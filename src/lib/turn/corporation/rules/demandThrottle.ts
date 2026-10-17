@@ -311,6 +311,25 @@ export function withForeignDemand(
 export const FOREIGN_DEMAND_CLAIM_PER_TURN = 0.25;
 
 /**
+ * The throttle balance for one output, with the lagged book's truncated demand
+ * and an exporter's unserved foreign deficit restored.
+ *
+ * Both balance legs read this: the sold-out leg (`balanceFor`) and the wider leg
+ * a partially sold extraction plant reads (`wideBalanceFor`). For a
+ * country-scoped output the two are the same reachable book, and an exporter's
+ * raw book pins demand to its supply (see market/tradePartition
+ * reachableDemandUnits), so without the foreign lift the wider leg grants no
+ * room however short the country's buyers are.
+ */
+export function liftedThrottleBalance(
+  balance: { supply: number; demand: number } | null | undefined,
+  latentFactor: number | null | undefined,
+  unmetForeignDemand: number | null | undefined
+): { supply: number; demand: number } | null | undefined {
+  return withForeignDemand(withLatentDemand(balance, latentFactor), unmetForeignDemand);
+}
+
+/**
  * Per-output fill for production feedback, with units a media ownership law
  * refused added back. Those units had buyers, so a capped outlet keeps its run
  * instead of reading the legal limit as weak demand. Clamped to a full fill.

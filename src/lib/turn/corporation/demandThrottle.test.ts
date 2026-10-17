@@ -9,6 +9,7 @@ import {
   withForeignDemand,
   withLatentDemand,
   withRegulationBlockedFill,
+  liftedThrottleBalance,
 } from "./demandThrottle";
 
 describe("demandThrottleFactor — flip identity", () => {
@@ -407,5 +408,19 @@ describe("withForeignDemand", () => {
     expect(headroom({ supply: 1000, demand: 1000 })).toBe(0);
     // A quarter of the 400 unserved, times this seller's half of the book.
     expect(headroom(withForeignDemand({ supply: 1000, demand: 1000 }, 400)!)).toBeCloseTo(50, 6);
+  });
+});
+
+describe("liftedThrottleBalance — exporter books carry foreign room", () => {
+  it("leaves a balanced book unchanged when no foreign demand is unserved", () => {
+    const raw = { supply: 1000, demand: 1000 };
+    expect(liftedThrottleBalance(raw, 1, 0)).toEqual(raw);
+  });
+
+  it("restores a country's gravity share of the deficits nobody is serving", () => {
+    const raw = { supply: 1000, demand: 1000 };
+    const lifted = liftedThrottleBalance(raw, 1, 4000)!;
+    expect(lifted.supply).toBe(1000);
+    expect(lifted.demand).toBeCloseTo(1000 + 4000 * FOREIGN_DEMAND_CLAIM_PER_TURN, 6);
   });
 });
