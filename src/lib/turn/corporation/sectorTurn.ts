@@ -91,6 +91,7 @@ import { buildManufacturedSectorOutput } from "@/lib/products/rules/manufacturin
 import { getManufacturingProductKind } from "@/lib/products/manufacturingCatalog";
 import { isLegalManufacturingProductForPlant } from "@/lib/products/rules/manufacturingEligibility";
 import { shortagePolicyHeadroom } from "@/lib/market/commodityFixStages";
+import { stagedMarginTrimPp } from "@/lib/market/marketRecoveryStages";
 
 /** Process one sector and append its persisted update to the turn collectors. */
 export function processSector(
@@ -448,7 +449,11 @@ export function processSector(
   } = accumulateMarginModifiers({
     corp,
     sector,
-    lookups,
+    // Market recovery stage 2 lowers the flat margin trim (marketRecoveryStages.ts).
+    lookups: {
+      ...lookups,
+      marginLevelTrimPp: stagedMarginTrimPp(lookups.marginLevelTrimPp, market.marketRecoveryStage),
+    },
     strategySupply: strategyRates.supply,
     strategyDemand: strategyRates.demand,
     strategyIsTransitioning: strategyRates.isTransitioning,
