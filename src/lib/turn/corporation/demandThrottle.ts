@@ -10,5 +10,6 @@ export {
   withLatentDemand,
   withForeignDemand,
   FOREIGN_DEMAND_CLAIM_PER_TURN,
+  liftedThrottleBalance,
   withRegulationBlockedFill,
 } from "./rules/demandThrottle";
