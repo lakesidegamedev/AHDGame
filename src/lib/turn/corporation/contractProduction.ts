@@ -17,6 +17,8 @@ interface ContractProductionArgs {
   guaranteedDemandUnits?: number | null;
   /** Unmet demand a sold-out plant may add on top of last turn's sales. */
   marketHeadroomUnits?: number | null;
+  /** Share of the market run a plant that keeps losing money still produces. */
+  lossRunShare?: number | null;
   soldFraction: number | null;
 }
 
@@ -48,7 +50,8 @@ export function computeContractProduction(args: ContractProductionArgs): {
         args.priorSoldUnits,
         args.priorProducedUnits,
         args.guaranteedDemandUnits,
-        args.marketHeadroomUnits
+        args.marketHeadroomUnits,
+        args.lossRunShare
       )
     : 1;
   const actual = computeSectorOutputUnits({
