@@ -55,6 +55,8 @@ export interface MarketContext {
   explicitPlantCostsEnabled?: boolean;
   /** Commodity treadmill fix stage (0..6); stage 4 adds shortage policy headroom. */
   commodityFixStage?: number;
+  /** Market recovery program stage; see marketRecoveryStages.ts. */
+  marketRecoveryStage?: number;
   /** Halve remaining build time for orders in deep-shortage sectors. */
   shortageBuildSpeedupEnabled?: boolean;
   /** Default off: ownership limits and censorship constrain media delivery. */
