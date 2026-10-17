@@ -64,6 +64,7 @@ export { computeSectorOutputUnits } from "./sectorOutputUnits";
 export type { SectorTurnEnv, SectorTurnResult } from "./sectorTurnTypes";
 
 import { computeIdleUpkeep } from "./sectorTurn/idleUpkeep";
+import { contributionShare, nextLossRun } from "./rules/lossRun";
 import {
   sectorNpvBoostMultiplier,
   sectorRevenueBoostMultiplier,
@@ -489,6 +490,21 @@ export function processSector(
   // A cold plant (no crew on site last turn) hires straight to its run; one
   // whose crew stayed through an outage keeps the gradual-layoff path.
   const coldRestart = restarting && (sector.workers ?? 0) <= 1;
+  // Market rebuild 1b: a plant that keeps losing money on what it makes runs
+  // less of it. Read from last turn's stored P&L; a missing or stale P&L, a
+  // mothball or a restart holds the plant where it was.
+  const priorPnl = sector.plantsPnl;
+  const lossRun =
+    plantsEnabled && explicitPlantCostsEnabled && !mothballed && !restarting
+      ? nextLossRun({
+          contribution:
+            priorPnl && typeof priorPnl.turn === "number" && priorPnl.turn >= currentTurn - 1
+              ? contributionShare(priorPnl, PLANT_CREW_FLOOR_SHARE)
+              : null,
+          priorShare: sector.lossRunShare,
+          priorStreak: sector.lossRunStreak,
+        })
+      : { share: sector.lossRunShare ?? 1, streak: sector.lossRunStreak ?? 0 };
   const {
     plantsExtractionHardMin,
     producedUnits,
@@ -502,6 +518,7 @@ export function processSector(
     capacityBindingEvent,
   } = resolvePlantsRevenue({
     restartRunShare,
+    lossRunShare: lossRun.share,
     sector,
     corp,
     strategySupply: strategyRates.supply,
@@ -1113,6 +1130,8 @@ export function processSector(
   if (plantsEnabled) {
     sectorUpdate.plantsStartTurn = plantsStartTurn ?? null;
     sectorUpdate.demandIdleTurns = idleRetirement.streak;
+    sectorUpdate.lossRunShare = lossRun.share;
+    sectorUpdate.lossRunStreak = lossRun.streak;
     sectorUpdate.plantCrewShare = plantCrew;
     sectorUpdate.idleCapacityRetiredUnits = idleCapacityRetiredUnits;
     // Stamp the idle-upkeep margin basis ONCE, from the live margin, and then
