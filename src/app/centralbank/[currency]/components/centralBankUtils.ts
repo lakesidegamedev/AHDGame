@@ -1,3 +1,4 @@
+import { CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 
 export function formatNativeCurrency(amount: number, currency: CurrencyCode): string {
@@ -19,4 +20,11 @@ export function formatNativeCurrency(amount: number, currency: CurrencyCode): st
     minimumFractionDigits: fixedDigits,
     maximumFractionDigits: fixedDigits,
   })}`;
+}
+
+/** Full face amounts preserve the central-bank tabs' fixed precision and symbol spacing. */
+export function formatNativeFaceAmount(amount: number, currency: CurrencyCode): string {
+  const sym = CURRENCY_SYMBOLS[currency] ?? "$";
+  if (currency === "JPY") return `${sym}${Math.round(amount).toLocaleString("en-US")}`;
+  return `${sym}${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

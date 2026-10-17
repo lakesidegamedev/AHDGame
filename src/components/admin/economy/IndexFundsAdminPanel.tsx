@@ -4,6 +4,7 @@ import { apiErrorText } from "@/lib/errors/catalog";
 import { useCallback, useEffect, useState } from "react";
 import { ResponsiveTable, type ResponsiveTableColumn } from "@/components/ui/ResponsiveTable";
 import { fetchJson } from "@/lib/observability/fetchJson";
+import { fmt } from "./corporations/format";
 
 interface AdminFundRow {
   id: string;
@@ -19,13 +20,6 @@ interface AdminFundRow {
   cashAnchor: number;
   backingRatio: number | null;
   holdingsCount: number;
-}
-
-function fmt(n: number) {
-  if (Math.abs(n) >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(2)}B`;
-  if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
-  if (Math.abs(n) >= 1_000) return `$${(n / 1_000).toFixed(1)}K`;
-  return `$${n.toFixed(2)}`;
 }
 
 const COLUMNS: ResponsiveTableColumn<AdminFundRow>[] = [

@@ -1,17 +1,11 @@
 "use client";
 
 import { US_STATE_ID_NAME_PAIRS } from "@/lib/constants/usStateNames";
-import { formatPartyCountryMoney } from "@/lib/utils/formatters";
 import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
 import type { PartyLeadershipTitles } from "@/lib/db/types/party";
 import type { NationalPosition } from "./types";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-/** Party money in the country's home currency (not always USD). */
-export function fmt(n: number, countryId: string): string {
-  return formatPartyCountryMoney(n, countryId);
-}
+export { formatPartyCountryMoney as fmt } from "@/lib/utils/formatters";
 
 export const US_STATES: [string, string][] = US_STATE_ID_NAME_PAIRS;
 
