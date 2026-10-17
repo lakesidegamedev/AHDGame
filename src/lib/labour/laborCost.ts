@@ -185,10 +185,11 @@ export function clampWageLevel(value: number): number {
  * directly. The ceiling is the 1991 starter-plant cushion in
  * `openingPlantScenario`: a founder's plant must still clear its floor.
  *
- * These are the only sector-level tuned numbers in Phase 2. Because the carve-out
- * is profit-invariant at wageLevel=1 for ANY value here, they change nothing at
- * baseline: they only set how big the wage lever's bite is per sector, so they
- * are safe to refine alongside ongoing balance work.
+ * Legacy (non-explicit) cost modes carve labour out of maintenance, where these
+ * values are profit-invariant at wageLevel=1 and only set the wage lever's bite.
+ * Under explicit plant costs they are billed directly and DO set margins. The
+ * market recovery program relieves four of them at stage 1
+ * (src/lib/market/marketRecoveryStages.ts) without changing this table.
  */
 export const SECTOR_LABOR_INTENSITY: Record<OperatingSectorType, number> = {
   technology: 0.4,

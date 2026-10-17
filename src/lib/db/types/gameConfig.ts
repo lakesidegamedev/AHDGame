@@ -449,6 +449,12 @@ export interface GameConfig {
    */
   commodityFixStage?: number;
   /**
+   * Market recovery program stage (kanban 254504), advanced one per turn by an
+   * operator after a one-turn health check; lowering it rolls a stage back.
+   * See src/lib/market/marketRecoveryStages.ts. Unset or 0 changes nothing.
+   */
+  marketRecoveryStage?: number;
+  /**
    * When true, outstanding build orders in sectors whose output is in deep
    * shortage have their remaining build time halved, once per order. See
    * turn/corporation/sectorTurn/shortageBuildSpeedup.ts.
