@@ -1,5 +1,6 @@
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { plantLaborShare } from "@/lib/corporations/plantCosts/rules";
+import { stagedLaborShare } from "@/lib/market/marketRecoveryStages";
 import type { CorporateSector } from "@/lib/db/types";
 import {
   accumulateAutomationIndex,
@@ -186,6 +187,8 @@ export interface SectorLabourEconomicsInput {
   grossMaintenance: number;
   /** Explicit physical costs distinguish semiconductor fabs from service technology. */
   explicitPlantCostsEnabled?: boolean;
+  /** Market recovery stage; stage 1 relieves four service payroll rates. */
+  marketRecoveryStage?: number;
   computedWorkers: number;
   techLaborCostMultiplier: number;
   costOfLivingIndex?: number;
@@ -231,6 +234,7 @@ export interface SectorLabourEconomicsResult {
  * this module owns labour policy reads, indexes, and next-turn state.
  */
 export function resolveSectorLabourEconomics({
+  marketRecoveryStage,
   labour,
   sector,
   sectorCountryId,
@@ -294,27 +298,31 @@ export function resolveSectorLabourEconomics({
     hourlyRevenue,
     grossMaintenance,
     // Explicit plants distinguish production methods; legacy modes keep the lane share.
-    laborShare0: explicitPlantCostsEnabled
-      ? plantLaborShare({
-          sectorType: getOperatingSectorType(
-            sector.sectorType,
-            sector.industryModel,
-            sector.mediaDiscriminator
+    laborShare0: stagedLaborShare(
+      getOperatingSectorType(sector.sectorType, sector.industryModel, sector.mediaDiscriminator),
+      explicitPlantCostsEnabled
+        ? plantLaborShare({
+            sectorType: getOperatingSectorType(
+              sector.sectorType,
+              sector.industryModel,
+              sector.mediaDiscriminator
+            ),
+            strategyId: sector.strategyId,
+            transitionFromStrategyId: sector.transitionFromStrategyId,
+            transitionStartTurn: sector.transitionStartTurn,
+            currentTurn,
+            year: currentYear,
+          })
+        : getSectorLaborShare(
+            getOperatingSectorType(
+              sector.sectorType,
+              sector.industryModel,
+              sector.mediaDiscriminator
+            ),
+            currentYear
           ),
-          strategyId: sector.strategyId,
-          transitionFromStrategyId: sector.transitionFromStrategyId,
-          transitionStartTurn: sector.transitionStartTurn,
-          currentTurn,
-          year: currentYear,
-        })
-      : getSectorLaborShare(
-          getOperatingSectorType(
-            sector.sectorType,
-            sector.industryModel,
-            sector.mediaDiscriminator
-          ),
-          currentYear
-        ),
+      marketRecoveryStage
+    ),
     wageMultiplier,
   });
   const result: SectorLabourEconomicsResult = {
