@@ -42,6 +42,8 @@ import {
 } from "../demandThrottle";
 
 export interface PlantsRevenueInput {
+  /** Share of the market run kept by a plant that keeps losing money (rules/lossRun). */
+  lossRunShare?: number;
   sector: Pick<
     CorporateSector,
     | "_id"
@@ -517,6 +519,7 @@ export function resolvePlantsRevenue(input: PlantsRevenueInput): PlantsRevenueRe
           }) * priorProductionUnitRatio
         : undefined,
     soldFraction: clearingEnabled && clearing ? clearing.soldFraction : null,
+    lossRunShare: input.lossRunShare,
   });
   const { producedUnits, soldUnits, contractAchievableUnits, demandThrottleFactor } = production;
   // Plants: revenue is DERIVED from produced output, exactly inverting the P1

@@ -1078,6 +1078,13 @@ export interface CorporateSector {
    */
   demandIdleTurns?: number;
   /**
+   * Plants tier: share of the market run kept while the plant keeps losing
+   * money on its output (1 = no cut), and the signed streak behind it
+   * (negative = losing turns, positive = paying turns). See `rules/lossRun`.
+   */
+  lossRunShare?: number;
+  lossRunStreak?: number;
+  /**
    * Plants tier: share of active nameplate staffed and paid last turn (1 = full
    * crew). Carried so layoffs are gradual; see `rules/plantRunShare`.
    */
