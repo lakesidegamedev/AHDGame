@@ -37,6 +37,7 @@ export type UnlockTechNodeResult =
 const REASON_STATUS: Record<UnlockBlockReason, number> = {
   "unknown-node": 400,
   "decade-locked": 400,
+  "decade-complete": 400,
   "lane-locked": 409,
   "prereq-missing": 409,
   "path-locked": 409,
@@ -48,6 +49,7 @@ const REASON_STATUS: Record<UnlockBlockReason, number> = {
 const REASON_MESSAGE: Record<UnlockBlockReason, string> = {
   "unknown-node": "That technology is not part of this corporation's tree.",
   "decade-locked": "That decade's technology is not yet available.",
+  "decade-complete": "That decade is complete, so its specializations can no longer be researched.",
   "lane-locked": "You have committed to the other track this decade — abandon it first.",
   "prereq-missing": "Unlock the preceding technology in this branch first.",
   "path-locked": "You have committed to a different specialization this decade — abandon it first.",

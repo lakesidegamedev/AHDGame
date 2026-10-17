@@ -39,6 +39,7 @@ interface TechNode {
   unlocksStrategy: string | null;
   owned: boolean;
   autoGranted: boolean;
+  tierClosed: boolean;
   laneLocked: boolean;
   prereqMet: boolean;
   pathLocked: boolean;
@@ -584,16 +585,24 @@ function LaneTree({
         <span className="text-success">{t("owned")}</span>
       );
     }
-    if (!decade.reached || node.laneLocked || node.pathLocked || !node.prereqMet) {
+    if (
+      !decade.reached ||
+      node.tierClosed ||
+      node.laneLocked ||
+      node.pathLocked ||
+      !node.prereqMet
+    ) {
       return (
         <span className="text-muted">
-          {node.laneLocked
-            ? t("lockedByTrack", { track: t(`track.${decade.committedLane ?? "generic"}`) })
-            : node.pathLocked
-              ? t("specializationLocked")
-              : !decade.reached
-                ? t("availableFrom", { decade: decade.id })
-                : t("unlockPrerequisite", { technology: prerequisiteNames(node, bySlot) })}
+          {node.tierClosed
+            ? t("specializationClosed")
+            : node.laneLocked
+              ? t("lockedByTrack", { track: t(`track.${decade.committedLane ?? "generic"}`) })
+              : node.pathLocked
+                ? t("specializationLocked")
+                : !decade.reached
+                  ? t("availableFrom", { decade: decade.id })
+                  : t("unlockPrerequisite", { technology: prerequisiteNames(node, bySlot) })}
         </span>
       );
     }
@@ -702,9 +711,7 @@ function LaneTree({
                   : t("specializationChoice")}
               </p>
               <p className="mt-0.5 text-[11px] text-muted">
-                {decade.autoGrantedDecade
-                  ? t("allSpecializationsBaseline")
-                  : t("chooseSpecialization")}
+                {decade.autoGrantedDecade ? t("specializationsClosed") : t("chooseSpecialization")}
               </p>
             </div>
             <div className="grid grid-cols-3 gap-2">
