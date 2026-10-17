@@ -17,9 +17,33 @@ export const MARKET_RECOVERY_STAGE = {
    * 0.325, real estate 0.32 -> 0.21) until the phase 1 cost recalibration.
    */
   SERVICE_LABOUR_RELIEF: 1,
+  /**
+   * The 1.14 flat margin charge (SECTOR_MARGIN_LEVEL_TRIM_PP, 8 points) was
+   * tuned when the world ran a 21.8% median net margin; at turn 270 the median
+   * plant margin is 9%. Stage 2 lowers it to MARGIN_TRIM_STAGE2_PP. It rides
+   * the plants policy credit, so it moves on the next turn and reverts alone.
+   */
+  MARGIN_TRIM_RELIEF: 2,
 } as const;
 
-export const MARKET_RECOVERY_STAGE_MAX = MARKET_RECOVERY_STAGE.SERVICE_LABOUR_RELIEF;
+export const MARKET_RECOVERY_STAGE_MAX = MARKET_RECOVERY_STAGE.MARGIN_TRIM_RELIEF;
+
+/**
+ * Margin level trim at stage 2, in percentage points. Static replay at turn
+ * 270 with stage 1: losing plants 25.7% -> 15.8%, median margin 9.8% -> 17.8%.
+ */
+export const MARGIN_TRIM_STAGE2_PP = 0;
+
+/** The flat margin trim for the stages active in this world. */
+export function stagedMarginTrimPp(
+  trimPp: number | null | undefined,
+  stage: number | null | undefined
+): number {
+  const base = typeof trimPp === "number" && Number.isFinite(trimPp) ? trimPp : 0;
+  return marketRecoveryStageActive(stage, MARKET_RECOVERY_STAGE.MARGIN_TRIM_RELIEF)
+    ? Math.min(base, MARGIN_TRIM_STAGE2_PP)
+    : base;
+}
 
 /** Normalise a raw config value to an integer stage in [0, MAX]. */
 export function normalizeMarketRecoveryStage(raw: unknown): number {
