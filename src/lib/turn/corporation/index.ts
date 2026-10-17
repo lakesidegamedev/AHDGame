@@ -28,10 +28,7 @@ import { getLabourSystemMode, labourAtLeast } from "@/lib/labour/featureFlag";
 import { getMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
 import { buildMarketContext } from "@/lib/market/marketContext";
 import { normalizeCommodityFixStage } from "@/lib/market/commodityFixStages";
-import {
-  normalizeMarketRecoveryStage,
-  stagedMarginTrimPp,
-} from "@/lib/market/marketRecoveryStages";
+import { normalizeMarketRecoveryStage } from "@/lib/market/marketRecoveryStages";
 import { isFairnessDoctrineInEffect } from "@/lib/mediaRegulation/rules";
 import { runClearingPrePass } from "./clearingPrePass";
 import { computeQualityUpdates } from "./brandQualityTurn";
@@ -267,11 +264,6 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
           )
       : Promise.resolve(null),
   ]);
-  // Market recovery stage 2 lowers the flat margin trim (marketRecoveryStages.ts).
-  lookups.marginLevelTrimPp = stagedMarginTrimPp(
-    lookups.marginLevelTrimPp,
-    normalizeMarketRecoveryStage(marketGovernorConfig?.marketRecoveryStage)
-  );
   await resolvePhaseLookups(db, marketGovernorConfig, turn ?? gameState?.currentTurn ?? 0, lookups);
   if (
     mediaProductSlatesEnabled &&
