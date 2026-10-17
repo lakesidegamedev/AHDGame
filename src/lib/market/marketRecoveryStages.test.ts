@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { getSectorLaborShare } from "@/lib/labour/laborCost";
 import {
+  MARGIN_TRIM_STAGE2_PP,
   MARKET_RECOVERY_STAGE,
   normalizeMarketRecoveryStage,
   stagedLaborShare,
+  stagedMarginTrimPp,
 } from "./marketRecoveryStages";
 
 describe("market recovery stages", () => {
@@ -12,7 +14,7 @@ describe("market recovery stages", () => {
     expect(normalizeMarketRecoveryStage("2")).toBe(0);
     expect(normalizeMarketRecoveryStage(-3)).toBe(0);
     expect(normalizeMarketRecoveryStage(1.9)).toBe(1);
-    expect(normalizeMarketRecoveryStage(99)).toBe(MARKET_RECOVERY_STAGE.SERVICE_LABOUR_RELIEF);
+    expect(normalizeMarketRecoveryStage(99)).toBe(MARKET_RECOVERY_STAGE.MARGIN_TRIM_RELIEF);
   });
 
   it("stage 0 changes no labour share", () => {
@@ -30,5 +32,12 @@ describe("market recovery stages", () => {
     expect(at("financial")).toBeCloseTo(0.325 * 1.1, 9);
     expect(at("real_estate")).toBeCloseTo(0.21 * 1.1, 9);
     expect(at("manufacturing")).toBe(getSectorLaborShare("manufacturing", 1991));
+  });
+
+  it("stage 2 lowers the flat margin trim; stages 0 and 1 keep it", () => {
+    expect(stagedMarginTrimPp(8, 0)).toBe(8);
+    expect(stagedMarginTrimPp(8, 1)).toBe(8);
+    expect(stagedMarginTrimPp(8, 2)).toBe(MARGIN_TRIM_STAGE2_PP);
+    expect(stagedMarginTrimPp(undefined, 2)).toBe(0);
   });
 });
