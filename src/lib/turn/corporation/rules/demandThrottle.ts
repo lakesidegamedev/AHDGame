@@ -211,15 +211,22 @@ export const DEMAND_THROTTLE_FLOOR = 0.1;
  * same scalar output units as `plannedUnits`
  * @param marketHeadroomUnits unmet demand a sold-out plant may add on top of
  * what it sold, from `soldOutMarketHeadroomUnits`
+ * @param lossRunShare share of the market target a plant that keeps losing
+ * money on its output still produces, from `rules/lossRun` (1 = no cut)
  */
 export function demandThrottleFactor(
   plannedUnits: number,
   priorSoldUnits: number | null | undefined,
   priorProducedUnits: number | null | undefined,
   guaranteedDemandUnits?: number | null,
-  marketHeadroomUnits?: number | null
+  marketHeadroomUnits?: number | null,
+  lossRunShare?: number | null
 ): number {
   if (!Number.isFinite(plannedUnits) || plannedUnits <= 0) return 1;
+  const lossShare =
+    typeof lossRunShare === "number" && Number.isFinite(lossRunShare)
+      ? Math.max(0, Math.min(1, lossRunShare))
+      : 1;
   // No usable history: nothing to infer demand from, so do not throttle. This
   // is the newly-founded sector and the pre-clearing world.
   if (
@@ -227,9 +234,11 @@ export function demandThrottleFactor(
     !Number.isFinite(priorProducedUnits) ||
     priorProducedUnits <= 0
   ) {
-    return 1;
+    return lossShare < 1 ? Math.max(DEMAND_THROTTLE_FLOOR, lossShare) : 1;
   }
-  if (typeof priorSoldUnits !== "number" || !Number.isFinite(priorSoldUnits)) return 1;
+  if (typeof priorSoldUnits !== "number" || !Number.isFinite(priorSoldUnits)) {
+    return lossShare < 1 ? Math.max(DEMAND_THROTTLE_FLOOR, lossShare) : 1;
+  }
 
   // The target is ALWAYS last turn's sales plus the probe margin, including when
   // the plant cleared everything it made. Exempting a full clearance is what
@@ -246,7 +255,10 @@ export function demandThrottleFactor(
     typeof marketHeadroomUnits === "number" && Number.isFinite(marketHeadroomUnits)
       ? Math.max(0, marketHeadroomUnits)
       : 0;
-  const marketTarget = Math.max(sold * (1 + DEMAND_PROBE_MARGIN), sold + headroom);
+  // A plant losing money on its output scales back what it offers the market;
+  // a named buyer's contract below is never cut by it.
+  const marketTarget =
+    Math.min(Math.max(sold * (1 + DEMAND_PROBE_MARGIN), sold + headroom), plannedUnits) * lossShare;
   const contractTarget =
     typeof guaranteedDemandUnits === "number" && Number.isFinite(guaranteedDemandUnits)
       ? Math.max(0, guaranteedDemandUnits)
