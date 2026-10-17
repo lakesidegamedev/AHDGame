@@ -1,3 +1,4 @@
+import { withAdminRoute } from "@/lib/api/withAdminAuth";
 /**
  * GET /api/admin/country/[code]/readiness
  *
@@ -10,8 +11,7 @@
  */
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
-import { requireAdmin } from "@/lib/api/requireAdmin";
-import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { buildCountryReadinessReport } from "@/lib/admin/countryReadinessReport";
 
@@ -19,25 +19,18 @@ interface RouteParams {
   params: Promise<{ code: string }>;
 }
 
-export async function GET(_req: Request, { params }: RouteParams) {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
-
-    const { code } = await params;
-    const countryId = code.toUpperCase() as CountryId;
-    if (!COUNTRY_CONFIGS[countryId]) {
-      return errorResponse(400, "Invalid country");
-    }
-
-    const db = await getDb();
-    const report = await buildCountryReadinessReport(db, countryId);
-    if (!report) {
-      return errorResponse(404, `No readiness expectations registered for ${countryId}`);
-    }
-
-    return NextResponse.json(report);
-  } catch (error) {
-    return handleRouteError(error);
+export const GET = withAdminRoute(async (_auth, _req: Request, { params }: RouteParams) => {
+  const { code } = await params;
+  const countryId = code.toUpperCase() as CountryId;
+  if (!COUNTRY_CONFIGS[countryId]) {
+    return errorResponse(400, "Invalid country");
   }
-}
+
+  const db = await getDb();
+  const report = await buildCountryReadinessReport(db, countryId);
+  if (!report) {
+    return errorResponse(404, `No readiness expectations registered for ${countryId}`);
+  }
+
+  return NextResponse.json(report);
+});

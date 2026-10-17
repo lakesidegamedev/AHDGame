@@ -1,7 +1,7 @@
+import { withAdminRoute } from "@/lib/api/withAdminAuth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/api/requireAdmin";
-import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { errorResponse } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import type { Corporation } from "@/lib/db/types";
 import {
@@ -31,94 +31,87 @@ const querySchema = z.object({
 // already flushed, so no entry/dividend formula is recomputed.
 // Auth: requireAdmin
 // Errors: 400, 403
-export async function GET(request: Request) {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
+export const GET = withAdminRoute(async (_auth, request: Request) => {
+  const parsed = querySchema.safeParse(
+    Object.fromEntries(new URL(request.url).searchParams.entries())
+  );
+  if (!parsed.success) {
+    return errorResponse(400, "Invalid query", { extra: { details: parsed.error.flatten() } });
+  }
 
-    const parsed = querySchema.safeParse(
-      Object.fromEntries(new URL(request.url).searchParams.entries())
-    );
-    if (!parsed.success) {
-      return errorResponse(400, "Invalid query", { extra: { details: parsed.error.flatten() } });
-    }
-
-    const db = await getDb();
-    const diagnosticsCollection = db.collection<
-      NppOperatorAggregate & { _id?: string; turn?: number }
-    >(NPP_OPERATOR_TELEMETRY_COLLECTION);
-    if (parsed.data.turn !== undefined) {
-      const diagnostics = await diagnosticsCollection.findOne({ _id: `turn:${parsed.data.turn}` });
-      const counts = computeNppCorporationHealth({
-        corporations: [],
-        operatorDiagnostics: diagnostics,
-      });
-      return NextResponse.json({
-        health: null,
-        cashMetricsAvailability: "historical-snapshot-unavailable",
-        diagnosticsAvailable: diagnostics !== null,
-        diagnostics: {
-          bindingGateCounts: counts.bindingGateCounts,
-          bindingConstraintCounts: counts.bindingConstraintCounts,
-          bindingConstraintLegCounts: counts.bindingConstraintLegCounts,
-          operatorObservations: counts.operatorObservations,
-          sectorDiagnostics: diagnostics?.sectorDiagnostics ?? {},
-        },
-        turn: diagnostics?.turn ?? parsed.data.turn,
-      });
-    }
-    // NPP-led corps are exactly the ones the NPP brain operates: `ceoType` is
-    // "npp". The query filters on that rather than loading the whole NPP id set.
-    const corps = await db
-      .collection<Corporation>("corporations")
-      .find(
-        { ceoType: "npp", suspended: { $ne: true } },
-        {
-          projection: {
-            ceoId: 1,
-            ceoType: 1,
-            type: 1,
-            liquidCapital: 1,
-            liquidCurrencyCode: 1,
-            countryId: 1,
-            countryOwnerId: 1,
-            bankCharter: 1,
-          },
-        }
-      )
-      .toArray();
-
-    // liquidCapital is denominated in each corp's home currency; restate to ₳
-    // anchor so the median is comparable across countries. Valuation rates
-    // (with the authored era fallback) are correct here — nothing settles.
-    const fxByCurrency = await loadValuationFxRates(db);
-    const corporations: NppCorporationHealthCorporation[] = corps.map((corp) => ({
-      ceoId: corp.ceoId?.toString() ?? "",
-      ceoType: corp.ceoType ?? "npp",
-      type: corp.type,
-      liquidCapital: corpLiquidCapitalToAnchor(
-        corp.liquidCapital ?? 0,
-        corp,
-        fxRateForCorpFromMap(corp, fxByCurrency)
-      ),
-      countryOwnerId: corp.countryOwnerId ?? null,
-      bankCharter: corp.bankCharter ? { status: corp.bankCharter.status } : null,
-    }));
-
-    const diagnostics = await diagnosticsCollection.findOne({}, { sort: { turn: -1 } });
-
-    const health = computeNppCorporationHealth({
-      corporations,
+  const db = await getDb();
+  const diagnosticsCollection = db.collection<
+    NppOperatorAggregate & { _id?: string; turn?: number }
+  >(NPP_OPERATOR_TELEMETRY_COLLECTION);
+  if (parsed.data.turn !== undefined) {
+    const diagnostics = await diagnosticsCollection.findOne({ _id: `turn:${parsed.data.turn}` });
+    const counts = computeNppCorporationHealth({
+      corporations: [],
       operatorDiagnostics: diagnostics,
     });
-
     return NextResponse.json({
-      health,
-      cashMetricsAvailability: "current",
+      health: null,
+      cashMetricsAvailability: "historical-snapshot-unavailable",
       diagnosticsAvailable: diagnostics !== null,
-      turn: diagnostics?.turn ?? parsed.data.turn ?? null,
+      diagnostics: {
+        bindingGateCounts: counts.bindingGateCounts,
+        bindingConstraintCounts: counts.bindingConstraintCounts,
+        bindingConstraintLegCounts: counts.bindingConstraintLegCounts,
+        operatorObservations: counts.operatorObservations,
+        sectorDiagnostics: diagnostics?.sectorDiagnostics ?? {},
+      },
+      turn: diagnostics?.turn ?? parsed.data.turn,
     });
-  } catch (error) {
-    return handleRouteError(error);
   }
-}
+  // NPP-led corps are exactly the ones the NPP brain operates: `ceoType` is
+  // "npp". The query filters on that rather than loading the whole NPP id set.
+  const corps = await db
+    .collection<Corporation>("corporations")
+    .find(
+      { ceoType: "npp", suspended: { $ne: true } },
+      {
+        projection: {
+          ceoId: 1,
+          ceoType: 1,
+          type: 1,
+          liquidCapital: 1,
+          liquidCurrencyCode: 1,
+          countryId: 1,
+          countryOwnerId: 1,
+          bankCharter: 1,
+        },
+      }
+    )
+    .toArray();
+
+  // liquidCapital is denominated in each corp's home currency; restate to ₳
+  // anchor so the median is comparable across countries. Valuation rates
+  // (with the authored era fallback) are correct here — nothing settles.
+  const fxByCurrency = await loadValuationFxRates(db);
+  const corporations: NppCorporationHealthCorporation[] = corps.map((corp) => ({
+    ceoId: corp.ceoId?.toString() ?? "",
+    ceoType: corp.ceoType ?? "npp",
+    type: corp.type,
+    liquidCapital: corpLiquidCapitalToAnchor(
+      corp.liquidCapital ?? 0,
+      corp,
+      fxRateForCorpFromMap(corp, fxByCurrency)
+    ),
+    countryOwnerId: corp.countryOwnerId ?? null,
+    bankCharter: corp.bankCharter ? { status: corp.bankCharter.status } : null,
+  }));
+
+  const diagnostics = await diagnosticsCollection.findOne({}, { sort: { turn: -1 } });
+
+  const health = computeNppCorporationHealth({
+    corporations,
+    operatorDiagnostics: diagnostics,
+  });
+
+  return NextResponse.json({
+    health,
+    cashMetricsAvailability: "current",
+    diagnosticsAvailable: diagnostics !== null,
+    turn: diagnostics?.turn ?? parsed.data.turn ?? null,
+  });
+});

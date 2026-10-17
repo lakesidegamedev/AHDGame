@@ -1,12 +1,12 @@
+import { withAdminRoute } from "@/lib/api/withAdminAuth";
 /**
  * POST /api/admin/country/[code]/parties/[partyId]/appoint — Admin direct appointment of national party leadership
  */
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseJsonBody } from "@/lib/api/validate";
-import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { errorResponse } from "@/lib/api/errors";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import type { PoliticalParty, Character } from "@/lib/db/types";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
@@ -24,14 +24,12 @@ const appointSchema = z.object({
   characterId: z.union([z.string().length(24), z.null()]),
 });
 
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ code: string; partyId: string }> }
-) {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
-
+export const POST = withAdminRoute(
+  async (
+    _auth,
+    request: Request,
+    { params }: { params: Promise<{ code: string; partyId: string }> }
+  ) => {
     const { code, partyId } = await params;
     const countryId = code.toUpperCase() as CountryId;
     if (!COUNTRY_CONFIGS[countryId]) {
@@ -107,7 +105,5 @@ export async function POST(
         ? `Appointed ${characterName} as ${positionLabel}`
         : `${positionLabel} position vacated`,
     });
-  } catch (error) {
-    return handleRouteError(error);
   }
-}
+);

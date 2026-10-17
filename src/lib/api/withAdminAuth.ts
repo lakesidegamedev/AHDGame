@@ -1,3 +1,4 @@
+import { handleRouteError } from "./errors";
 import { requireAdmin, type AdminAuthResult } from "./requireAdmin";
 
 type AdminAuthOk = Extract<AdminAuthResult, { ok: true }>;
@@ -25,5 +26,22 @@ export function withAdminAuth<Args extends unknown[], R>(
     const auth = await requireAdmin();
     if (!auth.ok) return auth.response;
     return handler(auth, ...args);
+  };
+}
+
+/**
+ * Admin routes whose standard error boundary includes authentication.
+ * Keep withAdminAuth for routes that deliberately handle failures elsewhere.
+ */
+export function withAdminRoute<Args extends unknown[]>(
+  handler: (auth: AdminAuthOk, ...args: Args) => Promise<Response>
+): (...args: Args) => Promise<Response> {
+  const authenticated = withAdminAuth(handler);
+  return async (...args: Args) => {
+    try {
+      return await authenticated(...args);
+    } catch (error) {
+      return handleRouteError(error);
+    }
   };
 }

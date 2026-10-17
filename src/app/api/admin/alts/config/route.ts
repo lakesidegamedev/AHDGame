@@ -1,3 +1,4 @@
+import { withAdminRoute } from "@/lib/api/withAdminAuth";
 // GET/PUT /api/admin/alts/config — alt-detection scoring weights/thresholds
 // Auth: GET requireModerator (all staff roles read); PUT requireAdmin only
 // Errors: 400, 403
@@ -15,7 +16,6 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
 import { requireModerator } from "@/lib/api/requireModerator";
-import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { createAdminLog } from "@/lib/adminLog";
@@ -52,50 +52,43 @@ const putSchema = z.object({
 
 // PUT /api/admin/alts/config — admin only (plan §4.6: editing scoring
 // weights/thresholds is an admin-only capability; moderators read-only).
-export async function PUT(request: Request) {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
-
-    const parsed = await parseJsonBody(request, putSchema);
-    if (!parsed.success) {
-      return errorResponse(parsed.status, parsed.error);
-    }
-
-    const resolved = resolveAltScoringConfig(parsed.data);
-
-    const db = await getDb();
-    await db.collection<GameConfig>("gameConfig").updateOne(
-      { _id: "default" },
-      {
-        $set: {
-          // `resolveAltScoringConfig` returns the fully-keyed `AltSignalWeights`/
-          // `AltScoringThresholds` shapes (every key present); widen to plain
-          // `Record<string, number>` for storage — `GameConfig.altScoring`
-          // deliberately types its fields loosely (no `lib/altDetection`
-          // import into `db/types/gameConfig.ts`, matching how e.g.
-          // `labourSystemMode` inlines its own literal union there).
-          altScoring: {
-            weights: { ...resolved.weights } as Record<string, number>,
-            thresholds: { ...resolved.thresholds } as Record<string, number>,
-          },
-          altScoringUpdatedBy: auth.admin.username,
-          altScoringUpdatedAt: new Date().toISOString(),
-        },
-      },
-      { upsert: true }
-    );
-
-    await createAdminLog({
-      category: "system",
-      action: "alt_scoring_config_updated",
-      username: auth.admin.username,
-      adminUsername: auth.admin.username,
-      details: "Alt-detection scoring weights/thresholds updated.",
-    });
-
-    return NextResponse.json({ success: true, ...resolved });
-  } catch (error) {
-    return handleRouteError(error);
+export const PUT = withAdminRoute(async (auth, request: Request) => {
+  const parsed = await parseJsonBody(request, putSchema);
+  if (!parsed.success) {
+    return errorResponse(parsed.status, parsed.error);
   }
-}
+
+  const resolved = resolveAltScoringConfig(parsed.data);
+
+  const db = await getDb();
+  await db.collection<GameConfig>("gameConfig").updateOne(
+    { _id: "default" },
+    {
+      $set: {
+        // `resolveAltScoringConfig` returns the fully-keyed `AltSignalWeights`/
+        // `AltScoringThresholds` shapes (every key present); widen to plain
+        // `Record<string, number>` for storage — `GameConfig.altScoring`
+        // deliberately types its fields loosely (no `lib/altDetection`
+        // import into `db/types/gameConfig.ts`, matching how e.g.
+        // `labourSystemMode` inlines its own literal union there).
+        altScoring: {
+          weights: { ...resolved.weights } as Record<string, number>,
+          thresholds: { ...resolved.thresholds } as Record<string, number>,
+        },
+        altScoringUpdatedBy: auth.admin.username,
+        altScoringUpdatedAt: new Date().toISOString(),
+      },
+    },
+    { upsert: true }
+  );
+
+  await createAdminLog({
+    category: "system",
+    action: "alt_scoring_config_updated",
+    username: auth.admin.username,
+    adminUsername: auth.admin.username,
+    details: "Alt-detection scoring weights/thresholds updated.",
+  });
+
+  return NextResponse.json({ success: true, ...resolved });
+});

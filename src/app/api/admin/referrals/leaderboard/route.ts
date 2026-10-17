@@ -1,8 +1,8 @@
+import { withAdminRoute } from "@/lib/api/withAdminAuth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
-import { requireAdmin } from "@/lib/api/requireAdmin";
-import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { createAdminLog } from "@/lib/adminLog";
 import type { GameConfig } from "@/lib/db/types";
@@ -54,140 +54,102 @@ function toLeaderRow(
 // GET /api/admin/referrals/leaderboard — All-time and rolling contest referral rankings
 // Auth: requireAdmin
 // Errors: 403
-export async function GET() {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
+export const GET = withAdminRoute(async (_auth) => {
+  const db = await getDb();
+  const config = await db
+    .collection<GameConfig>("gameConfig")
+    .findOne({ _id: "default" }, { projection: { referralContestStartedAt: 1 } });
 
-    const db = await getDb();
-    const config = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { referralContestStartedAt: 1 } });
+  const contestStartedAt = config?.referralContestStartedAt ?? null;
+  const contestMode = contestStartedAt instanceof Date && !Number.isNaN(contestStartedAt.getTime());
 
-    const contestStartedAt = config?.referralContestStartedAt ?? null;
-    const contestMode =
-      contestStartedAt instanceof Date && !Number.isNaN(contestStartedAt.getTime());
+  const usersCol = db.collection<LeaderUserDoc>("users");
 
-    const usersCol = db.collection<LeaderUserDoc>("users");
+  const [allTimeDocs, contestDocs] = (await Promise.all([
+    usersCol
+      .find({ referralCount: { $gt: 0 } })
+      .project({ _id: 1, username: 1, displayName: 1, referralCount: 1 })
+      .sort({ referralCount: -1, username: 1 })
+      .limit(TOP_N)
+      .toArray(),
+    contestMode
+      ? usersCol
+          .find({ referralContestCount: { $gt: 0 } })
+          .project({ _id: 1, username: 1, displayName: 1, referralContestCount: 1 })
+          .sort({ referralContestCount: -1, username: 1 })
+          .limit(TOP_N)
+          .toArray()
+      : Promise.resolve([] as LeaderUserDoc[]),
+  ])) as [LeaderUserDoc[], LeaderUserDoc[]];
 
-    const [allTimeDocs, contestDocs] = (await Promise.all([
-      usersCol
-        .find({ referralCount: { $gt: 0 } })
-        .project({ _id: 1, username: 1, displayName: 1, referralCount: 1 })
-        .sort({ referralCount: -1, username: 1 })
-        .limit(TOP_N)
-        .toArray(),
-      contestMode
-        ? usersCol
-            .find({ referralContestCount: { $gt: 0 } })
-            .project({ _id: 1, username: 1, displayName: 1, referralContestCount: 1 })
-            .sort({ referralContestCount: -1, username: 1 })
-            .limit(TOP_N)
-            .toArray()
-        : Promise.resolve([] as LeaderUserDoc[]),
-    ])) as [LeaderUserDoc[], LeaderUserDoc[]];
+  const allTime: ReferralLeaderRow[] = allTimeDocs.map((u) => toLeaderRow(u, "referralCount"));
+  const contest: ReferralLeaderRow[] = contestDocs.map((u) =>
+    toLeaderRow(u, "referralContestCount")
+  );
 
-    const allTime: ReferralLeaderRow[] = allTimeDocs.map((u) => toLeaderRow(u, "referralCount"));
-    const contest: ReferralLeaderRow[] = contestDocs.map((u) =>
-      toLeaderRow(u, "referralContestCount")
-    );
-
-    return NextResponse.json({
-      contestMode,
-      contestStartedAt: contestStartedAt?.toISOString() ?? null,
-      allTime,
-      contest,
-    });
-  } catch (error) {
-    return handleRouteError(error);
-  }
-}
+  return NextResponse.json({
+    contestMode,
+    contestStartedAt: contestStartedAt?.toISOString() ?? null,
+    allTime,
+    contest,
+  });
+});
 
 // PATCH /api/admin/referrals/leaderboard — Start, reset, or award and restart the referral contest
 // Auth: requireAdmin
 // Errors: 400, 403
-export async function PATCH(request: Request) {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
+export const PATCH = withAdminRoute(async (auth, request: Request) => {
+  const parsed = await parseJsonBody(request, patchSchema);
+  if (!parsed.success) {
+    return errorResponse(parsed.status, parsed.error);
+  }
 
-    const parsed = await parseJsonBody(request, patchSchema);
-    if (!parsed.success) {
-      return errorResponse(parsed.status, parsed.error);
+  const db = await getDb();
+  const now = new Date();
+
+  if (parsed.data.action === "award-and-restart") {
+    let result;
+    try {
+      result = await awardIterationReferralsNow(db, auth.admin.username, now);
+    } catch (err) {
+      if (err instanceof ReferralAwardError) return errorResponse(400, err.message);
+      throw err;
     }
 
-    const db = await getDb();
-    const now = new Date();
+    const names = result.winners
+      .map(
+        (w, i) =>
+          `#${w.rank} ${result.usernames[i]} (${w.score})${w.alreadySupporter ? " already supporter" : ""}`
+      )
+      .join(", ");
+    await createAdminLog({
+      category: "system",
+      action: "referral_contest_awarded",
+      username: auth.admin.username,
+      adminUsername: auth.admin.username,
+      details: `Referral contest awarded: ${names || "no qualifying referrers"}. Supporter until the next award; ${result.revoked} earlier contest grant(s) ended. Contest restarted.`,
+    });
 
-    if (parsed.data.action === "award-and-restart") {
-      let result;
-      try {
-        result = await awardIterationReferralsNow(db, auth.admin.username, now);
-      } catch (err) {
-        if (err instanceof ReferralAwardError) return errorResponse(400, err.message);
-        throw err;
-      }
+    return NextResponse.json({
+      success: true,
+      contestMode: true,
+      contestStartedAt: result.restartedAt.toISOString(),
+      winners: result.winners.map((w, i) => ({
+        rank: w.rank,
+        name: result.usernames[i],
+        count: w.score,
+        alreadySupporter: w.alreadySupporter === true,
+      })),
+    });
+  }
 
-      const names = result.winners
-        .map(
-          (w, i) =>
-            `#${w.rank} ${result.usernames[i]} (${w.score})${w.alreadySupporter ? " already supporter" : ""}`
-        )
-        .join(", ");
-      await createAdminLog({
-        category: "system",
-        action: "referral_contest_awarded",
-        username: auth.admin.username,
-        adminUsername: auth.admin.username,
-        details: `Referral contest awarded: ${names || "no qualifying referrers"}. Supporter until the next award; ${result.revoked} earlier contest grant(s) ended. Contest restarted.`,
-      });
-
-      return NextResponse.json({
-        success: true,
-        contestMode: true,
-        contestStartedAt: result.restartedAt.toISOString(),
-        winners: result.winners.map((w, i) => ({
-          rank: w.rank,
-          name: result.usernames[i],
-          count: w.score,
-          alreadySupporter: w.alreadySupporter === true,
-        })),
-      });
-    }
-
-    if (parsed.data.action === "start-contest") {
-      await Promise.all([
-        db
-          .collection<GameConfig>("gameConfig")
-          .updateOne(
-            { _id: "default" },
-            { $set: { referralContestStartedAt: now } },
-            { upsert: true }
-          ),
-        db.collection("users").updateMany({}, { $set: { referralContestCount: 0 } }),
-      ]);
-
-      await createAdminLog({
-        category: "system",
-        action: "referral_contest_started",
-        username: auth.admin.username,
-        adminUsername: auth.admin.username,
-        details: `Referral contest window started at ${now.toISOString()}. Rolling counts reset to zero.`,
-      });
-
-      return NextResponse.json({
-        success: true,
-        contestMode: true,
-        contestStartedAt: now.toISOString(),
-      });
-    }
-
+  if (parsed.data.action === "start-contest") {
     await Promise.all([
       db
         .collection<GameConfig>("gameConfig")
         .updateOne(
           { _id: "default" },
-          { $unset: { referralContestStartedAt: "" } },
+          { $set: { referralContestStartedAt: now } },
           { upsert: true }
         ),
       db.collection("users").updateMany({}, { $set: { referralContestCount: 0 } }),
@@ -195,18 +157,41 @@ export async function PATCH(request: Request) {
 
     await createAdminLog({
       category: "system",
-      action: "referral_contest_reset",
+      action: "referral_contest_started",
       username: auth.admin.username,
       adminUsername: auth.admin.username,
-      details: "Referral contest ended — contest window cleared and rolling counts reset to zero.",
+      details: `Referral contest window started at ${now.toISOString()}. Rolling counts reset to zero.`,
     });
 
     return NextResponse.json({
       success: true,
-      contestMode: false,
-      contestStartedAt: null,
+      contestMode: true,
+      contestStartedAt: now.toISOString(),
     });
-  } catch (error) {
-    return handleRouteError(error);
   }
-}
+
+  await Promise.all([
+    db
+      .collection<GameConfig>("gameConfig")
+      .updateOne(
+        { _id: "default" },
+        { $unset: { referralContestStartedAt: "" } },
+        { upsert: true }
+      ),
+    db.collection("users").updateMany({}, { $set: { referralContestCount: 0 } }),
+  ]);
+
+  await createAdminLog({
+    category: "system",
+    action: "referral_contest_reset",
+    username: auth.admin.username,
+    adminUsername: auth.admin.username,
+    details: "Referral contest ended — contest window cleared and rolling counts reset to zero.",
+  });
+
+  return NextResponse.json({
+    success: true,
+    contestMode: false,
+    contestStartedAt: null,
+  });
+});
