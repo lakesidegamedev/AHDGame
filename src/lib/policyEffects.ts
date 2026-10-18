@@ -416,6 +416,12 @@ export async function processStateMetrics(
 
     for (const metric of category.metrics) {
       const metricId = metric.id;
+      if (
+        currentMetrics.labourEmployment &&
+        categoryId === "economic" &&
+        metricId === "unemploymentRate"
+      )
+        continue;
       // 📊 budget-sync chokepoint: the computed fiscal metrics are a pure readout
       // owned by the budget mirror; the policy layer must not move them via
       // effectTarget/effectTargetsWeighted decay either.
@@ -460,6 +466,12 @@ export async function processStateMetrics(
     if (!categoryData || typeof categoryData !== "object") continue;
 
     for (const [metricId, rate] of Object.entries(metricRates)) {
+      if (
+        currentMetrics.labourEmployment &&
+        category === "economic" &&
+        metricId === "unemploymentRate"
+      )
+        continue;
       if (rate === 0) continue;
       const metricData = (categoryData as Record<string, StateMetricValue>)[metricId];
       if (!metricData || typeof metricData.value !== "number") continue;
@@ -681,6 +693,12 @@ export async function processStatePolicyEffects(
       if (!categoryData || typeof categoryData !== "object") continue;
 
       for (const metric of category.metrics) {
+        if (
+          currentMetrics.labourEmployment &&
+          categoryId === "economic" &&
+          metric.id === "unemploymentRate"
+        )
+          continue;
         const metricId = metric.id;
         // Ownership chokepoint: metrics owned by a dedicated drift engine are
         // not decayed here — the policy layer co-writing them would fight the
@@ -723,6 +741,12 @@ export async function processStatePolicyEffects(
       if (!categoryData || typeof categoryData !== "object") continue;
 
       for (const [metricId, rate] of Object.entries(metricRates)) {
+        if (
+          currentMetrics.labourEmployment &&
+          category === "economic" &&
+          metricId === "unemploymentRate"
+        )
+          continue;
         if (rate === 0) continue;
         // Ownership chokepoint (see decay loop above): never apply per-turn
         // policy tick rates to a drift-engine-owned metric.

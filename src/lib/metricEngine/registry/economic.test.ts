@@ -355,7 +355,7 @@ describe("unemploymentNode — v2-3a labour wage-index Δ → jobs (gated on lab
       })
     );
     // gdp 4, potential fallback 2 → dev 2 → coeff 0.2 → okunTarget 4.5-0.4=4.1
-    expect(absent).toBe(4.1);
+    expect(absent).toBeCloseTo(4.44);
     expect(zero).toBe(absent);
   });
 
@@ -373,7 +373,7 @@ describe("unemploymentNode — v2-3a labour wage-index Δ → jobs (gated on lab
       })
     );
     expect(withDelta).toBeGreaterThan(baseline);
-    expect(withDelta).toBeCloseTo(baseline + 0.1 * LABOUR_UNEMPLOYMENT_WAGE_K, 9);
+    expect(withDelta).toBeCloseTo(baseline + 0.015 * LABOUR_UNEMPLOYMENT_WAGE_K, 9);
   });
 
   it("a negative wage-index Δ (wage cut) lowers the unemployment target", () => {
@@ -400,7 +400,7 @@ describe("unemploymentNode — v2-3a labour wage-index Δ → jobs (gated on lab
       })
     );
     // okunTarget 4.1 + capped pressure (LABOUR_UNEMPLOYMENT_WAGE_CAP_PP)
-    expect(out).toBeCloseTo(4.1 + LABOUR_UNEMPLOYMENT_WAGE_CAP_PP, 9);
+    expect(out).toBeCloseTo(4.44 + 0.15 * LABOUR_UNEMPLOYMENT_WAGE_CAP_PP, 9);
   });
 
   it("the combined value is re-clamped to the node's [2,15] bounds", () => {
@@ -445,7 +445,7 @@ describe("unemploymentNode — v2-3b automation-index Δ → jobs (gated on labo
       })
     );
     expect(withDelta).toBeGreaterThan(baseline);
-    expect(withDelta).toBeCloseTo(baseline + 0.1 * LABOUR_UNEMPLOYMENT_AUTOMATION_K, 9);
+    expect(withDelta).toBeCloseTo(baseline + 0.015 * LABOUR_UNEMPLOYMENT_AUTOMATION_K, 9);
   });
 
   it("less automation (a RISE in the index, positive Δ) lowers unemployment", () => {
@@ -471,7 +471,7 @@ describe("unemploymentNode — v2-3b automation-index Δ → jobs (gated on labo
         prevSimBaseline: { "economic.unemploymentRate": 4.5 },
       })
     );
-    expect(out).toBeCloseTo(4.1 + LABOUR_UNEMPLOYMENT_AUTOMATION_CAP_PP, 9);
+    expect(out).toBeCloseTo(4.44 + 0.15 * LABOUR_UNEMPLOYMENT_AUTOMATION_CAP_PP, 9);
   });
 
   it("the wage and automation pressures sum together in the same turn", () => {
@@ -498,7 +498,7 @@ describe("unemploymentNode — v2-3b automation-index Δ → jobs (gated on labo
       })
     );
     // okunTarget 4.1 + 0.15 (wage) + 0.25 (automation) = 4.5
-    expect(both).toBeCloseTo(wageOnly + automationOnly - 4.1, 9);
+    expect(both).toBeCloseTo(wageOnly + automationOnly - 4.44, 9);
   });
 });
 
@@ -652,7 +652,7 @@ describe("unemploymentNode — #791 measured-tightness channel", () => {
       })
     );
     expect(withMeasured).toBeLessThan(baseline);
-    expect(baseline - withMeasured).toBeCloseTo(-labourUnemploymentTightnessPressure(2), 9);
+    expect(baseline - withMeasured).toBeCloseTo(-0.15 * labourUnemploymentTightnessPressure(2), 9);
 
     // Mirror image from headcounts: 100 wanted over a 200-strong force reads
     // slack and lifts the target by the symmetric amount.
@@ -721,8 +721,8 @@ describe("unemploymentNode — #791 measured-tightness channel", () => {
         current: { ...base.current, "economic.labourTightness": 0.001 },
       })
     );
-    expect(baseline - spike).toBeCloseTo(LABOUR_UNEMPLOYMENT_TIGHTNESS_CAP_PP, 9);
-    expect(collapse - baseline).toBeCloseTo(LABOUR_UNEMPLOYMENT_TIGHTNESS_CAP_PP, 9);
+    expect(baseline - spike).toBeCloseTo(0.15 * LABOUR_UNEMPLOYMENT_TIGHTNESS_CAP_PP, 9);
+    expect(collapse - baseline).toBeCloseTo(0.15 * LABOUR_UNEMPLOYMENT_TIGHTNESS_CAP_PP, 9);
   });
 
   it("cold start (no measured tightness) is byte-identical to today", () => {

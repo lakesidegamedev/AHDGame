@@ -54,6 +54,7 @@ export function mergeRegionMetrics(macro: MacroMetricsDoc | null): StateMetrics 
 
   const base: Record<string, unknown> = { _id: macro._id, lastUpdated: macro.lastUpdated };
   if (macro.countryId != null) base.countryId = macro.countryId;
+  if (macro.labourEmployment != null) base.labourEmployment = macro.labourEmployment;
 
   base.economic = macro.economic ?? {};
   base.population = macro.population ?? {};

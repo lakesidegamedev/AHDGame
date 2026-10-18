@@ -5,6 +5,7 @@ import { MACRO_CATEGORIES } from "@/lib/macroMetrics/paths";
 import { METRIC_REGISTRY_SORTED } from "@/lib/metricEngine/registry";
 
 const TOP_LEVEL_RUNTIME_FIELDS = [
+  "labourEmployment",
   "economicModel",
   "governance",
   "independenceDesire",
