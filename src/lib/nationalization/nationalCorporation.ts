@@ -24,9 +24,8 @@ export function isStateOwned(
  */
 export function buildNationalCorporationDoc(
   countryId: CountryId,
-  overrides: Omit<Partial<Corporation>, "producerPayables"> & {
-    producerPayables: NonNullable<Corporation["producerPayables"]>;
-  }
+  /** Producer payables are stamped once the world has an economy generation. */
+  overrides: Partial<Corporation>
 ): Omit<Corporation, "_id"> {
   const identity = getNationalIdentity(countryId);
   const now = new Date();
