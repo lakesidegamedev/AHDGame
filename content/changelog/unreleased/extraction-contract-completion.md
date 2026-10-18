@@ -2,8 +2,8 @@
 date: 2026-10-18
 title: Extraction contracts from bidding to active concessions
 summary: Find extraction tenders before your first contract, manage regional concessions, and track awards and contract history.
-badges: [feature, fix]
-areas: [ui, api, engine]
+badges: [minor]
+areas: [fullstack, engine]
 tags: [corporations, government, extraction]
 ---
 
