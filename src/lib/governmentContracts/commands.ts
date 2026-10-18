@@ -23,9 +23,8 @@ import { defenceContractWindow } from "@/lib/military/defenceContractLimits";
 import { isProcurementBlocked } from "@/lib/military/procurementGate";
 import { militaryPriceAnchor } from "@/lib/military/procurement";
 import { lotPrice } from "@/lib/military/arsenal";
-import { DEFENCE_STRATEGY_COMPONENT } from "@/lib/military/arsenalComponents";
-import { lotProductionCost, lotPriceBand } from "@/lib/military/defenceLotEconomics";
 import { loadDefencePriceRatios } from "@/lib/military/defencePriceRatios";
+import { defenceLiveLotFloor } from "./defenceLiveFloor";
 import { loadContractIssuanceSettings } from "@/lib/extraction/featureFlag";
 import { computeContractedShare } from "@/lib/extraction/computeContractedShare";
 import { GOVT_CONTRACT_MAX_TOTAL_SHARE } from "@/lib/constants/prospecting";
@@ -33,7 +32,11 @@ import { settleTenderSigningFee } from "./signingFee";
 import { createNotifications } from "@/lib/notifications";
 import { managementAuthority } from "./authority";
 import { tenders } from "./persistence";
-import { reserveDefenceTender, expireGovernmentTenders } from "./reservations";
+import {
+  reserveDefenceTender,
+  expireGovernmentTenders,
+  topUpDefenceTenderReservation,
+} from "./reservations";
 import {
   canBid,
   tenderTab,
@@ -47,6 +50,81 @@ import { validateBid, ContractError } from "./eligibility";
 import { activateDefenceBid } from "./defence";
 import type { publishTenderSchema, bidSchema } from "./schemas";
 import type { GovernmentTender, ContractBid } from "./types";
+
+/**
+ * When live plant floors rise past a frozen open-tender maximum (yen-scale GDP drift or
+ * cost-index pressure), raise the maximum to the live floor and top up the reservation.
+ */
+export async function raiseOpenDefenceTenderToLiveFloor(
+  db: Db,
+  t: GovernmentTender,
+  now: Date = new Date()
+): Promise<GovernmentTender> {
+  if (t.status !== "open" || t.terms.type !== "defence") return t;
+  const state = await getGameState(db);
+  const budget = await ensureFederalBudget(db, t.countryId, state?.preset ?? DEFAULT_SEED_PRESET);
+  if (!budget) return t;
+  const anchor = lotPrice(
+    t.countryId,
+    militaryPriceAnchor(budget.gdp, budget.militaryPriceBaselineGdp)
+  );
+  if (anchor == null || !Number.isFinite(anchor) || !(anchor > 0)) return t;
+  const liveFloor = defenceLiveLotFloor({
+    component: t.terms.component,
+    grade: t.terms.grade,
+    anchor,
+    ratios: await loadDefencePriceRatios(db),
+  });
+  if (liveFloor == null || t.terms.maximumPricePerLot >= liveFloor) return t;
+  const newMax = liveFloor;
+  const newReserved = tenderReservationValue({
+    ...t.terms,
+    maximumPricePerLot: newMax,
+  });
+  if (newReserved == null || newReserved < t.reservedAmount) return t;
+  const defenseLine = resolveDefenseLineFrom(budget);
+  if (newReserved > t.reservedAmount) {
+    if (!(await topUpDefenceTenderReservation(db, t, newReserved, defenseLine))) return t;
+  }
+  const updated = await tenders(db).findOneAndUpdate(
+    {
+      _id: t._id,
+      status: "open",
+      "terms.type": "defence",
+      "terms.maximumPricePerLot": t.terms.maximumPricePerLot,
+      reservedAmount: t.reservedAmount,
+    },
+    {
+      $set: {
+        "terms.maximumPricePerLot": newMax,
+        reservedAmount: newReserved,
+        updatedAt: now,
+      },
+      $inc: { revision: 1 },
+    },
+    { returnDocument: "after" }
+  );
+  return updated ?? t;
+}
+
+/** Refresh every open defence tender whose frozen maximum sits below the live floor. */
+export async function refreshOpenDefenceTenderMaxima(
+  db: Db,
+  now: Date = new Date()
+): Promise<number> {
+  const open = await tenders(db).find({ status: "open", "terms.type": "defence" }).toArray();
+  let raised = 0;
+  for (const t of open) {
+    const next = await raiseOpenDefenceTenderToLiveFloor(db, t, now);
+    if (
+      next.terms.type === "defence" &&
+      t.terms.type === "defence" &&
+      next.terms.maximumPricePerLot > t.terms.maximumPricePerLot
+    )
+      raised += 1;
+  }
+  return raised;
+}
 
 export async function publishTender(
   db: Db,
@@ -89,18 +167,13 @@ export async function publishTender(
     if (anchor == null || !Number.isFinite(anchor) || !(anchor > 0))
       throw new ContractError("Defence lot prices are unavailable for this national budget.");
     const ratios = await loadDefencePriceRatios(db);
-    let minimumPrice = Infinity;
-    for (const [strategy, components] of Object.entries(DEFENCE_STRATEGY_COMPONENT)) {
-      if (!components.includes(input.terms.component)) continue;
-      const cost = lotProductionCost(strategy, anchor, ratios);
-      const band =
-        cost == null
-          ? null
-          : lotPriceBand({ anchorPrice: anchor, productionCost: cost, grade: input.terms.grade });
-      if (band && Number.isFinite(band.floor) && band.floor > 0)
-        minimumPrice = Math.min(minimumPrice, band.floor);
-    }
-    if (!Number.isFinite(minimumPrice))
+    const minimumPrice = defenceLiveLotFloor({
+      component: input.terms.component,
+      grade: input.terms.grade,
+      anchor,
+      ratios,
+    });
+    if (minimumPrice == null)
       throw new ContractError(
         "No usable defence lot prices are available for this component and grade."
       );
@@ -207,6 +280,9 @@ export async function submitBid(
   const ownRevision = previous?.revision ?? 0;
   if (input.expectedRevision !== ownRevision)
     throw new ContractError("Your bid changed. Refresh before submitting again.");
+  if (!input.withdraw && t.terms.type === "defence") {
+    t = await raiseOpenDefenceTenderToLiveFloor(db, t, now);
+  }
   const proposed = {
     corporationId: input.corporationId,
     sectorId: input.withdraw ? previous?.sectorId : input.sectorId,
