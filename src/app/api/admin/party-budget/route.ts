@@ -1,9 +1,9 @@
+import { withAdminRoute } from "@/lib/api/withAdminAuth";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/api/requireAdmin";
 import { getPartyBudgetCollection } from "@/lib/db/collections";
 import { ObjectId } from "mongodb";
-import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { errorResponse } from "@/lib/api/errors";
 import { parseJsonBody, schemas } from "@/lib/api/validate";
 
 const postSchema = z.object({
@@ -19,27 +19,20 @@ const postSchema = z.object({
  * Fetch party budgets with optional filters
  * Query params: partyId, stateId
  */
-export async function GET(req: NextRequest) {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
+export const GET = withAdminRoute(async (_auth, req: NextRequest) => {
+  const partyId = req.nextUrl.searchParams.get("partyId");
+  const stateId = req.nextUrl.searchParams.get("stateId");
 
-    const partyId = req.nextUrl.searchParams.get("partyId");
-    const stateId = req.nextUrl.searchParams.get("stateId");
+  const collection = await getPartyBudgetCollection();
+  const query: Record<string, unknown> = {};
 
-    const collection = await getPartyBudgetCollection();
-    const query: Record<string, unknown> = {};
+  if (partyId) query.partyId = partyId;
+  if (stateId) query.stateId = stateId;
 
-    if (partyId) query.partyId = partyId;
-    if (stateId) query.stateId = stateId;
+  const budgets = await collection.find(query).toArray();
 
-    const budgets = await collection.find(query).toArray();
-
-    return NextResponse.json({ budgets });
-  } catch (error) {
-    return handleRouteError(error);
-  }
-}
+  return NextResponse.json({ budgets });
+});
 
 /**
  * POST /api/admin/party-budget
@@ -50,48 +43,41 @@ export async function GET(req: NextRequest) {
  * politicalParties.treasury (national) / statePartyOrg.treasury (state).
  * Any `treasury` field on the body is ignored.
  */
-export async function POST(req: NextRequest) {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
-
-    const parsed = await parseJsonBody(req, postSchema);
-    if (!parsed.success) {
-      return errorResponse(parsed.status, parsed.error);
-    }
-    const { budgetId, partyId, scope, stateId, gotvBudgetPerTurn } = parsed.data;
-
-    const collection = await getPartyBudgetCollection();
-    const updates: Record<string, unknown> = { updatedAt: new Date() };
-
-    if (typeof gotvBudgetPerTurn === "number") {
-      updates.gotvBudgetPerTurn = Math.max(0, gotvBudgetPerTurn);
-    }
-
-    // Build query: either by budgetId or by partyId+scope(+stateId)
-    let query: Record<string, unknown>;
-    if (budgetId) {
-      query = { _id: new ObjectId(budgetId) };
-    } else if (partyId && scope) {
-      query = { partyId, scope };
-      if (scope === "state" && stateId) {
-        query.stateId = stateId;
-      }
-    } else {
-      return errorResponse(400, "Either budgetId or (partyId + scope) is required");
-    }
-
-    const result = await collection.updateOne(query, { $set: updates });
-
-    if (result.matchedCount === 0) {
-      return errorResponse(404, "Budget not found");
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: "Party budget updated successfully",
-    });
-  } catch (error) {
-    return handleRouteError(error);
+export const POST = withAdminRoute(async (_auth, req: NextRequest) => {
+  const parsed = await parseJsonBody(req, postSchema);
+  if (!parsed.success) {
+    return errorResponse(parsed.status, parsed.error);
   }
-}
+  const { budgetId, partyId, scope, stateId, gotvBudgetPerTurn } = parsed.data;
+
+  const collection = await getPartyBudgetCollection();
+  const updates: Record<string, unknown> = { updatedAt: new Date() };
+
+  if (typeof gotvBudgetPerTurn === "number") {
+    updates.gotvBudgetPerTurn = Math.max(0, gotvBudgetPerTurn);
+  }
+
+  // Build query: either by budgetId or by partyId+scope(+stateId)
+  let query: Record<string, unknown>;
+  if (budgetId) {
+    query = { _id: new ObjectId(budgetId) };
+  } else if (partyId && scope) {
+    query = { partyId, scope };
+    if (scope === "state" && stateId) {
+      query.stateId = stateId;
+    }
+  } else {
+    return errorResponse(400, "Either budgetId or (partyId + scope) is required");
+  }
+
+  const result = await collection.updateOne(query, { $set: updates });
+
+  if (result.matchedCount === 0) {
+    return errorResponse(404, "Budget not found");
+  }
+
+  return NextResponse.json({
+    success: true,
+    message: "Party budget updated successfully",
+  });
+});

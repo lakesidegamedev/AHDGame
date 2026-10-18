@@ -7,6 +7,7 @@
  * can soften only that additional personal portion, so a crisis response never
  * erases the broader ruling-party accountability.
  */
+import { clamp } from "@/lib/numeric/rules";
 
 export {
   DEMOCRATIC_HEALTH_CURRENT_RULER_EXTRA_MAX,
@@ -40,10 +41,6 @@ export interface DemocraticHealthElectionSnapshot {
   currentRulerReliefPct: number;
   currentRulerInRace: boolean;
   recordedTurn: number;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }
 
 /** Return the candidate's nominal-share multiplier for the health channel. */

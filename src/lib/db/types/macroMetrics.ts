@@ -15,6 +15,7 @@
 import type { EconomicModelState } from "@/lib/constants/economicModels";
 import type { StateMetrics, StateMetricValue } from "./stateMetrics";
 import type { CrisisEconomicExposure } from "@/lib/livingConflict/rules/economicExposure";
+import type { EmploymentState } from "@/lib/labour/rules/employment";
 
 /**
  * Reset persistence contract:
@@ -27,6 +28,8 @@ import type { CrisisEconomicExposure } from "@/lib/livingConflict/rules/economic
  *   preset authors them, preventing `$set` omissions from retaining old state.
  */
 export interface MacroMetricsDoc {
+  /** Initialized from existing employment; cleared on reset before new-world seeding. */
+  labourEmployment?: EmploymentState;
   /** Bounded crisis pressure feeding actual civilian labour and GDP potential. */
   livingConflictExposure?: CrisisEconomicExposure;
   /** stateId, or a national-scope rollup id ("federal", "uk_national", …). */

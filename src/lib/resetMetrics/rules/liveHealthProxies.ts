@@ -1,3 +1,4 @@
+import { clamp } from "@/lib/numeric/rules";
 /** Portable, game-calibrated health access proxies until service ledgers exist. */
 export interface LiveHealthProxyInput {
   countryId: "US" | "UK" | "JP" | "IE" | "SCO" | "WAL";
@@ -15,10 +16,6 @@ export interface LiveHealthProxyResult {
 
 function valid(value: number | null): value is number {
   return typeof value === "number" && Number.isFinite(value);
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }
 
 /**

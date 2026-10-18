@@ -4,6 +4,7 @@ import { apiErrorText } from "@/lib/errors/catalog";
 import { useState } from "react";
 import type { OrderDisplay } from "@/app/country/[code]/forex/types";
 import { formatStableUtc } from "@/lib/time/localTime";
+import { formatAmount, formatRate } from "./formatters";
 
 interface Props {
   orders: OrderDisplay[];
@@ -17,17 +18,6 @@ const STATUS_STYLES: Record<string, string> = {
   cancelled: "bg-card-elevated text-muted",
   expired: "bg-card-elevated text-muted",
 };
-
-function formatRate(rate: number): string {
-  if (rate >= 10) return rate.toFixed(2);
-  return rate.toFixed(4);
-}
-
-function formatAmount(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return n.toLocaleString("en-US", { maximumFractionDigits: 2 });
-}
 
 function formatDate(d: string | Date): string {
   // Deterministic (UTC) so SSR and client agree — avoids hydration error #418.

@@ -6,6 +6,7 @@
  * scaling of the cap, and failure resolution.
  */
 
+import { clampWithUpperPriority as clamp } from "@/lib/numeric/rules";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 
 /** Modern-era USD reference insured cap. Era/FX scaled at call time. */
@@ -42,10 +43,6 @@ export interface InsurancePremiumEvidence {
   grossPayouts: number;
   recoveries: number;
   fundBalance: number;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }
 
 /**

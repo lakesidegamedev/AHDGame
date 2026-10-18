@@ -1,7 +1,7 @@
+import { withAdminRoute } from "@/lib/api/withAdminAuth";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
-import { requireAdmin } from "@/lib/api/requireAdmin";
-import { handleRouteError, notFound, errorResponse } from "@/lib/api/errors";
+import { notFound, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
 import { isIndexFundsEnabled, INDEX_FUNDS_DISABLED_MESSAGE } from "@/lib/indexFunds/featureFlag";
@@ -26,11 +26,8 @@ const injectCapitalSchema = z.object({
 // POST /api/admin/investment-funds/[slug]/inject-capital
 // Injects anchor-currency cash into an index fund without minting units.
 // Increases NAV and resets backing ratio toward 1.0.
-export async function POST(request: Request, { params }: { params: Promise<{ slug: string }> }) {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
-
+export const POST = withAdminRoute(
+  async (auth, request: Request, { params }: { params: Promise<{ slug: string }> }) => {
     const parsed = await parseJsonBody(request, injectCapitalSchema);
     if (!parsed.success) {
       return errorResponse(parsed.status, parsed.error);
@@ -126,7 +123,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
       quotedNav: newNav,
       backingRatio: backing.backingRatio,
     });
-  } catch (error) {
-    return handleRouteError(error);
   }
-}
+);

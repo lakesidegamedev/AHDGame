@@ -1,3 +1,4 @@
+import { clamp01 } from "@/lib/numeric/rules";
 import type { AltLinkSignal, AltSignal } from "@/lib/db/types/altDetection";
 
 /**
@@ -26,11 +27,6 @@ export interface ScoreLinkResult {
   confidence: number;
   /** One entry per input signal, in input order, with `contribution` filled in. */
   contributions: AltLinkSignal[];
-}
-
-function clamp01(value: number): number {
-  if (!Number.isFinite(value)) return 0;
-  return Math.min(1, Math.max(0, value));
 }
 
 /** `1 - Π(1 - w_i)` over the given weights (already clamped to [0,1]). */

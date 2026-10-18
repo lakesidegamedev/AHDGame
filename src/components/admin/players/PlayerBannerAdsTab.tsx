@@ -4,6 +4,7 @@ import { InlineError } from "@/components/ui/InlineError";
 import { useEffect, useState } from "react";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { formatCurrencyCodeAmount as fmt } from "@/lib/currency/formatCurrencyCodeAmount";
 
 interface AdRow {
   _id: string;
@@ -25,10 +26,6 @@ const MODERATION_BADGE: Record<AdRow["moderationStatus"], { label: string; class
   approved: { label: "Approved", className: "bg-success/15 text-success" },
   rejected: { label: "Rejected", className: "bg-error/15 text-error" },
 };
-
-function fmt(n: number, code: string) {
-  return `${n.toLocaleString("en-US")} ${code}`;
-}
 
 function relativeDate(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();

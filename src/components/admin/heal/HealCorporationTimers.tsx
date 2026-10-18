@@ -1,5 +1,7 @@
 "use client";
 
+import { HealPanelMessage } from "./HealPanelParts";
+
 import { useState } from "react";
 import { apiErrorText } from "@/lib/errors/catalog";
 
@@ -138,11 +140,7 @@ export function HealCorporationTimers() {
         </div>
       )}
 
-      {result && (
-        <p className={`text-xs font-medium ${result.ok ? "text-success" : "text-error"}`}>
-          {result.message}
-        </p>
-      )}
+      <HealPanelMessage result={result} />
     </div>
   );
 }

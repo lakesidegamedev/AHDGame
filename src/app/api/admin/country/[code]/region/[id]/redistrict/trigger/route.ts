@@ -1,7 +1,7 @@
+import { withAdminRoute } from "@/lib/api/withAdminAuth";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
-import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import { requireAdmin } from "@/lib/api/requireAdmin";
+import { errorResponse } from "@/lib/api/errors";
 import { getGameState } from "@/lib/gameState";
 import { isRedistrictingEnabled } from "@/lib/redistricting/flag";
 import { regenerateCongressionalDistricts } from "@/lib/redistricting/regenerate";
@@ -13,14 +13,12 @@ import { regionRedistrictUrl } from "@/lib/urls";
 // district map to a neutral baseline and open it for manual redraw.
 // Auth: requireAdmin
 // Errors: 400, 403, 404
-export async function POST(
-  _request: Request,
-  { params }: { params: Promise<{ code: string; id: string }> }
-) {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
-
+export const POST = withAdminRoute(
+  async (
+    auth,
+    _request: Request,
+    { params }: { params: Promise<{ code: string; id: string }> }
+  ) => {
     const { code, id } = await params;
     const countryId = code.toUpperCase() as CountryId;
     const stateId = id.toUpperCase();
@@ -65,7 +63,5 @@ export async function POST(
       redirectUrl: regionRedistrictUrl(countryId, stateId),
       regenerated,
     });
-  } catch (error) {
-    return handleRouteError(error);
   }
-}
+);

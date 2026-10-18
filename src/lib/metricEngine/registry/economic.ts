@@ -35,6 +35,7 @@ import {
   labourUnemploymentAutomationPressure,
 } from "@/lib/labour/laborCost";
 import { labourUnemploymentTightnessPressure } from "@/lib/labour/labourMarket";
+import { legacyEmploymentSmoothing, type EmploymentResult } from "@/lib/labour/rules/employment";
 
 /** Per-state payload the phase extracts from `sectorRevenueTaxProvider` for one state. */
 export interface SectorRevenueTaxPayload {
@@ -222,7 +223,11 @@ export const gdpGrowthNode: RegistryNode = {
 };
 
 /**
- * unemploymentRate node — Okun's law on gdpGrowth. A VALUE-EMA with no policy
+ * Unemployment reads the phase's regional employment counts without a second
+ * smoothing pass or direct policy-point bonuses. The legacy fallback below
+ * applies only when civilian labor-force data is unavailable.
+ *
+ * Legacy path: Okun's law on gdpGrowth. A VALUE-EMA with no policy
  * delta (maxPolicyDelta:0), mirroring gdpGrowth.ts exactly: target =
  * clamp(prevUnemployment − okun·gdpDeviation), then 0.85·prev + 0.15·target.
  * The phase feeds `prevSimBaseline["economic.unemploymentRate"]` = the prior
@@ -254,11 +259,15 @@ export const unemploymentNode: RegistryNode = {
   metricId: "unemploymentRate",
   kind: "derived",
   inputs: ["economic.gdpGrowth"],
-  bounds: [UNEMPLOYMENT_MIN, UNEMPLOYMENT_MAX],
-  inertia: UNEMPLOYMENT_INERTIA,
+  bounds: [UNEMPLOYMENT_MIN, 100],
+  // The employment stock already advances once per turn. Smoothing it again
+  // would make the displayed unemployment disagree with employed headcounts.
+  inertia: 0,
   maxPolicyDelta: 0,
   decimals: 2,
   compute: (ctx) => {
+    const employment = ctx.providers.regionalEmployment as EmploymentResult | undefined;
+    if (employment) return employment.unemployment;
     const gdp = ctx.current["economic.gdpGrowth"] ?? 0;
     const prevRaw = ctx.prevSimBaseline["economic.unemploymentRate"];
     const prevUnemployment = Number.isFinite(prevRaw) ? prevRaw : 4.5;
@@ -284,7 +293,11 @@ export const unemploymentNode: RegistryNode = {
       labourUnemploymentWagePressure(wageDelta) +
       labourUnemploymentAutomationPressure(automationDelta) +
       labourUnemploymentTightnessPressure(typeof tightness === "number" ? tightness : undefined);
-    return Math.max(UNEMPLOYMENT_MIN, Math.min(UNEMPLOYMENT_MAX, okunTarget + labourPressure));
+    const target = Math.max(
+      UNEMPLOYMENT_MIN,
+      Math.min(UNEMPLOYMENT_MAX, okunTarget + labourPressure)
+    );
+    return legacyEmploymentSmoothing(prevUnemployment, target, UNEMPLOYMENT_INERTIA);
   },
 };
 

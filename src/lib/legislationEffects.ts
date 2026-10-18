@@ -77,9 +77,15 @@ async function applyOneProvision(
   // branch below already does.
   if (isMacroMetricPath(path)) {
     if (!countryId) return;
-    await db
-      .collection<StateMetrics>("macroMetrics")
-      .updateMany({ countryId }, { $inc: { [path]: delta }, $set: { lastUpdated: new Date() } });
+    await db.collection<StateMetrics>("macroMetrics").updateMany(
+      {
+        countryId,
+        ...(path === "economic.unemploymentRate.value"
+          ? { labourEmployment: { $exists: false } }
+          : {}),
+      },
+      { $inc: { [path]: delta }, $set: { lastUpdated: new Date() } }
+    );
     return;
   }
   // Political effects land on the BOARD, as a residual shift. An $inc on the

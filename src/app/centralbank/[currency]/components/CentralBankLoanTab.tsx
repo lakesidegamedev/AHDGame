@@ -19,6 +19,7 @@ import {
 } from "@/lib/lineOfCredit/locMath";
 import { useAuthMe } from "@/contexts/AuthDataContext";
 import { requestCharacterStatsRefetch } from "@/lib/characterStatsSync";
+import { formatNativeFaceAmount as formatNative } from "./centralBankUtils";
 
 interface LedgerRow {
   type: string;
@@ -93,12 +94,6 @@ function formatLedgerType(t: string): string {
   if (t === "freeze") return "Frozen";
   if (t === "unfreeze") return "Unfrozen";
   return t;
-}
-
-function formatNative(amount: number, currency: CurrencyCode): string {
-  const sym = CURRENCY_SYMBOLS[currency] ?? "$";
-  if (currency === "JPY") return `${sym}${Math.round(amount).toLocaleString("en-US")}`;
-  return `${sym}${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 interface Props {

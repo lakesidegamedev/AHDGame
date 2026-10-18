@@ -18,6 +18,7 @@
  * 1953 BASELINE adjuster's economic ratios so metrics and their decay targets
  * agree instead of pulling against each other.
  */
+import { clamp } from "@/lib/numeric/rules";
 import type { StateMetrics, StateMetricValue } from "@/lib/db/types";
 import { getIncomeAnchor } from "@/lib/era/metricCatalog";
 
@@ -26,10 +27,6 @@ import { getIncomeAnchor } from "@/lib/era/metricCatalog";
  * table the baseline adjuster uses so the two cannot drift apart.
  */
 const INCOME_ANCHOR_RATIO_1953 = getIncomeAnchor("US", 1953)! / getIncomeAnchor("US", 2019)!;
-
-function clamp(v: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, v));
-}
 
 /** Preserve `trend` and any sibling fields; only move `value`. */
 function shift(value: StateMetricValue | undefined, fn: (v: number) => number): StateMetricValue {

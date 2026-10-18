@@ -1,3 +1,4 @@
+import { clamp } from "@/lib/numeric/rules";
 import type { CountryLayer1Model } from "./types";
 import {
   EASTERN_BLOC_COMPOSITION,
@@ -33,10 +34,6 @@ export type Successor1991CountryId = keyof typeof regions;
 const nationalTurnout = { RU: 75, PL: 63, CS: 85, HU: 65, RO: 85, BG: 85, YU: 75 } as const;
 const universityShare = { RU: 12, PL: 9, CS: 12, HU: 11, RO: 8, BG: 10, YU: 8 } as const;
 const primaryShare = { RU: 29, PL: 34, CS: 24, HU: 33, RO: 40, BG: 36, YU: 39 } as const;
-
-function clamp(value: number, low: number, high: number): number {
-  return Math.max(low, Math.min(high, value));
-}
 
 /**
  * A 1991 transition model independent of the 1953/1979 position tables.

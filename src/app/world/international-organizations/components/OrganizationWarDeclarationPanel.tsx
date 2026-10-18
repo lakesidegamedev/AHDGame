@@ -6,16 +6,9 @@ import { Button } from "@/components/ui";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
 import { useEnabledCountryIds } from "@/lib/hooks/useEnabledCountryIds";
 import { WAR_GOALS } from "@/lib/military/warGoals";
-import type { ProposalVote } from "@/lib/db/types/internationalOrganization";
-import {
-  dedupeOrganizationVotes,
-  requiresUnanimity,
-  votesNeeded,
-} from "@/lib/internationalOrganizations/resolutionRules";
 import type { OrgSummary, OrgViewerInfo } from "../orgTypes";
-import { VoteButtons } from "../VoteButtons";
-import { VoteRoster } from "../VoteRoster";
-import { apiErrorText } from "@/lib/errors/catalog";
+import { organizationVoteHandler, postOrganizationAction } from "../proposalActions";
+import { ProposalBallotCard } from "../ProposalBallotCard";
 
 interface Props {
   org: OrgSummary;
@@ -36,9 +29,6 @@ export function OrganizationWarDeclarationPanel({
   const viewerCountry = viewer?.foreignMinisterOf ?? viewer?.headOfGovernmentOf ?? null;
   const viewerIsMember =
     viewerCountry != null && org.members.some((member) => member.countryId === viewerCountry);
-  const viewerHoldsVote =
-    viewerCountry != null &&
-    org.members.some((member) => member.countryId === viewerCountry && member.hasVote);
   const memberIds = new Set(org.members.map((member) => member.countryId));
   const targets = useEnabledCountryIds().filter((countryId) => !memberIds.has(countryId));
   const pending = org.pendingLegislation.filter((item) => item.type === "declare_war");
@@ -54,18 +44,11 @@ export function OrganizationWarDeclarationPanel({
     setSubmitting(true);
     setError(null);
     try {
-      const response = await fetch(
+      await postOrganizationAction(
         `/api/country/${viewerCountry}/international-organizations/${org.id}/legislation`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ type: "declare_war", targetCountryId, warGoal }),
-        }
+        { type: "declare_war", targetCountryId, warGoal },
+        "Failed to propose a declaration of war"
       );
-      if (!response.ok) {
-        const body = (await response.json().catch(() => ({}))) as { error?: string };
-        throw new Error(apiErrorText(body, "Failed to propose a declaration of war"));
-      }
       setShowForm(false);
       onChange();
     } catch (submissionError) {
@@ -79,22 +62,7 @@ export function OrganizationWarDeclarationPanel({
     }
   }
 
-  async function vote(legislationId: string, voteValue: ProposalVote) {
-    if (!viewerCountry) throw new Error("No diplomatic role");
-    const response = await fetch(
-      `/api/country/${viewerCountry}/international-organizations/legislation/${legislationId}/vote`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ vote: voteValue }),
-      }
-    );
-    if (!response.ok) {
-      const body = (await response.json().catch(() => ({}))) as { error?: string };
-      throw new Error(apiErrorText(body, "Vote failed"));
-    }
-    onChange();
-  }
+  const vote = organizationVoteHandler(viewerCountry, onChange, "legislation");
 
   return (
     <section className="space-y-4">
@@ -188,71 +156,23 @@ export function OrganizationWarDeclarationPanel({
         ) : (
           pending.map((item) => {
             const turnsLeft = Math.max(0, item.closesOnTurn - currentTurn);
-            const expectedVoters = org.members
-              .filter((member) => member.hasVote)
-              .map((member) => member.countryId);
-            const votes = dedupeOrganizationVotes(item.votes);
-            const yesCount = votes.filter(
-              (cast) => cast.vote === "yes" && expectedVoters.includes(cast.countryId)
-            ).length;
-            const needed = votesNeeded(item.type, expectedVoters.length);
-            const progress = needed > 0 ? (yesCount / needed) * 100 : 0;
-            const myVote = viewerCountry
-              ? (votes.find((cast) => cast.countryId === viewerCountry)?.vote ?? null)
-              : null;
-            const requirement =
-              expectedVoters.length === 0
-                ? "no player nations hold a vote"
-                : requiresUnanimity(item.type)
-                  ? "unanimous player consent required"
-                  : `${needed} needed`;
             return (
-              <article
+              <ProposalBallotCard
                 key={item._id.toString()}
-                className="rounded-xl border border-card-border bg-card p-5 shadow-card"
+                legislation={item}
+                org={org}
+                viewerCountry={viewerCountry}
+                electorate="hasVote"
+                turnsLeft={turnsLeft}
+                votingWindowTurns={votingWindowTurns}
+                onVote={vote}
               >
-                <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h5 className="text-sm font-semibold text-foreground">{item.title}</h5>
-                    <p className="mt-0.5 text-xs text-muted">
-                      Tabled by {item.proposedByCharacterName} · closes in {turnsLeft} turn
-                      {turnsLeft === 1 ? "" : "s"}
-                    </p>
-                  </div>
-                  <span className="rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
-                    Voting
-                  </span>
-                </div>
-                <div className="mb-3">
-                  <div className="mb-1 flex items-center justify-between text-xs text-muted">
-                    <span>
-                      {yesCount} / {expectedVoters.length} player nations in favour, {requirement}
-                    </span>
-                    <span className="tabular-nums">
-                      {votingWindowTurns - turnsLeft}/{votingWindowTurns} turns
-                    </span>
-                  </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-background">
-                    <div
-                      className="h-full rounded-full bg-primary transition-all duration-500"
-                      style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
-                    />
-                  </div>
-                </div>
-                <VoteButtons
-                  onVote={(value) => vote(item._id.toString(), value)}
-                  disabled={!viewerHoldsVote}
-                  disabledReason={
-                    !viewerHoldsVote
-                      ? !viewerIsMember
-                        ? "Only foreign ministers of member states may vote."
-                        : "Your country holds no vote in this organization."
-                      : undefined
-                  }
-                  currentVote={myVote}
-                />
-                <VoteRoster votes={item.votes} expectedVoters={expectedVoters} />
-              </article>
+                <h5 className="text-sm font-semibold text-foreground">{item.title}</h5>
+                <p className="mt-0.5 text-xs text-muted">
+                  Tabled by {item.proposedByCharacterName} · closes in {turnsLeft} turn
+                  {turnsLeft === 1 ? "" : "s"}
+                </p>
+              </ProposalBallotCard>
             );
           })
         )}

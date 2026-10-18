@@ -7,18 +7,11 @@ import { CountryFlag } from "@/components/CountryFlag";
 import { COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
 import { COMMODITY_TYPES } from "@/lib/constants/commodities";
 import { canTableResolutionType } from "@/lib/constants/orgCategory";
-import type { ProposalVote } from "@/lib/db/types/internationalOrganization";
 import type { OrgSummary, OrgViewerInfo } from "../orgTypes";
 import { orgProposingCountry } from "../orgTypes";
-import { VoteButtons } from "../VoteButtons";
-import { VoteRoster } from "../VoteRoster";
-import {
-  dedupeOrganizationVotes,
-  requiresUnanimity,
-  votesNeeded,
-} from "@/lib/internationalOrganizations/resolutionRules";
 import { useEntityName } from "../useEntityName";
-import { apiErrorText } from "@/lib/errors/catalog";
+import { organizationVoteHandler, postOrganizationAction } from "../proposalActions";
+import { ProposalBallotCard } from "../ProposalBallotCard";
 
 interface Props {
   org: OrgSummary;
@@ -40,14 +33,6 @@ export function SanctionsPanel({ org, viewer, currentTurn, votingWindowTurns, on
   // for (agenda pool). Votes stay on viewerFmCountry.
   const proposer = orgProposingCountry(viewer, org.id);
   const proposerIsMember = proposer != null && org.members.some((m) => m.countryId === proposer);
-  const viewerIsMember =
-    viewerFmCountry != null && org.members.some((m) => m.countryId === viewerFmCountry);
-  // Tabling only needs membership, but voting needs a ballot: the route enforces
-  // isVotingMember, so an enabled button for a silent member promises a vote the
-  // server will refuse.
-  const viewerHoldsVote =
-    viewerFmCountry != null &&
-    org.members.some((m) => m.countryId === viewerFmCountry && m.hasPolicyVote);
   const canTable = canTableResolutionType(org.def.category, "sanctions");
 
   const pending = org.pendingLegislation.filter((l) => l.type === "sanctions");
@@ -67,18 +52,11 @@ export function SanctionsPanel({ org, viewer, currentTurn, votingWindowTurns, on
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch(
+      await postOrganizationAction(
         `/api/country/${proposer}/international-organizations/${org.id}/legislation`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ type: "sanctions", targetCountryId: target, commodity }),
-        }
+        { type: "sanctions", targetCountryId: target, commodity },
+        "Failed to table sanctions"
       );
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(apiErrorText(body, "Failed to table sanctions"));
-      }
       setShowForm(false);
       setTarget("");
       setCommodity("all");
@@ -90,22 +68,7 @@ export function SanctionsPanel({ org, viewer, currentTurn, votingWindowTurns, on
     }
   }
 
-  async function vote(legislationId: string, voteValue: ProposalVote) {
-    if (!viewerFmCountry) throw new Error("No diplomatic role");
-    const res = await fetch(
-      `/api/country/${viewerFmCountry}/international-organizations/legislation/${legislationId}/vote`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ vote: voteValue }),
-      }
-    );
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(apiErrorText(body, "Vote failed"));
-    }
-    onChange();
-  }
+  const vote = organizationVoteHandler(viewerFmCountry, onChange, "legislation");
 
   const commodityLabel = (c?: string) => (c === "all" || !c ? "all commodities" : c);
   const targetLabel = (l: { sanctionsTargetCountryId?: CountryId }) =>
@@ -230,90 +193,31 @@ export function SanctionsPanel({ org, viewer, currentTurn, votingWindowTurns, on
         ) : (
           pending.map((l) => {
             const turnsLeft = Math.max(0, l.closesOnTurn - currentTurn);
-            const ballotSize = org.members.filter((m) => m.hasPolicyVote).length;
-            // Fold duplicate rows first: the resolver tallies the folded ballot,
-            // so anything counted here must be counted the same way.
-            const votes = dedupeOrganizationVotes(l.votes);
-            const yesCount = votes.filter(
-              (v) =>
-                v.vote === "yes" &&
-                org.members.some((m) => m.countryId === v.countryId && m.hasPolicyVote)
-            ).length;
-            const myVote =
-              viewerFmCountry != null
-                ? (votes.find((v) => v.countryId === viewerFmCountry)?.vote ?? null)
-                : null;
-            const needed = votesNeeded(l.type, ballotSize);
-            const progress = needed > 0 ? (yesCount / needed) * 100 : 0;
-            // Derived, never hardcoded: an org with nobody eligible cannot carry
-            // anything, and the wording must follow whatever the rule says today.
-            const requirement =
-              ballotSize === 0
-                ? "no members hold a vote"
-                : requiresUnanimity(l.type)
-                  ? "unanimous consent required"
-                  : `${needed} needed`;
             return (
-              <article
+              <ProposalBallotCard
                 key={l._id.toString()}
-                className="rounded-xl border border-card-border bg-card p-5 shadow-card"
+                legislation={l}
+                org={org}
+                viewerCountry={viewerFmCountry}
+                electorate="hasPolicyVote"
+                turnsLeft={turnsLeft}
+                votingWindowTurns={votingWindowTurns}
+                onVote={vote}
+                progressClassName="bg-error"
               >
-                <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h5 className="text-sm font-semibold text-foreground">{l.title}</h5>
-                    <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted">
-                      Embargoing
-                      {l.sanctionsTargetCountryId && (
-                        <CountryFlag country={l.sanctionsTargetCountryId} size="sm" />
-                      )}
-                      {targetLabel(l)} · {commodityLabel(l.sanctionsCommodity)}
-                    </p>
-                    <p className="mt-0.5 text-xs text-muted">
-                      Tabled by {l.proposedByCharacterName} · closes in {turnsLeft} turn
-                      {turnsLeft === 1 ? "" : "s"}
-                    </p>
-                  </div>
-                  <span className="rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
-                    Voting
-                  </span>
-                </div>
-
-                <div className="mb-3">
-                  <div className="mb-1 flex items-center justify-between text-xs text-muted">
-                    <span>
-                      {yesCount} / {ballotSize} members in favour, {requirement}
-                    </span>
-                    <span className="tabular-nums">
-                      {votingWindowTurns - turnsLeft}/{votingWindowTurns} turns
-                    </span>
-                  </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-background">
-                    <div
-                      className="h-full rounded-full bg-error transition-all duration-500"
-                      style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
-                    />
-                  </div>
-                </div>
-
-                <VoteButtons
-                  onVote={(v) => vote(l._id.toString(), v)}
-                  disabled={!viewerHoldsVote}
-                  disabledReason={
-                    !viewerHoldsVote
-                      ? !viewerIsMember
-                        ? "Only foreign ministers of member states may vote."
-                        : "Your country holds no vote in this organization."
-                      : undefined
-                  }
-                  currentVote={myVote}
-                />
-                <VoteRoster
-                  votes={l.votes}
-                  expectedVoters={org.members
-                    .filter((m) => m.hasPolicyVote)
-                    .map((m) => m.countryId)}
-                />
-              </article>
+                <h5 className="text-sm font-semibold text-foreground">{l.title}</h5>
+                <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted">
+                  Embargoing
+                  {l.sanctionsTargetCountryId && (
+                    <CountryFlag country={l.sanctionsTargetCountryId} size="sm" />
+                  )}
+                  {targetLabel(l)} · {commodityLabel(l.sanctionsCommodity)}
+                </p>
+                <p className="mt-0.5 text-xs text-muted">
+                  Tabled by {l.proposedByCharacterName} · closes in {turnsLeft} turn
+                  {turnsLeft === 1 ? "" : "s"}
+                </p>
+              </ProposalBallotCard>
             );
           })
         )}

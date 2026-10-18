@@ -57,7 +57,7 @@ describe("readTurnLock", () => {
     const { db } = makeStrictInMemoryStore({
       gameState: [
         {
-          _id: "live",
+          _id: "current",
           isActive: true,
           currentTurn: 7,
           isProcessing: true,
@@ -79,18 +79,28 @@ describe("readTurnLock", () => {
     // The real databases carry isActive:false on this document, so a guard
     // that queries {isActive:true} matches nothing and fails open.
     const { db } = makeStrictInMemoryStore({
-      gameState: [{ _id: "current", isActive: false, currentTurn: 412, isProcessing: true }],
+      gameState: [
+        { _id: "stray", isActive: true, currentTurn: 1, isProcessing: false },
+        { _id: "current", isActive: false, currentTurn: 412, isProcessing: true },
+      ],
     });
     const lock = await readTurnLock(db, new Date());
     expect(lock).toMatchObject({ currentTurn: 412, isProcessing: true, unknown: false });
   });
 
-  it("falls back to the legacy isActive shape", async () => {
-    const { db } = makeStrictInMemoryStore({
-      gameState: [{ _id: "legacy", isActive: true, currentTurn: 7, isProcessing: false }],
-    });
-    expect(await readTurnLock(db, new Date())).toMatchObject({ currentTurn: 7, unknown: false });
-  });
+  it.each([false, true])(
+    "refuses a stray active row when its processing flag is %s",
+    async (isProcessing) => {
+      const { db } = makeStrictInMemoryStore({
+        gameState: [{ _id: "legacy", isActive: true, currentTurn: 7, isProcessing }],
+      });
+      const turnLock = await readTurnLock(db, new Date());
+      expect(turnLock).toMatchObject({ currentTurn: null, unknown: true });
+      const outcome = evaluateGuards({ defect: makeDefect(), plan: makePlan(), turnLock });
+      expect(outcome.ok).toBe(false);
+      expect(outcome.refusal).toContain("UNKNOWN whether a turn is running");
+    }
+  );
 
   it("reports unknown, NOT idle, when there is no gameState at all", async () => {
     const { db } = makeStrictInMemoryStore({ gameState: [] });

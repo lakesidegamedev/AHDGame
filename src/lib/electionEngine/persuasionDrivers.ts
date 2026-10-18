@@ -24,6 +24,7 @@
  * The returned value is the sum of components clamped to `[-1, +1]`.
  */
 
+import { clamp } from "@/lib/numeric/rules";
 import { executiveIncumbencyBudget } from "@/lib/government/rules/accountability";
 import type { EnrichedCandidate, DistributeVotesOptions } from "./types";
 
@@ -86,10 +87,6 @@ export const INCUMBENCY_APPROVAL_SLOPE = 0.01 as const;
 export const LEGISLATIVE_INCUMBENCY_SHIELD = 0.06 as const; // flat +6 pts
 export const LEGISLATIVE_TENURE_FATIGUE_PER_TERM = 0.01 as const; // −1 pt / term beyond first
 export const LEGISLATIVE_INCUMBENCY_MIN = 0.01 as const; // permanent +1 pt floor
-
-function clamp(v: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, v));
-}
 
 /**
  * Signed incumbency budget as a function of the sitting executive's approval.

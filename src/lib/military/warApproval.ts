@@ -1,3 +1,4 @@
+import { clamp } from "@/lib/numeric/rules";
 import type { Db } from "mongodb";
 import { navalApprovalEffect, navalApprovalLabel } from "@/lib/navair/navalApproval";
 import type { NavairUnit } from "@/lib/navair/types";
@@ -30,10 +31,6 @@ import {
 /** Round to one decimal. Chips render `effect` raw, so a repeating fraction would print in full. */
 function round1(value: number): number {
   return Math.round(value * 10) / 10;
-}
-
-function clamp(value: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, value));
 }
 
 /**

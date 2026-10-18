@@ -1,8 +1,8 @@
+import { withAdminRoute } from "@/lib/api/withAdminAuth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
-import { requireAdmin } from "@/lib/api/requireAdmin";
-import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { createAdminLog } from "@/lib/adminLog";
 import { getCurrentTurn } from "@/lib/currentTurn";
@@ -82,74 +82,62 @@ async function snapshot(db: Awaited<ReturnType<typeof getDb>>) {
 // gate and comparison it is judged against, every change decided in advance,
 // and the rollback conditions currently raised.
 // Auth: requireAdmin only. Works when privateBankingEnabled is false.
-export async function GET() {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
-    const db = await getDb();
-    return NextResponse.json(await snapshot(db));
-  } catch (error) {
-    return handleRouteError(error);
-  }
-}
+export const GET = withAdminRoute(async (_auth) => {
+  const db = await getDb();
+  return NextResponse.json(await snapshot(db));
+});
 
 // POST /api/admin/banking/rollout - apply one rollout change. Widening is
 // refused with the rules' reasons; narrowing always applies.
 // Auth: requireAdmin only.
 // Errors: 400 (invalid body), 403, 409 (refused by the rules)
-export async function POST(request: Request) {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
-    const parsed = await parseJsonBody(request, changeSchema);
-    if (!parsed.success) {
-      return errorResponse(parsed.status, parsed.error);
-    }
-    const change = parsed.data as RolloutChange;
-    if (
-      (change.kind === "add_read_currency" || change.kind === "remove_read_currency") &&
-      !(FOREX_ACTIVE_CURRENCIES as string[]).includes(change.currency)
-    ) {
-      return errorResponse(400, "Unknown currency.");
-    }
-
-    const db = await getDb();
-    const before = await snapshot(db);
-    const decision = decideRolloutChange(
-      before.state,
-      change,
-      evidenceFrom(await buildBankingHealth(db), before.currentTurn)
-    );
-    if (!decision.allowed) {
-      return errorResponse(409, "Refused by the rollout rules.", {
-        extra: { reasons: decision.reasons },
-      });
-    }
-    if (decision.direction !== "none") {
-      await db.collection<GameConfig>("gameConfig").updateOne(
-        { _id: "default" },
-        {
-          $set: {
-            savingsAccountsMode: decision.next.mode,
-            savingsAccountsReadCurrencies: decision.next.readCurrencies,
-          },
-        },
-        { upsert: true }
-      );
-      await createAdminLog({
-        category: "system",
-        action:
-          decision.direction === "widen" ? "savings_rollout_widened" : "savings_rollout_narrowed",
-        username: auth.admin.username,
-        adminUsername: auth.admin.username,
-        details: `Savings rollout: ${describeChange(change)}. Now ${decision.next.mode}, read cohort [${decision.next.readCurrencies.join(", ")}].`,
-      });
-    }
-    return NextResponse.json({ success: true, ...(await snapshot(db)) });
-  } catch (error) {
-    return handleRouteError(error);
+export const POST = withAdminRoute(async (auth, request: Request) => {
+  const parsed = await parseJsonBody(request, changeSchema);
+  if (!parsed.success) {
+    return errorResponse(parsed.status, parsed.error);
   }
-}
+  const change = parsed.data as RolloutChange;
+  if (
+    (change.kind === "add_read_currency" || change.kind === "remove_read_currency") &&
+    !(FOREX_ACTIVE_CURRENCIES as string[]).includes(change.currency)
+  ) {
+    return errorResponse(400, "Unknown currency.");
+  }
+
+  const db = await getDb();
+  const before = await snapshot(db);
+  const decision = decideRolloutChange(
+    before.state,
+    change,
+    evidenceFrom(await buildBankingHealth(db), before.currentTurn)
+  );
+  if (!decision.allowed) {
+    return errorResponse(409, "Refused by the rollout rules.", {
+      extra: { reasons: decision.reasons },
+    });
+  }
+  if (decision.direction !== "none") {
+    await db.collection<GameConfig>("gameConfig").updateOne(
+      { _id: "default" },
+      {
+        $set: {
+          savingsAccountsMode: decision.next.mode,
+          savingsAccountsReadCurrencies: decision.next.readCurrencies,
+        },
+      },
+      { upsert: true }
+    );
+    await createAdminLog({
+      category: "system",
+      action:
+        decision.direction === "widen" ? "savings_rollout_widened" : "savings_rollout_narrowed",
+      username: auth.admin.username,
+      adminUsername: auth.admin.username,
+      details: `Savings rollout: ${describeChange(change)}. Now ${decision.next.mode}, read cohort [${decision.next.readCurrencies.join(", ")}].`,
+    });
+  }
+  return NextResponse.json({ success: true, ...(await snapshot(db)) });
+});
 
 function describeChange(change: RolloutChange): string {
   switch (change.kind) {

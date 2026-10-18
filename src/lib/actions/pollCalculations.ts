@@ -5,6 +5,7 @@
  * can be unit-tested without a real database or HTTP context.
  */
 
+import { clampPercentStat } from "@/lib/numeric/rules";
 import type {
   Character,
   State,
@@ -22,10 +23,6 @@ import { infamyPenaltyMultiplier } from "@/lib/utils/infamy";
 import { FPTP_SPOILER_RATE } from "@/lib/electionEngine/constants";
 import { partitionMajorParties } from "@/lib/electionEngine/majorParties";
 import { getMajorPartiesForRegion } from "@/lib/constants/countries";
-
-function clampPercentStat(value: number): number {
-  return Math.min(100, Math.max(0, value));
-}
 
 /** Opponent data for in-race share computation */
 export interface OpponentForShare {

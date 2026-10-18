@@ -72,7 +72,7 @@ export const metricCategories: MetricCategory[] = [
         // reconstruction employment). Registry still also reads UNEMPLOYMENT_MIN
         // from gdpGrowth.ts (out of this bound's reach); keep defs honest.
         minValue: 1,
-        maxValue: 25, // Depression-level ceiling
+        maxValue: 100, // Count accounting also covers extreme job-loss scenarios.
       },
       {
         id: "medianIncome",
