@@ -22,6 +22,14 @@ The Resource Extraction Authority Act determines the permitted government level:
 
 Authority belongs to the office. A successor can manage an outstanding tender, and the current licensing law is checked when an official acts. Other Cabinet Offices can browse the board without gaining new contracting powers.
 
+## Company access and active concessions
+
+An extraction corporation’s **Contracts** tab links to matching tenders even before it holds a contract. Active agreements show their capacity share, royalty, expiry and award record. Revoked, expired and defaulted agreements stay in history. Existing agreements remain visible if new issuance is paused.
+
+A region’s **Resources** tab shows daily capacity, daily output, contracted shares and remaining contract headroom. Open tenders reserve headroom without allocating production until award activation. National officials can revoke nationally issued concessions there; regional officials can revoke concessions issued by their region. The server checks the current office holder on every action.
+
+A company with multiple concessions for the same resource in the same region receives their combined share across all its sectors. A contracted company is capped at that allocation; it does not also draw on the open-access pool. Without a contract, companies share the open-access pool in proportion to their extraction demand. A concession reserves extraction capacity, not buyers or sales.
+
 ## Corporate bids
 
 A corporation must be an extraction corporation with operations in the tender's state. Its CEO chooses a signing-fee bid at or above the published minimum. The share, royalty and term stay fixed, so companies compete on comparable terms.

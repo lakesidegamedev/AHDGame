@@ -71,6 +71,25 @@ describe("computeExtractionCapacityMultipliers", () => {
     expect(result.get("s2")?.oil).toBeCloseTo(0.625);
   });
 
+  it("adds multiple concessions for the same company without leaking reserved capacity to open access", () => {
+    const sectors = [
+      { sectorId: "s1", stateId: "TX", corporationId: corp1, revenueBasedOutput: { oil: 40000 } },
+      { sectorId: "s2", stateId: "TX", corporationId: corp1, revenueBasedOutput: { oil: 60000 } },
+      { sectorId: "s3", stateId: "TX", corporationId: corp2, revenueBasedOutput: { oil: 100000 } },
+    ];
+    const capacities = [makeCapacity("TX", { oil: 100000 })];
+    const contracts = [
+      makeContract("TX", corp1, "oil", 0.2),
+      makeContract("TX", corp1, "oil", 0.3),
+    ];
+    for (const ordered of [contracts, [...contracts].reverse()]) {
+      const result = computeExtractionCapacityMultipliers(sectors, ordered, capacities);
+      expect(result.get("s1")?.oil).toBeCloseTo(0.5);
+      expect(result.get("s2")?.oil).toBeCloseTo(0.5);
+      expect(result.get("s3")?.oil).toBeCloseTo(0.5);
+    }
+  });
+
   it("caps contract-holder output at contracted capacity", () => {
     const sectors = [
       { sectorId: "s1", stateId: "TX", corporationId: corp1, revenueBasedOutput: { oil: 80000 } },

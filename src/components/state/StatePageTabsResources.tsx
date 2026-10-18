@@ -1,6 +1,8 @@
 "use client";
 
 import { apiErrorText } from "@/lib/errors/catalog";
+import { useTranslations } from "next-intl";
+import { ContractBoardLink } from "@/components/governmentContracts/ContractBoardLink";
 import { useEffect, useState } from "react";
 import { COMMODITY_LABELS, COMMODITY_UNITS } from "@/lib/constants/commodities";
 import { GrantContractModal } from "@/components/congress/GrantContractModal";
@@ -19,6 +21,7 @@ interface ResourceSummaryRow {
   resource: ExtractableResource;
   capacityPerTurn: number;
   contractedPct: number;
+  committedShare?: number;
   openAccessPct: number;
   overAllocated: boolean;
   currentOutput: number;
@@ -55,6 +58,8 @@ interface Props {
 }
 
 export function ResourcesTab({ stateId, countryId, isAdmin = false }: Props) {
+  const t = useTranslations("corporations.extractionContracts");
+  const [loadError, setLoadError] = useState("");
   const [data, setData] = useState<ResourcesData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showGrantModal, setShowGrantModal] = useState(false);
@@ -64,7 +69,7 @@ export function ResourcesTab({ stateId, countryId, isAdmin = false }: Props) {
   const [revokeError, setRevokeError] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
   const gameTurn = useGameTurnStatus();
-  const { isStateIssuer } = useExtractionIssuerAccess(countryId, stateId);
+  const { isNationalIssuer, isStateIssuer } = useExtractionIssuerAccess(countryId, stateId);
   const {
     surveys,
     loading: surveysLoading,
@@ -76,25 +81,54 @@ export function ResourcesTab({ stateId, countryId, isAdmin = false }: Props) {
   });
 
   useEffect(() => {
-    fetch(`/api/states/${stateId}/resources`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then(setData)
-      .catch(() => setData(null))
-      .finally(() => setLoading(false));
-  }, [stateId, refreshKey]);
+    const controller = new AbortController();
+    setLoading(true);
+    setLoadError("");
+    fetch(`/api/states/${stateId}/resources?countryId=${countryId}`, {
+      signal: controller.signal,
+      cache: "no-store",
+    })
+      .then(async (res) => {
+        const json = await res.json();
+        if (!res.ok) throw new Error(apiErrorText(json, t("resourcesLoadFailed")));
+        if (!controller.signal.aborted) setData(json);
+      })
+      .catch((e) => {
+        if (!controller.signal.aborted)
+          setLoadError(e instanceof Error ? e.message : t("resourcesLoadFailed"));
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [stateId, countryId, refreshKey, gameTurn?.currentTurn, t]);
 
   async function handleRevoke(id: string) {
     setRevoking(id);
     setRevokeError("");
-    const res = await fetch(`/api/contracts/extraction/${id}/revoke`, { method: "POST" });
-    setRevoking(null);
-    if (!res.ok) {
-      const json = await res.json().catch(() => ({}));
-      setRevokeError(apiErrorText(json, "Failed to revoke contract"));
-      return;
+    try {
+      const res = await fetch(`/api/contracts/extraction/${id}/revoke`, { method: "POST" });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(apiErrorText(json, t("revokeFailed")));
+      }
+      setRefreshKey((k) => k + 1);
+    } catch (e) {
+      setRevokeError(e instanceof Error ? e.message : t("revokeFailed"));
+    } finally {
+      setRevoking(null);
     }
-    setRefreshKey((k) => k + 1);
   }
+
+  if (loadError)
+    return (
+      <div role="alert" className="rounded-lg border border-error/30 p-4">
+        <p className="text-sm text-error">{loadError}</p>
+        <button className="mt-2 text-primary" onClick={() => setRefreshKey((k) => k + 1)}>
+          {t("retry")}
+        </button>
+      </div>
+    );
 
   if (loading) {
     return (
@@ -110,7 +144,7 @@ export function ResourcesTab({ stateId, countryId, isAdmin = false }: Props) {
     );
   }
 
-  const canGovern = isAdmin || isStateIssuer;
+  const canGovern = isAdmin || isStateIssuer || isNationalIssuer;
 
   // KPI strip values
   const totalCapacity = data.summary.reduce((s, r) => s + r.capacityPerTurn, 0);
@@ -122,6 +156,11 @@ export function ResourcesTab({ stateId, countryId, isAdmin = false }: Props) {
 
   return (
     <div className="space-y-6">
+      <div className="rounded-xl border border-card-border bg-card p-4">
+        <ContractBoardLink countryId={countryId} type="extraction" />
+        <p className="mt-3 text-sm text-muted">{t("allocationHint")}</p>
+        <p className="mt-2 text-sm text-muted">{t("reservationHint")}</p>
+      </div>
       {/* KPI strip */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-xl border border-card-border bg-card p-3.5">
@@ -173,10 +212,12 @@ export function ResourcesTab({ stateId, countryId, isAdmin = false }: Props) {
             <thead>
               <tr className="border-b border-card-border bg-card-elevated">
                 <th className="px-4 py-3 text-left font-medium text-muted">Resource</th>
-                <th className="px-4 py-3 text-right font-medium text-muted">Capacity / turn</th>
+                <th className="px-4 py-3 text-right font-medium text-muted">
+                  {t("capacityPerDay")}
+                </th>
                 <th className="px-4 py-3 text-right font-medium text-muted">Contracted</th>
                 <th className="px-4 py-3 text-right font-medium text-muted">Open-access</th>
-                <th className="px-4 py-3 text-right font-medium text-muted">Current output</th>
+                <th className="px-4 py-3 text-right font-medium text-muted">{t("outputPerDay")}</th>
                 <th className="px-4 py-3 text-left font-medium text-muted">Utilization</th>
                 <th className="px-4 py-3 text-left font-medium text-muted">
                   Contract headroom (75% cap)
@@ -198,7 +239,7 @@ export function ResourcesTab({ stateId, countryId, isAdmin = false }: Props) {
                         : "bg-success";
                 const headroomUsedPct = Math.min(
                   1,
-                  row.contractedPct / GOVT_CONTRACT_MAX_TOTAL_SHARE
+                  (row.committedShare ?? row.contractedPct) / GOVT_CONTRACT_MAX_TOTAL_SHARE
                 );
                 return (
                   <tr key={row.resource} className="border-b border-card-border last:border-0">
@@ -240,7 +281,7 @@ export function ResourcesTab({ stateId, countryId, isAdmin = false }: Props) {
                       <div className="flex items-center gap-2">
                         <div
                           className="h-1.5 w-24 overflow-hidden rounded-full bg-card-elevated"
-                          title={`${(row.contractedPct * 100).toFixed(1)}% of capacity is contracted out of a 75% cap`}
+                          title={`${((row.committedShare ?? row.contractedPct) * 100).toFixed(1)}% of capacity is committed out of a 75% cap`}
                         >
                           <div
                             className={`h-full transition-[width] ${headroomUsedPct >= 1 ? "bg-error" : headroomUsedPct >= 0.8 ? "bg-warning" : "bg-primary"}`}
@@ -250,7 +291,8 @@ export function ResourcesTab({ stateId, countryId, isAdmin = false }: Props) {
                         <span className="min-w-[36px] tabular-nums text-xs text-muted">
                           {Math.max(
                             0,
-                            GOVT_CONTRACT_MAX_TOTAL_SHARE * 100 - row.contractedPct * 100
+                            GOVT_CONTRACT_MAX_TOTAL_SHARE * 100 -
+                              (row.committedShare ?? row.contractedPct) * 100
                           ).toFixed(0)}
                           % left
                         </span>
@@ -350,8 +392,8 @@ export function ResourcesTab({ stateId, countryId, isAdmin = false }: Props) {
                     </td>
                     <td className="px-4 py-3 text-xs text-muted">
                       {c.grantedByLevel === "national"
-                        ? "National legislature"
-                        : "State legislature"}
+                        ? t("nationalGovernment")
+                        : t("regionalGovernment")}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <ContractStatusBadge status={effectiveContractStatus(c)} />
@@ -360,10 +402,11 @@ export function ResourcesTab({ stateId, countryId, isAdmin = false }: Props) {
                       <td className="px-4 py-3 text-right">
                         {/* Server rule: admins may revoke anything; the governor
                             may only revoke contracts their level issued. */}
-                        {(isAdmin || c.grantedByLevel === "state") && (
+                        {(isAdmin ||
+                          (c.grantedByLevel === "state" ? isStateIssuer : isNationalIssuer)) && (
                           <button
                             onClick={() => handleRevoke(c._id)}
-                            disabled={revoking === c._id}
+                            disabled={revoking !== null}
                             className="rounded px-2 py-1 text-xs text-error hover:bg-error/10 disabled:opacity-50 transition-colors"
                           >
                             {revoking === c._id ? "Revoking…" : "Revoke"}
@@ -395,7 +438,7 @@ export function ResourcesTab({ stateId, countryId, isAdmin = false }: Props) {
 
       {canGovern && showIssueModal && (
         <IssueExtractionContractModal
-          level="state"
+          level={isNationalIssuer ? "national" : "state"}
           countryId={countryId}
           stateId={stateId}
           onClose={() => setShowIssueModal(false)}
@@ -408,7 +451,7 @@ export function ResourcesTab({ stateId, countryId, isAdmin = false }: Props) {
 
       {canGovern && showSurveyModal && (
         <CommissionSurveyModal
-          level="state"
+          level={isNationalIssuer ? "national" : "state"}
           countryId={countryId}
           stateId={stateId}
           onClose={() => setShowSurveyModal(false)}
