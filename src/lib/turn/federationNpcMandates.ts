@@ -16,7 +16,7 @@ import {
   type FederationSettlementApplicationRecord,
 } from "@/lib/world/succession/runtimeEntities";
 
-const SOURCES = ["CS", "YU"] as const;
+const SOURCES = ["CS", "YU", "RU"] as const;
 
 /** An NPC legislature opens one rejectable mandate after its historical
  * decision window. A player-held government or chamber keeps the choice in

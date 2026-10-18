@@ -3,6 +3,7 @@ import { ObjectId, type Db } from "mongodb";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { csRegions1991 } from "@/lib/countries/cs/data/csRegions1991";
 import { yuRegions1991 } from "@/lib/countries/yu/data/yuRegions1991";
+import { sovietUnionRegions1991 } from "@/lib/countries/ru/data/sovietUnionRegions1991";
 import {
   getLowerChamberOfficeType,
   getUpperChamberOfficeType,
@@ -111,6 +112,57 @@ describe("autonomous federation mandates", () => {
     expect(
       await processFederationNpcMandates(mem as unknown as Db, "1991-default", 1991, new Date(0))
     ).toBe(0);
+  });
+
+  it("opens the Soviet mandate under an NPP Congress and government", async () => {
+    const mem = createInMemoryDb();
+    const nppId = new ObjectId();
+    mem.seed("gameState", [
+      { _id: "current", preset: "1991-default", currentYear: 1996, currentTurn: 294 },
+    ]);
+    mem.seed("states", sovietUnionRegions1991 as unknown as Record<string, unknown>[]);
+    mem.seed("electedOfficials", [
+      {
+        _id: new ObjectId(),
+        countryId: "RU",
+        officeType: getLowerChamberOfficeType("RU", "1991-default"),
+        nppId: new ObjectId(),
+        characterId: null,
+      },
+    ]);
+    mem.seed("governmentFormations", [
+      { _id: "RU", status: "formed", pmCharacterId: null, pmNppId: nppId },
+    ]);
+    const db = mem as unknown as Db;
+    expect(await processFederationNpcMandates(db, "1991-default", 1996, new Date(0))).toBe(1);
+    expect(await processFederationNpcMandates(db, "1991-default", 1996, new Date(0))).toBe(0);
+    const bill = await mem.collection("bills").findOne({ countryId: "RU" });
+    expect(bill).toMatchObject({
+      status: "active",
+      federationSettlementMandate: { sourceEntityId: "RU" },
+    });
+    expect(await mem.collection("federationSettlementApplications").countDocuments({})).toBe(0);
+  });
+
+  it("leaves the Soviet decision to a player seated in Congress", async () => {
+    const mem = createInMemoryDb();
+    mem.seed("gameState", [
+      { _id: "current", preset: "1991-default", currentYear: 1996, currentTurn: 294 },
+    ]);
+    mem.seed("states", sovietUnionRegions1991 as unknown as Record<string, unknown>[]);
+    mem.seed("electedOfficials", [
+      {
+        _id: new ObjectId(),
+        countryId: "RU",
+        officeType: getLowerChamberOfficeType("RU", "1991-default"),
+        nppId: null,
+        characterId: new ObjectId(),
+      },
+    ]);
+    expect(
+      await processFederationNpcMandates(mem as unknown as Db, "1991-default", 1996, new Date(0))
+    ).toBe(0);
+    expect(await mem.collection("bills").countDocuments({})).toBe(0);
   });
 
   it("publishes explicit shared-asset custody in the NPC opening position", () => {
