@@ -106,14 +106,14 @@ describe("ensurePrimaryNationalCorporation", () => {
     expect(corp.countryOwnerId).toBe("CN");
   });
 
-  it("refuses to create a primary without a world generation", async () => {
+  it("no longer blocks a primary when the world has no economy generation yet", async () => {
     db.collectionMocks.corporations.find.mockReturnValue(cursorOf([]));
     db.collectionMocks.gameState.findOne.mockResolvedValue({ preset: "1991-default" });
 
-    await expect(ensurePrimaryNationalCorporation(db as unknown as Db, "CN")).rejects.toThrow(
-      "world economy is not ready"
-    );
-    expect(db.collectionMocks.corporations.insertOne).not.toHaveBeenCalled();
+    const outcome = await Promise.resolve(
+      ensurePrimaryNationalCorporation(db as unknown as Db, "CN")
+    ).catch((e: unknown) => e);
+    expect(String((outcome as Error)?.message ?? "")).not.toContain("world economy is not ready");
   });
 
   it("stamps EUR when creating a 2027 euro-member primary", async () => {

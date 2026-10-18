@@ -1,4 +1,5 @@
 import type { Db } from "mongodb";
+import { producerWorldEpochIfReady } from "@/lib/demographics/worldEpoch";
 import { ObjectId } from "mongodb";
 import type { CentralBank, Corporation, CorporateSector } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
@@ -177,9 +178,8 @@ export async function privatizeAsset(
     getMarketSystemModeForDb(db),
     getGameState(db),
   ]);
-  if (!gameState?.worldEpochId)
-    throw new Error("The world economy is not ready to create a privatized corporation");
-  const producerOpeningTurn = gameState.currentTurn ?? params.turn;
+  const producerWorldEpoch = await producerWorldEpochIfReady(db, gameState ?? undefined);
+  const producerOpeningTurn = gameState?.currentTurn ?? params.turn;
   const primeMap = buildPrimeRateMap(centralBanks);
   // D11 SYMMETRY — the state must SELL on the same basis it BUYS on.
   //
@@ -294,7 +294,9 @@ export async function privatizeAsset(
     countryId: params.countryId,
     headquartersState,
     liquidCapital: 0,
-    producerPayables: emptyProducerPayables(gameState.worldEpochId, producerOpeningTurn),
+    ...(producerWorldEpoch
+      ? { producerPayables: emptyProducerPayables(producerWorldEpoch, producerOpeningTurn) }
+      : {}),
     liquidCurrencyCode: currency,
     marketingBudget: 0,
     marketingStrength: 10,

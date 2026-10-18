@@ -498,6 +498,8 @@ export interface SectorUpdateOp {
 
 /** Everything the sector-processing loop produces for downstream phases. */
 export interface SectorCalculationsResult {
+  /** The per-sector environment this turn ran with (read by the producer-market shadow). */
+  sectorTurnEnv: import("./sectorTurnTypes").SectorTurnEnv;
   sectorOps: SectorUpdateOp[];
   corpOps: AnyBulkWriteOperation<Corporation>[];
   /** Live-balance guarded product-development cash debits, applied after all other corp cash ops. */

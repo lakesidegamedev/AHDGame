@@ -1,4 +1,5 @@
 import type { Db } from "mongodb";
+import { producerWorldEpochIfReady } from "@/lib/demographics/worldEpoch";
 import { ObjectId } from "mongodb";
 import type { Corporation, GameState } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
@@ -106,8 +107,7 @@ export async function ensurePrimaryNationalCorporation(
   const gameState = await db
     .collection<GameState>("gameState")
     .findOne({ _id: "current" }, { projection: { preset: 1, worldEpochId: 1, currentTurn: 1 } });
-  if (!gameState?.worldEpochId)
-    throw new Error("The world economy is not ready to create a National Corporation");
+  const producerWorldEpoch = await producerWorldEpochIfReady(db, gameState ?? undefined);
   const preset =
     gameState?.preset && gameState.preset.trim().length > 0
       ? gameState.preset
@@ -116,7 +116,9 @@ export async function ensurePrimaryNationalCorporation(
     isPrimaryNationalCorporation: true,
     assignedSectorTypes: [],
     liquidCurrencyCode: getSeedCurrencyCode(countryId, preset),
-    producerPayables: emptyProducerPayables(gameState.worldEpochId, gameState.currentTurn ?? 0),
+    ...(producerWorldEpoch
+      ? { producerPayables: emptyProducerPayables(producerWorldEpoch, gameState?.currentTurn ?? 0) }
+      : {}),
   });
   const result = await corps.insertOne(doc as Corporation);
   return { ...(doc as Corporation), _id: result.insertedId };

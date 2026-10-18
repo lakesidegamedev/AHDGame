@@ -4,6 +4,7 @@ import {
   corporationTypeOfLane,
   type OperatingSectorType,
 } from "@/lib/constants/corporations";
+import { producerWorldEpochIfReady } from "@/lib/demographics/worldEpoch";
 import type { Db } from "mongodb";
 import { recordCorporationExit } from "@/lib/corporations/exits/recordCorporationExit";
 import { ObjectId } from "mongodb";
@@ -75,8 +76,7 @@ export async function splitOffSectorType(db: Db, params: SplitOffParams): Promis
   const producerWorld = await db
     .collection<GameState>("gameState")
     .findOne({ _id: "current" }, { projection: { worldEpochId: 1, currentTurn: 1 } });
-  if (!producerWorld?.worldEpochId)
-    throw new Error("The world economy is not ready to create a National Corporation");
+  const producerWorldEpoch = await producerWorldEpochIfReady(db, producerWorld ?? undefined);
 
   // Ensure the primary exists (so the country has a coherent NatCorp set first).
   const primary = await ensurePrimaryNationalCorporation(db, params.countryId);
@@ -100,10 +100,14 @@ export async function splitOffSectorType(db: Db, params: SplitOffParams): Promis
   }
 
   const doc = buildNationalCorporationDoc(params.countryId, {
-    producerPayables: emptyProducerPayables(
-      producerWorld.worldEpochId,
-      producerWorld.currentTurn ?? 0
-    ),
+    ...(producerWorldEpoch
+      ? {
+          producerPayables: emptyProducerPayables(
+            producerWorldEpoch,
+            producerWorld?.currentTurn ?? 0
+          ),
+        }
+      : {}),
     name,
     // Inherit the primary's home currency so a split-off on a 2027 euro
     // member stamps EUR, not the era-blind map code. No extra read: the

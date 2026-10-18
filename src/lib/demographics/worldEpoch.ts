@@ -26,3 +26,16 @@ export async function ensureDemographicWorldEpoch(
     throw new Error("Could not establish population receipt world identity");
   return winner.worldEpochId;
 }
+
+/**
+ * The world economy generation for stamping new producer sites, or null while
+ * the world has none yet (bootstrap seeds companies before the demographics
+ * phase establishes it). Sites founded then carry no producer fields; the
+ * producer-market opening conversion stamps them. Never creates an identity.
+ */
+export async function producerWorldEpochIfReady(
+  _db: Db,
+  known?: Pick<GameState, "worldEpochId">
+): Promise<string | null> {
+  return known?.worldEpochId ?? null;
+}

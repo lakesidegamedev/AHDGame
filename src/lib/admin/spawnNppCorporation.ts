@@ -1,4 +1,5 @@
 import { chooseNppCorporationName } from "@/lib/corporations/names/rules";
+import { producerWorldEpochIfReady } from "@/lib/demographics/worldEpoch";
 import type { Db, Document, WithId } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Corporation, CorporateSector, GameState, NPP } from "@/lib/db/types";
@@ -249,7 +250,7 @@ export interface CreateNppCorporationShellInput {
   tickerSymbol?: string;
   nppPartyId?: string;
   foundedAtTurn?: number;
-  worldEpoch: string;
+  worldEpoch: string | null;
   producerOpeningTurn: number;
   /** Tech nodes carried over in addition to the era's auto-granted set. */
   inheritedTechNodeIds?: readonly string[];
@@ -440,7 +441,9 @@ export async function createNppCorporationShell(
     hiddenFromExchange: false,
     isPrivate: false,
     foundedAtTurn: input.foundedAtTurn ?? 0,
-    producerPayables: emptyProducerPayables(input.worldEpoch, input.producerOpeningTurn),
+    ...(input.worldEpoch
+      ? { producerPayables: emptyProducerPayables(input.worldEpoch, input.producerOpeningTurn) }
+      : {}),
     createdAt: now,
     updatedAt: now,
     ...input.extraFields,
@@ -478,7 +481,7 @@ export interface GrantNppSectorFromUnownedPoolInput {
   profitMargin: number;
   initialStrategyId?: string;
   foundedAtTurn?: number;
-  worldEpoch: string;
+  worldEpoch: string | null;
   producerOpeningTurn: number;
   plantsEnabled: boolean;
   eraUnitScale: number;
@@ -589,7 +592,9 @@ export async function grantNppSectorFromUnownedPool(
           capitalStock: startingCapacityUnits,
           capacityBookAnchor: 0,
           ...seedPlantLedger(type, startingCapacityUnits, industryModel, mediaDiscriminator),
-          ...emptyProducerSectorOpening(input.worldEpoch, input.producerOpeningTurn),
+          ...(input.worldEpoch
+            ? emptyProducerSectorOpening(input.worldEpoch, input.producerOpeningTurn)
+            : {}),
           // Born under plants — never needs the flip-turn migration.
           plantsStartTurn: input.foundedAtTurn ?? input.producerOpeningTurn,
         }
@@ -668,9 +673,8 @@ export async function spawnNppCorporation(
   const producerWorld = await db
     .collection<GameState>("gameState")
     .findOne({ _id: "current" }, { projection: { worldEpochId: 1, currentTurn: 1 } });
-  if (!producerWorld?.worldEpochId)
-    throw new Error("NPP corporation founding requires a world economy generation");
-  const producerOpeningTurn = input.foundedAtTurn ?? producerWorld.currentTurn ?? 0;
+  const producerWorldEpoch = await producerWorldEpochIfReady(db, producerWorld ?? undefined);
+  const producerOpeningTurn = input.foundedAtTurn ?? producerWorld?.currentTurn ?? 0;
   const {
     name,
     type,
@@ -808,7 +812,7 @@ export async function spawnNppCorporation(
       tickerSymbol: customTicker,
       nppPartyId,
       foundedAtTurn: input.foundedAtTurn,
-      worldEpoch: producerWorld.worldEpochId,
+      worldEpoch: producerWorldEpoch,
       producerOpeningTurn,
       now,
     });
@@ -824,7 +828,7 @@ export async function spawnNppCorporation(
     profitMargin,
     initialStrategyId: input.initialStrategyId,
     foundedAtTurn: input.foundedAtTurn,
-    worldEpoch: producerWorld.worldEpochId,
+    worldEpoch: producerWorldEpoch,
     producerOpeningTurn,
     plantsEnabled,
     eraUnitScale,

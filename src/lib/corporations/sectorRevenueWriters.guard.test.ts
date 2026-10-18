@@ -318,7 +318,7 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
   // `src/lib/turn/corporation/index.ts`, registered below.
 
   // ─── Found only once the detector learned about indirect inserts ─────────
-  "src/lib/turn/corporation/index.ts": {
+  "src/lib/turn/corporation/insertNppNewSectors.ts": {
     writeSites: 1,
     status: "plants-gated",
     reason:
@@ -389,7 +389,7 @@ const MUST_BE_PLANTS_AWARE = [
   // (`nppCorporationBehavior.ts` was here too — see the note in ALLOWED_WRITERS
   // for why it no longer writes the field at all.)
   // Surfaced by the indirect-insert rule.
-  "src/lib/turn/corporation/index.ts",
+  "src/lib/turn/corporation/insertNppNewSectors.ts",
   // The two nationalization writers. These were the guard's own worked example
   // of the failure it exists to prevent (see the attestation note below):
   // `nationalizeSectorWide` sat in ALLOWED_WRITERS, registered green, while BOTH

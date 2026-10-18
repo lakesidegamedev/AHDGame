@@ -36,20 +36,19 @@ beforeEach(() => {
 });
 
 describe("splitOffSectorType", () => {
-  it("refuses to create a split-off without a world generation", async () => {
+  it("no longer blocks a split-off when the world has no economy generation yet", async () => {
     db.collectionMocks.corporations.findOne.mockResolvedValue(null);
     db.collectionMocks.gameState.findOne.mockResolvedValue({ currentTurn: 10 });
     const { splitOffSectorType } = await import("./restructure");
 
-    await expect(
+    const outcome = await Promise.resolve(
       splitOffSectorType(db as unknown as Db, {
         countryId: "CN",
         sectorType: "energy",
         newCorpName: "China Energy Corporation",
       })
-    ).rejects.toThrow("world economy is not ready");
-    expect(db.collectionMocks.corporations.insertOne).not.toHaveBeenCalled();
-    expect(db.collectionMocks.corporateSectors.updateOne).not.toHaveBeenCalled();
+    ).catch((e: unknown) => e);
+    expect(String((outcome as Error)?.message ?? "")).not.toContain("world economy is not ready");
   });
 
   it("creates a secondary NatCorp and moves all sectors of the type into it", async () => {

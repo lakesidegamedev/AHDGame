@@ -1,8 +1,7 @@
 import type { Db } from "mongodb";
 
-type FundDividendAccruals = Parameters<
-  typeof import("@/lib/indexFunds/dividendPassThrough").processIndexFundDividendsBatch
->[1];
+type FundDividendAccruals =
+  import("@/lib/indexFunds/dividendPassThrough").FundDividendAccrualInput[];
 
 /**
  * Phase 3c-fund: constituent corp dividends to index funds (75% reinvest /

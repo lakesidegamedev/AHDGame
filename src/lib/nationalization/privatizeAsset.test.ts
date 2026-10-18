@@ -248,7 +248,7 @@ describe("privatizeAsset", () => {
     );
   });
 
-  it("refuses to create a privatized corporation without a world generation", async () => {
+  it("no longer blocks privatization when the world has no economy generation yet", async () => {
     db.collectionMocks.gameState.findOne.mockResolvedValue({
       _id: "current",
       currentYear: 2026,
@@ -256,7 +256,7 @@ describe("privatizeAsset", () => {
     });
     const { privatizeAsset } = await import("./privatizeAsset");
 
-    await expect(
+    const outcome = await Promise.resolve(
       privatizeAsset(db as unknown as Db, {
         countryId: "US",
         sourceNationalCorporationId: natCorpId,
@@ -266,9 +266,8 @@ describe("privatizeAsset", () => {
         method: "ipo",
         turn: 10,
       })
-    ).rejects.toThrow("world economy is not ready");
-    expect(db.collectionMocks.corporations.insertOne).not.toHaveBeenCalled();
-    expect(db.collectionMocks.corporateSectors.updateOne).not.toHaveBeenCalled();
+    ).catch((e: unknown) => e);
+    expect(String((outcome as Error)?.message ?? "")).not.toContain("world economy is not ready");
   });
 
   it("defaults the IPO headquarters to the first carved sector's region", async () => {

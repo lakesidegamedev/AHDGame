@@ -135,12 +135,7 @@ async function main() {
     )
       throw new Error("The live world changed during the read-only opening census");
 
-    const preset =
-      gameConfig?.seedPreset ??
-      gameConfig?.preset ??
-      before.seedPreset ??
-      before.preset ??
-      "1991-default";
+    const preset = gameConfig?.seedPreset ?? gameConfig?.preset ?? before.preset ?? "1991-default";
     const rates = new Map(source.exchangeRates.map((row: any) => [row.currencyCode, row.rate]));
     const corporationsById = new Map(source.corporations.map((row: any) => [String(row._id), row]));
     const pricesByCommodity = new Map(
