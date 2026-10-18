@@ -1,3 +1,4 @@
+import { getSectorLaborShare } from "@/lib/labour/laborCost";
 import { describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
 import type { CorporateSector } from "@/lib/db/types";
@@ -112,7 +113,7 @@ describe("physical producer preparation", () => {
         (sum, output) => sum + output.unitsPerOutput * output.referenceUnitPrice,
         0
       );
-    expect(plan.labourCost).toBeCloseTo(outputValue * 0.44, 8);
+    expect(plan.labourCost).toBeCloseTo(outputValue * getSectorLaborShare("financial", 1991), 8);
     expect(plan.otherOperatingCost).toBeCloseTo(outputValue * 0.04, 8);
     env.lookups.priceRatioByCommodity.set("financial_services", 2);
     const changed = prepareProducerPhysicalSector(input).prepared.plan;
@@ -120,6 +121,17 @@ describe("physical producer preparation", () => {
     expect(changed.labourCost).toBe(plan.labourCost);
     expect(changed.otherOperatingCost).toBe(plan.otherOperatingCost);
     expect(changed.outputs[0].referenceUnitPrice).toBe(plan.outputs[0].referenceUnitPrice * 2);
+  });
+
+  it("makes an off-type plant less productive instead of charging margin", () => {
+    const { input } = fixture();
+    input.corporation.type = "financial";
+    const own = prepareProducerPhysicalSector(input).prepared.plan;
+    input.corporation.type = "media";
+    const off = prepareProducerPhysicalSector(input).prepared.plan;
+    expect(off.outputMultiplier / own.outputMultiplier).toBeCloseTo(0.85 / 1.05, 10);
+    expect(off.labourCost).toBe(own.labourCost);
+    expect(off.otherOperatingCost).toBe(own.otherOperatingCost);
   });
 
   it("retains a smaller cold-site bill while mothballing stops jobs and output", () => {

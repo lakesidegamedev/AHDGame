@@ -19,6 +19,12 @@ import { applyExtractionResourceCapacityToSupply } from "@/lib/corporations/extr
 import { commodityProductionCapacityScale } from "@/lib/banking/capacityAllocation";
 import { nationalizationProductivityFactor } from "@/lib/nationalization/transitionShock";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
+import { computeSoeEfficiencyPenalty } from "@/lib/nationalization/soeEfficiency";
+import { resolveSectorMandate } from "@/lib/nationalization/soeMandates";
+import { sociMultiplier } from "@/lib/nationalization/concentration";
+import { politicalSoeInputs } from "@/lib/politicalLegislation/marginAdapter";
+import { getSectorTypeMatchModifier } from "@/lib/corporations/specialization/rules";
+import { organisationalOutputFactor } from "@/lib/market/producerMarket/efficiencyRules";
 import { resolveSectorHostCurrencyCode } from "@/lib/currency/corporationCapital";
 import {
   computeDisasterPenaltySplit,
@@ -272,7 +278,35 @@ export function prepareProducerPhysicalSector(input: {
           plan.activeFraction
         )
       : 1;
+  // Type match and state-company efficiency are real productivity here, not
+  // margin points (see efficiencyRules.ts).
+  const stateOwned = isStateOwned(corp);
+  const politicalBoard = lookups.politicalBoardByState?.get(sector.stateId);
+  const politicalSoe = politicalBoard ? politicalSoeInputs(politicalBoard) : null;
+  const soeMandate = stateOwned ? resolveSectorMandate(corp, sector) : null;
+  const organisational = organisationalOutputFactor({
+    typeMatchPp:
+      stateOwned || !corp.type
+        ? 0
+        : getSectorTypeMatchModifier(sector.sectorType, corp.type, corp.secondaryType),
+    soeEfficiencyPp: stateOwned
+      ? computeSoeEfficiencyPenalty({
+          corruptionIndex:
+            metrics?.governance?.corruptionIndex?.value ?? politicalSoe?.corruptionIndex ?? null,
+          governmentTransparency:
+            metrics?.governance?.governmentTransparency?.value ??
+            politicalSoe?.governmentTransparency ??
+            null,
+          priceControlled: soeMandate?.priceControlled === true,
+          employmentGuaranteed: soeMandate?.employmentGuaranteed === true,
+          concentrationMultiplier: sociMultiplier(
+            lookups.stateOwnershipConcentrationByCountry?.get(corp.countryOwnerId ?? "") ?? 0
+          ),
+        })
+      : 0,
+  });
   plan.outputMultiplier =
+    organisational *
     labour.outputFactor *
     disasterProductionFactor(disaster.productionPenalty) *
     policyOutput *
