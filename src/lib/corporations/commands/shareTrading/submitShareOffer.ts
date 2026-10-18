@@ -19,6 +19,7 @@ import { assertCeoTradeNotBlocked } from "@/lib/corporations/commands/privatizat
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { getHomeCurrency, loadCharacterFxRate } from "@/lib/currency/characterFunds";
+import { autoConvertForPurchase } from "@/lib/currency/autoConvert";
 import {
   anchorToCorpLiquidCapital,
   corpLiquidCapitalToAnchor,
@@ -307,6 +308,21 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
         charFxRate = fxResult.rate;
       }
       const escrowInHome = escrowAnchor * charFxRate;
+
+      // Match public share buys: consolidate other personal wallets into home
+      // currency when forex + auto-convert are on, before the escrow debit.
+      if (forexEnabled) {
+        const convertResult = await autoConvertForPurchase(db, {
+          character,
+          requiredCurrency: homeCurrency,
+          requiredAmount: escrowInHome,
+          turn: currentTurn,
+          forexEnabled,
+        });
+        if (convertResult.needed && !convertResult.success) {
+          return errorResponse(400, convertResult.error);
+        }
+      }
 
       // Atomic balance-gated escrow debit on character cash. Pre-fix used
       // getPersonalBalance() against a cached doc + non-atomic $inc.
