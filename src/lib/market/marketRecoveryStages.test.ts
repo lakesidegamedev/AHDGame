@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { getSectorLaborShare } from "@/lib/labour/laborCost";
 import {
   MARGIN_TRIM_STAGE2_PP,
-  MARKET_RECOVERY_STAGE,
   MARKET_RECOVERY_STAGE_MAX,
   normalizeMarketRecoveryStage,
   stagedLaborShare,
