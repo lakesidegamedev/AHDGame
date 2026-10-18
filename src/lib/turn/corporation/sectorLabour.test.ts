@@ -150,8 +150,8 @@ describe("resolveSectorLabourEconomics", () => {
       currentYear: 1991,
       explicitPlantCostsEnabled: true,
     });
-    expect(explicit.sectorLaborCost).toBeCloseTo(legacy.sectorLaborCost * 0.75, 10);
-    expect(explicit.wagePerWorker).toBeCloseTo(legacy.wagePerWorker! * 0.75, 10);
+    expect(explicit.sectorLaborCost).toBeCloseTo(legacy.sectorLaborCost * (0.3 / 0.35), 10);
+    expect(explicit.wagePerWorker).toBeCloseTo(legacy.wagePerWorker! * (0.3 / 0.35), 10);
     expect(explicit.sectorLaborCost).toBeGreaterThan(1000 * 0.33);
     for (const strategyId of ["standard", "software"]) {
       const sector = { ...input.sector, strategyId };

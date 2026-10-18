@@ -30,14 +30,14 @@ describe("explicit production-method payroll", () => {
   });
 
   it.each([
-    ["software", "hardware", 100, 0.44],
-    ["software", "hardware", 106, 0.385],
+    ["software", "hardware", 100, 0.385],
+    ["software", "hardware", 106, 0.3575],
     ["software", "hardware", 112, 0.33],
     ["hardware", "software", 100, 0.33],
-    ["hardware", "software", 106, 0.385],
-    ["hardware", "software", 112, 0.44],
+    ["hardware", "software", 106, 0.3575],
+    ["hardware", "software", 112, 0.385],
     ["hardware", "software", 99, 0.33],
-    ["hardware", "software", 113, 0.44],
+    ["hardware", "software", 113, 0.385],
   ])(
     "blends %s to %s at turn %s",
     (transitionFromStrategyId, strategyId, currentTurn, expected) => {
