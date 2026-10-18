@@ -240,6 +240,8 @@ export interface CorporationOperatorPolicy {
 }
 
 export interface Corporation {
+  /** Unified producer market (#4322): creditor claims, written only once the new market settles. */
+  producerPayables?: import("./producerEconomy").ProducerPayablesState;
   /** Frozen migration fallback for unrecorded legacy personal cost basis. */
   stockHoldingRolloutAnchorPrice?: number;
   stockHoldingRolloutTurn?: number;
@@ -1021,6 +1023,18 @@ export interface SectorBuildOrder {
 }
 
 export interface CorporateSector {
+  /** Unified producer market (#4322): written only once the new market settles a turn. */
+  producerSettlement?: import("./producerEconomy").ProducerSectorSettlement;
+  /** Physical opening generation, advanced atomically with the operating receipt. */
+  producerCapacity?: import("./producerEconomy").ProducerGenerationStamp;
+  producerInventory?: import("./producerEconomy").ProducerInventoryState;
+  /** Per-product asking policies. Fixed unit prices are anchor money, never revenue multipliers. */
+  producerQuotes?: Partial<
+    Record<
+      import("../../constants/commodities").CommodityType,
+      import("@/lib/market/producerMarket/rules").ProducerQuotePolicy
+    >
+  >;
   _id: ObjectId;
   /** Recoverable defence award or factory-allocation operation holding this plant. */
   contractMutationOwner?: string;
