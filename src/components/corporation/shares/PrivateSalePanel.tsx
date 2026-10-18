@@ -48,6 +48,7 @@ interface PrivateSalePanelProps {
   myCharacterId: string | null;
   corpId: string;
   myShares: number;
+  myCorporation?: { id: string; name: string } | null;
   /** Whether the viewer is the current CEO of this corporation — gates the divest-confirm dialog. */
   isCeo?: boolean;
   onToast: (message: string, variant: "success" | "error") => void;
@@ -60,6 +61,7 @@ export default function PrivateSalePanel({
   myCharacterId,
   corpId,
   myShares,
+  myCorporation,
   isCeo = false,
   onToast,
   forceOpen = false,
@@ -95,6 +97,7 @@ export default function PrivateSalePanel({
 
   // Create listing form
   const [listingShares, setListingShares] = useState(0);
+  const [corporationListingShares, setCorporationListingShares] = useState(0);
   const terms = corporation.shareholders.find(
     (holder) => holder.characterId === myCharacterId
   )?.holdingTerms;
@@ -106,6 +109,10 @@ export default function PrivateSalePanel({
         : "long"
       : requestedTerm;
   const availableShares = terms ? availableHoldingShares(terms, holdingTerm) : myShares;
+  const corporationShares = myCorporation
+    ? (corporation.shareholders.find((holder) => holder.corporationId === myCorporation.id)
+        ?.shares ?? 0)
+    : 0;
   const [ceoVacateConfirm, setCeoVacateConfirm] = useState<{ message: string } | null>(null);
 
   // Submit offer forms — keyed by listingId
@@ -158,6 +165,35 @@ export default function PrivateSalePanel({
           "success"
         );
         setListingShares(0);
+        await loadListings();
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateCorporationListing = async () => {
+    if (!myCorporation || corporationListingShares <= 0) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/corporations/${corpId}/shares/listings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shares: corporationListingShares,
+          sellAsCorporation: true,
+          sellerCorporationId: myCorporation.id,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        onToast(apiErrorText(data, "Failed to create company listing"), "error");
+      } else {
+        onToast(
+          `${myCorporation.name} listed ${corporationListingShares.toLocaleString("en-US")} shares for private sale`,
+          "success"
+        );
+        setCorporationListingShares(0);
         await loadListings();
       }
     } finally {
@@ -317,6 +353,48 @@ export default function PrivateSalePanel({
               asked to confirm first.
             </p>
           )}
+        </div>
+      )}
+
+      {corporation?.isPrivate && myCorporation && corporationShares > 0 && (
+        <div>
+          <h3 className="mb-1.5 text-xs font-medium text-muted">
+            List shares held by {myCorporation.name}
+          </h3>
+          <p className="mb-2 text-xs text-muted">
+            The company receives the proceeds. Listing shares reserves them until they sell or the
+            listing expires.
+          </p>
+          <div className="flex items-end gap-3 flex-wrap">
+            <div>
+              <label className="block text-xs text-muted mb-1">Shares to list</label>
+              <input
+                type="number"
+                value={corporationListingShares || ""}
+                onChange={(e) =>
+                  setCorporationListingShares(Math.max(0, Math.floor(Number(e.target.value))))
+                }
+                placeholder="Quantity"
+                min={1}
+                max={corporationShares}
+                className="h-7 w-36 rounded-md border border-card-border bg-background px-2 text-right text-[13px] tabular-nums text-foreground focus:border-foreground focus:outline-none"
+              />
+            </div>
+            <button
+              onClick={() => void handleCreateCorporationListing()}
+              disabled={
+                loading ||
+                corporationListingShares <= 0 ||
+                corporationListingShares > corporationShares
+              }
+              className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {loading ? "Listing" : "List company shares"}
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-muted">
+            {myCorporation.name} holds {corporationShares.toLocaleString("en-US")} shares here.
+          </p>
         </div>
       )}
 

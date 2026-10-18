@@ -278,6 +278,7 @@ export const createListingSchema = z.object({
   holdingTerm: z.enum(["short", "long"]).optional(),
   shares: z.number().int().positive("Must list at least 1 share"),
   sellAsCorporation: z.boolean().optional().default(false),
+  sellerCorporationId: schemas.objectId.optional(),
   // When a listing would divest a CEO's entire remaining stake (auto-vacating
   // the seat), the route returns 409 requiresCeoVacateConfirm unless this is true.
   confirmCeoVacate: z.boolean().optional().default(false),
