@@ -92,6 +92,7 @@ import { processColdWarTensionTurn } from "@/lib/turn/coldWarTensionTurn";
 import { processAutoSectorSeed } from "@/lib/turn/autoSectorSeed";
 import { processExtractionAutoStrategy } from "@/lib/turn/extractionAutoStrategy";
 import { processCorporationTurn } from "@/lib/turn/corporationTurn";
+import { processOffTypeHandover } from "@/lib/corporations/offTypeHandover";
 import { processUnionsTurn } from "@/lib/turn/unions";
 import { processNppUnionBehavior } from "@/lib/turn/unions/nppUnionBehavior";
 import { processDecolonizationTurn } from "@/lib/turn/decolonizationTurn";
@@ -300,6 +301,11 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
           // nppAutonomyAtLeast(v2); a no-op below the comingle tier.
           await runtime.runPhase("nppCorporateAttacks", () =>
             runNppCorporateAttacksPhase(gameNow, newTurn)
+          );
+          // Market recovery stage 5: AI companies hand one off-type plant each
+          // to a same-type AI company. No-op below stage 5.
+          await runtime.runPhase("offTypeHandover", () =>
+            processOffTypeHandover(context.db, newTurn)
           );
         }
 
