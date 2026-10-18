@@ -2,7 +2,7 @@ import { beforeEach, describe, it, expect, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import type { AuthUserWithCharacter } from "@/lib/auth";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
-import { publishTender } from "./commands";
+import { publishTender, raiseOpenDefenceTenderToLiveFloor } from "./commands";
 import * as bidderAlerts from "./opportunityNotifications";
 import { tenders } from "./persistence";
 import { lotPrice } from "@/lib/military/arsenal";
@@ -267,5 +267,96 @@ describe("defence tender publication price floor", () => {
     } finally {
       cost.mockRestore();
     }
+  });
+});
+
+describe("raiseOpenDefenceTenderToLiveFloor", () => {
+  it("raises a frozen yen-scale maximum to the live floor and tops up the reservation", async () => {
+    const jpGdp = 568_386_963_509_097.4;
+    await db.collection("federalBudget").insertOne({
+      countryId: "JP",
+      gdp: jpGdp,
+      spending: { byCategory: { defense: 1e15 } },
+      defenseAppropriation: {
+        balance: 1e15,
+        encumbered: 0,
+        accruedThroughTurn: 1,
+        arrearsRatio: 0,
+      },
+    });
+    const budget = (await db.collection("federalBudget").findOne({ countryId: "JP" }))!;
+    const anchor = lotPrice(
+      "JP",
+      militaryPriceAnchor(budget.gdp, budget.militaryPriceBaselineGdp)
+    )!;
+    expect(anchor).toBe(159_148_349_783);
+    const liveFloor = lotPriceBand({
+      anchorPrice: anchor,
+      productionCost: lotProductionCost("naval_systems", anchor, await loadDefencePriceRatios(db))!,
+      grade: 0,
+    })!.floor;
+    expect(liveFloor).toBeGreaterThan(1);
+    const staleMax = liveFloor - 2_943_645_216;
+    expect(staleMax).toBeGreaterThan(0);
+    const id = await publishTender(
+      db,
+      "JP",
+      {
+        title: "Naval equipment",
+        description: "Synthetic yen-scale naval procurement",
+        closesTurn: 7,
+        awardDeadlineTurn: 31,
+        terms: {
+          type: "defence",
+          component: "naval",
+          lots: 2,
+          grade: 0,
+          maximumPricePerLot: liveFloor,
+        },
+      },
+      government,
+      1,
+      now
+    );
+    await tenders(db).updateOne(
+      { _id: id },
+      {
+        $set: {
+          "terms.maximumPricePerLot": staleMax,
+          reservedAmount: staleMax * 2,
+        },
+      }
+    );
+    const jpBudget = (await db.collection("federalBudget").findOne({ countryId: "JP" }))!;
+    await db.collection("federalBudget").updateOne(
+      { countryId: "JP" },
+      {
+        $set: {
+          "defenseAppropriation.encumbered": staleMax * 2,
+          [`defenseAppropriation.governmentTenderReservations.${id}`]: {
+            state: "held",
+            amount: staleMax * 2,
+          },
+        },
+      }
+    );
+    const windowId = (await tenders(db).findOne({ _id: id }))!.allocationWindowId!;
+    await db.collection("defenceProcurementAllocations").updateOne(
+      { _id: windowId as never },
+      {
+        $set: {
+          countryAmount: staleMax * 2,
+          [`governmentTenderReservations.${id}`]: { state: "held", amount: staleMax * 2 },
+        },
+      }
+    );
+    const before = (await tenders(db).findOne({ _id: id }))!;
+    const raised = await raiseOpenDefenceTenderToLiveFloor(db, before, now);
+    expect(raised.terms.type).toBe("defence");
+    if (raised.terms.type !== "defence") throw new Error("expected defence");
+    expect(raised.terms.maximumPricePerLot).toBeGreaterThanOrEqual(liveFloor);
+    expect(raised.reservedAmount).toBe(raised.terms.maximumPricePerLot * 2);
+    const afterBudget = (await db.collection("federalBudget").findOne({ countryId: "JP" }))!;
+    expect(afterBudget.defenseAppropriation.encumbered).toBe(raised.reservedAmount);
   });
 });
