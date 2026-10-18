@@ -199,6 +199,13 @@ export function advanceProducerEconomy(input: {
   producers: ProducerOperatingResult[];
   tradeReceipt: ProducerTradeReceipt;
   prices: ReturnType<typeof settleProducerMarket>["prices"];
+  /** Units each buyer order asked for and received, for demand telemetry. */
+  orderOutcomes: Array<{
+    commodity: string;
+    book: string;
+    requestedUnits: number;
+    deliveredUnits: number;
+  }>;
 } {
   const carryRates: Readonly<Record<string, number>> =
     input.carryLossByCommodity ?? COMMODITY_SPOILAGE_PER_TURN;
@@ -873,5 +880,19 @@ export function advanceProducerEconomy(input: {
     producers: results,
     tradeReceipt: market.tradeReceipt,
     prices: market.prices,
+    orderOutcomes: (() => {
+      const meta = new Map(
+        [...consumerOrders, ...inputOrders()].map((o) => [
+          o.id,
+          { commodity: o.commodity, book: o.book },
+        ])
+      );
+      return market.orders.flatMap((o) => {
+        const m = meta.get(o.id);
+        return m
+          ? [{ ...m, requestedUnits: o.requestedUnits, deliveredUnits: o.deliveredUnits }]
+          : [];
+      });
+    })(),
   };
 }

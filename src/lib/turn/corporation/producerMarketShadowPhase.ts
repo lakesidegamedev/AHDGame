@@ -242,8 +242,14 @@ export async function runProducerMarketShadowPhase(
           o.eligibleOfferIds = listFor(o.commodity, o.accountId.slice("public:".length));
     }
 
+    const references = Object.fromEntries(
+      COMMODITY_TYPES.map((c) => [c, refPrice(c, "")] as const).filter(
+        (e): e is readonly [CommodityType, number] => e[1] != null
+      )
+    );
     const summary = runProducerShadow({
       turn: input.turn,
+      references,
       producers,
       skipped,
       accounts,
@@ -255,9 +261,7 @@ export async function runProducerMarketShadowPhase(
       { _id: input.turn as never },
       {
         ...summary,
-        legacyPrices: Object.fromEntries(
-          COMMODITY_TYPES.map((c) => [c, refPrice(c, "")] as const).filter(([, p]) => p != null)
-        ),
+        legacyPrices: references,
         worldEpoch: input.worldEpoch,
         ms: Date.now() - started,
         at: new Date(),

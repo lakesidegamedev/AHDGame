@@ -99,4 +99,25 @@ describe("producer market shadow", () => {
     expect(s.shadowLosingShare).toBe(0);
     expect(s.publicSpend).toBeGreaterThan(0);
   });
+
+  it("a glutted world book sets a lower next reference price", () => {
+    const s = runProducerShadow({
+      ...base,
+      references: { financial_services: 3 },
+      producers: [{ plan: plan("a"), sectorType: "financial", legacy: null }],
+      households: [
+        {
+          accountId: "households",
+          spendFraction: 1,
+          products: [
+            { commodity: "financial_services", book: "world", maximumUnitPrice: 3, weight: 1 },
+          ],
+        },
+      ],
+      publicOrders: [],
+    });
+    const fin = s.nextPrices.find((p) => p.commodity === "financial_services")!;
+    expect(fin.unsoldUnits).toBeGreaterThan(0);
+    expect(fin.next).toBeLessThan(3);
+  });
 });
