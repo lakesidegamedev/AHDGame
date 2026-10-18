@@ -8,6 +8,7 @@ import {
 } from "@/lib/turn/npp/rules/autopilotReinvest";
 import type { CorpTabId, CorporationDetail } from "./CorporationPageTypes";
 import { DenseSection, InlineStatus, SmallButton } from "./dense/DenseKit";
+import { OperatorPolicyCard } from "./ceo/OperatorPolicyCard";
 
 const CAPEX_PERCENT = Math.round(AUTOPILOT_CAPEX_CASH_SHARE * 100);
 const STEP_PERCENT = Math.round(AUTOPILOT_GROWTH_STEP_OF_RUN * 100);
@@ -140,6 +141,7 @@ export function AutopilotCard({
         )}
         <InlineStatus message={error} tone="error" />
       </div>
+      {on && <OperatorPolicyCard corpId={corpId} />}
     </DenseSection>
   );
 }
