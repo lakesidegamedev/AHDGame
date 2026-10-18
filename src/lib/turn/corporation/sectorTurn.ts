@@ -22,6 +22,7 @@ import {
   nextNegativeProductionCounter,
 } from "@/lib/constants/corporations";
 import { readCorpEconomicAnchor, writeCorpEconomicLocal } from "@/lib/currency/corpEconomyFields";
+import { isAutopilotRun } from "@/lib/corporations/autopilot";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { sociMultiplier } from "@/lib/nationalization/concentration";
 import { nationalizationProductivityFactor } from "@/lib/nationalization/transitionShock";
@@ -71,6 +72,7 @@ import {
 } from "@/lib/corporations/rules/marketBoost";
 import { isStateScopedCommodity } from "@/lib/market/commodityMarketScope";
 import { liftedThrottleBalance } from "./demandThrottle";
+import { nppOperatingCapacityTarget } from "./rules/nppOperatingCapacity";
 import { idleCapacityRetirement, IDLE_RETIRE_GRACE_TURNS } from "./rules/idleCapacityRetirement";
 import { plantCrewMaxDropPerTurn, plantCrewShare } from "./rules/plantRunShare";
 import {
@@ -338,6 +340,66 @@ export function processSector(
     perTurnGrowthRate,
     eraUnitScale: lookups.eraUnitScale,
   });
+  // Resolve operation where allocated named demand and physical books are known.
+  // NPP V6 and owner-enabled autopilot share this reversible rule; ordinary player
+  // operation remains manual. Autopilot is owner-opted-in, so it does not depend on
+  // the country's NPP autonomy tier. Neither may strand a buyer behind parked capacity.
+  const originalActivePercent = sector.activeCapacityPercent;
+  const autopilotOperationEligible = isAutopilotRun(corp);
+  const nppV6OperationEligible =
+    corp.ceoType === "npp" &&
+    !corp.caretakerCeo &&
+    !corp.suspended &&
+    !corp.ceoVacant &&
+    lookups.engineSixCountries?.has(corp.countryId) === true;
+  const operatingCapacityEligible =
+    plantsEnabled &&
+    (nppV6OperationEligible || autopilotOperationEligible) &&
+    sector.sectorType !== "media" &&
+    !isStateOwned(corp) &&
+    !corp.suspended &&
+    !corp.ceoVacant &&
+    corp.subsidiaryFormalizedAtTurn == null;
+  const operatingCapacityTarget = operatingCapacityEligible
+    ? nppOperatingCapacityTarget({
+        eligible: true,
+        mothballed: sector.mothballed === true,
+        activePercent: originalActivePercent,
+        demandThrottle: sector.demandThrottleFactor,
+        measuredProfit: sector.plantsPnl?.profit,
+        measuredTurn: sector.plantsPnl?.turn,
+        currentTurn,
+        contractDemand:
+          market.contractProductionTargetBySectorId?.get(sector._id.toString()) ??
+          (market.contractProductionTargetBySectorId ? 0 : undefined),
+        outputBooks: Object.entries(strategyRates.supply)
+          .filter(([, rate]) => (rate ?? 0) > 0)
+          .map(([rawCommodity]) => {
+            const commodity = rawCommodity as CommodityType;
+            // The book the throttle leg reads, so parking and throttling agree on demand.
+            return liftedThrottleBalance(
+              isStateScopedCommodity(commodity)
+                ? lookups.rawStateBalances?.get(sector.stateId)?.get(commodity)
+                : (lookups.countryClearingBooks?.get(sectorCountryId)?.get(commodity) ??
+                    lookups.globalCommodityBalances?.get(commodity)),
+              lookups.latentDemandFactorByCommodity?.get(commodity),
+              isStateScopedCommodity(commodity) ||
+                !lookups.countryClearingBooks?.has(sectorCountryId)
+                ? 0
+                : lookups.unmetForeignDemandByCountry?.get(sectorCountryId)?.get(commodity)
+            );
+          }),
+        physicalConstraintsClear:
+          throughputRaw.throughput >= 1 &&
+          labourOutputFactor >= 1 &&
+          capacityUtil.utilization >= 1 &&
+          !lookups.activeDisasterEffectsByState.has(sector.stateId),
+        constructionOrRetool: strategyRates.isTransitioning || (sector.buildQueue?.length ?? 0) > 0,
+      })
+    : null;
+  if (operatingCapacityTarget != null) {
+    sector = { ...sector, activeCapacityPercent: operatingCapacityTarget };
+  }
   // (moved to computeMarketTiers: throughput coupling + downside floor)
   // (moved to computeMarketTiers: capital tier + P1 nameplate units)
   // Plants tier: capacity is AUTHORITATIVE, not a haircut.
@@ -1415,6 +1477,19 @@ export function processSector(
       update: sectorUpdateDoc,
     },
   });
+  if (operatingCapacityTarget != null) {
+    // Preserve an explicit operating choice made after this turn's snapshot.
+    sectorOps.push({
+      updateOne: {
+        filter: {
+          _id: sector._id,
+          activeCapacityPercent:
+            originalActivePercent === undefined ? { $exists: false } : originalActivePercent,
+        },
+        update: { $set: { activeCapacityPercent: operatingCapacityTarget } },
+      },
+    });
+  }
   // Shortage build speed-up: positional per-order updates, after the `$pull`
   // above (bulkWrite is ordered), matched by order identity so an order placed
   // during this phase is never touched.
