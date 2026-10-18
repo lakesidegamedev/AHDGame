@@ -12,6 +12,7 @@ import {
   actOnBargainingCampaignAsEmployer,
   actOnBargainingCampaignAsUnion,
   bargainingMacroInputs,
+  employerBargainingOpenBlockedReason,
   proposeBargainingCampaign,
 } from "./bargaining";
 import { laborTightnessFromUnemployment } from "@/lib/unions/bargaining";
@@ -884,5 +885,95 @@ describe("persistUnionBargainingEscalation read cache (#2690)", () => {
     expect(first.macro).toBeGreaterThan(0);
     expect(first.col).toBeGreaterThan(0);
     expect(second).toEqual(first);
+  });
+});
+
+describe("employerBargainingOpenBlockedReason", () => {
+  const strongLocal = {
+    _id: new ObjectId(),
+    workers: 1000,
+    unionization: 60,
+    wageLevel: 1,
+    stateId: "MI",
+  };
+
+  it("returns null when the employer can open a campaign", () => {
+    expect(
+      employerBargainingOpenBlockedReason({
+        hasOpenCampaign: false,
+        agreementExpiresAtTurn: null,
+        lastEndedAtTurn: null,
+        currentTurn: 100,
+        locals: [strongLocal],
+        treasury: 50_000,
+        laborTightness: 70,
+        lawSupport: 60,
+        costOfLivingByState: new Map([["MI", 1]]),
+      })
+    ).toBeNull();
+  });
+
+  it("blocks an open campaign before mandate checks", () => {
+    expect(
+      employerBargainingOpenBlockedReason({
+        hasOpenCampaign: true,
+        agreementExpiresAtTurn: null,
+        lastEndedAtTurn: null,
+        currentTurn: 100,
+        locals: [strongLocal],
+        treasury: 50_000,
+        laborTightness: 70,
+        lawSupport: 60,
+        costOfLivingByState: new Map([["MI", 1]]),
+      })
+    ).toBe("An open bargaining campaign already exists with this employer.");
+  });
+
+  it("blocks a live agreement with the same wording as the opener", () => {
+    expect(
+      employerBargainingOpenBlockedReason({
+        hasOpenCampaign: false,
+        agreementExpiresAtTurn: 140,
+        lastEndedAtTurn: null,
+        currentTurn: 100,
+        locals: [strongLocal],
+        treasury: 50_000,
+        laborTightness: 70,
+        lawSupport: 60,
+        costOfLivingByState: new Map([["MI", 1]]),
+      })
+    ).toBe("A collective agreement already covers this employer through turn 140.");
+  });
+
+  it("blocks reopen cooldown from the shared constant", () => {
+    expect(
+      employerBargainingOpenBlockedReason({
+        hasOpenCampaign: false,
+        agreementExpiresAtTurn: null,
+        lastEndedAtTurn: 95,
+        currentTurn: 100,
+        locals: [strongLocal],
+        treasury: 50_000,
+        laborTightness: 70,
+        lawSupport: 60,
+        costOfLivingByState: new Map([["MI", 1]]),
+      })
+    ).toBe("Bargaining with this employer can reopen on turn 103.");
+  });
+
+  it("surfaces the mandate refusal for under-organized locals", () => {
+    expect(
+      employerBargainingOpenBlockedReason({
+        hasOpenCampaign: false,
+        agreementExpiresAtTurn: null,
+        lastEndedAtTurn: null,
+        currentTurn: 100,
+        locals: [{ ...strongLocal, unionization: 5 }],
+        treasury: 50_000,
+        laborTightness: 70,
+        lawSupport: 60,
+        costOfLivingByState: new Map([["MI", 1]]),
+      })
+    ).toBe("The union needs more organized workers at this employer.");
   });
 });
