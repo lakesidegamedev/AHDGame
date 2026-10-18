@@ -72,6 +72,8 @@ export interface NppCorpDecisionContext {
    * dominates; 1 for the sector leader and healthy sectors. Absent reads as 1.
    */
   challengerBoostOf?: (sectorType: string, ownCorporationId: string) => number;
+  /** Resolved NPP operator permissions; absent derives them from the corporation. */
+  operator?: import("./rules/operatorPolicy").OperatorPermissions;
   /** Player-appointed caretaker mandate. NPP-owned corporations are always active. */
   caretakerMandate?: "active" | "passive";
 }
