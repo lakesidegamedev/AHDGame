@@ -294,6 +294,8 @@ export function clampRate(
 // ── Full pipeline ───────────────────────────────────────────────────────────
 
 export interface RateUpdateResult {
+  /** Quote before guardrails, used to price an intervention without overshooting. */
+  unclampedRate?: number;
   /** The new exchange rate after all components */
   rate: number;
   /** The macro-fundamental target this turn */
@@ -344,6 +346,7 @@ export function computeRateUpdate(
 
   return {
     rate: clamped,
+    unclampedRate: withNoise,
     macroTarget,
     volumePressure,
     cyclePressure,

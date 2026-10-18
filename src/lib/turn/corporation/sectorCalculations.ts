@@ -10,7 +10,7 @@ import { prepareInternalSupplySectorResults } from "./internalSupplySectorPass";
 import { holdingDividendSplit, positionHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
 import { formalizedSubsidiaryCountByParentId } from "@/lib/corporations/subsidiaries/helpers";
 import type { AnyBulkWriteOperation, ObjectId } from "mongodb";
-import type { Bond, Corporation, MediaProductAdvertisingObligationV1 } from "@/lib/db/types";
+import type { Corporation, MediaProductAdvertisingObligationV1 } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getLegalStructureForCorp } from "@/lib/corporations/legalStructure";
 import { getControllingCorporateParent } from "@/lib/corporations/corporateOwnership";
@@ -73,7 +73,6 @@ import type {
   FundDividendAccrual,
   SectorCalculationsResult,
 } from "./types";
-import { perTurnCouponPayment, BOND_UNIT_FACE_VALUE } from "@/lib/constants/bonds";
 import { imfFacilityPaymentAnchorPerTurn } from "@/lib/imf/imfFacilityFinancials";
 import { computeSharePrices, type SharePriceInput } from "./sharePriceFormula";
 import { getShareBuybackMode } from "@/lib/corporations/shareBuybackMode";
@@ -1649,6 +1648,7 @@ export function processSectors(
   }
 
   return {
+    sectorTurnEnv,
     sectorOps,
     corpOps: [
       ...(corpOps as AnyBulkWriteOperation<Corporation>[]),

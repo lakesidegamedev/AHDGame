@@ -554,6 +554,9 @@ export default function CentralBankClient({ countryId, apiBasePath, members }: P
       {activeTab === "intervention" && data.intervention && (
         <div className="mx-auto max-w-7xl space-y-12 px-4 sm:px-6">
           <CurrencyRegimePanel
+            previewContext={data.intervention.previewContext}
+            currencyCode={data.intervention.currencyCode}
+            maxSpendPerTurn={data.intervention.policy?.maxSpendPerTurn}
             bankApiBasePath={bankApiBasePath}
             isChair={(data.isPolicyChair ?? data.isChair) === true}
             currentTurn={data.currentTurn ?? 0}

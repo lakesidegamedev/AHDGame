@@ -1,5 +1,7 @@
 /**
- * Pure math for FX intervention — no DB access.
+ * Legacy FX pressure helpers retained for compatibility and comparison sims.
+ * Live settlement uses intervention/rules/defence.ts, which prices useful
+ * pressure against market depth and a directional reserve budget.
  *
  * Given the current rate, an active band, and available reserves, compute the
  * synthetic trade volume the CB should inject into the volume-pressure channel
@@ -16,6 +18,7 @@
 
 import { INTERVENTION_AGGRESSIVENESS } from "@/lib/constants/currencies";
 import type { InterventionPolicy } from "@/lib/db/types/exchangeRate";
+import { defenceBounds } from "./intervention/rules/defence";
 
 export interface InterventionResult {
   /** Signed synthetic volume in internal units. 0 means no intervention. */
@@ -26,7 +29,8 @@ export interface InterventionResult {
 }
 
 export function isInBand(rate: number, band: InterventionPolicy): boolean {
-  return rate >= band.floor && rate <= band.ceiling;
+  const bounds = defenceBounds(band);
+  return rate >= bounds.floor && rate <= bounds.ceiling;
 }
 
 /**
