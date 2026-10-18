@@ -5,6 +5,7 @@ import {
   MARKET_RECOVERY_STAGE,
   normalizeMarketRecoveryStage,
   stagedLaborShare,
+  dampedMemoryMultiplier,
   stagedMarginTrimPp,
 } from "./marketRecoveryStages";
 
@@ -14,7 +15,7 @@ describe("market recovery stages", () => {
     expect(normalizeMarketRecoveryStage("2")).toBe(0);
     expect(normalizeMarketRecoveryStage(-3)).toBe(0);
     expect(normalizeMarketRecoveryStage(1.9)).toBe(1);
-    expect(normalizeMarketRecoveryStage(99)).toBe(MARKET_RECOVERY_STAGE.MARGIN_TRIM_RELIEF);
+    expect(normalizeMarketRecoveryStage(99)).toBe(MARKET_RECOVERY_STAGE.PRICE_MEMORY_DAMP_2);
   });
 
   it("stage 0 changes no labour share", () => {
@@ -39,5 +40,12 @@ describe("market recovery stages", () => {
     expect(stagedMarginTrimPp(8, 1)).toBe(8);
     expect(stagedMarginTrimPp(8, 2)).toBe(MARGIN_TRIM_STAGE2_PP);
     expect(stagedMarginTrimPp(undefined, 2)).toBe(0);
+  });
+
+  it("stages 3 and 4 keep 75% then 50% of price-memory excess; earlier stages keep all", () => {
+    expect(dampedMemoryMultiplier(1.4, 2)).toBeCloseTo(1.4, 12);
+    expect(dampedMemoryMultiplier(1.4, 3)).toBeCloseTo(1.3, 12);
+    expect(dampedMemoryMultiplier(1.4, 4)).toBeCloseTo(1.2, 12);
+    expect(dampedMemoryMultiplier(0.8, 4)).toBeCloseTo(0.9, 12);
   });
 });

@@ -24,9 +24,34 @@ export const MARKET_RECOVERY_STAGE = {
    * the plants policy credit, so it moves on the next turn and reverts alone.
    */
   MARGIN_TRIM_RELIEF: 2,
+  /**
+   * Price memory damping, first step: scarcity memory and producer cost
+   * pass-through keep 75% of their excess over 1 when forming prices. The
+   * persisted multipliers are untouched, so lowering the stage restores the
+   * old price targets exactly.
+   */
+  PRICE_MEMORY_DAMP_1: 3,
+  /** Second step: 50% of the excess. */
+  PRICE_MEMORY_DAMP_2: 4,
 } as const;
 
-export const MARKET_RECOVERY_STAGE_MAX = MARKET_RECOVERY_STAGE.MARGIN_TRIM_RELIEF;
+export const MARKET_RECOVERY_STAGE_MAX = MARKET_RECOVERY_STAGE.PRICE_MEMORY_DAMP_2;
+
+/** Share of price-memory excess (multiplier minus 1) kept at the active stage. */
+export function priceMemoryKeep(stage: number | null | undefined): number {
+  if (marketRecoveryStageActive(stage, MARKET_RECOVERY_STAGE.PRICE_MEMORY_DAMP_2)) return 0.5;
+  if (marketRecoveryStageActive(stage, MARKET_RECOVERY_STAGE.PRICE_MEMORY_DAMP_1)) return 0.75;
+  return 1;
+}
+
+/** A price-memory multiplier as it enters price formation at the active stage. */
+export function dampedMemoryMultiplier(
+  multiplier: number,
+  stage: number | null | undefined
+): number {
+  if (!Number.isFinite(multiplier)) return multiplier;
+  return 1 + (multiplier - 1) * priceMemoryKeep(stage);
+}
 
 /**
  * Margin level trim at stage 2, in percentage points. Static replay at turn
