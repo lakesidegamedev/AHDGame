@@ -29,6 +29,12 @@ export const TURN_HOT_PATH_INDEXES: ReadonlyArray<{
     key: { status: 1, expiryRefundState: 1 },
     name: "currencyOrders_expiry_refund",
   },
+  // Market recovery stage 5 reads this turn's handover receipts by leg.
+  {
+    collection: "offTypeHandovers",
+    key: { turn: 1, state: 1 },
+    name: "offTypeHandovers_turn_state",
+  },
 ];
 
 export async function seedTurnHotPathIndexes(db: Db, log: (msg: string) => void) {

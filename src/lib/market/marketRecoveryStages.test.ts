@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { getSectorLaborShare } from "@/lib/labour/laborCost";
 import {
   MARGIN_TRIM_STAGE2_PP,
-  MARKET_RECOVERY_STAGE,
+  MARKET_RECOVERY_STAGE_MAX,
   normalizeMarketRecoveryStage,
   stagedLaborShare,
   dampedMemoryMultiplier,
@@ -15,7 +15,7 @@ describe("market recovery stages", () => {
     expect(normalizeMarketRecoveryStage("2")).toBe(0);
     expect(normalizeMarketRecoveryStage(-3)).toBe(0);
     expect(normalizeMarketRecoveryStage(1.9)).toBe(1);
-    expect(normalizeMarketRecoveryStage(99)).toBe(MARKET_RECOVERY_STAGE.PRICE_MEMORY_DAMP_2);
+    expect(normalizeMarketRecoveryStage(99)).toBe(MARKET_RECOVERY_STAGE_MAX);
   });
 
   it("stage 0 changes no labour share", () => {

@@ -33,9 +33,16 @@ export const MARKET_RECOVERY_STAGE = {
   PRICE_MEMORY_DAMP_1: 3,
   /** Second step: 50% of the excess. */
   PRICE_MEMORY_DAMP_2: 4,
+  /**
+   * Standalone AI companies sell one off-type plant per turn, at book value
+   * plus inventory, to a same-type AI company in the same country
+   * (corporations/offTypeHandover.ts). Lowering the stage stops new handovers;
+   * completed ones stand, as any sale does.
+   */
+  AI_OFF_TYPE_HANDOVER: 5,
 } as const;
 
-export const MARKET_RECOVERY_STAGE_MAX = MARKET_RECOVERY_STAGE.PRICE_MEMORY_DAMP_2;
+export const MARKET_RECOVERY_STAGE_MAX = MARKET_RECOVERY_STAGE.AI_OFF_TYPE_HANDOVER;
 
 /** Share of price-memory excess (multiplier minus 1) kept at the active stage. */
 export function priceMemoryKeep(stage: number | null | undefined): number {
