@@ -1,4 +1,5 @@
 import type { Db } from "mongodb";
+import { producerWorldEpochIfReady } from "@/lib/demographics/worldEpoch";
 import { ObjectId } from "mongodb";
 import type { CentralBank, Corporation, CorporateSector } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
@@ -36,6 +37,7 @@ import { pickOrCreateNppCeoForNewCorp } from "@/lib/corporations/subsidiaries/np
 import { operatingSectorTypeFor } from "@/lib/constants/corporations";
 import { getDefaultLegalStructureId } from "@/lib/corporations/legalStructure";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
+import { emptyProducerPayables } from "@/lib/market/producerMarket/openingState";
 import {
   hasProtectedConstructionProperty,
   releaseConstructionPropertyTransition,
@@ -176,6 +178,8 @@ export async function privatizeAsset(
     getMarketSystemModeForDb(db),
     getGameState(db),
   ]);
+  const producerWorldEpoch = await producerWorldEpochIfReady(db, gameState ?? undefined);
+  const producerOpeningTurn = gameState?.currentTurn ?? params.turn;
   const primeMap = buildPrimeRateMap(centralBanks);
   // D11 SYMMETRY — the state must SELL on the same basis it BUYS on.
   //
@@ -290,6 +294,9 @@ export async function privatizeAsset(
     countryId: params.countryId,
     headquartersState,
     liquidCapital: 0,
+    ...(producerWorldEpoch
+      ? { producerPayables: emptyProducerPayables(producerWorldEpoch, producerOpeningTurn) }
+      : {}),
     liquidCurrencyCode: currency,
     marketingBudget: 0,
     marketingStrength: 10,

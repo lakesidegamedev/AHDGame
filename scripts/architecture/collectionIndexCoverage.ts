@@ -1,11 +1,14 @@
 /** New world collections need a bootstrap index plan or a reviewed primary-key policy. */
 export const PRIMARY_KEY_INDEX_POLICIES: Readonly<Record<string, string>> = {
+  producerEconomyTurnChunks:
+    "Immutable receipt chunks are written by SHA-256 _id and read only by the bounded list of hashes in one frozen turn manifest. Reset deletes all chunks; there are no secondary scans or TTL queries.",
   fundWritedownCompensationLedger: "Retired world receipts have no active secondary access path.",
   procurementRestrictions: "One restriction per country, read and updated by its country _id.",
   vietnamEscalation: "One singleton, read and upserted by _id.",
   appliedWorldTransitions:
     "One receipt per authored rule, upserted by _id; the bounded rule roster is read once.",
   bankingTelemetry: "Turn number is the _id used for upsert and latest-turn ordering.",
+  producerMarketShadows: "Telemetry: one summary per turn, upserted and read by its turn _id.",
   acquisitionSettlements: "Settlement recovery and writes address the offer identity through _id.",
   ngChamberLeadershipElections: "One election per chamber role, read and written by _id.",
   nppOperatorDiagnostics:

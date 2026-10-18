@@ -1,4 +1,5 @@
 import type { Db, ObjectId } from "mongodb";
+import { producerWorldEpochIfReady } from "@/lib/demographics/worldEpoch";
 import { isPrivateEnterpriseBlocked } from "@/lib/economy/queries/privateEnterpriseGate";
 import { ObjectId as Oid } from "mongodb";
 import type { Character, Corporation, CorporateSector } from "@/lib/db/types";
@@ -18,6 +19,7 @@ import { autoGrantedNodeIds } from "@/lib/constants/techTree";
 import { STARTING_YEAR } from "@/lib/constants/turnTime";
 import { resolveGameYear } from "@/lib/era/era";
 import { getGameState } from "@/lib/gameState";
+import { emptyProducerPayables } from "@/lib/market/producerMarket/openingState";
 import {
   generateTickerSymbol,
   insertCorporationWithTickerRetry,
@@ -212,6 +214,7 @@ export async function spinOff(
     // (suggestion #363). Without it the moved sectors lost their tech margin,
     // build discount and input/output bonuses the moment they changed hands.
     const gameState = await getGameState(db);
+    const spinOffWorldEpoch = await producerWorldEpochIfReady(db, gameState ?? undefined);
     const baselineTechNodeIds =
       gameState?.sectorTechTreesEnabled === true
         ? autoGrantedNodeIds(sectorType, resolveGameYear(gameState) ?? STARTING_YEAR)
@@ -235,6 +238,9 @@ export async function spinOff(
       countryId: parent.countryId,
       headquartersState: parent.headquartersState,
       liquidCapital: 0,
+      ...(spinOffWorldEpoch
+        ? { producerPayables: emptyProducerPayables(spinOffWorldEpoch, turn) }
+        : {}),
       liquidCurrencyCode: currencyCode,
       marketingBudget: 0,
       marketingStrength: 0,

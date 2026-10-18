@@ -1,4 +1,5 @@
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
+import { producerWorldEpochIfReady } from "@/lib/demographics/worldEpoch";
 import { NextResponse } from "next/server";
 import type { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -63,6 +64,7 @@ import {
   retailCapacityExpansionPaused,
   retailDemandTransitionTurnsRemaining,
 } from "@/lib/market/retailDemandTransition";
+import { emptyProducerSectorOpening } from "@/lib/market/producerMarket/openingState";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -224,10 +226,12 @@ export async function expandSector(request: Request, { params }: RouteParams) {
     let starterBuildAnchor = 0;
     let starterOnlineTurn = 0;
     let currentTurn = 0;
+    let producerWorldEpoch: string | null | undefined;
     // Modern basis until the plants block resolves the world's real scale; the
     // pool writer below only runs under plants, where the block has run.
     let eraUnitScale = 1;
     if (plantsEnabled) {
+      producerWorldEpoch = await producerWorldEpochIfReady(db, gameState ?? undefined);
       currentTurn = gameState?.currentTurn ?? 0;
       const currentYear =
         gameState?.currentYear ??
@@ -396,6 +400,8 @@ export async function expandSector(request: Request, { params }: RouteParams) {
       // basis.
       newSector.capacityBookAnchor = 0;
       newSector.buildQueue = [starterOrder];
+      if (producerWorldEpoch)
+        Object.assign(newSector, emptyProducerSectorOpening(producerWorldEpoch, currentTurn));
       // Born under plants, so it never needs the flip-turn migration — stamping
       // this now keeps `sectorTurn`'s `isFlipTurn` (plantsStartTurn == null) from
       // treating a zero-capacity newborn as a legacy sector to convert.
