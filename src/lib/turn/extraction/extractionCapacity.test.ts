@@ -84,21 +84,23 @@ describe("computeExtractionCapacityMultipliers", () => {
     ];
     for (const ordered of [contracts, [...contracts].reverse()]) {
       const result = computeExtractionCapacityMultipliers(sectors, ordered, capacities);
-      expect(result.get("s1")?.oil).toBeCloseTo(0.5);
-      expect(result.get("s2")?.oil).toBeCloseTo(0.5);
-      expect(result.get("s3")?.oil).toBeCloseTo(0.5);
+      // corp1 reserves 50k of its 100k; its other 50k and corp2's 100k share
+      // the 50k open pool pro rata (1/3 each unit).
+      expect(result.get("s1")?.oil).toBeCloseTo(2 / 3);
+      expect(result.get("s2")?.oil).toBeCloseTo(2 / 3);
+      expect(result.get("s3")?.oil).toBeCloseTo(1 / 3);
     }
   });
 
-  it("caps contract-holder output at contracted capacity", () => {
+  it("lets a contract holder draw on the open pool beyond its lease (ticket 1619)", () => {
     const sectors = [
       { sectorId: "s1", stateId: "TX", corporationId: corp1, revenueBasedOutput: { oil: 80000 } },
     ];
     const capacities = [makeCapacity("TX", { oil: 100000 })];
     const contracts = [makeContract("TX", corp1, "oil", 0.5)];
     const result = computeExtractionCapacityMultipliers(sectors, contracts, capacities);
-    // allocatedCap = 100000 × 0.5 = 50000; revenueOutput = 80000; multiplier = 50000/80000 = 0.625
-    expect(result.get("s1")?.oil).toBeCloseTo(0.625);
+    // 50k reserved + the remaining 30k from a 50k open pool nobody else wants.
+    expect(result.get("s1")?.oil).toBe(1);
   });
 
   it("does not cap contract-holder when revenue output is below contracted capacity", () => {
@@ -122,8 +124,8 @@ describe("computeExtractionCapacityMultipliers", () => {
 
     const result = computeExtractionCapacityMultipliers(sectors, contracts, capacities);
 
-    expect(result.get("s1")?.oil).toBeCloseTo(0.625);
-    expect(result.get("s2")?.oil).toBeCloseTo(0.625);
+    expect(result.get("s1")?.oil).toBe(1);
+    expect(result.get("s2")?.oil).toBe(1);
   });
 
   it("squeezes open-access to zero when contracts over-allocate", () => {
@@ -161,7 +163,37 @@ describe("computeExtractionCapacityMultipliers", () => {
     const capacities = [makeCapacity("TX", { oil: 100000, coal: 20000 })];
     const contracts = [makeContract("TX", corp1, "oil", 0.5)]; // oil contract only
     const result = computeExtractionCapacityMultipliers(sectors, contracts, capacities);
-    expect(result.get("s1")?.oil).toBeCloseTo(0.625); // capped by contract
+    expect(result.get("s1")?.oil).toBe(1); // lease plus open pool
     expect(result.get("s1")?.coal).toBe(1); // open-access, within pool
+  });
+
+  it("never lets buying a lease lower a company's dig", () => {
+    const sectors = [
+      { sectorId: "s1", stateId: "MN", corporationId: corp1, revenueBasedOutput: { iron: 90000 } },
+      { sectorId: "s2", stateId: "MN", corporationId: corp2, revenueBasedOutput: { iron: 30000 } },
+    ];
+    const capacities = [makeCapacity("MN", { iron: 100000 })];
+    const without = computeExtractionCapacityMultipliers(sectors, [], capacities);
+    const withLease = computeExtractionCapacityMultipliers(
+      sectors,
+      [makeContract("MN", corp1, "iron", 0.1)],
+      capacities
+    );
+    expect(withLease.get("s1")!.iron!).toBeGreaterThanOrEqual(without.get("s1")!.iron! - 1e-12);
+  });
+
+  it("keeps a holder's unused reserved share out of the open pool", () => {
+    const sectors = [
+      { sectorId: "s1", stateId: "TX", corporationId: corp1, revenueBasedOutput: { oil: 10000 } },
+      { sectorId: "s2", stateId: "TX", corporationId: corp2, revenueBasedOutput: { oil: 100000 } },
+    ];
+    const capacities = [makeCapacity("TX", { oil: 100000 })];
+    const result = computeExtractionCapacityMultipliers(
+      sectors,
+      [makeContract("TX", corp1, "oil", 0.5)],
+      capacities
+    );
+    expect(result.get("s1")?.oil).toBe(1);
+    expect(result.get("s2")?.oil).toBeCloseTo(0.5);
   });
 });

@@ -54,7 +54,8 @@ import type { UnownedSector } from "@/lib/db/types/unownedSector";
 import { CAPITAL_DEPRECIATION_PER_TURN } from "@/lib/market/capital";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { isAutopilotRun } from "@/lib/corporations/autopilot";
-import { getControllingCorporateParent } from "@/lib/corporations/corporateOwnership";
+import { operatorPermissionsFor } from "./operatorPermissions";
+import { operatorAllowsPlacement, operatorMay } from "./rules/operatorPolicy";
 import { bucketKey } from "@/lib/nationalization/stateControlledBuckets";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import {
@@ -161,6 +162,11 @@ export function makeNppCorpDecision(
   placementSignals?: PlacementSignals
 ): NppCorpDecision {
   const { corp, sectors, now, modifiers } = ctx;
+  const operator = ctx.operator ?? operatorPermissionsFor(corp);
+  const foundAllowed = operatorMay(operator, "found");
+  const borrowAllowed = operatorMay(operator, "borrow");
+  const budgetsAllowed = operatorMay(operator, "budgets");
+  const dividendsAllowed = operatorMay(operator, "dividends");
   const coreSectorModel = corp.industryModel ?? null;
   const isCoreSector = (sector: CorporateSector) =>
     sector.sectorType === corp.type && (sector.industryModel ?? null) === coreSectorModel;
@@ -374,20 +380,24 @@ export function makeNppCorpDecision(
   );
 
   const primaryIndustryOnly = groupDirection?.primaryIndustryOnly === true;
+  const placementLimited = operator.sectorTypes !== null || operator.countryIds !== null;
   const entryPools =
-    groupDirection?.regions.length || primaryIndustryOnly
+    groupDirection?.regions.length || primaryIndustryOnly || placementLimited
       ? new Map(
           [...unownedByCountry].map(([country, rows]) => [
             country,
-            rows.filter(
-              (row) =>
+            rows.filter((row) => {
+              const rowType = getOperatingSectorType(
+                row.sectorType,
+                row.industryModel,
+                row.mediaDiscriminator
+              );
+              return (
                 (!groupDirection?.regions.length || groupDirection.regions.includes(row.stateId)) &&
-                allowsNppIndustryInvestment(
-                  operatingCorpType,
-                  getOperatingSectorType(row.sectorType, row.industryModel, row.mediaDiscriminator),
-                  primaryIndustryOnly
-                )
-            ),
+                allowsNppIndustryInvestment(operatingCorpType, rowType, primaryIndustryOnly) &&
+                operatorAllowsPlacement(operator, rowType, country)
+              );
+            }),
           ])
         )
       : unownedByCountry;
@@ -453,17 +463,13 @@ export function makeNppCorpDecision(
     }
   }
 
-  // Autopilot never sheds a player's plant: a divest deletes the sector with no
-  // proceeds. It reports the losers to the owner instead.
+  // A divest deletes the sector with no proceeds, so a player's plant is shed only
+  // when the owner's policy allows it. Autopilot reports the losers to the owner
+  // instead. A parent-owned AI corporation keeps the parent's property (often
+  // bought at a premium) unless the policy says otherwise.
   const autopilot = isAutopilotRun(corp);
-  const autopilotLosers = autopilot ? divestedSectorIds.splice(0).length : 0;
-  // The same holds for an AI-run corporation a parent corporation owns: its
-  // sectors are the parent's property (often bought at a premium), and a divest
-  // deletes them for nothing. Derived from the cap table, like every other
-  // subsidiary fact, so it cannot drift from who actually controls the corp.
-  const ownedByParent =
-    corp.subsidiaryFormalizedAtTurn != null && getControllingCorporateParent(corp) != null;
-  if (ownedByParent) divestedSectorIds.splice(0);
+  const blockedDivests = operatorMay(operator, "divest") ? 0 : divestedSectorIds.splice(0).length;
+  const autopilotLosers = autopilot && operator.actions.divest === "ask" ? blockedDivests : 0;
 
   // Divest-leg flag (section 1): a completed shed; blocked-shed flags are set
   // inside the margin-divest loop above.
@@ -641,8 +647,7 @@ export function makeNppCorpDecision(
   // Autopilot and a parent-owned corporation leave retooling to the owner.
   if (
     !corp.countryOwnerId &&
-    !autopilot &&
-    !ownedByParent &&
+    operatorMay(operator, "retool") &&
     glutStaggerEligible(corp._id.toString(), ctx.turn)
   ) {
     const retool = chooseNppStrategyRetool({
@@ -728,9 +733,11 @@ export function makeNppCorpDecision(
       Math.round(totalRevenue * NPP_RD_MAINTENANCE_SHARE)
     );
   }
-  if (marketingBudget !== (corp.marketingBudget ?? 0)) updates.marketingBudget = marketingBudget;
-  if (logisticsBudget !== (corp.logisticsBudget ?? 0)) updates.logisticsBudget = logisticsBudget;
-  if (rdBudget !== (corp.rdBudget ?? 0)) updates.rdBudget = rdBudget;
+  if (budgetsAllowed) {
+    if (marketingBudget !== (corp.marketingBudget ?? 0)) updates.marketingBudget = marketingBudget;
+    if (logisticsBudget !== (corp.logisticsBudget ?? 0)) updates.logisticsBudget = logisticsBudget;
+    if (rdBudget !== (corp.rdBudget ?? 0)) updates.rdBudget = rdBudget;
+  }
 
   // ── 4. Dividend policy ────────────────────────────────────────────────────
   // Rate scales with margin — higher margin = higher payout. isProfitable/
@@ -755,15 +762,17 @@ export function makeNppCorpDecision(
     if (!(liquidCapital > effectiveCashFloor)) constraintFlags.dividend_cash_floor = true;
     if (corpMargin < 15) constraintFlags.dividend_margin_below_min = true;
   }
-  if (targetDividendRate !== (corp.dividendRate ?? 0)) {
+  if (dividendsAllowed && targetDividendRate !== (corp.dividendRate ?? 0)) {
     updates.dividendRate = targetDividendRate;
   }
 
   if (passive) {
-    updates.marketingBudget = 0;
-    updates.logisticsBudget = 0;
-    updates.rdBudget = 0;
-    updates.dividendRate = 0;
+    if (budgetsAllowed) {
+      updates.marketingBudget = 0;
+      updates.logisticsBudget = 0;
+      updates.rdBudget = 0;
+    }
+    if (dividendsAllowed) updates.dividendRate = 0;
     return {
       corpId: corp._id,
       updates,
@@ -810,7 +819,7 @@ export function makeNppCorpDecision(
     minCash: effectiveExpansionMinCash,
     sectorCount: effectiveSectors,
     logisticsSupportedSectors,
-    allowExpansion: levers.allowExpansion,
+    allowExpansion: levers.allowExpansion && foundAllowed,
     ordinaryEntryEligible: ctx.ordinaryEntryEligible,
     shortageEntryEligible: ctx.shortageEntryEligible,
     criticalLogisticsEntryEligible: ctx.criticalLogisticsEntryEligible,
@@ -859,6 +868,7 @@ export function makeNppCorpDecision(
   // it is non-null, so the block below prices the same slot either way.
   const foundingTarget = expansion ?? frontier?.target ?? null;
   const foundingBlockEntered =
+    foundAllowed &&
     foundingTarget !== null &&
     newSectors.length < NPP_SHORTAGE_ENTRIES_PER_TURN &&
     (ordinaryEntry || exceptionalShortageEntry || frontier !== null);
@@ -915,7 +925,8 @@ export function makeNppCorpDecision(
       // Charged in the corp's own currency: fee + build are ₳, liquidCapital is not.
       const entryFeeAnchor = sectorEntryFeeAnchor(plants.preset);
       const entryCapital =
-        liquidCapital + (exceptionalShortageEntry ? (ctx.shortageEntryCreditLocal ?? 0) : 0);
+        liquidCapital +
+        (exceptionalShortageEntry && borrowAllowed ? (ctx.shortageEntryCreditLocal ?? 0) : 0);
       // Size the first build to available capital, not a token facility. Deploy
       // a bounded fraction of post-floor, post-fee surplus into capacity, capped
       // by the market's unowned headroom and by the per-order ceiling, and
@@ -1057,7 +1068,7 @@ export function makeNppCorpDecision(
         foundingCashLocal = foundingCost;
         entryDiagnostic = setNppMarketEntryReason(entryDiagnostic, "entered");
       } else {
-        if (foundingOutcome.creditPath) {
+        if (foundingOutcome.creditPath && borrowAllowed) {
           shortageCreditRequest = {
             amountLocal: Math.max(0, foundingCost + effectiveCashFloor - entryCapital),
             sectorType: foundingTarget.sectorType as CorporationType,
@@ -1079,7 +1090,8 @@ export function makeNppCorpDecision(
     } else {
       const foundingCost = toCorpLocal(EXPANSION_COST);
       const entryCapital =
-        liquidCapital + (exceptionalShortageEntry ? (ctx.shortageEntryCreditLocal ?? 0) : 0);
+        liquidCapital +
+        (exceptionalShortageEntry && borrowAllowed ? (ctx.shortageEntryCreditLocal ?? 0) : 0);
       // Legacy (non-plants) founding has no per-unit quote; the observation
       // records the affordability facts with an explicit zero price.
       noteFoundingCapacityOutcome(foundingOutcome, {
@@ -1109,7 +1121,7 @@ export function makeNppCorpDecision(
         foundingCashLocal = foundingCost;
         entryDiagnostic = setNppMarketEntryReason(entryDiagnostic, "entered");
       } else {
-        if (foundingOutcome.creditPath) {
+        if (foundingOutcome.creditPath && borrowAllowed) {
           shortageCreditRequest = {
             amountLocal: Math.max(0, foundingCost + effectiveCashFloor - entryCapital),
             sectorType: foundingTarget.sectorType as CorporationType,
@@ -1423,6 +1435,17 @@ export function makeNppCorpDecision(
         // Autopilot never grows on a shortage alone: the plant must already earn.
         (sp.isProfitable || (criticalShortage && !autopilot)) &&
         levers.allowGrowthCapex &&
+        // Growth only: replacing worn capacity is upkeep, so a placement limit never stops it.
+        operatorMay(operator, "grow") &&
+        operatorAllowsPlacement(
+          operator,
+          getOperatingSectorType(
+            sector.sectorType,
+            sector.industryModel,
+            sector.mediaDiscriminator
+          ),
+          sectorCountryId
+        ) &&
         !(ctx.retailExpansionPaused && sector.sectorType === "retail") &&
         stateShortage > NPP_GROWTH_MIN_SHORTAGE &&
         // Utilization is measured on throttled output. In a critical shortage
@@ -1700,15 +1723,18 @@ export function makeNppCorpDecision(
           candidate.growthUnits > 0
             ? Math.max(0, cashLocal - effectiveCashFloor)
             : Math.max(0, Math.min(cashLocal, cashLocal * NPP_REINVEST_MAINTENANCE_CASH_SHARE));
-        constructionFinanceIntents.push({
-          sector,
-          order,
-          costLocal,
-          cashContributionLimitLocal,
-          growthUnits: candidate.growthUnits,
-          priority: candidate.interventionPriority,
-          fill: candidate.fill,
-        });
+        // An operator barred from borrowing never queues a financing request.
+        if (borrowAllowed) {
+          constructionFinanceIntents.push({
+            sector,
+            order,
+            costLocal,
+            cashContributionLimitLocal,
+            growthUnits: candidate.growthUnits,
+            priority: candidate.interventionPriority,
+            fill: candidate.fill,
+          });
+        }
         observePricedReinvestCandidate(
           "insufficient_cash",
           sector,

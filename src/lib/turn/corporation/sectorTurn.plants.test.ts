@@ -950,10 +950,17 @@ describe("plants mode — wages and upkeep follow the scheduled run", () => {
   const glutted = { producedUnits: unthrottledProduced, soldUnits: 0 };
 
   it("lays off gradually: the first throttled turn drops the crew by one step", () => {
-    const full = runCosts({});
-    const first = runCosts(glutted);
+    const full = runCosts({ plantCrewShare: 1 });
+    const first = runCosts({ ...glutted, plantCrewShare: 1 });
     expect(first.crew).toBeCloseTo(1 - PLANT_CREW_MAX_DROP_PER_TURN, 10);
     expect(first.laborCost / full.laborCost).toBeCloseTo(1 - PLANT_CREW_MAX_DROP_PER_TURN, 2);
+  });
+
+  it("hires a brand-new plant straight to its run instead of a full crew", () => {
+    const full = runCosts({ plantCrewShare: 1 });
+    const fresh = runCosts(glutted); // no stored crew share: never hired anyone
+    expect(fresh.crew).toBeCloseTo(PLANT_CREW_FLOOR_SHARE, 10);
+    expect(fresh.laborCost / full.laborCost).toBeCloseTo(PLANT_CREW_FLOOR_SHARE, 2);
   });
 
   it("staffs and pays a throttled plant at the crew floor once settled, not full nameplate", () => {

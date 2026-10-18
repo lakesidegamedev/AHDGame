@@ -106,6 +106,18 @@ number.
   (shipped in 6.14.1). Running worlds never change level on their own. The
   live multiplayer world moved to v6 with game 1.16.
 
+## 6.20.0 (game 1.16.0, 2026-10-18)
+
+Stage 3 (corporations).
+
+- **Reversible operation for oversized NPP plants (v6).** Independent automated
+  companies with measured operating losses can park unused capacity while
+  retaining the paid plant. Named-buyer demand, a physical market shortage,
+  missing market information, new construction or resource constraints restore
+  full operation before production. Corporations on owner-enabled autopilot
+  follow the same rule. Player CEOs, caretakers, subsidiaries and state firms
+  keep their operating choices. Media remains outside this change.
+
 ## 6.19.0 (game 1.16.0, 2026-10-15)
 
 Stage 3 (corporations).

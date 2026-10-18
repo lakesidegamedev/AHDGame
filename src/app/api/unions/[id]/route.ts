@@ -54,6 +54,13 @@ import {
   getBargainingMediationAvailability,
   isCollectiveAgreementActive,
 } from "@/lib/unions/bargaining";
+import {
+  bargainingMacroInputs,
+  bargainingPairKey,
+  costOfLivingByState,
+  employerBargainingOpenBlockedReason,
+  loadBargainingLastEnded,
+} from "@/lib/unions/commands/bargaining";
 import { buildRatificationView, ratificationBlockReason } from "@/lib/unions/ratification";
 import { RATIFICATION_BALLOTS } from "@/lib/unions/commands/ratifySettlement";
 import type { BargainingRatificationBallot } from "@/lib/db/types/union";
@@ -122,6 +129,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
               wageLevel: 1,
               workers: 1,
               unionization: 1,
+              workerExpectationIndex: 1,
               wagePerWorker: 1,
               representingUnionId: 1,
               strikeStartedAtTurn: 1,
@@ -292,6 +300,11 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const agreementByEmployer = new Map(
       liveAgreements.map((agreement) => [agreement.employerCorporationId.toString(), agreement])
     );
+    const [bargainingMacro, lastEndedByPair, bargainingCostOfLiving] = await Promise.all([
+      bargainingMacroInputs(db, union.countryId),
+      loadBargainingLastEnded(db, [union._id]),
+      costOfLivingByState(db, sectors),
+    ]);
 
     // Code-review fix #14: endorsements were a write-only dead end (recorded,
     // never surfaced anywhere). Join to bill titles and return them here so
@@ -434,20 +447,43 @@ export async function GET(_request: Request, { params }: RouteParams) {
         expiresAtTurn: agreement.expiresAtTurn,
         noStrikeUntilTurn: agreement.noStrikeUntilTurn,
       })),
-      employerOptions: [...sectorsByCorporation.entries()].map(([corporationId, locals]) => ({
-        corporationId,
-        corporationName: corpNameById.get(corporationId) ?? "Unknown",
-        localCount: locals.length,
-        averageWageLevel:
-          locals.reduce((sum, local) => sum + (local.wageLevel ?? 1), 0) / locals.length,
-        averageUnionization:
-          locals.reduce((sum, local) => sum + (local.unionization ?? 0), 0) / locals.length,
-        openCampaignId: openCampaignByEmployer.get(corporationId)?._id.toString() ?? null,
-        agreementExpiresAtTurn: agreementByEmployer.get(corporationId)?.expiresAtTurn ?? null,
-        agreementWageLevel: agreementByEmployer.get(corporationId)?.wageLevel ?? null,
-        agreementNoStrikeUntilTurn:
-          agreementByEmployer.get(corporationId)?.noStrikeUntilTurn ?? null,
-      })),
+      employerOptions: [...sectorsByCorporation.entries()]
+        .map(([corporationId, locals]) => {
+          const agreement = agreementByEmployer.get(corporationId);
+          const openCampaign = openCampaignByEmployer.get(corporationId);
+          return {
+            corporationId,
+            corporationName: corpNameById.get(corporationId) ?? "Unknown",
+            localCount: locals.length,
+            averageWageLevel:
+              locals.reduce((sum, local) => sum + (local.wageLevel ?? 1), 0) / locals.length,
+            averageUnionization:
+              locals.reduce((sum, local) => sum + (local.unionization ?? 0), 0) / locals.length,
+            openCampaignId: openCampaign?._id.toString() ?? null,
+            agreementExpiresAtTurn: agreement?.expiresAtTurn ?? null,
+            agreementWageLevel: agreement?.wageLevel ?? null,
+            agreementNoStrikeUntilTurn: agreement?.noStrikeUntilTurn ?? null,
+            openBlockedReason: employerBargainingOpenBlockedReason({
+              hasOpenCampaign: openCampaign != null,
+              agreementExpiresAtTurn: agreement?.expiresAtTurn ?? null,
+              lastEndedAtTurn:
+                lastEndedByPair.get(bargainingPairKey(union._id, new ObjectId(corporationId))) ??
+                null,
+              currentTurn,
+              locals,
+              treasury: union.treasury,
+              laborTightness: bargainingMacro.laborTightness,
+              lawSupport: bargainingMacro.lawSupport,
+              costOfLivingByState: bargainingCostOfLiving,
+            }),
+          };
+        })
+        .sort((a, b) => {
+          const aOpen = a.openBlockedReason == null ? 0 : 1;
+          const bOpen = b.openBlockedReason == null ? 0 : 1;
+          if (aOpen !== bOpen) return aOpen - bOpen;
+          return a.corporationName.localeCompare(b.corporationName);
+        }),
       // A8: the union's pension scheme, absent entirely when it has never
       // bargained one. Absence is the honest record that it never won a pension,
       // rather than a row of zeroes that looks like a scheme with no money.

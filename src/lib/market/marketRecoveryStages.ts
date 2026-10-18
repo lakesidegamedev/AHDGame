@@ -91,18 +91,12 @@ export function marketRecoveryStageActive(
 }
 
 /**
- * Stage 1 payroll factor per service industry: relieved intensity over the
- * #3551 intensity. Applied to the full labour share (era multiplier and
- * production-method blend included), so it scales exactly the service rate.
- * Static replay at turn 269: losing plants 28.9% -> 26.9%; healthcare margin
- * -7% -> -2%; real estate +7% -> +15%.
+ * Stage 1 (temporary service payroll relief) was superseded by the phase 1
+ * recalibration of SECTOR_LABOR_INTENSITY on 2026-10-18, which sets those four
+ * shares at or below the relieved values directly. The stage number stays so
+ * live worlds keep their stage, and it no longer scales anything.
  */
-export const SERVICE_LABOUR_RELIEF_FACTOR: Partial<Record<OperatingSectorType, number>> = {
-  technology: 0.35 / 0.4,
-  healthcare: 0.35 / 0.4,
-  financial: 0.325 / 0.4,
-  real_estate: 0.21 / 0.32,
-};
+export const SERVICE_LABOUR_RELIEF_FACTOR: Partial<Record<OperatingSectorType, number>> = {};
 
 /** A sector's labour share after the stages active in this world. */
 export function stagedLaborShare(

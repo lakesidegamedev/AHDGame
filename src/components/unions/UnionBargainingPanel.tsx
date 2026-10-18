@@ -15,6 +15,8 @@ export interface UnionBargainingEmployer {
   agreementExpiresAtTurn: number | null;
   agreementWageLevel: number | null;
   agreementNoStrikeUntilTurn: number | null;
+  /** Why Open campaign would refuse this employer; null when it can be opened. */
+  openBlockedReason: string | null;
 }
 
 export interface UnionBargainingOffer {
@@ -161,15 +163,10 @@ export function UnionBargainingPanel({
 
   useEffect(() => {
     const currentEmployer = employers.find((employer) => employer.corporationId === employerId);
-    if (
-      !currentEmployer ||
-      currentEmployer.openCampaignId ||
-      currentEmployer.agreementExpiresAtTurn
-    ) {
-      setEmployerId(
-        employers.find((employer) => !employer.openCampaignId && !employer.agreementExpiresAtTurn)
-          ?.corporationId ?? ""
-      );
+    const isOpenable = (employer: UnionBargainingEmployer) =>
+      !employer.openCampaignId && !employer.agreementExpiresAtTurn && !employer.openBlockedReason;
+    if (!currentEmployer || !isOpenable(currentEmployer)) {
+      setEmployerId(employers.find(isOpenable)?.corporationId ?? "");
     }
   }, [employerId, employers]);
 
@@ -313,14 +310,18 @@ export function UnionBargainingPanel({
                   <option
                     key={employer.corporationId}
                     value={employer.corporationId}
-                    disabled={!!employer.openCampaignId || !!employer.agreementExpiresAtTurn}
+                    disabled={
+                      !!employer.openCampaignId ||
+                      !!employer.agreementExpiresAtTurn ||
+                      !!employer.openBlockedReason
+                    }
                   >
                     {employer.corporationName} ({employer.localCount} locals,{" "}
                     {employer.averageUnionization.toFixed(0)}% organized
                     {employer.agreementExpiresAtTurn
                       ? `, agreement to turn ${employer.agreementExpiresAtTurn}`
                       : ""}
-                    )
+                    {employer.openBlockedReason ? `; ${employer.openBlockedReason}` : ""})
                   </option>
                 ))}
               </select>
@@ -370,7 +371,7 @@ export function UnionBargainingPanel({
               <span className="text-body-sm text-muted">
                 {employers.length === 0
                   ? "No employer operates a local of this industry in this country yet."
-                  : "Every employer already has an open campaign or a live agreement."}
+                  : "No employer can open a campaign right now. Each company in the list shows why."}
               </span>
             )}
           </div>

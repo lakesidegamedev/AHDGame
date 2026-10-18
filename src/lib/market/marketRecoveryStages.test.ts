@@ -26,13 +26,11 @@ describe("market recovery stages", () => {
     }
   });
 
-  it("stage 1 puts the four service rates halfway back and leaves others alone", () => {
-    const at = (type: string) => stagedLaborShare(type, getSectorLaborShare(type, 1991), 1);
-    expect(at("technology")).toBeCloseTo(0.35 * 1.1, 9);
-    expect(at("healthcare")).toBeCloseTo(0.35 * 1.1, 9);
-    expect(at("financial")).toBeCloseTo(0.325 * 1.1, 9);
-    expect(at("real_estate")).toBeCloseTo(0.21 * 1.1, 9);
-    expect(at("manufacturing")).toBe(getSectorLaborShare("manufacturing", 1991));
+  it("stage 1 no longer scales labour: the phase 1 calibration replaced it", () => {
+    for (const type of ["technology", "healthcare", "financial", "real_estate", "manufacturing"]) {
+      const share = getSectorLaborShare(type, 1991);
+      expect(stagedLaborShare(type, share, 1)).toBe(share);
+    }
   });
 
   it("stage 2 lowers the flat margin trim; stages 0 and 1 keep it", () => {
