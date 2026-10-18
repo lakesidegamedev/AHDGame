@@ -249,17 +249,22 @@ export async function runProducerMarketShadowPhase(
       publicOrders: publicBuyerOrders,
       eligibleOffersByOrder,
     });
-    await db
-      .collection(PRODUCER_SHADOW_COLLECTION)
-      .replaceOne(
-        { _id: input.turn as never },
-        { ...summary, worldEpoch: input.worldEpoch, ms: Date.now() - started, at: new Date() },
-        { upsert: true }
-      );
+    await db.collection(PRODUCER_SHADOW_COLLECTION).replaceOne(
+      { _id: input.turn as never },
+      {
+        ...summary,
+        legacyPrices: Object.fromEntries(
+          COMMODITY_TYPES.map((c) => [c, refPrice(c, "")] as const).filter(([, p]) => p != null)
+        ),
+        worldEpoch: input.worldEpoch,
+        ms: Date.now() - started,
+        at: new Date(),
+      },
+      { upsert: true }
+    );
   } catch (error) {
     console.warn("[producerMarketShadow] shadow run failed (telemetry only):", error);
   }
-  void COMMODITY_TYPES;
 }
 
 /** Legacy plantsPnl this turn, read from the sector writes already computed (no I/O). */

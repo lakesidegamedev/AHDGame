@@ -37,6 +37,8 @@ export interface ShadowSummary {
   householdSpend: number;
   publicSpend: number;
   industries: ShadowIndustryRow[];
+  /** World-book traded volume and volume-weighted price per commodity (anchor units). */
+  prices: { commodity: string; units: number; unitPrice: number }[];
 }
 
 /** Public purchase lines become funded orders from one public-buyer wallet per country. */
@@ -138,5 +140,9 @@ export function runProducerShadow(input: {
     householdSpend,
     publicSpend,
     industries: [...byType.values()].sort((a, b) => (a.sectorType < b.sectorType ? -1 : 1)),
+    prices: result.prices
+      .filter((p) => p.book === "world" && p.units > 0)
+      .map((p) => ({ commodity: p.commodity, units: p.units, unitPrice: p.unitPrice }))
+      .sort((a, b) => (a.commodity < b.commodity ? -1 : 1)),
   };
 }
