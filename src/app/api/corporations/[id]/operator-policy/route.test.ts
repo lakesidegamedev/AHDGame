@@ -24,6 +24,8 @@ const ownerId = new ObjectId();
 const corpId = new ObjectId();
 const ctx = { params: Promise.resolve({ id: corpId.toString() }) };
 const updateOne = () => db.collectionMocks["corporations"]!.updateOne;
+const firstUpdate = () =>
+  updateOne().mock.calls[0] as unknown as [Record<string, unknown>, Record<string, any>];
 
 async function setCorp(overrides: Record<string, unknown> = {}) {
   const { resolveCorporation } = await import("@/lib/api/corporations/resolveQuery");
@@ -77,7 +79,7 @@ describe("/api/corporations/[id]/operator-policy", () => {
       countryIds: ["US", "US"],
     });
     expect(res.status).toBe(200);
-    const set = updateOne().mock.calls[0]![1].$set.operatorPolicy;
+    const set = firstUpdate()[1].$set.operatorPolicy;
     expect(set).toEqual({
       actions: { divest: "allow", grow: "never" },
       sectorTypes: ["energy"],
@@ -130,6 +132,6 @@ describe("/api/corporations/[id]/operator-policy", () => {
   it("clears the policy", async () => {
     const res = await DELETE(new Request("http://localhost/x", { method: "DELETE" }), ctx);
     expect(res.status).toBe(200);
-    expect(updateOne().mock.calls[0]![1].$unset).toEqual({ operatorPolicy: "" });
+    expect(firstUpdate()[1].$unset).toEqual({ operatorPolicy: "" });
   });
 });

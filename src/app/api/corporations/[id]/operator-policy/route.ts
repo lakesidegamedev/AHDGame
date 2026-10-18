@@ -70,7 +70,7 @@ async function load(params: RouteParams["params"]) {
   return { db, corporation } as const;
 }
 
-export async function GET(_request: Request, { params }: RouteParams) {
+export async function GET(_request: Request, { params }: RouteParams): Promise<NextResponse> {
   try {
     const loaded = await load(params);
     if ("response" in loaded) return loaded.response;
@@ -80,7 +80,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
   }
 }
 
-export async function PUT(request: Request, { params }: RouteParams) {
+export async function PUT(request: Request, { params }: RouteParams): Promise<NextResponse> {
   try {
     const loaded = await load(params);
     if ("response" in loaded) return loaded.response;
@@ -106,7 +106,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
   }
 }
 
-export async function DELETE(_request: Request, { params }: RouteParams) {
+export async function DELETE(_request: Request, { params }: RouteParams): Promise<NextResponse> {
   try {
     const loaded = await load(params);
     if ("response" in loaded) return loaded.response;
