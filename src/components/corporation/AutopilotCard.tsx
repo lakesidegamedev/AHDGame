@@ -88,8 +88,8 @@ export function AutopilotCard({
               reserve, and adds at most {STEP_PERCENT}% to any one plant, only where the plant is
               already making money and the new capacity should pay for itself. New plants take many
               turns to come online, and that cash is not available while they build. It may also
-              reduce active capacity at eligible loss-making plants, while keeping the plant and
-              its paid capacity.
+              reduce active capacity at eligible loss-making plants, while keeping the plant and its
+              paid capacity.
             </p>
             <div className="flex gap-2">
               <SmallButton tone="primary" onClick={toggle} disabled={busy}>
