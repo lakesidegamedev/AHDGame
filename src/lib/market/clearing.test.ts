@@ -790,6 +790,28 @@ describe("clearCommodityMarket — contracted pre-pass (supply agreements)", () 
     const sold = clearCommodityMarket(10_000, sellers, undefined, new Map([["supplier", 2_000]]));
     expect(sold.get("supplier")).toBeCloseTo(1, 6);
   });
+
+  it("can reserve above the nameplate when contractFillUnits is higher", () => {
+    const sellers = [{ id: "mine", units: 400, posture: 0, contractFillUnits: 534 }];
+    const takeOut = new Map<string, number>();
+    const sold = clearCommodityMarket(
+      2_000,
+      sellers,
+      undefined,
+      new Map([["mine", 1_200]]),
+      takeOut
+    );
+    expect(takeOut.get("mine")).toBeCloseTo(534, 6);
+    // Nameplate residual is fully consumed by the larger contract take.
+    expect(sold.get("mine")).toBeCloseTo(1, 6);
+  });
+
+  it("caps the contract take at plants contractFillUnits below the nameplate", () => {
+    const sellers = [{ id: "mine", units: 600, posture: 0, contractFillUnits: 400 }];
+    const takeOut = new Map<string, number>();
+    clearCommodityMarket(2_000, sellers, undefined, new Map([["mine", 1_200]]), takeOut);
+    expect(takeOut.get("mine")).toBeCloseTo(400, 6);
+  });
 });
 
 describe("computeClearingFactors — state-scoped supply agreements", () => {
@@ -1229,5 +1251,87 @@ describe("dumping guard", () => {
 
   it("only applies on measured plants offers", () => {
     expect(run(false, -0.2).get("dominant")?.effectivePosture).toBe(-0.2);
+  });
+});
+
+describe("computeClearingFactors — extraction contractFillUnits", () => {
+  const basePrices = { coal: 100 } as Record<CommodityType, number>;
+
+  it("settles contracts against plants contractFillUnits when that exceeds the nameplate offer", () => {
+    // Extraction stays on the revenue nameplate (400) so lagged-supply normalization
+    // still runs, but plants made 534 — contracts must deliver the plants figure.
+    const settlementOut = new Map<string, Map<CommodityType, number>>();
+    computeClearingFactors({
+      sectors: [
+        {
+          sectorId: "mine",
+          revenue: 40_000, // nameplate = 400 at base 100
+          supplyRates: { coal: 1 },
+          posture: 0,
+          contractFillUnits: 534,
+        },
+      ],
+      balances: bals([["coal", { supply: 400, demand: 2_000 }]]),
+      priceRatioByCommodity: new Map([["coal", 1]]),
+      basePrices,
+      plantsEnabled: true,
+      contractedByCorpCommodity: new Map([["C1", new Map([["coal", 1_200]])]]),
+      sectorCorpId: new Map([["mine", "C1"]]),
+      contractSettlementOut: settlementOut,
+    });
+    expect(settlementOut.get("C1")?.get("coal")).toBeCloseTo(534, 5);
+  });
+
+  it("never settles a contract above plants contractFillUnits when the nameplate is larger", () => {
+    // Nameplate overstates plants: delivering the nameplate would invent goods.
+    const settlementOut = new Map<string, Map<CommodityType, number>>();
+    computeClearingFactors({
+      sectors: [
+        {
+          sectorId: "mine",
+          revenue: 60_000, // nameplate = 600
+          supplyRates: { coal: 1 },
+          posture: 0,
+          contractFillUnits: 400,
+        },
+      ],
+      balances: bals([["coal", { supply: 600, demand: 2_000 }]]),
+      priceRatioByCommodity: new Map([["coal", 1]]),
+      basePrices,
+      plantsEnabled: true,
+      contractedByCorpCommodity: new Map([["C1", new Map([["coal", 1_200]])]]),
+      sectorCorpId: new Map([["mine", "C1"]]),
+      contractSettlementOut: settlementOut,
+    });
+    expect(settlementOut.get("C1")?.get("coal")).toBeLessThanOrEqual(400 + 1e-9);
+    expect(settlementOut.get("C1")?.get("coal")).toBeCloseTo(400, 5);
+  });
+
+  it("keeps extraction nameplate offers on lagged-supply normalization (realUnits false)", () => {
+    // Without contractFillUnits on the seller path via producedUnits, a nameplate
+    // extraction seller remains normalizable. contractFillUnits must not flip realUnits.
+    const settlementOut = new Map<string, Map<CommodityType, number>>();
+    const res = computeClearingFactors({
+      sectors: [
+        {
+          sectorId: "mine",
+          revenue: 80_000, // nameplate 800
+          supplyRates: { coal: 1 },
+          posture: 0,
+          contractFillUnits: 500,
+        },
+      ],
+      // Lagged supply well below raw nameplate → normalization shrinks the offer.
+      balances: bals([["coal", { supply: 400, demand: 2_000 }]]),
+      priceRatioByCommodity: new Map([["coal", 1]]),
+      basePrices,
+      plantsEnabled: true,
+      contractedByCorpCommodity: new Map([["C1", new Map([["coal", 100]])]]),
+      sectorCorpId: new Map([["mine", "C1"]]),
+      contractSettlementOut: settlementOut,
+    });
+    // After normalization offer is ~400; contract 100 still fills from plants basis.
+    expect(settlementOut.get("C1")?.get("coal")).toBeCloseTo(100, 5);
+    expect(res.get("mine")?.soldFraction).toBeGreaterThan(0);
   });
 });
