@@ -11,3 +11,12 @@ describe("bank capacity explanation", () => {
     expect(bank.help).toContain("deposit ceiling");
   });
 });
+
+describe("staffing idle explanation", () => {
+  it("names a worker shortage on the run meter", () => {
+    const staffing = idleCauseMeta("media").staffing;
+    expect(staffing.label).toBe("Short of workers");
+    expect(staffing.tone).toBe("warning");
+    expect(staffing.help.toLowerCase()).toContain("workers");
+  });
+});

@@ -577,6 +577,7 @@ export type PlantIdleCauseKey =
   | "strike"
   | "disaster"
   | "policy"
+  | "staffing"
   | "bank"
   | "deposits"
   | "mothballed"
