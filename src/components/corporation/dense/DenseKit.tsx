@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useLocalCurrency } from "@/hooks/useLocalCurrency";
-import type { CurrencyCode } from "@/lib/constants/currencies";
+import { resolveCorpDisplayCurrency } from "@/lib/corporations/resolveCorpDisplayCurrency";
 import type { FillRateBand } from "@/lib/corporations/financialFogOfWar";
 import { ROW_ACCENT, type Tone } from "./InlineViz";
 import {
@@ -477,10 +477,13 @@ export function MiniSparkline({
  * of `useLocalCurrency` (local -> anchor -> the viewer's display currency).
  * Adds a signed amount for P&L lines, and share prices in the listing currency.
  */
-export function useCorpMoney(liquidCurrencyCode: string | null | undefined) {
+export function useCorpMoney(
+  liquidCurrencyCode: string | null | undefined,
+  countryId?: string | null
+) {
   const { formatPriceIn, formatPrice } = useCurrency();
-  const local = useLocalCurrency(liquidCurrencyCode ?? undefined);
-  const code = (liquidCurrencyCode as CurrencyCode | undefined) ?? undefined;
+  const code = resolveCorpDisplayCurrency({ liquidCurrencyCode, countryId });
+  const local = useLocalCurrency(code);
   const fmtSigned = (amount: number) =>
     `${amount > 0 ? "+" : amount < 0 ? "-" : ""}${local.fmtAmount(Math.abs(amount))}`;
   /** A share trades in its listing currency, whatever the viewer's display preference. */

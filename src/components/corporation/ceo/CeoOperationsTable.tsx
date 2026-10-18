@@ -711,7 +711,7 @@ export default function CeoOperationsTable({
 }: CeoOperationsTableProps) {
   const plantsMode = corporation.plantsMode === true;
   const labourEnabled = corporation.labourEnabled === true;
-  const money = useCorpMoney(corporation.liquidCurrencyCode);
+  const money = useCorpMoney(corporation.liquidCurrencyCode, corporation.countryId);
   const countryName = useCountryDisplayName();
   const [sortKey, setSortKey] = useState<SortKey>("revenue");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
