@@ -94,7 +94,10 @@ async function collectSnapshot(): Promise<Snapshot> {
     const collection = requests.get(event.requestId);
     if (!collection) return;
     requests.delete(event.requestId);
-    const rows = event.reply.cursor?.firstBatch ?? event.reply.cursor?.nextBatch ?? [];
+    const reply = event.reply as {
+      cursor?: { firstBatch?: Record<string, unknown>[]; nextBatch?: Record<string, unknown>[] };
+    };
+    const rows = reply.cursor?.firstBatch ?? reply.cursor?.nextBatch ?? [];
     const bytes = rows.reduce(
       (sum: number, row: Record<string, unknown>) => sum + BSON.calculateObjectSize(row),
       0
