@@ -114,8 +114,10 @@ import {
   getOperatingSectorType,
 } from "@/lib/constants/sectorStrategies";
 import { retoolProductionMeasurements } from "@/lib/corporations/retooling/rules";
+import { activeCapacityFraction } from "@/lib/corporations/investment/rules";
 import {
   computeExtractionCapacityMultipliers,
+  fullOutputMultipliers,
   type ExtractionSectorInput,
 } from "@/lib/turn/extraction/extractionCapacity";
 import { depletedCapacityDoc } from "@/lib/extraction/depletion";
@@ -1215,11 +1217,26 @@ export async function buildCorporationLookups(
       const sectorId = sector._id.toString();
       ratesBySector.set(sectorId, rates);
       outputUnitsBySector.set(sectorId, revenueBasedOutput);
+      // Plants (#4503): parked or mothballed capacity digs nothing, so it does
+      // not claim a share of the deposit. This turn's demand throttle is not
+      // known yet here; the ledger caps at real output.
+      let plantOutputCap: ExtractionSectorInput["plantOutputCap"];
+      if (options?.plantsEnabled === true) {
+        const active = activeCapacityFraction(sector);
+        plantOutputCap = {};
+        for (const [resource, units] of Object.entries(revenueBasedOutput) as [
+          ExtractableResource,
+          number,
+        ][]) {
+          plantOutputCap[resource] = units * active;
+        }
+      }
       return {
         sectorId,
         stateId: sector.stateId,
         corporationId: sector.corporationId,
         revenueBasedOutput,
+        ...(plantOutputCap ? { plantOutputCap } : {}),
       };
     });
     // P3b: under plants the corp phase rations against the DEPLETION-ADJUSTED
@@ -1227,12 +1244,17 @@ export async function buildCorporationLookups(
     // Without this the sector's revenue-side utilization and the world's supply
     // ledger would disagree about how much ore is left. Below plants the raw
     // docs are used, byte-identically.
-    const multipliers = computeExtractionCapacityMultipliers(
+    // Utilization below stays a share of FULL output (the plants hard-min
+    // divides it by the active fraction), so capped grants are re-expressed.
+    const multipliers = fullOutputMultipliers(
       extractionInputs,
-      activeContracts,
-      options?.plantsEnabled === true
-        ? stateResourceCapacityDocs.map(depletedCapacityDoc)
-        : stateResourceCapacityDocs
+      computeExtractionCapacityMultipliers(
+        extractionInputs,
+        activeContracts,
+        options?.plantsEnabled === true
+          ? stateResourceCapacityDocs.map(depletedCapacityDoc)
+          : stateResourceCapacityDocs
+      )
     );
     // Scarcity relief: lift the haircut off resources in global shortage
     // (lagged balances — same one-turn lag as every market input) so the

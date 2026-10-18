@@ -112,6 +112,7 @@ import {
   buildGdpGrowthData,
   buildPrimeRateByState,
   buildExtractionRevenueInputs,
+  withRealizedOutputCaps,
   accumulatePlantsUnits,
 } from "./commodity/sectorLedger";
 import {
@@ -618,7 +619,9 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
     const plantsEnabled = plantsLedgerEnabled;
     const rationingDocs = plantsEnabled ? capacityDocs.map(depletedCapacityDoc) : capacityDocs;
     extractionMultipliers = computeExtractionCapacityMultipliers(
-      extractionInputs,
+      plantsEnabled
+        ? withRealizedOutputCaps(extractionInputs, realizedFractionBySectorId)
+        : extractionInputs,
       activeContracts,
       rationingDocs
     );
