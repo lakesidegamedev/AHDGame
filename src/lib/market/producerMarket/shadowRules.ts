@@ -9,6 +9,7 @@ import { advanceProducerEconomy, type ProductionPlan } from "./production";
 import { producerTrades, type MarketAccount, type PurchaseOrder } from "./rules";
 import type { HouseholdSpec } from "./householdDemandRules";
 import type { PublicPurchaseLine } from "./publicBuyerRules";
+import { nextReferencePrice } from "./referencePriceRules";
 
 export interface ShadowProducer {
   plan: ProductionPlan;
@@ -39,6 +40,14 @@ export interface ShadowSummary {
   industries: ShadowIndustryRow[];
   /** World-book traded volume and volume-weighted price per commodity (anchor units). */
   prices: { commodity: string; units: number; unitPrice: number }[];
+  /** World-book demand and supply left over, and the reference the new market would set next turn. */
+  nextPrices: {
+    commodity: string;
+    reference: number;
+    next: number;
+    unmetUnits: number;
+    unsoldUnits: number;
+  }[];
 }
 
 /** Public purchase lines become funded orders from one public-buyer wallet per country. */
@@ -68,6 +77,8 @@ export function publicOrders(
 
 export function runProducerShadow(input: {
   turn: number;
+  /** Today's world reference price per commodity (anchor units). */
+  references?: Readonly<Record<string, number>>;
   producers: readonly ShadowProducer[];
   skipped: number;
   accounts: readonly MarketAccount[];
@@ -140,6 +151,43 @@ export function runProducerShadow(input: {
     householdSpend,
     publicSpend,
     industries: [...byType.values()].sort((a, b) => (a.sectorType < b.sectorType ? -1 : 1)),
+    nextPrices: (() => {
+      const unmet = new Map<string, number>();
+      for (const o of result.orderOutcomes)
+        if (o.book === "world")
+          unmet.set(
+            o.commodity,
+            (unmet.get(o.commodity) ?? 0) + Math.max(0, o.requestedUnits - o.deliveredUnits)
+          );
+      const unsold = new Map<string, number>();
+      for (const r of result.producers)
+        for (const p of r.products)
+          if (p.book === "world")
+            unsold.set(p.commodity, (unsold.get(p.commodity) ?? 0) + Math.max(0, p.unsoldUnits));
+      const settled = new Map(
+        result.prices.filter((p) => p.book === "world").map((p) => [p.commodity, p])
+      );
+      return Object.entries(input.references ?? {})
+        .filter(([, ref]) => ref > 0)
+        .map(([commodity, reference]) => {
+          const s = settled.get(commodity);
+          const u = unmet.get(commodity) ?? 0;
+          const k = unsold.get(commodity) ?? 0;
+          return {
+            commodity,
+            reference,
+            next: nextReferencePrice(reference, {
+              settledUnitPrice: s?.unitPrice ?? null,
+              unmetUnits: u,
+              unsoldUnits: k,
+              tradedUnits: s?.units ?? 0,
+            }),
+            unmetUnits: u,
+            unsoldUnits: k,
+          };
+        })
+        .sort((a, b) => (a.commodity < b.commodity ? -1 : 1));
+    })(),
     prices: result.prices
       .filter((p) => p.book === "world" && p.units > 0)
       .map((p) => ({ commodity: p.commodity, units: p.units, unitPrice: p.unitPrice }))
