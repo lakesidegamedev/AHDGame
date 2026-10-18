@@ -695,7 +695,11 @@ export function processSector(
         demandThrottleFactor: Math.min(demandThrottleFactor, restartRunShare),
         ramp: plantsRampLambda,
         floor: PLANT_CREW_FLOOR_SHARE,
-        previous: coldRestart ? 0 : sector.plantCrewShare,
+        // A plant with no stored crew share is new: it has never hired anyone,
+        // so it hires straight to its run instead of starting at a full crew
+        // and shedding 2% a turn (ticket: new plants paid ~90% payroll at a
+        // 33% run for their first turns).
+        previous: coldRestart || sector.plantCrewShare == null ? 0 : sector.plantCrewShare,
         maxDropPerTurn: plantCrewMaxDropPerTurn({
           demandThrottleFactor,
           priorDemandIdleTurns: sector.demandIdleTurns,
