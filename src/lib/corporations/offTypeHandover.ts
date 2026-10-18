@@ -17,8 +17,10 @@
  * are never sellers or buyers.
  *
  * Crash safety: one keyed receipt per (turn, sector) in `offTypeHandovers`,
- * advanced pending -> debited -> moved -> done. A retry resumes from the
- * recorded leg, so no debit, credit, transfer or ledger row repeats.
+ * advanced pending -> debited -> moved -> done, one bulk write per leg. Buyer
+ * debits and seller credits carry a per-turn marker on the corporation, so a
+ * retried turn resumes from the recorded leg without repeating a money move.
+ * Buyers share the seller's currency, so re-parenting needs no re-denomination.
  */
 import type { Db, ObjectId } from "mongodb";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
@@ -28,18 +30,14 @@ import { getControllingCorporateParent } from "@/lib/corporations/corporateOwner
 import { getSectorTypeMatchModifier } from "@/lib/corporations/specialization/rules";
 import { hasProtectedConstructionProperty } from "@/lib/corporations/securedConstructionProperty";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
-import { moveSectorToCorp } from "@/lib/corporations/moveSector";
+import { unprotectedConstructionPropertyFilter } from "@/lib/corporations/securedConstructionProperty";
 import { sectorBookValueAnchor } from "@/lib/corporations/sectorProfitBasis";
 import {
   anchorToCorpLiquidCapital,
   getCorpFxRate,
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
-import {
-  atomicallyDebitCorpLiquidCapital,
-  creditCorpLiquidCapital,
-} from "@/lib/financialTxLog/atomicCashGuard";
-import { emitTx } from "@/lib/financialTxLog/emit";
+import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import {
   MARKET_RECOVERY_STAGE,
   marketRecoveryStageActive,
@@ -91,6 +89,28 @@ interface HandoverReceipt {
   reason?: string;
 }
 
+/**
+ * Per-turn idempotency markers on the corporation documents. A buyer is debited
+ * and a seller credited at most once per turn, so one marker per side is enough
+ * to make each bulk money leg safe to replay.
+ */
+const DEBIT_MARK = "offTypeHandoverDebitKey";
+const CREDIT_MARK = "offTypeHandoverCreditKey";
+
+const laneKey = (corpId: ObjectId | string, s: CorporateSector) =>
+  `${corpId}|${s.stateId}|${s.sectorType}|${s.industryModel ?? ""}|${s.mediaDiscriminator ?? ""}`;
+
+async function bulkIgnoringWriteErrors(run: () => Promise<unknown>): Promise<void> {
+  try {
+    await run();
+  } catch (error) {
+    // Unordered bulk writes apply every op they can; per-op failures (a lane
+    // that appeared since planning, a duplicate receipt) are caught by the
+    // read-back that follows each leg.
+    if ((error as { name?: string })?.name !== "MongoBulkWriteError") throw error;
+  }
+}
+
 export async function runOffTypeHandover(
   db: Db,
   args: {
@@ -110,11 +130,8 @@ export async function runOffTypeHandover(
   const corps = (await corpsCol.find({ ceoType: "npp" }).toArray()).filter(isStandaloneAiCompany);
   if (corps.length === 0) return out;
   const corpById = new Map(corps.map((c) => [c._id.toString(), c]));
-  const sectors = await sectorsCol
-    .find({ corporationId: { $in: corps.map((c) => c._id) } })
-    .toArray();
-
-  const [contractSectorIds, activeAgreements] = await Promise.all([
+  const [sectors, contractSectorIds, activeAgreements, priorReceipts] = await Promise.all([
+    sectorsCol.find({ corporationId: { $in: corps.map((c) => c._id) } }).toArray(),
     db
       .collection("defenceContracts")
       .distinct("sectorId", { status: { $nin: ["cancelled", "completed", "expired"] } }),
@@ -125,197 +142,292 @@ export async function runOffTypeHandover(
         { projection: { supplierCorpId: 1, commodity: 1 } }
       )
       .toArray(),
+    receipts.find({ turn: args.turn }).toArray(),
   ]);
   const contracted = new Set(contractSectorIds.map((id) => String(id)));
   const agreementKeys = new Set(activeAgreements.map((a) => `${a.supplierCorpId}|${a.commodity}`));
 
-  const ownedLanes = new Set(
-    sectors.map(
-      (s) =>
-        `${s.corporationId}|${s.stateId}|${s.sectorType}|${s.industryModel ?? ""}|${s.mediaDiscriminator ?? ""}`
-    )
-  );
+  // ---- Plan (pure): one sale per seller, one purchase per buyer. ----
+  const sellersDone = new Set(priorReceipts.map((r) => r.sellerId.toString()));
+  const buyersUsed = new Set(priorReceipts.map((r) => r.buyerId.toString()));
+  const ownedLanes = new Set(sectors.map((s) => laneKey(s.corporationId, s)));
   const capacityByCorpType = new Map<string, number>();
+  const bySeller = new Map<string, CorporateSector[]>();
   for (const s of sectors) {
     const k = `${s.corporationId}|${s.sectorType}`;
     capacityByCorpType.set(k, (capacityByCorpType.get(k) ?? 0) + (Number(s.capitalStock) || 0));
-  }
-
-  const bySeller = new Map<string, CorporateSector[]>();
-  for (const s of sectors) {
     const seller = corpById.get(s.corporationId.toString());
-    if (!seller || !isOffType(seller, s.sectorType)) continue;
+    if (!seller || sellersDone.has(seller._id.toString()) || !isOffType(seller, s.sectorType))
+      continue;
     if (s.sectorType === "extraction" || hasProtectedConstructionProperty(s)) continue;
     if (contracted.has(s._id.toString())) continue;
-    const outputs = Object.keys(s.soldByCommodity ?? {});
-    if (outputs.some((c) => agreementKeys.has(`${s.corporationId}|${c}`))) continue;
+    if (
+      Object.keys(s.soldByCommodity ?? {}).some((c) => agreementKeys.has(`${s.corporationId}|${c}`))
+    )
+      continue;
     const list = bySeller.get(s.corporationId.toString()) ?? [];
     list.push(s);
     bySeller.set(s.corporationId.toString(), list);
   }
 
-  const buyersUsed = new Set<string>();
-  for (const [sellerId, rows] of bySeller) {
+  const fxByCorp = new Map<string, number>();
+  const planned: HandoverReceipt[] = [];
+  const now = new Date();
+  for (const [sellerId, rows] of [...bySeller].sort(([a], [b]) => a.localeCompare(b))) {
     const seller = corpById.get(sellerId)!;
     const sector = pickHandoverSector(rows);
     if (!sector) continue;
-    const key = `${args.turn}:${sector._id.toString()}`;
-    const prior = await receipts.findOne({ _id: key });
-    if (prior && (prior.state === "done" || prior.state === "deferred" || prior.state === "failed"))
-      continue;
-
-    const sellerCurrency = resolveCorpLiquidCurrencyCode(seller);
-    const buyer = prior
-      ? (corpById.get(prior.buyerId.toString()) ?? null)
-      : (corps
-          .filter(
-            (c) =>
-              !c._id.equals(seller._id) &&
-              !buyersUsed.has(c._id.toString()) &&
-              c.countryId === seller.countryId &&
-              isSameType(c, sector.sectorType) &&
-              resolveCorpLiquidCurrencyCode(c) === sellerCurrency &&
-              !ownedLanes.has(
-                `${c._id}|${sector.stateId}|${sector.sectorType}|${sector.industryModel ?? ""}|${sector.mediaDiscriminator ?? ""}`
-              )
-          )
-          .sort(
-            (a, b) =>
-              (capacityByCorpType.get(`${a._id}|${sector.sectorType}`) ?? 0) -
-                (capacityByCorpType.get(`${b._id}|${sector.sectorType}`) ?? 0) ||
-              a._id.toString().localeCompare(b._id.toString())
-          )[0] ?? null);
+    const currency = resolveCorpLiquidCurrencyCode(seller);
+    const buyer =
+      corps
+        .filter(
+          (c) =>
+            !c._id.equals(seller._id) &&
+            !buyersUsed.has(c._id.toString()) &&
+            c.countryId === seller.countryId &&
+            isSameType(c, sector.sectorType) &&
+            resolveCorpLiquidCurrencyCode(c) === currency &&
+            !ownedLanes.has(laneKey(c._id, sector))
+        )
+        .sort(
+          (a, b) =>
+            (capacityByCorpType.get(`${a._id}|${sector.sectorType}`) ?? 0) -
+              (capacityByCorpType.get(`${b._id}|${sector.sectorType}`) ?? 0) ||
+            a._id.toString().localeCompare(b._id.toString())
+        )[0] ?? null;
     if (!buyer) {
       out.deferred++;
       continue;
     }
+    const priceAnchor = Math.max(
+      0,
+      sectorBookValueAnchor(sector as never, args.year, args.eraUnitScale, args.turn) +
+        Math.max(0, Number(sector.inventoryValueAnchor) || 0)
+    );
+    planned.push({
+      _id: `${args.turn}:${sector._id.toString()}`,
+      turn: args.turn,
+      sectorId: sector._id,
+      sellerId: seller._id,
+      buyerId: buyer._id,
+      priceAnchor,
+      priceLocal: 0,
+      currency: currency ?? "USD",
+      state: "pending",
+      at: now,
+    });
+    buyersUsed.add(buyer._id.toString());
+    ownedLanes.add(laneKey(buyer._id, sector));
+  }
 
-    const priceAnchor =
-      prior?.priceAnchor ??
-      Math.max(
-        0,
-        sectorBookValueAnchor(sector as never, args.year, args.eraUnitScale, args.turn) +
-          Math.max(0, Number(sector.inventoryValueAnchor) || 0)
+  // FX is per currency, not per row: resolve each distinct buyer once.
+  const fxBuyers = [...new Set(planned.map((r) => r.buyerId.toString()))].map((id) =>
+    corpById.get(id)!
+  );
+  const fxRates = await Promise.all(fxBuyers.map((c) => getCorpFxRate(db, c)));
+  fxBuyers.forEach((c, i) => fxByCorp.set(c._id.toString(), fxRates[i]));
+  const fresh = planned
+    .map((r) => {
+      const buyer = corpById.get(r.buyerId.toString())!;
+      const priceLocal = Math.round(
+        anchorToCorpLiquidCapital(r.priceAnchor, buyer, fxByCorp.get(r.buyerId.toString()) ?? 1)
       );
-    const fx = await getCorpFxRate(db, buyer);
-    const priceLocal =
-      prior?.priceLocal ?? Math.round(anchorToCorpLiquidCapital(priceAnchor, buyer, fx));
-    if (!(priceLocal > 0)) {
-      out.deferred++;
-      continue;
-    }
-    if (!prior) {
-      try {
-        await receipts.insertOne({
-          _id: key,
-          turn: args.turn,
-          sectorId: sector._id,
-          sellerId: seller._id,
-          buyerId: buyer._id,
-          priceAnchor,
-          priceLocal,
-          currency: sellerCurrency ?? "USD",
-          state: "pending",
-          at: new Date(),
-        });
-      } catch {
-        continue; // another run owns this key
-      }
-    }
-    let state = prior?.state ?? "pending";
+      return { ...r, priceLocal };
+    })
+    .filter((r) => {
+      const buyer = corpById.get(r.buyerId.toString())!;
+      const affordable = r.priceLocal > 0 && (Number(buyer.liquidCapital) || 0) >= r.priceLocal;
+      if (!affordable) out.deferred++;
+      return affordable;
+    });
+  if (fresh.length > 0) {
+    await bulkIgnoringWriteErrors(() => receipts.insertMany(fresh, { ordered: false }));
+  }
 
-    if (state === "pending") {
-      const debit = await atomicallyDebitCorpLiquidCapital(db, buyer._id, priceLocal);
-      if (!debit.ok) {
-        await receipts.updateOne(
-          { _id: key },
-          { $set: { state: "deferred", reason: debit.error } }
-        );
-        out.deferred++;
-        continue;
-      }
-      await receipts.updateOne({ _id: key }, { $set: { state: "debited" } });
-      state = "debited";
+  // ---- Leg 1: debit buyers (guarded by cash and the per-turn marker). ----
+  let open = await receipts
+    .find({ turn: args.turn, state: { $in: ["pending", "debited", "moved"] } })
+    .toArray();
+  const pending = open.filter((r) => r.state === "pending");
+  if (pending.length > 0) {
+    await bulkIgnoringWriteErrors(() =>
+      corpsCol.bulkWrite(
+        pending.map((r) => ({
+          updateOne: {
+            filter: {
+              _id: r.buyerId,
+              liquidCapital: { $gte: r.priceLocal },
+              [DEBIT_MARK]: { $ne: r._id },
+            },
+            update: {
+              $inc: { liquidCapital: -r.priceLocal },
+              $set: { [DEBIT_MARK]: r._id, updatedAt: now },
+            },
+          },
+        })),
+        { ordered: false }
+      )
+    );
+    const debited = new Set(
+      (
+        await corpsCol
+          .find(
+            { [DEBIT_MARK]: { $in: pending.map((r) => r._id) } },
+            { projection: { [DEBIT_MARK]: 1 } }
+          )
+          .toArray()
+      ).map((c) => String((c as Record<string, unknown>)[DEBIT_MARK]))
+    );
+    await receipts.bulkWrite(
+      pending.map((r) => ({
+        updateOne: {
+          filter: { _id: r._id, state: "pending" },
+          update: debited.has(r._id)
+            ? { $set: { state: "debited" as const } }
+            : { $set: { state: "deferred" as const, reason: "Insufficient corporate funds" } },
+        },
+      })),
+      { ordered: false }
+    );
+  }
+
+  // ---- Leg 2: re-parent the plant row (non-merge path only). ----
+  open = await receipts.find({ turn: args.turn, state: { $in: ["debited", "moved"] } }).toArray();
+  const toMove = open.filter((r) => r.state === "debited");
+  if (toMove.length > 0) {
+    await bulkIgnoringWriteErrors(() =>
+      sectorsCol.bulkWrite(
+        toMove.map((r) => ({
+          updateOne: {
+            filter: {
+              _id: r.sectorId,
+              corporationId: r.sellerId,
+              ...unprotectedConstructionPropertyFilter(),
+            },
+            update: { $set: { corporationId: r.buyerId, updatedAt: now }, $unset: { forSale: "" } },
+          },
+        })),
+        { ordered: false }
+      )
+    );
+    const owners = new Map(
+      (
+        await sectorsCol
+          .find(
+            { _id: { $in: toMove.map((r) => r.sectorId) } },
+            { projection: { corporationId: 1 } }
+          )
+          .toArray()
+      ).map((s) => [s._id.toString(), s.corporationId?.toString()])
+    );
+    const moved = toMove.filter((r) => owners.get(r.sectorId.toString()) === r.buyerId.toString());
+    const failed = toMove.filter((r) => owners.get(r.sectorId.toString()) !== r.buyerId.toString());
+    if (failed.length > 0) {
+      // Refund exactly once: the refund clears the debit marker it matches on.
+      await corpsCol.bulkWrite(
+        failed.map((r) => ({
+          updateOne: {
+            filter: { _id: r.buyerId, [DEBIT_MARK]: r._id },
+            update: {
+              $inc: { liquidCapital: r.priceLocal },
+              $unset: { [DEBIT_MARK]: "" },
+              $set: { updatedAt: now },
+            },
+          },
+        })),
+        { ordered: false }
+      );
+      out.deferred += failed.length;
     }
-    if (state === "debited") {
-      const live = await sectorsCol.findOne({ _id: sector._id });
-      if (live && live.corporationId.equals(seller._id)) {
-        try {
-          await moveSectorToCorp(
-            db,
-            live,
-            buyer._id,
-            sellerCurrency,
-            fx,
-            sellerCurrency,
-            fx,
-            new Date()
-          );
-        } catch (error) {
-          await creditCorpLiquidCapital(db, buyer._id, priceLocal);
-          await receipts.updateOne(
-            { _id: key },
-            {
-              $set: {
-                state: "failed",
-                reason: error instanceof Error ? error.message : String(error),
-              },
-            }
-          );
-          out.deferred++;
-          continue;
-        }
-      }
-      await receipts.updateOne({ _id: key }, { $set: { state: "moved" } });
-      state = "moved";
-    }
-    if (state === "moved") {
-      await creditCorpLiquidCapital(db, seller._id, priceLocal);
-      await receipts.updateOne({ _id: key }, { $set: { state: "done" } });
-      const now = new Date();
+    await receipts.bulkWrite(
+      [
+        ...moved.map((r) => ({
+          updateOne: {
+            filter: { _id: r._id, state: "debited" as const },
+            update: { $set: { state: "moved" as const } },
+          },
+        })),
+        ...failed.map((r) => ({
+          updateOne: {
+            filter: { _id: r._id, state: "debited" as const },
+            update: {
+              $set: { state: "failed" as const, reason: "Plant changed hands or became secured" },
+            },
+          },
+        })),
+      ],
+      { ordered: false }
+    );
+  }
+
+  // ---- Leg 3: credit sellers, close receipts, write the ledger. ----
+  const toCredit = await receipts.find({ turn: args.turn, state: "moved" }).toArray();
+  if (toCredit.length > 0) {
+    await corpsCol.bulkWrite(
+      toCredit.map((r) => ({
+        updateOne: {
+          filter: { _id: r.sellerId, [CREDIT_MARK]: { $ne: r._id } },
+          update: {
+            $inc: { liquidCapital: r.priceLocal },
+            $set: { [CREDIT_MARK]: r._id, updatedAt: now },
+          },
+        },
+      })),
+      { ordered: false }
+    );
+    await receipts.bulkWrite(
+      toCredit.map((r) => ({
+        updateOne: {
+          filter: { _id: r._id, state: "moved" as const },
+          update: { $set: { state: "done" as const } },
+        },
+      })),
+      { ordered: false }
+    );
+    const sectorById = new Map(sectors.map((s) => [s._id.toString(), s]));
+    const entries = toCredit.flatMap((r) => {
+      const buyer = corpById.get(r.buyerId.toString());
+      const seller = corpById.get(r.sellerId.toString());
+      const sector = sectorById.get(r.sectorId.toString());
       const meta = {
         kind: "off_type_handover",
-        sectorId: sector._id.toString(),
-        sectorType: sector.sectorType,
-        stateId: sector.stateId,
-        priceAnchor,
+        receiptId: r._id,
+        sectorId: r.sectorId.toString(),
+        sectorType: sector?.sectorType,
+        stateId: sector?.stateId,
+        priceAnchor: r.priceAnchor,
       };
-      await Promise.all([
-        emitTx(db, {
+      const common = {
+        turn: args.turn,
+        createdAt: now,
+        subjectType: "corporation",
+        currencyCode: r.currency,
+        counterpartyType: "corporation",
+        meta,
+      } as const;
+      return [
+        {
+          ...common,
           type: "corp_sector_purchase",
-          turn: args.turn,
-          createdAt: now,
-          subjectType: "corporation",
-          subjectId: buyer._id,
-          subjectName: buyer.name,
-          amount: -priceLocal,
-          currencyCode: sellerCurrency ?? "USD",
-          counterpartyType: "corporation",
-          counterpartyId: seller._id,
-          counterpartyName: seller.name,
-          meta,
-        }),
-        emitTx(db, {
+          subjectId: r.buyerId,
+          subjectName: buyer?.name ?? "",
+          amount: -r.priceLocal,
+          counterpartyId: r.sellerId,
+          counterpartyName: seller?.name ?? "",
+        },
+        {
+          ...common,
           type: "corp_sector_sale",
-          turn: args.turn,
-          createdAt: now,
-          subjectType: "corporation",
-          subjectId: seller._id,
-          subjectName: seller.name,
-          amount: priceLocal,
-          currencyCode: sellerCurrency ?? "USD",
-          counterpartyType: "corporation",
-          counterpartyId: buyer._id,
-          counterpartyName: buyer.name,
-          meta,
-        }),
-      ]);
-      buyersUsed.add(buyer._id.toString());
-      ownedLanes.add(
-        `${buyer._id}|${sector.stateId}|${sector.sectorType}|${sector.industryModel ?? ""}|${sector.mediaDiscriminator ?? ""}`
-      );
-      out.moved++;
-    }
+          subjectId: r.sellerId,
+          subjectName: seller?.name ?? "",
+          amount: r.priceLocal,
+          counterpartyId: r.buyerId,
+          counterpartyName: buyer?.name ?? "",
+        },
+      ];
+    });
+    await emitTxBulk(db, entries as never, await loadTxThresholds(db));
+    out.moved += toCredit.length;
   }
   return out;
 }

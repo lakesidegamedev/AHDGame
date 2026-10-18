@@ -163,6 +163,12 @@ const REFERENCE: CollectionEntry[] = [
       "One vacant-head union per (countryId, sectorType). Wiped on reset; re-seeded at bootstrap with era-appropriate names.",
   },
   { name: "unionEndorsements", category: "runtime" },
+  {
+    name: "offTypeHandovers",
+    category: "runtime",
+    notes:
+      "Per-turn receipts for market recovery stage 5: one row per (turn, sector) AI off-type plant handover, advanced pending -> debited -> moved -> done so a retried turn resumes without repeating a money leg.",
+  },
   { name: "unionLeaderVotes", category: "runtime" },
   { name: "unionOrganizers", category: "runtime" },
   {
