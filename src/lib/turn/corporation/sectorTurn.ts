@@ -22,6 +22,7 @@ import {
   nextNegativeProductionCounter,
 } from "@/lib/constants/corporations";
 import { readCorpEconomicAnchor, writeCorpEconomicLocal } from "@/lib/currency/corpEconomyFields";
+import { isAutopilotRun } from "@/lib/corporations/autopilot";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { sociMultiplier } from "@/lib/nationalization/concentration";
 import { nationalizationProductivityFactor } from "@/lib/nationalization/transitionShock";
@@ -340,19 +341,25 @@ export function processSector(
     eraUnitScale: lookups.eraUnitScale,
   });
   // Resolve operation where allocated named demand and physical books are known.
-  // NPP proposals must not strand a new buyer behind yesterday's parked share.
+  // NPP V6 and owner-enabled autopilot share this reversible rule; ordinary player
+  // operation remains manual. Autopilot is owner-opted-in, so it does not depend on
+  // the country's NPP autonomy tier. Neither may strand a buyer behind parked capacity.
   const originalActivePercent = sector.activeCapacityPercent;
+  const autopilotOperationEligible = isAutopilotRun(corp);
+  const nppV6OperationEligible =
+    corp.ceoType === "npp" &&
+    !corp.caretakerCeo &&
+    !corp.suspended &&
+    !corp.ceoVacant &&
+    lookups.engineSixCountries?.has(corp.countryId) === true;
   const operatingCapacityEligible =
     plantsEnabled &&
-    corp.ceoType === "npp" &&
+    (nppV6OperationEligible || autopilotOperationEligible) &&
     sector.sectorType !== "media" &&
-    !corp.caretakerCeo &&
-    !corp.autopilot &&
     !isStateOwned(corp) &&
     !corp.suspended &&
     !corp.ceoVacant &&
-    corp.subsidiaryFormalizedAtTurn == null &&
-    lookups.engineSixCountries?.has(corp.countryId) === true;
+    corp.subsidiaryFormalizedAtTurn == null;
   const operatingCapacityTarget = operatingCapacityEligible
     ? nppOperatingCapacityTarget({
         eligible: true,

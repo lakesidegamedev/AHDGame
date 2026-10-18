@@ -176,7 +176,7 @@ Under the plants system dominance is a barrier to expansion, not a tax on operat
 
 ## Letting autopilot run the routine
 
-The corporation Overview has an **Autopilot** switch. You stay CEO and keep every manual action. Each turn it sets the marketing, logistics and R&D budgets and the dividend, grows plants that are selling, pauses plants stuck in a glut, and opens new plants when there is spare cash. Budgets and dividends you set by hand are reset the next turn while it is on.
+The corporation Overview has an **Autopilot** switch. You stay CEO and keep every manual action. Each turn it sets the marketing, logistics and R&D budgets and the dividend, grows plants that are selling, and opens new plants when there is spare cash. It can reduce active capacity at a demand-limited plant that is losing money, then restore it when buyers return or production constraints clear. The plant and its paid capacity remain yours. Budgets and dividends you set by hand are reset the next turn while it is on.
 
 It never borrows, picks research, retools, sells or closes plants, or buys rivals. Anything in those categories that it judges worth doing goes on the Overview as an advisory, with urgent ones also sent to your inbox. A corporation on autopilot is not penalised for an inactive CEO, but its CEO's national influence is capped at the standard rate.
 

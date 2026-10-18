@@ -1,5 +1,6 @@
 /**
- * NPC plant operation. Demand-limited, losing plants can park spare capacity.
+ * Autonomous plant operation for NPP V6 and owner-enabled autopilot. Demand-limited,
+ * losing plants can park spare capacity without discarding the paid asset.
  * nppOperatingCapacityTarget restores it when buyers or physical constraints require it.
  */
 import { activeCapacityFraction } from "@/lib/corporations/investment/rules";
