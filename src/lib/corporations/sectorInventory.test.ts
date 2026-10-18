@@ -6,6 +6,7 @@ import {
   type InventoryTurnInput,
 } from "./sectorInventory";
 import { COMMODITY_SPOILAGE_PER_TURN } from "@/lib/market/inventory";
+import { COMMODITY_BASE_PRICES } from "@/lib/constants/commodities";
 
 const base = (over: Partial<InventoryTurnInput> = {}): InventoryTurnInput => ({
   inventory: {},
@@ -92,6 +93,74 @@ describe("advanceSectorInventory", () => {
     expect(r.accruedUnits).toBeCloseTo(2.5, 6);
     expect(r.heldValueAnchor).toBeCloseTo(175, 6);
     expect(r.carryCostAnchor).toBeCloseTo(175 * INVENTORY_CARRY_COST_RATE_PER_TURN, 6);
+  });
+
+  it("values a retooled extraction pile at each commodity's own price", () => {
+    // A coal mine retooled to rare earth. The old coal in the pile must not
+    // inherit the new rare-earth mix price, which is what made a six-commodity
+    // pile read as hundreds of times its real value.
+    const mixPriceAnchor = COMMODITY_BASE_PRICES.rare_earth / 0.72;
+    const r = advanceSectorInventory(
+      base({
+        inventory: { coal: 1000, rare_earth: 10 },
+        stockpileEnabled: false,
+        producedUnits: 100,
+        soldUnits: 100,
+        soldFraction: 1,
+        soldByCommodity: {},
+        supplyRates: { rare_earth: 0.72 },
+        mixPriceAnchor,
+      })
+    );
+
+    // One output unit of the current strategy prices every held ton at that
+    // commodity's own base price on the same unit basis: base / Σrate.
+    const coalAnchor = COMMODITY_BASE_PRICES.coal / 0.72;
+    const rareAnchor = COMMODITY_BASE_PRICES.rare_earth / 0.72;
+    const coalAfterSpoilage = 1000 * (1 - COMMODITY_SPOILAGE_PER_TURN.coal);
+    const rareAfterSpoilage = 10 * (1 - COMMODITY_SPOILAGE_PER_TURN.rare_earth);
+    const coalDrained = coalAfterSpoilage * INVENTORY_DRAIN_RATE_PER_TURN;
+    const rareDrained = rareAfterSpoilage * INVENTORY_DRAIN_RATE_PER_TURN;
+
+    expect(r.drainedRevenueAnchor).toBeCloseTo(
+      coalDrained * coalAnchor + rareDrained * rareAnchor,
+      4
+    );
+    expect(r.heldValueAnchor).toBeCloseTo(
+      (coalAfterSpoilage - coalDrained) * coalAnchor +
+        (rareAfterSpoilage - rareDrained) * rareAnchor,
+      4
+    );
+    // The old uniform mix price valued all 1,010 tons at the rare-earth unit
+    // price; the pile is now a small fraction of that.
+    expect(r.heldValueAnchor).toBeLessThan(1000 * mixPriceAnchor * 0.02);
+  });
+
+  it("keeps the blended mix price when the sector has no priced output mix", () => {
+    // No supply rates means no per-commodity basis to derive; behaviour must
+    // stay exactly as before for such a sector.
+    const mixPriceAnchor = 300;
+    const r = advanceSectorInventory(
+      base({
+        inventory: { coal: 1000 },
+        stockpileEnabled: false,
+        producedUnits: 0,
+        soldUnits: 0,
+        soldFraction: 1,
+        soldByCommodity: {},
+        supplyRates: {},
+        mixPriceAnchor,
+      })
+    );
+    const afterSpoilage = 1000 * (1 - COMMODITY_SPOILAGE_PER_TURN.coal);
+    expect(r.drainedRevenueAnchor).toBeCloseTo(
+      afterSpoilage * INVENTORY_DRAIN_RATE_PER_TURN * mixPriceAnchor,
+      4
+    );
+    expect(r.heldValueAnchor).toBeCloseTo(
+      afterSpoilage * (1 - INVENTORY_DRAIN_RATE_PER_TURN) * mixPriceAnchor,
+      4
+    );
   });
 
   it("holding forever loses money against selling (carry + spoilage are net-negative EV)", () => {
