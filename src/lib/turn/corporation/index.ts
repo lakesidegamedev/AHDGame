@@ -137,6 +137,7 @@ import {
 import { persistMediaProductSales } from "@/lib/products/mediaProductSales";
 import { getMediaProductKind } from "@/lib/products/mediaProductCatalog";
 import { aggregateMediaProductSectorEffects } from "@/lib/products/rules/mediaProductRules";
+import { emptyProducerSectorOpening } from "@/lib/market/producerMarket/openingState";
 
 export type { CorporationTurnResult } from "./corporationTurnRuntime";
 
@@ -1276,7 +1277,18 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
   // the operative figure. The quantity that matters is written by the builder,
   // not here.
   if (nppNewSectors.length > 0) {
-    await db.collection("corporateSectors").insertMany(nppNewSectors);
+    let newProducerSectors = nppNewSectors;
+    if (plantsEnabledForMarketShare) {
+      if (!gameState?.worldEpochId)
+        throw new Error("Producer site founding requires a world economy generation");
+      const producerTurn = turn ?? gameState.currentTurn ?? 0;
+      const worldEpoch = gameState.worldEpochId;
+      newProducerSectors = nppNewSectors.map((sector) => ({
+        ...sector,
+        ...emptyProducerSectorOpening(worldEpoch, producerTurn),
+      }));
+    }
+    await db.collection("corporateSectors").insertMany(newProducerSectors);
   }
 
   // Business Acumen use-growth: each turn, every active player CEO accrues
