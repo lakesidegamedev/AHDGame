@@ -270,6 +270,7 @@ export default function SharesTab({
               <PrivateSalePanel
                 corporation={corporation}
                 myCharacterId={myCharacterId}
+                myCorporation={myCorporation}
                 corpId={corpId}
                 myShares={trading.myShares}
                 isCeo={isCeo}

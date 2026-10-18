@@ -67,7 +67,8 @@
       "rightBranch": "Rechter Zweig",
       "specializationSelected": "Spezialisierung gewählt: {name}",
       "specializationChoice": "Spezialisierung wählen",
-      "allSpecializationsBaseline": "Die Grundforschung abgeschlossener Jahrzehnte umfasst alle Spezialisierungen.",
+      "specializationClosed": "In einem abgeschlossenen Jahrzehnt nicht erforschbar",
+      "specializationsClosed": "Dieses Jahrzehnt ist abgeschlossen; seine Spezialisierungen können nicht mehr erforscht werden.",
       "chooseSpecialization": "Wähle eine. Die anderen werden für dieses Jahrzehnt gesperrt. Jeder Abschluss folgt seiner eigenen Wahl."
     }
   }

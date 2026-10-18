@@ -1103,6 +1103,7 @@ export default function CorporationDetailPage() {
             <PrivateSalePanel
               corporation={corporation}
               myCharacterId={myCharacterId}
+              myCorporation={myCorporation}
               corpId={id}
               myShares={
                 corporation.shareholders.find((sh) => sh.characterId === myCharacterId)?.shares ?? 0

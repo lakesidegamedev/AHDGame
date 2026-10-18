@@ -1061,6 +1061,7 @@ export default function SharePurchaseModal({
               <PrivateSalePanel
                 corporation={corporation}
                 myCharacterId={myCharacterId}
+                myCorporation={myCorporation}
                 corpId={corpId}
                 myShares={myShares}
                 isCeo={isCeo}

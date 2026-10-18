@@ -168,6 +168,33 @@ describe("GET /api/corporation/[id]/tech", () => {
     expect(sectorRoot.laneLocked).toBe(false);
   });
 
+  it("marks the specialization tier of a completed decade closed on both tracks (ticket 1606)", async () => {
+    const { resolveCorporation } = await import("@/lib/api/corporations/resolveQuery");
+    vi.mocked(resolveCorporation).mockResolvedValue({
+      ok: true,
+      corporation: makeCorp({ techDecadeLane: {}, unlockedTechNodeIds: [] }),
+    } as never);
+
+    const { GET } = await import("./route");
+    const res = await GET(new Request("http://localhost/api/corporation/x/tech"), {
+      params: Promise.resolve({ id: corpId.toString() }),
+    });
+    const body = await res.json();
+
+    const decade1979 = body.decades.find((d: { id: string }) => d.id === "1979");
+    expect(decade1979.autoGrantedDecade).toBe(true);
+
+    for (const lane of ["generic", "sector"] as const) {
+      const baseline = decade1979.lanes[lane].find((n: { slot: number }) => n.slot === 9);
+      const specialization = decade1979.lanes[lane].find((n: { slot: number }) => n.slot === 10);
+      expect(baseline.tierClosed, `${lane} baseline`).toBe(false);
+      expect(specialization.tierClosed, `${lane} specialization`).toBe(true);
+      expect(specialization.affordable, `${lane} specialization affordable`).toBe(false);
+      // A completed decade is not lane-locked: it is closed as a completed decade.
+      expect(specialization.laneLocked, `${lane} specialization laneLocked`).toBe(false);
+    }
+  });
+
   describe("private subsidiary visibility (ticket 1529)", () => {
     const parentId = new ObjectId();
     const parentCeoUserId = new ObjectId();

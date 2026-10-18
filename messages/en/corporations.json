@@ -447,7 +447,8 @@
       "rightBranch": "Right branch",
       "specializationSelected": "Specialization selected: {name}",
       "specializationChoice": "Specialization choice",
-      "allSpecializationsBaseline": "Completed decade baseline includes all specialization options.",
+      "specializationClosed": "Not researchable in a completed decade",
+      "specializationsClosed": "This decade is complete, so its specializations can no longer be researched.",
       "chooseSpecialization": "Choose one. Its rivals lock for this decade. Each capstone follows its own choice."
     },
     "group": {
