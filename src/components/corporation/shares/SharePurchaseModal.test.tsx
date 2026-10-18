@@ -196,3 +196,53 @@ describe("personal CEO market purchases", () => {
     expect(screen.queryByText(/CEO purchase limit/)).toBeNull();
   });
 });
+
+describe("at-market buy limit notices", () => {
+  const noFloat = /No shares are for sale on the market right now/;
+  const ceoFull = /You have reached your CEO buying limit for this window/;
+  const bank = {
+    id: "buyer",
+    name: "Buyer",
+    liquidCapital: 1_000_000,
+    liquidCurrencyCode: "USD",
+    isInvestmentBank: true,
+  };
+  function fullWindow(overrides: Partial<CorporationDetail> = {}) {
+    const corp = corporation();
+    return corporation({
+      ceoShareWindow: { ...corp.ceoShareWindow!, reservedShares: 100_000, remainingShares: 0 },
+      ...overrides,
+    });
+  }
+
+  it("explains an empty float and points to a limit order", () => {
+    setup({ isCeo: false, corporation: corporation({ publicFloat: 0 }) });
+    expect(screen.getByText(noFloat)).toBeTruthy();
+    expect(screen.queryByText(ceoFull)).toBeNull();
+  });
+  it("does not show the empty float notice to an investment bank", () => {
+    setup({ myCorporation: bank, corporation: corporation({ publicFloat: 0 }) });
+    fireEvent.click(screen.getByText("Investment bank"));
+    expect(screen.queryByText(noFloat)).toBeNull();
+  });
+  it("explains a used-up CEO window", () => {
+    setup({ corporation: fullWindow() });
+    expect(screen.getByText(ceoFull)).toBeTruthy();
+    expect(screen.queryByText(noFloat)).toBeNull();
+  });
+  it("prefers the CEO notice when the float is also empty", () => {
+    setup({ corporation: fullWindow({ publicFloat: 0 }) });
+    expect(screen.getByText(ceoFull)).toBeTruthy();
+    expect(screen.queryByText(noFloat)).toBeNull();
+  });
+  it("drops the CEO notice when buying for a company", () => {
+    setup({ myCorporation: bank, corporation: fullWindow() });
+    fireEvent.click(screen.getByText("Buyer"));
+    expect(screen.queryByText(ceoFull)).toBeNull();
+  });
+  it("shows no notice with float and allowance left", () => {
+    setup();
+    expect(screen.queryByText(noFloat)).toBeNull();
+    expect(screen.queryByText(ceoFull)).toBeNull();
+  });
+});
