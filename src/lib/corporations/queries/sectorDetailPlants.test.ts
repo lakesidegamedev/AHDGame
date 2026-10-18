@@ -73,6 +73,7 @@ describe("buildSectorPlantsSection", () => {
         producedUnits: 787_066,
         soldUnits: 633_305,
         throughputFactor: 0.965,
+        labourStaffingFactor: 1,
       }),
     });
     expect(result.idleCauses.some((cause) => cause.cause === "deposits")).toBe(false);
@@ -108,6 +109,37 @@ describe("buildSectorPlantsSection", () => {
     expect(s.workers).toBe(100);
     expect(s.workersDesired).toBe(400);
     expect(s.labourStaffingFactor).toBe(0.25);
+  });
+
+  it("names short staffing as an idle cause instead of other limits", () => {
+    const s = buildSectorPlantsSection({
+      eraUnitScale: 1,
+      ...BASE_ARGS,
+      sector: sectorFixture({
+        operatingCapacityUnits: 200,
+        producedUnits: 50,
+        soldUnits: 48,
+        throughputFactor: 1,
+        labourStaffingFactor: 0.25,
+      }),
+    });
+    expect(s.idleCauses.map((cause) => cause.cause)).toEqual(["staffing"]);
+    expect(s.idleCauses[0]?.units).toBeCloseTo(s.idleUnits!, 8);
+  });
+
+  it("keeps other limits only for idle the engine still cannot name", () => {
+    const s = buildSectorPlantsSection({
+      eraUnitScale: 1,
+      ...BASE_ARGS,
+      sector: sectorFixture({
+        operatingCapacityUnits: 200,
+        producedUnits: 150,
+        soldUnits: 150,
+        throughputFactor: 1,
+        labourStaffingFactor: 1,
+      }),
+    });
+    expect(s.idleCauses).toEqual([{ cause: "other", units: 50 }]);
   });
 
   it("includes national dominance in the player-facing build quote", () => {
@@ -148,7 +180,12 @@ describe("buildSectorPlantsSection", () => {
       eraUnitScale: 1,
       ...BASE_ARGS,
       sector: {
-        ...sectorFixture({ capitalStock: 1_000, producedUnits: 100, soldUnits: 80 }),
+        ...sectorFixture({
+          capitalStock: 1_000,
+          producedUnits: 100,
+          soldUnits: 80,
+          labourStaffingFactor: 1,
+        }),
         demandThrottleFactor: 0.1,
       } as CorporateSector,
     });
@@ -161,7 +198,12 @@ describe("buildSectorPlantsSection", () => {
       eraUnitScale: 1,
       ...BASE_ARGS,
       sector: {
-        ...sectorFixture({ capitalStock: 1_000, producedUnits: 336, soldUnits: 336 }),
+        ...sectorFixture({
+          capitalStock: 1_000,
+          producedUnits: 336,
+          soldUnits: 336,
+          labourStaffingFactor: 1,
+        }),
         demandThrottleFactor: 0.336,
       } as CorporateSector,
     });
@@ -624,7 +666,14 @@ describe("bank branch capacity attribution", () => {
       bankingCommodityScale: commodityProductionCapacityScale(charter, true),
     });
     expect(result.idleCauses[0]).toEqual({ cause: "bank", units: 1186.86, capacityShare: 0.6 });
-    expect(result.idleCauses.find((c) => c.cause === "inputs")?.units).toBeCloseTo(17.8, 6);
+    expect(result.idleCauses.find((c) => c.cause === "inputs")?.units).toBeCloseTo(
+      2.966666666666667,
+      6
+    );
+    expect(result.idleCauses.find((c) => c.cause === "staffing")?.units).toBeCloseTo(
+      14.833333333333334,
+      6
+    );
     expect(result.idleCauses.find((c) => c.cause === "other")?.units ?? 0).toBeLessThan(0.001);
     expect(result.idleCauses.reduce((sum, c) => sum + c.units, 0)).toBeCloseTo(
       result.idleUnits!,
@@ -638,9 +687,24 @@ describe("bank branch capacity attribution", () => {
       bankingCommodityScale: commodityProductionCapacityScale(charter, true),
       sector: { ...args.sector, throughputFactor: 0.8, demandThrottleFactor: 0.8, soldUnits: 0 },
     });
-    expect(result.idleCauses.map((cause) => cause.cause)).toEqual(["bank", "inputs", "demand"]);
-    expect(result.idleCauses.find((cause) => cause.cause === "inputs")?.units).toBeCloseTo(8.9, 6);
-    expect(result.idleCauses.find((cause) => cause.cause === "demand")?.units).toBeCloseTo(8.9, 6);
+    expect(result.idleCauses.map((cause) => cause.cause)).toEqual([
+      "bank",
+      "inputs",
+      "demand",
+      "staffing",
+    ]);
+    expect(result.idleCauses.find((cause) => cause.cause === "inputs")?.units).toBeCloseTo(
+      3.0956521739130435,
+      6
+    );
+    expect(result.idleCauses.find((cause) => cause.cause === "demand")?.units).toBeCloseTo(
+      3.0956521739130435,
+      6
+    );
+    expect(result.idleCauses.find((cause) => cause.cause === "staffing")?.units).toBeCloseTo(
+      11.608695652173914,
+      6
+    );
     expect(result.idleCauses.reduce((sum, cause) => sum + cause.units, 0)).toBeCloseTo(
       result.idleUnits!,
       8
@@ -656,6 +720,7 @@ describe("bank branch capacity attribution", () => {
         operatingCapacityUnits: 200,
         producedUnits: 60,
         throughputFactor: 1,
+        labourStaffingFactor: 1,
       },
     });
     expect(result.idleCauses).toEqual([
@@ -677,10 +742,19 @@ describe("bank branch capacity attribution", () => {
       bankingCommodityScale: commodityProductionCapacityScale(bankCharter, enabled),
     });
     expect(after.idleCauses).toEqual(before.idleCauses);
-    expect(after.idleCauses).toEqual([
-      { cause: "inputs", units: expect.closeTo(296.715, 6) },
-      { cause: "other", units: expect.closeTo(907.945, 6) },
-    ]);
+    expect(after.idleCauses.map((cause) => cause.cause)).toEqual(["inputs", "staffing"]);
+    expect(after.idleCauses.find((cause) => cause.cause === "inputs")?.units).toBeCloseTo(
+      200.77666666666667,
+      6
+    );
+    expect(after.idleCauses.find((cause) => cause.cause === "staffing")?.units).toBeCloseTo(
+      1003.8833333333333,
+      6
+    );
+    expect(after.idleCauses.reduce((sum, cause) => sum + cause.units, 0)).toBeCloseTo(
+      after.idleUnits!,
+      8
+    );
   });
 
   it("leaves non-financial sectors unchanged", () => {
