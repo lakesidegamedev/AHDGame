@@ -36,6 +36,7 @@ import {
   getExclusiveRivalIds,
   getPassedDecadeIds,
   getUnlockedStrategyIds,
+  isNodeOpenForResearch,
   getSectorTechEffects,
   SLOT_PARENT,
   techNodeCashCost,
@@ -149,6 +150,9 @@ export async function GET(_request: Request, { params }: RouteParams) {
         const cashCost = techNodeCashCost(node, dailyGrossRevenue ?? 0, techCashFloorLocal);
         // Past decades have both lanes auto-granted — no lane commitment applies.
         const laneLocked = isPastDecade ? false : !!committed && committed !== lane;
+        // A completed decade grants only its baseline, so its specialization
+        // tier is closed on both tracks (ticket 1606).
+        const tierOpen = isNodeOpenForResearch(node, isPastDecade);
         const prereqIds = getNodePrereqIds(node);
         const prereqMet = prereqIds.length === 0 || prereqIds.some((id) => unlocked.has(id));
         // v3: owning a rival specialization locks this node for the decade.
@@ -176,6 +180,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
             : null,
           owned: redact ? false : owned,
           autoGranted: !redact && owned && isPastDecade,
+          tierClosed: redact ? false : !tierOpen,
           laneLocked: redact ? false : laneLocked,
           prereqMet: redact ? false : prereqMet,
           pathLocked: redact ? false : pathLocked,
@@ -184,6 +189,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
             isCeo &&
             reached &&
             !owned &&
+            tierOpen &&
             !laneLocked &&
             !pathLocked &&
             prereqMet &&

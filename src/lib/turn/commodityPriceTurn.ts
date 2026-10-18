@@ -72,6 +72,7 @@ import {
   retailGdpParamsForStage,
   stockCoverCapTurnsForStage,
 } from "@/lib/market/commodityFixStages";
+import { normalizeMarketRecoveryStage } from "@/lib/market/marketRecoveryStages";
 import {
   inputDemandRealPhaseProgress,
   inputDemandRealPhaseStartTurnFrom,
@@ -557,7 +558,11 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
   const fixStageCfg = await db
     .collection<GameConfig>("gameConfig")
     .findOne({ _id: "default" } as Record<string, unknown>, {
-      projection: { commodityFixStage: 1, inputDemandRealPhaseStartTurn: 1 },
+      projection: {
+        commodityFixStage: 1,
+        marketRecoveryStage: 1,
+        inputDemandRealPhaseStartTurn: 1,
+      },
     });
   const inputDemandRealPhase = inputDemandRealPhaseProgress(
     inputDemandRealPhaseStartTurnFrom(fixStageCfg),
@@ -1056,6 +1061,7 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
     commodityNominalPriceIndex,
     scarcityDriftEnabled,
     commodityFixStage,
+    marketRecoveryStage: normalizeMarketRecoveryStage(fixStageCfg?.marketRecoveryStage),
     commandEconomyEnabled,
     priceCurrentYear,
     freightSettlementActive,

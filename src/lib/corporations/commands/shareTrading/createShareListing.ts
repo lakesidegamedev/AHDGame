@@ -77,7 +77,7 @@ export async function createShareListing(request: Request, { params }: RoutePara
     const parsed = await parseJsonBody(request, createListingSchema);
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
 
-    const { shares, sellAsCorporation, confirmCeoVacate } = parsed.data;
+    const { shares, sellAsCorporation, sellerCorporationId, confirmCeoVacate } = parsed.data;
     const db = await getDb();
     const corpGuard = await requireCorporationActionsEnabled(db);
     if (corpGuard) return corpGuard;
@@ -102,9 +102,11 @@ export async function createShareListing(request: Request, { params }: RoutePara
     const nowTurn = await getCurrentTurn(db);
 
     if (sellAsCorporation) {
-      const placerCorp = await db
-        .collection<Corporation>("corporations")
-        .findOne({ ceoId: character._id, ceoVacant: { $ne: true } });
+      const placerCorp = await db.collection<Corporation>("corporations").findOne({
+        ...(sellerCorporationId ? { _id: new ObjectId(sellerCorporationId) } : {}),
+        ceoId: character._id,
+        ceoVacant: { $ne: true },
+      });
       if (!placerCorp) {
         return errorResponse(
           403,
