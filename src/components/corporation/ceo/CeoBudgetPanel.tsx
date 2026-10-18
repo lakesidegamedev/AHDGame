@@ -107,7 +107,7 @@ export default function CeoBudgetPanel({
 }: CeoBudgetPanelProps) {
   const [periodView, setPeriodView] = useState<MoneyPeriod>("turn");
   const [drafts, setDrafts] = useState<Partial<Record<BudgetKey, string>>>({});
-  const money = useCorpMoney(corporation.liquidCurrencyCode);
+  const money = useCorpMoney(corporation.liquidCurrencyCode, corporation.countryId);
   const code = (corporation.liquidCurrencyCode as CurrencyCode | undefined) ?? undefined;
   const symbol = code ? (CURRENCY_SYMBOLS[code] ?? "$") : "₳";
   const suffix = MONEY_PERIOD_SUFFIX[periodView];

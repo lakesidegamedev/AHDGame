@@ -65,7 +65,7 @@ export default function CeoCapitalPanel({
   saving,
   onSaveSettings,
 }: CeoCapitalPanelProps) {
-  const money = useCorpMoney(corporation.liquidCurrencyCode);
+  const money = useCorpMoney(corporation.liquidCurrencyCode, corporation.countryId);
   const [fundModal, setFundModal] = useState<{ cooldownRemaining: number } | null>(null);
 
   const isPublic = !corporation.isPrivate && !corporation.countryOwnerId;

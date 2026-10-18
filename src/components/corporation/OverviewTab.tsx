@@ -390,7 +390,7 @@ export default function OverviewTab({
   myCharacterId,
   onTrade,
 }: OverviewTabProps) {
-  const money = useCorpMoney(corporation.liquidCurrencyCode);
+  const money = useCorpMoney(corporation.liquidCurrencyCode, corporation.countryId);
   const { fmt, fmtSigned, fmtPrice } = money;
   const fogged = financialFogOfWar != null;
   const est = (text: string) => (fogged ? `~${text}` : text);

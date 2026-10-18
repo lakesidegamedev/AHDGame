@@ -1297,6 +1297,7 @@ export default function CorporationDetailPage() {
                       corporationSecondaryType={corporation.secondaryType}
                       liquidCapital={corporation.liquidCapital}
                       liquidCurrencyCode={corporation.liquidCurrencyCode}
+                      countryId={corporation.countryId}
                       logisticsStrength={corporation.logisticsStrength}
                       onAbandonSector={handleAbandonSector}
                       abandoningSectorId={abandoningSectorId}

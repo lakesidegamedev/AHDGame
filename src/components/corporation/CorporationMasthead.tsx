@@ -138,7 +138,7 @@ export function CorporationMasthead({
   }
 
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const money = useCorpMoney(corporation.liquidCurrencyCode);
+  const money = useCorpMoney(corporation.liquidCurrencyCode, corporation.countryId);
   const ticker = deriveTicker({ tickerSymbol: corporation.tickerSymbol, name: corporation.name });
 
   // A public corp's price is public knowledge; a private corp shows it only to
