@@ -83,7 +83,7 @@ describe("processCrisisTurn", () => {
     await processCrisisTurn(db as unknown as Db, 10);
 
     // SP5: economic effects land on macroMetrics for every target region.
-    // S8: pipeline update clamped to the metricDefinitions bounds ([1, 25]).
+    // S8: pipeline update clamped to the metricDefinitions bounds ([1, 100]).
     // The floor was 2 until the 1953 era-band sweep: post-war reconstruction
     // Europe ran genuinely tighter labour markets than the modern floor assumed
     // (France's authored 1953 Île-de-France unemployment is 1.5).
@@ -96,7 +96,10 @@ describe("processCrisisTurn", () => {
               $max: [
                 1,
                 {
-                  $min: [25, { $add: [{ $ifNull: ["$economic.unemploymentRate.value", 0] }, 0.5] }],
+                  $min: [
+                    100,
+                    { $add: [{ $ifNull: ["$economic.unemploymentRate.value", 0] }, 0.5] },
+                  ],
                 },
               ],
             },
@@ -428,7 +431,7 @@ describe("processCrisisTurn", () => {
   });
 
   it("clamps crisis metric shocks to the metric's bounds (S8)", async () => {
-    // A -40 shock to unemploymentRate (bounds [1, 25]) must be written as a
+    // A -40 shock to unemploymentRate (bounds [1, 100]) must be written as a
     // bounded pipeline expression — never a bare unbounded $inc.
     const crisis = makeCrisis({
       scope: "global",
@@ -462,12 +465,12 @@ describe("processCrisisTurn", () => {
     expect(expr).toEqual({
       $max: [
         1,
-        { $min: [25, { $add: [{ $ifNull: ["$economic.unemploymentRate.value", 0] }, -40] }] },
+        { $min: [100, { $add: [{ $ifNull: ["$economic.unemploymentRate.value", 0] }, -40] }] },
       ],
     });
     // Evaluate the expression like Mongo would for a current value of 6:
     // 6 + (-40) = -34 → clamped to the floor 1, not persisted out of range.
-    expect(Math.max(1, Math.min(25, 6 + -40))).toBe(1);
+    expect(Math.max(1, Math.min(100, 6 + -40))).toBe(1);
   });
 
   it("applies a one-time real GDP loss via $mul on the affected states at startTurn", async () => {
