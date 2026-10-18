@@ -161,4 +161,38 @@ describe("employment legislation readback", () => {
     expect(policies.get("HOK")?.publicEmploymentAnnual).toBe(150_000);
     expect(policies.get("TOH")?.publicEmploymentAnnual).toBe(450_000);
   });
+
+  it("does not price a new jobs option using a stale enacted option's appropriation", async () => {
+    const { db, seed } = fixture();
+    seed("statePolicies", [
+      { stateId: "HOK", legislationTypeId: "jp_training", policyOptionIndex: 0 },
+    ]);
+    seed("enactedLaws", [
+      {
+        countryId: "JP",
+        stateId: "HOK",
+        scope: "state",
+        legislationTypeId: "jp_training",
+        policyOptionIndex: 1,
+        annualCostUsd: 1_000_000,
+      },
+    ]);
+    seed("legislationTypes", [
+      {
+        _id: "jp_training",
+        name: "Workforce Development",
+        policyOptions: [
+          { id: "opt_0", name: "Universal Jobs Guarantee" },
+          { id: "opt_1", name: "Limited Jobs Guarantee" },
+        ],
+      },
+    ]);
+    const policies = await loadEmploymentPolicies(
+      db,
+      48,
+      [{ _id: "HOK", countryId: "JP", population: 100 }],
+      { national: false, regional: false }
+    );
+    expect(policies.get("HOK")?.publicEmploymentAnnual).toBe(0);
+  });
 });
