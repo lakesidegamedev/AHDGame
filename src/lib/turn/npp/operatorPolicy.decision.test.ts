@@ -67,7 +67,7 @@ function run({ autopilot = false, policy, losingSector = false }: Options = {}) 
       revenue: 100,
       profitMargin: -900,
       plantsPnl: { revenue: 100, costs: 1000, profit: -900 },
-    } as CorporateSector;
+    } as unknown as CorporateSector;
   }
   const pools = specs.map(
     ([sectorType, countryId, stateId]) =>
