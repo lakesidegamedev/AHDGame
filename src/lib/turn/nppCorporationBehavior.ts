@@ -110,6 +110,8 @@ import {
   isAutopilotRun,
 } from "@/lib/corporations/autopilot";
 import type { CorpAutopilotAdvisory } from "@/lib/db/types/corporation";
+import { operatorPermissionsFor } from "@/lib/turn/npp/operatorPermissions";
+import { operatorMay } from "@/lib/turn/npp/rules/operatorPolicy";
 import { createNotifications } from "@/lib/notifications";
 import {
   corpDailyGrossRevenueLocalFromSectors,
@@ -495,6 +497,8 @@ export async function processNppCorporationDecisions(
   for (const corp of nppCorps) {
     const sectors = sectorsByCorp.get(corp._id.toString()) ?? [];
     const autopilot = isAutopilotRun(corp);
+    const operator = operatorPermissionsFor(corp);
+    const borrowAllowed = operatorMay(operator, "borrow");
     const archetype =
       (corp.ceoId && archetypeByNppId.get(corp.ceoId.toString())) || DEFAULT_ARCHETYPE;
     const corpCurrency = resolveCorpLiquidCurrencyCode(corp);
@@ -521,9 +525,10 @@ export async function processNppCorporationDecisions(
       strategyEligible: entryCohortEligible,
       ordinaryEntryEligible: entryCohortEligible,
       criticalLogisticsEntryEligible: criticalLogisticsEligible,
-      criticalLogisticsShortageEligible: criticalLogisticsEligible && !autopilot,
-      // Autopilot never borrows: shortage entry draws market-entry credit.
-      shortageEntryEligible: entryCohortEligible && !autopilot,
+      criticalLogisticsShortageEligible: criticalLogisticsEligible && borrowAllowed,
+      operator,
+      // An operator barred from borrowing (autopilot by default) never takes shortage-entry credit.
+      shortageEntryEligible: entryCohortEligible && borrowAllowed,
       retailExpansionPaused,
       caretakerMandate: corp.caretakerCeo?.mandate ?? "active",
       strategyLoopEnabled,
@@ -569,7 +574,7 @@ export async function processNppCorporationDecisions(
           placementSignals
         ),
     });
-    if (nppConstructionFinanceEnabled && corpCurrency && !autopilot) {
+    if (nppConstructionFinanceEnabled && corpCurrency && borrowAllowed) {
       for (const intent of decision.constructionFinanceIntents ?? []) {
         constructionFinanceCandidates.push({
           ...intent,
@@ -627,7 +632,12 @@ export async function processNppCorporationDecisions(
     // Autopilot computes the same pick into scratch arrays and leaves it to the
     // owner: a tech lane commitment is permanent, so it is the owner's call.
     const techScratch: TechUnlockLedgerInput[] = [];
-    if (techTreesEnabled && decisionContext.caretakerMandate !== "passive") {
+    const researchPermission = operator.actions.research;
+    if (
+      techTreesEnabled &&
+      decisionContext.caretakerMandate !== "passive" &&
+      researchPermission !== "never"
+    ) {
       maybePushNppTechUnlock({
         corp,
         dailyGrossRevenueLocal: corpDailyGrossRevenueLocalFromSectors(sectors, corp, {
@@ -642,10 +652,10 @@ export async function processNppCorporationDecisions(
         techCurrentYear,
         turn,
         now,
-        corpUpdates: autopilot ? [] : corpUpdates,
+        corpUpdates: researchPermission === "allow" ? corpUpdates : [],
         liquidCapitalDelta: decision.liquidCapitalDelta,
         cashReserve: decision.cashFloorLocal,
-        techLedger: autopilot ? techScratch : techLedger,
+        techLedger: researchPermission === "allow" ? techLedger : techScratch,
       });
     }
 

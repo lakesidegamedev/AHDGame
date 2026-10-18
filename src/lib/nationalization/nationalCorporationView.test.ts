@@ -134,7 +134,7 @@ describe("buildNationalCorporationView", () => {
     const ca = vm.holdingsByRegion.find((r) => r.stateId === "US-CA")!;
     expect(ca.sectors[0].priceControlled).toBe(true);
     // Efficiency breakdown present + total within the clamp.
-    expect(ca.sectors[0].efficiency.base).toBeLessThan(0);
+    expect(ca.sectors[0].efficiency.base).toBe(0); // no base drag since 2026-10-18
     expect(ca.sectors[0].efficiency.total).toBeLessThanOrEqual(-5);
     expect(ca.sectors[0].efficiency.total).toBeGreaterThanOrEqual(-25);
 

@@ -194,3 +194,15 @@ describe("parseDisplayDigits", () => {
     expect(parseDisplayDigits("9".repeat(40))).toBe(Number.MAX_SAFE_INTEGER);
   });
 });
+
+describe("CeoBudgetPanel: autopilot note", () => {
+  it("tells the CEO budgets reset each turn while autopilot is on", () => {
+    renderBudget({ corporation: { autopilot: { enabledTurn: 1, advisories: [] } } });
+    expect(screen.getByTestId("budget-autopilot-note").textContent).toMatch(/reset on the next/);
+  });
+
+  it("shows no note when autopilot is off", () => {
+    renderBudget();
+    expect(screen.queryByTestId("budget-autopilot-note")).toBeNull();
+  });
+});

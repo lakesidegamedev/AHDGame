@@ -218,6 +218,27 @@ export interface CorporationAutopilot {
   notifiedTurn?: Partial<Record<CorpAutopilotAdvisoryKind, number>>;
 }
 
+/** Moves an NPP operator can make for a corporation. */
+export type CorpOperatorAction =
+  "found" | "grow" | "divest" | "retool" | "borrow" | "budgets" | "dividends" | "research";
+
+/** `ask` records an advisory for the owner instead of acting, where one exists. */
+export type CorpOperatorPermission = "allow" | "ask" | "never";
+
+/**
+ * Owner-set limits on what an NPP operator (autopilot, caretaker or an NPP CEO
+ * of a subsidiary) may do. Absent keeps each role's default behavior exactly.
+ */
+export interface CorporationOperatorPolicy {
+  /** Per-action overrides; an action left out keeps its role default. */
+  actions?: Partial<Record<CorpOperatorAction, CorpOperatorPermission>>;
+  /** Operating sector types the operator may found or grow in; absent means any. */
+  sectorTypes?: string[];
+  /** Countries the operator may found or grow in; absent means any. */
+  countryIds?: string[];
+  setTurn: number;
+}
+
 export interface Corporation {
   /** Frozen migration fallback for unrecorded legacy personal cost basis. */
   stockHoldingRolloutAnchorPrice?: number;
@@ -658,6 +679,8 @@ export interface Corporation {
    * `advisories` for the owner. Absent means the player runs the corp.
    */
   autopilot?: CorporationAutopilot;
+  /** Owner limits on the NPP operator running this corporation. */
+  operatorPolicy?: CorporationOperatorPolicy;
   /** Country owner for state-owned / nationalized corporations */
   countryOwnerId?: CountryId;
   /** Hide the corporation from stock-exchange style equity listings */

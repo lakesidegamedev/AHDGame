@@ -3,7 +3,11 @@
  */
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { UnionBargainingPanel, type UnionBargainingCampaign } from "./UnionBargainingPanel";
+import {
+  UnionBargainingPanel,
+  type UnionBargainingCampaign,
+  type UnionBargainingEmployer,
+} from "./UnionBargainingPanel";
 
 function dispute(): UnionBargainingCampaign {
   const offer = {
@@ -327,5 +331,86 @@ describe("UnionBargainingPanel dispute actions", () => {
     expect(screen.getByText("Labour law")).toBeTruthy();
     expect(screen.getByText("Strike fund")).toBeTruthy();
     expect(screen.getByText("2.5 calls")).toBeTruthy();
+  });
+});
+
+function employer(overrides: Partial<UnionBargainingEmployer> = {}): UnionBargainingEmployer {
+  return {
+    corporationId: "corp-open",
+    corporationName: "Openable Corp",
+    localCount: 2,
+    averageWageLevel: 1.05,
+    averageUnionization: 55,
+    openCampaignId: null,
+    agreementExpiresAtTurn: null,
+    agreementWageLevel: null,
+    agreementNoStrikeUntilTurn: null,
+    openBlockedReason: null,
+    ...overrides,
+  };
+}
+
+describe("UnionBargainingPanel employer picker", () => {
+  it("disables a blocked employer and shows the reason in the option label", () => {
+    render(
+      <UnionBargainingPanel
+        unionId="union1"
+        unionTreasury={2_000}
+        currentTurn={105}
+        isLeader
+        employers={[
+          employer({
+            corporationId: "corp-blocked",
+            corporationName: "Blocked Corp",
+            openBlockedReason: "The union needs more organized workers at this employer.",
+          }),
+          employer(),
+        ]}
+        campaigns={[]}
+        onReload={vi.fn().mockResolvedValue(undefined)}
+      />
+    );
+
+    const blocked = screen.getByRole("option", {
+      name: /Blocked Corp.*The union needs more organized workers at this employer/,
+    }) as HTMLOptionElement;
+    const openable = screen.getByRole("option", { name: /Openable Corp/ }) as HTMLOptionElement;
+    expect(blocked.disabled).toBe(true);
+    expect(openable.disabled).toBe(false);
+    expect((screen.getByRole("combobox") as HTMLSelectElement).value).toBe("corp-open");
+  });
+
+  it("explains when every employer is blocked from opening", () => {
+    render(
+      <UnionBargainingPanel
+        unionId="union1"
+        unionTreasury={2_000}
+        currentTurn={105}
+        isLeader
+        employers={[
+          employer({
+            corporationId: "corp-a",
+            corporationName: "Alpha",
+            openBlockedReason: "An open bargaining campaign already exists with this employer.",
+          }),
+          employer({
+            corporationId: "corp-b",
+            corporationName: "Beta",
+            openBlockedReason: "Bargaining with this employer can reopen on turn 120.",
+          }),
+        ]}
+        campaigns={[]}
+        onReload={vi.fn().mockResolvedValue(undefined)}
+      />
+    );
+
+    expect(
+      screen.getByText(
+        "No employer can open a campaign right now. Each company in the list shows why."
+      )
+    ).toBeTruthy();
+    expect(
+      (screen.getByRole("button", { name: "Open campaign" }) as HTMLButtonElement).disabled
+    ).toBe(true);
   });
 });

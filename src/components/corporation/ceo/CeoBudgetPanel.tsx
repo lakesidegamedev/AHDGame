@@ -253,6 +253,12 @@ export default function CeoBudgetPanel({
         />
       }
     >
+      {corporation.autopilot != null && (
+        <p className="pb-2 text-xs text-muted" data-testid="budget-autopilot-note">
+          Autopilot sets these budgets every turn, so changes you save here are reset on the next
+          turn. Turn autopilot off to set them yourself.
+        </p>
+      )}
       <StatementTable>
         <StatementLine
           label="Gross revenue"

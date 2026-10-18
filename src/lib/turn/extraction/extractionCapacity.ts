@@ -101,32 +101,56 @@ export function computeExtractionCapacityMultipliers(
       // A contract belongs to the corporation, not to each of its sectors.
       // Price the corporation's combined demand against its one allocation so
       // opening another sector cannot duplicate the same extraction rights.
+      //
+      // A lease is a reserved floor, not a ceiling: whatever a holder wants
+      // beyond its reserved share competes for the open-access pool on the same
+      // terms as everyone else. Before ticket 1619 a holder was shut out of the
+      // pool entirely, so buying a 10% lease on a deposit the company was
+      // already mining alone cut its dig to 10% of the deposit.
+      const reservedByCorporation = new Map<string, { allocated: number; desired: number }>();
       for (const [corporationId, corporationSectors] of contractedByCorporation) {
         const share = contractsForResource!.get(corporationId)!;
-        const allocatedCap = totalCapacity * share;
-        const totalOutput = corporationSectors.reduce(
+        const desired = corporationSectors.reduce(
           (sum, sector) => sum + (sector.revenueBasedOutput[resource] ?? 0),
           0
         );
-        const multiplier = totalOutput > 0 ? Math.min(1, allocatedCap / totalOutput) : 1;
-        for (const sector of corporationSectors) {
-          setMultiplier(result, sector.sectorId, resource, multiplier);
-        }
+        reservedByCorporation.set(corporationId, {
+          allocated: Math.min(desired, totalCapacity * share),
+          desired,
+        });
       }
-
-      const totalOADemand = openAccess.reduce(
-        (sum, s) => sum + (s.revenueBasedOutput[resource] ?? 0),
-        0
-      );
-      for (const sector of openAccess) {
+      const residualOf = (sector: ExtractionSectorInput): number => {
         const output = sector.revenueBasedOutput[resource] ?? 0;
-        if (openAccessPool <= 0 || output <= 0) {
-          setMultiplier(result, sector.sectorId, resource, openAccessPool <= 0 ? 0 : 1);
-        } else if (totalOADemand <= openAccessPool) {
-          setMultiplier(result, sector.sectorId, resource, 1);
-        } else {
-          setMultiplier(result, sector.sectorId, resource, openAccessPool / totalOADemand);
+        const reserved = reservedByCorporation.get(sector.corporationId.toString());
+        if (!reserved) return output;
+        if (!(reserved.desired > 0)) return 0;
+        return output * (1 - reserved.allocated / reserved.desired);
+      };
+      const totalOADemand = stateSectors.reduce((sum, s) => sum + residualOf(s), 0);
+      const poolFill =
+        openAccessPool <= 0 || totalOADemand <= 0 ? 0 : Math.min(1, openAccessPool / totalOADemand);
+
+      for (const sector of stateSectors) {
+        const output = sector.revenueBasedOutput[resource] ?? 0;
+        const reserved = reservedByCorporation.get(sector.corporationId.toString());
+        if (output <= 0) {
+          setMultiplier(
+            result,
+            sector.sectorId,
+            resource,
+            openAccessPool <= 0 && !reserved ? 0 : 1
+          );
+          continue;
         }
+        const reservedUnits =
+          reserved && reserved.desired > 0 ? output * (reserved.allocated / reserved.desired) : 0;
+        const poolUnits = residualOf(sector) * poolFill;
+        setMultiplier(
+          result,
+          sector.sectorId,
+          resource,
+          Math.min(1, (reservedUnits + poolUnits) / output)
+        );
       }
     }
   }
