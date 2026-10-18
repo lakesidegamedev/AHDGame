@@ -455,6 +455,12 @@ export interface GameConfig {
    */
   marketRecoveryStage?: number;
   /**
+   * Run the unified producer market in memory each turn beside the live engine
+   * and record a per-industry comparison in `producerMarketShadows`. Telemetry
+   * only: moves no money and writes no sector or corporation.
+   */
+  producerMarketShadowEnabled?: boolean;
+  /**
    * When true, outstanding build orders in sectors whose output is in deep
    * shortage have their remaining build time halved, once per order. See
    * turn/corporation/sectorTurn/shortageBuildSpeedup.ts.

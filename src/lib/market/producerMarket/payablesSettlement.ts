@@ -106,11 +106,13 @@ export async function publishProducerPayables(
   const bindings = input.bindings.filter((binding) => debtors.has(binding.accountId));
   if (bindings.length !== debtors.size)
     throw new Error("Missing producer payable publication target");
-  for (const kind of ["corporation", "economyAccount"] as const) {
-    const targets = bindings.filter((binding) => binding.kind === kind);
+  // One bulk write per collection (two collections, never per row); the
+  // driver splits each into server-sized batches.
+  const publish = async (kind: "corporation" | "economyAccount") => {
+    const batch = bindings.filter((binding) => binding.kind === kind);
+    if (batch.length === 0) return;
     const collection = kind === "corporation" ? "corporations" : "producerEconomyAccounts";
-    for (let offset = 0; offset < targets.length; offset += 128) {
-      const batch = targets.slice(offset, offset + 128);
+    {
       const result = await db
         .collection<{
           _id: string | ObjectId;
@@ -149,10 +151,13 @@ export async function publishProducerPayables(
                 },
               },
             },
-          }))
+          })),
+          { ordered: false }
         );
       if (result.matchedCount !== batch.length)
         throw new Error("Producer payable publication lost its generation guard");
     }
-  }
+  };
+  await publish("corporation");
+  await publish("economyAccount");
 }

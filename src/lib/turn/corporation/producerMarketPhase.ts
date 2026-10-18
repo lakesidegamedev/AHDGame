@@ -54,24 +54,25 @@ async function createProducerWallets(
 ) {
   const unique = new Map(scopes.map((scope) => [producerWalletId(worldEpoch, scope), scope]));
   const entries = [...unique];
-  for (let offset = 0; offset < entries.length; offset += 128) {
-    await db.collection<ProducerEconomyAccount>("producerEconomyAccounts").bulkWrite(
-      entries.slice(offset, offset + 128).map(([_id, scope]) => ({
-        updateOne: {
-          filter: {
-            _id,
-            worldEpoch,
-            kind: scope.kind,
-            countryId: scope.countryId,
-            stateId: scope.stateId ?? { $exists: false },
-            currency: scope.currency,
-          },
-          update: { $setOnInsert: { _id, worldEpoch, ...scope, cash: 0 } },
-          upsert: true,
+  if (entries.length === 0) return;
+  // One unordered bulk write; the driver splits it into server-sized batches.
+  await db.collection<ProducerEconomyAccount>("producerEconomyAccounts").bulkWrite(
+    entries.map(([_id, scope]) => ({
+      updateOne: {
+        filter: {
+          _id,
+          worldEpoch,
+          kind: scope.kind,
+          countryId: scope.countryId,
+          stateId: scope.stateId ?? { $exists: false },
+          currency: scope.currency,
         },
-      }))
-    );
-  }
+        update: { $setOnInsert: { _id, worldEpoch, ...scope, cash: 0 } },
+        upsert: true,
+      },
+    })),
+    { ordered: false }
+  );
 }
 
 /**

@@ -1628,6 +1628,7 @@ export function processSectors(
   }
 
   return {
+    sectorTurnEnv,
     sectorOps,
     corpOps: [
       ...(corpOps as AnyBulkWriteOperation<Corporation>[]),

@@ -51,8 +51,6 @@ interface ProducerTurnRecord {
   status: "frozen" | "settled";
 }
 
-const PUBLICATION_BATCH_SIZE = 128;
-
 async function readFrozen(db: Db, record: ProducerTurnRecord): Promise<FrozenProducerTurn> {
   const payload = (await decodeReceipt(db, record)) as FrozenProducerTurn;
   if (
@@ -422,8 +420,9 @@ export async function settleProducerTurn(
   const results = new Map(frozen.result.producers.map((p) => [p.id, p]));
   // Only turn-owned absolute receipt fields are published here. Replaying a
   // completed batch changes no cash, stock quantity or user command field.
-  for (let offset = 0; offset < frozen.targets.length; offset += PUBLICATION_BATCH_SIZE) {
-    const targets = frozen.targets.slice(offset, offset + PUBLICATION_BATCH_SIZE);
+  // One bulk write for every target; the driver splits it into server batches.
+  {
+    const targets = frozen.targets;
     const published = await sectors.bulkWrite(
       targets.map((target) => ({
         updateOne: {
@@ -467,7 +466,8 @@ export async function settleProducerTurn(
             },
           },
         },
-      }))
+      })),
+      { ordered: false }
     );
     if (published.matchedCount !== targets.length)
       throw new Error("Producer receipt publication lost its target");

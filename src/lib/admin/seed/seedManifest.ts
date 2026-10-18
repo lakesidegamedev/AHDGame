@@ -164,6 +164,12 @@ const REFERENCE: CollectionEntry[] = [
   },
   { name: "unionEndorsements", category: "runtime" },
   {
+    name: "producerMarketShadows",
+    category: "runtime",
+    notes:
+      "Telemetry for the unified producer market shadow (market recovery Phase 2): one per-industry comparison per turn. Never read by game logic.",
+  },
+  {
     name: "offTypeHandovers",
     category: "runtime",
     notes:

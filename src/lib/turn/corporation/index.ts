@@ -138,6 +138,7 @@ import { persistMediaProductSales } from "@/lib/products/mediaProductSales";
 import { getMediaProductKind } from "@/lib/products/mediaProductCatalog";
 import { aggregateMediaProductSectorEffects } from "@/lib/products/rules/mediaProductRules";
 import { insertNppNewSectors } from "./insertNppNewSectors";
+import { legacyPnlBySectorId, runProducerMarketShadowPhase } from "./producerMarketShadowPhase";
 import { settleFundDividendAccruals } from "./settleFundDividendAccruals";
 
 export type { CorporationTurnResult } from "./corporationTurnRuntime";
@@ -766,6 +767,7 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
     capacityBindingEvents,
     settledMarketingSpendAnchorByBuyerId,
     advertisingDeliveredAnchorBySellerId,
+    sectorTurnEnv,
   } = processSectors(
     lookups,
     turn,
@@ -781,6 +783,14 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
     treasuryCashLedgerEnabled
   );
   mark("processSectors(CPU)");
+  await runProducerMarketShadowPhase(db, {
+    enabled: marketGovernorConfig?.producerMarketShadowEnabled === true,
+    turn: turn ?? gameState?.currentTurn ?? 0,
+    worldEpoch: gameState?.worldEpochId,
+    lookups,
+    env: sectorTurnEnv,
+    legacyBySectorId: legacyPnlBySectorId(sectorOps),
+  });
 
   // Phase 2b: NPP corporation AI decisions, budgets, expansion, dividends
   // Run before bulk writes so NPP decisions are applied this turn.
