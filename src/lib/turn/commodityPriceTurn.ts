@@ -72,6 +72,7 @@ import {
   retailGdpParamsForStage,
   stockCoverCapTurnsForStage,
 } from "@/lib/market/commodityFixStages";
+import { normalizeMarketRecoveryStage } from "@/lib/market/marketRecoveryStages";
 import {
   inputDemandRealPhaseProgress,
   inputDemandRealPhaseStartTurnFrom,
@@ -90,9 +91,8 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { GameState } from "@/lib/db/types/gameState";
 import { clearAllCommodities } from "@/lib/trade/snapshot";
 import { buildReachableBooks } from "@/lib/trade/reachableBook";
-import { applyTradeConvergence } from "@/lib/trade/convergence";
+import { applyTradeConvergence, tradeConvergenceK } from "@/lib/trade/convergence";
 import { buildTradeAffinity } from "@/lib/trade/tradeAffinity";
-import { TRADE_PRICE_CONVERGENCE_K } from "@/lib/trade/constants";
 import { loadActiveFtaPairs } from "@/lib/tariffs/ftaOverrides";
 import { reconcileSignedEmbargoBills } from "@/lib/trade/reconcileEmbargoes";
 import type { Tariff } from "@/lib/db/types/tariff";
@@ -214,6 +214,7 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
           commodityNominalPriceIndex: 1,
           commodityNominalPriceIndexTurn: 1,
           stateGdpAnchorPhaseStartTurn: 1,
+          tradeConvergenceFullStartTurn: 1,
         },
       }
     ),
@@ -557,7 +558,11 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
   const fixStageCfg = await db
     .collection<GameConfig>("gameConfig")
     .findOne({ _id: "default" } as Record<string, unknown>, {
-      projection: { commodityFixStage: 1, inputDemandRealPhaseStartTurn: 1 },
+      projection: {
+        commodityFixStage: 1,
+        marketRecoveryStage: 1,
+        inputDemandRealPhaseStartTurn: 1,
+      },
     });
   const inputDemandRealPhase = inputDemandRealPhaseProgress(
     inputDemandRealPhaseStartTurnFrom(fixStageCfg),
@@ -992,7 +997,12 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
     commodities: COMMODITY_TYPES,
     affinity: affinityFor,
   });
-  applyTradeConvergence(countries, byCountry, tradeClearing, TRADE_PRICE_CONVERGENCE_K);
+  applyTradeConvergence(
+    countries,
+    byCountry,
+    tradeClearing,
+    tradeConvergenceK(ledgerConfig?.tradeConvergenceFullStartTurn, turn)
+  );
 
   // Build nudge map from the parallel-fetched nudge docs
   const nudgeMap = buildNudgeMap(nudgeDocs);
@@ -1051,6 +1061,7 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
     commodityNominalPriceIndex,
     scarcityDriftEnabled,
     commodityFixStage,
+    marketRecoveryStage: normalizeMarketRecoveryStage(fixStageCfg?.marketRecoveryStage),
     commandEconomyEnabled,
     priceCurrentYear,
     freightSettlementActive,
@@ -1114,6 +1125,7 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
       tradeClearing,
       reachableBooks,
       countries,
+      tradeLanes: { affinityFor, importCostMultiplierFor },
     },
     turn,
     now

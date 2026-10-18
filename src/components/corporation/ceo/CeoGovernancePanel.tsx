@@ -89,7 +89,7 @@ export default function CeoGovernancePanel({
     shareholderAddressOpen,
   } = state;
   const { formatFull, toInternalFrom } = useCurrency();
-  const money = useCorpMoney(corporation.liquidCurrencyCode);
+  const money = useCorpMoney(corporation.liquidCurrencyCode, corporation.countryId);
 
   const relocationMarketCapBasis = Math.round(corporation.sharePrice * corporation.totalShares);
   const isCrossCountry = relocateCountry !== corporation.countryId;

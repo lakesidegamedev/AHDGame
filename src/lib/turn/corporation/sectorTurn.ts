@@ -64,17 +64,21 @@ export { computeSectorOutputUnits } from "./sectorOutputUnits";
 export type { SectorTurnEnv, SectorTurnResult } from "./sectorTurnTypes";
 
 import { computeIdleUpkeep } from "./sectorTurn/idleUpkeep";
+import { contributionShare, nextLossRun } from "./rules/lossRun";
 import {
   sectorNpvBoostMultiplier,
   sectorRevenueBoostMultiplier,
 } from "@/lib/corporations/rules/marketBoost";
 import { isStateScopedCommodity } from "@/lib/market/commodityMarketScope";
-import { withLatentDemand } from "./demandThrottle";
-import { idleCapacityRetirement } from "./rules/idleCapacityRetirement";
-import { plantCrewShare } from "./rules/plantRunShare";
+import { withForeignDemand, withLatentDemand } from "./demandThrottle";
+import { idleCapacityRetirement, IDLE_RETIRE_GRACE_TURNS } from "./rules/idleCapacityRetirement";
+import { plantCrewMaxDropPerTurn, plantCrewShare } from "./rules/plantRunShare";
 import {
   PLANT_CREW_FLOOR_SHARE,
   PLANT_CREW_MAX_DROP_PER_TURN,
+  RESTART_RUN_SHARE,
+  PLANT_CREW_SUSTAINED_GLUT_MAX_DROP_PER_TURN,
+  PLANT_CREW_SUSTAINED_GLUT_THROTTLE,
 } from "@/lib/constants/capacityEconomy";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
 import {
@@ -87,6 +91,7 @@ import { buildManufacturedSectorOutput } from "@/lib/products/rules/manufacturin
 import { getManufacturingProductKind } from "@/lib/products/manufacturingCatalog";
 import { isLegalManufacturingProductForPlant } from "@/lib/products/rules/manufacturingEligibility";
 import { shortagePolicyHeadroom } from "@/lib/market/commodityFixStages";
+import { stagedMarginTrimPp } from "@/lib/market/marketRecoveryStages";
 
 /** Process one sector and append its persisted update to the turn collectors. */
 export function processSector(
@@ -444,7 +449,11 @@ export function processSector(
   } = accumulateMarginModifiers({
     corp,
     sector,
-    lookups,
+    // Market recovery stage 2 lowers the flat margin trim (marketRecoveryStages.ts).
+    lookups: {
+      ...lookups,
+      marginLevelTrimPp: stagedMarginTrimPp(lookups.marginLevelTrimPp, market.marketRecoveryStage),
+    },
     strategySupply: strategyRates.supply,
     strategyDemand: strategyRates.demand,
     strategyIsTransitioning: strategyRates.isTransitioning,
@@ -477,6 +486,30 @@ export function processSector(
   // ─── P3b extraction capacity + realized revenue ───────────────────────────
   // Pure computation in `sectorTurn/plantsRevenue.ts`; the orchestrator only
   // threads its inputs and consumes the legs. Names are unchanged.
+  // Restart turn: the plant made nothing last turn (back from mothball, first
+  // capacity just landed, or a full outage), so clearing has nothing of it on
+  // the market this turn. It runs only RESTART_RUN_SHARE until real sales exist.
+  const restarting =
+    plantsEnabled && !mothballed && plantsCapacity > 0 && sector.producedUnits === 0;
+  const restartRunShare = restarting ? RESTART_RUN_SHARE : 1;
+  // A cold plant (no crew on site last turn) hires straight to its run; one
+  // whose crew stayed through an outage keeps the gradual-layoff path.
+  const coldRestart = restarting && (sector.workers ?? 0) <= 1;
+  // Market rebuild 1b: a plant that keeps losing money on what it makes runs
+  // less of it. Read from last turn's stored P&L; a missing or stale P&L, a
+  // mothball or a restart holds the plant where it was.
+  const priorPnl = sector.plantsPnl;
+  const lossRun =
+    plantsEnabled && explicitPlantCostsEnabled && !mothballed && !restarting
+      ? nextLossRun({
+          contribution:
+            priorPnl && typeof priorPnl.turn === "number" && priorPnl.turn >= currentTurn - 1
+              ? contributionShare(priorPnl, PLANT_CREW_FLOOR_SHARE)
+              : null,
+          priorShare: sector.lossRunShare,
+          priorStreak: sector.lossRunStreak,
+        })
+      : { share: sector.lossRunShare ?? 1, streak: sector.lossRunStreak ?? 0 };
   const {
     plantsExtractionHardMin,
     producedUnits,
@@ -485,9 +518,12 @@ export function processSector(
     demandThrottleFactor,
     demandFill,
     embargoExportExposure,
+    bankingCommodityScale,
     hourlyRevenue: realizedHourlyRevenue,
     capacityBindingEvent,
   } = resolvePlantsRevenue({
+    restartRunShare,
+    lossRunShare: lossRun.share,
     sector,
     corp,
     strategySupply: strategyRates.supply,
@@ -549,13 +585,22 @@ export function processSector(
     // The lagged books hold demand capped at 1.5x supply; restore the truncated
     // share so a plant in a deep shortage ramps toward real unmet demand.
     throttleLegBalance: (commodity) =>
-      withLatentDemand(
-        isStateScopedCommodity(commodity)
-          ? lookups.rawStateBalances?.get(sector.stateId)?.get(commodity)
-          : (lookups.countryClearingBooks?.get(sectorCountryId)?.get(commodity) ??
-              lookups.globalCommodityBalances?.get(commodity)),
-        lookups.latentDemandFactorByCommodity?.get(commodity)
+      withForeignDemand(
+        withLatentDemand(
+          isStateScopedCommodity(commodity)
+            ? lookups.rawStateBalances?.get(sector.stateId)?.get(commodity)
+            : (lookups.countryClearingBooks?.get(sectorCountryId)?.get(commodity) ??
+                lookups.globalCommodityBalances?.get(commodity)),
+          lookups.latentDemandFactorByCommodity?.get(commodity)
+        ),
+        // Only a country-scoped book pins an exporter's demand to its supply.
+        // Local services never cross a state line, and a single worldwide book
+        // already holds every country's demand, so neither adds foreign room.
+        isStateScopedCommodity(commodity) || !lookups.countryClearingBooks?.has(sectorCountryId)
+          ? 0
+          : lookups.unmetForeignDemandByCountry?.get(sectorCountryId)?.get(commodity)
       ),
+    throttleWideBalance: (commodity) => wideCommodityBalances.get(commodity),
     throttleLegMixWeight: (commodity) =>
       commodityMixWeight(
         strategyRates.supply,
@@ -579,6 +624,7 @@ export function processSector(
     demandFill,
     priorStreak: sector.demandIdleTurns,
     rampLambda: plantsRampLambda,
+    nppRun: corp.ceoType === "npp",
     nppStructural:
       corp.ceoType === "npp" && lookups.engineSixCountries?.has(corp.countryId) === true,
   });
@@ -636,11 +682,18 @@ export function processSector(
   // a plant is never staffed at zero. A plant at a full run gets exactly 1.
   const plantCrew = explicitPlantCostsEnabled
     ? plantCrewShare({
-        demandThrottleFactor,
+        demandThrottleFactor: Math.min(demandThrottleFactor, restartRunShare),
         ramp: plantsRampLambda,
         floor: PLANT_CREW_FLOOR_SHARE,
-        previous: sector.plantCrewShare,
-        maxDropPerTurn: PLANT_CREW_MAX_DROP_PER_TURN,
+        previous: coldRestart ? 0 : sector.plantCrewShare,
+        maxDropPerTurn: plantCrewMaxDropPerTurn({
+          demandThrottleFactor,
+          priorDemandIdleTurns: sector.demandIdleTurns,
+          graceTurns: IDLE_RETIRE_GRACE_TURNS,
+          normalMaxDrop: PLANT_CREW_MAX_DROP_PER_TURN,
+          sustainedMaxDrop: PLANT_CREW_SUSTAINED_GLUT_MAX_DROP_PER_TURN,
+          sustainedThrottle: PLANT_CREW_SUSTAINED_GLUT_THROTTLE,
+        }),
       })
     : 1;
   const { desiredWorkers, workers: computedWorkers } = resolveSectorHeadcount({
@@ -682,19 +735,25 @@ export function processSector(
     newStrikeCooldownUntilTurn,
   } = resolveSectorLabourEconomics({
     explicitPlantCostsEnabled,
+    marketRecoveryStage: market.marketRecoveryStage,
     labour: explicitPlantCostsEnabled ? { ...labour, wagesEnabled: true } : labour,
     sector,
     sectorCountryId,
     currentTurn,
     currentYear,
+    // Decision 18 diverts branch capacity from production; apply the same scale
+    // to the commodity labour-cost basis, with deposit income covering branches.
+    // Keep branch headcount, so wagePerWorker reflects the smaller commodity bill.
     hourlyRevenue: explicitPlantCostsEnabled
-      ? (plantsNameplateRevenue * activeFraction * plantCrew) / TURNS_PER_DAY
+      ? (plantsNameplateRevenue * activeFraction * plantCrew * bankingCommodityScale) /
+        TURNS_PER_DAY
       : hourlyRevenue,
     // Staff are paid for the scheduled run of active capacity (crew floor
     // applies), even when its output cannot sell. This neutral basis also
     // removes the legacy margin cap on payroll.
     grossMaintenance: explicitPlantCostsEnabled
-      ? (plantsNameplateRevenue * activeFraction * plantCrew) / TURNS_PER_DAY
+      ? (plantsNameplateRevenue * activeFraction * plantCrew * bankingCommodityScale) /
+        TURNS_PER_DAY
       : payrollBasis,
     computedWorkers,
     techLaborCostMultiplier: techEffects.laborCostMultiplier,
@@ -1077,6 +1136,8 @@ export function processSector(
   if (plantsEnabled) {
     sectorUpdate.plantsStartTurn = plantsStartTurn ?? null;
     sectorUpdate.demandIdleTurns = idleRetirement.streak;
+    sectorUpdate.lossRunShare = lossRun.share;
+    sectorUpdate.lossRunStreak = lossRun.streak;
     sectorUpdate.plantCrewShare = plantCrew;
     sectorUpdate.idleCapacityRetiredUnits = idleCapacityRetiredUnits;
     // Stamp the idle-upkeep margin basis ONCE, from the live margin, and then

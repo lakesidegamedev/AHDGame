@@ -34,6 +34,7 @@ import type { CommodityType } from "@/lib/constants/commodities";
 import type { ExtractableResource } from "@/lib/constants/commodities";
 import type { CorporationLookups } from "../types";
 import { computeContractProduction } from "../contractProduction";
+import { restartProductionFactor } from "../rules/restartRun";
 import {
   soldOutMarketHeadroomUnits,
   throttleSoldUnits,
@@ -41,6 +42,8 @@ import {
 } from "../demandThrottle";
 
 export interface PlantsRevenueInput {
+  /** Share of the market run kept by a plant that keeps losing money (rules/lossRun). */
+  lossRunShare?: number;
   sector: Pick<
     CorporateSector,
     | "_id"
@@ -118,6 +121,13 @@ export interface PlantsRevenueInput {
   marketPlantsEnabled: boolean;
   contractProductionTargetBySectorId: MarketContext["contractProductionTargetBySectorId"];
   /**
+   * Share of the plant that runs this turn because it is restarting (back from
+   * mothball, or its first capacity just landed): clearing offers last turn's
+   * output, so a restarting plant has nothing on the market yet. 1 otherwise.
+   * Production only; the demand throttle and every demand read are untouched.
+   */
+  restartRunShare?: number;
+  /**
    * Lagged price over base for one output in this sector's own market (state
    * book for state-scoped outputs, else its reachable country book, else the
    * world). Values each output leg when restating last turn's sales for the
@@ -130,6 +140,10 @@ export interface PlantsRevenueInput {
    * market ramp to the unmet demand (ticket 1393). Absent means no headroom.
    */
   throttleLegBalance?: (
+    commodity: CommodityType
+  ) => { supply: number; demand: number } | null | undefined;
+  /** Reachable country or global balance for the extraction shortage fill gate. */
+  throttleWideBalance?: (
     commodity: CommodityType
   ) => { supply: number; demand: number } | null | undefined;
   /** Share of one sector output unit that is this commodity, as clearing splits offers. */
@@ -221,8 +235,10 @@ export function resolvePlantsRevenue(input: PlantsRevenueInput): PlantsRevenueRe
     privateBankingEnabled,
     marketPlantsEnabled,
     contractProductionTargetBySectorId,
+    restartRunShare = 1,
     throttleLegPriceRatio,
     throttleLegBalance,
+    throttleWideBalance,
     throttleLegMixWeight,
   } = input;
 
@@ -449,10 +465,23 @@ export function resolvePlantsRevenue(input: PlantsRevenueInput): PlantsRevenueRe
     priorThrottleProducedUnits > 0
       ? Math.max(0, Math.min(1, priorThrottleSoldUnits / priorThrottleProducedUnits))
       : null;
+  // Restart: run only the restart share, or what a supply contract needs if
+  // more. A factor on production, not on the demand throttle, so no demand
+  // read (saturation, retirement, idle upkeep) mistakes a restart for low demand.
+  const guaranteedUnits = marketPlantsEnabled
+    ? contractProductionTargetBySectorId?.get(sector._id.toString())
+    : undefined;
+  const restartFactor = plantsEnabled
+    ? restartProductionFactor({
+        restartRunShare,
+        guaranteedUnits,
+        plannedUnits: productionNameplateUnits * productionFactor,
+      })
+    : 1;
   const production = computeContractProduction({
     plantsEnabled,
     actualNameplateUnits: productionNameplateUnits,
-    actualProductionFactor: productionFactor,
+    actualProductionFactor: productionFactor * restartFactor,
     fullPolicyNameplateUnits: plantsCapacity * bankingCommodityScale,
     involuntaryProductionFactor:
       disasterOutputFactor *
@@ -480,12 +509,17 @@ export function resolvePlantsRevenue(input: PlantsRevenueInput): PlantsRevenueRe
               clearing?.marketSupplyShareByCommodity?.[commodity as CommodityType],
             mixWeightFor: (commodity) => throttleLegMixWeight(commodity as CommodityType),
             balanceFor: (commodity) => throttleLegBalance(commodity as CommodityType),
+            wideBalanceFor:
+              sector.sectorType === "extraction" && throttleWideBalance
+                ? (commodity) => throttleWideBalance(commodity as CommodityType)
+                : undefined,
             priceRatioFor: (commodity) =>
               throttleLegPriceRatio?.(commodity as CommodityType) ??
               priceRatioByCommodity.get(commodity as CommodityType),
           }) * priorProductionUnitRatio
         : undefined,
     soldFraction: clearingEnabled && clearing ? clearing.soldFraction : null,
+    lossRunShare: input.lossRunShare,
   });
   const { producedUnits, soldUnits, contractAchievableUnits, demandThrottleFactor } = production;
   // Plants: revenue is DERIVED from produced output, exactly inverting the P1

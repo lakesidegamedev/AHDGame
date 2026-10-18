@@ -47,8 +47,8 @@ interface GameStateShape {
  * `isActive: false`, so the query matched NOTHING. The turn-lock guard then
  * failed OPEN (no document reads as "no turn in flight") and the confirm token
  * bound to a null turn number, disabling the staleness check. Both are
- * load-bearing, so: canonical id first, legacy shape as a fallback, and
- * `unknown` rather than an invented idle.
+ * load-bearing, so read only the canonical id and report `unknown` rather
+ * than trusting unrelated active rows when the application singleton is absent.
  */
 export async function readGameState(db: Db): Promise<GameStateShape | null> {
   const projection = {
@@ -59,9 +59,7 @@ export async function readGameState(db: Db): Promise<GameStateShape | null> {
   };
   // gameState is keyed by a string sentinel ("current"), not an ObjectId.
   const gameState = db.collection<{ _id: string } & Record<string, unknown>>("gameState");
-  return ((await gameState.findOne<GameStateShape>({ _id: "current" }, { projection })) ??
-    (await gameState.findOne<GameStateShape>({ isActive: true }, { projection })) ??
-    null) as GameStateShape | null;
+  return gameState.findOne<GameStateShape>({ _id: "current" }, { projection });
 }
 
 export async function readTurnLock(db: Db, now: Date): Promise<TurnLockState> {

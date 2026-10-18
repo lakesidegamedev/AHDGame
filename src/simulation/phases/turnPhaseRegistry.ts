@@ -92,6 +92,7 @@ import { processColdWarTensionTurn } from "@/lib/turn/coldWarTensionTurn";
 import { processAutoSectorSeed } from "@/lib/turn/autoSectorSeed";
 import { processExtractionAutoStrategy } from "@/lib/turn/extractionAutoStrategy";
 import { processCorporationTurn } from "@/lib/turn/corporationTurn";
+import { processOffTypeHandover } from "@/lib/corporations/offTypeHandover";
 import { processUnionsTurn } from "@/lib/turn/unions";
 import { processNppUnionBehavior } from "@/lib/turn/unions/nppUnionBehavior";
 import { processDecolonizationTurn } from "@/lib/turn/decolonizationTurn";
@@ -124,6 +125,7 @@ import { processBankingTurn } from "@/lib/turn/bankingTurn";
 import { processSavingsShadowTurn } from "@/lib/savings/shadow";
 import { runPensionTurn } from "@/lib/pensions/pensionTurn";
 import { processBankSolvencyTurn } from "@/lib/turn/bankSolvencyTurn";
+import { runParliamentaryGovernmentConfidencePhase } from "./parliamentaryGovernmentConfidencePhase";
 import { processBankSupervision } from "@/lib/banking/supervision";
 import { processLineOfCreditTurn } from "@/lib/turn/lineOfCreditTurn";
 import { processNppFundGeneration } from "@/lib/turn/nppFundGeneration";
@@ -299,6 +301,11 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
           // nppAutonomyAtLeast(v2); a no-op below the comingle tier.
           await runtime.runPhase("nppCorporateAttacks", () =>
             runNppCorporateAttacksPhase(gameNow, newTurn)
+          );
+          // Market recovery stage 5: AI companies hand one off-type plant each
+          // to a same-type AI company. No-op below stage 5.
+          await runtime.runPhase("offTypeHandover", () =>
+            processOffTypeHandover(context.db, newTurn)
           );
         }
 
@@ -1421,6 +1428,9 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
 
         await runtime.runPhase("parliamentaryGovernmentPhases", () =>
           runParliamentaryGovernmentPhases(gameNow, newTurn)
+        );
+        await runtime.runPhase("parliamentaryGovernmentConfidence", () =>
+          runParliamentaryGovernmentConfidencePhase(db, gameNow, newTurn)
         );
         await runtime.runPhase("parliamentaryVacancyWatcher", () =>
           runParliamentaryVacancyWatcher(gameNow, newTurn)

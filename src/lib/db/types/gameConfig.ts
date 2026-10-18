@@ -365,6 +365,11 @@ export interface GameConfig {
    * Turn the input-demand-follows-real-output phase-in starts, set by an
    * operator (never stamped automatically). See src/lib/market/inputDemandRealPhase.ts.
    */
+  /**
+   * Turn trade convergence starts ramping from 0.5 to 1 (see
+   * tradeConvergenceK). Stamped by an operator, announced ahead. Absent = 0.5.
+   */
+  tradeConvergenceFullStartTurn?: number;
   inputDemandRealPhaseStartTurn?: number;
   /**
    * Geographic freight rollout. Shadow records routes for calibration; active
@@ -443,6 +448,12 @@ export interface GameConfig {
    * Unset or 0 keeps every pre-fix constant.
    */
   commodityFixStage?: number;
+  /**
+   * Market recovery program stage (kanban 254504), advanced one per turn by an
+   * operator after a one-turn health check; lowering it rolls a stage back.
+   * See src/lib/market/marketRecoveryStages.ts. Unset or 0 changes nothing.
+   */
+  marketRecoveryStage?: number;
   /**
    * When true, outstanding build orders in sectors whose output is in deep
    * shortage have their remaining build time halved, once per order. See

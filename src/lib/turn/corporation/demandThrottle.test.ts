@@ -5,6 +5,8 @@ import {
   demandThrottleFactor,
   soldOutMarketHeadroomUnits,
   throttleSoldUnits,
+  FOREIGN_DEMAND_CLAIM_PER_TURN,
+  withForeignDemand,
   withLatentDemand,
   withRegulationBlockedFill,
 } from "./demandThrottle";
@@ -224,6 +226,81 @@ describe("sold-out plants in a short market (ticket 1393)", () => {
     expect(factor * 990).toBeCloseTo(336 * (1 + DEMAND_PROBE_MARGIN), 6);
   });
 
+  const extraction = {
+    soldByCommodity: { iron: 0.83 },
+    supplyRates: { iron: 1 },
+    mixWeightFor: () => 1,
+    marketShareFor: () => 0.1,
+    balanceFor: () => ({ supply: 1000, demand: 900 }),
+    priceRatioFor: () => 1,
+  };
+
+  it("gives partially sold output its share of a wider shortage", () => {
+    expect(
+      soldOutMarketHeadroomUnits({
+        ...extraction,
+        wideBalanceFor: () => ({ supply: 1000, demand: 2000 }),
+      })
+    ).toBe(100);
+  });
+
+  it.each([900, 1000, NaN, Infinity])(
+    "keeps the full-fill gate without a finite wider shortage (demand %s)",
+    (demand) => {
+      expect(
+        soldOutMarketHeadroomUnits({
+          ...extraction,
+          balanceFor: () => ({ supply: 100, demand: 200 }),
+          wideBalanceFor: () => ({ supply: 1000, demand }),
+        })
+      ).toBe(0);
+    }
+  );
+
+  it.each([undefined, () => undefined])(
+    "keeps the full-fill gate when the wider balance is missing (%s)",
+    (wideBalanceFor) => {
+      expect(
+        soldOutMarketHeadroomUnits({
+          ...extraction,
+          balanceFor: () => ({ supply: 100, demand: 200 }),
+          wideBalanceFor,
+        })
+      ).toBe(0);
+    }
+  );
+
+  it.each([0.99, 1])("preserves scoped headroom for a full fill of %s", (fill) => {
+    const args = {
+      ...extraction,
+      soldByCommodity: { iron: fill },
+      balanceFor: () => ({ supply: 100, demand: 200 }),
+    };
+    expect(
+      soldOutMarketHeadroomUnits({
+        ...args,
+        wideBalanceFor: () => ({ supply: 1000, demand: 2000 }),
+      })
+    ).toBe(soldOutMarketHeadroomUnits(args));
+    expect(soldOutMarketHeadroomUnits(args)).toBe(10);
+  });
+
+  it.each([
+    [0.5, 100],
+    [0.499, 0],
+  ])(
+    "requires at least half of output to sell during a wider shortage (fill %s)",
+    (fill, expected) => {
+      expect(
+        soldOutMarketHeadroomUnits({
+          ...extraction,
+          soldByCommodity: { iron: fill },
+          wideBalanceFor: () => ({ supply: 1000, demand: 2000 }),
+        })
+      ).toBe(expected);
+    }
+  );
+
   it("weights short legs by value so a glutted co-product dilutes the step", () => {
     const glutted = {
       ...base,
@@ -301,5 +378,34 @@ describe("withRegulationBlockedFill", () => {
     const fill = { advertising: 0.5 };
     expect(withRegulationBlockedFill(fill, undefined)).toBe(fill);
     expect(withRegulationBlockedFill(undefined, { advertising: 0.2 })).toBeUndefined();
+  });
+});
+
+describe("withForeignDemand", () => {
+  it("adds unserved foreign buyers to an exporter's pinned book", () => {
+    expect(withForeignDemand({ supply: 100, demand: 100 }, 40)).toEqual({
+      supply: 100,
+      demand: 100 + 40 * FOREIGN_DEMAND_CLAIM_PER_TURN,
+    });
+  });
+  it("leaves the book alone without foreign room", () => {
+    const book = { supply: 100, demand: 100 };
+    expect(withForeignDemand(book, 0)).toBe(book);
+    expect(withForeignDemand(book, null)).toBe(book);
+    expect(withForeignDemand(null, 40)).toBeNull();
+  });
+  it("gives a sold-out exporter real headroom instead of zero", () => {
+    const headroom = (balance: { supply: number; demand: number }) =>
+      soldOutMarketHeadroomUnits({
+        soldByCommodity: { advertising: 0.99 },
+        supplyRates: { advertising: 1 },
+        mixWeightFor: () => 1,
+        marketShareFor: () => 0.5,
+        balanceFor: () => balance,
+        priceRatioFor: () => 1,
+      });
+    expect(headroom({ supply: 1000, demand: 1000 })).toBe(0);
+    // A quarter of the 400 unserved, times this seller's half of the book.
+    expect(headroom(withForeignDemand({ supply: 1000, demand: 1000 }, 400)!)).toBeCloseTo(50, 6);
   });
 });

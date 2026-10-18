@@ -20,7 +20,20 @@ Extraction tenders grant a fixed state/resource capacity share, contract term
 and royalty rate. Corporations bid the signing fee in anchor units. Fixed
 non-price terms make bids comparable. Signing fees use the existing settlement
 journal in both Treasury modes and activate capacity only after completion.
-The government's recorded native currency is authoritative. Existing royalty
+The government's recorded native currency is authoritative. Forms accept local
+currency equivalents and convert back to the same canonical anchor value.
+Publishers use government currency; bidders use the selected corporation's liquid
+currency. Public comparisons use government currency. These are current-rate
+estimates, including historical bids: the local debit can change before award.
+Missing conversion disables publication/bids while retaining withdrawal.
+
+Capacity percentages apply to total state capacity of the named resource, not
+current mining output. The board and publishing form show the current nominal
+allocation in daily commodity units, the same basis as extraction rationing.
+This is a ceiling, not a government purchase or guaranteed production. Operating
+constraints and deposit depletion can lower output. Recurring royalties use
+capacity share times resource price, even when production or sales are lower.
+Existing royalty
 and default mechanisms apply after award.
 
 ## Lifecycle
@@ -46,11 +59,12 @@ and default mechanisms apply after award.
    open or abandoned publishing tenders expire into Canceled. Interrupted
    awards remain in Bidding Closed for recovery, without losing committed money.
 
-The bidding interval and award interval must both contain a turn. Defence's
-award deadline is at or before the next quarterly window begins. All unawarded
-tenders have at most the existing 24-turn offer lifetime, so a published opportunity
-cannot hold capacity indefinitely. No money is
-charged merely for bidding. No bid deposit, automatic late-bid extension,
+New tenders allow 6 to 48 bidding turns (default 24), followed by a separate
+24-turn award window. Existing tenders retain their stored deadlines. Defence
+tenders may cross quarter boundaries; their appropriation hold and quota remain
+in the original publication window until award, cancellation or expiry. An open
+tender therefore holds resources for at most 72 turns. No money is charged
+merely for bidding. No bid deposit, automatic late-bid extension,
 foreign arms purchase, performance guarantee or new delivery penalty is added.
 
 Existing active contracts retain their signed price, delivery, royalty,
@@ -78,6 +92,20 @@ pauses are checked again at mutation time.
 State-owned and true NPP defence suppliers submit an initial suggested-price bid
 through the tender pipeline. Player corporations with NPP caretaker CEOs are not
 automatically committed.
+
+## Discovery
+
+Publishing sends one idempotent inbox alert per eligible player CEO, grouping
+multiple matching corporations. Eligibility uses the existing industry,
+operations, domestic supplier, grade, price band and supplier concentration
+rules. Reads are projected and batched; notification delivery is a non-fatal
+side effect after publication. Inbox preferences can mute the new notification
+type. No hourly scanning is added.
+
+CEO corporation overviews include a compact link to active tenders. An inbox
+link carries the tender id so the shared board opens its details even if the
+tender is not on the selected list page. Bidding and award eligibility are still
+checked again when players act.
 
 ## Board and UI
 
@@ -120,3 +148,28 @@ line contention, UI actions, architecture contracts, verify, build and Semgrep.
 Existing extraction ledger and defence delivery tests remain relevant.
 Turn measurements must report bytes and commands; local wall time alone is not
 qualification of the new expiration phase.
+
+## Viewer capability filter and balance comparison
+
+The optional `supplier=mine` query matches any currently managed corporation;
+`supplier=<corporation ObjectId>` selects one of those corporations. Ownership is
+resolved from the signed-in user on every request, never trusted from the URL.
+Candidate terms are projected without bids, evaluated against batched corporation,
+sector, price, budget, allocation and existing-order inputs, then applied before
+counting and ten-row pagination. The public board remains available without login.
+
+Defence matches require existing bid eligibility plus positive current projected
+output and free factory slots, including legacy order allocations. Procurement
+pauses/restrictions and the original publication-window supplier quota apply.
+There is no promised delivery deadline, cash-affordability check or award guarantee.
+Extraction matches use the existing corporation-type and state-operation rules,
+because a concession grants extraction rights rather than ordering deliveries.
+Closed and historical tabs compare with the viewer's capabilities today.
+
+`scripts/sim/governmentContractCapacityComparison.ts` compares current capacity
+shares with fixed recent-output baselines using synthetic utilization and shock
+scenarios. It changes no production rules. At 10% utilization, 10% of capacity
+equals all current state output, while 10% of recent output equals one tenth.
+An idle state gets zero under an output-only baseline. Royalty bases, startup
+fallbacks, averaging windows and resistance to deliberate output suppression
+need design and calibrated world evidence before changing new contracts.

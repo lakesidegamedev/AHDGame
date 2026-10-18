@@ -12,6 +12,7 @@ import { captureClientExceptionWithId } from "@/lib/observability/sentryClientLa
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter, useSearchParams, usePathname } from "next/navigation";
 import Link from "next/link";
+import { ContractOpportunityBanner } from "@/components/governmentContracts/ContractOpportunityBanner";
 import { Skeleton } from "@/components/ui";
 import { ErrorRef } from "@/components/ui/ErrorRef";
 import BackButton from "@/components/BackButton";
@@ -969,6 +970,24 @@ export default function CorporationDetailPage() {
           showBanner={activeTab === "overview"}
         />
 
+        {isCeo &&
+          activeTab === "overview" &&
+          corporation.countryId &&
+          (isDefenceCorp ||
+            (corporation.type === "extraction" && corporation.contractIssuanceEnabled)) && (
+            <ContractOpportunityBanner
+              corporationId={corporation._id}
+              countryId={corporation.countryId}
+              type={
+                isDefenceCorp && corporation.type === "extraction"
+                  ? "all"
+                  : isDefenceCorp
+                    ? "defence"
+                    : "extraction"
+              }
+            />
+          )}
+
         <NationalizationStatusCard
           corpId={id}
           hasExposure={
@@ -1084,6 +1103,7 @@ export default function CorporationDetailPage() {
             <PrivateSalePanel
               corporation={corporation}
               myCharacterId={myCharacterId}
+              myCorporation={myCorporation}
               corpId={id}
               myShares={
                 corporation.shareholders.find((sh) => sh.characterId === myCharacterId)?.shares ?? 0
@@ -1277,6 +1297,7 @@ export default function CorporationDetailPage() {
                       corporationSecondaryType={corporation.secondaryType}
                       liquidCapital={corporation.liquidCapital}
                       liquidCurrencyCode={corporation.liquidCurrencyCode}
+                      countryId={corporation.countryId}
                       logisticsStrength={corporation.logisticsStrength}
                       onAbandonSector={handleAbandonSector}
                       abandoningSectorId={abandoningSectorId}

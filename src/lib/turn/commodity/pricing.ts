@@ -18,6 +18,7 @@ import {
   updateScarcityMultiplierMomentum,
 } from "@/lib/market/scarcityDrift";
 import { COMMODITY_FIX_STAGE, commodityFixStageActive } from "@/lib/market/commodityFixStages";
+import { dampedMemoryMultiplier } from "@/lib/market/marketRecoveryStages";
 import { administeredNationalPrice, dualTrackPrice } from "@/lib/economy/administeredPricing";
 import { isPlannedEconomy, plannedShare } from "@/lib/constants/commandEconomy";
 import { buildReachableBooks } from "@/lib/trade/reachableBook";
@@ -65,6 +66,8 @@ export interface CommodityPricingContext {
   scarcityDriftEnabled: boolean;
   /** Commodity treadmill fix stage (0..6); >= 1 switches the ratchet to momentum mode. */
   commodityFixStage?: number;
+  /** Market recovery stage; stages 3 and 4 damp price memory. */
+  marketRecoveryStage?: number;
   commandEconomyEnabled: boolean;
   priceCurrentYear: number | null;
   freightSettlementActive: boolean;
@@ -122,6 +125,7 @@ export function priceCommodity(
     commodityNominalPriceIndex,
     scarcityDriftEnabled,
     commodityFixStage,
+    marketRecoveryStage,
     commandEconomyEnabled,
     priceCurrentYear,
     freightSettlementActive,
@@ -218,14 +222,20 @@ export function priceCommodity(
   // so producers are not structurally forced below cost. See
   // src/lib/market/costPassThrough.ts for the full rationale (the 62%-of-
   // farms-negative incident).
-  const costMult = costPassThroughMultiplier(commodity, laggedRatios);
+  // Market recovery stages 3 and 4 damp the memory terms in price formation
+  // only; the persisted scarcity multipliers keep integrating unchanged.
+  const costMult = dampedMemoryMultiplier(
+    costPassThroughMultiplier(commodity, laggedRatios),
+    marketRecoveryStage
+  );
   const nominalBasePrice = basePrice * commodityNominalPriceIndex;
   // Country-scoped effective base: the country's own reachable-scarcity
   // multiplier when it has one, the world base otherwise. Every
   // country-scoped leg (national, wide, regional, administered) reads this
   // so a country's price level carries ITS market's scarcity memory.
   const effBaseFor = (countryId: string | undefined): number => {
-    const m = countryId != null ? scarcityMultByCountry[countryId] : undefined;
+    const raw = countryId != null ? scarcityMultByCountry[countryId] : undefined;
+    const m = raw != null ? dampedMemoryMultiplier(raw, marketRecoveryStage) : undefined;
     return m != null ? Math.round(nominalBasePrice * m * costMult * 100) / 100 : effBasePrice;
   };
   const priceKnee = getPriceSoftKnee(commodity);
@@ -235,7 +245,7 @@ export function priceCommodity(
   const globalResult = computeGlobalCommodityPrice({
     realBasePrice: basePrice,
     nominalIndex: commodityNominalPriceIndex,
-    scarcityMultiplier: scarcityMult,
+    scarcityMultiplier: dampedMemoryMultiplier(scarcityMult, marketRecoveryStage),
     costPassThroughMultiplier: costMult,
     supply: globalBal.supply,
     demand: globalBal.demand,

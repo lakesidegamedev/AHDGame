@@ -67,6 +67,7 @@ import {
   resolveCapacityCohort,
 } from "@/lib/turn/npp/capacityDecisionTelemetry";
 import { glutStaggerEligible } from "@/lib/turn/npp/cohort";
+import { foundingUnmetSizing, isMarketSaturated } from "@/lib/turn/npp/rules/marketSaturation";
 import type {
   NppCorpDecision,
   NppCorpDecisionContext,
@@ -125,6 +126,7 @@ import {
   NPP_GROWTH_DEPLOY_FRACTION,
   NPP_GROWTH_MAX_STEP_OF_RUN,
   NPP_GROWTH_MIN_SHORTAGE,
+  NPP_GROWTH_MIN_THROTTLE,
   NPP_GROWTH_MIN_UTILIZATION,
   NPP_REINVEST_AGGRESSION,
   NPP_REINVEST_MAINTENANCE_CASH_SHARE,
@@ -623,6 +625,7 @@ export function makeNppCorpDecision(
     sectorProfits,
     divestedSectorIds,
     priceRatioOf,
+    marketSaturationOf: placementSignals?.marketSaturationOf,
   });
   sectorUpdates.push(...mothballUpdates);
   const newlyMothballedIds = new Set(
@@ -933,9 +936,23 @@ export function makeNppCorpDecision(
       // construction). Cash and a per-mine facility ceiling bound it instead;
       // the state deposit haircut caps real output and the reinvestment growth
       // leg deepens it over turns. Demand-side sectors keep the headroom cap.
+      // Demand-side entrants are also capped by what the cell still wants, for
+      // the mix they would run; the unowned pool's headroom overstates it. A
+      // critical-shortage entry reads its deepest leg so a balanced co-product
+      // cannot dilute the shortage (rules/marketSaturation).
+      const unmetSizing = foundingUnmetSizing({
+        unmetUnits: isExtraction
+          ? null
+          : (placementSignals?.unmetDemandUnitsOf?.(foundingTarget, {
+              strategyId: foundingStrategyId,
+              aggregate: exceptionalShortageEntry ? "max" : "mean",
+            }) ?? null),
+        starterUnits,
+      });
       const sizeCap = isExtraction
         ? starterUnits * NPP_EXTRACTION_FOUNDING_MAX_FACILITIES
-        : headroomUnits * NPP_FOUNDING_HEADROOM_SHARE;
+        : Math.min(headroomUnits * NPP_FOUNDING_HEADROOM_SHARE, unmetSizing.sizeCap);
+      const unmetBlocksEntry = unmetSizing.blocksEntry;
       const buildUnits =
         starterUnits > 0
           ? Math.max(
@@ -965,15 +982,17 @@ export function makeNppCorpDecision(
       noteFoundingCapacityOutcome(foundingOutcome, {
         affordable:
           buildUnits > 0 &&
+          !unmetBlocksEntry &&
           (isExtraction || headroomUnits >= buildUnits) &&
           entryCapital - foundingCost >= effectiveCashFloor,
         creditPath:
           exceptionalShortageEntry &&
           starterUnits > 0 &&
           headroomUnits >= starterUnits &&
+          !unmetBlocksEntry &&
           !isStateOwned(corp) &&
           !corp.imfBailoutActive,
-        sizeBlocked: starterUnits <= 0 || headroomUnits < starterUnits,
+        sizeBlocked: starterUnits <= 0 || headroomUnits < starterUnits || unmetBlocksEntry,
         quote: {
           unitPriceAnchor: perUnitFoundingAnchor,
           dominanceMultiplier: foundingUnitQuote?.dominanceMultiplier ?? 1,
@@ -1409,7 +1428,11 @@ export function makeNppCorpDecision(
         // Utilization is measured on throttled output. In a critical shortage
         // the throttle, not demand, is what holds the run rate down, so the
         // gate would lock out exactly the capacity the market is missing.
-        (utilization >= NPP_GROWTH_MIN_UTILIZATION || criticalShortage) &&
+        // A price-read shortage cannot override a cell whose incumbents the
+        // throttle already holds deep under capacity (rules/marketSaturation).
+        (utilization >= NPP_GROWTH_MIN_UTILIZATION ||
+          (criticalShortage &&
+            !isMarketSaturated(placementSignals?.marketSaturationOf?.(sector)))) &&
         (sector.sectorType !== "extraction" || extractionHeadroom > 0);
       // Existing plants pay the same dominance-tolled list price as players.
       const growthShare =
@@ -1488,6 +1511,26 @@ export function makeNppCorpDecision(
             )
           : 0;
       let growthUnits = existingPlantGrowthUnits(affordableGrowthUnits, growthCapUnits);
+      // NPP-run plants do not add growth where the market already throttles
+      // them; replacement of worn capacity still goes through below.
+      const throttledMarket =
+        !autopilot &&
+        typeof sector.demandThrottleFactor === "number" &&
+        Number.isFinite(sector.demandThrottleFactor) &&
+        sector.demandThrottleFactor < NPP_GROWTH_MIN_THROTTLE;
+      let throttleGate = false;
+      if (throttledMarket && growthUnits > 0) {
+        growthUnits = 0;
+        throttleGate = true;
+        observeReinvestCandidate(
+          "growth_throttled_market",
+          sector,
+          capitalStock,
+          headroomUnits,
+          replacementUnits,
+          null
+        );
+      }
       // Autopilot builds only where the plant already earns, the market has
       // room and the order repays itself; a refused growth leg still lets the
       // replacement leg through.
@@ -1518,7 +1561,7 @@ export function makeNppCorpDecision(
       }
       const units = replacementUnits + growthUnits;
       if (!(units > 0)) {
-        if (!autopilotGate) {
+        if (!autopilotGate && !throttleGate) {
           observeReinvestCandidate(
             "below_minimum_order",
             sector,

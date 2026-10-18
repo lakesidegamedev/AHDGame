@@ -107,7 +107,10 @@ export function throttleSoldUnits(args: {
 }
 
 /** Fill at or above this counts as a leg that sold everything it offered. */
-export const SOLD_OUT_FILL = 0.999;
+export const SOLD_OUT_FILL = 0.99;
+
+/** Minimum fill for extraction to claim headroom in a wider shortage. */
+export const SHORTAGE_RELAXED_FILL = 0.5;
 
 /**
  * Extra units a sold-out plant can put into a market that left buyers unserved
@@ -127,6 +130,8 @@ export const SOLD_OUT_FILL = 0.999;
  * Each seller receives only its share of the normalized clearing book. The
  * allocations sum to at most the book's unmet demand. Capacity caps remain
  * in the throttle; unused allocations are not promised to another seller.
+ * Extraction may also claim its share of a wider shortage after selling at
+ * least half its output. Full fills retain their existing scoped-book headroom.
  */
 export function soldOutMarketHeadroomUnits(args: {
   /** Fill per output commodity for the prior output in this scoped book. */
@@ -139,6 +144,8 @@ export function soldOutMarketHeadroomUnits(args: {
   marketShareFor?: (commodity: string) => number | null | undefined;
   /** Lagged balance of the book this output clears in. */
   balanceFor: (commodity: string) => { supply: number; demand: number } | null | undefined;
+  /** Optional reachable country or global book for partially sold extraction output. */
+  wideBalanceFor?: (commodity: string) => { supply: number; demand: number } | null | undefined;
   /** Lagged price over base for one output, in the sector's own market. */
   priceRatioFor: (commodity: string) => number | null | undefined;
 }): number {
@@ -154,9 +161,14 @@ export function soldOutMarketHeadroomUnits(args: {
     const weight =
       rate * (typeof ratio === "number" && Number.isFinite(ratio) && ratio > 0 ? ratio : 1);
     weightSum += weight;
-    if (fill < SOLD_OUT_FILL) continue;
+    let balance;
+    if (fill < SOLD_OUT_FILL) {
+      if (fill < SHORTAGE_RELAXED_FILL) continue;
+      balance = args.wideBalanceFor?.(commodity);
+    } else {
+      balance = args.balanceFor(commodity);
+    }
     const share = args.mixWeightFor(commodity);
-    const balance = args.balanceFor(commodity);
     if (!(share > 0) || !balance) continue;
     const unmet = balance.demand - balance.supply;
     if (!(Number.isFinite(unmet) && unmet > 0)) continue;
@@ -199,15 +211,22 @@ export const DEMAND_THROTTLE_FLOOR = 0.1;
  * same scalar output units as `plannedUnits`
  * @param marketHeadroomUnits unmet demand a sold-out plant may add on top of
  * what it sold, from `soldOutMarketHeadroomUnits`
+ * @param lossRunShare share of the market target a plant that keeps losing
+ * money on its output still produces, from `rules/lossRun` (1 = no cut)
  */
 export function demandThrottleFactor(
   plannedUnits: number,
   priorSoldUnits: number | null | undefined,
   priorProducedUnits: number | null | undefined,
   guaranteedDemandUnits?: number | null,
-  marketHeadroomUnits?: number | null
+  marketHeadroomUnits?: number | null,
+  lossRunShare?: number | null
 ): number {
   if (!Number.isFinite(plannedUnits) || plannedUnits <= 0) return 1;
+  const lossShare =
+    typeof lossRunShare === "number" && Number.isFinite(lossRunShare)
+      ? Math.max(0, Math.min(1, lossRunShare))
+      : 1;
   // No usable history: nothing to infer demand from, so do not throttle. This
   // is the newly-founded sector and the pre-clearing world.
   if (
@@ -215,9 +234,11 @@ export function demandThrottleFactor(
     !Number.isFinite(priorProducedUnits) ||
     priorProducedUnits <= 0
   ) {
-    return 1;
+    return lossShare < 1 ? Math.max(DEMAND_THROTTLE_FLOOR, lossShare) : 1;
   }
-  if (typeof priorSoldUnits !== "number" || !Number.isFinite(priorSoldUnits)) return 1;
+  if (typeof priorSoldUnits !== "number" || !Number.isFinite(priorSoldUnits)) {
+    return lossShare < 1 ? Math.max(DEMAND_THROTTLE_FLOOR, lossShare) : 1;
+  }
 
   // The target is ALWAYS last turn's sales plus the probe margin, including when
   // the plant cleared everything it made. Exempting a full clearance is what
@@ -234,7 +255,10 @@ export function demandThrottleFactor(
     typeof marketHeadroomUnits === "number" && Number.isFinite(marketHeadroomUnits)
       ? Math.max(0, marketHeadroomUnits)
       : 0;
-  const marketTarget = Math.max(sold * (1 + DEMAND_PROBE_MARGIN), sold + headroom);
+  // A plant losing money on its output scales back what it offers the market;
+  // a named buyer's contract below is never cut by it.
+  const marketTarget =
+    Math.min(Math.max(sold * (1 + DEMAND_PROBE_MARGIN), sold + headroom), plannedUnits) * lossShare;
   const contractTarget =
     typeof guaranteedDemandUnits === "number" && Number.isFinite(guaranteedDemandUnits)
       ? Math.max(0, guaranteedDemandUnits)
@@ -261,6 +285,42 @@ export function withLatentDemand(
   }
   return { supply: balance.supply, demand: balance.demand * factor };
 }
+
+/**
+ * Book balance plus foreign buyers nobody serves.
+ *
+ * An exporter's clearing book pins demand to supply (its surplus is cleared
+ * abroad), so `demand - supply` reads zero however short its foreign buyers
+ * are, and a sold-out exporter could only creep up by the probe margin. The
+ * trade snapshot's `unmetForeignDemand` is this country's gravity share of the
+ * deficits no one is serving, so adding it restores the room the exporter can
+ * actually win. Other exporters claim their own shares, not this one.
+ */
+export function withForeignDemand(
+  balance: { supply: number; demand: number } | null | undefined,
+  unmetForeignDemand: number | null | undefined
+): { supply: number; demand: number } | null | undefined {
+  if (
+    !balance ||
+    !(typeof unmetForeignDemand === "number" && Number.isFinite(unmetForeignDemand)) ||
+    unmetForeignDemand <= 0
+  ) {
+    return balance;
+  }
+  return {
+    supply: balance.supply,
+    demand: balance.demand + unmetForeignDemand * FOREIGN_DEMAND_CLAIM_PER_TURN,
+  };
+}
+
+/**
+ * Share of the unserved foreign deficit an exporter may claim as room in one
+ * turn. The gravity share ignores route caps and tariff budgets, so claiming it
+ * whole could send a plant straight to capacity into routes that cannot carry
+ * it. A quarter a turn ramps over a few turns, and each turn re-reads what the
+ * last one actually shipped.
+ */
+export const FOREIGN_DEMAND_CLAIM_PER_TURN = 0.25;
 
 /**
  * Per-output fill for production feedback, with units a media ownership law

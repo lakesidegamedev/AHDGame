@@ -1,13 +1,27 @@
 "use client";
-import { CONTRACT_OFFER_EXPIRY_TURNS } from "@/lib/constants/prospecting";
+import {
+  BIDDING_TURNS_MIN,
+  BIDDING_TURNS_MAX,
+  BIDDING_TURNS_DEFAULT,
+  AWARD_WINDOW_TURNS,
+  tenderDeadlines,
+} from "@/lib/governmentContracts/rules";
 import { GRADE_PRICE_SCALE } from "@/lib/military/defenceLotEconomics";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { ContractType, TenderView } from "@/lib/governmentContracts/types";
 import { apiErrorText } from "@/lib/errors/catalog";
+import {
+  extractionCapacityQuote,
+  contractAnchorAmount,
+  contractLocalAmount,
+  validContractQuote,
+  type ContractCurrencyQuote,
+} from "@/lib/governmentContracts/rules/presentation";
 import { sortByRegionLabel } from "@/lib/regionOptions";
 export interface ContractAccess {
   currentTurn: number;
+  currencyQuote?: ContractCurrencyQuote | null;
   defenceAnchorPrice?: number | null;
   maximumGrade?: number;
   uncommittedAppropriation?: number | null;
@@ -16,11 +30,12 @@ export interface ContractAccess {
   regionalExtraction: boolean;
   extractionEnabled: boolean;
   window: { endTurn: number };
-  states: { stateId: string; resources: string[] }[];
+  states: { stateId: string; resources: string[]; capacity?: Record<string, number | null> }[];
   corporations: {
     _id: string;
     name: string;
     countryId: string;
+    currencyQuote?: ContractCurrencyQuote | null;
     type: string;
     sectors: { _id: string; stateId: string; type: string; strategyId: string }[];
   }[];
@@ -63,12 +78,20 @@ export function PublishTenderForm({
           : "extraction"
   );
   const [grade, setGrade] = useState(0);
-  const defenceWindowAvailable = access.currentTurn + 2 <= access.window.endTurn + 1;
+  const [biddingTurns, setBiddingTurns] = useState(BIDDING_TURNS_DEFAULT);
+  const deadlines = tenderDeadlines(access.currentTurn, biddingTurns);
   const sortedStates = sortByRegionLabel(access.states, (s) => s.stateId);
   const [stateId, setStateId] = useState(sortedStates[0]?.stateId ?? "");
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   const resources = access.states.find((s) => s.stateId === stateId)?.resources ?? [];
+  const [resourceChoice, setResourceChoice] = useState("");
+  const resource = resources.includes(resourceChoice) ? resourceChoice : (resources[0] ?? "");
+  const [share, setShare] = useState(10);
+  const capacity = extractionCapacityQuote(
+    access.states.find((s) => s.stateId === stateId)?.capacity?.[resource] ?? undefined,
+    share / 100
+  );
   if (
     !access.defence &&
     !(access.extractionEnabled && (access.nationalExtraction || access.regionalExtraction))
@@ -88,11 +111,12 @@ export function PublishTenderForm({
         const form = new FormData(e.currentTarget);
         const n = (key: string) => Number(form.get(key));
         try {
+          if (type === "extraction" && !validContractQuote(access.currencyQuote))
+            throw new Error(t("currencyUnavailable"));
           await contractPost(`/api/country/${countryId}/government-contracts`, {
             title: form.get("title"),
             description: form.get("description"),
-            closesTurn: n("closesTurn"),
-            awardDeadlineTurn: n("awardDeadlineTurn"),
+            biddingTurns: n("biddingTurns"),
             terms:
               type === "defence"
                 ? {
@@ -109,7 +133,9 @@ export function PublishTenderForm({
                     share: n("share") / 100,
                     termTurns: n("termTurns"),
                     royaltyRatePerTurn: n("royalty") / 100,
-                    minimumSigningFeeAnchor: n("minimumSigningFeeAnchor"),
+                    minimumSigningFeeAnchor: validContractQuote(access.currencyQuote)
+                      ? contractAnchorAmount(n("minimumSigningFeeAnchor"), access.currencyQuote)
+                      : 0,
                   },
           });
           onDone(type);
@@ -149,49 +175,27 @@ export function PublishTenderForm({
           className={inputClass}
         />
       </label>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="text-sm">
-          {t("closesTurn")}
-          <input
-            required
-            type="number"
-            name="closesTurn"
-            min={access.currentTurn + 1}
-            max={access.currentTurn + CONTRACT_OFFER_EXPIRY_TURNS - 1}
-            key={type}
-            defaultValue={
-              type === "defence"
-                ? Math.min(access.currentTurn + 2, access.window.endTurn)
-                : access.currentTurn + 2
-            }
-            className={inputClass}
-          />
-        </label>
-        <label className="text-sm">
-          {t("awardDeadline")}
-          <input
-            required
-            type="number"
-            key={type}
-            name="awardDeadlineTurn"
-            min={access.currentTurn + 2}
-            max={
-              type === "defence"
-                ? Math.min(
-                    access.window.endTurn + 1,
-                    access.currentTurn + CONTRACT_OFFER_EXPIRY_TURNS
-                  )
-                : access.currentTurn + CONTRACT_OFFER_EXPIRY_TURNS
-            }
-            defaultValue={
-              type === "defence"
-                ? Math.min(access.currentTurn + 4, access.window.endTurn + 1)
-                : access.currentTurn + 4
-            }
-            className={inputClass}
-          />
-        </label>
-      </div>
+      <label className="block text-sm">
+        {t("biddingLength")}
+        <input
+          required
+          type="number"
+          name="biddingTurns"
+          min={BIDDING_TURNS_MIN}
+          max={BIDDING_TURNS_MAX}
+          step={1}
+          value={biddingTurns}
+          onChange={(e) => setBiddingTurns(Number(e.target.value))}
+          className={inputClass}
+        />
+      </label>
+      <p className="text-sm text-muted">
+        {t("deadlineSummary", {
+          close: deadlines.closesTurn,
+          deadline: deadlines.awardDeadlineTurn,
+          turns: AWARD_WINDOW_TURNS,
+        })}
+      </p>
       {type === "defence" ? (
         <fieldset className="grid gap-4 sm:grid-cols-2">
           <label className="text-sm">
@@ -256,11 +260,6 @@ export function PublishTenderForm({
               {t("fundingReference", { amount: access.uncommittedAppropriation })}
             </p>
           )}
-          {!defenceWindowAvailable && (
-            <p role="status" className="text-sm text-warning sm:col-span-2">
-              {t("windowTooLate", { turn: access.window.endTurn + 1 })}
-            </p>
-          )}
         </fieldset>
       ) : (
         <fieldset className="grid gap-4 sm:grid-cols-2">
@@ -279,7 +278,14 @@ export function PublishTenderForm({
           </label>
           <label className="text-sm">
             {t("resource")}
-            <select required key={stateId} name="resource" className={inputClass}>
+            <select
+              required
+              key={stateId}
+              name="resource"
+              value={resource}
+              onChange={(e) => setResourceChoice(e.target.value)}
+              className={inputClass}
+            >
               {resources.map((r) => (
                 <option key={r}>{r}</option>
               ))}
@@ -291,10 +297,11 @@ export function PublishTenderForm({
               required
               type="number"
               name="share"
+              onChange={(e) => setShare(Number(e.target.value))}
               min={1}
               max={75}
               step={0.01}
-              defaultValue={10}
+              value={share}
               className={inputClass}
             />
           </label>
@@ -324,18 +331,33 @@ export function PublishTenderForm({
             />
           </label>
           <label className="text-sm">
-            {t("minimumFee")}
+            {t("minimumFeeLocal", { currency: access.currencyQuote?.code ?? "?" })}
             <input
               required
               type="number"
               name="minimumSigningFeeAnchor"
+              disabled={!validContractQuote(access.currencyQuote)}
               min={0}
-              step={1}
+              step="any"
               defaultValue={0}
               className={inputClass}
             />
           </label>
           <p className="text-sm text-muted sm:col-span-2">{t("extractionReservation")}</p>
+          <p className="text-sm text-muted sm:col-span-2">
+            {capacity
+              ? t("capacityQuantity", {
+                  allocated: capacity.allocatedDailyUnits,
+                  total: capacity.totalDailyUnits,
+                  resource,
+                })
+              : t("capacityUnavailable")}
+          </p>
+          <p className="text-sm text-muted sm:col-span-2">{t("capacityBasis")}</p>
+          <p className="text-sm text-muted sm:col-span-2">{t("exchangeNote")}</p>
+          {!validContractQuote(access.currencyQuote) && (
+            <p role="alert">{t("currencyUnavailable")}</p>
+          )}
         </fieldset>
       )}
       {error && (
@@ -345,7 +367,7 @@ export function PublishTenderForm({
       )}
       <button
         className={buttonClass}
-        disabled={busy || (type === "defence" && !defenceWindowAvailable)}
+        disabled={busy || (type === "extraction" && !validContractQuote(access.currencyQuote))}
       >
         {t("publish")}
       </button>
@@ -379,14 +401,29 @@ export function BidForm({
     [error, setError] = useState("");
   const corp = eligible.find((c) => c._id === corporationId);
   const prior = tender.bids.find((b) => b.corporationId === corporationId);
+  const quote = corp?.currencyQuote;
+  const extraction = tender.terms.type === "extraction";
   if (!eligible.length) return <p className="text-sm text-muted">{t("noEligibleCorporation")}</p>;
   async function submit(form: FormData, withdraw = false) {
     setBusy(true);
     setError("");
     try {
+      if (!withdraw && extraction && !validContractQuote(quote))
+        throw new Error(t("currencyUnavailable"));
       await contractPost(`/api/country/${countryId}/government-contracts/${tender._id}/bids`, {
         corporationId,
-        amount: withdraw ? (prior?.amount ?? 0) : Number(form.get("amount")),
+        amount: withdraw
+          ? (prior?.amount ?? 0)
+          : extraction
+            ? validContractQuote(quote)
+              ? contractAnchorAmount(Number(form.get("amount")), quote, [
+                  prior?.amount,
+                  tender.terms.type === "extraction"
+                    ? tender.terms.minimumSigningFeeAnchor
+                    : undefined,
+                ])
+              : 0
+            : Number(form.get("amount")),
         sectorId: withdraw ? prior?.sectorId : form.get("sectorId") || undefined,
         expectedRevision: prior?.revision ?? 0,
         withdraw,
@@ -408,6 +445,9 @@ export function BidForm({
     >
       <h3 className="font-semibold">{t("yourBid")}</h3>
       <p className="text-sm text-muted">{t("bindingBid")}</p>
+      <p className="text-sm text-muted">{t(extraction ? "extractionPayment" : "defencePayment")}</p>
+      {extraction && <p className="text-sm text-muted">{t("exchangeNote")}</p>}
+      {extraction && !validContractQuote(quote) && <p role="alert">{t("currencyUnavailable")}</p>}
       <label className="block text-sm">
         {t("corporation")}
         <select
@@ -443,16 +483,31 @@ export function BidForm({
         </label>
       )}
       <label className="block text-sm">
-        {tender.terms.type === "defence" ? t("pricePerLot") : t("signingFee")}
+        {tender.terms.type === "defence"
+          ? t("pricePerLot")
+          : t("signingFeeLocal", { currency: quote?.code ?? "?" })}
         <input
           required
           key={corporationId}
           type="number"
           name="amount"
-          min={tender.terms.type === "defence" ? 1 : tender.terms.minimumSigningFeeAnchor}
+          disabled={extraction && !validContractQuote(quote)}
+          min={
+            tender.terms.type === "defence"
+              ? 1
+              : validContractQuote(quote)
+                ? contractLocalAmount(tender.terms.minimumSigningFeeAnchor, quote)
+                : 0
+          }
           max={tender.terms.type === "defence" ? tender.terms.maximumPricePerLot : undefined}
-          step={1}
-          defaultValue={prior?.amount}
+          step={extraction ? "any" : 1}
+          defaultValue={
+            prior
+              ? extraction && validContractQuote(quote)
+                ? contractLocalAmount(prior.amount, quote)
+                : prior.amount
+              : undefined
+          }
           className={inputClass}
         />
       </label>
@@ -462,7 +517,10 @@ export function BidForm({
         </p>
       )}
       <div className="flex flex-wrap gap-3">
-        <button disabled={busy} className={buttonClass}>
+        <button
+          disabled={busy || (extraction && !validContractQuote(quote))}
+          className={buttonClass}
+        >
           {prior && !prior.withdrawn ? t("reviseBid") : t("submitBid")}
         </button>
         {prior && !prior.withdrawn && (

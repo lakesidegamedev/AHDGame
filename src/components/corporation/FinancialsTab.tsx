@@ -94,7 +94,7 @@ export default function FinancialsTab({
   sectors,
   financialFogOfWar,
 }: FinancialsTabProps) {
-  const money = useCorpMoney(corporation.liquidCurrencyCode);
+  const money = useCorpMoney(corporation.liquidCurrencyCode, corporation.countryId);
   const tArrears = useTranslations("corporations.arrears");
   const [view, setView] = useState<StatementView>("income");
   const [npvPage, setNpvPage] = useState(0);

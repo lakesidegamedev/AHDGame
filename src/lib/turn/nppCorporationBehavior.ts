@@ -118,6 +118,14 @@ import {
 import type { TechUnlockLedgerInput } from "@/lib/corporations/techTree/techUnlockLedger";
 import { loadNppPlacementSignals } from "@/lib/turn/npp/fragileMarketSupply";
 import {
+  buildMarketSaturationIndex,
+  canFoundAsBuilder,
+  cellUnmetDemandUnits,
+  marketSaturationOf,
+} from "@/lib/turn/npp/rules/marketSaturation";
+import { getOperatingSectorType, getStrategy } from "@/lib/constants/sectorStrategies";
+import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
+import {
   resolveNppMarketEntryCredit,
   type NppMarketEntryDiagnostic,
 } from "@/lib/turn/npp/entryDiagnostics";
@@ -274,6 +282,8 @@ export async function processNppCorporationDecisions(
             nationalizedAtTurn: 1,
             mothballed: 1,
             capitalStock: 1,
+            // Physical saturation per cell: see rules/marketSaturation.
+            demandThrottleFactor: 1,
           },
         }
       )
@@ -281,6 +291,50 @@ export async function processNppCorporationDecisions(
   ]);
   const stateControlled = computeStateControlledBuckets(globalSectors, nationalCorpIds);
   placementSignals.activeMarketBuckets = buildActiveMarketBuckets(globalSectors);
+  const saturationIndex = buildMarketSaturationIndex(globalSectors);
+  placementSignals.marketSaturationOf = (cell, excluding) =>
+    marketSaturationOf(saturationIndex, cell, excluding);
+  // Last turn's state and national books, already loaded as price docs.
+  // Same-type NPP builders per country, for the essential-shortage valve.
+  const sameTypeNpp = new Set<string>();
+  for (const corp of nppCorps) {
+    if (
+      !canFoundAsBuilder({
+        ceoType: corp.ceoType,
+        autopilotRun: isAutopilotRun(corp),
+        suspended: corp.suspended,
+        liquidCapital: corp.liquidCapital,
+        strategyId: corp.nppStrategy?.id,
+      })
+    ) {
+      continue;
+    }
+    sameTypeNpp.add(`${corp.countryId}|${corp.type}`);
+    if (corp.secondaryType) sameTypeNpp.add(`${corp.countryId}|${corp.secondaryType}`);
+  }
+  placementSignals.hasSameTypeNppIn = (countryId, sectorType) =>
+    sameTypeNpp.has(`${countryId}|${sectorType}`);
+  placementSignals.unmetDemandUnitsOf = (cell, options) => {
+    // The mix the new plant would actually run: its founding strategy, else the
+    // sector default (getStrategy falls back to it).
+    const supplyMix = getStrategy(
+      getOperatingSectorType(cell.sectorType, cell.industryModel, cell.mediaDiscriminator),
+      options?.strategyId ?? ""
+    ).supply;
+    return cellUnmetDemandUnits({
+      supplyMix,
+      aggregate: options?.aggregate,
+      gapFor: (commodity) => {
+        const doc = priceByCommodity.get(commodity);
+        if (!doc) return null;
+        const [supply, demand] = isStateScopedCommodity(commodity)
+          ? [doc.stateSupply?.[cell.stateId], doc.stateDemand?.[cell.stateId]]
+          : [doc.nationalSupply?.[cell.countryId], doc.nationalDemand?.[cell.countryId]];
+        if (typeof supply !== "number" || typeof demand !== "number") return null;
+        return Math.max(0, demand - supply);
+      },
+    });
+  };
 
   // Rival index for capacity-decision telemetry, off the already-loaded
   // `globalSectors` snapshot: no turn-path reads. See capacityDecisionTelemetry.

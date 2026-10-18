@@ -1,7 +1,13 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
 import { createMockDb } from "@/lib/test-utils/mockDb";
 import type { Db } from "mongodb";
-const ctx = vi.hoisted(() => ({ context: vi.fn(), publish: vi.fn(), auth: vi.fn() }));
+const ctx = vi.hoisted(() => ({
+  context: vi.fn(),
+  publish: vi.fn(),
+  auth: vi.fn(),
+  viewerAuth: vi.fn(),
+}));
+vi.mock("@/lib/auth", () => ({ getAuthUserWithCharacter: ctx.viewerAuth }));
 vi.mock("@/lib/governmentContracts/api", async () => {
   const { NextResponse } = await import("next/server");
   return {
@@ -21,6 +27,7 @@ describe("country government contracts API", () => {
     db = createMockDb();
     ctx.context.mockResolvedValue({ db: db as unknown as Db, countryId: "JP", turn: 5 });
     ctx.auth.mockResolvedValue({ ok: true, user: { userId: "a".repeat(24) } });
+    ctx.viewerAuth.mockResolvedValue(null);
   });
   it("uses the URL country, a fixed ten-row page and a type-specific server filter", async () => {
     db.collection("governmentTenders");
@@ -56,6 +63,52 @@ describe("country government contracts API", () => {
       (
         await GET(
           new Request("http://localhost/api/country/jp/government-contracts?tab=anything"),
+          context
+        )
+      ).status
+    ).toBe(400);
+  });
+
+  it("accepts bounded bidding durations and rejects ambiguous timing requests", async () => {
+    const body = {
+      title: "Procurement",
+      description: "Equipment for the country",
+      biddingTurns: 24,
+      terms: { type: "defence", component: "ground", grade: 0, lots: 1, maximumPricePerLot: 100 },
+    };
+    const send = (payload: unknown) =>
+      POST(
+        new Request("http://localhost", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }),
+        context
+      );
+    for (const duration of [5, 49, 24.5, "24"])
+      expect((await send({ ...body, biddingTurns: duration })).status).toBe(400);
+    expect((await send({ ...body, closesTurn: 29, awardDeadlineTurn: 53 })).status).toBe(400);
+    const { biddingTurns: _duration, ...withoutDuration } = body;
+    expect((await send({ ...withoutDuration, closesTurn: 29 })).status).toBe(400);
+    expect(ctx.publish).not.toHaveBeenCalled();
+    ctx.publish.mockResolvedValue("tender");
+    expect((await send(body)).status).toBe(200);
+    expect(ctx.publish.mock.calls[0][2]).toMatchObject({ biddingTurns: 24 });
+  });
+
+  it("requires viewer authentication for private filters and rejects malformed corporation ids", async () => {
+    expect(
+      (
+        await GET(
+          new Request("http://localhost/api/country/jp/government-contracts?supplier=mine"),
+          context
+        )
+      ).status
+    ).toBe(401);
+    expect(
+      (
+        await GET(
+          new Request("http://localhost/api/country/jp/government-contracts?supplier=invalid"),
           context
         )
       ).status

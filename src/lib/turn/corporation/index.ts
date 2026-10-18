@@ -28,6 +28,7 @@ import { getLabourSystemMode, labourAtLeast } from "@/lib/labour/featureFlag";
 import { getMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
 import { buildMarketContext } from "@/lib/market/marketContext";
 import { normalizeCommodityFixStage } from "@/lib/market/commodityFixStages";
+import { normalizeMarketRecoveryStage } from "@/lib/market/marketRecoveryStages";
 import { isFairnessDoctrineInEffect } from "@/lib/mediaRegulation/rules";
 import { runClearingPrePass } from "./clearingPrePass";
 import { computeQualityUpdates } from "./brandQualityTurn";
@@ -89,7 +90,7 @@ import { COMMODITY_LABELS, eraScaledBasePrices } from "@/lib/constants/commoditi
 import { trackFinancialDistress } from "./financialDistressTracking";
 import {
   persistLabourIndices,
-  persistLabourMarketTelemetry,
+  persistLabourDemand,
   creditCorpDividends,
   updateCorporateTaxBases,
   emitCorporationTurnTx,
@@ -437,6 +438,9 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
   });
   market.explicitPlantCostsEnabled = marketGovernorConfig?.explicitPlantCostsEnabled === true;
   market.commodityFixStage = normalizeCommodityFixStage(marketGovernorConfig?.commodityFixStage);
+  market.marketRecoveryStage = normalizeMarketRecoveryStage(
+    marketGovernorConfig?.marketRecoveryStage
+  );
   market.shortageBuildSpeedupEnabled = marketGovernorConfig?.shortageBuildSpeedupEnabled === true;
   market.mediaRegulationEnabled = mediaRegulationEnabled;
   market.mediaEditorialEnabled = mediaEditorialEnabled;
@@ -872,10 +876,10 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
     automationIndexByState,
   });
 
-  // Phase 1 labour market telemetry: record how many jobs the corporate sector
-  // wants per state and how that compares to the civilian labour force. Inert
-  // measurement, deliberately not gated on the labour system being on.
-  await persistLabourMarketTelemetry({
+  // Record current-turn corporate labour demand for every region. The metric
+  // engine combines it with this turn's labour force after computing supply.
+  // Deliberately not gated on the labour system being on.
+  await persistLabourDemand({
     db,
     labourDemandByState,
     labourDemandWageIndexByState,

@@ -55,7 +55,7 @@ function makeFixture(overrides: Partial<Defect> = {}): Defect {
   };
 }
 
-const IDLE_WORLD = [{ _id: "live", isActive: true, currentTurn: 100, isProcessing: false }];
+const IDLE_WORLD = [{ _id: "current", isActive: true, currentTurn: 100, isProcessing: false }];
 
 function seed(extra: Record<string, Doc[]> = {}) {
   return makeStrictInMemoryStore({
@@ -108,7 +108,7 @@ describe("runPlan", () => {
 
   it("withholds a token when a guard already fails", async () => {
     const { db } = makeStrictInMemoryStore({
-      gameState: [{ _id: "live", isActive: true, currentTurn: 100, isProcessing: true }],
+      gameState: [{ _id: "current", isActive: true, currentTurn: 100, isProcessing: true }],
       widgets: [{ _id: "w1", bad: true }],
     });
     const outcome = await runPlan(db, makeFixture(), { env: "sandbox", operator: OPERATOR });
@@ -151,6 +151,22 @@ describe("runApply", () => {
       operator: OPERATOR,
     });
     expect(runs[0].verify?.ok).toBe(true);
+  });
+
+  it("refuses an approved heal if the canonical world is replaced by a stray active row", async () => {
+    const tokenId = await planned();
+    store.cols.gameState.splice(0, store.cols.gameState.length, {
+      _id: "stray",
+      isActive: true,
+      currentTurn: 100,
+      isProcessing: false,
+    });
+    const result = await runApply(db, fixture, { env: "sandbox", tokenId, operator: OPERATOR });
+    expect(result.ok).toBe(false);
+    expect(result.refusal).toContain("world state moved");
+    expect(store.cols.widgets).toHaveLength(3);
+    expect(store.cols[HEAL_RUNS_COLLECTION] ?? []).toHaveLength(0);
+    expect(store.cols[HEAL_BACKUPS_COLLECTION] ?? []).toHaveLength(0);
   });
 
   it("snapshots every touched document before writing", async () => {
