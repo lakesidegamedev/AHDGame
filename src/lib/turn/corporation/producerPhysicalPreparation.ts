@@ -82,6 +82,10 @@ export type ProducerPhysicalEnv = Pick<
     | "extractionCapacityUtilBySector"
     | "corporateEmbargoSuppression"
     | "embargoTradeExposureEnabled"
+    | "eraYear"
+    | "politicalBaseModifiersByState"
+    | "regionalConditionMarginByState"
+    | "stateOwnershipConcentrationByCountry"
   >;
 };
 
