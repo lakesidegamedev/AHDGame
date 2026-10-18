@@ -522,6 +522,36 @@ describe("processForexTurn", () => {
   });
 
   describe("intervention integration", () => {
+    it("does not repeat a paid intervention on a repeated turn", async () => {
+      await setupIntervention({
+        rate: 1.15,
+        floor: 0.95,
+        ceiling: 1.05,
+        forexRevenue: 0,
+        reserveBalance: 0,
+        spreadFeeReserveBalances: { GBP: 750000 },
+        bank: { lastFxInterventionTurn: 50 },
+      });
+      await processForexTurn(db as unknown as Db, 50);
+      expect(usUpdateCall()).toBeUndefined();
+      expect(usBankUpdateCalls()).toHaveLength(0);
+    });
+    it("does not publish a defended quote after a raced reserve debit", async () => {
+      await setupIntervention({
+        rate: 1.15,
+        floor: 0.95,
+        ceiling: 1.05,
+        forexRevenue: 0,
+        reserveBalance: 0,
+        spreadFeeReserveBalances: { GBP: 750000 },
+      });
+      db.collectionMocks.centralBanks.updateOne.mockResolvedValue({
+        matchedCount: 0,
+        modifiedCount: 0,
+      });
+      await expect(processForexTurn(db as unknown as Db, 50)).rejects.toThrow("reserve balance");
+      expect(usUpdateCall()).toBeUndefined();
+    });
     async function setupIntervention({
       rate,
       floor,
@@ -807,7 +837,7 @@ describe("processForexTurn", () => {
           ceiling: 1,
           forexRevenue: 0,
           reserveBalance: 0,
-          spreadFeeReserveBalances: { GBP: 0.000001 },
+          spreadFeeReserveBalances: { GBP: 0.1 },
           fx: { ...fx, fxRegime: "peg", pegTarget: 1 },
         });
         await processForexTurn(db as unknown as Db, 50);
@@ -868,8 +898,8 @@ describe("processForexTurn", () => {
       );
       expect(bankInc).toBeDefined();
       const inc = bankInc![1].$inc as Record<string, number>;
-      expect(inc["spreadFeeReserveBalances.GBP"]).toBe(-750_000);
-      expect(inc["spreadFeeReserveBalances.USD"]).toBeGreaterThan(1_100_000);
+      expect(inc["spreadFeeReserveBalances.GBP"]).toBe(-75_000);
+      expect(inc["spreadFeeReserveBalances.USD"]).toBeGreaterThan(110_000);
       expect(inc.forexRevenue ?? 0).toBe(0);
       expect(inc.reserveBalance ?? 0).toBe(0);
 
@@ -928,20 +958,21 @@ describe("processForexTurn", () => {
       expect(policy.recentInterventions[0].fundingSource).toBe("mixed");
     });
 
-    it("charges failure infamy when both pools deplete mid-breach", async () => {
+    it("charges failure infamy when usable foreign reserves are exhausted", async () => {
       await setupIntervention({
         rate: 1.15,
         floor: 0.95,
         ceiling: 1.05,
         forexRevenue: 0,
         reserveBalance: 0,
-        spreadFeeReserveBalances: { GBP: 3.75 },
+        spreadFeeReserveBalances: {},
       });
 
       await processForexTurn(db as unknown as Db, 50);
 
       const bankInc = usBankUpdateCalls().find(
-        (call: Array<Record<string, unknown>>) => call[1].$inc !== undefined
+        (call: Array<Record<string, unknown>>) =>
+          (call[1].$set as Record<string, unknown> | undefined)?.chairInfamy !== undefined
       );
       const set = bankInc![1].$set as Record<string, number>;
       expect(set.chairInfamy).toBe(15);
@@ -982,7 +1013,7 @@ describe("processForexTurn", () => {
         ceiling: 1.05,
         forexRevenue: 0,
         reserveBalance: 0,
-        spreadFeeReserveBalances: { GBP: 3.75 },
+        spreadFeeReserveBalances: {},
         chairInfamy: 95,
       });
 
@@ -1265,6 +1296,48 @@ describe("Bretton Woods float band (issue #7)", () => {
 });
 
 describe("euro legacy ledger links", () => {
+  it("publishes linked rates from a recovered paid anchor without a second debit", async () => {
+    const { planEuroSettlement } = await import("@/lib/currency/euro/rules");
+    const union = planEuroSettlement({
+      year: 1999,
+      turn: 385,
+      preset: "1991-default",
+      europeanMembers: ["DE", "UK", "IE"],
+      consentedCountries: ["DE", "UK", "IE"],
+      rates: { EUR: 0.85, GBP: 0.6, IEP: 0.7 },
+    }).union;
+    vi.spyOn(euroService, "reconcileEuroMonetaryUnion").mockResolvedValueOnce(union);
+    const receipt = {
+      turn: 386,
+      countryId: "DE",
+      rate: 0.8,
+      macroTarget: 0.85,
+      policy: null,
+      previousPolicy: null,
+    };
+    db.collectionMocks.centralBanks.find.mockReturnValue({
+      toArray: async () => [
+        makeCentralBank("DE", { _id: "ECB", fxInterventionSettlement: receipt }),
+      ],
+    });
+    db.collectionMocks.exchangeRates.find.mockReturnValue({
+      toArray: async () => [
+        makeExchangeRate("UK", "GBP", 0.6, 0.6),
+        makeExchangeRate("IE", "IEP", 0.7, 0.7),
+        makeExchangeRate("DE", "EUR", 0.85, 0.85),
+      ],
+    });
+    db.collectionMocks.exchangeRates.bulkWrite.mockResolvedValue({ matchedCount: 2 });
+    await processForexTurn(db as unknown as Db, 386, "1991-default", 1999);
+    const writes = db.collectionMocks.exchangeRates.bulkWrite.mock.calls[0][0];
+    const british = writes.find(
+      (op: { updateOne: { filter: { _id: string } } }) => op.updateOne.filter._id === "UK"
+    ).updateOne.update.$set;
+    expect(british.rate).toBeCloseTo((0.8 * 0.6) / 0.85);
+    expect(
+      db.collectionMocks.centralBanks.updateOne.mock.calls.every(([, update]) => !update.$inc)
+    ).toBe(true);
+  });
   it("uses the current anchor quote for UK and Irish units without independent intervention", async () => {
     const { planEuroSettlement } = await import("@/lib/currency/euro/rules");
     const union = planEuroSettlement({

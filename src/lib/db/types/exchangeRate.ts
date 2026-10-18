@@ -20,6 +20,8 @@ export interface InterventionRecord {
 export interface InterventionPolicy {
   floor: number;
   ceiling: number;
+  /** Optional home-currency spending ceiling; absent uses 10% of usable reserves per turn. */
+  maxSpendPerTurn?: number;
   /** Legacy peg declarations can have unknown attribution and turn metadata. */
   setByCharacterId: ObjectId | null;
   setByCharacterName: string | null;

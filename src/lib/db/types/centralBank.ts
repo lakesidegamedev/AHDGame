@@ -315,6 +315,9 @@ export interface TreasuryTransferRecord {
 }
 
 export interface CentralBank {
+  /** Standalone-safe paid FX publication, cleared after the quote is published. */
+  fxInterventionSettlement?: import("@/lib/currency/intervention/settlement").FxSettlement;
+  lastFxInterventionTurn?: number;
   /** Version and recoverable owner shared by LOC publication and reserve transfers. */
   locBookRevision?: number;
   locReserveCreditRevision?: number;

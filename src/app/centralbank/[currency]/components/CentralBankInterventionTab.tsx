@@ -3,6 +3,12 @@
 import { InlineError } from "@/components/ui/InlineError";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useState } from "react";
+import {
+  stabilizationBand,
+  type DefencePreviewContext,
+} from "@/lib/currency/intervention/rules/preview";
+import { InterventionPreview } from "./InterventionPreview";
+import { defenceBounds } from "@/lib/currency/intervention/rules/defence";
 import type { CountryId } from "@/lib/constants/countries";
 import { Button } from "@/components/ui";
 import { CURRENCY_SYMBOLS, type CurrencyCode } from "@/lib/constants/currencies";
@@ -27,6 +33,7 @@ const FUNDING_SOURCE_LABELS: Record<string, string> = {
 interface InterventionPolicyView {
   floor: number;
   ceiling: number;
+  maxSpendPerTurn?: number;
   setByCharacterName: string | null;
   setAtTurn: number | null;
   lastAdjustedAtTurn: number | null;
@@ -45,6 +52,7 @@ export interface ForexSpreadView {
 }
 
 export interface InterventionData {
+  previewContext?: DefencePreviewContext | null;
   fxRegime?: "float" | "band" | "peg";
   currencyCode: CurrencyCode | null;
   baseRate: number | null;
@@ -78,6 +86,9 @@ export function CentralBankInterventionTab({
 }: Props) {
   const [floor, setFloor] = useState<string>(data.policy ? String(data.policy.floor) : "");
   const [ceiling, setCeiling] = useState<string>(data.policy ? String(data.policy.ceiling) : "");
+  const [budget, setBudget] = useState(
+    data.policy?.maxSpendPerTurn !== undefined ? String(data.policy.maxSpendPerTurn) : ""
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -85,10 +96,12 @@ export function CentralBankInterventionTab({
   const isPeg = data.fxRegime === "peg";
   const canEdit = !isPeg && ((isChair && !chairControlsLocked) || isAdmin);
   const currencySym = data.currencyCode ? (CURRENCY_SYMBOLS[data.currencyCode] ?? "") : "";
-  const totalReserves = (data.forexRevenue ?? 0) + (data.reserveBalance ?? 0);
+  const budgetValid =
+    budget.trim() === "" || (Number.isFinite(Number(budget)) && Number(budget) >= 0);
   const inBand =
     data.policy && data.currentRate != null
-      ? data.currentRate >= data.policy.floor && data.currentRate <= data.policy.ceiling
+      ? data.currentRate >= defenceBounds(data.policy).floor &&
+        data.currentRate <= defenceBounds(data.policy).ceiling
       : null;
 
   const turnsSinceAdjusted =
@@ -101,8 +114,8 @@ export function CentralBankInterventionTab({
   const desiredFloor = parseFloat(floor);
   const desiredCeiling = parseFloat(ceiling);
   const bandValid =
-    !isNaN(desiredFloor) &&
-    !isNaN(desiredCeiling) &&
+    Number.isFinite(desiredFloor) &&
+    Number.isFinite(desiredCeiling) &&
     desiredFloor > 0 &&
     desiredFloor < desiredCeiling;
 
@@ -111,7 +124,10 @@ export function CentralBankInterventionTab({
     bandValid &&
     desiredFloor <= data.policy.floor &&
     desiredCeiling >= data.policy.ceiling &&
-    (desiredFloor !== data.policy.floor || desiredCeiling !== data.policy.ceiling);
+    ((budget.trim() === "" ? undefined : Number(budget)) === data.policy.maxSpendPerTurn ||
+      (budget.trim() !== "" &&
+        data.policy.maxSpendPerTurn !== undefined &&
+        Number(budget) <= data.policy.maxSpendPerTurn));
 
   const submitLabel = data.policy ? (isWiden ? "Widen band" : "Narrow / shift band") : "Set band";
 
@@ -123,7 +139,11 @@ export function CentralBankInterventionTab({
       const res = await fetch(`/api/country/${countryId}/central-bank/intervention`, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ floor: desiredFloor, ceiling: desiredCeiling }),
+        body: JSON.stringify({
+          floor: desiredFloor,
+          ceiling: desiredCeiling,
+          ...(budget.trim() === "" ? {} : { maxSpendPerTurn: Number(budget) }),
+        }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -237,6 +257,28 @@ export function CentralBankInterventionTab({
               submit(data.policy ? "PATCH" : "POST");
             }}
           >
+            <p className="max-w-3xl text-body-sm text-muted">
+              Lower numbers mean a stronger currency. Below the floor we sell home currency; above
+              the ceiling we buy it. The band is a commitment, not a guaranteed exchange rate.
+            </p>
+            {data.previewContext && (
+              <div className="flex flex-wrap gap-2">
+                {(["current", "fundamentals"] as const).map((around) => (
+                  <Button
+                    key={around}
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      const suggested = stabilizationBand(data.previewContext!, around);
+                      setFloor(String(suggested.floor));
+                      setCeiling(String(suggested.ceiling));
+                    }}
+                  >
+                    {around === "current" ? "Stabilize near current rate" : "Near fundamentals"}
+                  </Button>
+                ))}
+              </div>
+            )}
             <div className="grid max-w-md grid-cols-2 gap-3">
               <label className="flex flex-col gap-1 text-body-sm text-muted">
                 Floor
@@ -263,8 +305,36 @@ export function CentralBankInterventionTab({
                 />
               </label>
             </div>
+            <label className="flex max-w-md flex-col gap-1 text-body-sm text-muted">
+              Maximum reserve draw per turn ({data.currencyCode})
+              <input
+                type="number"
+                min={0}
+                step="any"
+                value={budget}
+                onChange={(e) => setBudget(e.target.value)}
+                placeholder="Automatic: 10% of usable reserves"
+                className="rounded-md border border-card-border bg-background px-2 py-1 font-mono text-body text-foreground"
+                disabled={submitting}
+              />
+            </label>
+            <p className="text-body-sm text-muted">
+              Leave blank for the automatic budget. Zero stops spending without cancelling the
+              commitment.
+            </p>
+            {data.previewContext && (
+              <InterventionPreview
+                context={data.previewContext}
+                currency={data.currencyCode ?? ""}
+                policy={{
+                  floor: Number(floor),
+                  ceiling: Number(ceiling),
+                  ...(budget.trim() === "" ? {} : { maxSpendPerTurn: Number(budget) }),
+                }}
+              />
+            )}
             <div className="flex gap-2">
-              <Button type="submit" disabled={!bandValid || submitting}>
+              <Button type="submit" disabled={!bandValid || !budgetValid || submitting}>
                 {submitLabel}
               </Button>
               {data.policy && (
@@ -293,16 +363,30 @@ export function CentralBankInterventionTab({
               {currencySym}
               {Math.round(data.reserveBalance).toLocaleString("en-US")}
             </dd>
-            <dt className="font-semibold text-foreground">Total available</dt>
+            <dt className="font-semibold text-foreground">Usable to support the currency</dt>
             <dd className="text-right font-mono font-semibold">
               {currencySym}
-              {Math.round(totalReserves).toLocaleString("en-US")}
+              {data.previewContext
+                ? Math.round(
+                    data.previewContext.buyReservesAnchor * data.previewContext.homeRate
+                  ).toLocaleString("en-US")
+                : "Unavailable"}
+            </dd>
+            <dt className="font-semibold text-foreground">Usable to weaken the currency</dt>
+            <dd className="text-right font-mono">
+              {currencySym}
+              {data.previewContext
+                ? Math.round(
+                    data.previewContext.sellReservesAnchor * data.previewContext.homeRate
+                  ).toLocaleString("en-US")
+                : "Unavailable"}
             </dd>
           </dl>
           <p className="mt-3 max-w-3xl text-body-sm text-muted">
-            Intervention spends the forex revenue pool first, then the reserve balance. The reserve
-            balance also backs the line of credit limit, so spending it on currency leaves less for
-            lending.
+            Supporting the currency spends foreign-currency reserves. Weakening it spends
+            home-currency spread reserves first, then forex revenue, then the reserve balance.
+            Intervention exchanges assets rather than destroying their full value. Spending the
+            reserve balance also reduces the backing for lines of credit.
           </p>
         </CentralBankSection>
       )}

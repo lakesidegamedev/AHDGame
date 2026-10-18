@@ -5,6 +5,8 @@ import { apiErrorText } from "@/lib/errors/catalog";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui";
 import { CentralBankSection } from "./CentralBankSection";
+import { InterventionPreview } from "./InterventionPreview";
+import type { DefencePreviewContext } from "@/lib/currency/intervention/rules/preview";
 
 /**
  * B6 currency regimes, from the chair's seat.
@@ -53,11 +55,17 @@ const REGIME_BLURBS: Record<FxRegime, string> = {
 };
 
 export function CurrencyRegimePanel({
+  previewContext,
+  currencyCode,
+  maxSpendPerTurn,
   bankApiBasePath,
   isChair,
   currentTurn,
   onChanged,
 }: {
+  previewContext?: DefencePreviewContext | null;
+  currencyCode?: string | null;
+  maxSpendPerTurn?: number;
   bankApiBasePath: string;
   isChair: boolean;
   currentTurn: number;
@@ -101,7 +109,7 @@ export function CurrencyRegimePanel({
 
   const cooldownRemaining = data ? Math.max(0, data.changeableFromTurn - currentTurn) : 0;
   const desiredPegTarget = parseFloat(pegTarget);
-  const pegValid = regime !== "peg" || (!isNaN(desiredPegTarget) && desiredPegTarget > 0);
+  const pegValid = regime !== "peg" || (Number.isFinite(desiredPegTarget) && desiredPegTarget > 0);
   const dirty =
     data !== null &&
     (regime !== data.regime ||
@@ -220,6 +228,13 @@ export function CurrencyRegimePanel({
             </label>
           )}
 
+          {regime === "peg" && previewContext && (
+            <InterventionPreview
+              context={previewContext}
+              policy={{ floor: desiredPegTarget, ceiling: desiredPegTarget, maxSpendPerTurn }}
+              currency={currencyCode ?? ""}
+            />
+          )}
           <label className="flex items-center gap-2 text-body">
             <input
               type="checkbox"
