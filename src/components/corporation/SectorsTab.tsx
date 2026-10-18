@@ -20,6 +20,7 @@ import {
   type MoneyPeriod,
 } from "@/lib/constants/moneyTimescale";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { resolveCorpDisplayCurrency } from "@/lib/corporations/resolveCorpDisplayCurrency";
 import type { SectorDetail } from "./CorporationPageTypes";
 import ExpandMarketModal from "./ExpandMarketModal";
 import { SectorTableHeader, sectorTableGrid } from "./SectorTableHeader";
@@ -62,6 +63,8 @@ interface SectorsTabProps {
   liquidCapital: number;
   /** Corp currency code for all per-sector money fields (v0.2.6). */
   liquidCurrencyCode?: string | null;
+  /** HQ country — fallback when liquidCurrencyCode is missing (private redaction). */
+  countryId?: string | null;
   /** Corporation logistics strength — used for sprawl penalty display */
   logisticsStrength: number;
   onAbandonSector: (sectorId: string) => void;
@@ -101,6 +104,7 @@ export default function SectorsTab({
   corporationSecondaryType,
   liquidCapital,
   liquidCurrencyCode,
+  countryId,
   logisticsStrength,
   onAbandonSector,
   abandoningSectorId,
@@ -123,9 +127,7 @@ export default function SectorsTab({
 }: SectorsTabProps) {
   const { formatAmount, toInternalFrom } = useCurrency();
   // Post-v0.2.6: sector revenue / profit / growthCost are in corp currency.
-  const liquidCode =
-    (liquidCurrencyCode as import("@/lib/constants/currencies").CurrencyCode | null | undefined) ??
-    undefined;
+  const liquidCode = resolveCorpDisplayCurrency({ liquidCurrencyCode, countryId });
   const fmtMoney = (val: number) => {
     const anchor = liquidCode ? toInternalFrom(val, liquidCode) : val;
     return formatAmount(anchor, liquidCode);
