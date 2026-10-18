@@ -154,6 +154,65 @@ describe("POST /api/country/[code]/central-bank/intervention", () => {
 });
 
 describe("PATCH /api/country/[code]/central-bank/intervention", () => {
+  it("stores an explicit budget, including a zero-spend commitment", async () => {
+    await setup({
+      rate: makeRate({
+        interventionPolicy: {
+          floor: 0.9,
+          ceiling: 1.1,
+          maxSpendPerTurn: 1000,
+          lastAdjustedAtTurn: 90,
+          recentInterventions: [],
+        },
+      }),
+    });
+    const { PATCH } = await import("./route");
+    const response = await PATCH(
+      makeRequest({ floor: 0.9, ceiling: 1.1, maxSpendPerTurn: 0 }, "PATCH"),
+      ctx()
+    );
+    expect(response.status).toBe(200);
+    expect((await response.json()).interventionPolicy.maxSpendPerTurn).toBe(0);
+  });
+  it("does not use widening to evade the budget-increase cooldown", async () => {
+    await setup({
+      rate: makeRate({
+        interventionPolicy: {
+          floor: 0.9,
+          ceiling: 1.1,
+          maxSpendPerTurn: 1000,
+          lastAdjustedAtTurn: 98,
+          recentInterventions: [],
+        },
+      }),
+    });
+    const { PATCH } = await import("./route");
+    expect(
+      (
+        await PATCH(
+          makeRequest({ floor: 0.8, ceiling: 1.2, maxSpendPerTurn: 2000 }, "PATCH"),
+          ctx()
+        )
+      ).status
+    ).toBe(400);
+  });
+  it("removes an explicit budget when returning to automatic spending", async () => {
+    await setup({
+      rate: makeRate({
+        interventionPolicy: {
+          floor: 0.9,
+          ceiling: 1.1,
+          maxSpendPerTurn: 1000,
+          lastAdjustedAtTurn: 90,
+          recentInterventions: [],
+        },
+      }),
+    });
+    const { PATCH } = await import("./route");
+    const response = await PATCH(makeRequest({ floor: 0.9, ceiling: 1.1 }, "PATCH"), ctx());
+    expect(response.status).toBe(200);
+    expect((await response.json()).interventionPolicy).not.toHaveProperty("maxSpendPerTurn");
+  });
   beforeEach(() => {
     vi.clearAllMocks();
   });

@@ -30,6 +30,7 @@ interface RouteContext {
 const bandSchema = z.object({
   floor: z.number().positive(),
   ceiling: z.number().positive(),
+  maxSpendPerTurn: z.number().finite().nonnegative().optional(),
 });
 
 function assertBandShape(
@@ -187,6 +188,9 @@ export async function POST(request: Request, context: RouteContext) {
     const policy: InterventionPolicy = {
       floor: parsed.data.floor,
       ceiling: parsed.data.ceiling,
+      ...(parsed.data.maxSpendPerTurn === undefined
+        ? {}
+        : { maxSpendPerTurn: parsed.data.maxSpendPerTurn }),
       setByCharacterId: guard.character._id,
       setByCharacterName: guard.character.name,
       setAtTurn: currentTurn,
@@ -227,11 +231,24 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     const existing = guard.rate.interventionPolicy;
     if (!existing) throw badRequest("No active band — use POST to set one.");
-    if (isSameBand(parsed.data, existing)) throw badRequest("Band unchanged.");
+    if (
+      isSameBand(parsed.data, existing) &&
+      parsed.data.maxSpendPerTurn === existing.maxSpendPerTurn
+    )
+      throw badRequest("Band unchanged.");
 
     const gameState = await getGameState();
     const currentTurn = gameState?.currentTurn ?? 0;
-    const isWiden = isSuperset(parsed.data, existing) && !isSameBand(parsed.data, existing);
+    const budgetSafe =
+      parsed.data.maxSpendPerTurn === existing.maxSpendPerTurn ||
+      (parsed.data.maxSpendPerTurn !== undefined &&
+        existing.maxSpendPerTurn !== undefined &&
+        parsed.data.maxSpendPerTurn <= existing.maxSpendPerTurn);
+    const isWiden =
+      isSuperset(parsed.data, existing) &&
+      budgetSafe &&
+      (!isSameBand(parsed.data, existing) ||
+        parsed.data.maxSpendPerTurn !== existing.maxSpendPerTurn);
 
     if (!isWiden && !guard.isAdmin) {
       const turnsSince = currentTurn - (existing.lastAdjustedAtTurn ?? 0);
@@ -246,8 +263,10 @@ export async function PATCH(request: Request, context: RouteContext) {
       ...existing,
       floor: parsed.data.floor,
       ceiling: parsed.data.ceiling,
+      maxSpendPerTurn: parsed.data.maxSpendPerTurn,
       lastAdjustedAtTurn: isWiden ? existing.lastAdjustedAtTurn : currentTurn,
     };
+    if (parsed.data.maxSpendPerTurn === undefined) delete next.maxSpendPerTurn;
     await guard.db
       .collection<ExchangeRate>("exchangeRates")
       .updateOne(
