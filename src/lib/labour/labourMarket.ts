@@ -54,7 +54,9 @@ export function accumulateLabourDemand(
  * labour force.
  *
  * 1.0 means the corporate sector wants exactly as many workers as the state has.
- * Below 1 the market has slack. Above 1 it is oversubscribed, and the excess is
+ * Below 1 measures partial corporate coverage, not whole-economy slack.
+ * Regional unemployment uses the background-employment ledger instead.
+ * Above 1 it is oversubscribed, and the excess is
  * headcount that could never be staffed by real people.
  *
  * Returns `undefined` rather than a number when supply is missing or not

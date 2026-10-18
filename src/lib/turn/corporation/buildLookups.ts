@@ -12,6 +12,7 @@ import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { RESET_V2_COUNTRIES, resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import type { Db } from "mongodb";
 import { findMergedRegionMetricsMany } from "@/lib/macroMetrics/merge";
+import { employmentStaffingTightness } from "@/lib/labour/rules/employment";
 import type {
   Character,
   Corporation,
@@ -1000,7 +1001,12 @@ export async function buildCorporationLookups(
     if (typeof corrVal === "number") {
       corruptionByState.set(stateId, getCorruptionMarginModifier(corrVal));
     }
-    const tightnessVal = sm.economic?.labourTightness?.value;
+    const allocatedTightness = employmentStaffingTightness(sm.labourEmployment);
+    const coverageTightness = sm.economic?.labourTightness?.value;
+    const tightnessVal =
+      allocatedTightness === undefined
+        ? coverageTightness
+        : Math.max(Number.isFinite(coverageTightness) ? coverageTightness! : 0, allocatedTightness);
     if (typeof tightnessVal === "number" && Number.isFinite(tightnessVal)) {
       labourTightnessByState.set(stateId, tightnessVal);
     }

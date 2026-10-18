@@ -1,6 +1,7 @@
 import type { EconomicModelState } from "@/lib/constants/economicModels";
 import type { SubhourStepStamp } from "@/lib/turn/subhour/stepFraction";
 import type { SubhourGrowthMetricBase } from "@/lib/turn/subhour/stepBase";
+import type { EmploymentState } from "@/lib/labour/rules/employment";
 
 export type MetricCategoryId =
   | "economic"
@@ -23,6 +24,8 @@ export interface StateMetricValue {
 
 export interface StateMetrics {
   _id: string;
+  /** Macro-store employment allocation, forwarded by the legacy read adapter. */
+  labourEmployment?: EmploymentState;
   countryId?: string;
   /** The :30 half tick's stamp (turn/subhour/stepFraction.ts). */
   subhourStep?: SubhourStepStamp;

@@ -765,7 +765,7 @@ describe("runMetricEngine — v2-2/v2-3a labour wage-index Δ → medianIncome +
     expect(gatedOffIncome).toBe(baselineIncome);
   });
 
-  it("v2-3a: at 'macro', a positive wage-index Δ also raises unemployment above the no-Δ baseline", async () => {
+  it("a wage-index change alone does not invent layoffs in the employment ledger", async () => {
     const withDelta = createMockDb();
     seed(
       withDelta,
@@ -788,7 +788,7 @@ describe("runMetricEngine — v2-2/v2-3a labour wage-index Δ → medianIncome +
 
     expect(withDeltaUnemployment).toBeDefined();
     expect(baselineUnemployment).toBeDefined();
-    expect(withDeltaUnemployment!).toBeGreaterThan(baselineUnemployment!);
+    expect(withDeltaUnemployment!).toBe(baselineUnemployment!);
   });
 
   it("v2-3a: at 'wages' (below 'macro'), the unemployment Δ is gated off — parity with the no-Δ baseline", async () => {
@@ -815,7 +815,7 @@ describe("runMetricEngine — v2-2/v2-3a labour wage-index Δ → medianIncome +
     expect(gatedOffUnemployment).toBe(baselineUnemployment);
   });
 
-  it("v2-3b: at 'macro', more automation (a negative index Δ) also raises unemployment above the no-Δ baseline", async () => {
+  it("an automation-index change affects jobs through headcount rather than a duplicate unemployment penalty", async () => {
     const withDelta = createMockDb();
     seed(
       withDelta,
@@ -838,7 +838,7 @@ describe("runMetricEngine — v2-2/v2-3a labour wage-index Δ → medianIncome +
 
     expect(withDeltaUnemployment).toBeDefined();
     expect(baselineUnemployment).toBeDefined();
-    expect(withDeltaUnemployment!).toBeGreaterThan(baselineUnemployment!);
+    expect(withDeltaUnemployment!).toBe(baselineUnemployment!);
   });
 
   it("v2-3b: at 'wages' (below 'macro'), the automation Δ is gated off — parity with the no-Δ baseline", async () => {

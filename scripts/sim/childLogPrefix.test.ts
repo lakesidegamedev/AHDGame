@@ -73,6 +73,8 @@ describe("concurrent child log attribution (#2071)", () => {
   });
 });
 
+// The watchdog deliberately requires POSIX process groups. Windows must reject
+// budgeted runs, not silently run an engine without the lifetime guarantee.
 describe.skipIf(process.platform === "win32")("budgeted engine lifetime", () => {
   it("terminates a stalled process group and reports timeout even for graceful exit", async () => {
     const result = await spawnWithPrefixedLogs(
@@ -148,12 +150,33 @@ it.skipIf(process.platform === "win32")(
   }
 );
 
-it.runIf(process.platform === "win32")("rejects budgeted process groups on Windows", async () => {
-  await expect(
-    spawnWithPrefixedLogs(process.execPath, ["-e", "process.exit(0)"], identityA, () => {}, {
-      timeoutMs: 500,
-    })
-  ).rejects.toThrow("Budgeted process-group termination requires POSIX");
+describe.runIf(process.platform === "win32")("Windows budget safety", () => {
+  it("rejects budgeted execution before starting an unsupported process group", async () => {
+    await expect(
+      spawnWithPrefixedLogs(process.execPath, ["-e", "process.exit(0)"], identityA, () => {}, {
+        timeoutMs: 500,
+      })
+    ).rejects.toThrow("Budgeted process-group termination requires POSIX");
+  });
+
+  it("rejects direct watchdog execution without starting the engine", async () => {
+    const { spawnSync } = await import("node:child_process");
+    const { join } = await import("node:path");
+    const result = spawnSync(
+      process.execPath,
+      [
+        join(__dirname, "budgetProcess.mjs"),
+        "800",
+        process.execPath,
+        "-e",
+        "console.log('must-not-run')",
+      ],
+      { encoding: "utf8", timeout: 5000 }
+    );
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("Invalid budgeted process configuration");
+  });
 });
 
 it.each([0, -1, NaN, Infinity, -Infinity])(

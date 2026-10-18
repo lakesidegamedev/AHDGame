@@ -534,6 +534,28 @@ describe("applyLegislationEffect — macro-metric effects are scoped to the enac
     } as MockDb["collectionMocks"][string];
   });
 
+  it.each(["US", "UK", "JP"] as const)(
+    "does not add unemployment points over employment counts in %s",
+    async (countryId) => {
+      db.collectionMocks["legislationTypes"]!.findOne.mockResolvedValue({
+        _id: "employment_act",
+        effectTarget: { metricCategoryId: "economic", metricId: "unemploymentRate" },
+      });
+      await applyLegislationEffect(db as unknown as Db, {
+        _id: new ObjectId(),
+        countryId,
+        legislationTypeId: "employment_act",
+        effectDirection: -1,
+      });
+      expect(db.collectionMocks["macroMetrics"]!.updateMany).toHaveBeenCalledWith(
+        { countryId, labourEmployment: { $exists: false } },
+        expect.objectContaining({
+          $inc: { "economic.unemploymentRate.value": expect.any(Number) },
+        })
+      );
+    }
+  );
+
   it("filters the macroMetrics write by countryId instead of hitting every region on earth", async () => {
     await applyLegislationEffect(db as unknown as Db, {
       _id: new ObjectId(),
