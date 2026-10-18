@@ -81,6 +81,11 @@ export function idleCauseMeta(
       tone: "info",
       help: "You set output below full. Raise the output target to run more of your capacity.",
     },
+    staffing: {
+      label: "Short of workers",
+      tone: "warning",
+      help: `Your ${sites} did not have enough workers for a full run. Hire or raise pay until staffing catches up.`,
+    },
     bank: {
       label: "Reserved for your bank network",
       tone: "info",
