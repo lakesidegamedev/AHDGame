@@ -1,5 +1,6 @@
-import type { Db } from "mongodb";
+import type { Db, ObjectId } from "mongodb";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
+import type { Bill, NPP } from "@/lib/db/types";
 import {
   getLowerChamberOfficeType,
   getUpperChamberOfficeType,
@@ -19,8 +20,10 @@ import {
 const SOURCES = ["CS", "YU", "RU"] as const;
 
 /** An NPC legislature opens one rejectable mandate after its historical
- * decision window. A player-held government or chamber keeps the choice in
- * player hands. The bill and subsequent successor consent decide the result. */
+ * decision window, sponsored by the premier's party. A player-held government
+ * or chamber keeps the choice in player hands. The bill and subsequent
+ * successor consent decide the result. A mandate that failed with no vote cast
+ * either way never reached a decision, so the NPC opens the next revision. */
 export async function processFederationNpcMandates(
   db: Db,
   preset: string | undefined,
@@ -50,7 +53,7 @@ export async function processFederationNpcMandates(
       .collection<FederationPoliticalProposalRecord>(FEDERATION_POLITICAL_PROPOSALS_COLLECTION)
       .find(
         { presetId: "1991-default", sourceEntityId: { $in: eligible } },
-        { projection: { sourceEntityId: 1 } }
+        { projection: { sourceEntityId: 1, revision: 1, status: 1, billId: 1 } }
       )
       .toArray(),
     db
@@ -76,13 +79,45 @@ export async function processFederationNpcMandates(
       )
       .toArray(),
   ]);
-  const occupied = new Set([
-    ...proposals.map((proposal) => proposal.sourceEntityId),
-    ...applications.map((application) => application.sourceEntityId),
+  const latest = new Map<string, FederationPoliticalProposalRecord>();
+  for (const proposal of proposals) {
+    const prior = latest.get(proposal.sourceEntityId);
+    if (!prior || proposal.revision > prior.revision) latest.set(proposal.sourceEntityId, proposal);
+  }
+  const rejectedBillIds = [...latest.values()]
+    .filter((proposal) => proposal.status === "rejected")
+    .map((proposal) => proposal.billId);
+  const [undecidedBills, leaders] = await Promise.all([
+    rejectedBillIds.length
+      ? db
+          .collection<Bill>("bills")
+          .find(
+            { _id: { $in: rejectedBillIds }, status: "failed", votesFor: 0, votesAgainst: 0 },
+            { projection: { _id: 1 } }
+          )
+          .toArray()
+      : [],
+    db
+      .collection<NPP>("npps")
+      .find(
+        {
+          _id: {
+            $in: governments
+              .map((formation) => formation.pmNppId)
+              .filter((id): id is ObjectId => !!id),
+          },
+        },
+        { projection: { party: 1 } }
+      )
+      .toArray(),
   ]);
+  const undecided = new Set(undecidedBills.map((bill) => bill._id.toString()));
+  const settled = new Set(applications.map((application) => application.sourceEntityId));
   let opened = 0;
   for (const source of eligible) {
-    if (occupied.has(source)) continue;
+    if (settled.has(source)) continue;
+    const prior = latest.get(source);
+    if (prior && !(prior.status === "rejected" && undecided.has(prior.billId.toString()))) continue;
     const lowerOffice = getLowerChamberOfficeType(source, "1991-default");
     const upperOffice = getUpperChamberOfficeType(source, "1991-default");
     const legislatureOffices = new Set([lowerOffice, upperOffice].filter(Boolean));
@@ -97,12 +132,16 @@ export async function processFederationNpcMandates(
       !federalOfficials.some((official) => official.officeType === lowerOffice && official.nppId)
     )
       continue;
+    const sponsorParty = leaders.find((npp) => government?.pmNppId?.equals(npp._id))?.party;
+    if (typeof sponsorParty !== "string" || !sponsorParty) continue;
     try {
       await openDefaultFederationPoliticalProposal({
         db,
         sourceCountryId: source,
         currentYear: year,
         now,
+        sponsorParty,
+        revision: (prior?.revision ?? 0) + 1,
       });
       opened += 1;
     } catch (error) {

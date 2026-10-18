@@ -11,6 +11,20 @@ import {
 import { defaultNpcCustodians } from "@/lib/world/succession/defaultProposal";
 import { processFederationNpcMandates } from "./federationNpcMandates";
 
+/** A formed NPC government whose premier sits in `party`. */
+function seedNpcGovernment(
+  mem: ReturnType<typeof createInMemoryDb>,
+  countryId: string,
+  party = "1"
+): ObjectId {
+  const pmNppId = new ObjectId();
+  mem.seed("npps", [{ _id: pmNppId, countryId, party }]);
+  mem.seed("governmentFormations", [
+    { _id: countryId, status: "formed", pmCharacterId: null, pmNppId },
+  ]);
+  return pmNppId;
+}
+
 describe("autonomous federation mandates", () => {
   it("opens one ordinary CS bill after the date and leaves the outcome to voting", async () => {
     const mem = createInMemoryDb();
@@ -27,12 +41,14 @@ describe("autonomous federation mandates", () => {
         characterId: null,
       },
     ]);
+    seedNpcGovernment(mem, "CS", "4");
     const db = mem as unknown as Db;
     expect(await processFederationNpcMandates(db, "1991-default", 1992, new Date(0))).toBe(1);
     expect(await processFederationNpcMandates(db, "1991-default", 1992, new Date(0))).toBe(0);
     const bill = await mem.collection("bills").findOne({ countryId: "CS" });
     expect(bill).toMatchObject({
       status: "active",
+      sponsorParty: "4",
       federationSettlementMandate: { sourceEntityId: "CS" },
     });
     expect(await mem.collection("federationRatifications").countDocuments({})).toBe(0);
@@ -81,6 +97,7 @@ describe("autonomous federation mandates", () => {
     ]);
     const db = mem as unknown as Db;
     expect(await processFederationNpcMandates(db, "1991-default", 1992, new Date(0))).toBe(0);
+    mem.seed("npps", [{ _id: nppId, countryId: "CS", party: "1" }]);
     await mem
       .collection("governmentFormations")
       .updateOne({ _id: "CS" }, { $set: { status: "formed", pmNppId: nppId } });
@@ -116,7 +133,6 @@ describe("autonomous federation mandates", () => {
 
   it("opens the Soviet mandate under an NPP Congress and government", async () => {
     const mem = createInMemoryDb();
-    const nppId = new ObjectId();
     mem.seed("gameState", [
       { _id: "current", preset: "1991-default", currentYear: 1996, currentTurn: 294 },
     ]);
@@ -130,16 +146,15 @@ describe("autonomous federation mandates", () => {
         characterId: null,
       },
     ]);
-    mem.seed("governmentFormations", [
-      { _id: "RU", status: "formed", pmCharacterId: null, pmNppId: nppId },
-    ]);
+    seedNpcGovernment(mem, "RU", "1");
     const db = mem as unknown as Db;
     expect(await processFederationNpcMandates(db, "1991-default", 1996, new Date(0))).toBe(1);
     expect(await processFederationNpcMandates(db, "1991-default", 1996, new Date(0))).toBe(0);
     const bill = await mem.collection("bills").findOne({ countryId: "RU" });
     expect(bill).toMatchObject({
       status: "active",
-      federationSettlementMandate: { sourceEntityId: "RU" },
+      sponsorParty: "1",
+      federationSettlementMandate: { sourceEntityId: "RU", revision: 1 },
     });
     expect(await mem.collection("federationSettlementApplications").countDocuments({})).toBe(0);
   });
@@ -163,6 +178,103 @@ describe("autonomous federation mandates", () => {
       await processFederationNpcMandates(mem as unknown as Db, "1991-default", 1996, new Date(0))
     ).toBe(0);
     expect(await mem.collection("bills").countDocuments({})).toBe(0);
+  });
+
+  it("reopens a mandate that failed without a single vote cast", async () => {
+    const mem = createInMemoryDb();
+    const billId = new ObjectId();
+    mem.seed("gameState", [
+      { _id: "current", preset: "1991-default", currentYear: 1996, currentTurn: 294 },
+    ]);
+    mem.seed("states", csRegions1991 as unknown as Record<string, unknown>[]);
+    mem.seed("electedOfficials", [
+      {
+        _id: new ObjectId(),
+        countryId: "CS",
+        officeType: getLowerChamberOfficeType("CS", "1991-default"),
+        nppId: new ObjectId(),
+        characterId: null,
+      },
+    ]);
+    seedNpcGovernment(mem, "CS", "4");
+    mem.seed("federationPoliticalProposals", [
+      {
+        _id: "1991-default:cs-1991-default:1",
+        presetId: "1991-default",
+        sourceEntityId: "CS",
+        settlementId: "cs-1991-default",
+        revision: 1,
+        status: "rejected",
+        billId,
+      },
+    ]);
+    mem.seed("bills", [
+      { _id: billId, countryId: "CS", status: "failed", votesFor: 0, votesAgainst: 0 },
+    ]);
+    const db = mem as unknown as Db;
+    expect(await processFederationNpcMandates(db, "1991-default", 1996, new Date(0))).toBe(1);
+    expect(
+      await mem
+        .collection("bills")
+        .findOne({ countryId: "CS", "federationSettlementMandate.revision": 2 })
+    ).toMatchObject({ status: "active", sponsorParty: "4" });
+    expect(await processFederationNpcMandates(db, "1991-default", 1996, new Date(0))).toBe(0);
+  });
+
+  it("accepts a mandate that was actually voted down", async () => {
+    const mem = createInMemoryDb();
+    const billId = new ObjectId();
+    mem.seed("gameState", [
+      { _id: "current", preset: "1991-default", currentYear: 1996, currentTurn: 294 },
+    ]);
+    mem.seed("states", csRegions1991 as unknown as Record<string, unknown>[]);
+    mem.seed("electedOfficials", [
+      {
+        _id: new ObjectId(),
+        countryId: "CS",
+        officeType: getLowerChamberOfficeType("CS", "1991-default"),
+        nppId: new ObjectId(),
+        characterId: null,
+      },
+    ]);
+    seedNpcGovernment(mem, "CS", "4");
+    mem.seed("federationPoliticalProposals", [
+      {
+        _id: "1991-default:cs-1991-default:1",
+        presetId: "1991-default",
+        sourceEntityId: "CS",
+        settlementId: "cs-1991-default",
+        revision: 1,
+        status: "rejected",
+        billId,
+      },
+    ]);
+    mem.seed("bills", [
+      { _id: billId, countryId: "CS", status: "failed", votesFor: 40, votesAgainst: 110 },
+    ]);
+    expect(
+      await processFederationNpcMandates(mem as unknown as Db, "1991-default", 1996, new Date(0))
+    ).toBe(0);
+  });
+
+  it("needs a formed government to sponsor the mandate", async () => {
+    const mem = createInMemoryDb();
+    mem.seed("gameState", [
+      { _id: "current", preset: "1991-default", currentYear: 1992, currentTurn: 96 },
+    ]);
+    mem.seed("states", csRegions1991 as unknown as Record<string, unknown>[]);
+    mem.seed("electedOfficials", [
+      {
+        _id: new ObjectId(),
+        countryId: "CS",
+        officeType: getLowerChamberOfficeType("CS", "1991-default"),
+        nppId: new ObjectId(),
+        characterId: null,
+      },
+    ]);
+    expect(
+      await processFederationNpcMandates(mem as unknown as Db, "1991-default", 1992, new Date(0))
+    ).toBe(0);
   });
 
   it("publishes explicit shared-asset custody in the NPC opening position", () => {
