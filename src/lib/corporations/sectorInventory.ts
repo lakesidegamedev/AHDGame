@@ -108,6 +108,44 @@ function unitShares(
   return parts;
 }
 
+/**
+ * Per-commodity ₳ anchor for a pile whose units were not measured exactly.
+ * `outputUnitsByCommodity` only exists for a manufacturing product project, so
+ * every extraction sector falls back to this.
+ *
+ * `mixPriceAnchor` is ₳ per blended OUTPUT unit (1 / Σ(rate/base)), which prices
+ * the sector's current mix, not one commodity. The pile is stored per
+ * commodity, so each held unit must carry its own commodity's base price. The
+ * era unit scale implied by the mix price (Σ(rate/base) × mixPrice) and the
+ * mix's Σrate keep `base × scale / Σrate` equal to `mixPriceAnchor` for any
+ * single-commodity mix, so a pile matching the current output keeps exactly the
+ * valuation it has today.
+ *
+ * Returns null for a commodity with no base price, leaving the caller to fall
+ * back to the blended mix price.
+ */
+function perCommodityAnchor(
+  supplyRates: Partial<Record<CommodityType, number>>,
+  mixPriceAnchor: number
+): (commodity: CommodityType) => number | null {
+  let yieldPerUnit = 0;
+  let rateSum = 0;
+  for (const commodity of Object.keys(supplyRates ?? {}) as CommodityType[]) {
+    const rate = supplyRates[commodity] ?? 0;
+    const base = COMMODITY_BASE_PRICES[commodity];
+    if (rate > 0 && base > 0) {
+      yieldPerUnit += rate / base;
+      rateSum += rate;
+    }
+  }
+  if (yieldPerUnit <= 0 || rateSum <= 0 || !(mixPriceAnchor > 0)) return () => null;
+  const priceScale = yieldPerUnit * mixPriceAnchor;
+  return (commodity) => {
+    const base = COMMODITY_BASE_PRICES[commodity];
+    return base > 0 ? (base * priceScale) / rateSum : null;
+  };
+}
+
 export function advanceSectorInventory(input: InventoryTurnInput): InventoryTurnResult {
   const {
     inventory,
@@ -126,12 +164,14 @@ export function advanceSectorInventory(input: InventoryTurnInput): InventoryTurn
   let accruedUnits = 0;
   let drainedRevenueAnchor = 0;
   let heldValueAnchor = 0;
+  const fallbackAnchor = perCommodityAnchor(supplyRates, mixPriceAnchor);
   const unitAnchorFor = (commodity: CommodityType): number => {
     const units = input.outputUnitsByCommodity?.[commodity];
     const anchor = input.outputAnchorByCommodity?.[commodity];
-    return typeof units === "number" && units > 0 && typeof anchor === "number" && anchor >= 0
-      ? anchor / units
-      : mixPriceAnchor;
+    if (typeof units === "number" && units > 0 && typeof anchor === "number" && anchor >= 0) {
+      return anchor / units;
+    }
+    return fallbackAnchor(commodity) ?? mixPriceAnchor;
   };
 
   // The pile can sell down only into a market that cleared the sector's whole
@@ -206,13 +246,12 @@ export function advanceSectorInventory(input: InventoryTurnInput): InventoryTurn
 
   let heldUnits = 0;
   for (const held of Object.values(next)) heldUnits += held ?? 0;
-  if (input.outputUnitsByCommodity) {
-    for (const [commodity, held] of Object.entries(next) as Array<[CommodityType, number]>) {
-      heldValueAnchor += held * unitAnchorFor(commodity);
-    }
-  } else {
-    heldValueAnchor = heldUnits * mixPriceAnchor;
-    drainedRevenueAnchor = drainedUnits * mixPriceAnchor;
+  // Value every held commodity on its own anchor. The pile is stored PER
+  // COMMODITY, so one blended mix price cannot price it: a retool leaves the old
+  // method's commodities in the pile, and pricing coal, oil or gas at the new
+  // mix price made the pile worth orders of magnitude too much.
+  for (const [commodity, held] of Object.entries(next) as Array<[CommodityType, number]>) {
+    heldValueAnchor += held * unitAnchorFor(commodity);
   }
 
   return {
