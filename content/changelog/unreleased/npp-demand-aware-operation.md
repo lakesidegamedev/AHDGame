@@ -1,5 +1,5 @@
 ---
-date: 2026-10-16
+date: 2026-10-18
 title: Operate surplus NPC plants only as demand requires
 summary: >-
   Independent NPC companies can reduce the operating share of losing plants
