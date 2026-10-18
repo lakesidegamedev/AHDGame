@@ -110,6 +110,70 @@ export async function fenceDefenceReservation(db: Db, t: GovernmentTender): Prom
     { projection: { _id: 1 } }
   ));
 }
+
+/** Raise an open tender's held appropriation and quota when its maximum is refreshed. */
+export async function topUpDefenceTenderReservation(
+  db: Db,
+  t: GovernmentTender,
+  newReservedAmount: number,
+  defenseLine: number
+): Promise<boolean> {
+  if (!(newReservedAmount > t.reservedAmount) || !Number.isSafeInteger(newReservedAmount))
+    return false;
+  const delta = newReservedAmount - t.reservedAmount;
+  const m = marker(t._id),
+    p = potMarker(t._id);
+  const cap = defenceContractLotCaps(defenseLine, 1).procurementNotional;
+  await db.collection("defenceProcurementAllocations").updateOne(
+    {
+      _id: t.allocationWindowId as never,
+      [`${m}.state`]: "held",
+      $expr: { $lte: [{ $ifNull: ["$countryAmount", 0] }, cap - delta] },
+    },
+    {
+      $inc: { countryAmount: delta },
+      $set: { [m]: { state: "held", amount: newReservedAmount } },
+    }
+  );
+  const quota = await db
+    .collection("defenceProcurementAllocations")
+    .findOne(
+      {
+        _id: t.allocationWindowId as never,
+        [`${m}.state`]: "held",
+        [`${m}.amount`]: newReservedAmount,
+      },
+      { projection: { _id: 1 } }
+    );
+  if (!quota) return false;
+  await db.collection("federalBudget").updateOne(
+    {
+      countryId: t.countryId,
+      [`${p}.state`]: "held",
+      $expr: {
+        $gte: [
+          {
+            $subtract: [
+              { $ifNull: ["$defenseAppropriation.balance", 0] },
+              { $ifNull: ["$defenseAppropriation.encumbered", 0] },
+            ],
+          },
+          delta,
+        ],
+      },
+    },
+    {
+      $inc: { "defenseAppropriation.encumbered": delta },
+      $set: { [p]: { state: "held", amount: newReservedAmount } },
+    }
+  );
+  return !!(await db
+    .collection("federalBudget")
+    .findOne(
+      { countryId: t.countryId, [`${p}.state`]: "held", [`${p}.amount`]: newReservedAmount },
+      { projection: { _id: 1 } }
+    ));
+}
 export async function convertDefenceReservation(
   db: Db,
   t: GovernmentTender,

@@ -2,6 +2,7 @@ import { closingFinancialSnapshotsPhase } from "./stateEffectsPhase";
 import { processPlayerIncomeTax } from "@/lib/budget/playerIncomeTax";
 import { refreshIncomeTaxShares } from "@/lib/budget/incomeTaxShares";
 import { expireGovernmentTenders } from "@/lib/governmentContracts/reservations";
+import { refreshOpenDefenceTenderMaxima } from "@/lib/governmentContracts/commands";
 import { getEraContext } from "@/lib/era/context";
 import { processStatePartyElections } from "@/lib/statePartyElections";
 import { processNationalPartyElections } from "@/lib/nationalPartyElections";
@@ -637,6 +638,10 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
 
         await runtime.runPhase("governmentContractExpiry", () =>
           expireGovernmentTenders(context.db, newTurn)
+        );
+
+        await runtime.runPhase("governmentContractMaximaRefresh", () =>
+          refreshOpenDefenceTenderMaxima(context.db, context.realNow)
         );
 
         const lineOfCreditResult = await runtime.runPhase("lineOfCreditTurn", async () => {
