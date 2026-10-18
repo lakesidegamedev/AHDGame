@@ -31,6 +31,20 @@ vi.mock("@/lib/indexFunds/fundQueries", () => ({
   getFundById: vi.fn(),
   listActiveFunds: vi.fn(),
   listServiceableFunds: vi.fn(),
+  listWindingDownFunds: vi.fn().mockResolvedValue([]),
+  unionFundObjectIds: (...lists: { toString(): string }[][]) => {
+    const seen = new Set<string>();
+    const out: { toString(): string }[] = [];
+    for (const list of lists) {
+      for (const id of list) {
+        const key = id.toString();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(id);
+      }
+    }
+    return out;
+  },
   updateFundNav: vi.fn(),
   updateFundConstituents: vi.fn(),
   setFundStatus: vi.fn(),

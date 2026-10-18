@@ -43,6 +43,8 @@ import {
   listFundsByIds,
   listActiveFunds,
   listServiceableFunds,
+  listWindingDownFunds,
+  unionFundObjectIds,
   updateFundNav,
   insertFundSnapshotsBulk,
   setFundStatus,
@@ -237,12 +239,19 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
     ])
   );
   let funds = await listServiceableFunds(db);
-  const redemptionServiceFundIds = funds.map((fund) => fund._id);
+  // Winding-down funds stay out of Pass 1 NAV/investing, but their queued
+  // redemptions must still clear in Pass 3c or wind-up never completes.
+  const windingDownFunds = await listWindingDownFunds(db);
+  const redemptionServiceFundIds = unionFundObjectIds(
+    funds.map((fund) => fund._id),
+    windingDownFunds.map((fund) => fund._id)
+  );
   // Load valuation side ledgers once before Pass 1 so NAV includes committed
   // bid escrow and counts queued redemption units as the claims they are.
+  // Queued units include winding_down ids so Pass 3c claimOrder can see them.
   const fundIds = funds.map((fund) => fund._id);
   const openOrdersEscrowByFundId = await loadOpenOrdersEscrowByFundId(db, fundIds);
-  const queuedUnitsByFundId = await loadQueuedRedemptionUnitsByFundId(db, fundIds);
+  const queuedUnitsByFundId = await loadQueuedRedemptionUnitsByFundId(db, redemptionServiceFundIds);
   const initialBondPrincipalByFundId = await sumFundBondHoldingsByFundId(db, funds, exchangeRates);
   // #992 tranche 6: one thresholds read for every bond-reserve purchase row
   // this turn; threaded through each deploy so N funds share it.

@@ -9,6 +9,8 @@ import {
   creditFundPosition,
   debitFundHoldingShares,
   listServiceableFunds,
+  listWindingDownFunds,
+  unionFundObjectIds,
 } from "./fundQueries";
 
 describe("fundQueries constants", () => {
@@ -35,6 +37,54 @@ describe("listServiceableFunds", () => {
       { projection: { floatSettlementPlan: 0 } }
     );
     expect(toArray).toHaveBeenCalledOnce();
+  });
+
+  it("excludes winding_down funds from serviceable NAV/investing work", async () => {
+    const toArray = vi.fn().mockResolvedValue([]);
+    const sort = vi.fn().mockReturnValue({ toArray });
+    const find = vi.fn().mockReturnValue({ sort });
+    const db = { collection: vi.fn().mockReturnValue({ find }) } as never;
+
+    await listServiceableFunds(db);
+
+    const filter = find.mock.calls[0][0];
+    expect(JSON.stringify(filter)).not.toContain("winding_down");
+  });
+});
+
+describe("listWindingDownFunds", () => {
+  it("queries only status winding_down with the shared fund projection", async () => {
+    const toArray = vi.fn().mockResolvedValue([]);
+    const sort = vi.fn().mockReturnValue({ toArray });
+    const find = vi.fn().mockReturnValue({ sort });
+    const db = { collection: vi.fn().mockReturnValue({ find }) } as never;
+
+    await listWindingDownFunds(db);
+
+    expect(find).toHaveBeenCalledWith(
+      { status: "winding_down" },
+      { projection: { floatSettlementPlan: 0 } }
+    );
+    expect(sort).toHaveBeenCalledWith({ scope: 1, kind: 1, countryId: 1, sectorType: 1 });
+    expect(toArray).toHaveBeenCalledOnce();
+  });
+});
+
+describe("unionFundObjectIds", () => {
+  it("dedupes by string id and keeps first-seen order", () => {
+    const a = new ObjectId();
+    const b = new ObjectId();
+    const aDup = ObjectId.createFromHexString(a.toHexString());
+    expect(unionFundObjectIds([a, b], [aDup, b])).toEqual([a, b]);
+  });
+
+  it("includes winding_down ids that are absent from the serviceable list", () => {
+    const active = new ObjectId();
+    const winding = new ObjectId();
+    expect(unionFundObjectIds([active], [winding]).map(String)).toEqual([
+      String(active),
+      String(winding),
+    ]);
   });
 });
 

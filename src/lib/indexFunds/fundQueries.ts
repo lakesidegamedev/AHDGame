@@ -116,11 +116,13 @@ export async function listActiveFunds(db: Db): Promise<IndexFund[]> {
 }
 
 /**
- * Funds the turn engine must continue servicing. A fund paused automatically
- * for backing can become solvent again as prices, coupons, and maturities move,
- * so excluding it from NAV and redemption work would make the pause permanent.
- * Manual and listing pauses remain inert until their owning workflow resumes
- * them.
+ * Funds the turn engine must continue servicing for NAV, bond deploy, and
+ * investing. A fund paused automatically for backing can become solvent again
+ * as prices, coupons, and maturities move, so excluding it from that work would
+ * make the pause permanent. Manual and listing pauses remain inert until their
+ * owning workflow resumes them. Winding-down funds are excluded here; their
+ * queued redemptions are serviced separately via the cron id union with
+ * listWindingDownFunds.
  */
 export async function listServiceableFunds(db: Db): Promise<IndexFund[]> {
   return db
@@ -131,6 +133,34 @@ export async function listServiceableFunds(db: Db): Promise<IndexFund[]> {
     )
     .sort({ scope: 1, kind: 1, countryId: 1, sectorType: 1 })
     .toArray();
+}
+
+/**
+ * Funds already in wind-up. Kept out of listServiceableFunds so they skip NAV
+ * mark-to-market and investing, but still need queued-redemption payouts so
+ * completeWindUp can finish once holdings clear.
+ */
+export async function listWindingDownFunds(db: Db): Promise<IndexFund[]> {
+  return db
+    .collection<IndexFund>(FUND_COLLECTION)
+    .find({ status: "winding_down" }, { projection: FUND_READ_PROJECTION })
+    .sort({ scope: 1, kind: 1, countryId: 1, sectorType: 1 })
+    .toArray();
+}
+
+/** Dedupe ObjectIds by string form, preserving first-seen order across lists. */
+export function unionFundObjectIds(...lists: readonly (readonly ObjectId[])[]): ObjectId[] {
+  const seen = new Set<string>();
+  const out: ObjectId[] = [];
+  for (const list of lists) {
+    for (const id of list) {
+      const key = id.toString();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(id);
+    }
+  }
+  return out;
 }
 
 /**
