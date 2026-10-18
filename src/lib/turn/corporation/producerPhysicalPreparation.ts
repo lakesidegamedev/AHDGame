@@ -25,6 +25,7 @@ import { sociMultiplier } from "@/lib/nationalization/concentration";
 import { politicalSoeInputs } from "@/lib/politicalLegislation/marginAdapter";
 import { getSectorTypeMatchModifier } from "@/lib/corporations/specialization/rules";
 import { organisationalOutputFactor } from "@/lib/market/producerMarket/efficiencyRules";
+import { nextRunShare, type PriorReceipt } from "@/lib/market/producerMarket/outputResponseRules";
 import { computeStateMetricMarginModifier } from "@/lib/corporations/sectorMetricMarginProfiles";
 import { STRATEGY_TRANSITION_TURNS } from "@/lib/constants/sectorStrategyTypes";
 import { resolveSectorHostCurrencyCode } from "@/lib/currency/corporationCapital";
@@ -331,7 +332,14 @@ export function prepareProducerPhysicalSector(input: {
         })
       : 0,
   });
+  // Output follows price: last turn's own settled receipt sets this turn's run.
+  const priorReceipt = (sector as { producerSettlement?: PriorReceipt & { turn?: number } })
+    .producerSettlement;
+  const runShare = nextRunShare(
+    priorReceipt && priorReceipt.turn === currentTurn - 1 ? priorReceipt : null
+  );
   plan.outputMultiplier =
+    runShare *
     organisational *
     labour.outputFactor *
     disasterProductionFactor(disaster.productionPenalty) *

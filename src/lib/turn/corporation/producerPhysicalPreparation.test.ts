@@ -134,6 +134,27 @@ describe("physical producer preparation", () => {
     expect(off.otherOperatingCost).toBe(own.otherOperatingCost);
   });
 
+  it("runs more after a profitable sell-out and less after selling below input cost", () => {
+    const { input, sector } = fixture();
+    const base = { activeUnits: 100, producedUnits: 50, offeredUnits: 50, inputsConsumed: 200 };
+    const turn = input.env.currentTurn - 1;
+    (sector as unknown as { producerSettlement: unknown }).producerSettlement = {
+      ...base,
+      soldUnits: 50,
+      revenue: 500,
+      turn,
+    };
+    const good = prepareProducerPhysicalSector(input).prepared.plan.outputMultiplier;
+    (sector as unknown as { producerSettlement: unknown }).producerSettlement = {
+      ...base,
+      soldUnits: 50,
+      revenue: 100,
+      turn,
+    };
+    const bad = prepareProducerPhysicalSector(input).prepared.plan.outputMultiplier;
+    expect(good / bad).toBeCloseTo((0.5 * 1.15) / (0.5 * 0.9), 10);
+  });
+
   it("retains a smaller cold-site bill while mothballing stops jobs and output", () => {
     const { input, sector } = fixture();
     const running = prepareProducerPhysicalSector(input);
