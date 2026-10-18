@@ -13,6 +13,7 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { parseJsonBody } from "@/lib/api/validate";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
@@ -48,32 +49,36 @@ function view(corporation: Corporation) {
   };
 }
 
-async function load(params: RouteParams["params"]) {
+type Loaded =
+  | { response: NextResponse }
+  | { response?: undefined; db: Awaited<ReturnType<typeof getDb>>; corporation: Corporation };
+
+async function load(params: RouteParams["params"]): Promise<Loaded> {
   const auth = await requireBasicAuth();
-  if (!auth.ok) return { response: auth.response } as const;
+  if (!auth.ok) return { response: auth.response };
   const rateLimit = checkRateLimit(auth.user.userId, 20, 60000);
-  if (!rateLimit.ok) return { response: rateLimitResponse(rateLimit.retryAfter) } as const;
+  if (!rateLimit.ok) return { response: rateLimitResponse(rateLimit.retryAfter) };
   const db = await getDb();
   const resolved = await resolveCorporation(db, (await params).id);
-  if (!resolved.ok) return { response: resolved.response } as const;
+  if (!resolved.ok) return { response: resolved.response };
   const { corporation } = resolved;
   if (corporation.countryOwnerId || corporation.isNationalized) {
     return {
       response: errorResponse(400, "State-owned corporations have no operator policy."),
-    } as const;
+    };
   }
   if (!(await authorize(db, corporation, auth.user.userId))) {
     return {
       response: errorResponse(403, "Only the CEO or the parent corporation's CEO can do this"),
-    } as const;
+    };
   }
-  return { db, corporation } as const;
+  return { db, corporation };
 }
 
 export async function GET(_request: Request, { params }: RouteParams): Promise<NextResponse> {
   try {
     const loaded = await load(params);
-    if ("response" in loaded) return loaded.response;
+    if (loaded.response) return loaded.response;
     return NextResponse.json(view(loaded.corporation));
   } catch (error) {
     return handleRouteError(error);
@@ -83,10 +88,10 @@ export async function GET(_request: Request, { params }: RouteParams): Promise<N
 export async function PUT(request: Request, { params }: RouteParams): Promise<NextResponse> {
   try {
     const loaded = await load(params);
-    if ("response" in loaded) return loaded.response;
+    if (loaded.response) return loaded.response;
     const { db, corporation } = loaded;
-    const parsed = operatorPolicyInputSchema.safeParse(await request.json().catch(() => null));
-    if (!parsed.success) return errorResponse(400, "Invalid operator policy.");
+    const parsed = await parseJsonBody(request, operatorPolicyInputSchema);
+    if (!parsed.success) return errorResponse(parsed.status, parsed.error);
     const policy = buildOperatorPolicy(parsed.data, await getCurrentTurn(db));
     // Re-assert the operator seat so a CEO change between read and write cannot land the edit.
     const result = await db.collection<Corporation>("corporations").updateOne(
@@ -109,7 +114,7 @@ export async function PUT(request: Request, { params }: RouteParams): Promise<Ne
 export async function DELETE(_request: Request, { params }: RouteParams): Promise<NextResponse> {
   try {
     const loaded = await load(params);
-    if ("response" in loaded) return loaded.response;
+    if (loaded.response) return loaded.response;
     const { db, corporation } = loaded;
     await db
       .collection<Corporation>("corporations")
