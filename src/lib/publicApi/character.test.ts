@@ -28,6 +28,7 @@ const mockChar = {
   donorBaseLevel: 2,
   policies: { economic: 25, social: -10 },
   avatarUrl: null,
+  profileHeaderImageUrl: "https://example.com/profile-banner.png",
   createdAt: new Date("2025-01-01"),
 };
 
@@ -103,6 +104,7 @@ describe("queryCharacters", () => {
     const result = await queryCharacters(db as unknown as Db, { name: "Jane" });
 
     expect(result.found).toBe(true);
+    expect(result.characters[0].profileHeaderImageUrl).toBe(mockChar.profileHeaderImageUrl);
     expect(result.characters[0].campaignFunds).toBe(12500);
     expect(result.characters[0].cashOnHand).toBe(8000);
     expect(result.characters[0].netWorth).toBe(12500 + 8000 + 0);
