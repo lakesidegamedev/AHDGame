@@ -85,14 +85,14 @@ export function defenceBidError(input: {
     return "The procurement values must be finite and valid.";
   if (Math.min(input.supplierGrade, input.eraGrade ?? 3) < input.requiredGrade)
     return "The plant cannot supply the required equipment grade.";
-  if (
-    input.floor == null ||
-    input.ceiling == null ||
-    input.amount < input.floor ||
-    input.amount > input.ceiling ||
-    input.amount > input.maximum
-  )
+  // Empty intersection: every amount in the plant band exceeds the listed maximum.
+  if (input.floor != null && input.ceiling != null && input.floor > input.maximum)
+    return "Current plant costs sit above this tender's maximum, so no bid amount can fit both the price band and the listed maximum.";
+  if (input.floor == null || input.ceiling == null)
     return "The bid must fit the current permitted price band and this tender's maximum.";
+  if (input.amount < input.floor) return "The bid is below the current permitted price band.";
+  if (input.amount > input.ceiling) return "The bid is above the current permitted price band.";
+  if (input.amount > input.maximum) return "The bid is above this tender's maximum.";
   if (input.supplierRemainingLots < input.lots)
     return "The supplier cannot take this order within its quarterly concentration limit.";
   return null;
