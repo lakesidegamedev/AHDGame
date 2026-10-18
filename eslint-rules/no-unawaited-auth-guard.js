@@ -39,6 +39,7 @@ const ASYNC_GUARDS = new Set([
   "requireModerator",
   "requireForeignMinister",
   "requireTradeMinister",
+  "requireMinister",
   "requireBotApiAccess",
   "requireUserApiKey",
   "parseJsonBody",
