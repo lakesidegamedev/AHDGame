@@ -2,6 +2,7 @@
  * NPC household deposit-capture arithmetic. The shell (`banking/deposits.ts`)
  * moves a player's savings pointer; the banking turn moves the household cash.
  */
+import { clampWithUpperPriority as clamp } from "@/lib/numeric/rules";
 
 /**
  * Provisional NPC household deposit-capture math - flagged for user review.
@@ -32,10 +33,6 @@ export type NpcDepositShare = {
   /** Fraction of externalBroadMoney captured by this bank (0..MAX_SHARE_PER_BANK). */
   share: number;
 };
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
 
 /**
  * Each bank's raw share scales with its deposit-rate premium over the CB

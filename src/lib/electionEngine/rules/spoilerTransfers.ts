@@ -1,3 +1,4 @@
+import { clamp } from "@/lib/numeric/rules";
 import type { CountryId } from "@/lib/constants/countries";
 import { getMajorPartiesForRegion } from "@/lib/constants/countries";
 import { FPTP_SPOILER_RATE } from "../constants";
@@ -15,10 +16,6 @@ export interface SpoilerTransferOptions {
   parentRegionId?: string;
   spoilerRate?: number;
   useOrgAwareSpoiler?: boolean;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }
 
 function spoilerOrgFactor(thirdPartyOrg: number | undefined, majorOrg: number | undefined): number {

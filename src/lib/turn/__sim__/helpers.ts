@@ -26,6 +26,7 @@
  * with what the DB-backed driver would do, the drivers themselves have
  * a bug — re-run the unit tests to localise it.
  */
+import { clamp } from "@/lib/numeric/rules";
 import type { PopularMoodAxisProfile } from "@/lib/constants/popularMoodProfiles";
 import { CN_POPULAR_MOOD_PROFILE } from "@/lib/constants/popularMoodProfiles";
 import { computePopularTurnDrift, type PopularTurnInputs } from "@/lib/turn/popularLegitimacyTurn";
@@ -316,10 +317,6 @@ export function runSimTurns(inp: SimRunInputs): SimSnapshot[] {
   }
 
   return snapshots;
-}
-
-function clamp(v: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, v));
 }
 
 /**

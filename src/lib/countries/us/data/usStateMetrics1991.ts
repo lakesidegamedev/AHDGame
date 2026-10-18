@@ -29,6 +29,7 @@
  *   - All nominal-dollar fields (medianIncome, costOfLiving) scaled to 1991.
  */
 
+import { clamp } from "@/lib/numeric/rules";
 import type { StateMetrics, StateMetricValue } from "@/lib/db/types";
 import { stateMetrics as stateMetrics2020 } from "./usStateMetrics";
 import { getRegionPopulationAnchor } from "@/lib/seeds/populationAnchors";
@@ -39,10 +40,6 @@ import type { CountryId } from "@/lib/constants/countries";
 // with era scoring) — regional variation is preserved by scaling each region's
 // modern seed by anchor(1991)/anchor(2019) instead of a hand-picked ratio.
 const INCOME_ANCHOR_RATIO_1991 = getIncomeAnchor("US", 1991)! / getIncomeAnchor("US", 2019)!;
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
 
 function shift(value: StateMetricValue | undefined, fn: (v: number) => number): StateMetricValue {
   if (!value) return { value: fn(50) };

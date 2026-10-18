@@ -15,6 +15,7 @@
  *   - Infamy multiplier applied at the end
  */
 
+import { clampPercentStat } from "@/lib/numeric/rules";
 import {
   normalizeNPI,
   normalizeNationalReachPresidentialPrimary,
@@ -23,10 +24,6 @@ import {
 import { infamyPenaltyMultiplier } from "@/lib/utils/infamy";
 import type { CountryId } from "@/lib/constants/countries";
 import { NPP_PRIMARY_SCORE_MULTIPLIER } from "@/lib/electionEngine/constants";
-
-function clampPercentStat(value: number): number {
-  return Math.min(100, Math.max(0, value));
-}
 
 /**
  * Temperature for {@link primarySharePctSoftmax}. Lower = more decisive (the
