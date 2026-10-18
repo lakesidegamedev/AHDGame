@@ -1,3 +1,4 @@
+import { withAdminRoute } from "@/lib/api/withAdminAuth";
 // GET /api/admin/alts/tuning — advisory alt-scoring weight-tuning
 // suggestions, learned from moderator dispositions on `altClusters`
 // (confirmed vs. dismissed rings). Forensics-v2 Wave 2 "learning loop"
@@ -20,19 +21,10 @@
 // `PUT /api/admin/alts/config`.
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
-import { requireAdmin } from "@/lib/api/requireAdmin";
-import { handleRouteError } from "@/lib/api/errors";
 import { computeTuningSuggestions } from "@/lib/altDetection/tuning";
 
-export async function GET() {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
-
-    const db = await getDb();
-    const report = await computeTuningSuggestions(db);
-    return NextResponse.json(report);
-  } catch (error) {
-    return handleRouteError(error);
-  }
-}
+export const GET = withAdminRoute(async (_auth) => {
+  const db = await getDb();
+  const report = await computeTuningSuggestions(db);
+  return NextResponse.json(report);
+});

@@ -2,6 +2,8 @@
 
 import type { ReactNode } from "react";
 
+export { fmtMoneyM, fmtMoneyAbs } from "../formatMoney";
+
 // Simple inline-SVG glyphs keyed to the estate archetype icon keys (matches the
 // militaryUi inline-icon pattern; no external icon dependency).
 const ICON_PATHS: Record<string, string> = {
@@ -42,25 +44,6 @@ const ICON_PATHS: Record<string, string> = {
 
 /** Icon keys with a glyph, exported so the estate catalog test can pin them. */
 export const ICON_KEYS = Object.keys(ICON_PATHS);
-
-/** Format a millions-denominated figure (upkeep) into a currency string. */
-export function fmtMoneyM(sym: string, millions: number): string {
-  const v = millions * 1e6;
-  const abs = Math.abs(v);
-  if (abs >= 1e12) return `${sym}${(v / 1e12).toFixed(2)}T`;
-  if (abs >= 1e9) return `${sym}${(v / 1e9).toFixed(1)}B`;
-  if (abs >= 1e6) return `${sym}${(v / 1e6).toFixed(0)}M`;
-  return `${sym}${Math.round(v).toLocaleString("en-US")}`;
-}
-
-/** Format an absolute-currency figure (the portfolio envelope) into a string. */
-export function fmtMoneyAbs(sym: string, v: number): string {
-  const abs = Math.abs(v);
-  if (abs >= 1e12) return `${sym}${(v / 1e12).toFixed(2)}T`;
-  if (abs >= 1e9) return `${sym}${(v / 1e9).toFixed(1)}B`;
-  if (abs >= 1e6) return `${sym}${(v / 1e6).toFixed(0)}M`;
-  return `${sym}${Math.round(v).toLocaleString("en-US")}`;
-}
 
 export function EstateIcon({ name, className = "h-5 w-5" }: { name: string; className?: string }) {
   return (

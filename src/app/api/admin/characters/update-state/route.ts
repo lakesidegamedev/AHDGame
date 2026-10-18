@@ -1,3 +1,4 @@
+import { withAdminRoute } from "@/lib/api/withAdminAuth";
 /**
  * PATCH /api/admin/characters/update-state
  * Admin: change a character's homeState via the full relocation pipeline.
@@ -5,9 +6,8 @@
  */
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
-import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseJsonBody } from "@/lib/api/validate";
-import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { errorResponse } from "@/lib/api/errors";
 import { z } from "zod";
 import { MAX_REGION_ID_LENGTH } from "@/lib/constants/states";
 import type { Character, State } from "@/lib/db/types";
@@ -37,62 +37,55 @@ const updateStateSchema = z.object({
 // PATCH /api/admin/characters/update-state — Change a character's homeState via the full relocation pipeline.
 // Auth: requireAdmin
 // Errors: 400, 403, 404
-export async function PATCH(request: Request) {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
+export const PATCH = withAdminRoute(async (_auth, request: Request) => {
+  const parsed = await parseJsonBody(request, updateStateSchema);
+  if (!parsed.success) {
+    return errorResponse(parsed.status, parsed.error);
+  }
+  const { username, homeState } = parsed.data;
 
-    const parsed = await parseJsonBody(request, updateStateSchema);
-    if (!parsed.success) {
-      return errorResponse(parsed.status, parsed.error);
-    }
-    const { username, homeState } = parsed.data;
+  const db = await getDb();
 
-    const db = await getDb();
+  const user = await db.collection("users").findOne({ username });
+  if (!user) {
+    return errorResponse(404, `User '${username}' not found`);
+  }
 
-    const user = await db.collection("users").findOne({ username });
-    if (!user) {
-      return errorResponse(404, `User '${username}' not found`);
-    }
+  const character = await db.collection<Character>("characters").findOne({ userId: user._id });
+  if (!character) {
+    return errorResponse(404, `No character found for user '${username}'`);
+  }
 
-    const character = await db.collection<Character>("characters").findOne({ userId: user._id });
-    if (!character) {
-      return errorResponse(404, `No character found for user '${username}'`);
-    }
-
-    const oldState = character.homeState;
-    if (oldState === homeState) {
-      return NextResponse.json({
-        success: true,
-        message: `${character.name} is already in ${homeState} — no change made`,
-      });
-    }
-
-    // Admins move characters WITHIN their own country: scoping the lookup to
-    // `character.countryId` both resolves the region and rejects cross-country
-    // moves in one step. This is the authoritative check on `homeState`.
-    const targetState = await db
-      .collection<State>("states")
-      .findOne({ _id: homeState, countryId: character.countryId });
-    if (!targetState) {
-      // Name the country that was searched: the caller picks a region from a
-      // country list, so "not found" is far more often the wrong country than
-      // a bad id, and the old message could not tell those apart.
-      return errorResponse(
-        400,
-        `No region "${homeState}" in ${character.countryId} — ${character.name} is a ${character.countryId} character, and this move must stay inside their own country.`
-      );
-    }
-
-    const outcome = await performRelocation(db, character, targetState);
-
+  const oldState = character.homeState;
+  if (oldState === homeState) {
     return NextResponse.json({
       success: true,
-      message: `${character.name}'s home state changed from ${oldState} to ${homeState}`,
-      character: { name: character.name, oldState, newState: homeState },
-      outcome,
+      message: `${character.name} is already in ${homeState} — no change made`,
     });
-  } catch (error) {
-    return handleRouteError(error);
   }
-}
+
+  // Admins move characters WITHIN their own country: scoping the lookup to
+  // `character.countryId` both resolves the region and rejects cross-country
+  // moves in one step. This is the authoritative check on `homeState`.
+  const targetState = await db
+    .collection<State>("states")
+    .findOne({ _id: homeState, countryId: character.countryId });
+  if (!targetState) {
+    // Name the country that was searched: the caller picks a region from a
+    // country list, so "not found" is far more often the wrong country than
+    // a bad id, and the old message could not tell those apart.
+    return errorResponse(
+      400,
+      `No region "${homeState}" in ${character.countryId} — ${character.name} is a ${character.countryId} character, and this move must stay inside their own country.`
+    );
+  }
+
+  const outcome = await performRelocation(db, character, targetState);
+
+  return NextResponse.json({
+    success: true,
+    message: `${character.name}'s home state changed from ${oldState} to ${homeState}`,
+    character: { name: character.name, oldState, newState: homeState },
+    outcome,
+  });
+});

@@ -1,3 +1,4 @@
+import { withAdminRoute } from "@/lib/api/withAdminAuth";
 /**
  * GET  /api/admin/country/[code]/settings — read country settings + live stats
  * PATCH /api/admin/country/[code]/settings — update enabledForPlayers, status, and/or economyPreview
@@ -9,9 +10,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
-import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseJsonBody } from "@/lib/api/validate";
-import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { errorResponse } from "@/lib/api/errors";
 import { getCountryAccess, getCountryAccessFromDb, type CountryAccess } from "@/lib/countryAccess";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { GameState, CountryGameState } from "@/lib/db/types/gameState";
@@ -131,212 +131,198 @@ function buildReadinessProfiles(input: {
   };
 }
 
-export async function GET(request: Request, { params }: RouteContext) {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
+export const GET = withAdminRoute(async (_auth, request: Request, { params }: RouteContext) => {
+  const { code } = await params;
+  const countryId = code.toUpperCase() as CountryId;
+  if (!COUNTRY_CONFIGS[countryId]) {
+    return errorResponse(400, "Invalid country code");
+  }
 
-    const { code } = await params;
-    const countryId = code.toUpperCase() as CountryId;
-    if (!COUNTRY_CONFIGS[countryId]) {
-      return errorResponse(400, "Invalid country code");
+  const db = await getDb();
+
+  const [access, gameState, activePlayers, activeNpps, politicalParties] = await Promise.all([
+    getCountryAccess(countryId),
+    db.collection<GameState>("gameState").findOne({ _id: "current" }),
+    db.collection("characters").countDocuments({ countryId }),
+    db.collection("npps").countDocuments({ countryId }),
+    db.collection("politicalParties").countDocuments({ countryId }),
+  ]);
+
+  const presetId = resolvePresetIdFromGameState(gameState);
+  // A country the era roster marks `absent` is not a world entity in this
+  // preset, so the readiness contract refuses to assess it rather than
+  // fabricating a verdict. Answer the admin explicitly instead of 500ing:
+  // "East Germany does not exist in a 2019 world" is the useful response.
+  const absentFromEra = isShippingPreset(presetId) && tierFor(presetId, countryId) === "absent";
+  let readiness: CountryReadinessReport | null = null;
+  if (!absentFromEra) {
+    try {
+      readiness = assessCountryReadiness(countryId, presetId);
+    } catch (error) {
+      if (
+        !(error instanceof Error) ||
+        !/^World entity .+ is not classified for preset .+; refusing fallback\.$/.test(
+          error.message
+        )
+      ) {
+        throw error;
+      }
+      // The readiness profile below turns a missing manifest entry into an
+      // explicit blocker instead of making the whole admin card fail.
     }
+  }
+  const readinessProfiles = buildReadinessProfiles({
+    countryId,
+    presetId,
+    activeLevel: access.requirementLevel,
+    report: readiness,
+  });
 
-    const db = await getDb();
+  return NextResponse.json({
+    enabledForPlayers: access.enabledForPlayers,
+    status: access.status,
+    economyPreview: access.economyPreview,
+    absentFromEra,
+    readinessProfiles,
+    readiness: readiness
+      ? {
+          presetId: readiness.presetId,
+          requirementLevel: readiness.requirementLevel,
+          requirementStatus: readiness.requirementStatus,
+          requirementBlockers: readiness.requirementBlockers,
+          backgroundMode: readiness.backgroundMode,
+          contentStatus: readiness.contentStatus,
+          archetypes: readiness.archetypes,
+          autonomous: readiness.autonomous,
+          player: readiness.player,
+          hardBlockers: readiness.hardBlockers,
+          flavorGaps: readiness.flavorGaps,
+        }
+      : null,
+    stats: {
+      currentTurn: gameState?.currentTurn ?? null,
+      currentYear: gameState?.currentYear ?? null,
+      activePlayers,
+      activeNpps,
+      politicalParties,
+    },
+  });
+});
 
-    const [access, gameState, activePlayers, activeNpps, politicalParties] = await Promise.all([
-      getCountryAccess(countryId),
-      db.collection<GameState>("gameState").findOne({ _id: "current" }),
-      db.collection("characters").countDocuments({ countryId }),
-      db.collection("npps").countDocuments({ countryId }),
-      db.collection("politicalParties").countDocuments({ countryId }),
-    ]);
+export const PATCH = withAdminRoute(async (_auth, request: Request, { params }: RouteContext) => {
+  const { code } = await params;
+  const countryId = code.toUpperCase() as CountryId;
+  if (!COUNTRY_CONFIGS[countryId]) {
+    return errorResponse(400, "Invalid country code");
+  }
 
+  const parsed = await parseJsonBody(request, settingsSchema);
+  if (!parsed.success) {
+    return errorResponse(parsed.status, parsed.error);
+  }
+
+  const { enabledForPlayers, status, economyPreview } = parsed.data;
+
+  const db = await getDb();
+  const now = new Date();
+  let currentAccess: CountryAccess | null = null;
+  const readCurrentAccess = async (): Promise<CountryAccess> => {
+    currentAccess ??= await getCountryAccessFromDb(db, countryId);
+    return currentAccess;
+  };
+
+  if (economyPreview === true) {
+    if (enabledForPlayers !== false && (await readCurrentAccess()).enabledForPlayers) {
+      return errorResponse(
+        409,
+        `Cannot enable economy preview for ${countryId} while it is enabled for players. Disable player access in the same request first.`
+      );
+    }
+    const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
     const presetId = resolvePresetIdFromGameState(gameState);
-    // A country the era roster marks `absent` is not a world entity in this
-    // preset, so the readiness contract refuses to assess it rather than
-    // fabricating a verdict. Answer the admin explicitly instead of 500ing:
-    // "East Germany does not exist in a 2019 world" is the useful response.
-    const absentFromEra = isShippingPreset(presetId) && tierFor(presetId, countryId) === "absent";
-    let readiness: CountryReadinessReport | null = null;
-    if (!absentFromEra) {
-      try {
-        readiness = assessCountryReadiness(countryId, presetId);
-      } catch (error) {
-        if (
-          !(error instanceof Error) ||
-          !/^World entity .+ is not classified for preset .+; refusing fallback\.$/.test(
-            error.message
-          )
-        ) {
-          throw error;
-        }
-        // The readiness profile below turns a missing manifest entry into an
-        // explicit blocker instead of making the whole admin card fail.
-      }
+    if (isShippingPreset(presetId) && tierFor(presetId, countryId) === "absent") {
+      return errorResponse(
+        409,
+        `Cannot enable economy preview for ${countryId} under ${presetId}: the country is absent from this era.`
+      );
     }
-    const readinessProfiles = buildReadinessProfiles({
-      countryId,
-      presetId,
-      activeLevel: access.requirementLevel,
-      report: readiness,
-    });
-
-    return NextResponse.json({
-      enabledForPlayers: access.enabledForPlayers,
-      status: access.status,
-      economyPreview: access.economyPreview,
-      absentFromEra,
-      readinessProfiles,
-      readiness: readiness
-        ? {
-            presetId: readiness.presetId,
-            requirementLevel: readiness.requirementLevel,
-            requirementStatus: readiness.requirementStatus,
-            requirementBlockers: readiness.requirementBlockers,
-            backgroundMode: readiness.backgroundMode,
-            contentStatus: readiness.contentStatus,
-            archetypes: readiness.archetypes,
-            autonomous: readiness.autonomous,
-            player: readiness.player,
-            hardBlockers: readiness.hardBlockers,
-            flavorGaps: readiness.flavorGaps,
-          }
-        : null,
-      stats: {
-        currentTurn: gameState?.currentTurn ?? null,
-        currentYear: gameState?.currentYear ?? null,
-        activePlayers,
-        activeNpps,
-        politicalParties,
-      },
-    });
-  } catch (error) {
-    return handleRouteError(error);
-  }
-}
-
-export async function PATCH(request: Request, { params }: RouteContext) {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
-
-    const { code } = await params;
-    const countryId = code.toUpperCase() as CountryId;
-    if (!COUNTRY_CONFIGS[countryId]) {
-      return errorResponse(400, "Invalid country code");
-    }
-
-    const parsed = await parseJsonBody(request, settingsSchema);
-    if (!parsed.success) {
-      return errorResponse(parsed.status, parsed.error);
-    }
-
-    const { enabledForPlayers, status, economyPreview } = parsed.data;
-
-    const db = await getDb();
-    const now = new Date();
-    let currentAccess: CountryAccess | null = null;
-    const readCurrentAccess = async (): Promise<CountryAccess> => {
-      currentAccess ??= await getCountryAccessFromDb(db, countryId);
-      return currentAccess;
-    };
-
-    if (economyPreview === true) {
-      if (enabledForPlayers !== false && (await readCurrentAccess()).enabledForPlayers) {
-        return errorResponse(
-          409,
-          `Cannot enable economy preview for ${countryId} while it is enabled for players. Disable player access in the same request first.`
-        );
-      }
-      const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
-      const presetId = resolvePresetIdFromGameState(gameState);
-      if (isShippingPreset(presetId) && tierFor(presetId, countryId) === "absent") {
-        return errorResponse(
-          409,
-          `Cannot enable economy preview for ${countryId} under ${presetId}: the country is absent from this era.`
-        );
-      }
-      try {
-        assertCanEnableCountryEconomyPreview(countryId, presetId);
-      } catch (err) {
-        if (err instanceof EconomyPreviewBlockedError) {
-          return errorResponse(409, err.message, {
-            extra: {
-              readiness: {
-                presetId: err.report.presetId,
-                autonomous: err.report.autonomous,
-                player: err.report.player,
-                hardBlockers: err.report.hardBlockers,
-                flavorGaps: err.report.flavorGaps,
-              },
+    try {
+      assertCanEnableCountryEconomyPreview(countryId, presetId);
+    } catch (err) {
+      if (err instanceof EconomyPreviewBlockedError) {
+        return errorResponse(409, err.message, {
+          extra: {
+            readiness: {
+              presetId: err.report.presetId,
+              autonomous: err.report.autonomous,
+              player: err.report.player,
+              hardBlockers: err.report.hardBlockers,
+              flavorGaps: err.report.flavorGaps,
             },
-          });
-        }
-        throw err;
-      }
-    }
-
-    // Mid-world player handoff (#3725): open/close go through the handoff
-    // module so readiness is gated, live state is preserved, and exit vacates
-    // claimable player offices without an instant NPP replacement.
-    if (enabledForPlayers === true) {
-      try {
-        await enterCountryForPlayers(db, countryId, {
-          now,
-          status,
+          },
         });
-      } catch (err) {
-        if (err instanceof PlayerOpenBlockedError) {
-          return errorResponse(409, err.message, {
-            extra: {
-              readiness: {
-                presetId: err.report.presetId,
-                archetypes: err.report.archetypes,
-                autonomous: err.report.autonomous,
-                player: err.report.player,
-                hardBlockers: err.report.hardBlockers,
-                flavorGaps: err.report.flavorGaps,
-              },
-            },
-          });
-        }
-        throw err;
       }
-      // enterCountryForPlayers writes the mutually-exclusive access state,
-      // including clearing any stale economy-preview flag.
-      return NextResponse.json({ success: true });
+      throw err;
     }
-
-    if (enabledForPlayers === false) {
-      await exitCountryForPlayers(db, countryId, { now });
-      const extra: Record<string, unknown> = { updatedAt: now };
-      if (status !== undefined) extra.status = status;
-      if (economyPreview !== undefined) extra.economyPreview = economyPreview;
-      if (status !== undefined || economyPreview !== undefined) {
-        await db
-          .collection<CountryGameState>("countryGameStates")
-          .updateOne({ _id: countryId }, { $set: extra }, { upsert: true });
-      }
-      return NextResponse.json({ success: true });
-    }
-
-    const updateFields: Record<string, unknown> = { updatedAt: now };
-    if (status !== undefined) {
-      updateFields.status = status;
-      // `status: active` is a display/lifecycle setting, not an authorization
-      // bypass. Persist the currently resolved access value so legacy fallback
-      // logic cannot turn a status-only upsert into player access.
-      updateFields.enabledForPlayers = (await readCurrentAccess()).enabledForPlayers;
-    }
-    if (economyPreview !== undefined) updateFields.economyPreview = economyPreview;
-
-    await db
-      .collection<CountryGameState>("countryGameStates")
-      .updateOne({ _id: countryId }, { $set: updateFields }, { upsert: true });
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    return handleRouteError(error);
   }
-}
+
+  // Mid-world player handoff (#3725): open/close go through the handoff
+  // module so readiness is gated, live state is preserved, and exit vacates
+  // claimable player offices without an instant NPP replacement.
+  if (enabledForPlayers === true) {
+    try {
+      await enterCountryForPlayers(db, countryId, {
+        now,
+        status,
+      });
+    } catch (err) {
+      if (err instanceof PlayerOpenBlockedError) {
+        return errorResponse(409, err.message, {
+          extra: {
+            readiness: {
+              presetId: err.report.presetId,
+              archetypes: err.report.archetypes,
+              autonomous: err.report.autonomous,
+              player: err.report.player,
+              hardBlockers: err.report.hardBlockers,
+              flavorGaps: err.report.flavorGaps,
+            },
+          },
+        });
+      }
+      throw err;
+    }
+    // enterCountryForPlayers writes the mutually-exclusive access state,
+    // including clearing any stale economy-preview flag.
+    return NextResponse.json({ success: true });
+  }
+
+  if (enabledForPlayers === false) {
+    await exitCountryForPlayers(db, countryId, { now });
+    const extra: Record<string, unknown> = { updatedAt: now };
+    if (status !== undefined) extra.status = status;
+    if (economyPreview !== undefined) extra.economyPreview = economyPreview;
+    if (status !== undefined || economyPreview !== undefined) {
+      await db
+        .collection<CountryGameState>("countryGameStates")
+        .updateOne({ _id: countryId }, { $set: extra }, { upsert: true });
+    }
+    return NextResponse.json({ success: true });
+  }
+
+  const updateFields: Record<string, unknown> = { updatedAt: now };
+  if (status !== undefined) {
+    updateFields.status = status;
+    // `status: active` is a display/lifecycle setting, not an authorization
+    // bypass. Persist the currently resolved access value so legacy fallback
+    // logic cannot turn a status-only upsert into player access.
+    updateFields.enabledForPlayers = (await readCurrentAccess()).enabledForPlayers;
+  }
+  if (economyPreview !== undefined) updateFields.economyPreview = economyPreview;
+
+  await db
+    .collection<CountryGameState>("countryGameStates")
+    .updateOne({ _id: countryId }, { $set: updateFields }, { upsert: true });
+
+  return NextResponse.json({ success: true });
+});

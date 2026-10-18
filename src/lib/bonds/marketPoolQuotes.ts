@@ -14,6 +14,7 @@
  * rebuilds cash. Pure: no database, no clock.
  */
 
+import { clampWithUpperPriority as clamp, round4 } from "@/lib/numeric/rules";
 import type { BondIssuerType } from "@/lib/db/types/bond";
 
 /** Dealer half spread, as a fraction of the mid. */
@@ -57,14 +58,6 @@ export interface BondPoolQuote {
   cashSkew: number;
   appetiteSkew: number;
   skew: number;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
-
-function round4(value: number): number {
-  return Math.round(value * 10_000) / 10_000;
 }
 
 export function bondPoolCashSkew(cashLocal: number, targetCashLocal: number): number {

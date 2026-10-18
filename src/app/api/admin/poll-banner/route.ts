@@ -1,8 +1,8 @@
+import { withAdminRoute } from "@/lib/api/withAdminAuth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
-import { requireAdmin } from "@/lib/api/requireAdmin";
-import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { createAdminLog } from "@/lib/adminLog";
 import { invalidatePollBannerCache } from "@/lib/pollBannerCache";
@@ -63,89 +63,75 @@ const patchSchema = z
  * while the toggle is off, which is right for the public endpoint and wrong
  * for the editor, where the admin needs their unfinished text back.
  */
-export async function GET() {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
+export const GET = withAdminRoute(async (_auth) => {
+  const db = await getDb();
+  const config = await db.collection<GameConfig>("gameConfig").findOne(
+    { _id: "default" },
+    {
+      projection: {
+        pollBannerEnabled: 1,
+        pollBannerMessage: 1,
+        pollBannerLinkLabel: 1,
+        pollBannerUrl: 1,
+        pollBannerTone: 1,
+        pollBannerUpdatedBy: 1,
+        pollBannerUpdatedAt: 1,
+      },
+    }
+  );
 
-    const db = await getDb();
-    const config = await db.collection<GameConfig>("gameConfig").findOne(
-      { _id: "default" },
-      {
-        projection: {
-          pollBannerEnabled: 1,
-          pollBannerMessage: 1,
-          pollBannerLinkLabel: 1,
-          pollBannerUrl: 1,
-          pollBannerTone: 1,
-          pollBannerUpdatedBy: 1,
-          pollBannerUpdatedAt: 1,
-        },
-      }
-    );
-
-    return NextResponse.json({
-      enabled: config?.pollBannerEnabled ?? false,
-      message: config?.pollBannerMessage ?? "",
-      linkLabel: config?.pollBannerLinkLabel ?? "",
-      url: config?.pollBannerUrl ?? "",
-      tone: normalizePollBannerTone(config?.pollBannerTone),
-      updatedBy: config?.pollBannerUpdatedBy ?? "",
-      updatedAt: config?.pollBannerUpdatedAt ?? "",
-    });
-  } catch (error) {
-    return handleRouteError(error);
-  }
-}
+  return NextResponse.json({
+    enabled: config?.pollBannerEnabled ?? false,
+    message: config?.pollBannerMessage ?? "",
+    linkLabel: config?.pollBannerLinkLabel ?? "",
+    url: config?.pollBannerUrl ?? "",
+    tone: normalizePollBannerTone(config?.pollBannerTone),
+    updatedBy: config?.pollBannerUpdatedBy ?? "",
+    updatedAt: config?.pollBannerUpdatedAt ?? "",
+  });
+});
 
 // PATCH /api/admin/poll-banner - Save the poll banner text, link, tone and toggle.
 // Auth: requireAdmin
 // Errors: 400, 403
 /** PATCH — save the banner and flip it on or off */
-export async function PATCH(request: Request) {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
+export const PATCH = withAdminRoute(async (auth, request: Request) => {
+  const parsed = await parseJsonBody(request, patchSchema);
+  if (!parsed.success) return errorResponse(parsed.status, parsed.error);
 
-    const parsed = await parseJsonBody(request, patchSchema);
-    if (!parsed.success) return errorResponse(parsed.status, parsed.error);
+  const { enabled, message, linkLabel, url, tone } = parsed.data;
 
-    const { enabled, message, linkLabel, url, tone } = parsed.data;
-
-    const db = await getDb();
-    // No $unset on the "off" branch, unlike maintenance: switching the banner
-    // off is routine and the same survey often goes back up, so the drafted
-    // text and link are kept exactly as typed.
-    await db.collection<GameConfig>("gameConfig").updateOne(
-      { _id: "default" },
-      {
-        $set: {
-          pollBannerEnabled: enabled,
-          pollBannerMessage: message.trim(),
-          pollBannerLinkLabel: linkLabel.trim(),
-          pollBannerUrl: url.trim(),
-          pollBannerTone: tone,
-          pollBannerUpdatedBy: auth.admin.username,
-          pollBannerUpdatedAt: new Date().toISOString(),
-        },
+  const db = await getDb();
+  // No $unset on the "off" branch, unlike maintenance: switching the banner
+  // off is routine and the same survey often goes back up, so the drafted
+  // text and link are kept exactly as typed.
+  await db.collection<GameConfig>("gameConfig").updateOne(
+    { _id: "default" },
+    {
+      $set: {
+        pollBannerEnabled: enabled,
+        pollBannerMessage: message.trim(),
+        pollBannerLinkLabel: linkLabel.trim(),
+        pollBannerUrl: url.trim(),
+        pollBannerTone: tone,
+        pollBannerUpdatedBy: auth.admin.username,
+        pollBannerUpdatedAt: new Date().toISOString(),
       },
-      { upsert: true }
-    );
+    },
+    { upsert: true }
+  );
 
-    invalidatePollBannerCache();
+  invalidatePollBannerCache();
 
-    await createAdminLog({
-      category: "system",
-      action: enabled ? "poll_banner_set" : "poll_banner_disabled",
-      username: auth.admin.username,
-      adminUsername: auth.admin.username,
-      details: enabled
-        ? `Poll banner enabled (${tone}): "${message.trim()}" linking to ${url.trim()}`
-        : "Poll banner disabled",
-    });
+  await createAdminLog({
+    category: "system",
+    action: enabled ? "poll_banner_set" : "poll_banner_disabled",
+    username: auth.admin.username,
+    adminUsername: auth.admin.username,
+    details: enabled
+      ? `Poll banner enabled (${tone}): "${message.trim()}" linking to ${url.trim()}`
+      : "Poll banner disabled",
+  });
 
-    return NextResponse.json({ success: true, enabled });
-  } catch (error) {
-    return handleRouteError(error);
-  }
-}
+  return NextResponse.json({ success: true, enabled });
+});

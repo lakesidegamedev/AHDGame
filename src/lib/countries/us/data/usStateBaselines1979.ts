@@ -53,12 +53,9 @@
  *   - urbanizationRate ×0.88 (vs ×0.75) — more urbanised than 1953
  */
 
+import { clamp } from "@/lib/numeric/rules";
 import type { StateMetricBaseline } from "@/lib/db/types";
 import { getIncomeAnchor } from "@/lib/era/metricCatalog";
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
 
 function deepClone<T>(value: T): T {
   return structuredClone(value);

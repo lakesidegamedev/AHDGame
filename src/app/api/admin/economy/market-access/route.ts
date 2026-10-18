@@ -1,7 +1,7 @@
+import { withAdminRoute } from "@/lib/api/withAdminAuth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/api/requireAdmin";
-import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { errorResponse } from "@/lib/api/errors";
 import { normalizeMarketFormationSnapshot } from "@/lib/economy/marketFormationSnapshot";
 import { computeMarketAccessVisibility } from "@/lib/economy/marketAccessVisibility";
 import type { EconomicVitalSigns } from "@/lib/db/types";
@@ -44,55 +44,48 @@ async function resolveLatestTurn(db: Awaited<ReturnType<typeof getDb>>): Promise
 // market-formation inputs the snapshot phase writes; recomputes nothing else.
 // Auth: requireAdmin
 // Errors: 400, 403, 404
-export async function GET(request: Request) {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
-
-    const parsed = querySchema.safeParse(
-      Object.fromEntries(new URL(request.url).searchParams.entries())
-    );
-    if (!parsed.success) {
-      return errorResponse(400, "Invalid query", { extra: { details: parsed.error.flatten() } });
-    }
-
-    const db = await getDb();
-    const turn = parsed.data.turn ?? (await resolveLatestTurn(db));
-    if (turn == null) {
-      return errorResponse(404, "No economic snapshot available");
-    }
-
-    const [network, commodityDocs, vitalSigns, prices] = await Promise.all([
-      db.collection<SourcingNetworkDoc>("sourcingNetworkLoad").findOne({ turn }),
-      db.collection<CommoditySourcingDoc>("commoditySourcingFlows").find({ turn }).toArray(),
-      db.collection<EconomicVitalSigns>(ECONOMIC_VITAL_SIGNS_COLLECTION).findOne({ turn }),
-      db
-        .collection<CommodityPrice>("commodityPrices")
-        .find({}, { projection: { commodity: 1, globalPrice: 1, basePrice: 1 } })
-        .toArray(),
-    ]);
-
-    if (!network && !vitalSigns) {
-      return errorResponse(404, `Market-access inputs not found for turn ${turn}`);
-    }
-
-    const globalPrices: Partial<Record<CommodityType, number>> = {};
-    const basePrices: Partial<Record<CommodityType, number>> = {};
-    for (const price of prices) {
-      if (typeof price.globalPrice === "number") globalPrices[price.commodity] = price.globalPrice;
-      if (typeof price.basePrice === "number") basePrices[price.commodity] = price.basePrice;
-    }
-
-    const marketAccess = computeMarketAccessVisibility({
-      globalPrices,
-      basePrices,
-      network,
-      commodityDocs,
-      marketFormation: normalizeMarketFormationSnapshot(vitalSigns?.marketFormation),
-    });
-
-    return NextResponse.json({ turn, marketAccess });
-  } catch (error) {
-    return handleRouteError(error);
+export const GET = withAdminRoute(async (_auth, request: Request) => {
+  const parsed = querySchema.safeParse(
+    Object.fromEntries(new URL(request.url).searchParams.entries())
+  );
+  if (!parsed.success) {
+    return errorResponse(400, "Invalid query", { extra: { details: parsed.error.flatten() } });
   }
-}
+
+  const db = await getDb();
+  const turn = parsed.data.turn ?? (await resolveLatestTurn(db));
+  if (turn == null) {
+    return errorResponse(404, "No economic snapshot available");
+  }
+
+  const [network, commodityDocs, vitalSigns, prices] = await Promise.all([
+    db.collection<SourcingNetworkDoc>("sourcingNetworkLoad").findOne({ turn }),
+    db.collection<CommoditySourcingDoc>("commoditySourcingFlows").find({ turn }).toArray(),
+    db.collection<EconomicVitalSigns>(ECONOMIC_VITAL_SIGNS_COLLECTION).findOne({ turn }),
+    db
+      .collection<CommodityPrice>("commodityPrices")
+      .find({}, { projection: { commodity: 1, globalPrice: 1, basePrice: 1 } })
+      .toArray(),
+  ]);
+
+  if (!network && !vitalSigns) {
+    return errorResponse(404, `Market-access inputs not found for turn ${turn}`);
+  }
+
+  const globalPrices: Partial<Record<CommodityType, number>> = {};
+  const basePrices: Partial<Record<CommodityType, number>> = {};
+  for (const price of prices) {
+    if (typeof price.globalPrice === "number") globalPrices[price.commodity] = price.globalPrice;
+    if (typeof price.basePrice === "number") basePrices[price.commodity] = price.basePrice;
+  }
+
+  const marketAccess = computeMarketAccessVisibility({
+    globalPrices,
+    basePrices,
+    network,
+    commodityDocs,
+    marketFormation: normalizeMarketFormationSnapshot(vitalSigns?.marketFormation),
+  });
+
+  return NextResponse.json({ turn, marketAccess });
+});

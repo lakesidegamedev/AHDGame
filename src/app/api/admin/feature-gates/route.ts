@@ -1,9 +1,9 @@
+import { withAdminRoute } from "@/lib/api/withAdminAuth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { NPP_AUTONOMY_LEVELS } from "@/lib/nppAutonomy/levels";
 import { getDb } from "@/lib/mongodb";
-import { requireAdmin } from "@/lib/api/requireAdmin";
-import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import type {
   GameState,
@@ -166,147 +166,134 @@ async function readState(): Promise<FeatureGatesState> {
 }
 
 /** GET /api/admin/feature-gates — current state of every gate. */
-export async function GET() {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
-    return NextResponse.json(await readState());
-  } catch (error) {
-    return handleRouteError(error);
-  }
-}
+export const GET = withAdminRoute(async (_auth) => {
+  return NextResponse.json(await readState());
+});
 
 /** POST /api/admin/feature-gates sets one boolean, autonomy level, or policy mode. */
-export async function POST(request: Request) {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
-
-    const parsed = await parseJsonBody(request, bodySchema);
-    if (!parsed.success) {
-      return errorResponse(parsed.status, parsed.error);
-    }
-
-    if (
-      parsed.data.kind === "reset-system-version" &&
-      parsed.data.value === "v2" &&
-      !RESET_V2_READY[parsed.data.system]
-    ) {
-      return errorResponse(
-        409,
-        `${parsed.data.system} v2 is not available until its complete runtime path ships.`
-      );
-    }
-
-    const db = await getDb();
-    const resetChange = parsed.data.kind === "reset-system-version" ? parsed.data : null;
-    let resetFilter: Record<string, unknown> = { _id: "current" };
-    if (resetChange) {
-      const gameState = await db.collection<GameState>("gameState").findOne(
-        { _id: "current" },
-        {
-          projection: {
-            metricsSystemVersion: 1,
-            legislationSystemVersion: 1,
-            cabinetSystemVersion: 1,
-            demographicsSystemVersion: 1,
-            resetSystemSelections: 1,
-            resetWorldId: 1,
-          },
-        }
-      );
-      if (!gameState) {
-        return errorResponse(409, "No game world is initialized.");
-      }
-      const eligibility = resetVersionSelectionEligibility(
-        gameState,
-        resetChange.system,
-        resetChange.value,
-        RESET_V2_READY
-      );
-      if (!eligibility.allowed) {
-        const error =
-          eligibility.reason === "metrics_required"
-            ? "Select Metrics v2 for the next reset before Legislation or Cabinet v2."
-            : eligibility.reason === "dependent_v2"
-              ? "Return Legislation and Cabinet to v1 before selecting Metrics v1."
-              : `${resetChange.system} v2 is not available until its complete runtime path ships.`;
-        return errorResponse(409, error);
-      }
-      resetFilter = {
-        _id: "current",
-        resetWorldId: gameState.resetWorldId ?? { $exists: false },
-        ...Object.fromEntries(
-          RESET_SYSTEMS.map((system) => [
-            `resetSystemSelections.${system}`,
-            gameState.resetSystemSelections?.[system] ?? { $exists: false },
-          ])
-        ),
-      };
-    }
-    const nowIso = new Date().toISOString();
-    const set: Record<string, unknown> = { updatedAt: new Date() };
-    const unset: Record<string, ""> = {};
-
-    if (parsed.data.kind === "boolean") {
-      const { key, value } = parsed.data;
-      set[key] = value;
-      // Each flag carries an `${key}By`/`${key}At` audit stamp; clear it on disable.
-      if (value) {
-        set[`${key}By`] = auth.admin.username;
-        set[`${key}At`] = nowIso;
-      } else {
-        unset[`${key}By`] = "";
-        unset[`${key}At`] = "";
-      }
-    } else if (parsed.data.kind === "level") {
-      const level = parsed.data.value as NppAutonomyLevel;
-      set.nppAutonomyLevel = level;
-      // Keep the legacy boolean in sync for back-compat readers.
-      set.nppAutonomyEnabled = level !== "off";
-      if (level !== "off") {
-        set.nppAutonomyEnabledBy = auth.admin.username;
-        set.nppAutonomyEnabledAt = nowIso;
-      } else {
-        unset.nppAutonomyEnabledBy = "";
-        unset.nppAutonomyEnabledAt = "";
-      }
-    } else if (parsed.data.kind === "foreign-policy-mode") {
-      const mode = parsed.data.value as NppForeignPolicyMode;
-      set.nppForeignPolicyMode = mode;
-      set.nppForeignPolicyModeBy = auth.admin.username;
-      set.nppForeignPolicyModeAt = nowIso;
-    } else if (parsed.data.kind === "foreign-policy-stage") {
-      const stage = parsed.data.value as NppForeignPolicyStage;
-      set.nppForeignPolicyStage = stage;
-      set.nppForeignPolicyStageBy = auth.admin.username;
-      set.nppForeignPolicyStageAt = nowIso;
-    } else if (parsed.data.kind === "npp-entry-viability-mode") {
-      const mode = parsed.data.value as NppEntryViabilityMode;
-      set.nppEntryViabilityMode = mode;
-      set.nppEntryViabilityModeBy = auth.admin.username;
-      set.nppEntryViabilityModeAt = nowIso;
-    } else {
-      set[`resetSystemSelections.${parsed.data.system}`] = parsed.data.value;
-      set[`resetSystemSelectionsAudit.${parsed.data.system}`] = {
-        by: auth.admin.username,
-        at: nowIso,
-      };
-    }
-
-    const update: Record<string, unknown> = { $set: set };
-    if (Object.keys(unset).length > 0) update.$unset = unset;
-
-    const result = await db.collection<GameState>("gameState").updateOne(resetFilter, update);
-    if (resetChange && result.matchedCount === 0) {
-      return errorResponse(
-        409,
-        "The system versions changed during this request. Reload and try again."
-      );
-    }
-
-    return NextResponse.json({ success: true, ...(await readState()) });
-  } catch (error) {
-    return handleRouteError(error);
+export const POST = withAdminRoute(async (auth, request: Request) => {
+  const parsed = await parseJsonBody(request, bodySchema);
+  if (!parsed.success) {
+    return errorResponse(parsed.status, parsed.error);
   }
-}
+
+  if (
+    parsed.data.kind === "reset-system-version" &&
+    parsed.data.value === "v2" &&
+    !RESET_V2_READY[parsed.data.system]
+  ) {
+    return errorResponse(
+      409,
+      `${parsed.data.system} v2 is not available until its complete runtime path ships.`
+    );
+  }
+
+  const db = await getDb();
+  const resetChange = parsed.data.kind === "reset-system-version" ? parsed.data : null;
+  let resetFilter: Record<string, unknown> = { _id: "current" };
+  if (resetChange) {
+    const gameState = await db.collection<GameState>("gameState").findOne(
+      { _id: "current" },
+      {
+        projection: {
+          metricsSystemVersion: 1,
+          legislationSystemVersion: 1,
+          cabinetSystemVersion: 1,
+          demographicsSystemVersion: 1,
+          resetSystemSelections: 1,
+          resetWorldId: 1,
+        },
+      }
+    );
+    if (!gameState) {
+      return errorResponse(409, "No game world is initialized.");
+    }
+    const eligibility = resetVersionSelectionEligibility(
+      gameState,
+      resetChange.system,
+      resetChange.value,
+      RESET_V2_READY
+    );
+    if (!eligibility.allowed) {
+      const error =
+        eligibility.reason === "metrics_required"
+          ? "Select Metrics v2 for the next reset before Legislation or Cabinet v2."
+          : eligibility.reason === "dependent_v2"
+            ? "Return Legislation and Cabinet to v1 before selecting Metrics v1."
+            : `${resetChange.system} v2 is not available until its complete runtime path ships.`;
+      return errorResponse(409, error);
+    }
+    resetFilter = {
+      _id: "current",
+      resetWorldId: gameState.resetWorldId ?? { $exists: false },
+      ...Object.fromEntries(
+        RESET_SYSTEMS.map((system) => [
+          `resetSystemSelections.${system}`,
+          gameState.resetSystemSelections?.[system] ?? { $exists: false },
+        ])
+      ),
+    };
+  }
+  const nowIso = new Date().toISOString();
+  const set: Record<string, unknown> = { updatedAt: new Date() };
+  const unset: Record<string, ""> = {};
+
+  if (parsed.data.kind === "boolean") {
+    const { key, value } = parsed.data;
+    set[key] = value;
+    // Each flag carries an `${key}By`/`${key}At` audit stamp; clear it on disable.
+    if (value) {
+      set[`${key}By`] = auth.admin.username;
+      set[`${key}At`] = nowIso;
+    } else {
+      unset[`${key}By`] = "";
+      unset[`${key}At`] = "";
+    }
+  } else if (parsed.data.kind === "level") {
+    const level = parsed.data.value as NppAutonomyLevel;
+    set.nppAutonomyLevel = level;
+    // Keep the legacy boolean in sync for back-compat readers.
+    set.nppAutonomyEnabled = level !== "off";
+    if (level !== "off") {
+      set.nppAutonomyEnabledBy = auth.admin.username;
+      set.nppAutonomyEnabledAt = nowIso;
+    } else {
+      unset.nppAutonomyEnabledBy = "";
+      unset.nppAutonomyEnabledAt = "";
+    }
+  } else if (parsed.data.kind === "foreign-policy-mode") {
+    const mode = parsed.data.value as NppForeignPolicyMode;
+    set.nppForeignPolicyMode = mode;
+    set.nppForeignPolicyModeBy = auth.admin.username;
+    set.nppForeignPolicyModeAt = nowIso;
+  } else if (parsed.data.kind === "foreign-policy-stage") {
+    const stage = parsed.data.value as NppForeignPolicyStage;
+    set.nppForeignPolicyStage = stage;
+    set.nppForeignPolicyStageBy = auth.admin.username;
+    set.nppForeignPolicyStageAt = nowIso;
+  } else if (parsed.data.kind === "npp-entry-viability-mode") {
+    const mode = parsed.data.value as NppEntryViabilityMode;
+    set.nppEntryViabilityMode = mode;
+    set.nppEntryViabilityModeBy = auth.admin.username;
+    set.nppEntryViabilityModeAt = nowIso;
+  } else {
+    set[`resetSystemSelections.${parsed.data.system}`] = parsed.data.value;
+    set[`resetSystemSelectionsAudit.${parsed.data.system}`] = {
+      by: auth.admin.username,
+      at: nowIso,
+    };
+  }
+
+  const update: Record<string, unknown> = { $set: set };
+  if (Object.keys(unset).length > 0) update.$unset = unset;
+
+  const result = await db.collection<GameState>("gameState").updateOne(resetFilter, update);
+  if (resetChange && result.matchedCount === 0) {
+    return errorResponse(
+      409,
+      "The system versions changed during this request. Reload and try again."
+    );
+  }
+
+  return NextResponse.json({ success: true, ...(await readState()) });
+});

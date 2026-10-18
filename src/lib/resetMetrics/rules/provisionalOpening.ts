@@ -3,6 +3,7 @@
  * game-calibrated estimates, not historical observations or live turn rules.
  * Plain inputs and outputs let the headless harness and reset shell share them.
  */
+import { clampWithUpperPriority as clamp } from "@/lib/numeric/rules";
 import { primaryMetricById } from "../catalog";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import type { OpeningMetricObservation } from "./openingObservation";
@@ -61,10 +62,6 @@ function weightedMean(
 
 function positiveRatio(a: number | null, b: number | null): number | null {
   return valid(a) && a > 0 && valid(b) && b > 0 ? a / b : null;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }
 
 function proxy(

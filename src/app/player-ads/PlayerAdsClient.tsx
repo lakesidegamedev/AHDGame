@@ -4,6 +4,7 @@ import { InlineError } from "@/components/ui/InlineError";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useEffect, useRef, useState } from "react";
 import { Skeleton } from "@/components/ui";
+import { formatCurrencyCodeAmount as fmt } from "@/lib/currency/formatCurrencyCodeAmount";
 
 interface CostInfo {
   cost: number;
@@ -30,10 +31,6 @@ const GUIDELINES = [
   "Content must be related to your in-game activity (faction, party, corporation, campaign, etc.).",
   "New ads are reviewed by an admin before they start serving, and may be removed without refund for policy violations.",
 ];
-
-function fmt(n: number, code: string) {
-  return `${n.toLocaleString("en-US")} ${code}`;
-}
 
 function turnLabel(turns: number): string {
   return turns === 1 ? "1 turn" : `${turns} turns`;

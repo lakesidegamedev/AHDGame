@@ -1,3 +1,4 @@
+import { clamp } from "@/lib/numeric/rules";
 import type { Db, ObjectId } from "mongodb";
 import type { AxisPositions, Character, PolicyShiftLedgerEntry } from "@/lib/db/types";
 import { snapToPositionGrid } from "@/lib/utils/politics";
@@ -17,10 +18,6 @@ export const VOTE_SHIFT_STEP = 0.25;
 const POSITION_MIN = -5;
 const POSITION_MAX = 5;
 const AXES = ["economic", "social"] as const;
-
-function clamp(val: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, val));
-}
 
 /** Snap to the 0.05 grid and strip float noise (grid values are exact at 2 dp). */
 function onGrid(value: number): number {

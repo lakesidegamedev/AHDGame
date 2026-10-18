@@ -1,3 +1,4 @@
+import { clampWithUpperPriority as clamp } from "@/lib/numeric/rules";
 import { ObjectId, type ClientSession, type Db, type Filter } from "mongodb";
 import type {
   Character,
@@ -30,10 +31,6 @@ export interface EndorsementCandidateProfile {
 }
 
 export type RequestedEndorsementLikelihood = "likely_accept" | "likely_decline";
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
 
 function normalizeRelationshipScore(score: number): number {
   return clamp((score + 100) / 2, 0, 100);

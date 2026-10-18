@@ -18,6 +18,7 @@
  * gdpGrowth/unemployment math.
  */
 
+import { clamp } from "@/lib/numeric/rules";
 import type { CountryId } from "@/lib/constants/countries";
 import { JP_ECONOMY } from "@/lib/countries/jp/economy";
 import { US_ECONOMY } from "@/lib/countries/us/economy";
@@ -161,10 +162,6 @@ export function sumHostRealizedRevenue(
     }
   }
   return total;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }
 
 /**

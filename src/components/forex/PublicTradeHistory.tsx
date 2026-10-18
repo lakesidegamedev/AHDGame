@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui";
 import { LocalTime } from "@/components/time/LocalTime";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { formatAmount } from "./formatters";
 
 interface TradeEntry {
   _id: string;
@@ -17,12 +18,6 @@ interface TradeEntry {
   buyerName: string | null;
   /** null means the counterparty was the market maker */
   sellerName: string | null;
-}
-
-function formatAmount(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return n.toLocaleString("en-US", { maximumFractionDigits: 2 });
 }
 
 const DATE_LABEL_OPTIONS = {

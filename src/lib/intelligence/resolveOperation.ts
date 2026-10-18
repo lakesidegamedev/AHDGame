@@ -1,3 +1,4 @@
+import { clamp01 } from "@/lib/numeric/rules";
 import type { OperationCompromise, OperationOutcome } from "@/lib/db/types/intelligence";
 import { COVERAGE_MAX, NETWORK_MAX_LEVEL, TRADECRAFT_MAX, TRADECRAFT_MIN } from "./config";
 
@@ -33,11 +34,6 @@ export interface OperationResolution {
   /** Exposed for the op log's rollDetail and for sim reports. Never served to a target. */
   successChance: number;
   compromiseChance: number;
-}
-
-function clamp01(v: number): number {
-  if (!Number.isFinite(v)) return 0;
-  return Math.max(0, Math.min(1, v));
 }
 
 function normalizedTradecraft(tradecraft: number): number {

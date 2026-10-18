@@ -1,6 +1,7 @@
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
-import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { describe, it, expect, vi } from "vitest";
+import type { Db } from "mongodb";
+import { createMockDb } from "@/lib/test-utils/mockDb";
 import type { CountryId } from "@/lib/constants/countries";
 import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
 import { commandEconomySoeSectors } from "@/lib/constants/commandEconomy";
@@ -691,7 +692,8 @@ describe("generateCountryOwnedSeedData", () => {
 // fired and all eight seeded zero sectors — while the generator's own unit
 // tests passed, because they pass the preset explicitly.
 //
-// This asserts the CALL SITE, which is where the bug actually lived.
+// Exercise the actual seeder, including shared helpers, so forwarding cannot
+// regress while a generator-only test still passes.
 describe("budget seeders pass their preset through to the corp seeder", () => {
   const MARKET_STATE_ENTERPRISE_SEEDERS = [
     "seedAtBudgets",
@@ -706,15 +708,16 @@ describe("budget seeders pass their preset through to the corp seeder", () => {
 
   it.each(MARKET_STATE_ENTERPRISE_SEEDERS)(
     "%s forwards preset to generateCountryOwnedSeedData",
-    (seeder) => {
-      const src = readFileSync(`src/lib/admin/seed/${seeder}.ts`, "utf8");
-      const call = src.match(/generateCountryOwnedSeedData\(([^)]*)\)/);
-      expect(call, `${seeder} never calls generateCountryOwnedSeedData`).toBeTruthy();
-      expect(
-        call![1].includes("preset"),
-        `${seeder} calls generateCountryOwnedSeedData without preset — the ` +
-          `1953 market-state-enterprise seed will silently produce nothing`
-      ).toBe(true);
+    async (seeder) => {
+      const budgets = await import("./budgets");
+      const generate = vi.spyOn(budgets, "generateCountryOwnedSeedData");
+      try {
+        const { [seeder]: run } = await import(`../../admin/seed/${seeder}.ts`);
+        await run(createMockDb() as unknown as Db, false, () => {}, "1953-default");
+        expect(generate).toHaveBeenCalledWith(expect.any(Array), "1953-default");
+      } finally {
+        generate.mockRestore();
+      }
     }
   );
 });

@@ -3,21 +3,11 @@
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useState, useMemo } from "react";
 import type { OrderDisplay } from "@/app/country/[code]/forex/types";
+import { formatAmount, formatRate } from "./formatters";
 
 interface Props {
   orders: OrderDisplay[];
   onFilled?: () => void;
-}
-
-function formatRate(rate: number): string {
-  if (rate >= 10) return rate.toFixed(2);
-  return rate.toFixed(4);
-}
-
-function formatAmount(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return n.toLocaleString("en-US", { maximumFractionDigits: 2 });
 }
 
 export function OrderBook({ orders, onFilled }: Props) {

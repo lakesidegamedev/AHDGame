@@ -1,3 +1,4 @@
+import { withAdminRoute } from "@/lib/api/withAdminAuth";
 /**
  * GET  /api/admin/country/[code]/bills          — list bills with filters
  * POST /api/admin/country/[code]/bills          — force actions: sign | veto | reset | advance
@@ -5,10 +6,9 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseBoundedIntParam, parseJsonBody } from "@/lib/api/validate";
 import { adminBillsSchema } from "@/lib/api/schemas/admin";
-import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { errorResponse } from "@/lib/api/errors";
 import { onBillEnacted } from "@/lib/billEnactment";
 import { flushServerPosthog } from "@/lib/analytics/serverPosthog";
 import { applyLegislationEffect } from "@/lib/legislationEffects";
@@ -23,11 +23,8 @@ const PRESIDENT_ACTION_MS = 10 * 60 * 60 * 1000;
 const VOTING_DURATION_HOURS = 24;
 const VOTING_DURATION_MS = VOTING_DURATION_HOURS * 60 * 60 * 1000;
 
-export async function GET(request: Request, { params }: { params: Promise<{ code: string }> }) {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
-
+export const GET = withAdminRoute(
+  async (_auth, request: Request, { params }: { params: Promise<{ code: string }> }) => {
     const { code } = await params;
     const countryId = code.toUpperCase() as CountryId;
     if (!COUNTRY_CONFIGS[countryId]) {
@@ -108,16 +105,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       limit,
       totalPages: Math.ceil(total / limit),
     });
-  } catch (error) {
-    return handleRouteError(error);
   }
-}
+);
 
-export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
-
+export const POST = withAdminRoute(
+  async (_auth, request: Request, { params }: { params: Promise<{ code: string }> }) => {
     // Consume the path param (not used for POST but required by Next.js)
     await params;
 
@@ -282,7 +274,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     }
 
     return errorResponse(400, "Invalid action.");
-  } catch (error) {
-    return handleRouteError(error);
   }
-}
+);

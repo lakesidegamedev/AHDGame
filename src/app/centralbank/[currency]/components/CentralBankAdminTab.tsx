@@ -11,10 +11,10 @@ import { Button } from "@/components/ui";
 import { EmptyState, Skeleton } from "@/components/ui";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import { CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
 import type { LocSnapshot } from "@/lib/lineOfCredit/buildSnapshot";
 import { CB_TH, CentralBankFigure, CentralBankSection } from "./CentralBankSection";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { formatNativeFaceAmount as formatNative } from "./centralBankUtils";
 
 interface BorrowerRow {
   characterId: string;
@@ -113,12 +113,6 @@ type AccountSelection = { kind: "deposit" | "loan"; characterId: string };
 
 interface Props {
   countryId: CountryId;
-}
-
-function formatNative(amount: number, currency: CurrencyCode): string {
-  const sym = CURRENCY_SYMBOLS[currency] ?? "$";
-  if (currency === "JPY") return `${sym}${Math.round(amount).toLocaleString("en-US")}`;
-  return `${sym}${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function formatSavingsLedgerType(t: string): string {

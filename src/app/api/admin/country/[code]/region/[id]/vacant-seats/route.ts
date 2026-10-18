@@ -1,3 +1,4 @@
+import { withAdminRoute } from "@/lib/api/withAdminAuth";
 /**
  * GET /api/admin/country/[code]/region/[id]/vacant-seats
  * Admin: get vacant seat information for a region.
@@ -5,7 +6,6 @@
  */
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
-import { requireAdmin } from "@/lib/api/requireAdmin";
 import {
   COUNTRY_CONFIGS,
   getRegionAppointableSeats,
@@ -16,7 +16,7 @@ import type { ElectedOfficial, State, SenateClass } from "@/lib/db/types";
 import { SENATE_CLASSES } from "@/lib/constants";
 import { subNationalChamberSeats } from "@/lib/constants/states";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
-import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { errorResponse } from "@/lib/api/errors";
 
 /** A region seat group as rendered/validated by the admin seat appointer. */
 interface SeatGroup {
@@ -47,14 +47,12 @@ function totalForSpec(
   return 0;
 }
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ code: string; id: string }> }
-) {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
-
+export const GET = withAdminRoute(
+  async (
+    _auth,
+    request: Request,
+    { params }: { params: Promise<{ code: string; id: string }> }
+  ) => {
     const { code, id } = await params;
     const countryId = code.toUpperCase() as CountryId;
     if (!COUNTRY_CONFIGS[countryId]) {
@@ -156,7 +154,5 @@ export async function GET(
       commonsVacant: lower?.vacant ?? 0,
       commonsTotal: lower?.total ?? 0,
     });
-  } catch (error) {
-    return handleRouteError(error);
   }
-}
+);

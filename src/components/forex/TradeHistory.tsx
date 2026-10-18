@@ -4,18 +4,13 @@ import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui";
 import { LocalTime } from "@/components/time/LocalTime";
 import type { OrderDisplay } from "@/app/country/[code]/forex/types";
+import { formatAmount } from "./formatters";
 
 const STATUS_STYLES: Record<string, string> = {
   filled: "bg-success/10 text-success",
   cancelled: "bg-card-elevated text-muted",
   expired: "bg-card-elevated text-muted",
 };
-
-function formatAmount(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return n.toLocaleString("en-US", { maximumFractionDigits: 2 });
-}
 
 const DATE_LABEL_OPTIONS = {
   month: "short",

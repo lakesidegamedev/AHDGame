@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  legislatureCompositionData,
+  LEGISLATURE_STATUS_FILTERS,
+  filterLegislatureBills,
+} from "./components/shared/legislaturePresentation";
+
 import { useState, useEffect, useCallback } from "react";
 import { useJPDietPageState } from "./useJPDietPageState";
 import { fetchJson } from "@/lib/observability/fetchJson";
@@ -7,7 +13,6 @@ import type { ExecutiveGovernmentResponse } from "@/lib/government/executiveView
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { LegislatureCompositionSection } from "@/components/legislature/LegislatureCompositionSection";
-import type { LegislatureCompositionData, LegislatureMember } from "@/components/legislature/types";
 import { useToast } from "@/contexts/ToastContext";
 import type { BillDisplay } from "@/lib/legislature/dto/billDisplay";
 import { BillsList } from "@/components/bills/BillsList";
@@ -24,10 +29,7 @@ import { useLegislatureData, type MembersData } from "./components/shared/useLeg
 import { ProposeLegislationModal } from "./ProposeLegislationModal";
 import { JPCabinetProposeBillModal } from "./JPCabinetProposeBillModal";
 import { PMSnapElectionButton } from "@/components/parliamentary/PMSnapElectionButton";
-import {
-  matchesLegislatureBillStatusFilter,
-  type LegislatureBillStatusFilter,
-} from "@/lib/legislature/billStatusFilters";
+import type { LegislatureBillStatusFilter } from "@/lib/legislature/billStatusFilters";
 import type { BillProposalAutoFailWarning } from "@/lib/legislature/billAutoFailWarning";
 import { apiErrorText } from "@/lib/errors/catalog";
 
@@ -38,13 +40,6 @@ const DIET_HERO = {
 
 type ChamberKey = "shugiin" | "sangiin" | "cabinet";
 type PageTab = "composition" | "bills" | "leadership" | "tariffs" | "subsidies";
-
-const LEGISLATURE_STATUS_FILTERS = [
-  { value: "all", label: "All" },
-  { value: "voting", label: "Voting" },
-  { value: "passed", label: "Passed" },
-  { value: "failed", label: "Failed" },
-] satisfies Array<{ value: LegislatureBillStatusFilter; label: string }>;
 
 // ─── Composition Sub-component ──────────────────────────────────────────────
 
@@ -57,32 +52,7 @@ function ChamberComposition({
   chamberLabel: string;
   countryId: CountryId;
 }) {
-  const compositionData: LegislatureCompositionData = {
-    members: members.members.map((mp): LegislatureMember => ({
-      id: mp.characterId,
-      characterId: mp.characterId,
-      sequentialId: mp.sequentialId ?? null,
-      characterName: mp.characterName,
-      region: mp.constituency,
-      party: mp.party,
-      partyName: mp.partyName,
-      partyColor: mp.partyColor,
-      countryId,
-      seatsHeld: mp.seatsHeld,
-      isNPP: mp.isNPP,
-      isVacant: false,
-    })),
-    composition: members.composition.map((c) => ({
-      party: c.partyId,
-      partyName: c.partyName,
-      partyColor: c.partyColor,
-      economicPosition: c.economicPosition,
-      seats: c.seats,
-      countryId,
-    })),
-    totalSeats: members.totalSeats,
-    filledSeats: members.filledSeats,
-  };
+  const compositionData = legislatureCompositionData(members, countryId);
 
   return (
     <LegislatureCompositionSection
@@ -542,13 +512,7 @@ export function JPDietPage({ countryId }: Props) {
 
               {(() => {
                 const billList = bills?.bills ?? [];
-                const filtered = billList.filter((bill) => {
-                  if (!matchesLegislatureBillStatusFilter(bill.status, billStatusFilter))
-                    return false;
-                  if (billVoteFilter === "voted") return bill.myVote != null;
-                  if (billVoteFilter === "not_voted") return bill.myVote == null;
-                  return true;
-                });
+                const filtered = filterLegislatureBills(billList, billVoteFilter, billStatusFilter);
 
                 if (billList.length === 0) {
                   return (
