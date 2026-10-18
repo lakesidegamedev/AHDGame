@@ -25,6 +25,8 @@ import { sociMultiplier } from "@/lib/nationalization/concentration";
 import { politicalSoeInputs } from "@/lib/politicalLegislation/marginAdapter";
 import { getSectorTypeMatchModifier } from "@/lib/corporations/specialization/rules";
 import { organisationalOutputFactor } from "@/lib/market/producerMarket/efficiencyRules";
+import { computeStateMetricMarginModifier } from "@/lib/corporations/sectorMetricMarginProfiles";
+import { STRATEGY_TRANSITION_TURNS } from "@/lib/constants/sectorStrategyTypes";
 import { resolveSectorHostCurrencyCode } from "@/lib/currency/corporationCapital";
 import {
   computeDisasterPenaltySplit,
@@ -284,7 +286,27 @@ export function prepareProducerPhysicalSector(input: {
   const politicalBoard = lookups.politicalBoardByState?.get(sector.stateId);
   const politicalSoe = politicalBoard ? politicalSoeInputs(politicalBoard) : null;
   const soeMandate = stateOwned ? resolveSectorMandate(corp, sector) : null;
+  const regionalMetric = computeStateMetricMarginModifier({
+    sectorType: operatingType,
+    strategyId: sector.strategyId ?? "standard",
+    transitionFromStrategyId: sector.transitionFromStrategyId,
+    transitionProgress:
+      sector.transitionFromStrategyId && sector.transitionStartTurn != null
+        ? Math.min(
+            1,
+            Math.max(0, (currentTurn - sector.transitionStartTurn) / STRATEGY_TRANSITION_TURNS)
+          )
+        : 0,
+    stateMetrics: metrics ?? null,
+    countryId,
+    year: lookups.eraYear ?? null,
+    politicalBaseModifiers: lookups.politicalBaseModifiersByState?.get(sector.stateId) ?? null,
+  });
   const organisational = organisationalOutputFactor({
+    regionalPp:
+      regionalMetric.cappedTotal +
+      (lookups.regionalConditionMarginByState?.get(sector.stateId) ?? 0) +
+      (tech.marginBonusPp ?? 0),
     typeMatchPp:
       stateOwned || !corp.type
         ? 0

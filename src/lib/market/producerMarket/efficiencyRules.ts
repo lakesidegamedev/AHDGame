@@ -20,9 +20,15 @@ export function organisationalOutputFactor(args: {
   typeMatchPp: number;
   /** State-company efficiency points (<= 0; 0 for private companies). */
   soeEfficiencyPp: number;
+  /**
+   * Where the plant is and what it knows: the state-metric profile (grid,
+   * skills, crime, roads, broadband...), regional conditions and the tech
+   * tree's margin bonus. Real conditions change output per worker.
+   */
+  regionalPp?: number;
 }): number {
+  const finite = (x: number | undefined) => (typeof x === "number" && Number.isFinite(x) ? x : 0);
   const pp =
-    (Number.isFinite(args.typeMatchPp) ? args.typeMatchPp : 0) +
-    (Number.isFinite(args.soeEfficiencyPp) ? Math.min(0, args.soeEfficiencyPp) : 0);
+    finite(args.typeMatchPp) + Math.min(0, finite(args.soeEfficiencyPp)) + finite(args.regionalPp);
   return Math.max(ORGANISATIONAL_EFFICIENCY_MIN_FACTOR, 1 + pp / 100);
 }
