@@ -13,7 +13,9 @@ function scenario() {
   mem.seed("countryGameStates", [
     { _id: "RU", ruSovietSuccessionSinceTurn: 48, ruProvisionalCongressSeats: 1154 },
   ]);
-  mem.seed("governmentFormations", [{ _id: "RU", status: "formed", pmNppId: new ObjectId() }]);
+  const pmNppId = new ObjectId();
+  mem.seed("npps", [{ _id: pmNppId, countryId: "RU", party: "1" }]);
+  mem.seed("governmentFormations", [{ _id: "RU", status: "formed", pmNppId }]);
   mem.seed("electedOfficials", [
     { _id: new ObjectId(), countryId: "RU", officeType: "congressDeputy", nppId: new ObjectId() },
   ]);
@@ -26,6 +28,8 @@ describe("NPC Russian constitutional introduction", () => {
     expect(await processRussianConstitutionalNpcProposals(db, game, 129, new Date(0))).toBe(1);
     expect(await processRussianConstitutionalNpcProposals(db, game, 130, new Date(0))).toBe(0);
     expect(mem.collection("bills").docs).toHaveLength(2);
+    // The premier's party sponsors each bill, so deputies vote instead of abstaining.
+    expect(mem.collection("bills").docs.map((bill) => bill.sponsorParty)).toEqual(["1", "1"]);
     expect(mem.collection("countryGameStates").docs[0]).not.toHaveProperty(
       "ruPresidencyMandateSinceTurn"
     );
@@ -43,6 +47,12 @@ describe("NPC Russian constitutional introduction", () => {
       expect(mem.collection("bills").docs).toHaveLength(0);
     }
   );
+  it("needs the premier's party to sponsor the decision", async () => {
+    const { db, mem } = scenario();
+    await mem.collection("npps").updateMany({}, { $unset: { party: "" } });
+    expect(await processRussianConstitutionalNpcProposals(db, game, 129, new Date(0))).toBe(0);
+    expect(mem.collection("bills").docs).toHaveLength(0);
+  });
   it("waits for a seated formed government and active successor legislature", async () => {
     const { db, mem } = scenario();
     mem.collection("governmentFormations").docs[0].status = "pending";

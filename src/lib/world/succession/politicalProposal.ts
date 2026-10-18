@@ -56,8 +56,11 @@ export async function openFederationPoliticalProposal(input: {
   sourceCountryId: CountryId;
   activation: Activation;
   now: Date;
+  /** Party introducing the mandate. Without one, NPC deputies have no party
+   * line on a provision-less bill and every vote lands in the abstain band. */
+  sponsorParty?: string;
 }): Promise<FederationPoliticalProposalRecord> {
-  const { db, sourceCountryId, activation, now } = input;
+  const { db, sourceCountryId, activation, now, sponsorParty } = input;
   const state = await db
     .collection<GameState>("gameState")
     .findOne({ _id: "current" }, { projection: { preset: 1, currentYear: 1, currentTurn: 1 } });
@@ -209,6 +212,7 @@ export async function openFederationPoliticalProposal(input: {
     currentChamber: chamber,
     sponsorId: null,
     sponsorName: `${source.displayName} Government`,
+    ...(sponsorParty ? { sponsorParty } : {}),
     status: "active",
     votesFor: 0,
     votesAgainst: 0,

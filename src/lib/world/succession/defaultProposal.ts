@@ -81,6 +81,7 @@ export async function openDefaultFederationPoliticalProposal(input: {
   assetSharesBps?: Readonly<Record<string, number>>;
   debtSharesBps?: Readonly<Record<string, number>>;
   revision?: number;
+  sponsorParty?: string;
 }) {
   const { db, sourceCountryId, currentYear, now } = input;
   const availableFromYear = earliestFederationDecisionYear("1991-default", sourceCountryId);
@@ -97,6 +98,7 @@ export async function openDefaultFederationPoliticalProposal(input: {
     db,
     sourceCountryId,
     now,
+    sponsorParty: input.sponsorParty,
     activation: {
       settlementId,
       approval: {
