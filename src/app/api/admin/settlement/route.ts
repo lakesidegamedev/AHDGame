@@ -1,9 +1,9 @@
+import { withAdminRoute } from "@/lib/api/withAdminAuth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import type { Filter } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import { requireAdmin } from "@/lib/api/requireAdmin";
-import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { getSettlementCrisesCollection } from "@/lib/db/collections";
 import {
@@ -63,182 +63,168 @@ const bodySchema = z.discriminatedUnion("action", [
 ]);
 
 /** GET /api/admin/settlement — the live board, or null with the reason. */
-export async function GET() {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
+export const GET = withAdminRoute(async (_auth) => {
+  const db = await getDb();
+  const gameState = await getGameState(db);
+  const currentTurn = gameState?.currentTurn ?? 1;
+  const crises = await getSettlementCrisesCollection(db);
 
-    const db = await getDb();
-    const gameState = await getGameState(db);
-    const currentTurn = gameState?.currentTurn ?? 1;
-    const crises = await getSettlementCrisesCollection(db);
+  const live = await crises.findOne({
+    status: { $in: ["open", "frozen"] },
+  } as Filter<SettlementCrisisDoc>);
+  // Cancelled questions belong in the history too — an operator wants to see
+  // that one was called off, not have it vanish.
+  const history = await crises
+    .find({ status: { $in: ["resolved", "cancelled"] } } as Filter<SettlementCrisisDoc>)
+    .sort({ resolvedTurn: -1 })
+    .limit(5)
+    .toArray();
 
-    const live = await crises.findOne({
-      status: { $in: ["open", "frozen"] },
-    } as Filter<SettlementCrisisDoc>);
-    // Cancelled questions belong in the history too — an operator wants to see
-    // that one was called off, not have it vanish.
-    const history = await crises
-      .find({ status: { $in: ["resolved", "cancelled"] } } as Filter<SettlementCrisisDoc>)
-      .sort({ resolvedTurn: -1 })
-      .limit(5)
-      .toArray();
+  // Asked ONLY when the Open button is the one on screen. With a question
+  // already live the answer changes nothing an operator can act on, and this
+  // is a scan of the conflicts collection on every poll of the admin board.
+  const openWarning =
+    !live && gameState?.settlementCrisisEnabled === true
+      ? await describeQualifyingWar(db).catch(() => null)
+      : null;
 
-    // Asked ONLY when the Open button is the one on screen. With a question
-    // already live the answer changes nothing an operator can act on, and this
-    // is a scan of the conflicts collection on every poll of the admin board.
-    const openWarning =
-      !live && gameState?.settlementCrisisEnabled === true
-        ? await describeQualifyingWar(db).catch(() => null)
-        : null;
-
-    return NextResponse.json({
-      enabled: gameState?.settlementCrisisEnabled === true,
-      currentTurn,
-      // Present before anything is pressed, so the caution arrives while it can
-      // still change the operator's mind rather than after the fact.
-      openWarning: openWarning ? warFreezeNotice(openWarning, "before") : null,
-      crisis: live
-        ? {
-            id: live._id.toString(),
-            status: live.status,
-            position: live.position,
-            heat: live.ladder.heat,
-            openedTurn: live.openedTurn,
-            conflictId: live.conflictId,
-            // So an operator can tell at a glance whether the wire is running,
-            // without reading the channel.
-            nextBriefingTurn:
-              (live.lastBriefing?.turn ?? live.openedTurn) + SETTLEMENT_WIRE_INTERVAL_TURNS,
-            postedWireEvents: live.postedWireEvents ?? [],
-            rules: settlementRulesFor(live),
-            institutions: live.institutions.map((inst) => ({
-              id: inst.id,
-              name: getInstitution(inst.id)?.name ?? inst.id,
-              weight: inst.weight,
-              position: inst.position,
-            })),
-          }
-        : null,
-      history: history.map((h) => ({
-        id: h._id.toString(),
-        status: h.status,
-        outcome: h.outcome,
-        resolvedTurn: h.resolvedTurn,
-        cooldownUntilTurn: h.cooldownUntilTurn,
-      })),
-    });
-  } catch (err) {
-    return handleRouteError(err);
-  }
-}
+  return NextResponse.json({
+    enabled: gameState?.settlementCrisisEnabled === true,
+    currentTurn,
+    // Present before anything is pressed, so the caution arrives while it can
+    // still change the operator's mind rather than after the fact.
+    openWarning: openWarning ? warFreezeNotice(openWarning, "before") : null,
+    crisis: live
+      ? {
+          id: live._id.toString(),
+          status: live.status,
+          position: live.position,
+          heat: live.ladder.heat,
+          openedTurn: live.openedTurn,
+          conflictId: live.conflictId,
+          // So an operator can tell at a glance whether the wire is running,
+          // without reading the channel.
+          nextBriefingTurn:
+            (live.lastBriefing?.turn ?? live.openedTurn) + SETTLEMENT_WIRE_INTERVAL_TURNS,
+          postedWireEvents: live.postedWireEvents ?? [],
+          rules: settlementRulesFor(live),
+          institutions: live.institutions.map((inst) => ({
+            id: inst.id,
+            name: getInstitution(inst.id)?.name ?? inst.id,
+            weight: inst.weight,
+            position: inst.position,
+          })),
+        }
+      : null,
+    history: history.map((h) => ({
+      id: h._id.toString(),
+      status: h.status,
+      outcome: h.outcome,
+      resolvedTurn: h.resolvedTurn,
+      cooldownUntilTurn: h.cooldownUntilTurn,
+    })),
+  });
+});
 
 /** POST /api/admin/settlement — one of the four admin actions. */
-export async function POST(request: Request) {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
+export const POST = withAdminRoute(async (_auth, request: Request) => {
+  const parsed = await parseJsonBody(request, bodySchema);
+  if (!parsed.success) {
+    return errorResponse(parsed.status, parsed.error);
+  }
+  const body = parsed.data;
 
-    const parsed = await parseJsonBody(request, bodySchema);
-    if (!parsed.success) {
-      return errorResponse(parsed.status, parsed.error);
+  const db = await getDb();
+  const gameState = await getGameState(db);
+  const currentTurn = gameState?.currentTurn ?? 1;
+  const crises = await getSettlementCrisesCollection(db);
+
+  if (body.action === "open") {
+    const result = await openSettlementCrisis(db, { turn: currentTurn });
+    return result.opened
+      ? NextResponse.json({
+          success: true,
+          crisisId: result.crisisId,
+          // Present only when the question opened INTO a war already being
+          // fought. The UI shows it as a warning, not as part of the success.
+          ...(result.warning ? { warning: result.warning } : {}),
+        })
+      : errorResponse(409, result.reason);
+  }
+
+  if (body.action === "close") {
+    const result = await closeSettlementCrisis(db, { turn: currentTurn });
+    if (!result.closed) {
+      return errorResponse(409, result.reason);
     }
-    const body = parsed.data;
-
-    const db = await getDb();
-    const gameState = await getGameState(db);
-    const currentTurn = gameState?.currentTurn ?? 1;
-    const crises = await getSettlementCrisesCollection(db);
-
-    if (body.action === "open") {
-      const result = await openSettlementCrisis(db, { turn: currentTurn });
-      return result.opened
-        ? NextResponse.json({
-            success: true,
-            crisisId: result.crisisId,
-            // Present only when the question opened INTO a war already being
-            // fought. The UI shows it as a warning, not as part of the success.
-            ...(result.warning ? { warning: result.warning } : {}),
-          })
-        : errorResponse(409, result.reason);
-    }
-
-    if (body.action === "close") {
-      const result = await closeSettlementCrisis(db, { turn: currentTurn });
-      if (!result.closed) {
-        return errorResponse(409, result.reason);
-      }
-      return NextResponse.json({
-        success: true,
-        // Named, not hidden: the war a frozen crisis declared is a real conflict
-        // and closing the question does not end it.
-        note: result.orphanedConflictId
-          ? `Closed. Conflict ${result.orphanedConflictId} is still running on the Conflicts board and must be dealt with there.`
-          : undefined,
-      });
-    }
-
-    const live = await crises.findOne({
-      status: { $in: ["open", "frozen"] },
-    } as Filter<SettlementCrisisDoc>);
-    if (!live) return errorResponse(404, "No settlement crisis is live.");
-
-    if (body.action === "setRule") {
-      await crises.updateOne(
-        { _id: live._id },
-        { $set: { [`rules.${body.key}`]: body.value, updatedAt: new Date() } }
-      );
-      return NextResponse.json({ success: true });
-    }
-
-    if (body.action === "setPosition") {
-      // Write the institution, then DERIVE the index from all four. Setting
-      // `position` directly is the one thing that would let the masthead
-      // disagree with the cards it is a mean of.
-      const institutions = live.institutions.map((inst) =>
-        inst.id === body.institutionId
-          ? { ...inst, position: Math.round(body.points * HUNDREDTHS) }
-          : inst
-      );
-      await crises.updateOne(
-        { _id: live._id },
-        {
-          $set: { institutions, position: recomputePosition(institutions), updatedAt: new Date() },
-        }
-      );
-      return NextResponse.json({ success: true, position: recomputePosition(institutions) });
-    }
-
-    // resolve — write the outcome and stop. Actuation is the turn phase's,
-    // which is what keeps the forced path and the earned path identical.
-    const claimed = await crises.updateOne(
-      { _id: live._id, status: { $in: ["open", "frozen"] } },
-      {
-        $set: {
-          status: "resolved",
-          outcome: body.outcome,
-          resolvedTurn: currentTurn,
-          cooldownUntilTurn: null,
-          updatedAt: new Date(),
-        },
-      }
-    );
-    if (claimed.matchedCount !== 1) {
-      return errorResponse(409, "The crisis closed before this landed.");
-    }
-
-    // A forced resolution ENDS an attachment, so the war the crisis had frozen
-    // itself onto gets its own name and hosts back — same reasoning as closing.
-    // A war the crisis DECLARED carries no attachment and is left alone. After
-    // the claim, so only the request that actually resolved it touches the war.
-    await endWarAttachment(db, live);
-
     return NextResponse.json({
       success: true,
-      outcome: body.outcome,
-      note: "Actuation runs on the next turn tick.",
+      // Named, not hidden: the war a frozen crisis declared is a real conflict
+      // and closing the question does not end it.
+      note: result.orphanedConflictId
+        ? `Closed. Conflict ${result.orphanedConflictId} is still running on the Conflicts board and must be dealt with there.`
+        : undefined,
     });
-  } catch (err) {
-    return handleRouteError(err);
   }
-}
+
+  const live = await crises.findOne({
+    status: { $in: ["open", "frozen"] },
+  } as Filter<SettlementCrisisDoc>);
+  if (!live) return errorResponse(404, "No settlement crisis is live.");
+
+  if (body.action === "setRule") {
+    await crises.updateOne(
+      { _id: live._id },
+      { $set: { [`rules.${body.key}`]: body.value, updatedAt: new Date() } }
+    );
+    return NextResponse.json({ success: true });
+  }
+
+  if (body.action === "setPosition") {
+    // Write the institution, then DERIVE the index from all four. Setting
+    // `position` directly is the one thing that would let the masthead
+    // disagree with the cards it is a mean of.
+    const institutions = live.institutions.map((inst) =>
+      inst.id === body.institutionId
+        ? { ...inst, position: Math.round(body.points * HUNDREDTHS) }
+        : inst
+    );
+    await crises.updateOne(
+      { _id: live._id },
+      {
+        $set: { institutions, position: recomputePosition(institutions), updatedAt: new Date() },
+      }
+    );
+    return NextResponse.json({ success: true, position: recomputePosition(institutions) });
+  }
+
+  // resolve — write the outcome and stop. Actuation is the turn phase's,
+  // which is what keeps the forced path and the earned path identical.
+  const claimed = await crises.updateOne(
+    { _id: live._id, status: { $in: ["open", "frozen"] } },
+    {
+      $set: {
+        status: "resolved",
+        outcome: body.outcome,
+        resolvedTurn: currentTurn,
+        cooldownUntilTurn: null,
+        updatedAt: new Date(),
+      },
+    }
+  );
+  if (claimed.matchedCount !== 1) {
+    return errorResponse(409, "The crisis closed before this landed.");
+  }
+
+  // A forced resolution ENDS an attachment, so the war the crisis had frozen
+  // itself onto gets its own name and hosts back — same reasoning as closing.
+  // A war the crisis DECLARED carries no attachment and is left alone. After
+  // the claim, so only the request that actually resolved it touches the war.
+  await endWarAttachment(db, live);
+
+  return NextResponse.json({
+    success: true,
+    outcome: body.outcome,
+    note: "Actuation runs on the next turn tick.",
+  });
+});

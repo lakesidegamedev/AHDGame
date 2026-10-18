@@ -75,7 +75,7 @@ describe("concurrent child log attribution (#2071)", () => {
 
 // The watchdog deliberately requires POSIX process groups. Windows must reject
 // budgeted runs, not silently run an engine without the lifetime guarantee.
-describe.runIf(process.platform !== "win32")("budgeted engine lifetime", () => {
+describe.skipIf(process.platform === "win32")("budgeted engine lifetime", () => {
   it("terminates a stalled process group and reports timeout even for graceful exit", async () => {
     const result = await spawnWithPrefixedLogs(
       process.execPath,
@@ -99,7 +99,7 @@ describe.runIf(process.platform !== "win32")("budgeted engine lifetime", () => {
   });
 });
 
-it.runIf(process.platform !== "win32")(
+it.skipIf(process.platform === "win32")(
   "kills an owned descendant that ignores graceful termination",
   async () => {
     const lines: string[] = [];
@@ -118,7 +118,7 @@ it.runIf(process.platform !== "win32")(
   }
 );
 
-it.runIf(process.platform !== "win32")(
+it.skipIf(process.platform === "win32")(
   "keeps the budget watchdog alive after its queue-worker parent dies",
   async () => {
     const { spawn } = await import("node:child_process");
@@ -178,3 +178,14 @@ describe.runIf(process.platform === "win32")("Windows budget safety", () => {
     expect(result.stderr).toContain("Invalid budgeted process configuration");
   });
 });
+
+it.each([0, -1, NaN, Infinity, -Infinity])(
+  "rejects invalid timeout %s on every platform",
+  async (timeoutMs) => {
+    await expect(
+      spawnWithPrefixedLogs(process.execPath, ["-e", "process.exit(0)"], identityA, () => {}, {
+        timeoutMs,
+      })
+    ).rejects.toThrow("timeoutMs must be positive and finite");
+  }
+);

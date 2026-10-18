@@ -7,7 +7,6 @@ import { postBillProposalWithElectionConfirmation } from "@/components/bills/Bil
 import { useEntityName } from "./useEntityName";
 import { CountryFlag } from "@/components/CountryFlag";
 import type { CountryId } from "@/lib/constants/countries";
-import type { ProposalVote } from "@/lib/db/types/internationalOrganization";
 import type { OrgSummary, OrgViewerInfo } from "./orgTypes";
 import { orgProposingCountry } from "./orgTypes";
 import { VoteButtons } from "./VoteButtons";
@@ -17,7 +16,7 @@ import {
   requiresUnanimity,
   votesNeeded,
 } from "@/lib/internationalOrganizations/resolutionRules";
-import { apiErrorText } from "@/lib/errors/catalog";
+import { organizationVoteHandler, postOrganizationAction } from "./proposalActions";
 
 interface Props {
   org: OrgSummary;
@@ -85,18 +84,11 @@ export function LegislationPanel({ org, viewer, currentTurn, votingWindowTurns, 
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch(
+      await postOrganizationAction(
         `/api/country/${proposer}/international-organizations/${org.id}/legislation`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ type: "free_trade_agreement", parties }),
-        }
+        { type: "free_trade_agreement", parties },
+        "Failed to propose FTA"
       );
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(apiErrorText(body, "Failed to propose FTA"));
-      }
       setSelected(new Set());
       setShowForm(false);
       onChange();
@@ -107,22 +99,7 @@ export function LegislationPanel({ org, viewer, currentTurn, votingWindowTurns, 
     }
   }
 
-  async function vote(legislationId: string, voteValue: ProposalVote) {
-    if (!viewerFmCountry) throw new Error("No diplomatic role");
-    const res = await fetch(
-      `/api/country/${viewerFmCountry}/international-organizations/legislation/${legislationId}/vote`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ vote: voteValue }),
-      }
-    );
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(apiErrorText(body, "Vote failed"));
-    }
-    onChange();
-  }
+  const vote = organizationVoteHandler(viewerFmCountry, onChange, "legislation");
 
   async function proposeWithdrawal(legislationId: string, legislationTitle: string) {
     if (!viewerFmCountry) return;

@@ -1,7 +1,8 @@
+import { requireAdmin } from "@/lib/api/requireAdmin";
+import { withAdminRoute } from "@/lib/api/withAdminAuth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
-import { requireAdmin } from "@/lib/api/requireAdmin";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { createAdminLog } from "@/lib/adminLog";
@@ -86,74 +87,67 @@ const patchSchema = z.object({
 // GET /api/admin/config/market — Structural market rework mode + feature flags
 // Auth: requireAdmin
 // Errors: 403
-export async function GET() {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
+export const GET = withAdminRoute(async (_auth) => {
+  const db = await getDb();
+  const config = await db.collection<GameConfig>("gameConfig").findOne(
+    { _id: "default" },
+    {
+      projection: {
+        marketSystemMode: 1,
+        commodityScarcityDriftEnabled: 1,
+        stockCoverCapEnabled: 1,
+        brandLoyaltyEnabled: 1,
+        brandLoyaltySliceEnabled: 1,
+        sectorQualityEnabled: 1,
+        qualityPremiumPricingEnabled: 1,
+        productLinesV2Enabled: 1,
+        mediaOperatingModelsEnabled: 1,
+        mediaProductSlatesEnabled: 1,
+        supplyAgreementsEnabled: 1,
+        shortageResponsiveSourcingEnabled: 1,
+        sovereignIssuanceConsolidationEnabled: 1,
+        domesticSovereignBondCoverageEnabled: 1,
+        indexFundBondLiquidityEnabled: 1,
+        equityLiquidityFacilityEnabled: 1,
+        nppMarketCoverageEnabled: 1,
+        nppFragileMarketSupplyEnabled: 1,
+        extractionOutputScaleEnabled: 1,
+        commandEconomyEnabled: 1,
+        mediaRegulationEnabled: 1,
+        commandEconomySecondEconomyTolerance: 1,
+      },
+    }
+  );
 
-    const db = await getDb();
-    const config = await db.collection<GameConfig>("gameConfig").findOne(
-      { _id: "default" },
-      {
-        projection: {
-          marketSystemMode: 1,
-          commodityScarcityDriftEnabled: 1,
-          stockCoverCapEnabled: 1,
-          brandLoyaltyEnabled: 1,
-          brandLoyaltySliceEnabled: 1,
-          sectorQualityEnabled: 1,
-          qualityPremiumPricingEnabled: 1,
-          productLinesV2Enabled: 1,
-          mediaOperatingModelsEnabled: 1,
-          mediaProductSlatesEnabled: 1,
-          supplyAgreementsEnabled: 1,
-          shortageResponsiveSourcingEnabled: 1,
-          sovereignIssuanceConsolidationEnabled: 1,
-          domesticSovereignBondCoverageEnabled: 1,
-          indexFundBondLiquidityEnabled: 1,
-          equityLiquidityFacilityEnabled: 1,
-          nppMarketCoverageEnabled: 1,
-          nppFragileMarketSupplyEnabled: 1,
-          extractionOutputScaleEnabled: 1,
-          commandEconomyEnabled: 1,
-          mediaRegulationEnabled: 1,
-          commandEconomySecondEconomyTolerance: 1,
-        },
-      }
-    );
-
-    const mode = await getMarketSystemMode();
-    return NextResponse.json({
-      mode,
-      scarcityDriftEnabled: config?.commodityScarcityDriftEnabled === true,
-      stockCoverCapEnabled: config?.stockCoverCapEnabled === true,
-      brandLoyaltyEnabled: config?.brandLoyaltyEnabled === true,
-      brandLoyaltySliceEnabled: config?.brandLoyaltySliceEnabled === true,
-      sectorQualityEnabled: config?.sectorQualityEnabled === true,
-      qualityPremiumPricingEnabled: config?.qualityPremiumPricingEnabled === true,
-      productLinesV2Enabled: config?.productLinesV2Enabled === true,
-      mediaOperatingModelsEnabled: config?.mediaOperatingModelsEnabled === true,
-      mediaProductSlatesEnabled: config?.mediaProductSlatesEnabled === true,
-      supplyAgreementsEnabled: config?.supplyAgreementsEnabled === true,
-      shortageResponsiveSourcingEnabled: config?.shortageResponsiveSourcingEnabled === true,
-      sovereignIssuanceConsolidationEnabled: config?.sovereignIssuanceConsolidationEnabled === true,
-      domesticSovereignBondCoverageEnabled: config?.domesticSovereignBondCoverageEnabled === true,
-      indexFundBondLiquidityEnabled: config?.indexFundBondLiquidityEnabled === true,
-      equityLiquidityFacilityEnabled: config?.equityLiquidityFacilityEnabled === true,
-      nppMarketCoverageEnabled: config?.nppMarketCoverageEnabled === true,
-      nppFragileMarketSupplyEnabled: config?.nppFragileMarketSupplyEnabled === true,
-      extractionOutputScaleEnabled: config?.extractionOutputScaleEnabled === true,
-      commandEconomyEnabled: config?.commandEconomyEnabled === true,
-      mediaRegulationEnabled: config?.mediaRegulationEnabled === true,
-      commandEconomySecondEconomyTolerance:
-        typeof config?.commandEconomySecondEconomyTolerance === "number"
-          ? config.commandEconomySecondEconomyTolerance
-          : 0.3,
-    });
-  } catch (error) {
-    return handleRouteError(error);
-  }
-}
+  const mode = await getMarketSystemMode();
+  return NextResponse.json({
+    mode,
+    scarcityDriftEnabled: config?.commodityScarcityDriftEnabled === true,
+    stockCoverCapEnabled: config?.stockCoverCapEnabled === true,
+    brandLoyaltyEnabled: config?.brandLoyaltyEnabled === true,
+    brandLoyaltySliceEnabled: config?.brandLoyaltySliceEnabled === true,
+    sectorQualityEnabled: config?.sectorQualityEnabled === true,
+    qualityPremiumPricingEnabled: config?.qualityPremiumPricingEnabled === true,
+    productLinesV2Enabled: config?.productLinesV2Enabled === true,
+    mediaOperatingModelsEnabled: config?.mediaOperatingModelsEnabled === true,
+    mediaProductSlatesEnabled: config?.mediaProductSlatesEnabled === true,
+    supplyAgreementsEnabled: config?.supplyAgreementsEnabled === true,
+    shortageResponsiveSourcingEnabled: config?.shortageResponsiveSourcingEnabled === true,
+    sovereignIssuanceConsolidationEnabled: config?.sovereignIssuanceConsolidationEnabled === true,
+    domesticSovereignBondCoverageEnabled: config?.domesticSovereignBondCoverageEnabled === true,
+    indexFundBondLiquidityEnabled: config?.indexFundBondLiquidityEnabled === true,
+    equityLiquidityFacilityEnabled: config?.equityLiquidityFacilityEnabled === true,
+    nppMarketCoverageEnabled: config?.nppMarketCoverageEnabled === true,
+    nppFragileMarketSupplyEnabled: config?.nppFragileMarketSupplyEnabled === true,
+    extractionOutputScaleEnabled: config?.extractionOutputScaleEnabled === true,
+    commandEconomyEnabled: config?.commandEconomyEnabled === true,
+    mediaRegulationEnabled: config?.mediaRegulationEnabled === true,
+    commandEconomySecondEconomyTolerance:
+      typeof config?.commandEconomySecondEconomyTolerance === "number"
+        ? config.commandEconomySecondEconomyTolerance
+        : 0.3,
+  });
+});
 
 // PATCH /api/admin/config/market — Set market system mode
 // Auth: requireAdmin

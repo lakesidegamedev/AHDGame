@@ -7,6 +7,7 @@
  *
  * See `docs/superpowers/specs/2026-06-16-independence-process-design.md`.
  */
+import { clamp } from "@/lib/numeric/rules";
 
 // ─── Eligibility / lifecycle tunables (durations in turns; 48 turns = 1 yr) ──
 
@@ -73,10 +74,6 @@ export const WIRE_SWING_THRESHOLD = 2;
 export const WIRE_GROUND_MIN_DELTA = 0.3;
 /** Wire pagination page size. */
 export const WIRE_PAGE_SIZE = 10;
-
-function clamp(x: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, x));
-}
 
 // ─── Pure helpers ────────────────────────────────────────────────────────────
 

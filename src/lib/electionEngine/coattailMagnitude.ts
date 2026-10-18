@@ -7,12 +7,9 @@
  * 1 − COATTAIL_MAX_BONUS).
  */
 
+import { clamp } from "@/lib/numeric/rules";
 import { COATTAIL_MAX_BONUS, COATTAIL_APPROVAL_SATURATION } from "./constants";
 import { BASE_APPROVAL } from "@/lib/utils/governmentApproval";
-
-function clamp(v: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, v));
-}
 
 /**
  * Nominal-share multiplier for an executive at the given approval (0–100):

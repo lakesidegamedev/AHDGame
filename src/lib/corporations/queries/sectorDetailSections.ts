@@ -1405,6 +1405,10 @@ export function buildSectorPlantsSection(args: {
         w: Math.min(1, Math.abs(sector.productionPolicyLevel ?? 0) / 10),
       });
     }
+    const staffing = num(sector.labourStaffingFactor);
+    if (staffing != null && staffing < 1) {
+      weights.push({ cause: "staffing", w: 1 - Math.max(0, staffing) });
+    }
     // A deposit constraint is only a yes/no signal, not a measured loss.
     // Assigning the entire remaining idle share to it fabricates a quantity,
     // including for output legs whose deposits have ample headroom. Keep

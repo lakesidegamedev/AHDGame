@@ -2,6 +2,7 @@
  * Pure product venture rules. Nothing here touches the database: the turn
  * processor feeds in settled cash and the engine returns the next state.
  */
+import { clampWithUpperPriority as clamp } from "@/lib/numeric/rules";
 import { TURNS_PER_DAY } from "@/lib/constants/corporations";
 import type {
   ProductVenture,
@@ -38,10 +39,6 @@ const HIT_FLOOR = 0.05;
 const HIT_CEILING = 0.65;
 const HIT_QUALITY_WEIGHT = 0.6;
 const HIT_QUALITY_EXPONENT = 1.3;
-
-function clamp(value: number, lo: number, hi: number): number {
-  return Math.min(hi, Math.max(lo, value));
-}
 
 function finite(value: number | undefined | null, fallback = 0): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;

@@ -1,3 +1,4 @@
+import { clamp } from "@/lib/numeric/rules";
 import type { StateMetrics } from "@/lib/db/types";
 import { demographicAnchor1991 } from "./successorDemographicAnchors1991";
 import { makeEasternBlocStateMetrics } from "@/lib/seeds/shared/easternBlocMetrics";
@@ -118,10 +119,6 @@ const regions = {
 function metric(value: number) {
   return { value };
 }
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value));
-}
-
 export const SUCCESSOR_STATE_METRICS_1991: StateMetrics[] = (
   Object.keys(profiles) as Array<keyof typeof profiles>
 ).flatMap((countryId) => {

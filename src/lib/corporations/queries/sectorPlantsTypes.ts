@@ -19,6 +19,7 @@ export interface PlantIdleCause {
     | "strike"
     | "disaster"
     | "policy"
+    | "staffing"
     | "bank"
     | "deposits"
     | "mothballed"

@@ -1,9 +1,9 @@
+import { withAdminRoute } from "@/lib/api/withAdminAuth";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
-import { requireAdmin } from "@/lib/api/requireAdmin";
-import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { errorResponse } from "@/lib/api/errors";
 import { schemas } from "@/lib/api/validate";
 import { buildCharacterHref } from "@/lib/utils/profileUrls";
 import type { GameConfig } from "@/lib/db/types";
@@ -31,11 +31,8 @@ const REFERRALS_MAX = 500;
 // GET /api/admin/referrals/by-user/[userId] — Users referred by the given account (completed character setup)
 // Auth: requireAdmin
 // Errors: 400, 403, 404
-export async function GET(request: Request, { params }: { params: Promise<{ userId: string }> }) {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
-
+export const GET = withAdminRoute(
+  async (_auth, request: Request, { params }: { params: Promise<{ userId: string }> }) => {
     const { userId: userIdParam } = await params;
     const parsedId = schemas.objectId.safeParse(userIdParam);
     if (!parsedId.success) {
@@ -118,7 +115,5 @@ export async function GET(request: Request, { params }: { params: Promise<{ user
       referees,
       contestMode: mode === "contest" && contestStartedAt != null,
     });
-  } catch (error) {
-    return handleRouteError(error);
   }
-}
+);

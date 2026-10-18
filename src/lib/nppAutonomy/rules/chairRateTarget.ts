@@ -3,6 +3,7 @@
  * and growth gaps. Chair alignment changes the weights and inflation target;
  * see computeNppChairRateTarget.
  */
+import { clamp } from "@/lib/numeric/rules";
 import { chairAlignmentPolicy, type ChairAlignment } from "@/lib/centralBank/chairAlignment";
 import {
   NPP_CHAIR_GROWTH_COEF,
@@ -24,10 +25,6 @@ import {
 export interface ChairActivityInputs {
   outputGap: number | null;
   unemploymentRate: number;
-}
-
-function clamp(value: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, value));
 }
 
 /** Shared dual-mandate Taylor target used by autonomous chairs and credibility. */

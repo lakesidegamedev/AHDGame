@@ -1,8 +1,8 @@
+import { withAdminRoute } from "@/lib/api/withAdminAuth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
-import { requireAdmin } from "@/lib/api/requireAdmin";
-import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { createAdminLog } from "@/lib/adminLog";
 import { MIGRATIONS } from "@/lib/migrations/registry";
@@ -29,100 +29,86 @@ const INDEX_FUND_BOOTSTRAP_MIGRATIONS = [
 // GET /api/admin/config/index-funds — Index-funds feature mode
 // Auth: requireAdmin
 // Errors: 403
-export async function GET() {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
+export const GET = withAdminRoute(async (_auth) => {
+  const db = await getDb();
+  const config = await db
+    .collection<GameConfig>("gameConfig")
+    .findOne({ _id: "default" }, { projection: { indexFundsMode: 1 } });
 
-    const db = await getDb();
-    const config = await db
-      .collection<GameConfig>("gameConfig")
-      .findOne({ _id: "default" }, { projection: { indexFundsMode: 1 } });
+  const mode: IndexFundsMode =
+    config?.indexFundsMode === "partial" || config?.indexFundsMode === "full"
+      ? config.indexFundsMode
+      : "off";
 
-    const mode: IndexFundsMode =
-      config?.indexFundsMode === "partial" || config?.indexFundsMode === "full"
-        ? config.indexFundsMode
-        : "off";
-
-    return NextResponse.json({ mode });
-  } catch (error) {
-    return handleRouteError(error);
-  }
-}
+  return NextResponse.json({ mode });
+});
 
 // PATCH /api/admin/config/index-funds — Set index funds mode
 // Auth: requireAdmin
 // Errors: 400, 403
-export async function PATCH(request: Request) {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
-
-    const parsed = await parseJsonBody(request, patchSchema);
-    if (!parsed.success) {
-      return errorResponse(parsed.status, parsed.error);
-    }
-
-    const { mode } = parsed.data;
-
-    const db = await getDb();
-    const gameConfig = db.collection<GameConfig>("gameConfig");
-
-    // Read the prior value so we know whether this is a fresh enable (and
-    // therefore whether the bootstrap migrations need to run).
-    const priorConfig = await gameConfig.findOne(
-      { _id: "default" },
-      { projection: { indexFundsMode: 1 } }
-    );
-    const priorMode: IndexFundsMode =
-      priorConfig?.indexFundsMode === "partial" || priorConfig?.indexFundsMode === "full"
-        ? priorConfig.indexFundsMode
-        : "off";
-
-    const wasEnabled = priorMode !== "off";
-    const isEnabled = mode !== "off";
-
-    let bootstrap: Awaited<ReturnType<typeof runMigrations>> | null = null;
-    if (isEnabled && !wasEnabled) {
-      bootstrap = await runMigrations(db, {
-        migrations: MIGRATIONS,
-        dryRun: false,
-        only: INDEX_FUND_BOOTSTRAP_MIGRATIONS,
-      });
-    }
-
-    await gameConfig.updateOne(
-      { _id: "default" },
-      { $set: { indexFundsMode: mode } },
-      { upsert: true }
-    );
-
-    await createAdminLog({
-      category: "system",
-      action: isEnabled ? "index_funds_enabled" : "index_funds_disabled",
-      username: auth.admin.username,
-      adminUsername: auth.admin.username,
-      details:
-        mode === "off"
-          ? "Index funds disabled; fund APIs, UI, and cron behavior remain unavailable."
-          : bootstrap && bootstrap.ranIds.length > 0
-            ? `Index funds set to "${mode}". Ran bootstrap migrations: ${bootstrap.ranIds.join(", ")}.`
-            : bootstrap
-              ? `Index funds set to "${mode}". Bootstrap migrations already applied.`
-              : `Index funds mode set to "${mode}".`,
-    });
-
-    return NextResponse.json({
-      success: true,
-      mode,
-      bootstrap: bootstrap
-        ? {
-            ranIds: bootstrap.ranIds,
-            skippedIds: bootstrap.skippedIds,
-          }
-        : null,
-    });
-  } catch (error) {
-    return handleRouteError(error);
+export const PATCH = withAdminRoute(async (auth, request: Request) => {
+  const parsed = await parseJsonBody(request, patchSchema);
+  if (!parsed.success) {
+    return errorResponse(parsed.status, parsed.error);
   }
-}
+
+  const { mode } = parsed.data;
+
+  const db = await getDb();
+  const gameConfig = db.collection<GameConfig>("gameConfig");
+
+  // Read the prior value so we know whether this is a fresh enable (and
+  // therefore whether the bootstrap migrations need to run).
+  const priorConfig = await gameConfig.findOne(
+    { _id: "default" },
+    { projection: { indexFundsMode: 1 } }
+  );
+  const priorMode: IndexFundsMode =
+    priorConfig?.indexFundsMode === "partial" || priorConfig?.indexFundsMode === "full"
+      ? priorConfig.indexFundsMode
+      : "off";
+
+  const wasEnabled = priorMode !== "off";
+  const isEnabled = mode !== "off";
+
+  let bootstrap: Awaited<ReturnType<typeof runMigrations>> | null = null;
+  if (isEnabled && !wasEnabled) {
+    bootstrap = await runMigrations(db, {
+      migrations: MIGRATIONS,
+      dryRun: false,
+      only: INDEX_FUND_BOOTSTRAP_MIGRATIONS,
+    });
+  }
+
+  await gameConfig.updateOne(
+    { _id: "default" },
+    { $set: { indexFundsMode: mode } },
+    { upsert: true }
+  );
+
+  await createAdminLog({
+    category: "system",
+    action: isEnabled ? "index_funds_enabled" : "index_funds_disabled",
+    username: auth.admin.username,
+    adminUsername: auth.admin.username,
+    details:
+      mode === "off"
+        ? "Index funds disabled; fund APIs, UI, and cron behavior remain unavailable."
+        : bootstrap && bootstrap.ranIds.length > 0
+          ? `Index funds set to "${mode}". Ran bootstrap migrations: ${bootstrap.ranIds.join(", ")}.`
+          : bootstrap
+            ? `Index funds set to "${mode}". Bootstrap migrations already applied.`
+            : `Index funds mode set to "${mode}".`,
+  });
+
+  return NextResponse.json({
+    success: true,
+    mode,
+    bootstrap: bootstrap
+      ? {
+          ranIds: bootstrap.ranIds,
+          skippedIds: bootstrap.skippedIds,
+        }
+      : null,
+  });
+});

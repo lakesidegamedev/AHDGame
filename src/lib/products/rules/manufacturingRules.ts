@@ -3,6 +3,7 @@
  * contribution from paid development. The portable rules are allocateManufacturedOutput and
  * productQualityForCommodity.
  */
+import { clampWithUpperPriority as clamp } from "@/lib/numeric/rules";
 import { commodityMixWeight, type CommodityType } from "@/lib/constants/commodities";
 import { validateProductAllocations, type ProductPlantAllocation } from "./plantAllocations";
 import {
@@ -160,10 +161,6 @@ export function manufacturingDevelopmentThresholdAnchor(allocatedCapitalAnchor: 
 
 function finiteNonNegative(value: number): number {
   return Number.isFinite(value) ? Math.max(0, value) : 0;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }
 
 /** Advances development only from paid cash and elapsed turns. */

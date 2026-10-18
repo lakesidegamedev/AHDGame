@@ -1,3 +1,4 @@
+import { clamp01 } from "@/lib/numeric/rules";
 import { DEFAULT_TRANSITION_PRESSURES, getTransitionRule } from "./rules";
 import type {
   HistoricalWindow,
@@ -15,11 +16,6 @@ const SOVEREIGNTY_THRESHOLD = 0.35;
 const CONFLICT_PREVENTION_FLOOR = 0.85;
 /** After the latest year, a deeply negative score prevents rather than delays. */
 const LATE_PREVENTION_SCORE = -0.25;
-
-function clamp01(value: number): number {
-  if (!Number.isFinite(value)) return 0;
-  return Math.min(1, Math.max(0, value));
-}
 
 function clampPressures(pressures: TransitionPressures): TransitionPressures {
   return {

@@ -1,5 +1,7 @@
 "use client";
 
+import { HealPanelActions, HealPanelMessage } from "./HealPanelParts";
+
 import { useState } from "react";
 import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
@@ -127,22 +129,14 @@ export function HealBudgets() {
         </p>
       </div>
 
-      <div className="flex gap-2">
-        <button
-          onClick={runDiagnostic}
-          disabled={loading}
-          className="rounded-lg border border-card-border bg-background px-3 py-2 text-xs font-medium transition-colors hover:border-primary/50 disabled:opacity-50"
-        >
-          {loading ? "Running…" : "Diagnose"}
-        </button>
-        <button
-          onClick={runHeal}
-          disabled={loading}
-          className="rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-xs font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-50"
-        >
-          {loading ? "Healing…" : "Heal all budgets"}
-        </button>
-      </div>
+      <HealPanelActions
+        loading={loading}
+        onDiagnose={runDiagnostic}
+        onHeal={runHeal}
+        diagnosePendingLabel={"Running…"}
+        healPendingLabel={"Healing…"}
+        healLabel={"Heal all budgets"}
+      />
 
       {diagnostics && (
         <div className="rounded-lg border border-card-border bg-background p-3 space-y-4 text-xs">
@@ -219,11 +213,7 @@ export function HealBudgets() {
         </div>
       )}
 
-      {result && (
-        <p className={`text-xs font-medium ${result.ok ? "text-success" : "text-error"}`}>
-          {result.message}
-        </p>
-      )}
+      <HealPanelMessage result={result} />
     </div>
   );
 }

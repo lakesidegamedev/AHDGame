@@ -1,5 +1,13 @@
 "use client";
 
+import {
+  LegislatureRowsSkeleton,
+  LegislaturePageShell,
+  LegislaturePageTabs,
+} from "./components/shared/LegislaturePageShell";
+
+import { filterLegislatureBills } from "./components/shared/legislaturePresentation";
+
 import { useState, useEffect } from "react";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import {
@@ -10,15 +18,12 @@ import { TariffsTab } from "@/components/legislature/TariffsTab";
 import { SubsidiesTab } from "@/components/legislature/SubsidiesTab";
 import { LeaderCard } from "@/components/legislature/LeaderCard";
 import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
-import type { BillDisplay } from "@/lib/legislature/dto/billDisplay";
 import { BillsList } from "@/components/bills/BillsList";
 import { BillListControls, type BillVoteFilter } from "@/components/bills/BillListControls";
-import { LegislatureCompositionSection } from "@/components/legislature/LegislatureCompositionSection";
-import type { LegislatureCompositionData, LegislatureMember } from "@/components/legislature/types";
+import { LegislatureMembersTab } from "./components/shared/LegislatureMembersTab";
 import LegislatureHeader from "./components/shared/LegislatureHeader";
 import {
   useLegislatureData,
-  type MembersData,
   type BillsData,
   type LeadersData,
 } from "./components/shared/useLegislatureData";
@@ -79,74 +84,6 @@ const DEVOLVED_META: Partial<Record<CountryId, DevolvedMeta>> = {
 
 type PageTab = "bills" | "composition" | "leadership" | "tariffs" | "subsidies";
 
-// ─── Composition Tab ──────────────────────────────────────────────────────────
-
-function CompositionTab({
-  members,
-  loading,
-  chamberLabel,
-  countryId,
-}: {
-  members: MembersData | null;
-  loading: boolean;
-  chamberLabel: string;
-  countryId: CountryId;
-}) {
-  if (loading) {
-    return (
-      <div className="space-y-3">
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="h-10 rounded-lg bg-card/60 animate-pulse" />
-        ))}
-      </div>
-    );
-  }
-
-  if (!members) {
-    return <p className="text-center text-sm text-muted py-12">Composition data unavailable.</p>;
-  }
-
-  const compositionData: LegislatureCompositionData = {
-    members: members.members.map((mp): LegislatureMember => ({
-      id: mp.characterId,
-      characterId: mp.characterId,
-      sequentialId: mp.sequentialId ?? null,
-      characterName: mp.characterName,
-      avatarUrl: mp.avatarUrl,
-      region: mp.constituency,
-      party: mp.party,
-      partyName: mp.partyName,
-      partyColor: mp.partyColor,
-      countryId,
-      seatsHeld: mp.seatsHeld,
-      isNPP: mp.isNPP,
-      isVacant: false,
-    })),
-    composition: members.composition.map((c) => ({
-      party: c.partyId,
-      partyName: c.partyName,
-      partyColor: c.partyColor,
-      economicPosition: c.economicPosition,
-      seats: c.seats,
-      countryId,
-    })),
-    totalSeats: members.totalSeats,
-    filledSeats: members.filledSeats,
-  };
-
-  return (
-    <LegislatureCompositionSection
-      data={compositionData}
-      chamberLabel={chamberLabel}
-      showSeatsColumn={true}
-      regionLabel={getCountryConfig(countryId).regionLabel}
-      searchPlaceholder={`Search ${chamberLabel} members…`}
-      countryId={countryId}
-      parliamentChartVariant="hemicycle"
-    />
-  );
-}
-
 // ─── Bills Tab ────────────────────────────────────────────────────────────────
 
 function BillsTab({
@@ -170,13 +107,7 @@ function BillsTab({
   const [voteFilter, setVoteFilter] = useState<BillVoteFilter>("all");
 
   if (loading) {
-    return (
-      <div className="space-y-3">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-16 rounded-lg bg-card/60 animate-pulse" />
-        ))}
-      </div>
-    );
+    return <LegislatureRowsSkeleton kind="bills" />;
   }
 
   if (!bills) {
@@ -191,11 +122,7 @@ function BillsTab({
     blockedProvisions,
     proposalWarnings,
   } = bills;
-  const filtered = (() => {
-    if (voteFilter === "voted") return billList.filter((b: BillDisplay) => b.myVote != null);
-    if (voteFilter === "not_voted") return billList.filter((b: BillDisplay) => b.myVote == null);
-    return billList;
-  })();
+  const filtered = filterLegislatureBills(billList, voteFilter);
 
   return (
     <div className="space-y-4">
@@ -427,101 +354,80 @@ export function DevolvedParliamentPage({ countryId }: { countryId: CountryId }) 
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        {loading ? (
-          <div className="mb-5 h-[220px] rounded-2xl bg-card/60 animate-pulse" />
-        ) : (
-          <LegislatureHeader
-            countryId={countryId}
-            title={chamberLabel}
-            subtitle={`${seats} ${meta.memberPlural} · ${meta.electoralSystem} · ${config.name}`}
-            heroImage={`/api/images/hero/${meta.heroSlug}`}
-            heroAlt={meta.heroAlt}
-            stats={headerStats}
-          />
-        )}
-
-        {!loading && error && (
-          <div className="mb-4 flex items-center justify-between rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-            <span>Some data failed to load.</span>
-            <button
-              onClick={refetch}
-              className="ml-3 underline hover:text-warning/80 transition-colors"
-            >
-              Retry
-            </button>
+    <LegislaturePageShell
+      loading={loading}
+      error={error}
+      onRetry={refetch}
+      header={
+        <LegislatureHeader
+          countryId={countryId}
+          title={chamberLabel}
+          subtitle={`${seats} ${meta.memberPlural} · ${meta.electoralSystem} · ${config.name}`}
+          heroImage={`/api/images/hero/${meta.heroSlug}`}
+          heroAlt={meta.heroAlt}
+          stats={headerStats}
+        />
+      }
+    >
+      <LegislaturePageTabs tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab}>
+        {bills?.adminOverride && (
+          <div className="ml-auto pb-1">
+            <AdminSnapElectionButton
+              countryId={countryId}
+              onDone={() => {
+                refetch();
+                fetchGovernmentData();
+              }}
+            />
           </div>
         )}
+      </LegislaturePageTabs>
 
-        <div className="mb-5 flex items-center gap-1 border-b border-card-border/60">
-          {TABS.map(({ id, label }) => (
-            <button
-              key={id}
-              onClick={() => setActiveTab(id)}
-              className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                activeTab === id
-                  ? "border-primary text-foreground"
-                  : "border-transparent text-muted hover:text-foreground"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-          {bills?.adminOverride && (
-            <div className="ml-auto pb-1">
-              <AdminSnapElectionButton
-                countryId={countryId}
-                onDone={() => {
-                  refetch();
-                  fetchGovernmentData();
-                }}
-              />
-            </div>
-          )}
-        </div>
-
-        {activeTab === "composition" && (
-          <CompositionTab
-            members={members}
-            loading={loading}
-            chamberLabel={chamberLabel}
-            countryId={countryId}
-          />
-        )}
-        {activeTab === "bills" && (
-          <BillsTab
-            bills={bills}
-            loading={loading}
-            countryId={countryId}
-            chamberKey={chamberKey}
-            chamberLabel={chamberLabel}
-            meta={meta}
-            onProposed={refetch}
-          />
-        )}
-        {activeTab === "leadership" && (
-          <LeadershipTab
-            leaders={leaders}
-            loading={loading}
-            countryId={countryId}
-            chamberLabel={chamberLabel}
-            meta={meta}
-            governmentStatus={governmentStatus}
-            viewerIsSittingPM={viewerIsSittingPM}
-            snapElectionsAllowed={snapElectionsAllowed}
-            snapElectionsUsed={snapElectionsUsed}
-            snapElectionsRemaining={snapElectionsRemaining}
-            snapCooldownTurnsRemaining={snapCooldownTurnsRemaining}
-            onRefresh={() => {
-              refetch();
-              fetchGovernmentData();
-            }}
-          />
-        )}
-        {activeTab === "tariffs" && <TariffsTab countryId={countryId} />}
-        {activeTab === "subsidies" && <SubsidiesTab countryId={countryId} />}
-      </main>
-    </div>
+      {activeTab === "composition" && (
+        <LegislatureMembersTab
+          members={members}
+          loading={loading}
+          compositionOptions={{ includeAvatars: true }}
+          chamberLabel={chamberLabel}
+          showSeatsColumn={true}
+          regionLabel={getCountryConfig(countryId).regionLabel}
+          searchPlaceholder={`Search ${chamberLabel} members…`}
+          countryId={countryId}
+          parliamentChartVariant="hemicycle"
+        />
+      )}
+      {activeTab === "bills" && (
+        <BillsTab
+          bills={bills}
+          loading={loading}
+          countryId={countryId}
+          chamberKey={chamberKey}
+          chamberLabel={chamberLabel}
+          meta={meta}
+          onProposed={refetch}
+        />
+      )}
+      {activeTab === "leadership" && (
+        <LeadershipTab
+          leaders={leaders}
+          loading={loading}
+          countryId={countryId}
+          chamberLabel={chamberLabel}
+          meta={meta}
+          governmentStatus={governmentStatus}
+          viewerIsSittingPM={viewerIsSittingPM}
+          snapElectionsAllowed={snapElectionsAllowed}
+          snapElectionsUsed={snapElectionsUsed}
+          snapElectionsRemaining={snapElectionsRemaining}
+          snapCooldownTurnsRemaining={snapCooldownTurnsRemaining}
+          onRefresh={() => {
+            refetch();
+            fetchGovernmentData();
+          }}
+        />
+      )}
+      {activeTab === "tariffs" && <TariffsTab countryId={countryId} />}
+      {activeTab === "subsidies" && <SubsidiesTab countryId={countryId} />}
+    </LegislaturePageShell>
   );
 }

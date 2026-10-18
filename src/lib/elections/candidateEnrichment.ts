@@ -1,3 +1,4 @@
+import { clampPercentStatOr as clampPercentStat } from "@/lib/numeric/rules";
 import type {
   ElectionCandidate,
   Character,
@@ -16,11 +17,6 @@ import {
   scorePrimaryCandidate,
 } from "@/lib/primaryScore";
 import { parseSeatId } from "@/lib/seats/seatId";
-
-function clampPercentStat(value: number, fallback: number): number {
-  const safeValue = Number.isFinite(value) ? value : fallback;
-  return Math.min(100, Math.max(0, safeValue));
-}
 
 export interface EnrichedCandidate {
   id: string;

@@ -12,6 +12,7 @@
  * revenue-weighted operating states. Everything is bounded: coverage and
  * overlap live in [0, 1], efficacy in [1, 1 + AD_MAX_COVERAGE_BONUS].
  */
+import { clamp01, round4 } from "@/lib/numeric/rules";
 import { effectiveMediaOperatingModelId } from "@/lib/mediaOperatingModels/catalog";
 
 /** National reach per operating model. Provisional: worldsim re-tunes. */
@@ -36,15 +37,6 @@ export const AD_TECH_LIFT_EACH = 0.02;
 export const AD_TECH_LIFT_CAP = 0.1;
 /** Efficacy ceiling: full-overlap contracted spend is worth at most this much extra. */
 export const AD_MAX_COVERAGE_BONUS = 0.5;
-
-function clamp01(value: number): number {
-  if (!Number.isFinite(value)) return 0;
-  return Math.min(1, Math.max(0, value));
-}
-
-function round4(value: number): number {
-  return Math.round(value * 10000) / 10000;
-}
 
 function toCount(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;

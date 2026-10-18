@@ -3,6 +3,7 @@
  * Generates AI-controlled politicians based on state party organization
  */
 
+import { clamp } from "@/lib/numeric/rules";
 import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -359,13 +360,6 @@ export interface NPPGenerationContext {
  */
 function randomInRange(min: number, max: number): number {
   return Math.random() * (max - min) + min;
-}
-
-/**
- * Clamp a value between min and max
- */
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }
 
 /**

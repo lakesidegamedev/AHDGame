@@ -14,6 +14,7 @@ import { EmptyState, Skeleton } from "@/components/ui";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useToast } from "@/contexts/ToastContext";
 import { CB_TH, CentralBankFigure, CentralBankSection } from "./CentralBankSection";
+import { formatNativeFaceAmount as formatNative } from "./centralBankUtils";
 
 interface LedgerRow {
   type: string;
@@ -58,12 +59,6 @@ function formatLedgerType(t: string): string {
   if (t === "withdraw") return "Withdraw";
   if (t === "open") return "Account opened";
   return t;
-}
-
-function formatNative(amount: number, currency: CurrencyCode): string {
-  const sym = CURRENCY_SYMBOLS[currency] ?? "$";
-  if (currency === "JPY") return `${sym}${Math.round(amount).toLocaleString("en-US")}`;
-  return `${sym}${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 interface Props {

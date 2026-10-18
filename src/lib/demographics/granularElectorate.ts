@@ -124,6 +124,7 @@
  * the type doc on `Layer1TurnoutOverlay` (`src/lib/db/types/demographics.ts`).
  */
 
+import { clamp } from "@/lib/numeric/rules";
 import {
   targetedAdBonuses,
   usesCampaignAds,
@@ -780,10 +781,6 @@ export function deriveGranularElectorateUnits(
 }
 
 // ─── Archetype-keyed → unit-keyed remapping ─────────────────────────────────
-
-function clamp(v: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, v));
-}
 
 /**
  * Remap archetype-keyed values (approvals, favorability deltas) onto units.

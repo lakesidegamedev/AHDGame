@@ -41,6 +41,74 @@ vi.mock("./actionRefreshRoles", async (importOriginal) => {
   };
 });
 
+type BulkOp = {
+  updateOne: {
+    filter: Record<string, unknown>;
+    update: { $set: Record<string, unknown> } | Array<{ $set: Record<string, unknown> }>;
+  };
+};
+
+function isPipelineUpdate(
+  update: BulkOp["updateOne"]["update"]
+): update is Array<{ $set: Record<string, unknown> }> {
+  return Array.isArray(update);
+}
+
+function actionsGrantOp(ops: BulkOp[], id?: unknown): BulkOp {
+  const op = ops.find(
+    (candidate) =>
+      isPipelineUpdate(candidate.updateOne.update) &&
+      (id === undefined || candidate.updateOne.filter._id === id)
+  );
+  if (!op) throw new Error("missing actions grant pipeline op");
+  return op;
+}
+
+function fieldsSet(ops: BulkOp[], id?: unknown): Record<string, unknown> {
+  const op = ops.find(
+    (candidate) =>
+      !isPipelineUpdate(candidate.updateOne.update) &&
+      (id === undefined || candidate.updateOne.filter._id === id)
+  );
+  if (!op || isPipelineUpdate(op.updateOne.update)) throw new Error("missing fields $set op");
+  return op.updateOne.update.$set;
+}
+
+/** Evaluate the actions pipeline against a live balance (Mongo stand-in). */
+function applyActionsPipeline(op: BulkOp, liveActions: number): number {
+  if (!isPipelineUpdate(op.updateOne.update)) throw new Error("expected pipeline");
+  const actionsExpr = op.updateOne.update[0]!.$set.actions as {
+    $min: [
+      number,
+      {
+        $max: [
+          number,
+          {
+            $add: [
+              {
+                $subtract: [
+                  { $ifNull: [string, number] },
+                  {
+                    $cond: [{ $gt: [{ $ifNull: [string, number] }, number] }, number, number];
+                  },
+                ];
+              },
+              number,
+            ];
+          },
+        ];
+      },
+    ];
+  };
+  const energyCap = actionsExpr.$min[0];
+  const addExpr = actionsExpr.$min[1].$max[1];
+  const actionRefresh = addExpr.$add[1];
+  const threshold = addExpr.$add[0].$subtract[1].$cond[0].$gt[1];
+  const penaltyAmount = addExpr.$add[0].$subtract[1].$cond[1];
+  const penalty = liveActions > threshold ? penaltyAmount : 0;
+  return Math.min(energyCap, Math.max(0, liveActions - penalty + actionRefresh));
+}
+
 describe("processActionRefresh", () => {
   const mockBulkWrite = vi.fn();
   let chairRows: { chairCharacterId: unknown }[] = [];
@@ -229,24 +297,74 @@ describe("processActionRefresh", () => {
     await processActionRefresh([char], config, new Date());
 
     expect(mockBulkWrite).toHaveBeenCalledTimes(1);
-    const [ops] = mockBulkWrite.mock.calls[0];
-    expect(ops).toHaveLength(1);
-    const op = ops[0];
-    expect(op.updateOne.filter).toMatchObject({
+    const [ops] = mockBulkWrite.mock.calls[0] as [BulkOp[]];
+    expect(ops).toHaveLength(2);
+    const grantOp = actionsGrantOp(ops, "char1");
+    expect(grantOp.updateOne.filter).toEqual({ _id: "char1" });
+    expect(applyActionsPipeline(grantOp, 5)).toBe(9); // 5 + 4 base
+    const update = fieldsSet(ops, "char1");
+    expect(update.actions).toBeUndefined();
+    // politicalInfluence starts at 10, decays by 10 * 0.0075 = 0.075
+    expect(update.politicalInfluence).toBeCloseTo(9.925, 5);
+    // fields update keeps optimistic concurrency without actions
+    const fieldsOp = ops.find((op) => !isPipelineUpdate(op.updateOne.update))!;
+    expect(fieldsOp.updateOne.filter).toMatchObject({
       _id: "char1",
-      actions: 5,
       politicalInfluence: 10,
       nationalInfluence: 0,
     });
-    const update = op.updateOne.update.$set as Record<string, unknown>;
-    expect(update.actions).toBe(9); // 5 + 4 base
-    // politicalInfluence starts at 10, decays by 10 * 0.0075 = 0.075
-    expect(update.politicalInfluence).toBeCloseTo(9.925, 5);
+    expect(fieldsOp.updateOne.filter).not.toHaveProperty("actions");
     // State influence 10 earns 10/50 - 0.5 = -0.3 NI; national influence is
     // floored at 0.
     expect(update.nationalInfluence).toBe(0);
     expect(update.infamy).toBeDefined();
     expect(update.favorability).toBeDefined();
+  });
+
+  it("grants personal AP from live actions even if the snapshot balance was spent mid-turn", async () => {
+    // Refs #4457: optimistic filter on snapshotted actions let a mid-turn spend
+    // cancel the whole refresh; party bonus still landed via a live $actions pipeline.
+    const { processActionRefresh } = await import("./actionRefresh");
+    const char: Character = {
+      _id: "midTurnSpend" as never,
+      userId: "userMid" as never,
+      name: "Spender",
+      countryId: "US",
+      homeState: "CA",
+      policies: { economic: 0, social: 0 },
+      actions: 20, // snapshot balance before the mid-turn spend
+      funds: 100000,
+      favorability: 50,
+      politicalInfluence: 10,
+      nationalInfluence: 0,
+      donorBaseLevel: 0,
+      infamy: 0,
+      party: "independent",
+      currentOffice: { type: "house", state: "CA" },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as Character;
+
+    const config = {
+      _id: "default",
+      baseActionsPerTurn: 4,
+      officeActionBonus: { house: 1 },
+      chairActionBonus: 3,
+    } as unknown as GameConfig;
+
+    await processActionRefresh([char], config, new Date());
+
+    const [ops] = mockBulkWrite.mock.calls[0] as [BulkOp[]];
+    const grantOp = actionsGrantOp(ops, "midTurnSpend");
+    // Must not require the snapshotted actions value - a mid-turn spend would miss.
+    expect(grantOp.updateOne.filter).toEqual({ _id: "midTurnSpend" });
+    expect(isPipelineUpdate(grantOp.updateOne.update)).toBe(true);
+    // Grant is base 4 + house 1 = 5; applied to live post-spend balance 8 → 13.
+    expect(applyActionsPipeline(grantOp, 8)).toBe(13);
+    // Influence/stats keep optimistic concurrency and must not rewrite actions.
+    const fields = fieldsSet(ops, "midTurnSpend");
+    expect(fields.actions).toBeUndefined();
+    expect(fields.politicalInfluence).toBeCloseTo(9.925, 5);
   });
 
   it("applies hoarding penalty when actions > 100", async () => {
@@ -280,10 +398,9 @@ describe("processActionRefresh", () => {
 
     await processActionRefresh([char], config, new Date());
 
-    const [ops] = mockBulkWrite.mock.calls[0];
-    const update = ops[0].updateOne.update.$set as Record<string, unknown>;
+    const [ops] = mockBulkWrite.mock.calls[0] as [BulkOp[]];
     // 105 - 4 (penalty) + 4 (base) = 105
-    expect(update.actions).toBe(105);
+    expect(applyActionsPipeline(actionsGrantOp(ops), 105)).toBe(105);
   });
 
   it("applies the advertised infamy favorability drain above 20 infamy", async () => {
@@ -317,8 +434,8 @@ describe("processActionRefresh", () => {
 
     await processActionRefresh([char], config, new Date());
 
-    const [ops] = mockBulkWrite.mock.calls[0];
-    const update = ops[0].updateOne.update.$set as Record<string, unknown>;
+    const [ops] = mockBulkWrite.mock.calls[0] as [BulkOp[]];
+    const update = fieldsSet(ops);
     // (60 - 20) x 0.05 = 2.0 favorability drain; fav 50 is below the
     // above-threshold penalty, so the drain is the only change.
     expect(update.favorability).toBeCloseTo(48, 5);
@@ -418,10 +535,9 @@ describe("processActionRefresh", () => {
 
     await processActionRefresh([char], config, new Date());
 
-    const [ops] = mockBulkWrite.mock.calls[0];
-    const update = ops[0].updateOne.update.$set as Record<string, unknown>;
+    const [ops] = mockBulkWrite.mock.calls[0] as [BulkOp[]];
     // 10 + base 4 + sangiin 1 + chair 3 = 18
-    expect(update.actions).toBe(18);
+    expect(applyActionsPipeline(actionsGrantOp(ops), 10)).toBe(18);
   });
 
   it("grants only the chair bonus when chair holds no elected office", async () => {
@@ -458,15 +574,14 @@ describe("processActionRefresh", () => {
 
     await processActionRefresh([char], config, new Date());
 
-    const [ops] = mockBulkWrite.mock.calls[0];
-    const update = ops[0].updateOne.update.$set as Record<string, unknown>;
+    const [ops] = mockBulkWrite.mock.calls[0] as [BulkOp[]];
     // 0 + base 4 + chair 3 = 7
-    expect(update.actions).toBe(7);
+    expect(applyActionsPipeline(actionsGrantOp(ops), 0)).toBe(7);
   });
 
   it("grants the Justice NI bonus (#3598) on top of an elected-office NI bonus, stacked like the chair bonus", async () => {
     // A seated Justice is stored on supremeCourtSeats.justiceCharacterId, not
-    // character.currentOffice — mirrors the central bank chair bonus stacking
+    // character.currentOffice - mirrors the central bank chair bonus stacking
     // pattern above, not the chairRows one (different collection/field).
     const { processActionRefresh } = await import("./actionRefresh");
     const charId = "justice-char" as never;
@@ -501,13 +616,13 @@ describe("processActionRefresh", () => {
 
     await processActionRefresh([char], config, new Date());
 
-    const [ops] = mockBulkWrite.mock.calls[0];
-    const update = ops[0].updateOne.update.$set as Record<string, unknown>;
+    const [ops] = mockBulkWrite.mock.calls[0] as [BulkOp[]];
+    const update = fieldsSet(ops);
     // Senate tier 1.0, Justice tier 1.5: the higher wins (Math.max stacking,
     // same as party-chair/leader tiers). State influence 0 costs 0.5.
     expect(update.nationalInfluence).toBeCloseTo(1.0, 5);
     // The Justice AP bonus stacks on the Senate seat: 4 base + 2 seat + 2.
-    expect(update.actions).toBe(8);
+    expect(applyActionsPipeline(actionsGrantOp(ops), 0)).toBe(8);
   });
 
   it("stacks the cabinet bonus on the legislative seat for a cabinet minister", async () => {
@@ -550,10 +665,10 @@ describe("processActionRefresh", () => {
 
     await processActionRefresh([char], config, new Date());
 
-    const [ops] = mockBulkWrite.mock.calls[0];
-    const update = ops[0].updateOne.update.$set as Record<string, unknown>;
+    const [ops] = mockBulkWrite.mock.calls[0] as [BulkOp[]];
+    const update = fieldsSet(ops);
     // 0 + base 4 + bundestag seat 1 + cabinet 1 = 6
-    expect(update.actions).toBe(6);
+    expect(applyActionsPipeline(actionsGrantOp(ops), 0)).toBe(6);
   });
 
   it("grants an acting cabinet member the acting NI tier without currentOffice", async () => {
@@ -587,10 +702,7 @@ describe("processActionRefresh", () => {
 
     await processActionRefresh([character], null, new Date());
 
-    const update = mockBulkWrite.mock.calls[0][0][0].updateOne.update.$set as Record<
-      string,
-      number
-    >;
+    const update = fieldsSet(mockBulkWrite.mock.calls[0][0] as BulkOp[]);
     // Acting tier 0.75; state influence 25 adds nothing.
     expect(update.nationalInfluence).toBeCloseTo(0.75, 5);
   });
@@ -623,13 +735,11 @@ describe("processActionRefresh", () => {
 
     await processActionRefresh([character], null, new Date());
 
-    const update = mockBulkWrite.mock.calls[0][0][0].updateOne.update.$set as Record<
-      string,
-      number
-    >;
+    const ops = mockBulkWrite.mock.calls[0][0] as BulkOp[];
+    const update = fieldsSet(ops);
     expect(update.nationalInfluence).toBeCloseTo(2, 5);
     // Presiding officer AP: 4 base + 1 House seat + 3 Speaker.
-    expect(update.actions).toBe(8);
+    expect(applyActionsPipeline(actionsGrantOp(ops), 0)).toBe(8);
   });
 
   it("caps actions at 200", async () => {
@@ -663,10 +773,10 @@ describe("processActionRefresh", () => {
 
     await processActionRefresh([char], config, new Date());
 
-    const [ops] = mockBulkWrite.mock.calls[0];
-    const update = ops[0].updateOne.update.$set as Record<string, unknown>;
-    expect(update.actions).toBeLessThanOrEqual(200);
-    expect(update.actions).toBe(200); // capped
+    const [ops] = mockBulkWrite.mock.calls[0] as [BulkOp[]];
+    const granted = applyActionsPipeline(actionsGrantOp(ops), 201);
+    expect(granted).toBeLessThanOrEqual(200);
+    expect(granted).toBe(200); // capped
   });
 
   it("clamps over-cap player influence and favorability back to 100", async () => {
@@ -700,8 +810,8 @@ describe("processActionRefresh", () => {
 
     await processActionRefresh([char], config, new Date());
 
-    const [ops] = mockBulkWrite.mock.calls[0];
-    const update = ops[0].updateOne.update.$set as Record<string, unknown>;
+    const [ops] = mockBulkWrite.mock.calls[0] as [BulkOp[]];
+    const update = fieldsSet(ops);
     expect(update.politicalInfluence).toBe(100);
     expect(update.favorability).toBe(100);
   });
@@ -748,10 +858,7 @@ describe("processActionRefresh", () => {
     await processActionRefresh([player], config, new Date());
 
     // Player still decays below 10 (floor 0).
-    const playerUpdate = mockBulkWrite.mock.calls[0][0][0].updateOne.update.$set as Record<
-      string,
-      unknown
-    >;
+    const playerUpdate = fieldsSet(mockBulkWrite.mock.calls[0][0] as BulkOp[]);
     expect(playerUpdate.politicalInfluence).toBeCloseTo(9.925, 5);
 
     // NPP ops go through the dedicated npp bulkWrite.
@@ -937,20 +1044,13 @@ describe("processActionRefresh", () => {
 
     await processActionRefresh([deputy, rep], config, new Date());
 
-    const [ops] = mockBulkWrite.mock.calls[0];
-    const byId = Object.fromEntries(
-      (
-        ops as {
-          updateOne: { filter: { _id: string }; update: { $set: Record<string, number> } };
-        }[]
-      ).map((op) => [op.updateOne.filter._id, op.updateOne.update.$set])
-    );
-    // 5 + 4 base + 1 seat bonus — identical to the US representative.
-    expect(byId.ddDeputy.actions).toBe(10);
-    expect(byId.usRep.actions).toBe(10);
+    const [ops] = mockBulkWrite.mock.calls[0] as [BulkOp[]];
+    // 5 + 4 base + 1 seat bonus - identical to the US representative.
+    expect(applyActionsPipeline(actionsGrantOp(ops, "ddDeputy"), 5)).toBe(10);
+    expect(applyActionsPipeline(actionsGrantOp(ops, "usRep"), 5)).toBe(10);
     // Rank-and-file legislator NI tier, also identical.
-    expect(byId.ddDeputy.nationalInfluence).toBeCloseTo(1.0, 5);
-    expect(byId.usRep.nationalInfluence).toBeCloseTo(1.0, 5);
+    expect(fieldsSet(ops, "ddDeputy").nationalInfluence).toBeCloseTo(1.0, 5);
+    expect(fieldsSet(ops, "usRep").nationalInfluence).toBeCloseTo(1.0, 5);
   });
 
   describe("actions and national influence rework", () => {
@@ -975,10 +1075,18 @@ describe("processActionRefresh", () => {
         updatedAt: new Date(),
         ...overrides,
       }) as Character;
-    const refreshOne = async (character: Character, config: GameConfig | null = null) => {
+    const refreshOne = async (
+      character: Character,
+      config: GameConfig | null = null
+    ): Promise<Record<string, unknown> & { actions: number }> => {
       const { processActionRefresh } = await import("./actionRefresh");
       await processActionRefresh([character], config, new Date());
-      return mockBulkWrite.mock.calls[0][0][0].updateOne.update.$set as Record<string, unknown>;
+      const ops = mockBulkWrite.mock.calls[0][0] as BulkOp[];
+      const fields = fieldsSet(ops);
+      return {
+        ...fields,
+        actions: applyActionsPipeline(actionsGrantOp(ops), character.actions ?? 0),
+      };
     };
 
     it("decays national influence 1% before adding the turn's gain", async () => {
@@ -1092,14 +1200,15 @@ describe("processActionRefresh", () => {
         new Date()
       );
       const ops = mockBulkWrite.mock.calls.find((call) =>
-        (call[0] as { updateOne: { filter: { _id: string } } }[]).some(
-          (op) => op.updateOne.filter._id === "member"
-        )
-      )![0] as {
-        updateOne: { filter: { _id: string }; update: { $set: Record<string, number> } };
-      }[];
+        (call[0] as BulkOp[]).some((op) => op.updateOne.filter._id === "member")
+      )![0] as BulkOp[];
       const byId = Object.fromEntries(
-        ops.map((op) => [op.updateOne.filter._id, op.updateOne.update.$set])
+        ops
+          .filter((op) => !isPipelineUpdate(op.updateOne.update))
+          .map((op) => [
+            op.updateOne.filter._id,
+            (op.updateOne.update as { $set: Record<string, number> }).$set,
+          ])
       );
       // 20% approval: 1.8x of the 0.75% decay.
       expect(byId.member.politicalInfluence).toBeCloseTo(40 - 40 * 0.0075 * 1.8, 5);

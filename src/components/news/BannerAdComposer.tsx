@@ -3,6 +3,7 @@
 import { InlineError } from "@/components/ui/InlineError";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useEffect, useRef, useState } from "react";
+import { formatCurrencyCodeAmount as fmt } from "@/lib/currency/formatCurrencyCodeAmount";
 
 interface CostInfo {
   cost: number;
@@ -11,10 +12,6 @@ interface CostInfo {
   affordable: boolean;
   canSubmit: boolean;
   turnsUntilEligible: number | null;
-}
-
-function fmt(n: number, code: string) {
-  return `${n.toLocaleString("en-US")} ${code}`;
 }
 
 function turnLabel(turns: number): string {

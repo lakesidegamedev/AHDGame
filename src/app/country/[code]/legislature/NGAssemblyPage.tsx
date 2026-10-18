@@ -1,104 +1,34 @@
 "use client";
 
+import {
+  LegislatureRowsSkeleton,
+  LegislaturePageShell,
+  LegislaturePageTabs,
+} from "./components/shared/LegislaturePageShell";
+
+import {
+  LEGISLATURE_STATUS_FILTERS,
+  filterLegislatureBills,
+} from "./components/shared/legislaturePresentation";
+
 import { useState } from "react";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import { LegislatureCompositionSection } from "@/components/legislature/LegislatureCompositionSection";
-import type { LegislatureCompositionData, LegislatureMember } from "@/components/legislature/types";
-import type { BillDisplay } from "@/lib/legislature/dto/billDisplay";
+import { LegislatureMembersTab } from "./components/shared/LegislatureMembersTab";
 import { BillsList } from "@/components/bills/BillsList";
 import { BillListControls, type BillVoteFilter } from "@/components/bills/BillListControls";
 import { ProposeLegislationModal } from "./ProposeLegislationModal";
-import {
-  matchesLegislatureBillStatusFilter,
-  type LegislatureBillStatusFilter,
-} from "@/lib/legislature/billStatusFilters";
+import type { LegislatureBillStatusFilter } from "@/lib/legislature/billStatusFilters";
 import LegislatureHeader from "./components/shared/LegislatureHeader";
 import { NgChamberLeadershipPanel } from "./NgChamberLeadershipPanel";
-import {
-  useLegislatureData,
-  type MembersData,
-  type BillsData,
-} from "./components/shared/useLegislatureData";
+import { useLegislatureData, type BillsData } from "./components/shared/useLegislatureData";
 
 const NATIONAL_ASSEMBLY_HERO = {
   image: "/api/images/hero/national-assembly",
   alt: "The National Assembly Complex, Abuja",
 };
 
-const LEGISLATURE_STATUS_FILTERS = [
-  { value: "all", label: "All" },
-  { value: "voting", label: "Voting" },
-  { value: "passed", label: "Passed" },
-  { value: "failed", label: "Failed" },
-] satisfies Array<{ value: LegislatureBillStatusFilter; label: string }>;
-
 type ChamberKey = "house" | "senate";
 type PageTab = "composition" | "bills" | "leadership";
-
-// ─── Composition Tab ──────────────────────────────────────────────────────────
-
-function CompositionTab({
-  members,
-  loading,
-  chamberLabel,
-  countryId,
-}: {
-  members: MembersData | null;
-  loading: boolean;
-  chamberLabel: string;
-  countryId: CountryId;
-}) {
-  if (loading) {
-    return (
-      <div className="space-y-3">
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="h-10 rounded-lg bg-card/60 animate-pulse" />
-        ))}
-      </div>
-    );
-  }
-  if (!members) {
-    return <p className="text-center text-sm text-muted py-12">Composition data unavailable.</p>;
-  }
-
-  const data: LegislatureCompositionData = {
-    members: members.members.map((m): LegislatureMember => ({
-      id: m.characterId || `npp-${m.party}-${m.constituency}`,
-      characterId: m.characterId,
-      sequentialId: m.sequentialId ?? null,
-      characterName: m.characterName,
-      region: m.constituency,
-      party: m.party,
-      partyName: m.partyName,
-      partyColor: m.partyColor,
-      countryId,
-      seatsHeld: m.seatsHeld,
-      isNPP: m.isNPP,
-      isVacant: false,
-    })),
-    composition: members.composition.map((c) => ({
-      party: c.partyId,
-      partyName: c.partyName,
-      partyColor: c.partyColor,
-      economicPosition: c.economicPosition,
-      seats: c.seats,
-      countryId,
-    })),
-    totalSeats: members.totalSeats,
-    filledSeats: members.filledSeats,
-  };
-
-  return (
-    <LegislatureCompositionSection
-      data={data}
-      chamberLabel={chamberLabel}
-      showSeatsColumn={true}
-      regionLabel="Zone"
-      searchPlaceholder="Search parties…"
-      countryId={countryId}
-    />
-  );
-}
 
 // ─── Bills Tab ────────────────────────────────────────────────────────────────
 
@@ -122,13 +52,7 @@ function BillsTab({
   const [statusFilter, setStatusFilter] = useState<LegislatureBillStatusFilter>("all");
 
   if (loading) {
-    return (
-      <div className="space-y-3">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-16 rounded-lg bg-card/60 animate-pulse" />
-        ))}
-      </div>
-    );
+    return <LegislatureRowsSkeleton kind="bills" />;
   }
   if (!bills) {
     return <p className="text-center text-sm text-muted py-12">Bills data unavailable.</p>;
@@ -142,12 +66,7 @@ function BillsTab({
     blockedProvisions,
     proposalWarnings,
   } = bills;
-  const filtered = billList.filter((bill: BillDisplay) => {
-    if (!matchesLegislatureBillStatusFilter(bill.status, statusFilter)) return false;
-    if (voteFilter === "voted") return bill.myVote != null;
-    if (voteFilter === "not_voted") return bill.myVote == null;
-    return true;
-  });
+  const filtered = filterLegislatureBills(billList, voteFilter, statusFilter);
 
   return (
     <div className="space-y-4">
@@ -252,80 +171,63 @@ export function NGAssemblyPage({ countryId }: { countryId: CountryId }) {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        {loading ? (
-          <div className="mb-5 h-[220px] rounded-2xl bg-card/60 animate-pulse" />
-        ) : (
-          <LegislatureHeader
-            countryId={countryId}
-            title={config.legislature.name}
-            subtitle={`${chamberConfig.seats.toLocaleString("en-US")} seats · ${chamberConfig.description}`}
-            heroImage={NATIONAL_ASSEMBLY_HERO.image}
-            heroAlt={NATIONAL_ASSEMBLY_HERO.alt}
-            stats={headerStats}
-            chamberSwitcher={{
-              active: activeChamber,
-              onSwitch: (chamber) => {
-                setActiveChamber(chamber as ChamberKey);
-                setActiveTab("composition");
-              },
-              options: [
-                { key: "house", label: lower.shortName },
-                { key: "senate", label: upper.shortName },
-              ],
-            }}
-          />
-        )}
+    <LegislaturePageShell
+      loading={loading}
+      error={error}
+      onRetry={refetch}
+      header={
+        <LegislatureHeader
+          countryId={countryId}
+          title={config.legislature.name}
+          subtitle={`${chamberConfig.seats.toLocaleString("en-US")} seats · ${chamberConfig.description}`}
+          heroImage={NATIONAL_ASSEMBLY_HERO.image}
+          heroAlt={NATIONAL_ASSEMBLY_HERO.alt}
+          stats={headerStats}
+          chamberSwitcher={{
+            active: activeChamber,
+            onSwitch: (chamber) => {
+              setActiveChamber(chamber as ChamberKey);
+              setActiveTab("composition");
+            },
+            options: [
+              { key: "house", label: lower.shortName },
+              { key: "senate", label: upper.shortName },
+            ],
+          }}
+        />
+      }
+    >
+      <LegislaturePageTabs
+        tabs={TABS}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      ></LegislaturePageTabs>
 
-        {!loading && error && (
-          <div className="mb-4 flex items-center justify-between rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-            <span>Some data failed to load.</span>
-            <button
-              onClick={refetch}
-              className="ml-3 underline hover:text-warning/80 transition-colors"
-            >
-              Retry
-            </button>
-          </div>
-        )}
-
-        <div className="mb-5 flex items-center gap-1 border-b border-card-border/60">
-          {TABS.map(({ id, label }) => (
-            <button
-              key={id}
-              onClick={() => setActiveTab(id)}
-              className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                activeTab === id
-                  ? "border-primary text-foreground"
-                  : "border-transparent text-muted hover:text-foreground"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {activeTab === "composition" && (
-          <CompositionTab
-            members={members}
-            loading={loading}
-            chamberLabel={chamberConfig.name}
-            countryId={countryId}
-          />
-        )}
-        {activeTab === "bills" && (
-          <BillsTab
-            bills={bills}
-            loading={loading}
-            countryId={countryId}
-            activeChamber={activeChamber}
-            chamberShortName={chamberConfig.shortName}
-            onProposed={refetch}
-          />
-        )}
-        {activeTab === "leadership" && <LeadershipTab countryId={countryId} />}
-      </main>
-    </div>
+      {activeTab === "composition" && (
+        <LegislatureMembersTab
+          members={members}
+          loading={loading}
+          compositionOptions={{
+            memberId: (m) => m.characterId || `npp-${m.party}-${m.constituency}`,
+          }}
+          chamberLabel={chamberConfig.name}
+          showSeatsColumn={true}
+          regionLabel="Zone"
+          searchPlaceholder="Search parties…"
+          countryId={countryId}
+        />
+      )}
+      {activeTab === "bills" && (
+        <BillsTab
+          bills={bills}
+          loading={loading}
+          countryId={countryId}
+          activeChamber={activeChamber}
+          chamberShortName={chamberConfig.shortName}
+          onProposed={refetch}
+        />
+      )}
+      {activeTab === "leadership" && <LeadershipTab countryId={countryId} />}
+    </LegislaturePageShell>
   );
 }

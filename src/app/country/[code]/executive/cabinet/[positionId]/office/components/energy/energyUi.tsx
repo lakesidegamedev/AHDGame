@@ -3,6 +3,8 @@
 import type { ReactNode } from "react";
 import type { EnergySource } from "@/lib/db/types/energyPlant";
 
+export { fmtMoneyM, fmtMoneyAbs } from "../formatMoney";
+
 // Inline-SVG glyphs keyed to the energy source icon keys (matches the estatesUi /
 // militaryUi inline-icon pattern; no external icon dependency).
 const ICON_PATHS: Record<string, string> = {
@@ -22,25 +24,6 @@ export const SOURCE_COLOR: Record<EnergySource, string> = {
   wind: "#4ade80",
   solar: "#fbbf24",
 };
-
-/** Format a millions-denominated figure (upkeep) into a currency string. */
-export function fmtMoneyM(sym: string, millions: number): string {
-  const v = millions * 1e6;
-  const abs = Math.abs(v);
-  if (abs >= 1e12) return `${sym}${(v / 1e12).toFixed(2)}T`;
-  if (abs >= 1e9) return `${sym}${(v / 1e9).toFixed(1)}B`;
-  if (abs >= 1e6) return `${sym}${(v / 1e6).toFixed(0)}M`;
-  return `${sym}${Math.round(v).toLocaleString("en-US")}`;
-}
-
-/** Format an absolute-currency figure (the energy envelope) into a string. */
-export function fmtMoneyAbs(sym: string, v: number): string {
-  const abs = Math.abs(v);
-  if (abs >= 1e12) return `${sym}${(v / 1e12).toFixed(2)}T`;
-  if (abs >= 1e9) return `${sym}${(v / 1e9).toFixed(1)}B`;
-  if (abs >= 1e6) return `${sym}${(v / 1e6).toFixed(0)}M`;
-  return `${sym}${Math.round(v).toLocaleString("en-US")}`;
-}
 
 /** Format a megawatt capacity into a GW/MW string. */
 export function fmtCapacity(mw: number): string {
