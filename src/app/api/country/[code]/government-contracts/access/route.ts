@@ -3,6 +3,11 @@ import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { ObjectId } from "mongodb";
 import { getAuthUserWithCharacter } from "@/lib/auth";
 import { lotPrice } from "@/lib/military/arsenal";
+import { loadDefencePriceRatios } from "@/lib/military/defencePriceRatios";
+import {
+  defenceLiveLotFloor,
+  suggestedDefenceMaximumPricePerLot,
+} from "@/lib/governmentContracts/defenceLiveFloor";
 import { militaryPriceAnchor } from "@/lib/military/procurement";
 import type { Corporation, CorporateSector, FederalBudget } from "@/lib/db/types";
 import { contractContext, contractRouteError, privateJson } from "@/lib/governmentContracts/api";
@@ -91,6 +96,35 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
     const defenceAnchorPrice = budget
       ? lotPrice(countryId, militaryPriceAnchor(budget.gdp, budget.militaryPriceBaselineGdp))
       : null;
+    const defencePriceRatios =
+      defence && defenceAnchorPrice != null ? await loadDefencePriceRatios(db) : null;
+    const defenceComponents = ["ground", "naval", "air", "rocket", "space", "marine"] as const;
+    const defenceSuggestedMaximumByGrade =
+      defence && defenceAnchorPrice != null && defencePriceRatios
+        ? Object.fromEntries(
+            ([0, 1, 2, 3] as const).map((grade) => {
+              let liveFloor: number | null = null;
+              for (const component of defenceComponents) {
+                const floor = defenceLiveLotFloor({
+                  component,
+                  grade,
+                  anchor: defenceAnchorPrice,
+                  ratios: defencePriceRatios,
+                });
+                if (floor != null)
+                  liveFloor = liveFloor == null ? floor : Math.max(liveFloor, floor);
+              }
+              return [
+                grade,
+                suggestedDefenceMaximumPricePerLot({
+                  anchor: defenceAnchorPrice,
+                  grade,
+                  liveFloor,
+                }),
+              ];
+            })
+          )
+        : null;
     const corps = user
       ? await db
           .collection<Corporation>("corporations")
@@ -122,6 +156,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       currencyQuote: currency.government,
       defence,
       defenceAnchorPrice,
+      defenceSuggestedMaximumByGrade,
       maximumGrade: maxTechTierForPreset(game?.preset ?? DEFAULT_SEED_PRESET),
       uncommittedAppropriation: budget
         ? Math.max(
