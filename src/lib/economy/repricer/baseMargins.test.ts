@@ -47,3 +47,21 @@ describe("base-price margins (market recovery phase 1)", () => {
     expect(cheaper.bareMarginPct - base.bareMarginPct).toBeCloseTo(base.labourPct - 20, 5);
   });
 });
+
+describe("bench matches the game's own starter-plant scenario", () => {
+  it("reproduces openingPlantScenario's margin for every standard strategy", async () => {
+    const { openingPlantScenario } =
+      await import("@/lib/corporations/investment/rules/openingBalance");
+    const { SECTOR_TYPE_MATCH_BONUS } = await import("@/lib/corporations/specialization/rules");
+    const { HOME_STATE_MARGIN_BONUS } = await import("@/lib/constants/corporations");
+    const { OPERATING_SECTOR_TYPES } = await import("@/lib/constants/corporations");
+    for (const type of OPERATING_SECTOR_TYPES) {
+      const opening = openingPlantScenario(type as never, 0.05);
+      const bench = baseMarginRow(type, opening.strategy)!;
+      // openingPlantScenario carves labour out of 80% of revenue and credits the
+      // own-type and home-state bonuses; the bench bills the full share.
+      const expected = bench.bareMarginPct + SECTOR_TYPE_MATCH_BONUS + HOME_STATE_MARGIN_BONUS;
+      if (bench.labourPct <= 80) expect(opening.marginPercent, type).toBeCloseTo(expected, 6);
+    }
+  });
+});

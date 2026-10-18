@@ -20,10 +20,11 @@ import {
   COMMODITY_TYPES,
   type CommodityType,
 } from "@/lib/constants/commodities";
-import { getSectorLaborShare, computeSectorLaborCost } from "@/lib/labour/laborCost";
+import { computeSectorLaborCost } from "@/lib/labour/laborCost";
 import { computeInputsCost, assemblePhysicalPnl } from "@/lib/corporations/physicalPnl";
 import { computePlantOverhead } from "@/lib/corporations/plantCosts/rules";
-import { priceRealizationFactor } from "@/lib/market/priceRealization";
+import { computePriceRealization } from "@/lib/market/priceRealization";
+import { plantLaborShare } from "@/lib/corporations/plantCosts/rules";
 import { SECTOR_TYPE_MATCH_BONUS } from "@/lib/corporations/specialization/rules";
 import { stagedLaborShare } from "@/lib/market/marketRecoveryStages";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
@@ -72,8 +73,12 @@ export function baseMarginRow(
   if (!strategy) return null;
   const dailyRevenue = revenuePerCapacityUnitForStrategy(sectorType, strategy.id, 1);
   if (!(dailyRevenue > 0)) return null;
-  const outputRatio = outputPriceRatio(strategy.supply ?? {}, scenario.priceRatios);
-  const hourlyRevenue = (dailyRevenue / TURNS_PER_DAY) * priceRealizationFactor(outputRatio);
+  const priceRatios = new Map(
+    COMMODITY_TYPES.map((c) => [c, scenario.priceRatios?.[c] ?? 1] as [CommodityType, number])
+  );
+  // The turn's own curve: per commodity, weighted by supply rate.
+  const hourlyRevenue =
+    (dailyRevenue / TURNS_PER_DAY) * computePriceRealization(strategy.supply ?? {}, priceRatios);
   const scale = scenario.inputRateScale?.[sectorType] ?? 1;
   const recipe = scenario.recipes?.[`${sectorType}/${strategy.id}`] ?? strategy.demand ?? {};
   const rates = Object.fromEntries(
@@ -83,15 +88,16 @@ export function baseMarginRow(
     nominalDailyRevenue: dailyRevenue,
     rates,
     basePrices: COMMODITY_BASE_PRICES,
-    priceRatios: new Map(
-      COMMODITY_TYPES.map((c) => [c, scenario.priceRatios?.[c] ?? 1] as [CommodityType, number])
-    ),
+    priceRatios,
     utilization: 1,
     inputMultiplier: 1,
     turnsPerDay: TURNS_PER_DAY,
     mothballed: false,
   });
-  const share0 = scenario.laborShare?.[sectorType] ?? getSectorLaborShare(sectorType, year);
+  // Explicit plants price payroll for their production method (hardware differs).
+  const share0 =
+    scenario.laborShare?.[sectorType] ??
+    plantLaborShare({ sectorType, strategyId: strategy.id, currentTurn: 0, year });
   const share = stagedLaborShare(sectorType, share0, scenario.marketRecoveryStage ?? 0);
   // No maintenance clamp: the bench reports the share the turn would bill.
   const labour = computeSectorLaborCost({
@@ -132,21 +138,6 @@ export function baseMarginRow(
     ownTypeMarginPct: margin(SECTOR_TYPE_MATCH_BONUS),
     offTypeMarginPct: margin(OFF_TYPE_PP),
   };
-}
-
-/** Revenue-weighted price ratio of a strategy's outputs (at base value weights). */
-function outputPriceRatio(
-  supply: Partial<Record<string, number>>,
-  ratios: BaseMarginScenario["priceRatios"]
-): number {
-  let value = 0;
-  let weighted = 0;
-  for (const [c, rate] of Object.entries(supply)) {
-    const v = (rate ?? 0) * (COMMODITY_BASE_PRICES[c as CommodityType] ?? 0);
-    value += v;
-    weighted += v * (ratios?.[c as CommodityType] ?? 1);
-  }
-  return value > 0 ? weighted / value : 1;
 }
 
 export function baseMarginTable(scenario: BaseMarginScenario = {}): BaseMarginRow[] {
