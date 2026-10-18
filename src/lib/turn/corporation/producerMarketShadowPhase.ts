@@ -58,6 +58,7 @@ export async function runProducerMarketShadowPhase(
   try {
     const started = Date.now();
     const legacyBySectorId = legacyPnlBySectorId(input.sectorOps);
+    const env = isolatedShadowEnv(input.env);
     const { lookups } = input;
     const base = eraScaledBasePrices(lookups.eraUnitScale);
     const refPrice = (commodity: CommodityType, stateId: string): number | null => {
@@ -84,7 +85,7 @@ export async function runProducerMarketShadowPhase(
         try {
           const { prepared, walletScopes } = prepareProducerPhysicalSector({
             worldEpoch: input.worldEpoch,
-            env: input.env,
+            env,
             corporation: corp,
             sector,
             inputPriceHeadroom: PRICE_HEADROOM,
@@ -285,4 +286,21 @@ export function legacyPnlBySectorId(
       out.set(id, { revenue: pnl.revenue!, profit: pnl.profit! });
   }
   return out;
+}
+
+/**
+ * Plant preparation records labour demand, wage and automation indexes and
+ * strike events into the environment it is given. The live turn persists those
+ * collectors later, so the shadow must never write into them: it works on deep
+ * copies and starts with no pending strikes.
+ */
+export function isolatedShadowEnv(env: ProducerPhysicalEnv): ProducerPhysicalEnv {
+  return {
+    ...env,
+    labourDemandByState: structuredClone(env.labourDemandByState),
+    labourDemandWageIndexByState: structuredClone(env.labourDemandWageIndexByState),
+    wageIndexByState: structuredClone(env.wageIndexByState),
+    automationIndexByState: structuredClone(env.automationIndexByState),
+    pendingStrikeEvents: [],
+  };
 }
