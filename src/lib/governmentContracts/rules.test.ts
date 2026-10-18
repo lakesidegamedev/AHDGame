@@ -94,6 +94,49 @@ describe("government tender rules", () => {
     expect(defenceBidError({ ...input, floor: NaN })).toContain("finite");
     expect(defenceBidError({ ...input, supplierGrade: Infinity })).toContain("finite");
   });
+  it("explains when the plant price band sits entirely above the tender maximum", () => {
+    const input = {
+      supplierGrade: 3,
+      eraGrade: 3,
+      requiredGrade: 1,
+      amount: 159148349783,
+      maximum: 156204704567,
+      floor: 159148349783,
+      ceiling: 159148349783,
+      supplierRemainingLots: 10,
+      lots: 1,
+    };
+    expect(defenceBidError(input)).toBe(
+      "Current plant costs sit above this tender's maximum, so no bid amount can fit both the price band and the listed maximum."
+    );
+    expect(
+      defenceBidError({
+        ...input,
+        amount: 100,
+        maximum: 200,
+        floor: 50,
+        ceiling: 200,
+      })
+    ).toBeNull();
+    expect(
+      defenceBidError({
+        ...input,
+        amount: 250,
+        maximum: 200,
+        floor: 50,
+        ceiling: 300,
+      })
+    ).toContain("maximum");
+    expect(
+      defenceBidError({
+        ...input,
+        amount: 250,
+        maximum: 200,
+        floor: 50,
+        ceiling: 300,
+      })
+    ).not.toContain("plant costs sit above");
+  });
   it("fixes pagination at ten and rejects invalid/unsafe page inputs", () => {
     expect(CONTRACTS_PAGE_SIZE).toBe(10);
     for (const raw of [null, "0", "-1", "1.5", "NaN", "Infinity", "100001"])
