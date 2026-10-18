@@ -13,6 +13,7 @@ vi.mock("@/lib/api/rateLimit", () => ({
   rateLimitResponse: vi.fn(),
 }));
 vi.mock("@/lib/currency/featureFlag", () => ({ isForexEnabled: vi.fn().mockResolvedValue(false) }));
+vi.mock("@/lib/currency/autoConvert", () => ({ autoConvertForPurchase: vi.fn() }));
 vi.mock("@/lib/api/corporations/resolveQuery", () => ({ resolveCorporation: vi.fn() }));
 vi.mock("@/lib/db/characterLookup", () => ({ getCharacterByUserId: vi.fn() }));
 vi.mock("@/lib/corporations/commands/privatization/openVoteGuard", () => ({
