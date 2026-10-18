@@ -1,8 +1,12 @@
 import { STRATEGY_TRANSITION_TURNS } from "@/lib/constants/sectorStrategyTypes";
 import { eraLaborMultiplier, getSectorLaborShare } from "@/lib/labour/laborCost";
 
-/** Hardware retains the technology payroll intensity from before the service-payroll increase. */
-export const HARDWARE_LABOR_INTENSITY = 0.3;
+/**
+ * Hardware's own payroll intensity. 0.2625 is the 0.3 it had before, times the
+ * stage 1 relief live worlds already billed (0.875), so retiring that relief in
+ * the phase 1 recalibration does not raise hardware payroll.
+ */
+export const HARDWARE_LABOR_INTENSITY = 0.2625;
 
 /** Explicit plants price payroll for their production method, including a retool in progress. */
 export function plantLaborShare(args: {

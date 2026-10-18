@@ -10,15 +10,16 @@ const demandRate = (sector: keyof typeof SECTOR_STRATEGIES, strategy: string) =>
 describe("input-heavy strategy fairness", () => {
   it.each([
     ["manufacturing", "standard", 0.615],
-    ["manufacturing", "heavy_metals", 0.7],
-    ["healthcare", "biotech", 0.73],
+    ["manufacturing", "heavy_metals", 0.614],
+    ["healthcare", "biotech", 0.547],
     ["manufacturing_vehicles", "standard", 0.635],
-    ["manufacturing_vehicles", "ev", 0.74],
-    ["manufacturing_vehicles", "heavy_machinery", 0.74],
-    ["defense", "heavy_armor", 0.68],
+    ["manufacturing_vehicles", "ev", 0.634],
+    ["manufacturing_vehicles", "heavy_machinery", 0.635],
+    ["defense", "heavy_armor", 0.525],
     ["construction", "standard", 0.5],
-    ["construction", "infrastructure", 0.7],
+    ["construction", "infrastructure", 0.526],
     ["retail", "standard", 0.58],
+    // Phase 1 recalibration (2026-10-18) trimmed the variants to reach the 15-25% base band.
   ] as const)("keeps %s/%s input rates at the audited ceiling", (sector, strategy, expected) => {
     expect(demandRate(sector, strategy)).toBeCloseTo(expected, 10);
   });
