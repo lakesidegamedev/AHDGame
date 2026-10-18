@@ -1071,6 +1071,7 @@ export async function buildCorporationLookups(
   // baseline, and partitioning it would only re-derive the same world market
   // with extra moving parts. See market/tradePartition.ts for book semantics.
   let countryClearingBooks: ReturnType<typeof buildCountryClearingBooks> | null = null;
+  let tradeRoutes: CorporationLookups["tradeRoutes"] = null;
   if (eraUnitScale !== 1) {
     const blocsByCountry = new Map<string, Set<string>>();
     for (const m of orgMembershipDocs) {
@@ -1103,6 +1104,7 @@ export async function buildCorporationLookups(
       embargoes: activeEmbargoDocs,
       curtainedCountries,
     });
+    tradeRoutes = { affinityFor, importCostMultiplierFor };
     countryClearingBooks = buildCountryClearingBooks({
       countries,
       nationalBalances: nationalCommodityBalancesByCountry,
@@ -1595,6 +1597,7 @@ export async function buildCorporationLookups(
     freightHaulRevenueByOriginState,
     nationalCommodityBalancesByCountry,
     countryClearingBooks,
+    tradeRoutes,
     unmetForeignDemandByCountry,
     exportIntensityByCountry,
     rawStateBalances,

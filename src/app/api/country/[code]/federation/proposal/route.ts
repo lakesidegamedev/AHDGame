@@ -182,6 +182,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       assetSharesBps: parsed.data.assetSharesBps,
       debtSharesBps: parsed.data.debtSharesBps,
       revision: parsed.data.revision,
+      sponsorParty: typeof official?.party === "string" ? official.party : undefined,
     });
     return NextResponse.json(
       { billId: proposal.billId.toString(), status: proposal.status },

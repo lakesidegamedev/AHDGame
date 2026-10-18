@@ -2,9 +2,12 @@
  * NPC Russian governments can introduce separate constitutional bills after their
  * decision dates. processRussianConstitutionalNpcProposals leaves player-held
  * government or parliamentary choices to players and never retries rejected bills.
+ * Each bill carries the premier's party, so deputies vote on a party line instead
+ * of abstaining on a bill with no provisions.
  */
 import type { Db } from "mongodb";
 import type { ElectedOfficial } from "@/lib/db/types/officials";
+import type { NPP } from "@/lib/db/types";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
 import { loadRuntimeCountryOffices } from "@/lib/countries/runtimeOffices";
 import {
@@ -41,6 +44,11 @@ export async function processRussianConstitutionalNpcProposals(
     { projection: { status: 1, pmCharacterId: 1, pmNppId: 1 } }
   );
   if (government?.status !== "formed" || government.pmCharacterId || !government.pmNppId) return 0;
+  const leader = await db
+    .collection<NPP>("npps")
+    .findOne({ _id: government.pmNppId }, { projection: { party: 1 } });
+  const sponsorParty = typeof leader?.party === "string" ? leader.party : undefined;
+  if (!sponsorParty) return 0;
   const offices = await loadRuntimeCountryOffices(db, "RU", "1991-default");
   const officials = await db
     .collection<ElectedOfficial>("electedOfficials")
@@ -64,9 +72,10 @@ export async function processRussianConstitutionalNpcProposals(
         now,
         mode: decision.kind,
         sponsor: null,
+        sponsorParty,
       });
     else if (decision.kind === "law1995")
-      await openRussianDuma1995Proposal({ db, game, turn, now, sponsor: null });
+      await openRussianDuma1995Proposal({ db, game, turn, now, sponsor: null, sponsorParty });
     else
       await openRussianConstitutionalProposal({
         db,
@@ -75,6 +84,7 @@ export async function processRussianConstitutionalNpcProposals(
         now,
         kind: decision.kind,
         sponsor: null,
+        sponsorParty,
       });
     opened += 1;
   }

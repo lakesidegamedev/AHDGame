@@ -1,4 +1,8 @@
 import { effectiveInterventionPolicy } from "@/lib/currency/intervention/rules";
+import {
+  reserveDefenceSettlement,
+  publishDefenceSettlement,
+} from "@/lib/currency/intervention/settlement";
 import { linkedEuroRates } from "@/lib/currency/euro/rules";
 import { getPresetMonetaryScope } from "@/lib/monetaryPolicy/presetMonetaryScope";
 /**
@@ -28,7 +32,6 @@ import {
   getSeedCurrencyCode,
   INTERVENTION_FAILURE_INFAMY,
   INTERVENTION_HISTORY_MAX,
-  FOREX_ACTIVE_CURRENCIES,
   reserveCurrencyVolatilityMultiplier,
   CYCLE_PRESSURE_TURNS,
   CYCLE_PRESSURE_BY_REGIME,
@@ -52,10 +55,15 @@ import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { isCommandEconomy, MARKETIZATION_SCHEDULE } from "@/lib/constants/commandEconomy";
 import { rankReserveCurrencies } from "@/lib/centralBank/reserveCurrencyRanking";
 import { computeCurrencyVolumes } from "@/lib/currency/volumeTracker";
-import { computeInterventionPressure, isInBand } from "@/lib/currency/interventionCalculator";
+import { isInBand } from "@/lib/currency/interventionCalculator";
+import {
+  defenceLiquidity,
+  defenceMarketDepth,
+  planDefenceFunding,
+  quoteDefence,
+} from "@/lib/currency/intervention/rules/defence";
 import { interventionAdherenceMultiplier } from "@/lib/centralBank/marketEffects";
 import { sendSystemMail } from "@/lib/mail/systemMail";
-import { getBankId } from "@/lib/centralBank/helpers";
 import { reconcileEuroMonetaryUnion } from "@/lib/currency/euro/service";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import {
@@ -205,6 +213,23 @@ export async function processForexTurn(
     if (euroUnion?.members[countryId] && countryId !== euroUnion.anchorCountryId) continue;
     const bank = bankMap.get(countryId);
     if (!bank) continue;
+    if (bank.fxInterventionSettlement) {
+      const pending = bank.fxInterventionSettlement;
+      const prior = rateMap.get(pending.countryId);
+      if (!prior) throw new Error("Missing FX quote for paid intervention");
+      rateMap.set(pending.countryId, await publishDefenceSettlement(db, bank, prior, pending, now));
+    }
+    if (bank.lastFxInterventionTurn === currentTurn) {
+      const settled = rateMap.get(countryId);
+      if (countryId === euroAnchorCountry && settled) {
+        euroAnchorRate = settled.rate;
+        euroAnchorMacroTarget = settled.macroTarget;
+      }
+      if (euroUnion && countryId === euroUnion.anchorCountryId && settled)
+        ratesByCurrency[settled.currencyCode] = settled.rate;
+      countriesUpdated++;
+      continue;
+    }
 
     const isEuroAnchor = countryId === euroAnchorCountry;
     const existingRateDoc = rateMap.get(countryId);
@@ -370,6 +395,8 @@ export async function processForexTurn(
         ? null
         : await applyIntervention({
             rate: update.rate,
+            rawRate: update.unclampedRate ?? update.rate,
+            organicPressure: update.volumePressure,
             initialRate: safeCurrentRate,
             noise,
             bwBand,
@@ -446,6 +473,39 @@ export async function processForexTurn(
       }
     }
 
+    const paidIntervention =
+      interventionOutcome &&
+      (interventionOutcome.record !== null || interventionOutcome.infamyCharged);
+    if (paidIntervention && interventionOutcome) {
+      const inc: Record<string, number> = {};
+      if (interventionOutcome.forexRevenueDelta)
+        inc.forexRevenue = interventionOutcome.forexRevenueDelta;
+      if (interventionOutcome.reserveBalanceDelta)
+        inc.reserveBalance = interventionOutcome.reserveBalanceDelta;
+      for (const [currency, delta] of Object.entries(interventionOutcome.spreadFeeReserveDeltas)) {
+        if (delta) inc[`spreadFeeReserveBalances.${currency}`] = delta;
+      }
+      const receipt = {
+        turn: currentTurn,
+        countryId,
+        rate: update.rate,
+        macroTarget: update.macroTarget,
+        policy: nextPolicy ?? effectivePolicy,
+        previousPolicy: existingRate.interventionPolicy ?? null,
+      };
+      await reserveDefenceSettlement(
+        db,
+        bank,
+        receipt,
+        inc,
+        interventionOutcome.infamyCharged
+          ? Math.min(100, finiteOr(bank.chairInfamy, 0) + INTERVENTION_FAILURE_INFAMY)
+          : undefined
+      );
+      await publishDefenceSettlement(db, bank, existingRate, receipt, now);
+      for (const key of ["rate", "macroTarget", "rateHistory", "interventionPolicy"])
+        delete setFields[key];
+    }
     await db.collection<ExchangeRate>("exchangeRates").updateOne(
       { _id: countryId },
       {
@@ -454,9 +514,7 @@ export async function processForexTurn(
       }
     );
 
-    // Persist reserve draw, infamy, and trade audit row. All post-rate-write so
-    // that a partial failure here leaves exchange rates intact rather than
-    // half-updated.
+    // Monetary settlement is already durable. Notifications do not debit funds.
     if (interventionOutcome) {
       await persistInterventionSideEffects(db, countryId, bank, interventionOutcome);
     }
@@ -535,119 +593,6 @@ interface InterventionOutcome {
   infamyCharged: boolean;
 }
 
-interface ReserveFundingPlan {
-  availableInternal: number;
-  spreadFeeReserveDeltas: Partial<Record<CurrencyCode, number>>;
-  forexRevenueDelta: number;
-  reserveBalanceDelta: number;
-  homeCurrencyDelta: number;
-  reservesSpentHome: number;
-}
-
-function finitePositiveRate(rates: Partial<Record<CurrencyCode, number>>, currency: CurrencyCode) {
-  const rate = rates[currency];
-  return typeof rate === "number" && Number.isFinite(rate) && rate > 0 ? rate : null;
-}
-
-function chooseCounterReserveCurrency(homeCurrency: CurrencyCode): CurrencyCode {
-  return (
-    FOREX_ACTIVE_CURRENCIES.find((currency) => currency !== homeCurrency && currency === "USD") ??
-    FOREX_ACTIVE_CURRENCIES.find((currency) => currency !== homeCurrency) ??
-    "USD"
-  );
-}
-
-function buildInterventionFundingPlan(params: {
-  direction: "buy" | "sell";
-  homeCurrency: CurrencyCode;
-  currentRate: number;
-  rates: Partial<Record<CurrencyCode, number>>;
-  bank: CentralBank;
-  requestedInternal: number;
-}): ReserveFundingPlan {
-  const spreadBalances = params.bank.spreadFeeReserveBalances ?? {};
-  const spreadFeeReserveDeltas: Partial<Record<CurrencyCode, number>> = {};
-  const homeRate = params.currentRate;
-  let remainingInternal = params.requestedInternal;
-  let actualInternal = 0;
-  let forexRevenueDelta = 0;
-  let reserveBalanceDelta = 0;
-  let homeCurrencyDelta = 0;
-
-  const drawCurrency = (currency: CurrencyCode, maxInternal?: number) => {
-    const rate = finitePositiveRate(params.rates, currency);
-    const balance = spreadBalances[currency] ?? 0;
-    if (!rate || balance <= 0 || remainingInternal <= 0) return 0;
-    const availableInternal = balance / rate;
-    const internalDraw = Math.min(availableInternal, remainingInternal, maxInternal ?? Infinity);
-    if (internalDraw <= 0) return 0;
-    const currencyDraw = internalDraw * rate;
-    spreadFeeReserveDeltas[currency] = (spreadFeeReserveDeltas[currency] ?? 0) - currencyDraw;
-    remainingInternal -= internalDraw;
-    actualInternal += internalDraw;
-    return internalDraw;
-  };
-
-  if (params.direction === "buy") {
-    const foreignBalances = (Object.entries(spreadBalances) as Array<[CurrencyCode, number]>)
-      .filter(([currency, balance]) => currency !== params.homeCurrency && balance > 0)
-      .map(([currency, balance]) => {
-        const rate = finitePositiveRate(params.rates, currency);
-        return { currency, internalValue: rate ? balance / rate : 0 };
-      })
-      .filter((entry) => entry.internalValue > 0)
-      .sort((a, b) => b.internalValue - a.internalValue);
-
-    for (const entry of foreignBalances) {
-      drawCurrency(entry.currency);
-    }
-
-    homeCurrencyDelta = actualInternal * homeRate;
-    if (homeCurrencyDelta > 0) {
-      spreadFeeReserveDeltas[params.homeCurrency] =
-        (spreadFeeReserveDeltas[params.homeCurrency] ?? 0) + homeCurrencyDelta;
-    }
-  } else {
-    drawCurrency(params.homeCurrency);
-    if (remainingInternal > 0) {
-      const forexRevenue = finiteOr(params.bank.forexRevenue, 0);
-      const forexInternal = forexRevenue / homeRate;
-      const drawInternal = Math.min(forexInternal, remainingInternal);
-      if (drawInternal > 0) {
-        forexRevenueDelta = -(drawInternal * homeRate);
-        remainingInternal -= drawInternal;
-        actualInternal += drawInternal;
-      }
-    }
-    if (remainingInternal > 0) {
-      const reserveBalance = finiteOr(params.bank.reserveBalance, 0);
-      const reserveInternal = reserveBalance / homeRate;
-      const drawInternal = Math.min(reserveInternal, remainingInternal);
-      if (drawInternal > 0) {
-        reserveBalanceDelta = -(drawInternal * homeRate);
-        remainingInternal -= drawInternal;
-        actualInternal += drawInternal;
-      }
-    }
-
-    const counterCurrency = chooseCounterReserveCurrency(params.homeCurrency);
-    const counterRate = finitePositiveRate(params.rates, counterCurrency);
-    if (counterRate && actualInternal > 0) {
-      spreadFeeReserveDeltas[counterCurrency] =
-        (spreadFeeReserveDeltas[counterCurrency] ?? 0) + actualInternal * counterRate;
-    }
-  }
-
-  return {
-    availableInternal: actualInternal,
-    spreadFeeReserveDeltas,
-    forexRevenueDelta,
-    reserveBalanceDelta,
-    homeCurrencyDelta,
-    reservesSpentHome: actualInternal * homeRate,
-  };
-}
-
 /**
  * Compute intervention spend for a single currency this turn. Pure-ish: reads
  * bank reserves off the pre-loaded bank document, returns deltas + audit data
@@ -655,6 +600,8 @@ function buildInterventionFundingPlan(params: {
  */
 async function applyIntervention(args: {
   rate: number;
+  rawRate: number;
+  organicPressure: number;
   initialRate: number;
   noise: number | undefined;
   bwBand: number;
@@ -681,27 +628,38 @@ async function applyIntervention(args: {
   if (!policy) return null;
   if (isInBand(args.rate, policy)) return null;
 
-  const desiredIntervention = computeInterventionPressure(
-    args.rate,
-    policy,
-    Number.MAX_SAFE_INTEGER
-  );
-  const fundingPlan = buildInterventionFundingPlan({
-    direction: desiredIntervention.direction === "sell" ? "sell" : "buy",
+  const reserves = {
     homeCurrency: args.currencyCode,
-    currentRate: args.rate,
-    rates: args.rates,
-    bank: args.bank,
-    requestedInternal: desiredIntervention.reserveCost,
-  });
-
-  const intervention = computeInterventionPressure(
-    args.rate,
+    balances: args.bank.spreadFeeReserveBalances ?? {},
+    rates: { ...args.rates, [args.currencyCode]: args.rate },
+    forexRevenue: args.bank.forexRevenue ?? 0,
+    reserveBalance: args.bank.reserveBalance ?? 0,
+  };
+  const liquidity = defenceLiquidity(reserves);
+  const direction = args.rate > policy.ceiling ? "buy" : "sell";
+  const adherence = interventionAdherenceMultiplier(args.bank.chairInfamy ?? 0);
+  const quote = quoteDefence(
+    {
+      rawRate: args.rawRate,
+      organicPressure: args.organicPressure,
+      hardFloor: args.baseRate * (1 - args.bwBand),
+      hardCeiling: args.baseRate * (1 + args.bwBand),
+      homeRate: args.rate,
+      marketDepthAnchor: defenceMarketDepth(
+        args.organicVolumes.buyVolume24,
+        args.organicVolumes.sellVolume24
+      ),
+      adherence,
+    },
     policy,
-    fundingPlan.availableInternal
+    liquidity[direction]
   );
-
-  if (intervention.reserveCost <= 0) {
+  if (!quote) return null;
+  const fundingPlan = planDefenceFunding(reserves, direction, quote.spendAnchor, args.rate);
+  if (fundingPlan.availableInternal + 1e-8 < quote.spendAnchor) {
+    throw new Error("FX defence has no priced counter-currency");
+  }
+  if (quote.spendAnchor <= 0) {
     // No reserves to spend — still assess failure infamy since the rate is out
     // of band and the CB can't defend it.
     const alreadyCharged = typeof policy.lastInfamyChargedAtTurn === "number";
@@ -713,7 +671,7 @@ async function applyIntervention(args: {
       forexRevenueDelta: 0,
       reserveBalanceDelta: 0,
       spreadFeeReserveDeltas: {},
-      infamyCharged: !alreadyCharged && hasSeatedChair,
+      infamyCharged: quote.exhausted && !alreadyCharged && hasSeatedChair,
     };
   }
   const spreadReserveDrawn = Object.values(fundingPlan.spreadFeeReserveDeltas).some(
@@ -731,13 +689,9 @@ async function applyIntervention(args: {
           ? "reserveBalance"
           : "forexRevenue";
 
-  // B4 market effect: a discredited bank's intervention holds the target less
-  // well. The reserve outlay is UNCHANGED; what shrinks is what the outlay
-  // buys, which is the right shape for a market that doubts the bank will hold
-  // the line. Floored, so even a maximally discredited bank still moves the
-  // rate.
-  const adherence = interventionAdherenceMultiplier(args.bank.chairInfamy ?? 0);
-  const effectiveSynthetic = intervention.syntheticVolume * adherence;
+  // The quote already prices credibility: lower adherence buys less movement
+  // for the same reserve outlay, without charging beyond useful pressure.
+  const effectiveSynthetic = quote.syntheticVolume;
 
   // Re-run the rate pipeline with the intervention alongside traded flow. This
   // is what makes intervention affect the SAME turn's published rate. It rides
@@ -766,7 +720,7 @@ async function applyIntervention(args: {
 
   const record: InterventionRecord = {
     turn: args.currentTurn,
-    direction: intervention.direction === "buy" ? "buy" : "sell",
+    direction,
     reservesSpent: fundingPlan.reservesSpentHome,
     fundingSource,
     resultingRate: nextRate,
@@ -781,11 +735,9 @@ async function applyIntervention(args: {
   // The dampened rate is what the world sees; the undampened rate is what the
   // chair is blamed for.
   const rateForBlame =
-    adherence >= 1 ? nextRate : (runBlend(intervention.syntheticVolume).rate ?? nextRate);
+    adherence >= 1 ? nextRate : (runBlend(quote.syntheticVolume / adherence).rate ?? nextRate);
   const stillBreached = !isInBand(Number.isFinite(rateForBlame) ? rateForBlame : nextRate, policy);
-  const reservesDrained =
-    desiredIntervention.reserveCost > 0 &&
-    fundingPlan.availableInternal < desiredIntervention.reserveCost - 1e-9;
+  const reservesDrained = quote.exhausted;
   const alreadyCharged = typeof policy.lastInfamyChargedAtTurn === "number";
   const hasSeatedChair = !!args.bank.chairCharacterId;
   const infamyCharged = stillBreached && reservesDrained && !alreadyCharged && hasSeatedChair;
@@ -802,8 +754,7 @@ async function applyIntervention(args: {
 }
 
 /**
- * Apply the reserve deltas, infamy tick, audit trade row, and chair
- * notification after the exchange rate has been persisted.
+ * Notify the chair after durable monetary settlement. Never debit funds here.
  */
 async function persistInterventionSideEffects(
   db: Db,
@@ -811,33 +762,6 @@ async function persistInterventionSideEffects(
   bank: CentralBank,
   outcome: InterventionOutcome
 ): Promise<void> {
-  const inc: Record<string, number> = {};
-  if (outcome.forexRevenueDelta !== 0) inc.forexRevenue = outcome.forexRevenueDelta;
-  if (outcome.reserveBalanceDelta !== 0) inc.reserveBalance = outcome.reserveBalanceDelta;
-  for (const [currency, delta] of Object.entries(outcome.spreadFeeReserveDeltas) as Array<
-    [CurrencyCode, number]
-  >) {
-    if (delta !== 0) inc[`spreadFeeReserveBalances.${currency}`] = delta;
-  }
-  const set: Partial<Pick<CentralBank, "chairInfamy">> = {};
-  if (outcome.infamyCharged) {
-    set.chairInfamy = Math.min(100, finiteOr(bank.chairInfamy, 0) + INTERVENTION_FAILURE_INFAMY);
-  }
-
-  if (Object.keys(inc).length > 0 || Object.keys(set).length > 0) {
-    // Use getBankId so shared-bank countries (e.g. eurozone members) update the
-    // correct central bank document rather than a per-country phantom document.
-    const bankId = getBankId(countryId as Parameters<typeof getBankId>[0]);
-    await db.collection<CentralBank>("centralBanks").updateOne(
-      { _id: bankId },
-      {
-        ...(Object.keys(inc).length > 0 ? { $inc: inc } : {}),
-        ...(Object.keys(set).length > 0 ? { $set: set } : {}),
-      },
-      { upsert: true }
-    );
-  }
-
   if (outcome.infamyCharged && bank.chairCharacterId) {
     const chair = await db
       .collection<Character>("characters")

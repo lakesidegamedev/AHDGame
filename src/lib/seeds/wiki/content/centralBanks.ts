@@ -199,9 +199,12 @@ The Chair can post a **soft-band intervention policy**: a floor and ceiling arou
 Access the Central Bank page and set:
 - **Floor**: minimum acceptable rate (stronger than this triggers selling)
 - **Ceiling**: maximum acceptable rate (weaker than this triggers buying)
+- **Maximum spend per turn**: an optional limit in the home currency. Leave blank for an automatic budget of 10% of usable directional reserves per turn; zero pauses spending.
+
+The live preview estimates next-turn spending and the defended rate as you type. Suggested bands near the current rate or fundamentals are starting points, not guaranteed targets. Market flow, fundamentals and reserves can change before settlement.
 
 **Policy change rules:**
-- **Widening** the band (making it looser) is free: do it any time.
+- **Widening** the band (making it looser) is free if it does not increase the spending limit.
 - **Narrowing or cancelling** the band requires a **6-turn cooldown** after the last policy change. This mirrors the prime-rate cadence and prevents rapid-fire policy whipsawing.
 
 The band **persists across chair transitions**. A new chair inherits the previous band and must wait out any active cooldown before tightening it.
@@ -210,11 +213,13 @@ The band **persists across chair transitions**. A new chair inherits the previou
 
 Each turn, if the published rate is outside the band:
 
-1. The game computes the **breach distance** (how far outside the band the rate sits, as a fraction of the breached edge).
-2. It calculates desired spend as \`|breachDistance| × aggressiveness\`, in internal FX-volume units.
-3. Actual spend is capped by available reserves.
-4. The synthetic volume is folded into the same **volume-pressure channel** that organic trades use, so intervention obeys the same ±5% per-turn cap.
-5. The rate is recomputed with the synthetic volume included.
+1. The game estimates the pressure needed to reach the nearest band edge, without overshooting it. A declared peg has a tolerance of 0.05% on either side.
+2. Reserve cost equals useful pressure times market depth, divided by credibility adherence. Depth is at least 20 million internal anchor units, or recorded daily buy plus sell volume if larger.
+3. Spending is capped by the chair's per-turn budget and usable reserves. Intervention contributes at most 1% rate pressure before credibility effects, and combined organic and intervention pressure is also capped at 1%.
+4. The rate is recomputed using the same market noise as the unassisted quote. Spending beyond useful movement is not charged.
+5. Funding and the resulting rate are recorded with a recoverable settlement receipt, preventing a retried turn from spending twice.
+
+Buying the home currency requires priced foreign reserves. Selling requires domestic funds. These are exchanges: foreign assets are sold for domestic currency, or domestic currency for foreign assets, at the settlement conversion rate. Domestic treasury funds alone cannot defend a weak currency by buying it.
 
 **Reserve draw order for sell-side defense:**
 - The currency-specific **spread-fee reserve pool** is spent first.
@@ -241,7 +246,7 @@ If the rate is **still outside the band after spending all available reserves**,
 
 - **+15 infamy** charged once per breach cycle (deduped so you don't get stacked penalties every turn)
 - A system mail notifies the Chair that reserves are depleted
-- The band remains posted; the Chair must either restore reserves (via treasury transfer or waiting for forex revenue to accumulate) or widen the band
+- The band remains posted; the Chair must restore the required directional reserves or review the commitment. Treasury transfers replenish domestic funds, not foreign assets.
 
 If no reserves are available at all when the breach occurs, failure infamy still fires: the band was undefended.
 

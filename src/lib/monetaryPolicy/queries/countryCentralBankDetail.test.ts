@@ -341,6 +341,7 @@ describe("loadCountryCentralBankDetail money supply", () => {
       policy: { floor: 0.5, ceiling: 0.5, recentInterventions: [] },
       forexRevenue: null,
       reserveBalance: null,
+      previewContext: null,
     });
   });
   it("returns the stored money supply for a public viewer when enabled", async () => {
