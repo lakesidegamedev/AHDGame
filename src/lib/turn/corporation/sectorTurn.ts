@@ -71,7 +71,7 @@ import {
   sectorRevenueBoostMultiplier,
 } from "@/lib/corporations/rules/marketBoost";
 import { isStateScopedCommodity } from "@/lib/market/commodityMarketScope";
-import { liftedThrottleBalance, withLatentDemand } from "./demandThrottle";
+import { liftedThrottleBalance } from "./demandThrottle";
 import { nppOperatingCapacityTarget } from "./rules/nppOperatingCapacity";
 import { idleCapacityRetirement, IDLE_RETIRE_GRACE_TURNS } from "./rules/idleCapacityRetirement";
 import { plantCrewMaxDropPerTurn, plantCrewShare } from "./rules/plantRunShare";
@@ -376,11 +376,17 @@ export function processSector(
           .filter(([, rate]) => (rate ?? 0) > 0)
           .map(([rawCommodity]) => {
             const commodity = rawCommodity as CommodityType;
-            return withLatentDemand(
+            // The book the throttle leg reads, so parking and throttling agree on demand.
+            return liftedThrottleBalance(
               isStateScopedCommodity(commodity)
                 ? lookups.rawStateBalances?.get(sector.stateId)?.get(commodity)
-                : wideCommodityBalances?.get(commodity),
-              lookups.latentDemandFactorByCommodity?.get(commodity)
+                : (lookups.countryClearingBooks?.get(sectorCountryId)?.get(commodity) ??
+                    lookups.globalCommodityBalances?.get(commodity)),
+              lookups.latentDemandFactorByCommodity?.get(commodity),
+              isStateScopedCommodity(commodity) ||
+                !lookups.countryClearingBooks?.has(sectorCountryId)
+                ? 0
+                : lookups.unmetForeignDemandByCountry?.get(sectorCountryId)?.get(commodity)
             );
           }),
         physicalConstraintsClear:
