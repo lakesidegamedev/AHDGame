@@ -119,3 +119,29 @@ describe("marketing budget list", () => {
     expect(screen.queryByText("Marketing budgets by company")).toBeNull();
   });
 });
+
+describe("producer list basis caption", () => {
+  const producer = { corpId: "miner", name: "Miner One", units: 1200 };
+
+  function renderProducers(commodity: string) {
+    render(
+      <TopProducersConsumers
+        topProducers={[producer]}
+        topConsumers={[]}
+        syntheticDemandSources={[]}
+        unit="tonnes"
+        commodity={commodity}
+      />
+    );
+  }
+
+  it("says mining figures are capacity, not dug output", () => {
+    renderProducers("iron");
+    expect(screen.getByText(/production capacity, not dug output/i)).toBeTruthy();
+  });
+
+  it("keeps the output-volume caption for manufactured goods", () => {
+    renderProducers("steel");
+    expect(screen.getByText(/Largest corporations by output volume/i)).toBeTruthy();
+  });
+});
