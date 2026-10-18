@@ -1,6 +1,7 @@
 import type { ExtractionContractStatus } from "./types";
 
 const STATUS_STYLES: Record<ExtractionContractStatus, string> = {
+  revoked: "bg-muted/15 text-muted border-card-border",
   offered: "bg-primary/15 text-primary border-primary/30",
   active: "bg-success/15 text-success border-success/30",
   declined: "bg-muted/15 text-muted border-card-border",
@@ -9,6 +10,7 @@ const STATUS_STYLES: Record<ExtractionContractStatus, string> = {
 };
 
 const STATUS_LABELS: Record<ExtractionContractStatus, string> = {
+  revoked: "Revoked",
   offered: "Offered",
   active: "Active",
   declined: "Declined",

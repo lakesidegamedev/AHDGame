@@ -4,6 +4,7 @@ import { InlineError } from "@/components/ui/InlineError";
 import { useEffect, useState } from "react";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { formatCurrencyCodeAmount as fmt } from "@/lib/currency/formatCurrencyCodeAmount";
 
 interface AdRow {
   _id: string;
@@ -17,10 +18,6 @@ interface AdRow {
   createdAt: string;
   costPaid: number;
   currencyCode: string;
-}
-
-function fmt(n: number, code: string) {
-  return `${n.toLocaleString("en-US")} ${code}`;
 }
 
 function relativeDate(iso: string) {

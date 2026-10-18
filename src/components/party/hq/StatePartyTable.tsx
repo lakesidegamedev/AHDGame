@@ -2,6 +2,7 @@
 
 import type { StatePartyRow } from "@/lib/states/buildStatePartyRows";
 import { orgTier, toneColor, orgFill, leanLabelFromValue } from "./orgTier";
+import { fmtMoney } from "./formatters";
 
 export type StatePartySortKey =
   | "name"
@@ -40,12 +41,6 @@ const COLUMNS: { key: StatePartySortKey; label: string; hint: string }[] = [
   { key: "nppCount", label: "NPPs", hint: "Non-player politicians in the state party" },
   { key: "lean", label: "Lean", hint: "Which way the state leans politically" },
 ];
-
-function fmtMoney(v: number): string {
-  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
-  if (v >= 1_000) return `$${(v / 1_000).toFixed(0)}K`;
-  return `$${v.toFixed(0)}`;
-}
 
 export function StatePartyTable({
   rows,

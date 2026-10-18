@@ -1,3 +1,5 @@
+import { requireAdmin } from "@/lib/api/requireAdmin";
+import { withAdminRoute } from "@/lib/api/withAdminAuth";
 /**
  * GET  /api/admin/country/[code]/cabinet-nominations — list all cabinet nominations
  * POST /api/admin/country/[code]/cabinet-nominations — force actions on nominations
@@ -6,7 +8,6 @@ import { NextResponse } from "next/server";
 import { initialMinisterialActionFields } from "@/lib/cabinet/ministerialActionPool";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseBoundedIntParam, parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { CabinetNomination, CabinetMember, Character, CareerEvent } from "@/lib/db/types";
@@ -35,11 +36,8 @@ function getPositionName(positionId: string): string {
   return positionId;
 }
 
-export async function GET(request: Request, { params }: { params: Promise<{ code: string }> }) {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
-
+export const GET = withAdminRoute(
+  async (_auth, request: Request, { params }: { params: Promise<{ code: string }> }) => {
     const { code } = await params;
     const countryId = code.toUpperCase() as CountryId;
     if (!COUNTRY_CONFIGS[countryId]) {
@@ -89,10 +87,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
       limit,
       totalPages: Math.ceil(total / limit),
     });
-  } catch (error) {
-    return handleRouteError(error);
   }
-}
+);
 
 export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
   const auth = await requireAdmin();

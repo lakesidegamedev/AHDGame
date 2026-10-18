@@ -1,4 +1,6 @@
 import { loadBankFailureEffects } from "@/lib/banking/failurePolitics";
+import { loadEmploymentPolicies } from "@/lib/labour/employmentPolicies";
+import { advanceEmployment, type EmploymentState } from "@/lib/labour/rules/employment";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import { cabinetMacroRegistry } from "@/lib/resetCabinet/rules/gameplay";
@@ -226,6 +228,7 @@ function readMetricPath(
 
 interface PrevMetricsDoc {
   _id: string;
+  labourEmployment?: EmploymentState;
   livingConflictExposure?: CrisisEconomicExposure;
   /** §6.1 (P7b): the region's LAGGED economic model, for sector GDP concentration. */
   economicModel?: EconomicModelState;
@@ -271,6 +274,8 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
         resetVersionSeeds: 1,
         metricsSystemVersion: 1,
         cabinetSystemVersion: 1,
+        departmentFinanceEnabled: 1,
+        regionalLegislationFinanceEnabled: 1,
       },
     }
   );
@@ -305,6 +310,8 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
   // with the same field list (absent fields project to nothing) and merged
   // per region below, so every downstream read keeps its single-doc shape.
   const PREV_PROJECTION = {
+    labourEmployment: 1,
+    "economic.matchingFriction.value": 1,
     livingConflictExposure: 1,
     economicModel: 1,
     "economic.sectorGrowth.value": 1,
@@ -455,6 +462,13 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
   const realStates = allStates.filter((s) => !NATIONAL_SCOPE_IDS.has(s._id));
   if (realStates.length === 0) return 0;
 
+  const employmentPolicies = await loadEmploymentPolicies(db, turn, realStates, {
+    national: eraGameState?.departmentFinanceEnabled === true,
+    regional: eraGameState?.regionalLegislationFinanceEnabled === true,
+    year: eraYear ?? undefined,
+    baselineYear: eraGameState?.startingYear,
+  });
+
   // One in-memory pass over the political boards already loaded above. This
   // avoids a country-by-country query loop on the multiplayer turn path.
   const healthTotalsByCountry = new Map<
@@ -512,7 +526,10 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
   const macroOps: Array<{
     updateOne: {
       filter: { _id: string };
-      update: { $set: Record<string, number | Date>; $unset?: Record<string, ""> };
+      update: {
+        $set: Record<string, number | Date | EmploymentState>;
+        $unset?: Record<string, "">;
+      };
     };
   }> = [];
   // GDP-level stock writes to the `states` collection (SSOT — design §5.4). The
@@ -783,7 +800,8 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
       Math.min(
         100,
         (laborParticipationByState.get(state._id) ?? NEUTRAL_LABOR_PARTICIPATION) +
-          participationDemandBonus
+          participationDemandBonus +
+          (employmentPolicies.get(state._id)?.participationBonus ?? 0)
       ) * crisisParticipationMultiplier(crisisExposure);
     const laborForce = computeLaborForce(
       state.workingAgePopulation ?? 0,
@@ -1027,12 +1045,37 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
       resetSystemVersionsForCountry(eraGameState, RESET_V2_READY, countryId).cabinet === "v2"
         ? CABINET_V2_MACRO_NODES
         : MACRO_NODES;
+    const employment =
+      laborForce > 0
+        ? advanceEmployment({
+            turn,
+            turnsPerYear: TURNS_PER_YEAR,
+            laborForce,
+            unemployment: unempVal,
+            initialLaborForce: prevLaborForce.get(state._id),
+            corporateDemand: hasCurrentLabourDemand ? currentDemand : undefined,
+            matchingFriction:
+              (readMetricPath(prevDoc, "economic.matchingFriction", "value") ?? 4.5) +
+              (targetNudges["economic.unemploymentRate"] ?? 0),
+            workforceSkill:
+              politicalInputs.score(state._id, "education.adultSkills") ??
+              tfpPath("education.workforceSkill"),
+            outputGap: hasTrend ? state.outputGap : 0,
+            medianIncome: readMetricPath(prevDoc, "economic.medianIncome", "value"),
+            policy: employmentPolicies.get(state._id),
+            previous: prevDoc?.labourEmployment,
+          })
+        : undefined;
+    // Existing cabinet/model effects influence desired employment, not an
+    // extra point adjustment after counts have already determined the rate.
+    if (employment) delete targetNudges["economic.unemploymentRate"];
     const results = evaluateRegistry(registry, {
       stateId: state._id,
       countryId,
       prev: prevValue,
       prevSimBaseline,
       providers: {
+        regionalEmployment: employment,
         sectorRevenueTax: payload,
         // National approval applied to every state of the country (a regional
         // approval variant is a named future refinement). Missing doc → 45.
@@ -1117,12 +1160,13 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     // Macro only. Every node evaluated above is a macro node, so the filter is
     // a guard rather than a router: a political path reaching it would mean
     // something is trying to persist a board metric into the macro doc.
-    const macroSet: Record<string, number | Date> = {};
+    const macroSet: Record<string, number | Date | EmploymentState> = {};
     for (const [key, value] of Object.entries(setFields)) {
       if (key === "lastUpdated") continue;
       if (isMacroMetricPath(key)) macroSet[key] = value;
     }
     if (Object.keys(macroSet).length > 0) {
+      if (employment) macroSet.labourEmployment = employment.state;
       if (persistCrisisExposure) {
         for (const [key, value] of Object.entries(crisisExposure))
           macroSet[`livingConflictExposure.${key}`] = value;

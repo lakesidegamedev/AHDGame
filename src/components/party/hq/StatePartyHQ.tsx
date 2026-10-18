@@ -11,6 +11,7 @@ import { sumBulkEstimate, type BulkMode, type BulkPreview } from "./bulkEstimate
 import { orgTier, toneColor } from "./orgTier";
 import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { fmtMoney } from "./formatters";
 
 export interface StatePartyHQProps {
   countryId: string;
@@ -40,16 +41,10 @@ export interface StatePartyHQProps {
   onNationalPsSpent?: () => void;
 }
 
-function fmtMoney(v: number): string {
-  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
-  if (v >= 1_000) return `$${(v / 1_000).toFixed(0)}K`;
-  return `$${v.toFixed(0)}`;
-}
-
 /**
  * Currency-correct money for the bulk Build Org readouts.
  *
- * `fmtMoney` above hardcodes `$` and is duplicated in `StateDrawer` and
+ * The shared `fmtMoney` hardcodes `$` for `StateDrawer` and
  * `StatePartyTable`, so every HQ money figure reads as dollars regardless of the
  * party's country. That is a pre-existing issue wider than this surface and is
  * left alone here; new copy uses the party's real symbol rather than adding to

@@ -14,6 +14,7 @@
  * See `docs/superpowers/specs/2026-05-28-one-party-state-collapse-design.md`
  * § "Scalar mechanics" for the drift table.
  */
+import { clamp } from "@/lib/numeric/rules";
 import type { PopularMoodAxisProfile } from "@/lib/constants/popularMoodProfiles";
 import { POPULAR_MOOD_AXES } from "@/lib/constants/popularMoodProfiles";
 import { POPULAR_RECOVERY_RATE, POPULAR_RECOVERY_TARGET } from "./popularLegitimacy";
@@ -198,10 +199,4 @@ export function intraPartyCouplingBleed(partyConfidence: number): number {
 export function naturalRecoveryDrift(current: number): number {
   if (current === POPULAR_RECOVERY_TARGET) return 0;
   return current < POPULAR_RECOVERY_TARGET ? POPULAR_RECOVERY_RATE : -POPULAR_RECOVERY_RATE;
-}
-
-// ── Internal ────────────────────────────────────────────────────────────────
-
-function clamp(v: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, v));
 }

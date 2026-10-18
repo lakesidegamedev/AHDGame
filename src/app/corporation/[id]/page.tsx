@@ -843,13 +843,12 @@ export default function CorporationDetailPage() {
   const gatedBaseTabs0 = corporation.techTreesEnabled
     ? baseTabs
     : baseTabs.filter((t) => t.id !== "tech");
-  // The Contracts tab only appears for extraction corps when contractIssuanceEnabled.
+  // Existing concessions remain visible when new contract issuance is paused.
   const isExtractionCorp =
     corporation.type === "extraction" || corporation.secondaryType === "extraction";
-  const gatedBaseTabs =
-    corporation.contractIssuanceEnabled && isExtractionCorp
-      ? gatedBaseTabs0
-      : gatedBaseTabs0.filter((t) => t.id !== "contracts");
+  const gatedBaseTabs = isExtractionCorp
+    ? gatedBaseTabs0
+    : gatedBaseTabs0.filter((t) => t.id !== "contracts");
   // The Defence tab only appears for corps that actually build materiel — defence as the
   // primary or the secondary focus. A corp with no defence line can never hold a
   // procurement contract, so the tab would be permanently empty.
@@ -1425,7 +1424,7 @@ export default function CorporationDetailPage() {
                   <TechTab corporationId={id} isCeo={isCeo} />
                 )}
 
-                {tab === "contracts" && corporation.contractIssuanceEnabled && isExtractionCorp && (
+                {tab === "contracts" && isExtractionCorp && (
                   <CorporationContractsTab
                     corpId={id}
                     isCeo={isCeo}

@@ -26,10 +26,12 @@ export interface ProspectingSurveyRow {
   resolvedTurn?: number;
 }
 
-export type ExtractionContractStatus = "offered" | "active" | "declined" | "expired" | "defaulted";
+export type ExtractionContractStatus =
+  "offered" | "active" | "declined" | "expired" | "defaulted" | "revoked";
 
 export interface ExtractionContractRow {
   _id: string;
+  tenderId?: string;
   stateId: string;
   countryId: string;
   corporationId: string;
@@ -72,6 +74,7 @@ export function effectiveContractStatus(c: {
   status?: ExtractionContractStatus;
   revokedTurn?: number;
 }): ExtractionContractStatus {
-  if (c.status) return c.status;
-  return c.revokedTurn != null ? "expired" : "active";
+  if (c.status && c.status !== "active" && c.status !== "offered") return c.status;
+  if (c.revokedTurn != null) return "revoked";
+  return c.status ?? "active";
 }

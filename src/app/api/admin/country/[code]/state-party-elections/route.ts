@@ -1,3 +1,4 @@
+import { withAdminRoute } from "@/lib/api/withAdminAuth";
 /**
  * GET  /api/admin/country/[code]/state-party-elections
  *   List all party leadership elections (state, national, committee) - filterable.
@@ -11,8 +12,7 @@
 
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
-import { requireAdmin } from "@/lib/api/requireAdmin";
-import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { errorResponse } from "@/lib/api/errors";
 import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
 import {
@@ -73,11 +73,8 @@ function applyOptionalCountryScope(
   return { $and: [baseQuery, countryQuery] };
 }
 
-export async function GET(request: Request, { params }: { params: Promise<{ code: string }> }) {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
-
+export const GET = withAdminRoute(
+  async (_auth, request: Request, { params }: { params: Promise<{ code: string }> }) => {
     const { code } = await params;
     // "all" is a cross-country view: skip country validation and scoping.
     const allCountries = code.toLowerCase() === "all";
@@ -357,16 +354,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
     });
 
     return NextResponse.json({ elections: allRows, total: allRows.length, currentTurn });
-  } catch (error) {
-    return handleRouteError(error);
   }
-}
+);
 
-export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
-
+export const POST = withAdminRoute(
+  async (_auth, request: Request, { params }: { params: Promise<{ code: string }> }) => {
     const { code } = await params;
     // "all" runs the batch action across every country (resolver/create helpers
     // treat an undefined countryId as "all countries").
@@ -606,7 +598,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     }
 
     return errorResponse(400, "action must be batch-resolve, batch-create, or batch-restart");
-  } catch (error) {
-    return handleRouteError(error);
   }
-}
+);

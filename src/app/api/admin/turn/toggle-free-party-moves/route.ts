@@ -1,6 +1,6 @@
+import { withAdminRoute } from "@/lib/api/withAdminAuth";
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/api/requireAdmin";
-import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { errorResponse } from "@/lib/api/errors";
 import { getDb } from "@/lib/mongodb";
 import { getGameStateCollection } from "@/lib/db/collections";
 
@@ -9,34 +9,27 @@ import { getGameStateCollection } from "@/lib/db/collections";
 // Flip on while staging a launch so players can settle into a party during the pause, off at go-live.
 // Auth: requireAdmin
 // Errors: 403, 404
-export async function POST() {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
+export const POST = withAdminRoute(async (_auth) => {
+  const db = await getDb();
+  const col = await getGameStateCollection(db);
+  const gameState = await col.findOne({ _id: "current" });
 
-    const db = await getDb();
-    const col = await getGameStateCollection(db);
-    const gameState = await col.findOne({ _id: "current" });
-
-    if (!gameState) {
-      return errorResponse(404, "Game state not initialized");
-    }
-
-    const newValue = !(gameState.freePartyMovesOpen ?? false);
-
-    await col.updateOne(
-      { _id: "current" },
-      { $set: { freePartyMovesOpen: newValue, updatedAt: new Date() } }
-    );
-
-    return NextResponse.json({
-      success: true,
-      freePartyMovesOpen: newValue,
-      message: newValue
-        ? "Free party moves open - each player gets one cooldown-free party switch during this window"
-        : "Free party moves closed - the 24h party-switch cooldown applies normally",
-    });
-  } catch (error) {
-    return handleRouteError(error);
+  if (!gameState) {
+    return errorResponse(404, "Game state not initialized");
   }
-}
+
+  const newValue = !(gameState.freePartyMovesOpen ?? false);
+
+  await col.updateOne(
+    { _id: "current" },
+    { $set: { freePartyMovesOpen: newValue, updatedAt: new Date() } }
+  );
+
+  return NextResponse.json({
+    success: true,
+    freePartyMovesOpen: newValue,
+    message: newValue
+      ? "Free party moves open - each player gets one cooldown-free party switch during this window"
+      : "Free party moves closed - the 24h party-switch cooldown applies normally",
+  });
+});

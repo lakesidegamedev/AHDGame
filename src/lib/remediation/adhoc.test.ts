@@ -107,7 +107,7 @@ describe("compileAdhocDefect", () => {
 });
 
 describe("ad-hoc through the runner", () => {
-  const IDLE = [{ _id: "live", isActive: true, currentTurn: 100, isProcessing: false }];
+  const IDLE = [{ _id: "current", isActive: true, currentTurn: 100, isProcessing: false }];
 
   function seed() {
     return makeStrictInMemoryStore({

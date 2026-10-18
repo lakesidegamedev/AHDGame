@@ -4,7 +4,8 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import { handleRouteError } from "@/lib/api/errors";
+import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { handleRouteError, badRequest } from "@/lib/api/errors";
 import { EXTRACTABLE_RESOURCES } from "@/lib/constants/commodities";
 import type { ExtractableResource } from "@/lib/constants/commodities";
 import type { StateResourceCapacity } from "@/lib/db/types/stateResourceCapacity";
@@ -15,18 +16,35 @@ import type { Corporation } from "@/lib/db/types/corporation";
 import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { isProspectingEnabled, isContractIssuanceEnabled } from "@/lib/extraction/featureFlag";
 
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: stateId } = await params;
+    const countryId = new URL(request.url).searchParams.get("countryId");
+    if (countryId && !Object.hasOwn(COUNTRY_CONFIGS, countryId))
+      throw badRequest("Invalid countryId");
+    const scope = { stateId, ...(countryId ? { countryId: countryId as CountryId } : {}) };
     const db = await getDb();
 
     const stateSupplyKey = `stateSupply.${stateId}` as const;
 
+    // Read tender reservations before contracts so an award cannot disappear between reads.
+    const reservations = await db
+      .collection<import("@/lib/governmentContracts/types").GovernmentTender>("governmentTenders")
+      .find(
+        {
+          "terms.type": "extraction",
+          "terms.stateId": stateId,
+          status: { $in: ["publishing", "open", "awarding"] },
+          ...(countryId ? { countryId: countryId as CountryId } : {}),
+        },
+        { projection: { _id: 1, terms: 1 } }
+      )
+      .toArray();
     const [capacityDoc, contracts, commodityPrices, config] = await Promise.all([
-      db.collection<StateResourceCapacity>("stateResourceCapacity").findOne({ stateId }),
+      db.collection<StateResourceCapacity>("stateResourceCapacity").findOne(scope),
       db
         .collection<ExtractionContract>("extractionContracts")
-        .find({ stateId, ...activeExtractionContractFilter() })
+        .find({ ...scope, ...activeExtractionContractFilter() })
         .toArray(),
       db
         .collection<CommodityPrice>("commodityPrices")
@@ -53,16 +71,29 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       currentOutput[resource] = priceDoc.stateSupply?.[stateId] ?? 0;
     }
 
+    const linkedTenders = new Set(contracts.map((c) => c.tenderId).filter(Boolean));
     const summary = EXTRACTABLE_RESOURCES.map((resource) => {
       const cap = capacity[resource] ?? 0;
       const resourceContracts = contracts.filter((c) => c.resource === resource);
       const contractedShare = resourceContracts.reduce((sum, c) => sum + (c.share ?? 0), 0);
+      const reservedShare = reservations.reduce(
+        (sum, tender) =>
+          sum +
+          (tender.terms.type === "extraction" &&
+          tender.terms.resource === resource &&
+          !linkedTenders.has(tender._id)
+            ? tender.terms.share
+            : 0),
+        0
+      );
+      const committedShare = contractedShare + reservedShare;
       const openAccessPct = Math.max(0, 1 - contractedShare);
       return {
         resource,
         capacityPerTurn: cap,
         contractedPct: Math.min(1, contractedShare),
         openAccessPct,
+        committedShare,
         overAllocated: contractedShare > 1,
         currentOutput: currentOutput[resource] ?? 0,
       };
@@ -87,8 +118,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       summary,
       contracts: contracts.map((c) => {
         const id = (c.corporationId as ObjectId).toString();
+        const { missedPayments: _missedPayments, ...publicContract } = c;
         return {
-          ...c,
+          ...publicContract,
           _id: c._id.toString(),
           corporationId: id,
           corporationName: corpNames.get(id),

@@ -47,12 +47,9 @@
  * so a country that doesn't carry the field is a no-op.
  */
 
+import { clamp } from "@/lib/numeric/rules";
 import type { StateMetricBaseline } from "@/lib/db/types";
 import { getIncomeAnchor } from "@/lib/era/metricCatalog";
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
 
 // `structuredClone` (not a JSON round-trip) so any `Date` fields survive as
 // real Dates rather than being silently stringified.

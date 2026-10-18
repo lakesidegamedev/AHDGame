@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { apiErrorText } from "@/lib/errors/catalog";
+import { HealPanelActions, HealPanelMessage } from "./HealPanelParts";
+
+import { useHealPanel } from "./useHealPanel";
 
 interface OrphanedCandidate {
   candidateId: string;
@@ -24,49 +25,10 @@ interface DiagnosticResult {
 }
 
 export function HealPartyLeadershipElections() {
-  const [loading, setLoading] = useState(false);
-  const [diagnostic, setDiagnostic] = useState<DiagnosticResult | null>(null);
-  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
-
-  const runDiagnostic = async () => {
-    setLoading(true);
-    setResult(null);
-    try {
-      const res = await fetch("/api/admin/heal/party-leadership-elections");
-      const data = await res.json();
-      if (res.ok) {
-        setDiagnostic(data);
-      } else {
-        setResult({ ok: false, message: apiErrorText(data, "Diagnostic failed") });
-      }
-    } catch {
-      setResult({ ok: false, message: "Network error" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const runHeal = async () => {
-    if (
-      !confirm(
-        "This will withdraw all candidates from party leadership elections who are no longer members of that party.\n\nContinue?"
-      )
-    )
-      return;
-
-    setLoading(true);
-    setDiagnostic(null);
-    setResult(null);
-    try {
-      const res = await fetch("/api/admin/heal/party-leadership-elections", { method: "POST" });
-      const data = await res.json();
-      setResult({ ok: res.ok, message: data.message ?? apiErrorText(data, "Unknown response") });
-    } catch {
-      setResult({ ok: false, message: "Network error" });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { loading, diagnostic, result, runDiagnostic, runHeal } = useHealPanel<DiagnosticResult>(
+    "/api/admin/heal/party-leadership-elections",
+    "This will withdraw all candidates from party leadership elections who are no longer members of that party.\n\nContinue?"
+  );
 
   const getElectionTypeLabel = (type: "state" | "national" | "committee") => {
     switch (type) {
@@ -90,22 +52,14 @@ export function HealPartyLeadershipElections() {
         </p>
       </div>
 
-      <div className="flex gap-2">
-        <button
-          onClick={runDiagnostic}
-          disabled={loading}
-          className="rounded-lg border border-card-border bg-background px-3 py-2 text-xs font-medium transition-colors hover:border-primary/50 disabled:opacity-50"
-        >
-          {loading ? "Running..." : "Diagnose"}
-        </button>
-        <button
-          onClick={runHeal}
-          disabled={loading}
-          className="rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs font-medium text-warning transition-colors hover:bg-warning/20 disabled:opacity-50"
-        >
-          {loading ? "Fixing..." : "Withdraw invalid candidates"}
-        </button>
-      </div>
+      <HealPanelActions
+        loading={loading}
+        onDiagnose={runDiagnostic}
+        onHeal={runHeal}
+        healPendingLabel={"Fixing..."}
+        healLabel={"Withdraw invalid candidates"}
+        healTone="warning"
+      />
 
       {diagnostic && (
         <div className="rounded-lg border border-card-border bg-background p-3 space-y-2 text-xs">
@@ -153,11 +107,7 @@ export function HealPartyLeadershipElections() {
         </div>
       )}
 
-      {result && (
-        <p className={`text-xs font-medium ${result.ok ? "text-success" : "text-error"}`}>
-          {result.message}
-        </p>
-      )}
+      <HealPanelMessage result={result} />
     </div>
   );
 }

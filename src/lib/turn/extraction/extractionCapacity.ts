@@ -1,7 +1,13 @@
+/**
+ * Extraction rights reserve a company's combined concessions before sharing the
+ * remaining capacity among open-access operators. All of a company's sectors
+ * share its allocation: see computeExtractionCapacityMultipliers.
+ */
 import type { ExtractableResource } from "@/lib/constants/commodities";
 import { EXTRACTABLE_RESOURCES } from "@/lib/constants/commodities";
 import type { StateResourceCapacity } from "@/lib/db/types/stateResourceCapacity";
 import type { ExtractionContract } from "@/lib/db/types/extractionContract";
+import { indexContractShares } from "@/lib/extraction/rules/contractShares";
 import type { ObjectId } from "mongodb";
 
 export interface ExtractionSectorInput {
@@ -35,18 +41,14 @@ export function computeExtractionCapacityMultipliers(
     capacityByState.set(cap.stateId, cap);
   }
 
-  // Index active contracts: stateId → resource → corporationId string → share
-  const contractIndex = new Map<string, Map<ExtractableResource, Map<string, number>>>();
-  for (const contract of contracts) {
-    if (!contractIndex.has(contract.stateId)) {
-      contractIndex.set(contract.stateId, new Map());
-    }
-    const byResource = contractIndex.get(contract.stateId)!;
-    if (!byResource.has(contract.resource)) {
-      byResource.set(contract.resource, new Map());
-    }
-    byResource.get(contract.resource)!.set(contract.corporationId.toString(), contract.share);
-  }
+  const contractIndex = indexContractShares(
+    contracts.map((contract) => ({
+      stateId: contract.stateId,
+      corporationId: contract.corporationId.toString(),
+      resource: contract.resource,
+      share: contract.share,
+    }))
+  );
 
   const sectorsByState = new Map<string, ExtractionSectorInput[]>();
   for (const sector of sectors) {

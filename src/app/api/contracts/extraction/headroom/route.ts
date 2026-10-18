@@ -7,10 +7,8 @@ import { getDb } from "@/lib/mongodb";
 import { handleRouteError, badRequest } from "@/lib/api/errors";
 import { EXTRACTABLE_RESOURCES, type ExtractableResource } from "@/lib/constants/commodities";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import {
-  computeContractedShare,
-  computeRemainingContractHeadroom,
-} from "@/lib/extraction/computeContractedShare";
+import { computeContractedShare } from "@/lib/extraction/computeContractedShare";
+import { GOVT_CONTRACT_MAX_TOTAL_SHARE } from "@/lib/constants/prospecting";
 import { getResourceContractAuthority } from "@/lib/extraction/contractAuthority";
 
 export async function GET(request: Request) {
@@ -23,17 +21,17 @@ export async function GET(request: Request) {
     if (!resource || !EXTRACTABLE_RESOURCES.includes(resource as ExtractableResource)) {
       throw badRequest("Valid resource is required");
     }
-    if (!countryId || !(countryId in COUNTRY_CONFIGS)) {
+    if (!countryId || !Object.hasOwn(COUNTRY_CONFIGS, countryId)) {
       throw badRequest("Valid countryId is required");
     }
 
     const db = await getDb();
-    const [contractedShare, remainingHeadroom, authority] = await Promise.all([
-      computeContractedShare(db, stateId, resource as ExtractableResource),
-      computeRemainingContractHeadroom(db, stateId, resource as ExtractableResource),
+    const [contractedShare, authority] = await Promise.all([
+      computeContractedShare(db, stateId, resource as ExtractableResource, countryId),
       getResourceContractAuthority(db, countryId as CountryId),
     ]);
 
+    const remainingHeadroom = Math.max(0, GOVT_CONTRACT_MAX_TOTAL_SHARE - contractedShare);
     return NextResponse.json({ contractedShare, remainingHeadroom, authority });
   } catch (error) {
     return handleRouteError(error);

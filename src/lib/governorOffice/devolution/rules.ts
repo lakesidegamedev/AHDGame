@@ -3,6 +3,7 @@
  * stance, regional and Westminster approval, inflation and baseline recovery.
  * computeIndependenceDesireDriftSnapshot returns the next value and its drivers.
  */
+import { clamp } from "@/lib/numeric/rules";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { REQUEST_THRESHOLD } from "@/lib/constants/referendum";
 import type { DevolutionPolicy } from "@/lib/db/types/governorOfficeState";
@@ -120,10 +121,6 @@ export interface IndependenceDesireDriftPerRegion {
 export interface IndependenceDesireDriftResult {
   regionsProcessed: number;
   perRegion: IndependenceDesireDriftPerRegion[];
-}
-
-function clamp(x: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, x));
 }
 
 /** Preserve sub-hundredth drivers while avoiding accumulated floating-point noise. */

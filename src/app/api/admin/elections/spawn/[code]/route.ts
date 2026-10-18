@@ -1,3 +1,4 @@
+import { withAdminRoute } from "@/lib/api/withAdminAuth";
 /**
  * POST /api/admin/elections/spawn/[code]
  *
@@ -9,8 +10,7 @@
  * Errors: 403, 404 (no handler registered for country)
  */
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/api/requireAdmin";
-import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { errorResponse } from "@/lib/api/errors";
 import { SPAWN_ELECTIONS_REGISTRY } from "@/lib/turn/perpetualElections";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 
@@ -18,35 +18,25 @@ interface RouteParams {
   params: Promise<{ code: string }>;
 }
 
-export async function POST(_request: Request, { params }: RouteParams) {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
-
-    const { code } = await params;
-    const countryId = code.toUpperCase() as CountryId;
-    if (!COUNTRY_CONFIGS[countryId]) {
-      return errorResponse(400, "Invalid country");
-    }
-    const handler = SPAWN_ELECTIONS_REGISTRY[countryId];
-    if (!handler) {
-      return errorResponse(
-        404,
-        `No spawn-elections handler registered for country '${countryId}'.`
-      );
-    }
-
-    const start = Date.now();
-    const now = new Date();
-    const result = (await handler(now)) ?? { message: `${countryId} spawn complete.` };
-    const ms = Date.now() - start;
-
-    return NextResponse.json({
-      success: true,
-      ms,
-      ...result,
-    });
-  } catch (error) {
-    return handleRouteError(error);
+export const POST = withAdminRoute(async (_auth, _request: Request, { params }: RouteParams) => {
+  const { code } = await params;
+  const countryId = code.toUpperCase() as CountryId;
+  if (!COUNTRY_CONFIGS[countryId]) {
+    return errorResponse(400, "Invalid country");
   }
-}
+  const handler = SPAWN_ELECTIONS_REGISTRY[countryId];
+  if (!handler) {
+    return errorResponse(404, `No spawn-elections handler registered for country '${countryId}'.`);
+  }
+
+  const start = Date.now();
+  const now = new Date();
+  const result = (await handler(now)) ?? { message: `${countryId} spawn complete.` };
+  const ms = Date.now() - start;
+
+  return NextResponse.json({
+    success: true,
+    ms,
+    ...result,
+  });
+});

@@ -1,3 +1,4 @@
+import { clamp } from "@/lib/numeric/rules";
 import type { Db } from "mongodb";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
@@ -32,10 +33,6 @@ interface NationalPolicyRow {
 interface LegislationTypeOptionsRow {
   _id: string;
   policyOptions?: Array<{ social?: number }>;
-}
-
-function clamp(v: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, v));
 }
 
 /**

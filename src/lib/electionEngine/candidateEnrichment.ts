@@ -1,6 +1,7 @@
 /**
  * Fetches and enriches candidate data for vote calculations.
  */
+import { clampPercentStatOr as clampPercentStat } from "@/lib/numeric/rules";
 import { combinedAds } from "@/lib/campaignTargeting/rules";
 
 import { ObjectId, type Db } from "mongodb";
@@ -20,11 +21,6 @@ import {
 } from "@/lib/nppEndorsements";
 import { buildPartyChairMaps, resolvePartyChairPrimaryRole } from "@/lib/primaryScore";
 import type { StatePartyOrg } from "@/lib/db/types/statePartyOrg";
-
-function clampPercentStat(value: number, fallback: number): number {
-  const safeValue = Number.isFinite(value) ? value : fallback;
-  return Math.min(100, Math.max(0, safeValue));
-}
 
 // ─── Fetch & enrich candidate stats ──────────────────────────────────────────
 
