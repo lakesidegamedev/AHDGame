@@ -163,7 +163,7 @@ export const CORP_TABS: CorpTab[] = [
   {
     id: "contracts",
     label: "Contracts",
-    tooltip: "Extraction contract offers and active agreements with governments",
+    tooltip: "Extraction tenders, active concessions and contract history",
     icon: (
       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path

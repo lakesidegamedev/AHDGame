@@ -325,7 +325,11 @@ function extractionMoney(amount: number, row: TenderView): string | null {
     ? `${contractLocalAmount(amount, row.currencyQuote).toLocaleString(undefined, { maximumSignificantDigits: 12 })} ${row.currencyQuote.code}`
     : null;
 }
-function ExtractionScope({ row }: { row: Pick<TenderView, "terms" | "capacityQuote"> }) {
+function ExtractionScope({
+  row,
+}: {
+  row: Pick<TenderView, "terms" | "capacityQuote" | "countryId">;
+}) {
   const t = useTranslations("corporations.governmentContracts");
   if (row.terms.type !== "extraction") return null;
   return (
@@ -340,6 +344,12 @@ function ExtractionScope({ row }: { row: Pick<TenderView, "terms" | "capacityQuo
           : t("capacityUnavailable")}
       </p>
       <p>{t("capacityBasis")}</p>
+      <Link
+        className="inline-block text-primary"
+        href={`/country/${row.countryId.toLowerCase()}/region/${row.terms.stateId}?tab=resources`}
+      >
+        {t("regionResources")}
+      </Link>
     </div>
   );
 }

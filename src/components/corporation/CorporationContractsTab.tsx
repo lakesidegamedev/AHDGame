@@ -1,7 +1,9 @@
 "use client";
 
 import { ContractBoardLink } from "@/components/governmentContracts/ContractBoardLink";
-import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { useEffect, useState } from "react";
 import { COMMODITY_LABELS } from "@/lib/constants/commodities";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useToast } from "@/contexts/ToastContext";
@@ -22,43 +24,48 @@ interface CorporationContractsTabProps {
 }
 
 /**
- * Extraction-contract offers + active contracts held by this corporation.
+ * Extraction concessions, legacy offers and award history held by this corporation.
  * CEO can accept/decline offers and see royalty/term detail on active
- * contracts. Rendered only for extraction corps when contractIssuanceEnabled.
+ * contracts. Existing obligations remain visible when new issuance is paused.
  */
 export default function CorporationContractsTab({
   corpId,
   isCeo,
   countryId,
 }: CorporationContractsTabProps) {
+  const t = useTranslations("corporations.extractionContracts");
   const { formatAmount } = useCurrency();
   const { showToast } = useToast();
   const gameTurn = useGameTurnStatus();
   const currentTurn = gameTurn?.currentTurn ?? 0;
 
   const [contracts, setContracts] = useState<ExtractionContractRow[]>([]);
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/contracts/extraction?corporationId=${corpId}&status=all`);
-      if (res.ok) {
-        const data = (await res.json()) as { contracts?: ExtractionContractRow[] };
-        setContracts(data.contracts ?? []);
-      }
-    } catch {
-      setContracts([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [corpId]);
-
   useEffect(() => {
-    load();
-  }, [load, refreshKey]);
+    const controller = new AbortController();
+    setLoading(true);
+    setError("");
+    fetch(`/api/contracts/extraction?corporationId=${corpId}&status=all`, {
+      signal: controller.signal,
+      cache: "no-store",
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(apiErrorText(data, t("loadFailed")));
+        if (!controller.signal.aborted) setContracts(data.contracts ?? []);
+      })
+      .catch((e) => {
+        if (!controller.signal.aborted) setError(e instanceof Error ? e.message : t("loadFailed"));
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [corpId, refreshKey, currentTurn, t]);
 
   async function respond(id: string, action: "accept" | "decline") {
     setBusyId(id);
@@ -66,62 +73,71 @@ export default function CorporationContractsTab({
       const res = await fetch(`/api/contracts/extraction/${id}/${action}`, { method: "POST" });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
-        showToast(apiErrorText(json, `Failed to ${action} the offer.`), "error");
+        showToast(apiErrorText(json, t("actionFailed")), "error");
         return;
       }
-      showToast(action === "accept" ? "Contract accepted." : "Offer declined.", "success");
+      showToast(action === "accept" ? t("accepted") : t("declined"), "success");
       setRefreshKey((k) => k + 1);
     } catch {
-      showToast("Network error.", "error");
+      showToast(t("networkError"), "error");
     } finally {
       setBusyId(null);
     }
-  }
-
-  if (loading) {
-    return <p className="py-2 text-xs text-muted">Loading contracts…</p>;
   }
 
   const offers = contracts.filter((c) => effectiveContractStatus(c) === "offered");
   const active = contracts.filter((c) => effectiveContractStatus(c) === "active");
   const past = contracts.filter((c) => {
     const s = effectiveContractStatus(c);
-    return s === "declined" || s === "expired" || s === "defaulted";
+    return s !== "offered" && s !== "active";
   });
-
-  if (contracts.length === 0) {
-    return (
-      <DenseSection title="Extraction contracts">
-        <p className="py-2 text-xs text-muted">No extraction contracts yet.</p>
-      </DenseSection>
-    );
-  }
 
   const resource = (c: ExtractionContractRow) => COMMODITY_LABELS[c.resource] ?? c.resource;
   const royalty = (c: ExtractionContractRow) =>
-    c.royaltyRatePerTurn != null ? `${(c.royaltyRatePerTurn * 100).toFixed(2)}%` : "n/a";
+    c.royaltyRatePerTurn != null ? `${(c.royaltyRatePerTurn * 100).toFixed(2)}%` : t("unavailable");
 
   return (
     <div className="space-y-6">
-      <ContractBoardLink countryId={countryId} type="extraction" />
-      {offers.length > 0 && (
-        <DenseSection title="Pending offers" meta={`${offers.length}`}>
+      <DenseSection title={t("heading")}>
+        <p className="mb-3 text-sm text-muted">{t("intro")}</p>
+        <ContractBoardLink
+          countryId={countryId}
+          type="extraction"
+          corporationId={isCeo ? corpId : undefined}
+        />
+        <p className="mt-3 text-xs text-muted">{t("allocationHint")}</p>
+        <p className="mt-2 text-xs text-muted">{t("royaltyHint")}</p>
+      </DenseSection>
+      {error ? (
+        <div role="alert" className="rounded-lg border border-error/30 p-4">
+          <p className="text-sm text-error">{error}</p>
+          <SmallButton onClick={() => setRefreshKey((k) => k + 1)}>{t("retry")}</SmallButton>
+        </div>
+      ) : loading ? (
+        <p role="status" className="text-sm text-muted">
+          {t("loading")}
+        </p>
+      ) : contracts.length === 0 ? (
+        <p className="text-sm text-muted">{t("empty")}</p>
+      ) : null}
+      {!error && !loading && offers.length > 0 && (
+        <DenseSection title={t("pending")} meta={`${offers.length}`}>
           <TableScroll>
             <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <Th>Resource</Th>
-                  <Th>State</Th>
-                  <Th align="right">Share</Th>
-                  <Th align="right">Signing fee</Th>
-                  <Th align="right" title="Share of contracted value paid each turn">
-                    Royalty / turn
+                  <Th>{t("resource")}</Th>
+                  <Th>{t("state")}</Th>
+                  <Th align="right">{t("share")}</Th>
+                  <Th align="right">{t("signingFee")}</Th>
+                  <Th align="right" title={t("royaltyBasis")}>
+                    {t("royalty")}
                   </Th>
-                  <Th align="right">Term</Th>
-                  <Th align="right">Offer expires</Th>
+                  <Th align="right">{t("term")}</Th>
+                  <Th align="right">{t("offerExpires")}</Th>
                   {isCeo && (
                     <Th align="right">
-                      <span className="sr-only">Respond</span>
+                      <span className="sr-only">{t("respond")}</span>
                     </Th>
                   )}
                 </tr>
@@ -129,17 +145,38 @@ export default function CorporationContractsTab({
               <tbody>
                 {offers.map((c) => (
                   <tr key={c._id}>
-                    <Td className="text-foreground">{resource(c)}</Td>
-                    <Td className="text-muted">{c.stateId}</Td>
+                    <Td className="text-foreground">
+                      {resource(c)}
+                      {c.tenderId && (
+                        <Link
+                          className="mt-1 block text-xs text-primary"
+                          href={`/country/${c.countryId.toLowerCase()}/government-contracts?tab=awarded&type=extraction&tender=${c.tenderId}`}
+                        >
+                          {t("awardRecord")}
+                        </Link>
+                      )}
+                    </Td>
+                    <Td className="text-muted">
+                      <Link
+                        href={`/country/${c.countryId.toLowerCase()}/region/${c.stateId}?tab=resources`}
+                        className="text-primary"
+                      >
+                        {c.stateId}
+                      </Link>
+                    </Td>
                     <Td align="right">{(c.share * 100).toFixed(1)}%</Td>
                     <Td align="right">
-                      {c.signingFeeAnchor != null ? formatAmount(c.signingFeeAnchor) : "n/a"}
+                      {c.signingFeeAnchor != null
+                        ? formatAmount(c.signingFeeAnchor)
+                        : t("unavailable")}
                     </Td>
                     <Td align="right">{royalty(c)}</Td>
-                    <Td align="right">{c.termTurns ? `${c.termTurns} turns` : "Perpetual"}</Td>
+                    <Td align="right">
+                      {c.termTurns ? t("turns", { count: c.termTurns }) : t("perpetual")}
+                    </Td>
                     <Td align="right" className="text-muted">
                       {c.offerExpiresTurn != null
-                        ? `${Math.max(0, c.offerExpiresTurn - currentTurn)} turns`
+                        ? t("turns", { count: Math.max(0, c.offerExpiresTurn - currentTurn) })
                         : ""}
                     </Td>
                     {isCeo && (
@@ -150,13 +187,13 @@ export default function CorporationContractsTab({
                             onClick={() => void respond(c._id, "accept")}
                             disabled={busyId === c._id}
                           >
-                            {busyId === c._id ? "Working…" : "Accept"}
+                            {busyId === c._id ? t("working") : t("accept")}
                           </SmallButton>
                           <SmallButton
                             onClick={() => void respond(c._id, "decline")}
                             disabled={busyId === c._id}
                           >
-                            Decline
+                            {t("decline")}
                           </SmallButton>
                         </span>
                       </Td>
@@ -169,18 +206,18 @@ export default function CorporationContractsTab({
         </DenseSection>
       )}
 
-      {active.length > 0 && (
-        <DenseSection title="Active contracts" meta={`${active.length}`}>
+      {!error && !loading && active.length > 0 && (
+        <DenseSection title={t("active")} meta={`${active.length}`}>
           <TableScroll>
             <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <Th>Resource</Th>
-                  <Th>State</Th>
-                  <Th align="right">Share</Th>
-                  <Th align="right">Royalty / turn</Th>
-                  <Th align="right">Expires</Th>
-                  <Th align="right">Status</Th>
+                  <Th>{t("resource")}</Th>
+                  <Th>{t("state")}</Th>
+                  <Th align="right">{t("share")}</Th>
+                  <Th align="right">{t("royalty")}</Th>
+                  <Th align="right">{t("expires")}</Th>
+                  <Th align="right">{t("status")}</Th>
                 </tr>
               </thead>
               <tbody>
@@ -188,20 +225,42 @@ export default function CorporationContractsTab({
                   const missed = c.missedPayments ?? 0;
                   return (
                     <tr key={c._id}>
-                      <Td className="text-foreground">{resource(c)}</Td>
-                      <Td className="text-muted">{c.stateId}</Td>
+                      <Td className="text-foreground">
+                        {resource(c)}
+                        {c.tenderId && (
+                          <Link
+                            className="mt-1 block text-xs text-primary"
+                            href={`/country/${c.countryId.toLowerCase()}/government-contracts?tab=awarded&type=extraction&tender=${c.tenderId}`}
+                          >
+                            {t("awardRecord")}
+                          </Link>
+                        )}
+                      </Td>
+                      <Td className="text-muted">
+                        <Link
+                          href={`/country/${c.countryId.toLowerCase()}/region/${c.stateId}?tab=resources`}
+                          className="text-primary"
+                        >
+                          {c.stateId}
+                        </Link>
+                      </Td>
                       <Td align="right">{(c.share * 100).toFixed(1)}%</Td>
                       <Td align="right">{royalty(c)}</Td>
                       <Td align="right" className="text-muted">
-                        {c.expiresTurn != null ? `Turn ${c.expiresTurn}` : "Perpetual"}
+                        {c.expiresTurn != null
+                          ? t("turn", { turn: c.expiresTurn })
+                          : t("perpetual")}
                       </Td>
                       <Td align="right" numeric={false}>
                         {missed > 0 ? (
                           <span
                             className="text-warning"
-                            title={`${missed} of ${CONTRACT_DEFAULT_MISSED_PAYMENTS} missed royalty payments before default`}
+                            title={t("defaultWarning", {
+                              count: missed,
+                              limit: CONTRACT_DEFAULT_MISSED_PAYMENTS,
+                            })}
                           >
-                            {missed} missed payment{missed === 1 ? "" : "s"}
+                            {t("missedPayments", { count: missed })}
                           </span>
                         ) : (
                           <ContractStatusText status="active" />
@@ -216,23 +275,40 @@ export default function CorporationContractsTab({
         </DenseSection>
       )}
 
-      {past.length > 0 && (
-        <DenseSection title="History" meta={`${past.length}`}>
+      {!error && !loading && past.length > 0 && (
+        <DenseSection title={t("history")} meta={`${past.length}`}>
           <TableScroll>
             <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <Th>Resource</Th>
-                  <Th>State</Th>
-                  <Th align="right">Share</Th>
-                  <Th align="right">Status</Th>
+                  <Th>{t("resource")}</Th>
+                  <Th>{t("state")}</Th>
+                  <Th align="right">{t("share")}</Th>
+                  <Th align="right">{t("status")}</Th>
                 </tr>
               </thead>
               <tbody>
                 {past.map((c) => (
                   <tr key={c._id}>
-                    <Td className="text-foreground">{resource(c)}</Td>
-                    <Td className="text-muted">{c.stateId}</Td>
+                    <Td className="text-foreground">
+                      {resource(c)}
+                      {c.tenderId && (
+                        <Link
+                          className="mt-1 block text-xs text-primary"
+                          href={`/country/${c.countryId.toLowerCase()}/government-contracts?tab=awarded&type=extraction&tender=${c.tenderId}`}
+                        >
+                          {t("awardRecord")}
+                        </Link>
+                      )}
+                    </Td>
+                    <Td className="text-muted">
+                      <Link
+                        href={`/country/${c.countryId.toLowerCase()}/region/${c.stateId}?tab=resources`}
+                        className="text-primary"
+                      >
+                        {c.stateId}
+                      </Link>
+                    </Td>
                     <Td align="right">{(c.share * 100).toFixed(1)}%</Td>
                     <Td align="right" numeric={false}>
                       <ContractStatusText status={effectiveContractStatus(c)} />
@@ -249,15 +325,17 @@ export default function CorporationContractsTab({
 }
 
 const STATUS_TEXT: Record<ExtractionContractStatus, { label: string; tone: string }> = {
-  offered: { label: "Offered", tone: "text-foreground" },
-  active: { label: "Active", tone: "text-success" },
-  declined: { label: "Declined", tone: "text-muted" },
-  expired: { label: "Expired", tone: "text-muted" },
-  defaulted: { label: "Defaulted", tone: "text-error" },
+  revoked: { label: "revoked", tone: "text-muted" },
+  offered: { label: "offered", tone: "text-foreground" },
+  active: { label: "active", tone: "text-success" },
+  declined: { label: "declined", tone: "text-muted" },
+  expired: { label: "expired", tone: "text-muted" },
+  defaulted: { label: "defaulted", tone: "text-error" },
 };
 
 /** Contract status as plain text, coloured by what it means. */
 function ContractStatusText({ status }: { status: ExtractionContractStatus }) {
+  const t = useTranslations("corporations.extractionContracts");
   const s = STATUS_TEXT[status];
-  return <span className={s.tone}>{s.label}</span>;
+  return <span className={s.tone}>{t(`statuses.${s.label}`)}</span>;
 }
