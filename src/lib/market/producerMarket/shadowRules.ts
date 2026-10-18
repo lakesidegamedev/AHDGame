@@ -71,6 +71,8 @@ export function runProducerShadow(input: {
   accounts: readonly MarketAccount[];
   households: readonly HouseholdSpec[];
   publicOrders: readonly PurchaseOrder[];
+  /** Trade-route eligibility for plant input orders (see routeRules.ts). */
+  eligibleOffersByOrder?: Readonly<Record<string, readonly string[]>>;
 }): ShadowSummary {
   const result = advanceProducerEconomy({
     turn: input.turn,
@@ -78,6 +80,7 @@ export function runProducerShadow(input: {
     producers: input.producers.map((p) => p.plan),
     households: input.households,
     externalOrders: input.publicOrders,
+    eligibleOffersByOrder: input.eligibleOffersByOrder,
   });
   const receiptById = new Map(result.producers.map((r) => [r.id, r]));
   const byType = new Map<string, ShadowIndustryRow>();

@@ -33,6 +33,11 @@ import {
   type ProducerPhysicalEnv,
 } from "./producerPhysicalPreparation";
 import type { CorporationLookups } from "./types";
+import {
+  routeEligibility,
+  type RouteOffer,
+  type RouteOrder,
+} from "@/lib/market/producerMarket/routeRules";
 
 export const PRODUCER_SHADOW_COLLECTION = "producerMarketShadows";
 const PRICE_HEADROOM = 1.25;
@@ -67,7 +72,11 @@ export async function runProducerMarketShadowPhase(
     const producers: ShadowProducer[] = [];
     let skipped = 0;
     const cashByCorp = new Map<string, number>();
-    const householdWallets = new Map<string, { accountId: string; stateId: string }>();
+    const householdWallets = new Map<
+      string,
+      { accountId: string; stateId: string; countryId: string }
+    >();
+    const planCountry = new Map<string, string>();
     const operatingPayees = new Set<string>();
     for (const corp of lookups.corporations) {
       for (const sector of lookups.sectorsByCorp.get(corp._id.toString()) ?? []) {
@@ -88,9 +97,12 @@ export async function runProducerMarketShadowPhase(
             prepared.plan.accountId,
             rate && rate > 0 ? Math.max(0, (corp.liquidCapital ?? 0) / rate) : 0
           );
+          const sectorCountry = String(sector.countryId ?? corp.countryId ?? "");
+          planCountry.set(prepared.plan.id, sectorCountry);
           householdWallets.set(prepared.plan.labourRecipientAccountId, {
             accountId: prepared.plan.labourRecipientAccountId,
             stateId: sector.stateId,
+            countryId: sectorCountry,
           });
           operatingPayees.add(prepared.plan.operatingRecipientAccountId);
           void walletScopes;
@@ -173,21 +185,69 @@ export async function runProducerMarketShadowPhase(
         .map((id) => ({ id, cash: 0 })),
     ];
 
+    // 5. Trade routes: world-book buyers only reach sellers in their own
+    //    country or on routes the live trade matrix leaves open.
+    const households = householdDemandSpecs({
+      wallets: [...householdWallets.values()],
+      referencePrice: refPrice,
+      priceHeadroom: PRICE_HEADROOM,
+    });
+    const publicBuyerOrders = publicOrders(
+      publicBuyers,
+      (c, book) => refPrice(c as CommodityType, book.startsWith("state:") ? book.slice(6) : ""),
+      PRICE_HEADROOM
+    );
+    const routes = lookups.tradeRoutes;
+    let eligibleOffersByOrder: Record<string, readonly string[]> | undefined;
+    if (routes) {
+      const open = (c: string, from: string, to: string) =>
+        routes.affinityFor(c as CommodityType, from as never, to as never) > 0;
+      const offers: RouteOffer[] = producers.flatMap((p) =>
+        p.plan.outputs
+          .filter((o) => o.book === "world")
+          .map((o) => ({
+            id: JSON.stringify([p.plan.id, "output", o.commodity]),
+            commodity: o.commodity,
+            sellerCountry: planCountry.get(p.plan.id) ?? "",
+          }))
+      );
+      const orders: RouteOrder[] = [
+        ...producers.flatMap((p) =>
+          p.plan.inputs
+            .filter((r) => r.book === "world")
+            .map((r) => ({
+              id: JSON.stringify([p.plan.id, "input", r.commodity]),
+              commodity: r.commodity,
+              buyerCountry: planCountry.get(p.plan.id) ?? "",
+            }))
+        ),
+      ];
+      eligibleOffersByOrder = routeEligibility(orders, offers, open);
+      const walletCountry = new Map(
+        [...householdWallets.values()].map((w) => [w.accountId, w.countryId])
+      );
+      const listFor = (commodity: string, country: string) =>
+        routeEligibility([{ id: "x", commodity, buyerCountry: country }], offers, open).x;
+      for (const h of households)
+        for (const product of h.products)
+          if (product.book === "world")
+            (product as { eligibleOfferIds?: readonly string[] }).eligibleOfferIds = listFor(
+              product.commodity,
+              walletCountry.get(h.accountId) ?? ""
+            );
+      for (const o of publicBuyerOrders)
+        if (o.book === "world")
+          o.eligibleOfferIds = listFor(o.commodity, o.accountId.slice("public:".length));
+    }
+
     const summary = runProducerShadow({
       turn: input.turn,
       producers,
       skipped,
       accounts,
-      households: householdDemandSpecs({
-        wallets: [...householdWallets.values()],
-        referencePrice: refPrice,
-        priceHeadroom: PRICE_HEADROOM,
-      }),
-      publicOrders: publicOrders(
-        publicBuyers,
-        (c, book) => refPrice(c as CommodityType, book.startsWith("state:") ? book.slice(6) : ""),
-        PRICE_HEADROOM
-      ),
+      households,
+      publicOrders: publicBuyerOrders,
+      eligibleOffersByOrder,
     });
     await db
       .collection(PRODUCER_SHADOW_COLLECTION)

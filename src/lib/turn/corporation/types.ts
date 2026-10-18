@@ -263,6 +263,20 @@ export interface CorporationLookups {
    * present, the clearing pass runs one book per seller home country instead
    * of a single worldwide book. See market/tradePartition.ts.
    */
+  /**
+   * The trade matrix this turn's books were built from: route openness and the
+   * importer's tariff multiplier. Read by the producer-market shadow so it uses
+   * exactly the routes and tariffs the live trade step uses. Null when the
+   * turn has no country books.
+   */
+  tradeRoutes?: {
+    affinityFor: (commodity: CommodityType, exporter: CountryId, importer: CountryId) => number;
+    importCostMultiplierFor: (
+      commodity: CommodityType,
+      exporter: CountryId,
+      importer: CountryId
+    ) => number;
+  } | null;
   countryClearingBooks: Map<
     CountryId,
     Map<CommodityType, { supply: number; demand: number }>
