@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { CorporationDetail } from "../CorporationPageTypes";
 import { InlineStatus, SmallButton } from "../dense/DenseKit";
 import { GovernanceRow } from "./GovernanceRow";
+import { OperatorPolicyCard } from "./OperatorPolicyCard";
 
 /**
  * Hand day-to-day operation of the corp to an autonomous NPP caretaker, or
@@ -160,6 +161,7 @@ export function CaretakerCeoCard({
             <SmallButton tone="primary" onClick={dismiss} disabled={busy}>
               {busy ? "Updating" : "Resume control"}
             </SmallButton>
+            <OperatorPolicyCard corpId={corpId} />
           </>
         ) : (
           <SmallButton tone="primary" onClick={appoint} disabled={busy || onCooldown}>
