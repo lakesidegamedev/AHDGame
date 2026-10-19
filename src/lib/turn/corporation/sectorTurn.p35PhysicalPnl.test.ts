@@ -838,3 +838,58 @@ describe("energy productivity physical input units", () => {
     expect(pnl.inputs).toBeCloseTo(expected, 6);
   });
 });
+
+describe("explicit plant payroll under labour rationing", () => {
+  // The state's labour market supplies only part of the crew a plant wants.
+  // Output and headcount already follow that share; the payroll must too, or
+  // the missing staff are billed and the wage per worker inflates.
+  const staffed = (tightness: number | undefined, priorStaffingFactor?: number) =>
+    run(
+      "plants",
+      makeSector({
+        capitalStock: STOCK,
+        plantsStartTurn: 800,
+        wageLevel: 1,
+        labourStaffingFactor: priorStaffingFactor,
+      }),
+      1000,
+      (env) => {
+        env.market.explicitPlantCostsEnabled = true;
+        if (tightness !== undefined) env.lookups.labourTightnessByState.set(STATE_ID, tightness);
+      }
+    );
+  const labourOf = (r: ReturnType<typeof staffed>) =>
+    (r.update.plantsPnl as NonNullable<CorporateSector["plantsPnl"]>).labour;
+
+  it("bills a fully staffed plant exactly as an unrationed one", () => {
+    const slack = staffed(0.5, 1);
+    const unstamped = staffed(undefined);
+    expect(slack.update.labourStaffingFactor).toBe(1);
+    expect(slack.update.workers).toBe(slack.update.workersDesired);
+    expect(labourOf(slack)).toBeGreaterThan(0);
+    expect(labourOf(slack)).toBe(labourOf(unstamped));
+    expect(slack.update.wagePerWorker).toBe(unstamped.update.wagePerWorker);
+  });
+
+  it("treats a new sector in a world with no staffing reading as fully staffed", () => {
+    const fresh = staffed(undefined);
+    expect(fresh.update.labourStaffingFactor).toBe(1);
+    expect(fresh.update.workers).toBe(fresh.update.workersDesired);
+    expect(labourOf(fresh)).toBe(labourOf(staffed(1, 1)));
+  });
+
+  it("pays only the staffed share and keeps the wage per worker", () => {
+    const full = staffed(1, 1);
+    const tight = staffed(1 / 0.6, 0.6);
+    const desired = tight.update.workersDesired as number;
+    const workers = tight.update.workers as number;
+    expect(tight.update.labourStaffingFactor).toBeCloseTo(0.6, 8);
+    expect(desired).toBe(full.update.workersDesired);
+    expect(workers).toBe(Math.round(desired * 0.6));
+    expect(labourOf(tight)).toBeCloseTo(labourOf(full) * (workers / desired), 6);
+    expect(tight.update.wagePerWorker as number).toBeCloseTo(
+      full.update.wagePerWorker as number,
+      6
+    );
+  });
+});
