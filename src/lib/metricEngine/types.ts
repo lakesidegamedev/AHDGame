@@ -82,6 +82,8 @@ export interface RegistryNode {
    * shock retains 90% each turn (half-life ~6.6 turns).
    */
   policyDeltaDecay?: number;
+  /** Optional pure decay rule when display rounding must not freeze a small residual. */
+  decayPolicyDelta?: (delta: number, ctx: EngineNodeContext) => number;
   /** Per-turn movement beyond this is clamped + logged (circuit-breaker). */
   circuitBreaker?: number;
   /** derived/root: compute this turn's simulated target. */
