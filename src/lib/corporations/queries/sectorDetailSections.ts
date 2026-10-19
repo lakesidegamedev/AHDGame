@@ -119,7 +119,6 @@ import {
   type CommodityTollModel,
 } from "@/lib/corporations/rules/commodityDominanceRamp";
 import { STRIKE_REVENUE_THROTTLE } from "@/lib/labour/strikes";
-import { calculatePlantSectorSplit } from "@/lib/corporations/plantSectorSplit";
 import {
   CAPITAL_DEPRECIATION_PER_TURN,
   governorAnchorTurn,
@@ -288,7 +287,6 @@ export async function buildSectorCrisisSection(
 /** Attack/split panel info for the viewer's corporation (non-null viewer). */
 export function buildSectorAttackInfo(args: {
   viewerCorporation: Corporation;
-  defenderMarketingStrength: number;
   viewerCorpFxRate: number;
   sectorHostFxRate: number;
   sectorHostLiquidCode: CurrencyCode | undefined;
@@ -303,14 +301,13 @@ export function buildSectorAttackInfo(args: {
   siblingsSectors: CorporateSector[];
   siblingRevenueAnchorById: Map<string, number>;
   /**
-   * Under plants, unowned splits are gone — only rival plant takeovers remain.
+   * Under plants, unowned splits are gone (and rival plant splits were removed).
    * Split quote fields are forced to 0 so no client can render a Split CTA.
    */
   plantsMode?: boolean;
 }) {
   const {
     viewerCorporation,
-    defenderMarketingStrength,
     viewerCorpFxRate,
     sectorHostFxRate,
     sectorHostLiquidCode,
@@ -404,15 +401,6 @@ export function buildSectorAttackInfo(args: {
     typeof sector.capacityBookAnchor === "number" &&
     Number.isFinite(sector.capacityBookAnchor) &&
     sector.capacityBookAnchor >= 0;
-  const plantSplitQuote =
-    plantsMode && hasPersistedPlantLedger
-      ? calculatePlantSectorSplit({
-          defenderPlantCount: sector.plantCount as number,
-          defenderBookValueAnchor: sector.capacityBookAnchor as number,
-          attackerMarketingStrength: viewerCorporation.marketingStrength ?? 0,
-          defenderMarketingStrength,
-        })
-      : null;
 
   return {
     attackCost: calculateAttackCostFromLocalRevenue(
@@ -421,7 +409,7 @@ export function buildSectorAttackInfo(args: {
       sectorHostFxRate
     ),
     // Flat full-strength fields kept for backwards compat. Plants: always 0 —
-    // unowned splits are retired; attackCost above is the only market action.
+    // unowned splits are retired.
     splitCost: plantsMode ? 0 : fullStrengthInfo.splitCost,
     splitEstimatedCapture: plantsMode ? 0 : fullStrengthInfo.splitEstimatedCapture,
     splitMsCost: plantsMode ? 0 : fullStrengthInfo.splitMsCost,
@@ -431,7 +419,6 @@ export function buildSectorAttackInfo(args: {
     stateId: sector.stateId,
     countryId: sectorCountryId,
     ...(plantsMode && hasPersistedPlantLedger ? { plantCount: sector.plantCount } : {}),
-    ...(plantSplitQuote ? { plantSplitQuote } : {}),
     splitStrengths: plantsMode
       ? { full: zeroSplit, half: zeroSplit }
       : {

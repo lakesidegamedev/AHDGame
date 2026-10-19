@@ -1,6 +1,5 @@
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import type { StateMetricMarginContribution } from "@/lib/corporations/stateMetricMarginTypes";
-import type { PlantSectorSplitQuote } from "@/lib/corporations/plantSectorSplit";
 import type { RetoolHint } from "@/lib/corporations/retoolHint";
 
 export interface SectorData {
@@ -461,7 +460,6 @@ export interface AttackInfo {
   stateId: string;
   countryId?: string;
   plantCount?: number;
-  plantSplitQuote?: PlantSectorSplitQuote;
   /** Per-strength cost/capture breakdown. Present on pages loaded after the split-strength feature. */
   splitStrengths?: {
     full: SplitStrengthInfo;
