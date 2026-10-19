@@ -13,7 +13,6 @@ import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currenc
 import { regionApiSubUrl, regionUrl } from "@/lib/urls";
 import type { StateResources, ExtractionCapacityRow, ResourceOpportunity } from "./types";
 import { MAX_GROWTH_RATE, MIN_GROWTH_RATE } from "@/lib/constants/corporations";
-import { useToast } from "@/contexts/ToastContext";
 import { useSectorPageState } from "./useSectorPageState";
 import HeroCard from "./components/HeroCard";
 import FinancialVisibilityNotice from "./components/FinancialVisibilityNotice";
@@ -68,7 +67,6 @@ export default function SectorDetailPage() {
   const [capacityMessage, setCapacityMessage] = useState("");
 
   const [state, dispatch] = useSectorPageState();
-  const { showToast } = useToast();
   const {
     sector,
     corporation,
@@ -93,9 +91,6 @@ export default function SectorDetailPage() {
     abandonConfirm,
     abandoning,
     attackInfo,
-    attacking,
-    attackMsg,
-    attackError,
     splitting,
     splitMsg,
     splitError,
@@ -456,46 +451,6 @@ export default function SectorDetailPage() {
     }
   };
 
-  const handleAttackSector = async () => {
-    if (!attackInfo || !sector) return false;
-    dispatch({ type: "SET_ATTACKING", value: true });
-    dispatch({ type: "SET_ATTACK_ERROR", value: "" });
-    dispatch({ type: "SET_ATTACK_MSG", value: "" });
-    // attackInfo.countryId is already the correct CountryId value; fall back to "US" for legacy records
-    const attackCountryId = attackInfo.countryId ?? "US";
-    try {
-      const res = await fetch(
-        regionApiSubUrl(attackCountryId, attackInfo.stateId, "economy/attack-sector"),
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sectorId }),
-        }
-      );
-      const result = await res.json();
-      if (res.ok) {
-        dispatch({ type: "SET_ATTACK_MSG", value: result.message });
-        // Toast as well as the inline banner. A successful split can drop the
-        // defender below the two-plant minimum, which makes the target no longer
-        // splittable, so AttackPanel unmounts on the refresh below and takes the
-        // inline banner with it. The player was left with no confirmation of what
-        // happened at all (ticket #1239 follow-up). A failed roll still costs the
-        // committed cash and MS, so say which outcome it was.
-        showToast(result.message, result.splitSucceeded === false ? "error" : "success");
-        fetchData();
-        return true;
-      } else {
-        dispatch({ type: "SET_ATTACK_ERROR", value: apiErrorText(result, "Attack failed") });
-        return false;
-      }
-    } catch {
-      dispatch({ type: "SET_ATTACK_ERROR", value: "Network error" });
-      return false;
-    } finally {
-      dispatch({ type: "SET_ATTACKING", value: false });
-    }
-  };
-
   const handleListForSale = async () => {
     dispatch({ type: "SET_LISTING_FOR_SALE", value: true });
     dispatch({ type: "SET_FOR_SALE_MESSAGE", value: null });
@@ -809,21 +764,13 @@ export default function SectorDetailPage() {
                   onBuy={handleBuySector}
                 />
               )}
-              {/* Splitting is retired under plants (capacity is the growth
-                  lever there); attacking survives as the PVP. With split gone
-                  the panel is worth rendering only when attack is available,
-                  otherwise a CEO viewing their own sector gets an empty card. */}
-              {attackInfo && (!isCeo || (!plantsEnabled && attackInfo.splitCost > 0)) && (
+              {/* Splitting the unowned market is retired under plants (capacity is
+                  the growth lever there) and splitting rival plants was removed,
+                  so the panel only exists for the legacy unowned split. */}
+              {attackInfo && !plantsEnabled && attackInfo.splitCost > 0 && (
                 <AttackPanel
                   attackInfo={attackInfo}
-                  plantsMode={plantsEnabled}
-                  targetName={sector.displayName ?? corporation.name}
-                  showAttack={!isCeo && !corporation.isStateOwned}
                   showSplit={!plantsEnabled}
-                  attacking={attacking}
-                  attackError={attackError}
-                  attackMsg={attackMsg}
-                  onAttack={handleAttackSector}
                   splitting={splitting}
                   splitError={splitError}
                   splitMsg={splitMsg}
