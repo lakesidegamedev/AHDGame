@@ -1253,26 +1253,30 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
     // buys. When a country's own buyers take cheaper imports (or cannot reach
     // their own states), the domestic spare they passed over is still held
     // by its states but was never offered abroad, so it went unplaced while
-    // foreign buyers stayed short (#4504). Offer exactly that displaced spare,
-    // fair-shared again, to the foreign buyers still unmet. Existing pools are
-    // not re-offered, so a turn with no displacement is unchanged.
+    // foreign buyers stayed short (#4504). The first pass's fair shares also
+    // reserve pool for buyers a cheaper seller then filled, and nothing
+    // released those reservations (#4524). So offer the unused pool plus the
+    // displaced spare, fair-shared again, to the buyers still unmet. Exports
+    // drew from both the pool and the states, so the held spare already
+    // contains the unused pool: displaced is only what states hold beyond it,
+    // and the offer is never counted twice.
     if (sortedStates.some(({ stateId }) => (unmetByState.get(stateId) ?? 0) > 0)) {
       initialForeignSpareByCountry.clear();
       foreignAllocatedByBuyer.clear();
-      let anyDisplaced = false;
+      let anyOffer = false;
       for (const cid of countryIds) {
         let held = 0;
         for (const stateId of statesByCountry.get(cid) ?? [])
           held += spareByState.get(stateId) ?? 0;
-        const displaced = Math.max(0, held - (spareByCountry.get(cid) ?? 0));
-        spareByCountry.set(cid, displaced);
-        initialForeignSpareByCountry.set(cid, displaced);
-        if (displaced > 0) {
-          destinationFor(cid).foreignOfferUnits += displaced;
-          anyDisplaced = true;
-        }
+        const unusedPool = spareByCountry.get(cid) ?? 0;
+        const displaced = Math.max(0, held - unusedPool);
+        const offer = unusedPool + displaced;
+        spareByCountry.set(cid, offer);
+        initialForeignSpareByCountry.set(cid, offer);
+        if (displaced > 0) destinationFor(cid).foreignOfferUnits += displaced;
+        if (offer > 0) anyOffer = true;
       }
-      if (anyDisplaced) serveBuyers(sortedStates, true);
+      if (anyOffer) serveBuyers(sortedStates, true);
     }
 
     // Every buyer has been offered every seller, so whatever is still spare is
