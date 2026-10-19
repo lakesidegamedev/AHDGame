@@ -9,13 +9,14 @@
  * else. It never moves money, never touches a sector or corporation, and a
  * failure is logged, never thrown into the turn.
  */
+import { resolveSectorHostCurrencyCode } from "@/lib/currency/corporationCapital";
 import type { CorporateSector } from "@/lib/db/types";
 import { emptyProducerSectorOpening } from "@/lib/market/producerMarket/openingState";
 import type { Db } from "mongodb";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { COMMODITY_TYPES } from "@/lib/constants/commodities";
 import { eraScaledBasePrices } from "@/lib/constants/commodities";
-import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
+import { TURNS_PER_DAY, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import {
   computeHouseholdConsumption,
   plantsHouseholdUnitScale,
@@ -94,7 +95,19 @@ export async function runProducerMarketShadowPhase(
             sector: shadowOpeningSector(sector, input.worldEpoch, input.turn),
             inputPriceHeadroom: PRICE_HEADROOM,
           });
-          const legacy = legacyBySectorId.get(sector._id.toString()) ?? null;
+          // Legacy plantsPnl is daily and in the sector host's currency; the
+          // shadow is per turn in anchor units, so convert before comparing.
+          const legacyLocal = legacyBySectorId.get(sector._id.toString()) ?? null;
+          const hostRate = lookups.exchangeRatesByCurrency.get(
+            (resolveSectorHostCurrencyCode(sector, corp) ?? "USD") as never
+          );
+          const legacy =
+            legacyLocal && hostRate && hostRate > 0
+              ? {
+                  revenue: legacyLocal.revenue / hostRate / TURNS_PER_DAY,
+                  profit: legacyLocal.profit / hostRate / TURNS_PER_DAY,
+                }
+              : null;
           producers.push({ plan: prepared.plan, sectorType: sector.sectorType, legacy });
           const rate = lookups.exchangeRatesByCurrency.get(
             (corp.liquidCurrencyCode ?? "USD") as never
