@@ -189,6 +189,7 @@ export default function CeoOfficeTab({
       productionPolicy?: number; // pragma: allowlist secret
       pricingPosture?: number | null;
       wageLevel?: number;
+      capacity?: "mothball" | "reactivate";
       preview?: boolean;
     }
   ): Promise<BulkOperationsResult> {
@@ -205,6 +206,7 @@ export default function CeoOfficeTab({
         matchedCount: data.matchedCount as number | undefined,
         growth: data.growth as BulkOperationsResult["growth"],
         wages: data.wages as BulkOperationsResult["wages"],
+        capacity: data.capacity as BulkOperationsResult["capacity"],
       };
     } catch {
       return { ok: false, error: "Network error" };
