@@ -139,4 +139,50 @@ describe("federation custody materialization", () => {
       })
     ).rejects.toThrow("approved playable station");
   });
+
+  async function retain(
+    unit: Record<string, unknown>,
+    kind: "conventional-force" | "strategic-force"
+  ) {
+    const mem = createInMemoryDb();
+    mem.seed("militaryUnits", [{ _id: unitId, countryId: "RU", ...unit }]);
+    const db = mem as unknown as Db;
+    const count = await materializeFederationCustody({
+      db,
+      session: {} as ClientSession,
+      applicationId,
+      sourceCountryId: "RU",
+      assignments: [
+        {
+          assetId: `force:${unitId.toString()}`,
+          kind,
+          custodianEntityId: "RU",
+          disposition: "retain-detailed",
+        },
+      ],
+      transfers,
+    });
+    return { db, count };
+  }
+
+  it("keeps a retained ground force that has no station", async () => {
+    const { db, count } = await retain({ domain: "ground" }, "conventional-force");
+    expect(count).toBe(1);
+    expect(await db.collection("militaryUnits").countDocuments({})).toBe(1);
+    const records = await db.collection("federationCustodyRecords").find({}).toArray();
+    expect(records).toHaveLength(1);
+    expect(records[0].sourceDocument).toBeUndefined();
+  });
+
+  it("keeps a retained naval force stationed in a map region", async () => {
+    const { db, count } = await retain({ domain: "naval", station: "eeu" }, "conventional-force");
+    expect(count).toBe(1);
+    expect(await db.collection("militaryUnits").countDocuments({})).toBe(1);
+  });
+
+  it("keeps a retained strategic force stationed in a retained state", async () => {
+    const { db, count } = await retain({ domain: "rocket", station: "RUSSIA" }, "strategic-force");
+    expect(count).toBe(1);
+    expect(await db.collection("militaryUnits").countDocuments({})).toBe(1);
+  });
 });

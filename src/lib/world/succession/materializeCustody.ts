@@ -32,8 +32,10 @@ function objectIdFromAsset(assetId: string, prefix: string): ObjectId {
 }
 
 /** Apply physical custody after departed regional rows have been archived, in
- * the same transaction. A background unit or shell leaves the detailed source;
- * a retained force must still be stationed in surviving detailed territory. */
+ * the same transaction. A background unit or shell leaves the detailed source.
+ * A retained force stays untouched; it is rejected only when its station is a
+ * source state that leaves detailed simulation. Unit stations are usually map
+ * region codes or absent, which never name a departing state. */
 export async function materializeFederationCustody(input: {
   db: Db;
   session: ClientSession;
@@ -75,7 +77,7 @@ export async function materializeFederationCustody(input: {
       )
         throw new Error("Federation custody force changed location or kind");
       if (assignment.disposition === "retain-detailed") {
-        if (!transfer || transfer.leavesDetailedSource)
+        if (transfer?.leavesDetailedSource)
           throw new Error("Retained federation force needs an approved playable station");
       } else {
         if (
