@@ -6,7 +6,7 @@ summary: >-
   title, what changed and who suggested it. Profiles now show how many of a player's
   suggestions have been implemented.
 tags: [suggestions, discord, profile]
-badges: [feature]
+badges: [minor]
 areas: [frontend, backend]
 ---
 

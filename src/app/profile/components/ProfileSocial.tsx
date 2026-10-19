@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { getOnlineStatus } from "@/lib/utils/onlineStatus";
 import { DiscordBadge } from "../DiscordBadge";
@@ -34,12 +35,12 @@ export function ProfileSocial({
           />
         )}
         {implementedSuggestions > 0 && (
-          <a
+          <Link
             href="/feedback"
             className="inline-flex items-center gap-1.5 rounded-md bg-muted/20 px-2 py-0.5 text-body-sm text-foreground hover:bg-muted/30"
           >
             {t("implementedSuggestions", { count: implementedSuggestions })}
-          </a>
+          </Link>
         )}
         {online && (
           <span className="inline-flex items-center gap-2 text-body-sm text-muted">
