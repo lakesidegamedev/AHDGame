@@ -329,6 +329,31 @@ export function buildExtractionRevenueInputs(
 }
 
 /**
+ * Plants only (#4503): share the deposit by what each mine actually dug, not by
+ * its nameplate. The cap is nameplate x the same realized fraction depletion
+ * and the supply leg apply, so with the multiplier read as the fraction of
+ * that capped desire granted, both book exactly the granted units. Sectors
+ * without a realized measurement stay uncapped.
+ */
+export function withRealizedOutputCaps(
+  inputs: ExtractionSectorInput[],
+  realizedFractionBySectorId: ReadonlyMap<string, number>
+): ExtractionSectorInput[] {
+  return inputs.map((input) => {
+    const fraction = realizedFractionBySectorId.get(input.sectorId);
+    if (typeof fraction !== "number") return input;
+    const plantOutputCap: ExtractionSectorInput["revenueBasedOutput"] = {};
+    for (const [resource, units] of Object.entries(input.revenueBasedOutput) as [
+      ExtractableResource,
+      number,
+    ][]) {
+      plantOutputCap[resource] = units * fraction;
+    }
+    return { ...input, plantOutputCap };
+  });
+}
+
+/**
  * Per-commodity produced/sold units from corporate plants, split across each
  * sector's output mix by the SAME weights the supply ledger uses. Feeds the
  * inventory advance so unsold output lands in stock instead of vanishing.
