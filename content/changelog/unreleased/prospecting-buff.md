@@ -6,7 +6,7 @@ summary: >-
   odds of success are higher. A company that strikes new deposits gets a royalty free
   contract over what it found.
 tags: [economy, extraction, prospecting]
-badges: [balance]
+badges: [minor]
 areas: [economy]
 ---
 
