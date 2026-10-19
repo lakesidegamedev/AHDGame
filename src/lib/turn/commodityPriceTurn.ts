@@ -390,6 +390,8 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
             commodity: 1,
             globalPrice: 1,
             statePrices: 1,
+            // Sourcing quotes these as each foreign seller's ask.
+            nationalPrices: 1,
             hardPeg: 1,
             stateHardPegs: 1,
             stateNudges: 1,

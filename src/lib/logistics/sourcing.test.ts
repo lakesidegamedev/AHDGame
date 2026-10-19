@@ -1562,6 +1562,45 @@ describe("displaced domestic spare is offered abroad (#4504)", () => {
     expect(JSON.stringify(runSourcingPass(inputs))).toBe(JSON.stringify(r));
   });
 
+  it("re-offers the exporter pool a buyer reserved but then filled from a cheaper seller (#4524)", () => {
+    // US (A1) has 100 spare coal. FR (C1) and DE (D1) each need 100. The UK
+    // embargoes FR, so the US is FR's only seller, but DE buys the cheaper UK
+    // coal. The first pass splits the US pool 50/50 between the two short
+    // buyers, and DE's half went unplaced while FR stayed short.
+    const r = runSourcingPass(
+      displacedInputs({
+        states: [
+          { stateId: "A1", countryId: "US" as CountryId },
+          { stateId: "B1", countryId: "UK" as CountryId },
+          { stateId: "C1", countryId: "FR" as CountryId },
+          { stateId: "D1", countryId: "DE" as CountryId },
+        ],
+        byState: balances({
+          A1: { coal: { supply: 100, demand: 0 }, freight: { supply: 1000, demand: 0 } },
+          B1: { coal: { supply: 100, demand: 0 } },
+          C1: { coal: { supply: 0, demand: 100 } },
+          D1: { coal: { supply: 0, demand: 100 } },
+        }),
+        byCountry: balances({
+          US: { coal: { supply: 100, demand: 0 } },
+          UK: { coal: { supply: 100, demand: 0 } },
+          FR: { coal: { supply: 0, demand: 100 } },
+          DE: { coal: { supply: 0, demand: 100 } },
+        }),
+        statePricesFor: () => ({ A1: 90, B1: 50, C1: 100, D1: 100 }),
+        nationalPricesFor: () => ({ US: 90, UK: 50, FR: 100, DE: 100 }),
+      })
+    );
+    expect(delivered(r, "coal", "UK", "DE")).toBeCloseTo(100);
+    expect(delivered(r, "coal", "US", "DE")).toBe(0);
+    expect(delivered(r, "coal", "US", "FR")).toBeCloseTo(100);
+    expect(r.unplacedSupplyByState.get("coal")!.get("A1")).toBeCloseTo(0);
+    expect(destination(r, "coal", "FR")!.unmetUnits).toBeCloseTo(0);
+    // The pool is offered once, not counted again when it is re-offered.
+    expect(destination(r, "coal", "US")!.foreignOfferUnits).toBe(100);
+    expect(r.summaries.find((s) => s.commodity === "coal")!.unmetUnits).toBeCloseTo(0);
+  });
+
   describe("world validation", () => {
     it("a world with no shortage anywhere places exactly as before", () => {
       const r = runSourcingPass(
