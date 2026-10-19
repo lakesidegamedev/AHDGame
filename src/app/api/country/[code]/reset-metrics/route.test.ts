@@ -53,7 +53,8 @@ describe("v2 metrics API", () => {
     expect(payload).toHaveProperty("governanceStyle", null);
     expect(payload.metrics[0]).toMatchObject({
       description: expect.any(String),
-      observation: { source: expect.any(String), owner: expect.any(String) },
+      observation: { source: expect.any(String), owner: expect.any(String), lastUpdatedTurn: 1 },
+      refresh: "1",
       conditionScore: expect.any(Number),
     });
   });

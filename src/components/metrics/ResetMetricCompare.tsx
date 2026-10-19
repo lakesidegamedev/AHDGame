@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { metricFreshnessLabel } from "@/lib/resetMetrics/presentation";
 import { Button } from "@/components/ui/Button";
 import { CategoryIcon } from "@/app/country/[code]/political-metrics/components/categoryIcons";
 import { scoreTone } from "@/app/country/[code]/political-metrics/components/tones";
@@ -396,6 +397,14 @@ export function ResetMetricCompare({
                                   </div>
                                   <div className="text-body-sm font-medium text-muted">
                                     <Score value={comparisonMetric.conditionScore} /> condition
+                                  </div>
+                                  <div className="text-body-xs text-muted">
+                                    {metricFreshnessLabel(
+                                      comparisonMetric.observation.lastUpdatedTurn,
+                                      comparisonMetric.observation.source.includes(
+                                        "national rollup"
+                                      )
+                                    )}
                                   </div>
                                 </div>
                               ) : (

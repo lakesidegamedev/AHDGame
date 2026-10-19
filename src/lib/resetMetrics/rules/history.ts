@@ -26,7 +26,7 @@ export function validateMetricHistory(
   for (const [id, series] of Object.entries(history)) {
     if (
       series.length === 0 ||
-      series[0]!.turn !== sourceTurn ||
+      series[0]!.turn < sourceTurn ||
       series.length > RESET_METRIC_HISTORY_LIMIT ||
       series.some(
         (point, index) =>

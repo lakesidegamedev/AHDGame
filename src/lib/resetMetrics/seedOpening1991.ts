@@ -42,6 +42,17 @@ export function buildOpeningMetricSnapshots1991(
     );
   }
   const regionalCount = regional.length;
+  for (const row of rows) {
+    row.openingValues = Object.fromEntries(
+      Object.entries(row.observations).map(([id, observation]) => [id, observation.value!])
+    );
+    row.observations = Object.fromEntries(
+      Object.entries(row.observations).map(([id, observation]) => [
+        id,
+        { ...observation, lastUpdatedTurn: sourceTurn },
+      ])
+    );
+  }
   if (
     rows.length !== RESET_V2_OPENING_COUNTRIES.length + regionalCount ||
     new Set(rows.map((row) => row._id)).size !== rows.length
@@ -93,6 +104,7 @@ export async function seedOpeningMetrics1991(
           sourceTurn: 1,
           asOfTurn: 1,
           observations: 1,
+          openingValues: 1,
           history: 1,
         },
       }

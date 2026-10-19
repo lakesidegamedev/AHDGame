@@ -120,6 +120,13 @@ export function aggregateNationalMetricObservations(
             status,
             source: `${kind}-weighted national rollup of current regional v2 observations`,
             owner: metric.owner,
+            ...(observations.every((observation) => observation.lastUpdatedTurn !== undefined)
+              ? {
+                  lastUpdatedTurn: Math.min(
+                    ...observations.map((observation) => observation.lastUpdatedTurn!)
+                  ),
+                }
+              : {}),
             note: isProvisional
               ? `Game-calibrated national rollup. The ${metric.aggregation} owner-specific national denominator is not yet persisted separately.`
               : `National rollup using the catalog's ${metric.aggregation} aggregation rule.`,
