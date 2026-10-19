@@ -11,6 +11,9 @@ import type { HouseholdSpec } from "./householdDemandRules";
 import type { PublicPurchaseLine } from "./publicBuyerRules";
 import { nextReferencePrice } from "./referencePriceRules";
 
+/** Planning passes the shadow allows per turn (see the t300 replay note above). */
+export const SHADOW_PLANNING_PASSES = 8;
+
 export interface ShadowProducer {
   plan: ProductionPlan;
   sectorType: string;
@@ -93,6 +96,9 @@ export function runProducerShadow(input: {
     producers: input.producers.map((p) => p.plan),
     households: input.households,
     externalOrders: input.publicOrders,
+    // Eight passes settle the live world to within 0.02% of 32 (t300 replay:
+    // 4,609,920 vs 4,610,514 units) in about 21 s instead of minutes.
+    maximumPlanningPasses: SHADOW_PLANNING_PASSES,
     eligibleOffersByOrder: input.eligibleOffersByOrder,
   });
   const receiptById = new Map(result.producers.map((r) => [r.id, r]));
