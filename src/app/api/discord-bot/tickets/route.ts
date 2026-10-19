@@ -104,7 +104,19 @@ const ticketStatusEnum = z.enum([
 
 const createSchema = z.object({
   // `incident` is staff-only; the bot checks the opener's roles before calling.
-  category: z.enum(["bug", "moderation", "account", "gameplay", "other", "incident"]),
+  category: z.enum([
+    "bug",
+    "moderation",
+    "account",
+    "gameplay",
+    "other",
+    "incident",
+    "investigation",
+  ]),
+  investigationKey: z
+    .string()
+    .regex(/^[a-z0-9:_-]{1,160}$/)
+    .optional(),
   // .trim() before .min(1) so whitespace-only titles/descriptions are rejected.
   title: z.string().trim().min(1).max(200),
   description: z.string().trim().min(1).max(5000),
@@ -449,6 +461,9 @@ export async function POST(request: Request) {
       ...(visits.length ? { supportRecentVisits: visits } : {}),
       ...(reporter ? { reporter } : {}),
       category: body.category,
+      ...(body.category === "investigation" && body.investigationKey
+        ? { investigationKey: body.investigationKey }
+        : {}),
       ...(platform ? { platform } : {}),
       title: body.title.trim().slice(0, 200),
       description: body.description.trim().slice(0, 5000),
@@ -680,7 +695,7 @@ export async function PATCH(request: Request) {
 
     if (body.action === "merge") {
       const source = await coll.findOne(filter, {
-        projection: { ticketNumber: 1, status: 1, mergedInto: 1, discordUserId: 1 },
+        projection: { ticketNumber: 1, status: 1, category: 1, mergedInto: 1, discordUserId: 1 },
       });
       if (!source) return errorResponse(404, "Ticket not found");
       if (source.ticketNumber === body.targetTicketNumber) {
@@ -694,6 +709,9 @@ export async function PATCH(request: Request) {
         { projection: { ticketNumber: 1, status: 1, category: 1, mergedInto: 1 } }
       );
       if (!target) return errorResponse(404, "Target ticket not found");
+      if (source.category === "investigation" || target.category === "investigation") {
+        return errorResponse(409, "Investigation tickets require private staff handling");
+      }
       if (target.mergedInto != null) {
         return errorResponse(409, `Target was itself merged into #${target.mergedInto}`);
       }
