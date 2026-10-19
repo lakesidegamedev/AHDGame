@@ -74,7 +74,7 @@ export const FRAGILE_MARKET_COMMODITIES_BY_SECTOR: Readonly<
   Partial<Record<OperatingSectorType, readonly CommodityType[]>>
 > = {
   media: ["advertising"],
-  media_entertainment: ["advertising", "entertainment_services"],
+  media_entertainment: ["advertising"],
   healthcare: ["healthcare_services"],
   chemical_industries: ["fertilizers"],
   logistics: ["freight"],

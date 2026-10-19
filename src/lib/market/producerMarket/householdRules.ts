@@ -13,7 +13,6 @@ export const HOUSEHOLD_CONSUMER_BASKET: Partial<Record<CommodityType, number>> =
   real_estate_services: 0.1,
   financial_services: 0.05,
   network_services: 0.05,
-  entertainment_services: 0.05,
   software: 0.03,
   freight: 0.03,
   consulting_services: 0.02,

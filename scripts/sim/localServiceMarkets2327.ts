@@ -19,7 +19,6 @@ const local: CommodityType[] = [
   "construction_services",
   "healthcare_services",
   "real_estate_services",
-  "entertainment_services",
 ];
 const remote: CommodityType[] = ["software", "consulting_services"];
 const rows: Array<Record<string, number | string>> = [];

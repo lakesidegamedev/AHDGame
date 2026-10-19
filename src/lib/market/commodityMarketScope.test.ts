@@ -17,7 +17,6 @@ describe("commodityMarketScope", () => {
       "construction_services",
       "healthcare_services",
       "real_estate_services",
-      "entertainment_services",
     ];
     for (const commodity of local) expect(commodityMarketScope(commodity), commodity).toBe("state");
     for (const commodity of COMMODITY_TYPES) {

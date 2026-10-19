@@ -97,7 +97,6 @@ export const FREIGHT_CLASS_BY_COMMODITY: Record<CommodityType, FreightClass | nu
   freight: null,
   consulting_services: null,
   network_services: null,
-  entertainment_services: null,
 };
 
 /** True when the class rides the haulage fleet and spends TEU capacity. */

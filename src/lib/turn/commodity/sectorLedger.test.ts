@@ -69,8 +69,7 @@ describe("accumulatePlantsUnits product output", () => {
     );
 
     expect(accumulatePlantsUnits([sector], 20, COMMODITY_BASE_PRICES)).toEqual(expected);
-    expect(expected.has("advertising")).toBe(true);
-    expect(expected.has("entertainment_services")).toBe(true);
+    expect([...expected.keys()]).toEqual(["advertising"]);
   });
 });
 

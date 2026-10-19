@@ -164,6 +164,12 @@ const REFERENCE: CollectionEntry[] = [
   },
   { name: "unionEndorsements", category: "runtime" },
   {
+    name: "retiredCommodityArchive",
+    category: "runtime",
+    notes:
+      "Archive of documents keyed by a removed commodity (entertainment_services, 2026-10-19), copied before deletion. Never read by game logic.",
+  },
+  {
     name: "producerMarketShadows",
     category: "runtime",
     notes:

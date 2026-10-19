@@ -37,10 +37,7 @@ describe("computePriceRealization", () => {
 
   it("bleeds a glut: 0.67× base → ~−18% revenue", () => {
     expect(
-      computePriceRealization(
-        { entertainment_services: 1 },
-        ratios([["entertainment_services", 0.67]])
-      )
+      computePriceRealization({ advertising: 1 }, ratios([["advertising", 0.67]]))
     ).toBeCloseTo(0.8185, 3);
   });
 

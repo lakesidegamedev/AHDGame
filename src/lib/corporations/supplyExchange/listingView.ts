@@ -1,5 +1,6 @@
 import type { Db, Filter, ObjectId, Sort } from "mongodb";
 import type { CommodityType } from "@/lib/constants/commodities";
+import { COMMODITY_TYPES } from "@/lib/constants/commodities";
 import type { Character } from "@/lib/db/types/character";
 import type { Corporation } from "@/lib/db/types/corporation";
 import type { SupplyListing, SupplyListingView } from "@/lib/db/types/supplyListing";
@@ -98,7 +99,8 @@ export function openOffersFilter(args: {
       ? { commodity: commodities[0] }
       : commodities.length > 1
         ? { commodity: { $in: commodities } }
-        : {}),
+        : // Only live commodities: a listing for a retired one must not surface.
+          { commodity: { $in: [...COMMODITY_TYPES] } }),
     ...(args.side ? { side: args.side } : {}),
     ...(args.kind === "player"
       ? { aiListed: { $ne: true } }

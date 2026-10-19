@@ -1,4 +1,5 @@
 import { configureGroupSupply, groupForecastWriteOps } from "./groupSupplyTurn";
+import { migrateEntertainmentRemoval } from "./migrateEntertainmentRemoval";
 import { settleFundDividendAccruals } from "./settleFundDividendAccruals";
 import { runProducerMarketShadowPhase } from "./producerMarketShadowPhase";
 import { resolvePhaseLookups } from "./phaseLookups";
@@ -211,6 +212,12 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
   // Market share (which drives the dominance growth-cost multiplier) switches
   // to the owned-capacity basis under the plants tier.
   const plantsEnabledForMarketShare = marketAtLeast(marketSystemMode, "plants");
+  // One-time: entertainment commodity removal rescales stock before lookups load it.
+  await migrateEntertainmentRemoval(db, {
+    turn: turn ?? gameState?.currentTurn ?? 0,
+    plantsEnabled: plantsEnabledForMarketShare,
+    now,
+  });
   const interstateMoneyWiringEnabled =
     (marketGovernorConfig as { interstateMoneyWiringEnabled?: boolean } | null)
       ?.interstateMoneyWiringEnabled === true;

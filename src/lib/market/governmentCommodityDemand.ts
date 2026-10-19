@@ -30,7 +30,7 @@ export const GOVERNMENT_COMMODITY_DEMAND: ReadonlyArray<{
   },
   {
     category: "education",
-    commodity: "entertainment_services",
+    commodity: "advertising",
     rate: STATE_MEDIA_DEMAND_RATE,
     plannedOnly: true,
   },

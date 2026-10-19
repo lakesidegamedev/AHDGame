@@ -566,8 +566,8 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       minDecade: "2009",
       name: "Streaming Media",
       description:
-        "Direct-to-consumer streaming: strong content and ad output that runs on software, networks and energy.",
-      supply: { advertising: 0.3, entertainment_services: 0.3 },
+        "Direct-to-consumer streaming: strong ad output that runs on software, networks and energy.",
+      supply: { advertising: 0.6 },
       demand: { software: 0.15, network_services: 0.12, energy: 0.08 },
     },
     {
@@ -943,16 +943,15 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       minDecade: "2019",
       name: "Live-Service Platforms",
       description:
-        "Always-on games and experiences with ongoing revenue: high entertainment output on software and networks.",
-      supply: { entertainment_services: 0.5 },
+        "Always-on games and experiences with ongoing revenue: high advertising output on software and networks.",
+      supply: { advertising: 0.5 },
       demand: { software: 0.18, network_services: 0.1, energy: 0.06 },
     },
     {
       id: "standard",
       name: "Standard",
       description: "Mixed media_entertainment: studios, venues, and digital content.",
-      // Added entertainment_services supply 0.40 — unique output for entertainment differentiation.
-      supply: { advertising: 0.2, entertainment_services: 0.4 },
+      supply: { advertising: 0.6 },
       demand: { software: 0.15, electronics: 0.1, energy: 0.06, real_estate_services: 0.03 },
     },
     {
@@ -961,8 +960,7 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       name: "Streaming/Digital",
       description:
         "Digital-first entertainment platforms. Co-produces software, energy-intensive streaming.",
-      // Added entertainment_services supply 0.35.
-      supply: { advertising: 0.15, software: 0.1, entertainment_services: 0.35 },
+      supply: { advertising: 0.5, software: 0.1 },
       demand: { software: 0.2, energy: 0.1, real_estate_services: 0.02 },
     },
     {
@@ -970,9 +968,8 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       name: "Live/Venue",
       description:
         "Concert halls, theaters, and live events. Higher advertising output, physical infrastructure needs.",
-      // Added entertainment_services supply 0.50. Reduced construction_services 0.12→0.08
-      // to ease input stacking on a scarce commodity.
-      supply: { advertising: 0.25, entertainment_services: 0.5 },
+      // Reduced construction_services 0.12→0.08 to ease input stacking on a scarce commodity.
+      supply: { advertising: 0.75 },
       demand: {
         construction_services: 0.08,
         building_materials: 0.06,

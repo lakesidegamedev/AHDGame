@@ -141,7 +141,7 @@ describe("daysOfCover", () => {
 
 describe("isStorable", () => {
   it("classifies services non-storable and bulk goods storable", () => {
-    expect(isStorable("entertainment_services")).toBe(false);
+    expect(isStorable("healthcare_services")).toBe(false);
     expect(isStorable("rare_earth")).toBe(true);
     expect(isStorable("software")).toBe(true);
   });

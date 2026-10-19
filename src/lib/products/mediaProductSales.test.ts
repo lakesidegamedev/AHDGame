@@ -93,9 +93,6 @@ describe("media product sales attribution", () => {
 
     const availability = mediaProductOfferAvailability(projects);
     expect(availability.advertising).toBeCloseTo(0.415);
-    // These titles do not produce entertainment services, so they leave that
-    // existing physical offer untouched.
-    expect(availability.entertainment_services).toBe(1);
   });
 
   it("attributes actual cleared units and tail revenue without adding output", () => {
