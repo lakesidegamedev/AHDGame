@@ -313,6 +313,7 @@ export async function runProducerMarketShadowPhase(
       {
         ...summary,
         legacyPrices: references,
+        skipReasons,
         worldEpoch: input.worldEpoch,
         ms: Date.now() - started,
         at: new Date(),
