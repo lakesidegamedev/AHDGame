@@ -353,6 +353,20 @@ describe("PATCH /api/discord-bot/tickets", () => {
   });
 });
 
+it("advertises investigation intake only behind bot authentication", async () => {
+  const { GET } = await import("./route");
+  const { requireBotToken } = await import("@/lib/api/requireBotToken");
+  vi.mocked(requireBotToken).mockReturnValueOnce(false);
+  expect(
+    (await GET(new Request("https://example.com/api/discord-bot/tickets?capabilities=1"))).status
+  ).toBe(401);
+  vi.mocked(requireBotToken).mockReturnValueOnce(true);
+  const response = await GET(
+    new Request("https://example.com/api/discord-bot/tickets?capabilities=1")
+  );
+  expect(await response.json()).toEqual({ investigationIntake: true });
+});
+
 describe("POST /api/discord-bot/tickets filing context", () => {
   let db: MockDb;
 

@@ -309,6 +309,9 @@ export async function GET(request: Request) {
   try {
     if (!requireBotToken(request, false)) return errorResponse(401, "Unauthorized");
     const params = new URL(request.url).searchParams;
+    if (params.get("capabilities") === "1") {
+      return NextResponse.json({ investigationIntake: true });
+    }
     const parsed = z
       .object({
         ticketNumber: z.coerce.number().int().positive().optional(),
