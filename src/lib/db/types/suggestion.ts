@@ -81,6 +81,14 @@ export interface Suggestion {
   discordPostedAt?: Date;
   /** Discord message ID of the webhook post — used to match Discord reactions back to this suggestion */
   discordMessageId?: string;
+  /** Player-facing summary of what shipped, shown in the "Implemented" Discord post. */
+  implementationNote?: string;
+  /** Set once the "Implemented" post has been claimed or delivered; never posted twice. */
+  completionAnnouncedAt?: Date;
+  /** Discord message ID of the "Implemented" post. */
+  completionDiscordMessageId?: string;
+  /** Status changes recorded by support tooling, newest last. */
+  statusHistory?: Array<{ status: string; at: Date; by?: string; source?: string; note?: string }>;
   createdAt: Date;
   updatedAt: Date;
 }

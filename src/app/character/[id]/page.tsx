@@ -1,3 +1,4 @@
+import { countImplementedSuggestions } from "@/lib/suggestions/completionAnnouncement";
 import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
 import {
   loadCampaignPriceLevel,
@@ -134,11 +135,15 @@ export default async function CharacterPage({ params }: PageProps) {
 
   if (!data) redirect("/map");
 
-  const [financialData, unionContribution] = await Promise.all([
+  const [financialData, unionContribution, implementedSuggestions] = await Promise.all([
     getFinancialData(data.character._id),
     (async () => {
       const db = await getDb();
       return unionContributionIncomePerTurn(db, data.character._id);
+    })(),
+    (async () => {
+      const db = await getDb();
+      return countImplementedSuggestions(db, { userId: data.character.userId ?? null });
     })(),
   ]);
 
@@ -765,6 +770,7 @@ export default async function CharacterPage({ params }: PageProps) {
               discordUsername={discordUsername}
               discordAvatar={discordAvatar}
               lastActivity={lastActivity}
+              implementedSuggestions={implementedSuggestions}
             />
 
             <CareerHistory

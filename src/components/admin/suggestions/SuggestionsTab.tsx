@@ -29,6 +29,7 @@ interface State {
   updating: boolean;
   newStatus: string;
   adminNotes: string;
+  implementationNote: string;
   updateMessage: string;
 }
 
@@ -46,6 +47,7 @@ const initialState: State = {
   updating: false,
   newStatus: "",
   adminNotes: "",
+  implementationNote: "",
   updateMessage: "",
 };
 
@@ -62,6 +64,7 @@ type Action =
   | { type: "UPDATE_DONE"; msg: string }
   | { type: "SET_STATUS"; status: string }
   | { type: "SET_NOTES"; notes: string }
+  | { type: "SET_IMPLEMENTATION_NOTE"; note: string }
   | { type: "CLEAR" }
   | { type: "SET_ERR"; error: string }
   | { type: "SET_COUNTS"; counts: Record<string, number> }
@@ -96,6 +99,7 @@ function reducer(state: State, action: Action): State {
         detail: action.detail,
         newStatus: action.detail.status,
         adminNotes: action.detail.adminNotes ?? "",
+        implementationNote: action.detail.implementationNote ?? "",
       };
     case "UPDATE_START":
       return { ...state, updating: true, updateMessage: "" };
@@ -105,6 +109,8 @@ function reducer(state: State, action: Action): State {
       return { ...state, newStatus: action.status };
     case "SET_NOTES":
       return { ...state, adminNotes: action.notes };
+    case "SET_IMPLEMENTATION_NOTE":
+      return { ...state, implementationNote: action.note };
     case "CLEAR":
       return { ...state, selectedId: null };
     case "SET_ERR":
@@ -235,7 +241,8 @@ export function SuggestionsTab({ initialIssueNumber }: { initialIssueNumber?: nu
     if (!state.selectedId || !state.detail) return;
     if (
       state.newStatus === state.detail.status &&
-      state.adminNotes === (state.detail.adminNotes ?? "")
+      state.adminNotes === (state.detail.adminNotes ?? "") &&
+      state.implementationNote === (state.detail.implementationNote ?? "")
     ) {
       dispatch({ type: "UPDATE_DONE", msg: "No changes" });
       return;
@@ -248,6 +255,7 @@ export function SuggestionsTab({ initialIssueNumber }: { initialIssueNumber?: nu
         body: JSON.stringify({
           status: state.newStatus,
           adminNotes: state.adminNotes.trim() || undefined,
+          implementationNote: state.implementationNote.trim() || undefined,
         }),
       });
       const data = await res.json();
@@ -255,7 +263,10 @@ export function SuggestionsTab({ initialIssueNumber }: { initialIssueNumber?: nu
         dispatch({ type: "UPDATE_DONE", msg: `✗ ${apiErrorText(data, "Request failed")}` });
         return;
       }
-      dispatch({ type: "UPDATE_DONE", msg: "✓ Updated" });
+      dispatch({
+        type: "UPDATE_DONE",
+        msg: data.announcement === "posted" ? "✓ Updated and announced on Discord" : "✓ Updated",
+      });
       dispatch({
         type: "PATCH_DETAIL",
         status: state.newStatus,
@@ -672,6 +683,23 @@ export function SuggestionsTab({ initialIssueNumber }: { initialIssueNumber?: nu
                   </option>
                 ))}
               </select>
+              {(state.newStatus === "completed" || state.detail.status === "completed") && (
+                <>
+                  <label className="block text-sm font-medium text-muted">
+                    What changed (posted to Discord with the reporter&apos;s name)
+                  </label>
+                  <textarea
+                    value={state.implementationNote}
+                    onChange={(e) =>
+                      dispatch({ type: "SET_IMPLEMENTATION_NOTE", note: e.target.value })
+                    }
+                    rows={3}
+                    maxLength={1000}
+                    placeholder="Corporations can now mothball or reactivate every sector at once from the CEO office."
+                    className="w-full resize-none rounded-lg border border-card-border bg-background px-3 py-2 text-sm"
+                  />
+                </>
+              )}
               <label className="block text-sm font-medium text-muted">Admin notes</label>
               <textarea
                 value={state.adminNotes}
