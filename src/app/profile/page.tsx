@@ -1,3 +1,4 @@
+import { countImplementedSuggestions } from "@/lib/suggestions/completionAnnouncement";
 import { resolveCampaignPriceLevel } from "@/lib/campaigns/rules/priceLevel";
 import { loadCampaignPriceLevel } from "@/lib/campaigns/campaignCurrency";
 import { loadCampaignCurrencyRates } from "@/lib/campaigns/campaignCurrency";
@@ -961,6 +962,9 @@ export default async function ProfilePage() {
               discordUsername={discordUsername}
               discordAvatar={discordAvatar}
               lastActivity={lastActivity}
+              implementedSuggestions={await countImplementedSuggestions(db, {
+                userId: character.userId ?? null,
+              })}
             />
 
             <CareerHistory

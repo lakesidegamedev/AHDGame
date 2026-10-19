@@ -13,6 +13,11 @@ import { getSuggestionsCollection } from "@/lib/db/collections/suggestions";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import { markSuggestionThreadRead } from "@/lib/suggestions/readState";
 import {
+  announceSuggestionCompletion,
+  countImplementedSuggestions,
+  isSuggestionDoneStatus,
+} from "@/lib/suggestions/completionAnnouncement";
+import {
   discordSubmitHandleForChip,
   discordSubmitPrimaryLabel,
 } from "@/lib/suggestions/discordSubmitAttribution";
@@ -76,6 +81,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
       priority: suggestion.priority ?? null,
       status: suggestion.status,
       adminNotes: suggestion.adminNotes ?? "",
+      implementationNote: suggestion.implementationNote ?? "",
+      reporterImplementedCount: await countImplementedSuggestions(db, suggestion),
       screenshotUrl: suggestion.screenshotUrl ?? null,
       githubIssueUrl: suggestion.githubIssueUrl ?? null,
       githubIssueNumber: suggestion.githubIssueNumber ?? null,
@@ -107,7 +114,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (!parsed.success) {
       return errorResponse(parsed.status, parsed.error);
     }
-    const { status, adminNotes } = parsed.data;
+    const { status, adminNotes, implementationNote } = parsed.data;
 
     const db = await getDb();
     const coll = getSuggestionsCollection(db);
@@ -140,6 +147,17 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         statusChanged = true;
         previousStatus = suggestion.status;
       }
+    }
+
+    if (implementationNote) {
+      updates.implementationNote = implementationNote;
+    }
+    const becomesDone =
+      statusChanged &&
+      isSuggestionDoneStatus(updates.status as string) &&
+      !suggestion.completionAnnouncedAt;
+    if (becomesDone && !implementationNote && !suggestion.implementationNote?.trim()) {
+      return errorResponse(400, "Describe what changed before marking a suggestion completed.");
     }
 
     if (adminNotes !== undefined) {
@@ -194,8 +212,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       });
     }
 
+    let announcement: string | undefined;
+    if (becomesDone) {
+      const fresh = await coll.findOne({ _id: suggestion._id });
+      if (fresh) announcement = await announceSuggestionCompletion(db, fresh);
+    }
+
     return NextResponse.json({
       message: "Updated",
+      ...(announcement ? { announcement } : {}),
       issueNumber: suggestion.issueNumber,
       status: updates.status ?? suggestion.status,
     });
