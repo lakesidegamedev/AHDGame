@@ -3,7 +3,7 @@ date: 2026-10-19
 title: Entertainment services removed
 summary: Entertainment services are no longer a traded commodity. Entertainment media now sells advertising, with plant capacity adjusted so its output is worth the same.
 tags: [economy, corporations]
-badges: [change]
+badges: [minor]
 areas: [backend]
 ---
 

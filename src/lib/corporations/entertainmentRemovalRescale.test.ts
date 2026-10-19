@@ -25,7 +25,7 @@ function frozenRpu(mix: Readonly<Record<string, number>>): number {
 function split(key: string) {
   const [lane, strategyId] = key.split("/");
   return lane === "media_entertainment"
-    ? { sectorType: "media", mediaDiscriminator: "entertainment", strategyId }
+    ? { sectorType: "media", mediaDiscriminator: "entertainment" as const, strategyId }
     : { sectorType: "media", mediaDiscriminator: null, strategyId };
 }
 
@@ -40,7 +40,7 @@ describe("entertainment removal rescale", () => {
         s.mediaDiscriminator
       );
       expect(now.id, key).toBe(s.strategyId);
-      expect(now.supply.entertainment_services, key).toBeUndefined();
+      expect((now.supply as Record<string, number>).entertainment_services, key).toBeUndefined();
       expect(sum(now.supply), key).toBeCloseTo(sum(frozen), 10);
     }
   });

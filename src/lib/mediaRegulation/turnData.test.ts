@@ -64,7 +64,9 @@ describe("loadUSMediaOutletDelivery", () => {
       outputUnitsByCommodity: 1,
       mediaDiscriminator: 1,
     });
-    expect(outlets).toHaveLength(2);
+    // The entertainment lane sells advertising since the entertainment
+    // commodity was removed, so it is an outlet too (and is not derated).
+    expect(outlets).toHaveLength(3);
     expect(outlets[0]).toMatchObject({
       stateId: "CA",
       countryId: "US",
@@ -72,6 +74,8 @@ describe("loadUSMediaOutletDelivery", () => {
       deliveredAdvertisingUnits: 8,
     });
     expect(outlets[1].deliveredAdvertisingUnits).toBeCloseTo(5);
+    expect(outlets[2]).toMatchObject({ corporationId: "corp-3" });
+    expect(outlets[2].deliveredAdvertisingUnits).toBeCloseTo(100);
   });
 
   it("does not count transition-era estimates without a current turn or exact output", async () => {

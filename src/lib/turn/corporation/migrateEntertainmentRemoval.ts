@@ -145,7 +145,7 @@ export async function migrateEntertainmentRemoval(
     if (!set) continue;
     ops.push({
       updateOne: {
-        filter: { _id: row._id, [ENTERTAINMENT_RESCALE_STAMP]: { $ne: true } },
+        filter: { _id: row._id as never, [ENTERTAINMENT_RESCALE_STAMP]: { $ne: true } },
         update: { $set: set, $unset: unset },
       },
     });
