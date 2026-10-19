@@ -369,15 +369,19 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - name: Start isolated Mongo replica set
         run: |
-          echo "runner image: ${ImageOS:-unknown} ${ImageVersion:-unknown}"
-          docker version --format 'docker server {{.Server.Version}}' || true
+          echo "::notice::runner image: ${ImageOS:-unknown} ${ImageVersion:-unknown}"
+          echo "::notice::$(docker version --format 'docker server {{.Server.Version}}' 2>&1)"
           # Google's Docker Hub mirror: same mongo:8.0 digest, no anonymous pull limit.
           docker pull mirror.gcr.io/library/mongo:8.0
-          docker image inspect --format 'mongo image {{index .RepoDigests 0}}' mirror.gcr.io/library/mongo:8.0 || true
+          echo "::notice::$(docker image inspect --format 'mongo image {{index .RepoDigests 0}} created {{.Created}}' mirror.gcr.io/library/mongo:8.0 2>&1)"
           docker run --detach --name federation-mongo --publish 27991:27017 mirror.gcr.io/library/mongo:8.0 --replSet federationQualification --bind_ip_all
           mongo_dump() {
             docker ps --all --filter name=federation-mongo || true
+            echo "::error::$(docker inspect --format 'exit {{.State.ExitCode}} oom {{.State.OOMKilled}} error {{.State.Error}}' federation-mongo 2>&1)"
             docker logs --tail 200 federation-mongo 2>&1 || true
+            # Surface the container's last lines as annotations so a failed
+            # start can be diagnosed without downloading the raw job log.
+            docker logs --tail 8 federation-mongo 2>&1 | cut -c1-900 | sed 's/^/::error title=mongo log::/' || true
           }
           # Probe from the host with the driver, not docker exec, so nothing
           # writes inside /data/db while the entrypoint is still chowning it.
