@@ -1,4 +1,5 @@
 /** Bulk sector operations apply CEO policies to a country or sector group, with optional cost previews. */
+import type { CountryId } from "@/lib/constants/countries";
 import { isLabourWagesEnabled, isLabourUnionsEnabled } from "@/lib/labour/featureFlag";
 import { loadCollectiveAgreementEffects } from "@/lib/unions/collectiveAgreementEffects";
 import { estimateWageChange } from "@/lib/corporations/rules/bulkWagePreview";
@@ -329,7 +330,7 @@ async function bulkSetCapacity(
   corporation: Corporation,
   userId: string,
   action: "mothball" | "reactivate",
-  scope: { countryId: string; sectorType?: OperatingSectorType; preview?: boolean }
+  scope: { countryId: CountryId; sectorType?: OperatingSectorType; preview?: boolean }
 ) {
   const mode = await getMarketSystemMode();
   if (!isMarketSystemMode(mode) || !marketAtLeast(mode, "plants")) {
