@@ -31,12 +31,13 @@ export type IterationType = "Alpha" | "Beta" | "Iteration";
  *          verdicts into the next agenda, and holds its commitments instead of
  *          re-deciding every cycle. Adds no new lever: every V5 intent is
  *          executed through the same validation/execution paths v4 already
- *          uses. Singleplayer/Worldsim beta — see featureFlagDefaults.
+ *          uses. See featureFlagDefaults for per-mode defaults.
  *   - v6:  v5 + NPP engine 6 behavior (see `nppAutonomy/engineVersion.ts` and
  *          content/changelog/npp/). Engine 6 changes how well NPPs pursue the
  *          v5 activities and what they cost to run, never what they are
- *          allowed to do or how many resources they get. Inert on hosted
- *          worlds until an operator selects it.
+ *          allowed to do or how many resources they get. Active on any world
+ *          whose `nppAutonomyLevel` is set to v6; the running engine version
+ *          is stamped on each turn log as `nppEngineVersion`.
  * See plans/2026-06-23-npp-autonomy-v1-v2-plan.md.
  */
 export type NppAutonomyLevel = "off" | "v0" | "v1" | "v2" | "v3" | "v4" | "v5" | "v6";
