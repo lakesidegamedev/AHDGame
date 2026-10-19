@@ -37,4 +37,20 @@ describe("producer-market shadow isolation", () => {
     expect(m.get("a")).toEqual({ revenue: 10, profit: 2 });
     expect(m.has("b")).toBe(false);
   });
+
+  it("gives an unconverted sector an in-memory opening with its stock, without touching it", async () => {
+    const { shadowOpeningSector } = await import("./producerMarketShadowPhase");
+    const sector = {
+      stateId: "MN",
+      capitalStock: 10,
+      inventoryUnits: { iron: 5, healthcare_services: 2, coal: 0 },
+    } as never;
+    const copy = shadowOpeningSector(sector, "w", 300);
+    expect(copy.producerCapacity).toMatchObject({ worldEpoch: "w", turn: 299 });
+    expect(copy.producerInventory!.outputStock).toEqual([
+      { commodity: "iron", units: 5, book: "world" },
+      { commodity: "healthcare_services", units: 2, book: "state:MN" },
+    ]);
+    expect((sector as { producerCapacity?: unknown }).producerCapacity).toBeUndefined();
+  });
 });
