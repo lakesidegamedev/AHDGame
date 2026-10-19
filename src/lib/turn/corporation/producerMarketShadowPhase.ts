@@ -9,6 +9,7 @@
  * else. It never moves money, never touches a sector or corporation, and a
  * failure is logged, never thrown into the turn.
  */
+import { resolveSectorHostCurrencyCode } from "@/lib/currency/corporationCapital";
 import type { CorporateSector } from "@/lib/db/types";
 import { emptyProducerSectorOpening } from "@/lib/market/producerMarket/openingState";
 import type { Db } from "mongodb";
@@ -93,7 +94,16 @@ export async function runProducerMarketShadowPhase(
             sector: shadowOpeningSector(sector, input.worldEpoch, input.turn),
             inputPriceHeadroom: PRICE_HEADROOM,
           });
-          const legacy = legacyBySectorId.get(sector._id.toString()) ?? null;
+          // Legacy plantsPnl is in the sector host's currency; the shadow is in
+          // anchor units, so convert before comparing.
+          const legacyLocal = legacyBySectorId.get(sector._id.toString()) ?? null;
+          const hostRate = lookups.exchangeRatesByCurrency.get(
+            (resolveSectorHostCurrencyCode(sector, corp) ?? "USD") as never
+          );
+          const legacy =
+            legacyLocal && hostRate && hostRate > 0
+              ? { revenue: legacyLocal.revenue / hostRate, profit: legacyLocal.profit / hostRate }
+              : null;
           producers.push({ plan: prepared.plan, sectorType: sector.sectorType, legacy });
           const rate = lookups.exchangeRatesByCurrency.get(
             (corp.liquidCurrencyCode ?? "USD") as never
