@@ -147,4 +147,34 @@ describe("regional employment accounting", () => {
     );
     expect(Number.isFinite(corrupt.unemployment)).toBe(true);
   });
+
+  it("fills company openings within a few turns when jobseekers are plentiful (ticket 1628)", () => {
+    const settled = project(input({ matchingFriction: 12, corporateDemand: 20_000 }), 480);
+    let result = settled;
+    for (let i = 0; i < 8; i++)
+      result = advanceEmployment({
+        ...input({ matchingFriction: 12, corporateDemand: 60_000 }),
+        turn: settled.state.lastTurn + 1 + i,
+        unemployment: result.unemployment,
+        previous: result.state,
+      });
+    // Half of the gap closes every two turns at average skill.
+    expect(result.state.corporateEmployed / 60_000).toBeGreaterThan(0.9);
+  });
+
+  it("cannot hire more company workers than there are jobseekers to match", () => {
+    const settled = project(input({ unemployment: 1, corporateDemand: 20_000 }), 480);
+    const unemployed =
+      settled.state.laborForce - settled.state.corporateEmployed - settled.state.backgroundEmployed;
+    const next = advanceEmployment({
+      ...input({ unemployment: 1, corporateDemand: 900_000 }),
+      turn: settled.state.lastTurn + 1,
+      unemployment: settled.unemployment,
+      previous: settled.state,
+    });
+    expect(next.state.corporateEmployed - settled.state.corporateEmployed).toBeLessThanOrEqual(
+      unemployed
+    );
+    expect(next.state.corporateEmployed).toBeLessThan(900_000);
+  });
 });

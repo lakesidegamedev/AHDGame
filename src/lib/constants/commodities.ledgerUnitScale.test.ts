@@ -111,13 +111,12 @@ describe("computeRawSupplyDemand - ledgerUnitScale (ticket #1027 phase 2)", () =
     expect(scaledLeg).toBeCloseTo(baseLeg * SCALE, 6);
   });
 
-  it("scales the macro GDP demand legs (network/entertainment/construction services)", () => {
+  it("scales the macro GDP demand legs (network/construction services)", () => {
     const stateGdpMap = new Map([["TX", 1_000_000]]);
     const base = run([plant({ revenue: 0 })], 1, { stateGdpMap });
     const scaled = run([plant({ revenue: 0 })], SCALE, { stateGdpMap });
     for (const c of [
       "network_services",
-      "entertainment_services",
       "construction_services",
       "building_materials",
     ] as CommodityType[]) {

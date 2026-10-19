@@ -19,10 +19,10 @@ const identities = [
   { sectorType: "manufacturing", mediaDiscriminator: undefined, industryModel: "vehicles" },
 ] as const;
 const profiles: readonly Partial<Record<CommodityType, number>>[] = [
-  { advertising: 4, entertainment_services: 0.5 },
+  { advertising: 4, software: 0.5 },
   { steel: 8, electronics: 4, vehicles: 1.1 },
-  { vehicles: 4, steel: 1, entertainment_services: 3 },
-  { advertising: 1, entertainment_services: 3, software: 0.5 },
+  { vehicles: 4, steel: 1, software: 3 },
+  { advertising: 1, software: 3 },
 ];
 let scenarios = 0;
 let decisions = 0;

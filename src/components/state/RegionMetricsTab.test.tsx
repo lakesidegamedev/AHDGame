@@ -35,6 +35,7 @@ function regionalMetric() {
       source: "1991 game-calibrated fixture",
       owner: definition.owner,
       note: "Opening estimate, not a historical observation.",
+      lastUpdatedTurn: 7,
     },
     temporaryActionEffect: null,
     legislativeEffect: null,
@@ -63,7 +64,7 @@ describe("RegionMetricsTab", () => {
               countryId: "US",
               scope: "regional",
               regionId: "PA",
-              asOfTurn: 1,
+              asOfTurn: 9,
               governanceStyle: null,
               metrics: [regionalMetric()],
             },
@@ -79,7 +80,9 @@ describe("RegionMetricsTab", () => {
       expect.objectContaining({ cache: "no-store" })
     );
     fireEvent.click(screen.getByRole("button", { name: "Open Economic" }));
+    expect(screen.getByText("Last updated: turn 7")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Open Unemployment" }));
+    expect(await screen.findByText("Last updated: turn 7")).toBeTruthy();
     expect(await screen.findByText("1 percentage point better than national")).toBeTruthy();
     expect(screen.getByText("2nd of 3 nationally")).toBeTruthy();
     expect(screen.queryByText("Regional breakdown")).toBeNull();

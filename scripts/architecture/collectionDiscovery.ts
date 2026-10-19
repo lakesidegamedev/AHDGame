@@ -230,6 +230,94 @@ function finiteNamesAt(
   const byType = literalStrings(checker.getTypeAtLocation(node), checker);
   if (byType) return byType;
 
+  // Follow literal configuration arrays passed to a for-of parameter. Unknown
+  // callers, spreads, and dynamic property values stay unresolved for review.
+  if (ts.isPropertyAccessExpression(node) && ts.isIdentifier(node.expression)) {
+    const item = checker.getSymbolAtLocation(node.expression)?.valueDeclaration;
+    const loop = item && ts.isVariableDeclaration(item) ? item.parent.parent : undefined;
+    if (
+      loop &&
+      ts.isForOfStatement(loop) &&
+      ts.isVariableDeclarationList(loop.initializer) &&
+      (loop.initializer.flags & ts.NodeFlags.Const) !== 0 &&
+      ts.isIdentifier(loop.expression)
+    ) {
+      const parameter = checker.getSymbolAtLocation(loop.expression)?.valueDeclaration;
+      if (parameter && ts.isParameter(parameter) && ts.isFunctionLike(parameter.parent)) {
+        const fn = parameter.parent;
+        const index = fn.parameters.indexOf(parameter);
+        const fnName = fn.name?.getText();
+        const callsites = new Set([
+          ...(callsByDeclaration.get(fn) ?? []),
+          ...(fnName ? (callsByName.get(fnName) ?? []) : []),
+        ]);
+        const property = node.name.text;
+        function arrayValues(
+          expression: ts.Expression,
+          visited = new Set<ts.Node>()
+        ): string[] | undefined {
+          if (visited.has(expression)) return undefined;
+          visited.add(expression);
+          if (
+            ts.isAsExpression(expression) ||
+            ts.isTypeAssertionExpression(expression) ||
+            ts.isSatisfiesExpression(expression) ||
+            ts.isParenthesizedExpression(expression)
+          )
+            return arrayValues(expression.expression, visited);
+          if (ts.isIdentifier(expression)) {
+            let symbol = checker.getSymbolAtLocation(expression);
+            if (symbol && symbol.flags & ts.SymbolFlags.Alias)
+              symbol = checker.getAliasedSymbol(symbol);
+            const declaration = symbol?.valueDeclaration;
+            if (
+              declaration &&
+              ts.isVariableDeclaration(declaration) &&
+              ts.isVariableDeclarationList(declaration.parent) &&
+              declaration.parent.flags & ts.NodeFlags.Const &&
+              declaration.initializer
+            )
+              return arrayValues(declaration.initializer, visited);
+          }
+          if (!ts.isArrayLiteralExpression(expression)) return undefined;
+          const values: string[] = [];
+          for (const element of expression.elements) {
+            if (
+              !ts.isObjectLiteralExpression(element) ||
+              element.properties.some(
+                (field) => !ts.isPropertyAssignment(field) || ts.isComputedPropertyName(field.name)
+              )
+            )
+              return undefined;
+            const fields = element.properties.filter(
+              (field): field is ts.PropertyAssignment =>
+                ts.isPropertyAssignment(field) &&
+                (ts.isIdentifier(field.name) || ts.isStringLiteralLike(field.name)) &&
+                field.name.text === property
+            );
+            if (fields.length !== 1) return undefined;
+            const names = literalStrings(checker.getTypeAtLocation(fields[0].initializer), checker);
+            if (!names) return undefined;
+            values.push(...names);
+          }
+          return values;
+        }
+        const values: string[] = [];
+        let matched = false;
+        for (const call of callsites) {
+          if (checker.getResolvedSignature(call)?.getDeclaration() !== fn) continue;
+          const actual = call.arguments[index];
+          if (!actual || ts.isSpreadElement(actual)) return undefined;
+          matched = true;
+          const names = arrayValues(actual);
+          if (!names) return undefined;
+          values.push(...names);
+        }
+        if (matched) return [...new Set(values)].sort();
+      }
+    }
+  }
+
   if (ts.isIdentifier(node)) {
     const symbol = checker.getSymbolAtLocation(node);
     for (const declaration of symbol?.declarations ?? []) {

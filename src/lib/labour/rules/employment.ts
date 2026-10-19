@@ -65,6 +65,8 @@ export interface EmploymentResult {
 }
 
 export const EMPLOYMENT_RECOVERY_HALF_LIFE_YEARS = 0.5;
+/** Turns for half of a company's open positions to be filled at average skill. */
+export const CORPORATE_VACANCY_HALF_LIFE_TURNS = 2;
 export const OUTPUT_GAP_UNEMPLOYMENT_COEFFICIENT = 0.4;
 export const EMPLOYMENT_UNEMPLOYMENT_BOUNDS = [1, 100] as const;
 
@@ -220,16 +222,25 @@ export function advanceEmployment(input: EmploymentInput): EmploymentResult {
   const corporateVacancies = Math.max(0, demand - corporate);
   const backgroundVacancies = Math.max(0, backgroundTarget - background);
   const vacancies = corporateVacancies + backgroundVacancies;
-  const hires = Math.min(
+  // Jobseekers who can be matched this turn, the shared limit on all hiring.
+  const matchable = Math.min(
     Math.max(0, maximumEmployment - corporate - background),
     Math.max(0, supply - corporate - background) *
-      (1 - Math.exp(-12 / Math.max(1, finite(input.turnsPerYear, 48)))),
-    vacancies * rate
+      (1 - Math.exp(-12 / Math.max(1, finite(input.turnsPerYear, 48))))
   );
-  if (vacancies > 0) {
-    corporate += hires * (corporateVacancies / vacancies);
-    background += hires * (backgroundVacancies / vacancies);
-  }
+  // A company with a posted opening and jobseekers available fills it within a
+  // few turns. Only the background economy drifts back at the slow recovery
+  // rate; filling company openings at that rate left plants short for months
+  // while the same state had double-digit unemployment (ticket 1628).
+  const corporateFill = 1 - Math.pow(0.5, (0.5 + skill / 100) / CORPORATE_VACANCY_HALF_LIFE_TURNS);
+  const corporateHires = Math.min(corporateVacancies * corporateFill, matchable);
+  const backgroundHires = Math.min(
+    backgroundVacancies * rate,
+    Math.max(0, matchable - corporateHires)
+  );
+  const hires = corporateHires + backgroundHires;
+  corporate += corporateHires;
+  background += backgroundHires;
   const state: EmploymentState = {
     version: 1,
     lastTurn: input.turn,

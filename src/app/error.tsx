@@ -1,14 +1,8 @@
 "use client";
 
-import { ErrorPageContent } from "@/components/ui";
+import { ErrorPageContent, type RouteErrorProps } from "@/components/ui";
 
-export default function RootError({
-  error,
-  reset,
-}: {
-  error: Error & { digest?: string };
-  reset: () => void;
-}) {
+export default function RootError({ error, reset }: RouteErrorProps) {
   const msg = typeof error?.message === "string" ? error.message : "";
   const looksLikeNetwork =
     /failed to fetch|networkerror|load failed|fetch.*(failed|aborted)|terminated/i.test(msg);

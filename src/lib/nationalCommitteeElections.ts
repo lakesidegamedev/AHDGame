@@ -1,3 +1,4 @@
+import { applyOptionalCountryScope } from "@/lib/nationalPartyElectionScope";
 import { ObjectId, type Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { createNotification, createNotifications } from "@/lib/notifications";
@@ -12,7 +13,7 @@ import type {
   PoliticalParty,
   Character,
 } from "@/lib/db/types";
-import { DEFAULT_LEGACY_COUNTRY_ID, type CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countries";
 import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
 import { createTurnBackedWindow } from "@/lib/time/turnBackedWindow";
 import { insertManyIgnoringDuplicateKey } from "@/lib/elections/duplicateKey";
@@ -56,26 +57,6 @@ async function findPartyByElectionPartyId(
   }
   // Always use countryId to find the correct party (sequentialId is only unique within a country)
   return db.collection<PoliticalParty>("politicalParties").findOne({ sequentialId, countryId });
-}
-
-function applyOptionalCountryScope(
-  baseQuery: Record<string, unknown>,
-  countryId?: CountryId
-): Record<string, unknown> {
-  if (!countryId) return baseQuery;
-
-  const countryQuery: Record<string, unknown> =
-    countryId === DEFAULT_LEGACY_COUNTRY_ID
-      ? {
-          $or: [{ countryId: DEFAULT_LEGACY_COUNTRY_ID }, { countryId: { $exists: false } }],
-        }
-      : { countryId };
-
-  if (Object.keys(baseQuery).length === 0) {
-    return countryQuery;
-  }
-
-  return { $and: [baseQuery, countryQuery] };
 }
 
 // ─── Create ──────────────────────────────────────────────────────────────────

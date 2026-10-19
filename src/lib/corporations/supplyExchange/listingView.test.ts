@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
+import { COMMODITY_TYPES } from "@/lib/constants/commodities";
 import { loadOpenOffers, offerSort, openOffersFilter } from "./listingView";
 
 function makeDb(rows: unknown[], publishers: unknown[]) {
@@ -41,7 +42,10 @@ describe("loadOpenOffers", () => {
       [{ _id: corpId, name: "Acme" }]
     );
     const out = await loadOpenOffers(db, { turn: 5, viewerCorpIds: new Set(), limit: 2, page: 3 });
-    expect(find.mock.calls[0][0]).toEqual({ expiresAtTurn: { $gt: 5 } });
+    expect(find.mock.calls[0][0]).toEqual({
+      commodity: { $in: [...COMMODITY_TYPES] },
+      expiresAtTurn: { $gt: 5 },
+    });
     expect(chain.skip).toHaveBeenCalledWith(4);
     expect(chain.limit).toHaveBeenCalledWith(3);
     expect(out.hasMore).toBe(true);

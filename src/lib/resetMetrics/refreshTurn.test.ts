@@ -50,6 +50,32 @@ function ownerReadings(
 }
 
 describe("v2 metric turn persistence shell", () => {
+  it("captures a legacy opening baseline once without replacing observations or history", async () => {
+    const db = createMockDb();
+    const legacy = boards.map(({ openingValues: _openingValues, ...board }) => board);
+    db.collection("resetMetricSnapshots").find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue(legacy),
+    });
+    db.collection("resetMetricSnapshots").bulkWrite.mockResolvedValue({
+      matchedCount: legacy.length,
+    });
+    await refreshResetMetricSnapshotsTurn({
+      db: db as unknown as Db,
+      gameState: state,
+      turn: 2,
+      ownerReadings: ownerReadings(legacy),
+      ready,
+    });
+    const operations = db.collectionMocks.resetMetricSnapshots!.bulkWrite.mock.calls[0]![0];
+    expect(operations[0].updateOne.update.$set.openingValues["07"]).toBe(
+      legacy[0]!.history!["07"]![0]!.value
+    );
+    expect(operations[0].updateOne.update.$set).not.toHaveProperty("observations");
+    expect(operations[0].updateOne.update.$set).not.toHaveProperty("history");
+    const projection = db.collectionMocks.resetMetricSnapshots!.find.mock.calls[0]![1].projection;
+    expect(projection["history.07"]).toEqual({ $slice: 1 });
+    expect(projection.history).toBeUndefined();
+  });
   it("recovers a failed prior refresh using its actual CAS turn without backfilling history", async () => {
     const db = createMockDb();
     const stalled = boards.map((board) => ({ ...board, asOfTurn: 12 }));
@@ -90,6 +116,8 @@ describe("v2 metric turn persistence shell", () => {
         },
       });
       expect(operation.updateOne.update.$set).not.toHaveProperty("history");
+      expect(operation.updateOne.update.$set).not.toHaveProperty("observations");
+      expect(operation.updateOne.update).not.toHaveProperty("$push");
     }
     expect(readings["US:CT"]!.updates).toHaveProperty("16");
     expect(readings["US:CT"]!.updates).toHaveProperty("18");
@@ -225,7 +253,12 @@ describe("v2 metric turn persistence shell", () => {
 
   it("replays already-written boards and advances only the remaining boards", async () => {
     const db = createMockDb();
-    const partial = boards.map((board, index) => (index < 10 ? { ...board, asOfTurn: 2 } : board));
+    const readings = ownerReadings();
+    const partial = boards.map((board, index) =>
+      index < 10
+        ? refreshResetMetricBoard({ board, turn: 2, ...readings[board._id]! }).board
+        : board
+    );
     db.collection("resetMetricSnapshots").find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue(partial),
     });
@@ -242,7 +275,7 @@ describe("v2 metric turn persistence shell", () => {
     expect(db.collectionMocks.resetMetricSnapshots!.bulkWrite.mock.calls[0]![0]).toHaveLength(73);
   });
 
-  it("samples history in the existing bulk write on the annual cadence", async () => {
+  it("appends history in the existing bulk write on the separate 12-turn cadence", async () => {
     const db = createMockDb();
     const annualBoards = boards.map((board) => ({ ...board, asOfTurn: 12 }));
     db.collection("resetMetricSnapshots").find.mockReturnValue({
@@ -259,7 +292,12 @@ describe("v2 metric turn persistence shell", () => {
     const findOptions = db.collectionMocks.resetMetricSnapshots!.find.mock.calls[0]![1];
     expect(findOptions.projection.history).toBe(1);
     const operations = db.collectionMocks.resetMetricSnapshots!.bulkWrite.mock.calls[0]![0];
-    expect(operations[0].updateOne.update.$set.history["07"]).toHaveLength(2);
-    expect(operations[0].updateOne.update.$set.history["07"][1].turn).toBe(13);
+    expect(operations[0].updateOne.update.$set).not.toHaveProperty("history");
+    expect(operations[0].updateOne.update.$set).not.toHaveProperty("observations");
+    expect(operations[0].updateOne.update.$set["observations.07"].lastUpdatedTurn).toBe(13);
+    expect(operations[0].updateOne.update.$push["history.07"]).toEqual({
+      $each: [{ turn: 13, value: annualBoards[0]!.observations["07"]!.value }],
+      $slice: -120,
+    });
   });
 });

@@ -10,6 +10,7 @@
  * (MHP), an industrial working class, the rural peasantry, a marginalised Kurdish
  * population in the east/southeast, and an Istanbul business bourgeoisie.
  */
+import { convertLayer1Census } from "@/lib/seeds/international/convertLayer1Census";
 import type { CountryLayer1Model, DemographicPosition } from "@/lib/seeds/international/types";
 import { trRegionCensusData, type TRRegionLayer1 } from "@/lib/seeds/tr/trRegionCensusData";
 import { trRegionCensusDataModern } from "./data/trRegionCensusDataModern";
@@ -202,22 +203,7 @@ const ERA_CENSUS: Partial<Record<EraId, Record<string, TRRegionLayer1>>> = {
   "2027": trRegionCensusDataModern,
 };
 
-function convertCensus(
-  raw: Record<string, TRRegionLayer1>
-): Record<string, Record<string, Record<string, number>>> {
-  return Object.fromEntries(
-    Object.entries(raw).map(([regionId, layer1]) => [
-      regionId,
-      {
-        ethnicity: layer1.ethnicity as unknown as Record<string, number>,
-        age: layer1.age as unknown as Record<string, number>,
-        education: layer1.education as unknown as Record<string, number>,
-        income: layer1.income as unknown as Record<string, number>,
-        urbanization: layer1.urbanization as unknown as Record<string, number>,
-      },
-    ])
-  );
-}
+const convertCensus = convertLayer1Census<TRRegionLayer1>;
 
 export function getTrModel(era: EraId): CountryLayer1Model {
   const census = convertCensus(ERA_CENSUS[era] ?? trRegionCensusData);

@@ -167,4 +167,24 @@ describe("seed manifest source discovery", () => {
     );
     expect(genericOnlyDiscovery.unresolved).toEqual([]);
   });
+
+  it("resolves forwarded literal index plans but still reviews dynamic or spread plans", () => {
+    const fixtureRoot = join(repositoryRoot, "scripts/architecture/fixtures/indexPlanForwarding");
+    const found = discoverCollectionCalls(fixtureRoot, [join(fixtureRoot, "src/callsite.ts")]);
+    expect(
+      found.calls
+        .filter((call) => call.argument === "plan.collection")
+        .flatMap((call) => call.names)
+    ).toEqual(["fixturePlanA", "fixturePlanB"]);
+    expect(found.unresolved.map((call) => call.owner).sort()).toEqual([
+      "runComputedPlans",
+      "runMixedPlans",
+      "runMutablePlans",
+      "runPropertyPlans",
+      "runSpreadPlans",
+    ]);
+    expect(
+      discovery.unresolved.some((call) => call.file === "src/lib/migrations/indexPlans.ts")
+    ).toBe(false);
+  });
 });

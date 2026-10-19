@@ -120,7 +120,7 @@ describe("NPP strategy choice respects the plant's operating lane", () => {
 
   it("does not put an entertainment plant onto a parent media recipe", () => {
     const item = sector();
-    const decision = decide(item, { advertising: 4, entertainment_services: 0.5 });
+    const decision = decide(item, { advertising: 4 });
     expect(decision).not.toBeNull();
     const target = String(decision!.updates.strategyId);
     expect(target).not.toBe("legacy_broadcast");

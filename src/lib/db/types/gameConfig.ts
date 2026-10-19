@@ -461,6 +461,11 @@ export interface GameConfig {
    */
   producerMarketShadowEnabled?: boolean;
   /**
+   * Turn the one-time entertainment commodity removal migration ran
+   * (migrateEntertainmentRemoval). Present means later turns skip it.
+   */
+  entertainmentCommodityRemovedAtTurn?: number;
+  /**
    * When true, outstanding build orders in sectors whose output is in deep
    * shortage have their remaining build time halved, once per order. See
    * turn/corporation/sectorTurn/shortageBuildSpeedup.ts.

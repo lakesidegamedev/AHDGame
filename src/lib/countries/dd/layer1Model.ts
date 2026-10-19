@@ -11,6 +11,7 @@
  * youth. The electorate leans heavily statist; reform pressure sits with the
  * intelligentsia and the young.
  */
+import { convertLayer1Census } from "@/lib/seeds/international/convertLayer1Census";
 import type { CountryLayer1Model, DemographicPosition } from "@/lib/seeds/international/types";
 import { ddRegionCensusData, type DDRegionLayer1 } from "@/lib/seeds/dd/ddRegionCensusData";
 import { ddRegionCensusData1953 } from "@/lib/seeds/dd/ddRegionCensusData1953";
@@ -187,22 +188,7 @@ const ERA_POSITIONS: Partial<Record<EraId, EraPositions>> = {
   "1979": POSITIONS_1979,
 };
 
-function convertCensus(
-  raw: Record<string, DDRegionLayer1>
-): Record<string, Record<string, Record<string, number>>> {
-  return Object.fromEntries(
-    Object.entries(raw).map(([regionId, layer1]) => [
-      regionId,
-      {
-        ethnicity: layer1.ethnicity as unknown as Record<string, number>,
-        age: layer1.age as unknown as Record<string, number>,
-        education: layer1.education as unknown as Record<string, number>,
-        income: layer1.income as unknown as Record<string, number>,
-        urbanization: layer1.urbanization as unknown as Record<string, number>,
-      },
-    ])
-  );
-}
+const convertCensus = convertLayer1Census<DDRegionLayer1>;
 
 export function getDdModel(era: EraId): CountryLayer1Model {
   const census = ERA_CENSUS[era] ?? ddRegionCensusData;

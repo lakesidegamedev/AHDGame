@@ -6,6 +6,8 @@ export const PRIMARY_KEY_INDEX_POLICIES: Readonly<Record<string, string>> = {
   appliedWorldTransitions:
     "One receipt per authored rule, upserted by _id; the bounded rule roster is read once.",
   bankingTelemetry: "Turn number is the _id used for upsert and latest-turn ordering.",
+  retiredCommodityArchive:
+    "Write-once archive keyed by source collection and _id; game logic never reads it.",
   producerMarketShadows:
     "Telemetry: one summary per turn, upserted by its turn _id; game logic never reads it.",
   acquisitionSettlements: "Settlement recovery and writes address the offer identity through _id.",

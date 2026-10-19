@@ -1,12 +1,44 @@
 import { describe, expect, it } from "vitest";
 import { buildOpeningMetricSnapshots1991 } from "../seedOpening1991";
 import { refreshResetMetricBoard } from "./refresh";
+import { primaryMetrics } from "../catalog";
 
 const board = buildOpeningMetricSnapshots1991("test-world", 1).find(
   (row) => row._id === "US:national"
 )!;
 
 describe("reset metric owner refresh", () => {
+  it("publishes all numeric owners every turn in every seeded country without triggering elections", () => {
+    const openings = buildOpeningMetricSnapshots1991("all-countries", 1);
+    expect(new Set(openings.map((row) => row.countryId)).size).toBeGreaterThan(3);
+    for (const opening of openings) {
+      const ids = primaryMetrics
+        .filter(
+          (metric) =>
+            metric.refresh === "1" &&
+            (opening.scope === "national"
+              ? metric.aggregation === "national"
+              : metric.aggregation !== "national")
+        )
+        .map((metric) => metric.id);
+      const updates = Object.fromEntries(ids.map((id) => [id, opening.observations[id]!]));
+      const next = refreshResetMetricBoard({
+        board: opening,
+        turn: 2,
+        updates,
+        cohortDue: false,
+        electionDue: false,
+      });
+      expect(next.missingDueIds).toEqual([]);
+      expect(next.dueIds).toEqual(ids);
+      for (const id of ids) expect(next.board.observations[id]!.lastUpdatedTurn).toBe(2);
+      expect(next.board.history).toBe(opening.history);
+      if (opening.scope === "regional") {
+        expect(next.board.observations["51"]!.lastUpdatedTurn).toBe(1);
+        expect(next.board.observations["11"]!.lastUpdatedTurn).toBe(1);
+      }
+    }
+  });
   it("recovers a missed health cadence with current readings and replays exactly", () => {
     const opening = buildOpeningMetricSnapshots1991("test-world", 1).find(
       (row) => row._id === "US:CT"
@@ -76,7 +108,7 @@ describe("reset metric owner refresh", () => {
       cohortDue: false,
       electionDue: false,
     });
-    expect(result.dueIds).toEqual(["07", "09", "10"]);
+    expect(result.dueIds).toEqual(["07", "09", "10", "57", "58"]);
     expect(result.missingDueIds).toEqual(result.dueIds);
     expect(result.board.asOfTurn).toBe(2);
     expect(result.board.observations).toEqual(board.observations);
@@ -93,7 +125,8 @@ describe("reset metric owner refresh", () => {
     });
     expect(result.changedIds).toEqual(["07"]);
     expect(result.board.observations["07"]?.value).toBe(4.5);
-    expect(result.missingDueIds).toEqual(["09", "10"]);
+    expect(result.missingDueIds).toEqual(["09", "10", "57", "58"]);
+    expect(result.board.observations["07"]?.lastUpdatedTurn).toBe(2);
     expect(() =>
       refreshResetMetricBoard({
         board,
@@ -116,7 +149,7 @@ describe("reset metric owner refresh", () => {
 
   it("accepts exact same-turn replay but rejects a changed owner reading", () => {
     const updates = Object.fromEntries(
-      ["07", "09", "10"].map((id) => [id, board.observations[id]!])
+      ["07", "09", "10", "57", "58"].map((id) => [id, board.observations[id]!])
     );
     const first = refreshResetMetricBoard({
       board,
@@ -156,7 +189,12 @@ describe("reset metric owner refresh", () => {
       cohortDue: false,
       electionDue: false,
     });
-    expect(ordinary.dueIds).toEqual(["02"]);
+    expect(ordinary.dueIds).toEqual(
+      primaryMetrics
+        .filter((metric) => metric.aggregation !== "national" && metric.refresh === "1")
+        .map((metric) => metric.id)
+    );
+    expect(ordinary.board.observations["11"]?.lastUpdatedTurn).toBe(1);
     const event = refreshResetMetricBoard({
       board: regional,
       turn: 2,
