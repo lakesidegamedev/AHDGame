@@ -67,6 +67,11 @@ export function BlendDetailTally({ model, renderEndorse, hrefFor }: BlendDetailT
                     </span>
                   )}
                 </div>
+                {row.isYou && row.seatMarginNote && (
+                  <div className="mt-0.5 truncate text-[11px] tabular-nums text-foreground/80">
+                    {row.seatMarginNote}
+                  </div>
+                )}
               </div>
 
               <div className="w-[92px] shrink-0 text-right">

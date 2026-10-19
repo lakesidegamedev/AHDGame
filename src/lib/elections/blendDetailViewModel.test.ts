@@ -340,3 +340,15 @@ it("shows pending national allocation instead of a fabricated zero-seat result",
   expect(view.isSeatRace).toBe(false);
   expect(view.rows.every((row) => row.seatsCell === "Pending")).toBe(true);
 });
+
+describe("seat margin note", () => {
+  it("states both directions in whole votes", async () => {
+    const { seatMarginNote } = await import("./blendDetailViewModel");
+    expect(seatMarginNote({ toGain: 1240, toLose: 859 })).toBe(
+      "1,240 more votes to gain a seat, 860 fewer votes to lose one"
+    );
+    expect(seatMarginNote({ toGain: 300, toLose: null })).toBe("300 more votes to gain a seat");
+    expect(seatMarginNote({ toGain: null, toLose: null })).toBeNull();
+    expect(seatMarginNote(undefined)).toBeNull();
+  });
+});
