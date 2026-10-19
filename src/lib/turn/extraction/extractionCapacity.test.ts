@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeExtractionCapacityMultipliers } from "./extractionCapacity";
+import { computeExtractionCapacityMultipliers, fullOutputMultipliers } from "./extractionCapacity";
 import type { ExtractableResource } from "@/lib/constants/commodities";
 import type { StateResourceCapacity } from "@/lib/db/types/stateResourceCapacity";
 import type { ExtractionContract } from "@/lib/db/types/extractionContract";
@@ -195,5 +195,231 @@ describe("computeExtractionCapacityMultipliers", () => {
     );
     expect(result.get("s1")?.oil).toBe(1);
     expect(result.get("s2")?.oil).toBeCloseTo(0.5);
+  });
+});
+
+describe("computeExtractionCapacityMultipliers with plant output caps (#4503)", () => {
+  const mn = (iron: number) => [makeCapacity("MN", { iron })];
+
+  it("does not ration mines whose real dig fits the deposit though nameplate does not", () => {
+    const sectors = [
+      {
+        sectorId: "s1",
+        stateId: "MN",
+        corporationId: corp1,
+        revenueBasedOutput: { iron: 6000 },
+        plantOutputCap: { iron: 3000 },
+      },
+      {
+        sectorId: "s2",
+        stateId: "MN",
+        corporationId: corp2,
+        revenueBasedOutput: { iron: 6000 },
+        plantOutputCap: { iron: 3000 },
+      },
+    ];
+    const result = computeExtractionCapacityMultipliers(sectors, [], mn(10000));
+    expect(result.get("s1")?.iron).toBe(1);
+    expect(result.get("s2")?.iron).toBe(1);
+  });
+
+  it("still rations pro-rata when real dig exceeds the deposit", () => {
+    const sectors = [
+      {
+        sectorId: "s1",
+        stateId: "MN",
+        corporationId: corp1,
+        revenueBasedOutput: { iron: 10000 },
+        plantOutputCap: { iron: 8000 },
+      },
+      {
+        sectorId: "s2",
+        stateId: "MN",
+        corporationId: corp2,
+        revenueBasedOutput: { iron: 10000 },
+        plantOutputCap: { iron: 2000 },
+      },
+    ];
+    const result = computeExtractionCapacityMultipliers(sectors, [], mn(5000));
+    // The multiplier is the fraction of the CAPPED desire granted.
+    expect(result.get("s1")?.iron).toBeCloseTo(0.5);
+    expect(result.get("s2")?.iron).toBeCloseTo(0.5);
+    // Granted units fill the deposit exactly, never more.
+    expect(8000 * result.get("s1")!.iron! + 2000 * result.get("s2")!.iron!).toBeCloseTo(5000);
+  });
+
+  it("reserves a lease against capped desire and lets the holder compete beyond it", () => {
+    const contracts = [makeContract("MN", corp1, "iron", 0.2)];
+    const fits = computeExtractionCapacityMultipliers(
+      [
+        {
+          sectorId: "s1",
+          stateId: "MN",
+          corporationId: corp1,
+          revenueBasedOutput: { iron: 10000 },
+          plantOutputCap: { iron: 4000 },
+        },
+        {
+          sectorId: "s2",
+          stateId: "MN",
+          corporationId: corp2,
+          revenueBasedOutput: { iron: 10000 },
+          plantOutputCap: { iron: 3000 },
+        },
+      ],
+      contracts,
+      mn(10000)
+    );
+    expect(fits.get("s1")?.iron).toBe(1);
+    expect(fits.get("s2")?.iron).toBe(1);
+    // Holder: 2000 reserved, then its 4000 residual shares the 8000 pool with 6000.
+    const binds = computeExtractionCapacityMultipliers(
+      [
+        {
+          sectorId: "s1",
+          stateId: "MN",
+          corporationId: corp1,
+          revenueBasedOutput: { iron: 10000 },
+          plantOutputCap: { iron: 6000 },
+        },
+        {
+          sectorId: "s2",
+          stateId: "MN",
+          corporationId: corp2,
+          revenueBasedOutput: { iron: 10000 },
+          plantOutputCap: { iron: 6000 },
+        },
+      ],
+      contracts,
+      mn(10000)
+    );
+    expect(6000 * binds.get("s1")!.iron!).toBeCloseTo(2000 + 4000 * 0.8);
+    expect(6000 * binds.get("s2")!.iron!).toBeCloseTo(6000 * 0.8);
+  });
+
+  it("is identical to the uncapped result when no cap is supplied", () => {
+    const base = [
+      {
+        sectorId: "s1",
+        stateId: "MN",
+        corporationId: corp1,
+        revenueBasedOutput: { iron: 9000, coal: 4000 },
+      },
+      { sectorId: "s2", stateId: "MN", corporationId: corp2, revenueBasedOutput: { iron: 7000 } },
+    ];
+    const capacities = [makeCapacity("MN", { iron: 10000, coal: 3000 })];
+    const contracts = [makeContract("MN", corp1, "iron", 0.3)];
+    const uncapped = computeExtractionCapacityMultipliers(base, contracts, capacities);
+    const withEmptyCaps = computeExtractionCapacityMultipliers(
+      base.map((s) => ({ ...s, plantOutputCap: {} })),
+      contracts,
+      capacities
+    );
+    expect(withEmptyCaps).toEqual(uncapped);
+  });
+
+  it("falls back to uncapped output for a resource with no usable cap", () => {
+    const sectors = [
+      {
+        sectorId: "s1",
+        stateId: "MN",
+        corporationId: corp1,
+        revenueBasedOutput: { iron: 6000 },
+        plantOutputCap: { iron: Number.NaN },
+      },
+      { sectorId: "s2", stateId: "MN", corporationId: corp2, revenueBasedOutput: { iron: 6000 } },
+    ];
+    const result = computeExtractionCapacityMultipliers(sectors, [], mn(10000));
+    expect(result.get("s1")?.iron).toBeCloseTo(10000 / 12000);
+    expect(result.get("s2")?.iron).toBeCloseTo(10000 / 12000);
+  });
+
+  it("gives an idle mine (cap 0) no claim on the deposit", () => {
+    const sectors = [
+      {
+        sectorId: "idle",
+        stateId: "MN",
+        corporationId: corp1,
+        revenueBasedOutput: { iron: 8000 },
+        plantOutputCap: { iron: 0 },
+      },
+      {
+        sectorId: "busy",
+        stateId: "MN",
+        corporationId: corp2,
+        revenueBasedOutput: { iron: 8000 },
+        plantOutputCap: { iron: 8000 },
+      },
+    ];
+    const result = computeExtractionCapacityMultipliers(sectors, [], mn(10000));
+    expect(result.get("busy")?.iron).toBe(1);
+    expect(result.get("idle")?.iron).toBe(1);
+  });
+});
+
+describe("fullOutputMultipliers (#4503 corp phase)", () => {
+  it("re-expresses a bound capped grant as a share of full output, never above the grant", () => {
+    // A half-parked mine claims 5000 of its 10000 nameplate and gets 4000.
+    const sectors = [
+      {
+        sectorId: "parked",
+        stateId: "MN",
+        corporationId: corp1,
+        revenueBasedOutput: { iron: 10000 },
+        plantOutputCap: { iron: 5000 },
+      },
+      {
+        sectorId: "full",
+        stateId: "MN",
+        corporationId: corp2,
+        revenueBasedOutput: { iron: 10000 },
+        plantOutputCap: { iron: 10000 },
+      },
+    ];
+    const capped = computeExtractionCapacityMultipliers(
+      sectors,
+      [],
+      [makeCapacity("MN", { iron: 12000 })]
+    );
+    const full = fullOutputMultipliers(sectors, capped);
+    expect(10000 * full.get("parked")!.iron!).toBeCloseTo(4000);
+    expect(10000 * full.get("full")!.iron!).toBeCloseTo(8000);
+    // The hard-min reads min(1, util / active) on active capacity: dig = grant.
+    const dig = 10000 * 0.5 * Math.min(1, full.get("parked")!.iron! / 0.5);
+    expect(dig).toBeCloseTo(4000);
+  });
+
+  it("keeps an unbound or idle mine at 1 and leaves uncapped sectors untouched", () => {
+    const sectors = [
+      {
+        sectorId: "idle",
+        stateId: "MN",
+        corporationId: corp1,
+        revenueBasedOutput: { iron: 8000 },
+        plantOutputCap: { iron: 0 },
+      },
+      {
+        sectorId: "parked",
+        stateId: "MN",
+        corporationId: corp1,
+        revenueBasedOutput: { iron: 8000 },
+        plantOutputCap: { iron: 4000 },
+      },
+      {
+        sectorId: "plain",
+        stateId: "WI",
+        corporationId: corp2,
+        revenueBasedOutput: { iron: 9000 },
+      },
+    ];
+    const capped = computeExtractionCapacityMultipliers(
+      sectors,
+      [],
+      [makeCapacity("MN", { iron: 10000 }), makeCapacity("WI", { iron: 3000 })]
+    );
+    const full = fullOutputMultipliers(sectors, capped);
+    expect(full.get("idle")?.iron).toBe(1);
+    expect(full.get("parked")?.iron).toBe(1);
+    expect(full.get("plain")).toEqual(capped.get("plain"));
   });
 });
