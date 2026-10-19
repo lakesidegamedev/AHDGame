@@ -7,7 +7,7 @@ summary: >-
   contract over what it found.
 tags: [economy, extraction, prospecting]
 badges: [minor]
-areas: [economy]
+areas: [engine]
 ---
 
 ## What changed
