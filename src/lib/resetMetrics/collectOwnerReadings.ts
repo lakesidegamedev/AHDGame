@@ -12,6 +12,12 @@ import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
+import type { State } from "@/lib/db/types/state";
+import type { GameState } from "@/lib/db/types/gameState";
+import type { TradeFlowSnapshot } from "@/lib/db/types/tradeFlowSnapshot";
+import { getGdpAnchorRate } from "@/lib/currency/gdpAnchorRate";
+import { commodityTradeBalance } from "./rules/tradeOwner";
+import { loadTurnoutReadings } from "./loadTurnoutReadings";
 import { healthOwnerInputs } from "./rules/healthOwner";
 import {
   openingGrossPurchasingInputs1991,
@@ -49,7 +55,6 @@ const DIRECT_ECONOMIC_OWNERS = [
   ["03", "povertyRate"],
   ["05", "gdpGrowth"],
   ["06", "productivityGrowth"],
-  ["08", "tradeBalance"],
 ] as const;
 
 const FAIL_CLOSED_OWNER_IDS = new Set([
@@ -107,6 +112,7 @@ export async function collectResetMetricOwnerReadings(
             "economic.productivityGrowth.value": 1,
             "economic.tradeBalance.value": 1,
             resetCohortReading: 1,
+            labourEmployment: 1,
           },
         }
       )
@@ -171,6 +177,37 @@ export async function collectResetMetricOwnerReadings(
           .toArray()
       : Promise.resolve([]),
   ]);
+  const [trade, states, world] = await Promise.all([
+    db
+      .collection<TradeFlowSnapshot>("tradeFlowSnapshots")
+      .find({ turn }, { projection: { turn: 1, national: 1 } })
+      .toArray(),
+    db
+      .collection<State>("states")
+      .find(
+        { _id: { $in: regionalIds }, countryId: { $in: countryIds } },
+        {
+          projection: {
+            _id: 1,
+            countryId: 1,
+            population: 1,
+            workingAgePopulation: 1,
+            votingEligiblePopulation: 1,
+          },
+        }
+      )
+      .toArray(),
+    db
+      .collection<GameState>("gameState")
+      .findOne({ _id: "current" }, { projection: { preset: 1 } }),
+  ]);
+  const turnout = await loadTurnoutReadings(db, {
+    turn,
+    sourceTurn: Math.min(...boards.map((b) => b.sourceTurn)),
+    countries: countryIds,
+    states,
+  });
+  const stateById = new Map(states.map((s) => [s._id, s]));
   const pressureByBoard = await loadResetPolicyPressure(db, {
     worldId: boards[0]!.worldId,
     boards,
@@ -189,7 +226,11 @@ export async function collectResetMetricOwnerReadings(
       // The demographic phase runs each turn. A missing current-turn receipt
       // must leave the cohort observation due, not silently defer it forever.
       const cohortDue = board.scope === "regional";
-      const dueIds = dueResetMetricIds(board, turn, cohortDue, false);
+      const event = board.regionId ? turnout.get(board.regionId) : undefined;
+      const electionDue = Boolean(
+        event && event.turn > (board.observations["51"]?.observedAtTurn ?? board.sourceTurn)
+      );
+      const dueIds = dueResetMetricIds(board, turn, cohortDue, electionDue);
       const due = new Set(dueIds);
       const updates: Record<string, ResetMetricSnapshot["observations"][string]> = {};
       if (board.scope === "national") {
@@ -241,6 +282,46 @@ export async function collectResetMetricOwnerReadings(
           }
         }
       } else {
+        if (electionDue && event)
+          updates["51"] = {
+            ...board.observations["51"]!,
+            value: (100 * event.ballots) / event.eligible,
+            status: "proxy",
+            source: "latest completed election tally",
+            note: "Counted ballots divided by current eligible residents. Historical tallies without a frozen register remain an electorate-denominator proxy; simultaneous offices are not added together.",
+            observedAtTurn: event.turn,
+            ratioBasis: { numerator: event.ballots, denominator: event.eligible },
+          };
+        if (due.has("08")) {
+          const flows = trade.find((s) => s.turn === turn)?.national[board.countryId];
+          const gdp = budgetByCountry.get(board.countryId)?.gdp;
+          const value =
+            flows && typeof gdp === "number"
+              ? commodityTradeBalance({
+                  exports: flows.exports,
+                  imports: flows.imports,
+                  annualGdpAnchor: gdp * getGdpAnchorRate(board.countryId, world?.preset),
+                  turnsPerYear: TURNS_PER_YEAR,
+                })
+              : null;
+          updates["08"] = {
+            ...board.observations["08"]!,
+            value: value ?? board.observations["08"]!.value,
+            status: "proxy",
+            source:
+              value === null
+                ? "retained trade observation: current cleared-flow ledger unavailable"
+                : "current national cleared-commodity trade ledger",
+            note:
+              value === null
+                ? "No current trade-flow receipt; this is not a newly measured balance."
+                : "Annualized commodity exports less imports as a share of annual GDP. National scope repeated on regional boards; services and unmodeled external trade are not included.",
+            observedAtTurn:
+              value === null
+                ? (board.observations["08"]?.observedAtTurn ?? board.sourceTurn)
+                : turn,
+          };
+        }
         const healthRow = healthById.get(board.regionId!);
         const health = healthRow?.countryId === board.countryId ? healthRow.healthcare : undefined;
         const healthBoard = healthBoardById.get(board.regionId!);
@@ -317,6 +398,15 @@ export async function collectResetMetricOwnerReadings(
               id === "03"
                 ? "Modeled population-share estimate, not surveyed household poverty. Current funded law delivery replaces booked social spending in v2 countries; historical adjustments decay over time."
                 : "Current model result, not a political-board score or an independently measured statistic.",
+            ratioBasis:
+              id === "01" &&
+              liveMacro?.labourEmployment?.lastTurn === turn &&
+              liveMacro.labourEmployment.laborForce > 0
+                ? {
+                    numerator: (value / 100) * liveMacro.labourEmployment.laborForce,
+                    denominator: liveMacro.labourEmployment.laborForce,
+                  }
+                : undefined,
           };
         }
         if (due.has("02")) {
@@ -386,6 +476,16 @@ export async function collectResetMetricOwnerReadings(
               status: "derived",
               source: "current single-year age and sex cohort flow",
               note,
+              ...(id === "56" && stateById.get(board.regionId!)?.population
+                ? {
+                    ratioBasis: {
+                      numerator:
+                        stateById.get(board.regionId!)!.population -
+                        stateById.get(board.regionId!)!.population / (1 + value / 100),
+                      denominator: stateById.get(board.regionId!)!.population / (1 + value / 100),
+                    },
+                  }
+                : {}),
             };
           }
         }
@@ -436,7 +536,7 @@ export async function collectResetMetricOwnerReadings(
             : "Game-calibrated carry-forward until this owner has a physical live ledger. Laws and actions affect underlying systems where implemented; this estimate does not invent a direct bonus.",
         };
       }
-      return [board._id, { updates, cohortDue, electionDue: false }];
+      return [board._id, { updates, cohortDue, electionDue }];
     })
   );
 }

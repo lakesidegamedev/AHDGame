@@ -47,6 +47,9 @@ function sameObservation(a: OpeningMetricObservation | undefined, b: OpeningMetr
     a.source === b.source &&
     a.owner === b.owner &&
     a.note === b.note &&
+    a.observedAtTurn === b.observedAtTurn &&
+    a.ratioBasis?.numerator === b.ratioBasis?.numerator &&
+    a.ratioBasis?.denominator === b.ratioBasis?.denominator &&
     a.lastUpdatedTurn === b.lastUpdatedTurn
   );
 }
@@ -155,6 +158,9 @@ export function refreshResetMetricBoard(input: MetricRefreshInput): MetricRefres
     ...board,
     asOfTurn: turn,
     lastRefreshFromTurn: board.asOfTurn,
+    priorValues: Object.fromEntries(
+      Object.entries(board.observations).map(([id, o]) => [id, o.value])
+    ),
     observations: { ...board.observations, ...updates },
   };
   return { board: next, replayed: false, dueIds, changedIds, missingDueIds };

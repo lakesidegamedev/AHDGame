@@ -55,6 +55,33 @@ function rollupStatus(
   return aggregation === "population_weighted" ? "derived" : "proxy";
 }
 
+/** Only same-observation counts can make a national ratio exact. */
+function ownerRatio(
+  metricId: string,
+  observations: readonly OpeningMetricObservation[]
+): number | null {
+  if (!["01", "51", "56"].includes(metricId) || !observations.length) return null;
+  let numerator = 0,
+    denominator = 0;
+  for (const observation of observations) {
+    if (!observation) return null;
+    const basis = observation.ratioBasis;
+    if (
+      !basis ||
+      !Number.isFinite(basis.numerator) ||
+      basis.numerator < 0 ||
+      !Number.isFinite(basis.denominator) ||
+      basis.denominator <= 0
+    )
+      return null;
+    if (Math.abs(observation.value! - (100 * basis.numerator) / basis.denominator) > 0.001)
+      return null;
+    numerator += basis.numerator;
+    denominator += basis.denominator;
+  }
+  return (100 * numerator) / denominator;
+}
+
 /**
  * Build the national read model for region-owned primary metrics.
  *
@@ -109,17 +136,29 @@ export function aggregateNationalMetricObservations(
         if (totalWeight <= 0 || !kind) {
           throw new Error(`National metric rollup has no denominator for ${metric.id}`);
         }
-        const status = rollupStatus(observations, metric.aggregation, fallback);
+        const exactRatio = ownerRatio(metric.id, observations);
+        const status =
+          exactRatio !== null
+            ? observations.some((o) => o.status === "proxy")
+              ? "proxy"
+              : "derived"
+            : rollupStatus(observations, metric.aggregation, fallback);
         const isProvisional = status === "proxy";
         return [
           metric.id,
           {
             metricId: metric.id,
             path: metric.path,
-            value: weightedValue / totalWeight,
+            value: exactRatio ?? weightedValue / totalWeight,
             status,
-            source: `${kind}-weighted national rollup of current regional v2 observations`,
+            source:
+              exactRatio !== null
+                ? "Owner-numerator/denominator national rollup of current regional observations"
+                : `${kind}-weighted national rollup of current regional v2 observations`,
             owner: metric.owner,
+            ...(observations.every((o) => o.observedAtTurn !== undefined)
+              ? { observedAtTurn: Math.min(...observations.map((o) => o.observedAtTurn!)) }
+              : {}),
             ...(observations.every((observation) => observation.lastUpdatedTurn !== undefined)
               ? {
                   lastUpdatedTurn: Math.min(
@@ -128,11 +167,13 @@ export function aggregateNationalMetricObservations(
                 }
               : {}),
             note:
-              metric.id === "03"
-                ? "Population-weighted modeled poverty estimate, not a measured count of households below an official national threshold."
-                : isProvisional
-                  ? `Game-calibrated national rollup. The ${metric.aggregation} owner-specific national denominator is not yet persisted separately.`
-                  : `National rollup using the catalog's ${metric.aggregation} aggregation rule.`,
+              exactRatio !== null
+                ? "National rate recomputed from the sum of same-observation regional counts, not a mean weighted by a different population."
+                : metric.id === "03"
+                  ? "Population-weighted modeled poverty estimate, not a measured count of households below an official national threshold."
+                  : isProvisional
+                    ? `Game-calibrated national rollup. The ${metric.aggregation} owner-specific national denominator is not yet persisted separately.`
+                    : `National rollup using the catalog's ${metric.aggregation} aggregation rule.`,
           },
         ];
       })
@@ -143,6 +184,11 @@ export function aggregateNationalMetricValue(
   metricId: string,
   regions: readonly NationalMetricRegionReading[]
 ): number {
+  const exactRatio = ownerRatio(
+    metricId,
+    regions.map((r) => r.observations[metricId]!)
+  );
+  if (exactRatio !== null) return exactRatio;
   let weightedValue = 0;
   let totalWeight = 0;
   for (const region of regions) {
@@ -182,6 +228,13 @@ export function aggregateNationalMetricHistory(
     throw new Error(`National metric history is not aligned for ${metricId}`);
   }
   return turns.map((turn, index) => {
+    const observations = regions.map((region) => ({
+      ...region.observations[metricId]!,
+      value: region.history[metricId]![index]!.value,
+      ratioBasis: region.history[metricId]![index]!.ratioBasis,
+    }));
+    const exactRatio = ownerRatio(metricId, observations);
+    if (exactRatio !== null) return { turn, value: exactRatio };
     let weightedValue = 0;
     let totalWeight = 0;
     for (const region of regions) {

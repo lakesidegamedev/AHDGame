@@ -16,7 +16,7 @@ const positions = ["far_left", "center_left", "center", "center_right", "far_rig
 const key = (row: { country: string; scope: string; regionId?: string; familyId: string }) =>
   `${row.country}:${row.scope}:${row.regionId ?? ""}:${row.familyId}`;
 
-export function openingPovertyPrograms(input: {
+export function openingMetricPrograms(input: {
   worldId: string;
   boards: readonly Pick<
     ResetLawOpeningBoard,
@@ -28,11 +28,12 @@ export function openingPovertyPrograms(input: {
     countryId: string;
     familyAnnualDemand?: Record<string, number>;
   }[];
+  familyIds?: readonly string[];
 }): PovertyProgram[] {
   const replaced = new Set(input.replacements.map(key));
   const out: PovertyProgram[] = [];
   for (const board of input.boards) {
-    for (const familyId of POVERTY_FAMILY_IDS) {
+    for (const familyId of input.familyIds ?? POVERTY_FAMILY_IDS) {
       const reference = board.references[familyId];
       const identity = {
         country: board.countryId,
@@ -51,6 +52,9 @@ export function openingPovertyPrograms(input: {
         positions.indexOf(openingChoice1991(reference))
       ];
       if (response === undefined || !Number.isFinite(response)) continue;
+      const effects = (
+        resetLawFamilies.find((family) => family.id === familyId)?.primaryMetricIds ?? []
+      ).map((metricId) => ({ metricId, favorableNormalizedPoints: response }));
       const id = `${input.worldId}:${board.countryId}:${board.regionId ?? "national"}:${familyId}`;
       if (board.scope === "national") {
         const account = input.accounts.find(
@@ -58,14 +62,13 @@ export function openingPovertyPrograms(input: {
             candidate.countryId === board.countryId &&
             candidate.familyAnnualDemand?.[familyId] !== undefined
         );
-        if (account)
-          out.push({
-            ...identity,
-            _id: id,
-            fundingAccountId: account._id,
-            effectiveTurn: board.sourceTurn,
-            primaryMetricEffects: [{ metricId: "03", favorableNormalizedPoints: response }],
-          });
+        out.push({
+          ...identity,
+          _id: id,
+          fundingAccountId: account?._id ?? "unsettled_opening_account",
+          effectiveTurn: board.sourceTurn,
+          primaryMetricEffects: effects,
+        });
       } else {
         const total = reference.sourceComponents.reduce(
           (sum, source) => sum + Math.max(0, source.annualBooked),
@@ -82,9 +85,10 @@ export function openingPovertyPrograms(input: {
             fundingAccountId: "regional_budget",
             effectiveTurn: board.sourceTurn,
             settlementLawId: source.sourceId,
-            primaryMetricEffects: [
-              { metricId: "03", favorableNormalizedPoints: response * weight },
-            ],
+            primaryMetricEffects: effects.map((effect) => ({
+              ...effect,
+              favorableNormalizedPoints: effect.favorableNormalizedPoints * weight,
+            })),
           });
         }
       }
@@ -92,3 +96,5 @@ export function openingPovertyPrograms(input: {
   }
   return out;
 }
+
+export const openingPovertyPrograms = openingMetricPrograms;

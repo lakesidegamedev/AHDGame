@@ -15,8 +15,11 @@
  * stays authoritative for them.
  */
 import type { PrimaryMetricDefinition } from "../catalog";
-import type { ResetMetricScoreCountry } from "../conditionScore";
+import { resetMetricConditionScore, type ResetMetricScoreCountry } from "../conditionScore";
 import { estimateObservedMetricChange } from "./effectForecast";
+import { getMetricDefinition } from "@/lib/constants/metricDefinitions";
+import type { MetricCategoryId } from "@/lib/db/types";
+import { metricQualityRange } from "@/lib/corporations/sectorMetricMarginProfiles";
 
 /**
  * Condition points (0-100 scale) at full settlement per unit of normalized
@@ -59,15 +62,49 @@ export interface PolicyDriftInput {
 export function policyDriftTarget(input: PolicyDriftInput): number | null {
   const { metric, openingValue, pressure, countryId, year } = input;
   if (!Number.isFinite(openingValue) || !Number.isFinite(pressure)) return null;
-  if (pressure === 0) return openingValue;
+  const score = resetMetricConditionScore(metric, openingValue, countryId, year);
+  if (score === null) return null;
+  const probePoints =
+    pressure === 0 ? 0 : Math.sign(pressure) * Math.min(1, pressure > 0 ? 100 - score : score);
   const forecast = estimateObservedMetricChange({
     metric,
     currentValue: openingValue,
-    favorableNormalizedPoints: pressure * POLICY_PRESSURE_SCORE_POINTS,
+    favorableNormalizedPoints: probePoints,
     countryId,
     year,
   });
-  return forecast ? forecast.projectedValue : null;
+  if (!forecast) return null;
+  let target =
+    probePoints === 0
+      ? openingValue
+      : openingValue + (forecast.delta / probePoints) * pressure * POLICY_PRESSURE_SCORE_POINTS;
+  const [category, id] = metric.path.split(".");
+  const definition = getMetricDefinition(category as MetricCategoryId, id);
+  if ((target === openingValue || score === 0 || score === 100) && pressure !== 0) {
+    // Display-score saturation is not a physical ceiling on the owner value.
+    const span = ["12", "15", "24", "58"].includes(metric.id)
+      ? 100
+      : definition
+        ? (() => {
+            const range = metricQualityRange(definition, id, { countryId, year });
+            return range.max - range.min;
+          })()
+        : 0;
+    const direction =
+      metric.interpretation === "lower"
+        ? -1
+        : metric.interpretation === "higher"
+          ? 1
+          : definition?.isHigherBetter
+            ? 1
+            : -1;
+    target = openingValue + ((direction * pressure * POLICY_PRESSURE_SCORE_POINTS) / 100) * span;
+  }
+  if (definition && !["12", "15", "24"].includes(metric.id))
+    target = Math.max(definition.minValue ?? 0, Math.min(definition.maxValue ?? 100, target));
+  if (["12", "15", "24"].includes(metric.id)) target = Math.max(0, target);
+  if (metric.id === "58") target = Math.max(0, Math.min(100, target));
+  return target;
 }
 
 /**

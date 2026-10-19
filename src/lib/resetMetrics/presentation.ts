@@ -3,13 +3,13 @@ import type { ObservationStatus } from "./rules/openingObservation";
 
 const PLAYER_DESCRIPTIONS: Readonly<Record<string, string>> = {
   "01": "The share of people in the labor force who are looking for work. Hiring, layoffs, available jobs, and the ease of matching workers with employers all shape this rate.",
-  "02": "The annual income available to a typical household after taxes and transfers, adjusted for local prices. It represents what households can actually afford in constant 1991 money.",
-  "03": "The share of households whose resources fall below the national poverty threshold. Earnings, household size, prices, taxes, and income support all affect it.",
+  "02": "Modeled annual gross household income adjusted for the local consumer-price basket, in constant 1991 money. Taxes and transfers are not yet included.",
+  "03": "A modeled population-share poverty estimate responding to employment, inequality, safety and current funded law delivery. It is not a household survey or a measured national poverty threshold.",
   "04": "How unevenly income is distributed across households. It reflects wage differences, taxes, transfers, and regional income gaps, but does not by itself measure opportunity.",
   "05": "The annual change in inflation-adjusted national output. A sustained trend matters more than a brief rebound after a downturn.",
-  "06": "The annual change in how much the economy produces per hour worked. Skills, equipment, infrastructure, research, and technology adoption can all improve it.",
+  "06": "A modeled productivity-growth estimate based on research, workforce skills and infrastructure. It is not a direct measurement of output divided by hours worked.",
   "07": "The pace and predictability of consumer-price changes. Low, stable inflation is generally healthiest; deflation or rapidly rising prices can both cause harm.",
-  "08": "The difference between exports and imports as a share of the economy. A surplus or deficit can be sustainable or risky depending on its size, cause, and duration.",
+  "08": "Annualized cleared-commodity exports less imports as a share of national GDP. Services and other unmodeled trade are excluded; regions show their country's balance rather than an invented regional allocation.",
   "09": "The government's revenue minus spending and interest costs as a share of the economy. Positive values are surpluses and negative values are deficits.",
   "10": "Total public debt compared with annual economic output. Interest costs, repayment dates, growth, and the government's fiscal balance determine how burdensome that debt becomes.",
   "11": "The share of each student cohort that completes secondary education. Attendance, school capacity, teachers, and dropout prevention influence the result.",

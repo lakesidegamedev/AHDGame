@@ -3,6 +3,7 @@ import type { OpeningMetricObservation } from "./openingObservation";
 export interface ResetMetricHistoryPoint {
   turn: number;
   value: number;
+  ratioBasis?: { numerator: number; denominator: number };
 }
 
 export type ResetMetricHistory = Record<string, ResetMetricHistoryPoint[]>;
@@ -101,7 +102,14 @@ export function appendMetricHistory(
       if (last && last.turn > turn) throw new Error(`Metric history turn regressed for ${id}`);
       return [
         id,
-        [...prior, { turn, value: observation.value }].slice(-RESET_METRIC_HISTORY_LIMIT),
+        [
+          ...prior,
+          {
+            turn,
+            value: observation.value,
+            ...(observation.ratioBasis ? { ratioBasis: observation.ratioBasis } : {}),
+          },
+        ].slice(-RESET_METRIC_HISTORY_LIMIT),
       ];
     })
   );

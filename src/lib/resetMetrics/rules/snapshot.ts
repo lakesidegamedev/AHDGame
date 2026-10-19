@@ -17,6 +17,8 @@ export interface ResetMetricSnapshot {
   history?: ResetMetricHistory;
   /** Immutable policy baseline, independent of the bounded history window. */
   openingValues?: Record<string, number>;
+  /** Compact preceding owner values make lagged turn retries deterministic. */
+  priorValues?: Record<string, number | null>;
 }
 
 /** Validate an entire scoped opening board before any v2 writer can consume it. */

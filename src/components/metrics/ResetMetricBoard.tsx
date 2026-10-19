@@ -727,7 +727,7 @@ function MetricRow({
           </div>
           <div className="mt-0.5 text-body-xs text-muted">
             {metricFreshnessLabel(
-              metric.observation.lastUpdatedTurn,
+              metric.observation.observedAtTurn ?? metric.observation.lastUpdatedTurn,
               metric.observation.source.includes("national rollup")
             )}
           </div>
@@ -1066,7 +1066,7 @@ function MetricDetail({
                 <dt className="text-muted">Latest publication</dt>
                 <dd className="text-foreground">
                   {metricFreshnessLabel(
-                    metric.observation.lastUpdatedTurn,
+                    metric.observation.observedAtTurn ?? metric.observation.lastUpdatedTurn,
                     metric.observation.source.includes("national rollup")
                   )}
                 </dd>

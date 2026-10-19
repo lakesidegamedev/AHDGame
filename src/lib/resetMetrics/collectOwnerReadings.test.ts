@@ -338,8 +338,10 @@ describe("first live v2 metric owners", () => {
     expect(readings["US:PA"]!.updates["03"]?.note).toContain("funded law delivery");
     expect(readings["US:CA"]!.updates["05"]?.value).toBe(2.6);
     expect(readings["US:PA"]!.updates["06"]?.value).toBe(1.1);
-    expect(readings["US:PA"]!.updates["08"]?.value).toBe(-2.4);
-    expect(readings["US:CA"]!.updates["08"]?.value).toBe(1.6);
+    expect(readings["US:PA"]!.updates["08"]?.source).toContain(
+      "current cleared-flow ledger unavailable"
+    );
+    expect(readings["US:CA"]!.updates["08"]?.status).toBe("proxy");
     expect(readings["US:PA"]!.updates["14"]).toMatchObject({
       status: "proxy",
       source: "provisional continuity owner: higher_education",
@@ -447,6 +449,7 @@ describe("first live v2 metric owners", () => {
       toArray: vi.fn().mockResolvedValue([
         {
           _id: "test-world:JP:national:L25",
+          effectiveTurn: 2,
           country: "JP",
           scope: "national",
           familyId: "L25",
@@ -459,6 +462,7 @@ describe("first live v2 metric owners", () => {
       toArray: vi.fn().mockResolvedValue([
         {
           _id: "JP:jp_land_ministry",
+          accruedThroughTurn: 13,
           countryId: "JP",
           externallySettled: false,
           lastProgramDelivery: { L25: { implementationFactor: 1 } },

@@ -17,6 +17,10 @@ export interface OpeningMetricObservation {
   note: string;
   /** Turn this owner last published this observation; absent on legacy readings. */
   lastUpdatedTurn?: number;
+  /** Owner-specific same-observation numerator and denominator; never backfilled into history. */
+  ratioBasis?: { numerator: number; denominator: number };
+  /** Turn of the underlying event or ledger, distinct from its publication turn. */
+  observedAtTurn?: number;
 }
 
 export interface OpeningMetricInputs {

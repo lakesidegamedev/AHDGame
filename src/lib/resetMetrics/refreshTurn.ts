@@ -127,6 +127,7 @@ export async function refreshResetMetricSnapshotsTurn(input: {
         const fields: Document = {
           asOfTurn: turn,
           lastRefreshFromTurn: board.lastRefreshFromTurn,
+          priorValues: board.priorValues,
         };
         for (const id of changedIds) fields[`observations.${id}`] = board.observations[id];
         // Upgrade old boards once, before bounded appends can trim their baseline.

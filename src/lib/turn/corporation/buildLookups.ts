@@ -80,6 +80,10 @@ import { INVESTOR_CONFIDENCE_BASELINE } from "@/lib/nationalization/constants";
 import { NATIONAL_SCOPE, NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { buildPoliticalBaseModifiers } from "@/lib/politicalLegislation/marginAdapter";
 import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
+import {
+  ownedPoliticalValues,
+  ownedPoliticalModifiers,
+} from "@/lib/resetMetrics/rules/ownedInputs";
 import { buildFlatMetrics } from "@/lib/utils/governmentApproval";
 import { evaluateModifiers } from "@/lib/utils/approvalModifiers";
 import { resolveGameYear } from "@/lib/era/era";
@@ -1404,6 +1408,30 @@ export async function buildCorporationLookups(
           )
           .toArray()
       : [];
+  const politicalById = new Map(politicalDocs.map((doc) => [String(doc._id), doc]));
+  for (const board of resetBoards) {
+    if (board.scope !== "regional" || !board.regionId) continue;
+    const prior = politicalById.get(board.regionId);
+    if (!prior || prior.countryId !== board.countryId) continue;
+    politicalBaseModifiersByState.set(
+      board.regionId,
+      ownedPoliticalModifiers(
+        prior.values,
+        board.observations,
+        board.countryId,
+        eraYear ?? gameState?.currentYear ?? 1991
+      )
+    );
+    politicalBoardByState.set(
+      board.regionId,
+      ownedPoliticalValues(
+        prior.values,
+        board.observations,
+        board.countryId,
+        eraYear ?? gameState?.currentYear ?? 1991
+      )
+    );
+  }
   const resetConditions = new Map(
     await Promise.all(
       resetCountries.map(

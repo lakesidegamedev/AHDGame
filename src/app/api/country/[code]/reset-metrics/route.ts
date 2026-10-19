@@ -11,7 +11,6 @@ import {
 } from "@/lib/resetCabinet/rules/actions";
 import type { ResetLawProgramDocument } from "@/lib/resetLegislation/program";
 import type { ResetDepartmentAccountSnapshot } from "@/lib/resetFinance/rules/liveDepartmentAccount";
-import { combineLawProgramEffects } from "@/lib/resetLegislation/rules/programEffects";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
 import type { StateBudget } from "@/lib/db/types/budget";
 import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
@@ -25,6 +24,8 @@ import { buildMetricLawStatuses } from "@/lib/resetLegislation/rules/metricPolic
 import { isResetV2Country } from "@/lib/resetVersions/rules";
 import { cabinetActionApplies } from "@/lib/resetMetrics/loadPolicyPressure";
 import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
+import { loadMetricLawDelivery } from "@/lib/resetMetrics/loadLawDelivery";
+import { deliveredLawFactor, deliveredMetricEffects } from "@/lib/resetMetrics/rules/lawDelivery";
 
 const cabinetActionTitles = new Map(resetCabinetActions.map((action) => [action.id, action.title]));
 
@@ -72,6 +73,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
             worldId: board.board.worldId,
             country: countryId,
             scope: board.board.scope,
+            effectiveTurn: { $lte: board.board.asOfTurn },
             ...(board.board.regionId ? { regionId: board.board.regionId } : {}),
           },
           {
@@ -81,6 +83,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
               titleSnapshot: 1,
               primaryMetricEffects: 1,
               fundingAccountId: 1,
+              effectiveTurn: 1,
+              annualAgencyAllocation: 1,
+              country: 1,
+              scope: 1,
+              regionId: 1,
             },
           }
         )
@@ -90,7 +97,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
             .collection<ResetDepartmentAccountSnapshot>("resetDepartmentAccounts")
             .find(
               { worldId: board.board.worldId, countryId },
-              { projection: { lastProgramDelivery: 1, externallySettled: 1 } }
+              {
+                projection: { lastProgramDelivery: 1, externallySettled: 1, accruedThroughTurn: 1 },
+              }
             )
             .toArray()
         : Promise.resolve([]),
@@ -141,7 +150,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
                 : (regionalBudget as RegionalBudget | null)?.programSettlements;
             return {
               familyId: program.familyId,
-              implementationFactor: settlements?.[program._id]?.implementationFactor ?? 1,
+              implementationFactor: deliveredLawFactor(
+                program,
+                settlements?.[program._id],
+                board.board.asOfTurn
+              ),
             };
           })
         : programs.map((program) => {
@@ -150,13 +163,51 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
             );
             return {
               familyId: program.familyId,
-              implementationFactor:
-                account?.lastProgramDelivery[program.familyId]?.implementationFactor ??
-                (account?.externallySettled ? 1 : 0),
+              implementationFactor: deliveredLawFactor(
+                program,
+                account
+                  ? {
+                      implementationFactor:
+                        account.lastProgramDelivery?.[program.familyId]?.implementationFactor ??
+                        (account.externallySettled ? 1 : 0),
+                      lastSettledTurn: account.accruedThroughTurn,
+                    }
+                  : undefined,
+                board.board.asOfTurn
+              ),
             };
           });
+    const laws = await loadMetricLawDelivery(db, {
+      worldId: board.board.worldId,
+      turn: board.board.asOfTurn,
+      countryIds: [countryId],
+      regions: board.board.regionId ? [{ _id: board.board.regionId, countryId }] : [],
+    });
+    const applicable = laws.programs.filter(
+      (p) =>
+        p.country === countryId && (p.scope === "national" || p.regionId === board.board.regionId)
+    );
     const legislativeEffects = new Map(
-      combineLawProgramEffects(programs, delivery).map((effect) => [effect.metricId, effect])
+      Object.entries(
+        deliveredMetricEffects(applicable, laws.settlements, board.board.asOfTurn)
+      ).map(([metricId, favorableNormalizedPoints]) => [
+        metricId,
+        {
+          metricId,
+          favorableNormalizedPoints,
+          contributingPrograms: [
+            ...new Set(
+              applicable
+                .filter(
+                  (p) =>
+                    deliveredLawFactor(p, laws.settlements.get(p._id), board.board.asOfTurn) > 0 &&
+                    p.primaryMetricEffects.some((e) => e.metricId === metricId)
+                )
+                .map((p) => p.familyId)
+            ),
+          ],
+        },
+      ])
     );
     const standingLaws = openingLawBoard
       ? buildMetricLawStatuses({
