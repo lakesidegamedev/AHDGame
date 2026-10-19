@@ -9,13 +9,14 @@
  * else. It never moves money, never touches a sector or corporation, and a
  * failure is logged, never thrown into the turn.
  */
+import { resolveSectorHostCurrencyCode } from "@/lib/currency/corporationCapital";
 import type { CorporateSector } from "@/lib/db/types";
 import { emptyProducerSectorOpening } from "@/lib/market/producerMarket/openingState";
 import type { Db } from "mongodb";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { COMMODITY_TYPES } from "@/lib/constants/commodities";
 import { eraScaledBasePrices } from "@/lib/constants/commodities";
-import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
+import { TURNS_PER_DAY, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import {
   computeHouseholdConsumption,
   plantsHouseholdUnitScale,
@@ -24,6 +25,8 @@ import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope"
 import { householdDemandSpecs } from "@/lib/market/producerMarket/householdDemandRules";
 import { HOUSEHOLD_OPENING_TURNS } from "@/lib/market/producerMarket/householdOpeningRules";
 import { publicBuyerFunding } from "@/lib/market/producerMarket/publicBuyerRules";
+import { marketingBuyerLines } from "@/lib/market/producerMarket/marketingBuyerRules";
+import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import {
   publicOrders,
   runProducerShadow,
@@ -34,6 +37,7 @@ import {
   prepareProducerPhysicalSector,
   type ProducerPhysicalEnv,
 } from "./producerPhysicalPreparation";
+import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 import type { CorporationLookups } from "./types";
 import {
   routeEligibility,
@@ -93,7 +97,19 @@ export async function runProducerMarketShadowPhase(
             sector: shadowOpeningSector(sector, input.worldEpoch, input.turn),
             inputPriceHeadroom: PRICE_HEADROOM,
           });
-          const legacy = legacyBySectorId.get(sector._id.toString()) ?? null;
+          // Legacy plantsPnl is daily and in the sector host's currency; the
+          // shadow is per turn in anchor units, so convert before comparing.
+          const legacyLocal = legacyBySectorId.get(sector._id.toString()) ?? null;
+          const hostRate = lookups.exchangeRatesByCurrency.get(
+            (resolveSectorHostCurrencyCode(sector, corp) ?? "USD") as never
+          );
+          const legacy =
+            legacyLocal && hostRate && hostRate > 0
+              ? {
+                  revenue: legacyLocal.revenue / hostRate / TURNS_PER_DAY,
+                  profit: legacyLocal.profit / hostRate / TURNS_PER_DAY,
+                }
+              : null;
           producers.push({ plan: prepared.plan, sectorType: sector.sectorType, legacy });
           const rate = lookups.exchangeRatesByCurrency.get(
             (corp.liquidCurrencyCode ?? "USD") as never
@@ -161,7 +177,8 @@ export async function runProducerMarketShadowPhase(
       }
     const funding = publicBuyerFunding(
       lookups.federalBudgets.map((b) => {
-        const rate = lookups.exchangeRatesByCurrency.get((b.currencyCode ?? "USD") as never) ?? 1;
+        const code = resolveCountryCurrencyCode(b);
+        const rate = (code && lookups.exchangeRatesByCurrency.get(code)) || 1;
         const byCategory = Object.fromEntries(
           Object.entries(b.spending?.byCategory ?? {}).map(([k, v]) => [k, (v as number) / rate])
         );
@@ -204,6 +221,32 @@ export async function runProducerMarketShadowPhase(
       (c, book) => refPrice(c as CommodityType, book.startsWith("state:") ? book.slice(6) : ""),
       PRICE_HEADROOM
     );
+    // 4b. Corporate advertising from funded marketing budgets, paid from the
+    //     corporation's own account (only corporations with plants hold one).
+    const corpCountry = new Map<string, string>();
+    const marketingBudgets = lookups.corporations.flatMap((corp) => {
+      const id = corp._id.toString();
+      const cash = cashByCorp.get(id);
+      if (cash == null || !((corp.marketingBudget ?? 0) > 0)) return [];
+      corpCountry.set(id, String(corp.countryId ?? ""));
+      const rate = lookups.exchangeRatesByCurrency.get((corp.liquidCurrencyCode ?? "USD") as never);
+      return [
+        {
+          accountId: id,
+          dailyBudgetAnchor: readCorpEconomicAnchor(
+            corp.marketingBudget ?? 0,
+            corp.liquidCurrencyCode,
+            rate ?? 1
+          ),
+          cashAnchor: cash,
+        },
+      ];
+    });
+    const marketingOrders = publicOrders(
+      marketingBuyerLines(marketingBudgets, TURNS_PER_DAY),
+      (c) => refPrice(c as CommodityType, ""),
+      PRICE_HEADROOM
+    ).map((o) => ({ ...o, id: `marketing:${o.accountId}` }));
     const routes = lookups.tradeRoutes;
     let eligibleOffersByOrder: Record<string, readonly string[]> | undefined;
     if (routes) {
@@ -245,6 +288,8 @@ export async function runProducerMarketShadowPhase(
       for (const o of publicBuyerOrders)
         if (o.book === "world")
           o.eligibleOfferIds = listFor(o.commodity, o.accountId.slice("public:".length));
+      for (const o of marketingOrders)
+        o.eligibleOfferIds = listFor(o.commodity, corpCountry.get(o.accountId) ?? "");
     }
 
     const references = Object.fromEntries(
@@ -260,6 +305,7 @@ export async function runProducerMarketShadowPhase(
       accounts,
       households,
       publicOrders: publicBuyerOrders,
+      marketingOrders,
       eligibleOffersByOrder,
     });
     await db.collection(PRODUCER_SHADOW_COLLECTION).replaceOne(

@@ -40,6 +40,8 @@ export interface ShadowSummary {
   shadowLosingShare: number;
   householdSpend: number;
   publicSpend: number;
+  /** Corporate advertising bought from marketing budgets. */
+  marketingSpend: number;
   industries: ShadowIndustryRow[];
   /** World-book traded volume and volume-weighted price per commodity (anchor units). */
   prices: { commodity: string; units: number; unitPrice: number }[];
@@ -87,15 +89,18 @@ export function runProducerShadow(input: {
   accounts: readonly MarketAccount[];
   households: readonly HouseholdSpec[];
   publicOrders: readonly PurchaseOrder[];
+  /** Funded corporate advertising orders (see marketingBuyerRules.ts). */
+  marketingOrders?: readonly PurchaseOrder[];
   /** Trade-route eligibility for plant input orders (see routeRules.ts). */
   eligibleOffersByOrder?: Readonly<Record<string, readonly string[]>>;
 }): ShadowSummary {
+  const marketingOrders = input.marketingOrders ?? [];
   const result = advanceProducerEconomy({
     turn: input.turn,
     accounts: input.accounts,
     producers: input.producers.map((p) => p.plan),
     households: input.households,
-    externalOrders: input.publicOrders,
+    externalOrders: [...input.publicOrders, ...marketingOrders],
     // Eight passes settle the live world to within 0.02% of 32 (t300 replay:
     // 4,609,920 vs 4,610,514 units) in about 21 s instead of minutes.
     maximumPlanningPasses: SHADOW_PLANNING_PASSES,
@@ -142,9 +147,14 @@ export function runProducerShadow(input: {
   const publicIds = new Set(input.publicOrders.map((o) => o.accountId));
   let householdSpend = 0;
   let publicSpend = 0;
+  // Corporations also buy plant inputs from the same account, so marketing
+  // spend is counted by order, not by buyer.
+  const marketingOrderIds = new Set(marketingOrders.map((o) => o.id));
+  let marketingSpend = 0;
   for (const t of producerTrades(result.tradeReceipt)) {
     const value = t.units * t.unitPrice;
-    if (householdIds.has(t.buyerAccountId)) householdSpend += value;
+    if (marketingOrderIds.has(t.orderId)) marketingSpend += value;
+    else if (householdIds.has(t.buyerAccountId)) householdSpend += value;
     else if (publicIds.has(t.buyerAccountId)) publicSpend += value;
   }
   const n = input.producers.length;
@@ -156,6 +166,7 @@ export function runProducerShadow(input: {
     shadowLosingShare: n > 0 ? shadowLosing / n : 0,
     householdSpend,
     publicSpend,
+    marketingSpend,
     industries: [...byType.values()].sort((a, b) => (a.sectorType < b.sectorType ? -1 : 1)),
     nextPrices: (() => {
       const unmet = new Map<string, number>();
