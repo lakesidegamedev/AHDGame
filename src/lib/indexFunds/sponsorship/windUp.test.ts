@@ -28,6 +28,16 @@ vi.mock("@/lib/bonds/sellFundBondUnits", () => ({
     .fn()
     .mockResolvedValue({ proceedsAnchor: 0, unitsSold: 0, bondsTouched: 0 }),
 }));
+vi.mock("@/lib/indexFunds/fundQueries", () => ({
+  listPendingRedemptions: vi.fn().mockResolvedValue([]),
+}));
+vi.mock("@/lib/indexFunds/processQueuedRedemptions", () => ({
+  QUEUED_REDEMPTION_CLAIMS_PER_PASS: 2000,
+  processQueuedRedemptions: vi.fn().mockResolvedValue(0),
+}));
+vi.mock("@/lib/currency/featureFlag", () => ({
+  isForexEnabled: vi.fn().mockResolvedValue(true),
+}));
 // Mirrors the real contract: a fund_reserve position is the fund's own units
 // and is never paid out.
 vi.mock("./holderPayout", () => ({
@@ -41,7 +51,13 @@ import { creditCorpLiquidCapital } from "@/lib/financialTxLog/atomicCashGuard";
 import { sellFundHoldingsForRedemptionCash } from "@/lib/indexFunds/fundRedemptionLiquidity";
 import { sellFundBondHoldingsForCash } from "@/lib/bonds/sellFundBondUnits";
 import { payFundHolderCash } from "./holderPayout";
-import { advanceWindDowns, beginWindUp, completeWindUp } from "./windUp";
+import { listPendingRedemptions } from "@/lib/indexFunds/fundQueries";
+import { processQueuedRedemptions } from "@/lib/indexFunds/processQueuedRedemptions";
+import {
+  proRataRedemptionCashShare,
+  quoteCashOnlyRedemption,
+} from "@/lib/indexFunds/unitAccounting";
+import { advanceWindDowns, beginWindUp, cashSupportedWindUpNav, completeWindUp } from "./windUp";
 
 const SPONSOR = new ObjectId();
 
@@ -78,6 +94,7 @@ function makeDb(opts: {
   claimed?: boolean;
   fund?: IndexFund;
   bondsRemaining?: () => number;
+  queueOpen?: () => number;
 }) {
   const fundUpdate = vi.fn().mockResolvedValue({ modifiedCount: opts.claimed === false ? 0 : 1 });
   const positionsUpdateMany = vi.fn().mockResolvedValue({ modifiedCount: 1 });
@@ -115,6 +132,8 @@ function makeDb(opts: {
               opts.sponsorExists === false ? null : { _id: SPONSOR, name: "Sponsor Co" }
             ),
         };
+      if (name === "indexFundRedemptionQueue")
+        return { countDocuments: vi.fn(async () => opts.queueOpen?.() ?? 0) };
       return { countDocuments: vi.fn().mockResolvedValue(0) };
     }),
   } as unknown as Db;
@@ -265,5 +284,133 @@ describe("advanceWindDowns", () => {
     const { db } = makeDb({ windingDown: [fund], positions: [] });
     const r = await advanceWindDowns(db, 200);
     expect(r.fundsCompleted).toBe(1);
+  });
+
+  describe("queued redemptions on a cash-only fund", () => {
+    const queueRow = (units: number) => ({
+      _id: new ObjectId(),
+      units,
+      status: "queued",
+      unitsBurnedAtRequest: true,
+    });
+
+    it("pays the queue at the cash-supported NAV, then completes", async () => {
+      // 900 units held + 100 queued against 50,000 cash: everyone is owed 50 a
+      // unit, not the stale quote of 100.
+      const fund = makeFund({ status: "winding_down", cashAnchor: 50_000, quotedNav: 100 });
+      const positions = [{ _id: new ObjectId(), units: 900, holderKind: "character" as const }];
+      const { db, fundUpdate } = makeDb({ windingDown: [fund], fund, positions });
+      vi.mocked(listPendingRedemptions)
+        .mockResolvedValueOnce([queueRow(100)] as never)
+        .mockResolvedValueOnce([]);
+      vi.mocked(processQueuedRedemptions).mockResolvedValueOnce(1);
+
+      const r = await advanceWindDowns(db, 200, { forexEnabled: false });
+
+      const nav = cashSupportedWindUpNav(50_000, 900, 100);
+      expect(nav).toBeCloseTo(50, 6);
+      expect(nav).toBeLessThan(50);
+      expect(fundUpdate.mock.calls[0][1].$set.quotedNav).toBe(nav);
+      const call = vi.mocked(processQueuedRedemptions).mock.calls[0];
+      expect(call[1].quotedNav).toBe(nav);
+      expect(call[2]).toBe(false);
+      expect(r.errors).toEqual([]);
+      expect(r.fundsCompleted).toBe(1);
+    });
+
+    it("does not count a legacy row's units twice: they are still in the position", async () => {
+      const fund = makeFund({ status: "winding_down", cashAnchor: 50_000, quotedNav: 100 });
+      const positions = [{ _id: new ObjectId(), units: 1_000, holderKind: "character" as const }];
+      const { db, fundUpdate } = makeDb({ windingDown: [fund], fund, positions });
+      vi.mocked(listPendingRedemptions)
+        .mockResolvedValueOnce([{ ...queueRow(100), unitsBurnedAtRequest: undefined }] as never)
+        .mockResolvedValueOnce([]);
+      vi.mocked(processQueuedRedemptions).mockResolvedValueOnce(1);
+
+      await advanceWindDowns(db, 200, { forexEnabled: false });
+
+      expect(fundUpdate.mock.calls[0][1].$set.quotedNav).toBe(
+        cashSupportedWindUpNav(50_000, 1_000, 0)
+      );
+    });
+
+    it("keeps going next pass, without an error, when the queue is only part paid", async () => {
+      const fund = makeFund({ status: "winding_down", cashAnchor: 50_000 });
+      const { db } = makeDb({ windingDown: [fund], fund, queueOpen: () => 1 });
+      vi.mocked(listPendingRedemptions)
+        .mockResolvedValueOnce([queueRow(100), queueRow(100)] as never)
+        .mockResolvedValueOnce([queueRow(100)] as never);
+      vi.mocked(processQueuedRedemptions).mockResolvedValueOnce(1);
+
+      const r = await advanceWindDowns(db, 200);
+
+      expect(vi.mocked(processQueuedRedemptions).mock.calls[0][2]).toBe(true);
+      expect(r.fundsCompleted).toBe(0);
+      expect(r.errors).toEqual([]);
+      expect(payFundHolderCash).not.toHaveBeenCalled();
+    });
+
+    it("still reports a queue that made no progress", async () => {
+      const fund = makeFund({ status: "winding_down", cashAnchor: 0 });
+      const { db } = makeDb({ windingDown: [fund], fund, queueOpen: () => 1 });
+      vi.mocked(listPendingRedemptions).mockResolvedValue([queueRow(100)] as never);
+
+      const r = await advanceWindDowns(db, 200);
+
+      vi.mocked(listPendingRedemptions).mockResolvedValue([]);
+      expect(processQueuedRedemptions).not.toHaveBeenCalled();
+      expect(r.fundsCompleted).toBe(0);
+      expect(r.errors).toEqual(["NIT: Fund settlement must finish before wind-up"]);
+    });
+
+    it("does not touch the queue while stocks remain", async () => {
+      const fund = makeFund({
+        status: "winding_down",
+        holdings: [{ corporationId: new ObjectId(), shares: 10, lastValueAnchor: 50_000 }],
+      });
+      const { db } = makeDb({ windingDown: [fund] });
+      await advanceWindDowns(db, 200);
+      expect(listPendingRedemptions).not.toHaveBeenCalled();
+      expect(processQueuedRedemptions).not.toHaveBeenCalled();
+    });
+  });
+});
+
+describe("cashSupportedWindUpNav", () => {
+  it("is zero with no cash or nothing owed", () => {
+    expect(cashSupportedWindUpNav(0, 10, 10)).toBe(0);
+    expect(cashSupportedWindUpNav(1_000, 0, 0)).toBe(0);
+  });
+
+  it("pays every queued unit in full without drawing more than the cash", () => {
+    // Awkward real-world sizes: the pro-rata gate plus whole-unit flooring
+    // must still clear each row, and the total must fit inside the cash.
+    const cash = 265_212_345.67;
+    const positionUnits = 2_565_704;
+    const rows = [1, 7, 333, 12_345, 99_999, 3, 250_001];
+    const queued = rows.reduce((a, b) => a + b, 0);
+    const nav = cashSupportedWindUpNav(cash, positionUnits, queued);
+    let available = cash;
+    let unserved = queued;
+    let paidTotal = 0;
+    for (const units of rows) {
+      const share = proRataRedemptionCashShare({
+        entryUnits: units,
+        unservedUnits: unserved,
+        availableCashAnchor: available,
+      });
+      unserved -= units;
+      const quote = quoteCashOnlyRedemption({
+        quotedNav: nav,
+        requestedUnits: units,
+        cashAnchor: share,
+      });
+      expect(quote.redeemableUnits).toBe(units);
+      available -= quote.paidAmountAnchor;
+      paidTotal += quote.paidAmountAnchor;
+    }
+    expect(paidTotal).toBeLessThanOrEqual(cash);
+    // What is left is the staying holders' share at (almost exactly) the same NAV.
+    expect(available / positionUnits).toBeGreaterThanOrEqual(nav);
   });
 });

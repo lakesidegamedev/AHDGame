@@ -28,6 +28,14 @@ import { payCorporateWindUpHolders } from "./corporateHolderPayout";
 import { payFundHolderCash } from "./holderPayout";
 import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 import { recordAudit } from "@/lib/audit/recordAudit";
+import { isForexEnabled } from "@/lib/currency/featureFlag";
+import { listPendingRedemptions } from "@/lib/indexFunds/fundQueries";
+import { remainingRedemptionUnits } from "@/lib/indexFunds/fundRedemptionQueue";
+import {
+  processQueuedRedemptions,
+  QUEUED_REDEMPTION_CLAIMS_PER_PASS,
+  type QueuedRedemptionClaimBudget,
+} from "@/lib/indexFunds/processQueuedRedemptions";
 
 const FUND_TX = "indexFundTransactions";
 const POSITIONS = "indexFundPositions";
@@ -84,10 +92,83 @@ export interface WindDownPassResult {
 }
 
 /**
- * One cron pass over every winding-down fund: sell what is left, and finish any
- * fund whose portfolio has become cash.
+ * NAV a cash-only fund can actually pay: its cash split over every unit still
+ * owed, held in positions or waiting in the redemption queue. Shaved by a
+ * relative hair so float rounding can never pay the queue more than the cash
+ * (the remainder falls to the final holder payout). Zero when nothing is owed
+ * or there is no cash.
  */
-export async function advanceWindDowns(db: Db, currentTurn: number): Promise<WindDownPassResult> {
+export function cashSupportedWindUpNav(
+  cashAnchor: number,
+  positionUnits: number,
+  queuedUnits: number
+): number {
+  const units = Math.max(0, positionUnits) + Math.max(0, queuedUnits);
+  if (!Number.isFinite(cashAnchor) || cashAnchor <= 0 || !(units > 0)) return 0;
+  return (cashAnchor / units) * (1 - 1e-9);
+}
+
+/**
+ * Pay a cash-only winding-down fund's queued redemptions before completion.
+ * The regular redemption pass only serves active or backing-paused funds, so
+ * claims queued before (or during) a wind-up would otherwise block it forever.
+ * Queued holders are paid at the same cash-supported NAV the remaining holders
+ * get at completion, so neither side gains at the other's expense.
+ *
+ * Returns whether claims are still waiting after this pass.
+ */
+async function settleWindDownQueue(
+  db: Db,
+  fund: IndexFund,
+  currentTurn: number,
+  forexEnabled: boolean,
+  budget: QueuedRedemptionClaimBudget
+): Promise<{ waiting: boolean; paid: number }> {
+  const pending = await listPendingRedemptions(db, fund._id);
+  if (pending.length === 0) return { waiting: false, paid: 0 };
+  const current = await db.collection<IndexFund>("indexFunds").findOne({ _id: fund._id });
+  if (!current || current.status !== "winding_down") return { waiting: false, paid: 0 };
+  const positions = await db
+    .collection<IndexFundPosition>(POSITIONS)
+    .find({ fundId: fund._id, units: { $gt: 0 } }, { projection: { units: 1 } })
+    .toArray();
+  const positionUnits = positions.reduce((sum, p) => sum + p.units, 0);
+  // Only rows whose units already left their position (every current request)
+  // add to the denominator; legacy rows still hold theirs in the position.
+  const queuedUnits = pending.reduce(
+    (sum, e) => sum + (e.unitsBurnedAtRequest === true ? remainingRedemptionUnits(e) : 0),
+    0
+  );
+  const nav = cashSupportedWindUpNav(current.cashAnchor, positionUnits, queuedUnits);
+  if (nav <= 0) return { waiting: true, paid: 0 };
+  // The processor re-reads the fund between payouts, so the mark must be stored.
+  await db
+    .collection<IndexFund>("indexFunds")
+    .updateOne(
+      { _id: fund._id, status: "winding_down" },
+      { $set: { quotedNav: nav, updatedAt: new Date() } }
+    );
+  const paid = await processQueuedRedemptions(
+    db,
+    { ...current, quotedNav: nav },
+    forexEnabled,
+    currentTurn,
+    false,
+    budget
+  );
+  const left = await listPendingRedemptions(db, fund._id);
+  return { waiting: left.length > 0, paid };
+}
+
+/**
+ * One cron pass over every winding-down fund: sell what is left, pay any queued
+ * redemptions once the portfolio is cash, and finish the fund.
+ */
+export async function advanceWindDowns(
+  db: Db,
+  currentTurn: number,
+  options: { forexEnabled?: boolean } = {}
+): Promise<WindDownPassResult> {
   const result: WindDownPassResult = {
     fundsProcessed: 0,
     fundsCompleted: 0,
@@ -157,9 +238,17 @@ export async function advanceWindDowns(db: Db, currentTurn: number): Promise<Win
     return result;
   }
 
+  // shortcut: one claim budget for all wind-downs, served in fund order. A
+  // fund past the budget simply continues next pass.
+  const budget: QueuedRedemptionClaimBudget = { claimsLeft: QUEUED_REDEMPTION_CLAIMS_PER_PASS };
+  let forexEnabled = options.forexEnabled;
   for (const fund of bondPhase) {
     if (stillHoldingBonds.has(String(fund._id))) continue;
     try {
+      forexEnabled ??= await isForexEnabled();
+      const queue = await settleWindDownQueue(db, fund, currentTurn, forexEnabled, budget);
+      // Progress this pass: finish next pass rather than report a stall.
+      if (queue.waiting && queue.paid > 0) continue;
       const paid = await completeWindUp(db, fund, currentTurn);
       result.holdersPaid += paid;
       result.fundsCompleted += 1;

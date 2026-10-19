@@ -737,7 +737,7 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
 
   try {
     const { advanceWindDowns } = await import("@/lib/indexFunds/sponsorship/windUp");
-    const windDown = await advanceWindDowns(db, currentTurn);
+    const windDown = await advanceWindDowns(db, currentTurn, { forexEnabled });
     result.windDownsAdvanced = windDown.fundsProcessed;
     result.windDownsCompleted = windDown.fundsCompleted;
     if (windDown.errors.length > 0) result.errors.push(...windDown.errors);
