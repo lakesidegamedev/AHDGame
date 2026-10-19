@@ -32,6 +32,7 @@ export type BondHistoryType =
   | "bond_coupon"
   | "bond_maturity"
   | "bond_purchase"
+  | "bond_buyback"
   | "bond_issuance"
   | "bond_default"
   | "bond_dissolution_payout";
