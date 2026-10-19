@@ -74,6 +74,7 @@ import {
 import { fiscalMirrorFields, FISCAL_MIRROR_METRICS } from "./fiscalMirror";
 import { isMacroMetricPath, MACRO_CATEGORIES } from "@/lib/macroMetrics/paths";
 import { spendingProvider } from "./spendingProvider";
+import { loadPovertyPolicyInputs } from "./povertyProvider";
 import {
   loadRepairingCapacityObligations,
   settleCapacityObligations,
@@ -273,6 +274,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
         resetWorldId: 1,
         resetVersionSeeds: 1,
         metricsSystemVersion: 1,
+        legislationSystemVersion: 1,
         cabinetSystemVersion: 1,
         departmentFinanceEnabled: 1,
         regionalLegislationFinanceEnabled: 1,
@@ -461,6 +463,18 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
 
   const realStates = allStates.filter((s) => !NATIONAL_SCOPE_IDS.has(s._id));
   if (realStates.length === 0) return 0;
+
+  // V2 programs are the relief owner, including laws passed before this fix.
+  // No per-region reads and no assumption that a missing settlement is funded.
+  const povertyPolicies = await loadPovertyPolicyInputs(db, {
+    worldId: eraGameState?.resetWorldId ?? "",
+    turn,
+    regions: realStates.filter(
+      (state) =>
+        resetSystemVersionsForCountry(eraGameState, RESET_V2_READY, state.countryId).legislation ===
+        "v2"
+    ),
+  });
 
   const employmentPolicies = await loadEmploymentPolicies(db, turn, realStates, {
     national: eraGameState?.departmentFinanceEnabled === true,
@@ -954,7 +968,13 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     for (const id of POLITICAL_INPUT_IDS) {
       const v =
         politicalInputs.legacyUnit(state._id, id) ?? politicalInputs.legacyValue(state._id, id);
-      if (v != null && Number.isFinite(v)) seedCurrent[id] = v;
+      if (v != null && Number.isFinite(v)) {
+        seedCurrent[id] = v;
+        // The political board has already advanced using the preceding macro
+        // readings. Feed that predetermined snapshot to external lagged edges,
+        // rather than falling back to constants in retired macro categories.
+        if (genericLaggedIds.has(id)) prevValue[id] = v;
+      }
     }
     // v2-2/v2-3: labour wage-index Δ → medianIncome + unemployment, gated on
     // labourSystemMode ≥ "macro" (the corp turn writes the fields whenever
@@ -1075,6 +1095,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
       prev: prevValue,
       prevSimBaseline,
       providers: {
+        povertyPolicy: povertyPolicies.get(state._id),
         regionalEmployment: employment,
         sectorRevenueTax: payload,
         // National approval applied to every state of the country (a regional
