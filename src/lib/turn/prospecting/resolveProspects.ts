@@ -6,6 +6,9 @@ import type { NotificationInput } from "@/lib/notifications";
 import { createNotifications } from "@/lib/notifications";
 import { getProspectingSurveysCollection } from "@/lib/db/collections/prospectingSurveys";
 import { getStateResourceCapacityCollection } from "@/lib/db/collections/stateResourceCapacity";
+import { getExtractionContractsCollection } from "@/lib/db/collections/extractionContracts";
+import { computeContractedShare } from "@/lib/extraction/computeContractedShare";
+import type { ExtractionContract } from "@/lib/db/types/extractionContract";
 import { makeSeededRng } from "@/lib/events/substrate/rng";
 import {
   PROSPECT_GOVT_SUCCESS_CHANCE,
@@ -16,6 +19,9 @@ import {
   prospectCorpSuccessChance,
   prospectEraScaling,
   prospectCorpRdMult,
+  GOVT_CONTRACT_MAX_TOTAL_SHARE,
+  PROSPECT_FINDER_RIGHTS_TERM_TURNS,
+  PROSPECT_FINDER_RIGHTS_GRANTOR,
 } from "@/lib/constants/prospecting";
 
 export interface ResolveProspectsResult {
@@ -23,7 +29,11 @@ export interface ResolveProspectsResult {
   succeeded: number;
   failed: number;
   totalCapacityAdded: number;
+  finderRightsGranted: number;
 }
+
+/** Below this a finder's-rights contract is not worth a row. */
+const MIN_FINDER_SHARE = 0.001;
 
 /** Factory that turns a seed string into a deterministic [0,1) stream. */
 type RngFactory = (seed: string) => () => number;
@@ -68,6 +78,7 @@ export async function resolveProspects(
     succeeded: 0,
     failed: 0,
     totalCapacityAdded: 0,
+    finderRightsGranted: 0,
   };
   if (dueSurveys.length === 0) return result;
 
@@ -97,6 +108,11 @@ export async function resolveProspects(
   const capIncByKey = new Map<string, Record<string, number>>();
   const surveyBulk: AnyBulkWriteOperation<ProspectingSurvey>[] = [];
   const notifications: NotificationInput[] = [];
+  const finderGrants: Array<{
+    survey: ProspectingSurvey;
+    gained: number;
+    notification?: NotificationInput;
+  }> = [];
 
   for (const survey of dueSurveys) {
     const rng = rngFactory(`prospect:${survey._id.toString()}:${turn}`);
@@ -155,8 +171,12 @@ export async function resolveProspects(
     }
 
     const recipient = resolveRecipientUserId(survey, corpById);
-    if (recipient) {
-      notifications.push(buildNotification(survey, success, capacityGained, recipient));
+    const notification = recipient
+      ? buildNotification(survey, success, capacityGained, recipient)
+      : undefined;
+    if (notification) notifications.push(notification);
+    if (isCorp && survey.corporationId && capacityGained > 0) {
+      finderGrants.push({ survey, gained: capacityGained, notification });
     }
   }
 
@@ -172,10 +192,76 @@ export async function resolveProspects(
     });
   }
   if (capBulk.length > 0) await capCol.bulkWrite(capBulk);
+  result.finderRightsGranted = await grantFinderRights(
+    db,
+    turn,
+    now,
+    finderGrants,
+    capByKey,
+    capIncByKey
+  );
   if (surveyBulk.length > 0) await surveysCol.bulkWrite(surveyBulk);
   if (notifications.length > 0) await createNotifications(notifications);
 
   return result;
+}
+
+/**
+ * Finder's rights: the corp that found the deposit gets a royalty-free contract
+ * over what it found, sized against the state's capacity after every win this
+ * turn and capped by the contract headroom. Grants in the same pass count
+ * against each other so stacked wins never overshoot the cap.
+ */
+async function grantFinderRights(
+  db: Db,
+  turn: number,
+  now: Date,
+  grants: Array<{ survey: ProspectingSurvey; gained: number; notification?: NotificationInput }>,
+  capByKey: Map<string, StateResourceCapacity>,
+  capIncByKey: Map<string, Record<string, number>>
+): Promise<number> {
+  if (grants.length === 0) return 0;
+  const contracts = await getExtractionContractsCollection(db);
+  const grantedThisPass = new Map<string, number>();
+  let granted = 0;
+  for (const { survey, gained, notification } of grants) {
+    const key = `${survey.stateId}|${survey.countryId}`;
+    const field = `resources.${survey.resource}`;
+    const newCap =
+      (capByKey.get(key)?.resources?.[survey.resource] ?? 0) + (capIncByKey.get(key)?.[field] ?? 0);
+    if (newCap <= 0) continue;
+    const resourceKey = `${key}|${survey.resource}`;
+    const used =
+      (await computeContractedShare(db, survey.stateId, survey.resource, survey.countryId)) +
+      (grantedThisPass.get(resourceKey) ?? 0);
+    const share = Math.min(gained / newCap, Math.max(0, GOVT_CONTRACT_MAX_TOTAL_SHARE - used));
+    if (share < MIN_FINDER_SHARE) continue;
+    const contract: Omit<ExtractionContract, "_id"> = {
+      stateId: survey.stateId,
+      countryId: survey.countryId,
+      corporationId: survey.corporationId as ObjectId,
+      resource: survey.resource,
+      share,
+      grantedTurn: turn,
+      grantedBy: PROSPECT_FINDER_RIGHTS_GRANTOR,
+      grantedByLevel: "state",
+      status: "active",
+      royaltyRatePerTurn: 0,
+      termTurns: PROSPECT_FINDER_RIGHTS_TERM_TURNS,
+      activatedTurn: turn,
+      expiresTurn: turn + PROSPECT_FINDER_RIGHTS_TERM_TURNS,
+      missedPayments: 0,
+      updatedAt: now,
+    };
+    await contracts.insertOne(contract as ExtractionContract);
+    grantedThisPass.set(resourceKey, (grantedThisPass.get(resourceKey) ?? 0) + share);
+    granted += 1;
+    if (notification) {
+      notification.message += ` Your company holds the rights to ${(share * 100).toFixed(1)}% of this state's ${survey.resource} capacity, royalty free, for ${PROSPECT_FINDER_RIGHTS_TERM_TURNS} turns.`;
+      notification.metadata = { ...notification.metadata, finderRightsShare: share };
+    }
+  }
+  return granted;
 }
 
 function resolveRecipientUserId(
