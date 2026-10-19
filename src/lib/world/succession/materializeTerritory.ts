@@ -104,23 +104,26 @@ export async function materializeFederationTerritory(input: {
     const filter = scopeFilter(scope, sourceCountryId, stateIds);
     const collection = db.collection(scope.collection);
     const rows = await collection.find(filter, { session }).toArray();
+    // Mirrors scopeFilter: each key reads the same field it was matched on.
     const stateFor = (row: Document): string => {
-      if (scope.key === "idIsState") return String(row._id);
-      if (scope.key === "compositeCountryState") {
-        const id = String(row._id);
-        const prefix = `${sourceCountryId}_`;
-        if (!id.startsWith(prefix)) throw new Error("Federation regional key changed");
-        return id.slice(prefix.length);
+      switch (scope.key) {
+        case "regionIdField":
+          return String(row.regionId);
+        case "stateIdField":
+          return String(row.stateId);
+        case "stateField":
+          return String(row.state);
+        case "idIsState":
+          return String(row._id);
+        case "homeStateField":
+          return String(row.homeState);
+        case "compositeCountryState": {
+          const id = String(row._id);
+          const prefix = `${sourceCountryId}_`;
+          if (!id.startsWith(prefix)) throw new Error("Federation regional key changed");
+          return id.slice(prefix.length);
+        }
       }
-      return String(
-        row[
-          scope.key === "stateField"
-            ? "state"
-            : scope.key === "homeStateField"
-              ? "homeState"
-              : "stateId"
-        ]
-      );
     };
     await archiveRows(scope.collection, rows, stateFor);
     if (rows.length) {
