@@ -34,14 +34,7 @@ const attackInfo: AttackInfo = {
 };
 const attackProps = {
   attackInfo,
-  plantsMode: false,
-  targetName: "Test corporation",
-  showAttack: true,
   showSplit: true,
-  attacking: false,
-  attackError: "",
-  attackMsg: "",
-  onAttack: vi.fn().mockResolvedValue(true),
   splitting: false,
   splitError: "",
   splitMsg: "",
@@ -153,29 +146,10 @@ describe("sector action visibility", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
-  it("uses the whole-plant quote to hide an unaffordable rival split", () => {
-    const { container } = render(
-      <AttackPanel
-        {...attackProps}
-        plantsMode
-        showSplit={false}
-        attackInfo={{
-          ...attackInfo,
-          attackCost: 0,
-          splitMsCost: 0,
-          plantCount: 100,
-          plantSplitQuote: {
-            seizureFraction: 0.1,
-            plantsAtRisk: 10,
-            trancheBookValueAnchor: 4000,
-            cashCostAnchor: 2000,
-            marketingStrengthCost: 20,
-            successProbability: 0.5,
-          },
-        }}
-      />
-    );
+  it("never offers to attack a rival or split its plants", () => {
+    const { container } = render(<AttackPanel {...attackProps} showSplit={false} />);
     expect(container.textContent).toBe("");
+    expect(screen.queryByRole("button")).toBeNull();
   });
 
   it("offers an affordable half split without the unavailable full strength choice", () => {
@@ -191,7 +165,6 @@ describe("sector action visibility", () => {
     render(
       <AttackPanel
         {...attackProps}
-        showAttack={false}
         onSplit={onSplit}
         attackInfo={{
           ...attackInfo,

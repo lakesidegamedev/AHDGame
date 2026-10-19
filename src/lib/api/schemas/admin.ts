@@ -14,6 +14,8 @@ export const adminSuggestionPatchSchema = z.object({
     .enum(["not_reviewed", "planned", "in_progress", "completed", "not_implementing"])
     .optional(),
   adminNotes: z.string().max(5000).optional(),
+  /** What shipped, in player-facing words. Posted to Discord when status becomes completed. */
+  implementationNote: z.string().trim().max(1000).optional(),
 });
 
 // admin/suggestions/merge POST

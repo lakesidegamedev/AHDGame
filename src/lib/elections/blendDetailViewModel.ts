@@ -12,6 +12,7 @@
  * none, a turnout with no electorate) is omitted rather than invented.
  */
 
+import type { SeatMargin } from "@/lib/elections/seatMargins";
 import { getElectionMethod, isMultiSeatMethod } from "@/lib/elections/electionMethod";
 import { MULTI_SEAT_TYPES } from "@/lib/utils/electionLabels";
 import type { CountryId } from "@/lib/constants/countries";
@@ -93,6 +94,11 @@ export interface BlendDetailTallyRow {
   seatsCell: string;
   seatWord: string;
   isWinner: boolean;
+  /**
+   * Live races only: how many votes to the next seat and how many can be lost
+   * before dropping one. Null when the race has no live projection.
+   */
+  seatMarginNote: string | null;
   /** Plain-language account of how this candidate's seats were arrived at. */
   mathNote: string;
   math: BlendMathEntry[];
@@ -147,6 +153,8 @@ export interface BlendDetailInput {
   candidates: BlendDetailCandidate[];
   totalVotes: Record<string, number>;
   seatsEstimate: Record<string, number> | null;
+  /** Live proportional races: votes to the next seat and cushion before losing one. */
+  seatMargins?: Record<string, SeatMargin> | null;
   totalSeats: number | null;
   electionType: string;
   countryId: CountryId;
@@ -167,6 +175,15 @@ export interface BlendDetailInput {
 }
 
 const GOLD = "var(--gold)";
+
+/** "1,240 votes to gain a seat, 860 votes from losing one". */
+export function seatMarginNote(m: SeatMargin | undefined): string | null {
+  if (!m) return null;
+  const parts: string[] = [];
+  if (m.toGain != null) parts.push(`${fmtInt(m.toGain)} more votes to gain a seat`);
+  if (m.toLose != null) parts.push(`${fmtInt(m.toLose + 1)} fewer votes to lose one`);
+  return parts.length > 0 ? parts.join(", ") : null;
+}
 
 function fmtInt(n: number): string {
   return Math.round(n).toLocaleString("en-US");
@@ -440,6 +457,10 @@ export function buildBlendDetail(input: BlendDetailInput): BlendDetailModel {
       seatsCell: allocationPending ? "Pending" : multiSeat ? String(r.seats) : won ? "WON" : "—",
       seatWord: r.seats === 1 ? "Seat" : "Seats",
       isWinner: won,
+      seatMarginNote:
+        input.isEnded || allocationPending || !multiSeat
+          ? null
+          : seatMarginNote(input.seatMargins?.[r.c.id]),
       mathNote,
       math,
     };

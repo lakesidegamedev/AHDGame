@@ -10,7 +10,7 @@ vi.mock("@/contexts/CurrencyContext", () => ({
   useCurrency: () => ({
     formatAmount: (n: number) => `$${Math.round(n)}`,
     formatFull: (n: number) => `$${Math.round(n)}.00`,
-    formatPriceIn: (n: number) => `$${n.toFixed(2)}`,
+    formatListingPrice: (n: number) => `$${n.toFixed(2)}`,
     formatPrice: (n: number) => `$${n.toFixed(2)}`,
     toInternalFrom: (n: number) => n,
   }),

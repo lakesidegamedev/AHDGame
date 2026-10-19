@@ -1,4 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  PROSPECT_DURATION_TURNS,
+  PROSPECT_MAX_ACTIVE_PER_INITIATOR,
+} from "@/lib/constants/prospecting";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import type { Db } from "mongodb";
@@ -111,7 +115,7 @@ describe("launchCorpProspect", () => {
   });
 
   it("rejects when the corp already runs the max active surveys", async () => {
-    primeEligible(db, { active: 3 });
+    primeEligible(db, { active: PROSPECT_MAX_ACTIVE_PER_INITIATOR });
     const res = await run(db, makeCorp());
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.status).toBe(409);
@@ -132,7 +136,7 @@ describe("launchCorpProspect", () => {
       expect(res.costs.costAnchor).toBe(500_000);
       expect(res.costs.costMultiplier).toBe(1);
       expect(res.survey.status).toBe("active");
-      expect(res.survey.completesTurn).toBe(TURN + 12);
+      expect(res.survey.completesTurn).toBe(TURN + PROSPECT_DURATION_TURNS);
       expect(res.survey.rdScoreAtStart).toBe(100);
     }
     expect(db.collectionMocks.corporations.updateOne).toHaveBeenCalledWith(

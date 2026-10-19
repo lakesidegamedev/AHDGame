@@ -20,8 +20,7 @@ import {
 } from "@/lib/turn/gdpGrowth";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
-import { fundingResponse } from "../spendingChannel";
-import { SOCIAL_SPEND_HALF_SAT } from "./social";
+import { decayPovertyOffset, povertyTarget, type PovertyPolicyInput } from "../rules/poverty";
 import { advanceOutputGap, GDP_GROWTH_BOUND } from "../outputGap";
 import { blendToMeasured } from "../outputTrend";
 import { tfpBasket } from "../potentialGrowth";
@@ -302,14 +301,10 @@ export const unemploymentNode: RegistryNode = {
 };
 
 /**
- * povertyRate — LIVE (P3a; was the P0 reference node). Drivers: unemployment +
- * incomeInequality (Gini-100, a same-turn social node) push poverty up; the
- * social spending channel relieves it; crimeRate is a LAGGED edge (per-100k
- * post-P3a; breaks the poverty↔crime cycle, which P3b closes from the other
- * side). The medianIncome LEVEL term was DROPPED: incomes are local-currency
- * (a ¥5M median maxed the old $50k-normalized relief clamp) and the node ctx
- * has no countryId for normalization — a currency-normalized income term is
- * named for the balance pass.
+ * Poverty is a population-share proxy, not a household survey. V2 relief is
+ * based on current laws' delivered funding, not booked legacy social budgets.
+ * Unattributed old offsets decay; active law and Cabinet effects shift the
+ * target afresh rather than accumulating a permanent percentage-point bonus.
  */
 export const povertyRateNode: RegistryNode = {
   id: "economic.povertyRate",
@@ -323,6 +318,7 @@ export const povertyRateNode: RegistryNode = {
     "social.incomeInequality", // live social node (P3a) → topo edge
     { spending: "social" },
     { lagged: "publicSafety.crimeRate" },
+    { provider: "povertyPolicy" },
   ],
   bounds: [3, 80],
   inertia: 0.85,
@@ -330,24 +326,17 @@ export const povertyRateNode: RegistryNode = {
   // below 1dp's half-grain, where policy-delta preservation reabsorbs every
   // step (the P2c rounding-plateau class) and the crime→poverty edge dies.
   decimals: 2,
-  compute: (ctx) => {
-    const unemployment = ctx.current["economic.unemploymentRate"] ?? 5;
-    const inequality = ctx.current["social.incomeInequality"] ?? 42; // Gini-100 (node baseline 42)
-    const crimeLagged = ctx.prev["publicSafety.crimeRate"] ?? 4500; // per 100k, last turn (node baseline 4500)
-    const socialResponse = fundingResponse(ctx.spending["social"] ?? 0, SOCIAL_SPEND_HALF_SAT, 100);
-
-    // Balance pass: centering refs match the driven nodes' baselines
-    // (incomeInequality 42, crimeRate 4500) so each deviation term is 0 at the
-    // cross-tier equilibrium — internally consistent + correct missing-input
-    // fallback. Slopes unchanged (they drive the live response).
-    return (
-      13 +
-      (unemployment - 5) * 0.6 +
-      (inequality - 42) * 0.15 +
-      (crimeLagged - 4500) * 0.0004 -
-      socialResponse * 0.06
-    );
-  },
+  baselineDecimals: 6,
+  decayPolicyDelta: (delta, ctx) =>
+    decayPovertyOffset(delta, ctx.providers.povertyPolicy !== undefined),
+  compute: (ctx) =>
+    povertyTarget({
+      unemployment: ctx.current["economic.unemploymentRate"],
+      inequality: ctx.current["social.incomeInequality"],
+      crime: ctx.prev["publicSafety.crimeRate"],
+      socialSpending: ctx.spending["social"],
+      policy: ctx.providers.povertyPolicy as PovertyPolicyInput | undefined,
+    }),
 };
 
 /**

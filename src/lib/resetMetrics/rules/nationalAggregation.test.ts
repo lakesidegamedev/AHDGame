@@ -63,6 +63,8 @@ describe("national v2 metric aggregation", () => {
 
     expect(Object.keys(result)).toHaveLength(53);
     expect(result["02"]!.value).toBe(25);
+    expect(result["03"]!.value).toBe(25);
+    expect(result["03"]!.note).toContain("Population-weighted modeled poverty");
     expect(result["05"]!.value).toBe(26);
     expect(result["51"]!.value).toBe(25);
     expect(result["07"]).toBeUndefined();

@@ -334,6 +334,8 @@ describe("first live v2 metric owners", () => {
     expect(readings["US:PA"]!.updates["01"]?.value).toBe(6.2);
     expect(readings["US:CA"]!.updates["01"]?.value).toBe(8.4);
     expect(readings["US:PA"]!.updates["03"]?.value).toBe(12.3);
+    expect(readings["US:PA"]!.updates["03"]?.status).toBe("proxy");
+    expect(readings["US:PA"]!.updates["03"]?.note).toContain("funded law delivery");
     expect(readings["US:CA"]!.updates["05"]?.value).toBe(2.6);
     expect(readings["US:PA"]!.updates["06"]?.value).toBe(1.1);
     expect(readings["US:PA"]!.updates["08"]?.value).toBe(-2.4);
