@@ -127,9 +127,12 @@ export function aggregateNationalMetricObservations(
                   ),
                 }
               : {}),
-            note: isProvisional
-              ? `Game-calibrated national rollup. The ${metric.aggregation} owner-specific national denominator is not yet persisted separately.`
-              : `National rollup using the catalog's ${metric.aggregation} aggregation rule.`,
+            note:
+              metric.id === "03"
+                ? "Population-weighted modeled poverty estimate, not a measured count of households below an official national threshold."
+                : isProvisional
+                  ? `Game-calibrated national rollup. The ${metric.aggregation} owner-specific national denominator is not yet persisted separately.`
+                  : `National rollup using the catalog's ${metric.aggregation} aggregation rule.`,
           },
         ];
       })

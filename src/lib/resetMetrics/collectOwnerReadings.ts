@@ -311,9 +311,12 @@ export async function collectResetMetricOwnerReadings(
           updates[id] = {
             ...board.observations[id]!,
             value,
-            status: "derived",
+            status: id === "03" ? "proxy" : "derived",
             source: `current regional economy engine: ${field}`,
-            note: "Current model result, not a political-board score or an independently measured statistic.",
+            note:
+              id === "03"
+                ? "Modeled population-share estimate, not surveyed household poverty. Current funded law delivery replaces booked social spending in v2 countries; historical adjustments decay over time."
+                : "Current model result, not a political-board score or an independently measured statistic.",
           };
         }
         if (due.has("02")) {
