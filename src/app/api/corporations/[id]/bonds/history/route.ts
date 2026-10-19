@@ -24,6 +24,7 @@ const BOND_TX_TYPES = [
   "bond_maturity",
   "bond_purchase",
   "bond_sell",
+  "bond_buyback",
   "bond_issuance",
   "bond_default",
   "bond_dissolution_payout",

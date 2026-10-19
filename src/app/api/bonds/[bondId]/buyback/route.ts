@@ -8,9 +8,10 @@ import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationAc
 import { parseJsonBody } from "@/lib/api/validate";
 import { buyBondSchema } from "@/lib/api/schemas/bonds";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import type { Bond, Corporation } from "@/lib/db/types";
+import type { Bond, Corporation, GameState } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { emitTx } from "@/lib/financialTxLog/emit";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import {
   anchorToCorpLiquidCapital,
@@ -191,6 +192,30 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // The retired units were the pool's; the issuer's cash is the pool's now.
     await creditBondPool(db, bondCurrency, costLocal, "retiredIn", now);
+
+    // Recorded only once the float claim landed, so a refunded race leaves no row.
+    const turnDoc = await db
+      .collection<GameState>("gameState")
+      .findOne({ _id: "current" }, { projection: { currentTurn: 1 } });
+    await emitTx(db, {
+      type: "bond_buyback",
+      turn: turnDoc?.currentTurn ?? 0,
+      createdAt: now,
+      subjectType: "corporation",
+      subjectId: issuingCorp._id,
+      subjectName: issuingCorp.name,
+      amount: -costInCorpCapital,
+      currencyCode: corpCurrency ?? "USD",
+      counterpartyType: "system",
+      counterpartyName: "Bond market",
+      meta: {
+        bondId: bond._id.toString(),
+        units,
+        pricePerUnit,
+        bondCurrency,
+        bondAmount: -Math.round(costLocal * 100) / 100,
+      },
+    });
 
     const refreshedBond = await db.collection<Bond>("bonds").findOne({ _id: bond._id });
     const remainingPublicFloat =

@@ -72,6 +72,8 @@ const REASON_BY_TX_TYPE: Partial<Record<FinancialTxLogEntry["type"], string>> = 
   corp_starting_grant: "corporation_starting_grant",
   gov_bond_maturity_payment: "bond_settlement",
   bond_maturity: "bond_settlement",
+  // An issuer buyback is early redemption: it pairs with the pool's retiredIn receipt.
+  bond_buyback: "bond_settlement",
   gov_coupon_payment: "bond_coupon_settlement",
   bond_coupon: "bond_coupon_settlement",
   bond_pool_inflow: "bond_pool_excluded_liquidity",

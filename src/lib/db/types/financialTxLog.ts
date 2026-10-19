@@ -37,6 +37,7 @@ export type FinancialTxType =
   // Bonds
   | "bond_purchase"
   | "bond_sell"
+  | "bond_buyback" // issuer retires its own units from the bond market pool
   | "bond_pool_inflow"
   | "bond_pool_sweep"
   | "bond_coupon"
