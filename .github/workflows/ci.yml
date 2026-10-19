@@ -358,7 +358,10 @@ jobs:
   federation-transactions:
     needs: changes
     if: needs.changes.outputs.full_suite == 'true'
-    runs-on: ubuntu-latest
+    # Pinned while ubuntu-latest migrates to Ubuntu 26: the Mongo 8.0 container
+    # has been exiting during startup since the migration began; this step passed
+    # on the same script before it.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
