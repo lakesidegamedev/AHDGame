@@ -28,6 +28,11 @@ vi.mock("@/lib/bonds/sellFundBondUnits", () => ({
     .fn()
     .mockResolvedValue({ proceedsAnchor: 0, unitsSold: 0, bondsTouched: 0 }),
 }));
+vi.mock("@/lib/indexFunds/processQueuedRedemptions", () => ({
+  QUEUED_REDEMPTION_CLAIMS_PER_PASS: 2000,
+  processQueuedRedemptions: vi.fn().mockResolvedValue(0),
+}));
+vi.mock("@/lib/currency/featureFlag", () => ({ isForexEnabled: vi.fn().mockResolvedValue(true) }));
 // Mirrors the real contract: a fund_reserve position is the fund's own units
 // and is never paid out.
 vi.mock("./holderPayout", () => ({
@@ -41,6 +46,7 @@ import { creditCorpLiquidCapital } from "@/lib/financialTxLog/atomicCashGuard";
 import { sellFundHoldingsForRedemptionCash } from "@/lib/indexFunds/fundRedemptionLiquidity";
 import { sellFundBondHoldingsForCash } from "@/lib/bonds/sellFundBondUnits";
 import { payFundHolderCash } from "./holderPayout";
+import { processQueuedRedemptions } from "@/lib/indexFunds/processQueuedRedemptions";
 import { advanceWindDowns, beginWindUp, completeWindUp } from "./windUp";
 
 const SPONSOR = new ObjectId();
@@ -78,6 +84,7 @@ function makeDb(opts: {
   claimed?: boolean;
   fund?: IndexFund;
   bondsRemaining?: () => number;
+  withdrawalsRemaining?: () => number;
 }) {
   const fundUpdate = vi.fn().mockResolvedValue({ modifiedCount: opts.claimed === false ? 0 : 1 });
   const positionsUpdateMany = vi.fn().mockResolvedValue({ modifiedCount: 1 });
@@ -107,6 +114,8 @@ function makeDb(opts: {
           })),
         };
       if (name === "indexFundTransactions") return { insertOne: txInsert };
+      if (name === "indexFundRedemptionQueue")
+        return { countDocuments: vi.fn(async () => opts.withdrawalsRemaining?.() ?? 0) };
       if (name === "corporations")
         return {
           findOne: vi
@@ -264,6 +273,53 @@ describe("advanceWindDowns", () => {
     const fund = makeFund({ status: "winding_down", holdings: [], cashAnchor: 10_000 });
     const { db } = makeDb({ windingDown: [fund], positions: [] });
     const r = await advanceWindDowns(db, 200);
+    expect(r.fundsCompleted).toBe(1);
+  });
+
+  it("pays withdrawals queued before wind-up from the fund's cash, then completes", async () => {
+    const fund = makeFund({ status: "winding_down", holdings: [], cashAnchor: 10_000 });
+    const current = { ...fund };
+    let queued = 1;
+    const { db, fundUpdate } = makeDb({
+      windingDown: [fund],
+      fund: current,
+      withdrawalsRemaining: () => queued,
+    });
+    vi.mocked(processQueuedRedemptions).mockImplementationOnce(async (_db, f) => {
+      expect(f).toBe(current);
+      queued = 0;
+      current.cashAnchor -= 4_000;
+      return 1;
+    });
+    const r = await advanceWindDowns(db, 200);
+    expect(processQueuedRedemptions).toHaveBeenCalledWith(db, current, true, 200, false, {
+      claimsLeft: 2000,
+    });
+    expect(r.errors).toEqual([]);
+    expect(r.fundsCompleted).toBe(1);
+    expect(fundUpdate.mock.calls[0][1].$set.status).toBe("delisted");
+    // Only the cash left after the withdrawals goes to the sponsor.
+    expect(creditCorpLiquidCapital).toHaveBeenCalledWith(db, SPONSOR, 6_000);
+  });
+
+  it("does not pay queued withdrawals while stocks are still being sold", async () => {
+    const fund = makeFund({
+      status: "winding_down",
+      holdings: [{ corporationId: new ObjectId(), shares: 10, lastValueAnchor: 50_000 }],
+    });
+    const { db } = makeDb({ windingDown: [fund], withdrawalsRemaining: () => 1 });
+    await advanceWindDowns(db, 200);
+    expect(processQueuedRedemptions).not.toHaveBeenCalled();
+  });
+
+  it("records a withdrawal failure and still advances the other funds", async () => {
+    const broken = makeFund({ status: "winding_down", tickerSymbol: "BRK" });
+    const healthy = makeFund({ status: "winding_down", tickerSymbol: "OK" });
+    const { db } = makeDb({ windingDown: [broken, healthy], fund: healthy });
+    vi.mocked(processQueuedRedemptions).mockRejectedValueOnce(new Error("payout refused"));
+    const r = await advanceWindDowns(db, 200);
+    expect(r.errors).toEqual(["BRK: payout refused"]);
+    expect(processQueuedRedemptions).toHaveBeenCalledTimes(2);
     expect(r.fundsCompleted).toBe(1);
   });
 });

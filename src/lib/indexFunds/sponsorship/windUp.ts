@@ -24,6 +24,12 @@ import { creditCorpLiquidCapital } from "@/lib/financialTxLog/atomicCashGuard";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { sellFundHoldingsForRedemptionCash } from "@/lib/indexFunds/fundRedemptionLiquidity";
 import { sellFundBondHoldingsForCash } from "@/lib/bonds/sellFundBondUnits";
+import { getFundById } from "@/lib/indexFunds/fundQueries";
+import {
+  processQueuedRedemptions,
+  QUEUED_REDEMPTION_CLAIMS_PER_PASS,
+} from "@/lib/indexFunds/processQueuedRedemptions";
+import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { payCorporateWindUpHolders } from "./corporateHolderPayout";
 import { payFundHolderCash } from "./holderPayout";
 import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
@@ -99,6 +105,8 @@ export async function advanceWindDowns(db: Db, currentTurn: number): Promise<Win
     .collection<IndexFund>("indexFunds")
     .find({ status: "winding_down" })
     .toArray();
+  if (funds.length === 0) return result;
+  const forexEnabled = await isForexEnabled();
 
   // Funds whose stocks are gone sell their bonds this pass; they complete
   // only once no bond units remain (checked in one batched read below).
@@ -126,6 +134,16 @@ export async function advanceWindDowns(db: Db, currentTurn: number): Promise<Win
       await sellFundBondHoldingsForCash(db, fund, Number.POSITIVE_INFINITY, new Date(), {
         turn: currentTurn,
       });
+      // The cron's redemption pass skips winding-down funds, so withdrawals
+      // queued before wind-up are paid here or completion never runs (#4219).
+      await processQueuedRedemptions(
+        db,
+        (await getFundById(db, fund._id)) ?? fund,
+        forexEnabled,
+        currentTurn,
+        false,
+        { claimsLeft: QUEUED_REDEMPTION_CLAIMS_PER_PASS }
+      );
       bondPhase.push(fund);
     } catch (err) {
       result.errors.push(`${fund.tickerSymbol}: ${(err as Error).message}`);
