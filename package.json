@@ -186,7 +186,7 @@
     "husky": "^9.1.7",
     "knip": "^6.39.0",
     "lint-staged": "^17.6.0",
-    "prettier": "^3.9.9",
+    "prettier": "^3.9.10",
     "tailwindcss": "^4",
     "topojson-server": "^3.0.1",
     "typescript": "6.0.2",
