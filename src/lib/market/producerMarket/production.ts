@@ -19,6 +19,7 @@ import {
 } from "./payablesRules";
 import { COMMODITY_SPOILAGE_PER_TURN } from "../inventory";
 import { householdPurchaseOrders } from "./householdRules";
+import { makeDoOutput } from "./makeDoRules";
 import { feasibleProduction } from "./productionFeasibilityRules";
 
 export interface PurchasedStock {
@@ -648,34 +649,48 @@ export function advanceProducerEconomy(input: {
   const passes = input.maximumPlanningPasses ?? 128;
   if (!Number.isSafeInteger(passes) || passes < 1 || passes > 1024)
     throw new Error("Invalid planning-pass limit");
+  // Make do with short inputs (makeDoRules.ts): each pass reads every input's
+  // fill rate at the current plan and sets output from the ORIGINAL plan, so
+  // shortages settle at a proportional cut instead of compounding to zero.
+  // Rises are damped; a run that has not settled keeps its last plan.
+  const originalPlan = new Map(plannedById);
   for (let pass = 0; pass < passes; pass++) {
     market = trial();
     const bought = new Map(market.orders.map((o) => [o.id, o.deliveredUnits]));
     let changed = false;
     for (const p of plans) {
       const previous = plannedById.get(p.id)!;
-      let supported = previous;
-      for (const recipe of p.inputs) {
-        if (!(recipe.unitsPerOutput > 0)) continue;
+      const fills = p.inputs.map((recipe) => {
         const stock = p.inputStock
           .filter((s) => s.commodity === recipe.commodity)
           .reduce((n, s) => n + s.units, 0);
-        supported = Math.min(
-          supported,
-          (stock +
-            orderIdsForInput(p.id, recipe.commodity).reduce(
-              (sum, id) => sum + (bought.get(id) ?? 0),
-              0
-            )) /
-            recipe.unitsPerOutput
-        );
-      }
-      if (previous - supported > Math.max(1e-9, previous * 1e-12)) changed = true;
-      plannedById.set(p.id, Math.max(0, supported));
+        const have =
+          stock +
+          orderIdsForInput(p.id, recipe.commodity).reduce(
+            (sum, id) => sum + (bought.get(id) ?? 0),
+            0
+          );
+        const need = previous * recipe.unitsPerOutput;
+        return {
+          unitsPerOutput: recipe.unitsPerOutput,
+          unitValue: recipe.maximumUnitPrice,
+          // A plan already at zero ordered nothing; it stays at zero.
+          fill: need > 0 ? Math.min(1, have / need) : previous > 0 ? 1 : 0,
+        };
+      });
+      const target = makeDoOutput(originalPlan.get(p.id)!, fills);
+      // Falls apply at once; rises are damped so the cycle settles.
+      const damped = pass === 0 || target <= previous ? target : (previous + target) / 2;
+      // A plan that has decayed to a negligible share of the original is zero.
+      const next = damped < originalPlan.get(p.id)! * 1e-9 ? 0 : damped;
+      if (Math.abs(next - previous) > Math.max(1e-9, previous * 1e-4)) changed = true;
+      plannedById.set(p.id, Math.max(0, Math.min(originalPlan.get(p.id)!, next)));
     }
     if (!changed) break;
-    if (pass === passes - 1) throw new Error("Production and funded deliveries did not converge");
   }
+  // Clear once more at the settled plan so every sale is backed by what is
+  // actually produced (the last pass may have lowered plans after clearing).
+  market = trial();
   if (!market) throw new Error("Missing producer market settlement");
   const results: ProducerOperatingResult[] = [];
   const offersById = new Map(market.offers.map((o) => [o.id, o]));
@@ -719,17 +734,13 @@ export function advanceProducerEconomy(input: {
       purchases += bought.cost;
       stocks.set(recipe.commodity, stock);
     }
-    let produced = plannedById.get(p.id)!;
-    for (const recipe of p.inputs)
-      if (recipe.unitsPerOutput > 0)
-        produced = Math.min(
-          produced,
-          (stocks.get(recipe.commodity)?.units ?? 0) / recipe.unitsPerOutput
-        );
+    // Make do: the plant produces its settled plan and uses up to what it has
+    // of each input; a short input is used up rather than limiting output.
+    const produced = plannedById.get(p.id)!;
     let consumed = 0;
     for (const recipe of p.inputs) {
       const stock = stocks.get(recipe.commodity)!;
-      const used = produced * recipe.unitsPerOutput;
+      const used = Math.min(stock.units, produced * recipe.unitsPerOutput);
       const exhausted = used >= stock.units * (1 - 1e-12);
       const cost = exhausted
         ? stock.value
