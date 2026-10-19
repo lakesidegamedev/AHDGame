@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
+import { COMMODITY_TYPES } from "@/lib/constants/commodities";
 
 const loadOpenOffers = vi.fn();
 const countDocuments = vi.fn();
@@ -43,7 +44,10 @@ describe("GET /api/supply-offers", () => {
       page: 2,
       limit: 20,
     });
-    expect(countDocuments).toHaveBeenCalledWith({ expiresAtTurn: { $gt: 10 } });
+    expect(countDocuments).toHaveBeenCalledWith({
+      commodity: { $in: [...COMMODITY_TYPES] },
+      expiresAtTurn: { $gt: 10 },
+    });
   });
 
   it("still filters by commodity", async () => {
@@ -71,7 +75,11 @@ describe("GET /api/supply-offers", () => {
       expiresAtTurn: { $gt: 10 },
     });
     await get("?kind=npp");
-    expect(countDocuments).toHaveBeenLastCalledWith({ aiListed: true, expiresAtTurn: { $gt: 10 } });
+    expect(countDocuments).toHaveBeenLastCalledWith({
+      commodity: { $in: [...COMMODITY_TYPES] },
+      aiListed: true,
+      expiresAtTurn: { $gt: 10 },
+    });
   });
 
   it("rejects an unknown commodity and bad paging", async () => {
