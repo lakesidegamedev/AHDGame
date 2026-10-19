@@ -7,7 +7,7 @@ import { createNotifications } from "@/lib/notifications";
 import { getProspectingSurveysCollection } from "@/lib/db/collections/prospectingSurveys";
 import { getStateResourceCapacityCollection } from "@/lib/db/collections/stateResourceCapacity";
 import { getExtractionContractsCollection } from "@/lib/db/collections/extractionContracts";
-import { computeContractedShare } from "@/lib/extraction/computeContractedShare";
+import type { GovernmentTender } from "@/lib/governmentContracts/types";
 import type { ExtractionContract } from "@/lib/db/types/extractionContract";
 import { makeSeededRng } from "@/lib/events/substrate/rng";
 import {
@@ -216,27 +216,60 @@ async function grantFinderRights(
   db: Db,
   turn: number,
   now: Date,
-  grants: Array<{ survey: ProspectingSurvey; gained: number; notification?: NotificationInput }>,
+  grants: Array<{
+    survey: ProspectingSurvey;
+    gained: number;
+    notification?: NotificationInput;
+  }>,
   capByKey: Map<string, StateResourceCapacity>,
   capIncByKey: Map<string, Record<string, number>>
 ): Promise<number> {
   if (grants.length === 0) return 0;
+  // Contracted share per state|country|resource, read once for every state
+  // involved: the same sum computeContractedShare takes (open contracts plus
+  // unlinked extraction tender reservations).
+  const stateIds = [...new Set(grants.map((g) => g.survey.stateId))];
   const contracts = await getExtractionContractsCollection(db);
-  const grantedThisPass = new Map<string, number>();
-  let granted = 0;
+  const [existing, tenders] = await Promise.all([
+    contracts
+      .find(
+        { stateId: { $in: stateIds }, revokedTurn: { $exists: false } },
+        { projection: { stateId: 1, countryId: 1, resource: 1, share: 1, tenderId: 1 } }
+      )
+      .toArray(),
+    db
+      .collection<GovernmentTender>("governmentTenders")
+      .find(
+        {
+          "terms.type": "extraction",
+          "terms.stateId": { $in: stateIds },
+          status: { $in: ["publishing", "open", "awarding"] },
+        },
+        { projection: { _id: 1, countryId: 1, terms: 1 } }
+      )
+      .toArray(),
+  ]);
+  const used = new Map<string, number>();
+  const add = (key: string, share: number) => used.set(key, (used.get(key) ?? 0) + share);
+  const linked = new Set(existing.map((c) => c.tenderId).filter(Boolean));
+  for (const c of existing) add(`${c.stateId}|${c.countryId}|${c.resource}`, c.share ?? 0);
+  for (const t of tenders) {
+    if (t.terms.type !== "extraction" || linked.has(t._id)) continue;
+    add(`${t.terms.stateId}|${t.countryId}|${t.terms.resource}`, t.terms.share);
+  }
+
+  const inserts: Array<Omit<ExtractionContract, "_id">> = [];
   for (const { survey, gained, notification } of grants) {
     const key = `${survey.stateId}|${survey.countryId}`;
-    const field = `resources.${survey.resource}`;
     const newCap =
-      (capByKey.get(key)?.resources?.[survey.resource] ?? 0) + (capIncByKey.get(key)?.[field] ?? 0);
+      (capByKey.get(key)?.resources?.[survey.resource] ?? 0) +
+      (capIncByKey.get(key)?.[`resources.${survey.resource}`] ?? 0);
     if (newCap <= 0) continue;
     const resourceKey = `${key}|${survey.resource}`;
-    const used =
-      (await computeContractedShare(db, survey.stateId, survey.resource, survey.countryId)) +
-      (grantedThisPass.get(resourceKey) ?? 0);
-    const share = Math.min(gained / newCap, Math.max(0, GOVT_CONTRACT_MAX_TOTAL_SHARE - used));
+    const headroom = Math.max(0, GOVT_CONTRACT_MAX_TOTAL_SHARE - (used.get(resourceKey) ?? 0));
+    const share = Math.min(gained / newCap, headroom);
     if (share < MIN_FINDER_SHARE) continue;
-    const contract: Omit<ExtractionContract, "_id"> = {
+    inserts.push({
       stateId: survey.stateId,
       countryId: survey.countryId,
       corporationId: survey.corporationId as ObjectId,
@@ -252,16 +285,16 @@ async function grantFinderRights(
       expiresTurn: turn + PROSPECT_FINDER_RIGHTS_TERM_TURNS,
       missedPayments: 0,
       updatedAt: now,
-    };
-    await contracts.insertOne(contract as ExtractionContract);
-    grantedThisPass.set(resourceKey, (grantedThisPass.get(resourceKey) ?? 0) + share);
-    granted += 1;
+    });
+    // Grants in this pass count against each other.
+    add(resourceKey, share);
     if (notification) {
       notification.message += ` Your company holds the rights to ${(share * 100).toFixed(1)}% of this state's ${survey.resource} capacity, royalty free, for ${PROSPECT_FINDER_RIGHTS_TERM_TURNS} turns.`;
       notification.metadata = { ...notification.metadata, finderRightsShare: share };
     }
   }
-  return granted;
+  if (inserts.length > 0) await contracts.insertMany(inserts as ExtractionContract[]);
+  return inserts.length;
 }
 
 function resolveRecipientUserId(

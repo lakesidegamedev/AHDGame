@@ -310,7 +310,15 @@ describe("resolveProspects", () => {
         db,
         "extractionContracts",
         existingShare > 0
-          ? [{ _id: new ObjectId(), share: existingShare, stateId: "TX", resource: "oil" }]
+          ? [
+              {
+                _id: new ObjectId(),
+                share: existingShare,
+                stateId: "TX",
+                countryId: "US",
+                resource: "oil",
+              },
+            ]
           : []
       );
     }
@@ -322,7 +330,7 @@ describe("resolveProspects", () => {
       const result = await resolveProspects(db as unknown as Db, 13, NOW, fixedRng([0, 0]));
 
       expect(result.finderRightsGranted).toBe(1);
-      const contract = db.collectionMocks["extractionContracts"]!.insertOne.mock.calls[0][0];
+      const contract = db.collectionMocks["extractionContracts"]!.insertMany.mock.calls[0][0][0];
       const gained = result.totalCapacityAdded;
       expect(contract.corporationId).toEqual(survey.corporationId);
       expect(contract.status).toBe("active");
@@ -339,7 +347,7 @@ describe("resolveProspects", () => {
       primeWin(survey, GOVT_CONTRACT_MAX_TOTAL_SHARE - 0.01);
       const resolveProspects = await loadFn();
       await resolveProspects(db as unknown as Db, 13, NOW, fixedRng([0, 0]));
-      const contract = db.collectionMocks["extractionContracts"]!.insertOne.mock.calls[0][0];
+      const contract = db.collectionMocks["extractionContracts"]!.insertMany.mock.calls[0][0][0];
       expect(contract.share).toBeCloseTo(0.01, 6);
     });
 
@@ -349,7 +357,7 @@ describe("resolveProspects", () => {
       const resolveProspects = await loadFn();
       const result = await resolveProspects(db as unknown as Db, 13, NOW, fixedRng([0, 0]));
       expect(result.finderRightsGranted).toBe(0);
-      expect(db.collectionMocks["extractionContracts"]?.insertOne).not.toHaveBeenCalled();
+      expect(db.collectionMocks["extractionContracts"]?.insertMany).not.toHaveBeenCalled();
     });
 
     it("never grants rights on a government survey", async () => {
