@@ -59,7 +59,10 @@ export function evalNode(
   // shock erodes toward the simulated baseline instead of being frozen forever.
   // Default 1 preserves legacy behavior for every non-opted-in node.
   const decay = node.policyDeltaDecay ?? 1;
-  const policyDelta = Math.max(-cap, Math.min(cap, rawDelta)) * decay;
+  const cappedDelta = Math.max(-cap, Math.min(cap, rawDelta));
+  const policyDelta = node.decayPolicyDelta
+    ? node.decayPolicyDelta(cappedDelta, ctx)
+    : cappedDelta * decay;
 
   // Era envelope: bound the PERSISTED baseline too (a prior above-cap baseline
   // — e.g. the window just tightened — must not survive the EMA).

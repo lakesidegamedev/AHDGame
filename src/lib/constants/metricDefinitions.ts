@@ -140,7 +140,8 @@ export const metricCategories: MetricCategory[] = [
         id: "povertyRate",
         name: "Poverty Rate",
         unit: "percent",
-        description: "Percentage of population below poverty line",
+        description:
+          "Modeled population-share poverty estimate, not a surveyed household poverty rate",
         isHigherBetter: false,
         formatSuffix: "%",
         decimals: 1,

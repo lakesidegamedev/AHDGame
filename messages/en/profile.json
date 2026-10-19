@@ -230,7 +230,8 @@
       "viewCorporation": "View corporation"
     },
     "social": {
-      "title": "Social"
+      "title": "Social",
+      "implementedSuggestions": "{count, plural, one {# suggestion implemented} other {# suggestions implemented}}"
     },
     "achievements": {
       "title": "Achievements",

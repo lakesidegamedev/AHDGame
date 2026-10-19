@@ -227,7 +227,8 @@
       "viewCorporation": "Unternehmen ansehen"
     },
     "social": {
-      "title": "Sozial"
+      "title": "Sozial",
+      "implementedSuggestions": "{count, plural, one {# Vorschlag umgesetzt} other {# Vorschläge umgesetzt}}"
     },
     "achievements": {
       "title": "Erfolge",

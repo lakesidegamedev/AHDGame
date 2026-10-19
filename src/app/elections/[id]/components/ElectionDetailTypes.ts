@@ -1,3 +1,4 @@
+import type { SeatMargin } from "@/lib/elections/seatMargins";
 import type { ElectionVoteTally } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import type {
@@ -147,6 +148,8 @@ export interface GeneralVotes {
   candidateColors: Record<string, string>;
   finalized: boolean;
   seatsEstimate: Record<string, number> | null;
+  /** Live proportional races: votes to the next seat and cushion before losing one. */
+  seatMargins?: Record<string, SeatMargin>;
   turnSnapshots: VoteTurnSnapshot[];
   /** President only: electoral votes per candidate */
   electoralVotesByCandidate?: Record<string, number>;

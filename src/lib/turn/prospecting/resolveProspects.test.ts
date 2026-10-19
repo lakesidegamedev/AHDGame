@@ -3,7 +3,11 @@ import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import type { ProspectingSurvey } from "@/lib/db/types/prospectingSurvey";
-import { PROSPECT_MAX_GAIN_FRACTION } from "@/lib/constants/prospecting";
+import {
+  GOVT_CONTRACT_MAX_TOTAL_SHARE,
+  PROSPECT_FINDER_RIGHTS_TERM_TURNS,
+  PROSPECT_MAX_GAIN_FRACTION,
+} from "@/lib/constants/prospecting";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 
@@ -119,7 +123,7 @@ describe("resolveProspects", () => {
     ]);
 
     const resolveProspects = await loadFn();
-    // successRoll 0.99 → above the 25% floor chance → failure.
+    // successRoll 0.99 → above the 40% floor chance → failure.
     const result = await resolveProspects(db as unknown as Db, 13, NOW, fixedRng([0.99]));
 
     expect(result.failed).toBe(1);
@@ -284,5 +288,84 @@ describe("resolveProspects", () => {
     const result = await resolveProspects(db as unknown as Db, 5, NOW, fixedRng([0]));
     expect(result.surveysResolved).toBe(0);
     expect(db.collectionMocks["prospectingSurveys"]!.bulkWrite).not.toHaveBeenCalled();
+  });
+
+  describe("finder's rights", () => {
+    function primeWin(survey: ProspectingSurvey, existingShare = 0) {
+      setFind(db, "prospectingSurveys", [survey]);
+      setFind(db, "stateResourceCapacity", [
+        {
+          _id: new ObjectId(),
+          stateId: "TX",
+          countryId: "US",
+          resources: { oil: 10_000 },
+          updatedAt: NOW,
+        },
+      ]);
+      setFind(db, "corporations", [
+        { _id: survey.corporationId, userId: new ObjectId(), name: "Acme Oil" },
+      ]);
+      setFind(db, "governmentTenders", []);
+      setFind(
+        db,
+        "extractionContracts",
+        existingShare > 0
+          ? [
+              {
+                _id: new ObjectId(),
+                share: existingShare,
+                stateId: "TX",
+                countryId: "US",
+                resource: "oil",
+              },
+            ]
+          : []
+      );
+    }
+
+    it("gives the discovering corp a royalty-free contract over what it found", async () => {
+      const survey = makeSurvey();
+      primeWin(survey);
+      const resolveProspects = await loadFn();
+      const result = await resolveProspects(db as unknown as Db, 13, NOW, fixedRng([0, 0]));
+
+      expect(result.finderRightsGranted).toBe(1);
+      const contract = db.collectionMocks["extractionContracts"]!.insertMany.mock.calls[0][0][0];
+      const gained = result.totalCapacityAdded;
+      expect(contract.corporationId).toEqual(survey.corporationId);
+      expect(contract.status).toBe("active");
+      expect(contract.royaltyRatePerTurn).toBe(0);
+      expect(contract.share).toBeCloseTo(gained / (10_000 + gained), 6);
+      expect(contract.expiresTurn).toBe(13 + PROSPECT_FINDER_RIGHTS_TERM_TURNS);
+
+      const notif = db.collectionMocks["notifications"]!.insertMany.mock.calls[0][0];
+      expect(notif[0].message).toContain("royalty free");
+    });
+
+    it("caps the share at the remaining contract headroom", async () => {
+      const survey = makeSurvey();
+      primeWin(survey, GOVT_CONTRACT_MAX_TOTAL_SHARE - 0.01);
+      const resolveProspects = await loadFn();
+      await resolveProspects(db as unknown as Db, 13, NOW, fixedRng([0, 0]));
+      const contract = db.collectionMocks["extractionContracts"]!.insertMany.mock.calls[0][0][0];
+      expect(contract.share).toBeCloseTo(0.01, 6);
+    });
+
+    it("grants nothing when the state is fully contracted", async () => {
+      const survey = makeSurvey();
+      primeWin(survey, GOVT_CONTRACT_MAX_TOTAL_SHARE);
+      const resolveProspects = await loadFn();
+      const result = await resolveProspects(db as unknown as Db, 13, NOW, fixedRng([0, 0]));
+      expect(result.finderRightsGranted).toBe(0);
+      expect(db.collectionMocks["extractionContracts"]?.insertMany).not.toHaveBeenCalled();
+    });
+
+    it("never grants rights on a government survey", async () => {
+      const survey = makeSurvey({ initiatorType: "state_government", corporationId: undefined });
+      primeWin(survey);
+      const resolveProspects = await loadFn();
+      const result = await resolveProspects(db as unknown as Db, 13, NOW, fixedRng([0, 0]));
+      expect(result.finderRightsGranted).toBe(0);
+    });
   });
 });

@@ -57,7 +57,6 @@ import { effectiveMarketAnchor } from "@/lib/corporations/marketShare";
 import { aggregateCountrySectorMix } from "@/lib/economy/sectorMix";
 import { loadNationalGdpGrowth } from "@/lib/country/nationalGdpGrowth";
 import type { GameState } from "@/lib/db/types/gameState";
-import { calculatePlantSectorSplit } from "@/lib/corporations/plantSectorSplit";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string }>;
@@ -422,19 +421,6 @@ export async function GET(request: Request, { params }: RouteParams) {
           typeof s.capacityBookAnchor === "number" &&
           Number.isFinite(s.capacityBookAnchor) &&
           s.capacityBookAnchor >= 0;
-        const plantSplitQuote =
-          plantsMode &&
-          userCorporationId &&
-          userCorporationId !== s.corporationId.toString() &&
-          !isNatcorp &&
-          hasPersistedPlantLedger
-            ? calculatePlantSectorSplit({
-                defenderPlantCount: s.plantCount as number,
-                defenderBookValueAnchor: s.capacityBookAnchor as number,
-                attackerMarketingStrength: userMarketingStrength,
-                defenderMarketingStrength: corp?.marketingStrength ?? 0,
-              })
-            : null;
         return {
           sectorId: s._id.toString(),
           corporationId: s.corporationId.toString(),
@@ -476,7 +462,7 @@ export async function GET(request: Request, { params }: RouteParams) {
             !isNatcorp &&
             (() => {
               // Legacy worlds still quote the same cost and capture enforced by
-              // the attack route. Plant worlds use plantSplitQuote above.
+              // the attack route.
               const defenderMS = corp?.marketingStrength ?? 0;
               const msSum = userMarketingStrength + defenderMS;
               const attackerShare = msSum > 0 ? userMarketingStrength / msSum : 1;
@@ -494,7 +480,6 @@ export async function GET(request: Request, { params }: RouteParams) {
                 attackEstimatedCapture: actualCapture,
               };
             })()),
-          ...(plantSplitQuote ? { plantSplitQuote } : {}),
         };
       });
 

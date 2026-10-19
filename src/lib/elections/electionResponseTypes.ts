@@ -59,6 +59,8 @@ export interface GeneralVotesData {
   candidateColors: Record<string, string>;
   finalized: boolean;
   seatsEstimate: Record<string, number> | null;
+  /** Live proportional races: votes to gain the next seat / cushion before losing one. */
+  seatMargins?: Record<string, import("@/lib/elections/seatMargins").SeatMargin>;
   turnSnapshots: Array<{
     turn: number;
     recordedAt: Date;

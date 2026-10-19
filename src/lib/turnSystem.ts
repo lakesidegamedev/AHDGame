@@ -73,6 +73,7 @@ import {
   getSingleplayerPhasePredicate,
 } from "@/simulation/phases/singleplayerPhases";
 import { runPostTurnIntegrityScans } from "@/lib/turn/postTurnScans";
+import { announcePendingSuggestionCompletions } from "@/lib/suggestions/completionAnnouncement";
 import { runContestsAfterTurn } from "@/lib/contests/engine";
 import { getAnomalyScanCadencePredicate } from "@/simulation/phases/anomalyScanCadence";
 import { isSingleplayer } from "@/lib/singleplayer";
@@ -740,6 +741,10 @@ async function processTurnImpl(
       );
       // Weekly contests read the committed turn's values; never blocks the turn.
       void runContestsAfterTurn(db, context.newTurn);
+      // Suggestions marked done by any tool get their Discord post here.
+      void announcePendingSuggestionCompletions(db).catch((err) =>
+        console.warn("[post-turn] suggestion completion announcements failed", err)
+      );
     }
 
     emit({
