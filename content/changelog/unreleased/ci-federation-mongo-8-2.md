@@ -6,7 +6,7 @@ summary: >-
   newer runner kernels, so it no longer fails before any test runs.
 tags: [ci]
 badges: [patch]
-areas: [tooling]
+areas: [backend]
 ---
 
 ## What changed
