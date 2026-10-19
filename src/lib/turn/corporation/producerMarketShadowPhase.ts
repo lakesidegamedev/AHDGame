@@ -9,6 +9,8 @@
  * else. It never moves money, never touches a sector or corporation, and a
  * failure is logged, never thrown into the turn.
  */
+import type { CorporateSector } from "@/lib/db/types";
+import { emptyProducerSectorOpening } from "@/lib/market/producerMarket/openingState";
 import type { Db } from "mongodb";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { COMMODITY_TYPES } from "@/lib/constants/commodities";
@@ -80,6 +82,7 @@ export async function runProducerMarketShadowPhase(
     >();
     const planCountry = new Map<string, string>();
     const operatingPayees = new Set<string>();
+    const skipReasons: Record<string, number> = {};
     for (const corp of lookups.corporations) {
       for (const sector of lookups.sectorsByCorp.get(corp._id.toString()) ?? []) {
         try {
@@ -87,7 +90,7 @@ export async function runProducerMarketShadowPhase(
             worldEpoch: input.worldEpoch,
             env,
             corporation: corp,
-            sector,
+            sector: shadowOpeningSector(sector, input.worldEpoch, input.turn),
             inputPriceHeadroom: PRICE_HEADROOM,
           });
           const legacy = legacyBySectorId.get(sector._id.toString()) ?? null;
@@ -108,8 +111,10 @@ export async function runProducerMarketShadowPhase(
           });
           operatingPayees.add(prepared.plan.operatingRecipientAccountId);
           void walletScopes;
-        } catch {
+        } catch (error) {
           skipped++;
+          const reason = error instanceof Error ? error.message : String(error);
+          skipReasons[reason] = (skipReasons[reason] ?? 0) + 1;
         }
       }
     }
@@ -306,5 +311,36 @@ export function isolatedShadowEnv(env: ProducerPhysicalEnv): ProducerPhysicalEnv
     wageIndexByState: structuredClone(env.wageIndexByState),
     automationIndexByState: structuredClone(env.automationIndexByState),
     pendingStrikeEvents: [],
+  };
+}
+
+/**
+ * The live world has not had the producer opening conversion, so its sectors
+ * carry no producer generation or inventory. For the shadow only, give each a
+ * copy with an opening stamped on last turn and its existing stock carried as
+ * sellable output stock. Never written back.
+ */
+export function shadowOpeningSector(
+  sector: CorporateSector,
+  worldEpoch: string,
+  turn: number
+): CorporateSector {
+  if (sector.producerCapacity && sector.producerInventory) return sector;
+  const opening = emptyProducerSectorOpening(worldEpoch, Math.max(0, turn - 1));
+  const outputStock = Object.entries(sector.inventoryUnits ?? {})
+    .filter(([, units]) => typeof units === "number" && Number.isFinite(units) && units > 0)
+    .map(([commodity, units]) => ({
+      commodity,
+      units: units as number,
+      book: isStateScopedCommodity(commodity as CommodityType)
+        ? `state:${sector.stateId}`
+        : "world",
+    }));
+  return {
+    ...sector,
+    capacityBookAnchor: sector.capacityBookAnchor ?? 0,
+    buildQueue: Array.isArray(sector.buildQueue) ? sector.buildQueue : [],
+    producerCapacity: opening.producerCapacity,
+    producerInventory: { ...opening.producerInventory, outputStock },
   };
 }
