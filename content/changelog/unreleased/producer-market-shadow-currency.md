@@ -7,4 +7,4 @@ badges: [minor]
 areas: [backend]
 ---
 
-- The market test now converts each company's current results into one currency before comparing them with the new system. It changes nothing players see.
+- The market test now converts each company's current results into one currency and onto a per-turn basis before comparing them with the new system. It changes nothing players see.
