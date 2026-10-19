@@ -1159,6 +1159,20 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       },
     },
     {
+      id: "freight_only",
+      name: "Freight Only",
+      description:
+        "Pure haulage with no consulting arm: all output is freight, with the same fleet and running costs as Standard.",
+      supply: { freight: 0.7 },
+      demand: {
+        vehicles: 0.2,
+        energy: 0.2,
+        software: 0.1,
+        real_estate_services: 0.03,
+        food: 0.06,
+      },
+    },
+    {
       id: "automated",
       requiresTechUnlock: true,
       minDecade: "1989",
