@@ -27,6 +27,8 @@ interface ErrorPageContentProps {
   fullScreen?: boolean;
 }
 
+export type RouteErrorProps = Pick<ErrorPageContentProps, "error" | "reset">;
+
 /**
  * Reusable error content for Next.js error.tsx pages.
  * Handles logging and provides consistent error UI.

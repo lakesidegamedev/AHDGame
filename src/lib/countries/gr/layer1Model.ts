@@ -14,6 +14,7 @@
  * centrist republicans vs a banned communist left voting EDA; the national
  * schism (venizelist/royalist) and the civil war are the live cleavages.
  */
+import { convertLayer1Census } from "@/lib/seeds/international/convertLayer1Census";
 import type { CountryLayer1Model, DemographicPosition } from "@/lib/seeds/international/types";
 import { grRegionCensusData, type GRRegionLayer1 } from "@/lib/seeds/gr/grRegionCensusData";
 import { grRegionCensusData1953 } from "@/lib/seeds/gr/grRegionCensusData1953";
@@ -205,22 +206,7 @@ const ERA_CENSUS: Partial<Record<EraId, Record<string, GRRegionLayer1>>> = {
   "2027": grRegionCensusData,
 };
 
-function convertCensus(
-  raw: Record<string, GRRegionLayer1>
-): Record<string, Record<string, Record<string, number>>> {
-  return Object.fromEntries(
-    Object.entries(raw).map(([regionId, layer1]) => [
-      regionId,
-      {
-        ethnicity: layer1.ethnicity as unknown as Record<string, number>,
-        age: layer1.age as unknown as Record<string, number>,
-        education: layer1.education as unknown as Record<string, number>,
-        income: layer1.income as unknown as Record<string, number>,
-        urbanization: layer1.urbanization as unknown as Record<string, number>,
-      },
-    ])
-  );
-}
+const convertCensus = convertLayer1Census<GRRegionLayer1>;
 
 export function getGrModel(era: EraId): CountryLayer1Model {
   const census = convertCensus(ERA_CENSUS[era] ?? grRegionCensusData);

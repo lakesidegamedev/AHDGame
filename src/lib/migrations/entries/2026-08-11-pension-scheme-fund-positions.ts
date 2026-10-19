@@ -1,6 +1,5 @@
-import type { CreateIndexesOptions, Db, IndexSpecification } from "mongodb";
-import type { Migration, MigrationResult } from "../types";
-
+import { createPlannedIndexes, type IndexPlan } from "../indexPlans";
+import type { Migration } from "../types";
 /**
  * A8 phase 2: a pension scheme can hold index-fund units, so it needs the same
  * one-position-per-holder-per-fund guard every other holder kind already has.
@@ -14,11 +13,6 @@ import type { Migration, MigrationResult } from "../types";
  * NPP indexes in the index-fund foundation migration: positions of other kinds
  * carry no `pensionSchemeId` and must not collide on a missing field.
  */
-type IndexPlan = {
-  collection: string;
-  keys: IndexSpecification;
-  options: CreateIndexesOptions & { name: string };
-};
 
 const INDEXES: IndexPlan[] = [
   {
@@ -45,27 +39,9 @@ const INDEXES: IndexPlan[] = [
   },
 ];
 
-async function createPlannedIndexes(db: Db, dryRun: boolean): Promise<MigrationResult> {
-  const notes: string[] = [];
-  for (const plan of INDEXES) {
-    const label = `${plan.collection}.${plan.options.name}`;
-    if (dryRun) {
-      notes.push(`would create ${label}`);
-      continue;
-    }
-    await db.collection(plan.collection).createIndex(plan.keys, plan.options);
-    notes.push(`created/verified ${label}`);
-  }
-  return {
-    documentsScanned: INDEXES.length,
-    documentsUpdated: dryRun ? 0 : INDEXES.length,
-    notes,
-  };
-}
-
 export const migration: Migration = {
   id: "2026-08-11-pension-scheme-fund-positions",
   description: "One fund position per pension scheme per fund, and the scheme-side lookup index.",
   idempotent: true,
-  execute: async (db, ctx) => createPlannedIndexes(db, ctx.dryRun),
+  execute: async (db, ctx) => createPlannedIndexes(db, ctx.dryRun, INDEXES),
 };

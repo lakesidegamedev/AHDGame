@@ -75,12 +75,13 @@ const INHERENTLY_HEAVY = ["src/lib/seeds/regionCensusData.ts"];
 
 /**
  * Exact boundary inherited by the transitive graph walk when it was added.
- * The list is hashed so a new edge cannot hide inside a broad allowlist, while
- * keeping 200-plus historical source/target pairs out of this test file.
+ * Hash source/target pairs, not internal import counts: a pure shared helper
+ * does not add a heavy client edge. The exact hash prevents new boundary edges
+ * while keeping 200-plus historical source/target pairs out of this test file.
  */
 const LEGACY_TRANSITIVE_COUNTRY_BOUNDARY = {
   count: 205,
-  sha256: "b679a1aa1ee7e2ac28969af4791cdb55532b66dffdfa14ee86421fe3d085be6e",
+  sha256: "d5f5211b8988574a88085f5d99e9378f19b57a894d8660163336bf7f71c6bcf6",
 } as const;
 
 /** `import ... from` that is not `import type ... from`, and not a bare side-effect import. */
@@ -202,7 +203,7 @@ describe("client-reachable country leaf modules carry no runtime imports", () =>
           // actually pulled it into the client graph.
           if (!CLIENT_SAFE.includes(target)) {
             const heavy = (readFileSync(target, "utf8").match(VALUE_IMPORT) ?? []).length;
-            if (heavy > 0) offenders.add(`${file}\n    -> ${target} (${heavy} value imports)`);
+            if (heavy > 0) offenders.add(`${file}\n    -> ${target}`);
           }
           continue;
         }

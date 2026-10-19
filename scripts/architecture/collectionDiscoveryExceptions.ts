@@ -351,33 +351,6 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
       "Checked-in migration descriptors own the target collection for one-off index or schema work.",
   },
   {
-    file: "src/lib/migrations/entries/2026-06-06-route-performance-indexes.ts",
-    owner: "createPlannedIndexes",
-    argument: "plan.collection",
-    scopeHash: "4433de9a99dce79f7770aee954456041f5e1d453f2d4e47ca89b0ecdb14c0620",
-    count: 1,
-    reason:
-      "Checked-in migration descriptors own the target collection for one-off index or schema work.",
-  },
-  {
-    file: "src/lib/migrations/entries/2026-06-09-event-substrate-indexes.ts",
-    owner: "createPlannedIndexes",
-    argument: "plan.collection",
-    scopeHash: "43b92967364132f75c907f08ea65b9e5b0a2fb448b4c222a86764077cb98ae69",
-    count: 1,
-    reason:
-      "Checked-in migration descriptors own the target collection for one-off index or schema work.",
-  },
-  {
-    file: "src/lib/migrations/entries/2026-06-21-crisis-aid-indexes.ts",
-    owner: "createPlannedIndexes",
-    argument: "plan.collection",
-    scopeHash: "43b92967364132f75c907f08ea65b9e5b0a2fb448b4c222a86764077cb98ae69",
-    count: 1,
-    reason:
-      "Checked-in migration descriptors own the target collection for one-off index or schema work.",
-  },
-  {
     file: "src/lib/migrations/entries/2026-07-01-union-indexes.ts",
     owner: "createPlannedIndexes",
     argument: "dropped.collection",
@@ -396,109 +369,10 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
       "Checked-in migration descriptors own the target collection for one-off index or schema work.",
   },
   {
-    file: "src/lib/migrations/entries/2026-07-04-union-leadership-indexes.ts",
-    owner: "createPlannedIndexes",
-    argument: "plan.collection",
-    scopeHash: "43b92967364132f75c907f08ea65b9e5b0a2fb448b4c222a86764077cb98ae69",
-    count: 1,
-    reason:
-      "Checked-in migration descriptors own the target collection for one-off index or schema work.",
-  },
-  {
-    file: "src/lib/migrations/entries/2026-07-08-perf-n1-indexes.ts",
-    owner: "createPlannedIndexes",
-    argument: "plan.collection",
-    scopeHash: "4433de9a99dce79f7770aee954456041f5e1d453f2d4e47ca89b0ecdb14c0620",
-    count: 1,
-    reason:
-      "Checked-in migration descriptors own the target collection for one-off index or schema work.",
-  },
-  {
-    file: "src/lib/migrations/entries/2026-07-10-orgregledger-index.ts",
-    owner: "createPlannedIndexes",
-    argument: "plan.collection",
-    scopeHash: "4433de9a99dce79f7770aee954456041f5e1d453f2d4e47ca89b0ecdb14c0620",
-    count: 1,
-    reason:
-      "Checked-in migration descriptors own the target collection for one-off index or schema work.",
-  },
-  {
-    file: "src/lib/migrations/entries/2026-08-09-labour-relations-indexes.ts",
-    owner: "createPlannedIndexes",
-    argument: "plan.collection",
-    scopeHash: "defaf23fa2e0b7ae6a89836c2cd715bca33c71d42724513ca41cfbe9e62eba4b",
-    count: 1,
-    reason:
-      "Checked-in migration descriptors own the target collection for one-off index or schema work.",
-  },
-  {
-    file: "src/lib/migrations/entries/2026-08-10-index-fund-phase-indexes.ts",
-    owner: "createPlannedIndexes",
-    argument: "plan.collection",
-    scopeHash: "defaf23fa2e0b7ae6a89836c2cd715bca33c71d42724513ca41cfbe9e62eba4b",
-    count: 1,
-    reason:
-      "Checked-in migration descriptors own the target collection for one-off index or schema work.",
-  },
-  {
-    file: "src/lib/migrations/entries/2026-08-10-index-listing-petition-indexes.ts",
-    owner: "createPlannedIndexes",
-    argument: "plan.collection",
-    scopeHash: "defaf23fa2e0b7ae6a89836c2cd715bca33c71d42724513ca41cfbe9e62eba4b",
-    count: 1,
-    reason:
-      "Checked-in migration descriptors own the target collection for one-off index or schema work.",
-  },
-  {
-    file: "src/lib/migrations/entries/2026-08-10-pension-scheme-indexes.ts",
-    owner: "createPlannedIndexes",
-    argument: "plan.collection",
-    scopeHash: "defaf23fa2e0b7ae6a89836c2cd715bca33c71d42724513ca41cfbe9e62eba4b",
-    count: 1,
-    reason:
-      "Checked-in migration descriptors own the target collection for one-off index or schema work.",
-  },
-  {
-    file: "src/lib/migrations/entries/2026-08-11-pension-scheme-fund-positions.ts",
-    owner: "createPlannedIndexes",
-    argument: "plan.collection",
-    scopeHash: "defaf23fa2e0b7ae6a89836c2cd715bca33c71d42724513ca41cfbe9e62eba4b",
-    count: 1,
-    reason:
-      "Checked-in migration descriptors own the target collection for one-off index or schema work.",
-  },
-  {
-    file: "src/lib/migrations/entries/2026-08-11-ratification-ballot-indexes.ts",
-    owner: "createPlannedIndexes",
-    argument: "plan.collection",
-    scopeHash: "defaf23fa2e0b7ae6a89836c2cd715bca33c71d42724513ca41cfbe9e62eba4b",
-    count: 1,
-    reason:
-      "Checked-in migration descriptors own the target collection for one-off index or schema work.",
-  },
-  {
-    file: "src/lib/migrations/entries/2026-08-18-bank-money-move-indexes.ts",
-    owner: "createPlannedIndexes",
-    argument: "plan.collection",
-    scopeHash: "defaf23fa2e0b7ae6a89836c2cd715bca33c71d42724513ca41cfbe9e62eba4b",
-    count: 1,
-    reason:
-      "Checked-in migration descriptors own the target collection for one-off index or schema work.",
-  },
-  {
     file: "src/lib/migrations/entries/2026-08-31-intelligence-indexes.ts",
     owner: "execute",
     argument: "plan.collection",
     scopeHash: "359568d25c88efe8236d026b6fade60d4de0c26f0e19cf404c413082d2003e48",
-    count: 1,
-    reason:
-      "Checked-in migration descriptors own the target collection for one-off index or schema work.",
-  },
-  {
-    file: "src/lib/migrations/entries/2026-09-06-manifestos-index.ts",
-    owner: "createPlannedIndexes",
-    argument: "plan.collection",
-    scopeHash: "4433de9a99dce79f7770aee954456041f5e1d453f2d4e47ca89b0ecdb14c0620",
     count: 1,
     reason:
       "Checked-in migration descriptors own the target collection for one-off index or schema work.",

@@ -22,6 +22,7 @@
  *         1979→2019
  */
 
+import { convertLayer1Census } from "@/lib/seeds/international/convertLayer1Census";
 import type { CountryLayer1Model, DemographicPosition } from "@/lib/seeds/international/types";
 import { ieRegionCensusData } from "@/lib/seeds/ie/ieRegionCensusData";
 import { ieRegionCensusData1953 } from "@/lib/seeds/ie/ieRegionCensusData1953";
@@ -511,22 +512,7 @@ const ERA_POSITIONS: Record<EraId, EraPositions> = {
 
 // ── Census conversion ─────────────────────────────────────────────────────────
 
-function convertCensus(
-  raw: Record<string, IERegionLayer1>
-): Record<string, Record<string, Record<string, number>>> {
-  return Object.fromEntries(
-    Object.entries(raw).map(([regionId, layer1]) => [
-      regionId,
-      {
-        ethnicity: layer1.ethnicity as unknown as Record<string, number>,
-        age: layer1.age as unknown as Record<string, number>,
-        education: layer1.education as unknown as Record<string, number>,
-        income: layer1.income as unknown as Record<string, number>,
-        urbanization: layer1.urbanization as unknown as Record<string, number>,
-      },
-    ])
-  );
-}
+const convertCensus = convertLayer1Census<IERegionLayer1>;
 
 const ERA_CENSUS: Record<EraId, Record<string, IERegionLayer1>> = {
   "1953": ieRegionCensusData1953,

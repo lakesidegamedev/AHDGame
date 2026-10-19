@@ -29,6 +29,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { feature } from "topojson-client";
 import polygonClipping from "polygon-clipping";
+import { rewind } from "./geometry.mjs";
 
 const __d = path.dirname(fileURLToPath(import.meta.url));
 const pub = (f) => path.resolve(__d, "../../public", f);
@@ -58,24 +59,6 @@ const SOUTH_BOX = [
     [90, -5],
   ],
 ];
-
-const windSignedArea = (r) => {
-  let s = 0;
-  for (let i = 0; i < r.length - 1; i++) s += (r[i + 1][0] - r[i][0]) * (r[i + 1][1] + r[i][1]);
-  return s;
-};
-const rewind = (geometry) => {
-  const fixRing = (ring, wantCW) => {
-    const a = windSignedArea(ring);
-    if (a === 0) return ring;
-    return a > 0 === wantCW ? ring : ring.slice().reverse();
-  };
-  const polys = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
-  const fixed = polys.map((poly) => poly.map((ring, i) => fixRing(ring, i === 0)));
-  return geometry.type === "Polygon"
-    ? { type: "Polygon", coordinates: fixed[0] }
-    : { type: "MultiPolygon", coordinates: fixed };
-};
 
 const topo = JSON.parse(readFileSync(pub("geo/countries-50m.json"), "utf8"));
 const countries = feature(topo, topo.objects.countries);

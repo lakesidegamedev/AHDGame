@@ -1,6 +1,5 @@
-import type { CreateIndexesOptions, Db, IndexSpecification } from "mongodb";
-import type { Migration, MigrationResult } from "../types";
-
+import { createPlannedIndexes, type IndexPlan } from "../indexPlans";
+import type { Migration } from "../types";
 /**
  * A7 part 2 indexes for `indexListingPetitions`.
  *
@@ -12,11 +11,6 @@ import type { Migration, MigrationResult } from "../types";
  * corporation is expected to accumulate decided petitions over a long game and
  * a full uniqueness constraint would refuse the second one it ever files.
  */
-type IndexPlan = {
-  collection: string;
-  keys: IndexSpecification;
-  options: CreateIndexesOptions & { name: string };
-};
 
 const INDEXES: IndexPlan[] = [
   {
@@ -48,27 +42,9 @@ const INDEXES: IndexPlan[] = [
   },
 ];
 
-async function createPlannedIndexes(db: Db, dryRun: boolean): Promise<MigrationResult> {
-  const notes: string[] = [];
-  for (const plan of INDEXES) {
-    const label = `${plan.collection}.${plan.options.name}`;
-    if (dryRun) {
-      notes.push(`would create ${label}`);
-      continue;
-    }
-    await db.collection(plan.collection).createIndex(plan.keys, plan.options);
-    notes.push(`created/verified ${label}`);
-  }
-  return {
-    documentsScanned: INDEXES.length,
-    documentsUpdated: dryRun ? 0 : INDEXES.length,
-    notes,
-  };
-}
-
 export const migration: Migration = {
   id: "2026-08-10-index-listing-petition-indexes",
   description: "Uniqueness and read indexes for A7 index-committee listing petitions.",
   idempotent: true,
-  execute: async (db, ctx) => createPlannedIndexes(db, ctx.dryRun),
+  execute: async (db, ctx) => createPlannedIndexes(db, ctx.dryRun, INDEXES),
 };
