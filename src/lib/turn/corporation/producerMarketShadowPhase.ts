@@ -26,7 +26,6 @@ import { householdDemandSpecs } from "@/lib/market/producerMarket/householdDeman
 import { HOUSEHOLD_OPENING_TURNS } from "@/lib/market/producerMarket/householdOpeningRules";
 import { publicBuyerFunding } from "@/lib/market/producerMarket/publicBuyerRules";
 import { marketingBuyerLines } from "@/lib/market/producerMarket/marketingBuyerRules";
-import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import {
   publicOrders,
