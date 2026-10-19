@@ -5,7 +5,7 @@ import { estimateWageChange } from "@/lib/corporations/rules/bulkWagePreview";
 import { loadValuationFxRates } from "@/lib/currency/corporationCapital";
 import { buildSectorCurrencyRestatement } from "@/lib/corporations/queries/corporationDetail/currencyRestatement";
 import { NextResponse } from "next/server";
-import type { AnyBulkWriteOperation } from "mongodb";
+import type { AnyBulkWriteOperation, Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { requireCorporationActionsEnabled } from "@/lib/api/requireCorporationActions";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
@@ -13,8 +13,11 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { bulkSectorOperationsSchema } from "@/lib/api/schemas/corporations";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
-import type { Character, CorporateSector } from "@/lib/db/types";
-import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
+import type { Character, Corporation, CorporateSector } from "@/lib/db/types";
+import {
+  OPERATING_SECTOR_TYPE_LABELS,
+  type OperatingSectorType,
+} from "@/lib/constants/corporations";
 import { clampProductionPolicy } from "@/lib/utils/productionPolicy";
 import { clampPricingPosture } from "@/lib/market/clearing";
 import { getMarketSystemMode, isMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
@@ -70,6 +73,14 @@ export async function bulkSetSectorOperations(request: Request, { params }: Rout
 
     const ceoCheck = requireCeo(corporation, auth.user.userId);
     if (ceoCheck) return ceoCheck;
+
+    if (body.capacity) {
+      return bulkSetCapacity(db, corporation, auth.user.userId, body.capacity, {
+        countryId,
+        sectorType,
+        preview,
+      });
+    }
 
     if (wageLevel !== undefined && !(await isLabourWagesEnabled())) {
       return errorResponse(403, "The labour system is not enabled.");
@@ -296,4 +307,97 @@ export async function bulkSetSectorOperations(request: Request, { params }: Rout
   } catch (error) {
     return handleRouteError(error);
   }
+}
+
+/**
+ * A holding the single-sector capacity command would refuse: listed for sale,
+ * mid property transition, or holding a pending construction loan. Mirrors
+ * buildCapacity's capacityMutationFilter so bulk never bypasses a guard.
+ */
+function capacityLocked(s: CorporateSector): boolean {
+  return (
+    s.forSale != null ||
+    s.constructionPropertyTransition != null ||
+    s.constructionFinancing?.status === "awaiting_approval" ||
+    s.constructionFinancing?.status === "funding"
+  );
+}
+
+/** Same write the single-sector mothball/reactivate makes, across every eligible holding in scope. */
+async function bulkSetCapacity(
+  db: Db,
+  corporation: Corporation,
+  userId: string,
+  action: "mothball" | "reactivate",
+  scope: { countryId: string; sectorType?: OperatingSectorType; preview?: boolean }
+) {
+  const mode = await getMarketSystemMode();
+  if (!isMarketSystemMode(mode) || !marketAtLeast(mode, "plants")) {
+    return errorResponse(400, "Capacity building is not enabled in this world");
+  }
+  const mothballed = action === "mothball";
+  const filter: Record<string, unknown> = {
+    corporationId: corporation._id,
+    countryId: scope.countryId,
+  };
+  if (scope.sectorType) filter.sectorType = scope.sectorType;
+  const sectors = await db.collection<CorporateSector>("corporateSectors").find(filter).toArray();
+  const needsChange = sectors.filter(
+    (s) => (s.mothballed === true) !== mothballed || (s.activeCapacityPercent ?? 100) !== 100
+  );
+  const eligible = needsChange.filter((s) => !capacityLocked(s));
+  const lockedCount = needsChange.length - eligible.length;
+
+  if (scope.preview || eligible.length === 0) {
+    return NextResponse.json({
+      success: true,
+      preview: scope.preview ?? false,
+      matchedCount: 0,
+      capacity: { action, eligibleCount: eligible.length, lockedCount, changedCount: 0 },
+    });
+  }
+
+  const now = new Date();
+  const result = await db.collection<CorporateSector>("corporateSectors").bulkWrite(
+    eligible.map((s) => ({
+      updateOne: {
+        filter: {
+          _id: s._id,
+          corporationId: corporation._id,
+          forSale: null,
+          constructionPropertyTransition: { $exists: false },
+          "constructionFinancing.status": { $nin: ["awaiting_approval", "funding"] },
+        },
+        update: { $set: { mothballed, activeCapacityPercent: 100, updatedAt: now } },
+      },
+    }))
+  );
+  const changedCount = result.modifiedCount;
+  const typeLabel = scope.sectorType
+    ? OPERATING_SECTOR_TYPE_LABELS[scope.sectorType]
+    : "all sectors";
+  void logEconomicAction(db, {
+    characterId: corporation.ceoId,
+    userId,
+    actionType: mothballed ? "mothballSector" : "reactivateSector",
+    turn: await getCurrentTurn(db).catch(() => 0),
+    characterName: corporation.name,
+    countryId: scope.countryId,
+    result: {
+      success: true,
+      message: `Bulk ${action} ${typeLabel}: ${changedCount} holdings in ${scope.countryId}`,
+    },
+  }).catch(() => {});
+
+  return NextResponse.json({
+    success: true,
+    preview: false,
+    matchedCount: changedCount,
+    capacity: {
+      action,
+      eligibleCount: eligible.length,
+      lockedCount: lockedCount + (eligible.length - changedCount),
+      changedCount,
+    },
+  });
 }
