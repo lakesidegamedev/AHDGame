@@ -220,6 +220,39 @@ describe("battleground board", () => {
   });
 });
 
+describe("battleground view", () => {
+  it("lists the closest states first, from the shared margin model", () => {
+    const vm = buildGeneralBlendViewModel(input());
+    // AZ 0.8pp, PA 2pp, TX 20pp, CA 40pp.
+    expect(vm.closestStates).toEqual(["AZ", "PA", "TX", "CA"]);
+    expect(Object.keys(vm.marginByState).sort()).toEqual(["AZ", "CA", "PA", "TX"]);
+  });
+
+  it("highlights at most five states", () => {
+    const base = election().generalVotes!;
+    const extra = Object.fromEntries(
+      ["NV", "GA", "MI"].map((id, i) => [
+        id,
+        { votesByCandidate: { c1: 501 + i, c2: 499 - i }, evByCandidate: { c1: 6 } },
+      ])
+    );
+    const vm = buildGeneralBlendViewModel(
+      input({
+        election: election({
+          generalVotes: { ...base, stateVoteData: { ...base.stateVoteData, ...extra } },
+        }),
+      })
+    );
+    // NV 0.2pp, GA 0.4pp, MI 0.6pp, AZ 0.8pp, PA 2pp; TX and CA drop off.
+    expect(vm.closestStates).toEqual(["NV", "GA", "MI", "AZ", "PA"]);
+  });
+
+  it("names each state on its hover card", () => {
+    const vm = buildGeneralBlendViewModel(input());
+    expect(vm.hoverCardByState.AZ?.stateName).toBe("Arizona");
+  });
+});
+
 describe("your ticket", () => {
   it("reports the lead over the runner up", () => {
     const vm = buildGeneralBlendViewModel(input());
