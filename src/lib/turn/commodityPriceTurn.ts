@@ -91,7 +91,11 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { GameState } from "@/lib/db/types/gameState";
 import { clearAllCommodities } from "@/lib/trade/snapshot";
 import { buildReachableBooks } from "@/lib/trade/reachableBook";
-import { applyTradeConvergence, tradeConvergenceK } from "@/lib/trade/convergence";
+import {
+  applyTradeConvergence,
+  capClearingToSourcedTrade,
+  tradeConvergenceK,
+} from "@/lib/trade/convergence";
 import { buildTradeAffinity } from "@/lib/trade/tradeAffinity";
 import { loadActiveFtaPairs } from "@/lib/tariffs/ftaOverrides";
 import { reconcileSignedEmbargoBills } from "@/lib/trade/reconcileEmbargoes";
@@ -988,6 +992,13 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
     capUnitsFor,
     importCostMultiplierFor
   );
+  // Books and convergence count only trade the sourcing pass actually shipped
+  // (active settlement only; shadow sourcing delivers nothing). The raw
+  // clearing result is still what the flow snapshot persists.
+  const shippedClearing = capClearingToSourcedTrade(
+    tradeClearing,
+    freightSettlementActive ? freightSettlement?.sourcing : undefined
+  );
   // Reachable books, built from the SAME pre-convergence balances the clearing
   // ran on. `applyTradeConvergence` mutates `byCountry` in place on the next
   // line, so this cannot move below it: post-convergence an importer's demand
@@ -998,14 +1009,14 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
   const reachableBooks = buildReachableBooks({
     countries,
     balances: byCountry,
-    clearing: tradeClearing,
+    clearing: shippedClearing,
     commodities: COMMODITY_TYPES,
     affinity: affinityFor,
   });
   applyTradeConvergence(
     countries,
     byCountry,
-    tradeClearing,
+    shippedClearing,
     tradeConvergenceK(ledgerConfig?.tradeConvergenceFullStartTurn, turn)
   );
 
