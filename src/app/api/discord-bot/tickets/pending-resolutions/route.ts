@@ -86,6 +86,7 @@ export async function GET(request: Request) {
     // Ops writes channel delivery metadata alongside Ticket fields; keep this
     // selector local instead of widening the player ticket schema for Ops data.
     const pendingFilter = {
+      category: { $ne: "investigation" },
       status: { $in: ["resolved", "closed"] },
       "resolution.message": { $exists: true },
       "resolution.deliveredAt": null,

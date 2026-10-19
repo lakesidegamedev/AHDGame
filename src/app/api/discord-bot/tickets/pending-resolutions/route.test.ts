@@ -33,6 +33,7 @@ describe("GET /api/discord-bot/tickets/pending-resolutions", () => {
     expect(response.status).toBe(200);
     expect(tickets.find).toHaveBeenCalledWith(
       expect.objectContaining({
+        category: { $ne: "investigation" },
         status: { $in: ["resolved", "closed"] },
         "resolution.message": { $exists: true },
         "resolution.deliveredAt": null,
