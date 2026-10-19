@@ -27,6 +27,7 @@
  * Era-fact anchors validated in de.test.ts (NEVER vs existing seed leans).
  */
 
+import { convertLayer1Census } from "@/lib/seeds/international/convertLayer1Census";
 import type { CountryLayer1Model, DemographicPosition } from "@/lib/seeds/international/types";
 import { deRegionCensusData } from "@/lib/seeds/de/deRegionCensusData";
 import { deRegionCensusData1953 } from "@/lib/seeds/de/deRegionCensusData1953";
@@ -575,22 +576,7 @@ const ERA_POSITIONS: Record<EraId, EraPositions> = {
 // ── Census conversion ─────────────────────────────────────────────────────────
 // DERegionLayer1 is already Record<dim, Record<key, number>> — just reindex.
 
-function convertCensus(
-  raw: Record<string, DERegionLayer1>
-): Record<string, Record<string, Record<string, number>>> {
-  return Object.fromEntries(
-    Object.entries(raw).map(([regionId, layer1]) => [
-      regionId,
-      {
-        ethnicity: layer1.ethnicity as unknown as Record<string, number>,
-        age: layer1.age as unknown as Record<string, number>,
-        education: layer1.education as unknown as Record<string, number>,
-        income: layer1.income as unknown as Record<string, number>,
-        urbanization: layer1.urbanization as unknown as Record<string, number>,
-      },
-    ])
-  );
-}
+const convertCensus = convertLayer1Census<DERegionLayer1>;
 
 const ERA_CENSUS: Record<EraId, Record<string, DERegionLayer1>> = {
   "1953": deRegionCensusData1953,

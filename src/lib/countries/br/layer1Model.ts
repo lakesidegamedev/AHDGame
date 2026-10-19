@@ -24,6 +24,7 @@
  *   2023: NORDESTE LEFT; SUL RIGHT (confirmed — Lula 2022 vs Bolsonaro mirror)
  */
 
+import { convertLayer1Census } from "@/lib/seeds/international/convertLayer1Census";
 import type { CountryLayer1Model, DemographicPosition } from "@/lib/seeds/international/types";
 import { brRegionCensusData } from "@/lib/seeds/br/brRegionCensusData";
 import { brRegionCensusData1953 } from "@/lib/seeds/br/brRegionCensusData1953";
@@ -614,22 +615,7 @@ const ERA_POSITIONS: Record<EraId, EraPositions> = {
 // ── Census conversion ──────────────────────────────────────────────────────────
 // BRRegionLayer1 → Record<dim, Record<key, number>>
 
-function convertCensus(
-  raw: Record<string, BRRegionLayer1>
-): Record<string, Record<string, Record<string, number>>> {
-  return Object.fromEntries(
-    Object.entries(raw).map(([regionId, layer1]) => [
-      regionId,
-      {
-        ethnicity: layer1.ethnicity as unknown as Record<string, number>,
-        age: layer1.age as unknown as Record<string, number>,
-        education: layer1.education as unknown as Record<string, number>,
-        income: layer1.income as unknown as Record<string, number>,
-        urbanization: layer1.urbanization as unknown as Record<string, number>,
-      },
-    ])
-  );
-}
+const convertCensus = convertLayer1Census<BRRegionLayer1>;
 
 const ERA_CENSUS: Record<EraId, Record<string, BRRegionLayer1>> = {
   "1953": brRegionCensusData1953,

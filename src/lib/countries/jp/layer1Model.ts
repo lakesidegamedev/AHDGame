@@ -17,6 +17,7 @@
  *   2009 (modelled under 2007): DPJ victory reflected in urban left shift
  */
 
+import { convertLayer1Census } from "@/lib/seeds/international/convertLayer1Census";
 import type { CountryLayer1Model, DemographicPosition } from "@/lib/seeds/international/types";
 import { jpRegionCensusData } from "@/lib/countries/jp/data/jpRegionCensusData";
 import { jpRegionCensusData1953 } from "@/lib/countries/jp/data/jpRegionCensusData1953";
@@ -560,22 +561,7 @@ const ERA_POSITIONS: Record<EraId, EraPositions> = {
 // ── Census conversion ─────────────────────────────────────────────────────────
 // JPRegionLayer1 is already Record<dim, Record<key, number>> — just reindex.
 
-function convertCensus(
-  raw: Record<string, JPRegionLayer1>
-): Record<string, Record<string, Record<string, number>>> {
-  return Object.fromEntries(
-    Object.entries(raw).map(([regionId, layer1]) => [
-      regionId,
-      {
-        ethnicity: layer1.ethnicity as unknown as Record<string, number>,
-        age: layer1.age as unknown as Record<string, number>,
-        education: layer1.education as unknown as Record<string, number>,
-        income: layer1.income as unknown as Record<string, number>,
-        urbanization: layer1.urbanization as unknown as Record<string, number>,
-      },
-    ])
-  );
-}
+const convertCensus = convertLayer1Census<JPRegionLayer1>;
 
 const ERA_CENSUS: Record<EraId, Record<string, JPRegionLayer1>> = {
   "1953": jpRegionCensusData1953,

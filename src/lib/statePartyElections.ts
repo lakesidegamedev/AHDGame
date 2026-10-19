@@ -1,3 +1,4 @@
+import { applyOptionalCountryScope } from "@/lib/nationalPartyElectionScope";
 import { ObjectId, type Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { createNotification, createNotifications } from "@/lib/notifications";
@@ -146,26 +147,6 @@ const POSITION_FIELD: Record<
   viceChair: "viceChairId",
   treasurer: "treasurerId",
 };
-
-function applyOptionalCountryScope(
-  baseQuery: Record<string, unknown>,
-  countryId?: CountryId
-): Record<string, unknown> {
-  if (!countryId) return baseQuery;
-
-  const countryQuery: Record<string, unknown> =
-    countryId === DEFAULT_LEGACY_COUNTRY_ID
-      ? {
-          $or: [{ countryId: DEFAULT_LEGACY_COUNTRY_ID }, { countryId: { $exists: false } }],
-        }
-      : { countryId };
-
-  if (Object.keys(baseQuery).length === 0) {
-    return countryQuery;
-  }
-
-  return { $and: [baseQuery, countryQuery] };
-}
 
 // ─── Create ──────────────────────────────────────────────────────────────────
 

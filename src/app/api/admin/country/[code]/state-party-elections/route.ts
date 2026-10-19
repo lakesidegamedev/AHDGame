@@ -1,3 +1,4 @@
+import { applyOptionalCountryScope } from "@/lib/nationalPartyElectionScope";
 import { withAdminRoute } from "@/lib/api/withAdminAuth";
 /**
  * GET  /api/admin/country/[code]/state-party-elections
@@ -38,11 +39,7 @@ import type {
   NationalCommitteeElection,
   PoliticalParty,
 } from "@/lib/db/types";
-import {
-  COUNTRY_CONFIGS,
-  DEFAULT_LEGACY_COUNTRY_ID,
-  type CountryId,
-} from "@/lib/constants/countries";
+import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getGameTime } from "@/lib/time/gameTime";
 
 // Schema for POST requests
@@ -52,26 +49,6 @@ const batchSchema = z.object({
   includeNational: z.boolean().optional(),
   includeCommittee: z.boolean().optional(),
 });
-
-function applyOptionalCountryScope(
-  baseQuery: Record<string, unknown>,
-  countryId?: CountryId
-): Record<string, unknown> {
-  // No countryId → "all countries": apply no country scope.
-  if (!countryId) return baseQuery;
-  const countryQuery: Record<string, unknown> =
-    countryId === DEFAULT_LEGACY_COUNTRY_ID
-      ? {
-          $or: [{ countryId: DEFAULT_LEGACY_COUNTRY_ID }, { countryId: { $exists: false } }],
-        }
-      : { countryId };
-
-  if (Object.keys(baseQuery).length === 0) {
-    return countryQuery;
-  }
-
-  return { $and: [baseQuery, countryQuery] };
-}
 
 export const GET = withAdminRoute(
   async (_auth, request: Request, { params }: { params: Promise<{ code: string }> }) => {

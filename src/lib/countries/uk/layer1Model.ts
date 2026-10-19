@@ -15,6 +15,7 @@
  *   2019: LON strongly LEFT (cosmopolitan); SEE RIGHT; NEE drifting right vs 1979
  */
 
+import { convertLayer1Census } from "@/lib/seeds/international/convertLayer1Census";
 import type { CountryLayer1Model, DemographicPosition } from "@/lib/seeds/international/types";
 import { ukRegionCensusData } from "@/lib/seeds/uk/ukRegionCensusData";
 import { ukRegionCensusData1953 } from "@/lib/seeds/uk/ukRegionCensusData1953";
@@ -573,22 +574,7 @@ const ERA_POSITIONS: Record<EraId, EraPositions> = {
 // ── Census conversion ─────────────────────────────────────────────────────────
 // UKRegionLayer1 is already Record<dim, Record<key, number>> — just reindex.
 
-function convertCensus(
-  raw: Record<string, UKRegionLayer1>
-): Record<string, Record<string, Record<string, number>>> {
-  return Object.fromEntries(
-    Object.entries(raw).map(([regionId, layer1]) => [
-      regionId,
-      {
-        ethnicity: layer1.ethnicity as unknown as Record<string, number>,
-        age: layer1.age as unknown as Record<string, number>,
-        education: layer1.education as unknown as Record<string, number>,
-        income: layer1.income as unknown as Record<string, number>,
-        urbanization: layer1.urbanization as unknown as Record<string, number>,
-      },
-    ])
-  );
-}
+const convertCensus = convertLayer1Census<UKRegionLayer1>;
 
 const ERA_CENSUS: Record<EraId, Record<string, UKRegionLayer1>> = {
   "1953": ukRegionCensusData1953,

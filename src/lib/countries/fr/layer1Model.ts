@@ -11,6 +11,7 @@
  * youth and graduates pull socially liberal.
  */
 
+import { convertLayer1Census } from "@/lib/seeds/international/convertLayer1Census";
 import type { CountryLayer1Model, DemographicPosition } from "@/lib/seeds/international/types";
 import { frRegionCensusData, type FRRegionLayer1 } from "@/lib/seeds/fr/frRegionCensusData";
 import { frRegionCensusData1953 } from "@/lib/seeds/fr/frRegionCensusData1953";
@@ -177,22 +178,7 @@ const POSITIONS_1979: EraPositions = {
   },
 };
 
-function convertCensus(
-  raw: Record<string, FRRegionLayer1>
-): Record<string, Record<string, Record<string, number>>> {
-  return Object.fromEntries(
-    Object.entries(raw).map(([regionId, layer1]) => [
-      regionId,
-      {
-        ethnicity: layer1.ethnicity as unknown as Record<string, number>,
-        age: layer1.age as unknown as Record<string, number>,
-        education: layer1.education as unknown as Record<string, number>,
-        income: layer1.income as unknown as Record<string, number>,
-        urbanization: layer1.urbanization as unknown as Record<string, number>,
-      },
-    ])
-  );
-}
+const convertCensus = convertLayer1Census<FRRegionLayer1>;
 
 const ERA_CENSUS: Partial<Record<EraId, Record<string, FRRegionLayer1>>> = {
   "1953": frRegionCensusData1953,
