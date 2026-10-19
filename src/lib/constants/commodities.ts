@@ -36,7 +36,6 @@ import type { CountryId } from "./countries";
 import {
   getEffectiveStrategyRatesForOperatingModel,
   getOperatingSectorType,
-  applyPlannedEconomyOutputMix,
 } from "./sectorStrategies";
 import {
   energyProductivityMultiplier,
@@ -77,7 +76,6 @@ export const COMMODITY_TYPES = [
   "ordnance",
   "plastics",
   "network_services",
-  "entertainment_services",
 ] as const;
 
 export type CommodityType = (typeof COMMODITY_TYPES)[number];
@@ -235,7 +233,6 @@ export const COMMODITY_LABELS: Record<CommodityType, string> = {
   ordnance: "Ordnance & Weapons Systems",
   plastics: "Plastics & Polymers",
   network_services: "Network Services",
-  entertainment_services: "Entertainment Services",
 };
 
 export const COMMODITY_ICONS: Record<CommodityType, string> = {
@@ -266,7 +263,6 @@ export const COMMODITY_ICONS: Record<CommodityType, string> = {
   ordnance: "Ord",
   plastics: "Pl",
   network_services: "NS",
-  entertainment_services: "Ent",
 };
 
 /** Hero image slug for each commodity (served by /api/images/hero/[slug]) */
@@ -298,7 +294,6 @@ export const COMMODITY_HERO_SLUGS: Record<CommodityType, string> = {
   ordnance: "commodity-ordnance",
   plastics: "commodity-plastics",
   network_services: "commodity-network-services",
-  entertainment_services: "commodity-entertainment-services",
 };
 
 /** Alt text for commodity hero images */
@@ -331,7 +326,6 @@ export const COMMODITY_HERO_ALTS: Record<CommodityType, string> = {
   ordnance: "Ordnance assembly line at a weapons manufacturing facility",
   plastics: "Industrial polymer extrusion and plastics manufacturing plant",
   network_services: "Fiber optic data center network infrastructure",
-  entertainment_services: "Concert arena filled with an audience",
 };
 
 /**
@@ -366,7 +360,6 @@ export const COMMODITY_BASE_PRICES: Record<CommodityType, number> = {
   ordnance: 4500, // $/lot (weapons system lot)
   plastics: 1000, // $/ton
   network_services: 1200, // $/subscription-equivalent
-  entertainment_services: 600, // $/event-equivalent
 };
 
 /**
@@ -420,7 +413,6 @@ export const COMMODITY_UNITS: Record<CommodityType, string> = {
   ordnance: "lots",
   plastics: "tons",
   network_services: "subscriptions",
-  entertainment_services: "events",
 };
 
 /**
@@ -459,7 +451,6 @@ export const COMMODITY_STABILIZER: Record<CommodityType, number> = {
   rare_earth: 4214, // merged: value-weighted sum of copper+rare-earth 1500-unit floors at the $21k base
   vehicles: 1500,
   ordnance: 1500,
-  entertainment_services: 2900,
   healthcare_services: 3200,
   consulting_services: 4100,
   pharmaceuticals: 4400,
@@ -726,21 +717,17 @@ export const GOVT_HEALTHCARE_DEMAND_RATE = 0.015;
  * them while this does not.
  */
 /**
- * Share of a PLANNED economy's education budget that buys state broadcasting.
+ * Share of a PLANNED economy's education budget that buys state media.
  *
- * A command economy funds its media directly rather than selling airtime, so
- * this is the buyer that replaces the advertising market its broadcasters were
- * pointed at (see `applyPlannedEconomyOutputMix`). Applies ONLY to planned
- * economies — a market economy's education budget buys no such thing.
+ * A command economy funds its media directly rather than leaving it to
+ * commercial advertisers, so this is the domestic buyer for its broadcasters'
+ * output (advertising since the entertainment commodity was removed,
+ * 2026-10-19). Applies ONLY to planned economies; a market economy's education
+ * budget buys no such thing.
  *
- * Sized against prod at turn 114. Poland's media puts out 731,673 units/day of
- * advertising, which value-conserves to 182,918 units/day of state
- * broadcasting; its education line is 19.4bn zloty, ~₳810M/yr at the era rate,
- * which is 1,962,000 units/turn of headroom at the era base price. 182,918 /
- * 1,962,000 = 0.093. Bloc-wide that is roughly ₳345M/yr of state media
- * spending, which is a real and visible slice of a propaganda state's budget
- * rather than a rounding error, and it lands bloc entertainment services near
- * balance instead of 700x oversupplied.
+ * Sized against prod at turn 114 (Poland's education line, ~₳810M/yr at the
+ * era rate): roughly ₳345M/yr of bloc-wide state media spending, a visible
+ * slice of a propaganda state's budget rather than a rounding error.
  */
 export const STATE_MEDIA_DEMAND_RATE = 0.09;
 
@@ -813,14 +800,6 @@ export const GOVT_DEFENSE_ORDNANCE_DEMAND_RATE = 0.005;
  * At 4e-6, a $500B-GDP state generates ~1,667 units/day ($500B × 4e-6 / $1200 base price).
  */
 export const NETWORK_SERVICES_GDP_DEMAND_FRACTION = 4e-6;
-
-/**
- * Fraction of state GDP that converts to entertainment_services demand (leisure spending).
- * Raised 6e-7 → 2.5e-6: retail and media sectors now also demand entertainment services,
- * so the macro baseline is scaled to match the expanded demand profile.
- * At 2.5e-6, a $500B-GDP state generates ~2,083 units/day ($500B × 2.5e-6 / $600 base price).
- */
-export const ENTERTAINMENT_SERVICES_GDP_DEMAND_FRACTION = 2.5e-6;
 
 /**
  * Fraction of state GDP that converts to construction_services demand (infrastructure/GDP expansion).
@@ -1606,7 +1585,6 @@ export const COMMODITY_COLORS: Record<CommodityType, string> = {
   ordnance: "bg-red-700/15 text-red-600 border-red-700/30",
   plastics: "bg-purple-500/15 text-purple-400 border-purple-500/30",
   network_services: "bg-sky-700/15 text-sky-600 border-sky-700/30",
-  entertainment_services: "bg-rose-600/15 text-rose-500 border-rose-600/30",
 };
 
 interface CommodityFlow {
@@ -1655,10 +1633,7 @@ export const SECTOR_SUPPLY: Partial<Record<OperatingSectorType, CommodityFlow[]>
     { commodity: "software", rate: 0.2 },
     { commodity: "network_services", rate: 0.4 },
   ],
-  media_entertainment: [
-    { commodity: "advertising", rate: 0.2 },
-    { commodity: "entertainment_services", rate: 0.4 },
-  ],
+  media_entertainment: [{ commodity: "advertising", rate: 0.6 }],
   retail: [{ commodity: "retail", rate: 0.5 }],
   logistics: [
     { commodity: "freight", rate: 0.45 },
@@ -1786,7 +1761,6 @@ export const SECTOR_DEMAND: Partial<Record<OperatingSectorType, CommodityFlow[]>
     { commodity: "consulting_services", rate: 0.06 },
     { commodity: "real_estate_services", rate: 0.03 },
     { commodity: "network_services", rate: 0.1 },
-    { commodity: "entertainment_services", rate: 0.06 },
   ],
   defense: [
     { commodity: "steel", rate: 0.2 },
@@ -1872,7 +1846,6 @@ export const SECTOR_DEMAND: Partial<Record<OperatingSectorType, CommodityFlow[]>
     { commodity: "timber", rate: 0.01 },
     { commodity: "plastics", rate: 0.05 },
     { commodity: "network_services", rate: 0.05 },
-    { commodity: "entertainment_services", rate: 0.03 },
   ],
   extraction: [
     { commodity: "energy", rate: 0.2 },
@@ -2110,7 +2083,7 @@ export function computeRawSupplyDemand(
    * see `capacityUnitYield`). But every dollars-to-units leg in THIS function
    * still divides era-nominal revenue by the MODERN `COMMODITY_BASE_PRICES`
    * table: intermediate SECTOR_DEMAND inputs, the macro GDP legs (real estate /
-   * network / entertainment / construction services), and the legacy nameplate
+   * network / construction services), and the legacy nameplate
    * supply path (unowned buckets, extraction). On a 1953 world those legs are
    * therefore undercounted ~70x against plants supply - the structural driver
    * of the 12-312x finished-good gluts and the 0.44-0.68x price floor cluster
@@ -2313,14 +2286,7 @@ export function computeRawSupplyDemand(
     const rawSupplyMix: Partial<Record<CommodityType, number>> = strategyRates
       ? strategyRates.supply
       : Object.fromEntries((SECTOR_SUPPLY[st] ?? []).map((f) => [f.commodity, f.rate]));
-    const strategySupplyEntries = Object.entries(
-      applyPlannedEconomyOutputMix(
-        st,
-        rawSupplyMix,
-        sector.plannedEconomy === true,
-        sector.mediaDiscriminator
-      )
-    ) as [CommodityType, number][];
+    const strategySupplyEntries = Object.entries(rawSupplyMix) as [CommodityType, number][];
     const supplyEntries = [...strategySupplyEntries];
     if (plantsEnabled && sector.outputUnitsByCommodity) {
       const existing = new Set(supplyEntries.map(([commodity]) => commodity));
@@ -2637,24 +2603,6 @@ export function computeRawSupplyDemand(
         byState.set(stateId, stateMap);
       }
       byState.get(stateId)!.get("network_services")!.demand += units;
-    }
-  }
-
-  // ── Entertainment Services: macro demand from GDP (leisure spending) ─────────
-  if (stateGdpMap) {
-    const esBasePrice = COMMODITY_BASE_PRICES["entertainment_services"];
-    for (const [stateId, gdp] of stateGdpMap) {
-      if (gdp <= 0) continue;
-      const units = ((gdp * ENTERTAINMENT_SERVICES_GDP_DEMAND_FRACTION) / esBasePrice) * luScale;
-      if (units <= 0) continue;
-      global.get("entertainment_services")!.demand += units;
-      addUnscaledDemand("entertainment_services", units / luScale);
-      if (!byState.has(stateId)) {
-        const stateMap = new Map<CommodityType, { supply: number; demand: number }>();
-        for (const c of COMMODITY_TYPES) stateMap.set(c, { supply: 0, demand: 0 });
-        byState.set(stateId, stateMap);
-      }
-      byState.get(stateId)!.get("entertainment_services")!.demand += units;
     }
   }
 

@@ -21,7 +21,7 @@ export interface MediaProductKind {
   id: MediaProductKindId;
   modelId: MediaOperatingModelId;
   label: string;
-  outputCommodities: readonly ("advertising" | "entertainment_services")[];
+  outputCommodities: readonly "advertising"[];
   /** Share of the model's audience that can reach a new title, from 0 to 1. */
   coverage: number;
   durations: ProductLifecycleDurations;
@@ -68,7 +68,7 @@ export const MEDIA_PRODUCT_KINDS: readonly MediaProductKind[] = [
     id: "cable_program",
     modelId: "cable_tv",
     label: "Cable program",
-    outputCommodities: ["advertising", "entertainment_services"],
+    outputCommodities: ["advertising"],
     coverage: 0.65,
     durations: { development: 5, launch: 4, growth: 12, mature: 24, decline: 10 },
     tail: "syndication",
@@ -78,7 +78,7 @@ export const MEDIA_PRODUCT_KINDS: readonly MediaProductKind[] = [
     id: "film",
     modelId: "film_studio",
     label: "Film",
-    outputCommodities: ["entertainment_services"],
+    outputCommodities: ["advertising"],
     coverage: 0.4,
     durations: { development: 10, launch: 4, growth: 8, mature: 16, decline: 12 },
     tail: "syndication",
@@ -88,7 +88,7 @@ export const MEDIA_PRODUCT_KINDS: readonly MediaProductKind[] = [
     id: "music_release",
     modelId: "music_label",
     label: "Music release",
-    outputCommodities: ["entertainment_services"],
+    outputCommodities: ["advertising"],
     coverage: 0.25,
     durations: { development: 4, launch: 4, growth: 10, mature: 20, decline: 10 },
     tail: "backlist",
@@ -98,7 +98,7 @@ export const MEDIA_PRODUCT_KINDS: readonly MediaProductKind[] = [
     id: "book",
     modelId: "publishing_house",
     label: "Book",
-    outputCommodities: ["advertising", "entertainment_services"],
+    outputCommodities: ["advertising"],
     coverage: 0.2,
     durations: { development: 8, launch: 4, growth: 12, mature: 24, decline: 12 },
     tail: "backlist",
@@ -108,7 +108,7 @@ export const MEDIA_PRODUCT_KINDS: readonly MediaProductKind[] = [
     id: "streaming_original",
     modelId: "streaming_platform",
     label: "Streaming original",
-    outputCommodities: ["advertising", "entertainment_services"],
+    outputCommodities: ["advertising"],
     coverage: 0.6,
     durations: { development: 8, launch: 4, growth: 12, mature: 24, decline: 12 },
     tail: "backlist",

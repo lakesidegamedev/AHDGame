@@ -22,8 +22,13 @@ export interface PrimaryMetricDefinition {
   openingSource: MetricOpeningSource;
 }
 
-export const primaryMetrics: readonly PrimaryMetricDefinition[] =
-  catalog as PrimaryMetricDefinition[];
+export const primaryMetrics: readonly PrimaryMetricDefinition[] = (
+  catalog as PrimaryMetricDefinition[]
+).map((metric) => ({
+  ...metric,
+  // Publication is independent of history sampling and event-owned reporting.
+  refresh: /^\d+$/.test(metric.refresh) ? "1" : metric.refresh,
+}));
 
 export function primaryMetricById(id: string): PrimaryMetricDefinition | undefined {
   return primaryMetrics.find((metric) => metric.id === id);

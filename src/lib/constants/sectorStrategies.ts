@@ -28,7 +28,6 @@ import {
   type OperatingSectorType,
 } from "./corporations";
 import type { CommodityType } from "./commodities";
-import { COMMODITY_BASE_PRICES } from "./commodities";
 import {
   MEDIA_OPERATING_MODELS,
   mediaOperatingModelOutputRates,
@@ -97,7 +96,7 @@ export function getMediaOperatingModelStrategies(sectorType: string): SectorStra
           ? [[commodity, rate]]
           : [];
       })
-    ) as Partial<Record<"advertising" | "entertainment_services", number>>;
+    ) as Partial<Record<"advertising", number>>;
     const sourceBudget = Object.values(outputSourceRates).reduce(
       (total, rate) => total + (rate ?? 0),
       0
@@ -108,7 +107,7 @@ export function getMediaOperatingModelStrategies(sectorType: string): SectorStra
         commodity,
         (rate ?? 0) / sourceBudget,
       ])
-    ) as Partial<Record<"advertising" | "entertainment_services", number>>;
+    ) as Partial<Record<"advertising", number>>;
 
     return [
       {
@@ -348,89 +347,18 @@ function blendRates(
   return result;
 }
 
-// ─── Planned-economy output remap ───────────────────────────────────────────
-
-/**
- * What media produces in a command economy instead of `advertising`.
- *
- * Advertising is a market institution: it exists because rival brands bid for
- * custom. A planned economy has no such contest, so its broadcasters, presses
- * and cinemas are producing state information and culture, which households
- * consume — not airtime sold to advertisers.
- *
- * The 1953 seed nonetheless gave every Warsaw Pact state a full commercial
- * media sector on the standard strategy, so the bloc was pushing 3,343,618
- * units/day of advertising — 54% of world supply — into economies whose
- * combined advertising demand was 4,736 units/day. Measured on prod at turn
- * 114: Hungary ran 1,181x oversupplied, Czechoslovakia and Bulgaria 786x,
- * Poland 779x. That glut set the world price and pinned it to the deflation
- * clamp at 0.32x base, so every media owner on Earth was selling ~2% of output
- * at a 68% discount.
- */
-export const PLANNED_ECONOMY_MEDIA_OUTPUT: CommodityType = "entertainment_services";
-
-/**
- * Re-denominate a sector's OUTPUT mix for a planned economy.
- *
- * Pure and total: returns the input untouched for market economies, for
- * non-media sectors, and for a mix that produces no advertising, so every
- * existing call site is byte-identical unless the sector is bloc media.
- *
- * MUST be applied at every site that resolves output rates — the world supply
- * ledger AND the clearing offer both — or the offered book and the ledger drift
- * apart and clearing's lagged-supply reconciliation misfires. That is why this
- * lives here rather than being inlined at either call site.
- */
-export function applyPlannedEconomyOutputMix(
-  sectorType: OperatingSectorType,
-  supply: Partial<Record<CommodityType, number>>,
-  plannedEconomy: boolean,
-  mediaDiscriminator: string | null | undefined
-): Partial<Record<CommodityType, number>> {
-  if (!plannedEconomy || !isNewsMediaLane(sectorType, mediaDiscriminator)) return supply;
-  const advertising = supply.advertising ?? 0;
-  if (!(advertising > 0)) return supply;
-  const remapped: Partial<Record<CommodityType, number>> = { ...supply };
-  delete remapped.advertising;
-  // Preserve the CAPACITY UNIT YIELD k = Σ(rate / basePrice) — the quantity the
-  // engine actually uses (`capacityUnitYield` → `revenuePerCapacityUnit` → build
-  // cost and facility sizing). Holding k means the rate scales by
-  // base_new / base_old, so 0.5 advertising becomes 2.0 state broadcasting.
-  //
-  // The obvious-looking alternative, conserving Σ(rate × basePrice), is not an
-  // invariant of anything the engine computes: it moves k by the price ratio and
-  // `facilityQuantum.test.ts` fails on the resulting RPU shift.
-  //
-  // This does NOT hold output VALUE constant. Under plants a single-commodity
-  // mix has `commodityMixWeight` 1 whatever the rate, so the sector still makes
-  // the same `producedUnits`, now priced at 600 rather than 150. Capacity is the
-  // only lever for that, which is why the bloc media seed is right-sized in the
-  // same pass. See ops-knowledge `plants-output-mix-invariants`.
-  const rateScale =
-    COMMODITY_BASE_PRICES[PLANNED_ECONOMY_MEDIA_OUTPUT] / COMMODITY_BASE_PRICES.advertising;
-  remapped[PLANNED_ECONOMY_MEDIA_OUTPUT] =
-    (remapped[PLANNED_ECONOMY_MEDIA_OUTPUT] ?? 0) + advertising * rateScale;
-  return remapped;
-}
+// ─── Media supply derates ─────────────────────────────────────────────────────
 
 /**
  * Share of a planned economy's media output that reaches the market.
  *
  * The 1953 seed sized every bloc state's media sector like a Western commercial
- * broadcaster — 82,000 to 806,000 capitalStock each, one per state — so the bloc
- * physically produces about 4x what a state media budget plausibly funds. Under
- * plants the output mix cannot express that: `commodityMixWeight` is 1 for a
- * single-commodity mix whatever the rate, so a re-pointed sector still makes the
- * same `producedUnits`. Capacity is the only real lever, and derating the market
- * contribution is the reversible, code-side form of it — no mutation of live
- * state-owned sectors.
- *
- * 0.25 is chosen to be REVENUE-NEUTRAL: state broadcasting prices at 4x
- * advertising, so a quarter of the units at four times the price is the same
- * ₳/day the sector would earn selling its whole advertising output. Bloc media
- * therefore neither gains free money from the re-pointing nor is broken by the
- * derate — and in practice it is a large gain, because today those sectors clear
- * 0.14% of output at a third of base price.
+ * broadcaster, 82,000 to 806,000 capitalStock each, one per state, so the bloc
+ * physically produces about 4x what a state media budget plausibly funds.
+ * Capacity is the only real lever under plants, and derating the market
+ * contribution is the reversible, code-side form of it: no mutation of live
+ * state-owned sectors. Bloc media sells advertising, bought domestically by
+ * the planned-only state media line (STATE_MEDIA_DEMAND_RATE).
  *
  * Proper fix is to right-size the seed; see ops-knowledge
  * `plants-output-mix-invariants`.
@@ -469,7 +397,7 @@ export const MARKET_ECONOMY_MEDIA_SUPPLY_FACTOR = 0.1;
 /**
  * True only for the news and broadcast media lane. A `media` row with the
  * `entertainment` discriminator runs the entertainment lane's economics, so the
- * media derate and the planned-economy advertising remap never reach it. The discriminator is a required argument at
+ * media derate never reaches it. The discriminator is a required argument at
  * every call site so the ledger and the clearing offer cannot drift apart.
  */
 export function isNewsMediaLane(

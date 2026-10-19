@@ -65,7 +65,6 @@ describe("buildTradeFlowSnapshot", () => {
     "construction_services",
     "healthcare_services",
     "real_estate_services",
-    "entertainment_services",
   ] as const)(
     "leaves %s surplus and deficits local even with an open foreign lane",
     (commodity) => {

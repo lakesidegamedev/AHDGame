@@ -220,12 +220,7 @@ export function makeNppCorpDecision(
     dominanceSectorsCache ??= sectors.map((s) => toDominanceSector(s, ctx.turn));
     return commodityDominanceRatio({
       sectors: dominanceSectorsCache,
-      commodities: sectorOutputCommodities(
-        sector,
-        ctx.turn,
-        plants.year,
-        plants.commandEconomyEnabled === true
-      ),
+      commodities: sectorOutputCommodities(sector, ctx.turn),
       demandOf,
       targetSectorId: sector._id.toString(),
       extraUnits,

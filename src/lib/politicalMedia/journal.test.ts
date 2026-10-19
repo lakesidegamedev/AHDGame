@@ -159,13 +159,13 @@ describe("political media order journal", () => {
     const sectorInput: SectorClearingInput = {
       sectorId: "media-sector",
       revenue: 100,
-      supplyRates: { advertising: 0.5, entertainment_services: 0.5 },
+      supplyRates: { advertising: 0.5, software: 0.5 },
       posture: 0,
     };
     const sectorClearing: SectorClearingResult = {
       factor: 0.5,
       soldFraction: 0.5,
-      soldByCommodity: { advertising: 0.5, entertainment_services: 0.5 },
+      soldByCommodity: { advertising: 0.5, software: 0.5 },
       effectivePosture: 0,
     };
     const published = settlePoliticalAdMarket({

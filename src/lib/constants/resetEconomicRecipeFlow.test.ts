@@ -10,7 +10,8 @@ import { computeInputsCost } from "@/lib/corporations/physicalPnl";
 describe("1991 input rails agree while legacy presets retain their original values", () => {
   it.each([
     ["1953-default", 0.15, 0.18],
-    ["1991-default", 0.16, 0.16],
+    // 1991 standards carry the advertising input (2026-10-19); energy was trimmed to fund it.
+    ["1991-default", 0.142, 0.142],
     ["2019-default", 0.15, 0.18],
   ] as const)(
     "uses the qualified %s input basket on all rails",

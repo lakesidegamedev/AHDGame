@@ -20,7 +20,7 @@ export { LoadingSpinner } from "./LoadingSpinner";
 export { PageLoader } from "./PageLoader";
 export { PageError, type PageErrorCode } from "./PageError";
 export { PageErrorBoundary } from "./PageErrorBoundary";
-export { ErrorPageContent } from "./ErrorPageContent";
+export { ErrorPageContent, type RouteErrorProps } from "./ErrorPageContent";
 export { MobileSelect } from "./MobileSelect";
 export {
   HeroStatsStrip,

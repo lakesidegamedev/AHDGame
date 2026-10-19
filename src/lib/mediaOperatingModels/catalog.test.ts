@@ -71,21 +71,12 @@ describe("media operating model catalog", () => {
     }
   });
 
-  it("preserves the legacy base-value budget while allowing recipe unit yield to change", () => {
+  it("puts the whole legacy base-value budget on advertising", () => {
     const rates = mediaOperatingModelOutputRates(
-      { advertising: 0.2, entertainment_services: 0.4 },
-      { advertising: 0.25, entertainment_services: 0.75 }
+      { advertising: 0.2, software: 0.4 },
+      { advertising: 1 }
     );
-    expect(Object.values(rates).reduce((sum, rate) => sum + (rate ?? 0), 0)).toBeCloseTo(0.6);
-
-    const legacyYield = 0.2 / 20_000 + 0.4 / 18_000;
-    const modelYield =
-      (rates.advertising ?? 0) / 20_000 + (rates.entertainment_services ?? 0) / 18_000;
-    expect(Math.abs(modelYield - legacyYield)).toBeGreaterThan(1e-8);
-    expect(
-      ((rates.advertising ?? 0) / 20_000) * 20_000 +
-        ((rates.entertainment_services ?? 0) / 18_000) * 18_000
-    ).toBeCloseTo(0.6);
+    expect(rates).toEqual({ advertising: 0.6000000000000001 });
   });
 
   it("rejects empty, invalid, or non-normalized value shares", () => {

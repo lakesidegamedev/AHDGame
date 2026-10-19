@@ -12,6 +12,7 @@ import {
 } from "@/lib/api/schemas/supplyListings";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { supplyAgreementRequiresState } from "@/lib/market/commodityMarketScope";
+import { COMMODITY_TYPES } from "@/lib/constants/commodities";
 import type { Corporation, GameConfig, State } from "@/lib/db/types";
 import type { SupplyListing, SupplyListingView } from "@/lib/db/types/supplyListing";
 import {
@@ -58,7 +59,7 @@ export async function GET(request: Request, context: Context) {
       collection
         .find({
           expiresAtTurn: { $gt: turn },
-          ...(query.data.commodity ? { commodity: query.data.commodity } : {}),
+          commodity: query.data.commodity ?? { $in: [...COMMODITY_TYPES] },
         })
         .sort({ updatedAt: -1, _id: 1 })
         .skip(query.data.page * 30)

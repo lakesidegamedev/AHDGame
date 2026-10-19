@@ -21,7 +21,6 @@ describe("migrateStateScopedSupplyAgreements", () => {
       "healthcare_services",
       "real_estate_services",
       "freight",
-      "entertainment_services",
     ];
     const updateMany = vi
       .fn()

@@ -42,7 +42,16 @@ export interface PresidentialStageProps {
   map: ReactNode;
   /** The state squares board. When given, a toggle switches between it and the map. */
   squares?: ReactNode;
+  /** The battleground margin map. When given, it joins the toggle as a third view. */
+  battleground?: ReactNode;
 }
+
+type BoardView = "map" | "squares" | "battleground";
+const VIEW_LABEL: Record<BoardView, string> = {
+  map: "Map",
+  squares: "Squares",
+  battleground: "Battleground",
+};
 
 /**
  * Height of the site's fixed bottom status bar, kept current. The stage fills
@@ -213,10 +222,13 @@ export function PresidentialStage({
   right,
   map,
   squares,
+  battleground,
 }: PresidentialStageProps) {
-  const [view, setView] = useState<"map" | "squares">("map");
+  const [view, setView] = useState<BoardView>("map");
   const statusBar = useStatusBarHeight();
-  const showSquares = view === "squares" && !!squares;
+  const boards: Record<BoardView, ReactNode> = { map, squares, battleground };
+  const views = (Object.keys(boards) as BoardView[]).filter((v) => v === "map" || boards[v]);
+  const shown = boards[view] ? view : "map";
 
   // Stored widths only exist in the browser: the server renders the defaults
   // and the stored layout takes over on hydration. A drag overrides both and
@@ -248,18 +260,18 @@ export function PresidentialStage({
     [setWidths]
   );
 
-  const toggle = squares ? (
+  const toggle = views[1] ? (
     <div
       role="tablist"
       aria-label="Board view"
       style={{ display: "inline-flex", flexShrink: 0, border: `1px solid ${BLEND.hairlineStrong}` }}
     >
-      {(["map", "squares"] as const).map((v) => (
+      {views.map((v) => (
         <button
           key={v}
           type="button"
           role="tab"
-          aria-selected={view === v}
+          aria-selected={shown === v}
           onClick={() => setView(v)}
           style={{
             padding: "6px 14px",
@@ -270,11 +282,11 @@ export function PresidentialStage({
             letterSpacing: ".08em",
             textTransform: "uppercase",
             border: "none",
-            color: view === v ? BLEND.ink : BLEND.muted,
-            background: view === v ? BLEND.hairlineStrong : "transparent",
+            color: shown === v ? BLEND.ink : BLEND.muted,
+            background: shown === v ? BLEND.hairlineStrong : "transparent",
           }}
         >
-          {v === "map" ? "Map" : "Squares"}
+          {VIEW_LABEL[v]}
         </button>
       ))}
     </div>
@@ -354,11 +366,13 @@ export function PresidentialStage({
         ) : null}
         {ticker}
         {strip}
-        {showSquares ? (
-          <div className="pres-stage__board pres-stage__board--squares">{squares}</div>
-        ) : (
-          <div className="pres-stage__board">{map}</div>
-        )}
+        <div
+          className={
+            shown === "map" ? "pres-stage__board" : "pres-stage__board pres-stage__board--squares"
+          }
+        >
+          {boards[shown]}
+        </div>
       </div>
 
       {right ? (

@@ -121,3 +121,39 @@ describe("useClickOutside", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 });
+
+it("detaches both dismissal listeners when closed or unmounted, and supports reopening", () => {
+  const inner = document.createElement("div");
+  const child = inner.appendChild(document.createElement("button"));
+  document.body.appendChild(inner);
+  const ref = createRef<HTMLDivElement>();
+  Object.defineProperty(ref, "current", { value: inner });
+  const onClose = vi.fn();
+  const { rerender, unmount } = renderHook(
+    ({ active }) => useClickOutside(ref, active, onClose, { closeOnEscape: true }),
+    { initialProps: { active: false } }
+  );
+  const escape = () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+  const outside = () => document.body.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+  escape();
+  outside();
+  expect(onClose).not.toHaveBeenCalled();
+  rerender({ active: true });
+  child.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+  expect(onClose).not.toHaveBeenCalled();
+  escape();
+  expect(onClose).toHaveBeenCalledOnce();
+  onClose.mockClear();
+  rerender({ active: false });
+  escape();
+  outside();
+  expect(onClose).not.toHaveBeenCalled();
+  rerender({ active: true });
+  outside();
+  expect(onClose).toHaveBeenCalledOnce();
+  unmount();
+  escape();
+  outside();
+  expect(onClose).toHaveBeenCalledOnce();
+});

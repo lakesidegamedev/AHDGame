@@ -16,6 +16,7 @@
  * Swedish-speaking coasts liberal, and the resettled Karelian east radicalised
  * in both agrarian and communist directions.
  */
+import { convertLayer1Census } from "@/lib/seeds/international/convertLayer1Census";
 import type { CountryLayer1Model, DemographicPosition } from "@/lib/seeds/international/types";
 import { fiRegionCensusData, type FIRegionLayer1 } from "@/lib/seeds/fi/fiRegionCensusData";
 import { fiRegionCensusData1953 } from "@/lib/seeds/fi/fiRegionCensusData1953";
@@ -204,22 +205,7 @@ const ERA_CENSUS: Partial<Record<EraId, Record<string, FIRegionLayer1>>> = {
   "2027": fiRegionCensusData,
 };
 
-function convertCensus(
-  raw: Record<string, FIRegionLayer1>
-): Record<string, Record<string, Record<string, number>>> {
-  return Object.fromEntries(
-    Object.entries(raw).map(([regionId, layer1]) => [
-      regionId,
-      {
-        ethnicity: layer1.ethnicity as unknown as Record<string, number>,
-        age: layer1.age as unknown as Record<string, number>,
-        education: layer1.education as unknown as Record<string, number>,
-        income: layer1.income as unknown as Record<string, number>,
-        urbanization: layer1.urbanization as unknown as Record<string, number>,
-      },
-    ])
-  );
-}
+const convertCensus = convertLayer1Census<FIRegionLayer1>;
 
 export function getFiModel(era: EraId): CountryLayer1Model {
   const census = convertCensus(ERA_CENSUS[era] ?? fiRegionCensusData);

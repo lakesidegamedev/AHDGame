@@ -10,6 +10,7 @@
  * bloc (Moderate), the agrarian Centre, urban Liberals, the Left Communists, and a
  * resource-economy rural North. The country skews strongly secular/progressive.
  */
+import { convertLayer1Census } from "@/lib/seeds/international/convertLayer1Census";
 import type { CountryLayer1Model, DemographicPosition } from "@/lib/seeds/international/types";
 import { seRegionCensusData, type SERegionLayer1 } from "@/lib/seeds/se/seRegionCensusData";
 import { seRegionCensusData1953 } from "@/lib/seeds/se/seRegionCensusData1953";
@@ -200,22 +201,7 @@ const ERA_CENSUS: Partial<Record<EraId, Record<string, SERegionLayer1>>> = {
   "2027": seRegionCensusData,
 };
 
-function convertCensus(
-  raw: Record<string, SERegionLayer1>
-): Record<string, Record<string, Record<string, number>>> {
-  return Object.fromEntries(
-    Object.entries(raw).map(([regionId, layer1]) => [
-      regionId,
-      {
-        ethnicity: layer1.ethnicity as unknown as Record<string, number>,
-        age: layer1.age as unknown as Record<string, number>,
-        education: layer1.education as unknown as Record<string, number>,
-        income: layer1.income as unknown as Record<string, number>,
-        urbanization: layer1.urbanization as unknown as Record<string, number>,
-      },
-    ])
-  );
-}
+const convertCensus = convertLayer1Census<SERegionLayer1>;
 
 export function getSeModel(era: EraId): CountryLayer1Model {
   const census = convertCensus(ERA_CENSUS[era] ?? seRegionCensusData);

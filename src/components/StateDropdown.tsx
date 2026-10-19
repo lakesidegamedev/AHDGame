@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
+import { useClickOutside } from "@/hooks/useClickOutside";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { DROPDOWN_PANEL_CLASS } from "@/components/navbar/dropdownStyles";
@@ -54,24 +55,8 @@ export function StateDropdown({
     return parentNation?.devolvedBody ?? "State Legislature";
   })();
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setIsOpen(false);
-    };
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      document.addEventListener("keydown", handleKeyDown);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen]);
+  const closeDropdown = useCallback(() => setIsOpen(false), []);
+  useClickOutside(dropdownRef, isOpen, closeDropdown, { closeOnEscape: true });
 
   return (
     <div className="relative" ref={dropdownRef}>

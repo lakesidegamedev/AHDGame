@@ -102,9 +102,8 @@ describe("D9 — rescaleCapacityForStrategyChange", () => {
   });
 
   it.each([
-    ["media", "standard", "cable_tv"],
-    ["media", "standard", "publishing_house"],
-    ["media_entertainment", "standard", "streaming_platform"],
+    ["media", "standard", "digital_first"],
+    ["media_entertainment", "standard", "streaming"],
   ] as Array<[CorporationType, string, string]>)(
     "keeps mixed-output model capacity and paid queue value stable for %s %s -> %s",
     (type, from, to) => {

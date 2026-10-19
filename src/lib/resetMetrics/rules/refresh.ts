@@ -46,7 +46,8 @@ function sameObservation(a: OpeningMetricObservation | undefined, b: OpeningMetr
     a.status === b.status &&
     a.source === b.source &&
     a.owner === b.owner &&
-    a.note === b.note
+    a.note === b.note &&
+    a.lastUpdatedTurn === b.lastUpdatedTurn
   );
 }
 
@@ -86,7 +87,13 @@ export function dueResetMetricIds(
  * visible as missing; callers must not certify the result as a live board.
  */
 export function refreshResetMetricBoard(input: MetricRefreshInput): MetricRefreshResult {
-  const { board, turn, updates, cohortDue, electionDue } = input;
+  const { board, turn, cohortDue, electionDue } = input;
+  const updates = Object.fromEntries(
+    Object.entries(input.updates).map(([id, observation]) => [
+      id,
+      { ...observation, lastUpdatedTurn: turn },
+    ])
+  );
   if (
     !Number.isSafeInteger(turn) ||
     turn < board.asOfTurn ||
@@ -105,6 +112,12 @@ export function refreshResetMetricBoard(input: MetricRefreshInput): MetricRefres
     Object.keys(board.observations).some((id) => !expectedIds.has(id))
   ) {
     throw new Error("Reset metric board is incomplete before refresh");
+  }
+  if (
+    board.openingValues &&
+    expected.some((metric) => !Number.isFinite(board.openingValues![metric.id]))
+  ) {
+    throw new Error("Reset metric board has an incomplete immutable opening baseline");
   }
   for (const [id, observed] of Object.entries(updates)) {
     const metric = expected.find((entry) => entry.id === id);

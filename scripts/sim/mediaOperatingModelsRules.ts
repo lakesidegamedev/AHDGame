@@ -63,9 +63,6 @@ const models = LANES.flatMap((lane) => {
       ) < 1e-6 && rescaledQueue[0].costPaidAnchor === queue[0].costPaidAnchor;
     const nominalRates = mediaOperatingModelOutputRates(baseline.supply, {
       advertising: strategy.supply.advertising ? strategy.supply.advertising / outputValue : 0,
-      entertainment_services: strategy.supply.entertainment_services
-        ? strategy.supply.entertainment_services / outputValue
-        : 0,
     });
     return {
       lane,

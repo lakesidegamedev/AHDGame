@@ -12,11 +12,7 @@ import {
   COMMODITY_LABELS,
   type CommodityType,
 } from "@/lib/constants/commodities";
-import {
-  applyPlannedEconomyOutputMix,
-  getEffectiveStrategyRatesForOperatingModel,
-} from "@/lib/constants/sectorStrategies";
-import { isPlannedEconomy } from "@/lib/constants/commandEconomy";
+import { getEffectiveStrategyRatesForOperatingModel } from "@/lib/constants/sectorStrategies";
 import { undeliveredUnits } from "@/lib/corporations/buildDelivery";
 import type { CommodityTollModel } from "@/lib/corporations/rules/commodityDominanceRamp";
 import {
@@ -83,7 +79,7 @@ export function toDominanceSector(row: FirmSectorRow, turn: number): CommodityDo
   };
 }
 
-/** Commodities a sector's output mix contains, honouring the planned-economy remap. */
+/** Commodities a sector's output mix contains. */
 export function sectorOutputCommodities(
   sector: Pick<
     CommodityDominanceSector,
@@ -93,11 +89,8 @@ export function sectorOutputCommodities(
     | "strategyId"
     | "transitionFromStrategyId"
     | "transitionStartTurn"
-    | "countryId"
   >,
-  turn: number,
-  currentYear: number,
-  commandEconomyEnabled: boolean
+  turn: number
 ): CommodityType[] {
   const rates = getEffectiveStrategyRatesForOperatingModel(
     sector.sectorType,
@@ -108,12 +101,7 @@ export function sectorOutputCommodities(
     sector.industryModel,
     sector.mediaDiscriminator
   );
-  const mix = applyPlannedEconomyOutputMix(
-    sector.sectorType,
-    rates.supply ?? {},
-    isPlannedEconomy(sector.countryId, currentYear, commandEconomyEnabled),
-    sector.mediaDiscriminator
-  );
+  const mix = rates.supply ?? {};
   return (Object.keys(mix) as CommodityType[]).filter(
     (c) => (mix[c] ?? 0) > 0 && COMMODITY_BASE_PRICES[c] > 0
   );
@@ -166,12 +154,7 @@ export async function loadCommodityDominanceContext(
     const sectors = (rows as FirmSectorRow[]).map((r) => toDominanceSector(r, args.turn));
     const target = sectors.find((s) => String(s._id) === String(args.sector._id));
     if (!target) return null;
-    const commodities = sectorOutputCommodities(
-      target,
-      args.turn,
-      args.currentYear,
-      commandEconomyEnabled
-    );
+    const commodities = sectorOutputCommodities(target, args.turn);
     if (commodities.length === 0) return null;
     const priceDocs = await db
       .collection<CommodityPrice>("commodityPrices")

@@ -133,6 +133,12 @@ export function metricRefreshLabel(refresh: string): string {
   }
 }
 
+/** National rollups report the oldest contributing regional observation. */
+export function metricFreshnessLabel(turn: number | undefined, nationalRollup = false): string {
+  if (turn === undefined) return "Last updated: not recorded";
+  return nationalRollup ? `Oldest regional update: turn ${turn}` : `Last updated: turn ${turn}`;
+}
+
 export function metricAggregationLabel(aggregation: string): string {
   return AGGREGATION_LABELS[aggregation] ?? "Combined from the relevant underlying records.";
 }

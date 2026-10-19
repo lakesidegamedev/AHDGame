@@ -783,6 +783,12 @@ export function processSector(
     wageLevel: labour.wagesEnabled ? sector.wageLevel : 1,
   });
 
+  // Wanted staff the state could not supply are not paid (as in the producer path).
+  const staffedShare = desiredWorkers > 0 ? computedWorkers / desiredWorkers : 0;
+  const explicitPayrollBasis =
+    (plantsNameplateRevenue * activeFraction * plantCrew * bankingCommodityScale * staffedShare) /
+    TURNS_PER_DAY;
+
   const payrollSpecializationMod = isStateOwned(corp)
     ? 0
     : specializationPayrollModifier(
@@ -820,17 +826,11 @@ export function processSector(
     // Decision 18 diverts branch capacity from production; apply the same scale
     // to the commodity labour-cost basis, with deposit income covering branches.
     // Keep branch headcount, so wagePerWorker reflects the smaller commodity bill.
-    hourlyRevenue: explicitPlantCostsEnabled
-      ? (plantsNameplateRevenue * activeFraction * plantCrew * bankingCommodityScale) /
-        TURNS_PER_DAY
-      : hourlyRevenue,
-    // Staff are paid for the scheduled run of active capacity (crew floor
-    // applies), even when its output cannot sell. This neutral basis also
-    // removes the legacy margin cap on payroll.
-    grossMaintenance: explicitPlantCostsEnabled
-      ? (plantsNameplateRevenue * activeFraction * plantCrew * bankingCommodityScale) /
-        TURNS_PER_DAY
-      : payrollBasis,
+    hourlyRevenue: explicitPlantCostsEnabled ? explicitPayrollBasis : hourlyRevenue,
+    // Staff are paid for the staffed share of the scheduled run of active
+    // capacity (crew floor applies), even when its output cannot sell. This
+    // neutral basis also removes the legacy margin cap on payroll.
+    grossMaintenance: explicitPlantCostsEnabled ? explicitPayrollBasis : payrollBasis,
     computedWorkers,
     techLaborCostMultiplier: techEffects.laborCostMultiplier,
     costOfLivingIndex: sectorMetrics?.economic?.costOfLiving?.value,

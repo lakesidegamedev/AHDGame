@@ -22,6 +22,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { topology } from "topojson-server";
 import { merge as topoMerge } from "topojson-client";
+import { simplifyArc, rewind, roundGeometry } from "./geometry.mjs";
+import { fetchSource } from "./sources.mjs";
 
 const __d = path.dirname(fileURLToPath(import.meta.url));
 const pub = (f) => path.resolve(__d, "../../public", f);
@@ -101,33 +103,6 @@ if (PROVINCE_TO_REGION.size !== 20)
 // Threshold is in deg² of triangle area; output coords round to 4 decimals.
 const SIMPLIFY_MIN_TRIANGLE = 4e-6;
 const ROUND = (v) => Math.round(v * 1e4) / 1e4;
-
-// Visvalingam–Whyatt on one absolute-coordinate arc; first/last points pinned
-// so arc junctions (region tripoints) never move.
-const simplifyArc = (arc) => {
-  if (arc.length <= 2) return arc;
-  const pts = arc.slice();
-  const triArea = (a, b, c) =>
-    Math.abs((b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1])) / 2;
-  let changed = true;
-  while (changed && pts.length > 2) {
-    changed = false;
-    let minArea = Infinity;
-    let minI = -1;
-    for (let i = 1; i < pts.length - 1; i++) {
-      const a = triArea(pts[i - 1], pts[i], pts[i + 1]);
-      if (a < minArea) {
-        minArea = a;
-        minI = i;
-      }
-    }
-    if (minArea < SIMPLIFY_MIN_TRIANGLE) {
-      pts.splice(minI, 1);
-      changed = true;
-    }
-  }
-  return pts;
-};
 // Drop islands smaller than this (deg²; ~60 km²) — sub-pixel at both render
 // scales. Keeps Sicily/Sardinia/Elba; sheds Capri/Ischia/Aeolian specks.
 const MIN_ISLAND_AREA = 5e-3;
@@ -146,45 +121,7 @@ const dropTinyIslands = (geometry) => {
     : { type: "MultiPolygon", coordinates: kept };
 };
 
-// > 0 => clockwise in (lon,lat).
-const windSignedArea = (r) => {
-  let s = 0;
-  for (let i = 0; i < r.length - 1; i++) s += (r[i + 1][0] - r[i][0]) * (r[i + 1][1] + r[i][1]);
-  return s;
-};
-const rewind = (geometry) => {
-  const fixRing = (ring, wantCW) => {
-    const a = windSignedArea(ring);
-    if (a === 0) return ring;
-    return a > 0 === wantCW ? ring : ring.slice().reverse();
-  };
-  const polys = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
-  const fixed = polys.map((poly) => poly.map((ring, i) => fixRing(ring, i === 0)));
-  return geometry.type === "Polygon"
-    ? { type: "Polygon", coordinates: fixed[0] }
-    : { type: "MultiPolygon", coordinates: fixed };
-};
-
-async function fetchSource() {
-  for (const s of SOURCES) {
-    try {
-      let url = s.url;
-      if (s.indirect) {
-        const meta = await (await fetch(url)).json();
-        url = meta?.gjDownloadURL;
-        if (!url) throw new Error("no gjDownloadURL");
-      }
-      const gj = await (await fetch(url)).json();
-      if (gj?.features?.length) return { ...s, gj };
-      throw new Error("no features");
-    } catch (e) {
-      console.warn(`source ${s.name} failed: ${e.message}`);
-    }
-  }
-  throw new Error("all sources failed");
-}
-
-const { gj, nameProp, name: sourceName } = await fetchSource();
+const { gj, nameProp, name: sourceName } = await fetchSource(SOURCES);
 console.log(`source: ${sourceName}, ${gj.features.length} features`);
 
 const objects = {};
@@ -205,23 +142,14 @@ if (seen.size !== 20) throw new Error(`consumed ${seen.size} regions, expected 2
 // Unquantized topology: arcs keep absolute coordinates, so they can be
 // simplified in place (a quantized topology delta-encodes arcs).
 const topo = topology(objects);
-topo.arcs = topo.arcs.map(simplifyArc);
-
-const roundGeometry = (geometry) => {
-  const roundRing = (r) => r.map(([x, y]) => [ROUND(x), ROUND(y)]);
-  const polys = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
-  const rounded = polys.map((poly) => poly.map(roundRing));
-  return geometry.type === "Polygon"
-    ? { type: "Polygon", coordinates: rounded[0] }
-    : { type: "MultiPolygon", coordinates: rounded };
-};
+topo.arcs = topo.arcs.map((arc) => simplifyArc(arc, SIMPLIFY_MIN_TRIANGLE));
 
 const out = [];
 for (const [regionId, { na }] of Object.entries(REGIONS)) {
   const obj = topo.objects[regionId];
   if (!obj) throw new Error(`no regions mapped to ${regionId}`);
   // topoMerge dissolves the macro-region's members, removing internal shared arcs.
-  const geometry = rewind(roundGeometry(dropTinyIslands(topoMerge(topo, [obj]))));
+  const geometry = rewind(roundGeometry(dropTinyIslands(topoMerge(topo, [obj])), ROUND));
   out.push({
     type: "Feature",
     id: regionId,

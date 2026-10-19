@@ -1,15 +1,9 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { ErrorPageContent } from "@/components/ui";
+import { ErrorPageContent, type RouteErrorProps } from "@/components/ui";
 
-export default function ElectionsError({
-  error,
-  reset,
-}: {
-  error: Error & { digest?: string };
-  reset: () => void;
-}) {
+export default function ElectionsError({ error, reset }: RouteErrorProps) {
   const t = useTranslations("elections");
   return (
     <ErrorPageContent

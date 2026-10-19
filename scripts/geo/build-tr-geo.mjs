@@ -18,6 +18,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { topology } from "topojson-server";
 import { merge as topoMerge } from "topojson-client";
+import { rewind } from "./geometry.mjs";
+import { fetchSource } from "./sources.mjs";
 
 const __d = path.dirname(fileURLToPath(import.meta.url));
 const pub = (f) => path.resolve(__d, "../../public", f);
@@ -205,45 +207,7 @@ const dropTinyIslands = (geometry) => {
     : { type: "MultiPolygon", coordinates: kept };
 };
 
-// > 0 => clockwise in (lon,lat).
-const windSignedArea = (r) => {
-  let s = 0;
-  for (let i = 0; i < r.length - 1; i++) s += (r[i + 1][0] - r[i][0]) * (r[i + 1][1] + r[i][1]);
-  return s;
-};
-const rewind = (geometry) => {
-  const fixRing = (ring, wantCW) => {
-    const a = windSignedArea(ring);
-    if (a === 0) return ring;
-    return a > 0 === wantCW ? ring : ring.slice().reverse();
-  };
-  const polys = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
-  const fixed = polys.map((poly) => poly.map((ring, i) => fixRing(ring, i === 0)));
-  return geometry.type === "Polygon"
-    ? { type: "Polygon", coordinates: fixed[0] }
-    : { type: "MultiPolygon", coordinates: fixed };
-};
-
-async function fetchSource() {
-  for (const s of SOURCES) {
-    try {
-      let url = s.url;
-      if (s.indirect) {
-        const meta = await (await fetch(url)).json();
-        url = meta?.gjDownloadURL;
-        if (!url) throw new Error("no gjDownloadURL");
-      }
-      const gj = await (await fetch(url)).json();
-      if (gj?.features?.length) return { ...s, gj };
-      throw new Error("no features");
-    } catch (e) {
-      console.warn(`source ${s.name} failed: ${e.message}`);
-    }
-  }
-  throw new Error("all sources failed");
-}
-
-const { gj, nameProp, name: sourceName } = await fetchSource();
+const { gj, nameProp, name: sourceName } = await fetchSource(SOURCES);
 console.log(`source: ${sourceName}, ${gj.features.length} features`);
 
 const objects = {};

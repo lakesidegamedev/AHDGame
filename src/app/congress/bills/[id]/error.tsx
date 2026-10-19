@@ -1,14 +1,8 @@
 "use client";
 
-import { ErrorPageContent } from "@/components/ui";
+import { ErrorPageContent, type RouteErrorProps } from "@/components/ui";
 
-export default function BillError({
-  error,
-  reset,
-}: {
-  error: Error & { digest?: string };
-  reset: () => void;
-}) {
+export default function BillError({ error, reset }: RouteErrorProps) {
   return (
     <ErrorPageContent
       error={error}

@@ -155,18 +155,6 @@ describe("aggregateCountrySectorMix", () => {
         stateDemand: { CA: 40 },
         turn: 1,
       },
-      {
-        commodity: "entertainment_services",
-        basePrice: 600,
-        globalPrice: 600,
-        globalSupply: 0,
-        globalDemand: 1_000,
-        nationalSupply: { US: 0 },
-        nationalDemand: { US: 1_000 },
-        stateSupply: { CA: 0 },
-        stateDemand: { CA: 1_000 },
-        turn: 1,
-      },
     ]);
     mockFind("corporations", []);
     mockFind("exchangeRates", []);
@@ -183,14 +171,6 @@ describe("aggregateCountrySectorMix", () => {
     expect(automobiles.totalMarketAnchor).toBe(2_600_000);
     expect(automobiles.ownedPercent).toBeCloseTo(3.8, 1);
 
-    const entertainment = mix.find((s) => s.type === "media_entertainment")!;
-    // Entertainment has no plant yet, but its consumer-service demand still
-    // creates a real latent market.
-    // The standard entertainment mix is one-third entertainment services by
-    // capacity weight, so 1,000 latent service units imply $1.5M of sector
-    // capacity on the same basis.
-    expect(entertainment.totalMarketAnchor).toBe(1_500_000);
-    expect(entertainment.ownedPercent).toBe(0);
     expect(db.collectionMocks.unownedSectors!.find).not.toHaveBeenCalled();
     // Plants has no persisted target-growth signal; exposing 0.00% here would
     // claim a measured contraction/expansion that did not occur.
