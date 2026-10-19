@@ -210,13 +210,44 @@ export async function processCommonsByElectionWatcher(
   // reason instead, so this only fires for unhooked paths (`removal`).
   const commonsRows = await officials.find({ officeType: "commons", ...scope }).toArray();
   const tombstones = commonsRows.filter((o) => o.state && o.characterId == null && o.nppId == null);
+  const untracked: ElectedOfficial[] = [];
   for (const row of tombstones) {
-    const live = await findLiveVacancyForOfficial(db, row._id);
-    if (live) continue;
+    if (!(await findLiveVacancyForOfficial(db, row._id))) untracked.push(row);
+  }
+  // Office-switch vacates unset `seatsHeld`, so a bloc row would be
+  // re-contested as one seat and the rest of the bloc lost. Size count-less
+  // rows from the region's deficit: preset seats minus seated MPs, seats live
+  // vacancies already cover, and untracked rows that kept a count. Several
+  // count-less rows in one region split it once: the first takes the deficit
+  // less one seat per other row, the others one each. Never below one.
+  const derivedSeats = new Map<string, number>();
+  const countless = untracked.filter((row) => !((row.seatsHeld ?? 0) > 0));
+  if (countless.length > 0) {
+    const live = await vacancies
+      .find({ countryId: "UK", status: { $in: ["open", "scheduled"] } })
+      .toArray();
+    for (const state of new Set(countless.map((row) => row.state as string))) {
+      const rows = countless.filter((row) => row.state === state);
+      const seated = commonsRows
+        .filter((o) => o.state === state && (o.characterId != null || o.nppId != null))
+        .reduce((n, o) => n + (o.seatsHeld ?? 1), 0);
+      const claimed = live
+        .filter((v) => v.state === state)
+        .reduce((n, v) => n + Math.max(1, v.seats), 0);
+      const kept = untracked
+        .filter((row) => row.state === state && (row.seatsHeld ?? 0) > 0)
+        .reduce((n, row) => n + (row.seatsHeld as number), 0);
+      const deficit = (seatMap[state] ?? 0) - seated - claimed - kept;
+      rows.forEach((row, i) =>
+        derivedSeats.set(row._id.toString(), i === 0 ? Math.max(1, deficit - (rows.length - 1)) : 1)
+      );
+    }
+  }
+  for (const row of untracked) {
     await createCommonsVacancy(db, {
       officialId: row._id,
       state: row.state as string,
-      seats: Math.max(1, row.seatsHeld ?? 1),
+      seats: derivedSeats.get(row._id.toString()) ?? Math.max(1, row.seatsHeld ?? 1),
       reason: "removal",
       priorCharacterName: row.characterName ?? undefined,
       priorParty: typeof row.party === "string" ? row.party : undefined,
