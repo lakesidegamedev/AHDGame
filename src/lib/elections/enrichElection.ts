@@ -3,6 +3,7 @@
  * _enrichElection retains Russian national list nominees together and uses the
  * same primary advance limit as the resolver.
  */
+import { computeSeatMargins } from "@/lib/elections/seatMargins";
 import { oneRowPerTurn } from "@/lib/electionEngine/rules/turnSlice";
 import { hu1991PrimaryAdvanceLimit } from "@/lib/countries/hu/rules/assemblyCampaign1991";
 import { russianAssemblyPrimaryAdvanceLimit } from "@/lib/countries/ru/assemblyPrimaryProgression";
@@ -580,6 +581,42 @@ export async function _enrichElection(
     }
   }
 
+  // Votes to gain or lose a seat, for live races projected through the
+  // standard allocator only. Seated, districted and bloc-list figures come
+  // from other engines, so a margin against this projection would mislead.
+  const projectedByAllocator =
+    !seatedAllocation &&
+    !isBgOrdinary &&
+    !isHu1991Pending &&
+    !(blocQuota && election.totalSeats) &&
+    seatsEstimate != null &&
+    tally != null &&
+    !tally.finalized &&
+    tally.countingMethod !== "pr_stv" &&
+    !(
+      election.electionType === "house" &&
+      (countryId ?? "US") === "US" &&
+      isRedistrictingEnabled(gameState)
+    );
+  const seatMargins =
+    projectedByAllocator && tally
+      ? computeSeatMargins(
+          (votes) =>
+            computeSeatEstimates(
+              election.electionType,
+              election.totalSeats,
+              { ...tally, totalVotes: votes },
+              activeCandidateIdSet,
+              election.countryId ?? "US",
+              election.allocationMethod,
+              election.state
+            ),
+          Object.fromEntries(
+            [...activeCandidateIdSet].map((id) => [id, tally.totalVotes?.[id] ?? 0])
+          )
+        )
+      : null;
+
   // ----- Full-view only fields -----
   let prevElectionId: string | null = null;
   let nextElectionId: string | null = null;
@@ -845,6 +882,7 @@ export async function _enrichElection(
         candidateColors: fullCandidateColors,
         finalized: resolvedTally.finalized,
         seatsEstimate,
+        ...(seatMargins ? { seatMargins } : {}),
         turnSnapshots: resolvedTally.turnSnapshots.slice(-96).map((t) => {
           const persisted =
             t.seatsEstimate && Object.keys(t.seatsEstimate).length > 0
