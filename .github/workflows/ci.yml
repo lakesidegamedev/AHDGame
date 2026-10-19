@@ -374,23 +374,30 @@ jobs:
           # Google's Docker Hub mirror: same mongo:8.0 digest, no anonymous pull limit.
           docker pull mirror.gcr.io/library/mongo:8.0
           docker image inspect --format 'mongo image {{index .RepoDigests 0}}' mirror.gcr.io/library/mongo:8.0 || true
-          docker run --detach --name federation-mongo --publish 27991:27017 mirror.gcr.io/library/mongo:8.0 --replSet federationQualification --bind_ip_all
           mongo_dump() {
             docker ps --all --filter name=federation-mongo || true
             docker logs --tail 200 federation-mongo 2>&1 || true
           }
-          # Probe from the host with the driver, not docker exec, so nothing
-          # writes inside /data/db while the entrypoint is still chowning it.
+          # The container exits during startup on some runs and starts cleanly
+          # on others with the same script and image, so start it up to three
+          # times, keeping each failed attempt's logs in the job output.
           mongo_started=0
-          for attempt in $(seq 1 90); do
-            if [ "$(docker inspect --format '{{.State.Running}}' federation-mongo)" != true ]; then
-              echo "::error::Mongo container exited during startup"; mongo_dump; exit 1
-            fi
-            if node -e 'const {MongoClient}=require("mongodb");const c=new MongoClient("mongodb://127.0.0.1:27991/?directConnection=true",{serverSelectionTimeoutMS:1000});c.db("admin").command({ping:1}).then(()=>process.exit(0),()=>process.exit(1))'; then mongo_started=1; break; fi
-            sleep 1
+          for start in 1 2 3; do
+            docker rm --force federation-mongo >/dev/null 2>&1 || true
+            docker run --detach --name federation-mongo --publish 27991:27017 mirror.gcr.io/library/mongo:8.0 --replSet federationQualification --bind_ip_all
+            # Probe from the host with the driver, not docker exec, so nothing
+            # writes inside /data/db while the entrypoint is still chowning it.
+            for attempt in $(seq 1 90); do
+              if [ "$(docker inspect --format '{{.State.Running}}' federation-mongo)" != true ]; then
+                echo "::warning::Mongo container exited during startup (start $start of 3)"; mongo_dump; break
+              fi
+              if node -e 'const {MongoClient}=require("mongodb");const c=new MongoClient("mongodb://127.0.0.1:27991/?directConnection=true",{serverSelectionTimeoutMS:1000});c.db("admin").command({ping:1}).then(()=>process.exit(0),()=>process.exit(1))'; then mongo_started=1; break; fi
+              sleep 1
+            done
+            if [ "$mongo_started" = 1 ]; then break; fi
           done
           if [ "$mongo_started" != 1 ]; then
-            echo "::error::Mongo did not accept connections within 90 seconds"; mongo_dump; exit 1
+            echo "::error::Mongo did not start after three attempts"; mongo_dump; exit 1
           fi
           for attempt in $(seq 1 30); do
             if docker exec federation-mongo mongosh --quiet --eval 'quit(db.adminCommand({ping: 1}).ok ? 0 : 1)'; then break; fi
