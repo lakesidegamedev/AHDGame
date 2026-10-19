@@ -401,8 +401,13 @@ export async function collectResetMetricOwnerReadings(
         if (updates[id] || FAIL_CLOSED_OWNER_IDS.has(id)) continue;
         const prior = board.observations[id];
         if (typeof prior?.value !== "number" || !Number.isFinite(prior.value)) continue;
+        // A partially completed bulk retry must not apply proxy drift twice.
+        if (board.asOfTurn === turn) {
+          updates[id] = prior;
+          continue;
+        }
         const metric = primaryMetricById(id);
-        const openingValue = board.history?.[id]?.[0]?.value;
+        const openingValue = board.openingValues?.[id] ?? board.history?.[id]?.[0]?.value;
         const points = pressure[id] ?? 0;
         const value =
           metric && typeof openingValue === "number" && Number.isFinite(openingValue)

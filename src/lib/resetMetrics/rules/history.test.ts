@@ -6,6 +6,7 @@ import {
   metricHistoryDue,
   openingMetricHistory,
   RESET_METRIC_HISTORY_CADENCE_TURNS,
+  validateMetricHistory,
 } from "./history";
 
 function observation(id: string, value: number): OpeningMetricObservation {
@@ -22,6 +23,17 @@ function observation(id: string, value: number): OpeningMetricObservation {
 }
 
 describe("reset metric history", () => {
+  it("keeps appending beyond the history window without requiring the trimmed opening point", () => {
+    const observations = { "01": observation("01", 5) };
+    let history = openingMetricHistory(observations, 1);
+    for (let sample = 1; sample <= 130; sample++) {
+      history = appendMetricHistory(history, observations, 1 + sample * 12);
+      validateMetricHistory(history, observations, 1);
+    }
+    expect(history["01"]).toHaveLength(120);
+    expect(history["01"]![0]!.turn).toBe(133);
+    expect(history["01"]!.at(-1)!.turn).toBe(1561);
+  });
   it("opens every series at the seed turn and appends immutable snapshots", () => {
     const opening = { "01": observation("01", 5), "02": observation("02", 20_000) };
     const history = openingMetricHistory(opening, 1);

@@ -15,6 +15,8 @@ export interface ResetMetricSnapshot {
   lastRefreshFromTurn?: number;
   observations: Record<string, OpeningMetricObservation>;
   history?: ResetMetricHistory;
+  /** Immutable policy baseline, independent of the bounded history window. */
+  openingValues?: Record<string, number>;
 }
 
 /** Validate an entire scoped opening board before any v2 writer can consume it. */
@@ -49,7 +51,10 @@ export function buildResetMetricSnapshot(input: {
       !Number.isFinite(observed.value) ||
       observed.status === "unavailable" ||
       !observed.source ||
-      !observed.owner
+      !observed.owner ||
+      (observed.lastUpdatedTurn !== undefined &&
+        (!Number.isSafeInteger(observed.lastUpdatedTurn) ||
+          observed.lastUpdatedTurn < input.sourceTurn))
     ) {
       throw new Error(
         `Reset metric ${input.countryId}/${input.regionId ?? "national"}/${metric.id} is not ready`
@@ -98,10 +103,12 @@ export function resetMetricSnapshotPayload(rows: readonly ResetMetricSnapshot[])
             observation.source,
             observation.owner,
             observation.note,
+            observation.lastUpdatedTurn ?? null,
           ]),
         Object.entries(row.history ?? {})
           .sort(([a], [b]) => a.localeCompare(b))
           .map(([id, series]) => [id, series.map((point) => [point.turn, point.value])]),
+        Object.entries(row.openingValues ?? {}).sort(([a], [b]) => a.localeCompare(b)),
       ])
   );
 }

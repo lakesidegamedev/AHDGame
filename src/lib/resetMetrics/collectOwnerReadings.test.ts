@@ -149,12 +149,12 @@ describe("first live v2 metric owners", () => {
       })
     );
   });
-  it("does not refresh health off cadence or accept another country's health stocks", async () => {
+  it("reads health each turn but does not accept another country's health stocks", async () => {
     const db = createMockDb();
     mockOwnerSources(db);
     const pa = boards.find((board) => board._id === "US:PA")!;
     await collectResetMetricOwnerReadings(db as unknown as Db, [pa], 2);
-    expect(db.collectionMocks.stateMetrics).toBeUndefined();
+    expect(db.collectionMocks.stateMetrics!.find).toHaveBeenCalledOnce();
     db.collection("stateMetrics").find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue([
         {
@@ -198,7 +198,7 @@ describe("first live v2 metric owners", () => {
       expect(readings[ct._id]!.updates["18"]).toBeUndefined();
     }
   });
-  it("collects per-turn fiscal and purchasing readings in two projected reads", async () => {
+  it("collects per-turn readings in batched projected reads", async () => {
     const db = createMockDb();
     mockOwnerSources(db);
     const readings = await collectResetMetricOwnerReadings(db as unknown as Db, boards, 2);
@@ -221,7 +221,7 @@ describe("first live v2 metric owners", () => {
     );
     expect(db.collectionMocks.macroMetrics!.find).toHaveBeenCalledTimes(1);
     expect(db.collectionMocks.federalBudget!.find).toHaveBeenCalledTimes(1);
-    expect(db.collectionMocks.militaryUnits).toBeUndefined();
+    expect(db.collectionMocks.militaryUnits!.find).toHaveBeenCalledOnce();
   });
 
   it("recomputes national readiness from live roster condition on its 12-turn cadence", async () => {
@@ -433,7 +433,7 @@ describe("first live v2 metric owners", () => {
     expect(readings["US:national"]!.updates["07"]).toBeUndefined();
     expect(readings["US:national"]!.updates["09"]).toBeUndefined();
     expect(readings["US:national"]!.updates["10"]).toBeUndefined();
-    expect(readings["US:national"]!.updates["58"]).toBeUndefined();
+    expect(readings["US:national"]!.updates["58"]?.status).toBe("proxy");
   });
 
   it("moves a provisional metric toward its funded-law settlement and back when the law lapses", async () => {
@@ -463,7 +463,7 @@ describe("first live v2 metric owners", () => {
         },
       ]),
     });
-    // Turn 13: the 12-turn infrastructure cadence is due for the first time.
+    // Current funded pressure now advances the estimate on every published turn.
     const funded = await collectResetMetricOwnerReadings(db as unknown as Db, [board], 13);
     const lifted = funded[board._id]!.updates["26"]!;
     expect(lifted.status).toBe("proxy");
@@ -492,7 +492,18 @@ describe("first live v2 metric owners", () => {
       allowCatchUp: true,
       ...funded[board._id]!,
     }).board;
+    const replay = await collectResetMetricOwnerReadings(db as unknown as Db, [advanced], 13);
+    expect(replay[board._id]!.updates["26"]).toEqual(advanced.observations["26"]);
+    // Trimming the chart must not move the policy baseline to a later observation.
+    const trimmed = {
+      ...advanced,
+      history: { ...advanced.history, "26": [{ turn: 13, value: lifted.value! }] },
+    };
+    const usingOpening = await collectResetMetricOwnerReadings(db as unknown as Db, [trimmed], 25);
     const lapsed = await collectResetMetricOwnerReadings(db as unknown as Db, [advanced], 25);
+    expect(usingOpening[board._id]!.updates["26"]!.value).toBe(
+      lapsed[board._id]!.updates["26"]!.value
+    );
     const relaxed = lapsed[advanced._id]!.updates["26"]!.value!;
     expect(relaxed).toBeLessThan(lifted.value!);
     expect(relaxed).toBeGreaterThan(opening);

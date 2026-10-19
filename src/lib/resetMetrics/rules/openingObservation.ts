@@ -15,6 +15,8 @@ export interface OpeningMetricObservation {
   source: string;
   owner: string;
   note: string;
+  /** Turn this owner last published this observation; absent on legacy readings. */
+  lastUpdatedTurn?: number;
 }
 
 export interface OpeningMetricInputs {
