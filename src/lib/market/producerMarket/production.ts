@@ -366,6 +366,8 @@ export function advanceProducerEconomy(input: {
       p.capacityUnits * p.activeFraction * p.outputMultiplier * (funding.get(p.accountId) ?? 1),
     ])
   );
+  // Physical maximum per plant, before the feasibility pre-pass picks a start.
+  const physicalMaximum = new Map(plannedById);
   // Find a physically feasible mix before buyers reserve inputs. Otherwise an
   // early final producer can take the energy needed by the steel supplier that
   // makes its own inputs, and a greedy shrink pass strands the entire cycle.
@@ -650,10 +652,24 @@ export function advanceProducerEconomy(input: {
   if (!Number.isSafeInteger(passes) || passes < 1 || passes > 1024)
     throw new Error("Invalid planning-pass limit");
   // Make do with short inputs (makeDoRules.ts): each pass reads every input's
-  // fill rate at the current plan and sets output from the ORIGINAL plan, so
+  // fill rate at the current plan and sets output from its physical maximum, so
   // shortages settle at a proportional cut instead of compounding to zero.
   // Rises are damped; a run that has not settled keeps its last plan.
-  const originalPlan = new Map(plannedById);
+  // The pre-pass result is the starting plan: it allocates scarce inputs so
+  // supplier cycles stay alive, and a plant it fed never rises above it (a
+  // rise would starve that cycle). A plant it zeroed (its inputs net short, or
+  // no local supplier) rises toward what make-do allows from its physical
+  // maximum.
+  const originalPlan = new Map(
+    plans.map((p) => {
+      const start = plannedById.get(p.id)!;
+      return [p.id, start > 0 ? start : physicalMaximum.get(p.id)!] as const;
+    })
+  );
+  // A zeroed plant tries: it orders at its physical maximum on the first pass
+  // and settles by fill rate like everyone else.
+  for (const p of plans)
+    if (!(plannedById.get(p.id)! > 0)) plannedById.set(p.id, physicalMaximum.get(p.id)!);
   for (let pass = 0; pass < passes; pass++) {
     market = trial();
     const bought = new Map(market.orders.map((o) => [o.id, o.deliveredUnits]));
@@ -680,7 +696,7 @@ export function advanceProducerEconomy(input: {
       });
       const target = makeDoOutput(originalPlan.get(p.id)!, fills);
       // Falls apply at once; rises are damped so the cycle settles.
-      const damped = pass === 0 || target <= previous ? target : (previous + target) / 2;
+      const damped = target <= previous ? target : (previous + target) / 2;
       // A plan that has decayed to a negligible share of the original is zero.
       const next = damped < originalPlan.get(p.id)! * 1e-9 ? 0 : damped;
       if (Math.abs(next - previous) > Math.max(1e-9, previous * 1e-4)) changed = true;
