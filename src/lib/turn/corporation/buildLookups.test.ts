@@ -319,6 +319,13 @@ describe("buildCorporationLookups — bond holdings", () => {
     expect(corporationProjection).not.toHaveProperty("mediaProductAdvertisingReceiptV1");
   });
 
+  it("projects the budget outlay and currency the producer market shadow funds public buyers from", async () => {
+    await buildCorporationLookups(db as unknown as Db);
+
+    const projection = db.collectionMocks.federalBudget.find.mock.calls[0]?.[1]?.projection;
+    expect(projection).toMatchObject({ currencyCode: 1, "spending.byCategory": 1 });
+  });
+
   it("does not query the v2 product project collection while the gate is off", async () => {
     await buildCorporationLookups(db as unknown as Db);
 
