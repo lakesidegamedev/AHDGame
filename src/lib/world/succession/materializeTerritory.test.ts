@@ -72,4 +72,61 @@ describe("federation territory materialization", () => {
       ["stateRegistrationPool", "RU_KYIV", "UKR"],
     ]);
   });
+
+  it("archives departed energy plants and infrastructure projects keyed by regionId", async () => {
+    const mem = createInMemoryDb();
+    mem.seed("states", [
+      { _id: "RUSSIA", countryId: "RU" },
+      { _id: "KYIV", countryId: "RU" },
+    ]);
+    mem.seed("energyPlants", [
+      { _id: "ru-plant", regionId: "RUSSIA", countryId: "RU" },
+      { _id: "ua-plant", regionId: "KYIV", countryId: "RU" },
+    ]);
+    mem.seed("infraProjects", [
+      { _id: "ru-project", regionId: "RUSSIA", countryId: "RU" },
+      { _id: "ua-project", regionId: "KYIV", countryId: "RU" },
+    ]);
+    const db = mem as unknown as Db;
+    const result = await materializeFederationTerritory({
+      db,
+      session: {} as ClientSession,
+      applicationId: "1991-default:ussr-split:1",
+      sourceCountryId: "RU",
+      transfers: [
+        {
+          stateId: "RUSSIA",
+          parentRegionId: null,
+          topLevelRegionId: "RUSSIA",
+          successorEntityId: "RU",
+          leavesDetailedSource: false,
+        },
+        {
+          stateId: "KYIV",
+          parentRegionId: null,
+          topLevelRegionId: "KYIV",
+          successorEntityId: "UKR",
+          leavesDetailedSource: true,
+        },
+      ],
+    });
+    expect(result).toEqual({ statesArchived: 1, regionalRowsArchived: 2 });
+    expect((await db.collection("energyPlants").find({}).toArray()).map((row) => row._id)).toEqual([
+      "ru-plant",
+    ]);
+    expect((await db.collection("infraProjects").find({}).toArray()).map((row) => row._id)).toEqual(
+      ["ru-project"]
+    );
+    expect(
+      (await db.collection("federationArchivedRegionRows").find({}).toArray()).map((row) => [
+        row.collection,
+        row.originalId,
+        row.successorEntityId,
+      ])
+    ).toEqual([
+      ["states", "KYIV", "UKR"],
+      ["energyPlants", "ua-plant", "UKR"],
+      ["infraProjects", "ua-project", "UKR"],
+    ]);
+  });
 });

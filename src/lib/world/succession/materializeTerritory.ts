@@ -106,6 +106,7 @@ export async function materializeFederationTerritory(input: {
     const rows = await collection.find(filter, { session }).toArray();
     const stateFor = (row: Document): string => {
       if (scope.key === "idIsState") return String(row._id);
+      if (scope.key === "regionIdField") return String(row.regionId);
       if (scope.key === "compositeCountryState") {
         const id = String(row._id);
         const prefix = `${sourceCountryId}_`;
