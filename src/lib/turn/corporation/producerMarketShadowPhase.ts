@@ -34,6 +34,7 @@ import {
   prepareProducerPhysicalSector,
   type ProducerPhysicalEnv,
 } from "./producerPhysicalPreparation";
+import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 import type { CorporationLookups } from "./types";
 import {
   routeEligibility,
@@ -161,7 +162,8 @@ export async function runProducerMarketShadowPhase(
       }
     const funding = publicBuyerFunding(
       lookups.federalBudgets.map((b) => {
-        const rate = lookups.exchangeRatesByCurrency.get((b.currencyCode ?? "USD") as never) ?? 1;
+        const code = resolveCountryCurrencyCode(b);
+        const rate = (code && lookups.exchangeRatesByCurrency.get(code)) || 1;
         const byCategory = Object.fromEntries(
           Object.entries(b.spending?.byCategory ?? {}).map(([k, v]) => [k, (v as number) / rate])
         );

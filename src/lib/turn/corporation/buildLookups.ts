@@ -372,9 +372,12 @@ export async function buildCorporationLookups(
             minimumWageKaitzRatio: 1,
             unionLawBias: 1,
             unionsBanned: 1,
+            // Producer market shadow: public buyers are funded from the budget
+            // outlay by category, converted from the budget's own currency.
+            currencyCode: 1,
+            "spending.byCategory": 1,
             ...(options?.politicalMediaMarketEnabled === true
               ? {
-                  currencyCode: 1,
                   treasuryCashLocal: 1,
                   treasuryBalance: 1,
                 }
