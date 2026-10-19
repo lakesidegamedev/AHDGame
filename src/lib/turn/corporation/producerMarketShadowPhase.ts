@@ -24,6 +24,9 @@ import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope"
 import { householdDemandSpecs } from "@/lib/market/producerMarket/householdDemandRules";
 import { HOUSEHOLD_OPENING_TURNS } from "@/lib/market/producerMarket/householdOpeningRules";
 import { publicBuyerFunding } from "@/lib/market/producerMarket/publicBuyerRules";
+import { marketingBuyerLines } from "@/lib/market/producerMarket/marketingBuyerRules";
+import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
+import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import {
   publicOrders,
   runProducerShadow,
@@ -206,6 +209,32 @@ export async function runProducerMarketShadowPhase(
       (c, book) => refPrice(c as CommodityType, book.startsWith("state:") ? book.slice(6) : ""),
       PRICE_HEADROOM
     );
+    // 4b. Corporate advertising from funded marketing budgets, paid from the
+    //     corporation's own account (only corporations with plants hold one).
+    const corpCountry = new Map<string, string>();
+    const marketingBudgets = lookups.corporations.flatMap((corp) => {
+      const id = corp._id.toString();
+      const cash = cashByCorp.get(id);
+      if (cash == null || !((corp.marketingBudget ?? 0) > 0)) return [];
+      corpCountry.set(id, String(corp.countryId ?? ""));
+      const rate = lookups.exchangeRatesByCurrency.get((corp.liquidCurrencyCode ?? "USD") as never);
+      return [
+        {
+          accountId: id,
+          dailyBudgetAnchor: readCorpEconomicAnchor(
+            corp.marketingBudget ?? 0,
+            corp.liquidCurrencyCode,
+            rate ?? 1
+          ),
+          cashAnchor: cash,
+        },
+      ];
+    });
+    const marketingOrders = publicOrders(
+      marketingBuyerLines(marketingBudgets, TURNS_PER_DAY),
+      (c) => refPrice(c as CommodityType, ""),
+      PRICE_HEADROOM
+    ).map((o) => ({ ...o, id: `marketing:${o.accountId}` }));
     const routes = lookups.tradeRoutes;
     let eligibleOffersByOrder: Record<string, readonly string[]> | undefined;
     if (routes) {
@@ -247,6 +276,8 @@ export async function runProducerMarketShadowPhase(
       for (const o of publicBuyerOrders)
         if (o.book === "world")
           o.eligibleOfferIds = listFor(o.commodity, o.accountId.slice("public:".length));
+      for (const o of marketingOrders)
+        o.eligibleOfferIds = listFor(o.commodity, corpCountry.get(o.accountId) ?? "");
     }
 
     const references = Object.fromEntries(
@@ -262,6 +293,7 @@ export async function runProducerMarketShadowPhase(
       accounts,
       households,
       publicOrders: publicBuyerOrders,
+      marketingOrders,
       eligibleOffersByOrder,
     });
     await db.collection(PRODUCER_SHADOW_COLLECTION).replaceOne(
