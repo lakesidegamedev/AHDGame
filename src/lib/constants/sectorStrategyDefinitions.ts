@@ -4,12 +4,13 @@ import type { SectorStrategy } from "./sectorStrategyTypes";
 // ─── Strategy definitions ───────────────────────────────────────────────────
 
 /**
- * Advertising as a paid input (2026-10-19): every strategy in retail,
+ * Advertising as a paid input (2026-10-19): every variant strategy in retail,
  * manufacturing, vehicles, agriculture, financial, telecommunications,
  * technology and real estate buys advertising at 7% of output value (or more
  * where it already did). Where that would push a strategy's base margin below
  * min(its margin, 17%), its other inputs were trimmed proportionally on the
- * base-margin bench to land there, so standard strategies keep their margin.
+ * base-margin bench to land there. The standard strategies carry the same
+ * change in the 1991 table (sectorStrategyDefinitions1991.ts).
  */
 export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = {
   // ── Energy ──────────────────────────────────────────────────────────────
@@ -143,14 +144,13 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       description: "Balanced steel and building materials production from iron and coal inputs.",
       supply: { steel: 0.4, building_materials: 0.2 },
       demand: {
-        energy: 0.147,
-        iron: 0.106,
-        coal: 0.081,
-        electronics: 0.065,
-        freight: 0.065,
-        real_estate_services: 0.024,
-        plastics: 0.057,
-        advertising: 0.07,
+        energy: 0.18,
+        iron: 0.13,
+        coal: 0.1,
+        electronics: 0.08,
+        freight: 0.08,
+        real_estate_services: 0.03,
+        plastics: 0.07,
       },
     },
     {
@@ -262,12 +262,11 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       description: "Balanced hardware and software development.",
       supply: { electronics: 0.35, software: 0.35 },
       demand: {
-        energy: 0.128,
-        rare_earth: 0.069,
-        steel: 0.043,
-        consulting_services: 0.069,
-        real_estate_services: 0.026,
-        advertising: 0.07,
+        energy: 0.15,
+        rare_earth: 0.08,
+        steel: 0.05,
+        consulting_services: 0.08,
+        real_estate_services: 0.03,
       },
     },
     {
@@ -336,14 +335,7 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       // Reduced food output 0.55→0.50: food moved to oversupply (D/S ~0.85×) after the
       // prior supply boost. Lower rate rebalances toward target D/S.
       supply: { food: 0.5 },
-      demand: {
-        fertilizers: 0.15,
-        vehicles: 0.1,
-        energy: 0.1,
-        freight: 0.08,
-        plastics: 0.05,
-        advertising: 0.07,
-      },
+      demand: { fertilizers: 0.15, vehicles: 0.1, energy: 0.1, freight: 0.08, plastics: 0.05 },
     },
     {
       id: "industrial",
@@ -534,14 +526,13 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       description: "Traditional automotive manufacturing with internal combustion focus.",
       supply: { vehicles: 0.5 },
       demand: {
-        steel: 0.169,
-        iron: 0.064,
-        electronics: 0.105,
-        energy: 0.081,
-        freight: 0.064,
-        real_estate_services: 0.016,
-        plastics: 0.064,
-        advertising: 0.07,
+        steel: 0.21,
+        iron: 0.08,
+        electronics: 0.13,
+        energy: 0.1,
+        freight: 0.08,
+        real_estate_services: 0.02,
+        plastics: 0.08,
       },
     },
     {
@@ -610,11 +601,10 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       description: "Traditional banking and financial services.",
       supply: { financial_services: 0.5 },
       demand: {
-        software: 0.186,
-        electronics: 0.046,
-        consulting_services: 0.093,
-        real_estate_services: 0.037,
-        advertising: 0.07,
+        software: 0.2,
+        electronics: 0.05,
+        consulting_services: 0.1,
+        real_estate_services: 0.04,
       },
     },
     {
@@ -831,12 +821,11 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       // Reduced financial_services 0.15→0.10 to match SECTOR_DEMAND update.
       supply: { real_estate_services: 0.45 },
       demand: {
-        construction_services: 0.176,
-        building_materials: 0.106,
-        steel: 0.07,
-        energy: 0.07,
-        financial_services: 0.088,
-        advertising: 0.07,
+        construction_services: 0.2,
+        building_materials: 0.12,
+        steel: 0.08,
+        energy: 0.08,
+        financial_services: 0.1,
       },
     },
     {
@@ -963,13 +952,12 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       // Reduced electronics 0.25 to 0.18 and rare_earth (covers copper) 0.12 to 0.09 to match SECTOR_DEMAND update.
       supply: { software: 0.2, network_services: 0.4 },
       demand: {
-        electronics: 0.166,
-        energy: 0.092,
-        building_materials: 0.055,
-        construction_services: 0.074,
-        real_estate_services: 0.028,
-        rare_earth: 0.083,
-        advertising: 0.07,
+        electronics: 0.18,
+        energy: 0.1,
+        building_materials: 0.06,
+        construction_services: 0.08,
+        real_estate_services: 0.03,
+        rare_earth: 0.09,
       },
     },
     {
@@ -1096,23 +1084,26 @@ export const SECTOR_STRATEGIES: Record<OperatingSectorType, SectorStrategy[]> = 
       description: "Mixed online and physical retail operations.",
       supply: { retail: 0.5 },
       demand: {
-        food: 0.076,
-        electronics: 0.046,
-        energy: 0.038,
-        vehicles: 0.03,
-        freight: 0.046,
+        // Broad-basket rates sum to 0.735 rather than 1.05. Retail still creates
+        // the widest final-demand sink, but no longer buys more than its entire
+        // nameplate before payroll, occupancy and other operating costs.
+        food: 0.1,
+        electronics: 0.06,
+        energy: 0.05,
+        vehicles: 0.04,
+        freight: 0.06,
         advertising: 0.08,
-        software: 0.038,
-        chemicals: 0.019,
-        pharmaceuticals: 0.019,
-        financial_services: 0.03,
-        consulting_services: 0.019,
-        building_materials: 0.023,
-        steel: 0.019,
-        oil: 0.019,
-        healthcare_services: 0.023,
-        real_estate_services: 0.027,
-        plastics: 0.027,
+        software: 0.05,
+        chemicals: 0.025,
+        pharmaceuticals: 0.025,
+        financial_services: 0.04,
+        consulting_services: 0.025,
+        building_materials: 0.03,
+        steel: 0.025,
+        oil: 0.025,
+        healthcare_services: 0.03,
+        real_estate_services: 0.035,
+        plastics: 0.035,
       },
     },
     {
