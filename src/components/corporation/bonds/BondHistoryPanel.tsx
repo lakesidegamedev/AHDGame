@@ -47,6 +47,7 @@ function entryLabel(e: BondHistoryEntry): string {
     return e.amount > 0 ? "Bond matured (received)" : "Bond matured (paid)";
   }
   if (e.type === "bond_purchase") return "Bond purchased";
+  if (e.type === "bond_buyback") return "Bonds bought back";
   if (e.type === "bond_issuance") return e.refinance ? "Bond refinanced" : "Bond issued";
   if (e.type === "bond_default") return "Bond default";
   if (e.type === "bond_dissolution_payout") return "Dissolution payout";
