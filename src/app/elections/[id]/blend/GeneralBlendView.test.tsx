@@ -2,7 +2,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { CandidateDetail, ElectionDetail } from "../components/ElectionDetailTypes";
+import { NextIntlClientProvider } from "next-intl";
+import enElections from "../../../../../messages/en/elections.json";
 import { GeneralBlendView } from "./GeneralBlendView";
+
+// The battleground view draws through the shared map, which fetches its shapes from the CDN.
+vi.mock("@/components/USAMapPaths", () => ({
+  USAMapPaths: (props: { stateData: Record<string, unknown> }) => (
+    <div data-testid="battleground-map">{Object.keys(props.stateData).sort().join(",")}</div>
+  ),
+}));
 
 vi.mock("./presMap/usStatesGeo", () => ({
   MAP_WIDTH: 960,
@@ -164,6 +173,21 @@ describe("GeneralBlendView", () => {
     expect(screen.getAllByRole("group", { name: /US presidential map/ })).toHaveLength(1);
     expect(await screen.findAllByRole("button", { name: /Pennsylvania/ })).toHaveLength(1);
     expect(screen.queryByText(/battleground board/i)).toBeNull();
+    expect(screen.queryByText("Battleground Map")).toBeNull();
+  });
+
+  it("switches the board to the battleground view, closest races highlighted", async () => {
+    render(
+      <NextIntlClientProvider locale="en" messages={enElections}>
+        <GeneralBlendView election={election()} electionId="e1" wire={[]} onRefresh={() => {}} />
+      </NextIntlClientProvider>
+    );
+    fireEvent.click(screen.getByRole("tab", { name: "Battleground" }));
+    expect(screen.getByText("Battleground Map")).toBeTruthy();
+    // CA, TX and PA have reported: all three are among the five closest.
+    expect(await screen.findByText("Battleground (3)")).toBeTruthy();
+    expect(screen.getByTestId("battleground-map").textContent).toBe("CA,PA,TX");
+    expect(screen.queryByRole("group", { name: /US presidential map/ })).toBeNull();
   });
 
   it("owns its gestures on the desktop stage, with no lock to undo", () => {

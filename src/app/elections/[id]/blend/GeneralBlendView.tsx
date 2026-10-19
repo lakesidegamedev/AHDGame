@@ -22,6 +22,7 @@ import { TicketCards, TicketsTable } from "./GeneralTicketsTable";
 import { DemocraticHealthBlock } from "./DemocraticHealthBlock";
 import { PresidentialMap } from "./presMap/PresidentialMap";
 import { StateSquares } from "./presMap/StateSquares";
+import { BattlegroundMap } from "@/components/elections/general/BattlegroundMap";
 import { CollegeSnake } from "./presMap/CollegeSnake";
 import { MyCampaignStateBlock, useMyCampaign } from "./useMyCampaign";
 import { PresidentialStage, presidentialTitle } from "./PresidentialStage";
@@ -677,6 +678,16 @@ export function GeneralBlendView({
           }
           squares={
             <StateSquares model={mapModel} electionId={electionId} countryId={election.countryId} />
+          }
+          battleground={
+            vm.closestStates.length > 0 ? (
+              <BattlegroundMap
+                marginByState={vm.marginByState}
+                hoverCardByState={vm.hoverCardByState}
+                highlightedStates={vm.closestStates}
+                onSelectState={(stateId) => setFocus({ stateId, nonce: Date.now() })}
+              />
+            ) : undefined
           }
         />
 
