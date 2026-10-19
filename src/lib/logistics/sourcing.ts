@@ -312,7 +312,10 @@ export interface SourcingDestinationAggregate {
   demandUnits: number;
   /** Sum of the country's state-level supply for the commodity this turn. */
   supplyUnits: number;
-  /** National spare offered to foreign buyers (supply minus demand, floored at 0). */
+  /**
+   * Spare offered to foreign buyers: national supply minus demand (floored at
+   * 0), plus state spare the country's own buyers passed over (#4504).
+   */
   foreignOfferUnits: number;
   localUnits: number;
   interStateUnits: number;
@@ -915,317 +918,361 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
     const ownEntries = [...ownLegsByEntry.keys()] as typeof sortedStates;
     ownEntries.sort((a, b) => a.stateId.localeCompare(b.stateId));
 
-    for (const buyer of [...ownEntries, ...sortedStates]) {
-      let unmet = unmetByState.get(buyer.stateId) ?? 0;
-      if (unmet <= 0) continue;
-      const ownLegs = ownLegsByEntry.get(buyer);
-      const { baseCeiling, ceiling } = ownLegs ? OWN_LEG_TERMS : buyerTerms(buyer);
+    const serveBuyers = (
+      buyers: ReadonlyArray<{ stateId: string; countryId: CountryId }>,
+      foreignOnly: boolean
+    ) => {
+      for (const buyer of buyers) {
+        let unmet = unmetByState.get(buyer.stateId) ?? 0;
+        const unmetBefore = unmet;
+        if (unmet <= 0) continue;
+        const ownLegs = ownLegsByEntry.get(buyer);
+        const { baseCeiling, ceiling } = ownLegs ? OWN_LEG_TERMS : buyerTerms(buyer);
 
-      // Candidate sellers: same-country states with spare + foreign countries.
-      const candidates: SourcingCandidate[] = ownLegs ? [...ownLegs] : [];
+        // Candidate sellers: same-country states with spare + foreign countries.
+        const candidates: SourcingCandidate[] = ownLegs ? [...ownLegs] : [];
 
-      for (const seller of ownLegs ? [] : sortedStates) {
-        if (seller.countryId !== buyer.countryId || seller.stateId === buyer.stateId) continue;
-        const spare = spareByState.get(seller.stateId) ?? 0;
-        if (spare <= 0) continue;
-        const hopCount =
-          hops(buyer.countryId, seller.stateId, buyer.stateId) ?? UNREACHABLE_HOP_EQUIV;
-        if (hopCount <= 0) continue;
-        const ask = statePrices[seller.stateId] ?? basePrice;
-        const routeMultiplier = shippingCostMultiplier
-          ? Math.max(0, shippingCostMultiplier(buyer.countryId, seller.stateId, buyer.stateId))
-          : 1;
-        const shippingPerUnit = isGrid
-          ? gridWheelingPerHop(ask) * hopCount * routeMultiplier
-          : boundedShippingPerUnit(shippingPerUnitPerHop * hopCount * routeMultiplier, ask);
-        candidates.push({
-          originType: "state",
-          originId: seller.stateId,
-          landed: ask + shippingPerUnit,
-          ask,
-          shippingPerUnit,
-          tariffRatePct: 0,
-          hopCount,
-          domestic: true,
-        });
-      }
-      for (const cid of ownLegs ? [] : countryIds) {
-        const candidate = foreignCandidateFor(buyer, cid);
-        if (candidate) candidates.push(candidate);
-      }
-
-      if (!ownLegs)
-        candidates.sort(
-          (a, b) =>
-            a.landed - b.landed ||
-            Number(b.domestic) - Number(a.domestic) ||
-            a.originId.localeCompare(b.originId)
-        );
-
-      for (const cand of candidates) {
-        if (unmet <= 0) break;
-        // The buyer-tolerance ceiling is a HAULAGE limit: past it, trucking the
-        // cargo costs more than the cargo is worth, so the demand goes unmet.
-        // Grid commodities (energy, natural gas) do not ride the haulage fleet —
-        // they are wheeled over wire and pipe, and the design is that a state
-        // gets power at a price rather than a blackout. So grid is NOT
-        // tolerance-bound: it keeps drawing from reachable generation (cheapest
-        // first, lossier the farther it comes) until supply is exhausted, which
-        // is what the consumption ledger already books. Applying the freight
-        // ceiling to grid was the whole energy book divergence: the ledger
-        // served it, the sourcing book called it unmet.
-        if (!isGrid && cand.landed > ceiling) {
-          // Sorted ascending: everything past here also breaks the ceiling.
-          summary.toleranceBoundUnits += unmet;
-          destinationFor(buyer.countryId).toleranceBoundUnits += unmet;
-          break;
-        }
-        const spare =
-          cand.originType === "state"
-            ? ownRouteAvailable(
-                spareByState.get(cand.originId) ?? 0,
-                localFillByState.get(cand.originId) ?? 0,
-                cand.ownRoute?.ownFirstAcrossStates === true
-              )
-            : spareByCountry.get(cand.originId as CountryId)!;
-        if (spare <= 0) continue;
-
-        // Grid legs lose a share of what they dispatch, so the buyer's fill and
-        // the seller's drawdown are two different numbers. `deliver` is what
-        // lands, `dispatch` is what leaves.
-        const deliveryFactor = gridDeliveryFactor(cand.hopCount);
-        const ownSupplyKey = cand.ownRoute && ownRouteBudgetKey(cand.ownRoute, "origin");
-        const ownDemandKey = cand.ownRoute && ownRouteBudgetKey(cand.ownRoute, "destination");
-        let deliver = Math.min(
-          unmet,
-          cand.ownRoute?.units ?? Infinity,
-          spare * deliveryFactor,
-          ownSupplyKey ? (ownBudgets.supply.get(ownSupplyKey) ?? Infinity) : Infinity,
-          ownDemandKey ? (ownBudgets.demand.get(ownDemandKey) ?? Infinity) : Infinity
-        );
-        let dispatch = deliveryFactor > 0 ? deliver / deliveryFactor : 0;
-        if (cand.originType === "country") {
-          const fairBudget = fairForeignBudgetFor(buyer, cand.originId as CountryId);
-          if (dispatch > fairBudget) {
-            dispatch = fairBudget;
-            deliver = dispatch * deliveryFactor;
-          }
-        }
-        let teuConsumed = 0;
-        let overflowDispatch = 0;
-        let congestionSurchargePaid = 0;
-        if (cand.originType === "state" && isHauledClass(freightClass)) {
-          // Origin-state capacity gate (plan open question 4: v1 charges the
-          // whole route to the origin's network). Past nominal capacity the
-          // haul still runs, at a congestion surcharge on the overflow units
-          // only, up to the overflow limit: freight is a cost, not a wall.
-          const nominal = freightCapacityByState.get(cand.originId) ?? 0;
-          const used = freightUsedByState.get(cand.originId)!;
-          const totalUsed = used.bulk + used.special;
-          const teuPerUnit = teuPerUnitHop * cand.hopCount;
-          if (teuPerUnit > 0) {
-            if (!(nominal > 0)) {
-              // A state with no freight supply at all hauls nothing.
-              summary.capacityBoundUnits += deliver;
-              destinationFor(buyer.countryId).capacityBoundUnits += deliver;
-              addCapacityBound(cand.originId, deliver, teuPerUnit);
-              continue;
-            }
-            const unitsToNominal = Math.max(0, nominal - totalUsed) / teuPerUnit;
-            const unitsInOverflow =
-              Math.max(
-                0,
-                nominal * (1 + FREIGHT_CONGESTION_OVERFLOW) - Math.max(totalUsed, nominal)
-              ) / teuPerUnit;
-            // Overflow units carry the full surcharge. If that price breaks the
-            // buyer's tolerance the overflow simply does not happen, which is a
-            // tolerance outcome rather than a hard capacity wall.
-            const congestedLanded = congestedLandedPrice(cand.landed, cand.shippingPerUnit);
-            const overflowAffordable = congestedLanded <= ceiling;
-            const dispatchCeiling = unitsToNominal + (overflowAffordable ? unitsInOverflow : 0);
-            if (dispatchCeiling <= 0) {
-              summary.capacityBoundUnits += deliver;
-              destinationFor(buyer.countryId).capacityBoundUnits += deliver;
-              addCapacityBound(cand.originId, deliver, teuPerUnit);
-              continue;
-            }
-            if (dispatch > dispatchCeiling) {
-              const lost = (dispatch - dispatchCeiling) * deliveryFactor;
-              // Only the capacity branch is a delivery failure. When the
-              // overflow surcharge is what broke the buyer's ceiling the goods
-              // were haulable and merely too expensive, which is a price
-              // outcome and must not tell the seller to build freight.
-              if (overflowAffordable) {
-                summary.capacityBoundUnits += lost;
-                destinationFor(buyer.countryId).capacityBoundUnits += lost;
-                addCapacityBound(cand.originId, lost, teuPerUnit);
-              } else {
-                summary.toleranceBoundUnits += lost;
-                destinationFor(buyer.countryId).toleranceBoundUnits += lost;
-              }
-              dispatch = dispatchCeiling;
-              deliver = dispatch * deliveryFactor;
-            }
-            if (dispatch <= 0) continue;
-            overflowDispatch = Math.max(0, dispatch - unitsToNominal);
-            congestionSurchargePaid =
-              overflowDispatch * cand.shippingPerUnit * FREIGHT_CONGESTION_SURCHARGE;
-            teuConsumed = dispatch * teuPerUnit;
-            used[freightClass] += teuConsumed;
-            freightDemandByState.get(cand.originId)![freightClass] += teuConsumed;
-          }
-        }
-        if (deliver <= 0) continue;
-        const take = deliver;
-        // Spend company budgets after capacity gates, using actual dispatch.
-        // Unshipped surplus remains in the ordinary market pass below.
-        if (ownSupplyKey && ownBudgets.supply.has(ownSupplyKey))
-          ownBudgets.supply.set(ownSupplyKey, ownBudgets.supply.get(ownSupplyKey)! - dispatch);
-        if (ownDemandKey && ownBudgets.demand.has(ownDemandKey))
-          ownBudgets.demand.set(ownDemandKey, ownBudgets.demand.get(ownDemandKey)! - take);
-        if (shortageResponsiveSourcingEnabled) {
-          if (cand.landed > baseCeiling) {
-            summary.shortageResponsiveUnits += take;
-          } else if (
-            overflowDispatch > 0 &&
-            congestedLandedPrice(cand.landed, cand.shippingPerUnit) > baseCeiling
-          ) {
-            summary.shortageResponsiveUnits += overflowDispatch * deliveryFactor;
-          }
-        }
-        summary.gridLossUnits += Math.max(0, dispatch - deliver);
-        summary.congestionUnits += overflowDispatch * deliveryFactor;
-        summary.congestionSurchargePaid += congestionSurchargePaid;
-
-        const tariffPaid = dispatch * cand.ask * (cand.tariffRatePct / 100);
-        const deliveredTariffPaid = dispatch > 0 ? tariffPaid * (take / dispatch) : 0;
-        if (cand.originType === "state") {
-          const marketSpare = spareByState.get(cand.originId) ?? 0;
-          const reclaimed = reclaimedLocalUnits(dispatch, marketSpare);
-          if (reclaimed > 0) {
-            // Do not take local buyers' fill until the capacity and price gates pass.
-            localFillByState.set(
-              cand.originId,
-              (localFillByState.get(cand.originId) ?? 0) - reclaimed
-            );
-            unmetByState.set(cand.originId, (unmetByState.get(cand.originId) ?? 0) + reclaimed);
-            summary.intraStateUnits -= reclaimed;
-            destinationFor(buyer.countryId).localUnits -= reclaimed;
-            const premium = landedPremiumByDestState.get(cand.originId)?.get(commodity);
-            if (premium) premium.metUnits -= reclaimed;
-            addPurchaseExposure(
-              ensurePurchaseExposure(cand.originId, commodity),
-              useSharesByState.get(cand.originId)!,
-              {
-                units: -reclaimed,
-                preDutyValue: -reclaimed * (statePrices[cand.originId] ?? basePrice),
-                tariffPaid: 0,
-                deliveredTariffPaid: 0,
-                imported: false,
-              }
-            );
-          }
-          spareByState.set(cand.originId, Math.max(0, marketSpare - dispatch));
-          summary.interStateUnits += take;
-        } else {
-          spareByCountry.set(cand.originId as CountryId, spare - dispatch);
-          drawExportFromStates(cand.originId, dispatch);
-          summary.importUnits += take;
-          summary.tariffPaid += tariffPaid;
-          const key = foreignBudgetKey(cand.originId as CountryId, buyer.stateId);
-          foreignAllocatedByBuyer.set(key, (foreignAllocatedByBuyer.get(key) ?? 0) + dispatch);
-        }
-        unmet -= take;
-        unmetByState.set(buyer.stateId, unmet);
-
-        const exporter = cand.originType === "state" ? buyer.countryId : cand.originId;
-        const pair = pairFor(exporter, buyer.countryId);
-        pair.deliveredUnits += take;
-        pair.dispatchedUnits += dispatch;
-        pair.askValue += dispatch * cand.ask;
-        pair.freightPaid += take * cand.shippingPerUnit + congestionSurchargePaid;
-        pair.tariffPaid += tariffPaid;
-        pair.landedValue += take * cand.landed;
-        pair.tariffRateUnits += take * cand.tariffRatePct;
-        pair.legs += 1;
-        const destination = destinationFor(buyer.countryId);
-        if (cand.originType === "state") destination.interStateUnits += take;
-        else destination.importUnits += take;
-
-        // Delivered-units + extra-cost accumulation for money wiring, regardless
-        // of the itemization floor below (that floor only caps the doc's flow
-        // list; the aggregates must stay exact).
-        if (!cand.ownRoute) {
-          addLandedPremium(
-            buyer.stateId,
-            commodity,
-            take,
-            take * cand.shippingPerUnit + tariffPaid
-          );
-        }
-        // Canonical freight billing: the shipping leg of a domestic hauled flow
-        // is the buyer state's charge and the origin state's haul revenue, one
-        // amount booked on both sides. Hauled classes lose nothing in transit
-        // (deliveryFactor 1), so `take` here is also what was dispatched.
-        if (cand.ownRoute) {
-          const freightCharge = take * cand.shippingPerUnit + congestionSurchargePaid;
-          haulRevenueByOriginState.set(
-            cand.originId,
-            (haulRevenueByOriginState.get(cand.originId) ?? 0) + freightCharge
-          );
-          ownRouteDelivered.push({ ...cand.ownRoute, units: take, freightCharge });
-        } else if (cand.originType === "state" && isHauledClass(freightClass)) {
-          addFreightBilling(
-            buyer.stateId,
-            cand.originId,
-            commodity,
-            take * cand.shippingPerUnit + congestionSurchargePaid
-          );
-        }
-        if (cand.originType === "country") {
-          const agg = importAggregatesByCountry.get(buyer.countryId) ?? {
-            tariffPaid: 0,
-            importValue: 0,
-          };
-          agg.tariffPaid += tariffPaid;
-          agg.importValue += take * cand.ask;
-          importAggregatesByCountry.set(buyer.countryId, agg);
-        }
-        addPurchaseExposure(
-          ensurePurchaseExposure(buyer.stateId, commodity),
-          useSharesByState.get(buyer.stateId) ?? purchaseUseShares(0, undefined),
-          {
-            units: take,
-            preDutyValue: take * cand.ask,
-            tariffPaid,
-            deliveredTariffPaid,
-            imported: cand.originType === "country",
-          }
-        );
-
-        if (take >= FLOW_RECORD_FLOOR_UNITS) {
-          flows.push({
-            commodity,
-            originType: cand.originType,
-            originId: cand.originId,
-            destStateId: buyer.stateId,
-            units: round2(take),
-            hops: cand.hopCount,
-            freightClass,
-            ask: round2(cand.ask),
-            shippingPerUnit: round2(cand.shippingPerUnit),
-            tariffRatePct: cand.tariffRatePct,
-            tariffPaid: round2(tariffPaid),
-            deliveredTariffPaid: round2(deliveredTariffPaid),
-            landedPrice: round2(cand.landed),
-            freightTeuConsumed: round2(teuConsumed),
+        for (const seller of ownLegs || foreignOnly ? [] : sortedStates) {
+          if (seller.countryId !== buyer.countryId || seller.stateId === buyer.stateId) continue;
+          const spare = spareByState.get(seller.stateId) ?? 0;
+          if (spare <= 0) continue;
+          const hopCount =
+            hops(buyer.countryId, seller.stateId, buyer.stateId) ?? UNREACHABLE_HOP_EQUIV;
+          if (hopCount <= 0) continue;
+          const ask = statePrices[seller.stateId] ?? basePrice;
+          const routeMultiplier = shippingCostMultiplier
+            ? Math.max(0, shippingCostMultiplier(buyer.countryId, seller.stateId, buyer.stateId))
+            : 1;
+          const shippingPerUnit = isGrid
+            ? gridWheelingPerHop(ask) * hopCount * routeMultiplier
+            : boundedShippingPerUnit(shippingPerUnitPerHop * hopCount * routeMultiplier, ask);
+          candidates.push({
+            originType: "state",
+            originId: seller.stateId,
+            landed: ask + shippingPerUnit,
+            ask,
+            shippingPerUnit,
+            tariffRatePct: 0,
+            hopCount,
+            domestic: true,
           });
         }
-      }
+        for (const cid of ownLegs ? [] : countryIds) {
+          const candidate = foreignCandidateFor(buyer, cid);
+          if (candidate) candidates.push(candidate);
+        }
 
-      if (ownLegs) continue; // the market pass for this state books what is left
-      summary.unmetUnits += Math.max(0, unmet);
-      if (unmet > 0) destinationFor(buyer.countryId).unmetUnits += unmet;
+        if (!ownLegs)
+          candidates.sort(
+            (a, b) =>
+              a.landed - b.landed ||
+              Number(b.domestic) - Number(a.domestic) ||
+              a.originId.localeCompare(b.originId)
+          );
+
+        for (const cand of candidates) {
+          if (unmet <= 0) break;
+          // The buyer-tolerance ceiling is a HAULAGE limit: past it, trucking the
+          // cargo costs more than the cargo is worth, so the demand goes unmet.
+          // Grid commodities (energy, natural gas) do not ride the haulage fleet —
+          // they are wheeled over wire and pipe, and the design is that a state
+          // gets power at a price rather than a blackout. So grid is NOT
+          // tolerance-bound: it keeps drawing from reachable generation (cheapest
+          // first, lossier the farther it comes) until supply is exhausted, which
+          // is what the consumption ledger already books. Applying the freight
+          // ceiling to grid was the whole energy book divergence: the ledger
+          // served it, the sourcing book called it unmet.
+          if (!isGrid && cand.landed > ceiling) {
+            // Sorted ascending: everything past here also breaks the ceiling.
+            // The displaced-spare pass only revisits buyers the first pass
+            // already booked, so it must not count the same shortfall twice.
+            if (!foreignOnly) {
+              summary.toleranceBoundUnits += unmet;
+              destinationFor(buyer.countryId).toleranceBoundUnits += unmet;
+            }
+            break;
+          }
+          const spare =
+            cand.originType === "state"
+              ? ownRouteAvailable(
+                  spareByState.get(cand.originId) ?? 0,
+                  localFillByState.get(cand.originId) ?? 0,
+                  cand.ownRoute?.ownFirstAcrossStates === true
+                )
+              : spareByCountry.get(cand.originId as CountryId)!;
+          if (spare <= 0) continue;
+
+          // Grid legs lose a share of what they dispatch, so the buyer's fill and
+          // the seller's drawdown are two different numbers. `deliver` is what
+          // lands, `dispatch` is what leaves.
+          const deliveryFactor = gridDeliveryFactor(cand.hopCount);
+          const ownSupplyKey = cand.ownRoute && ownRouteBudgetKey(cand.ownRoute, "origin");
+          const ownDemandKey = cand.ownRoute && ownRouteBudgetKey(cand.ownRoute, "destination");
+          let deliver = Math.min(
+            unmet,
+            cand.ownRoute?.units ?? Infinity,
+            spare * deliveryFactor,
+            ownSupplyKey ? (ownBudgets.supply.get(ownSupplyKey) ?? Infinity) : Infinity,
+            ownDemandKey ? (ownBudgets.demand.get(ownDemandKey) ?? Infinity) : Infinity
+          );
+          let dispatch = deliveryFactor > 0 ? deliver / deliveryFactor : 0;
+          if (cand.originType === "country") {
+            const fairBudget = fairForeignBudgetFor(buyer, cand.originId as CountryId);
+            if (dispatch > fairBudget) {
+              dispatch = fairBudget;
+              deliver = dispatch * deliveryFactor;
+            }
+          }
+          let teuConsumed = 0;
+          let overflowDispatch = 0;
+          let congestionSurchargePaid = 0;
+          if (cand.originType === "state" && isHauledClass(freightClass)) {
+            // Origin-state capacity gate (plan open question 4: v1 charges the
+            // whole route to the origin's network). Past nominal capacity the
+            // haul still runs, at a congestion surcharge on the overflow units
+            // only, up to the overflow limit: freight is a cost, not a wall.
+            const nominal = freightCapacityByState.get(cand.originId) ?? 0;
+            const used = freightUsedByState.get(cand.originId)!;
+            const totalUsed = used.bulk + used.special;
+            const teuPerUnit = teuPerUnitHop * cand.hopCount;
+            if (teuPerUnit > 0) {
+              if (!(nominal > 0)) {
+                // A state with no freight supply at all hauls nothing.
+                summary.capacityBoundUnits += deliver;
+                destinationFor(buyer.countryId).capacityBoundUnits += deliver;
+                addCapacityBound(cand.originId, deliver, teuPerUnit);
+                continue;
+              }
+              const unitsToNominal = Math.max(0, nominal - totalUsed) / teuPerUnit;
+              const unitsInOverflow =
+                Math.max(
+                  0,
+                  nominal * (1 + FREIGHT_CONGESTION_OVERFLOW) - Math.max(totalUsed, nominal)
+                ) / teuPerUnit;
+              // Overflow units carry the full surcharge. If that price breaks the
+              // buyer's tolerance the overflow simply does not happen, which is a
+              // tolerance outcome rather than a hard capacity wall.
+              const congestedLanded = congestedLandedPrice(cand.landed, cand.shippingPerUnit);
+              const overflowAffordable = congestedLanded <= ceiling;
+              const dispatchCeiling = unitsToNominal + (overflowAffordable ? unitsInOverflow : 0);
+              if (dispatchCeiling <= 0) {
+                summary.capacityBoundUnits += deliver;
+                destinationFor(buyer.countryId).capacityBoundUnits += deliver;
+                addCapacityBound(cand.originId, deliver, teuPerUnit);
+                continue;
+              }
+              if (dispatch > dispatchCeiling) {
+                const lost = (dispatch - dispatchCeiling) * deliveryFactor;
+                // Only the capacity branch is a delivery failure. When the
+                // overflow surcharge is what broke the buyer's ceiling the goods
+                // were haulable and merely too expensive, which is a price
+                // outcome and must not tell the seller to build freight.
+                if (overflowAffordable) {
+                  summary.capacityBoundUnits += lost;
+                  destinationFor(buyer.countryId).capacityBoundUnits += lost;
+                  addCapacityBound(cand.originId, lost, teuPerUnit);
+                } else {
+                  summary.toleranceBoundUnits += lost;
+                  destinationFor(buyer.countryId).toleranceBoundUnits += lost;
+                }
+                dispatch = dispatchCeiling;
+                deliver = dispatch * deliveryFactor;
+              }
+              if (dispatch <= 0) continue;
+              overflowDispatch = Math.max(0, dispatch - unitsToNominal);
+              congestionSurchargePaid =
+                overflowDispatch * cand.shippingPerUnit * FREIGHT_CONGESTION_SURCHARGE;
+              teuConsumed = dispatch * teuPerUnit;
+              used[freightClass] += teuConsumed;
+              freightDemandByState.get(cand.originId)![freightClass] += teuConsumed;
+            }
+          }
+          if (deliver <= 0) continue;
+          const take = deliver;
+          // Spend company budgets after capacity gates, using actual dispatch.
+          // Unshipped surplus remains in the ordinary market pass below.
+          if (ownSupplyKey && ownBudgets.supply.has(ownSupplyKey))
+            ownBudgets.supply.set(ownSupplyKey, ownBudgets.supply.get(ownSupplyKey)! - dispatch);
+          if (ownDemandKey && ownBudgets.demand.has(ownDemandKey))
+            ownBudgets.demand.set(ownDemandKey, ownBudgets.demand.get(ownDemandKey)! - take);
+          if (shortageResponsiveSourcingEnabled) {
+            if (cand.landed > baseCeiling) {
+              summary.shortageResponsiveUnits += take;
+            } else if (
+              overflowDispatch > 0 &&
+              congestedLandedPrice(cand.landed, cand.shippingPerUnit) > baseCeiling
+            ) {
+              summary.shortageResponsiveUnits += overflowDispatch * deliveryFactor;
+            }
+          }
+          summary.gridLossUnits += Math.max(0, dispatch - deliver);
+          summary.congestionUnits += overflowDispatch * deliveryFactor;
+          summary.congestionSurchargePaid += congestionSurchargePaid;
+
+          const tariffPaid = dispatch * cand.ask * (cand.tariffRatePct / 100);
+          const deliveredTariffPaid = dispatch > 0 ? tariffPaid * (take / dispatch) : 0;
+          if (cand.originType === "state") {
+            const marketSpare = spareByState.get(cand.originId) ?? 0;
+            const reclaimed = reclaimedLocalUnits(dispatch, marketSpare);
+            if (reclaimed > 0) {
+              // Do not take local buyers' fill until the capacity and price gates pass.
+              localFillByState.set(
+                cand.originId,
+                (localFillByState.get(cand.originId) ?? 0) - reclaimed
+              );
+              unmetByState.set(cand.originId, (unmetByState.get(cand.originId) ?? 0) + reclaimed);
+              summary.intraStateUnits -= reclaimed;
+              destinationFor(buyer.countryId).localUnits -= reclaimed;
+              const premium = landedPremiumByDestState.get(cand.originId)?.get(commodity);
+              if (premium) premium.metUnits -= reclaimed;
+              addPurchaseExposure(
+                ensurePurchaseExposure(cand.originId, commodity),
+                useSharesByState.get(cand.originId)!,
+                {
+                  units: -reclaimed,
+                  preDutyValue: -reclaimed * (statePrices[cand.originId] ?? basePrice),
+                  tariffPaid: 0,
+                  deliveredTariffPaid: 0,
+                  imported: false,
+                }
+              );
+            }
+            spareByState.set(cand.originId, Math.max(0, marketSpare - dispatch));
+            summary.interStateUnits += take;
+          } else {
+            spareByCountry.set(cand.originId as CountryId, spare - dispatch);
+            drawExportFromStates(cand.originId, dispatch);
+            summary.importUnits += take;
+            summary.tariffPaid += tariffPaid;
+            const key = foreignBudgetKey(cand.originId as CountryId, buyer.stateId);
+            foreignAllocatedByBuyer.set(key, (foreignAllocatedByBuyer.get(key) ?? 0) + dispatch);
+          }
+          unmet -= take;
+          unmetByState.set(buyer.stateId, unmet);
+
+          const exporter = cand.originType === "state" ? buyer.countryId : cand.originId;
+          const pair = pairFor(exporter, buyer.countryId);
+          pair.deliveredUnits += take;
+          pair.dispatchedUnits += dispatch;
+          pair.askValue += dispatch * cand.ask;
+          pair.freightPaid += take * cand.shippingPerUnit + congestionSurchargePaid;
+          pair.tariffPaid += tariffPaid;
+          pair.landedValue += take * cand.landed;
+          pair.tariffRateUnits += take * cand.tariffRatePct;
+          pair.legs += 1;
+          const destination = destinationFor(buyer.countryId);
+          if (cand.originType === "state") destination.interStateUnits += take;
+          else destination.importUnits += take;
+
+          // Delivered-units + extra-cost accumulation for money wiring, regardless
+          // of the itemization floor below (that floor only caps the doc's flow
+          // list; the aggregates must stay exact).
+          if (!cand.ownRoute) {
+            addLandedPremium(
+              buyer.stateId,
+              commodity,
+              take,
+              take * cand.shippingPerUnit + tariffPaid
+            );
+          }
+          // Canonical freight billing: the shipping leg of a domestic hauled flow
+          // is the buyer state's charge and the origin state's haul revenue, one
+          // amount booked on both sides. Hauled classes lose nothing in transit
+          // (deliveryFactor 1), so `take` here is also what was dispatched.
+          if (cand.ownRoute) {
+            const freightCharge = take * cand.shippingPerUnit + congestionSurchargePaid;
+            haulRevenueByOriginState.set(
+              cand.originId,
+              (haulRevenueByOriginState.get(cand.originId) ?? 0) + freightCharge
+            );
+            ownRouteDelivered.push({ ...cand.ownRoute, units: take, freightCharge });
+          } else if (cand.originType === "state" && isHauledClass(freightClass)) {
+            addFreightBilling(
+              buyer.stateId,
+              cand.originId,
+              commodity,
+              take * cand.shippingPerUnit + congestionSurchargePaid
+            );
+          }
+          if (cand.originType === "country") {
+            const agg = importAggregatesByCountry.get(buyer.countryId) ?? {
+              tariffPaid: 0,
+              importValue: 0,
+            };
+            agg.tariffPaid += tariffPaid;
+            agg.importValue += take * cand.ask;
+            importAggregatesByCountry.set(buyer.countryId, agg);
+          }
+          addPurchaseExposure(
+            ensurePurchaseExposure(buyer.stateId, commodity),
+            useSharesByState.get(buyer.stateId) ?? purchaseUseShares(0, undefined),
+            {
+              units: take,
+              preDutyValue: take * cand.ask,
+              tariffPaid,
+              deliveredTariffPaid,
+              imported: cand.originType === "country",
+            }
+          );
+
+          if (take >= FLOW_RECORD_FLOOR_UNITS) {
+            flows.push({
+              commodity,
+              originType: cand.originType,
+              originId: cand.originId,
+              destStateId: buyer.stateId,
+              units: round2(take),
+              hops: cand.hopCount,
+              freightClass,
+              ask: round2(cand.ask),
+              shippingPerUnit: round2(cand.shippingPerUnit),
+              tariffRatePct: cand.tariffRatePct,
+              tariffPaid: round2(tariffPaid),
+              deliveredTariffPaid: round2(deliveredTariffPaid),
+              landedPrice: round2(cand.landed),
+              freightTeuConsumed: round2(teuConsumed),
+            });
+          }
+        }
+
+        if (ownLegs) continue; // the market pass for this state books what is left
+        if (foreignOnly) {
+          // The first pass booked this buyer's whole shortfall: take back what
+          // the displaced spare filled.
+          summary.unmetUnits -= unmetBefore - unmet;
+          destinationFor(buyer.countryId).unmetUnits -= unmetBefore - unmet;
+          continue;
+        }
+        summary.unmetUnits += Math.max(0, unmet);
+        if (unmet > 0) destinationFor(buyer.countryId).unmetUnits += unmet;
+      }
+    };
+    serveBuyers([...ownEntries, ...sortedStates], false);
+
+    // The national pool above is supply minus demand, fixed before anyone
+    // buys. When a country's own buyers take cheaper imports (or cannot reach
+    // their own states), the domestic spare they passed over is still held
+    // by its states but was never offered abroad, so it went unplaced while
+    // foreign buyers stayed short (#4504). Offer exactly that displaced spare,
+    // fair-shared again, to the foreign buyers still unmet. Existing pools are
+    // not re-offered, so a turn with no displacement is unchanged.
+    if (sortedStates.some(({ stateId }) => (unmetByState.get(stateId) ?? 0) > 0)) {
+      initialForeignSpareByCountry.clear();
+      foreignAllocatedByBuyer.clear();
+      let anyDisplaced = false;
+      for (const cid of countryIds) {
+        let held = 0;
+        for (const stateId of statesByCountry.get(cid) ?? [])
+          held += spareByState.get(stateId) ?? 0;
+        const displaced = Math.max(0, held - (spareByCountry.get(cid) ?? 0));
+        spareByCountry.set(cid, displaced);
+        initialForeignSpareByCountry.set(cid, displaced);
+        if (displaced > 0) {
+          destinationFor(cid).foreignOfferUnits += displaced;
+          anyDisplaced = true;
+        }
+      }
+      if (anyDisplaced) serveBuyers(sortedStates, true);
     }
 
     // Every buyer has been offered every seller, so whatever is still spare is

@@ -1382,3 +1382,299 @@ describe("own-company priority routes", () => {
     expect(r.ownRouteDelivered).toEqual([]);
   });
 });
+
+describe("displaced domestic spare is offered abroad (#4504)", () => {
+  type Inputs = SourcingInputs;
+  const balances = (entries: Record<string, Partial<Record<CommodityType, Balance>>>) =>
+    new Map(
+      Object.entries(entries).map(([id, byCommodity]) => [
+        id,
+        new Map(Object.entries(byCommodity) as [CommodityType, Balance][]),
+      ])
+    );
+
+  /**
+   * US: A1 mines 100 coal, A2 needs 100. A2's cheapest landed seller is the
+   * UK (ask 50) rather than A1 (ask 90), so the US national book reads
+   * balanced and A1's coal is displaced. FR (C1) needs 100 coal and the UK
+   * embargoes it, so the US is FR's only possible seller.
+   */
+  function displacedInputs(overrides: Partial<Inputs> = {}): Inputs {
+    return {
+      states: [
+        { stateId: "A1", countryId: "US" as CountryId },
+        { stateId: "A2", countryId: "US" as CountryId },
+        { stateId: "B1", countryId: "UK" as CountryId },
+        { stateId: "C1", countryId: "FR" as CountryId },
+      ],
+      byState: balances({
+        A1: { coal: { supply: 100, demand: 0 }, freight: { supply: 1000, demand: 0 } },
+        A2: { coal: { supply: 0, demand: 100 }, freight: { supply: 1000, demand: 0 } },
+        B1: { coal: { supply: 200, demand: 0 } },
+        C1: { coal: { supply: 0, demand: 100 } },
+      }),
+      byCountry: balances({
+        US: { coal: { supply: 100, demand: 100 } },
+        UK: { coal: { supply: 200, demand: 0 } },
+        FR: { coal: { supply: 0, demand: 100 } },
+      }),
+      statePricesFor: () => ({ A1: 90, A2: 100, B1: 50, C1: 100 }),
+      nationalPricesFor: () => ({ US: 90, UK: 50, FR: 100 }),
+      basePriceFor: () => 100,
+      freightPrice: 400,
+      hops: (_c, from, to) => (from === to ? 0 : from[0] === to[0] ? 1 : null),
+      tariffRatePct: () => 0,
+      isBlocked: (_c, exporter, importer) => exporter === "UK" && importer === "FR",
+      ...overrides,
+    };
+  }
+
+  const delivered = (
+    r: ReturnType<typeof runSourcingPass>,
+    commodity: CommodityType,
+    exporter: string,
+    importer: string
+  ) =>
+    r.pairAggregates
+      .filter(
+        (p) => p.commodity === commodity && p.exporter === exporter && p.importer === importer
+      )
+      .reduce((total, p) => total + p.deliveredUnits, 0);
+
+  it("ships spare that domestic buyers passed over to a short foreign buyer", () => {
+    const r = runSourcingPass(displacedInputs());
+    // A2 still buys the cheaper UK coal.
+    expect(delivered(r, "coal", "UK", "US")).toBeCloseTo(100);
+    // A1's displaced coal reaches FR instead of sitting unplaced.
+    expect(delivered(r, "coal", "US", "FR")).toBeCloseTo(100);
+    expect(r.unplacedSupplyByState.get("coal")!.get("A1")).toBeCloseTo(0);
+    const coal = r.summaries.find((s) => s.commodity === "coal")!;
+    expect(coal.unmetUnits).toBeCloseTo(0);
+    expect(coal.importUnits).toBeCloseTo(200);
+    const fr = r.destinationAggregates.find((d) => d.commodity === "coal" && d.country === "FR")!;
+    expect(fr.importUnits).toBeCloseTo(100);
+    expect(fr.unmetUnits).toBeCloseTo(0);
+    const us = r.destinationAggregates.find((d) => d.commodity === "coal" && d.country === "US")!;
+    expect(us.foreignOfferUnits).toBeCloseTo(100);
+  });
+
+  const destination = (
+    r: ReturnType<typeof runSourcingPass>,
+    commodity: CommodityType,
+    country: string
+  ) => r.destinationAggregates.find((d) => d.commodity === commodity && d.country === country);
+
+  it("leaves a turn unchanged when domestic buyers stayed with domestic supply", () => {
+    // UK coal now lands dearer than A1's, so A2 buys at home and nothing is displaced.
+    const r = runSourcingPass(displacedInputs({ nationalPricesFor: () => ({ US: 90, UK: 95 }) }));
+    expect(delivered(r, "coal", "US", "US")).toBeCloseTo(100);
+    expect(delivered(r, "coal", "US", "FR")).toBe(0);
+    expect(destination(r, "coal", "FR")!.unmetUnits).toBeCloseTo(100);
+    expect(destination(r, "coal", "US")!.foreignOfferUnits).toBe(0);
+    expect(destination(r, "coal", "UK")!.foreignOfferUnits).toBe(200);
+
+    // A surplus country still offers exactly national supply minus demand.
+    const surplus = runSourcingPass(
+      makeInputs({
+        byState: balances({
+          A1: { coal: { supply: 0, demand: 100 }, freight: { supply: 1000, demand: 0 } },
+          A2: { coal: { supply: 200, demand: 0 }, freight: { supply: 1000, demand: 0 } },
+          B1: { coal: { supply: 0, demand: 300 } },
+        }),
+        byCountry: balances({
+          US: { coal: { supply: 200, demand: 100 } },
+          UK: { coal: { supply: 0, demand: 300 } },
+        }),
+        freightPrice: 400,
+      })
+    );
+    expect(delivered(surplus, "coal", "US", "US")).toBeCloseTo(100);
+    expect(delivered(surplus, "coal", "US", "UK")).toBeCloseTo(100);
+    expect(destination(surplus, "coal", "US")!.foreignOfferUnits).toBe(100);
+    expect(destination(surplus, "coal", "UK")!.unmetUnits).toBeCloseTo(200);
+    expect(surplus.unplacedSupplyByState.get("coal")!.get("A2")).toBeCloseTo(0);
+  });
+
+  it("conserves goods and respects embargoes when displaced spare ships", () => {
+    // DE (D1) is embargoed by both the UK and the US, so it may get nothing.
+    const inputs = displacedInputs({
+      states: [
+        { stateId: "A1", countryId: "US" as CountryId },
+        { stateId: "A2", countryId: "US" as CountryId },
+        { stateId: "B1", countryId: "UK" as CountryId },
+        { stateId: "C1", countryId: "FR" as CountryId },
+        { stateId: "D1", countryId: "DE" as CountryId },
+      ],
+      byState: balances({
+        A1: { coal: { supply: 100, demand: 0 }, freight: { supply: 1000, demand: 0 } },
+        A2: { coal: { supply: 0, demand: 100 }, freight: { supply: 1000, demand: 0 } },
+        B1: { coal: { supply: 200, demand: 0 } },
+        C1: { coal: { supply: 0, demand: 60 } },
+        D1: { coal: { supply: 0, demand: 100 } },
+      }),
+      byCountry: balances({
+        US: { coal: { supply: 100, demand: 100 } },
+        UK: { coal: { supply: 200, demand: 0 } },
+        FR: { coal: { supply: 0, demand: 60 } },
+        DE: { coal: { supply: 0, demand: 100 } },
+      }),
+      statePricesFor: () => ({ A1: 90, A2: 100, B1: 50, C1: 100, D1: 100 }),
+      nationalPricesFor: () => ({ US: 90, UK: 50, FR: 100, DE: 100 }),
+      isBlocked: (_c, exporter, importer) =>
+        importer === "DE" || (exporter === "UK" && importer === "FR"),
+    });
+    const r = runSourcingPass(inputs);
+
+    expect(delivered(r, "coal", "US", "FR")).toBeCloseTo(60);
+    expect(r.pairAggregates.some((p) => p.importer === "DE" && p.deliveredUnits > 0)).toBe(false);
+    expect(r.pairAggregates.some((p) => p.exporter === "UK" && p.importer === "FR")).toBe(false);
+    expect(destination(r, "coal", "DE")!.unmetUnits).toBeCloseTo(100);
+
+    const unplaced = r.unplacedSupplyByState.get("coal")!;
+    for (const { stateId } of inputs.states) {
+      const { supply, demand } = inputs.byState.get(stateId)!.get("coal")!;
+      const left = unplaced.get(stateId) ?? 0;
+      // Placed never exceeds supply, and nothing is placed twice.
+      expect(left).toBeGreaterThanOrEqual(0);
+      expect(left).toBeLessThanOrEqual(Math.max(0, supply - demand) + 1e-9);
+      const met = r.landedPremiumByDestState.get(stateId)?.get("coal")?.metUnits ?? 0;
+      expect(met).toBeLessThanOrEqual(demand + 1e-9);
+    }
+    expect(unplaced.get("A1")).toBeCloseTo(40);
+    // Every unit that left a state's spare shipped to exactly one buyer.
+    for (const country of ["US", "UK"]) {
+      const drawn = inputs.states
+        .filter((s) => s.countryId === country)
+        .reduce((t, { stateId }) => {
+          const { supply, demand } = inputs.byState.get(stateId)!.get("coal")!;
+          return t + Math.max(0, supply - demand) - (unplaced.get(stateId) ?? 0);
+        }, 0);
+      const shipped = r.pairAggregates
+        .filter((p) => p.commodity === "coal" && p.exporter === country)
+        .reduce((t, p) => t + p.dispatchedUnits, 0);
+      expect(drawn).toBeCloseTo(shipped);
+    }
+    for (const d of r.destinationAggregates.filter((row) => row.commodity === "coal")) {
+      expect(d.localUnits + d.interStateUnits + d.importUnits + d.unmetUnits).toBeCloseTo(
+        d.demandUnits
+      );
+    }
+    expect(JSON.stringify(runSourcingPass(inputs))).toBe(JSON.stringify(r));
+  });
+
+  describe("world validation", () => {
+    it("a world with no shortage anywhere places exactly as before", () => {
+      const r = runSourcingPass(
+        displacedInputs({
+          byState: balances({
+            A1: { coal: { supply: 100, demand: 0 }, freight: { supply: 1000, demand: 0 } },
+            A2: { coal: { supply: 0, demand: 100 }, freight: { supply: 1000, demand: 0 } },
+            B1: { coal: { supply: 200, demand: 0 } },
+            C1: { coal: { supply: 0, demand: 0 } },
+          }),
+          byCountry: balances({
+            US: { coal: { supply: 100, demand: 100 } },
+            UK: { coal: { supply: 200, demand: 0 } },
+            FR: { coal: { supply: 0, demand: 0 } },
+          }),
+        })
+      );
+      expect(delivered(r, "coal", "UK", "US")).toBeCloseTo(100);
+      expect(r.pairAggregates.some((p) => p.exporter === "US")).toBe(false);
+      // Nobody is short, so A1's coal is a genuine glut and stays unplaced.
+      expect(r.unplacedSupplyByState.get("coal")!.get("A1")).toBeCloseTo(100);
+      expect(destination(r, "coal", "US")!.foreignOfferUnits).toBe(0);
+    });
+
+    it("a country with no state holding spare offers only its national pool", () => {
+      // US mines nothing; GR has national spare but no modeled states.
+      const r = runSourcingPass(
+        displacedInputs({
+          byState: balances({
+            A1: { coal: { supply: 0, demand: 0 }, freight: { supply: 1000, demand: 0 } },
+            A2: { coal: { supply: 0, demand: 100 }, freight: { supply: 1000, demand: 0 } },
+            B1: { coal: { supply: 200, demand: 0 } },
+            C1: { coal: { supply: 0, demand: 100 } },
+          }),
+          byCountry: balances({
+            US: { coal: { supply: 0, demand: 100 } },
+            UK: { coal: { supply: 200, demand: 0 } },
+            FR: { coal: { supply: 0, demand: 100 } },
+            GR: { coal: { supply: 50, demand: 0 } },
+          }),
+          nationalPricesFor: () => ({ US: 90, UK: 50, FR: 100, GR: 60 }),
+        })
+      );
+      expect(delivered(r, "coal", "GR", "FR")).toBeCloseTo(50);
+      expect(r.pairAggregates.some((p) => p.exporter === "US")).toBe(false);
+      expect(destination(r, "coal", "FR")!.unmetUnits).toBeCloseTo(50);
+      expect(destination(r, "coal", "GR")!.foreignOfferUnits).toBe(50);
+      expect(destination(r, "coal", "US")!.foreignOfferUnits).toBe(0);
+    });
+
+    it("a first turn with no stored prices or demand uses still offers displaced spare", () => {
+      // No prior prices: every ask is the base price. A1 has no freight, so A2
+      // cannot haul from it and imports instead, displacing A1's coal.
+      const inputs = displacedInputs({
+        byState: balances({
+          A1: { coal: { supply: 100, demand: 0 } },
+          A2: { coal: { supply: 0, demand: 100 } },
+          B1: { coal: { supply: 200, demand: 0 } },
+          C1: { coal: { supply: 0, demand: 100 } },
+        }),
+        statePricesFor: () => undefined,
+        nationalPricesFor: () => undefined,
+      });
+      const r = runSourcingPass(inputs);
+      expect(r.purchaseExposureByCountry).toBeUndefined();
+      expect(delivered(r, "coal", "UK", "US")).toBeCloseTo(100);
+      expect(delivered(r, "coal", "US", "FR")).toBeCloseTo(100);
+      expect(r.unplacedSupplyByState.get("coal")!.get("A1")).toBeCloseTo(0);
+      // A1 was refused by its own network, but the coal sold, so it is not stuck.
+      expect(r.deliveryLimitedSupplyByState.get("coal")!.get("A1")).toBeCloseTo(0);
+
+      const withUses = runSourcingPass({
+        ...inputs,
+        demandUsesByState: new Map([
+          ["C1", new Map([["coal", { householdFinal: 0, productionInput: 100 }]])],
+        ]),
+      });
+      const fr = withUses.purchaseExposureByCountry?.get("FR")?.get("coal");
+      expect(fr?.productionInput.importUnits).toBeCloseTo(100);
+    });
+
+    it("a state mining several commodities offers each displaced spare, grid loss included", () => {
+      const r = runSourcingPass(
+        displacedInputs({
+          byState: balances({
+            A1: {
+              coal: { supply: 100, demand: 0 },
+              natural_gas: { supply: 100, demand: 0 },
+              freight: { supply: 1000, demand: 0 },
+            },
+            A2: {
+              coal: { supply: 0, demand: 100 },
+              natural_gas: { supply: 0, demand: 100 },
+              freight: { supply: 1000, demand: 0 },
+            },
+            B1: { coal: { supply: 200, demand: 0 }, natural_gas: { supply: 200, demand: 0 } },
+            C1: { coal: { supply: 0, demand: 100 }, natural_gas: { supply: 0, demand: 100 } },
+          }),
+          byCountry: balances({
+            US: { coal: { supply: 100, demand: 100 }, natural_gas: { supply: 100, demand: 100 } },
+            UK: { coal: { supply: 200, demand: 0 }, natural_gas: { supply: 200, demand: 0 } },
+            FR: { coal: { supply: 0, demand: 100 }, natural_gas: { supply: 0, demand: 100 } },
+          }),
+        })
+      );
+      const seaFactor = (1 - GRID_LOSS_PER_HOP) ** SEA_FREIGHT_HOP_EQUIV;
+      expect(delivered(r, "coal", "US", "FR")).toBeCloseTo(100);
+      expect(delivered(r, "natural_gas", "UK", "US")).toBeCloseTo(100);
+      expect(delivered(r, "natural_gas", "US", "FR")).toBeCloseTo(100 * seaFactor);
+      for (const commodity of ["coal", "natural_gas"] as const) {
+        expect(r.unplacedSupplyByState.get(commodity)!.get("A1")).toBeCloseTo(0);
+      }
+      expect(destination(r, "natural_gas", "FR")!.unmetUnits).toBeCloseTo(100 - 100 * seaFactor);
+    });
+  });
+});
