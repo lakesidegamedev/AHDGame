@@ -21,7 +21,7 @@ vi.mock("@/contexts/CurrencyContext", () => ({
   useCurrency: () => ({
     formatAmount: (amount: number) => `$${amount}`,
     formatPrice: (amount: number) => `$${amount}`,
-    formatPriceIn: (amount: number) => `$${amount}`,
+    formatListingPrice: (amount: number) => `$${amount}`,
     formatFull: (amount: number) => `$${amount}`,
     toInternalFrom: (amount: number) => amount,
   }),

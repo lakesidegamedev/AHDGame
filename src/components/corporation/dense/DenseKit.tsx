@@ -481,14 +481,14 @@ export function useCorpMoney(
   liquidCurrencyCode: string | null | undefined,
   countryId?: string | null
 ) {
-  const { formatPriceIn, formatPrice } = useCurrency();
+  const { formatListingPrice, formatPrice } = useCurrency();
   const code = resolveCorpDisplayCurrency({ liquidCurrencyCode, countryId });
   const local = useLocalCurrency(code);
   const fmtSigned = (amount: number) =>
     `${amount > 0 ? "+" : amount < 0 ? "-" : ""}${local.fmtAmount(Math.abs(amount))}`;
   /** A share trades in its listing currency, whatever the viewer's display preference. */
   const fmtPrice = (amount: number) =>
-    code ? formatPriceIn(local.toAnchor(amount), code) : formatPrice(amount, code);
+    code ? formatListingPrice(amount, code) : formatPrice(amount, code);
   return {
     code,
     toAnchor: local.toAnchor,
