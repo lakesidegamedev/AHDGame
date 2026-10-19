@@ -46,6 +46,7 @@ export const ALL_TX_TYPES: readonly FinancialTxType[] = [
   // ── Bonds ──────────────────────────────────────────────────────────────
   "bond_purchase",
   "bond_sell",
+  "bond_buyback",
   "bond_pool_inflow",
   "bond_pool_sweep",
   "bond_coupon",
@@ -201,6 +202,7 @@ export const TX_TYPE_LABELS: Record<FinancialTxType, string> = {
 
   bond_purchase: "Bond Purchase",
   bond_sell: "Bond Sell",
+  bond_buyback: "Bond Buyback",
   bond_pool_inflow: "Bond Pool Liquidity Inflow",
   bond_pool_sweep: "Bond Pool Liquidity Sweep",
   bond_coupon: "Bond Coupon",

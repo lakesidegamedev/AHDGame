@@ -130,6 +130,7 @@ const TX_TYPE_TO_AUDIT_ACTION: Partial<Record<FinancialTxType, string>> = {
   // Bonds
   bond_purchase: "bond.buy",
   bond_sell: "bond.sell",
+  bond_buyback: "bond.buyback",
   bond_coupon: "bond.coupon",
   bond_maturity: "bond.maturity",
   bond_default: "bond.default",
