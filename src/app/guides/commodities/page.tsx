@@ -856,6 +856,12 @@ Examples:
                     note: "Traditional freight and consulting",
                   },
                   {
+                    name: "Freight Only",
+                    supply: "Freight 0.70",
+                    demand: "Vehicles 0.20, Energy 0.20, Software",
+                    note: "Pure haulage, no consulting arm",
+                  },
+                  {
                     name: "Automated Logistics",
                     supply: "Freight 0.50, Consulting Services 0.15",
                     demand: "Software 0.20, Electronics 0.15, Energy",

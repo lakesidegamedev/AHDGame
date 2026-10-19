@@ -371,7 +371,7 @@ Computer-run corporations may automatically retool a sector onto a better strate
 | Telecommunications | 5G/6G Networks, Standard, 5G/Infrastructure, Cloud Services | 4 |
 | Media (entertainment) | Live-Service Platforms, Standard, Streaming/Digital, Live/Venue | 4 |
 | Retail | E-Commerce Fulfillment, Standard, E-Commerce, Brick & Mortar | 4 |
-| Logistics | Autonomous Freight, Standard, Automated Logistics, Full-Service | 4 |
+| Logistics | Autonomous Freight, Standard, Freight Only, Automated Logistics, Full-Service | 5 |
 | Extraction & Mining | Diversified, Iron & Metals Mining, Oil & Gas, Rare Earth Minerals Mining, Coal Mining, Timber & Forestry | 6 |
 
 There is no separate Copper Mining strategy: copper was merged into the Rare Earth Minerals commodity, and Rare Earth Minerals Mining covers both markets.
