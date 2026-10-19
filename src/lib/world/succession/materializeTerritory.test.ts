@@ -16,6 +16,11 @@ describe("federation territory materialization", () => {
       { _id: "ua-policy", stateId: "KYIV", countryId: "RU" },
     ]);
     mem.seed("corporateSectors", [{ _id: "ua-facility", stateId: "KYIV", countryId: "RU" }]);
+    mem.seed("energyPlants", [
+      { _id: "ru-plant", countryId: "RU", regionId: "RUSSIA" },
+      { _id: "ua-plant", countryId: "RU", regionId: "KYIV" },
+    ]);
+    mem.seed("infraProjects", [{ _id: "ua-infra", countryId: "RU", regionId: "KYIV" }]);
     mem.seed("macroMetrics", [{ _id: "UKRAINE", countryId: "RU", value: 1 }]);
     mem.seed("stateRegistrationPool", [{ _id: "RU_KYIV", countryId: "RU", value: 1 }]);
     mem.seed("characters", [{ _id: "player", homeState: "KYIV", countryId: "RU" }]);
@@ -49,13 +54,17 @@ describe("federation territory materialization", () => {
         },
       ],
     });
-    expect(result).toEqual({ statesArchived: 2, regionalRowsArchived: 4 });
+    expect(result).toEqual({ statesArchived: 2, regionalRowsArchived: 6 });
     expect((await db.collection("states").find({}).toArray()).map((row) => row._id)).toEqual([
       "RUSSIA",
     ]);
     expect((await db.collection("statePolicies").find({}).toArray()).map((row) => row._id)).toEqual(
       ["ru-policy"]
     );
+    expect((await db.collection("energyPlants").find({}).toArray()).map((row) => row._id)).toEqual([
+      "ru-plant",
+    ]);
+    expect(await db.collection("infraProjects").countDocuments({})).toBe(0);
     expect(await db.collection("characters").countDocuments({ homeState: "KYIV" })).toBe(1);
     expect(
       (await db.collection("federationArchivedRegionRows").find({}).toArray()).map((row) => [
@@ -66,6 +75,8 @@ describe("federation territory materialization", () => {
     ).toEqual([
       ["states", "UKRAINE", "UKR"],
       ["states", "KYIV", "UKR"],
+      ["energyPlants", "ua-plant", "UKR"],
+      ["infraProjects", "ua-infra", "UKR"],
       ["statePolicies", "ua-policy", "UKR"],
       ["corporateSectors", "ua-facility", "UKR"],
       ["macroMetrics", "UKRAINE", "UKR"],
