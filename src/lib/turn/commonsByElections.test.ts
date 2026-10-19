@@ -109,6 +109,75 @@ describe("commons watcher backstop", () => {
   });
 });
 
+describe("commons watcher backstop bloc seats", () => {
+  // 1991 preset: Wales holds 38 Commons seats. Office-switch vacates drop
+  // `seatsHeld`, so the backstop must size the row from the region's deficit.
+  const WAL_SEATS = getUkCommonsSeats("1991-default").WAL;
+
+  function walesWorld(rows: Record<string, unknown>[]) {
+    const fake = createFakeCommonsDb();
+    fake.seed("gameState", [{ _id: "current", preset: "1991-default" }]);
+    fake.seed("electedOfficials", rows);
+    return fake;
+  }
+
+  function seatedBloc(seatsHeld: number) {
+    return { ...seatedMp().official, state: "WAL", seatsHeld };
+  }
+
+  it("contests the whole deficit when the vacated row lost its seat count", async () => {
+    const { processCommonsByElectionWatcher } = await import("./commonsByElections");
+    expect(WAL_SEATS).toBe(38);
+    const fake = walesWorld([seatedBloc(21), tombstone({ state: "WAL" })]);
+
+    await processCommonsByElectionWatcher(fake.db, TURN, NOW);
+    const vacancies = fake.read<Record<string, unknown>>("ukCommonsVacancies");
+    expect(vacancies).toHaveLength(1);
+    expect(vacancies[0].seats).toBe(17);
+    const race = fake.read<Record<string, unknown>>("elections")[0];
+    expect(race).toMatchObject({ electionType: "special_commons", state: "WAL", totalSeats: 17 });
+  });
+
+  it("keeps a recorded seat count", async () => {
+    const { processCommonsByElectionWatcher } = await import("./commonsByElections");
+    const fake = walesWorld([seatedBloc(21), tombstone({ state: "WAL", seatsHeld: 5 })]);
+
+    await processCommonsByElectionWatcher(fake.db, TURN, NOW);
+    expect(fake.read<Record<string, unknown>>("ukCommonsVacancies")[0].seats).toBe(5);
+  });
+
+  it("floors at one seat when the region has no deficit", async () => {
+    const { processCommonsByElectionWatcher } = await import("./commonsByElections");
+    const fake = walesWorld([seatedBloc(WAL_SEATS), tombstone({ state: "WAL" })]);
+
+    await processCommonsByElectionWatcher(fake.db, TURN, NOW);
+    expect(fake.read<Record<string, unknown>>("ukCommonsVacancies")[0].seats).toBe(1);
+  });
+
+  it("allocates the deficit once across count-less rows and live vacancies", async () => {
+    const { processCommonsByElectionWatcher } = await import("./commonsByElections");
+    // 38 - 21 seated - 4 already behind a live vacancy = 13 left for two rows.
+    const tracked = tombstone({ state: "WAL" });
+    const fake = walesWorld([
+      seatedBloc(21),
+      tracked,
+      tombstone({ state: "WAL" }),
+      tombstone({ state: "WAL" }),
+    ]);
+    fake.seed("ukCommonsVacancies", [
+      openVacancy({ state: "WAL", seats: 4, officialId: tracked._id }),
+    ]);
+
+    await processCommonsByElectionWatcher(fake.db, TURN, NOW);
+    const seats = fake
+      .read<Record<string, unknown>>("ukCommonsVacancies")
+      .map((v) => v.seats as number);
+    expect(seats).toHaveLength(3);
+    expect(seats.reduce((n, s) => n + s, 0)).toBe(17);
+    expect([...seats].sort((a, b) => a - b)).toEqual([1, 4, 12]);
+  });
+});
+
 describe("commons watcher spawn", () => {
   it("spawns one special_commons race per region with the carve persisted and vacancies claimed", async () => {
     const { processCommonsByElectionWatcher } = await import("./commonsByElections");
