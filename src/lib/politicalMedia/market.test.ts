@@ -13,14 +13,14 @@ import { mediaAudienceAccessLimitUnitsByOutlet } from "@/lib/mediaRegulation/rul
 const input: SectorClearingInput = {
   sectorId: "sector-1",
   revenue: 100,
-  supplyRates: { advertising: 0.5, entertainment_services: 0.5 },
+  supplyRates: { advertising: 0.5, software: 0.5 },
   posture: 0,
 };
 
 const clearing: SectorClearingResult = {
   factor: 0.5,
   soldFraction: 0.5,
-  soldByCommodity: { advertising: 0.5, entertainment_services: 0.5 },
+  soldByCommodity: { advertising: 0.5, software: 0.5 },
   effectivePosture: 0,
 };
 
@@ -241,7 +241,7 @@ describe("settlePoliticalAdMarket", () => {
     expect(result.clearingBySectorId.get("sector-1")).toMatchObject({
       factor: 0.75,
       soldFraction: 0.75,
-      soldByCommodity: { advertising: 1, entertainment_services: 0.5 },
+      soldByCommodity: { advertising: 1, software: 0.5 },
     });
     expect(result.sellerPayoutLocalByCorpId.get("corp-1")).toBe(125);
   });
@@ -323,7 +323,7 @@ describe("settlePoliticalAdMarket", () => {
     expect(result.clearingBySectorId.get("sector-1")).toMatchObject({
       factor: 0.75,
       soldFraction: 0.75,
-      soldByCommodity: { advertising: 1, entertainment_services: 0.5 },
+      soldByCommodity: { advertising: 1, software: 0.5 },
     });
     expect(result.sellerPayoutLocalByCorpId.get("corp-1")).toBe(125);
   });

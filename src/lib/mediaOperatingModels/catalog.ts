@@ -24,7 +24,7 @@ export interface MediaOperatingModelDefinition {
   name: string;
   sectorTypes: readonly MediaOperatingModelSector[];
   availableFromYear: number;
-  outputProducts: readonly ("advertising" | "entertainment_services")[];
+  outputProducts: readonly "advertising"[];
   /** Existing input basket charged through ordinary sector physical costs. */
   recipes: Partial<
     Record<MediaOperatingModelSector, { inputStrategyId: string; outputStrategyId: string }>
@@ -70,7 +70,7 @@ export const MEDIA_OPERATING_MODELS: readonly MediaOperatingModelDefinition[] = 
     name: "Cable Television",
     sectorTypes: ["media"],
     availableFromYear: 1980,
-    outputProducts: ["advertising", "entertainment_services"],
+    outputProducts: ["advertising"],
     recipes: {
       media: { inputStrategyId: "streaming_media", outputStrategyId: "streaming_media" },
     },
@@ -81,7 +81,7 @@ export const MEDIA_OPERATING_MODELS: readonly MediaOperatingModelDefinition[] = 
     name: "Film Studio",
     sectorTypes: ["media_entertainment"],
     availableFromYear: 1910,
-    outputProducts: ["entertainment_services"],
+    outputProducts: ["advertising"],
     recipes: {
       media_entertainment: { inputStrategyId: "standard", outputStrategyId: "standard" },
     },
@@ -92,7 +92,7 @@ export const MEDIA_OPERATING_MODELS: readonly MediaOperatingModelDefinition[] = 
     name: "Music Label",
     sectorTypes: ["media_entertainment"],
     availableFromYear: 1950,
-    outputProducts: ["entertainment_services"],
+    outputProducts: ["advertising"],
     recipes: {
       media_entertainment: { inputStrategyId: "standard", outputStrategyId: "standard" },
     },
@@ -103,7 +103,7 @@ export const MEDIA_OPERATING_MODELS: readonly MediaOperatingModelDefinition[] = 
     name: "Publishing House",
     sectorTypes: ["media"],
     availableFromYear: 1900,
-    outputProducts: ["advertising", "entertainment_services"],
+    outputProducts: ["advertising"],
     recipes: {
       media: { inputStrategyId: "standard", outputStrategyId: "streaming_media" },
     },
@@ -114,7 +114,7 @@ export const MEDIA_OPERATING_MODELS: readonly MediaOperatingModelDefinition[] = 
     name: "Streaming Platform",
     sectorTypes: ["media", "media_entertainment"],
     availableFromYear: 2005,
-    outputProducts: ["advertising", "entertainment_services"],
+    outputProducts: ["advertising"],
     recipes: {
       media: { inputStrategyId: "streaming_media", outputStrategyId: "streaming_media" },
       media_entertainment: { inputStrategyId: "streaming", outputStrategyId: "streaming" },
@@ -171,7 +171,7 @@ export function effectiveMediaOperatingModelId(
  */
 export function mediaOperatingModelOutputRates(
   legacyRates: Partial<Record<CommodityType, number>>,
-  outputValueShares: Partial<Record<"advertising" | "entertainment_services", number>>
+  outputValueShares: Partial<Record<"advertising", number>>
 ): Partial<Record<CommodityType, number>> {
   const legacyValueBudget = Object.values(legacyRates).reduce(
     (total, rate) =>
@@ -179,7 +179,7 @@ export function mediaOperatingModelOutputRates(
     0
   );
   const entries = Object.entries(outputValueShares).filter(
-    (entry): entry is ["advertising" | "entertainment_services", number] =>
+    (entry): entry is ["advertising", number] =>
       typeof entry[1] === "number" && Number.isFinite(entry[1]) && entry[1] > 0
   );
   const shareTotal = entries.reduce((total, [, share]) => total + share, 0);

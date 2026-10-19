@@ -169,17 +169,11 @@ describe("governed fragile-market supply routing", () => {
     expect(fragileMarketCommodityForSector("media", "US", prices)).toBeNull();
   });
 
-  it("answers chronic healthcare and entertainment service shortages (#2088)", () => {
+  it("answers chronic healthcare and advertising shortages (#2088)", () => {
     const hc = ratios({ healthcare_services: 5.2 });
     expect(fragileMarketCommodityForSector("healthcare", "US", hc)).toBe("healthcare_services");
-    const ent = ratios({ advertising: 1.7, entertainment_services: 8.5 });
-    expect(fragileMarketCommodityForSector("media_entertainment", "US", ent)).toBe(
-      "entertainment_services"
-    );
-    const adsOnly = ratios({ advertising: 2.0, entertainment_services: 1.1 });
-    expect(fragileMarketCommodityForSector("media_entertainment", "US", adsOnly)).toBe(
-      "advertising"
-    );
+    const ads = ratios({ advertising: 2.0 });
+    expect(fragileMarketCommodityForSector("media_entertainment", "US", ads)).toBe("advertising");
   });
 
   it("keeps healthcare entry disarmed below the critical-shortage bar (#2088)", () => {

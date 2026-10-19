@@ -102,7 +102,8 @@ export async function GET(request: Request, { params }: RouteParams) {
     for (const row of history) {
       if (!row.commodityOutput) continue;
       for (const key of Object.keys(row.commodityOutput)) {
-        commoditySet.add(key as CommodityType);
+        // History keeps retired commodities; only chart ones that still exist.
+        if (key in COMMODITY_LABELS) commoditySet.add(key as CommodityType);
       }
     }
     const commodities = [...commoditySet];

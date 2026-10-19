@@ -17,7 +17,6 @@ import {
 } from "./brandLoyaltyTurn";
 import {
   getEffectiveStrategyRatesForOperatingModel,
-  applyPlannedEconomyOutputMix,
   plannedEconomyMediaSupplyFactor,
 } from "@/lib/constants/sectorStrategies";
 import { isPlannedEconomy } from "@/lib/constants/commandEconomy";
@@ -256,24 +255,14 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
         // sector sat at 0.435-0.498 against a 0.5 threshold and so read as
         // permanently oversupplied on output it could never have made.
         //
-        // Order matters: the planned-economy remap runs first (it can swap the
-        // commodity entirely), then the capacity filter culls what the state
-        // cannot extract. The helper no-ops for non-extraction sectors and for
-        // states with no capacity document, so nothing else moves.
+        // The capacity filter culls what the state cannot extract. The helper
+        // no-ops for non-extraction sectors and for states with no capacity
+        // document, so nothing else moves.
         const rates = {
           ...baseRates,
           supply: applyExtractionResourceCapacityToSupply(
             sector.sectorType,
-            applyPlannedEconomyOutputMix(
-              sector.sectorType,
-              baseRates.supply,
-              isPlannedEconomy(
-                (sector as { countryId?: string }).countryId,
-                currentYear,
-                commandEconomyEnabled
-              ),
-              sector.mediaDiscriminator
-            ),
+            baseRates.supply,
             lookups.stateResourceCapacityByState.get(sector.stateId)
           ),
         };

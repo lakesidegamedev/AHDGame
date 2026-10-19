@@ -30,7 +30,7 @@ export const ENTERTAINMENT_V3: V3LaneContent = {
         "B-picture units turn out finished features on fixed weekly quotas at minimal cost.",
       effects: [
         { kind: "growthCostReduction", pct: 0.05 },
-        { kind: "outputRate", commodity: "entertainment_services", pct: 0.07 },
+        { kind: "outputRate", commodity: "advertising", pct: 0.07 },
       ],
     },
     {
@@ -81,7 +81,7 @@ export const ENTERTAINMENT_V3: V3LaneContent = {
       description: "Purpose-built television units shoot a half-hour episode in three days flat.",
       effects: [
         { kind: "laborCostReduction", pct: 0.07 },
-        { kind: "outputRate", commodity: "entertainment_services", pct: 0.08 },
+        { kind: "outputRate", commodity: "advertising", pct: 0.08 },
       ],
     },
     {
@@ -186,7 +186,7 @@ export const ENTERTAINMENT_V3: V3LaneContent = {
         "Thousands of simultaneous prints amortize marketing over a single massive weekend.",
       effects: [
         { kind: "growthCostReduction", pct: 0.06 },
-        { kind: "outputRate", commodity: "entertainment_services", pct: 0.08 },
+        { kind: "outputRate", commodity: "advertising", pct: 0.08 },
       ],
     },
     {
@@ -337,7 +337,7 @@ export const ENTERTAINMENT_V3: V3LaneContent = {
         "File-based delivery to theaters and stores eliminates prints, shipping, and warehouses.",
       effects: [
         { kind: "growthCostReduction", pct: 0.06 },
-        { kind: "outputRate", commodity: "entertainment_services", pct: 0.09 },
+        { kind: "outputRate", commodity: "advertising", pct: 0.09 },
       ],
     },
     {
@@ -439,7 +439,7 @@ export const ENTERTAINMENT_V3: V3LaneContent = {
         "One asset pipeline feeds film, series, and games so nothing is ever built twice.",
       effects: [
         { kind: "growthCostReduction", pct: 0.07 },
-        { kind: "outputRate", commodity: "entertainment_services", pct: 0.08 },
+        { kind: "outputRate", commodity: "advertising", pct: 0.08 },
       ],
     },
     {
@@ -491,7 +491,7 @@ export const ENTERTAINMENT_V3: V3LaneContent = {
         "Generative pipelines under editorial control produce finished episodes at software cost.",
       effects: [
         { kind: "laborCostReduction", pct: 0.09 },
-        { kind: "outputRate", commodity: "entertainment_services", pct: 0.09 },
+        { kind: "outputRate", commodity: "advertising", pct: 0.09 },
       ],
     },
     {

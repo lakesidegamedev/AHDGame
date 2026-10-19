@@ -168,19 +168,19 @@ export async function buildPoliticalAdMarketReport() {
   const inputFor = (sectorId: string): SectorClearingInput => ({
     sectorId,
     revenue: 100,
-    supplyRates: { advertising: 0.5, entertainment_services: 0.5 },
+    supplyRates: { advertising: 0.5, software: 0.5 },
     posture: 0,
   });
   const commercialA: SectorClearingResult = {
     factor: 0.25,
     soldFraction: 0.25,
-    soldByCommodity: { advertising: 0.5, entertainment_services: 0 },
+    soldByCommodity: { advertising: 0.5, software: 0 },
     effectivePosture: 0,
   };
   const commercialB: SectorClearingResult = {
     factor: 0.1,
     soldFraction: 0.1,
-    soldByCommodity: { advertising: 0.2, entertainment_services: 0 },
+    soldByCommodity: { advertising: 0.2, software: 0 },
     effectivePosture: 0,
   };
   const offers = [

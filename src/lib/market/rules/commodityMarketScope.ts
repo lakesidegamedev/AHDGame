@@ -14,7 +14,6 @@ export function commodityMarketScope(commodity: CommodityType): CommodityMarketS
     case "construction_services":
     case "healthcare_services":
     case "real_estate_services":
-    case "entertainment_services":
       return "state";
     default:
       return "reachable";

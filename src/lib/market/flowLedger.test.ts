@@ -53,7 +53,7 @@ describe("buildCommodityFlowDocs", () => {
 
   it("records glut flows: cleared = demand, surplus = supply − demand", () => {
     const docs = buildCommodityFlowDocs(
-      args({ global: new Map([["entertainment_services", { supply: 168677, demand: 66265 }]]) })
+      args({ global: new Map([["advertising", { supply: 168677, demand: 66265 }]]) })
     );
     const d = docs[0];
     expect(d.clearedUnits).toBe(66265);

@@ -380,8 +380,6 @@ For extraction sectors specifically, the **Diversified** strategy spreads output
 
 **Telecommunications** sectors produce **Network Services** (subscription-equivalent broadband/connectivity capacity) as their primary unique output alongside software. The three strategies (Standard, 5G/Infrastructure, Cloud Services) differ in how much network_services vs software they supply and in their hardware/energy input mix. Network services have background macro demand from GDP, so there is always a market even before player-built Telecom sectors are common.
 
-**Entertainment-line media** sectors produce **Entertainment Services** (event-equivalent entertainment capacity) as their primary unique output alongside advertising. The three strategies (Standard, Streaming/Digital, Live/Venue) differ in output split and input profile. Live/Venue supplies the most entertainment_services but demands construction and real estate inputs for physical venue infrastructure.
-
 ## Corporate taxes
 
 Two tax rates apply to each sector: a **domestic rate** and a **foreign rate**. A corporation headquartered in the US pays the US domestic rate on US sectors and the foreign rate of any other country where it operates. Both rates are set by legislation in each country. State-level corporate taxes also stack on top.

@@ -9,7 +9,7 @@ confidence, and prices.
 
 Every state generates demand for a basket of finished goods and consumer
 services, including food, energy, retail, vehicles, electronics, medicine,
-housing, finance, networks, entertainment, software, freight, and professional
+housing, finance, networks, software, freight, and professional
 services.
 
 The total budget is anchored to population rather than nominal GDP so countries
@@ -23,14 +23,14 @@ the demand level:
 
 Wealth changes the basket mix through Engel's law. Richer states spend a
 smaller share on staples and a larger share on vehicles, electronics, housing,
-finance, entertainment, and software.
+finance, and software.
 
 ## Price elasticity
 
 Households buy less of a commodity when its prior global price rises above the
 era base price and more when it falls below. Staples such as food, energy,
 healthcare, and medicine are relatively inelastic. Vehicles, electronics,
-software, and entertainment respond more strongly.
+and software respond more strongly.
 
 In plants worlds, household demand is scaled onto the physical production unit
 basis. Per-commodity demand is capped at 1.5× the prior turn's global supply so a

@@ -1706,6 +1706,11 @@ export interface CorporateSector {
    * opex-anchor heal.
    */
   retoolRescaleApplied?: boolean;
+  /**
+   * Set once the entertainment commodity removal rescaled this sector's owned
+   * units onto the advertising basis (migrateEntertainmentRemoval).
+   */
+  entertainmentRemovalRescaleApplied?: boolean;
   /** Turn after which a new strategy change is allowed (transition end + cooldown) */
   transitionCooldownUntilTurn?: number | null;
   /** Turn the extraction auto-strategy phase adopted a focused mining strategy here (audit trail). */
