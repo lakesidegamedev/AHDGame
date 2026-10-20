@@ -272,7 +272,7 @@ describe("buildPolicyStackRows", () => {
         foreignTariffModifier: -3,
         stateMetricsModifier: 8.5,
         corruptionModifier: -2.5,
-        techMarginBonus: 4,
+        sectorTypeMatchModifier: 4,
       },
     });
     // Corruption is a reading inside the state-metric total, not a second term.
@@ -314,7 +314,7 @@ describe("buildPolicyStackRows", () => {
       revenueAnchor: 3_000_000,
       appliedPolicyPp: 1.18,
       mods: {
-        techMarginBonus: 3.3,
+        subsidyModifier: 3.3,
         sectorTypeMatchModifier: 5.0,
         typeSwitchModifier: -10.0,
         strategyTransitionModifier: -4.6,
@@ -332,7 +332,7 @@ describe("buildPolicyStackRows", () => {
     });
     expect(rows.reduce((s, r) => s + r.anchor, 0)).toBeCloseTo(35_300, 6);
     const typeSwitch = rows.find((r) => r.key === "typeSwitchModifier");
-    const tech = rows.find((r) => r.key === "techMarginBonus");
+    const tech = rows.find((r) => r.key === "subsidyModifier");
     expect(typeSwitch).toBeDefined();
     expect(tech).toBeDefined();
     expect(typeSwitch!.pp).toBe(-10);
@@ -399,11 +399,11 @@ describe("buildPolicyStackRows", () => {
     const rows = buildPolicyStackRows({
       policyCreditAnchor: 35_300,
       revenueAnchor: 3_000_000,
-      mods: { typeSwitchModifier: -10, techMarginBonus: 3.3, subsidyModifier: 5 },
+      mods: { typeSwitchModifier: -10, sectorTypeMatchModifier: 3.3, subsidyModifier: 5 },
     });
     expect(rows.reduce((s, r) => s + r.anchor, 0)).toBeCloseTo(35_300, 6);
     expect(rows.find((r) => r.key === "typeSwitchModifier")!.anchor).toBeLessThan(0);
-    expect(rows.find((r) => r.key === "techMarginBonus")!.anchor).toBeGreaterThan(0);
+    expect(rows.find((r) => r.key === "sectorTypeMatchModifier")!.anchor).toBeGreaterThan(0);
   });
 });
 

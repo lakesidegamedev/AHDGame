@@ -13,7 +13,7 @@ export const FINANCIAL_V3: V3LaneContent = {
       name: "Trust Client Referrals",
       description:
         "Officers court estates and war contractors, moving accounts into higher fee tiers.",
-      effects: [{ kind: "priceRealization", pct: 0.012 }],
+      effects: [{ kind: "plantOutput", pct: 0.012 }],
     },
     {
       name: "Regulator Liaison Office",
@@ -34,7 +34,7 @@ export const FINANCIAL_V3: V3LaneContent = {
       name: "War Finance Prestige",
       description: "Bond drive leadership makes the bank the trusted name for premium accounts.",
       effects: [
-        { kind: "priceRealization", pct: 0.02 },
+        { kind: "plantOutput", pct: 0.02 },
         { kind: "marketingStrength", flat: 25 },
       ],
     },
@@ -57,7 +57,7 @@ export const FINANCIAL_V3: V3LaneContent = {
       name: "Personal Banker Programs",
       description: "Named bankers for affluent households justify higher service charges.",
       effects: [
-        { kind: "priceRealization", pct: 0.012 },
+        { kind: "plantOutput", pct: 0.012 },
         { kind: "inputCost", commodity: "consulting_services", pct: 0.05 },
       ],
     },
@@ -78,7 +78,7 @@ export const FINANCIAL_V3: V3LaneContent = {
       name: "Blue Chip Advisory Desks",
       description: "Full advisory relationships with corporate treasurers command premium fees.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "marketingStrength", flat: 25 },
       ],
     },
@@ -104,7 +104,7 @@ export const FINANCIAL_V3: V3LaneContent = {
     {
       name: "Charge Account Upselling",
       description: "Revolving credit lines attached to checking accounts lift income per customer.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Interstate Compact Lobbying",
@@ -126,7 +126,7 @@ export const FINANCIAL_V3: V3LaneContent = {
       name: "Premium Card Franchises",
       description: "A prestige card brand with travel perks locks in high-margin cardholders.",
       effects: [
-        { kind: "priceRealization", pct: 0.022 },
+        { kind: "plantOutput", pct: 0.022 },
         { kind: "marketingStrength", flat: 28 },
       ],
     },
@@ -152,7 +152,7 @@ export const FINANCIAL_V3: V3LaneContent = {
     {
       name: "Cash Management Sales Force",
       description: "Treasury products sold to corporates carry fees ordinary deposits never could.",
-      effects: [{ kind: "priceRealization", pct: 0.014 }],
+      effects: [{ kind: "plantOutput", pct: 0.014 }],
     },
     {
       name: "Offshore Booking Centers",
@@ -173,7 +173,7 @@ export const FINANCIAL_V3: V3LaneContent = {
       description:
         "Advisory mandates and syndication lead roles put the bank at the top of fee tables.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "outputRate", commodity: "financial_services", pct: 0.06 },
       ],
     },
@@ -199,7 +199,7 @@ export const FINANCIAL_V3: V3LaneContent = {
       name: "Rate Tiering Desks",
       description:
         "Deposit and loan pricing tiered by balance captures what each customer will pay.",
-      effects: [{ kind: "priceRealization", pct: 0.014 }],
+      effects: [{ kind: "plantOutput", pct: 0.014 }],
     },
     {
       name: "Deregulation Task Force",
@@ -221,7 +221,7 @@ export const FINANCIAL_V3: V3LaneContent = {
       name: "Yield Product Engineering",
       description: "NOW accounts, sweeps and money desks price every idle dollar at market.",
       effects: [
-        { kind: "priceRealization", pct: 0.026 },
+        { kind: "plantOutput", pct: 0.026 },
         { kind: "outputRate", commodity: "financial_services", pct: 0.06 },
       ],
     },
@@ -246,7 +246,7 @@ export const FINANCIAL_V3: V3LaneContent = {
     {
       name: "Relationship Pricing Models",
       description: "Bundled pricing across the whole relationship raises fee capture per client.",
-      effects: [{ kind: "priceRealization", pct: 0.014 }],
+      effects: [{ kind: "plantOutput", pct: 0.014 }],
     },
     {
       name: "Interstate Acquisition Play",
@@ -265,7 +265,7 @@ export const FINANCIAL_V3: V3LaneContent = {
       name: "Proprietary Trading Floors",
       description: "House trading desks and structured books earn spreads no branch ever saw.",
       effects: [
-        { kind: "priceRealization", pct: 0.028 },
+        { kind: "plantOutput", pct: 0.028 },
         { kind: "outputRate", commodity: "financial_services", pct: 0.07 },
       ],
     },
@@ -291,7 +291,7 @@ export const FINANCIAL_V3: V3LaneContent = {
       name: "Wealth Segment Branding",
       description: "Private client tiers with dedicated advisors carry advisory-level margins.",
       effects: [
-        { kind: "priceRealization", pct: 0.013 },
+        { kind: "plantOutput", pct: 0.013 },
         { kind: "marketingStrength", flat: 12 },
       ],
     },
@@ -313,7 +313,7 @@ export const FINANCIAL_V3: V3LaneContent = {
       name: "Universal Bank Cross-Sell",
       description: "Every client sees lending, markets and wealth products in one pitch book.",
       effects: [
-        { kind: "priceRealization", pct: 0.026 },
+        { kind: "plantOutput", pct: 0.026 },
         { kind: "marketingStrength", flat: 30 },
       ],
     },
@@ -340,7 +340,7 @@ export const FINANCIAL_V3: V3LaneContent = {
       name: "Fee Transparency Repricing",
       description:
         "Clean, published pricing wins back trust and defends fee income after the crash.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Stress Test Readiness",
@@ -359,7 +359,7 @@ export const FINANCIAL_V3: V3LaneContent = {
       name: "Flow Franchise Dominance",
       description: "Being first call for every large order lets the desk price the whole market.",
       effects: [
-        { kind: "priceRealization", pct: 0.028 },
+        { kind: "plantOutput", pct: 0.028 },
         { kind: "outputRate", commodity: "financial_services", pct: 0.08 },
       ],
     },
@@ -386,7 +386,7 @@ export const FINANCIAL_V3: V3LaneContent = {
     {
       name: "Subscription Banking Tiers",
       description: "Flat monthly plans convert unpredictable fees into steady premium revenue.",
-      effects: [{ kind: "priceRealization", pct: 0.014 }],
+      effects: [{ kind: "plantOutput", pct: 0.014 }],
     },
     {
       name: "Banking-as-a-Service Rails",
@@ -407,7 +407,7 @@ export const FINANCIAL_V3: V3LaneContent = {
       description:
         "Behavioral pricing engines quote each client the rate the relationship supports.",
       effects: [
-        { kind: "priceRealization", pct: 0.028 },
+        { kind: "plantOutput", pct: 0.028 },
         { kind: "marketingStrength", flat: 26 },
       ],
     },
@@ -432,7 +432,7 @@ export const FINANCIAL_V3: V3LaneContent = {
     {
       name: "Outcome-Priced Advice",
       description: "Advisory fees indexed to client outcomes command a durable premium.",
-      effects: [{ kind: "priceRealization", pct: 0.015 }],
+      effects: [{ kind: "plantOutput", pct: 0.015 }],
     },
     {
       name: "Programmable Compliance",
@@ -454,7 +454,7 @@ export const FINANCIAL_V3: V3LaneContent = {
       name: "Sovereign-Grade Custody",
       description: "Custody trusted by treasuries and funds prices at the very top of the market.",
       effects: [
-        { kind: "priceRealization", pct: 0.03 },
+        { kind: "plantOutput", pct: 0.03 },
         { kind: "marketingStrength", flat: 28 },
       ],
     },

@@ -159,10 +159,10 @@ describe("committed lane + effects", () => {
     expect(getCommittedLane(corp, "1999")).toBe("generic");
     expect(getCommittedLane(corp, "2009")).toBeUndefined();
   });
-  it("aggregates margin effects from unlocked nodes", () => {
+  it("aggregates plant effects from unlocked nodes", () => {
     const corp: TechCorpView = { type: "energy", unlockedTechNodeIds: [corpNodeId("2019", 1)] };
     expect(getActiveTechEffects(corp).length).toBeGreaterThan(0);
-    expect(getAggregatedTechEffects(corp).marginBonusPp).toBeCloseTo(2); // RPA = +2pp
+    expect(getAggregatedTechEffects(corp).plantOutputBonus).toBeCloseTo(0.02); // RPA = +2% output
   });
   it("surfaces unlocked production methods", () => {
     const corp: TechCorpView = {
@@ -173,15 +173,17 @@ describe("committed lane + effects", () => {
   });
 
   it("scopes effects: sector lane = primary only (full), corp lane = all (halved)", () => {
-    // energy-2019-1 (sector, +3.5pp) + corp-2019-1 (generic, +2pp).
+    // energy-2019-1 (sector, -10.5% inputs) + corp-2019-1 (generic, +2% output).
     const corp: TechCorpView = {
       type: "energy",
       unlockedTechNodeIds: [sectorNodeId("energy", "2019", 1), corpNodeId("2019", 1)],
     };
-    // Primary (energy) sector: corp 2×0.5=1 + sector 3.5 = 4.5pp.
-    expect(getSectorTechEffects(corp, "energy").marginBonusPp).toBeCloseTo(4.5);
-    // A non-primary sector: only the corp lane, halved → 1pp; no sector bonus.
-    expect(getSectorTechEffects(corp, "retail").marginBonusPp).toBeCloseTo(1);
+    // Primary (energy) sector: corp output halved to 1%, sector inputs at full strength.
+    expect(getSectorTechEffects(corp, "energy").plantOutputBonus).toBeCloseTo(0.01);
+    expect(getSectorTechEffects(corp, "energy").inputEfficiencyBonus).toBeCloseTo(0.105);
+    // A non-primary sector: only the corp lane, halved; no sector bonus.
+    expect(getSectorTechEffects(corp, "retail").plantOutputBonus).toBeCloseTo(0.01);
+    expect(getSectorTechEffects(corp, "retail").inputEfficiencyBonus).toBe(0);
   });
 });
 

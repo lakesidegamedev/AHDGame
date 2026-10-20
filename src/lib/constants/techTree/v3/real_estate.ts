@@ -13,7 +13,7 @@ export const REAL_ESTATE_V3: V3LaneContent = {
       name: "Defense Worker Housing Priority",
       description:
         "Priority allocations for war workers keep buildings full at controlled but reliable rents.",
-      effects: [{ kind: "priceRealization", pct: 0.011 }],
+      effects: [{ kind: "plantOutput", pct: 0.011 }],
     },
     {
       name: "Rent Board Relations",
@@ -35,7 +35,7 @@ export const REAL_ESTATE_V3: V3LaneContent = {
       description:
         "Government master leases guarantee full occupancy at premium terms for the duration.",
       effects: [
-        { kind: "priceRealization", pct: 0.022 },
+        { kind: "plantOutput", pct: 0.022 },
         { kind: "outputRate", commodity: "real_estate_services", pct: 0.06 },
       ],
     },
@@ -61,7 +61,7 @@ export const REAL_ESTATE_V3: V3LaneContent = {
       description:
         "Furnished model homes and weekend showings sell units faster at full asking price.",
       effects: [
-        { kind: "priceRealization", pct: 0.011 },
+        { kind: "plantOutput", pct: 0.011 },
         { kind: "marketingStrength", flat: 10 },
       ],
     },
@@ -85,7 +85,7 @@ export const REAL_ESTATE_V3: V3LaneContent = {
       description:
         "Named master communities with schools and parks sell an address, not just a house.",
       effects: [
-        { kind: "priceRealization", pct: 0.023 },
+        { kind: "plantOutput", pct: 0.023 },
         { kind: "marketingStrength", flat: 26 },
       ],
     },
@@ -109,7 +109,7 @@ export const REAL_ESTATE_V3: V3LaneContent = {
     {
       name: "Prestige Tower Addresses",
       description: "Flagship towers with named lobbies command the top of the office rent card.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Planning Commission Seats",
@@ -131,7 +131,7 @@ export const REAL_ESTATE_V3: V3LaneContent = {
       description:
         "Long headquarters leases with blue-chip tenants anchor rents at premium levels for decades.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "outputRate", commodity: "real_estate_services", pct: 0.06 },
       ],
     },
@@ -155,7 +155,7 @@ export const REAL_ESTATE_V3: V3LaneContent = {
     {
       name: "Amenity Package Upselling",
       description: "Pools, clubs, and concierge tiers move rents above the neighborhood comp set.",
-      effects: [{ kind: "priceRealization", pct: 0.012 }],
+      effects: [{ kind: "plantOutput", pct: 0.012 }],
     },
     {
       name: "Syndication Risk Sharing",
@@ -177,7 +177,7 @@ export const REAL_ESTATE_V3: V3LaneContent = {
       description:
         "A curated trophy portfolio attracts institutions that pay premium rents for the address.",
       effects: [
-        { kind: "priceRealization", pct: 0.024 },
+        { kind: "plantOutput", pct: 0.024 },
         { kind: "marketingStrength", flat: 27 },
       ],
     },
@@ -202,7 +202,7 @@ export const REAL_ESTATE_V3: V3LaneContent = {
       name: "Inflation-Indexed Leases",
       description:
         "CPI escalators in every lease turn runaway inflation into automatic rent growth.",
-      effects: [{ kind: "priceRealization", pct: 0.014 }],
+      effects: [{ kind: "plantOutput", pct: 0.014 }],
     },
     {
       name: "Tax Shelter Structuring",
@@ -224,7 +224,7 @@ export const REAL_ESTATE_V3: V3LaneContent = {
       description:
         "Shifting tenants to triple-net terms passes costs through and hardens effective rents.",
       effects: [
-        { kind: "priceRealization", pct: 0.026 },
+        { kind: "plantOutput", pct: 0.026 },
         { kind: "outputRate", commodity: "real_estate_services", pct: 0.06 },
       ],
     },
@@ -249,7 +249,7 @@ export const REAL_ESTATE_V3: V3LaneContent = {
       name: "Class-A Repositioning",
       description:
         "Lobby, systems, and facade upgrades move tired buildings into the top rent tier.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "RTC Auction Discipline",
@@ -271,7 +271,7 @@ export const REAL_ESTATE_V3: V3LaneContent = {
       description:
         "A trusted national brand lets tenants pay more for a name they know in every city.",
       effects: [
-        { kind: "priceRealization", pct: 0.024 },
+        { kind: "plantOutput", pct: 0.024 },
         { kind: "marketingStrength", flat: 30 },
       ],
     },
@@ -296,7 +296,7 @@ export const REAL_ESTATE_V3: V3LaneContent = {
       name: "Broadband-Ready Buildings",
       description:
         "Wired buildings win tech tenants who pay up for connectivity others cannot offer.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Entitlement Pipeline Depth",
@@ -318,7 +318,7 @@ export const REAL_ESTATE_V3: V3LaneContent = {
       description:
         "Concentrated holdings in tech corridors ride the boom's rents to the top of the market.",
       effects: [
-        { kind: "priceRealization", pct: 0.026 },
+        { kind: "plantOutput", pct: 0.026 },
         { kind: "marketingStrength", flat: 26 },
       ],
     },
@@ -343,7 +343,7 @@ export const REAL_ESTATE_V3: V3LaneContent = {
       name: "LEED Certification Premiums",
       description:
         "Certified green buildings win corporate tenants with sustainability mandates and bigger budgets.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Foreclosure-to-Rental Pipelines",
@@ -366,7 +366,7 @@ export const REAL_ESTATE_V3: V3LaneContent = {
         "Guaranteed-savings retrofit contracts cut utility spend while premium tenants pay for green.",
       effects: [
         { kind: "inputCost", commodity: "energy", pct: 0.12 },
-        { kind: "priceRealization", pct: 0.02 },
+        { kind: "plantOutput", pct: 0.02 },
       ],
     },
     {
@@ -389,7 +389,7 @@ export const REAL_ESTATE_V3: V3LaneContent = {
       name: "Amenity-as-a-Service Tiers",
       description: "Subscription amenity tiers layer recurring premium revenue onto base rents.",
       effects: [
-        { kind: "priceRealization", pct: 0.013 },
+        { kind: "plantOutput", pct: 0.013 },
         { kind: "marketingStrength", flat: 11 },
       ],
     },
@@ -413,7 +413,7 @@ export const REAL_ESTATE_V3: V3LaneContent = {
       description:
         "Daily repricing against live demand keeps every unit at the top of what the market bears.",
       effects: [
-        { kind: "priceRealization", pct: 0.027 },
+        { kind: "plantOutput", pct: 0.027 },
         { kind: "outputRate", commodity: "real_estate_services", pct: 0.06 },
       ],
     },
@@ -438,7 +438,7 @@ export const REAL_ESTATE_V3: V3LaneContent = {
       name: "Wellness-Certified Space",
       description:
         "Air, light, and acoustic certification puts space at the top of corporate leasing lists.",
-      effects: [{ kind: "priceRealization", pct: 0.014 }],
+      effects: [{ kind: "plantOutput", pct: 0.014 }],
     },
     {
       name: "Climate Resilience Ratings",
@@ -460,7 +460,7 @@ export const REAL_ESTATE_V3: V3LaneContent = {
       description:
         "Buildings that reconfigure by the hour sell the same square feet several times a day.",
       effects: [
-        { kind: "priceRealization", pct: 0.028 },
+        { kind: "plantOutput", pct: 0.028 },
         { kind: "outputRate", commodity: "real_estate_services", pct: 0.07 },
       ],
     },

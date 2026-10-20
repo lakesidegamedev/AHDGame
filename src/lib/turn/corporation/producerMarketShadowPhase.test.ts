@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { isolatedShadowEnv, legacyPnlBySectorId } from "./producerMarketShadowPhase";
+import {
+  isolatedShadowEnv,
+  legacyPnlBySectorId,
+  shadowFitsPhaseBudget,
+} from "./producerMarketShadowPhase";
 import type { ProducerPhysicalEnv } from "./producerPhysicalPreparation";
 
 describe("producer-market shadow isolation", () => {
@@ -52,5 +56,12 @@ describe("producer-market shadow isolation", () => {
       { commodity: "healthcare_services", units: 2, book: "state:MN" },
     ]);
     expect((sector as { producerCapacity?: unknown }).producerCapacity).toBeUndefined();
+  });
+});
+
+describe("shadow phase budget", () => {
+  it("runs only when two minutes of the phase budget remain", () => {
+    expect(shadowFitsPhaseBudget(100_000, 240_000)).toBe(true);
+    expect(shadowFitsPhaseBudget(121_000, 240_000)).toBe(false);
   });
 });

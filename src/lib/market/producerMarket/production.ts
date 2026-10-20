@@ -309,13 +309,18 @@ export function advanceProducerEconomy(input: {
     for (const stock of p.outputStock) {
       finite(stock.units, "output stock");
       if (stock.quoteUnitCost != null) finite(stock.quoteUnitCost, "stock quote cost");
+      // An empty row (a good the plant no longer makes and has sold out of) is
+      // harmless; only stock that exists must match an output and its book.
       if (
-        !outputCommodities.has(stock.commodity) ||
-        !p.outputs.some(
-          (output) => output.commodity === stock.commodity && output.book === stock.book
-        )
+        stock.units > 0 &&
+        (!outputCommodities.has(stock.commodity) ||
+          !p.outputs.some(
+            (output) => output.commodity === stock.commodity && output.book === stock.book
+          ))
       )
-        throw new Error("Unrecognized produced stock or market book");
+        throw new Error(
+          `Unrecognized produced stock or market book: ${p.id} ${stock.commodity} ${stock.book} (outputs ${p.outputs.map((o) => `${o.commodity}@${o.book}`).join(",")})`
+        );
     }
   }
   const funding = new Map(
@@ -889,7 +894,11 @@ export function advanceProducerEconomy(input: {
       profit: revenue - consumed - inventoryWriteOff - p.labourCost - p.otherOperatingCost,
       cashFlow: revenue - purchases - paid.labour - paid.operating - arrearsPaid,
       inputStock: [...stocks.values()],
-      outputStock,
+      // A sold-out retained good (no longer in the recipe) leaves no row: next
+      // turn's plan has no output for it, so an empty row would be unrecognized.
+      outputStock: outputStock.filter(
+        (stock, i) => stock.units > 0 || p.outputs[i].unitsPerOutput > 0
+      ),
       products,
     });
   }

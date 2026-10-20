@@ -115,7 +115,6 @@ export interface PolicyStackInput {
   typeSwitchModifier?: number | null;
   strategyTransitionModifier?: number | null;
   sustainedNegativeProductionPenalty?: number | null;
-  techMarginBonus?: number | null;
   inflationModifier?: number | null;
   debtToGdpModifier?: number | null;
   deficitToGdpModifier?: number | null;
@@ -128,7 +127,6 @@ const POLICY_STACK_LABELS: { key: keyof PolicyStackInput; label: string }[] = [
   { key: "subsidyModifier", label: "Subsidies" },
   { key: "foreignTariffModifier", label: "Foreign tariff" },
   { key: "domesticTariffMalus", label: "Tariff friction" },
-  { key: "techMarginBonus", label: "Tech tree bonus" },
   { key: "homeLocationModifier", label: "Home location" },
   { key: "sectorTypeMatchModifier", label: "Sector match" },
   { key: "sprawlModifier", label: "Sprawl" },

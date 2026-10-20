@@ -1,7 +1,8 @@
 import { configureGroupSupply, groupForecastWriteOps } from "./groupSupplyTurn";
 import { migrateEntertainmentRemoval } from "./migrateEntertainmentRemoval";
 import { settleFundDividendAccruals } from "./settleFundDividendAccruals";
-import { runProducerMarketShadowPhase } from "./producerMarketShadowPhase";
+import { runProducerMarketShadowPhase, shadowFitsPhaseBudget } from "./producerMarketShadowPhase";
+import { PHASE_TIMEOUT_MS } from "@/lib/turn/processingLock";
 import { claimProducerPath, loadProducerPath } from "@/lib/market/producerMarket/liveMode";
 import { runFundedProducerTurn } from "./fundedProducerTurn";
 import type { ProducerPhysicalEnv } from "./producerPhysicalPreparation";
@@ -157,6 +158,7 @@ const CORP_TURN_RNG_SALT = process.env.SIM_RNG_SALT ? `:${process.env.SIM_RNG_SA
 export async function processCorporationTurn(turn?: number): Promise<CorporationTurnResult> {
   const db = await getDb();
   const now = new Date();
+  const phaseStartedAt = Date.now();
 
   const timer = createCorporationTurnTimer();
   const mark = timer.mark;
@@ -851,7 +853,13 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
   mark("processSectors(CPU)");
   await runProducerMarketShadowPhase(db, {
     // Never measure a shadow beside the live funded market in the same turn.
-    enabled: !funded && marketGovernorConfig?.producerMarketShadowEnabled === true,
+    // The shadow is telemetry inside this phase's timeout. Skip it when the
+    // phase has already used most of its budget; a skipped turn only starts a
+    // new shadow run next turn, a timed-out phase fails the economy.
+    enabled:
+      !funded &&
+      marketGovernorConfig?.producerMarketShadowEnabled === true &&
+      shadowFitsPhaseBudget(Date.now() - phaseStartedAt, PHASE_TIMEOUT_MS),
     turn: turn ?? gameState?.currentTurn ?? 0,
     worldEpoch: gameState?.worldEpochId,
     lookups,

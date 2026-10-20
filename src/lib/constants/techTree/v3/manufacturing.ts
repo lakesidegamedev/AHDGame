@@ -11,7 +11,7 @@ export const MANUFACTURING_V3: V3LaneContent = {
     {
       name: "Arsenal Grade Certification",
       description: "Certified wartime quality lets the mill quote above the going rate for steel.",
-      effects: [{ kind: "priceRealization", pct: 0.012 }],
+      effects: [{ kind: "plantOutput", pct: 0.012 }],
     },
     {
       name: "War Production Board Seats",
@@ -30,8 +30,8 @@ export const MANUFACTURING_V3: V3LaneContent = {
       name: "Prime Contractor Status",
       description: "Prime contracts with cost-plus terms pay premium prices for reliable output.",
       effects: [
-        { kind: "priceRealization", pct: 0.024 },
-        { kind: "marginBonus", pp: 0.5 },
+        { kind: "plantOutput", pct: 0.024 },
+        { kind: "inputEfficiency", pct: 0.015 },
       ],
     },
     {
@@ -52,7 +52,7 @@ export const MANUFACTURING_V3: V3LaneContent = {
     {
       name: "Alloy Steel Lines",
       description: "Specialty alloy grades sell into aerospace and autos at premium prices.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Industry Association Leadership",
@@ -72,7 +72,7 @@ export const MANUFACTURING_V3: V3LaneContent = {
       name: "Branded Structural Products",
       description: "Branded beams and sheet with certified specs hold price through downturns.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "marketingStrength", flat: 25 },
       ],
     },
@@ -94,7 +94,7 @@ export const MANUFACTURING_V3: V3LaneContent = {
     {
       name: "Coated Sheet Premiums",
       description: "Galvanized and coated sheet earns more per ton than commodity coil.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Import Quota Advocacy",
@@ -113,7 +113,7 @@ export const MANUFACTURING_V3: V3LaneContent = {
       name: "Applications Engineering Sales",
       description: "Engineers embedded with customers design the product in and defend the price.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "marketingStrength", flat: 26 },
       ],
     },
@@ -136,7 +136,7 @@ export const MANUFACTURING_V3: V3LaneContent = {
     {
       name: "Certified Pressure Grades",
       description: "Certified pipe and vessel grades sell into energy projects at a premium.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Trigger Price Monitoring",
@@ -155,7 +155,7 @@ export const MANUFACTURING_V3: V3LaneContent = {
       name: "Long-Term Supply Contracts",
       description: "Indexed multi-year contracts with big buyers lock in price and volume.",
       effects: [
-        { kind: "priceRealization", pct: 0.024 },
+        { kind: "plantOutput", pct: 0.024 },
         { kind: "outputRate", commodity: "steel", pct: 0.06 },
       ],
     },
@@ -177,7 +177,7 @@ export const MANUFACTURING_V3: V3LaneContent = {
     {
       name: "High-Strength Light Grades",
       description: "Lighter high-strength grades win auto contracts at better prices per ton.",
-      effects: [{ kind: "priceRealization", pct: 0.014 }],
+      effects: [{ kind: "plantOutput", pct: 0.014 }],
     },
     {
       name: "Plant Community Compacts",
@@ -196,7 +196,7 @@ export const MANUFACTURING_V3: V3LaneContent = {
       name: "Just-in-Time Supply Slots",
       description: "Guaranteed delivery windows to assembly lines command contract premiums.",
       effects: [
-        { kind: "priceRealization", pct: 0.024 },
+        { kind: "plantOutput", pct: 0.024 },
         { kind: "logisticsStrength", flat: 28 },
       ],
     },
@@ -222,7 +222,7 @@ export const MANUFACTURING_V3: V3LaneContent = {
       name: "Prefabricated Building Systems",
       description: "Engineered building packages sell as systems, not tonnage, at system prices.",
       effects: [
-        { kind: "priceRealization", pct: 0.012 },
+        { kind: "plantOutput", pct: 0.012 },
         { kind: "outputRate", commodity: "building_materials", pct: 0.03 },
       ],
     },
@@ -244,7 +244,7 @@ export const MANUFACTURING_V3: V3LaneContent = {
       description:
         "Design, fabrication and install sold together capture the whole project margin.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "outputRate", commodity: "building_materials", pct: 0.06 },
       ],
     },
@@ -266,7 +266,7 @@ export const MANUFACTURING_V3: V3LaneContent = {
     {
       name: "Traceable Quality Records",
       description: "Full heat-to-coil traceability wins certified orders at better prices.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Antidumping Petition Desk",
@@ -286,7 +286,7 @@ export const MANUFACTURING_V3: V3LaneContent = {
       description:
         "Managing the customer's steel stock on site makes the mill impossible to quote out.",
       effects: [
-        { kind: "priceRealization", pct: 0.024 },
+        { kind: "plantOutput", pct: 0.024 },
         { kind: "logisticsStrength", flat: 26 },
       ],
     },
@@ -308,7 +308,7 @@ export const MANUFACTURING_V3: V3LaneContent = {
     {
       name: "Green Steel Certification",
       description: "Certified low-carbon steel sells to committed buyers above market.",
-      effects: [{ kind: "priceRealization", pct: 0.014 }],
+      effects: [{ kind: "plantOutput", pct: 0.014 }],
     },
     {
       name: "Regional Content Compliance",
@@ -327,8 +327,8 @@ export const MANUFACTURING_V3: V3LaneContent = {
       name: "Custom Alloy Programs",
       description: "Alloys engineered per customer program price on performance, not the index.",
       effects: [
-        { kind: "priceRealization", pct: 0.027 },
-        { kind: "marginBonus", pp: 0.5 },
+        { kind: "plantOutput", pct: 0.027 },
+        { kind: "inputEfficiency", pct: 0.015 },
       ],
     },
     {
@@ -352,7 +352,7 @@ export const MANUFACTURING_V3: V3LaneContent = {
     {
       name: "Additive Spare Parts",
       description: "Printed spares and short runs sell at premium prices with zero tooling.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Carbon Border Readiness",
@@ -372,7 +372,7 @@ export const MANUFACTURING_V3: V3LaneContent = {
       description:
         "Selling guaranteed uptime and performance instead of parts lifts realized price.",
       effects: [
-        { kind: "priceRealization", pct: 0.028 },
+        { kind: "plantOutput", pct: 0.028 },
         { kind: "marketingStrength", flat: 26 },
       ],
     },
@@ -395,7 +395,7 @@ export const MANUFACTURING_V3: V3LaneContent = {
       name: "Materials Passport Products",
       description:
         "Products shipped with full lifecycle passports command circular-economy premiums.",
-      effects: [{ kind: "priceRealization", pct: 0.015 }],
+      effects: [{ kind: "plantOutput", pct: 0.015 }],
     },
     {
       name: "Strategic Industry Designation",
@@ -419,7 +419,7 @@ export const MANUFACTURING_V3: V3LaneContent = {
       description:
         "Closed-loop recycled steel with audited provenance sets the market's top price.",
       effects: [
-        { kind: "priceRealization", pct: 0.03 },
+        { kind: "plantOutput", pct: 0.03 },
         { kind: "marketingStrength", flat: 27 },
       ],
     },
