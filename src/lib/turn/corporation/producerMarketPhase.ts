@@ -12,6 +12,9 @@ import {
 import type { prepareProducerSector } from "./producerSectorPlan";
 import { producerWalletId, type ProducerWalletScope } from "./producerWallets";
 
+/** Planning passes for a live funded turn (the shadow uses 8). */
+export const LIVE_PLANNING_PASSES = 16;
+
 export { producerWalletId, type ProducerWalletScope };
 
 type PreparedSector = ReturnType<typeof prepareProducerSector>;
@@ -147,6 +150,10 @@ export async function runCorporationProducerMarket(
     worldEpoch: input.worldEpoch,
     production: {
       ...input.demand,
+      // Settle like the shadow does, with headroom: 8 passes land within
+      // 0.02% of 32 on a t300 replay, while the default 128 let a slow turn
+      // spend well over a minute here against the phase timeout.
+      maximumPlanningPasses: LIVE_PLANNING_PASSES,
       turn: input.turn,
       accounts: openingAccounts,
       payables: [...corporations, ...wallets].flatMap((row) => row.producerPayables?.claims ?? []),
