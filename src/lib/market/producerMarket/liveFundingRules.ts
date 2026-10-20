@@ -170,6 +170,46 @@ export function investmentReturnMoves(
     }));
 }
 
+/**
+ * Folds one turn's per-country moves of a single kind into ONE money move, so
+ * the turn pays one journal claim and one bulk write instead of a claim and a
+ * write per country. Every wallet still appears exactly once (the batch throws
+ * otherwise), mint and burn legs touch no document, so the move qualifies for
+ * batched independent debits. The key is deterministic per world, turn and
+ * kind, so a retried turn replays the same move.
+ */
+export function batchProducerMoves(
+  worldEpoch: string,
+  turn: number,
+  moves: readonly MoneyMove[]
+): MoneyMove[] {
+  if (moves.length === 0) return [];
+  const kind = moves[0].kind;
+  const seen = new Set<string>();
+  const legs: MoneyMove["legs"] = [];
+  for (const move of moves) {
+    if (move.kind !== kind) throw new Error(`Cannot batch ${move.kind} with ${kind}`);
+    if (move.turn !== turn) throw new Error(`Cannot batch a move from turn ${move.turn}`);
+    for (const leg of move.legs) {
+      if (leg.kind === "debit" || leg.kind === "credit") {
+        const id = `${leg.collection}:${String(leg.filter?._id)}`;
+        if (seen.has(id)) throw new Error(`Producer move batch repeats account ${id}`);
+        seen.add(id);
+      }
+      legs.push(leg);
+    }
+  }
+  return [
+    {
+      key: `${kind}-batch:${worldEpoch}:${turn}`,
+      kind,
+      turn,
+      legs,
+      record: { batchIndependentDebits: true },
+    },
+  ];
+}
+
 /** One-time household opening seed, keyed per world so it can only land once. */
 export function householdOpeningMoves(
   worldEpoch: string,

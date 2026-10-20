@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { legsNet } from "@/lib/banking/moneyMove";
 import {
+  batchProducerMoves,
   closeTransferMoves,
   householdOpeningMoves,
   investmentFundingMoves,
@@ -130,5 +131,46 @@ describe("ledger witness for producer moves", () => {
       "sink:producer_public_return:USD",
     ]);
     expect(burnLegs.reduce((sum, l) => sum + l.anchorAmount, 0)).toBeCloseTo(0);
+  });
+
+  it("batches one kind of per-country move into one deterministic move with the same legs", () => {
+    const rows = [
+      { ...wallet, countryId: "us" },
+      { ...wallet, walletId: "pub-gb", countryId: "gb", currencyCode: "GBP", localPerAnchor: 0.6 },
+      { ...wallet, walletId: "pub-jp", countryId: "jp", currencyCode: "JPY", localPerAnchor: 125 },
+    ];
+    const single = publicFundingMoves("w", 7, rows);
+    const [batch] = batchProducerMoves("w", 7, single);
+    expect(batchProducerMoves("w", 7, single)[0].key).toBe(batch.key);
+    expect(batch.key).toBe("producer_public_funding-batch:w:7");
+    expect(batch.record).toEqual({ batchIndependentDebits: true });
+    expect(batch.legs).toEqual(single.flatMap((m) => m.legs));
+    expect(legsNet(batch.legs)).toBeCloseTo(
+      single.reduce((n, m) => n + legsNet(m.legs), 0),
+      9
+    );
+    const witness = producerMoveLedgerLegs(batch)!;
+    const singleWitness = single.flatMap((m) => producerMoveLedgerLegs(m)!);
+    expect(witness.reduce((n, l) => n + l.anchorAmount, 0)).toBeCloseTo(0, 9);
+    expect(witness.map((l) => [l.account, l.amount]).sort()).toEqual(
+      singleWitness.map((l) => [l.account, l.amount]).sort()
+    );
+  });
+
+  it("refuses a batch that repeats an account, mixes kinds or turns, and skips empty input", () => {
+    expect(batchProducerMoves("w", 7, [])).toEqual([]);
+    const dup = publicReturnMoves("w", 7, [
+      { ...wallet, countryId: "us" },
+      { ...wallet, countryId: "gb" },
+    ]);
+    expect(() => batchProducerMoves("w", 7, dup)).toThrow(/repeats account/);
+    const mixed = [
+      ...publicFundingMoves("w", 7, [{ ...wallet, countryId: "us" }]),
+      ...investmentFundingMoves("w", 7, [{ ...wallet, walletId: "inv-us", countryId: "us" }]),
+    ];
+    expect(() => batchProducerMoves("w", 7, mixed)).toThrow(/Cannot batch/);
+    expect(() =>
+      batchProducerMoves("w", 8, publicFundingMoves("w", 7, [{ ...wallet, countryId: "us" }]))
+    ).toThrow(/turn 7/);
   });
 });
