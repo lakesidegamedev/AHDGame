@@ -86,6 +86,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     let userCorporationId: string | null = null;
     let userCorporationSectorType: OperatingSectorType | null = null;
     let userMarketingStrength = 0;
+    let userRdScore = 0;
     let userLiquidCapitalAnchor = 0;
     let userSplitEscalation = 0;
     let userCorpCountryId: string | null = null;
@@ -109,6 +110,7 @@ export async function GET(request: Request, { params }: RouteParams) {
           industryModel: 1,
           mediaDiscriminator: 1,
           marketingStrength: 1,
+          rdScore: 1,
           liquidCapital: 1,
           liquidCurrencyCode: 1,
           splitEscalation: 1,
@@ -153,6 +155,7 @@ export async function GET(request: Request, { params }: RouteParams) {
           corp.mediaDiscriminator
         );
         userMarketingStrength = corp.marketingStrength ?? 0;
+        userRdScore = corp.rdScore ?? 0;
         userLiquidCapitalAnchor = corpLiquidCapitalToAnchor(
           corp.liquidCapital ?? 0,
           corp,
@@ -278,6 +281,7 @@ export async function GET(request: Request, { params }: RouteParams) {
               brandColor: 1,
               logoUrl: 1,
               marketingStrength: 1,
+              rdScore: 1,
               countryOwnerId: 1,
               countryId: 1,
               liquidCurrencyCode: 1,
@@ -433,6 +437,8 @@ export async function GET(request: Request, { params }: RouteParams) {
                 defenderBookValueAnchor: s.capacityBookAnchor as number,
                 attackerMarketingStrength: userMarketingStrength,
                 defenderMarketingStrength: corp?.marketingStrength ?? 0,
+                attackerRdScore: userRdScore,
+                defenderRdScore: corp?.rdScore ?? 0,
               })
             : null;
         return {

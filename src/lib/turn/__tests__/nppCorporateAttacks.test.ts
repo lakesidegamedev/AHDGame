@@ -206,7 +206,7 @@ describe("executeNppPlantSplit (plants economy)", () => {
     expect(result).toMatchObject({ capturedAnchor: 40_000, defenderName: "Rival Inc" });
     const stamps = vi
       .mocked(db.collection("corporations").updateOne)
-      .mock.calls.map((call) => (call[1] as { $set: Record<string, unknown> }).$set);
+      .mock.calls.map((call: unknown[]) => (call[1] as { $set: Record<string, unknown> }).$set);
     expect(stamps).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ lastAutoAttackTurn: 300 }),
