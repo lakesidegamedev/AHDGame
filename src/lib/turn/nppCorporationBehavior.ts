@@ -115,6 +115,7 @@ import { operatorMay } from "@/lib/turn/npp/rules/operatorPolicy";
 import { createNotifications } from "@/lib/notifications";
 import {
   corpDailyGrossRevenueLocalFromSectors,
+  corpTechPlantBasisFromSectors,
   corpTechCashFloorLocal,
 } from "@/lib/corporations/dailyGrossRevenue";
 import type { TechUnlockLedgerInput } from "@/lib/corporations/techTree/techUnlockLedger";
@@ -647,6 +648,9 @@ export async function processNppCorporationDecisions(
         }),
         techCashFloorLocal: corpTechCashFloorLocal(corp, {
           eraUnitScale: plants?.eraUnitScale ?? 1,
+          fxByCurrency: fxByCurrency as ReadonlyMap<CurrencyCode, number>,
+        }),
+        techPlantBasis: corpTechPlantBasisFromSectors(sectors, corp, {
           fxByCurrency: fxByCurrency as ReadonlyMap<CurrencyCode, number>,
         }),
         techCurrentYear,

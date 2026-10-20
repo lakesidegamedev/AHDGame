@@ -44,6 +44,7 @@ import {
   toneOfSign,
 } from "./dense/InlineViz";
 import { OverviewSimple, type SimpleFigures } from "./OverviewSimple";
+import { GrowthLeversPanel } from "./GrowthLeversPanel";
 import {
   buildAttentionItems,
   sectorMargin,
@@ -506,6 +507,11 @@ export default function OverviewTab({
       </DenseSection>
     ) : null;
 
+  const growthPanel =
+    isCeo && corporation.plantsMode === true ? (
+      <GrowthLeversPanel sectors={sectors} corpId={corpId} onTabChange={onTabChange} />
+    ) : null;
+
   const periodControl = (
     <Segmented
       ariaLabel="Money period"
@@ -553,6 +559,7 @@ export default function OverviewTab({
     return (
       <div className="space-y-5">
         {modeBar}
+        {growthPanel}
         {!financials && (
           <p className="border-y border-card-border py-2 text-xs text-muted">
             Privately held. Revenue, cash and the books are disclosed to the CEO only.
@@ -579,6 +586,7 @@ export default function OverviewTab({
   return (
     <div className="space-y-5">
       {modeBar}
+      {growthPanel}
       <div className="grid gap-x-8 gap-y-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="min-w-0 space-y-6">
           {financials && (

@@ -215,47 +215,50 @@ describe("StateEconomy", () => {
     );
   });
 
-  it.each([
-    {
-      mode: "plants",
-      extra: { plantsMode: true },
-      owner: {
-        plantCount: 100,
-        // A stale response may still carry a quote; it must not bring the action back.
-        plantSplitQuote: {
-          seizureFraction: 0.13,
-          plantsAtRisk: 13,
-          trancheBookValueAnchor: 294_000,
-          cashCostAnchor: 147_000,
-          marketingStrengthCost: 20,
-          successProbability: 0.6,
-        },
-      },
-    },
-    { mode: "legacy", extra: {}, owner: { attackCost: 50_000, attackEstimatedCapture: 9_000 } },
-  ])("offers no way to split or attack a rival ($mode)", async ({ extra, owner }) => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        ...payload,
-        ...extra,
-        userCorporationId: "corp-me",
-        userMarketingStrength: 36,
-        userLiquidCapitalAnchor: 500_000,
-        sectors: payload.sectors.map((sector) => ({
-          ...sector,
-          owners: sector.owners.map((o) => ({ ...o, ...owner })),
+  it("previews a plant split and requires confirmation before posting", async () => {
+    const plantsAttackPayload = {
+      ...payload,
+      plantsMode: true,
+      userCorporationId: "corp-me",
+      userMarketingStrength: 36,
+      userLiquidCapitalAnchor: 500_000,
+      splitMsCost: 0,
+      sectors: payload.sectors.map((sector) => ({
+        ...sector,
+        owners: sector.owners.map((owner) => ({
+          ...owner,
+          plantCount: 100,
+          plantSplitQuote: {
+            seizureFraction: 0.13,
+            plantsAtRisk: 13,
+            trancheBookValueAnchor: 294_000,
+            cashCostAnchor: 147_000,
+            marketingStrengthCost: 20,
+            successProbability: 0.6,
+          },
         })),
-      }),
-    });
+      })),
+    };
+    const fetchMock = vi.fn((_input: RequestInfo | URL, init?: RequestInit) =>
+      Promise.resolve({
+        ok: true,
+        json: async () =>
+          init?.method === "POST" ? { message: "Split resolved" } : plantsAttackPayload,
+      })
+    );
     vi.stubGlobal("fetch", fetchMock);
 
     render(<StateEconomy stateId="TX" countryId="US" />);
 
-    await screen.findAllByText("Lone Star Petroleum");
-    expect(screen.queryByRole("button", { name: /Plan split|^Attack/ })).toBeNull();
-    expect(screen.queryByText(/Automatic split/)).toBeNull();
+    fireEvent.click(await screen.findByRole("button", { name: "Plan split" }));
+    expect(screen.getByText("Confirm sector split")).toBeTruthy();
+    expect(screen.getByText(/not selectable/i)).toBeTruthy();
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "Confirm sector split" }));
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(true)
+    );
   });
 });
 

@@ -1,7 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { getResearchableDecades, getDecadeForYear, TECH_DECADES } from "./decades";
 import { TECH_TREE, corpNodeId, sectorNodeId } from "./nodes";
-import { techNodeCashCost, techNodeCashFloorAnchor, TECH_NODE_CASH_FLOOR_ANCHOR } from "./costs";
+import {
+  techNodeCashCost,
+  techNodeCashFloorAnchor,
+  techNodeValuePerTurn,
+  TECH_NODE_CASH_FLOOR_ANCHOR,
+  TECH_NODE_PAYBACK_TURNS,
+} from "./costs";
 import {
   canUnlock,
   getCommittedLane,
@@ -190,7 +196,7 @@ describe("committed lane + effects", () => {
 describe("cash cost", () => {
   it("scales with daily gross revenue and the node fraction", () => {
     const node = TECH_TREE.energy.find((n) => n.id === corpNodeId("2019", 1))!;
-    expect(techNodeCashCost(node, 100_000)).toBe(15_000); // default 0.15
+    expect(techNodeCashCost(node, 100_000)).toBe(5_000); // default 0.05
     expect(techNodeCashCost(node, 0)).toBe(0);
   });
 
@@ -198,10 +204,41 @@ describe("cash cost", () => {
     const node = TECH_TREE.energy.find((n) => n.id === corpNodeId("2019", 1))!;
     expect(techNodeCashCost(node, 0, 5_000_000)).toBe(5_000_000);
     expect(techNodeCashCost(node, 10_000_000, 5_000_000)).toBe(5_000_000);
-    // Large corps are priced off revenue exactly as before.
-    expect(techNodeCashCost(node, 550_000_000, 5_000_000)).toBe(82_500_000);
+    // Without a plant basis, large corps are priced off revenue.
+    expect(techNodeCashCost(node, 550_000_000, 5_000_000)).toBe(27_500_000);
     expect(techNodeCashCost(node, 0, Number.NaN)).toBe(0);
     expect(techNodeCashCost(node, 0, -1)).toBe(0);
+  });
+
+  it("prices a valued node at one game year of what it earns this corp", () => {
+    // corp-2019-1 is a Corporate-lane node (+2% plant output, −10% labour):
+    // half strength on every sector. Output is valued on contribution
+    // (revenue minus inputs), labour on the labour bill.
+    const node = TECH_TREE.energy.find((n) => n.id === corpNodeId("2019", 1))!;
+    const basis = {
+      primary: { revenue: 1_000_000, inputs: 300_000, labour: 200_000 },
+      all: { revenue: 2_000_000, inputs: 600_000, labour: 400_000 },
+    };
+    const value = techNodeValuePerTurn(node, basis);
+    expect(value).toBeCloseTo(0.5 * (0.02 * 1_400_000 + 0.1 * 400_000));
+    expect(techNodeCashCost(node, 48_000_000, 0, basis)).toBe(
+      Math.round(value * TECH_NODE_PAYBACK_TURNS)
+    );
+    // The floor still applies to a small corp.
+    expect(techNodeCashCost(node, 0, 5_000_000, basis)).toBe(5_000_000);
+  });
+
+  it("values a Sector-lane labour node on the primary sector only", () => {
+    const node = {
+      ...TECH_TREE.energy.find((n) => n.id === corpNodeId("2019", 1))!,
+      lane: "sector" as const,
+      effects: [{ kind: "laborCostReduction" as const, pct: 0.1 }],
+    };
+    const basis = {
+      primary: { revenue: 1_000_000, inputs: 300_000, labour: 200_000 },
+      all: { revenue: 2_000_000, inputs: 600_000, labour: 400_000 },
+    };
+    expect(techNodeValuePerTurn(node, basis)).toBeCloseTo(20_000);
   });
 
   it("scales the floor with the world era", () => {
