@@ -4,8 +4,70 @@ import { states1991 } from "@/lib/countries/us/data/usStates1991";
 import { createMockDb } from "@/lib/test-utils/mockDb";
 import { readResetMetricDetail } from "./readMetricDetail";
 import { buildOpeningMetricSnapshots1991 } from "./seedOpening1991";
+import { householdFixture } from "./testing/householdFixture";
+import { regionalCoverageKey } from "./rules/householdPublication";
 
 describe("v2 metric detail read", () => {
+  it("does not chart older gross-income history as a disposable-income series", async () => {
+    const db = createMockDb();
+    const f = householdFixture();
+    const countryBasis = {
+      countryId: "UK",
+      coverageKey: regionalCoverageKey(f.regions.map((b) => b.regionId!)),
+      measurementTurn: 2,
+      value: 100,
+    };
+    const regional = f.regions.map((board) => ({
+      ...board,
+      asOfTurn: 2,
+      observations: {
+        ...board.observations,
+        "02": {
+          ...board.observations["02"]!,
+          definitionVersion: 2 as const,
+          unit: "annual real equivalised disposable income",
+          observedAtTurn: 2,
+          countryBasis,
+          value: 100,
+        },
+      },
+      history: {
+        ...board.history,
+        "02": [
+          ...board.history!["02"]!,
+          {
+            turn: 2,
+            value: 100,
+            definitionVersion: 2 as const,
+            unit: "annual real equivalised disposable income",
+            countryBasis,
+          },
+        ],
+      },
+    }));
+    db.collection("resetMetricSnapshots").find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue(regional),
+    });
+    db.collection("states").find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue(
+        f.regions.map((b) => ({
+          _id: b.regionId,
+          countryId: "UK",
+          name: "Fixture region",
+          population: 4,
+        }))
+      ),
+    });
+    const result = await readResetMetricDetail(
+      db as unknown as Db,
+      { ...f.national, asOfTurn: 2 },
+      "02"
+    );
+    expect(result!.history).toHaveLength(1);
+    expect(result!.history[0]!.definitionVersion).toBe(2);
+    expect(regional[0]!.history["02"]![0]!.turn).toBe(1);
+    expect(regional[0]!.history["02"]).toHaveLength(2);
+  });
   it("returns aligned history and every regional owner for a region-owned metric", async () => {
     const db = createMockDb();
     const boards = buildOpeningMetricSnapshots1991("world-detail", 1);

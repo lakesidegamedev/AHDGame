@@ -19,8 +19,10 @@ import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope"
 import { isStorable } from "@/lib/market/inventory";
 import {
   classifySector,
+  shadowTurnSettled,
   TRANSITION_BASIS_TURNS,
 } from "@/lib/market/producerMarket/transitionRules";
+import { HOUSEHOLD_OPENING_TURNS } from "@/lib/market/producerMarket/householdOpeningRules";
 import type { GameState } from "@/lib/db/types/gameState";
 
 function digest(value: unknown): string {
@@ -242,7 +244,13 @@ export async function captureProducerOpening(
             ownedDailyUnits: Number.isFinite(ownedDailyUnits) ? ownedDailyUnits : 0,
             paidBookAnchor:
               Number.isFinite(paidBookAnchor) && paidBookAnchor >= 0 ? paidBookAnchor : 0,
-            buildQueue: sector.buildQueue ?? [],
+            // An order due on the completed turn lands on the next turn in the
+            // legacy engine; the opening schedules it for the first funded turn.
+            buildQueue: (sector.buildQueue ?? []).map((order: { onlineTurn: number }) =>
+              order.onlineTurn <= before.currentTurn
+                ? { ...order, onlineTurn: before.currentTurn + 1 }
+                : order
+            ),
           },
           inventoryDailyUnits,
           inventoryValueAnchor: sector.inventoryValueAnchor ?? 0,
@@ -276,20 +284,28 @@ export async function captureProducerOpening(
     try {
       if (blockers.length > 0) throw new Error("Opening census contains reconciliation blockers");
       plan = planProducerOpening(normalized);
-      // Freeze the transition classification from the last shadow turns.
-      const shadows = await db
-        .collection<{
-          _id: number;
-          worldEpoch?: string;
-          sectorRevenue?: { sectorId: string; legacy: number; funded: number }[];
-        }>("producerMarketShadows")
-        .find(
-          { worldEpoch: String(before.worldEpochId), sectorRevenue: { $exists: true } },
-          { projection: { sectorRevenue: 1 } }
-        )
-        .sort({ _id: -1 })
-        .limit(TRANSITION_BASIS_TURNS)
-        .toArray();
+      // Freeze the transition classification from the last settled shadow
+      // turns: never a run's opening turns, whose household cushion inflates
+      // funded revenue.
+      const shadows = (
+        await db
+          .collection<{
+            _id: number;
+            turn: number;
+            runId?: string;
+            worldEpoch?: string;
+            sectorRevenue?: { sectorId: string; legacy: number; funded: number }[];
+          }>("producerMarketShadows")
+          .find(
+            { worldEpoch: String(before.worldEpochId), sectorRevenue: { $exists: true } },
+            { projection: { sectorRevenue: 1, turn: 1, runId: 1 } }
+          )
+          .sort({ _id: -1 })
+          .limit(TRANSITION_BASIS_TURNS + 4 * HOUSEHOLD_OPENING_TURNS)
+          .toArray()
+      )
+        .filter((d) => shadowTurnSettled(d.runId, d.turn, HOUSEHOLD_OPENING_TURNS))
+        .slice(0, TRANSITION_BASIS_TURNS);
       const samplesBySector = new Map<string, { legacy: number; funded: number }[]>();
       for (const doc of [...shadows].reverse())
         for (const row of doc.sectorRevenue ?? [])

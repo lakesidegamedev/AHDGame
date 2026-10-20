@@ -3,8 +3,8 @@
  *
  * Shared by the player route and the autonomous NPP attack pass so both run
  * the same rule: the attacker's marketing strength against the defender's sets
- * the share (1% up to 20% of the defender's plants), their R&D scores set the
- * odds, and on success the plants move intact to the attacker. Cash and MS are
+ * the share (1% up to 20% of the defender's plants) and the odds, and on
+ * success the plants move intact to the attacker. Cash and MS are
  * spent either way. See `calculatePlantSectorSplit` for the quote.
  */
 import type { Db, ObjectId } from "mongodb";
@@ -166,8 +166,6 @@ export async function attemptPlantSectorSplit(
         defenderBookValueAnchor,
         attackerMarketingStrength: freshAttacker.marketingStrength ?? 0,
         defenderMarketingStrength: freshDefender.marketingStrength ?? 0,
-        attackerRdScore: freshAttacker.rdScore ?? 0,
-        defenderRdScore: freshDefender.rdScore ?? 0,
       });
       if (quote.plantsAtRisk <= 0) {
         rejection = { status: 400, error: "The defender must retain at least one plant." };

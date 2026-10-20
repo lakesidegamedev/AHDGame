@@ -3,11 +3,14 @@
  * phase B slice S3b). Each flow is one idempotent money move with a stable key
  * per world, turn and party, so a retried turn never pays twice.
  *
- * - Public funding: the plant economy's share of the commodity outlay the
- *   treasury already spends each turn. That outlay is deducted from the
+ * - Public funding: the commodity outlay the treasury already spends each
+ *   turn (each budget line times its commodity demand rate). That outlay is deducted from the
  *   treasury today and goes nowhere; here the same amount is minted into the
  *   country's public-buyer wallet as its destination. Unspent funding is
  *   burned at close, so public buyers never accumulate cash.
+ * - Construction funding: this turn's work on outstanding build orders, whose
+ *   cost was paid into a sink when each order was placed. Minted into the
+ *   country's construction-buyer wallet and burned at close if unspent.
  * - Household opening: the one-time owner-approved seed (about 3 turns of
  *   wages), minted once per world.
  * - Close: AI profit distribution and operating-payee income move to
@@ -16,6 +19,9 @@
  * Pure: plain data in, money-move descriptions out.
  */
 import type { MoneyMove } from "@/lib/banking/moneyMove";
+import { ZOD_CURRENCY_ENUM } from "@/lib/constants/currencies";
+import { accountId, mintSinkAccount } from "@/lib/ledger/accounts";
+import type { LedgerLeg } from "@/lib/ledger/types";
 
 export const PRODUCER_ACCOUNTS = "producerEconomyAccounts";
 
@@ -53,7 +59,7 @@ export function publicFundingMoves(
           kind: "mint",
           amount: r.amountLocal,
           valuation: valuation(r),
-          note: "plant share of the budget outlay the treasury already spent",
+          note: "commodity share of the budget outlay the treasury already spent",
         },
         {
           kind: "credit",
@@ -95,6 +101,70 @@ export function publicReturnMoves(
           amount: r.amountLocal,
           valuation: valuation(r),
           note: "unspent public funding returns to the budget",
+        },
+      ],
+    }));
+}
+
+/** Mints each construction buyer's funding: the turn's work on already-paid build orders. */
+export function investmentFundingMoves(
+  worldEpoch: string,
+  turn: number,
+  rows: readonly (WalletAmount & { countryId: string })[]
+): MoneyMove[] {
+  return rows
+    .filter((r) => positive(r.amountLocal) > 0)
+    .map((r) => ({
+      key: `producer-investment-funding:${worldEpoch}:${turn}:${r.countryId}`,
+      kind: "producer_investment_funding",
+      turn,
+      legs: [
+        {
+          kind: "mint",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          note: "construction work on build orders already paid into the capex sink",
+        },
+        {
+          kind: "credit",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          collection: PRODUCER_ACCOUNTS,
+          filter: { _id: r.walletId },
+          path: "cash",
+          note: "construction buyer funding",
+        },
+      ],
+    }));
+}
+
+/** Burns construction work no producer could supply this turn. */
+export function investmentReturnMoves(
+  worldEpoch: string,
+  turn: number,
+  rows: readonly (WalletAmount & { countryId: string })[]
+): MoneyMove[] {
+  return rows
+    .filter((r) => positive(r.amountLocal) > 0)
+    .map((r) => ({
+      key: `producer-investment-return:${worldEpoch}:${turn}:${r.countryId}`,
+      kind: "producer_investment_return",
+      turn,
+      legs: [
+        {
+          kind: "debit",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          collection: PRODUCER_ACCOUNTS,
+          filter: { _id: r.walletId },
+          path: "cash",
+          note: "unbought construction work",
+        },
+        {
+          kind: "burn",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          note: "unbought construction work stays in the capex sink",
         },
       ],
     }));
@@ -181,14 +251,14 @@ export function closeTransferMoves(
 export function transitionSupportMoves(
   worldEpoch: string,
   turn: number,
-  payments: readonly { sectorId: string; amountAnchor: number; from: CloseParty; to: CloseParty }[]
+  payments: readonly { payeeKey: string; amountAnchor: number; from: CloseParty; to: CloseParty }[]
 ): MoneyMove[] {
   return payments
     .filter(
       (p) => positive(p.amountAnchor) > 0 && p.from.localPerAnchor > 0 && p.to.localPerAnchor > 0
     )
     .map((p) => ({
-      key: `producer-transition:${worldEpoch}:${turn}:${p.sectorId}`,
+      key: `producer-transition:${worldEpoch}:${turn}:${p.payeeKey}`,
       kind: "producer_transition_support",
       turn,
       legs: [p.from, p.to].map((side, i) => ({
@@ -201,4 +271,50 @@ export function transitionSupportMoves(
         note: "transition revenue floor",
       })),
     }));
+}
+
+/**
+ * Ledger legs witnessing one applied producer money move, so the ledger
+ * reconciler sees the funded market's transfers, mints and burns beside the
+ * settlement it already witnesses. Mints draw from and burns pay into a named
+ * account per move kind, so every entry balances. Null when a leg cannot be
+ * named (unknown collection or currency).
+ */
+export function producerMoveLedgerLegs(move: MoneyMove): LedgerLeg[] | null {
+  const legs: LedgerLeg[] = [];
+  for (const leg of move.legs) {
+    if (!(leg.amount > 0)) continue;
+    const currency = ZOD_CURRENCY_ENUM.find((c) => c === leg.valuation?.currencyCode);
+    const rate = leg.valuation?.localPerAnchor;
+    if (!currency || !rate || !(rate > 0)) return null;
+    const anchor = leg.amount / rate;
+    if (leg.kind === "mint" || leg.kind === "burn") {
+      const sign = leg.kind === "mint" ? -1 : 1;
+      legs.push({
+        account: mintSinkAccount(leg.kind === "mint" ? 1 : -1, move.kind, currency),
+        amount: sign * leg.amount,
+        currencyCode: currency,
+        anchorAmount: sign * anchor,
+        role: "primary",
+      });
+      continue;
+    }
+    const kind =
+      leg.collection === "corporations"
+        ? "corporation"
+        : leg.collection === PRODUCER_ACCOUNTS
+          ? "economy_wallet"
+          : null;
+    const ref = leg.filter?._id;
+    if (!kind || ref == null) return null;
+    const sign = leg.kind === "debit" ? -1 : 1;
+    legs.push({
+      account: accountId(kind, String(ref), currency),
+      amount: sign * leg.amount,
+      currencyCode: currency,
+      anchorAmount: sign * anchor,
+      role: "primary",
+    });
+  }
+  return legs.length >= 2 ? legs : null;
 }

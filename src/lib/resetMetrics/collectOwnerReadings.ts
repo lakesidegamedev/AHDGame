@@ -1,46 +1,67 @@
-import {
-  inheritedCalibrationRegion,
-  inheritedCalibrationCountry,
-} from "./rules/conversionCalibration";
 /**
- * First live owners for the v2 board. Legacy macro readings are underlying
- * economic inputs, not a second set of player-facing primary metrics.
+ * Metric owners publish live cohort and economic readings, with funded linked
+ * estimates where household and service ledgers do not exist. Legacy political
+ * scores never stand in for owned healthcare access.
  */
+import { inheritedCalibrationRegion } from "./rules/conversionCalibration";
 import type { Db } from "mongodb";
-import type { FederalBudget } from "@/lib/db/types/budget";
+import type { FederalBudget, StateBudget } from "@/lib/db/types/budget";
 import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
-import type { StateMetrics } from "@/lib/db/types/stateMetrics";
-import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
-import { healthOwnerInputs } from "./rules/healthOwner";
+import type { State } from "@/lib/db/types/state";
+import type { GameState } from "@/lib/db/types/gameState";
+import type { TradeFlowSnapshot } from "@/lib/db/types/tradeFlowSnapshot";
+import { getGdpAnchorRate } from "@/lib/currency/gdpAnchorRate";
+import { commodityTradeBalance } from "./rules/tradeOwner";
+import { loadTurnoutReadings } from "./loadTurnoutReadings";
 import {
   openingGrossPurchasingInputs1991,
   openingLifeCalibration1991,
-  openingHealthProxyReferences1991,
+  openingHouseholdCalibration1991,
 } from "./openingSeed1991";
-import { liveHealthProxies } from "./rules/liveHealthProxies";
+import { prepareCalibratedHouseholds } from "./rules/calibratedHouseholdCohorts";
+import { prepareCalibratedHousing } from "./rules/calibratedHousing";
+import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
+import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
 import { fiscalOwnerReadings } from "./rules/fiscalOwner";
 import { nationalForceReadiness } from "./rules/forceReadiness";
 import { provisionalRealPurchasingPower } from "./rules/realPurchasingPower";
 import { dueResetMetricIds } from "./rules/refresh";
-import { driftProxyValue } from "./rules/policyDrift";
+import {
+  driftProxyValue,
+  policyDriftTarget,
+  POLICY_DRIFT_RATE_PER_TURN,
+} from "./rules/policyDrift";
+import { linkedOutcomeTargets } from "./rules/linkedOutcomes";
+import { outputGrowth, productivityBasis, productivityGrowth } from "./rules/productivity";
+import { compatibleConditionChange, gameplayMetricPressure } from "./rules/gameplayDrivers";
+import { marketServicePressure } from "./rules/marketServices";
+import { resetMetricConditionScore } from "./conditionScore";
+import { demographicRates } from "./rules/demographicMeasurement";
+import { ownedHealthAccess } from "./rules/ownedHealthAccess";
 import { loadResetPolicyPressure } from "./loadPolicyPressure";
 import { primaryMetricById } from "./catalog";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import type { ResetMetricSnapshot } from "./rules/snapshot";
 import type { MetricOwnerTurnReadingsByBoard } from "./refreshTurn";
+import { loadMetricLawDelivery } from "./loadLawDelivery";
+import { householdPublication, HOUSEHOLD_PUBLICATION_IDS } from "./rules/householdPublication";
+import { housingPublication, HOUSING_PUBLICATION_IDS } from "./rules/housingPublication";
+import { produceHouseholdSource } from "./rules/produceHouseholdSource";
+import type { HouseholdProductionStatus } from "./rules/householdSources";
+import { modelHouseholdIncome } from "./rules/modelHouseholdIncome";
+import { resolveRegionalBudgetCadence } from "@/simulation/phases/regionalBudgetCadence";
+import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 
 let openingCalibrationCache: {
   gross: ReturnType<typeof openingGrossPurchasingInputs1991>;
   life: ReturnType<typeof openingLifeCalibration1991>;
-  health: ReturnType<typeof openingHealthProxyReferences1991>;
 } | null = null;
 
 function openingCalibration() {
   return (openingCalibrationCache ??= {
     gross: openingGrossPurchasingInputs1991(),
     life: openingLifeCalibration1991(),
-    health: openingHealthProxyReferences1991(),
   });
 }
 
@@ -49,7 +70,6 @@ const DIRECT_ECONOMIC_OWNERS = [
   ["03", "povertyRate"],
   ["05", "gdpGrowth"],
   ["06", "productivityGrowth"],
-  ["08", "tradeBalance"],
 ] as const;
 
 const FAIL_CLOSED_OWNER_IDS = new Set([
@@ -76,7 +96,7 @@ export async function collectResetMetricOwnerReadings(
   turn: number,
   year?: number
 ): Promise<MetricOwnerTurnReadingsByBoard> {
-  const { gross: openingGross, life: openingLife, health: openingHealth } = openingCalibration();
+  const { gross: openingGross, life: openingLife } = openingCalibration();
   const regionalIds = boards
     .filter((board) => board.scope === "regional")
     .map((board) => board.regionId!);
@@ -85,12 +105,7 @@ export async function collectResetMetricOwnerReadings(
     (board) =>
       board.scope === "national" && dueResetMetricIds(board, turn, false, false).includes("57")
   );
-  const healthDue = boards.some(
-    (board) =>
-      board.scope === "regional" &&
-      dueResetMetricIds(board, turn, true, false).some((id) => id === "16" || id === "18")
-  );
-  const [macro, budgets, units, healthStocks, healthBoards] = await Promise.all([
+  const [macro, budgets, units] = await Promise.all([
     db
       .collection<MacroMetricsDoc>("macroMetrics")
       .find(
@@ -107,6 +122,8 @@ export async function collectResetMetricOwnerReadings(
             "economic.productivityGrowth.value": 1,
             "economic.tradeBalance.value": 1,
             resetCohortReading: 1,
+            labourEmployment: 1,
+            labourProductivity: 1,
           },
         }
       )
@@ -123,6 +140,8 @@ export async function collectResetMetricOwnerReadings(
             "spending.total": 1,
             "economicFactors.inflationRate": 1,
             "debt.principal": 1,
+            householdResourceControl: 1,
+            taxRates: 1,
           },
         }
       )
@@ -145,42 +164,447 @@ export async function collectResetMetricOwnerReadings(
           )
           .toArray()
       : Promise.resolve([]),
-    healthDue
-      ? db
-          .collection<StateMetrics>("stateMetrics")
-          .find(
-            { _id: { $in: regionalIds } },
-            {
-              projection: {
-                _id: 1,
-                countryId: 1,
-                "healthcare.uninsuredRate.value": 1,
-                "healthcare.physicianRate.value": 1,
-                "healthcare.publicHealthPreparedness.value": 1,
-                "healthcare.nhsWaitingTime.value": 1,
-                "healthcare.hseWaitingListMonths.value": 1,
-              },
-            }
-          )
-          .toArray()
-      : Promise.resolve([]),
-    healthDue
-      ? db
-          .collection<PoliticalMetricsDoc>("politicalMetrics")
-          .find({ _id: { $in: regionalIds } }, { projection: { _id: 1, countryId: 1, values: 1 } })
-          .toArray()
-      : Promise.resolve([]),
   ]);
+  const [trade, states, world] = await Promise.all([
+    db
+      .collection<TradeFlowSnapshot>("tradeFlowSnapshots")
+      .find({ turn }, { projection: { turn: 1, national: 1 } })
+      .toArray(),
+    db
+      .collection<State>("states")
+      .find(
+        { _id: { $in: regionalIds }, countryId: { $in: countryIds } },
+        {
+          projection: {
+            _id: 1,
+            countryId: 1,
+            population: 1,
+            gdp: 1,
+            workingAgePopulation: 1,
+            votingEligiblePopulation: 1,
+          },
+        }
+      )
+      .toArray(),
+    db
+      .collection<GameState>("gameState")
+      .findOne({ _id: "current" }, { projection: { preset: 1 } }),
+  ]);
+  const turnout = await loadTurnoutReadings(db, {
+    turn,
+    sourceTurn: Math.min(...boards.map((b) => b.sourceTurn)),
+    countries: countryIds,
+    states,
+  });
+  const stateById = new Map(states.map((s) => [s._id, s]));
+  const serviceMarkets = await db
+    .collection<CommodityPrice>("commodityPrices")
+    .find(
+      {
+        commodity: { $in: ["healthcare_services", "energy", "food", "coal", "oil", "natural_gas"] },
+        turn,
+      },
+      {
+        projection: {
+          _id: 0,
+          commodity: 1,
+          turn: 1,
+          ...Object.fromEntries(
+            regionalIds.flatMap((id) => [
+              [`stateDemand.${id}`, 1],
+              [`stateDeliveredSupply.${id}`, 1],
+            ])
+          ),
+        },
+      }
+    )
+    .toArray();
+  const automaticCountries = countryIds.filter(
+    (country) =>
+      world?.preset === "1991-default" &&
+      ["US", "UK", "JP"].includes(country) &&
+      boards.some(
+        (b) =>
+          b.countryId === country &&
+          b.scope === "national" &&
+          !b.householdSource &&
+          !b.householdReference &&
+          !b.householdCurrentState &&
+          !b.householdIncomeModel
+      )
+  );
+  const laws =
+    automaticCountries.length ||
+    boards.some(
+      (b) =>
+        b.scope === "national" &&
+        (b.householdSource ||
+          b.housingSource ||
+          b.householdReference ||
+          b.householdCurrentState ||
+          b.householdIncomeModel)
+    )
+      ? await loadMetricLawDelivery(db, {
+          worldId: boards[0]!.worldId,
+          turn,
+          countryIds,
+          regions: boards
+            .filter((b) => b.scope === "regional")
+            .map((b) => ({ _id: b.regionId!, countryId: b.countryId })),
+        })
+      : undefined;
   const pressureByBoard = await loadResetPolicyPressure(db, {
     worldId: boards[0]!.worldId,
     boards,
     turn,
+    laws,
   });
+  // Only calibrated model countries need this one batched statutory-rate read.
+  const automaticPacks = new Map(
+    automaticCountries.map((countryId) => [
+      countryId,
+      prepareCalibratedHouseholds({
+        worldId: boards[0]!.worldId,
+        countryId,
+        preset: world?.preset ?? "",
+        regionIds: boards
+          .filter((b) => b.scope === "regional" && b.countryId === countryId)
+          .map((b) => b.regionId!),
+        calibration: openingHouseholdCalibration1991(countryId),
+        programs: laws?.programs ?? [],
+      }),
+    ])
+  );
+  const modeledCountryIds = [
+    ...new Set([
+      ...automaticCountries,
+      ...boards
+        .filter((b) => b.scope === "national" && b.householdIncomeModel)
+        .map((b) => b.countryId),
+    ]),
+  ];
+  const modeledRegionalTaxes = modeledCountryIds.length
+    ? await db
+        .collection<StateBudget>("stateBudgets")
+        .find(
+          { _id: { $in: regionalIds }, countryId: { $in: modeledCountryIds } },
+          { projection: { _id: 1, countryId: 1, taxRates: 1 } }
+        )
+        .toArray()
+    : [];
+  const taxesByRegion = new Map(modeledRegionalTaxes.map((r) => [r._id, r]));
+  // UK and JP regional tax owners publish annual assessments, not StateBudget rates.
+  const cohortRegionalBudgets = automaticCountries.some((c) => c !== "US")
+    ? await db
+        .collection<RegionalBudget>("regionalBudgets")
+        .find(
+          {
+            _id: { $in: regionalIds },
+            countryId: { $in: automaticCountries.filter((c) => c !== "US") },
+          },
+          {
+            projection: {
+              _id: 1,
+              countryId: 1,
+              turn: 1,
+              councilTaxRevenue: 1,
+              residentTaxRevenue: 1,
+              fixedAssetTaxRevenue: 1,
+            },
+          }
+        )
+        .toArray()
+    : [];
+  const cohortTaxByRegion = new Map(cohortRegionalBudgets.map((r) => [r._id, r]));
+  const regionalTaxCadence = resolveRegionalBudgetCadence();
+  const macroByRegion = new Map(macro.map((r) => [r._id, r]));
+  const productionByCountry = new Map(
+    countryIds.map((countryId) => {
+      const stored = boards.find((b) => b.countryId === countryId && b.scope === "national");
+      const pack = automaticPacks.get(countryId);
+      const national = pack?.model
+        ? { ...stored, householdIncomeModel: pack.model, householdReference: pack.reference }
+        : stored;
+      const modeled = national?.householdIncomeModel
+        ? modelHouseholdIncome({
+            worldId: boards[0]!.worldId,
+            countryId,
+            turn,
+            year: year ?? NaN,
+            preset: world?.preset ?? "",
+            reference: national.householdReference,
+            model: national.householdIncomeModel,
+            nationalTaxes: budgets.find((b) => b.countryId === countryId)?.taxRates,
+            activity: boards
+              .filter((b) => b.scope === "regional" && b.countryId === countryId)
+              .map((b) => {
+                const state = stateById.get(b.regionId!);
+                const tax = taxesByRegion.get(b.regionId!);
+                const regionalBudget = cohortTaxByRegion.get(b.regionId!);
+                return {
+                  regionId: b.regionId!,
+                  output: state?.gdp ?? NaN,
+                  population: state?.population ?? NaN,
+                  costOfLiving:
+                    macroByRegion.get(b.regionId!)?.economic?.costOfLiving?.value ?? NaN,
+                  regionalTaxes: tax?.countryId === countryId ? tax.taxRates : undefined,
+                  ...(pack?.model && countryId !== "US"
+                    ? {
+                        annualHouseholdLevy:
+                          regionalBudget?.countryId === countryId &&
+                          Number.isSafeInteger(regionalBudget.turn) &&
+                          regionalBudget.turn > 0 &&
+                          regionalBudget.turn <= turn &&
+                          turn - regionalBudget.turn < regionalTaxCadence
+                            ? countryId === COUNTRY_CONFIGS.UK.id
+                              ? regionalBudget.councilTaxRevenue
+                              : (regionalBudget.residentTaxRevenue ?? NaN) +
+                                (regionalBudget.fixedAssetTaxRevenue ?? NaN)
+                            : NaN,
+                      }
+                    : {}),
+                };
+              }),
+          })
+        : undefined;
+      const current = modeled ? modeled.current : national?.householdCurrentState;
+      const populationMatches = current?.regions.every((region) => {
+        const state = stateById.get(region.regionId);
+        return state?.countryId === countryId && state.population >= region.householdResidents;
+      });
+      return [
+        countryId,
+        pack?.gaps.length || modeled?.gaps.length
+          ? {
+              evaluatedAtTurn: turn,
+              path: "legacy" as const,
+              gaps: pack?.gaps.length ? pack.gaps : modeled!.gaps,
+              source: undefined,
+            }
+          : produceHouseholdSource({
+              worldId: boards[0]!.worldId,
+              countryId,
+              turn,
+              year: year ?? NaN,
+              regionIds: boards
+                .filter((b) => b.countryId === countryId && b.scope === "regional")
+                .map((b) => b.regionId!),
+              reference: national?.householdReference,
+              current: populationMatches ? current : undefined,
+              fiscalControls: modeled
+                ? modeled.fiscalControls
+                : budgets.find((b) => b.countryId === countryId)?.householdResourceControl,
+              programs: laws?.programs ?? [],
+              settlements: laws?.settlements ?? new Map(),
+            }),
+      ] as const;
+    })
+  );
+  const householdSourceByCountry = new Map(
+    countryIds.map((countryId) => {
+      const national = boards.find((b) => b.countryId === countryId && b.scope === "national");
+      const production = productionByCountry.get(countryId)!;
+      // A failed new source cannot fall back to a stale externally prepared source.
+      return [
+        countryId,
+        national?.householdReference ||
+        national?.householdCurrentState ||
+        national?.householdIncomeModel ||
+        automaticPacks.has(countryId)
+          ? production.source
+          : national?.householdSource,
+      ] as const;
+    })
+  );
+  const productionStatusByCountry = new Map<string, HouseholdProductionStatus>();
+  const householdByRegion = new Map(
+    countryIds.flatMap((countryId) => {
+      const regions = boards.filter((b) => b.countryId === countryId && b.scope === "regional");
+      const result = householdPublication({
+        worldId: boards[0]!.worldId,
+        countryId,
+        turn,
+        regionIds: regions.map((b) => b.regionId!),
+        source: householdSourceByCountry.get(countryId),
+        programs: laws?.programs ?? [],
+        settlements: laws?.settlements ?? new Map(),
+      });
+      const production = productionByCountry.get(countryId)!;
+      productionStatusByCountry.set(
+        countryId,
+        result.size === regions.length && regions.length > 0
+          ? { evaluatedAtTurn: turn, path: "produced", gaps: [] }
+          : {
+              evaluatedAtTurn: turn,
+              path: "legacy",
+              gaps:
+                production.path === "produced"
+                  ? ["publication-reconciliation-failed"]
+                  : production.gaps,
+            }
+      );
+      // Adoption is country-wide. Missing later inputs freeze the adopted definition
+      // with its old measurement date, never silently revert it to a gross-income proxy.
+      const adopted = regions.some((b) =>
+        HOUSEHOLD_PUBLICATION_IDS.some((id) => b.observations[id]?.definitionVersion === 2)
+      );
+      return regions.map(
+        (b) =>
+          [
+            b._id,
+            result.get(b.regionId!) ??
+              (adopted
+                ? Object.fromEntries(
+                    HOUSEHOLD_PUBLICATION_IDS.map((id) => [id, b.observations[id]!])
+                  )
+                : {}),
+          ] as const
+      );
+    })
+  );
+  const housingCandidates = countryIds.filter(
+    (country) =>
+      !boards.find((b) => b.countryId === country && b.scope === "national")?.housingSource &&
+      householdSourceByCountry.get(country)?.calibration
+  );
+  const constructionMarket = housingCandidates.length
+    ? await db.collection<CommodityPrice>("commodityPrices").findOne(
+        { commodity: "construction_services", turn },
+        {
+          projection: {
+            commodity: 1,
+            turn: 1,
+            ...Object.fromEntries(regionalIds.map((id) => [`stateSupply.${id}`, 1])),
+          },
+        }
+      )
+    : null;
+  const housingStatusByCountry = new Map<string, HouseholdProductionStatus>();
+  const housingByRegion = new Map(
+    countryIds.flatMap((countryId) => {
+      const national = boards.find((b) => b.countryId === countryId && b.scope === "national");
+      const regions = boards.filter((b) => b.countryId === countryId && b.scope === "regional");
+      const priorStates = new Map(
+        regions.flatMap((b) => (b.housingState ? [[b.regionId!, b.housingState] as const] : []))
+      );
+      const generated = !national?.housingSource
+        ? prepareCalibratedHousing({
+            worldId: boards[0]!.worldId,
+            countryId,
+            preset: world?.preset ?? "",
+            turn,
+            reference: automaticPacks.get(countryId)?.reference ?? national?.householdReference,
+            households: householdSourceByCountry.get(countryId),
+            priorStates,
+            construction: regions.map((b) => ({
+              regionId: b.regionId!,
+              population: stateById.get(b.regionId!)?.population ?? NaN,
+              turn: constructionMarket?.turn ?? NaN,
+              crewDays: constructionMarket?.stateSupply?.[b.regionId!] ?? NaN,
+            })),
+            programs: laws?.programs ?? [],
+            settlements: laws?.settlements ?? new Map(),
+          })
+        : undefined;
+      const source = national?.housingSource ?? generated?.source;
+      const populationMatches = source?.regions.every((r) => {
+        const state = stateById.get(r.regionId);
+        return state?.countryId === countryId && state.population === r.flow.population;
+      });
+      const result = housingPublication({
+        worldId: boards[0]!.worldId,
+        countryId,
+        turn,
+        regionIds: regions.map((b) => b.regionId!),
+        source: populationMatches ? source : undefined,
+        householdSource: householdSourceByCountry.get(countryId),
+        householdReadings: new Map(
+          regions.map((b) => [b.regionId!, householdByRegion.get(b._id) ?? {}])
+        ),
+        priorStates,
+        programs: laws?.programs ?? [],
+        settlements: laws?.settlements ?? new Map(),
+      });
+      housingStatusByCountry.set(countryId, {
+        evaluatedAtTurn: turn,
+        path: result.size === regions.length && regions.length > 0 ? "produced" : "legacy",
+        gaps:
+          result.size === regions.length && regions.length > 0
+            ? []
+            : generated?.gaps.length
+              ? generated.gaps
+              : ["housing-publication-reconciliation-failed"],
+      });
+      const adopted = regions.some((b) =>
+        HOUSING_PUBLICATION_IDS.some((id) => b.observations[id]?.definitionVersion === 2)
+      );
+      return regions.map(
+        (b) =>
+          [
+            b._id,
+            result.get(b.regionId!) ?? {
+              state: undefined,
+              updates: adopted
+                ? Object.fromEntries(HOUSING_PUBLICATION_IDS.map((id) => [id, b.observations[id]!]))
+                : {},
+            },
+          ] as const
+      );
+    })
+  );
   const scoreYear = year ?? 1991 + Math.floor((turn - 1) / TURNS_PER_YEAR);
+  // All country members must publish the same definition/window, including a
+  // partially completed bulk retry. Never certify a half-migrated country.
+  for (const countryId of countryIds) {
+    const regions = boards.filter((b) => b.countryId === countryId && b.scope === "regional");
+    for (const [ids, readings] of [
+      [
+        HOUSEHOLD_PUBLICATION_IDS,
+        new Map(regions.map((b) => [b._id, householdByRegion.get(b._id) ?? {}])),
+      ],
+      [
+        HOUSING_PUBLICATION_IDS,
+        new Map(regions.map((b) => [b._id, housingByRegion.get(b._id)?.updates ?? {}])),
+      ],
+    ] as const) {
+      for (const id of ids) {
+        const candidates = regions.map((b) => readings.get(b._id)?.[id]);
+        if (
+          candidates.some((o) => o?.definitionVersion === 2) &&
+          candidates.some((o) => o?.definitionVersion !== 2)
+        )
+          throw new Error("Cannot publish a partial country definition migration");
+        for (const board of regions.filter((b) => b.asOfTurn === turn)) {
+          const prior = board.observations[id],
+            candidate = readings.get(board._id)?.[id];
+          if (prior?.definitionVersion !== 2 && candidate?.definitionVersion !== 2) continue;
+          const receipt = (o: typeof prior | undefined) =>
+            JSON.stringify(
+              o && [o.value, o.unit, o.definitionVersion, o.observedAtTurn, o.countryBasis]
+            );
+          if (receipt(prior) !== receipt(candidate))
+            throw new Error("Metric source changed during partial country replay");
+        }
+      }
+    }
+  }
   const macroById = new Map(macro.map((row) => [String(row._id), row]));
+  const productivityReady = new Set(
+    countryIds.filter((countryId) => {
+      const regions = boards.filter((b) => b.countryId === countryId && b.scope === "regional");
+      return (
+        regions.length > 0 &&
+        regions.every((b) => {
+          const row = macroById.get(b.regionId!);
+          return (
+            row?.countryId === countryId &&
+            productivityBasis(row.labourProductivity)?.endTurn === turn
+          );
+        })
+      );
+    })
+  );
   const budgetByCountry = new Map(budgets.map((row) => [row.countryId, row]));
-  const healthById = new Map(healthStocks.map((row) => [String(row._id), row]));
-  const healthBoardById = new Map(healthBoards.map((row) => [String(row._id), row]));
   const unitsByCountry = new Map(
     countryIds.map((countryId) => [countryId, units.filter((unit) => unit.countryId === countryId)])
   );
@@ -189,9 +613,22 @@ export async function collectResetMetricOwnerReadings(
       // The demographic phase runs each turn. A missing current-turn receipt
       // must leave the cohort observation due, not silently defer it forever.
       const cohortDue = board.scope === "regional";
-      const dueIds = dueResetMetricIds(board, turn, cohortDue, false);
+      const event = board.regionId ? turnout.get(board.regionId) : undefined;
+      const electionDue = Boolean(
+        event && event.turn > (board.observations["51"]?.observedAtTurn ?? board.sourceTurn)
+      );
+      const dueIds = dueResetMetricIds(board, turn, cohortDue, electionDue);
       const due = new Set(dueIds);
       const updates: Record<string, ResetMetricSnapshot["observations"][string]> = {};
+      if (board.asOfTurn === turn)
+        return [
+          board._id,
+          {
+            updates: Object.fromEntries(dueIds.map((id) => [id, board.observations[id]!])),
+            cohortDue,
+            electionDue,
+          },
+        ];
       if (board.scope === "national") {
         const budget = budgetByCountry.get(board.countryId);
         const fiscal = fiscalOwnerReadings({
@@ -241,64 +678,44 @@ export async function collectResetMetricOwnerReadings(
           }
         }
       } else {
-        const healthRow = healthById.get(board.regionId!);
-        const health = healthRow?.countryId === board.countryId ? healthRow.healthcare : undefined;
-        const healthBoard = healthBoardById.get(board.regionId!);
-        const boardInputs =
-          healthBoard?.countryId === board.countryId
-            ? healthOwnerInputs(healthBoard.values, board.countryId, year)
-            : null;
-        // Regions with a board no longer persist the legacy health store.
-        // Never hide an incomplete or mismatched board behind stale legacy data.
-        const inputs = healthBoard
-          ? boardInputs
-          : {
-              physicianRate: health?.physicianRate?.value ?? null,
-              preparedness: health?.publicHealthPreparedness?.value ?? null,
-              uninsuredPercent: health?.uninsuredRate?.value ?? null,
-              waitingTime:
-                board.countryId === "IE"
-                  ? health?.hseWaitingListMonths?.value
-                  : health?.nhsWaitingTime?.value,
-            };
-        const reference =
-          openingHealth[inheritedCalibrationCountry(board.countryId) as keyof typeof openingHealth];
-        const physicianReference = reference?.physicianRate ?? inputs?.physicianRate ?? null;
-        const preparednessReference = reference?.preparedness ?? inputs?.preparedness ?? null;
-        const access = liveHealthProxies({
-          countryId: board.countryId,
-          physicianRate: inputs?.physicianRate ?? null,
-          preparedness: inputs?.preparedness ?? null,
-          uninsuredPercent: inputs?.uninsuredPercent ?? null,
-          openingPhysicianReference: physicianReference ?? Number.NaN,
-          openingPreparednessReference: preparednessReference ?? Number.NaN,
-        });
-        if (due.has("16") && access) {
-          updates["16"] = {
-            ...board.observations["16"]!,
-            value: access.effectiveCoverage,
+        if (electionDue && event)
+          updates["51"] = {
+            ...board.observations["51"]!,
+            value: (100 * event.ballots) / event.eligible,
             status: "proxy",
-            source: boardInputs
-              ? "current political board converted to eligibility and service-reach proxy inputs"
-              : "current eligibility and physician/preparedness service-reach estimate",
-            note: "Game-calibrated reachable-care estimate using fixed 1991 reference stocks, not observed patient access.",
+            source: "latest completed election tally",
+            note: "Counted ballots divided by current eligible residents. Historical tallies without a frozen register remain an electorate-denominator proxy; simultaneous offices are not added together.",
+            observedAtTurn: event.turn,
+            ratioBasis: { numerator: event.ballots, denominator: event.eligible },
           };
-        }
-        const delay =
-          board.countryId === "UK" || board.countryId === "IE"
-            ? inputs?.waitingTime
-            : access?.treatmentDelayIndex;
-        if (due.has("18") && typeof delay === "number" && Number.isFinite(delay) && delay >= 0) {
-          updates["18"] = {
-            ...board.observations["18"]!,
-            value: delay,
+        if (due.has("08")) {
+          const flows = trade.find((s) => s.turn === turn)?.national[board.countryId];
+          const gdp = budgetByCountry.get(board.countryId)?.gdp;
+          const value =
+            flows && typeof gdp === "number"
+              ? commodityTradeBalance({
+                  exports: flows.exports,
+                  imports: flows.imports,
+                  annualGdpAnchor: gdp * getGdpAnchorRate(board.countryId, world?.preset),
+                  turnsPerYear: TURNS_PER_YEAR,
+                })
+              : null;
+          updates["08"] = {
+            ...board.observations["08"]!,
+            value: value ?? board.observations["08"]!.value,
             status: "proxy",
-            source: boardInputs
-              ? "current political board converted to treatment-delay proxy inputs"
-              : board.countryId === "UK" || board.countryId === "IE"
-                ? "current national health-service waiting index"
-                : "current physician/preparedness delay estimate",
-            note: "Comparable treatment-delay proxy, not median waiting days. Fixed opening references preserve nationwide capacity changes.",
+            source:
+              value === null
+                ? "retained trade observation: current cleared-flow ledger unavailable"
+                : "current national cleared-commodity trade ledger",
+            note:
+              value === null
+                ? "No current trade-flow receipt; this is not a newly measured balance."
+                : "Annualized commodity exports less imports as a share of annual GDP. National scope repeated on regional boards; services and unmodeled external trade are not included.",
+            observedAtTurn:
+              value === null
+                ? (board.observations["08"]?.observedAtTurn ?? board.sourceTurn)
+                : turn,
           };
         }
         const candidateMacro = macroById.get(board.regionId!);
@@ -306,17 +723,59 @@ export async function collectResetMetricOwnerReadings(
           candidateMacro?.countryId === board.countryId ? candidateMacro : undefined;
         for (const [id, field] of DIRECT_ECONOMIC_OWNERS) {
           if (!due.has(id)) continue;
+          if (id === "05" || id === "06") {
+            const basis = productivityReady.has(board.countryId)
+              ? productivityBasis(liveMacro?.labourProductivity)
+              : null;
+            const growth =
+              basis?.endTurn === turn
+                ? id === "06"
+                  ? productivityGrowth([basis])
+                  : outputGrowth([basis])
+                : null;
+            if (growth !== null && basis) {
+              updates[id] = {
+                ...board.observations[id]!,
+                value: growth,
+                status: "proxy",
+                observedAtTurn: turn,
+                growthBasis: basis,
+                source:
+                  id === "06"
+                    ? "modeled real output per modeled hour worked"
+                    : "matching modeled real-output endpoints",
+                note:
+                  id === "06"
+                    ? "Trailing 48-turn growth. Whole-economy real output and background plus corporate employment share the same window. Hours use a fixed country assumption, not recorded timecards. Funded policies affect output and employment through their owning systems, not a second headline bonus."
+                    : "Trailing 48-turn growth in the economy engine's real-output level. National growth pools opening and closing output before calculating the change. This is a game model, not observed national accounts.",
+              };
+              continue;
+            }
+            if (board.observations[id]?.growthBasis) {
+              updates[id] = board.observations[id]!;
+              continue;
+            }
+          }
           const value = liveMacro?.economic?.[field]?.value;
           if (typeof value !== "number" || !Number.isFinite(value)) continue;
           updates[id] = {
             ...board.observations[id]!,
             value,
-            status: id === "03" ? "proxy" : "derived",
+            status: id === "03" || id === "06" ? "proxy" : "derived",
             source: `current regional economy engine: ${field}`,
             note:
               id === "03"
                 ? "Modeled population-share estimate, not surveyed household poverty. Current funded law delivery replaces booked social spending in v2 countries; historical adjustments decay over time."
                 : "Current model result, not a political-board score or an independently measured statistic.",
+            ratioBasis:
+              id === "01" &&
+              liveMacro?.labourEmployment?.lastTurn === turn &&
+              liveMacro.labourEmployment.laborForce > 0
+                ? {
+                    numerator: (value / 100) * liveMacro.labourEmployment.laborForce,
+                    denominator: liveMacro.labourEmployment.laborForce,
+                  }
+                : undefined,
           };
         }
         if (due.has("02")) {
@@ -355,11 +814,13 @@ export async function collectResetMetricOwnerReadings(
           const measures = [
             [
               "20",
-              typeof cohort.periodLifeExpectancy === "number" && lifeCalibration
-                ? lifeCalibration.openingYears +
-                  cohort.periodLifeExpectancy -
-                  lifeCalibration.modeledYears
-                : null,
+              cohort.mortality
+                ? (demographicRates([cohort.mortality]) ?? cohort.periodLifeExpectancy)
+                : typeof cohort.periodLifeExpectancy === "number" && lifeCalibration
+                  ? lifeCalibration.openingYears +
+                    cohort.periodLifeExpectancy -
+                    lifeCalibration.modeledYears
+                  : null,
               "Period life expectancy from this turn's age-specific mortality curve, calibrated to the 1991 opening regional anchor.",
             ],
             [
@@ -369,7 +830,9 @@ export async function collectResetMetricOwnerReadings(
             ],
             [
               "55",
-              cohort.realizedTfr,
+              cohort.fertility
+                ? (demographicRates([cohort.fertility]) ?? cohort.realizedTfr)
+                : cohort.realizedTfr,
               "Realized fertility from births and the female age distribution, including service constraints.",
             ],
             [
@@ -386,6 +849,40 @@ export async function collectResetMetricOwnerReadings(
               status: "derived",
               source: "current single-year age and sex cohort flow",
               note,
+              demographicBasis: undefined,
+              ratioBasis: undefined,
+              observedAtTurn: turn,
+              ...(id === "20" && cohort.mortality
+                ? {
+                    demographicBasis: cohort.mortality,
+                    note: "Period life table from the same age-specific mortality used by the cohort flow, including pandemic excess deaths. No additive display adjustment.",
+                  }
+                : {}),
+              ...(id === "55" && cohort.fertility
+                ? {
+                    demographicBasis: cohort.fertility,
+                    note: "Sum of annual births per woman at each maternal age. Service withdrawals reduce only the affected ages.",
+                  }
+                : {}),
+              ...(id === "54" && cohort.populationBefore && cohort.populationAfter !== undefined
+                ? {
+                    ratioBasis: {
+                      numerator:
+                        (cohort.populationAfter - cohort.populationBefore) * TURNS_PER_YEAR,
+                      denominator: cohort.populationBefore,
+                    },
+                  }
+                : {}),
+              ...(id === "56" && stateById.get(board.regionId!)?.population
+                ? {
+                    ratioBasis: {
+                      numerator:
+                        stateById.get(board.regionId!)!.population -
+                        stateById.get(board.regionId!)!.population / (1 + value / 100),
+                      denominator: stateById.get(board.regionId!)!.population / (1 + value / 100),
+                    },
+                  }
+                : {}),
             };
           }
         }
@@ -399,11 +896,30 @@ export async function collectResetMetricOwnerReadings(
       // deliberately labelled as a game-calibrated estimate so the UI never
       // presents it as a fresh measurement. Owners with live ledgers above
       // remain fail-closed.
-      const pressure = pressureByBoard.get(board._id) ?? {};
+      const pressure = { ...(pressureByBoard.get(board._id) ?? {}) };
+      const regions =
+        board.scope === "regional"
+          ? [board.regionId!]
+          : boards
+              .filter((b) => b.scope === "regional" && b.countryId === board.countryId)
+              .map((b) => b.regionId!);
+      for (const [id, points] of Object.entries(
+        marketServicePressure(serviceMarkets, regions, turn, board.scope === "national")
+      ))
+        pressure[id] = Math.max(-1.2, Math.min(1.2, (pressure[id] ?? 0) + points));
+      // T-1 published conditions break same-turn circular feedback. Current law
+      // settlement remains T; measured owners above are never overwritten.
+      if (board.scope === "regional")
+        for (const [id, points] of Object.entries(gameplayMetricPressure(board, scoreYear)))
+          pressure[id] = Math.max(-1.2, Math.min(1.2, (pressure[id] ?? 0) + points));
       for (const id of dueIds) {
         if (updates[id] || FAIL_CLOSED_OWNER_IDS.has(id)) continue;
         const prior = board.observations[id];
         if (typeof prior?.value !== "number" || !Number.isFinite(prior.value)) continue;
+        if (prior.definitionVersion === 2) {
+          updates[id] = prior;
+          continue;
+        }
         // A partially completed bulk retry must not apply proxy drift twice.
         if (board.asOfTurn === turn) {
           updates[id] = prior;
@@ -429,14 +945,173 @@ export async function collectResetMetricOwnerReadings(
           value,
           status: "proxy",
           source: moved
-            ? `provisional continuity owner: ${prior.owner}, moved by enacted-law and Cabinet pressure`
+            ? `game outcome owner: ${prior.owner}, funded policy delivery and lagged game conditions`
             : `provisional continuity owner: ${prior.owner}`,
           note: moved
-            ? "Game-calibrated estimate until this owner has a physical live ledger: funded laws and active Cabinet initiatives move this line toward their settlement each refresh, and it returns toward its opening when they lapse."
+            ? "Modeled estimate, not a survey or counted ledger. Current funded laws and Cabinet delivery combine with bounded prior-turn livelihood, production and service conditions. Effects settle gradually; withdrawn support decays rather than granting a permanent bonus."
             : "Game-calibrated carry-forward until this owner has a physical live ledger. Laws and actions affect underlying systems where implemented; this estimate does not invent a direct bonus.",
         };
       }
-      return [board._id, { updates, cohortDue, electionDue: false }];
+      if (board.scope === "regional") {
+        const opening =
+          board.openingValues ??
+          Object.fromEntries(
+            Object.entries(board.history ?? {}).map(([id, series]) => [id, series[0]!.value])
+          );
+        const accessTargets = ["16", "18"].map((id) =>
+          policyDriftTarget({
+            metric: primaryMetricById(id)!,
+            currentValue: board.observations[id]!.value!,
+            openingValue: opening[id]!,
+            pressure: pressure[id] ?? 0,
+            countryId: board.countryId,
+            year: scoreYear,
+          })
+        );
+        const access = accessTargets.every((v) => v !== null)
+          ? ownedHealthAccess({
+              coverageTarget: accessTargets[0]!,
+              delayTarget: accessTargets[1]!,
+              preparedness: updates["23"]?.value ?? board.observations["23"]!.value!,
+              openingPreparedness: opening["23"]!,
+            })
+          : null;
+        if (access)
+          for (const [id, target] of [
+            ["16", access.coverage],
+            ["18", access.delay],
+          ] as const) {
+            if (due.has(id))
+              updates[id] = {
+                ...board.observations[id]!,
+                value: Number(
+                  (
+                    board.observations[id]!.value! +
+                    POLICY_DRIFT_RATE_PER_TURN * (target - board.observations[id]!.value!)
+                  ).toFixed(6)
+                ),
+                status: "proxy",
+                source: "owned health coverage, delay and delivered preparedness model",
+                note: "Opening-calibrated funded service estimate. Uses owned preparedness, not retired political-score inversions; patient/provider ledgers are not yet modeled.",
+              };
+          }
+        const current = Object.fromEntries(
+          Object.entries({ ...board.observations, ...updates }).map(([id, o]) => [id, o.value])
+        );
+        // Compare new household/housing units only to their own pinned baseline.
+        // Otherwise a migration could look like an economic shock. These
+        // livelihood channels intentionally use T-1 published household values.
+        const linkedOpening = { ...opening };
+        for (const id of ["02", "03", "24", "41"])
+          if (board.observations[id]?.definitionVersion === 2) {
+            const observation = board.observations[id]!;
+            const reference = board.gameplayReferences?.[id];
+            if (reference?.definitionVersion === 2 && reference.unit === observation.unit) {
+              current[id] = observation.value;
+              linkedOpening[id] = reference.value;
+            } else current[id] = opening[id] ?? current[id];
+          }
+        const policyTargets: Record<string, number> = {};
+        for (const id of ["19", "24", "41", "42"]) {
+          if (board.observations[id]?.definitionVersion === 2) continue;
+          const metric = primaryMetricById(id)!;
+          const value = policyDriftTarget({
+            metric,
+            currentValue: board.observations[id]!.value!,
+            openingValue: opening[id]!,
+            pressure: pressure[id] ?? 0,
+            countryId: board.countryId,
+            year: scoreYear,
+          });
+          if (value !== null) policyTargets[id] = value;
+        }
+        const conditionChanges = [
+          "01",
+          "03",
+          "16",
+          "19",
+          "24",
+          "26",
+          "29",
+          "30",
+          "31",
+          "47",
+          "48",
+          "50",
+        ].flatMap((id) => {
+          if (board.observations[id]?.definitionVersion === 2) {
+            const change = compatibleConditionChange(board, id, board.countryId, scoreYear);
+            return change === null ? [] : [change];
+          }
+          const metric = primaryMetricById(id)!;
+          const now = current[id],
+            base = opening[id];
+          if (typeof now !== "number" || typeof base !== "number") return [];
+          const a = resetMetricConditionScore(metric, now, board.countryId, scoreYear);
+          const b = resetMetricConditionScore(metric, base, board.countryId, scoreYear);
+          return a !== null && b !== null ? [a - b] : [];
+        });
+        const targets = linkedOutcomeTargets({
+          opening: linkedOpening,
+          current,
+          policyTargets,
+          conditionChanges,
+        });
+        for (const [id, target] of Object.entries(targets)) {
+          if (!due.has(id)) continue;
+          const prior = board.observations[id]!;
+          if (prior.definitionVersion === 2) continue;
+          updates[id] = {
+            ...prior,
+            value: Number(
+              (prior.value! + POLICY_DRIFT_RATE_PER_TURN * (target - prior.value!)).toFixed(6)
+            ),
+            status: "proxy",
+            source:
+              "linked outcome model using current owned conditions and funded program delivery",
+            note:
+              id === "49"
+                ? "Trust follows livelihood, service and governance conditions; legislation cannot grant trust directly. Model estimate, not a survey."
+                : "Opening-calibrated model with explicit livelihood or care-access elasticities and funded policy delivery. Not an observed household or clinical ledger.",
+          };
+        }
+        const population = stateById.get(board.regionId!)?.population;
+        const median = updates["02"]?.value,
+          gini = updates["04"]?.value;
+        for (const id of ["02", "04"])
+          if (updates[id]) updates[id] = { ...updates[id]!, householdBasis: undefined };
+        if (
+          typeof median === "number" &&
+          median > 0 &&
+          typeof gini === "number" &&
+          gini >= 0 &&
+          gini <= 95 &&
+          population &&
+          population > 0
+        ) {
+          const householdBasis = { median, gini, weight: population };
+          for (const id of ["02", "04"]) updates[id] = { ...updates[id]!, householdBasis };
+        }
+      }
+      for (const [id, observation] of Object.entries(householdByRegion.get(board._id) ?? {}))
+        if (due.has(id)) updates[id] = observation;
+      for (const [id, observation] of Object.entries(housingByRegion.get(board._id)?.updates ?? {}))
+        if (due.has(id)) updates[id] = observation;
+      return [
+        board._id,
+        {
+          updates,
+          cohortDue,
+          electionDue,
+          housingState: housingByRegion.get(board._id)?.state,
+          ...(board.scope === "national"
+            ? {
+                householdProductionStatus: productionStatusByCountry.get(board.countryId),
+                housingProductionStatus: housingStatusByCountry.get(board.countryId),
+              }
+            : {}),
+        },
+      ];
     })
   );
 }

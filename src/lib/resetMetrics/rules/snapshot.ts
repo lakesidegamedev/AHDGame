@@ -2,6 +2,15 @@ import { primaryMetrics } from "../catalog";
 import type { OpeningMetricObservation } from "./openingObservation";
 import { openingMetricHistory, validateMetricHistory, type ResetMetricHistory } from "./history";
 import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
+import type { HouseholdPublicationSource } from "./householdPublication";
+import type { HousingPublicationSource } from "./housingPublication";
+import type { HousingState } from "./housing";
+import type {
+  HouseholdDecodedReference,
+  HouseholdCurrentState,
+  HouseholdProductionStatus,
+  HouseholdIncomeModel,
+} from "./householdSources";
 
 export interface ResetMetricSnapshot {
   _id: string;
@@ -17,6 +26,23 @@ export interface ResetMetricSnapshot {
   history?: ResetMetricHistory;
   /** Immutable policy baseline, independent of the bounded history window. */
   openingValues?: Record<string, number>;
+  /** First compatible gameplay baseline after a unit change; wiped on world reset. */
+  gameplayReferences?: Record<string, { value: number; unit?: string; definitionVersion: 2 }>;
+  /** Compact preceding owner values make lagged turn retries deterministic. */
+  priorValues?: Record<string, number | null>;
+  /** Reviewed upstream owner inputs. World-scoped; this entire collection is wiped on reset. */
+  householdSource?: HouseholdPublicationSource;
+  /** Reviewed source and economic-owner inputs; all wiped with this world-bound collection. */
+  householdReference?: HouseholdDecodedReference;
+  householdIncomeModel?: HouseholdIncomeModel;
+  householdCurrentState?: HouseholdCurrentState;
+  /** Bounded latest evaluation only. This is not a new measurement or a history series. */
+  householdProductionStatus?: HouseholdProductionStatus;
+  /** Latest housing readiness only; wiped with the metric snapshots on reset. */
+  housingProductionStatus?: HouseholdProductionStatus;
+  housingSource?: HousingPublicationSource;
+  /** Country source inputs and regional stock state are wiped with this world-bound collection. */
+  housingState?: HousingState;
 }
 
 /** Validate an entire scoped opening board before any v2 writer can consume it. */

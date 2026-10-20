@@ -6,6 +6,7 @@ import { METRIC_REGISTRY_SORTED } from "@/lib/metricEngine/registry";
 
 const TOP_LEVEL_RUNTIME_FIELDS = [
   "labourEmployment",
+  "labourProductivity",
   "economicModel",
   "governance",
   "independenceDesire",

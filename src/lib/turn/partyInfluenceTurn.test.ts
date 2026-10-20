@@ -290,6 +290,9 @@ describe("processPartyInfluenceTurn", () => {
         if (name === "caucuses") {
           return { find: mockCaucusesFind, bulkWrite: mockBulkWrite };
         }
+        if (name === "gameState") {
+          return { findOne: vi.fn().mockResolvedValue({ currentTurn: 77 }) };
+        }
         return { find: mockPartiesFind, bulkWrite: mockBulkWrite };
       }),
     } as never);
@@ -442,6 +445,54 @@ describe("processPartyInfluenceTurn", () => {
     expect(up2[0].$set.actions).toEqual({
       $min: [ACTION_CAP, { $add: [{ $ifNull: ["$actions", 0] }, 1] }],
     });
+  });
+
+  it("logs a party bonus in the same pipeline stage as the actions update (Refs #4649)", async () => {
+    const party = makeParty({ sequentialId: 1, countryId: "US" });
+    mockPartiesFind.mockReturnValue({ toArray: vi.fn().mockResolvedValue([party]) });
+    // char1 holds all the influence (6 bonus actions); char2 earns none.
+    const char1 = makeChar({ party: "1", countryId: "US", partyInfluence: 100 });
+    const char2 = makeChar({ party: "1", countryId: "US", partyInfluence: 0 });
+    const now = new Date("2026-10-20T17:00:00Z");
+
+    const { processPartyInfluenceTurn } = await import("./partyInfluenceTurn");
+    await processPartyInfluenceTurn([char1, char2], null, now);
+
+    const [ops] = mockBulkWrite.mock.calls[0];
+    const op1 = ops.find((o: { updateOne: { filter: { _id: ObjectId } } }) =>
+      o.updateOne.filter._id.equals(char1._id)
+    );
+    const op2 = ops.find((o: { updateOne: { filter: { _id: ObjectId } } }) =>
+      o.updateOne.filter._id.equals(char2._id)
+    );
+    const set = (op1.updateOne.update as { $set: Record<string, unknown> }[])[0].$set;
+    expect(set.actionGrantLog).toEqual({
+      $slice: [
+        {
+          $concatArrays: [
+            { $ifNull: ["$actionGrantLog", []] },
+            [
+              {
+                turn: 77,
+                source: "party",
+                granted: 6,
+                before: { $ifNull: ["$actions", 0] },
+                after: set.actions,
+                cap: ACTION_CAP,
+                at: now,
+              },
+            ],
+          ],
+        },
+        -48,
+      ],
+    });
+    expect(set.actions).toEqual({
+      $min: [ACTION_CAP, { $add: [{ $ifNull: ["$actions", 0] }, 6] }],
+    });
+    // Zero bonus: plain $set, actions and the grant log untouched.
+    expect(op2.updateOne.update.$set).not.toHaveProperty("actionGrantLog");
+    expect(op2.updateOne.update.$set).not.toHaveProperty("actions");
   });
 
   it("applies leadership bonus to partyInfluence gain", async () => {

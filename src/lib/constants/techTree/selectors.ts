@@ -357,6 +357,38 @@ export function decadeLabel(decadeId: string): string {
  * effects) are ignored here — they're tracked separately via
  * getUnlockedStrategyIds and are permanent.
  */
+/**
+ * Decades whose owned techs still apply their running plant effects in the
+ * turn: the current decade and the one before it. Older techs stay owned but
+ * stop applying (shown as expired on the Tech tab).
+ */
+export function getActiveTechDecadeIds(currentYear: number): Set<string> {
+  const currentDecade = getDecadeForYear(currentYear);
+  const currentIdx = TECH_DECADES.findIndex((d) => d.id === currentDecade.id);
+  const prevDecade = currentIdx > 0 ? TECH_DECADES[currentIdx - 1] : null;
+  return new Set([currentDecade.id, ...(prevDecade ? [prevDecade.id] : [])]);
+}
+
+/** Effect kinds the turn applies per plant, which expire with their decade. */
+const RUNNING_TECH_EFFECT_KINDS = new Set<TechEffect["kind"]>([
+  "plantOutput",
+  "inputEfficiency",
+  "laborCostReduction",
+  "inputCost",
+  "outputRate",
+]);
+
+/** True when an owned node from an expired decade has lost a running effect. */
+export function isTechNodeEffectExpired(
+  node: TechTreeNode,
+  activeDecadeIds: ReadonlySet<string>
+): boolean {
+  return (
+    !activeDecadeIds.has(node.decadeId) &&
+    node.effects.some((e) => RUNNING_TECH_EFFECT_KINDS.has(e.kind))
+  );
+}
+
 export function getSectorTechEffectsForYear(
   corp: TechCorpView,
   sectorType: OperatingSectorType,
@@ -364,10 +396,7 @@ export function getSectorTechEffectsForYear(
   industryModel?: ManufacturingIndustryModel | null,
   mediaDiscriminator?: MediaDiscriminator | null
 ): AggregatedTechEffects {
-  const currentDecade = getDecadeForYear(currentYear);
-  const currentIdx = TECH_DECADES.findIndex((d) => d.id === currentDecade.id);
-  const prevDecade = currentIdx > 0 ? TECH_DECADES[currentIdx - 1] : null;
-  const allowedIds = new Set([currentDecade.id, ...(prevDecade ? [prevDecade.id] : [])]);
+  const allowedIds = getActiveTechDecadeIds(currentYear);
 
   const isPrimary = isPrimaryTechSector(corp, sectorType, industryModel, mediaDiscriminator);
   const effects = getUnlockedNodes(corp).flatMap((node) => {

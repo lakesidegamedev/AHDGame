@@ -46,6 +46,23 @@ describe("output follows price", () => {
     );
   });
 
+  it("a glut drops straight to the probe run and grows back a step once sales return", () => {
+    expect(
+      nextRunShare(receipt({ producedUnits: 100, offeredUnits: 400, soldUnits: 10, revenue: 50 }))
+    ).toBe(OUTPUT_RUN_FLOOR);
+    expect(
+      nextRunShare(
+        receipt({
+          producedUnits: 10,
+          offeredUnits: 10,
+          soldUnits: 10,
+          revenue: 100,
+          inputsConsumed: 20,
+        })
+      )
+    ).toBeCloseTo(0.1 * (1 + OUTPUT_GROW_STEP), 12);
+  });
+
   it("labour is not in the test: a plant that covers its inputs keeps running", () => {
     // Revenue 300 > inputs 200, even though wages would make the plant lose money overall.
     expect(nextRunShare(receipt({ revenue: 300 }))).toBeGreaterThan(0.5);

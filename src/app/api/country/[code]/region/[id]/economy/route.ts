@@ -1,4 +1,7 @@
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
+import {
+  getOperatingSectorType,
+  getStrategyForOperatingModel,
+} from "@/lib/constants/sectorStrategies";
 import { NextResponse } from "next/server";
 import { loadWorkforceSkillByState } from "@/lib/politicalLegislation/workforceSkillLoader";
 import { ObjectId } from "mongodb";
@@ -7,7 +10,6 @@ import { getAuthUser } from "@/lib/auth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { getGdpAnchorRate, loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
-import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
 import type {
   State,
   Corporation,
@@ -51,7 +53,11 @@ import {
   calculateSplitMsCost,
 } from "@/lib/corporations/marketActionCosts";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
-import { computeUnownedHeadroomUnits } from "@/lib/market/unownedHeadroom";
+import {
+  buildRoomUnits,
+  loadBuildRoomContext,
+  queuedUndeliveredUnits,
+} from "@/lib/corporations/buildRoom";
 import { shouldRedactCorporation } from "@/lib/corporations/redaction";
 import { effectiveMarketAnchor } from "@/lib/corporations/marketShare";
 import { aggregateCountrySectorMix } from "@/lib/economy/sectorMix";
@@ -86,7 +92,6 @@ export async function GET(request: Request, { params }: RouteParams) {
     let userCorporationId: string | null = null;
     let userCorporationSectorType: OperatingSectorType | null = null;
     let userMarketingStrength = 0;
-    let userRdScore = 0;
     let userLiquidCapitalAnchor = 0;
     let userSplitEscalation = 0;
     let userCorpCountryId: string | null = null;
@@ -110,7 +115,6 @@ export async function GET(request: Request, { params }: RouteParams) {
           industryModel: 1,
           mediaDiscriminator: 1,
           marketingStrength: 1,
-          rdScore: 1,
           liquidCapital: 1,
           liquidCurrencyCode: 1,
           splitEscalation: 1,
@@ -155,7 +159,6 @@ export async function GET(request: Request, { params }: RouteParams) {
           corp.mediaDiscriminator
         );
         userMarketingStrength = corp.marketingStrength ?? 0;
-        userRdScore = corp.rdScore ?? 0;
         userLiquidCapitalAnchor = corpLiquidCapitalToAnchor(
           corp.liquidCapital ?? 0,
           corp,
@@ -222,7 +225,6 @@ export async function GET(request: Request, { params }: RouteParams) {
     // base config's modern/1979 ones.
     const economyPreset = await loadWorldPreset(db);
     const usdExchangeRate = getGdpAnchorRate(countryId, economyPreset);
-    const eraUnitScale = getEraUnitScale(economyPreset);
     const totalMarketPerSector = Math.round(
       (state.gdp * usdExchangeRate * SECTOR_MARKET_GDP_FRACTION) / SECTOR_TYPE_COUNT
     );
@@ -249,20 +251,6 @@ export async function GET(request: Request, { params }: RouteParams) {
     // is self-healed from revenue for rows predating the backfill — a bare 0
     // there would report a busy market as having no demand at all.
     const plantsMode = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
-    const headroomUnitsByType = new Map(
-      unownedDocs.map((u) => [
-        laneOf(u),
-        u.headroomUnits != null && Number.isFinite(u.headroomUnits)
-          ? u.headroomUnits
-          : computeUnownedHeadroomUnits(
-              u.sectorType,
-              u.revenue ?? 0,
-              eraUnitScale,
-              u.industryModel,
-              u.mediaDiscriminator
-            ),
-      ])
-    );
 
     // Get corporation details for each sector
     const corpIds = [...new Set(sectors.map((s) => s.corporationId))];
@@ -281,7 +269,6 @@ export async function GET(request: Request, { params }: RouteParams) {
               brandColor: 1,
               logoUrl: 1,
               marketingStrength: 1,
-              rdScore: 1,
               countryOwnerId: 1,
               countryId: 1,
               liquidCurrencyCode: 1,
@@ -371,6 +358,8 @@ export async function GET(request: Request, { params }: RouteParams) {
     // distort the totals. Per-row `revenue` stays ₳ too — UI layer formats
     // via wallet preference (no native corp-currency stamped per row because
     // rows can be from different-currency corps).
+    const buildRoom = plantsMode ? await loadBuildRoomContext(db) : null;
+    const buildQueueTurn = growthGameState?.currentTurn ?? 0;
     const economySectors = OPERATING_SECTOR_TYPES.map((sectorType) => {
       const typeSectors = sectorsByType.get(sectorType) ?? [];
       const ownedRevenue = typeSectors.reduce(
@@ -437,8 +426,6 @@ export async function GET(request: Request, { params }: RouteParams) {
                 defenderBookValueAnchor: s.capacityBookAnchor as number,
                 attackerMarketingStrength: userMarketingStrength,
                 defenderMarketingStrength: corp?.marketingStrength ?? 0,
-                attackerRdScore: userRdScore,
-                defenderRdScore: corp?.rdScore ?? 0,
               })
             : null;
         return {
@@ -586,16 +573,25 @@ export async function GET(request: Request, { params }: RouteParams) {
         estimatedCapture,
         estimatedCapturePercent,
         // Plants-tier: unmet demand in output units/day. Null elsewhere.
-        headroomUnits: plantsMode
-          ? Math.round(
-              headroomUnitsByType.get(sectorType) ??
-                computeUnownedHeadroomUnits(
+        // Room to build: buyers here not being served, less capacity already
+        // under construction. Not the legacy unowned pool (a market can be
+        // short with an empty pool).
+        headroomUnits: buildRoom
+          ? buildRoomUnits(
+              buildRoom.demandGapUnits(
+                getStrategyForOperatingModel(
                   operatingSectorIdentity(sectorType).sectorType,
-                  unownedRevenue,
-                  eraUnitScale,
+                  "standard",
                   operatingSectorIdentity(sectorType).industryModel,
                   operatingSectorIdentity(sectorType).mediaDiscriminator
-                )
+                ).supply ?? {},
+                stateId,
+                state.countryId ?? countryId
+              ),
+              typeSectors.reduce(
+                (sum, s) => sum + queuedUndeliveredUnits(s.buildQueue, buildQueueTurn),
+                0
+              )
             )
           : null,
         tariffEffectiveRate,

@@ -1,5 +1,10 @@
 import { corpToSectorCountrySpread } from "@/lib/currency/sectorFxSpread";
 import { NextResponse } from "next/server";
+import {
+  buildRoomUnits,
+  loadBuildRoomContext,
+  queuedUndeliveredUnits,
+} from "@/lib/corporations/buildRoom";
 import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
@@ -15,6 +20,7 @@ import type {
   Character,
   CorporateSector,
   GameState,
+  SectorBuildOrder,
   StateMetrics,
   UnownedSector,
   State,
@@ -23,11 +29,6 @@ import type {
 } from "@/lib/db/types";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { computeUnownedHeadroomUnits } from "@/lib/market/unownedHeadroom";
-import type { CommodityType } from "@/lib/constants/commodities";
-import { sectorDemandGapUnits } from "@/lib/market/sectorDemandGap";
-import { commodityDemandGap, isStateScopedCommodity } from "@/lib/market/commodityMarketScope";
-import { latentTopUpForCountry, latentTopUpForState } from "@/lib/market/latentShortageSignal";
-import { bookFor, loadReachableBooks } from "@/lib/trade/queries/loadReachableBooks";
 import { getStrategyForOperatingModel } from "@/lib/constants/sectorStrategies";
 import {
   CAPACITY_BUILD_TURNS,
@@ -55,7 +56,6 @@ import { loadCommandEconomyBlockedCountries } from "@/lib/economy/queries/comman
 import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
 import { pinStateInTopSuggestions } from "@/lib/corporations/expandSuggestionPin";
 import { fetchCorporationNationalSectorSharesByCountry } from "@/lib/corporations/marketShare";
-import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
 import {
   retailCapacityExpansionPaused,
   retailDemandTransitionTurnsRemaining,
@@ -173,73 +173,13 @@ export async function GET(request: Request, { params }: RouteParams) {
     const supplyMix =
       getStrategyForOperatingModel(sectorType, "standard", industryModel, mediaDiscriminator)
         .supply ?? {};
-    const [reachableBooks, priceDocs] = plantsMode
-      ? await Promise.all([
-          loadReachableBooks(db),
-          db
-            .collection<CommodityPrice>("commodityPrices")
-            .find(
-              {},
-              {
-                projection: {
-                  commodity: 1,
-                  globalSupply: 1,
-                  globalDemand: 1,
-                  nationalDemand: 1,
-                  stateSupply: 1,
-                  stateDemand: 1,
-                  demandTruncatedUnits: 1,
-                },
-              }
-            )
-            .toArray(),
-        ])
-      : [null, [] as CommodityPrice[]];
-    const globalBalances = new Map(
-      priceDocs.map((price) => [
-        price.commodity,
-        { supply: price.globalSupply ?? 0, demand: price.globalDemand ?? 0 },
-      ])
-    );
-    const stateBalances = new Map<string, Map<CommodityType, { supply: number; demand: number }>>();
-    for (const price of priceDocs) {
-      for (const stateId of new Set([
-        ...Object.keys(price.stateSupply ?? {}),
-        ...Object.keys(price.stateDemand ?? {}),
-      ])) {
-        const byCommodity = stateBalances.get(stateId) ?? new Map();
-        byCommodity.set(price.commodity, {
-          supply: price.stateSupply?.[stateId] ?? 0,
-          demand: price.stateDemand?.[stateId] ?? 0,
-        });
-        stateBalances.set(stateId, byCommodity);
-      }
-    }
-    const priceDocByCommodity = new Map(priceDocs.map((price) => [price.commodity, price]));
+    const buildRoom = plantsMode ? await loadBuildRoomContext(db) : null;
     const demandGapUnitsByState = new Map<string, number>();
     const demandGapUnitsFor = (stateId: string, countryId: string): number => {
-      if (!plantsMode) return Number.POSITIVE_INFINITY;
+      if (!buildRoom) return Number.POSITIVE_INFINITY;
       const cached = demandGapUnitsByState.get(stateId);
       if (cached !== undefined) return cached;
-      const gap = sectorDemandGapUnits(supplyMix, (mixCommodity) => {
-        // Demand audit step 1: restore the 1.5x-cap-hidden demand to the
-        // advisor gap. State-local outputs attribute the state's share,
-        // reachable/global outputs the candidate country's share. Zero when
-        // nothing was truncated, leaving the quote unchanged below the cap.
-        const doc = priceDocByCommodity.get(mixCommodity);
-        const latentDemandTopUp = doc
-          ? isStateScopedCommodity(mixCommodity)
-            ? latentTopUpForState(doc, stateId)
-            : latentTopUpForCountry(doc, countryId)
-          : 0;
-        return commodityDemandGap({
-          commodity: mixCommodity,
-          stateBalance: stateBalances.get(stateId)?.get(mixCommodity),
-          reachableBook: bookFor(reachableBooks, countryId, mixCommodity),
-          globalBalance: globalBalances.get(mixCommodity),
-          latentDemandTopUp,
-        });
-      });
+      const gap = buildRoom.demandGapUnits(supplyMix, stateId, countryId);
       demandGapUnitsByState.set(stateId, gap);
       return gap;
     };
@@ -306,10 +246,16 @@ export async function GET(request: Request, { params }: RouteParams) {
       db
         .collection<CorporateSector>("corporateSectors")
         .find({ ...marketFilter, stateId: { $in: stateIds } })
-        .project<{ corporationId: string; stateId: string; revenue: number }>({
+        .project<{
+          corporationId: string;
+          stateId: string;
+          revenue: number;
+          buildQueue?: SectorBuildOrder[];
+        }>({
           corporationId: 1,
           stateId: 1,
           revenue: 1,
+          buildQueue: 1,
         })
         .toArray(),
       db
@@ -510,6 +456,19 @@ export async function GET(request: Request, { params }: RouteParams) {
     }
 
     // Group siblings by stateId for competitor lookup
+    // Capacity every operator still has under construction here, by state.
+    const buildQueueTurn =
+      (
+        await db
+          .collection<GameState>("gameState")
+          .findOne({ _id: "current" }, { projection: { currentTurn: 1 } })
+      )?.currentTurn ?? 0;
+    const queuedUnitsByState = new Map<string, number>();
+    for (const s of siblingCorpSectors) {
+      const queued = queuedUndeliveredUnits(s.buildQueue, buildQueueTurn);
+      if (queued > 0)
+        queuedUnitsByState.set(s.stateId, (queuedUnitsByState.get(s.stateId) ?? 0) + queued);
+    }
     const siblingsByState = new Map<string, typeof siblingCorpSectors>();
     for (const s of siblingCorpSectors) {
       if (!siblingsByState.has(s.stateId)) siblingsByState.set(s.stateId, []);
@@ -551,11 +510,16 @@ export async function GET(request: Request, { params }: RouteParams) {
                 mediaDiscriminator
               )
           : null;
-        // Cap the pool share at what buyers in THIS market can actually absorb —
-        // in a glut the pool reads huge while extra output simply goes unsold.
+        // Room to build: demand buyers here are not getting, less capacity
+        // already under construction for it. The unowned pool is legacy market
+        // share, not physical demand, so it no longer caps this figure (a
+        // market can be short with an empty pool).
         const headroomUnits =
           poolHeadroomUnits != null
-            ? Math.round(Math.min(poolHeadroomUnits, demandGapUnitsFor(state._id, state.countryId)))
+            ? buildRoomUnits(
+                demandGapUnitsFor(state._id, state.countryId),
+                queuedUnitsByState.get(state._id) ?? 0
+              )
             : null;
         const starterBuildCostAnchor = plantsMode
           ? (starterBuildCostByState.get(stateId) ?? 0)

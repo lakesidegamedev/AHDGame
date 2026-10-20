@@ -19,6 +19,8 @@ import { politicalValueForLegacyMetric } from "./marginAdapter";
 import { legacyUnitFromPoliticalScore } from "./legacyUnitBands";
 import { legacyValueFromPoliticalScore } from "@/lib/politicalMetrics/derive/legacyInversion";
 import { loadCabinetGameplayEffects } from "@/lib/resetCabinet/loadGameplayEffects";
+import { loadOwnedMetricInputs } from "@/lib/resetMetrics/loadOwnedInputs";
+import { ownedPoliticalValues } from "@/lib/resetMetrics/rules/ownedInputs";
 import type { ApplicableTemporaryTargetEffect } from "@/lib/resetCabinet/rules/actions";
 import {
   applyCabinetPoliticalInputs,
@@ -68,20 +70,37 @@ export async function loadPoliticalMacroInputs(
   db: Db,
   turn?: number
 ): Promise<PoliticalMacroInputs> {
-  const [docs, cabinetEffects] = await Promise.all([
+  const [docs, cabinetEffects, owned] = await Promise.all([
     db
       .collection<PoliticalMetricsDoc>("politicalMetrics")
       .find({}, { projection: { _id: 1, countryId: 1, values: 1 } })
       .toArray(),
     loadCabinetGameplayEffects(db, undefined, turn),
+    loadOwnedMetricInputs(db, turn),
   ]);
-  const valuesById = new Map<string, Record<PoliticalMetricId, number>>(
+  const primitiveValuesById = new Map<string, Record<PoliticalMetricId, number>>(
     docs.map((d) => [
       String(d._id),
       applyCabinetPoliticalInputs(
         d.values ?? {},
         cabinetEffectsForRegion(cabinetEffects, d.countryId, String(d._id))
       ) as Record<PoliticalMetricId, number>,
+    ])
+  );
+  const valuesById = new Map<string, Record<PoliticalMetricId, number>>(
+    docs.map((d) => [
+      String(d._id),
+      owned.has(String(d._id))
+        ? ownedPoliticalValues(
+            d.values,
+            owned.get(String(d._id))!.observations,
+            owned.get(String(d._id))!.countryId,
+            owned.get(String(d._id))!.year
+          )
+        : (applyCabinetPoliticalInputs(
+            d.values ?? {},
+            cabinetEffectsForRegion(cabinetEffects, d.countryId, String(d._id))
+          ) as Record<PoliticalMetricId, number>),
     ])
   );
 
@@ -95,7 +114,11 @@ export async function loadPoliticalMacroInputs(
       ),
     has: (stateId) => valuesById.has(stateId),
     legacyUnit(stateId, path) {
-      const values = valuesById.get(stateId);
+      const direct = owned.get(stateId)?.values[path];
+      if (direct !== undefined) return direct;
+      // Unmapped primitive stocks, such as physician supply, keep their own
+      // source rather than being inferred from a different published outcome.
+      const values = primitiveValuesById.get(stateId);
       if (!values) return null;
       const [category, metricId] = path.split(".");
       if (!category || !metricId) return null;
@@ -104,7 +127,9 @@ export async function loadPoliticalMacroInputs(
       return legacyUnitFromPoliticalScore(path, score);
     },
     legacyValue(stateId, path, era) {
-      const values = valuesById.get(stateId);
+      const direct = owned.get(stateId)?.values[path];
+      if (direct !== undefined) return direct;
+      const values = primitiveValuesById.get(stateId);
       if (!values) return null;
       const [category, metricId] = path.split(".");
       if (!category || !metricId) return null;

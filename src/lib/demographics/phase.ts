@@ -27,13 +27,23 @@ import { ensureDemographicWorldEpoch } from "./worldEpoch";
 import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import {
+  RESET_V2_COUNTRIES,
   resetSystemVersionsForCountry,
   type ResetV2Readiness,
   type ResetVersionState,
 } from "@/lib/resetVersions/rules";
 import { dependencyBurden15To64 } from "@/lib/resetMetrics/rules/cohortOpening";
 import { realizedTfrFromBirths } from "@/lib/resetMetrics/rules/realizedFertility";
-import { periodLifeExpectancy } from "@/lib/resetMetrics/rules/periodLifeExpectancy";
+import {
+  calibratedMortalityRates,
+  demographicRates,
+  lifeFromMortalityRates,
+  type FertilityBasis,
+  type MortalityBasis,
+} from "@/lib/resetMetrics/rules/demographicMeasurement";
+import { inheritedCalibrationRegion } from "@/lib/resetMetrics/rules/conversionCalibration";
+import { loadResetPolicyPressure } from "@/lib/resetMetrics/loadPolicyPressure";
+import { fertilityPolicyIndex } from "@/lib/resetMetrics/rules/fertilityPolicy";
 import type { ResetMetricSnapshot } from "@/lib/resetMetrics/rules/snapshot";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { resolveVotingAgeEligible } from "@/lib/constants/votingAge";
@@ -107,6 +117,7 @@ async function resetCohortOpeningCalibration() {
 
 interface MetricsDoc {
   _id: string;
+  resetCohortReading?: { fertilityPolicyIndex?: number };
   population?: { birthRate?: { value?: number }; migrationRate?: { value?: number } };
   healthcare?: { lifeExpectancy?: { value?: number }; preventableMortality?: { value?: number } };
   economic?: {
@@ -134,6 +145,9 @@ interface RegionWork {
   servingFemaleByAge: readonly number[];
   realizedTfr: number | null;
   periodLifeExpectancy: number | null;
+  fertility?: FertilityBasis;
+  mortality?: MortalityBasis;
+  fertilityPolicyIndex?: number;
 }
 
 const val = (x: { value?: number } | undefined, dflt: number): number =>
@@ -213,6 +227,7 @@ export async function runDemographicFlows(
   // (Bridge A, below). Both halves are projected identically and merged.
   const METRICS_PROJECTION = {
     "population.birthRate.value": 1,
+    "resetCohortReading.fertilityPolicyIndex": 1,
     "population.migrationRate.value": 1,
     "healthcare.lifeExpectancy.value": 1,
     "healthcare.preventableMortality.value": 1,
@@ -286,7 +301,7 @@ export async function runDemographicFlows(
   const workHi = resolveRetirementAgeEligible(gameState ?? undefined);
   const stateById = new Map(states.map((s) => [s._id, s]));
   const v2Countries = new Set(
-    (["US", "UK", "JP"] as const).filter(
+    RESET_V2_COUNTRIES.filter(
       (countryId) => resetSystemVersionsForCountry(gameState, v2Ready, countryId).metrics === "v2"
     )
   );
@@ -316,6 +331,9 @@ export async function runDemographicFlows(
             regionId: 1,
             asOfTurn: 1,
             "observations.19.value": 1,
+            "openingValues.19": 1,
+            "history.19": { $slice: 1 },
+            scope: 1,
           },
         }
       )
@@ -336,12 +354,23 @@ export async function runDemographicFlows(
         board.asOfTurn !== turn - 1 ||
         typeof preventable !== "number" ||
         !Number.isFinite(preventable) ||
-        !v2Opening!.life[demo.countryId as "US" | "UK" | "JP"][demo._id]
+        !(() => {
+          const ref = inheritedCalibrationRegion(demo.countryId, demo._id);
+          return v2Opening!.life[ref.countryId as "US" | "UK" | "JP" | "IE"]?.[ref.regionId];
+        })()
       ) {
         throw new Error(`V2 cohorts lack current health inputs for ${demo.countryId}:${demo._id}`);
       }
     }
   }
+  const fertilityPressure =
+    v2Countries.size && typeof gameState?.resetWorldId === "string"
+      ? await loadResetPolicyPressure(db, {
+          worldId: gameState.resetWorldId,
+          boards: [...v2HealthByRegion.values()],
+          turn: turn - 1,
+        })
+      : new Map<string, Record<string, number>>();
 
   // v2: labour→macro coupling is active only at labourSystemMode ≥ "macro".
   const labourMacroEnabled = labourAtLeast(
@@ -381,7 +410,10 @@ export async function runDemographicFlows(
     // ±1.5 annual percentage points at the board extremes, unchanged at 50.
     const useResetMetrics = v2Countries.has(demo.countryId as "US" | "UK" | "JP");
     const seededMigrationPct = useResetMetrics
-      ? v2Opening!.migration[demo.countryId as "US" | "UK" | "JP"][demo._id]
+      ? (() => {
+          const ref = inheritedCalibrationRegion(demo.countryId, demo._id);
+          return v2Opening!.migration[ref.countryId as "US" | "UK" | "JP" | "IE"]?.[ref.regionId];
+        })()
       : val(m?.population?.migrationRate, 0);
     if (seededMigrationPct === undefined) {
       throw new Error(
@@ -504,8 +536,11 @@ export async function runDemographicFlows(
     // playables. Keep the seed as the base so authored regional character
     // survives; ±25 index points at the board extremes, unchanged at 50.
     const useResetMetrics = v2Countries.has(p.countryId as "US" | "UK" | "JP");
+    const calibration = inheritedCalibrationRegion(p.countryId, p.demo._id);
     const seededBirthRate = useResetMetrics
-      ? v2Opening!.fertility[p.countryId as "US" | "UK" | "JP"][p.demo._id]
+      ? v2Opening!.fertility[calibration.countryId as "US" | "UK" | "JP" | "IE"]?.[
+          calibration.regionId
+        ]
       : val(p.m?.population?.birthRate, 50);
     if (seededBirthRate === undefined) {
       throw new Error(
@@ -515,8 +550,13 @@ export async function runDemographicFlows(
     const demographyScore = useResetMetrics
       ? null
       : politicalInputs.score(p.demo._id, "society.demography");
-    const birthRateIndex =
-      demographyScore == null
+    const birthRateIndex = useResetMetrics
+      ? fertilityPolicyIndex(
+          seededBirthRate,
+          p.m?.resetCohortReading?.fertilityPolicyIndex,
+          fertilityPressure.get(`${p.countryId}:${p.demo._id}`)?.["55"] ?? 0
+        )
+      : demographyScore == null
         ? seededBirthRate
         : modulateByPoliticalScore(seededBirthRate, demographyScore, 25);
 
@@ -527,7 +567,9 @@ export async function runDemographicFlows(
       healthcare: useResetMetrics
         ? {
             lifeExpectancy:
-              v2Opening!.life[p.countryId as "US" | "UK" | "JP"][p.demo._id]!.openingYears,
+              v2Opening!.life[calibration.countryId as "US" | "UK" | "JP" | "IE"]![
+                calibration.regionId
+              ]!.openingYears,
             preventableMortality: v2HealthByRegion.get(`${p.countryId}:${p.demo._id}`)!
               .observations["19"]!.value!,
           }
@@ -544,8 +586,26 @@ export async function runDemographicFlows(
       migrantShareMale: 0.5,
       servingFemaleByAge: p.conscription.servingFemaleByAge,
     };
+    if (useResetMetrics) {
+      const board = v2HealthByRegion.get(`${p.countryId}:${p.demo._id}`)!;
+      const reference =
+        v2Opening!.life[calibration.countryId as "US" | "UK" | "JP" | "IE"]![calibration.regionId]!;
+      const openingPreventable = board.openingValues?.["19"] ?? board.history?.["19"]?.[0]?.value;
+      if (typeof openingPreventable !== "number")
+        throw new Error(`Missing mortality baseline ${board._id}`);
+      inputs.mortalityRates = calibratedMortalityRates({
+        openingYears: reference.openingYears,
+        openingPreventable,
+        currentPreventable: board.observations["19"]!.value!,
+      });
+    }
 
-    const { vector, flows } = advanceCohort(p.before, inputs, turn, TURNS_PER_YEAR);
+    const { vector, flows, fertility, mortality } = advanceCohort(
+      p.before,
+      inputs,
+      turn,
+      TURNS_PER_YEAR
+    );
     const serving =
       receptionOrders.length || civilianLossOrders.length
         ? servingCohortsForReception(
@@ -566,11 +626,13 @@ export async function runDemographicFlows(
       servingMaleByAge: serving.male,
       servingFemaleByAge: serving.female,
       realizedTfr: v2Countries.has(p.countryId as "US" | "UK" | "JP")
-        ? realizedTfrFromBirths(p.before, flows.births, TURNS_PER_YEAR)
+        ? (demographicRates([fertility]) ??
+          realizedTfrFromBirths(p.before, flows.births, TURNS_PER_YEAR))
         : null,
       periodLifeExpectancy: v2Countries.has(p.countryId as "US" | "UK" | "JP")
-        ? periodLifeExpectancy(inputs.healthcare)
+        ? (demographicRates([mortality]) ?? lifeFromMortalityRates(inputs.mortalityRates!))
         : null,
+      ...(useResetMetrics ? { fertility, mortality, fertilityPolicyIndex: birthRateIndex } : {}),
     });
   }
 
@@ -698,6 +760,9 @@ export async function runDemographicFlows(
     militaryServicePop,
     realizedTfr,
     periodLifeExpectancy: lifeYears,
+    fertility,
+    mortality,
+    fertilityPolicyIndex: policyIndex,
   } of works) {
     const newPop = Math.max(1, totalPopulation(vector));
     const eligible = Math.round(votingAgePopulation(vector, votingAgeFor(countryId)));
@@ -731,6 +796,11 @@ export async function runDemographicFlows(
               realizedTfr,
               periodLifeExpectancy: lifeYears,
               dependencyBurden15To64: dependencyBurden15To64(vector),
+              fertility,
+              mortality,
+              fertilityPolicyIndex: policyIndex,
+              populationBefore: totalPopulation(before),
+              populationAfter: totalPopulation(vector),
             },
           }
         : {}),

@@ -7,6 +7,7 @@ import {
   techNodeValuePerTurn,
   TECH_NODE_CASH_FLOOR_ANCHOR,
   TECH_NODE_PAYBACK_TURNS,
+  TECH_NODE_VALUED_FLOOR_FRACTION,
 } from "./costs";
 import {
   canUnlock,
@@ -18,6 +19,8 @@ import {
   getDecadeLaneNodes,
   getNodePrereqId,
   getSectorTechEffects,
+  getActiveTechDecadeIds,
+  isTechNodeEffectExpired,
   SLOT_PARENT,
   type TechCorpView,
 } from "./selectors";
@@ -193,6 +196,30 @@ describe("committed lane + effects", () => {
   });
 });
 
+describe("tech effect expiry", () => {
+  it("keeps the current and previous decade active", () => {
+    expect([...getActiveTechDecadeIds(1996)].sort()).toEqual(["1979", "1989"]);
+  });
+
+  it("marks an old node with a running plant effect as expired", () => {
+    const base = TECH_TREE.energy.find((n) => n.id === corpNodeId("2019", 1))!;
+    const running = {
+      ...base,
+      decadeId: "1969",
+      effects: [{ kind: "laborCostReduction" as const, pct: 0.1 }],
+    };
+    const strategyOnly = {
+      ...base,
+      decadeId: "1969",
+      effects: [{ kind: "unlockStrategy" as const, strategyId: "x" }],
+    };
+    const active = getActiveTechDecadeIds(1996);
+    expect(isTechNodeEffectExpired(running, active)).toBe(true);
+    expect(isTechNodeEffectExpired({ ...running, decadeId: "1979" }, active)).toBe(false);
+    expect(isTechNodeEffectExpired(strategyOnly as typeof base, active)).toBe(false);
+  });
+});
+
 describe("cash cost", () => {
   it("scales with daily gross revenue and the node fraction", () => {
     const node = TECH_TREE.energy.find((n) => n.id === corpNodeId("2019", 1))!;
@@ -224,8 +251,19 @@ describe("cash cost", () => {
     expect(techNodeCashCost(node, 48_000_000, 0, basis)).toBe(
       Math.round(value * TECH_NODE_PAYBACK_TURNS)
     );
-    // The floor still applies to a small corp.
-    expect(techNodeCashCost(node, 0, 5_000_000, basis)).toBe(5_000_000);
+    // A valued node only needs a tenth of the floor, so a mid-size corp still
+    // pays value x 48 instead of the flat minimum.
+    expect(techNodeCashCost(node, 0, 5_000_000, basis)).toBe(
+      Math.round(value * TECH_NODE_PAYBACK_TURNS)
+    );
+    // A tiny corp whose node value is near zero still pays the reduced floor.
+    const tiny = {
+      primary: { revenue: 1_000, inputs: 300, labour: 200 },
+      all: { revenue: 2_000, inputs: 600, labour: 400 },
+    };
+    expect(techNodeCashCost(node, 0, 5_000_000, tiny)).toBe(
+      5_000_000 * TECH_NODE_VALUED_FLOOR_FRACTION
+    );
   });
 
   it("values a Sector-lane labour node on the primary sector only", () => {

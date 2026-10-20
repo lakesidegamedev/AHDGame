@@ -27,7 +27,7 @@ import {
   getLogisticsSupportedSectorCount,
   type ManufacturingIndustryModel,
 } from "@/lib/constants/corporations";
-import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
+import { getOperatingSectorType, STRATEGY_COOLDOWN_TURNS } from "@/lib/constants/sectorStrategies";
 import type { CapacityDecisionObservation } from "@/lib/corporations/capacityDecisionTelemetry/rules";
 import { foundingStarterUnits, sectorEntryFeeAnchor } from "@/lib/corporations/foundingPlant";
 import { unownedHeadroomUnitsOf } from "@/lib/corporations/marketShare";
@@ -104,6 +104,11 @@ import {
   settleFrontierEntryPlacement,
 } from "@/lib/turn/npp/frontierEntryCandidate";
 import { buildNppGlutMothballUpdates } from "@/lib/turn/npp/glutMothballing";
+import {
+  AI_ZERO_SALES_MOTHBALL_TURNS,
+  chooseTransitionConversion,
+} from "@/lib/turn/npp/rules/transitionConversion";
+import { industryConversionFields } from "@/lib/corporations/retooling/conversion";
 import {
   computeMacroProductionPolicy,
   depositAwarePriceRatioOf,
@@ -634,6 +639,55 @@ export function makeNppCorpDecision(
       .filter(({ update }) => update.$set?.mothballed === true)
       .map(({ filter }) => filter._id.toString())
   );
+
+  // ── 2d. Transition package: free conversion of one losing, over-built
+  // sector toward the country's real shortage (funded market only). The
+  // owner's retool permission gates it, so autopilot and parent-owned
+  // corporations never convert on their own.
+  if (ctx.transitionFirstFundedTurn != null && operatorMay(operator, "retool")) {
+    const choice = chooseTransitionConversion({
+      sectors,
+      incomeBySectorId: new Map(sectorProfits.map((p) => [p.sector._id.toString(), p.income])),
+      turn: ctx.turn,
+      firstFundedTurn: ctx.transitionFirstFundedTurn,
+      shortageOf: (lane, countryId) => sectorShortageScore(lane, countryId, priceRatioOf),
+      allowedLanes: operator.sectorTypes,
+      excludedSectorIds: newlyMothballedIds,
+    });
+    const target = choice && sectors.find((s) => s._id.toString() === choice.sectorId);
+    const fields = target && industryConversionFields(target, choice.lane);
+    if (target && fields?.ok) {
+      sectorUpdates.push({
+        filter: { _id: target._id, cutoverConvertedAtTurn: { $exists: false } },
+        update: {
+          $set: {
+            ...fields.set,
+            cutoverConvertedAtTurn: ctx.turn,
+            transitionCooldownUntilTurn: ctx.turn + STRATEGY_COOLDOWN_TURNS,
+            updatedAt: now,
+          },
+        },
+      });
+      newlyMothballedIds.add(target._id.toString());
+    }
+  }
+
+  // ── 2e. Funded market: an AI-run corporation mothballs every plant that has
+  // sold nothing for two settled turns, instead of one plant a turn. Its wages
+  // and site bills buy nothing; the glut restart above brings it back when the
+  // market's price recovers. Player autopilot and caretakers never do this.
+  if (ctx.transitionFirstFundedTurn != null && operator.role === "npp" && !corp.countryOwnerId) {
+    for (const sector of sectors) {
+      const id = sector._id.toString();
+      if (sector.mothballed === true || newlyMothballedIds.has(id)) continue;
+      if ((sector.producerZeroSalesTurns ?? 0) < AI_ZERO_SALES_MOTHBALL_TURNS) continue;
+      sectorUpdates.push({
+        filter: { _id: sector._id, mothballed: { $ne: true } },
+        update: { $set: { mothballed: true, updatedAt: now } },
+      });
+      newlyMothballedIds.add(id);
+    }
+  }
 
   // Input-squeeze strategy shifts use the 2c cohort independently: a mothball and a strategy
   // shift never target a sector scheduled to become cold in this decision.

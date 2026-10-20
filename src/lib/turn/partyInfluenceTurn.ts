@@ -7,6 +7,7 @@ import type { StatePartyOrg } from "@/lib/db/types/statePartyOrg";
 import type { Caucus } from "@/lib/db/types/caucus";
 import { energyActionLimits } from "@/lib/stats/statDrift";
 import { STAT_MIN } from "@/lib/stats/statsConstants";
+import { appendActionGrantLog } from "./actionGrantLog";
 
 /*
  * Reference infamy level at which the infamy penalty reaches its configured
@@ -132,6 +133,12 @@ export async function processPartyInfluenceTurn(
   now: Date
 ): Promise<void> {
   const db = await getDb();
+  const currentTurn =
+    (
+      await db
+        .collection<{ _id: string; currentTurn?: number }>("gameState")
+        .findOne({ _id: "current" }, { projection: { currentTurn: 1 } })
+    )?.currentTurn ?? 0;
 
   /*
    * Defaults model a "use it or lose it" mechanic:
@@ -254,6 +261,8 @@ export async function processPartyInfluenceTurn(
       if (bonusActions > 0) {
         // Cap at this character's Energy-scaled action cap (matches actionRefresh).
         const energyCap = energyActionLimits(char.stats?.energy ?? STAT_MIN).cap;
+        const liveActions = { $ifNull: ["$actions", 0] };
+        const newActions = { $min: [energyCap, { $add: [liveActions, bonusActions] }] };
         ops.push({
           updateOne: {
             filter: { _id: char._id },
@@ -262,9 +271,16 @@ export async function processPartyInfluenceTurn(
                 $set: {
                   partyInfluence: newInfluence,
                   updatedAt: now,
-                  actions: {
-                    $min: [energyCap, { $add: [{ $ifNull: ["$actions", 0] }, bonusActions] }],
-                  },
+                  actions: newActions,
+                  actionGrantLog: appendActionGrantLog({
+                    turn: currentTurn,
+                    source: "party",
+                    granted: bonusActions,
+                    before: liveActions,
+                    after: newActions,
+                    cap: energyCap,
+                    at: now,
+                  }),
                 },
               },
             ],

@@ -1,0 +1,32 @@
+---
+date: 2026-10-19
+title: Connect metric funding, outcomes and national readouts
+summary: >-
+  Metric estimates share current statutory funding evidence and feed compatible
+  gameplay consumers. Trade and turnout use their actual ledgers, and national
+  rates use owner counts where available.
+tags: [metrics, legislation, funding, trade, elections]
+badges: [patch]
+areas: [engine, fullstack]
+---
+
+## What changed
+
+- Historical Japanese household decoding accepts only complete numeric data cells. Unexpected markup and malformed numbers remain missing instead of being stripped into apparent data.
+
+- Nonviolent crime now uses the same unit calibration for its policy response and condition score. Funded policing and changing game conditions can still affect the modeled crime rate when its display score is saturated. Physical limits remain enforced. Added an exhaustive 58-metric numerical reachability audit, with actual owner input changes kept separate from modeled policy responses and legacy-country coverage.
+
+- Modeled service and social outcomes respond to bounded prior-turn employment, household resources, production and delivered services, alongside existing funded laws. Counted outcomes keep their own owners. Economic growth does not grant civil liberties or rewrite election results. New household definitions have fixed compatible baselines, so they can affect food insecurity and trust without comparing currency amounts with old indexes.
+- Output and productivity boards collect matching real-output and modeled-hours windows. After a complete 48-turn window across a country, growth uses those levels; national productivity pools output and hours before calculating growth. Incomplete windows keep the previous definition and measurement date. Hours are a documented game assumption, not recorded timecards. The economy's technology driver remains separate.
+- Current delivered healthcare, food, electricity and fuel shortages constrain the corresponding modeled outcomes. Unmeasured delivery remains unknown, and surplus in another region does not cancel a local delivery failure. Fuel quantities are not added across incompatible units.
+
+- Complete US, UK and JP 1991 metric boards can now use explicitly labeled public-data-calibrated household cohorts. Household purchasing power, relative poverty and inequality respond to regional activity, current taxes and funded laws without requiring survey microdata. Missing inputs keep the country on legacy calculations. National benefits require actual outlays; regional benefits use clearly labeled funded annual accrual, not assumed cash payments. Earlier chart samples are unchanged.
+
+- Existing replacement and unreplaced opening laws use dated funding settlements across US, UK, Japan, Ireland, and independent Scotland and Wales. Missing, expired and pre-enactment funding no longer supplies full implementation. Legacy countries retain their existing system.
+- Opening-anchored estimates apply the change from the opening statutory contribution, avoiding a second full benefit from the same opening law. Poverty retains its separate diminishing-return target, using the same delivery evidence.
+- Compatible macro, demographic and corporate-margin consumers use published metric owners instead of separate shadow values. Prior-turn values are retained compactly for deterministic retries, and no chart history is rewritten.
+- Commodity trade balance uses current cleared flows annualized against currency-normalized national GDP. It excludes services and does not invent regional trade accounts.
+- Completed election tallies can update turnout, including existing elections. Simultaneous races are not added together. Tallies without a frozen electorate remain explicitly provisional.
+- Unemployment, turnout and dependency rollups sum owner numerators and denominators when complete. New history samples retain their count basis; older samples remain unchanged. Other aggregates without sufficient owner data remain labeled estimates.
+- Proxy targets no longer stop solely because a display condition score reaches 100. Actual unit limits still apply.
+- Purchasing power, poverty, productivity and trade descriptions identify their modeling limitations.

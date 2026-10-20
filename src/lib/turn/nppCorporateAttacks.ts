@@ -94,14 +94,7 @@ export interface AttackCandidate {
   >;
   defender: Pick<
     Corporation,
-    | "_id"
-    | "name"
-    | "marketingStrength"
-    | "rdScore"
-    | "countryOwnerId"
-    | "suspended"
-    | "userId"
-    | "ceoVacant"
+    "_id" | "name" | "marketingStrength" | "countryOwnerId" | "suspended" | "userId" | "ceoVacant"
   > &
     Parameters<typeof getCorpFxRate>[1];
   /**
@@ -391,7 +384,7 @@ export async function executeNppSectorAttack(
 
 /**
  * Plants-economy NPP attack: the same whole-plant split a player runs
- * (`attemptPlantSectorSplit`). MS sets the share, R&D the odds, plants move
+ * (`attemptPlantSectorSplit`). MS sets the share and the odds, plants move
  * intact on success, and the cash and MS are spent either way. Stamps both
  * cooldowns whenever the attempt resolves, won or lost.
  */
@@ -749,8 +742,6 @@ export async function runNppCorporateAttacks(
           defenderBookValueAnchor: target.sector.capacityBookAnchor ?? 0,
           attackerMarketingStrength: attacker.marketingStrength ?? 0,
           defenderMarketingStrength: target.defender.marketingStrength ?? 0,
-          attackerRdScore: attacker.rdScore ?? 0,
-          defenderRdScore: target.defender.rdScore ?? 0,
         })
       : null;
     const attackCostAnchor =

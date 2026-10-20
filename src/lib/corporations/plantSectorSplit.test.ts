@@ -16,8 +16,6 @@ describe("calculatePlantSectorSplit", () => {
         defenderBookValueAnchor: 2_000_000,
         attackerMarketingStrength: 100,
         defenderMarketingStrength: 100,
-        attackerRdScore: 100,
-        defenderRdScore: 100,
       }).plantsAtRisk
     ).toBe(100);
 
@@ -27,8 +25,6 @@ describe("calculatePlantSectorSplit", () => {
         defenderBookValueAnchor: 50_000,
         attackerMarketingStrength: 100,
         defenderMarketingStrength: 100,
-        attackerRdScore: 100,
-        defenderRdScore: 100,
       }).plantsAtRisk
     ).toBe(1);
 
@@ -38,8 +34,6 @@ describe("calculatePlantSectorSplit", () => {
         defenderBookValueAnchor: 1_000,
         attackerMarketingStrength: 100,
         defenderMarketingStrength: 100,
-        attackerRdScore: 100,
-        defenderRdScore: 100,
       }).plantsAtRisk
     ).toBe(0);
   });
@@ -60,22 +54,17 @@ describe("calculatePlantSectorSplit", () => {
         defenderBookValueAnchor: 2_000_000,
         attackerMarketingStrength: 200,
         defenderMarketingStrength: 100,
-        attackerRdScore: 100,
-        defenderRdScore: 100,
       }).plantsAtRisk
     ).toBe(2_000);
   });
 
-  it("sets odds from R&D and clamps them to 5 through 95 percent", () => {
-    const quote = (attackerRdScore: number, defenderRdScore: number) =>
+  it("sets odds from MS and clamps them to 5 through 95 percent", () => {
+    const quote = (attackerMarketingStrength: number, defenderMarketingStrength: number) =>
       calculatePlantSectorSplit({
         defenderPlantCount: 100,
         defenderBookValueAnchor: 100_000,
-        // A big MS edge changes the share, never the odds.
-        attackerMarketingStrength: 1_000,
-        defenderMarketingStrength: 100,
-        attackerRdScore,
-        defenderRdScore,
+        attackerMarketingStrength,
+        defenderMarketingStrength,
       }).successProbability;
     expect(quote(100, 100)).toBe(0.5);
     expect(quote(300, 100)).toBe(0.75);
@@ -90,8 +79,6 @@ describe("calculatePlantSectorSplit", () => {
       defenderBookValueAnchor: 2_000_000,
       attackerMarketingStrength: 100,
       defenderMarketingStrength: 100,
-      attackerRdScore: 100,
-      defenderRdScore: 100,
     });
 
     expect(result.plantsAtRisk).toBe(10);
@@ -106,8 +93,6 @@ describe("calculatePlantSectorSplit", () => {
       defenderBookValueAnchor: -100,
       attackerMarketingStrength: -10,
       defenderMarketingStrength: Number.POSITIVE_INFINITY,
-      attackerRdScore: 100,
-      defenderRdScore: 100,
     });
 
     expect(result).toEqual({

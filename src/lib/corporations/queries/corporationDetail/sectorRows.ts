@@ -1,3 +1,8 @@
+import {
+  freeTransitionConversion,
+  inTransitionWindow,
+  TRANSITION_WINDOW_TURNS,
+} from "@/lib/market/producerMarket/transitionRules";
 import type { Db } from "mongodb";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { TurnReferenceData } from "@/lib/corporations/turnReferenceData";
@@ -140,6 +145,8 @@ export interface SectorRowContext {
   corporation: Corporation;
   sectors: CorporateSector[];
   currentTurn: number;
+  /** First funded turn of the market transition; absent before the funded market. */
+  transitionFirstFundedTurn?: number;
   plantsMode: boolean;
   labourWagesEnabled: boolean;
   revenueRealizationRatio: number;
@@ -499,12 +506,19 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       ? sectorFieldToCorpCcy(enginePnl.totalCost - enginePnl.compliance, sector) -
         sectorGrowthCostLocal
       : (financialRevenue - freightIncome) * (1 - effectiveProfitMargin / 100);
+    // Funded market: the owner's result counts transition support received and
+    // output sent to stock at cost, both written beside the booked profit.
+    const fundedResultAdjust = sectorFieldToCorpCcy(
+      (sector.plantsPnl?.transitionSupport ?? 0) + (sector.plantsPnl?.stockAddedAtCost ?? 0),
+      sector
+    );
     const profit =
       (enginePnl
         ? sectorFieldToCorpCcy(enginePnl.profit, sector)
         : financialRevenue - freightIncome - maintenance - sectorGrowthCostLocal) +
       freightIncome -
-      freightCost;
+      freightCost +
+      fundedResultAdjust;
     // Physical cost decomposition for the margin drilldown (ticket 1072: the
     // additive modifier list could not explain a physically-derived margin —
     // base + modifiers summed 40pts above the engine figure with no line
@@ -735,6 +749,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       transitionFromStrategyId: sector.transitionFromStrategyId ?? null,
       transitionStartTurn: sector.transitionStartTurn ?? null,
       transitionCooldownUntilTurn: sector.transitionCooldownUntilTurn ?? null,
+      cutoverTransition: transitionView(sector, ctx.currentTurn, ctx.transitionFirstFundedTurn),
       isReversing: sector.isReversing ?? false,
       productionPolicy: sector.productionPolicy ?? 0,
       productionPolicyLevel: sector.productionPolicyLevel ?? 0,
@@ -793,3 +808,19 @@ export function buildSectorDetails(ctx: SectorRowContext) {
 
 export type SectorDetailsResult = ReturnType<typeof buildSectorDetails>;
 export type SectorDetailRow = SectorDetailsResult["sectorDetails"][number];
+
+/** The transition package as the sector row shows it; null when it does not apply. */
+function transitionView(
+  sector: CorporateSector,
+  currentTurn: number,
+  firstFundedTurn: number | undefined
+) {
+  if (firstFundedTurn == null || sector.cutoverTransition?.mismatched !== true) return null;
+  const effectiveTurn = currentTurn + 1;
+  if (!inTransitionWindow(effectiveTurn, firstFundedTurn)) return null;
+  return {
+    turnsLeft: firstFundedTurn + TRANSITION_WINDOW_TURNS - effectiveTurn,
+    freeConversion: freeTransitionConversion(sector, effectiveTurn, firstFundedTurn),
+    converted: sector.cutoverConvertedAtTurn != null,
+  };
+}

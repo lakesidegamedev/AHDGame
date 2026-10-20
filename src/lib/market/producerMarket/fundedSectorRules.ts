@@ -38,6 +38,10 @@ export interface FundedReceipt {
   profit: number;
   producedUnits: number;
   soldUnits: number;
+  /** Anchor per turn: inputs in output that went to stock unsold (inventory at cost). */
+  unsoldProductionCost?: number;
+  /** Anchor per turn: transition floor support this sector received. */
+  transitionSupport?: number;
 }
 
 export interface LegacySectorResultLike {
@@ -87,20 +91,43 @@ export function fundedSectorOps(
   /** Turns per day: receipt units are per turn, the sector fields are daily. */
   turnsPerDay: number
 ): Op[] {
+  return fundedSectorOpsAll(ops, new Map([[sectorId, { receipt, result, daily }]]), turnsPerDay);
+}
+
+/**
+ * Every funded sector's writes in one pass over the turn's sector ops. Running
+ * the single-sector form once per sector rescanned and rebuilt the whole op
+ * list each time, quadratic in the world's sector count.
+ */
+export function fundedSectorOpsAll(
+  ops: readonly Op[],
+  funded: ReadonlyMap<
+    string,
+    {
+      receipt: FundedReceipt;
+      result: LegacySectorResultLike;
+      daily: (anchorPerTurn: number) => number;
+    }
+  >,
+  /** Turns per day: receipt units are per turn, the sector fields are daily. */
+  turnsPerDay: number
+): Op[] {
   const owned = new Set(SETTLEMENT_OWNED_SECTOR_FIELDS);
   const out: Op[] = [];
-  let stamped = false;
+  const stamped = new Set<string>();
   for (const op of ops) {
     const id = String((op.updateOne.filter as { _id?: unknown })._id ?? "");
-    if (id !== sectorId) {
+    const entry = funded.get(id);
+    if (!entry) {
       out.push(op);
       continue;
     }
+    const { receipt, result, daily } = entry;
     const update = op.updateOne.update as Record<string, Record<string, unknown> | undefined>;
     const set = Object.fromEntries(
       Object.entries(update.$set ?? {}).filter(([f]) => !owned.has(rootOf(f)))
     );
-    if (!stamped && update.$set) {
+    if (!stamped.has(id) && update.$set) {
       Object.assign(set, {
         realizedRevenue: daily(result.hourlyRevenue),
         producedUnits: Math.round(receipt.producedUnits * turnsPerDay * 100) / 100,
@@ -111,9 +138,12 @@ export function fundedSectorOps(
           profit: daily(result.hourlyRevenue - result.costs),
           totalCost: daily(result.costs),
           source: "funded" as const,
+          // Shown to the owner beside profit; decisions keep reading profit.
+          stockAddedAtCost: daily(receipt.unsoldProductionCost ?? 0),
+          transitionSupport: daily(receipt.transitionSupport ?? 0),
         },
       });
-      stamped = true;
+      stamped.add(id);
     }
     // Other operators ($pull / $push on buildQueue and similar) keep only fields
     // the settlement does not own; an operator left empty is dropped.

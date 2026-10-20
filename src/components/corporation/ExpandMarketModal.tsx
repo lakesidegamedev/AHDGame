@@ -825,7 +825,12 @@ export default function ExpandMarketModal({
                       {plantsMode && foundingQuote && (
                         <div className="grid grid-cols-3 gap-2">
                           <div className="rounded-lg bg-background/60 px-3 py-2 text-center">
-                            <p className="text-body-sm font-medium text-muted">In-state demand</p>
+                            <p
+                              className="text-body-sm font-medium text-muted"
+                              title="What buyers here want and are not getting, less plants already under construction. It does not limit what you can build."
+                            >
+                              Unmet demand
+                            </p>
                             <p className="text-sm font-bold text-foreground tabular-nums">
                               {formatUnits(activeSuggestion.headroomUnits)}
                             </p>
