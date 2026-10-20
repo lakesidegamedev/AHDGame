@@ -381,11 +381,16 @@ const RUNNING_TECH_EFFECT_KINDS = new Set<TechEffect["kind"]>([
 /** True when an owned node from an expired decade has lost a running effect. */
 export function isTechNodeEffectExpired(
   node: TechTreeNode,
-  activeDecadeIds: ReadonlySet<string>
+  activeDecadeIds: ReadonlySet<string>,
+  options: { shieldExpires?: boolean } = {}
 ): boolean {
   return (
     !activeDecadeIds.has(node.decadeId) &&
-    node.effects.some((e) => RUNNING_TECH_EFFECT_KINDS.has(e.kind))
+    node.effects.some(
+      (e) =>
+        RUNNING_TECH_EFFECT_KINDS.has(e.kind) ||
+        (options.shieldExpires === true && e.kind === "dominanceShield")
+    )
   );
 }
 

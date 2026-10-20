@@ -399,6 +399,15 @@ export default function FinancialsTab({
                       pct={pctOf(financials.stateTax)}
                     />
                   )}
+                  {(financials.passThroughOwnerTax ?? 0) > 0 && (
+                    <StatementLine
+                      indent
+                      label="Of which: owner tax on pass-through profit"
+                      amount={cost(financials.passThroughOwnerTax ?? 0)}
+                      pct={pctOf(financials.passThroughOwnerTax ?? 0)}
+                      title="Owners of a pass-through are taxed on their full share of the profit, paid out or not. The company pays it for them, so payouts are not taxed again."
+                    />
+                  )}
                 </>
               )}
 

@@ -62,6 +62,7 @@ import { recordCapacityDecisionBestEffort } from "@/lib/corporations/capacityDec
 import { classifyCorporationManagement } from "@/lib/corporations/balanceAudit/rules";
 import { getMarketSystemMode, isMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
+import { loadStrengthUpkeepStage, upkeptDominanceShield } from "@/lib/corporations/strengthUpkeep";
 import {
   CAPACITY_BUILD_CANCEL_REFUND,
   CAPACITY_BUILD_TURNS,
@@ -593,21 +594,34 @@ export async function buildCapacity(request: Request, { params }: RouteParams) {
     // Tech-tree growth-cost reduction, re-homed onto the build price (it bought
     // nothing under plants, where the growth slider is vestigial). Scoped to the
     // corp's primary type exactly as `expandSector` scopes its own discount.
+    const techView = {
+      type: corporation.type,
+      industryModel: corporation.industryModel,
+      mediaDiscriminator: corporation.mediaDiscriminator,
+      unlockedTechNodeIds: corporation.unlockedTechNodeIds,
+      techDecadeLane: corporation.techDecadeLane,
+    };
     const techBuildEffects = (await isSectorTechTreesEnabled())
       ? getSectorTechEffects(
-          {
-            type: corporation.type,
-            industryModel: corporation.industryModel,
-            mediaDiscriminator: corporation.mediaDiscriminator,
-            unlockedTechNodeIds: corporation.unlockedTechNodeIds,
-            techDecadeLane: corporation.techDecadeLane,
-          },
+          techView,
           sector.sectorType,
           sector.industryModel,
           sector.mediaDiscriminator
         )
       : null;
     const techBuildCostMultiplier = techBuildEffects?.growthCostMultiplier ?? 1;
+    // Strength upkeep: from its shield stage the dominance shield counts only
+    // current and previous decade techs and is capped at 50%.
+    const techDominanceShield = techBuildEffects
+      ? upkeptDominanceShield(
+          techView,
+          sector.sectorType,
+          sector.industryModel,
+          sector.mediaDiscriminator,
+          currentYear,
+          await loadStrengthUpkeepStage(db)
+        )
+      : 0;
 
     // Commodity-level toll: what this firm could make of each commodity the
     // sector produces (owned plus queued plus THIS order) over world demand.
@@ -641,7 +655,7 @@ export async function buildCapacity(request: Request, { params }: RouteParams) {
       acumen: ceoAcumen,
       hostCostOfLivingIndex,
       techGrowthCostMultiplier: techBuildCostMultiplier,
-      techDominanceShield: techBuildEffects?.dominanceShield ?? 0,
+      techDominanceShield,
     });
     // The same research that discounts the price also shortens the build.
     const buildTurns = techBuildTurns(

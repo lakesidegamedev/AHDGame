@@ -25,6 +25,14 @@ export interface CorporationLookups {
   /** Originating reset preset selects the qualified input baskets. */
   preset?: string;
   stockHoldingTaxStartTurn?: number;
+  /** See GameState.passThroughOwnerTaxStartTurn. */
+  passThroughOwnerTaxStartTurn?: number;
+  /** National top personal income tax rate (percent) by country. */
+  personalTopIncomeTaxRateByCountry?: Map<string, number>;
+  /** State top personal income tax rate (percent) by state id. */
+  personalTopIncomeTaxRateByState?: Map<string, number>;
+  /** See GameState.nppCeoPayStartTurn. */
+  nppCeoPayStartTurn?: number;
   hardwareInputReliefStartTurn?: number;
   corporations: Corporation[];
   sectorsByCorp: Map<string, CorporateSector[]>;
@@ -215,6 +223,11 @@ export interface CorporationLookups {
    * count and gameConfig.managementOverheadPpPerDoubling. Absent = none.
    */
   managementOverheadPpByCorpId?: Map<string, number>;
+  /**
+   * gameConfig.strengthUpkeepStage (see corporations/strengthUpkeep). Absent
+   * or 0 = strength upkeep off.
+   */
+  strengthUpkeepStage?: number;
   /**
    * World price ratios overlaid with each country's reachable ratios, then
    * capped at the world ratio per commodity (`min(world, reachable)` via
@@ -537,6 +550,10 @@ export interface SectorCalculationsResult {
   dividendPayments: Map<string, Map<CurrencyCode, number>>;
   /** Long-term direct personal dividends, in the same credited currency as dividendPayments. */
   capitalDividendPayments: Map<string, Map<CurrencyCode, number>>;
+  /** Dividend amounts already taxed at source under the pass-through reform. */
+  passThroughTaxedDividendPayments: Map<string, Map<CurrencyCode, number>>;
+  /** Corp-held dividends (anchor) already taxed at source; excluded from the received-dividend tax. */
+  corpDividendTaxedAtSourceAnchorByCorpId: Map<string, number>;
   /** Dividends owed to corporate shareholders, amounts in ₳ (internal) — convert to treasury currency when applying. */
   corpDividendPaymentsAnchorByCorpId: Map<string, number>;
   /** Same dividends split by the PAYING corp's currency (recipientId → payerCcy → ₳), for cross-currency FX spread. */

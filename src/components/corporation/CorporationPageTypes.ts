@@ -344,6 +344,12 @@ export interface CorporationDetail {
   lastShareholderAddressAt?: string | null;
   /** Active legal structure short name (e.g. "LLC", "C-Corp"). */
   legalStructureLabel?: string;
+  /** Player-facing tax treatment of the legal form for this corporation. */
+  legalStructureTaxLabel?: string;
+  /** Pass-through tax reform progress 0 to 1 (0 before it starts). */
+  passThroughTaxPhase?: number;
+  /** Owner tax on pass-through profit collected at source (per day). */
+  passThroughOwnerTax?: number;
   /** Active legal structure ID (defaults to country default when absent). */
   legalStructure?: string;
   /** Turn when CEO may next change legal structure (48-turn cooldown). */
@@ -534,6 +540,8 @@ export interface Financials {
   federalTax: number;
   /** State/regional corporate tax this turn (aggregated across sectors at each sector's state rate). */
   stateTax: number;
+  /** Part of federal + state tax that is owner tax on pass-through profit. */
+  passThroughOwnerTax?: number;
   /** Federal tax broken down by sector country (for tooltip display). */
   federalTaxByCountry: Record<string, number>;
   bondInterestCost: number;

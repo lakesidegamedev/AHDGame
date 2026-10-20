@@ -87,8 +87,15 @@ export function producerCashTransition(input: {
     gross += Math.abs(change);
     if (change === 0) continue;
     const binding = bindings.get(id)!;
-    const amount = Math.abs(change) * binding.localPerAnchor;
+    let amount = Math.abs(change) * binding.localPerAnchor;
     if (!Number.isFinite(amount)) throw new Error("Non-finite native producer cash transfer");
+    // Spending every unit converts anchor back to local and can overshoot the
+    // stored balance by float noise, which the write's overdraft guard refuses.
+    if (change < 0 && amount > binding.openingCashLocal) {
+      if (amount - binding.openingCashLocal > Math.max(1e-7, binding.openingCashLocal * 1e-12))
+        throw new Error("Producer cash overdraws its opening balance");
+      amount = binding.openingCashLocal;
+    }
     legs.push({
       kind: change < 0 ? "debit" : "credit",
       amount,

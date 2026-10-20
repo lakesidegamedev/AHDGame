@@ -147,7 +147,7 @@ describe("1953 reset — end-to-end political-legislation verification", () => {
     // have no new-generation equivalent and the redistricting caps read them by
     // id (ticket #1189). Any OTHER old playable-country id still fails here.
     expect(survivingIds.filter((id) => /^(us|uk|su|dd)_/.test(id)).sort()).toEqual(
-      [...POLITICAL_LEGISLATION_RETAINED_OLD_IDS].sort()
+      [...POLITICAL_LEGISLATION_RETAINED_OLD_IDS].filter((id) => /^(us|uk|su|dd)_/.test(id)).sort()
     );
     // Other countries' old catalogs survive untouched.
     expect(survivingIds.some((id) => id.startsWith("jp_"))).toBe(true);

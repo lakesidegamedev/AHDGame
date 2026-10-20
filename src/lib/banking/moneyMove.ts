@@ -848,6 +848,8 @@ function independentDebitTargets(record: MoneyMoveRecord): boolean {
   if (record.batchIndependentDebits !== true) return false;
   const seen = new Set<string>();
   for (const leg of record.legs) {
+    // Mint and burn touch no document: they cannot collide with a cash leg.
+    if (leg.kind === "mint" || leg.kind === "burn") continue;
     if (
       (leg.kind !== "debit" && leg.kind !== "credit") ||
       !leg.collection ||

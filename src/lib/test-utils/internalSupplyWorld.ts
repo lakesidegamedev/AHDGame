@@ -67,6 +67,8 @@ export function runInternalSupplyWorld(
     fx?: number;
     coordinationDiscount?: number;
     eraScale?: number;
+    fundedProducerTurn?: boolean;
+    brandLoyaltyEnabled?: boolean;
   } = {}
 ) {
   const parentId = new ObjectId("000000000000000000000001");
@@ -173,7 +175,7 @@ export function runInternalSupplyWorld(
   const market = buildMarketContext("plants");
   market.explicitPlantCostsEnabled = true;
   market.groupSupplyEnabled = overrides.coordinationDiscount != null;
-  runClearingPrePass({
+  const prePass = runClearingPrePass({
     lookups,
     market,
     turn: 1000,
@@ -187,10 +189,13 @@ export function runInternalSupplyWorld(
     producedByCorpCommodity: new Map(),
     achievableByCorpCommodity: new Map(),
     stateLocalClearingBlockedByLegacyAgreement: false,
-    brandLoyaltyEnabled: false,
+    brandLoyaltyEnabled: overrides.brandLoyaltyEnabled === true,
     brandLoyaltySliceEnabled: false,
     qualityPremiumPricingEnabled: false,
     treasuryCashLedgerEnabled: false,
+    ...(overrides.fundedProducerTurn !== undefined
+      ? { fundedProducerTurn: overrides.fundedProducerTurn }
+      : {}),
   });
   const sectorOps: SectorTurnEnv["sectorOps"] = [];
   const env = {
@@ -237,5 +242,5 @@ export function runInternalSupplyWorld(
     (op) =>
       (op as { updateOne: { update: { $set: Partial<CorporateSector> } } }).updateOne.update.$set
   );
-  return { seller, buyer, updates, market, lookups };
+  return { seller, buyer, updates, market, lookups, prePass };
 }

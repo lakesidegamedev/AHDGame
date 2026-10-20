@@ -9,6 +9,7 @@ import {
 } from "@/lib/constants/corporations";
 import { type CountryId } from "@/lib/constants/countries";
 import { LEGAL_STRUCTURES, type LegalStructureId } from "@/lib/constants/legalStructures";
+import { legalStructureTaxLabel } from "@/lib/corporations/rules/passThroughTax";
 import { getLegalStructureForCorp, isListedOnlyStructure } from "@/lib/corporations/legalStructure";
 import { useCountryDisplayName, useEnabledCountries } from "@/contexts/RegisteredCountriesContext";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -356,6 +357,7 @@ export default function CeoGovernancePanel({
   const countryStructures = LEGAL_STRUCTURES.filter(
     (s) =>
       s.countryId === corporation.countryId &&
+      (s.id !== "cn_soe" || !!corporation.countryOwnerId) &&
       (corporation.isPrivate ? !isListedOnlyStructure(s) : !s.isPrivateDefault)
   );
   const currentStructure = getLegalStructureForCorp({
@@ -368,11 +370,7 @@ export default function CeoGovernancePanel({
     corporation.currentTurn < corporation.legalStructureChangeCooldownUntilTurn;
   const chosenStructure = countryStructures.find((x) => x.id === selectedStructure);
   const taxLabel = (s: (typeof LEGAL_STRUCTURES)[number]) =>
-    s.taxTreatment === "pass_through"
-      ? "pass-through, no corporate tax"
-      : s.taxTreatment === "preferential"
-        ? `preferential tax, ${((s.taxMultiplier ?? 1) * 100).toFixed(0)}% of the standard rate`
-        : "standard tax";
+    legalStructureTaxLabel(s, corporation.passThroughTaxPhase ?? 0, corporation);
 
   const corpCode = (corporation.liquidCurrencyCode ?? "USD") as CurrencyCode;
 
