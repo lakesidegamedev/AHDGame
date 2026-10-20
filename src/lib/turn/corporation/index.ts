@@ -5,6 +5,7 @@ import { runProducerMarketShadowPhase, shadowFitsPhaseBudget } from "./producerM
 import { PHASE_TIMEOUT_MS } from "@/lib/turn/processingLock";
 import { claimProducerPath, loadProducerPath } from "@/lib/market/producerMarket/liveMode";
 import { runFundedProducerTurn } from "./fundedProducerTurn";
+import { TurnMustStopError } from "@/lib/turn/turnMustStop";
 import type { ProducerPhysicalEnv } from "./producerPhysicalPreparation";
 import { makeLabourDemandByState } from "@/lib/labour/labourMarket";
 import { resolvePhaseLookups } from "./phaseLookups";
@@ -773,6 +774,8 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
     const earlier = await db
       .collection("producerEconomyTurns")
       .findOne({ worldEpoch, turn: { $lt: producerTurn } }, { projection: { _id: 1 } });
+    // A failed funded settlement must stop the turn: advancing would leave every
+    // plant a generation behind, so no later funded turn could reconcile.
     funded = await runFundedProducerTurn(db, {
       turn: producerTurn,
       worldEpoch,
@@ -801,6 +804,8 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
         gameState?.producerOpening?.worldEpoch === worldEpoch
           ? gameState.producerOpening.turn + 1
           : undefined,
+    }).catch((error: unknown) => {
+      throw new TurnMustStopError("corporationTurn", error);
     });
     mark("fundedProducerMarket");
   }

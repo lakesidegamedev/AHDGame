@@ -15,7 +15,7 @@ import { advanceProducerEconomy } from "./production";
 import { producerCashTransition, type ProducerCashBinding } from "./cashSettlementRules";
 
 type EconomyInput = Parameters<typeof advanceProducerEconomy>[0];
-type EconomyResult = ReturnType<typeof advanceProducerEconomy>;
+export type EconomyResult = ReturnType<typeof advanceProducerEconomy>;
 type ProducerTurnProduction = Omit<EconomyInput, "producers"> & {
   /** The shell derives capacity from owned stock and paid construction. */
   producers: readonly Omit<EconomyInput["producers"][number], "capacityUnits">[];
@@ -39,7 +39,7 @@ interface FrozenProducerTurn {
   bindings: readonly ProducerCashBinding[];
   targets: readonly ProducerSectorTarget[];
   capacities: Array<{ producerId: string; closing: ReturnType<typeof advanceProducerCapacity> }>;
-  result: EconomyResult;
+  result: SettledEconomyResult;
 }
 
 interface ProducerTurnRecord {
@@ -311,6 +311,53 @@ export async function assertProducerTurnFence(
  * Current prices, policy changes or partially applied cash never re-quote it.
  * This shell is called inside the corporation phase's exclusive turn fence.
  */
+/** One closing transfer between two bound accounts, anchor units. */
+export interface SettlementCloseTransfer {
+  reason: string;
+  fromAccountId: string;
+  toAccountId: string;
+  amountAnchor: number;
+}
+
+/** Transfers settled with the market in the same receipt, plus what the caller wants kept. */
+export interface SettlementClose {
+  transfers: SettlementCloseTransfer[];
+  meta?: Record<string, unknown>;
+}
+
+export type SettledEconomyResult = EconomyResult & { close?: SettlementClose };
+
+/**
+ * Apply closing transfers to the settled account balances before the receipt
+ * is frozen. Transfers stay between bound accounts and sum to zero, so the
+ * settlement still publishes, and witnesses, one balanced set of balance
+ * changes: distributions and support land with the market in one write
+ * instead of thousands of separate money moves.
+ */
+export function applySettlementClose(
+  result: EconomyResult,
+  close: SettlementClose,
+  boundAccountIds: ReadonlySet<string>
+): SettledEconomyResult {
+  const cash = new Map(result.accounts.map((a) => [a.id, a.cash]));
+  for (const t of close.transfers) {
+    if (!Number.isFinite(t.amountAnchor) || t.amountAnchor < 0)
+      throw new Error(`Invalid closing transfer ${t.reason}`);
+    if (!boundAccountIds.has(t.fromAccountId) || !boundAccountIds.has(t.toAccountId))
+      throw new Error(`Closing transfer ${t.reason} names an unbound account`);
+    if (!cash.has(t.fromAccountId)) throw new Error("Closing transfer source has no balance");
+    cash.set(t.fromAccountId, cash.get(t.fromAccountId)! - t.amountAnchor);
+    cash.set(t.toAccountId, (cash.get(t.toAccountId) ?? 0) + t.amountAnchor);
+  }
+  for (const [id, value] of cash)
+    if (value < -1e-6) throw new Error(`Closing transfers overdraw ${id}`);
+  return {
+    ...result,
+    accounts: [...cash].map(([id, value]) => ({ id, cash: Math.max(0, value) })),
+    close,
+  };
+}
+
 export async function settleProducerTurn(
   db: Db,
   input: {
@@ -318,8 +365,10 @@ export async function settleProducerTurn(
     production: ProducerTurnProduction;
     bindings: readonly ProducerCashBinding[];
     targets: readonly ProducerSectorTarget[];
+    /** Closing transfers computed from the settled market, frozen with it. */
+    close?: (result: EconomyResult) => SettlementClose;
   }
-): Promise<EconomyResult> {
+): Promise<SettledEconomyResult> {
   const turn = input.production.turn;
   const key = JSON.stringify([input.worldEpoch, turn]);
   await assertProducerTurnFence(db, input.worldEpoch, turn);
@@ -364,7 +413,16 @@ export async function settleProducerTurn(
       bindings: input.bindings,
       targets: input.targets,
       capacities,
-      result: advanceProducerEconomy(production),
+      result: (() => {
+        const market = advanceProducerEconomy(production);
+        return input.close
+          ? applySettlementClose(
+              market,
+              input.close(market),
+              new Set(input.bindings.map((b) => b.accountId))
+            )
+          : market;
+      })(),
     };
     validateTargets(payload);
     const encoded = encodeReceipt(payload);

@@ -3,6 +3,7 @@ import type { TurnPhaseTelemetryMap } from "@/lib/db/types";
 import { recordRoundTrip, resetRoundTripProfiler } from "@/lib/observability/mongoRoundTrips";
 import { PHASE_TIMEOUT_MS, TURN_LOCK_HEARTBEAT_MS } from "@/lib/turn/processingLock";
 import { createTurnPhaseRuntime } from "@/simulation/engine/turnPhaseRuntime";
+import { TurnMustStopError } from "@/lib/turn/turnMustStop";
 import { getAnomalyScanCadencePredicate } from "@/simulation/phases/anomalyScanCadence";
 import { getSingleplayerPhasePredicate } from "@/simulation/phases/singleplayerPhases";
 
@@ -151,6 +152,22 @@ describe("createTurnPhaseRuntime", () => {
     expect(phaseStatuses.bondTurn.status).toBe("failed");
     expect(phaseStatuses.bondTurn.message).toBe("coupon mismatch");
     expect(warnings).toEqual(["bondTurn: coupon mismatch"]);
+  });
+
+  it("records the failure and stops the turn when a phase must succeed", async () => {
+    const phaseStatuses: TurnPhaseTelemetryMap = {};
+    const warnings: string[] = [];
+    const currentPhaseRef = { current: null as string | null };
+    const { db } = createMockDb();
+    const runtime = createTurnPhaseRuntime({ db, phaseStatuses, warnings, currentPhaseRef });
+
+    await expect(
+      runtime.runPhase("corporationTurn", async () => {
+        throw new TurnMustStopError("corporationTurn", new Error("plants not settled"));
+      })
+    ).rejects.toBeInstanceOf(TurnMustStopError);
+    expect(phaseStatuses.corporationTurn.status).toBe("failed");
+    expect(warnings[0]).toContain("plants not settled");
   });
 
   it("publishes completed substeps on the lock heartbeat while a phase is running", async () => {

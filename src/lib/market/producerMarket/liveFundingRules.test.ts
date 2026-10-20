@@ -6,6 +6,7 @@ import {
   investmentFundingMoves,
   investmentReturnMoves,
   publicFundingMoves,
+  producerMoveLedgerLegs,
   publicReturnMoves,
   transitionSupportMoves,
 } from "./liveFundingRules";
@@ -92,13 +93,13 @@ describe("transition support moves", () => {
     });
     const [move] = transitionSupportMoves("w", 9, [
       {
-        sectorId: "s1",
+        payeeKey: "s1",
         amountAnchor: 5,
         from: side("pub", "USD", 1),
         to: side("corp", "GBP", 0.8),
       },
       {
-        sectorId: "s2",
+        payeeKey: "s2",
         amountAnchor: 0,
         from: side("pub", "USD", 1),
         to: side("corp", "GBP", 0.8),
@@ -110,5 +111,24 @@ describe("transition support moves", () => {
       ["credit", 4],
     ]);
     expect(Math.abs(legsNet(move.legs))).toBeLessThan(1e-9);
+  });
+});
+
+describe("ledger witness for producer moves", () => {
+  it("balances a mint against a named mint account and names wallet and company legs", () => {
+    const [mint] = publicFundingMoves("w", 7, [{ ...wallet, countryId: "us" }]);
+    const legs = producerMoveLedgerLegs(mint)!;
+    expect(legs.map((l) => l.account)).toEqual([
+      "mint:producer_public_funding:USD",
+      "economy_wallet:pub-us:USD",
+    ]);
+    expect(legs.reduce((sum, l) => sum + l.anchorAmount, 0)).toBeCloseTo(0);
+    const [burn] = publicReturnMoves("w", 7, [{ ...wallet, countryId: "us" }]);
+    const burnLegs = producerMoveLedgerLegs(burn)!;
+    expect(burnLegs.map((l) => l.account)).toEqual([
+      "economy_wallet:pub-us:USD",
+      "sink:producer_public_return:USD",
+    ]);
+    expect(burnLegs.reduce((sum, l) => sum + l.anchorAmount, 0)).toBeCloseTo(0);
   });
 });

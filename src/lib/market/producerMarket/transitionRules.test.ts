@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   classifySector,
+  freeTransitionConversion,
   inTransitionWindow,
   landingWeight,
   shadowTurnSettled,
@@ -128,5 +129,69 @@ describe("settled shadow turns for classification", () => {
     expect(shadowTurnSettled("w:r322", 325, 3)).toBe(true);
     expect(shadowTurnSettled(undefined, 400, 3)).toBe(false);
     expect(shadowTurnSettled("w:live", 400, 3)).toBe(false);
+  });
+});
+
+describe("support never overdraws the pool", () => {
+  it("pays a fully claimed pool without exceeding it under float error", () => {
+    const sectors = Array.from({ length: 997 }, (_, i) => ({
+      sectorId: `s${String(i).padStart(4, "0")}`,
+      countryId: "BG",
+      transition: {
+        mismatched: true,
+        legacyRevenueAnchor: 1 + i * 0.7319,
+        fundedRevenueAnchor: 0,
+        basisTurns: 5,
+      },
+      settledRevenue: 0.1,
+      mothballed: false,
+      converted: false,
+    }));
+    const pool = 15.798931;
+    const { payments } = transitionSupport({
+      turn: 10,
+      firstFundedTurn: 10,
+      sectors,
+      poolByCountry: new Map([["BG", pool]]),
+    });
+    let left = pool * 28.025652481726606;
+    for (const p of payments) left -= p.claim * 28.025652481726606;
+    expect(left).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe("free transition conversion", () => {
+  const mismatched = {
+    mismatched: true,
+    legacyRevenueAnchor: 9,
+    fundedRevenueAnchor: 1,
+    basisTurns: 5,
+  };
+  it("is open once for a mismatched sector inside the window", () => {
+    expect(freeTransitionConversion({ cutoverTransition: mismatched }, 11, 11)).toBe(true);
+    expect(
+      freeTransitionConversion(
+        { cutoverTransition: mismatched },
+        11 + TRANSITION_WINDOW_TURNS - 1,
+        11
+      )
+    ).toBe(true);
+  });
+  it("is closed outside the window, after use, for matched sectors and before any opening", () => {
+    expect(
+      freeTransitionConversion({ cutoverTransition: mismatched }, 11 + TRANSITION_WINDOW_TURNS, 11)
+    ).toBe(false);
+    expect(freeTransitionConversion({ cutoverTransition: mismatched }, 10, 11)).toBe(false);
+    expect(
+      freeTransitionConversion(
+        { cutoverTransition: mismatched, cutoverConvertedAtTurn: 12 },
+        13,
+        11
+      )
+    ).toBe(false);
+    expect(
+      freeTransitionConversion({ cutoverTransition: { ...mismatched, mismatched: false } }, 12, 11)
+    ).toBe(false);
+    expect(freeTransitionConversion({ cutoverTransition: mismatched }, 12, undefined)).toBe(false);
   });
 });

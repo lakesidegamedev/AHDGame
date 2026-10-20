@@ -42,6 +42,8 @@ interface TechNode {
   effects: TechEffectView[];
   unlocksStrategy: string | null;
   owned: boolean;
+  /** Owned, but from before the previous decade, so its plant effects no longer apply. */
+  effectExpired?: boolean;
   autoGranted: boolean;
   tierClosed: boolean;
   laneLocked: boolean;
@@ -770,14 +772,17 @@ function TechNodeCard({
   status: ReactNode;
 }) {
   const isOwned = node.owned;
+  const expired = isOwned && !!node.effectExpired;
   return (
     <article
       className={`w-full min-w-0 rounded-md border p-2.5 text-center ${
-        isOwned
-          ? "border-success/50 bg-success/5"
-          : node.pathLocked
-            ? "border-card-border bg-surface/40 opacity-60"
-            : "border-card-border bg-surface/60"
+        expired
+          ? "border-card-border bg-surface/40"
+          : isOwned
+            ? "border-success/50 bg-success/5"
+            : node.pathLocked
+              ? "border-card-border bg-surface/40 opacity-60"
+              : "border-card-border bg-surface/60"
       }`}
       title={node.description}
     >
@@ -793,6 +798,14 @@ function TechNodeCard({
       {!isOwned && (
         <p className="mt-1.5 text-[10px] tabular-nums text-muted">
           {node.cost} R&amp;D · {fmtCash(node.cashCost)}
+        </p>
+      )}
+      {expired && (
+        <p
+          className="mt-1.5 text-[10px] font-medium text-warning"
+          title="Techs only apply their plant effects in their own decade and the one after it."
+        >
+          Effect expired: older than last decade
         </p>
       )}
       {node.valuePerTurn != null && (

@@ -743,14 +743,24 @@ async function settleCorporateOperatingCashBatched(
     }
     const taxAnchor = quote.taxByCountryAnchor.reduce((sum, [, amount]) => sum + amount, 0);
     const taxSourceLocal = taxAnchor * quote.sourceLocalPerAnchor;
+    // A negative net (tax above this turn's receipts) still batches when the
+    // corporation's cash covers it: one guarded debit instead of separate gross
+    // and tax receipts. On a funded turn the producer market has already paid
+    // the corporation its operating profit, so most nets are negative.
+    const cash = cashByCorpId.get(id) ?? 0;
+    // Losses batch too when cash covers them: the corporation pays its whole
+    // net, the loss leaves through the batch burn and the tax reaches the
+    // Treasury, exactly as the separate loss and tax receipts would. A loss
+    // cash cannot cover keeps the per-corporation path and its arrears.
     if (
-      !(quote.grossLocal > 0) ||
-      !(taxSourceLocal > 0) ||
-      !(quote.netLocal >= 0) ||
-      !((cashByCorpId.get(id) ?? 0) >= 0) ||
+      !Number.isFinite(quote.grossLocal) ||
+      !(taxSourceLocal >= 0) ||
+      !(quote.netLocal >= 0 || cash >= -quote.netLocal) ||
+      !(cash >= 0) ||
       !quote.taxByCountryAnchor.every(([, amount]) => amount >= 0) ||
-      quote.taxDestinations.length === 0 ||
-      !quote.taxDestinations.every((destination) => treasuryIdByCountry.has(destination.country))
+      (taxSourceLocal > 0 && quote.taxDestinations.length === 0) ||
+      !quote.taxDestinations.every((destination) => treasuryIdByCountry.has(destination.country)) ||
+      (quote.grossLocal === 0 && quote.netLocal === 0)
     )
       continue;
     // One mint leg per batch: members share a source currency and rate, and
@@ -779,12 +789,14 @@ async function settleCorporateOperatingCashBatched(
     const ids = members.map(({ snapshot }) => snapshot.corpId.toString());
     const key = `${batchPrefix}${createHash("sha256").update(ids.join(",")).digest("hex").slice(0, 32)}`;
     let grossLocal = 0;
+    let lossLocal = 0;
     const legs: BankingTransition["legs"] = [];
     const treasuryLocal = new Map<string, number>();
     for (const { snapshot, quote } of members) {
       const taxAnchor = quote.taxByCountryAnchor.reduce((sum, [, amount]) => sum + amount, 0);
       const corporationLocal = quote.grossLocal - taxAnchor * sourceRate;
-      grossLocal += quote.grossLocal;
+      if (quote.grossLocal >= 0) grossLocal += quote.grossLocal;
+      else lossLocal += -quote.grossLocal;
       if (corporationLocal > 0)
         legs.push({
           kind: "credit",
@@ -795,6 +807,19 @@ async function settleCorporateOperatingCashBatched(
           path: "liquidCapital",
           note: "Credit realized operating receipts net of tax withholding",
         });
+      else if (corporationLocal < 0)
+        legs.push({
+          kind: "debit",
+          amount: -corporationLocal,
+          valuation,
+          collection: "corporations",
+          filter: {
+            _id: oid(snapshot.corpId.toString()),
+            liquidCapital: { $gte: -corporationLocal },
+          },
+          path: "liquidCapital",
+          note: "Withhold corporate tax above this turn's receipts from available cash",
+        });
       for (const destination of quote.taxDestinations)
         treasuryLocal.set(
           destination.country,
@@ -802,14 +827,23 @@ async function settleCorporateOperatingCashBatched(
             destination.amountAnchor * destination.localPerAnchor
         );
     }
-    legs.unshift({
-      kind: "mint",
-      amount: grossLocal,
-      valuation,
-      note: "Realized modeled gross operating receipts",
-    });
+    if (lossLocal > 0)
+      legs.push({
+        kind: "burn",
+        amount: lossLocal,
+        valuation,
+        note: "Settle funded operating costs outside the corporations",
+      });
+    if (grossLocal > 0)
+      legs.unshift({
+        kind: "mint",
+        amount: grossLocal,
+        valuation,
+        note: "Realized modeled gross operating receipts",
+      });
     for (const destination of members[0].quote.taxDestinations) {
       const amount = treasuryLocal.get(destination.country) ?? 0;
+      if (!(amount > 0)) continue;
       legs.push({
         kind: "credit",
         amount,

@@ -20,6 +20,7 @@
  * Merging the result to main is what publishes it: the release workflow tags
  * v<version> and opens the GitHub release from the public post.
  */
+import { execFileSync } from "child_process";
 import fs from "fs";
 import path from "path";
 import { parseFrontmatter, asString, asStringArray } from "../../src/lib/changelog/frontmatter";
@@ -152,7 +153,9 @@ function main(): void {
     );
   }
 
-  const title = flag("title");
+  // The version prefix is added below, so drop one the caller already typed
+  // ("1.17: Title" would otherwise publish as "1.17: 1.17: Title").
+  const title = flag("title")?.replace(/^\s*v?\d+\.\d+(?:\.\d+)?\s*:\s*/, "");
   if (!title) fail(`--title is required: it is the headline for ${version} on the feed.`);
 
   const badgeFlag = flag("badge");
@@ -216,6 +219,26 @@ function main(): void {
 
   pkg.version = version;
   fs.writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`, "utf-8");
+
+  // Keep the lockfile's own version fields in step with package.json.
+  const lockPath = path.join(process.cwd(), "package-lock.json");
+  if (fs.existsSync(lockPath)) {
+    const lock = JSON.parse(fs.readFileSync(lockPath, "utf-8")) as {
+      version?: string;
+      packages?: Record<string, { version?: string }>;
+    };
+    lock.version = version;
+    if (lock.packages?.[""]) lock.packages[""].version = version;
+    fs.writeFileSync(lockPath, `${JSON.stringify(lock, null, 2)}\n`, "utf-8");
+  }
+
+  // The generated posts must pass the repository format check as written.
+  const written = [devPath, ...(publicPath ? [publicPath] : [])];
+  try {
+    execFileSync("npx", ["prettier", "--write", ...written], { stdio: "ignore" });
+  } catch {
+    console.warn("prettier did not run; format the new posts before committing.");
+  }
 
   for (const note of notes) {
     fs.unlinkSync(path.join(UNRELEASED_DIR, `${note.topic}.md`));

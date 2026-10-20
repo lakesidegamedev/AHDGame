@@ -132,6 +132,7 @@ describe("processActionRefresh", () => {
   let seatedJusticeRows: { justiceCharacterId: unknown }[] = [];
   let persistFixture = false;
   let characterRows: Character[] = [];
+  let gameStateRow: { currentTurn: number } | null = null;
   const mockNppBulkWrite = vi.fn();
 
   beforeEach(async () => {
@@ -152,6 +153,7 @@ describe("processActionRefresh", () => {
     seatedJusticeRows = [];
     persistFixture = false;
     characterRows = [];
+    gameStateRow = null;
     mockBulkWrite.mockImplementation(async (ops: unknown[]) => {
       if (persistFixture) {
         for (const op of ops as {
@@ -258,7 +260,7 @@ describe("processActionRefresh", () => {
         return {
           find: vi.fn().mockReturnValue({ toArray: async () => [] }),
           bulkWrite: mockBulkWrite,
-          findOne: vi.fn().mockResolvedValue(null),
+          findOne: vi.fn().mockResolvedValue(name === "gameState" ? gameStateRow : null),
           insertOne: vi.fn().mockResolvedValue(undefined),
         };
       }),
@@ -401,6 +403,95 @@ describe("processActionRefresh", () => {
     const [ops] = mockBulkWrite.mock.calls[0] as [BulkOp[]];
     // 105 - 4 (penalty) + 4 (base) = 105
     expect(applyActionsPipeline(actionsGrantOp(ops), 105)).toBe(105);
+  });
+
+  it("logs the personal grant in the same pipeline stage as the actions update (Refs #4649)", async () => {
+    gameStateRow = { currentTurn: 321 };
+    const now = new Date("2026-10-20T16:00:00Z");
+    const { processActionRefresh } = await import("./actionRefresh");
+    // No actionGrantLog field: an old-world character document.
+    const char = {
+      _id: "charLog" as never,
+      userId: "userLog" as never,
+      name: "Logged",
+      countryId: "US",
+      homeState: "TX",
+      policies: { economic: 0, social: 0 },
+      actions: 105,
+      funds: 100000,
+      favorability: 50,
+      politicalInfluence: 0,
+      nationalInfluence: 0,
+      donorBaseLevel: 0,
+      infamy: 0,
+      party: "independent",
+      currentOffice: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as Character;
+    const config = {
+      _id: "default",
+      baseActionsPerTurn: 4,
+      officeActionBonus: {},
+      chairActionBonus: 3,
+    } as GameConfig;
+
+    await processActionRefresh([char], config, now);
+
+    const [ops] = mockBulkWrite.mock.calls[0] as [BulkOp[]];
+    const grantOp = actionsGrantOp(ops, "charLog");
+    const set = (grantOp.updateOne.update as Array<{ $set: Record<string, unknown> }>)[0]!.$set;
+    const log = set.actionGrantLog as {
+      $slice: [{ $concatArrays: [unknown, Record<string, unknown>[]] }, number];
+    };
+    expect(log).toBeDefined();
+    // Old worlds have no log yet: the append starts from an empty array.
+    expect(log.$slice[0].$concatArrays[0]).toEqual({ $ifNull: ["$actionGrantLog", []] });
+    // Keeps the last 48 entries.
+    expect(log.$slice[1]).toBe(-48);
+    const [entry] = log.$slice[0].$concatArrays[1];
+    const liveActions = { $ifNull: ["$actions", 0] };
+    expect(entry).toEqual({
+      turn: 321,
+      source: "personal",
+      granted: 4,
+      before: liveActions,
+      after: set.actions,
+      hoardPenalty: { $cond: [{ $gt: [liveActions, 100] }, 4, 0] },
+      cap: 200,
+      at: now,
+    });
+    // `after` is the exact expression that sets the new balance.
+    expect(applyActionsPipeline(grantOp, 105)).toBe(105);
+  });
+
+  it("caps the grant log at the 48 most recent entries", async () => {
+    const { processActionRefresh } = await import("./actionRefresh");
+    await processActionRefresh(
+      [
+        {
+          _id: "capLog" as never,
+          countryId: "US",
+          actions: 0,
+          favorability: 50,
+        } as unknown as Character,
+      ],
+      null,
+      new Date()
+    );
+    const [ops] = mockBulkWrite.mock.calls[0] as [BulkOp[]];
+    const set = (
+      actionsGrantOp(ops).updateOne.update as Array<{ $set: Record<string, unknown> }>
+    )[0]!.$set;
+    const log = set.actionGrantLog as {
+      $slice: [{ $concatArrays: [unknown, Record<string, unknown>[]] }, number];
+    };
+    // Mongo $slice with a negative count keeps the tail, like Array#slice.
+    const existing = Array.from({ length: 48 }, (_, turn) => ({ turn }));
+    const kept = [...existing, ...log.$slice[0].$concatArrays[1]].slice(log.$slice[1]);
+    expect(kept).toHaveLength(48);
+    expect(kept[0]).toEqual({ turn: 1 });
+    expect(kept[47]).toMatchObject({ source: "personal" });
   });
 
   it("applies the advertised infamy favorability drain above 20 infamy", async () => {

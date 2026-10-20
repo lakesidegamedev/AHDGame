@@ -80,7 +80,7 @@ import { pushEarningsHistory, normalizedEarningsFromHistory } from "./earningsRo
 import { applyEquityMethodEarnings } from "./equityMethodEarnings";
 import {
   fundedCashIncome,
-  fundedSectorOps,
+  fundedSectorOpsAll,
   fundedSectorResult,
   type FundedReceipt,
 } from "@/lib/market/producerMarket/fundedSectorRules";
@@ -1612,19 +1612,23 @@ export function processSectors(
     }
   }
 
-  if (funded)
-    for (const [sectorId, result] of fundedResults) {
-      const receipt = funded.receiptsBySectorId.get(sectorId)!;
-      const kept = fundedSectorOps(
-        sectorOps as Parameters<typeof fundedSectorOps>[0],
-        sectorId,
-        receipt,
-        result,
-        fundedDaily.get(sectorId)!,
-        TURNS_PER_DAY
-      );
-      sectorOps.splice(0, sectorOps.length, ...(kept as typeof sectorOps));
-    }
+  if (funded && fundedResults.size > 0) {
+    const kept = fundedSectorOpsAll(
+      sectorOps as Parameters<typeof fundedSectorOpsAll>[0],
+      new Map(
+        [...fundedResults].map(([sectorId, result]) => [
+          sectorId,
+          {
+            receipt: funded.receiptsBySectorId.get(sectorId)!,
+            result,
+            daily: fundedDaily.get(sectorId)!,
+          },
+        ])
+      ),
+      TURNS_PER_DAY
+    );
+    sectorOps.splice(0, sectorOps.length, ...(kept as typeof sectorOps));
+  }
 
   return {
     sectorTurnEnv,

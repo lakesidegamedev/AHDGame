@@ -18,6 +18,8 @@
 export const TRANSITION_MISMATCH_SHARE = 0.6;
 /** Shadow turns averaged for the classification. */
 export const TRANSITION_BASIS_TURNS = 5;
+/** Share of a fully claimed pool held back so float error never overdraws it. */
+export const POOL_FLOAT_MARGIN = 1e-9;
 /** Turns the package runs after the first funded turn. */
 export const TRANSITION_WINDOW_TURNS = 24;
 /** Capacity built after this turn chased the reverted advertising spike; reported only. */
@@ -66,6 +68,24 @@ export function inTransitionWindow(turn: number, firstFundedTurn: number): boole
   return turn >= firstFundedTurn && turn < firstFundedTurn + TRANSITION_WINDOW_TURNS;
 }
 
+/**
+ * The transition package's free conversion (owner decision 2026-10-20: free,
+ * at book value, same or another industry): once per mismatched sector, while
+ * the window is open for the turn the change takes effect.
+ */
+export function freeTransitionConversion(
+  sector: { cutoverTransition?: SectorTransition | null; cutoverConvertedAtTurn?: number | null },
+  effectiveTurn: number,
+  firstFundedTurn: number | undefined
+): boolean {
+  return (
+    firstFundedTurn != null &&
+    sector.cutoverTransition?.mismatched === true &&
+    sector.cutoverConvertedAtTurn == null &&
+    inTransitionWindow(effectiveTurn, firstFundedTurn)
+  );
+}
+
 /** Floor weight: 1 on the first funded turn, falling linearly to 0 at the window's end. */
 export function landingWeight(turn: number, firstFundedTurn: number): number {
   if (!inTransitionWindow(turn, firstFundedTurn)) return 0;
@@ -112,7 +132,14 @@ export function transitionSupport(input: {
   const coverageByCountry = new Map<string, number>();
   for (const [country, total] of claimed) {
     const pool = Math.max(0, input.poolByCountry.get(country) ?? 0);
-    coverageByCountry.set(country, total > 0 ? Math.min(1, pool / total) : 1);
+    // A partly covered pool pays out all of it, so float error in the shares
+    // could ask for a hair more than the wallet holds and the debit's balance
+    // guard would refuse it. Keep a negligible share back; it is returned with
+    // the rest of the unspent funding.
+    coverageByCountry.set(
+      country,
+      total > 0 ? (pool < total ? (pool / total) * (1 - POOL_FLOAT_MARGIN) : 1) : 1
+    );
   }
   const payments = claims
     .map((c) => ({ ...c, claim: c.claim * (coverageByCountry.get(c.countryId) ?? 0) }))

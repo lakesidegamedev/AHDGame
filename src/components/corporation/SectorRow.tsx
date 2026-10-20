@@ -13,6 +13,7 @@ import {
 import { type CorporationType, type OperatingSectorType } from "@/lib/constants/corporations";
 import { isExtractionStrategyZeroYield } from "@/lib/corporations/extractionStrategyAvailability";
 import StrategyChangeConfirm from "./StrategyChangeConfirm";
+import { TransitionPanel } from "./TransitionPanel";
 import type { SectorDetail } from "./CorporationPageTypes";
 import {
   StateFlag,
@@ -276,6 +277,21 @@ export function SectorRow({
           reactivate them.
         </p>
       )}
+      {isCeo &&
+        sector.cutoverTransition &&
+        !sector.cutoverTransition.converted &&
+        !isMothballed && (
+          <div className="mt-2">
+            <TransitionPanel
+              corpId={corpId}
+              sectorId={sector._id}
+              currentLane={operatingSectorType as OperatingSectorType}
+              turnsLeft={sector.cutoverTransition.turnsLeft}
+              freeConversion={sector.cutoverTransition.freeConversion}
+              buildUrl={sectorBuildUrl(corpId, sector._id)}
+            />
+          </div>
+        )}
     </>
   );
 

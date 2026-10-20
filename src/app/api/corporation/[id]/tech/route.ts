@@ -37,7 +37,9 @@ import {
   getPassedDecadeIds,
   getUnlockedStrategyIds,
   isNodeOpenForResearch,
-  getSectorTechEffects,
+  getSectorTechEffectsForYear,
+  getActiveTechDecadeIds,
+  isTechNodeEffectExpired,
   SLOT_PARENT,
   techNodeCashCost,
   techNodeValuePerTurn,
@@ -121,6 +123,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     };
     const unlocked = new Set(corporation.unlockedTechNodeIds ?? []);
     const passedDecades = new Set(getPassedDecadeIds(currentYear));
+    const activeDecadeIds = getActiveTechDecadeIds(currentYear);
     const strategyNameById = new Map(
       (SECTOR_STRATEGIES[operatingSectorType] ?? []).map((s) => [s.id, s.name])
     );
@@ -161,7 +164,11 @@ export async function GET(_request: Request, { params }: RouteParams) {
         // What the node is worth per turn to this corp, and how long its cash
         // price takes to earn back. Null when redacted or when the node has no
         // running plant value.
-        const valuePerTurn = techPlantBasis ? techNodeValuePerTurn(node, techPlantBasis) : 0;
+        // Owned techs from before the previous decade no longer apply their
+        // running plant effects in the turn, so they are worth nothing now.
+        const effectExpired = owned && isTechNodeEffectExpired(node, activeDecadeIds);
+        const valuePerTurn =
+          techPlantBasis && !effectExpired ? techNodeValuePerTurn(node, techPlantBasis) : 0;
         const paybackTurns = valuePerTurn > 0 ? Math.ceil(cashCost / valuePerTurn) : null;
         // Past decades have both lanes auto-granted — no lane commitment applies.
         const laneLocked = isPastDecade ? false : !!committed && committed !== lane;
@@ -196,6 +203,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
               (strategyEffect as { strategyId: string }).strategyId)
             : null,
           owned: redact ? false : owned,
+          effectExpired: redact ? false : effectExpired,
           autoGranted: !redact && owned && isPastDecade,
           tierClosed: redact ? false : !tierOpen,
           laneLocked: redact ? false : laneLocked,
@@ -235,9 +243,12 @@ export async function GET(_request: Request, { params }: RouteParams) {
       };
     });
 
-    // Headline margin = the effective bonus on the corp's PRIMARY sector
+    // Headline = the effective bonus on the corp's PRIMARY sector
     // (Corporate-lane scaled + Sector-lane full), which is the strongest case.
-    const agg = redact ? null : getSectorTechEffects(corpView, operatingSectorType);
+    // Uses the same decade window as the turn, so expired techs do not count.
+    const agg = redact
+      ? null
+      : getSectorTechEffectsForYear(corpView, operatingSectorType, currentYear);
 
     // ── Tech overview metrics ──────────────────────────────────────────────
     const totalNodes = (TECH_TREE[operatingSectorType] ?? []).length;

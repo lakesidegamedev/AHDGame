@@ -253,6 +253,187 @@ describe("GET /api/corporations/[id]/expand-suggestions (mode=unowned)", () => {
     );
   });
 
+  it("shows room where buyers go unserved even when the legacy unowned pool is empty", async () => {
+    db.collectionMocks.gameConfig.findOne.mockResolvedValue({
+      _id: "default",
+      marketSystemMode: "plants",
+    });
+    db.collectionMocks.gameState.findOne.mockResolvedValue({
+      _id: "current",
+      currentTurn: 10,
+      currentYear: 1953,
+    });
+    db.collectionMocks.unownedSectors.find.mockReturnValue({
+      project: vi.fn().mockReturnThis(),
+      toArray: vi.fn().mockResolvedValue([
+        { stateId: "AZ", sectorType: "logistics", revenue: 1000, headroomUnits: 0 },
+        { stateId: "NJ", sectorType: "logistics", revenue: 1000, headroomUnits: 0 },
+      ]),
+    });
+    db.collectionMocks.states.find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([
+        { _id: "AZ", name: "Arizona", countryId: "US" },
+        { _id: "NJ", name: "New Jersey", countryId: "US" },
+      ]),
+    });
+    db.collectionMocks.corporateSectors.find.mockReturnValue({
+      project: vi.fn().mockReturnThis(),
+      toArray: vi.fn().mockResolvedValue([]),
+    });
+    db.collectionMocks.macroMetrics.find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([]),
+    });
+    db.collectionMocks.tradeFlowSnapshots.findOne.mockResolvedValue({
+      books: {
+        US: {
+          freight: {
+            supply: 1000,
+            demand: 100,
+            domesticDemand: 100,
+            imports: 0,
+            exports: 0,
+            blockedSupply: 0,
+            untradedSupply: 0,
+          },
+          consulting_services: {
+            supply: 100,
+            demand: 1000,
+            domesticDemand: 1000,
+            imports: 0,
+            exports: 0,
+            blockedSupply: 0,
+            untradedSupply: 0,
+          },
+        },
+      },
+    });
+    db.collectionMocks.commodityPrices.find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([
+        {
+          commodity: "freight",
+          globalSupply: 1000,
+          globalDemand: 100,
+          stateSupply: { AZ: 100, NJ: 100 },
+          stateDemand: { AZ: 200, NJ: 10 },
+        },
+        {
+          commodity: "consulting_services",
+          globalSupply: 100,
+          globalDemand: 1000,
+          stateSupply: {},
+          stateDemand: {},
+        },
+      ]),
+    });
+
+    const response = await GET(makeRequest("sectorType=logistics&mode=unowned"), ctx());
+    const data = await response.json();
+    const az = (data.suggestions as Array<{ stateId: string; headroomUnits: number }>).find(
+      (row) => row.stateId === "AZ"
+    );
+    // AZ freight demand 200 against 100 delivered is a real shortage; an
+    // empty pool of unclaimed market share must not hide it.
+    expect(az?.headroomUnits).toBeGreaterThan(0);
+  });
+
+  it("takes capacity already under construction off the room to build", async () => {
+    db.collectionMocks.gameConfig.findOne.mockResolvedValue({
+      _id: "default",
+      marketSystemMode: "plants",
+    });
+    db.collectionMocks.gameState.findOne.mockResolvedValue({
+      _id: "current",
+      currentTurn: 10,
+      currentYear: 1953,
+    });
+    db.collectionMocks.unownedSectors.find.mockReturnValue({
+      project: vi.fn().mockReturnThis(),
+      toArray: vi.fn().mockResolvedValue([
+        { stateId: "AZ", sectorType: "logistics", revenue: 1000, headroomUnits: 0 },
+        { stateId: "NJ", sectorType: "logistics", revenue: 1000, headroomUnits: 0 },
+      ]),
+    });
+    db.collectionMocks.states.find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([
+        { _id: "AZ", name: "Arizona", countryId: "US" },
+        { _id: "NJ", name: "New Jersey", countryId: "US" },
+      ]),
+    });
+    db.collectionMocks.corporateSectors.find.mockReturnValue({
+      project: vi.fn().mockReturnThis(),
+      toArray: vi.fn().mockResolvedValue([]),
+    });
+    db.collectionMocks.macroMetrics.find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([]),
+    });
+    db.collectionMocks.tradeFlowSnapshots.findOne.mockResolvedValue({
+      books: {
+        US: {
+          freight: {
+            supply: 1000,
+            demand: 100,
+            domesticDemand: 100,
+            imports: 0,
+            exports: 0,
+            blockedSupply: 0,
+            untradedSupply: 0,
+          },
+          consulting_services: {
+            supply: 100,
+            demand: 1000,
+            domesticDemand: 1000,
+            imports: 0,
+            exports: 0,
+            blockedSupply: 0,
+            untradedSupply: 0,
+          },
+        },
+      },
+    });
+    db.collectionMocks.commodityPrices.find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([
+        {
+          commodity: "freight",
+          globalSupply: 1000,
+          globalDemand: 100,
+          stateSupply: { AZ: 100, NJ: 100 },
+          stateDemand: { AZ: 200, NJ: 10 },
+        },
+        {
+          commodity: "consulting_services",
+          globalSupply: 100,
+          globalDemand: 1000,
+          stateSupply: {},
+          stateDemand: {},
+        },
+      ]),
+    });
+
+    const baseline = await (
+      await GET(makeRequest("sectorType=logistics&mode=unowned"), ctx())
+    ).json();
+    const before = (baseline.suggestions as Array<{ stateId: string; headroomUnits: number }>).find(
+      (row) => row.stateId === "AZ"
+    )!.headroomUnits;
+    db.collectionMocks.corporateSectors.find.mockReturnValue({
+      project: vi.fn().mockReturnThis(),
+      toArray: vi.fn().mockResolvedValue([
+        {
+          _id: "6ad000000000000000000001",
+          corporationId: "6ad000000000000000000002",
+          stateId: "AZ",
+          revenue: 0,
+          buildQueue: [{ unitsOrdered: 1, costPaidAnchor: 1, startTurn: 9, onlineTurn: 20 }],
+        },
+      ]),
+    });
+    const after = (
+      (await (await GET(makeRequest("sectorType=logistics&mode=unowned"), ctx())).json())
+        .suggestions as Array<{ stateId: string; headroomUnits: number }>
+    ).find((row) => row.stateId === "AZ")!.headroomUnits;
+    expect(after).toBe(Math.max(0, before - 1));
+  });
+
   it("offers zero-revenue greenfield markets under plants", async () => {
     const { fetchCorporationNationalSectorSharesByCountry } =
       await import("@/lib/corporations/marketShare");

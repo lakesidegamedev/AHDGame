@@ -223,6 +223,18 @@ describe("TechTab research tree", () => {
     expect(screen.getAllByText("Baseline, no cost")).toHaveLength(2);
   });
 
+  it("marks owned techs whose plant effects have expired", async () => {
+    const tree = responseWithTree();
+    Object.assign(tree.decades[0].lanes.generic[0], { effectExpired: true });
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => tree } as Response);
+
+    renderTechTab();
+
+    expect(await screen.findByRole("heading", { name: "Corporate track" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Earlier decades/ }));
+    expect(screen.getAllByText("Effect expired: older than last decade")).toHaveLength(1);
+  });
+
   it("explains track commitment before confirming the first research choice", async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,

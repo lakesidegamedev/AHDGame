@@ -104,6 +104,11 @@ export interface ProducerOperatingResult {
   closingArrears: number;
   /** Purchases move cash into input stock; only consumption is an expense. */
   profit: number;
+  /**
+   * Inputs consumed by output that went to stock instead of a buyer this turn:
+   * inventory at cost, not a loss. Reported beside profit, never moved as cash.
+   */
+  unsoldProductionCost?: number;
   cashFlow: number;
   inputStock: PurchasedStock[];
   outputStock: ProducedStock[];
@@ -784,7 +789,9 @@ export function advanceProducerEconomy(input: {
     let revenue = 0,
       offeredUnits = 0,
       soldUnits = 0,
-      deliveredUnits = 0;
+      deliveredUnits = 0,
+      // Value-weighted share of this turn's output that went to stock unsold.
+      unsoldShare = 0;
     const products: ProducerOperatingResult["products"] = [];
     const outputStock = p.outputs.map((output) => {
       const sold = offersById.get(JSON.stringify([p.id, "output", output.commodity]))!;
@@ -807,6 +814,7 @@ export function advanceProducerEconomy(input: {
       const weight =
         outputValue > 0 ? (output.unitsPerOutput * output.referenceUnitPrice) / outputValue : 0;
       const made = produced * output.unitsPerOutput;
+      if (made > 0) unsoldShare += (weight * Math.max(0, made - sold.deliveredUnits)) / made;
       // Preserve an unknown historical cost as unknown. A reference price or
       // this turn's fixed bill cannot manufacture the old stock's cost basis.
       const knownOpeningCost = openingRows.every((stock) => stock.quoteUnitCost != null);
@@ -892,6 +900,7 @@ export function advanceProducerEconomy(input: {
       arrearsPaid,
       closingArrears,
       profit: revenue - consumed - inventoryWriteOff - p.labourCost - p.otherOperatingCost,
+      unsoldProductionCost: consumed * Math.min(1, Math.max(0, unsoldShare)),
       cashFlow: revenue - purchases - paid.labour - paid.operating - arrearsPaid,
       inputStock: [...stocks.values()],
       // A sold-out retained good (no longer in the recipe) leaves no row: next
