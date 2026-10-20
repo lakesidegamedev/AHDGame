@@ -28,6 +28,17 @@ vi.mock("@/lib/bonds/sellFundBondUnits", () => ({
     .fn()
     .mockResolvedValue({ proceedsAnchor: 0, unitsSold: 0, bondsTouched: 0 }),
 }));
+vi.mock("@/lib/indexFunds/processQueuedRedemptions", () => ({
+  processQueuedRedemptions: vi.fn().mockResolvedValue(0),
+}));
+vi.mock("@/lib/indexFunds/fundValuation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/indexFunds/fundValuation")>()),
+  getQueuedRedemptionUnits: vi.fn().mockResolvedValue(0),
+}));
+vi.mock("@/lib/indexFunds/fundQueries", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/indexFunds/fundQueries")>()),
+  updateFundNav: vi.fn().mockResolvedValue(undefined),
+}));
 // Mirrors the real contract: a fund_reserve position is the fund's own units
 // and is never paid out.
 vi.mock("./holderPayout", () => ({
@@ -41,6 +52,9 @@ import { creditCorpLiquidCapital } from "@/lib/financialTxLog/atomicCashGuard";
 import { sellFundHoldingsForRedemptionCash } from "@/lib/indexFunds/fundRedemptionLiquidity";
 import { sellFundBondHoldingsForCash } from "@/lib/bonds/sellFundBondUnits";
 import { payFundHolderCash } from "./holderPayout";
+import { processQueuedRedemptions } from "@/lib/indexFunds/processQueuedRedemptions";
+import { getQueuedRedemptionUnits } from "@/lib/indexFunds/fundValuation";
+import { updateFundNav } from "@/lib/indexFunds/fundQueries";
 import { advanceWindDowns, beginWindUp, completeWindUp } from "./windUp";
 
 const SPONSOR = new ObjectId();
@@ -87,13 +101,25 @@ function makeDb(opts: {
       if (name === "indexFunds")
         return {
           updateOne: fundUpdate,
-          findOne: async () =>
-            opts.fund ?? opts.windingDown?.[0] ?? makeFund({ status: "winding_down" }),
+          findOne: async (filter?: { _id?: ObjectId }) =>
+            opts.fund ??
+            opts.windingDown?.find((f) => filter?._id && f._id.equals(filter._id)) ??
+            opts.windingDown?.[0] ??
+            makeFund({ status: "winding_down" }),
           find: () => ({ toArray: () => Promise.resolve(opts.windingDown ?? []) }),
         };
       if (name === "indexFundPositions")
         return {
           find: () => ({ toArray: () => Promise.resolve(opts.positions ?? []) }),
+          aggregate: vi.fn(() => ({
+            toArray: async () =>
+              (opts.windingDown ?? []).map((f) => ({
+                _id: f._id,
+                units: (opts.positions ?? [])
+                  .filter((p) => !p.fundId || p.fundId.equals(f._id))
+                  .reduce((sum, p) => sum + (p.units ?? 0), 0),
+              })),
+          })),
           updateMany: positionsUpdateMany,
         };
       if (name === "bonds")
@@ -265,5 +291,119 @@ describe("advanceWindDowns", () => {
     const { db } = makeDb({ windingDown: [fund], positions: [] });
     const r = await advanceWindDowns(db, 200);
     expect(r.fundsCompleted).toBe(1);
+  });
+});
+
+describe("advanceWindDowns queued withdrawals", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getQueuedRedemptionUnits).mockResolvedValue(0);
+    vi.mocked(processQueuedRedemptions).mockResolvedValue(0);
+  });
+
+  const holders = () => [
+    { _id: new ObjectId(), units: 20, holderKind: "character" as const },
+    { _id: new ObjectId(), units: 40, holderKind: "character" as const },
+  ];
+
+  it("pays queued withdrawals at the cash-backed final value before completing", async () => {
+    // 10,000 cash over 60 held + 40 queued units is 100 a unit for everyone;
+    // the stored quote (250) is stale while winding down and must not be used.
+    const fund = makeFund({ status: "winding_down", cashAnchor: 10_000, quotedNav: 250 });
+    const { db, fundUpdate } = makeDb({ windingDown: [fund], positions: holders() });
+    vi.mocked(getQueuedRedemptionUnits).mockResolvedValue(40);
+    vi.mocked(processQueuedRedemptions).mockResolvedValue(3);
+
+    const r = await advanceWindDowns(db, 200, true);
+
+    expect(updateFundNav).toHaveBeenCalledWith(db, fund._id, { quotedNav: 100 });
+    expect(processQueuedRedemptions).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({ _id: fund._id, quotedNav: 100 }),
+      true,
+      200,
+      true
+    );
+    expect(r.redemptionsPaid).toBe(3);
+    expect(r.fundsCompleted).toBe(1);
+    expect(fundUpdate.mock.calls[0][1].$set.status).toBe("delisted");
+    expect(vi.mocked(processQueuedRedemptions).mock.invocationCallOrder[0]).toBeLessThan(
+      fundUpdate.mock.invocationCallOrder[0]
+    );
+  });
+
+  it("does not pay queued withdrawals while bond units remain", async () => {
+    const fund = makeFund({ status: "winding_down", cashAnchor: 10_000 });
+    const { db } = makeDb({ windingDown: [fund], positions: holders(), bondsRemaining: () => 1 });
+    vi.mocked(getQueuedRedemptionUnits).mockResolvedValue(40);
+
+    const r = await advanceWindDowns(db, 200, true);
+
+    expect(processQueuedRedemptions).not.toHaveBeenCalled();
+    expect(updateFundNav).not.toHaveBeenCalled();
+    expect(r.fundsCompleted).toBe(0);
+  });
+
+  it("does not pay queued withdrawals while stocks remain", async () => {
+    const fund = makeFund({
+      status: "winding_down",
+      cashAnchor: 10_000,
+      holdings: [{ corporationId: new ObjectId(), shares: 10, lastValueAnchor: 50_000 }],
+    });
+    const { db } = makeDb({ windingDown: [fund], positions: holders() });
+    vi.mocked(getQueuedRedemptionUnits).mockResolvedValue(40);
+
+    const r = await advanceWindDowns(db, 200, true);
+
+    expect(processQueuedRedemptions).not.toHaveBeenCalled();
+    expect(updateFundNav).not.toHaveBeenCalled();
+    expect(r.fundsCompleted).toBe(0);
+  });
+
+  it("completes as before when nothing is queued", async () => {
+    const fund = makeFund({ status: "winding_down", cashAnchor: 10_000 });
+    const { db } = makeDb({ windingDown: [fund], positions: holders() });
+
+    const r = await advanceWindDowns(db, 200, true);
+
+    expect(processQueuedRedemptions).not.toHaveBeenCalled();
+    expect(updateFundNav).not.toHaveBeenCalled();
+    expect(r.redemptionsPaid).toBe(0);
+    expect(r.fundsCompleted).toBe(1);
+  });
+
+  it("holds completion when there is no cash to pay queued withdrawals", async () => {
+    const fund = makeFund({ status: "winding_down", cashAnchor: 0 });
+    const { db, fundUpdate } = makeDb({ windingDown: [fund], positions: holders() });
+    vi.mocked(getQueuedRedemptionUnits).mockResolvedValue(40);
+
+    const r = await advanceWindDowns(db, 200, true);
+
+    expect(r.errors).toEqual(["NIT: no cash to pay queued withdrawals"]);
+    expect(processQueuedRedemptions).not.toHaveBeenCalled();
+    expect(fundUpdate).not.toHaveBeenCalled();
+    expect(r.fundsCompleted).toBe(0);
+  });
+
+  it("records one fund's payout failure and still finishes the next fund", async () => {
+    const a = makeFund({ status: "winding_down", tickerSymbol: "AAA", cashAnchor: 10_000 });
+    const b = makeFund({ status: "winding_down", tickerSymbol: "BBB", cashAnchor: 10_000 });
+    const { db, fundUpdate } = makeDb({ windingDown: [a, b], positions: holders() });
+    vi.mocked(getQueuedRedemptionUnits).mockResolvedValue(40);
+    vi.mocked(processQueuedRedemptions)
+      .mockRejectedValueOnce(new Error("payout ledger down"))
+      .mockResolvedValueOnce(2);
+
+    const r = await advanceWindDowns(db, 200, true);
+
+    expect(r.errors).toEqual(["AAA: payout ledger down"]);
+    expect(vi.mocked(processQueuedRedemptions).mock.calls[1][1]).toMatchObject({
+      _id: b._id,
+      quotedNav: 100,
+    });
+    expect(r.redemptionsPaid).toBe(2);
+    expect(r.fundsCompleted).toBe(1);
+    expect(fundUpdate).toHaveBeenCalledTimes(1);
+    expect(fundUpdate.mock.calls[0][0]).toEqual({ _id: b._id });
   });
 });

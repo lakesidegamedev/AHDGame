@@ -24,6 +24,9 @@ import { creditCorpLiquidCapital } from "@/lib/financialTxLog/atomicCashGuard";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { sellFundHoldingsForRedemptionCash } from "@/lib/indexFunds/fundRedemptionLiquidity";
 import { sellFundBondHoldingsForCash } from "@/lib/bonds/sellFundBondUnits";
+import { getFundById, updateFundNav } from "@/lib/indexFunds/fundQueries";
+import { getQueuedRedemptionUnits } from "@/lib/indexFunds/fundValuation";
+import { processQueuedRedemptions } from "@/lib/indexFunds/processQueuedRedemptions";
 import { payCorporateWindUpHolders } from "./corporateHolderPayout";
 import { payFundHolderCash } from "./holderPayout";
 import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
@@ -80,6 +83,7 @@ export interface WindDownPassResult {
   fundsProcessed: number;
   fundsCompleted: number;
   holdersPaid: number;
+  redemptionsPaid: number;
   errors: string[];
 }
 
@@ -87,11 +91,16 @@ export interface WindDownPassResult {
  * One cron pass over every winding-down fund: sell what is left, and finish any
  * fund whose portfolio has become cash.
  */
-export async function advanceWindDowns(db: Db, currentTurn: number): Promise<WindDownPassResult> {
+export async function advanceWindDowns(
+  db: Db,
+  currentTurn: number,
+  forexEnabled = false
+): Promise<WindDownPassResult> {
   const result: WindDownPassResult = {
     fundsProcessed: 0,
     fundsCompleted: 0,
     holdersPaid: 0,
+    redemptionsPaid: 0,
     errors: [],
   };
 
@@ -157,9 +166,52 @@ export async function advanceWindDowns(db: Db, currentTurn: number): Promise<Win
     return result;
   }
 
-  for (const fund of bondPhase) {
-    if (stillHoldingBonds.has(String(fund._id))) continue;
+  const ready = bondPhase.filter((fund) => !stillHoldingBonds.has(String(fund._id)));
+  if (ready.length === 0) return result;
+
+  // Remaining position units per fund, read once for every fund about to complete.
+  let positionUnitsByFund: Map<string, number>;
+  try {
+    const rows = await db
+      .collection<IndexFundPosition>(POSITIONS)
+      .aggregate<{ _id: unknown; units: number }>([
+        { $match: { fundId: { $in: ready.map((f) => f._id) }, units: { $gt: 0 } } },
+        { $group: { _id: "$fundId", units: { $sum: "$units" } } },
+      ])
+      .toArray();
+    positionUnitsByFund = new Map(rows.map((r) => [String(r._id), r.units]));
+  } catch (err) {
+    for (const fund of ready) result.errors.push(`${fund.tickerSymbol}: ${(err as Error).message}`);
+    return result;
+  }
+
+  for (const fund of ready) {
     try {
+      const fresh = await getFundById(db, fund._id);
+      if (!fresh) continue;
+      const queuedUnits = await getQueuedRedemptionUnits(db, fund._id);
+      if (queuedUnits > 0) {
+        const positionUnits = positionUnitsByFund.get(String(fund._id)) ?? 0;
+        // The stored quote is not refreshed while winding down. Queued units were
+        // burned at request, so pay them the same cash per unit that settleWindUp's
+        // final NAV (cash / remaining position units) then gives everyone else.
+        const nav = fresh.cashAnchor / (positionUnits + queuedUnits);
+        if (!Number.isFinite(nav) || nav <= 0) {
+          result.errors.push(`${fund.tickerSymbol}: no cash to pay queued withdrawals`);
+          continue;
+        }
+        // processQueuedRedemptions re-reads the fund mid-pass, so persist the NAV first.
+        // Frozen payouts were already recovered at the start of the fund cron; skip a
+        // second recovery so cash cannot move after this NAV was struck.
+        await updateFundNav(db, fund._id, { quotedNav: nav });
+        result.redemptionsPaid += await processQueuedRedemptions(
+          db,
+          { ...fresh, quotedNav: nav },
+          forexEnabled,
+          currentTurn,
+          true
+        );
+      }
       const paid = await completeWindUp(db, fund, currentTurn);
       result.holdersPaid += paid;
       result.fundsCompleted += 1;
