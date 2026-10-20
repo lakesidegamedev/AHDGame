@@ -1,61 +1,27 @@
-# Task: pure rules module for NPP CEO careers and pay demands
+# Task: UI cards and a turn-pass test for NPP CEO pay (TypeScript/React)
 
-Write ONE new file and ONE new test file. Do not edit any other file. Do not run git. Do not run tsc or the full test suite. You may run exactly: `npx vitest run src/lib/corporations/rules/nppCeoCareer.test.ts`.
+Edit or create ONLY these files. Do not run git, tsc or the full test suite. You may run: `npx vitest run src/lib/turn/corporation/nppCeoPay.test.ts src/components/corporation/ceo` and `npx eslint <files you touched>` and `npx prettier --write <files you touched>`.
+No em dashes or en dashes anywhere (code, comments, copy). Plain, short player-facing copy. Match the style of neighbouring files exactly (read them first).
 
-Files:
+## 1. Create `src/components/corporation/ceo/CeoPayCard.tsx`
+A client component `export function CeoPayCard({ corpId }: { corpId: string })` styled like `src/components/corporation/ceo/OperatorPolicyCard.tsx` (read it and copy its fetch/loading/error patterns, section wrapper and button components).
+- GET `/api/corporations/${corpId}/ceo-pay` returns `{ ceoPay: null | { salary: number; nextReviewTurn: number; demand: null | { amount: number; turn: number; expiresTurn: number; level: number; trailingProfit: number }; lastDecision: null | { turn: number; outcome: "accepted" | "countered" | "replaced"; salary?: number; bySystem: boolean } } }`. Render nothing when `ceoPay` is null.
+- Always show: "CEO salary" (salary per day, formatted like other money values in OperatorPolicyCard or neighbouring cards), "Next pay review: turn N".
+- When `demand` is set, show: "Your CEO (level L) asks for X per day." and "Unanswered by turn E, your standing policy decides." plus three actions: Accept; Counter (a number input prefilled with demand.amount, submit button); Replace CEO. Each POSTs JSON to the same URL: `{ "action": "accept" }`, `{ "action": "counter", "amount": number }`, `{ "action": "replace" }`. On success re-fetch. Show the server `error` text on failure (409 means it was already answered).
+- Add one line of help text: "Better CEOs cut your management overhead. A new CEO starts at a low level."
+- When `lastDecision` is set and there is no demand, show one line, for example "Turn 340: raise accepted by your standing policy" or "Turn 340: you replaced the CEO".
 
-- create `src/lib/corporations/rules/nppCeoCareer.ts`
-- create `src/lib/corporations/rules/nppCeoCareer.test.ts` (vitest, `import { describe, it, expect } from "vitest"`)
+## 2. Render it
+In `src/components/corporation/AutopilotCard.tsx` and `src/components/corporation/ceo/CaretakerCeoCard.tsx`, render `<CeoPayCard corpId={corpId} />` right next to where `<OperatorPolicyCard corpId={corpId} />` is rendered, under the same condition. Change nothing else in those files.
 
-Style: TypeScript, pure functions only (no DB, no Date, no randomness), JSDoc comment on each export in plain English, no em dashes or en dashes anywhere, match the style of `src/lib/corporations/rules/passThroughTax.ts` if it exists, otherwise `src/lib/corporations/rules/marketBoost.ts`.
+## 3. Extend `src/components/corporation/ceo/OperatorPolicyCard.tsx`
+The policy body now accepts an optional `ceoPayAutoAcceptShare` (number between 0 and 0.1). Add one control: label "Auto-accept CEO raises up to", a select with options 0%, 1%, 3% (default), 5%, 10% "of profit", stored as 0, 0.01, 0.03, 0.05, 0.1, included in the PUT body like the other fields. Follow the card's existing pattern for reading the stored policy and saving.
 
-Background (already decided, do not redesign): NPP CEOs currently work for free. Each NPP has `ceoTrackRecord: Record<lane, { turns: number; relMarginPp: number; lastTurn: number }>` (turns served in a sector lane, average margin vs peers in percentage points) and `personality: { loyalty: number; ambition: number; stubbornness: number }` each 0 to 100.
-
-Exports to implement exactly:
-
-1. `export const CEO_MAX_LEVEL = 10;`
-   `export const CEO_PAY_REVIEW_TURNS = 24;`
-   `export const CEO_PROFIT_SHARE_CAP = 0.10;`
-   `export const CEO_OVERHEAD_DISCOUNT_PER_LEVEL = 0.10;`
-   `export const CEO_OVERHEAD_DISCOUNT_CAP_PP = 2;`
-
-2. `export function ceoLevel(record: { turns: number; relMarginPp: number } | undefined): number`
-   - undefined or turns <= 0 -> 1.
-   - experience points = min(turns, 480) / 48 (0..10)
-   - performance points = clamp(relMarginPp, -10, 10) / 2 (-5..5)
-   - level = clamp(round(1 + experience * 0.6 + performance * 0.8), 1, 10)
-   - non-finite inputs treated as 0.
-
-3. `export function ceoOverheadDiscountPp(level: number, overheadPp: number): number`
-   - returns the margin points removed from the corp's management overhead.
-   - discount = overheadPp * min(1, (clamp(level,1,10) - 1) * CEO_OVERHEAD_DISCOUNT_PER_LEVEL)
-   - capped at CEO_OVERHEAD_DISCOUNT_CAP_PP and never more than overheadPp; returns 0 for overheadPp <= 0 or non-finite.
-
-4. `export function ceoBaseSalary(level: number, eraSalaryUnit: number): number`
-   - eraSalaryUnit * (0.5 + 0.25 * (clamp(level,1,10) - 1)); 0 if eraSalaryUnit not finite or <= 0.
-
-5. `export interface PayDemandInput { level: number; trailingProfit: number; plantCount: number; growthRate: number; ambition: number; loyalty: number; eraSalaryUnit: number; currentSalary: number }`
-   `export function ceoPayDemand(input: PayDemandInput): number`
-   - base = ceoBaseSalary(level, eraSalaryUnit)
-   - if trailingProfit <= 0: demand = max(currentSalary, base) (no profit share).
-   - sizeFactor = clamp(log2(max(plantCount,1) / 300 + 1), 0.25, 2)
-   - growthFactor = clamp(1 + growthRate, 0.75, 1.5) (growthRate is a fraction, e.g. 0.1 = 10%)
-   - temperament = clamp(1 + (ambition - 50) / 100 - (loyalty - 50) / 200, 0.5, 1.5)
-   - levelFactor = clamp(level,1,10) / 10
-   - share = min(CEO_PROFIT_SHARE_CAP, 0.04 * levelFactor * sizeFactor * growthFactor * temperament)
-   - demand = max(currentSalary, base + share * trailingProfit)
-   - result must never exceed base + CEO_PROFIT_SHARE_CAP * max(0, trailingProfit) and never below 0. Round to whole units.
-
-6. `export function counterAccepted(demand: number, counter: number, stubbornness: number): boolean`
-   - threshold = demand * clamp(0.75 + stubbornness / 400, 0.75, 1) (stubborn CEOs accept less of a cut)
-   - accepted when counter >= threshold.
-
-7. `export type DefaultPayAction = "accept" | "replace";`
-   `export function defaultPayAction(demand: number, trailingProfit: number, autoAcceptProfitShare: number): DefaultPayAction`
-   - autoAcceptProfitShare default meaning: fraction of trailing profit (e.g. 0.03).
-   - "accept" when trailingProfit > 0 and demand <= autoAcceptProfitShare * trailingProfit, or when demand <= 0; else "replace".
-
-8. `export function nextPayReviewTurn(appointedTurn: number, currentTurn: number, earliestTurn: number): number`
-   - first review is appointedTurn + CEO_PAY_REVIEW_TURNS, then every CEO_PAY_REVIEW_TURNS after; return the first review turn that is > currentTurn and >= earliestTurn.
-
-Tests: at least 3 cases per export including edge cases (undefined record, negative profit, cap reached, huge plant counts, non-finite inputs). Make every test pass.
+## 4. Create `src/lib/turn/corporation/nppCeoPay.test.ts`
+Vitest unit tests for `processNppCeoPay` in `src/lib/turn/corporation/nppCeoPay.ts` (read it fully first). Use a small hand-written fake `Db` object (no real Mongo): `collection(name)` returns an object with `find().project().toArray()`, `aggregate().toArray()`, and `bulkWrite(ops)` that records ops. Mock `@/lib/corporations/caretakerCeo` with `vi.mock` so `gatherCaretakerAffiliations` returns one affiliation with a free NPP and `pickCaretakerNpp` returns that NPP id, and keep `corporationLane` returning "technology". Cover:
+- no startTurn: returns zeros, no writes;
+- first sight of an NPP-run corp: writes `ceoPay` with nextReviewTurn >= startTurn + 24;
+- due review: writes `ceoPay.demand` with amount > 0 for a profitable corp (fake aggregate returns revenue 1,000,000 and profit 200,000 for that corp id);
+- expired demand under 3% of profit: auto-accepts (ceoSalary set to demand);
+- expired demand above the policy share: replaces (ceoId set to the new NPP and a ceoHistory $push present);
+- a state-owned corp (countryOwnerId set) is ignored.
