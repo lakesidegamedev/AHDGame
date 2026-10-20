@@ -220,45 +220,20 @@ export async function runFundedProducerTurn(
     };
   };
 
-  const firstWallet = demand.firstWalletByCorp;
-  const transfers: CloseTransfer[] = [];
-  for (const t of distributeProfits(
-    [...settledProfitByCorp].flatMap(([accountId, profit]) => {
-      const kind: ProfitOwnerKind | undefined = demand.ownerKindByCompany.get(accountId);
-      const corp = corpById.get(accountId);
-      if (!kind || !corp) return [];
-      const recipient =
-        kind === "ai"
-          ? (firstWallet.get(accountId)?.wallet ?? null)
-          : `treasury:${corp.countryOwnerId ?? corp.countryId}`;
-      return [
-        {
-          accountId,
-          kind,
-          profit,
-          cash: closingCash.get(accountId) ?? 0,
-          recipientAccountId: recipient,
-        },
-      ];
-    })
-  ))
-    transfers.push({
-      reason: t.reason,
-      amountAnchor: t.amount,
-      from: corpParty(t.fromAccountId),
-      to:
-        t.reason === "ai_dividend"
-          ? walletParty(t.toAccountId)
-          : treasuryParty(t.toAccountId.slice("treasury:".length)),
-    });
-  for (const [payee, household] of demand.householdForPayee)
-    if (payee !== household && (closingCash.get(payee) ?? 0) > 0)
-      transfers.push({
-        reason: "operating_income",
-        amountAnchor: closingCash.get(payee)!,
-        from: walletParty(payee),
-        to: walletParty(household),
-      });
+  const transfers = planFundedClose({
+    settledProfitByCorp,
+    closingCash,
+    ownerKindByCompany: demand.ownerKindByCompany,
+    householdFor: (corpId) => demand.firstWalletByCorp.get(corpId)?.wallet ?? null,
+    householdForPayee: demand.householdForPayee,
+    stateTreasuryFor: (corpId) => {
+      const corp = corpById.get(corpId);
+      return corp ? String(corp.countryOwnerId ?? corp.countryId) : null;
+    },
+    corpParty,
+    walletParty,
+    treasuryParty,
+  });
   await apply(closeTransferMoves(worldEpoch, turn, transfers));
   await apply(
     publicReturnMoves(
@@ -284,6 +259,70 @@ export async function runFundedProducerTurn(
   );
 
   return { receiptsBySectorId, settledProfitByCorp };
+}
+
+/**
+ * End-of-turn transfers from settled profit and closing balances: AI profit
+ * (60%, capped by cash) to the households where the company employs, state
+ * company remittances to the owning treasury, and each operating payee's
+ * receipts to the households of its state. Player companies keep their profit.
+ */
+export function planFundedClose(input: {
+  settledProfitByCorp: ReadonlyMap<string, number>;
+  /** Closing cash per account, anchor units. */
+  closingCash: ReadonlyMap<string, number>;
+  ownerKindByCompany: ReadonlyMap<string, ProfitOwnerKind>;
+  householdFor: (corpId: string) => string | null;
+  householdForPayee: ReadonlyMap<string, string>;
+  stateTreasuryFor: (corpId: string) => string | null;
+  corpParty: (id: string) => CloseParty;
+  walletParty: (id: string) => CloseParty;
+  treasuryParty: (countryId: string) => CloseParty;
+}): CloseTransfer[] {
+  const transfers: CloseTransfer[] = [];
+  const rows = [...input.settledProfitByCorp].flatMap(([accountId, profit]) => {
+    const kind = input.ownerKindByCompany.get(accountId);
+    if (!kind) return [];
+    const recipient =
+      kind === "ai"
+        ? input.householdFor(accountId)
+        : kind === "state"
+          ? (() => {
+              const country = input.stateTreasuryFor(accountId);
+              return country ? `treasury:${country}` : null;
+            })()
+          : null;
+    return [
+      {
+        accountId,
+        kind,
+        profit,
+        cash: input.closingCash.get(accountId) ?? 0,
+        recipientAccountId: recipient,
+      },
+    ];
+  });
+  for (const t of distributeProfits(rows))
+    transfers.push({
+      reason: t.reason,
+      amountAnchor: t.amount,
+      from: input.corpParty(t.fromAccountId),
+      to:
+        t.reason === "ai_dividend"
+          ? input.walletParty(t.toAccountId)
+          : input.treasuryParty(t.toAccountId.slice("treasury:".length)),
+    });
+  for (const [payee, household] of input.householdForPayee) {
+    const cash = input.closingCash.get(payee) ?? 0;
+    if (payee !== household && cash > 0)
+      transfers.push({
+        reason: "operating_income",
+        amountAnchor: cash,
+        from: input.walletParty(payee),
+        to: input.walletParty(household),
+      });
+  }
+  return transfers;
 }
 
 /**
