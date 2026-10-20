@@ -5,6 +5,7 @@ import {
   getTreeForType,
   sumStrengthGrants,
   techNodeCashCost,
+  type TechPlantBasis,
   type TechTreeNode,
 } from "@/lib/constants/techTree";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
@@ -19,7 +20,11 @@ export function pickBestNppTechNode(
   corp: Corporation,
   currentYear: number,
   dailyGrossRevenue: number,
-  options: { cashReserve?: number; cashFloorLocal?: number } = {}
+  options: {
+    cashReserve?: number;
+    cashFloorLocal?: number;
+    plantBasis?: TechPlantBasis | null;
+  } = {}
 ): { node: TechTreeNode; cashCost: number } | null {
   const rdScore = corp.rdScore ?? 0;
   const cashAvailable = Math.max(
@@ -35,7 +40,12 @@ export function pickBestNppTechNode(
   )
     .map((node) => ({
       node,
-      cashCost: techNodeCashCost(node, dailyGrossRevenue, options.cashFloorLocal ?? 0),
+      cashCost: techNodeCashCost(
+        node,
+        dailyGrossRevenue,
+        options.cashFloorLocal ?? 0,
+        options.plantBasis
+      ),
     }))
     .filter(
       ({ node, cashCost }) =>
@@ -71,6 +81,8 @@ export function maybePushNppTechUnlock(args: {
   dailyGrossRevenueLocal: number;
   /** Era-scaled minimum node cash price in the corp's currency (#1506). */
   techCashFloorLocal?: number;
+  /** Per-turn plant P&L the node price is valued against. */
+  techPlantBasis?: TechPlantBasis | null;
   techCurrentYear: number;
   turn: number;
   now: Date;
@@ -91,7 +103,11 @@ export function maybePushNppTechUnlock(args: {
     { ...corp, liquidCapital: cashAfterDecision },
     techCurrentYear,
     args.dailyGrossRevenueLocal,
-    { cashReserve: args.cashReserve, cashFloorLocal: args.techCashFloorLocal }
+    {
+      cashReserve: args.cashReserve,
+      cashFloorLocal: args.techCashFloorLocal,
+      plantBasis: args.techPlantBasis,
+    }
   );
   if (!pick) return;
   const { node: techNode, cashCost } = pick;

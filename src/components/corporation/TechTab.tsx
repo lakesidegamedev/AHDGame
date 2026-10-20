@@ -35,6 +35,10 @@ interface TechNode {
   exclusiveGroup?: string | null;
   cost: number;
   cashCost: number | null;
+  /** Estimated per-turn money the node is worth to this corp; null if none. */
+  valuePerTurn?: number | null;
+  /** Turns the cash price takes to earn back; null if the node has no running value. */
+  paybackTurns?: number | null;
   effects: TechEffectView[];
   unlocksStrategy: string | null;
   owned: boolean;
@@ -789,6 +793,12 @@ function TechNodeCard({
       {!isOwned && (
         <p className="mt-1.5 text-[10px] tabular-nums text-muted">
           {node.cost} R&amp;D · {fmtCash(node.cashCost)}
+        </p>
+      )}
+      {node.valuePerTurn != null && (
+        <p className="mt-0.5 text-[10px] tabular-nums text-muted">
+          Worth about {fmtCash(node.valuePerTurn)}/turn
+          {!isOwned && node.paybackTurns != null && ` · pays back in ${node.paybackTurns} turns`}
         </p>
       )}
       <div className="mt-2 text-[10px] leading-snug">{status}</div>

@@ -100,7 +100,8 @@ export async function unlockTechNode(
   const cashCost = techNodeCashCost(
     node,
     pricing.dailyGrossRevenueLocal,
-    pricing.techCashFloorLocal
+    pricing.techCashFloorLocal,
+    pricing.techPlantBasis
   );
   const check: CanUnlockResult = canUnlock(corpView, nodeId, currentYear, {
     rdScore,
