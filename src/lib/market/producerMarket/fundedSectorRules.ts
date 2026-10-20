@@ -45,11 +45,13 @@ export interface LegacySectorResultLike {
   effectiveMargin: number;
   costs: number;
   hourlyGrowthCost: number;
+  regulatoryBurden?: number;
 }
 
 /**
  * Revenue and margin from the receipt. Costs are the receipt's operating costs
- * plus the legacy growth spend, which the funded market does not cover yet.
+ * plus the legacy growth spend and the regulatory compliance cost set by
+ * government policy, neither of which the funded market charges itself.
  */
 export function fundedSectorResult<T extends LegacySectorResultLike>(
   legacy: T,
@@ -57,7 +59,10 @@ export function fundedSectorResult<T extends LegacySectorResultLike>(
 ): T {
   const revenue = Math.max(0, finite(r.revenue));
   const producerCosts = Math.max(0, revenue - finite(r.profit));
-  const costs = producerCosts + Math.max(0, finite(legacy.hourlyGrowthCost));
+  const costs =
+    producerCosts +
+    Math.max(0, finite(legacy.hourlyGrowthCost)) +
+    Math.max(0, finite(legacy.regulatoryBurden ?? 0));
   return {
     ...legacy,
     hourlyRevenue: revenue,

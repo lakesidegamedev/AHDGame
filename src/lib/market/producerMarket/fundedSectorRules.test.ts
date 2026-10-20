@@ -80,3 +80,10 @@ describe("funded cash income", () => {
     expect(fundedCashIncome(50, 70)).toBe(-20);
   });
 });
+
+describe("funded sector result keeps policy costs", () => {
+  it("charges regulatory compliance on top of the receipt", () => {
+    const r = fundedSectorResult({ ...legacy, regulatoryBurden: 5 }, receipt);
+    expect(r.costs).toBe(85);
+  });
+});
