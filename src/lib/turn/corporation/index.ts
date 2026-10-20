@@ -493,6 +493,15 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
     subsidiaryCorporationsEnabled,
     marketGovernorConfig?.groupSupplyCoordinationEnabled === true
   );
+  // The producer path is read here, before the clearing pre-pass, so a funded
+  // turn can skip legacy-only clearing work. It is claimed below, before any
+  // producer money moves.
+  const producerTurn = turn ?? gameState?.currentTurn ?? 0;
+  const producerPath = await loadProducerPath(db, {
+    turn: producerTurn,
+    worldEpoch: gameState?.worldEpochId,
+    liveFromTurn: marketGovernorConfig?.producerMarketLiveFromTurn,
+  });
   const {
     clearingInvariantBreaches,
     brandLoyaltyUpdates,
@@ -519,6 +528,7 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
     qualityPremiumPricingEnabled,
     politicalMediaOrders,
     treasuryCashLedgerEnabled,
+    fundedProducerTurn: producerPath === "funded",
   });
   const plannedPoliticalMediaOrders = new Map(
     politicalMediaSettlementPlans.map(({ orderId, plan }) => [orderId, plan])
@@ -753,12 +763,6 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
   // Funded-market cutover: one producer path per turn, claimed before any
   // producer money moves. On a funded turn the market settles first and the
   // legacy pass takes revenue and margin from its receipts.
-  const producerTurn = turn ?? gameState?.currentTurn ?? 0;
-  const producerPath = await loadProducerPath(db, {
-    turn: producerTurn,
-    worldEpoch: gameState?.worldEpochId,
-    liveFromTurn: marketGovernorConfig?.producerMarketLiveFromTurn,
-  });
   if (gameState?.worldEpochId)
     await claimProducerPath(db, {
       worldEpoch: gameState.worldEpochId,
