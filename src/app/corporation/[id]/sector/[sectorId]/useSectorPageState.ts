@@ -57,6 +57,9 @@ export interface SectorPageState {
   abandonConfirm: boolean;
   abandoning: boolean;
   attackInfo: AttackInfo | null;
+  attacking: boolean;
+  attackMsg: string;
+  attackError: string;
   splitting: boolean;
   splitMsg: string;
   splitError: string;
@@ -107,6 +110,9 @@ export type SectorPageAction =
   | { type: "SET_ABANDON_CONFIRM"; value: boolean }
   | { type: "SET_ABANDONING"; value: boolean }
   | { type: "SET_ATTACK_INFO"; value: AttackInfo | null }
+  | { type: "SET_ATTACKING"; value: boolean }
+  | { type: "SET_ATTACK_MSG"; value: string }
+  | { type: "SET_ATTACK_ERROR"; value: string }
   | { type: "SET_SPLITTING"; value: boolean }
   | { type: "SET_SPLIT_MSG"; value: string }
   | { type: "SET_SPLIT_ERROR"; value: string }
@@ -160,6 +166,9 @@ const initialState: SectorPageState = {
   abandonConfirm: false,
   abandoning: false,
   attackInfo: null,
+  attacking: false,
+  attackMsg: "",
+  attackError: "",
   splitting: false,
   splitMsg: "",
   splitError: "",
@@ -238,6 +247,12 @@ export function sectorPageReducer(
       return { ...state, abandoning: action.value };
     case "SET_ATTACK_INFO":
       return { ...state, attackInfo: action.value };
+    case "SET_ATTACKING":
+      return { ...state, attacking: action.value };
+    case "SET_ATTACK_MSG":
+      return { ...state, attackMsg: action.value };
+    case "SET_ATTACK_ERROR":
+      return { ...state, attackError: action.value };
     case "SET_SPLITTING":
       return { ...state, splitting: action.value };
     case "SET_SPLIT_MSG":

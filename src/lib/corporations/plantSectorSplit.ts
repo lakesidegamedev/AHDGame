@@ -1,7 +1,7 @@
 /** Plant-sector split rules. This module is deterministic except for the supplied roll. */
 
 export const BASELINE_PLANT_SPLIT_FRACTION = 0.01;
-export const MAX_PLANT_SPLIT_FRACTION = 0.25;
+export const MAX_PLANT_SPLIT_FRACTION = 0.2;
 export const MS_RATIO_FOR_MAX_PLANT_SPLIT = 2;
 export const MIN_PLANT_SPLIT_SUCCESS_PROBABILITY = 0.05;
 export const MAX_PLANT_SPLIT_SUCCESS_PROBABILITY = 0.95;
@@ -16,6 +16,9 @@ export interface PlantSectorSplitInput {
   /** Both MS values are read before this attempt deducts its cost. */
   attackerMarketingStrength: number;
   defenderMarketingStrength: number;
+  /** R&D scores set the odds: the better-researched side usually wins. */
+  attackerRdScore: number;
+  defenderRdScore: number;
 }
 
 export interface PlantSectorSplitQuote {
@@ -43,7 +46,7 @@ function clamp(value: number, minimum: number, maximum: number): number {
  * Convert relative MS into the automatic seizure size.
  *
  * Equal or weaker MS receives the 1 percent baseline. The share then rises
- * linearly with attacker advantage, reaching the 25 percent cap at 2:1 MS.
+ * linearly with attacker advantage, reaching the 20 percent cap at 2:1 MS.
  * The attacker never chooses this value.
  */
 export function plantSplitFractionFromMarketingStrength(
@@ -66,7 +69,7 @@ export function plantSplitFractionFromMarketingStrength(
  *
  * The attacker never chooses a percentage. Every eligible attempt starts at
  * 1 percent of the defender's opening whole-plant count. Relative MS scales
- * that automatically to at most 25 percent at a 2:1 advantage. The result is
+ * that automatically to at most 20 percent at a 2:1 advantage. The result is
  * rounded down with a one-plant minimum, and the defender keeps one plant.
  */
 export function calculatePlantSectorSplit(input: PlantSectorSplitInput): PlantSectorSplitQuote {
@@ -93,9 +96,11 @@ export function calculatePlantSectorSplit(input: PlantSectorSplitInput): PlantSe
   const marketingStrengthCost =
     plantsAtRisk > 0 ? PLANT_SPLIT_MS_LOG_SCALE * Math.ceil(Math.log2(1 + defenderPlantCount)) : 0;
 
-  const totalMarketingStrength = attackerMarketingStrength + defenderMarketingStrength;
-  const rawSuccessProbability =
-    totalMarketingStrength > 0 ? attackerMarketingStrength / totalMarketingStrength : 0.5;
+  // Marketing sets how much is at stake; R&D sets whether the attempt lands.
+  const attackerRdScore = finiteNonNegative(input.attackerRdScore);
+  const defenderRdScore = finiteNonNegative(input.defenderRdScore);
+  const totalRdScore = attackerRdScore + defenderRdScore;
+  const rawSuccessProbability = totalRdScore > 0 ? attackerRdScore / totalRdScore : 0.5;
   const successProbability = clamp(
     rawSuccessProbability,
     MIN_PLANT_SPLIT_SUCCESS_PROBABILITY,
