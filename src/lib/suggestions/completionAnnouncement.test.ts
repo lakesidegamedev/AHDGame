@@ -50,6 +50,28 @@ describe("suggestionImplementationNote", () => {
     expect(suggestionImplementationNote(s)).toBe("Bulk mothball is live.");
   });
 
+  it("ignores edit entries appended after the suggestion was marked done", () => {
+    const s = suggestion({
+      statusHistory: [
+        { status: "completed", at: new Date(), note: "Mothball all is live." },
+        { status: "completed", at: new Date(), note: "content update: gameSystem" },
+      ],
+    });
+    expect(suggestionImplementationNote(s)).toBe("Mothball all is live.");
+  });
+
+  it("uses the latest completion when a suggestion was reopened and finished again", () => {
+    const s = suggestion({
+      statusHistory: [
+        { status: "completed", at: new Date(), note: "First pass." },
+        { status: "in_progress", at: new Date(), note: "reopened" },
+        { status: "completed", at: new Date(), note: "Second pass." },
+        { status: "completed", at: new Date() },
+      ],
+    });
+    expect(suggestionImplementationNote(s)).toBe("Second pass.");
+  });
+
   it("falls back to admin notes, then null", () => {
     expect(suggestionImplementationNote(suggestion({ adminNotes: "Done in 1.13" }))).toBe(
       "Done in 1.13"
