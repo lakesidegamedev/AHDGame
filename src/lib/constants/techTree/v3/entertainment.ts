@@ -16,7 +16,7 @@ export const ENTERTAINMENT_V3: V3LaneContent = {
       name: "Marquee Billing Strategy",
       description:
         "Careful star billing and premiere staging lets theaters charge full price for every seat.",
-      effects: [{ kind: "priceRealization", pct: 0.012 }],
+      effects: [{ kind: "plantOutput", pct: 0.012 }],
     },
     {
       name: "War Bond Screenings",
@@ -38,7 +38,7 @@ export const ENTERTAINMENT_V3: V3LaneContent = {
       description:
         "A slate of award-chasing productions builds a brand that commands roadshow pricing.",
       effects: [
-        { kind: "priceRealization", pct: 0.02 },
+        { kind: "plantOutput", pct: 0.02 },
         { kind: "marketingStrength", flat: 25 },
       ],
     },
@@ -67,7 +67,7 @@ export const ENTERTAINMENT_V3: V3LaneContent = {
       description:
         "CinemaScope epics give audiences something television cannot, justifying premium tickets.",
       effects: [
-        { kind: "priceRealization", pct: 0.012 },
+        { kind: "plantOutput", pct: 0.012 },
         { kind: "marketingStrength", flat: 12 },
       ],
     },
@@ -89,7 +89,7 @@ export const ENTERTAINMENT_V3: V3LaneContent = {
       description:
         "Reserved-seat engagements with intermissions sell moviegoing as a night at the opera.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "marketingStrength", flat: 28 },
       ],
     },
@@ -119,7 +119,7 @@ export const ENTERTAINMENT_V3: V3LaneContent = {
         "Coordinated film, single, and album launches make each release sell the others.",
       effects: [
         { kind: "marketingStrength", flat: 15 },
-        { kind: "marginBonus", pp: 0.5 },
+        { kind: "laborCostReduction", pct: 0.02 },
       ],
     },
     {
@@ -143,7 +143,7 @@ export const ENTERTAINMENT_V3: V3LaneContent = {
         "Signing the acts teenagers actually follow puts the catalog at the center of the boom.",
       effects: [
         { kind: "marketingStrength", flat: 30 },
-        { kind: "priceRealization", pct: 0.02 },
+        { kind: "plantOutput", pct: 0.02 },
       ],
     },
     {
@@ -171,7 +171,7 @@ export const ENTERTAINMENT_V3: V3LaneContent = {
         "National television ad buys open a film everywhere at once at full ticket price.",
       effects: [
         { kind: "marketingStrength", flat: 18 },
-        { kind: "priceRealization", pct: 0.01 },
+        { kind: "plantOutput", pct: 0.01 },
       ],
     },
     {
@@ -194,7 +194,7 @@ export const ENTERTAINMENT_V3: V3LaneContent = {
       description:
         "The calendar is built around event films that own their release windows outright.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "marketingStrength", flat: 30 },
       ],
     },
@@ -221,7 +221,7 @@ export const ENTERTAINMENT_V3: V3LaneContent = {
     {
       name: "Pay Cable Windows",
       description: "Exclusive premium cable windows extract a second full price from every title.",
-      effects: [{ kind: "priceRealization", pct: 0.015 }],
+      effects: [{ kind: "plantOutput", pct: 0.015 }],
     },
     {
       name: "Talent Guild Peace",
@@ -243,7 +243,7 @@ export const ENTERTAINMENT_V3: V3LaneContent = {
       description: "Sequels, toys, and park rides are planned before the first film even opens.",
       effects: [
         { kind: "marketingStrength", flat: 32 },
-        { kind: "priceRealization", pct: 0.02 },
+        { kind: "plantOutput", pct: 0.02 },
       ],
     },
     {
@@ -270,7 +270,7 @@ export const ENTERTAINMENT_V3: V3LaneContent = {
       name: "Sell-Through Video Pricing",
       description: "Family titles priced to own instead of rent multiply the revenue on every hit.",
       effects: [
-        { kind: "priceRealization", pct: 0.013 },
+        { kind: "plantOutput", pct: 0.013 },
         { kind: "marketingStrength", flat: 10 },
       ],
     },
@@ -295,7 +295,7 @@ export const ENTERTAINMENT_V3: V3LaneContent = {
         "Simultaneous worldwide premieres turn each release into an international news story.",
       effects: [
         { kind: "marketingStrength", flat: 35 },
-        { kind: "priceRealization", pct: 0.02 },
+        { kind: "plantOutput", pct: 0.02 },
       ],
     },
     {
@@ -322,8 +322,8 @@ export const ENTERTAINMENT_V3: V3LaneContent = {
       name: "Collector Edition Formats",
       description: "Special editions and box sets resell the same catalog at premium prices.",
       effects: [
-        { kind: "priceRealization", pct: 0.012 },
-        { kind: "marginBonus", pp: 0.5 },
+        { kind: "plantOutput", pct: 0.012 },
+        { kind: "laborCostReduction", pct: 0.02 },
       ],
     },
     {
@@ -345,7 +345,7 @@ export const ENTERTAINMENT_V3: V3LaneContent = {
       description:
         "Interlocking story universes make every release a mandatory ticket for the fan base.",
       effects: [
-        { kind: "priceRealization", pct: 0.028 },
+        { kind: "plantOutput", pct: 0.028 },
         { kind: "marketingStrength", flat: 30 },
       ],
     },
@@ -372,7 +372,7 @@ export const ENTERTAINMENT_V3: V3LaneContent = {
     {
       name: "Premium Format Screens",
       description: "Large-format and 3D engagements carry ticket surcharges audiences happily pay.",
-      effects: [{ kind: "priceRealization", pct: 0.014 }],
+      effects: [{ kind: "plantOutput", pct: 0.014 }],
     },
     {
       name: "Platform Neutrality Deals",
@@ -394,7 +394,7 @@ export const ENTERTAINMENT_V3: V3LaneContent = {
       description:
         "Owned channels, memberships, and merch capture the full value of the loudest fans.",
       effects: [
-        { kind: "priceRealization", pct: 0.022 },
+        { kind: "plantOutput", pct: 0.022 },
         { kind: "marketingStrength", flat: 34 },
       ],
     },
@@ -423,7 +423,7 @@ export const ENTERTAINMENT_V3: V3LaneContent = {
       description:
         "Day-one premium home access sells the opening weekend to people who never left the couch.",
       effects: [
-        { kind: "priceRealization", pct: 0.013 },
+        { kind: "plantOutput", pct: 0.013 },
         { kind: "marketingStrength", flat: 12 },
       ],
     },
@@ -447,7 +447,7 @@ export const ENTERTAINMENT_V3: V3LaneContent = {
       description:
         "Premium tiers with early access and live events convert fandom into recurring revenue.",
       effects: [
-        { kind: "priceRealization", pct: 0.026 },
+        { kind: "plantOutput", pct: 0.026 },
         { kind: "marketingStrength", flat: 30 },
       ],
     },
@@ -475,8 +475,8 @@ export const ENTERTAINMENT_V3: V3LaneContent = {
       name: "Personalized Cut Delivery",
       description: "Viewers pay extra for versions tuned to their tastes, pacing, and language.",
       effects: [
-        { kind: "priceRealization", pct: 0.015 },
-        { kind: "marginBonus", pp: 0.5 },
+        { kind: "plantOutput", pct: 0.015 },
+        { kind: "laborCostReduction", pct: 0.02 },
       ],
     },
     {
@@ -499,7 +499,7 @@ export const ENTERTAINMENT_V3: V3LaneContent = {
       description:
         "Mixed-reality premiere experiences sell scarce live moments at unprecedented prices.",
       effects: [
-        { kind: "priceRealization", pct: 0.03 },
+        { kind: "plantOutput", pct: 0.03 },
         { kind: "marketingStrength", flat: 36 },
       ],
     },

@@ -43,7 +43,8 @@ import {
   tierImageUrl,
   describeTechEffect,
   techEffectCategory,
-  TECH_MARGIN_BONUS_CAP_PP,
+  TECH_INPUT_EFFICIENCY_CAP,
+  TECH_PLANT_OUTPUT_CAP,
   TECH_NODE_CASH_REVENUE_FRACTION,
   type TechCorpView,
   type TechLane,
@@ -279,10 +280,11 @@ export async function GET(_request: Request, { params }: RouteParams) {
           },
       unlockedStrategyIds: redact ? [] : getUnlockedStrategyIds(corpView),
       unlockedStrategyNames,
-      // Active tech-effect summary (transparency for the capped margin).
-      activeMarginPp: agg ? Math.round(agg.marginBonusPp * 10) / 10 : null,
-      activeMarginRawPp: agg ? Math.round(agg.marginBonusPpRaw * 10) / 10 : null,
-      marginCapPp: TECH_MARGIN_BONUS_CAP_PP,
+      // Active plant-wide tech effects against their caps.
+      plantOutputPct: agg ? Math.round(agg.plantOutputBonus * 1000) / 10 : null,
+      plantOutputCapPct: Math.round(TECH_PLANT_OUTPUT_CAP * 100),
+      inputEfficiencyPct: agg ? Math.round(agg.inputEfficiencyBonus * 1000) / 10 : null,
+      inputEfficiencyCapPct: Math.round(TECH_INPUT_EFFICIENCY_CAP * 100),
       // Overview metrics.
       totalNodes,
       techsUnlocked,

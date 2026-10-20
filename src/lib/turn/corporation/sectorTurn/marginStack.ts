@@ -456,7 +456,6 @@ export function accumulateMarginModifiers(input: MarginStackInput): MarginStackR
     negativeProductionMarginPenalty +
     disasterMarginMod +
     regionalConditionMarginMod +
-    techEffects.marginBonusPp +
     strikeMarginMod -
     (lookups.marginLevelTrimPp ?? 0);
   // Dynamic SOE efficiency (spec §11.3) replaces the old flat −15%. Driven

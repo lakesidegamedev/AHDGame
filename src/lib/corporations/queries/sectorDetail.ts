@@ -948,18 +948,6 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         : null;
       const techBuildCostMultiplier = techBuildEffects?.growthCostMultiplier ?? 1;
       const techDominanceShield = techBuildEffects?.dominanceShield ?? 0;
-      // Tech margin points ride `policyCredit` under plants like every other
-      // non-physical modifier, and `computeAllMarginModifiers` does not carry
-      // them, so name the row here rather than letting it fall into the scale
-      // factor unlabelled (ticket 1122).
-      const techMarginBonusPp = techTreesEnabled
-        ? getSectorTechEffects(
-            techCorpView,
-            sectorType,
-            sector.industryModel,
-            sector.mediaDiscriminator
-          ).marginBonusPp
-        : 0;
       // The physical input bill: the same demand rows the Inputs panel renders,
       // priced at the BILLED unit price (base x realization factor, the price
       // computeInputsCost actually charges), so the panel and the engine's
@@ -1364,7 +1352,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           ? buildPolicyStackRows({
               policyCreditAnchor: sectorAmountAnchor(enginePnl.policyCredit),
               revenueAnchor: sectorAmountAnchor(enginePnl.revenue),
-              mods: { ...mods, ...ownershipTerms, techMarginBonus: techMarginBonusPp },
+              mods: { ...mods, ...ownershipTerms },
               appliedPolicyPp: enginePnl.policyPp,
             })
           : [],

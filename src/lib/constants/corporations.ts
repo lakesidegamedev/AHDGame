@@ -1718,10 +1718,13 @@ export function calcLogisticsStrengthAfterTurn(
 // ─── R&D Score ──────────────────────────────────────────────────────────────
 
 /** Base R&D score gain per turn when any R&D budget is set */
-export const RD_BASE_GAIN_PER_TURN = 1.0;
+export const RD_BASE_GAIN_PER_TURN = 1.2;
 
-/** Scaling coefficient for log-based R&D budget scaling (matches marketing) */
-export const RD_BUDGET_SCALE = 0.65;
+/**
+ * Scaling coefficient for log-based R&D budget scaling. 20% above marketing's
+ * 0.65 (with the base gain) so tech arrives at a playable pace.
+ */
+export const RD_BUDGET_SCALE = 0.78;
 
 /** R&D score threshold where diminishing returns double (matches marketing) */
 export const RD_DIMINISHING_THRESHOLD = 100;
