@@ -182,6 +182,12 @@ const REFERENCE: CollectionEntry[] = [
       "Carried books for the producer market shadow: cash, stock, unpaid bills and prices per run and turn, last two turns kept. Read only by the shadow phase.",
   },
   {
+    name: "producerPathClaims",
+    category: "runtime",
+    notes:
+      "One row per turn recording whether it ran the legacy or funded producer path, so no turn can run both.",
+  },
+  {
     name: "offTypeHandovers",
     category: "runtime",
     notes:

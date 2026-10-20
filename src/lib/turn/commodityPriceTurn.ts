@@ -89,6 +89,7 @@ import type { State } from "@/lib/db/types/state";
 import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
 import type { CountryId } from "@/lib/constants/countries";
 import type { GameState } from "@/lib/db/types/gameState";
+import { assertLegacyProducerPathClaim } from "@/lib/market/producerMarket/liveMode";
 import { clearAllCommodities } from "@/lib/trade/snapshot";
 import { buildReachableBooks } from "@/lib/trade/reachableBook";
 import {
@@ -453,9 +454,13 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
         currentYear: 1,
         stateGdpAnchoredDemand: 1,
         hardwareInputReliefStartTurn: 1,
+        worldEpochId: 1,
       },
     }
   );
+  // The corporation phase claims this turn's producer path first. Legacy
+  // prices must never be written for a turn the funded market settled.
+  await assertLegacyProducerPathClaim(db, presetState?.worldEpochId, turn);
   const activePreset = presetState?.preset ?? "";
   // One calibration lookup for the whole pass: the supply caps bound the
   // calibrated demand and `applyDemandCalibration` applies it (ticket 1370).
