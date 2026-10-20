@@ -31,18 +31,17 @@ describe("all-metric gameplay reachability", () => {
         row.country,
         row.year
       )!;
-      expect(
-        driftProxyValue({
-          metric: primaryMetricById(row.id)!,
-          currentValue: row.opening,
-          openingValue: row.opening,
-          pressure: 0,
-          countryId: row.country as "US" | "UK" | "JP" | "IE" | "SCO" | "WAL",
-          year: row.year,
-        }),
-        `${row.board}:${row.id} unforced baseline`
-      ).toBe(row.opening);
+      const input = {
+        metric: primaryMetricById(row.id)!,
+        currentValue: row.opening,
+        openingValue: row.opening,
+        pressure: 0,
+        countryId: row.country as "US" | "UK" | "JP" | "IE" | "SCO" | "WAL",
+        year: row.year,
+      };
+      const unforced = driftProxyValue(input);
       if (row.opening >= calibration.min && row.opening <= calibration.max) {
+        expect(unforced, `${row.board}:${row.id} valid unforced baseline`).toBe(row.opening);
         expect(
           (row.favorable - row.opening) * calibration.direction,
           `${row.board}:${row.id} favorable polarity`
@@ -51,9 +50,35 @@ describe("all-metric gameplay reachability", () => {
           (row.adverse - row.opening) * calibration.direction,
           `${row.board}:${row.id} adverse polarity`
         ).toBeLessThanOrEqual(0);
+      } else {
+        // Some authored estimates exceed their physical domain. Zero policy
+        // pressure must not disable the existing gradual bounds correction.
+        const bounded = Math.max(calibration.min, Math.min(calibration.max, row.opening));
+        expect(policyDriftTarget(input), `${row.board}:${row.id} physical target`).toBe(bounded);
+        expect(Math.abs(unforced - bounded), `${row.board}:${row.id} bounds recovery`).toBeLessThan(
+          Math.abs(row.opening - bounded)
+        );
       }
     }
   });
+  it.each([
+    [100.4, 100, 100.392],
+    [-0.4, 0, -0.392],
+  ])(
+    "corrects out-of-domain water quality %s without inventing policy pressure",
+    (openingValue, target, first) => {
+      const input = {
+        metric: primaryMetricById("29")!,
+        currentValue: openingValue,
+        openingValue,
+        pressure: 0,
+        countryId: "US" as const,
+        year: 1991,
+      };
+      expect(policyDriftTarget(input)).toBe(target);
+      expect(driftProxyValue(input)).toBe(first);
+    }
+  );
   it.each(Object.keys(COUNTRY_CONFIGS))(
     "counted owner rules respond to genuine input changes in %s",
     (country) => {
