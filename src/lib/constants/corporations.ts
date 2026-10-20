@@ -1813,6 +1813,24 @@ export const RD_CAPACITY_BOOST_MIN_PCT = 0.01;
 export const RD_CAPACITY_BOOST_MAX_PCT = 0.15;
 
 /**
+ * Plants a corporation may own before management overhead starts. Set at the
+ * live 90th percentile (turn 332), so most corporations never see it.
+ */
+export const MANAGEMENT_OVERHEAD_FREE_PLANTS = 300;
+
+/**
+ * Management overhead (pp of margin, returned as a positive charge) for a
+ * corporation running `plantCount` whole plants: `ppPerDoubling` for every
+ * doubling above MANAGEMENT_OVERHEAD_FREE_PLANTS. Coordinating more plants
+ * costs every plant a little, so the largest corporations' margins thin out
+ * while ordinary ones are untouched. 0 when the knob is 0 (the default).
+ */
+export function managementOverheadPp(plantCount: number, ppPerDoubling: number): number {
+  if (!(ppPerDoubling > 0) || !(plantCount > MANAGEMENT_OVERHEAD_FREE_PLANTS)) return 0;
+  return ppPerDoubling * Math.log2(plantCount / MANAGEMENT_OVERHEAD_FREE_PLANTS);
+}
+
+/**
  * Logistical sprawl penalty: -0.5% for every 2 sectors over 15.
  * A corporation with 15 or fewer sectors has no penalty.
  * 16-17 sectors: -0.5%, 18-19: -1.0%, etc.
