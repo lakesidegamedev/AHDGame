@@ -18,6 +18,8 @@
 export const TRANSITION_MISMATCH_SHARE = 0.6;
 /** Shadow turns averaged for the classification. */
 export const TRANSITION_BASIS_TURNS = 5;
+/** Share of a fully claimed pool held back so float error never overdraws it. */
+export const POOL_FLOAT_MARGIN = 1e-9;
 /** Turns the package runs after the first funded turn. */
 export const TRANSITION_WINDOW_TURNS = 24;
 /** Capacity built after this turn chased the reverted advertising spike; reported only. */
@@ -112,7 +114,14 @@ export function transitionSupport(input: {
   const coverageByCountry = new Map<string, number>();
   for (const [country, total] of claimed) {
     const pool = Math.max(0, input.poolByCountry.get(country) ?? 0);
-    coverageByCountry.set(country, total > 0 ? Math.min(1, pool / total) : 1);
+    // A partly covered pool pays out all of it, so float error in the shares
+    // could ask for a hair more than the wallet holds and the debit's balance
+    // guard would refuse it. Keep a negligible share back; it is returned with
+    // the rest of the unspent funding.
+    coverageByCountry.set(
+      country,
+      total > 0 ? (pool < total ? (pool / total) * (1 - POOL_FLOAT_MARGIN) : 1) : 1
+    );
   }
   const payments = claims
     .map((c) => ({ ...c, claim: c.claim * (coverageByCountry.get(c.countryId) ?? 0) }))

@@ -130,3 +130,31 @@ describe("settled shadow turns for classification", () => {
     expect(shadowTurnSettled("w:live", 400, 3)).toBe(false);
   });
 });
+
+describe("support never overdraws the pool", () => {
+  it("pays a fully claimed pool without exceeding it under float error", () => {
+    const sectors = Array.from({ length: 997 }, (_, i) => ({
+      sectorId: `s${String(i).padStart(4, "0")}`,
+      countryId: "BG",
+      transition: {
+        mismatched: true,
+        legacyRevenueAnchor: 1 + i * 0.7319,
+        fundedRevenueAnchor: 0,
+        basisTurns: 5,
+      },
+      settledRevenue: 0.1,
+      mothballed: false,
+      converted: false,
+    }));
+    const pool = 15.798931;
+    const { payments } = transitionSupport({
+      turn: 10,
+      firstFundedTurn: 10,
+      sectors,
+      poolByCountry: new Map([["BG", pool]]),
+    });
+    let left = pool * 28.025652481726606;
+    for (const p of payments) left -= p.claim * 28.025652481726606;
+    expect(left).toBeGreaterThanOrEqual(0);
+  });
+});
