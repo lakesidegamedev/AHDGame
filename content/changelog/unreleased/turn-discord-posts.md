@@ -2,8 +2,8 @@
 date: 2026-10-20
 title: Turn announcements reach Discord again
 summary: Posts that come out of a turn, such as implemented suggestion cards, are delivered to Discord again.
-tags: [community]
-badges: [fix]
+tags: [community, fix]
+badges: [patch]
 areas: [backend]
 ---
 
