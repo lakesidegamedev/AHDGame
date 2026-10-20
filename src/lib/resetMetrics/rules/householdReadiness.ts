@@ -28,7 +28,7 @@ export interface HouseholdCountryCoverage {
     Record<
       HouseholdReferenceInput,
       {
-        basis: "reference" | "synthetic";
+        basis: "reference" | "synthetic" | "public-calibrated-model";
         sourceId: string;
       }
     >
@@ -61,7 +61,10 @@ export function householdCoverageGaps(
   const gaps = new Set<HouseholdCoverageGap>();
   for (const input of HOUSEHOLD_REFERENCE_INPUTS) {
     const evidence = coverage.references[input];
-    if (evidence?.basis !== "reference" || !evidence.sourceId.trim())
+    if (
+      !["reference", "public-calibrated-model"].includes(evidence?.basis ?? "") ||
+      !evidence?.sourceId.trim()
+    )
       gaps.add(`missing-reference:${input}`);
   }
   const roster = new Map(coverage.regions.map((region) => [region.regionId, region]));

@@ -1,7 +1,7 @@
 /**
  * Household publication uses complete reference inputs and paid-law evidence.
  * householdPublication calculates one national threshold and keeps countries
- * with missing inputs on their existing definitions, never synthetic households.
+ * with missing inputs on their existing definitions. Calibrated cohorts are labeled proxies.
  */
 import {
   resolveHouseholdResources,
@@ -10,17 +10,18 @@ import {
 } from "./householdResources";
 import { resolveHouseholdCountry, type HouseholdCountryCoverage } from "./householdReadiness";
 import {
-  metricLawOutlaysAtTurn,
   type MetricLawProgram,
   type MetricLawSettlement,
   metricLawRoleMatches,
   type MetricLawRoleBinding,
 } from "./lawDelivery";
-import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import type { OpeningMetricObservation } from "./openingObservation";
+import type { HouseholdCohortCalibration } from "./householdSources";
+import { householdBenefitFunding } from "./householdBenefitFunding";
 
 export interface HouseholdPublicationSource {
   incomeBasis?: "modeled-economic-income";
+  calibration?: HouseholdCohortCalibration;
   worldId: string;
   coverage: HouseholdCountryCoverage;
   inputs: readonly HouseholdResourceInput[];
@@ -77,15 +78,16 @@ export function householdPublication(input: {
     if (role.role !== "cash") continue;
     if (!Number.isFinite(role.cashShare) || role.cashShare! < 0 || role.cashShare! > 1)
       return output;
-    // Regional annual funded spending has no proven per-turn cash schedule yet.
-    // Do not turn it into a transfer by dividing it by 48 or multiplying a score.
-    if (program.scope !== "national") return output;
-    const receipts = metricLawOutlaysAtTurn([program], input.settlements, input.turn);
-    for (const receipt of receipts) {
-      if (seenPayments.has(receipt.paymentKey)) return output;
-      seenPayments.add(receipt.paymentKey);
-      annualPaidCash += receipt.amount * role.cashShare! * TURNS_PER_YEAR;
-    }
+    // Only the labeled calibrated model accepts annual funded regional accrual.
+    const receipt = householdBenefitFunding(
+      program,
+      input.settlements,
+      input.turn,
+      !!source.calibration
+    );
+    if (!receipt || seenPayments.has(receipt.key)) return output;
+    seenPayments.add(receipt.key);
+    annualPaidCash += receipt.annualAmount * role.cashShare!;
   }
   const control = source.coverage.reconciliation;
   if (
@@ -136,19 +138,23 @@ export function householdPublication(input: {
             unit,
             definitionVersion: 2,
             owner: "households",
-            status: "derived",
-            source:
-              source.incomeBasis === "modeled-economic-income"
+            status: source.calibration ? "proxy" : "derived",
+            source: source.calibration
+              ? "public-data-calibrated household cohort model"
+              : source.incomeBasis === "modeled-economic-income"
                 ? "modeled household earnings and tax owner; settled cash benefits"
                 : "reconciled reference household resource owner",
             observedAtTurn: input.turn,
             note:
+              (source.calibration
+                ? "Public-data-calibrated synthetic cohorts, not observed households. Fixed national income shape and assumed composition are rebased to regional opening incomes. National benefits use paid outlays; regional benefits use current funded annual accrual, not cash paid this turn. Assumptions and public sources: calibratedHouseholdCohorts v1. "
+                : "") +
               (source.incomeBasis === "modeled-economic-income"
-                ? "Earnings and taxes are modeled from current regional output, population and enacted game tax rates, not observed cash settlements or real-world filing-unit liabilities. Reference composition and income ranks are held fixed. Prices use the regional cost-of-living index relative to calibration, with proportional nominal repricing. Benefits require current paid funding. "
+                ? "Earnings and taxes are modeled from current regional output, population and enacted game tax rates or regional tax assessments, not observed cash settlements or real-world filing-unit liabilities. Reference composition and income ranks are held fixed. Prices use the regional cost-of-living index relative to calibration, with proportional nominal repricing. Benefits require current funding evidence. "
                 : "") +
               (id === "03"
-                ? `People below half the national median equivalised disposable income. National threshold: ${national.threshold50} ${reading.currency}. Taxes and actual paid cash transfers are included; services are not cash.`
-                : "Reference household distribution after direct taxes, employee contributions and paid cash transfers. Square-root household-size equivalisation; purchasing power uses the reviewed consumer basket."),
+                ? `People below half the national median equivalised disposable income. National threshold: ${national.threshold50} ${reading.currency}. Taxes and ${source.calibration ? "funded modeled benefits" : "actual paid cash transfers"} are included; services are not cash.`
+                : `Reference household distribution after direct taxes, employee contributions and ${source.calibration ? "funded modeled benefits" : "paid cash transfers"}. Square-root household-size equivalisation; purchasing power uses the reviewed consumer basket.`),
             countryBasis: {
               countryId: input.countryId,
               coverageKey,

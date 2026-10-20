@@ -14,7 +14,13 @@ import type { TradeFlowSnapshot } from "@/lib/db/types/tradeFlowSnapshot";
 import { getGdpAnchorRate } from "@/lib/currency/gdpAnchorRate";
 import { commodityTradeBalance } from "./rules/tradeOwner";
 import { loadTurnoutReadings } from "./loadTurnoutReadings";
-import { openingGrossPurchasingInputs1991, openingLifeCalibration1991 } from "./openingSeed1991";
+import {
+  openingGrossPurchasingInputs1991,
+  openingLifeCalibration1991,
+  openingHouseholdCalibration1991,
+} from "./openingSeed1991";
+import { prepareCalibratedHouseholds } from "./rules/calibratedHouseholdCohorts";
+import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
 import { fiscalOwnerReadings } from "./rules/fiscalOwner";
 import { nationalForceReadiness } from "./rules/forceReadiness";
 import { provisionalRealPurchasingPower } from "./rules/realPurchasingPower";
@@ -39,6 +45,8 @@ import { housingPublication, HOUSING_PUBLICATION_IDS } from "./rules/housingPubl
 import { produceHouseholdSource } from "./rules/produceHouseholdSource";
 import type { HouseholdProductionStatus } from "./rules/householdSources";
 import { modelHouseholdIncome } from "./rules/modelHouseholdIncome";
+import { resolveRegionalBudgetCadence } from "@/simulation/phases/regionalBudgetCadence";
+import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 
 let openingCalibrationCache: {
   gross: ReturnType<typeof openingGrossPurchasingInputs1991>;
@@ -183,24 +191,40 @@ export async function collectResetMetricOwnerReadings(
     states,
   });
   const stateById = new Map(states.map((s) => [s._id, s]));
-  const laws = boards.some(
-    (b) =>
-      b.scope === "national" &&
-      (b.householdSource ||
-        b.housingSource ||
-        b.householdReference ||
-        b.householdCurrentState ||
-        b.householdIncomeModel)
-  )
-    ? await loadMetricLawDelivery(db, {
-        worldId: boards[0]!.worldId,
-        turn,
-        countryIds,
-        regions: boards
-          .filter((b) => b.scope === "regional")
-          .map((b) => ({ _id: b.regionId!, countryId: b.countryId })),
-      })
-    : undefined;
+  const automaticCountries = countryIds.filter(
+    (country) =>
+      world?.preset === "1991-default" &&
+      ["US", "UK", "JP"].includes(country) &&
+      boards.some(
+        (b) =>
+          b.countryId === country &&
+          b.scope === "national" &&
+          !b.householdSource &&
+          !b.householdReference &&
+          !b.householdCurrentState &&
+          !b.householdIncomeModel
+      )
+  );
+  const laws =
+    automaticCountries.length ||
+    boards.some(
+      (b) =>
+        b.scope === "national" &&
+        (b.householdSource ||
+          b.housingSource ||
+          b.householdReference ||
+          b.householdCurrentState ||
+          b.householdIncomeModel)
+    )
+      ? await loadMetricLawDelivery(db, {
+          worldId: boards[0]!.worldId,
+          turn,
+          countryIds,
+          regions: boards
+            .filter((b) => b.scope === "regional")
+            .map((b) => ({ _id: b.regionId!, countryId: b.countryId })),
+        })
+      : undefined;
   const pressureByBoard = await loadResetPolicyPressure(db, {
     worldId: boards[0]!.worldId,
     boards,
@@ -208,9 +232,29 @@ export async function collectResetMetricOwnerReadings(
     laws,
   });
   // Only calibrated model countries need this one batched statutory-rate read.
-  const modeledCountryIds = boards
-    .filter((b) => b.scope === "national" && b.householdIncomeModel)
-    .map((b) => b.countryId);
+  const automaticPacks = new Map(
+    automaticCountries.map((countryId) => [
+      countryId,
+      prepareCalibratedHouseholds({
+        worldId: boards[0]!.worldId,
+        countryId,
+        preset: world?.preset ?? "",
+        regionIds: boards
+          .filter((b) => b.scope === "regional" && b.countryId === countryId)
+          .map((b) => b.regionId!),
+        calibration: openingHouseholdCalibration1991(countryId),
+        programs: laws?.programs ?? [],
+      }),
+    ])
+  );
+  const modeledCountryIds = [
+    ...new Set([
+      ...automaticCountries,
+      ...boards
+        .filter((b) => b.scope === "national" && b.householdIncomeModel)
+        .map((b) => b.countryId),
+    ]),
+  ];
   const modeledRegionalTaxes = modeledCountryIds.length
     ? await db
         .collection<StateBudget>("stateBudgets")
@@ -221,10 +265,38 @@ export async function collectResetMetricOwnerReadings(
         .toArray()
     : [];
   const taxesByRegion = new Map(modeledRegionalTaxes.map((r) => [r._id, r]));
+  // UK and JP regional tax owners publish annual assessments, not StateBudget rates.
+  const cohortRegionalBudgets = automaticCountries.some((c) => c !== "US")
+    ? await db
+        .collection<RegionalBudget>("regionalBudgets")
+        .find(
+          {
+            _id: { $in: regionalIds },
+            countryId: { $in: automaticCountries.filter((c) => c !== "US") },
+          },
+          {
+            projection: {
+              _id: 1,
+              countryId: 1,
+              turn: 1,
+              councilTaxRevenue: 1,
+              residentTaxRevenue: 1,
+              fixedAssetTaxRevenue: 1,
+            },
+          }
+        )
+        .toArray()
+    : [];
+  const cohortTaxByRegion = new Map(cohortRegionalBudgets.map((r) => [r._id, r]));
+  const regionalTaxCadence = resolveRegionalBudgetCadence();
   const macroByRegion = new Map(macro.map((r) => [r._id, r]));
   const productionByCountry = new Map(
     countryIds.map((countryId) => {
-      const national = boards.find((b) => b.countryId === countryId && b.scope === "national");
+      const stored = boards.find((b) => b.countryId === countryId && b.scope === "national");
+      const pack = automaticPacks.get(countryId);
+      const national = pack?.model
+        ? { ...stored, householdIncomeModel: pack.model, householdReference: pack.reference }
+        : stored;
       const modeled = national?.householdIncomeModel
         ? modelHouseholdIncome({
             worldId: boards[0]!.worldId,
@@ -240,6 +312,7 @@ export async function collectResetMetricOwnerReadings(
               .map((b) => {
                 const state = stateById.get(b.regionId!);
                 const tax = taxesByRegion.get(b.regionId!);
+                const regionalBudget = cohortTaxByRegion.get(b.regionId!);
                 return {
                   regionId: b.regionId!,
                   output: state?.gdp ?? NaN,
@@ -247,6 +320,21 @@ export async function collectResetMetricOwnerReadings(
                   costOfLiving:
                     macroByRegion.get(b.regionId!)?.economic?.costOfLiving?.value ?? NaN,
                   regionalTaxes: tax?.countryId === countryId ? tax.taxRates : undefined,
+                  ...(pack?.model && countryId !== "US"
+                    ? {
+                        annualHouseholdLevy:
+                          regionalBudget?.countryId === countryId &&
+                          Number.isSafeInteger(regionalBudget.turn) &&
+                          regionalBudget.turn > 0 &&
+                          regionalBudget.turn <= turn &&
+                          turn - regionalBudget.turn < regionalTaxCadence
+                            ? countryId === COUNTRY_CONFIGS.UK.id
+                              ? regionalBudget.councilTaxRevenue
+                              : (regionalBudget.residentTaxRevenue ?? NaN) +
+                                (regionalBudget.fixedAssetTaxRevenue ?? NaN)
+                            : NaN,
+                      }
+                    : {}),
                 };
               }),
           })
@@ -258,11 +346,11 @@ export async function collectResetMetricOwnerReadings(
       });
       return [
         countryId,
-        modeled?.gaps.length
+        pack?.gaps.length || modeled?.gaps.length
           ? {
               evaluatedAtTurn: turn,
               path: "legacy" as const,
-              gaps: modeled.gaps,
+              gaps: pack?.gaps.length ? pack.gaps : modeled!.gaps,
               source: undefined,
             }
           : produceHouseholdSource({
@@ -293,7 +381,8 @@ export async function collectResetMetricOwnerReadings(
         countryId,
         national?.householdReference ||
         national?.householdCurrentState ||
-        national?.householdIncomeModel
+        national?.householdIncomeModel ||
+        automaticPacks.has(countryId)
           ? production.source
           : national?.householdSource,
       ] as const;

@@ -47,6 +47,20 @@ const regions = {
   JP: jpRegions1991,
   IE: ieRegions1991,
 } as const;
+
+/** Fixed seed-year anchors for explicitly modeled public household cohorts. */
+export function openingHouseholdCalibration1991(country: string) {
+  if (!["US", "UK", "JP"].includes(country)) return [];
+  const id = country as "US" | "UK" | "JP";
+  const purchasing = openingGrossPurchasingInputs1991()[id];
+  return regions[id].map((r) => ({
+    regionId: String(r._id),
+    population: r.population,
+    output: r.gdp,
+    costOfLiving: purchasing[String(r._id)]!.basketIndex,
+    medianIncome: purchasing[String(r._id)]!.medianIncome,
+  }));
+}
 const delayProxyPath: Record<Country, string | null> = {
   US: null,
   UK: "healthcare.nhsWaitingTime",

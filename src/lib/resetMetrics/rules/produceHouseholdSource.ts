@@ -7,7 +7,6 @@ import { adaptHouseholdCountry, HOUSEHOLD_COUNTRY_PROFILES } from "./householdCo
 import { HOUSEHOLD_REFERENCE_INPUTS } from "./householdReadiness";
 import { allocateHouseholdCash } from "./householdResources";
 import {
-  metricLawOutlaysAtTurn,
   metricLawRoleMatches,
   type MetricLawProgram,
   type MetricLawSettlement,
@@ -18,8 +17,8 @@ import type {
   HouseholdSourceProduction,
   HouseholdFiscalControls,
 } from "./householdSources";
-import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
-import { householdReferenceGaps } from "./householdSources";
+import { householdReferenceGaps, isPublicHouseholdCalibration } from "./householdSources";
+import { householdBenefitFunding } from "./householdBenefitFunding";
 
 const keyOf = (cell: { sourceArea: string; id: string }) =>
   JSON.stringify([cell.sourceArea, cell.id]);
@@ -102,6 +101,13 @@ export function produceHouseholdSource(input: {
   }
   if (current) {
     if (
+      current.calibration &&
+      (current.incomeBasis !== "modeled-economic-income" ||
+        !isPublicHouseholdCalibration(reference?.calibration) ||
+        !isPublicHouseholdCalibration(current.calibration))
+    )
+      gaps.push("incompatible-public-cohort-provenance");
+    if (
       current.worldId !== input.worldId ||
       current.countryId !== input.countryId ||
       current.turn !== input.turn ||
@@ -163,12 +169,13 @@ export function produceHouseholdSource(input: {
   )
     return legacy(["unclassified-current-law-option"]);
   const cashByCell = new Map(current.cells.map((c) => [keyOf(c), 0]));
+  const currentCellsByKey = new Map(current.cells.map((c) => [keyOf(c), c]));
   const paidKeys = new Set<string>();
   let annualCash = 0;
   for (const program of programs) {
     const role = roles.get(program._id)!;
     if (role.role !== "cash") continue;
-    if (program.scope !== "national")
+    if (program.scope !== "national" && !current.calibration)
       return legacy(["regional-annual-allocation-is-not-a-cash-receipt"]);
     if (
       !Number.isFinite(role.cashShare) ||
@@ -183,20 +190,24 @@ export function produceHouseholdSource(input: {
       [...recipients.keys()].some((id) => !cashByCell.has(id))
     )
       return legacy(["invalid-cash-recipient-roster"]);
-    const receipts = metricLawOutlaysAtTurn([program], input.settlements, input.turn);
-    if (receipts.length !== 1) return legacy(["missing-current-cash-payment-receipt"]);
-    const receipt = receipts[0]!;
-    if (paidKeys.has(receipt.paymentKey)) return legacy(["duplicate-cash-payment"]);
-    paidKeys.add(receipt.paymentKey);
-    const pool = receipt.amount * role.cashShare! * TURNS_PER_YEAR;
+    const receipt = householdBenefitFunding(
+      program,
+      input.settlements,
+      input.turn,
+      !!current.calibration
+    );
+    if (!receipt) return legacy(["missing-current-cash-payment-receipt"]);
+    if (paidKeys.has(receipt.key)) return legacy(["duplicate-cash-payment"]);
+    paidKeys.add(receipt.key);
+    const pool = receipt.annualAmount * role.cashShare!;
     let allocation;
     try {
       allocation = allocateHouseholdCash({
         paidPool: pool,
-        recipients: current.cells.map((c) => ({
-          id: keyOf(c),
-          households: c.households,
-          eligibility: recipients.get(keyOf(c)) ?? 0,
+        recipients: role.recipients.map((r) => ({
+          id: keyOf(r),
+          households: currentCellsByKey.get(keyOf(r))!.households,
+          eligibility: r.eligibility,
         })),
       });
     } catch {
@@ -226,7 +237,9 @@ export function produceHouseholdSource(input: {
         HOUSEHOLD_REFERENCE_INPUTS.map((name) => [
           name,
           {
-            basis: "reference" as const,
+            basis: current.calibration
+              ? ("public-calibrated-model" as const)
+              : ("reference" as const),
             sourceId:
               name === "consumerBasket"
                 ? current.basketSourceId
@@ -278,5 +291,6 @@ export function produceHouseholdSource(input: {
   if (result.path === "legacy") return legacy(result.gaps);
   if (current.incomeBasis === "modeled-economic-income")
     result.source.incomeBasis = current.incomeBasis;
+  if (current.calibration) result.source.calibration = current.calibration;
   return { evaluatedAtTurn: input.turn, path: "produced", gaps: [], source: result.source };
 }

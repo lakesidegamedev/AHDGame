@@ -10,7 +10,7 @@ import {
   INCOME_TIERS,
 } from "@/lib/budget/rules/incomeTaxTiers";
 import { HOUSEHOLD_COUNTRY_PROFILES } from "./householdCountryAdapter";
-import { householdReferenceGaps } from "./householdSources";
+import { householdReferenceGaps, isPublicHouseholdCalibration } from "./householdSources";
 import { weightedMedian } from "./householdResources";
 import type {
   HouseholdCurrentState,
@@ -24,6 +24,8 @@ export interface HouseholdModelActivity {
   output: number;
   population: number;
   costOfLiving: number;
+  /** Current annual household tax assessment from the UK/JP regional budget model, not a payment receipt. */
+  annualHouseholdLevy?: number;
   /** Current resolved statutory rates, not budget revenue or a political score. */
   regionalTaxes?: IncomeTaxRates & {
     residentTax?: number;
@@ -52,6 +54,14 @@ export function modelHouseholdIncome(input: {
         (v) => v !== undefined
       ));
   if (!ref || !model) return fail("missing-reviewed-income-model");
+  if (ref.calibration && !isPublicHouseholdCalibration(ref.calibration))
+    return fail("invalid-public-cohort-calibration");
+  if (
+    ref.calibration &&
+    Array.isArray(ref.cells) &&
+    ref.cells.some((c) => !Number.isFinite(c.propertyTaxBase) || c.propertyTaxBase! < 0)
+  )
+    return fail("missing-modeled-household-property-base");
   if (
     !Object.hasOwn(HOUSEHOLD_COUNTRY_PROFILES, input.countryId) ||
     !Array.isArray(ref.gaps) ||
@@ -120,6 +130,7 @@ export function modelHouseholdIncome(input: {
   for (const base of model.regions) {
     const now = activity.get(base.regionId);
     if (
+      !ref.calibration &&
       now?.regionalTaxes &&
       [now.regionalTaxes.propertyTax, now.regionalTaxes.fixedAssetTax].some(
         (v) => v !== undefined && v !== 0
@@ -155,9 +166,18 @@ export function modelHouseholdIncome(input: {
       if (!area || areas.has(area)) return fail("ambiguous-income-geography");
       areas.set(area, base);
     }
-    if (input.countryId !== "UK" && !now.regionalTaxes)
+    if (
+      now.annualHouseholdLevy !== undefined &&
+      (!ref.calibration || !Number.isFinite(now.annualHouseholdLevy) || now.annualHouseholdLevy < 0)
+    )
+      return fail("invalid-current-regional-household-levy");
+    if (input.countryId !== "UK" && !now.regionalTaxes && now.annualHouseholdLevy === undefined)
       return fail("missing-regional-income-tax-rates");
-    if (input.countryId === "JP" && !Number.isFinite(now.regionalTaxes?.residentTax))
+    if (
+      input.countryId === "JP" &&
+      now.annualHouseholdLevy === undefined &&
+      !Number.isFinite(now.regionalTaxes?.residentTax)
+    )
       return fail("missing-regional-resident-tax");
     if (input.countryId === "US" && !completeRates(now.regionalTaxes))
       return fail("missing-regional-income-tax-rates");
@@ -213,6 +233,7 @@ export function modelHouseholdIncome(input: {
       households: c.households! * weightFactor,
       marketIncome: c.marketIncome! * incomeFactor,
       labour: c.labourIncome! * incomeFactor,
+      propertyBase: c.propertyTaxBase === undefined ? 0 : c.propertyTaxBase * incomeFactor,
       regionId: base.regionId,
     };
   });
@@ -241,12 +262,20 @@ export function modelHouseholdIncome(input: {
     payroll = 0,
     market = 0;
   const cells: HouseholdCurrentState["cells"][number][] = [];
+  const assessmentUnitsByRegion = new Map(
+    model.regions.map((r) => [
+      r.regionId,
+      raw
+        .filter((c) => c.regionId === r.regionId)
+        .reduce((s, c) => s + c.households * Math.max(1, c.adults), 0),
+    ])
+  );
   try {
     for (const c of raw) {
       const tier = earnedIncomeTier(c.marketIncome / Math.max(1, c.adults), median);
       const regional = activity.get(c.regionId)!.regionalTaxes;
       const regionalRate =
-        input.countryId === "UK"
+        input.countryId === "UK" || activity.get(c.regionId)!.annualHouseholdLevy !== undefined
           ? 0
           : input.countryId === "JP"
             ? regional!.residentTax!
@@ -254,9 +283,33 @@ export function modelHouseholdIncome(input: {
       if (!Number.isFinite(regionalRate) || regionalRate < 0 || regionalRate > 100)
         return fail("invalid-current-income-tax-rates");
       // Same liability ceiling as the game's player-income tax rules; no debt is labeled a paid deduction.
+      const propertyRate =
+        activity.get(c.regionId)!.annualHouseholdLevy !== undefined
+          ? 0
+          : (regional?.propertyTax ?? 0) + (regional?.fixedAssetTax ?? 0);
+      if (
+        [regional?.propertyTax, regional?.fixedAssetTax].some(
+          (rate) => rate !== undefined && (!Number.isFinite(rate) || rate < 0 || rate > 100)
+        )
+      )
+        return fail("invalid-current-property-levy");
+      const annualRegionalLevy =
+        ((activity.get(c.regionId)!.annualHouseholdLevy ?? 0) * Math.max(1, c.adults)) /
+        assessmentUnitsByRegion.get(c.regionId)!;
+      if (
+        !Number.isFinite(c.propertyBase) ||
+        c.propertyBase < 0 ||
+        !Number.isFinite(propertyRate) ||
+        propertyRate < 0 ||
+        propertyRate > 100
+      )
+        return fail("invalid-current-property-levy");
       const directTaxes = Math.min(
         c.marketIncome,
-        (c.marketIncome * (incomeTaxRate(taxes, tier) + regionalRate)) / 100
+        (c.marketIncome * (incomeTaxRate(taxes, tier) + regionalRate) +
+          c.propertyBase * propertyRate) /
+          100 +
+          annualRegionalLevy
       );
       const employeeContributions = Math.min(
         c.marketIncome - directTaxes,
@@ -343,6 +396,7 @@ export function modelHouseholdIncome(input: {
     gaps: [],
     current: {
       incomeBasis: "modeled-economic-income",
+      ...(ref.calibration && { calibration: ref.calibration }),
       worldId: input.worldId,
       countryId: ref.countryId,
       currency: ref.currency,

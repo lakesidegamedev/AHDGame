@@ -86,6 +86,7 @@ export async function refreshResetMetricSnapshotsTurn(input: {
               "population",
               "distribution",
               "gaps",
+              "calibration",
               "cells.id",
               "cells.sourceArea",
               "cells.households",
@@ -97,6 +98,7 @@ export async function refreshResetMetricSnapshotsTurn(input: {
               "cells.employeeContributions",
               "cells.labourIncome",
               "cells.otherDirectTaxes",
+              "cells.propertyTaxBase",
             ].map((field) => [`householdReference.${field}`, 1])
           ),
           householdCurrentState: 1,

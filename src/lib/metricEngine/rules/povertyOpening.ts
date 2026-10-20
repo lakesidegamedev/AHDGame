@@ -67,6 +67,7 @@ export function openingMetricPrograms(input: {
           _id: id,
           fundingAccountId: account?._id ?? "unsettled_opening_account",
           effectiveTurn: board.sourceTurn,
+          choice: openingChoice1991(reference),
           primaryMetricEffects: effects,
         });
       } else {
@@ -84,6 +85,7 @@ export function openingMetricPrograms(input: {
             _id: `${id}:${source.sourceId}`,
             fundingAccountId: "regional_budget",
             effectiveTurn: board.sourceTurn,
+            choice: openingChoice1991(reference),
             settlementLawId: source.sourceId,
             primaryMetricEffects: effects.map((effect) => ({
               ...effect,

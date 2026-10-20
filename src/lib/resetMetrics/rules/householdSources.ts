@@ -1,7 +1,8 @@
 /**
  * Household references keep survey observations separate from current cash flows.
  * Source decoders retain missing fields and population restrictions; current
- * producers cannot promote a marginal table into a regional distribution.
+ * producers do not promote marginal tables into measured distributions.
+ * Explicitly labeled public-calibrated cohorts are a separate model path.
  */
 import type { HouseholdAdapterCountry } from "./householdCountryAdapter";
 import type { HouseholdPublicationSource } from "./householdPublication";
@@ -17,6 +18,8 @@ export interface HouseholdReferenceCell {
   labourIncome?: number;
   /** Explicit reviewed non-income direct taxes. The first income model requires zero. */
   otherDirectTaxes?: number;
+  /** Explicit taxable housing-value proxy for a calibrated model, not observed assets. */
+  propertyTaxBase?: number;
   cashTransfers: number | null;
   directTaxes: number | null;
   employeeContributions: number | null;
@@ -37,10 +40,35 @@ export interface HouseholdDecodedReference {
   /** Reasons from source semantics, not a flag that a seed may silently clear. */
   gaps: readonly string[];
   cells: readonly HouseholdReferenceCell[];
+  calibration?: HouseholdCohortCalibration;
+}
+
+export interface HouseholdCohortCalibration {
+  kind: "public-data-calibrated-cohorts";
+  version: 1;
+  assumptions: readonly string[];
+  sourceUrls: readonly string[];
+}
+
+export function isPublicHouseholdCalibration(
+  value: HouseholdCohortCalibration | undefined
+): boolean {
+  return (
+    !!value &&
+    value.kind === "public-data-calibrated-cohorts" &&
+    value.version === 1 &&
+    Array.isArray(value.assumptions) &&
+    value.assumptions.length > 0 &&
+    value.assumptions.every((a) => typeof a === "string" && a.trim().length > 0) &&
+    Array.isArray(value.sourceUrls) &&
+    value.sourceUrls.length > 0 &&
+    value.sourceUrls.every((url) => typeof url === "string" && url.startsWith("https://"))
+  );
 }
 
 export interface HouseholdCurrentState {
   incomeBasis?: "modeled-economic-income";
+  calibration?: HouseholdCohortCalibration;
   worldId: string;
   countryId: HouseholdAdapterCountry;
   currency: string;
@@ -96,7 +124,7 @@ export interface HouseholdSourceProduction {
 }
 export type HouseholdProductionStatus = Omit<HouseholdSourceProduction, "source">;
 
-/** Reviewed reference-year calibration, not a current income frame or a synthetic population. */
+/** Reviewed reference-year calibration, not a current income frame. */
 export interface HouseholdIncomeModel {
   /** Reviewed employee incidence of the payroll instrument, between zero and one. */
   employeePayrollShare: number;
