@@ -10,8 +10,7 @@ const demandRate = (sector: keyof typeof SECTOR_STRATEGIES, strategy: string) =>
 describe("input-heavy strategy fairness", () => {
   it.each([
     ["manufacturing", "standard", 0.615],
-    // Advertising input (2026-10-19) re-rounded the trimmed rates to 3 decimals.
-    ["manufacturing", "heavy_metals", 0.615],
+    ["manufacturing", "heavy_metals", 0.614],
     ["healthcare", "biotech", 0.547],
     ["manufacturing_vehicles", "standard", 0.635],
     ["manufacturing_vehicles", "ev", 0.634],
@@ -25,11 +24,9 @@ describe("input-heavy strategy fairness", () => {
     expect(demandRate(sector, strategy)).toBeCloseTo(expected, 10);
   });
 
-  it("does not change already-healthy benchmark recipes beyond the advertising input", () => {
-    // Advertising (2026-10-19): healthy recipes absorb 7% of output value as
-    // advertising; financial/standard was trimmed back to a 17% base margin.
-    expect(demandRate("technology", "software")).toBeCloseTo(0.32, 10);
-    expect(demandRate("financial", "standard")).toBeCloseTo(0.432, 10);
+  it("does not change already-healthy benchmark recipes", () => {
+    expect(demandRate("technology", "software")).toBeCloseTo(0.25, 10);
+    expect(demandRate("financial", "standard")).toBeCloseTo(0.39, 10);
     expect(demandRate("logistics", "standard")).toBeCloseTo(0.59, 10);
     expect(demandRate("extraction", "standard")).toBeCloseTo(0.56, 10);
   });

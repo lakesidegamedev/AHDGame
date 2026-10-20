@@ -150,12 +150,11 @@ describe("1991 reset calibration does not change other era presets", () => {
     expect(
       getStrategyForOperatingModel("manufacturing", "standard", null, null, "1991-default").demand
         .energy
-      // 1991 standards carry the advertising input (2026-10-19); inputs trimmed to fund it.
-    ).toBe(0.142);
+    ).toBe(0.16);
     expect(
       getStrategyForOperatingModel("manufacturing", "standard", "vehicles", null, "1991-default")
         .demand.steel
-    ).toBe(0.169);
+    ).toBe(0.19);
     expect(getStrategyForOperatingModel("manufacturing", "standard").demand.energy).toBe(0.18);
     expect(sectorEntryFeeAnchor("1991-default")).toBe(2_500);
   });
