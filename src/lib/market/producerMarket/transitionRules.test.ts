@@ -3,6 +3,7 @@ import {
   classifySector,
   inTransitionWindow,
   landingWeight,
+  shadowTurnSettled,
   TRANSITION_WINDOW_TURNS,
   transitionSupport,
 } from "./transitionRules";
@@ -117,5 +118,15 @@ describe("transition support", () => {
     expect(
       transitionSupport({ ...base, turn: 130, poolByCountry: new Map([["US", 1000]]) }).payments
     ).toEqual([]);
+  });
+});
+
+describe("settled shadow turns for classification", () => {
+  it("skips a run's cushion turns and unparseable run ids", () => {
+    expect(shadowTurnSettled("w:r322", 322, 3)).toBe(false);
+    expect(shadowTurnSettled("w:r322", 324, 3)).toBe(false);
+    expect(shadowTurnSettled("w:r322", 325, 3)).toBe(true);
+    expect(shadowTurnSettled(undefined, 400, 3)).toBe(false);
+    expect(shadowTurnSettled("w:live", 400, 3)).toBe(false);
   });
 });
