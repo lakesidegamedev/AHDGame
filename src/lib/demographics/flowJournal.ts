@@ -12,6 +12,11 @@ import type { RefugeeReceptionResult } from "@/lib/livingConflict/rules/refugeeR
 import type { Db, Filter } from "mongodb";
 import type { AgeSexVector } from "./cohortVector";
 import {
+  validDemographicBasis,
+  type FertilityBasis,
+  type MortalityBasis,
+} from "@/lib/resetMetrics/rules/demographicMeasurement";
+import {
   demographicFlowBatchId,
   demographicRecoveryDecision,
   type DemographicFlowReceiptStatus,
@@ -52,6 +57,11 @@ export interface DemographicFlowCohortReading {
   realizedTfr: number | null;
   periodLifeExpectancy: number | null;
   dependencyBurden15To64: number | null;
+  fertility?: FertilityBasis;
+  mortality?: MortalityBasis;
+  fertilityPolicyIndex?: number;
+  populationBefore?: number;
+  populationAfter?: number;
 }
 
 export interface DemographicFlowRegionInput {
@@ -138,9 +148,17 @@ function freezeRegionInput(input: DemographicFlowRegionInput): DemographicFlowRe
   assertFiniteRecord(input.stateAfter, `stateAfter(${input.regionId})`);
   assertFiniteRecord(input.metricsAfter, `metricsAfter(${input.regionId})`);
   if (input.resetCohortReadingAfter) {
-    const { realizedTfr, periodLifeExpectancy, dependencyBurden15To64, ...required } =
-      input.resetCohortReadingAfter;
+    const {
+      realizedTfr,
+      periodLifeExpectancy,
+      dependencyBurden15To64,
+      fertility,
+      mortality,
+      ...required
+    } = input.resetCohortReadingAfter;
     assertFiniteRecord(required, `resetCohortReadingAfter(${input.regionId})`);
+    if ([fertility, mortality].some((basis) => basis && !validDemographicBasis(basis)))
+      throw new Error(`Invalid demographic measurement for ${input.regionId}`);
     for (const nullable of [realizedTfr, periodLifeExpectancy, dependencyBurden15To64])
       if (nullable !== null && !Number.isFinite(nullable))
         throw new Error(`resetCohortReadingAfter(${input.regionId}) must be finite or null`);

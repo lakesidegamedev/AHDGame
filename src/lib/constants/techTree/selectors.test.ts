@@ -7,6 +7,7 @@ import {
   techNodeValuePerTurn,
   TECH_NODE_CASH_FLOOR_ANCHOR,
   TECH_NODE_PAYBACK_TURNS,
+  TECH_NODE_VALUED_FLOOR_FRACTION,
 } from "./costs";
 import {
   canUnlock,
@@ -224,8 +225,19 @@ describe("cash cost", () => {
     expect(techNodeCashCost(node, 48_000_000, 0, basis)).toBe(
       Math.round(value * TECH_NODE_PAYBACK_TURNS)
     );
-    // The floor still applies to a small corp.
-    expect(techNodeCashCost(node, 0, 5_000_000, basis)).toBe(5_000_000);
+    // A valued node only needs a tenth of the floor, so a mid-size corp still
+    // pays value x 48 instead of the flat minimum.
+    expect(techNodeCashCost(node, 0, 5_000_000, basis)).toBe(
+      Math.round(value * TECH_NODE_PAYBACK_TURNS)
+    );
+    // A tiny corp whose node value is near zero still pays the reduced floor.
+    const tiny = {
+      primary: { revenue: 1_000, inputs: 300, labour: 200 },
+      all: { revenue: 2_000, inputs: 600, labour: 400 },
+    };
+    expect(techNodeCashCost(node, 0, 5_000_000, tiny)).toBe(
+      5_000_000 * TECH_NODE_VALUED_FLOOR_FRACTION
+    );
   });
 
   it("values a Sector-lane labour node on the primary sector only", () => {

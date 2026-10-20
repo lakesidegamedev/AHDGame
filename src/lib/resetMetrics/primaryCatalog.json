@@ -76,7 +76,7 @@
     "path": "economic.priceStability",
     "name": "Price stability",
     "description": "Consumer-price change, food/energy/housing prices, volatility. Introduce only if the economic engine owns a real price process; otherwise leave this as a diagnostic, not a fabricated 0-100 score.",
-    "unit": "% annual CPI change and volatility",
+    "unit": "% annual CPI change",
     "interpretation": "band",
     "refresh": "1",
     "aggregation": "national",

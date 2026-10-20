@@ -4,6 +4,9 @@
  * tagged with its derivation and only its designated owner may replace it.
  */
 import { primaryMetricById, type PrimaryMetricDefinition } from "../catalog";
+import type { DemographicBasis } from "./demographicMeasurement";
+import type { HouseholdRegion } from "./householdDistribution";
+import type { CountryMetricBasis } from "./householdPublication";
 
 export type ObservationStatus = "observed" | "derived" | "proxy" | "unavailable";
 
@@ -17,6 +20,19 @@ export interface OpeningMetricObservation {
   note: string;
   /** Turn this owner last published this observation; absent on legacy readings. */
   lastUpdatedTurn?: number;
+  /** Owner-specific same-observation numerator and denominator; never backfilled into history. */
+  ratioBasis?: { numerator: number; denominator: number };
+  /** Matching real-output/hours endpoints, pooled nationally before growth. */
+  growthBasis?: import("./productivity").GrowthBasis;
+  /** Sufficient age-specific flows for recomputing a national synthetic lifetime. */
+  demographicBasis?: DemographicBasis;
+  householdBasis?: HouseholdRegion;
+  /** Turn of the underlying event or ledger, distinct from its publication turn. */
+  observedAtTurn?: number;
+  /** Definition changes travel with values, never relabel legacy history. */
+  definitionVersion?: 2;
+  unit?: string;
+  countryBasis?: CountryMetricBasis;
 }
 
 export interface OpeningMetricInputs {

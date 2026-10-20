@@ -147,7 +147,7 @@ export function GrowthLeversPanel({
         </div>
         <p className="text-muted">
           To take plants from a rival, open their sector page and use Split rival plants. Your
-          marketing strength sets how many you can take, your R&amp;D sets the odds.
+          marketing strength sets how many you can take and the odds.
         </p>
       </div>
     </DenseSection>

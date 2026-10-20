@@ -633,6 +633,8 @@ describe("population vs GDP weighting distinction", () => {
     });
     expect(update.$set["economic.labourDemand"]).toBeUndefined();
     expect(update.$set["economic.labourTightness"]).toBeUndefined();
+    // A path may not be both set and unset: Mongo rejects the whole update.
+    expect(update.$set["economic.labourDemandTurn"]).toBeUndefined();
   });
 
   it("clears stale national labor telemetry even when no other metric can be rolled up", async () => {

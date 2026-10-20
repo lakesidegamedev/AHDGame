@@ -120,3 +120,18 @@ export function transitionSupport(input: {
     .sort((a, b) => (a.sectorId < b.sectorId ? -1 : 1));
   return { payments, coverageByCountry };
 }
+
+/**
+ * Whether a shadow turn is settled enough to classify from: a run's first
+ * turns spend the household opening cushion, which inflates funded revenue
+ * and would hide over-built sectors. Run ids end in `:r<first turn>`.
+ */
+export function shadowTurnSettled(
+  runId: string | undefined,
+  turn: number,
+  cushionTurns: number
+): boolean {
+  const match = /:r(\d+)$/.exec(runId ?? "");
+  if (!match) return false;
+  return turn - Number(match[1]) >= cushionTurns;
+}

@@ -3,11 +3,14 @@
  * phase B slice S3b). Each flow is one idempotent money move with a stable key
  * per world, turn and party, so a retried turn never pays twice.
  *
- * - Public funding: the plant economy's share of the commodity outlay the
- *   treasury already spends each turn. That outlay is deducted from the
+ * - Public funding: the commodity outlay the treasury already spends each
+ *   turn (each budget line times its commodity demand rate). That outlay is deducted from the
  *   treasury today and goes nowhere; here the same amount is minted into the
  *   country's public-buyer wallet as its destination. Unspent funding is
  *   burned at close, so public buyers never accumulate cash.
+ * - Construction funding: this turn's work on outstanding build orders, whose
+ *   cost was paid into a sink when each order was placed. Minted into the
+ *   country's construction-buyer wallet and burned at close if unspent.
  * - Household opening: the one-time owner-approved seed (about 3 turns of
  *   wages), minted once per world.
  * - Close: AI profit distribution and operating-payee income move to
@@ -53,7 +56,7 @@ export function publicFundingMoves(
           kind: "mint",
           amount: r.amountLocal,
           valuation: valuation(r),
-          note: "plant share of the budget outlay the treasury already spent",
+          note: "commodity share of the budget outlay the treasury already spent",
         },
         {
           kind: "credit",
@@ -95,6 +98,70 @@ export function publicReturnMoves(
           amount: r.amountLocal,
           valuation: valuation(r),
           note: "unspent public funding returns to the budget",
+        },
+      ],
+    }));
+}
+
+/** Mints each construction buyer's funding: the turn's work on already-paid build orders. */
+export function investmentFundingMoves(
+  worldEpoch: string,
+  turn: number,
+  rows: readonly (WalletAmount & { countryId: string })[]
+): MoneyMove[] {
+  return rows
+    .filter((r) => positive(r.amountLocal) > 0)
+    .map((r) => ({
+      key: `producer-investment-funding:${worldEpoch}:${turn}:${r.countryId}`,
+      kind: "producer_investment_funding",
+      turn,
+      legs: [
+        {
+          kind: "mint",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          note: "construction work on build orders already paid into the capex sink",
+        },
+        {
+          kind: "credit",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          collection: PRODUCER_ACCOUNTS,
+          filter: { _id: r.walletId },
+          path: "cash",
+          note: "construction buyer funding",
+        },
+      ],
+    }));
+}
+
+/** Burns construction work no producer could supply this turn. */
+export function investmentReturnMoves(
+  worldEpoch: string,
+  turn: number,
+  rows: readonly (WalletAmount & { countryId: string })[]
+): MoneyMove[] {
+  return rows
+    .filter((r) => positive(r.amountLocal) > 0)
+    .map((r) => ({
+      key: `producer-investment-return:${worldEpoch}:${turn}:${r.countryId}`,
+      kind: "producer_investment_return",
+      turn,
+      legs: [
+        {
+          kind: "debit",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          collection: PRODUCER_ACCOUNTS,
+          filter: { _id: r.walletId },
+          path: "cash",
+          note: "unbought construction work",
+        },
+        {
+          kind: "burn",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          note: "unbought construction work stays in the capex sink",
         },
       ],
     }));

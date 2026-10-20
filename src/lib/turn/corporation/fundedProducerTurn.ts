@@ -29,6 +29,8 @@ import {
   householdOpeningMoves,
   transitionSupportMoves,
   PRODUCER_ACCOUNTS,
+  investmentFundingMoves,
+  investmentReturnMoves,
   publicFundingMoves,
   publicReturnMoves,
   type CloseParty,
@@ -96,6 +98,13 @@ export async function runFundedProducerTurn(
     return { kind: "publicBuyer", countryId, currency };
   };
   const publicWallet = (countryId: string) => producerWalletId(worldEpoch, publicScope(countryId));
+  // Construction buyer wallet per country, same currency as its public buyer.
+  const investmentScope = (countryId: string): ProducerWalletScope => ({
+    ...publicScope(countryId),
+    kind: "investmentBuyer",
+  });
+  const investmentWallet = (countryId: string) =>
+    producerWalletId(worldEpoch, investmentScope(countryId));
 
   const demand = await buildProducerTurnDemand(db, {
     turn,
@@ -105,6 +114,7 @@ export async function runFundedProducerTurn(
     sectorOps: [],
     carry: liveCarry(lookups, worldEpoch, turn),
     publicAccountId: publicWallet,
+    investmentAccountId: investmentWallet,
   });
   // A live turn must settle every plant: a skipped one would run on legacy
   // revenue beside the funded market. Fail the turn instead.
@@ -121,7 +131,8 @@ export async function runFundedProducerTurn(
       `Funded producer turn could not prepare ${failed.length} sector(s): ${[...new Set(failed.map((f) => f.reason))].slice(0, 5).join("; ")}`
     );
   const publicScopes = demand.funding.map((f) => publicScope(f.countryId));
-  const walletScopes = [...demand.walletScopes, ...publicScopes];
+  const investmentScopes = demand.investmentFunding.map((f) => investmentScope(f.countryId));
+  const walletScopes = [...demand.walletScopes, ...publicScopes, ...investmentScopes];
   const scopeById = new Map(walletScopes.map((s) => [producerWalletId(worldEpoch, s), s]));
   await createProducerWallets(db, worldEpoch, walletScopes);
 
@@ -145,6 +156,23 @@ export async function runFundedProducerTurn(
         return {
           countryId: f.countryId,
           walletId: publicWallet(f.countryId),
+          amountLocal: f.fundingLocal * rate,
+          currencyCode: currency,
+          localPerAnchor: rate,
+        };
+      })
+    )
+  );
+  await apply(
+    investmentFundingMoves(
+      worldEpoch,
+      turn,
+      demand.investmentFunding.map((f) => {
+        const currency = countryCurrency.get(f.countryId)!;
+        const rate = rateOf(currency);
+        return {
+          countryId: f.countryId,
+          walletId: investmentWallet(f.countryId),
           amountLocal: f.fundingLocal * rate,
           currencyCode: currency,
           localPerAnchor: rate,
@@ -189,7 +217,7 @@ export async function runFundedProducerTurn(
       households: demand.households,
       // Marketing budgets keep their legacy settlement to media sellers this
       // turn; buying them here as well would spend each budget twice.
-      externalOrders: demand.publicBuyerOrders,
+      externalOrders: [...demand.publicBuyerOrders, ...demand.investmentBuyerOrders],
       eligibleOffersByOrder: demand.eligibleOffersByOrder,
     },
   });
@@ -349,6 +377,28 @@ export async function runFundedProducerTurn(
       turn,
       demand.funding.flatMap((f) => {
         const id = publicWallet(f.countryId);
+        const left = closingCash.get(id) ?? 0;
+        if (!(left > 0)) return [];
+        const currency = countryCurrency.get(f.countryId)!;
+        const rate = rateOf(currency);
+        return [
+          {
+            countryId: f.countryId,
+            walletId: id,
+            amountLocal: left * rate,
+            currencyCode: currency,
+            localPerAnchor: rate,
+          },
+        ];
+      })
+    )
+  );
+  await apply(
+    investmentReturnMoves(
+      worldEpoch,
+      turn,
+      demand.investmentFunding.flatMap((f) => {
+        const id = investmentWallet(f.countryId);
         const left = closingCash.get(id) ?? 0;
         if (!(left > 0)) return [];
         const currency = countryCurrency.get(f.countryId)!;

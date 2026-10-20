@@ -1,4 +1,4 @@
-/** Producer-market wallet identities (households, public buyers, operating payees). */
+/** Producer-market wallet identities (households, public and construction buyers, operating payees). */
 import { ZOD_CURRENCY_ENUM, type CurrencyCode } from "@/lib/constants/currencies";
 import type { ProducerEconomyAccount } from "@/lib/db/types/producerEconomy";
 
@@ -13,7 +13,7 @@ export function producerWalletId(worldEpoch: string, scope: ProducerWalletScope)
   if (
     !worldEpoch ||
     !scope.countryId ||
-    !["households", "publicBuyer", "operatingPayee"].includes(scope.kind) ||
+    !["households", "publicBuyer", "investmentBuyer", "operatingPayee"].includes(scope.kind) ||
     !ZOD_CURRENCY_ENUM.includes(scope.currency)
   )
     throw new Error("Invalid producer wallet scope");

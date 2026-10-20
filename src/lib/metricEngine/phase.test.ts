@@ -667,6 +667,20 @@ describe("runMetricEngine — v2-2/v2-3a labour wage-index Δ → medianIncome +
     const set = ops[0].updateOne.update.$set;
     expect(set["economic.laborForce.value"]).toBeCloseTo(36.15, 6);
     expect(set["economic.labourTightness.value"]).toBe(2);
+    const receipt = set.labourProductivity as unknown as {
+      points: { turn: number; output: number; hours: number }[];
+    };
+    const employment = set.labourEmployment as unknown as {
+      corporateEmployed: number;
+      backgroundEmployed: number;
+    };
+    const stateWrites = currentDemand.collectionMocks.states!.bulkWrite.mock.calls[0]![0];
+    expect(receipt.points).toHaveLength(1);
+    expect(receipt.points[0]!.turn).toBe(10);
+    expect(receipt.points[0]!.output).toBe(stateWrites[0].updateOne.update.$set.gdp);
+    expect(receipt.points[0]!.hours).toBeCloseTo(
+      ((employment.corporateEmployed + employment.backgroundEmployed) * 1808) / 48
+    );
   });
 
   it("retains the previous tightness when corporation demand was not refreshed this turn", async () => {

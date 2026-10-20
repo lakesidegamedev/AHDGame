@@ -69,6 +69,8 @@ export async function runProducerMarketShadowPhase(
       householdSeed,
       householdWallets,
       households,
+      investmentBuyerOrders,
+      investmentFundingTotal,
       marketingOrders,
       newCompanyCash,
       openingById,
@@ -100,6 +102,7 @@ export async function runProducerMarketShadowPhase(
       accounts,
       households,
       publicOrders: publicBuyerOrders,
+      investmentOrders: investmentBuyerOrders,
       marketingOrders,
       eligibleOffersByOrder,
       payables: (carry?.payables ?? []).filter((p) => cashByCorp.has(p.debtorAccountId)),
@@ -196,7 +199,12 @@ export async function runProducerMarketShadowPhase(
     const conservation = checkConservation({
       openingTotal: Object.values(carry?.accounts ?? {}).reduce((s, v) => s + v, 0),
       closingTotal: Object.values(close.accounts).reduce((s, v) => s + v, 0),
-      sources: { householdSeed, newCompanyCash: newCompanyCash.total, publicFunding },
+      sources: {
+        householdSeed,
+        newCompanyCash: newCompanyCash.total,
+        publicFunding,
+        investmentFunding: investmentFundingTotal,
+      },
       sinks: {
         exitedAccounts: exited,
         publicReturned: close.publicReturned,
@@ -212,7 +220,12 @@ export async function runProducerMarketShadowPhase(
       tolerance: MONEY_LOOP_TOLERANCE,
       conservation: {
         ...conservation,
-        sources: { householdSeed, newCompanyCash: newCompanyCash.total, publicFunding },
+        sources: {
+          householdSeed,
+          newCompanyCash: newCompanyCash.total,
+          publicFunding,
+          investmentFunding: investmentFundingTotal,
+        },
         sinks: {
           exitedAccounts: exited,
           publicReturned: close.publicReturned,
