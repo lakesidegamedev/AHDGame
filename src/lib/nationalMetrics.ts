@@ -239,7 +239,9 @@ export async function computeNationalMetrics(db: Db, turn?: number): Promise<voi
       (Object.keys(macroSetOps).length > 0 || Object.keys(unsetOps).length > 0)
     ) {
       const macroSetFields: Record<string, unknown> = { ...macroSetOps };
-      if (labourDemandTurn !== undefined && !unsetOps["economic.labourDemandTurn"]) {
+      // `$unset` values are "", so test membership: a falsy read would put the
+      // same path in $set and $unset, which Mongo rejects for the whole update.
+      if (labourDemandTurn !== undefined && !("economic.labourDemandTurn" in unsetOps)) {
         macroSetFields["economic.labourDemandTurn"] = labourDemandTurn;
       }
       macroRollupOps.push({
