@@ -89,7 +89,13 @@ import type { State } from "@/lib/db/types/state";
 import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
 import type { CountryId } from "@/lib/constants/countries";
 import type { GameState } from "@/lib/db/types/gameState";
-import { assertLegacyProducerPathClaim } from "@/lib/market/producerMarket/liveMode";
+import { readProducerPathClaim } from "@/lib/market/producerMarket/liveMode";
+import {
+  fundedLedgers,
+  PRODUCER_MARKET_OUTCOMES,
+  type FundedLedgerRow,
+} from "@/lib/market/producerMarket/fundedLedgerRules";
+
 import { clearAllCommodities } from "@/lib/trade/snapshot";
 import { buildReachableBooks } from "@/lib/trade/reachableBook";
 import {
@@ -458,9 +464,10 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
       },
     }
   );
-  // The corporation phase claims this turn's producer path first. Legacy
-  // prices must never be written for a turn the funded market settled.
-  await assertLegacyProducerPathClaim(db, presetState?.worldEpochId, turn);
+  // The corporation phase claims this turn's producer path first. On a funded
+  // turn prices come from the settled market's supply and demand, never from
+  // the formula ledgers built below.
+  const producerPath = await readProducerPathClaim(db, presetState?.worldEpochId, turn);
   const activePreset = presetState?.preset ?? "";
   // One calibration lookup for the whole pass: the supply caps bound the
   // calibrated demand and `applyDemandCalibration` applies it (ticket 1370).
@@ -1077,12 +1084,30 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
     nominalIndices.lagged
   );
 
+  if (producerPath === "funded") {
+    const outcomes = await db
+      .collection<{ _id: string; rows: FundedLedgerRow[] }>(PRODUCER_MARKET_OUTCOMES)
+      .findOne({ _id: `${presetState?.worldEpochId}:${turn}` });
+    if (!outcomes) throw new Error(`Funded turn ${turn} has no settled supply and demand`);
+    const funded = fundedLedgers(outcomes.rows);
+    global.clear();
+    for (const [c, b] of funded.global) global.set(c as CommodityType, b);
+    byState.clear();
+    for (const [stateId, m] of funded.byState)
+      byState.set(stateId, new Map([...m].map(([c, b]) => [c as CommodityType, b])));
+    byCountry.clear();
+    for (const [countryId, m] of aggregateByCountry(byState, stateToCountry))
+      byCountry.set(countryId, m);
+  }
   const pricingCtx: CommodityPricingContext = {
     ledgerBasePrices: LEDGER_BASE_PRICES,
     commodityNominalPriceIndex,
     scarcityDriftEnabled,
     commodityFixStage,
-    marketRecoveryStage: normalizeMarketRecoveryStage(fixStageCfg?.marketRecoveryStage),
+    marketRecoveryStage:
+      producerPath === "funded"
+        ? 0
+        : normalizeMarketRecoveryStage(fixStageCfg?.marketRecoveryStage),
     commandEconomyEnabled,
     priceCurrentYear,
     freightSettlementActive,

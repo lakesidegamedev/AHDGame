@@ -204,6 +204,8 @@ export function advanceProducerEconomy(input: {
   orderOutcomes: Array<{
     commodity: string;
     book: string;
+    /** Buyer account, so demand can be placed where the buyer is. */
+    accountId: string;
     requestedUnits: number;
     deliveredUnits: number;
   }>;
@@ -911,7 +913,7 @@ export function advanceProducerEconomy(input: {
       const meta = new Map(
         [...consumerOrders, ...inputOrders()].map((o) => [
           o.id,
-          { commodity: o.commodity, book: o.book },
+          { commodity: o.commodity, book: o.book, accountId: o.accountId },
         ])
       );
       return market.orders.flatMap((o) => {

@@ -115,3 +115,16 @@ export async function assertLegacyProducerPathClaim(
   if (claim?.path === "funded")
     throw new Error(`Turn ${turn} settled on the funded producer market; legacy prices refused`);
 }
+
+/** The path the corporation phase claimed for a turn, if any. */
+export async function readProducerPathClaim(
+  db: Db,
+  worldEpoch: string | null | undefined,
+  turn: number
+): Promise<ProducerPath | null> {
+  if (!worldEpoch) return null;
+  const claim = await db
+    .collection<{ _id: string; path: ProducerPath }>(PRODUCER_PATH_CLAIMS)
+    .findOne({ _id: JSON.stringify([worldEpoch, turn]) });
+  return claim?.path ?? null;
+}

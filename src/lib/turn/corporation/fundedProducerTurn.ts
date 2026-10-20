@@ -34,6 +34,10 @@ import {
   type CloseTransfer,
 } from "@/lib/market/producerMarket/liveFundingRules";
 import type { FundedReceipt } from "@/lib/market/producerMarket/fundedSectorRules";
+import {
+  fundedLedgerRows,
+  PRODUCER_MARKET_OUTCOMES,
+} from "@/lib/market/producerMarket/fundedLedgerRules";
 import type { ShadowCarryState } from "@/lib/market/producerMarket/shadowCarryRules";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { ProducerPhysicalEnv } from "./producerPhysicalPreparation";
@@ -182,6 +186,39 @@ export async function runFundedProducerTurn(
     [...settled.operatingByCorporation].map(([id, o]) => [id, o.profit])
   );
 
+  // Funded supply and demand for the price phase (slice S7).
+  const sectorState = new Map<string, string>();
+  for (const corp of lookups.corporations)
+    for (const sector of lookups.sectorsByCorp.get(corp._id.toString()) ?? [])
+      sectorState.set(sector._id.toString(), sector.stateId);
+  const stateOfWallet = (id: string) => scopeById.get(id)?.stateId ?? null;
+  const rows = fundedLedgerRows({
+    outcomes: settled.result.orderOutcomes,
+    products: settled.result.producers.flatMap((p) =>
+      p.products.map((x) => ({
+        producerId: p.id,
+        commodity: x.commodity,
+        book: x.book,
+        offeredUnits: x.offeredUnits,
+      }))
+    ),
+    stateOfAccount: (id) => {
+      const wallet = stateOfWallet(id);
+      if (wallet) return wallet;
+      const first = demand.firstWalletByCorp.get(id);
+      return first ? stateOfWallet(first.wallet) : null;
+    },
+    stateOfProducer: (id) => sectorState.get(demand.planSector.get(id) ?? "") ?? null,
+    unitScale: TURNS_PER_DAY,
+  });
+  await db
+    .collection<{ _id: string }>(PRODUCER_MARKET_OUTCOMES)
+    .replaceOne(
+      { _id: `${worldEpoch}:${turn}` },
+      { _id: `${worldEpoch}:${turn}`, worldEpoch, turn, rows, at: new Date() } as never,
+      { upsert: true }
+    );
+
   // Close. Cash read from the settled account balances (anchor units).
   const closingCash = new Map(settled.result.accounts.map((a) => [a.id, a.cash]));
   const corpById = new Map(lookups.corporations.map((c) => [c._id.toHexString(), c]));
@@ -211,7 +248,7 @@ export async function runFundedProducerTurn(
   const treasuryParty = (countryId: string): CloseParty => {
     const currency = countryCurrency.get(countryId) ?? "USD";
     return {
-      collection: "federalBudgets",
+      collection: "federalBudget",
       filter: { countryId },
       path: "treasuryBalance",
       id: `treasury:${countryId}`,
