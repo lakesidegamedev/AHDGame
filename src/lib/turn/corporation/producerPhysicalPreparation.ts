@@ -230,7 +230,7 @@ export function prepareProducerPhysicalSector(input: {
   const prepared = prepareProducerSector({
     worldEpoch: input.worldEpoch,
     turn: currentTurn,
-    sector,
+    sector: withStateBooks(sector),
     // A site with no accessible resource still retains its recipe for selling
     // old goods. Its current physical output is zero, never a fallback yield.
     recipe: {
@@ -381,5 +381,25 @@ export function prepareProducerPhysicalSector(input: {
     policyLevel,
     staffingFactor: labour.staffingFactor,
     suspended,
+  };
+}
+
+/**
+ * Freight trades on one book per country in the funded market, so stock it
+ * carried over is stamped `country:<id>`. Plant preparation knows only state
+ * and world books; read carried country-book stock back onto the plant's own
+ * state book (the market maps it to the country book again).
+ */
+export function withStateBooks(sector: CorporateSector): CorporateSector {
+  const inv = sector.producerInventory;
+  if (!inv || !inv.outputStock.some((r) => r.book.startsWith("country:"))) return sector;
+  return {
+    ...sector,
+    producerInventory: {
+      ...inv,
+      outputStock: inv.outputStock.map((r) =>
+        r.book.startsWith("country:") ? { ...r, book: `state:${sector.stateId}` } : r
+      ),
+    },
   };
 }
