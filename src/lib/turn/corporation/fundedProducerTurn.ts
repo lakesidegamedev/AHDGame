@@ -369,15 +369,26 @@ export async function runFundedProducerTurn(
     transitionSupportMoves(
       worldEpoch,
       turn,
-      support.payments.map((p) => {
-        paidByCountry.set(p.countryId, (paidByCountry.get(p.countryId) ?? 0) + p.claim);
-        return {
-          sectorId: p.sectorId,
-          amountAnchor: p.claim,
-          from: walletParty(publicWallet(p.countryId)),
-          to: corpParty(sectorOwner.get(p.sectorId)!),
-        };
-      })
+      // One payment per owner and country, not per sector: each money move
+      // costs several round trips, and sector-level moves ran to thousands.
+      [
+        ...support.payments
+          .reduce((byPayee, p) => {
+            paidByCountry.set(p.countryId, (paidByCountry.get(p.countryId) ?? 0) + p.claim);
+            const owner = sectorOwner.get(p.sectorId)!;
+            const key = `${owner}:${p.countryId}`;
+            const row = byPayee.get(key) ?? { owner, countryId: p.countryId, claim: 0 };
+            row.claim += p.claim;
+            byPayee.set(key, row);
+            return byPayee;
+          }, new Map<string, { owner: string; countryId: string; claim: number }>())
+          .entries(),
+      ].map(([key, row]) => ({
+        payeeKey: key,
+        amountAnchor: row.claim,
+        from: walletParty(publicWallet(row.countryId)),
+        to: corpParty(row.owner),
+      }))
     )
   );
   for (const [country, paid] of paidByCountry) {

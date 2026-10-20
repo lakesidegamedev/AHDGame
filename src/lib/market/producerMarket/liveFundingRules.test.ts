@@ -92,13 +92,13 @@ describe("transition support moves", () => {
     });
     const [move] = transitionSupportMoves("w", 9, [
       {
-        sectorId: "s1",
+        payeeKey: "s1",
         amountAnchor: 5,
         from: side("pub", "USD", 1),
         to: side("corp", "GBP", 0.8),
       },
       {
-        sectorId: "s2",
+        payeeKey: "s2",
         amountAnchor: 0,
         from: side("pub", "USD", 1),
         to: side("corp", "GBP", 0.8),
