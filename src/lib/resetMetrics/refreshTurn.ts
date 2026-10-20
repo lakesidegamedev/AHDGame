@@ -107,6 +107,7 @@ export async function refreshResetMetricSnapshotsTurn(input: {
           housingProductionStatus: 1,
           housingSource: 1,
           housingState: 1,
+          gameplayReferences: 1,
           // Ordinary turns need only the legacy baseline, not the full chart.
           ...(recordHistory
             ? { history: 1 }
@@ -166,6 +167,7 @@ export async function refreshResetMetricSnapshotsTurn(input: {
           asOfTurn: turn,
           lastRefreshFromTurn: board.lastRefreshFromTurn,
           priorValues: board.priorValues,
+          gameplayReferences: board.gameplayReferences,
         };
         for (const id of changedIds) fields[`observations.${id}`] = board.observations[id];
         if (board.housingState?.asOfTurn === turn) fields.housingState = board.housingState;

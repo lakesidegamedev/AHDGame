@@ -4,6 +4,7 @@ import type { ResetMetricHistoryPoint } from "./history";
 import { demographicRates } from "./demographicMeasurement";
 import { householdDistributionRollup } from "./householdDistribution";
 import { regionalCoverageKey } from "./householdPublication";
+import { outputGrowth, productivityGrowth } from "./productivity";
 
 export interface NationalMetricRegionReading {
   regionId: string;
@@ -65,6 +66,20 @@ function ownerRatio(
   regionIds?: readonly string[]
 ): number | null {
   if (!observations.length) return null;
+  if (["05", "06"].includes(metricId) && observations.some((o) => o.growthBasis)) {
+    const growth = metricId === "06" ? productivityGrowth : outputGrowth;
+    if (
+      observations.some(
+        (o) =>
+          !o.growthBasis ||
+          (o.observedAtTurn !== undefined && o.observedAtTurn !== o.growthBasis.endTurn) ||
+          growth([o.growthBasis]) === null ||
+          Math.abs(growth([o.growthBasis])! - o.value!) > 0.001
+      )
+    )
+      return null;
+    return growth(observations.map((o) => o.growthBasis!));
+  }
   if (observations.some((o) => o?.definitionVersion === 2)) {
     const first = observations[0]!;
     const basis = first.countryBasis;
@@ -212,11 +227,13 @@ export function aggregateNationalMetricObservations(
             status,
             source:
               exactRatio !== null
-                ? ["20", "55"].includes(metric.id)
-                  ? "National synthetic lifetime recomputed from pooled age-specific owner flows"
-                  : ["02", "04"].includes(metric.id)
-                    ? "Pooled modeled household income distribution, including between-region differences"
-                    : "Owner-numerator/denominator national rollup of current regional observations"
+                ? ["05", "06"].includes(metric.id)
+                  ? "National growth recomputed from matching modeled output and hours levels"
+                  : ["20", "55"].includes(metric.id)
+                    ? "National synthetic lifetime recomputed from pooled age-specific owner flows"
+                    : ["02", "04"].includes(metric.id)
+                      ? "Pooled modeled household income distribution, including between-region differences"
+                      : "Owner-numerator/denominator national rollup of current regional observations"
                 : `${kind}-weighted national rollup of current regional v2 observations`,
             owner: metric.owner,
             ...(observations[0]!.definitionVersion === 2
@@ -239,13 +256,15 @@ export function aggregateNationalMetricObservations(
               : {}),
             note:
               exactRatio !== null
-                ? ["20", "55"].includes(metric.id)
-                  ? "Recomputed from pooled deaths/exposures or births/women at each age, not averaged regional lifetimes. These are modeled flows, not observed vital-registration statistics."
-                  : ["02", "04"].includes(metric.id)
-                    ? observations[0]!.definitionVersion === 2
-                      ? observations[0]!.note
-                      : "Discrete lognormal household model fitted to regional medians and Ginis. Population weights stand in for household counts; not a measured national income distribution."
-                    : "National rate recomputed from the sum of same-observation regional counts, not a mean weighted by a different population."
+                ? ["05", "06"].includes(metric.id)
+                  ? "Matching 48-turn endpoints are pooled before growth is calculated. Productivity uses modeled hours, not timecards; output uses the economy engine's real-output level."
+                  : ["20", "55"].includes(metric.id)
+                    ? "Recomputed from pooled deaths/exposures or births/women at each age, not averaged regional lifetimes. These are modeled flows, not observed vital-registration statistics."
+                    : ["02", "04"].includes(metric.id)
+                      ? observations[0]!.definitionVersion === 2
+                        ? observations[0]!.note
+                        : "Discrete lognormal household model fitted to regional medians and Ginis. Population weights stand in for household counts; not a measured national income distribution."
+                      : "National rate recomputed from the sum of same-observation regional counts, not a mean weighted by a different population."
                 : metric.id === "03"
                   ? "Population-weighted modeled poverty estimate, not a measured count of households below an official national threshold."
                   : isProvisional
@@ -317,6 +336,7 @@ export function aggregateNationalMetricHistory(
       ...region.observations[metricId]!,
       value: region.history[metricId]![index]!.value,
       ratioBasis: region.history[metricId]![index]!.ratioBasis,
+      growthBasis: region.history[metricId]![index]!.growthBasis,
       demographicBasis: region.history[metricId]![index]!.demographicBasis,
       householdBasis: region.history[metricId]![index]!.householdBasis,
       definitionVersion: region.history[metricId]![index]!.definitionVersion,

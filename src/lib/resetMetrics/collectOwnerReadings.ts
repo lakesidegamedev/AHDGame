@@ -33,6 +33,9 @@ import {
   POLICY_DRIFT_RATE_PER_TURN,
 } from "./rules/policyDrift";
 import { linkedOutcomeTargets } from "./rules/linkedOutcomes";
+import { outputGrowth, productivityBasis, productivityGrowth } from "./rules/productivity";
+import { compatibleConditionChange, gameplayMetricPressure } from "./rules/gameplayDrivers";
+import { marketServicePressure } from "./rules/marketServices";
 import { resetMetricConditionScore } from "./conditionScore";
 import { demographicRates } from "./rules/demographicMeasurement";
 import { ownedHealthAccess } from "./rules/ownedHealthAccess";
@@ -120,6 +123,7 @@ export async function collectResetMetricOwnerReadings(
             "economic.tradeBalance.value": 1,
             resetCohortReading: 1,
             labourEmployment: 1,
+            labourProductivity: 1,
           },
         }
       )
@@ -193,6 +197,28 @@ export async function collectResetMetricOwnerReadings(
     states,
   });
   const stateById = new Map(states.map((s) => [s._id, s]));
+  const serviceMarkets = await db
+    .collection<CommodityPrice>("commodityPrices")
+    .find(
+      {
+        commodity: { $in: ["healthcare_services", "energy", "food", "coal", "oil", "natural_gas"] },
+        turn,
+      },
+      {
+        projection: {
+          _id: 0,
+          commodity: 1,
+          turn: 1,
+          ...Object.fromEntries(
+            regionalIds.flatMap((id) => [
+              [`stateDemand.${id}`, 1],
+              [`stateDeliveredSupply.${id}`, 1],
+            ])
+          ),
+        },
+      }
+    )
+    .toArray();
   const automaticCountries = countryIds.filter(
     (country) =>
       world?.preset === "1991-default" &&
@@ -563,6 +589,21 @@ export async function collectResetMetricOwnerReadings(
     }
   }
   const macroById = new Map(macro.map((row) => [String(row._id), row]));
+  const productivityReady = new Set(
+    countryIds.filter((countryId) => {
+      const regions = boards.filter((b) => b.countryId === countryId && b.scope === "regional");
+      return (
+        regions.length > 0 &&
+        regions.every((b) => {
+          const row = macroById.get(b.regionId!);
+          return (
+            row?.countryId === countryId &&
+            productivityBasis(row.labourProductivity)?.endTurn === turn
+          );
+        })
+      );
+    })
+  );
   const budgetByCountry = new Map(budgets.map((row) => [row.countryId, row]));
   const unitsByCountry = new Map(
     countryIds.map((countryId) => [countryId, units.filter((unit) => unit.countryId === countryId)])
@@ -682,12 +723,45 @@ export async function collectResetMetricOwnerReadings(
           candidateMacro?.countryId === board.countryId ? candidateMacro : undefined;
         for (const [id, field] of DIRECT_ECONOMIC_OWNERS) {
           if (!due.has(id)) continue;
+          if (id === "05" || id === "06") {
+            const basis = productivityReady.has(board.countryId)
+              ? productivityBasis(liveMacro?.labourProductivity)
+              : null;
+            const growth =
+              basis?.endTurn === turn
+                ? id === "06"
+                  ? productivityGrowth([basis])
+                  : outputGrowth([basis])
+                : null;
+            if (growth !== null && basis) {
+              updates[id] = {
+                ...board.observations[id]!,
+                value: growth,
+                status: "proxy",
+                observedAtTurn: turn,
+                growthBasis: basis,
+                source:
+                  id === "06"
+                    ? "modeled real output per modeled hour worked"
+                    : "matching modeled real-output endpoints",
+                note:
+                  id === "06"
+                    ? "Trailing 48-turn growth. Whole-economy real output and background plus corporate employment share the same window. Hours use a fixed country assumption, not recorded timecards. Funded policies affect output and employment through their owning systems, not a second headline bonus."
+                    : "Trailing 48-turn growth in the economy engine's real-output level. National growth pools opening and closing output before calculating the change. This is a game model, not observed national accounts.",
+              };
+              continue;
+            }
+            if (board.observations[id]?.growthBasis) {
+              updates[id] = board.observations[id]!;
+              continue;
+            }
+          }
           const value = liveMacro?.economic?.[field]?.value;
           if (typeof value !== "number" || !Number.isFinite(value)) continue;
           updates[id] = {
             ...board.observations[id]!,
             value,
-            status: id === "03" ? "proxy" : "derived",
+            status: id === "03" || id === "06" ? "proxy" : "derived",
             source: `current regional economy engine: ${field}`,
             note:
               id === "03"
@@ -822,7 +896,22 @@ export async function collectResetMetricOwnerReadings(
       // deliberately labelled as a game-calibrated estimate so the UI never
       // presents it as a fresh measurement. Owners with live ledgers above
       // remain fail-closed.
-      const pressure = pressureByBoard.get(board._id) ?? {};
+      const pressure = { ...(pressureByBoard.get(board._id) ?? {}) };
+      const regions =
+        board.scope === "regional"
+          ? [board.regionId!]
+          : boards
+              .filter((b) => b.scope === "regional" && b.countryId === board.countryId)
+              .map((b) => b.regionId!);
+      for (const [id, points] of Object.entries(
+        marketServicePressure(serviceMarkets, regions, turn, board.scope === "national")
+      ))
+        pressure[id] = Math.max(-1.2, Math.min(1.2, (pressure[id] ?? 0) + points));
+      // T-1 published conditions break same-turn circular feedback. Current law
+      // settlement remains T; measured owners above are never overwritten.
+      if (board.scope === "regional")
+        for (const [id, points] of Object.entries(gameplayMetricPressure(board, scoreYear)))
+          pressure[id] = Math.max(-1.2, Math.min(1.2, (pressure[id] ?? 0) + points));
       for (const id of dueIds) {
         if (updates[id] || FAIL_CLOSED_OWNER_IDS.has(id)) continue;
         const prior = board.observations[id];
@@ -856,10 +945,10 @@ export async function collectResetMetricOwnerReadings(
           value,
           status: "proxy",
           source: moved
-            ? `provisional continuity owner: ${prior.owner}, moved by enacted-law and Cabinet pressure`
+            ? `game outcome owner: ${prior.owner}, funded policy delivery and lagged game conditions`
             : `provisional continuity owner: ${prior.owner}`,
           note: moved
-            ? "Game-calibrated estimate until this owner has a physical live ledger: funded laws and active Cabinet initiatives move this line toward their settlement each refresh, and it returns toward its opening when they lapse."
+            ? "Modeled estimate, not a survey or counted ledger. Current funded laws and Cabinet delivery combine with bounded prior-turn livelihood, production and service conditions. Effects settle gradually; withdrawn support decays rather than granting a permanent bonus."
             : "Game-calibrated carry-forward until this owner has a physical live ledger. Laws and actions affect underlying systems where implemented; this estimate does not invent a direct bonus.",
         };
       }
@@ -909,14 +998,22 @@ export async function collectResetMetricOwnerReadings(
         const current = Object.fromEntries(
           Object.entries({ ...board.observations, ...updates }).map(([id, o]) => [id, o.value])
         );
-        // Legacy linked estimates have old-definition opening baselines. Until
-        // those owners migrate, do not compare disposable income/relative poverty
-        // or payment burden against gross-income/proxy/index opening values.
+        // Compare new household/housing units only to their own pinned baseline.
+        // Otherwise a migration could look like an economic shock. These
+        // livelihood channels intentionally use T-1 published household values.
+        const linkedOpening = { ...opening };
         for (const id of ["02", "03", "24", "41"])
-          if (board.observations[id]?.definitionVersion === 2)
-            current[id] = opening[id] ?? current[id];
+          if (board.observations[id]?.definitionVersion === 2) {
+            const observation = board.observations[id]!;
+            const reference = board.gameplayReferences?.[id];
+            if (reference?.definitionVersion === 2 && reference.unit === observation.unit) {
+              current[id] = observation.value;
+              linkedOpening[id] = reference.value;
+            } else current[id] = opening[id] ?? current[id];
+          }
         const policyTargets: Record<string, number> = {};
         for (const id of ["19", "24", "41", "42"]) {
+          if (board.observations[id]?.definitionVersion === 2) continue;
           const metric = primaryMetricById(id)!;
           const value = policyDriftTarget({
             metric,
@@ -942,6 +1039,10 @@ export async function collectResetMetricOwnerReadings(
           "48",
           "50",
         ].flatMap((id) => {
+          if (board.observations[id]?.definitionVersion === 2) {
+            const change = compatibleConditionChange(board, id, board.countryId, scoreYear);
+            return change === null ? [] : [change];
+          }
           const metric = primaryMetricById(id)!;
           const now = current[id],
             base = opening[id];
@@ -950,7 +1051,12 @@ export async function collectResetMetricOwnerReadings(
           const b = resetMetricConditionScore(metric, base, board.countryId, scoreYear);
           return a !== null && b !== null ? [a - b] : [];
         });
-        const targets = linkedOutcomeTargets({ opening, current, policyTargets, conditionChanges });
+        const targets = linkedOutcomeTargets({
+          opening: linkedOpening,
+          current,
+          policyTargets,
+          conditionChanges,
+        });
         for (const [id, target] of Object.entries(targets)) {
           if (!due.has(id)) continue;
           const prior = board.observations[id]!;

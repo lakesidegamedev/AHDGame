@@ -28,6 +28,29 @@ function completeRegionalObservations(value: (metricId: string) => number) {
 }
 
 describe("national v2 metric aggregation", () => {
+  it("pools output and hours at matching endpoints, including historical samples", () => {
+    const basis = {
+      startTurn: 1,
+      endTurn: 49,
+      openingOutput: 100,
+      closingOutput: 110,
+      openingHours: 10,
+      closingHours: 10,
+    };
+    const other = { ...basis, closingOutput: 100, closingHours: 15 };
+    const regions = [basis, other].map((growthBasis, i) => ({
+      regionId: String(i),
+      population: 100,
+      gdp: 100,
+      observations: {
+        ...completeRegionalObservations(() => 10),
+        "06": { ...observation("06", i ? -100 / 3 : 10, "proxy"), growthBasis, observedAtTurn: 49 },
+      },
+      history: { "06": [{ turn: 49, value: i ? -100 / 3 : 10, growthBasis }] },
+    }));
+    expect(aggregateNationalMetricObservations(regions)["06"]!.value).toBeCloseTo(-16);
+    expect(aggregateNationalMetricHistory("06", regions)[0]!.value).toBeCloseTo(-16);
+  });
   it("reports the oldest contributing publication and leaves legacy freshness unknown", () => {
     const first: Record<string, OpeningMetricObservation> = completeRegionalObservations(() => 10);
     const second: Record<string, OpeningMetricObservation> = completeRegionalObservations(() => 20);

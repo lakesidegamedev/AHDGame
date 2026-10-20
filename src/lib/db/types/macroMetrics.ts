@@ -16,6 +16,7 @@ import type { EconomicModelState } from "@/lib/constants/economicModels";
 import type { StateMetrics, StateMetricValue } from "./stateMetrics";
 import type { CrisisEconomicExposure } from "@/lib/livingConflict/rules/economicExposure";
 import type { EmploymentState } from "@/lib/labour/rules/employment";
+import type { ProductivityState } from "@/lib/resetMetrics/rules/productivity";
 import type { DemographicFlowCohortReading } from "@/lib/demographics/flowJournal";
 
 /**
@@ -31,6 +32,8 @@ import type { DemographicFlowCohortReading } from "@/lib/demographics/flowJourna
 export interface MacroMetricsDoc {
   /** Initialized from existing employment; cleared on reset before new-world seeding. */
   labourEmployment?: EmploymentState;
+  /** Matching modeled output/hours, bounded to 49 turns; cleared on reset. */
+  labourProductivity?: ProductivityState;
   /** Bounded crisis pressure feeding actual civilian labour and GDP potential. */
   livingConflictExposure?: CrisisEconomicExposure;
   /** stateId, or a national-scope rollup id ("federal", "uk_national", …). */

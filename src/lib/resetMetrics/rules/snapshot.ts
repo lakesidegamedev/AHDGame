@@ -26,6 +26,8 @@ export interface ResetMetricSnapshot {
   history?: ResetMetricHistory;
   /** Immutable policy baseline, independent of the bounded history window. */
   openingValues?: Record<string, number>;
+  /** First compatible gameplay baseline after a unit change; wiped on world reset. */
+  gameplayReferences?: Record<string, { value: number; unit?: string; definitionVersion: 2 }>;
   /** Compact preceding owner values make lagged turn retries deterministic. */
   priorValues?: Record<string, number | null>;
   /** Reviewed upstream owner inputs. World-scoped; this entire collection is wiped on reset. */

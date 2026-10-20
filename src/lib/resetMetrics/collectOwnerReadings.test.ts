@@ -9,6 +9,7 @@ import {
 } from "./openingSeed1991";
 import { collectResetMetricOwnerReadings } from "./collectOwnerReadings";
 import { refreshResetMetricBoard } from "./rules/refresh";
+import { advanceProductivity, type ProductivityState } from "./rules/productivity";
 
 const boards = buildOpeningMetricSnapshots1991("test-world", 1);
 const opening = openingGrossPurchasingInputs1991();
@@ -48,6 +49,73 @@ function mockOwnerSources(db: ReturnType<typeof createMockDb>) {
 }
 
 describe("first live v2 metric owners", () => {
+  it.each(["US", "UK", "JP"] as const)(
+    "adopts matching growth windows country-wide, not one region at a time in %s",
+    async (country) => {
+      const db = createMockDb();
+      mockOwnerSources(db);
+      const regional = boards
+        .filter((b) => b.countryId === country && b.scope === "regional")
+        .slice(0, 2);
+      let window: ProductivityState | undefined;
+      for (let turn = 1; turn <= 49; turn++)
+        window = advanceProductivity({
+          previous: window,
+          turn,
+          employmentTurn: turn,
+          countryId: country,
+          output: 1000 * 1.03 ** ((turn - 1) / 48),
+          employed: 100 * 1.01 ** ((turn - 1) / 48),
+        });
+      const rows = regional.map((b, i) => ({
+        _id: b.regionId,
+        countryId: country,
+        economic: { gdpGrowth: { value: 99 }, productivityGrowth: { value: 99 } },
+        labourProductivity: i ? undefined : window,
+      }));
+      db.collection("macroMetrics").find.mockReturnValue({
+        toArray: vi.fn().mockResolvedValue(rows),
+      });
+      const partial = await collectResetMetricOwnerReadings(db as unknown as Db, regional, 49);
+      for (const b of regional) expect(partial[b._id]!.updates["06"]!.value).toBe(99);
+      rows[1]!.labourProductivity = window;
+      const ready = await collectResetMetricOwnerReadings(db as unknown as Db, regional, 49);
+      for (const b of regional) {
+        expect(ready[b._id]!.updates["06"]!.value).toBeCloseTo(100 * (1.03 / 1.01 - 1));
+        expect(ready[b._id]!.updates["05"]!.value).toBeCloseTo(3);
+        expect(ready[b._id]!.updates["06"]!.observedAtTurn).toBe(49);
+      }
+      const adopted = regional.map((b) => ({
+        ...b,
+        observations: { ...b.observations, ...ready[b._id]!.updates },
+      }));
+      const stale = await collectResetMetricOwnerReadings(db as unknown as Db, adopted, 50);
+      expect(stale[adopted[0]!._id]!.updates["06"]!.observedAtTurn).toBe(49);
+    }
+  );
+  it("uses measured local delivery shortfalls, not global spare capacity, in health estimates", async () => {
+    const db = createMockDb();
+    mockOwnerSources(db);
+    const board = boards.find((b) => b._id === "UK:LON")!;
+    const market = {
+      commodity: "healthcare_services",
+      turn: 13,
+      stateDemand: { LON: 100 },
+      stateDeliveredSupply: { LON: 100 },
+    };
+    db.collection("commodityPrices").find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([market]),
+    });
+    const full = await collectResetMetricOwnerReadings(db as unknown as Db, [board], 13);
+    market.stateDeliveredSupply.LON = 50;
+    const short = await collectResetMetricOwnerReadings(db as unknown as Db, [board], 13);
+    expect(short[board._id]!.updates["16"]!.value!).toBeLessThan(
+      full[board._id]!.updates["16"]!.value!
+    );
+    expect(short[board._id]!.updates["18"]!.value!).toBeGreaterThan(
+      full[board._id]!.updates["18"]!.value!
+    );
+  });
   it.each([
     ["SCO", "LOT", "SCO"],
     ["WAL", "CDF", "WAL"],
@@ -473,7 +541,7 @@ describe("first live v2 metric owners", () => {
     const lifted = funded[board._id]!.updates["26"]!;
     expect(lifted.status).toBe("proxy");
     expect(lifted.value!).toBeGreaterThan(opening);
-    expect(lifted.source).toContain("moved by enacted-law and Cabinet pressure");
+    expect(lifted.source).toContain("funded policy delivery and lagged game conditions");
     // A metric the law does not target is still a plain carry-forward.
     expect(funded[board._id]!.updates["27"]!.value).toBe(board.observations["27"]!.value);
     expect(funded[board._id]!.updates["27"]!.source).toBe("provisional continuity owner: transit");

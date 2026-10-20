@@ -4,6 +4,7 @@ export interface ResetMetricHistoryPoint {
   turn: number;
   value: number;
   ratioBasis?: { numerator: number; denominator: number };
+  growthBasis?: OpeningMetricObservation["growthBasis"];
   demographicBasis?: OpeningMetricObservation["demographicBasis"];
   householdBasis?: OpeningMetricObservation["householdBasis"];
   definitionVersion?: 2;
@@ -102,6 +103,7 @@ export function appendMetricHistory(
         if (
           last.value !== observation.value ||
           JSON.stringify(last.ratioBasis) !== JSON.stringify(observation.ratioBasis) ||
+          JSON.stringify(last.growthBasis) !== JSON.stringify(observation.growthBasis) ||
           JSON.stringify(last.demographicBasis) !== JSON.stringify(observation.demographicBasis) ||
           JSON.stringify(last.householdBasis) !== JSON.stringify(observation.householdBasis) ||
           last.definitionVersion !== observation.definitionVersion ||
@@ -121,6 +123,7 @@ export function appendMetricHistory(
             turn,
             value: observation.value,
             ...(observation.ratioBasis ? { ratioBasis: observation.ratioBasis } : {}),
+            ...(observation.growthBasis ? { growthBasis: observation.growthBasis } : {}),
             ...(observation.demographicBasis
               ? { demographicBasis: observation.demographicBasis }
               : {}),

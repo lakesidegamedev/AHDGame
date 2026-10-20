@@ -22,6 +22,8 @@ export interface OpeningMetricObservation {
   lastUpdatedTurn?: number;
   /** Owner-specific same-observation numerator and denominator; never backfilled into history. */
   ratioBasis?: { numerator: number; denominator: number };
+  /** Matching real-output/hours endpoints, pooled nationally before growth. */
+  growthBasis?: import("./productivity").GrowthBasis;
   /** Sufficient age-specific flows for recomputing a national synthetic lifetime. */
   demographicBasis?: DemographicBasis;
   householdBasis?: HouseholdRegion;

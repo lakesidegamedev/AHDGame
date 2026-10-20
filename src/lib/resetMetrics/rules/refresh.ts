@@ -57,6 +57,7 @@ function sameObservation(a: OpeningMetricObservation | undefined, b: OpeningMetr
     a.ratioBasis?.denominator === b.ratioBasis?.denominator &&
     JSON.stringify(a.demographicBasis) === JSON.stringify(b.demographicBasis) &&
     JSON.stringify(a.householdBasis) === JSON.stringify(b.householdBasis) &&
+    JSON.stringify(a.growthBasis) === JSON.stringify(b.growthBasis) &&
     a.definitionVersion === b.definitionVersion &&
     a.unit === b.unit &&
     JSON.stringify(a.countryBasis) === JSON.stringify(b.countryBasis) &&
@@ -200,6 +201,18 @@ export function refreshResetMetricBoard(input: MetricRefreshInput): MetricRefres
       Object.entries(board.observations).map(([id, o]) => [id, o.value])
     ),
     observations: { ...board.observations, ...updates },
+    gameplayReferences: {
+      ...board.gameplayReferences,
+      ...Object.fromEntries(
+        Object.entries(updates).flatMap(([id, o]) =>
+          o.definitionVersion === 2 &&
+          o.value !== null &&
+          (board.gameplayReferences?.[id]?.unit !== o.unit || !board.gameplayReferences?.[id])
+            ? [[id, { value: o.value, unit: o.unit, definitionVersion: 2 as const }]]
+            : []
+        )
+      ),
+    },
     ...(input.housingState ? { housingState: input.housingState } : {}),
     ...(input.householdProductionStatus
       ? { householdProductionStatus: input.householdProductionStatus }
