@@ -32,6 +32,7 @@ import type { SupremeCourtSeat } from "@/lib/db/types/scotus";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
 import { awardOfficeHolderAchievements } from "@/lib/achievements/officeHolders";
 import { logger } from "../observability/logger";
+import { appendActionGrantLog } from "./actionGrantLog";
 import {
   observeGovernmentAccountability,
   memberAccountabilityDrain,
@@ -357,39 +358,33 @@ export async function processActionRefresh(
     // snapshotted actions value (optimistic concurrency) let a mid-turn spend
     // cancel the whole refresh while partyInfluenceTurn still added its bonus
     // via a live $actions pipeline - leaving only the party grant (Refs #4457).
+    const liveActions = { $ifNull: ["$actions", 0] };
+    const hoardPenalty = {
+      $cond: [{ $gt: [liveActions, energyThreshold] }, ACTION_HOARD_PENALTY, 0],
+    };
+    const newActions = {
+      $min: [
+        energyCap,
+        { $max: [0, { $add: [{ $subtract: [liveActions, hoardPenalty] }, actionRefresh] }] },
+      ],
+    };
     ops.push({
       updateOne: {
         filter: { _id: character._id },
         update: [
           {
             $set: {
-              actions: {
-                $min: [
-                  energyCap,
-                  {
-                    $max: [
-                      0,
-                      {
-                        $add: [
-                          {
-                            $subtract: [
-                              { $ifNull: ["$actions", 0] },
-                              {
-                                $cond: [
-                                  { $gt: [{ $ifNull: ["$actions", 0] }, energyThreshold] },
-                                  ACTION_HOARD_PENALTY,
-                                  0,
-                                ],
-                              },
-                            ],
-                          },
-                          actionRefresh,
-                        ],
-                      },
-                    ],
-                  },
-                ],
-              },
+              actions: newActions,
+              actionGrantLog: appendActionGrantLog({
+                turn: currentTurn,
+                source: "personal",
+                granted: actionRefresh,
+                before: liveActions,
+                after: newActions,
+                hoardPenalty,
+                cap: energyCap,
+                at: now,
+              }),
             },
           },
         ],
