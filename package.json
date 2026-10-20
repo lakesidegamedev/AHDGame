@@ -190,7 +190,7 @@
     "tailwindcss": "^4",
     "topojson-server": "^3.0.1",
     "typescript": "6.0.2",
-    "vite": "^8.3.0",
+    "vite": "^8.3.4",
     "vitest": "^5.0.1"
   },
   "license": "PolyForm-Noncommercial-1.0.0"
