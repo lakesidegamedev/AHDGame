@@ -2020,7 +2020,13 @@ export function computeAllMarginModifiers(
   regionalConditionsModifier: number = 0,
   regionalConditionModifiers: { label: string; marginEffect: number }[] = [],
   /** The sprawl margin (pp) the turn actually applied, when recorded (SOEs pay on the state's holdings). */
-  sprawlMarginOverride: number | null = null
+  sprawlMarginOverride: number | null = null,
+  /**
+   * The dominance penalty (pp) the turn actually applied, when recorded. It
+   * already carries the plants fade, tech shield and running-cost scale that
+   * the share alone cannot reproduce.
+   */
+  dominanceMarginOverride: number | null = null
 ): MarginModifiers {
   const unemploymentMod = getUnemploymentMarginModifier(metrics.unemploymentRate);
   const gridMod = getGridReliabilityMarginModifier(metrics.gridReliability);
@@ -2079,7 +2085,9 @@ export function computeAllMarginModifiers(
     : 0;
 
   const typeSwitchMod = typeSwitchPenaltyActive ? TYPE_SWITCH_MARGIN_PENALTY : 0;
-  const dominanceMarginMod = stateOwned ? 0 : getDominanceMarginPenalty(marketSharePercent);
+  const dominanceMarginMod = stateOwned
+    ? 0
+    : (dominanceMarginOverride ?? getDominanceMarginPenalty(marketSharePercent));
   // Regulatory burden is deducted from revenue (not margin) by the sector loop.
   // We surface its margin-point equivalent here so the UI breakdown can show
   // the full cost of dominance in one place. NOT included in `totalMod` to
