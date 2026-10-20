@@ -26,9 +26,7 @@ import {
   type ProfitOwnerKind,
 } from "@/lib/market/producerMarket/profitDistributionRules";
 import {
-  closeTransferMoves,
   householdOpeningMoves,
-  transitionSupportMoves,
   PRODUCER_ACCOUNTS,
   investmentFundingMoves,
   investmentReturnMoves,
@@ -48,6 +46,8 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { ProducerPhysicalEnv } from "./producerPhysicalPreparation";
 import type { CorporationLookups } from "./types";
 import { buildProducerTurnDemand } from "./producerTurnDemand";
+import type { SettlementClose } from "@/lib/market/producerMarket/settlement";
+import type { EconomyResult } from "@/lib/market/producerMarket/settlement";
 import { NO_PHYSICAL_CAPACITY } from "./producerSectorPlan";
 import { newEntrantProducerBooks } from "@/lib/market/producerMarket/openingState";
 import {
@@ -209,6 +209,114 @@ export async function runFundedProducerTurn(
     );
   }
 
+  const corpById = new Map(lookups.corporations.map((c) => [c._id.toHexString(), c]));
+  const corpParty = (id: string): CloseParty => {
+    const corp = corpById.get(id)!;
+    const currency = corp.liquidCurrencyCode ?? "USD";
+    return {
+      collection: "corporations",
+      filter: { _id: new ObjectId(id) },
+      path: "liquidCapital",
+      id,
+      currencyCode: currency,
+      localPerAnchor: rateOf(currency),
+    };
+  };
+  const walletParty = (id: string): CloseParty => {
+    const scope = scopeById.get(id);
+    return {
+      collection: PRODUCER_ACCOUNTS,
+      filter: { _id: id },
+      path: "cash",
+      id,
+      currencyCode: scope?.currency ?? "USD",
+      localPerAnchor: rateOf(scope?.currency),
+    };
+  };
+
+  const corpOfPlan = new Map(
+    demand.preparedSectors.map((row) => [row.plan.id, row.plan.accountId])
+  );
+  const sectorOwner = new Map<string, string>();
+  for (const corp of lookups.corporations)
+    for (const sector of lookups.sectorsByCorp.get(corp._id.toString()) ?? [])
+      sectorOwner.set(sector._id.toHexString(), corp._id.toHexString());
+  // Closing transfers computed from the settled market and frozen with it: AI
+  // profit to households, operating income to households, and the transition
+  // floor from unspent public funding. One settlement write instead of
+  // thousands of money moves (each costs several prod round trips).
+  const closeAtSettlement = (market: EconomyResult): SettlementClose => {
+    const closingCash = new Map(market.accounts.map((a) => [a.id, a.cash]));
+    const settledProfitByCorp = new Map<string, number>();
+    const revenueBySector = new Map<string, number>();
+    for (const r of market.producers) {
+      const corp = corpOfPlan.get(r.id);
+      if (corp) settledProfitByCorp.set(corp, (settledProfitByCorp.get(corp) ?? 0) + r.profit);
+      const sectorId = demand.planSector.get(r.id);
+      if (sectorId) revenueBySector.set(sectorId, r.revenue);
+    }
+    const transfers: SettlementClose["transfers"] = planFundedClose({
+      settledProfitByCorp,
+      closingCash,
+      ownerKindByCompany: demand.ownerKindByCompany,
+      householdFor: (corpId) => demand.firstWalletByCorp.get(corpId)?.wallet ?? null,
+      householdForPayee: demand.householdForPayee,
+      corpParty,
+      walletParty,
+    }).map((t) => ({
+      reason: t.reason,
+      fromAccountId: t.from.id,
+      toAccountId: t.to.id,
+      amountAnchor: t.amountAnchor,
+    }));
+    const support = input.firstFundedTurn
+      ? transitionSupport({
+          turn,
+          firstFundedTurn: input.firstFundedTurn,
+          sectors: lookups.corporations.flatMap((corp) =>
+            (lookups.sectorsByCorp.get(corp._id.toString()) ?? []).map((sector) => ({
+              sectorId: sector._id.toHexString(),
+              countryId: String(sector.countryId ?? corp.countryId ?? ""),
+              transition: sector.cutoverTransition,
+              settledRevenue: revenueBySector.get(sector._id.toHexString()) ?? 0,
+              mothballed: sector.mothballed === true,
+              converted: sector.cutoverConvertedAtTurn != null,
+            }))
+          ),
+          poolByCountry: new Map(
+            demand.funding.map((f) => [
+              f.countryId,
+              Math.max(0, closingCash.get(publicWallet(f.countryId)) ?? 0),
+            ])
+          ),
+        })
+      : { payments: [], coverageByCountry: new Map<string, number>() };
+    const byPayee = new Map<string, SettlementClose["transfers"][number]>();
+    const paid: Record<string, number> = {};
+    for (const p of support.payments) {
+      paid[p.countryId] = (paid[p.countryId] ?? 0) + p.claim;
+      const owner = sectorOwner.get(p.sectorId)!;
+      const from = publicWallet(p.countryId);
+      const key = `${owner}:${from}`;
+      const row = byPayee.get(key) ?? {
+        reason: "transition_support",
+        fromAccountId: from,
+        toAccountId: owner,
+        amountAnchor: 0,
+      };
+      row.amountAnchor += p.claim;
+      byPayee.set(key, row);
+    }
+    transfers.push(...byPayee.values());
+    return {
+      transfers,
+      meta: {
+        paidByCountry: paid,
+        coverageByCountry: Object.fromEntries(support.coverageByCountry),
+      },
+    };
+  };
+
   const settled = await runCorporationProducerMarket(db, {
     worldEpoch,
     turn,
@@ -223,6 +331,7 @@ export async function runFundedProducerTurn(
       externalOrders: [...demand.publicBuyerOrders, ...demand.investmentBuyerOrders],
       eligibleOffersByOrder: demand.eligibleOffersByOrder,
     },
+    close: closeAtSettlement,
   });
 
   const receiptsBySectorId = new Map<string, FundedReceipt>();
@@ -298,111 +407,20 @@ export async function runFundedProducerTurn(
       { upsert: true }
     );
 
-  // Close. Cash read from the settled account balances (anchor units).
-  const closingCash = new Map(settled.result.accounts.map((a) => [a.id, a.cash]));
-  const corpById = new Map(lookups.corporations.map((c) => [c._id.toHexString(), c]));
-  const corpParty = (id: string): CloseParty => {
-    const corp = corpById.get(id)!;
-    const currency = corp.liquidCurrencyCode ?? "USD";
-    return {
-      collection: "corporations",
-      filter: { _id: new ObjectId(id) },
-      path: "liquidCapital",
-      id,
-      currencyCode: currency,
-      localPerAnchor: rateOf(currency),
-    };
-  };
-  const walletParty = (id: string): CloseParty => {
-    const scope = scopeById.get(id);
-    return {
-      collection: PRODUCER_ACCOUNTS,
-      filter: { _id: id },
-      path: "cash",
-      id,
-      currencyCode: scope?.currency ?? "USD",
-      localPerAnchor: rateOf(scope?.currency),
-    };
-  };
-
-  const transfers = planFundedClose({
-    settledProfitByCorp,
-    closingCash,
-    ownerKindByCompany: demand.ownerKindByCompany,
-    householdFor: (corpId) => demand.firstWalletByCorp.get(corpId)?.wallet ?? null,
-    householdForPayee: demand.householdForPayee,
-    corpParty,
-    walletParty,
-  });
-  await apply(closeTransferMoves(worldEpoch, turn, transfers));
-
-  // Transition package: over-built sectors get a fading revenue floor, paid
-  // only from public funding that would otherwise be burned below.
-  const support = input.firstFundedTurn
-    ? transitionSupport({
-        turn,
-        firstFundedTurn: input.firstFundedTurn,
-        sectors: lookups.corporations.flatMap((corp) =>
-          (lookups.sectorsByCorp.get(corp._id.toString()) ?? []).map((sector) => ({
-            sectorId: sector._id.toHexString(),
-            countryId: String(sector.countryId ?? corp.countryId ?? ""),
-            transition: sector.cutoverTransition,
-            settledRevenue: receiptsBySectorId.get(sector._id.toHexString())?.revenue ?? 0,
-            mothballed: sector.mothballed === true,
-            converted: sector.cutoverConvertedAtTurn != null,
-          }))
-        ),
-        poolByCountry: new Map(
-          demand.funding.map((f) => [
-            f.countryId,
-            Math.max(0, closingCash.get(publicWallet(f.countryId)) ?? 0),
-          ])
-        ),
-      })
-    : { payments: [], coverageByCountry: new Map<string, number>() };
-  const sectorOwner = new Map<string, string>();
-  for (const corp of lookups.corporations)
-    for (const sector of lookups.sectorsByCorp.get(corp._id.toString()) ?? [])
-      sectorOwner.set(sector._id.toHexString(), corp._id.toHexString());
-  const paidByCountry = new Map<string, number>();
-  await apply(
-    transitionSupportMoves(
-      worldEpoch,
-      turn,
-      // One payment per owner and country, not per sector: each money move
-      // costs several round trips, and sector-level moves ran to thousands.
-      [
-        ...support.payments
-          .reduce((byPayee, p) => {
-            paidByCountry.set(p.countryId, (paidByCountry.get(p.countryId) ?? 0) + p.claim);
-            const owner = sectorOwner.get(p.sectorId)!;
-            const key = `${owner}:${p.countryId}`;
-            const row = byPayee.get(key) ?? { owner, countryId: p.countryId, claim: 0 };
-            row.claim += p.claim;
-            byPayee.set(key, row);
-            return byPayee;
-          }, new Map<string, { owner: string; countryId: string; claim: number }>())
-          .entries(),
-      ].map(([key, row]) => ({
-        payeeKey: key,
-        amountAnchor: row.claim,
-        from: walletParty(publicWallet(row.countryId)),
-        to: corpParty(row.owner),
-      }))
-    )
+  // Close and transition support settled with the market (see closeAtSettlement).
+  const close = settled.result.close;
+  const paidByCountry = new Map(
+    Object.entries((close?.meta?.paidByCountry as Record<string, number> | undefined) ?? {})
   );
-  for (const [country, paid] of paidByCountry) {
-    const id = publicWallet(country);
-    closingCash.set(id, (closingCash.get(id) ?? 0) - paid);
-  }
   await db.collection<{ _id: string }>(PRODUCER_MARKET_OUTCOMES).updateOne(
     { _id: `${worldEpoch}:${turn}` },
     {
       $set: {
         transitionSupport: {
           paid: Object.fromEntries(paidByCountry),
-          coverage: Object.fromEntries(support.coverageByCountry),
+          coverage: (close?.meta?.coverageByCountry as Record<string, number> | undefined) ?? {},
         },
+        closeTransfers: close?.transfers.length ?? 0,
       },
     }
   );
@@ -453,26 +471,6 @@ export async function runFundedProducerTurn(
       demand.investmentFunding.flatMap((f) => returnRow(f.countryId, investmentWallet(f.countryId)))
     )
   );
-
-  // The close moved company cash after settlement published it in memory.
-  // Later steps of this turn (NPP decisions) price from these objects, so
-  // re-read the real balances once rather than let them spend paid-out cash.
-  const paidOut = [
-    ...new Set(transfers.filter((t) => t.from.collection === "corporations").map((t) => t.from.id)),
-  ];
-  if (paidOut.length > 0) {
-    const fresh = await db
-      .collection<{ _id: ObjectId; liquidCapital?: number }>("corporations")
-      .find(
-        { _id: { $in: paidOut.map((id) => new ObjectId(id)) } },
-        { projection: { liquidCapital: 1 } }
-      )
-      .toArray();
-    for (const row of fresh) {
-      const corp = corpById.get(row._id.toHexString());
-      if (corp && typeof row.liquidCapital === "number") corp.liquidCapital = row.liquidCapital;
-    }
-  }
 
   return { receiptsBySectorId, settledProfitByCorp };
 }

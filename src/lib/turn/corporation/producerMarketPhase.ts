@@ -76,6 +76,8 @@ export async function runCorporationProducerMarket(
       | "inputReservations"
       | "eligibleOffersByOrder"
     >;
+    /** Closing transfers frozen and published with the settlement (see applySettlementClose). */
+    close?: Parameters<typeof settleProducerTurn>[1]["close"];
   }
 ) {
   const resumed = await resumeProducerTurn(db, input);
@@ -154,6 +156,7 @@ export async function runCorporationProducerMarket(
     },
     bindings,
     targets,
+    close: input.close,
   });
   return publishHostState(db, input.corporations, { result, bindings, targets, openingAccounts });
 }
