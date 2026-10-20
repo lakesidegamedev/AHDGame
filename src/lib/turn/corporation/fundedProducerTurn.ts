@@ -396,48 +396,50 @@ export async function runFundedProducerTurn(
     }
   );
 
+  // Return what each public and construction buyer actually holds. Deriving
+  // it from settled anchor cash times the rate drifted by float error past
+  // the real balance, and the debit's guard refused the whole move.
+  const returnWallets = [
+    ...demand.funding.map((f) => ({ countryId: f.countryId, id: publicWallet(f.countryId) })),
+    ...demand.investmentFunding.map((f) => ({
+      countryId: f.countryId,
+      id: investmentWallet(f.countryId),
+    })),
+  ];
+  const heldLocal = new Map(
+    (
+      await db
+        .collection<{ _id: string; cash: number }>(PRODUCER_ACCOUNTS)
+        .find({ _id: { $in: returnWallets.map((w) => w.id) } }, { projection: { cash: 1 } })
+        .toArray()
+    ).map((w) => [w._id, w.cash])
+  );
+  const returnRow = (countryId: string, id: string) => {
+    const left = heldLocal.get(id) ?? 0;
+    if (!(Number.isFinite(left) && left > 0)) return [];
+    const currency = countryCurrency.get(countryId)!;
+    return [
+      {
+        countryId,
+        walletId: id,
+        amountLocal: left,
+        currencyCode: currency,
+        localPerAnchor: rateOf(currency),
+      },
+    ];
+  };
   await apply(
     publicReturnMoves(
       worldEpoch,
       turn,
-      demand.funding.flatMap((f) => {
-        const id = publicWallet(f.countryId);
-        const left = closingCash.get(id) ?? 0;
-        if (!(left > 0)) return [];
-        const currency = countryCurrency.get(f.countryId)!;
-        const rate = rateOf(currency);
-        return [
-          {
-            countryId: f.countryId,
-            walletId: id,
-            amountLocal: left * rate,
-            currencyCode: currency,
-            localPerAnchor: rate,
-          },
-        ];
-      })
+      demand.funding.flatMap((f) => returnRow(f.countryId, publicWallet(f.countryId)))
     )
   );
   await apply(
     investmentReturnMoves(
       worldEpoch,
       turn,
-      demand.investmentFunding.flatMap((f) => {
-        const id = investmentWallet(f.countryId);
-        const left = closingCash.get(id) ?? 0;
-        if (!(left > 0)) return [];
-        const currency = countryCurrency.get(f.countryId)!;
-        const rate = rateOf(currency);
-        return [
-          {
-            countryId: f.countryId,
-            walletId: id,
-            amountLocal: left * rate,
-            currencyCode: currency,
-            localPerAnchor: rate,
-          },
-        ];
-      })
+      demand.investmentFunding.flatMap((f) => returnRow(f.countryId, investmentWallet(f.countryId)))
     )
   );
 
