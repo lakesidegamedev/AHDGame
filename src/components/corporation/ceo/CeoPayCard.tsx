@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import type { CurrencyCode } from "@/lib/constants/currencies";
 import { DenseSection, InlineStatus, KVRow, SmallButton } from "../dense/DenseKit";
 
 interface PayDemand {
@@ -20,6 +21,8 @@ interface PayDecision {
 }
 
 interface PayView {
+  /** Company currency; every amount here is in it, per day. */
+  currencyCode: CurrencyCode;
   salary: number;
   nextReviewTurn: number;
   demand: PayDemand | null;
@@ -52,7 +55,7 @@ function decisionLine(decision: PayDecision, money: (amount: number) => string):
  * the corporation's standing pay policy when its window closes.
  */
 export function CeoPayCard({ corpId }: { corpId: string }) {
-  const { formatAmount } = useCurrency();
+  const { formatFull, toInternalFrom } = useCurrency();
   const [view, setView] = useState<PayView | null>(null);
   const [counter, setCounter] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -104,7 +107,9 @@ export function CeoPayCard({ corpId }: { corpId: string }) {
 
   if (!view) return error ? <InlineStatus message={error} tone="error" /> : null;
 
-  const { salary, nextReviewTurn, demand, lastDecision } = view;
+  const { salary, nextReviewTurn, demand, lastDecision, currencyCode } = view;
+  const formatAmount = (local: number) =>
+    formatFull(toInternalFrom(local, currencyCode), currencyCode);
 
   return (
     <DenseSection id="ceo-pay" title="CEO pay" meta={demand ? "Raise requested" : undefined}>

@@ -103,6 +103,8 @@ export function ceoPayView(corporation: Corporation) {
   const pay = corporation.ceoPay;
   if (!isNppCeoPayCorp(corporation) || !pay) return null;
   return {
+    /** Amounts below are in this currency, per day. */
+    currencyCode: corporation.liquidCurrencyCode ?? "USD",
     salary: corporation.ceoSalary ?? 0,
     nextReviewTurn: pay.nextReviewTurn,
     demand: pay.demand ?? null,
