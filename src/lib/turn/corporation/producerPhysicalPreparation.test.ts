@@ -219,7 +219,7 @@ describe("carried country-book stock", () => {
       producerInventory: {
         worldEpoch: "w",
         turn: 1,
-        inputStock: [{ commodity: "freight", units: 2, book: "country:US", value: 1 }],
+        inputStock: [],
         outputStock: [
           { commodity: "freight", units: 5, book: "country:US" },
           { commodity: "food", units: 1, book: "world" },
@@ -228,7 +228,6 @@ describe("carried country-book stock", () => {
     } as unknown as CorporateSector;
     const out = withStateBooks(sector);
     expect(out.producerInventory!.outputStock.map((r) => r.book)).toEqual(["state:US_CA", "world"]);
-    expect(out.producerInventory!.inputStock[0].book).toBe("state:US_CA");
     const plain = {
       stateId: "X",
       producerInventory: { worldEpoch: "w", turn: 1, inputStock: [], outputStock: [] },

@@ -392,22 +392,14 @@ export function prepareProducerPhysicalSector(input: {
  */
 export function withStateBooks(sector: CorporateSector): CorporateSector {
   const inv = sector.producerInventory;
-  if (!inv) return sector;
-  const fix = <T extends { book: string }>(rows: readonly T[]): T[] =>
-    rows.map((r) =>
-      r.book.startsWith("country:") ? { ...r, book: `state:${sector.stateId}` } : r
-    );
-  const touched = [...inv.inputStock, ...inv.outputStock].some((r) =>
-    r.book.startsWith("country:")
-  );
-  return touched
-    ? {
-        ...sector,
-        producerInventory: {
-          ...inv,
-          inputStock: fix(inv.inputStock),
-          outputStock: fix(inv.outputStock),
-        },
-      }
-    : sector;
+  if (!inv || !inv.outputStock.some((r) => r.book.startsWith("country:"))) return sector;
+  return {
+    ...sector,
+    producerInventory: {
+      ...inv,
+      outputStock: inv.outputStock.map((r) =>
+        r.book.startsWith("country:") ? { ...r, book: `state:${sector.stateId}` } : r
+      ),
+    },
+  };
 }
