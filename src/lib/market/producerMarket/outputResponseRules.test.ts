@@ -32,6 +32,12 @@ describe("output follows price", () => {
     );
   });
 
+  it("each unit covered its inputs but not its wages and site costs: runs a step less", () => {
+    expect(
+      nextRunShare(receipt({ labourPaid: 200, labourArrears: 50, otherOperatingPaid: 100 }))
+    ).toBeCloseTo(0.5 * (1 - OUTPUT_CUT_STEP), 12);
+  });
+
   it("sold only part: moves toward what sold, never faster than a step", () => {
     const n = nextRunShare(receipt({ soldUnits: 10, revenue: 100, inputsConsumed: 40 }));
     expect(n).toBeCloseTo(0.5 * (1 - OUTPUT_CUT_STEP), 12);

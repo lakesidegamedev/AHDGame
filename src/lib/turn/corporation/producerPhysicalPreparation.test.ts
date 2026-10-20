@@ -156,6 +156,30 @@ describe("physical producer preparation", () => {
     expect(good / bad).toBeCloseTo((0.5 * 1.15) / (0.5 * 0.9), 10);
   });
 
+  it("pays wages and site running costs for the line it runs, not idle capacity", () => {
+    const { input, sector } = fixture();
+    const full = prepareProducerPhysicalSector(input);
+    // A glut last turn drops the run to the probe floor.
+    (sector as unknown as { producerSettlement: unknown }).producerSettlement = {
+      activeUnits: 100,
+      producedUnits: 50,
+      offeredUnits: 50,
+      soldUnits: 0,
+      revenue: 0,
+      inputsConsumed: 200,
+      turn: input.env.currentTurn - 1,
+    };
+    const idle = prepareProducerPhysicalSector(input);
+    expect(idle.prepared.plan.labourCost).toBeCloseTo(full.prepared.plan.labourCost * 0.1, 6);
+    expect(idle.headcount.workers).toBeLessThan(full.headcount.workers);
+    expect(idle.prepared.plan.otherOperatingCost).toBeLessThan(
+      full.prepared.plan.otherOperatingCost * 0.2
+    );
+    expect(idle.prepared.plan.otherOperatingCost).toBeGreaterThan(
+      full.prepared.plan.otherOperatingCost * 0.1
+    );
+  });
+
   it("retains a smaller cold-site bill while mothballing stops jobs and output", () => {
     const { input, sector } = fixture();
     const running = prepareProducerPhysicalSector(input);
