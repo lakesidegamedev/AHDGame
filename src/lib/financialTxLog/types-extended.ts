@@ -13,6 +13,7 @@ import type { FinancialTxType } from "@/lib/db/types/financialTxLog";
  */
 export const ALL_TX_TYPES: readonly FinancialTxType[] = [
   "producer_market_settlement",
+  "producer_market_transfer",
   "player_income_tax",
   "player_capital_gains_tax",
   // ── Character / imperial cash ──────────────────────────────────────────
@@ -172,6 +173,7 @@ export const ALL_TX_TYPES: readonly FinancialTxType[] = [
 
 export const TX_TYPE_LABELS: Record<FinancialTxType, string> = {
   producer_market_settlement: "Producer market settlement",
+  producer_market_transfer: "Producer market transfer",
   player_income_tax: "Personal Income Tax",
   player_capital_gains_tax: "Personal Capital Gains Tax",
   corp_sector_founding: "Corporation Sector Founding",
