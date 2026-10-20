@@ -104,7 +104,10 @@ import {
   settleFrontierEntryPlacement,
 } from "@/lib/turn/npp/frontierEntryCandidate";
 import { buildNppGlutMothballUpdates } from "@/lib/turn/npp/glutMothballing";
-import { chooseTransitionConversion } from "@/lib/turn/npp/rules/transitionConversion";
+import {
+  AI_ZERO_SALES_MOTHBALL_TURNS,
+  chooseTransitionConversion,
+} from "@/lib/turn/npp/rules/transitionConversion";
 import { industryConversionFields } from "@/lib/corporations/retooling/conversion";
 import {
   computeMacroProductionPolicy,
@@ -666,6 +669,23 @@ export function makeNppCorpDecision(
         },
       });
       newlyMothballedIds.add(target._id.toString());
+    }
+  }
+
+  // ── 2e. Funded market: an AI-run corporation mothballs every plant that has
+  // sold nothing for two settled turns, instead of one plant a turn. Its wages
+  // and site bills buy nothing; the glut restart above brings it back when the
+  // market's price recovers. Player autopilot and caretakers never do this.
+  if (ctx.transitionFirstFundedTurn != null && operator.role === "npp" && !corp.countryOwnerId) {
+    for (const sector of sectors) {
+      const id = sector._id.toString();
+      if (sector.mothballed === true || newlyMothballedIds.has(id)) continue;
+      if ((sector.producerZeroSalesTurns ?? 0) < AI_ZERO_SALES_MOTHBALL_TURNS) continue;
+      sectorUpdates.push({
+        filter: { _id: sector._id, mothballed: { $ne: true } },
+        update: { $set: { mothballed: true, updatedAt: now } },
+      });
+      newlyMothballedIds.add(id);
     }
   }
 

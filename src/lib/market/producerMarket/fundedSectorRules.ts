@@ -38,6 +38,10 @@ export interface FundedReceipt {
   profit: number;
   producedUnits: number;
   soldUnits: number;
+  /** Anchor per turn: inputs in output that went to stock unsold (inventory at cost). */
+  unsoldProductionCost?: number;
+  /** Anchor per turn: transition floor support this sector received. */
+  transitionSupport?: number;
 }
 
 export interface LegacySectorResultLike {
@@ -134,6 +138,9 @@ export function fundedSectorOpsAll(
           profit: daily(result.hourlyRevenue - result.costs),
           totalCost: daily(result.costs),
           source: "funded" as const,
+          // Shown to the owner beside profit; decisions keep reading profit.
+          stockAddedAtCost: daily(receipt.unsoldProductionCost ?? 0),
+          transitionSupport: daily(receipt.transitionSupport ?? 0),
         },
       });
       stamped.add(id);
