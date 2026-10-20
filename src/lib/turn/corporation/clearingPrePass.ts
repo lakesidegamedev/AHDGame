@@ -110,7 +110,28 @@ export interface ClearingPrePassInput {
   qualityPremiumPricingEnabled: boolean;
   politicalMediaOrders?: readonly PoliticalMediaOrderForClearing[];
   treasuryCashLedgerEnabled: boolean;
+  /**
+   * True on a funded producer turn. The funded market settles every plant's
+   * sales and input purchases itself and does not honour own-group sourcing,
+   * so own-group reservations run only on the books whose legacy clearing
+   * still moves money on that turn (see FUNDED_TURN_INTERNAL_SUPPLY_COMMODITIES).
+   * Absent or false on legacy turns, which are unchanged.
+   */
+  fundedProducerTurn?: boolean;
 }
+
+/**
+ * Books that keep own-group sourcing on a funded producer turn. Advertising
+ * stays on its legacy settlement there (marketing budgets pay media sellers by
+ * delivered value, political ad orders settle against the same fills), so its
+ * own-group reservations must still shape who delivers. On every other book the
+ * own-group allocation fed legacy plant revenue and the legacy input discount,
+ * both replaced by funded receipts, and it was the most expensive part of the
+ * pre-pass. Supply agreement settlement is unaffected: contracts reserve ahead
+ * of own-group trades, so their cleared take does not depend on them.
+ */
+export const FUNDED_TURN_INTERNAL_SUPPLY_COMMODITIES: ReadonlySet<CommodityType> =
+  new Set<CommodityType>(["advertising"]);
 
 export interface ClearingPrePassResult {
   clearingInvariantBreaches: string[];
@@ -142,6 +163,7 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
     qualityPremiumPricingEnabled,
     politicalMediaOrders = [],
     treasuryCashLedgerEnabled,
+    fundedProducerTurn = false,
   } = input;
   let { contractedByCorpCommodity } = input;
   const internalSupplyEnabled =
@@ -852,6 +874,9 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
           sectors: supplyAgreementDemandSectors,
           agreements: supplyAgreementsEnabled ? (settleableAgreements ?? []) : [],
           turn: turn ?? 0,
+          ...(fundedProducerTurn
+            ? { reserveCommodities: FUNDED_TURN_INTERNAL_SUPPLY_COMMODITIES }
+            : {}),
         })
       : undefined;
     market.clearingBySectorId = computeClearingFactors({

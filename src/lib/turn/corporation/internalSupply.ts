@@ -21,6 +21,8 @@ export function buildInternalSupplyContext(args: {
   agreements: readonly SettleableSupplyAgreement[];
   turn: number;
   freightSettlementActive?: boolean;
+  /** Restrict own-group reservations to these commodity books (see InternalSupplyClearing). */
+  reserveCommodities?: ReadonlySet<CommodityType>;
 }): InternalSupplyClearing | undefined {
   if (!args.market.plantsEnabled || !args.market.clearingEnabled) return undefined;
   const owners = [...args.lookups.corpById].map(([id, c]) => ({
@@ -76,6 +78,7 @@ export function buildInternalSupplyContext(args: {
   args.market.internalInputAvailabilityBySectorId = availabilityOut;
   args.market.internalSupplyDiscountCostBySectorId = discountCostOut;
   return {
+    ...(args.reserveCommodities ? { reserveCommodities: args.reserveCommodities } : {}),
     policies,
     buyers,
     availabilityOut,

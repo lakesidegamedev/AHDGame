@@ -18,6 +18,11 @@ import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 export interface InternalSupplyClearing {
   deliveryStateBySector?: ReadonlyMap<string, string>;
   ownRouteDeliveredByKey?: ReadonlyMap<string, number>;
+  /**
+   * When set, only these commodity books reserve own-group supply; every other
+   * book clears on the open market alone. Absent means every book reserves.
+   */
+  reserveCommodities?: ReadonlySet<CommodityType>;
   policies: ReadonlyMap<string, { root: string; policy: InternalSupplyPolicy }>;
   buyers: readonly {
     sectorId: string;
@@ -65,6 +70,8 @@ export function reserveInternalSupply(args: {
   reservationRoom: number;
   marketPrice: number;
 }): Map<string, number> | undefined {
+  if (args.context.reserveCommodities && !args.context.reserveCommodities.has(args.commodity))
+    return undefined;
   const buyers: InternalSupplyBuyer[] = args.context.buyers
     .filter((b) => args.bookForSector(b.sectorId) === args.book)
     .map((b) => ({
