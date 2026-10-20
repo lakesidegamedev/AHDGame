@@ -447,6 +447,8 @@ export function isolatedShadowEnv(env: ProducerPhysicalEnv): ProducerPhysicalEnv
     wageIndexByState: structuredClone(env.wageIndexByState),
     automationIndexByState: structuredClone(env.automationIndexByState),
     pendingStrikeEvents: [],
+    // The shadow measures the funded world, which buys advertising as an input.
+    advertisingInput: true,
   };
 }
 

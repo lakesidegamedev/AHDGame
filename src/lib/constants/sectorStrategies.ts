@@ -1,4 +1,8 @@
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import {
+  ADVERTISING_INPUT_STANDARD_1991_DEMAND,
+  ADVERTISING_INPUT_VARIANT_DEMAND,
+} from "./sectorStrategyAdvertisingOverlay";
 /**
  * Sector strategies a corporation can pick, and what switching costs. Each sector
  * type has 4 to 8 strategies in SECTOR_STRATEGIES that change which commodities it
@@ -141,10 +145,16 @@ function strategyForPreset(
   return demand ? { ...strategy, demand: { ...demand } } : strategy;
 }
 
+export interface StrategyOptions {
+  /** Funded producer turns only: advertising as a paid input (see the overlay module). */
+  advertisingInput?: boolean;
+}
+
 export function getStrategy(
   sectorType: string,
   strategyId: string,
-  preset?: string
+  preset?: string,
+  options?: StrategyOptions
 ): SectorStrategy {
   if (!Object.hasOwn(SECTOR_STRATEGIES, sectorType)) {
     if (!reportedUnknownSectorTypes.has(sectorType)) {
@@ -161,7 +171,13 @@ export function getStrategy(
     strategies.find((s) => s.id === strategyId) ??
     getMediaOperatingModelStrategies(sectorType).find((s) => s.id === strategyId) ??
     strategies[0];
-  return strategyForPreset(sectorType, strategy, preset);
+  const resolved = strategyForPreset(sectorType, strategy, preset);
+  if (!options?.advertisingInput) return resolved;
+  const overlay =
+    resolved.id === "standard" && eraForPreset(preset ?? DEFAULT_SEED_PRESET) === "1991"
+      ? ADVERTISING_INPUT_STANDARD_1991_DEMAND[sectorType]
+      : ADVERTISING_INPUT_VARIANT_DEMAND[sectorType]?.[resolved.id];
+  return overlay ? { ...resolved, demand: { ...overlay } } : resolved;
 }
 
 /** Strategy options for queries and menus. Model options are omitted unless enabled. */
@@ -252,7 +268,8 @@ export function getEffectiveStrategyRates(
   currentTurn: number,
   mediaDiscriminator?: string | null,
   preset?: string,
-  hardwareInputReliefStartTurn?: number | null
+  hardwareInputReliefStartTurn?: number | null,
+  options?: StrategyOptions
 ): EffectiveStrategyRates {
   const operatingType = getOperatingSectorType(sectorType, undefined, mediaDiscriminator);
   const relieve = (strategy: SectorStrategy): SectorStrategy => {
@@ -269,7 +286,7 @@ export function getEffectiveStrategyRates(
     }
     return { ...strategy, demand };
   };
-  const target = relieve(getStrategy(operatingType, strategyId, preset));
+  const target = relieve(getStrategy(operatingType, strategyId, preset, options));
 
   // No transition in progress → return target directly
   if (!transitionFromStrategyId || transitionStartTurn == null) {
@@ -292,7 +309,7 @@ export function getEffectiveStrategyRates(
     };
   }
 
-  const source = relieve(getStrategy(operatingType, transitionFromStrategyId, preset));
+  const source = relieve(getStrategy(operatingType, transitionFromStrategyId, preset, options));
 
   // Interpolate each commodity rate
   const supply = blendRates(source.supply, target.supply, progress);
@@ -311,7 +328,8 @@ export function getEffectiveStrategyRatesForOperatingModel(
   industryModel?: string | null,
   mediaDiscriminator?: string | null,
   preset?: string,
-  hardwareInputReliefStartTurn?: number | null
+  hardwareInputReliefStartTurn?: number | null,
+  options?: StrategyOptions
 ): EffectiveStrategyRates {
   return getEffectiveStrategyRates(
     getOperatingSectorType(sectorType, industryModel, mediaDiscriminator),
@@ -321,7 +339,8 @@ export function getEffectiveStrategyRatesForOperatingModel(
     currentTurn,
     mediaDiscriminator,
     preset,
-    hardwareInputReliefStartTurn
+    hardwareInputReliefStartTurn,
+    options
   );
 }
 

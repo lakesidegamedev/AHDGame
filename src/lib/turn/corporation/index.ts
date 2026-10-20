@@ -788,6 +788,7 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
         labourDemandByState: makeLabourDemandByState(),
         labourDemandWageIndexByState: new Map(),
         privateBankingEnabled,
+        advertisingInput: true,
       } as unknown as ProducerPhysicalEnv,
       firstFundedTurn: earlier == null,
     });

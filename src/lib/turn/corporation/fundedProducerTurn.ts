@@ -166,7 +166,9 @@ export async function runFundedProducerTurn(
     rates,
     demand: {
       households: demand.households,
-      externalOrders: [...demand.publicBuyerOrders, ...demand.marketingOrders],
+      // Marketing budgets keep their legacy settlement to media sellers this
+      // turn; buying them here as well would spend each budget twice.
+      externalOrders: demand.publicBuyerOrders,
       eligibleOffersByOrder: demand.eligibleOffersByOrder,
     },
   });
