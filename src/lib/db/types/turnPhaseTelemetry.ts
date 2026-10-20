@@ -15,6 +15,8 @@ export type TurnPhaseSkipReason =
   | "upstreamAbort"
   | "manualPause"
   | "simElectionsOnly"
+  /** Failed with TurnMustStopError: the turn stopped and a resume reruns the phase. */
+  | "mustStop"
   | "other";
 
 export interface TurnPhaseTelemetry {
