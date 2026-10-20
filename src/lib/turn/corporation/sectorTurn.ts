@@ -1570,6 +1570,7 @@ export function processSector(
     stateMetricsCappedTotal: stateMetricMargin.cappedTotal,
     stateMetricsLegacyTotal: stateMetricMargin.legacyTotal,
     hourlyGrowthCost,
+    regulatoryBurden: embargoLegacyMothball ? 0 : regulatoryBurden,
     // O1c: paid growth cost this turn (0 only under legacy mothball — froze, paid
     // nothing; the trade-exposure model keeps investing on the domestic remainder).
     growthInvestmentAnchor: embargoLegacyMothball ? 0 : hourlyGrowthCost,

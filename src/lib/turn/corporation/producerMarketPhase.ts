@@ -26,7 +26,7 @@ function observedRate(currency: string, rates: ReadonlyMap<CurrencyCode, number>
 }
 
 /** Zero-only creation never endows a buyer with imputed wealth or banking deposits. */
-async function createProducerWallets(
+export async function createProducerWallets(
   db: Db,
   worldEpoch: string,
   scopes: readonly ProducerWalletScope[]

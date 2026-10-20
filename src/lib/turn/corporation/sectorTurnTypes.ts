@@ -67,6 +67,8 @@ export interface SectorTurnResult {
   stateMetricsCappedTotal: number;
   stateMetricsLegacyTotal: number;
   hourlyGrowthCost: number;
+  /** Regulatory compliance cost already included in costs (player policy). */
+  regulatoryBurden?: number;
   growthInvestmentAnchor: number;
   stateId: string;
   countryId: string;

@@ -3917,3 +3917,60 @@ describe("stock-market boost phasing", () => {
     );
   });
 });
+
+describe("funded producer turn", () => {
+  type Op = { updateOne: { filter: Record<string, unknown>; update: Record<string, any> } };
+  const run = (profitPaid: number) => {
+    const corp = makeCorp();
+    const sector = makeSector(corp._id, { revenue: 24_000, profitMargin: 50 });
+    const id = sector._id.toString();
+    const result = processSectors(
+      baseLookups([corp], [sector]),
+      1,
+      new Date(),
+      false,
+      undefined,
+      undefined,
+      undefined,
+      false,
+      false,
+      false,
+      new Set(),
+      false,
+      {
+        receiptsBySectorId: new Map([
+          [id, { revenue: 100, profit: 30, producedUnits: 5, soldUnits: 4 }],
+        ]),
+        settledProfitByCorp: new Map([[corp._id.toString(), profitPaid]]),
+      }
+    );
+    return { result, id, corpId: corp._id.toString() };
+  };
+
+  it("takes revenue from the receipt and never writes settlement-owned sector fields", () => {
+    const { result, id } = run(30);
+    const ops = (result.sectorOps as Op[]).filter((o) => String(o.updateOne.filter._id) === id);
+    const set = Object.assign({}, ...ops.map((o) => o.updateOne.update.$set ?? {}));
+    for (const f of [
+      "capitalStock",
+      "capacityBookAnchor",
+      "buildQueue",
+      "inventoryUnits",
+      "producerSettlement",
+    ])
+      expect(set).not.toHaveProperty(f);
+    expect(ops.some((o) => o.updateOne.update.$pull || o.updateOne.update.$push)).toBe(false);
+    expect(set.realizedRevenue).toBeCloseTo(100 * TURNS_PER_DAY);
+    expect(set.soldUnits).toBe(4 * TURNS_PER_DAY);
+    expect(result.totalRevenueGenerated).toBeCloseTo(100);
+  });
+
+  it("does not credit the producer profit the settlement already paid", () => {
+    const paid = run(30);
+    const unpaid = run(0);
+    const inc = (r: typeof paid) =>
+      (r.result.corpOps as Op[]).find((o) => String(o.updateOne.filter._id) === r.corpId)!.updateOne
+        .update.$inc.liquidCapital as number;
+    expect(inc(unpaid) - inc(paid)).toBeCloseTo(30);
+  });
+});

@@ -413,6 +413,12 @@ export interface CorpSnapshot {
   income: number;
   /** Net operating cash delta in the corporation's liquid currency for this turn. */
   operatingCashIncomeLocal?: number;
+  /**
+   * Funded producer turn: producer profit the settlement already moved as cash
+   * and witnessed in its own ledger entry (anchor). The legacy cash witness
+   * excludes it. Absent on legacy turns.
+   */
+  settledProducerProfitAnchor?: number;
   /** Currency used by the operating cash writer above. */
   operatingCashCurrency?: CurrencyCode;
   /** Per-country federal tax withholding in anchor units, frozen with this snapshot. */
