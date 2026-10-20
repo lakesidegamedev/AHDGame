@@ -45,6 +45,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { ProducerPhysicalEnv } from "./producerPhysicalPreparation";
 import type { CorporationLookups } from "./types";
 import { buildProducerTurnDemand } from "./producerTurnDemand";
+import { NO_PHYSICAL_CAPACITY } from "./producerSectorPlan";
 import {
   createProducerWallets,
   producerWalletId,
@@ -107,9 +108,17 @@ export async function runFundedProducerTurn(
   });
   // A live turn must settle every plant: a skipped one would run on legacy
   // revenue beside the funded market. Fail the turn instead.
-  if (demand.skipped > 0)
+  // A sector with no physical capacity yet (a new founding awaiting its first
+  // build) produces nothing: it settles as an explicit zero receipt below. Any
+  // other preparation failure would leave a plant on legacy revenue beside the
+  // funded market, so the turn fails instead.
+  const idleSectorIds = demand.skippedSectors
+    .filter((s) => s.reason === NO_PHYSICAL_CAPACITY)
+    .map((s) => s.sectorId);
+  const failed = demand.skippedSectors.filter((s) => s.reason !== NO_PHYSICAL_CAPACITY);
+  if (failed.length > 0)
     throw new Error(
-      `Funded producer turn could not prepare ${demand.skipped} sector(s): ${Object.keys(demand.skipReasons).slice(0, 5).join("; ")}`
+      `Funded producer turn could not prepare ${failed.length} sector(s): ${[...new Set(failed.map((f) => f.reason))].slice(0, 5).join("; ")}`
     );
   const publicScopes = demand.funding.map((f) => publicScope(f.countryId));
   const walletScopes = [...demand.walletScopes, ...publicScopes];
@@ -196,6 +205,9 @@ export async function runFundedProducerTurn(
         soldUnits: r.soldUnits,
       });
   }
+  for (const sectorId of idleSectorIds)
+    if (!receiptsBySectorId.has(sectorId))
+      receiptsBySectorId.set(sectorId, { revenue: 0, profit: 0, producedUnits: 0, soldUnits: 0 });
   const settledProfitByCorp = new Map(
     [...settled.operatingByCorporation].map(([id, o]) => [id, o.profit])
   );
