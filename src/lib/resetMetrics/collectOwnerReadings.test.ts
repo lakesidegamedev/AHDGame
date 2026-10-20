@@ -110,7 +110,7 @@ describe("first live v2 metric owners", () => {
     const readings = await collectResetMetricOwnerReadings(db as unknown as Db, [ct], 13);
     expect(readings[ct._id]!.updates["16"]?.value).toEqual(expect.any(Number));
     expect(readings[ct._id]!.updates["18"]?.value).toEqual(expect.any(Number));
-    expect(readings[ct._id]!.updates["16"]?.source).toContain("political board");
+    expect(readings[ct._id]!.updates["16"]?.source).toContain("owned health");
     expect(readings[ct._id]!.updates["16"]?.status).toBe("proxy");
   });
   it("updates health proxies on cadence with fixed reference stocks and retains the NHS wait index", async () => {
@@ -135,26 +135,23 @@ describe("first live v2 metric owners", () => {
       ),
     });
     const readings = await collectResetMetricOwnerReadings(db as unknown as Db, regional, 13);
-    expect(readings[regional[0]!._id]!.updates["16"]?.value).toBe(80);
-    expect(readings[regional[1]!._id]!.updates["16"]?.value).toBeCloseTo(98);
-    expect(readings[regional[2]!._id]!.updates["16"]?.value).toBeCloseTo(98);
-    expect(readings[regional[1]!._id]!.updates["18"]?.value).toBe(27);
-    expect(readings[regional[0]!._id]!.updates["18"]?.value).toBeCloseTo(20 / 1.2);
+    for (const board of regional) {
+      expect(readings[board._id]!.updates["16"]?.value).toBeCloseTo(
+        board.observations["16"]!.value!
+      );
+      expect(readings[board._id]!.updates["18"]?.value).toBeCloseTo(
+        board.observations["18"]!.value!
+      );
+    }
     expect(readings[regional[2]!._id]!.updates["18"]?.status).toBe("proxy");
-    expect(db.collectionMocks.stateMetrics!.find).toHaveBeenCalledTimes(1);
-    expect(db.collectionMocks.stateMetrics!.find).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        projection: expect.objectContaining({ "healthcare.physicianRate.value": 1 }),
-      })
-    );
+    expect(db.collectionMocks.stateMetrics!.find).not.toHaveBeenCalled();
   });
   it("reads health each turn but does not accept another country's health stocks", async () => {
     const db = createMockDb();
     mockOwnerSources(db);
     const pa = boards.find((board) => board._id === "US:PA")!;
     await collectResetMetricOwnerReadings(db as unknown as Db, [pa], 2);
-    expect(db.collectionMocks.stateMetrics!.find).toHaveBeenCalledOnce();
+    expect(db.collectionMocks.stateMetrics).toBeUndefined();
     db.collection("stateMetrics").find.mockReturnValue({
       toArray: vi.fn().mockResolvedValue([
         {
@@ -169,8 +166,8 @@ describe("first live v2 metric owners", () => {
       ]),
     });
     const readings = await collectResetMetricOwnerReadings(db as unknown as Db, [pa], 13);
-    expect(readings[pa._id]!.updates["16"]).toBeUndefined();
-    expect(readings[pa._id]!.updates["18"]).toBeUndefined();
+    expect(readings[pa._id]!.updates["16"]?.value).toBeCloseTo(pa.observations["16"]!.value!);
+    expect(readings[pa._id]!.updates["18"]?.value).toBeCloseTo(pa.observations["18"]!.value!);
   });
   it("does not hide an incomplete or mismatched current board behind legacy health stocks", async () => {
     const db = createMockDb();
@@ -194,8 +191,8 @@ describe("first live v2 metric owners", () => {
         toArray: vi.fn().mockResolvedValue([{ _id: "CT", countryId, values: {} }]),
       });
       const readings = await collectResetMetricOwnerReadings(db as unknown as Db, [ct], 13, 1991);
-      expect(readings[ct._id]!.updates["16"]).toBeUndefined();
-      expect(readings[ct._id]!.updates["18"]).toBeUndefined();
+      expect(readings[ct._id]!.updates["16"]?.value).toBeCloseTo(ct.observations["16"]!.value!);
+      expect(readings[ct._id]!.updates["18"]?.value).toBeCloseTo(ct.observations["18"]!.value!);
     }
   });
   it("collects per-turn readings in batched projected reads", async () => {
@@ -346,10 +343,10 @@ describe("first live v2 metric owners", () => {
       status: "proxy",
       source: "provisional continuity owner: higher_education",
     });
-    expect(readings["US:PA"]!.updates["16"]).toBeUndefined();
+    expect(readings["US:PA"]!.updates["16"]?.source).toContain("owned health");
     // Health proxies may use the current health board; economic values above
     // still come exclusively from macroMetrics.
-    expect(db.collectionMocks.politicalMetrics!.find).toHaveBeenCalledTimes(1);
+    expect(db.collectionMocks.politicalMetrics).toBeUndefined();
   });
 
   it("rejects a macro row assigned to another country", async () => {
@@ -423,7 +420,9 @@ describe("first live v2 metric owners", () => {
       index < 10 ? { ...board, asOfTurn: 2 } : board
     );
     const readings = await collectResetMetricOwnerReadings(db as unknown as Db, partlyWritten, 2);
-    expect(readings["US:national"]!.updates["07"]?.value).toBe(4);
+    expect(readings["US:national"]!.updates["07"]?.value).toBe(
+      boards.find((b) => b._id === "US:national")!.observations["07"]!.value
+    );
     expect(readings["US:PA"]!.updates["02"]?.value).toBeTypeOf("number");
   });
 

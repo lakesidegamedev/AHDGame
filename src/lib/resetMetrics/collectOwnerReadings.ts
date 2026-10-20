@@ -1,52 +1,51 @@
-import {
-  inheritedCalibrationRegion,
-  inheritedCalibrationCountry,
-} from "./rules/conversionCalibration";
 /**
- * First live owners for the v2 board. Legacy macro readings are underlying
- * economic inputs, not a second set of player-facing primary metrics.
+ * Metric owners publish live cohort and economic readings, with funded linked
+ * estimates where household and service ledgers do not exist. Legacy political
+ * scores never stand in for owned healthcare access.
  */
+import { inheritedCalibrationRegion } from "./rules/conversionCalibration";
 import type { Db } from "mongodb";
 import type { FederalBudget } from "@/lib/db/types/budget";
 import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
-import type { StateMetrics } from "@/lib/db/types/stateMetrics";
-import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
 import type { State } from "@/lib/db/types/state";
 import type { GameState } from "@/lib/db/types/gameState";
 import type { TradeFlowSnapshot } from "@/lib/db/types/tradeFlowSnapshot";
 import { getGdpAnchorRate } from "@/lib/currency/gdpAnchorRate";
 import { commodityTradeBalance } from "./rules/tradeOwner";
 import { loadTurnoutReadings } from "./loadTurnoutReadings";
-import { healthOwnerInputs } from "./rules/healthOwner";
-import {
-  openingGrossPurchasingInputs1991,
-  openingLifeCalibration1991,
-  openingHealthProxyReferences1991,
-} from "./openingSeed1991";
-import { liveHealthProxies } from "./rules/liveHealthProxies";
+import { openingGrossPurchasingInputs1991, openingLifeCalibration1991 } from "./openingSeed1991";
 import { fiscalOwnerReadings } from "./rules/fiscalOwner";
 import { nationalForceReadiness } from "./rules/forceReadiness";
 import { provisionalRealPurchasingPower } from "./rules/realPurchasingPower";
 import { dueResetMetricIds } from "./rules/refresh";
-import { driftProxyValue } from "./rules/policyDrift";
+import {
+  driftProxyValue,
+  policyDriftTarget,
+  POLICY_DRIFT_RATE_PER_TURN,
+} from "./rules/policyDrift";
+import { linkedOutcomeTargets } from "./rules/linkedOutcomes";
+import { resetMetricConditionScore } from "./conditionScore";
+import { demographicRates } from "./rules/demographicMeasurement";
+import { ownedHealthAccess } from "./rules/ownedHealthAccess";
 import { loadResetPolicyPressure } from "./loadPolicyPressure";
 import { primaryMetricById } from "./catalog";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import type { ResetMetricSnapshot } from "./rules/snapshot";
 import type { MetricOwnerTurnReadingsByBoard } from "./refreshTurn";
+import { loadMetricLawDelivery } from "./loadLawDelivery";
+import { householdPublication, HOUSEHOLD_PUBLICATION_IDS } from "./rules/householdPublication";
+import { housingPublication, HOUSING_PUBLICATION_IDS } from "./rules/housingPublication";
 
 let openingCalibrationCache: {
   gross: ReturnType<typeof openingGrossPurchasingInputs1991>;
   life: ReturnType<typeof openingLifeCalibration1991>;
-  health: ReturnType<typeof openingHealthProxyReferences1991>;
 } | null = null;
 
 function openingCalibration() {
   return (openingCalibrationCache ??= {
     gross: openingGrossPurchasingInputs1991(),
     life: openingLifeCalibration1991(),
-    health: openingHealthProxyReferences1991(),
   });
 }
 
@@ -81,7 +80,7 @@ export async function collectResetMetricOwnerReadings(
   turn: number,
   year?: number
 ): Promise<MetricOwnerTurnReadingsByBoard> {
-  const { gross: openingGross, life: openingLife, health: openingHealth } = openingCalibration();
+  const { gross: openingGross, life: openingLife } = openingCalibration();
   const regionalIds = boards
     .filter((board) => board.scope === "regional")
     .map((board) => board.regionId!);
@@ -90,12 +89,7 @@ export async function collectResetMetricOwnerReadings(
     (board) =>
       board.scope === "national" && dueResetMetricIds(board, turn, false, false).includes("57")
   );
-  const healthDue = boards.some(
-    (board) =>
-      board.scope === "regional" &&
-      dueResetMetricIds(board, turn, true, false).some((id) => id === "16" || id === "18")
-  );
-  const [macro, budgets, units, healthStocks, healthBoards] = await Promise.all([
+  const [macro, budgets, units] = await Promise.all([
     db
       .collection<MacroMetricsDoc>("macroMetrics")
       .find(
@@ -151,31 +145,6 @@ export async function collectResetMetricOwnerReadings(
           )
           .toArray()
       : Promise.resolve([]),
-    healthDue
-      ? db
-          .collection<StateMetrics>("stateMetrics")
-          .find(
-            { _id: { $in: regionalIds } },
-            {
-              projection: {
-                _id: 1,
-                countryId: 1,
-                "healthcare.uninsuredRate.value": 1,
-                "healthcare.physicianRate.value": 1,
-                "healthcare.publicHealthPreparedness.value": 1,
-                "healthcare.nhsWaitingTime.value": 1,
-                "healthcare.hseWaitingListMonths.value": 1,
-              },
-            }
-          )
-          .toArray()
-      : Promise.resolve([]),
-    healthDue
-      ? db
-          .collection<PoliticalMetricsDoc>("politicalMetrics")
-          .find({ _id: { $in: regionalIds } }, { projection: { _id: 1, countryId: 1, values: 1 } })
-          .toArray()
-      : Promise.resolve([]),
   ]);
   const [trade, states, world] = await Promise.all([
     db
@@ -208,16 +177,134 @@ export async function collectResetMetricOwnerReadings(
     states,
   });
   const stateById = new Map(states.map((s) => [s._id, s]));
+  const laws = boards.some((b) => b.scope === "national" && (b.householdSource || b.housingSource))
+    ? await loadMetricLawDelivery(db, {
+        worldId: boards[0]!.worldId,
+        turn,
+        countryIds,
+        regions: boards
+          .filter((b) => b.scope === "regional")
+          .map((b) => ({ _id: b.regionId!, countryId: b.countryId })),
+      })
+    : undefined;
   const pressureByBoard = await loadResetPolicyPressure(db, {
     worldId: boards[0]!.worldId,
     boards,
     turn,
+    laws,
   });
+  const householdByRegion = new Map(
+    countryIds.flatMap((countryId) => {
+      const national = boards.find((b) => b.countryId === countryId && b.scope === "national");
+      const regions = boards.filter((b) => b.countryId === countryId && b.scope === "regional");
+      const result = householdPublication({
+        worldId: boards[0]!.worldId,
+        countryId,
+        turn,
+        regionIds: regions.map((b) => b.regionId!),
+        source: national?.householdSource,
+        programs: laws?.programs ?? [],
+        settlements: laws?.settlements ?? new Map(),
+      });
+      // Adoption is country-wide. Missing later inputs freeze the adopted definition
+      // with its old measurement date, never silently revert it to a gross-income proxy.
+      const adopted = regions.some((b) =>
+        HOUSEHOLD_PUBLICATION_IDS.some((id) => b.observations[id]?.definitionVersion === 2)
+      );
+      return regions.map(
+        (b) =>
+          [
+            b._id,
+            result.get(b.regionId!) ??
+              (adopted
+                ? Object.fromEntries(
+                    HOUSEHOLD_PUBLICATION_IDS.map((id) => [id, b.observations[id]!])
+                  )
+                : {}),
+          ] as const
+      );
+    })
+  );
+  const housingByRegion = new Map(
+    countryIds.flatMap((countryId) => {
+      const national = boards.find((b) => b.countryId === countryId && b.scope === "national");
+      const regions = boards.filter((b) => b.countryId === countryId && b.scope === "regional");
+      const source = national?.housingSource;
+      const populationMatches = source?.regions.every((r) => {
+        const state = stateById.get(r.regionId);
+        return state?.countryId === countryId && state.population === r.flow.population;
+      });
+      const result = housingPublication({
+        worldId: boards[0]!.worldId,
+        countryId,
+        turn,
+        regionIds: regions.map((b) => b.regionId!),
+        source: populationMatches ? source : undefined,
+        householdSource: national?.householdSource,
+        householdReadings: new Map(
+          regions.map((b) => [b.regionId!, householdByRegion.get(b._id) ?? {}])
+        ),
+        priorStates: new Map(
+          regions.flatMap((b) => (b.housingState ? [[b.regionId!, b.housingState] as const] : []))
+        ),
+        programs: laws?.programs ?? [],
+        settlements: laws?.settlements ?? new Map(),
+      });
+      const adopted = regions.some((b) =>
+        HOUSING_PUBLICATION_IDS.some((id) => b.observations[id]?.definitionVersion === 2)
+      );
+      return regions.map(
+        (b) =>
+          [
+            b._id,
+            result.get(b.regionId!) ?? {
+              state: undefined,
+              updates: adopted
+                ? Object.fromEntries(HOUSING_PUBLICATION_IDS.map((id) => [id, b.observations[id]!]))
+                : {},
+            },
+          ] as const
+      );
+    })
+  );
   const scoreYear = year ?? 1991 + Math.floor((turn - 1) / TURNS_PER_YEAR);
+  // All country members must publish the same definition/window, including a
+  // partially completed bulk retry. Never certify a half-migrated country.
+  for (const countryId of countryIds) {
+    const regions = boards.filter((b) => b.countryId === countryId && b.scope === "regional");
+    for (const [ids, readings] of [
+      [
+        HOUSEHOLD_PUBLICATION_IDS,
+        new Map(regions.map((b) => [b._id, householdByRegion.get(b._id) ?? {}])),
+      ],
+      [
+        HOUSING_PUBLICATION_IDS,
+        new Map(regions.map((b) => [b._id, housingByRegion.get(b._id)?.updates ?? {}])),
+      ],
+    ] as const) {
+      for (const id of ids) {
+        const candidates = regions.map((b) => readings.get(b._id)?.[id]);
+        if (
+          candidates.some((o) => o?.definitionVersion === 2) &&
+          candidates.some((o) => o?.definitionVersion !== 2)
+        )
+          throw new Error("Cannot publish a partial country definition migration");
+        for (const board of regions.filter((b) => b.asOfTurn === turn)) {
+          const prior = board.observations[id],
+            candidate = readings.get(board._id)?.[id];
+          if (prior?.definitionVersion !== 2 && candidate?.definitionVersion !== 2) continue;
+          const receipt = (o: typeof prior | undefined) =>
+            JSON.stringify(
+              o && [o.value, o.unit, o.definitionVersion, o.observedAtTurn, o.countryBasis]
+            );
+          if (receipt(prior) !== receipt(candidate))
+            throw new Error("Metric source changed during partial country replay");
+        }
+      }
+    }
+  }
   const macroById = new Map(macro.map((row) => [String(row._id), row]));
   const budgetByCountry = new Map(budgets.map((row) => [row.countryId, row]));
-  const healthById = new Map(healthStocks.map((row) => [String(row._id), row]));
-  const healthBoardById = new Map(healthBoards.map((row) => [String(row._id), row]));
   const unitsByCountry = new Map(
     countryIds.map((countryId) => [countryId, units.filter((unit) => unit.countryId === countryId)])
   );
@@ -233,6 +320,15 @@ export async function collectResetMetricOwnerReadings(
       const dueIds = dueResetMetricIds(board, turn, cohortDue, electionDue);
       const due = new Set(dueIds);
       const updates: Record<string, ResetMetricSnapshot["observations"][string]> = {};
+      if (board.asOfTurn === turn)
+        return [
+          board._id,
+          {
+            updates: Object.fromEntries(dueIds.map((id) => [id, board.observations[id]!])),
+            cohortDue,
+            electionDue,
+          },
+        ];
       if (board.scope === "national") {
         const budget = budgetByCountry.get(board.countryId);
         const fiscal = fiscalOwnerReadings({
@@ -322,66 +418,6 @@ export async function collectResetMetricOwnerReadings(
                 : turn,
           };
         }
-        const healthRow = healthById.get(board.regionId!);
-        const health = healthRow?.countryId === board.countryId ? healthRow.healthcare : undefined;
-        const healthBoard = healthBoardById.get(board.regionId!);
-        const boardInputs =
-          healthBoard?.countryId === board.countryId
-            ? healthOwnerInputs(healthBoard.values, board.countryId, year)
-            : null;
-        // Regions with a board no longer persist the legacy health store.
-        // Never hide an incomplete or mismatched board behind stale legacy data.
-        const inputs = healthBoard
-          ? boardInputs
-          : {
-              physicianRate: health?.physicianRate?.value ?? null,
-              preparedness: health?.publicHealthPreparedness?.value ?? null,
-              uninsuredPercent: health?.uninsuredRate?.value ?? null,
-              waitingTime:
-                board.countryId === "IE"
-                  ? health?.hseWaitingListMonths?.value
-                  : health?.nhsWaitingTime?.value,
-            };
-        const reference =
-          openingHealth[inheritedCalibrationCountry(board.countryId) as keyof typeof openingHealth];
-        const physicianReference = reference?.physicianRate ?? inputs?.physicianRate ?? null;
-        const preparednessReference = reference?.preparedness ?? inputs?.preparedness ?? null;
-        const access = liveHealthProxies({
-          countryId: board.countryId,
-          physicianRate: inputs?.physicianRate ?? null,
-          preparedness: inputs?.preparedness ?? null,
-          uninsuredPercent: inputs?.uninsuredPercent ?? null,
-          openingPhysicianReference: physicianReference ?? Number.NaN,
-          openingPreparednessReference: preparednessReference ?? Number.NaN,
-        });
-        if (due.has("16") && access) {
-          updates["16"] = {
-            ...board.observations["16"]!,
-            value: access.effectiveCoverage,
-            status: "proxy",
-            source: boardInputs
-              ? "current political board converted to eligibility and service-reach proxy inputs"
-              : "current eligibility and physician/preparedness service-reach estimate",
-            note: "Game-calibrated reachable-care estimate using fixed 1991 reference stocks, not observed patient access.",
-          };
-        }
-        const delay =
-          board.countryId === "UK" || board.countryId === "IE"
-            ? inputs?.waitingTime
-            : access?.treatmentDelayIndex;
-        if (due.has("18") && typeof delay === "number" && Number.isFinite(delay) && delay >= 0) {
-          updates["18"] = {
-            ...board.observations["18"]!,
-            value: delay,
-            status: "proxy",
-            source: boardInputs
-              ? "current political board converted to treatment-delay proxy inputs"
-              : board.countryId === "UK" || board.countryId === "IE"
-                ? "current national health-service waiting index"
-                : "current physician/preparedness delay estimate",
-            note: "Comparable treatment-delay proxy, not median waiting days. Fixed opening references preserve nationwide capacity changes.",
-          };
-        }
         const candidateMacro = macroById.get(board.regionId!);
         const liveMacro =
           candidateMacro?.countryId === board.countryId ? candidateMacro : undefined;
@@ -445,11 +481,13 @@ export async function collectResetMetricOwnerReadings(
           const measures = [
             [
               "20",
-              typeof cohort.periodLifeExpectancy === "number" && lifeCalibration
-                ? lifeCalibration.openingYears +
-                  cohort.periodLifeExpectancy -
-                  lifeCalibration.modeledYears
-                : null,
+              cohort.mortality
+                ? (demographicRates([cohort.mortality]) ?? cohort.periodLifeExpectancy)
+                : typeof cohort.periodLifeExpectancy === "number" && lifeCalibration
+                  ? lifeCalibration.openingYears +
+                    cohort.periodLifeExpectancy -
+                    lifeCalibration.modeledYears
+                  : null,
               "Period life expectancy from this turn's age-specific mortality curve, calibrated to the 1991 opening regional anchor.",
             ],
             [
@@ -459,7 +497,9 @@ export async function collectResetMetricOwnerReadings(
             ],
             [
               "55",
-              cohort.realizedTfr,
+              cohort.fertility
+                ? (demographicRates([cohort.fertility]) ?? cohort.realizedTfr)
+                : cohort.realizedTfr,
               "Realized fertility from births and the female age distribution, including service constraints.",
             ],
             [
@@ -476,6 +516,30 @@ export async function collectResetMetricOwnerReadings(
               status: "derived",
               source: "current single-year age and sex cohort flow",
               note,
+              demographicBasis: undefined,
+              ratioBasis: undefined,
+              observedAtTurn: turn,
+              ...(id === "20" && cohort.mortality
+                ? {
+                    demographicBasis: cohort.mortality,
+                    note: "Period life table from the same age-specific mortality used by the cohort flow, including pandemic excess deaths. No additive display adjustment.",
+                  }
+                : {}),
+              ...(id === "55" && cohort.fertility
+                ? {
+                    demographicBasis: cohort.fertility,
+                    note: "Sum of annual births per woman at each maternal age. Service withdrawals reduce only the affected ages.",
+                  }
+                : {}),
+              ...(id === "54" && cohort.populationBefore && cohort.populationAfter !== undefined
+                ? {
+                    ratioBasis: {
+                      numerator:
+                        (cohort.populationAfter - cohort.populationBefore) * TURNS_PER_YEAR,
+                      denominator: cohort.populationBefore,
+                    },
+                  }
+                : {}),
               ...(id === "56" && stateById.get(board.regionId!)?.population
                 ? {
                     ratioBasis: {
@@ -504,6 +568,10 @@ export async function collectResetMetricOwnerReadings(
         if (updates[id] || FAIL_CLOSED_OWNER_IDS.has(id)) continue;
         const prior = board.observations[id];
         if (typeof prior?.value !== "number" || !Number.isFinite(prior.value)) continue;
+        if (prior.definitionVersion === 2) {
+          updates[id] = prior;
+          continue;
+        }
         // A partially completed bulk retry must not apply proxy drift twice.
         if (board.asOfTurn === turn) {
           updates[id] = prior;
@@ -536,7 +604,138 @@ export async function collectResetMetricOwnerReadings(
             : "Game-calibrated carry-forward until this owner has a physical live ledger. Laws and actions affect underlying systems where implemented; this estimate does not invent a direct bonus.",
         };
       }
-      return [board._id, { updates, cohortDue, electionDue }];
+      if (board.scope === "regional") {
+        const opening =
+          board.openingValues ??
+          Object.fromEntries(
+            Object.entries(board.history ?? {}).map(([id, series]) => [id, series[0]!.value])
+          );
+        const accessTargets = ["16", "18"].map((id) =>
+          policyDriftTarget({
+            metric: primaryMetricById(id)!,
+            currentValue: board.observations[id]!.value!,
+            openingValue: opening[id]!,
+            pressure: pressure[id] ?? 0,
+            countryId: board.countryId,
+            year: scoreYear,
+          })
+        );
+        const access = accessTargets.every((v) => v !== null)
+          ? ownedHealthAccess({
+              coverageTarget: accessTargets[0]!,
+              delayTarget: accessTargets[1]!,
+              preparedness: updates["23"]?.value ?? board.observations["23"]!.value!,
+              openingPreparedness: opening["23"]!,
+            })
+          : null;
+        if (access)
+          for (const [id, target] of [
+            ["16", access.coverage],
+            ["18", access.delay],
+          ] as const) {
+            if (due.has(id))
+              updates[id] = {
+                ...board.observations[id]!,
+                value: Number(
+                  (
+                    board.observations[id]!.value! +
+                    POLICY_DRIFT_RATE_PER_TURN * (target - board.observations[id]!.value!)
+                  ).toFixed(6)
+                ),
+                status: "proxy",
+                source: "owned health coverage, delay and delivered preparedness model",
+                note: "Opening-calibrated funded service estimate. Uses owned preparedness, not retired political-score inversions; patient/provider ledgers are not yet modeled.",
+              };
+          }
+        const current = Object.fromEntries(
+          Object.entries({ ...board.observations, ...updates }).map(([id, o]) => [id, o.value])
+        );
+        // Legacy linked estimates have old-definition opening baselines. Until
+        // those owners migrate, do not compare disposable income/relative poverty
+        // or payment burden against gross-income/proxy/index opening values.
+        for (const id of ["02", "03", "24", "41"])
+          if (board.observations[id]?.definitionVersion === 2)
+            current[id] = opening[id] ?? current[id];
+        const policyTargets: Record<string, number> = {};
+        for (const id of ["19", "24", "41", "42"]) {
+          const metric = primaryMetricById(id)!;
+          const value = policyDriftTarget({
+            metric,
+            currentValue: board.observations[id]!.value!,
+            openingValue: opening[id]!,
+            pressure: pressure[id] ?? 0,
+            countryId: board.countryId,
+            year: scoreYear,
+          });
+          if (value !== null) policyTargets[id] = value;
+        }
+        const conditionChanges = [
+          "01",
+          "03",
+          "16",
+          "19",
+          "24",
+          "26",
+          "29",
+          "30",
+          "31",
+          "47",
+          "48",
+          "50",
+        ].flatMap((id) => {
+          const metric = primaryMetricById(id)!;
+          const now = current[id],
+            base = opening[id];
+          if (typeof now !== "number" || typeof base !== "number") return [];
+          const a = resetMetricConditionScore(metric, now, board.countryId, scoreYear);
+          const b = resetMetricConditionScore(metric, base, board.countryId, scoreYear);
+          return a !== null && b !== null ? [a - b] : [];
+        });
+        const targets = linkedOutcomeTargets({ opening, current, policyTargets, conditionChanges });
+        for (const [id, target] of Object.entries(targets)) {
+          if (!due.has(id)) continue;
+          const prior = board.observations[id]!;
+          if (prior.definitionVersion === 2) continue;
+          updates[id] = {
+            ...prior,
+            value: Number(
+              (prior.value! + POLICY_DRIFT_RATE_PER_TURN * (target - prior.value!)).toFixed(6)
+            ),
+            status: "proxy",
+            source:
+              "linked outcome model using current owned conditions and funded program delivery",
+            note:
+              id === "49"
+                ? "Trust follows livelihood, service and governance conditions; legislation cannot grant trust directly. Model estimate, not a survey."
+                : "Opening-calibrated model with explicit livelihood or care-access elasticities and funded policy delivery. Not an observed household or clinical ledger.",
+          };
+        }
+        const population = stateById.get(board.regionId!)?.population;
+        const median = updates["02"]?.value,
+          gini = updates["04"]?.value;
+        for (const id of ["02", "04"])
+          if (updates[id]) updates[id] = { ...updates[id]!, householdBasis: undefined };
+        if (
+          typeof median === "number" &&
+          median > 0 &&
+          typeof gini === "number" &&
+          gini >= 0 &&
+          gini <= 95 &&
+          population &&
+          population > 0
+        ) {
+          const householdBasis = { median, gini, weight: population };
+          for (const id of ["02", "04"]) updates[id] = { ...updates[id]!, householdBasis };
+        }
+      }
+      for (const [id, observation] of Object.entries(householdByRegion.get(board._id) ?? {}))
+        if (due.has(id)) updates[id] = observation;
+      for (const [id, observation] of Object.entries(housingByRegion.get(board._id)?.updates ?? {}))
+        if (due.has(id)) updates[id] = observation;
+      return [
+        board._id,
+        { updates, cohortDue, electionDue, housingState: housingByRegion.get(board._id)?.state },
+      ];
     })
   );
 }

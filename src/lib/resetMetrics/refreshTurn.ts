@@ -12,11 +12,13 @@ import { refreshResetMetricBoard } from "./rules/refresh";
 import { primaryMetrics } from "./catalog";
 import type { ResetMetricSnapshot } from "./rules/snapshot";
 import { appendMetricHistory, metricHistoryDue, RESET_METRIC_HISTORY_LIMIT } from "./rules/history";
+import type { HousingState } from "./rules/housing";
 
 export interface MetricOwnerTurnReadings {
   updates: Readonly<Record<string, OpeningMetricObservation>>;
   cohortDue: boolean;
   electionDue: boolean;
+  housingState?: HousingState;
 }
 
 export type MetricOwnerTurnReadingsByBoard = Readonly<Record<string, MetricOwnerTurnReadings>>;
@@ -69,6 +71,9 @@ export async function refreshResetMetricSnapshotsTurn(input: {
           lastRefreshFromTurn: 1,
           observations: 1,
           openingValues: 1,
+          householdSource: 1,
+          housingSource: 1,
+          housingState: 1,
           // Ordinary turns need only the legacy baseline, not the full chart.
           ...(recordHistory
             ? { history: 1 }
@@ -130,6 +135,7 @@ export async function refreshResetMetricSnapshotsTurn(input: {
           priorValues: board.priorValues,
         };
         for (const id of changedIds) fields[`observations.${id}`] = board.observations[id];
+        if (board.housingState?.asOfTurn === turn) fields.housingState = board.housingState;
         // Upgrade old boards once, before bounded appends can trim their baseline.
         if (!board.openingValues) {
           if (

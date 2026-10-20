@@ -2,6 +2,9 @@ import { primaryMetrics } from "../catalog";
 import type { OpeningMetricObservation } from "./openingObservation";
 import { openingMetricHistory, validateMetricHistory, type ResetMetricHistory } from "./history";
 import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
+import type { HouseholdPublicationSource } from "./householdPublication";
+import type { HousingPublicationSource } from "./housingPublication";
+import type { HousingState } from "./housing";
 
 export interface ResetMetricSnapshot {
   _id: string;
@@ -19,6 +22,11 @@ export interface ResetMetricSnapshot {
   openingValues?: Record<string, number>;
   /** Compact preceding owner values make lagged turn retries deterministic. */
   priorValues?: Record<string, number | null>;
+  /** Reviewed upstream owner inputs. World-scoped; this entire collection is wiped on reset. */
+  householdSource?: HouseholdPublicationSource;
+  housingSource?: HousingPublicationSource;
+  /** Country source inputs and regional stock state are wiped with this world-bound collection. */
+  housingState?: HousingState;
 }
 
 /** Validate an entire scoped opening board before any v2 writer can consume it. */

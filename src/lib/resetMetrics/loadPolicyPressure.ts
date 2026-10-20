@@ -6,7 +6,7 @@ import {
   mergeApplicableActionEffects,
 } from "@/lib/resetCabinet/rules/actions";
 import { loadMetricLawDelivery } from "./loadLawDelivery";
-import { deliveredMetricEffects } from "./rules/lawDelivery";
+import { deliveredMetricEffects, metricLawApplies } from "./rules/lawDelivery";
 import type { ResetMetricSnapshot } from "./rules/snapshot";
 
 export const MAX_COMBINED_POLICY_PRESSURE = 1.2;
@@ -28,20 +28,26 @@ export function cabinetActionApplies(
 
 export async function loadResetPolicyPressure(
   db: Db,
-  input: { worldId: string; boards: readonly ResetMetricSnapshot[]; turn: number }
+  input: {
+    worldId: string;
+    boards: readonly ResetMetricSnapshot[];
+    turn: number;
+    laws?: Awaited<ReturnType<typeof loadMetricLawDelivery>>;
+  }
 ): Promise<Map<string, Record<string, number>>> {
   const { worldId, boards, turn } = input;
   if (!boards.length) return new Map();
   const countryIds = [...new Set(boards.map((b) => b.countryId))];
   const [laws, actions] = await Promise.all([
-    loadMetricLawDelivery(db, {
-      worldId,
-      turn,
-      countryIds,
-      regions: boards
-        .filter((b) => b.scope === "regional")
-        .map((b) => ({ _id: b.regionId!, countryId: b.countryId })),
-    }),
+    input.laws ??
+      loadMetricLawDelivery(db, {
+        worldId,
+        turn,
+        countryIds,
+        regions: boards
+          .filter((b) => b.scope === "regional")
+          .map((b) => ({ _id: b.regionId!, countryId: b.countryId })),
+      }),
     db
       .collection<ResetCabinetActionState>("resetCabinetActionStates")
       .find({ _id: { $in: countryIds }, worldId }, { projection: { _id: 1, active: 1 } })
@@ -51,8 +57,8 @@ export async function loadResetPolicyPressure(
   return new Map(
     boards.map((board) => {
       const applies = (p: { country: string; scope: string; regionId?: string }) =>
-        p.country === board.countryId &&
-        (p.scope === "national" || (board.scope === "regional" && p.regionId === board.regionId));
+        (p.scope === "national" || p.scope === "regional") &&
+        metricLawApplies({ ...p, scope: p.scope }, board);
       const points = deliveredMetricEffects(laws.programs.filter(applies), laws.settlements, turn);
       // The historical opening already embodies its statutes at full delivery.
       // Subtract that reference once; defunding existing laws must not leave a free opening benefit.

@@ -16,6 +16,7 @@ import type { EconomicModelState } from "@/lib/constants/economicModels";
 import type { StateMetrics, StateMetricValue } from "./stateMetrics";
 import type { CrisisEconomicExposure } from "@/lib/livingConflict/rules/economicExposure";
 import type { EmploymentState } from "@/lib/labour/rules/employment";
+import type { DemographicFlowCohortReading } from "@/lib/demographics/flowJournal";
 
 /**
  * Reset persistence contract:
@@ -36,11 +37,7 @@ export interface MacroMetricsDoc {
   _id: string;
   countryId?: string;
   /** V2-only raw cohort owner reading; never reused as a legacy approval metric. */
-  resetCohortReading?: {
-    asOfTurn: number;
-    populationGrowthAnnualized: number;
-    realizedTfr: number | null;
-    dependencyBurden15To64: number | null;
+  resetCohortReading?: Omit<DemographicFlowCohortReading, "periodLifeExpectancy"> & {
     periodLifeExpectancy?: number | null;
   };
   economic: StateMetrics["economic"];

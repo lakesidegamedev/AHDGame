@@ -2,6 +2,7 @@
 import { primaryMetrics } from "../catalog";
 import type { OpeningMetricObservation } from "./openingObservation";
 import type { ResetMetricSnapshot } from "./snapshot";
+import { validateHousingState, type HousingState } from "./housing";
 
 export interface MetricRefreshInput {
   board: ResetMetricSnapshot;
@@ -12,6 +13,7 @@ export interface MetricRefreshInput {
   electionDue: boolean;
   /** Refresh overdue owners from current readings without manufacturing missed turns. */
   allowCatchUp?: boolean;
+  housingState?: HousingState;
 }
 
 export interface MetricRefreshResult {
@@ -50,6 +52,11 @@ function sameObservation(a: OpeningMetricObservation | undefined, b: OpeningMetr
     a.observedAtTurn === b.observedAtTurn &&
     a.ratioBasis?.numerator === b.ratioBasis?.numerator &&
     a.ratioBasis?.denominator === b.ratioBasis?.denominator &&
+    JSON.stringify(a.demographicBasis) === JSON.stringify(b.demographicBasis) &&
+    JSON.stringify(a.householdBasis) === JSON.stringify(b.householdBasis) &&
+    a.definitionVersion === b.definitionVersion &&
+    a.unit === b.unit &&
+    JSON.stringify(a.countryBasis) === JSON.stringify(b.countryBasis) &&
     a.lastUpdatedTurn === b.lastUpdatedTurn
   );
 }
@@ -91,6 +98,17 @@ export function dueResetMetricIds(
  */
 export function refreshResetMetricBoard(input: MetricRefreshInput): MetricRefreshResult {
   const { board, turn, cohortDue, electionDue } = input;
+  if (input.housingState) {
+    validateHousingState(input.housingState);
+    if (
+      board.scope !== "regional" ||
+      input.housingState.worldId !== board.worldId ||
+      input.housingState.countryId !== board.countryId ||
+      input.housingState.regionId !== board.regionId ||
+      input.housingState.asOfTurn !== turn
+    )
+      throw new Error("Housing state is not bound to this board turn");
+  }
   const updates = Object.fromEntries(
     Object.entries(input.updates).map(([id, observation]) => [
       id,
@@ -162,6 +180,7 @@ export function refreshResetMetricBoard(input: MetricRefreshInput): MetricRefres
       Object.entries(board.observations).map(([id, o]) => [id, o.value])
     ),
     observations: { ...board.observations, ...updates },
+    ...(input.housingState ? { housingState: input.housingState } : {}),
   };
   return { board: next, replayed: false, dueIds, changedIds, missingDueIds };
 }

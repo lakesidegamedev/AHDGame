@@ -20,6 +20,30 @@ vi.mock("@/lib/resetMetrics/readGovernanceStyle", () => ({
 }));
 
 describe("v2 metrics API", () => {
+  it("serves adopted units without applying an incompatible legacy income or housing score", async () => {
+    const { getDb } = await import("@/lib/mongodb");
+    const { readResetMetricBoard } = await import("@/lib/resetMetrics/readBoard");
+    const { GET } = await import("./route");
+    const db = createMockDb();
+    vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
+    const board = buildOpeningMetricSnapshots1991("world", 1).find((b) => b._id === "US:CA")!;
+    board.observations["24"] = {
+      ...board.observations["24"]!,
+      value: 40,
+      definitionVersion: 2,
+      unit: "% disposable income spent on housing",
+    };
+    vi.mocked(readResetMetricBoard).mockResolvedValue({ status: "ready", board });
+    const response = await GET(
+      new Request("http://localhost/api/country/us/reset-metrics?region=CA"),
+      { params: Promise.resolve({ code: "us" }) }
+    );
+    const payload = await response.json();
+    expect(payload.metrics.find((m: { id: string }) => m.id === "24")).toMatchObject({
+      unit: "% disposable income spent on housing",
+      conditionScore: null,
+    });
+  });
   it("uses the same dated funding evidence as the turn, rather than granting a missing settlement full effect", async () => {
     const { getDb } = await import("@/lib/mongodb");
     const { readResetMetricBoard } = await import("@/lib/resetMetrics/readBoard");

@@ -17,7 +17,11 @@ export function ownedLegacyValues(
   for (const metric of primaryMetrics) {
     // V2 fertility is children per woman; the legacy birthRate path is a
     // 0-100 policy index. Do not silently reinterpret one as the other.
-    if (metric.id === "55") continue;
+    if (
+      metric.id === "55" ||
+      (observations[metric.id]?.definitionVersion === 2 && ["02", "24"].includes(metric.id))
+    )
+      continue;
     const o = observations[metric.id];
     if (
       o?.path === metric.path &&
@@ -85,6 +89,7 @@ export function ownedPoliticalValues(
     const family = ADAPTER_TIER1[metric.path];
     const o = observations[metric.id];
     if (!family || o?.value == null || o.status === "unavailable") continue;
+    if (o.definitionVersion === 2 && ["02", "24"].includes(metric.id)) continue;
     const score = resetMetricConditionScore(metric, o.value, country, year);
     if (score === null) continue;
     const scores = groups.get(family) ?? [];

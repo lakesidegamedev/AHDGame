@@ -228,13 +228,17 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
         const observation = observations[definition.id];
         return {
           ...definition,
+          ...(observation?.unit ? { unit: observation.unit } : {}),
           observation,
-          conditionScore: resetMetricConditionScore(
-            definition,
-            observation?.value ?? null,
-            countryId,
-            currentYear
-          ),
+          conditionScore:
+            observation?.definitionVersion === 2 && ["02", "24"].includes(definition.id)
+              ? null
+              : resetMetricConditionScore(
+                  definition,
+                  observation?.value ?? null,
+                  countryId,
+                  currentYear
+                ),
           temporaryActionEffect: temporary
             ? {
                 favorableNormalizedPoints: temporary.favorableNormalizedPoints,

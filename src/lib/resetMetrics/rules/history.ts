@@ -4,6 +4,11 @@ export interface ResetMetricHistoryPoint {
   turn: number;
   value: number;
   ratioBasis?: { numerator: number; denominator: number };
+  demographicBasis?: OpeningMetricObservation["demographicBasis"];
+  householdBasis?: OpeningMetricObservation["householdBasis"];
+  definitionVersion?: 2;
+  unit?: string;
+  countryBasis?: OpeningMetricObservation["countryBasis"];
 }
 
 export type ResetMetricHistory = Record<string, ResetMetricHistoryPoint[]>;
@@ -94,7 +99,15 @@ export function appendMetricHistory(
       const prior = history[id]!;
       const last = prior.at(-1);
       if (last?.turn === turn) {
-        if (last.value !== observation.value) {
+        if (
+          last.value !== observation.value ||
+          JSON.stringify(last.ratioBasis) !== JSON.stringify(observation.ratioBasis) ||
+          JSON.stringify(last.demographicBasis) !== JSON.stringify(observation.demographicBasis) ||
+          JSON.stringify(last.householdBasis) !== JSON.stringify(observation.householdBasis) ||
+          last.definitionVersion !== observation.definitionVersion ||
+          last.unit !== observation.unit ||
+          JSON.stringify(last.countryBasis) !== JSON.stringify(observation.countryBasis)
+        ) {
           throw new Error(`Metric history replay differs for ${id}`);
         }
         return [id, [...prior]];
@@ -108,6 +121,17 @@ export function appendMetricHistory(
             turn,
             value: observation.value,
             ...(observation.ratioBasis ? { ratioBasis: observation.ratioBasis } : {}),
+            ...(observation.demographicBasis
+              ? { demographicBasis: observation.demographicBasis }
+              : {}),
+            ...(observation.householdBasis ? { householdBasis: observation.householdBasis } : {}),
+            ...(observation.definitionVersion
+              ? {
+                  definitionVersion: observation.definitionVersion,
+                  unit: observation.unit,
+                  countryBasis: observation.countryBasis,
+                }
+              : {}),
           },
         ].slice(-RESET_METRIC_HISTORY_LIMIT),
       ];

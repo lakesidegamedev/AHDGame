@@ -8,6 +8,7 @@ import {
   type NationalMetricRegionReading,
 } from "./rules/nationalAggregation";
 import type { ResetMetricSnapshot } from "./rules/snapshot";
+import type { OpeningMetricObservation } from "./rules/openingObservation";
 
 export interface ResetMetricDetailRead {
   history: ResetMetricHistoryPoint[];
@@ -18,12 +19,28 @@ export interface ResetMetricDetailRead {
 function withCurrentPoint(
   history: readonly ResetMetricHistoryPoint[],
   turn: number,
-  value: number
+  value: number,
+  observation?: OpeningMetricObservation
 ): ResetMetricHistoryPoint[] {
-  const next = [...history];
+  // Keep older definitions stored, but never draw a continuous series across
+  // a gross/disposable-income or index/percentage definition change.
+  const next = history.filter(
+    (point) => point.definitionVersion === observation?.definitionVersion
+  );
+  const current = {
+    turn,
+    value,
+    ...(observation?.definitionVersion
+      ? {
+          definitionVersion: observation.definitionVersion,
+          unit: observation.unit,
+          countryBasis: observation.countryBasis,
+        }
+      : {}),
+  };
   const last = next.at(-1);
-  if (!last || last.turn < turn) next.push({ turn, value });
-  else if (last.turn === turn) next[next.length - 1] = { turn, value };
+  if (!last || last.turn < turn) next.push(current);
+  else if (last.turn === turn) next[next.length - 1] = current;
   return next;
 }
 
@@ -61,7 +78,8 @@ export async function readResetMetricDetail(
       history: withCurrentPoint(
         national.history?.[metricId] ?? [],
         board.asOfTurn,
-        observation.value
+        observation.value,
+        observation
       ),
       nationalValue: observation.value,
       regions: [],
@@ -142,11 +160,17 @@ export async function readResetMetricDetail(
         : undefined;
     if (board.scope === "regional" && !selectedRegion) return null;
     const displayedHistory = selectedRegion
-      ? withCurrentPoint(selectedRegion.history[metricId]!, board.asOfTurn, selectedRegion.value)
+      ? withCurrentPoint(
+          selectedRegion.history[metricId]!,
+          board.asOfTurn,
+          selectedRegion.value,
+          selectedRegion.observations[metricId]
+        )
       : withCurrentPoint(
           aggregateNationalMetricHistory(metricId, readings),
           board.asOfTurn,
-          nationalValue
+          nationalValue,
+          readings[0]!.observations[metricId]
         );
     return {
       history: displayedHistory,

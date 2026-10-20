@@ -8,7 +8,11 @@ import type { StateBudget } from "@/lib/db/types/budget";
 import { resetLawFamilies } from "@/lib/resetLegislation/catalog";
 import { isResetV2Country } from "@/lib/resetVersions/rules";
 import { openingMetricPrograms } from "@/lib/metricEngine/rules/povertyOpening";
-import type { MetricLawProgram, MetricLawSettlement } from "./rules/lawDelivery";
+import {
+  hasCurrentLawSettlement,
+  type MetricLawProgram,
+  type MetricLawSettlement,
+} from "./rules/lawDelivery";
 
 export async function loadMetricLawDelivery(
   db: Db,
@@ -129,7 +133,10 @@ export async function loadMetricLawDelivery(
   const byAccount = new Map(accounts.map((account) => [account._id, account]));
   const byRegion = new Map<
     string,
-    { countryId?: string; settlements: Record<string, MetricLawSettlement> }
+    {
+      countryId?: string;
+      settlements: Record<string, MetricLawSettlement & { fundedAmount?: number }>;
+    }
   >();
   for (const row of regional)
     byRegion.set(String(row._id), {
@@ -152,17 +159,36 @@ export async function loadMetricLawDelivery(
         settlements.set(program._id, {
           implementationFactor: family?.implementationFactor ?? 1,
           lastSettledTurn: account.accruedThroughTurn,
+          // Externally settled readiness is not evidence of a cash payment.
+          ...(family && {
+            outlaid: family.outlaid,
+            paymentKey: `national:${worldId}:${account._id}:${program.familyId}:${account.accruedThroughTurn}`,
+          }),
         });
       }
     } else if (program.regionId) {
       const budget = byRegion.get(program.regionId);
       if (budget?.countryId !== program.country) continue;
-      const paid = program.settlementLawId
-        ? Object.values(budget.settlements).find(
-            (row) => row.legislationTypeId === program.settlementLawId
-          )
-        : budget.settlements[program._id];
-      if (paid) settlements.set(program._id, paid);
+      const matches = Object.entries(budget.settlements).filter(
+        ([id, row]) =>
+          (program.settlementLawId
+            ? row.legislationTypeId === program.settlementLawId
+            : id === program._id) && hasCurrentLawSettlement(program, row, turn)
+      );
+      // A stale first entry must not hide a current receipt. Multiple current
+      // matches are ambiguous and must not silently choose one or double pay.
+      if (matches.length === 1) {
+        const [id, paid] = matches[0]!;
+        settlements.set(program._id, {
+          ...paid,
+          // These settlements allocate ANNUAL regional spending, even when the
+          // budget is reevaluated every turn. They do not prove a daily payout.
+          outlaid: undefined,
+          paymentKey: undefined,
+          fundedAnnualAmount: paid.fundedAmount,
+          fundingKey: `regional:${worldId}:${program.country}:${program.regionId}:${id}:${paid.lastSettledTurn}`,
+        });
+      }
     }
   }
   return { programs, opening, settlements };

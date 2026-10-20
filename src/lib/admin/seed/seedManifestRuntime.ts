@@ -70,7 +70,7 @@ export const RUNTIME: CollectionEntry[] = [
     name: "resetMetricSnapshots",
     category: "runtime",
     notes:
-      "World-bound 1991 v2 primary-metric boards for US, UK, and JP. Wiped on every reset; populated and read back only when the metrics v2 opening is selected. Never replaces v1 working stores in place.",
+      "World-bound reviewed v2 primary-metric boards, including successor countries. Wiped on every reset, including optional household/housing reference inputs, housing stocks and versioned observation/history metadata. No synthetic household or housing sources are created at reset; incomplete countries retain existing calculations. Never replaces v1 working stores in place.",
   },
   {
     name: "resetLawOpeningBoards",
