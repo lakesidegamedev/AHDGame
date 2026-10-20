@@ -176,6 +176,12 @@ const REFERENCE: CollectionEntry[] = [
       "Telemetry for the unified producer market shadow (market recovery Phase 2): one per-industry comparison per turn. Never read by game logic.",
   },
   {
+    name: "producerMarketShadowState",
+    category: "runtime",
+    notes:
+      "Carried books for the producer market shadow: cash, stock, unpaid bills and prices per run and turn, last two turns kept. Read only by the shadow phase.",
+  },
+  {
     name: "offTypeHandovers",
     category: "runtime",
     notes:

@@ -10,6 +10,7 @@ import { producerTrades, type MarketAccount, type PurchaseOrder } from "./rules"
 import type { HouseholdSpec } from "./householdDemandRules";
 import type { PublicPurchaseLine } from "./publicBuyerRules";
 import { nextReferencePrice } from "./referencePriceRules";
+import type { ProducerPayable } from "./payablesRules";
 
 /** Planning passes the shadow allows per turn (see the t300 replay note above). */
 export const SHADOW_PLANNING_PASSES = 8;
@@ -80,7 +81,7 @@ export function publicOrders(
   return orders;
 }
 
-export function runProducerShadow(input: {
+type ShadowInput = {
   turn: number;
   /** Today's world reference price per commodity (anchor units). */
   references?: Readonly<Record<string, number>>;
@@ -93,11 +94,24 @@ export function runProducerShadow(input: {
   marketingOrders?: readonly PurchaseOrder[];
   /** Trade-route eligibility for plant input orders (see routeRules.ts). */
   eligibleOffersByOrder?: Readonly<Record<string, readonly string[]>>;
-}): ShadowSummary {
+  /** Unpaid producer bills carried from the previous shadow turn. */
+  payables?: readonly ProducerPayable[];
+};
+
+export function runProducerShadow(input: ShadowInput): ShadowSummary {
+  return runProducerShadowDetailed(input).summary;
+}
+
+/** The summary plus the raw settlement, for callers that carry state between turns. */
+export function runProducerShadowDetailed(input: ShadowInput): {
+  summary: ShadowSummary;
+  result: ReturnType<typeof advanceProducerEconomy>;
+} {
   const marketingOrders = input.marketingOrders ?? [];
   const result = advanceProducerEconomy({
     turn: input.turn,
     accounts: input.accounts,
+    payables: input.payables,
     producers: input.producers.map((p) => p.plan),
     households: input.households,
     externalOrders: [...input.publicOrders, ...marketingOrders],
@@ -158,7 +172,7 @@ export function runProducerShadow(input: {
     else if (publicIds.has(t.buyerAccountId)) publicSpend += value;
   }
   const n = input.producers.length;
-  return {
+  const summary: ShadowSummary = {
     turn: input.turn,
     plants: n,
     skipped: input.skipped,
@@ -210,4 +224,5 @@ export function runProducerShadow(input: {
       .map((p) => ({ commodity: p.commodity, units: p.units, unitPrice: p.unitPrice }))
       .sort((a, b) => (a.commodity < b.commodity ? -1 : 1)),
   };
+  return { summary, result };
 }
