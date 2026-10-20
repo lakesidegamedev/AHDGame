@@ -236,7 +236,36 @@ export interface CorporationOperatorPolicy {
   sectorTypes?: string[];
   /** Countries the operator may found or grow in; absent means any. */
   countryIds?: string[];
+  /**
+   * Standing answer to an NPP CEO's pay demand when nobody responds in time:
+   * accept a raise costing up to this share of trailing profit, else replace
+   * the CEO. Absent means the default (3%).
+   */
+  ceoPayAutoAcceptShare?: number;
   setTurn: number;
+}
+
+/** NPP CEO career and pay state for a corporation run by an NPP CEO. */
+export interface CorporationCeoPay {
+  /** The NPP this state belongs to; a different ceoId restarts the schedule. */
+  ceoId: string;
+  appointedTurn: number;
+  nextReviewTurn: number;
+  /** Open pay demand awaiting the owner, in the company's currency per day. */
+  demand?: {
+    amount: number;
+    turn: number;
+    expiresTurn: number;
+    level: number;
+    trailingProfit: number;
+  };
+  /** Last resolved review, for the company page. */
+  lastDecision?: {
+    turn: number;
+    outcome: "accepted" | "countered" | "replaced";
+    salary?: number;
+    bySystem: boolean;
+  };
 }
 
 export interface Corporation {
@@ -688,6 +717,8 @@ export interface Corporation {
   autopilot?: CorporationAutopilot;
   /** Owner limits on the NPP operator running this corporation. */
   operatorPolicy?: CorporationOperatorPolicy;
+  /** NPP CEO career and pay demands (only while ceoType is "npp"). */
+  ceoPay?: CorporationCeoPay;
   /** Country owner for state-owned / nationalized corporations */
   countryOwnerId?: CountryId;
   /** Hide the corporation from stock-exchange style equity listings */

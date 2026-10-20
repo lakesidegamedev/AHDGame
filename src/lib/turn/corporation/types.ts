@@ -31,6 +31,8 @@ export interface CorporationLookups {
   personalTopIncomeTaxRateByCountry?: Map<string, number>;
   /** State top personal income tax rate (percent) by state id. */
   personalTopIncomeTaxRateByState?: Map<string, number>;
+  /** See GameState.nppCeoPayStartTurn. */
+  nppCeoPayStartTurn?: number;
   hardwareInputReliefStartTurn?: number;
   corporations: Corporation[];
   sectorsByCorp: Map<string, CorporateSector[]>;

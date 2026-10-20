@@ -181,3 +181,50 @@ export function nextPayReviewTurn(
   reviewsAhead = Math.max(0, reviewsAhead);
   return start + CEO_PAY_REVIEW_TURNS * reviewsAhead;
 }
+
+/** Turns a pay demand stays open before the standing policy decides it. */
+export const CEO_PAY_DEMAND_OPEN_TURNS = 12;
+
+/**
+ * A CEO salary unit is this share of the company's trailing daily revenue, so
+ * base pay scales with the size of the business in its own currency.
+ */
+export const CEO_SALARY_UNIT_REVENUE_SHARE = 0.005;
+
+/** Standing policy when the owner sets none: accept a raise up to 3% of profit. */
+export const DEFAULT_CEO_PAY_AUTO_ACCEPT_SHARE = 0.03;
+
+/** Salary unit for a company from its trailing daily revenue. */
+export function ceoSalaryUnit(trailingDailyRevenue: number): number {
+  return Number.isFinite(trailingDailyRevenue) && trailingDailyRevenue > 0
+    ? trailingDailyRevenue * CEO_SALARY_UNIT_REVENUE_SHARE
+    : 0;
+}
+
+/** Owner responses to an open pay demand. */
+export type CeoPayResponse =
+  { action: "accept" } | { action: "counter"; amount: number } | { action: "replace" };
+
+/** Outcome of a response: the salary to set, or a replacement. */
+export type CeoPayOutcome =
+  | { kind: "salary"; salary: number; accepted: "demand" | "counter" }
+  | { kind: "replace"; reason: "owner" | "refusedCounter" };
+
+/**
+ * Resolve an owner response to an open demand. A refused counter means the
+ * CEO walks out and the company appoints a new one.
+ */
+export function resolveCeoPayResponse(
+  demand: number,
+  response: CeoPayResponse,
+  stubbornness: number
+): CeoPayOutcome {
+  if (response.action === "accept") {
+    return { kind: "salary", salary: Math.max(0, Math.round(demand)), accepted: "demand" };
+  }
+  if (response.action === "replace") return { kind: "replace", reason: "owner" };
+  const counter = Math.max(0, Math.round(finiteOr(response.amount, 0)));
+  return counterAccepted(demand, counter, stubbornness)
+    ? { kind: "salary", salary: counter, accepted: "counter" }
+    : { kind: "replace", reason: "refusedCounter" };
+}

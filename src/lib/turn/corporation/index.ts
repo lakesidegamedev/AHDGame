@@ -32,6 +32,7 @@ import { shedInactiveCeoSectorsToUnowned } from "./inactiveCeoSectorShed";
 import { installCaretakersForVacantCorps } from "./autoCaretakerVacantCorps";
 import { loadEngineSixCountries } from "./engineSixCountries";
 import { recordNppCeoTrackRecords } from "./nppCeoTrackRecord";
+import { processNppCeoPay } from "./nppCeoPay";
 import { processSectors } from "./sectorCalculations";
 import { getLabourSystemMode, labourAtLeast } from "@/lib/labour/featureFlag";
 import { getMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
@@ -694,6 +695,16 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
     console.error("[corporationTurn] NPP CEO track record pass failed", error);
   }
   mark("nppCeoTrackRecord");
+
+  // NPP CEO careers: pay reviews, demands and the standing policy's answer.
+  // Runs before the sector calculations so a salary set here is paid this
+  // turn. A failure skips one review cycle; nothing else depends on it.
+  try {
+    await processNppCeoPay(db, lookups, turn ?? 0, lookups.nppCeoPayStartTurn);
+  } catch (error) {
+    console.error("[corporationTurn] NPP CEO pay pass failed", error);
+  }
+  mark("nppCeoPay");
 
   // Forensics/alt-detection audit spine: aggregate, not-per-corp entries for
   // this turn's silent auto-mutations (vacant/inactive-CEO shedding, NPP

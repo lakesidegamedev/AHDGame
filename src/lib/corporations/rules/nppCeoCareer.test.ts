@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  ceoSalaryUnit,
+  resolveCeoPayResponse,
   CEO_MAX_LEVEL,
   CEO_OVERHEAD_DISCOUNT_CAP_PP,
   CEO_OVERHEAD_DISCOUNT_PER_LEVEL,
@@ -22,13 +24,13 @@ describe("CEO constants", () => {
 
   it("reviews pay every twenty four turns and caps the profit share at ten percent", () => {
     expect(CEO_PAY_REVIEW_TURNS).toBe(24);
-    expect(CEO_PROFIT_SHARE_CAP).toBe(0.10);
+    expect(CEO_PROFIT_SHARE_CAP).toBe(0.1);
     expect(CEO_PROFIT_SHARE_CAP).toBeGreaterThan(0);
     expect(CEO_PROFIT_SHARE_CAP).toBeLessThan(1);
   });
 
   it("discounts overhead by ten percent per level up to two margin points", () => {
-    expect(CEO_OVERHEAD_DISCOUNT_PER_LEVEL).toBe(0.10);
+    expect(CEO_OVERHEAD_DISCOUNT_PER_LEVEL).toBe(0.1);
     expect(CEO_OVERHEAD_DISCOUNT_CAP_PP).toBe(2);
     expect(CEO_OVERHEAD_DISCOUNT_CAP_PP).toBeGreaterThan(0);
   });
@@ -303,5 +305,33 @@ describe("nextPayReviewTurn", () => {
     expect(nextPayReviewTurn(Number.NaN, Number.NaN, Number.NaN)).toBe(24);
     expect(nextPayReviewTurn(0, Number.POSITIVE_INFINITY, 0)).toBe(24);
     expect(nextPayReviewTurn(Number.POSITIVE_INFINITY, 0, 0)).toBe(24);
+  });
+});
+
+describe("salary unit and responses", () => {
+  it("scales the salary unit with revenue and guards bad input", () => {
+    expect(ceoSalaryUnit(1_000_000)).toBe(5_000);
+    expect(ceoSalaryUnit(0)).toBe(0);
+    expect(ceoSalaryUnit(Number.NaN)).toBe(0);
+  });
+  it("accepts, counters and replaces", () => {
+    expect(resolveCeoPayResponse(1000, { action: "accept" }, 50)).toEqual({
+      kind: "salary",
+      salary: 1000,
+      accepted: "demand",
+    });
+    expect(resolveCeoPayResponse(1000, { action: "counter", amount: 900 }, 0)).toEqual({
+      kind: "salary",
+      salary: 900,
+      accepted: "counter",
+    });
+    expect(resolveCeoPayResponse(1000, { action: "counter", amount: 800 }, 100)).toEqual({
+      kind: "replace",
+      reason: "refusedCounter",
+    });
+    expect(resolveCeoPayResponse(1000, { action: "replace" }, 0)).toEqual({
+      kind: "replace",
+      reason: "owner",
+    });
   });
 });

@@ -87,6 +87,11 @@ export interface GameState {
    * share of pass-through profit, phased in over 24 turns. Unset = legacy.
    */
   passThroughOwnerTaxStartTurn?: number;
+  /**
+   * First turn NPP CEOs are paid and level up. Pay reviews start no earlier
+   * than 24 turns after it, so owners see the first demand coming.
+   */
+  nppCeoPayStartTurn?: number;
   /** World-local activation boundary for the twelve-turn hardware input reduction. */
   hardwareInputReliefStartTurn?: number;
   /** Unique world identity for replay receipts; replaced on each reset. */
