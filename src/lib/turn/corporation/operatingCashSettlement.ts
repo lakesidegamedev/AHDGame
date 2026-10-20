@@ -743,11 +743,16 @@ async function settleCorporateOperatingCashBatched(
     }
     const taxAnchor = quote.taxByCountryAnchor.reduce((sum, [, amount]) => sum + amount, 0);
     const taxSourceLocal = taxAnchor * quote.sourceLocalPerAnchor;
+    // A negative net (tax above this turn's receipts) still batches when the
+    // corporation's cash covers it: one guarded debit instead of separate gross
+    // and tax receipts. On a funded turn the producer market has already paid
+    // the corporation its operating profit, so most nets are negative.
+    const cash = cashByCorpId.get(id) ?? 0;
     if (
       !(quote.grossLocal > 0) ||
       !(taxSourceLocal > 0) ||
-      !(quote.netLocal >= 0) ||
-      !((cashByCorpId.get(id) ?? 0) >= 0) ||
+      !(quote.netLocal >= 0 || cash >= -quote.netLocal) ||
+      !(cash >= 0) ||
       !quote.taxByCountryAnchor.every(([, amount]) => amount >= 0) ||
       quote.taxDestinations.length === 0 ||
       !quote.taxDestinations.every((destination) => treasuryIdByCountry.has(destination.country))
@@ -794,6 +799,19 @@ async function settleCorporateOperatingCashBatched(
           filter: { _id: oid(snapshot.corpId.toString()) },
           path: "liquidCapital",
           note: "Credit realized operating receipts net of tax withholding",
+        });
+      else if (corporationLocal < 0)
+        legs.push({
+          kind: "debit",
+          amount: -corporationLocal,
+          valuation,
+          collection: "corporations",
+          filter: {
+            _id: oid(snapshot.corpId.toString()),
+            liquidCapital: { $gte: -corporationLocal },
+          },
+          path: "liquidCapital",
+          note: "Withhold corporate tax above this turn's receipts from available cash",
         });
       for (const destination of quote.taxDestinations)
         treasuryLocal.set(

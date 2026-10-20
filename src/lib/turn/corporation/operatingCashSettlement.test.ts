@@ -135,6 +135,48 @@ describe("corporate operating cash settlement", () => {
     expect(kinds).toContain("corporate_tax_withholding");
   });
 
+  it("batches a corporation whose tax exceeds this turn's receipts when its cash covers it", async () => {
+    const db = createInMemoryDb();
+    const a = new ObjectId("650000000000000000000041");
+    const b = new ObjectId("650000000000000000000042");
+    db.seed("gameConfig", [{ _id: "default", treasuryCashLedgerEnabled: true }]);
+    db.seed("gameState", [{ _id: "current", currentTurn: 4, preset: "2019-default" }]);
+    db.seed("exchangeRates", [{ currencyCode: "USD", rate: 1 }]);
+    db.seed("federalBudget", [
+      { _id: "US", countryId: "US", currencyCode: "USD", treasuryCashLocal: 0, treasuryBalance: 0 },
+    ]);
+    db.seed("corporations", [
+      { _id: a, liquidCapital: 100 },
+      { _id: b, liquidCapital: 100 },
+    ]);
+    const snaps = [
+      // Net -15: gross 5 minted, tax 20 to the Treasury, 15 from cash.
+      snapshot(a, {
+        operatingCashIncomeLocal: -15,
+        operatingCashCurrency: "USD",
+        operatingCashLocalPerAnchor: 1,
+        federalTaxByCountryAnchor: new Map([["US", 20]]),
+      }),
+      snapshot(b, {
+        operatingCashIncomeLocal: 30,
+        operatingCashCurrency: "USD",
+        operatingCashLocalPerAnchor: 1,
+        federalTaxByCountryAnchor: new Map([["US", 10]]),
+      }),
+    ];
+    await settleCorporateOperatingCash(db as unknown as Db, snaps, 4, new Date());
+    await settleCorporateOperatingCash(db as unknown as Db, snaps, 4, new Date());
+    const corps = new Map(
+      db.collection("corporations").docs.map((c) => [String(c._id), c.liquidCapital])
+    );
+    expect(corps.get(String(a))).toBeCloseTo(85);
+    expect(corps.get(String(b))).toBeCloseTo(130);
+    expect(db.collection("federalBudget").docs[0].treasuryCashLocal).toBeCloseTo(30);
+    const keys = db.collection("bankMoneyMoves").docs.map((d) => String(d._id));
+    expect(keys.filter((k) => k.startsWith("corp-operating-net-batch:4:"))).toHaveLength(1);
+    expect(keys.some((k) => k.endsWith(":gross") || k.endsWith(":tax"))).toBe(false);
+  });
+
   it("finishes a crashed batch on retry and never settles its members again", async () => {
     const db = createInMemoryDb();
     const ids = [51, 52, 53, 54].map((n) => new ObjectId(`6500000000000000000000${n}`));
