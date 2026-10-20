@@ -13,12 +13,12 @@ export interface PlantSectorSplitInput {
   defenderPlantCount: number;
   /** Total paid basis of those plants in anchor currency. */
   defenderBookValueAnchor: number;
-  /** Both MS values are read before this attempt deducts its cost. */
+  /**
+   * Both MS values are read before this attempt deducts its cost. MS sets
+   * both the share at stake and the odds.
+   */
   attackerMarketingStrength: number;
   defenderMarketingStrength: number;
-  /** R&D scores set the odds: the better-researched side usually wins. */
-  attackerRdScore: number;
-  defenderRdScore: number;
 }
 
 export interface PlantSectorSplitQuote {
@@ -96,11 +96,10 @@ export function calculatePlantSectorSplit(input: PlantSectorSplitInput): PlantSe
   const marketingStrengthCost =
     plantsAtRisk > 0 ? PLANT_SPLIT_MS_LOG_SCALE * Math.ceil(Math.log2(1 + defenderPlantCount)) : 0;
 
-  // Marketing sets how much is at stake; R&D sets whether the attempt lands.
-  const attackerRdScore = finiteNonNegative(input.attackerRdScore);
-  const defenderRdScore = finiteNonNegative(input.defenderRdScore);
-  const totalRdScore = attackerRdScore + defenderRdScore;
-  const rawSuccessProbability = totalRdScore > 0 ? attackerRdScore / totalRdScore : 0.5;
+  // Marketing sets both how much is at stake and whether the attempt lands.
+  const totalMarketingStrength = attackerMarketingStrength + defenderMarketingStrength;
+  const rawSuccessProbability =
+    totalMarketingStrength > 0 ? attackerMarketingStrength / totalMarketingStrength : 0.5;
   const successProbability = clamp(
     rawSuccessProbability,
     MIN_PLANT_SPLIT_SUCCESS_PROBABILITY,
