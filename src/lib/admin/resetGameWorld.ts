@@ -3,6 +3,7 @@ import {
   archiveRetiredCareerLegislation,
   loadCareerLoans,
 } from "@/lib/world/careerEvidence";
+import { PASS_THROUGH_PHASE_IN_TURNS } from "@/lib/corporations/rules/passThroughTax";
 import { fetchExchangeRateMap } from "@/lib/world/forex";
 import { resolveStartingPartiesMode, type StartingPartiesMode } from "./startingParties";
 import { MongoServerError, ObjectId, type Db } from "mongodb";
@@ -682,6 +683,9 @@ export async function resetGameWorld(
     currentTurn: resetDate.currentTurn,
     hardwareInputReliefStartTurn: resetDate.currentTurn,
     stockHoldingTaxStartTurn: resetDate.currentTurn,
+    // A fresh world starts with pass-through owners fully taxed; the phase-in
+    // only exists to ease a live world into the reform.
+    passThroughOwnerTaxStartTurn: resetDate.currentTurn - PASS_THROUGH_PHASE_IN_TURNS,
     currentYear: resetDate.currentYear,
     resetStartDate: { year: resetDate.year, week: resetDate.week },
     startingYear,

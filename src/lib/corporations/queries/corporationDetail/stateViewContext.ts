@@ -80,6 +80,7 @@ export async function loadStateViewContext(
                 currentTurn: 1,
                 hardwareInputReliefStartTurn: 1,
                 stockHoldingTaxStartTurn: 1,
+                passThroughOwnerTaxStartTurn: 1,
                 startingYear: 1,
                 eraSystemEnabled: 1,
               },
@@ -91,7 +92,10 @@ export async function loadStateViewContext(
           [],
           await db
             .collection<GameState>("gameState")
-            .findOne({ _id: "current" }, { projection: { stockHoldingTaxStartTurn: 1 } }),
+            .findOne(
+              { _id: "current" },
+              { projection: { stockHoldingTaxStartTurn: 1, passThroughOwnerTaxStartTurn: 1 } }
+            ),
         ];
   const states = allStates.filter((s) => uniqueStateIdSet.has(s._id));
   // SP4 §4a: political margin overlays for playable regions among this corp's states.
@@ -138,6 +142,8 @@ export async function loadStateViewContext(
             gdp: 1,
             "taxRates.domesticCorporateTax": 1,
             "taxRates.foreignCorporateTax": 1,
+            "taxRates.incomeTaxHigh": 1,
+            "taxRates.incomeTax": 1,
             // Read by the expropriation-risk and SOE overreach margin terms.
             // Missing from this projection, both maps were always empty and
             // the corp page computed those terms as zero.

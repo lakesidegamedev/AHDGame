@@ -363,6 +363,9 @@ export async function buildCorporationLookups(
             gdp: 1,
             "taxRates.domesticCorporateTax": 1,
             "taxRates.foreignCorporateTax": 1,
+            // Pass-through owners are taxed at the top personal rate.
+            "taxRates.incomeTaxHigh": 1,
+            "taxRates.incomeTax": 1,
             // Per-country authored GDP-share targets (fiscal-scale audit,
             // 2026-07-29) - updateCorporateTaxBases below reads
             // taxBaseGdpShareBaseline.{domestic,foreign}CorporateProfits as the
@@ -401,6 +404,8 @@ export async function buildCorporationLookups(
             _id: 1,
             "taxRates.domesticCorporateTax": 1,
             "taxRates.foreignCorporateTax": 1,
+            "taxRates.incomeTaxHigh": 1,
+            "taxRates.incomeTax": 1,
           },
         }
       )
@@ -702,6 +707,7 @@ export async function buildCorporationLookups(
   // applies to all other corps. Per-sector selection happens in sectorCalculations.ts.
   const domesticCorpTaxRateByCountry = new Map<string, number>();
   const foreignCorpTaxRateByCountry = new Map<string, number>();
+  const personalTopIncomeTaxRateByCountry = new Map<string, number>();
   for (const budget of federalBudgets) {
     const cid = budget.countryId;
     if (!cid) continue;
@@ -720,6 +726,8 @@ export async function buildCorporationLookups(
     if (typeof domRate === "number") domesticCorpTaxRateByCountry.set(cid, domRate);
     const forRate = budget.taxRates?.foreignCorporateTax;
     if (typeof forRate === "number") foreignCorpTaxRateByCountry.set(cid, forRate);
+    const topIncome = budget.taxRates?.incomeTaxHigh ?? budget.taxRates?.incomeTax;
+    if (typeof topIncome === "number") personalTopIncomeTaxRateByCountry.set(cid, topIncome);
     investorConfidenceByCountry.set(cid, budget.investorConfidence ?? INVESTOR_CONFIDENCE_BASELINE);
     stateOwnershipConcentrationByCountry.set(cid, budget.stateOwnershipConcentration ?? 0);
   }
@@ -774,11 +782,14 @@ export async function buildCorporationLookups(
   // Build per-state domestic/foreign corporate tax rate maps for per-sector state tax.
   const domesticStateCorpTaxRateByState = new Map<string, number>();
   const foreignStateCorpTaxRateByState = new Map<string, number>();
+  const personalTopIncomeTaxRateByState = new Map<string, number>();
   for (const sb of stateBudgets) {
     const dom = sb.taxRates?.domesticCorporateTax;
     if (typeof dom === "number") domesticStateCorpTaxRateByState.set(sb._id, dom);
     const fgn = sb.taxRates?.foreignCorporateTax;
     if (typeof fgn === "number") foreignStateCorpTaxRateByState.set(sb._id, fgn);
+    const topIncome = sb.taxRates?.incomeTaxHigh ?? sb.taxRates?.incomeTax;
+    if (typeof topIncome === "number") personalTopIncomeTaxRateByState.set(sb._id, topIncome);
   }
 
   // Build global, national, and per-state commodity balance lookups for margin modifiers.
@@ -1412,6 +1423,7 @@ export async function buildCorporationLookups(
         preset: 1,
         hardwareInputReliefStartTurn: 1,
         stockHoldingTaxStartTurn: 1,
+        passThroughOwnerTaxStartTurn: 1,
         currentYear: 1,
         currentTurn: 1,
         startingYear: 1,
@@ -1628,6 +1640,9 @@ export async function buildCorporationLookups(
     preset: marketSharePreset,
     hardwareInputReliefStartTurn: gameState?.hardwareInputReliefStartTurn,
     stockHoldingTaxStartTurn: gameState?.stockHoldingTaxStartTurn,
+    passThroughOwnerTaxStartTurn: gameState?.passThroughOwnerTaxStartTurn,
+    personalTopIncomeTaxRateByCountry,
+    personalTopIncomeTaxRateByState,
     eraYear,
     eraUnitScale,
     corporations,

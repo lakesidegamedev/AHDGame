@@ -82,6 +82,11 @@ export interface IterationStampFields {
 export interface GameState {
   /** Set only after the stock holding and capital-gains migration completes. */
   stockHoldingTaxStartTurn?: number;
+  /**
+   * First turn of the pass-through tax reform: owners are taxed on their full
+   * share of pass-through profit, phased in over 24 turns. Unset = legacy.
+   */
+  passThroughOwnerTaxStartTurn?: number;
   /** World-local activation boundary for the twelve-turn hardware input reduction. */
   hardwareInputReliefStartTurn?: number;
   /** Unique world identity for replay receipts; replaced on each reset. */

@@ -34,6 +34,27 @@ import {
 } from "./rules/incomeTaxTiers";
 
 export const PLAYER_TAX_KIND = "player_income_tax";
+
+/**
+ * Pass-through distributions already taxed at source (the owner tax on
+ * pass-through profit) are not taxed again. The exempt amount comes off the
+ * income portion first, then the capital portion.
+ */
+export function excludeTaxedAtSource<
+  T extends { income: number; capital: number; assessmentTurn?: number },
+>(entry: { type: string; meta?: Record<string, unknown> }, taxable: T): T {
+  if (entry.type !== "corp_dividend") return taxable;
+  const raw = entry.meta?.passThroughTaxedAmount;
+  const exempt = typeof raw === "number" && Number.isFinite(raw) && raw > 0 ? raw : 0;
+  if (exempt === 0) return taxable;
+  const fromIncome = Math.min(taxable.income, exempt);
+  const fromCapital = Math.min(taxable.capital, exempt - fromIncome);
+  return {
+    ...taxable,
+    income: taxable.income - fromIncome,
+    capital: taxable.capital - fromCapital,
+  };
+}
 const LOOKBACK_TURNS = 12;
 type TaxIncomeEntry = Pick<
   FinancialTxLogEntry,
@@ -257,15 +278,18 @@ export async function processPlayerIncomeTax(
     const budget = budgetByCountry.get(country);
     const stateBudget = stateBudgets.get(character.homeState);
     const amounts = (entry: TaxIncomeEntry) =>
-      gameState.stockHoldingTaxStartTurn !== undefined &&
-      turn >= gameState.stockHoldingTaxStartTurn &&
-      (entry.type === "stock_trade_sell" || entry.type === "corp_dividend")
-        ? taxableStockAmounts(entry.type, entry.amount, entry.meta?.stockTax)
-        : {
-            income: entry.type === "stock_trade_sell" ? 0 : entry.amount,
-            capital: 0,
-            assessmentTurn: undefined,
-          };
+      excludeTaxedAtSource(
+        entry,
+        gameState.stockHoldingTaxStartTurn !== undefined &&
+          turn >= gameState.stockHoldingTaxStartTurn &&
+          (entry.type === "stock_trade_sell" || entry.type === "corp_dividend")
+          ? taxableStockAmounts(entry.type, entry.amount, entry.meta?.stockTax)
+          : {
+              income: entry.type === "stock_trade_sell" ? 0 : entry.amount,
+              capital: 0,
+              assessmentTurn: undefined,
+            }
+      );
     const eligibleRows = (byCharacter.get(character._id.toHexString()) ?? []).filter((entry) => {
       const due = amounts(entry).assessmentTurn ?? entry.turn;
       return due >= character.incomeTaxStartTurn! && due <= turn;
