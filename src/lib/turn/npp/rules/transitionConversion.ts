@@ -18,6 +18,9 @@ import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { freeTransitionConversion } from "@/lib/market/producerMarket/transitionRules";
 import type { CorporateSector } from "@/lib/db/types";
 
+/** Settled turns with no sales after which an AI-run corporation mothballs a plant. */
+export const AI_ZERO_SALES_MOTHBALL_TURNS = 2;
+
 /** Price-over-base shortage a target lane must show before an AI converts into it. */
 export const AI_CONVERSION_MIN_SHORTAGE = 1.25;
 

@@ -321,8 +321,10 @@ export async function runFundedProducerTurn(
       : { payments: [], coverageByCountry: new Map<string, number>() };
     const byPayee = new Map<string, SettlementClose["transfers"][number]>();
     const paid: Record<string, number> = {};
+    const bySector: Record<string, number> = {};
     for (const p of support.payments) {
       paid[p.countryId] = (paid[p.countryId] ?? 0) + p.claim;
+      bySector[p.sectorId] = (bySector[p.sectorId] ?? 0) + p.claim;
       const owner = sectorOwner.get(p.sectorId)!;
       const from = publicWallet(p.countryId);
       const key = `${owner}:${from}`;
@@ -340,6 +342,7 @@ export async function runFundedProducerTurn(
       transfers,
       meta: {
         paidByCountry: paid,
+        supportBySector: bySector,
         coverageByCountry: Object.fromEntries(support.coverageByCountry),
       },
     };
@@ -362,6 +365,8 @@ export async function runFundedProducerTurn(
     close: closeAtSettlement,
   });
 
+  const supportBySector =
+    (settled.result.close?.meta?.supportBySector as Record<string, number> | undefined) ?? {};
   const receiptsBySectorId = new Map<string, FundedReceipt>();
   for (const sector of settled.closingSectors) {
     const r = sector.producerSettlement;
@@ -371,8 +376,26 @@ export async function runFundedProducerTurn(
         profit: r.profit,
         producedUnits: r.producedUnits,
         soldUnits: r.soldUnits,
+        unsoldProductionCost: r.unsoldProductionCost ?? 0,
+        transitionSupport: supportBySector[sector._id.toHexString()] ?? 0,
       });
   }
+  // Consecutive zero-sales turns per settled sector (AI mothballing reads it).
+  const zeroSales: ObjectId[] = [];
+  const sold: ObjectId[] = [];
+  for (const [id, r] of receiptsBySectorId)
+    (r.soldUnits > 0 ? sold : zeroSales).push(new ObjectId(id));
+  const sectorDocs = db.collection<CorporateSector>("corporateSectors");
+  if (zeroSales.length > 0)
+    await sectorDocs.updateMany(
+      { _id: { $in: zeroSales } },
+      { $inc: { producerZeroSalesTurns: 1 } }
+    );
+  if (sold.length > 0)
+    await sectorDocs.updateMany(
+      { _id: { $in: sold }, producerZeroSalesTurns: { $gt: 0 } },
+      { $set: { producerZeroSalesTurns: 0 } }
+    );
   for (const sectorId of idleSectorIds)
     if (!receiptsBySectorId.has(sectorId))
       receiptsBySectorId.set(sectorId, { revenue: 0, profit: 0, producedUnits: 0, soldUnits: 0 });

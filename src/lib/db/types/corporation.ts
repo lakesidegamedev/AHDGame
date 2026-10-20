@@ -1032,6 +1032,8 @@ export interface CorporateSector {
   cutoverTransition?: import("@/lib/market/producerMarket/transitionRules").SectorTransition;
   /** Turn the owner used the transition package's free conversion; ends floor support. */
   cutoverConvertedAtTurn?: number;
+  /** Funded market: consecutive settled turns this sector sold nothing. */
+  producerZeroSalesTurns?: number;
   /** Physical opening generation, advanced atomically with the operating receipt. */
   producerCapacity?: import("./producerEconomy").ProducerGenerationStamp;
   producerInventory?: import("./producerEconomy").ProducerInventoryState;
@@ -1588,6 +1590,10 @@ export interface CorporateSector {
     inventoryRevenue: number;
     /** Inventory carrying cost inside `totalCost`. */
     inventoryCarry: number;
+    /** Funded market: inputs in output that went to stock unsold this turn, at cost (reported beside profit). */
+    stockAddedAtCost?: number;
+    /** Funded market: transition floor support received this turn (reported beside profit). */
+    transitionSupport?: number;
     inputs: number;
     labour: number;
     upkeep: number;
