@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { PLANT_OVERHEAD_FIXED_SHARE, computePlantOverhead, plantLaborShare } from "./rules";
+import {
+  PLANT_OVERHEAD_FIXED_SHARE,
+  computePlantOverhead,
+  plantLaborShare,
+  standingProducerSiteBill,
+} from "./rules";
 import { getSectorLaborShare } from "@/lib/labour/laborCost";
 
 describe("explicit production-method payroll", () => {
@@ -100,5 +105,16 @@ describe("explicit plant overhead", () => {
       expect(computePlantOverhead({ ...base, producedUnits: bad })).toBe(0);
     }
     expect(computePlantOverhead({ ...base, mothballed: true })).toBe(0);
+  });
+});
+
+describe("transition window upkeep waiver", () => {
+  it("charges no cold upkeep on idle capacity when waived", () => {
+    const base = { nominalHourlyCapacityValue: 100, activeFraction: 0, financialPenaltyPercent: 0 };
+    expect(standingProducerSiteBill(base)).toBeGreaterThan(0);
+    expect(standingProducerSiteBill({ ...base, coldUpkeepWaived: true })).toBe(0);
+    expect(standingProducerSiteBill({ ...base, activeFraction: 1, coldUpkeepWaived: true })).toBe(
+      standingProducerSiteBill({ ...base, activeFraction: 1 })
+    );
   });
 });

@@ -176,3 +176,29 @@ export function closeTransferMoves(
       })),
     }));
 }
+
+/** Transition floor payments: unspent public funding to an over-built sector's owner. */
+export function transitionSupportMoves(
+  worldEpoch: string,
+  turn: number,
+  payments: readonly { sectorId: string; amountAnchor: number; from: CloseParty; to: CloseParty }[]
+): MoneyMove[] {
+  return payments
+    .filter(
+      (p) => positive(p.amountAnchor) > 0 && p.from.localPerAnchor > 0 && p.to.localPerAnchor > 0
+    )
+    .map((p) => ({
+      key: `producer-transition:${worldEpoch}:${turn}:${p.sectorId}`,
+      kind: "producer_transition_support",
+      turn,
+      legs: [p.from, p.to].map((side, i) => ({
+        kind: i === 0 ? ("debit" as const) : ("credit" as const),
+        amount: p.amountAnchor * side.localPerAnchor,
+        valuation: { currencyCode: side.currencyCode, localPerAnchor: side.localPerAnchor },
+        collection: side.collection,
+        filter: side.filter,
+        path: side.path,
+        note: "transition revenue floor",
+      })),
+    }));
+}

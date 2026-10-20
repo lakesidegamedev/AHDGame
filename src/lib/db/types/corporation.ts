@@ -1025,6 +1025,13 @@ export interface SectorBuildOrder {
 export interface CorporateSector {
   /** Unified producer market (#4322): written only once the new market settles a turn. */
   producerSettlement?: import("./producerEconomy").ProducerSectorSettlement;
+  /**
+   * Funded-market cutover transition package: the classification frozen into
+   * the reviewed opening plan. Written once by applyProducerOpening, never after.
+   */
+  cutoverTransition?: import("@/lib/market/producerMarket/transitionRules").SectorTransition;
+  /** Turn the owner used the transition package's free conversion; ends floor support. */
+  cutoverConvertedAtTurn?: number;
   /** Physical opening generation, advanced atomically with the operating receipt. */
   producerCapacity?: import("./producerEconomy").ProducerGenerationStamp;
   producerInventory?: import("./producerEconomy").ProducerInventoryState;

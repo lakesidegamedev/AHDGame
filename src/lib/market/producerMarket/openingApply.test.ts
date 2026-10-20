@@ -37,6 +37,12 @@ const plan = (changes: Partial<ProducerOpeningPlan> = {}): ProducerOpeningPlan =
           { commodity: "food", book: "world", policy: { kind: "automatic", targetMarkup: 0 } },
         ],
         openingInventoryMemoValueAnchor: 0,
+        transition: {
+          mismatched: true,
+          legacyRevenueAnchor: 50,
+          fundedRevenueAnchor: 10,
+          basisTurns: 5,
+        },
       },
     ],
     openingQuoteAdjustments: [],
@@ -82,6 +88,7 @@ describe("producer opening apply", () => {
       outputStock: [{ commodity: "food", book: "world", units: 5 }],
     });
     expect(sector.producerQuotes).toEqual({ food: { kind: "automatic", targetMarkup: 0 } });
+    expect(sector.cutoverTransition).toMatchObject({ mismatched: true, legacyRevenueAnchor: 50 });
     const corp = memory.collection("corporations").docs[0];
     expect(corp.producerPayables).toEqual({ worldEpoch: "w", turn: 99, claims: [] });
     expect(corp.operatingCashArrearsByCurrency).toBeUndefined();
