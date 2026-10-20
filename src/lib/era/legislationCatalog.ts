@@ -14,6 +14,7 @@
  */
 
 import { BANKING_SEPARATION_ERA_ENTRIES } from "@/lib/seeds/shared/bankingSeparationLegislation";
+import { MECHANICAL_LEGISLATION_ERA_ENTRIES } from "@/lib/mechanicalLaws/legislation";
 
 export const LEGISLATION_ERA: Record<string, number | "always"> = {
   // ── Windowed (74) — numbers are the first fileable calendar year ──────────
@@ -736,6 +737,7 @@ export const LEGISLATION_ERA: Record<string, number | "always"> = {
   yu_universal_education: "always",
   // Banking separation: reusable charter law, era-universal for every legislature.
   ...BANKING_SEPARATION_ERA_ENTRIES,
+  ...MECHANICAL_LEGISLATION_ERA_ENTRIES,
 };
 
 /**

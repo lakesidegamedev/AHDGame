@@ -16,6 +16,7 @@
  * non-playable conversion will need a scope check here rather than a new,
  * drift-prone gate of its own.
  */
+import { MECHANICAL_RETAINED_IDS } from "@/lib/mechanicalLaws/legislation";
 import {
   REDISTRICT_AUTHORITY_LAW,
   REDISTRICT_COMPACTNESS_LAW,
@@ -60,6 +61,9 @@ export const POLITICAL_LEGISLATION_RETAINED_OLD_IDS: ReadonlySet<string> = new S
   REDISTRICT_AUTHORITY_LAW,
   REDISTRICT_COMPACTNESS_LAW,
   REDISTRICT_FAIRNESS_LAW,
+  // Subsidiary Limits and Foreign Investment laws: mechanical, read by game
+  // code, and with no new-generation counterpart in these four countries.
+  ...MECHANICAL_RETAINED_IDS,
 ]);
 
 /**
