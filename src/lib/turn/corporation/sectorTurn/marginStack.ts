@@ -324,9 +324,12 @@ export function accumulateMarginModifiers(input: MarginStackInput): MarginStackR
   // (15 at LS 0, 30 at LS 200) and halves the rate at LS 200. SOEs are exempt
   // - they accumulate sectors by nationalization. Logistics sectors are exempt
   // on their own margin but still count toward corpSectorCount.
-  const sprawlMod =
-    isStateOwned(corp) || isSprawlExemptSectorType(operatingSectorType)
-      ? 0
+  // With gameConfig.soeSizeCostScale on, an SOE pays sprawl on its country's
+  // total state sector count instead.
+  const sprawlMod = isSprawlExemptSectorType(operatingSectorType)
+    ? 0
+    : isStateOwned(corp)
+      ? (lookups.soeSizeCostByCorpId?.get(corp._id.toString())?.sprawlPp ?? 0)
       : getSprawlModifier(corpSectorCount, corp.logisticsStrength ?? 0, !!corp.secondaryType);
   // Management overhead grows with total plant count (the whole control group's
   // once groupSizeCostsStage is on); SOEs are exempt like sprawl.

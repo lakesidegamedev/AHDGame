@@ -32,6 +32,8 @@ import type { Crisis } from "@/lib/db/types/crisis";
 import { buildDisasterEffectsByState } from "@/lib/crises/disasterMarginPenalty";
 import { excludePendingFederationFirms } from "@/lib/world/succession/rules/pendingFirmActivity";
 import type { CommodityPrice } from "@/lib/db/types";
+import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
+import { soeSizeCostByCorpId as soeSizeCostByCorpIdRule } from "@/lib/corporations/rules/soeSizeCost";
 import type { TradeFlowSnapshot } from "@/lib/db/types/tradeFlowSnapshot";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { COUNTRY_CURRENCY_MAP, eraRateForCurrency } from "@/lib/constants/currencies";
@@ -1081,6 +1083,7 @@ export async function buildCorporationLookups(
       managementOverheadPpPerDoubling?: number;
       strengthUpkeepStage?: number;
       groupSizeCostsStage?: number;
+      soeSizeCostScale?: number;
     }>("gameConfig")
     .findOne(
       { _id: "default" },
@@ -1089,6 +1092,7 @@ export async function buildCorporationLookups(
           managementOverheadPpPerDoubling: 1,
           strengthUpkeepStage: 1,
           groupSizeCostsStage: 1,
+          soeSizeCostScale: 1,
         },
       }
     );
@@ -1122,6 +1126,32 @@ export async function buildCorporationLookups(
       if (pp > 0) managementOverheadPpByCorpId.set(corpId, pp);
     }
   }
+
+  // State-owned corporations: overhead and sprawl on the whole country's
+  // holdings (gameConfig.soeSizeCostScale). Empty when off.
+  const soeSizeCostScale =
+    typeof overheadCfg?.soeSizeCostScale === "number" ? overheadCfg.soeSizeCostScale : 0;
+  const soeSizeCostByCorpId =
+    soeSizeCostScale > 0
+      ? soeSizeCostByCorpIdRule({
+          corps: loadedCorporations
+            .filter((c) => isStateOwned(c))
+            .map((c) => {
+              const sectors = sectorsByCorp.get(c._id.toString()) ?? [];
+              return {
+                id: c._id.toString(),
+                country: c.countryOwnerId ?? c.countryId,
+                sectorCount: sectors.length,
+                plantCount: sectors.reduce(
+                  (sum, s) => sum + (Number.isFinite(s.plantCount) ? (s.plantCount as number) : 0),
+                  0
+                ),
+              };
+            }),
+          overheadPpPerDoubling,
+          scale: soeSizeCostScale,
+        })
+      : undefined;
 
   // Per-sector market share (₳-normalized) drives the dominance growth-cost
   // multiplier in calculateDailyGrowthCost. Built once per turn so every sector
@@ -1709,6 +1739,7 @@ export async function buildCorporationLookups(
     marginLevelTrimPp: SECTOR_MARGIN_LEVEL_TRIM_PP,
     managementOverheadPpByCorpId,
     dumpingGuardRootByCorpId: groupSizeCostsStage >= 3 ? controlRootByCorpId : null,
+    soeSizeCostByCorpId,
     strengthUpkeepStage,
     reachablePriceRatioByCountry,
     reachableInputPriceRatiosByCountry,

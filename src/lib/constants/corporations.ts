@@ -2018,7 +2018,9 @@ export function computeAllMarginModifiers(
    */
   stateOwned: boolean = false,
   regionalConditionsModifier: number = 0,
-  regionalConditionModifiers: { label: string; marginEffect: number }[] = []
+  regionalConditionModifiers: { label: string; marginEffect: number }[] = [],
+  /** The sprawl margin (pp) the turn actually applied, when recorded (SOEs pay on the state's holdings). */
+  sprawlMarginOverride: number | null = null
 ): MarginModifiers {
   const unemploymentMod = getUnemploymentMarginModifier(metrics.unemploymentRate);
   const gridMod = getGridReliabilityMarginModifier(metrics.gridReliability);
@@ -2063,9 +2065,11 @@ export function computeAllMarginModifiers(
       ? 0
       : getSectorTypeMatchModifier(sectorType, corporationType, secondaryType);
   const sprawlMod =
-    stateOwned || totalSectors == null || isSprawlExemptSectorType(sectorType)
-      ? 0
-      : getSprawlModifier(totalSectors, logisticsStrength, !!secondaryType);
+    sprawlMarginOverride != null
+      ? sprawlMarginOverride
+      : stateOwned || totalSectors == null || isSprawlExemptSectorType(sectorType)
+        ? 0
+        : getSprawlModifier(totalSectors, logisticsStrength, !!secondaryType);
 
   // National-level macroeconomic modifiers
   const inflationMod = macroEcon ? getInflationMarginModifier(macroEcon.inflationRate) : 0;

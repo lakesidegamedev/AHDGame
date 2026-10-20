@@ -1260,6 +1260,8 @@ export interface CorporateSector {
    * stored margin showed min == max for an entire run.
    */
   effectiveProfitMargin?: number;
+  /** Logistical sprawl margin (pp, negative) the turn applied to this sector last turn. */
+  sprawlMarginPp?: number;
   /**
    * Labour system telemetry: most recent per-turn labor cost written when
    * labourSystemMode ≥ "wages" (home currency, daily basis like `revenue`).

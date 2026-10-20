@@ -11,9 +11,12 @@ import type { CorporationLookups } from "./types";
 export function managementOverheadPpForCorp(
   corp: Pick<Corporation, "_id" | "countryOwnerId" | "ownershipState"> &
     Partial<Pick<Corporation, "ceoType" | "ceoPay">>,
-  lookups: Pick<CorporationLookups, "managementOverheadPpByCorpId">
+  lookups: Pick<CorporationLookups, "managementOverheadPpByCorpId" | "soeSizeCostByCorpId">
 ): number {
-  if (isStateOwned(corp)) return 0;
+  // State-owned corporations pay on their country's holdings once the SOE
+  // size cost is on; otherwise they are exempt.
+  if (isStateOwned(corp))
+    return lookups.soeSizeCostByCorpId?.get(corp._id.toString())?.overheadPp ?? 0;
   const pp = lookups.managementOverheadPpByCorpId?.get(corp._id.toString()) ?? 0;
   // A levelled NPP CEO runs the company more cheaply: it cuts the overhead,
   // never below zero and never by more than the career rules' cap.

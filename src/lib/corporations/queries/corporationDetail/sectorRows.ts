@@ -435,7 +435,8 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       regionalConditionsModifiers.map((m) => ({
         label: m.label,
         marginEffect: m.marginEffect ?? 0,
-      }))
+      })),
+      sector.sprawlMarginPp ?? null
     );
 
     // Realized revenue for this sector (#3001/#3002). Keep the CEO statement
