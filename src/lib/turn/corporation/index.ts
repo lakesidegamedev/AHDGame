@@ -817,7 +817,9 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
     ceoSalaryPayments,
     dividendPayments,
     capitalDividendPayments,
+    passThroughTaxedDividendPayments,
     corpDividendPaymentsAnchorByCorpId,
+    corpDividendTaxedAtSourceAnchorByCorpId,
     corpDividendPaymentsAnchorByCorpCurrency,
     sectorFxSpreadFees,
     fundDividendAccruals,
@@ -1476,6 +1478,7 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
     lookups,
     corpDividendPaymentsAnchorByCorpId,
     corpDividendPaymentsAnchorByCorpCurrency,
+    corpDividendTaxedAtSourceAnchorByCorpId,
     turn,
     now,
     thresholds,
@@ -1850,6 +1853,7 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
     corpSnapshots,
     ceoSalaryPayments,
     dividendPayments: taxableDividendPayments,
+    passThroughTaxedDividendPayments,
     dividendTaxPaidByCountry,
     capitalDividendPayments:
       lookups.stockHoldingTaxStartTurn !== undefined &&

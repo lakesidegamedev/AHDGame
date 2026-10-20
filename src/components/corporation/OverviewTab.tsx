@@ -921,7 +921,13 @@ export default function OverviewTab({
             <KVList>
               <KVRow
                 label="Legal form"
-                value={corporation.legalStructureLabel ?? "n/a"}
+                value={
+                  corporation.legalStructureLabel
+                    ? corporation.legalStructureTaxLabel
+                      ? `${corporation.legalStructureLabel} (${corporation.legalStructureTaxLabel})`
+                      : corporation.legalStructureLabel
+                    : "n/a"
+                }
                 mono={false}
               />
               <KVRow label="Headquarters" value={corporation.headquartersStateName} mono={false} />

@@ -70,6 +70,12 @@ export async function POST(request: Request, { params }: RouteParams) {
     // This route is private-only (public corps are blocked above), so a
     // listed-only form (PLC, AG, SA Aberta, …) cannot be elected here — it is
     // acquired by taking the corporation public, not by restructuring.
+    // State patronage forms are for state-owned companies only; a private
+    // owner cannot elect a state tax preference.
+    if (structure.id === "cn_soe" && !corporation.countryOwnerId) {
+      return errorResponse(400, `${structure.name} is only available to state-owned companies.`);
+    }
+
     if (isListedOnlyStructure(structure)) {
       return errorResponse(
         400,

@@ -17,6 +17,14 @@ import {
 } from "@/lib/pensions/employerPensionCosts";
 import { anchorPerTurnToFinancialDaily } from "@/lib/imf/imfFacilityFinancials";
 import { getLegalStructureForCorp } from "@/lib/corporations/legalStructure";
+import {
+  blendedOwnerRate,
+  corporateTaxMultiplierFor,
+  legalStructureTaxLabel,
+  passThroughOwnerTax,
+  passThroughReformPhase,
+  passThroughTaxMode,
+} from "@/lib/corporations/rules/passThroughTax";
 import { loadBankingPolicy } from "@/lib/banking/policy";
 import { savingsReadsAuthoritative } from "@/lib/banking/rules/policy";
 import { bankIncomeIncludingUnbookedSovereignAssets } from "@/lib/banking/rules/sovereignClaims";
@@ -66,6 +74,12 @@ export interface IncomeStatementResult {
   operatingCosts: number;
   operatingIncome: number;
   displayFederalTax: number;
+  /** Owner tax on pass-through profit collected at source (local, per day). */
+  passThroughOwnerTaxLocal: number;
+  /** Player-facing tax label for this corporation's legal form. */
+  legalStructureTax: string;
+  /** Pass-through reform progress 0 to 1. */
+  passThroughPhase: number;
   displayStateTax: number;
   federalTaxByCountry: Record<string, number>;
   perSectorTax: Map<string, SectorTaxLine>;
@@ -251,12 +265,21 @@ export async function computeIncomeStatement(
     0
   );
   const corpLegalStructure = getLegalStructureForCorp(corporation);
-  const corpTaxMultiplier =
-    corpLegalStructure.taxTreatment === "pass_through"
-      ? 0
-      : corpLegalStructure.taxTreatment === "preferential"
-        ? (corpLegalStructure.taxMultiplier ?? 1)
-        : 1;
+  const passThroughPhase = passThroughReformPhase(
+    currentTurn,
+    gameState?.passThroughOwnerTaxStartTurn
+  );
+  const corpTaxMultiplier = corporateTaxMultiplierFor(
+    corpLegalStructure,
+    passThroughPhase,
+    corporation
+  );
+  const legalStructureTax = legalStructureTaxLabel(
+    corpLegalStructure,
+    passThroughPhase,
+    corporation
+  );
+  let consolidatedTaxableNet = 0;
 
   let displayFederalTax = 0;
   let displayStateTax = 0;
@@ -266,6 +289,7 @@ export async function computeIncomeStatement(
     const revenueShare =
       sectorRevenueTotal > 0 ? (sd.financialRevenue ?? sd.revenue ?? 0) / sectorRevenueTotal : 0;
     const sectorNetIncome = (sd.profit ?? 0) - corpLevelCosts * revenueShare;
+    consolidatedTaxableNet += sectorNetIncome;
     const sectorTaxable = Math.max(0, sectorNetIncome);
     const sectorCountry = sd.countryId ?? corporation.countryId;
     const isDomestic = corporation.countryId === sectorCountry;
@@ -339,6 +363,39 @@ export async function computeIncomeStatement(
     displayFederalTax += bondCouponFedTaxLocal;
     federalTaxByCountry[corporation.countryId] =
       (federalTaxByCountry[corporation.countryId] ?? 0) + bondCouponFedTaxLocal;
+  }
+  // Pass-through owner tax: owners are taxed on all profit, collected at source.
+  let passThroughOwnerTaxLocal = 0;
+  if (
+    passThroughTaxMode(corpLegalStructure, corporation) === "ownerFlowThrough" &&
+    passThroughPhase > 0
+  ) {
+    const hq = corporation.headquartersState;
+    const homeBudget = federalBudgets.find((b) => b.countryId === corporation.countryId);
+    const hqBudget = hq ? stateBudgetsForTax.find((b) => b._id === hq) : undefined;
+    const ownerTax = passThroughOwnerTax({
+      taxableProfit: Math.max(0, consolidatedTaxableNet) + Math.max(0, dailyCouponIncomeLocal),
+      phase: passThroughPhase,
+      rates: blendedOwnerRate(
+        (corporation.shareholders ?? []).map((sh) => ({
+          personal: !!sh.characterId || !!sh.imperialCharacterId,
+          shares: sh.shares,
+        })),
+        corporation.totalShares ?? 0,
+        {
+          personalNationalPct:
+            homeBudget?.taxRates?.incomeTaxHigh ?? homeBudget?.taxRates?.incomeTax ?? 0,
+          personalStatePct: hqBudget?.taxRates?.incomeTaxHigh ?? hqBudget?.taxRates?.incomeTax ?? 0,
+          corporateNationalPct: corpHomeCountryFedRate,
+          corporateStatePct: hq ? (domesticStateRateByStateId.get(hq) ?? 0) : 0,
+        }
+      ),
+    });
+    passThroughOwnerTaxLocal = Math.round(ownerTax.national + ownerTax.state);
+    displayFederalTax += Math.round(ownerTax.national);
+    displayStateTax += Math.round(ownerTax.state);
+    federalTaxByCountry[corporation.countryId] =
+      (federalTaxByCountry[corporation.countryId] ?? 0) + Math.round(ownerTax.national);
   }
   const corporateTax = displayFederalTax + displayStateTax;
   const imfFacilityPaymentDailyLocal = anchorToCorpCapital(
@@ -496,6 +553,9 @@ export async function computeIncomeStatement(
     operatingCosts,
     operatingIncome,
     displayFederalTax,
+    passThroughOwnerTaxLocal,
+    legalStructureTax,
+    passThroughPhase,
     displayStateTax,
     federalTaxByCountry,
     perSectorTax,

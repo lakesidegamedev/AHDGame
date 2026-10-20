@@ -101,6 +101,14 @@ import {
   quoteFundedProductAdvertising,
 } from "@/lib/products/rules/productAdvertising";
 import type { ManufacturingProductAdvertisingObligationV2 } from "@/lib/products/manufacturingProject";
+import {
+  alreadyTaxedDistributionShare,
+  blendedOwnerRate,
+  corporateTaxMultiplierFor,
+  passThroughOwnerTax,
+  passThroughReformPhase,
+  passThroughTaxMode,
+} from "@/lib/corporations/rules/passThroughTax";
 
 export function processSectors(
   lookups: CorporationLookups,
@@ -208,7 +216,16 @@ export function processSectors(
   const ceoSalaryPayments = new Map<string, Map<CurrencyCode, number>>();
   const dividendPayments = new Map<string, Map<CurrencyCode, number>>();
   const capitalDividendPayments = new Map<string, Map<CurrencyCode, number>>();
+  // Portion of each character's dividends already taxed at source under the
+  // pass-through reform; the income-tax phase does not tax it again.
+  const passThroughTaxedDividendPayments = new Map<string, Map<CurrencyCode, number>>();
   const corpDividendPaymentsAnchorByCorpId = new Map<string, number>();
+  // Same idea for corporate holders: excluded from the dividend-received tax.
+  const corpDividendTaxedAtSourceAnchorByCorpId = new Map<string, number>();
+  const passThroughPhase = passThroughReformPhase(
+    currentTurn,
+    lookups.passThroughOwnerTaxStartTurn
+  );
   // Same totals as above, but split by the PAYING corp's currency so a
   // cross-currency corp→corp dividend can be charged the FX spread downstream.
   const corpDividendPaymentsAnchorByCorpCurrency = new Map<string, Map<CurrencyCode, number>>();
@@ -631,14 +648,11 @@ export function processSectors(
     const taxPaidByCountryForeign = new Map<string, number>();
     const taxPaidByStateDomestic = new Map<string, number>();
     const taxPaidByStateForeign = new Map<string, number>();
-    // Legal structure: pass_through → 0% corp tax; preferential → taxMultiplier× rate; standard → 1×
+    // Legal structure: preferential -> taxMultiplier x rate; standard -> 1x. A
+    // pass-through pays no company tax (its owners are taxed below), except a
+    // structure taxed as a company in reality, which phases in to 1x.
     const corpLegalStructure = getLegalStructureForCorp(corp);
-    const corpTaxMultiplier =
-      corpLegalStructure.taxTreatment === "pass_through"
-        ? 0
-        : corpLegalStructure.taxTreatment === "preferential"
-          ? (corpLegalStructure.taxMultiplier ?? 1)
-          : 1;
+    const corpTaxMultiplier = corporateTaxMultiplierFor(corpLegalStructure, passThroughPhase, corp);
 
     // Consolidated loss offset. Taxing each sector's positive income in
     // isolation (`max(0, sectorNetIncome)`) meant a diversified corp's losses
@@ -740,6 +754,57 @@ export function processSectors(
       );
     }
 
+    // Pass-through owner tax: the owners owe tax on their full share of the
+    // profit whether or not it is distributed, collected at source at the
+    // owners' rates and credited to the home country and headquarters state.
+    if (
+      passThroughTaxMode(corpLegalStructure, corp) === "ownerFlowThrough" &&
+      passThroughPhase > 0
+    ) {
+      const hqState = corp.headquartersState;
+      const ownerRates = blendedOwnerRate(
+        (corp.shareholders ?? []).map((sh) => ({
+          personal: !!sh.characterId || !!sh.imperialCharacterId,
+          shares: sh.shares,
+        })),
+        corp.totalShares ?? 0,
+        {
+          personalNationalPct: lookups.personalTopIncomeTaxRateByCountry?.get(corp.countryId) ?? 0,
+          personalStatePct: hqState
+            ? (lookups.personalTopIncomeTaxRateByState?.get(hqState) ?? 0)
+            : 0,
+          corporateNationalPct: lookups.domesticCorpTaxRateByCountry.get(corp.countryId) ?? 0,
+          corporateStatePct: hqState
+            ? (lookups.domesticStateCorpTaxRateByState.get(hqState) ?? 0)
+            : 0,
+        }
+      );
+      const ownerTax = passThroughOwnerTax({
+        taxableProfit: Math.max(0, consolidatedNet) + Math.max(0, perTurnBondCouponIncome),
+        phase: passThroughPhase,
+        rates: ownerRates,
+      });
+      if (ownerTax.national > 0) {
+        totalFederalTax += ownerTax.national;
+        taxPaidByCountry.set(
+          corp.countryId,
+          (taxPaidByCountry.get(corp.countryId) ?? 0) + ownerTax.national
+        );
+        taxPaidByCountryDomestic.set(
+          corp.countryId,
+          (taxPaidByCountryDomestic.get(corp.countryId) ?? 0) + ownerTax.national
+        );
+      }
+      if (ownerTax.state > 0 && hqState) {
+        totalStateTax += ownerTax.state;
+        taxPaidByState.set(hqState, (taxPaidByState.get(hqState) ?? 0) + ownerTax.state);
+        taxPaidByStateDomestic.set(
+          hqState,
+          (taxPaidByStateDomestic.get(hqState) ?? 0) + ownerTax.state
+        );
+      }
+    }
+
     // State-owned enterprises pay no corporate income tax. A nationalized industry is
     // owned by the state, and it already returns its profit to that same state through the
     // per-turn remittance (processSoeRemittance). Levying corporate tax on top charged one
@@ -812,12 +877,25 @@ export function processSectors(
           ? corp.pendingShareIssuance.remainingShares
           : 0;
       const totalShares = Math.max(1, (corp.totalShares ?? 10_000_000) - unplacedIpoShares);
+      const taxedAtSourceShare = alreadyTaxedDistributionShare(
+        corpLegalStructure,
+        passThroughPhase,
+        corp
+      );
       for (const sh of corp.shareholders) {
         const share = totalShares > 0 ? sh.shares / totalShares : 0;
         const payment = hourlyDividendPayout * share;
         if (payment > 0) {
           if (sh.characterId) {
             addToPaymentMap(dividendPayments, sh.characterId.toString(), payment, corp.countryId);
+            if (taxedAtSourceShare > 0) {
+              addToPaymentMap(
+                passThroughTaxedDividendPayments,
+                sh.characterId.toString(),
+                payment * taxedAtSourceShare,
+                corp.countryId
+              );
+            }
             const capital = holdingDividendSplit(
               positionHoldingTerms(sh, currentTurn, 0),
               payment,
@@ -836,6 +914,14 @@ export function processSectors(
               payment,
               corp.countryId
             );
+            if (taxedAtSourceShare > 0) {
+              addToPaymentMap(
+                passThroughTaxedDividendPayments,
+                `imperial:${sh.imperialCharacterId.toString()}`,
+                payment * taxedAtSourceShare,
+                corp.countryId
+              );
+            }
             const capital = holdingDividendSplit(
               positionHoldingTerms(sh, currentTurn, 0),
               payment,
@@ -867,6 +953,13 @@ export function processSectors(
               hid,
               (corpDividendPaymentsAnchorByCorpId.get(hid) ?? 0) + payment
             );
+            if (taxedAtSourceShare > 0) {
+              corpDividendTaxedAtSourceAnchorByCorpId.set(
+                hid,
+                (corpDividendTaxedAtSourceAnchorByCorpId.get(hid) ?? 0) +
+                  payment * taxedAtSourceShare
+              );
+            }
             // Track the same ₳ amount keyed by the paying corp's currency so the
             // recipient's cross-currency FX spread can be charged in Phase 3c.
             const payerCcy = (resolveCorpLiquidCurrencyCode(corp) ?? "USD") as CurrencyCode;
@@ -1642,6 +1735,8 @@ export function processSectors(
     ceoSalaryPayments,
     dividendPayments,
     capitalDividendPayments,
+    passThroughTaxedDividendPayments,
+    corpDividendTaxedAtSourceAnchorByCorpId,
     corpDividendPaymentsAnchorByCorpId,
     corpDividendPaymentsAnchorByCorpCurrency,
     sectorFxSpreadFees,
