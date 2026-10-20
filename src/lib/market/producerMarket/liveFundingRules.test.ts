@@ -5,6 +5,7 @@ import {
   householdOpeningMoves,
   publicFundingMoves,
   publicReturnMoves,
+  transitionSupportMoves,
 } from "./liveFundingRules";
 
 const wallet = { walletId: "pub-us", amountLocal: 50, currencyCode: "USD", localPerAnchor: 1 };
@@ -56,6 +57,39 @@ describe("live producer money flows", () => {
     expect(move.legs.map((l) => [l.kind, l.amount])).toEqual([
       ["debit", 8],
       ["credit", 10],
+    ]);
+    expect(Math.abs(legsNet(move.legs))).toBeLessThan(1e-9);
+  });
+});
+
+describe("transition support moves", () => {
+  it("moves unspent public funding to the sector owner, keyed per sector and turn", () => {
+    const side = (id: string, currencyCode: string, localPerAnchor: number) => ({
+      collection: "c",
+      filter: { _id: id },
+      path: "cash",
+      id,
+      currencyCode,
+      localPerAnchor,
+    });
+    const [move] = transitionSupportMoves("w", 9, [
+      {
+        sectorId: "s1",
+        amountAnchor: 5,
+        from: side("pub", "USD", 1),
+        to: side("corp", "GBP", 0.8),
+      },
+      {
+        sectorId: "s2",
+        amountAnchor: 0,
+        from: side("pub", "USD", 1),
+        to: side("corp", "GBP", 0.8),
+      },
+    ]);
+    expect(move.key).toBe("producer-transition:w:9:s1");
+    expect(move.legs.map((l) => [l.kind, l.amount])).toEqual([
+      ["debit", 5],
+      ["credit", 4],
     ]);
     expect(Math.abs(legsNet(move.legs))).toBeLessThan(1e-9);
   });

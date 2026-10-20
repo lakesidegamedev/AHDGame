@@ -17,6 +17,10 @@ import { getEffectiveStrategyRatesForOperatingModel } from "@/lib/constants/sect
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
 import { isStorable } from "@/lib/market/inventory";
+import {
+  classifySector,
+  TRANSITION_BASIS_TURNS,
+} from "@/lib/market/producerMarket/transitionRules";
 import type { GameState } from "@/lib/db/types/gameState";
 
 function digest(value: unknown): string {
@@ -272,6 +276,32 @@ export async function captureProducerOpening(
     try {
       if (blockers.length > 0) throw new Error("Opening census contains reconciliation blockers");
       plan = planProducerOpening(normalized);
+      // Freeze the transition classification from the last shadow turns.
+      const shadows = await db
+        .collection<{
+          _id: number;
+          worldEpoch?: string;
+          sectorRevenue?: { sectorId: string; legacy: number; funded: number }[];
+        }>("producerMarketShadows")
+        .find(
+          { worldEpoch: String(before.worldEpochId), sectorRevenue: { $exists: true } },
+          { projection: { sectorRevenue: 1 } }
+        )
+        .sort({ _id: -1 })
+        .limit(TRANSITION_BASIS_TURNS)
+        .toArray();
+      const samplesBySector = new Map<string, { legacy: number; funded: number }[]>();
+      for (const doc of [...shadows].reverse())
+        for (const row of doc.sectorRevenue ?? [])
+          samplesBySector.set(row.sectorId, [
+            ...(samplesBySector.get(row.sectorId) ?? []),
+            { legacy: row.legacy, funded: row.funded },
+          ]);
+      if (samplesBySector.size > 0)
+        for (const sector of plan.sectors) {
+          const samples = samplesBySector.get(sector.id);
+          if (samples) sector.transition = classifySector(samples);
+        }
     } catch (error) {
       blockers.push(error instanceof Error ? error.message : String(error));
     }

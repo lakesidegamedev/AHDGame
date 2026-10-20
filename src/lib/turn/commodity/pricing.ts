@@ -6,6 +6,7 @@ import {
   COMMODITY_PRICE_DRIFT_RATE,
   COMMODITY_TYPES,
   NATIONAL_COMMODITY_STABILIZER,
+  NATIONAL_PRICE_ADJUSTMENT_RATE,
   blendPrice,
   computeMarketPrice,
   type CommodityType,
@@ -37,6 +38,17 @@ export function buildNudgeMap(
       .filter((d): d is typeof d & { nudgePrice: number } => d.nudgePrice != null)
       .map((d) => [d.commodity, d.nudgePrice])
   );
+}
+
+/**
+ * One partial-adjustment step of a national price from last turn's value
+ * toward this turn's target. No usable previous price (new country, first
+ * turn, seeded world) takes the target as is.
+ */
+export function adjustNationalPrice(previous: number | undefined, target: number): number {
+  if (previous == null || !Number.isFinite(previous) || previous <= 0) return target;
+  if (!Number.isFinite(target)) return previous;
+  return Math.round((previous + NATIONAL_PRICE_ADJUSTMENT_RATE * (target - previous)) * 100) / 100;
 }
 
 /**
@@ -289,6 +301,11 @@ export function priceCommodity(
     } else {
       nationalPrices[countryId] = marketNationalPrice;
     }
+    // Partial adjustment from last turn's price damps the exporter cobweb (#4605).
+    nationalPrices[countryId] = adjustNationalPrice(
+      existing?.nationalPrices?.[countryId],
+      nationalPrices[countryId]
+    );
     nationalSupply[countryId] = Math.round(bal.supply * 100) / 100;
     nationalDemand[countryId] = Math.round(bal.demand * 100) / 100;
   }

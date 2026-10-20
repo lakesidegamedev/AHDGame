@@ -1,4 +1,5 @@
 /** Prepare work, recipes and plant constraints before any product money is moved. */
+import { inTransitionWindow } from "@/lib/market/producerMarket/transitionRules";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import {
   COMMODITY_BASE_PRICES,
@@ -66,6 +67,8 @@ export type ProducerPhysicalEnv = Pick<
 > & {
   /** Funded producer turns and the shadow: advertising as a paid input. */
   advertisingInput?: boolean;
+  /** First funded turn of this world, when the cutover transition window applies. */
+  transitionFirstFundedTurn?: number;
   lookups: Pick<
     CorporationLookups,
     | "labourTightnessByState"
@@ -227,7 +230,7 @@ export function prepareProducerPhysicalSector(input: {
   const prepared = prepareProducerSector({
     worldEpoch: input.worldEpoch,
     turn: currentTurn,
-    sector,
+    sector: withStateBooks(sector),
     // A site with no accessible resource still retains its recipe for selling
     // old goods. Its current physical output is zero, never a fallback yield.
     recipe: {
@@ -365,6 +368,10 @@ export function prepareProducerPhysicalSector(input: {
     nominalHourlyCapacityValue: nominalDaily / TURNS_PER_DAY,
     activeFraction: plan.activeFraction,
     financialPenaltyPercent: Math.max(0, -disaster.marginPenalty),
+    coldUpkeepWaived:
+      env.transitionFirstFundedTurn != null &&
+      sector.cutoverTransition?.mismatched === true &&
+      inTransitionWindow(currentTurn, env.transitionFirstFundedTurn),
   });
   return {
     prepared,
@@ -374,5 +381,25 @@ export function prepareProducerPhysicalSector(input: {
     policyLevel,
     staffingFactor: labour.staffingFactor,
     suspended,
+  };
+}
+
+/**
+ * Freight trades on one book per country in the funded market, so stock it
+ * carried over is stamped `country:<id>`. Plant preparation knows only state
+ * and world books; read carried country-book stock back onto the plant's own
+ * state book (the market maps it to the country book again).
+ */
+export function withStateBooks(sector: CorporateSector): CorporateSector {
+  const inv = sector.producerInventory;
+  if (!inv || !inv.outputStock.some((r) => r.book.startsWith("country:"))) return sector;
+  return {
+    ...sector,
+    producerInventory: {
+      ...inv,
+      outputStock: inv.outputStock.map((r) =>
+        r.book.startsWith("country:") ? { ...r, book: `state:${sector.stateId}` } : r
+      ),
+    },
   };
 }
