@@ -6,11 +6,26 @@ import {
 } from "./capitalSpendRules";
 
 describe("construction work as demand", () => {
-  it("spreads an order's paid cost over its window and never more than it paid", () => {
-    const order = { costPaidAnchor: 100, startTurn: 10, onlineTurn: 14 };
+  it("spreads a smooth order's paid cost over its window and never more than it paid", () => {
+    const order = { costPaidAnchor: 100, startTurn: 10, onlineTurn: 14, smooth: true };
     const slices = [10, 11, 12, 13, 14, 15].map((t) => buildWorkThisTurn(order, t));
     expect(slices).toEqual([0, 25, 25, 25, 25, 0]);
     expect(slices.reduce((a, b) => a + b, 0)).toBeCloseTo(100);
+  });
+
+  it("buys an all-at-once order's work when it lands, so a refund before landing cannot add to it", () => {
+    const order = { costPaidAnchor: 100, startTurn: 10, onlineTurn: 14 };
+    expect([11, 12, 13].map((t) => buildWorkThisTurn(order, t))).toEqual([0, 0, 0]);
+    expect(buildWorkThisTurn(order, 14)).toBe(100);
+  });
+
+  it("never buys more than paid plus refundable remainder after a cancellation", () => {
+    // Bought through turn 12 of a smooth order, then cancelled: the refund is
+    // 75% of the undelivered half, so bought + refund stays under cost.
+    const order = { costPaidAnchor: 100, startTurn: 10, onlineTurn: 14, smooth: true };
+    const bought = [11, 12].reduce((s, t) => s + buildWorkThisTurn(order, t), 0);
+    const refund = 0.75 * 100 * (1 - 0.5);
+    expect(bought + refund).toBeLessThanOrEqual(100);
   });
 
   it("buys an instant order once and ignores unpaid or invalid orders", () => {
@@ -26,7 +41,7 @@ describe("construction work as demand", () => {
         {
           countryId: "US",
           stateId: "TX",
-          buildQueue: [{ costPaidAnchor: 100, startTurn: 0, onlineTurn: 1 }],
+          buildQueue: [{ costPaidAnchor: 100, startTurn: 0, onlineTurn: 1, smooth: true }],
         },
         {
           countryId: "",

@@ -5,15 +5,20 @@
  * leaves the economy with no recipient. In the funded market it becomes the
  * destination it should have had: the construction work on each outstanding
  * order is bought from producers as the order progresses, spread over the
- * order's build window on the same linear schedule smooth deliveries use.
+ * order's build window on its delivery schedule (`deliveredFraction`): linear
+ * for smooth orders, all at landing for all-at-once orders.
  *
- * Unbought work stays in the existing sink, so no money is created beyond what
- * the build already paid. Each slice is clamped to what the order paid.
+ * Using the delivery schedule keeps money closed: a cancellation refunds a
+ * share of the undelivered cost only, a shortage speed-up preserves the
+ * delivered fraction, so work bought plus any refund never exceeds what the
+ * order paid. Unbought work stays in the existing sink.
  *
  * Pure: build orders in, per-country purchase lines out.
  */
 import type { CommodityType } from "@/lib/constants/commodities";
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
+import type { SectorBuildOrder } from "@/lib/db/types";
+import { deliveredFraction } from "@/lib/corporations/buildDelivery";
 import type { PublicPurchaseLine } from "./publicBuyerRules";
 
 /**
@@ -30,17 +35,10 @@ export const CAPITAL_GOODS_BASKET: Readonly<Partial<Record<CommodityType, number
   software: 0.1,
 };
 
-export interface BuildOrderWork {
-  costPaidAnchor: number;
-  startTurn: number;
-  onlineTurn: number;
-}
-
-function progress(order: BuildOrderWork, turn: number): number {
-  if (order.onlineTurn <= order.startTurn) return turn >= order.onlineTurn ? 1 : 0;
-  const f = (turn - order.startTurn) / (order.onlineTurn - order.startTurn);
-  return f <= 0 ? 0 : f >= 1 ? 1 : f;
-}
+export type BuildOrderWork = Pick<
+  SectorBuildOrder,
+  "costPaidAnchor" | "startTurn" | "onlineTurn" | "smooth"
+>;
 
 /** Anchor value of the construction work done on an order during `turn`. */
 export function buildWorkThisTurn(order: BuildOrderWork, turn: number): number {
@@ -52,7 +50,8 @@ export function buildWorkThisTurn(order: BuildOrderWork, turn: number): number {
     !Number.isFinite(order.onlineTurn)
   )
     return 0;
-  const work = cost * (progress(order, turn) - progress(order, turn - 1));
+  const delivered = (t: number) => deliveredFraction(order as SectorBuildOrder, t);
+  const work = cost * (delivered(turn) - delivered(turn - 1));
   return work > 0 ? Math.min(work, cost) : 0;
 }
 
