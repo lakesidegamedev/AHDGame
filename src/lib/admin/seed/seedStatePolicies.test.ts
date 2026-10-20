@@ -5,6 +5,7 @@
  * new-generation equivalent and src/lib/redistricting/caps.ts reads them by id),
  * so a state's enacted redistricting authority must survive the sweep.
  */
+import { MECHANICAL_RETAINED_IDS } from "@/lib/mechanicalLaws/legislation";
 import { describe, expect, it, vi } from "vitest";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { seedStatePolicies } from "./seedStatePolicies";
@@ -41,6 +42,8 @@ describe("seedStatePolicies — stale sweep", () => {
     const keptOldUs = staleSweep
       .legislationTypeId!.$nin!.filter((id) => id.startsWith("us_"))
       .sort();
-    expect(keptOldUs).toEqual([...REDISTRICT_IDS].sort());
+    expect(keptOldUs).toEqual(
+      [...REDISTRICT_IDS, ...MECHANICAL_RETAINED_IDS.filter((id) => id.startsWith("us_"))].sort()
+    );
   });
 });

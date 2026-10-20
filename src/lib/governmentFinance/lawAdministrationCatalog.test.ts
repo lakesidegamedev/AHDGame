@@ -34,8 +34,10 @@ function hasCost(type: (typeof legislationTypes)[number]): boolean {
 
 describe("law administration catalog", () => {
   it("classifies every US, UK, and Japan law", () => {
+    // 195 authored laws plus the Subsidiary Limits and Foreign Investment Acts
+    // (US, UK, JP) and Japan's Competition Act from mechanicalLaws.
     expect(initialCatalog.filter((type) => !/__(?:income|capital)_/.test(type._id))).toHaveLength(
-      195
+      202
     );
     expect(initialCatalog.some((type) => type._id.endsWith("__income_low"))).toBe(true);
     expect(initialCatalog.some((type) => type._id.endsWith("__capital_low"))).toBe(true);
