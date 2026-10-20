@@ -18,7 +18,7 @@ export interface OpeningFertilityRebase {
   regions: RebasingFertilitySeed[];
 }
 
-function tfrToBirthRateIndex(tfr: number, replacementTfr: number): number {
+export function tfrToBirthRateIndex(tfr: number, replacementTfr: number): number {
   const ratio = tfr / replacementTfr;
   return ratio <= 1 ? ((ratio - 0.4) / 0.6) * 50 : 50 + ((ratio - 1) / 2.4) * 50;
 }

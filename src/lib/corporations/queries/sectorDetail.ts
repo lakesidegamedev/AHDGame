@@ -24,6 +24,8 @@ import { isPrivateEnterpriseBlocked } from "@/lib/economy/queries/privateEnterpr
 import { buildPoliticalBaseModifiers } from "@/lib/politicalLegislation/marginAdapter";
 import { isPoliticalApprovalCountry } from "@/lib/politicalLegislation/politicalApprovalProvider";
 import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
+import { loadOwnedMetricInputs } from "@/lib/resetMetrics/loadOwnedInputs";
+import { ownedPoliticalModifiers } from "@/lib/resetMetrics/rules/ownedInputs";
 import { isLabourWagesEnabled, isLabourFullMode } from "@/lib/labour/featureFlag";
 import { undergroundUnrestVisible } from "@/lib/unions/enforcementCosts";
 import { isProspectingEnabled } from "@/lib/extraction/featureFlag";
@@ -403,8 +405,16 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
     const totalCorpSectors = allCorpSectors.length;
     // SP4 §4a: political margin overlay for playable regions (null elsewhere).
     const politicalDoc = await politicalDocPromise;
+    const ownedInputs = (await loadOwnedMetricInputs(db)).get(sector.stateId);
     const politicalBaseModifiers = politicalDoc
-      ? buildPoliticalBaseModifiers(politicalDoc.values)
+      ? ownedInputs?.countryId === sector.countryId
+        ? ownedPoliticalModifiers(
+            politicalDoc.values,
+            ownedInputs.observations,
+            ownedInputs.countryId,
+            ownedInputs.year
+          )
+        : buildPoliticalBaseModifiers(politicalDoc.values)
       : null;
 
     // Fetch federal budget for macroeconomic margin modifiers

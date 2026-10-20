@@ -15,8 +15,9 @@
  * stays authoritative for them.
  */
 import type { PrimaryMetricDefinition } from "../catalog";
-import type { ResetMetricScoreCountry } from "../conditionScore";
+import { resetMetricConditionScore, type ResetMetricScoreCountry } from "../conditionScore";
 import { estimateObservedMetricChange } from "./effectForecast";
+import { proxyResponseCalibration } from "./metricCalibration";
 
 /**
  * Condition points (0-100 scale) at full settlement per unit of normalized
@@ -59,15 +60,32 @@ export interface PolicyDriftInput {
 export function policyDriftTarget(input: PolicyDriftInput): number | null {
   const { metric, openingValue, pressure, countryId, year } = input;
   if (!Number.isFinite(openingValue) || !Number.isFinite(pressure)) return null;
-  if (pressure === 0) return openingValue;
+  const score = resetMetricConditionScore(metric, openingValue, countryId, year);
+  if (score === null) return null;
+  const probePoints =
+    pressure === 0 ? 0 : Math.sign(pressure) * Math.min(1, pressure > 0 ? 100 - score : score);
   const forecast = estimateObservedMetricChange({
     metric,
     currentValue: openingValue,
-    favorableNormalizedPoints: pressure * POLICY_PRESSURE_SCORE_POINTS,
+    favorableNormalizedPoints: probePoints,
     countryId,
     year,
   });
-  return forecast ? forecast.projectedValue : null;
+  if (!forecast) return null;
+  let target =
+    probePoints === 0
+      ? openingValue
+      : openingValue + (forecast.delta / probePoints) * pressure * POLICY_PRESSURE_SCORE_POINTS;
+  const calibration = proxyResponseCalibration(metric, countryId, year);
+  if ((target === openingValue || score === 0 || score === 100) && pressure !== 0) {
+    // Display-score saturation is not a physical ceiling on the owner value.
+    if (!calibration || !(calibration.span > 0)) return null;
+    target =
+      openingValue +
+      ((calibration.direction * pressure * POLICY_PRESSURE_SCORE_POINTS) / 100) * calibration.span;
+  }
+  if (calibration) target = Math.max(calibration.min, Math.min(calibration.max, target));
+  return target;
 }
 
 /**

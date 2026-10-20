@@ -1,4 +1,5 @@
 import { loadBankFailureEffects } from "@/lib/banking/failurePolitics";
+import { advanceProductivity, type ProductivityState } from "@/lib/resetMetrics/rules/productivity";
 import { loadEmploymentPolicies } from "@/lib/labour/employmentPolicies";
 import { advanceEmployment, type EmploymentState } from "@/lib/labour/rules/employment";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
@@ -230,6 +231,7 @@ function readMetricPath(
 interface PrevMetricsDoc {
   _id: string;
   labourEmployment?: EmploymentState;
+  labourProductivity?: ProductivityState;
   livingConflictExposure?: CrisisEconomicExposure;
   /** §6.1 (P7b): the region's LAGGED economic model, for sector GDP concentration. */
   economicModel?: EconomicModelState;
@@ -313,6 +315,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
   // per region below, so every downstream read keeps its single-doc shape.
   const PREV_PROJECTION = {
     labourEmployment: 1,
+    labourProductivity: 1,
     "economic.matchingFriction.value": 1,
     livingConflictExposure: 1,
     economicModel: 1,
@@ -541,7 +544,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     updateOne: {
       filter: { _id: string };
       update: {
-        $set: Record<string, number | Date | EmploymentState>;
+        $set: Record<string, number | Date | EmploymentState | ProductivityState>;
         $unset?: Record<string, "">;
       };
     };
@@ -1181,7 +1184,7 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
     // Macro only. Every node evaluated above is a macro node, so the filter is
     // a guard rather than a router: a political path reaching it would mean
     // something is trying to persist a board metric into the macro doc.
-    const macroSet: Record<string, number | Date | EmploymentState> = {};
+    const macroSet: Record<string, number | Date | EmploymentState | ProductivityState> = {};
     for (const [key, value] of Object.entries(setFields)) {
       if (key === "lastUpdated") continue;
       if (isMacroMetricPath(key)) macroSet[key] = value;
@@ -1238,6 +1241,15 @@ export async function runMetricEngine(db: Db, turn: number): Promise<number> {
       }
     }
     const newGdp = capacityFold?.gdp ?? compoundedGdp;
+    if (employment)
+      macroSet.labourProductivity = advanceProductivity({
+        previous: prevDoc?.labourProductivity,
+        turn,
+        output: newGdp,
+        employed: employment.state.corporateEmployed + employment.state.backgroundEmployed,
+        employmentTurn: employment.state.lastTurn,
+        countryId,
+      });
     stateOps.push({
       updateOne: {
         filter: { _id: state._id },
