@@ -111,6 +111,7 @@ export async function applyProducerOpening(
                   outputStock: sector.outputStock,
                 },
                 producerQuotes: quotes,
+                ...(sector.transition ? { cutoverTransition: sector.transition } : {}),
               },
             },
           },

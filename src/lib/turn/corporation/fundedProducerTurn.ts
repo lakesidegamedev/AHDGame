@@ -27,6 +27,7 @@ import {
 import {
   closeTransferMoves,
   householdOpeningMoves,
+  transitionSupportMoves,
   PRODUCER_ACCOUNTS,
   publicFundingMoves,
   publicReturnMoves,
@@ -34,6 +35,7 @@ import {
   type CloseTransfer,
 } from "@/lib/market/producerMarket/liveFundingRules";
 import type { FundedReceipt } from "@/lib/market/producerMarket/fundedSectorRules";
+import { transitionSupport } from "@/lib/market/producerMarket/transitionRules";
 import {
   fundedLedgerRows,
   PRODUCER_MARKET_OUTCOMES,
@@ -66,8 +68,10 @@ export async function runFundedProducerTurn(
     worldEpoch: string;
     lookups: CorporationLookups;
     env: ProducerPhysicalEnv;
-    /** True when no funded turn has run for this world yet. */
-    firstFundedTurn: boolean;
+    /** True when no funded turn has run for this world yet: seed household cash. */
+    seedHouseholds: boolean;
+    /** First funded turn of the world (opening turn + 1), for the transition window. */
+    firstFundedTurn?: number;
   }
 ): Promise<FundedProducerTurnResult> {
   const { lookups, worldEpoch, turn } = input;
@@ -140,7 +144,7 @@ export async function runFundedProducerTurn(
     )
   );
 
-  if (input.firstFundedTurn) {
+  if (input.seedHouseholds) {
     const wageBill = new Map<string, number>();
     for (const p of demand.preparedSectors)
       wageBill.set(
@@ -266,6 +270,67 @@ export async function runFundedProducerTurn(
     walletParty,
   });
   await apply(closeTransferMoves(worldEpoch, turn, transfers));
+
+  // Transition package: over-built sectors get a fading revenue floor, paid
+  // only from public funding that would otherwise be burned below.
+  const support = input.firstFundedTurn
+    ? transitionSupport({
+        turn,
+        firstFundedTurn: input.firstFundedTurn,
+        sectors: lookups.corporations.flatMap((corp) =>
+          (lookups.sectorsByCorp.get(corp._id.toString()) ?? []).map((sector) => ({
+            sectorId: sector._id.toHexString(),
+            countryId: String(sector.countryId ?? corp.countryId ?? ""),
+            transition: sector.cutoverTransition,
+            settledRevenue: receiptsBySectorId.get(sector._id.toHexString())?.revenue ?? 0,
+            mothballed: sector.mothballed === true,
+            converted: sector.cutoverConvertedAtTurn != null,
+          }))
+        ),
+        poolByCountry: new Map(
+          demand.funding.map((f) => [
+            f.countryId,
+            Math.max(0, closingCash.get(publicWallet(f.countryId)) ?? 0),
+          ])
+        ),
+      })
+    : { payments: [], coverageByCountry: new Map<string, number>() };
+  const sectorOwner = new Map<string, string>();
+  for (const corp of lookups.corporations)
+    for (const sector of lookups.sectorsByCorp.get(corp._id.toString()) ?? [])
+      sectorOwner.set(sector._id.toHexString(), corp._id.toHexString());
+  const paidByCountry = new Map<string, number>();
+  await apply(
+    transitionSupportMoves(
+      worldEpoch,
+      turn,
+      support.payments.map((p) => {
+        paidByCountry.set(p.countryId, (paidByCountry.get(p.countryId) ?? 0) + p.claim);
+        return {
+          sectorId: p.sectorId,
+          amountAnchor: p.claim,
+          from: walletParty(publicWallet(p.countryId)),
+          to: corpParty(sectorOwner.get(p.sectorId)!),
+        };
+      })
+    )
+  );
+  for (const [country, paid] of paidByCountry) {
+    const id = publicWallet(country);
+    closingCash.set(id, (closingCash.get(id) ?? 0) - paid);
+  }
+  await db.collection<{ _id: string }>(PRODUCER_MARKET_OUTCOMES).updateOne(
+    { _id: `${worldEpoch}:${turn}` },
+    {
+      $set: {
+        transitionSupport: {
+          paid: Object.fromEntries(paidByCountry),
+          coverage: Object.fromEntries(support.coverageByCountry),
+        },
+      },
+    }
+  );
+
   await apply(
     publicReturnMoves(
       worldEpoch,

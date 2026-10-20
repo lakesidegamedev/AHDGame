@@ -1,4 +1,5 @@
 /** Prepare work, recipes and plant constraints before any product money is moved. */
+import { inTransitionWindow } from "@/lib/market/producerMarket/transitionRules";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import {
   COMMODITY_BASE_PRICES,
@@ -66,6 +67,8 @@ export type ProducerPhysicalEnv = Pick<
 > & {
   /** Funded producer turns and the shadow: advertising as a paid input. */
   advertisingInput?: boolean;
+  /** First funded turn of this world, when the cutover transition window applies. */
+  transitionFirstFundedTurn?: number;
   lookups: Pick<
     CorporationLookups,
     | "labourTightnessByState"
@@ -365,6 +368,10 @@ export function prepareProducerPhysicalSector(input: {
     nominalHourlyCapacityValue: nominalDaily / TURNS_PER_DAY,
     activeFraction: plan.activeFraction,
     financialPenaltyPercent: Math.max(0, -disaster.marginPenalty),
+    coldUpkeepWaived:
+      env.transitionFirstFundedTurn != null &&
+      sector.cutoverTransition?.mismatched === true &&
+      inTransitionWindow(currentTurn, env.transitionFirstFundedTurn),
   });
   return {
     prepared,

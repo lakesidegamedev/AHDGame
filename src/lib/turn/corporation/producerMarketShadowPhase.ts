@@ -289,6 +289,15 @@ export async function runProducerMarketShadowPhase(
             : 1
       );
 
+    // Per-sector legacy and funded revenue (anchor per turn): the evidence the
+    // cutover's transition classification is frozen from.
+    const fundedByPlan = new Map(result.producers.map((r) => [r.id, r.revenue]));
+    const sectorRevenue = producers.flatMap((p) => {
+      const sectorId = planSector.get(p.plan.id);
+      if (!sectorId || !p.legacy) return [];
+      return [{ sectorId, legacy: p.legacy.revenue, funded: fundedByPlan.get(p.plan.id) ?? 0 }];
+    });
+
     // 9. Persist next turn's opening (shadow-only) and the turn summary.
     const valueAddedByCountry: Record<string, number> = {};
     const plants: Record<string, ShadowPlantCarry> = {};
@@ -342,6 +351,7 @@ export async function runProducerMarketShadowPhase(
             : { mode: "new", reason: continuity.reason },
         moneyLoop,
         demandRatios,
+        sectorRevenue,
         publicShareByCountry,
         legacyPrices: references,
         skipReasons,
