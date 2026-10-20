@@ -309,11 +309,14 @@ export function advanceProducerEconomy(input: {
     for (const stock of p.outputStock) {
       finite(stock.units, "output stock");
       if (stock.quoteUnitCost != null) finite(stock.quoteUnitCost, "stock quote cost");
+      // An empty row (a good the plant no longer makes and has sold out of) is
+      // harmless; only stock that exists must match an output and its book.
       if (
-        !outputCommodities.has(stock.commodity) ||
-        !p.outputs.some(
-          (output) => output.commodity === stock.commodity && output.book === stock.book
-        )
+        stock.units > 0 &&
+        (!outputCommodities.has(stock.commodity) ||
+          !p.outputs.some(
+            (output) => output.commodity === stock.commodity && output.book === stock.book
+          ))
       )
         throw new Error(
           `Unrecognized produced stock or market book: ${p.id} ${stock.commodity} ${stock.book} (outputs ${p.outputs.map((o) => `${o.commodity}@${o.book}`).join(",")})`
