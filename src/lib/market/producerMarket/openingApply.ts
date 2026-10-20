@@ -111,6 +111,12 @@ export async function applyProducerOpening(
                   outputStock: sector.outputStock,
                 },
                 producerQuotes: quotes,
+                // The reviewed schedule: orders due on the completed turn land on
+                // the first funded turn.
+                buildQueue: sector.capacity.buildQueue,
+                // The reviewed paid basis (0 where an empty sector never had one),
+                // so every sector the plan opened can be prepared.
+                capacityBookAnchor: sector.capacity.paidBookAnchor,
                 ...(sector.transition ? { cutoverTransition: sector.transition } : {}),
               },
             },
