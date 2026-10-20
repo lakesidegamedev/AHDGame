@@ -251,6 +251,8 @@ export interface CorporationCeoPay {
   ceoId: string;
   appointedTurn: number;
   nextReviewTurn: number;
+  /** CEO level at the last review (1 to 10); drives the overhead discount. */
+  level?: number;
   /** Open pay demand awaiting the owner, in the company's currency per day. */
   demand?: {
     amount: number;

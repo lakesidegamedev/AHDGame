@@ -57,6 +57,7 @@ export async function respondToCeoPayDemand(
       ceoId: corporation.ceoPay!.ceoId,
       appointedTurn: corporation.ceoPay!.appointedTurn,
       nextReviewTurn: turn + CEO_PAY_REVIEW_TURNS,
+      level: demand.level,
       lastDecision: {
         turn,
         outcome: outcome.accepted === "demand" ? "accepted" : "countered",
@@ -107,6 +108,7 @@ export function ceoPayView(corporation: Corporation) {
     currencyCode: corporation.liquidCurrencyCode ?? "USD",
     salary: corporation.ceoSalary ?? 0,
     nextReviewTurn: pay.nextReviewTurn,
+    level: pay.level ?? null,
     demand: pay.demand ?? null,
     lastDecision: pay.lastDecision ?? null,
   };

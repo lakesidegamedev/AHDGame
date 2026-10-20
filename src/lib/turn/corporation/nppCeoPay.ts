@@ -90,6 +90,7 @@ export async function processNppCeoPay(
   const ops: AnyBulkWriteOperation<Corporation>[] = [];
   const due: Corporation[] = [];
   const expired: Corporation[] = [];
+  const newlySeen: Corporation[] = [];
   for (const corp of corps) {
     const ceoId = corp.ceoId!.toString();
     const state = corp.ceoPay;
@@ -99,10 +100,8 @@ export async function processNppCeoPay(
         appointedTurn: turn,
         nextReviewTurn: nextPayReviewTurn(turn, turn, earliest),
       };
-      ops.push({
-        updateOne: { filter: { _id: corp._id }, update: { $set: { ceoPay: fresh } } },
-      });
       corp.ceoPay = fresh;
+      newlySeen.push(corp);
       result.initialised++;
       continue;
     }
@@ -113,9 +112,9 @@ export async function processNppCeoPay(
     }
   }
 
-  if (due.length > 0 || expired.length > 0) {
+  if (due.length > 0 || expired.length > 0 || newlySeen.length > 0) {
     const involved = [...due, ...expired];
-    const nppIds = [...new Set(involved.map((c) => c.ceoId!.toString()))]
+    const nppIds = [...new Set([...involved, ...newlySeen].map((c) => c.ceoId!.toString()))]
       .filter((id) => ObjectId.isValid(id))
       .map((id) => new ObjectId(id));
     const npps = await db
@@ -134,6 +133,12 @@ export async function processNppCeoPay(
         (n, s) => n + (Number.isFinite(s.plantCount) ? (s.plantCount as number) : 0),
         0
       );
+
+    for (const corp of newlySeen) {
+      const pay = { ...corp.ceoPay!, level: levelFor(corp, nppById.get(corp.ceoId!.toString())) };
+      ops.push({ updateOne: { filter: { _id: corp._id }, update: { $set: { ceoPay: pay } } } });
+      corp.ceoPay = pay;
+    }
 
     for (const corp of due) {
       const npp = nppById.get(corp.ceoId!.toString());
@@ -161,10 +166,10 @@ export async function processNppCeoPay(
       ops.push({
         updateOne: {
           filter: { _id: corp._id },
-          update: { $set: { "ceoPay.demand": demand } },
+          update: { $set: { "ceoPay.demand": demand, "ceoPay.level": level } },
         },
       });
-      corp.ceoPay = { ...corp.ceoPay!, demand };
+      corp.ceoPay = { ...corp.ceoPay!, demand, level };
       result.demands++;
     }
 
@@ -177,6 +182,7 @@ export async function processNppCeoPay(
           ceoId: corp.ceoPay!.ceoId,
           appointedTurn: corp.ceoPay!.appointedTurn,
           nextReviewTurn: turn + CEO_PAY_REVIEW_TURNS,
+          level: demand.level,
           lastDecision: { turn, outcome: "accepted", salary: demand.amount, bySystem: true },
         };
         ops.push({
@@ -260,6 +266,7 @@ export async function replaceCeos(
         ceoId: nppId,
         appointedTurn: turn,
         nextReviewTurn: turn + CEO_PAY_REVIEW_TURNS,
+        level: 1,
         lastDecision: { turn, outcome: "replaced", bySystem },
       };
       // A new CEO starts on the base salary for a level 1 hire, sized to the

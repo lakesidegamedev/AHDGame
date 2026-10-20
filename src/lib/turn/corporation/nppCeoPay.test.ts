@@ -153,8 +153,9 @@ describe("processNppCeoPay", () => {
     expect(pay.ceoId).toBe(target.ceoId!.toString());
     expect(pay.nextReviewTurn).toBeGreaterThanOrEqual(START_TURN + CEO_PAY_REVIEW_TURNS);
     expect(pay.demand).toBeUndefined();
-    // A first sighting reads nothing: there is nothing to price yet.
-    expect(world.reads).toEqual({ npps: 0, corporationHistory: 0 });
+    // A first sighting reads the CEO's record for its level, but prices nothing.
+    expect(pay.level).toBeGreaterThanOrEqual(1);
+    expect(world.reads).toEqual({ npps: 1, corporationHistory: 0 });
   });
 
   it("opens a pay demand at a due review for a profitable corporation", async () => {
