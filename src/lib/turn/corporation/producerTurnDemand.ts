@@ -11,6 +11,7 @@ import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope"
 import { householdDemandSpecs } from "@/lib/market/producerMarket/householdDemandRules";
 import { HOUSEHOLD_OPENING_TURNS } from "@/lib/market/producerMarket/householdOpeningRules";
 import { publicBuyerFunding } from "@/lib/market/producerMarket/publicBuyerRules";
+import { investmentBuyerFunding } from "@/lib/market/producerMarket/capitalSpendRules";
 import { marketingBuyerLines } from "@/lib/market/producerMarket/marketingBuyerRules";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { publicOrders, type ShadowProducer } from "@/lib/market/producerMarket/shadowRules";
@@ -59,10 +60,14 @@ export async function buildProducerTurnDemand(
     carry: ShadowCarryState | null;
     /** Public buyer account per country; the shadow uses `public:<country>`. */
     publicAccountId?: (countryId: string) => string;
+    /** Construction buyer account per country; the shadow uses `investment:<country>`. */
+    investmentAccountId?: (countryId: string) => string;
   }
 ) {
   const { worldEpoch, carry } = input;
   const publicAccountId = input.publicAccountId ?? ((countryId: string) => `public:${countryId}`);
+  const investmentAccountId =
+    input.investmentAccountId ?? ((countryId: string) => `investment:${countryId}`);
   const preparedSectors: ReturnType<typeof prepareProducerPhysicalSector>["prepared"][] = [];
   const walletScopes: ReturnType<typeof prepareProducerPhysicalSector>["walletScopes"][number][] =
     [];
@@ -236,12 +241,12 @@ export async function buildProducerTurnDemand(
       const countryId = String(b.countryId);
       const code = resolveCountryCurrencyCode(b);
       const rate = (code && lookups.exchangeRatesByCurrency.get(code)) || 1;
-      const share = shareFor(countryId);
+      // Telemetry only. The demand rates already size each budget line to the
+      // plant economy; scaling by the plant share again shrank public buying
+      // several hundredfold and fed back on itself as funded value added fell.
+      shareFor(countryId);
       const byCategory = Object.fromEntries(
-        Object.entries(b.spending?.byCategory ?? {}).map(([k, v]) => [
-          k,
-          ((v as number) / rate) * share,
-        ])
+        Object.entries(b.spending?.byCategory ?? {}).map(([k, v]) => [k, (v as number) / rate])
       );
       return {
         countryId,
@@ -256,6 +261,26 @@ export async function buildProducerTurnDemand(
     lines: f.lines.map((l) => ({ ...l, book: shadowBook(l.book, l.commodity, f.countryId) })),
   }));
   const publicFunding = funding.reduce((s, f) => s + f.fundingLocal, 0);
+  const budgetCountries = new Set(lookups.federalBudgets.map((b) => String(b.countryId)));
+  // Construction work on outstanding build orders, bought from producers. The
+  // builds were paid when placed; this gives that cash its destination.
+  const investmentFunding = investmentBuyerFunding(
+    lookups.corporations.flatMap((corp) =>
+      (lookups.sectorsByCorp.get(corp._id.toString()) ?? []).map((sector) => ({
+        countryId: String(sector.countryId ?? corp.countryId ?? ""),
+        stateId: String(sector.stateId ?? ""),
+        buildQueue: sector.buildQueue ?? [],
+      }))
+    ),
+    input.turn
+  )
+    // A construction buyer settles in its country's budget currency.
+    .filter((f) => budgetCountries.has(f.countryId))
+    .map((f) => ({
+      ...f,
+      lines: f.lines.map((l) => ({ ...l, book: shadowBook(l.book, l.commodity, f.countryId) })),
+    }));
+  const investmentFundingTotal = investmentFunding.reduce((s, f) => s + f.fundingLocal, 0);
 
   // 4. Accounts: company cash, households, funded public buyers, payees (empty at open).
   const roles: ShadowAccountRole[] = [];
@@ -271,6 +296,11 @@ export async function buildProducerTurnDemand(
   for (const f of funding) {
     accounts.push({ id: publicAccountId(f.countryId), cash: f.fundingLocal });
     roles.push({ id: publicAccountId(f.countryId), kind: "public", countryId: f.countryId });
+  }
+  // Construction buyers close like public buyers: unspent work returns to its sink.
+  for (const f of investmentFunding) {
+    accounts.push({ id: investmentAccountId(f.countryId), cash: f.fundingLocal });
+    roles.push({ id: investmentAccountId(f.countryId), kind: "public", countryId: f.countryId });
   }
   for (const id of householdForPayee.keys())
     if (!householdWallets.has(id)) {
@@ -297,6 +327,11 @@ export async function buildProducerTurnDemand(
   }));
   const publicBuyerOrders = publicOrders(
     funding.map((f) => ({ accountId: publicAccountId(f.countryId), lines: f.lines })),
+    (c, book) => refPrice(c as CommodityType, book.startsWith("state:") ? book.slice(6) : ""),
+    PRICE_HEADROOM
+  );
+  const investmentBuyerOrders = publicOrders(
+    investmentFunding.map((f) => ({ accountId: investmentAccountId(f.countryId), lines: f.lines })),
     (c, book) => refPrice(c as CommodityType, book.startsWith("state:") ? book.slice(6) : ""),
     PRICE_HEADROOM
   );
@@ -365,6 +400,12 @@ export async function buildProducerTurnDemand(
     for (const o of publicBuyerOrders)
       if (o.book === "world")
         o.eligibleOfferIds = listFor(o.commodity, publicCountry.get(o.accountId) ?? "");
+    const investmentCountry = new Map(
+      investmentFunding.map((f) => [investmentAccountId(f.countryId), f.countryId])
+    );
+    for (const o of investmentBuyerOrders)
+      if (o.book === "world")
+        o.eligibleOfferIds = listFor(o.commodity, investmentCountry.get(o.accountId) ?? "");
     for (const o of marketingOrders)
       o.eligibleOfferIds = listFor(o.commodity, corpCountry.get(o.accountId) ?? "");
   }
@@ -387,6 +428,9 @@ export async function buildProducerTurnDemand(
     householdSeed,
     householdWallets,
     households,
+    investmentBuyerOrders,
+    investmentFunding,
+    investmentFundingTotal,
     marketingOrders,
     newCompanyCash,
     openingById,

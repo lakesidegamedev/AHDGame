@@ -3,6 +3,8 @@ import { legsNet } from "@/lib/banking/moneyMove";
 import {
   closeTransferMoves,
   householdOpeningMoves,
+  investmentFundingMoves,
+  investmentReturnMoves,
   publicFundingMoves,
   publicReturnMoves,
   transitionSupportMoves,
@@ -21,6 +23,22 @@ describe("live producer money flows", () => {
     expect(
       publicReturnMoves("w", 7, [{ ...wallet, countryId: "us" }])[0].legs.map((l) => l.kind)
     ).toEqual(["debit", "burn"]);
+  });
+
+  it("keys construction funding apart from public funding for the same country", () => {
+    const funding = investmentFundingMoves("w", 7, [
+      { ...wallet, walletId: "inv-us", countryId: "us" },
+    ]);
+    const back = investmentReturnMoves("w", 7, [
+      { ...wallet, walletId: "inv-us", countryId: "us", amountLocal: 20 },
+    ]);
+    expect(funding.map((m) => m.key)).toEqual(["producer-investment-funding:w:7:us"]);
+    expect(back.map((m) => m.key)).toEqual(["producer-investment-return:w:7:us"]);
+    expect(funding[0].legs.map((l) => l.kind)).toEqual(["mint", "credit"]);
+    expect(back[0].legs.map((l) => l.kind)).toEqual(["debit", "burn"]);
+    expect(
+      investmentFundingMoves("w", 7, [{ ...wallet, countryId: "us", amountLocal: 0 }])
+    ).toEqual([]);
   });
 
   it("seeds households once per world and requires an approval reference", () => {
