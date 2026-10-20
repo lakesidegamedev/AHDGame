@@ -181,6 +181,12 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
     status: "plants-gated",
     reason: "Vacant/inactive-CEO shed moves capacity units to pool headroom under plants.",
   },
+  "src/app/api/country/[code]/region/[id]/economy/attack-sector/route.ts": {
+    writeSites: 1,
+    status: "plants-gated",
+    reason:
+      "Split is plants-only; a new row starts at zero revenue and the turn derives its revenue from transferred whole plants.",
+  },
   "src/app/api/country/[code]/region/[id]/economy/attack/route.ts": {
     writeSites: 5,
     status: "plants-gated",
@@ -364,6 +370,7 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
 const MUST_BE_PLANTS_AWARE = [
   "src/lib/turn/corporation/rdInnovation.ts",
   "src/lib/turn/corporation/corporationSectorShed.ts",
+  "src/app/api/country/[code]/region/[id]/economy/attack-sector/route.ts",
   "src/app/api/country/[code]/region/[id]/economy/attack/route.ts",
   "src/lib/turn/nppCorporateAttacks.ts",
   "src/lib/corporations/moveSector.ts",

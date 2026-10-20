@@ -1423,6 +1423,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
       marketActionsAvailable && viewerCorporation
         ? buildSectorAttackInfo({
             viewerCorporation,
+            defenderMarketingStrength: corporation.marketingStrength ?? 0,
             viewerCorpFxRate,
             sectorHostFxRate,
             sectorHostLiquidCode,

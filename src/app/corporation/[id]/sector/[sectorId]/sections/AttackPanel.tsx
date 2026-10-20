@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Tooltip } from "@/components/Tooltip";
+import { PlantSplitPlannerModal } from "@/components/corporation/PlantSplitPlannerModal";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { formatMarketingStrength } from "@/lib/utils/formatters";
@@ -16,13 +17,21 @@ const STRENGTH_LABELS: Record<SplitStrength, string> = {
 
 interface AttackPanelProps {
   attackInfo: AttackInfo;
+  plantsMode: boolean;
+  targetName: string;
+  showAttack: boolean;
   /**
    * Market splitting is retired under the plants tier: capacity is the
    * authoritative production base there, so buying a slice of an abstract
    * "unowned market" is a second, contradictory way to grow that leaves two
-   * economic vocabularies on one page.
+   * economic vocabularies on one page. Attacking survives because it is the
+   * PVP, not a growth lever.
    */
   showSplit: boolean;
+  attacking: boolean;
+  attackError: string;
+  attackMsg: string;
+  onAttack: () => Promise<boolean>;
   splitting: boolean;
   splitError: string;
   splitMsg: string;
@@ -33,7 +42,14 @@ interface AttackPanelProps {
 
 export default function AttackPanel({
   attackInfo,
+  plantsMode,
+  targetName,
+  showAttack,
   showSplit,
+  attacking,
+  attackError,
+  attackMsg,
+  onAttack,
   splitting,
   splitError,
   splitMsg,
@@ -56,11 +72,13 @@ export default function AttackPanel({
   const activeStrength = affordableStrengths.includes(selectedStrength)
     ? selectedStrength
     : (affordableStrengths[0] ?? "full");
+  const [plannerOpen, setPlannerOpen] = useState(false);
 
   const targetNativeCurrency = targetCurrencyCode ?? sectorCurrencyCode;
   const userNativeCurrency =
     (attackInfo.userLiquidCurrencyCode as CurrencyCode | undefined) ?? targetNativeCurrency;
   const formatSectorMoney = (amount: number) => formatAmount(amount, sectorCurrencyCode);
+  const formatTargetMoney = (amount: number) => formatAmount(amount, targetNativeCurrency);
   const formatUserMoney = (amount: number) => formatAmount(amount, userNativeCurrency);
   const splitCurrencyTooltip = `Projected split values are forex-normalized. Local mode shows ${sectorCurrencyCode}, this sector's home currency; other display modes convert from the same underlying value.`;
   const capitalCurrencyTooltip = `Your corporation treasury is denominated in ${userNativeCurrency}; display modes convert it from that native balance.`;
@@ -89,13 +107,34 @@ export default function AttackPanel({
 
   const hasStrengthData = !!attackInfo.splitStrengths;
 
+  const canAttack =
+    attackInfo.userLiquidCapital >=
+      (plantsMode
+        ? (attackInfo.plantSplitQuote?.cashCostAnchor ?? Infinity)
+        : attackInfo.attackCost) &&
+    attackInfo.userMarketingStrength >=
+      (plantsMode
+        ? (attackInfo.plantSplitQuote?.marketingStrengthCost ?? Infinity)
+        : attackInfo.splitMsCost);
+
+  if (
+    (plantsMode && (!showAttack || !attackInfo.plantSplitQuote || attackInfo.plantCount == null)) ||
+    (!plantsMode && !showAttack && attackInfo.splitCost <= 0)
+  )
+    return null;
+
   const canSplit =
     activeSplitCost > 0 &&
     attackInfo.userLiquidCapital >= activeSplitCost &&
     attackInfo.userMarketingStrength >= activeSplitMsCost;
 
-  if (!showSplit || attackInfo.canSplit === false || !canSplit) return null;
+  const availableAttack = showAttack && attackInfo.canAttack !== false && canAttack;
+  const availableSplit = showSplit && attackInfo.canSplit !== false && canSplit;
+  if (!availableAttack && !availableSplit) return null;
 
+  const attackReason = showSplit
+    ? "Attack this sector to capture market share"
+    : "Take over plants from this rival";
   const splitReason = "Split the unowned market from this sector page";
 
   const netIncomeTooltip =
@@ -113,134 +152,275 @@ export default function AttackPanel({
   return (
     <div className="rounded-xl border border-card-border bg-card p-6">
       <h2 className="mb-1 text-lg font-bold text-foreground">Market actions</h2>
-      <p className="mb-4 text-xs text-muted">Split the unowned share of this sector.</p>
+      <p className="mb-4 text-xs text-muted">
+        {plantsMode
+          ? "Attempt a sector split against this rival's whole plants."
+          : availableAttack
+            ? availableSplit
+              ? "Attack this corporation or split the unowned share of this sector."
+              : "Attack this corporation in this market."
+            : "Split the unowned share of this sector."}
+      </p>
 
-      <div className="grid gap-4">
-        <div className="rounded-xl border border-primary/20 bg-background/40 p-4">
-          <h3 className="text-sm font-semibold text-foreground">Split unowned market</h3>
-          <p className="mt-1 text-xs text-muted">
-            Capture the remaining unowned market share for this sector type without targeting a
-            competitor directly.
-          </p>
-
-          {/* Strength selector */}
-          {hasStrengthData && activeSplitCost > 0 && (
-            <div className="mt-3">
-              <div className="mb-1 text-body-sm font-medium text-muted">Split strength</div>
-              <div className="flex gap-1">
-                {affordableStrengths.map((strength) => (
-                  <button
-                    key={strength}
-                    onClick={() => setSelectedStrength(strength)}
-                    className={`flex-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
-                      activeStrength === strength
-                        ? "border-primary/60 bg-primary/15 text-primary"
-                        : "border-card-border/60 bg-background text-muted hover:text-foreground"
-                    }`}
-                  >
-                    {STRENGTH_LABELS[strength]}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {splitError && (
-            <div className="mt-3 rounded-lg border border-error/30 bg-error/10 p-3 text-xs text-error">
-              {splitError}
-            </div>
-          )}
-          {splitMsg && (
-            <div className="mt-3 rounded-lg border border-success/30 bg-success/10 p-3 text-xs text-success">
-              {splitMsg}
-            </div>
-          )}
-          {activeDominanceWarning && canSplit && (
-            <div className="mt-3 rounded-lg border border-warning/30 bg-warning/10 p-3 text-xs text-warning">
-              This capture would push your market share above 50%, triggering a dominance margin
-              penalty (up to −15pp). Net income may be lower than estimated.
-            </div>
-          )}
-
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="space-y-1 text-xs text-muted">
-              <div>
-                Cost:{" "}
-                <Tooltip content={buildSplitCostTooltip()}>
-                  <span className="cursor-help border-b border-dashed border-card-border/70 font-medium text-foreground">
-                    {formatSectorMoney(activeSplitCost)}
-                  </span>
-                </Tooltip>
-                {" + "}
-                <span className="font-medium text-foreground">{activeSplitMsCost} MS</span>
-              </div>
-              <div>
-                Your capital:{" "}
-                <Tooltip content={capitalCurrencyTooltip}>
-                  <span className="cursor-help border-b border-dashed border-card-border/70 font-medium text-foreground">
-                    {formatUserMoney(attackInfo.userLiquidCapital)}
-                  </span>
-                </Tooltip>
-                {" / "}Your MS:{" "}
-                <span className="font-medium text-foreground">
-                  {formatMarketingStrength(attackInfo.userMarketingStrength)}
-                </span>
-              </div>
-              <div>
-                <Tooltip content={splitCurrencyTooltip}>
-                  <span className="cursor-help border-b border-dashed border-card-border/70">
-                    Est. revenue
-                  </span>
-                </Tooltip>
-                :{" "}
-                <span className="font-medium text-foreground">
-                  {formatSectorMoney(activeCapture)}
-                </span>
-              </div>
-              {activeNetIncome !== null && hasStrengthData && (
+      <div className={`grid gap-4 ${availableAttack && availableSplit ? "lg:grid-cols-2" : ""}`}>
+        {availableAttack &&
+          plantsMode &&
+          attackInfo.plantSplitQuote &&
+          attackInfo.plantCount != null && (
+            <div className="rounded-xl border border-error/20 bg-background/40 p-4">
+              <h3 className="text-sm font-semibold text-foreground">Split rival plants</h3>
+              <p className="mt-1 text-xs text-muted">
+                Relative MS automatically sets the share and success chance. You do not choose a
+                percentage.
+              </p>
+              {attackMsg && (
+                <div className="mt-3 rounded-lg border border-success/30 bg-success/10 p-3 text-xs text-success">
+                  {attackMsg}
+                </div>
+              )}
+              <div className="mt-4 grid grid-cols-3 gap-3 rounded-lg border border-card-border/60 bg-card/60 p-3 text-center">
                 <div>
-                  <Tooltip content={netIncomeTooltip}>
+                  <p className="text-body-sm font-medium text-muted">Automatic share</p>
+                  <p className="mt-1 font-semibold tabular-nums text-foreground">
+                    {(attackInfo.plantSplitQuote.seizureFraction * 100).toFixed(
+                      (attackInfo.plantSplitQuote.seizureFraction * 100) % 1 === 0 ? 0 : 1
+                    )}
+                    %
+                  </p>
+                </div>
+                <div className="border-x border-card-border/60 px-2">
+                  <p className="text-body-sm font-medium text-muted">Plants at risk</p>
+                  <p className="mt-1 font-semibold tabular-nums text-foreground">
+                    {attackInfo.plantSplitQuote.plantsAtRisk.toLocaleString("en-US")}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-body-sm font-medium text-muted">Success chance</p>
+                  <p className="mt-1 font-semibold tabular-nums text-foreground">
+                    {(attackInfo.plantSplitQuote.successProbability * 100).toFixed(1)}%
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-xs text-muted">
+                  Committed: {formatAmount(attackInfo.plantSplitQuote.cashCostAnchor)} +{" "}
+                  {attackInfo.plantSplitQuote.marketingStrengthCost} MS, paid even on failure
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setPlannerOpen(true)}
+                  className="rounded-lg border border-error/30 bg-error/10 px-4 py-2 text-sm font-medium text-error transition-colors hover:bg-error/20"
+                >
+                  Plan sector split
+                </button>
+              </div>
+            </div>
+          )}
+
+        {availableAttack && !plantsMode && (
+          <div className="rounded-xl border border-error/20 bg-background/40 p-4">
+            <h3 className="text-sm font-semibold text-foreground">
+              {showSplit ? "Attack sector" : "Take over plants"}
+            </h3>
+            <p className="mt-1 text-xs text-muted">
+              {showSplit
+                ? "Spend capital and marketing strength to capture market share from this corporation."
+                : "Spend capital and marketing strength to take capacity off this rival. You cannot split untapped demand."}
+            </p>
+            {attackError && (
+              <div className="mt-3 rounded-lg border border-error/30 bg-error/10 p-3 text-xs text-error">
+                {attackError}
+              </div>
+            )}
+            {attackMsg && (
+              <div className="mt-3 rounded-lg border border-success/30 bg-success/10 p-3 text-xs text-success">
+                {attackMsg}
+              </div>
+            )}
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <div className="space-y-1 text-xs text-muted">
+                <div>
+                  Cost:{" "}
+                  <span className="font-medium text-foreground">
+                    {formatTargetMoney(attackInfo.attackCost)}
+                  </span>
+                  {" + "}
+                  <span className="font-medium text-foreground">{attackInfo.splitMsCost} MS</span>
+                </div>
+                <div>
+                  Your capital:{" "}
+                  <Tooltip content={capitalCurrencyTooltip}>
+                    <span className="cursor-help border-b border-dashed border-card-border/70 font-medium text-foreground">
+                      {formatUserMoney(attackInfo.userLiquidCapital)}
+                    </span>
+                  </Tooltip>
+                  {" / "}Your MS:{" "}
+                  <span className="font-medium text-foreground">
+                    {formatMarketingStrength(attackInfo.userMarketingStrength)}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => void onAttack()}
+                disabled={attacking}
+                className="rounded-lg border border-error/30 bg-error/10 px-4 py-2 text-sm font-medium text-error transition-colors hover:bg-error/20 disabled:cursor-not-allowed disabled:opacity-40"
+                title={attackReason}
+              >
+                {attacking ? "Attacking..." : showSplit ? "Attack sector" : "Take over"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {availableSplit && (
+          <div className="rounded-xl border border-primary/20 bg-background/40 p-4">
+            <h3 className="text-sm font-semibold text-foreground">Split unowned market</h3>
+            <p className="mt-1 text-xs text-muted">
+              Capture the remaining unowned market share for this sector type without targeting a
+              competitor directly.
+            </p>
+
+            {/* Strength selector */}
+            {hasStrengthData && activeSplitCost > 0 && (
+              <div className="mt-3">
+                <div className="mb-1 text-body-sm font-medium text-muted">Split strength</div>
+                <div className="flex gap-1">
+                  {affordableStrengths.map((strength) => (
+                    <button
+                      key={strength}
+                      onClick={() => setSelectedStrength(strength)}
+                      className={`flex-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
+                        activeStrength === strength
+                          ? "border-primary/60 bg-primary/15 text-primary"
+                          : "border-card-border/60 bg-background text-muted hover:text-foreground"
+                      }`}
+                    >
+                      {STRENGTH_LABELS[strength]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {splitError && (
+              <div className="mt-3 rounded-lg border border-error/30 bg-error/10 p-3 text-xs text-error">
+                {splitError}
+              </div>
+            )}
+            {splitMsg && (
+              <div className="mt-3 rounded-lg border border-success/30 bg-success/10 p-3 text-xs text-success">
+                {splitMsg}
+              </div>
+            )}
+            {activeDominanceWarning && canSplit && (
+              <div className="mt-3 rounded-lg border border-warning/30 bg-warning/10 p-3 text-xs text-warning">
+                This capture would push your market share above 50%, triggering a dominance margin
+                penalty (up to −15pp). Net income may be lower than estimated.
+              </div>
+            )}
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <div className="space-y-1 text-xs text-muted">
+                <div>
+                  Cost:{" "}
+                  <Tooltip content={buildSplitCostTooltip()}>
+                    <span className="cursor-help border-b border-dashed border-card-border/70 font-medium text-foreground">
+                      {formatSectorMoney(activeSplitCost)}
+                    </span>
+                  </Tooltip>
+                  {" + "}
+                  <span className="font-medium text-foreground">{activeSplitMsCost} MS</span>
+                </div>
+                <div>
+                  Your capital:{" "}
+                  <Tooltip content={capitalCurrencyTooltip}>
+                    <span className="cursor-help border-b border-dashed border-card-border/70 font-medium text-foreground">
+                      {formatUserMoney(attackInfo.userLiquidCapital)}
+                    </span>
+                  </Tooltip>
+                  {" / "}Your MS:{" "}
+                  <span className="font-medium text-foreground">
+                    {formatMarketingStrength(attackInfo.userMarketingStrength)}
+                  </span>
+                </div>
+                <div>
+                  <Tooltip content={splitCurrencyTooltip}>
                     <span className="cursor-help border-b border-dashed border-card-border/70">
-                      Est. net income
+                      Est. revenue
                     </span>
                   </Tooltip>
                   :{" "}
-                  <span
-                    className={`font-medium ${activeNetIncome >= 0 ? "text-success" : "text-error"}`}
-                  >
-                    {formatSectorMoney(activeNetIncome)}
+                  <span className="font-medium text-foreground">
+                    {formatSectorMoney(activeCapture)}
                   </span>
-                  {attackInfo.sectorEffectiveMargin !== undefined && (
-                    <span className="ml-1 text-muted">
-                      ({Math.round(attackInfo.sectorEffectiveMargin)}% margin)
+                </div>
+                {activeNetIncome !== null && hasStrengthData && (
+                  <div>
+                    <Tooltip content={netIncomeTooltip}>
+                      <span className="cursor-help border-b border-dashed border-card-border/70">
+                        Est. net income
+                      </span>
+                    </Tooltip>
+                    :{" "}
+                    <span
+                      className={`font-medium ${activeNetIncome >= 0 ? "text-success" : "text-error"}`}
+                    >
+                      {formatSectorMoney(activeNetIncome)}
                     </span>
-                  )}
-                </div>
-              )}
-              {hasStrengthData && activeProjectedShare > 0 && (
-                <div className="text-muted">
-                  Projected share:{" "}
-                  <span
-                    className={`font-medium ${activeDominanceWarning ? "text-warning" : "text-foreground"}`}
-                  >
-                    {activeProjectedShare.toFixed(1)}%
-                  </span>
-                </div>
-              )}
+                    {attackInfo.sectorEffectiveMargin !== undefined && (
+                      <span className="ml-1 text-muted">
+                        ({Math.round(attackInfo.sectorEffectiveMargin)}% margin)
+                      </span>
+                    )}
+                  </div>
+                )}
+                {hasStrengthData && activeProjectedShare > 0 && (
+                  <div className="text-muted">
+                    Projected share:{" "}
+                    <span
+                      className={`font-medium ${activeDominanceWarning ? "text-warning" : "text-foreground"}`}
+                    >
+                      {activeProjectedShare.toFixed(1)}%
+                    </span>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => onSplit(activeStrength)}
+                disabled={splitting}
+                className="rounded-lg border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-40"
+                title={splitReason}
+              >
+                {splitting
+                  ? "Splitting..."
+                  : `Split${activeStrength !== "full" ? ` ${STRENGTH_LABELS[activeStrength]}` : ""}`}
+              </button>
             </div>
-            <button
-              onClick={() => onSplit(activeStrength)}
-              disabled={splitting}
-              className="rounded-lg border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-40"
-              title={splitReason}
-            >
-              {splitting
-                ? "Splitting..."
-                : `Split${activeStrength !== "full" ? ` ${STRENGTH_LABELS[activeStrength]}` : ""}`}
-            </button>
           </div>
-        </div>
+        )}
       </div>
+
+      {availableAttack &&
+        plantsMode &&
+        attackInfo.plantSplitQuote &&
+        attackInfo.plantCount != null && (
+          <PlantSplitPlannerModal
+            open={plannerOpen}
+            targetName={targetName}
+            defenderPlantCount={attackInfo.plantCount}
+            quote={attackInfo.plantSplitQuote}
+            userLiquidCapitalAnchor={attackInfo.userLiquidCapital}
+            userMarketingStrength={attackInfo.userMarketingStrength}
+            submitting={attacking}
+            errorMessage={attackError}
+            onClose={() => {
+              if (!attacking) setPlannerOpen(false);
+            }}
+            onConfirm={async () => {
+              if (await onAttack()) setPlannerOpen(false);
+            }}
+          />
+        )}
     </div>
   );
 }
