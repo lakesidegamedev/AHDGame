@@ -47,10 +47,14 @@ export interface LawLevels {
   foreignInvestment: MechanicalLawLevel;
 }
 
-/** Root of every controlled company, and the members of each group. */
+/**
+ * Root of every controlled company, and the members of each group. Same
+ * resolution as the size-cost control groups (groups/controlGroups.ts):
+ * every >50% controlling link counts, formalized or not.
+ */
 export function controlGroups(rows: readonly ControlRow[]) {
   return resolveMembershipRows(
-    rows.map((r) => ({ id: r.id, parentId: r.parentId, formalized: r.parentId != null }))
+    rows.map((r) => ({ id: r.id, parentId: r.parentId, formalized: true }))
   );
 }
 
@@ -170,3 +174,64 @@ export function complianceReasonText(reason: ComplianceReason): string {
       return "your group runs more subsidiaries here than the Subsidiary Limits Act allows";
   }
 }
+
+export interface DominantGroup {
+  rootId: string;
+  countryId: string;
+  sectorType: string;
+  sharePercent: number;
+  thresholdPercent: number;
+}
+
+/**
+ * Groups at or above the breakup threshold of their country's Competition Act
+ * (levels 3 and 4) in some national industry. One entry per group and
+ * country: its strongest industry there. `thresholdForCompetitionLevel`
+ * returns the review threshold for a level, or null for no review.
+ */
+export function findDominantGroups(input: {
+  rows: readonly ControlRow[];
+  industry: readonly IndustryRow[];
+  competitionLevelByCountry: ReadonlyMap<string, MechanicalLawLevel>;
+  thresholdForCompetitionLevel: (level: MechanicalLawLevel) => number | null;
+}): DominantGroup[] {
+  const { rootByCorpId } = controlGroups(input.rows);
+  const total = new Map<string, number>();
+  const byRoot = new Map<string, number>();
+  for (const row of input.industry) {
+    if (!(row.revenue > 0)) continue;
+    const cell = `${row.countryId}|${row.sectorType}`;
+    total.set(cell, (total.get(cell) ?? 0) + row.revenue);
+    const rootId = rootByCorpId.get(row.corpId) ?? row.corpId;
+    const key = `${rootId}|${cell}`;
+    byRoot.set(key, (byRoot.get(key) ?? 0) + row.revenue);
+  }
+  const strongest = new Map<string, DominantGroup>();
+  for (const [key, revenue] of byRoot) {
+    const [rootId, countryId, sectorType] = key.split("|");
+    const level = input.competitionLevelByCountry.get(countryId) ?? 0;
+    if (level < 3) continue;
+    const threshold = input.thresholdForCompetitionLevel(level);
+    const cellTotal = total.get(`${countryId}|${sectorType}`) ?? 0;
+    if (threshold == null || !(cellTotal > 0)) continue;
+    const sharePercent = (revenue / cellTotal) * 100;
+    if (sharePercent < threshold) continue;
+    const slot = `${rootId}|${countryId}`;
+    const prior = strongest.get(slot);
+    if (!prior || sharePercent > prior.sharePercent) {
+      strongest.set(slot, {
+        rootId,
+        countryId,
+        sectorType,
+        sharePercent,
+        thresholdPercent: threshold,
+      });
+    }
+  }
+  return [...strongest.values()].sort((a, b) =>
+    a.rootId === b.rootId ? (a.countryId < b.countryId ? -1 : 1) : a.rootId < b.rootId ? -1 : 1
+  );
+}
+
+/** Turns a breakup case stays open for the competition authority to decide. */
+export const BREAKUP_CASE_TURNS = 6;

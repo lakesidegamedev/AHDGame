@@ -726,6 +726,21 @@ export interface Corporation {
    * its controlling group must give up control by `dueTurn`, or the excess
    * stake is sold at book value into the equity market. Cleared when cured.
    */
+  /**
+   * An open Competition Act breakup case against this group root (levels 3
+   * and 4). The competition authority orders a breakup or dismisses it by
+   * `decideByTurn`; undecided cases resolve on the measured share then.
+   */
+  antitrustCase?: {
+    countryId: string;
+    sectorType: string;
+    sharePercent: number;
+    thresholdPercent: number;
+    openedTurn: number;
+    decideByTurn: number;
+    decision?: "order" | "dismiss";
+    decidedTurn?: number;
+  };
   antitrustDivestiture?: {
     reason: "subsidiaryCap" | "foreignBan" | "foreignShareCap";
     countryId: string;
