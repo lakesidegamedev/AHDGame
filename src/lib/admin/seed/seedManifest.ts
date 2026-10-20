@@ -188,6 +188,18 @@ const REFERENCE: CollectionEntry[] = [
       "One row per turn recording whether it ran the legacy or funded producer path, so no turn can run both.",
   },
   {
+    name: "producerMarketOutcomes",
+    category: "runtime",
+    notes:
+      "Settled funded supply and demand per turn (requested and offered units by commodity and state), read by the price phase on funded turns.",
+  },
+  {
+    name: "producerOpenings",
+    category: "runtime",
+    notes:
+      "One record per applied producer opening conversion (keyed by plan digest): reconciliation and the non-cash opening adjustments it made.",
+  },
+  {
     name: "offTypeHandovers",
     category: "runtime",
     notes:

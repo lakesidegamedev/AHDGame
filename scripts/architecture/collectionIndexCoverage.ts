@@ -13,6 +13,8 @@ export const PRIMARY_KEY_INDEX_POLICIES: Readonly<Record<string, string>> = {
   producerMarketShadows:
     "Telemetry: one summary per turn, upserted by its turn _id; game logic never reads it.",
   producerPathClaims: "One claim per world and turn, inserted and read by its _id.",
+  producerMarketOutcomes: "One document per world and turn, written and read by its _id.",
+  producerOpenings: "One record per applied opening, written and read by its plan digest _id.",
   producerMarketShadowState:
     "Shadow-only carried books, upserted by run and turn _id; at most two documents per run are kept, so the predecessor scan is bounded.",
   acquisitionSettlements: "Settlement recovery and writes address the offer identity through _id.",

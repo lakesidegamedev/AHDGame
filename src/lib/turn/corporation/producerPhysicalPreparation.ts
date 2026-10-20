@@ -64,6 +64,8 @@ export type ProducerPhysicalEnv = Pick<
   | "labourDemandWageIndexByState"
   | "privateBankingEnabled"
 > & {
+  /** Funded producer turns and the shadow: advertising as a paid input. */
+  advertisingInput?: boolean;
   lookups: Pick<
     CorporationLookups,
     | "labourTightnessByState"
@@ -152,7 +154,8 @@ export function prepareProducerPhysicalSector(input: {
     sector.industryModel,
     sector.mediaDiscriminator,
     lookups.preset,
-    lookups.hardwareInputReliefStartTurn
+    lookups.hardwareInputReliefStartTurn,
+    { advertisingInput: env.advertisingInput === true }
   );
   const operatingType = getOperatingSectorType(
     sector.sectorType,

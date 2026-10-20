@@ -1,0 +1,178 @@
+/**
+ * Live money flows around a funded producer turn (funded-market cutover,
+ * phase B slice S3b). Each flow is one idempotent money move with a stable key
+ * per world, turn and party, so a retried turn never pays twice.
+ *
+ * - Public funding: the plant economy's share of the commodity outlay the
+ *   treasury already spends each turn. That outlay is deducted from the
+ *   treasury today and goes nowhere; here the same amount is minted into the
+ *   country's public-buyer wallet as its destination. Unspent funding is
+ *   burned at close, so public buyers never accumulate cash.
+ * - Household opening: the one-time owner-approved seed (about 3 turns of
+ *   wages), minted once per world.
+ * - Close: AI profit distribution and operating-payee income move to
+ *   households; state-company remittances move to their treasury.
+ *
+ * Pure: plain data in, money-move descriptions out.
+ */
+import type { MoneyMove } from "@/lib/banking/moneyMove";
+
+export const PRODUCER_ACCOUNTS = "producerEconomyAccounts";
+
+export interface WalletAmount {
+  walletId: string;
+  /** Native currency of the wallet. */
+  amountLocal: number;
+  currencyCode: string;
+  localPerAnchor: number;
+}
+
+const valuation = (w: WalletAmount) => ({
+  currencyCode: w.currencyCode,
+  localPerAnchor: w.localPerAnchor,
+});
+
+function positive(x: number): number {
+  return Number.isFinite(x) && x > 0 ? x : 0;
+}
+
+/** Mints each public buyer's funding for this turn. */
+export function publicFundingMoves(
+  worldEpoch: string,
+  turn: number,
+  rows: readonly (WalletAmount & { countryId: string })[]
+): MoneyMove[] {
+  return rows
+    .filter((r) => positive(r.amountLocal) > 0)
+    .map((r) => ({
+      key: `producer-public-funding:${worldEpoch}:${turn}:${r.countryId}`,
+      kind: "producer_public_funding",
+      turn,
+      legs: [
+        {
+          kind: "mint",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          note: "plant share of the budget outlay the treasury already spent",
+        },
+        {
+          kind: "credit",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          collection: PRODUCER_ACCOUNTS,
+          filter: { _id: r.walletId },
+          path: "cash",
+          note: "public buyer funding",
+        },
+      ],
+    }));
+}
+
+/** Burns what a public buyer did not spend. */
+export function publicReturnMoves(
+  worldEpoch: string,
+  turn: number,
+  rows: readonly (WalletAmount & { countryId: string })[]
+): MoneyMove[] {
+  return rows
+    .filter((r) => positive(r.amountLocal) > 0)
+    .map((r) => ({
+      key: `producer-public-return:${worldEpoch}:${turn}:${r.countryId}`,
+      kind: "producer_public_return",
+      turn,
+      legs: [
+        {
+          kind: "debit",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          collection: PRODUCER_ACCOUNTS,
+          filter: { _id: r.walletId },
+          path: "cash",
+          note: "unspent public funding",
+        },
+        {
+          kind: "burn",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          note: "unspent public funding returns to the budget",
+        },
+      ],
+    }));
+}
+
+/** One-time household opening seed, keyed per world so it can only land once. */
+export function householdOpeningMoves(
+  worldEpoch: string,
+  approvalReference: string,
+  rows: readonly WalletAmount[]
+): MoneyMove[] {
+  if (!approvalReference.trim())
+    throw new Error("Household opening cash requires an owner approval reference");
+  return rows
+    .filter((r) => positive(r.amountLocal) > 0)
+    .map((r) => ({
+      key: `producer-household-opening:${worldEpoch}:${r.walletId}`,
+      kind: "producer_household_opening",
+      record: { approvalReference },
+      legs: [
+        {
+          kind: "mint",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          note: `household opening cash (${approvalReference})`,
+        },
+        {
+          kind: "credit",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          collection: PRODUCER_ACCOUNTS,
+          filter: { _id: r.walletId },
+          path: "cash",
+          note: "household opening cash",
+        },
+      ],
+    }));
+}
+
+export interface CloseParty {
+  collection: string;
+  filter: Record<string, unknown>;
+  path: string;
+  id: string;
+  currencyCode: string;
+  localPerAnchor: number;
+}
+
+export interface CloseTransfer {
+  reason: "ai_dividend" | "operating_income" | "state_remittance";
+  from: CloseParty;
+  to: CloseParty;
+  /** Anchor value; each side is booked in its own currency at its own rate. */
+  amountAnchor: number;
+}
+
+/** End-of-turn transfers, one move per source and reason. */
+export function closeTransferMoves(
+  worldEpoch: string,
+  turn: number,
+  transfers: readonly CloseTransfer[]
+): MoneyMove[] {
+  return transfers
+    .filter(
+      (t) => positive(t.amountAnchor) > 0 && t.from.localPerAnchor > 0 && t.to.localPerAnchor > 0
+    )
+    .map((t) => ({
+      key: `producer-close:${worldEpoch}:${turn}:${t.reason}:${t.from.id}`,
+      kind: `producer_${t.reason}`,
+      turn,
+      legs: [t.from, t.to].map((side, i) => ({
+        kind: i === 0 ? ("debit" as const) : ("credit" as const),
+        amount: t.amountAnchor * side.localPerAnchor,
+        valuation: { currencyCode: side.currencyCode, localPerAnchor: side.localPerAnchor },
+        collection: side.collection,
+        filter: side.filter,
+        path: side.path,
+        note: t.reason,
+      })),
+    }));
+}
