@@ -77,6 +77,7 @@ import {
   SECTOR_MARGIN_LEVEL_TRIM_PP,
   managementOverheadPp,
 } from "@/lib/constants/corporations";
+import { controlGroupRootByCorpId, groupTotals } from "@/lib/corporations/groups/controlGroups";
 import { INVESTOR_CONFIDENCE_BASELINE } from "@/lib/nationalization/constants";
 import { NATIONAL_SCOPE, NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { buildPoliticalBaseModifiers } from "@/lib/politicalLegislation/marginAdapter";
@@ -1068,20 +1069,44 @@ export async function buildCorporationLookups(
       _id: string;
       managementOverheadPpPerDoubling?: number;
       strengthUpkeepStage?: number;
+      groupSizeCostsStage?: number;
     }>("gameConfig")
     .findOne(
       { _id: "default" },
-      { projection: { managementOverheadPpPerDoubling: 1, strengthUpkeepStage: 1 } }
+      {
+        projection: {
+          managementOverheadPpPerDoubling: 1,
+          strengthUpkeepStage: 1,
+          groupSizeCostsStage: 1,
+        },
+      }
     );
   const overheadPpPerDoubling = overheadCfg?.managementOverheadPpPerDoubling ?? 0;
   const strengthUpkeepStage =
     typeof overheadCfg?.strengthUpkeepStage === "number" ? overheadCfg.strengthUpkeepStage : 0;
+  const groupSizeCostsStage =
+    typeof overheadCfg?.groupSizeCostsStage === "number" ? overheadCfg.groupSizeCostsStage : 0;
+  // Control-group roots for size costs (contestability plan): every corp
+  // resolved to its ultimate controlling owner. Only built when a group size
+  // cost is on.
+  const controlRootByCorpId =
+    groupSizeCostsStage >= 1 ? controlGroupRootByCorpId(loadedCorporations) : null;
   const managementOverheadPpByCorpId = new Map<string, number>();
   if (overheadPpPerDoubling > 0) {
+    const plantsByCorpId = new Map<string, number>();
     for (const [corpId, sectors] of sectorsByCorp) {
       let plants = 0;
       for (const s of sectors)
         plants += Number.isFinite(s.plantCount) ? (s.plantCount as number) : 0;
+      plantsByCorpId.set(corpId, plants);
+    }
+    // Stage 1: measure overhead on the whole control group, so splitting a
+    // business into subsidiaries does not dodge it. Every member pays the
+    // group's rate on its own sectors.
+    const basis = controlRootByCorpId
+      ? groupTotals(controlRootByCorpId, plantsByCorpId)
+      : plantsByCorpId;
+    for (const [corpId, plants] of basis) {
       const pp = managementOverheadPp(plants, overheadPpPerDoubling);
       if (pp > 0) managementOverheadPpByCorpId.set(corpId, pp);
     }

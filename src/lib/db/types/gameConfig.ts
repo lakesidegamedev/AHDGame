@@ -157,6 +157,8 @@ export interface GameConfig {
   managementOverheadPpPerDoubling?: number;
   /** Strength upkeep rollout stage (corporations/strengthUpkeep). 0 or absent = off. */
   strengthUpkeepStage?: number;
+  /** Group size costs rollout stage (1 = management overhead on the control group). 0 or absent = off. */
+  groupSizeCostsStage?: number;
   /** Public media editorial stance and audience response rules. Missing means off. */
   mediaEditorialEnabled?: boolean;
   /** Paid media and entertainment operating-model catalog. Default off. */

@@ -1379,15 +1379,21 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
               mods: {
                 ...mods,
                 ...ownershipTerms,
-                managementOverheadModifier: -managementOverheadPp(
-                  allSectorsRaw.reduce(
-                    (sum, s) =>
-                      s.corporationId.equals(corporation._id) && Number.isFinite(s.plantCount)
-                        ? sum + (s.plantCount as number)
-                        : sum,
-                    0
-                  ),
-                  governorConfig?.managementOverheadPpPerDoubling ?? 0
+                // The overhead the turn applied (group basis when on, SOEs
+                // exempt); before the first turn writes it, the corp's own
+                // plant count.
+                managementOverheadModifier: -(
+                  corporation.managementOverheadPp ??
+                  managementOverheadPp(
+                    allSectorsRaw.reduce(
+                      (sum, s) =>
+                        s.corporationId.equals(corporation._id) && Number.isFinite(s.plantCount)
+                          ? sum + (s.plantCount as number)
+                          : sum,
+                      0
+                    ),
+                    governorConfig?.managementOverheadPpPerDoubling ?? 0
+                  )
                 ),
               },
               appliedPolicyPp: enginePnl.policyPp,

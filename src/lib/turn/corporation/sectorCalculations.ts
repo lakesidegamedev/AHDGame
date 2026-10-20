@@ -35,6 +35,7 @@ import {
   CORP_OVERHEAD_MAX_REVENUE_MULTIPLE,
 } from "@/lib/constants/corporations";
 import { marketingStrengthAfterTurn } from "@/lib/corporations/strengthUpkeep";
+import { managementOverheadPpForCorp } from "./managementOverhead";
 import {
   bankNpvBoostMultiplier,
   sectorRiskPremiumAtTurn,
@@ -1257,6 +1258,8 @@ export function processSectors(
             earningsHistory: updatedEarningsHistory,
             sharePrice: placeholderSharePrice,
             splitEscalation: newEscalation,
+            // Applied management overhead (group basis when on), for the sector page.
+            managementOverheadPp: managementOverheadPpForCorp(corp, lookups),
             countryId: corpCountryId,
             updatedAt: now,
             creditRatingSnapshot: creditPack.creditRating.rating,
