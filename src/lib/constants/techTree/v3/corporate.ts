@@ -14,7 +14,7 @@ export const CORPORATE_V3: V3LaneContent = {
         "Patriotic advertising tied to the war effort lifts brand standing and pricing power.",
       effects: [
         { kind: "marketingStrength", flat: 12 },
-        { kind: "priceRealization", pct: 0.01 },
+        { kind: "plantOutput", pct: 0.01 },
       ],
     },
     {
@@ -38,7 +38,7 @@ export const CORPORATE_V3: V3LaneContent = {
         "Years of wartime goodwill campaigns leave the company a household name it can price on.",
       effects: [
         { kind: "marketingStrength", flat: 28 },
-        { kind: "priceRealization", pct: 0.02 },
+        { kind: "plantOutput", pct: 0.02 },
       ],
     },
     {
@@ -63,7 +63,7 @@ export const CORPORATE_V3: V3LaneContent = {
         "Door-to-door surveys of the new suburbs sharpen what the company charges and to whom.",
       effects: [
         { kind: "marketingStrength", flat: 14 },
-        { kind: "priceRealization", pct: 0.012 },
+        { kind: "plantOutput", pct: 0.012 },
       ],
     },
     {
@@ -89,7 +89,7 @@ export const CORPORATE_V3: V3LaneContent = {
         "Coordinated print, radio and billboard buys make the brand known coast to coast.",
       effects: [
         { kind: "marketingStrength", flat: 30 },
-        { kind: "priceRealization", pct: 0.02 },
+        { kind: "plantOutput", pct: 0.02 },
       ],
     },
     {
@@ -114,8 +114,8 @@ export const CORPORATE_V3: V3LaneContent = {
       description:
         "Splitting customers into segments lets each product line charge what its buyers will pay.",
       effects: [
-        { kind: "priceRealization", pct: 0.012 },
-        { kind: "marginBonus", pp: 0.5 },
+        { kind: "plantOutput", pct: 0.012 },
+        { kind: "plantOutput", pct: 0.005 },
       ],
     },
     {
@@ -138,7 +138,7 @@ export const CORPORATE_V3: V3LaneContent = {
       description:
         "A disciplined brand hierarchy lets premium lines carry premium prices without confusing buyers.",
       effects: [
-        { kind: "priceRealization", pct: 0.022 },
+        { kind: "plantOutput", pct: 0.022 },
         { kind: "marketingStrength", flat: 26 },
       ],
     },
@@ -164,7 +164,7 @@ export const CORPORATE_V3: V3LaneContent = {
         "Structured focus group testing tunes products and copy before a dollar is spent on media.",
       effects: [
         { kind: "marketingStrength", flat: 15 },
-        { kind: "priceRealization", pct: 0.01 },
+        { kind: "plantOutput", pct: 0.01 },
       ],
     },
     {
@@ -187,7 +187,7 @@ export const CORPORATE_V3: V3LaneContent = {
       description:
         "Selling an identity rather than a product lets the company hold prices through the downturn.",
       effects: [
-        { kind: "priceRealization", pct: 0.024 },
+        { kind: "plantOutput", pct: 0.024 },
         { kind: "marketingStrength", flat: 28 },
       ],
     },
@@ -239,7 +239,7 @@ export const CORPORATE_V3: V3LaneContent = {
       description:
         "Upmarket versions of proven products capture buyers who will pay more for the same name.",
       effects: [
-        { kind: "priceRealization", pct: 0.024 },
+        { kind: "plantOutput", pct: 0.024 },
         { kind: "marketingStrength", flat: 25 },
       ],
     },
@@ -265,8 +265,8 @@ export const CORPORATE_V3: V3LaneContent = {
       description:
         "Managing whole product categories with retailers wins shelf placement and steadier prices.",
       effects: [
-        { kind: "priceRealization", pct: 0.012 },
-        { kind: "marginBonus", pp: 0.5 },
+        { kind: "plantOutput", pct: 0.012 },
+        { kind: "plantOutput", pct: 0.005 },
       ],
     },
     {
@@ -289,7 +289,7 @@ export const CORPORATE_V3: V3LaneContent = {
         "Licensing the brand across markets and merchandise turns the name itself into revenue.",
       effects: [
         { kind: "marketingStrength", flat: 32 },
-        { kind: "priceRealization", pct: 0.022 },
+        { kind: "plantOutput", pct: 0.022 },
       ],
     },
     {
@@ -314,7 +314,7 @@ export const CORPORATE_V3: V3LaneContent = {
       description: "An early, polished web brand reaches customers rivals still serve by catalog.",
       effects: [
         { kind: "marketingStrength", flat: 18 },
-        { kind: "priceRealization", pct: 0.01 },
+        { kind: "plantOutput", pct: 0.01 },
       ],
     },
     {
@@ -337,7 +337,7 @@ export const CORPORATE_V3: V3LaneContent = {
         "Personalized offers built from customer databases lift both response rates and prices paid.",
       effects: [
         { kind: "marketingStrength", flat: 32 },
-        { kind: "priceRealization", pct: 0.024 },
+        { kind: "plantOutput", pct: 0.024 },
       ],
     },
     {
@@ -361,7 +361,7 @@ export const CORPORATE_V3: V3LaneContent = {
         "Paid search puts the company at the top of results at the moment customers decide.",
       effects: [
         { kind: "marketingStrength", flat: 18 },
-        { kind: "marginBonus", pp: 0.5 },
+        { kind: "plantOutput", pct: 0.005 },
       ],
     },
     {
@@ -385,7 +385,7 @@ export const CORPORATE_V3: V3LaneContent = {
         "Store, web and mobile present one seamless brand and customers pay full price for it.",
       effects: [
         { kind: "marketingStrength", flat: 30 },
-        { kind: "priceRealization", pct: 0.024 },
+        { kind: "plantOutput", pct: 0.024 },
       ],
     },
     {
@@ -410,7 +410,7 @@ export const CORPORATE_V3: V3LaneContent = {
       description: "Paid creators put the product in front of audiences that skip traditional ads.",
       effects: [
         { kind: "marketingStrength", flat: 18 },
-        { kind: "priceRealization", pct: 0.012 },
+        { kind: "plantOutput", pct: 0.012 },
       ],
     },
     {
@@ -433,7 +433,7 @@ export const CORPORATE_V3: V3LaneContent = {
       description:
         "Selling direct captures the retail margin and the customer relationship in one move.",
       effects: [
-        { kind: "priceRealization", pct: 0.026 },
+        { kind: "plantOutput", pct: 0.026 },
         { kind: "marketingStrength", flat: 30 },
       ],
     },
@@ -482,7 +482,7 @@ export const CORPORATE_V3: V3LaneContent = {
       description:
         "Negotiation agents settle a price with each buyer and leave little money on the table.",
       effects: [
-        { kind: "priceRealization", pct: 0.028 },
+        { kind: "plantOutput", pct: 0.028 },
         { kind: "marketingStrength", flat: 28 },
       ],
     },

@@ -41,7 +41,6 @@ const baseSector = {
   homeLocationModifier: 0,
   foreignTariffModifier: 0,
   domesticTariffMalus: 0,
-  techMarginBonus: null,
   inflationModifier: -2.0,
   debtToGdpModifier: 0,
   deficitToGdpModifier: 0,

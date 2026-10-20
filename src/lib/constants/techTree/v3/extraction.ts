@@ -16,7 +16,7 @@ export const EXTRACTION_V3: V3LaneContent = {
       name: "Direct Smelter Contracts",
       description:
         "Selling straight to smelters on long contracts captures the middleman's spread.",
-      effects: [{ kind: "priceRealization", pct: 0.012 }],
+      effects: [{ kind: "plantOutput", pct: 0.012 }],
     },
     {
       name: "Strategic Minerals Status",
@@ -37,7 +37,7 @@ export const EXTRACTION_V3: V3LaneContent = {
       description:
         "Certified grade and consistency guarantees earn a standing premium on every shipment.",
       effects: [
-        { kind: "priceRealization", pct: 0.024 },
+        { kind: "plantOutput", pct: 0.024 },
         { kind: "outputRate", commodity: "iron", pct: 0.06 },
       ],
     },
@@ -64,7 +64,7 @@ export const EXTRACTION_V3: V3LaneContent = {
       name: "Washed and Sized Product",
       description: "Preparation plants sell clean, sized coal that burns better and prices higher.",
       effects: [
-        { kind: "priceRealization", pct: 0.012 },
+        { kind: "plantOutput", pct: 0.012 },
         { kind: "outputRate", commodity: "coal", pct: 0.03 },
       ],
     },
@@ -86,7 +86,7 @@ export const EXTRACTION_V3: V3LaneContent = {
       description:
         "Twenty-year fuel contracts with power utilities lock in prices above the spot market.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "outputRate", commodity: "oil", pct: 0.06 },
       ],
     },
@@ -114,7 +114,7 @@ export const EXTRACTION_V3: V3LaneContent = {
       description:
         "Upgrading fines into blast-furnace pellets sells low-grade ore at high-grade prices.",
       effects: [
-        { kind: "priceRealization", pct: 0.013 },
+        { kind: "plantOutput", pct: 0.013 },
         { kind: "outputRate", commodity: "iron", pct: 0.03 },
       ],
     },
@@ -137,7 +137,7 @@ export const EXTRACTION_V3: V3LaneContent = {
       description:
         "A named, certified export blend becomes the benchmark other producers price against.",
       effects: [
-        { kind: "priceRealization", pct: 0.026 },
+        { kind: "plantOutput", pct: 0.026 },
         { kind: "outputRate", commodity: "rare_earth", pct: 0.06 },
       ],
     },
@@ -163,7 +163,7 @@ export const EXTRACTION_V3: V3LaneContent = {
     {
       name: "Spot Cargo Trading Desk",
       description: "An in-house trading desk times spot cargo sales to catch every price spike.",
-      effects: [{ kind: "priceRealization", pct: 0.014 }],
+      effects: [{ kind: "plantOutput", pct: 0.014 }],
     },
     {
       name: "Reclamation Compliance Lead",
@@ -184,7 +184,7 @@ export const EXTRACTION_V3: V3LaneContent = {
       description:
         "Indexed contracts renegotiated in the shock years capture the new energy price floor.",
       effects: [
-        { kind: "priceRealization", pct: 0.028 },
+        { kind: "plantOutput", pct: 0.028 },
         { kind: "outputRate", commodity: "oil", pct: 0.07 },
       ],
     },
@@ -212,7 +212,7 @@ export const EXTRACTION_V3: V3LaneContent = {
       name: "Quality Bonus Clauses",
       description:
         "Contracts that pay bonuses for grade and penalize dilution reward disciplined mining.",
-      effects: [{ kind: "priceRealization", pct: 0.012 }],
+      effects: [{ kind: "plantOutput", pct: 0.012 }],
     },
     {
       name: "Multi-Basin Portfolio",
@@ -231,7 +231,7 @@ export const EXTRACTION_V3: V3LaneContent = {
       name: "Refined Product Integration",
       description: "Moving downstream into processing captures margins raw ore never sees.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "outputRate", commodity: "rare_earth", pct: 0.07 },
       ],
     },
@@ -258,7 +258,7 @@ export const EXTRACTION_V3: V3LaneContent = {
       name: "Certified Assay Laboratories",
       description:
         "Accredited on-site labs settle grade disputes in the mine's favor at the weighbridge.",
-      effects: [{ kind: "priceRealization", pct: 0.012 }],
+      effects: [{ kind: "plantOutput", pct: 0.012 }],
     },
     {
       name: "Closure Bond Discipline",
@@ -279,7 +279,7 @@ export const EXTRACTION_V3: V3LaneContent = {
       description:
         "A hedging book locks forward prices at peaks while rivals ride the spot market down.",
       effects: [
-        { kind: "priceRealization", pct: 0.026 },
+        { kind: "plantOutput", pct: 0.026 },
         { kind: "outputRate", commodity: "natural_gas", pct: 0.06 },
       ],
     },
@@ -306,7 +306,7 @@ export const EXTRACTION_V3: V3LaneContent = {
     {
       name: "Traceable Origin Premiums",
       description: "Documented chain of custody sells certified ethical material at a markup.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Community Development Accords",
@@ -326,7 +326,7 @@ export const EXTRACTION_V3: V3LaneContent = {
       name: "China Boom Positioning",
       description: "Expanded capacity aimed at Asian demand sells every ton into a rising market.",
       effects: [
-        { kind: "priceRealization", pct: 0.026 },
+        { kind: "plantOutput", pct: 0.026 },
         { kind: "outputRate", commodity: "iron", pct: 0.08 },
       ],
     },
@@ -354,7 +354,7 @@ export const EXTRACTION_V3: V3LaneContent = {
       description:
         "Repointing exploration and product lines at battery demand catches the richest new market.",
       effects: [
-        { kind: "priceRealization", pct: 0.013 },
+        { kind: "plantOutput", pct: 0.013 },
         { kind: "outputRate", commodity: "rare_earth", pct: 0.03 },
       ],
     },
@@ -377,7 +377,7 @@ export const EXTRACTION_V3: V3LaneContent = {
       description:
         "Long-term supply pacts with manufacturers price scarcity years into the future.",
       effects: [
-        { kind: "priceRealization", pct: 0.028 },
+        { kind: "plantOutput", pct: 0.028 },
         { kind: "outputRate", commodity: "rare_earth", pct: 0.07 },
       ],
     },
@@ -405,7 +405,7 @@ export const EXTRACTION_V3: V3LaneContent = {
       name: "Low-Carbon Product Lines",
       description:
         "Verified low-emission extraction sells into green procurement mandates at a premium.",
-      effects: [{ kind: "priceRealization", pct: 0.014 }],
+      effects: [{ kind: "plantOutput", pct: 0.014 }],
     },
     {
       name: "Tailings Safety Certification",
@@ -427,7 +427,7 @@ export const EXTRACTION_V3: V3LaneContent = {
       description:
         "Audited renewable-powered operations command the top tier of every green price index.",
       effects: [
-        { kind: "priceRealization", pct: 0.028 },
+        { kind: "plantOutput", pct: 0.028 },
         { kind: "outputRate", commodity: "natural_gas", pct: 0.06 },
       ],
     },
@@ -455,7 +455,7 @@ export const EXTRACTION_V3: V3LaneContent = {
       name: "Digital Provenance Ledger",
       description:
         "Cryptographic origin records sell verified material into the strictest supply mandates.",
-      effects: [{ kind: "priceRealization", pct: 0.015 }],
+      effects: [{ kind: "plantOutput", pct: 0.015 }],
     },
     {
       name: "Closed-Loop Site Standard",
@@ -477,7 +477,7 @@ export const EXTRACTION_V3: V3LaneContent = {
       description:
         "Direct auctions of critical material clear at prices no negotiated contract reaches.",
       effects: [
-        { kind: "priceRealization", pct: 0.03 },
+        { kind: "plantOutput", pct: 0.03 },
         { kind: "outputRate", commodity: "oil", pct: 0.06 },
       ],
     },

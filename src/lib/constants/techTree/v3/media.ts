@@ -12,7 +12,7 @@ export const MEDIA_V3: V3LaneContent = {
     {
       name: "Flagship Sponsor Slots",
       description: "Named sponsorship of marquee programs sells airtime at top-of-card rates.",
-      effects: [{ kind: "priceRealization", pct: 0.012 }],
+      effects: [{ kind: "plantOutput", pct: 0.012 }],
     },
     {
       name: "War Bureau Accreditation",
@@ -33,7 +33,7 @@ export const MEDIA_V3: V3LaneContent = {
       description:
         "Year-long national campaigns lock blue chip advertisers into premium schedules.",
       effects: [
-        { kind: "priceRealization", pct: 0.022 },
+        { kind: "plantOutput", pct: 0.022 },
         { kind: "outputRate", commodity: "advertising", pct: 0.06 },
       ],
     },
@@ -55,7 +55,7 @@ export const MEDIA_V3: V3LaneContent = {
     {
       name: "Spot Rate Cards",
       description: "Published rate cards tied to audited ratings hold ad prices firm.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Affiliate Contract Locks",
@@ -74,7 +74,7 @@ export const MEDIA_V3: V3LaneContent = {
       name: "Ratings Premium Selling",
       description: "Top-rated slots auctioned against measured audiences fetch record prices.",
       effects: [
-        { kind: "priceRealization", pct: 0.024 },
+        { kind: "plantOutput", pct: 0.024 },
         { kind: "outputRate", commodity: "advertising", pct: 0.07 },
       ],
     },
@@ -99,7 +99,7 @@ export const MEDIA_V3: V3LaneContent = {
     {
       name: "Color Premium Slots",
       description: "Color broadcasts sold as a premium product raise the rate card again.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Public Interest Programming",
@@ -119,7 +119,7 @@ export const MEDIA_V3: V3LaneContent = {
       name: "Event Broadcasting Rights",
       description: "Exclusive rights to live spectacles sell sponsorships at unheard-of prices.",
       effects: [
-        { kind: "priceRealization", pct: 0.026 },
+        { kind: "plantOutput", pct: 0.026 },
         { kind: "marketingStrength", flat: 28 },
       ],
     },
@@ -145,7 +145,7 @@ export const MEDIA_V3: V3LaneContent = {
       name: "Daypart Yield Selling",
       description:
         "Pricing each daypart against its exact audience squeezes more from the schedule.",
-      effects: [{ kind: "priceRealization", pct: 0.014 }],
+      effects: [{ kind: "plantOutput", pct: 0.014 }],
     },
     {
       name: "Cross-Ownership Positioning",
@@ -168,7 +168,7 @@ export const MEDIA_V3: V3LaneContent = {
       name: "Mini-Series Event Pricing",
       description: "Multi-night event programming sells whole advertising packages at once.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "outputRate", commodity: "advertising", pct: 0.07 },
       ],
     },
@@ -191,7 +191,7 @@ export const MEDIA_V3: V3LaneContent = {
       name: "Zoned Ad Editions",
       description: "Neighborhood ad zones let one paper sell the same page many times.",
       effects: [
-        { kind: "priceRealization", pct: 0.012 },
+        { kind: "plantOutput", pct: 0.012 },
         { kind: "outputRate", commodity: "advertising", pct: 0.03 },
       ],
     },
@@ -213,7 +213,7 @@ export const MEDIA_V3: V3LaneContent = {
       name: "Upfront Market Leadership",
       description: "Selling the season upfront at scale sets the market price for everyone else.",
       effects: [
-        { kind: "priceRealization", pct: 0.026 },
+        { kind: "plantOutput", pct: 0.026 },
         { kind: "marketingStrength", flat: 27 },
       ],
     },
@@ -239,7 +239,7 @@ export const MEDIA_V3: V3LaneContent = {
     {
       name: "Branded Channel Spinoffs",
       description: "Spinning strong brands into niche channels sells the same audience twice.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Retransmission Consent Play",
@@ -259,7 +259,7 @@ export const MEDIA_V3: V3LaneContent = {
       name: "Global Brand Licensing",
       description: "Licensing marquee media brands worldwide earns premiums with no new content.",
       effects: [
-        { kind: "priceRealization", pct: 0.027 },
+        { kind: "plantOutput", pct: 0.027 },
         { kind: "marketingStrength", flat: 30 },
       ],
     },
@@ -286,7 +286,7 @@ export const MEDIA_V3: V3LaneContent = {
       description:
         "Bundling niche sites into themed networks sells remnant inventory at premium CPMs.",
       effects: [
-        { kind: "priceRealization", pct: 0.012 },
+        { kind: "plantOutput", pct: 0.012 },
         { kind: "outputRate", commodity: "advertising", pct: 0.04 },
       ],
     },
@@ -307,7 +307,7 @@ export const MEDIA_V3: V3LaneContent = {
       name: "Cross-Platform Sponsorships",
       description: "Selling TV, print and web as one package commands integrated campaign budgets.",
       effects: [
-        { kind: "priceRealization", pct: 0.026 },
+        { kind: "plantOutput", pct: 0.026 },
         { kind: "outputRate", commodity: "advertising", pct: 0.08 },
       ],
     },
@@ -332,7 +332,7 @@ export const MEDIA_V3: V3LaneContent = {
     {
       name: "Behavioral Ad Targeting",
       description: "Audience data raises the price of every impression the sales desk moves.",
-      effects: [{ kind: "priceRealization", pct: 0.014 }],
+      effects: [{ kind: "plantOutput", pct: 0.014 }],
     },
     {
       name: "Rights Windowing Strategy",
@@ -352,7 +352,7 @@ export const MEDIA_V3: V3LaneContent = {
       description:
         "Private marketplaces sell verified premium video well above open exchange rates.",
       effects: [
-        { kind: "priceRealization", pct: 0.028 },
+        { kind: "plantOutput", pct: 0.028 },
         { kind: "outputRate", commodity: "advertising", pct: 0.08 },
       ],
     },
@@ -377,7 +377,7 @@ export const MEDIA_V3: V3LaneContent = {
     {
       name: "First-Party Data Selling",
       description: "Logged-in audience data sells campaigns rivals cannot measure or match.",
-      effects: [{ kind: "priceRealization", pct: 0.014 }],
+      effects: [{ kind: "plantOutput", pct: 0.014 }],
     },
     {
       name: "Platform Neutrality Deals",
@@ -397,7 +397,7 @@ export const MEDIA_V3: V3LaneContent = {
       name: "Addressable Ad Serving",
       description: "Per-household ad insertion sells one slot at a thousand different prices.",
       effects: [
-        { kind: "priceRealization", pct: 0.028 },
+        { kind: "plantOutput", pct: 0.028 },
         { kind: "outputRate", commodity: "advertising", pct: 0.09 },
       ],
     },
@@ -422,7 +422,7 @@ export const MEDIA_V3: V3LaneContent = {
     {
       name: "Attention-Verified Pricing",
       description: "Ads billed on verified attention rather than impressions carry a premium.",
-      effects: [{ kind: "priceRealization", pct: 0.015 }],
+      effects: [{ kind: "plantOutput", pct: 0.015 }],
     },
     {
       name: "Provenance Certification",
@@ -445,7 +445,7 @@ export const MEDIA_V3: V3LaneContent = {
       name: "Personal Feed Sponsorships",
       description: "Sponsorships woven into individually assembled feeds price far above spots.",
       effects: [
-        { kind: "priceRealization", pct: 0.03 },
+        { kind: "plantOutput", pct: 0.03 },
         { kind: "outputRate", commodity: "advertising", pct: 0.09 },
       ],
     },

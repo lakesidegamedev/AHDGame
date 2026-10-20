@@ -11,7 +11,7 @@ export const TECHNOLOGY_V3: V3LaneContent = {
     {
       name: "Signal Corps Reputation",
       description: "A record of reliable military gear lets the firm quote above commodity rates.",
-      effects: [{ kind: "priceRealization", pct: 0.012 }],
+      effects: [{ kind: "plantOutput", pct: 0.012 }],
     },
     {
       name: "Classified Contract Clearance",
@@ -31,7 +31,7 @@ export const TECHNOLOGY_V3: V3LaneContent = {
       name: "Proximity Fuze Prestige",
       description: "Famous precision war work becomes the sales pitch for every postwar product.",
       effects: [
-        { kind: "priceRealization", pct: 0.022 },
+        { kind: "plantOutput", pct: 0.022 },
         { kind: "marketingStrength", flat: 26 },
       ],
     },
@@ -53,7 +53,7 @@ export const TECHNOLOGY_V3: V3LaneContent = {
     {
       name: "Hi-Fi Consumer Lines",
       description: "Living-room audio sells laboratory engineering at department-store prices.",
-      effects: [{ kind: "priceRealization", pct: 0.012 }],
+      effects: [{ kind: "plantOutput", pct: 0.012 }],
     },
     {
       name: "Patent Cross-Licensing",
@@ -73,7 +73,7 @@ export const TECHNOLOGY_V3: V3LaneContent = {
       description:
         "Flagship mainframe installations at famous customers set the price for everyone else.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "marketingStrength", flat: 28 },
       ],
     },
@@ -95,7 +95,7 @@ export const TECHNOLOGY_V3: V3LaneContent = {
     {
       name: "Aerospace Grade Certification",
       description: "Space-rated qualification lets components command program-level prices.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Second Source Agreements",
@@ -114,7 +114,7 @@ export const TECHNOLOGY_V3: V3LaneContent = {
       name: "Unbundled Software Pricing",
       description: "Charging separately for programs turns software into its own premium product.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "outputRate", commodity: "software", pct: 0.06 },
       ],
     },
@@ -137,8 +137,8 @@ export const TECHNOLOGY_V3: V3LaneContent = {
       name: "Turnkey Systems Bundles",
       description: "Hardware, software and support sold together price far above parts.",
       effects: [
-        { kind: "priceRealization", pct: 0.012 },
-        { kind: "marginBonus", pp: 0.5 },
+        { kind: "plantOutput", pct: 0.012 },
+        { kind: "plantOutput", pct: 0.005 },
       ],
     },
     {
@@ -160,7 +160,7 @@ export const TECHNOLOGY_V3: V3LaneContent = {
       description:
         "Dedicated teams inside big customers make the firm's stack the default purchase.",
       effects: [
-        { kind: "priceRealization", pct: 0.024 },
+        { kind: "plantOutput", pct: 0.024 },
         { kind: "marketingStrength", flat: 28 },
       ],
     },
@@ -182,7 +182,7 @@ export const TECHNOLOGY_V3: V3LaneContent = {
     {
       name: "Branded Personal Computers",
       description: "A consumer brand on the box sells silicon at retail prices, not parts prices.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Killer App Exclusives",
@@ -202,7 +202,7 @@ export const TECHNOLOGY_V3: V3LaneContent = {
       description: "Shrink-wrapped programs duplicate at almost no cost and sell at list price.",
       effects: [
         { kind: "outputRate", commodity: "software", pct: 0.08 },
-        { kind: "priceRealization", pct: 0.022 },
+        { kind: "plantOutput", pct: 0.022 },
       ],
     },
     {
@@ -224,7 +224,7 @@ export const TECHNOLOGY_V3: V3LaneContent = {
       name: "Ingredient Branding",
       description: "A logo on every machine sells the component brand straight to end buyers.",
       effects: [
-        { kind: "priceRealization", pct: 0.012 },
+        { kind: "plantOutput", pct: 0.012 },
         { kind: "marketingStrength", flat: 12 },
       ],
     },
@@ -247,7 +247,7 @@ export const TECHNOLOGY_V3: V3LaneContent = {
         "Bundled office applications price as one premium product and crowd out point tools.",
       effects: [
         { kind: "outputRate", commodity: "software", pct: 0.07 },
-        { kind: "priceRealization", pct: 0.024 },
+        { kind: "plantOutput", pct: 0.024 },
       ],
     },
     {
@@ -269,7 +269,7 @@ export const TECHNOLOGY_V3: V3LaneContent = {
     {
       name: "Dot-Com Brand Building",
       description: "A household web brand lets an unprofitable product command premium terms.",
-      effects: [{ kind: "priceRealization", pct: 0.012 }],
+      effects: [{ kind: "plantOutput", pct: 0.012 }],
     },
     {
       name: "Network Effect Moats",
@@ -288,7 +288,7 @@ export const TECHNOLOGY_V3: V3LaneContent = {
       name: "Search Advertising Auctions",
       description: "Auction-priced placement monetizes attention at margins retail never saw.",
       effects: [
-        { kind: "priceRealization", pct: 0.026 },
+        { kind: "plantOutput", pct: 0.026 },
         { kind: "marketingStrength", flat: 30 },
       ],
     },
@@ -313,7 +313,7 @@ export const TECHNOLOGY_V3: V3LaneContent = {
     {
       name: "App Store Revenue Share",
       description: "A platform cut of every third-party sale prices distribution itself.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Patent Portfolio Defense",
@@ -332,7 +332,7 @@ export const TECHNOLOGY_V3: V3LaneContent = {
       name: "Premium Device Ecosystem",
       description: "Hardware, services and accessories sold as one system carry luxury margins.",
       effects: [
-        { kind: "priceRealization", pct: 0.028 },
+        { kind: "plantOutput", pct: 0.028 },
         { kind: "marketingStrength", flat: 32 },
       ],
     },
@@ -354,7 +354,7 @@ export const TECHNOLOGY_V3: V3LaneContent = {
     {
       name: "Subscription Everything",
       description: "Perpetual licenses become monthly plans with steadier, higher lifetime prices.",
-      effects: [{ kind: "priceRealization", pct: 0.014 }],
+      effects: [{ kind: "plantOutput", pct: 0.014 }],
     },
     {
       name: "Data Residency Compliance",
@@ -374,7 +374,7 @@ export const TECHNOLOGY_V3: V3LaneContent = {
       name: "Developer Mindshare Flywheel",
       description: "Free tiers and famous tooling make the platform the default for a generation.",
       effects: [
-        { kind: "priceRealization", pct: 0.024 },
+        { kind: "plantOutput", pct: 0.024 },
         { kind: "marketingStrength", flat: 30 },
       ],
     },
@@ -397,7 +397,7 @@ export const TECHNOLOGY_V3: V3LaneContent = {
     {
       name: "Frontier Model Licensing",
       description: "Access to the strongest models prices like infrastructure, not software.",
-      effects: [{ kind: "priceRealization", pct: 0.015 }],
+      effects: [{ kind: "plantOutput", pct: 0.015 }],
     },
     {
       name: "Compute Export Navigation",
@@ -416,7 +416,7 @@ export const TECHNOLOGY_V3: V3LaneContent = {
       name: "Personal AI Relationships",
       description: "Assistants users trust daily carry pricing power no app ever had.",
       effects: [
-        { kind: "priceRealization", pct: 0.028 },
+        { kind: "plantOutput", pct: 0.028 },
         { kind: "marketingStrength", flat: 32 },
       ],
     },

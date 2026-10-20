@@ -17,10 +17,6 @@ import {
   softCapEffectiveMargin,
 } from "@/lib/constants/corporations";
 import type { StateMetricValues } from "@/lib/constants/corporations";
-import {
-  getSectorTechEffectsForYear,
-  getSectorTechEffects,
-} from "@/lib/constants/techTree/selectors";
 import { computeBlendedMarginModifiers } from "@/lib/constants/commodities";
 import type { CommodityType } from "@/lib/constants/commodities";
 import {
@@ -241,15 +237,6 @@ export function buildSectorDetails(ctx: SectorRowContext) {
   } = marketCtx;
   const sectorFieldToCorpCcy = restatement.toCorpCurrency;
   const sectorFieldToAnchor = restatement.toAnchor;
-
-  const techCorpView = {
-    type: corporation.type,
-    industryModel: corporation.industryModel,
-    mediaDiscriminator: corporation.mediaDiscriminator,
-    unlockedTechNodeIds: corporation.unlockedTechNodeIds,
-    techDecadeLane: corporation.techDecadeLane,
-  };
-  const currentYear = gameState?.currentYear;
 
   let totalRevenue = 0;
   let totalMaintenanceCosts = 0;
@@ -477,23 +464,11 @@ export function buildSectorDetails(ctx: SectorRowContext) {
     });
     const soeEfficiency = ownershipTerms.soeEfficiencyModifier;
     const expropriationRisk = ownershipTerms.expropriationRiskModifier;
-    const techEffects =
-      currentYear != null
-        ? getSectorTechEffectsForYear(
-            techCorpView,
-            st,
-            currentYear,
-            sector.industryModel,
-            sector.mediaDiscriminator
-          )
-        : getSectorTechEffects(techCorpView, st, sector.industryModel, sector.mediaDiscriminator);
-    const techMarginBonus = techEffects.marginBonusPp;
     const stackMargin = softCapEffectiveMargin(
       mods.effective +
         soeEfficiency +
         expropriationRisk +
-        ownershipTerms.economicModelAlignmentModifier +
-        techMarginBonus
+        ownershipTerms.economicModelAlignmentModifier
     );
     // The margin the engine ACTUALLY applied last turn. Under plants the stored
     // field is an OUTPUT of the physical P&L (sectorTurn.ts P3.5:
@@ -741,7 +716,6 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       marginBasis: physicalCosts != null ? ("physical" as const) : ("additive" as const),
       physicalCosts,
       fillAdjustedMarginPct,
-      techMarginBonus: techMarginBonus !== 0 ? techMarginBonus : null,
       marketSharePercent: sectorMarketSharePct,
       ...mods,
       ...roundOwnershipTerms(ownershipTerms),

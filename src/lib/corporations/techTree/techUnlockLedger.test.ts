@@ -233,7 +233,7 @@ describe("tech unlock ledger (ticket #1998)", () => {
     expect(corpsUpdateOne.mock.calls.length).toBe(2);
     const [, refund] = corpsUpdateOne.mock.calls[1];
     expect(refund.$inc.liquidCapital).toBe(CASH_1950_1);
-    expect(refund.$inc.rdScore).toBe(8);
+    expect(refund.$inc.rdScore).toBe(6);
     expect(refund.$pull).toEqual({ unlockedTechNodeIds: NODE_1950_1 });
   });
 
@@ -302,7 +302,7 @@ describe("tech unlock ledger (ticket #1998)", () => {
     expect(corpsUpdateOne.mock.calls.length).toBe(2);
     const [, refund] = corpsUpdateOne.mock.calls[1];
     expect(refund.$inc.liquidCapital).toBe(CASH_1950_1);
-    expect(refund.$inc.rdScore).toBe(8);
+    expect(refund.$inc.rdScore).toBe(6);
     expect(refund.$pull).toEqual({ unlockedTechNodeIds: NODE_1950_1 });
     expect(vi.mocked(recordAudit)).not.toHaveBeenCalled();
   });

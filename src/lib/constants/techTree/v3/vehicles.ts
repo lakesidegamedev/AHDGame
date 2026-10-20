@@ -11,7 +11,7 @@ export const VEHICLES_V3: V3LaneContent = {
     {
       name: "Staff Car Contracts",
       description: "Officer staff car and ambulance orders carry better prices than basic trucks.",
-      effects: [{ kind: "priceRealization", pct: 0.012 }],
+      effects: [{ kind: "plantOutput", pct: 0.012 }],
     },
     {
       name: "War Production Board Standing",
@@ -31,7 +31,7 @@ export const VEHICLES_V3: V3LaneContent = {
       name: "Command Car Prestige Lines",
       description: "Named badge programs for military brass build a brand that survives the peace.",
       effects: [
-        { kind: "priceRealization", pct: 0.02 },
+        { kind: "plantOutput", pct: 0.02 },
         { kind: "marketingStrength", flat: 25 },
       ],
     },
@@ -57,7 +57,7 @@ export const VEHICLES_V3: V3LaneContent = {
     {
       name: "Two-Tone Styling Studios",
       description: "Chrome and color studios sell the yearly restyle at a premium sticker.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Franchise Territory Locks",
@@ -78,7 +78,7 @@ export const VEHICLES_V3: V3LaneContent = {
       description:
         "Flagship convertibles headline the showroom and lift prices across the whole range.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "marketingStrength", flat: 30 },
       ],
     },
@@ -103,7 +103,7 @@ export const VEHICLES_V3: V3LaneContent = {
       description:
         "Performance badges and engine options carry sticker markups far above their cost.",
       effects: [
-        { kind: "priceRealization", pct: 0.012 },
+        { kind: "plantOutput", pct: 0.012 },
         { kind: "marketingStrength", flat: 12 },
       ],
     },
@@ -124,7 +124,7 @@ export const VEHICLES_V3: V3LaneContent = {
       name: "Grand Touring Image Campaigns",
       description: "Racing wins and touring campaigns turn the marque into a premium name.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "marketingStrength", flat: 25 },
       ],
     },
@@ -148,7 +148,7 @@ export const VEHICLES_V3: V3LaneContent = {
       name: "Luxury Brougham Packages",
       description:
         "Vinyl roofs, plush interiors and badges sell the same platform at a higher price.",
-      effects: [{ kind: "priceRealization", pct: 0.014 }],
+      effects: [{ kind: "plantOutput", pct: 0.014 }],
     },
     {
       name: "Local Content Compliance",
@@ -168,7 +168,7 @@ export const VEHICLES_V3: V3LaneContent = {
       name: "Personal Luxury Coupes",
       description: "High-margin coupes built on sedan platforms become the most profitable line.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "marketingStrength", flat: 26 },
       ],
     },
@@ -190,7 +190,7 @@ export const VEHICLES_V3: V3LaneContent = {
     {
       name: "Diesel Economy Options",
       description: "Diesel variants command a premium from buyers fleeing gasoline prices.",
-      effects: [{ kind: "priceRealization", pct: 0.012 }],
+      effects: [{ kind: "plantOutput", pct: 0.012 }],
     },
     {
       name: "Voluntary Quota Positioning",
@@ -210,7 +210,7 @@ export const VEHICLES_V3: V3LaneContent = {
       description:
         "Positioning against European sport sedans lifts the brand into a higher price class.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "marketingStrength", flat: 25 },
       ],
     },
@@ -236,7 +236,7 @@ export const VEHICLES_V3: V3LaneContent = {
     {
       name: "Luxury Marque Launch",
       description: "A standalone premium channel sells engineering the volume brand cannot price.",
-      effects: [{ kind: "priceRealization", pct: 0.015 }],
+      effects: [{ kind: "plantOutput", pct: 0.015 }],
     },
     {
       name: "Regional Content Networks",
@@ -256,7 +256,7 @@ export const VEHICLES_V3: V3LaneContent = {
       name: "Dealership Experience Standards",
       description: "Uniform premium showrooms and service rituals justify list price everywhere.",
       effects: [
-        { kind: "priceRealization", pct: 0.022 },
+        { kind: "plantOutput", pct: 0.022 },
         { kind: "marketingStrength", flat: 28 },
       ],
     },
@@ -282,8 +282,8 @@ export const VEHICLES_V3: V3LaneContent = {
       name: "SUV Premium Mix",
       description: "Truck-based utilities sell family space at margins sedans never reached.",
       effects: [
-        { kind: "priceRealization", pct: 0.012 },
-        { kind: "marginBonus", pp: 1 },
+        { kind: "plantOutput", pct: 0.012 },
+        { kind: "inputEfficiency", pct: 0.03 },
       ],
     },
     {
@@ -303,7 +303,7 @@ export const VEHICLES_V3: V3LaneContent = {
       name: "Crossover Segment Creation",
       description: "Car-based utilities define a new segment the firm prices before anyone else.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "marketingStrength", flat: 25 },
       ],
     },
@@ -325,7 +325,7 @@ export const VEHICLES_V3: V3LaneContent = {
     {
       name: "Premium Compact Push",
       description: "Upscale small cars carry luxury pricing into high-volume segments.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Restructuring War Chest",
@@ -344,7 +344,7 @@ export const VEHICLES_V3: V3LaneContent = {
       name: "Design Language Unification",
       description: "One recognizable face across the range makes every model advertise the rest.",
       effects: [
-        { kind: "priceRealization", pct: 0.022 },
+        { kind: "plantOutput", pct: 0.022 },
         { kind: "marketingStrength", flat: 30 },
       ],
     },
@@ -368,7 +368,7 @@ export const VEHICLES_V3: V3LaneContent = {
     {
       name: "Direct Sales Model",
       description: "Selling online at fixed prices keeps the dealer margin inside the company.",
-      effects: [{ kind: "priceRealization", pct: 0.014 }],
+      effects: [{ kind: "plantOutput", pct: 0.014 }],
     },
     {
       name: "Chip Supply Insurance",
@@ -388,7 +388,7 @@ export const VEHICLES_V3: V3LaneContent = {
       name: "Feature Subscription Revenue",
       description: "Paid software features turn every delivered vehicle into recurring income.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "marketingStrength", flat: 25 },
       ],
     },
@@ -416,7 +416,7 @@ export const VEHICLES_V3: V3LaneContent = {
       name: "Autonomy Premium Tiers",
       description:
         "Hands-off driving capability sells as the defining premium option of the decade.",
-      effects: [{ kind: "priceRealization", pct: 0.015 }],
+      effects: [{ kind: "plantOutput", pct: 0.015 }],
     },
     {
       name: "Fleet Operator Alliances",
@@ -436,7 +436,7 @@ export const VEHICLES_V3: V3LaneContent = {
       name: "In-Cabin Experience Platform",
       description: "The interior becomes a paid living space, priced like consumer electronics.",
       effects: [
-        { kind: "priceRealization", pct: 0.028 },
+        { kind: "plantOutput", pct: 0.028 },
         { kind: "marketingStrength", flat: 30 },
       ],
     },

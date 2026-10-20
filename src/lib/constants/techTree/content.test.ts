@@ -191,8 +191,8 @@ describe("tech tree content (v3 specializations)", () => {
       for (const node of v3Nodes(type)) {
         for (const eff of node.effects) {
           const tag = `${type}:${node.id}:${eff.kind}`;
-          if (eff.kind === "priceRealization") expect(eff.pct, tag).toBeLessThanOrEqual(0.03);
-          if (eff.kind === "marginBonus") expect(eff.pp, tag).toBeLessThanOrEqual(1.5);
+          if (eff.kind === "plantOutput") expect(eff.pct, tag).toBeLessThanOrEqual(0.03);
+          if (eff.kind === "inputEfficiency") expect(eff.pct, tag).toBeLessThanOrEqual(0.05);
           if (eff.kind === "outputRate") expect(eff.pct, tag).toBeLessThanOrEqual(0.1);
           if (eff.kind === "inputCost") expect(eff.pct, tag).toBeLessThanOrEqual(0.15);
           if (eff.kind === "laborCostReduction") expect(eff.pct, tag).toBeLessThanOrEqual(0.1);

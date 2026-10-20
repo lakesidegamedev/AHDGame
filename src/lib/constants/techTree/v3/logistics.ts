@@ -14,7 +14,7 @@ export const LOGISTICS_V3: V3LaneContent = {
     {
       name: "Priority War Contracts",
       description: "Certified priority carrier status wins government freight at premium rates.",
-      effects: [{ kind: "priceRealization", pct: 0.012 }],
+      effects: [{ kind: "plantOutput", pct: 0.012 }],
     },
     {
       name: "Rationing Board Liaison",
@@ -36,7 +36,7 @@ export const LOGISTICS_V3: V3LaneContent = {
       description:
         "Published on-time guarantees let the firm bill for reliability, not just miles.",
       effects: [
-        { kind: "priceRealization", pct: 0.022 },
+        { kind: "plantOutput", pct: 0.022 },
         { kind: "outputRate", commodity: "freight", pct: 0.06 },
       ],
     },
@@ -64,7 +64,7 @@ export const LOGISTICS_V3: V3LaneContent = {
       description:
         "Trained crews and clean equipment win the high-value cargo that pays premium rates.",
       effects: [
-        { kind: "priceRealization", pct: 0.012 },
+        { kind: "plantOutput", pct: 0.012 },
         { kind: "marketingStrength", flat: 10 },
       ],
     },
@@ -86,7 +86,7 @@ export const LOGISTICS_V3: V3LaneContent = {
       description:
         "Single-contact service for big shippers locks in contract freight at healthy margins.",
       effects: [
-        { kind: "priceRealization", pct: 0.024 },
+        { kind: "plantOutput", pct: 0.024 },
         { kind: "marketingStrength", flat: 26 },
       ],
     },
@@ -113,7 +113,7 @@ export const LOGISTICS_V3: V3LaneContent = {
       name: "Expedited Freight Brand",
       description: "A named overnight service turns speed into a product shippers ask for by name.",
       effects: [
-        { kind: "priceRealization", pct: 0.013 },
+        { kind: "plantOutput", pct: 0.013 },
         { kind: "marketingStrength", flat: 12 },
       ],
     },
@@ -137,7 +137,7 @@ export const LOGISTICS_V3: V3LaneContent = {
       description:
         "One bill of lading covers ship, rail, and truck, and the firm owns the whole promise.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "outputRate", commodity: "consulting_services", pct: 0.06 },
       ],
     },
@@ -164,7 +164,7 @@ export const LOGISTICS_V3: V3LaneContent = {
       name: "Time-Definite Services",
       description:
         "Freight priced by the hour of arrival, not the mile, commands committed premiums.",
-      effects: [{ kind: "priceRealization", pct: 0.014 }],
+      effects: [{ kind: "plantOutput", pct: 0.014 }],
     },
     {
       name: "Deregulation Readiness",
@@ -184,7 +184,7 @@ export const LOGISTICS_V3: V3LaneContent = {
       name: "Overnight Air Network",
       description: "A hub-fed overnight air system sells certainty at ten times the surface rate.",
       effects: [
-        { kind: "priceRealization", pct: 0.026 },
+        { kind: "plantOutput", pct: 0.026 },
         { kind: "marketingStrength", flat: 30 },
       ],
     },
@@ -212,7 +212,7 @@ export const LOGISTICS_V3: V3LaneContent = {
       name: "Contract Logistics Sales",
       description: "Multi-year dedicated contracts replace spot-rate chaos with committed margin.",
       effects: [
-        { kind: "priceRealization", pct: 0.012 },
+        { kind: "plantOutput", pct: 0.012 },
         { kind: "outputRate", commodity: "consulting_services", pct: 0.04 },
       ],
     },
@@ -236,7 +236,7 @@ export const LOGISTICS_V3: V3LaneContent = {
       description:
         "One brand promises pickup to delivery anywhere, and shippers pay for the simplicity.",
       effects: [
-        { kind: "priceRealization", pct: 0.024 },
+        { kind: "plantOutput", pct: 0.024 },
         { kind: "marketingStrength", flat: 32 },
       ],
     },
@@ -265,7 +265,7 @@ export const LOGISTICS_V3: V3LaneContent = {
       description: "Selling network design studies turns operating expertise into billable advice.",
       effects: [
         { kind: "outputRate", commodity: "consulting_services", pct: 0.05 },
-        { kind: "priceRealization", pct: 0.01 },
+        { kind: "plantOutput", pct: 0.01 },
       ],
     },
     {
@@ -285,7 +285,7 @@ export const LOGISTICS_V3: V3LaneContent = {
       name: "Lead Logistics Provider",
       description: "Running a shipper's entire supply chain makes the firm impossible to unplug.",
       effects: [
-        { kind: "priceRealization", pct: 0.026 },
+        { kind: "plantOutput", pct: 0.026 },
         { kind: "outputRate", commodity: "consulting_services", pct: 0.07 },
       ],
     },
@@ -313,7 +313,7 @@ export const LOGISTICS_V3: V3LaneContent = {
       name: "Premium Cold Chain",
       description:
         "Validated temperature control wins pharmaceutical and fresh freight at top rates.",
-      effects: [{ kind: "priceRealization", pct: 0.014 }],
+      effects: [{ kind: "plantOutput", pct: 0.014 }],
     },
     {
       name: "Security Certified Lanes",
@@ -335,7 +335,7 @@ export const LOGISTICS_V3: V3LaneContent = {
       description:
         "One worldwide contract and one invoice make the firm the default for multinationals.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "marketingStrength", flat: 28 },
       ],
     },
@@ -364,7 +364,7 @@ export const LOGISTICS_V3: V3LaneContent = {
       description:
         "Urban micro-depots sell same-day service at rates overnight carriers cannot touch.",
       effects: [
-        { kind: "priceRealization", pct: 0.013 },
+        { kind: "plantOutput", pct: 0.013 },
         { kind: "marketingStrength", flat: 10 },
       ],
     },
@@ -387,7 +387,7 @@ export const LOGISTICS_V3: V3LaneContent = {
       description:
         "Branded checkout delivery promises make the carrier part of the product shoppers buy.",
       effects: [
-        { kind: "priceRealization", pct: 0.024 },
+        { kind: "plantOutput", pct: 0.024 },
         { kind: "marketingStrength", flat: 32 },
       ],
     },
@@ -414,7 +414,7 @@ export const LOGISTICS_V3: V3LaneContent = {
       name: "Real-Time Visibility Sales",
       description: "Live shipment data sold as a product turns tracking into a revenue line.",
       effects: [
-        { kind: "priceRealization", pct: 0.012 },
+        { kind: "plantOutput", pct: 0.012 },
         { kind: "outputRate", commodity: "consulting_services", pct: 0.04 },
       ],
     },
@@ -437,7 +437,7 @@ export const LOGISTICS_V3: V3LaneContent = {
       description:
         "A household name for two-hour delivery charges for speed the way airlines charge for class.",
       effects: [
-        { kind: "priceRealization", pct: 0.026 },
+        { kind: "plantOutput", pct: 0.026 },
         { kind: "marketingStrength", flat: 32 },
       ],
     },
@@ -466,8 +466,8 @@ export const LOGISTICS_V3: V3LaneContent = {
       description:
         "Auctioned delivery slots with hard guarantees price scarce capacity at its true worth.",
       effects: [
-        { kind: "priceRealization", pct: 0.015 },
-        { kind: "marginBonus", pp: 0.5 },
+        { kind: "plantOutput", pct: 0.015 },
+        { kind: "laborCostReduction", pct: 0.02 },
       ],
     },
     {
@@ -489,7 +489,7 @@ export const LOGISTICS_V3: V3LaneContent = {
       description:
         "Goods ship before the order exists, and customers pay premium rates for instant arrival.",
       effects: [
-        { kind: "priceRealization", pct: 0.028 },
+        { kind: "plantOutput", pct: 0.028 },
         { kind: "outputRate", commodity: "freight", pct: 0.07 },
       ],
     },
