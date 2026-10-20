@@ -1,3 +1,4 @@
+import { COMMODITY_TYPES } from "../commodities";
 /**
  * Tech-tree effect types.
  *
@@ -5,8 +6,13 @@
  * union and applies each kind at an existing injection point — no effect ever
  * mutates persisted margins or costs directly.
  *
+ * Every per-turn effect acts on plants: what they cost to build, how many
+ * workers and inputs they need, and how much they produce.
+ *
  * Per-turn (recomputed from the unlocked set):
- *  - marginBonus         → added into `totalMarginMod` (capped in aggregate)
+ *  - plantOutput         → raises every output rate of the sector's plants
+ *  - inputEfficiency     → lowers every input rate of the sector's plants
+ *  - laborCostReduction  → lowers the sector's labor bill
  *  - growthCostReduction → scales daily growth cost and, under plants, the
  *                          capacity build price and (at 60% weight) build time
  *                          (capped in aggregate)
@@ -19,8 +25,15 @@
  *  - unlockStrategy → makes a gated production method available
  */
 
-/** Total tech margin bonus is capped so a fully-researched corp can't run away. */
-export const TECH_MARGIN_BONUS_CAP_PP = 8;
+/**
+ * Total tech plant-output bonus is capped. Output scales revenue and world
+ * supply together, so the cap stays modest: it absorbed the old profit-margin
+ * (8pp cap) and output-sale-price (6% cap) effects, so it sits between their sum
+ * and the larger of the two.
+ */
+export const TECH_PLANT_OUTPUT_CAP = 0.12;
+/** Total tech input-efficiency bonus is capped (every input rate floored at 1 − this). */
+export const TECH_INPUT_EFFICIENCY_CAP = 0.3;
 /** Total tech growth-cost reduction is capped (multiplier floored at 1 − this). */
 export const TECH_GROWTH_REDUCTION_CAP = 0.5;
 /**
@@ -35,23 +48,22 @@ export const TECH_LABOR_REDUCTION_CAP = 0.5;
 /** Shield-style effects (dominance/tariff/expansion) cap at this fraction. */
 export const TECH_SHIELD_CAP = 0.6;
 /**
- * Total price-realization bonus is capped. Under plants this multiplies
- * realised revenue directly (sectorTurn's derived-revenue leg), so the cap is
- * deliberately tight: 6% of revenue is already worth more than the old 8pp
- * margin cap ever was in practice.
- */
-export const TECH_PRICE_REALIZATION_CAP = 0.06;
-/**
  * Corporate-lane effects apply to ALL of a corp's sectors but at this reduced
  * strength; Sector-lane effects apply only to the corp's PRIMARY sector type, at
  * full strength. See getSectorTechEffects in ./selectors.
  */
 export const CORP_LANE_EFFECT_SCALE = 0.5;
 
-/** Additive percentage-point boost to a sector's profit margin (per turn). */
-export interface MarginBonusEffect {
-  kind: "marginBonus";
-  pp: number;
+/** Raises every output rate of the sector's plants (0.02 = 2% more output). */
+export interface PlantOutputEffect {
+  kind: "plantOutput";
+  pct: number;
+}
+
+/** Lowers every input rate of the sector's plants (0.03 = 3% fewer inputs). */
+export interface InputEfficiencyEffect {
+  kind: "inputEfficiency";
+  pct: number;
 }
 
 /**
@@ -138,23 +150,9 @@ export interface UnlockStrategyEffect {
   strategyId: string;
 }
 
-/**
- * Raises the price the sector's output actually realises (quality premium,
- * branding, contract terms). Under plants this multiplies the derived revenue
- * leg (`producedUnits × mixPrice × sales legs`), the plants-native way to say
- * "your output sells for more" — it cannot invert and does not touch the
- * nameplate or the world supply ledger. Cost-plus sectors take it too, as extra
- * markup on top of their posted price.
- */
-export interface PriceRealizationEffect {
-  kind: "priceRealization";
-  /** Fraction added to realised revenue (0.02 = +2%). */
-  pct: number;
-}
-
 export type TechEffect =
-  | MarginBonusEffect
-  | PriceRealizationEffect
+  | PlantOutputEffect
+  | InputEfficiencyEffect
   | GrowthCostReductionEffect
   | LaborCostReductionEffect
   | InputCostEffect
@@ -168,7 +166,6 @@ export type TechEffect =
 
 /** Category drives the UI icon for an effect (no emojis). */
 export type TechEffectCategory =
-  | "margin"
   | "growth"
   | "input"
   | "output"
@@ -181,11 +178,10 @@ export type TechEffectCategory =
 
 export function techEffectCategory(kind: TechEffect["kind"]): TechEffectCategory {
   switch (kind) {
-    case "marginBonus":
-      return "margin";
-    case "priceRealization":
-      // Revenue-side like outputRate; shares the output icon.
+    case "plantOutput":
       return "output";
+    case "inputEfficiency":
+      return "input";
     case "growthCostReduction":
       return "growth";
     case "laborCostReduction":
@@ -221,10 +217,10 @@ export function collectUnlockedStrategyIds(effects: TechEffect[]): string[] {
 
 /** Aggregate of the per-turn effects, reduced to engine-ready scalars. */
 export interface AggregatedTechEffects {
-  /** Capped total margin bonus actually applied (≤ TECH_MARGIN_BONUS_CAP_PP). */
-  marginBonusPp: number;
-  /** Uncapped sum (for transparent display of "x / cap"). */
-  marginBonusPpRaw: number;
+  /** Capped plant-output bonus folded into every `outputRateMult` entry. */
+  plantOutputBonus: number;
+  /** Capped input-efficiency bonus folded into every `inputRateMult` entry. */
+  inputEfficiencyBonus: number;
   /** Combined growth-cost multiplier in [1−cap, 1]; 1 = no reduction. */
   growthCostMultiplier: number;
   /** Combined labor-cost multiplier in [1−cap, 1]; 1 = no reduction (automation). */
@@ -239,14 +235,12 @@ export interface AggregatedTechEffects {
   tariffShield: number;
   /** 0–TECH_SHIELD_CAP fraction off sector expansion cost. */
   expansionDiscount: number;
-  /** 0–TECH_PRICE_REALIZATION_CAP fraction added to realised revenue (plants). */
-  priceRealizationBonus: number;
 }
 
 /** Neutral aggregate (no tech effects) — used when the feature gate is off. */
 export const NEUTRAL_TECH_EFFECTS: AggregatedTechEffects = {
-  marginBonusPp: 0,
-  marginBonusPpRaw: 0,
+  plantOutputBonus: 0,
+  inputEfficiencyBonus: 0,
   growthCostMultiplier: 1,
   laborCostMultiplier: 1,
   inputRateMult: {},
@@ -254,15 +248,13 @@ export const NEUTRAL_TECH_EFFECTS: AggregatedTechEffects = {
   dominanceShield: 0,
   tariffShield: 0,
   expansionDiscount: 0,
-  priceRealizationBonus: 0,
 };
 
 /** Scale a single effect's magnitude (corp-lane effects apply at reduced strength). */
 export function scaleEffect(effect: TechEffect, scale: number): TechEffect {
   switch (effect.kind) {
-    case "marginBonus":
-      return { ...effect, pp: effect.pp * scale };
-    case "priceRealization":
+    case "plantOutput":
+    case "inputEfficiency":
       return { ...effect, pct: effect.pct * scale };
     case "growthCostReduction":
       return { ...effect, pct: effect.pct * scale };
@@ -281,8 +273,8 @@ export function scaleEffect(effect: TechEffect, scale: number): TechEffect {
 
 /** Reduce a flat list of effects to the per-turn scalars the turn engine applies. */
 export function aggregateTechEffects(effects: TechEffect[]): AggregatedTechEffects {
-  let marginBonusPpRaw = 0;
-  let priceRealizationPct = 0;
+  let plantOutputPct = 0;
+  let inputEfficiencyPct = 0;
   let growthCostReductionPct = 0;
   let laborCostReductionPct = 0;
   let dominanceShield = 0;
@@ -291,10 +283,10 @@ export function aggregateTechEffects(effects: TechEffect[]): AggregatedTechEffec
   const inputRateMult: Record<string, number> = {};
   const outputRateMult: Record<string, number> = {};
   for (const effect of effects) {
-    if (effect.kind === "marginBonus") {
-      marginBonusPpRaw += effect.pp;
-    } else if (effect.kind === "priceRealization") {
-      priceRealizationPct += effect.pct;
+    if (effect.kind === "plantOutput") {
+      plantOutputPct += effect.pct;
+    } else if (effect.kind === "inputEfficiency") {
+      inputEfficiencyPct += effect.pct;
     } else if (effect.kind === "growthCostReduction") {
       growthCostReductionPct += effect.pct;
     } else if (effect.kind === "laborCostReduction") {
@@ -319,9 +311,25 @@ export function aggregateTechEffects(effects: TechEffect[]): AggregatedTechEffec
     Math.max(0, laborCostReductionPct)
   );
   const shield = (v: number) => Math.min(TECH_SHIELD_CAP, Math.max(0, v));
+  // The plant-wide effects fold into the per-commodity maps every consumer
+  // already reads (supply, demand, unit yield, world ledger), so no consumer
+  // needs a second code path. Applied to every commodity: a rate a recipe does
+  // not use is never read.
+  const plantOutputBonus = Math.min(TECH_PLANT_OUTPUT_CAP, Math.max(0, plantOutputPct));
+  const inputEfficiencyBonus = Math.min(TECH_INPUT_EFFICIENCY_CAP, Math.max(0, inputEfficiencyPct));
+  if (plantOutputBonus > 0 || inputEfficiencyBonus > 0) {
+    for (const commodity of COMMODITY_TYPES) {
+      if (plantOutputBonus > 0) {
+        outputRateMult[commodity] = (outputRateMult[commodity] ?? 1) * (1 + plantOutputBonus);
+      }
+      if (inputEfficiencyBonus > 0) {
+        inputRateMult[commodity] = (inputRateMult[commodity] ?? 1) * (1 - inputEfficiencyBonus);
+      }
+    }
+  }
   return {
-    marginBonusPp: Math.min(TECH_MARGIN_BONUS_CAP_PP, marginBonusPpRaw),
-    marginBonusPpRaw,
+    plantOutputBonus,
+    inputEfficiencyBonus,
     growthCostMultiplier: 1 - clampedReduction,
     laborCostMultiplier: 1 - clampedLaborReduction,
     inputRateMult,
@@ -329,7 +337,6 @@ export function aggregateTechEffects(effects: TechEffect[]): AggregatedTechEffec
     dominanceShield: shield(dominanceShield),
     tariffShield: shield(tariffShield),
     expansionDiscount: shield(expansionDiscount),
-    priceRealizationBonus: Math.min(TECH_PRICE_REALIZATION_CAP, Math.max(0, priceRealizationPct)),
   };
 }
 
@@ -364,16 +371,16 @@ function prettyCommodity(c: string): string {
 /** Short human-readable summary of a single effect (for tooltips / UI). */
 export function describeTechEffect(effect: TechEffect): string {
   switch (effect.kind) {
-    case "marginBonus":
-      return `+${effect.pp}pp profit margin`;
-    case "priceRealization":
-      return `+${formatPct(effect.pct)}% output sale price (adds to cost-plus markup)`;
+    case "plantOutput":
+      return `+${formatPct(effect.pct)}% plant output`;
+    case "inputEfficiency":
+      return `−${formatPct(effect.pct)}% plant inputs`;
     case "growthCostReduction":
       return `−${formatPct(effect.pct)}% capacity build cost, −${formatPct(
         effect.pct * TECH_BUILD_TIME_PER_GROWTH_REDUCTION
       )}% build time`;
     case "laborCostReduction":
-      return `−${Math.round(effect.pct * 100)}% labor cost`;
+      return `−${formatPct(effect.pct)}% labor cost`;
     case "inputCost":
       return `−${Math.round(effect.pct * 100)}% ${prettyCommodity(effect.commodity)} input`;
     case "outputRate":

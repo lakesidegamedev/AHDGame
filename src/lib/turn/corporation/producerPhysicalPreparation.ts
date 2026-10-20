@@ -316,8 +316,7 @@ export function prepareProducerPhysicalSector(input: {
   const organisational = organisationalOutputFactor({
     regionalPp:
       regionalMetric.cappedTotal +
-      (lookups.regionalConditionMarginByState?.get(sector.stateId) ?? 0) +
-      (tech.marginBonusPp ?? 0),
+      (lookups.regionalConditionMarginByState?.get(sector.stateId) ?? 0),
     typeMatchPp:
       stateOwned || !corp.type
         ? 0

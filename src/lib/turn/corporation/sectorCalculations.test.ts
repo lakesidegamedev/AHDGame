@@ -2880,7 +2880,7 @@ describe("processSectors, sustained-negative-production tracker", () => {
 
 describe("sector tech-tree effects", () => {
   it("applies no effect when the feature gate is off (4th arg false)", () => {
-    const teched = makeCorp({ unlockedTechNodeIds: ["corp-1999-3"] }); // +2pp margin node
+    const teched = makeCorp({ unlockedTechNodeIds: ["corp-1999-3"] }); // plant-effect node
     const techedSector = makeSector(teched._id, { revenue: 24_000, profitMargin: 50 });
 
     const plain = makeCorp();
@@ -2890,19 +2890,6 @@ describe("sector tech-tree effects", () => {
     const baseline = processSectors(baseLookups([plain], [plainSector]), 1, new Date(), false);
     // Gate off ⇒ identical income to a corp with no unlocked nodes.
     expect(off.totalIncomeGenerated).toBeCloseTo(baseline.totalIncomeGenerated, 5);
-  });
-
-  it("lifts income via a margin-bonus node when the gate is on", () => {
-    const plain = makeCorp();
-    const teched = makeCorp({ unlockedTechNodeIds: ["corp-1999-3"] }); // +2pp margin
-    const plainSector = makeSector(plain._id, { revenue: 24_000, profitMargin: 50 });
-    const techedSector = makeSector(teched._id, { revenue: 24_000, profitMargin: 50 });
-
-    const base = processSectors(baseLookups([plain], [plainSector]), 1, new Date(), true);
-    const lifted = processSectors(baseLookups([teched], [techedSector]), 1, new Date(), true);
-
-    // +2pp margin ⇒ lower maintenance ⇒ higher income.
-    expect(lifted.totalIncomeGenerated).toBeGreaterThan(base.totalIncomeGenerated);
   });
 });
 

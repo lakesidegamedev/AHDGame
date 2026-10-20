@@ -30,7 +30,7 @@ export const DEFENSE_V3: V3LaneContent = {
       name: "Ordnance Board Endorsements",
       description: "Official acceptance marks let the arsenal quote premium prices on every lot.",
       effects: [
-        { kind: "priceRealization", pct: 0.02 },
+        { kind: "plantOutput", pct: 0.02 },
         { kind: "marketingStrength", flat: 25 },
       ],
     },
@@ -52,7 +52,7 @@ export const DEFENSE_V3: V3LaneContent = {
     {
       name: "Service Trials Publicity",
       description: "Well-publicized service trials justify premium unit pricing.",
-      effects: [{ kind: "priceRealization", pct: 0.012 }],
+      effects: [{ kind: "plantOutput", pct: 0.012 }],
     },
     {
       name: "Allied Sales Missions",
@@ -71,7 +71,7 @@ export const DEFENSE_V3: V3LaneContent = {
       name: "Prime Contractor Branding",
       description: "A prime contractor reputation commands top rates on every new program.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "marketingStrength", flat: 30 },
       ],
     },
@@ -94,7 +94,7 @@ export const DEFENSE_V3: V3LaneContent = {
       name: "Competitive Flyoff Wins",
       description: "Head-to-head flyoff victories carry pricing power into contract talks.",
       effects: [
-        { kind: "priceRealization", pct: 0.01 },
+        { kind: "plantOutput", pct: 0.01 },
         { kind: "marketingStrength", flat: 15 },
       ],
     },
@@ -115,7 +115,7 @@ export const DEFENSE_V3: V3LaneContent = {
       name: "Total Package Procurement Wins",
       description: "Winning whole-lifecycle packages locks in premium pricing for decades.",
       effects: [
-        { kind: "priceRealization", pct: 0.03 },
+        { kind: "plantOutput", pct: 0.03 },
         { kind: "marketingStrength", flat: 25 },
       ],
     },
@@ -137,7 +137,7 @@ export const DEFENSE_V3: V3LaneContent = {
     {
       name: "Milestone Award Fees",
       description: "Incentive-fee contracts pay a premium for hitting delivery milestones.",
-      effects: [{ kind: "priceRealization", pct: 0.012 }],
+      effects: [{ kind: "plantOutput", pct: 0.012 }],
     },
     {
       name: "Foreign Military Sales Offices",
@@ -157,7 +157,7 @@ export const DEFENSE_V3: V3LaneContent = {
       name: "Air Show Flight Demonstrations",
       description: "International air show displays turn spectacle into premium export orders.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "marketingStrength", flat: 28 },
       ],
     },
@@ -198,7 +198,7 @@ export const DEFENSE_V3: V3LaneContent = {
       name: "Frontline Performance Records",
       description: "Documented combat performance lets sales teams name their price.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "marketingStrength", flat: 26 },
       ],
     },
@@ -239,7 +239,7 @@ export const DEFENSE_V3: V3LaneContent = {
       name: "Smart Weapon Showcases",
       description: "Guided-weapon accuracy footage anchors premium pricing across the catalog.",
       effects: [
-        { kind: "priceRealization", pct: 0.03 },
+        { kind: "plantOutput", pct: 0.03 },
         { kind: "marketingStrength", flat: 30 },
       ],
     },
@@ -261,7 +261,7 @@ export const DEFENSE_V3: V3LaneContent = {
     {
       name: "Performance-Based Contracts",
       description: "Pay-for-availability terms reward reliability with richer margins.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Homeland Security Diversification",
@@ -280,7 +280,7 @@ export const DEFENSE_V3: V3LaneContent = {
       name: "Sole-Source Sustainment Deals",
       description: "Exclusive lifetime support contracts turn every sale into a premium annuity.",
       effects: [
-        { kind: "priceRealization", pct: 0.03 },
+        { kind: "plantOutput", pct: 0.03 },
         { kind: "marketingStrength", flat: 25 },
       ],
     },
@@ -321,7 +321,7 @@ export const DEFENSE_V3: V3LaneContent = {
       name: "Combat-Proven Drone Lines",
       description: "Unmanned systems with operational records command premium export pricing.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "marketingStrength", flat: 28 },
       ],
     },
@@ -344,7 +344,7 @@ export const DEFENSE_V3: V3LaneContent = {
     {
       name: "Rapid Prototyping Contracts",
       description: "Quick-turn prototype awards pay premium rates for speed to field.",
-      effects: [{ kind: "priceRealization", pct: 0.014 }],
+      effects: [{ kind: "plantOutput", pct: 0.014 }],
     },
     {
       name: "Friend-Shored Supply Chains",
@@ -364,7 +364,7 @@ export const DEFENSE_V3: V3LaneContent = {
       name: "Battle-Tested Export Lines",
       description: "Systems proven in current conflicts sell at the top of the market.",
       effects: [
-        { kind: "priceRealization", pct: 0.03 },
+        { kind: "plantOutput", pct: 0.03 },
         { kind: "marketingStrength", flat: 30 },
       ],
     },
@@ -405,7 +405,7 @@ export const DEFENSE_V3: V3LaneContent = {
       name: "Orbital Demonstration Missions",
       description: "On-orbit capability demonstrations set the price ceiling for the industry.",
       effects: [
-        { kind: "priceRealization", pct: 0.03 },
+        { kind: "plantOutput", pct: 0.03 },
         { kind: "marketingStrength", flat: 35 },
       ],
     },

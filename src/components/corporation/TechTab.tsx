@@ -70,8 +70,10 @@ interface TechResponse {
     defaultRevenueFraction: number;
     capacityFloorApplied: boolean;
   } | null;
-  activeMarginPp?: number | null;
-  marginCapPp?: number | null;
+  plantOutputPct?: number | null;
+  plantOutputCapPct?: number | null;
+  inputEfficiencyPct?: number | null;
+  inputEfficiencyCapPct?: number | null;
   unlockedStrategyNames?: string[];
   totalNodes?: number;
   techsUnlocked?: number;
@@ -286,9 +288,14 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
               value={`${data.techsUnlocked ?? 0} / ${data.totalNodes ?? 0}`}
             />
             <KVRow
-              label="Tech margin"
-              value={`+${data.activeMarginPp ?? 0}pp`}
-              hint={`cap +${data.marginCapPp ?? 8}pp`}
+              label="Plant output"
+              value={`+${data.plantOutputPct ?? 0}%`}
+              hint={`cap +${data.plantOutputCapPct ?? 12}%`}
+            />
+            <KVRow
+              label="Plant inputs"
+              value={`−${data.inputEfficiencyPct ?? 0}%`}
+              hint={`cap −${data.inputEfficiencyCapPct ?? 30}%`}
             />
             <KVRow
               label="Production methods"

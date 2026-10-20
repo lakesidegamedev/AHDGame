@@ -30,7 +30,7 @@ export const TELECOMMUNICATIONS_V3: V3LaneContent = {
       name: "Nationwide Brand Campaigns",
       description: "A single national telephone brand supports premium subscriber rates.",
       effects: [
-        { kind: "priceRealization", pct: 0.02 },
+        { kind: "plantOutput", pct: 0.02 },
         { kind: "marketingStrength", flat: 26 },
       ],
     },
@@ -52,7 +52,7 @@ export const TELECOMMUNICATIONS_V3: V3LaneContent = {
     {
       name: "Designer Handset Lines",
       description: "Colored and styled handsets turn the telephone into a premium purchase.",
-      effects: [{ kind: "priceRealization", pct: 0.012 }],
+      effects: [{ kind: "plantOutput", pct: 0.012 }],
     },
     {
       name: "Rural Exchange Franchises",
@@ -71,7 +71,7 @@ export const TELECOMMUNICATIONS_V3: V3LaneContent = {
       name: "Premium Business Services",
       description: "Dedicated business trunks and switchboards bill at the top of the tariff.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "marketingStrength", flat: 25 },
       ],
     },
@@ -94,7 +94,7 @@ export const TELECOMMUNICATIONS_V3: V3LaneContent = {
     {
       name: "Data Line Premiums",
       description: "Conditioned data circuits for computers bill far above voice rates.",
-      effects: [{ kind: "priceRealization", pct: 0.012 }],
+      effects: [{ kind: "plantOutput", pct: 0.012 }],
     },
     {
       name: "Regulated Rate Base Growth",
@@ -114,7 +114,7 @@ export const TELECOMMUNICATIONS_V3: V3LaneContent = {
       name: "Picturephone Showcases",
       description: "Futuristic service showcases sell the whole network as the premium choice.",
       effects: [
-        { kind: "priceRealization", pct: 0.02 },
+        { kind: "plantOutput", pct: 0.02 },
         { kind: "marketingStrength", flat: 30 },
       ],
     },
@@ -155,7 +155,7 @@ export const TELECOMMUNICATIONS_V3: V3LaneContent = {
       name: "Feature Package Upselling",
       description: "Bundled feature packages raise revenue per line without new plant.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "marketingStrength", flat: 28 },
       ],
     },
@@ -178,7 +178,7 @@ export const TELECOMMUNICATIONS_V3: V3LaneContent = {
     {
       name: "Business Data Packages",
       description: "Packaged corporate data services bill at premium contract rates.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Post-Divestiture Positioning",
@@ -198,7 +198,7 @@ export const TELECOMMUNICATIONS_V3: V3LaneContent = {
       name: "National Calling Card Brands",
       description: "Branded calling cards keep premium toll revenue loyal in a competitive market.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "marketingStrength", flat: 27 },
       ],
     },
@@ -240,7 +240,7 @@ export const TELECOMMUNICATIONS_V3: V3LaneContent = {
       name: "Bundled Long Distance Brands",
       description: "Branded calling plans bundle minutes and features at premium effective rates.",
       effects: [
-        { kind: "priceRealization", pct: 0.028 },
+        { kind: "plantOutput", pct: 0.028 },
         { kind: "marketingStrength", flat: 28 },
       ],
     },
@@ -263,7 +263,7 @@ export const TELECOMMUNICATIONS_V3: V3LaneContent = {
     {
       name: "Broadband Tiering",
       description: "Speed tiers let heavy users pay more on the same physical line.",
-      effects: [{ kind: "priceRealization", pct: 0.014 }],
+      effects: [{ kind: "plantOutput", pct: 0.014 }],
     },
     {
       name: "Spectrum Auction War Chests",
@@ -283,7 +283,7 @@ export const TELECOMMUNICATIONS_V3: V3LaneContent = {
       name: "Triple Play Bundles",
       description: "Voice, video, and internet on one bill raise revenue per home passed.",
       effects: [
-        { kind: "priceRealization", pct: 0.03 },
+        { kind: "plantOutput", pct: 0.03 },
         { kind: "marketingStrength", flat: 30 },
       ],
     },
@@ -324,7 +324,7 @@ export const TELECOMMUNICATIONS_V3: V3LaneContent = {
       name: "Unlimited Plan Branding",
       description: "Simple unlimited plans command premium loyalty in a confusing market.",
       effects: [
-        { kind: "priceRealization", pct: 0.028 },
+        { kind: "plantOutput", pct: 0.028 },
         { kind: "marketingStrength", flat: 32 },
       ],
     },
@@ -347,7 +347,7 @@ export const TELECOMMUNICATIONS_V3: V3LaneContent = {
     {
       name: "Fixed Wireless Premiums",
       description: "Wireless home broadband sells premium speeds without trenching a street.",
-      effects: [{ kind: "priceRealization", pct: 0.014 }],
+      effects: [{ kind: "plantOutput", pct: 0.014 }],
     },
     {
       name: "Vendor Diversification Mandates",
@@ -366,7 +366,7 @@ export const TELECOMMUNICATIONS_V3: V3LaneContent = {
       name: "Enterprise Edge Contracts",
       description: "On-premise edge deployments bill enterprises at premium managed-service rates.",
       effects: [
-        { kind: "priceRealization", pct: 0.03 },
+        { kind: "plantOutput", pct: 0.03 },
         { kind: "marketingStrength", flat: 28 },
       ],
     },
@@ -389,7 +389,7 @@ export const TELECOMMUNICATIONS_V3: V3LaneContent = {
     {
       name: "Guaranteed Latency Tiers",
       description: "Contractual latency guarantees bill premium rates to demanding applications.",
-      effects: [{ kind: "priceRealization", pct: 0.015 }],
+      effects: [{ kind: "plantOutput", pct: 0.015 }],
     },
     {
       name: "Sovereign Network Requirements",
@@ -409,7 +409,7 @@ export const TELECOMMUNICATIONS_V3: V3LaneContent = {
       description:
         "Holographic and immersive calling sells as the network's flagship premium tier.",
       effects: [
-        { kind: "priceRealization", pct: 0.03 },
+        { kind: "plantOutput", pct: 0.03 },
         { kind: "marketingStrength", flat: 35 },
       ],
     },
