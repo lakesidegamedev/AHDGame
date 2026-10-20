@@ -10,6 +10,7 @@ import {
 import { collectResetMetricOwnerReadings } from "./collectOwnerReadings";
 import { refreshResetMetricBoard } from "./rules/refresh";
 import { advanceProductivity, type ProductivityState } from "./rules/productivity";
+import { reachabilityBoards } from "./testing/metricReachability";
 
 const boards = buildOpeningMetricSnapshots1991("test-world", 1);
 const opening = openingGrossPurchasingInputs1991();
@@ -49,6 +50,48 @@ function mockOwnerSources(db: ReturnType<typeof createMockDb>) {
 }
 
 describe("first live v2 metric owners", () => {
+  it("publishes funded policing responses even at saturated crime scores across all v2 countries", async () => {
+    const db = createMockDb();
+    const targets = reachabilityBoards().filter((b) => b.scope === "regional");
+    const countries = [...new Set(targets.map((b) => b.countryId))];
+    const programs = countries.map((country) => ({
+      _id: `${country}:national:L34`,
+      country,
+      scope: "national",
+      familyId: "L34",
+      fundingAccountId: `${country}:justice`,
+      effectiveTurn: 2,
+      primaryMetricEffects: [{ metricId: "32", favorableNormalizedPoints: 0.89 }],
+    }));
+    db.collection("resetLawPrograms").find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue(programs),
+    });
+    const accounts = (factor: number) =>
+      countries.map((countryId) => ({
+        _id: `${countryId}:justice`,
+        countryId,
+        accruedThroughTurn: 2,
+        externallySettled: false,
+        lastProgramDelivery: { L34: { implementationFactor: factor } },
+      }));
+    db.collection("resetDepartmentAccounts").find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue(accounts(1)),
+    });
+    const funded = await collectResetMetricOwnerReadings(db as unknown as Db, targets, 2);
+    db.collection("resetDepartmentAccounts").find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue(accounts(0)),
+    });
+    const unfunded = await collectResetMetricOwnerReadings(db as unknown as Db, targets, 2);
+    for (const board of targets) {
+      expect(funded[board._id]!.updates["32"]!.value, board._id).toBeLessThan(
+        unfunded[board._id]!.updates["32"]!.value!
+      );
+      const published = refreshResetMetricBoard({ board, turn: 2, ...funded[board._id]! }).board;
+      expect(published.observations["32"]!.lastUpdatedTurn).toBe(2);
+      expect(published.observations["32"]!.value).toBe(funded[board._id]!.updates["32"]!.value);
+      expect(board.observations["32"]!.lastUpdatedTurn).toBe(1);
+    }
+  });
   it.each(["US", "UK", "JP"] as const)(
     "adopts matching growth windows country-wide, not one region at a time in %s",
     async (country) => {

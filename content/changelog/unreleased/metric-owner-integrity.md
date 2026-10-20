@@ -12,6 +12,8 @@ areas: [engine, fullstack]
 
 ## What changed
 
+- Nonviolent crime now uses the same unit calibration for its policy response and condition score. Funded policing and changing game conditions can still affect the modeled crime rate when its display score is saturated. Physical limits remain enforced. Added an exhaustive 58-metric numerical reachability audit, with actual owner input changes kept separate from modeled policy responses and legacy-country coverage.
+
 - Modeled service and social outcomes respond to bounded prior-turn employment, household resources, production and delivered services, alongside existing funded laws. Counted outcomes keep their own owners. Economic growth does not grant civil liberties or rewrite election results. New household definitions have fixed compatible baselines, so they can affect food insecurity and trust without comparing currency amounts with old indexes.
 - Output and productivity boards collect matching real-output and modeled-hours windows. After a complete 48-turn window across a country, growth uses those levels; national productivity pools output and hours before calculating growth. Incomplete windows keep the previous definition and measurement date. Hours are a documented game assumption, not recorded timecards. The economy's technology driver remains separate.
 - Current delivered healthcare, food, electricity and fuel shortages constrain the corresponding modeled outcomes. Unmeasured delivery remains unknown, and surplus in another region does not cancel a local delivery failure. Fuel quantities are not added across incompatible units.

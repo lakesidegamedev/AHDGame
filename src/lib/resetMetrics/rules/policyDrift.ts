@@ -17,9 +17,7 @@
 import type { PrimaryMetricDefinition } from "../catalog";
 import { resetMetricConditionScore, type ResetMetricScoreCountry } from "../conditionScore";
 import { estimateObservedMetricChange } from "./effectForecast";
-import { getMetricDefinition } from "@/lib/constants/metricDefinitions";
-import type { MetricCategoryId } from "@/lib/db/types";
-import { metricQualityRange } from "@/lib/corporations/sectorMetricMarginProfiles";
+import { proxyResponseCalibration } from "./metricCalibration";
 
 /**
  * Condition points (0-100 scale) at full settlement per unit of normalized
@@ -78,32 +76,15 @@ export function policyDriftTarget(input: PolicyDriftInput): number | null {
     probePoints === 0
       ? openingValue
       : openingValue + (forecast.delta / probePoints) * pressure * POLICY_PRESSURE_SCORE_POINTS;
-  const [category, id] = metric.path.split(".");
-  const definition = getMetricDefinition(category as MetricCategoryId, id);
+  const calibration = proxyResponseCalibration(metric, countryId, year);
   if ((target === openingValue || score === 0 || score === 100) && pressure !== 0) {
     // Display-score saturation is not a physical ceiling on the owner value.
-    const span = ["12", "15", "24", "58"].includes(metric.id)
-      ? 100
-      : definition
-        ? (() => {
-            const range = metricQualityRange(definition, id, { countryId, year });
-            return range.max - range.min;
-          })()
-        : 0;
-    const direction =
-      metric.interpretation === "lower"
-        ? -1
-        : metric.interpretation === "higher"
-          ? 1
-          : definition?.isHigherBetter
-            ? 1
-            : -1;
-    target = openingValue + ((direction * pressure * POLICY_PRESSURE_SCORE_POINTS) / 100) * span;
+    if (!calibration || !(calibration.span > 0)) return null;
+    target =
+      openingValue +
+      ((calibration.direction * pressure * POLICY_PRESSURE_SCORE_POINTS) / 100) * calibration.span;
   }
-  if (definition && !["12", "15", "24"].includes(metric.id))
-    target = Math.max(definition.minValue ?? 0, Math.min(definition.maxValue ?? 100, target));
-  if (["12", "15", "24"].includes(metric.id)) target = Math.max(0, target);
-  if (metric.id === "58") target = Math.max(0, Math.min(100, target));
+  if (calibration) target = Math.max(calibration.min, Math.min(calibration.max, target));
   return target;
 }
 
