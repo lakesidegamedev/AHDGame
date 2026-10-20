@@ -170,8 +170,8 @@ export default function AttackPanel({
             <div className="rounded-xl border border-error/20 bg-background/40 p-4">
               <h3 className="text-sm font-semibold text-foreground">Split rival plants</h3>
               <p className="mt-1 text-xs text-muted">
-                Relative MS automatically sets the share and success chance. You do not choose a
-                percentage.
+                Your MS against theirs sets the share, from 1% up to 20% of their plants. Your
+                R&amp;D against theirs sets the success chance. Plants you win transfer intact.
               </p>
               {attackMsg && (
                 <div className="mt-3 rounded-lg border border-success/30 bg-success/10 p-3 text-xs text-success">

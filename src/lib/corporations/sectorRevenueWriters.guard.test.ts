@@ -181,11 +181,11 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
     status: "plants-gated",
     reason: "Vacant/inactive-CEO shed moves capacity units to pool headroom under plants.",
   },
-  "src/app/api/country/[code]/region/[id]/economy/attack-sector/route.ts": {
+  "src/lib/corporations/commands/plantSectorSplitAttempt.ts": {
     writeSites: 1,
     status: "plants-gated",
     reason:
-      "Split is plants-only; a new row starts at zero revenue and the turn derives its revenue from transferred whole plants.",
+      "Whole-plant split (player route and NPP attacks) is plants-only; a new row starts at zero revenue and the turn derives its revenue from transferred whole plants.",
   },
   "src/app/api/country/[code]/region/[id]/economy/attack/route.ts": {
     writeSites: 5,
@@ -195,7 +195,8 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
   "src/lib/turn/nppCorporateAttacks.ts": {
     writeSites: 4,
     status: "plants-gated",
-    reason: "NPP attacks share the player attack's capacity-transfer path.",
+    reason:
+      "Revenue capture runs only below plants; under plants NPP attacks run the shared whole-plant split.",
   },
   "src/lib/corporations/moveSector.ts": {
     writeSites: 2,
@@ -370,7 +371,7 @@ const ALLOWED_WRITERS: Record<string, WriterEntry> = {
 const MUST_BE_PLANTS_AWARE = [
   "src/lib/turn/corporation/rdInnovation.ts",
   "src/lib/turn/corporation/corporationSectorShed.ts",
-  "src/app/api/country/[code]/region/[id]/economy/attack-sector/route.ts",
+  "src/lib/corporations/commands/plantSectorSplitAttempt.ts",
   "src/app/api/country/[code]/region/[id]/economy/attack/route.ts",
   "src/lib/turn/nppCorporateAttacks.ts",
   "src/lib/corporations/moveSector.ts",

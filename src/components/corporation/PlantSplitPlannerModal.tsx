@@ -77,7 +77,8 @@ export function PlantSplitPlannerModal({
             </div>
           </div>
           <p className="mt-3 border-t border-card-border/60 pt-3 text-center text-xs text-muted">
-            The percentage is calculated from relative MS. It is not selectable.
+            Your MS against theirs sets the share and your R&amp;D against theirs sets the success
+            chance. They are not selectable.
           </p>
         </div>
 

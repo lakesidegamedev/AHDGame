@@ -2,11 +2,29 @@ import { describe, it, expect, vi } from "vitest";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import { createMockDb } from "@/lib/test-utils/mockDb";
+import { attemptPlantSectorSplit } from "@/lib/corporations/commands/plantSectorSplitAttempt";
+import { createNotification } from "@/lib/notifications";
+
+vi.mock("@/lib/corporations/commands/plantSectorSplitAttempt", () => ({
+  attemptPlantSectorSplit: vi.fn(),
+}));
+vi.mock("@/lib/notifications", () => ({ createNotification: vi.fn() }));
+vi.mock("@/lib/wireEvent", () => ({ logWireEvent: vi.fn(), wireHeadlineSectorAttack: vi.fn() }));
+vi.mock("@/lib/financialTxLog/emit", () => ({ emitTx: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("@/lib/currency/corporationCapital", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/currency/corporationCapital")>()),
+  getCorpFxRate: vi.fn().mockResolvedValue(1),
+}));
+vi.mock("@/lib/nppAutonomy/playerImpactBudget", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/nppAutonomy/playerImpactBudget")>()),
+  countRecentNppNotifications: vi.fn().mockResolvedValue(0),
+}));
 import {
   selectAttackTarget,
   canAttack,
   runNppCorporateAttacks,
   formatNppSectorAttackDefenderMessage,
+  executeNppPlantSplit,
   ATTACK_COOLDOWN_TURNS,
   type AttackCandidate,
 } from "../nppCorporateAttacks";
@@ -130,8 +148,6 @@ describe("formatNppSectorAttackDefenderMessage (suggestion #324)", () => {
       capturedAnchor: 123456,
       sectorLabel: "Technology",
       stateLabel: "California",
-      plantsEnabled: false,
-      capacityUnitsTaken: 0,
     });
     expect(message).toContain("Attacker Corp");
     expect(message).toContain("$123,456");
@@ -146,27 +162,82 @@ describe("formatNppSectorAttackDefenderMessage (suggestion #324)", () => {
       capturedAnchor: 5000,
       sectorLabel: "Steel",
       stateLabel: "Ohio",
-      plantsEnabled: false,
-      capacityUnitsTaken: 0,
     });
     expect(message).toMatch(/not profit/i);
   });
+});
 
-  it("under plants reports capacity units with book value instead of revenue", () => {
-    const message = formatNppSectorAttackDefenderMessage({
-      attackerName: "Attacker Corp",
-      capturedAnchor: 8000,
-      sectorLabel: "Steel",
-      stateLabel: "Ohio",
-      plantsEnabled: true,
-      capacityUnitsTaken: 12.5,
+describe("executeNppPlantSplit (plants economy)", () => {
+  it("runs the shared split, stamps both cooldowns and tells a player defender", async () => {
+    vi.mocked(attemptPlantSectorSplit).mockResolvedValueOnce({
+      ok: true,
+      resolution: {
+        quote: {
+          seizureFraction: 0.1,
+          plantsAtRisk: 4,
+          trancheBookValueAnchor: 40_000,
+          cashCostAnchor: 20_000,
+          marketingStrengthCost: 8,
+          successProbability: 0.6,
+        },
+        succeeded: true,
+        randomRoll: 0.2,
+        attackCostLocal: 20_000,
+        defenderCorporationName: "Rival Inc",
+        sectorType: "technology",
+        plantsTransferred: 4,
+        capacityTransferred: 40,
+        bookValueTransferredAnchor: 40_000,
+      },
     });
-    expect(message).toContain("12.5");
-    expect(message).toContain("capacity units");
-    expect(message).toContain("book value");
-    expect(message).toContain("Steel");
-    expect(message).toContain("Ohio");
-    expect(message).not.toMatch(/of revenue/);
+    const db = createMockDb();
+    const target = candidate({ revenueAnchor: 50_000 });
+    const attacker = { _id: new ObjectId(), name: "NPP Corp", countryId: "US" } as never;
+
+    const result = await executeNppPlantSplit(db as unknown as Db, {
+      attacker,
+      targetSector: target.sector,
+      defender: target.defender,
+      currentTurn: 300,
+      now: new Date(),
+    });
+
+    expect(attemptPlantSectorSplit).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({ capturedAnchor: 40_000, defenderName: "Rival Inc" });
+    const stamps = vi
+      .mocked(db.collection("corporations").updateOne)
+      .mock.calls.map((call) => (call[1] as { $set: Record<string, unknown> }).$set);
+    expect(stamps).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ lastAutoAttackTurn: 300 }),
+        expect.objectContaining({ lastAutoAttackedTurn: 300 }),
+      ])
+    );
+    expect(createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Plants Seized",
+        message: expect.stringContaining("4 whole plants"),
+      })
+    );
+  });
+
+  it("does nothing when the shared split rejects the attempt", async () => {
+    vi.mocked(attemptPlantSectorSplit).mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      error: "Insufficient marketing strength.",
+    });
+    const db = createMockDb();
+    const target = candidate({ revenueAnchor: 50_000 });
+    const result = await executeNppPlantSplit(db as unknown as Db, {
+      attacker: { _id: new ObjectId(), name: "NPP Corp", countryId: "US" } as never,
+      targetSector: target.sector,
+      defender: target.defender,
+      currentTurn: 300,
+      now: new Date(),
+    });
+    expect(result).toBeNull();
+    expect(db.collection("corporations").updateOne).not.toHaveBeenCalled();
   });
 });
 
