@@ -5,6 +5,7 @@ import type { ProducerQuotePolicy } from "./rules";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { validateProducerCapacityState, type ProducerCapacityState } from "./capacityRules";
 import { queueUndeliveredCost } from "@/lib/corporations/buildDelivery";
+import type { SectorTransition } from "./transitionRules";
 
 export interface ExistingWorldProducerOpening {
   worldEpoch: string;
@@ -75,6 +76,11 @@ export interface ProducerOpeningPlan {
     outputStock: Array<{ commodity: string; book: string; units: number }>;
     quotes: Array<{ commodity: string; book: string; policy: ProducerQuotePolicy }>;
     openingInventoryMemoValueAnchor: number;
+    /**
+     * Transition package classification, frozen at the opening and covered by
+     * the plan digest (see transitionRules.ts). Absent when no shadow evidence.
+     */
+    transition?: SectorTransition;
   }>;
   /** Cost-plus intent cannot price old retained goods without a historical unit cost. */
   openingQuoteAdjustments: Array<{

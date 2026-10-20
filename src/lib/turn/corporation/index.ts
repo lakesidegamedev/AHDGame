@@ -789,8 +789,16 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
         labourDemandWageIndexByState: new Map(),
         privateBankingEnabled,
         advertisingInput: true,
+        transitionFirstFundedTurn:
+          gameState?.producerOpening?.worldEpoch === worldEpoch
+            ? gameState.producerOpening.turn + 1
+            : undefined,
       } as unknown as ProducerPhysicalEnv,
-      firstFundedTurn: earlier == null,
+      seedHouseholds: earlier == null,
+      firstFundedTurn:
+        gameState?.producerOpening?.worldEpoch === worldEpoch
+          ? gameState.producerOpening.turn + 1
+          : undefined,
     });
     mark("fundedProducerMarket");
   }
