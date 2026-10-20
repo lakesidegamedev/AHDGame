@@ -256,7 +256,9 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
         return errorResponse(400, OWNERSHIP_CYCLE_ERROR);
       }
       if (type === "buy" && wouldGainControl(corporation, placerCorp._id, shares)) {
-        const foreignRejection = await assertForeignControlAllowed(db, placerCorp, corporation);
+        const foreignRejection = await assertForeignControlAllowed(db, placerCorp, corporation, {
+          viaMarket: true,
+        });
         if (foreignRejection) return errorResponse(foreignRejection.status, foreignRejection.error);
       }
 

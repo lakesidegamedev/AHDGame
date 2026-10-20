@@ -169,7 +169,9 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
         return errorResponse(400, OWNERSHIP_CYCLE_ERROR);
       }
       if (wouldGainControl(corporation, buyingCorp._id, shares)) {
-        const foreignRejection = await assertForeignControlAllowed(db, buyingCorp, corporation);
+        const foreignRejection = await assertForeignControlAllowed(db, buyingCorp, corporation, {
+          viaMarket: true,
+        });
         if (foreignRejection) return errorResponse(foreignRejection.status, foreignRejection.error);
       }
 

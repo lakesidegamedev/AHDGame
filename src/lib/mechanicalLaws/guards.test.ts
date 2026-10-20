@@ -138,6 +138,23 @@ describe("assertForeignControlAllowed", () => {
     expect(rejection?.status).toBe(400);
     expect(rejection?.error).toContain("Foreign Investment Act");
   });
+
+  it("sends a foreign market buy under screening to the acquisition route", async () => {
+    const { db } = fakeDb(corps);
+    mockedLevels.mockResolvedValue(levels(0, 1));
+
+    const viaMarket = await assertForeignControlAllowed(
+      db,
+      frSubsidiaryOfUs,
+      { countryId: "FR" },
+      { viaMarket: true }
+    );
+    const viaOffer = await assertForeignControlAllowed(db, frSubsidiaryOfUs, { countryId: "FR" });
+
+    expect(viaMarket?.error).toContain("acquisition offer");
+    // Acquisitions and takeovers are screened by merger review instead.
+    expect(viaOffer).toBeNull();
+  });
 });
 
 describe("assertSubsidiaryWithinCap", () => {

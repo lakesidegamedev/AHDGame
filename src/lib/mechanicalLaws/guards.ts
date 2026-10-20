@@ -111,12 +111,23 @@ export async function assertSubsidiaryWithinCap(
 export async function assertForeignControlAllowed(
   db: Db,
   buyer: ControlFields,
-  target: Pick<Corporation, "countryId">
+  target: Pick<Corporation, "countryId">,
+  options: { viaMarket?: boolean } = {}
 ): Promise<LawRejection | null> {
   const root = await controllingRoot(db, buyer);
   if (root.countryId === target.countryId) return null;
   const levels = await getMechanicalLawLevels(db, target.countryId as CountryId);
-  if (foreignInvestmentRuleForLevel(levels.foreignInvestment).kind !== "ban") return null;
+  const rule = foreignInvestmentRuleForLevel(levels.foreignInvestment).kind;
+  // Screening (and the share caps, which include it) reviews foreign takeovers
+  // through merger review, which only acquisitions and takeovers go through.
+  if (options.viaMarket && (rule === "screening" || rule === "cap")) {
+    return {
+      status: 400,
+      error:
+        "This country's Foreign Investment Act screens foreign takeovers. A group headquartered abroad must make an acquisition offer, which the competition authority reviews, instead of buying control on the market.",
+    };
+  }
+  if (rule !== "ban") return null;
   return {
     status: 400,
     error:

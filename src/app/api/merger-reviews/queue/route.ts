@@ -113,6 +113,7 @@ async function handleGET() {
       leadSectorType: review.leadSectorType,
       combinedSharePercent: review.combinedSharePercent,
       thresholdPercent: review.thresholdPercent,
+      ...(review.reason ? { reason: review.reason } : {}),
       status: review.status,
       openedAtTurn: review.openedAtTurn,
       decideByTurn: review.decideByTurn,
