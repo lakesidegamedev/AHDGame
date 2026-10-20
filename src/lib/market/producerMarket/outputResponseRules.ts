@@ -3,7 +3,8 @@
  * producer market. Replaces the demand throttle and the loss run with one rule
  * read from the plant's own last settled receipt:
  *
- * - each unit sold did not pay for its inputs -> run less, a step a turn;
+ * - each unit sold did not pay for its inputs, wages and site costs -> run
+ *   less, a step a turn;
  * - it sold out and each unit paid -> run more, a step a turn;
  * - otherwise move toward what actually sold, with a small probe above it so
  *   the plant keeps testing for more demand.
@@ -12,9 +13,9 @@
  *   stops buying inputs to make goods nobody buys, and grow back a step a turn
  *   once sales return.
  *
- * Labour and site costs are not in the per-unit test: they are paid whether
- * the line runs or not, so they cannot be saved by running less. A floor keeps
- * a probe run on the book so a plant can see prices recover.
+ * Wages and site running costs follow the run (producerPhysicalPreparation), so
+ * they are in the per-unit test: running less saves them. A floor keeps a
+ * probe run on the book so a plant can see prices recover.
  *
  * Pure: last receipt in, run share for this turn out.
  */
@@ -36,6 +37,11 @@ export interface PriorReceipt {
   revenue: number;
   /** Inputs consumed by what was made last turn. */
   inputsConsumed: number;
+  /** Wages and site costs accrued last turn (paid plus arrears). */
+  labourPaid?: number;
+  labourArrears?: number;
+  otherOperatingPaid?: number;
+  otherOperatingArrears?: number;
 }
 
 export function nextRunShare(prior: PriorReceipt | null | undefined): number {
@@ -48,11 +54,14 @@ export function nextRunShare(prior: PriorReceipt | null | undefined): number {
   const offered = finite(prior.offeredUnits);
   const sold = finite(prior.soldUnits);
   const sellThrough = offered > 0 ? Math.min(1, sold / offered) : 0;
+  const runningCost =
+    finite(prior.inputsConsumed) +
+    finite(prior.labourPaid ?? 0) +
+    finite(prior.labourArrears ?? 0) +
+    finite(prior.otherOperatingPaid ?? 0) +
+    finite(prior.otherOperatingArrears ?? 0);
   const contributionPerUnit =
-    sold > 0
-      ? (finite(prior.revenue) - (finite(prior.inputsConsumed) * sold) / Math.max(produced, sold)) /
-        sold
-      : 0;
+    sold > 0 ? (finite(prior.revenue) - (runningCost * sold) / Math.max(produced, sold)) / sold : 0;
   let next: number;
   if (offered > 0 && sellThrough < GLUT_SELL_THROUGH) next = OUTPUT_RUN_FLOOR;
   else if (sold > 0 && contributionPerUnit < 0) next = run * (1 - OUTPUT_CUT_STEP);

@@ -254,8 +254,18 @@ export function prepareProducerPhysicalSector(input: {
     lookups.embargoTradeExposureEnabled !== true;
   if (suspended) plan.activeFraction = 0;
   const nominalDaily = plan.capacityUnits * TURNS_PER_DAY * baseRecipe.nominalAnchorPerCapacityUnit;
+  // Output follows price: last turn's own settled receipt sets this turn's run.
+  const priorReceipt = (sector as { producerSettlement?: PriorReceipt & { turn?: number } })
+    .producerSettlement;
+  const runShare = nextRunShare(
+    priorReceipt && priorReceipt.turn === currentTurn - 1 ? priorReceipt : null
+  );
+  // Wages and site running costs follow the line the plant runs: idle lines
+  // employ no one (their workers count as unemployed) and idle capacity pays
+  // cold upkeep only.
+  const runningFraction = plan.activeFraction * runShare;
   const headcount = resolveSectorHeadcount({
-    revenue: nominalDaily * plan.activeFraction,
+    revenue: nominalDaily * runningFraction,
     stateId: sector.stateId,
     rawWorkforceSkillByState: lookups.rawWorkforceSkillByState,
     politicalBoard: lookups.politicalBoardByState?.get(sector.stateId),
@@ -274,8 +284,8 @@ export function prepareProducerPhysicalSector(input: {
     currentTurn,
     currentYear,
     explicitPlantCostsEnabled: true,
-    hourlyRevenue: (nominalDaily * plan.activeFraction * staffedShare) / TURNS_PER_DAY,
-    grossMaintenance: (nominalDaily * plan.activeFraction * staffedShare) / TURNS_PER_DAY,
+    hourlyRevenue: (nominalDaily * runningFraction * staffedShare) / TURNS_PER_DAY,
+    grossMaintenance: (nominalDaily * runningFraction * staffedShare) / TURNS_PER_DAY,
     computedWorkers: headcount.workers,
     techLaborCostMultiplier: tech.laborCostMultiplier,
     costOfLivingIndex: metrics?.economic?.costOfLiving?.value,
@@ -337,12 +347,6 @@ export function prepareProducerPhysicalSector(input: {
         })
       : 0,
   });
-  // Output follows price: last turn's own settled receipt sets this turn's run.
-  const priorReceipt = (sector as { producerSettlement?: PriorReceipt & { turn?: number } })
-    .producerSettlement;
-  const runShare = nextRunShare(
-    priorReceipt && priorReceipt.turn === currentTurn - 1 ? priorReceipt : null
-  );
   plan.outputMultiplier =
     runShare *
     organisational *
@@ -365,7 +369,7 @@ export function prepareProducerPhysicalSector(input: {
   plan.labourCost = payroll.sectorLaborCost;
   plan.otherOperatingCost = standingProducerSiteBill({
     nominalHourlyCapacityValue: nominalDaily / TURNS_PER_DAY,
-    activeFraction: plan.activeFraction,
+    activeFraction: runningFraction,
     financialPenaltyPercent: Math.max(0, -disaster.marginPenalty),
     coldUpkeepWaived:
       env.transitionFirstFundedTurn != null &&
