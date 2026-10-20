@@ -1038,9 +1038,9 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
 
             {data.plantsMode && (
               <p className="px-4 pb-3 text-xs leading-snug text-muted">
-                About {formatUnits(sector.headroomUnits)} {CAPACITY_UNIT_LABEL} of in-state demand
-                in {data.stateName} has no plant serving it. That is demand in this state only, not
-                national or global.
+                Buyers in {data.stateName} want about {formatUnits(sector.headroomUnits)}{" "}
+                {CAPACITY_UNIT_LABEL} more than they are getting, after plants already under
+                construction.
               </p>
             )}
 
