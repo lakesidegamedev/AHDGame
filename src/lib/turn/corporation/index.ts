@@ -31,7 +31,7 @@ import { shedVacantCeoSectorsToUnowned } from "./vacantCeoSectorShed";
 import { shedInactiveCeoSectorsToUnowned } from "./inactiveCeoSectorShed";
 import { installCaretakersForVacantCorps } from "./autoCaretakerVacantCorps";
 import { loadEngineSixCountries } from "./engineSixCountries";
-import { recordNppCeoTrackRecords } from "./nppCeoTrackRecord";
+import { runNppCeoCareerPasses } from "./nppCeoPay";
 import { processSectors } from "./sectorCalculations";
 import { getLabourSystemMode, labourAtLeast } from "@/lib/labour/featureFlag";
 import { getMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
@@ -688,11 +688,7 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
   // against sector peers into its CEO track record. Reads last turn's sector
   // results from the snapshot, before the sheds below mutate it. No decision
   // reads it below v6, so a failure only loses one sample.
-  try {
-    await recordNppCeoTrackRecords(db, lookups, turn ?? 0);
-  } catch (error) {
-    console.error("[corporationTurn] NPP CEO track record pass failed", error);
-  }
+  await runNppCeoCareerPasses(db, lookups, turn ?? 0);
   mark("nppCeoTrackRecord");
 
   // Forensics/alt-detection audit spine: aggregate, not-per-corp entries for

@@ -686,6 +686,8 @@ export async function resetGameWorld(
     // A fresh world starts with pass-through owners fully taxed; the phase-in
     // only exists to ease a live world into the reform.
     passThroughOwnerTaxStartTurn: resetDate.currentTurn - PASS_THROUGH_PHASE_IN_TURNS,
+    // NPP CEOs are paid from the first turn of a fresh world.
+    nppCeoPayStartTurn: resetDate.currentTurn,
     currentYear: resetDate.currentYear,
     resetStartDate: { year: resetDate.year, week: resetDate.week },
     startingYear,
