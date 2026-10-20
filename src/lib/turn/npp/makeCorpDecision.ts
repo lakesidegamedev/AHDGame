@@ -222,7 +222,9 @@ export function makeNppCorpDecision(
   const commodityRatioFor = (sector: CorporateSector, extraUnits: number): number => {
     const demandOf = plants?.commodityDemandOf;
     if (!plants || !demandOf) return 0;
-    dominanceSectorsCache ??= sectors.map((s) => toDominanceSector(s, ctx.turn));
+    dominanceSectorsCache ??=
+      plants.groupDominanceSectorsOf?.(corp._id.toString()) ??
+      sectors.map((s) => toDominanceSector(s, ctx.turn));
     return commodityDominanceRatio({
       sectors: dominanceSectorsCache,
       commodities: sectorOutputCommodities(sector, ctx.turn),
