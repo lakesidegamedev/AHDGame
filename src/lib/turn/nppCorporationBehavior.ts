@@ -469,9 +469,17 @@ export async function processNppCorporationDecisions(
         nppCorpStrategyEnabled: 1,
         frontierEntryExperimentEnabled: 1,
         subsidiaryCorporationsEnabled: 1,
+        worldEpochId: 1,
+        producerOpening: 1,
       },
     }
   );
+  // Funded-market transition window, for AI use of the free conversion.
+  const transitionFirstFundedTurn =
+    strategyGate?.producerOpening &&
+    strategyGate.producerOpening.worldEpoch === strategyGate.worldEpochId
+      ? strategyGate.producerOpening.turn + 1
+      : undefined;
   const groupMembership = await loadGroupDirectionMembership(
     db,
     strategyGate?.subsidiaryCorporationsEnabled === true,
@@ -547,6 +555,7 @@ export async function processNppCorporationDecisions(
       techTreesEnabled,
       frontierEntry: autopilot ? undefined : frontierEntryTurn,
       engineSix: engineSixByCountry.get(corp.countryId) === true,
+      transitionFirstFundedTurn,
     };
     let decision = makeNppCorpDecision(
       decisionContext,
