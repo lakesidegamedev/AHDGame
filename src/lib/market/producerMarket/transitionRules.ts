@@ -68,6 +68,24 @@ export function inTransitionWindow(turn: number, firstFundedTurn: number): boole
   return turn >= firstFundedTurn && turn < firstFundedTurn + TRANSITION_WINDOW_TURNS;
 }
 
+/**
+ * The transition package's free conversion (owner decision 2026-10-20: free,
+ * at book value, same or another industry): once per mismatched sector, while
+ * the window is open for the turn the change takes effect.
+ */
+export function freeTransitionConversion(
+  sector: { cutoverTransition?: SectorTransition | null; cutoverConvertedAtTurn?: number | null },
+  effectiveTurn: number,
+  firstFundedTurn: number | undefined
+): boolean {
+  return (
+    firstFundedTurn != null &&
+    sector.cutoverTransition?.mismatched === true &&
+    sector.cutoverConvertedAtTurn == null &&
+    inTransitionWindow(effectiveTurn, firstFundedTurn)
+  );
+}
+
 /** Floor weight: 1 on the first funded turn, falling linearly to 0 at the window's end. */
 export function landingWeight(turn: number, firstFundedTurn: number): number {
   if (!inTransitionWindow(turn, firstFundedTurn)) return 0;

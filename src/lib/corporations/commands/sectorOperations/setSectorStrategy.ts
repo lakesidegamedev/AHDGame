@@ -49,6 +49,8 @@ import { getStrategyAvailability } from "@/lib/constants/techTree";
 import { retoolRescaleFields } from "@/lib/corporations/retoolRescale";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
+import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
+import { freeTransitionConversion } from "@/lib/market/producerMarket/transitionRules";
 
 interface RouteParams {
   params: Promise<{ id: string; sectorId: string }>;
@@ -57,7 +59,9 @@ interface RouteParams {
 /**
  * POST /api/corporations/[id]/sectors/[sectorId]/strategy
  * Change operating strategy for a sector. CEO only.
- * Charges 25% of daily revenue and begins a 12-turn transition.
+ * Charges 25% of daily revenue and begins a 12-turn transition. During the
+ * funded-market transition window a mismatched sector's first retool is free
+ * and skips the cooldown (the transition package's free conversion).
  */
 export async function setSectorStrategy(request: Request, { params }: RouteParams) {
   try {
@@ -147,6 +151,21 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
     const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
     const currentTurn = gameState?.currentTurn ?? 0;
 
+    // Funded market: a turn freezes each plant's physical image and rejects a
+    // change before it closes, so retools wait for the turn to finish.
+    const funded =
+      gameState?.producerOpening != null &&
+      gameState.producerOpening.worldEpoch === gameState.worldEpochId;
+    if (funded) {
+      const busy = await rejectDuringTurn(db);
+      if (busy) return busy;
+    }
+    const freeConversion = freeTransitionConversion(
+      sector,
+      currentTurn + 1,
+      funded ? gameState!.producerOpening!.turn + 1 : undefined
+    );
+
     // Tech-tree production-method gate: modern methods are locked until the
     // world reaches their era and/or the corp unlocks them in the tech tree.
     // Inert when the feature is off.
@@ -179,6 +198,7 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
 
     // Check cooldown
     if (
+      !freeConversion &&
       sector.transitionCooldownUntilTurn != null &&
       currentTurn < sector.transitionCooldownUntilTurn
     ) {
@@ -224,13 +244,14 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
     const corpFxRate = await getCorpFxRate(db, corporation);
     const liquidCode = resolveCorpLiquidCurrencyCode(corporation);
     const sectorHostRate = await getSectorHostFxRate(db, sector, corporation);
-    const retoolCostAnchor = shortageDiscount.qualifies
-      ? 0
-      : readCorpEconomicAnchor(
-          sector.revenue,
-          resolveSectorHostCurrencyCode(sector, corporation),
-          sectorHostRate
-        ) * STRATEGY_RETOOL_COST_FRACTION;
+    const retoolCostAnchor =
+      shortageDiscount.qualifies || freeConversion
+        ? 0
+        : readCorpEconomicAnchor(
+            sector.revenue,
+            resolveSectorHostCurrencyCode(sector, corporation),
+            sectorHostRate
+          ) * STRATEGY_RETOOL_COST_FRACTION;
     // Foreign-sector FX friction (symmetry with the foreign operating-income
     // spread): retooling a sector in a different-currency country incurs the
     // reduced sector spread on top of the base cost, routed to the CB system.
@@ -313,6 +334,7 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
             // decide whether to invert it. The helper records the GATE, not
             // whether a particular leg found something to scale.
             ...rescale,
+            ...(freeConversion ? { cutoverConvertedAtTurn: currentTurn } : {}),
             updatedAt: new Date(),
           },
         }
@@ -340,6 +362,7 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
         ? STRATEGY_TRANSITION_TURNS - SHORTAGE_RETOOL_TRANSITION_HEADSTART
         : STRATEGY_TRANSITION_TURNS,
       cooldownTurns: STRATEGY_COOLDOWN_TURNS,
+      freeConversion,
       // Shortage-destination discount metadata (client toast/messaging).
       shortageDiscount: shortageDiscount.qualifies
         ? { resource: shortageDiscount.resource, sd: shortageDiscount.sd }

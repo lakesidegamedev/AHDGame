@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   classifySector,
+  freeTransitionConversion,
   inTransitionWindow,
   landingWeight,
   shadowTurnSettled,
@@ -156,5 +157,41 @@ describe("support never overdraws the pool", () => {
     let left = pool * 28.025652481726606;
     for (const p of payments) left -= p.claim * 28.025652481726606;
     expect(left).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe("free transition conversion", () => {
+  const mismatched = {
+    mismatched: true,
+    legacyRevenueAnchor: 9,
+    fundedRevenueAnchor: 1,
+    basisTurns: 5,
+  };
+  it("is open once for a mismatched sector inside the window", () => {
+    expect(freeTransitionConversion({ cutoverTransition: mismatched }, 11, 11)).toBe(true);
+    expect(
+      freeTransitionConversion(
+        { cutoverTransition: mismatched },
+        11 + TRANSITION_WINDOW_TURNS - 1,
+        11
+      )
+    ).toBe(true);
+  });
+  it("is closed outside the window, after use, for matched sectors and before any opening", () => {
+    expect(
+      freeTransitionConversion({ cutoverTransition: mismatched }, 11 + TRANSITION_WINDOW_TURNS, 11)
+    ).toBe(false);
+    expect(freeTransitionConversion({ cutoverTransition: mismatched }, 10, 11)).toBe(false);
+    expect(
+      freeTransitionConversion(
+        { cutoverTransition: mismatched, cutoverConvertedAtTurn: 12 },
+        13,
+        11
+      )
+    ).toBe(false);
+    expect(
+      freeTransitionConversion({ cutoverTransition: { ...mismatched, mismatched: false } }, 12, 11)
+    ).toBe(false);
+    expect(freeTransitionConversion({ cutoverTransition: mismatched }, 12, undefined)).toBe(false);
   });
 });

@@ -74,6 +74,11 @@ export interface NppCorpDecisionContext {
   challengerBoostOf?: (sectorType: string, ownCorporationId: string) => number;
   /** Resolved NPP operator permissions; absent derives them from the corporation. */
   operator?: import("./rules/operatorPolicy").OperatorPermissions;
+  /**
+   * First funded turn of the world's market transition (opening turn + 1);
+   * absent before the funded market or outside a funded world.
+   */
+  transitionFirstFundedTurn?: number;
   /** Player-appointed caretaker mandate. NPP-owned corporations are always active. */
   caretakerMandate?: "active" | "passive";
 }

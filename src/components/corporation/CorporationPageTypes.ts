@@ -619,6 +619,8 @@ export interface CommoditySupplyDemandBlendPct {
 
 export interface SectorDetail {
   _id: string;
+  /** Funded-market transition package while its window is open for this sector. */
+  cutoverTransition?: { turnsLeft: number; freeConversion: boolean; converted: boolean } | null;
   stateId: string;
   /** Country where this sector operates */
   countryId?: string;

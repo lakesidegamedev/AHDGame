@@ -216,6 +216,11 @@ export const setSectorStrategySchema = z.object({
   strategyId: z.string().min(1).max(50),
 });
 
+export const convertSectorIndustrySchema = z.object({
+  targetLane: z.enum(OPERATING_SECTOR_TYPES),
+  strategyId: z.string().min(1).max(50).optional(),
+});
+
 export const setSectorPolicySchema = z.object({
   productionPolicy: z.number().min(-25).max(25),
 });
