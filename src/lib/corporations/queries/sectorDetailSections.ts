@@ -289,7 +289,6 @@ export async function buildSectorCrisisSection(
 export function buildSectorAttackInfo(args: {
   viewerCorporation: Corporation;
   defenderMarketingStrength: number;
-  defenderRdScore: number;
   viewerCorpFxRate: number;
   sectorHostFxRate: number;
   sectorHostLiquidCode: CurrencyCode | undefined;
@@ -312,7 +311,6 @@ export function buildSectorAttackInfo(args: {
   const {
     viewerCorporation,
     defenderMarketingStrength,
-    defenderRdScore,
     viewerCorpFxRate,
     sectorHostFxRate,
     sectorHostLiquidCode,
@@ -413,8 +411,6 @@ export function buildSectorAttackInfo(args: {
           defenderBookValueAnchor: sector.capacityBookAnchor as number,
           attackerMarketingStrength: viewerCorporation.marketingStrength ?? 0,
           defenderMarketingStrength,
-          attackerRdScore: viewerCorporation.rdScore ?? 0,
-          defenderRdScore,
         })
       : null;
 
