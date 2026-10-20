@@ -461,6 +461,13 @@ export interface GameConfig {
    */
   producerMarketShadowEnabled?: boolean;
   /**
+   * First turn the funded producer market settles live (funded-market cutover).
+   * Unset keeps the legacy engine. Requires the opening conversion marker on the
+   * previous turn; once a funded turn has run, the world cannot return to
+   * legacy. See src/lib/market/producerMarket/liveMode.ts.
+   */
+  producerMarketLiveFromTurn?: number;
+  /**
    * Turn the one-time entertainment commodity removal migration ran
    * (migrateEntertainmentRemoval). Present means later turns skip it.
    */
