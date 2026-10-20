@@ -36,4 +36,10 @@ describe("funded supply and demand ledgers", () => {
     expect(byState.get("CA")?.get("food")).toEqual({ supply: 0, demand: 240 });
     expect([...byState.keys()].sort()).toEqual(["CA", "NY", "TX"]);
   });
+
+  it("gives every commodity a row in every book, zero when nothing traded", () => {
+    const { global, byState } = fundedLedgers(rows);
+    expect(global.get("steel")).toEqual({ supply: 0, demand: 0 });
+    expect(byState.get("CA")?.get("steel")).toEqual({ supply: 0, demand: 0 });
+  });
 });

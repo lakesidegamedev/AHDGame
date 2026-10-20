@@ -9,6 +9,7 @@
  *
  * Pure: settlement outcomes in, ledger rows out.
  */
+import { COMMODITY_TYPES } from "@/lib/constants/commodities";
 /** Settled funded supply and demand per turn, read by the price phase. */
 export const PRODUCER_MARKET_OUTCOMES = "producerMarketOutcomes";
 
@@ -66,7 +67,14 @@ export function fundedLedgers(rows: readonly FundedLedgerRow[]): {
   global: Map<string, { supply: number; demand: number }>;
   byState: Map<string, Map<string, { supply: number; demand: number }>>;
 } {
-  const global = new Map<string, { supply: number; demand: number }>();
+  // Dense, like the formula ledgers the price phase replaces: every commodity
+  // has a row in the world book and in each state book, zero when nothing
+  // traded, so national aggregation never meets a missing commodity.
+  const zeroBook = () =>
+    new Map<string, { supply: number; demand: number }>(
+      COMMODITY_TYPES.map((c) => [c, { supply: 0, demand: 0 }])
+    );
+  const global = zeroBook();
   const byState = new Map<string, Map<string, { supply: number; demand: number }>>();
   for (const r of rows) {
     const g = global.get(r.commodity) ?? { supply: 0, demand: 0 };
@@ -74,7 +82,7 @@ export function fundedLedgers(rows: readonly FundedLedgerRow[]): {
     g.demand += r.demand;
     global.set(r.commodity, g);
     if (r.stateId == null) continue;
-    const m = byState.get(r.stateId) ?? new Map<string, { supply: number; demand: number }>();
+    const m = byState.get(r.stateId) ?? zeroBook();
     const s = m.get(r.commodity) ?? { supply: 0, demand: 0 };
     s.supply += r.supply;
     s.demand += r.demand;
