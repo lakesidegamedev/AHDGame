@@ -40,6 +40,9 @@ export const STALE_PER_WORLD_GAME_CONFIG_UNSET: Readonly<Record<string, "">> = O
   // One-time entertainment removal migration stamp: a turn on the old world's
   // counter. A new world runs the (no-op) migration once and restamps it.
   entertainmentCommodityRemovedAtTurn: "",
+  // Funded producer market switch turn: a turn on the old world's counter. A
+  // new world needs its own opening conversion before it can be set again.
+  producerMarketLiveFromTurn: "",
   // Launch guard reference (src/lib/market/launchGuard.ts): a new market's
   // drawdown must not be measured against the dead world's valuation.
   marketGuardReferenceMcap: "",

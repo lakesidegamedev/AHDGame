@@ -1,8 +1,4 @@
-/**
- * Input baskets qualified for the 1991 reset. Other presets keep the base recipes.
- * Consumer-facing standards carry advertising at 7% of output value (2026-10-19),
- * with other inputs trimmed to keep a 17% base margin where needed.
- */
+/** Input baskets qualified for the 1991 reset. Other presets keep the base recipes. */
 import type { CommodityType } from "./commodities";
 import type { OperatingSectorType } from "./corporations";
 
@@ -10,14 +6,13 @@ export const DEFAULT_DEMAND_1991: Partial<
   Record<OperatingSectorType, Partial<Record<CommodityType, number>>>
 > = {
   manufacturing: {
-    energy: 0.142,
-    iron: 0.097,
-    coal: 0.088,
-    electronics: 0.071,
-    freight: 0.071,
-    real_estate_services: 0.027,
-    plastics: 0.049,
-    advertising: 0.07,
+    energy: 0.16,
+    iron: 0.11,
+    coal: 0.1,
+    electronics: 0.08,
+    freight: 0.08,
+    real_estate_services: 0.03,
+    plastics: 0.055,
   },
   healthcare: {
     pharmaceuticals: 0.095,
@@ -30,14 +25,13 @@ export const DEFAULT_DEMAND_1991: Partial<
     plastics: 0.035,
   },
   manufacturing_vehicles: {
-    steel: 0.169,
-    iron: 0.071,
-    electronics: 0.098,
-    energy: 0.089,
-    freight: 0.071,
-    real_estate_services: 0.018,
-    plastics: 0.049,
-    advertising: 0.07,
+    steel: 0.19,
+    iron: 0.08,
+    electronics: 0.11,
+    energy: 0.1,
+    freight: 0.08,
+    real_estate_services: 0.02,
+    plastics: 0.055,
   },
   defense: {
     steel: 0.15,
@@ -60,62 +54,22 @@ export const DEFAULT_DEMAND_1991: Partial<
     plastics: 0.035,
   },
   retail: {
-    food: 0.088,
-    electronics: 0.049,
-    energy: 0.039,
-    vehicles: 0.029,
-    freight: 0.049,
-    advertising: 0.07,
-    software: 0.039,
+    food: 0.09,
+    electronics: 0.05,
+    energy: 0.04,
+    vehicles: 0.03,
+    freight: 0.05,
+    advertising: 0.06,
+    software: 0.04,
     chemicals: 0.02,
     pharmaceuticals: 0.02,
-    financial_services: 0.029,
+    financial_services: 0.03,
     consulting_services: 0.02,
     building_materials: 0.02,
     steel: 0.02,
     oil: 0.02,
     healthcare_services: 0.02,
-    real_estate_services: 0.024,
-    plastics: 0.024,
-  },
-  agriculture: {
-    fertilizers: 0.15,
-    vehicles: 0.1,
-    energy: 0.1,
-    freight: 0.08,
-    plastics: 0.05,
-    advertising: 0.07,
-  },
-  financial: {
-    software: 0.186,
-    electronics: 0.046,
-    consulting_services: 0.093,
-    real_estate_services: 0.037,
-    advertising: 0.07,
-  },
-  telecommunications: {
-    electronics: 0.166,
-    energy: 0.092,
-    building_materials: 0.055,
-    construction_services: 0.074,
-    real_estate_services: 0.028,
-    rare_earth: 0.083,
-    advertising: 0.07,
-  },
-  technology: {
-    energy: 0.128,
-    rare_earth: 0.069,
-    steel: 0.043,
-    consulting_services: 0.069,
-    real_estate_services: 0.026,
-    advertising: 0.07,
-  },
-  real_estate: {
-    construction_services: 0.176,
-    building_materials: 0.106,
-    steel: 0.07,
-    energy: 0.07,
-    financial_services: 0.088,
-    advertising: 0.07,
+    real_estate_services: 0.025,
+    plastics: 0.025,
   },
 };
