@@ -63,7 +63,7 @@ describe("NPP tech spending budget", () => {
     });
 
     expect(corpUpdates).toHaveLength(1);
-    expect(corpUpdates[0].update.$inc?.liquidCapital).toBe(-1_500_000);
+    expect(corpUpdates[0].update.$inc?.liquidCapital).toBe(-500_000);
   });
 
   it("does not spend the opening cash twice after capacity reinvestment", () => {
@@ -85,11 +85,11 @@ describe("NPP tech spending budget", () => {
     );
 
     const cashAfterCapacity = (corp.liquidCapital ?? 0) + decision.liquidCapitalDelta;
-    const openingCashPick = pickBestNppTechNode(corp, 2020, 10_000_000);
+    const openingCashPick = pickBestNppTechNode(corp, 2020, 30_000_000);
     const techPick = pickBestNppTechNode(
       { ...corp, liquidCapital: cashAfterCapacity },
       2020,
-      10_000_000,
+      30_000_000,
       { cashReserve: decision.cashFloorLocal }
     );
 

@@ -211,6 +211,11 @@ export interface CorporationLookups {
    */
   marginLevelTrimPp?: number;
   /**
+   * Management overhead (positive pp) per corporation id, from its total plant
+   * count and gameConfig.managementOverheadPpPerDoubling. Absent = none.
+   */
+  managementOverheadPpByCorpId?: Map<string, number>;
+  /**
    * World price ratios overlaid with each country's reachable ratios, then
    * capped at the world ratio per commodity (`min(world, reachable)` via
    * `capInputPriceRatioAtWorld`). Cheap local inputs still win; expensive

@@ -75,6 +75,7 @@ import {
   getDebtToGdpMarginModifier,
   getDeficitToGdpMarginModifier,
   SECTOR_MARGIN_LEVEL_TRIM_PP,
+  managementOverheadPp,
 } from "@/lib/constants/corporations";
 import { INVESTOR_CONFIDENCE_BASELINE } from "@/lib/nationalization/constants";
 import { NATIONAL_SCOPE, NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
@@ -1055,6 +1056,24 @@ export async function buildCorporationLookups(
     sectorsByCorp.set(key, list);
   }
 
+  // Management overhead: a margin charge on every sector of a corporation that
+  // grows with its total whole-plant count (snowball brake). Off unless the
+  // gameConfig knob is set.
+  const overheadCfg = await db
+    .collection<{ _id: string; managementOverheadPpPerDoubling?: number }>("gameConfig")
+    .findOne({ _id: "default" }, { projection: { managementOverheadPpPerDoubling: 1 } });
+  const overheadPpPerDoubling = overheadCfg?.managementOverheadPpPerDoubling ?? 0;
+  const managementOverheadPpByCorpId = new Map<string, number>();
+  if (overheadPpPerDoubling > 0) {
+    for (const [corpId, sectors] of sectorsByCorp) {
+      let plants = 0;
+      for (const s of sectors)
+        plants += Number.isFinite(s.plantCount) ? (s.plantCount as number) : 0;
+      const pp = managementOverheadPp(plants, overheadPpPerDoubling);
+      if (pp > 0) managementOverheadPpByCorpId.set(corpId, pp);
+    }
+  }
+
   // Per-sector market share (₳-normalized) drives the dominance growth-cost
   // multiplier in calculateDailyGrowthCost. Built once per turn so every sector
   // pays the same dominance penalty the player-facing routes display.
@@ -1609,6 +1628,7 @@ export async function buildCorporationLookups(
     priceRatioByCommodity,
     latentDemandFactorByCommodity,
     marginLevelTrimPp: SECTOR_MARGIN_LEVEL_TRIM_PP,
+    managementOverheadPpByCorpId,
     reachablePriceRatioByCountry,
     reachableInputPriceRatiosByCountry,
     landedPremiumByState,
