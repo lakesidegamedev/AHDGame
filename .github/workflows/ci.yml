@@ -371,10 +371,18 @@ jobs:
         run: |
           echo "::notice::runner image: ${ImageOS:-unknown} ${ImageVersion:-unknown}"
           echo "::notice::$(docker version --format 'docker server {{.Server.Version}}' 2>&1)"
-          # Google's Docker Hub mirror: same mongo:8.0 digest, no anonymous pull limit.
-          docker pull mirror.gcr.io/library/mongo:8.0
-          echo "::notice::$(docker image inspect --format 'mongo image {{index .RepoDigests 0}} created {{.Created}}' mirror.gcr.io/library/mongo:8.0 2>&1)"
-          docker run --detach --name federation-mongo --publish 27991:27017 mirror.gcr.io/library/mongo:8.0 --replSet federationQualification --bind_ip_all
+          # Google's Docker Hub mirror: same digests as Docker Hub, no anonymous pull limit.
+          # MongoDB 8.0 refuses to start on Linux 6.19+ (SERVER-121912), and the
+          # hosted runners are rolling onto that kernel, so those runners use 7.0.
+          mongo_image=mirror.gcr.io/library/mongo:8.0
+          kernel="$(uname -r | cut -d- -f1)"
+          if [ "$(printf "%s\n" 6.19 "$kernel" | sort -V | head -n1)" = 6.19 ]; then
+            mongo_image=mirror.gcr.io/library/mongo:7.0
+          fi
+          echo "::notice::kernel $kernel, using $mongo_image"
+          docker pull "$mongo_image"
+          echo "::notice::$(docker image inspect --format 'mongo image {{index .RepoDigests 0}} created {{.Created}}' "$mongo_image" 2>&1)"
+          docker run --detach --name federation-mongo --publish 27991:27017 "$mongo_image" --replSet federationQualification --bind_ip_all
           mongo_dump() {
             docker ps --all --filter name=federation-mongo || true
             echo "::error::$(docker inspect --format 'exit {{.State.ExitCode}} oom {{.State.OOMKilled}} error {{.State.Error}}' federation-mongo 2>&1)"
