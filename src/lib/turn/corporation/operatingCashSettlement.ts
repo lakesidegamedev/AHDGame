@@ -864,6 +864,9 @@ async function settleCorporateOperatingCashBatched(
       turn,
       currency: sourceCurrency,
       legs,
+      // Each member corporation and Treasury appears once, so the debits (a
+      // funded turn's usual negative nets) deliver in fixed round trips too.
+      batchIndependentDebits: true,
       projections: [],
       event: {
         kind: "monetary.executed",
