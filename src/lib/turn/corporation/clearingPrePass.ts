@@ -881,6 +881,7 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
       : undefined;
     market.clearingBySectorId = computeClearingFactors({
       groupSupply,
+      controlRootByCorpId: lookups.dumpingGuardRootByCorpId ?? undefined,
       sectors: clearingInputs,
       internalSupply,
       mediaOwnership,

@@ -1708,6 +1708,7 @@ export async function buildCorporationLookups(
     latentDemandFactorByCommodity,
     marginLevelTrimPp: SECTOR_MARGIN_LEVEL_TRIM_PP,
     managementOverheadPpByCorpId,
+    dumpingGuardRootByCorpId: groupSizeCostsStage >= 3 ? controlRootByCorpId : null,
     strengthUpkeepStage,
     reachablePriceRatioByCountry,
     reachableInputPriceRatiosByCountry,
