@@ -15,7 +15,7 @@
  * margin from it, and the producer profit per corporation the settlement paid.
  */
 import { ObjectId, type Db } from "mongodb";
-import { applyMoneyMove } from "@/lib/banking/moneyMove";
+import { applyMoneyMove, resumeMoneyMove } from "@/lib/banking/moneyMove";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 import { resolveSectorHostCurrencyCode } from "@/lib/currency/corporationCapital";
@@ -101,6 +101,12 @@ export async function runFundedProducerTurn(
     carry: liveCarry(lookups, worldEpoch, turn),
     publicAccountId: publicWallet,
   });
+  // A live turn must settle every plant: a skipped one would run on legacy
+  // revenue beside the funded market. Fail the turn instead.
+  if (demand.skipped > 0)
+    throw new Error(
+      `Funded producer turn could not prepare ${demand.skipped} sector(s): ${Object.keys(demand.skipReasons).slice(0, 5).join("; ")}`
+    );
   const publicScopes = demand.funding.map((f) => publicScope(f.countryId));
   const walletScopes = [...demand.walletScopes, ...publicScopes];
   const scopeById = new Map(walletScopes.map((s) => [producerWalletId(worldEpoch, s), s]));
@@ -108,7 +114,9 @@ export async function runFundedProducerTurn(
 
   const apply = async (moves: ReturnType<typeof publicFundingMoves>) => {
     for (const move of moves) {
-      const result = await applyMoneyMove(db, move);
+      let result = await applyMoneyMove(db, move);
+      // An existing key may be a move a crash left half done: finish it.
+      if (result.status === "replayed") result = await resumeMoneyMove(db, move.key);
       if (result.status !== "applied" && result.status !== "replayed")
         throw new Error(`Producer money move ${move.key} ${result.status}`);
     }
@@ -247,17 +255,6 @@ export async function runFundedProducerTurn(
       localPerAnchor: rateOf(scope?.currency),
     };
   };
-  const treasuryParty = (countryId: string): CloseParty => {
-    const currency = countryCurrency.get(countryId) ?? "USD";
-    return {
-      collection: "federalBudget",
-      filter: { countryId },
-      path: "treasuryBalance",
-      id: `treasury:${countryId}`,
-      currencyCode: currency,
-      localPerAnchor: rateOf(currency),
-    };
-  };
 
   const transfers = planFundedClose({
     settledProfitByCorp,
@@ -265,13 +262,8 @@ export async function runFundedProducerTurn(
     ownerKindByCompany: demand.ownerKindByCompany,
     householdFor: (corpId) => demand.firstWalletByCorp.get(corpId)?.wallet ?? null,
     householdForPayee: demand.householdForPayee,
-    stateTreasuryFor: (corpId) => {
-      const corp = corpById.get(corpId);
-      return corp ? String(corp.countryOwnerId ?? corp.countryId) : null;
-    },
     corpParty,
     walletParty,
-    treasuryParty,
   });
   await apply(closeTransferMoves(worldEpoch, turn, transfers));
   await apply(
@@ -297,14 +289,34 @@ export async function runFundedProducerTurn(
     )
   );
 
+  // The close moved company cash after settlement published it in memory.
+  // Later steps of this turn (NPP decisions) price from these objects, so
+  // re-read the real balances once rather than let them spend paid-out cash.
+  const paidOut = [
+    ...new Set(transfers.filter((t) => t.from.collection === "corporations").map((t) => t.from.id)),
+  ];
+  if (paidOut.length > 0) {
+    const fresh = await db
+      .collection<{ _id: ObjectId; liquidCapital?: number }>("corporations")
+      .find(
+        { _id: { $in: paidOut.map((id) => new ObjectId(id)) } },
+        { projection: { liquidCapital: 1 } }
+      )
+      .toArray();
+    for (const row of fresh) {
+      const corp = corpById.get(row._id.toHexString());
+      if (corp && typeof row.liquidCapital === "number") corp.liquidCapital = row.liquidCapital;
+    }
+  }
+
   return { receiptsBySectorId, settledProfitByCorp };
 }
 
 /**
  * End-of-turn transfers from settled profit and closing balances: AI profit
- * (60%, capped by cash) to the households where the company employs, state
- * company remittances to the owning treasury, and each operating payee's
- * receipts to the households of its state. Player companies keep their profit.
+ * (60%, capped by cash) to the households where the company employs, and each
+ * operating payee's receipts to the households of its state. Player companies
+ * keep their profit; state companies remit through the existing SOE sweep.
  */
 export function planFundedClose(input: {
   settledProfitByCorp: ReadonlyMap<string, number>;
@@ -313,24 +325,16 @@ export function planFundedClose(input: {
   ownerKindByCompany: ReadonlyMap<string, ProfitOwnerKind>;
   householdFor: (corpId: string) => string | null;
   householdForPayee: ReadonlyMap<string, string>;
-  stateTreasuryFor: (corpId: string) => string | null;
   corpParty: (id: string) => CloseParty;
   walletParty: (id: string) => CloseParty;
-  treasuryParty: (countryId: string) => CloseParty;
 }): CloseTransfer[] {
   const transfers: CloseTransfer[] = [];
   const rows = [...input.settledProfitByCorp].flatMap(([accountId, profit]) => {
     const kind = input.ownerKindByCompany.get(accountId);
     if (!kind) return [];
-    const recipient =
-      kind === "ai"
-        ? input.householdFor(accountId)
-        : kind === "state"
-          ? (() => {
-              const country = input.stateTreasuryFor(accountId);
-              return country ? `treasury:${country}` : null;
-            })()
-          : null;
+    // State companies keep their profit here: the existing SOE sweep remits
+    // to the treasury later in the turn, and remitting twice would drain them.
+    const recipient = kind === "ai" ? input.householdFor(accountId) : null;
     return [
       {
         accountId,
@@ -346,10 +350,7 @@ export function planFundedClose(input: {
       reason: t.reason,
       amountAnchor: t.amount,
       from: input.corpParty(t.fromAccountId),
-      to:
-        t.reason === "ai_dividend"
-          ? input.walletParty(t.toAccountId)
-          : input.treasuryParty(t.toAccountId.slice("treasury:".length)),
+      to: input.walletParty(t.toAccountId),
     });
   for (const [payee, household] of input.householdForPayee) {
     const cash = input.closingCash.get(payee) ?? 0;

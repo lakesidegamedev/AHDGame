@@ -1686,7 +1686,8 @@ export function processSectors(
         sectorId,
         receipt,
         result,
-        fundedDaily.get(sectorId)!
+        fundedDaily.get(sectorId)!,
+        TURNS_PER_DAY
       );
       sectorOps.splice(0, sectorOps.length, ...(kept as typeof sectorOps));
     }

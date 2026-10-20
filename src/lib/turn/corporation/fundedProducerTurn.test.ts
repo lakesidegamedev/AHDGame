@@ -134,12 +134,8 @@ describe("funded producer turn close", () => {
       ownerKindByCompany: new Map([[corpId, "ai"]]),
       householdFor: () => household,
       householdForPayee: new Map([[operating, household]]),
-      stateTreasuryFor: () => null,
       corpParty: (id) => party("corporations", id, "liquidCapital"),
       walletParty: (id) => party(PRODUCER_ACCOUNTS, id, "cash"),
-      treasuryParty: () => {
-        throw new Error("no state companies here");
-      },
     });
     expect(transfers.map((t) => t.reason).sort()).toEqual(["ai_dividend", "operating_income"]);
     expect(transfers.find((t) => t.reason === "ai_dividend")!.amountAnchor).toBeCloseTo(

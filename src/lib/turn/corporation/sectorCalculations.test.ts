@@ -3961,7 +3961,7 @@ describe("funded producer turn", () => {
       expect(set).not.toHaveProperty(f);
     expect(ops.some((o) => o.updateOne.update.$pull || o.updateOne.update.$push)).toBe(false);
     expect(set.realizedRevenue).toBeCloseTo(100 * TURNS_PER_DAY);
-    expect(set.soldUnits).toBe(4);
+    expect(set.soldUnits).toBe(4 * TURNS_PER_DAY);
     expect(result.totalRevenueGenerated).toBeCloseTo(100);
   });
 

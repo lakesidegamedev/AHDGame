@@ -83,7 +83,9 @@ export function fundedSectorOps(
   sectorId: string,
   receipt: FundedReceipt,
   result: LegacySectorResultLike,
-  daily: (anchorPerTurn: number) => number
+  daily: (anchorPerTurn: number) => number,
+  /** Turns per day: receipt units are per turn, the sector fields are daily. */
+  turnsPerDay: number
 ): Op[] {
   const owned = new Set(SETTLEMENT_OWNED_SECTOR_FIELDS);
   const out: Op[] = [];
@@ -101,8 +103,8 @@ export function fundedSectorOps(
     if (!stamped && update.$set) {
       Object.assign(set, {
         realizedRevenue: daily(result.hourlyRevenue),
-        producedUnits: Math.round(receipt.producedUnits * 100) / 100,
-        soldUnits: Math.round(receipt.soldUnits * 100) / 100,
+        producedUnits: Math.round(receipt.producedUnits * turnsPerDay * 100) / 100,
+        soldUnits: Math.round(receipt.soldUnits * turnsPerDay * 100) / 100,
         effectiveProfitMargin: Math.round(result.effectiveMargin * 100) / 100,
         plantsPnl: {
           revenue: daily(result.hourlyRevenue),

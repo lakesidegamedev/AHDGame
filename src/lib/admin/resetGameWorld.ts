@@ -726,6 +726,8 @@ export async function resetGameWorld(
     resetVersionSeeds: "",
   };
   gameStateUnset.demographicFlowAttempt = "";
+  // The outgoing world's producer opening marker; a new world needs its own.
+  gameStateUnset.producerOpening = "";
   // The outgoing world's last market tick; the fresh world has none yet.
   gameStateUnset.lastMarketTickAt = "";
   gameStateUpdate.preIterationTurns = 0;

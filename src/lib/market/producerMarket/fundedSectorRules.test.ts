@@ -55,7 +55,7 @@ describe("funded sector ops", () => {
 
   it("drops settlement-owned fields and build side ops, stamps the receipt, leaves other sectors alone", () => {
     const result = fundedSectorResult(legacy, receipt);
-    const out = fundedSectorOps(ops, "s1", receipt, result, (a) => a * 24);
+    const out = fundedSectorOps(ops, "s1", receipt, result, (a) => a * 24, 24);
     expect(out).toHaveLength(3);
     const main = out[0].updateOne.update as { $set: Record<string, unknown> };
     for (const f of SETTLEMENT_OWNED_SECTOR_FIELDS) expect(main.$set).not.toHaveProperty(f);
@@ -65,8 +65,8 @@ describe("funded sector ops", () => {
       revenue: 9,
       wageLevel: 1.1,
       realizedRevenue: 2400,
-      producedUnits: 12.35,
-      soldUnits: 10,
+      producedUnits: 296.28,
+      soldUnits: 240,
       effectiveProfitMargin: 20,
     });
     expect(main.$set.plantsPnl).toMatchObject({ revenue: 2400, profit: 480, totalCost: 1920 });
