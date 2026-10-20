@@ -373,3 +373,17 @@ export {
   shadowCountryBooks,
   shadowOpeningSector,
 } from "./producerTurnDemand";
+
+/**
+ * The shadow costs up to about two minutes on the live world. Run it only when
+ * that much of the phase budget is left, with a safety margin.
+ */
+export const SHADOW_RESERVED_MS = 120_000;
+export function shadowFitsPhaseBudget(elapsedMs: number, phaseTimeoutMs: number): boolean {
+  const ok = elapsedMs + SHADOW_RESERVED_MS <= phaseTimeoutMs;
+  if (!ok)
+    console.warn(
+      `[producerMarketShadow] skipped: corporation phase at ${Math.round(elapsedMs / 1000)}s of ${Math.round(phaseTimeoutMs / 1000)}s`
+    );
+  return ok;
+}
