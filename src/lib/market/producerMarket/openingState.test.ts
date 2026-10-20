@@ -9,7 +9,12 @@ describe("new producer entrants", () => {
     expect(newEntrantProducerBooks({ inventoryUnits: { food: 0 } }, "sector", "w", 9)).toEqual({
       producerCapacity: { worldEpoch: "w", turn: 9 },
       producerInventory: { worldEpoch: "w", turn: 9, inputStock: [], outputStock: [] },
+      capacityBookAnchor: 0,
+      buildQueue: [],
     });
+    expect(
+      newEntrantProducerBooks({ capacityBookAnchor: 50, buildQueue: [] }, "sector", "w", 9)
+    ).not.toHaveProperty("capacityBookAnchor");
   });
 
   it("leaves records with books or unconverted legacy value alone", () => {

@@ -239,6 +239,28 @@ export async function runFundedProducerTurn(
   for (const sectorId of idleSectorIds)
     if (!receiptsBySectorId.has(sectorId))
       receiptsBySectorId.set(sectorId, { revenue: 0, profit: 0, producedUnits: 0, soldUnits: 0 });
+  // An idle sector settled this turn at zero: advance its generation with the
+  // rest, or the next turn would reject it as unreconciled once it can produce.
+  if (idleSectorIds.length > 0)
+    await db.collection<CorporateSector>("corporateSectors").bulkWrite(
+      idleSectorIds.map((id) => ({
+        updateOne: {
+          filter: {
+            _id: new ObjectId(id),
+            "producerCapacity.worldEpoch": worldEpoch,
+            "producerCapacity.turn": turn - 1,
+          },
+          update: {
+            $set: {
+              producerCapacity: { worldEpoch, turn },
+              "producerInventory.worldEpoch": worldEpoch,
+              "producerInventory.turn": turn,
+            },
+          },
+        },
+      })),
+      { ordered: false }
+    );
   const settledProfitByCorp = new Map(
     [...settled.operatingByCorporation].map(([id, o]) => [id, o.profit])
   );

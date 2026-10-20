@@ -40,6 +40,8 @@ export function newEntrantProducerBooks(
     producerCapacity?: unknown;
     producerInventory?: unknown;
     producerPayables?: unknown;
+    capacityBookAnchor?: number | null;
+    buildQueue?: unknown[] | null;
     inventoryUnits?: Record<string, unknown> | null;
     operatingCashArrearsByCurrency?: Record<string, unknown> | null;
   },
@@ -47,7 +49,10 @@ export function newEntrantProducerBooks(
   worldEpoch: string,
   lastSettledTurn: number
 ):
-  | ReturnType<typeof emptyProducerSectorOpening>
+  | (ReturnType<typeof emptyProducerSectorOpening> & {
+      capacityBookAnchor?: number;
+      buildQueue?: [];
+    })
   | { producerPayables: ProducerPayablesState }
   | null {
   const positive = (m: Record<string, unknown> | null | undefined) =>
@@ -58,5 +63,11 @@ export function newEntrantProducerBooks(
   }
   if ((record.producerCapacity && record.producerInventory) || positive(record.inventoryUnits))
     return null;
-  return emptyProducerSectorOpening(worldEpoch, lastSettledTurn);
+  // A founding records capacity but may carry no paid basis or queue yet; an
+  // empty basis lets it produce instead of idling forever.
+  return {
+    ...emptyProducerSectorOpening(worldEpoch, lastSettledTurn),
+    ...(record.capacityBookAnchor == null ? { capacityBookAnchor: 0 } : {}),
+    ...(Array.isArray(record.buildQueue) ? {} : { buildQueue: [] as [] }),
+  };
 }
