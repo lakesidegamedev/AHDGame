@@ -252,7 +252,7 @@ describe("StateEconomy", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Plan split" }));
     expect(screen.getByText("Confirm sector split")).toBeTruthy();
-    expect(screen.getByText(/not selectable/i)).toBeTruthy();
+    expect(screen.getByText(/sets both the share and the success chance/i)).toBeTruthy();
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(false);
 
     fireEvent.click(screen.getByRole("button", { name: "Confirm sector split" }));
