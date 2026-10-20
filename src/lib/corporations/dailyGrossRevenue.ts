@@ -4,7 +4,14 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { sectorEconomicScale } from "@/lib/corporations/sectorProfitBasis";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
-import { techNodeCashFloorAnchor } from "@/lib/constants/techTree/costs";
+import {
+  techNodeCashFloorAnchor,
+  type TechPlantBasis,
+  type TechPlantBasisSlice,
+} from "@/lib/constants/techTree/costs";
+import { isPrimaryTechSector } from "@/lib/constants/techTree/selectors";
+import { TURNS_PER_DAY } from "@/lib/constants/corporations";
+import type { OperatingSectorType } from "@/lib/constants/corporations";
 import {
   anchorToCorpLiquidCapital,
   corpCapitalToAnchor,
@@ -39,6 +46,66 @@ export interface CorpDailyGrossRevenuePricing {
   capacityFloorApplied: boolean;
   /** Era-scaled minimum tech node cash price in the corp's currency (#1506). */
   techCashFloorLocal: number;
+  /** Per-turn plant P&L tech nodes are valued against, in the corp's currency. */
+  techPlantBasis: TechPlantBasis;
+}
+
+type TechBasisCorp = Pick<
+  Corporation,
+  "countryId" | "liquidCurrencyCode" | "type" | "industryModel" | "mediaDiscriminator"
+>;
+
+/**
+ * Per-turn plant revenue, input bill and labour bill from each sector's stored
+ * `plantsPnl` (daily, host currency), converted into the corp's currency and
+ * split into the corp's primary sector type and all sectors. Sectors without a
+ * stored P&L contribute nothing, so a corp outside plants prices every node
+ * off its revenue fraction.
+ */
+export function corpTechPlantBasisFromSectors(
+  sectors: readonly CorporateSector[],
+  corp: TechBasisCorp,
+  options: { fxByCurrency: ReadonlyMap<CurrencyCode, number> }
+): TechPlantBasis {
+  const zero = (): TechPlantBasisSlice => ({ revenue: 0, inputs: 0, labour: 0 });
+  const primary = zero();
+  const all = zero();
+  const corpRate = fxRateForCorpFromMap(corp, options.fxByCurrency);
+  for (const sector of sectors) {
+    const pnl = sector.plantsPnl;
+    if (!pnl) continue;
+    const toCorpPerTurn = (daily: number | undefined) =>
+      Number.isFinite(daily)
+        ? anchorToCorpLiquidCapital(
+            corpCapitalToAnchor(
+              (daily as number) / TURNS_PER_DAY,
+              resolveSectorHostCurrencyCode(sector, corp),
+              fxRateForSectorHostFromMap(sector, corp, options.fxByCurrency)
+            ),
+            corp,
+            corpRate
+          )
+        : 0;
+    const line = {
+      revenue: toCorpPerTurn(pnl.revenue),
+      inputs: toCorpPerTurn(pnl.inputs),
+      labour: toCorpPerTurn(pnl.labour),
+    };
+    const slices = isPrimaryTechSector(
+      corp,
+      sector.sectorType as OperatingSectorType,
+      sector.industryModel,
+      sector.mediaDiscriminator
+    )
+      ? [primary, all]
+      : [all];
+    for (const slice of slices) {
+      slice.revenue += line.revenue;
+      slice.inputs += line.inputs;
+      slice.labour += line.labour;
+    }
+  }
+  return { primary, all };
 }
 
 /**
@@ -92,7 +159,7 @@ export function corpDailyGrossRevenueLocalFromSectors(
 /** The pricing basis plus whether owned plant capacity supplied its floor. */
 export async function corpDailyGrossRevenuePricingLocal(
   db: Db,
-  corp: Pick<Corporation, "_id" | "countryId" | "liquidCurrencyCode">
+  corp: Pick<Corporation, "_id"> & TechBasisCorp
 ): Promise<CorpDailyGrossRevenuePricing> {
   const [sectors, plantsEnabled, eraUnitScale, fxByCurrency] = await Promise.all([
     db
@@ -106,6 +173,9 @@ export async function corpDailyGrossRevenuePricingLocal(
             strategyId: 1,
             sectorType: 1,
             countryId: 1,
+            industryModel: 1,
+            mediaDiscriminator: 1,
+            plantsPnl: 1,
           },
         }
       )
@@ -123,12 +193,13 @@ export async function corpDailyGrossRevenuePricingLocal(
     }),
     capacityFloorApplied: plantsEnabled,
     techCashFloorLocal: corpTechCashFloorLocal(corp, { eraUnitScale, fxByCurrency }),
+    techPlantBasis: corpTechPlantBasisFromSectors(sectors, corp, { fxByCurrency }),
   };
 }
 
 export async function corpDailyGrossRevenueLocal(
   db: Db,
-  corp: Pick<Corporation, "_id" | "countryId" | "liquidCurrencyCode">
+  corp: Pick<Corporation, "_id"> & TechBasisCorp
 ): Promise<number> {
   return (await corpDailyGrossRevenuePricingLocal(db, corp)).dailyGrossRevenueLocal;
 }

@@ -40,6 +40,8 @@ import {
   getSectorTechEffects,
   SLOT_PARENT,
   techNodeCashCost,
+  techNodeValuePerTurn,
+  type TechPlantBasis,
   tierImageUrl,
   describeTechEffect,
   techEffectCategory,
@@ -127,6 +129,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     let dailyGrossRevenue: number | null = null;
     let capacityFloorApplied = false;
     let techCashFloorLocal = 0;
+    let techPlantBasis: TechPlantBasis | null = null;
     if (!redact) {
       // Ticket #1118: one helper for both the quoted price and the charged
       // price, and it converts each sector out of its host currency before
@@ -135,6 +138,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       dailyGrossRevenue = pricing.dailyGrossRevenueLocal;
       capacityFloorApplied = pricing.capacityFloorApplied;
       techCashFloorLocal = pricing.techCashFloorLocal;
+      techPlantBasis = pricing.techPlantBasis;
     }
     const rdScore = redact ? null : Math.floor(corporation.rdScore ?? 0);
     const liquidCapital = redact ? null : Math.floor(corporation.liquidCapital ?? 0);
@@ -148,7 +152,17 @@ export async function GET(_request: Request, { params }: RouteParams) {
       const isPastDecade = passedDecades.has(decadeId);
       return getDecadeLaneNodes(operatingSectorType, decadeId, lane).map((node) => {
         const owned = unlocked.has(node.id);
-        const cashCost = techNodeCashCost(node, dailyGrossRevenue ?? 0, techCashFloorLocal);
+        const cashCost = techNodeCashCost(
+          node,
+          dailyGrossRevenue ?? 0,
+          techCashFloorLocal,
+          techPlantBasis
+        );
+        // What the node is worth per turn to this corp, and how long its cash
+        // price takes to earn back. Null when redacted or when the node has no
+        // running plant value.
+        const valuePerTurn = techPlantBasis ? techNodeValuePerTurn(node, techPlantBasis) : 0;
+        const paybackTurns = valuePerTurn > 0 ? Math.ceil(cashCost / valuePerTurn) : null;
         // Past decades have both lanes auto-granted — no lane commitment applies.
         const laneLocked = isPastDecade ? false : !!committed && committed !== lane;
         // A completed decade grants only its baseline, so its specialization
@@ -171,6 +185,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
           exclusiveGroup: node.exclusiveGroup ?? null,
           cost: node.cost,
           cashCost: redact ? null : cashCost,
+          valuePerTurn: redact || valuePerTurn <= 0 ? null : Math.round(valuePerTurn),
+          paybackTurns: redact ? null : paybackTurns,
           effects: node.effects.map((e) => ({
             category: techEffectCategory(e.kind),
             label: describeTechEffect(e),

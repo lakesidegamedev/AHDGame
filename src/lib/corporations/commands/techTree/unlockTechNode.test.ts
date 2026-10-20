@@ -77,7 +77,7 @@ describe("unlockTechNode (v2 dual cost + lane)", () => {
 
   it("spends rdScore + cash and commits the lane on first unlock", async () => {
     const corp = makeCorp({ liquidCapital: 100_000_000 });
-    const { db, updateOne } = mockDb({ revenues: [60_000_000] }); // daily gross 60M, 15% => 9M
+    const { db, updateOne } = mockDb({ revenues: [180_000_000] }); // daily gross 180M, 5% => 9M
     const nodeId = corpNodeId("2019", 1); // cost 17
 
     const res = await unlockTechNode(db, corp, nodeId, YEAR, TURN);
