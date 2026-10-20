@@ -73,6 +73,7 @@ export interface MarginStackInput {
   >;
   sector: Pick<
     CorporateSector,
+    | "_id"
     | "stateId"
     | "sectorType"
     | "mediaDiscriminator"
