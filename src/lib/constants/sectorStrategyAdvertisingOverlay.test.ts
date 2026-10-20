@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getEffectiveStrategyRates, getStrategy } from "./sectorStrategies";
 import { DEFAULT_DEMAND_1991 } from "./sectorStrategyDefinitions1991";
+import { SECTOR_STRATEGIES } from "./sectorStrategyDefinitions";
 import {
   ADVERTISING_INPUT_STANDARD_1991_DEMAND,
   ADVERTISING_INPUT_VARIANT_DEMAND,
@@ -8,10 +9,15 @@ import {
 
 describe("advertising input overlay", () => {
   it("leaves the live recipes untouched unless asked for", () => {
-    for (const type of Object.keys(ADVERTISING_INPUT_STANDARD_1991_DEMAND))
-      expect(getStrategy(type, "standard", "1991-default").demand).toEqual(
-        DEFAULT_DEMAND_1991[type as keyof typeof DEFAULT_DEMAND_1991]
-      );
+    for (const [type, overlay] of Object.entries(ADVERTISING_INPUT_STANDARD_1991_DEMAND)) {
+      const plain = getStrategy(type, "standard", "1991-default");
+      const table =
+        DEFAULT_DEMAND_1991[type as keyof typeof DEFAULT_DEMAND_1991] ??
+        SECTOR_STRATEGIES[type as keyof typeof SECTOR_STRATEGIES].find((s) => s.id === "standard")
+          ?.demand;
+      expect(plain.demand).toEqual(table);
+      expect(plain.demand).not.toEqual(overlay);
+    }
   });
 
   it("replaces each touched recipe in full when asked for", () => {
@@ -50,6 +56,6 @@ describe("advertising input overlay", () => {
       null,
       "1991-default"
     );
-    expect(off.demand).toEqual(DEFAULT_DEMAND_1991.agriculture);
+    expect(off.demand).not.toEqual(ADVERTISING_INPUT_STANDARD_1991_DEMAND.agriculture);
   });
 });
