@@ -33,6 +33,7 @@ import {
   investmentFundingMoves,
   producerMoveLedgerLegs,
   investmentReturnMoves,
+  batchProducerMoves,
   publicFundingMoves,
   publicReturnMoves,
   type CloseParty,
@@ -178,37 +179,45 @@ export async function runFundedProducerTurn(
   };
 
   await apply(
-    publicFundingMoves(
+    batchProducerMoves(
       worldEpoch,
       turn,
-      demand.funding.map((f) => {
-        const currency = countryCurrency.get(f.countryId)!;
-        const rate = rateOf(currency);
-        return {
-          countryId: f.countryId,
-          walletId: publicWallet(f.countryId),
-          amountLocal: f.fundingLocal * rate,
-          currencyCode: currency,
-          localPerAnchor: rate,
-        };
-      })
+      publicFundingMoves(
+        worldEpoch,
+        turn,
+        demand.funding.map((f) => {
+          const currency = countryCurrency.get(f.countryId)!;
+          const rate = rateOf(currency);
+          return {
+            countryId: f.countryId,
+            walletId: publicWallet(f.countryId),
+            amountLocal: f.fundingLocal * rate,
+            currencyCode: currency,
+            localPerAnchor: rate,
+          };
+        })
+      )
     )
   );
   await apply(
-    investmentFundingMoves(
+    batchProducerMoves(
       worldEpoch,
       turn,
-      demand.investmentFunding.map((f) => {
-        const currency = countryCurrency.get(f.countryId)!;
-        const rate = rateOf(currency);
-        return {
-          countryId: f.countryId,
-          walletId: investmentWallet(f.countryId),
-          amountLocal: f.fundingLocal * rate,
-          currencyCode: currency,
-          localPerAnchor: rate,
-        };
-      })
+      investmentFundingMoves(
+        worldEpoch,
+        turn,
+        demand.investmentFunding.map((f) => {
+          const currency = countryCurrency.get(f.countryId)!;
+          const rate = rateOf(currency);
+          return {
+            countryId: f.countryId,
+            walletId: investmentWallet(f.countryId),
+            amountLocal: f.fundingLocal * rate,
+            currencyCode: currency,
+            localPerAnchor: rate,
+          };
+        })
+      )
     )
   );
 
@@ -509,17 +518,27 @@ export async function runFundedProducerTurn(
     ];
   };
   await apply(
-    publicReturnMoves(
+    batchProducerMoves(
       worldEpoch,
       turn,
-      demand.funding.flatMap((f) => returnRow(f.countryId, publicWallet(f.countryId)))
+      publicReturnMoves(
+        worldEpoch,
+        turn,
+        demand.funding.flatMap((f) => returnRow(f.countryId, publicWallet(f.countryId)))
+      )
     )
   );
   await apply(
-    investmentReturnMoves(
+    batchProducerMoves(
       worldEpoch,
       turn,
-      demand.investmentFunding.flatMap((f) => returnRow(f.countryId, investmentWallet(f.countryId)))
+      investmentReturnMoves(
+        worldEpoch,
+        turn,
+        demand.investmentFunding.flatMap((f) =>
+          returnRow(f.countryId, investmentWallet(f.countryId))
+        )
+      )
     )
   );
 
