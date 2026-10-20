@@ -84,9 +84,9 @@ describe("unlockTechNode (v2 dual cost + lane)", () => {
 
     expect(res).toMatchObject({ ok: true, status: 200, nodeId, cashSpent: 9_000_000 });
     const [filter, update] = updateOne.mock.calls[0];
-    expect(filter.rdScore).toEqual({ $gte: 48 }); // 2019 decade cost
+    expect(filter.rdScore).toEqual({ $gte: 38 }); // 2019 decade cost
     expect(filter.liquidCapital).toEqual({ $gte: 9_000_000 });
-    expect(update.$inc).toMatchObject({ rdScore: -48, liquidCapital: -9_000_000 });
+    expect(update.$inc).toMatchObject({ rdScore: -38, liquidCapital: -9_000_000 });
     expect(update.$push).toEqual({ unlockedTechNodeIds: nodeId });
     expect(update.$set["techDecadeLane.2019"]).toBe("generic");
   });
