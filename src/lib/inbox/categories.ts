@@ -136,6 +136,8 @@ export const CATEGORY_OF: Record<NotificationType, InboxCategory> = {
   merger_review_opened: "treasury",
   merger_review_decided: "treasury",
   merger_remedy_overdue: "treasury",
+  antitrust_divestiture_ordered: "treasury",
+  antitrust_divestiture_executed: "treasury",
   transfer_pricing_assessed: "treasury",
   bank_supervision_breach: "treasury",
   bank_supervision_cleared: "treasury",

@@ -2,6 +2,7 @@
  * Public share purchases exchange funding for available shares.
  * buyPublicShares uses source-authority spread settings for corporate conversion.
  */
+import { assertForeignControlAllowed, wouldGainControl } from "@/lib/mechanicalLaws/guards";
 import { loadForexSpreadStrengths } from "@/lib/currency/euro/quotes";
 import { loadEuroMonetaryUnion } from "@/lib/currency/euro/service";
 import { NextResponse } from "next/server";
@@ -166,6 +167,10 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
 
       if (await corpPurchaseWouldCycle(db, buyingCorp._id, corporation._id)) {
         return errorResponse(400, OWNERSHIP_CYCLE_ERROR);
+      }
+      if (wouldGainControl(corporation, buyingCorp._id, shares)) {
+        const foreignRejection = await assertForeignControlAllowed(db, buyingCorp, corporation);
+        if (foreignRejection) return errorResponse(foreignRejection.status, foreignRejection.error);
       }
 
       // sharePrice is stored in the target corp's liquidCurrencyCode (v0.2.6).

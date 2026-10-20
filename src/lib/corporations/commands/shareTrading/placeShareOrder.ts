@@ -2,6 +2,7 @@
  * Share orders reserve funding for purchases and expose shares for sale.
  * placeShareOrder prices corporate currency conversion using the source authority.
  */
+import { assertForeignControlAllowed, wouldGainControl } from "@/lib/mechanicalLaws/guards";
 import { loadForexSpreadStrengths } from "@/lib/currency/euro/quotes";
 import { loadEuroMonetaryUnion } from "@/lib/currency/euro/service";
 import { NextResponse } from "next/server";
@@ -253,6 +254,10 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
 
       if (type === "buy" && (await corpPurchaseWouldCycle(db, placerCorp._id, corporation._id))) {
         return errorResponse(400, OWNERSHIP_CYCLE_ERROR);
+      }
+      if (type === "buy" && wouldGainControl(corporation, placerCorp._id, shares)) {
+        const foreignRejection = await assertForeignControlAllowed(db, placerCorp, corporation);
+        if (foreignRejection) return errorResponse(foreignRejection.status, foreignRejection.error);
       }
 
       const placerFxRate = await getCorpFxRate(db, placerCorp);

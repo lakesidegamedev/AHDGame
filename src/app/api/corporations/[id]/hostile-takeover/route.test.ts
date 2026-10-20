@@ -2,6 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
+// Antitrust law guards are covered in mechanicalLaws; these tests are about the merge itself.
+vi.mock("@/lib/mechanicalLaws/guards", () => ({
+  assertForeignControlAllowed: vi.fn().mockResolvedValue(null),
+  assertSubsidiaryWithinCap: vi.fn().mockResolvedValue(null),
+  wouldGainControl: vi.fn().mockReturnValue(false),
+}));
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireCorporationActions", () => ({
   requireCorporationActionsEnabled: vi.fn(),

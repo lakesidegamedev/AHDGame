@@ -721,6 +721,18 @@ export interface Corporation {
   operatorPolicy?: CorporationOperatorPolicy;
   /** NPP CEO career and pay demands (only while ceoType is "npp"). */
   ceoPay?: CorporationCeoPay;
+  /**
+   * A Subsidiary Limits or Foreign Investment Act order against this company:
+   * its controlling group must give up control by `dueTurn`, or the excess
+   * stake is sold at book value into the equity market. Cleared when cured.
+   */
+  antitrustDivestiture?: {
+    reason: "subsidiaryCap" | "foreignBan" | "foreignShareCap";
+    countryId: string;
+    rootCorporationId: string;
+    sinceTurn: number;
+    dueTurn: number;
+  };
   /** Country owner for state-owned / nationalized corporations */
   countryOwnerId?: CountryId;
   /** Hide the corporation from stock-exchange style equity listings */

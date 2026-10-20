@@ -2,6 +2,7 @@
  * Share offers reserve purchase funding while awaiting acceptance.
  * submitShareOffer includes the source monetary authority spread in corporate escrow.
  */
+import { assertForeignControlAllowed, wouldGainControl } from "@/lib/mechanicalLaws/guards";
 import { loadForexSpreadStrengths } from "@/lib/currency/euro/quotes";
 import { loadEuroMonetaryUnion } from "@/lib/currency/euro/service";
 import { NextResponse } from "next/server";
@@ -198,6 +199,10 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
       // Cannot offer on a listing created by the same corporation
       if (listing.sellerCorporationId && placerCorp._id.equals(listing.sellerCorporationId)) {
         return errorResponse(400, "Cannot offer on your own corporation's listing");
+      }
+      if (listingCorp && wouldGainControl(listingCorp, placerCorp._id, shares)) {
+        const foreignRejection = await assertForeignControlAllowed(db, placerCorp, listingCorp);
+        if (foreignRejection) return errorResponse(foreignRejection.status, foreignRejection.error);
       }
       const placerCurrency = (resolveCorpLiquidCurrencyCode(placerCorp) ?? "USD") as CurrencyCode;
       const targetCurrency = (resolveCorpLiquidCurrencyCode(listingCorp) ?? "USD") as CurrencyCode;

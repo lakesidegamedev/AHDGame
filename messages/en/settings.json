@@ -669,6 +669,8 @@
         "merger_review_opened": "Merger review opened",
         "merger_review_decided": "Merger review decided",
         "merger_remedy_overdue": "Merger remedy overdue",
+        "antitrust_divestiture_ordered": "Order to give up a subsidiary",
+        "antitrust_divestiture_executed": "Subsidiary stake sold",
         "transfer_pricing_assessed": "Transfer pricing assessed",
         "corp_supply_agreement_damages": "Corporation supply agreement damages",
         "corp_supply_agreement_offer": "Corporation supply agreement offer",
