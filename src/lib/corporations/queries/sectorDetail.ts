@@ -57,6 +57,7 @@ import { buildFtaCoverageLookup, loadActiveFtaPairs } from "@/lib/tariffs/ftaOve
 import {
   OPERATING_SECTOR_TYPE_LABELS,
   calculateWorkers,
+  managementOverheadPp,
   TURNS_PER_DAY,
 } from "@/lib/constants/corporations";
 import type {
@@ -190,6 +191,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           marketGovernorGlideMode: 1,
           marketGovernorGlideFloor: 1,
           explicitPlantCostsEnabled: 1,
+          managementOverheadPpPerDoubling: 1,
           mediaEditorialEnabled: 1,
           mediaOperatingModelsEnabled: 1,
           privateBankingEnabled: 1,
@@ -529,6 +531,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
                 transitionStartTurn: 1,
                 operatingCapacityUnits: 1,
                 capitalStock: 1,
+                plantCount: 1,
                 producedUnits: 1,
                 buildQueue: 1,
               },
@@ -1352,7 +1355,20 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           ? buildPolicyStackRows({
               policyCreditAnchor: sectorAmountAnchor(enginePnl.policyCredit),
               revenueAnchor: sectorAmountAnchor(enginePnl.revenue),
-              mods: { ...mods, ...ownershipTerms },
+              mods: {
+                ...mods,
+                ...ownershipTerms,
+                managementOverheadModifier: -managementOverheadPp(
+                  allSectorsRaw.reduce(
+                    (sum, s) =>
+                      s.corporationId.equals(corporation._id) && Number.isFinite(s.plantCount)
+                        ? sum + (s.plantCount as number)
+                        : sum,
+                    0
+                  ),
+                  governorConfig?.managementOverheadPpPerDoubling ?? 0
+                ),
+              },
               appliedPolicyPp: enginePnl.policyPp,
             })
           : [],

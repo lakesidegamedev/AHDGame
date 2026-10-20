@@ -150,6 +150,11 @@ export interface GameConfig {
    * See `@/lib/constants/commandEconomy`.
    */
   commandEconomyEnabled?: boolean;
+  /**
+   * Management overhead, in margin points per doubling of a corporation's
+   * plant count above MANAGEMENT_OVERHEAD_FREE_PLANTS. 0 or absent = off.
+   */
+  managementOverheadPpPerDoubling?: number;
   /** Public media editorial stance and audience response rules. Missing means off. */
   mediaEditorialEnabled?: boolean;
   /** Paid media and entertainment operating-model catalog. Default off. */

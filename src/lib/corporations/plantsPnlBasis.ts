@@ -112,6 +112,7 @@ export interface PolicyStackInput {
   subsidyModifier?: number | null;
   sectorTypeMatchModifier?: number | null;
   sprawlModifier?: number | null;
+  managementOverheadModifier?: number | null;
   typeSwitchModifier?: number | null;
   strategyTransitionModifier?: number | null;
   sustainedNegativeProductionPenalty?: number | null;
@@ -130,6 +131,7 @@ const POLICY_STACK_LABELS: { key: keyof PolicyStackInput; label: string }[] = [
   { key: "homeLocationModifier", label: "Home location" },
   { key: "sectorTypeMatchModifier", label: "Sector match" },
   { key: "sprawlModifier", label: "Sprawl" },
+  { key: "managementOverheadModifier", label: "Management overhead" },
   { key: "typeSwitchModifier", label: "Type switch penalty" },
   { key: "strategyTransitionModifier", label: "Strategy transition" },
   { key: "sustainedNegativeProductionPenalty", label: "Sustained under-production" },
