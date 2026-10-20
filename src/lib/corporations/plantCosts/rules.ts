@@ -86,8 +86,11 @@ export function standingProducerSiteBill(input: {
   nominalHourlyCapacityValue: number;
   activeFraction: number;
   financialPenaltyPercent: number;
+  /** Funded-market transition window: idle capacity of an over-built plant pays no upkeep. */
+  coldUpkeepWaived?: boolean;
 }): number {
   const { nominalHourlyCapacityValue, activeFraction, financialPenaltyPercent } = input;
+  const coldShare = input.coldUpkeepWaived ? 0 : COLD_CAPACITY_UPKEEP_FRACTION;
   if (
     ![nominalHourlyCapacityValue, activeFraction, financialPenaltyPercent].every(Number.isFinite) ||
     nominalHourlyCapacityValue < 0 ||
@@ -98,8 +101,7 @@ export function standingProducerSiteBill(input: {
     throw new Error("Invalid producer site cost basis");
   const bill =
     nominalHourlyCapacityValue *
-    (PLANT_OVERHEAD_OUTPUT_SHARE *
-      (activeFraction + COLD_CAPACITY_UPKEEP_FRACTION * (1 - activeFraction)) +
+    (PLANT_OVERHEAD_OUTPUT_SHARE * (activeFraction + coldShare * (1 - activeFraction)) +
       (activeFraction * financialPenaltyPercent) / 100);
   if (!Number.isFinite(bill)) throw new Error("Producer site cost overflow");
   return bill;

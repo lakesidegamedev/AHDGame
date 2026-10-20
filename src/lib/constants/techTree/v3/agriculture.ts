@@ -13,7 +13,7 @@ export const AGRICULTURE_V3: V3LaneContent = {
       name: "Certified Seed Premiums",
       description:
         "Certified seed lots and graded deliveries earn better prices from wartime buyers.",
-      effects: [{ kind: "priceRealization", pct: 0.012 }],
+      effects: [{ kind: "plantOutput", pct: 0.012 }],
     },
     {
       name: "Farm Bureau Advocacy",
@@ -35,7 +35,7 @@ export const AGRICULTURE_V3: V3LaneContent = {
       description:
         "Direct supply contracts with war food boards lock in premium prices for graded output.",
       effects: [
-        { kind: "priceRealization", pct: 0.02 },
+        { kind: "plantOutput", pct: 0.02 },
         { kind: "outputRate", commodity: "food", pct: 0.06 },
       ],
     },
@@ -61,7 +61,7 @@ export const AGRICULTURE_V3: V3LaneContent = {
       description:
         "Branded, graded packs move farm output from commodity bins to premium grocery shelves.",
       effects: [
-        { kind: "priceRealization", pct: 0.01 },
+        { kind: "plantOutput", pct: 0.01 },
         { kind: "marketingStrength", flat: 10 },
       ],
     },
@@ -85,7 +85,7 @@ export const AGRICULTURE_V3: V3LaneContent = {
       description:
         "Year-round supply agreements with supermarket chains pay steady premiums for consistent grade.",
       effects: [
-        { kind: "priceRealization", pct: 0.022 },
+        { kind: "plantOutput", pct: 0.022 },
         { kind: "marketingStrength", flat: 25 },
       ],
     },
@@ -110,7 +110,7 @@ export const AGRICULTURE_V3: V3LaneContent = {
       name: "Grade-A Dairy Standards",
       description:
         "Meeting the strictest sanitary grades moves milk and produce into the highest-paying market class.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Export License Desks",
@@ -131,7 +131,7 @@ export const AGRICULTURE_V3: V3LaneContent = {
       name: "Origin Label Programs",
       description: "Regional origin labels build shopper loyalty that commands lasting premiums.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "marketingStrength", flat: 28 },
       ],
     },
@@ -155,7 +155,7 @@ export const AGRICULTURE_V3: V3LaneContent = {
       name: "Identity-Preserved Grain",
       description:
         "Segregated handling of high-protein lots earns premiums over blended elevator grain.",
-      effects: [{ kind: "priceRealization", pct: 0.014 }],
+      effects: [{ kind: "plantOutput", pct: 0.014 }],
     },
     {
       name: "Grain Embargo Hedging",
@@ -177,7 +177,7 @@ export const AGRICULTURE_V3: V3LaneContent = {
       description:
         "Guaranteed-grade export contracts pay top of market for consistent protein and moisture specs.",
       effects: [
-        { kind: "priceRealization", pct: 0.024 },
+        { kind: "plantOutput", pct: 0.024 },
         { kind: "outputRate", commodity: "food", pct: 0.07 },
       ],
     },
@@ -202,7 +202,7 @@ export const AGRICULTURE_V3: V3LaneContent = {
       name: "Specialty Crop Rotation",
       description:
         "Rotating high-value specialty crops into the mix lifts revenue per acre above commodity rates.",
-      effects: [{ kind: "priceRealization", pct: 0.012 }],
+      effects: [{ kind: "plantOutput", pct: 0.012 }],
     },
     {
       name: "Farm Credit Restructuring",
@@ -224,7 +224,7 @@ export const AGRICULTURE_V3: V3LaneContent = {
       description:
         "Long-term processor agreements bypass the elevator and capture the middleman margin.",
       effects: [
-        { kind: "priceRealization", pct: 0.023 },
+        { kind: "plantOutput", pct: 0.023 },
         { kind: "marketingStrength", flat: 26 },
       ],
     },
@@ -249,7 +249,7 @@ export const AGRICULTURE_V3: V3LaneContent = {
       name: "Organic Certification Lines",
       description: "Certified organic acreage sells into a fast-growing channel at steep premiums.",
       effects: [
-        { kind: "priceRealization", pct: 0.013 },
+        { kind: "plantOutput", pct: 0.013 },
         { kind: "marketingStrength", flat: 12 },
       ],
     },
@@ -273,7 +273,7 @@ export const AGRICULTURE_V3: V3LaneContent = {
       description:
         "A recognized organic label across produce and grain lines commands shelf-price leadership.",
       effects: [
-        { kind: "priceRealization", pct: 0.026 },
+        { kind: "plantOutput", pct: 0.026 },
         { kind: "marketingStrength", flat: 30 },
       ],
     },
@@ -298,7 +298,7 @@ export const AGRICULTURE_V3: V3LaneContent = {
       name: "Traceability Barcoding",
       description:
         "Lot-level traceability wins contracts with food companies that pay for documented supply.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "WTO Compliance Teams",
@@ -320,7 +320,7 @@ export const AGRICULTURE_V3: V3LaneContent = {
       description:
         "Multi-year alliances with branded food companies pay sustained premiums for preferred supply.",
       effects: [
-        { kind: "priceRealization", pct: 0.024 },
+        { kind: "plantOutput", pct: 0.024 },
         { kind: "outputRate", commodity: "food", pct: 0.07 },
       ],
     },
@@ -348,7 +348,7 @@ export const AGRICULTURE_V3: V3LaneContent = {
       name: "Farm-to-Table Contracts",
       description:
         "Direct contracts with restaurants and grocers sell provenance at a premium over commodity prices.",
-      effects: [{ kind: "priceRealization", pct: 0.014 }],
+      effects: [{ kind: "plantOutput", pct: 0.014 }],
     },
     {
       name: "Water Rights Portfolios",
@@ -370,7 +370,7 @@ export const AGRICULTURE_V3: V3LaneContent = {
       description:
         "Audited sustainability scores unlock the premium programs of every major food buyer.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "marketingStrength", flat: 27 },
       ],
     },
@@ -396,7 +396,7 @@ export const AGRICULTURE_V3: V3LaneContent = {
       description:
         "Verified regenerative practices earn carbon-conscious buyers' premium programs.",
       effects: [
-        { kind: "priceRealization", pct: 0.013 },
+        { kind: "plantOutput", pct: 0.013 },
         { kind: "marketingStrength", flat: 11 },
       ],
     },
@@ -420,7 +420,7 @@ export const AGRICULTURE_V3: V3LaneContent = {
       description:
         "Blockchain-verified provenance lets premium buyers pay top price with full confidence.",
       effects: [
-        { kind: "priceRealization", pct: 0.026 },
+        { kind: "plantOutput", pct: 0.026 },
         { kind: "marketingStrength", flat: 29 },
       ],
     },
@@ -445,7 +445,7 @@ export const AGRICULTURE_V3: V3LaneContent = {
       name: "Designer Crop Contracts",
       description:
         "Crops tuned to a buyer's exact nutrition and processing specs sell far above commodity grade.",
-      effects: [{ kind: "priceRealization", pct: 0.015 }],
+      effects: [{ kind: "plantOutput", pct: 0.015 }],
     },
     {
       name: "Food Security Compacts",
@@ -467,7 +467,7 @@ export const AGRICULTURE_V3: V3LaneContent = {
       description:
         "Crops bred for personalized nutrition programs command the highest prices in food.",
       effects: [
-        { kind: "priceRealization", pct: 0.028 },
+        { kind: "plantOutput", pct: 0.028 },
         { kind: "outputRate", commodity: "food", pct: 0.08 },
       ],
     },

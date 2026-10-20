@@ -12,7 +12,7 @@ export const CHEMICAL_INDUSTRIES_V3: V3LaneContent = {
       name: "Military Specification Grades",
       description:
         "Meeting strict military purity specs lets plants charge premium contract prices.",
-      effects: [{ kind: "priceRealization", pct: 0.012 }],
+      effects: [{ kind: "plantOutput", pct: 0.012 }],
     },
     {
       name: "War Production Board Liaison",
@@ -32,7 +32,7 @@ export const CHEMICAL_INDUSTRIES_V3: V3LaneContent = {
       name: "Arsenal Grade Certification",
       description: "Certified arsenal-grade output commands top prices across all chemical lines.",
       effects: [
-        { kind: "priceRealization", pct: 0.022 },
+        { kind: "plantOutput", pct: 0.022 },
         { kind: "outputRate", commodity: "chemicals", pct: 0.06 },
       ],
     },
@@ -59,7 +59,7 @@ export const CHEMICAL_INDUSTRIES_V3: V3LaneContent = {
       name: "Branded Consumer Resins",
       description: "Trademarked resin brands let commodity plastics sell at branded prices.",
       effects: [
-        { kind: "priceRealization", pct: 0.012 },
+        { kind: "plantOutput", pct: 0.012 },
         { kind: "marketingStrength", flat: 12 },
       ],
     },
@@ -80,7 +80,7 @@ export const CHEMICAL_INDUSTRIES_V3: V3LaneContent = {
       name: "Miracle Fiber Campaigns",
       description: "National campaigns for nylon-age fibers pull the whole portfolio upmarket.",
       effects: [
-        { kind: "priceRealization", pct: 0.024 },
+        { kind: "plantOutput", pct: 0.024 },
         { kind: "marketingStrength", flat: 28 },
       ],
     },
@@ -106,8 +106,8 @@ export const CHEMICAL_INDUSTRIES_V3: V3LaneContent = {
       name: "Technical Sales Force",
       description: "Chemists in the sales force sell formulations, not tonnage, at better prices.",
       effects: [
-        { kind: "priceRealization", pct: 0.012 },
-        { kind: "marginBonus", pp: 0.5 },
+        { kind: "plantOutput", pct: 0.012 },
+        { kind: "inputEfficiency", pct: 0.015 },
       ],
     },
     {
@@ -128,7 +128,7 @@ export const CHEMICAL_INDUSTRIES_V3: V3LaneContent = {
       name: "Application Engineering Teams",
       description: "Engineers embedded with customers lock in premium pricing on tailored grades.",
       effects: [
-        { kind: "priceRealization", pct: 0.024 },
+        { kind: "plantOutput", pct: 0.024 },
         { kind: "marketingStrength", flat: 26 },
       ],
     },
@@ -153,8 +153,8 @@ export const CHEMICAL_INDUSTRIES_V3: V3LaneContent = {
       description:
         "High-margin additives for fuels and lubricants ride out commodity price swings.",
       effects: [
-        { kind: "priceRealization", pct: 0.013 },
-        { kind: "marginBonus", pp: 0.6 },
+        { kind: "plantOutput", pct: 0.013 },
+        { kind: "inputEfficiency", pct: 0.018 },
       ],
     },
     {
@@ -176,7 +176,7 @@ export const CHEMICAL_INDUSTRIES_V3: V3LaneContent = {
       description:
         "Shifting capacity into fine chemicals and drug intermediates lifts realized prices sharply.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "outputRate", commodity: "pharmaceuticals", pct: 0.06 },
       ],
     },
@@ -202,7 +202,7 @@ export const CHEMICAL_INDUSTRIES_V3: V3LaneContent = {
     {
       name: "Electronic Grade Purity",
       description: "Ultra-pure grades for the semiconductor boom sell at multiples of bulk prices.",
-      effects: [{ kind: "priceRealization", pct: 0.014 }],
+      effects: [{ kind: "plantOutput", pct: 0.014 }],
     },
     {
       name: "Superfund Readiness Audits",
@@ -224,7 +224,7 @@ export const CHEMICAL_INDUSTRIES_V3: V3LaneContent = {
       description:
         "Divesting bulk lines for specialty businesses resets the whole margin structure.",
       effects: [
-        { kind: "priceRealization", pct: 0.026 },
+        { kind: "plantOutput", pct: 0.026 },
         { kind: "outputRate", commodity: "chemicals", pct: 0.06 },
       ],
     },
@@ -251,7 +251,7 @@ export const CHEMICAL_INDUSTRIES_V3: V3LaneContent = {
       description:
         "Grades certified against each customer's process win pricing power and loyalty.",
       effects: [
-        { kind: "priceRealization", pct: 0.013 },
+        { kind: "plantOutput", pct: 0.013 },
         { kind: "marketingStrength", flat: 12 },
       ],
     },
@@ -274,7 +274,7 @@ export const CHEMICAL_INDUSTRIES_V3: V3LaneContent = {
         "Biotech joint ventures push the portfolio into drug ingredients with premium pricing.",
       effects: [
         { kind: "outputRate", commodity: "pharmaceuticals", pct: 0.07 },
-        { kind: "priceRealization", pct: 0.022 },
+        { kind: "plantOutput", pct: 0.022 },
       ],
     },
     {
@@ -300,8 +300,8 @@ export const CHEMICAL_INDUSTRIES_V3: V3LaneContent = {
       name: "Formulation Patents Portfolio",
       description: "A thick patent wall around formulations keeps premium grades premium.",
       effects: [
-        { kind: "priceRealization", pct: 0.014 },
-        { kind: "marginBonus", pp: 0.5 },
+        { kind: "plantOutput", pct: 0.014 },
+        { kind: "inputEfficiency", pct: 0.015 },
       ],
     },
     {
@@ -323,7 +323,7 @@ export const CHEMICAL_INDUSTRIES_V3: V3LaneContent = {
       description:
         "Exclusive synthesis contracts with drugmakers deliver the richest prices in the industry.",
       effects: [
-        { kind: "priceRealization", pct: 0.028 },
+        { kind: "plantOutput", pct: 0.028 },
         { kind: "outputRate", commodity: "pharmaceuticals", pct: 0.06 },
       ],
     },
@@ -347,7 +347,7 @@ export const CHEMICAL_INDUSTRIES_V3: V3LaneContent = {
       name: "Green Premium Lines",
       description: "Bio-based and recycled-content grades earn a visible price premium.",
       effects: [
-        { kind: "priceRealization", pct: 0.013 },
+        { kind: "plantOutput", pct: 0.013 },
         { kind: "marketingStrength", flat: 14 },
       ],
     },
@@ -368,7 +368,7 @@ export const CHEMICAL_INDUSTRIES_V3: V3LaneContent = {
       name: "High-Performance Materials Suite",
       description: "Aerospace and electronics materials sell on performance, not on price sheets.",
       effects: [
-        { kind: "priceRealization", pct: 0.026 },
+        { kind: "plantOutput", pct: 0.026 },
         { kind: "outputRate", commodity: "plastics", pct: 0.07 },
       ],
     },
@@ -394,7 +394,7 @@ export const CHEMICAL_INDUSTRIES_V3: V3LaneContent = {
       name: "Certified Circular Content",
       description:
         "Third-party certified recycled content lets brands pay up for the same polymer.",
-      effects: [{ kind: "priceRealization", pct: 0.014 }],
+      effects: [{ kind: "plantOutput", pct: 0.014 }],
     },
     {
       name: "Plastics Treaty Seat",
@@ -413,7 +413,7 @@ export const CHEMICAL_INDUSTRIES_V3: V3LaneContent = {
       name: "Battery Materials Franchise",
       description: "Electrolytes and cathode precursors ride the battery boom at premium prices.",
       effects: [
-        { kind: "priceRealization", pct: 0.027 },
+        { kind: "plantOutput", pct: 0.027 },
         { kind: "outputRate", commodity: "chemicals", pct: 0.07 },
       ],
     },
@@ -441,8 +441,8 @@ export const CHEMICAL_INDUSTRIES_V3: V3LaneContent = {
       description:
         "Outcome-priced supply contracts sell guaranteed performance instead of tonnage.",
       effects: [
-        { kind: "priceRealization", pct: 0.015 },
-        { kind: "marginBonus", pp: 0.6 },
+        { kind: "plantOutput", pct: 0.015 },
+        { kind: "inputEfficiency", pct: 0.018 },
       ],
     },
     {
@@ -464,7 +464,7 @@ export const CHEMICAL_INDUSTRIES_V3: V3LaneContent = {
       description:
         "Model-designed molecules reach markets first and price like patents, not commodities.",
       effects: [
-        { kind: "priceRealization", pct: 0.029 },
+        { kind: "plantOutput", pct: 0.029 },
         { kind: "outputRate", commodity: "pharmaceuticals", pct: 0.07 },
       ],
     },

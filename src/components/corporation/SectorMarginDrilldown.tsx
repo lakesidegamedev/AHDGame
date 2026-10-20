@@ -99,7 +99,6 @@ export function SectorMarginDrilldown({
     { label: "Home location", value: sector.homeLocationModifier },
     { label: "Foreign tariff", value: sector.foreignTariffModifier },
     { label: "Tariff friction", value: sector.domesticTariffMalus },
-    { label: "Tech tree bonus", value: sector.techMarginBonus },
     { label: "State enterprise efficiency", value: sector.soeEfficiencyModifier },
     { label: "Expropriation risk", value: sector.expropriationRiskModifier },
     { label: "Economic model fit", value: sector.economicModelAlignmentModifier },

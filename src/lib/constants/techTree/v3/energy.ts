@@ -11,7 +11,7 @@ export const ENERGY_V3: V3LaneContent = {
     {
       name: "Industrial Priority Rates",
       description: "War-plant supply contracts pay premium rates for guaranteed power.",
-      effects: [{ kind: "priceRealization", pct: 0.012 }],
+      effects: [{ kind: "plantOutput", pct: 0.012 }],
     },
     {
       name: "Utility Commission Standing",
@@ -30,7 +30,7 @@ export const ENERGY_V3: V3LaneContent = {
       name: "Victory Power Campaigns",
       description: "Patriotic electrification drives sign up whole towns at favorable tariffs.",
       effects: [
-        { kind: "priceRealization", pct: 0.022 },
+        { kind: "plantOutput", pct: 0.022 },
         { kind: "marketingStrength", flat: 26 },
       ],
     },
@@ -54,7 +54,7 @@ export const ENERGY_V3: V3LaneContent = {
       name: "All-Electric Home Promotion",
       description: "Appliance-era marketing sells rising household loads at healthy rates.",
       effects: [
-        { kind: "priceRealization", pct: 0.012 },
+        { kind: "plantOutput", pct: 0.012 },
         { kind: "marketingStrength", flat: 12 },
       ],
     },
@@ -76,7 +76,7 @@ export const ENERGY_V3: V3LaneContent = {
       description:
         "A national lifestyle campaign makes the utility a household brand with pricing power.",
       effects: [
-        { kind: "priceRealization", pct: 0.024 },
+        { kind: "plantOutput", pct: 0.024 },
         { kind: "marketingStrength", flat: 30 },
       ],
     },
@@ -98,7 +98,7 @@ export const ENERGY_V3: V3LaneContent = {
     {
       name: "Firm Power Contracts",
       description: "Guaranteed-delivery contracts with industry price above interruptible supply.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Interutility Power Pools",
@@ -118,7 +118,7 @@ export const ENERGY_V3: V3LaneContent = {
       description:
         "The lowest headline rates in the region attract industry that pays for the system.",
       effects: [
-        { kind: "priceRealization", pct: 0.022 },
+        { kind: "plantOutput", pct: 0.022 },
         { kind: "marketingStrength", flat: 26 },
       ],
     },
@@ -140,7 +140,7 @@ export const ENERGY_V3: V3LaneContent = {
     {
       name: "Time-of-Day Pricing",
       description: "Peak-priced tariffs bill power at what it actually costs to make.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Fuel Diversity Hedging",
@@ -159,7 +159,7 @@ export const ENERGY_V3: V3LaneContent = {
       name: "Interruptible Rate Ladders",
       description: "Layered firm and interruptible tariffs sell the same plant twice over.",
       effects: [
-        { kind: "priceRealization", pct: 0.024 },
+        { kind: "plantOutput", pct: 0.024 },
         { kind: "marketingStrength", flat: 26 },
       ],
     },
@@ -181,7 +181,7 @@ export const ENERGY_V3: V3LaneContent = {
     {
       name: "Qualifying Facility Sales",
       description: "Selling cogenerated power under new law earns rates set by avoided cost.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Rate Case Mastery",
@@ -200,7 +200,7 @@ export const ENERGY_V3: V3LaneContent = {
       name: "Conservation Service Brands",
       description: "Paid audits and efficiency services turn the meter into a trusted advisor.",
       effects: [
-        { kind: "priceRealization", pct: 0.022 },
+        { kind: "plantOutput", pct: 0.022 },
         { kind: "marketingStrength", flat: 28 },
       ],
     },
@@ -223,7 +223,7 @@ export const ENERGY_V3: V3LaneContent = {
     {
       name: "Green Pricing Pilots",
       description: "Early clean-power tariffs find customers who will pay extra by choice.",
-      effects: [{ kind: "priceRealization", pct: 0.012 }],
+      effects: [{ kind: "plantOutput", pct: 0.012 }],
     },
     {
       name: "Acid Rain Allowance Bank",
@@ -244,7 +244,7 @@ export const ENERGY_V3: V3LaneContent = {
       description:
         "A trading floor prices every megawatt against the open market, not the tariff book.",
       effects: [
-        { kind: "priceRealization", pct: 0.026 },
+        { kind: "plantOutput", pct: 0.026 },
         { kind: "marketingStrength", flat: 25 },
       ],
     },
@@ -267,7 +267,7 @@ export const ENERGY_V3: V3LaneContent = {
       name: "Retail Choice Branding",
       description: "In deregulated markets a consumer brand wins switchers at premium plans.",
       effects: [
-        { kind: "priceRealization", pct: 0.012 },
+        { kind: "plantOutput", pct: 0.012 },
         { kind: "marketingStrength", flat: 12 },
       ],
     },
@@ -288,7 +288,7 @@ export const ENERGY_V3: V3LaneContent = {
       name: "Structured Power Products",
       description: "Shaped, firmed and optioned contracts price reliability itself as a product.",
       effects: [
-        { kind: "priceRealization", pct: 0.026 },
+        { kind: "plantOutput", pct: 0.026 },
         { kind: "logisticsStrength", flat: 26 },
       ],
     },
@@ -310,7 +310,7 @@ export const ENERGY_V3: V3LaneContent = {
     {
       name: "Renewable Credit Premiums",
       description: "Bundled green certificates earn extra revenue on every clean megawatt.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Interconnection Queue Position",
@@ -330,7 +330,7 @@ export const ENERGY_V3: V3LaneContent = {
       name: "Corporate Power Purchase Deals",
       description: "Long-term deals with big brands sell clean output above wholesale for decades.",
       effects: [
-        { kind: "priceRealization", pct: 0.026 },
+        { kind: "plantOutput", pct: 0.026 },
         { kind: "marketingStrength", flat: 28 },
       ],
     },
@@ -352,7 +352,7 @@ export const ENERGY_V3: V3LaneContent = {
     {
       name: "Capacity Market Bidding",
       description: "Paid availability commitments earn revenue even when plants sit idle.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Storm Hardening Programs",
@@ -371,7 +371,7 @@ export const ENERGY_V3: V3LaneContent = {
       name: "Twenty-Four Seven Clean Deals",
       description: "Hourly-matched clean supply is the premium product sophisticated buyers want.",
       effects: [
-        { kind: "priceRealization", pct: 0.026 },
+        { kind: "plantOutput", pct: 0.026 },
         { kind: "marketingStrength", flat: 30 },
       ],
     },
@@ -393,7 +393,7 @@ export const ENERGY_V3: V3LaneContent = {
     {
       name: "Data Center Power Campuses",
       description: "Dedicated supply for AI campuses sells firm power at compute-era prices.",
-      effects: [{ kind: "priceRealization", pct: 0.015 }],
+      effects: [{ kind: "plantOutput", pct: 0.015 }],
     },
     {
       name: "Grid Resilience Mandates",
@@ -414,7 +414,7 @@ export const ENERGY_V3: V3LaneContent = {
       description:
         "Always-on carbon-free supply is the scarcest product on the grid and priced like it.",
       effects: [
-        { kind: "priceRealization", pct: 0.028 },
+        { kind: "plantOutput", pct: 0.028 },
         { kind: "marketingStrength", flat: 32 },
       ],
     },

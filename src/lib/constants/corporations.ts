@@ -1718,10 +1718,13 @@ export function calcLogisticsStrengthAfterTurn(
 // ─── R&D Score ──────────────────────────────────────────────────────────────
 
 /** Base R&D score gain per turn when any R&D budget is set */
-export const RD_BASE_GAIN_PER_TURN = 1.0;
+export const RD_BASE_GAIN_PER_TURN = 1.2;
 
-/** Scaling coefficient for log-based R&D budget scaling (matches marketing) */
-export const RD_BUDGET_SCALE = 0.65;
+/**
+ * Scaling coefficient for log-based R&D budget scaling. 20% above marketing's
+ * 0.65 (with the base gain) so tech arrives at a playable pace.
+ */
+export const RD_BUDGET_SCALE = 0.78;
 
 /** R&D score threshold where diminishing returns double (matches marketing) */
 export const RD_DIMINISHING_THRESHOLD = 100;
@@ -1808,6 +1811,24 @@ export const RD_CAPACITY_BOOST_MIN_PCT = 0.01;
 
 /** Maximum per-resource capacity boost for extraction innovations (15% of current capacity) */
 export const RD_CAPACITY_BOOST_MAX_PCT = 0.15;
+
+/**
+ * Plants a corporation may own before management overhead starts. Set at the
+ * live 90th percentile (turn 332), so most corporations never see it.
+ */
+export const MANAGEMENT_OVERHEAD_FREE_PLANTS = 300;
+
+/**
+ * Management overhead (pp of margin, returned as a positive charge) for a
+ * corporation running `plantCount` whole plants: `ppPerDoubling` for every
+ * doubling above MANAGEMENT_OVERHEAD_FREE_PLANTS. Coordinating more plants
+ * costs every plant a little, so the largest corporations' margins thin out
+ * while ordinary ones are untouched. 0 when the knob is 0 (the default).
+ */
+export function managementOverheadPp(plantCount: number, ppPerDoubling: number): number {
+  if (!(ppPerDoubling > 0) || !(plantCount > MANAGEMENT_OVERHEAD_FREE_PLANTS)) return 0;
+  return ppPerDoubling * Math.log2(plantCount / MANAGEMENT_OVERHEAD_FREE_PLANTS);
+}
 
 /**
  * Logistical sprawl penalty: -0.5% for every 2 sectors over 15.

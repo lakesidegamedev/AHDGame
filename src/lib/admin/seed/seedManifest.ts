@@ -182,6 +182,30 @@ const REFERENCE: CollectionEntry[] = [
       "Telemetry for the unified producer market shadow (market recovery Phase 2): one per-industry comparison per turn. Never read by game logic.",
   },
   {
+    name: "producerMarketShadowState",
+    category: "runtime",
+    notes:
+      "Carried books for the producer market shadow: cash, stock, unpaid bills and prices per run and turn, last two turns kept. Read only by the shadow phase.",
+  },
+  {
+    name: "producerPathClaims",
+    category: "runtime",
+    notes:
+      "One row per turn recording whether it ran the legacy or funded producer path, so no turn can run both.",
+  },
+  {
+    name: "producerMarketOutcomes",
+    category: "runtime",
+    notes:
+      "Settled funded supply and demand per turn (requested and offered units by commodity and state), read by the price phase on funded turns.",
+  },
+  {
+    name: "producerOpenings",
+    category: "runtime",
+    notes:
+      "One record per applied producer opening conversion (keyed by plan digest): reconciliation and the non-cash opening adjustments it made.",
+  },
+  {
     name: "offTypeHandovers",
     category: "runtime",
     notes:

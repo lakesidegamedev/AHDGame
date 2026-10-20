@@ -3,21 +3,43 @@ import {
   aggregateTechEffects,
   techEffectCategory,
   describeTechEffect,
-  TECH_MARGIN_BONUS_CAP_PP,
+  TECH_PLANT_OUTPUT_CAP,
+  TECH_INPUT_EFFICIENCY_CAP,
   TECH_GROWTH_REDUCTION_CAP,
   TECH_LABOR_REDUCTION_CAP,
   type TechEffect,
 } from "./effects";
 
 describe("aggregateTechEffects", () => {
-  it("caps total margin bonus but keeps the raw sum", () => {
+  it("caps plant output and folds it into every output rate", () => {
     const effects: TechEffect[] = Array.from({ length: 6 }, () => ({
-      kind: "marginBonus" as const,
-      pp: 3,
+      kind: "plantOutput" as const,
+      pct: 0.03,
     }));
-    const agg = aggregateTechEffects(effects); // raw 18
-    expect(agg.marginBonusPpRaw).toBe(18);
-    expect(agg.marginBonusPp).toBe(TECH_MARGIN_BONUS_CAP_PP);
+    const agg = aggregateTechEffects([
+      ...effects,
+      { kind: "outputRate", commodity: "steel", pct: 0.1 },
+    ]);
+    expect(agg.plantOutputBonus).toBe(TECH_PLANT_OUTPUT_CAP);
+    expect(agg.outputRateMult.electronics).toBeCloseTo(1 + TECH_PLANT_OUTPUT_CAP);
+    expect(agg.outputRateMult.steel).toBeCloseTo(1.1 * (1 + TECH_PLANT_OUTPUT_CAP));
+  });
+
+  it("caps input efficiency and folds it into every input rate", () => {
+    const agg = aggregateTechEffects([
+      { kind: "inputEfficiency", pct: 0.2 },
+      { kind: "inputEfficiency", pct: 0.2 },
+      { kind: "inputCost", commodity: "coal", pct: 0.5 },
+    ]);
+    expect(agg.inputEfficiencyBonus).toBe(TECH_INPUT_EFFICIENCY_CAP);
+    expect(agg.inputRateMult.steel).toBeCloseTo(1 - TECH_INPUT_EFFICIENCY_CAP);
+    expect(agg.inputRateMult.coal).toBeCloseTo(0.5 * (1 - TECH_INPUT_EFFICIENCY_CAP));
+  });
+
+  it("leaves the rate maps empty with no plant-wide effects", () => {
+    const agg = aggregateTechEffects([{ kind: "laborCostReduction", pct: 0.1 }]);
+    expect(agg.outputRateMult).toEqual({});
+    expect(agg.inputRateMult).toEqual({});
   });
 
   it("caps growth reduction", () => {
@@ -74,7 +96,8 @@ describe("effect display", () => {
   it("categorizes each kind for the UI icon", () => {
     expect(techEffectCategory("inputCost")).toBe("input");
     expect(techEffectCategory("outputRate")).toBe("output");
-    expect(techEffectCategory("marginBonus")).toBe("margin");
+    expect(techEffectCategory("plantOutput")).toBe("output");
+    expect(techEffectCategory("inputEfficiency")).toBe("input");
   });
   it("describes the new commodity effects readably", () => {
     expect(describeTechEffect({ kind: "inputCost", commodity: "oil", pct: 0.5 })).toBe(
@@ -96,9 +119,8 @@ describe("effect display", () => {
     expect(describeTechEffect({ kind: "growthCostReduction", pct: 0.2 })).toBe(
       "−20% capacity build cost, −12% build time"
     );
-    expect(describeTechEffect({ kind: "priceRealization", pct: 0.013 })).toBe(
-      "+1.3% output sale price (adds to cost-plus markup)"
-    );
+    expect(describeTechEffect({ kind: "plantOutput", pct: 0.013 })).toBe("+1.3% plant output");
+    expect(describeTechEffect({ kind: "inputEfficiency", pct: 0.06 })).toBe("−6% plant inputs");
     expect(describeTechEffect({ kind: "logisticsStrength", flat: 25 })).toContain(
       "cheaper freight and landed inputs"
     );

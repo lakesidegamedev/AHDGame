@@ -5,6 +5,7 @@ import type { CorporateSector } from "@/lib/db/types";
 import { makeCorporation } from "@/lib/test-utils/factories";
 import {
   prepareProducerPhysicalSector,
+  withStateBooks,
   type ProducerPhysicalEnv,
 } from "./producerPhysicalPreparation";
 
@@ -208,5 +209,29 @@ describe("physical producer preparation", () => {
     expect(empty.prepared.plan.outputMultiplier).toBe(0);
     sector.transitionFromStrategyId = "oil_gas";
     expect(() => prepareProducerPhysicalSector(input)).toThrow("owned-unit basis");
+  });
+});
+
+describe("carried country-book stock", () => {
+  it("is read back onto the plant's own state book", () => {
+    const sector = {
+      stateId: "US_CA",
+      producerInventory: {
+        worldEpoch: "w",
+        turn: 1,
+        inputStock: [],
+        outputStock: [
+          { commodity: "freight", units: 5, book: "country:US" },
+          { commodity: "food", units: 1, book: "world" },
+        ],
+      },
+    } as unknown as CorporateSector;
+    const out = withStateBooks(sector);
+    expect(out.producerInventory!.outputStock.map((r) => r.book)).toEqual(["state:US_CA", "world"]);
+    const plain = {
+      stateId: "X",
+      producerInventory: { worldEpoch: "w", turn: 1, inputStock: [], outputStock: [] },
+    } as unknown as CorporateSector;
+    expect(withStateBooks(plain)).toBe(plain);
   });
 });

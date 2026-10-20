@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   COMMODITY_TYPES,
   COMMODITY_PRICE_DRIFT_RATE,
+  NATIONAL_PRICE_ADJUSTMENT_RATE,
   type CommodityType,
 } from "@/lib/constants/commodities";
 import type { CommodityPrice } from "@/lib/db/types";
@@ -149,6 +150,21 @@ describe("priceCommodity", () => {
     const next = op2.updateOne.update.$set.statePrices["s1"];
     // Same balances and same lagged global ⇒ same target; one drift step.
     expect(next).toBeCloseTo(start + COMMODITY_PRICE_DRIFT_RATE * (target - start), 2);
+  });
+
+  it("moves the national price one adjustment step from last turn's national price", () => {
+    const bal = { supply: 100, demand: 200 };
+    const { priceOp: op1 } = priceCommodity(pricingContext(bal), "food", new Set());
+    const target = op1.updateOne.update.$set.nationalPrices!["US"];
+
+    const start = target * 2;
+    const second = pricingContext(bal, {
+      existingPriceMap: new Map([["food", commodityPrice({ nationalPrices: { US: start } })]]),
+    });
+    const { priceOp: op2 } = priceCommodity(second, "food", new Set());
+    const next = op2.updateOne.update.$set.nationalPrices!["US"];
+    expect(next).toBeCloseTo(start + NATIONAL_PRICE_ADJUSTMENT_RATE * (target - start), 2);
+    expect(second.appliedNationalPrices.get("food")!["US"]).toBe(next);
   });
 
   it("applies peg precedence: state peg > global peg", () => {

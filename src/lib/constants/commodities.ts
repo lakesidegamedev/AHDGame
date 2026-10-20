@@ -834,6 +834,14 @@ export const REGIONAL_PRICE_WEIGHT = 0.25;
 export const COMMODITY_PRICE_DRIFT_RATE = 0.06;
 
 /**
+ * Per-turn step of a country's national price toward its supply/demand
+ * target. Exporters' supply depends on last turn's national price (sourcing
+ * asks), so an undamped national price cobwebs: cheap one turn, ships
+ * everything, dear the next, ships nothing (#4605). Half a step settles it.
+ */
+export const NATIONAL_PRICE_ADJUSTMENT_RATE = 0.5;
+
+/**
  * Convert a dollar-equivalent flow to units at a given price.
  * units = dollarFlow / price
  */

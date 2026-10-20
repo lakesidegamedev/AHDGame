@@ -139,4 +139,71 @@ describe("federation custody materialization", () => {
       })
     ).rejects.toThrow("approved playable station");
   });
+
+  it("keeps retained forces with no station or an off-map station", async () => {
+    const groundId = new ObjectId("000000000000000000000064");
+    const navalId = new ObjectId("000000000000000000000065");
+    const rocketId = new ObjectId("000000000000000000000066");
+    const mem = createInMemoryDb();
+    mem.seed("militaryUnits", [
+      { _id: groundId, countryId: "RU", domain: "ground", station: null },
+      { _id: navalId, countryId: "RU", domain: "naval", station: "mea" },
+      { _id: rocketId, countryId: "RU", domain: "rocket" },
+    ]);
+    const db = mem as unknown as Db;
+    const retained = (id: ObjectId, kind: "conventional-force" | "strategic-force") => ({
+      assetId: `force:${id.toString()}`,
+      kind,
+      custodianEntityId: "RU",
+      disposition: "retain-detailed" as const,
+    });
+    expect(
+      await materializeFederationCustody({
+        db,
+        session: {} as ClientSession,
+        applicationId,
+        sourceCountryId: "RU",
+        assignments: [
+          retained(groundId, "conventional-force"),
+          retained(navalId, "conventional-force"),
+          retained(rocketId, "strategic-force"),
+        ],
+        transfers,
+      })
+    ).toBe(3);
+    expect(await db.collection("militaryUnits").countDocuments({})).toBe(3);
+    for (const id of [groundId, navalId, rocketId])
+      expect(
+        await db
+          .collection<{ _id: string }>("federationCustodyRecords")
+          .countDocuments({ _id: `${applicationId}:force:${id.toString()}` })
+      ).toBe(1);
+  });
+
+  it("keeps a retained force stationed in territory that stays with the source", async () => {
+    const mem = createInMemoryDb();
+    mem.seed("militaryUnits", [
+      { _id: unitId, countryId: "RU", domain: "ground", station: "RUSSIA" },
+    ]);
+    const db = mem as unknown as Db;
+    expect(
+      await materializeFederationCustody({
+        db,
+        session: {} as ClientSession,
+        applicationId,
+        sourceCountryId: "RU",
+        assignments: [
+          {
+            assetId: `force:${unitId.toString()}`,
+            kind: "conventional-force",
+            custodianEntityId: "RU",
+            disposition: "retain-detailed",
+          },
+        ],
+        transfers,
+      })
+    ).toBe(1);
+    expect(await db.collection("militaryUnits").countDocuments({})).toBe(1);
+    expect(await db.collection("federationCustodyRecords").countDocuments({})).toBe(1);
+  });
 });

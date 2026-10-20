@@ -50,7 +50,7 @@ function mockDb(
   } = {}
 ) {
   const {
-    revenues = [100_000_000],
+    revenues = [300_000_000],
     modifiedCount = 1,
     failTxInserts = 0,
     postOwned = [],
@@ -95,8 +95,9 @@ function mockDb(
 }
 
 const NODE_1950_1 = corpNodeId("1950", 1); // Management by Objectives, rd cost 8
-// Revenue sits well above the era tech cash floor (#1506), so the price is revenue-based.
-const CASH_1950_1 = Math.round(100_000_000 * 0.15); // 15_000_000
+// No stored plant P&L, so the node is priced off revenue: 5% of a 300M daily
+// gross, well above the era tech cash floor (#1506).
+const CASH_1950_1 = Math.round(300_000_000 * 0.05); // 15_000_000
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -233,7 +234,7 @@ describe("tech unlock ledger (ticket #1998)", () => {
     expect(corpsUpdateOne.mock.calls.length).toBe(2);
     const [, refund] = corpsUpdateOne.mock.calls[1];
     expect(refund.$inc.liquidCapital).toBe(CASH_1950_1);
-    expect(refund.$inc.rdScore).toBe(8);
+    expect(refund.$inc.rdScore).toBe(6);
     expect(refund.$pull).toEqual({ unlockedTechNodeIds: NODE_1950_1 });
   });
 
@@ -302,7 +303,7 @@ describe("tech unlock ledger (ticket #1998)", () => {
     expect(corpsUpdateOne.mock.calls.length).toBe(2);
     const [, refund] = corpsUpdateOne.mock.calls[1];
     expect(refund.$inc.liquidCapital).toBe(CASH_1950_1);
-    expect(refund.$inc.rdScore).toBe(8);
+    expect(refund.$inc.rdScore).toBe(6);
     expect(refund.$pull).toEqual({ unlockedTechNodeIds: NODE_1950_1 });
     expect(vi.mocked(recordAudit)).not.toHaveBeenCalled();
   });

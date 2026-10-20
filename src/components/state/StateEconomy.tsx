@@ -34,6 +34,8 @@ import {
 } from "@/lib/constants/corporations";
 import { economyUrl, regionApiSubUrl, stockmarketUrl } from "@/lib/urls";
 import { CorporationLogo } from "@/components/corporation/CorporationLogo";
+import { PlantSplitPlannerModal } from "@/components/corporation/PlantSplitPlannerModal";
+import type { PlantSectorSplitQuote } from "@/lib/corporations/plantSectorSplit";
 import { getCountryFlagUrlForEra } from "@/lib/constants/flags";
 import { useActivePreset } from "@/contexts/RegisteredCountriesContext";
 import { formatMarketingStrength, formatGDP } from "@/lib/utils/formatters";
@@ -88,6 +90,7 @@ interface SectorOwner {
   attackCost?: number | null;
   attackEstimatedCapture?: number | null;
   plantCount?: number;
+  plantSplitQuote?: PlantSectorSplitQuote;
   /** Active for-sale listing — null when not on the secondary market */
   forSale?: {
     listedAt: string;
@@ -179,6 +182,10 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
   const [splitMsg, setSplitMsg] = useState("");
   const [splitError, setSplitError] = useState("");
   const [splitStrength, setSplitStrength] = useState<"full" | "half">("full");
+  const [attackingId, setAttackingId] = useState<string | null>(null);
+  const [attackMsg, setAttackMsg] = useState("");
+  const [attackError, setAttackError] = useState("");
+  const [plannedSplitTarget, setPlannedSplitTarget] = useState<SectorOwner | null>(null);
   const [adjustingId, setAdjustingId] = useState<string | null>(null);
   const [adjustMsg, setAdjustMsg] = useState("");
   const [adjustError, setAdjustError] = useState("");
@@ -246,6 +253,31 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
       setSplitError("Network error");
     } finally {
       setSplitting(false);
+    }
+  }
+
+  async function handleAttackSector(sectorId: string) {
+    setAttackingId(sectorId);
+    setAttackError("");
+    setAttackMsg("");
+    try {
+      const res = await fetch(regionApiSubUrl(countryId, stateId, "economy/attack-sector"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sectorId }),
+      });
+      const result = await res.json();
+      if (res.ok) {
+        setAttackMsg(result.message);
+        setPlannedSplitTarget(null);
+        fetchEconomy();
+      } else {
+        setAttackError(apiErrorText(result, "Attack failed"));
+      }
+    } catch {
+      setAttackError("Network error");
+    } finally {
+      setAttackingId(null);
     }
   }
 
@@ -334,6 +366,8 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
     setSplitStrength("full");
     setSplitMsg("");
     setSplitError("");
+    setAttackMsg("");
+    setAttackError("");
     setAdjustMsg("");
     setAdjustError("");
   };
@@ -628,6 +662,17 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
         </div>
       </div>
 
+      {/* Attack feedback */}
+      {attackError && (
+        <div className="rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-error">
+          {attackError}
+        </div>
+      )}
+      {attackMsg && (
+        <div className="rounded-lg border border-success/30 bg-success/10 p-3 text-sm text-success">
+          {attackMsg}
+        </div>
+      )}
       {/* Growth adjust feedback */}
       {adjustError && (
         <div className="rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-error">
@@ -858,6 +903,86 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
                         </button>
                       </div>
                     )}
+
+                    {/* Rival action lives with the target. Plant mode opens a
+                        full quote and confirmation instead of firing inline. */}
+                    {!isOwn &&
+                      !owner.isNatcorp &&
+                      data.userCorporationId &&
+                      (data.plantsMode ? (
+                        owner.plantSplitQuote && owner.plantCount != null ? (
+                          <div className="flex items-center justify-between gap-4 border-t border-card-border/50 px-4 py-2">
+                            <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
+                              <span>
+                                Automatic split:{" "}
+                                <span className="font-medium text-foreground">
+                                  {(owner.plantSplitQuote.seizureFraction * 100).toFixed(
+                                    (owner.plantSplitQuote.seizureFraction * 100) % 1 === 0 ? 0 : 1
+                                  )}
+                                  %
+                                </span>
+                              </span>
+                              <span>
+                                {owner.plantSplitQuote.plantsAtRisk.toLocaleString("en-US")} plants
+                              </span>
+                              <span>
+                                {(owner.plantSplitQuote.successProbability * 100).toFixed(1)}%
+                                chance
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAttackError("");
+                                setAttackMsg("");
+                                setPlannedSplitTarget(owner);
+                              }}
+                              className="shrink-0 rounded border border-error/30 bg-error/10 px-3 py-1 text-xs font-medium text-error transition-colors hover:bg-error/20"
+                            >
+                              Plan split
+                            </button>
+                          </div>
+                        ) : null
+                      ) : owner.attackCost != null && owner.attackCost > 0 ? (
+                        <div className="flex items-center justify-between gap-4 border-t border-card-border/50 px-4 py-2">
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
+                            <span>
+                              Cost:{" "}
+                              <span className="font-medium text-foreground">
+                                {formatAmount(owner.attackCost)}
+                              </span>{" "}
+                              +{" "}
+                              <span className="font-medium text-foreground">
+                                {data.attackMsCost ?? data.splitMsCost} MS
+                              </span>
+                            </span>
+                            {owner.attackEstimatedCapture != null &&
+                              owner.attackEstimatedCapture > 0 && (
+                                <span>
+                                  Est. capture:{" "}
+                                  <span className="font-medium text-success">
+                                    {formatAmount(owner.attackEstimatedCapture)}
+                                  </span>
+                                </span>
+                              )}
+                          </div>
+                          <button
+                            onClick={() => handleAttackSector(owner.sectorId)}
+                            disabled={
+                              attackingId === owner.sectorId ||
+                              data.userMarketingStrength < (data.attackMsCost ?? data.splitMsCost)
+                            }
+                            className="shrink-0 rounded border border-error/30 bg-error/10 px-3 py-1 text-xs font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-40"
+                            title={
+                              data.userMarketingStrength < (data.attackMsCost ?? data.splitMsCost)
+                                ? `Need ${data.attackMsCost ?? data.splitMsCost} MS, have ${formatMarketingStrength(data.userMarketingStrength)}`
+                                : "Attack this sector to capture market share"
+                            }
+                          >
+                            {attackingId === owner.sectorId ? "Attacking..." : "Attack"}
+                          </button>
+                        </div>
+                      ) : null)}
                   </div>
                 );
               })}
@@ -1118,6 +1243,26 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
       <CollapsibleSection title="National economic model">
         <EconomicModelCard countryId={countryId} />
       </CollapsibleSection>
+
+      {plannedSplitTarget?.plantSplitQuote && plannedSplitTarget.plantCount != null && (
+        <PlantSplitPlannerModal
+          open
+          targetName={plannedSplitTarget.displayName ?? plannedSplitTarget.corporationName}
+          defenderPlantCount={plannedSplitTarget.plantCount}
+          quote={plannedSplitTarget.plantSplitQuote}
+          userLiquidCapitalAnchor={data.userLiquidCapitalAnchor ?? 0}
+          userMarketingStrength={data.userMarketingStrength}
+          submitting={attackingId === plannedSplitTarget.sectorId}
+          errorMessage={attackError}
+          onClose={() => {
+            if (attackingId !== plannedSplitTarget.sectorId) {
+              setPlannedSplitTarget(null);
+              setAttackError("");
+            }
+          }}
+          onConfirm={() => handleAttackSector(plannedSplitTarget.sectorId)}
+        />
+      )}
     </div>
   );
 }

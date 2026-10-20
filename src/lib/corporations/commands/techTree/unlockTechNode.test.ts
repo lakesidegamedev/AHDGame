@@ -77,16 +77,16 @@ describe("unlockTechNode (v2 dual cost + lane)", () => {
 
   it("spends rdScore + cash and commits the lane on first unlock", async () => {
     const corp = makeCorp({ liquidCapital: 100_000_000 });
-    const { db, updateOne } = mockDb({ revenues: [60_000_000] }); // daily gross 60M, 15% => 9M
+    const { db, updateOne } = mockDb({ revenues: [180_000_000] }); // daily gross 180M, 5% => 9M
     const nodeId = corpNodeId("2019", 1); // cost 17
 
     const res = await unlockTechNode(db, corp, nodeId, YEAR, TURN);
 
     expect(res).toMatchObject({ ok: true, status: 200, nodeId, cashSpent: 9_000_000 });
     const [filter, update] = updateOne.mock.calls[0];
-    expect(filter.rdScore).toEqual({ $gte: 48 }); // 2019 decade cost
+    expect(filter.rdScore).toEqual({ $gte: 38 }); // 2019 decade cost
     expect(filter.liquidCapital).toEqual({ $gte: 9_000_000 });
-    expect(update.$inc).toMatchObject({ rdScore: -48, liquidCapital: -9_000_000 });
+    expect(update.$inc).toMatchObject({ rdScore: -38, liquidCapital: -9_000_000 });
     expect(update.$push).toEqual({ unlockedTechNodeIds: nodeId });
     expect(update.$set["techDecadeLane.2019"]).toBe("generic");
   });

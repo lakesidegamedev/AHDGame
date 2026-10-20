@@ -3,50 +3,35 @@
  *
  * After the live corporation phase has computed this turn's sectors, prepare
  * every plant with the unified producer host and run the funded market in
- * memory: households seeded with a few turns of today's household spending and
- * paid this turn's wages, public buyers funded from the existing budget outlay.
- * Writes ONE summary document per turn to `producerMarketShadows` and nothing
- * else. It never moves money, never touches a sector or corporation, and a
- * failure is logged, never thrown into the turn.
+ * memory on its own carried books (funded-market cutover phase A): cash, stock,
+ * unpaid bills and prices continue from the previous shadow turn; households
+ * spend wages, distributed AI profit and savings; public buyers spend the
+ * plant economy's share of their budget. Writes one summary per turn to
+ * `producerMarketShadows` and the carried state to
+ * `producerMarketShadowState`, nothing else. It never moves live money, never
+ * touches a sector or corporation, and a failure is logged, never thrown.
  */
-import { resolveSectorHostCurrencyCode } from "@/lib/currency/corporationCapital";
-import type { CorporateSector } from "@/lib/db/types";
-import { emptyProducerSectorOpening } from "@/lib/market/producerMarket/openingState";
 import type { Db } from "mongodb";
-import type { CommodityType } from "@/lib/constants/commodities";
-import { COMMODITY_TYPES } from "@/lib/constants/commodities";
-import { eraScaledBasePrices } from "@/lib/constants/commodities";
-import { TURNS_PER_DAY, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
+import { runProducerShadowDetailed } from "@/lib/market/producerMarket/shadowRules";
 import {
-  computeHouseholdConsumption,
-  plantsHouseholdUnitScale,
-} from "@/lib/turn/householdConsumption";
-import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
-import { householdDemandSpecs } from "@/lib/market/producerMarket/householdDemandRules";
-import { HOUSEHOLD_OPENING_TURNS } from "@/lib/market/producerMarket/householdOpeningRules";
-import { publicBuyerFunding } from "@/lib/market/producerMarket/publicBuyerRules";
-import { marketingBuyerLines } from "@/lib/market/producerMarket/marketingBuyerRules";
-import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
-import {
-  publicOrders,
-  runProducerShadow,
-  type ShadowProducer,
-} from "@/lib/market/producerMarket/shadowRules";
-import { isPlannedEconomy } from "@/lib/constants/commandEconomy";
-import {
-  prepareProducerPhysicalSector,
-  type ProducerPhysicalEnv,
-} from "./producerPhysicalPreparation";
-import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
+  checkCohort,
+  checkConservation,
+  closeShadowTurn,
+  MONEY_LOOP_TOLERANCE,
+  resolveShadowContinuity,
+  SHADOW_STATE_SCHEMA_VERSION,
+  type CohortFlows,
+  type ShadowCarryState,
+  type ShadowPlantCarry,
+} from "@/lib/market/producerMarket/shadowCarryRules";
+import { producerTrades } from "@/lib/market/producerMarket/rules";
+import type { ProducerPhysicalEnv } from "./producerPhysicalPreparation";
 import type { CorporationLookups } from "./types";
-import {
-  routeEligibility,
-  type RouteOffer,
-  type RouteOrder,
-} from "@/lib/market/producerMarket/routeRules";
+import { buildProducerTurnDemand } from "./producerTurnDemand";
 
 export const PRODUCER_SHADOW_COLLECTION = "producerMarketShadows";
-const PRICE_HEADROOM = 1.25;
+/** Shadow-only carried state, one document per run and turn. Never read by live code. */
+export const PRODUCER_SHADOW_STATE_COLLECTION = "producerMarketShadowState";
 
 export async function runProducerMarketShadowPhase(
   db: Db,
@@ -63,241 +48,53 @@ export async function runProducerMarketShadowPhase(
   if (!input.enabled || !input.worldEpoch) return;
   try {
     const started = Date.now();
-    const legacyBySectorId = legacyPnlBySectorId(input.sectorOps);
-    const env = isolatedShadowEnv(input.env);
-    const { lookups } = input;
-    const base = eraScaledBasePrices(lookups.eraUnitScale);
-    const refPrice = (commodity: CommodityType, stateId: string): number | null => {
-      const ratio = isStateScopedCommodity(commodity)
-        ? lookups.statePriceRatioByState?.get(stateId)?.get(commodity)
-        : undefined;
-      const r = ratio ?? lookups.priceRatioByCommodity.get(commodity) ?? 1;
-      const p = base[commodity] * r;
-      return Number.isFinite(p) && p > 0 ? p : null;
-    };
-
-    // 1. Prepare every producing plant with the new host.
-    const producers: ShadowProducer[] = [];
-    let skipped = 0;
-    const cashByCorp = new Map<string, number>();
-    const householdWallets = new Map<
-      string,
-      { accountId: string; stateId: string; countryId: string }
-    >();
-    const planCountry = new Map<string, string>();
-    const operatingPayees = new Set<string>();
-    const skipReasons: Record<string, number> = {};
-    for (const corp of lookups.corporations) {
-      for (const sector of lookups.sectorsByCorp.get(corp._id.toString()) ?? []) {
-        try {
-          const { prepared, walletScopes } = prepareProducerPhysicalSector({
-            worldEpoch: input.worldEpoch,
-            env,
-            corporation: corp,
-            sector: shadowOpeningSector(sector, input.worldEpoch, input.turn),
-            inputPriceHeadroom: PRICE_HEADROOM,
-          });
-          // Legacy plantsPnl is daily and in the sector host's currency; the
-          // shadow is per turn in anchor units, so convert before comparing.
-          const legacyLocal = legacyBySectorId.get(sector._id.toString()) ?? null;
-          const hostRate = lookups.exchangeRatesByCurrency.get(
-            (resolveSectorHostCurrencyCode(sector, corp) ?? "USD") as never
-          );
-          const legacy =
-            legacyLocal && hostRate && hostRate > 0
-              ? {
-                  revenue: legacyLocal.revenue / hostRate / TURNS_PER_DAY,
-                  profit: legacyLocal.profit / hostRate / TURNS_PER_DAY,
-                }
-              : null;
-          producers.push({ plan: prepared.plan, sectorType: sector.sectorType, legacy });
-          const rate = lookups.exchangeRatesByCurrency.get(
-            (corp.liquidCurrencyCode ?? "USD") as never
-          );
-          cashByCorp.set(
-            prepared.plan.accountId,
-            rate && rate > 0 ? Math.max(0, (corp.liquidCapital ?? 0) / rate) : 0
-          );
-          const sectorCountry = String(sector.countryId ?? corp.countryId ?? "");
-          planCountry.set(prepared.plan.id, sectorCountry);
-          householdWallets.set(prepared.plan.labourRecipientAccountId, {
-            accountId: prepared.plan.labourRecipientAccountId,
-            stateId: sector.stateId,
-            countryId: sectorCountry,
-          });
-          operatingPayees.add(prepared.plan.operatingRecipientAccountId);
-          void walletScopes;
-        } catch (error) {
-          skipped++;
-          const reason = error instanceof Error ? error.message : String(error);
-          skipReasons[reason] = (skipReasons[reason] ?? 0) + 1;
-        }
-      }
-    }
-
-    // 2. Household opening cash: a few turns of today's household spending.
-    const states = await db
-      .collection<{ _id: unknown; countryId?: string; gdp?: number; population?: number }>("states")
-      .find({}, { projection: { countryId: 1, gdp: 1, population: 1 } })
-      .toArray();
-    const consumption = computeHouseholdConsumption({
-      states: states.map((s) => ({
-        stateId: String(s._id),
-        countryId: s.countryId,
-        gdp: s.gdp ?? 0,
-        population: s.population ?? 0,
-      })),
-      metricsByState: new Map(
-        [...(lookups.stateMetricsByState ?? new Map())].map(([id, m]) => [
-          id,
-          {
-            medianIncome: m?.economic?.medianIncome?.value,
-            unemploymentRate: m?.economic?.unemploymentRate?.value,
-            consumerConfidence: m?.economic?.consumerConfidence?.value,
-          },
-        ])
-      ),
-      eraUnitScale: lookups.eraUnitScale,
-      plantsUnitScale: plantsHouseholdUnitScale(lookups.preset),
-    });
-    const spendByState = new Map<string, number>();
-    for (const [stateId, units] of consumption.byState) {
-      let value = 0;
-      for (const [c, u] of units) value += u * (refPrice(c, stateId) ?? 0);
-      spendByState.set(stateId, value);
-    }
-
-    // 3. Public buyers from the existing budget outlay (anchor units).
-    const stateWeightsByCountry = new Map<string, Map<string, number>>();
-    for (const s of states)
-      if (s.countryId) {
-        const m = stateWeightsByCountry.get(s.countryId) ?? new Map<string, number>();
-        m.set(String(s._id), Math.max(0, s.gdp ?? 0));
-        stateWeightsByCountry.set(s.countryId, m);
-      }
-    const funding = publicBuyerFunding(
-      lookups.federalBudgets.map((b) => {
-        const code = resolveCountryCurrencyCode(b);
-        const rate = (code && lookups.exchangeRatesByCurrency.get(code)) || 1;
-        const byCategory = Object.fromEntries(
-          Object.entries(b.spending?.byCategory ?? {}).map(([k, v]) => [k, (v as number) / rate])
-        );
-        return {
-          countryId: String(b.countryId),
-          byCategory,
-          plannedEconomy: isPlannedEconomy(String(b.countryId), lookups.eraYear ?? null, false),
-          stateWeights: stateWeightsByCountry.get(String(b.countryId)) ?? new Map(),
-        };
-      }),
-      TURNS_PER_YEAR
+    const worldEpoch = input.worldEpoch;
+    const stateCollection = db.collection<ShadowCarryState & { _id: string; at: Date }>(
+      PRODUCER_SHADOW_STATE_COLLECTION
     );
-    const publicBuyers = funding.map((f) => ({
-      accountId: `public:${f.countryId}`,
-      lines: f.lines,
-    }));
-
-    // 4. Accounts: company cash, seeded households, funded public buyers, payees.
-    const accounts = [
-      ...[...cashByCorp].map(([id, cash]) => ({ id, cash })),
-      ...[...householdWallets.values()].map((w) => ({
-        id: w.accountId,
-        cash: HOUSEHOLD_OPENING_TURNS * (spendByState.get(w.stateId) ?? 0),
-      })),
-      ...funding.map((f) => ({ id: `public:${f.countryId}`, cash: f.fundingLocal })),
-      ...[...operatingPayees]
-        .filter((id) => !householdWallets.has(id))
-        .map((id) => ({ id, cash: 0 })),
-    ];
-
-    // 5. Trade routes: world-book buyers only reach sellers in their own
-    //    country or on routes the live trade matrix leaves open.
-    const households = householdDemandSpecs({
-      wallets: [...householdWallets.values()],
-      referencePrice: refPrice,
-      priceHeadroom: PRICE_HEADROOM,
-    });
-    const publicBuyerOrders = publicOrders(
-      publicBuyers,
-      (c, book) => refPrice(c as CommodityType, book.startsWith("state:") ? book.slice(6) : ""),
-      PRICE_HEADROOM
+    const predecessor = await stateCollection.findOne(
+      { worldEpoch, turn: input.turn - 1, schemaVersion: SHADOW_STATE_SCHEMA_VERSION },
+      { sort: { at: -1 } }
     );
-    // 4b. Corporate advertising from funded marketing budgets, paid from the
-    //     corporation's own account (only corporations with plants hold one).
-    const corpCountry = new Map<string, string>();
-    const marketingBudgets = lookups.corporations.flatMap((corp) => {
-      const id = corp._id.toString();
-      const cash = cashByCorp.get(id);
-      if (cash == null || !((corp.marketingBudget ?? 0) > 0)) return [];
-      corpCountry.set(id, String(corp.countryId ?? ""));
-      const rate = lookups.exchangeRatesByCurrency.get((corp.liquidCurrencyCode ?? "USD") as never);
-      return [
-        {
-          accountId: id,
-          dailyBudgetAnchor: readCorpEconomicAnchor(
-            corp.marketingBudget ?? 0,
-            corp.liquidCurrencyCode,
-            rate ?? 1
-          ),
-          cashAnchor: cash,
-        },
-      ];
-    });
-    const marketingOrders = publicOrders(
-      marketingBuyerLines(marketingBudgets, TURNS_PER_DAY),
-      (c) => refPrice(c as CommodityType, ""),
-      PRICE_HEADROOM
-    ).map((o) => ({ ...o, id: `marketing:${o.accountId}` }));
-    const routes = lookups.tradeRoutes;
-    let eligibleOffersByOrder: Record<string, readonly string[]> | undefined;
-    if (routes) {
-      const open = (c: string, from: string, to: string) =>
-        routes.affinityFor(c as CommodityType, from as never, to as never) > 0;
-      const offers: RouteOffer[] = producers.flatMap((p) =>
-        p.plan.outputs
-          .filter((o) => o.book === "world")
-          .map((o) => ({
-            id: JSON.stringify([p.plan.id, "output", o.commodity]),
-            commodity: o.commodity,
-            sellerCountry: planCountry.get(p.plan.id) ?? "",
-          }))
-      );
-      const orders: RouteOrder[] = [
-        ...producers.flatMap((p) =>
-          p.plan.inputs
-            .filter((r) => r.book === "world")
-            .map((r) => ({
-              id: JSON.stringify([p.plan.id, "input", r.commodity]),
-              commodity: r.commodity,
-              buyerCountry: planCountry.get(p.plan.id) ?? "",
-            }))
-        ),
-      ];
-      eligibleOffersByOrder = routeEligibility(orders, offers, open);
-      const walletCountry = new Map(
-        [...householdWallets.values()].map((w) => [w.accountId, w.countryId])
-      );
-      const listFor = (commodity: string, country: string) =>
-        routeEligibility([{ id: "x", commodity, buyerCountry: country }], offers, open).x;
-      for (const h of households)
-        for (const product of h.products)
-          if (product.book === "world")
-            (product as { eligibleOfferIds?: readonly string[] }).eligibleOfferIds = listFor(
-              product.commodity,
-              walletCountry.get(h.accountId) ?? ""
-            );
-      for (const o of publicBuyerOrders)
-        if (o.book === "world")
-          o.eligibleOfferIds = listFor(o.commodity, o.accountId.slice("public:".length));
-      for (const o of marketingOrders)
-        o.eligibleOfferIds = listFor(o.commodity, corpCountry.get(o.accountId) ?? "");
-    }
+    const continuity = resolveShadowContinuity(predecessor, { worldEpoch, turn: input.turn });
+    const carry = continuity.mode === "continue" ? continuity.predecessor : null;
 
-    const references = Object.fromEntries(
-      COMMODITY_TYPES.map((c) => [c, refPrice(c, "")] as const).filter(
-        (e): e is readonly [CommodityType, number] => e[1] != null
-      )
-    );
-    const summary = runProducerShadow({
+    const {
+      accounts,
+      cashByCorp,
+      eligibleOffersByOrder,
+      firstWalletByCorp,
+      funding,
+      householdForPayee,
+      householdSeed,
+      householdWallets,
+      households,
+      investmentBuyerOrders,
+      investmentFundingTotal,
+      marketingOrders,
+      newCompanyCash,
+      openingById,
+      ownerKindByCompany,
+      planCountry,
+      planSector,
+      producers,
+      publicBuyerOrders,
+      publicFunding,
+      publicShareByCountry,
+      references,
+      roles,
+      skipReasons,
+      skipped,
+      states,
+    } = await buildProducerTurnDemand(db, {
+      turn: input.turn,
+      worldEpoch,
+      lookups: input.lookups,
+      env: input.env,
+      sectorOps: input.sectorOps,
+      carry,
+    });
+    const { summary, result } = runProducerShadowDetailed({
       turn: input.turn,
       references,
       producers,
@@ -305,16 +102,274 @@ export async function runProducerMarketShadowPhase(
       accounts,
       households,
       publicOrders: publicBuyerOrders,
+      investmentOrders: investmentBuyerOrders,
       marketingOrders,
       eligibleOffersByOrder,
+      payables: (carry?.payables ?? []).filter((p) => cashByCorp.has(p.debtorAccountId)),
     });
+
+    // 6. Close: AI profit to households, operating payees to their state's
+    //    households, unspent public funding back to the treasury.
+    const profitByCompany = new Map<string, number>();
+    const planAccount = new Map(producers.map((p) => [p.plan.id, p.plan.accountId]));
+    for (const r of result.producers) {
+      const id = planAccount.get(r.id);
+      if (id) profitByCompany.set(id, (profitByCompany.get(id) ?? 0) + r.profit);
+    }
+    const close = closeShadowTurn({
+      closingAccounts: result.accounts,
+      roles,
+      profitByCompany,
+      ownerKindByCompany,
+      householdFor: (id) => householdForPayee.get(id) ?? firstWalletByCorp.get(id)?.wallet ?? null,
+    });
+
+    // 7. Gate A: money loop per household wallet, per country and globally.
+    const wagesByWallet = new Map<string, number>();
+    const planRecipient = new Map(
+      producers.map((p) => [p.plan.id, p.plan.labourRecipientAccountId])
+    );
+    for (const r of result.producers) {
+      const w = planRecipient.get(r.id);
+      if (w) wagesByWallet.set(w, (wagesByWallet.get(w) ?? 0) + r.labourPaid);
+    }
+    for (const pay of result.payablePayments)
+      if (householdWallets.has(pay.creditorAccountId))
+        wagesByWallet.set(
+          pay.creditorAccountId,
+          (wagesByWallet.get(pay.creditorAccountId) ?? 0) + pay.amount
+        );
+    const spendByBuyer = new Map<string, number>();
+    for (const t of producerTrades(result.tradeReceipt))
+      spendByBuyer.set(
+        t.buyerAccountId,
+        (spendByBuyer.get(t.buyerAccountId) ?? 0) + t.units * t.unitPrice
+      );
+    const distByWallet = new Map<string, number>();
+    const opIncomeByWallet = new Map<string, number>();
+    for (const t of close.transfers) {
+      const m =
+        t.reason === "ai_dividend"
+          ? distByWallet
+          : t.reason === "operating_income"
+            ? opIncomeByWallet
+            : null;
+      if (m) m.set(t.to, (m.get(t.to) ?? 0) + t.amount);
+    }
+    const flowsFor = (ids: readonly string[]): CohortFlows => {
+      const sum = (f: (id: string) => number) => ids.reduce((s, id) => s + f(id), 0);
+      return {
+        opening: sum((id) => openingById.get(id) ?? 0),
+        wagesPaid: sum((id) => wagesByWallet.get(id) ?? 0),
+        distributionsPaid: sum((id) => distByWallet.get(id) ?? 0),
+        operatingIncome: sum((id) => opIncomeByWallet.get(id) ?? 0),
+        settledSpend: sum((id) => spendByBuyer.get(id) ?? 0),
+        closing: sum((id) => close.accounts[id] ?? 0),
+      };
+    };
+    const walletIds = [...householdWallets.keys()].sort();
+    const walletChecks = walletIds.map((id) => checkCohort(id, flowsFor([id])));
+    const byCountry = new Map<string, string[]>();
+    for (const w of householdWallets.values())
+      byCountry.set(w.countryId, [...(byCountry.get(w.countryId) ?? []), w.accountId]);
+    const countryChecks = [...byCountry]
+      .sort(([a], [b]) => (a < b ? -1 : 1))
+      .map(([c, ids]) => checkCohort(c, flowsFor(ids)));
+    const globalCheck = checkCohort("households", flowsFor(walletIds));
+    const publicChecks = funding.map((f) => {
+      const id = `public:${f.countryId}`;
+      const spent = spendByBuyer.get(id) ?? 0;
+      const returned = close.transfers
+        .filter((t) => t.from === id && t.reason === "public_return")
+        .reduce((s, t) => s + t.amount, 0);
+      const residual = f.fundingLocal - spent - returned;
+      return {
+        countryId: f.countryId,
+        funded: f.fundingLocal,
+        spent,
+        returned,
+        residual,
+        pass: Math.abs(residual) <= MONEY_LOOP_TOLERANCE * Math.max(f.fundingLocal, 1),
+      };
+    });
+    const carriedIds = new Set(Object.keys(carry?.accounts ?? {}));
+    const exited = [...carriedIds]
+      .filter((id) => !openingById.has(id))
+      .reduce((s, id) => s + (carry?.accounts[id] ?? 0), 0);
+    const conservation = checkConservation({
+      openingTotal: Object.values(carry?.accounts ?? {}).reduce((s, v) => s + v, 0),
+      closingTotal: Object.values(close.accounts).reduce((s, v) => s + v, 0),
+      sources: {
+        householdSeed,
+        newCompanyCash: newCompanyCash.total,
+        publicFunding,
+        investmentFunding: investmentFundingTotal,
+      },
+      sinks: {
+        exitedAccounts: exited,
+        publicReturned: close.publicReturned,
+        stateRemitted: close.stateRemitted,
+      },
+    });
+    const moneyLoop = {
+      pass:
+        conservation.pass &&
+        globalCheck.pass &&
+        walletChecks.every((c) => c.pass) &&
+        publicChecks.every((c) => c.pass),
+      tolerance: MONEY_LOOP_TOLERANCE,
+      conservation: {
+        ...conservation,
+        sources: {
+          householdSeed,
+          newCompanyCash: newCompanyCash.total,
+          publicFunding,
+          investmentFunding: investmentFundingTotal,
+        },
+        sinks: {
+          exitedAccounts: exited,
+          publicReturned: close.publicReturned,
+          stateRemitted: close.stateRemitted,
+        },
+      },
+      households: globalCheck,
+      countries: countryChecks,
+      failingWallets: walletChecks.filter((c) => !c.pass).slice(0, 50),
+      walletCount: walletChecks.length,
+      zeroActivityWallets: walletChecks.filter((c) => c.zeroActivity).length,
+      public: publicChecks,
+      distributed: close.distributed,
+      operatingSwept: close.operatingSwept,
+    };
+
+    // 8. Requested vs offered per commodity and country.
+    const stateCountry = new Map(states.map((s) => [String(s._id), String(s.countryId ?? "")]));
+    const scopeOf = (book: string) =>
+      book === "world"
+        ? "world"
+        : book.startsWith("state:")
+          ? (stateCountry.get(book.slice(6)) ?? "")
+          : book.slice("country:".length);
+    const demand = new Map<
+      string,
+      {
+        commodity: string;
+        scope: string;
+        requested: number;
+        delivered: number;
+        offered: number;
+        sold: number;
+      }
+    >();
+    const row = (commodity: string, book: string) => {
+      const scope = scopeOf(book);
+      const key = `${commodity}|${scope}`;
+      const r = demand.get(key) ?? {
+        commodity,
+        scope,
+        requested: 0,
+        delivered: 0,
+        offered: 0,
+        sold: 0,
+      };
+      demand.set(key, r);
+      return r;
+    };
+    for (const o of result.orderOutcomes) {
+      const r = row(o.commodity, o.book);
+      r.requested += o.requestedUnits;
+      r.delivered += o.deliveredUnits;
+    }
+    for (const p of result.producers)
+      for (const prod of p.products) {
+        const r = row(prod.commodity, prod.book);
+        r.offered += prod.offeredUnits;
+        r.sold += prod.soldUnits;
+      }
+    const demandRatios = [...demand.values()]
+      .map((r) => ({
+        ...r,
+        requestedPerOffered: r.offered > 0 ? r.requested / r.offered : null,
+        note: r.offered > 0 ? undefined : r.requested > 0 ? "no offer" : "no activity",
+      }))
+      .sort((a, b) =>
+        a.commodity === b.commodity
+          ? a.scope < b.scope
+            ? -1
+            : 1
+          : a.commodity < b.commodity
+            ? -1
+            : 1
+      );
+
+    // Per-sector legacy and funded revenue (anchor per turn): the evidence the
+    // cutover's transition classification is frozen from.
+    const fundedByPlan = new Map(result.producers.map((r) => [r.id, r.revenue]));
+    const sectorRevenue = producers.flatMap((p) => {
+      const sectorId = planSector.get(p.plan.id);
+      if (!sectorId || !p.legacy) return [];
+      return [{ sectorId, legacy: p.legacy.revenue, funded: fundedByPlan.get(p.plan.id) ?? 0 }];
+    });
+
+    // 9. Persist next turn's opening (shadow-only) and the turn summary.
+    const valueAddedByCountry: Record<string, number> = {};
+    const plants: Record<string, ShadowPlantCarry> = {};
+    for (const r of result.producers) {
+      const country = planCountry.get(r.id) ?? "";
+      valueAddedByCountry[country] =
+        (valueAddedByCountry[country] ?? 0) + (r.revenue - r.inputsConsumed);
+      const sectorId = planSector.get(r.id);
+      if (sectorId)
+        plants[sectorId] = {
+          inputStock: r.inputStock,
+          outputStock: r.outputStock,
+          receipt: {
+            activeUnits: r.activeUnits,
+            producedUnits: r.producedUnits,
+            offeredUnits: r.offeredUnits,
+            soldUnits: r.soldUnits,
+            revenue: r.revenue,
+            inputsConsumed: r.inputsConsumed,
+          },
+        };
+    }
+    const nextState: ShadowCarryState = {
+      runId: continuity.runId,
+      worldEpoch,
+      turn: input.turn,
+      predecessorTurn: carry ? carry.turn : null,
+      schemaVersion: SHADOW_STATE_SCHEMA_VERSION,
+      codeSha: process.env.RAILWAY_GIT_COMMIT_SHA ?? null,
+      accounts: close.accounts,
+      plants,
+      payables: result.payables,
+      references: Object.fromEntries(summary.nextPrices.map((p) => [p.commodity, p.next])),
+      valueAddedByCountry,
+    };
+    const stateId = `${continuity.runId}:${input.turn}`;
+    await stateCollection.replaceOne(
+      { _id: stateId },
+      { ...nextState, at: new Date() },
+      { upsert: true }
+    );
+    await stateCollection.deleteMany({ runId: continuity.runId, turn: { $lt: input.turn - 1 } });
     await db.collection(PRODUCER_SHADOW_COLLECTION).replaceOne(
       { _id: input.turn as never },
       {
         ...summary,
+        runId: continuity.runId,
+        continuity:
+          continuity.mode === "continue"
+            ? { mode: "continue", predecessorTurn: carry!.turn }
+            : { mode: "new", reason: continuity.reason },
+        moneyLoop,
+        demandRatios,
+        sectorRevenue,
+        publicShareByCountry,
         legacyPrices: references,
         skipReasons,
-        worldEpoch: input.worldEpoch,
+        worldEpoch,
+        codeSha: nextState.codeSha,
         ms: Date.now() - started,
         at: new Date(),
       },
@@ -325,69 +380,23 @@ export async function runProducerMarketShadowPhase(
   }
 }
 
-/** Legacy plantsPnl this turn, read from the sector writes already computed (no I/O). */
-export function legacyPnlBySectorId(
-  sectorOps: readonly unknown[]
-): Map<string, { revenue: number; profit: number }> {
-  const out = new Map<string, { revenue: number; profit: number }>();
-  for (const op of sectorOps as {
-    updateOne?: {
-      filter?: { _id?: { toString(): string } };
-      update?: { $set?: { plantsPnl?: { revenue?: number; profit?: number } } };
-    };
-  }[]) {
-    const id = op.updateOne?.filter?._id?.toString();
-    const pnl = op.updateOne?.update?.$set?.plantsPnl;
-    if (id && pnl && Number.isFinite(pnl.revenue) && Number.isFinite(pnl.profit))
-      out.set(id, { revenue: pnl.revenue!, profit: pnl.profit! });
-  }
-  return out;
-}
+export {
+  isolatedShadowEnv,
+  legacyPnlBySectorId,
+  shadowCountryBooks,
+  shadowOpeningSector,
+} from "./producerTurnDemand";
 
 /**
- * Plant preparation records labour demand, wage and automation indexes and
- * strike events into the environment it is given. The live turn persists those
- * collectors later, so the shadow must never write into them: it works on deep
- * copies and starts with no pending strikes.
+ * The shadow costs up to about two minutes on the live world. Run it only when
+ * that much of the phase budget is left, with a safety margin.
  */
-export function isolatedShadowEnv(env: ProducerPhysicalEnv): ProducerPhysicalEnv {
-  return {
-    ...env,
-    labourDemandByState: structuredClone(env.labourDemandByState),
-    labourDemandWageIndexByState: structuredClone(env.labourDemandWageIndexByState),
-    wageIndexByState: structuredClone(env.wageIndexByState),
-    automationIndexByState: structuredClone(env.automationIndexByState),
-    pendingStrikeEvents: [],
-  };
-}
-
-/**
- * The live world has not had the producer opening conversion, so its sectors
- * carry no producer generation or inventory. For the shadow only, give each a
- * copy with an opening stamped on last turn and its existing stock carried as
- * sellable output stock. Never written back.
- */
-export function shadowOpeningSector(
-  sector: CorporateSector,
-  worldEpoch: string,
-  turn: number
-): CorporateSector {
-  if (sector.producerCapacity && sector.producerInventory) return sector;
-  const opening = emptyProducerSectorOpening(worldEpoch, Math.max(0, turn - 1));
-  const outputStock = Object.entries(sector.inventoryUnits ?? {})
-    .filter(([, units]) => typeof units === "number" && Number.isFinite(units) && units > 0)
-    .map(([commodity, units]) => ({
-      commodity,
-      units: units as number,
-      book: isStateScopedCommodity(commodity as CommodityType)
-        ? `state:${sector.stateId}`
-        : "world",
-    }));
-  return {
-    ...sector,
-    capacityBookAnchor: sector.capacityBookAnchor ?? 0,
-    buildQueue: Array.isArray(sector.buildQueue) ? sector.buildQueue : [],
-    producerCapacity: opening.producerCapacity,
-    producerInventory: { ...opening.producerInventory, outputStock },
-  };
+export const SHADOW_RESERVED_MS = 120_000;
+export function shadowFitsPhaseBudget(elapsedMs: number, phaseTimeoutMs: number): boolean {
+  const ok = elapsedMs + SHADOW_RESERVED_MS <= phaseTimeoutMs;
+  if (!ok)
+    console.warn(
+      `[producerMarketShadow] skipped: corporation phase at ${Math.round(elapsedMs / 1000)}s of ${Math.round(phaseTimeoutMs / 1000)}s`
+    );
+  return ok;
 }

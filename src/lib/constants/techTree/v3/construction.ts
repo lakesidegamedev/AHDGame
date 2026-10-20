@@ -13,7 +13,7 @@ export const CONSTRUCTION_V3: V3LaneContent = {
       name: "Cost-Plus Contract Mastery",
       description:
         "Meticulous cost documentation on cost-plus war work captures every allowable dollar.",
-      effects: [{ kind: "priceRealization", pct: 0.011 }],
+      effects: [{ kind: "plantOutput", pct: 0.011 }],
     },
     {
       name: "War Production Board Standing",
@@ -35,7 +35,7 @@ export const CONSTRUCTION_V3: V3LaneContent = {
       description:
         "Negotiated priority contracts pay premium rates for guaranteed wartime delivery.",
       effects: [
-        { kind: "priceRealization", pct: 0.021 },
+        { kind: "plantOutput", pct: 0.021 },
         { kind: "outputRate", commodity: "construction_services", pct: 0.06 },
       ],
     },
@@ -60,7 +60,7 @@ export const CONSTRUCTION_V3: V3LaneContent = {
       name: "Negotiated Work Reputation",
       description:
         "A reputation for schedule certainty wins negotiated contracts above hard-bid margins.",
-      effects: [{ kind: "priceRealization", pct: 0.012 }],
+      effects: [{ kind: "plantOutput", pct: 0.012 }],
     },
     {
       name: "Interstate Program Prequalification",
@@ -82,7 +82,7 @@ export const CONSTRUCTION_V3: V3LaneContent = {
       description:
         "Bundling design and construction sells owners certainty at premium contract values.",
       effects: [
-        { kind: "priceRealization", pct: 0.022 },
+        { kind: "plantOutput", pct: 0.022 },
         { kind: "marketingStrength", flat: 25 },
       ],
     },
@@ -107,7 +107,7 @@ export const CONSTRUCTION_V3: V3LaneContent = {
       name: "Landmark Project Portfolio",
       description: "Signature towers and stadiums let the firm charge for reputation on every bid.",
       effects: [
-        { kind: "priceRealization", pct: 0.012 },
+        { kind: "plantOutput", pct: 0.012 },
         { kind: "marketingStrength", flat: 10 },
       ],
     },
@@ -131,7 +131,7 @@ export const CONSTRUCTION_V3: V3LaneContent = {
       description:
         "Delivering land, finance, and building as one package commands developer-level fees.",
       effects: [
-        { kind: "priceRealization", pct: 0.024 },
+        { kind: "plantOutput", pct: 0.024 },
         { kind: "outputRate", commodity: "construction_services", pct: 0.07 },
       ],
     },
@@ -156,7 +156,7 @@ export const CONSTRUCTION_V3: V3LaneContent = {
       name: "Fast-Track Delivery Premiums",
       description:
         "Overlapping design and construction delivers months early for owners who pay for speed.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Environmental Review Navigation",
@@ -178,7 +178,7 @@ export const CONSTRUCTION_V3: V3LaneContent = {
       description:
         "Managing entire capital programs earns professional fees on billions the firm never builds.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "marketingStrength", flat: 26 },
       ],
     },
@@ -203,7 +203,7 @@ export const CONSTRUCTION_V3: V3LaneContent = {
       name: "Interior Fit-Out Specialization",
       description:
         "High-margin corporate interiors work rides the office boom while heavy work stalls.",
-      effects: [{ kind: "priceRealization", pct: 0.012 }],
+      effects: [{ kind: "plantOutput", pct: 0.012 }],
     },
     {
       name: "Claims Avoidance Culture",
@@ -225,7 +225,7 @@ export const CONSTRUCTION_V3: V3LaneContent = {
       description:
         "GMP contracts with shared savings win premium work from owners burned by overruns.",
       effects: [
-        { kind: "priceRealization", pct: 0.024 },
+        { kind: "plantOutput", pct: 0.024 },
         { kind: "outputRate", commodity: "construction_services", pct: 0.06 },
       ],
     },
@@ -249,7 +249,7 @@ export const CONSTRUCTION_V3: V3LaneContent = {
       name: "Preconstruction Services Fees",
       description:
         "Paid preconstruction work converts estimating from overhead into billable expertise.",
-      effects: [{ kind: "priceRealization", pct: 0.012 }],
+      effects: [{ kind: "plantOutput", pct: 0.012 }],
     },
     {
       name: "Surety Relationship Depth",
@@ -271,7 +271,7 @@ export const CONSTRUCTION_V3: V3LaneContent = {
       description:
         "Single-contract delivery at scale wins premium work owners will not bid conventionally.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "marketingStrength", flat: 28 },
       ],
     },
@@ -295,7 +295,7 @@ export const CONSTRUCTION_V3: V3LaneContent = {
       name: "Data Center Build Expertise",
       description:
         "Specialized mission-critical delivery earns technology clients' premium budgets.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Public-Private Partnership Desks",
@@ -317,7 +317,7 @@ export const CONSTRUCTION_V3: V3LaneContent = {
       description:
         "Repeat-build agreements with national chains deliver premium fee work in every region.",
       effects: [
-        { kind: "priceRealization", pct: 0.024 },
+        { kind: "plantOutput", pct: 0.024 },
         { kind: "outputRate", commodity: "construction_services", pct: 0.07 },
       ],
     },
@@ -341,7 +341,7 @@ export const CONSTRUCTION_V3: V3LaneContent = {
     {
       name: "Stimulus-Ready Shovel Work",
       description: "Pre-permitted projects capture stimulus funding at healthy negotiated margins.",
-      effects: [{ kind: "priceRealization", pct: 0.012 }],
+      effects: [{ kind: "plantOutput", pct: 0.012 }],
     },
     {
       name: "Countercyclical Sector Mix",
@@ -363,7 +363,7 @@ export const CONSTRUCTION_V3: V3LaneContent = {
       description:
         "Shared-risk IPD agreements with repeat owners lock in premium fees and zero-claim projects.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "marketingStrength", flat: 27 },
       ],
     },
@@ -388,7 +388,7 @@ export const CONSTRUCTION_V3: V3LaneContent = {
       name: "Mission-Critical Frameworks",
       description:
         "Framework agreements with hyperscale clients pay premium rates for guaranteed capacity.",
-      effects: [{ kind: "priceRealization", pct: 0.014 }],
+      effects: [{ kind: "plantOutput", pct: 0.014 }],
     },
     {
       name: "Workforce Development Pipelines",
@@ -410,7 +410,7 @@ export const CONSTRUCTION_V3: V3LaneContent = {
       description:
         "Delivering a living digital twin with the keys earns fees long after substantial completion.",
       effects: [
-        { kind: "priceRealization", pct: 0.026 },
+        { kind: "plantOutput", pct: 0.026 },
         { kind: "outputRate", commodity: "construction_services", pct: 0.07 },
       ],
     },
@@ -435,7 +435,7 @@ export const CONSTRUCTION_V3: V3LaneContent = {
       name: "Net-Zero Delivery Guarantees",
       description:
         "Guaranteed carbon-neutral delivery wins mandates that exclude conventional builders.",
-      effects: [{ kind: "priceRealization", pct: 0.014 }],
+      effects: [{ kind: "plantOutput", pct: 0.014 }],
     },
     {
       name: "Embodied Carbon Compliance",
@@ -457,7 +457,7 @@ export const CONSTRUCTION_V3: V3LaneContent = {
       description:
         "Contracts priced on delivered energy and uptime outcomes carry fees far above cost-plus.",
       effects: [
-        { kind: "priceRealization", pct: 0.028 },
+        { kind: "plantOutput", pct: 0.028 },
         { kind: "outputRate", commodity: "construction_services", pct: 0.08 },
       ],
     },

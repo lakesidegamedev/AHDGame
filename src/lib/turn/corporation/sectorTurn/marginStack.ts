@@ -126,6 +126,7 @@ export interface MarginStackResult {
   stateSectorSpecializationMod: number;
   sectorTypeMatchMod: number;
   sprawlMod: number;
+  managementOverheadMod: number;
   inflationMod: number;
   debtToGdpMod: number;
   deficitMod: number;
@@ -326,6 +327,10 @@ export function accumulateMarginModifiers(input: MarginStackInput): MarginStackR
     isStateOwned(corp) || isSprawlExemptSectorType(operatingSectorType)
       ? 0
       : getSprawlModifier(corpSectorCount, corp.logisticsStrength ?? 0, !!corp.secondaryType);
+  // Management overhead grows with total plant count; SOEs are exempt like sprawl.
+  const managementOverheadMod = isStateOwned(corp)
+    ? 0
+    : -(lookups.managementOverheadPpByCorpId?.get(corp._id.toString()) ?? 0);
   // National-level macroeconomic modifiers (inflation, debt-to-GDP, deficit)
   const inflationMod = lookups.macroInflationByCountry.get(sectorCountryId) ?? 0;
   const debtToGdpMod = lookups.macroDebtToGdpByCountry.get(sectorCountryId) ?? 0;
@@ -441,6 +446,7 @@ export function accumulateMarginModifiers(input: MarginStackInput): MarginStackR
     stateSectorSpecializationMod +
     sectorTypeMatchMod +
     sprawlMod +
+    managementOverheadMod +
     inflationMod +
     debtToGdpMod +
     deficitMod +
@@ -456,7 +462,6 @@ export function accumulateMarginModifiers(input: MarginStackInput): MarginStackR
     negativeProductionMarginPenalty +
     disasterMarginMod +
     regionalConditionMarginMod +
-    techEffects.marginBonusPp +
     strikeMarginMod -
     (lookups.marginLevelTrimPp ?? 0);
   // Dynamic SOE efficiency (spec §11.3) replaces the old flat −15%. Driven
@@ -507,6 +512,7 @@ export function accumulateMarginModifiers(input: MarginStackInput): MarginStackR
     stateSectorSpecializationMod,
     sectorTypeMatchMod,
     sprawlMod,
+    managementOverheadMod,
     inflationMod,
     debtToGdpMod,
     deficitMod,

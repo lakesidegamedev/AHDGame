@@ -59,6 +59,7 @@ import { buildFtaCoverageLookup, loadActiveFtaPairs } from "@/lib/tariffs/ftaOve
 import {
   OPERATING_SECTOR_TYPE_LABELS,
   calculateWorkers,
+  managementOverheadPp,
   TURNS_PER_DAY,
 } from "@/lib/constants/corporations";
 import type {
@@ -192,6 +193,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           marketGovernorGlideMode: 1,
           marketGovernorGlideFloor: 1,
           explicitPlantCostsEnabled: 1,
+          managementOverheadPpPerDoubling: 1,
           mediaEditorialEnabled: 1,
           mediaOperatingModelsEnabled: 1,
           privateBankingEnabled: 1,
@@ -539,6 +541,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
                 transitionStartTurn: 1,
                 operatingCapacityUnits: 1,
                 capitalStock: 1,
+                plantCount: 1,
                 producedUnits: 1,
                 buildQueue: 1,
               },
@@ -958,18 +961,6 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         : null;
       const techBuildCostMultiplier = techBuildEffects?.growthCostMultiplier ?? 1;
       const techDominanceShield = techBuildEffects?.dominanceShield ?? 0;
-      // Tech margin points ride `policyCredit` under plants like every other
-      // non-physical modifier, and `computeAllMarginModifiers` does not carry
-      // them, so name the row here rather than letting it fall into the scale
-      // factor unlabelled (ticket 1122).
-      const techMarginBonusPp = techTreesEnabled
-        ? getSectorTechEffects(
-            techCorpView,
-            sectorType,
-            sector.industryModel,
-            sector.mediaDiscriminator
-          ).marginBonusPp
-        : 0;
       // The physical input bill: the same demand rows the Inputs panel renders,
       // priced at the BILLED unit price (base x realization factor, the price
       // computeInputsCost actually charges), so the panel and the engine's
@@ -1374,7 +1365,20 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           ? buildPolicyStackRows({
               policyCreditAnchor: sectorAmountAnchor(enginePnl.policyCredit),
               revenueAnchor: sectorAmountAnchor(enginePnl.revenue),
-              mods: { ...mods, ...ownershipTerms, techMarginBonus: techMarginBonusPp },
+              mods: {
+                ...mods,
+                ...ownershipTerms,
+                managementOverheadModifier: -managementOverheadPp(
+                  allSectorsRaw.reduce(
+                    (sum, s) =>
+                      s.corporationId.equals(corporation._id) && Number.isFinite(s.plantCount)
+                        ? sum + (s.plantCount as number)
+                        : sum,
+                    0
+                  ),
+                  governorConfig?.managementOverheadPpPerDoubling ?? 0
+                ),
+              },
               appliedPolicyPp: enginePnl.policyPp,
             })
           : [],
@@ -1433,6 +1437,8 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
       marketActionsAvailable && viewerCorporation
         ? buildSectorAttackInfo({
             viewerCorporation,
+            defenderMarketingStrength: corporation.marketingStrength ?? 0,
+            defenderRdScore: corporation.rdScore ?? 0,
             viewerCorpFxRate,
             sectorHostFxRate,
             sectorHostLiquidCode,

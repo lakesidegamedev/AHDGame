@@ -40,10 +40,13 @@ import {
   getSectorTechEffects,
   SLOT_PARENT,
   techNodeCashCost,
+  techNodeValuePerTurn,
+  type TechPlantBasis,
   tierImageUrl,
   describeTechEffect,
   techEffectCategory,
-  TECH_MARGIN_BONUS_CAP_PP,
+  TECH_INPUT_EFFICIENCY_CAP,
+  TECH_PLANT_OUTPUT_CAP,
   TECH_NODE_CASH_REVENUE_FRACTION,
   type TechCorpView,
   type TechLane,
@@ -126,6 +129,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     let dailyGrossRevenue: number | null = null;
     let capacityFloorApplied = false;
     let techCashFloorLocal = 0;
+    let techPlantBasis: TechPlantBasis | null = null;
     if (!redact) {
       // Ticket #1118: one helper for both the quoted price and the charged
       // price, and it converts each sector out of its host currency before
@@ -134,6 +138,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       dailyGrossRevenue = pricing.dailyGrossRevenueLocal;
       capacityFloorApplied = pricing.capacityFloorApplied;
       techCashFloorLocal = pricing.techCashFloorLocal;
+      techPlantBasis = pricing.techPlantBasis;
     }
     const rdScore = redact ? null : Math.floor(corporation.rdScore ?? 0);
     const liquidCapital = redact ? null : Math.floor(corporation.liquidCapital ?? 0);
@@ -147,7 +152,17 @@ export async function GET(_request: Request, { params }: RouteParams) {
       const isPastDecade = passedDecades.has(decadeId);
       return getDecadeLaneNodes(operatingSectorType, decadeId, lane).map((node) => {
         const owned = unlocked.has(node.id);
-        const cashCost = techNodeCashCost(node, dailyGrossRevenue ?? 0, techCashFloorLocal);
+        const cashCost = techNodeCashCost(
+          node,
+          dailyGrossRevenue ?? 0,
+          techCashFloorLocal,
+          techPlantBasis
+        );
+        // What the node is worth per turn to this corp, and how long its cash
+        // price takes to earn back. Null when redacted or when the node has no
+        // running plant value.
+        const valuePerTurn = techPlantBasis ? techNodeValuePerTurn(node, techPlantBasis) : 0;
+        const paybackTurns = valuePerTurn > 0 ? Math.ceil(cashCost / valuePerTurn) : null;
         // Past decades have both lanes auto-granted — no lane commitment applies.
         const laneLocked = isPastDecade ? false : !!committed && committed !== lane;
         // A completed decade grants only its baseline, so its specialization
@@ -170,6 +185,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
           exclusiveGroup: node.exclusiveGroup ?? null,
           cost: node.cost,
           cashCost: redact ? null : cashCost,
+          valuePerTurn: redact || valuePerTurn <= 0 ? null : Math.round(valuePerTurn),
+          paybackTurns: redact ? null : paybackTurns,
           effects: node.effects.map((e) => ({
             category: techEffectCategory(e.kind),
             label: describeTechEffect(e),
@@ -244,58 +261,6 @@ export async function GET(_request: Request, { params }: RouteParams) {
       ? []
       : getUnlockedStrategyIds(corpView).map((id) => strategyNameById.get(id) ?? id);
 
-    // rdDemandFactor: ±15% signal based on tech-ecosystem + sector commodity D/S
-    const SECTOR_RD_COMS: Record<string, [string, string?]> = {
-      energy: ["coal", "natural_gas"],
-      mining: ["iron_ore", "copper"],
-      agriculture: ["grain", "produce"],
-      manufacturing: ["steel", "industrial_chemicals"],
-      technology: ["electronics", "rare_earth"],
-      pharmaceuticals: ["pharmaceuticals", "industrial_chemicals"],
-      finance: ["consulting_services", "software"],
-      media: ["software", "consulting_services"],
-      retail: ["consumer_goods", "produce"],
-      healthcare: ["pharmaceuticals", "consulting_services"],
-      education: ["consulting_services", "software"],
-      transportation: ["petroleum", "steel"],
-      construction: ["steel", "timber"],
-      utilities: ["coal", "natural_gas"],
-      telecoms: ["electronics", "software"],
-      hospitality: ["produce", "consumer_goods"],
-      legal: ["consulting_services", "software"],
-    };
-    let rdDemandFactor: number | null = null;
-    if (!redact) {
-      const [sc1, sc2] = SECTOR_RD_COMS[operatingSectorType] ?? [];
-      const comTypes = Array.from(
-        new Set(["software", "consulting_services", sc1, sc2].filter(Boolean) as string[])
-      );
-      const comDocs = (await db
-        .collection("commodityPrices")
-        .find(
-          { commodity: { $in: comTypes } },
-          { projection: { commodity: 1, globalSupply: 1, globalDemand: 1 } }
-        )
-        .toArray()) as unknown as {
-        commodity: string;
-        globalSupply: number;
-        globalDemand: number;
-      }[];
-      const comMap = new Map(
-        comDocs.map((c) => [c.commodity, { supply: c.globalSupply, demand: c.globalDemand }])
-      );
-      const ds = (c: string) => {
-        const b = comMap.get(c);
-        return !b || b.supply <= 0 ? 1 : b.demand / b.supply;
-      };
-      const ratios = [ds("software"), ds("consulting_services")];
-      if (sc1) ratios.push(ds(sc1));
-      if (sc2) ratios.push(ds(sc2));
-      const avg = ratios.reduce((s, v) => s + v, 0) / ratios.length;
-      rdDemandFactor =
-        Math.round(Math.min(1.15, Math.max(0.85, 1 + (avg - 1) * 0.25)) * 1000) / 1000;
-    }
-
     // FX rate for anchor-normalizing the R&D budget in rdGainPerTurn below.
     const corpFxRate = await getCorpFxRate(db, corporation);
 
@@ -331,17 +296,17 @@ export async function GET(_request: Request, { params }: RouteParams) {
           },
       unlockedStrategyIds: redact ? [] : getUnlockedStrategyIds(corpView),
       unlockedStrategyNames,
-      // Active tech-effect summary (transparency for the capped margin).
-      activeMarginPp: agg ? Math.round(agg.marginBonusPp * 10) / 10 : null,
-      activeMarginRawPp: agg ? Math.round(agg.marginBonusPpRaw * 10) / 10 : null,
-      marginCapPp: TECH_MARGIN_BONUS_CAP_PP,
+      // Active plant-wide tech effects against their caps.
+      plantOutputPct: agg ? Math.round(agg.plantOutputBonus * 1000) / 10 : null,
+      plantOutputCapPct: Math.round(TECH_PLANT_OUTPUT_CAP * 100),
+      inputEfficiencyPct: agg ? Math.round(agg.inputEfficiencyBonus * 1000) / 10 : null,
+      inputEfficiencyCapPct: Math.round(TECH_INPUT_EFFICIENCY_CAP * 100),
       // Overview metrics.
       totalNodes,
       techsUnlocked,
       unlockableCount,
       breakthroughChance,
       breakthroughInterval: RD_INNOVATION_INTERVAL,
-      rdDemandFactor,
       decades,
     });
   } catch (error) {

@@ -2880,7 +2880,7 @@ describe("processSectors, sustained-negative-production tracker", () => {
 
 describe("sector tech-tree effects", () => {
   it("applies no effect when the feature gate is off (4th arg false)", () => {
-    const teched = makeCorp({ unlockedTechNodeIds: ["corp-1999-3"] }); // +2pp margin node
+    const teched = makeCorp({ unlockedTechNodeIds: ["corp-1999-3"] }); // plant-effect node
     const techedSector = makeSector(teched._id, { revenue: 24_000, profitMargin: 50 });
 
     const plain = makeCorp();
@@ -2890,19 +2890,6 @@ describe("sector tech-tree effects", () => {
     const baseline = processSectors(baseLookups([plain], [plainSector]), 1, new Date(), false);
     // Gate off ⇒ identical income to a corp with no unlocked nodes.
     expect(off.totalIncomeGenerated).toBeCloseTo(baseline.totalIncomeGenerated, 5);
-  });
-
-  it("lifts income via a margin-bonus node when the gate is on", () => {
-    const plain = makeCorp();
-    const teched = makeCorp({ unlockedTechNodeIds: ["corp-1999-3"] }); // +2pp margin
-    const plainSector = makeSector(plain._id, { revenue: 24_000, profitMargin: 50 });
-    const techedSector = makeSector(teched._id, { revenue: 24_000, profitMargin: 50 });
-
-    const base = processSectors(baseLookups([plain], [plainSector]), 1, new Date(), true);
-    const lifted = processSectors(baseLookups([teched], [techedSector]), 1, new Date(), true);
-
-    // +2pp margin ⇒ lower maintenance ⇒ higher income.
-    expect(lifted.totalIncomeGenerated).toBeGreaterThan(base.totalIncomeGenerated);
   });
 });
 
@@ -3915,5 +3902,62 @@ describe("stock-market boost phasing", () => {
       STOCK_BOOST_REVENUE_TARGET * STOCK_BOOST_FINANCIAL_REVENUE_EXTRA,
       2
     );
+  });
+});
+
+describe("funded producer turn", () => {
+  type Op = { updateOne: { filter: Record<string, unknown>; update: Record<string, any> } };
+  const run = (profitPaid: number) => {
+    const corp = makeCorp();
+    const sector = makeSector(corp._id, { revenue: 24_000, profitMargin: 50 });
+    const id = sector._id.toString();
+    const result = processSectors(
+      baseLookups([corp], [sector]),
+      1,
+      new Date(),
+      false,
+      undefined,
+      undefined,
+      undefined,
+      false,
+      false,
+      false,
+      new Set(),
+      false,
+      {
+        receiptsBySectorId: new Map([
+          [id, { revenue: 100, profit: 30, producedUnits: 5, soldUnits: 4 }],
+        ]),
+        settledProfitByCorp: new Map([[corp._id.toString(), profitPaid]]),
+      }
+    );
+    return { result, id, corpId: corp._id.toString() };
+  };
+
+  it("takes revenue from the receipt and never writes settlement-owned sector fields", () => {
+    const { result, id } = run(30);
+    const ops = (result.sectorOps as Op[]).filter((o) => String(o.updateOne.filter._id) === id);
+    const set = Object.assign({}, ...ops.map((o) => o.updateOne.update.$set ?? {}));
+    for (const f of [
+      "capitalStock",
+      "capacityBookAnchor",
+      "buildQueue",
+      "inventoryUnits",
+      "producerSettlement",
+    ])
+      expect(set).not.toHaveProperty(f);
+    expect(ops.some((o) => o.updateOne.update.$pull || o.updateOne.update.$push)).toBe(false);
+    expect(set.realizedRevenue).toBeCloseTo(100 * TURNS_PER_DAY);
+    expect(set.soldUnits).toBe(4 * TURNS_PER_DAY);
+    expect(result.totalRevenueGenerated).toBeCloseTo(100);
+  });
+
+  it("does not credit the producer profit the settlement already paid", () => {
+    const paid = run(30);
+    const unpaid = run(0);
+    const inc = (r: typeof paid) =>
+      (r.result.corpOps as Op[]).find((o) => String(o.updateOne.filter._id) === r.corpId)!.updateOne
+        .update.$inc.liquidCapital as number;
+    expect(inc(unpaid) - inc(paid)).toBeCloseTo(30);
   });
 });

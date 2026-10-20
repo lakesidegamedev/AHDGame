@@ -28,7 +28,7 @@ function input(over: Partial<PlantsRevenueInput> = {}): PlantsRevenueInput {
     } as PlantsRevenueInput["sector"],
     corp: { _id: corpId, countryId: "US", bankCharter: undefined } as PlantsRevenueInput["corp"],
     strategySupply: {},
-    techEffects: { outputRateMult: {}, priceRealizationBonus: 0 },
+    techEffects: { outputRateMult: {} },
     plantsEnabled: true,
     mothballed: false,
     nameplateUnits: 1000,
@@ -406,30 +406,23 @@ describe("absolute cost-plus quotes", () => {
     }
   );
 
-  it("settles the offered price during the ramp and adds the tech price bonus on top", () => {
-    const base = {
-      costPlusPricingEnabled: true,
-      clearingEnabled: true,
-      clearingFactor: 1.4,
-      clearingStartTurn: CURRENT_TURN,
-      plantsStartTurn: CURRENT_TURN,
-    };
+  it("settles the offered price during the ramp", () => {
     const plain = resolvePlantsRevenue(
-      input({ ...base, techEffects: { outputRateMult: {}, priceRealizationBonus: 0 } })
-    );
-    const boosted = resolvePlantsRevenue(
-      input({ ...base, techEffects: { outputRateMult: {}, priceRealizationBonus: 0.05 } })
+      input({
+        costPlusPricingEnabled: true,
+        clearingEnabled: true,
+        clearingFactor: 1.4,
+        clearingStartTurn: CURRENT_TURN,
+        plantsStartTurn: CURRENT_TURN,
+        techEffects: { outputRateMult: {} },
+      })
     );
     // The posted price is not blended or clamped by the governor.
-    expect(boosted.clearingRevenueLeg).toBe(1.4);
-    expect(plain.plantsTechPriceLeg).toBe(1);
+    expect(plain.clearingRevenueLeg).toBe(1.4);
     expect(plain.marketHourlyRevenue).toBeCloseTo(
       ((plain.producedUnits * 10) / TURNS_PER_DAY) * 1.4,
       8
     );
-    // Price realization now moves a cost-plus sector's revenue by exactly its bonus.
-    expect(boosted.plantsTechPriceLeg).toBeCloseTo(1.05, 10);
-    expect(boosted.marketHourlyRevenue).toBeCloseTo(plain.marketHourlyRevenue * 1.05, 8);
   });
 });
 

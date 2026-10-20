@@ -80,7 +80,7 @@ describe("GET /api/corporation/[id]/tech", () => {
 
     expect(body.cashPricing).toEqual({
       dailyGrossOperatingScale: 2_635_025_294,
-      defaultRevenueFraction: 0.15,
+      defaultRevenueFraction: 0.05,
       capacityFloorApplied: true,
     });
   });

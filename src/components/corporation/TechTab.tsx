@@ -35,6 +35,10 @@ interface TechNode {
   exclusiveGroup?: string | null;
   cost: number;
   cashCost: number | null;
+  /** Estimated per-turn money the node is worth to this corp; null if none. */
+  valuePerTurn?: number | null;
+  /** Turns the cash price takes to earn back; null if the node has no running value. */
+  paybackTurns?: number | null;
   effects: TechEffectView[];
   unlocksStrategy: string | null;
   owned: boolean;
@@ -70,15 +74,16 @@ interface TechResponse {
     defaultRevenueFraction: number;
     capacityFloorApplied: boolean;
   } | null;
-  activeMarginPp?: number | null;
-  marginCapPp?: number | null;
+  plantOutputPct?: number | null;
+  plantOutputCapPct?: number | null;
+  inputEfficiencyPct?: number | null;
+  inputEfficiencyCapPct?: number | null;
   unlockedStrategyNames?: string[];
   totalNodes?: number;
   techsUnlocked?: number;
   unlockableCount?: number;
   breakthroughChance?: number | null;
   breakthroughInterval?: number;
-  rdDemandFactor?: number | null;
   decades?: TechDecade[];
 }
 interface TechTabProps {
@@ -222,14 +227,6 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
   const previous = reached.find((d) => d.id === previousDecadeId);
   const methods = data.unlockedStrategyNames ?? [];
   const chancePct = Math.round((data.breakthroughChance ?? 0) * 100);
-  const ecosystem =
-    data.rdDemandFactor == null
-      ? null
-      : data.rdDemandFactor > 1
-        ? `+${Math.round((data.rdDemandFactor - 1) * 100)}%`
-        : data.rdDemandFactor < 1
-          ? `${Math.round((data.rdDemandFactor - 1) * 100)}%`
-          : "Neutral";
 
   return (
     <div className="space-y-6">
@@ -295,9 +292,14 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
               value={`${data.techsUnlocked ?? 0} / ${data.totalNodes ?? 0}`}
             />
             <KVRow
-              label="Tech margin"
-              value={`+${data.activeMarginPp ?? 0}pp`}
-              hint={`cap +${data.marginCapPp ?? 8}pp`}
+              label="Plant output"
+              value={`+${data.plantOutputPct ?? 0}%`}
+              hint={`cap +${data.plantOutputCapPct ?? 12}%`}
+            />
+            <KVRow
+              label="Plant inputs"
+              value={`−${data.inputEfficiencyPct ?? 0}%`}
+              hint={`cap −${data.inputEfficiencyCapPct ?? 30}%`}
             />
             <KVRow
               label="Production methods"
@@ -309,24 +311,6 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
               value={`${chancePct}%`}
               hint={`every ${data.breakthroughInterval ?? 6} turns`}
             />
-            {ecosystem && (
-              <KVRow
-                label="R&D ecosystem"
-                value={
-                  <span
-                    className={
-                      (data.rdDemandFactor ?? 1) > 1.02
-                        ? "text-success"
-                        : (data.rdDemandFactor ?? 1) < 0.98
-                          ? "text-error"
-                          : ""
-                    }
-                  >
-                    {ecosystem}
-                  </span>
-                }
-              />
-            )}
           </KVList>
         </DenseSection>
       </div>
@@ -809,6 +793,12 @@ function TechNodeCard({
       {!isOwned && (
         <p className="mt-1.5 text-[10px] tabular-nums text-muted">
           {node.cost} R&amp;D · {fmtCash(node.cashCost)}
+        </p>
+      )}
+      {node.valuePerTurn != null && (
+        <p className="mt-0.5 text-[10px] tabular-nums text-muted">
+          Worth about {fmtCash(node.valuePerTurn)}/turn
+          {!isOwned && node.paybackTurns != null && ` · pays back in ${node.paybackTurns} turns`}
         </p>
       )}
       <div className="mt-2 text-[10px] leading-snug">{status}</div>

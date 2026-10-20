@@ -10,6 +10,7 @@ import { producerTrades, type MarketAccount, type PurchaseOrder } from "./rules"
 import type { HouseholdSpec } from "./householdDemandRules";
 import type { PublicPurchaseLine } from "./publicBuyerRules";
 import { nextReferencePrice } from "./referencePriceRules";
+import type { ProducerPayable } from "./payablesRules";
 
 /** Planning passes the shadow allows per turn (see the t300 replay note above). */
 export const SHADOW_PLANNING_PASSES = 8;
@@ -42,6 +43,8 @@ export interface ShadowSummary {
   publicSpend: number;
   /** Corporate advertising bought from marketing budgets. */
   marketingSpend: number;
+  /** Construction work on build orders bought from producers. */
+  investmentSpend: number;
   industries: ShadowIndustryRow[];
   /** World-book traded volume and volume-weighted price per commodity (anchor units). */
   prices: { commodity: string; units: number; unitPrice: number }[];
@@ -80,7 +83,7 @@ export function publicOrders(
   return orders;
 }
 
-export function runProducerShadow(input: {
+type ShadowInput = {
   turn: number;
   /** Today's world reference price per commodity (anchor units). */
   references?: Readonly<Record<string, number>>;
@@ -91,16 +94,32 @@ export function runProducerShadow(input: {
   publicOrders: readonly PurchaseOrder[];
   /** Funded corporate advertising orders (see marketingBuyerRules.ts). */
   marketingOrders?: readonly PurchaseOrder[];
+  /** Construction work on build orders (see capitalSpendRules.ts). */
+  investmentOrders?: readonly PurchaseOrder[];
   /** Trade-route eligibility for plant input orders (see routeRules.ts). */
   eligibleOffersByOrder?: Readonly<Record<string, readonly string[]>>;
-}): ShadowSummary {
+  /** Unpaid producer bills carried from the previous shadow turn. */
+  payables?: readonly ProducerPayable[];
+};
+
+export function runProducerShadow(input: ShadowInput): ShadowSummary {
+  return runProducerShadowDetailed(input).summary;
+}
+
+/** The summary plus the raw settlement, for callers that carry state between turns. */
+export function runProducerShadowDetailed(input: ShadowInput): {
+  summary: ShadowSummary;
+  result: ReturnType<typeof advanceProducerEconomy>;
+} {
   const marketingOrders = input.marketingOrders ?? [];
+  const investmentOrders = input.investmentOrders ?? [];
   const result = advanceProducerEconomy({
     turn: input.turn,
     accounts: input.accounts,
+    payables: input.payables,
     producers: input.producers.map((p) => p.plan),
     households: input.households,
-    externalOrders: [...input.publicOrders, ...marketingOrders],
+    externalOrders: [...input.publicOrders, ...investmentOrders, ...marketingOrders],
     // Eight passes settle the live world to within 0.02% of 32 (t300 replay:
     // 4,609,920 vs 4,610,514 units) in about 21 s instead of minutes.
     maximumPlanningPasses: SHADOW_PLANNING_PASSES,
@@ -151,14 +170,17 @@ export function runProducerShadow(input: {
   // spend is counted by order, not by buyer.
   const marketingOrderIds = new Set(marketingOrders.map((o) => o.id));
   let marketingSpend = 0;
+  const investmentIds = new Set(investmentOrders.map((o) => o.accountId));
+  let investmentSpend = 0;
   for (const t of producerTrades(result.tradeReceipt)) {
     const value = t.units * t.unitPrice;
     if (marketingOrderIds.has(t.orderId)) marketingSpend += value;
+    else if (investmentIds.has(t.buyerAccountId)) investmentSpend += value;
     else if (householdIds.has(t.buyerAccountId)) householdSpend += value;
     else if (publicIds.has(t.buyerAccountId)) publicSpend += value;
   }
   const n = input.producers.length;
-  return {
+  const summary: ShadowSummary = {
     turn: input.turn,
     plants: n,
     skipped: input.skipped,
@@ -167,23 +189,30 @@ export function runProducerShadow(input: {
     householdSpend,
     publicSpend,
     marketingSpend,
+    investmentSpend,
     industries: [...byType.values()].sort((a, b) => (a.sectorType < b.sectorType ? -1 : 1)),
     nextPrices: (() => {
+      // One reference per commodity, answering to every book it trades on:
+      // local services and freight settle on state and country books, so a
+      // world-only read would freeze their price at the opening reference.
       const unmet = new Map<string, number>();
       for (const o of result.orderOutcomes)
-        if (o.book === "world")
-          unmet.set(
-            o.commodity,
-            (unmet.get(o.commodity) ?? 0) + Math.max(0, o.requestedUnits - o.deliveredUnits)
-          );
+        unmet.set(
+          o.commodity,
+          (unmet.get(o.commodity) ?? 0) + Math.max(0, o.requestedUnits - o.deliveredUnits)
+        );
       const unsold = new Map<string, number>();
       for (const r of result.producers)
         for (const p of r.products)
-          if (p.book === "world")
-            unsold.set(p.commodity, (unsold.get(p.commodity) ?? 0) + Math.max(0, p.unsoldUnits));
-      const settled = new Map(
-        result.prices.filter((p) => p.book === "world").map((p) => [p.commodity, p])
-      );
+          unsold.set(p.commodity, (unsold.get(p.commodity) ?? 0) + Math.max(0, p.unsoldUnits));
+      const settled = new Map<string, { units: number; value: number }>();
+      for (const p of result.prices) {
+        if (!(p.units > 0)) continue;
+        const s = settled.get(p.commodity) ?? { units: 0, value: 0 };
+        s.units += p.units;
+        s.value += p.units * p.unitPrice;
+        settled.set(p.commodity, s);
+      }
       return Object.entries(input.references ?? {})
         .filter(([, ref]) => ref > 0)
         .map(([commodity, reference]) => {
@@ -194,7 +223,7 @@ export function runProducerShadow(input: {
             commodity,
             reference,
             next: nextReferencePrice(reference, {
-              settledUnitPrice: s?.unitPrice ?? null,
+              settledUnitPrice: s && s.units > 0 ? s.value / s.units : null,
               unmetUnits: u,
               unsoldUnits: k,
               tradedUnits: s?.units ?? 0,
@@ -210,4 +239,5 @@ export function runProducerShadow(input: {
       .map((p) => ({ commodity: p.commodity, units: p.units, unitPrice: p.unitPrice }))
       .sort((a, b) => (a.commodity < b.commodity ? -1 : 1)),
   };
+  return { summary, result };
 }

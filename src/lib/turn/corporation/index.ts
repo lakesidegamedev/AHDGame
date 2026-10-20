@@ -1,7 +1,12 @@
 import { configureGroupSupply, groupForecastWriteOps } from "./groupSupplyTurn";
 import { migrateEntertainmentRemoval } from "./migrateEntertainmentRemoval";
 import { settleFundDividendAccruals } from "./settleFundDividendAccruals";
-import { runProducerMarketShadowPhase } from "./producerMarketShadowPhase";
+import { runProducerMarketShadowPhase, shadowFitsPhaseBudget } from "./producerMarketShadowPhase";
+import { PHASE_TIMEOUT_MS } from "@/lib/turn/processingLock";
+import { claimProducerPath, loadProducerPath } from "@/lib/market/producerMarket/liveMode";
+import { runFundedProducerTurn } from "./fundedProducerTurn";
+import type { ProducerPhysicalEnv } from "./producerPhysicalPreparation";
+import { makeLabourDemandByState } from "@/lib/labour/labourMarket";
 import { resolvePhaseLookups } from "./phaseLookups";
 /**
  * Corporation turns settle operating results and distribute shareholder income.
@@ -153,6 +158,7 @@ const CORP_TURN_RNG_SALT = process.env.SIM_RNG_SALT ? `:${process.env.SIM_RNG_SA
 export async function processCorporationTurn(turn?: number): Promise<CorporationTurnResult> {
   const db = await getDb();
   const now = new Date();
+  const phaseStartedAt = Date.now();
 
   const timer = createCorporationTurnTimer();
   const mark = timer.mark;
@@ -743,6 +749,61 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
   mark("shedSectors");
 
   // Phase 2: Process all corporations and sectors (pure computation, no DB calls)
+  // Funded-market cutover: one producer path per turn, claimed before any
+  // producer money moves. On a funded turn the market settles first and the
+  // legacy pass takes revenue and margin from its receipts.
+  const producerTurn = turn ?? gameState?.currentTurn ?? 0;
+  const producerPath = await loadProducerPath(db, {
+    turn: producerTurn,
+    worldEpoch: gameState?.worldEpochId,
+    liveFromTurn: marketGovernorConfig?.producerMarketLiveFromTurn,
+  });
+  if (gameState?.worldEpochId)
+    await claimProducerPath(db, {
+      worldEpoch: gameState.worldEpochId,
+      turn: producerTurn,
+      path: producerPath,
+      phase: "corporation",
+    });
+  let funded: Awaited<ReturnType<typeof runFundedProducerTurn>> | undefined;
+  if (producerPath === "funded") {
+    if (market.marketRecoveryStage)
+      throw new Error("marketRecoveryStage must be 0 on a funded producer turn");
+    const worldEpoch = gameState!.worldEpochId!;
+    const earlier = await db
+      .collection("producerEconomyTurns")
+      .findOne({ worldEpoch, turn: { $lt: producerTurn } }, { projection: { _id: 1 } });
+    funded = await runFundedProducerTurn(db, {
+      turn: producerTurn,
+      worldEpoch,
+      lookups,
+      // Fresh collectors: the legacy pass below records labour telemetry once.
+      env: {
+        lookups,
+        currentTurn: producerTurn,
+        currentYear,
+        techTreesEnabled,
+        labour,
+        wageIndexByState: new Map(),
+        automationIndexByState: new Map(),
+        pendingStrikeEvents: [],
+        labourDemandByState: makeLabourDemandByState(),
+        labourDemandWageIndexByState: new Map(),
+        privateBankingEnabled,
+        advertisingInput: true,
+        transitionFirstFundedTurn:
+          gameState?.producerOpening?.worldEpoch === worldEpoch
+            ? gameState.producerOpening.turn + 1
+            : undefined,
+      } as unknown as ProducerPhysicalEnv,
+      seedHouseholds: earlier == null,
+      firstFundedTurn:
+        gameState?.producerOpening?.worldEpoch === worldEpoch
+          ? gameState.producerOpening.turn + 1
+          : undefined,
+    });
+    mark("fundedProducerMarket");
+  }
   const {
     sectorOps,
     corpOps,
@@ -786,11 +847,19 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
     commandEconomyEnabled,
     privateBankingEnabled,
     new Set(equityPoolTurn.activeCurrencies),
-    treasuryCashLedgerEnabled
+    treasuryCashLedgerEnabled,
+    funded
   );
   mark("processSectors(CPU)");
   await runProducerMarketShadowPhase(db, {
-    enabled: marketGovernorConfig?.producerMarketShadowEnabled === true,
+    // Never measure a shadow beside the live funded market in the same turn.
+    // The shadow is telemetry inside this phase's timeout. Skip it when the
+    // phase has already used most of its budget; a skipped turn only starts a
+    // new shadow run next turn, a timed-out phase fails the economy.
+    enabled:
+      !funded &&
+      marketGovernorConfig?.producerMarketShadowEnabled === true &&
+      shadowFitsPhaseBudget(Date.now() - phaseStartedAt, PHASE_TIMEOUT_MS),
     turn: turn ?? gameState?.currentTurn ?? 0,
     worldEpoch: gameState?.worldEpochId,
     lookups,

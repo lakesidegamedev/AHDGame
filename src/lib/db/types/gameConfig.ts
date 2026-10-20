@@ -150,6 +150,11 @@ export interface GameConfig {
    * See `@/lib/constants/commandEconomy`.
    */
   commandEconomyEnabled?: boolean;
+  /**
+   * Management overhead, in margin points per doubling of a corporation's
+   * plant count above MANAGEMENT_OVERHEAD_FREE_PLANTS. 0 or absent = off.
+   */
+  managementOverheadPpPerDoubling?: number;
   /** Public media editorial stance and audience response rules. Missing means off. */
   mediaEditorialEnabled?: boolean;
   /** Paid media and entertainment operating-model catalog. Default off. */
@@ -460,6 +465,13 @@ export interface GameConfig {
    * only: moves no money and writes no sector or corporation.
    */
   producerMarketShadowEnabled?: boolean;
+  /**
+   * First turn the funded producer market settles live (funded-market cutover).
+   * Unset keeps the legacy engine. Requires the opening conversion marker on the
+   * previous turn; once a funded turn has run, the world cannot return to
+   * legacy. See src/lib/market/producerMarket/liveMode.ts.
+   */
+  producerMarketLiveFromTurn?: number;
   /**
    * Turn the one-time entertainment commodity removal migration ran
    * (migrateEntertainmentRemoval). Present means later turns skip it.
