@@ -34,6 +34,7 @@ import {
   CEO_SALARY_MAX_REVENUE_MULTIPLE,
   CORP_OVERHEAD_MAX_REVENUE_MULTIPLE,
 } from "@/lib/constants/corporations";
+import { marketingStrengthAfterTurn } from "@/lib/corporations/strengthUpkeep";
 import {
   bankNpvBoostMultiplier,
   sectorRiskPremiumAtTurn,
@@ -963,6 +964,15 @@ export function processSectors(
       marketingSettlementEnabled ? hourlyMarketing * TURNS_PER_DAY : marketingBudgetAnchor,
       corp.marketingStrength ?? 0
     );
+    // Strength upkeep (stage 3): marketing strength decays like R&D, so it has
+    // to be maintained with spend rather than banked.
+    const currentMarketingStrength = corp.marketingStrength ?? 0;
+    const marketingDelta =
+      marketingStrengthAfterTurn(
+        currentMarketingStrength,
+        marketingGrowth,
+        lookups.strengthUpkeepStage
+      ) - currentMarketingStrength;
 
     // Logistics strength: decays 5%/turn, grows with spending. No diminishing returns —
     // the decay naturally caps accumulation. Same anchor-threshold convention.
@@ -1184,7 +1194,7 @@ export function processSectors(
       taxPaidByCountryForeign,
       taxPaidByStateDomestic,
       taxPaidByStateForeign,
-      marketingStrength: (corp.marketingStrength ?? 0) + marketingGrowth,
+      marketingStrength: currentMarketingStrength + marketingDelta,
       logisticsStrength: Math.round(newLogisticsStrength * 100) / 100,
       rdScore: Math.round(newRdScore * 100) / 100,
       dividendRate: payoutDividendRate,
@@ -1239,7 +1249,7 @@ export function processSectors(
           $inc: {
             liquidCapital: (treasuryCashLedgerEnabled ? 0 : incomeForBalance) - escrowFundingMove,
             ...(escrowFundingMove > 0 ? { shareEscrowBalance: escrowFundingMove } : {}),
-            marketingStrength: marketingGrowth,
+            marketingStrength: marketingDelta,
             logisticsStrength: logisticsDelta,
             rdScore: rdScoreDelta,
           },

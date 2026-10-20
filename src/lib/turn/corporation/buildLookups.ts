@@ -1064,9 +1064,18 @@ export async function buildCorporationLookups(
   // grows with its total whole-plant count (snowball brake). Off unless the
   // gameConfig knob is set.
   const overheadCfg = await db
-    .collection<{ _id: string; managementOverheadPpPerDoubling?: number }>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { managementOverheadPpPerDoubling: 1 } });
+    .collection<{
+      _id: string;
+      managementOverheadPpPerDoubling?: number;
+      strengthUpkeepStage?: number;
+    }>("gameConfig")
+    .findOne(
+      { _id: "default" },
+      { projection: { managementOverheadPpPerDoubling: 1, strengthUpkeepStage: 1 } }
+    );
   const overheadPpPerDoubling = overheadCfg?.managementOverheadPpPerDoubling ?? 0;
+  const strengthUpkeepStage =
+    typeof overheadCfg?.strengthUpkeepStage === "number" ? overheadCfg.strengthUpkeepStage : 0;
   const managementOverheadPpByCorpId = new Map<string, number>();
   if (overheadPpPerDoubling > 0) {
     for (const [corpId, sectors] of sectorsByCorp) {
@@ -1657,6 +1666,7 @@ export async function buildCorporationLookups(
     latentDemandFactorByCommodity,
     marginLevelTrimPp: SECTOR_MARGIN_LEVEL_TRIM_PP,
     managementOverheadPpByCorpId,
+    strengthUpkeepStage,
     reachablePriceRatioByCountry,
     reachableInputPriceRatiosByCountry,
     landedPremiumByState,

@@ -803,7 +803,7 @@ function TechNodeCard({
       {expired && (
         <p
           className="mt-1.5 text-[10px] font-medium text-warning"
-          title="Techs only apply their plant effects in their own decade and the one after it."
+          title="A tech's plant effects and dominance shield apply only in its own decade and the one after it."
         >
           Effect expired: older than last decade
         </p>

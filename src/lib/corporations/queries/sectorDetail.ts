@@ -14,6 +14,7 @@ import { NextResponse } from "next/server";
 import { findMergedRegionMetrics } from "@/lib/macroMetrics/merge";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
+import { upkeptDominanceShield } from "@/lib/corporations/strengthUpkeep";
 import { getAuthUser } from "@/lib/auth";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import { getControllingCorporateParent } from "@/lib/corporations/corporateOwnership";
@@ -194,6 +195,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           marketGovernorGlideFloor: 1,
           explicitPlantCostsEnabled: 1,
           managementOverheadPpPerDoubling: 1,
+          strengthUpkeepStage: 1,
           mediaEditorialEnabled: 1,
           mediaOperatingModelsEnabled: 1,
           privateBankingEnabled: 1,
@@ -960,7 +962,16 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           )
         : null;
       const techBuildCostMultiplier = techBuildEffects?.growthCostMultiplier ?? 1;
-      const techDominanceShield = techBuildEffects?.dominanceShield ?? 0;
+      const techDominanceShield = techBuildEffects
+        ? upkeptDominanceShield(
+            techCorpView,
+            sectorType,
+            sector.industryModel,
+            sector.mediaDiscriminator,
+            techCurrentYear,
+            governorConfig?.strengthUpkeepStage
+          )
+        : 0;
       // The physical input bill: the same demand rows the Inputs panel renders,
       // priced at the BILLED unit price (base x realization factor, the price
       // computeInputsCost actually charges), so the panel and the engine's
