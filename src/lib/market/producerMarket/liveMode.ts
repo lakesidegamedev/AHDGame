@@ -90,11 +90,17 @@ export async function claimProducerPath(
     turn: number;
     path: ProducerPath;
   }>(PRODUCER_PATH_CLAIMS);
-  await claims.updateOne(
-    { _id },
-    { $setOnInsert: { _id, worldEpoch: input.worldEpoch, turn: input.turn, path: input.path } },
-    { upsert: true }
-  );
+  try {
+    await claims.insertOne({
+      _id,
+      worldEpoch: input.worldEpoch,
+      turn: input.turn,
+      path: input.path,
+    });
+  } catch (error) {
+    // Duplicate key: a claim exists already (a retry, or the other phase).
+    if ((error as { code?: number }).code !== 11000) throw error;
+  }
   const claim = await claims.findOne({ _id });
   if (claim?.path !== input.path)
     throw new Error(
@@ -114,4 +120,17 @@ export async function assertLegacyProducerPathClaim(
     .findOne({ _id: JSON.stringify([worldEpoch, turn]) });
   if (claim?.path === "funded")
     throw new Error(`Turn ${turn} settled on the funded producer market; legacy prices refused`);
+}
+
+/** The path the corporation phase claimed for a turn, if any. */
+export async function readProducerPathClaim(
+  db: Db,
+  worldEpoch: string | null | undefined,
+  turn: number
+): Promise<ProducerPath | null> {
+  if (!worldEpoch) return null;
+  const claim = await db
+    .collection<{ _id: string; path: ProducerPath }>(PRODUCER_PATH_CLAIMS)
+    .findOne({ _id: JSON.stringify([worldEpoch, turn]) });
+  return claim?.path ?? null;
 }

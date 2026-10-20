@@ -91,6 +91,12 @@ export interface GameState {
   /** Written before journal-enabled population planning, distinguishing legacy crash recovery. */
   demographicFlowAttempt?: { worldEpochId: string; turn: number };
   /**
+   * Funded-market cutover: the applied producer opening conversion (world,
+   * last legacy turn, plan digest). Stamped last by applyProducerOpening; the
+   * funded producer path refuses to start without it. Cleared on reset.
+   */
+  producerOpening?: { worldEpoch: string; turn: number; digest: string };
+  /**
    * Snapshot of media regulation gates used by legislation endpoints that
    * already read this document. Admin market configuration keeps it current so
    * flag-off law pickers need no additional config query.

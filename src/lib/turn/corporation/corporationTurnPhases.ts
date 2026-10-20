@@ -534,7 +534,9 @@ export async function emitCorporationTurnTx(args: {
     // The cash writer keeps fractional native units. Witness the signed
     // pre-tax operating result and its tax debit at the same precision.
     // Losses consume cash even when there is no positive revenue row (#992).
-    const revenueAnchorPreTax = snap.income + Math.max(0, totalTaxAnchor);
+    // On a funded turn the settlement already witnessed the producer profit.
+    const revenueAnchorPreTax =
+      snap.income + Math.max(0, totalTaxAnchor) - (snap.settledProducerProfitAnchor ?? 0);
     const operatingLocal = anchorToCorpCapital(revenueAnchorPreTax, resolved, fx);
     if (Number.isFinite(operatingLocal) && operatingLocal !== 0) {
       txEntries.push({
