@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
-import type { Corporation, CorporationCeoPay } from "@/lib/db/types";
+import type { Corporation, CorporationCeoPay } from "@/lib/db/types/corporation";
 import type { NPP } from "@/lib/db/types/npp";
 import type { CorporationLookups } from "./types";
 import {

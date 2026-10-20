@@ -37,6 +37,7 @@ import {
   pickCaretakerNpp,
 } from "@/lib/corporations/caretakerCeo";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
+import { recordNppCeoTrackRecords } from "./nppCeoTrackRecord";
 
 type NppCareer = Pick<NPP, "_id" | "ceoTrackRecord" | "personality">;
 
@@ -353,4 +354,26 @@ export async function trailingDailyResults(
     .toArray();
   for (const r of rows) out.set(r._id.toString(), r);
   return out;
+}
+
+/**
+ * The corporation turn's NPP CEO step: fold each NPP CEO's results into its
+ * track record, then run pay reviews. Each pass changes no decision the rest
+ * of the turn depends on, so a failure is logged and the turn continues.
+ */
+export async function runNppCeoCareerPasses(
+  db: Db,
+  lookups: Pick<CorporationLookups, "corporations" | "sectorsByCorp" | "nppCeoPayStartTurn">,
+  turn: number
+): Promise<void> {
+  try {
+    await recordNppCeoTrackRecords(db, lookups, turn);
+  } catch (error) {
+    console.error("[corporationTurn] NPP CEO track record pass failed", error);
+  }
+  try {
+    await processNppCeoPay(db, lookups, turn, lookups.nppCeoPayStartTurn);
+  } catch (error) {
+    console.error("[corporationTurn] NPP CEO pay pass failed", error);
+  }
 }
