@@ -155,4 +155,34 @@ describe("historical household source decoding", () => {
       expect(() => decodeEstat1989(data)).toThrow();
     }
   });
+  it.each([
+    "<script>6653</script>",
+    "<scr<script>ipt>6653",
+    "<script",
+    "<b>6</b>653",
+    "<span>6,653</span>",
+    "&lt;script&gt;6653",
+    "6<!-- note -->653",
+    "6,,653",
+    "66,53",
+    "6,653 trailing",
+    "",
+    "&nbsp;",
+    "9".repeat(400),
+  ])("keeps nonnumeric e-Stat content missing instead of stripping it: %s", (content) => {
+    const data = estat();
+    data.table = data.table.replace("<td>6,653</td>", `<td>${content}</td>`);
+    expect(decodeEstat1989(data).cells[0]!.grossIncome).toBeNull();
+  });
+  it.each([
+    ["\n 6,653\r\n", 6_653_000],
+    ["&nbsp;6,653&#160;", 6_653_000],
+    ["6653", 6_653_000],
+    ["0", 0],
+    ["-1.25", -1250],
+  ] as const)("decodes only complete numeric e-Stat cells: %s", (content, expected) => {
+    const data = estat();
+    data.table = data.table.replace("<td>6,653</td>", `<td>${content}</td>`);
+    expect(decodeEstat1989(data).cells[0]!.grossIncome).toBe(expected);
+  });
 });

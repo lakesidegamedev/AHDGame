@@ -210,11 +210,16 @@ export function decodeOns1991(
   };
 }
 
-const textOf = (html: string) =>
-  html
-    .replace(/<[^>]*>/g, "")
-    .replace(/&nbsp;|&#160;/g, " ")
-    .trim();
+/** e-Stat data cells are plain numeric text, not HTML to sanitize or render. */
+function estatNumber(contents: string): number | null {
+  const text = contents.replace(/&nbsp;|&#160;/g, " ").trim();
+  // Validate the complete cell before removing numeric grouping separators.
+  // Markup, entities other than spacing, annotations and suppression symbols
+  // stay unknown; deleting tags could join separate text into a false number.
+  if (!/^-?(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d+)?$/.test(text)) return null;
+  const value = Number(text.replace(/,/g, ""));
+  return Number.isFinite(value) ? value : null;
+}
 /** e-Stat public table 0000110274, normal viewer JSON. Symbol cells remain missing, not zero. */
 export function decodeEstat1989(input: {
   tableId: string;
@@ -255,12 +260,13 @@ export function decodeEstat1989(input: {
   for (const row of input.table.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/g)) {
     const region = row[1]!.match(/class="[^"]*js-dbview-rows[^"]*"[^>]*data-unique="([^"]+)"/);
     if (!region) continue;
-    const raw = [...row[1]!.matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/g)].map((m) => textOf(m[1]!));
+    const raw = [...row[1]!.matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/g)].map((m) =>
+      estatNumber(m[1]!)
+    );
     if (raw.length !== codes.length) throw new Error("Truncated e-Stat row");
     const get = (code: string) => {
-      const i = codes.indexOf(code),
-        v = i < 0 ? "" : raw[i]!.replace(/,/g, "");
-      return /^-?\d+(?:\.\d+)?$/.test(v) ? Number(v) : null;
+      const i = codes.indexOf(code);
+      return i < 0 ? null : raw[i]!;
     };
     const cell = blankCell(`tenure-mean-${region[1]}`, region[1]!);
     cell.meanHouseholdSize = get("004") ?? undefined;

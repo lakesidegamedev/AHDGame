@@ -12,6 +12,8 @@ areas: [engine, fullstack]
 
 ## What changed
 
+- Historical Japanese household decoding accepts only complete numeric data cells. Unexpected markup and malformed numbers remain missing instead of being stripped into apparent data.
+
 - Nonviolent crime now uses the same unit calibration for its policy response and condition score. Funded policing and changing game conditions can still affect the modeled crime rate when its display score is saturated. Physical limits remain enforced. Added an exhaustive 58-metric numerical reachability audit, with actual owner input changes kept separate from modeled policy responses and legacy-country coverage.
 
 - Modeled service and social outcomes respond to bounded prior-turn employment, household resources, production and delivered services, alongside existing funded laws. Counted outcomes keep their own owners. Economic growth does not grant civil liberties or rewrite election results. New household definitions have fixed compatible baselines, so they can affect food insecurity and trust without comparing currency amounts with old indexes.
