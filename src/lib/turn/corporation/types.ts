@@ -223,6 +223,8 @@ export interface CorporationLookups {
    * count and gameConfig.managementOverheadPpPerDoubling. Absent = none.
    */
   managementOverheadPpByCorpId?: Map<string, number>;
+  /** Control-group root per corporation for the dumping guard; null/absent = per corporation. */
+  dumpingGuardRootByCorpId?: Map<string, string> | null;
   /**
    * gameConfig.strengthUpkeepStage (see corporations/strengthUpkeep). Absent
    * or 0 = strength upkeep off.
