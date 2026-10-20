@@ -78,7 +78,6 @@ interface TechResponse {
   unlockableCount?: number;
   breakthroughChance?: number | null;
   breakthroughInterval?: number;
-  rdDemandFactor?: number | null;
   decades?: TechDecade[];
 }
 interface TechTabProps {
@@ -222,14 +221,6 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
   const previous = reached.find((d) => d.id === previousDecadeId);
   const methods = data.unlockedStrategyNames ?? [];
   const chancePct = Math.round((data.breakthroughChance ?? 0) * 100);
-  const ecosystem =
-    data.rdDemandFactor == null
-      ? null
-      : data.rdDemandFactor > 1
-        ? `+${Math.round((data.rdDemandFactor - 1) * 100)}%`
-        : data.rdDemandFactor < 1
-          ? `${Math.round((data.rdDemandFactor - 1) * 100)}%`
-          : "Neutral";
 
   return (
     <div className="space-y-6">
@@ -309,24 +300,6 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
               value={`${chancePct}%`}
               hint={`every ${data.breakthroughInterval ?? 6} turns`}
             />
-            {ecosystem && (
-              <KVRow
-                label="R&D ecosystem"
-                value={
-                  <span
-                    className={
-                      (data.rdDemandFactor ?? 1) > 1.02
-                        ? "text-success"
-                        : (data.rdDemandFactor ?? 1) < 0.98
-                          ? "text-error"
-                          : ""
-                    }
-                  >
-                    {ecosystem}
-                  </span>
-                }
-              />
-            )}
           </KVList>
         </DenseSection>
       </div>
