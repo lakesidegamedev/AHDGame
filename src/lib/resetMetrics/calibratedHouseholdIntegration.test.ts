@@ -4,6 +4,7 @@ import { createMockDb } from "@/lib/test-utils/mockDb";
 import { householdFixture } from "./testing/householdFixture";
 import { openingHouseholdCalibration1991 } from "./openingSeed1991";
 import { collectResetMetricOwnerReadings } from "./collectOwnerReadings";
+import { refreshResetMetricBoard } from "./rules/refresh";
 
 describe("automatic calibrated household activation", () => {
   function setup(country: "US" | "UK" | "JP") {
@@ -88,6 +89,53 @@ describe("automatic calibrated household activation", () => {
     ]);
     return { f, db, regions, calibration, rows };
   }
+  it.each(["US", "UK", "JP"] as const)(
+    "activates residential housing only with current local construction data in %s",
+    async (country) => {
+      const { f, db, regions, calibration } = setup(country);
+      db.collection("commodityPrices").findOne.mockResolvedValue({
+        commodity: "construction_services",
+        turn: 2,
+        stateSupply: Object.fromEntries(calibration.map((r) => [r.regionId, r.population / 50])),
+      });
+      const result = await collectResetMetricOwnerReadings(
+        db as unknown as Db,
+        [f.national, ...regions],
+        2,
+        1991
+      );
+      expect(result[f.national._id]!.housingProductionStatus).toMatchObject({
+        path: "produced",
+        gaps: [],
+      });
+      for (const b of regions) {
+        expect(result[b._id]!.updates["24"]!.definitionVersion).toBe(2);
+        expect(result[b._id]!.updates["24"]!.status).toBe("proxy");
+        expect(result[b._id]!.housingState!.lastFlow!.completed).toBe(0);
+      }
+      expect(db.collection("commodityPrices").findOne).toHaveBeenCalledTimes(1);
+      const advanced = [f.national, ...regions].map(
+        (board) => refreshResetMetricBoard({ board, turn: 2, ...result[board._id]! }).board
+      );
+      const retry = await collectResetMetricOwnerReadings(db as unknown as Db, advanced, 2, 1991);
+      for (const b of advanced.filter((b) => b.scope === "regional")) {
+        for (const id of ["24", "25", "41"])
+          expect({ ...retry[b._id]!.updates[id]!, lastUpdatedTurn: 2 }).toEqual(b.observations[id]);
+        // An already-committed board returns cached observations and does not
+        // issue another state write; country-level source checks run above it.
+        expect(retry[b._id]!.housingState).toBeUndefined();
+      }
+      db.collection("commodityPrices").findOne.mockResolvedValue(null);
+      const missing = await collectResetMetricOwnerReadings(
+        db as unknown as Db,
+        [f.national, ...regions],
+        2,
+        1991
+      );
+      expect(missing[f.national._id]!.housingProductionStatus!.path).toBe("legacy");
+      expect(missing[regions[0]!._id]!.updates["24"]!.definitionVersion).toBeUndefined();
+    }
+  );
   it.each(["US", "UK", "JP"] as const)(
     "activates %s without installing an external income frame",
     async (country) => {

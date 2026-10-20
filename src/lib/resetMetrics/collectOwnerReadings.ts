@@ -20,6 +20,8 @@ import {
   openingHouseholdCalibration1991,
 } from "./openingSeed1991";
 import { prepareCalibratedHouseholds } from "./rules/calibratedHouseholdCohorts";
+import { prepareCalibratedHousing } from "./rules/calibratedHousing";
+import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
 import type { RegionalBudget } from "@/lib/db/types/regionalBudget";
 import { fiscalOwnerReadings } from "./rules/fiscalOwner";
 import { nationalForceReadiness } from "./rules/forceReadiness";
@@ -434,11 +436,51 @@ export async function collectResetMetricOwnerReadings(
       );
     })
   );
+  const housingCandidates = countryIds.filter(
+    (country) =>
+      !boards.find((b) => b.countryId === country && b.scope === "national")?.housingSource &&
+      householdSourceByCountry.get(country)?.calibration
+  );
+  const constructionMarket = housingCandidates.length
+    ? await db.collection<CommodityPrice>("commodityPrices").findOne(
+        { commodity: "construction_services", turn },
+        {
+          projection: {
+            commodity: 1,
+            turn: 1,
+            ...Object.fromEntries(regionalIds.map((id) => [`stateSupply.${id}`, 1])),
+          },
+        }
+      )
+    : null;
+  const housingStatusByCountry = new Map<string, HouseholdProductionStatus>();
   const housingByRegion = new Map(
     countryIds.flatMap((countryId) => {
       const national = boards.find((b) => b.countryId === countryId && b.scope === "national");
       const regions = boards.filter((b) => b.countryId === countryId && b.scope === "regional");
-      const source = national?.housingSource;
+      const priorStates = new Map(
+        regions.flatMap((b) => (b.housingState ? [[b.regionId!, b.housingState] as const] : []))
+      );
+      const generated = !national?.housingSource
+        ? prepareCalibratedHousing({
+            worldId: boards[0]!.worldId,
+            countryId,
+            preset: world?.preset ?? "",
+            turn,
+            reference: automaticPacks.get(countryId)?.reference ?? national?.householdReference,
+            households: householdSourceByCountry.get(countryId),
+            priorStates,
+            construction: regions.map((b) => ({
+              regionId: b.regionId!,
+              population: stateById.get(b.regionId!)?.population ?? NaN,
+              turn: constructionMarket?.turn ?? NaN,
+              crewDays: constructionMarket?.stateSupply?.[b.regionId!] ?? NaN,
+            })),
+            programs: laws?.programs ?? [],
+            settlements: laws?.settlements ?? new Map(),
+          })
+        : undefined;
+      const source = national?.housingSource ?? generated?.source;
       const populationMatches = source?.regions.every((r) => {
         const state = stateById.get(r.regionId);
         return state?.countryId === countryId && state.population === r.flow.population;
@@ -453,11 +495,19 @@ export async function collectResetMetricOwnerReadings(
         householdReadings: new Map(
           regions.map((b) => [b.regionId!, householdByRegion.get(b._id) ?? {}])
         ),
-        priorStates: new Map(
-          regions.flatMap((b) => (b.housingState ? [[b.regionId!, b.housingState] as const] : []))
-        ),
+        priorStates,
         programs: laws?.programs ?? [],
         settlements: laws?.settlements ?? new Map(),
+      });
+      housingStatusByCountry.set(countryId, {
+        evaluatedAtTurn: turn,
+        path: result.size === regions.length && regions.length > 0 ? "produced" : "legacy",
+        gaps:
+          result.size === regions.length && regions.length > 0
+            ? []
+            : generated?.gaps.length
+              ? generated.gaps
+              : ["housing-publication-reconciliation-failed"],
       });
       const adopted = regions.some((b) =>
         HOUSING_PUBLICATION_IDS.some((id) => b.observations[id]?.definitionVersion === 2)
@@ -949,7 +999,10 @@ export async function collectResetMetricOwnerReadings(
           electionDue,
           housingState: housingByRegion.get(board._id)?.state,
           ...(board.scope === "national"
-            ? { householdProductionStatus: productionStatusByCountry.get(board.countryId) }
+            ? {
+                householdProductionStatus: productionStatusByCountry.get(board.countryId),
+                housingProductionStatus: housingStatusByCountry.get(board.countryId),
+              }
             : {}),
         },
       ];

@@ -21,6 +21,7 @@ export interface MetricOwnerTurnReadings {
   electionDue: boolean;
   housingState?: HousingState;
   householdProductionStatus?: HouseholdProductionStatus;
+  housingProductionStatus?: HouseholdProductionStatus;
 }
 
 export type MetricOwnerTurnReadingsByBoard = Readonly<Record<string, MetricOwnerTurnReadings>>;
@@ -103,6 +104,7 @@ export async function refreshResetMetricSnapshotsTurn(input: {
           ),
           householdCurrentState: 1,
           householdProductionStatus: 1,
+          housingProductionStatus: 1,
           housingSource: 1,
           housingState: 1,
           // Ordinary turns need only the legacy baseline, not the full chart.
@@ -169,6 +171,8 @@ export async function refreshResetMetricSnapshotsTurn(input: {
         if (board.housingState?.asOfTurn === turn) fields.housingState = board.housingState;
         if (board.householdProductionStatus?.evaluatedAtTurn === turn)
           fields.householdProductionStatus = board.householdProductionStatus;
+        if (board.housingProductionStatus?.evaluatedAtTurn === turn)
+          fields.housingProductionStatus = board.housingProductionStatus;
         // Upgrade old boards once, before bounded appends can trim their baseline.
         if (!board.openingValues) {
           if (

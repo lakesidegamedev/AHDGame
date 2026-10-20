@@ -18,15 +18,31 @@ export interface HousingState {
   unhousedPeople: number;
   constructionCash: number;
   pipeline: readonly HousingProject[];
+  /** Compact anchors for the explicitly modeled residential owner, wiped on reset. */
+  model?: HousingModelState;
   /** Bounded canonical input receipt prevents a changed source during partial turn recovery. */
   lastInputKey?: string;
   lastFlow?: {
     completed: number;
     lost: number;
     openingStock: number;
+    openingOccupied?: number;
+    openingCash?: number;
+    openingPipelineDwellings?: number;
+    openingPipelineLength?: number;
+    resumedFromTurn?: number;
     spent: number;
     rehousedPeople: number;
   };
+}
+export interface HousingModelState {
+  version: 1;
+  openingHouseholds: number;
+  openingMarketIncome: number;
+  openingPriceIndex: number;
+  openingDwellings: number;
+  previousHouseholds: number;
+  currentHouseholds: number;
 }
 export interface HousingTurnInput {
   turn: number;
@@ -46,12 +62,30 @@ export interface HousingTurnInput {
   newlyUnhousedPeople: number;
   rehousingHouseholds: number;
   peoplePerRehousing: number;
+  /** Modeled household formation without a home; absent on observed-flow sources. */
+  peoplePerUnplacedHousehold?: number;
+  /** Model only: apply this current flow after a data gap, never backfill missed funding. */
+  resumeFromTurn?: number;
 }
 
 const count = (v: number) => Number.isSafeInteger(v) && v >= 0;
 const MAX_HOUSING_PROJECTS = 256;
 
 export function validateHousingState(state: HousingState): void {
+  if (
+    state.model &&
+    (state.model.version !== 1 ||
+      !count(state.model.openingDwellings) ||
+      state.model.openingDwellings === 0 ||
+      ![
+        state.model.openingHouseholds,
+        state.model.openingMarketIncome,
+        state.model.openingPriceIndex,
+        state.model.previousHouseholds,
+        state.model.currentHouseholds,
+      ].every((v) => Number.isFinite(v) && v > 0))
+  )
+    throw new Error("Invalid modeled housing anchors");
   if (
     !state.worldId ||
     !state.countryId ||
@@ -101,6 +135,9 @@ export function advanceHousing(state: HousingState, input: HousingTurnInput): Ho
     input.newlyUnhousedPeople,
     input.rehousingHouseholds,
     input.peoplePerRehousing,
+    ...(input.peoplePerUnplacedHousehold !== undefined || input.resumeFromTurn !== undefined
+      ? [input.peoplePerUnplacedHousehold ?? 0, input.resumeFromTurn ?? null]
+      : []),
     [...input.newProjects]
       .sort((a, b) => a.id.localeCompare(b.id))
       .map((p) => [p.id, p.dwellings, p.earliestCompletionTurn]),
@@ -112,7 +149,12 @@ export function advanceHousing(state: HousingState, input: HousingTurnInput): Ho
       throw new Error("Housing source changed during turn replay");
     return state;
   }
-  if (state.asOfTurn !== input.turn - 1)
+  const resuming =
+    !!state.model &&
+    count(input.resumeFromTurn ?? -1) &&
+    input.resumeFromTurn === state.asOfTurn &&
+    state.asOfTurn < input.turn - 1;
+  if (state.asOfTurn !== input.turn - 1 && !resuming)
     throw new Error("Housing flow must advance exactly one turn");
   if (
     ![
@@ -131,6 +173,7 @@ export function advanceHousing(state: HousingState, input: HousingTurnInput): Ho
       input.newlyUnhousedPeople,
       input.rehousingHouseholds,
       input.peoplePerRehousing,
+      input.peoplePerUnplacedHousehold ?? 0,
     ].every(count) ||
     input.population === 0 ||
     input.costPerCompletedDwelling === 0 ||
@@ -184,8 +227,14 @@ export function advanceHousing(state: HousingState, input: HousingTurnInput): Ho
   const usableDwellings = state.usableDwellings + completed - input.dwellingsLost;
   let occupiedDwellings =
     state.occupiedDwellings - input.occupiedDwellingsLost - input.vacatedDwellings;
-  occupiedDwellings += Math.min(input.otherNewOccupancies, usableDwellings - occupiedDwellings);
-  const beforeRehousing = state.unhousedPeople + input.newlyUnhousedPeople + input.displacedPeople;
+  const newlyOccupied = Math.min(input.otherNewOccupancies, usableDwellings - occupiedDwellings);
+  occupiedDwellings += newlyOccupied;
+  const unplacedPeople =
+    (input.otherNewOccupancies - newlyOccupied) * (input.peoplePerUnplacedHousehold ?? 0);
+  const beforeRehousing =
+    state.unhousedPeople + input.newlyUnhousedPeople + input.displacedPeople + unplacedPeople;
+  if (!count(beforeRehousing) || beforeRehousing > input.population)
+    throw new Error("Housing flows exceed population exposure");
   const householdsRehoused = Math.min(
     input.rehousingHouseholds,
     usableDwellings - occupiedDwellings,
@@ -206,6 +255,11 @@ export function advanceHousing(state: HousingState, input: HousingTurnInput): Ho
       completed,
       lost: input.dwellingsLost,
       openingStock: state.usableDwellings,
+      openingOccupied: state.occupiedDwellings,
+      openingCash: state.constructionCash,
+      openingPipelineDwellings: state.pipeline.reduce((n, p) => n + p.dwellings, 0),
+      openingPipelineLength: state.pipeline.length,
+      ...(resuming ? { resumedFromTurn: state.asOfTurn } : {}),
       spent: completed * input.costPerCompletedDwelling,
       rehousedPeople,
     },

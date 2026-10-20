@@ -36,6 +36,8 @@ export interface ResetMetricSnapshot {
   householdCurrentState?: HouseholdCurrentState;
   /** Bounded latest evaluation only. This is not a new measurement or a history series. */
   householdProductionStatus?: HouseholdProductionStatus;
+  /** Latest housing readiness only; wiped with the metric snapshots on reset. */
+  housingProductionStatus?: HouseholdProductionStatus;
   housingSource?: HousingPublicationSource;
   /** Country source inputs and regional stock state are wiped with this world-bound collection. */
   housingState?: HousingState;

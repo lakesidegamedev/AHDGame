@@ -16,6 +16,7 @@ export interface MetricRefreshInput {
   allowCatchUp?: boolean;
   housingState?: HousingState;
   householdProductionStatus?: HouseholdProductionStatus;
+  housingProductionStatus?: HouseholdProductionStatus;
 }
 
 export interface MetricRefreshResult {
@@ -100,19 +101,17 @@ export function dueResetMetricIds(
  */
 export function refreshResetMetricBoard(input: MetricRefreshInput): MetricRefreshResult {
   const { board, turn, cohortDue, electionDue } = input;
-  if (
-    input.householdProductionStatus &&
-    (board.scope !== "national" ||
-      input.householdProductionStatus.evaluatedAtTurn !== turn ||
-      !["produced", "legacy"].includes(input.householdProductionStatus.path) ||
-      input.householdProductionStatus.gaps.length > 64 ||
-      input.householdProductionStatus.gaps.some(
-        (g) => typeof g !== "string" || !g || g.length > 200
-      ) ||
-      (input.householdProductionStatus.path === "produced" &&
-        input.householdProductionStatus.gaps.length > 0))
-  )
-    throw new Error("Invalid household production status");
+  for (const status of [input.householdProductionStatus, input.housingProductionStatus])
+    if (
+      status &&
+      (board.scope !== "national" ||
+        status.evaluatedAtTurn !== turn ||
+        !["produced", "legacy"].includes(status.path) ||
+        status.gaps.length > 64 ||
+        status.gaps.some((g) => typeof g !== "string" || !g || g.length > 200) ||
+        (status.path === "produced" && status.gaps.length > 0))
+    )
+      throw new Error("Invalid household production status");
   if (input.housingState) {
     validateHousingState(input.housingState);
     if (
@@ -184,7 +183,10 @@ export function refreshResetMetricBoard(input: MetricRefreshInput): MetricRefres
       changedIds.some((id) => !sameObservation(board.observations[id], updates[id]!)) ||
       (input.householdProductionStatus &&
         JSON.stringify(board.householdProductionStatus) !==
-          JSON.stringify(input.householdProductionStatus))
+          JSON.stringify(input.householdProductionStatus)) ||
+      (input.housingProductionStatus &&
+        JSON.stringify(board.housingProductionStatus) !==
+          JSON.stringify(input.housingProductionStatus))
     ) {
       throw new Error("Reset metric turn replay differs from its persisted owner readings");
     }
@@ -201,6 +203,9 @@ export function refreshResetMetricBoard(input: MetricRefreshInput): MetricRefres
     ...(input.housingState ? { housingState: input.housingState } : {}),
     ...(input.householdProductionStatus
       ? { householdProductionStatus: input.householdProductionStatus }
+      : {}),
+    ...(input.housingProductionStatus
+      ? { housingProductionStatus: input.housingProductionStatus }
       : {}),
   };
   return { board: next, replayed: false, dueIds, changedIds, missingDueIds };
