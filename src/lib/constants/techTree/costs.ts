@@ -8,7 +8,10 @@
  * strength grants, production methods) cost a small fraction of daily gross
  * revenue instead. A minimum cash price (TECH_NODE_CASH_FLOOR_ANCHOR, scaled
  * to the world era) stops tiny and zero-revenue corps from unlocking nodes for
- * R&D points alone (ticket #1506). Cash is charged in the corp's currency.
+ * R&D points alone (ticket #1506). A node with running value only needs a
+ * tenth of that floor (TECH_NODE_VALUED_FLOOR_FRACTION): the full floor sat
+ * above value x 48 for most corps and flattened every price to the minimum.
+ * Cash is charged in the corp's currency.
  */
 import type { TechTreeNode } from "./nodes";
 import type { TechEffect } from "./effects";
@@ -95,6 +98,13 @@ export function techNodeValuePerTurn(node: TechTreeNode, basis: TechPlantBasis):
  */
 export const TECH_NODE_CASH_FLOOR_ANCHOR = 5_000_000;
 
+/**
+ * Share of the cash floor that still applies to a node with running plant
+ * value. Its price already scales with the corp's own plants, so the floor
+ * only has to stop near-free unlocks, not set the price for mid-size corps.
+ */
+export const TECH_NODE_VALUED_FLOOR_FRACTION = 0.1;
+
 /** Era-scaled floor in anchor money. Bad scales fall back to 2019 (1.0). */
 export function techNodeCashFloorAnchor(eraUnitScale: number): number {
   const scale = Number.isFinite(eraUnitScale) && eraUnitScale > 0 ? eraUnitScale : 1;
@@ -105,8 +115,8 @@ export function techNodeCashFloorAnchor(eraUnitScale: number): number {
  * Cash cost (local currency) to unlock `node`. With a plant basis and a node
  * that has running value: that value times TECH_NODE_PAYBACK_TURNS. Otherwise
  * the revenue fraction of daily gross. Never below `cashFloorLocal` (the
- * era-scaled minimum already converted into the corp's currency). Rounded;
- * never negative. rdScore is charged separately.
+ * era-scaled minimum already converted into the corp's currency), or a tenth
+ * of it for a valued node. Rounded; never negative. rdScore is charged separately.
  */
 export function techNodeCashCost(
   node: TechTreeNode,
@@ -116,7 +126,11 @@ export function techNodeCashCost(
 ): number {
   const floor = Number.isFinite(cashFloorLocal) ? Math.max(0, cashFloorLocal) : 0;
   const value = plantBasis ? techNodeValuePerTurn(node, plantBasis) : 0;
-  if (value > 0) return Math.round(Math.max(value * TECH_NODE_PAYBACK_TURNS, floor));
+  if (value > 0) {
+    return Math.round(
+      Math.max(value * TECH_NODE_PAYBACK_TURNS, floor * TECH_NODE_VALUED_FLOOR_FRACTION)
+    );
+  }
   const fraction = node.cashRevenueFraction ?? TECH_NODE_CASH_REVENUE_FRACTION;
   const revenueCost = Math.max(0, dailyGrossRevenueLocal * fraction);
   return Math.round(Math.max(revenueCost, floor));
