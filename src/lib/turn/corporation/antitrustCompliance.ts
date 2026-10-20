@@ -158,6 +158,7 @@ export async function processAntitrustCompliance(
 
   if (ops.length > 0) await db.collection<Corporation>("corporations").bulkWrite(ops);
 
+  const settled: AnyBulkWriteOperation<Corporation>[] = [];
   for (const { target, finding } of due.slice(0, MAX_FORCED_SALES_PER_TURN)) {
     const parentRef = getControllingCorporateParent(target);
     const parent = parentRef ? corpById.get(parentRef.corporationId.toString()) : undefined;
@@ -170,9 +171,12 @@ export async function processAntitrustCompliance(
       now,
     });
     if (outcome.status === "sold" || outcome.status === "noControl") {
-      await db
-        .collection<Corporation>("corporations")
-        .updateOne({ _id: target._id }, { $unset: { antitrustDivestiture: "" } });
+      settled.push({
+        updateOne: {
+          filter: { _id: target._id },
+          update: { $unset: { antitrustDivestiture: "" } },
+        },
+      });
       if (outcome.status === "sold") {
         result.sold++;
         notifyOwner(
@@ -187,6 +191,8 @@ export async function processAntitrustCompliance(
       result.deferred++;
     }
   }
+
+  if (settled.length > 0) await db.collection<Corporation>("corporations").bulkWrite(settled);
 
   if (notices.length > 0) await createNotifications(notices);
   return result;

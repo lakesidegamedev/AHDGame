@@ -200,7 +200,7 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
       if (listing.sellerCorporationId && placerCorp._id.equals(listing.sellerCorporationId)) {
         return errorResponse(400, "Cannot offer on your own corporation's listing");
       }
-      if (wouldGainControl(listingCorp, placerCorp._id, shares)) {
+      if (listingCorp && wouldGainControl(listingCorp, placerCorp._id, shares)) {
         const foreignRejection = await assertForeignControlAllowed(db, placerCorp, listingCorp);
         if (foreignRejection) return errorResponse(foreignRejection.status, foreignRejection.error);
       }

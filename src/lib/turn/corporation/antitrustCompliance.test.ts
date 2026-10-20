@@ -163,11 +163,13 @@ describe("processAntitrustCompliance", () => {
       db,
       expect.objectContaining({ target: sub, parent: root, turn: 500, now })
     );
-    expect(bulkWrite).not.toHaveBeenCalled();
-    expect(updateOne).toHaveBeenCalledWith(
-      { _id: sub._id },
-      { $unset: { antitrustDivestiture: "" } }
-    );
+    // The cleared order is written in one batch after the sales.
+    expect(updateOne).not.toHaveBeenCalled();
+    expect(bulkWrite).toHaveBeenCalledWith([
+      {
+        updateOne: { filter: { _id: sub._id }, update: { $unset: { antitrustDivestiture: "" } } },
+      },
+    ]);
     expect(mockedNotify).toHaveBeenCalledWith([
       expect.objectContaining({
         userId: rootUserId,

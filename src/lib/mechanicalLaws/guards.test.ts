@@ -21,7 +21,7 @@ function levels(
 /** A 1000 share company whose corporate holder owns 60% of the votes. */
 function subsidiaryOf(holderId: ObjectId, countryId: string): Corporation {
   return makeCorporation({
-    countryId,
+    countryId: countryId as Corporation["countryId"],
     totalShares: 1000,
     shareholders: [{ corporationId: holderId, shares: 600 }],
   });
