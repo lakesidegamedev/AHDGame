@@ -7,12 +7,46 @@
  * market structure changes and whose authority reviews the deal.
  */
 
-import type { Db } from "mongodb";
+import { ObjectId, type Db } from "mongodb";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { CorporationType } from "@/lib/constants/corporations";
 import type { MergerOverlapFinding } from "@/lib/db/types/mergerReview";
 import { computeMarketSharePercent } from "../marketShare";
 import { loadIndustryBasis } from "../corpMarketShare";
+import { controlGroupMemberIds, controlGroupRootByCorpId } from "../groups/controlGroups";
+
+/** gameConfig.groupSizeCostsStage at which merger concentration reads both sides' control groups. */
+export const GROUP_MERGER_CONCENTRATION_STAGE = 5;
+
+/**
+ * Corporation ids on each side of the deal: the corporation alone while the
+ * group stage is off, else its whole control group (the acquirer's group and
+ * the target with everything it controls), so a deal cannot be sliced into
+ * pieces that each look small.
+ */
+async function dealSides(
+  db: Db,
+  acquirer: Pick<Corporation, "_id">,
+  target: Pick<Corporation, "_id">
+): Promise<{ acquirerIds: string[]; targetIds: string[] }> {
+  const alone = { acquirerIds: [acquirer._id.toString()], targetIds: [target._id.toString()] };
+  const cfg = await db
+    .collection<{ groupSizeCostsStage?: number }>("gameConfig")
+    .findOne({ _id: "default" as never }, { projection: { groupSizeCostsStage: 1 } });
+  if ((cfg?.groupSizeCostsStage ?? 0) < GROUP_MERGER_CONCENTRATION_STAGE) return alone;
+  const corps = await db
+    .collection<Corporation>("corporations")
+    .find({}, { projection: { shareholders: 1, totalShares: 1, superShareMultiplier: 1 } })
+    .toArray();
+  const roots = controlGroupRootByCorpId(corps);
+  const acquirerIds = controlGroupMemberIds(roots, alone.acquirerIds[0]);
+  const inAcquirerGroup = new Set(acquirerIds);
+  // Target-side members already in the acquirer's group are not a second holder.
+  const targetIds = controlGroupMemberIds(roots, alone.targetIds[0]).filter(
+    (id) => !inAcquirerGroup.has(id)
+  );
+  return { acquirerIds, targetIds: targetIds.length > 0 ? targetIds : alone.targetIds };
+}
 
 export interface MergerConcentration {
   /** Every industry where the combined firm would hold share, worst first. */
@@ -38,14 +72,13 @@ export async function computeMergerConcentration(
   target: Pick<Corporation, "_id" | "countryId">,
   plantsEnabled: boolean = false
 ): Promise<MergerConcentration> {
-  const acquirerId = acquirer._id.toString();
-  const targetId = target._id.toString();
+  const { acquirerIds, targetIds } = await dealSides(db, acquirer, target);
 
   // Industries either side operates in ANYWHERE — filtered to the reviewing
   // country by the rollup itself, which only reads that country's states.
   const sectors = await db
     .collection<CorporateSector>("corporateSectors")
-    .find({ corporationId: { $in: [acquirer._id, target._id] } })
+    .find({ corporationId: { $in: [...acquirerIds, ...targetIds].map((id) => new ObjectId(id)) } })
     .project<Pick<CorporateSector, "sectorType">>({ sectorType: 1 })
     .toArray();
   const types = [...new Set(sectors.map((s) => s.sectorType))] as CorporationType[];
@@ -59,8 +92,10 @@ export async function computeMergerConcentration(
   for (const sectorType of types) {
     const basis = byType.get(sectorType);
     if (!basis || basis.basisMarket <= 0) continue;
-    const acquirerBasis = basis.basisByCorp.get(acquirerId) ?? 0;
-    const targetBasis = basis.basisByCorp.get(targetId) ?? 0;
+    const sideBasis = (ids: readonly string[]) =>
+      ids.reduce((sum, id) => sum + (basis.basisByCorp.get(id) ?? 0), 0);
+    const acquirerBasis = sideBasis(acquirerIds);
+    const targetBasis = sideBasis(targetIds);
     // ─── An overlap needs BOTH sides in the industry (#1163) ───────────────
     //
     // This used to record an industry whenever EITHER side held share, so a
