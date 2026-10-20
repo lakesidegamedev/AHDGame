@@ -14,7 +14,8 @@
  * Returns each sector's settled receipt so the legacy pass can take revenue and
  * margin from it, and the producer profit per corporation the settlement paid.
  */
-import { ObjectId, type Db } from "mongodb";
+import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
+import type { CorporateSector, Corporation } from "@/lib/db/types/corporation";
 import { applyMoneyMove, resumeMoneyMove } from "@/lib/banking/moneyMove";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
@@ -48,6 +49,7 @@ import type { ProducerPhysicalEnv } from "./producerPhysicalPreparation";
 import type { CorporationLookups } from "./types";
 import { buildProducerTurnDemand } from "./producerTurnDemand";
 import { NO_PHYSICAL_CAPACITY } from "./producerSectorPlan";
+import { newEntrantProducerBooks } from "@/lib/market/producerMarket/openingState";
 import {
   createProducerWallets,
   producerWalletId,
@@ -78,6 +80,7 @@ export async function runFundedProducerTurn(
   }
 ): Promise<FundedProducerTurnResult> {
   const { lookups, worldEpoch, turn } = input;
+  await admitNewProducerEntrants(db, lookups, worldEpoch, turn);
   const rates = lookups.exchangeRatesByCurrency;
   const rateOf = (code: string | null | undefined) => {
     const r = code ? rates.get(code as CurrencyCode) : undefined;
@@ -533,4 +536,48 @@ function liveCarry(
     references: {},
     valueAddedByCountry,
   };
+}
+
+/**
+ * Corporations and sectors founded since the opening join the funded market
+ * with empty producer books at the last settled turn. Anything carrying legacy
+ * stock or arrears is left alone, so preparation still fails closed on it.
+ */
+async function admitNewProducerEntrants(
+  db: Db,
+  lookups: CorporationLookups,
+  worldEpoch: string,
+  turn: number
+): Promise<void> {
+  const corpOps: AnyBulkWriteOperation<Corporation>[] = [];
+  const sectorOps: AnyBulkWriteOperation<CorporateSector>[] = [];
+  for (const corp of lookups.corporations) {
+    const sectors = lookups.sectorsByCorp.get(corp._id.toString()) ?? [];
+    if (sectors.length === 0) continue;
+    const books = newEntrantProducerBooks(corp, "corporation", worldEpoch, turn - 1);
+    if (books)
+      corpOps.push({
+        updateOne: {
+          filter: { _id: corp._id, producerPayables: { $exists: false } },
+          update: { $set: books },
+        },
+      });
+    for (const sector of sectors) {
+      const opening = newEntrantProducerBooks(sector, "sector", worldEpoch, turn - 1);
+      if (!opening || !("producerCapacity" in opening)) continue;
+      Object.assign(sector, opening);
+      sectorOps.push({
+        updateOne: {
+          filter: { _id: sector._id, producerCapacity: { $exists: false } },
+          update: { $set: opening },
+        },
+      });
+    }
+  }
+  if (corpOps.length > 0)
+    await db.collection<Corporation>("corporations").bulkWrite(corpOps, { ordered: false });
+  if (sectorOps.length > 0)
+    await db
+      .collection<CorporateSector>("corporateSectors")
+      .bulkWrite(sectorOps, { ordered: false });
 }
