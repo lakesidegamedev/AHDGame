@@ -100,6 +100,7 @@ export async function buildProducerTurnDemand(
   const legacyRevenueByCountry = new Map<string, number>();
   const ownerKindByCompany = new Map<string, ProfitOwnerKind>();
   const skipReasons: Record<string, number> = {};
+  const skippedSectors: { sectorId: string; reason: string }[] = [];
   for (const corp of lookups.corporations) {
     for (const sector of lookups.sectorsByCorp.get(corp._id.toString()) ?? []) {
       try {
@@ -172,6 +173,7 @@ export async function buildProducerTurnDemand(
         skipped++;
         const reason = error instanceof Error ? error.message : String(error);
         skipReasons[reason] = (skipReasons[reason] ?? 0) + 1;
+        skippedSectors.push({ sectorId: sector._id.toString(), reason });
       }
     }
   }
@@ -373,6 +375,7 @@ export async function buildProducerTurnDemand(
     )
   );
   return {
+    skippedSectors,
     preparedSectors,
     walletScopes,
     accounts,

@@ -25,6 +25,9 @@ type SectorFacts = Pick<
   | "producerQuotes"
 >;
 
+/** Preparation error for a sector with no physical stock yet; it produces nothing. */
+export const NO_PHYSICAL_CAPACITY = "Producer sector requires physical stock and paid basis";
+
 export function prepareProducerSector(input: {
   worldEpoch: string;
   turn: number;
@@ -65,7 +68,7 @@ export function prepareProducerSector(input: {
     sector.capacityBookAnchor == null ||
     !Array.isArray(sector.buildQueue)
   )
-    throw new Error("Producer sector requires physical stock and paid basis");
+    throw new Error(NO_PHYSICAL_CAPACITY);
   for (const amount of [input.outputMultiplier, input.labourCost, input.otherOperatingCost])
     if (!Number.isFinite(amount) || amount < 0) throw new Error("Invalid producer operating facts");
   const id = sector._id.toHexString();

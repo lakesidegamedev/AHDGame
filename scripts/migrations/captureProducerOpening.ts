@@ -242,7 +242,13 @@ export async function captureProducerOpening(
             ownedDailyUnits: Number.isFinite(ownedDailyUnits) ? ownedDailyUnits : 0,
             paidBookAnchor:
               Number.isFinite(paidBookAnchor) && paidBookAnchor >= 0 ? paidBookAnchor : 0,
-            buildQueue: sector.buildQueue ?? [],
+            // An order due on the completed turn lands on the next turn in the
+            // legacy engine; the opening schedules it for the first funded turn.
+            buildQueue: (sector.buildQueue ?? []).map((order: { onlineTurn: number }) =>
+              order.onlineTurn <= before.currentTurn
+                ? { ...order, onlineTurn: before.currentTurn + 1 }
+                : order
+            ),
           },
           inventoryDailyUnits,
           inventoryValueAnchor: sector.inventoryValueAnchor ?? 0,

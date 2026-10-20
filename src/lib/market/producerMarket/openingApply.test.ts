@@ -89,6 +89,9 @@ describe("producer opening apply", () => {
     });
     expect(sector.producerQuotes).toEqual({ food: { kind: "automatic", targetMarkup: 0 } });
     expect(sector.cutoverTransition).toMatchObject({ mismatched: true, legacyRevenueAnchor: 50 });
+    // The reviewed schedule and paid basis are written, so every opened sector can be prepared.
+    expect(sector.capacityBookAnchor).toBe(1);
+    expect(sector.buildQueue).toEqual([]);
     const corp = memory.collection("corporations").docs[0];
     expect(corp.producerPayables).toEqual({ worldEpoch: "w", turn: 99, claims: [] });
     expect(corp.operatingCashArrearsByCurrency).toBeUndefined();
