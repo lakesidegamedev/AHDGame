@@ -90,11 +90,17 @@ export async function claimProducerPath(
     turn: number;
     path: ProducerPath;
   }>(PRODUCER_PATH_CLAIMS);
-  await claims.updateOne(
-    { _id },
-    { $setOnInsert: { _id, worldEpoch: input.worldEpoch, turn: input.turn, path: input.path } },
-    { upsert: true }
-  );
+  try {
+    await claims.insertOne({
+      _id,
+      worldEpoch: input.worldEpoch,
+      turn: input.turn,
+      path: input.path,
+    });
+  } catch (error) {
+    // Duplicate key: a claim exists already (a retry, or the other phase).
+    if ((error as { code?: number }).code !== 11000) throw error;
+  }
   const claim = await claims.findOne({ _id });
   if (claim?.path !== input.path)
     throw new Error(
