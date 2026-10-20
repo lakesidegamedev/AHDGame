@@ -2,6 +2,7 @@ import { configureGroupSupply, groupForecastWriteOps } from "./groupSupplyTurn";
 import { migrateEntertainmentRemoval } from "./migrateEntertainmentRemoval";
 import { settleFundDividendAccruals } from "./settleFundDividendAccruals";
 import { runProducerMarketShadowPhase } from "./producerMarketShadowPhase";
+import { claimProducerPath, loadProducerPath } from "@/lib/market/producerMarket/liveMode";
 import { resolvePhaseLookups } from "./phaseLookups";
 /**
  * Corporation turns settle operating results and distribute shareholder income.
@@ -789,6 +790,21 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
     treasuryCashLedgerEnabled
   );
   mark("processSectors(CPU)");
+  const producerTurn = turn ?? gameState?.currentTurn ?? 0;
+  const producerPath = await loadProducerPath(db, {
+    turn: producerTurn,
+    worldEpoch: gameState?.worldEpochId,
+    liveFromTurn: marketGovernorConfig?.producerMarketLiveFromTurn,
+  });
+  if (gameState?.worldEpochId)
+    await claimProducerPath(db, {
+      worldEpoch: gameState.worldEpochId,
+      turn: producerTurn,
+      path: producerPath,
+      phase: "corporation",
+    });
+  if (producerPath === "funded")
+    throw new Error("The funded producer market is not wired into the corporation turn yet");
   await runProducerMarketShadowPhase(db, {
     enabled: marketGovernorConfig?.producerMarketShadowEnabled === true,
     turn: turn ?? gameState?.currentTurn ?? 0,
