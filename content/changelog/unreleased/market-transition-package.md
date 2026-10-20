@@ -3,8 +3,8 @@ date: 2026-10-20
 title: Market switch: transition options
 summary: Businesses hit hard by the upcoming market change can convert or mothball for free.
 tags: [economy, corporations]
-badges: [feature]
-areas: [corporations, economy]
+badges: [minor]
+areas: [fullstack]
 ---
 
 - When the new market goes live, a business whose real demand is far below what it used to earn shows a Market transition panel for a limited number of turns.
