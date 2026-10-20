@@ -2,6 +2,7 @@ import type { WikiSeedPage } from "../types";
 import { corporationsContent } from "../content/corporations";
 import { corporateRAndDContent } from "../content/corporateRAndD";
 import { brandLoyaltyContent } from "../content/brandLoyalty";
+import { marketSwitchContent } from "../content/marketSwitch";
 import { outputQualityContent } from "../content/outputQuality";
 import { supplyAgreementsContent } from "../content/supplyAgreements";
 import { corporateBondsContent } from "../content/corporateBonds";
@@ -59,6 +60,19 @@ export const economyPages: readonly WikiSeedPage[] = [
     difficulty: "intermediate",
     contentType: "guide",
     estimatedReadTime: 8,
+  },
+  {
+    slug: "market-real-buyers",
+    title: "The Market: Real Buyers, Real Money",
+    description:
+      "How the market works: who buys, how prices move, unmet demand in the build planner, and the transition options for over-built businesses.",
+    content: marketSwitchContent,
+    category: "economy",
+    extraTags: ["market", "transition", "conversion", "mothball", "demand", "prices"],
+    featured: true,
+    difficulty: "beginner",
+    contentType: "guide",
+    estimatedReadTime: 5,
   },
   {
     slug: "brand-loyalty",
