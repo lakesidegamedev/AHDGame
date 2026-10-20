@@ -216,6 +216,11 @@ export interface CorporationLookups {
    */
   managementOverheadPpByCorpId?: Map<string, number>;
   /**
+   * gameConfig.strengthUpkeepStage (see corporations/strengthUpkeep). Absent
+   * or 0 = strength upkeep off.
+   */
+  strengthUpkeepStage?: number;
+  /**
    * World price ratios overlaid with each country's reachable ratios, then
    * capped at the world ratio per commodity (`min(world, reachable)` via
    * `capInputPriceRatioAtWorld`). Cheap local inputs still win; expensive

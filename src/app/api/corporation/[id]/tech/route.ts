@@ -13,6 +13,11 @@ import { handleRouteError } from "@/lib/api/errors";
 import { resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { getGameState } from "@/lib/gameState";
 import { getAuthUser } from "@/lib/auth";
+import {
+  STRENGTH_UPKEEP_STAGE,
+  loadStrengthUpkeepStage,
+  strengthUpkeepActive,
+} from "@/lib/corporations/strengthUpkeep";
 import type { Corporation } from "@/lib/db/types";
 import { shouldRedactCorporation } from "@/lib/corporations/redaction";
 import { getControllingCorporateParent } from "@/lib/corporations/corporateOwnership";
@@ -124,6 +129,11 @@ export async function GET(_request: Request, { params }: RouteParams) {
     const unlocked = new Set(corporation.unlockedTechNodeIds ?? []);
     const passedDecades = new Set(getPassedDecadeIds(currentYear));
     const activeDecadeIds = getActiveTechDecadeIds(currentYear);
+    // Strength upkeep: from its shield stage the dominance shield expires too.
+    const shieldExpires = strengthUpkeepActive(
+      await loadStrengthUpkeepStage(db),
+      STRENGTH_UPKEEP_STAGE.SHIELD
+    );
     const strategyNameById = new Map(
       (SECTOR_STRATEGIES[operatingSectorType] ?? []).map((s) => [s.id, s.name])
     );
@@ -166,7 +176,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
         // running plant value.
         // Owned techs from before the previous decade no longer apply their
         // running plant effects in the turn, so they are worth nothing now.
-        const effectExpired = owned && isTechNodeEffectExpired(node, activeDecadeIds);
+        const effectExpired =
+          owned && isTechNodeEffectExpired(node, activeDecadeIds, { shieldExpires });
         const valuePerTurn =
           techPlantBasis && !effectExpired ? techNodeValuePerTurn(node, techPlantBasis) : 0;
         const paybackTurns = valuePerTurn > 0 ? Math.ceil(cashCost / valuePerTurn) : null;

@@ -165,3 +165,22 @@ describe("memberShareCap — the spin-off inheritance window", () => {
     ).toBe(GROUP_SYNERGY_MAX_SHARE);
   });
 });
+
+describe("synergy as a transfer (strength upkeep)", () => {
+  it("charges the leader exactly what the members gain", () => {
+    const members = [
+      { corporationId: "lead", marketingStrength: 200, logisticsStrength: 100 },
+      { corporationId: "a", marketingStrength: 0, logisticsStrength: 0 },
+      { corporationId: "b", marketingStrength: 10, logisticsStrength: 0 },
+    ];
+    const free = computeGroupSynergies(members, 1);
+    expect(free.every((d) => d.marketingStrength >= 0)).toBe(true);
+    const paid = computeGroupSynergies(members, 1, { transfer: true });
+    const sum = (k: "marketingStrength" | "logisticsStrength") =>
+      paid.reduce((total, d) => total + d[k], 0);
+    expect(Math.abs(sum("marketingStrength"))).toBeLessThan(0.02);
+    expect(Math.abs(sum("logisticsStrength"))).toBeLessThan(0.02);
+    const lead = paid.find((d) => d.corporationId === "lead")!;
+    expect(lead.marketingStrength).toBeLessThan(0);
+  });
+});
