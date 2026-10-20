@@ -315,7 +315,9 @@ export function advanceProducerEconomy(input: {
           (output) => output.commodity === stock.commodity && output.book === stock.book
         )
       )
-        throw new Error("Unrecognized produced stock or market book");
+        throw new Error(
+          `Unrecognized produced stock or market book: ${p.id} ${stock.commodity} ${stock.book} (outputs ${p.outputs.map((o) => `${o.commodity}@${o.book}`).join(",")})`
+        );
     }
   }
   const funding = new Map(
@@ -889,7 +891,11 @@ export function advanceProducerEconomy(input: {
       profit: revenue - consumed - inventoryWriteOff - p.labourCost - p.otherOperatingCost,
       cashFlow: revenue - purchases - paid.labour - paid.operating - arrearsPaid,
       inputStock: [...stocks.values()],
-      outputStock,
+      // A sold-out retained good (no longer in the recipe) leaves no row: next
+      // turn's plan has no output for it, so an empty row would be unrecognized.
+      outputStock: outputStock.filter(
+        (stock, i) => stock.units > 0 || p.outputs[i].unitsPerOutput > 0
+      ),
       products,
     });
   }
