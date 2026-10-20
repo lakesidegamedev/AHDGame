@@ -101,6 +101,8 @@ export function decodeCps1992(lines: Iterable<string>): HouseholdDecodedReferenc
       cell.reportedIncomeComponents = Object.fromEntries(
         categories.map((name, i) => [name, number(line, starts[i]!, i === 6 || i === 7 ? 6 : 7)])
       );
+      // Match the game's wages-and-salaries payroll base, not pensions or capital income.
+      cell.labourIncome = cell.reportedIncomeComponents.wages;
       if (
         Object.values(cell.reportedIncomeComponents).reduce((s, v) => s + v, 0) !== cell.grossIncome
       )
@@ -186,6 +188,7 @@ export function decodeOns1991(
         ? tax - taxRelief + localRates
         : null;
     cell.employeeContributions = value(contributions, c);
+    cell.labourIncome = value(incomeRows[0]!, c) ?? undefined;
     // Reading the row is mandatory to ensure the original/gross definition is understood.
     if (value(inKind, c) === null) throw new Error("Missing ONS in-kind component");
     return cell;

@@ -83,7 +83,7 @@ export interface HouseholdCountryAdapterInput {
   turn: number;
   year: number;
   extract: HouseholdAdapterExtract | undefined;
-  /** Independent roster and fiscal controls, not totals manufactured from these rows. */
+  /** Reviewed roster and compatible controls. A modeled source labels its aggregate controls explicitly; they are not treasury receipts. */
   coverage: HouseholdCountryCoverage;
   programRoles: HouseholdPublicationSource["programRoles"];
 }

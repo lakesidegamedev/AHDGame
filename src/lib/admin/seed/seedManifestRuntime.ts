@@ -70,7 +70,7 @@ export const RUNTIME: CollectionEntry[] = [
     name: "resetMetricSnapshots",
     category: "runtime",
     notes:
-      "World-bound reviewed v2 primary-metric boards, including successor countries. Wiped on every reset, including decoded household references, current economic-owner inputs, latest production diagnostics, housing stocks and versioned observation/history metadata. No synthetic household or housing sources are created at reset; incomplete countries retain existing calculations. Never replaces v1 working stores in place.",
+      "World-bound reviewed v2 primary-metric boards, including successor countries. Wiped on every reset, including decoded household references, reviewed income-model calibrations, current economic-owner inputs, latest production diagnostics, housing stocks and versioned observation/history metadata. No synthetic household or housing sources are created at reset; incomplete countries retain existing calculations. Never replaces v1 working stores in place.",
   },
   {
     name: "resetLawOpeningBoards",

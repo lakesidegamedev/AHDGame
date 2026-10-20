@@ -74,6 +74,7 @@ export async function refreshResetMetricSnapshotsTurn(input: {
           observations: 1,
           openingValues: 1,
           householdSource: 1,
+          householdIncomeModel: 1,
           // Raw survey component columns are offline evidence, never turn inputs.
           ...Object.fromEntries(
             [
@@ -94,6 +95,8 @@ export async function refreshResetMetricSnapshotsTurn(input: {
               "cells.cashTransfers",
               "cells.directTaxes",
               "cells.employeeContributions",
+              "cells.labourIncome",
+              "cells.otherDirectTaxes",
             ].map((field) => [`householdReference.${field}`, 1])
           ),
           householdCurrentState: 1,

@@ -9,6 +9,7 @@ import type {
   HouseholdDecodedReference,
   HouseholdCurrentState,
   HouseholdProductionStatus,
+  HouseholdIncomeModel,
 } from "./householdSources";
 
 export interface ResetMetricSnapshot {
@@ -31,6 +32,7 @@ export interface ResetMetricSnapshot {
   householdSource?: HouseholdPublicationSource;
   /** Reviewed source and economic-owner inputs; all wiped with this world-bound collection. */
   householdReference?: HouseholdDecodedReference;
+  householdIncomeModel?: HouseholdIncomeModel;
   householdCurrentState?: HouseholdCurrentState;
   /** Bounded latest evaluation only. This is not a new measurement or a history series. */
   householdProductionStatus?: HouseholdProductionStatus;

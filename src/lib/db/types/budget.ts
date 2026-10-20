@@ -555,7 +555,7 @@ export interface BankSovereignClaim {
 }
 
 export interface FederalBudget {
-  /** Optional independently settled all-household control; never inferred from forecasts or player-only receipts. Wiped with the world budget. */
+  /** Optional all-household control with explicit settled/model basis; never relabel forecasts or player-only receipts. Wiped with the world budget. */
   householdResourceControl?: HouseholdFiscalControls;
   /** Monotonic tax-collection proof, reset with the owning world balance. */
   incomeTaxBatchReceipt?: IncomeTaxBatchReceipt | null;

@@ -158,7 +158,7 @@ export function resolveHouseholdResources(input: HouseholdResourceInput): Househ
   };
 }
 
-function weightedMedian(cells: readonly { value: number; weight: number }[]): number {
+export function weightedMedian(cells: readonly { value: number; weight: number }[]): number {
   const sorted = [...cells].sort((a, b) => a.value - b.value);
   const half = sorted.reduce((sum, c) => sum + c.weight, 0) / 2;
   let count = 0;

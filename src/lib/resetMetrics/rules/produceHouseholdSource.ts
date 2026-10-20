@@ -1,5 +1,5 @@
 /**
- * Current household resources use economic-owner records and independently settled controls.
+ * Current household resources distinguish modeled income from settled cash flows.
  * produceHouseholdSource allocates only actual cash-law outlays, checks every
  * region and household, and returns explicit legacy gaps rather than inventing flows.
  */
@@ -19,6 +19,7 @@ import type {
   HouseholdFiscalControls,
 } from "./householdSources";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
+import { householdReferenceGaps } from "./householdSources";
 
 const keyOf = (cell: { sourceArea: string; id: string }) =>
   JSON.stringify([cell.sourceArea, cell.id]);
@@ -42,15 +43,23 @@ export function produceHouseholdSource(input: {
   });
   const reference = input.reference,
     current = input.current;
+  const controlGap =
+    current?.incomeBasis === "modeled-economic-income"
+      ? "missing-modeled-household-controls"
+      : "missing-independent-current-household-controls";
   const gaps: string[] = [];
   if (!Number.isSafeInteger(input.year) || input.year < 1) gaps.push("missing-current-game-year");
   if (!Object.hasOwn(HOUSEHOLD_COUNTRY_PROFILES, input.countryId))
     return legacy(["unsupported-country"]);
   if (!reference) gaps.push("missing-decoded-reference");
   if (!current) gaps.push("missing-current-household-owner");
-  if (!input.fiscalControls) gaps.push("missing-independent-current-household-controls");
+  if (!input.fiscalControls) gaps.push(controlGap);
   if (reference) {
-    gaps.push(...reference.gaps.map((g) => `reference:${g}`));
+    gaps.push(
+      ...householdReferenceGaps(reference, current?.incomeBasis === "modeled-economic-income").map(
+        (g) => `reference:${g}`
+      )
+    );
     if (
       reference.version !== 1 ||
       reference.countryId !== input.countryId ||
@@ -79,9 +88,9 @@ export function produceHouseholdSource(input: {
             c.adults,
             c.children,
             c.marketIncome,
-            c.cashTransfers,
-            c.directTaxes,
-            c.employeeContributions,
+            ...(current?.incomeBasis === "modeled-economic-income"
+              ? []
+              : [c.cashTransfers, c.directTaxes, c.employeeContributions]),
           ].some((v) => v === null || !Number.isFinite(v) || v < 0) ||
           !Number.isSafeInteger(c.adults) ||
           !Number.isSafeInteger(c.children) ||
@@ -110,11 +119,14 @@ export function produceHouseholdSource(input: {
       controls.turn !== input.turn ||
       controls.currency !== current.currency ||
       controls.population !== "all-household-residents" ||
-      controls.basis !== "settled-household-flows" ||
+      controls.basis !==
+        (current.incomeBasis === "modeled-economic-income"
+          ? "modeled-household-flows"
+          : "settled-household-flows") ||
       !controls.sourceId.trim() ||
       controls.sourceId === current.ownerId
     )
-      gaps.push("missing-independent-current-household-controls");
+      gaps.push(controlGap);
     if (
       current.regions.length !== input.regionIds.length ||
       new Set(current.regions.map((r) => r.regionId)).size !== current.regions.length ||
@@ -264,5 +276,7 @@ export function produceHouseholdSource(input: {
     },
   });
   if (result.path === "legacy") return legacy(result.gaps);
+  if (current.incomeBasis === "modeled-economic-income")
+    result.source.incomeBasis = current.incomeBasis;
   return { evaluatedAtTurn: input.turn, path: "produced", gaps: [], source: result.source };
 }

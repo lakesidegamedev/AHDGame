@@ -5,6 +5,7 @@ import { householdProducerFixture } from "./testing/householdProducerFixture";
 import { householdFixture } from "./testing/householdFixture";
 import { collectResetMetricOwnerReadings } from "./collectOwnerReadings";
 import { refreshResetMetricBoard } from "./rules/refresh";
+import { modeledHouseholdFixture } from "./testing/modeledHouseholdFixture";
 
 function setup() {
   const db = createMockDb();
@@ -89,6 +90,77 @@ function setup() {
 }
 
 describe("current household producer on the turn collector", () => {
+  it("builds model frames from current activity and enacted rates, without external current frames or settled controls", async () => {
+    const f = setup();
+    const modeled = f.fixtures.map((c) => modeledHouseholdFixture(c.reference.countryId));
+    for (let i = 0; i < modeled.length; i++) {
+      const m = modeled[i]!;
+      m.model.programRoles = m.model.programRoles.map((r) => ({
+        ...r,
+        programId: `${m.countryId}:cash-law`,
+      }));
+      Object.assign(f.fixtures[i]!.national, {
+        householdReference: m.reference,
+        householdIncomeModel: m.model,
+        householdCurrentState: undefined,
+      });
+    }
+    f.db.collection("gameState").findOne.mockResolvedValue({ preset: "1991-default" });
+    f.db.collection("states").find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue(
+        modeled.flatMap((m) =>
+          m.activity.map((r) => ({
+            _id: r.regionId,
+            countryId: m.countryId,
+            population: r.population,
+            gdp: r.output,
+          }))
+        )
+      ),
+    });
+    f.db.collection("macroMetrics").find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue(
+        modeled.flatMap((m) =>
+          m.activity.map((r) => ({
+            _id: r.regionId,
+            countryId: m.countryId,
+            economic: { costOfLiving: { value: r.costOfLiving } },
+          }))
+        )
+      ),
+    });
+    f.db.collection("stateBudgets").find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue(
+        modeled.flatMap((m) =>
+          m.activity.map((r) => ({
+            _id: r.regionId,
+            countryId: m.countryId,
+            taxRates: r.regionalTaxes,
+          }))
+        )
+      ),
+    });
+    f.db.collection("federalBudget").find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue(
+        modeled.map((m) => ({
+          countryId: m.countryId,
+          taxRates: m.nationalTaxes,
+          gdp: 1e9,
+          revenue: { total: 1e8 },
+          spending: { total: 9e7 },
+          debt: { principal: 5e8 },
+          economicFactors: { inflationRate: 2 },
+        }))
+      ),
+    });
+    const result = await collectResetMetricOwnerReadings(f.db as unknown as Db, f.boards, 2, 1991);
+    for (const c of f.fixtures) {
+      expect(result[c.national._id]!.householdProductionStatus!.path).toBe("produced");
+      expect(result[c.regions[0]!._id]!.updates["03"]!.source).toContain("modeled");
+    }
+    // One model rate batch plus the existing shared law settlement batch, never per household.
+    expect(f.db.collection("stateBudgets").find).toHaveBeenCalledTimes(2);
+  });
   it("publishes three independently complete countries with one batched law load", async () => {
     const f = setup();
     const results = await collectResetMetricOwnerReadings(f.db as unknown as Db, f.boards, 2, 1991);

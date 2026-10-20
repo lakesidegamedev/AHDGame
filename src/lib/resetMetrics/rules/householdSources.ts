@@ -13,6 +13,10 @@ export interface HouseholdReferenceCell {
   adults: number | null;
   children: number | null;
   marketIncome: number | null;
+  /** Annual earned income subject to the game's payroll levy; never total capital income. */
+  labourIncome?: number;
+  /** Explicit reviewed non-income direct taxes. The first income model requires zero. */
+  otherDirectTaxes?: number;
   cashTransfers: number | null;
   directTaxes: number | null;
   employeeContributions: number | null;
@@ -36,6 +40,7 @@ export interface HouseholdDecodedReference {
 }
 
 export interface HouseholdCurrentState {
+  incomeBasis?: "modeled-economic-income";
   worldId: string;
   countryId: HouseholdAdapterCountry;
   currency: string;
@@ -69,7 +74,7 @@ export interface HouseholdCurrentState {
   })[];
 }
 
-/** Separate fiscal-owner receipt; the economic producer must not manufacture it from its own rows. */
+/** Settled controls are independent receipts. Modeled controls are labeled model accounting totals, never evidence of cash settlement. */
 export interface HouseholdFiscalControls {
   sourceId: string;
   worldId: string;
@@ -77,7 +82,7 @@ export interface HouseholdFiscalControls {
   currency: string;
   turn: number;
   population: "all-household-residents" | "players-only";
-  basis: "settled-household-flows" | "budget-forecast";
+  basis: "settled-household-flows" | "modeled-household-flows" | "budget-forecast";
   annualMarketIncome: number;
   annualDirectTaxes: number;
   annualEmployeeContributions: number;
@@ -90,3 +95,44 @@ export interface HouseholdSourceProduction {
   source?: HouseholdPublicationSource;
 }
 export type HouseholdProductionStatus = Omit<HouseholdSourceProduction, "source">;
+
+/** Reviewed reference-year calibration, not a current income frame or a synthetic population. */
+export interface HouseholdIncomeModel {
+  /** Reviewed employee incidence of the payroll instrument, between zero and one. */
+  employeePayrollShare: number;
+  worldId: string;
+  countryId: HouseholdAdapterCountry;
+  referenceSourceId: string;
+  sourceId: string;
+  preset: string;
+  year: number;
+  regions: readonly {
+    regionId: string;
+    sourceAreas: readonly string[];
+    /** Same authored GDP denomination as State.gdp; only within-region ratios are used. */
+    output: number;
+    population: number;
+    costOfLiving: number;
+  }[];
+  programRoles: readonly (HouseholdCurrentState["programRoles"][number] & {
+    /** Bound to the exact enacted option; fixed groups are explicit, never inferred from survey cash. */
+    eligibilityModel?:
+      | { kind: "fixed-reference-groups" }
+      | {
+          kind: "maximum-modeled-market-income";
+          annualPerAssessmentUnit: number;
+          indexedToPrices: boolean;
+        };
+  })[];
+}
+
+/** Historical modeled tax estimates are not current receipts and are not used by the new tax model. */
+export function householdReferenceGaps(reference: HouseholdDecodedReference, modeled: boolean) {
+  return reference.gaps.filter(
+    (g) =>
+      !modeled ||
+      !["estimated-tax-liabilities-not-cash", "tax-credits-and-filing-units-not-resolved"].includes(
+        g
+      )
+  );
+}

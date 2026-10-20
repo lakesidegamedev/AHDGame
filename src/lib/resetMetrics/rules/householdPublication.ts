@@ -20,6 +20,7 @@ import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import type { OpeningMetricObservation } from "./openingObservation";
 
 export interface HouseholdPublicationSource {
+  incomeBasis?: "modeled-economic-income";
   worldId: string;
   coverage: HouseholdCountryCoverage;
   inputs: readonly HouseholdResourceInput[];
@@ -136,12 +137,18 @@ export function householdPublication(input: {
             definitionVersion: 2,
             owner: "households",
             status: "derived",
-            source: "reconciled reference household resource owner",
+            source:
+              source.incomeBasis === "modeled-economic-income"
+                ? "modeled household earnings and tax owner; settled cash benefits"
+                : "reconciled reference household resource owner",
             observedAtTurn: input.turn,
             note:
-              id === "03"
+              (source.incomeBasis === "modeled-economic-income"
+                ? "Earnings and taxes are modeled from current regional output, population and enacted game tax rates, not observed cash settlements or real-world filing-unit liabilities. Reference composition and income ranks are held fixed. Prices use the regional cost-of-living index relative to calibration, with proportional nominal repricing. Benefits require current paid funding. "
+                : "") +
+              (id === "03"
                 ? `People below half the national median equivalised disposable income. National threshold: ${national.threshold50} ${reading.currency}. Taxes and actual paid cash transfers are included; services are not cash.`
-                : "Reference household distribution after direct taxes, employee contributions and paid cash transfers. Square-root household-size equivalisation; purchasing power uses the reviewed consumer basket.",
+                : "Reference household distribution after direct taxes, employee contributions and paid cash transfers. Square-root household-size equivalisation; purchasing power uses the reviewed consumer basket."),
             countryBasis: {
               countryId: input.countryId,
               coverageKey,

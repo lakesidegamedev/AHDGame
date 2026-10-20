@@ -5,7 +5,7 @@
  */
 import { inheritedCalibrationRegion } from "./rules/conversionCalibration";
 import type { Db } from "mongodb";
-import type { FederalBudget } from "@/lib/db/types/budget";
+import type { FederalBudget, StateBudget } from "@/lib/db/types/budget";
 import type { MacroMetricsDoc } from "@/lib/db/types/macroMetrics";
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
 import type { State } from "@/lib/db/types/state";
@@ -38,6 +38,7 @@ import { householdPublication, HOUSEHOLD_PUBLICATION_IDS } from "./rules/househo
 import { housingPublication, HOUSING_PUBLICATION_IDS } from "./rules/housingPublication";
 import { produceHouseholdSource } from "./rules/produceHouseholdSource";
 import type { HouseholdProductionStatus } from "./rules/householdSources";
+import { modelHouseholdIncome } from "./rules/modelHouseholdIncome";
 
 let openingCalibrationCache: {
   gross: ReturnType<typeof openingGrossPurchasingInputs1991>;
@@ -126,6 +127,7 @@ export async function collectResetMetricOwnerReadings(
             "economicFactors.inflationRate": 1,
             "debt.principal": 1,
             householdResourceControl: 1,
+            taxRates: 1,
           },
         }
       )
@@ -163,6 +165,7 @@ export async function collectResetMetricOwnerReadings(
             _id: 1,
             countryId: 1,
             population: 1,
+            gdp: 1,
             workingAgePopulation: 1,
             votingEligiblePopulation: 1,
           },
@@ -183,7 +186,11 @@ export async function collectResetMetricOwnerReadings(
   const laws = boards.some(
     (b) =>
       b.scope === "national" &&
-      (b.householdSource || b.housingSource || b.householdReference || b.householdCurrentState)
+      (b.householdSource ||
+        b.housingSource ||
+        b.householdReference ||
+        b.householdCurrentState ||
+        b.householdIncomeModel)
   )
     ? await loadMetricLawDelivery(db, {
         worldId: boards[0]!.worldId,
@@ -200,30 +207,80 @@ export async function collectResetMetricOwnerReadings(
     turn,
     laws,
   });
+  // Only calibrated model countries need this one batched statutory-rate read.
+  const modeledCountryIds = boards
+    .filter((b) => b.scope === "national" && b.householdIncomeModel)
+    .map((b) => b.countryId);
+  const modeledRegionalTaxes = modeledCountryIds.length
+    ? await db
+        .collection<StateBudget>("stateBudgets")
+        .find(
+          { _id: { $in: regionalIds }, countryId: { $in: modeledCountryIds } },
+          { projection: { _id: 1, countryId: 1, taxRates: 1 } }
+        )
+        .toArray()
+    : [];
+  const taxesByRegion = new Map(modeledRegionalTaxes.map((r) => [r._id, r]));
+  const macroByRegion = new Map(macro.map((r) => [r._id, r]));
   const productionByCountry = new Map(
     countryIds.map((countryId) => {
       const national = boards.find((b) => b.countryId === countryId && b.scope === "national");
-      const current = national?.householdCurrentState;
+      const modeled = national?.householdIncomeModel
+        ? modelHouseholdIncome({
+            worldId: boards[0]!.worldId,
+            countryId,
+            turn,
+            year: year ?? NaN,
+            preset: world?.preset ?? "",
+            reference: national.householdReference,
+            model: national.householdIncomeModel,
+            nationalTaxes: budgets.find((b) => b.countryId === countryId)?.taxRates,
+            activity: boards
+              .filter((b) => b.scope === "regional" && b.countryId === countryId)
+              .map((b) => {
+                const state = stateById.get(b.regionId!);
+                const tax = taxesByRegion.get(b.regionId!);
+                return {
+                  regionId: b.regionId!,
+                  output: state?.gdp ?? NaN,
+                  population: state?.population ?? NaN,
+                  costOfLiving:
+                    macroByRegion.get(b.regionId!)?.economic?.costOfLiving?.value ?? NaN,
+                  regionalTaxes: tax?.countryId === countryId ? tax.taxRates : undefined,
+                };
+              }),
+          })
+        : undefined;
+      const current = modeled ? modeled.current : national?.householdCurrentState;
       const populationMatches = current?.regions.every((region) => {
         const state = stateById.get(region.regionId);
         return state?.countryId === countryId && state.population >= region.householdResidents;
       });
       return [
         countryId,
-        produceHouseholdSource({
-          worldId: boards[0]!.worldId,
-          countryId,
-          turn,
-          year: year ?? NaN,
-          regionIds: boards
-            .filter((b) => b.countryId === countryId && b.scope === "regional")
-            .map((b) => b.regionId!),
-          reference: national?.householdReference,
-          current: populationMatches ? current : undefined,
-          fiscalControls: budgets.find((b) => b.countryId === countryId)?.householdResourceControl,
-          programs: laws?.programs ?? [],
-          settlements: laws?.settlements ?? new Map(),
-        }),
+        modeled?.gaps.length
+          ? {
+              evaluatedAtTurn: turn,
+              path: "legacy" as const,
+              gaps: modeled.gaps,
+              source: undefined,
+            }
+          : produceHouseholdSource({
+              worldId: boards[0]!.worldId,
+              countryId,
+              turn,
+              year: year ?? NaN,
+              regionIds: boards
+                .filter((b) => b.countryId === countryId && b.scope === "regional")
+                .map((b) => b.regionId!),
+              reference: national?.householdReference,
+              current: populationMatches ? current : undefined,
+              fiscalControls: modeled
+                ? modeled.fiscalControls
+                : budgets.find((b) => b.countryId === countryId)?.householdResourceControl,
+              programs: laws?.programs ?? [],
+              settlements: laws?.settlements ?? new Map(),
+            }),
       ] as const;
     })
   );
@@ -234,7 +291,9 @@ export async function collectResetMetricOwnerReadings(
       // A failed new source cannot fall back to a stale externally prepared source.
       return [
         countryId,
-        national?.householdReference || national?.householdCurrentState
+        national?.householdReference ||
+        national?.householdCurrentState ||
+        national?.householdIncomeModel
           ? production.source
           : national?.householdSource,
       ] as const;
