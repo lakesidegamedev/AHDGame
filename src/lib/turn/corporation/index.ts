@@ -1933,6 +1933,8 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
         await import("@/lib/corporations/mergerReview/lifecycle");
       const { resolved } = await resolveDueMergerReviews(db, turn);
       const { fined, totalAnchor } = await fineOverdueDivestitures(db, turn);
+      const { processAntitrustCompliance } = await import("./antitrustCompliance");
+      const antitrust = await processAntitrustCompliance(db, lookups, turn);
       if (resolved > 0 || fined > 0) {
         console.log(
           `[corporationTurn] merger review: ${resolved} referral(s) resolved on deadline, ${fined} overdue divestiture(s) fined`
@@ -1944,7 +1946,7 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
           phase: "corporationTurn",
           subject: { type: "corpBatch", name: "merger review sweep" },
           outcome: "ok",
-          meta: { resolved, fined, finesAnchor: totalAnchor },
+          meta: { resolved, fined, finesAnchor: totalAnchor, ...antitrust },
         });
       }
     } catch (err) {

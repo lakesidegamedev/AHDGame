@@ -1,4 +1,8 @@
 import type { Db, ObjectId } from "mongodb";
+import {
+  assertForeignControlAllowed,
+  assertSubsidiaryWithinCap,
+} from "@/lib/mechanicalLaws/guards";
 import type { Corporation } from "@/lib/db/types";
 import { acquirerOwnershipPercent } from "@/lib/corporations/corporateOwnership";
 import {
@@ -79,6 +83,12 @@ export async function formalizeSubsidiary(
   if (wouldCreateOwnershipCycle(parent, target, allCorps)) {
     return fail("Formalizing this subsidiary would create an ownership cycle.");
   }
+
+  // Subsidiary Limits and Foreign Investment Acts of the subsidiary's country.
+  const lawRejection =
+    (await assertForeignControlAllowed(db, parent, target)) ??
+    (await assertSubsidiaryWithinCap(db, parent, target.countryId, target._id));
+  if (lawRejection) return fail(lawRejection.error, lawRejection.status);
 
   // Same-human guard: a subsidiary must be run by a different player than the
   // parent owner. If the target's current human operator is the parent owner,
