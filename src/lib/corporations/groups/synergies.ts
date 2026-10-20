@@ -18,6 +18,10 @@
  * ever reduced. The cap stops a group of ten shells from all inheriting a
  * flagship's brand outright.
  *
+ * Under strength upkeep (gameConfig.strengthUpkeepStage >= 2) the lift is a
+ * transfer: the group leader pays what the members gain, so grouping shares
+ * strength rather than minting it.
+ *
  * ## Spin-offs carry the brand out with them
  *
  * `isSpinOff` and `spunOffFromCorpId` have been written on every spun-off
@@ -86,7 +90,8 @@ const finite = (n: number | undefined) =>
  */
 export function computeGroupSynergies(
   members: SynergyMember[],
-  currentTurn: number
+  currentTurn: number,
+  options: { transfer?: boolean } = {}
 ): SynergyDelta[] {
   if (members.length < 2) return [];
 
@@ -119,5 +124,28 @@ export function computeGroupSynergies(
       logisticsStrength: Math.round(logisticsDelta * 100) / 100,
     });
   }
+  if (!options.transfer || deltas.length === 0) return deltas;
+
+  // Strength upkeep: the lift is paid by the group's leader in each strength,
+  // so a group moves strength around instead of creating it. The leader never
+  // pays more than it holds.
+  const payFrom = (key: "marketingStrength" | "logisticsStrength", best: number) => {
+    const total = deltas.reduce((sum, d) => sum + d[key], 0);
+    if (total <= 0) return;
+    const leader = members.find((m) => finite(m[key]) === best);
+    if (!leader) return;
+    const pay = Math.min(total, finite(leader[key]));
+    const existing = deltas.find((d) => d.corporationId === leader.corporationId);
+    if (existing) existing[key] = Math.round((existing[key] - pay) * 100) / 100;
+    else
+      deltas.push({
+        corporationId: leader.corporationId,
+        marketingStrength: 0,
+        logisticsStrength: 0,
+        [key]: -Math.round(pay * 100) / 100,
+      });
+  };
+  payFrom("marketingStrength", bestMarketing);
+  payFrom("logisticsStrength", bestLogistics);
   return deltas;
 }

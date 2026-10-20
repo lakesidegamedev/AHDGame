@@ -31,7 +31,7 @@ import { shedVacantCeoSectorsToUnowned } from "./vacantCeoSectorShed";
 import { shedInactiveCeoSectorsToUnowned } from "./inactiveCeoSectorShed";
 import { installCaretakersForVacantCorps } from "./autoCaretakerVacantCorps";
 import { loadEngineSixCountries } from "./engineSixCountries";
-import { recordNppCeoTrackRecords } from "./nppCeoTrackRecord";
+import { runNppCeoCareerPasses } from "./nppCeoPay";
 import { processSectors } from "./sectorCalculations";
 import { getLabourSystemMode, labourAtLeast } from "@/lib/labour/featureFlag";
 import { getMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
@@ -493,6 +493,15 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
     subsidiaryCorporationsEnabled,
     marketGovernorConfig?.groupSupplyCoordinationEnabled === true
   );
+  // The producer path is read here, before the clearing pre-pass, so a funded
+  // turn can skip legacy-only clearing work. It is claimed below, before any
+  // producer money moves.
+  const producerTurn = turn ?? gameState?.currentTurn ?? 0;
+  const producerPath = await loadProducerPath(db, {
+    turn: producerTurn,
+    worldEpoch: gameState?.worldEpochId,
+    liveFromTurn: marketGovernorConfig?.producerMarketLiveFromTurn,
+  });
   const {
     clearingInvariantBreaches,
     brandLoyaltyUpdates,
@@ -519,6 +528,7 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
     qualityPremiumPricingEnabled,
     politicalMediaOrders,
     treasuryCashLedgerEnabled,
+    fundedProducerTurn: producerPath === "funded",
   });
   const plannedPoliticalMediaOrders = new Map(
     politicalMediaSettlementPlans.map(({ orderId, plan }) => [orderId, plan])
@@ -678,11 +688,7 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
   // against sector peers into its CEO track record. Reads last turn's sector
   // results from the snapshot, before the sheds below mutate it. No decision
   // reads it below v6, so a failure only loses one sample.
-  try {
-    await recordNppCeoTrackRecords(db, lookups, turn ?? 0);
-  } catch (error) {
-    console.error("[corporationTurn] NPP CEO track record pass failed", error);
-  }
+  await runNppCeoCareerPasses(db, lookups, turn ?? 0);
   mark("nppCeoTrackRecord");
 
   // Forensics/alt-detection audit spine: aggregate, not-per-corp entries for
@@ -753,12 +759,6 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
   // Funded-market cutover: one producer path per turn, claimed before any
   // producer money moves. On a funded turn the market settles first and the
   // legacy pass takes revenue and margin from its receipts.
-  const producerTurn = turn ?? gameState?.currentTurn ?? 0;
-  const producerPath = await loadProducerPath(db, {
-    turn: producerTurn,
-    worldEpoch: gameState?.worldEpochId,
-    liveFromTurn: marketGovernorConfig?.producerMarketLiveFromTurn,
-  });
   if (gameState?.worldEpochId)
     await claimProducerPath(db, {
       worldEpoch: gameState.worldEpochId,
@@ -817,7 +817,9 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
     ceoSalaryPayments,
     dividendPayments,
     capitalDividendPayments,
+    passThroughTaxedDividendPayments,
     corpDividendPaymentsAnchorByCorpId,
+    corpDividendTaxedAtSourceAnchorByCorpId,
     corpDividendPaymentsAnchorByCorpCurrency,
     sectorFxSpreadFees,
     fundDividendAccruals,
@@ -1476,6 +1478,7 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
     lookups,
     corpDividendPaymentsAnchorByCorpId,
     corpDividendPaymentsAnchorByCorpCurrency,
+    corpDividendTaxedAtSourceAnchorByCorpId,
     turn,
     now,
     thresholds,
@@ -1850,6 +1853,7 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
     corpSnapshots,
     ceoSalaryPayments,
     dividendPayments: taxableDividendPayments,
+    passThroughTaxedDividendPayments,
     dividendTaxPaidByCountry,
     capitalDividendPayments:
       lookups.stockHoldingTaxStartTurn !== undefined &&

@@ -26,6 +26,8 @@ export async function applyPassedVoteEffects(opts: {
 
   switch (vote.type) {
     case "governance_change": {
+      // State patronage forms are for state-owned companies only.
+      if (vote.payload.newLegalStructure === "cn_soe" && !corporation.countryOwnerId) return;
       await db.collection("corporations").updateOne(
         { _id: corporation._id },
         {

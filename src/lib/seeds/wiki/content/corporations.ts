@@ -384,6 +384,18 @@ For extraction sectors specifically, the **Diversified** strategy spreads output
 
 Two tax rates apply to each sector: a **domestic rate** and a **foreign rate**. A corporation headquartered in the US pays the US domestic rate on US sectors and the foreign rate of any other country where it operates. Both rates are set by legislation in each country. State-level corporate taxes also stack on top.
 
+### Pass-through companies
+
+An LLC, S-Corp or LLP pays no company tax. Instead, its owners are taxed on their **full share of the profit every turn, whether it is paid out or not**, the way real pass-through taxation works. The company pays this owner tax for them at the headquarters country's and state's rates: the top personal income rate for shares held by people, and the corporate rate for shares held by companies, NPPs and funds. Payouts from a pass-through are then not taxed again.
+
+Some forms are taxed as ordinary companies instead:
+
+- A pass-through whose **shares trade publicly** (any public float).
+- An **S-Corp with more than 100 holders, or any holder that is not a person**.
+- A Japanese **Godo Kaisha (GK)**, which is a company for tax purposes.
+
+This change phases in over 24 turns from its start, so the tax rises step by step.
+
 ## Economic effects on corporations
 
 Your corporation's sectors respond to state and national conditions:

@@ -5,6 +5,7 @@
  * fully reseeded after the entries were added. Now upserts by _id instead,
  * and must never delete admin-authored custom types (source: "admin").
  */
+import { MECHANICAL_RETAINED_IDS } from "@/lib/mechanicalLaws/legislation";
 import { describe, expect, it, vi } from "vitest";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { seedLegislationTypes } from "./seedLegislationTypes";
@@ -111,6 +112,8 @@ describe("seedLegislationTypes — redistricting levers survive the old-catalog 
       collection.bulkWrite.mock.calls[0][0] as Array<{ replaceOne: { filter: { _id: string } } }>
     ).map((op) => op.replaceOne.filter._id);
     const survivingOldUs = seededIds.filter((id) => id.startsWith("us_"));
-    expect(survivingOldUs.sort()).toEqual([...REDISTRICT_IDS].sort());
+    expect(survivingOldUs.sort()).toEqual(
+      [...REDISTRICT_IDS, ...MECHANICAL_RETAINED_IDS.filter((id) => id.startsWith("us_"))].sort()
+    );
   });
 });

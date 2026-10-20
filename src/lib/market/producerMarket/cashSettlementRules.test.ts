@@ -69,6 +69,29 @@ describe("closed producer cash settlement", () => {
     ).toThrow("participants");
   });
 
+  it("debits a fully spent balance exactly, not a float overshoot the guard refuses", () => {
+    const rate = 5.623705334854198;
+    const local = 3064.6333514475377;
+    const spent = local / rate;
+    expect(spent * rate).toBeGreaterThan(local);
+    const receipt = producerCashTransition({
+      ...args(),
+      bindings: [
+        { ...bindings[1], localPerAnchor: rate, openingCashLocal: local },
+        { ...bindings[0], localPerAnchor: 1, openingCashLocal: 0 },
+      ],
+      opening: [
+        { id: "seller", cash: spent },
+        { id: "buyer", cash: 0 },
+      ],
+      closing: [
+        { id: "seller", cash: 0 },
+        { id: "buyer", cash: spent },
+      ],
+    });
+    expect(receipt.legs.find((leg) => leg.kind === "debit")?.amount).toBe(local);
+  });
+
   it("has no cash legs when within-corporation deliveries change no money", () => {
     const { opening } = args();
     expect(producerCashTransition({ ...args(), closing: opening }).legs).toEqual([]);

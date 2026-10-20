@@ -103,6 +103,22 @@ describe("independent debit batches", () => {
     }
   );
 
+  it("still batches when the move also carries mint and burn bookkeeping legs", async () => {
+    const f = fixture();
+    const move: MoneyMove = {
+      ...f.move,
+      legs: [
+        { kind: "mint", amount: 50, note: "Gross receipts" },
+        ...f.move.legs,
+        { kind: "burn", amount: 50, note: "Costs settled outside" },
+      ],
+    };
+    expect((await applyMoneyMove(f.db, move)).status).toBe("applied");
+    expect(Object.values(f.calls).reduce((sum, value) => sum + value, 0)).toBeLessThan(35);
+    expect(f.balance("recipient")).toBe(400);
+    for (let i = 0; i < 40; i++) expect(f.balance(`payer:${i}`)).toBe(90);
+  });
+
   it("retains individual debit execution unless the original claim opts in", async () => {
     const f = fixture(8);
     f.move.record = {};

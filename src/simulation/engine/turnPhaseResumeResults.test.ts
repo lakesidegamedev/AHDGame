@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { TurnPhaseTelemetryMap } from "@/lib/db/types";
 import type { BondTurnResult } from "@/lib/turn/bondTurn";
+import { TurnMustStopError } from "@/lib/turn/turnMustStop";
 import { createTurnPhaseRuntime } from "@/simulation/engine/turnPhaseRuntime";
 import {
   hasCompleteSovereignFlows,
@@ -255,6 +256,32 @@ describe("crash resume of result-carrying phases (#3429)", () => {
     );
     expect([...state.interrupted]).toEqual(["bondTurn"]);
     expect(state.results).toEqual({});
+  });
+
+  it("reruns a phase that stopped the turn with TurnMustStopError, after skipping completed ones", async () => {
+    const { doc, db } = createGameStateDb();
+    const first = createTurnPhaseRuntime({
+      db,
+      phaseStatuses: {},
+      warnings: [],
+      currentPhaseRef: { current: null },
+    });
+    await first.runPhase("bondTurn", async () => BOND_RESULT);
+    await expect(
+      first.runPhase("corporationTurn", async () => {
+        throw new TurnMustStopError("corporationTurn", new Error("leg refused"));
+      })
+    ).rejects.toBeInstanceOf(TurnMustStopError);
+    const statuses = doc.processingPhaseStatuses as TurnPhaseTelemetryMap;
+    expect(statuses.corporationTurn).toMatchObject({ status: "failed", reason: "mustStop" });
+
+    const bond = vi.fn(async () => BOND_RESULT);
+    const corporation = vi.fn(async () => 1);
+    const resumed = resumedRuntime(doc, db);
+    await resumed.runPhase("bondTurn", bond);
+    await resumed.runPhase("corporationTurn", corporation);
+    expect(bond).not.toHaveBeenCalled();
+    expect(corporation).toHaveBeenCalledOnce();
   });
 
   it("stops the turn when the completion result cannot be stored, and never records completed without it", async () => {

@@ -17,6 +17,8 @@
  * decision handler.
  */
 
+import { mechanicalLawId } from "@/lib/mechanicalLaws/registry";
+import { getMechanicalLawLevel } from "@/lib/mechanicalLaws/levels";
 import { ObjectId, type Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import type { MergerReview, MergerReviewTrigger } from "@/lib/db/types/mergerReview";
@@ -124,11 +126,21 @@ export async function assertMergerClearance(
   // the GDR's), and the winner's law governs the unified state. Costs one
   // indexed lookup only on the miss path; still fails open when neither a
   // native nor a carried statute exists.
+  // New-generation competition primaries first; then the country's own
+  // Competition Act (mechanicalLaws); then a statute carried by a country merge.
+  const nativeLawId = ANTITRUST_LAW_BY_COUNTRY[target.countryId as CountryId];
+  const mechanicalId = nativeLawId
+    ? null
+    : mechanicalLawId(target.countryId as CountryId, "competition");
   const lawId =
-    ANTITRUST_LAW_BY_COUNTRY[target.countryId as CountryId] ??
+    nativeLawId ??
+    mechanicalId ??
     (await carriedLawIdFor(db, target.countryId, Object.values(ANTITRUST_LAW_BY_COUNTRY)));
   if (!lawId) return { ok: true };
-  const level = await getEnactedLevel(db, target.countryId as LawCountryId, lawId);
+  const level =
+    mechanicalId != null
+      ? await getMechanicalLawLevel(db, target.countryId as CountryId, "competition")
+      : await getEnactedLevel(db, target.countryId as LawCountryId, lawId);
   const threshold = thresholdForLevel(level);
   if (threshold == null) return { ok: true };
 

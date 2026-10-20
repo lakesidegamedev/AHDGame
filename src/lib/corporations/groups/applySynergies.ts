@@ -11,6 +11,11 @@ import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import { resolveFormalizedGroups } from "./groupMembership";
 import { computeGroupSynergies, type SynergyMember } from "./synergies";
+import {
+  STRENGTH_UPKEEP_STAGE,
+  loadStrengthUpkeepStage,
+  strengthUpkeepActive,
+} from "@/lib/corporations/strengthUpkeep";
 
 export interface SynergyResult {
   groupsProcessed: number;
@@ -23,6 +28,10 @@ export async function applyGroupSynergies(db: Db, currentTurn: number): Promise<
 
   const membership = await resolveFormalizedGroups(db);
   if (membership.membersByRootId.size === 0) return result;
+  const transfer = strengthUpkeepActive(
+    await loadStrengthUpkeepStage(db),
+    STRENGTH_UPKEEP_STAGE.SYNERGY_TRANSFER
+  );
 
   const allIds = new Set<string>();
   for (const members of membership.membersByRootId.values()) {
@@ -71,16 +80,16 @@ export async function applyGroupSynergies(db: Db, currentTurn: number): Promise<
     if (members.length < 2) continue;
     result.groupsProcessed += 1;
 
-    for (const delta of computeGroupSynergies(members, currentTurn)) {
+    for (const delta of computeGroupSynergies(members, currentTurn, { transfer })) {
       ops.push({
         updateOne: {
           filter: { _id: new ObjectId(delta.corporationId) },
           update: {
             $inc: {
-              ...(delta.marketingStrength > 0
+              ...(delta.marketingStrength !== 0
                 ? { marketingStrength: delta.marketingStrength }
                 : {}),
-              ...(delta.logisticsStrength > 0
+              ...(delta.logisticsStrength !== 0
                 ? { logisticsStrength: delta.logisticsStrength }
                 : {}),
             },

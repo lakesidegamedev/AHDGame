@@ -8,6 +8,7 @@
  * nationalStateId, and regions. The buildBasePolicies() loop handles the rest.
  */
 
+import { MECHANICAL_LAW_BASELINE, mechanicalLawKeyForId } from "@/lib/mechanicalLaws/registry";
 import type { State } from "@/lib/db/types";
 import { legislationTypes } from "./legislationTypes";
 import { isLegislationTypeActive } from "@/lib/era/legislationCatalog";
@@ -285,7 +286,10 @@ function buildBasePolicies(
         social: 0,
       };
       const overrideIdx = config.optionIndexes[lt._id.split(/__(?:income|capital)_/)[0]];
-      const optIndex = overrideIdx ?? 3;
+      // Mechanical laws start at their authored level, not the generic index 3,
+      // which would arm the subsidiary and foreign-investment caps at seed.
+      const mechanicalKey = mechanicalLawKeyForId(lt._id);
+      const optIndex = mechanicalKey ? MECHANICAL_LAW_BASELINE[mechanicalKey] : (overrideIdx ?? 3);
       const option = lt.policyOptions?.[optIndex];
       out.push({
         scope: "national",

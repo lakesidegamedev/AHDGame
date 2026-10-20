@@ -47,6 +47,7 @@ import {
 } from "@/lib/crises/disasterMarginPenalty";
 import { computeSoeEfficiencyPenalty } from "@/lib/nationalization/soeEfficiency";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
+import { managementOverheadPpForCorp } from "../managementOverhead";
 import { resolveSectorMandate } from "@/lib/nationalization/soeMandates";
 import { corpAlignmentModifier } from "@/lib/economicModels/effects";
 import type { getSectorTechEffects } from "@/lib/constants/techTree";
@@ -327,10 +328,9 @@ export function accumulateMarginModifiers(input: MarginStackInput): MarginStackR
     isStateOwned(corp) || isSprawlExemptSectorType(operatingSectorType)
       ? 0
       : getSprawlModifier(corpSectorCount, corp.logisticsStrength ?? 0, !!corp.secondaryType);
-  // Management overhead grows with total plant count; SOEs are exempt like sprawl.
-  const managementOverheadMod = isStateOwned(corp)
-    ? 0
-    : -(lookups.managementOverheadPpByCorpId?.get(corp._id.toString()) ?? 0);
+  // Management overhead grows with total plant count (the whole control group's
+  // once groupSizeCostsStage is on); SOEs are exempt like sprawl.
+  const managementOverheadMod = -managementOverheadPpForCorp(corp, lookups);
   // National-level macroeconomic modifiers (inflation, debt-to-GDP, deficit)
   const inflationMod = lookups.macroInflationByCountry.get(sectorCountryId) ?? 0;
   const debtToGdpMod = lookups.macroDebtToGdpByCountry.get(sectorCountryId) ?? 0;

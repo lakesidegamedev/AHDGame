@@ -106,7 +106,7 @@ export const LEGAL_STRUCTURES: LegalStructure[] = [
     // without an IPO, but the ownership pool stays small.
     maxShareholders: 100,
     description:
-      "Pass-through taxation. No corporate tax but profits must be distributed. Shareholders have stronger oversight. Capped at 100 private shareholders.",
+      "Pass-through taxation: no company tax, but owners are taxed on their full share of the profit, paid out or not. At least 20% of profit must be paid out. Shareholders have stronger oversight. S-Corp status needs 100 or fewer holders, all of them individuals; otherwise it is taxed as a company.",
   },
   {
     id: "us_llc",
@@ -117,7 +117,8 @@ export const LEGAL_STRUCTURES: LegalStructure[] = [
     taxTreatment: "pass_through",
     shareholderVoteThreshold: 0.62,
     minimumDividendRate: 0.2,
-    description: "Maximum tax efficiency and CEO autonomy. Profits must be distributed to members.",
+    description:
+      "Pass-through taxation: no company tax, but members are taxed on their full share of the profit, paid out or not. Maximum CEO autonomy. At least 20% of profit must be paid out. If its shares trade publicly it is taxed as a company.",
   },
   // ── United Kingdom ────────────────────────────────────────────────────────
   {
@@ -151,7 +152,7 @@ export const LEGAL_STRUCTURES: LegalStructure[] = [
     shareholderVoteThreshold: 0.65,
     minimumDividendRate: 0.25,
     description:
-      "Pass-through taxation. Partners extract value directly; CEO has maximum autonomy.",
+      "Pass-through taxation: no company tax, but partners are taxed on their full share of the profit, paid out or not. CEO has maximum autonomy. If its shares trade publicly it is taxed as a company.",
   },
   // ── Japan ─────────────────────────────────────────────────────────────────
   {
@@ -175,7 +176,7 @@ export const LEGAL_STRUCTURES: LegalStructure[] = [
     shareholderVoteThreshold: 0.5,
     minimumDividendRate: 0.2,
     description:
-      "Flexible pass-through structure used by major foreign subsidiaries. Balanced governance.",
+      "Flexible company form used by major foreign subsidiaries. Taxed as a company, like a KK. Balanced governance.",
   },
   // ── Germany ───────────────────────────────────────────────────────────────
   {
@@ -316,7 +317,7 @@ export const LEGAL_STRUCTURES: LegalStructure[] = [
     taxMultiplier: 0.6,
     shareholderVoteThreshold: 0.72,
     description:
-      "State patronage: 40% reduction on corporate tax rate. Shareholders have almost no recourse against the CEO.",
+      "State patronage for state-owned companies only: 40% reduction on corporate tax rate. Shareholders have almost no recourse against the CEO.",
   },
   // ── Nigeria ───────────────────────────────────────────────────────────────
   {

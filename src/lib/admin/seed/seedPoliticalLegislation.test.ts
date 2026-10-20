@@ -79,7 +79,9 @@ describe("seedLegislationTypes — exclusion sweep + generation-aware deleter", 
    */
   function expectOnlyRetainedOldIdsSurvive(ids: string[]) {
     const survivors = ids.filter((id) => /^(us|uk|su|dd)_/.test(id)).sort();
-    expect(survivors).toEqual([...POLITICAL_LEGISLATION_RETAINED_OLD_IDS].sort());
+    expect(survivors).toEqual(
+      [...POLITICAL_LEGISLATION_RETAINED_OLD_IDS].filter((id) => /^(us|uk|su|dd)_/.test(id)).sort()
+    );
   }
 
   it("seeds projected new-generation docs instead of old US/UK/RU/DD catalogs on the 1953 preset", async () => {

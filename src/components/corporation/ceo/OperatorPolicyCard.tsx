@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { CorpOperatorAction, CorpOperatorPermission } from "@/lib/db/types/corporation";
+import { DEFAULT_CEO_PAY_AUTO_ACCEPT_SHARE } from "@/lib/corporations/rules/nppCeoCareer";
 import { OPERATOR_ACTIONS } from "@/lib/turn/npp/rules/operatorPolicy";
 import {
   matchOperatorPreset,
@@ -12,13 +13,22 @@ import { DenseSection, InlineStatus, KVRow, SmallButton } from "../dense/DenseKi
 
 type Actions = Partial<Record<CorpOperatorAction, CorpOperatorPermission>>;
 
+interface StoredPolicy {
+  actions?: Actions;
+  /** Share of trailing profit the standing policy accepts automatically. */
+  ceoPayAutoAcceptShare?: number;
+}
+
 interface PolicyView {
-  policy: { actions?: Actions } | null;
+  policy: StoredPolicy | null;
   effective: {
     role: "autopilot" | "caretaker" | "npp";
     actions: Record<CorpOperatorAction, CorpOperatorPermission>;
   };
 }
+
+/** Standing answers to a CEO raise when the owner does not reply in time. */
+const PAY_SHARE_OPTIONS = [0, 0.01, 0.03, 0.05, 0.1] as const;
 
 const ACTION_LABEL: Record<CorpOperatorAction, string> = {
   found: "Open new plants",
@@ -66,15 +76,23 @@ export function OperatorPolicyCard({ corpId }: { corpId: string }) {
     };
   }, [corpId]);
 
-  async function save(actions: Actions) {
+  async function save(next: StoredPolicy) {
     setBusy(true);
     setError("");
     try {
-      const empty = Object.keys(actions).length === 0;
+      const actions =
+        next.actions && Object.keys(next.actions).length > 0 ? next.actions : undefined;
+      const body = {
+        ...(actions ? { actions } : {}),
+        ...(next.ceoPayAutoAcceptShare != null
+          ? { ceoPayAutoAcceptShare: next.ceoPayAutoAcceptShare }
+          : {}),
+      };
+      const empty = Object.keys(body).length === 0;
       const res = await fetch(`/api/corporations/${corpId}/operator-policy`, {
         method: empty ? "DELETE" : "PUT",
         headers: { "Content-Type": "application/json" },
-        body: empty ? undefined : JSON.stringify({ actions }),
+        body: empty ? undefined : JSON.stringify(body),
       });
       const data = (await res.json()) as PolicyView & { error?: string };
       if (!res.ok) throw new Error(data.error ?? "Could not save");
@@ -90,7 +108,14 @@ export function OperatorPolicyCard({ corpId }: { corpId: string }) {
   if (!view) return error ? <InlineStatus message={error} tone="error" /> : null;
 
   const stored = view.policy?.actions ?? {};
+  const payShare = view.policy?.ceoPayAutoAcceptShare ?? DEFAULT_CEO_PAY_AUTO_ACCEPT_SHARE;
   const attitude: OperatorAttitude | null = matchOperatorPreset(stored);
+
+  /** Save the action map, carrying the stored pay share so it is not reset. */
+  function saveActions(actions: Actions) {
+    const share = view?.policy?.ceoPayAutoAcceptShare;
+    void save({ actions, ...(share != null ? { ceoPayAutoAcceptShare: share } : {}) });
+  }
 
   function setAction(action: CorpOperatorAction, permission: CorpOperatorPermission) {
     if (
@@ -101,7 +126,7 @@ export function OperatorPolicyCard({ corpId }: { corpId: string }) {
       setConfirmDivest(true);
       return;
     }
-    void save({ ...stored, [action]: permission });
+    saveActions({ ...stored, [action]: permission });
   }
 
   return (
@@ -116,7 +141,7 @@ export function OperatorPolicyCard({ corpId }: { corpId: string }) {
               key={preset.id}
               tone={attitude === preset.id ? "primary" : "default"}
               disabled={busy}
-              onClick={() => void save(preset.actions)}
+              onClick={() => saveActions(preset.actions)}
             >
               {preset.label}
             </SmallButton>
@@ -156,6 +181,29 @@ export function OperatorPolicyCard({ corpId }: { corpId: string }) {
             );
           })}
         </div>
+        <div className="border-y border-card-border">
+          <KVRow
+            label="Auto-accept CEO raises up to"
+            mono={false}
+            value={
+              <select
+                aria-label="Auto-accept CEO raises up to"
+                className="rounded border border-card-border bg-transparent px-1 py-0.5 text-xs"
+                value={String(payShare)}
+                disabled={busy}
+                onChange={(e) =>
+                  void save({ actions: stored, ceoPayAutoAcceptShare: Number(e.target.value) })
+                }
+              >
+                {PAY_SHARE_OPTIONS.map((share) => (
+                  <option key={share} value={String(share)}>
+                    {Math.round(share * 100)}% of profit
+                  </option>
+                ))}
+              </select>
+            }
+          />
+        </div>
         {confirmDivest && (
           <div className="space-y-2 border-y border-card-border py-2" role="alert">
             <p className="text-sm font-medium">Allow the NPP to sell or close plants?</p>
@@ -167,7 +215,7 @@ export function OperatorPolicyCard({ corpId }: { corpId: string }) {
               <SmallButton
                 tone="primary"
                 disabled={busy}
-                onClick={() => void save({ ...stored, divest: "allow" })}
+                onClick={() => saveActions({ ...stored, divest: "allow" })}
               >
                 Allow it
               </SmallButton>

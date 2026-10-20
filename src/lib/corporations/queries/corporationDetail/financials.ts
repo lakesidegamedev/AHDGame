@@ -107,6 +107,7 @@ export function buildFinancials(inputs: FinancialsInputs) {
     operatingIncome: Math.round(inc.operatingIncome),
     federalTax: inc.displayFederalTax,
     stateTax: inc.displayStateTax,
+    passThroughOwnerTax: inc.passThroughOwnerTaxLocal,
     federalTaxByCountry: inc.federalTaxByCountry,
     bondInterestCost: Math.round(inc.dailyInterestLocal),
     bondCouponIncome: Math.round(inc.dailyCouponIncomeLocal),

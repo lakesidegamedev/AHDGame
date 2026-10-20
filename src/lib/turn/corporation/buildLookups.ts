@@ -77,6 +77,7 @@ import {
   SECTOR_MARGIN_LEVEL_TRIM_PP,
   managementOverheadPp,
 } from "@/lib/constants/corporations";
+import { controlGroupRootByCorpId, groupTotals } from "@/lib/corporations/groups/controlGroups";
 import { INVESTOR_CONFIDENCE_BASELINE } from "@/lib/nationalization/constants";
 import { NATIONAL_SCOPE, NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { buildPoliticalBaseModifiers } from "@/lib/politicalLegislation/marginAdapter";
@@ -362,6 +363,9 @@ export async function buildCorporationLookups(
             gdp: 1,
             "taxRates.domesticCorporateTax": 1,
             "taxRates.foreignCorporateTax": 1,
+            // Pass-through owners are taxed at the top personal rate.
+            "taxRates.incomeTaxHigh": 1,
+            "taxRates.incomeTax": 1,
             // Per-country authored GDP-share targets (fiscal-scale audit,
             // 2026-07-29) - updateCorporateTaxBases below reads
             // taxBaseGdpShareBaseline.{domestic,foreign}CorporateProfits as the
@@ -400,6 +404,8 @@ export async function buildCorporationLookups(
             _id: 1,
             "taxRates.domesticCorporateTax": 1,
             "taxRates.foreignCorporateTax": 1,
+            "taxRates.incomeTaxHigh": 1,
+            "taxRates.incomeTax": 1,
           },
         }
       )
@@ -701,6 +707,7 @@ export async function buildCorporationLookups(
   // applies to all other corps. Per-sector selection happens in sectorCalculations.ts.
   const domesticCorpTaxRateByCountry = new Map<string, number>();
   const foreignCorpTaxRateByCountry = new Map<string, number>();
+  const personalTopIncomeTaxRateByCountry = new Map<string, number>();
   for (const budget of federalBudgets) {
     const cid = budget.countryId;
     if (!cid) continue;
@@ -719,6 +726,8 @@ export async function buildCorporationLookups(
     if (typeof domRate === "number") domesticCorpTaxRateByCountry.set(cid, domRate);
     const forRate = budget.taxRates?.foreignCorporateTax;
     if (typeof forRate === "number") foreignCorpTaxRateByCountry.set(cid, forRate);
+    const topIncome = budget.taxRates?.incomeTaxHigh ?? budget.taxRates?.incomeTax;
+    if (typeof topIncome === "number") personalTopIncomeTaxRateByCountry.set(cid, topIncome);
     investorConfidenceByCountry.set(cid, budget.investorConfidence ?? INVESTOR_CONFIDENCE_BASELINE);
     stateOwnershipConcentrationByCountry.set(cid, budget.stateOwnershipConcentration ?? 0);
   }
@@ -773,11 +782,14 @@ export async function buildCorporationLookups(
   // Build per-state domestic/foreign corporate tax rate maps for per-sector state tax.
   const domesticStateCorpTaxRateByState = new Map<string, number>();
   const foreignStateCorpTaxRateByState = new Map<string, number>();
+  const personalTopIncomeTaxRateByState = new Map<string, number>();
   for (const sb of stateBudgets) {
     const dom = sb.taxRates?.domesticCorporateTax;
     if (typeof dom === "number") domesticStateCorpTaxRateByState.set(sb._id, dom);
     const fgn = sb.taxRates?.foreignCorporateTax;
     if (typeof fgn === "number") foreignStateCorpTaxRateByState.set(sb._id, fgn);
+    const topIncome = sb.taxRates?.incomeTaxHigh ?? sb.taxRates?.incomeTax;
+    if (typeof topIncome === "number") personalTopIncomeTaxRateByState.set(sb._id, topIncome);
   }
 
   // Build global, national, and per-state commodity balance lookups for margin modifiers.
@@ -1064,15 +1076,48 @@ export async function buildCorporationLookups(
   // grows with its total whole-plant count (snowball brake). Off unless the
   // gameConfig knob is set.
   const overheadCfg = await db
-    .collection<{ _id: string; managementOverheadPpPerDoubling?: number }>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { managementOverheadPpPerDoubling: 1 } });
+    .collection<{
+      _id: string;
+      managementOverheadPpPerDoubling?: number;
+      strengthUpkeepStage?: number;
+      groupSizeCostsStage?: number;
+    }>("gameConfig")
+    .findOne(
+      { _id: "default" },
+      {
+        projection: {
+          managementOverheadPpPerDoubling: 1,
+          strengthUpkeepStage: 1,
+          groupSizeCostsStage: 1,
+        },
+      }
+    );
   const overheadPpPerDoubling = overheadCfg?.managementOverheadPpPerDoubling ?? 0;
+  const strengthUpkeepStage =
+    typeof overheadCfg?.strengthUpkeepStage === "number" ? overheadCfg.strengthUpkeepStage : 0;
+  const groupSizeCostsStage =
+    typeof overheadCfg?.groupSizeCostsStage === "number" ? overheadCfg.groupSizeCostsStage : 0;
+  // Control-group roots for size costs (contestability plan): every corp
+  // resolved to its ultimate controlling owner. Only built when a group size
+  // cost is on.
+  const controlRootByCorpId =
+    groupSizeCostsStage >= 1 ? controlGroupRootByCorpId(loadedCorporations) : null;
   const managementOverheadPpByCorpId = new Map<string, number>();
   if (overheadPpPerDoubling > 0) {
+    const plantsByCorpId = new Map<string, number>();
     for (const [corpId, sectors] of sectorsByCorp) {
       let plants = 0;
       for (const s of sectors)
         plants += Number.isFinite(s.plantCount) ? (s.plantCount as number) : 0;
+      plantsByCorpId.set(corpId, plants);
+    }
+    // Stage 1: measure overhead on the whole control group, so splitting a
+    // business into subsidiaries does not dodge it. Every member pays the
+    // group's rate on its own sectors.
+    const basis = controlRootByCorpId
+      ? groupTotals(controlRootByCorpId, plantsByCorpId)
+      : plantsByCorpId;
+    for (const [corpId, plants] of basis) {
       const pp = managementOverheadPp(plants, overheadPpPerDoubling);
       if (pp > 0) managementOverheadPpByCorpId.set(corpId, pp);
     }
@@ -1378,6 +1423,8 @@ export async function buildCorporationLookups(
         preset: 1,
         hardwareInputReliefStartTurn: 1,
         stockHoldingTaxStartTurn: 1,
+        passThroughOwnerTaxStartTurn: 1,
+        nppCeoPayStartTurn: 1,
         currentYear: 1,
         currentTurn: 1,
         startingYear: 1,
@@ -1594,6 +1641,10 @@ export async function buildCorporationLookups(
     preset: marketSharePreset,
     hardwareInputReliefStartTurn: gameState?.hardwareInputReliefStartTurn,
     stockHoldingTaxStartTurn: gameState?.stockHoldingTaxStartTurn,
+    passThroughOwnerTaxStartTurn: gameState?.passThroughOwnerTaxStartTurn,
+    personalTopIncomeTaxRateByCountry,
+    personalTopIncomeTaxRateByState,
+    nppCeoPayStartTurn: gameState?.nppCeoPayStartTurn,
     eraYear,
     eraUnitScale,
     corporations,
@@ -1657,6 +1708,7 @@ export async function buildCorporationLookups(
     latentDemandFactorByCommodity,
     marginLevelTrimPp: SECTOR_MARGIN_LEVEL_TRIM_PP,
     managementOverheadPpByCorpId,
+    strengthUpkeepStage,
     reachablePriceRatioByCountry,
     reachableInputPriceRatiosByCountry,
     landedPremiumByState,

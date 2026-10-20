@@ -125,7 +125,9 @@ export function encodeResumeResult(name: string, result: unknown): Record<string
  * A skip from a release before that carry existed (`upstreamAbort` with no
  * `resumeCarried`) proves the phase applied but not that it finished, so it is
  * treated as interrupted: never rerun, never a source of a result. A `failed`
- * phase may have written part of its work, so it is interrupted too.
+ * phase may have written part of its work, so it is interrupted too, unless it
+ * failed with TurnMustStopError: such a phase is re-entrant by contract (its
+ * money moves replay by key), the turn stopped on it, and the resume reruns it.
  */
 function appliedState(
   telemetry: TurnPhaseTelemetryMap[string] | null | undefined
@@ -134,8 +136,9 @@ function appliedState(
     case "completed":
       return "completed";
     case "running":
-    case "failed":
       return "interrupted";
+    case "failed":
+      return telemetry.reason === "mustStop" ? null : "interrupted";
     case "skipped":
       if (telemetry.resumeCarried) return telemetry.resumeCarried;
       return telemetry.reason === "upstreamAbort" ? "interrupted" : null;

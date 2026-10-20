@@ -347,6 +347,9 @@ export async function loadCorporationDetailView(args: {
       lastShareholderAddressAt: corporation.lastShareholderAddressAt ?? null,
       legalStructure: corporation.legalStructure ?? undefined,
       legalStructureLabel: income.corpLegalStructure.shortName,
+      legalStructureTaxLabel: income.legalStructureTax,
+      passThroughTaxPhase: income.passThroughPhase,
+      passThroughOwnerTax: income.passThroughOwnerTaxLocal,
       legalStructureChangeCooldownUntilTurn:
         corporation.legalStructureChangeCooldownUntilTurn ?? null,
       lastShareStructureTurn: corporation.lastShareStructureTurn ?? null,

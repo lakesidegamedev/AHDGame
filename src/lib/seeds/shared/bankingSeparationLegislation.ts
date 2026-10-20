@@ -13,7 +13,7 @@ type ChamberKey = LegislationType["positions"][number]["chamber"];
  * Player copy is era-neutral and LARP-safe: no real-world statute names, no
  * year references.
  */
-interface BankingSeparationSpec {
+export interface BankingSeparationSpec {
   /** Id prefix, e.g. "us" → "us_banking_separation". */
   prefix: string;
   scope: CountryScope;
@@ -88,7 +88,7 @@ function makeBankingSeparationType(spec: BankingSeparationSpec): LegislationType
 }
 
 /** One entry per seeded legislature countryScope. */
-const BANKING_SEPARATION_SPECS: BankingSeparationSpec[] = [
+export const BANKING_SEPARATION_SPECS: readonly BankingSeparationSpec[] = [
   { prefix: "us", scope: "us", chamberKey: "house", committeeLabel: "Financial Services" },
   { prefix: "uk", scope: "uk", chamberKey: "commons", committeeLabel: "Treasury" },
   { prefix: "jp", scope: "jp", chamberKey: "shugiin", committeeLabel: "Finance" },

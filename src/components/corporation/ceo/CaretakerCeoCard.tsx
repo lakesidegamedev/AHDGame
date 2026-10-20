@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { CorporationDetail } from "../CorporationPageTypes";
 import { InlineStatus, SmallButton } from "../dense/DenseKit";
+import { CeoPayCard } from "./CeoPayCard";
 import { GovernanceRow } from "./GovernanceRow";
 import { OperatorPolicyCard } from "./OperatorPolicyCard";
 
@@ -162,6 +163,7 @@ export function CaretakerCeoCard({
               {busy ? "Updating" : "Resume control"}
             </SmallButton>
             <OperatorPolicyCard corpId={corpId} />
+            <CeoPayCard corpId={corpId} />
           </>
         ) : (
           <SmallButton tone="primary" onClick={appoint} disabled={busy || onCooldown}>

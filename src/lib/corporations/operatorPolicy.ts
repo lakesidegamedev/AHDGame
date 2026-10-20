@@ -19,6 +19,8 @@ export const operatorPolicyInputSchema = z
       .array(z.string().regex(/^[A-Z]{2}$/))
       .max(40)
       .optional(),
+    /** Auto-accept an NPP CEO raise costing up to this share of profit (0 to 0.1). */
+    ceoPayAutoAcceptShare: z.number().finite().min(0).max(0.1).optional(),
   })
   .strict();
 
@@ -38,6 +40,9 @@ export function buildOperatorPolicy(
     ...(actions && Object.keys(actions).length > 0 ? { actions } : {}),
     ...(unique(input.sectorTypes) ? { sectorTypes: unique(input.sectorTypes) } : {}),
     ...(unique(input.countryIds) ? { countryIds: unique(input.countryIds) } : {}),
+    ...(input.ceoPayAutoAcceptShare != null
+      ? { ceoPayAutoAcceptShare: input.ceoPayAutoAcceptShare }
+      : {}),
     setTurn: turn,
   };
 }
