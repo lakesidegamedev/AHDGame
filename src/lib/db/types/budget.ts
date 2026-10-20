@@ -1,4 +1,5 @@
 import type { IncomeTaxBatchReceipt } from "./incomeTax";
+import type { HouseholdFiscalControls } from "@/lib/resetMetrics/rules/householdSources";
 import type { IncomeShares } from "@/lib/budget/rules/incomeTaxTiers";
 import type { ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
@@ -554,6 +555,8 @@ export interface BankSovereignClaim {
 }
 
 export interface FederalBudget {
+  /** Optional independently settled all-household control; never inferred from forecasts or player-only receipts. Wiped with the world budget. */
+  householdResourceControl?: HouseholdFiscalControls;
   /** Monotonic tax-collection proof, reset with the owning world balance. */
   incomeTaxBatchReceipt?: IncomeTaxBatchReceipt | null;
   /** Income-weighted census shares; independent of the numeric tax-base vector. */

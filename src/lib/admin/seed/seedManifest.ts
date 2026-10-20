@@ -138,7 +138,13 @@ const REFERENCE: CollectionEntry[] = [
   },
   { name: "legislationTypes", category: "reference", seededBy: "seedLegislationTypes" },
   { name: "achievements", category: "reference", seededBy: "seedAchievements" },
-  { name: "federalBudget", category: "reference", seededBy: "seedBudgets" },
+  {
+    name: "federalBudget",
+    category: "reference",
+    seededBy: "seedBudgets",
+    notes:
+      "Reset with world budgets, including optional independently settled all-household resource controls. Historical source imports never create these cash-flow receipts.",
+  },
   { name: "stateBudgets", category: "reference", seededBy: "seedBudgets" },
   {
     name: "regionalBudgets",

@@ -36,6 +36,8 @@ import type { MetricOwnerTurnReadingsByBoard } from "./refreshTurn";
 import { loadMetricLawDelivery } from "./loadLawDelivery";
 import { householdPublication, HOUSEHOLD_PUBLICATION_IDS } from "./rules/householdPublication";
 import { housingPublication, HOUSING_PUBLICATION_IDS } from "./rules/housingPublication";
+import { produceHouseholdSource } from "./rules/produceHouseholdSource";
+import type { HouseholdProductionStatus } from "./rules/householdSources";
 
 let openingCalibrationCache: {
   gross: ReturnType<typeof openingGrossPurchasingInputs1991>;
@@ -123,6 +125,7 @@ export async function collectResetMetricOwnerReadings(
             "spending.total": 1,
             "economicFactors.inflationRate": 1,
             "debt.principal": 1,
+            householdResourceControl: 1,
           },
         }
       )
@@ -177,7 +180,11 @@ export async function collectResetMetricOwnerReadings(
     states,
   });
   const stateById = new Map(states.map((s) => [s._id, s]));
-  const laws = boards.some((b) => b.scope === "national" && (b.householdSource || b.housingSource))
+  const laws = boards.some(
+    (b) =>
+      b.scope === "national" &&
+      (b.householdSource || b.housingSource || b.householdReference || b.householdCurrentState)
+  )
     ? await loadMetricLawDelivery(db, {
         worldId: boards[0]!.worldId,
         turn,
@@ -193,19 +200,73 @@ export async function collectResetMetricOwnerReadings(
     turn,
     laws,
   });
+  const productionByCountry = new Map(
+    countryIds.map((countryId) => {
+      const national = boards.find((b) => b.countryId === countryId && b.scope === "national");
+      const current = national?.householdCurrentState;
+      const populationMatches = current?.regions.every((region) => {
+        const state = stateById.get(region.regionId);
+        return state?.countryId === countryId && state.population >= region.householdResidents;
+      });
+      return [
+        countryId,
+        produceHouseholdSource({
+          worldId: boards[0]!.worldId,
+          countryId,
+          turn,
+          year: year ?? NaN,
+          regionIds: boards
+            .filter((b) => b.countryId === countryId && b.scope === "regional")
+            .map((b) => b.regionId!),
+          reference: national?.householdReference,
+          current: populationMatches ? current : undefined,
+          fiscalControls: budgets.find((b) => b.countryId === countryId)?.householdResourceControl,
+          programs: laws?.programs ?? [],
+          settlements: laws?.settlements ?? new Map(),
+        }),
+      ] as const;
+    })
+  );
+  const householdSourceByCountry = new Map(
+    countryIds.map((countryId) => {
+      const national = boards.find((b) => b.countryId === countryId && b.scope === "national");
+      const production = productionByCountry.get(countryId)!;
+      // A failed new source cannot fall back to a stale externally prepared source.
+      return [
+        countryId,
+        national?.householdReference || national?.householdCurrentState
+          ? production.source
+          : national?.householdSource,
+      ] as const;
+    })
+  );
+  const productionStatusByCountry = new Map<string, HouseholdProductionStatus>();
   const householdByRegion = new Map(
     countryIds.flatMap((countryId) => {
-      const national = boards.find((b) => b.countryId === countryId && b.scope === "national");
       const regions = boards.filter((b) => b.countryId === countryId && b.scope === "regional");
       const result = householdPublication({
         worldId: boards[0]!.worldId,
         countryId,
         turn,
         regionIds: regions.map((b) => b.regionId!),
-        source: national?.householdSource,
+        source: householdSourceByCountry.get(countryId),
         programs: laws?.programs ?? [],
         settlements: laws?.settlements ?? new Map(),
       });
+      const production = productionByCountry.get(countryId)!;
+      productionStatusByCountry.set(
+        countryId,
+        result.size === regions.length && regions.length > 0
+          ? { evaluatedAtTurn: turn, path: "produced", gaps: [] }
+          : {
+              evaluatedAtTurn: turn,
+              path: "legacy",
+              gaps:
+                production.path === "produced"
+                  ? ["publication-reconciliation-failed"]
+                  : production.gaps,
+            }
+      );
       // Adoption is country-wide. Missing later inputs freeze the adopted definition
       // with its old measurement date, never silently revert it to a gross-income proxy.
       const adopted = regions.some((b) =>
@@ -240,7 +301,7 @@ export async function collectResetMetricOwnerReadings(
         turn,
         regionIds: regions.map((b) => b.regionId!),
         source: populationMatches ? source : undefined,
-        householdSource: national?.householdSource,
+        householdSource: householdSourceByCountry.get(countryId),
         householdReadings: new Map(
           regions.map((b) => [b.regionId!, householdByRegion.get(b._id) ?? {}])
         ),
@@ -734,7 +795,15 @@ export async function collectResetMetricOwnerReadings(
         if (due.has(id)) updates[id] = observation;
       return [
         board._id,
-        { updates, cohortDue, electionDue, housingState: housingByRegion.get(board._id)?.state },
+        {
+          updates,
+          cohortDue,
+          electionDue,
+          housingState: housingByRegion.get(board._id)?.state,
+          ...(board.scope === "national"
+            ? { householdProductionStatus: productionStatusByCountry.get(board.countryId) }
+            : {}),
+        },
       ];
     })
   );

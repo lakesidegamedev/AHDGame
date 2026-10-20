@@ -13,12 +13,14 @@ import { primaryMetrics } from "./catalog";
 import type { ResetMetricSnapshot } from "./rules/snapshot";
 import { appendMetricHistory, metricHistoryDue, RESET_METRIC_HISTORY_LIMIT } from "./rules/history";
 import type { HousingState } from "./rules/housing";
+import type { HouseholdProductionStatus } from "./rules/householdSources";
 
 export interface MetricOwnerTurnReadings {
   updates: Readonly<Record<string, OpeningMetricObservation>>;
   cohortDue: boolean;
   electionDue: boolean;
   housingState?: HousingState;
+  householdProductionStatus?: HouseholdProductionStatus;
 }
 
 export type MetricOwnerTurnReadingsByBoard = Readonly<Record<string, MetricOwnerTurnReadings>>;
@@ -72,6 +74,30 @@ export async function refreshResetMetricSnapshotsTurn(input: {
           observations: 1,
           openingValues: 1,
           householdSource: 1,
+          // Raw survey component columns are offline evidence, never turn inputs.
+          ...Object.fromEntries(
+            [
+              "version",
+              "countryId",
+              "sourceId",
+              "incomeYear",
+              "currency",
+              "population",
+              "distribution",
+              "gaps",
+              "cells.id",
+              "cells.sourceArea",
+              "cells.households",
+              "cells.adults",
+              "cells.children",
+              "cells.marketIncome",
+              "cells.cashTransfers",
+              "cells.directTaxes",
+              "cells.employeeContributions",
+            ].map((field) => [`householdReference.${field}`, 1])
+          ),
+          householdCurrentState: 1,
+          householdProductionStatus: 1,
           housingSource: 1,
           housingState: 1,
           // Ordinary turns need only the legacy baseline, not the full chart.
@@ -136,6 +162,8 @@ export async function refreshResetMetricSnapshotsTurn(input: {
         };
         for (const id of changedIds) fields[`observations.${id}`] = board.observations[id];
         if (board.housingState?.asOfTurn === turn) fields.housingState = board.housingState;
+        if (board.householdProductionStatus?.evaluatedAtTurn === turn)
+          fields.householdProductionStatus = board.householdProductionStatus;
         // Upgrade old boards once, before bounded appends can trim their baseline.
         if (!board.openingValues) {
           if (

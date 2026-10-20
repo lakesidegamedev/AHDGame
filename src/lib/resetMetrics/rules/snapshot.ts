@@ -5,6 +5,11 @@ import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
 import type { HouseholdPublicationSource } from "./householdPublication";
 import type { HousingPublicationSource } from "./housingPublication";
 import type { HousingState } from "./housing";
+import type {
+  HouseholdDecodedReference,
+  HouseholdCurrentState,
+  HouseholdProductionStatus,
+} from "./householdSources";
 
 export interface ResetMetricSnapshot {
   _id: string;
@@ -24,6 +29,11 @@ export interface ResetMetricSnapshot {
   priorValues?: Record<string, number | null>;
   /** Reviewed upstream owner inputs. World-scoped; this entire collection is wiped on reset. */
   householdSource?: HouseholdPublicationSource;
+  /** Reviewed source and economic-owner inputs; all wiped with this world-bound collection. */
+  householdReference?: HouseholdDecodedReference;
+  householdCurrentState?: HouseholdCurrentState;
+  /** Bounded latest evaluation only. This is not a new measurement or a history series. */
+  householdProductionStatus?: HouseholdProductionStatus;
   housingSource?: HousingPublicationSource;
   /** Country source inputs and regional stock state are wiped with this world-bound collection. */
   housingState?: HousingState;
