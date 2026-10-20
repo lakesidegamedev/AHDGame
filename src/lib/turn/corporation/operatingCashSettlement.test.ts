@@ -177,6 +177,61 @@ describe("corporate operating cash settlement", () => {
     expect(keys.some((k) => k.endsWith(":gross") || k.endsWith(":tax"))).toBe(false);
   });
 
+  it("batches covered losses with receipts: loss burned, tax delivered, one transition", async () => {
+    const db = createInMemoryDb();
+    const a = new ObjectId("650000000000000000000051");
+    const b = new ObjectId("650000000000000000000052");
+    const c = new ObjectId("650000000000000000000053");
+    db.seed("gameConfig", [{ _id: "default", treasuryCashLedgerEnabled: true }]);
+    db.seed("gameState", [{ _id: "current", currentTurn: 4, preset: "2019-default" }]);
+    db.seed("exchangeRates", [{ currencyCode: "USD", rate: 1 }]);
+    db.seed("federalBudget", [
+      { _id: "US", countryId: "US", currencyCode: "USD", treasuryCashLocal: 0, treasuryBalance: 0 },
+    ]);
+    db.seed("corporations", [
+      { _id: a, liquidCapital: 100 },
+      { _id: b, liquidCapital: 100 },
+      { _id: c, liquidCapital: 100 },
+    ]);
+    const us = (n: number) => new Map([["US", n]]);
+    const snaps = [
+      // Gross -10 (costs), tax 5: pays 15.
+      snapshot(a, {
+        operatingCashIncomeLocal: -15,
+        operatingCashCurrency: "USD",
+        operatingCashLocalPerAnchor: 1,
+        federalTaxByCountryAnchor: us(5),
+      }),
+      // Gross +40, tax 10: receives 30.
+      snapshot(b, {
+        operatingCashIncomeLocal: 30,
+        operatingCashCurrency: "USD",
+        operatingCashLocalPerAnchor: 1,
+        federalTaxByCountryAnchor: us(10),
+      }),
+      // Gross -20, tax 0 but listed for the same Treasury: pays 20.
+      snapshot(c, {
+        operatingCashIncomeLocal: -20,
+        operatingCashCurrency: "USD",
+        operatingCashLocalPerAnchor: 1,
+        federalTaxByCountryAnchor: us(0),
+      }),
+    ];
+    await settleCorporateOperatingCash(db as unknown as Db, snaps, 4, new Date());
+    await settleCorporateOperatingCash(db as unknown as Db, snaps, 4, new Date());
+    const corps = new Map(
+      db.collection("corporations").docs.map((x) => [String(x._id), x.liquidCapital])
+    );
+    expect(corps.get(String(a))).toBeCloseTo(85);
+    expect(corps.get(String(b))).toBeCloseTo(130);
+    expect(corps.get(String(c))).toBeCloseTo(80);
+    expect(db.collection("federalBudget").docs[0].treasuryCashLocal).toBeCloseTo(15);
+    const keys = db.collection("bankMoneyMoves").docs.map((d) => String(d._id));
+    // Groups split by Treasury destinations: the untaxed loss settles in its own batch.
+    expect(keys.filter((k) => k.startsWith("corp-operating-net-batch:4:"))).toHaveLength(2);
+    expect(keys.some((k) => k.endsWith(":gross") || k.endsWith(":tax"))).toBe(false);
+  });
+
   it("finishes a crashed batch on retry and never settles its members again", async () => {
     const db = createInMemoryDb();
     const ids = [51, 52, 53, 54].map((n) => new ObjectId(`6500000000000000000000${n}`));
