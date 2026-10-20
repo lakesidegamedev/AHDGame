@@ -19,6 +19,9 @@
  * Pure: plain data in, money-move descriptions out.
  */
 import type { MoneyMove } from "@/lib/banking/moneyMove";
+import { ZOD_CURRENCY_ENUM } from "@/lib/constants/currencies";
+import { accountId, mintSinkAccount } from "@/lib/ledger/accounts";
+import type { LedgerLeg } from "@/lib/ledger/types";
 
 export const PRODUCER_ACCOUNTS = "producerEconomyAccounts";
 
@@ -268,4 +271,50 @@ export function transitionSupportMoves(
         note: "transition revenue floor",
       })),
     }));
+}
+
+/**
+ * Ledger legs witnessing one applied producer money move, so the ledger
+ * reconciler sees the funded market's transfers, mints and burns beside the
+ * settlement it already witnesses. Mints draw from and burns pay into a named
+ * account per move kind, so every entry balances. Null when a leg cannot be
+ * named (unknown collection or currency).
+ */
+export function producerMoveLedgerLegs(move: MoneyMove): LedgerLeg[] | null {
+  const legs: LedgerLeg[] = [];
+  for (const leg of move.legs) {
+    if (!(leg.amount > 0)) continue;
+    const currency = ZOD_CURRENCY_ENUM.find((c) => c === leg.valuation?.currencyCode);
+    const rate = leg.valuation?.localPerAnchor;
+    if (!currency || !rate || !(rate > 0)) return null;
+    const anchor = leg.amount / rate;
+    if (leg.kind === "mint" || leg.kind === "burn") {
+      const sign = leg.kind === "mint" ? -1 : 1;
+      legs.push({
+        account: mintSinkAccount(leg.kind === "mint" ? 1 : -1, move.kind, currency),
+        amount: sign * leg.amount,
+        currencyCode: currency,
+        anchorAmount: sign * anchor,
+        role: "primary",
+      });
+      continue;
+    }
+    const kind =
+      leg.collection === "corporations"
+        ? "corporation"
+        : leg.collection === PRODUCER_ACCOUNTS
+          ? "economy_wallet"
+          : null;
+    const ref = leg.filter?._id;
+    if (!kind || ref == null) return null;
+    const sign = leg.kind === "debit" ? -1 : 1;
+    legs.push({
+      account: accountId(kind, String(ref), currency),
+      amount: sign * leg.amount,
+      currencyCode: currency,
+      anchorAmount: sign * anchor,
+      role: "primary",
+    });
+  }
+  return legs.length >= 2 ? legs : null;
 }

@@ -14,7 +14,9 @@
  * Returns each sector's settled receipt so the legacy pass can take revenue and
  * margin from it, and the producer profit per corporation the settlement paid.
  */
+import { createHash } from "node:crypto";
 import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
+import type { LedgerEntry } from "@/lib/ledger/types";
 import type { CorporateSector, Corporation } from "@/lib/db/types/corporation";
 import { applyMoneyMove, resumeMoneyMove } from "@/lib/banking/moneyMove";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
@@ -31,6 +33,7 @@ import {
   transitionSupportMoves,
   PRODUCER_ACCOUNTS,
   investmentFundingMoves,
+  producerMoveLedgerLegs,
   investmentReturnMoves,
   publicFundingMoves,
   publicReturnMoves,
@@ -140,13 +143,38 @@ export async function runFundedProducerTurn(
   await createProducerWallets(db, worldEpoch, walletScopes);
 
   const apply = async (moves: ReturnType<typeof publicFundingMoves>) => {
+    const entries: LedgerEntry[] = [];
     for (const move of moves) {
       let result = await applyMoneyMove(db, move);
       // An existing key may be a move a crash left half done: finish it.
       if (result.status === "replayed") result = await resumeMoneyMove(db, move.key);
       if (result.status !== "applied" && result.status !== "replayed")
         throw new Error(`Producer money move ${move.key} ${result.status}`);
+      // Witness the move in the ledger, like the settlement witnesses its own
+      // cash; the id derives from the move key, so a replay adds nothing.
+      const legs = producerMoveLedgerLegs(move);
+      if (legs)
+        entries.push({
+          _id: new ObjectId(
+            createHash("sha256").update(`${move.key}:ledger`).digest("hex").slice(0, 24)
+          ),
+          turn,
+          createdAt: new Date(),
+          txType: "producer_market_transfer",
+          legs,
+          balanced: Math.abs(legs.reduce((sum, leg) => sum + leg.anchorAmount, 0)) < 1e-6,
+          emitSite: "producerMarket/fundedProducerTurn",
+        });
     }
+    if (entries.length > 0)
+      await db
+        .collection<LedgerEntry>("ledgerEntries")
+        .insertMany(entries, { ordered: false })
+        .catch((error: unknown) => {
+          // Duplicate ids are replays already witnessed; anything else is real.
+          const writeErrors = (error as { writeErrors?: { code?: number }[] }).writeErrors;
+          if (!writeErrors || writeErrors.some((e) => e.code !== 11000)) throw error;
+        });
   };
 
   await apply(
