@@ -1231,6 +1231,9 @@ export function processSectors(
       incomePreDividends,
       income,
       operatingCashIncomeLocal: incomeForBalance,
+      ...(funded
+        ? { settledProducerProfitAnchor: funded.settledProfitByCorp.get(corpId) ?? 0 }
+        : {}),
       operatingCashCurrency: resolvedHomeCurrency,
       federalTaxByCountryAnchor: new Map(taxPaidByCountry),
       operatingCashLocalPerAnchor: localFxRate,
