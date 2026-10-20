@@ -4,7 +4,7 @@ import { holdingMaturationWrites } from "./holdingMaturationWrites";
  * runs every sector's revenue, margin and costs, then charges corp-level marketing,
  * logistics, R&D and CEO salary (capped together at 1.5x gross revenue), bond
  * interest and dividends (up to MAX_DIVIDEND_RATE), accrues R&D score
- * (rdMoraleFactor, computeRdDemandFactor), and converts each sector from its host currency.
+ * (rdMoraleFactor), and converts each sector from its host currency.
  */
 import { prepareInternalSupplySectorResults } from "./internalSupplySectorPass";
 import { holdingDividendSplit, positionHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
@@ -16,7 +16,6 @@ import { getLegalStructureForCorp } from "@/lib/corporations/legalStructure";
 import { getControllingCorporateParent } from "@/lib/corporations/corporateOwnership";
 import { activeParentDividendFloorPct } from "@/lib/corporations/subsidiaries/helpers";
 import { COUNTRY_CURRENCY_MAP, SECTOR_FX_SPREAD } from "@/lib/constants/currencies";
-import type { CommodityType } from "@/lib/constants/commodities";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { MARKET_DISABLED, type MarketContext } from "@/lib/market/marketContext";
 import {
@@ -96,48 +95,6 @@ import {
   quoteFundedProductAdvertising,
 } from "@/lib/products/rules/productAdvertising";
 import type { ManufacturingProductAdvertisingObligationV2 } from "@/lib/products/manufacturingProject";
-
-/** Primary commodities that proxy R&D conditions for each sector type. */
-const SECTOR_RD_COMMODITIES: Partial<Record<string, [string, string?]>> = {
-  energy: ["coal", "natural_gas"],
-  mining: ["iron_ore", "copper"],
-  agriculture: ["grain", "produce"],
-  manufacturing: ["steel", "industrial_chemicals"],
-  technology: ["electronics", "rare_earth"],
-  pharmaceuticals: ["pharmaceuticals", "industrial_chemicals"],
-  finance: ["consulting_services", "software"],
-  media: ["software", "consulting_services"],
-  retail: ["consumer_goods", "produce"],
-  healthcare: ["pharmaceuticals", "consulting_services"],
-  education: ["consulting_services", "software"],
-  transportation: ["petroleum", "steel"],
-  construction: ["steel", "timber"],
-  utilities: ["coal", "natural_gas"],
-  telecoms: ["electronics", "software"],
-  hospitality: ["produce", "consumer_goods"],
-  legal: ["consulting_services", "software"],
-};
-
-/**
- * R&D demand factor (0.85–1.15): ties R&D accrual to global commodity
- * market conditions. Base signal from software + consulting (tech ecosystem),
- * blended with 1–2 sector-specific commodities when available.
- * Neutral (1.0) when balanced or data is missing.
- */
-function computeRdDemandFactor(
-  software?: { supply: number; demand: number },
-  consulting?: { supply: number; demand: number },
-  sector1?: { supply: number; demand: number },
-  sector2?: { supply: number; demand: number }
-): number {
-  const ds = (b?: { supply: number; demand: number }) =>
-    !b || b.supply <= 0 ? 1 : b.demand / b.supply;
-  const ratios = [ds(software), ds(consulting)];
-  if (sector1) ratios.push(ds(sector1));
-  if (sector2) ratios.push(ds(sector2));
-  const avg = ratios.reduce((s, v) => s + v, 0) / ratios.length;
-  return Math.min(1.15, Math.max(0.85, 1 + (avg - 1) * 0.25));
-}
 
 export function processSectors(
   lookups: CorporationLookups,
@@ -355,28 +312,6 @@ export function processSectors(
     // Sector tech-tree bonuses (decade-gated R&D unlocks) — derived once per corp
     // from its unlocked node set. Inert (neutral 0pp / ×1) when the feature gate
     // is off. See lib/constants/techTree.
-    // R&D accrual is tied moderately to the software (technology output) and
-    // consulting-services markets: when demand for them runs ahead of supply the
-    // innovation ecosystem is hot and R&D compounds a little faster, and vice
-    // versa. Clamped to ±15%. Inert when the feature gate is off.
-    const rdDemandFactor = techTreesEnabled
-      ? (() => {
-          const [c1, c2] =
-            SECTOR_RD_COMMODITIES[
-              getOperatingSectorType(
-                corp.type,
-                corp.industryModel,
-                corp.mediaDiscriminator
-              ) as string
-            ] ?? [];
-          return computeRdDemandFactor(
-            lookups.globalCommodityBalances.get("software"),
-            lookups.globalCommodityBalances.get("consulting_services"),
-            c1 ? lookups.globalCommodityBalances.get(c1 as CommodityType) : undefined,
-            c2 ? lookups.globalCommodityBalances.get(c2 as CommodityType) : undefined
-          );
-        })()
-      : 1;
     const sectors = lookups.sectorsByCorp.get(corpId) ?? [];
     let corpRevenue = 0;
     let corpGrowthNumer = 0;
@@ -1022,14 +957,13 @@ export function processSectors(
     // Grows on generic R&D only. Product development is handled as guarded
     // capitalized cash spend below and cannot also earn generic research score.
     const currentRdScore = corp.rdScore ?? 0;
-    // rdDemandFactor (±15%) ties R&D output to technology + consulting demand.
     // moraleFactor (#84, ±15%) rewards paying workers above baseline: happier
     // workers convert R&D spend more efficiently. Neutral when labour is off.
     const avgWageLevel = corpWageWeight > 0 ? corpWageWeighted / corpWageWeight : 1;
     const moraleFactor = rdMoraleFactor(avgWageLevel);
     const newRdScore = calcRdScoreAfterTurn(
       currentRdScore,
-      genericResearchSpend * TURNS_PER_DAY * rdDemandFactor * moraleFactor
+      genericResearchSpend * TURNS_PER_DAY * moraleFactor
     );
     const rdScoreDelta = newRdScore - currentRdScore;
 

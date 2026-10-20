@@ -244,58 +244,6 @@ export async function GET(_request: Request, { params }: RouteParams) {
       ? []
       : getUnlockedStrategyIds(corpView).map((id) => strategyNameById.get(id) ?? id);
 
-    // rdDemandFactor: ±15% signal based on tech-ecosystem + sector commodity D/S
-    const SECTOR_RD_COMS: Record<string, [string, string?]> = {
-      energy: ["coal", "natural_gas"],
-      mining: ["iron_ore", "copper"],
-      agriculture: ["grain", "produce"],
-      manufacturing: ["steel", "industrial_chemicals"],
-      technology: ["electronics", "rare_earth"],
-      pharmaceuticals: ["pharmaceuticals", "industrial_chemicals"],
-      finance: ["consulting_services", "software"],
-      media: ["software", "consulting_services"],
-      retail: ["consumer_goods", "produce"],
-      healthcare: ["pharmaceuticals", "consulting_services"],
-      education: ["consulting_services", "software"],
-      transportation: ["petroleum", "steel"],
-      construction: ["steel", "timber"],
-      utilities: ["coal", "natural_gas"],
-      telecoms: ["electronics", "software"],
-      hospitality: ["produce", "consumer_goods"],
-      legal: ["consulting_services", "software"],
-    };
-    let rdDemandFactor: number | null = null;
-    if (!redact) {
-      const [sc1, sc2] = SECTOR_RD_COMS[operatingSectorType] ?? [];
-      const comTypes = Array.from(
-        new Set(["software", "consulting_services", sc1, sc2].filter(Boolean) as string[])
-      );
-      const comDocs = (await db
-        .collection("commodityPrices")
-        .find(
-          { commodity: { $in: comTypes } },
-          { projection: { commodity: 1, globalSupply: 1, globalDemand: 1 } }
-        )
-        .toArray()) as unknown as {
-        commodity: string;
-        globalSupply: number;
-        globalDemand: number;
-      }[];
-      const comMap = new Map(
-        comDocs.map((c) => [c.commodity, { supply: c.globalSupply, demand: c.globalDemand }])
-      );
-      const ds = (c: string) => {
-        const b = comMap.get(c);
-        return !b || b.supply <= 0 ? 1 : b.demand / b.supply;
-      };
-      const ratios = [ds("software"), ds("consulting_services")];
-      if (sc1) ratios.push(ds(sc1));
-      if (sc2) ratios.push(ds(sc2));
-      const avg = ratios.reduce((s, v) => s + v, 0) / ratios.length;
-      rdDemandFactor =
-        Math.round(Math.min(1.15, Math.max(0.85, 1 + (avg - 1) * 0.25)) * 1000) / 1000;
-    }
-
     // FX rate for anchor-normalizing the R&D budget in rdGainPerTurn below.
     const corpFxRate = await getCorpFxRate(db, corporation);
 
@@ -341,7 +289,6 @@ export async function GET(_request: Request, { params }: RouteParams) {
       unlockableCount,
       breakthroughChance,
       breakthroughInterval: RD_INNOVATION_INTERVAL,
-      rdDemandFactor,
       decades,
     });
   } catch (error) {
