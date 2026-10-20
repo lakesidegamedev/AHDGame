@@ -605,6 +605,11 @@ export interface Corporation {
   lastShareStructureTurn?: number | null;
   /** Split escalation level, MS cost per split is 2^splitEscalation. Decays by 1 each turn. */
   splitEscalation?: number;
+  /**
+   * Management overhead (margin points) applied last turn, on the control-group
+   * basis when gameConfig.groupSizeCostsStage is on. Written by the turn.
+   */
+  managementOverheadPp?: number;
   /** Whether the CEO position is currently vacant (resigned or no CEO accepted yet) */
   ceoVacant?: boolean;
   /** Turn when the CEO position became vacant (for display in admin UI) */
