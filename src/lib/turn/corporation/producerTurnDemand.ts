@@ -57,9 +57,15 @@ export async function buildProducerTurnDemand(
     env: ProducerPhysicalEnv;
     sectorOps: readonly unknown[];
     carry: ShadowCarryState | null;
+    /** Public buyer account per country; the shadow uses `public:<country>`. */
+    publicAccountId?: (countryId: string) => string;
   }
 ) {
   const { worldEpoch, carry } = input;
+  const publicAccountId = input.publicAccountId ?? ((countryId: string) => `public:${countryId}`);
+  const preparedSectors: ReturnType<typeof prepareProducerPhysicalSector>["prepared"][] = [];
+  const walletScopes: ReturnType<typeof prepareProducerPhysicalSector>["walletScopes"][number][] =
+    [];
   const legacyBySectorId = legacyPnlBySectorId(input.sectorOps);
   const env = isolatedShadowEnv(input.env);
   const { lookups } = input;
@@ -98,7 +104,7 @@ export async function buildProducerTurnDemand(
     for (const sector of lookups.sectorsByCorp.get(corp._id.toString()) ?? []) {
       try {
         const sectorId = sector._id.toString();
-        const { prepared } = prepareProducerPhysicalSector({
+        const { prepared, walletScopes: scopes } = prepareProducerPhysicalSector({
           worldEpoch,
           env,
           corporation: corp,
@@ -107,6 +113,8 @@ export async function buildProducerTurnDemand(
         });
         const sectorCountry = String(sector.countryId ?? corp.countryId ?? "");
         const plan = shadowCountryBooks(prepared.plan, sectorCountry);
+        preparedSectors.push({ ...prepared, plan });
+        walletScopes.push(...scopes);
         // Legacy plantsPnl is daily and in the sector host's currency; the
         // shadow is per turn in anchor units, so convert before comparing.
         const legacyLocal = legacyBySectorId.get(sectorId) ?? null;
@@ -259,8 +267,8 @@ export async function buildProducerTurnDemand(
     roles.push({ id: w.accountId, kind: "household", countryId: w.countryId });
   }
   for (const f of funding) {
-    accounts.push({ id: `public:${f.countryId}`, cash: f.fundingLocal });
-    roles.push({ id: `public:${f.countryId}`, kind: "public", countryId: f.countryId });
+    accounts.push({ id: publicAccountId(f.countryId), cash: f.fundingLocal });
+    roles.push({ id: publicAccountId(f.countryId), kind: "public", countryId: f.countryId });
   }
   for (const id of householdForPayee.keys())
     if (!householdWallets.has(id)) {
@@ -286,7 +294,7 @@ export async function buildProducerTurnDemand(
     })),
   }));
   const publicBuyerOrders = publicOrders(
-    funding.map((f) => ({ accountId: `public:${f.countryId}`, lines: f.lines })),
+    funding.map((f) => ({ accountId: publicAccountId(f.countryId), lines: f.lines })),
     (c, book) => refPrice(c as CommodityType, book.startsWith("state:") ? book.slice(6) : ""),
     PRICE_HEADROOM
   );
@@ -351,9 +359,10 @@ export async function buildProducerTurnDemand(
             product.commodity,
             walletCountry.get(h.accountId) ?? ""
           );
+    const publicCountry = new Map(funding.map((f) => [publicAccountId(f.countryId), f.countryId]));
     for (const o of publicBuyerOrders)
       if (o.book === "world")
-        o.eligibleOfferIds = listFor(o.commodity, o.accountId.slice("public:".length));
+        o.eligibleOfferIds = listFor(o.commodity, publicCountry.get(o.accountId) ?? "");
     for (const o of marketingOrders)
       o.eligibleOfferIds = listFor(o.commodity, corpCountry.get(o.accountId) ?? "");
   }
@@ -364,6 +373,8 @@ export async function buildProducerTurnDemand(
     )
   );
   return {
+    preparedSectors,
+    walletScopes,
     accounts,
     cashByCorp,
     eligibleOffersByOrder,

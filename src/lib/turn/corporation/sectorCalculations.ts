@@ -79,6 +79,12 @@ import { getShareBuybackMode } from "@/lib/corporations/shareBuybackMode";
 import { computeEscrowFundingTransfer } from "@/lib/corporations/escrowFunding";
 import { pushEarningsHistory, normalizedEarningsFromHistory } from "./earningsRollingAverage";
 import { applyEquityMethodEarnings } from "./equityMethodEarnings";
+import {
+  fundedCashIncome,
+  fundedSectorOps,
+  fundedSectorResult,
+  type FundedReceipt,
+} from "@/lib/market/producerMarket/fundedSectorRules";
 import { processSector, type SectorTurnEnv } from "./sectorTurn";
 import {
   perTurnIssuerBondInterestExpense,
@@ -158,8 +164,19 @@ export function processSectors(
   /** Currency pools that supersede issuer-funded share-buyback escrow. */
   equityMarketPoolCurrencies: ReadonlySet<CurrencyCode> = new Set(),
   /** Route modeled operating cash through the durable Treasury cash journal. */
-  treasuryCashLedgerEnabled: boolean = false
+  treasuryCashLedgerEnabled: boolean = false,
+  /**
+   * Funded producer turn: settled receipts replace legacy revenue and margin,
+   * settlement-owned sector fields are not written, and the producer profit the
+   * settlement already paid is not credited again. Absent on legacy turns.
+   */
+  funded?: {
+    receiptsBySectorId: ReadonlyMap<string, FundedReceipt>;
+    settledProfitByCorp: ReadonlyMap<string, number>;
+  }
 ): SectorCalculationsResult {
+  const fundedResults = new Map<string, ReturnType<typeof fundedSectorResult>>();
+  const fundedDaily = new Map<string, (anchorPerTurn: number) => number>();
   const currentTurn = typeof turn === "number" ? turn : 1;
 
   let totalRevenueGenerated = 0;
@@ -417,7 +434,7 @@ export function processSectors(
         corp,
         lookups.exchangeRatesByCurrency
       );
-      const r =
+      const legacyResult =
         internalSupplyResults?.get(sector._id.toString()) ??
         processSector(
           sectorTurnEnv,
@@ -427,6 +444,14 @@ export function processSectors(
           sectorCurrencyCode,
           sectorFxRate
         );
+      const fundedReceipt = funded?.receiptsBySectorId.get(sector._id.toString());
+      const r = fundedReceipt ? fundedSectorResult(legacyResult, fundedReceipt) : legacyResult;
+      if (fundedReceipt) {
+        fundedResults.set(sector._id.toString(), r);
+        fundedDaily.set(sector._id.toString(), (anchorPerTurn: number) =>
+          writeCorpEconomicLocal(anchorPerTurn * TURNS_PER_DAY, sectorCurrencyCode, sectorFxRate)
+        );
+      }
       corpGrowthNumer += (r.newCurrentGrowthRate / 100) * r.hourlyRevenue;
       corpGrowthDenom += r.hourlyRevenue;
       corpSectorNPV += r.npvContribution;
@@ -1037,8 +1062,11 @@ export function processSectors(
     // order. Add back only that buyer's settled accounting expense here so the
     // pre-settlement cash leg is charged exactly once after the transfer lands.
     // With no sellers there is no transfer and the ordinary expense remains.
-    const cashIncomeBeforeMarketingSettlement =
+    const legacyCashIncome =
       income + (marketingSpendAnchorByBuyerId.has(corpId) ? hourlyMarketing : 0);
+    const cashIncomeBeforeMarketingSettlement = funded
+      ? fundedCashIncome(legacyCashIncome, funded.settledProfitByCorp.get(corpId) ?? 0)
+      : legacyCashIncome;
     const incomeForBalance = anchorToCorpCapital(
       cashIncomeBeforeMarketingSettlement,
       resolvedHomeCurrency,
@@ -1646,6 +1674,19 @@ export function processSectors(
       op.updateOne.update.$set.fundamentalSharePrice = priceLocal;
     }
   }
+
+  if (funded)
+    for (const [sectorId, result] of fundedResults) {
+      const receipt = funded.receiptsBySectorId.get(sectorId)!;
+      const kept = fundedSectorOps(
+        sectorOps as Parameters<typeof fundedSectorOps>[0],
+        sectorId,
+        receipt,
+        result,
+        fundedDaily.get(sectorId)!
+      );
+      sectorOps.splice(0, sectorOps.length, ...(kept as typeof sectorOps));
+    }
 
   return {
     sectorTurnEnv,

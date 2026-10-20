@@ -3,6 +3,9 @@ import { migrateEntertainmentRemoval } from "./migrateEntertainmentRemoval";
 import { settleFundDividendAccruals } from "./settleFundDividendAccruals";
 import { runProducerMarketShadowPhase } from "./producerMarketShadowPhase";
 import { claimProducerPath, loadProducerPath } from "@/lib/market/producerMarket/liveMode";
+import { runFundedProducerTurn } from "./fundedProducerTurn";
+import type { ProducerPhysicalEnv } from "./producerPhysicalPreparation";
+import { makeLabourDemandByState } from "@/lib/labour/labourMarket";
 import { resolvePhaseLookups } from "./phaseLookups";
 /**
  * Corporation turns settle operating results and distribute shareholder income.
@@ -744,6 +747,52 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
   mark("shedSectors");
 
   // Phase 2: Process all corporations and sectors (pure computation, no DB calls)
+  // Funded-market cutover: one producer path per turn, claimed before any
+  // producer money moves. On a funded turn the market settles first and the
+  // legacy pass takes revenue and margin from its receipts.
+  const producerTurn = turn ?? gameState?.currentTurn ?? 0;
+  const producerPath = await loadProducerPath(db, {
+    turn: producerTurn,
+    worldEpoch: gameState?.worldEpochId,
+    liveFromTurn: marketGovernorConfig?.producerMarketLiveFromTurn,
+  });
+  if (gameState?.worldEpochId)
+    await claimProducerPath(db, {
+      worldEpoch: gameState.worldEpochId,
+      turn: producerTurn,
+      path: producerPath,
+      phase: "corporation",
+    });
+  let funded: Awaited<ReturnType<typeof runFundedProducerTurn>> | undefined;
+  if (producerPath === "funded") {
+    if (market.marketRecoveryStage)
+      throw new Error("marketRecoveryStage must be 0 on a funded producer turn");
+    const worldEpoch = gameState!.worldEpochId!;
+    const earlier = await db
+      .collection("producerEconomyTurns")
+      .findOne({ worldEpoch, turn: { $lt: producerTurn } }, { projection: { _id: 1 } });
+    funded = await runFundedProducerTurn(db, {
+      turn: producerTurn,
+      worldEpoch,
+      lookups,
+      // Fresh collectors: the legacy pass below records labour telemetry once.
+      env: {
+        lookups,
+        currentTurn: producerTurn,
+        currentYear,
+        techTreesEnabled,
+        labour,
+        wageIndexByState: new Map(),
+        automationIndexByState: new Map(),
+        pendingStrikeEvents: [],
+        labourDemandByState: makeLabourDemandByState(),
+        labourDemandWageIndexByState: new Map(),
+        privateBankingEnabled,
+      } as unknown as ProducerPhysicalEnv,
+      firstFundedTurn: earlier == null,
+    });
+    mark("fundedProducerMarket");
+  }
   const {
     sectorOps,
     corpOps,
@@ -787,26 +836,13 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
     commandEconomyEnabled,
     privateBankingEnabled,
     new Set(equityPoolTurn.activeCurrencies),
-    treasuryCashLedgerEnabled
+    treasuryCashLedgerEnabled,
+    funded
   );
   mark("processSectors(CPU)");
-  const producerTurn = turn ?? gameState?.currentTurn ?? 0;
-  const producerPath = await loadProducerPath(db, {
-    turn: producerTurn,
-    worldEpoch: gameState?.worldEpochId,
-    liveFromTurn: marketGovernorConfig?.producerMarketLiveFromTurn,
-  });
-  if (gameState?.worldEpochId)
-    await claimProducerPath(db, {
-      worldEpoch: gameState.worldEpochId,
-      turn: producerTurn,
-      path: producerPath,
-      phase: "corporation",
-    });
-  if (producerPath === "funded")
-    throw new Error("The funded producer market is not wired into the corporation turn yet");
   await runProducerMarketShadowPhase(db, {
-    enabled: marketGovernorConfig?.producerMarketShadowEnabled === true,
+    // Never measure a shadow beside the live funded market in the same turn.
+    enabled: !funded && marketGovernorConfig?.producerMarketShadowEnabled === true,
     turn: turn ?? gameState?.currentTurn ?? 0,
     worldEpoch: gameState?.worldEpochId,
     lookups,
