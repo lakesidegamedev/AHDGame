@@ -59,6 +59,9 @@ export interface PassThroughOwnership {
   shareholders?: ReadonlyArray<{
     characterId?: unknown;
     imperialCharacterId?: unknown;
+    corporationId?: unknown;
+    nppId?: unknown;
+    fundId?: unknown;
   }>;
 }
 
