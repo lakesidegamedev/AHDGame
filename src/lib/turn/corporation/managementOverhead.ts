@@ -8,7 +8,7 @@ import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import type { CorporationLookups } from "./types";
 
 export function managementOverheadPpForCorp(
-  corp: Corporation,
+  corp: Pick<Corporation, "_id" | "countryOwnerId" | "ownershipState">,
   lookups: Pick<CorporationLookups, "managementOverheadPpByCorpId">
 ): number {
   if (isStateOwned(corp)) return 0;
