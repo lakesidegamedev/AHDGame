@@ -80,6 +80,10 @@ export interface NppCorpDecisionContext {
    * absent before the funded market or outside a funded world.
    */
   transitionFirstFundedTurn?: number;
+  /** Per-country allowance of capacity that may start converting this turn; absent = unpaced. */
+  conversionBudgetOf?: (
+    countryId: string
+  ) => import("@/lib/market/producerMarket/transitionRules").ConversionBudget | undefined;
   /** Player-appointed caretaker mandate. NPP-owned corporations are always active. */
   caretakerMandate?: "active" | "passive";
 }

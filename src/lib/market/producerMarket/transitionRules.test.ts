@@ -200,3 +200,24 @@ describe("free transition conversion", () => {
     expect(freeTransitionConversion({ cutoverTransition: mismatched }, 12, undefined)).toBe(false);
   });
 });
+
+describe("conversion pacing budget", () => {
+  it("gives each country a share of its capacity and lets the last conversion overshoot", async () => {
+    const { conversionBudgets, takeConversionBudget } = await import("./transitionRules");
+    const budgets = conversionBudgets(
+      new Map([
+        ["US", 1000],
+        ["UK", 0],
+      ]),
+      0.02
+    );
+    expect(budgets.has("UK")).toBe(false);
+    const us = budgets.get("US");
+    expect(us?.remaining).toBeCloseTo(20, 10);
+    expect(takeConversionBudget(us, 15)).toBe(true);
+    expect(takeConversionBudget(us, 15)).toBe(true); // 5 left, allowed, overshoots
+    expect(takeConversionBudget(us, 1)).toBe(false); // exhausted: waits for next turn
+    expect(takeConversionBudget(undefined, 999)).toBe(true); // unpaced
+    expect(conversionBudgets(new Map([["US", 1000]]), 0).size).toBe(0);
+  });
+});
