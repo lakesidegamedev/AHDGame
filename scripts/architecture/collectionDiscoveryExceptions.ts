@@ -197,7 +197,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/banking/recovery.ts",
     owner: "existingTargetIds",
     argument: "collection",
-    scopeHash: "aaef6412df21fea89fa93b902f260737fd15dbd16b8e838d34c0b6e564c9fe91",
+    scopeHash: "a20eecd22c12debe43922f58d945d828b4f8e6cd5b733502035f4fd0b64bd51c",
     count: 1,
     reason: "The recovery worker checks the destinations a persisted money move names.",
   },
