@@ -49,7 +49,7 @@ import { calculateFxInflationPressure } from "@/lib/turn/rules/fxInflationPressu
 import {
   commodityPressureForCountry,
   loadCommodityPressureSnapshots,
-} from "@/lib/turn/rules/commodityInflationPressure";
+} from "@/lib/turn/commodityInflationPressure";
 import {
   countryTurnTariffInflationExposure,
   loadTurnTariffInflationExposure,

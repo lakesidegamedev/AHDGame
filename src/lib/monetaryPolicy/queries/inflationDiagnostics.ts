@@ -38,7 +38,7 @@ import { savingsFlowPressureRatio } from "@/lib/budget/savingsFlowPressure";
 import {
   commodityPressureForCountry,
   loadCommodityPressureSnapshots,
-} from "@/lib/turn/rules/commodityInflationPressure";
+} from "@/lib/turn/commodityInflationPressure";
 import {
   countryTurnTariffInflationExposure,
   loadTurnTariffInflationExposure,
