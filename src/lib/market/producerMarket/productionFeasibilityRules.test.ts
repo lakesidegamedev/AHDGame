@@ -166,6 +166,13 @@ describe("production reconciliation residuals", () => {
     expect(used).toBeLessThanOrEqual(10 + 1e-9 * 11);
   });
 
+  it("repairs a pivot residual of a few millionths of the row scale", () => {
+    // Seen on a large row (scale ~29k): used 0.06 against available 0.
+    const constraints = [{ available: 0, coefficients: [29346, 1] }];
+    const result = reconcileProduction([2.03e-6, 0], constraints);
+    expect(29346 * result[0] + result[1]).toBeLessThanOrEqual(29346 * 1e-9);
+  });
+
   it("still rejects a real overdraw", () => {
     expect(() => reconcileProduction([1, 1], [{ available: 1, coefficients: [5, 5] }])).toThrow(
       "did not reconcile"

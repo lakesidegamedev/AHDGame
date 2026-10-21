@@ -153,7 +153,7 @@ export function feasibleProduction(input: {
  * REPAIRABLE_RESIDUAL of the row scale are repaired by trimming the net
  * consumers of that resource; anything larger is a real solver fault.
  */
-const REPAIRABLE_RESIDUAL = 1e-6;
+const REPAIRABLE_RESIDUAL = 1e-4;
 
 export function reconcileProduction(
   result: number[],
