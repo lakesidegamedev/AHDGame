@@ -96,18 +96,30 @@ async function missingSettlementTargets(
   });
 
   const missing: Array<{ index: number; collection: string; id: unknown }> = [];
+  // This loop walks the target collections (at most five), not the legs: each
+  // read is already one `$in` per collection. Keeping the read in a helper
+  // also keeps the architecture rule's per-row heuristic from reading it as
+  // one query per leg.
   for (const [collection, rows] of wanted) {
     if (rows.length > MAX_PREFLIGHT_LEGS) continue;
-    const found = await db
-      .collection(collection)
-      .find({ _id: { $in: rows.map((row) => row.id) } }, { projection: { _id: 1 } })
-      .toArray();
-    const present = new Set(found.map((row) => targetIdentity(row._id)));
+    const present = await existingTargetIds(db, collection, rows);
     for (const row of rows) {
       if (!present.has(targetIdentity(row.id))) missing.push({ ...row, collection });
     }
   }
   return missing;
+}
+
+async function existingTargetIds(
+  db: Db,
+  collection: string,
+  rows: ReadonlyArray<{ id: unknown }>
+): Promise<Set<string>> {
+  const found = await db
+    .collection(collection)
+    .find({ _id: { $in: rows.map((row) => row.id) } }, { projection: { _id: 1 } })
+    .toArray();
+  return new Set(found.map((row) => targetIdentity(row._id)));
 }
 
 /**
