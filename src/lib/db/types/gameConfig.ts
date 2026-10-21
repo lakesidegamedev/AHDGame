@@ -173,6 +173,11 @@ export interface GameConfig {
    * overdrawn cash as debt in credit and share price. 0 or absent = off.
    */
   honestBalanceSheetsStage?: number;
+  /**
+   * A player CEO raising their own salary above this share of trailing daily
+   * net income needs a shareholder vote. 0 or absent = off.
+   */
+  ceoSalaryVoteNetIncomeShare?: number;
   /** Group size costs rollout stage (1 = management overhead on the control group, 2 = commodity build toll, 3 = dumping guard, 4 = monopoly trigger, 5 = merger concentration on the control group). 0 or absent = off. */
   groupSizeCostsStage?: number;
   /** Public media editorial stance and audience response rules. Missing means off. */

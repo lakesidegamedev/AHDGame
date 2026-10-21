@@ -7,6 +7,7 @@ import { updateCorporationSettingsSchema } from "@/lib/api/schemas/corporations"
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
 import { getGameState } from "@/lib/gameState";
+import { evaluateCeoSalaryVote, openCeoSalaryVote } from "@/lib/corporations/ceoSalaryVote";
 import { loadFxRatesByCurrency } from "@/lib/currency/corporationCapital";
 import { buildSectorCurrencyRestatement } from "@/lib/corporations/queries/corporationDetail/currencyRestatement";
 import { computeRevenueRealizationRatio } from "@/lib/corporations/queries/corporationDetail/realizationRatio";
@@ -177,8 +178,29 @@ export async function updateCorporationSettings(request: Request, { params }: Ro
     if (rdBudget !== undefined) {
       updates.rdBudget = rdBudget;
     }
+    // A player CEO raising their own pay past the net-income share needs the
+    // shareholders (gameConfig.ceoSalaryVoteNetIncomeShare). Everything else in
+    // this save still applies; the salary stays where it is until the vote passes.
+    let ceoSalaryNotice: string | undefined;
     if (ceoSalary !== undefined) {
-      updates.ceoSalary = ceoSalary;
+      const gate = await evaluateCeoSalaryVote(db, corporation, ceoSalary);
+      if (!gate.required) {
+        updates.ceoSalary = ceoSalary;
+      } else {
+        const gameState = await getGameState();
+        const opened = await openCeoSalaryVote({
+          db,
+          corporation,
+          newSalary: ceoSalary,
+          currentTurn: gameState?.currentTurn ?? 0,
+        });
+        const why = gate.noPositiveNetIncome
+          ? "The company has no positive net income, so any pay rise needs a shareholder vote."
+          : `This raise is above ${Math.round(gate.freeCeilingLocal).toLocaleString("en-US")} a day, the share of net income a CEO can award themselves, so it needs a shareholder vote.`;
+        ceoSalaryNotice = opened.ok
+          ? `Other changes saved. ${why} The vote is open and your salary stays the same until it passes.`
+          : `Other changes saved. ${why} The vote could not be opened: ${opened.error}`;
+      }
     }
     if (shareBuybackMode !== undefined) {
       updates.shareBuybackMode = shareBuybackMode;
@@ -307,7 +329,10 @@ export async function updateCorporationSettings(request: Request, { params }: Ro
 
     await db.collection<Corporation>("corporations").updateOne({ _id: corporation._id }, updateDoc);
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      ...(ceoSalaryNotice ? { notice: ceoSalaryNotice } : {}),
+    });
   } catch (error) {
     return handleRouteError(error);
   }

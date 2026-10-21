@@ -102,7 +102,12 @@ export default function CeoOfficeTab({
         escrowFundingPerTurn: Math.max(0, Number(s.editEscrowFundingPerTurn) || 0),
       });
       if (ok) {
-        set({ actionSuccess: "Budgets saved." });
+        set({
+          actionSuccess:
+            typeof (data as { notice?: unknown } | null)?.notice === "string"
+              ? (data as { notice: string }).notice
+              : "Budgets saved.",
+        });
         onRefresh();
       } else {
         set({ actionError: apiErrorText(data, "Failed to save") });
