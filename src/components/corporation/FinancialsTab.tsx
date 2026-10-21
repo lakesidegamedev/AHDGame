@@ -22,6 +22,7 @@ import type {
 import { TariffRestrictions } from "./TariffRestrictions";
 import { SubsidyBenefits } from "./SubsidyBenefits";
 import { GroupOverviewCard } from "./GroupOverviewCard";
+import { BalanceSheetRings } from "./finance/BalanceSheetRings";
 import {
   buildAllocation,
   cashAfterContracts,
@@ -632,146 +633,155 @@ export default function FinancialsTab({
               ) : undefined
             }
           >
-            <StatementTable>
-              <StatementGroup>Assets</StatementGroup>
-              <StatementLine
-                indent
-                label="Cash"
-                amount={fmt(balanceSheet.assets.cashOnHand)}
-                note={
-                  fogged && lastQ?.liquidCapital != null
-                    ? `last report ${money.fmt(lastQ.liquidCapital)}`
-                    : undefined
-                }
-              />
-              {(corporation.shareEscrowBalance ?? 0) > 0 && (
-                <StatementLine
-                  indent
-                  label="Share buyback escrow"
-                  amount={money.fmt(corporation.shareEscrowBalance ?? 0)}
-                  note="funds sell-backs, not spendable"
-                />
-              )}
-              {balanceSheet.assets.bankEquity != null && (
-                <>
+            <BalanceSheetRings sheet={balanceSheet} fmt={fmt} />
+            <details className="group mt-5 border-t border-card-border pt-3">
+              <summary className="cursor-pointer list-none text-xs [&::-webkit-details-marker]:hidden font-semibold text-muted hover:text-foreground">
+                <span className="group-open:hidden">Every line</span>
+                <span className="hidden group-open:inline">Hide lines</span>
+              </summary>
+              <div className="mt-3">
+                <StatementTable>
+                  <StatementGroup>Assets</StatementGroup>
                   <StatementLine
                     indent
-                    label="Bank valuation"
-                    amount={fmtSigned(balanceSheet.assets.bankValuation ?? 0)}
-                    note="75% of book equity"
-                    title="The ring-fenced bank's residual equity at the same 75% haircut the share-price model uses. Deposits belong to the bank."
+                    label="Cash"
+                    amount={fmt(balanceSheet.assets.cashOnHand)}
+                    note={
+                      fogged && lastQ?.liquidCapital != null
+                        ? `last report ${money.fmt(lastQ.liquidCapital)}`
+                        : undefined
+                    }
                   />
-                  <StatementLine
-                    indent
-                    label="Bank book equity"
-                    amount={fmtSigned(balanceSheet.assets.bankEquity)}
-                  />
-                  {(balanceSheet.assets.bankNPV ?? 0) !== 0 && (
+                  {(corporation.shareEscrowBalance ?? 0) > 0 && (
                     <StatementLine
                       indent
-                      label="Banking NPV"
-                      amount={fmt(balanceSheet.assets.bankNPV ?? 0)}
+                      label="Share buyback escrow"
+                      amount={money.fmt(corporation.shareEscrowBalance ?? 0)}
+                      note="funds sell-backs, not spendable"
                     />
                   )}
-                </>
-              )}
-              <StatementLine
-                indent
-                label="Sector NPV"
-                amount={fmt(balanceSheet.assets.totalSectorNPV)}
-                note={`${npvRows.length} sector${npvRows.length === 1 ? "" : "s"}, discounted at 15% a year`}
-              />
-              {balanceSheet.assets.stockHoldingsValue > 0 && (
-                <StatementLine
-                  indent
-                  label="Stock holdings"
-                  amount={fmt(balanceSheet.assets.stockHoldingsValue)}
-                  note="at market price"
-                />
-              )}
-              {balanceSheet.assets.bondHoldingsValue > 0 && (
-                <StatementLine
-                  indent
-                  label="Bond holdings"
-                  amount={fmt(balanceSheet.assets.bondHoldingsValue)}
-                  note="at market price"
-                />
-              )}
-              {(balanceSheet.assets.fundHoldingsValue ?? 0) > 0 && (
-                <StatementLine
-                  indent
-                  label="Index fund holdings"
-                  amount={fmt(balanceSheet.assets.fundHoldingsValue ?? 0)}
-                  note="at current fund NAV"
-                />
-              )}
-              {(balanceSheet.assets.heldFunds ?? []).map((holding) => (
-                <StatementLine
-                  key={holding.fundId}
-                  indent
-                  label={
-                    holding.slug ? (
-                      <Link
-                        href={`/stockmarket/global/fund/${holding.slug}`}
-                        className="text-primary hover:underline"
-                      >
-                        {holding.name}
-                      </Link>
-                    ) : (
-                      holding.name
-                    )
-                  }
-                  amount={`${holding.units.toLocaleString("en-US")} units`}
-                />
-              ))}
-              {(balanceSheet.assets.imfFacilityReceivablesValue ?? 0) > 0 && (
-                <StatementLine
-                  indent
-                  label="IMF facility loans"
-                  amount={fmt(balanceSheet.assets.imfFacilityReceivablesValue)}
-                />
-              )}
-              {balanceSheet.assets.techAssetValue > 0 && (
-                <StatementLine
-                  indent
-                  label="Technology"
-                  amount={fmt(balanceSheet.assets.techAssetValue)}
-                  note="unlocked tech nodes, older decades discounted"
-                />
-              )}
-              <StatementLine
-                strong
-                label="Total assets"
-                amount={fmt(balanceSheet.assets.totalAssets)}
-              />
-
-              <StatementGroup>Liabilities</StatementGroup>
-              {balanceSheet.liabilities.totalDebt > 0 ? (
-                <>
+                  {balanceSheet.assets.bankEquity != null && (
+                    <>
+                      <StatementLine
+                        indent
+                        label="Bank valuation"
+                        amount={fmtSigned(balanceSheet.assets.bankValuation ?? 0)}
+                        note="75% of book equity"
+                        title="The ring-fenced bank's residual equity at the same 75% haircut the share-price model uses. Deposits belong to the bank."
+                      />
+                      <StatementLine
+                        indent
+                        label="Bank book equity"
+                        amount={fmtSigned(balanceSheet.assets.bankEquity)}
+                      />
+                      {(balanceSheet.assets.bankNPV ?? 0) !== 0 && (
+                        <StatementLine
+                          indent
+                          label="Banking NPV"
+                          amount={fmt(balanceSheet.assets.bankNPV ?? 0)}
+                        />
+                      )}
+                    </>
+                  )}
                   <StatementLine
                     indent
-                    label={`Bond debt, ${balanceSheet.liabilities.bondCount} issue${balanceSheet.liabilities.bondCount === 1 ? "" : "s"}`}
-                    amount={fmt(balanceSheet.liabilities.totalDebt)}
-                    note={`interest ${money.fmt(scaleMoney(balanceSheet.liabilities.dailyInterestCost, "turn"))} a turn`}
+                    label="Sector NPV"
+                    amount={fmt(balanceSheet.assets.totalSectorNPV)}
+                    note={`${npvRows.length} sector${npvRows.length === 1 ? "" : "s"}, discounted at 15% a year`}
                   />
+                  {balanceSheet.assets.stockHoldingsValue > 0 && (
+                    <StatementLine
+                      indent
+                      label="Stock holdings"
+                      amount={fmt(balanceSheet.assets.stockHoldingsValue)}
+                      note="at market price"
+                    />
+                  )}
+                  {balanceSheet.assets.bondHoldingsValue > 0 && (
+                    <StatementLine
+                      indent
+                      label="Bond holdings"
+                      amount={fmt(balanceSheet.assets.bondHoldingsValue)}
+                      note="at market price"
+                    />
+                  )}
+                  {(balanceSheet.assets.fundHoldingsValue ?? 0) > 0 && (
+                    <StatementLine
+                      indent
+                      label="Index fund holdings"
+                      amount={fmt(balanceSheet.assets.fundHoldingsValue ?? 0)}
+                      note="at current fund NAV"
+                    />
+                  )}
+                  {(balanceSheet.assets.heldFunds ?? []).map((holding) => (
+                    <StatementLine
+                      key={holding.fundId}
+                      indent
+                      label={
+                        holding.slug ? (
+                          <Link
+                            href={`/stockmarket/global/fund/${holding.slug}`}
+                            className="text-primary hover:underline"
+                          >
+                            {holding.name}
+                          </Link>
+                        ) : (
+                          holding.name
+                        )
+                      }
+                      amount={`${holding.units.toLocaleString("en-US")} units`}
+                    />
+                  ))}
+                  {(balanceSheet.assets.imfFacilityReceivablesValue ?? 0) > 0 && (
+                    <StatementLine
+                      indent
+                      label="IMF facility loans"
+                      amount={fmt(balanceSheet.assets.imfFacilityReceivablesValue)}
+                    />
+                  )}
+                  {balanceSheet.assets.techAssetValue > 0 && (
+                    <StatementLine
+                      indent
+                      label="Technology"
+                      amount={fmt(balanceSheet.assets.techAssetValue)}
+                      note="unlocked tech nodes, older decades discounted"
+                    />
+                  )}
                   <StatementLine
                     strong
-                    label="Total liabilities"
-                    amount={fmt(balanceSheet.liabilities.totalDebt)}
+                    label="Total assets"
+                    amount={fmt(balanceSheet.assets.totalAssets)}
                   />
-                </>
-              ) : (
-                <StatementLine indent label="No outstanding debt" amount={money.fmt(0)} />
-              )}
 
-              <StatementGroup>Equity</StatementGroup>
-              <StatementLine
-                strong
-                label="Book value"
-                amount={fmt(balanceSheet.equity.bookValue)}
-                title="Assets minus liabilities: the net worth attributable to shareholders."
-              />
-            </StatementTable>
+                  <StatementGroup>Liabilities</StatementGroup>
+                  {balanceSheet.liabilities.totalDebt > 0 ? (
+                    <>
+                      <StatementLine
+                        indent
+                        label={`Bond debt, ${balanceSheet.liabilities.bondCount} issue${balanceSheet.liabilities.bondCount === 1 ? "" : "s"}`}
+                        amount={fmt(balanceSheet.liabilities.totalDebt)}
+                        note={`interest ${money.fmt(scaleMoney(balanceSheet.liabilities.dailyInterestCost, "turn"))} a turn`}
+                      />
+                      <StatementLine
+                        strong
+                        label="Total liabilities"
+                        amount={fmt(balanceSheet.liabilities.totalDebt)}
+                      />
+                    </>
+                  ) : (
+                    <StatementLine indent label="No outstanding debt" amount={money.fmt(0)} />
+                  )}
+
+                  <StatementGroup>Equity</StatementGroup>
+                  <StatementLine
+                    strong
+                    label="Book value"
+                    amount={fmt(balanceSheet.equity.bookValue)}
+                    title="Assets minus liabilities: the net worth attributable to shareholders."
+                  />
+                </StatementTable>
+              </div>
+            </details>
           </DenseSection>
 
           <aside className="min-w-0 space-y-6">

@@ -7,6 +7,7 @@ import { resolveCorpDisplayCurrency } from "@/lib/corporations/resolveCorpDispla
 import type { FillRateBand } from "@/lib/corporations/financialFogOfWar";
 import { ROW_ACCENT, type Tone } from "./InlineViz";
 import { useCorpLedger } from "../ledger/LedgerContext";
+import { ProportionBar } from "../ledger/ProportionBar";
 import {
   FILL_BAND_TEXT,
   fillBandSentence,
@@ -274,6 +275,10 @@ export function StatementLine({
   amountClass?: string;
   title?: string;
 }) {
+  const ledger = useCorpLedger();
+  // In the ledger the share of revenue also draws as a bar; its magnitude is
+  // what matters, the sign is already in the amount.
+  const share = pct != null ? Math.abs(Number.parseFloat(pct)) : NaN;
   return (
     <tr className={strong ? "font-semibold" : undefined} title={title}>
       <td
@@ -289,7 +294,14 @@ export function StatementLine({
         {amount}
       </td>
       <td className="hidden whitespace-nowrap border-b border-card-border/60 px-2 py-1.5 text-right font-mono text-xs tabular-nums text-muted sm:table-cell">
-        {pct ?? ""}
+        {ledger && Number.isFinite(share) ? (
+          <span className="inline-flex items-center justify-end gap-2">
+            <ProportionBar pct={share} tone="muted" className="w-14" />
+            {pct}
+          </span>
+        ) : (
+          (pct ?? "")
+        )}
       </td>
       <td className="hidden border-b border-card-border/60 py-1.5 pl-2 text-xs text-muted md:table-cell">
         {note}

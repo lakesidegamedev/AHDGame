@@ -9,7 +9,10 @@ import { describe, expect, it } from "vitest";
  */
 export const LEDGER_FILES: string[] = [];
 
-const LEDGER_DIR = join(process.cwd(), "src/components/corporation/ledger");
+/** Directories written for the redesign; every component in them is checked. */
+const LEDGER_DIRS = ["ledger", "masthead", "overview", "finance"].map((d) =>
+  join(process.cwd(), "src/components/corporation", d)
+);
 const COLOUR_LITERAL = /#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(/;
 
 function stripComments(source: string): string {
@@ -17,9 +20,11 @@ function stripComments(source: string): string {
 }
 
 function sourceFiles(): string[] {
-  const own = readdirSync(LEDGER_DIR)
-    .filter((f) => f.endsWith(".tsx") && !f.endsWith(".test.tsx"))
-    .map((f) => join(LEDGER_DIR, f));
+  const own = LEDGER_DIRS.flatMap((dir) =>
+    readdirSync(dir)
+      .filter((f) => f.endsWith(".tsx") && !f.endsWith(".test.tsx"))
+      .map((f) => join(dir, f))
+  );
   return [...own, ...LEDGER_FILES.map((f) => join(process.cwd(), f))];
 }
 

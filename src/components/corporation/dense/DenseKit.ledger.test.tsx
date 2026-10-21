@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { render } from "@testing-library/react";
-import { DenseSection, KVList, KVRow } from "./DenseKit";
+import { DenseSection, KVList, KVRow, StatementLine } from "./DenseKit";
 import { CorpLedgerProvider, useCorpLedger } from "../ledger/LedgerContext";
 
 function Probe() {
@@ -52,5 +52,32 @@ describe("DenseKit ledger variants", () => {
     );
     expect(container.querySelector("[data-corp-ledger]")).not.toBeNull();
     expect(container.querySelector("[data-testid=probe]")?.textContent).toBe("true");
+  });
+});
+
+describe("StatementLine ledger bar", () => {
+  const line = (pct: string | null) => (
+    <table>
+      <tbody>
+        <StatementLine label="Wages" amount="$18.4M" pct={pct} />
+      </tbody>
+    </table>
+  );
+
+  it("draws a share-of-revenue bar only in the ledger", () => {
+    const plain = render(line("38.2%"));
+    expect(plain.container.querySelector("[data-fill]")).toBeNull();
+    plain.unmount();
+    const ledger = render(<CorpLedgerProvider>{line("38.2%")}</CorpLedgerProvider>);
+    expect(ledger.container.querySelector<HTMLElement>("[data-fill]")!.style.width).toBe("38.2%");
+    expect(ledger.getByText("38.2%")).toBeTruthy();
+  });
+
+  it("sizes a negative share by its magnitude and skips a missing one", () => {
+    const neg = render(<CorpLedgerProvider>{line("-3.1%")}</CorpLedgerProvider>);
+    expect(neg.container.querySelector<HTMLElement>("[data-fill]")!.style.width).toBe("3.1%");
+    neg.unmount();
+    const none = render(<CorpLedgerProvider>{line(null)}</CorpLedgerProvider>);
+    expect(none.container.querySelector("[data-fill]")).toBeNull();
   });
 });
