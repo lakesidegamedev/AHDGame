@@ -200,7 +200,11 @@ describe("physical producer preparation", () => {
     expect(prepareProducerPhysicalSector(input).prepared.plan.capacityUnits).toBe(off);
     env.transitionFirstFundedTurn = env.currentTurn - 1000;
     expect(prepareProducerPhysicalSector(input).prepared.plan.capacityUnits).toBeLessThan(off);
+    // Parked capacity retires too once it has sat idle past the grace.
     (sector as unknown as { mothballed: boolean }).mothballed = true;
+    expect(prepareProducerPhysicalSector(input).prepared.plan.capacityUnits).toBeLessThan(off);
+    // ...but not inside the transition window.
+    env.transitionFirstFundedTurn = env.currentTurn - 1;
     expect(prepareProducerPhysicalSector(input).prepared.plan.capacityUnits).toBeCloseTo(off, 10);
   });
 
