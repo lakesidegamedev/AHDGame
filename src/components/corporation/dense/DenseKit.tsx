@@ -6,6 +6,7 @@ import { useLocalCurrency } from "@/hooks/useLocalCurrency";
 import { resolveCorpDisplayCurrency } from "@/lib/corporations/resolveCorpDisplayCurrency";
 import type { FillRateBand } from "@/lib/corporations/financialFogOfWar";
 import { ROW_ACCENT, type Tone } from "./InlineViz";
+import { useCorpLedger } from "../ledger/LedgerContext";
 import {
   FILL_BAND_TEXT,
   fillBandSentence,
@@ -40,17 +41,30 @@ export function DenseSection({
   children: ReactNode;
   className?: string;
 }) {
+  const ledger = useCorpLedger();
   return (
     <section id={id} className={`min-w-0 scroll-mt-24 ${className}`}>
-      <div className="flex min-h-8 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-card-border pb-1.5">
+      <div
+        className={`flex min-h-8 flex-wrap items-center justify-between gap-x-4 gap-y-1 ${
+          ledger ? "border-b-2 border-foreground pb-2" : "border-b border-card-border pb-1.5"
+        }`}
+      >
         {/* The meta sits beside the heading, not inside it, so the heading's
             accessible name is just the title. */}
         <div className="flex min-w-0 items-baseline gap-2">
-          <span
-            aria-hidden
-            className="h-3 w-[3px] shrink-0 self-center rounded-full bg-primary/80"
-          />
-          <h2 className="truncate text-sm font-semibold text-foreground">{title}</h2>
+          {!ledger && (
+            <span
+              aria-hidden
+              className="h-3 w-[3px] shrink-0 self-center rounded-full bg-primary/80"
+            />
+          )}
+          <h2
+            className={`truncate font-semibold text-foreground ${
+              ledger ? "text-[17px] tracking-tight" : "text-sm"
+            }`}
+          >
+            {title}
+          </h2>
           {meta != null && <span className="text-xs text-muted">{meta}</span>}
         </div>
         {actions != null && <div className="flex flex-wrap items-center gap-1.5">{actions}</div>}
@@ -88,16 +102,30 @@ export function KVRow({
   /** Inline mark (bar, gauge) drawn before the value. */
   mark?: ReactNode;
 }) {
+  const ledger = useCorpLedger();
   return (
     <div
-      className={`flex items-center justify-between gap-3 border-b border-card-border/60 last:border-b-0 ${
-        lead ? "min-h-10 py-1.5" : "min-h-8 py-1"
-      } ${accent ? `-ml-2 border-l-2 pl-2 ${ROW_ACCENT[accent]}` : ""}`}
+      className={`flex items-center justify-between gap-3 ${
+        ledger ? "" : "border-b border-card-border/60 last:border-b-0"
+      } ${lead ? "min-h-10 py-1.5" : "min-h-8 py-1"} ${
+        accent ? `-ml-2 border-l-2 pl-2 ${ROW_ACCENT[accent]}` : ""
+      }`}
       title={title}
     >
-      <dt className={`min-w-0 truncate text-xs ${lead ? "text-foreground/80" : "text-muted"}`}>
+      <dt
+        className={`truncate text-xs ${lead ? "text-foreground/80" : "text-muted"} ${
+          ledger ? "min-w-0 shrink" : "min-w-0"
+        }`}
+      >
         {label}
       </dt>
+      {ledger && (
+        <span
+          aria-hidden
+          data-ledger-leader
+          className="min-w-3 flex-1 -translate-y-1 self-end border-b border-dotted border-card-border"
+        />
+      )}
       <dd className="flex min-w-0 items-center justify-end gap-2 text-right">
         {mark}
         <span
@@ -156,12 +184,15 @@ export function Th({
     ) : (
       children
     );
+  const ledger = useCorpLedger();
   return (
     <th
       scope="col"
       title={title}
       aria-sort={sorted === "asc" ? "ascending" : sorted === "desc" ? "descending" : undefined}
-      className={`whitespace-nowrap border-b border-card-border px-2 py-1.5 text-[11px] font-medium text-muted ${alignClass} ${className}`}
+      className={`whitespace-nowrap border-b border-card-border px-2 py-1.5 font-medium text-muted ${
+        ledger ? "text-[10px] uppercase tracking-[0.1em]" : "text-[11px]"
+      } ${alignClass} ${className}`}
     >
       {content}
     </th>
@@ -305,6 +336,7 @@ export function SmallButton({
   ariaLabel?: string;
   className?: string;
 }) {
+  const ledger = useCorpLedger();
   const toneClass =
     tone === "primary"
       ? "border-primary bg-primary text-white hover:bg-primary/90"
@@ -318,7 +350,9 @@ export function SmallButton({
       disabled={disabled}
       title={title}
       aria-label={ariaLabel}
-      className={`inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-md border px-2.5 font-sans text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${toneClass} ${className}`}
+      className={`inline-flex h-7 shrink-0 items-center justify-center gap-1 border px-2.5 font-sans text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+        ledger ? "rounded-[calc(var(--corp-rad)-2px)]" : "rounded-md"
+      } ${toneClass} ${className}`}
     >
       {children}
     </button>
@@ -339,11 +373,14 @@ export function Segmented<T extends string | number>({
   ariaLabel: string;
   disabled?: boolean;
 }) {
+  const ledger = useCorpLedger();
   return (
     <div
       role="radiogroup"
       aria-label={ariaLabel}
-      className="inline-flex h-7 shrink-0 items-stretch overflow-hidden rounded-md border border-card-border"
+      className={`inline-flex h-7 shrink-0 items-stretch overflow-hidden border border-card-border ${
+        ledger ? "rounded-[calc(var(--corp-rad)-2px)]" : "rounded-md"
+      }`}
     >
       {options.map((opt) => {
         const active = opt.value === value;
