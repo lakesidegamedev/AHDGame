@@ -551,20 +551,7 @@ async function applyLeg(
   db: Db,
   key: string,
   i: number,
-  leg: MoneyMoveRecordLeg,
-  /**
-   * Journal fields this call already holds because it claimed the key. A
-   * freshly claimed move cannot have been applied by another worker — a
-   * concurrent retry sees the key and replays instead of applying it — so the
-   * first attempt does not need to read the journal back. The read is restored
-   * after any retry (receipt wait or refusal clear), when another worker could
-   * have moved the record.
-   */
-  known?: {
-    status: string;
-    genericMoneyMoveVersion?: number;
-    retryCreditLegOnGuardFailure?: boolean;
-  }
+  leg: MoneyMoveRecordLeg
 ): Promise<string | null> {
   const records = db.collection<MoneyMoveRecord>(MONEY_MOVE_COLLECTION);
   const path = `legs.${i}`;
@@ -593,35 +580,24 @@ async function applyLeg(
     // Only this leg is read back. A maturity payout carries one leg per
     // holder (120-170 on the live world), so projecting the whole array makes
     // every leg acknowledgement decode the entire receipt again.
-    let saved: MoneyMoveRecordLeg | undefined;
-    let status: string | undefined;
-    let version: number | undefined;
-    let retryCredit: boolean | undefined;
-    if (known && attempt === 0) {
-      saved = leg;
-      status = known.status;
-      version = known.genericMoneyMoveVersion;
-      retryCredit = known.retryCreditLegOnGuardFailure;
-    } else {
-      const record = await records.findOne(
-        { _id: key },
-        {
-          projection: {
-            status: 1,
-            genericMoneyMoveVersion: 1,
-            retryCreditLegOnGuardFailure: 1,
-            legs: { $slice: [i, 1] },
-          },
-        }
-      );
-      // The server answers with the one-element slice; an in-memory test double
-      // may return the whole array. Length tells the two apart without guessing
-      // at an index the record does not have.
-      saved = record ? (record.legs.length === 1 ? record.legs[0] : record.legs[i]) : undefined;
-      status = record?.status;
-      version = record?.genericMoneyMoveVersion;
-      retryCredit = record?.retryCreditLegOnGuardFailure;
-    }
+    const record = await records.findOne(
+      { _id: key },
+      {
+        projection: {
+          status: 1,
+          genericMoneyMoveVersion: 1,
+          retryCreditLegOnGuardFailure: 1,
+          legs: { $slice: [i, 1] },
+        },
+      }
+    );
+    // The server answers with the one-element slice; an in-memory test double
+    // may return the whole array. Length tells the two apart without guessing
+    // at an index the record does not have.
+    const saved = record ? (record.legs.length === 1 ? record.legs[0] : record.legs[i]) : undefined;
+    const status = record?.status;
+    const version = record?.genericMoneyMoveVersion;
+    const retryCredit = record?.retryCreditLegOnGuardFailure;
     if (!saved) return `Leg ${i} of ${key} is missing from its journal.`;
     const receipt = current?.pendingMoneyMoveReceipt;
     if (receipt) {
@@ -630,7 +606,6 @@ async function applyLeg(
       await acknowledgeLeg(db, leg.collection, leg.filter._id, receipt);
       if (receipt.key === key && receipt.index === i)
         return receipt.outcome === "applied" ? null : receipt.error!;
-      known = undefined;
       continue;
     }
     // The target's settled-key stamp is the durable delivery witness. It is
@@ -654,7 +629,6 @@ async function applyLeg(
         },
         { $unset: { [`${path}.refusal`]: "" } }
       );
-      known = undefined;
       continue;
     }
     if (status !== "partial") return `Money move ${key} is already ${status}.`;
@@ -998,19 +972,7 @@ async function executeMoneyMove(
       if (record.status === "partial") bookkeeping.add(i);
       continue;
     }
-    const failed = await applyLeg(
-      db,
-      key,
-      i,
-      leg,
-      claimed
-        ? {
-            status: record.status,
-            genericMoneyMoveVersion: record.genericMoneyMoveVersion,
-            retryCreditLegOnGuardFailure: record.retryCreditLegOnGuardFailure,
-          }
-        : undefined
-    );
+    const failed = await applyLeg(db, key, i, leg);
     if (failed) {
       failure = failed;
       break;
