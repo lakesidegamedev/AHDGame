@@ -183,6 +183,21 @@ export async function runFundedProducerTurn(
           (c) => rateOf(countryCurrency.get(c))
         )
       : undefined;
+  const incomeFloor = input.env.householdIncomeFloor ?? 0;
+  const openingShareByCountry =
+    incomeFloor > 0
+      ? new Map(
+          Object.entries(
+            (
+              await db
+                .collection<{ _id: string; shareByCountry?: Record<string, number> }>(
+                  "producerHouseholdSource"
+                )
+                .findOne({ _id: worldEpoch })
+            )?.shareByCountry ?? {}
+          )
+        )
+      : undefined;
   const demand = await buildProducerTurnDemand(db, {
     turn,
     worldEpoch,
@@ -190,6 +205,8 @@ export async function runFundedProducerTurn(
     env: input.env,
     sectorOps: [],
     publicCarryIn,
+    householdIncomeFloor: incomeFloor,
+    openingShareByCountry,
     carry: liveCarry(lookups, worldEpoch, turn),
     publicAccountId: publicWallet,
     investmentAccountId: investmentWallet,
@@ -658,13 +675,31 @@ export async function runFundedProducerTurn(
     stateOfProducer: (id) => sectorState.get(demand.planSector.get(id) ?? "") ?? null,
     unitScale: TURNS_PER_DAY,
   });
-  await db
-    .collection<{ _id: string }>(PRODUCER_MARKET_OUTCOMES)
-    .replaceOne(
-      { _id: `${worldEpoch}:${turn}` },
-      { _id: `${worldEpoch}:${turn}`, worldEpoch, turn, rows, at: new Date() } as never,
+  if (demand.householdSource && openingShareByCountry && openingShareByCountry.size === 0)
+    await db.collection<{ _id: string }>("producerHouseholdSource").updateOne(
+      { _id: worldEpoch },
+      {
+        $setOnInsert: {
+          worldEpoch,
+          turn,
+          shareByCountry: demand.householdSource.currentShares,
+          at: new Date(),
+        },
+      } as never,
       { upsert: true }
     );
+  await db.collection<{ _id: string }>(PRODUCER_MARKET_OUTCOMES).replaceOne(
+    { _id: `${worldEpoch}:${turn}` },
+    {
+      _id: `${worldEpoch}:${turn}`,
+      worldEpoch,
+      turn,
+      rows,
+      ...(demand.householdSource ? { householdSource: demand.householdSource } : {}),
+      at: new Date(),
+    } as never,
+    { upsert: true }
+  );
 
   // Close and transition support settled with the market (see closeAtSettlement).
   const close = settled.result.close;

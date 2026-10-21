@@ -10,6 +10,7 @@ import { TURNS_PER_DAY, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
 import { householdDemandSpecs } from "@/lib/market/producerMarket/householdDemandRules";
 import { HOUSEHOLD_OPENING_TURNS } from "@/lib/market/producerMarket/householdOpeningRules";
+import { heldShares, incomeFloorShares } from "@/lib/market/producerMarket/householdSourceRules";
 import {
   householdTransferFunding,
   publicBuyerFunding,
@@ -75,6 +76,10 @@ export async function buildProducerTurnDemand(
     publicCarryIn?: ReadonlyMap<string, LineCarry>;
     /** Optional timing hook, called at the end of each numbered step. */
     stage?: (name: string) => void;
+    /** gameConfig.producerHouseholdIncomeFloor: target household income per turn (anchor); 0 or absent = off. */
+    householdIncomeFloor?: number;
+    /** Each country's plant-economy share at its first funded turn (see heldShares). */
+    openingShareByCountry?: ReadonlyMap<string, number>;
   }
 ) {
   const { worldEpoch, carry } = input;
@@ -306,20 +311,64 @@ export async function buildProducerTurnDemand(
   const publicFunding = funding.reduce((s, f) => s + f.fundingLocal, 0);
   // Transfer lines of the same budgets (social security, welfare, pensions)
   // are household income; the treasury deducts them already.
+  const transferBudgets = lookups.federalBudgets.map((b) => {
+    const code = resolveCountryCurrencyCode(b);
+    const rate = (code && lookups.exchangeRatesByCurrency.get(code)) || 1;
+    return {
+      countryId: String(b.countryId),
+      byCategory: Object.fromEntries(
+        Object.entries(b.spending?.byCategory ?? {}).map(([k, v]) => [k, (v as number) / rate])
+      ),
+    };
+  });
+  const currentShares = new Map(
+    Object.entries(publicShareByCountry).map(([id, v]) => [id, v.share])
+  );
+  // Steady household income (producerHouseholdIncomeFloor > 0): hold each
+  // country's opening share and top up to the income floor from its own
+  // transfer lines. Off: transfers follow the live plant share as before.
+  let transferShares: ReadonlyMap<string, number> = currentShares;
+  let householdSource: {
+    floorAnchor: number;
+    plannedIncomeAnchor: number;
+    topUpAnchor: number;
+    currentShares: Record<string, number>;
+  } | null = null;
+  const incomeFloor = input.householdIncomeFloor ?? 0;
+  if (incomeFloor > 0) {
+    const held = heldShares(currentShares, input.openingShareByCountry);
+    const lineAnchorByCountry = new Map<string, number>();
+    for (const t of householdTransferFunding(
+      transferBudgets,
+      [...householdWallets.values()],
+      stateWeightsByCountry,
+      new Map([...held.keys()].map((id) => [id, 1])),
+      TURNS_PER_YEAR
+    ))
+      lineAnchorByCountry.set(t.countryId, (lineAnchorByCountry.get(t.countryId) ?? 0) + t.amount);
+    const plannedIncomeAnchor = preparedSectors.reduce(
+      (sum, p) => sum + (p.plan.labourCost ?? 0) + (p.plan.otherOperatingCost ?? 0),
+      0
+    );
+    const floored = incomeFloorShares({
+      shares: held,
+      lineAnchorByCountry,
+      plannedIncomeAnchor,
+      floorAnchor: incomeFloor,
+    });
+    transferShares = floored.shares;
+    householdSource = {
+      floorAnchor: incomeFloor,
+      plannedIncomeAnchor,
+      topUpAnchor: floored.topUpAnchor,
+      currentShares: Object.fromEntries(currentShares),
+    };
+  }
   const householdTransfers = householdTransferFunding(
-    lookups.federalBudgets.map((b) => {
-      const code = resolveCountryCurrencyCode(b);
-      const rate = (code && lookups.exchangeRatesByCurrency.get(code)) || 1;
-      return {
-        countryId: String(b.countryId),
-        byCategory: Object.fromEntries(
-          Object.entries(b.spending?.byCategory ?? {}).map(([k, v]) => [k, (v as number) / rate])
-        ),
-      };
-    }),
+    transferBudgets,
     [...householdWallets.values()],
     stateWeightsByCountry,
-    new Map(Object.entries(publicShareByCountry).map(([id, v]) => [id, v.share])),
+    transferShares,
     TURNS_PER_YEAR
   );
   const householdTransferTotal = householdTransfers.reduce((sum, t) => sum + t.amount, 0);
@@ -512,6 +561,7 @@ export async function buildProducerTurnDemand(
     householdSeed,
     householdTransfers,
     householdTransferTotal,
+    householdSource,
     householdWallets,
     households,
     investmentBuyerOrders,

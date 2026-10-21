@@ -95,6 +95,8 @@ export type ProducerPhysicalEnv = Pick<
   publicCarryShare?: number;
   /** gameConfig.producerRunPaceDrop: largest share of last turn's run a plant may shed in one turn (0 or absent = off). */
   runPaceDrop?: number;
+  /** gameConfig.producerHouseholdIncomeFloor: target household income per turn, anchor (0 or absent = off). */
+  householdIncomeFloor?: number;
   /** gameConfig.producerIdleRetireStage: >= 1 retires capacity that persistently sells nothing. 0 or absent = off. */
   idleRetireStage?: number;
   /** gameConfig.decommissionGrantShare: share of retired book paid from unspent public funding. */
