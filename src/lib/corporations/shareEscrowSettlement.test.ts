@@ -255,6 +255,32 @@ describe("shareEscrowSettlement", () => {
       expect(res.split).toEqual({ escrowDebited: 0, treasuryDebited: 1000 });
     });
 
+    describe("with the buyback capped by cash (honest balance sheets stage 3)", () => {
+      beforeEach(() => {
+        db.collection("gameConfig");
+        db.collectionMocks.gameConfig!.findOne.mockResolvedValue({ honestBalanceSheetsStage: 3 });
+      });
+
+      it("pays from escrow first and the treasury for the rest when it can cover", async () => {
+        db.collection("corporations");
+        const corp = db.collectionMocks.corporations!;
+        corp.findOneAndUpdate.mockResolvedValue({ shareEscrowBalance: 200 });
+        const res = await settleFloatSellDebit(db as unknown as Db, ESCROW, 1000);
+        expect(res.ok).toBe(true);
+        expect(res.split).toEqual({ escrowDebited: 200, treasuryDebited: 800 });
+        // the filter carries the cash cap, so an uncovered sale matches nothing
+        expect(corp.findOneAndUpdate.mock.calls[0][0].$expr).toBeDefined();
+      });
+
+      it("refuses the sale when escrow plus treasury cash cannot cover it", async () => {
+        db.collection("corporations");
+        db.collectionMocks.corporations!.findOneAndUpdate.mockResolvedValue(null);
+        const res = await settleFloatSellDebit(db as unknown as Db, ESCROW, 1000);
+        expect(res.ok).toBe(false);
+        expect(res.split).toBeUndefined();
+      });
+    });
+
     it("instant mode gates against liquidCapital via findOneAndUpdate", async () => {
       const corp = db.collectionMocks; // force creation
       db.collection("corporations");

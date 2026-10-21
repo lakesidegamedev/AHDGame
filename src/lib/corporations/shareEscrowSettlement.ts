@@ -1,3 +1,4 @@
+import { HONEST_BUYBACK_CAP_STAGE } from "@/lib/corporations/honestBalanceSheets";
 import type { ClientSession, Db, ObjectId } from "mongodb";
 import type { Corporation, EquityMarketPool } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -10,6 +11,7 @@ import {
   decrementCorpIssuanceProceeds,
   creditCorpShareEscrow,
   debitCorpShareEscrowFloored,
+  debitCorpShareEscrowCapped,
   type EscrowDebitSplit,
 } from "@/lib/financialTxLog/atomicCashGuard";
 import {
@@ -211,6 +213,14 @@ export type FloatSellSettlement = {
   pacedRemainingLocal?: number;
 };
 
+/** gameConfig.honestBalanceSheetsStage >= 3 caps escrow buybacks by the issuer's cash. */
+async function buybackCappedByCash(db: Db): Promise<boolean> {
+  const cfg = await db
+    .collection<{ honestBalanceSheetsStage?: number }>("gameConfig")
+    .findOne({ _id: "default" as never }, { projection: { honestBalanceSheetsStage: 1 } });
+  return (cfg?.honestBalanceSheetsStage ?? 0) >= HONEST_BUYBACK_CAP_STAGE;
+}
+
 /**
  * Settle the issuer side of a float SELL.
  * - escrow mode: debit the market-making escrow FLOORED at zero — escrow can
@@ -263,6 +273,11 @@ export async function settleFloatSellDebit(
     return { ok: debit.ok };
   }
   if (getShareBuybackMode(corp) === "escrow") {
+    // Honest balance sheets stage 3: a buyback cannot overdraw the treasury.
+    if (await buybackCappedByCash(db)) {
+      const split = await debitCorpShareEscrowCapped(db, corp._id, amountLocal, options);
+      return split ? { ok: true, split } : { ok: false };
+    }
     const split = await debitCorpShareEscrowFloored(db, corp._id, amountLocal, options);
     return { ok: true, split };
   }
