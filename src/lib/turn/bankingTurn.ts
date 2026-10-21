@@ -64,7 +64,7 @@ import { effectiveBankRatesFromPrime, playerDepositRatePercent } from "@/lib/ban
 import { getBankDepositCeiling } from "@/lib/banking/capacityAllocation";
 import { roundSavingsAmount, savingsApyPercent } from "@/lib/currency/savingsInterest";
 import { loadCentralBankPricingAdjustment } from "@/lib/monetaryPolicy/centralBankPricing";
-import { emitTx, emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
+import { emitTx, emitTxBulk, loadTxThresholds, type TxInput } from "@/lib/financialTxLog/emit";
 import { isDepositTakingCharter, isNamedLendingCharter } from "@/lib/banking/charterKinds";
 import { charterCapabilities, charterMay } from "@/lib/banking/rules/capabilities";
 import { getCashReserves, bankEquity } from "@/lib/banking/bankCash";
@@ -1105,9 +1105,20 @@ async function serviceNamedLoanBook(
     list.push(loan);
     loansByBorrower.set(key, list);
   }
+  const txEntries: TxInput[] = [];
   const serviceBorrower = async (borrowerLoans: typeof loans) => {
     for (const loan of borrowerLoans) {
-      const loanResult = await servicePlayerLoan(db, turn, corp._id, loan, currency, corp.name);
+      const loanResult = await servicePlayerLoan(
+        db,
+        turn,
+        corp._id,
+        loan,
+        currency,
+        corp.name,
+        undefined,
+        false,
+        txEntries
+      );
       total.interestCollected += loanResult.interestCollected;
       total.principalRepaid += loanResult.principalRepaid;
       total.writtenOff += loanResult.writtenOff;
@@ -1125,6 +1136,7 @@ async function serviceNamedLoanBook(
   // serial so parallel admission cannot repeatedly starve all but one loan.
   for (const group of borrowerGroups)
     if (group.some((loan) => loan.constructionCollateral)) await serviceBorrower(group);
+  if (txEntries.length > 0) await emitTxBulk(db, txEntries, await loadTxThresholds(db));
   return total;
 }
 
@@ -1255,7 +1267,13 @@ async function servicePlayerLoan(
     path: "bankCharter.cashReserves",
     note: "instalment reaches the lending bank",
   },
-  trackInsuranceRecovery = false
+  trackInsuranceRecovery = false,
+  /**
+   * When supplied, the repayment's financial-tx row is queued here and the
+   * caller flushes the whole bank's rows with one emitTxBulk (one thresholds
+   * read, one anchor-rate map, one insertMany) instead of one emitTx per loan.
+   */
+  txEntries?: TxInput[]
 ): Promise<LoanServiceResult> {
   const empty: LoanServiceResult = {
     interestCollected: 0,
@@ -1309,7 +1327,7 @@ async function servicePlayerLoan(
   // The journal lands all of it exactly once under the per-loan-per-turn key,
   // so a retried turn can neither charge the borrower twice nor advance the
   // loan twice, and a crash between money and record is a visible partial.
-  const available = await readBorrowerAvailable(db, loan, currency);
+  const { available, name: borrowerName } = await readBorrowerAvailable(db, loan, currency);
   const { decision, transition } = loanServiceTransition({
     loan,
     borrowerAvailable: available,
@@ -1343,8 +1361,7 @@ async function servicePlayerLoan(
   const advanced = settled.appliedProjections.length === transition.projections.length;
 
   if (settled.status === "applied" && moneyLanded && decision.payment > 0) {
-    const borrowerName = await readBorrowerName(db, loan);
-    await emitTx(db, {
+    const entry: TxInput = {
       type: "bank_loan_repayment",
       turn,
       createdAt: new Date(),
@@ -1357,7 +1374,9 @@ async function servicePlayerLoan(
       counterpartyId: loan.bankCorporationId,
       counterpartyName: bankName,
       meta: { loanId: loan._id.toString(), settlementId: transition.key },
-    });
+    };
+    if (txEntries) txEntries.push(entry);
+    else await emitTx(db, entry);
   }
   if (settled.status === "applied" && advanced) {
     emitBankingAuditEvent(
@@ -1385,40 +1404,33 @@ async function servicePlayerLoan(
   };
 }
 
-/** Borrower display name for the ledger leg. One read per serviced loan. */
-async function readBorrowerName(db: Db, loan: BankLoan): Promise<string> {
-  if (!loan.borrowerId) return "Borrower";
-  if (loan.borrowerType === "character") {
-    const ch = await db
-      .collection<Character>("characters")
-      .findOne({ _id: loan.borrowerId }, { projection: { name: 1 } });
-    return ch?.name ?? "Borrower";
-  }
-  const corp = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: loan.borrowerId }, { projection: { name: 1 } });
-  return corp?.name ?? "Borrower";
-}
-
 async function readBorrowerAvailable(
   db: Db,
   loan: BankLoan,
   currency: CurrencyCode
-): Promise<number> {
-  if (!loan.borrowerId) return 0;
+): Promise<{ available: number; name: string }> {
+  if (!loan.borrowerId) return { available: 0, name: "Borrower" };
   if (loan.borrowerType === "character") {
     const ch = await db
       .collection<Character>("characters")
       .findOne(
         { _id: loan.borrowerId },
-        { projection: { [`currencyBalances.personal.${currency}`]: 1 } }
+        { projection: { name: 1, [`currencyBalances.personal.${currency}`]: 1 } }
       );
-    return Math.max(0, ch?.currencyBalances?.personal?.[currency] ?? 0);
+    return {
+      available: Math.max(0, ch?.currencyBalances?.personal?.[currency] ?? 0),
+      // The ledger leg needs the name; read it with the balance instead of
+      // paying a second round trip per serviced loan.
+      name: ch?.name ?? "Borrower",
+    };
   }
   const corp = await db
     .collection<Corporation>("corporations")
-    .findOne({ _id: loan.borrowerId }, { projection: { liquidCapital: 1 } });
-  return Math.max(0, corp?.liquidCapital ?? 0);
+    .findOne({ _id: loan.borrowerId }, { projection: { name: 1, liquidCapital: 1 } });
+  return {
+    available: Math.max(0, corp?.liquidCapital ?? 0),
+    name: corp?.name ?? "Borrower",
+  };
 }
 
 type NpcBulkState = {
