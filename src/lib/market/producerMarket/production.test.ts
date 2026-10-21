@@ -888,3 +888,67 @@ describe("receipt-backed production", () => {
     expect(result.accounts.reduce((sum, a) => sum + a.cash, 0)).toBe(4000);
   });
 });
+
+describe("same-turn spillover", () => {
+  const stockOnly = (id: string, commodity: string, units: number, price: number): ProductionPlan =>
+    plant({
+      id,
+      accountId: `${id}-corp`,
+      capacityUnits: 0,
+      labourCost: 0,
+      otherOperatingCost: 0,
+      inputs: [],
+      outputs: [
+        {
+          commodity,
+          book: "world",
+          unitsPerOutput: 0,
+          referenceUnitPrice: price,
+          retainedUnitCost: 1,
+          policy: { kind: "manual", unitPrice: price },
+          storable: true,
+        },
+      ],
+      outputStock: [{ commodity, book: "world", units, quoteUnitCost: 1 }],
+    });
+  const run = (spilloverShare?: number) =>
+    advanceProducerEconomy({
+      turn: 1,
+      accounts: [
+        { id: "scarce-corp", cash: 0 },
+        { id: "plenty-corp", cash: 0 },
+        { id: "households", cash: 1000 },
+        { id: "services", cash: 0 },
+      ],
+      carryLossByCommodity: { steel: 0, food: 0 },
+      producers: [stockOnly("scarce", "steel", 2, 10), stockOnly("plenty", "food", 1000, 5)],
+      households: [
+        {
+          accountId: "households",
+          spendFraction: 1,
+          products: [
+            { commodity: "steel", book: "world", maximumUnitPrice: 12, weight: 1 },
+            { commodity: "food", book: "world", maximumUnitPrice: 6, weight: 1 },
+          ],
+        },
+      ],
+      ...(spilloverShare === undefined ? {} : { spilloverShare }),
+    });
+  const spent = (r: ReturnType<typeof run>) =>
+    1000 - r.accounts.find((a) => a.id === "households")!.cash;
+
+  it("moves household spend stranded in a sold-out lane onto lanes with stock, at the same prices", () => {
+    const off = run();
+    const on = run(0.7);
+    expect(off.spillover).toBeUndefined();
+    // Willingness is sized at each lane's price ceiling; fills happen at the posted price.
+    expect(spent(off)).toBeCloseTo(2 * 10 + (500 / 6) * 5, 6);
+    expect(on.spillover!.strandedSpend).toBeCloseTo(500 - 2 * 12, 6);
+    expect(spent(on) - spent(off)).toBeCloseTo(0.7 * 476 * (5 / 6), 6);
+    expect(on.spillover!.recovered).toBeCloseTo(0.7 * 476 * (5 / 6), 6);
+    const price = (r: ReturnType<typeof run>, commodity: string) =>
+      r.prices.find((p) => p.commodity === commodity)!.unitPrice;
+    expect(price(on, "food")).toBeCloseTo(price(off, "food"), 12);
+    expect(price(on, "steel")).toBeCloseTo(price(off, "steel"), 12);
+  });
+});

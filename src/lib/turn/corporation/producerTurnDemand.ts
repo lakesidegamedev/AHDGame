@@ -10,7 +10,16 @@ import { TURNS_PER_DAY, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
 import { householdDemandSpecs } from "@/lib/market/producerMarket/householdDemandRules";
 import { HOUSEHOLD_OPENING_TURNS } from "@/lib/market/producerMarket/householdOpeningRules";
-import { publicBuyerFunding } from "@/lib/market/producerMarket/publicBuyerRules";
+import {
+  householdTransferFunding,
+  publicBuyerFunding,
+} from "@/lib/market/producerMarket/publicBuyerRules";
+import {
+  carryLineKey,
+  publicOrderId,
+  withCarriedLines,
+  type LineCarry,
+} from "@/lib/market/producerMarket/publicCarryRules";
 import { investmentBuyerFunding } from "@/lib/market/producerMarket/capitalSpendRules";
 import { marketingBuyerLines } from "@/lib/market/producerMarket/marketingBuyerRules";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
@@ -62,6 +71,8 @@ export async function buildProducerTurnDemand(
     publicAccountId?: (countryId: string) => string;
     /** Construction buyer account per country; the shadow uses `investment:<country>`. */
     investmentAccountId?: (countryId: string) => string;
+    /** Last turn's unspent public funding kept per budget line, by country (funded turn only). */
+    publicCarryIn?: ReadonlyMap<string, LineCarry>;
   }
 ) {
   const { worldEpoch, carry } = input;
@@ -270,7 +281,46 @@ export async function buildProducerTurnDemand(
     ...f,
     lines: f.lines.map((l) => ({ ...l, book: shadowBook(l.book, l.commodity, f.countryId) })),
   }));
+  // Carry-forward: money a short line left unspent last turn joins that line's
+  // budget (the wallet already holds it). Fresh outlay stays what is minted.
+  const publicFreshByCountry = new Map(
+    funding.map((f) => [
+      f.countryId,
+      new Map(f.lines.map((l) => [carryLineKey(l.commodity, l.book), l.amountLocal])),
+    ])
+  );
+  const publicCarriedIn = new Map<string, number>();
+  const carriedFunding = funding.map((f) => {
+    const carryIn = input.publicCarryIn?.get(f.countryId);
+    if (!carryIn) return f;
+    const lines = withCarriedLines(f.lines, carryIn);
+    const added =
+      lines.reduce((s, l) => s + l.amountLocal, 0) - f.lines.reduce((s, l) => s + l.amountLocal, 0);
+    if (added > 0) publicCarriedIn.set(f.countryId, added);
+    return { ...f, lines };
+  });
   const publicFunding = funding.reduce((s, f) => s + f.fundingLocal, 0);
+  // Transfer lines of the same budgets (social security, welfare, pensions)
+  // are household income; the treasury deducts them already.
+  const householdTransfers = householdTransferFunding(
+    lookups.federalBudgets.map((b) => {
+      const code = resolveCountryCurrencyCode(b);
+      const rate = (code && lookups.exchangeRatesByCurrency.get(code)) || 1;
+      return {
+        countryId: String(b.countryId),
+        byCategory: Object.fromEntries(
+          Object.entries(b.spending?.byCategory ?? {}).map(([k, v]) => [k, (v as number) / rate])
+        ),
+      };
+    }),
+    [...householdWallets.values()],
+    stateWeightsByCountry,
+    new Map(Object.entries(publicShareByCountry).map(([id, v]) => [id, v.share])),
+    TURNS_PER_YEAR
+  );
+  const householdTransferTotal = householdTransfers.reduce((sum, t) => sum + t.amount, 0);
+  for (const t of householdTransfers)
+    householdOpening.set(t.walletId, (householdOpening.get(t.walletId) ?? 0) + t.amount);
   const budgetCountries = new Set(lookups.federalBudgets.map((b) => String(b.countryId)));
   // Construction work on outstanding build orders, bought from producers. The
   // builds were paid when placed; this gives that cash its destination.
@@ -304,7 +354,13 @@ export async function buildProducerTurnDemand(
     roles.push({ id: w.accountId, kind: "household", countryId: w.countryId });
   }
   for (const f of funding) {
-    accounts.push({ id: publicAccountId(f.countryId), cash: f.fundingLocal });
+    // The live funded turn rebuilds opening cash from the database wallets, so
+    // the carry is already in the wallet there; this figure only seeds the
+    // shadow. Do not make it authoritative without removing the carry from the wallet.
+    accounts.push({
+      id: publicAccountId(f.countryId),
+      cash: f.fundingLocal + (publicCarriedIn.get(f.countryId) ?? 0),
+    });
     roles.push({ id: publicAccountId(f.countryId), kind: "public", countryId: f.countryId });
   }
   // Construction buyers close like public buyers: unspent work returns to its sink.
@@ -336,7 +392,7 @@ export async function buildProducerTurnDemand(
     })),
   }));
   const publicBuyerOrders = publicOrders(
-    funding.map((f) => ({ accountId: publicAccountId(f.countryId), lines: f.lines })),
+    carriedFunding.map((f) => ({ accountId: publicAccountId(f.countryId), lines: f.lines })),
     (c, book) => refPrice(c as CommodityType, book.startsWith("state:") ? book.slice(6) : ""),
     PRICE_HEADROOM
   );
@@ -434,9 +490,22 @@ export async function buildProducerTurnDemand(
     eligibleOffersByOrder,
     firstWalletByCorp,
     funding,
+    /** Per public buyer: each line's order id, fresh outlay and full budget (fresh + carried-in). */
+    publicCarryOrders: carriedFunding.map((f) => ({
+      countryId: f.countryId,
+      orders: f.lines.map((l) => ({
+        id: publicOrderId(publicAccountId(f.countryId), l.commodity, l.book),
+        commodity: l.commodity,
+        book: l.book,
+        budget: l.amountLocal,
+        fresh: publicFreshByCountry.get(f.countryId)?.get(carryLineKey(l.commodity, l.book)) ?? 0,
+      })),
+    })),
     headcountBySectorId,
     householdForPayee,
     householdSeed,
+    householdTransfers,
+    householdTransferTotal,
     householdWallets,
     households,
     investmentBuyerOrders,

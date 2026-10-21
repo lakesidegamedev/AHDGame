@@ -3,6 +3,7 @@ import {
   PLANT_OVERHEAD_FIXED_SHARE,
   computePlantOverhead,
   plantLaborShare,
+  LOW_USE_COLD_UPKEEP_FRACTION,
   standingProducerSiteBill,
 } from "./rules";
 import { getSectorLaborShare } from "@/lib/labour/laborCost";
@@ -114,6 +115,29 @@ describe("transition window upkeep waiver", () => {
     expect(standingProducerSiteBill(base)).toBeGreaterThan(0);
     expect(standingProducerSiteBill({ ...base, coldUpkeepWaived: true })).toBe(0);
     expect(standingProducerSiteBill({ ...base, activeFraction: 1, coldUpkeepWaived: true })).toBe(
+      standingProducerSiteBill({ ...base, activeFraction: 1 })
+    );
+  });
+});
+
+describe("low-use cold upkeep", () => {
+  const base = { nominalHourlyCapacityValue: 100, activeFraction: 0, financialPenaltyPercent: 0 };
+
+  it("cuts the bill on parked capacity to a tenth", () => {
+    const normal = standingProducerSiteBill(base);
+    const low = standingProducerSiteBill({
+      ...base,
+      coldShareOverride: LOW_USE_COLD_UPKEEP_FRACTION,
+    });
+    expect(low).toBeGreaterThan(0);
+    expect(low / normal).toBeCloseTo(0.1, 10);
+  });
+
+  it("never raises the cold share above the normal rate and leaves a running plant alone", () => {
+    expect(standingProducerSiteBill({ ...base, coldShareOverride: 5 })).toBe(
+      standingProducerSiteBill(base)
+    );
+    expect(standingProducerSiteBill({ ...base, activeFraction: 1, coldShareOverride: 0.001 })).toBe(
       standingProducerSiteBill({ ...base, activeFraction: 1 })
     );
   });

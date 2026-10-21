@@ -156,6 +156,28 @@ export interface GameConfig {
    */
   managementOverheadPpPerDoubling?: number;
   /**
+   * Funded producer market: >= 1 plans each plant's output from expected sales
+   * minus held stock, so inputs and staffing follow the plan. 0 or absent = off.
+   */
+  producerDemandPlanStage?: number;
+  /**
+   * Funded producer market: >= 1 re-clears household spend that was stranded in
+   * sold-out lanes onto the household's other lanes with unsold supply, once, at
+   * the same posted prices. 0 or absent = off.
+   */
+  producerSpilloverStage?: number;
+  /** With producerSpilloverStage on: share (0 to 1) of stranded spend that substitutes. Absent = 0.7. */
+  producerSpilloverShare?: number;
+  /**
+   * Funded producer market: >= 1 keeps a share of each public budget line's
+   * unfilled money in the public wallet for the next turn (instead of burning
+   * it at close), capped at four turns of the line's outlay. Support and grants
+   * are paid from what is left. 0 or absent = off.
+   */
+  producerPublicCarryStage?: number;
+  /** Share of a short line's unfilled budget kept when the stage is on. Default 0.5. */
+  producerPublicCarryShare?: number;
+  /**
    * Funded producer market: >= 1 retires, with no cash, a share of the
    * capacity of plants that have sold nothing for several turns. 0 or absent = off.
    */
@@ -166,6 +188,12 @@ export interface GameConfig {
    * Absent = 0.5. Never paid when the pool is empty.
    */
   decommissionGrantShare?: number;
+  /**
+   * Funded producer market: >= 1 lets a plant that sells almost nothing run
+   * and staff a 1% probe instead of 10%, and cuts upkeep on parked and idle
+   * capacity to a tenth. 0 or absent = off.
+   */
+  producerLowUseCostStage?: number;
   /** Strength upkeep rollout stage (corporations/strengthUpkeep). 0 or absent = off. */
   strengthUpkeepStage?: number;
   /**
