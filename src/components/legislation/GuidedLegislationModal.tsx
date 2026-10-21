@@ -164,6 +164,8 @@ export interface GuidedLegislationModalProps {
   scope?: "national" | "regional";
   regionId?: string;
   adminOverride?: boolean;
+  canSubmit?: boolean;
+  hasActiveBill?: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -176,6 +178,8 @@ export function GuidedLegislationModal({
   scope = "national",
   regionId,
   adminOverride,
+  canSubmit = true,
+  hasActiveBill = false,
   onClose,
   onSuccess,
 }: GuidedLegislationModalProps) {
@@ -435,6 +439,10 @@ export function GuidedLegislationModal({
   }
 
   async function submit() {
+    if (!canSubmit) {
+      showToast(t("activeBillProposalBlocked"), "error");
+      return;
+    }
     if (!title.trim() || !summary.trim() || (!isCustomBill && draft.length === 0)) {
       showToast(
         isCustomBill ? t("required") : "Add a title, summary, and at least one provision.",
@@ -558,6 +566,11 @@ export function GuidedLegislationModal({
         </div>
 
         <main className="max-h-[72vh] overflow-y-auto p-5">
+          {(hasActiveBill || !canSubmit) && !adminOverride ? (
+            <div className="mb-4 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+              {t("activeBillProposalBlocked")}
+            </div>
+          ) : null}
           {loadError && !isCustomBill ? (
             <div
               role="alert"
@@ -1090,6 +1103,7 @@ export function GuidedLegislationModal({
                       type="button"
                       disabled={
                         submitting ||
+                        !canSubmit ||
                         bodyTooLong ||
                         (!isCustomBill && draft.length === 0) ||
                         !title.trim() ||

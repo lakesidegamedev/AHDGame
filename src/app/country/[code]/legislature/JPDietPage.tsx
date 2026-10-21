@@ -160,6 +160,7 @@ export function JPDietPage({ countryId }: Props) {
     showProposeModal,
     showCabinetProposeModal,
     canProposeCabinetBill,
+    canBrowseCabinetBill,
     syncGovernmentData,
     setViewerIsAdmin,
     setMyHasActiveBill,
@@ -169,6 +170,7 @@ export function JPDietPage({ countryId }: Props) {
     setShowProposeModal,
     setShowCabinetProposeModal,
     setCanProposeCabinetBill,
+    setCanBrowseCabinetBill,
   } = useJPDietPageState();
   const [noConfidenceCooldownTurns, setNoConfidenceCooldownTurns] = useState<number | null>(null);
   const [viewerVotes, setViewerVotes] = useState<Record<string, "aye" | "nay">>({});
@@ -283,6 +285,7 @@ export function JPDietPage({ countryId }: Props) {
       blockedProvisions?: { legislationTypeId: string; policyOptionId: string }[];
       proposalAccess?: {
         canPropose?: boolean;
+        canBrowse?: boolean;
         allowedPolicyDomains?: string[] | null;
       };
     }>(`/api/country/${countryId.toLowerCase()}/legislature/cabinet-bills`, {
@@ -293,6 +296,9 @@ export function JPDietPage({ countryId }: Props) {
         setCabinetProposalWarning(data.proposalWarning ?? null);
         setCabinetBlockedProvisions(data.blockedProvisions ?? []);
         setCanProposeCabinetBill(Boolean(data.proposalAccess?.canPropose));
+        setCanBrowseCabinetBill(
+          Boolean(data.proposalAccess?.canBrowse ?? data.proposalAccess?.canPropose)
+        );
         setCabinetProposalDomains(data.proposalAccess?.allowedPolicyDomains ?? []);
       })
       .catch(() => {});
@@ -545,7 +551,7 @@ export function JPDietPage({ countryId }: Props) {
                   <button
                     type="button"
                     onClick={() => setShowCabinetProposeModal(true)}
-                    disabled={!canProposeCabinetBill}
+                    disabled={!canBrowseCabinetBill}
                     className="shrink-0 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
                   >
                     Propose bill
@@ -792,6 +798,8 @@ export function JPDietPage({ countryId }: Props) {
           blockedProvisions={cabinetBlockedProvisions}
           allowedPolicyDomains={cabinetProposalDomains}
           adminOverride={viewerIsAdmin}
+          canSubmit={canProposeCabinetBill}
+          hasActiveBill={myHasActiveBill}
           onClose={() => setShowCabinetProposeModal(false)}
           onSuccess={() => {
             setShowCabinetProposeModal(false);
