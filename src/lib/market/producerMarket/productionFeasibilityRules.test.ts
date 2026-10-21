@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { feasibleProduction } from "./productionFeasibilityRules";
+import { feasibleProduction, reconcileProduction } from "./productionFeasibilityRules";
 
 describe("joint physical production feasibility", () => {
   it("keeps upstream suppliers running while limiting a competing final producer", () => {
@@ -149,5 +149,26 @@ describe("joint physical production feasibility", () => {
       }, 0);
       expect(objective).toBeCloseTo(best, 6);
     }
+  });
+});
+
+describe("production reconciliation residuals", () => {
+  it("trims a rounding overdraw on a fully spent resource instead of stopping the turn", () => {
+    const constraints = [{ available: 0, coefficients: [424] }];
+    const result = reconcileProduction([2e-9], constraints);
+    expect(result[0]).toBe(0);
+  });
+
+  it("trims consumers when a binding input is over by a small residual", () => {
+    const constraints = [{ available: 10, coefficients: [5, 5.000001] }];
+    const result = reconcileProduction([1, 1], constraints);
+    const used = 5 * result[0] + 5.000001 * result[1];
+    expect(used).toBeLessThanOrEqual(10 + 1e-9 * 11);
+  });
+
+  it("still rejects a real overdraw", () => {
+    expect(() => reconcileProduction([1, 1], [{ available: 1, coefficients: [5, 5] }])).toThrow(
+      "did not reconcile"
+    );
   });
 });

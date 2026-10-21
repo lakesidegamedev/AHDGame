@@ -58,6 +58,7 @@ import {
 
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 
+import { loadGroupDominanceSectorResolver } from "@/lib/corporations/groupDominanceSectors";
 import type { BuildCapexTxInput } from "@/lib/corporations/capexTxLog";
 
 import { buildNppNationalShareResolver } from "@/lib/turn/npp/nationalDominancePricing";
@@ -389,6 +390,8 @@ export async function processNppCorporationDecisions(
       commandEconomyEnabled: nppGameConfig?.commandEconomyEnabled === true,
       nationalShareOf,
     };
+    const groupResolver = await loadGroupDominanceSectorResolver(db, turn);
+    if (groupResolver) plants.groupDominanceSectorsOf = groupResolver;
   }
   const unownedDraws: NonNullable<NppCorpDecision["unownedDraws"]> = [];
   // Capacity-decision observations, aggregated in memory and flushed once for

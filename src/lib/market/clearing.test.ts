@@ -1252,6 +1252,43 @@ describe("dumping guard", () => {
   it("only applies on measured plants offers", () => {
     expect(run(false, -0.2).get("dominant")?.effectivePosture).toBe(-0.2);
   });
+
+  describe("on the control group", () => {
+    // Two subsidiaries of one parent each sell 35 of 100 units: 35% apiece,
+    // 70% together.
+    const split = (controlRootByCorpId?: Map<string, string>) =>
+      computeClearingFactors({
+        sectors: ["a", "b"].map((id) => ({
+          sectorId: id,
+          corporationId: id,
+          revenue: 80_000,
+          supplyRates: { steel: 1 },
+          producedUnits: 35,
+          lastSoldFraction: 1,
+          posture: -0.2,
+        })),
+        balances: bals([["steel", { supply: 100, demand: 100 }]]),
+        priceRatioByCommodity: new Map([["steel", 1]]),
+        basePrices,
+        plantsEnabled: true,
+        controlRootByCorpId,
+      });
+
+    it("lets each subsidiary undercut when measured alone", () => {
+      expect(split().get("a")?.effectivePosture).toBe(-0.2);
+    });
+
+    it("floors every member once the group is above half of world supply", () => {
+      const result = split(
+        new Map([
+          ["a", "root"],
+          ["b", "root"],
+        ])
+      );
+      expect(result.get("a")?.effectivePosture).toBe(0);
+      expect(result.get("b")?.effectivePosture).toBe(0);
+    });
+  });
 });
 
 describe("computeClearingFactors — extraction contractFillUnits", () => {

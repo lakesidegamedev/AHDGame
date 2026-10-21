@@ -44,3 +44,14 @@ export function groupTotals(
   }
   return byCorp;
 }
+
+/** Ids of every corporation sharing `corpId`'s control group, itself included. */
+export function controlGroupMemberIds(
+  rootByCorpId: ReadonlyMap<string, string>,
+  corpId: string
+): string[] {
+  const root = rootByCorpId.get(corpId) ?? corpId;
+  const members: string[] = [];
+  for (const [id, r] of rootByCorpId) if (r === root) members.push(id);
+  return members.length > 0 ? members : [corpId];
+}

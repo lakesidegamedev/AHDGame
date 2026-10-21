@@ -223,6 +223,22 @@ export interface CorporationLookups {
    * count and gameConfig.managementOverheadPpPerDoubling. Absent = none.
    */
   managementOverheadPpByCorpId?: Map<string, number>;
+  /** Control-group root per corporation for the dumping guard; null/absent = per corporation. */
+  dumpingGuardRootByCorpId?: Map<string, string> | null;
+  /**
+   * State-owned corporations' overhead and sprawl (gameConfig.soeSizeCostScale),
+   * keyed by corporation id from their country's totals. Absent = SOEs exempt.
+   */
+  soeSizeCostByCorpId?: Map<string, import("@/lib/corporations/rules/soeSizeCost").SoeSizeCost>;
+  /**
+   * Running dominance cost (gameConfig.dominanceRunningCostScale): the scale and
+   * each sector's control-group shares. Absent = off.
+   */
+  dominanceRunningCost?: {
+    scale: number;
+    localShareBySectorId: Map<string, number>;
+    nationalShareBySectorId: Map<string, number>;
+  } | null;
   /**
    * gameConfig.strengthUpkeepStage (see corporations/strengthUpkeep). Absent
    * or 0 = strength upkeep off.

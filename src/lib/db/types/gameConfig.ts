@@ -157,7 +157,18 @@ export interface GameConfig {
   managementOverheadPpPerDoubling?: number;
   /** Strength upkeep rollout stage (corporations/strengthUpkeep). 0 or absent = off. */
   strengthUpkeepStage?: number;
-  /** Group size costs rollout stage (1 = management overhead on the control group). 0 or absent = off. */
+  /**
+   * State-owned corporations pay management overhead and sprawl on their
+   * country's total plants and sectors, scaled by this (0 to 1). 0 or absent = off.
+   */
+  soeSizeCostScale?: number;
+  /**
+   * Running dominance cost: share (0 to 1) of the dominance margin penalty a
+   * group pays every turn on plants worlds, measured on the control group's
+   * share and fading to zero as that share falls to the threshold. 0 or absent = off.
+   */
+  dominanceRunningCostScale?: number;
+  /** Group size costs rollout stage (1 = management overhead on the control group, 2 = commodity build toll, 3 = dumping guard, 4 = monopoly trigger, 5 = merger concentration on the control group). 0 or absent = off. */
   groupSizeCostsStage?: number;
   /** Public media editorial stance and audience response rules. Missing means off. */
   mediaEditorialEnabled?: boolean;

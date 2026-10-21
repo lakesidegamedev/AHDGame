@@ -138,6 +138,9 @@ export const NOTIFICATION_TYPES = [
   "merger_review_opened",
   "merger_review_decided",
   "merger_remedy_overdue",
+  // Subsidiary Limits / Foreign Investment Act enforcement
+  "antitrust_divestiture_ordered",
+  "antitrust_divestiture_executed",
   "transfer_pricing_assessed",
   /** A supply agreement charged its supplier shortfall damages this turn. */
   "corp_supply_agreement_damages",

@@ -1,4 +1,5 @@
 import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
+import { assertForeignControlAllowed } from "@/lib/mechanicalLaws/guards";
 import { NextResponse } from "next/server";
 import { positionHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
 import { pendingStockTaxReceipt } from "@/lib/corporations/rules/stockTaxReceipt";
@@ -213,6 +214,8 @@ export async function runHostileTakeover(request: Request, { params }: RoutePara
     if (!clearance.ok) {
       return errorResponse(clearance.status, clearance.error);
     }
+    const foreignRejection = await assertForeignControlAllowed(db, parent, target);
+    if (foreignRejection) return errorResponse(foreignRejection.status, foreignRejection.error);
 
     // Banked subsidiary (ticket-1267): the charter is a sub-document on the
     // target, so absorbing the shell would delete its bank with it. The

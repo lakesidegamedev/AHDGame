@@ -626,6 +626,12 @@ export function computeClearingFactors(args: {
    */
   plantsEnabled?: boolean;
   /**
+   * Control-group root per corporation. When present, the dumping guard sums a
+   * firm's sold units over its whole control group, so splitting output across
+   * subsidiaries does not dodge it. Omitted ⇒ each corporation on its own.
+   */
+  controlRootByCorpId?: ReadonlyMap<string, string>;
+  /**
    * Market partition (era worlds, marketPartition): sectorId → market-group key
    * (the seller's home country). Together with `balancesByGroup`, each
    * commodity clears one book PER GROUP against that group's reachable
@@ -831,16 +837,19 @@ export function computeClearingFactors(args: {
     for (const [commodity, sellers] of sellersByCommodity) {
       const worldSupply = balances.get(commodity)?.supply ?? 0;
       if (!(worldSupply > 0)) continue;
+      const guardKey = (corpId: string): string => args.controlRootByCorpId?.get(corpId) ?? corpId;
       const soldByCorp = new Map<string, number>();
       for (const seller of sellers) {
         const source = sourceBySector.get(seller.id);
         if (!source?.corporationId) continue;
         const sold = seller.units * (source.lastSoldFraction ?? 1);
-        soldByCorp.set(source.corporationId, (soldByCorp.get(source.corporationId) ?? 0) + sold);
+        const key = guardKey(source.corporationId);
+        soldByCorp.set(key, (soldByCorp.get(key) ?? 0) + sold);
       }
       for (const seller of sellers) {
         const corpId = sourceBySector.get(seller.id)?.corporationId;
-        if (!corpId || !isDumpingGuarded(soldByCorp.get(corpId) ?? 0, worldSupply)) continue;
+        if (!corpId || !isDumpingGuarded(soldByCorp.get(guardKey(corpId)) ?? 0, worldSupply))
+          continue;
         seller.posture = guardedPricingPosture(seller.posture, true);
         if (seller.quotedPosture !== undefined) {
           seller.quotedPosture = guardedPricingPosture(seller.quotedPosture, true);

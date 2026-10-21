@@ -19,6 +19,7 @@ export interface MergerReviewSummary {
   leadSectorType: string;
   combinedSharePercent: number;
   thresholdPercent: number;
+  reason?: "concentration" | "foreignScreening";
   status: MergerReview["status"];
   openedAtTurn: number;
   decideByTurn: number;
@@ -92,6 +93,7 @@ export async function GET() {
       leadSectorType: review.leadSectorType,
       combinedSharePercent: review.combinedSharePercent,
       thresholdPercent: review.thresholdPercent,
+      ...(review.reason ? { reason: review.reason } : {}),
       status: review.status,
       openedAtTurn: review.openedAtTurn,
       decideByTurn: review.decideByTurn,

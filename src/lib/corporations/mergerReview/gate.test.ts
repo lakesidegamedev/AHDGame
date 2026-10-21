@@ -17,12 +17,20 @@ vi.mock("@/lib/economy/queries/commandEconomyMarketGate", () => ({
 }));
 vi.mock("./concentration", () => ({ computeMergerConcentration: vi.fn() }));
 vi.mock("./authority", () => ({ resolveMergerAuthority: vi.fn() }));
+vi.mock("@/lib/mechanicalLaws/levels", () => ({
+  getMechanicalLawLevel: vi.fn().mockResolvedValue(2),
+  getMechanicalLawLevels: vi.fn(),
+}));
+vi.mock("@/lib/mechanicalLaws/guards", () => ({
+  controllingRoot: vi.fn(async (_db: unknown, corp: unknown) => corp),
+}));
 
 import { getEnactedLevel } from "@/lib/politicalLegislation/enactedLevels";
 import { loadCommandEconomyBlockedCountries } from "@/lib/economy/queries/commandEconomyMarketGate";
 import { computeMergerConcentration } from "./concentration";
 import { resolveMergerAuthority } from "./authority";
 import { acquisitionsBarredByDivestiture, assertMergerClearance } from "./gate";
+import { getMechanicalLawLevels } from "@/lib/mechanicalLaws/levels";
 
 const ACQ = new ObjectId();
 const TGT = new ObjectId();
@@ -56,6 +64,11 @@ describe("assertMergerClearance", () => {
     vi.clearAllMocks();
     vi.mocked(loadCommandEconomyBlockedCountries).mockResolvedValue(new Set());
     vi.mocked(getEnactedLevel).mockResolvedValue(2); // threshold 60
+    vi.mocked(getMechanicalLawLevels).mockResolvedValue({
+      competition: 2,
+      subsidiaryLimits: 0,
+      foreignInvestment: 0,
+    });
     vi.mocked(resolveMergerAuthority).mockResolvedValue({
       seatId: "attorney_general",
       seatName: "Attorney General",
@@ -101,6 +114,46 @@ describe("assertMergerClearance", () => {
     expect(insertOne).not.toHaveBeenCalled();
     // The expensive concentration rollup must not even run.
     expect(vi.mocked(computeMergerConcentration)).not.toHaveBeenCalled();
+  });
+
+  it("refers a foreign takeover under screening even below the concentration threshold", async () => {
+    vi.mocked(getMechanicalLawLevels).mockResolvedValue({
+      competition: 2,
+      subsidiaryLimits: 0,
+      foreignInvestment: 1,
+    });
+    vi.mocked(computeMergerConcentration).mockResolvedValue({
+      overlaps: [],
+      leadSectorType: "manufacturing",
+      combinedSharePercent: 5,
+    } as never);
+    const { db, insertOne } = makeDb();
+    const foreignBuyer = makeCorp({ countryId: "JP" });
+    const r = await assertMergerClearance(db, foreignBuyer, target(), "agreedAcquisition", 100);
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.review.reason).toBe("foreignScreening");
+      // Auto-clears at the deadline unless the authority blocks it.
+      expect(r.review.thresholdPercent).toBe(100);
+    }
+    expect(insertOne).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not screen a domestic buyer", async () => {
+    vi.mocked(getMechanicalLawLevels).mockResolvedValue({
+      competition: 2,
+      subsidiaryLimits: 0,
+      foreignInvestment: 1,
+    });
+    vi.mocked(computeMergerConcentration).mockResolvedValue({
+      overlaps: [],
+      leadSectorType: "manufacturing",
+      combinedSharePercent: 5,
+    } as never);
+    const { db, insertOne } = makeDb();
+    const r = await assertMergerClearance(db, acquirer(), target(), "agreedAcquisition", 100);
+    expect(r.ok).toBe(true);
+    expect(insertOne).not.toHaveBeenCalled();
   });
 
   it("is inert in a command economy, without consulting any country list", async () => {

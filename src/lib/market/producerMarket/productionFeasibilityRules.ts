@@ -147,7 +147,15 @@ export function feasibleProduction(input: {
   throw new Error("Production feasibility did not converge");
 }
 
-function reconcileProduction(
+/**
+ * Rows are rescaled and pivoted in floating point, so a binding constraint can
+ * come back over its limit by a rounding residual. Residuals up to
+ * REPAIRABLE_RESIDUAL of the row scale are repaired by trimming the net
+ * consumers of that resource; anything larger is a real solver fault.
+ */
+const REPAIRABLE_RESIDUAL = 1e-6;
+
+export function reconcileProduction(
   result: number[],
   constraints: readonly { available: number; coefficients: readonly number[] }[]
 ): number[] {
@@ -156,13 +164,40 @@ function reconcileProduction(
       throw new Error("Invalid feasible production bound");
     result[j] = Math.max(0, Math.min(1, result[j]));
   }
-  for (const constraint of constraints) {
-    const used = constraint.coefficients.reduce((sum, value, j) => sum + value * result[j], 0);
-    const scale = Math.max(
+  const usedOf = (constraint: { coefficients: readonly number[] }) =>
+    constraint.coefficients.reduce((sum, value, j) => sum + value * result[j], 0);
+  const scaleOf = (constraint: { available: number; coefficients: readonly number[] }) =>
+    Math.max(
       1,
       constraint.available,
       constraint.coefficients.reduce((sum, v) => sum + Math.abs(v), 0)
     );
+  // Trimming consumers of one resource can raise another that those activities
+  // supply, so repeat until every row settles.
+  for (let pass = 0; pass < 8; pass++) {
+    let repaired = false;
+    for (const constraint of constraints) {
+      const used = usedOf(constraint);
+      const scale = scaleOf(constraint);
+      if (used <= constraint.available + scale * 1e-9) continue;
+      if (used > constraint.available + scale * REPAIRABLE_RESIDUAL) break;
+      let consumed = 0;
+      let supplied = 0;
+      constraint.coefficients.forEach((value, j) => {
+        if (value > 0) consumed += value * result[j];
+        else supplied += value * result[j];
+      });
+      const factor = Math.max(0, Math.min(1, (constraint.available - supplied) / consumed));
+      constraint.coefficients.forEach((value, j) => {
+        if (value > 0) result[j] *= factor;
+      });
+      repaired = true;
+    }
+    if (!repaired) break;
+  }
+  for (const constraint of constraints) {
+    const used = usedOf(constraint);
+    const scale = scaleOf(constraint);
     if (used > constraint.available + scale * 1e-9)
       throw new Error(
         `Production resource constraint did not reconcile: used=${used}, available=${constraint.available}, tolerance=${scale * 1e-9}`
