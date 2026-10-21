@@ -302,6 +302,8 @@ export interface CorporationDetail {
   creditCompositeSnapshot?: number;
   /** Country owner ID for national corporations */
   countryOwnerId?: string;
+  /** Owned by a country, through `countryOwnerId` or a state ownership state. */
+  isStateOwned?: boolean;
   /** Whether this corporation is nationalized (margin penalty applies) */
   isNationalized?: boolean;
   /** Whether the corporation is private (financials hidden from non-CEO viewers) */

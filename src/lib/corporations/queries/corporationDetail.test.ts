@@ -230,6 +230,36 @@ describe("loadCorporationDetailView", () => {
     });
   });
 
+  it("marks state ownership from either the owner country or the ownership state", async () => {
+    db.collectionMocks["characters"]!.findOne.mockResolvedValue(null);
+    db.collectionMocks["corporateSectors"]!.find.mockReturnValue({
+      toArray: () => Promise.resolve([]),
+    } as never);
+    db.collectionMocks["bonds"]!.find.mockReturnValue({
+      toArray: () => Promise.resolve([]),
+    } as never);
+    db.collectionMocks["corporationHistory"]!.findOne.mockResolvedValue({ income: 0 });
+    const view = (over: Record<string, unknown>) =>
+      loadCorporationDetailView({
+        db: db as unknown as Db,
+        corporation: makeCorporation({
+          _id: new ObjectId(),
+          countryId: "US",
+          headquartersState: "CA",
+          liquidCurrencyCode: "USD",
+          shareholders: [],
+          publicFloat: 0,
+          ...over,
+        }),
+        currentTurn: 10,
+        viewerUserId: null,
+      });
+
+    expect((await view({})).corporation.isStateOwned).toBe(false);
+    expect((await view({ countryOwnerId: "US" })).corporation.isStateOwned).toBe(true);
+    expect((await view({ ownershipState: "stateOwned" })).corporation.isStateOwned).toBe(true);
+  });
+
   it("includes recorded freight and complete physical costs in the corporate statement", async () => {
     const ceo = makeCharacter({ _id: new ObjectId(), userId: new ObjectId() });
     const corporation = makeCorporation({

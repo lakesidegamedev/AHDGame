@@ -253,3 +253,8 @@ export function MothballedPill({
 export function sectorBuildUrl(corpId: string, sectorId: string): string {
   return `/corporation/${corpId}/sector/${sectorId}?build=1`;
 }
+
+/** The sector page with the rival plant-split planner open, once its quote loads. */
+export function sectorSplitUrl(corpId: string, sectorId: string): string {
+  return `/corporation/${corpId}/sector/${sectorId}?split=1`;
+}

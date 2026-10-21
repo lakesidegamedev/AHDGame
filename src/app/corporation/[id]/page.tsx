@@ -1342,6 +1342,9 @@ export default function CorporationDetailPage() {
                         mediaOperatingModelsEnabled={
                           corporation.mediaOperatingModelsEnabled === true
                         }
+                        canSplitRivalPlants={
+                          !!myCharacterId && !isCeo && corporation.isStateOwned !== true
+                        }
                         expandOnMount={searchParams.get("expand") === "1"}
                         expandSectorType={OPERATING_SECTOR_TYPES.find(
                           (t) => t === searchParams.get("sectorType")
