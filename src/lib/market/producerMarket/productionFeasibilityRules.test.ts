@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { feasibleProduction, reconcileProduction } from "./productionFeasibilityRules";
+import {
+  feasibleProduction,
+  productionRepairStats,
+  reconcileProduction,
+} from "./productionFeasibilityRules";
 
 describe("joint physical production feasibility", () => {
   it("keeps upstream suppliers running while limiting a competing final producer", () => {
@@ -187,5 +191,30 @@ describe("production reconciliation residuals", () => {
   it("leaves a feasible plan untouched", () => {
     const result = reconcileProduction([0.5, 0.25], [{ available: 10, coefficients: [5, 5] }]);
     expect(result).toEqual([0.5, 0.25]);
+  });
+});
+
+describe("pivot limit", () => {
+  it("returns a feasible plan instead of failing when the pivot limit runs out", () => {
+    const constraints = [
+      { available: 10, coefficients: [3, 4, 5] },
+      { available: 6, coefficients: [2, 1, 4] },
+    ];
+    const before = productionRepairStats.nonConverged;
+    const result = feasibleProduction({
+      activities: [
+        { id: "a", value: 5 },
+        { id: "b", value: 4 },
+        { id: "c", value: 7 },
+      ],
+      constraints,
+      maximumPivots: 1,
+    });
+    expect(productionRepairStats.nonConverged).toBe(before + 1);
+    for (const c of constraints) {
+      const used = c.coefficients.reduce((s, v, j) => s + v * result[j], 0);
+      expect(used).toBeLessThanOrEqual(c.available + 1e-9);
+    }
+    expect(result.every((v) => v >= 0 && v <= 1)).toBe(true);
   });
 });
