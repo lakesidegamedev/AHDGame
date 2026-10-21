@@ -54,26 +54,34 @@ export async function recordLossShares(db: Db, turn: number): Promise<number> {
     })),
     turn
   );
-  const signals = db.collection<SignalDoc>(MARKET_ADJUSTMENT_SIGNALS);
-  let written = 0;
-  for (const [countryId, value] of shares) {
-    try {
-      const res = await signals.updateOne(
-        { _id: countryId, lastTurn: { $ne: turn } },
-        {
-          $set: { lastTurn: turn },
-          $push: { points: { $each: [{ turn, value }], $slice: -LOSS_SHARE_HISTORY_TURNS } },
-        },
-        { upsert: true }
-      );
-      if (res.modifiedCount + res.upsertedCount > 0) written++;
-    } catch (err) {
-      // A retried turn finds the document already stamped; the upsert then
-      // collides on _id, which is exactly "already recorded".
-      if ((err as { code?: number }).code !== 11000) throw err;
-    }
+  const ops = [...shares].map(([countryId, value]) => ({
+    updateOne: {
+      filter: { _id: countryId, lastTurn: { $ne: turn } },
+      update: {
+        $set: { lastTurn: turn },
+        $push: { points: { $each: [{ turn, value }], $slice: -LOSS_SHARE_HISTORY_TURNS } },
+      },
+      upsert: true,
+    },
+  }));
+  if (ops.length === 0) return 0;
+  try {
+    const res = await db
+      .collection<SignalDoc>(MARKET_ADJUSTMENT_SIGNALS)
+      .bulkWrite(ops as never, { ordered: false });
+    return res.modifiedCount + res.upsertedCount;
+  } catch (err) {
+    // A retried turn finds each document already stamped; the upsert then
+    // collides on _id, which is exactly "already recorded". Anything else is real.
+    const e = err as {
+      writeErrors?: { code?: number }[];
+      result?: { modifiedCount?: number; upsertedCount?: number };
+    };
+    const errors = e.writeErrors ?? [];
+    if (errors.length > 0 && errors.every((w) => w.code === 11000))
+      return (e.result?.modifiedCount ?? 0) + (e.result?.upsertedCount ?? 0);
+    throw err;
   }
-  return written;
 }
 
 /** The latest loss share and its recent history for one country, if any was recorded. */

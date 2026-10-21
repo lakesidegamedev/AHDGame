@@ -26,14 +26,15 @@ describe("market adjustment signals", () => {
       ],
     });
     db.collection("marketAdjustmentSignals");
-    db.collectionMocks.marketAdjustmentSignals!.updateOne.mockResolvedValue({
+    db.collectionMocks.marketAdjustmentSignals!.bulkWrite.mockResolvedValue({
       modifiedCount: 0,
       upsertedCount: 1,
     });
     expect(await recordLossShares(db as unknown as Db, 5)).toBe(1);
-    const call = db.collectionMocks.marketAdjustmentSignals!.updateOne.mock.calls[0];
-    expect(call[0]).toEqual({ _id: "US", lastTurn: { $ne: 5 } });
-    expect(call[1].$push.points.$each[0].value).toBeCloseTo(0.6, 10);
+    const ops = db.collectionMocks.marketAdjustmentSignals!.bulkWrite.mock.calls[0][0];
+    expect(ops).toHaveLength(1);
+    expect(ops[0].updateOne.filter).toEqual({ _id: "US", lastTurn: { $ne: 5 } });
+    expect(ops[0].updateOne.update.$push.points.$each[0].value).toBeCloseTo(0.6, 10);
   });
 
   it("treats an already-recorded turn as done, not as an error", async () => {
@@ -44,10 +45,27 @@ describe("market adjustment signals", () => {
       ],
     });
     db.collection("marketAdjustmentSignals");
-    db.collectionMocks.marketAdjustmentSignals!.updateOne.mockRejectedValue(
-      Object.assign(new Error("dup"), { code: 11000 })
+    db.collectionMocks.marketAdjustmentSignals!.bulkWrite.mockRejectedValue(
+      Object.assign(new Error("dup"), {
+        writeErrors: [{ code: 11000 }],
+        result: { modifiedCount: 0, upsertedCount: 0 },
+      })
     );
     expect(await recordLossShares(db as unknown as Db, 5)).toBe(0);
+  });
+
+  it("rethrows a real write failure", async () => {
+    db.collection("corporateSectors");
+    db.collectionMocks.corporateSectors!.find.mockReturnValue({
+      toArray: async () => [
+        { countryId: "US", capitalStock: 10, producerSettlement: { turn: 5, profit: -1 } },
+      ],
+    });
+    db.collection("marketAdjustmentSignals");
+    db.collectionMocks.marketAdjustmentSignals!.bulkWrite.mockRejectedValue(
+      Object.assign(new Error("boom"), { writeErrors: [{ code: 121 }] })
+    );
+    await expect(recordLossShares(db as unknown as Db, 5)).rejects.toThrow("boom");
   });
 
   it("reads back the latest value and the history", async () => {
