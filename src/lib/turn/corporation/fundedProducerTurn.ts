@@ -69,6 +69,8 @@ export interface FundedProducerTurnResult {
   receiptsBySectorId: Map<string, FundedReceipt>;
   /** Anchor per turn, by corporation id. */
   settledProfitByCorp: Map<string, number>;
+  /** Staffed headcount of each plant at its funded run; plants with no plan are absent. */
+  headcountBySectorId: ReadonlyMap<string, { desiredWorkers: number; workers: number }>;
 }
 
 export async function runFundedProducerTurn(
@@ -553,7 +555,11 @@ export async function runFundedProducerTurn(
     input.firstFundedTurn
   );
 
-  return { receiptsBySectorId, settledProfitByCorp };
+  return {
+    receiptsBySectorId,
+    settledProfitByCorp,
+    headcountBySectorId: demand.headcountBySectorId,
+  };
 }
 
 /**
