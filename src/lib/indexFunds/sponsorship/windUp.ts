@@ -28,9 +28,18 @@ import { payCorporateWindUpHolders } from "./corporateHolderPayout";
 import { payFundHolderCash } from "./holderPayout";
 import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 import { recordAudit } from "@/lib/audit/recordAudit";
+import { recomputeNav } from "@/lib/indexFunds/fundNav";
+import { getFundById, updateFundNav } from "@/lib/indexFunds/fundQueries";
+import {
+  loadOpenOrdersEscrowByFundId,
+  loadQueuedRedemptionUnitsByFundId,
+} from "@/lib/indexFunds/fundValuation";
+import { processQueuedRedemptions } from "@/lib/indexFunds/processQueuedRedemptions";
+import { recoverQueuedPayouts } from "@/lib/indexFunds/queuedPayoutSettlement";
 
 const FUND_TX = "indexFundTransactions";
 const POSITIONS = "indexFundPositions";
+const REDEMPTION_QUEUE = "indexFundRedemptionQueue";
 
 export type WindUpResult =
   { ok: false; error: string; status: number } | { ok: true; status: IndexFund["status"] };
@@ -84,10 +93,14 @@ export interface WindDownPassResult {
 }
 
 /**
- * One cron pass over every winding-down fund: sell what is left, and finish any
- * fund whose portfolio has become cash.
+ * One cron pass over every winding-down fund: sell what is left, pay any
+ * withdrawals still queued, and finish any fund whose portfolio has become cash.
  */
-export async function advanceWindDowns(db: Db, currentTurn: number): Promise<WindDownPassResult> {
+export async function advanceWindDowns(
+  db: Db,
+  currentTurn: number,
+  forexEnabled: boolean
+): Promise<WindDownPassResult> {
   const result: WindDownPassResult = {
     fundsProcessed: 0,
     fundsCompleted: 0,
@@ -160,6 +173,7 @@ export async function advanceWindDowns(db: Db, currentTurn: number): Promise<Win
   for (const fund of bondPhase) {
     if (stillHoldingBonds.has(String(fund._id))) continue;
     try {
+      await payQueuedWindDownRedemptions(db, fund._id, currentTurn, forexEnabled);
       const paid = await completeWindUp(db, fund, currentTurn);
       result.holdersPaid += paid;
       result.fundsCompleted += 1;
@@ -169,6 +183,47 @@ export async function advanceWindDowns(db: Db, currentTurn: number): Promise<Win
   }
 
   return result;
+}
+
+/**
+ * Withdrawals queued before or during wind-down are not served by the ordinary
+ * redemption pass (it only lists active funds), and completion refuses to run
+ * while any remain. Once the portfolio is cash, pay them here first.
+ *
+ * Winding-down funds are also left out of the cron NAV refresh, so the quote
+ * can be many turns old. Price the queue at what the cash now supports, with
+ * queued holders counted as holders (the same NAV the active pass uses), so a
+ * withdrawal neither takes more than its share nor leaves value behind for the
+ * holders who stayed.
+ */
+async function payQueuedWindDownRedemptions(
+  db: Db,
+  fundId: IndexFund["_id"],
+  currentTurn: number,
+  forexEnabled: boolean
+): Promise<void> {
+  const pending = await db
+    .collection(REDEMPTION_QUEUE)
+    .countDocuments({ fundId, status: { $in: ["queued", "partial", "processing"] } });
+  if (pending === 0) return;
+
+  // Settle any payout a crashed pass left mid-flight before pricing the rest.
+  await recoverQueuedPayouts(db, fundId, currentTurn);
+  const fund = await getFundById(db, fundId);
+  if (!fund || fund.status !== "winding_down" || fund.holdings.length > 0) return;
+
+  const key = String(fundId);
+  const [escrow, queuedUnits] = await Promise.all([
+    loadOpenOrdersEscrowByFundId(db, [fundId]),
+    loadQueuedRedemptionUnitsByFundId(db, [fundId]),
+  ]);
+  const nav = recomputeNav(fund, {
+    openOrdersEscrowAnchor: escrow.get(key) ?? 0,
+    queuedRedemptionUnits: queuedUnits.get(key) ?? 0,
+  });
+  if (nav === null) return;
+  await updateFundNav(db, fundId, { quotedNav: nav });
+  await processQueuedRedemptions(db, { ...fund, quotedNav: nav }, forexEnabled, currentTurn, true);
 }
 
 /**
