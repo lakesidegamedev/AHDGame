@@ -65,7 +65,7 @@ describe("processBreakupCases", () => {
     expect(result).toEqual({ opened: 1, ordered: 0, dismissed: 0 });
     expect(resolveMergerAuthority).toHaveBeenCalledWith(db, "US", 1990);
     expect(bulkWrite).toHaveBeenCalledTimes(1);
-    const ops = bulkWrite.mock.calls[0][0] as Array<{
+    const ops = (bulkWrite.mock.calls as unknown[][])[0][0] as Array<{
       updateOne: { update: { $set: { antitrustCase: Record<string, unknown> } } };
     }>;
     expect(ops).toHaveLength(1);
@@ -114,7 +114,7 @@ describe("processBreakupCases", () => {
     });
 
     expect(result).toEqual({ opened: 0, ordered: 1, dismissed: 0 });
-    const ops = bulkWrite.mock.calls[0][0] as Array<{
+    const ops = (bulkWrite.mock.calls as unknown[][])[0][0] as Array<{
       updateOne: {
         update: {
           $set: { pendingDivestiture: Record<string, unknown> };
@@ -167,7 +167,7 @@ describe("processBreakupCases", () => {
     });
 
     expect(result).toEqual({ opened: 0, ordered: 0, dismissed: 1 });
-    const ops = bulkWrite.mock.calls[0][0] as Array<{
+    const ops = (bulkWrite.mock.calls as unknown[][])[0][0] as Array<{
       updateOne: { update: { $unset: Record<string, string>; $set?: unknown } };
     }>;
     expect(ops[0].updateOne.update.$unset).toEqual({ antitrustCase: "" });
@@ -209,7 +209,7 @@ describe("processBreakupCases", () => {
     // pass may then open a fresh case, which this test does not pin here.
     expect(result.dismissed).toBe(1);
     expect(result.ordered).toBe(0);
-    const ops = bulkWrite.mock.calls[0][0] as Array<{
+    const ops = (bulkWrite.mock.calls as unknown[][])[0][0] as Array<{
       updateOne: { update: { $unset: Record<string, string> } };
     }>;
     expect(ops[0].updateOne.update.$unset).toEqual({ antitrustCase: "" });
