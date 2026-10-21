@@ -46,7 +46,7 @@ describe("JPCabinetProposeBillModal", () => {
   });
 
   it("allows a legacy cabinet draft during an active bill but guards submission", () => {
-    const fetch = vi.fn(async () => ({ ok: true, json: async () => [] }));
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => new Response("[]", { status: 200 }));
     vi.stubGlobal("fetch", fetch);
     render(
       <NextIntlClientProvider locale="en" messages={messages}>
