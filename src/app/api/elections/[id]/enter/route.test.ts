@@ -37,6 +37,9 @@ vi.mock("@/lib/elections/electionParamResolution", () => ({
 vi.mock("@/lib/elections/activeCandidacy", () => ({
   findBlockingActiveCandidacy: vi.fn().mockResolvedValue(null),
 }));
+vi.mock("@/lib/elections/foundingTermElections", () => ({
+  loadFoundingElectionIds: vi.fn().mockResolvedValue(new Set()),
+}));
 vi.mock("@/lib/elections/executiveTermLimits", () => ({
   hasReachedExecutiveTermLimit: vi.fn().mockReturnValue(false),
 }));

@@ -20,6 +20,7 @@ import { isHexObjectIdString } from "@/lib/utils/objectIdHex";
 import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilters";
 import { hasReachedExecutiveTermLimit } from "@/lib/elections/executiveTermLimits";
+import { loadFoundingElectionIds } from "@/lib/elections/foundingTermElections";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -141,6 +142,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         .filter((candidateId): candidateId is string => Boolean(candidateId))
     );
     const partyMap = new Map(parties.map((p) => [`${p.countryId ?? "US"}_${p.sequentialId}`, p]));
+    const foundingElectionIds = await loadFoundingElectionIds(db, characters, electionCountry);
 
     const list = characters
       .filter((c) => {
@@ -153,7 +155,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         if (electionCountry !== COUNTRY_CONFIGS.US.id && !c.countryId) return false;
         if (
           countryConfig.executiveTermLimit?.blocksRunningMateSelection &&
-          hasReachedExecutiveTermLimit(c, electionCountry)
+          hasReachedExecutiveTermLimit(c, electionCountry, foundingElectionIds)
         ) {
           return false;
         }

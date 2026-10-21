@@ -16,6 +16,7 @@ import { isHexObjectIdString } from "@/lib/utils/objectIdHex";
 import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilters";
 import { hasReachedExecutiveTermLimit } from "@/lib/elections/executiveTermLimits";
+import { loadFoundingElectionIds } from "@/lib/elections/foundingTermElections";
 import { isSameCountry } from "@/lib/api/sameCountry";
 
 interface RouteParams {
@@ -173,7 +174,11 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     if (
       countryConfig.executiveTermLimit?.blocksRunningMateSelection &&
-      hasReachedExecutiveTermLimit(runningMateChar, electionCountry)
+      hasReachedExecutiveTermLimit(
+        runningMateChar,
+        electionCountry,
+        await loadFoundingElectionIds(db, [runningMateChar], electionCountry)
+      )
     ) {
       return errorResponse(
         400,

@@ -33,6 +33,7 @@ import { isCampaignEligibleElection } from "@/lib/campaigns/isCampaignEligible";
 import { getGameTime } from "@/lib/time/gameTime";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { hasReachedExecutiveTermLimit } from "@/lib/elections/executiveTermLimits";
+import { loadFoundingElectionIds } from "@/lib/elections/foundingTermElections";
 import {
   isElectionTypeEntryBlocked,
   isNationwideDirectExecutiveElection,
@@ -373,14 +374,16 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
     }
 
+    const termSnapshot = executiveTermSnapshot ?? {
+      careerHistory: character.careerHistory,
+      executiveTermsServed: character.executiveTermsServed,
+    };
     if (
       isNationwideExecutive &&
       hasReachedExecutiveTermLimit(
-        executiveTermSnapshot ?? {
-          careerHistory: character.careerHistory,
-          executiveTermsServed: character.executiveTermsServed,
-        },
-        electionCountry
+        termSnapshot,
+        electionCountry,
+        await loadFoundingElectionIds(db, [termSnapshot], electionCountry)
       )
     ) {
       logRequest("POST", path, 400, Date.now() - start);

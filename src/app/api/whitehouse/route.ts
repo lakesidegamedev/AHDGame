@@ -9,6 +9,7 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { ElectedOfficial, Character, PoliticalParty, CabinetNomination } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { getExecutiveTermsServed } from "@/lib/elections/executiveTermLimits";
+import { loadFoundingElectionIds } from "@/lib/elections/foundingTermElections";
 import { resolvePresidentialCountry } from "@/lib/executive/presidentialCountry";
 import { resolveExecutiveHolder } from "@/lib/elections/resolveExecutiveHolder";
 import { getGameTime } from "@/lib/time/gameTime";
@@ -78,12 +79,20 @@ export async function GET(request: Request) {
     // Sitting president's current term (1-based): executiveTermsServed is
     // incremented at each seating (election win or succession), so the stored
     // count IS the term in progress. Drives the Term Clock's "TERM n OF x".
+    // A founding (world-start) term is excluded, as it is from the limit.
     let presidentCurrentTerm: number | null = null;
 
     if (presCharId) {
       const char = await db.collection<Character>("characters").findOne({ _id: presCharId });
       if (char) {
-        presidentCurrentTerm = Math.max(1, getExecutiveTermsServed(char, countryId));
+        presidentCurrentTerm = Math.max(
+          1,
+          getExecutiveTermsServed(
+            char,
+            countryId,
+            await loadFoundingElectionIds(db, [char], countryId)
+          )
+        );
         const charCountry: CountryId = char.countryId ?? countryId;
         const party = char.party
           ? await db

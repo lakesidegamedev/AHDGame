@@ -9,6 +9,7 @@ import { createNotifications, type NotificationInput } from "@/lib/notifications
 import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilters";
 import { hasReachedExecutiveTermLimit } from "@/lib/elections/executiveTermLimits";
+import { loadFoundingElectionIds } from "@/lib/elections/foundingTermElections";
 
 /**
  * For each player presidential nominee without a runningMateId, tentatively
@@ -56,6 +57,11 @@ export async function autoAssignTentativeRunningMates(
       .toArray()
   );
   const partyCandidatesArrays = await Promise.all(partyQueries);
+  const foundingElectionIds = await loadFoundingElectionIds(
+    db,
+    partyCandidatesArrays.flat(),
+    countryId
+  );
   const candidatesByParty = new Map<string, Character[]>();
   let idx = 0;
   for (const party of nomineesByParty.keys()) {
@@ -88,7 +94,7 @@ export async function autoAssignTentativeRunningMates(
         (!incumbentId || !c._id.equals(incumbentId)) &&
         !(
           countryConfig.executiveTermLimit?.blocksRunningMateSelection &&
-          hasReachedExecutiveTermLimit(c, countryId)
+          hasReachedExecutiveTermLimit(c, countryId, foundingElectionIds)
         )
     );
 

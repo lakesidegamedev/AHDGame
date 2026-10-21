@@ -16,6 +16,7 @@ import {
   hasReachedExecutiveTermLimit,
   incrementExecutiveTermsServedUpdate,
 } from "@/lib/elections/executiveTermLimits";
+import { loadFoundingElectionIds } from "@/lib/elections/foundingTermElections";
 import { captureOfficeTransition } from "@/lib/analytics/officeTransitionAnalytics";
 
 /**
@@ -64,7 +65,13 @@ export async function processPresidentialSuccession(db: Db): Promise<boolean> {
       }
     );
     if (!vpCharacter) return false;
-    if (hasReachedExecutiveTermLimit(vpCharacter, usCountryId)) {
+    if (
+      hasReachedExecutiveTermLimit(
+        vpCharacter,
+        usCountryId,
+        await loadFoundingElectionIds(db, [vpCharacter], usCountryId)
+      )
+    ) {
       console.warn(
         `[Turn] Presidential succession blocked: VP ${vpRecord.characterId.toString()} has already reached the US presidential term limit`
       );
