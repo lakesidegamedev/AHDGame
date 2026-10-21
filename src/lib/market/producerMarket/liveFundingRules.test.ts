@@ -15,6 +15,43 @@ import {
 
 const wallet = { walletId: "pub-us", amountLocal: 50, currencyCode: "USD", localPerAnchor: 1 };
 
+const holder = {
+  collection: "resetNationalTreasuries",
+  filter: { _id: "us", worldId: "wid" },
+  path: "cash",
+};
+
+describe("v2 treasury-backed funding", () => {
+  it("debits the holder instead of minting, and nets to zero", () => {
+    const [move] = publicFundingMoves("w", 7, [{ ...wallet, countryId: "us", holder }]);
+    expect(move.legs.map((l) => l.kind)).toEqual(["debit", "credit"]);
+    expect(move.legs[0].collection).toBe("resetNationalTreasuries");
+    expect(legsNet(move.legs)).toBeCloseTo(0);
+    expect(producerMoveLedgerLegs(move)).toBeNull();
+  });
+
+  it("returns unspent funding to the holder instead of burning it", () => {
+    const [move] = publicReturnMoves("w", 7, [{ ...wallet, countryId: "us", holder }]);
+    expect(move.legs.map((l) => l.kind)).toEqual(["debit", "credit"]);
+    expect(move.legs[1].collection).toBe("resetNationalTreasuries");
+    expect(legsNet(move.legs)).toBeCloseTo(0);
+  });
+
+  it("pays household transfers with one holder debit per country and a credit per wallet", () => {
+    const moves = householdTransferMoves("w", 7, [
+      { ...wallet, walletId: "hh-1", amountLocal: 30, holder },
+      { ...wallet, walletId: "hh-2", amountLocal: 20, holder },
+      { ...wallet, walletId: "hh-gb", amountLocal: 5 },
+    ]);
+    const held = moves.find((m) => m.legs[0].kind === "debit")!;
+    expect(held.legs.map((l) => l.kind)).toEqual(["debit", "credit", "credit"]);
+    expect(held.legs[0].amount).toBeCloseTo(50);
+    expect(legsNet(held.legs)).toBeCloseTo(0);
+    expect(moves.some((m) => m.legs[0].kind === "mint")).toBe(true);
+    expect(batchProducerMoves("w", 7, moves)).toHaveLength(1);
+  });
+});
+
 describe("live producer money flows", () => {
   it("keys every move by world, turn and party and skips zero amounts", () => {
     const moves = publicFundingMoves("w", 7, [

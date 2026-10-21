@@ -65,6 +65,8 @@ export async function buildProducerTurnDemand(
     publicAccountId?: (countryId: string) => string;
     /** Construction buyer account per country; the shadow uses `investment:<country>`. */
     investmentAccountId?: (countryId: string) => string;
+    /** Treasury cash (anchor) that backs each Cabinet-v2 country's public funding this turn. */
+    v2FundingCapAnchor?: ReadonlyMap<string, number>;
   }
 ) {
   const { worldEpoch, carry } = input;
@@ -249,7 +251,7 @@ export async function buildProducerTurnDemand(
     };
     return share;
   };
-  const funding = publicBuyerFunding(
+  const fundingAll = publicBuyerFunding(
     lookups.federalBudgets.map((b) => {
       const countryId = String(b.countryId);
       const code = resolveCountryCurrencyCode(b);
@@ -273,10 +275,9 @@ export async function buildProducerTurnDemand(
     ...f,
     lines: f.lines.map((l) => ({ ...l, book: shadowBook(l.book, l.commodity, f.countryId) })),
   }));
-  const publicFunding = funding.reduce((s, f) => s + f.fundingLocal, 0);
   // Transfer lines of the same budgets (pensions, welfare, unemployment, child
   // benefits) are household income; the treasury deducts them already.
-  const householdTransfers = householdTransferFunding(
+  const householdTransfersAll = householdTransferFunding(
     lookups.federalBudgets.map((b) => {
       const code = resolveCountryCurrencyCode(b);
       const rate = (code && lookups.exchangeRatesByCurrency.get(code)) || 1;
@@ -292,6 +293,26 @@ export async function buildProducerTurnDemand(
     new Map(Object.entries(publicShareByCountry).map(([id, v]) => [id, v.share])),
     TURNS_PER_YEAR
   );
+  // A v2 country pays this money out of its national treasury cash (see
+  // FundingHolder). If the treasury cannot cover public funding plus transfers
+  // this turn, that country gets neither: nothing is created to fill the gap.
+  const unfundable = new Set<string>();
+  for (const [countryId, cap] of input.v2FundingCapAnchor ?? []) {
+    const need =
+      fundingAll.filter((f) => f.countryId === countryId).reduce((s, f) => s + f.fundingLocal, 0) +
+      householdTransfersAll
+        .filter((t) => t.countryId === countryId)
+        .reduce((s, t) => s + t.amount, 0);
+    if (need > cap) {
+      unfundable.add(countryId);
+      console.warn(
+        `[producer] ${countryId} treasury cannot cover public funding; skipped this turn`
+      );
+    }
+  }
+  const funding = fundingAll.filter((f) => !unfundable.has(f.countryId));
+  const householdTransfers = householdTransfersAll.filter((t) => !unfundable.has(t.countryId));
+  const publicFunding = funding.reduce((s, f) => s + f.fundingLocal, 0);
   const householdTransferTotal = householdTransfers.reduce((sum, t) => sum + t.amount, 0);
   for (const t of householdTransfers)
     householdOpening.set(t.walletId, (householdOpening.get(t.walletId) ?? 0) + t.amount);

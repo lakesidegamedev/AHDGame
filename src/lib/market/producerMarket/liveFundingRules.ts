@@ -33,6 +33,18 @@ export interface WalletAmount {
   localPerAnchor: number;
 }
 
+/**
+ * Where a v2 country's public money really sits (its national treasury cash).
+ * Cabinet-v2 countries do not run the legacy treasury outlay, so there is no
+ * spent outlay to mint against: funding is debited from this holder instead,
+ * and unspent funding goes back to it, so the money supply stays constant.
+ */
+export interface FundingHolder {
+  collection: string;
+  filter: Record<string, unknown>;
+  path: string;
+}
+
 const valuation = (w: WalletAmount) => ({
   currencyCode: w.currencyCode,
   localPerAnchor: w.localPerAnchor,
@@ -42,11 +54,14 @@ function positive(x: number): number {
   return Number.isFinite(x) && x > 0 ? x : 0;
 }
 
-/** Mints each public buyer's funding for this turn. */
+/**
+ * Funds each public buyer for this turn. A v1 country mints (its treasury
+ * already spent the outlay); a v2 country with a holder pays out of the holder.
+ */
 export function publicFundingMoves(
   worldEpoch: string,
   turn: number,
-  rows: readonly (WalletAmount & { countryId: string })[]
+  rows: readonly (WalletAmount & { countryId: string; holder?: FundingHolder })[]
 ): MoneyMove[] {
   return rows
     .filter((r) => positive(r.amountLocal) > 0)
@@ -55,14 +70,24 @@ export function publicFundingMoves(
       kind: "producer_public_funding",
       turn,
       legs: [
+        r.holder
+          ? {
+              kind: "debit" as const,
+              amount: r.amountLocal,
+              valuation: valuation(r),
+              collection: r.holder.collection,
+              filter: r.holder.filter,
+              path: r.holder.path,
+              note: "commodity share of the budget outlay, paid from the national treasury",
+            }
+          : {
+              kind: "mint" as const,
+              amount: r.amountLocal,
+              valuation: valuation(r),
+              note: "commodity share of the budget outlay the treasury already spent",
+            },
         {
-          kind: "mint",
-          amount: r.amountLocal,
-          valuation: valuation(r),
-          note: "commodity share of the budget outlay the treasury already spent",
-        },
-        {
-          kind: "credit",
+          kind: "credit" as const,
           amount: r.amountLocal,
           valuation: valuation(r),
           collection: PRODUCER_ACCOUNTS,
@@ -74,43 +99,75 @@ export function publicFundingMoves(
     }));
 }
 
-/** Mints each household wallet's share of the turn's budget transfer lines (pensions, welfare, benefits). */
+/**
+ * Pays each household wallet's share of the turn's budget transfer lines
+ * (pensions, welfare, benefits). A v1 country mints; a v2 country pays out of
+ * its holder with ONE debit per country and a credit per wallet.
+ */
 export function householdTransferMoves(
   worldEpoch: string,
   turn: number,
-  rows: readonly WalletAmount[]
+  rows: readonly (WalletAmount & { holder?: FundingHolder })[]
 ): MoneyMove[] {
-  return rows
-    .filter((r) => positive(r.amountLocal) > 0)
+  const credit = (r: WalletAmount) => ({
+    kind: "credit" as const,
+    amount: r.amountLocal,
+    valuation: valuation(r),
+    collection: PRODUCER_ACCOUNTS,
+    filter: { _id: r.walletId },
+    path: "cash",
+    note: "household transfer income",
+  });
+  const paid = rows.filter((r) => positive(r.amountLocal) > 0);
+  const minted = paid
+    .filter((r) => !r.holder)
     .map((r) => ({
       key: `producer-household-transfer:${worldEpoch}:${turn}:${r.walletId}`,
       kind: "producer_household_transfer",
       turn,
       legs: [
         {
-          kind: "mint",
+          kind: "mint" as const,
           amount: r.amountLocal,
           valuation: valuation(r),
           note: "transfer budget lines the treasury already spent",
         },
-        {
-          kind: "credit",
-          amount: r.amountLocal,
-          valuation: valuation(r),
-          collection: PRODUCER_ACCOUNTS,
-          filter: { _id: r.walletId },
-          path: "cash",
-          note: "household transfer income",
-        },
+        credit(r),
       ],
     }));
+  const byHolder = new Map<string, (typeof paid)[number][]>();
+  for (const r of paid.filter((x) => x.holder)) {
+    const id = `${r.holder!.collection}:${String(r.holder!.filter._id)}`;
+    byHolder.set(id, [...(byHolder.get(id) ?? []), r]);
+  }
+  const held = [...byHolder].map(([id, group]) => ({
+    key: `producer-household-transfer:${worldEpoch}:${turn}:holder:${id}`,
+    kind: "producer_household_transfer",
+    turn,
+    legs: [
+      {
+        kind: "debit" as const,
+        amount: group.reduce((sum, r) => sum + r.amountLocal, 0),
+        valuation: valuation(group[0]),
+        collection: group[0].holder!.collection,
+        filter: group[0].holder!.filter,
+        path: group[0].holder!.path,
+        note: "transfer budget lines, paid from the national treasury",
+      },
+      ...group.map(credit),
+    ],
+  }));
+  return [...minted, ...held];
 }
 
-/** Burns what a public buyer did not spend. */
+/**
+ * Returns what a public buyer did not spend: burned for a v1 country (the
+ * outlay was already spent), paid back to the holder for a v2 country.
+ */
 export function publicReturnMoves(
   worldEpoch: string,
   turn: number,
-  rows: readonly (WalletAmount & { countryId: string })[]
+  rows: readonly (WalletAmount & { countryId: string; holder?: FundingHolder })[]
 ): MoneyMove[] {
   return rows
     .filter((r) => positive(r.amountLocal) > 0)
@@ -120,7 +177,7 @@ export function publicReturnMoves(
       turn,
       legs: [
         {
-          kind: "debit",
+          kind: "debit" as const,
           amount: r.amountLocal,
           valuation: valuation(r),
           collection: PRODUCER_ACCOUNTS,
@@ -128,12 +185,22 @@ export function publicReturnMoves(
           path: "cash",
           note: "unspent public funding",
         },
-        {
-          kind: "burn",
-          amount: r.amountLocal,
-          valuation: valuation(r),
-          note: "unspent public funding returns to the budget",
-        },
+        r.holder
+          ? {
+              kind: "credit" as const,
+              amount: r.amountLocal,
+              valuation: valuation(r),
+              collection: r.holder.collection,
+              filter: r.holder.filter,
+              path: r.holder.path,
+              note: "unspent public funding returns to the national treasury",
+            }
+          : {
+              kind: "burn" as const,
+              amount: r.amountLocal,
+              valuation: valuation(r),
+              note: "unspent public funding returns to the budget",
+            },
       ],
     }));
 }

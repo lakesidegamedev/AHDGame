@@ -20,6 +20,8 @@ import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
 import type { LedgerEntry } from "@/lib/ledger/types";
 import type { CorporateSector, Corporation } from "@/lib/db/types/corporation";
 import { applyMoneyMove, resumeMoneyMove } from "@/lib/banking/moneyMove";
+import { RESET_V2_READY } from "@/lib/resetVersions/availability";
+import { resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 import { resolveSectorHostCurrencyCode } from "@/lib/currency/corporationCapital";
@@ -31,6 +33,7 @@ import {
 import {
   householdOpeningMoves,
   householdTransferMoves,
+  type FundingHolder,
   PRODUCER_ACCOUNTS,
   investmentFundingMoves,
   producerMoveLedgerLegs,
@@ -133,12 +136,41 @@ export async function runFundedProducerTurn(
   const investmentWallet = (countryId: string) =>
     producerWalletId(worldEpoch, investmentScope(countryId));
 
+  // Cabinet-v2 countries hold their public money in the national treasury, not
+  // in a legacy outlay that was already spent. Their funding comes out of it.
+  const gameStateDoc = await db.collection("gameState").findOne({ _id: "current" } as never);
+  const v2Holder = new Map<string, FundingHolder>();
+  const v2CashAnchor = new Map<string, number>();
+  for (const countryId of countryCurrency.keys()) {
+    if (
+      resetSystemVersionsForCountry(gameStateDoc as never, RESET_V2_READY, countryId).cabinet !==
+      "v2"
+    )
+      continue;
+    const worldId = (gameStateDoc as { resetWorldId?: string } | null)?.resetWorldId;
+    const treasury = worldId
+      ? await db
+          .collection<{ _id: string; cash?: number }>("resetNationalTreasuries")
+          .findOne({ _id: countryId, worldId } as never, { projection: { cash: 1 } })
+      : null;
+    v2Holder.set(countryId, {
+      collection: "resetNationalTreasuries",
+      filter: { _id: countryId, worldId },
+      path: "cash",
+    });
+    const cash = treasury?.cash;
+    v2CashAnchor.set(
+      countryId,
+      typeof cash === "number" && cash > 0 ? cash / rateOf(countryCurrency.get(countryId)) : 0
+    );
+  }
   const demand = await buildProducerTurnDemand(db, {
     turn,
     worldEpoch,
     lookups,
     env: input.env,
     sectorOps: [],
+    v2FundingCapAnchor: v2CashAnchor,
     carry: liveCarry(lookups, worldEpoch, turn),
     publicAccountId: publicWallet,
     investmentAccountId: investmentWallet,
@@ -214,6 +246,7 @@ export async function runFundedProducerTurn(
             amountLocal: f.fundingLocal * rate,
             currencyCode: currency,
             localPerAnchor: rate,
+            holder: v2Holder.get(f.countryId),
           };
         })
       )
@@ -256,6 +289,7 @@ export async function runFundedProducerTurn(
             amountLocal: t.amount * rate,
             currencyCode: scope!.currency,
             localPerAnchor: rate,
+            holder: v2Holder.get(t.countryId),
           };
         })
       )
@@ -638,7 +672,12 @@ export async function runFundedProducerTurn(
       publicReturnMoves(
         worldEpoch,
         turn,
-        demand.funding.flatMap((f) => returnRow(f.countryId, publicWallet(f.countryId)))
+        demand.funding.flatMap((f) =>
+          returnRow(f.countryId, publicWallet(f.countryId)).map((row) => ({
+            ...row,
+            holder: v2Holder.get(f.countryId),
+          }))
+        )
       )
     )
   );
