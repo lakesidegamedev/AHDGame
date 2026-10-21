@@ -88,4 +88,28 @@ describe("AI transition conversion", () => {
     });
     expect(choice).toEqual({ sectorId: a._id.toString(), lane: "energy" });
   });
+
+  it("skips a lane whose own inputs are the scarcest goods and takes the next best", () => {
+    const a = sector();
+    const choice = chooseTransitionConversion({
+      ...base,
+      sectors: [a],
+      incomeBySectorId: new Map([[a._id.toString(), -50]]),
+      shortageOf: (lane) => (lane === "healthcare" ? 1.7 : lane === "energy" ? 1.5 : 0.8),
+      inputPressureOf: (lane) => (lane === "healthcare" ? 2.2 : 1.1),
+    });
+    expect(choice).toEqual({ sectorId: a._id.toString(), lane: "energy" });
+  });
+
+  it("does not convert when input scarcity cancels the target's edge over the current lane", () => {
+    const a = sector();
+    const choice = chooseTransitionConversion({
+      ...base,
+      sectors: [a],
+      incomeBySectorId: new Map([[a._id.toString(), -50]]),
+      shortageOf: (lane) => (lane === "healthcare" ? 1.6 : 1.4),
+      inputPressureOf: (lane) => (lane === "healthcare" ? 2 : 1),
+    });
+    expect(choice).toBeNull();
+  });
 });
