@@ -492,7 +492,7 @@ function RegionBreakdown({
                           aria-expanded={isOpen}
                           aria-controls={panelId}
                           aria-label={`${isOpen ? "Hide" : "Show"} ${r.stateName} inputs and outputs`}
-                          className="inline-flex h-6 items-center rounded border border-card-border px-2 text-[11px] text-foreground hover:bg-card-elevated"
+                          className="inline-flex h-6 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border px-2 text-[11px] text-foreground hover:bg-card-elevated"
                         >
                           {isOpen ? "Hide" : "Show"}
                         </button>

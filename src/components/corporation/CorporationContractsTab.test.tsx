@@ -96,4 +96,46 @@ describe("extraction contract discovery and lifecycle", () => {
   ] as const)("resolves terminal state %j as %s", (contract, expected) => {
     expect(effectiveContractStatus(contract)).toBe(expected);
   });
+
+  const activeRow = (over: Record<string, unknown>) => ({
+    _id: "e".repeat(24),
+    countryId: "US",
+    stateId: "TX",
+    resource: "oil",
+    share: 0.2,
+    status: "active",
+    expiresTurn: 70,
+    royaltyRatePerTurn: 0.01,
+    ...over,
+  });
+  const termBar = async () => {
+    await screen.findByText("TX");
+    return document.querySelector<HTMLElement>("[data-term-used] [data-fill]");
+  };
+
+  it("term bar only with activation and term", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ contracts: [activeRow({ termTurns: 40 })] }))
+    );
+    show();
+    expect(await termBar()).toBeNull();
+    cleanup();
+
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ contracts: [activeRow({ activatedTurn: 30, termTurns: 40 })] }))
+    );
+    show();
+    const bar = await termBar();
+    expect(bar?.style.width).toBe("25%");
+    expect(screen.getByText("10 of 40 turns used")).toBeTruthy();
+  });
+
+  it("term bar clamps past expiry", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ contracts: [activeRow({ activatedTurn: 0, termTurns: 20 })] }))
+    );
+    show();
+    expect((await termBar())?.style.width).toBe("100%");
+    expect(screen.getByText("20 of 20 turns used")).toBeTruthy();
+  });
 });
