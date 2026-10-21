@@ -49,8 +49,11 @@ import {
   FREIGHT_CLASS_BY_COMMODITY,
   isHauledClass,
   SHIPPED_COMMODITIES,
+  freightTeuPerUnitHop,
   type FreightClass,
 } from "./freightClass";
+
+export { FREIGHT_TEU_PER_UNIT_HOP, freightTeuPerUnitHop } from "./freightClass";
 
 // ── Tuning constants (dark-ledger calibrated; money wiring still off) ────────
 
@@ -64,14 +67,6 @@ import {
  * counts and freight TEU supply already share {@link getEraUnitScale}, so this
  * ratio is era-invariant — see {@link freightTeuPerUnitHop}.
  */
-export const FREIGHT_TEU_PER_UNIT_HOP: Record<FreightClass, number> = {
-  bulk: 0.04,
-  special: 0.12,
-  // Grid rides wire and pipe, not the haulage fleet: it never spends TEU.
-  // Distance is paid in transmission loss and a wheeling charge instead.
-  grid: 0,
-};
-
 /**
  * Price weight per commodity unit per state-line crossing, by class.
  *
@@ -171,11 +166,6 @@ export function congestedLandedPrice(landed: number, shippingPerUnit: number): n
  * real-terms invariant across eras. `eraUnitScale` is accepted for call-site
  * symmetry with other plants helpers (and for money-wiring rates later).
  */
-export function freightTeuPerUnitHop(freightClass: FreightClass, eraUnitScale: number = 1): number {
-  void eraUnitScale;
-  return FREIGHT_TEU_PER_UNIT_HOP[freightClass];
-}
-
 /** Freight-price weight per commodity unit per hop on the era unit basis. */
 export function freightPriceTeuPerUnitHop(
   freightClass: FreightClass,

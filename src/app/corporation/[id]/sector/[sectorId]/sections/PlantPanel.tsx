@@ -22,11 +22,13 @@ import RunMeter from "../components/RunMeter";
 import DetailsDisclosure from "../components/DetailsDisclosure";
 import { fmtUnits, fmtPct } from "../lib/plants";
 import { facilitiesFromUnits, plantSizeUnits } from "@/lib/constants/facilityQuantum";
+import { estimateSectorFullCapacityOneHopFreightTeu } from "@/lib/logistics/freightVisibility";
 
 interface PlantPanelProps {
   plants: PlantsData;
   /** Commodity-ledger output after media, embargo and other market scaling. */
   marketSupplies?: CommodityFlow[];
+  freightState?: { observedLoad: number; capacity: number; turn: number | null };
   /** Drives the facility noun. A retail sector says "stores", not "plants". */
   sectorType: OperatingSectorType;
   /** The national industry union covering this workforce, vacant or led. */
@@ -63,6 +65,7 @@ interface PlantPanelProps {
 export default function PlantPanel({
   plants,
   marketSupplies = [],
+  freightState,
   sectorType,
   unionId,
   unionName,
@@ -98,6 +101,14 @@ export default function PlantPanel({
     hasRun && primaryMediaSupply && (plants.producedUnits ?? 0) > 0
       ? primaryMediaSupply.units / (plants.producedUnits ?? 1)
       : null;
+  const fullCapacityFreightEstimate = estimateSectorFullCapacityOneHopFreightTeu({
+    stateId: "",
+    producedUnits: plants.producedUnits,
+    capacityUnits: plants.capacityUnits,
+    outputByCommodity: Object.fromEntries(
+      marketSupplies.map((supply) => [supply.commodity, supply.units])
+    ),
+  });
 
   return (
     <div
@@ -115,6 +126,29 @@ export default function PlantPanel({
           <p className="mt-1 text-body-sm text-muted">
             Capacity is what you own here. It makes things, you sell them, that is your income.
           </p>
+          {(fullCapacityFreightEstimate != null || freightState) && (
+            <div className="mt-2 max-w-2xl space-y-1 text-body-xs text-muted">
+              {freightState && (
+                <p>
+                  {t("freightState", {
+                    load: fmtUnits(freightState.observedLoad),
+                    turnLabel:
+                      freightState.turn == null
+                        ? ""
+                        : t("freightStateTurn", { turn: freightState.turn }),
+                    capacity: fmtUnits(freightState.capacity),
+                  })}
+                </p>
+              )}
+              {fullCapacityFreightEstimate != null && (
+                <p>
+                  {t("freightOneHopEstimate", {
+                    estimate: fmtUnits(fullCapacityFreightEstimate),
+                  })}
+                </p>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {mothballed && (

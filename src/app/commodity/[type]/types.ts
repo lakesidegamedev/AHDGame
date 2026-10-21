@@ -62,6 +62,14 @@ export interface CommodityDetail {
   statePrices: Record<string, number>;
   stateSupply: Record<string, number>;
   stateDemand: Record<string, number>;
+  /** Freight-only, state-scoped load/capacity and a one-hop full-capacity estimate. */
+  freightNetwork?: {
+    turn: number | null;
+    states: Record<
+      string,
+      { observedLoad: number; capacity: number; fullCapacityOneHopEstimate: number | null }
+    >;
+  };
   /** Authoritative per-country supply (includes federal injections not in state maps). */
   nationalSupply?: Record<string, number>;
   /** Authoritative per-country demand (includes federal injections not in state maps). */
