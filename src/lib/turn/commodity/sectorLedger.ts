@@ -261,7 +261,8 @@ export function buildExtractionRevenueInputs(
   turn: number,
   ledgerBasePrices: Record<CommodityType, number>,
   extractionOutputScaleEnabled: boolean,
-  realizedFractionBySectorId: Map<string, number>
+  realizedFractionBySectorId: Map<string, number>,
+  plantsEnabled = false
 ): ExtractionSectorInput[] {
   return extractionSectors.map((sector) => {
     const hasStrategy = sector.strategyId && sector.strategyId !== "standard";
@@ -277,19 +278,6 @@ export function buildExtractionRevenueInputs(
             sector.mediaDiscriminator
           )
         : null;
-
-    const revenueBasedOutput: Partial<Record<ExtractableResource, number>> = {};
-    for (const resource of EXTRACTABLE_RESOURCES) {
-      const rate = strategyRates
-        ? (strategyRates.supply[resource] ?? 0)
-        : ((SECTOR_SUPPLY["extraction"] ?? []).find((f) => f.commodity === resource)?.rate ?? 0);
-      if (rate > 0) {
-        // Same scale applied to the S/D accumulation, so the capacity haircut
-        // is computed against the boosted output (fills idle deposit capacity).
-        const scale = extractionOutputScaleFor(resource, extractionOutputScaleEnabled);
-        revenueBasedOutput[resource] = (sector.revenue * rate * scale) / ledgerBasePrices[resource];
-      }
-    }
 
     // sectorId -> realized/nameplate output units, for the depletion booking.
     // Nameplate here is `impliedOutputUnits(revenue)` — the SAME quantity
@@ -316,6 +304,24 @@ export function buildExtractionRevenueInputs(
       const fraction = realizedOutputFraction(sector.producedUnits, nameplateUnits);
       if (fraction != null) {
         realizedFractionBySectorId.set(sector.sectorId!, fraction);
+      }
+    }
+
+    // Plants with a realized measurement: nameplate x fraction is already the
+    // real tonnage, so the output scale does not apply to it.
+    const realized = plantsEnabled && realizedFractionBySectorId.has(sector.sectorId!);
+    const revenueBasedOutput: Partial<Record<ExtractableResource, number>> = {};
+    for (const resource of EXTRACTABLE_RESOURCES) {
+      const rate = strategyRates
+        ? (strategyRates.supply[resource] ?? 0)
+        : ((SECTOR_SUPPLY["extraction"] ?? []).find((f) => f.commodity === resource)?.rate ?? 0);
+      if (rate > 0) {
+        // Same scale applied to the S/D accumulation, so the capacity haircut
+        // is computed against the boosted output (fills idle deposit capacity).
+        const scale = realized
+          ? 1
+          : extractionOutputScaleFor(resource, extractionOutputScaleEnabled);
+        revenueBasedOutput[resource] = (sector.revenue * rate * scale) / ledgerBasePrices[resource];
       }
     }
 
