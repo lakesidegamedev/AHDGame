@@ -1063,6 +1063,12 @@ type LoanServiceResult = {
   writtenOff: number;
   bankCredit: number;
   totalLoansDelta: number;
+  /** Payment that actually left the borrower this pass (for the preloaded balance). */
+  paidLocal: number;
+  /** The settlement was already applied by an earlier attempt; the preload is stale. */
+  replayed: boolean;
+  /** Some legs landed but the move did not finish; the preload may be stale. */
+  partial: boolean;
 };
 
 type LoanBookOnlyBank = { corp: Corporation; charter: BankCharter };
@@ -1087,6 +1093,9 @@ async function serviceNamedLoanBook(
     writtenOff: 0,
     bankCredit: 0,
     totalLoansDelta: 0,
+    paidLocal: 0,
+    replayed: false,
+    partial: false,
   };
   const loans = await db
     .collection<BankLoan>("bankLoans")
@@ -1106,9 +1115,74 @@ async function serviceNamedLoanBook(
     list.push(loan);
     loansByBorrower.set(key, list);
   }
+
+  // Preload every borrower's balance and name once per bank instead of once
+  // per loan. The banking pass is the only writer to these balances this turn
+  // (its keyed locks include every borrower), so the running balance below is
+  // exactly what the per-loan read saw after each settled debit.
+  const borrowerKeyOf = (loan: (typeof loans)[number]) =>
+    `${loan.borrowerType}:${String(loan.borrowerId)}:${loan.currency}`;
+  const characterIds = new Map<string, ObjectId>();
+  const corporationIds = new Map<string, ObjectId>();
+  for (const loan of loans) {
+    if (!loan.borrowerId) continue;
+    if (loan.borrowerType === "character")
+      characterIds.set(String(loan.borrowerId), loan.borrowerId);
+    else if (loan.borrowerType === "corporation")
+      corporationIds.set(String(loan.borrowerId), loan.borrowerId);
+  }
+  const [preloadChars, preloadCorps] = await Promise.all([
+    characterIds.size
+      ? db
+          .collection<Character>("characters")
+          .find(
+            { _id: { $in: [...characterIds.values()] } },
+            { projection: { name: 1, "currencyBalances.personal": 1 } }
+          )
+          .toArray()
+      : Promise.resolve([]),
+    corporationIds.size
+      ? db
+          .collection<Corporation>("corporations")
+          .find(
+            { _id: { $in: [...corporationIds.values()] } },
+            { projection: { name: 1, liquidCapital: 1 } }
+          )
+          .toArray()
+      : Promise.resolve([]),
+  ]);
+  const charById = new Map(preloadChars.map((row) => [String(row._id), row]));
+  const corpById = new Map(preloadCorps.map((row) => [String(row._id), row]));
+  const borrowerState = new Map<string, { available: number; name: string }>();
+  for (const loan of loans) {
+    if (!loan.borrowerId) continue;
+    const key = borrowerKeyOf(loan);
+    if (borrowerState.has(key)) continue;
+    if (loan.borrowerType === "character") {
+      const ch = charById.get(String(loan.borrowerId));
+      // A missing document falls back to the per-loan read, which returns the
+      // same zero but keeps a mocked/partial collection from inventing a
+      // borrower state that the real code would not have.
+      if (!ch) continue;
+      borrowerState.set(key, {
+        available: Math.max(0, ch.currencyBalances?.personal?.[loan.currency] ?? 0),
+        name: ch.name ?? "Borrower",
+      });
+    } else if (loan.borrowerType === "corporation") {
+      const corporation = corpById.get(String(loan.borrowerId));
+      if (!corporation) continue;
+      borrowerState.set(key, {
+        available: Math.max(0, corporation.liquidCapital ?? 0),
+        name: corporation.name ?? "Borrower",
+      });
+    }
+  }
+
   const txEntries: TxInput[] = [];
   const serviceBorrower = async (borrowerLoans: typeof loans) => {
     for (const loan of borrowerLoans) {
+      const key = borrowerKeyOf(loan);
+      const preloaded = borrowerState.get(key);
       const loanResult = await servicePlayerLoan(
         db,
         turn,
@@ -1118,13 +1192,21 @@ async function serviceNamedLoanBook(
         corp.name,
         undefined,
         false,
-        txEntries
+        txEntries,
+        preloaded
       );
       total.interestCollected += loanResult.interestCollected;
       total.principalRepaid += loanResult.principalRepaid;
       total.writtenOff += loanResult.writtenOff;
       total.bankCredit += loanResult.bankCredit;
       total.totalLoansDelta += loanResult.totalLoansDelta;
+      if (preloaded) {
+        // A replay or a partial move may have changed the balance behind this
+        // snapshot; drop it so the next loan on the borrower reads the truth.
+        if (loanResult.replayed || loanResult.partial) borrowerState.delete(key);
+        else if (loanResult.paidLocal > 0)
+          preloaded.available = Math.max(0, preloaded.available - loanResult.paidLocal);
+      }
     }
   };
   const borrowerGroups = [...loansByBorrower.values()];
@@ -1274,7 +1356,13 @@ async function servicePlayerLoan(
    * caller flushes the whole bank's rows with one emitTxBulk (one thresholds
    * read, one anchor-rate map, one insertMany) instead of one emitTx per loan.
    */
-  txEntries?: TxInput[]
+  txEntries?: TxInput[],
+  /**
+   * Balance and name read once per borrower for the whole bank pass. The
+   * caller keeps the running balance between that borrower's loans, which is
+   * exactly what the per-loan read saw after each settled debit.
+   */
+  preloadedBorrower?: { available: number; name: string }
 ): Promise<LoanServiceResult> {
   const empty: LoanServiceResult = {
     interestCollected: 0,
@@ -1282,6 +1370,9 @@ async function servicePlayerLoan(
     writtenOff: 0,
     bankCredit: 0,
     totalLoansDelta: 0,
+    paidLocal: 0,
+    replayed: false,
+    partial: false,
   };
   if (loan.lastProcessedTurn === turn) return empty;
   if (loan.constructionCollateral) {
@@ -1328,7 +1419,8 @@ async function servicePlayerLoan(
   // The journal lands all of it exactly once under the per-loan-per-turn key,
   // so a retried turn can neither charge the borrower twice nor advance the
   // loan twice, and a crash between money and record is a visible partial.
-  const { available, name: borrowerName } = await readBorrowerAvailable(db, loan, currency);
+  const { available, name: borrowerName } =
+    preloadedBorrower ?? (await readBorrowerAvailable(db, loan, currency));
   const { decision, transition } = loanServiceTransition({
     loan,
     borrowerAvailable: available,
@@ -1402,6 +1494,9 @@ async function servicePlayerLoan(
     writtenOff: advanced ? decision.writtenOff : 0,
     bankCredit: collected,
     totalLoansDelta: advanced ? decision.totalLoansDelta : 0,
+    paidLocal: collected,
+    replayed: settled.status === "replayed",
+    partial: settled.status === "partial",
   };
 }
 
