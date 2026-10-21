@@ -213,7 +213,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/banking/moneyMove.ts",
     owner: "applyLeg",
     argument: "leg.collection",
-    scopeHash: "90aba0abe7aa27f18de1b149205b7f83350d2c36233ec24fdf461debbb3a4c2e",
+    scopeHash: "0c733983322a307f0b500b47f8423b1a7ab0ea1cb1cf43d2191744bed8ad4246",
     count: 1,
     reason: "The persisted transaction or recovery record carries its destination collection.",
   },
