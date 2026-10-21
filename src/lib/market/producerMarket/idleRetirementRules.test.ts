@@ -22,8 +22,14 @@ describe("idle capacity retirement on the funded market", () => {
     expect(idleRetireFraction({ ...base, zeroSalesTurns: undefined })).toBe(0);
   });
 
-  it("never retires a mothballed plant", () => {
-    expect(idleRetireFraction({ ...base, mothballed: true })).toBe(0);
+  it("retires mothballed capacity once it has sat idle past the grace, like any dead plant", () => {
+    expect(idleRetireFraction({ ...base, mothballed: true, activeUnits: 0 })).toBeCloseTo(
+      IDLE_RETIRE_RATE * (1 - IDLE_RETIRE_PROBE_SHARE),
+      12
+    );
+    expect(
+      idleRetireFraction({ ...base, mothballed: true, zeroSalesTurns: IDLE_RETIRE_GRACE_TURNS })
+    ).toBe(0);
   });
 
   it("retires a share of everything above the probe run once persistently idle", () => {
