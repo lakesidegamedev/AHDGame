@@ -794,6 +794,7 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
         labourDemandWageIndexByState: new Map(),
         privateBankingEnabled,
         advertisingInput: true,
+        demandPlanStage: marketGovernorConfig?.producerDemandPlanStage,
         transitionFirstFundedTurn:
           gameState?.producerOpening?.worldEpoch === worldEpoch
             ? gameState.producerOpening.turn + 1
