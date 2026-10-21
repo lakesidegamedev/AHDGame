@@ -315,7 +315,13 @@ function buildWiki(): LoreWikiPage[] {
 }
 
 function buildGlossary(): LoreGlossaryTerm[] {
-  return Object.entries(WIKI_GLOSSARY).map(([term, entry]) => ({
+  // The glossary is a literal const, so its entries are a union of exact
+  // shapes and only some of them carry aliases. Read it through the shape the
+  // module documents rather than through the literal types.
+  const terms = WIKI_GLOSSARY as Readonly<
+    Record<string, { definition: string; aliases?: readonly string[] }>
+  >;
+  return Object.entries(terms).map(([term, entry]) => ({
     term,
     definition: entry.definition,
     aliases: [...(entry.aliases ?? [])],
