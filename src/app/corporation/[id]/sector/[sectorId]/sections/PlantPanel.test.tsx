@@ -110,11 +110,91 @@ describe("PlantPanel workforce", () => {
     expect(
       screen.getByText(/Commodity ledger output: Advertising 140 impressions\/day/)
     ).toBeTruthy();
-    expect(
-      screen.getByText(/Advertising counts only the factor-adjusted output shown above/)
-    ).toBeTruthy();
+    expect(screen.getByText(/advertising market may apply further limits/)).toBeTruthy();
     expect(
       screen.getByText("Advertising campaigns counted: 140/day (10% media output factor)")
+    ).toBeTruthy();
+  });
+
+  it("shows the planned economy campaign factor and keeps zero output visible", () => {
+    render(
+      <PlantPanel
+        plants={{ ...plants, producedUnits: 0 }}
+        marketSupplies={[
+          {
+            commodity: "advertising",
+            label: "Advertising",
+            icon: "AD",
+            colors: "",
+            unit: "impressions",
+            units: 0,
+            rate: 1,
+            basePrice: 1,
+            globalPrice: 1,
+            nationalPrice: 1,
+            regionalPrice: 1,
+            marketPrice: 1,
+            weight: 100,
+            priceImpact: 0,
+          },
+        ]}
+        sectorType="media"
+        mediaAdvertisingCampaignFactor={0.25}
+        averageWageLevel={1}
+        isCeo={false}
+        busy={false}
+        message=""
+        onOpenBuild={noop}
+        onCancelOrder={noop}
+        onMothball={noop}
+        onReactivate={noop}
+      />
+    );
+
+    expect(
+      screen.getByText("Advertising campaigns counted: 0/day (25% media output factor)")
+    ).toBeTruthy();
+  });
+
+  it("does not describe entertainment media as advertising campaigns", () => {
+    render(
+      <PlantPanel
+        plants={plants}
+        marketSupplies={[
+          {
+            commodity: "software",
+            label: "Software",
+            icon: "SW",
+            colors: "",
+            unit: "licenses",
+            units: 50,
+            rate: 1,
+            basePrice: 1,
+            globalPrice: 1,
+            nationalPrice: 1,
+            regionalPrice: 1,
+            marketPrice: 1,
+            weight: 100,
+            priceImpact: 0,
+          },
+        ]}
+        sectorType="media"
+        mediaDiscriminator="entertainment"
+        mediaAdvertisingCampaignFactor={0.1}
+        averageWageLevel={1}
+        isCeo={false}
+        busy={false}
+        message=""
+        onOpenBuild={noop}
+        onCancelOrder={noop}
+        onMothball={noop}
+        onReactivate={noop}
+      />
+    );
+
+    expect(screen.queryByText(/Advertising campaigns counted/)).toBeNull();
+    expect(
+      screen.getByText(/Entertainment output is shown in its own commodity ledger/)
     ).toBeTruthy();
   });
 });

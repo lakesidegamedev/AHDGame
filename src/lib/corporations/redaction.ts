@@ -78,6 +78,8 @@ const PRIVATE_REDACTED_SECTOR_FIELDS = [
   "capacityUnits",
   "producedUnits",
   "soldUnits",
+  "mediaAdvertisingCampaignUnits",
+  "mediaAdvertisingCampaignFactor",
   "fillRate",
   "fillRateBand",
   // Share of output a rival could not get to market. Same class of intel as the

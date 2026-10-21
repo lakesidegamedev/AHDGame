@@ -380,6 +380,7 @@ export const GET = withNoStore(async function GET(request: Request, { params }: 
                 capacityUnits: numberOrNull(row.capacityUnits),
                 producedUnits: numberOrNull(row.producedUnits),
                 soldUnits: numberOrNull(row.soldUnits),
+                mediaAdvertisingCampaignUnits: numberOrNull(row.mediaAdvertisingCampaignUnits),
                 constructionInProgressAnchor: numberOrNull(row.constructionInProgressAnchor),
               },
               physicalFactors

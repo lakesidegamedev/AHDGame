@@ -97,15 +97,21 @@ export default function PlantPanel({
     (workersDesired > 0 ? Math.min(1, plants.workers / workersDesired) : 1);
   const staffingShortfall =
     workersDesired > 0 && plants.workers < workersDesired ? 1 - plants.workers / workersDesired : 0;
+  const mediaAdvertisingSupply =
+    sectorType === "media" && mediaDiscriminator !== "entertainment"
+      ? marketSupplies.find((supply) => supply.commodity === "advertising")
+      : undefined;
   const primaryMediaSupply =
-    sectorType === "media" ? marketSupplies.find((supply) => supply.units > 0) : undefined;
+    sectorType === "media"
+      ? (mediaAdvertisingSupply ?? marketSupplies.find((supply) => supply.units > 0))
+      : undefined;
   const mediaLedgerShare =
     hasRun && primaryMediaSupply && (plants.producedUnits ?? 0) > 0
       ? primaryMediaSupply.units / (plants.producedUnits ?? 1)
       : null;
   const countedCampaigns =
     sectorType === "media" && mediaDiscriminator !== "entertainment" && hasRun
-      ? (primaryMediaSupply?.units ?? null)
+      ? (mediaAdvertisingSupply?.units ?? 0)
       : null;
 
   return (
@@ -188,15 +194,18 @@ export default function PlantPanel({
                   {mediaLedgerShare != null ? ` (${fmtPct(mediaLedgerShare)} of today's run)` : ""}
                 </p>
                 <p className="mt-1 text-muted">
-                  Media run units measure total audience activity. Advertising counts only the
-                  factor-adjusted output shown above; the market may apply further limits.
+                  {mediaDiscriminator === "entertainment"
+                    ? t("mediaEntertainmentExplanation")
+                    : t("mediaAdvertisingExplanation")}
                 </p>
               </div>
             )}
             {countedCampaigns != null && (
               <p className="mt-2 text-body-xs text-muted">
-                Advertising campaigns counted: {fmtUnits(countedCampaigns)}/day (
-                {fmtPct(mediaAdvertisingCampaignFactor)} media output factor)
+                {t("advertisingCampaignsCounted", {
+                  units: fmtUnits(countedCampaigns),
+                  factor: fmtPct(mediaAdvertisingCampaignFactor),
+                })}
               </p>
             )}
           </>

@@ -307,6 +307,8 @@ export interface SectorPhysicals {
   producedUnits: number | null;
   /** Units sold last turn. */
   soldUnits: number | null;
+  /** Exact advertising-ledger output, derived from produced units. */
+  mediaAdvertisingCampaignUnits?: number | null;
   /** Construction in progress, ₳ — capacity paid for but not yet productive. */
   constructionInProgressAnchor: number | null;
 }
@@ -374,6 +376,14 @@ export function applyFogToSectorPhysicals(
     capacityUnits: fogNullable(physicals.capacityUnits, factors.base),
     producedUnits: fogNullable(physicals.producedUnits, factors.produced),
     soldUnits: fogNullable(physicals.soldUnits, factors.sold),
+    ...(physicals.mediaAdvertisingCampaignUnits !== undefined
+      ? {
+          mediaAdvertisingCampaignUnits: fogNullable(
+            physicals.mediaAdvertisingCampaignUnits,
+            factors.produced
+          ),
+        }
+      : {}),
     constructionInProgressAnchor: fogNullable(physicals.constructionInProgressAnchor, factors.base),
     fillRate: null,
     fillRateBand: fillRateBand(computeFillRate(physicals.producedUnits, physicals.soldUnits)),
