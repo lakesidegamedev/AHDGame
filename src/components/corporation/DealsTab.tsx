@@ -3,7 +3,17 @@
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import MergerReviewPanel from "@/components/corporation/MergerReviewPanel";
-import { DenseSection, InlineStatus, SmallButton, Td, Th } from "./dense/DenseKit";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import {
+  DenseSection,
+  InlineStatus,
+  SmallButton,
+  TableScroll,
+  Td,
+  Th,
+  useCorpMoney,
+} from "./dense/DenseKit";
+import { DealPreview } from "./deals/DealPreview";
 
 interface DealSummary {
   offerId: string;
@@ -35,12 +45,35 @@ interface CorpSearchResult {
   nppRun?: boolean;
 }
 
-const fmt = (n: number) => "₳" + Math.round(n).toLocaleString("en-US");
-
 const outcomeLabel = (outcome: DealSummary["outcome"]) =>
   outcome === "subsidiary" ? "Keep as subsidiary" : "Merge";
 
-export default function DealsTab({ corpId, isCeo }: { corpId: string; isCeo: boolean }) {
+/** Offer over the server's estimated value, as a signed percent; null without a valuation. */
+function premiumText(o: DealSummary): string | null {
+  if (!(o.targetValuationAnchor > 0)) return null;
+  const pct = (o.priceAnchor / o.targetValuationAnchor - 1) * 100;
+  return `${pct >= 0 ? "+" : "-"}${Math.abs(pct).toFixed(1)}%`;
+}
+
+export default function DealsTab({
+  corpId,
+  isCeo,
+  liquidCapital = 0,
+  liquidCurrencyCode,
+  countryId,
+}: {
+  corpId: string;
+  isCeo: boolean;
+  /** This corporation's cash, in its own currency. */
+  liquidCapital?: number;
+  liquidCurrencyCode?: string | null;
+  countryId?: string | null;
+}) {
+  // Offer prices are stored as anchor values; show them in the viewer's
+  // display currency, and take the typed offer in this corporation's currency.
+  const { formatAmount } = useCurrency();
+  const fmt = (anchor: number) => formatAmount(anchor);
+  const money = useCorpMoney(liquidCurrencyCode, countryId);
   const [data, setData] = useState<DealsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -142,7 +175,7 @@ export default function DealsTab({ corpId, isCeo }: { corpId: string; isCeo: boo
         body: JSON.stringify({
           action: "propose",
           targetCorporationId: selectedTarget.id,
-          priceAnchor: Number(price),
+          priceAnchor: money.toAnchor(Number(price)),
           outcome: keepAsSubsidiary && data?.subsidiaryAvailable ? "subsidiary" : "merge",
         }),
       });
@@ -184,65 +217,67 @@ export default function DealsTab({ corpId, isCeo }: { corpId: string; isCeo: boo
         {!data || data.incoming.length === 0 ? (
           <p className="py-2 text-xs text-muted">No incoming offers.</p>
         ) : (
-          <table className="w-full border-collapse">
-            <thead>
-              <tr>
-                <Th>Acquirer</Th>
-                <Th>Outcome</Th>
-                <Th align="right">Offer</Th>
-                <Th align="right" title="This corporation's estimated value.">
-                  Est. value
-                </Th>
-                <Th align="right">
-                  <span className="sr-only">Actions</span>
-                </Th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.incoming.map((o) => (
-                <tr key={o.offerId}>
-                  <Td className="text-foreground">{o.acquirerName}</Td>
-                  <Td className="text-muted">{outcomeLabel(o.outcome)}</Td>
-                  <Td align="right">{fmt(o.priceAnchor)}</Td>
-                  <Td align="right" className="text-muted">
-                    {fmt(o.targetValuationAnchor)}
-                  </Td>
-                  <Td align="right" numeric={false}>
-                    <span className="inline-flex gap-1.5">
-                      <SmallButton
-                        tone="primary"
-                        onClick={() => {
-                          if (
-                            confirm(
-                              o.outcome === "subsidiary"
-                                ? `Accept ${o.acquirerName}'s offer of ${fmt(
-                                    o.priceAnchor
-                                  )}? Your corporation stays as it is, with its sectors, cash and management, but ${
-                                    o.acquirerName
-                                  } becomes its only shareholder and your current shareholders are paid out.`
-                                : `Accept ${o.acquirerName}'s offer of ${fmt(
-                                    o.priceAnchor
-                                  )}? Your corporation will be absorbed into theirs and shareholders paid out.`
-                            )
-                          )
-                            void act("accept", o.offerId);
-                        }}
-                        disabled={busyId === o.offerId}
-                      >
-                        {busyId === o.offerId ? "Working" : "Accept"}
-                      </SmallButton>
-                      <SmallButton
-                        onClick={() => void act("reject", o.offerId)}
-                        disabled={busyId === o.offerId}
-                      >
-                        Reject
-                      </SmallButton>
-                    </span>
-                  </Td>
+          <TableScroll>
+            <table className="w-full border-collapse">
+              <thead>
+                <tr>
+                  <Th>Acquirer</Th>
+                  <Th>Outcome</Th>
+                  <Th align="right">Offer</Th>
+                  <Th align="right" title="This corporation's estimated value.">
+                    Est. value
+                  </Th>
+                  <Th align="right">
+                    <span className="sr-only">Actions</span>
+                  </Th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {data.incoming.map((o) => (
+                  <tr key={o.offerId}>
+                    <Td className="text-foreground">{o.acquirerName}</Td>
+                    <Td className="text-muted">{outcomeLabel(o.outcome)}</Td>
+                    <Td align="right">{fmt(o.priceAnchor)}</Td>
+                    <Td align="right" className="text-muted">
+                      {fmt(o.targetValuationAnchor)}
+                    </Td>
+                    <Td align="right" numeric={false}>
+                      <span className="inline-flex gap-1.5">
+                        <SmallButton
+                          tone="primary"
+                          onClick={() => {
+                            if (
+                              confirm(
+                                o.outcome === "subsidiary"
+                                  ? `Accept ${o.acquirerName}'s offer of ${fmt(
+                                      o.priceAnchor
+                                    )}? Your corporation stays as it is, with its sectors, cash and management, but ${
+                                      o.acquirerName
+                                    } becomes its only shareholder and your current shareholders are paid out.`
+                                  : `Accept ${o.acquirerName}'s offer of ${fmt(
+                                      o.priceAnchor
+                                    )}? Your corporation will be absorbed into theirs and shareholders paid out.`
+                              )
+                            )
+                              void act("accept", o.offerId);
+                          }}
+                          disabled={busyId === o.offerId}
+                        >
+                          {busyId === o.offerId ? "Working" : "Accept"}
+                        </SmallButton>
+                        <SmallButton
+                          onClick={() => void act("reject", o.offerId)}
+                          disabled={busyId === o.offerId}
+                        >
+                          Reject
+                        </SmallButton>
+                      </span>
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TableScroll>
         )}
       </DenseSection>
 
@@ -250,35 +285,43 @@ export default function DealsTab({ corpId, isCeo }: { corpId: string; isCeo: boo
         {!data || data.outgoing.length === 0 ? (
           <p className="py-2 text-xs text-muted">No outgoing offers.</p>
         ) : (
-          <table className="w-full border-collapse">
-            <thead>
-              <tr>
-                <Th>Target</Th>
-                <Th>Outcome</Th>
-                <Th align="right">Offer</Th>
-                <Th align="right">
-                  <span className="sr-only">Actions</span>
-                </Th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.outgoing.map((o) => (
-                <tr key={o.offerId}>
-                  <Td className="text-foreground">{o.targetName}</Td>
-                  <Td className="text-muted">{outcomeLabel(o.outcome)}</Td>
-                  <Td align="right">{fmt(o.priceAnchor)}</Td>
-                  <Td align="right" numeric={false}>
-                    <SmallButton
-                      onClick={() => void act("withdraw", o.offerId)}
-                      disabled={busyId === o.offerId}
-                    >
-                      {busyId === o.offerId ? "Working" : "Withdraw"}
-                    </SmallButton>
-                  </Td>
+          <TableScroll>
+            <table className="w-full border-collapse">
+              <thead>
+                <tr>
+                  <Th>Target</Th>
+                  <Th>Outcome</Th>
+                  <Th align="right">Offer</Th>
+                  <Th align="right" title="The offer over the target's estimated value.">
+                    Premium
+                  </Th>
+                  <Th align="right">
+                    <span className="sr-only">Actions</span>
+                  </Th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {data.outgoing.map((o) => (
+                  <tr key={o.offerId}>
+                    <Td className="text-foreground">{o.targetName}</Td>
+                    <Td className="text-muted">{outcomeLabel(o.outcome)}</Td>
+                    <Td align="right">{fmt(o.priceAnchor)}</Td>
+                    <Td align="right" className="text-muted">
+                      {premiumText(o) ?? ""}
+                    </Td>
+                    <Td align="right" numeric={false}>
+                      <SmallButton
+                        onClick={() => void act("withdraw", o.offerId)}
+                        disabled={busyId === o.offerId}
+                      >
+                        {busyId === o.offerId ? "Working" : "Withdraw"}
+                      </SmallButton>
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TableScroll>
         )}
       </DenseSection>
 
@@ -295,7 +338,7 @@ export default function DealsTab({ corpId, isCeo }: { corpId: string; isCeo: boo
           </p>
           <form onSubmit={propose} className="flex flex-wrap items-center gap-1.5">
             {selectedTarget ? (
-              <span className="inline-flex h-7 items-center gap-2 rounded-md border border-card-border px-2 text-[13px] text-foreground">
+              <span className="inline-flex h-7 items-center gap-2 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border px-2 text-[13px] text-foreground">
                 {selectedTarget.name}
                 {selectedTarget.ticker ? (
                   <span className="text-xs text-muted">{selectedTarget.ticker}</span>
@@ -316,10 +359,10 @@ export default function DealsTab({ corpId, isCeo }: { corpId: string; isCeo: boo
                   onChange={(e) => setTargetQuery(e.target.value)}
                   placeholder="Search corporations"
                   aria-label="Target corporation"
-                  className="h-7 w-64 rounded-md border border-card-border bg-background px-2 text-[13px] text-foreground placeholder:text-muted focus:border-foreground focus:outline-none"
+                  className="h-7 w-full max-w-64 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-2 text-[13px] text-foreground placeholder:text-muted focus:border-foreground focus:outline-none"
                 />
                 {targetResults.length > 0 && (
-                  <ul className="absolute left-0 top-8 z-20 max-h-56 w-80 overflow-y-auto rounded-md border border-card-border bg-card shadow-lg">
+                  <ul className="absolute left-0 top-8 z-20 max-h-56 w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-card shadow-lg">
                     {targetResults.map((r) => (
                       <li key={r.id}>
                         <button
@@ -347,14 +390,14 @@ export default function DealsTab({ corpId, isCeo }: { corpId: string; isCeo: boo
               </span>
             )}
             <label className="flex items-center gap-1.5 text-xs text-muted">
-              Offer (₳)
+              {money.code ? `Offer, ${money.code}` : "Offer"}
               <input
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 type="number"
                 min="1"
                 aria-label="Offer price"
-                className="h-7 w-36 rounded-md border border-card-border bg-background px-2 text-right font-mono text-[13px] text-foreground focus:border-foreground focus:outline-none"
+                className="h-7 w-36 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-2 text-right font-mono text-[13px] text-foreground focus:border-foreground focus:outline-none"
                 required
               />
             </label>
@@ -402,6 +445,16 @@ export default function DealsTab({ corpId, isCeo }: { corpId: string; isCeo: boo
                 targets.
               </p>
             )}
+          {selectedTarget && (
+            <DealPreview
+              key={selectedTarget.id}
+              targetId={selectedTarget.id}
+              targetName={selectedTarget.name}
+              offerLocal={price.trim() !== "" && Number(price) > 0 ? Number(price) : null}
+              cashLocal={liquidCapital}
+              fmtLocal={money.fmt}
+            />
+          )}
           <InlineStatus message={proposeErr} tone="error" />
           <InlineStatus message={proposeMsg} tone="success" />
         </div>

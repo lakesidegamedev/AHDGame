@@ -1478,7 +1478,13 @@ export default function CorporationDetailPage() {
                   )}
 
                   {tab === "deals" && corporation.canManageAcquisitions && (
-                    <DealsTab corpId={id} isCeo={isCeo} />
+                    <DealsTab
+                      corpId={id}
+                      isCeo={isCeo}
+                      liquidCapital={corporation.liquidCapital}
+                      liquidCurrencyCode={corporation.liquidCurrencyCode}
+                      countryId={corporation.countryId}
+                    />
                   )}
 
                   {tab === "structure" && (
