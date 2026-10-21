@@ -59,7 +59,12 @@ import {
 } from "@/lib/banking/constructionServiceLease";
 import { settleLegacyDepositInterest } from "@/lib/banking/legacyDepositInterest";
 import { settleTransition } from "@/lib/banking/settlementJournal";
-import { oid, type TransitionLeg, type TransitionProjection } from "@/lib/banking/rules/boundary";
+import {
+  oid,
+  type BankingTransition,
+  type TransitionLeg,
+  type TransitionProjection,
+} from "@/lib/banking/rules/boundary";
 import { effectiveBankRatesFromPrime, playerDepositRatePercent } from "@/lib/banking/rates";
 import { getBankDepositCeiling } from "@/lib/banking/capacityAllocation";
 import { roundSavingsAmount, savingsApyPercent } from "@/lib/currency/savingsInterest";
@@ -1210,15 +1215,154 @@ async function serviceNamedLoanBook(
     }
   };
   const borrowerGroups = [...loansByBorrower.values()];
-  await Promise.all(
-    borrowerGroups
-      .filter((group) => !group.some((loan) => loan.constructionCollateral))
-      .map(serviceBorrower)
+  const constructionGroups = borrowerGroups.filter((group) =>
+    group.some((loan) => loan.constructionCollateral)
   );
+
+  // One journaled move for the bank's plain book: N borrower debits, one
+  // summed bank credit, one loan projection per loan. Decisions still use the
+  // running balance a borrower's previous loan left, exactly as the serial
+  // per-loan pass did. Construction receipts (one lender epoch, their own
+  // locks) keep the per-loan path below.
+  const plainLoans = loans.filter((loan) => !loan.constructionCollateral);
+  const batchable = plainLoans.filter(
+    (loan) => !!loan.borrowerId && loan.lastProcessedTurn !== turn
+  );
+  const decisions: Array<{
+    loan: (typeof loans)[number];
+    decision: ReturnType<typeof loanServiceTransition>["decision"];
+    transition: ReturnType<typeof loanServiceTransition>["transition"];
+    borrowerKey: string;
+  }> = [];
+  const creditTarget = {
+    collection: "corporations" as const,
+    filter: { _id: corp._id },
+    path: "bankCharter.cashReserves",
+    note: "instalment reaches the lending bank",
+  };
+  for (const loan of batchable) {
+    const key = borrowerKeyOf(loan);
+    const preloaded = borrowerState.get(key);
+    const available =
+      preloaded?.available ?? (await readBorrowerAvailable(db, loan, currency)).available;
+    const { decision, transition } = loanServiceTransition({
+      loan,
+      borrowerAvailable: available,
+      turn,
+      creditTarget,
+      bankId: corp._id.toString(),
+    });
+    if (preloaded) preloaded.available = Math.max(0, preloaded.available - decision.payment);
+    decisions.push({ loan, decision, transition, borrowerKey: key });
+  }
+
+  if (decisions.length > 0) {
+    const totalPayment = decisions.reduce((sum, row) => sum + Math.max(0, row.decision.payment), 0);
+    const legs: TransitionLeg[] = decisions.flatMap((row) =>
+      row.transition.legs.filter((leg) => leg.kind === "debit")
+    );
+    if (totalPayment > 0) legs.push({ kind: "credit", amount: totalPayment, ...creditTarget });
+    const projections = decisions.flatMap((row) =>
+      row.transition.projections.filter((projection) => {
+        if (projection.collection !== "corporations") return true;
+        const update = "update" in projection ? projection.update : undefined;
+        if (!update || typeof update !== "object") return true;
+        const inc = (update as { $inc?: Record<string, unknown> }).$inc;
+        return !inc || !("bankCharter.totalLoans" in inc);
+      })
+    );
+    const totalLoansDelta = decisions.reduce((sum, row) => sum + row.decision.totalLoansDelta, 0);
+    if (totalLoansDelta !== 0)
+      projections.push({
+        collection: "corporations",
+        filter: { _id: corp._id, "bankCharter.charteredTurn": charteredTurn },
+        update: { $inc: { "bankCharter.totalLoans": totalLoansDelta } },
+        note: "Advance the named loan book under the batch servicing receipt",
+      });
+    const batchKey = `loan-service-batch:${corp._id.toString()}:${turn}`;
+    const settled = await settleTransition(db, {
+      key: batchKey,
+      kind: "loan_service_batch",
+      turn,
+      currency,
+      legs,
+      projections,
+      batchIndependentDebits: true,
+      event: {
+        kind: "monetary.executed",
+        command: "turn.loanService.batch",
+        subjectType: "corporation",
+        subjectId: corp._id.toString(),
+        amount: totalPayment,
+        meta: { loans: decisions.length },
+      },
+    });
+    if (settled.status === "applied") {
+      for (const row of decisions) {
+        total.interestCollected += row.decision.interestPaid;
+        total.principalRepaid += row.decision.principalPaid;
+        total.writtenOff += row.decision.writtenOff;
+        total.totalLoansDelta += row.decision.totalLoansDelta;
+        total.bankCredit += Math.max(0, row.decision.payment);
+        if (row.decision.payment > 0) {
+          txEntries.push(
+            loanRepaymentTxEntry({
+              loan: row.loan,
+              turn,
+              currency,
+              bankCorporationId: row.loan.bankCorporationId,
+              bankName: corp.name,
+              borrowerName: borrowerState.get(row.borrowerKey)?.name ?? "Borrower",
+              payment: row.decision.payment,
+              settlementId: batchKey,
+            })
+          );
+        }
+        emitBankingAuditEvent(
+          {
+            ...row.transition.event,
+            turn,
+            outcome: "ok",
+            currency,
+            bankId: corp._id.toString(),
+            settlementId: batchKey,
+          },
+          db
+        );
+      }
+    } else if (settled.status === "partial") {
+      total.partial = true;
+    } else if (settled.status === "rejected") {
+      // The batch was refused before any money moved (an unbalanced or
+      // malformed plan). Service these loans on their own keys instead of
+      // dropping the turn; each still runs its own guard.
+      for (const row of decisions) {
+        const loanResult = await servicePlayerLoan(
+          db,
+          turn,
+          corp._id,
+          row.loan,
+          currency,
+          corp.name,
+          undefined,
+          false,
+          txEntries
+        );
+        total.interestCollected += loanResult.interestCollected;
+        total.principalRepaid += loanResult.principalRepaid;
+        total.writtenOff += loanResult.writtenOff;
+        total.bankCredit += loanResult.bankCredit;
+        total.totalLoansDelta += loanResult.totalLoansDelta;
+        borrowerState.delete(row.borrowerKey);
+      }
+    }
+    // replayed: the batch key already owns this turn's servicing. The loan
+    // records carry lastProcessedTurn, so there is nothing further to write.
+  }
+
   // Construction receipts hold one lender epoch. Keep their borrower groups
   // serial so parallel admission cannot repeatedly starve all but one loan.
-  for (const group of borrowerGroups)
-    if (group.some((loan) => loan.constructionCollateral)) await serviceBorrower(group);
+  for (const group of constructionGroups) await serviceBorrower(group);
   if (txEntries.length > 0) await emitTxBulk(db, txEntries, await loadTxThresholds(db));
   return total;
 }
@@ -1329,6 +1473,32 @@ async function processLoanBookOnlyBank(
     if (publication.matchedCount > 0) return serviced;
   }
   throw new Error(`Bank ${corp._id.toHexString()} income publication changed too often`);
+}
+
+function loanRepaymentTxEntry(args: {
+  loan: BankLoan;
+  turn: number;
+  currency: CurrencyCode;
+  bankCorporationId: ObjectId;
+  bankName: string;
+  borrowerName: string;
+  payment: number;
+  settlementId: string;
+}): TxInput {
+  return {
+    type: "bank_loan_repayment",
+    turn: args.turn,
+    createdAt: new Date(),
+    subjectType: args.loan.borrowerType === "character" ? "character" : "corporation",
+    subjectId: args.loan.borrowerId,
+    subjectName: args.borrowerName,
+    amount: -args.payment,
+    currencyCode: args.currency,
+    counterpartyType: "corporation",
+    counterpartyId: args.bankCorporationId,
+    counterpartyName: args.bankName,
+    meta: { loanId: args.loan._id.toString(), settlementId: args.settlementId },
+  };
 }
 
 async function servicePlayerLoan(
@@ -1454,20 +1624,16 @@ async function servicePlayerLoan(
   const advanced = settled.appliedProjections.length === transition.projections.length;
 
   if (settled.status === "applied" && moneyLanded && decision.payment > 0) {
-    const entry: TxInput = {
-      type: "bank_loan_repayment",
+    const entry: TxInput = loanRepaymentTxEntry({
+      loan,
       turn,
-      createdAt: new Date(),
-      subjectType: loan.borrowerType === "character" ? "character" : "corporation",
-      subjectId: loan.borrowerId,
-      subjectName: borrowerName,
-      amount: -decision.payment,
-      currencyCode: currency,
-      counterpartyType: "corporation",
-      counterpartyId: loan.bankCorporationId,
-      counterpartyName: bankName,
-      meta: { loanId: loan._id.toString(), settlementId: transition.key },
-    };
+      currency,
+      bankCorporationId: loan.bankCorporationId,
+      bankName,
+      borrowerName,
+      payment: decision.payment,
+      settlementId: transition.key,
+    });
     if (txEntries) txEntries.push(entry);
     else await emitTx(db, entry);
   }
