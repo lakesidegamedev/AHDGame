@@ -3,7 +3,10 @@ import { loadGroupDirectionMembership } from "./npp/groupDirectionMembership";
  * NPP corporation decisions use shared market and funding observations.
  * processNppCorporationDecisions loads them and prepares corporation and sector writes.
  */
-import { conversionBudgets as buildConversionBudgets } from "@/lib/market/producerMarket/transitionRules";
+import {
+  chargeConversionBudget,
+  conversionBudgets as buildConversionBudgets,
+} from "@/lib/market/producerMarket/transitionRules";
 import {
   challengerBoost,
   computeSectorConcentration,
@@ -546,7 +549,11 @@ export async function processNppCorporationDecisions(
       })
     : null;
 
-  for (const corp of nppCorps) {
+  const orderedCorps =
+    conversionPaceShare > 0
+      ? [...nppCorps].sort((a, b) => (a._id.toString() < b._id.toString() ? -1 : 1))
+      : nppCorps;
+  for (const corp of orderedCorps) {
     const sectors = sectorsByCorp.get(corp._id.toString()) ?? [];
     const autopilot = isAutopilotRun(corp);
     const operator = operatorPermissionsFor(corp);
@@ -646,6 +653,12 @@ export async function processNppCorporationDecisions(
               placementSignals
             ),
         });
+    // Charge the pacing allowance once, for the decision that is applied.
+    if (decision.conversionCharge)
+      chargeConversionBudget(
+        conversionBudgets.get(decision.conversionCharge.countryId),
+        decision.conversionCharge.cost
+      );
     if (nppConstructionFinanceEnabled && corpCurrency && borrowAllowed) {
       for (const intent of decision.constructionFinanceIntents ?? []) {
         constructionFinanceCandidates.push({

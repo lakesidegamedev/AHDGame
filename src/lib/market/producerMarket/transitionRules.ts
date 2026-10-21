@@ -222,6 +222,16 @@ export function conversionBudgets(
   return out;
 }
 
+/** Read-only check: does the country still have allowance? (A decision may be rebuilt; only the applied one charges.) */
+export function hasConversionBudget(budget: ConversionBudget | undefined): boolean {
+  return !budget || budget.remaining > 0;
+}
+
+/** Charges a conversion that was actually applied. */
+export function chargeConversionBudget(budget: ConversionBudget | undefined, cost: number): void {
+  if (budget) budget.remaining -= Number.isFinite(cost) && cost > 0 ? cost : 0;
+}
+
 /**
  * Takes a sector's capacity out of its country's allowance. A conversion is
  * allowed while any allowance remains, so a large sector is never starved; the

@@ -220,4 +220,16 @@ describe("conversion pacing budget", () => {
     expect(takeConversionBudget(undefined, 999)).toBe(true); // unpaced
     expect(conversionBudgets(new Map([["US", 1000]]), 0).size).toBe(0);
   });
+
+  it("checks read-only and charges only the applied decision", async () => {
+    const { chargeConversionBudget, conversionBudgets, hasConversionBudget } =
+      await import("./transitionRules");
+    const us = conversionBudgets(new Map([["US", 1000]]), 0.02).get("US");
+    expect(hasConversionBudget(us)).toBe(true);
+    expect(hasConversionBudget(us)).toBe(true); // a rebuilt decision does not consume it
+    expect(us?.remaining).toBeCloseTo(20, 10);
+    chargeConversionBudget(us, 30);
+    expect(hasConversionBudget(us)).toBe(false);
+    expect(hasConversionBudget(undefined)).toBe(true);
+  });
 });

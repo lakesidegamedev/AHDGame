@@ -97,6 +97,8 @@ export type NppSectorUpdateDoc = {
 
 export interface NppCorpDecision {
   corpId: ObjectId;
+  /** Capacity book a conversion in this decision consumes from its country's pacing allowance; charged by the caller once the decision is final. */
+  conversionCharge?: { countryId: string; cost: number };
   /** Situation flags a player-owned autopilot corp turns into owner advisories. */
   autopilotSignals?: {
     chronicLowFill: boolean;
