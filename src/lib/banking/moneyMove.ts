@@ -551,7 +551,20 @@ async function applyLeg(
   db: Db,
   key: string,
   i: number,
-  leg: MoneyMoveRecordLeg
+  leg: MoneyMoveRecordLeg,
+  /**
+   * Journal fields this call already holds because it claimed the key. A
+   * freshly claimed move cannot have been applied by another worker — a
+   * concurrent retry sees the key and replays instead of applying it — so the
+   * first attempt does not need to read the journal back. The read is restored
+   * after any retry (receipt wait or refusal clear), when another worker could
+   * have moved the record.
+   */
+  known?: {
+    status: string;
+    genericMoneyMoveVersion?: number;
+    retryCreditLegOnGuardFailure?: boolean;
+  }
 ): Promise<string | null> {
   const records = db.collection<MoneyMoveRecord>(MONEY_MOVE_COLLECTION);
   const path = `legs.${i}`;
@@ -580,21 +593,35 @@ async function applyLeg(
     // Only this leg is read back. A maturity payout carries one leg per
     // holder (120-170 on the live world), so projecting the whole array makes
     // every leg acknowledgement decode the entire receipt again.
-    const record = await records.findOne(
-      { _id: key },
-      {
-        projection: {
-          status: 1,
-          genericMoneyMoveVersion: 1,
-          retryCreditLegOnGuardFailure: 1,
-          legs: { $slice: [i, 1] },
-        },
-      }
-    );
-    // The server answers with the one-element slice; an in-memory test double
-    // may return the whole array. Length tells the two apart without guessing
-    // at an index the record does not have.
-    const saved = record ? (record.legs.length === 1 ? record.legs[0] : record.legs[i]) : undefined;
+    let saved: MoneyMoveRecordLeg | undefined;
+    let status: string | undefined;
+    let version: number | undefined;
+    let retryCredit: boolean | undefined;
+    if (known && attempt === 0) {
+      saved = leg;
+      status = known.status;
+      version = known.genericMoneyMoveVersion;
+      retryCredit = known.retryCreditLegOnGuardFailure;
+    } else {
+      const record = await records.findOne(
+        { _id: key },
+        {
+          projection: {
+            status: 1,
+            genericMoneyMoveVersion: 1,
+            retryCreditLegOnGuardFailure: 1,
+            legs: { $slice: [i, 1] },
+          },
+        }
+      );
+      // The server answers with the one-element slice; an in-memory test double
+      // may return the whole array. Length tells the two apart without guessing
+      // at an index the record does not have.
+      saved = record ? (record.legs.length === 1 ? record.legs[0] : record.legs[i]) : undefined;
+      status = record?.status;
+      version = record?.genericMoneyMoveVersion;
+      retryCredit = record?.retryCreditLegOnGuardFailure;
+    }
     if (!saved) return `Leg ${i} of ${key} is missing from its journal.`;
     const receipt = current?.pendingMoneyMoveReceipt;
     if (receipt) {
@@ -603,15 +630,20 @@ async function applyLeg(
       await acknowledgeLeg(db, leg.collection, leg.filter._id, receipt);
       if (receipt.key === key && receipt.index === i)
         return receipt.outcome === "applied" ? null : receipt.error!;
+      known = undefined;
       continue;
     }
+    // The target's settled-key stamp is the durable delivery witness. It is
+    // read in the same target round trip that already happened, so a leg that
+    // another worker delivered while this one waited is recognised without a
+    // journal read — and, in particular, a fresh claim's first attempt cannot
+    // re-credit a target that a concurrent resume has already paid. The receipt
+    // branch above runs first so a crash between delivery and acknowledgement
+    // still finishes its journal/receipt bookkeeping.
+    if (version === 2 && current?.settledKeys?.includes(stamp)) return null;
     if (saved.applied) return null;
     if (saved.refusal) {
-      if (
-        leg.kind !== "credit" ||
-        record?.retryCreditLegOnGuardFailure !== true ||
-        record?.status !== "partial"
-      )
+      if (leg.kind !== "credit" || retryCredit !== true || status !== "partial")
         return saved.refusal;
       await records.updateOne(
         {
@@ -622,11 +654,12 @@ async function applyLeg(
         },
         { $unset: { [`${path}.refusal`]: "" } }
       );
+      known = undefined;
       continue;
     }
-    if (record?.status !== "partial") return `Money move ${key} is already ${record?.status}.`;
+    if (status !== "partial") return `Money move ${key} is already ${status}.`;
     if (!current) return `Leg ${i} of ${key} has no target; reconciliation is required.`;
-    if (record.genericMoneyMoveVersion !== 2) {
+    if (version !== 2) {
       if (current.settledKeys?.includes(stamp)) {
         await records.updateOne(
           { _id: key, status: "partial" },
@@ -965,7 +998,19 @@ async function executeMoneyMove(
       if (record.status === "partial") bookkeeping.add(i);
       continue;
     }
-    const failed = await applyLeg(db, key, i, leg);
+    const failed = await applyLeg(
+      db,
+      key,
+      i,
+      leg,
+      claimed
+        ? {
+            status: record.status,
+            genericMoneyMoveVersion: record.genericMoneyMoveVersion,
+            retryCreditLegOnGuardFailure: record.retryCreditLegOnGuardFailure,
+          }
+        : undefined
+    );
     if (failed) {
       failure = failed;
       break;
