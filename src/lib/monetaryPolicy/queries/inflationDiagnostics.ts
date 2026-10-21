@@ -36,11 +36,14 @@ import {
 } from "@/lib/budget/inflation";
 import { savingsFlowPressureRatio } from "@/lib/budget/savingsFlowPressure";
 import {
+  commodityPressureForCountry,
+  loadCommodityPressureSnapshots,
+} from "@/lib/turn/rules/commodityInflationPressure";
+import {
   countryTurnTariffInflationExposure,
   loadTurnTariffInflationExposure,
 } from "@/lib/tariffs/tariffInflationExposure";
 import type { CentralBank, TurnSnapshot } from "@/lib/db/types/centralBank";
-import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import type { FederalBudget } from "@/lib/db/types/budget";
 import type { GameState } from "@/lib/db/types/gameState";
@@ -119,17 +122,14 @@ export async function loadInflationDiagnostics(
   const [
     banks,
     exchangeRates,
-    commodityPriceDocs,
+    commoditySnapshots,
     savingsFlowAgg,
     gameState,
     tariffExposureSnapshot,
   ] = await Promise.all([
     db.collection<CentralBank>("centralBanks").find({}).toArray(),
     db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),
-    db
-      .collection<CommodityPrice>("commodityPrices")
-      .find({}, { projection: { commodity: 1, basePrice: 1, nationalPrices: 1 } })
-      .toArray(),
+    loadCommodityPressureSnapshots(db, currentTurn),
     db
       .collection<SavingsLedgerEntry>("savingsLedger")
       .aggregate<{ _id: { countryId: string; type: string }; total: number }>([
@@ -210,24 +210,9 @@ export async function loadInflationDiagnostics(
     const tariffExposure = countryTurnTariffInflationExposure(tariffExposureSnapshot, countryId);
     const tariffRate = tariffExposure.tariffRate;
 
-    const commodityPressures: number[] = [];
-    for (const doc of commodityPriceDocs) {
-      const nationalPrice = (doc.nationalPrices as Record<string, number> | undefined)?.[countryId];
-      if (
-        typeof nationalPrice === "number" &&
-        Number.isFinite(nationalPrice) &&
-        typeof doc.basePrice === "number" &&
-        doc.basePrice > 0
-      ) {
-        const raw = nationalPrice / doc.basePrice - 1.0;
-        const clamped = Math.max(-0.9, Math.min(10.0, raw));
-        commodityPressures.push(clamped);
-      }
-    }
-    const commodityPressure =
-      commodityPressures.length > 0
-        ? commodityPressures.reduce((sum, value) => sum + value, 0) / commodityPressures.length
-        : 0.0;
+    // Same signal the turn uses: the median annualized national price change,
+    // not the price level against the frozen seed base.
+    const commodityPressure = commodityPressureForCountry(commoditySnapshots, countryId);
 
     // Members of a shared currency without their own FX doc inherit the
     // currency anchor's rate (SCO/WAL → GBP under UK) — mirrors inflationRecalc.
