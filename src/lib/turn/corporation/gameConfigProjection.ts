@@ -33,6 +33,8 @@ export const CORPORATION_TURN_GAME_CONFIG_PROJECTION = {
   producerRunPaceDrop: 1,
   producerConversionPaceShare: 1,
   producerHouseholdIncomeFloor: 1,
+  producerStockCover: 1,
+  producerClearingReferenceStage: 1,
   producerIdleRetireStage: 1,
   decommissionGrantShare: 1,
   producerLowUseCostStage: 1,

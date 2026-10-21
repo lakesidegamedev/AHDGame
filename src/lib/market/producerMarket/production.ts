@@ -3,6 +3,7 @@
  * Input shortages constrain the whole recipe; purchases and consumed stock
  * retain their receipt cost instead of being billed again at a reference price.
  */
+import { markdownFactor, markedDownAsk, stockCover, writeDownUnits } from "./stockCoverRules";
 import {
   quoteProducer,
   settleProducerMarket,
@@ -72,6 +73,11 @@ export interface ProductionPlan {
   inputStock: readonly PurchasedStock[];
   /** Previously produced, unsold stock available beside current production. */
   outputStock: readonly ProducedStock[];
+  /**
+   * Units this plant sold last turn, for stock-cover markdown (stockCoverRules).
+   * Absent means no markdown or write-down for this plant.
+   */
+  recentSoldUnits?: number;
 }
 
 export interface ProducerInputReservation {
@@ -206,6 +212,8 @@ export function advanceProducerEconomy(input: {
   spilloverShare?: number;
   /** Explicit carry policy for alternate catalogs; ordinary worlds use commodity spoilage. */
   carryLossByCommodity?: Readonly<Record<string, number>>;
+  /** Turns of recent sales a seller may carry before marking down (stockCoverRules); 0 or absent = off. */
+  stockCoverTurns?: number;
 }): {
   accounts: MarketAccount[];
   payables: ProducerPayable[];
@@ -533,8 +541,11 @@ export function advanceProducerEconomy(input: {
       })
     );
   orders.push(...inputOrders());
-  const pendingQuotes: Array<{ offer: ProducerOffer; quote: Parameters<typeof quoteProducer>[0] }> =
-    [];
+  const pendingQuotes: Array<{
+    offer: ProducerOffer;
+    quote: Parameters<typeof quoteProducer>[0];
+    markdown: { factor: number; reference: number };
+  }> = [];
   const requestedSpend = new Map<string, number>();
   const groupedSpend = new Map<string, { accountId: string; maximumSpend: number }>();
   for (const order of orders) {
@@ -619,7 +630,12 @@ export function advanceProducerEconomy(input: {
             ? { kind: "manual", unitPrice: output.referenceUnitPrice }
             : output.policy,
       });
+      const cover = p.recentSoldUnits != null ? stockCover(stock, p.recentSoldUnits) : 0;
       pendingQuotes.push({
+        markdown: {
+          factor: markdownFactor(cover, { coverTurns: input.stockCoverTurns ?? 0 }),
+          reference: output.referenceUnitPrice,
+        },
         offer: {
           id: JSON.stringify([p.id, "output", output.commodity]),
           accountId: p.accountId,
@@ -646,7 +662,14 @@ export function advanceProducerEconomy(input: {
         pending.offer.id
       ),
     });
-    offers.push({ ...pending.offer, unitPrice: quote.unitPrice });
+    offers.push({
+      ...pending.offer,
+      unitPrice: markedDownAsk(
+        quote.unitPrice,
+        pending.markdown.reference,
+        pending.markdown.factor
+      ),
+    });
   }
   const postedOffers = new Map(offers.map((o) => [o.id, o]));
   const trial = () => {
@@ -878,10 +901,21 @@ export function advanceProducerEconomy(input: {
       if (sold.deliveredUnits - available > Math.max(1e-8, available * 1e-12))
         throw new Error("Sold output exceeded input-backed production");
       const unsold = Math.max(0, available - sold.deliveredUnits);
-      const kept =
+      const carried =
         output.storable && sold.deliveredUnits < available * (1 - 1e-12)
           ? unsold * (1 - carryLoss(output.commodity))
           : 0;
+      // Stock beyond the cover is written down a little each turn (stockCoverRules).
+      const writtenDown =
+        p.recentSoldUnits != null
+          ? Math.min(
+              carried,
+              writeDownUnits(carried, stockCover(opening, p.recentSoldUnits), {
+                coverTurns: input.stockCoverTurns ?? 0,
+              })
+            )
+          : 0;
+      const kept = carried - writtenDown;
       products.push({
         commodity: output.commodity,
         book: output.book,

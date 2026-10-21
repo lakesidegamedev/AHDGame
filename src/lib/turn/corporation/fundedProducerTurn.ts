@@ -198,11 +198,25 @@ export async function runFundedProducerTurn(
           )
         )
       : undefined;
+  // Last turn's funded clearing price per reachable commodity (clearingReferenceStage).
+  const lastClearing =
+    (input.env.clearingReferenceStage ?? 0) >= 1
+      ? (
+          await db
+            .collection<{ _id: string; clearingPrices?: Record<string, number> }>(
+              PRODUCER_MARKET_OUTCOMES
+            )
+            .findOne({ _id: `${worldEpoch}:${turn - 1}` }, { projection: { clearingPrices: 1 } })
+        )?.clearingPrices
+      : undefined;
+  const demandEnv = lastClearing
+    ? { ...input.env, lastClearingPriceByCommodity: new Map(Object.entries(lastClearing)) }
+    : input.env;
   const demand = await buildProducerTurnDemand(db, {
     turn,
     worldEpoch,
     lookups,
-    env: input.env,
+    env: demandEnv,
     sectorOps: [],
     publicCarryIn,
     householdIncomeFloor: incomeFloor,
@@ -563,6 +577,7 @@ export async function runFundedProducerTurn(
       externalOrders: [...demand.publicBuyerOrders, ...demand.investmentBuyerOrders],
       eligibleOffersByOrder: demand.eligibleOffersByOrder,
       spilloverShare: input.env.spilloverShare,
+      stockCoverTurns: input.env.stockCoverTurns,
     },
     close: closeAtSettlement,
   });
@@ -675,6 +690,11 @@ export async function runFundedProducerTurn(
     stateOfProducer: (id) => sectorState.get(demand.planSector.get(id) ?? "") ?? null,
     unitScale: TURNS_PER_DAY,
   });
+  // World-book clearing price per commodity, for next turn's buyer references.
+  const clearingPrices: Record<string, number> = {};
+  for (const row of settled.result.prices)
+    if (row.book === "world" && row.units > 0 && row.value > 0)
+      clearingPrices[row.commodity] = row.value / row.units;
   if (demand.householdSource && openingShareByCountry && openingShareByCountry.size === 0)
     await db.collection<{ _id: string }>("producerHouseholdSource").updateOne(
       { _id: worldEpoch },
@@ -695,6 +715,7 @@ export async function runFundedProducerTurn(
       worldEpoch,
       turn,
       rows,
+      ...((input.env.clearingReferenceStage ?? 0) >= 1 ? { clearingPrices } : {}),
       ...(demand.householdSource ? { householdSource: demand.householdSource } : {}),
       at: new Date(),
     } as never,
