@@ -34,14 +34,14 @@ describe("inflation frequency audit (#2337)", () => {
 
   it.each([
     ["inflation carryover", 8, {}, [6.5, 2, 2, 2]],
-    ["rate cut", 2, { primeRate: 1 }, [2.48, 2.7, 2.7, 2.7]],
+    ["rate cut", 2, { primeRate: 1 }, [2.96, 3.41, 3.41, 3.41]],
     ["output growth", 2, { gdpGrowth: 5 }, [2.36, 2.53, 2.53, 2.53]],
     ["currency depreciation", 2, { forexPressure: 0.1 }, [2.48, 2.7, 2.7, 2.7]],
     [
       "combined rate, output, and FX shock",
       2,
       { primeRate: 1, gdpGrowth: 5, forexPressure: 0.1 },
-      [3.32, 3.94, 3.94, 3.94],
+      [3.5, 4.64, 4.64, 4.64],
     ],
   ] as const)("tracks %s at 1, 12, 48, and 240 turns", (_name, startingRate, shock, expected) => {
     let annualizedRate: number = startingRate;
@@ -511,8 +511,8 @@ describe("calculateInflation", () => {
       primeRate: 1.0,
       primeRateHistory: history,
     });
-    // Should be much closer to 2.0 than the no-lag case (~2.8)
-    expect(rate).toBeLessThan(2.3);
+    // Should be much closer to 2.0 than the no-lag case (~3.4)
+    expect(rate).toBeLessThan(2.4);
   });
 
   it("rate cut fully propagates after being held for 12+ turns", () => {
@@ -898,37 +898,37 @@ describe("commodity cost-push is a rate, not a level", () => {
     previousInflation: 2.0,
   };
 
-  it("contributes 0.30pp per 1pp of annual commodity inflation", () => {
-    // Basket rising 10%/yr → +3.0pp of CPI.
+  it("contributes 0.10pp per 1pp of annual commodity inflation", () => {
+    // Basket rising 10%/yr → +1.0pp of CPI.
     const { breakdown } = calculateInflationWithBreakdown({
       ...base,
       commodityPressure: 0.1,
     });
-    expect(breakdown.commodity).toBeCloseTo(3.0, 6);
+    expect(breakdown.commodity).toBeCloseTo(1.0, 6);
   });
 
-  it("passes falling prices through at half rate (downward stickiness)", () => {
+  it("passes falling prices through at the same weight", () => {
     const { breakdown } = calculateInflationWithBreakdown({
       ...base,
       commodityPressure: -0.1,
     });
-    expect(breakdown.commodity).toBeCloseTo(-1.5, 6);
+    expect(breakdown.commodity).toBeCloseTo(-1.0, 6);
   });
 
-  it("clamps an acute supply crisis to +9pp rather than an unbounded shock", () => {
+  it("clamps an acute supply crisis to +3pp rather than an unbounded shock", () => {
     const { breakdown } = calculateInflationWithBreakdown({
       ...base,
       commodityPressure: 3.0, // +300%/yr
     });
-    expect(breakdown.commodity).toBeCloseTo(9.0, 6);
+    expect(breakdown.commodity).toBeCloseTo(3.0, 6);
   });
 
-  it("clamps a collapsing basket to -2.25pp", () => {
+  it("clamps a collapsing basket to -1.5pp", () => {
     const { breakdown } = calculateInflationWithBreakdown({
       ...base,
       commodityPressure: -0.9,
     });
-    expect(breakdown.commodity).toBeCloseTo(-2.25, 6);
+    expect(breakdown.commodity).toBeCloseTo(-1.5, 6);
   });
 
   it("lets CPI settle at target once commodity prices stop moving", () => {

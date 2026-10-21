@@ -399,6 +399,15 @@ export default function FinancialsTab({
                       pct={pctOf(financials.stateTax)}
                     />
                   )}
+                  {(financials.taxLossCarryforward ?? 0) > 0 && (
+                    <StatementLine
+                      indent
+                      label="Losses carried forward"
+                      amount={financials.taxLossCarryforward ?? 0}
+                      pct={pctOf(financials.taxLossCarryforward ?? 0)}
+                      title="Past losses are banked and offset up to 80% of taxable profit in later turns, so tax resumes gradually after a bad stretch."
+                    />
+                  )}
                   {(financials.passThroughOwnerTax ?? 0) > 0 && (
                     <StatementLine
                       indent

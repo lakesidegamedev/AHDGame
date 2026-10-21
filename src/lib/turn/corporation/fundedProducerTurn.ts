@@ -14,6 +14,7 @@
  * Returns each sector's settled receipt so the legacy pass can take revenue and
  * margin from it, and the producer profit per corporation the settlement paid.
  */
+import { markStrugglingTransitionSectors } from "./transitionStruggling";
 import { createHash } from "node:crypto";
 import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
 import type { LedgerEntry } from "@/lib/ledger/types";
@@ -68,6 +69,8 @@ export interface FundedProducerTurnResult {
   receiptsBySectorId: Map<string, FundedReceipt>;
   /** Anchor per turn, by corporation id. */
   settledProfitByCorp: Map<string, number>;
+  /** Staffed headcount of each plant at its funded run; plants with no plan are absent. */
+  headcountBySectorId: ReadonlyMap<string, { desiredWorkers: number; workers: number }>;
 }
 
 export async function runFundedProducerTurn(
@@ -542,7 +545,21 @@ export async function runFundedProducerTurn(
     )
   );
 
-  return { receiptsBySectorId, settledProfitByCorp };
+  // Transition relief for sectors that struggle after the switch (owner
+  // decision 2026-10-21): mark them and tell their owners once.
+  await markStrugglingTransitionSectors(
+    db,
+    lookups,
+    receiptsBySectorId,
+    turn,
+    input.firstFundedTurn
+  );
+
+  return {
+    receiptsBySectorId,
+    settledProfitByCorp,
+    headcountBySectorId: demand.headcountBySectorId,
+  };
 }
 
 /**

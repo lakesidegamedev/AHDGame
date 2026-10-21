@@ -29,6 +29,8 @@ import { buildRegionalDisasterEffects } from "./autoDisasterSpawn";
 import { regionMatchesTags } from "./regionHazards";
 import { isTemplateAllowedInYear } from "./crisisEraWindow";
 import { refreshVietnamEscalationLevel } from "./vietnamEscalationInterface";
+import { MARKET_ADJUSTMENT_TEMPLATE_KEY } from "./marketAdjustment/template";
+import { marketAdjustmentEnabled, recordLossShares } from "./marketAdjustment/signals";
 
 /** Serializable description of an auto-spawnable template, for the admin tab. */
 export interface AutoCrisisCatalogEntry {
@@ -140,6 +142,10 @@ export async function processAutoCrisisSpawn(
   // simulating, including countries deliberately closed to players.
   const countryIds = await getSimulatedCountryIds(db);
   const cooldowns = await loadCooldownMap(db);
+  // Market Adjustment is dark until its stage is set: no signal is recorded and
+  // the template is skipped below.
+  const marketAdjustmentOn = await marketAdjustmentEnabled(db);
+  if (marketAdjustmentOn) await recordLossShares(db, currentTurn);
   const snapshotCache = new Map<CountryId, NationalSnapshot>();
   const snap = async (countryId: CountryId): Promise<NationalSnapshot> => {
     let s = snapshotCache.get(countryId);
@@ -161,6 +167,7 @@ export async function processAutoCrisisSpawn(
     if (spawned >= MAX_AUTO_CRISES_PER_TURN) break;
     const trig = template.autoTrigger!;
     if (trig.kind !== "condition") continue;
+    if (key === MARKET_ADJUSTMENT_TEMPLATE_KEY && !marketAdjustmentOn) continue;
     if (!isTemplateAllowedInYear(template, currentYear)) continue;
     for (const countryId of countryIds) {
       if (spawned >= MAX_AUTO_CRISES_PER_TURN) break;

@@ -1,5 +1,8 @@
 /** Prepare work, recipes and plant constraints before any product money is moved. */
-import { inTransitionWindow } from "@/lib/market/producerMarket/transitionRules";
+import {
+  inTransitionWindow,
+  transitionReliefEligible,
+} from "@/lib/market/producerMarket/transitionRules";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import {
   COMMODITY_BASE_PRICES,
@@ -379,7 +382,7 @@ export function prepareProducerPhysicalSector(input: {
     financialPenaltyPercent: Math.max(0, -disaster.marginPenalty),
     coldUpkeepWaived:
       env.transitionFirstFundedTurn != null &&
-      sector.cutoverTransition?.mismatched === true &&
+      transitionReliefEligible(sector) &&
       inTransitionWindow(currentTurn, env.transitionFirstFundedTurn),
   });
   return {
