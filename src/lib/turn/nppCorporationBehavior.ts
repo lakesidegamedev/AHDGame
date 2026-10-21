@@ -3,6 +3,7 @@ import { loadGroupDirectionMembership } from "./npp/groupDirectionMembership";
  * NPP corporation decisions use shared market and funding observations.
  * processNppCorporationDecisions loads them and prepares corporation and sector writes.
  */
+import { conversionBudgets as buildConversionBudgets } from "@/lib/market/producerMarket/transitionRules";
 import {
   challengerBoost,
   computeSectorConcentration,
@@ -360,6 +361,7 @@ export async function processNppCorporationDecisions(
   const manufacturingProductProjectState = await loadNppProductProjectsV2(db, nppCorps);
   const plantsEnabled = manufacturingProductProjectState.plantsEnabled;
   let plants: NppPlantsContext | undefined;
+  let conversionPaceShare = 0;
   let bankRates: RelocationPrimeBank[] | undefined;
   if (plantsEnabled) {
     const gsPlants = await db
@@ -381,8 +383,14 @@ export async function processNppCorporationDecisions(
     const colByState = await loadNppCostOfLivingByState(db);
     const nationalShareOf = buildNppNationalShareResolver(globalSectors);
     const nppGameConfig = await db
-      .collection<{ commandEconomyEnabled?: boolean }>("gameConfig")
-      .findOne({ _id: "default" as never }, { projection: { commandEconomyEnabled: 1 } });
+      .collection<{ commandEconomyEnabled?: boolean; producerConversionPaceShare?: number }>(
+        "gameConfig"
+      )
+      .findOne(
+        { _id: "default" as never },
+        { projection: { commandEconomyEnabled: 1, producerConversionPaceShare: 1 } }
+      );
+    conversionPaceShare = nppGameConfig?.producerConversionPaceShare ?? 0;
     plants = {
       enabled: true,
       year: plantsYear,
@@ -502,6 +510,18 @@ export async function processNppCorporationDecisions(
 
   const labourWagesEnabled = isLabourSystemMode(labourMode) && labourAtLeast(labourMode, "wages");
 
+  // Pace AI free conversions: a per-country allowance of capacity book value per turn.
+  const capacityBookByCountry = new Map<string, number>();
+  if (conversionPaceShare > 0)
+    for (const corpSectors of sectorsByCorp.values())
+      for (const s of corpSectors)
+        if (s.mothballed !== true && s.countryId)
+          capacityBookByCountry.set(
+            String(s.countryId),
+            (capacityBookByCountry.get(String(s.countryId)) ?? 0) + (s.capacityBookAnchor ?? 0)
+          );
+  const conversionBudgets = buildConversionBudgets(capacityBookByCountry, conversionPaceShare);
+
   const autopilotAlerts: Array<{ corp: Corporation; kinds: CorpAutopilotAdvisory[] }> = [];
 
   // NPP engine 6 corporate decisions, resolved once per country.
@@ -563,6 +583,8 @@ export async function processNppCorporationDecisions(
       frontierEntry: autopilot ? undefined : frontierEntryTurn,
       engineSix: engineSixByCountry.get(corp.countryId) === true,
       transitionFirstFundedTurn,
+      conversionBudgetOf:
+        conversionPaceShare > 0 ? (countryId) => conversionBudgets.get(countryId) : undefined,
     };
     let decision = makeNppCorpDecision(
       decisionContext,

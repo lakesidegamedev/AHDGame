@@ -35,6 +35,7 @@ import { getSectorTypeMatchModifier } from "@/lib/corporations/specialization/ru
 import { organisationalOutputFactor } from "@/lib/market/producerMarket/efficiencyRules";
 import {
   demandPlanRunShare,
+  pacedRunShare,
   LOW_USE_RUN_FLOOR,
   nextRunShare,
   OUTPUT_RUN_FLOOR,
@@ -92,6 +93,8 @@ export type ProducerPhysicalEnv = Pick<
   spilloverShare?: number;
   /** Share of unfilled public budget kept per line for next turn (0 = off). */
   publicCarryShare?: number;
+  /** gameConfig.producerRunPaceDrop: largest share of last turn's run a plant may shed in one turn (0 or absent = off). */
+  runPaceDrop?: number;
   /** gameConfig.producerIdleRetireStage: >= 1 retires capacity that persistently sells nothing. 0 or absent = off. */
   idleRetireStage?: number;
   /** gameConfig.decommissionGrantShare: share of retired book paid from unspent public funding. */
@@ -305,10 +308,12 @@ export function prepareProducerPhysicalSector(input: {
   const lowUse = (env.lowUseCostStage ?? 0) >= 1;
   const runFloor = lowUse ? LOW_USE_RUN_FLOOR : OUTPUT_RUN_FLOOR;
   const lastReceipt = priorReceipt && priorReceipt.turn === currentTurn - 1 ? priorReceipt : null;
-  const runShare =
+  const unpacedRunShare =
     (env.demandPlanStage ?? 0) >= 1
       ? demandPlanRunShare(lastReceipt, runFloor)
       : nextRunShare(lastReceipt, runFloor);
+  // A plan that reads a glut sheds at most runPaceDrop of its run a turn; the workforce persists.
+  const runShare = pacedRunShare(unpacedRunShare, lastReceipt, env.runPaceDrop ?? 0, runFloor);
   // Wages and site running costs follow the line the plant runs: idle lines
   // employ no one (their workers count as unemployed) and idle capacity pays
   // cold upkeep only.

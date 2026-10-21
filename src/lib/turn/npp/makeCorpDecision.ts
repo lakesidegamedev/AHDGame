@@ -109,6 +109,7 @@ import {
   chooseTransitionConversion,
   sectorsAfterConversion,
 } from "@/lib/turn/npp/rules/transitionConversion";
+import { takeConversionBudget } from "@/lib/market/producerMarket/transitionRules";
 import { industryConversionFields } from "@/lib/corporations/retooling/conversion";
 import {
   computeMacroProductionPolicy,
@@ -662,7 +663,14 @@ export function makeNppCorpDecision(
     });
     const target = choice && sectors.find((s) => s._id.toString() === choice.sectorId);
     const fields = target && industryConversionFields(target, choice.lane);
-    if (target && fields?.ok) {
+    if (
+      target &&
+      fields?.ok &&
+      takeConversionBudget(
+        ctx.conversionBudgetOf?.(String(target.countryId ?? corp.countryId ?? "")),
+        target.capacityBookAnchor ?? 0
+      )
+    ) {
       sectorUpdates.push({
         filter: { _id: target._id, cutoverConvertedAtTurn: { $exists: false } },
         update: {

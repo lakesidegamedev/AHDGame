@@ -178,6 +178,18 @@ export interface GameConfig {
   /** Share of a short line's unfilled budget kept when the stage is on. Default 0.5. */
   producerPublicCarryShare?: number;
   /**
+   * Funded producer market: > 0 limits how much of last turn's run a plant may
+   * shed in one turn (for example 0.15 = at most 15% a turn), so output and
+   * wages follow a glut down over several turns. 0 or absent = off.
+   */
+  producerRunPaceDrop?: number;
+  /**
+   * Funded producer market: > 0 caps AI free conversions per turn at this share
+   * of each country's operating capacity book value (for example 0.02). Unconverted
+   * losing sectors stay in the queue for the next turn. 0 or absent = off.
+   */
+  producerConversionPaceShare?: number;
+  /**
    * Funded producer market: >= 1 retires, with no cash, a share of the
    * capacity of plants that have sold nothing for several turns. 0 or absent = off.
    */
