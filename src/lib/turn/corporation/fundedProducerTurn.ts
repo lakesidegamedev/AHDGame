@@ -30,6 +30,7 @@ import {
 } from "@/lib/market/producerMarket/profitDistributionRules";
 import {
   householdOpeningMoves,
+  householdTransferMoves,
   PRODUCER_ACCOUNTS,
   investmentFundingMoves,
   producerMoveLedgerLegs,
@@ -233,6 +234,27 @@ export async function runFundedProducerTurn(
             walletId: investmentWallet(f.countryId),
             amountLocal: f.fundingLocal * rate,
             currencyCode: currency,
+            localPerAnchor: rate,
+          };
+        })
+      )
+    )
+  );
+
+  await apply(
+    batchProducerMoves(
+      worldEpoch,
+      turn,
+      householdTransferMoves(
+        worldEpoch,
+        turn,
+        demand.householdTransfers.map((t) => {
+          const scope = scopeById.get(t.walletId);
+          const rate = rateOf(scope?.currency);
+          return {
+            walletId: t.walletId,
+            amountLocal: t.amount * rate,
+            currencyCode: scope!.currency,
             localPerAnchor: rate,
           };
         })
