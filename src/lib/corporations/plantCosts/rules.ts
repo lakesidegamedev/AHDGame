@@ -46,6 +46,13 @@ export const PLANT_OVERHEAD_OUTPUT_SHARE = 0.04;
 export const PLANT_OVERHEAD_FIXED_SHARE = 0.5;
 
 /**
+ * Upkeep share on idle and mothballed capacity under the funded low-use cost
+ * stage (gameConfig.producerLowUseCostStage >= 1): a tenth of the usual cold
+ * share, so parked and barely running plants cost close to nothing to hold.
+ */
+export const LOW_USE_COLD_UPKEEP_FRACTION = 0.005;
+
+/**
  * Positive process overhead. Payroll, materials and idle-site upkeep are
  * separate bills. The nominal basket already carries the world's era price
  * level; market scarcity and target margin never enter, so the fixed half
@@ -88,9 +95,16 @@ export function standingProducerSiteBill(input: {
   financialPenaltyPercent: number;
   /** Funded-market transition window: idle capacity of an over-built plant pays no upkeep. */
   coldUpkeepWaived?: boolean;
+  /** Funded market, low-use cost stage: idle and parked capacity pays this share instead. */
+  coldShareOverride?: number;
 }): number {
   const { nominalHourlyCapacityValue, activeFraction, financialPenaltyPercent } = input;
-  const coldShare = input.coldUpkeepWaived ? 0 : COLD_CAPACITY_UPKEEP_FRACTION;
+  const coldShare = input.coldUpkeepWaived
+    ? 0
+    : Math.min(
+        COLD_CAPACITY_UPKEEP_FRACTION,
+        Math.max(0, input.coldShareOverride ?? COLD_CAPACITY_UPKEEP_FRACTION)
+      );
   if (
     ![nominalHourlyCapacityValue, activeFraction, financialPenaltyPercent].every(Number.isFinite) ||
     nominalHourlyCapacityValue < 0 ||

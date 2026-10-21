@@ -73,6 +73,8 @@ export interface FundedProducerTurnResult {
   headcountBySectorId: ReadonlyMap<string, { desiredWorkers: number; workers: number }>;
 }
 
+export { producerStageEnv } from "./producerStageEnv";
+
 export async function runFundedProducerTurn(
   db: Db,
   input: {
