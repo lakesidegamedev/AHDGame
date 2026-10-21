@@ -201,7 +201,9 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
         return errorResponse(400, "Cannot offer on your own corporation's listing");
       }
       if (listingCorp && wouldGainControl(listingCorp, placerCorp._id, shares)) {
-        const foreignRejection = await assertForeignControlAllowed(db, placerCorp, listingCorp);
+        const foreignRejection = await assertForeignControlAllowed(db, placerCorp, listingCorp, {
+          viaMarket: true,
+        });
         if (foreignRejection) return errorResponse(foreignRejection.status, foreignRejection.error);
       }
       const placerCurrency = (resolveCorpLiquidCurrencyCode(placerCorp) ?? "USD") as CurrencyCode;

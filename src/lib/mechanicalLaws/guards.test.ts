@@ -125,18 +125,34 @@ describe("assertForeignControlAllowed", () => {
   });
 
   it("refuses a foreign-controlled buyer in a country that bans foreign investment", async () => {
-    const { db, findOne } = fakeDb(corps);
+    const { db } = fakeDb(corps);
     mockedLevels.mockResolvedValue(levels(0, 4));
 
+    // Root is found by following the controlling corporate holder up to the US parent.
     const rejection = await assertForeignControlAllowed(db, frSubsidiaryOfUs, {
       countryId: "FR",
     });
 
-    // Root is found by following the controlling corporate holder up to the US parent.
-    expect(findOne).toHaveBeenCalledTimes(1);
     expect(rejection).not.toBeNull();
     expect(rejection?.status).toBe(400);
     expect(rejection?.error).toContain("Foreign Investment Act");
+  });
+
+  it("sends a foreign market buy under screening to the acquisition route", async () => {
+    const { db } = fakeDb(corps);
+    mockedLevels.mockResolvedValue(levels(0, 1));
+
+    const viaMarket = await assertForeignControlAllowed(
+      db,
+      frSubsidiaryOfUs,
+      { countryId: "FR" },
+      { viaMarket: true }
+    );
+    const viaOffer = await assertForeignControlAllowed(db, frSubsidiaryOfUs, { countryId: "FR" });
+
+    expect(viaMarket?.error).toContain("acquisition offer");
+    // Acquisitions and takeovers are screened by merger review instead.
+    expect(viaOffer).toBeNull();
   });
 });
 

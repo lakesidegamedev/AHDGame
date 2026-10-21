@@ -41,20 +41,24 @@ const CONTROL_PROJECTION = {
 
 /**
  * The corporation at the top of `corp`'s control chain (itself when nothing
- * controls it). Walks up one controlling holder at a time, at most 8 hops.
+ * controls it). One read of the control table, then an in-memory walk bounded
+ * by the number of companies, so a cycle cannot loop.
  */
 export async function controllingRoot(db: Db, corp: ControlFields): Promise<ControlFields> {
+  if (!getControllingCorporateParent(corp as Corporation)) return corp;
+  const all = (await db
+    .collection<Corporation>("corporations")
+    .find({}, { projection: CONTROL_PROJECTION })
+    .toArray()) as ControlFields[];
+  const byId = new Map(all.map((c) => [c._id.toString(), c]));
   let current = corp;
   const seen = new Set<string>([corp._id.toString()]);
-  for (let hop = 0; hop < 8; hop++) {
+  for (let hop = 0; hop < all.length; hop++) {
     const parent = getControllingCorporateParent(current as Corporation);
-    if (!parent || seen.has(parent.corporationId.toString())) return current;
-    const next = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: parent.corporationId }, { projection: CONTROL_PROJECTION });
-    if (!next) return current;
+    const next = parent ? byId.get(parent.corporationId.toString()) : undefined;
+    if (!next || seen.has(next._id.toString())) return current;
     seen.add(next._id.toString());
-    current = next as ControlFields;
+    current = next;
   }
   return current;
 }
@@ -111,12 +115,23 @@ export async function assertSubsidiaryWithinCap(
 export async function assertForeignControlAllowed(
   db: Db,
   buyer: ControlFields,
-  target: Pick<Corporation, "countryId">
+  target: Pick<Corporation, "countryId">,
+  options: { viaMarket?: boolean } = {}
 ): Promise<LawRejection | null> {
   const root = await controllingRoot(db, buyer);
   if (root.countryId === target.countryId) return null;
   const levels = await getMechanicalLawLevels(db, target.countryId as CountryId);
-  if (foreignInvestmentRuleForLevel(levels.foreignInvestment).kind !== "ban") return null;
+  const rule = foreignInvestmentRuleForLevel(levels.foreignInvestment).kind;
+  // Screening (and the share caps, which include it) reviews foreign takeovers
+  // through merger review, which only acquisitions and takeovers go through.
+  if (options.viaMarket && (rule === "screening" || rule === "cap")) {
+    return {
+      status: 400,
+      error:
+        "This country's Foreign Investment Act screens foreign takeovers. A group headquartered abroad must make an acquisition offer, which the competition authority reviews, instead of buying control on the market.",
+    };
+  }
+  if (rule !== "ban") return null;
   return {
     status: 400,
     error:
