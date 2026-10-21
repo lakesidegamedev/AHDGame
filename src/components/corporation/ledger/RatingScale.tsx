@@ -1,4 +1,13 @@
 import { CREDIT_RATINGS } from "@/lib/db/types/centralBank";
+import { gradeTone } from "../dense/InlineViz";
+
+/** The marked tier uses the page's grade colours: A grades good, B grades caution, below that poor. */
+const TIER_FILL = {
+  success: "bg-success",
+  warning: "bg-warning",
+  error: "bg-error",
+  muted: "bg-muted",
+} as const;
 
 /** The rating's letter tier: a defensive "+" or "-" suffix maps to its base grade. */
 function tierOf(rating: string): string | null {
@@ -28,7 +37,14 @@ export function RatingScale({ rating }: { rating: string }) {
             data-active={on ? "true" : "false"}
             className="flex flex-col items-center gap-1"
           >
-            <span className={`h-2 w-full ${on ? "bg-success" : "bg-track"}`} />
+            <span
+              data-bar
+              className={`h-2 w-full ${
+                on
+                  ? (TIER_FILL[gradeTone(tier) as keyof typeof TIER_FILL] ?? "bg-muted")
+                  : "bg-track"
+              }`}
+            />
             <span
               aria-hidden
               className={`h-0 w-0 border-x-4 border-b-[6px] border-x-transparent ${

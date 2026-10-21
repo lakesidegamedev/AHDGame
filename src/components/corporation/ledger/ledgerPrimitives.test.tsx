@@ -209,3 +209,17 @@ describe("CollapsibleSection", () => {
     expect(body.className).not.toMatch(/(^| )hidden( |$)/);
   });
 });
+
+describe("RatingScale tone", () => {
+  it("colours the marked tier by its grade, not always as good", () => {
+    const strong = render(<RatingScale rating="AAA" />);
+    expect(strong.container.querySelector('[data-tier="AAA"] [data-bar]')!.className).toContain(
+      "bg-success"
+    );
+    strong.unmount();
+    const weak = render(<RatingScale rating="CCC" />);
+    expect(weak.container.querySelector('[data-tier="CCC"] [data-bar]')!.className).toContain(
+      "bg-error"
+    );
+  });
+});
