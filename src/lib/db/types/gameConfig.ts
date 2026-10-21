@@ -167,6 +167,14 @@ export interface GameConfig {
    */
   producerLowUseCostStage?: number;
   /**
+   * Funded producer market: >= 1 re-clears household spend that was stranded in
+   * sold-out lanes onto the household's other lanes with unsold supply, once, at
+   * the same posted prices. 0 or absent = off.
+   */
+  producerSpilloverStage?: number;
+  /** With producerSpilloverStage on: share (0 to 1) of stranded spend that substitutes. Absent = 0.7. */
+  producerSpilloverShare?: number;
+  /**
    * Funded producer market: >= 1 retires, with no cash, a share of the
    * capacity of plants that have sold nothing for several turns. 0 or absent = off.
    */

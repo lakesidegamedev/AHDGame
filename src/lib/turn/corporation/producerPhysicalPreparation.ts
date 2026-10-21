@@ -89,6 +89,8 @@ export type ProducerPhysicalEnv = Pick<
   demandPlanStage?: number;
   /** gameConfig.producerLowUseCostStage: >= 1 lets barely used and parked plants cost close to nothing. */
   lowUseCostStage?: number;
+  /** gameConfig.producerSpilloverStage share: substitution share for same-turn spillover (0 or absent = off). */
+  spilloverShare?: number;
   /** gameConfig.producerIdleRetireStage: >= 1 retires capacity that persistently sells nothing. 0 or absent = off. */
   idleRetireStage?: number;
   /** gameConfig.decommissionGrantShare: share of retired book paid from unspent public funding. */
