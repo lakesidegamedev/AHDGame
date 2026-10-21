@@ -1,24 +1,23 @@
 "use client";
 
 import { apiErrorText } from "@/lib/errors/catalog";
-import { useState, type ReactNode } from "react";
-import Image from "next/image";
-import Link from "next/link";
+import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Avatar } from "@/components/Avatar";
 import { HeroImage } from "@/components/HeroImage";
-import { STATE_FLAGS } from "@/lib/constants";
 import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
 import { MONEY_PERIOD_SUFFIX, scaleMoney, type MoneyPeriod } from "@/lib/constants/moneyTimescale";
-import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";
 import { loyaltyLabel } from "@/lib/market/brandLoyalty";
-import { regionUrl } from "@/lib/urls";
 import { formatCompactNumber, formatMarketingStrength } from "@/lib/utils/formatters";
 import { corporationWikiSlug } from "@/lib/wiki/playerPages";
 import { CeoCorporationSettingsModal } from "./ceo/CeoCorporationSettingsModal";
 import { deriveTicker } from "./market/corpIdentity";
 import { useSharePriceHistory } from "./market/useSharePriceHistory";
-import { MiniSparkline, SmallButton, signTone, useCorpMoney } from "./dense/DenseKit";
+import { SmallButton, signTone, useCorpMoney } from "./dense/DenseKit";
+import { FiguresGrid, type FigureCell } from "./ledger/FiguresGrid";
+import { TickMeter } from "./ledger/TickMeter";
+import { MastheadIdentity } from "./masthead/MastheadIdentity";
+import { MobileSummary } from "./masthead/MobileSummary";
+import { QuoteBoard } from "./masthead/QuoteBoard";
 import type { CEO, CorporationDetail, FinancialFogMeta } from "./CorporationPageTypes";
 
 interface CorporationMastheadProps {
@@ -32,6 +31,8 @@ interface CorporationMastheadProps {
   creditRating?: string;
   /** Retained income after dividends, daily basis, corp currency. */
   retainedDaily: number | null;
+  /** Net income, daily basis, corp currency; null when the books are hidden. */
+  netIncomeDaily?: number | null;
   /** Revenue growth: realized over the past year, else the per-turn rate. */
   revenueGrowth?: { pct: number; realized: boolean } | null;
   /** What the corp pays out: max(CEO rate, legal floor, parent floor). */
@@ -46,44 +47,10 @@ interface CorporationMastheadProps {
   showBanner?: boolean;
 }
 
-/** One cell of the key-figures grid: a small label over its value. */
-function Figure({
-  label,
-  children,
-  title,
-  mono = true,
-}: {
-  label: string;
-  children: ReactNode;
-  title?: string;
-  /** Figures render in Geist Mono; pass false for words. */
-  mono?: boolean;
-}) {
-  return (
-    <div className="min-w-0" title={title}>
-      <dt className="truncate text-[11px] text-muted">{label}</dt>
-      <dd
-        className={`mt-0.5 truncate text-sm font-medium tabular-nums text-foreground ${mono ? "font-mono" : ""}`}
-      >
-        {children}
-      </dd>
-    </div>
-  );
-}
-
-function Sep() {
-  return (
-    <span aria-hidden className="text-muted/50">
-      ·
-    </span>
-  );
-}
-
 /**
- * Corporation page header, in three levels: the name and identity line, the
- * quote (the one large figure on the page), and a grid of labelled key
- * figures. The one action the viewer can take from here (trade, or settings
- * for the CEO) is a button, not a decoration.
+ * Corporation page header: the identity column and the live quote board, then
+ * the figures strip (folded behind a summary on a phone). The one action the
+ * viewer can take from here (trade, or settings for the CEO) is a button.
  */
 export function CorporationMasthead({
   corporation,
@@ -93,6 +60,7 @@ export function CorporationMasthead({
   exchangeLabel,
   creditRating,
   retainedDaily,
+  netIncomeDaily = null,
   revenueGrowth,
   effectiveDividendRate,
   periodView,
@@ -105,6 +73,8 @@ export function CorporationMasthead({
   const router = useRouter();
   const [creatingWikiPage, setCreatingWikiPage] = useState(false);
   const [wikiCreateError, setWikiCreateError] = useState("");
+  const [figuresOpen, setFiguresOpen] = useState(false);
+  const figuresId = useId();
   async function handleCreateWikiPage() {
     setCreatingWikiPage(true);
     setWikiCreateError("");
@@ -159,7 +129,6 @@ export function CorporationMasthead({
     ? `${corporation.typeLabel} / ${OPERATING_SECTOR_TYPE_LABELS[corporation.secondaryType]}`
     : corporation.typeLabel;
 
-  const hqFlag = STATE_FLAGS[corporation.headquartersState];
   const brand =
     corporation.brandLoyaltyLabel ??
     (corporation.brandLoyalty != null ? loyaltyLabel(corporation.brandLoyalty) : undefined);
@@ -173,22 +142,167 @@ export function CorporationMasthead({
       ? (corporation.publicFloat / corporation.totalShares) * 100
       : null;
   const hasPrice = priceVisible && Number.isFinite(corporation.sharePrice);
-  const hasQuote =
-    hasPrice &&
-    corporation.equityMarketPoolActive === true &&
-    Number.isFinite(corporation.marketBidPrice) &&
-    Number.isFinite(corporation.marketAskPrice);
 
   const nationalizationRisk = corporation.nationalizationRisk;
   const threat = corporation.nationalizationThreat;
   const threatActive = threat != null && (threat.whole || threat.sectorCount > 0);
+
+  // Every figure keeps the visibility rule and tooltip it had in the old grid.
+  const cells: FigureCell[] = [];
+  if (revenueGrowth && Number.isFinite(revenueGrowth.pct)) {
+    const note = revenueGrowth.realized
+      ? "Revenue growth over the past year."
+      : "Average revenue growth per turn.";
+    cells.push({
+      key: "growth",
+      label: "Revenue growth",
+      lead: true,
+      title: note,
+      value: (
+        <span className={signTone(revenueGrowth.pct)}>
+          {revenueGrowth.pct >= 0 ? "▲" : "▼"} {Math.abs(revenueGrowth.pct).toFixed(1)}%
+          <span className="ml-1 font-sans text-[11px] font-medium text-muted">
+            {revenueGrowth.realized ? "/yr" : "/turn"}
+          </span>
+        </span>
+      ),
+      sub: note,
+    });
+  }
+  const mktCapCell: FigureCell | null =
+    priceVisible && Number.isFinite(corporation.marketCapitalization)
+      ? { key: "cap", label: "Mkt cap", value: money.fmt(corporation.marketCapitalization) }
+      : null;
+  if (mktCapCell) cells.push(mktCapCell);
+  if (Number.isFinite(corporation.totalShares) && corporation.totalShares > 0) {
+    cells.push({
+      key: "shares",
+      label: "Shares",
+      value: formatCompactNumber(corporation.totalShares),
+    });
+  }
+  if (!corporation.isPrivate && floatPct != null) {
+    cells.push({
+      key: "float",
+      label: "Float",
+      title: "Shares anyone can buy on the market.",
+      value: `${floatPct.toFixed(1)}%`,
+      meter: <TickMeter pct={floatPct} tone="info" />,
+    });
+  }
+  if (dividendRate != null) {
+    cells.push({
+      key: "dividend",
+      label: "Dividend",
+      title: dividendIsFloor
+        ? `Legal minimum payout. The CEO has set ${corporation.dividendRate}%.`
+        : "Share of net income paid out to shareholders each turn.",
+      value: `${dividendRate}%${dividendIsFloor ? " floor" : ""}`,
+    });
+  }
+  if (retainedDaily != null) {
+    cells.push({
+      key: "retained",
+      label: `Retained${MONEY_PERIOD_SUFFIX[periodView]}`,
+      title: fogTitle ?? "Net income kept by the company after dividends.",
+      value: (
+        <span className={signTone(retainedDaily)}>
+          {est(money.fmtSigned(Math.round(scaleMoney(retainedDaily, periodView))))}
+        </span>
+      ),
+    });
+  }
+  const cashCell: FigureCell | null = Number.isFinite(corporation.liquidCapital)
+    ? {
+        key: "cash",
+        label: "Cash",
+        title: fogTitle ?? money.fmtFull(corporation.liquidCapital),
+        value: est(money.fmt(corporation.liquidCapital)),
+      }
+    : null;
+  if (cashCell) cells.push(cashCell);
+  const leverageCell: FigureCell | null = creditRating
+    ? {
+        key: "leverage",
+        label: "Leverage",
+        title:
+          "Measures debt load and the ability to service it, not profitability: a company with no debt rates AAA.",
+        value: creditRating,
+      }
+    : null;
+  if (leverageCell) cells.push(leverageCell);
+  if (Number.isFinite(corporation.marketingStrength)) {
+    const growth = corporation.marketingStrengthGrowth;
+    cells.push({
+      key: "marketing",
+      label: "Marketing",
+      title: "Marketing strength and its change per turn.",
+      value: (
+        <>
+          {formatMarketingStrength(corporation.marketingStrength)}
+          {growth != null && Number.isFinite(growth) && growth !== 0 && (
+            <span className={`ml-1.5 text-[11px] font-medium ${signTone(growth)}`}>
+              {growth > 0 ? "+" : ""}
+              {growth.toFixed(2)}
+            </span>
+          )}
+        </>
+      ),
+      meter: <TickMeter pct={corporation.marketingStrength} />,
+    });
+  }
+  if (brand) {
+    cells.push({ key: "brand", label: "Brand", value: <span className="font-sans">{brand}</span> });
+  }
+  if (corporation.averageQuality != null) {
+    cells.push({
+      key: "quality",
+      label: "Quality",
+      title: "Average product quality, out of 100.",
+      value: Math.round(corporation.averageQuality),
+      meter: <TickMeter pct={corporation.averageQuality} tone="success" />,
+    });
+  }
+
+  const netIncomeCell: FigureCell | null =
+    netIncomeDaily != null && Number.isFinite(netIncomeDaily)
+      ? {
+          key: "net",
+          label: `Net income${MONEY_PERIOD_SUFFIX[periodView]}`,
+          title: fogTitle,
+          value: (
+            <span className={signTone(netIncomeDaily)}>
+              {est(money.fmtSigned(Math.round(scaleMoney(netIncomeDaily, periodView))))}
+            </span>
+          ),
+        }
+      : null;
+  const summaryCells = [mktCapCell, cashCell, netIncomeCell, leverageCell].filter(
+    (c): c is FigureCell => c != null
+  );
+
+  const wikiAction =
+    typeof corporation.sequentialId === "number" &&
+    corporation.wikiPagePublished !== true &&
+    isCeo &&
+    !corporation.countryOwnerId ? (
+      <button
+        type="button"
+        onClick={handleCreateWikiPage}
+        disabled={creatingWikiPage}
+        title={wikiCreateError || "No published page yet. Create this corporation's wiki page."}
+        className="hover:underline disabled:opacity-50"
+      >
+        {creatingWikiPage ? "Creating..." : "Create wiki page"}
+      </button>
+    ) : undefined;
 
   return (
     <header className="space-y-4">
       {/* A CEO-uploaded banner is the corp's own identity, so it stays on the
           Overview, as a plain strip with nothing printed over it. */}
       {showBanner && corporation.headerImageUrl && (
-        <div className="relative aspect-[6/1] w-full overflow-hidden rounded-md border border-card-border">
+        <div className="relative hidden aspect-[6/1] w-full overflow-hidden rounded-[var(--corp-rad,6px)] border border-card-border lg:block">
           <HeroImage
             src={corporation.headerImageUrl}
             alt=""
@@ -199,157 +313,51 @@ export function CorporationMasthead({
         </div>
       )}
 
-      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-        <div className="flex min-w-0 items-center gap-3">
-          {corporation.logoUrl && (
-            <Image
-              src={corporation.logoUrl}
-              alt=""
-              width={44}
-              height={44}
-              className="h-11 w-11 shrink-0 rounded-md border border-card-border object-cover"
-              sizes="44px"
-              unoptimized={bypassNextImageOptimization(corporation.logoUrl)}
-            />
-          )}
-          <div className="min-w-0">
-            <h1 className="truncate text-2xl font-semibold leading-tight tracking-tight text-foreground sm:text-[28px]">
-              {corporation.name}
-            </h1>
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted">
-              <span className="font-mono font-medium text-foreground">
-                {exchangeLabel}: {ticker}
-              </span>
-              <Sep />
-              {isCeo ? (
-                // The CEO changes the sector type in Settings; the label is the
-                // place players look for it (ticket 1456).
-                <button
-                  type="button"
+      <div
+        className={`grid gap-5 border-b border-card-border pb-5 lg:gap-8 lg:pb-7 ${
+          hasPrice ? "lg:grid-cols-[minmax(0,1fr)_380px]" : ""
+        }`}
+      >
+        <MastheadIdentity
+          corporation={corporation}
+          ceo={ceo}
+          isCeo={isCeo}
+          exchangeLabel={exchangeLabel}
+          ticker={ticker}
+          typeLabel={typeLabel}
+          onOpenSettings={() => setSettingsOpen(true)}
+          wikiAction={wikiAction}
+          actions={
+            <>
+              {onTrade && (
+                <SmallButton tone="primary" onClick={onTrade} className="h-10 px-4 text-sm">
+                  Trade shares
+                </SmallButton>
+              )}
+              {isCeo && (
+                <SmallButton
                   onClick={() => setSettingsOpen(true)}
-                  title="Change sector type in corporation settings"
-                  className="underline decoration-dotted underline-offset-2 hover:text-foreground"
+                  ariaLabel="Corporation settings"
+                  className="h-10 px-4 text-sm"
                 >
-                  {typeLabel}
-                </button>
-              ) : (
-                <span>{typeLabel}</span>
+                  Settings
+                </SmallButton>
               )}
-              {corporation.legalStructureLabel && (
-                <>
-                  <Sep />
-                  <span>{corporation.legalStructureLabel}</span>
-                </>
-              )}
-              <Sep />
-              <span>{corporation.isPrivate ? "Private" : "Public"}</span>
-              {corporation.countryId && corporation.headquartersState && (
-                <>
-                  <Sep />
-                  <Link
-                    href={regionUrl(corporation.countryId, corporation.headquartersState)}
-                    className="inline-flex items-center gap-1 hover:text-foreground"
-                  >
-                    {hqFlag && (
-                      <Image
-                        src={hqFlag}
-                        alt=""
-                        width={16}
-                        height={11}
-                        className="h-[11px] w-4 rounded-[2px] object-cover"
-                        unoptimized={bypassNextImageOptimization(hqFlag)}
-                      />
-                    )}
-                    HQ {corporation.headquartersStateName}
-                  </Link>
-                </>
-              )}
-              <Sep />
-              {corporation.ceoVacant || !ceo ? (
-                <span className="text-warning">CEO vacant</span>
-              ) : (
-                <Link
-                  href={ceo.profilePath ?? `/character/${ceo.sequentialId}`}
-                  className="inline-flex items-center gap-1 hover:text-foreground"
-                >
-                  <Avatar
-                    url={ceo.avatarUrl}
-                    name={ceo.name}
-                    size="h-4 w-4"
-                    className="rounded-sm"
-                    borderKey={ceo.borderKey}
-                    tintColor={ceo.tintColor}
-                  />
-                  <span>
-                    CEO <span className="text-foreground">{ceo.name}</span>
-                  </span>
-                </Link>
-              )}
-              {corporation.parentCorporation && (
-                <>
-                  <Sep />
-                  <span>
-                    Subsidiary of{" "}
-                    <Link
-                      href={`/corporation/${corporation.parentCorporation.sequentialId ?? corporation.parentCorporation._id}`}
-                      className="text-foreground hover:underline"
-                    >
-                      {corporation.parentCorporation.name}
-                    </Link>{" "}
-                    <span className="tabular-nums">
-                      ({corporation.parentCorporation.ownershipPct.toFixed(1)}%)
-                    </span>
-                  </span>
-                </>
-              )}
-              {typeof corporation.sequentialId === "number" &&
-                corporation.wikiPagePublished === true && (
-                  <>
-                    <Sep />
-                    <Link
-                      href={`/wiki/${corporationWikiSlug(corporation.sequentialId)}`}
-                      className="hover:text-foreground"
-                    >
-                      Wiki
-                    </Link>
-                  </>
-                )}
-              {typeof corporation.sequentialId === "number" &&
-                corporation.wikiPagePublished !== true &&
-                isCeo &&
-                !corporation.countryOwnerId && (
-                  <>
-                    <Sep />
-                    <button
-                      type="button"
-                      onClick={handleCreateWikiPage}
-                      disabled={creatingWikiPage}
-                      title={
-                        wikiCreateError ||
-                        "No published page yet. Create this corporation's wiki page."
-                      }
-                      className="hover:text-foreground disabled:opacity-50"
-                    >
-                      {creatingWikiPage ? "Creating..." : "Create wiki page"}
-                    </button>
-                  </>
-                )}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex shrink-0 items-center gap-1.5">
-          {onTrade && (
-            <SmallButton tone="primary" onClick={onTrade}>
-              Trade shares
-            </SmallButton>
-          )}
-          {isCeo && (
-            <SmallButton onClick={() => setSettingsOpen(true)} ariaLabel="Corporation settings">
-              Settings
-            </SmallButton>
-          )}
-        </div>
+            </>
+          }
+        />
+        {hasPrice && (
+          <QuoteBoard
+            money={money}
+            price={corporation.sharePrice}
+            series={series}
+            dayChange={dayChange}
+            bid={corporation.marketBidPrice}
+            ask={corporation.marketAskPrice}
+            poolActive={corporation.equityMarketPoolActive === true}
+            currentTurn={corporation.currentTurn}
+          />
+        )}
       </div>
 
       {(ceoIsInactive || nationalizationRisk || threatActive) && (
@@ -396,141 +404,18 @@ export function CorporationMasthead({
         </ul>
       )}
 
-      <div className="flex flex-col gap-x-10 gap-y-4 border-t border-card-border pt-4 lg:flex-row lg:items-start">
-        {hasPrice && (
-          <div className="shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="flex items-baseline gap-2">
-                <span className="font-mono text-[28px] font-semibold leading-none tabular-nums text-foreground">
-                  {money.fmtPrice(corporation.sharePrice)}
-                </span>
-                {dayChange && (
-                  <span
-                    className={`font-mono text-sm font-medium tabular-nums ${signTone(dayChange.changePct)}`}
-                    title={`Previous turn ${money.fmtPrice(dayChange.prevClose)}`}
-                  >
-                    {dayChange.changePct >= 0 ? "+" : ""}
-                    {dayChange.changePct.toFixed(2)}%
-                  </span>
-                )}
-              </div>
-              <MiniSparkline
-                data={series}
-                width={112}
-                height={28}
-                label="Share price, recent turns"
-              />
-            </div>
-            {hasQuote && (
-              <p
-                className="mt-2 text-xs text-muted"
-                title="The equity market pool's live quote. Market sales fill at the bid, purchases at the ask."
-              >
-                Bid / Ask{" "}
-                <span className="font-mono font-medium tabular-nums text-foreground">
-                  {money.fmtPrice(corporation.marketBidPrice as number)} /{" "}
-                  {money.fmtPrice(corporation.marketAskPrice as number)}
-                </span>
-              </p>
-            )}
-            <p className="mt-1 text-[11px] text-muted">
-              Live quote{money.code ? ` in ${money.code}, the listing currency` : ""}. Market boards
-              show the last snapshot.
-            </p>
-          </div>
-        )}
-
-        <dl className="grid min-w-0 flex-1 grid-cols-3 gap-x-6 gap-y-3 md:grid-cols-5">
-          {revenueGrowth && Number.isFinite(revenueGrowth.pct) && (
-            <Figure
-              label="Growth"
-              title={
-                revenueGrowth.realized
-                  ? "Revenue growth over the past year."
-                  : "Average revenue growth per turn."
-              }
-            >
-              <span className={signTone(revenueGrowth.pct)}>
-                {revenueGrowth.pct >= 0 ? "▲" : "▼"} {Math.abs(revenueGrowth.pct).toFixed(1)}%
-                <span className="ml-1 text-[11px] font-normal text-muted">
-                  {revenueGrowth.realized ? "/yr" : "/turn"}
-                </span>
-              </span>
-            </Figure>
-          )}
-          {priceVisible && Number.isFinite(corporation.marketCapitalization) && (
-            <Figure label="Mkt cap">{money.fmt(corporation.marketCapitalization)}</Figure>
-          )}
-          {Number.isFinite(corporation.totalShares) && corporation.totalShares > 0 && (
-            <Figure label="Shares">{formatCompactNumber(corporation.totalShares)}</Figure>
-          )}
-          {!corporation.isPrivate && floatPct != null && (
-            <Figure label="Float" title="Shares anyone can buy on the market.">
-              {floatPct.toFixed(1)}%
-            </Figure>
-          )}
-          {dividendRate != null && (
-            <Figure
-              label="Dividend"
-              title={
-                dividendIsFloor
-                  ? `Legal minimum payout. The CEO has set ${corporation.dividendRate}%.`
-                  : "Share of net income paid out to shareholders each turn."
-              }
-            >
-              {dividendRate}%{dividendIsFloor ? " floor" : ""}
-            </Figure>
-          )}
-          {retainedDaily != null && (
-            <Figure
-              label={`Retained${MONEY_PERIOD_SUFFIX[periodView]}`}
-              title={fogTitle ?? "Net income kept by the company after dividends."}
-            >
-              <span className={signTone(retainedDaily)}>
-                {est(money.fmtSigned(Math.round(scaleMoney(retainedDaily, periodView))))}
-              </span>
-            </Figure>
-          )}
-          {Number.isFinite(corporation.liquidCapital) && (
-            <Figure label="Cash" title={fogTitle ?? money.fmtFull(corporation.liquidCapital)}>
-              {est(money.fmt(corporation.liquidCapital))}
-            </Figure>
-          )}
-          {creditRating && (
-            <Figure
-              label="Leverage"
-              title="Measures debt load and the ability to service it, not profitability: a company with no debt rates AAA."
-            >
-              {creditRating}
-            </Figure>
-          )}
-          {Number.isFinite(corporation.marketingStrength) && (
-            <Figure label="Marketing" title="Marketing strength and its change per turn.">
-              {formatMarketingStrength(corporation.marketingStrength)}
-              {corporation.marketingStrengthGrowth != null &&
-                Number.isFinite(corporation.marketingStrengthGrowth) &&
-                corporation.marketingStrengthGrowth !== 0 && (
-                  <span
-                    className={`ml-1.5 text-[11px] font-normal ${signTone(corporation.marketingStrengthGrowth)}`}
-                  >
-                    {corporation.marketingStrengthGrowth > 0 ? "+" : ""}
-                    {corporation.marketingStrengthGrowth.toFixed(2)}
-                  </span>
-                )}
-            </Figure>
-          )}
-          {brand && (
-            <Figure label="Brand" mono={false}>
-              {brand}
-            </Figure>
-          )}
-          {corporation.averageQuality != null && (
-            <Figure label="Quality" title="Average product quality, out of 100.">
-              {Math.round(corporation.averageQuality)}
-            </Figure>
-          )}
-        </dl>
-      </div>
+      <MobileSummary
+        cells={summaryCells}
+        total={cells.length}
+        open={figuresOpen}
+        onToggle={() => setFiguresOpen((v) => !v)}
+        controlsId={figuresId}
+      />
+      {cells.length > 0 && (
+        <div id={figuresId} className={`${figuresOpen ? "block" : "hidden"} lg:block`}>
+          <FiguresGrid cells={cells} columns={{ base: 2, md: 4, lg: 6 }} />
+        </div>
+      )}
 
       {fogged && (
         <p className="text-[11px] text-muted">

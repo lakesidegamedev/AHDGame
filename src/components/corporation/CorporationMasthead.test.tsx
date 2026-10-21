@@ -94,7 +94,9 @@ describe("CorporationMasthead", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Keystone Industries" })).toBeTruthy();
     expect(screen.getByText("NYSE: KSTN")).toBeTruthy();
     expect(screen.getByText("$24.74")).toBeTruthy();
-    expect(screen.getByText("$24.19 / $25.18")).toBeTruthy();
+    // Bid, spread and ask are separate cells on the quote board.
+    expect(screen.getByText("$24.19")).toBeTruthy();
+    expect(screen.getByText("$25.18")).toBeTruthy();
     expect(screen.getByText("Retained/turn")).toBeTruthy();
     // 24,000/day is 1,000 per turn.
     expect(screen.getByText("+$1000")).toBeTruthy();
@@ -112,7 +114,8 @@ describe("CorporationMasthead", () => {
         },
       }
     );
-    expect(screen.getByText("~$2900000")).toBeTruthy();
+    // Cash appears in the phone summary and in the full strip.
+    expect(screen.getAllByText("~$2900000").length).toBeGreaterThan(0);
     expect(screen.getByText(/estimate from the turn 96 quarterly report/)).toBeTruthy();
   });
 
@@ -125,7 +128,7 @@ describe("CorporationMasthead", () => {
   it("shows private subsidiary valuation to the controlling parent CEO without settings", () => {
     renderMasthead({ isPrivate: true, viewerIsControllingParentCeo: true });
     expect(screen.getByText("$24.74")).toBeTruthy();
-    expect(screen.getByText("Mkt cap")).toBeTruthy();
+    expect(screen.getAllByText("Mkt cap").length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "Corporation settings" })).toBeNull();
   });
 
