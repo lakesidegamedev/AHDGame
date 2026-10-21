@@ -508,6 +508,7 @@ export function processSector(
     disasterMarginMod,
     nationalizedMarginPenalty,
     effectiveMargin,
+    sprawlMod,
   } = accumulateMarginModifiers({
     corp,
     sector,
@@ -1149,6 +1150,8 @@ export function processSector(
     labourStaffingFactor: staffingFactor,
     productionPolicyLevel: newPolicyLevel,
     negativeProductionSustainedTurns: newNegativeProductionTurns,
+    // Sprawl margin (pp) the turn applied, for the sector page (SOEs pay on the state's holdings).
+    sprawlMarginPp: Math.round(sprawlMod * 100) / 100,
     countryId: sectorCountryId,
     // Surfaced to the corporation UI/API so a $0 sector reads as "suspended
     // by embargo" rather than looking like a bug.
