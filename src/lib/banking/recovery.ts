@@ -20,7 +20,7 @@
 import * as Sentry from "@sentry/nextjs";
 import type { Db, ObjectId } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
-import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
+import { MONEY_MOVE_COLLECTION, type MoneyMoveRecordLeg } from "@/lib/banking/moneyMove";
 import { resumeSettlement, unfinishedSettlementFilter } from "@/lib/banking/settlementJournal";
 import { resolveFailedBankDepositors } from "@/lib/banking/insurance";
 import { revokeCharter } from "@/lib/banking/charter";
@@ -50,6 +50,65 @@ export interface BankingRecoverySummary {
 }
 
 const MAX_RECORDS_PER_PASS = 200;
+/** Above this many unapplied legs, leave target checking to the resume itself. */
+const MAX_PREFLIGHT_LEGS = 1_000;
+
+interface UnfinishedMoveRow {
+  _id: string;
+  kind: string;
+  turn?: number;
+  status: string;
+  legs?: MoneyMoveRecordLeg[];
+  atomicDocument?: unknown;
+  legacyInterestBatch?: unknown;
+  locSettlement?: unknown;
+  treasuryReserveTransfer?: unknown;
+}
+
+function targetIdentity(id: unknown): string {
+  return `${typeof id}:${String(id)}`;
+}
+
+/**
+ * The targets of every leg that has not landed, checked in one query per
+ * collection. A payout whose recipient was deleted can never be resumed:
+ * retrying it walks the whole leg list again on every turn (the live world
+ * carries several 120-170 leg sovereign payouts), reads the journal once per
+ * leg and then stops at the same missing target. Checking first costs one
+ * record read plus a handful of `$in` queries, and leaves the record exactly
+ * as partial as it already was.
+ *
+ * Returns [] when the resume should be attempted, including for legs whose
+ * target was not recorded (older records) or that are mint/burn legs.
+ */
+async function missingSettlementTargets(
+  db: Db,
+  legs: MoneyMoveRecordLeg[]
+): Promise<Array<{ index: number; collection: string; id: unknown }>> {
+  const wanted = new Map<string, Array<{ index: number; id: unknown }>>();
+  legs.forEach((leg, index) => {
+    if (leg.applied) return;
+    if (leg.kind === "mint" || leg.kind === "burn") return;
+    if (!leg.collection || !leg.filter || leg.filter._id === undefined) return;
+    const rows = wanted.get(leg.collection) ?? [];
+    rows.push({ index, id: leg.filter._id });
+    wanted.set(leg.collection, rows);
+  });
+
+  const missing: Array<{ index: number; collection: string; id: unknown }> = [];
+  for (const [collection, rows] of wanted) {
+    if (rows.length > MAX_PREFLIGHT_LEGS) continue;
+    const found = await db
+      .collection(collection)
+      .find({ _id: { $in: rows.map((row) => row.id) } }, { projection: { _id: 1 } })
+      .toArray();
+    const present = new Set(found.map((row) => targetIdentity(row._id)));
+    for (const row of rows) {
+      if (!present.has(targetIdentity(row.id))) missing.push({ ...row, collection });
+    }
+  }
+  return missing;
+}
 
 /**
  * Finish what earlier turns left unfinished. `turn` is the in-flight turn:
@@ -134,13 +193,46 @@ export async function recoverBankingSettlements(
   }
 
   const partial = await db
-    .collection<{ _id: string; kind: string; turn?: number; status: string }>(MONEY_MOVE_COLLECTION)
-    .find({ ...unfinishedSettlementFilter(), turn: { $lt: turn } })
+    .collection<UnfinishedMoveRow>(MONEY_MOVE_COLLECTION)
+    .find(
+      { ...unfinishedSettlementFilter(), turn: { $lt: turn } },
+      {
+        projection: {
+          kind: 1,
+          turn: 1,
+          status: 1,
+          legs: 1,
+          atomicDocument: 1,
+          legacyInterestBatch: 1,
+          locSettlement: 1,
+          treasuryReserveTransfer: 1,
+        },
+      }
+    )
     .sort({ createdAt: 1 })
     .limit(MAX_RECORDS_PER_PASS)
     .toArray();
   for (const record of partial) {
     if (estateKeys.has(record._id)) continue;
+    const special =
+      record.atomicDocument ||
+      record.legacyInterestBatch ||
+      record.locSettlement ||
+      record.treasuryReserveTransfer;
+    const missingTargets =
+      !special && record.legs?.length ? await missingSettlementTargets(db, record.legs) : [];
+    if (missingTargets.length > 0) {
+      const first = missingTargets[0];
+      summary.stillPartial.push({
+        key: record._id,
+        kind: record.kind,
+        turn: record.turn,
+        error:
+          `Settlement target ${first.collection}:${String(first.id)} for leg ${first.index} ` +
+          `is missing; resume deferred until the target exists.`,
+      });
+      continue;
+    }
     // One record that cannot be resumed (a malformed plan, a guard that
     // throws) is reported and left partial. It must not stop every later
     // record, or the rest of the banking turn, from running.

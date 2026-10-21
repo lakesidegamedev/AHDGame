@@ -102,7 +102,20 @@ export async function computeCountryStateOwnershipConcentration(
   const [corps, fx] = await Promise.all([
     db
       .collection<Corporation>("corporations")
-      .find({ _id: { $in: uniqueCorpIds } })
+      .find(
+        { _id: { $in: uniqueCorpIds } },
+        {
+          // Revenue attribution only resolves the owner currency and the
+          // state owner. Loading the full balance sheet here decoded every
+          // corporation's holdings and settlement history once per country.
+          projection: {
+            _id: 1,
+            liquidCurrencyCode: 1,
+            countryId: 1,
+            countryOwnerId: 1,
+          },
+        }
+      )
       .toArray(),
     fxByCurrency ? Promise.resolve(fxByCurrency) : loadFxRatesByCurrency(db),
   ]);

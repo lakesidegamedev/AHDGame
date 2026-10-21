@@ -577,6 +577,9 @@ async function applyLeg(
     const current = await target.findOne(id, {
       projection: { [PENDING_LEG]: 1, [LEG_REVISION]: 1, settledKeys: 1 },
     });
+    // Only this leg is read back. A maturity payout carries one leg per
+    // holder (120-170 on the live world), so projecting the whole array makes
+    // every leg acknowledgement decode the entire receipt again.
     const record = await records.findOne(
       { _id: key },
       {
@@ -584,11 +587,14 @@ async function applyLeg(
           status: 1,
           genericMoneyMoveVersion: 1,
           retryCreditLegOnGuardFailure: 1,
-          legs: 1,
+          legs: { $slice: [i, 1] },
         },
       }
     );
-    const saved = record?.legs[i];
+    // The server answers with the one-element slice; an in-memory test double
+    // may return the whole array. Length tells the two apart without guessing
+    // at an index the record does not have.
+    const saved = record ? (record.legs.length === 1 ? record.legs[0] : record.legs[i]) : undefined;
     if (!saved) return `Leg ${i} of ${key} is missing from its journal.`;
     const receipt = current?.pendingMoneyMoveReceipt;
     if (receipt) {
@@ -749,9 +755,19 @@ async function deliverCashLegsInBatch(
     if (row) current.set(i, row);
   }
   const records = db.collection<MoneyMoveRecord>(MONEY_MOVE_COLLECTION);
+  // The batch only needs each leg's applied/refusal mark. Projecting those
+  // two subfields keeps array positions and count without decoding every
+  // leg's selector, valuation and note on a large payout.
   const record = await records.findOne(
     { _id: key },
-    { projection: { status: 1, genericMoneyMoveVersion: 1, legs: 1 } }
+    {
+      projection: {
+        status: 1,
+        genericMoneyMoveVersion: 1,
+        "legs.applied": 1,
+        "legs.refusal": 1,
+      },
+    }
   );
   if (record?.status !== "partial" || record.genericMoneyMoveVersion !== 2) return delivered;
 
@@ -955,7 +971,22 @@ async function executeMoneyMove(
       break;
     }
   }
-  const latest = await records.findOne({ _id: key });
+  // Completion only needs which legs landed and whether projections remain.
+  // Reading the whole receipt here doubles the journal bytes a large payout
+  // decodes after already applying every leg.
+  const latest = await records.findOne(
+    { _id: key },
+    {
+      projection: {
+        status: 1,
+        error: 1,
+        "legs.applied": 1,
+        "legs.refusal": 1,
+        "projections.applied": 1,
+        "projections.appliedAt": 1,
+      },
+    }
+  );
   if (!latest) throw new Error(`Money move ${key} disappeared during recovery`);
   const applied = latest.legs.flatMap((leg, i) =>
     leg.applied || (bookkeeping.has(i) && latest.status === "partial") ? [i] : []
