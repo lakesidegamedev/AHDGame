@@ -162,6 +162,7 @@ type SiblingCorpProjection = Pick<
   | "liquidCurrencyCode"
   | "ceoType"
   | "caretakerCeo"
+  | "marketingStrength"
 >;
 
 /**
@@ -604,6 +605,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
               brandColor: 1,
               countryId: 1,
               liquidCurrencyCode: 1,
+              marketingStrength: 1,
               // Who actually OWNS the corp, for the market panel's player/NPP
               // split. `caretakerCeo` rides along because an NPP caretaker runs
               // a corp whose owner is still a player, and that corp belongs with
@@ -680,6 +682,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
       effectiveMarket,
       marketShare,
       competitors,
+      attackExposure,
       unownedRevenue,
       unownedPercent,
       siblingRevenueAnchorById,
@@ -1692,6 +1695,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         totalMarket: effectiveMarket,
         marketShare,
         competitors,
+        attackExposure,
         unownedRevenue: Math.round(unownedRevenue),
         unownedPercent,
       },

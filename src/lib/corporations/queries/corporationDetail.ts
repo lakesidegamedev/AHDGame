@@ -1,3 +1,4 @@
+import { insiderConcentrationPenaltyApplies } from "@/lib/corporations/ceoOwnership";
 import type { Db } from "mongodb";
 import { loadPoolSellPacing } from "@/lib/equities/blockPacing";
 import type { Corporation, GameState, ShareListing, ShareOrder } from "@/lib/db/types";
@@ -303,6 +304,8 @@ export async function loadCorporationDetailView(args: {
       ceoSalary: income.ceoSalary,
       brandColor: corporation.brandColor,
       marketingStrength: roundMarketingStrength(corporation.marketingStrength),
+      // Size cost on the whole control group, in margin points, as applied last turn.
+      managementOverheadPp: Math.round((corporation.managementOverheadPp ?? 0) * 100) / 100,
       marketingStrengthGrowth: Math.round(income.marketingStrengthGrowth * 1000) / 1000,
       logisticsBudget: income.logisticsBudget,
       logisticsStrength: income.currentLogisticsStrength,
@@ -421,6 +424,8 @@ export async function loadCorporationDetailView(args: {
         (corporation.isPrivate ?? false)
           ? false
           : qualifiesForIndexInclusionBenefit(indexFundOwnershipFraction(corporation)),
+      // The mirror notch: a public company whose CEO holds over 65% loses one.
+      insiderConcentrationActive: insiderConcentrationPenaltyApplies(corporation),
       parentCorporation: subsidiary.parentCorporationPayload,
       subsidiaries: subsidiary.subsidiariesPayload,
       hostileTakeoverEligibility: subsidiary.hostileTakeoverEligibility,
