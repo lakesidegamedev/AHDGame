@@ -30,6 +30,12 @@ export interface SectorTurnEnv {
   labourDemandByState: LabourDemandByState;
   /** Desired-worker-weighted wage bids, kept separate from actual-worker wage telemetry. */
   labourDemandWageIndexByState?: Map<string, WageIndexAccumulator>;
+  /**
+   * Funded producer turn with gameConfig.fundedHeadcountStage on: the plan's
+   * staffed headcount per sector. A sector absent from the map has no plan and
+   * employs no one. Undefined = revenue-implied staffing, as before.
+   */
+  fundedHeadcountBySectorId?: ReadonlyMap<string, { desiredWorkers: number; workers: number }>;
   pendingStrikeEvents: SectorCalculationsResult["strikeEvents"];
   pendingCapacityBindingEvents: SectorCalculationsResult["capacityBindingEvents"];
   sectorOps: SectorUpdateOp[];

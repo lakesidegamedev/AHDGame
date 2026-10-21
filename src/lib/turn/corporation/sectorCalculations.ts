@@ -146,6 +146,7 @@ export function processSectors(
   funded?: {
     receiptsBySectorId: ReadonlyMap<string, FundedReceipt>;
     settledProfitByCorp: ReadonlyMap<string, number>;
+    headcountBySectorId?: ReadonlyMap<string, { desiredWorkers: number; workers: number }>;
   }
 ): SectorCalculationsResult {
   const fundedResults = new Map<string, ReturnType<typeof fundedSectorResult>>();
@@ -213,6 +214,8 @@ export function processSectors(
     automationIndexByState,
     labourDemandByState,
     labourDemandWageIndexByState,
+    fundedHeadcountBySectorId:
+      (lookups.fundedHeadcountStage ?? 0) >= 1 ? funded?.headcountBySectorId : undefined,
     pendingStrikeEvents,
     pendingCapacityBindingEvents,
     sectorOps,
