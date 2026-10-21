@@ -8,6 +8,6 @@ areas: [fullstack]
 ---
 
 - During the first 48 turns of the new market, any of your sectors that loses money or sells nothing gets the same help as the industries flagged at the switch: mothball it with no upkeep, or convert it once to another industry for free at book value.
-- You get one notice the first time this happens, and your company page lists every affected sector with a one-click Mothball button, plus a button to mothball all the ones that sold nothing.
+- You get a notice when this happens, and again if more of your sectors start struggling (at most once every 6 turns). Your company page lists every affected sector with a one-click Mothball button, plus a button to mothball all the ones that sold nothing.
 - Nothing changes unless you choose.
 - Unused capacity on a sector that has sold nothing for a long time retires after that window closes, never during it. Mothball it or convert it before then to keep it.
