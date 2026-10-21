@@ -433,12 +433,22 @@ export async function serviceNamedLoanBook(
 
   if (decisions.length > 0) {
     const totalPayment = decisions.reduce((sum, row) => sum + Math.max(0, row.decision.payment), 0);
-    const legs: TransitionLeg[] = decisions.flatMap((row) =>
-      row.transition.legs.filter((leg) => leg.kind === "debit")
-    );
-    // Stable sort by collection so the journal's batched debit delivery can
-    // group whole runs of character or corporation borrowers; a duplicate
-    // target still breaks its group, so a borrower's own loan order is kept.
+    // One debit per borrower (and currency) rather than one per loan: the
+    // decisions already capped each payment against the running balance, so
+    // the sum is what the serial per-loan debits would have taken. Unique
+    // targets are what lets the journal deliver the whole run in a batch.
+    const debitByTarget = new Map<string, TransitionLeg>();
+    for (const row of decisions) {
+      for (const leg of row.transition.legs) {
+        if (leg.kind !== "debit") continue;
+        const key = `${leg.collection}\u0000${String(leg.filter?._id)}\u0000${leg.path}`;
+        const existing = debitByTarget.get(key);
+        if (existing) existing.amount += leg.amount;
+        else debitByTarget.set(key, { ...leg });
+      }
+    }
+    const legs: TransitionLeg[] = [...debitByTarget.values()];
+    // Stable sort by collection so the batched delivery can group whole runs.
     legs.sort((a, b) => String(a.collection).localeCompare(String(b.collection)));
     if (totalPayment > 0) legs.push({ kind: "credit", amount: totalPayment, ...creditTarget });
     const projections = decisions.flatMap((row) =>
