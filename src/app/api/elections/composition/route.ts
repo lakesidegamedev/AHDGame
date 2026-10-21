@@ -213,7 +213,9 @@ export async function GET(request: Request) {
                 chamber.regionElectedClasses &&
                 election.senateClass &&
                 o.senateClass !== election.senateClass
-              )
+              ) &&
+              // JP Sangiin stores its class as chamberClass; matches turn resolution's multiSeatOfficialFilter.
+              !(election.chamberClass && o.chamberClass !== election.chamberClass)
           );
 
           // Take the contested seats off the board...
