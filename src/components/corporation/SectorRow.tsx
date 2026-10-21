@@ -277,6 +277,15 @@ export function SectorRow({
           reactivate them.
         </p>
       )}
+      {sector.lastDecommission && (
+        <p className="mt-1.5 text-[10px] leading-snug text-muted">
+          Unused capacity worth {fmtScaled(sector.lastDecommission.retiredBookAnchor)} was retired
+          because this sector sold nothing for a long time.{" "}
+          {sector.lastDecommission.grantAnchor > 0
+            ? `A decommissioning grant of ${fmtScaled(sector.lastDecommission.grantAnchor)} was paid from unspent public funding.`
+            : "No grant was paid: the country had no unspent public funding."}
+        </p>
+      )}
       {isCeo &&
         sector.cutoverTransition &&
         !sector.cutoverTransition.converted &&

@@ -30,6 +30,10 @@ import { politicalSoeInputs } from "@/lib/politicalLegislation/marginAdapter";
 import { getSectorTypeMatchModifier } from "@/lib/corporations/specialization/rules";
 import { organisationalOutputFactor } from "@/lib/market/producerMarket/efficiencyRules";
 import { nextRunShare, type PriorReceipt } from "@/lib/market/producerMarket/outputResponseRules";
+import {
+  idleRetireActive,
+  idleRetireSectorShare,
+} from "@/lib/market/producerMarket/idleRetirementRules";
 import { computeStateMetricMarginModifier } from "@/lib/corporations/sectorMetricMarginProfiles";
 import { STRATEGY_TRANSITION_TURNS } from "@/lib/constants/sectorStrategyTypes";
 import { resolveSectorHostCurrencyCode } from "@/lib/currency/corporationCapital";
@@ -72,6 +76,10 @@ export type ProducerPhysicalEnv = Pick<
   advertisingInput?: boolean;
   /** First funded turn of this world, when the cutover transition window applies. */
   transitionFirstFundedTurn?: number;
+  /** gameConfig.producerIdleRetireStage: >= 1 retires capacity that persistently sells nothing. 0 or absent = off. */
+  idleRetireStage?: number;
+  /** gameConfig.decommissionGrantShare: share of retired book paid from unspent public funding. */
+  decommissionGrantShare?: number;
   lookups: Pick<
     CorporationLookups,
     | "labourTightnessByState"
@@ -245,7 +253,17 @@ export function prepareProducerPhysicalSector(input: {
     markets,
     outputMultiplier: 0,
     operatingRecipeRatio: retoolOperatingCapacityRatio({ ...sector, currentTurn }),
-    recessionCapacityFactor: lookups.recessionCapacityFactorByCountry?.get(countryId) ?? 1,
+    recessionCapacityFactor:
+      (lookups.recessionCapacityFactorByCountry?.get(countryId) ?? 1) *
+      (1 -
+        (idleRetireActive(
+          env.idleRetireStage,
+          currentTurn,
+          env.transitionFirstFundedTurn,
+          inTransitionWindow
+        )
+          ? idleRetireSectorShare(sector, currentTurn)
+          : 0)),
     labourCost: 0,
     otherOperatingCost: 0,
     labourRecipientAccountId: producerWalletId(input.worldEpoch, scopes[0]),

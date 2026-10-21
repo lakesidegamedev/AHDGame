@@ -155,6 +155,17 @@ export interface GameConfig {
    * plant count above MANAGEMENT_OVERHEAD_FREE_PLANTS. 0 or absent = off.
    */
   managementOverheadPpPerDoubling?: number;
+  /**
+   * Funded producer market: >= 1 retires, with no cash, a share of the
+   * capacity of plants that have sold nothing for several turns. 0 or absent = off.
+   */
+  producerIdleRetireStage?: number;
+  /**
+   * With producerIdleRetireStage on: share (0 to 1) of the book value of retired
+   * capacity paid to the owner from the country's unspent public funding.
+   * Absent = 0.5. Never paid when the pool is empty.
+   */
+  decommissionGrantShare?: number;
   /** Strength upkeep rollout stage (corporations/strengthUpkeep). 0 or absent = off. */
   strengthUpkeepStage?: number;
   /**
