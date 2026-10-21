@@ -249,7 +249,6 @@ export function CorporationMasthead({
           )}
         </>
       ),
-      meter: <TickMeter pct={corporation.marketingStrength} />,
     });
   }
   if (brand) {

@@ -132,8 +132,10 @@ describe("OverviewTab", () => {
 
   it("shows the viewer's position with a trade action", () => {
     const { onTrade } = renderOverview();
-    expect(screen.getByText("Shares held")).toBeTruthy();
-    expect(screen.getByText("1,000,000")).toBeTruthy();
+    // The ownership ring also lists this holding, so read the position ticket itself.
+    const ticket = screen.getByRole("heading", { name: "Your position" }).closest("section")!;
+    expect(within(ticket).getByText("Shares held")).toBeTruthy();
+    expect(within(ticket).getByText("1,000,000")).toBeTruthy();
     fireEvent.click(screen.getByText("Buy / sell"));
     expect(onTrade).toHaveBeenCalled();
   });

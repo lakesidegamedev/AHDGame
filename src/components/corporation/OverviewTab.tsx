@@ -19,7 +19,7 @@ import { CorpEconomicModelBadge } from "@/components/economy/CorpEconomicModelBa
 import { GameMonthTime } from "@/components/time/GameMonthTime";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { corpIncomeBasis, netMarginPct } from "./financials/financialsModel";
-import { OwnershipDonut, buildOwnershipSlices } from "./OwnershipDonut";
+import { buildOwnershipSlices } from "./OwnershipDonut";
 import { CAPACITY_UNIT_LABEL, formatUnits } from "./plantsPresentation";
 import {
   DenseSection,
@@ -42,6 +42,10 @@ import { TransitionReviewCard } from "./TransitionReviewCard";
 import { KeyStatistics } from "./overview/KeyStatistics";
 import { RevenueMixStrip } from "./overview/RevenueMixStrip";
 import { SectorCards } from "./overview/SectorCards";
+import { OwnershipRing } from "./overview/OwnershipRing";
+import { VoteDocket, type OpenVote } from "./overview/VoteDocket";
+import { CollapsibleSection } from "./ledger/CollapsibleSection";
+import { LedgerTicket } from "./ledger/LedgerTicket";
 import { sectorTypeTones } from "./ledger/sectorTypeTone";
 import {
   buildAttentionItems,
@@ -347,23 +351,6 @@ function SectorTable({
   );
 }
 
-interface OpenVote {
-  _id: string;
-  type: string;
-  deadlineAtTurn?: number;
-  payload?: Record<string, unknown>;
-}
-
-const VOTE_LABEL: Record<string, string> = {
-  governance_change: "Restructuring",
-  dissolution: "Dissolution",
-  relocation: "Relocation",
-  share_issuance: "Share issuance",
-  adopt_supershares: "Supershares",
-  ticker_change: "Ticker change",
-  ceo_salary: "CEO pay",
-};
-
 /**
  * Signed per-turn change for an operations metric. Absent when the route
  * redacts a private corporation's books for an outside viewer, which is
@@ -461,6 +448,7 @@ export default function OverviewTab({
           ? null
           : `/character/${sh.sequentialId ?? sh.characterId}`;
   const ownershipSlices = buildOwnershipSlices(corporation, holderHref, myCharacterId);
+  const holderCount = corporation.shareholders.filter((sh) => sh.shares > 0).length;
 
   const brand =
     corporation.brandLoyaltyLabel ??
@@ -487,9 +475,9 @@ export default function OverviewTab({
 
   const positionSection =
     myCharacterId && canTrade && !isCeo ? (
-      <DenseSection
+      <LedgerTicket
         title="Your position"
-        actions={
+        action={
           onTrade ? (
             <SmallButton tone="primary" onClick={onTrade}>
               {myShares > 0 ? "Buy / sell" : "Buy shares"}
@@ -498,18 +486,23 @@ export default function OverviewTab({
         }
       >
         {myShares > 0 ? (
-          <KVList>
-            <KVRow label="Shares held" value={myShares.toLocaleString("en-US")} />
-            <KVRow
-              label="Ownership"
-              value={`${((myShares / Math.max(1, corporation.totalShares)) * 100).toFixed(2)}%`}
-            />
-            <KVRow label="Market value" value={fmt(myShares * corporation.sharePrice)} />
-          </KVList>
+          <>
+            <div className="font-mono text-[28px] font-semibold leading-none tracking-tight tabular-nums text-foreground">
+              {fmt(myShares * corporation.sharePrice)}
+            </div>
+            <div className="mb-2 mt-1.5 text-xs text-muted">Market value</div>
+            <KVList>
+              <KVRow label="Shares held" value={myShares.toLocaleString("en-US")} />
+              <KVRow
+                label="Ownership"
+                value={`${((myShares / Math.max(1, corporation.totalShares)) * 100).toFixed(2)}%`}
+              />
+            </KVList>
+          </>
         ) : (
           <p className="py-1 text-xs text-muted">You hold no shares in this corporation.</p>
         )}
-      </DenseSection>
+      </LedgerTicket>
     ) : null;
 
   const growthPanel =
@@ -672,143 +665,156 @@ export default function OverviewTab({
           {positionSection}
 
           {openVotes.length > 0 && (
-            <DenseSection
-              title="Open shareholder votes"
-              actions={<SmallButton onClick={() => onTabChange("shares")}>Vote</SmallButton>}
-            >
-              <table className="w-full border-collapse">
-                <tbody>
-                  {openVotes.map((v) => (
-                    <tr key={v._id}>
-                      <Td className="text-foreground">{VOTE_LABEL[v.type] ?? v.type}</Td>
-                      <Td align="right" numeric={false} className="text-muted">
-                        {v.deadlineAtTurn != null ? `closes turn ${v.deadlineAtTurn}` : "open"}
-                      </Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </DenseSection>
+            <CollapsibleSection title="Shareholder votes" summary={`${openVotes.length} open`}>
+              <DenseSection
+                title="Open shareholder votes"
+                actions={<SmallButton onClick={() => onTabChange("shares")}>Vote</SmallButton>}
+              >
+                <VoteDocket votes={openVotes} currentTurn={corporation.currentTurn} />
+              </DenseSection>
+            </CollapsibleSection>
           )}
 
-          <DenseSection title="Operations" meta="change per turn">
-            <KVList>
-              <KVRow
-                label="Marketing strength"
-                value={formatMarketingStrength(corporation.marketingStrength)}
-                hint={perTurnChangeHint(corporation.marketingStrengthGrowth)}
-              />
-              <KVRow
-                label="Logistics"
-                value={formatMarketingStrength(corporation.logisticsStrength)}
-                hint={perTurnChangeHint(corporation.logisticsStrengthNetChange)}
-              />
-              <KVRow
-                label="R&D score"
-                value={formatMarketingStrength(corporation.rdScore)}
-                hint={perTurnChangeHint(corporation.rdScoreNetChange)}
-              />
-              {brand && <KVRow label="Brand loyalty" value={brand} mono={false} />}
-              {(corporation.managementOverheadPp ?? 0) > 0 && (
+          <CollapsibleSection
+            title="Operations"
+            summary={
+              physical?.fillRate != null
+                ? `${Math.round(physical.fillRate * 100)}% fill`
+                : `Marketing ${formatMarketingStrength(corporation.marketingStrength)}`
+            }
+          >
+            <DenseSection title="Operations" meta="change per turn">
+              <KVList>
                 <KVRow
-                  label="Management overhead"
-                  value={`${(corporation.managementOverheadPp ?? 0).toFixed(1)} pts of margin`}
-                  hint="grows with every plant the whole group runs, subsidiaries included"
+                  label="Marketing strength"
+                  value={formatMarketingStrength(corporation.marketingStrength)}
+                  hint={perTurnChangeHint(corporation.marketingStrengthGrowth)}
                 />
-              )}
-              {corporation.averageQuality != null && (
                 <KVRow
-                  label="Average quality"
-                  mark={<Meter pct={corporation.averageQuality} className="w-10" />}
-                  value={`${Math.round(corporation.averageQuality)} / 100`}
+                  label="Logistics"
+                  value={formatMarketingStrength(corporation.logisticsStrength)}
+                  hint={perTurnChangeHint(corporation.logisticsStrengthNetChange)}
                 />
-              )}
-              {physical && (
-                <>
+                <KVRow
+                  label="R&D score"
+                  value={formatMarketingStrength(corporation.rdScore)}
+                  hint={perTurnChangeHint(corporation.rdScoreNetChange)}
+                />
+                {brand && <KVRow label="Brand loyalty" value={brand} mono={false} />}
+                {(corporation.managementOverheadPp ?? 0) > 0 && (
                   <KVRow
-                    label="Capacity"
-                    value={formatUnits(physical.capacityUnits)}
-                    hint={CAPACITY_UNIT_LABEL}
+                    label="Management overhead"
+                    value={`${(corporation.managementOverheadPp ?? 0).toFixed(1)} pts of margin`}
+                    hint="grows with every plant the whole group runs, subsidiaries included"
                   />
+                )}
+                {corporation.averageQuality != null && (
                   <KVRow
-                    label="Fill"
-                    mark={
-                      physical.fillRate != null ? (
-                        <Meter pct={physical.fillRate * 100} className="w-10" />
-                      ) : undefined
-                    }
-                    value={
-                      physical.fillRate != null ? `${Math.round(physical.fillRate * 100)}%` : "n/a"
-                    }
-                    hint={
-                      physical.buildingSectorCount > 0
-                        ? `${physical.buildingSectorCount} building`
-                        : undefined
-                    }
+                    label="Average quality"
+                    mark={<Meter pct={corporation.averageQuality} className="w-10" />}
+                    value={`${Math.round(corporation.averageQuality)} / 100`}
                   />
-                </>
-              )}
-            </KVList>
-          </DenseSection>
+                )}
+                {physical && (
+                  <>
+                    <KVRow
+                      label="Capacity"
+                      value={formatUnits(physical.capacityUnits)}
+                      hint={CAPACITY_UNIT_LABEL}
+                    />
+                    <KVRow
+                      label="Fill"
+                      mark={
+                        physical.fillRate != null ? (
+                          <Meter pct={physical.fillRate * 100} className="w-10" />
+                        ) : undefined
+                      }
+                      value={
+                        physical.fillRate != null
+                          ? `${Math.round(physical.fillRate * 100)}%`
+                          : "n/a"
+                      }
+                      hint={
+                        physical.buildingSectorCount > 0
+                          ? `${physical.buildingSectorCount} building`
+                          : undefined
+                      }
+                    />
+                  </>
+                )}
+              </KVList>
+            </DenseSection>
+          </CollapsibleSection>
 
           {ownershipSlices.length > 0 && (
-            <DenseSection
-              title="Ownership"
-              meta={`${corporation.shareholders.filter((sh) => sh.shares > 0).length}`}
-              actions={<SmallButton onClick={() => onTabChange("shares")}>All</SmallButton>}
-            >
-              <OwnershipDonut slices={ownershipSlices} />
-            </DenseSection>
+            <CollapsibleSection title="Ownership" summary={`${holderCount} holders`}>
+              <DenseSection
+                title="Ownership"
+                meta={`${holderCount}`}
+                actions={<SmallButton onClick={() => onTabChange("shares")}>All</SmallButton>}
+              >
+                <OwnershipRing slices={ownershipSlices} holderCount={holderCount} />
+              </DenseSection>
+            </CollapsibleSection>
           )}
 
-          <DenseSection title="Structure">
-            <KVList>
-              <KVRow
-                label="Legal form"
-                value={
-                  corporation.legalStructureLabel
-                    ? corporation.legalStructureTaxLabel
-                      ? `${corporation.legalStructureLabel} (${corporation.legalStructureTaxLabel})`
-                      : corporation.legalStructureLabel
-                    : "n/a"
-                }
-                mono={false}
-              />
-              <KVRow label="Headquarters" value={corporation.headquartersStateName} mono={false} />
-              {corporation.parentCorporation && (
+          <CollapsibleSection
+            title="Structure"
+            summary={corporation.legalStructureLabel ?? undefined}
+          >
+            <DenseSection title="Structure">
+              <KVList>
                 <KVRow
-                  mono={false}
-                  label="Parent"
+                  label="Legal form"
                   value={
-                    <Link
-                      href={`/corporation/${corporation.parentCorporation.sequentialId ?? corporation.parentCorporation._id}`}
-                      className="hover:underline"
-                    >
-                      {corporation.parentCorporation.name}
-                    </Link>
+                    corporation.legalStructureLabel
+                      ? corporation.legalStructureTaxLabel
+                        ? `${corporation.legalStructureLabel} (${corporation.legalStructureTaxLabel})`
+                        : corporation.legalStructureLabel
+                      : "n/a"
                   }
-                  hint={`${corporation.parentCorporation.ownershipPct.toFixed(1)}%`}
+                  mono={false}
                 />
-              )}
-              {(corporation.subsidiaries ?? []).map((sub) => (
                 <KVRow
-                  key={sub._id}
+                  label="Headquarters"
+                  value={corporation.headquartersStateName}
                   mono={false}
-                  label="Subsidiary"
-                  value={
-                    <Link
-                      href={`/corporation/${sub.sequentialId ?? sub._id}`}
-                      className="hover:underline"
-                    >
-                      {sub.name}
-                    </Link>
-                  }
-                  hint={`${sub.ownershipPct.toFixed(1)}%`}
                 />
-              ))}
-              <KVRow label="Founded" value={<GameMonthTime value={corporation.createdAt} />} />
-            </KVList>
-          </DenseSection>
+                {corporation.parentCorporation && (
+                  <KVRow
+                    mono={false}
+                    label="Parent"
+                    value={
+                      <Link
+                        href={`/corporation/${corporation.parentCorporation.sequentialId ?? corporation.parentCorporation._id}`}
+                        className="hover:underline"
+                      >
+                        {corporation.parentCorporation.name}
+                      </Link>
+                    }
+                    hint={`${corporation.parentCorporation.ownershipPct.toFixed(1)}%`}
+                  />
+                )}
+                {(corporation.subsidiaries ?? []).map((sub) => (
+                  <KVRow
+                    key={sub._id}
+                    mono={false}
+                    label="Subsidiary"
+                    value={
+                      <Link
+                        href={`/corporation/${sub.sequentialId ?? sub._id}`}
+                        className="hover:underline"
+                      >
+                        {sub.name}
+                      </Link>
+                    }
+                    hint={`${sub.ownershipPct.toFixed(1)}%`}
+                  />
+                ))}
+                <KVRow label="Founded" value={<GameMonthTime value={corporation.createdAt} />} />
+              </KVList>
+            </DenseSection>
+          </CollapsibleSection>
         </aside>
       </div>
     </div>
