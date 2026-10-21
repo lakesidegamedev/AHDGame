@@ -40,6 +40,9 @@ import { GrowthLeversPanel } from "./GrowthLeversPanel";
 import { AntitrustCaseCard } from "./AntitrustCaseCard";
 import { TransitionReviewCard } from "./TransitionReviewCard";
 import { KeyStatistics } from "./overview/KeyStatistics";
+import { RevenueMixStrip } from "./overview/RevenueMixStrip";
+import { SectorCards } from "./overview/SectorCards";
+import { sectorTypeTones } from "./ledger/sectorTypeTone";
 import {
   buildAttentionItems,
   sectorMargin,
@@ -143,179 +146,196 @@ function SectorTable({
 
   return (
     <>
-      <TableScroll>
-        <table className="w-full min-w-[640px] border-collapse">
-          <thead>
-            <tr className="bg-card-border/15">
-              <Th>Region</Th>
-              <Th>Sector</Th>
-              {hasMoney && (
-                <Th align="right" onClick={() => sortBy("revenue")} sorted={sortState("revenue")}>
-                  Revenue{MONEY_PERIOD_SUFFIX[periodView]}
-                </Th>
-              )}
-              <Th
-                align="right"
-                onClick={() => sortBy("margin")}
-                sorted={sortState("margin")}
-                title="Profit over the full cost bill where plants report it, else the operating margin."
-              >
-                Margin
-              </Th>
-              <Th align="right" onClick={() => sortBy("profit")} sorted={sortState("profit")}>
-                Profit{MONEY_PERIOD_SUFFIX[periodView]}
-              </Th>
-              <Th
-                align="right"
-                onClick={() => sortBy("share")}
-                sorted={sortState("share")}
-                title="Share of this sector's market in the region."
-              >
-                Share
-              </Th>
-              {hasMoney && (
+      <div className="md:hidden">
+        <SectorCards
+          sectors={visible}
+          corpId={corpId}
+          plantsMode={plantsMode}
+          fogged={fogged}
+          fmt={fmt}
+          fmtSigned={fmtSigned}
+          scale={scale}
+          maxRevenue={maxRevenue}
+        />
+      </div>
+      <div className="hidden md:block">
+        <TableScroll>
+          <table className="w-full min-w-[640px] border-collapse">
+            <thead>
+              <tr className="bg-card-border/15">
+                <Th>Region</Th>
+                <Th>Sector</Th>
+                {hasMoney && (
+                  <Th align="right" onClick={() => sortBy("revenue")} sorted={sortState("revenue")}>
+                    Revenue{MONEY_PERIOD_SUFFIX[periodView]}
+                  </Th>
+                )}
                 <Th
                   align="right"
-                  onClick={() => sortBy("workers")}
-                  sorted={sortState("workers")}
-                  className="hidden sm:table-cell"
+                  onClick={() => sortBy("margin")}
+                  sorted={sortState("margin")}
+                  title="Profit over the full cost bill where plants report it, else the operating margin."
                 >
-                  Workers
+                  Margin
                 </Th>
-              )}
-              {plantsMode ? (
-                <>
-                  <Th align="right" className="hidden md:table-cell">
-                    Capacity
-                  </Th>
-                  <Th align="right">Fill</Th>
-                </>
-              ) : (
-                <Th align="right" title="Revenue growth rate per turn.">
-                  Growth
+                <Th align="right" onClick={() => sortBy("profit")} sorted={sortState("profit")}>
+                  Profit{MONEY_PERIOD_SUFFIX[periodView]}
                 </Th>
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {visible.map((s) => {
-              const flag = STATE_FLAGS[s.stateId];
-              const margin = sectorMargin(s);
-              return (
-                <tr key={s._id} className="even:bg-card-border/[0.07] hover:bg-card-elevated/40">
-                  <Td
-                    className={`border-l-2 ${
-                      typeof s.profit === "number" && s.profit < 0
-                        ? "border-l-error/70"
-                        : "border-l-transparent"
-                    }`}
+                <Th
+                  align="right"
+                  onClick={() => sortBy("share")}
+                  sorted={sortState("share")}
+                  title="Share of this sector's market in the region."
+                >
+                  Share
+                </Th>
+                {hasMoney && (
+                  <Th
+                    align="right"
+                    onClick={() => sortBy("workers")}
+                    sorted={sortState("workers")}
+                    className="hidden sm:table-cell"
                   >
-                    <Link
-                      href={`/corporation/${corpId}/sector/${s._id}`}
-                      className="inline-flex max-w-[14rem] items-center gap-1.5 truncate text-foreground hover:underline"
-                    >
-                      {flag && (
-                        <Image
-                          src={flag}
-                          alt=""
-                          width={16}
-                          height={11}
-                          className="h-[11px] w-4 shrink-0 rounded-[2px] object-cover"
-                          unoptimized={bypassNextImageOptimization(flag)}
-                        />
-                      )}
-                      <span className="truncate">{s.displayName ?? s.stateName}</span>
-                    </Link>
-                    {s.embargoSuspended && (
-                      <span className="ml-1.5 text-[11px] text-error" title="Suspended by embargo">
-                        embargo
-                      </span>
-                    )}
-                    {s.mothballed && (
-                      <span className="ml-1.5 text-[11px] text-muted" title="Mothballed">
-                        mothballed
-                      </span>
-                    )}
-                  </Td>
-                  <Td className="text-muted">{s.sectorLabel}</Td>
-                  {hasMoney && (
-                    <Td align="right">
-                      {typeof s.revenue === "number" ? est(fmt(scale(sectorRevenue(s)))) : "n/a"}
-                      <DataBar
-                        value={sectorRevenue(s)}
-                        max={maxRevenue}
-                        className="ml-auto mt-0.5 w-16"
-                      />
-                    </Td>
-                  )}
-                  <Td align="right" className={signTone(margin)}>
-                    <span className="inline-flex items-center gap-2">
-                      <DivergingBar value={margin} className="hidden w-10 md:inline-block" />
-                      {margin != null ? `${margin.toFixed(1)}%` : "n/a"}
-                    </span>
-                  </Td>
-                  <Td align="right" className={signTone(s.profit)}>
-                    {typeof s.profit === "number" ? est(fmtSigned(scale(s.profit))) : "n/a"}
-                  </Td>
-                  <Td align="right" className="text-muted">
-                    {typeof s.marketSharePercent === "number"
-                      ? `${s.marketSharePercent.toFixed(1)}%`
-                      : "n/a"}
-                  </Td>
-                  {hasMoney && (
-                    <Td align="right" className="hidden text-muted sm:table-cell">
-                      {typeof s.workers === "number" ? s.workers.toLocaleString("en-US") : "n/a"}
-                    </Td>
-                  )}
-                  {plantsMode ? (
-                    <>
-                      <Td align="right" className="hidden text-muted md:table-cell">
-                        {formatUnits(s.capacityUnits)}
-                      </Td>
-                      <Td align="right">
-                        <FillText fill={s.fillRate} band={s.fillRateBand} />
-                      </Td>
-                    </>
-                  ) : (
-                    <Td align="right" className="text-muted">
-                      {Number.isFinite(s.currentGrowthRate) ? `${s.currentGrowthRate}%` : "n/a"}
-                    </Td>
-                  )}
-                </tr>
-              );
-            })}
-          </tbody>
-          {hasMoney && sectors.length > 1 && (
-            <tfoot>
-              <tr className="border-t-2 border-card-border bg-card-border/15 font-semibold">
-                <Td className="text-muted">Total</Td>
-                <Td className="text-muted">{sectors.length} sectors</Td>
-                <Td align="right">{est(fmt(scale(totals.revenue)))}</Td>
-                <Td align="right" className={signTone(totals.revenue ? totals.profit : null)}>
-                  {totals.revenue > 0
-                    ? `${((totals.profit / totals.revenue) * 100).toFixed(1)}%`
-                    : "n/a"}
-                </Td>
-                <Td align="right" className={signTone(totals.profit)}>
-                  {est(fmtSigned(scale(totals.profit)))}
-                </Td>
-                <Td />
-                <Td align="right" className="hidden sm:table-cell">
-                  {totals.workers.toLocaleString("en-US")}
-                </Td>
+                    Workers
+                  </Th>
+                )}
                 {plantsMode ? (
                   <>
-                    <Td className="hidden md:table-cell" />
-                    <Td />
+                    <Th align="right" className="hidden md:table-cell">
+                      Capacity
+                    </Th>
+                    <Th align="right">Fill</Th>
                   </>
                 ) : (
-                  <Td />
+                  <Th align="right" title="Revenue growth rate per turn.">
+                    Growth
+                  </Th>
                 )}
               </tr>
-            </tfoot>
-          )}
-        </table>
-      </TableScroll>
+            </thead>
+            <tbody>
+              {visible.map((s) => {
+                const flag = STATE_FLAGS[s.stateId];
+                const margin = sectorMargin(s);
+                return (
+                  <tr key={s._id} className="even:bg-card-border/[0.07] hover:bg-card-elevated/40">
+                    <Td
+                      className={`border-l-2 ${
+                        typeof s.profit === "number" && s.profit < 0
+                          ? "border-l-error/70"
+                          : "border-l-transparent"
+                      }`}
+                    >
+                      <Link
+                        href={`/corporation/${corpId}/sector/${s._id}`}
+                        className="inline-flex max-w-[14rem] items-center gap-1.5 truncate text-foreground hover:underline"
+                      >
+                        {flag && (
+                          <Image
+                            src={flag}
+                            alt=""
+                            width={16}
+                            height={11}
+                            className="h-[11px] w-4 shrink-0 rounded-[2px] object-cover"
+                            unoptimized={bypassNextImageOptimization(flag)}
+                          />
+                        )}
+                        <span className="truncate">{s.displayName ?? s.stateName}</span>
+                      </Link>
+                      {s.embargoSuspended && (
+                        <span
+                          className="ml-1.5 text-[11px] text-error"
+                          title="Suspended by embargo"
+                        >
+                          embargo
+                        </span>
+                      )}
+                      {s.mothballed && (
+                        <span className="ml-1.5 text-[11px] text-muted" title="Mothballed">
+                          mothballed
+                        </span>
+                      )}
+                    </Td>
+                    <Td className="text-muted">{s.sectorLabel}</Td>
+                    {hasMoney && (
+                      <Td align="right">
+                        {typeof s.revenue === "number" ? est(fmt(scale(sectorRevenue(s)))) : "n/a"}
+                        <DataBar
+                          value={sectorRevenue(s)}
+                          max={maxRevenue}
+                          className="ml-auto mt-0.5 w-16"
+                        />
+                      </Td>
+                    )}
+                    <Td align="right" className={signTone(margin)}>
+                      <span className="inline-flex items-center gap-2">
+                        <DivergingBar value={margin} className="hidden w-10 md:inline-block" />
+                        {margin != null ? `${margin.toFixed(1)}%` : "n/a"}
+                      </span>
+                    </Td>
+                    <Td align="right" className={signTone(s.profit)}>
+                      {typeof s.profit === "number" ? est(fmtSigned(scale(s.profit))) : "n/a"}
+                    </Td>
+                    <Td align="right" className="text-muted">
+                      {typeof s.marketSharePercent === "number"
+                        ? `${s.marketSharePercent.toFixed(1)}%`
+                        : "n/a"}
+                    </Td>
+                    {hasMoney && (
+                      <Td align="right" className="hidden text-muted sm:table-cell">
+                        {typeof s.workers === "number" ? s.workers.toLocaleString("en-US") : "n/a"}
+                      </Td>
+                    )}
+                    {plantsMode ? (
+                      <>
+                        <Td align="right" className="hidden text-muted md:table-cell">
+                          {formatUnits(s.capacityUnits)}
+                        </Td>
+                        <Td align="right">
+                          <FillText fill={s.fillRate} band={s.fillRateBand} />
+                        </Td>
+                      </>
+                    ) : (
+                      <Td align="right" className="text-muted">
+                        {Number.isFinite(s.currentGrowthRate) ? `${s.currentGrowthRate}%` : "n/a"}
+                      </Td>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+            {hasMoney && sectors.length > 1 && (
+              <tfoot>
+                <tr className="border-t-2 border-card-border bg-card-border/15 font-semibold">
+                  <Td className="text-muted">Total</Td>
+                  <Td className="text-muted">{sectors.length} sectors</Td>
+                  <Td align="right">{est(fmt(scale(totals.revenue)))}</Td>
+                  <Td align="right" className={signTone(totals.revenue ? totals.profit : null)}>
+                    {totals.revenue > 0
+                      ? `${((totals.profit / totals.revenue) * 100).toFixed(1)}%`
+                      : "n/a"}
+                  </Td>
+                  <Td align="right" className={signTone(totals.profit)}>
+                    {est(fmtSigned(scale(totals.profit)))}
+                  </Td>
+                  <Td />
+                  <Td align="right" className="hidden sm:table-cell">
+                    {totals.workers.toLocaleString("en-US")}
+                  </Td>
+                  {plantsMode ? (
+                    <>
+                      <Td className="hidden md:table-cell" />
+                      <Td />
+                    </>
+                  ) : (
+                    <Td />
+                  )}
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        </TableScroll>
+      </div>
       {sectors.length > SECTOR_ROWS_COLLAPSED && (
         <div className="pt-2">
           <SmallButton onClick={() => setExpanded((v) => !v)}>
@@ -403,6 +423,15 @@ export default function OverviewTab({
       ? financials.currentGrowthRate
       : null;
   const stateCount = new Set(sectors.map((s) => s.stateId)).size;
+  const primaryType = getOperatingSectorType(
+    corporation.type,
+    corporation.industryModel,
+    corporation.mediaDiscriminator
+  );
+  const sectorTones = sectorTypeTones(
+    sectors.map((s) => s.sectorType),
+    primaryType
+  );
   const activeBonds = bondInfo?.bonds.filter((b) => !b.defaulted && !b.matured).length ?? 0;
   const snapshotComposite = corporation.creditCompositeSnapshot;
   const liveComposite = bondInfo?.creditRating.compositeScore;
@@ -609,11 +638,7 @@ export default function OverviewTab({
               <>
                 <CorpEconomicModelBadge
                   countryId={corporation.countryId}
-                  sectorType={getOperatingSectorType(
-                    corporation.type,
-                    corporation.industryModel,
-                    corporation.mediaDiscriminator
-                  )}
+                  sectorType={primaryType}
                 />
                 <SmallButton onClick={() => onTabChange("sectors")}>
                   {isCeo ? "Manage" : "Details"}
@@ -627,15 +652,18 @@ export default function OverviewTab({
                 {isCeo ? " Open Sectors to found the first plant." : ""}
               </p>
             ) : (
-              <SectorTable
-                sectors={sectors}
-                corpId={corpId}
-                periodView={periodView}
-                plantsMode={corporation.plantsMode === true}
-                fogged={fogged}
-                fmt={fmt}
-                fmtSigned={fmtSigned}
-              />
+              <>
+                <RevenueMixStrip sectors={sectors} tones={sectorTones} />
+                <SectorTable
+                  sectors={sectors}
+                  corpId={corpId}
+                  periodView={periodView}
+                  plantsMode={corporation.plantsMode === true}
+                  fogged={fogged}
+                  fmt={fmt}
+                  fmtSigned={fmtSigned}
+                />
+              </>
             )}
           </DenseSection>
         </div>
