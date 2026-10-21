@@ -70,7 +70,7 @@ describe("household income floor", () => {
     expect(r.topUpAnchor).toBeCloseTo(67, 9);
   });
 
-  it("never pays more than a country's whole transfer line", () => {
+  it("never pays more than a country's whole transfer line, and redistributes a capped share", () => {
     const r = incomeFloorShares({
       shares: new Map([
         ["US", 0.99],
@@ -83,5 +83,26 @@ describe("household income floor", () => {
     expect(r.shares.get("US")).toBe(1);
     expect(r.shares.get("UK")).toBe(1);
     expect(r.topUpAnchor).toBeCloseTo(1000 * 0.01 + 300, 9);
+    // The whole lines (1300) minus the 990 already paid cannot reach 10,000: the rest is reported.
+    expect(r.shortfallAnchor).toBeCloseTo(10_000 - (990 + 310), 9);
+  });
+
+  it("gives a country below its line the part a capped country could not absorb", () => {
+    const r = incomeFloorShares({
+      shares: new Map([
+        ["US", 0.95],
+        ["UK", 0],
+      ]),
+      lineAnchorByCountry: new Map([
+        ["US", 1000],
+        ["UK", 1000],
+      ]),
+      plannedIncomeAnchor: 0,
+      floorAnchor: 1200, // transfers 950; gap 250; an equal split would push US past 1
+    });
+    expect(r.shares.get("US")).toBe(1);
+    expect(r.topUpAnchor).toBeCloseTo(250, 9);
+    expect(r.shortfallAnchor).toBe(0);
+    expect(r.shares.get("UK")).toBeCloseTo(0.2, 9); // 200 more from UK after US takes its 50
   });
 });
