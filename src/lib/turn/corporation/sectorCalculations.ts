@@ -36,6 +36,7 @@ import {
 } from "@/lib/constants/corporations";
 import { marketingStrengthAfterTurn } from "@/lib/corporations/strengthUpkeep";
 import { managementOverheadPpForCorp } from "./managementOverhead";
+import { valuationCashAnchor } from "@/lib/corporations/honestBalanceSheets";
 import {
   bankNpvBoostMultiplier,
   sectorRiskPremiumAtTurn,
@@ -1254,11 +1255,12 @@ export function processSectors(
         corp._id,
         currentTurn
       ),
-      otherLiabilitiesAnchor: corporateCashArrearsAnchor({
-        operatingByCurrency: corp.operatingCashArrearsByCurrency,
-        federalTaxByCountryAnchor: corp.federalTaxArrearsAnchorByCountry,
-        fxByCurrency: lookups.exchangeRatesByCurrency,
-      }),
+      otherLiabilitiesAnchor:
+        corporateCashArrearsAnchor({
+          operatingByCurrency: corp.operatingCashArrearsByCurrency,
+          federalTaxByCountryAnchor: corp.federalTaxArrearsAnchorByCountry,
+          fxByCurrency: lookups.exchangeRatesByCurrency,
+        }) + (lookups.constructionLoanDebtByCorpId?.get(corp._id.toString()) ?? 0),
     });
 
     // Capture snapshot for history charts + credit time series
@@ -1574,11 +1576,12 @@ export function processSectors(
           corp._id,
           currentTurn
         ),
-        otherLiabilitiesAnchor: corporateCashArrearsAnchor({
-          operatingByCurrency: corp.operatingCashArrearsByCurrency,
-          federalTaxByCountryAnchor: corp.federalTaxArrearsAnchorByCountry,
-          fxByCurrency: lookups.exchangeRatesByCurrency,
-        }),
+        otherLiabilitiesAnchor:
+          corporateCashArrearsAnchor({
+            operatingByCurrency: corp.operatingCashArrearsByCurrency,
+            federalTaxByCountryAnchor: corp.federalTaxArrearsAnchorByCountry,
+            fxByCurrency: lookups.exchangeRatesByCurrency,
+          }) + (lookups.constructionLoanDebtByCorpId?.get(corp._id.toString()) ?? 0),
       });
       snapshot.creditComposite = creditPack.creditRating.compositeScore;
       snapshot.creditRating = creditPack.creditRating.rating;
@@ -1668,10 +1671,15 @@ export function processSectors(
       // Issuance already scales the per-share price when new shares are created.
       // Cash that subsequently arrives is a real retained asset and belongs in
       // tangible book; subtracting it again double-counts dilution.
-      liquidCapitalAnchor: Math.max(0, s.liquidCapitalAnchorAfterIncome),
+      liquidCapitalAnchor: valuationCashAnchor(
+        s.liquidCapitalAnchorAfterIncome,
+        lookups.honestBalanceSheetsStage ?? 0
+      ),
       bankEquityAnchor,
       sectorNPVAnchor: s.sectorNPV + bankNpvAnchor,
-      issuedBondDebt: lookups.issuedBondDebtByCorpId.get(id) ?? 0,
+      issuedBondDebt:
+        (lookups.issuedBondDebtByCorpId.get(id) ?? 0) +
+        (lookups.constructionLoanDebtByCorpId?.get(id) ?? 0),
       bondHoldingsAnchor: lookups.bondAndImfPortfolioAnchorByCorpId.get(id) ?? 0,
       normalizedEarningsAnchor: adjustedEarningsMap.get(id) ?? 0,
       // Annualised bond-coupon income (snapshot value is per-turn ₳).
