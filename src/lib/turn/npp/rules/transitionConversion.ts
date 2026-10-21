@@ -6,6 +6,8 @@
  * is shortest of in that country, and only when that shortage is real (prices
  * well over base) and stronger than the sector's own lane. Chronic gluts are
  * already handled by mothballing; this moves capacity toward unmet demand.
+ * Lanes are ranked net of how scarce their own inputs are: a plant converted
+ * into a lane whose input is the shortest good in the country sits idle.
  *
  * Pure: sectors, last results and a price signal in, one choice or null out.
  */
@@ -37,6 +39,11 @@ export function chooseTransitionConversion(input: {
   firstFundedTurn: number | undefined;
   /** Weighted price-over-base of a lane's outputs in a country (1 = balanced). */
   shortageOf: (lane: OperatingSectorType, countryId: string) => number;
+  /**
+   * Highest price-over-base among the inputs a lane consumes in a country (1 =
+   * balanced). Omitted means inputs are not considered.
+   */
+  inputPressureOf?: (lane: OperatingSectorType, countryId: string) => number;
   /** Lanes the operator may run; null means any. */
   allowedLanes: ReadonlySet<string> | null;
   /** Sectors already mothballed or being mothballed this turn. */
@@ -71,20 +78,25 @@ export function chooseTransitionConversion(input: {
       sector.mediaDiscriminator
     );
     const taken = lanesInState.get(sector.stateId) ?? new Set<string>();
-    let best: { lane: OperatingSectorType; score: number } | null = null;
+    // Output shortage discounted by the scarcity of what the lane has to buy.
+    const netOf = (lane: OperatingSectorType) => {
+      const pressure = input.inputPressureOf?.(lane, country) ?? 1;
+      return (
+        input.shortageOf(lane, country) / (Number.isFinite(pressure) ? Math.max(1, pressure) : 1)
+      );
+    };
+    let best: { lane: OperatingSectorType; score: number; net: number } | null = null;
     for (const lane of OPERATING_SECTOR_TYPES) {
       // Extraction depends on local deposits the rule cannot see; leave it to players.
       if (lane === ownLane || taken.has(lane)) continue;
       if (operatingSectorIdentity(lane).sectorType === "extraction") continue;
       if (input.allowedLanes && !input.allowedLanes.has(lane)) continue;
       const score = input.shortageOf(lane, country);
-      if (Number.isFinite(score) && (!best || score > best.score)) best = { lane, score };
+      const net = netOf(lane);
+      if (Number.isFinite(score) && Number.isFinite(net) && (!best || net > best.net))
+        best = { lane, score, net };
     }
-    if (
-      best &&
-      best.score >= AI_CONVERSION_MIN_SHORTAGE &&
-      best.score > input.shortageOf(ownLane, country)
-    )
+    if (best && best.score >= AI_CONVERSION_MIN_SHORTAGE && best.net > netOf(ownLane))
       return { sectorId: sector._id.toString(), lane: best.lane };
   }
   return null;
