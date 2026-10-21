@@ -116,7 +116,7 @@ async function existingTargetIds(
   rows: ReadonlyArray<{ id: unknown }>
 ): Promise<Set<string>> {
   const found = await db
-    .collection(collection)
+    .collection<{ _id: unknown }>(collection)
     .find({ _id: { $in: rows.map((row) => row.id) } }, { projection: { _id: 1 } })
     .toArray();
   return new Set(found.map((row) => targetIdentity(row._id)));

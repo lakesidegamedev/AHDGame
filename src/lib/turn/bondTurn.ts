@@ -266,7 +266,7 @@ export async function processBondTurn(
       : await db
           .collection<Corporation>("corporations")
           .find({ _id: { $in: [...allCorpIds].map((id) => new ObjectId(id)) } })
-          .project(SETTLEMENT_HISTORY_EXCLUDED)
+          .project<Corporation>(SETTLEMENT_HISTORY_EXCLUDED)
           .toArray();
   const corpMap = new Map(corporations.map((c) => [c._id.toString(), c]));
   // Natcorp set is consulted in every later phase (coupon-cost skip, default
