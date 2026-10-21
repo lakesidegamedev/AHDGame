@@ -2,7 +2,7 @@
  * @vitest-environment happy-dom
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import CommoditiesTab from "./CommoditiesTab";
 
 vi.mock("@/contexts/CurrencyContext", () => ({
@@ -156,5 +156,141 @@ describe("CommoditiesTab private supply", () => {
     expect(screen.getByRole("link", { name: "Supply agreements" }).getAttribute("href")).toBe(
       "/corporation/604?tab=commodities#supply-agreements"
     );
+  });
+});
+
+describe("CommoditiesTab by region", () => {
+  const flow = (
+    commodity: string,
+    label: string,
+    unit: string,
+    outputUnits: number,
+    consumptionUnits: number,
+    price: number | null
+  ) => ({
+    commodity,
+    label,
+    icon: "",
+    color: "",
+    unit,
+    outputUnits,
+    consumptionUnits,
+    netUnits: outputUnits - consumptionUnits,
+    market: { price },
+  });
+
+  beforeEach(() => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        clearingEnabled: false,
+        commodities: [
+          flow("steel", "Steel", "t", 1000, 0, 31),
+          flow("iron_ore", "Iron ore", "t", 0, 500, 18),
+          flow("coal", "Coal", "t", 0, 100, null),
+        ],
+        regions: [
+          {
+            stateId: "PA",
+            stateName: "Pennsylvania",
+            region: "Northeast",
+            rows: [
+              {
+                commodity: "steel",
+                label: "Steel",
+                icon: "",
+                outputUnits: 1000,
+                consumptionUnits: 0,
+              },
+              {
+                commodity: "iron_ore",
+                label: "Iron ore",
+                icon: "",
+                outputUnits: 0,
+                consumptionUnits: 500,
+              },
+              { commodity: "coal", label: "Coal", icon: "", outputUnits: 0, consumptionUnits: 100 },
+            ],
+          },
+          { stateId: "NV", stateName: "Nevada", region: null, rows: [] },
+          {
+            stateId: "WV",
+            stateName: "West Virginia",
+            region: null,
+            rows: [
+              { commodity: "coal", label: "Coal", icon: "", outputUnits: 0, consumptionUnits: 50 },
+            ],
+          },
+        ],
+        marketShare: [],
+      }),
+    } as Response);
+  });
+
+  it("lists consumption before output in the flows table", async () => {
+    render(<CommoditiesTab corpId="7" />);
+    await screen.findByText("Pennsylvania");
+    const headers = screen.getAllByRole("columnheader").map((h) => h.textContent);
+    expect(headers.indexOf("Consumed")).toBeLessThan(headers.indexOf("Output"));
+    expect(headers.indexOf("Consumes")).toBeLessThan(headers.indexOf("Produces"));
+  });
+
+  it("summarises each state collapsed, valued at market price", async () => {
+    render(<CommoditiesTab corpId="7" />);
+    const name = await screen.findByRole("button", { name: "Pennsylvania" });
+    expect(name.getAttribute("aria-expanded")).toBe("false");
+    const row = name.closest("tr")!;
+    expect(within(row).getByText("Iron ore 500, Coal 100")).toBeTruthy();
+    expect(within(row).getByText("Steel 1,000")).toBeTruthy();
+    // Input cost counts only the priced line; coal has no market price.
+    const cost = within(row).getByText("$9000");
+    expect(cost.getAttribute("title")).toBe("Excludes commodities with no market price.");
+    expect(within(row).getByText("$31000")).toBeTruthy();
+    expect(within(row).getByText("+$22000")).toBeTruthy();
+    expect(screen.queryByText("Inputs to Pennsylvania")).toBeNull();
+  });
+
+  it("opens a state into inputs on the left and outputs on the right", async () => {
+    render(<CommoditiesTab corpId="7" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Pennsylvania" }));
+
+    const inputsTitle = screen.getByText("Inputs to Pennsylvania");
+    const outputsTitle = screen.getByText("Outputs from Pennsylvania");
+    expect(
+      inputsTitle.compareDocumentPosition(outputsTitle) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+
+    const inputs = inputsTitle.parentElement!;
+    expect(within(inputs).getByText("Iron ore")).toBeTruthy();
+    expect(within(inputs).getByText("n/a")).toBeTruthy();
+    const outputs = outputsTitle.parentElement!;
+    expect(within(outputs).getByText("Steel")).toBeTruthy();
+    expect(within(outputs).getByText("Output value")).toBeTruthy();
+
+    const toggle = screen.getByRole("button", { name: "Hide Pennsylvania inputs and outputs" });
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(toggle.getAttribute("aria-controls")).toBe("commodities-region-PA");
+    fireEvent.click(toggle);
+    expect(screen.queryByText("Inputs to Pennsylvania")).toBeNull();
+  });
+
+  it("leaves money blank for a state whose only lines have no price", async () => {
+    render(<CommoditiesTab corpId="7" />);
+    const name = await screen.findByRole("button", { name: "West Virginia" });
+    const cells = within(name.closest("tr")!).getAllByRole("cell");
+    // State, Consumes, Produces, Input cost, Output value, Net value, toggle.
+    expect(cells[1].textContent).toBe("Coal 50");
+    expect(cells[3].textContent).toBe("");
+    expect(cells[4].textContent).toBe("");
+    expect(cells[5].textContent).toBe("");
+    fireEvent.click(name);
+    expect(screen.getByText("Produces nothing here.")).toBeTruthy();
+  });
+
+  it("offers no toggle for a state with nothing to show", async () => {
+    render(<CommoditiesTab corpId="7" />);
+    await screen.findByText("Nevada");
+    expect(screen.queryByRole("button", { name: "Nevada" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Nevada inputs and outputs/ })).toBeNull();
   });
 });

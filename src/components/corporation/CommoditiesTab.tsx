@@ -7,6 +7,7 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import type { CorpCommodityFlow, CorpCommodityRegion } from "@/lib/corporations/corpCommodityFlows";
 import type { CorpMarketSharePosition } from "@/lib/corporations/corpMarketShare";
 import { DenseSection, TableScroll, Td, Th } from "./dense/DenseKit";
+import { DataBar } from "./dense/InlineViz";
 
 interface CommoditiesResponse {
   clearingEnabled: boolean;
@@ -141,13 +142,13 @@ export default function CommoditiesTab({
               <tr>
                 <Th>Commodity</Th>
                 <Th align="right">Price</Th>
-                <Th align="right">Output</Th>
-                <Th align="right" title="Output valued at the current market price, per turn">
-                  Value
-                </Th>
                 <Th align="right">Consumed</Th>
                 <Th align="right" title="Consumption valued at the current market price, per turn">
                   Cost
+                </Th>
+                <Th align="right">Output</Th>
+                <Th align="right" title="Output valued at the current market price, per turn">
+                  Value
                 </Th>
                 <Th align="right">Net production</Th>
                 <Th align="right" title="Net production valued at the current market price">
@@ -189,18 +190,18 @@ export default function CommoditiesTab({
                         {price != null ? formatAmount(price) : ""}
                       </Td>
                       <Td align="right" className="text-foreground">
-                        {units(c.outputUnits)}
-                      </Td>
-                      <Td align="right" className="text-muted">
-                        {price != null && c.outputUnits > 0 ? money(c.outputUnits * price) : ""}
-                      </Td>
-                      <Td align="right" className="text-foreground">
                         {units(c.consumptionUnits)}
                       </Td>
                       <Td align="right" className="text-muted">
                         {price != null && c.consumptionUnits > 0
                           ? money(c.consumptionUnits * price)
                           : ""}
+                      </Td>
+                      <Td align="right" className="text-foreground">
+                        {units(c.outputUnits)}
+                      </Td>
+                      <Td align="right" className="text-muted">
+                        {price != null && c.outputUnits > 0 ? money(c.outputUnits * price) : ""}
                       </Td>
                       <Td align="right" className={netTone(c.netUnits)}>
                         {c.netUnits > 0 ? "+" : ""}
@@ -304,57 +305,299 @@ export default function CommoditiesTab({
       </DenseSection>
 
       {regions.length > 0 && (
-        <DenseSection title="By region" meta="units per turn">
-          <TableScroll>
-            <table className="w-full border-collapse">
-              <thead>
-                <tr>
-                  <Th>State</Th>
-                  <Th>Produces</Th>
-                  <Th>Consumes</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {regions.map((r) => {
-                  const made = r.rows.filter((row) => row.outputUnits > 0);
-                  const used = r.rows.filter((row) => row.consumptionUnits > 0);
-                  return (
-                    <tr key={r.stateId} className="align-top">
-                      <Td>
+        <RegionBreakdown
+          key={corpId}
+          regions={regions}
+          commodities={commodities}
+          formatAmount={formatAmount}
+        />
+      )}
+    </div>
+  );
+}
+
+const REGION_COLS = 7;
+
+interface RegionLine {
+  commodity: string;
+  label: string;
+  unit: string;
+  units: number;
+  /** Units at the current market price; null when the commodity has no price. */
+  value: number | null;
+}
+
+interface ValueSum {
+  total: number;
+  /** At least one line had a price to add. */
+  priced: boolean;
+  /** At least one line had no price, so the total leaves it out. */
+  partial: boolean;
+}
+
+function sumValue(lines: RegionLine[]): ValueSum {
+  let total = 0;
+  let priced = false;
+  let partial = false;
+  for (const line of lines) {
+    if (line.value == null) partial = true;
+    else {
+      total += line.value;
+      priced = true;
+    }
+  }
+  return { total, priced, partial };
+}
+
+/**
+ * The per-state table: one row per state summarising what its plants consume
+ * and produce, opening into the two lists (inputs left, outputs right) with
+ * each commodity's units and market value. Values use the same current market
+ * price as the flows table above, not what the plants actually paid.
+ */
+function RegionBreakdown({
+  regions,
+  commodities,
+  formatAmount,
+}: {
+  regions: CorpCommodityRegion[];
+  commodities: CorpCommodityFlow[];
+  formatAmount: (amount: number) => string;
+}) {
+  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
+  const byCommodity = new Map(commodities.map((c) => [c.commodity, c]));
+
+  const toggle = (stateId: string) =>
+    setOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(stateId)) next.delete(stateId);
+      else next.add(stateId);
+      return next;
+    });
+
+  const lineOf = (row: CorpCommodityRegion["rows"][number], units: number): RegionLine => {
+    const flow = byCommodity.get(row.commodity);
+    const price = flow?.market.price;
+    return {
+      commodity: row.commodity,
+      label: row.label,
+      unit: flow?.unit ?? "",
+      units,
+      value: price != null && Number.isFinite(price) ? units * price : null,
+    };
+  };
+
+  const fmtTotal = (sum: ValueSum) => (sum.priced ? formatAmount(sum.total) : "");
+  const partialNote = "Excludes commodities with no market price.";
+
+  return (
+    <DenseSection title="By region" meta="units per turn, valued at market price">
+      <TableScroll>
+        <table className="w-full border-collapse">
+          <thead>
+            <tr>
+              <Th>State</Th>
+              <Th>Consumes</Th>
+              <Th>Produces</Th>
+              <Th align="right" title="Consumption valued at the current market price, per turn">
+                Input cost
+              </Th>
+              <Th align="right" title="Output valued at the current market price, per turn">
+                Output value
+              </Th>
+              <Th align="right">Net value</Th>
+              <Th>
+                <span className="sr-only">Details</span>
+              </Th>
+            </tr>
+          </thead>
+          <tbody>
+            {regions.map((r) => {
+              const inputs = r.rows
+                .filter((row) => row.consumptionUnits > 0)
+                .map((row) => lineOf(row, row.consumptionUnits));
+              const outputs = r.rows
+                .filter((row) => row.outputUnits > 0)
+                .map((row) => lineOf(row, row.outputUnits));
+              const inSum = sumValue(inputs);
+              const outSum = sumValue(outputs);
+              const net = outSum.total - inSum.total;
+              const partial = inSum.partial || outSum.partial;
+              const hasLines = inputs.length + outputs.length > 0;
+              const anyPriced = inSum.priced || outSum.priced;
+              const isOpen = hasLines && open.has(r.stateId);
+              const panelId = `commodities-region-${r.stateId.replace(/[^A-Za-z0-9_-]/g, "_")}`;
+              // One scale per state so a state's inputs and outputs compare directly.
+              const maxUnits = Math.max(
+                0,
+                ...inputs.map((l) => l.units),
+                ...outputs.map((l) => l.units)
+              );
+              const summary = (lines: RegionLine[]) =>
+                lines.map((l) => `${l.label} ${fmtUnits(l.units)}`).join(", ");
+
+              return (
+                <Fragment key={r.stateId}>
+                  <tr className="align-top hover:bg-card-elevated/40">
+                    <Td>
+                      {hasLines ? (
+                        <button
+                          type="button"
+                          onClick={() => toggle(r.stateId)}
+                          aria-expanded={isOpen}
+                          aria-controls={panelId}
+                          className="text-left text-foreground hover:underline"
+                        >
+                          {r.stateName}
+                        </button>
+                      ) : (
                         <span className="text-foreground">{r.stateName}</span>
-                        {r.region && (
-                          <span className="ml-1.5 text-[11px] text-muted">{r.region}</span>
-                        )}
-                      </Td>
-                      <Td wrap className="text-xs">
-                        {made.map((row, i) => (
-                          <span key={row.commodity} className="text-foreground">
-                            {row.label}{" "}
-                            <span className="font-mono tabular-nums text-success">
-                              {fmtUnits(row.outputUnits)}
-                            </span>
-                            {i < made.length - 1 ? ", " : ""}
-                          </span>
-                        ))}
-                      </Td>
-                      <Td wrap className="text-xs">
-                        {used.map((row, i) => (
-                          <span key={row.commodity} className="text-foreground">
-                            {row.label}{" "}
-                            <span className="font-mono tabular-nums text-muted">
-                              {fmtUnits(row.consumptionUnits)}
-                            </span>
-                            {i < used.length - 1 ? ", " : ""}
-                          </span>
-                        ))}
-                      </Td>
+                      )}
+                      {r.region && (
+                        <span className="ml-1.5 text-[11px] text-muted">{r.region}</span>
+                      )}
+                    </Td>
+                    <Td wrap className="text-xs text-muted">
+                      {summary(inputs)}
+                    </Td>
+                    <Td wrap className="text-xs text-muted">
+                      {summary(outputs)}
+                    </Td>
+                    <Td
+                      align="right"
+                      className="text-muted"
+                      title={inSum.partial ? partialNote : undefined}
+                    >
+                      {fmtTotal(inSum)}
+                    </Td>
+                    <Td
+                      align="right"
+                      className="text-foreground"
+                      title={outSum.partial ? partialNote : undefined}
+                    >
+                      {fmtTotal(outSum)}
+                    </Td>
+                    <Td
+                      align="right"
+                      className={net > 0 ? "text-success" : net < 0 ? "text-error" : "text-muted"}
+                      title={partial ? partialNote : undefined}
+                    >
+                      {anyPriced ? `${net > 0 ? "+" : ""}${formatAmount(net)}` : ""}
+                    </Td>
+                    <Td align="right" numeric={false}>
+                      {hasLines && (
+                        <button
+                          type="button"
+                          onClick={() => toggle(r.stateId)}
+                          aria-expanded={isOpen}
+                          aria-controls={panelId}
+                          aria-label={`${isOpen ? "Hide" : "Show"} ${r.stateName} inputs and outputs`}
+                          className="inline-flex h-6 items-center rounded border border-card-border px-2 text-[11px] text-foreground hover:bg-card-elevated"
+                        >
+                          {isOpen ? "Hide" : "Show"}
+                        </button>
+                      )}
+                    </Td>
+                  </tr>
+                  {isOpen && (
+                    <tr>
+                      <td
+                        colSpan={REGION_COLS}
+                        className="border-b border-card-border/60 bg-card-muted/40 px-2 py-3"
+                      >
+                        <div id={panelId} className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
+                          <RegionLines
+                            title={`Inputs to ${r.stateName}`}
+                            lines={inputs}
+                            maxUnits={maxUnits}
+                            tone="error"
+                            totalLabel="Input cost"
+                            total={fmtTotal(inSum)}
+                            partialNote={inSum.partial ? partialNote : undefined}
+                            empty="Consumes nothing here."
+                            formatAmount={formatAmount}
+                          />
+                          <RegionLines
+                            title={`Outputs from ${r.stateName}`}
+                            lines={outputs}
+                            maxUnits={maxUnits}
+                            tone="success"
+                            totalLabel="Output value"
+                            total={fmtTotal(outSum)}
+                            partialNote={outSum.partial ? partialNote : undefined}
+                            empty="Produces nothing here."
+                            formatAmount={formatAmount}
+                          />
+                        </div>
+                      </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </TableScroll>
-        </DenseSection>
+                  )}
+                </Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </TableScroll>
+    </DenseSection>
+  );
+}
+
+function RegionLines({
+  title,
+  lines,
+  maxUnits,
+  tone,
+  totalLabel,
+  total,
+  partialNote,
+  empty,
+  formatAmount,
+}: {
+  title: string;
+  lines: RegionLine[];
+  maxUnits: number;
+  tone: "success" | "error";
+  totalLabel: string;
+  total: string;
+  partialNote?: string;
+  empty: string;
+  formatAmount: (amount: number) => string;
+}) {
+  return (
+    <div className="min-w-0">
+      <h4 className="pb-1 text-[11px] font-medium uppercase tracking-wide text-muted">{title}</h4>
+      {lines.length === 0 ? (
+        <p className="py-1 text-xs text-muted">{empty}</p>
+      ) : (
+        <>
+          <ul>
+            {lines.map((line) => (
+              <li
+                key={line.commodity}
+                className="grid grid-cols-[minmax(0,1fr)_minmax(0,5rem)_auto_auto] items-center gap-x-3 border-b border-card-border/60 py-1 text-[13px]"
+              >
+                <span className="truncate text-foreground">{line.label}</span>
+                <DataBar value={line.units} max={maxUnits} tone={tone} />
+                <span className="text-right font-mono tabular-nums text-foreground">
+                  {fmtUnits(line.units)}
+                  {line.unit && (
+                    <span className="ml-1 font-sans text-[11px] text-muted">{line.unit}</span>
+                  )}
+                </span>
+                <span className="text-right font-mono tabular-nums text-muted">
+                  {line.value == null ? "n/a" : formatAmount(line.value)}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p
+            className="flex justify-between pt-1.5 text-[13px] font-medium text-foreground"
+            title={partialNote}
+          >
+            <span>{totalLabel}</span>
+            <span className="font-mono tabular-nums">{total}</span>
+          </p>
+        </>
       )}
     </div>
   );
