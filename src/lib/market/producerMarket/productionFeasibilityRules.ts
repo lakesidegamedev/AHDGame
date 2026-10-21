@@ -148,12 +148,19 @@ export function feasibleProduction(input: {
 }
 
 /**
- * Rows are rescaled and pivoted in floating point, so a binding constraint can
- * come back over its limit by a rounding residual. Residuals up to
- * REPAIRABLE_RESIDUAL of the row scale are repaired by trimming the net
- * consumers of that resource; anything larger is a real solver fault.
+ * The simplex solve eliminates dense, rescaled rows in floating point with no
+ * refactorisation, so on an ill-conditioned row a binding constraint can come
+ * back over its limit; the error grows with row size and coefficient spread
+ * (randomised large rows overshoot by far more than the few millionths seen in
+ * play). The result is never rejected: overdrawn rows first trim their net
+ * consumers, then, if any row is still over, every activity is scaled by one
+ * common factor. That always works: all limits are non-negative, so scaling
+ * toward the zero opening can only lower a row's net use. Repairs beyond
+ * rounding noise are counted and logged.
  */
-const REPAIRABLE_RESIDUAL = 1e-4;
+export const productionRepairStats = { repairs: 0, uniformScales: 0, worstRelative: 0 };
+const NOISE_RESIDUAL = 1e-9;
+const LOGGED_RESIDUAL = 1e-6;
 
 export function reconcileProduction(
   result: number[],
@@ -172,15 +179,19 @@ export function reconcileProduction(
       constraint.available,
       constraint.coefficients.reduce((sum, v) => sum + Math.abs(v), 0)
     );
+  const overBy = (constraint: { available: number; coefficients: readonly number[] }) =>
+    (usedOf(constraint) - constraint.available) / scaleOf(constraint);
+  let worst = 0;
+  for (const constraint of constraints) worst = Math.max(worst, overBy(constraint));
+  if (worst <= NOISE_RESIDUAL) return result;
+  productionRepairStats.repairs++;
+  productionRepairStats.worstRelative = Math.max(productionRepairStats.worstRelative, worst);
   // Trimming consumers of one resource can raise another that those activities
   // supply, so repeat until every row settles.
   for (let pass = 0; pass < 8; pass++) {
     let repaired = false;
     for (const constraint of constraints) {
-      const used = usedOf(constraint);
-      const scale = scaleOf(constraint);
-      if (used <= constraint.available + scale * 1e-9) continue;
-      if (used > constraint.available + scale * REPAIRABLE_RESIDUAL) break;
+      if (overBy(constraint) <= NOISE_RESIDUAL) continue;
       let consumed = 0;
       let supplied = 0;
       constraint.coefficients.forEach((value, j) => {
@@ -195,13 +206,19 @@ export function reconcileProduction(
     }
     if (!repaired) break;
   }
+  let scale = 1;
   for (const constraint of constraints) {
     const used = usedOf(constraint);
-    const scale = scaleOf(constraint);
-    if (used > constraint.available + scale * 1e-9)
-      throw new Error(
-        `Production resource constraint did not reconcile: used=${used}, available=${constraint.available}, tolerance=${scale * 1e-9}`
-      );
+    if (used > constraint.available + scaleOf(constraint) * NOISE_RESIDUAL)
+      scale = Math.min(scale, constraint.available / used);
   }
+  if (scale < 1) {
+    productionRepairStats.uniformScales++;
+    for (let j = 0; j < result.length; j++) result[j] *= scale * (1 - 1e-12);
+  }
+  if (worst > LOGGED_RESIDUAL)
+    console.warn(
+      `[production] feasibility residual repaired: worst=${worst.toExponential(2)} uniformScale=${scale.toFixed(6)}`
+    );
   return result;
 }

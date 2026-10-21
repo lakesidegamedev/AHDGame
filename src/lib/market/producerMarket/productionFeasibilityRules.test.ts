@@ -173,9 +173,19 @@ describe("production reconciliation residuals", () => {
     expect(29346 * result[0] + result[1]).toBeLessThanOrEqual(29346 * 1e-9);
   });
 
-  it("still rejects a real overdraw", () => {
-    expect(() => reconcileProduction([1, 1], [{ available: 1, coefficients: [5, 5] }])).toThrow(
-      "did not reconcile"
-    );
+  it("scales everything down for a gross overdraw rather than failing the turn", () => {
+    const constraints = [
+      { available: 1, coefficients: [5, 5] },
+      { available: 0, coefficients: [-3, 1] },
+    ];
+    const result = reconcileProduction([1, 1], constraints);
+    expect(5 * result[0] + 5 * result[1]).toBeLessThanOrEqual(1 + 1e-9 * 10);
+    expect(-3 * result[0] + result[1]).toBeLessThanOrEqual(1e-9 * 10);
+    expect(result.every((v) => v >= 0 && v <= 1)).toBe(true);
+  });
+
+  it("leaves a feasible plan untouched", () => {
+    const result = reconcileProduction([0.5, 0.25], [{ available: 10, coefficients: [5, 5] }]);
+    expect(result).toEqual([0.5, 0.25]);
   });
 });

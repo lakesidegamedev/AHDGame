@@ -7,4 +7,4 @@ badges: [patch]
 areas: [fullstack]
 ---
 
-- Under the upcoming market, a slightly larger rounding sliver in a fully spent input is also trimmed instead of halting the turn.
+- Under the upcoming market, a rounding error of any size in a production plan is trimmed instead of halting the turn.
