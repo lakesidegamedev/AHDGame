@@ -721,6 +721,33 @@ export interface Corporation {
   operatorPolicy?: CorporationOperatorPolicy;
   /** NPP CEO career and pay demands (only while ceoType is "npp"). */
   ceoPay?: CorporationCeoPay;
+  /**
+   * A Subsidiary Limits or Foreign Investment Act order against this company:
+   * its controlling group must give up control by `dueTurn`, or the excess
+   * stake is sold at book value into the equity market. Cleared when cured.
+   */
+  /**
+   * An open Competition Act breakup case against this group root (levels 3
+   * and 4). The competition authority orders a breakup or dismisses it by
+   * `decideByTurn`; undecided cases resolve on the measured share then.
+   */
+  antitrustCase?: {
+    countryId: string;
+    sectorType: string;
+    sharePercent: number;
+    thresholdPercent: number;
+    openedTurn: number;
+    decideByTurn: number;
+    decision?: "order" | "dismiss";
+    decidedTurn?: number;
+  };
+  antitrustDivestiture?: {
+    reason: "subsidiaryCap" | "foreignBan" | "foreignShareCap";
+    countryId: string;
+    rootCorporationId: string;
+    sinceTurn: number;
+    dueTurn: number;
+  };
   /** Country owner for state-owned / nationalized corporations */
   countryOwnerId?: CountryId;
   /** Hide the corporation from stock-exchange style equity listings */
@@ -1260,6 +1287,14 @@ export interface CorporateSector {
    * stored margin showed min == max for an entire run.
    */
   effectiveProfitMargin?: number;
+  /** Logistical sprawl margin (pp, negative) the turn applied to this sector last turn. */
+  sprawlMarginPp?: number;
+  /**
+   * Dominance margin penalty (pp, negative) the turn applied to this sector last
+   * turn, after the plants fade, tech shield and any running-cost scale. The
+   * sector page shows it instead of re-deriving it from the share.
+   */
+  dominanceMarginPenaltyPp?: number;
   /**
    * Labour system telemetry: most recent per-turn labor cost written when
    * labourSystemMode ≥ "wages" (home currency, daily basis like `revenue`).
