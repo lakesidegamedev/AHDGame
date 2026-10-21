@@ -18,7 +18,7 @@
  */
 
 import * as Sentry from "@sentry/nextjs";
-import type { Db, ObjectId } from "mongodb";
+import type { Db, Document, Filter, ObjectId } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import { MONEY_MOVE_COLLECTION, type MoneyMoveRecordLeg } from "@/lib/banking/moneyMove";
 import { resumeSettlement, unfinishedSettlementFilter } from "@/lib/banking/settlementJournal";
@@ -116,8 +116,10 @@ async function existingTargetIds(
   rows: ReadonlyArray<{ id: unknown }>
 ): Promise<Set<string>> {
   const found = await db
-    .collection<{ _id: unknown }>(collection)
-    .find({ _id: { $in: rows.map((row) => row.id) } }, { projection: { _id: 1 } })
+    .collection(collection)
+    .find({ _id: { $in: rows.map((row) => row.id) } } as unknown as Filter<Document>, {
+      projection: { _id: 1 },
+    })
     .toArray();
   return new Set(found.map((row) => targetIdentity(row._id)));
 }
