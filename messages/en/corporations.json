@@ -96,6 +96,11 @@
       }
     },
     "sectorInvestment": {
+      "advertisingCampaignsCounted": "Advertising campaigns counted: {units}/day ({factor} media output factor)",
+      "advertisingCampaignsLabel": "Advertising campaigns counted",
+      "advertisingCampaignsValue": "{units}/day ({factor} factor)",
+      "mediaAdvertisingExplanation": "Media run units measure total audience activity. The advertising market may apply further limits.",
+      "mediaEntertainmentExplanation": "Entertainment output is shown in its own commodity ledger.",
       "activeCapacity": "Keep {percent}% of capacity active",
       "recoveryExplanation": "Park surplus capacity while keeping a smaller operation running. Parked plants pay reduced upkeep. You keep the plants and can reopen them for free. Production, staffing and upkeep adjust next turn; supply commitments still apply.",
       "activeUnits": "Active capacity: {units, number} units/day",

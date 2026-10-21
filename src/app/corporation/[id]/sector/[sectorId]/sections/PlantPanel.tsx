@@ -12,6 +12,7 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import { Factory, Hammer, PauseCircle, PlayCircle, ShieldCheck, X } from "lucide-react";
 import type { CommodityFlow, PlantsData } from "../types";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
+import type { MediaDiscriminator } from "@/lib/constants/corporations";
 import {
   capitalizeFacility,
   facilityPlural,
@@ -31,6 +32,8 @@ interface PlantPanelProps {
   freightState?: { observedLoad: number; capacity: number; turn: number | null };
   /** Drives the facility noun. A retail sector says "stores", not "plants". */
   sectorType: OperatingSectorType;
+  mediaDiscriminator?: MediaDiscriminator | null;
+  mediaAdvertisingCampaignFactor?: number;
   /** The national industry union covering this workforce, vacant or led. */
   unionId?: string | null;
   unionName?: string | null;
@@ -67,6 +70,8 @@ export default function PlantPanel({
   marketSupplies = [],
   freightState,
   sectorType,
+  mediaDiscriminator,
+  mediaAdvertisingCampaignFactor = 1,
   unionId,
   unionName,
   averageWageLevel,
@@ -95,8 +100,14 @@ export default function PlantPanel({
     (workersDesired > 0 ? Math.min(1, plants.workers / workersDesired) : 1);
   const staffingShortfall =
     workersDesired > 0 && plants.workers < workersDesired ? 1 - plants.workers / workersDesired : 0;
+  const mediaAdvertisingSupply =
+    sectorType === "media" && mediaDiscriminator !== "entertainment"
+      ? marketSupplies.find((supply) => supply.commodity === "advertising")
+      : undefined;
   const primaryMediaSupply =
-    sectorType === "media" ? marketSupplies.find((supply) => supply.units > 0) : undefined;
+    sectorType === "media"
+      ? (mediaAdvertisingSupply ?? marketSupplies.find((supply) => supply.units > 0))
+      : undefined;
   const mediaLedgerShare =
     hasRun && primaryMediaSupply && (plants.producedUnits ?? 0) > 0
       ? primaryMediaSupply.units / (plants.producedUnits ?? 1)
@@ -109,6 +120,10 @@ export default function PlantPanel({
       marketSupplies.map((supply) => [supply.commodity, supply.units])
     ),
   });
+  const countedCampaigns =
+    sectorType === "media" && mediaDiscriminator !== "entertainment" && hasRun
+      ? (mediaAdvertisingSupply?.units ?? 0)
+      : null;
 
   return (
     <div
@@ -213,10 +228,19 @@ export default function PlantPanel({
                   {mediaLedgerShare != null ? ` (${fmtPct(mediaLedgerShare)} of today's run)` : ""}
                 </p>
                 <p className="mt-1 text-muted">
-                  Media run units measure total audience activity. The commodity market and eligible
-                  private supply agreements use the smaller ledger output shown here.
+                  {mediaDiscriminator === "entertainment"
+                    ? t("mediaEntertainmentExplanation")
+                    : t("mediaAdvertisingExplanation")}
                 </p>
               </div>
+            )}
+            {countedCampaigns != null && (
+              <p className="mt-2 text-body-xs text-muted">
+                {t("advertisingCampaignsCounted", {
+                  units: fmtUnits(countedCampaigns),
+                  factor: fmtPct(mediaAdvertisingCampaignFactor),
+                })}
+              </p>
             )}
           </>
         ) : (

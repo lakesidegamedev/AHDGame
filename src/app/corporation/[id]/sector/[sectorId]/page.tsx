@@ -732,6 +732,8 @@ export default function SectorDetailPage() {
                     marketSupplies={commodities?.supplies ?? []}
                     freightState={commodities?.freightState}
                     sectorType={sector.sectorType}
+                    mediaDiscriminator={sector.mediaDiscriminator}
+                    mediaAdvertisingCampaignFactor={sector.mediaAdvertisingCampaignFactor}
                     unionId={sector.unionId}
                     unionName={sector.unionName}
                     averageWageLevel={sector.wageLevel ?? 1}
