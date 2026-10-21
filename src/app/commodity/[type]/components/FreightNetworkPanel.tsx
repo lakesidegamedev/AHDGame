@@ -1,4 +1,5 @@
 import type { CommodityDetail } from "../types";
+import type { CountryId } from "@/lib/constants/countries";
 import { getStateDisplayName } from "@/lib/commodity-map";
 import { formatUnits } from "../lib/helpers";
 import { useTranslations } from "next-intl";
@@ -11,7 +12,7 @@ export default function FreightNetworkPanel({ data }: { data: CommodityDetail })
   const rows = Object.entries(network.states)
     .map(([stateId, freight]) => ({
       stateId,
-      countryId: data.stateCountryMap?.[stateId] ?? "US",
+      countryId: (data.stateCountryMap?.[stateId] ?? "US") as CountryId,
       ...freight,
     }))
     .sort((a, b) => (b.fullCapacityOneHopEstimate ?? -1) - (a.fullCapacityOneHopEstimate ?? -1));
