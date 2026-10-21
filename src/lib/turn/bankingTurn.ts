@@ -1261,6 +1261,10 @@ async function serviceNamedLoanBook(
     const legs: TransitionLeg[] = decisions.flatMap((row) =>
       row.transition.legs.filter((leg) => leg.kind === "debit")
     );
+    // Stable sort by collection so the journal's batched debit delivery can
+    // group whole runs of character or corporation borrowers; a duplicate
+    // target still breaks its group, so a borrower's own loan order is kept.
+    legs.sort((a, b) => String(a.collection).localeCompare(String(b.collection)));
     if (totalPayment > 0) legs.push({ kind: "credit", amount: totalPayment, ...creditTarget });
     const projections = decisions.flatMap((row) =>
       row.transition.projections.filter((projection) => {
