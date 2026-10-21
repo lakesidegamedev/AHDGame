@@ -169,6 +169,15 @@ export interface GameConfig {
   /** With producerSpilloverStage on: share (0 to 1) of stranded spend that substitutes. Absent = 0.7. */
   producerSpilloverShare?: number;
   /**
+   * Funded producer market: >= 1 keeps a share of each public budget line's
+   * unfilled money in the public wallet for the next turn (instead of burning
+   * it at close), capped at four turns of the line's outlay. Support and grants
+   * are paid from what is left. 0 or absent = off.
+   */
+  producerPublicCarryStage?: number;
+  /** Share of a short line's unfilled budget kept when the stage is on. Default 0.5. */
+  producerPublicCarryShare?: number;
+  /**
    * Funded producer market: >= 1 retires, with no cash, a share of the
    * capacity of plants that have sold nothing for several turns. 0 or absent = off.
    */

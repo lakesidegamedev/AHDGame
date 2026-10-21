@@ -90,6 +90,8 @@ export type ProducerPhysicalEnv = Pick<
   demandPlanStage?: number;
   /** gameConfig.producerSpilloverStage share: substitution share for same-turn spillover (0 or absent = off). */
   spilloverShare?: number;
+  /** Share of unfilled public budget kept per line for next turn (0 = off). */
+  publicCarryShare?: number;
   /** gameConfig.producerIdleRetireStage: >= 1 retires capacity that persistently sells nothing. 0 or absent = off. */
   idleRetireStage?: number;
   /** gameConfig.decommissionGrantShare: share of retired book paid from unspent public funding. */
