@@ -173,6 +173,9 @@ export default function BuildCapacityDialog({
       transferFee,
       total,
       orderDominance,
+      // What this order pays only because of the group's market share and
+      // share of world demand: the build with both multipliers set to 1.
+      sizeSurcharge: orderDominance > 1 ? construction * (1 - 1 / orderDominance) : 0,
       tollRatio,
       tollLabel: tollModel?.label ?? null,
       workersNeeded,
@@ -565,6 +568,13 @@ export default function BuildCapacityDialog({
                   {money(q.perUnitAnchor * unitsPerFacility)}
                 </dd>
               </div>
+              {preview.sizeSurcharge > 0 && preview.safeUnits > 0 && (
+                <CostLeg
+                  label="Of this order, extra for your size"
+                  value={money(preview.sizeSurcharge)}
+                  help="What this order costs above the same build for a company without your market share and share of world demand. Subsidiaries count with their parent."
+                />
+              )}
               {preview.transferFee > 0 && (
                 <CostLeg
                   label="Foreign transfer fee"
