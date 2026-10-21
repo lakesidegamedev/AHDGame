@@ -285,6 +285,51 @@ describe("extraction deposit rationing on real output (#4503)", () => {
     expect(units.get("a")! / units.get("b")!).toBeCloseTo(3);
   });
 
+  it("books real mined tons on plants worlds, without the extraction output scale", () => {
+    const total = totalNameplate(1_000_000);
+    const dig = total * 0.2;
+    const fractions = new Map<string, number>();
+    const [input] = buildExtractionRevenueInputs(
+      [mine("a", corpA, 1_000_000, dig)],
+      20,
+      COMMODITY_BASE_PRICES,
+      true,
+      fractions,
+      true
+    );
+    const rawIron = (1_000_000 * 0.4) / COMMODITY_BASE_PRICES.iron;
+    expect(input!.revenueBasedOutput.iron).toBeCloseTo(rawIron);
+    const [capped] = withRealizedOutputCaps([input!], fractions);
+    expect(capped!.plantOutputCap?.iron).toBeCloseTo(rawIron * 0.2);
+    // Depletion books revenueBasedOutput x multiplier (1, ample deposit) x fraction.
+    const f = fractions.get("a")!;
+    const booked = Object.values(input!.revenueBasedOutput).reduce((sum, u) => sum + u * f, 0);
+    expect(booked).toBeCloseTo(dig);
+  });
+
+  it("keeps the extraction output scale without a production record or below plants", () => {
+    const rawIron = (1_000_000 * 0.4) / COMMODITY_BASE_PRICES.iron;
+    const dig = totalNameplate(1_000_000) * 0.2;
+    const [unmeasured] = buildExtractionRevenueInputs(
+      [mine("new", corpA, 1_000_000)],
+      20,
+      COMMODITY_BASE_PRICES,
+      true,
+      new Map(),
+      true
+    );
+    expect(unmeasured!.revenueBasedOutput.iron).toBeCloseTo(rawIron * 1.8);
+    const [legacy] = buildExtractionRevenueInputs(
+      [mine("a", corpA, 1_000_000, dig)],
+      20,
+      COMMODITY_BASE_PRICES,
+      true,
+      new Map(),
+      false
+    );
+    expect(legacy!.revenueBasedOutput.iron).toBeCloseTo(rawIron * 1.8);
+  });
+
   it("keeps a sector with no production record (newly founded, first plants turn) uncapped", () => {
     const rows = [mine("new", corpA, 1_000_000), mine("zero", corpB, 0, 0)];
     const fractions = new Map<string, number>();
