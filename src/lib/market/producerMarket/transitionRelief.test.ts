@@ -4,6 +4,7 @@ import {
   strugglingReason,
   transitionReliefEligible,
   type SectorTransition,
+  TRANSITION_WINDOW_TURNS,
 } from "./transitionRules";
 
 const mismatched: SectorTransition = {
@@ -53,7 +54,7 @@ describe("freeTransitionConversion", () => {
 
   it("is free for a struggling sector inside the window", () => {
     expect(freeTransitionConversion(struggling, 101, 100)).toBe(true);
-    expect(freeTransitionConversion(struggling, 123, 100)).toBe(true);
+    expect(freeTransitionConversion(struggling, 100 + TRANSITION_WINDOW_TURNS - 1, 100)).toBe(true);
   });
 
   it("is not free once the sector already converted", () => {
@@ -64,7 +65,7 @@ describe("freeTransitionConversion", () => {
 
   it("is not free outside the window", () => {
     expect(freeTransitionConversion(struggling, 99, 100)).toBe(false);
-    expect(freeTransitionConversion(struggling, 124, 100)).toBe(false);
+    expect(freeTransitionConversion(struggling, 100 + TRANSITION_WINDOW_TURNS, 100)).toBe(false);
     expect(freeTransitionConversion(struggling, 101, undefined)).toBe(false);
   });
 });
