@@ -131,7 +131,12 @@ function stubCatalog(response: unknown = catalog, legislationTypes: unknown[] = 
   );
 }
 
-function renderModal(onSuccess = vi.fn(), countryId: "US" | "JP" = "US", onClose = vi.fn()) {
+function renderModal(
+  onSuccess = vi.fn(),
+  countryId: "US" | "JP" = "US",
+  onClose = vi.fn(),
+  options: { canSubmit?: boolean; hasActiveBill?: boolean } = {}
+) {
   render(
     <NextIntlClientProvider locale="en" messages={messages}>
       <GuidedLegislationModal
@@ -142,6 +147,8 @@ function renderModal(onSuccess = vi.fn(), countryId: "US" | "JP" = "US", onClose
           { value: "senate", label: "Senate" },
         ]}
         initialChamber="house"
+        canSubmit={options.canSubmit}
+        hasActiveBill={options.hasActiveBill}
         onClose={onClose}
         onSuccess={onSuccess}
       />
@@ -167,6 +174,25 @@ afterEach(() => {
 });
 
 describe("GuidedLegislationModal", () => {
+  it("allows drafting during an active bill but disables and guards submission", async () => {
+    stubCatalog();
+    renderModal(vi.fn(), "JP", vi.fn(), { canSubmit: false, hasActiveBill: true });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Custom Bill" }));
+    fireEvent.change(screen.getByLabelText("Bill title"), {
+      target: { value: "Cabinet Policy Draft" },
+    });
+    fireEvent.change(screen.getByLabelText("Message body"), {
+      target: { value: "Prepare this proposal while the existing bill is pending." },
+    });
+
+    const proposeButton = screen.getByRole("button", { name: "Propose bill" });
+    expect(screen.getByText(/You already have a bill in progress/)).toBeTruthy();
+    expect(proposeButton.hasAttribute("disabled")).toBe(true);
+    fireEvent.click(proposeButton);
+    expect(mocks.postBill).not.toHaveBeenCalled();
+  });
+
   it.each(["pending", "failure"])("allows custom bills while catalogs are %s", async (state) => {
     vi.stubGlobal(
       "fetch",

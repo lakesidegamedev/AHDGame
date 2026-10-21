@@ -23,6 +23,9 @@ beforeEach(async () => {
   db.collection("governmentFormations");
   db.collection("politicalParties");
   db.collection("legislationTypes");
+  db.collection("users");
+  db.collection("characters");
+  db.collection("cabinetMembers");
 
   const { getDb } = await import("@/lib/mongodb");
   vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
@@ -106,6 +109,11 @@ describe("GET /api/country/[code]/legislature/cabinet-bills", () => {
 
     expect(res.status).toBe(200);
     expect(json.bills).toHaveLength(1);
+    expect(json.proposalAccess).toEqual({
+      canPropose: false,
+      canBrowse: false,
+      allowedPolicyDomains: [],
+    });
     expect(json.bills[0]).toEqual(
       expect.objectContaining({
         id: billId.toString(),
@@ -114,6 +122,47 @@ describe("GET /api/country/[code]/legislature/cabinet-bills", () => {
         canVoteOrigin: false,
       })
     );
+  });
+
+  it("lets eligible cabinet members browse while an active bill blocks proposing", async () => {
+    const userId = new ObjectId();
+    const characterId = new ObjectId();
+    const { getAuthUser } = await import("@/lib/auth");
+    vi.mocked(getAuthUser).mockResolvedValue({
+      userId: userId.toString(),
+      isAdmin: false,
+    } as never);
+    db.collectionMocks.users!.findOne.mockResolvedValue({ _id: userId });
+    db.collectionMocks.characters!.findOne.mockResolvedValue({
+      _id: characterId,
+      userId,
+      name: "Cabinet Member",
+    });
+    db.collectionMocks.bills!.findOne.mockResolvedValue({
+      _id: new ObjectId(),
+      sponsorId: characterId,
+      countryId: "JP",
+      status: "active",
+    });
+    db.collectionMocks.cabinetMembers!.find.mockReturnValue({
+      project: vi.fn().mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([{ positionId: "finance_minister" }]),
+      }),
+    });
+    db.collectionMocks.governmentFormations!.findOne.mockResolvedValue({ _id: "JP" });
+
+    const { GET } = await import("./route");
+    const res = await GET(
+      new Request("http://localhost/api/country/jp/legislature/cabinet-bills"),
+      { params: Promise.resolve({ code: "jp" }) }
+    );
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.proposalAccess).toEqual(
+      expect.objectContaining({ canBrowse: true, canPropose: false })
+    );
+    expect(json.proposalAccess.allowedPolicyDomains.length).toBeGreaterThan(0);
   });
 });
 
@@ -154,6 +203,24 @@ describe("POST /api/country/[code]/legislature/cabinet-bills", () => {
       }),
     });
   }
+
+  it("keeps the server-side active-bill guard for cabinet proposals", async () => {
+    await authenticatePrimeMinister();
+    db.collectionMocks.bills!.findOne.mockResolvedValue({
+      _id: new ObjectId(),
+      sponsorId: characterId,
+      countryId: "JP",
+      status: "active",
+    });
+    const { POST } = await import("./route");
+
+    const response = await POST(request({}), { params: Promise.resolve({ code: "jp" }) });
+    const json = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(json.error).toMatch(/bill in progress/i);
+    expect(db.collectionMocks.bills!.insertOne).not.toHaveBeenCalled();
+  });
 
   it("rejects more than the supported number of reviewed provisions", async () => {
     await authenticatePrimeMinister();
