@@ -81,6 +81,13 @@ describe("production follows demand", () => {
     expect(demandPlanRunShare(null)).toBe(1);
   });
 
+  it("a sold-out line that sells below its running cost cuts instead of growing", () => {
+    const share = demandPlanRunShare(
+      receipt({ soldUnits: 50, offeredUnits: 50, revenue: 100, inputsConsumed: 200 })
+    );
+    expect(share).toBeCloseTo(0.5 * (1 - OUTPUT_CUT_STEP), 12);
+  });
+
   it("cuts straight to expected sales rather than a step a turn", () => {
     // Made 50 of 100 active, offered 50, sold 10: plans 11 units, not 45.
     const share = demandPlanRunShare(receipt({ soldUnits: 10, offeredUnits: 50 }));

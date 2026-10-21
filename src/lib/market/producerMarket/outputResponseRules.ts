@@ -102,6 +102,18 @@ export function demandPlanRunShare(prior: PriorReceipt | null | undefined): numb
   const offered = finite(prior.offeredUnits);
   const sold = finite(prior.soldUnits);
   const sellThrough = offered > 0 ? Math.min(1, sold / offered) : 0;
+  // The loss brake comes first, as in the stepped rule: a line that sells out
+  // at a price under its running cost must not grow.
+  const runningCost =
+    finite(prior.inputsConsumed) +
+    finite(prior.labourPaid ?? 0) +
+    finite(prior.labourArrears ?? 0) +
+    finite(prior.otherOperatingPaid ?? 0) +
+    finite(prior.otherOperatingArrears ?? 0);
+  const contributionPerUnit =
+    sold > 0 ? (finite(prior.revenue) - (runningCost * sold) / Math.max(produced, sold)) / sold : 0;
+  if (sold > 0 && contributionPerUnit < 0)
+    return Math.max(OUTPUT_RUN_FLOOR, run * (1 - OUTPUT_CUT_STEP));
   if (sellThrough >= SOLD_OUT) return Math.min(1, run * (1 + OUTPUT_GROW_STEP));
   const expectedSales = sold * (1 + DEMAND_PLAN_PROBE);
   const heldStock = Math.max(0, offered - sold);
