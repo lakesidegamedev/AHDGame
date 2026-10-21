@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
 import type { CorporateSector } from "@/lib/db/types";
-import { AI_CONVERSION_MIN_SHORTAGE, chooseTransitionConversion } from "./transitionConversion";
+import {
+  AI_CONVERSION_MIN_SHORTAGE,
+  chooseTransitionConversion,
+  sectorsAfterConversion,
+} from "./transitionConversion";
 
 const mismatched = {
   mismatched: true,
@@ -111,5 +115,17 @@ describe("AI transition conversion", () => {
       inputPressureOf: (lane) => (lane === "healthcare" ? 2 : 1),
     });
     expect(choice).toBeNull();
+  });
+
+  it("shows a converted sector in its new industry so entry cannot found a duplicate", () => {
+    const a = sector();
+    const b = sector({ sectorType: "logistics" });
+    const view = sectorsAfterConversion([a, b], {
+      sectorId: a._id.toString(),
+      set: { sectorType: "energy" },
+    });
+    expect(view.map((s) => s.sectorType)).toEqual(["energy", "logistics"]);
+    expect(a.sectorType).toBe("media");
+    expect(sectorsAfterConversion([a, b], null)).toEqual([a, b]);
   });
 });
