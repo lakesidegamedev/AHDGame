@@ -231,6 +231,15 @@ export interface CorporationLookups {
    */
   soeSizeCostByCorpId?: Map<string, import("@/lib/corporations/rules/soeSizeCost").SoeSizeCost>;
   /**
+   * Running dominance cost (gameConfig.dominanceRunningCostScale): the scale and
+   * each sector's control-group shares. Absent = off.
+   */
+  dominanceRunningCost?: {
+    scale: number;
+    localShareBySectorId: Map<string, number>;
+    nationalShareBySectorId: Map<string, number>;
+  } | null;
+  /**
    * gameConfig.strengthUpkeepStage (see corporations/strengthUpkeep). Absent
    * or 0 = strength upkeep off.
    */

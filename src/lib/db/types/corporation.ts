@@ -1290,6 +1290,12 @@ export interface CorporateSector {
   /** Logistical sprawl margin (pp, negative) the turn applied to this sector last turn. */
   sprawlMarginPp?: number;
   /**
+   * Dominance margin penalty (pp, negative) the turn applied to this sector last
+   * turn, after the plants fade, tech shield and any running-cost scale. The
+   * sector page shows it instead of re-deriving it from the share.
+   */
+  dominanceMarginPenaltyPp?: number;
+  /**
    * Labour system telemetry: most recent per-turn labor cost written when
    * labourSystemMode ≥ "wages" (home currency, daily basis like `revenue`).
    * Display/analytics only, not read back into the economy. Absent when the

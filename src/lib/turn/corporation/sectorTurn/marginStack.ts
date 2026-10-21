@@ -12,8 +12,6 @@
  */
 
 import {
-  getDominanceMarginPenalty,
-  getNationalDominanceMarginPenalty,
   getSustainedNegativeProductionPenalty,
   getExpropriationRiskMarginModifier,
   getHomeLocationMarginBonus,
@@ -48,6 +46,7 @@ import {
 import { computeSoeEfficiencyPenalty } from "@/lib/nationalization/soeEfficiency";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { managementOverheadPpForCorp } from "../managementOverhead";
+import { appliedDominanceMarginPenalty } from "@/lib/corporations/rules/dominanceRunningCost";
 import { resolveSectorMandate } from "@/lib/nationalization/soeMandates";
 import { corpAlignmentModifier } from "@/lib/economicModels/effects";
 import type { getSectorTechEffects } from "@/lib/constants/techTree";
@@ -74,6 +73,7 @@ export interface MarginStackInput {
   >;
   sector: Pick<
     CorporateSector,
+    | "_id"
     | "stateId"
     | "sectorType"
     | "mediaDiscriminator"
@@ -392,14 +392,31 @@ export function accumulateMarginModifiers(input: MarginStackInput): MarginStackR
   // switched off: λ = 0 on the flip turn keeps flip-day numbers byte-identical
   // for a dominant sector, rising to a full consolidation over the same ramp
   // every other plants leg uses.
+  // Running dominance cost (gameConfig.dominanceRunningCostScale): on plants
+  // worlds a group keeps paying a share of the penalty for as long as it holds
+  // the market, measured on the control group's combined share, so it fades
+  // away as that share falls to the threshold.
+  const running = lookups.dominanceRunningCost;
+  const sectorKey = sector._id.toString();
+  const dominanceShares = running
+    ? {
+        local: Math.max(sectorMarketSharePct, running.localShareBySectorId.get(sectorKey) ?? 0),
+        national: Math.max(
+          nationalDominanceSharePct,
+          running.nationalShareBySectorId.get(sectorKey) ?? 0
+        ),
+      }
+    : { local: sectorMarketSharePct, national: nationalDominanceSharePct };
   const dominanceMarginPenalty = isStateOwned(corp)
     ? 0
-    : Math.min(
-        getDominanceMarginPenalty(sectorMarketSharePct),
-        getNationalDominanceMarginPenalty(nationalDominanceSharePct)
-      ) *
-      (1 - techEffects.dominanceShield) *
-      (plantsEnabled ? 1 - plantsRampLambda : 1);
+    : appliedDominanceMarginPenalty({
+        localSharePct: dominanceShares.local,
+        nationalSharePct: dominanceShares.national,
+        shield: techEffects.dominanceShield,
+        plantsEnabled,
+        plantsRampLambda,
+        runningScale: running?.scale ?? 0,
+      });
   // Sustained-negative-production margin penalty: counter-driven, see
   // `getSustainedNegativeProductionPenalty`. Punishes long-term parking at
   // negative production levels without preventing tactical short-term use.

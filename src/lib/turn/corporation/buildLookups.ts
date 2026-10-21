@@ -34,6 +34,7 @@ import { excludePendingFederationFirms } from "@/lib/world/succession/rules/pend
 import type { CommodityPrice } from "@/lib/db/types";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { soeSizeCostByCorpId as soeSizeCostByCorpIdRule } from "@/lib/corporations/rules/soeSizeCost";
+import { buildGroupDominanceShares } from "@/lib/corporations/groups/groupDominanceShares";
 import type { TradeFlowSnapshot } from "@/lib/db/types/tradeFlowSnapshot";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { COUNTRY_CURRENCY_MAP, eraRateForCurrency } from "@/lib/constants/currencies";
@@ -1084,6 +1085,7 @@ export async function buildCorporationLookups(
       strengthUpkeepStage?: number;
       groupSizeCostsStage?: number;
       soeSizeCostScale?: number;
+      dominanceRunningCostScale?: number;
     }>("gameConfig")
     .findOne(
       { _id: "default" },
@@ -1093,6 +1095,7 @@ export async function buildCorporationLookups(
           strengthUpkeepStage: 1,
           groupSizeCostsStage: 1,
           soeSizeCostScale: 1,
+          dominanceRunningCostScale: 1,
         },
       }
     );
@@ -1104,8 +1107,14 @@ export async function buildCorporationLookups(
   // Control-group roots for size costs (contestability plan): every corp
   // resolved to its ultimate controlling owner. Only built when a group size
   // cost is on.
+  const dominanceRunningCostScale =
+    typeof overheadCfg?.dominanceRunningCostScale === "number"
+      ? Math.max(0, overheadCfg.dominanceRunningCostScale)
+      : 0;
   const controlRootByCorpId =
-    groupSizeCostsStage >= 1 ? controlGroupRootByCorpId(loadedCorporations) : null;
+    groupSizeCostsStage >= 1 || dominanceRunningCostScale > 0
+      ? controlGroupRootByCorpId(loadedCorporations)
+      : null;
   const managementOverheadPpByCorpId = new Map<string, number>();
   if (overheadPpPerDoubling > 0) {
     const plantsByCorpId = new Map<string, number>();
@@ -1118,9 +1127,10 @@ export async function buildCorporationLookups(
     // Stage 1: measure overhead on the whole control group, so splitting a
     // business into subsidiaries does not dodge it. Every member pays the
     // group's rate on its own sectors.
-    const basis = controlRootByCorpId
-      ? groupTotals(controlRootByCorpId, plantsByCorpId)
-      : plantsByCorpId;
+    const basis =
+      groupSizeCostsStage >= 1 && controlRootByCorpId
+        ? groupTotals(controlRootByCorpId, plantsByCorpId)
+        : plantsByCorpId;
     for (const [corpId, plants] of basis) {
       const pp = managementOverheadPp(plants, overheadPpPerDoubling);
       if (pp > 0) managementOverheadPpByCorpId.set(corpId, pp);
@@ -1249,6 +1259,24 @@ export async function buildCorporationLookups(
     exchangeRatesByCurrency,
     preset: marketSharePreset,
   });
+  // Running dominance cost reads the control group's combined shares.
+  const dominanceRunningCost =
+    dominanceRunningCostScale > 0 && controlRootByCorpId
+      ? (() => {
+          const g = buildGroupDominanceShares({
+            sectors: allSectors,
+            rootByCorpId: controlRootByCorpId,
+            localShareBySectorId: marketShareBySectorId,
+            nationalShareBySectorId: nationalDominanceShareBySectorId,
+            countryOf: (s) => s.countryId ?? stateById.get(s.stateId)?.countryId ?? "",
+          });
+          return {
+            scale: dominanceRunningCostScale,
+            localShareBySectorId: g.local,
+            nationalShareBySectorId: g.national,
+          };
+        })()
+      : null;
 
   // Extraction capacity utilization (sectorId → { utilization, bindingResource }).
   // Computed here, in the corp phase, because commodityPriceTurn (which computes
@@ -1740,6 +1768,7 @@ export async function buildCorporationLookups(
     managementOverheadPpByCorpId,
     dumpingGuardRootByCorpId: groupSizeCostsStage >= 3 ? controlRootByCorpId : null,
     soeSizeCostByCorpId,
+    dominanceRunningCost,
     strengthUpkeepStage,
     reachablePriceRatioByCountry,
     reachableInputPriceRatiosByCountry,

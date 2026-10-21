@@ -1130,7 +1130,8 @@ export function computeSectorMarginSection(args: {
     isStateOwned(corporation),
     regionalConditionsModifier,
     regionalConditionsModifiers,
-    sector.sprawlMarginPp ?? null
+    sector.sprawlMarginPp ?? null,
+    sector.dominanceMarginPenaltyPp ?? null
   );
   // Compute profit off the REALIZED (embargo/haircut-adjusted) revenue basis —
   // the same `sectorEconomicRevenue` the corp list and Financials page already
