@@ -12,7 +12,8 @@
  * `/elections/[id]/results` page and country-list embeds should go through.
  */
 import type { Db } from "mongodb";
-import type { Election, ElectionVoteTally } from "@/lib/db/types";
+import type { ElectedOfficial, Election, ElectionVoteTally } from "@/lib/db/types";
+import { resolveOfficeKeyForElectionType } from "@/lib/elections/officeResolution";
 import { computeSeatEstimates } from "@/lib/elections/buildPollingData";
 import { resolvedSeatsEstimate } from "@/lib/elections/resolvedSeatsEstimate";
 import {
@@ -118,11 +119,18 @@ export async function buildNationalElectionNight(
 ): Promise<NationalResults | null> {
   const electionType = election.electionType;
   if (!NATIONAL_AGGREGATION_TYPES.has(electionType)) return null;
+  // JP Sangiin elects half the chamber per night: the other class shares the cycle but is not tonight.
+  const chamberClass = election.chamberClass;
 
   const siblings = (await db
     .collection<Election>("elections")
     .find(
-      { countryId: election.countryId, electionType, cycle: election.cycle },
+      {
+        countryId: election.countryId,
+        electionType,
+        cycle: election.cycle,
+        ...(chamberClass ? { chamberClass } : {}),
+      },
       { projection: { state: 1, totalSeats: 1, status: 1, allocationMethod: 1 } }
     )
     .toArray()) as Pick<Election, "_id" | "state" | "totalSeats" | "status" | "allocationMethod">[];
@@ -213,6 +221,34 @@ export async function buildNationalElectionNight(
       declared,
       seatsByParty,
     });
+  }
+
+  // Seats of the class not up tonight are already held. Classless legacy rows
+  // are excluded: the turn retires them as class elections fill seats.
+  const officeType = chamberClass
+    ? resolveOfficeKeyForElectionType(election.countryId, electionType)
+    : null;
+  if (officeType) {
+    const holdovers = await db
+      .collection<ElectedOfficial>("electedOfficials")
+      .find(
+        {
+          countryId: election.countryId,
+          officeType,
+          chamberClass: { $exists: true, $ne: chamberClass },
+        },
+        { projection: { party: 1, characterId: 1, seatsHeld: 1 } }
+      )
+      .toArray();
+    for (const o of holdovers) {
+      const seats = o.seatsHeld ?? 1;
+      totalSeats += seats;
+      // A vacant seat counts towards the chamber but for no party.
+      if (o.characterId == null && !o.party) continue;
+      const party = o.party ?? "independent";
+      projectedByParty[party] = (projectedByParty[party] ?? 0) + seats;
+      declaredByParty[party] = (declaredByParty[party] ?? 0) + seats;
+    }
   }
 
   const parties: NationalParty[] = Object.keys(projectedByParty)
