@@ -12,6 +12,7 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import { Factory, Hammer, PauseCircle, PlayCircle, ShieldCheck, X } from "lucide-react";
 import type { CommodityFlow, PlantsData } from "../types";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
+import type { MediaDiscriminator } from "@/lib/constants/corporations";
 import {
   capitalizeFacility,
   facilityPlural,
@@ -29,6 +30,8 @@ interface PlantPanelProps {
   marketSupplies?: CommodityFlow[];
   /** Drives the facility noun. A retail sector says "stores", not "plants". */
   sectorType: OperatingSectorType;
+  mediaDiscriminator?: MediaDiscriminator | null;
+  mediaAdvertisingCampaignFactor?: number;
   /** The national industry union covering this workforce, vacant or led. */
   unionId?: string | null;
   unionName?: string | null;
@@ -64,6 +67,8 @@ export default function PlantPanel({
   plants,
   marketSupplies = [],
   sectorType,
+  mediaDiscriminator,
+  mediaAdvertisingCampaignFactor = 1,
   unionId,
   unionName,
   averageWageLevel,
@@ -97,6 +102,10 @@ export default function PlantPanel({
   const mediaLedgerShare =
     hasRun && primaryMediaSupply && (plants.producedUnits ?? 0) > 0
       ? primaryMediaSupply.units / (plants.producedUnits ?? 1)
+      : null;
+  const countedCampaigns =
+    sectorType === "media" && mediaDiscriminator !== "entertainment" && hasRun
+      ? (primaryMediaSupply?.units ?? null)
       : null;
 
   return (
@@ -179,10 +188,16 @@ export default function PlantPanel({
                   {mediaLedgerShare != null ? ` (${fmtPct(mediaLedgerShare)} of today's run)` : ""}
                 </p>
                 <p className="mt-1 text-muted">
-                  Media run units measure total audience activity. The commodity market and eligible
-                  private supply agreements use the smaller ledger output shown here.
+                  Media run units measure total audience activity. Advertising counts only the
+                  factor-adjusted output shown above; the market may apply further limits.
                 </p>
               </div>
+            )}
+            {countedCampaigns != null && (
+              <p className="mt-2 text-body-xs text-muted">
+                Advertising campaigns counted: {fmtUnits(countedCampaigns)}/day (
+                {fmtPct(mediaAdvertisingCampaignFactor)} media output factor)
+              </p>
             )}
           </>
         ) : (

@@ -95,6 +95,7 @@ describe("PlantPanel workforce", () => {
           },
         ]}
         sectorType="media"
+        mediaAdvertisingCampaignFactor={0.1}
         averageWageLevel={1}
         isCeo={false}
         busy={false}
@@ -110,7 +111,10 @@ describe("PlantPanel workforce", () => {
       screen.getByText(/Commodity ledger output: Advertising 140 impressions\/day/)
     ).toBeTruthy();
     expect(
-      screen.getByText(/eligible private supply agreements use the smaller ledger output/)
+      screen.getByText(/Advertising counts only the factor-adjusted output shown above/)
+    ).toBeTruthy();
+    expect(
+      screen.getByText("Advertising campaigns counted: 140/day (10% media output factor)")
     ).toBeTruthy();
   });
 });

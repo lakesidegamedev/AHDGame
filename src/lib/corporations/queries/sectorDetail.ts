@@ -90,7 +90,9 @@ import {
   getEffectiveStrategyRatesForOperatingModel,
   getOperatingSectorType,
   getSectorStrategies,
+  plannedEconomyMediaSupplyFactor,
 } from "@/lib/constants/sectorStrategies";
+import { isPlannedEconomy } from "@/lib/constants/commandEconomy";
 import { computeRetoolHint } from "@/lib/corporations/retoolHint";
 import { applyExtractionResourceCapacityToSupply } from "@/lib/corporations/extractionResourceSupply";
 import { capacityRescaleRatio } from "@/lib/constants/capacityEconomy";
@@ -199,6 +201,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           strengthUpkeepStage: 1,
           mediaEditorialEnabled: 1,
           mediaOperatingModelsEnabled: 1,
+          commandEconomyEnabled: 1,
           privateBankingEnabled: 1,
           bankConstructionFinanceEnabled: 1,
           treasuryCashLedgerEnabled: 1,
@@ -1505,6 +1508,16 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         countryId: sectorCountryId,
         stateName: state?.name ?? sector.stateId,
         sectorType: sector.sectorType,
+        mediaDiscriminator: sector.mediaDiscriminator ?? null,
+        mediaAdvertisingCampaignFactor: plannedEconomyMediaSupplyFactor(
+          sector.sectorType,
+          isPlannedEconomy(
+            sectorCountryId,
+            gameState?.currentYear,
+            governorConfig?.commandEconomyEnabled === true
+          ),
+          sector.mediaDiscriminator
+        ),
         industryModel: sector.industryModel ?? null,
         sectorLabel:
           sector.sectorType === "manufacturing" && sector.industryModel === "vehicles"
