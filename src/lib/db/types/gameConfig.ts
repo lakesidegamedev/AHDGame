@@ -191,6 +191,11 @@ export interface GameConfig {
    * instead of nameplate staffing. 0 or absent = off.
    */
   fundedHeadcountStage?: number;
+  /**
+   * Market Adjustment event: 1 records each country's loss share of funded
+   * capacity every turn and lets the event fire when it holds. 0 or absent = off.
+   */
+  marketAdjustmentStage?: number;
   /** Group size costs rollout stage (1 = management overhead on the control group, 2 = commodity build toll, 3 = dumping guard, 4 = monopoly trigger, 5 = merger concentration on the control group). 0 or absent = off. */
   groupSizeCostsStage?: number;
   /** Public media editorial stance and audience response rules. Missing means off. */
