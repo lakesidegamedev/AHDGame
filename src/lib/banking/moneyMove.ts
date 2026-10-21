@@ -609,8 +609,8 @@ async function applyLeg(
     if (saved.refusal) {
       if (
         leg.kind !== "credit" ||
-        record.retryCreditLegOnGuardFailure !== true ||
-        record.status !== "partial"
+        record?.retryCreditLegOnGuardFailure !== true ||
+        record?.status !== "partial"
       )
         return saved.refusal;
       await records.updateOne(

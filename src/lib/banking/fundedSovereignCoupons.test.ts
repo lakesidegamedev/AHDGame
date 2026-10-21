@@ -1000,7 +1000,7 @@ describe("bounded open-claim load", () => {
       claimRecord("sovereign-coupon:a:10", 10, 60, 0),
       claimRecord("sovereign-coupon:a:11", 11, 500, 0),
       claimRecord("sovereign-coupon:a:12", 12, 700, 0),
-    ]);
+    ] as unknown as Array<Record<string, unknown>>);
     const owned = new Set(["sovereign-coupon:a:12"]);
     const loaded = await loadSettleableOpenSovereignCouponClaims(
       db as unknown as Db,
@@ -1019,7 +1019,9 @@ describe("bounded open-claim load", () => {
   it("leaves an unaffordable claim open identically under the full and bounded load", async () => {
     const run = async (bounded: boolean) => {
       const db = world(1_000);
-      db.seed("sovereignCouponClaims", [claimRecord("sovereign-coupon:a:11", 11, 1_000_000)]);
+      db.seed("sovereignCouponClaims", [
+        claimRecord("sovereign-coupon:a:11", 11, 1_000_000),
+      ] as unknown as Array<Record<string, unknown>>);
       await settleFundedSovereignCoupons(db as unknown as Db, savedBudget(db), {
         turn: 12,
         bonds: [bond()],
