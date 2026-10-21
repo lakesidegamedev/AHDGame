@@ -1300,3 +1300,55 @@ describe("manufacturing vehicle ledger", () => {
     expect([...modeledLedger.global.entries()]).toEqual([...oldLedger.global.entries()]);
   });
 });
+
+describe("plants extraction ledger counts real mined tons", () => {
+  // `extractionRealizedFraction` is producedUnits / unscaled nameplate, and
+  // producedUnits already carries the production-policy curve. Reapplying the
+  // output scale (iron 1.8) or the policy bonus on top double-counts it.
+  const run = (
+    sector: Parameters<typeof computeRawSupplyDemand>[0][number],
+    scaleEnabled: boolean,
+    plantsEnabled: boolean
+  ): number =>
+    computeRawSupplyDemand(
+      [sector],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      scaleEnabled,
+      undefined,
+      false,
+      plantsEnabled
+    )
+      .byState.get(sector.stateId)
+      ?.get("iron")?.supply ?? 0;
+  const field = { sectorType: "extraction", revenue: 1_000_000, stateId: "MN" };
+  // Raw nameplate: no boost, no policy, no realization.
+  const nameplate = run(field, false, false);
+
+  it("books nameplate x realized fraction, without the output scale or policy bonus", () => {
+    expect(nameplate).toBeGreaterThan(0);
+    const supply = run(
+      { ...field, productionPolicyLevel: 25, extractionRealizedFraction: 0.5 },
+      true,
+      true
+    );
+    expect(supply).toBeCloseTo(nameplate * 0.5, 6);
+  });
+
+  it("keeps the scale and policy on a plants extraction row with no realized fraction", () => {
+    const supply = run({ ...field, productionPolicyLevel: 25 }, true, true);
+    expect(supply).toBeCloseTo(nameplate * 1.8 * 1.15, 6);
+  });
+
+  it("leaves non-plants worlds unchanged", () => {
+    const supply = run(
+      { ...field, productionPolicyLevel: 25, extractionRealizedFraction: 0.5 },
+      true,
+      false
+    );
+    expect(supply).toBeCloseTo(nameplate * 1.8 * 1.15, 6);
+  });
+});

@@ -225,6 +225,8 @@ export interface CorporationLookups {
   managementOverheadPpByCorpId?: Map<string, number>;
   /** gameConfig.fundedOverheadStage; absent = off. */
   fundedOverheadStage?: number;
+  /** gameConfig.fundedHeadcountStage; absent = off. */
+  fundedHeadcountStage?: number;
   /**
    * gameConfig.honestBalanceSheetsStage and, from stage 1, each corporation's
    * outstanding bank construction-loan principal in anchor units. Absent = off.

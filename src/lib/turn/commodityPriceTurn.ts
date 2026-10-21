@@ -623,7 +623,8 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
       turn,
       LEDGER_BASE_PRICES,
       extractionOutputScaleEnabled,
-      realizedFractionBySectorId
+      realizedFractionBySectorId,
+      plantsLedgerEnabled
     );
 
     // P3b (plants only): deposits are FINITE. Ration against the

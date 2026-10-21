@@ -1,4 +1,5 @@
 import type { Db } from "mongodb";
+import { applyLossCarryforward } from "@/lib/corporations/rules/lossCarryforward";
 import type { Corporation, FederalBudget } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { TurnReferenceData } from "@/lib/corporations/turnReferenceData";
@@ -76,6 +77,8 @@ export interface IncomeStatementResult {
   displayFederalTax: number;
   /** Owner tax on pass-through profit collected at source (local, per day). */
   passThroughOwnerTaxLocal: number;
+  /** Banked tax losses that will offset future taxable profit (local). */
+  taxLossCarryforwardLocal: number;
   /** Player-facing tax label for this corporation's legal form. */
   legalStructureTax: string;
   /** Pass-through reform progress 0 to 1. */
@@ -397,6 +400,26 @@ export async function computeIncomeStatement(
     federalTaxByCountry[corporation.countryId] =
       (federalTaxByCountry[corporation.countryId] ?? 0) + Math.round(ownerTax.national);
   }
+  // Tax loss carryforward: the banked losses offset up to 80% of taxable
+  // profit, as the turn applies it (rules/lossCarryforward).
+  const lossBankLocal = anchorToCorpCapital(
+    corporation.taxLossCarryforward?.anchor ?? 0,
+    corpCurrency,
+    corpFxRate
+  );
+  const lossCarry = applyLossCarryforward(
+    consolidatedTaxableNet + Math.max(0, dailyCouponIncomeLocal),
+    lossBankLocal
+  );
+  if (lossCarry.taxScale < 1) {
+    displayFederalTax = Math.round(displayFederalTax * lossCarry.taxScale);
+    displayStateTax = Math.round(displayStateTax * lossCarry.taxScale);
+    passThroughOwnerTaxLocal = Math.round(passThroughOwnerTaxLocal * lossCarry.taxScale);
+    for (const cc of Object.keys(federalTaxByCountry)) {
+      federalTaxByCountry[cc] = Math.round(federalTaxByCountry[cc] * lossCarry.taxScale);
+    }
+  }
+  const taxLossCarryforwardLocal = Math.round(lossBankLocal);
   const corporateTax = displayFederalTax + displayStateTax;
   const imfFacilityPaymentDailyLocal = anchorToCorpCapital(
     imfFacilityPaymentDaily,
@@ -554,6 +577,7 @@ export async function computeIncomeStatement(
     operatingIncome,
     displayFederalTax,
     passThroughOwnerTaxLocal,
+    taxLossCarryforwardLocal,
     legalStructureTax,
     passThroughPhase,
     displayStateTax,
