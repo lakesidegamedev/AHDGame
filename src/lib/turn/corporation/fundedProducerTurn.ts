@@ -464,6 +464,7 @@ export async function runFundedProducerTurn(
       // turn; buying them here as well would spend each budget twice.
       externalOrders: [...demand.publicBuyerOrders, ...demand.investmentBuyerOrders],
       eligibleOffersByOrder: demand.eligibleOffersByOrder,
+      spilloverShare: input.env.spilloverShare,
     },
     close: closeAtSettlement,
   });
@@ -598,6 +599,7 @@ export async function runFundedProducerTurn(
           coverage: (close?.meta?.coverageByCountry as Record<string, number> | undefined) ?? {},
         },
         closeTransfers: close?.transfers.length ?? 0,
+        ...(settled.result.spillover ? { spillover: settled.result.spillover } : {}),
       },
     }
   );

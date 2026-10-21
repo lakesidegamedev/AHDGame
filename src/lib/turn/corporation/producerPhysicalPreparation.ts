@@ -88,6 +88,8 @@ export type ProducerPhysicalEnv = Pick<
   transitionFirstFundedTurn?: number;
   /** gameConfig.producerDemandPlanStage: >= 1 plans output from expected sales. 0 or absent = off. */
   demandPlanStage?: number;
+  /** gameConfig.producerSpilloverStage share: substitution share for same-turn spillover (0 or absent = off). */
+  spilloverShare?: number;
   /** gameConfig.producerIdleRetireStage: >= 1 retires capacity that persistently sells nothing. 0 or absent = off. */
   idleRetireStage?: number;
   /** gameConfig.decommissionGrantShare: share of retired book paid from unspent public funding. */
