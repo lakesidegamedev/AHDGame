@@ -52,6 +52,17 @@ describe("household transfer funding", () => {
     { accountId: "w-c", countryId: "GB", stateId: "C" },
   ];
 
+  it("pays the sum of social security, welfare and pensions, not just the first line", () => {
+    const out = householdTransferFunding(
+      [{ countryId: "GB", byCategory: { socialSecurity: 600, welfare: 360, pensions: 240 } }],
+      wallets,
+      new Map(),
+      new Map([["GB", 1]]),
+      12
+    );
+    expect(out).toEqual([{ walletId: "w-c", countryId: "GB", amount: 100 }]);
+  });
+
   it("shares the social security line across a country's wallets by state weight", () => {
     const out = householdTransferFunding(
       [{ countryId: "US", byCategory: { socialSecurity: 1200, defense: 999 } }],

@@ -275,8 +275,8 @@ export async function buildProducerTurnDemand(
     ...f,
     lines: f.lines.map((l) => ({ ...l, book: shadowBook(l.book, l.commodity, f.countryId) })),
   }));
-  // Transfer lines of the same budgets (pensions, welfare, unemployment, child
-  // benefits) are household income; the treasury deducts them already.
+  // Transfer lines of the same budgets (social security, welfare, pensions)
+  // are household income; the treasury deducts them already.
   const householdTransfersAll = householdTransferFunding(
     lookups.federalBudgets.map((b) => {
       const code = resolveCountryCurrencyCode(b);

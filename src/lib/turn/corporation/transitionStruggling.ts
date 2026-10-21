@@ -50,6 +50,11 @@ export async function markStrugglingTransitionSectors(
   const reasons = new Map<CorporateSector, CutoverStruggling["reason"]>();
   // Last turn each owner was told: the newest mark set with a notice.
   const lastToldByOwner = new Map<string, number>();
+  // Marks set quietly inside the gap, so the next notice can count and stamp them.
+  const quietByOwner = new Map<
+    string,
+    { userId: ObjectId; corp: Corporation; sectors: CorporateSector[] }
+  >();
 
   for (const corp of lookups.corporations) {
     if (isStateOwned(corp)) continue;
@@ -61,6 +66,12 @@ export async function markStrugglingTransitionSectors(
         if (owner && told != null) {
           const key = owner.toString();
           lastToldByOwner.set(key, Math.max(lastToldByOwner.get(key) ?? -Infinity, told));
+        }
+        if (owner && mark?.notified === false) {
+          const key = owner.toString();
+          const entry = quietByOwner.get(key) ?? { userId: owner, corp, sectors: [] };
+          entry.sectors.push(sector);
+          quietByOwner.set(key, entry);
         }
         continue;
       }
@@ -96,21 +107,36 @@ export async function markStrugglingTransitionSectors(
 
   const turnsLeft = firstFundedTurn + TRANSITION_WINDOW_TURNS - turn;
   const notices: NotificationInput[] = [];
+  // Owners with quiet marks but nothing new this turn still get their catch-up notice.
+  for (const [key, entry] of quietByOwner) {
+    if (!newlyByOwner.has(key)) newlyByOwner.set(key, { ...entry, sectors: [] });
+  }
   for (const [key, { userId, corp, sectors }] of newlyByOwner) {
     const lastTold = lastToldByOwner.get(key);
     const notify = lastTold == null || turn - lastTold >= TRANSITION_RENOTICE_TURNS;
     for (const sector of sectors) stamp(sector, notify);
     if (!notify) continue;
+    const quiet = quietByOwner.get(key)?.sectors ?? [];
+    for (const sector of quiet) {
+      // Restamped to this turn: a notified mark's sinceTurn is when its owner was told.
+      const mark = { ...sector.cutoverStruggling!, notified: true, sinceTurn: turn };
+      ops.push({
+        updateOne: { filter: { _id: sector._id }, update: { $set: { cutoverStruggling: mark } } },
+      });
+      sector.cutoverStruggling = mark;
+    }
+    const count = sectors.length + quiet.length;
+    if (count === 0) continue;
     notices.push({
       userId,
       type: "market_transition_review",
       title: "Some of your plants are losing money in the new market",
-      message: `${sectors.length}${lastTold == null ? "" : " more"} of your sectors lost money or sold nothing last turn. For the next ${turnsLeft} turns you can mothball them with no upkeep or convert them to another industry for free. Open ${corp.name} to review them; nothing changes unless you choose.`,
+      message: `${count}${lastTold == null ? "" : " more"} of your sectors lost money or sold nothing last turn. For the next ${turnsLeft} turns you can mothball them with no upkeep or convert them to another industry for free. Open ${corp.name} to review them; nothing changes unless you choose.`,
       metadata: { corporationId: corp._id.toHexString() },
     });
   }
 
   if (ops.length > 0) await db.collection<CorporateSector>("corporateSectors").bulkWrite(ops);
   if (notices.length > 0) await createNotifications(notices);
-  return { marked: ops.length, owners: notices.length };
+  return { marked: reasons.size, owners: notices.length };
 }

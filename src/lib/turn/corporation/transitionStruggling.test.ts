@@ -221,6 +221,31 @@ describe("markStrugglingTransitionSectors", () => {
       $set: { cutoverStruggling: { sinceTurn: 107, reason: "losing", notified: true } },
     });
     const notices = createNotifications.mock.calls[0][0] as Array<Record<string, unknown>>;
+    expect(notices[0].message).toContain("2 more of your sectors");
+  });
+
+  it("sends a catch-up notice for quiet marks once the gap has passed, with no new marks", async () => {
+    const corp = corporation();
+    const told = sector(corp._id, {
+      cutoverStruggling: { sinceTurn: 100, reason: "losing", notified: true },
+    });
+    const quiet = sector(corp._id, {
+      cutoverStruggling: { sinceTurn: 103, reason: "zeroSales", notified: false },
+    });
+
+    const result = await markStrugglingTransitionSectors(
+      db as unknown as Db,
+      lookups([corp], [told, quiet]),
+      new Map(),
+      106,
+      FIRST_FUNDED_TURN
+    );
+
+    expect(result).toEqual({ marked: 0, owners: 1 });
+    expect(bulkOps(db.collectionMocks.corporateSectors.bulkWrite)[0][1]).toEqual({
+      $set: { cutoverStruggling: { sinceTurn: 106, reason: "zeroSales", notified: true } },
+    });
+    const notices = createNotifications.mock.calls[0][0] as Array<Record<string, unknown>>;
     expect(notices[0].message).toContain("1 more of your sectors");
   });
 

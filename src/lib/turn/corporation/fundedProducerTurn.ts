@@ -45,7 +45,11 @@ import {
   type CloseTransfer,
 } from "@/lib/market/producerMarket/liveFundingRules";
 import type { FundedReceipt } from "@/lib/market/producerMarket/fundedSectorRules";
-import { inTransitionWindow, transitionSupport } from "@/lib/market/producerMarket/transitionRules";
+import {
+  inTransitionWindow,
+  TRANSITION_WINDOW_TURNS,
+  transitionSupport,
+} from "@/lib/market/producerMarket/transitionRules";
 import {
   DECOMMISSION_GRANT_DEFAULT_SHARE,
   decommissionGrant,
@@ -426,7 +430,14 @@ export async function runFundedProducerTurn(
       const claims = lookups.corporations.flatMap((corp) =>
         (lookups.sectorsByCorp.get(corp._id.toString()) ?? []).flatMap((sector) => {
           const retiredBook =
-            (sector.capacityBookAnchor ?? 0) * idleRetireSectorShare(sector, turn);
+            (sector.capacityBookAnchor ?? 0) *
+            idleRetireSectorShare(
+              sector,
+              turn,
+              input.firstFundedTurn != null
+                ? input.firstFundedTurn + TRANSITION_WINDOW_TURNS
+                : undefined
+            );
           if (!(retiredBook > 0)) return [];
           retiredBookBySector[sector._id.toHexString()] = retiredBook;
           return [
