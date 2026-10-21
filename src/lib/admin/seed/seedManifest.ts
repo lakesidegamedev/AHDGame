@@ -200,6 +200,12 @@ const REFERENCE: CollectionEntry[] = [
       "Settled funded supply and demand per turn (requested and offered units by commodity and state), read by the price phase on funded turns.",
   },
   {
+    name: "producerPublicCarry",
+    category: "runtime",
+    notes:
+      "Kept public funding per country and budget line, one document per world and turn, read at the next turn by _id and upserted at close. Wiped on reset.",
+  },
+  {
     name: "producerOpenings",
     category: "runtime",
     notes:

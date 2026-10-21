@@ -1,3 +1,4 @@
+import { PUBLIC_CARRY_DEFAULT_SHARE } from "@/lib/market/producerMarket/publicCarryRules";
 import { SUBSTITUTION_SHARE as SPILLOVER_DEFAULT_SHARE } from "@/lib/market/producerMarket/spilloverRules";
 
 /** The staged funded-market switches in gameConfig, as the physical-preparation env reads them. */
@@ -10,6 +11,8 @@ export function producerStageEnv(
         decommissionGrantShare?: number;
         producerSpilloverStage?: number;
         producerSpilloverShare?: number;
+        producerPublicCarryStage?: number;
+        producerPublicCarryShare?: number;
       }
     | null
     | undefined
@@ -22,6 +25,10 @@ export function producerStageEnv(
     spilloverShare:
       (config?.producerSpilloverStage ?? 0) >= 1
         ? (config?.producerSpilloverShare ?? SPILLOVER_DEFAULT_SHARE)
+        : 0,
+    publicCarryShare:
+      (config?.producerPublicCarryStage ?? 0) >= 1
+        ? (config?.producerPublicCarryShare ?? PUBLIC_CARRY_DEFAULT_SHARE)
         : 0,
   };
 }
