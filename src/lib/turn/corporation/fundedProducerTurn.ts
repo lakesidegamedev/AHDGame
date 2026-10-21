@@ -14,6 +14,7 @@
  * Returns each sector's settled receipt so the legacy pass can take revenue and
  * margin from it, and the producer profit per corporation the settlement paid.
  */
+import { markStrugglingTransitionSectors } from "./transitionStruggling";
 import { createHash } from "node:crypto";
 import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
 import type { LedgerEntry } from "@/lib/ledger/types";
@@ -540,6 +541,16 @@ export async function runFundedProducerTurn(
         )
       )
     )
+  );
+
+  // Transition relief for sectors that struggle after the switch (owner
+  // decision 2026-10-21): mark them and tell their owners once.
+  await markStrugglingTransitionSectors(
+    db,
+    lookups,
+    receiptsBySectorId,
+    turn,
+    input.firstFundedTurn
   );
 
   return { receiptsBySectorId, settledProfitByCorp };

@@ -24,6 +24,7 @@ import {
 import { readCorpEconomicAnchor, writeCorpEconomicLocal } from "@/lib/currency/corpEconomyFields";
 import { isAutopilotRun } from "@/lib/corporations/autopilot";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
+import { fundedSizeCostPp } from "@/lib/corporations/rules/fundedSizeCost";
 import { sociMultiplier } from "@/lib/nationalization/concentration";
 import { nationalizationProductivityFactor } from "@/lib/nationalization/transitionShock";
 import {
@@ -510,6 +511,7 @@ export function processSector(
     effectiveMargin,
     sprawlMod,
     dominanceMarginPenalty,
+    managementOverheadMod,
   } = accumulateMarginModifiers({
     corp,
     sector,
@@ -1577,6 +1579,13 @@ export function processSector(
     stateMetricsLegacyTotal: stateMetricMargin.legacyTotal,
     hourlyGrowthCost,
     regulatoryBurden: embargoLegacyMothball ? 0 : regulatoryBurden,
+    fundedSizeCostPp: fundedSizeCostPp({
+      stateOwned: isStateOwned(corp),
+      overheadStage: lookups.fundedOverheadStage ?? 0,
+      overheadMod: managementOverheadMod,
+      sprawlMod,
+      dominancePenalty: dominanceMarginPenalty,
+    }),
     // O1c: paid growth cost this turn (0 only under legacy mothball — froze, paid
     // nothing; the trade-exposure model keeps investing on the domestic remainder).
     growthInvestmentAnchor: embargoLegacyMothball ? 0 : hourlyGrowthCost,

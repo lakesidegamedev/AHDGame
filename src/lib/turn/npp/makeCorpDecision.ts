@@ -115,6 +115,7 @@ import {
   ESSENTIAL_SHORTAGE_SCORE,
   hasEnterableHeadroom,
   sectorPeakShortageScore,
+  sectorInputPressure,
   sectorShortageScore,
   type CommodityPriceRatioFn,
   type PlacementSignals,
@@ -653,6 +654,7 @@ export function makeNppCorpDecision(
       turn: ctx.turn,
       firstFundedTurn: ctx.transitionFirstFundedTurn,
       shortageOf: (lane, countryId) => sectorShortageScore(lane, countryId, priceRatioOf),
+      inputPressureOf: (lane, countryId) => sectorInputPressure(lane, countryId, priceRatioOf),
       allowedLanes: operator.sectorTypes,
       excludedSectorIds: newlyMothballedIds,
     });

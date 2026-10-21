@@ -32,6 +32,10 @@ import type { Crisis } from "@/lib/db/types/crisis";
 import { buildDisasterEffectsByState } from "@/lib/crises/disasterMarginPenalty";
 import { excludePendingFederationFirms } from "@/lib/world/succession/rules/pendingFirmActivity";
 import type { CommodityPrice } from "@/lib/db/types";
+import {
+  HONEST_LOANS_STAGE,
+  loadConstructionLoanDebtAnchorByCorpId,
+} from "@/lib/corporations/honestBalanceSheets";
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { soeSizeCostByCorpId as soeSizeCostByCorpIdRule } from "@/lib/corporations/rules/soeSizeCost";
 import { buildGroupDominanceShares } from "@/lib/corporations/groups/groupDominanceShares";
@@ -1086,6 +1090,8 @@ export async function buildCorporationLookups(
       groupSizeCostsStage?: number;
       soeSizeCostScale?: number;
       dominanceRunningCostScale?: number;
+      honestBalanceSheetsStage?: number;
+      fundedOverheadStage?: number;
     }>("gameConfig")
     .findOne(
       { _id: "default" },
@@ -1096,6 +1102,8 @@ export async function buildCorporationLookups(
           groupSizeCostsStage: 1,
           soeSizeCostScale: 1,
           dominanceRunningCostScale: 1,
+          honestBalanceSheetsStage: 1,
+          fundedOverheadStage: 1,
         },
       }
     );
@@ -1104,6 +1112,14 @@ export async function buildCorporationLookups(
     typeof overheadCfg?.strengthUpkeepStage === "number" ? overheadCfg.strengthUpkeepStage : 0;
   const groupSizeCostsStage =
     typeof overheadCfg?.groupSizeCostsStage === "number" ? overheadCfg.groupSizeCostsStage : 0;
+  const honestBalanceSheetsStage =
+    typeof overheadCfg?.honestBalanceSheetsStage === "number"
+      ? overheadCfg.honestBalanceSheetsStage
+      : 0;
+  const constructionLoanDebtByCorpId =
+    honestBalanceSheetsStage >= HONEST_LOANS_STAGE
+      ? await loadConstructionLoanDebtAnchorByCorpId(db, exchangeRatesByCurrency)
+      : new Map<string, number>();
   // Control-group roots for size costs (contestability plan): every corp
   // resolved to its ultimate controlling owner. Only built when a group size
   // cost is on.
@@ -1766,6 +1782,10 @@ export async function buildCorporationLookups(
     latentDemandFactorByCommodity,
     marginLevelTrimPp: SECTOR_MARGIN_LEVEL_TRIM_PP,
     managementOverheadPpByCorpId,
+    honestBalanceSheetsStage,
+    constructionLoanDebtByCorpId,
+    fundedOverheadStage:
+      typeof overheadCfg?.fundedOverheadStage === "number" ? overheadCfg.fundedOverheadStage : 0,
     dumpingGuardRootByCorpId: groupSizeCostsStage >= 3 ? controlRootByCorpId : null,
     soeSizeCostByCorpId,
     dominanceRunningCost,
