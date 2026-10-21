@@ -39,6 +39,8 @@ export interface SectorTurnEnv {
 
 /** Per-sector contributions accumulated by processSectors. */
 export interface SectorTurnResult {
+  /** Size costs the margin stack carried, in points of revenue, for the funded path to charge. */
+  fundedSizeCostPp?: number;
   /** Exact current-turn input consumption, daily era units, for internal discount settlement. */
   internalSupplyInputUnits?: ReadonlyMap<
     import("@/lib/constants/commodities").CommodityType,

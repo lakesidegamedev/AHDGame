@@ -178,6 +178,13 @@ export interface GameConfig {
    * net income needs a shareholder vote. 0 or absent = off.
    */
   ceoSalaryVoteNetIncomeShare?: number;
+  /**
+   * Funded producer path: 1 charges management overhead as points of revenue on
+   * funded sectors, since the margin stack that carries it is bypassed there.
+   * State-owned size cost and running dominance cost follow their own scale
+   * knobs. 0 or absent = off.
+   */
+  fundedOverheadStage?: number;
   /** Group size costs rollout stage (1 = management overhead on the control group, 2 = commodity build toll, 3 = dumping guard, 4 = monopoly trigger, 5 = merger concentration on the control group). 0 or absent = off. */
   groupSizeCostsStage?: number;
   /** Public media editorial stance and audience response rules. Missing means off. */

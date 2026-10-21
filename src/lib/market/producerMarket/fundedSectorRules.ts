@@ -50,12 +50,15 @@ export interface LegacySectorResultLike {
   costs: number;
   hourlyGrowthCost: number;
   regulatoryBurden?: number;
+  /** Points of revenue for size costs the margin stack carried (overhead, SOE sprawl, running dominance). */
+  fundedSizeCostPp?: number;
 }
 
 /**
  * Revenue and margin from the receipt. Costs are the receipt's operating costs
- * plus the legacy growth spend and the regulatory compliance cost set by
- * government policy, neither of which the funded market charges itself.
+ * plus the legacy growth spend, the regulatory compliance cost set by
+ * government policy, and the size costs (overhead, state sprawl, running
+ * dominance) as points of revenue; the funded market charges none of these itself.
  */
 export function fundedSectorResult<T extends LegacySectorResultLike>(
   legacy: T,
@@ -66,7 +69,8 @@ export function fundedSectorResult<T extends LegacySectorResultLike>(
   const costs =
     producerCosts +
     Math.max(0, finite(legacy.hourlyGrowthCost)) +
-    Math.max(0, finite(legacy.regulatoryBurden ?? 0));
+    Math.max(0, finite(legacy.regulatoryBurden ?? 0)) +
+    (revenue * Math.max(0, finite(legacy.fundedSizeCostPp ?? 0))) / 100;
   return {
     ...legacy,
     hourlyRevenue: revenue,
