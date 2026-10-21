@@ -109,7 +109,7 @@ import {
   chooseTransitionConversion,
   sectorsAfterConversion,
 } from "@/lib/turn/npp/rules/transitionConversion";
-import { takeConversionBudget } from "@/lib/market/producerMarket/transitionRules";
+import { hasConversionBudget } from "@/lib/market/producerMarket/transitionRules";
 import { industryConversionFields } from "@/lib/corporations/retooling/conversion";
 import {
   computeMacroProductionPolicy,
@@ -649,6 +649,7 @@ export function makeNppCorpDecision(
   // sector toward the country's real shortage (funded market only). The
   // owner's retool permission gates it, so autopilot and parent-owned
   // corporations never convert on their own.
+  let conversionCharge: { countryId: string; cost: number } | undefined;
   let conversionApplied: { sectorId: string; set: Partial<(typeof sectors)[number]> } | null = null;
   if (ctx.transitionFirstFundedTurn != null && operatorMay(operator, "retool")) {
     const choice = chooseTransitionConversion({
@@ -666,9 +667,8 @@ export function makeNppCorpDecision(
     if (
       target &&
       fields?.ok &&
-      takeConversionBudget(
-        ctx.conversionBudgetOf?.(String(target.countryId ?? corp.countryId ?? "")),
-        target.capacityBookAnchor ?? 0
+      hasConversionBudget(
+        ctx.conversionBudgetOf?.(String(target.countryId ?? corp.countryId ?? ""))
       )
     ) {
       sectorUpdates.push({
@@ -684,6 +684,10 @@ export function makeNppCorpDecision(
       });
       newlyMothballedIds.add(target._id.toString());
       conversionApplied = { sectorId: target._id.toString(), set: fields.set };
+      conversionCharge = {
+        countryId: String(target.countryId ?? corp.countryId ?? ""),
+        cost: target.capacityBookAnchor ?? 0,
+      };
     }
   }
 
@@ -1893,6 +1897,7 @@ export function makeNppCorpDecision(
       constructionFinanceIntents.length > 0 ? constructionFinanceIntents : undefined,
     shortageCreditRequest,
     entryDiagnostic,
+    conversionCharge,
     strategy: strategyDecision?.state,
     capacityObservations,
     ...(autopilot
