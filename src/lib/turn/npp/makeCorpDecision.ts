@@ -107,6 +107,7 @@ import { buildNppGlutMothballUpdates } from "@/lib/turn/npp/glutMothballing";
 import {
   AI_ZERO_SALES_MOTHBALL_TURNS,
   chooseTransitionConversion,
+  sectorsAfterConversion,
 } from "@/lib/turn/npp/rules/transitionConversion";
 import { industryConversionFields } from "@/lib/corporations/retooling/conversion";
 import {
@@ -647,6 +648,7 @@ export function makeNppCorpDecision(
   // sector toward the country's real shortage (funded market only). The
   // owner's retool permission gates it, so autopilot and parent-owned
   // corporations never convert on their own.
+  let conversionApplied: { sectorId: string; set: Partial<(typeof sectors)[number]> } | null = null;
   if (ctx.transitionFirstFundedTurn != null && operatorMay(operator, "retool")) {
     const choice = chooseTransitionConversion({
       sectors,
@@ -673,6 +675,7 @@ export function makeNppCorpDecision(
         },
       });
       newlyMothballedIds.add(target._id.toString());
+      conversionApplied = { sectorId: target._id.toString(), set: fields.set };
     }
   }
 
@@ -858,7 +861,7 @@ export function makeNppCorpDecision(
   const surplusCash = liquidCapital - effectiveCashFloor;
   const entry = evaluateNppEntry({
     corp,
-    sectors,
+    sectors: sectorsAfterConversion(sectors, conversionApplied),
     unownedByCountry: entryPools,
     stateControlled,
     priceRatioOf,

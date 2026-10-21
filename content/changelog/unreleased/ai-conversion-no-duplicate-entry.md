@@ -1,0 +1,10 @@
+---
+date: 2026-10-21
+title: Market switch preparation
+summary: Groundwork for the upcoming market change. No gameplay change yet.
+tags: [economy, corporations]
+badges: [patch]
+areas: [fullstack]
+---
+
+- Under the upcoming market, a computer-run company that converts a plant into a new industry no longer tries to found a second plant in the same industry and state in the same turn.
