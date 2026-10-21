@@ -22,8 +22,14 @@ describe("idle capacity retirement on the funded market", () => {
     expect(idleRetireFraction({ ...base, zeroSalesTurns: undefined })).toBe(0);
   });
 
-  it("never retires a mothballed plant", () => {
-    expect(idleRetireFraction({ ...base, mothballed: true })).toBe(0);
+  it("retires mothballed capacity once it has sat idle past the grace, like any dead plant", () => {
+    expect(idleRetireFraction({ ...base, mothballed: true, activeUnits: 0 })).toBeCloseTo(
+      IDLE_RETIRE_RATE * (1 - IDLE_RETIRE_PROBE_SHARE),
+      12
+    );
+    expect(
+      idleRetireFraction({ ...base, mothballed: true, zeroSalesTurns: IDLE_RETIRE_GRACE_TURNS })
+    ).toBe(0);
   });
 
   it("retires a share of everything above the probe run once persistently idle", () => {
@@ -93,5 +99,21 @@ describe("decommissioning grant", () => {
 
   it("pays nothing from an empty or missing pool", () => {
     expect(decommissionGrant({ claims, poolByCountry: new Map([["US", 0]]) }).payments).toEqual([]);
+  });
+});
+
+describe("idleRetireSectorShare mothball grace after the window", () => {
+  const settled = { turn: 159, soldUnits: 0, activeUnits: 0 };
+  it("does not retire a plant mothballed during the window until the grace runs after it", () => {
+    const sector = { mothballed: true, producerZeroSalesTurns: 30, producerSettlement: settled };
+    expect(idleRetireSectorShare(sector, 160, 156)).toBe(0);
+  });
+  it("retires parked capacity once the grace has run after the window", () => {
+    const sector = {
+      mothballed: true,
+      producerZeroSalesTurns: 30,
+      producerSettlement: { ...settled, turn: 169 },
+    };
+    expect(idleRetireSectorShare(sector, 170, 156)).toBeGreaterThan(0);
   });
 });

@@ -63,3 +63,64 @@ export function publicBuyerFunding(
       };
     });
 }
+
+/**
+ * Budget lines that are pure transfers (social security, welfare and pensions,
+ * each its own spending.byCategory key) are household income.
+ * The treasury already deducts them each turn and, with no household wallets,
+ * the money landed nowhere. Here the same amount is the households' funding:
+ * the country's slice is shared across its state household wallets by weight.
+ *
+ * The plant economy is a slice of each country's economy, so the budget line
+ * is scaled by the plant economy's share of that country's GDP, which keeps
+ * transfers in the same proportion to plant-economy wages as the budget has to
+ * the whole economy.
+ *
+ * Pure: budgets, shares and weights in, per-wallet amounts out (anchor per turn).
+ */
+export const HOUSEHOLD_TRANSFER_CATEGORIES = ["socialSecurity", "welfare", "pensions"] as const;
+
+/** Annual transfer spending: the SUM of the transfer lines (not the first alias found). */
+export function householdTransferAnnual(
+  byCategory: Record<string, number> | undefined | null
+): number {
+  let total = 0;
+  for (const key of HOUSEHOLD_TRANSFER_CATEGORIES) total += govtSpendForCategory(byCategory, [key]);
+  return total;
+}
+
+export function householdTransferFunding(
+  budgets: ReadonlyArray<{
+    countryId: string;
+    byCategory: Parameters<typeof govtSpendForCategory>[0];
+  }>,
+  wallets: ReadonlyArray<{ accountId: string; countryId: string; stateId: string }>,
+  stateWeightsByCountry: ReadonlyMap<string, ReadonlyMap<string, number>>,
+  plantShareByCountry: ReadonlyMap<string, number>,
+  turnsPerYear: number
+): { walletId: string; countryId: string; amount: number }[] {
+  if (!Number.isFinite(turnsPerYear) || turnsPerYear <= 0)
+    throw new Error("Invalid turns per year");
+  const out: { walletId: string; countryId: string; amount: number }[] = [];
+  for (const b of [...budgets].sort((a, c) => (a.countryId < c.countryId ? -1 : 1))) {
+    const share = plantShareByCountry.get(b.countryId) ?? 0;
+    const perTurn =
+      (householdTransferAnnual(b.byCategory) / turnsPerYear) *
+      (Number.isFinite(share) ? Math.max(0, Math.min(1, share)) : 0);
+    if (!(perTurn > 0)) continue;
+    const own = wallets.filter((w) => w.countryId === b.countryId);
+    if (own.length === 0) continue;
+    const weights = stateWeightsByCountry.get(b.countryId);
+    const weightOf = (w: { stateId: string }) => {
+      const v = weights?.get(w.stateId);
+      return Number.isFinite(v) && (v as number) > 0 ? (v as number) : 0;
+    };
+    const total = own.reduce((sum, w) => sum + weightOf(w), 0);
+    for (const w of [...own].sort((a, c) => (a.accountId < c.accountId ? -1 : 1))) {
+      const walletShare = total > 0 ? weightOf(w) / total : 1 / own.length;
+      const amount = perTurn * walletShare;
+      if (amount > 0) out.push({ walletId: w.accountId, countryId: b.countryId, amount });
+    }
+  }
+  return out;
+}

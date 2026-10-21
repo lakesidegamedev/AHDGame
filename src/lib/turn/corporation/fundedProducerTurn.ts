@@ -30,6 +30,7 @@ import {
 } from "@/lib/market/producerMarket/profitDistributionRules";
 import {
   householdOpeningMoves,
+  householdTransferMoves,
   PRODUCER_ACCOUNTS,
   investmentFundingMoves,
   producerMoveLedgerLegs,
@@ -41,7 +42,11 @@ import {
   type CloseTransfer,
 } from "@/lib/market/producerMarket/liveFundingRules";
 import type { FundedReceipt } from "@/lib/market/producerMarket/fundedSectorRules";
-import { inTransitionWindow, transitionSupport } from "@/lib/market/producerMarket/transitionRules";
+import {
+  inTransitionWindow,
+  TRANSITION_WINDOW_TURNS,
+  transitionSupport,
+} from "@/lib/market/producerMarket/transitionRules";
 import {
   DECOMMISSION_GRANT_DEFAULT_SHARE,
   decommissionGrant,
@@ -60,6 +65,13 @@ import { buildProducerTurnDemand } from "./producerTurnDemand";
 import type { SettlementClose } from "@/lib/market/producerMarket/settlement";
 import type { EconomyResult } from "@/lib/market/producerMarket/settlement";
 import { NO_PHYSICAL_CAPACITY } from "./producerSectorPlan";
+import {
+  capCarry,
+  carryTotal,
+  nextLineCarry,
+  publicOrderId,
+  type LineCarry,
+} from "@/lib/market/producerMarket/publicCarryRules";
 import { newEntrantProducerBooks } from "@/lib/market/producerMarket/openingState";
 import {
   createProducerWallets,
@@ -79,14 +91,41 @@ export interface FundedProducerTurnResult {
   headcountBySectorId: ReadonlyMap<string, { desiredWorkers: number; workers: number }>;
 }
 
-/** The idle-retirement fields of the physical-preparation env, from the governor config. */
-export function idleRetireEnv(
-  config: { producerIdleRetireStage?: number; decommissionGrantShare?: number } | null | undefined
-) {
-  return {
-    idleRetireStage: config?.producerIdleRetireStage,
-    decommissionGrantShare: config?.decommissionGrantShare,
-  };
+export { producerStageEnv } from "./producerStageEnv";
+
+const PUBLIC_CARRY = "producerPublicCarry";
+
+/**
+ * Last turn's kept public funding per country, capped at what each public
+ * wallet really holds before this turn's funding lands, so a stale or partly
+ * burned carry can never promise more than the wallet has.
+ */
+async function readPublicCarryIn(
+  db: Db,
+  worldEpoch: string,
+  turn: number,
+  countryIds: readonly string[],
+  walletOf: (countryId: string) => string,
+  rateOfCountry: (countryId: string) => number
+): Promise<Map<string, LineCarry>> {
+  const doc = await db
+    .collection<{ _id: string; byCountry?: Record<string, LineCarry> }>(PUBLIC_CARRY)
+    .findOne({ _id: `${worldEpoch}:${turn - 1}` });
+  const out = new Map<string, LineCarry>();
+  if (!doc?.byCountry) return out;
+  const wallets = await db
+    .collection<{ _id: string; cash: number }>(PRODUCER_ACCOUNTS)
+    .find({ _id: { $in: countryIds.map(walletOf) } }, { projection: { cash: 1 } })
+    .toArray();
+  const cash = new Map(wallets.map((w) => [w._id, w.cash]));
+  for (const countryId of countryIds) {
+    const carry = doc.byCountry[countryId];
+    if (!carry) continue;
+    const held = cash.get(walletOf(countryId)) ?? 0;
+    const capped = capCarry(carry, held > 0 ? held / rateOfCountry(countryId) : 0);
+    if (carryTotal(capped) > 0) out.set(countryId, capped);
+  }
+  return out;
 }
 
 export async function runFundedProducerTurn(
@@ -132,12 +171,25 @@ export async function runFundedProducerTurn(
   const investmentWallet = (countryId: string) =>
     producerWalletId(worldEpoch, investmentScope(countryId));
 
+  const carryShare = input.env.publicCarryShare ?? 0;
+  const publicCarryIn =
+    carryShare > 0
+      ? await readPublicCarryIn(
+          db,
+          worldEpoch,
+          turn,
+          [...countryCurrency.keys()],
+          publicWallet,
+          (c) => rateOf(countryCurrency.get(c))
+        )
+      : undefined;
   const demand = await buildProducerTurnDemand(db, {
     turn,
     worldEpoch,
     lookups,
     env: input.env,
     sectorOps: [],
+    publicCarryIn,
     carry: liveCarry(lookups, worldEpoch, turn),
     publicAccountId: publicWallet,
     investmentAccountId: investmentWallet,
@@ -240,6 +292,27 @@ export async function runFundedProducerTurn(
     )
   );
 
+  await apply(
+    batchProducerMoves(
+      worldEpoch,
+      turn,
+      householdTransferMoves(
+        worldEpoch,
+        turn,
+        demand.householdTransfers.map((t) => {
+          const scope = scopeById.get(t.walletId);
+          const rate = rateOf(scope?.currency);
+          return {
+            walletId: t.walletId,
+            amountLocal: t.amount * rate,
+            currencyCode: scope!.currency,
+            localPerAnchor: rate,
+          };
+        })
+      )
+    )
+  );
+
   if (input.seedHouseholds) {
     const wageBill = new Map<string, number>();
     for (const p of demand.preparedSectors)
@@ -325,6 +398,25 @@ export async function runFundedProducerTurn(
       toAccountId: t.to.id,
       amountAnchor: t.amountAnchor,
     }));
+    // Public funding kept for next turn on lines that stayed short. Set aside
+    // before transition support and grants so the pool they draw on excludes it.
+    const carryTargetByCountry: Record<string, LineCarry> = {};
+    if (carryShare > 0) {
+      // Settled outcomes name account, commodity and book, not the order id.
+      const outcomes = (market.orderOutcomes ?? []).map((o) => ({
+        id: publicOrderId(o.accountId, o.commodity, o.book),
+        requestedUnits: o.requestedUnits,
+        deliveredUnits: o.deliveredUnits,
+      }));
+      for (const f of demand.funding) {
+        const orders =
+          demand.publicCarryOrders.find((o) => o.countryId === f.countryId)?.orders ?? [];
+        const wanted = nextLineCarry(orders, outcomes, carryShare);
+        const target = capCarry(wanted, closingCash.get(publicWallet(f.countryId)) ?? 0);
+        if (carryTotal(target) > 0) carryTargetByCountry[f.countryId] = target;
+      }
+    }
+    const carriedAside = (countryId: string) => carryTotal(carryTargetByCountry[countryId]);
     const support = input.firstFundedTurn
       ? transitionSupport({
           turn,
@@ -342,7 +434,10 @@ export async function runFundedProducerTurn(
           poolByCountry: new Map(
             demand.funding.map((f) => [
               f.countryId,
-              Math.max(0, closingCash.get(publicWallet(f.countryId)) ?? 0),
+              Math.max(
+                0,
+                (closingCash.get(publicWallet(f.countryId)) ?? 0) - carriedAside(f.countryId)
+              ),
             ])
           ),
         })
@@ -352,7 +447,10 @@ export async function runFundedProducerTurn(
     const bySector: Record<string, number> = {};
     const poolAfterSupport = new Map<string, number>();
     for (const f of demand.funding) {
-      const pool = Math.max(0, closingCash.get(publicWallet(f.countryId)) ?? 0);
+      const pool = Math.max(
+        0,
+        (closingCash.get(publicWallet(f.countryId)) ?? 0) - carriedAside(f.countryId)
+      );
       let spent = 0;
       for (const p of support.payments) if (p.countryId === f.countryId) spent += p.claim;
       poolAfterSupport.set(f.countryId, Math.max(0, pool - spent));
@@ -370,7 +468,14 @@ export async function runFundedProducerTurn(
       const claims = lookups.corporations.flatMap((corp) =>
         (lookups.sectorsByCorp.get(corp._id.toString()) ?? []).flatMap((sector) => {
           const retiredBook =
-            (sector.capacityBookAnchor ?? 0) * idleRetireSectorShare(sector, turn);
+            (sector.capacityBookAnchor ?? 0) *
+            idleRetireSectorShare(
+              sector,
+              turn,
+              input.firstFundedTurn != null
+                ? input.firstFundedTurn + TRANSITION_WINDOW_TURNS
+                : undefined
+            );
           if (!(retiredBook > 0)) return [];
           retiredBookBySector[sector._id.toHexString()] = retiredBook;
           return [
@@ -422,6 +527,7 @@ export async function runFundedProducerTurn(
         retiredBookBySector,
         grantBySector,
         coverageByCountry: Object.fromEntries(support.coverageByCountry),
+        publicCarryTarget: carryTargetByCountry,
       },
     };
   };
@@ -439,6 +545,7 @@ export async function runFundedProducerTurn(
       // turn; buying them here as well would spend each budget twice.
       externalOrders: [...demand.publicBuyerOrders, ...demand.investmentBuyerOrders],
       eligibleOffersByOrder: demand.eligibleOffersByOrder,
+      spilloverShare: input.env.spilloverShare,
     },
     close: closeAtSettlement,
   });
@@ -573,6 +680,7 @@ export async function runFundedProducerTurn(
           coverage: (close?.meta?.coverageByCountry as Record<string, number> | undefined) ?? {},
         },
         closeTransfers: close?.transfers.length ?? 0,
+        ...(settled.result.spillover ? { spillover: settled.result.spillover } : {}),
       },
     }
   );
@@ -595,8 +703,39 @@ export async function runFundedProducerTurn(
         .toArray()
     ).map((w) => [w._id, w.cash])
   );
+  const carryTarget =
+    (settled.result.close?.meta?.publicCarryTarget as Record<string, LineCarry> | undefined) ?? {};
+  const keptCarry: Record<string, LineCarry> = {};
+  // What a public wallet keeps for next turn instead of burning: the carry
+  // target, capped at what it really holds (transition support and grants were
+  // paid from the rest).
+  const keptLocal = new Map<string, number>();
+  for (const f of demand.funding) {
+    const target = carryTarget[f.countryId];
+    if (!target) continue;
+    const id = publicWallet(f.countryId);
+    const rate = rateOf(countryCurrency.get(f.countryId));
+    const held = heldLocal.get(id) ?? 0;
+    const kept = capCarry(target, Number.isFinite(held) ? held / rate : 0);
+    const keptTotal = carryTotal(kept);
+    if (!(keptTotal > 0)) continue;
+    keptCarry[f.countryId] = kept;
+    keptLocal.set(id, Math.min(held, keptTotal * rate));
+  }
+  if (carryShare > 0)
+    await db.collection<{ _id: string }>(PUBLIC_CARRY).replaceOne(
+      { _id: `${worldEpoch}:${turn}` },
+      {
+        _id: `${worldEpoch}:${turn}`,
+        worldEpoch,
+        turn,
+        byCountry: keptCarry,
+        at: new Date(),
+      } as never,
+      { upsert: true }
+    );
   const returnRow = (countryId: string, id: string) => {
-    const left = heldLocal.get(id) ?? 0;
+    const left = (heldLocal.get(id) ?? 0) - (keptLocal.get(id) ?? 0);
     if (!(Number.isFinite(left) && left > 0)) return [];
     const currency = countryCurrency.get(countryId)!;
     return [

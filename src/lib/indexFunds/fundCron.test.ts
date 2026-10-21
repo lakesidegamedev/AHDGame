@@ -14,6 +14,7 @@ import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { createMockDb } from "@/lib/test-utils/mockDb";
 import { INDEX_FUND_INITIAL_NAV } from "@/lib/indexFunds/unitAccounting";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
+import { staggerPhase } from "@/lib/turn/staggerPhase";
 import { getFundById, updateFundNav } from "@/lib/indexFunds/fundQueries";
 
 // ---------------------------------------------------------------------------
@@ -158,6 +159,45 @@ describe("fundCron — shouldRebalanceIndexFundConstituents", () => {
     expect(shouldRebalanceIndexFundConstituents(TURNS_PER_DAY * 2, 10)).toBe(true);
     // Turn 0 with a populated basket is the one non-rebalancing case.
     expect(shouldRebalanceIndexFundConstituents(0, 10)).toBe(false);
+  });
+
+  describe("overdue catch-up", () => {
+    const fundId = "64b000000000000000000001";
+    const phase = staggerPhase(fundId, TURNS_PER_DAY);
+    const staggerTurn = TURNS_PER_DAY * 10 + phase;
+    const offTurn = staggerTurn + 1;
+    const turnLengthMinutes = 60;
+    const nowMs = Date.UTC(2026, 9, 21, 12);
+    const turnsAgo = (turns: number) => new Date(nowMs - turns * turnLengthMinutes * 60_000);
+    const due = (turn: number, lastRebalancedAt: Date | undefined, targets = 10) =>
+      shouldRebalanceIndexFundConstituents(turn, targets, fundId, {
+        lastRebalancedAt,
+        nowMs,
+        turnLengthMinutes,
+      });
+
+    it("still rebalances on the stagger turn", () => {
+      expect(due(staggerTurn, turnsAgo(1))).toBe(true);
+    });
+
+    it("does not rebalance off the stagger turn when the last rebalance is recent", () => {
+      expect(due(offTurn, turnsAgo(1))).toBe(false);
+      expect(due(offTurn, turnsAgo(TURNS_PER_DAY))).toBe(false);
+    });
+
+    it("catches up off the stagger turn once the last rebalance is over a day and a turn old", () => {
+      expect(due(offTurn, new Date(turnsAgo(TURNS_PER_DAY + 1).getTime() - 60_000))).toBe(true);
+      expect(due(offTurn, turnsAgo(TURNS_PER_DAY * 8))).toBe(true);
+    });
+
+    it("keeps the stagger-only cadence when the fund has never recorded a rebalance", () => {
+      expect(due(offTurn, undefined)).toBe(false);
+      expect(due(staggerTurn, undefined)).toBe(true);
+    });
+
+    it("rebalances an empty basket on any turn", () => {
+      expect(due(offTurn, turnsAgo(1), 0)).toBe(true);
+    });
   });
 });
 

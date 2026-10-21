@@ -189,16 +189,22 @@ export async function applyMarkToMarketIfNeeded(
 export function shouldRebalanceIndexFundConstituents(
   currentTurn: number,
   targetConstituentsLength: number,
-  fundId?: string
+  fundId?: string,
+  /** Catch-up for a fund that missed its stagger turn (e.g. queued redemptions blocked it). */
+  catchUp?: { lastRebalancedAt?: Date; nowMs: number; turnLengthMinutes: number }
 ): boolean {
   // Lock market-cap baskets to the financial-day cadence. Intraday recomputes
   // churn positions, trigger sell/buy loops, and repeatedly hit order-flow.
   // Each fund keeps its own fixed turn of the day, so the whole roster no
   // longer rebalances on one turn (that turn ran ~50-60 s longer).
   if (targetConstituentsLength === 0) return true;
-  return fundId === undefined
-    ? currentTurn > 0 && currentTurn % TURNS_PER_DAY === 0
-    : isStaggeredTurn(fundId, currentTurn, TURNS_PER_DAY);
+  if (fundId === undefined) return currentTurn > 0 && currentTurn % TURNS_PER_DAY === 0;
+  if (isStaggeredTurn(fundId, currentTurn, TURNS_PER_DAY)) return true;
+  // A fund skipped on its own turn would otherwise wait a full day for the
+  // same slot, which can be blocked every day. Over a day and a turn late, run now.
+  if (!catchUp?.lastRebalancedAt) return false;
+  const ageMs = catchUp.nowMs - new Date(catchUp.lastRebalancedAt).getTime(); // NaN if unreadable: no catch-up
+  return ageMs > (TURNS_PER_DAY + 1) * catchUp.turnLengthMinutes * 60_000;
 }
 
 /**
