@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import {
   OPERATING_SECTOR_TYPES,
   OPERATING_SECTOR_TYPE_LABELS,
@@ -10,9 +9,10 @@ import {
 import { apiErrorText } from "@/lib/errors/catalog";
 
 /**
- * Market transition package for an over-built business: turns left, and the
- * one free conversion to another industry at book value. Shown to the CEO
- * only while the window is open, so every element is something they can act on.
+ * Market transition package for an over-built business: turns left, the one
+ * free conversion to another industry at book value, and a one-click mothball.
+ * Shown to the CEO only while the window is open, so every element is something
+ * they can act on.
  */
 export function TransitionPanel({
   corpId,
@@ -20,20 +20,23 @@ export function TransitionPanel({
   currentLane,
   turnsLeft,
   freeConversion,
-  buildUrl,
+  onChanged,
 }: {
   corpId: string;
   sectorId: string;
   currentLane: OperatingSectorType;
   turnsLeft: number;
   freeConversion: boolean;
-  /** The build planner, where plants can be mothballed. */
-  buildUrl: string;
+  /** The build planner, kept optional for callers that only need the actions. */
+  buildUrl?: string;
+  /** Called after a successful mothball so the caller can refresh its data. */
+  onChanged?: () => void;
 }) {
   const lanes = OPERATING_SECTOR_TYPES.filter((lane) => lane !== currentLane);
   const [target, setTarget] = useState<OperatingSectorType>(lanes[0]);
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [mothballing, setMothballing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const convert = async () => {
@@ -55,6 +58,27 @@ export function TransitionPanel({
     } finally {
       setBusy(false);
       setConfirming(false);
+    }
+  };
+
+  const mothball = async () => {
+    setMothballing(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/corporations/${corpId}/sectors/${sectorId}/build`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "mothball" }),
+      });
+      if (!res.ok) {
+        setError(apiErrorText(await res.json(), "Mothball failed"));
+        return;
+      }
+      onChanged?.();
+    } catch {
+      setError("Mothball failed");
+    } finally {
+      setMothballing(false);
     }
   };
 
@@ -114,9 +138,14 @@ export function TransitionPanel({
             )}
           </>
         )}
-        <Link href={buildUrl} className="text-xs font-medium text-accent hover:underline">
-          Mothball
-        </Link>
+        <button
+          type="button"
+          className="rounded border border-warning/40 px-2.5 py-1 text-xs font-semibold text-foreground disabled:opacity-60"
+          onClick={mothball}
+          disabled={mothballing}
+        >
+          {mothballing ? "Mothballing" : "Mothball (no upkeep)"}
+        </button>
       </div>
       {error && <p className="mt-1.5 text-xs text-danger">{error}</p>}
     </div>

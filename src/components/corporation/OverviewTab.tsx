@@ -46,6 +46,7 @@ import {
 import { OverviewSimple, type SimpleFigures } from "./OverviewSimple";
 import { GrowthLeversPanel } from "./GrowthLeversPanel";
 import { AntitrustCaseCard } from "./AntitrustCaseCard";
+import { TransitionReviewCard } from "./TransitionReviewCard";
 import {
   buildAttentionItems,
   sectorMargin,
@@ -590,6 +591,7 @@ export default function OverviewTab({
       {growthPanel}
       <div className="grid gap-x-8 gap-y-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="min-w-0 space-y-6">
+          <TransitionReviewCard corpId={corpId} sectors={sectors} isCeo={isCeo} />
           <AntitrustCaseCard corpId={corpId} />
           {financials && (
             <DenseSection
