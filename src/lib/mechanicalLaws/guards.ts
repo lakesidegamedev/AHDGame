@@ -41,20 +41,24 @@ const CONTROL_PROJECTION = {
 
 /**
  * The corporation at the top of `corp`'s control chain (itself when nothing
- * controls it). Walks up one controlling holder at a time, at most 8 hops.
+ * controls it). One read of the control table, then an in-memory walk bounded
+ * by the number of companies, so a cycle cannot loop.
  */
 export async function controllingRoot(db: Db, corp: ControlFields): Promise<ControlFields> {
+  if (!getControllingCorporateParent(corp as Corporation)) return corp;
+  const all = (await db
+    .collection<Corporation>("corporations")
+    .find({}, { projection: CONTROL_PROJECTION })
+    .toArray()) as ControlFields[];
+  const byId = new Map(all.map((c) => [c._id.toString(), c]));
   let current = corp;
   const seen = new Set<string>([corp._id.toString()]);
-  for (let hop = 0; hop < 8; hop++) {
+  for (let hop = 0; hop < all.length; hop++) {
     const parent = getControllingCorporateParent(current as Corporation);
-    if (!parent || seen.has(parent.corporationId.toString())) return current;
-    const next = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: parent.corporationId }, { projection: CONTROL_PROJECTION });
-    if (!next) return current;
+    const next = parent ? byId.get(parent.corporationId.toString()) : undefined;
+    if (!next || seen.has(next._id.toString())) return current;
     seen.add(next._id.toString());
-    current = next as ControlFields;
+    current = next;
   }
   return current;
 }
