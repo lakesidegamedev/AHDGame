@@ -84,15 +84,7 @@ export interface FundedProducerTurnResult {
   headcountBySectorId: ReadonlyMap<string, { desiredWorkers: number; workers: number }>;
 }
 
-/** The idle-retirement fields of the physical-preparation env, from the governor config. */
-export function idleRetireEnv(
-  config: { producerIdleRetireStage?: number; decommissionGrantShare?: number } | null | undefined
-) {
-  return {
-    idleRetireStage: config?.producerIdleRetireStage,
-    decommissionGrantShare: config?.decommissionGrantShare,
-  };
-}
+export { producerStageEnv } from "./producerStageEnv";
 
 export async function runFundedProducerTurn(
   db: Db,

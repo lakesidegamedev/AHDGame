@@ -21,6 +21,11 @@
  */
 
 export const OUTPUT_RUN_FLOOR = 0.1;
+/**
+ * Probe run kept when gameConfig.producerLowUseCostStage >= 1: a plant that sells
+ * almost nothing runs, staffs and bills a sliver of its capacity, not a tenth.
+ */
+export const LOW_USE_RUN_FLOOR = 0.01;
 export const OUTPUT_GROW_STEP = 0.15;
 export const OUTPUT_CUT_STEP = 0.1;
 export const OUTPUT_PROBE = 0.1;
@@ -44,13 +49,16 @@ export interface PriorReceipt {
   otherOperatingArrears?: number;
 }
 
-export function nextRunShare(prior: PriorReceipt | null | undefined): number {
+export function nextRunShare(
+  prior: PriorReceipt | null | undefined,
+  floor: number = OUTPUT_RUN_FLOOR
+): number {
   if (!prior) return 1;
   const finite = (x: number) => (Number.isFinite(x) ? x : 0);
   const active = finite(prior.activeUnits);
   const produced = finite(prior.producedUnits);
   if (!(active > 0)) return 1;
-  const run = Math.max(OUTPUT_RUN_FLOOR, Math.min(1, produced / active));
+  const run = Math.max(floor, Math.min(1, produced / active));
   const offered = finite(prior.offeredUnits);
   const sold = finite(prior.soldUnits);
   const sellThrough = offered > 0 ? Math.min(1, sold / offered) : 0;
@@ -63,7 +71,7 @@ export function nextRunShare(prior: PriorReceipt | null | undefined): number {
   const contributionPerUnit =
     sold > 0 ? (finite(prior.revenue) - (runningCost * sold) / Math.max(produced, sold)) / sold : 0;
   let next: number;
-  if (offered > 0 && sellThrough < GLUT_SELL_THROUGH) next = OUTPUT_RUN_FLOOR;
+  if (offered > 0 && sellThrough < GLUT_SELL_THROUGH) next = floor;
   else if (sold > 0 && contributionPerUnit < 0) next = run * (1 - OUTPUT_CUT_STEP);
   else if (sellThrough >= SOLD_OUT) next = run * (1 + OUTPUT_GROW_STEP);
   else {
@@ -73,7 +81,7 @@ export function nextRunShare(prior: PriorReceipt | null | undefined): number {
         ? Math.max(target, run * (1 - OUTPUT_CUT_STEP))
         : Math.min(target, run * (1 + OUTPUT_GROW_STEP));
   }
-  return Math.max(OUTPUT_RUN_FLOOR, Math.min(1, next));
+  return Math.max(floor, Math.min(1, next));
 }
 
 /** Probe above last turn's sales, so a demand-planned plant keeps testing for more. */
@@ -92,13 +100,16 @@ export const DEMAND_PLAN_PROBE = 0.1;
  *
  * Pure: last receipt in, run share for this turn out.
  */
-export function demandPlanRunShare(prior: PriorReceipt | null | undefined): number {
+export function demandPlanRunShare(
+  prior: PriorReceipt | null | undefined,
+  floor: number = OUTPUT_RUN_FLOOR
+): number {
   if (!prior) return 1;
   const finite = (x: number) => (Number.isFinite(x) ? x : 0);
   const active = finite(prior.activeUnits);
   if (!(active > 0)) return 1;
   const produced = finite(prior.producedUnits);
-  const run = Math.max(OUTPUT_RUN_FLOOR, Math.min(1, produced / active));
+  const run = Math.max(floor, Math.min(1, produced / active));
   const offered = finite(prior.offeredUnits);
   const sold = finite(prior.soldUnits);
   const sellThrough = offered > 0 ? Math.min(1, sold / offered) : 0;
@@ -112,11 +123,10 @@ export function demandPlanRunShare(prior: PriorReceipt | null | undefined): numb
     finite(prior.otherOperatingArrears ?? 0);
   const contributionPerUnit =
     sold > 0 ? (finite(prior.revenue) - (runningCost * sold) / Math.max(produced, sold)) / sold : 0;
-  if (sold > 0 && contributionPerUnit < 0)
-    return Math.max(OUTPUT_RUN_FLOOR, run * (1 - OUTPUT_CUT_STEP));
+  if (sold > 0 && contributionPerUnit < 0) return Math.max(floor, run * (1 - OUTPUT_CUT_STEP));
   if (sellThrough >= SOLD_OUT) return Math.min(1, run * (1 + OUTPUT_GROW_STEP));
   const expectedSales = sold * (1 + DEMAND_PLAN_PROBE);
   const heldStock = Math.max(0, offered - sold);
   const planned = Math.max(0, expectedSales - heldStock);
-  return Math.max(OUTPUT_RUN_FLOOR, Math.min(1, planned / active));
+  return Math.max(floor, Math.min(1, planned / active));
 }

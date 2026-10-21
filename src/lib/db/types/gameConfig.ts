@@ -171,6 +171,12 @@ export interface GameConfig {
    * Absent = 0.5. Never paid when the pool is empty.
    */
   decommissionGrantShare?: number;
+  /**
+   * Funded producer market: >= 1 lets a plant that sells almost nothing run
+   * and staff a 1% probe instead of 10%, and cuts upkeep on parked and idle
+   * capacity to a tenth. 0 or absent = off.
+   */
+  producerLowUseCostStage?: number;
   /** Strength upkeep rollout stage (corporations/strengthUpkeep). 0 or absent = off. */
   strengthUpkeepStage?: number;
   /**
