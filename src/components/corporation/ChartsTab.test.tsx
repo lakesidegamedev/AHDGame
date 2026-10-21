@@ -80,3 +80,29 @@ describe("corporation chart currency basis", () => {
     expectLatest("Market cap", "money:250:USD");
   });
 });
+
+describe("ChartsTab ledger", () => {
+  it("metrics table has a trend cell per metric", async () => {
+    await showHistory({});
+    for (const metric of ["Share price", "Market cap", "Cash on hand", "Dividend rate"]) {
+      const row = screen.getByRole("button", { name: metric }).closest("tr")!;
+      expect(within(row).getByRole("img", { name: `${metric} trend` })).toBeTruthy();
+    }
+    // Market share is charted per commodity and has no single trend line.
+    const share = screen.getByRole("button", { name: "Market share" }).closest("tr")!;
+    expect(within(share).queryByRole("img")).toBeNull();
+  });
+
+  it("chips switch the charted metric", async () => {
+    await showHistory({});
+    const chips = screen.getByRole("radiogroup", { name: "Charted metric" });
+    fireEvent.click(within(chips).getByRole("radio", { name: "Dividend rate" }));
+    expect(screen.getByRole("img", { name: "Dividend rate by turn" })).toBeTruthy();
+    expect(
+      within(chips).getByRole("radio", { name: "Dividend rate" }).getAttribute("aria-checked")
+    ).toBe("true");
+    expect(screen.getByRole("button", { name: "Dividend rate" }).getAttribute("aria-pressed")).toBe(
+      "true"
+    );
+  });
+});

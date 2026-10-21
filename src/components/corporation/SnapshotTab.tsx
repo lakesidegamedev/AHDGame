@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { DenseSection, Segmented, TableScroll, Td, Th } from "./dense/DenseKit";
+import { DivergingBar } from "./ledger/DivergingBar";
 import {
   computeSnapshotDeltas,
   toAnchorMetricMap,
@@ -182,6 +183,9 @@ export default function SnapshotTab({
   const activePreset =
     toTurn === lastTurn ? (presets.find((p) => p.from === earlierTurn)?.value ?? null) : null;
 
+  // Bars share one scale so the largest move fills its half.
+  const barScale = Math.max(0, ...(deltas ?? []).map((row) => Math.abs(row.pctDelta ?? 0)));
+
   const selectClass =
     "h-7 rounded-md border border-card-border bg-background px-2 font-mono text-xs text-foreground focus:border-foreground focus:outline-none";
 
@@ -246,6 +250,9 @@ export default function SnapshotTab({
               <Th align="right">T{laterTurn}</Th>
               <Th align="right">Change</Th>
               <Th align="right">%</Th>
+              <Th className="w-28 sm:w-40">
+                <span className="sr-only">Direction</span>
+              </Th>
             </tr>
           </thead>
           <tbody>
@@ -277,6 +284,15 @@ export default function SnapshotTab({
                   </Td>
                   <Td align="right" className={pctToneClass}>
                     {pctText}
+                  </Td>
+                  <Td>
+                    {row.pctDelta != null && (
+                      <DivergingBar
+                        value={flat ? 0 : row.pctDelta}
+                        scale={barScale}
+                        label={`${row.label} ${flat ? "unchanged" : good ? "up" : "down"} ${pctText}`}
+                      />
+                    )}
                   </Td>
                 </tr>
               );

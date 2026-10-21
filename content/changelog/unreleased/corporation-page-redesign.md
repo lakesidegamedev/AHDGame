@@ -17,3 +17,8 @@ areas: [frontend]
 - The Overview sidebar shows your position as a share stub, open votes with the turns left, and ownership as a ring with each holder's share count. On a phone these sections fold away until you tap them.
 - The Simple view tags what needs you, sets its figures in a grid and ranks the biggest sectors.
 - On a phone the Overview opens in Simple unless you have chosen otherwise.
+- The income statement draws each line's share of revenue as a bar. The balance sheet shows two rings, what the corporation owns and who has a claim on it, with every line one tap away.
+- Bonds show on a maturity timeline above the bond table, sized by what is repaid, with issues due soon in the warning colour.
+- The credit rating sits on the full rating scale, and Peers lists your corporation beside the country and sector averages.
+- Charts has a row of metric chips over the chart and a trend line for each metric in the table. On a phone the chart comes first.
+- Snapshot draws each change as a bar that grows right for a rise and left for a fall.
