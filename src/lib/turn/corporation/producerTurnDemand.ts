@@ -332,6 +332,7 @@ export async function buildProducerTurnDemand(
     floorAnchor: number;
     plannedIncomeAnchor: number;
     topUpAnchor: number;
+    shortfallAnchor: number;
     currentShares: Record<string, number>;
   } | null = null;
   const incomeFloor = input.householdIncomeFloor ?? 0;
@@ -361,6 +362,7 @@ export async function buildProducerTurnDemand(
       floorAnchor: incomeFloor,
       plannedIncomeAnchor,
       topUpAnchor: floored.topUpAnchor,
+      shortfallAnchor: floored.shortfallAnchor,
       currentShares: Object.fromEntries(currentShares),
     };
   }

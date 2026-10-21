@@ -22,6 +22,8 @@ export interface HouseholdSourceResult {
   shares: Map<string, number>;
   /** Anchor per turn paid above the held-share transfers to reach the floor. */
   topUpAnchor: number;
+  /** Floor gap still unpaid after every country is at its whole line (anchor per turn). */
+  shortfallAnchor: number;
 }
 
 /** A country's share is at least the share it had at its first funded turn. */
@@ -52,24 +54,32 @@ export function incomeFloorShares(input: {
   floorAnchor: number;
 }): HouseholdSourceResult {
   const shares = new Map(input.shares);
-  const lineTotal = [...input.lineAnchorByCountry.values()].reduce(
-    (sum, v) => sum + (Number.isFinite(v) && v > 0 ? v : 0),
-    0
-  );
-  if (!(input.floorAnchor > 0) || !(lineTotal > 0)) return { shares, topUpAnchor: 0 };
-  let transfers = 0;
+  const lines = new Map<string, number>();
   for (const [country, line] of input.lineAnchorByCountry)
-    if (line > 0) transfers += line * Math.min(1, Math.max(0, shares.get(country) ?? 0));
-  const gap = input.floorAnchor - (Math.max(0, input.plannedIncomeAnchor) + transfers);
-  if (!(gap > 0)) return { shares, topUpAnchor: 0 };
-  const delta = gap / lineTotal;
+    if (Number.isFinite(line) && line > 0) lines.set(country, line);
+  if (!(input.floorAnchor > 0) || lines.size === 0)
+    return { shares, topUpAnchor: 0, shortfallAnchor: 0 };
+  const shareOf = (country: string) => Math.min(1, Math.max(0, shares.get(country) ?? 0));
+  let transfers = 0;
+  for (const [country, line] of lines) transfers += line * shareOf(country);
+  let gap = input.floorAnchor - (Math.max(0, input.plannedIncomeAnchor) + transfers);
+  if (!(gap > 0)) return { shares, topUpAnchor: 0, shortfallAnchor: 0 };
   let topUp = 0;
-  for (const [country, line] of input.lineAnchorByCountry) {
-    if (!(line > 0)) continue;
-    const before = Math.min(1, Math.max(0, shares.get(country) ?? 0));
-    const after = Math.min(1, before + delta);
-    shares.set(country, after);
-    topUp += line * (after - before);
+  // Water-fill: spread the gap over countries still under their whole line, so a
+  // capped country does not strand its part of the increment.
+  for (let pass = 0; pass <= lines.size && gap > 1e-9; pass++) {
+    const open = [...lines].filter(([country]) => shareOf(country) < 1);
+    const openLine = open.reduce((sum, [, line]) => sum + line, 0);
+    if (!(openLine > 0)) break;
+    const delta = gap / openLine;
+    for (const [country, line] of open) {
+      const before = shareOf(country);
+      const after = Math.min(1, before + delta);
+      shares.set(country, after);
+      const paid = line * (after - before);
+      topUp += paid;
+      gap -= paid;
+    }
   }
-  return { shares, topUpAnchor: topUp };
+  return { shares, topUpAnchor: topUp, shortfallAnchor: Math.max(0, gap) };
 }
