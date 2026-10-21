@@ -41,6 +41,10 @@ interface SupplyAgreement {
   exclusive: boolean;
   durationTurns?: number;
   status: "pending" | "active" | "cancelling" | "cancelled";
+  expiresAtTurn?: number;
+  cancelEffectiveTurn?: number;
+  /** Turns of notice a one-sided cancellation would take now (active contracts only). */
+  cancelNoticeTurns?: number;
   proposedByCorpId: string;
   currentOffer?: SupplyAgreementOffer;
   offers?: SupplyAgreementOffer[];
@@ -254,7 +258,9 @@ export default function SupplyAgreementsSection({
         showToast(
           action === "accept"
             ? t("negotiation.offerAccepted")
-            : t("negotiation.agreementCancelled"),
+            : typeof data.message === "string"
+              ? data.message
+              : t("negotiation.agreementCancelled"),
           "success"
         );
         await load();
@@ -561,6 +567,21 @@ export default function SupplyAgreementsSection({
             ) : (
               "Awaiting first settlement"
             )}
+          </p>
+        )}
+
+        {a.status === "cancelling" && a.cancelEffectiveTurn != null && (
+          <p className="text-xs text-warning">
+            {t("negotiation.noticeServed", { turn: a.cancelEffectiveTurn })}
+          </p>
+        )}
+        {a.status === "active" && (
+          <p className="text-xs text-muted">
+            {a.expiresAtTurn != null && (
+              <>{t("negotiation.termEnds", { turn: a.expiresAtTurn })} </>
+            )}
+            {a.cancelNoticeTurns != null &&
+              t("negotiation.cancelNotice", { turns: a.cancelNoticeTurns })}
           </p>
         )}
 
