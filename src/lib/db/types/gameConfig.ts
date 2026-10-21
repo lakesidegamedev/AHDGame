@@ -206,6 +206,19 @@ export interface GameConfig {
    */
   producerHouseholdIncomeFloor?: number;
   /**
+   * Funded producer market: > 0 makes a seller mark its ask down as carried stock
+   * exceeds this many turns of its recent sales (down to the market floor) and
+   * write off a small share of the excess each turn. 0 or absent = off.
+   */
+  producerStockCover?: number;
+  /**
+   * Funded producer market: >= 1 floors each buyer's reference price for a
+   * reachable good at the last funded clearing price (capped at 3x), so a country
+   * whose lagged price signal is stale can still compete in a short market.
+   * 0 or absent = off.
+   */
+  producerClearingReferenceStage?: number;
+  /**
    * Funded producer market: >= 1 retires, with no cash, a share of the
    * capacity of plants that have sold nothing for several turns. 0 or absent = off.
    */

@@ -97,6 +97,12 @@ export type ProducerPhysicalEnv = Pick<
   runPaceDrop?: number;
   /** gameConfig.producerHouseholdIncomeFloor: target household income per turn, anchor (0 or absent = off). */
   householdIncomeFloor?: number;
+  /** gameConfig.producerStockCover: turns of recent sales a seller may carry before marking down (0 or absent = off). */
+  stockCoverTurns?: number;
+  /** gameConfig.producerClearingReferenceStage: >= 1 floors a buyer's reference at the last funded clearing price of a reachable good. */
+  clearingReferenceStage?: number;
+  /** Last funded clearing price per reachable commodity, anchor per unit (from the previous turn's outcomes). */
+  lastClearingPriceByCommodity?: ReadonlyMap<string, number>;
   /** gameConfig.producerIdleRetireStage: >= 1 retires capacity that persistently sells nothing. 0 or absent = off. */
   idleRetireStage?: number;
   /** gameConfig.decommissionGrantShare: share of retired book paid from unspent public funding. */
@@ -243,8 +249,14 @@ export function prepareProducerPhysicalSector(input: {
       const ratio = isStateScopedCommodity(commodity)
         ? lookups.statePriceRatioByState?.get(sector.stateId)?.get(commodity)
         : lookups.reachablePriceRatioByCountry?.get(countryId)?.get(commodity);
-      const reference =
+      let reference =
         prices[commodity] * (ratio ?? lookups.priceRatioByCommodity.get(commodity) ?? 1);
+      // A buyer's reference never sits under what the market last cleared at (capped at 3x its own).
+      if ((env.clearingReferenceStage ?? 0) >= 1 && !isStateScopedCommodity(commodity)) {
+        const cleared = env.lastClearingPriceByCommodity?.get(commodity);
+        if (cleared != null && Number.isFinite(cleared) && cleared > reference)
+          reference = Math.min(cleared, reference * 3);
+      }
       return [
         commodity,
         {
@@ -299,6 +311,12 @@ export function prepareProducerPhysicalSector(input: {
     operatingRecipientAccountId: producerWalletId(input.worldEpoch, scopes[1]),
   });
   const { plan } = prepared;
+  // Stock-cover markdown needs last turn's sales (see stockCoverRules).
+  if ((env.stockCoverTurns ?? 0) > 0) {
+    const last = (sector as { producerSettlement?: { soldUnits?: number; turn?: number } })
+      .producerSettlement;
+    plan.recentSoldUnits = last && last.turn === currentTurn - 1 ? (last.soldUnits ?? 0) : 0;
+  }
   const suspended =
     lookups.corporateEmbargoSuppression?.has(`${countryId}|${corp.countryId}`) === true &&
     lookups.embargoTradeExposureEnabled !== true;

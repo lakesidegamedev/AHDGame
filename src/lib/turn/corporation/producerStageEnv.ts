@@ -15,6 +15,8 @@ export function producerStageEnv(
         producerPublicCarryShare?: number;
         producerRunPaceDrop?: number;
         producerHouseholdIncomeFloor?: number;
+        producerStockCover?: number;
+        producerClearingReferenceStage?: number;
       }
     | null
     | undefined
@@ -30,6 +32,8 @@ export function producerStageEnv(
         : 0,
     runPaceDrop: config?.producerRunPaceDrop,
     householdIncomeFloor: config?.producerHouseholdIncomeFloor,
+    stockCoverTurns: config?.producerStockCover,
+    clearingReferenceStage: config?.producerClearingReferenceStage,
     publicCarryShare:
       (config?.producerPublicCarryStage ?? 0) >= 1
         ? (config?.producerPublicCarryShare ?? PUBLIC_CARRY_DEFAULT_SHARE)
