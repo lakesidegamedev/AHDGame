@@ -18,11 +18,15 @@ interface SignalDoc {
   points?: { turn: number; value: number }[];
 }
 
-export async function marketAdjustmentEnabled(db: Db): Promise<boolean> {
+export async function marketAdjustmentStage(db: Db): Promise<number> {
   const cfg = await db
     .collection<{ marketAdjustmentStage?: number }>("gameConfig")
     .findOne({ _id: "default" as never }, { projection: { marketAdjustmentStage: 1 } });
-  return (cfg?.marketAdjustmentStage ?? 0) >= MARKET_ADJUSTMENT_ENABLED_STAGE;
+  return typeof cfg?.marketAdjustmentStage === "number" ? cfg.marketAdjustmentStage : 0;
+}
+
+export async function marketAdjustmentEnabled(db: Db): Promise<boolean> {
+  return (await marketAdjustmentStage(db)) >= MARKET_ADJUSTMENT_ENABLED_STAGE;
 }
 
 /** Record this turn's loss share for every country with settled funded capacity. Idempotent per turn. */

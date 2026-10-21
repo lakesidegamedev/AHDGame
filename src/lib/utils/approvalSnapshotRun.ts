@@ -2,6 +2,10 @@ import {
   loadBankFailureEffects,
   bankFailureApprovalModifiers,
 } from "@/lib/banking/failurePolitics";
+import {
+  loadMarketAdjustmentEffects,
+  marketAdjustmentApprovalModifiers,
+} from "@/lib/crises/marketAdjustment/approvalEffects";
 import type { Db } from "mongodb";
 import { COUNTRY_CONFIGS, COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
 import { getConflictsCollection } from "@/lib/db/collections/conflicts";
@@ -54,7 +58,8 @@ export async function snapshotApprovalsForTurn(
   db: Db,
   turn: number,
   telemetryCtx?: LongHorizonContext,
-  bankFailurePoliticsEnabled = false
+  bankFailurePoliticsEnabled = false,
+  marketAdjustmentStage = 0
 ): Promise<ApprovalSnapshotRun> {
   const activeIds = COUNTRY_ORDER.filter((id) => COUNTRY_CONFIGS[id].status === "active");
   const approvals = db.collection<GovernmentApproval>("governmentApprovals");
@@ -92,9 +97,13 @@ export async function snapshotApprovalsForTurn(
 
   const plan = planApprovalSnapshot(activeIds, belligerents, documented, seeded);
   const bankFailures = await loadBankFailureEffects(db, turn, bankFailurePoliticsEnabled);
+  const marketAdjustment = await loadMarketAdjustmentEffects(db, turn, marketAdjustmentStage);
   await Promise.all(
     plan.ids.map((id) => {
-      const modifiers = bankFailureApprovalModifiers(bankFailures.get(id));
+      const modifiers = [
+        ...bankFailureApprovalModifiers(bankFailures.get(id)),
+        ...marketAdjustmentApprovalModifiers(marketAdjustment.get(id)),
+      ];
       return modifiers.length > 0
         ? snapshotApprovalHistory(db, id, turn, telemetryCtx, modifiers)
         : snapshotApprovalHistory(db, id, turn, telemetryCtx);
