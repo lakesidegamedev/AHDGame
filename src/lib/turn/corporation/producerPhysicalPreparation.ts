@@ -30,7 +30,11 @@ import { sociMultiplier } from "@/lib/nationalization/concentration";
 import { politicalSoeInputs } from "@/lib/politicalLegislation/marginAdapter";
 import { getSectorTypeMatchModifier } from "@/lib/corporations/specialization/rules";
 import { organisationalOutputFactor } from "@/lib/market/producerMarket/efficiencyRules";
-import { nextRunShare, type PriorReceipt } from "@/lib/market/producerMarket/outputResponseRules";
+import {
+  demandPlanRunShare,
+  nextRunShare,
+  type PriorReceipt,
+} from "@/lib/market/producerMarket/outputResponseRules";
 import {
   idleRetireActive,
   idleRetireSectorShare,
@@ -77,6 +81,8 @@ export type ProducerPhysicalEnv = Pick<
   advertisingInput?: boolean;
   /** First funded turn of this world, when the cutover transition window applies. */
   transitionFirstFundedTurn?: number;
+  /** gameConfig.producerDemandPlanStage: >= 1 plans output from expected sales. 0 or absent = off. */
+  demandPlanStage?: number;
   /** gameConfig.producerIdleRetireStage: >= 1 retires capacity that persistently sells nothing. 0 or absent = off. */
   idleRetireStage?: number;
   /** gameConfig.decommissionGrantShare: share of retired book paid from unspent public funding. */
@@ -285,9 +291,9 @@ export function prepareProducerPhysicalSector(input: {
   // Output follows price: last turn's own settled receipt sets this turn's run.
   const priorReceipt = (sector as { producerSettlement?: PriorReceipt & { turn?: number } })
     .producerSettlement;
-  const runShare = nextRunShare(
-    priorReceipt && priorReceipt.turn === currentTurn - 1 ? priorReceipt : null
-  );
+  const lastReceipt = priorReceipt && priorReceipt.turn === currentTurn - 1 ? priorReceipt : null;
+  const runShare =
+    (env.demandPlanStage ?? 0) >= 1 ? demandPlanRunShare(lastReceipt) : nextRunShare(lastReceipt);
   // Wages and site running costs follow the line the plant runs: idle lines
   // employ no one (their workers count as unemployed) and idle capacity pays
   // cold upkeep only.

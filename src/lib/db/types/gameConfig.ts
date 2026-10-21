@@ -156,6 +156,11 @@ export interface GameConfig {
    */
   managementOverheadPpPerDoubling?: number;
   /**
+   * Funded producer market: >= 1 plans each plant's output from expected sales
+   * minus held stock, so inputs and staffing follow the plan. 0 or absent = off.
+   */
+  producerDemandPlanStage?: number;
+  /**
    * Funded producer market: >= 1 retires, with no cash, a share of the
    * capacity of plants that have sold nothing for several turns. 0 or absent = off.
    */

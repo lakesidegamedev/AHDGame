@@ -75,3 +75,48 @@ export function nextRunShare(prior: PriorReceipt | null | undefined): number {
   }
   return Math.max(OUTPUT_RUN_FLOOR, Math.min(1, next));
 }
+
+/** Probe above last turn's sales, so a demand-planned plant keeps testing for more. */
+export const DEMAND_PLAN_PROBE = 0.1;
+
+/**
+ * Production follows demand (gameConfig.producerDemandPlanStage >= 1).
+ *
+ * A plant plans its output as expected sales minus the stock it already
+ * holds: expected sales is what it sold last turn plus a probe margin, stock is
+ * what it offered and did not sell. It buys inputs and staffs for that plan
+ * only, because wages, site costs and input buying all follow the run share.
+ * Unlike the stepped rule the cut is immediate, so a glut cannot bleed for
+ * many turns at ten percent a turn. A plant that sold out still grows a step,
+ * and a floor keeps a probe run on the book.
+ *
+ * Pure: last receipt in, run share for this turn out.
+ */
+export function demandPlanRunShare(prior: PriorReceipt | null | undefined): number {
+  if (!prior) return 1;
+  const finite = (x: number) => (Number.isFinite(x) ? x : 0);
+  const active = finite(prior.activeUnits);
+  if (!(active > 0)) return 1;
+  const produced = finite(prior.producedUnits);
+  const run = Math.max(OUTPUT_RUN_FLOOR, Math.min(1, produced / active));
+  const offered = finite(prior.offeredUnits);
+  const sold = finite(prior.soldUnits);
+  const sellThrough = offered > 0 ? Math.min(1, sold / offered) : 0;
+  // The loss brake comes first, as in the stepped rule: a line that sells out
+  // at a price under its running cost must not grow.
+  const runningCost =
+    finite(prior.inputsConsumed) +
+    finite(prior.labourPaid ?? 0) +
+    finite(prior.labourArrears ?? 0) +
+    finite(prior.otherOperatingPaid ?? 0) +
+    finite(prior.otherOperatingArrears ?? 0);
+  const contributionPerUnit =
+    sold > 0 ? (finite(prior.revenue) - (runningCost * sold) / Math.max(produced, sold)) / sold : 0;
+  if (sold > 0 && contributionPerUnit < 0)
+    return Math.max(OUTPUT_RUN_FLOOR, run * (1 - OUTPUT_CUT_STEP));
+  if (sellThrough >= SOLD_OUT) return Math.min(1, run * (1 + OUTPUT_GROW_STEP));
+  const expectedSales = sold * (1 + DEMAND_PLAN_PROBE);
+  const heldStock = Math.max(0, offered - sold);
+  const planned = Math.max(0, expectedSales - heldStock);
+  return Math.max(OUTPUT_RUN_FLOOR, Math.min(1, planned / active));
+}
