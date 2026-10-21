@@ -7,4 +7,4 @@ badges: [patch]
 areas: [fullstack]
 ---
 
-- Under the upcoming market, plants that have sold nothing for several turns will slowly retire their unused capacity, with no payout, unless the owner has mothballed them.
+- Under the upcoming market, plants that have sold nothing for several turns will slowly retire their unused capacity, with no payout, but only after the transition window has closed and never on a mothballed plant.

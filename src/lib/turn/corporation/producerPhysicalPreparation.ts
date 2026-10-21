@@ -250,7 +250,14 @@ export function prepareProducerPhysicalSector(input: {
     operatingRecipeRatio: retoolOperatingCapacityRatio({ ...sector, currentTurn }),
     recessionCapacityFactor:
       (lookups.recessionCapacityFactorByCountry?.get(countryId) ?? 1) *
-      (1 - idleRetireShare(sector, currentTurn, (env.idleRetireStage ?? 0) >= 1)),
+      (1 -
+        idleRetireShare(
+          sector,
+          currentTurn,
+          (env.idleRetireStage ?? 0) >= 1 &&
+            env.transitionFirstFundedTurn != null &&
+            !inTransitionWindow(currentTurn, env.transitionFirstFundedTurn)
+        )),
     labourCost: 0,
     otherOperatingCost: 0,
     labourRecipientAccountId: producerWalletId(input.worldEpoch, scopes[0]),
@@ -395,7 +402,11 @@ export function prepareProducerPhysicalSector(input: {
   };
 }
 
-/** Share of owned capacity to retire this turn from the prior settled receipt; 0 when the stage is off. */
+/**
+ * Share of owned capacity to retire this turn from the prior settled receipt;
+ * 0 when the stage is off or the transition window is still open, so owners
+ * get the whole window of free mothball and conversion first.
+ */
 function idleRetireShare(sector: CorporateSector, currentTurn: number, enabled: boolean): number {
   if (!enabled) return 0;
   const receipt = sector.producerSettlement;
