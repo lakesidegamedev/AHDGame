@@ -55,36 +55,46 @@ export async function loadMarketAdjustmentEffects(
       { projection: { countryIds: 1, startTurn: 1, endTurn: 1, status: 1 } }
     )
     .toArray();
+  if (crises.length === 0) return out;
+  // Three batched reads for every country at once, not one set per country.
+  const countryIds = [...new Set(crises.flatMap((c) => c.countryIds ?? []))];
+  const docIdOf = new Map<string, string>();
+  for (const countryId of countryIds) {
+    const docId = getNationalDocId(countryId as never);
+    if (docId) docIdOf.set(countryId, docId);
+  }
+  const docIds = [...new Set(docIdOf.values())];
+  const [signals, histories, metrics] = await Promise.all([
+    db
+      .collection<{ _id: string; points?: Point[] }>(MARKET_ADJUSTMENT_SIGNALS)
+      .find({ _id: { $in: countryIds } })
+      .toArray(),
+    db
+      .collection<{ _id: string; economic?: { unemploymentRate?: Point[] } }>("macroMetricsHistory")
+      .find({ _id: { $in: docIds } }, { projection: { economic: 1 } })
+      .toArray(),
+    db
+      .collection<{ _id: string; economic?: { unemploymentRate?: { value?: number } } }>(
+        "macroMetrics"
+      )
+      .find({ _id: { $in: docIds } }, { projection: { economic: 1 } })
+      .toArray(),
+  ]);
+  const signalById = new Map(signals.map((d) => [d._id, d]));
+  const historyById = new Map(histories.map((d) => [d._id, d]));
+  const metricsById = new Map(metrics.map((d) => [d._id, d]));
   for (const crisis of crises) {
     const open = crisis.status === "active";
     const asOf = open ? turn : (crisis.endTurn ?? turn);
     for (const countryId of crisis.countryIds ?? []) {
-      const nationalDocId = getNationalDocId(countryId as never);
-      const [signal, history, metrics] = await Promise.all([
-        db
-          .collection<{ _id: string; points?: Point[] }>(MARKET_ADJUSTMENT_SIGNALS)
-          .findOne({ _id: countryId }),
-        nationalDocId
-          ? db
-              .collection<{ _id: string; economic?: { unemploymentRate?: Point[] } }>(
-                "macroMetricsHistory"
-              )
-              .findOne({ _id: nationalDocId }, { projection: { economic: 1 } })
-          : null,
-        nationalDocId
-          ? db
-              .collection<{
-                _id: string;
-                economic?: { unemploymentRate?: { value?: number } };
-              }>("macroMetrics")
-              .findOne({ _id: nationalDocId }, { projection: { economic: 1 } })
-          : null,
-      ]);
-      const lossShare = valueAtOrBefore(signal?.points, asOf) ?? null;
-      const unemploymentHistory = history?.economic?.unemploymentRate;
+      const docId = docIdOf.get(countryId);
+      const lossShare = valueAtOrBefore(signalById.get(countryId)?.points, asOf) ?? null;
+      const unemploymentHistory = docId
+        ? historyById.get(docId)?.economic?.unemploymentRate
+        : undefined;
       const atStart = valueAtOrBefore(unemploymentHistory, crisis.startTurn);
       const atEnd = open
-        ? metrics?.economic?.unemploymentRate?.value
+        ? (docId ? metricsById.get(docId) : undefined)?.economic?.unemploymentRate?.value
         : valueAtOrBefore(unemploymentHistory, asOf);
       const unemploymentRise =
         typeof atStart === "number" && typeof atEnd === "number" ? atEnd - atStart : null;
