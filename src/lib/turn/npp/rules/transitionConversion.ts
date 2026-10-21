@@ -108,9 +108,9 @@ export function chooseTransitionConversion(input: {
  * a state and industry that the conversion has just taken.
  */
 export function sectorsAfterConversion<T extends { _id: { toString(): string } }>(
-  sectors: readonly T[],
+  sectors: T[],
   converted: { sectorId: string; set: Partial<T> } | null
-): readonly T[] {
+): T[] {
   if (!converted) return sectors;
   return sectors.map((s) =>
     s._id.toString() === converted.sectorId ? { ...s, ...converted.set } : s
