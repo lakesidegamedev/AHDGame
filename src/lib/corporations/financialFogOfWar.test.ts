@@ -149,6 +149,7 @@ describe("applyFogToSectorPhysicals", () => {
     capacityUnits: 10_000,
     producedUnits: 9_000,
     soldUnits: 4_500,
+    mediaAdvertisingCampaignUnits: 900,
     constructionInProgressAnchor: 2_000_000,
   };
   const uniform = (f: number) => ({ base: f, produced: f, sold: f });
@@ -165,6 +166,7 @@ describe("applyFogToSectorPhysicals", () => {
     const out = applyFogToSectorPhysicals(physicals, { base: 1.1, produced: 1.05, sold: 0.95 });
     expect(out.producedUnits).toBe(9_450);
     expect(out.soldUnits).toBe(4_275);
+    expect(out.mediaAdvertisingCampaignUnits).toBe(945);
   });
 
   it("never discloses the raw fill rate to an outsider", () => {

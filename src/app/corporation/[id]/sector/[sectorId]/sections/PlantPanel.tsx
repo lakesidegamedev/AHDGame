@@ -12,6 +12,7 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import { Factory, Hammer, PauseCircle, PlayCircle, ShieldCheck, X } from "lucide-react";
 import type { CommodityFlow, PlantsData } from "../types";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
+import type { MediaDiscriminator } from "@/lib/constants/corporations";
 import {
   capitalizeFacility,
   facilityPlural,
@@ -22,13 +23,17 @@ import RunMeter from "../components/RunMeter";
 import DetailsDisclosure from "../components/DetailsDisclosure";
 import { fmtUnits, fmtPct } from "../lib/plants";
 import { facilitiesFromUnits, plantSizeUnits } from "@/lib/constants/facilityQuantum";
+import { estimateSectorFullCapacityOneHopFreightTeu } from "@/lib/logistics/freightVisibility";
 
 interface PlantPanelProps {
   plants: PlantsData;
   /** Commodity-ledger output after media, embargo and other market scaling. */
   marketSupplies?: CommodityFlow[];
+  freightState?: { observedLoad: number; capacity: number; turn: number | null };
   /** Drives the facility noun. A retail sector says "stores", not "plants". */
   sectorType: OperatingSectorType;
+  mediaDiscriminator?: MediaDiscriminator | null;
+  mediaAdvertisingCampaignFactor?: number;
   /** The national industry union covering this workforce, vacant or led. */
   unionId?: string | null;
   unionName?: string | null;
@@ -63,7 +68,10 @@ interface PlantPanelProps {
 export default function PlantPanel({
   plants,
   marketSupplies = [],
+  freightState,
   sectorType,
+  mediaDiscriminator,
+  mediaAdvertisingCampaignFactor = 1,
   unionId,
   unionName,
   averageWageLevel,
@@ -92,11 +100,29 @@ export default function PlantPanel({
     (workersDesired > 0 ? Math.min(1, plants.workers / workersDesired) : 1);
   const staffingShortfall =
     workersDesired > 0 && plants.workers < workersDesired ? 1 - plants.workers / workersDesired : 0;
+  const mediaAdvertisingSupply =
+    sectorType === "media" && mediaDiscriminator !== "entertainment"
+      ? marketSupplies.find((supply) => supply.commodity === "advertising")
+      : undefined;
   const primaryMediaSupply =
-    sectorType === "media" ? marketSupplies.find((supply) => supply.units > 0) : undefined;
+    sectorType === "media"
+      ? (mediaAdvertisingSupply ?? marketSupplies.find((supply) => supply.units > 0))
+      : undefined;
   const mediaLedgerShare =
     hasRun && primaryMediaSupply && (plants.producedUnits ?? 0) > 0
       ? primaryMediaSupply.units / (plants.producedUnits ?? 1)
+      : null;
+  const fullCapacityFreightEstimate = estimateSectorFullCapacityOneHopFreightTeu({
+    stateId: "",
+    producedUnits: plants.producedUnits,
+    capacityUnits: plants.capacityUnits,
+    outputByCommodity: Object.fromEntries(
+      marketSupplies.map((supply) => [supply.commodity, supply.units])
+    ),
+  });
+  const countedCampaigns =
+    sectorType === "media" && mediaDiscriminator !== "entertainment" && hasRun
+      ? (mediaAdvertisingSupply?.units ?? 0)
       : null;
 
   return (
@@ -115,6 +141,29 @@ export default function PlantPanel({
           <p className="mt-1 text-body-sm text-muted">
             Capacity is what you own here. It makes things, you sell them, that is your income.
           </p>
+          {(fullCapacityFreightEstimate != null || freightState) && (
+            <div className="mt-2 max-w-2xl space-y-1 text-body-xs text-muted">
+              {freightState && (
+                <p>
+                  {t("freightState", {
+                    load: fmtUnits(freightState.observedLoad),
+                    turnLabel:
+                      freightState.turn == null
+                        ? ""
+                        : t("freightStateTurn", { turn: freightState.turn }),
+                    capacity: fmtUnits(freightState.capacity),
+                  })}
+                </p>
+              )}
+              {fullCapacityFreightEstimate != null && (
+                <p>
+                  {t("freightOneHopEstimate", {
+                    estimate: fmtUnits(fullCapacityFreightEstimate),
+                  })}
+                </p>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {mothballed && (
@@ -179,10 +228,19 @@ export default function PlantPanel({
                   {mediaLedgerShare != null ? ` (${fmtPct(mediaLedgerShare)} of today's run)` : ""}
                 </p>
                 <p className="mt-1 text-muted">
-                  Media run units measure total audience activity. The commodity market and eligible
-                  private supply agreements use the smaller ledger output shown here.
+                  {mediaDiscriminator === "entertainment"
+                    ? t("mediaEntertainmentExplanation")
+                    : t("mediaAdvertisingExplanation")}
                 </p>
               </div>
+            )}
+            {countedCampaigns != null && (
+              <p className="mt-2 text-body-xs text-muted">
+                {t("advertisingCampaignsCounted", {
+                  units: fmtUnits(countedCampaigns),
+                  factor: fmtPct(mediaAdvertisingCampaignFactor),
+                })}
+              </p>
             )}
           </>
         ) : (

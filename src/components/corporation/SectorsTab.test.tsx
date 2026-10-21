@@ -1,7 +1,17 @@
 /**
  * @vitest-environment happy-dom
  */
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render as renderView,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
+import messages from "../../../messages/en/corporations.json";
+import type { ReactElement, ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import SectorsTab from "./SectorsTab";
 import type { SectorDetail } from "./CorporationPageTypes";
@@ -43,6 +53,16 @@ const baseProps = {
   currentTurn: 10,
   plantsMode: true,
 };
+
+function render(ui: ReactElement) {
+  return renderView(ui, {
+    wrapper: ({ children }: { children: ReactNode }) => (
+      <NextIntlClientProvider locale="en" timeZone="UTC" messages={messages}>
+        {children}
+      </NextIntlClientProvider>
+    ),
+  });
+}
 
 describe("SectorsTab Build-here deep link", () => {
   afterEach(() => {
@@ -86,6 +106,55 @@ describe("SectorsTab Build-here deep link", () => {
   it("does not open the expand modal without the deep-link flag", () => {
     render(<SectorsTab {...baseProps} isCeo />);
     expect(screen.queryByTestId("expand-modal")).toBeNull();
+  });
+});
+
+describe("media advertising output on corporation sector cards", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("shows market-factor campaign ledger units in the sector revenue detail", () => {
+    const { container } = render(
+      <SectorsTab
+        {...baseProps}
+        sectors={[
+          sector({
+            _id: "media-market",
+            sectorType: "media",
+            mediaAdvertisingCampaignUnits: 137,
+            mediaAdvertisingCampaignFactor: 0.1,
+          }),
+        ]}
+        isCeo={false}
+      />
+    );
+
+    fireEvent.mouseEnter(container.querySelectorAll(".cursor-help")[0]);
+    expect(screen.getByText("Advertising campaigns counted")).toBeTruthy();
+    expect(screen.getByText("137/day (10% factor)")).toBeTruthy();
+  });
+
+  it("shows zero planned-economy campaign output and its factor", () => {
+    const { container } = render(
+      <SectorsTab
+        {...baseProps}
+        sectors={[
+          sector({
+            _id: "media-planned",
+            sectorType: "media",
+            producedUnits: 0,
+            mediaAdvertisingCampaignUnits: 0,
+            mediaAdvertisingCampaignFactor: 0.25,
+          }),
+        ]}
+        isCeo={false}
+      />
+    );
+
+    fireEvent.mouseEnter(container.querySelectorAll(".cursor-help")[0]);
+    expect(screen.getByText("Advertising campaigns counted")).toBeTruthy();
+    expect(screen.getByText("0/day (25% factor)")).toBeTruthy();
   });
 });
 
