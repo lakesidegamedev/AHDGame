@@ -14,6 +14,7 @@ export function producerStageEnv(
         producerPublicCarryStage?: number;
         producerPublicCarryShare?: number;
         producerRunPaceDrop?: number;
+        producerHouseholdIncomeFloor?: number;
       }
     | null
     | undefined
@@ -28,6 +29,7 @@ export function producerStageEnv(
         ? (config?.producerSpilloverShare ?? SPILLOVER_DEFAULT_SHARE)
         : 0,
     runPaceDrop: config?.producerRunPaceDrop,
+    householdIncomeFloor: config?.producerHouseholdIncomeFloor,
     publicCarryShare:
       (config?.producerPublicCarryStage ?? 0) >= 1
         ? (config?.producerPublicCarryShare ?? PUBLIC_CARRY_DEFAULT_SHARE)

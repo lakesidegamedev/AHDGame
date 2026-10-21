@@ -190,6 +190,14 @@ export interface GameConfig {
    */
   producerConversionPaceShare?: number;
   /**
+   * Funded producer market: > 0 keeps household income steady. Each country's
+   * household transfer share is held at its first-funded-turn level, and when
+   * planned household income (wages, operating payments, transfers) is under this
+   * many anchor units per turn, every country's transfers rise out of its own
+   * budget transfer lines until it is met. 0 or absent = off.
+   */
+  producerHouseholdIncomeFloor?: number;
+  /**
    * Funded producer market: >= 1 retires, with no cash, a share of the
    * capacity of plants that have sold nothing for several turns. 0 or absent = off.
    */
