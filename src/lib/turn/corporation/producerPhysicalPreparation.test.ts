@@ -156,14 +156,14 @@ describe("physical producer preparation", () => {
     expect(good / bad).toBeCloseTo((0.5 * 1.15) / (0.5 * 0.9), 10);
   });
 
-  it("low-use cost stage cuts the bill on a parked plant and the probe run of a dead one", () => {
+  it("low-use cost stage zeroes the bill on a parked plant and cuts the probe run of a dead one", () => {
     const { input, env, sector } = fixture();
     (sector as unknown as { mothballed: boolean }).mothballed = true;
     const off = prepareProducerPhysicalSector(input).prepared.plan.otherOperatingCost;
     env.lowUseCostStage = 1;
     const on = prepareProducerPhysicalSector(input).prepared.plan.otherOperatingCost;
     expect(off).toBeGreaterThan(0);
-    expect(on / off).toBeCloseTo(0.1, 8);
+    expect(on).toBe(0);
     (sector as unknown as { mothballed: boolean }).mothballed = false;
     (sector as unknown as { producerSettlement: unknown }).producerSettlement = {
       activeUnits: 100,

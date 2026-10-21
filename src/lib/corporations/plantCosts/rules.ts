@@ -46,9 +46,10 @@ export const PLANT_OVERHEAD_OUTPUT_SHARE = 0.04;
 export const PLANT_OVERHEAD_FIXED_SHARE = 0.5;
 
 /**
- * Upkeep share on idle and mothballed capacity under the funded low-use cost
- * stage (gameConfig.producerLowUseCostStage >= 1): a tenth of the usual cold
- * share, so parked and barely running plants cost close to nothing to hold.
+ * Upkeep share on idle capacity of a running plant under the funded low-use
+ * cost stage (gameConfig.producerLowUseCostStage >= 1): a tenth of the usual
+ * cold share. A fully mothballed plant pays none, so parked plants stop losing
+ * money.
  */
 export const LOW_USE_COLD_UPKEEP_FRACTION = 0.005;
 

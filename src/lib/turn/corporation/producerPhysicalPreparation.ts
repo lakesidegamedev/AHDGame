@@ -413,7 +413,11 @@ export function prepareProducerPhysicalSector(input: {
       env.transitionFirstFundedTurn != null &&
       transitionReliefEligible(sector) &&
       inTransitionWindow(currentTurn, env.transitionFirstFundedTurn),
-    coldShareOverride: lowUse ? LOW_USE_COLD_UPKEEP_FRACTION : undefined,
+    coldShareOverride: lowUse
+      ? sector.mothballed === true
+        ? 0
+        : LOW_USE_COLD_UPKEEP_FRACTION
+      : undefined,
   });
   return {
     prepared,
