@@ -101,3 +101,19 @@ describe("decommissioning grant", () => {
     expect(decommissionGrant({ claims, poolByCountry: new Map([["US", 0]]) }).payments).toEqual([]);
   });
 });
+
+describe("idleRetireSectorShare mothball grace after the window", () => {
+  const settled = { turn: 159, soldUnits: 0, activeUnits: 0 };
+  it("does not retire a plant mothballed during the window until the grace runs after it", () => {
+    const sector = { mothballed: true, producerZeroSalesTurns: 30, producerSettlement: settled };
+    expect(idleRetireSectorShare(sector, 160, 156)).toBe(0);
+  });
+  it("retires parked capacity once the grace has run after the window", () => {
+    const sector = {
+      mothballed: true,
+      producerZeroSalesTurns: 30,
+      producerSettlement: { ...settled, turn: 169 },
+    };
+    expect(idleRetireSectorShare(sector, 170, 156)).toBeGreaterThan(0);
+  });
+});

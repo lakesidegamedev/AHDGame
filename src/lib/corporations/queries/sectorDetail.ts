@@ -1695,7 +1695,8 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         totalMarket: effectiveMarket,
         marketShare,
         competitors,
-        attackExposure,
+        // Splits need the plants economy; below it the server refuses every attempt.
+        attackExposure: plantsEnabled ? attackExposure : null,
         unownedRevenue: Math.round(unownedRevenue),
         unownedPercent,
       },
