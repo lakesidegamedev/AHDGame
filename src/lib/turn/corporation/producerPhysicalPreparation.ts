@@ -18,7 +18,10 @@ import {
 import { getSectorTechEffectsForYear, NEUTRAL_TECH_EFFECTS } from "@/lib/constants/techTree";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 import { activeCapacityConstraintFactor } from "@/lib/corporations/investment/rules";
-import { standingProducerSiteBill } from "@/lib/corporations/plantCosts/rules";
+import {
+  LOW_USE_COLD_UPKEEP_FRACTION,
+  standingProducerSiteBill,
+} from "@/lib/corporations/plantCosts/rules";
 import { retoolOperatingCapacityRatio } from "@/lib/corporations/retooling/rules";
 import { applyExtractionResourceCapacityToSupply } from "@/lib/corporations/extractionResourceSupply";
 import { commodityProductionCapacityScale } from "@/lib/banking/capacityAllocation";
@@ -32,7 +35,9 @@ import { getSectorTypeMatchModifier } from "@/lib/corporations/specialization/ru
 import { organisationalOutputFactor } from "@/lib/market/producerMarket/efficiencyRules";
 import {
   demandPlanRunShare,
+  LOW_USE_RUN_FLOOR,
   nextRunShare,
+  OUTPUT_RUN_FLOOR,
   type PriorReceipt,
 } from "@/lib/market/producerMarket/outputResponseRules";
 import {
@@ -87,6 +92,8 @@ export type ProducerPhysicalEnv = Pick<
   idleRetireStage?: number;
   /** gameConfig.decommissionGrantShare: share of retired book paid from unspent public funding. */
   decommissionGrantShare?: number;
+  /** gameConfig.producerLowUseCostStage: >= 1 lets barely used and parked plants cost close to nothing. */
+  lowUseCostStage?: number;
   lookups: Pick<
     CorporationLookups,
     | "labourTightnessByState"
@@ -291,9 +298,13 @@ export function prepareProducerPhysicalSector(input: {
   // Output follows price: last turn's own settled receipt sets this turn's run.
   const priorReceipt = (sector as { producerSettlement?: PriorReceipt & { turn?: number } })
     .producerSettlement;
+  const lowUse = (env.lowUseCostStage ?? 0) >= 1;
+  const runFloor = lowUse ? LOW_USE_RUN_FLOOR : OUTPUT_RUN_FLOOR;
   const lastReceipt = priorReceipt && priorReceipt.turn === currentTurn - 1 ? priorReceipt : null;
   const runShare =
-    (env.demandPlanStage ?? 0) >= 1 ? demandPlanRunShare(lastReceipt) : nextRunShare(lastReceipt);
+    (env.demandPlanStage ?? 0) >= 1
+      ? demandPlanRunShare(lastReceipt, runFloor)
+      : nextRunShare(lastReceipt, runFloor);
   // Wages and site running costs follow the line the plant runs: idle lines
   // employ no one (their workers count as unemployed) and idle capacity pays
   // cold upkeep only.
@@ -409,6 +420,11 @@ export function prepareProducerPhysicalSector(input: {
       env.transitionFirstFundedTurn != null &&
       transitionReliefEligible(sector) &&
       inTransitionWindow(currentTurn, env.transitionFirstFundedTurn),
+    coldShareOverride: lowUse
+      ? sector.mothballed === true
+        ? 0
+        : LOW_USE_COLD_UPKEEP_FRACTION
+      : undefined,
   });
   return {
     prepared,

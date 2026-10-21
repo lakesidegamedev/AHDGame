@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   demandPlanRunShare,
+  LOW_USE_RUN_FLOOR,
   nextRunShare,
   OUTPUT_CUT_STEP,
   OUTPUT_GROW_STEP,
@@ -109,5 +110,15 @@ describe("production follows demand", () => {
 
   it("keeps a probe run when nothing sold", () => {
     expect(demandPlanRunShare(receipt({ soldUnits: 0, offeredUnits: 50 }))).toBe(OUTPUT_RUN_FLOOR);
+  });
+});
+
+describe("low-use probe floor", () => {
+  it("lets a plant that sells nothing drop to the small probe run", () => {
+    const sold0 = receipt({ soldUnits: 0, offeredUnits: 50 });
+    expect(nextRunShare(sold0)).toBe(OUTPUT_RUN_FLOOR);
+    expect(nextRunShare(sold0, LOW_USE_RUN_FLOOR)).toBe(LOW_USE_RUN_FLOOR);
+    expect(demandPlanRunShare(sold0)).toBe(OUTPUT_RUN_FLOOR);
+    expect(demandPlanRunShare(sold0, LOW_USE_RUN_FLOOR)).toBe(LOW_USE_RUN_FLOOR);
   });
 });
