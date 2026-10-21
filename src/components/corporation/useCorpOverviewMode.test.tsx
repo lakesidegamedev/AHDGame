@@ -55,3 +55,52 @@ describe("useCorpOverviewMode", () => {
     expect(fetchJson).not.toHaveBeenCalled();
   });
 });
+
+describe("useCorpOverviewMode on a phone", () => {
+  function stubWidth(phone: boolean) {
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn().mockImplementation((query: string) => ({
+        matches: phone && query === "(max-width: 1023px)",
+        media: query,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }))
+    );
+  }
+
+  beforeEach(() => {
+    localStorage.clear();
+    fetchJson.mockClear();
+    auth.value = null;
+  });
+
+  it("phone without a saved choice opens Simple", () => {
+    stubWidth(true);
+    const { result } = renderHook(() => useCorpOverviewMode());
+    expect(result.current.mode).toBe("simple");
+    // The device default is never written back as if the player had chosen it.
+    expect(localStorage.getItem(CORP_OVERVIEW_MODE_KEY)).toBeNull();
+    expect(fetchJson).not.toHaveBeenCalled();
+  });
+
+  it("saved pro wins on a phone", () => {
+    stubWidth(true);
+    localStorage.setItem(CORP_OVERVIEW_MODE_KEY, "pro");
+    const { result } = renderHook(() => useCorpOverviewMode());
+    expect(result.current.mode).toBe("pro");
+  });
+
+  it("account pro wins on a phone", () => {
+    stubWidth(true);
+    auth.value = { user: { corpOverviewMode: "pro" }, loading: false };
+    const { result } = renderHook(() => useCorpOverviewMode());
+    expect(result.current.mode).toBe("pro");
+  });
+
+  it("desktop without a saved choice opens Pro", () => {
+    stubWidth(false);
+    const { result } = renderHook(() => useCorpOverviewMode());
+    expect(result.current.mode).toBe("pro");
+  });
+});
