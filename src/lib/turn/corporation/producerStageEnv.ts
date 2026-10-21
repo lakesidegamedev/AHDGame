@@ -10,6 +10,7 @@ export function producerStageEnv(
         decommissionGrantShare?: number;
         producerSpilloverStage?: number;
         producerSpilloverShare?: number;
+        producerStickyWageStage?: number;
       }
     | null
     | undefined
@@ -23,5 +24,6 @@ export function producerStageEnv(
       (config?.producerSpilloverStage ?? 0) >= 1
         ? (config?.producerSpilloverShare ?? SPILLOVER_DEFAULT_SHARE)
         : 0,
+    stickyWageStage: config?.producerStickyWageStage,
   };
 }

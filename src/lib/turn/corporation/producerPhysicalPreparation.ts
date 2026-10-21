@@ -17,6 +17,7 @@ import {
 import { getSectorTechEffectsForYear, NEUTRAL_TECH_EFFECTS } from "@/lib/constants/techTree";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 import { activeCapacityConstraintFactor } from "@/lib/corporations/investment/rules";
+import { stickyWageBill } from "@/lib/market/producerMarket/stickyWageRules";
 import {
   LOW_USE_COLD_UPKEEP_FRACTION,
   standingProducerSiteBill,
@@ -91,6 +92,8 @@ export type ProducerPhysicalEnv = Pick<
   lowUseCostStage?: number;
   /** gameConfig.producerSpilloverStage share: substitution share for same-turn spillover (0 or absent = off). */
   spilloverShare?: number;
+  /** gameConfig.producerStickyWageStage: >= 1 lets a plant's wage bill fall only gradually. 0 or absent = off. */
+  stickyWageStage?: number;
   /** gameConfig.producerIdleRetireStage: >= 1 retires capacity that persistently sells nothing. 0 or absent = off. */
   idleRetireStage?: number;
   /** gameConfig.decommissionGrantShare: share of retired book paid from unspent public funding. */
@@ -406,7 +409,24 @@ export function prepareProducerPhysicalSector(input: {
           sector.nationalizationTransitionMultiplier ?? 1
         )
       : 1);
-  plan.labourCost = payroll.sectorLaborCost;
+  const stickyWages = (env.stickyWageStage ?? 0) >= 1;
+  const priorPaid =
+    priorReceipt && priorReceipt.turn === currentTurn - 1
+      ? (priorReceipt.labourPaid ?? 0) + (priorReceipt.labourArrears ?? 0)
+      : undefined;
+  const wageBill = stickyWages
+    ? stickyWageBill({
+        computed: payroll.sectorLaborCost,
+        previousPaid: priorPaid,
+        // Payroll scales with the run, so a full run pays about this much.
+        fullRunBill:
+          runningFraction > 0
+            ? (payroll.sectorLaborCost * plan.activeFraction) / runningFraction
+            : 0,
+        mothballed: sector.mothballed === true,
+      })
+    : payroll.sectorLaborCost;
+  plan.labourCost = wageBill;
   plan.otherOperatingCost = standingProducerSiteBill({
     nominalHourlyCapacityValue: nominalDaily / TURNS_PER_DAY,
     activeFraction: runningFraction,

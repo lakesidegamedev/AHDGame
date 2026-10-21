@@ -208,6 +208,28 @@ describe("physical producer preparation", () => {
     expect(prepareProducerPhysicalSector(input).prepared.plan.capacityUnits).toBeCloseTo(off, 10);
   });
 
+  it("sticky wages keep an open plant's wage bill from collapsing with its run, but not a parked one", () => {
+    const { input, env, sector } = fixture();
+    (sector as unknown as { producerSettlement: unknown }).producerSettlement = {
+      activeUnits: 100,
+      producedUnits: 10,
+      offeredUnits: 10,
+      soldUnits: 0,
+      revenue: 0,
+      inputsConsumed: 0,
+      labourPaid: 1e9,
+      labourArrears: 0,
+      turn: env.currentTurn - 1,
+    };
+    const off = prepareProducerPhysicalSector(input).prepared.plan.labourCost;
+    env.stickyWageStage = 1;
+    const on = prepareProducerPhysicalSector(input).prepared.plan.labourCost;
+    expect(on).toBeGreaterThan(off);
+    expect(on).toBeCloseTo(0.9e9, 0);
+    (sector as unknown as { mothballed: boolean }).mothballed = true;
+    expect(prepareProducerPhysicalSector(input).prepared.plan.labourCost).toBe(0);
+  });
+
   it("pays wages and site running costs for the line it runs, not idle capacity", () => {
     const { input, sector } = fixture();
     const full = prepareProducerPhysicalSector(input);

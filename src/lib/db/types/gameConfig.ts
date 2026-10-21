@@ -175,6 +175,12 @@ export interface GameConfig {
   /** With producerSpilloverStage on: share (0 to 1) of stranded spend that substitutes. Absent = 0.7. */
   producerSpilloverShare?: number;
   /**
+   * Funded producer market: >= 1 lets an open plant's wage bill fall at most
+   * 10% a turn and never below half a full run, so layoffs lag output. Mothballing
+   * releases the workers fully. 0 or absent = off.
+   */
+  producerStickyWageStage?: number;
+  /**
    * Funded producer market: >= 1 retires, with no cash, a share of the
    * capacity of plants that have sold nothing for several turns. 0 or absent = off.
    */

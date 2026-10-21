@@ -29,6 +29,7 @@ export const CORPORATION_TURN_GAME_CONFIG_PROJECTION = {
   producerLowUseCostStage: 1,
   producerSpilloverStage: 1,
   producerSpilloverShare: 1,
+  producerStickyWageStage: 1,
   producerIdleRetireStage: 1,
   decommissionGrantShare: 1,
   shortageBuildSpeedupEnabled: 1,
