@@ -1,5 +1,5 @@
 /**
- * GET  /api/corporations/[id]/antitrust-case  the open Competition Act case, if any
+ * GET  /api/corporations/[id]/antitrust-case  the open Competition Act case and standing orders
  * POST /api/corporations/[id]/antitrust-case  the competition authority decides: order or dismiss
  *
  * Auth: requireBasicAuth. POST further requires the caller to hold the
@@ -18,6 +18,7 @@ import { getGameState } from "@/lib/gameState";
 import {
   antitrustCaseDecisionSchema,
   antitrustCaseView,
+  antitrustOrdersView,
   decideAntitrustCase,
 } from "@/lib/corporations/commands/antitrustCase";
 
@@ -33,13 +34,17 @@ export async function GET(_request: Request, { params }: RouteParams): Promise<N
     const resolved = await resolveCorporation(db, (await params).id);
     if (!resolved.ok) return resolved.response;
     const gameState = await getGameState(db);
-    const view = await antitrustCaseView(
-      db,
-      resolved.corporation,
-      new ObjectId(auth.user.userId),
-      gameState?.currentYear ?? null
-    );
-    return NextResponse.json({ antitrustCase: view });
+    const [view, orders, currentTurn] = await Promise.all([
+      antitrustCaseView(
+        db,
+        resolved.corporation,
+        new ObjectId(auth.user.userId),
+        gameState?.currentYear ?? null
+      ),
+      antitrustOrdersView(db, resolved.corporation),
+      getCurrentTurn(db),
+    ]);
+    return NextResponse.json({ antitrustCase: view, orders, currentTurn });
   } catch (error) {
     return handleRouteError(error);
   }

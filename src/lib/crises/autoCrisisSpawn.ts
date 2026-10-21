@@ -31,6 +31,7 @@ import { isTemplateAllowedInYear } from "./crisisEraWindow";
 import { refreshVietnamEscalationLevel } from "./vietnamEscalationInterface";
 import { MARKET_ADJUSTMENT_TEMPLATE_KEY } from "./marketAdjustment/template";
 import { marketAdjustmentEnabled, recordLossShares } from "./marketAdjustment/signals";
+import { syncWorldHeadline } from "./marketAdjustment/worldHeadline";
 
 /** Serializable description of an auto-spawnable template, for the admin tab. */
 export interface AutoCrisisCatalogEntry {
@@ -242,6 +243,8 @@ export async function processAutoCrisisSpawn(
       spawned++;
     }
   }
+
+  if (marketAdjustmentOn) await syncWorldHeadline(db);
 
   return { spawned };
 }

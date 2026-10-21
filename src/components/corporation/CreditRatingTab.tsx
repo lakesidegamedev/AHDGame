@@ -466,6 +466,14 @@ export default function CreditRatingTab({
                     }
                   />
                 )}
+              {corporation.insiderConcentrationActive && (
+                <KVRow
+                  label="Founder concentration"
+                  value="one-notch downgrade"
+                  mono={false}
+                  hint="the CEO holds over 65% of the shares; selling below that removes it"
+                />
+              )}
             </KVList>
           </div>
           {hint && <p className="pt-1.5 text-xs text-muted">{hint}</p>}

@@ -753,6 +753,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       transitionStartTurn: sector.transitionStartTurn ?? null,
       transitionCooldownUntilTurn: sector.transitionCooldownUntilTurn ?? null,
       cutoverTransition: transitionView(sector, ctx.currentTurn, ctx.transitionFirstFundedTurn),
+      lastDecommission: sector.lastDecommission ?? null,
       isReversing: sector.isReversing ?? false,
       productionPolicy: sector.productionPolicy ?? 0,
       productionPolicyLevel: sector.productionPolicyLevel ?? 0,

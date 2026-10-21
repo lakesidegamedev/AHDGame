@@ -4,6 +4,8 @@ export function producerStageEnv(
     | {
         producerDemandPlanStage?: number;
         producerLowUseCostStage?: number;
+        producerIdleRetireStage?: number;
+        decommissionGrantShare?: number;
       }
     | null
     | undefined
@@ -11,5 +13,7 @@ export function producerStageEnv(
   return {
     demandPlanStage: config?.producerDemandPlanStage,
     lowUseCostStage: config?.producerLowUseCostStage,
+    idleRetireStage: config?.producerIdleRetireStage,
+    decommissionGrantShare: config?.decommissionGrantShare,
   };
 }

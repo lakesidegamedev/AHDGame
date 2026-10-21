@@ -1,26 +1,29 @@
 import { describe, expect, it } from "vitest";
 import {
-  SUPPLY_AGREEMENT_PRICE_BAND,
-  clampAgreementPremium,
-  isAgreementPremiumLegal,
+  CONTRACT_CANCEL_NOTICE_MAX_TURNS,
+  CONTRACT_CANCEL_NOTICE_TURNS,
+  contractCancelEffectiveTurn,
 } from "./supplyAgreement";
 
-describe("supply agreement price band (±35%)", () => {
-  it("accepts premiums inside the band", () => {
-    expect(isAgreementPremiumLegal(0)).toBe(true);
-    expect(isAgreementPremiumLegal(0.35)).toBe(true);
-    expect(isAgreementPremiumLegal(-0.35)).toBe(true);
-    expect(isAgreementPremiumLegal(0.2)).toBe(true);
+describe("contractCancelEffectiveTurn", () => {
+  it("gives open-ended contracts the flat notice", () => {
+    expect(contractCancelEffectiveTurn(100, undefined)).toBe(100 + CONTRACT_CANCEL_NOTICE_TURNS);
   });
-  it("rejects premiums outside the band", () => {
-    expect(isAgreementPremiumLegal(0.36)).toBe(false);
-    expect(isAgreementPremiumLegal(-0.5)).toBe(false);
-    expect(isAgreementPremiumLegal(Number.NaN)).toBe(false);
+
+  it("scales notice with the term left on a fixed-term contract", () => {
+    expect(contractCancelEffectiveTurn(100, 160)).toBe(115);
   });
-  it("clamps to the band", () => {
-    expect(clampAgreementPremium(0.9)).toBe(SUPPLY_AGREEMENT_PRICE_BAND);
-    expect(clampAgreementPremium(-0.9)).toBe(-SUPPLY_AGREEMENT_PRICE_BAND);
-    expect(clampAgreementPremium(0.1)).toBeCloseTo(0.1, 10);
-    expect(clampAgreementPremium(Number.NaN)).toBe(0);
+
+  it("never asks less than the flat notice", () => {
+    expect(contractCancelEffectiveTurn(100, 108)).toBe(104);
+  });
+
+  it("caps notice at a financial day", () => {
+    expect(contractCancelEffectiveTurn(100, 292)).toBe(100 + CONTRACT_CANCEL_NOTICE_MAX_TURNS);
+  });
+
+  it("never runs past the contract's own expiry", () => {
+    expect(contractCancelEffectiveTurn(100, 102)).toBe(102);
+    expect(contractCancelEffectiveTurn(100, 90)).toBe(100);
   });
 });
