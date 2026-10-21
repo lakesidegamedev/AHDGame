@@ -30,6 +30,7 @@ import { politicalSoeInputs } from "@/lib/politicalLegislation/marginAdapter";
 import { getSectorTypeMatchModifier } from "@/lib/corporations/specialization/rules";
 import { organisationalOutputFactor } from "@/lib/market/producerMarket/efficiencyRules";
 import { nextRunShare, type PriorReceipt } from "@/lib/market/producerMarket/outputResponseRules";
+import { idleRetireFraction } from "@/lib/market/producerMarket/idleRetirementRules";
 import { computeStateMetricMarginModifier } from "@/lib/corporations/sectorMetricMarginProfiles";
 import { STRATEGY_TRANSITION_TURNS } from "@/lib/constants/sectorStrategyTypes";
 import { resolveSectorHostCurrencyCode } from "@/lib/currency/corporationCapital";
@@ -72,6 +73,8 @@ export type ProducerPhysicalEnv = Pick<
   advertisingInput?: boolean;
   /** First funded turn of this world, when the cutover transition window applies. */
   transitionFirstFundedTurn?: number;
+  /** gameConfig.producerIdleRetireStage: >= 1 retires capacity that persistently sells nothing. 0 or absent = off. */
+  idleRetireStage?: number;
   lookups: Pick<
     CorporationLookups,
     | "labourTightnessByState"
@@ -245,7 +248,9 @@ export function prepareProducerPhysicalSector(input: {
     markets,
     outputMultiplier: 0,
     operatingRecipeRatio: retoolOperatingCapacityRatio({ ...sector, currentTurn }),
-    recessionCapacityFactor: lookups.recessionCapacityFactorByCountry?.get(countryId) ?? 1,
+    recessionCapacityFactor:
+      (lookups.recessionCapacityFactorByCountry?.get(countryId) ?? 1) *
+      (1 - idleRetireShare(sector, currentTurn, (env.idleRetireStage ?? 0) >= 1)),
     labourCost: 0,
     otherOperatingCost: 0,
     labourRecipientAccountId: producerWalletId(input.worldEpoch, scopes[0]),
@@ -388,6 +393,19 @@ export function prepareProducerPhysicalSector(input: {
     staffingFactor: labour.staffingFactor,
     suspended,
   };
+}
+
+/** Share of owned capacity to retire this turn from the prior settled receipt; 0 when the stage is off. */
+function idleRetireShare(sector: CorporateSector, currentTurn: number, enabled: boolean): number {
+  if (!enabled) return 0;
+  const receipt = sector.producerSettlement;
+  if (!receipt || receipt.turn !== currentTurn - 1) return 0;
+  return idleRetireFraction({
+    mothballed: sector.mothballed === true,
+    zeroSalesTurns: sector.producerZeroSalesTurns,
+    soldUnits: receipt.soldUnits,
+    activeUnits: receipt.activeUnits,
+  });
 }
 
 /**
