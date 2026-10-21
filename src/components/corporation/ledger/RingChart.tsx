@@ -27,13 +27,12 @@ export function RingChart({
   const total = positiveTotal(shown.map((s) => s.value));
   if (total <= 0) return null;
 
-  let start = 0;
-  const arcs = shown.map((s) => {
-    const pct = (s.value / total) * 100;
+  const pcts = shown.map((s) => (s.value / total) * 100);
+  const arcs = shown.map((segment, i) => {
+    const pct = pcts[i];
+    const start = pcts.slice(0, i).reduce((sum, p) => sum + p, 0);
     const length = shown.length > 1 ? Math.max(pct - GAP, 0.4) : 100;
-    const arc = { segment: s, pct, length, offset: 25 - start };
-    start += pct;
-    return arc;
+    return { segment, pct, length, offset: 25 - start };
   });
 
   return (
