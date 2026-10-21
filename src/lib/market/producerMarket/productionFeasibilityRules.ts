@@ -81,7 +81,13 @@ export function feasibleProduction(input: {
   const limit = input.maximumPivots ?? Math.max(1024, 10 * (n + m));
   if (!Number.isSafeInteger(limit) || limit < 1) throw new Error("Invalid production pivot limit");
   const upper = (j: number) => (j < n ? 1 : Infinity);
+  // Anti-cycling: a long run of degenerate pivots (steps of zero length) can
+  // cycle forever under the largest-improvement rule. After a streak of them,
+  // switch to Bland's rule (lowest-index improving column, lowest-index
+  // leaving row), which cannot cycle, until a pivot makes real progress.
+  let degenerateStreak = 0;
   for (let pivot = 0; pivot < limit; pivot++) {
+    const bland = degenerateStreak >= DEGENERATE_PIVOTS_BEFORE_BLAND;
     // Prefer a strong improving column; use stable activity order for ties.
     let entering = -1;
     let direction = 1;
@@ -93,6 +99,7 @@ export function feasibleProduction(input: {
         entering = j;
         direction = d;
         improvement = reduced[j] * d;
+        if (bland) break;
       }
     }
     if (entering < 0) {
@@ -118,6 +125,7 @@ export function feasibleProduction(input: {
       }
     }
     if (!Number.isFinite(step)) throw new Error("Unbounded production activity");
+    degenerateStreak = step > 1e-12 ? 0 : degenerateStreak + 1;
     const enteringValue = nonbasic[entering] + direction * step;
     for (let i = 0; i < m; i++) values[i] -= coefficients[i][entering] * direction * step;
     if (leaving < 0) {
@@ -148,6 +156,9 @@ export function feasibleProduction(input: {
   // feasible, so the current one is a valid, if not optimal, plan: use it
   // rather than halting the turn, and count it.
   productionRepairStats.nonConverged++;
+  console.warn(
+    `[production] feasibility pivot limit reached (${productionRepairStats.nonConverged} so far): using the last feasible plan`
+  );
   const fallback = Array.from(nonbasic.slice(0, n));
   for (let i = 0; i < m; i++) if (basic[i] < n) fallback[basic[i]] = values[i];
   return reconcileProduction(fallback, input.constraints);
@@ -164,6 +175,9 @@ export function feasibleProduction(input: {
  * toward the zero opening can only lower a row's net use. Repairs beyond
  * rounding noise are counted and logged.
  */
+/** Consecutive zero-length pivots after which the solve switches to Bland's rule. */
+const DEGENERATE_PIVOTS_BEFORE_BLAND = 48;
+
 export const productionRepairStats = {
   repairs: 0,
   uniformScales: 0,

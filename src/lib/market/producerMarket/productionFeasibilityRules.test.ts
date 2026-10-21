@@ -218,3 +218,21 @@ describe("pivot limit", () => {
     expect(result.every((v) => v >= 0 && v <= 1)).toBe(true);
   });
 });
+
+describe("degenerate rows", () => {
+  it("still finds the optimum on a heavily degenerate problem without using the fallback", () => {
+    const before = productionRepairStats.nonConverged;
+    // Many tied, zero-slack rows: a <= b, b <= c, c <= d and so on, all at limit 0.
+    const n = 12;
+    const constraints = Array.from({ length: n - 1 }, (_, i) => ({
+      available: 0,
+      coefficients: Array.from({ length: n }, (_, j) => (j === i ? 1 : j === i + 1 ? -1 : 0)),
+    }));
+    const result = feasibleProduction({
+      activities: Array.from({ length: n }, (_, j) => ({ id: `a${j}`, value: 1 + j })),
+      constraints,
+    });
+    expect(productionRepairStats.nonConverged).toBe(before);
+    for (const v of result) expect(v).toBeCloseTo(1, 6);
+  });
+});
