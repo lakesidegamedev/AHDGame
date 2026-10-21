@@ -69,3 +69,66 @@ export async function antitrustCaseView(
       !!viewerUserId && !!authority?.holderUserId && authority.holderUserId.equals(viewerUserId),
   };
 }
+
+export interface AntitrustOrdersView {
+  /** Companies this group must give up control of, including this one if it is ordered out of its parent's group. */
+  forcedSales: Array<{
+    corporationId: string;
+    corporationName: string;
+    reason: NonNullable<Corporation["antitrustDivestiture"]>["reason"];
+    countryId: string;
+    dueTurn: number;
+  }>;
+  /** A breakup or merger-review order to bring this group's share of one industry under a threshold. */
+  industryOrder: {
+    sectorType: string;
+    countryId: string;
+    thresholdPercent: number;
+    dueTurn: number;
+  } | null;
+}
+
+/**
+ * Standing antitrust orders on a corporation's group, public like the case
+ * itself: forced sales of subsidiaries (on the subsidiary, keyed by its root)
+ * and an industry-share order on the root. One read for the subsidiaries.
+ */
+export async function antitrustOrdersView(
+  db: Db,
+  corporation: Pick<Corporation, "_id" | "name" | "antitrustDivestiture" | "pendingDivestiture">
+): Promise<AntitrustOrdersView> {
+  const id = corporation._id.toString();
+  const ordered = await db
+    .collection<Corporation>("corporations")
+    .find(
+      { "antitrustDivestiture.rootCorporationId": id },
+      { projection: { name: 1, antitrustDivestiture: 1 } }
+    )
+    .toArray();
+  const rows = [...ordered];
+  if (corporation.antitrustDivestiture && !rows.some((c) => c._id.equals(corporation._id))) {
+    rows.push(corporation as Corporation);
+  }
+  const forcedSales = rows
+    .filter((c) => c.antitrustDivestiture)
+    .map((c) => ({
+      corporationId: c._id.toString(),
+      corporationName: c.name,
+      reason: c.antitrustDivestiture!.reason,
+      countryId: c.antitrustDivestiture!.countryId,
+      dueTurn: c.antitrustDivestiture!.dueTurn,
+    }))
+    .sort((a, b) => a.dueTurn - b.dueTurn);
+  const pending = corporation.pendingDivestiture;
+  return {
+    forcedSales,
+    industryOrder: pending
+      ? {
+          sectorType: pending.sectorType,
+          countryId: pending.countryId,
+          thresholdPercent: pending.thresholdPercent,
+          dueTurn: pending.dueTurn,
+        }
+      : null,
+  };
+}

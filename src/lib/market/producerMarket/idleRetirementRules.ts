@@ -9,9 +9,9 @@
  * more than the grace period, it retires a fixed share of the capacity above
  * what its last sales justify, as extra physical depreciation applied to
  * owned units and their paid basis together. The write-off pays no cash, so no
- * money is created. Mothballed plants are the owner's explicit choice to hold
- * capacity and never retire. A probe share is always kept so a plant can see
- * demand return.
+ * money is created. Capacity that has sat mothballed past the same grace
+ * retires too, because holding it costs nothing and parking must not become
+ * free hoarding. A probe share is always kept so a plant can see demand return.
  *
  * Pure: last receipt and streak in, share of capacity to retire this turn out.
  */
@@ -34,9 +34,10 @@ export function idleRetireFraction(input: {
   /** Units the plant could run at last turn (capacity x active share). */
   activeUnits: number;
 }): number {
-  if (input.mothballed) return 0;
   const streak = input.zeroSalesTurns ?? 0;
   if (!(streak > IDLE_RETIRE_GRACE_TURNS)) return 0;
+  // A mothballed plant runs nothing and sells nothing: only the probe share is kept.
+  if (input.mothballed) return IDLE_RETIRE_RATE * (1 - IDLE_RETIRE_PROBE_SHARE);
   if (!(input.activeUnits > 0)) return 0;
   const sold = Number.isFinite(input.soldUnits) ? Math.max(0, input.soldUnits) : 0;
   const justified = Math.min(

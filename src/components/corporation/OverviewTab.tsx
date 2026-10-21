@@ -877,6 +877,13 @@ export default function OverviewTab({
                 hint={perTurnChangeHint(corporation.rdScoreNetChange)}
               />
               {brand && <KVRow label="Brand loyalty" value={brand} mono={false} />}
+              {(corporation.managementOverheadPp ?? 0) > 0 && (
+                <KVRow
+                  label="Management overhead"
+                  value={`${(corporation.managementOverheadPp ?? 0).toFixed(1)} pts of margin`}
+                  hint="grows with every plant the whole group runs, subsidiaries included"
+                />
+              )}
               {corporation.averageQuality != null && (
                 <KVRow
                   label="Average quality"

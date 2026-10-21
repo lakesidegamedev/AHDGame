@@ -212,6 +212,8 @@ export interface CorporationDetail {
   logisticsStrength: number;
   /** Absent for outside viewers of a private corporation (redacted). */
   logisticsStrengthNetChange?: number;
+  /** Management overhead applied last turn, margin points, measured on the whole control group. */
+  managementOverheadPp?: number;
   rdBudget: number;
   rdScore: number;
   /** Absent for outside viewers of a private corporation (redacted). */
@@ -294,6 +296,8 @@ export interface CorporationDetail {
    * credit upgrade and the share-price premium.
    */
   indexInclusionActive?: boolean;
+  /** One-notch credit downgrade: a public company whose CEO holds over 65% of the shares. */
+  insiderConcentrationActive?: boolean;
   /** Persisted smoothed composite score matching `creditRatingSnapshot`. */
   creditCompositeSnapshot?: number;
   /** Country owner ID for national corporations */
