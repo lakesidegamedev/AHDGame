@@ -63,3 +63,47 @@ export function publicBuyerFunding(
       };
     });
 }
+
+/**
+ * Budget lines that are pure transfers (pensions, welfare, unemployment and
+ * child benefits all sit in the social security line) are household income.
+ * The treasury already deducts them each turn and, with no household wallets,
+ * the money landed nowhere. Here the same amount is the households' funding:
+ * the country's slice is shared across its state household wallets by weight.
+ *
+ * Pure: budgets and weights in, per-wallet amounts out (anchor per turn).
+ */
+export const HOUSEHOLD_TRANSFER_CATEGORIES = ["socialSecurity"] as const;
+
+export function householdTransferFunding(
+  budgets: ReadonlyArray<{
+    countryId: string;
+    byCategory: Parameters<typeof govtSpendForCategory>[0];
+  }>,
+  wallets: ReadonlyArray<{ accountId: string; countryId: string; stateId: string }>,
+  stateWeightsByCountry: ReadonlyMap<string, ReadonlyMap<string, number>>,
+  turnsPerYear: number
+): { walletId: string; countryId: string; amount: number }[] {
+  if (!Number.isFinite(turnsPerYear) || turnsPerYear <= 0)
+    throw new Error("Invalid turns per year");
+  const out: { walletId: string; countryId: string; amount: number }[] = [];
+  for (const b of [...budgets].sort((a, c) => (a.countryId < c.countryId ? -1 : 1))) {
+    const perTurn =
+      govtSpendForCategory(b.byCategory, [...HOUSEHOLD_TRANSFER_CATEGORIES]) / turnsPerYear;
+    if (!(perTurn > 0)) continue;
+    const own = wallets.filter((w) => w.countryId === b.countryId);
+    if (own.length === 0) continue;
+    const weights = stateWeightsByCountry.get(b.countryId);
+    const weightOf = (w: { stateId: string }) => {
+      const v = weights?.get(w.stateId);
+      return Number.isFinite(v) && (v as number) > 0 ? (v as number) : 0;
+    };
+    const total = own.reduce((sum, w) => sum + weightOf(w), 0);
+    for (const w of [...own].sort((a, c) => (a.accountId < c.accountId ? -1 : 1))) {
+      const share = total > 0 ? weightOf(w) / total : 1 / own.length;
+      const amount = perTurn * share;
+      if (amount > 0) out.push({ walletId: w.accountId, countryId: b.countryId, amount });
+    }
+  }
+  return out;
+}

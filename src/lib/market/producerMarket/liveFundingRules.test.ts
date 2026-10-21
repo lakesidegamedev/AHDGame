@@ -4,6 +4,7 @@ import {
   batchProducerMoves,
   closeTransferMoves,
   householdOpeningMoves,
+  householdTransferMoves,
   investmentFundingMoves,
   investmentReturnMoves,
   publicFundingMoves,
@@ -172,5 +173,28 @@ describe("ledger witness for producer moves", () => {
     expect(() =>
       batchProducerMoves("w", 8, publicFundingMoves("w", 7, [{ ...wallet, countryId: "us" }]))
     ).toThrow(/turn 7/);
+  });
+});
+
+describe("household transfer moves", () => {
+  it("mint into one wallet each, balance in the ledger, and batch into one move", () => {
+    const rows = [
+      { walletId: "hh-a", amountLocal: 30, currencyCode: "USD", localPerAnchor: 1 },
+      { walletId: "hh-b", amountLocal: 0, currencyCode: "USD", localPerAnchor: 1 },
+      { walletId: "hh-c", amountLocal: 20, currencyCode: "USD", localPerAnchor: 1 },
+    ];
+    const moves = householdTransferMoves("w", 7, rows);
+    expect(moves.map((m) => m.key)).toEqual([
+      "producer-household-transfer:w:7:hh-a",
+      "producer-household-transfer:w:7:hh-c",
+    ]);
+    for (const move of moves) {
+      expect(legsNet(move.legs)).toBeCloseTo(0, 12);
+      const ledger = producerMoveLedgerLegs(move)!;
+      expect(ledger.reduce((sum, leg) => sum + leg.anchorAmount, 0)).toBeCloseTo(0, 12);
+    }
+    const batch = batchProducerMoves("w", 7, moves);
+    expect(batch).toHaveLength(1);
+    expect(batch[0].kind).toBe("producer_household_transfer");
   });
 });
