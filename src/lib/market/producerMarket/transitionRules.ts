@@ -21,7 +21,7 @@ export const TRANSITION_BASIS_TURNS = 5;
 /** Share of a fully claimed pool held back so float error never overdraws it. */
 export const POOL_FLOAT_MARGIN = 1e-9;
 /** Turns the package runs after the first funded turn. */
-export const TRANSITION_WINDOW_TURNS = 24;
+export const TRANSITION_WINDOW_TURNS = 48;
 /** Capacity built after this turn chased the reverted advertising spike; reported only. */
 export const TRANSITION_SPIKE_COHORT_AFTER_TURN = 314;
 

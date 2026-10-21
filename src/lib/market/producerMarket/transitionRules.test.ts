@@ -35,10 +35,10 @@ describe("transition classification", () => {
 });
 
 describe("transition window", () => {
-  it("runs 24 turns and fades from 1 to 0", () => {
+  it("runs the full window and fades from 1 to 0", () => {
     expect(inTransitionWindow(99, 100)).toBe(false);
     expect(landingWeight(100, 100)).toBe(1);
-    expect(landingWeight(112, 100)).toBeCloseTo(0.5);
+    expect(landingWeight(100 + TRANSITION_WINDOW_TURNS / 2, 100)).toBeCloseTo(0.5);
     expect(inTransitionWindow(100 + TRANSITION_WINDOW_TURNS - 1, 100)).toBe(true);
     expect(landingWeight(100 + TRANSITION_WINDOW_TURNS, 100)).toBe(0);
   });
@@ -47,7 +47,8 @@ describe("transition window", () => {
 describe("transition support", () => {
   const mismatched = classifySector(samples(100, 20));
   const base = {
-    turn: 112,
+    // Halfway through the window, so the support has faded to half.
+    turn: 100 + TRANSITION_WINDOW_TURNS / 2,
     firstFundedTurn: 100,
     sectors: [
       {
@@ -117,7 +118,11 @@ describe("transition support", () => {
 
   it("pays nothing outside the window", () => {
     expect(
-      transitionSupport({ ...base, turn: 130, poolByCountry: new Map([["US", 1000]]) }).payments
+      transitionSupport({
+        ...base,
+        turn: 100 + TRANSITION_WINDOW_TURNS + 6,
+        poolByCountry: new Map([["US", 1000]]),
+      }).payments
     ).toEqual([]);
   });
 });
