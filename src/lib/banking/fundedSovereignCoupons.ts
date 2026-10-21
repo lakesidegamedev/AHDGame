@@ -45,15 +45,22 @@ let claimIndexReady: Promise<unknown> | null = null;
 
 function claimStore(db: Db) {
   const store = db.collection<SovereignCouponClaimRecord>(SOVEREIGN_COUPON_CLAIMS_COLLECTION);
-  claimIndexReady ??= store
-    .createIndex(
+  claimIndexReady ??= Promise.all([
+    store.createIndex(
       { budgetId: 1, settledTurn: 1 },
       { name: "sovereignCouponClaims_budget_settled", background: true }
-    )
-    .catch((error) => {
-      claimIndexReady = null;
-      throw error;
-    });
+    ),
+    // Serves the oldest-open-due-turn probe and the book-order sort without
+    // fetching every claim document; the amount bound is checked on the
+    // fetched candidates only.
+    store.createIndex(
+      { budgetId: 1, settledTurn: 1, "claim.dueTurn": 1, order: 1 },
+      { name: "sovereignCouponClaims_budget_settled_due", background: true }
+    ),
+  ]).catch((error) => {
+    claimIndexReady = null;
+    throw error;
+  });
   return store;
 }
 
@@ -111,6 +118,89 @@ export async function loadOpenSovereignCouponClaims(
     .sort({ "claim.dueTurn": 1, order: 1 })
     .toArray();
   return rows.map((row) => row.claim);
+}
+
+/**
+ * Every per-claim coupon payout the journal still knows about, read once for
+ * the whole turn. A budget then filters it to the claims it actually loaded.
+ *
+ * The per-claim alternative builds an `$or` with one `_id` regex per open claim
+ * (tens of thousands of clauses per budget, hundreds of thousands per turn)
+ * and makes the server evaluate all of them over the whole money-move
+ * collection. One indexed prefix scan is the same answer for every budget.
+ */
+export async function loadSovereignCouponPriorPayouts(
+  db: Db
+): Promise<Array<{ _id: string; status: string }>> {
+  return db
+    .collection<{ _id: string; status: string }>("bankMoneyMoves")
+    .find(
+      { _id: { $regex: "^sovereign-coupon:" }, status: { $in: ["partial", "applied"] } },
+      { projection: { _id: 1, status: 1 } }
+    )
+    .toArray();
+}
+
+/**
+ * Unpaid claims one budget can still act on this turn: every claim no larger
+ * than the cash it holds, plus the ones a prior receipt or a grouped receipt
+ * already owns (those must be resumed even when the cash snapshot cannot cover
+ * them). The loop skips any other claim before it can move money, so loading
+ * it would only decode bytes.
+ */
+export async function loadSettleableOpenSovereignCouponClaims(
+  db: Db,
+  budgetId: string,
+  maxAmountLocal: number,
+  alsoClaimIds: ReadonlySet<string>
+): Promise<FundedSovereignCouponClaim[]> {
+  const cap =
+    typeof maxAmountLocal === "number" && Number.isFinite(maxAmountLocal)
+      ? Math.max(0, maxAmountLocal)
+      : 0;
+  const ids = [...alsoClaimIds];
+  const base = { budgetId, ...OPEN_CLAIM };
+  const filter =
+    ids.length > 0
+      ? {
+          $and: [
+            base,
+            {
+              $or: [{ "claim.amountLocal": { $lte: cap } }, { _id: { $in: ids } }],
+            },
+          ],
+        }
+      : { ...base, "claim.amountLocal": { $lte: cap } };
+  const rows = await claimStore(db).find(filter).sort({ "claim.dueTurn": 1, order: 1 }).toArray();
+  return rows.map((row) => row.claim);
+}
+
+/** Due turn of the oldest unpaid claim, or null when the budget owes none. */
+export async function firstOpenSovereignCouponDueTurn(
+  db: Db,
+  budgetId: string
+): Promise<number | null> {
+  const row = await claimStore(db).findOne(
+    { budgetId, ...OPEN_CLAIM },
+    {
+      projection: { _id: 0, "claim.dueTurn": 1 },
+      sort: { "claim.dueTurn": 1, order: 1 },
+    }
+  );
+  const due = (row as { claim?: { dueTurn?: unknown } } | null)?.claim?.dueTurn;
+  return typeof due === "number" && Number.isFinite(due) ? due : null;
+}
+
+/** Currency codes a public-float holder can be paid in, across every open claim. */
+export async function openSovereignCouponPoolCurrencies(
+  db: Db,
+  budgetId: string
+): Promise<string[]> {
+  return claimStore(db).distinct("claim.currencyCode", {
+    budgetId,
+    ...OPEN_CLAIM,
+    "claim.holders.kind": "publicFloat",
+  });
 }
 
 /**
@@ -319,6 +409,15 @@ function payoutTransition(
   };
 }
 
+/** Cash the Treasury currently holds in its own currency; missing reads as zero. */
+async function readBudgetCash(db: Db, budgetId: unknown): Promise<number> {
+  const row = await db
+    .collection<FederalBudget>("federalBudget")
+    .findOne({ _id: budgetId as never }, { projection: { treasuryCashLocal: 1 } });
+  const value = (row as { treasuryCashLocal?: unknown } | null)?.treasuryCashLocal;
+  return typeof value === "number" && Number.isFinite(value) ? Math.max(0, value) : 0;
+}
+
 /** Freeze due-turn holder quotes before attempts; funded payout is journaled as one balanced native-currency move. */
 export async function settleFundedSovereignCoupons(
   db: Db,
@@ -332,6 +431,14 @@ export async function settleFundedSovereignCoupons(
     anchorRate: number;
     forexEnabled: boolean;
     corporateQuotes: ReadonlyMap<string, SovereignCouponCorporationQuote>;
+    /**
+     * Per-turn cache of every per-claim payout the journal still knows about
+     * (`loadSovereignCouponPriorPayouts`). When supplied, the claim load is
+     * bounded by the cash this budget holds plus the claims a prior or a
+     * grouped receipt already owns. Omitted, the pass keeps the historical
+     * load-every-open-claim behaviour.
+     */
+    priorPayouts?: ReadonlyArray<{ _id: string; status: string }>;
   }
 ): Promise<void> {
   const budgetId = String(budget._id);
@@ -339,8 +446,58 @@ export async function settleFundedSovereignCoupons(
   const claimById = new Map<string, FundedSovereignCouponClaim>(
     pinnedLegacy.map((claim) => [claim.id, claim])
   );
-  for (const claim of await loadOpenSovereignCouponClaims(db, budgetId))
-    claimById.set(claim.id, claim);
+
+  // The claim queue is bounded only by history: a Treasury that cannot cover
+  // the oldest arrears still carries one claim per bond per unpaid turn. Read
+  // what the queue can still act on this turn, not all of it.
+  let budgetPriors: Array<{ _id: string; status: string }> | undefined;
+  let cashBound: number | undefined;
+  let batches: CouponBatchRecord[] | undefined;
+  let poolCurrencies: string[] | undefined;
+  if (input.priorPayouts) {
+    const bondIds = new Set<string>();
+    for (const bond of input.bonds) bondIds.add(bond._id.toHexString());
+    for (const key of Object.keys(budget.sovereignCouponFrozenThrough ?? {}))
+      if (key.startsWith("b")) bondIds.add(key.slice(1));
+    budgetPriors = input.priorPayouts.filter((move) =>
+      bondIds.has(move._id.slice("sovereign-coupon:".length).split(":")[0] ?? "")
+    );
+    // The cash read is only a bound: it happens before a resumed grouped
+    // receipt can debit the Treasury, so it is never smaller than the cash the
+    // payout loop finally sees. The loop still reads the authoritative cash.
+    const legacyFirst = pinnedLegacy.length
+      ? Math.min(...pinnedLegacy.map((claim) => claim.dueTurn))
+      : null;
+    [cashBound, batches, poolCurrencies] = await Promise.all([
+      readBudgetCash(db, budget._id),
+      (async () => {
+        const storeFirst = await firstOpenSovereignCouponDueTurn(db, budgetId);
+        // With no queued claim at all the historical loader would still probe
+        // this turn's batch key (the fresh claims are in the list). Keep that.
+        const first =
+          storeFirst === null && legacyFirst === null
+            ? input.turn
+            : storeFirst === null
+              ? legacyFirst
+              : legacyFirst === null
+                ? storeFirst
+                : Math.min(storeFirst, legacyFirst);
+        return loadCouponBatches(db, budgetId, first, input.turn);
+      })(),
+      openSovereignCouponPoolCurrencies(db, budgetId),
+    ]);
+  }
+
+  const alsoClaimIds = new Set<string>();
+  if (batches)
+    for (const batch of batches) for (const id of batchMembers(batch)) alsoClaimIds.add(id);
+  if (budgetPriors) for (const move of budgetPriors) alsoClaimIds.add(claimIdOfMove(move._id));
+
+  const loadedClaims =
+    cashBound !== undefined
+      ? await loadSettleableOpenSovereignCouponClaims(db, budgetId, cashBound, alsoClaimIds)
+      : await loadOpenSovereignCouponClaims(db, budgetId);
+  for (const claim of loadedClaims) claimById.set(claim.id, claim);
 
   // Freeze this turn's claims. The record is written before the frozen-through
   // mark, so a crash between the two re-installs the same id (a no-op) rather
@@ -428,12 +585,20 @@ export async function settleFundedSovereignCoupons(
   }
 
   const claims = [...claimById.values()].sort((a, b) => a.dueTurn - b.dueTurn);
-  const priorMoves = await findPriorPayouts(db, claims);
-  const targetReadyClaimIds = await loadCouponTargetReadiness(db, claims);
+  const claimIds = new Set(claims.map((claim) => claim.id));
+  const priorMoves = budgetPriors
+    ? budgetPriors.filter((move) => claimIds.has(claimIdOfMove(move._id)))
+    : await findPriorPayouts(db, claims);
+  const targetReadyClaimIds = await loadCouponTargetReadiness(db, claims, poolCurrencies);
   // Claims a grouped receipt already owns settle only through that receipt.
   // Only a receipt whose every leg and projection landed closes its members;
   // one refused on resume moved no cash and leaves them owed.
-  const batches = await loadCouponBatches(db, budgetId, claims, input.turn);
+  batches ??= await loadCouponBatches(
+    db,
+    budgetId,
+    claims.length ? Math.min(...claims.map((claim) => claim.dueTurn)) : null,
+    input.turn
+  );
   const landed: CouponBatchRecord[] = [];
   const batched = new Set<string>();
   for (const batch of batches) {
@@ -586,11 +751,10 @@ const batchMembers = (batch: CouponBatchRecord): string[] =>
 async function loadCouponBatches(
   db: Db,
   budgetId: string,
-  claims: FundedSovereignCouponClaim[],
+  first: number | null,
   turn: number
 ): Promise<CouponBatchRecord[]> {
-  if (!claims.length) return [];
-  const first = Math.min(...claims.map((claim) => claim.dueTurn));
+  if (first === null) return [];
   const keys: string[] = [];
   for (let t = first; t <= turn; t++) keys.push(couponBatchKey(budgetId, t));
   return db
@@ -736,13 +900,18 @@ function batchPayoutTransition(
 
 async function loadCouponTargetReadiness(
   db: Db,
-  claims: FundedSovereignCouponClaim[]
+  claims: FundedSovereignCouponClaim[],
+  knownPoolCurrencies?: readonly string[]
 ): Promise<Set<string>> {
-  const poolCurrencies = new Set(
-    claims.flatMap((claim) =>
+  // The pool upsert is a side effect that must not depend on which claims the
+  // cash bound let this pass load, so a caller that pre-filtered passes the
+  // currency set read from every open claim.
+  const poolCurrencies = new Set<string>([
+    ...(knownPoolCurrencies ?? []),
+    ...claims.flatMap((claim) =>
       claim.holders.some((holder) => holder.kind === "publicFloat") ? [claim.currencyCode] : []
-    )
-  );
+    ),
+  ]);
   await Promise.all(
     [...poolCurrencies].map((currencyCode) =>
       db

@@ -8,6 +8,10 @@ import { perTurnCouponPayment } from "@/lib/constants/bonds";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import {
   couponBatchKey,
+  firstOpenSovereignCouponDueTurn,
+  loadSettleableOpenSovereignCouponClaims,
+  loadSovereignCouponPriorPayouts,
+  openSovereignCouponPoolCurrencies,
   settleFundedSovereignCoupons,
   type SovereignCouponClaimRecord,
 } from "./fundedSovereignCoupons";
@@ -952,5 +956,103 @@ describe("funded sovereign coupon claims", () => {
       });
       expect(openClaims(db)).toEqual([]);
     });
+  });
+});
+
+describe("bounded open-claim load", () => {
+  function claimRecord(
+    id: string,
+    dueTurn: number,
+    amountLocal: number,
+    order = 0
+  ): SovereignCouponClaimRecord {
+    return {
+      _id: id,
+      budgetId: "US",
+      order,
+      createdAt: new Date(),
+      claim: {
+        id,
+        bondId: bondId.toHexString(),
+        dueTurn,
+        countryId: "US",
+        currencyCode: "USD",
+        amountLocal,
+        amountAnchor: amountLocal,
+        anchorRate: 1,
+        holders: [
+          {
+            kind: "character",
+            id: characterId.toHexString(),
+            units: 1,
+            amountLocal,
+            amountAnchor: amountLocal,
+            currencyCode: "USD",
+          },
+        ],
+      } as unknown as FundedSovereignCouponClaim,
+    };
+  }
+
+  it("loads affordable claims plus the claims a prior receipt or batch already owns", async () => {
+    const db = world(100);
+    db.seed("sovereignCouponClaims", [
+      claimRecord("sovereign-coupon:a:10", 10, 60, 0),
+      claimRecord("sovereign-coupon:a:11", 11, 500, 0),
+      claimRecord("sovereign-coupon:a:12", 12, 700, 0),
+    ]);
+    const owned = new Set(["sovereign-coupon:a:12"]);
+    const loaded = await loadSettleableOpenSovereignCouponClaims(
+      db as unknown as Db,
+      "US",
+      100,
+      owned
+    );
+    expect(loaded.map((claim) => claim.id).sort()).toEqual([
+      "sovereign-coupon:a:10",
+      "sovereign-coupon:a:12",
+    ]);
+    expect(await firstOpenSovereignCouponDueTurn(db as unknown as Db, "US")).toBe(10);
+    expect(await openSovereignCouponPoolCurrencies(db as unknown as Db, "US")).toEqual([]);
+  });
+
+  it("leaves an unaffordable claim open identically under the full and bounded load", async () => {
+    const run = async (bounded: boolean) => {
+      const db = world(1_000);
+      db.seed("sovereignCouponClaims", [claimRecord("sovereign-coupon:a:11", 11, 1_000_000)]);
+      await settleFundedSovereignCoupons(db as unknown as Db, savedBudget(db), {
+        turn: 12,
+        bonds: [bond()],
+        anchorRate: 1,
+        forexEnabled: false,
+        corporateQuotes: new Map(),
+        ...(bounded
+          ? { priorPayouts: await loadSovereignCouponPriorPayouts(db as unknown as Db) }
+          : {}),
+      });
+      return {
+        cash: savedBudget(db).treasuryCashLocal,
+        claimIds: openClaims(db)
+          .map((claim) => claim.id)
+          .sort(),
+      };
+    };
+    expect(await run(true)).toEqual(await run(false));
+  });
+
+  it("reads per-claim payouts once and ignores grouped receipts and rejected attempts", async () => {
+    const db = world(100);
+    db.seed("bankMoneyMoves", [
+      { _id: "sovereign-coupon:a:10:attempt:12", status: "applied" },
+      { _id: "sovereign-coupon:a:11:attempt:12", status: "partial" },
+      { _id: "sovereign-coupon-batch:US:12", status: "applied" },
+      { _id: "sovereign-coupon:a:10:attempt:13", status: "rejected" },
+      { _id: "other:1", status: "applied" },
+    ]);
+    const priors = await loadSovereignCouponPriorPayouts(db as unknown as Db);
+    expect(priors.map((row) => row._id).sort()).toEqual([
+      "sovereign-coupon:a:10:attempt:12",
+      "sovereign-coupon:a:11:attempt:12",
+    ]);
   });
 });

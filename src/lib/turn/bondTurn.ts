@@ -94,6 +94,7 @@ import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { roundSavingsAmount } from "@/lib/currency/savingsInterest";
 import { resumeSettlement } from "@/lib/banking/settlementJournal";
 import { KeyedQueue, interleaveByKey, runInLanes } from "@/lib/turn/settlementLanes";
+import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 
 /** Concurrent sovereign maturity settlements; one Treasury still runs one at a time. */
 const SOVEREIGN_MATURITY_LANES = 8;
@@ -265,6 +266,7 @@ export async function processBondTurn(
       : await db
           .collection<Corporation>("corporations")
           .find({ _id: { $in: [...allCorpIds].map((id) => new ObjectId(id)) } })
+          .project(SETTLEMENT_HISTORY_EXCLUDED)
           .toArray();
   const corpMap = new Map(corporations.map((c) => [c._id.toString(), c]));
   // Natcorp set is consulted in every later phase (coupon-cost skip, default

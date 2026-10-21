@@ -4,6 +4,7 @@ import type { BondMaturityTurns } from "@/lib/db/types/bond";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
 import { recordAuditBulk } from "@/lib/audit/recordAudit";
 import type { ActionAuditInput } from "@/lib/db/types/actionAuditLog";
+import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 
 /**
  * Phase 7: Auto-resolve lingering corporate defaults.
@@ -49,7 +50,7 @@ export async function autoResolveLingeringDefaults(args: {
     ]);
     const candidateCorps = await db
       .collection<Corporation>("corporations")
-      .find({ _id: { $in: lingeringDefaultCorpIds } })
+      .find({ _id: { $in: lingeringDefaultCorpIds } }, { projection: SETTLEMENT_HISTORY_EXCLUDED })
       .toArray();
     const auditRows: Record<string, unknown>[] = [];
     // Forensics/alt-detection audit spine (plan §3.1, T2.7) — the "silent
