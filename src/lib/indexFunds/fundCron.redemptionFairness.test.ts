@@ -89,6 +89,49 @@ async function servedFundIds(db: Db): Promise<Set<string>> {
 }
 
 describe("index fund cron queued-redemption fairness", () => {
+  it("services queued redemptions for winding-down funds without changing their lifecycle", async () => {
+    const w = world();
+    const fund = w.funds[0];
+    await w.db
+      .collection("indexFunds")
+      .updateOne({ _id: fund._id }, { $set: { status: "winding_down" } });
+    const at = new Date(NOW.getTime() + 1);
+    await w.db.collection<IndexFundRedemptionQueueEntry>("indexFundRedemptionQueue").insertMany(
+      Array.from({ length: BUDGET + 1 }, () => ({
+        _id: new ObjectId(),
+        fundId: fund._id,
+        holderKind: "npp" as const,
+        nppId: w.npps[0]._id,
+        units: 10,
+        requestedNavAnchor: 100,
+        requestedAmountAnchor: 1_000,
+        paidAmountAnchor: 0,
+        status: "queued" as const,
+        unitsBurnedAtRequest: true,
+        createdAt: at,
+        updatedAt: at,
+      }))
+    );
+
+    const result = await runIndexFundCron(w.db, {
+      currentTurn: 11,
+      queuedRedemptionClaimsPerPass: BUDGET,
+    });
+
+    expect(result.redemptionsPaid).toBe(BUDGET);
+    expect(await w.db.collection("indexFunds").findOne({ _id: fund._id })).toMatchObject({
+      status: "winding_down",
+    });
+    expect(
+      await w.db
+        .collection<IndexFundRedemptionQueueEntry>("indexFundRedemptionQueue")
+        .countDocuments({
+          fundId: fund._id,
+          status: "queued",
+        })
+    ).toBe(1);
+  });
+
   it("bounds claims per turn and serves every fund when funds outnumber claims", async () => {
     const w = world();
     const turns = Math.ceil(FUNDS / BUDGET);

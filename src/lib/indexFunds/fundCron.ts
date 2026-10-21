@@ -237,7 +237,18 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
     ])
   );
   let funds = await listServiceableFunds(db);
-  const redemptionServiceFundIds = funds.map((fund) => fund._id);
+  const serviceableFundIds = funds.map((fund) => fund._id);
+  const windingDownFunds = await db
+    .collection<Pick<IndexFund, "_id">>("indexFunds")
+    .find({ status: "winding_down" })
+    .project<{ _id: IndexFund["_id"] }>({ _id: 1 })
+    .toArray();
+  const windingDownFundIds = windingDownFunds.map((fund) => fund._id);
+  const windingDownQueuedUnits = await loadQueuedRedemptionUnitsByFundId(db, windingDownFundIds);
+  const redemptionServiceFundIds = [
+    ...serviceableFundIds,
+    ...windingDownFundIds.filter((id) => windingDownQueuedUnits.has(id.toString())),
+  ];
   // Load valuation side ledgers once before Pass 1 so NAV includes committed
   // bid escrow and counts queued redemption units as the claims they are.
   const fundIds = funds.map((fund) => fund._id);
@@ -615,6 +626,10 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
   mark("pass3b-crossFund");
   // Pass 3c: pay redemptions and snapshot after cross-fund market settles.
   funds = await listFundsByIds(db, redemptionServiceFundIds);
+  const redemptionQueuedUnitsByFundId = await loadQueuedRedemptionUnitsByFundId(
+    db,
+    redemptionServiceFundIds
+  );
   // Snapshots are upserts keyed by (fund, turn); one bulk write replaces one per fund.
   const fundSnapshots: Parameters<typeof insertFundSnapshotsBulk>[1] = [];
   // One claim budget for the whole pass, split evenly over the funds still
@@ -626,7 +641,7 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
   const fundsById = new Map(funds.map((f) => [f._id.toString(), f]));
   const claimsPerPass = options?.queuedRedemptionClaimsPerPass ?? QUEUED_REDEMPTION_CLAIMS_PER_PASS;
   const claimOrder = orderQueuedRedemptionFunds(
-    funds.map((f) => f._id.toString()).filter((id) => queuedUnitsByFundId.has(id)),
+    funds.map((f) => f._id.toString()).filter((id) => redemptionQueuedUnitsByFundId.has(id)),
     claimsPerPass,
     currentTurn
   );
@@ -662,7 +677,7 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
       // `funds` was just re-read above and nothing writes between; the old
       // per-fund re-read here was a duplicate round trip.
       const refreshedFund = fund;
-      const hasQueuedRedemptions = queuedUnitsByFundId.has(fund._id.toString());
+      const hasQueuedRedemptions = redemptionQueuedUnitsByFundId.has(fund._id.toString());
 
       if (currentTurn > 0) {
         // A fund with no queued units cannot have been mutated by the
