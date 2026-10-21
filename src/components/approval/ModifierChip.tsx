@@ -5,7 +5,12 @@ import { displayEffect } from "@/lib/country/rules/approvalBreakdown";
 import { buildModifierTitle, toneFor } from "./modifierTitle";
 
 function marginForModifier(modifier: ActiveModifier): number | null {
-  if (modifier.source === "address" || modifier.source === "war" || modifier.source === "banking")
+  if (
+    modifier.source === "address" ||
+    modifier.source === "war" ||
+    modifier.source === "banking" ||
+    modifier.source === "market"
+  )
     return null;
   if (modifier.marginEffect === 0) return null;
   return modifier.marginEffect ?? null;

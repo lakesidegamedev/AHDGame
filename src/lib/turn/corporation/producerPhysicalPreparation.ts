@@ -1,5 +1,8 @@
 /** Prepare work, recipes and plant constraints before any product money is moved. */
-import { inTransitionWindow } from "@/lib/market/producerMarket/transitionRules";
+import {
+  inTransitionWindow,
+  transitionReliefEligible,
+} from "@/lib/market/producerMarket/transitionRules";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import {
   COMMODITY_BASE_PRICES,
@@ -31,6 +34,10 @@ import {
   nextRunShare,
   type PriorReceipt,
 } from "@/lib/market/producerMarket/outputResponseRules";
+import {
+  idleRetireActive,
+  idleRetireSectorShare,
+} from "@/lib/market/producerMarket/idleRetirementRules";
 import { computeStateMetricMarginModifier } from "@/lib/corporations/sectorMetricMarginProfiles";
 import { STRATEGY_TRANSITION_TURNS } from "@/lib/constants/sectorStrategyTypes";
 import { resolveSectorHostCurrencyCode } from "@/lib/currency/corporationCapital";
@@ -75,6 +82,10 @@ export type ProducerPhysicalEnv = Pick<
   transitionFirstFundedTurn?: number;
   /** gameConfig.producerDemandPlanStage: >= 1 plans output from expected sales. 0 or absent = off. */
   demandPlanStage?: number;
+  /** gameConfig.producerIdleRetireStage: >= 1 retires capacity that persistently sells nothing. 0 or absent = off. */
+  idleRetireStage?: number;
+  /** gameConfig.decommissionGrantShare: share of retired book paid from unspent public funding. */
+  decommissionGrantShare?: number;
   lookups: Pick<
     CorporationLookups,
     | "labourTightnessByState"
@@ -248,7 +259,17 @@ export function prepareProducerPhysicalSector(input: {
     markets,
     outputMultiplier: 0,
     operatingRecipeRatio: retoolOperatingCapacityRatio({ ...sector, currentTurn }),
-    recessionCapacityFactor: lookups.recessionCapacityFactorByCountry?.get(countryId) ?? 1,
+    recessionCapacityFactor:
+      (lookups.recessionCapacityFactorByCountry?.get(countryId) ?? 1) *
+      (1 -
+        (idleRetireActive(
+          env.idleRetireStage,
+          currentTurn,
+          env.transitionFirstFundedTurn,
+          inTransitionWindow
+        )
+          ? idleRetireSectorShare(sector, currentTurn)
+          : 0)),
     labourCost: 0,
     otherOperatingCost: 0,
     labourRecipientAccountId: producerWalletId(input.worldEpoch, scopes[0]),
@@ -379,7 +400,7 @@ export function prepareProducerPhysicalSector(input: {
     financialPenaltyPercent: Math.max(0, -disaster.marginPenalty),
     coldUpkeepWaived:
       env.transitionFirstFundedTurn != null &&
-      sector.cutoverTransition?.mismatched === true &&
+      transitionReliefEligible(sector) &&
       inTransitionWindow(currentTurn, env.transitionFirstFundedTurn),
   });
   return {

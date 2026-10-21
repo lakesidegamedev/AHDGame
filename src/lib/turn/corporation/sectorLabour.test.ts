@@ -5,7 +5,12 @@ import type { LabourContext } from "@/lib/labour/laborCost";
 import { STRIKE_MARGIN_PENALTY_PP, STRIKE_REVENUE_THROTTLE } from "@/lib/labour/strikes";
 import { TURNS_PER_DAY, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { annualWageFromDaily } from "@/lib/unions/unionServices";
-import { resolveSectorLabourEconomics, resolveSectorLabourProductionEffects } from "./sectorLabour";
+import {
+  resolveSectorHeadcount,
+  resolveSectorLabourEconomics,
+  resolveSectorLabourProductionEffects,
+} from "./sectorLabour";
+import { makeLabourDemandByState } from "@/lib/labour/labourMarket";
 
 function sector(strikeStartedAtTurn: number | null = null): CorporateSector {
   return {
@@ -213,5 +218,44 @@ describe("resolveSectorLabourEconomics", () => {
     const floored = resolveSectorLabourEconomics(economicsInput(1.3));
 
     expect(floored).not.toHaveProperty("negotiatedWageLevelToPersist");
+  });
+});
+
+describe("resolveSectorHeadcount on a funded turn", () => {
+  const base = {
+    revenue: 1_000_000,
+    stateId: "s1",
+    rawWorkforceSkillByState: new Map<string, number>(),
+    politicalBoard: undefined,
+    staffingFactor: 1,
+  };
+
+  it("staffs from revenue as before when there is no funded headcount", () => {
+    const demand = makeLabourDemandByState();
+    const out = resolveSectorHeadcount({ ...base, labourDemandByState: demand });
+    expect(out.desiredWorkers).toBeGreaterThan(0);
+    expect(demand.get("s1")).toBe(out.desiredWorkers);
+  });
+
+  it("uses the funded plan's staffed headcount and records that as the region's labour demand", () => {
+    const demand = makeLabourDemandByState();
+    const out = resolveSectorHeadcount({
+      ...base,
+      labourDemandByState: demand,
+      fundedHeadcount: { desiredWorkers: 40, workers: 30 },
+    });
+    expect(out).toEqual({ desiredWorkers: 40, workers: 30 });
+    expect(demand.get("s1")).toBe(40);
+  });
+
+  it("an idle plant (zero funded headcount) adds no labour demand however large its nameplate", () => {
+    const demand = makeLabourDemandByState();
+    const out = resolveSectorHeadcount({
+      ...base,
+      labourDemandByState: demand,
+      fundedHeadcount: { desiredWorkers: 0, workers: 0 },
+    });
+    expect(out).toEqual({ desiredWorkers: 0, workers: 0 });
+    expect(demand.get("s1") ?? 0).toBe(0);
   });
 });

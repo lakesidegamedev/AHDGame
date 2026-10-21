@@ -14,6 +14,7 @@
  * Returns each sector's settled receipt so the legacy pass can take revenue and
  * margin from it, and the producer profit per corporation the settlement paid.
  */
+import { markStrugglingTransitionSectors } from "./transitionStruggling";
 import { createHash } from "node:crypto";
 import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
 import type { LedgerEntry } from "@/lib/ledger/types";
@@ -29,6 +30,7 @@ import {
 } from "@/lib/market/producerMarket/profitDistributionRules";
 import {
   householdOpeningMoves,
+  householdTransferMoves,
   PRODUCER_ACCOUNTS,
   investmentFundingMoves,
   producerMoveLedgerLegs,
@@ -40,7 +42,13 @@ import {
   type CloseTransfer,
 } from "@/lib/market/producerMarket/liveFundingRules";
 import type { FundedReceipt } from "@/lib/market/producerMarket/fundedSectorRules";
-import { transitionSupport } from "@/lib/market/producerMarket/transitionRules";
+import { inTransitionWindow, transitionSupport } from "@/lib/market/producerMarket/transitionRules";
+import {
+  DECOMMISSION_GRANT_DEFAULT_SHARE,
+  decommissionGrant,
+  idleRetireActive,
+  idleRetireSectorShare,
+} from "@/lib/market/producerMarket/idleRetirementRules";
 import {
   fundedLedgerRows,
   PRODUCER_MARKET_OUTCOMES,
@@ -68,6 +76,18 @@ export interface FundedProducerTurnResult {
   receiptsBySectorId: Map<string, FundedReceipt>;
   /** Anchor per turn, by corporation id. */
   settledProfitByCorp: Map<string, number>;
+  /** Staffed headcount of each plant at its funded run; plants with no plan are absent. */
+  headcountBySectorId: ReadonlyMap<string, { desiredWorkers: number; workers: number }>;
+}
+
+/** The idle-retirement fields of the physical-preparation env, from the governor config. */
+export function idleRetireEnv(
+  config: { producerIdleRetireStage?: number; decommissionGrantShare?: number } | null | undefined
+) {
+  return {
+    idleRetireStage: config?.producerIdleRetireStage,
+    decommissionGrantShare: config?.decommissionGrantShare,
+  };
 }
 
 export async function runFundedProducerTurn(
@@ -221,6 +241,27 @@ export async function runFundedProducerTurn(
     )
   );
 
+  await apply(
+    batchProducerMoves(
+      worldEpoch,
+      turn,
+      householdTransferMoves(
+        worldEpoch,
+        turn,
+        demand.householdTransfers.map((t) => {
+          const scope = scopeById.get(t.walletId);
+          const rate = rateOf(scope?.currency);
+          return {
+            walletId: t.walletId,
+            amountLocal: t.amount * rate,
+            currencyCode: scope!.currency,
+            localPerAnchor: rate,
+          };
+        })
+      )
+    )
+  );
+
   if (input.seedHouseholds) {
     const wageBill = new Map<string, number>();
     for (const p of demand.preparedSectors)
@@ -331,6 +372,54 @@ export async function runFundedProducerTurn(
     const byPayee = new Map<string, SettlementClose["transfers"][number]>();
     const paid: Record<string, number> = {};
     const bySector: Record<string, number> = {};
+    const poolAfterSupport = new Map<string, number>();
+    for (const f of demand.funding) {
+      const pool = Math.max(0, closingCash.get(publicWallet(f.countryId)) ?? 0);
+      let spent = 0;
+      for (const p of support.payments) if (p.countryId === f.countryId) spent += p.claim;
+      poolAfterSupport.set(f.countryId, Math.max(0, pool - spent));
+    }
+    // Decommissioning grant for capacity retired this turn, from what transition
+    // support left of the same unspent public funding, so the pool is never
+    // claimed twice and nothing is paid from an empty one.
+    const retiredBookBySector: Record<string, number> = {};
+    const grantBySector: Record<string, number> = {};
+    const grantShare = input.env.decommissionGrantShare ?? DECOMMISSION_GRANT_DEFAULT_SHARE;
+    if (
+      grantShare > 0 &&
+      idleRetireActive(input.env.idleRetireStage, turn, input.firstFundedTurn, inTransitionWindow)
+    ) {
+      const claims = lookups.corporations.flatMap((corp) =>
+        (lookups.sectorsByCorp.get(corp._id.toString()) ?? []).flatMap((sector) => {
+          const retiredBook =
+            (sector.capacityBookAnchor ?? 0) * idleRetireSectorShare(sector, turn);
+          if (!(retiredBook > 0)) return [];
+          retiredBookBySector[sector._id.toHexString()] = retiredBook;
+          return [
+            {
+              sectorId: sector._id.toHexString(),
+              countryId: String(sector.countryId ?? corp.countryId ?? ""),
+              claim: retiredBook * Math.min(1, grantShare),
+            },
+          ];
+        })
+      );
+      const grants = decommissionGrant({ claims, poolByCountry: poolAfterSupport });
+      for (const g of grants.payments) {
+        grantBySector[g.sectorId] = g.claim;
+        const owner = sectorOwner.get(g.sectorId)!;
+        const from = publicWallet(g.countryId);
+        const key = `decommission:${owner}:${from}`;
+        const row = byPayee.get(key) ?? {
+          reason: "decommission_grant",
+          fromAccountId: from,
+          toAccountId: owner,
+          amountAnchor: 0,
+        };
+        row.amountAnchor += g.claim;
+        byPayee.set(key, row);
+      }
+    }
     for (const p of support.payments) {
       paid[p.countryId] = (paid[p.countryId] ?? 0) + p.claim;
       bySector[p.sectorId] = (bySector[p.sectorId] ?? 0) + p.claim;
@@ -352,6 +441,8 @@ export async function runFundedProducerTurn(
       meta: {
         paidByCountry: paid,
         supportBySector: bySector,
+        retiredBookBySector,
+        grantBySector,
         coverageByCountry: Object.fromEntries(support.coverageByCountry),
       },
     };
@@ -376,6 +467,29 @@ export async function runFundedProducerTurn(
 
   const supportBySector =
     (settled.result.close?.meta?.supportBySector as Record<string, number> | undefined) ?? {};
+  const retiredBookBySector =
+    (settled.result.close?.meta?.retiredBookBySector as Record<string, number> | undefined) ?? {};
+  const grantBySector =
+    (settled.result.close?.meta?.grantBySector as Record<string, number> | undefined) ?? {};
+  const retiredIds = Object.keys(retiredBookBySector);
+  if (retiredIds.length > 0)
+    await db.collection<CorporateSector>("corporateSectors").bulkWrite(
+      retiredIds.map((id) => ({
+        updateOne: {
+          filter: { _id: new ObjectId(id) },
+          update: {
+            $set: {
+              lastDecommission: {
+                turn,
+                retiredBookAnchor: retiredBookBySector[id],
+                grantAnchor: grantBySector[id] ?? 0,
+              },
+            },
+          },
+        },
+      })),
+      { ordered: false }
+    );
   const receiptsBySectorId = new Map<string, FundedReceipt>();
   for (const sector of settled.closingSectors) {
     const r = sector.producerSettlement;
@@ -542,7 +656,21 @@ export async function runFundedProducerTurn(
     )
   );
 
-  return { receiptsBySectorId, settledProfitByCorp };
+  // Transition relief for sectors that struggle after the switch (owner
+  // decision 2026-10-21): mark them and tell their owners once.
+  await markStrugglingTransitionSectors(
+    db,
+    lookups,
+    receiptsBySectorId,
+    turn,
+    input.firstFundedTurn
+  );
+
+  return {
+    receiptsBySectorId,
+    settledProfitByCorp,
+    headcountBySectorId: demand.headcountBySectorId,
+  };
 }
 
 /**

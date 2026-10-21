@@ -74,6 +74,38 @@ export function publicFundingMoves(
     }));
 }
 
+/** Mints each household wallet's share of the turn's budget transfer lines (pensions, welfare, benefits). */
+export function householdTransferMoves(
+  worldEpoch: string,
+  turn: number,
+  rows: readonly WalletAmount[]
+): MoneyMove[] {
+  return rows
+    .filter((r) => positive(r.amountLocal) > 0)
+    .map((r) => ({
+      key: `producer-household-transfer:${worldEpoch}:${turn}:${r.walletId}`,
+      kind: "producer_household_transfer",
+      turn,
+      legs: [
+        {
+          kind: "mint",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          note: "transfer budget lines the treasury already spent",
+        },
+        {
+          kind: "credit",
+          amount: r.amountLocal,
+          valuation: valuation(r),
+          collection: PRODUCER_ACCOUNTS,
+          filter: { _id: r.walletId },
+          path: "cash",
+          note: "household transfer income",
+        },
+      ],
+    }));
+}
+
 /** Burns what a public buyer did not spend. */
 export function publicReturnMoves(
   worldEpoch: string,

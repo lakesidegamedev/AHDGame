@@ -1,5 +1,6 @@
 import {
   freeTransitionConversion,
+  transitionReliefEligible,
   inTransitionWindow,
   TRANSITION_WINDOW_TURNS,
 } from "@/lib/market/producerMarket/transitionRules";
@@ -752,6 +753,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       transitionStartTurn: sector.transitionStartTurn ?? null,
       transitionCooldownUntilTurn: sector.transitionCooldownUntilTurn ?? null,
       cutoverTransition: transitionView(sector, ctx.currentTurn, ctx.transitionFirstFundedTurn),
+      lastDecommission: sector.lastDecommission ?? null,
       isReversing: sector.isReversing ?? false,
       productionPolicy: sector.productionPolicy ?? 0,
       productionPolicyLevel: sector.productionPolicyLevel ?? 0,
@@ -817,10 +819,15 @@ function transitionView(
   currentTurn: number,
   firstFundedTurn: number | undefined
 ) {
-  if (firstFundedTurn == null || sector.cutoverTransition?.mismatched !== true) return null;
+  if (firstFundedTurn == null || !transitionReliefEligible(sector)) return null;
   const effectiveTurn = currentTurn + 1;
   if (!inTransitionWindow(effectiveTurn, firstFundedTurn)) return null;
   return {
+    reason:
+      sector.cutoverTransition?.mismatched === true
+        ? ("overBuilt" as const)
+        : (sector.cutoverStruggling?.reason ?? ("losing" as const)),
+    mothballed: sector.mothballed === true,
     turnsLeft: firstFundedTurn + TRANSITION_WINDOW_TURNS - effectiveTurn,
     freeConversion: freeTransitionConversion(sector, effectiveTurn, firstFundedTurn),
     converted: sector.cutoverConvertedAtTurn != null,

@@ -67,6 +67,7 @@ export async function runProducerMarketShadowPhase(
       funding,
       householdForPayee,
       householdSeed,
+      householdTransferTotal,
       householdWallets,
       households,
       investmentBuyerOrders,
@@ -201,6 +202,7 @@ export async function runProducerMarketShadowPhase(
       closingTotal: Object.values(close.accounts).reduce((s, v) => s + v, 0),
       sources: {
         householdSeed,
+        householdTransfer: householdTransferTotal,
         newCompanyCash: newCompanyCash.total,
         publicFunding,
         investmentFunding: investmentFundingTotal,
@@ -222,6 +224,7 @@ export async function runProducerMarketShadowPhase(
         ...conservation,
         sources: {
           householdSeed,
+          householdTransfer: householdTransferTotal,
           newCompanyCash: newCompanyCash.total,
           publicFunding,
           investmentFunding: investmentFundingTotal,

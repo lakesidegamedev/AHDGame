@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { feasibleProduction, reconcileProduction } from "./productionFeasibilityRules";
+import {
+  feasibleProduction,
+  productionRepairStats,
+  reconcileProduction,
+} from "./productionFeasibilityRules";
 
 describe("joint physical production feasibility", () => {
   it("keeps upstream suppliers running while limiting a competing final producer", () => {
@@ -166,9 +170,69 @@ describe("production reconciliation residuals", () => {
     expect(used).toBeLessThanOrEqual(10 + 1e-9 * 11);
   });
 
-  it("still rejects a real overdraw", () => {
-    expect(() => reconcileProduction([1, 1], [{ available: 1, coefficients: [5, 5] }])).toThrow(
-      "did not reconcile"
-    );
+  it("repairs a pivot residual of a few millionths of the row scale", () => {
+    // Seen on a large row (scale ~29k): used 0.06 against available 0.
+    const constraints = [{ available: 0, coefficients: [29346, 1] }];
+    const result = reconcileProduction([2.03e-6, 0], constraints);
+    expect(29346 * result[0] + result[1]).toBeLessThanOrEqual(29346 * 1e-9);
+  });
+
+  it("scales everything down for a gross overdraw rather than failing the turn", () => {
+    const constraints = [
+      { available: 1, coefficients: [5, 5] },
+      { available: 0, coefficients: [-3, 1] },
+    ];
+    const result = reconcileProduction([1, 1], constraints);
+    expect(5 * result[0] + 5 * result[1]).toBeLessThanOrEqual(1 + 1e-9 * 10);
+    expect(-3 * result[0] + result[1]).toBeLessThanOrEqual(1e-9 * 10);
+    expect(result.every((v) => v >= 0 && v <= 1)).toBe(true);
+  });
+
+  it("leaves a feasible plan untouched", () => {
+    const result = reconcileProduction([0.5, 0.25], [{ available: 10, coefficients: [5, 5] }]);
+    expect(result).toEqual([0.5, 0.25]);
+  });
+});
+
+describe("pivot limit", () => {
+  it("returns a feasible plan instead of failing when the pivot limit runs out", () => {
+    const constraints = [
+      { available: 10, coefficients: [3, 4, 5] },
+      { available: 6, coefficients: [2, 1, 4] },
+    ];
+    const before = productionRepairStats.nonConverged;
+    const result = feasibleProduction({
+      activities: [
+        { id: "a", value: 5 },
+        { id: "b", value: 4 },
+        { id: "c", value: 7 },
+      ],
+      constraints,
+      maximumPivots: 1,
+    });
+    expect(productionRepairStats.nonConverged).toBe(before + 1);
+    for (const c of constraints) {
+      const used = c.coefficients.reduce((s, v, j) => s + v * result[j], 0);
+      expect(used).toBeLessThanOrEqual(c.available + 1e-9);
+    }
+    expect(result.every((v) => v >= 0 && v <= 1)).toBe(true);
+  });
+});
+
+describe("degenerate rows", () => {
+  it("still finds the optimum on a heavily degenerate problem without using the fallback", () => {
+    const before = productionRepairStats.nonConverged;
+    // Many tied, zero-slack rows: a <= b, b <= c, c <= d and so on, all at limit 0.
+    const n = 12;
+    const constraints = Array.from({ length: n - 1 }, (_, i) => ({
+      available: 0,
+      coefficients: Array.from({ length: n }, (_, j) => (j === i ? 1 : j === i + 1 ? -1 : 0)),
+    }));
+    const result = feasibleProduction({
+      activities: Array.from({ length: n }, (_, j) => ({ id: `a${j}`, value: 1 + j })),
+      constraints,
+    });
+    expect(productionRepairStats.nonConverged).toBe(before);
+    for (const v of result) expect(v).toBeCloseTo(1, 6);
   });
 });

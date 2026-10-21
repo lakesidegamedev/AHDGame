@@ -46,6 +46,7 @@ import {
 import { OverviewSimple, type SimpleFigures } from "./OverviewSimple";
 import { GrowthLeversPanel } from "./GrowthLeversPanel";
 import { AntitrustCaseCard } from "./AntitrustCaseCard";
+import { TransitionReviewCard } from "./TransitionReviewCard";
 import {
   buildAttentionItems,
   sectorMargin,
@@ -591,6 +592,7 @@ export default function OverviewTab({
       {growthPanel}
       <div className="grid gap-x-8 gap-y-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="min-w-0 space-y-6">
+          <TransitionReviewCard corpId={corpId} sectors={sectors} isCeo={isCeo} />
           <AntitrustCaseCard corpId={corpId} />
           {financials && (
             <DenseSection
@@ -875,6 +877,13 @@ export default function OverviewTab({
                 hint={perTurnChangeHint(corporation.rdScoreNetChange)}
               />
               {brand && <KVRow label="Brand loyalty" value={brand} mono={false} />}
+              {(corporation.managementOverheadPp ?? 0) > 0 && (
+                <KVRow
+                  label="Management overhead"
+                  value={`${(corporation.managementOverheadPp ?? 0).toFixed(1)} pts of margin`}
+                  hint="grows with every plant the whole group runs, subsidiaries included"
+                />
+              )}
               {corporation.averageQuality != null && (
                 <KVRow
                   label="Average quality"

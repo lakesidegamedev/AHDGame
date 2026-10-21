@@ -35,7 +35,12 @@ function toneClass(n: number, kind: "text" | "bg" | "fill"): string {
 }
 
 function marginForModifier(modifier: ActiveModifier): number | null {
-  if (modifier.source === "address" || modifier.source === "war" || modifier.source === "banking")
+  if (
+    modifier.source === "address" ||
+    modifier.source === "war" ||
+    modifier.source === "banking" ||
+    modifier.source === "market"
+  )
     return null;
   if (modifier.marginEffect === 0) return null;
   return modifier.marginEffect ?? null;
@@ -54,7 +59,9 @@ export function splitConditionForces(modifiers: ActiveModifier[]): {
   // The war block is national and can reach into the twenties. It has no
   // business in a regional balance bar: it would dominate the viz and read as
   // though one region were carrying a country-wide effect.
-  const regional = modifiers.filter((m) => m.source !== "war" && m.source !== "banking");
+  const regional = modifiers.filter(
+    (m) => m.source !== "war" && m.source !== "banking" && m.source !== "market"
+  );
   const tailwinds = regional.filter((m) => m.effect > 0);
   const headwinds = regional.filter((m) => m.effect < 0);
   return {

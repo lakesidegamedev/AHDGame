@@ -101,3 +101,18 @@ export function chooseTransitionConversion(input: {
   }
   return null;
 }
+
+/**
+ * The corporation's sectors as they will stand once this decision's conversion
+ * applies, so entry evaluation later in the same pass does not found a sector in
+ * a state and industry that the conversion has just taken.
+ */
+export function sectorsAfterConversion<T extends { _id: { toString(): string } }>(
+  sectors: T[],
+  converted: { sectorId: string; set: Partial<T> } | null
+): T[] {
+  if (!converted) return sectors;
+  return sectors.map((s) =>
+    s._id.toString() === converted.sectorId ? { ...s, ...converted.set } : s
+  );
+}

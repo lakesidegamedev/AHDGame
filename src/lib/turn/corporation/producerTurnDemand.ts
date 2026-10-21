@@ -10,7 +10,10 @@ import { TURNS_PER_DAY, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
 import { householdDemandSpecs } from "@/lib/market/producerMarket/householdDemandRules";
 import { HOUSEHOLD_OPENING_TURNS } from "@/lib/market/producerMarket/householdOpeningRules";
-import { publicBuyerFunding } from "@/lib/market/producerMarket/publicBuyerRules";
+import {
+  householdTransferFunding,
+  publicBuyerFunding,
+} from "@/lib/market/producerMarket/publicBuyerRules";
 import { investmentBuyerFunding } from "@/lib/market/producerMarket/capitalSpendRules";
 import { marketingBuyerLines } from "@/lib/market/producerMarket/marketingBuyerRules";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
@@ -69,6 +72,8 @@ export async function buildProducerTurnDemand(
   const investmentAccountId =
     input.investmentAccountId ?? ((countryId: string) => `investment:${countryId}`);
   const preparedSectors: ReturnType<typeof prepareProducerPhysicalSector>["prepared"][] = [];
+  // Each plant's staffed headcount at its funded run, for the labour market.
+  const headcountBySectorId = new Map<string, { desiredWorkers: number; workers: number }>();
   const walletScopes: ReturnType<typeof prepareProducerPhysicalSector>["walletScopes"][number][] =
     [];
   const legacyBySectorId = legacyPnlBySectorId(input.sectorOps);
@@ -110,7 +115,11 @@ export async function buildProducerTurnDemand(
     for (const sector of lookups.sectorsByCorp.get(corp._id.toString()) ?? []) {
       try {
         const sectorId = sector._id.toString();
-        const { prepared, walletScopes: scopes } = prepareProducerPhysicalSector({
+        const {
+          prepared,
+          walletScopes: scopes,
+          headcount,
+        } = prepareProducerPhysicalSector({
           worldEpoch,
           env,
           corporation: corp,
@@ -120,6 +129,10 @@ export async function buildProducerTurnDemand(
         const sectorCountry = String(sector.countryId ?? corp.countryId ?? "");
         const plan = shadowCountryBooks(prepared.plan, sectorCountry);
         preparedSectors.push({ ...prepared, plan });
+        headcountBySectorId.set(sectorId, {
+          desiredWorkers: headcount.desiredWorkers,
+          workers: headcount.workers,
+        });
         walletScopes.push(...scopes);
         // Legacy plantsPnl is daily and in the sector host's currency; the
         // shadow is per turn in anchor units, so convert before comparing.
@@ -261,6 +274,27 @@ export async function buildProducerTurnDemand(
     lines: f.lines.map((l) => ({ ...l, book: shadowBook(l.book, l.commodity, f.countryId) })),
   }));
   const publicFunding = funding.reduce((s, f) => s + f.fundingLocal, 0);
+  // Transfer lines of the same budgets (pensions, welfare, unemployment, child
+  // benefits) are household income; the treasury deducts them already.
+  const householdTransfers = householdTransferFunding(
+    lookups.federalBudgets.map((b) => {
+      const code = resolveCountryCurrencyCode(b);
+      const rate = (code && lookups.exchangeRatesByCurrency.get(code)) || 1;
+      return {
+        countryId: String(b.countryId),
+        byCategory: Object.fromEntries(
+          Object.entries(b.spending?.byCategory ?? {}).map(([k, v]) => [k, (v as number) / rate])
+        ),
+      };
+    }),
+    [...householdWallets.values()],
+    stateWeightsByCountry,
+    new Map(Object.entries(publicShareByCountry).map(([id, v]) => [id, v.share])),
+    TURNS_PER_YEAR
+  );
+  const householdTransferTotal = householdTransfers.reduce((sum, t) => sum + t.amount, 0);
+  for (const t of householdTransfers)
+    householdOpening.set(t.walletId, (householdOpening.get(t.walletId) ?? 0) + t.amount);
   const budgetCountries = new Set(lookups.federalBudgets.map((b) => String(b.countryId)));
   // Construction work on outstanding build orders, bought from producers. The
   // builds were paid when placed; this gives that cash its destination.
@@ -424,8 +458,11 @@ export async function buildProducerTurnDemand(
     eligibleOffersByOrder,
     firstWalletByCorp,
     funding,
+    headcountBySectorId,
     householdForPayee,
     householdSeed,
+    householdTransfers,
+    householdTransferTotal,
     householdWallets,
     households,
     investmentBuyerOrders,

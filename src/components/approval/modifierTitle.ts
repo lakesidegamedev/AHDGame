@@ -57,6 +57,8 @@ export function buildModifierTitle(modifier: ActiveModifier): string {
   if (modifier.source === "address") return ADDRESS_TITLE;
   if (modifier.source === "banking")
     return "Taxpayer-funded bank failure backstop relative to GDP. Approval cost fades over one game year; confidence is measured separately.";
+  if (modifier.source === "market")
+    return "Approval cost of a market adjustment: plants losing money across the economy and unemployment above its level when the adjustment began. Measured, never a reward for a response; fades over one game year after it ends.";
   if (modifier.source === "war") return WAR_TITLES[modifier.id] ?? WAR_FALLBACK_TITLE;
   return METRIC_TITLE;
 }

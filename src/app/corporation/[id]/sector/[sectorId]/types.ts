@@ -475,6 +475,13 @@ export interface Market {
   totalMarket: number;
   marketShare: number;
   competitors: Competitor[];
+  /** What the strongest-marketing rival here could take in a sector split, and its odds. */
+  attackExposure?: {
+    rivalName: string;
+    plantsAtRisk: number;
+    plantCount: number;
+    successProbability: number;
+  } | null;
   unownedRevenue: number;
   unownedPercent: number;
 }

@@ -25,6 +25,7 @@ interface PayView {
   currencyCode: CurrencyCode;
   salary: number;
   nextReviewTurn: number;
+  level: number | null;
   demand: PayDemand | null;
   lastDecision: PayDecision | null;
 }
@@ -118,6 +119,7 @@ export function CeoPayCard({ corpId }: { corpId: string }) {
           Better CEOs cut your management overhead. A new CEO starts at a low level.
         </p>
         <div className="divide-y divide-card-border border-y border-card-border">
+          {view.level != null && <KVRow label="CEO level" value={view.level} />}
           <KVRow label="CEO salary" value={`${formatAmount(salary)} per day`} />
           <KVRow label="Next pay review" mono={false} value={`Turn ${nextReviewTurn}`} />
         </div>

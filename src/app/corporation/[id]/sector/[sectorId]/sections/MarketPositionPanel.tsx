@@ -321,6 +321,15 @@ export default function MarketPositionPanel({
           </div>
         </div>
       )}
+      {market.attackExposure && (
+        <p className="mt-3 border-t border-card-border/60 pt-2 text-[11px] leading-snug text-muted">
+          Exposure: {market.attackExposure.rivalName}, the strongest marketer already in this
+          market, could try to take {market.attackExposure.plantsAtRisk} of your{" "}
+          {market.attackExposure.plantCount} plants with a{" "}
+          {Math.round(market.attackExposure.successProbability * 100)}% chance. Any company can try;
+          your own marketing strength lowers both.
+        </p>
+      )}
       {(clearingEnabled || capitalEnabled) && (
         <p className="mt-3 border-t border-card-border/60 pt-2 text-[11px] leading-snug text-muted">
           {capitalEnabled

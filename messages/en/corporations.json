@@ -83,7 +83,10 @@
         "term": "Term",
         "turns": "{count} turns",
         "volumePerTurn": "Volume cap per turn",
-        "pricePremium": "Price premium (%)"
+        "pricePremium": "Price premium (%)",
+        "cancelNotice": "Cancelling gives {turns} turns' notice. The contract keeps delivering and settling until then; agree a shorter term with the other side to end it sooner.",
+        "noticeServed": "Notice served. Ends on turn {turn}.",
+        "termEnds": "Term ends on turn {turn}."
       },
       "validation": {
         "positiveVolume": "Volume cap must be a positive number",

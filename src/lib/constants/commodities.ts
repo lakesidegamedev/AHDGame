@@ -150,7 +150,9 @@ export function countryCommodityDemandMultiplier(
  * Gated: only applied when gameConfig.extractionOutputScaleEnabled is true, so
  * it is inert on prod until deliberately dialed in (same pattern as
  * marketSystemMode). Applied BEFORE the capacity haircut so the boost fills the
- * ample idle deposit capacity rather than exceeding it.
+ * ample idle deposit capacity rather than exceeding it. On plants worlds it
+ * does not apply to extraction with a realized fraction: that tonnage is the
+ * real amount mined, so boosting it would count the same ore twice.
  *
  * RE-TUNE FLAG: rare_earth's 2.5x (covers the merged copper market) was
  * calibrated at t873 against a global S/D that later received a large one-off
@@ -2408,28 +2410,30 @@ export function computeRawSupplyDemand(
       // `luScale` (era plants worlds): the nameplate is era-nominal ₳ against
       // the modern price table, so without the scale this leg is ~70x under the
       // plants unit basis - see the `ledgerUnitScale` doc above.
-      let units =
-        dollarsToUnits(sector.revenue * rate, COMMODITY_BASE_PRICES[commodity]) *
-        luScale *
-        natcorpScale *
-        outputMultiplier *
-        militaryRetained;
-
       // Plants, extraction only: bring the nameplate down to what the plant
       // actually made. The SAME fraction the depletion booking charges the
       // state's reserves at — see `extractionRealizedFraction`. Without it the
       // ledger counted a ramping or throughput-limited field at full nameplate
-      // while the ground was only debited for the real output.
-      if (plantsEnabled && st === "extraction") {
-        const f = sector.extractionRealizedFraction;
-        if (typeof f === "number" && Number.isFinite(f)) units *= Math.max(0, Math.min(1, f));
-      }
+      // while the ground was only debited for the real output. nameplate x
+      // fraction is already the real tonnage (policy curve included), so the
+      // policy bonus and the output scale below do not apply to it.
+      const f = plantsEnabled && st === "extraction" ? sector.extractionRealizedFraction : null;
+      const realized =
+        typeof f === "number" && Number.isFinite(f) ? Math.max(0, Math.min(1, f)) : null;
+      let units =
+        dollarsToUnits(sector.revenue * rate, COMMODITY_BASE_PRICES[commodity]) *
+        luScale *
+        natcorpScale *
+        (realized != null ? 1 : outputMultiplier) *
+        militaryRetained;
+      if (realized != null) units *= realized;
 
       // Structural extraction shortage stabilizer (audit t873): boost extraction
       // output per-resource BEFORE the capacity haircut, so the extra output
       // fills idle deposit capacity rather than exceeding it. Inert (×1) unless
       // gameConfig.extractionOutputScaleEnabled — see EXTRACTION_OUTPUT_SCALE.
-      if (st === "extraction") {
+      // Not applied to realized plant tonnage, which is already real.
+      if (st === "extraction" && realized == null) {
         units *= extractionOutputScaleFor(commodity, extractionOutputScaleEnabled);
       }
 

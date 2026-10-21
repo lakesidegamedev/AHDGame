@@ -156,6 +156,33 @@ describe("physical producer preparation", () => {
     expect(good / bad).toBeCloseTo((0.5 * 1.15) / (0.5 * 0.9), 10);
   });
 
+  it("retires capacity that persistently sells nothing only after the transition window", () => {
+    const { input, env, sector } = fixture();
+    const turn = env.currentTurn - 1;
+    (sector as unknown as { producerSettlement: unknown }).producerSettlement = {
+      activeUnits: 100,
+      producedUnits: 10,
+      offeredUnits: 10,
+      soldUnits: 0,
+      revenue: 0,
+      inputsConsumed: 0,
+      turn,
+    };
+    (sector as unknown as { producerZeroSalesTurns: number }).producerZeroSalesTurns = 20;
+    const off = prepareProducerPhysicalSector(input).prepared.plan.capacityUnits;
+    env.idleRetireStage = 1;
+    env.transitionFirstFundedTurn = env.currentTurn - 1;
+    expect(prepareProducerPhysicalSector(input).prepared.plan.capacityUnits).toBe(off);
+    env.transitionFirstFundedTurn = env.currentTurn - 1000;
+    expect(prepareProducerPhysicalSector(input).prepared.plan.capacityUnits).toBeLessThan(off);
+    // Parked capacity retires too once it has sat idle past the grace.
+    (sector as unknown as { mothballed: boolean }).mothballed = true;
+    expect(prepareProducerPhysicalSector(input).prepared.plan.capacityUnits).toBeLessThan(off);
+    // ...but not inside the transition window.
+    env.transitionFirstFundedTurn = env.currentTurn - 1;
+    expect(prepareProducerPhysicalSector(input).prepared.plan.capacityUnits).toBeCloseTo(off, 10);
+  });
+
   it("pays wages and site running costs for the line it runs, not idle capacity", () => {
     const { input, sector } = fixture();
     const full = prepareProducerPhysicalSector(input);

@@ -739,7 +739,8 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
             newTurn,
             longHorizonCtx ?? undefined,
             context.config?.privateBankingEnabled === true &&
-              context.config?.bankFailurePoliticsEnabled === true
+              context.config?.bankFailurePoliticsEnabled === true,
+            context.config?.marketAdjustmentStage ?? 0
           )
         ),
         runtime.runPhase("interestRateSnapshot", () => snapshotInterestRateHistory(db, newTurn)),
