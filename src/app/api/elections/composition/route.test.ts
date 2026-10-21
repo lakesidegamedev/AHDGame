@@ -27,6 +27,8 @@ async function setup({
   officials = [] as unknown[],
   parties = [] as unknown[],
   elections = [] as unknown[],
+  tallies = [] as unknown[],
+  candidates = [] as unknown[],
 } = {}) {
   const { getDb } = await import("@/lib/mongodb");
   vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
@@ -52,7 +54,16 @@ async function setup({
   db.collectionMocks["elections"]!.find.mockReturnValue({
     toArray: async () => elections,
   });
+  db.collectionMocks["electionVoteTallies"]!.find.mockReturnValue({
+    toArray: async () => tallies,
+  });
+  db.collectionMocks["electionCandidates"]!.find.mockReturnValue({
+    toArray: async () => candidates,
+  });
 }
+
+const seatsByParty = (rows: { party: string; seats: number }[]) =>
+  Object.fromEntries(rows.map((p) => [p.party, p.seats]));
 
 async function call(url: string) {
   const { GET } = await import("./route");
@@ -177,5 +188,60 @@ describe("GET /api/elections/composition", () => {
     });
     const { body } = await call(`${BASE}?country=UK`);
     expect(body.lower.current[0].countryId).toBe("UK");
+  });
+
+  it("projects only the contested Senate class, keeping the other class seated", async () => {
+    await setup({
+      officials: [
+        { officeType: "senate", party: "A", characterId: "a", state: "NY", senateClass: 1 },
+        { officeType: "senate", party: "B", characterId: "b", state: "NY", senateClass: 2 },
+      ],
+      elections: [
+        { _id: "e1", electionType: "senate", state: "NY", senateClass: 2, primaryEndTurn: 0 },
+      ],
+      tallies: [{ electionId: "e1", totalVotes: { c1: 100 }, candidateParties: { c1: "C" } }],
+    });
+    const { body } = await call(`${BASE}?country=US`);
+    expect(seatsByParty(body.upper.projected)).toEqual({ A: 1, C: 1 });
+    expect(body.activeUpperClass).toBe(2);
+  });
+
+  it("keeps the House of Councillors class not up for election instead of showing it vacant", async () => {
+    await setup({
+      officials: [
+        {
+          officeType: "sangiin",
+          party: "A",
+          characterId: "a",
+          state: "TOK",
+          seatsHeld: 10,
+          chamberClass: 1,
+        },
+        {
+          officeType: "sangiin",
+          party: "B",
+          characterId: "b",
+          state: "TOK",
+          seatsHeld: 8,
+          chamberClass: 2,
+        },
+      ],
+      elections: [
+        { _id: "e1", electionType: "sangiin", state: "TOK", chamberClass: 2, primaryEndTurn: 0 },
+      ],
+      tallies: [
+        {
+          electionId: "e1",
+          totalVotes: { c1: 100 },
+          candidateParties: { c1: "C" },
+          seatsEstimate: { c1: 8 },
+        },
+      ],
+    });
+    const { body } = await call(`${BASE}?country=JP`);
+    expect(body.upper.inGeneral).toBe(true);
+    expect(seatsByParty(body.upper.current)).toEqual({ A: 10, B: 8 });
+    // Class 1 sits out this race; only class 2 (party B) is replaced.
+    expect(seatsByParty(body.upper.projected)).toEqual({ A: 10, C: 8 });
   });
 });

@@ -166,9 +166,26 @@ describe("production reconciliation residuals", () => {
     expect(used).toBeLessThanOrEqual(10 + 1e-9 * 11);
   });
 
-  it("still rejects a real overdraw", () => {
-    expect(() => reconcileProduction([1, 1], [{ available: 1, coefficients: [5, 5] }])).toThrow(
-      "did not reconcile"
-    );
+  it("repairs a pivot residual of a few millionths of the row scale", () => {
+    // Seen on a large row (scale ~29k): used 0.06 against available 0.
+    const constraints = [{ available: 0, coefficients: [29346, 1] }];
+    const result = reconcileProduction([2.03e-6, 0], constraints);
+    expect(29346 * result[0] + result[1]).toBeLessThanOrEqual(29346 * 1e-9);
+  });
+
+  it("scales everything down for a gross overdraw rather than failing the turn", () => {
+    const constraints = [
+      { available: 1, coefficients: [5, 5] },
+      { available: 0, coefficients: [-3, 1] },
+    ];
+    const result = reconcileProduction([1, 1], constraints);
+    expect(5 * result[0] + 5 * result[1]).toBeLessThanOrEqual(1 + 1e-9 * 10);
+    expect(-3 * result[0] + result[1]).toBeLessThanOrEqual(1e-9 * 10);
+    expect(result.every((v) => v >= 0 && v <= 1)).toBe(true);
+  });
+
+  it("leaves a feasible plan untouched", () => {
+    const result = reconcileProduction([0.5, 0.25], [{ available: 10, coefficients: [5, 5] }]);
+    expect(result).toEqual([0.5, 0.25]);
   });
 });
