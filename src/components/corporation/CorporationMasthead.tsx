@@ -16,6 +16,7 @@ import { SmallButton, signTone, useCorpMoney } from "./dense/DenseKit";
 import { FiguresGrid, type FigureCell } from "./ledger/FiguresGrid";
 import { TickMeter } from "./ledger/TickMeter";
 import { MastheadIdentity } from "./masthead/MastheadIdentity";
+import { NoticeStrip } from "./ledger/NoticeStrip";
 import { MobileSummary } from "./masthead/MobileSummary";
 import { QuoteBoard } from "./masthead/QuoteBoard";
 import type { CEO, CorporationDetail, FinancialFogMeta } from "./CorporationPageTypes";
@@ -361,47 +362,44 @@ export function CorporationMasthead({
       </div>
 
       {(ceoIsInactive || nationalizationRisk || threatActive) && (
-        <ul className="space-y-0.5 text-xs">
+        <div className="space-y-2">
           {ceoIsInactive && (
-            <li
-              className="text-warning"
-              title="The CEO has not been online in over 72 hours. 10% of each sector's revenue and workforce moves to the unowned-sector pool each turn until they return."
-            >
-              Inactive CEO: shedding 10% of each sector per turn until they return.
-            </li>
+            <div title="The CEO has not been online in over 72 hours. 10% of each sector's revenue and workforce moves to the unowned-sector pool each turn until they return.">
+              <NoticeStrip tone="warning" tag="Inactive CEO">
+                Inactive CEO: shedding 10% of each sector per turn until they return.
+              </NoticeStrip>
+            </div>
           )}
           {nationalizationRisk && (
-            <li
-              className="text-warning"
-              title="A government may nationalize this corporation once it has been in financial distress past the grace window."
-            >
-              {nationalizationRisk.turnsUntilEligible <= 0
-                ? "In financial distress: eligible for nationalization now."
-                : `In financial distress: eligible for nationalization in ${nationalizationRisk.turnsUntilEligible} turn${
-                    nationalizationRisk.turnsUntilEligible === 1 ? "" : "s"
-                  }.`}
-            </li>
+            <div title="A government may nationalize this corporation once it has been in financial distress past the grace window.">
+              <NoticeStrip tone="warning" tag="Distress">
+                {nationalizationRisk.turnsUntilEligible <= 0
+                  ? "In financial distress: eligible for nationalization now."
+                  : `In financial distress: eligible for nationalization in ${nationalizationRisk.turnsUntilEligible} turn${
+                      nationalizationRisk.turnsUntilEligible === 1 ? "" : "s"
+                    }.`}
+              </NoticeStrip>
+            </div>
           )}
           {threatActive && threat && (
-            <li
-              className="text-error"
-              title="This corporation is the target of a legislative nationalization: a passed taking in its notice window, or a bill still in voting."
-            >
-              Facing nationalization (
-              {threat.whole
-                ? threat.sectorCount > 0
-                  ? `whole corporation and ${threat.sectorCount} sector${threat.sectorCount === 1 ? "" : "s"}`
-                  : "whole corporation"
-                : `${threat.sectorCount} sector${threat.sectorCount === 1 ? "" : "s"}`}
-              ):{" "}
-              {threat.turnsUntilTaking == null
-                ? "bill in voting."
-                : threat.turnsUntilTaking <= 0
-                  ? "taking is due this turn."
-                  : `taking in ${threat.turnsUntilTaking} turn${threat.turnsUntilTaking === 1 ? "" : "s"}.`}
-            </li>
+            <div title="This corporation is the target of a legislative nationalization: a passed taking in its notice window, or a bill still in voting.">
+              <NoticeStrip tone="error" tag="Nationalization">
+                Facing nationalization (
+                {threat.whole
+                  ? threat.sectorCount > 0
+                    ? `whole corporation and ${threat.sectorCount} sector${threat.sectorCount === 1 ? "" : "s"}`
+                    : "whole corporation"
+                  : `${threat.sectorCount} sector${threat.sectorCount === 1 ? "" : "s"}`}
+                ):{" "}
+                {threat.turnsUntilTaking == null
+                  ? "bill in voting."
+                  : threat.turnsUntilTaking <= 0
+                    ? "taking is due this turn."
+                    : `taking in ${threat.turnsUntilTaking} turn${threat.turnsUntilTaking === 1 ? "" : "s"}.`}
+              </NoticeStrip>
+            </div>
           )}
-        </ul>
+        </div>
       )}
 
       <MobileSummary

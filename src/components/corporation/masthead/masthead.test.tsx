@@ -27,7 +27,7 @@ vi.mock("@/components/Avatar", () => ({ Avatar: () => null }));
 vi.mock("../ceo/CeoCorporationSettingsModal", () => ({ CeoCorporationSettingsModal: () => null }));
 
 const money = {
-  code: "USD",
+  code: "USD" as const,
   toAnchor: (n: number) => n,
   fmt: (n: number) => `$${Math.round(n)}`,
   fmtFull: (n: number) => `$${Math.round(n)}.00`,
