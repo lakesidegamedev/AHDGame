@@ -199,7 +199,10 @@ describe("OverviewTab", () => {
     expect(screen.getByText("Biggest sectors")).toBeTruthy();
     expect(screen.getByText("Nothing needs you right now.")).toBeTruthy();
     // Top five only, largest first.
-    const rows = screen.getAllByRole("row").filter((r) => within(r).queryByText(/^Region \d+$/));
+    // The Simple ranking is a list; one item per sector.
+    const rows = screen
+      .getAllByRole("listitem")
+      .filter((r) => within(r).queryByText(/^Region \d+$/));
     expect(rows).toHaveLength(5);
     expect(within(rows[0]).getByText("Region 12")).toBeTruthy();
   });
