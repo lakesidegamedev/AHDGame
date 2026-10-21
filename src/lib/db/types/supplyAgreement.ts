@@ -83,8 +83,7 @@ export interface SupplyAgreement {
   exclusive: boolean;
   /**
    * `"cancelling"` is the NOTICE state (C6). A live contract cannot be torn up
-   * instantly: cancelling it stamps {@link CONTRACT_CANCEL_NOTICE_TURNS} turns
-   * of notice during which the contract still delivers AND still settles, and
+   * instantly: cancelling it stamps notice ({@link contractCancelEffectiveTurn}) during which the contract still delivers AND still settles, and
    * only then becomes `"cancelled"`. Without it, cancellation was a free option
    * — a supplier watched its own production, cancelled on any turn it was going
    * to miss its volume, and the shortfall penalty only ever hit the players who
@@ -218,6 +217,40 @@ export const CONTRACT_SHORTFALL_PENALTY = 0.5;
  * PROVISIONAL: worldsim re-tunes.
  */
 export const CONTRACT_CANCEL_NOTICE_TURNS = 4;
+
+/**
+ * Share of a fixed-term contract's remaining turns that one-sided notice must
+ * cover, and the longest notice it can demand.
+ *
+ * A flat 4 turns let a 192-turn contract be walked away from as cheaply as a
+ * 4-turn one, so a long contract locked in nothing: whoever it turned against
+ * could leave within a sixth of a day. Scaling notice with the remaining term
+ * makes the commitment cost what it promised. A quarter of what is left, capped
+ * at a financial day, keeps leaving possible without making it free. Both
+ * sides can still end it sooner by agreeing a shorter term (amend).
+ */
+export const CONTRACT_CANCEL_NOTICE_TERM_SHARE = 0.25;
+export const CONTRACT_CANCEL_NOTICE_MAX_TURNS = 24;
+
+/**
+ * Turn a one-sided cancellation served on `currentTurn` takes effect. Open-ended
+ * contracts take the flat notice; fixed-term ones take a quarter of the turns
+ * left (at least the flat notice, at most a day) and never run past their own
+ * expiry.
+ */
+export function contractCancelEffectiveTurn(
+  currentTurn: number,
+  expiresAtTurn: number | undefined
+): number {
+  const flat = currentTurn + CONTRACT_CANCEL_NOTICE_TURNS;
+  if (expiresAtTurn == null || !Number.isFinite(expiresAtTurn)) return flat;
+  const remaining = Math.max(0, expiresAtTurn - currentTurn);
+  const notice = Math.min(
+    CONTRACT_CANCEL_NOTICE_MAX_TURNS,
+    Math.max(CONTRACT_CANCEL_NOTICE_TURNS, Math.ceil(remaining * CONTRACT_CANCEL_NOTICE_TERM_SHARE))
+  );
+  return Math.min(currentTurn + notice, Math.max(currentTurn, expiresAtTurn));
+}
 
 /** Minimum useful fixed term for a supply agreement, in turns. */
 export const SUPPLY_AGREEMENT_DURATION_MIN_TURNS = 4;

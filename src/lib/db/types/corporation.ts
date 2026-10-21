@@ -1097,6 +1097,12 @@ export interface CorporateSector {
    * the reviewed opening plan. Written once by applyProducerOpening, never after.
    */
   cutoverTransition?: import("@/lib/market/producerMarket/transitionRules").SectorTransition;
+  /**
+   * Last turn capacity of this sector was retired for persistently selling
+   * nothing: book value written off and the decommissioning grant paid from
+   * unspent public funding (anchor units).
+   */
+  lastDecommission?: { turn: number; retiredBookAnchor: number; grantAnchor: number };
   /** Lost money or sold nothing on a funded turn inside the window; gets the transition relief. */
   cutoverStruggling?: import("@/lib/market/producerMarket/transitionRules").CutoverStruggling;
   /** Turn the owner used the transition package's free conversion; ends floor support. */

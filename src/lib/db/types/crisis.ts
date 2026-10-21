@@ -544,7 +544,9 @@ export type TriggerMetric =
   | "unemploymentRate"
   | "approval"
   | "powerGridReliability"
-  | "fxDepreciation";
+  | "fxDepreciation"
+  /** Share of settled funded capacity in plants losing money; recorded by the market adjustment signal. */
+  | "lossShare";
 
 export interface TriggerClause {
   metric: TriggerMetric;

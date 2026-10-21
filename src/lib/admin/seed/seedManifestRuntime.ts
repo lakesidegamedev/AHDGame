@@ -953,6 +953,12 @@ export const RUNTIME: CollectionEntry[] = [
   { name: "conflictCivilianLossHistory", category: "runtime" },
   { name: "conflictCapacityObligations", category: "runtime" },
   {
+    name: "marketAdjustmentSignals",
+    category: "runtime",
+    notes:
+      "Per-country loss share of funded capacity, 12 turns of history, written by the crisis spawner when the market adjustment stage is on. Turn-based, so it resets with the world.",
+  },
+  {
     name: "crisisAutoCooldowns",
     category: "runtime",
     notes:

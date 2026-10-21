@@ -4,7 +4,7 @@ import { settleFundDividendAccruals } from "./settleFundDividendAccruals";
 import { runProducerMarketShadowPhase, shadowFitsPhaseBudget } from "./producerMarketShadowPhase";
 import { PHASE_TIMEOUT_MS } from "@/lib/turn/processingLock";
 import { claimProducerPath, loadProducerPath } from "@/lib/market/producerMarket/liveMode";
-import { runFundedProducerTurn } from "./fundedProducerTurn";
+import { idleRetireEnv, runFundedProducerTurn } from "./fundedProducerTurn";
 import { TurnMustStopError } from "@/lib/turn/turnMustStop";
 import type { ProducerPhysicalEnv } from "./producerPhysicalPreparation";
 import { makeLabourDemandByState } from "@/lib/labour/labourMarket";
@@ -794,6 +794,7 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
         labourDemandWageIndexByState: new Map(),
         privateBankingEnabled,
         advertisingInput: true,
+        ...idleRetireEnv(marketGovernorConfig),
         transitionFirstFundedTurn:
           gameState?.producerOpening?.worldEpoch === worldEpoch
             ? gameState.producerOpening.turn + 1

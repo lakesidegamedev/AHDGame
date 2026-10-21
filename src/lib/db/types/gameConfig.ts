@@ -155,6 +155,17 @@ export interface GameConfig {
    * plant count above MANAGEMENT_OVERHEAD_FREE_PLANTS. 0 or absent = off.
    */
   managementOverheadPpPerDoubling?: number;
+  /**
+   * Funded producer market: >= 1 retires, with no cash, a share of the
+   * capacity of plants that have sold nothing for several turns. 0 or absent = off.
+   */
+  producerIdleRetireStage?: number;
+  /**
+   * With producerIdleRetireStage on: share (0 to 1) of the book value of retired
+   * capacity paid to the owner from the country's unspent public funding.
+   * Absent = 0.5. Never paid when the pool is empty.
+   */
+  decommissionGrantShare?: number;
   /** Strength upkeep rollout stage (corporations/strengthUpkeep). 0 or absent = off. */
   strengthUpkeepStage?: number;
   /**
@@ -191,6 +202,11 @@ export interface GameConfig {
    * instead of nameplate staffing. 0 or absent = off.
    */
   fundedHeadcountStage?: number;
+  /**
+   * Market Adjustment event: 1 records each country's loss share of funded
+   * capacity every turn and lets the event fire when it holds. 0 or absent = off.
+   */
+  marketAdjustmentStage?: number;
   /** Group size costs rollout stage (1 = management overhead on the control group, 2 = commodity build toll, 3 = dumping guard, 4 = monopoly trigger, 5 = merger concentration on the control group). 0 or absent = off. */
   groupSizeCostsStage?: number;
   /** Public media editorial stance and audience response rules. Missing means off. */

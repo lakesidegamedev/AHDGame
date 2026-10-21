@@ -31,7 +31,7 @@ import type {
   MediaDiscriminator,
 } from "@/lib/constants/corporations";
 import {
-  CONTRACT_CANCEL_NOTICE_TURNS,
+  contractCancelEffectiveTurn,
   CONTRACT_OVERCOMMIT_TOLERANCE,
   SUPPLY_AGREEMENT_PRICE_BAND,
   type SupplyAgreement,
@@ -994,6 +994,9 @@ export async function processNppSupplyAgreements(
   const nppIds = new Set(nppCorps.map((c) => c._id.toString()));
 
   const agreements: ExistingNppAgreement[] = rawAgreements.map(toExistingNppAgreement);
+  const expiresAtById = new Map(
+    rawAgreements.map((a) => [a._id!.toString(), a.expiresAtTurn] as const)
+  );
 
   const priceByCommodity = new Map<
     string,
@@ -1131,7 +1134,10 @@ export async function processNppSupplyAgreements(
               update: {
                 $set: {
                   status: "cancelling",
-                  cancelEffectiveTurn: turn + CONTRACT_CANCEL_NOTICE_TURNS,
+                  cancelEffectiveTurn: contractCancelEffectiveTurn(
+                    turn,
+                    expiresAtById.get(decision.agreementId)
+                  ),
                   updatedAt: now,
                 },
               },

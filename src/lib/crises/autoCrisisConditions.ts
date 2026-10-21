@@ -6,6 +6,7 @@ import { politicalValueForLegacyMetric } from "@/lib/politicalLegislation/margin
 import { isPoliticalApprovalCountry } from "@/lib/politicalLegislation/politicalApprovalProvider";
 import { legacyValueFromPoliticalScore } from "@/lib/politicalMetrics/derive/legacyInversion";
 import type { TriggerClause, TriggerCondition, TriggerMetric } from "@/lib/db/types/crisis";
+import { loadLossShareSignal } from "./marketAdjustment/signals";
 
 interface MetricPoint {
   turn: number;
@@ -128,6 +129,14 @@ export async function loadNationalSnapshot(
   }
   if (historyDoc?.economic?.unemploymentRate?.length) {
     histories.unemploymentRate = historyDoc.economic.unemploymentRate.map((p) => p.value);
+  }
+
+  // Measured loss share of funded capacity (market adjustment). Absent until
+  // the signal has been recorded, so clauses over it stay false.
+  const lossSignal = await loadLossShareSignal(db, countryId);
+  if (lossSignal) {
+    current.lossShare = lossSignal.current;
+    histories.lossShare = lossSignal.history;
   }
 
   const rateHistory = exchangeRate?.rateHistory ?? [];
