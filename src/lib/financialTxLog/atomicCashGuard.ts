@@ -340,6 +340,65 @@ export async function debitCorpShareEscrowFloored(
 }
 
 /**
+ * Like {@link debitCorpShareEscrowFloored}, but refuses the debit when the
+ * escrow plus the treasury's positive cash cannot cover it, so a buyback can
+ * never push `liquidCapital` below zero. Returns null (nothing moved) when the
+ * cap blocks it. Honest-balance-sheets stage 3.
+ */
+export async function debitCorpShareEscrowCapped(
+  db: Db,
+  corporationId: ObjectId,
+  amount: number,
+  options?: CashGuardOptions
+): Promise<EscrowDebitSplit | null> {
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { escrowDebited: 0, treasuryDebited: 0 };
+  }
+  const escrowCover = {
+    $min: [amount, { $max: [0, { $ifNull: ["$shareEscrowBalance", 0] }] }],
+  };
+  const before = await db.collection("corporations").findOneAndUpdate(
+    {
+      _id: corporationId,
+      $expr: {
+        $gte: [
+          {
+            $add: [
+              { $max: [0, { $ifNull: ["$shareEscrowBalance", 0] }] },
+              { $max: [0, { $ifNull: ["$liquidCapital", 0] }] },
+            ],
+          },
+          amount,
+        ],
+      },
+    },
+    [
+      {
+        $set: {
+          liquidCapital: {
+            $subtract: [{ $ifNull: ["$liquidCapital", 0] }, { $subtract: [amount, escrowCover] }],
+          },
+          shareEscrowBalance: {
+            $subtract: [{ $ifNull: ["$shareEscrowBalance", 0] }, escrowCover],
+          },
+          updatedAt: new Date(),
+        },
+      },
+    ],
+    {
+      returnDocument: "before",
+      projection: { shareEscrowBalance: 1 },
+      ...mongoOptions(options),
+    }
+  );
+  if (!before) return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const preEscrow = (before as any).shareEscrowBalance ?? 0;
+  const escrowDebited = Math.min(amount, Math.max(0, preEscrow));
+  return { escrowDebited, treasuryDebited: amount - escrowDebited };
+}
+
+/**
  * Atomically debit an imperial character's wallet. Imperial characters use
  * the same `currencyBalances.personal.<code>` shape as regular characters
  * (post-forex). Pre-forex they fall back to `cashOnHand`. Lives in the

@@ -12,6 +12,8 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { corpCapitalToAnchor } from "@/lib/currency/corporationCapital";
 
 export const HONEST_LOANS_STAGE = 1;
+/** Stage 3 caps escrow buybacks by the issuer's cash. */
+export const HONEST_BUYBACK_CAP_STAGE = 3;
 
 /** Live loan states whose principal is still owed. */
 const LIVE_LOAN_STATUSES: BankLoan["status"][] = ["current", "arrears", "defaulted"];
