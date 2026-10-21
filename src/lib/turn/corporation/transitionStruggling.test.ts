@@ -97,10 +97,10 @@ describe("markStrugglingTransitionSectors", () => {
     const ops = bulkOps(db.collectionMocks.corporateSectors.bulkWrite);
     expect(ops).toHaveLength(2);
     expect(ops[0][1]).toEqual({
-      $set: { cutoverStruggling: { sinceTurn: 105, reason: "zeroSales" } },
+      $set: { cutoverStruggling: { sinceTurn: 105, reason: "zeroSales", notified: true } },
     });
     expect(ops[1][1]).toEqual({
-      $set: { cutoverStruggling: { sinceTurn: 105, reason: "zeroSales" } },
+      $set: { cutoverStruggling: { sinceTurn: 105, reason: "zeroSales", notified: true } },
     });
 
     expect(createNotifications).toHaveBeenCalledTimes(1);
@@ -193,6 +193,57 @@ describe("markStrugglingTransitionSectors", () => {
 
     expect(result).toEqual({ marked: 1, owners: 0 });
     expect(bulkOps(db.collectionMocks.corporateSectors.bulkWrite)).toHaveLength(1);
+    expect(createNotifications).not.toHaveBeenCalled();
+  });
+
+  it("tells an owner again about newly marked sectors once the repeat gap has passed", async () => {
+    const ownerId = new ObjectId();
+    const corp = corporation({ userId: ownerId });
+    const alreadyMarked = sector(corp._id, {
+      cutoverStruggling: { sinceTurn: 101, reason: "losing", notified: true },
+    });
+    const quietlyMarked = sector(corp._id, {
+      cutoverStruggling: { sinceTurn: 104, reason: "losing", notified: false },
+    });
+    const newlyStruggling = sector(corp._id);
+    const receipts = new Map([[newlyStruggling._id.toString(), receipt({ profit: -5 })]]);
+
+    const result = await markStrugglingTransitionSectors(
+      db as unknown as Db,
+      lookups([corp], [alreadyMarked, quietlyMarked, newlyStruggling]),
+      receipts,
+      107,
+      FIRST_FUNDED_TURN
+    );
+
+    expect(result).toEqual({ marked: 1, owners: 1 });
+    expect(bulkOps(db.collectionMocks.corporateSectors.bulkWrite)[0][1]).toEqual({
+      $set: { cutoverStruggling: { sinceTurn: 107, reason: "losing", notified: true } },
+    });
+    const notices = createNotifications.mock.calls[0][0] as Array<Record<string, unknown>>;
+    expect(notices[0].message).toContain("1 more of your sectors");
+  });
+
+  it("marks quietly inside the repeat gap", async () => {
+    const corp = corporation();
+    const alreadyMarked = sector(corp._id, {
+      cutoverStruggling: { sinceTurn: 104, reason: "losing", notified: true },
+    });
+    const newlyStruggling = sector(corp._id);
+    const receipts = new Map([[newlyStruggling._id.toString(), receipt({ soldUnits: 0 })]]);
+
+    const result = await markStrugglingTransitionSectors(
+      db as unknown as Db,
+      lookups([corp], [alreadyMarked, newlyStruggling]),
+      receipts,
+      107,
+      FIRST_FUNDED_TURN
+    );
+
+    expect(result).toEqual({ marked: 1, owners: 0 });
+    expect(bulkOps(db.collectionMocks.corporateSectors.bulkWrite)[0][1]).toEqual({
+      $set: { cutoverStruggling: { sinceTurn: 107, reason: "zeroSales", notified: false } },
+    });
     expect(createNotifications).not.toHaveBeenCalled();
   });
 

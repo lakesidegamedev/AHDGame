@@ -76,7 +76,16 @@ export function inTransitionWindow(turn: number, firstFundedTurn: number): boole
 export interface CutoverStruggling {
   sinceTurn: number;
   reason: "losing" | "zeroSales";
+  /**
+   * Whether the owner was told when this mark was set. False when it fell
+   * inside the repeat-notice gap; absent on marks from before repeat notices,
+   * which were all told at marking.
+   */
+  notified?: boolean;
 }
+
+/** Shortest gap between two transition-review notices to the same owner. */
+export const TRANSITION_RENOTICE_TURNS = 6;
 
 /** Why a sector on a funded turn is struggling, or null when it is not. */
 export function strugglingReason(receipt: {
