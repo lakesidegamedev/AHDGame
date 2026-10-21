@@ -28,7 +28,7 @@ export function spilloverOrders(input: {
   /** Accounts whose orders may spill (households). */
   accounts: ReadonlySet<string>;
   /** First-clearing outcome per order id. */
-  outcomes: ReadonlyMap<string, { cost: number }>;
+  outcomes: ReadonlyMap<string, { cost: number; deliveredUnits: number }>;
   /** Unsold units per [commodity, book] lane after the first clearing. */
   unsoldUnits: ReadonlyMap<string, number>;
   laneKey: (commodity: string, book: string) => string;
@@ -55,7 +55,13 @@ export function spilloverOrders(input: {
       if (!(want > 0) || !Number.isFinite(want)) continue;
       const unsold = input.unsoldUnits.get(input.laneKey(o.commodity, o.book)) ?? 0;
       if (unsold > 1e-9) open.push({ order: o, weight: want });
-      else accountStranded += Math.max(0, want - (input.outcomes.get(o.id)?.cost ?? 0));
+      else {
+        // Stranded is demand the lane could not serve: units that did not arrive,
+        // valued at the buyer's ceiling. A lane that sold out but still delivered
+        // every unit asked for, at a price under the ceiling, strands nothing.
+        const delivered = input.outcomes.get(o.id)?.deliveredUnits ?? 0;
+        accountStranded += Math.max(0, o.units - delivered) * o.maximumUnitPrice;
+      }
     }
     stranded += accountStranded;
     const pool = accountStranded * share;

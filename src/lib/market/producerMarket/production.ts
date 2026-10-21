@@ -742,9 +742,11 @@ export function advanceProducerEconomy(input: {
     for (const o of market.offers) {
       const lane = offerLane.get(o.id);
       if (lane)
-        unsoldUnits.set(lane, (unsoldUnits.get(lane) ?? 0) + (o.offeredUnits - o.soldUnits));
+        unsoldUnits.set(lane, (unsoldUnits.get(lane) ?? 0) + (o.offeredUnits - o.deliveredUnits));
     }
-    const first = new Map(market.orders.map((o) => [o.id, { cost: o.cost }]));
+    const first = new Map(
+      market.orders.map((o) => [o.id, { cost: o.cost, deliveredUnits: o.deliveredUnits }])
+    );
     const next = spilloverOrders({
       orders: consumerOrders,
       accounts: householdIds,

@@ -20,14 +20,30 @@ describe("same-turn spillover", () => {
   ];
   // Healthcare sold out and filled 40 of 100 wanted; electronics and food have stock.
   const outcomes = new Map([
-    ["care", { cost: 40 }],
-    ["tv", { cost: 100 }],
-    ["food", { cost: 100 }],
+    ["care", { cost: 40, deliveredUnits: 4 }],
+    ["tv", { cost: 100, deliveredUnits: 5 }],
+    ["food", { cost: 100, deliveredUnits: 20 }],
   ]);
   const unsold = new Map([
     [laneKey("electronics", "world"), 3],
     [laneKey("food", "world"), 50],
   ]);
+
+  it("a sold-out lane that delivered every unit below the ceiling strands nothing", () => {
+    const { stats } = spilloverOrders({
+      orders,
+      accounts: new Set(["hh"]),
+      outcomes: new Map([
+        ["care", { cost: 50, deliveredUnits: 10 }],
+        ["tv", { cost: 100, deliveredUnits: 5 }],
+        ["food", { cost: 100, deliveredUnits: 20 }],
+      ]),
+      unsoldUnits: new Map(),
+      laneKey,
+      share: 0.7,
+    });
+    expect(stats.strandedSpend).toBe(0);
+  });
 
   it("moves the substitution share of stranded spend onto lanes with supply, by what was wanted there", () => {
     const { orders: next, stats } = spilloverOrders({

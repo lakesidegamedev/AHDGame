@@ -943,9 +943,9 @@ describe("same-turn spillover", () => {
     expect(off.spillover).toBeUndefined();
     // Willingness is sized at each lane's price ceiling; fills happen at the posted price.
     expect(spent(off)).toBeCloseTo(2 * 10 + (500 / 6) * 5, 6);
-    expect(on.spillover!.strandedSpend).toBeCloseTo(500 - 20, 6);
-    expect(spent(on) - spent(off)).toBeCloseTo(0.7 * 480 * (5 / 6), 6);
-    expect(on.spillover!.recovered).toBeCloseTo(0.7 * 480 * (5 / 6), 6);
+    expect(on.spillover!.strandedSpend).toBeCloseTo(500 - 2 * 12, 6);
+    expect(spent(on) - spent(off)).toBeCloseTo(0.7 * 476 * (5 / 6), 6);
+    expect(on.spillover!.recovered).toBeCloseTo(0.7 * 476 * (5 / 6), 6);
     const price = (r: ReturnType<typeof run>, commodity: string) =>
       r.prices.find((p) => p.commodity === commodity)!.unitPrice;
     expect(price(on, "food")).toBeCloseTo(price(off, "food"), 12);
