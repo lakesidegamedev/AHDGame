@@ -144,7 +144,13 @@ export function feasibleProduction(input: {
     isBasic[entering] = 1;
     basic[leaving] = entering;
   }
-  throw new Error("Production feasibility did not converge");
+  // The pivot limit ran out (a degenerate cycle). Every simplex iterate is
+  // feasible, so the current one is a valid, if not optimal, plan: use it
+  // rather than halting the turn, and count it.
+  productionRepairStats.nonConverged++;
+  const fallback = Array.from(nonbasic.slice(0, n));
+  for (let i = 0; i < m; i++) if (basic[i] < n) fallback[basic[i]] = values[i];
+  return reconcileProduction(fallback, input.constraints);
 }
 
 /**
@@ -158,7 +164,13 @@ export function feasibleProduction(input: {
  * toward the zero opening can only lower a row's net use. Repairs beyond
  * rounding noise are counted and logged.
  */
-export const productionRepairStats = { repairs: 0, uniformScales: 0, worstRelative: 0 };
+export const productionRepairStats = {
+  repairs: 0,
+  uniformScales: 0,
+  worstRelative: 0,
+  /** Solves that hit the pivot limit and returned their last feasible iterate. */
+  nonConverged: 0,
+};
 const NOISE_RESIDUAL = 1e-9;
 const LOGGED_RESIDUAL = 1e-6;
 
