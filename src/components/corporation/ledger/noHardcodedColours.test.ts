@@ -10,9 +10,15 @@ import { describe, expect, it } from "vitest";
 export const LEDGER_FILES: string[] = [];
 
 /** Directories written for the redesign; every component in them is checked. */
-const LEDGER_DIRS = ["ledger", "masthead", "overview", "finance"].map((d) =>
-  join(process.cwd(), "src/components/corporation", d)
-);
+const LEDGER_DIRS = [
+  "ledger",
+  "masthead",
+  "overview",
+  "finance",
+  "sectors",
+  "deals",
+  "structure",
+].map((d) => join(process.cwd(), "src/components/corporation", d));
 const COLOUR_LITERAL = /#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(/;
 
 function stripComments(source: string): string {

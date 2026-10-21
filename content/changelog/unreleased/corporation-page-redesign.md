@@ -26,3 +26,7 @@ areas: [frontend]
 - Opening a plant sector's margins now shows how it gets from capacity to net profit, beside the margin build and production policy, with Build capacity, Details and Abandon to hand. Abandon asks you to confirm first.
 - Viewing a rival's plants, the margins drawer offers Split rival plants, which opens the split planner on that sector's page.
 - Active extraction contracts show how much of their term has run.
+- The order book draws each open order's size as a bar, on one scale across bids and asks. The shareholder register opens with one bar showing who owns what, including the shares still on the market.
+- Your holdings sit on a share stub, and shareholder votes are set out as cards.
+- Acquisition offers are shown in your display currency, and you type an offer in your corporation's own currency. Picking a target shows its sector count, headquarters, and your cash against the offer. Outgoing offers show their premium over the target's estimated value.
+- Structure draws your group: the parent above, your corporation, and each subsidiary with the share you own. Any corporation in a group now has a Structure tab, and management overhead is listed under group effects.
