@@ -40,6 +40,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { MoneyTarget } from "@/lib/banking/moneyMove";
 import { ensureFund } from "@/lib/banking/insurance";
 import { loanCharterEpochFilter } from "@/lib/banking/loanEpoch";
+import { emitTxBulk, loadTxThresholds, type TxInput } from "@/lib/financialTxLog/emit";
 
 export type DeadBankLoanSummary = {
   /** Loans belonging to a wound-up bank that were serviced this turn. */
@@ -215,7 +216,8 @@ export async function processDeadBankLoans(
     loan: BankLoan,
     bank: DeadBank,
     creditTarget: MoneyTarget,
-    trackInsuranceRecovery: boolean
+    trackInsuranceRecovery: boolean,
+    txEntries: TxInput[]
   ) => Promise<{ collected: number }>
 ): Promise<DeadBankLoanSummary> {
   const summary: DeadBankLoanSummary = { ...ZERO_DEAD_BANK_SUMMARY };
@@ -248,13 +250,23 @@ export async function processDeadBankLoans(
     }
 
     // Serial per bank: two loans from the same borrower must see each other's
-    // debit, exactly as the live path does.
+    // debit, exactly as the live path does. Repayment ledger rows are queued
+    // and flushed once per bank so each row does not reload the tx thresholds
+    // and the anchor-rate map.
+    const txEntries: TxInput[] = [];
     for (const loan of loans) {
-      const { collected } = await serviceLoan(loan, bank, target, trackInsuranceRecovery);
+      const { collected } = await serviceLoan(
+        loan,
+        bank,
+        target,
+        trackInsuranceRecovery,
+        txEntries
+      );
       summary.loansServiced += 1;
       if (bank.resolved) summary.recoveredToInsurer += collected;
       else summary.recoveredToEstate += collected;
     }
+    if (txEntries.length > 0) await emitTxBulk(db, txEntries, await loadTxThresholds(db));
   }
 
   return summary;

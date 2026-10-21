@@ -297,7 +297,7 @@ async function runBankingTurn(db: Db, turn: number): Promise<BankingTurnSummary>
   const deadBankResult = await processDeadBankLoans(
     db,
     turn,
-    async (loan, bank, target, trackInsuranceRecovery) => {
+    async (loan, bank, target, trackInsuranceRecovery, txEntries) => {
       if (loan.borrowerType === "npcBulk") {
         const recovered = await serviceDeadNpcBulkLoan(
           db,
@@ -320,7 +320,8 @@ async function runBankingTurn(db: Db, turn: number): Promise<BankingTurnSummary>
         bank.currency,
         bank.name,
         target,
-        trackInsuranceRecovery
+        trackInsuranceRecovery,
+        txEntries
       );
       summary.loanInterestCollected += serviced.interestCollected;
       summary.loanPrincipalRepaid += serviced.principalRepaid;
