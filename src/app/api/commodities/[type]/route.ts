@@ -3,6 +3,7 @@ import { loadReachableBooks, reachableBooksFor } from "@/lib/trade/queries/loadR
 import { getDb } from "@/lib/mongodb";
 import { getMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
 import type { CommodityFlow as CommodityFlowDoc } from "@/lib/db/types/commodityFlow";
+import type { SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { getGameState } from "@/lib/gameState";
 import { getAuthUser } from "@/lib/auth";
@@ -55,6 +56,9 @@ import { COUNTRY_CURRENCY_MAP, eraRateForCurrency } from "@/lib/constants/curren
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
+import { computeSectorCommodityUnits } from "@/lib/corporations/corpCommodityFlows";
+import { estimateStateFullCapacityOneHopFreightTeu } from "@/lib/logistics/freightVisibility";
+import { SHIPPED_COMMODITIES } from "@/lib/logistics/freightClass";
 import {
   aggregateRealizedCommodityVolumes,
   isExtractionExceptionCommodity,
@@ -172,7 +176,14 @@ export async function getCommodityDetailData(
     const targetTurn = Math.max(1, currentTurn - TURNS_PER_YEAR);
 
     // Parallel fetches
-    const [currentPrice, history, rollingReference, oldestHistory] = await Promise.all([
+    const [
+      currentPrice,
+      history,
+      rollingReference,
+      oldestHistory,
+      freightStateSupplyDocs,
+      latestSourcingNetwork,
+    ] = await Promise.all([
       db.collection<CommodityPrice>("commodityPrices").findOne({ commodity }),
       db
         .collection<CommodityPriceHistory>("commodityPriceHistory")
@@ -186,6 +197,26 @@ export async function getCommodityDetailData(
       db
         .collection<CommodityPriceHistory>("commodityPriceHistory")
         .findOne({ commodity, turn: { $lte: currentTurn } }, { sort: { turn: 1 } }),
+      includeHeavy && commodity === "freight"
+        ? db
+            .collection<CommodityPrice>("commodityPrices")
+            .find({ commodity: { $in: [...SHIPPED_COMMODITIES] } })
+            .project<{ commodity: CommodityType; stateSupply?: Record<string, number> }>({
+              commodity: 1,
+              stateSupply: 1,
+            })
+            .toArray()
+        : Promise.resolve(
+            [] as { commodity: CommodityType; stateSupply?: Record<string, number> }[]
+          ),
+      includeHeavy && commodity === "freight"
+        ? db
+            .collection<SourcingNetworkDoc>("sourcingNetworkLoad")
+            .find({})
+            .sort({ turn: -1 })
+            .limit(1)
+            .toArray()
+        : Promise.resolve([] as SourcingNetworkDoc[]),
     ]);
 
     let allSectors: CorporateSector[] = [];
@@ -410,6 +441,15 @@ export async function getCommodityDetailData(
     const stateResourcesByState = new Map(
       (stateResourceDocs ?? []).map((doc) => [doc.stateId, doc.resources ?? null])
     );
+    let freightNetwork:
+      | {
+          turn: number | null;
+          states: Record<
+            string,
+            { observedLoad: number; capacity: number; fullCapacityOneHopEstimate: number | null }
+          >;
+        }
+      | undefined;
 
     // Sector-type supply/demand (base tables + operating strategies that add inputs/outputs not in base)
     const suppliers = buildSectorFlowRows(commodity, "supply");
@@ -535,23 +575,24 @@ export async function getCommodityDetailData(
           isNatcorp: natcorpIds.has(corpId),
         };
       });
+      const realizedContext = {
+        plantsEnabled: marketAtLeast(mode, "plants"),
+        eraUnitScale,
+        currentYear: gameStateDoc?.currentYear ?? null,
+        preset: gameStateDoc?.preset,
+        hardwareInputReliefStartTurn: gameStateDoc?.hardwareInputReliefStartTurn,
+        inputDemandRealPhase: inputDemandRealPhaseProgress(
+          inputDemandRealPhaseStartTurnFrom(gameConfigDoc),
+          currentTurn
+        ),
+        commandEconomyEnabled: gameConfigDoc?.commandEconomyEnabled === true,
+        stateResourcesByState,
+      };
       const realized = aggregateRealizedCommodityVolumes(
         realizedSectors,
         commodity,
         currentTurn,
-        {
-          plantsEnabled: marketAtLeast(mode, "plants"),
-          eraUnitScale,
-          currentYear: gameStateDoc?.currentYear ?? null,
-          preset: gameStateDoc?.preset,
-          hardwareInputReliefStartTurn: gameStateDoc?.hardwareInputReliefStartTurn,
-          inputDemandRealPhase: inputDemandRealPhaseProgress(
-            inputDemandRealPhaseStartTurnFrom(gameConfigDoc),
-            currentTurn
-          ),
-          commandEconomyEnabled: gameConfigDoc?.commandEconomyEnabled === true,
-          stateResourcesByState,
-        },
+        realizedContext,
         (stateId) => stateCountryMap[stateId]
       );
       const corpSupply = realized.supplyByCorp;
@@ -573,6 +614,73 @@ export async function getCommodityDetailData(
       const nonCorporateDemand = Math.max(0, totalDemand - totalCorporateDemand);
       nonCorporateDemandShare =
         totalDemand > 0 ? Math.round((nonCorporateDemand / totalDemand) * 1000) / 10 : 0;
+
+      if (commodity === "freight") {
+        const corporateOutputByState: Record<string, Record<string, number>> = {};
+        const estimateSectors = realizedSectors.flatMap((sector) => {
+          if (allowedStateIds && !allowedStateIds.has(sector.stateId)) return [];
+          const { supply } = computeSectorCommodityUnits(
+            sector,
+            currentTurn,
+            sector.isNatcorp === undefined
+              ? realizedContext
+              : { ...realizedContext, isNatcorp: sector.isNatcorp }
+          );
+          const outputByCommodity = Object.fromEntries(supply);
+          const corporateStateOutput = (corporateOutputByState[sector.stateId] ??= {});
+          for (const [outputCommodity, units] of supply) {
+            corporateStateOutput[outputCommodity] =
+              (corporateStateOutput[outputCommodity] ?? 0) + units;
+          }
+          return [
+            {
+              stateId: sector.stateId,
+              producedUnits:
+                sector.sectorType === "extraction" ? sector.capacityUnits : sector.producedUnits,
+              capacityUnits: sector.capacityUnits,
+              outputByCommodity,
+              nameplateBasis: sector.sectorType === "extraction" || !marketAtLeast(mode, "plants"),
+            },
+          ];
+        });
+        const allStateOutputByCommodity: Record<string, Record<string, number>> = {};
+        for (const priceDoc of freightStateSupplyDocs) {
+          const stateMap = priceDoc.stateSupply ?? {};
+          for (const [stateId, rawUnits] of Object.entries(stateMap)) {
+            if (allowedStateIds && !allowedStateIds.has(stateId)) continue;
+            const outputByCommodity = (allStateOutputByCommodity[stateId] ??= {});
+            outputByCommodity[priceDoc.commodity] = Number(rawUnits) || 0;
+          }
+        }
+        const fullCapacityOneHopEstimate = estimateStateFullCapacityOneHopFreightTeu({
+          sectors: estimateSectors,
+          corporateOutputByState,
+          stateOutputByCommodity: allStateOutputByCommodity,
+        });
+        const latestNetwork = latestSourcingNetwork[0];
+        const stateIds = Object.keys(stateCountryMap).filter(
+          (stateId) => !allowedStateIds || allowedStateIds.has(stateId)
+        );
+        freightNetwork = {
+          turn: latestNetwork?.turn ?? null,
+          states: Object.fromEntries(
+            stateIds.map((stateId) => {
+              const observed = latestNetwork?.freightTeuByState[stateId];
+              return [
+                stateId,
+                {
+                  observedLoad:
+                    Math.max(0, observed?.bulk ?? 0) + Math.max(0, observed?.special ?? 0),
+                  capacity: Math.max(0, currentPrice?.stateSupply?.[stateId] ?? 0),
+                  fullCapacityOneHopEstimate: Object.hasOwn(fullCapacityOneHopEstimate, stateId)
+                    ? fullCapacityOneHopEstimate[stateId]
+                    : 0,
+                },
+              ];
+            })
+          ),
+        };
+      }
     }
 
     const otherAdvertisingDemand = Math.max(0, totalDemand - totalCorporateDemand);
@@ -869,6 +977,7 @@ export async function getCommodityDetailData(
         : {},
       stateSupply: includeHeavy ? filterStateMap(currentPrice?.stateSupply ?? {}) : {},
       stateDemand: includeHeavy ? filterStateMap(currentPrice?.stateDemand ?? {}) : {},
+      ...(freightNetwork ? { freightNetwork } : {}),
       nationalPrices: includeHeavy ? (currentPrice?.nationalPrices ?? {}) : {},
       nationalSupply: includeHeavy ? (currentPrice?.nationalSupply ?? {}) : {},
       nationalDemand: includeHeavy ? (currentPrice?.nationalDemand ?? {}) : {},

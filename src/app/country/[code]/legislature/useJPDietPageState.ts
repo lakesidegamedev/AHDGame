@@ -23,6 +23,7 @@ interface State {
   showProposeModal: boolean;
   showCabinetProposeModal: boolean;
   canProposeCabinetBill: boolean;
+  canBrowseCabinetBill: boolean;
 }
 
 type Action =
@@ -46,7 +47,8 @@ type Action =
   | { type: "SET_PROPOSING_NO_CONFIDENCE"; value: boolean }
   | { type: "SET_SHOW_PROPOSE_MODAL"; value: boolean }
   | { type: "SET_SHOW_CABINET_PROPOSE_MODAL"; value: boolean }
-  | { type: "SET_CAN_PROPOSE_CABINET_BILL"; value: boolean };
+  | { type: "SET_CAN_PROPOSE_CABINET_BILL"; value: boolean }
+  | { type: "SET_CAN_BROWSE_CABINET_BILL"; value: boolean };
 
 const initial: State = {
   viewerMayAppoint: false,
@@ -65,6 +67,7 @@ const initial: State = {
   showProposeModal: false,
   showCabinetProposeModal: false,
   canProposeCabinetBill: false,
+  canBrowseCabinetBill: false,
 };
 
 function reducer(state: State, action: Action): State {
@@ -87,6 +90,8 @@ function reducer(state: State, action: Action): State {
       return { ...state, showCabinetProposeModal: action.value };
     case "SET_CAN_PROPOSE_CABINET_BILL":
       return { ...state, canProposeCabinetBill: action.value };
+    case "SET_CAN_BROWSE_CABINET_BILL":
+      return { ...state, canBrowseCabinetBill: action.value };
     default:
       return state;
   }
@@ -124,5 +129,7 @@ export function useJPDietPageState() {
       dispatch({ type: "SET_SHOW_CABINET_PROPOSE_MODAL", value: v }),
     setCanProposeCabinetBill: (v: boolean) =>
       dispatch({ type: "SET_CAN_PROPOSE_CABINET_BILL", value: v }),
+    setCanBrowseCabinetBill: (v: boolean) =>
+      dispatch({ type: "SET_CAN_BROWSE_CABINET_BILL", value: v }),
   };
 }

@@ -69,6 +69,36 @@ describe("advertising commodity detail", () => {
       .toArray.mockResolvedValue([{ _id: "CA", countryId: "US" }]);
   });
 
+  it("returns one-hop state estimates beside the latest observed load and freight supply", async () => {
+    db.collection("corporateSectors").find().toArray.mockResolvedValue([]);
+    db.collection("commodityPrices").findOne.mockResolvedValue({
+      basePrice: 1,
+      globalSupply: 50,
+      globalDemand: 50,
+      stateSupply: { CA: 75 },
+    });
+    db.collection("commodityPrices")
+      .find()
+      .toArray.mockResolvedValue([{ commodity: "coal", stateSupply: { CA: 100 } }]);
+    db.collection("sourcingNetworkLoad")
+      .find()
+      .toArray.mockResolvedValue([
+        { turn: 91, freightTeuByState: { CA: { bulk: 12, special: 3, grid: 0 } } },
+      ]);
+
+    const data = await getCommodityDetailData("freight");
+
+    expect(data.freightNetwork).toEqual({
+      turn: 91,
+      states: {
+        CA: { observedLoad: 15, capacity: 75, fullCapacityOneHopEstimate: 4 },
+      },
+    });
+    expect(db.collection("commodityPrices").find).toHaveBeenCalledWith({
+      commodity: { $in: expect.any(Array) },
+    });
+  });
+
   it("reports only the global residual, even when configured budgets exceed stored demand", async () => {
     const response = await GET(new Request("http://localhost/api/commodities/advertising"), {
       params: Promise.resolve({ type: "advertising" }),

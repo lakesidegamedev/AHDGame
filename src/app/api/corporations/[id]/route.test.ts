@@ -283,7 +283,15 @@ describe("GET /api/corporations/[id]", () => {
         currentGrowthRate: 0,
         subsidyBenefit: 0,
       },
-      sectors: [],
+      sectors: [
+        {
+          capacityUnits: 10_000,
+          producedUnits: 9_000,
+          soldUnits: 4_500,
+          mediaAdvertisingCampaignUnits: 900,
+          mediaAdvertisingCampaignFactor: 0.1,
+        },
+      ],
       balanceSheet: {
         assets: {
           cashOnHand: 160_000,
@@ -312,6 +320,7 @@ describe("GET /api/corporations/[id]", () => {
     });
     const json = await res.json();
     const factor = getFogFactor(corporation._id.toString(), 10);
+    const producedFactor = getFogFactor(corporation._id.toString(), 10, "produced");
 
     expect(res.status).toBe(200);
     expect(json.corporation.viewerIsControllingParentCeo).toBe(false);
@@ -324,6 +333,8 @@ describe("GET /api/corporations/[id]", () => {
     expect(json.financials.totalRevenue).not.toBe(80_000);
     expect(json.balanceSheet.assets.cashOnHand).toBe(Math.round(160_000 * factor));
     expect(json.corporation.liquidCapital).toBe(Math.round(160_000 * factor));
+    expect(json.sectors[0].mediaAdvertisingCampaignUnits).toBe(Math.round(900 * producedFactor));
+    expect(json.sectors[0].mediaAdvertisingCampaignFactor).toBe(0.1);
   });
 });
 
