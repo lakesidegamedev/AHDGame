@@ -39,6 +39,48 @@ const plants = {
 function noop() {}
 
 describe("PlantPanel workforce", () => {
+  it("shows the sector's one-hop freight estimate at installed capacity", () => {
+    render(
+      <PlantPanel
+        plants={plants}
+        marketSupplies={[
+          {
+            commodity: "coal",
+            label: "Coal",
+            icon: "CO",
+            colors: "",
+            unit: "units",
+            units: 1_500,
+            rate: 1,
+            basePrice: 1,
+            globalPrice: 1,
+            nationalPrice: 1,
+            regionalPrice: 1,
+            marketPrice: 1,
+            weight: 100,
+            priceImpact: 0,
+          },
+        ]}
+        sectorType="extraction"
+        averageWageLevel={1}
+        isCeo={false}
+        busy={false}
+        message=""
+        onOpenBuild={noop}
+        onCancelOrder={noop}
+        onMothball={noop}
+        onReactivate={noop}
+      />
+    );
+
+    expect(
+      screen.getByText(
+        /at full capacity and shipped all output one state away, it would need about 80 TEU per day/
+      )
+    ).toBeTruthy();
+    expect(screen.getByText(/Local sales use no freight; longer routes use more/)).toBeTruthy();
+  });
+
   it("links the covering union with its emblem and shows the average wage level", () => {
     const { container } = render(
       <PlantPanel

@@ -168,6 +168,7 @@ export interface CommoditySupplyDemandBlendPct {
 export interface CommoditiesData {
   supplies: CommodityFlow[];
   demands: CommodityFlow[];
+  freightState?: { observedLoad: number; capacity: number; turn: number | null };
   commodityMarginModifier: number;
   commoditySupplyDemandBlendPct?: CommoditySupplyDemandBlendPct;
   /**

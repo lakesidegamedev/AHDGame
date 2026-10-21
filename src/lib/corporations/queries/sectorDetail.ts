@@ -96,6 +96,7 @@ import { isPlannedEconomy } from "@/lib/constants/commandEconomy";
 import { computeRetoolHint } from "@/lib/corporations/retoolHint";
 import { applyExtractionResourceCapacityToSupply } from "@/lib/corporations/extractionResourceSupply";
 import { capacityRescaleRatio } from "@/lib/constants/capacityEconomy";
+import type { SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
 import { productionProductivityMultiplier } from "@/lib/corporations/rules/productionProductivity";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import {
@@ -926,7 +927,22 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
     const marketMode = await getMarketSystemMode();
     const plantsEnabled = marketAtLeast(marketMode, "plants");
     let plants: Awaited<ReturnType<typeof buildSectorPlantsSection>> | null = null;
+    let freightState: { observedLoad: number; capacity: number; turn: number | null } | undefined;
     if (plantsEnabled && !shouldRedact && !publicFinancialFog) {
+      const [latestSourcingNetwork] = await db
+        .collection<SourcingNetworkDoc>("sourcingNetworkLoad")
+        .find({})
+        .sort({ turn: -1 })
+        .limit(1)
+        .toArray();
+      const observedFreight = latestSourcingNetwork?.freightTeuByState[sector.stateId];
+      const freightPrice = commodityPrices.find((price) => price.commodity === "freight");
+      freightState = {
+        observedLoad:
+          Math.max(0, observedFreight?.bulk ?? 0) + Math.max(0, observedFreight?.special ?? 0),
+        capacity: Math.max(0, freightPrice?.stateSupply?.[sector.stateId] ?? 0),
+        turn: latestSourcingNetwork?.turn ?? null,
+      };
       const nationalMarketShare =
         buildNationalDominanceShareBySectorId({
           sectors: allSectorsRaw,
@@ -1629,6 +1645,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
       commodities: {
         supplies,
         demands: demandsWithShortage,
+        ...(freightState ? { freightState } : {}),
         commodityMarginModifier: mods.commodityModifier,
         commoditySupplyDemandBlendPct: blendPct,
         priceRealization,

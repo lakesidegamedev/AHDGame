@@ -53,6 +53,70 @@ describe("getCorporationSectorDetail", () => {
       sectorType: "manufacturing",
       industryModel: "vehicles",
     });
+    expect(db.collectionMocks.sourcingNetworkLoad).toBeUndefined();
+  });
+
+  it("includes same-state freight load and supply in the plants sector DTO", async () => {
+    const corporationId = new ObjectId();
+    const sectorId = new ObjectId();
+    const ownerUserId = new ObjectId();
+    const { getAuthUser } = await import("@/lib/auth");
+    vi.mocked(getAuthUser).mockResolvedValueOnce({ userId: ownerUserId.toHexString() } as Awaited<
+      ReturnType<typeof getAuthUser>
+    >);
+    db.collectionMocks.corporations.findOne.mockResolvedValue({
+      _id: corporationId,
+      userId: ownerUserId,
+      sequentialId: 6,
+      name: "Steel Corp",
+      type: "manufacturing",
+      countryId: "US",
+      liquidCurrencyCode: "USD",
+    });
+    db.collectionMocks.corporateSectors.findOne.mockResolvedValue({
+      _id: sectorId,
+      corporationId,
+      stateId: "CA",
+      countryId: "US",
+      sectorType: "manufacturing",
+      strategyId: "standard",
+      revenue: 1_000_000,
+      producedUnits: 100,
+      soldUnits: 90,
+      operatingCapacityUnits: 120,
+      capitalStock: 120,
+    });
+    db.collection("gameConfig").findOne.mockResolvedValue({ marketSystemMode: "plants" });
+    db.collection("commodityPrices").find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([
+        {
+          commodity: "freight",
+          globalSupply: 75,
+          globalDemand: 50,
+          stateSupply: { CA: 75 },
+          stateDemand: { CA: 50 },
+        },
+      ]),
+    });
+    db.collection("sourcingNetworkLoad")
+      .find()
+      .toArray.mockResolvedValue([
+        { turn: 42, freightTeuByState: { CA: { bulk: 12, special: 3, grid: 0 } } },
+      ]);
+
+    const response = await getCorporationSectorDetail(
+      new Request(`http://localhost/api/corporations/6/sectors/${sectorId.toHexString()}`),
+      { params: Promise.resolve({ id: "6", sectorId: sectorId.toHexString() }) }
+    );
+    const data = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(data.commodities.freightState).toEqual({
+      observedLoad: 15,
+      capacity: 75,
+      turn: 42,
+    });
+    expect(db.collectionMocks.sourcingNetworkLoad.find).toHaveBeenCalledWith({});
   });
 
   it("redacts financial details for private corps from public viewers but keeps attack info accessible", async () => {
