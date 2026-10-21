@@ -1,3 +1,4 @@
+import { MARKET_ADJUSTMENT_TEMPLATE_KEY } from "@/lib/crises/marketAdjustment/template";
 import { describe, it, expect } from "vitest";
 import {
   ALL_CRISIS_TEMPLATES,
@@ -73,7 +74,11 @@ describe("crisis templates", () => {
         expect(template.name).toBeTruthy();
         expect(template.description).toBeTruthy();
         expect(["global", "country", "region"]).toContain(template.scope);
-        expect(template.effects.length).toBeGreaterThan(0);
+        // Market Adjustment is effect-free on purpose: it adds no damage of its own
+        // on top of the losses the funded market already books.
+        if (key !== MARKET_ADJUSTMENT_TEMPLATE_KEY) {
+          expect(template.effects.length).toBeGreaterThan(0);
+        }
       });
 
       it(`${key} effects target valid metric paths`, () => {
