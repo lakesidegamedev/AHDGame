@@ -1095,6 +1095,8 @@ export interface CorporateSector {
    * the reviewed opening plan. Written once by applyProducerOpening, never after.
    */
   cutoverTransition?: import("@/lib/market/producerMarket/transitionRules").SectorTransition;
+  /** Lost money or sold nothing on a funded turn inside the window; gets the transition relief. */
+  cutoverStruggling?: import("@/lib/market/producerMarket/transitionRules").CutoverStruggling;
   /** Turn the owner used the transition package's free conversion; ends floor support. */
   cutoverConvertedAtTurn?: number;
   /** Funded market: consecutive settled turns this sector sold nothing. */

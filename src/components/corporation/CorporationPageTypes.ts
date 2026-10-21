@@ -628,7 +628,14 @@ export interface CommoditySupplyDemandBlendPct {
 export interface SectorDetail {
   _id: string;
   /** Funded-market transition package while its window is open for this sector. */
-  cutoverTransition?: { turnsLeft: number; freeConversion: boolean; converted: boolean } | null;
+  cutoverTransition?: {
+    /** Why the sector gets relief: over-built at the switch, or losing / selling nothing since. */
+    reason: "overBuilt" | "losing" | "zeroSales";
+    mothballed: boolean;
+    turnsLeft: number;
+    freeConversion: boolean;
+    converted: boolean;
+  } | null;
   stateId: string;
   /** Country where this sector operates */
   countryId?: string;
