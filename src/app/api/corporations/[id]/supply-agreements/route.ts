@@ -6,6 +6,7 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { requireCeo, resolveCorporation } from "@/lib/api/corporations/resolveQuery";
 import { proposeSupplyAgreement } from "@/lib/corporations/commands/supplyAgreements";
 import {
+  contractCancelEffectiveTurn,
   CONTRACT_OVERCOMMIT_TOLERANCE,
   type SupplyAgreementOffer,
   type SupplyAgreement,
@@ -64,6 +65,13 @@ export async function GET(_request: Request, { params }: RouteParams) {
       .find({ $or: [{ supplierCorpId: corpId }, { buyerCorpId: corpId }] })
       .sort({ updatedAt: -1 })
       .toArray();
+    const noticeTurn = agreements.some((agreement) => agreement.status === "active")
+      ? ((
+          await db
+            .collection<GameState>("gameState")
+            .findOne({ _id: "current" }, { projection: { currentTurn: 1 } })
+        )?.currentTurn ?? 0)
+      : 0;
     const counterpartyIds = [
       ...new Set(
         agreements.flatMap((agreement) => [
@@ -191,6 +199,12 @@ export async function GET(_request: Request, { params }: RouteParams) {
         supplierCorpId: a.supplierCorpId.toString(),
         buyerCorpId: a.buyerCorpId.toString(),
         proposedByCorpId: a.proposedByCorpId.toString(),
+        ...(a.status === "active"
+          ? {
+              cancelNoticeTurns:
+                contractCancelEffectiveTurn(noticeTurn, a.expiresAtTurn) - noticeTurn,
+            }
+          : {}),
         currentOffer: serializeOffer(
           a.currentOffer ?? a.offers?.[a.offers.length - 1] ?? legacyOffer(a)
         ),
