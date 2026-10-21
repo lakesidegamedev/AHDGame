@@ -41,7 +41,13 @@ import {
   type CloseTransfer,
 } from "@/lib/market/producerMarket/liveFundingRules";
 import type { FundedReceipt } from "@/lib/market/producerMarket/fundedSectorRules";
-import { transitionSupport } from "@/lib/market/producerMarket/transitionRules";
+import { inTransitionWindow, transitionSupport } from "@/lib/market/producerMarket/transitionRules";
+import {
+  DECOMMISSION_GRANT_DEFAULT_SHARE,
+  decommissionGrant,
+  idleRetireActive,
+  idleRetireSectorShare,
+} from "@/lib/market/producerMarket/idleRetirementRules";
 import {
   fundedLedgerRows,
   PRODUCER_MARKET_OUTCOMES,
@@ -69,6 +75,16 @@ export interface FundedProducerTurnResult {
   receiptsBySectorId: Map<string, FundedReceipt>;
   /** Anchor per turn, by corporation id. */
   settledProfitByCorp: Map<string, number>;
+}
+
+/** The idle-retirement fields of the physical-preparation env, from the governor config. */
+export function idleRetireEnv(
+  config: { producerIdleRetireStage?: number; decommissionGrantShare?: number } | null | undefined
+) {
+  return {
+    idleRetireStage: config?.producerIdleRetireStage,
+    decommissionGrantShare: config?.decommissionGrantShare,
+  };
 }
 
 export async function runFundedProducerTurn(
@@ -332,6 +348,54 @@ export async function runFundedProducerTurn(
     const byPayee = new Map<string, SettlementClose["transfers"][number]>();
     const paid: Record<string, number> = {};
     const bySector: Record<string, number> = {};
+    const poolAfterSupport = new Map<string, number>();
+    for (const f of demand.funding) {
+      const pool = Math.max(0, closingCash.get(publicWallet(f.countryId)) ?? 0);
+      let spent = 0;
+      for (const p of support.payments) if (p.countryId === f.countryId) spent += p.claim;
+      poolAfterSupport.set(f.countryId, Math.max(0, pool - spent));
+    }
+    // Decommissioning grant for capacity retired this turn, from what transition
+    // support left of the same unspent public funding, so the pool is never
+    // claimed twice and nothing is paid from an empty one.
+    const retiredBookBySector: Record<string, number> = {};
+    const grantBySector: Record<string, number> = {};
+    const grantShare = input.env.decommissionGrantShare ?? DECOMMISSION_GRANT_DEFAULT_SHARE;
+    if (
+      grantShare > 0 &&
+      idleRetireActive(input.env.idleRetireStage, turn, input.firstFundedTurn, inTransitionWindow)
+    ) {
+      const claims = lookups.corporations.flatMap((corp) =>
+        (lookups.sectorsByCorp.get(corp._id.toString()) ?? []).flatMap((sector) => {
+          const retiredBook =
+            (sector.capacityBookAnchor ?? 0) * idleRetireSectorShare(sector, turn);
+          if (!(retiredBook > 0)) return [];
+          retiredBookBySector[sector._id.toHexString()] = retiredBook;
+          return [
+            {
+              sectorId: sector._id.toHexString(),
+              countryId: String(sector.countryId ?? corp.countryId ?? ""),
+              claim: retiredBook * Math.min(1, grantShare),
+            },
+          ];
+        })
+      );
+      const grants = decommissionGrant({ claims, poolByCountry: poolAfterSupport });
+      for (const g of grants.payments) {
+        grantBySector[g.sectorId] = g.claim;
+        const owner = sectorOwner.get(g.sectorId)!;
+        const from = publicWallet(g.countryId);
+        const key = `decommission:${owner}:${from}`;
+        const row = byPayee.get(key) ?? {
+          reason: "decommission_grant",
+          fromAccountId: from,
+          toAccountId: owner,
+          amountAnchor: 0,
+        };
+        row.amountAnchor += g.claim;
+        byPayee.set(key, row);
+      }
+    }
     for (const p of support.payments) {
       paid[p.countryId] = (paid[p.countryId] ?? 0) + p.claim;
       bySector[p.sectorId] = (bySector[p.sectorId] ?? 0) + p.claim;
@@ -353,6 +417,8 @@ export async function runFundedProducerTurn(
       meta: {
         paidByCountry: paid,
         supportBySector: bySector,
+        retiredBookBySector,
+        grantBySector,
         coverageByCountry: Object.fromEntries(support.coverageByCountry),
       },
     };
@@ -377,6 +443,29 @@ export async function runFundedProducerTurn(
 
   const supportBySector =
     (settled.result.close?.meta?.supportBySector as Record<string, number> | undefined) ?? {};
+  const retiredBookBySector =
+    (settled.result.close?.meta?.retiredBookBySector as Record<string, number> | undefined) ?? {};
+  const grantBySector =
+    (settled.result.close?.meta?.grantBySector as Record<string, number> | undefined) ?? {};
+  const retiredIds = Object.keys(retiredBookBySector);
+  if (retiredIds.length > 0)
+    await db.collection<CorporateSector>("corporateSectors").bulkWrite(
+      retiredIds.map((id) => ({
+        updateOne: {
+          filter: { _id: new ObjectId(id) },
+          update: {
+            $set: {
+              lastDecommission: {
+                turn,
+                retiredBookAnchor: retiredBookBySector[id],
+                grantAnchor: grantBySector[id] ?? 0,
+              },
+            },
+          },
+        },
+      })),
+      { ordered: false }
+    );
   const receiptsBySectorId = new Map<string, FundedReceipt>();
   for (const sector of settled.closingSectors) {
     const r = sector.producerSettlement;

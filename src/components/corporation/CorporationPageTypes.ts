@@ -636,6 +636,8 @@ export interface SectorDetail {
     freeConversion: boolean;
     converted: boolean;
   } | null;
+  /** Capacity retired for selling nothing, and the grant paid for it (anchor units). */
+  lastDecommission?: { turn: number; retiredBookAnchor: number; grantAnchor: number } | null;
   stateId: string;
   /** Country where this sector operates */
   countryId?: string;
