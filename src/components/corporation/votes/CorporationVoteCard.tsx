@@ -62,6 +62,8 @@ function proposalSummary(vote: CorporationVote): string {
       return `Adopt dual-class supershares (founder votes count ${vote.payload.superShareMultiplier ?? "?"}× each)`;
     case "ticker_change":
       return `Change stock ticker to ${vote.payload.newTicker ?? "?"}`;
+    case "ceo_salary":
+      return `Raise the CEO salary to ${vote.payload.newCeoSalary?.toLocaleString("en-US") ?? "?"} a day`;
   }
 }
 
@@ -79,6 +81,8 @@ function typeLabel(type: CorporationVote["type"]): string {
       return "Supershares";
     case "ticker_change":
       return "Ticker change";
+    case "ceo_salary":
+      return "CEO pay";
   }
 }
 

@@ -360,6 +360,7 @@ const VOTE_LABEL: Record<string, string> = {
   share_issuance: "Share issuance",
   adopt_supershares: "Supershares",
   ticker_change: "Ticker change",
+  ceo_salary: "CEO pay",
 };
 
 /**
