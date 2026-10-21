@@ -1,7 +1,7 @@
 ---
 date: 2026-10-21
-title: Market switch preparation
-summary: Groundwork for the upcoming market change. No gameplay change yet.
+title: Production planner handles tied choices
+summary: Under the upcoming market, the production planner no longer cycles on tied choices.
 tags: [economy, corporations]
 badges: [patch]
 areas: [fullstack]

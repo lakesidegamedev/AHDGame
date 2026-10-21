@@ -65,8 +65,8 @@ export function publicBuyerFunding(
 }
 
 /**
- * Budget lines that are pure transfers (pensions, welfare, unemployment and
- * child benefits all sit in the social security line) are household income.
+ * Budget lines that are pure transfers (social security, welfare and pensions,
+ * each its own spending.byCategory key) are household income.
  * The treasury already deducts them each turn and, with no household wallets,
  * the money landed nowhere. Here the same amount is the households' funding:
  * the country's slice is shared across its state household wallets by weight.
@@ -78,7 +78,16 @@ export function publicBuyerFunding(
  *
  * Pure: budgets, shares and weights in, per-wallet amounts out (anchor per turn).
  */
-export const HOUSEHOLD_TRANSFER_CATEGORIES = ["socialSecurity"] as const;
+export const HOUSEHOLD_TRANSFER_CATEGORIES = ["socialSecurity", "welfare", "pensions"] as const;
+
+/** Annual transfer spending: the SUM of the transfer lines (not the first alias found). */
+export function householdTransferAnnual(
+  byCategory: Record<string, number> | undefined | null
+): number {
+  let total = 0;
+  for (const key of HOUSEHOLD_TRANSFER_CATEGORIES) total += govtSpendForCategory(byCategory, [key]);
+  return total;
+}
 
 export function householdTransferFunding(
   budgets: ReadonlyArray<{
@@ -96,7 +105,7 @@ export function householdTransferFunding(
   for (const b of [...budgets].sort((a, c) => (a.countryId < c.countryId ? -1 : 1))) {
     const share = plantShareByCountry.get(b.countryId) ?? 0;
     const perTurn =
-      (govtSpendForCategory(b.byCategory, [...HOUSEHOLD_TRANSFER_CATEGORIES]) / turnsPerYear) *
+      (householdTransferAnnual(b.byCategory) / turnsPerYear) *
       (Number.isFinite(share) ? Math.max(0, Math.min(1, share)) : 0);
     if (!(perTurn > 0)) continue;
     const own = wallets.filter((w) => w.countryId === b.countryId);

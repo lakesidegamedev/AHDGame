@@ -1,6 +1,7 @@
 /** Prepare work, recipes and plant constraints before any product money is moved. */
 import {
   inTransitionWindow,
+  TRANSITION_WINDOW_TURNS,
   transitionReliefEligible,
 } from "@/lib/market/producerMarket/transitionRules";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
@@ -262,7 +263,13 @@ export function prepareProducerPhysicalSector(input: {
           env.transitionFirstFundedTurn,
           inTransitionWindow
         )
-          ? idleRetireSectorShare(sector, currentTurn)
+          ? idleRetireSectorShare(
+              sector,
+              currentTurn,
+              env.transitionFirstFundedTurn != null
+                ? env.transitionFirstFundedTurn + TRANSITION_WINDOW_TURNS
+                : undefined
+            )
           : 0)),
     labourCost: 0,
     otherOperatingCost: 0,
