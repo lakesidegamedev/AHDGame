@@ -868,7 +868,12 @@ export default function CorporationDetailPage() {
     !!corporation.canManageAsParent ||
     !!corporation.canSpinOff;
   const showSupplyAgreements = isCeo && !isNationalCorp && !!corporation.supplyAgreementsEnabled;
-  const showStructureTab = showSubsidiaryPanel;
+  // The group chart has something to show for any corporation in a group,
+  // even to a viewer with no structure action to take.
+  const showStructureTab =
+    showSubsidiaryPanel ||
+    !!corporation.parentCorporation ||
+    (corporation.subsidiaries?.length ?? 0) > 0;
 
   const visibleTabs = [
     ...gatedTabs,
