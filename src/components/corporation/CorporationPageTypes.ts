@@ -541,6 +541,8 @@ export interface Financials {
   /** State/regional corporate tax this turn (aggregated across sectors at each sector's state rate). */
   stateTax: number;
   /** Part of federal + state tax that is owner tax on pass-through profit. */
+  /** Banked tax losses offsetting up to 80% of future taxable profit. */
+  taxLossCarryforward?: number;
   passThroughOwnerTax?: number;
   /** Federal tax broken down by sector country (for tooltip display). */
   federalTaxByCountry: Record<string, number>;

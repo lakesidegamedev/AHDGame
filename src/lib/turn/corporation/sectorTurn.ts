@@ -785,6 +785,12 @@ export function processSector(
     labourDemandByState,
     labourDemandWageIndexByState: env.labourDemandWageIndexByState,
     wageLevel: labour.wagesEnabled ? sector.wageLevel : 1,
+    fundedHeadcount: env.fundedHeadcountBySectorId
+      ? (env.fundedHeadcountBySectorId.get(sector._id.toString()) ?? {
+          desiredWorkers: 0,
+          workers: 0,
+        })
+      : undefined,
   });
 
   // Wanted staff the state could not supply are not paid (as in the producer path).

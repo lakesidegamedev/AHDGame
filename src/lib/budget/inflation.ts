@@ -84,9 +84,11 @@ const OUTPUT_GAP_COEFF_UP = 0.25;
 const OUTPUT_GAP_COEFF_DOWN = 0.2;
 
 /** Monetary-policy coefficients: each 1 pp away from neutral rate → this much inflation change.
- *  Asymmetric: high rates (above neutral) suppress demand 3× harder than low rates stimulate. */
-const MONETARY_COEFF_LOW = 0.4; // below neutral → stimulative
-const MONETARY_COEFF_HIGH = 1.2; // above neutral → deflationary (3× low rate)
+ *  Asymmetric: high rates (above neutral) suppress demand 1.5× harder than low rates stimulate.
+ *  LOW was 0.4, which capped a bank at zero to about +1.2pp of stimulus: on prod the US sat at
+ *  a 0.5% prime from t214 to t317 and still spent two long spells on the -2% floor. */
+const MONETARY_COEFF_LOW = 0.8; // below neutral → stimulative
+const MONETARY_COEFF_HIGH = 1.2; // above neutral → deflationary (1.5× low rate)
 
 /** Number of turns over which a rate change propagates to full effect on inflation.
  *  A change made this turn contributes 1/LAG_TURNS of its effect; a change made
@@ -154,13 +156,17 @@ const WAGE_COEFF_DOWN = 0.08;
  *
  * Signal is the median ANNUALIZED CHANGE in the country's national commodity
  * prices (see inflationRecalc.ts) — 0.10 means the basket is rising 10%/yr. The
- * coefficient is therefore a basket weight: at COEFF_UP=30 a basket rising
- * 10%/yr contributes 3.0pp of CPI, i.e. 0.30pp per 1pp of commodity inflation.
+ * coefficient is therefore a basket weight: at COEFF=10 a basket rising
+ * 10%/yr contributes 1.0pp of CPI, i.e. 0.10pp per 1pp of commodity inflation.
  *
  * The weight is deliberately well under 1. Commodity prices ARE most prices, so
  * this channel feeds back on itself: CPI settles near
- * (target + other terms) / (1 - weight), a bounded 1.43x amplification at 0.30
- * that would run away as the weight approached 1.
+ * (target + other terms) / (1 - weight), a 1.11x amplification at 0.10.
+ *
+ * It was 30 up / 15 down. At that weight the commodity trend drove CPI almost
+ * one-for-one and swamped every policy lever: on prod US food fell 36% over
+ * t265-t285 and CPI went from +3.4% to the -2% floor for 13 turns while the
+ * central bank sat at a 0.5% prime.
  *
  * It used to be 3.0 against a price LEVEL (`P_national / P_base - 1`) rather
  * than a rate. `basePrice` is a frozen seed constant, so that term grew without
@@ -170,15 +176,14 @@ const WAGE_COEFF_DOWN = 0.08;
  * inflationRecalc.ts, and HOUSING_PRESSURE_COEFF below, which retired the
  * identical error in the cost-of-living channel.
  *
- * Asymmetric: falling commodity prices pass through at half the rate of rising
- * ones (downward price stickiness), matching the forex arm.
+ * Symmetric weight; downward stickiness comes from the tighter down clamp.
  */
-const COMMODITY_PRESSURE_COEFF_UP = 30.0;
-const COMMODITY_PRESSURE_COEFF_DOWN = 15.0;
+const COMMODITY_PRESSURE_COEFF_UP = 10.0;
+const COMMODITY_PRESSURE_COEFF_DOWN = 10.0;
 /**
  * Bounds on the annualized commodity signal before the coefficient, so a country
- * in an acute supply crisis contributes at most +9pp (and a collapsing basket at
- * most -2.25pp) rather than an unbounded shock. FR on prod runs ~+36%/yr and
+ * in an acute supply crisis contributes at most +3pp (and a collapsing basket at
+ * most -1.5pp) rather than an unbounded shock. FR on prod runs ~+36%/yr and
  * clamps here.
  */
 const COMMODITY_PRESSURE_CLAMP_UP = 0.3;

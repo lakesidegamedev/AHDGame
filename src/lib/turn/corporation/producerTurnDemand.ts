@@ -69,6 +69,8 @@ export async function buildProducerTurnDemand(
   const investmentAccountId =
     input.investmentAccountId ?? ((countryId: string) => `investment:${countryId}`);
   const preparedSectors: ReturnType<typeof prepareProducerPhysicalSector>["prepared"][] = [];
+  // Each plant's staffed headcount at its funded run, for the labour market.
+  const headcountBySectorId = new Map<string, { desiredWorkers: number; workers: number }>();
   const walletScopes: ReturnType<typeof prepareProducerPhysicalSector>["walletScopes"][number][] =
     [];
   const legacyBySectorId = legacyPnlBySectorId(input.sectorOps);
@@ -110,7 +112,11 @@ export async function buildProducerTurnDemand(
     for (const sector of lookups.sectorsByCorp.get(corp._id.toString()) ?? []) {
       try {
         const sectorId = sector._id.toString();
-        const { prepared, walletScopes: scopes } = prepareProducerPhysicalSector({
+        const {
+          prepared,
+          walletScopes: scopes,
+          headcount,
+        } = prepareProducerPhysicalSector({
           worldEpoch,
           env,
           corporation: corp,
@@ -120,6 +126,10 @@ export async function buildProducerTurnDemand(
         const sectorCountry = String(sector.countryId ?? corp.countryId ?? "");
         const plan = shadowCountryBooks(prepared.plan, sectorCountry);
         preparedSectors.push({ ...prepared, plan });
+        headcountBySectorId.set(sectorId, {
+          desiredWorkers: headcount.desiredWorkers,
+          workers: headcount.workers,
+        });
         walletScopes.push(...scopes);
         // Legacy plantsPnl is daily and in the sector host's currency; the
         // shadow is per turn in anchor units, so convert before comparing.
@@ -424,6 +434,7 @@ export async function buildProducerTurnDemand(
     eligibleOffersByOrder,
     firstWalletByCorp,
     funding,
+    headcountBySectorId,
     householdForPayee,
     householdSeed,
     householdWallets,

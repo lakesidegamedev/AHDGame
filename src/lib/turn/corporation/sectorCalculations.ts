@@ -6,6 +6,11 @@ import { holdingMaturationWrites } from "./holdingMaturationWrites";
  * interest and dividends (up to MAX_DIVIDEND_RATE), accrues R&D score
  * (rdMoraleFactor), and converts each sector from its host currency.
  */
+import {
+  applyLossCarryforward,
+  openingCarryforward,
+  type LossCarryforwardState,
+} from "@/lib/corporations/rules/lossCarryforward";
 import { prepareInternalSupplySectorResults } from "./internalSupplySectorPass";
 import { holdingDividendSplit, positionHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
 import { formalizedSubsidiaryCountByParentId } from "@/lib/corporations/subsidiaries/helpers";
@@ -141,6 +146,7 @@ export function processSectors(
   funded?: {
     receiptsBySectorId: ReadonlyMap<string, FundedReceipt>;
     settledProfitByCorp: ReadonlyMap<string, number>;
+    headcountBySectorId?: ReadonlyMap<string, { desiredWorkers: number; workers: number }>;
   }
 ): SectorCalculationsResult {
   const fundedResults = new Map<string, ReturnType<typeof fundedSectorResult>>();
@@ -208,6 +214,8 @@ export function processSectors(
     automationIndexByState,
     labourDemandByState,
     labourDemandWageIndexByState,
+    fundedHeadcountBySectorId:
+      (lookups.fundedHeadcountStage ?? 0) >= 1 ? funded?.headcountBySectorId : undefined,
     pendingStrikeEvents,
     pendingCapacityBindingEvents,
     sectorOps,
@@ -222,6 +230,8 @@ export function processSectors(
   // Portion of each character's dividends already taxed at source under the
   // pass-through reform; the income-tax phase does not tax it again.
   const passThroughTaxedDividendPayments = new Map<string, Map<CurrencyCode, number>>();
+  // Tax loss carryforward bank per corporation after this turn.
+  const lossCarryforwardByCorpId = new Map<string, LossCarryforwardState>();
   const corpDividendPaymentsAnchorByCorpId = new Map<string, number>();
   // Same idea for corporate holders: excluded from the dividend-received tax.
   const corpDividendTaxedAtSourceAnchorByCorpId = new Map<string, number>();
@@ -823,6 +833,37 @@ export function processSectors(
       taxPaidByCountryForeign.clear();
     }
 
+    // Tax loss carryforward: bank this turn's loss, or offset part of this
+    // turn's profit with banked losses (scaling every tax line alike).
+    if (!isStateOwned(corp)) {
+      const carry = applyLossCarryforward(
+        consolidatedNet + Math.max(0, perTurnBondCouponIncome),
+        openingCarryforward(corp.taxLossCarryforward, currentTurn)
+      );
+      if (carry.taxScale < 1) {
+        totalFederalTax *= carry.taxScale;
+        totalStateTax *= carry.taxScale;
+        for (const map of [
+          taxPaidByCountry,
+          taxPaidByState,
+          taxPaidByCountryDomestic,
+          taxPaidByCountryForeign,
+          taxPaidByStateDomestic,
+          taxPaidByStateForeign,
+        ]) {
+          for (const [k, v] of map) map.set(k, v * carry.taxScale);
+        }
+      }
+      const opening = openingCarryforward(corp.taxLossCarryforward, currentTurn);
+      if (carry.closing !== opening || corp.taxLossCarryforward?.turn === currentTurn) {
+        lossCarryforwardByCorpId.set(corp._id.toString(), {
+          anchor: carry.closing,
+          turn: currentTurn,
+          before: opening,
+        });
+      }
+    }
+
     const corporateTaxOwed = totalFederalTax + totalStateTax;
     const afterTaxOperating = incomePreDividends - corporateTaxOwed;
     const netIncomeBeforeDividends =
@@ -1374,6 +1415,9 @@ export function processSectors(
             // also blocks — see dividends/route.ts) should force-clear the stored rate.
             ...(imfBailoutActive ? { dividendRate: 0, lastDividendChange: now } : {}),
             ...(shouldZeroCeoSalary || imfBailoutActive ? { ceoSalary: 0 } : {}),
+            ...(lossCarryforwardByCorpId.has(corpId)
+              ? { taxLossCarryforward: lossCarryforwardByCorpId.get(corpId) }
+              : {}),
           },
           ...(mediaAdvertisingObligationByBuyerId.has(corpId) ||
           manufacturingAdvertisingObligationByBuyerId.has(corpId)

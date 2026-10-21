@@ -196,6 +196,12 @@ export interface GameConfig {
    * knobs. 0 or absent = off.
    */
   fundedOverheadStage?: number;
+  /**
+   * Funded producer path: 1 drives sector headcount, and the regional labour
+   * demand that unemployment reads, from the funded plan's staffed workers
+   * instead of nameplate staffing. 0 or absent = off.
+   */
+  fundedHeadcountStage?: number;
   /** Group size costs rollout stage (1 = management overhead on the control group, 2 = commodity build toll, 3 = dumping guard, 4 = monopoly trigger, 5 = merger concentration on the control group). 0 or absent = off. */
   groupSizeCostsStage?: number;
   /** Public media editorial stance and audience response rules. Missing means off. */

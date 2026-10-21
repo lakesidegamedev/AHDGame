@@ -719,6 +719,8 @@ export interface Corporation {
   autopilot?: CorporationAutopilot;
   /** Owner limits on the NPP operator running this corporation. */
   operatorPolicy?: CorporationOperatorPolicy;
+  /** Banked tax losses offsetting up to 80% of later taxable profit (anchor). */
+  taxLossCarryforward?: import("@/lib/corporations/rules/lossCarryforward").LossCarryforwardState;
   /** NPP CEO career and pay demands (only while ceoType is "npp"). */
   ceoPay?: CorporationCeoPay;
   /**
