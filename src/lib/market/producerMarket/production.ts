@@ -21,6 +21,9 @@ import { COMMODITY_SPOILAGE_PER_TURN } from "../inventory";
 import { householdPurchaseOrders } from "./householdRules";
 import { makeDoOutput } from "./makeDoRules";
 import { feasibleProduction } from "./productionFeasibilityRules";
+import { spilloverOrders } from "./spilloverRules";
+
+const laneKeyOf = (commodity: string, book: string) => JSON.stringify([commodity, book]);
 
 export interface PurchasedStock {
   commodity: string;
@@ -196,6 +199,11 @@ export function advanceProducerEconomy(input: {
   /** Explicit route/scope eligibility; missing entries allow only the offer's own book. */
   eligibleOffersByOrder?: Readonly<Record<string, readonly string[]>>;
   maximumPlanningPasses?: number;
+  /**
+   * Same-turn spillover of household spend stranded in sold-out lanes onto the
+   * buyer's other lanes with unsold supply (spilloverRules). 0 or absent = off.
+   */
+  spilloverShare?: number;
   /** Explicit carry policy for alternate catalogs; ordinary worlds use commodity spoilage. */
   carryLossByCommodity?: Readonly<Record<string, number>>;
 }): {
@@ -214,6 +222,8 @@ export function advanceProducerEconomy(input: {
     requestedUnits: number;
     deliveredUnits: number;
   }>;
+  /** Household spend stranded in sold-out lanes and how much the extra clearing placed. */
+  spillover?: { strandedSpend: number; extraRequested: number; recovered: number };
 } {
   const carryRates: Readonly<Record<string, number>> =
     input.carryLossByCommodity ?? COMMODITY_SPOILAGE_PER_TURN;
@@ -361,7 +371,7 @@ export function advanceProducerEconomy(input: {
   for (const [id, amount] of credits) cash.set(id, cash.get(id)! + amount);
   reserveUnpaidCash();
   const householdIds = new Set<string>();
-  const consumerOrders = [...(input.externalOrders ?? [])];
+  let consumerOrders = [...(input.externalOrders ?? [])];
   for (const household of input.households ?? []) {
     if (householdIds.has(household.accountId) || !cash.has(household.accountId))
       throw new Error("Duplicate or unknown household wallet");
@@ -720,6 +730,44 @@ export function advanceProducerEconomy(input: {
   // actually produced (the last pass may have lowered plans after clearing).
   market = trial();
   if (!market) throw new Error("Missing producer market settlement");
+  let spillover: { strandedSpend: number; extraRequested: number; recovered: number } | undefined;
+  if ((input.spilloverShare ?? 0) > 0 && householdIds.size > 0) {
+    const offerLane = new Map(
+      [...(input.externalOffers ?? []), ...offers].map((o) => [
+        o.id,
+        laneKeyOf(o.commodity, o.book),
+      ])
+    );
+    const unsoldUnits = new Map<string, number>();
+    for (const o of market.offers) {
+      const lane = offerLane.get(o.id);
+      if (lane)
+        unsoldUnits.set(lane, (unsoldUnits.get(lane) ?? 0) + (o.offeredUnits - o.deliveredUnits));
+    }
+    const first = new Map(
+      market.orders.map((o) => [o.id, { cost: o.cost, deliveredUnits: o.deliveredUnits }])
+    );
+    const next = spilloverOrders({
+      orders: consumerOrders,
+      accounts: householdIds,
+      outcomes: first,
+      unsoldUnits,
+      laneKey: laneKeyOf,
+      share: input.spilloverShare as number,
+    });
+    if (next.stats.extraRequested > 0) {
+      const spend = (orders: ReturnType<typeof settleProducerMarket>["orders"]) => {
+        const ids = new Set(
+          consumerOrders.filter((o) => householdIds.has(o.accountId)).map((o) => o.id)
+        );
+        return orders.filter((o) => ids.has(o.id)).reduce((sum, o) => sum + o.cost, 0);
+      };
+      const before = spend(market.orders);
+      consumerOrders = next.orders;
+      market = trial();
+      spillover = { ...next.stats, recovered: spend(market.orders) - before };
+    }
+  }
   const results: ProducerOperatingResult[] = [];
   const offersById = new Map(market.offers.map((o) => [o.id, o]));
   const ordersById = new Map(market.orders.map((o) => [o.id, o]));
@@ -927,6 +975,7 @@ export function advanceProducerEconomy(input: {
     producers: results,
     tradeReceipt: market.tradeReceipt,
     prices: market.prices,
+    ...(spillover ? { spillover } : {}),
     orderOutcomes: (() => {
       const meta = new Map(
         [...consumerOrders, ...inputOrders()].map((o) => [

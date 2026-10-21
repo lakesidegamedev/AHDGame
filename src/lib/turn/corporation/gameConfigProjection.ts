@@ -26,6 +26,8 @@ export const CORPORATION_TURN_GAME_CONFIG_PROJECTION = {
   producerMarketShadowEnabled: 1,
   producerMarketLiveFromTurn: 1,
   producerDemandPlanStage: 1,
+  producerSpilloverStage: 1,
+  producerSpilloverShare: 1,
   producerIdleRetireStage: 1,
   decommissionGrantShare: 1,
   producerLowUseCostStage: 1,

@@ -78,6 +78,7 @@ export async function runCorporationProducerMarket(
       | "externalOffers"
       | "inputReservations"
       | "eligibleOffersByOrder"
+      | "spilloverShare"
     >;
     /** Closing transfers frozen and published with the settlement (see applySettlementClose). */
     close?: Parameters<typeof settleProducerTurn>[1]["close"];
