@@ -48,3 +48,21 @@ describe("NoticeStrip", () => {
     expect(onDismiss).toHaveBeenCalledOnce();
   });
 });
+
+describe("NoticeStrip tag contrast", () => {
+  it("prints error and warning tags in the page background colour so every theme stays legible", () => {
+    const { rerender } = render(
+      <NoticeStrip tone="error" tag="Default">
+        x
+      </NoticeStrip>
+    );
+    expect(screen.getByText("Default").className).toContain("text-background");
+    expect(screen.getByText("Default").className).not.toContain("text-white");
+    rerender(
+      <NoticeStrip tone="warning" tag="Due">
+        x
+      </NoticeStrip>
+    );
+    expect(screen.getByText("Due").className).toContain("text-background");
+  });
+});

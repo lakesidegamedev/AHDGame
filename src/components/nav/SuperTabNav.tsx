@@ -239,7 +239,7 @@ export function SuperTabNav({
 
   if (variant === "folder") {
     return (
-      <div ref={folderRootRef} className="min-w-0 overflow-x-clip">
+      <div ref={folderRootRef} className="min-w-0">
         {preTabContent}
 
         <div
@@ -247,7 +247,7 @@ export function SuperTabNav({
           data-sticky-tabs={sticky ? "" : undefined}
           className={`relative z-[1] -mb-px ${
             sticky
-              ? "sticky top-[var(--site-navbar-h,0px)] z-30 bg-background pt-1.5 lg:static lg:bg-transparent lg:pt-0"
+              ? "sticky top-[var(--site-navbar-h,0px)] z-30 -mx-4 bg-background px-4 pt-1.5 sm:-mx-6 sm:px-6 lg:static lg:mx-0 lg:bg-transparent lg:px-0 lg:pt-0"
               : ""
           }`}
         >

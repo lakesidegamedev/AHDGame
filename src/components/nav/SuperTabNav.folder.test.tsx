@@ -68,6 +68,9 @@ describe("SuperTabNav folder variant", () => {
     const sticky = renderNav({ variant: "folder", sticky: true });
     const bar = sticky.container.querySelector<HTMLElement>("[data-sticky-tabs]")!;
     expect(bar.className).toContain("top-[var(--site-navbar-h,0px)]");
+    // The stuck bar bleeds to the screen edge on a phone so content does not show beside it.
+    expect(bar.className).toContain("-mx-4");
+    expect(bar.className).toContain("lg:mx-0");
   });
 
   it("sticky sub-tabs sit under the measured tab bar, however many rows it wraps to", () => {

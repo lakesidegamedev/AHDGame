@@ -10,7 +10,7 @@ const FRAME: Record<NoticeTone, string> = {
 
 const TAG: Record<NoticeTone, string> = {
   warning: "bg-warning text-background",
-  error: "bg-error text-white",
+  error: "bg-error text-background",
   info: "border border-card-border text-foreground",
 };
 
