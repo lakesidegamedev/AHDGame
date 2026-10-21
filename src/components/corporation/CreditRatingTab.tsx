@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Skeleton } from "@/components/ui";
 import { DenseSection, KVList, KVRow, Td, Th } from "./dense/DenseKit";
 import { DenseLineChart } from "./dense/DenseLineChart";
+import { RatingScale } from "./ledger/RatingScale";
+import { ProportionBar } from "./ledger/ProportionBar";
 import { INDEX_INCLUSION_THRESHOLD } from "@/lib/corporations/indexOwnership";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import {
@@ -100,6 +102,39 @@ function improvementHint(
   const need = threshold - compositeScore;
   if (need <= 0) return null;
   return `Roughly ${need} more composite point${need === 1 ? "" : "s"} to reach ${better} (threshold ${threshold}).`;
+}
+
+/** One line of the peer comparison: composite on its 0 to 100 scale, then coupon. */
+function PeerRow({
+  label,
+  you = false,
+  n,
+  composite,
+  coupon,
+}: {
+  label: string;
+  you?: boolean;
+  n: number | null;
+  composite: number | null | undefined;
+  coupon: number | null | undefined;
+}) {
+  return (
+    <tr className={you ? "bg-card-elevated/60 font-semibold" : undefined}>
+      <Td className={you ? "text-foreground" : "text-muted"}>{label}</Td>
+      <Td align="right">{you ? "" : (n ?? "n/a")}</Td>
+      <Td align="right">
+        {isFiniteNumber(composite) ? (
+          <span className="inline-flex items-center justify-end gap-2">
+            <ProportionBar pct={composite} tone={you ? "info" : "muted"} className="w-12" />
+            {composite}
+          </span>
+        ) : (
+          "n/a"
+        )}
+      </Td>
+      <Td align="right">{isFiniteNumber(coupon) ? `${coupon.toFixed(2)}%` : "n/a"}</Td>
+    </tr>
+  );
 }
 
 function isFiniteNumber(value: unknown): value is number {
@@ -476,6 +511,9 @@ export default function CreditRatingTab({
               )}
             </KVList>
           </div>
+          <div className="pb-1 pt-3">
+            <RatingScale rating={cr.rating} />
+          </div>
           {hint && <p className="pt-1.5 text-xs text-muted">{hint}</p>}
           <table className="mt-2 w-full border-collapse">
             <thead>
@@ -632,34 +670,33 @@ export default function CreditRatingTab({
               <thead>
                 <tr>
                   <Th />
-                  <Th align="right">Country</Th>
-                  <Th align="right">Sector</Th>
+                  <Th align="right" title="Rated corporations in the average">
+                    Peers
+                  </Th>
+                  <Th align="right">Composite</Th>
+                  <Th align="right">New-issue coupon</Th>
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <Td className="text-muted">Peers</Td>
-                  <Td align="right">{peerStats.countryPeers?.n ?? "n/a"}</Td>
-                  <Td align="right">{peerStats.sectorPeers?.n ?? "n/a"}</Td>
-                </tr>
-                <tr>
-                  <Td className="text-muted">Avg composite</Td>
-                  <Td align="right">{peerStats.countryPeers?.avgComposite ?? "n/a"}</Td>
-                  <Td align="right">{peerStats.sectorPeers?.avgComposite ?? "n/a"}</Td>
-                </tr>
-                <tr>
-                  <Td className="text-muted">Avg new-issue coupon</Td>
-                  <Td align="right">
-                    {isFiniteNumber(peerStats.countryPeers?.avgNewIssueCouponPct)
-                      ? `${peerStats.countryPeers.avgNewIssueCouponPct.toFixed(2)}%`
-                      : "n/a"}
-                  </Td>
-                  <Td align="right">
-                    {isFiniteNumber(peerStats.sectorPeers?.avgNewIssueCouponPct)
-                      ? `${peerStats.sectorPeers.avgNewIssueCouponPct.toFixed(2)}%`
-                      : "n/a"}
-                  </Td>
-                </tr>
+                <PeerRow
+                  label="You"
+                  you
+                  n={null}
+                  composite={peerStats.you.composite ?? cr.compositeScore}
+                  coupon={cr.effectiveCouponRate}
+                />
+                <PeerRow
+                  label="Country average"
+                  n={peerStats.countryPeers?.n ?? null}
+                  composite={peerStats.countryPeers?.avgComposite}
+                  coupon={peerStats.countryPeers?.avgNewIssueCouponPct}
+                />
+                <PeerRow
+                  label="Sector average"
+                  n={peerStats.sectorPeers?.n ?? null}
+                  composite={peerStats.sectorPeers?.avgComposite}
+                  coupon={peerStats.sectorPeers?.avgNewIssueCouponPct}
+                />
               </tbody>
             </table>
             {isFiniteNumber(peerStats.you.composite) &&
