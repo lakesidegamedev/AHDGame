@@ -65,6 +65,7 @@ describe("household transfer funding", () => {
           ]),
         ],
       ]),
+      new Map([["US", 1]]),
       12
     );
     expect(out).toEqual([
@@ -78,6 +79,7 @@ describe("household transfer funding", () => {
       [{ countryId: "US", byCategory: { socialSecurity: 240 } }],
       wallets,
       new Map(),
+      new Map([["US", 1]]),
       12
     );
     expect(out.reduce((s, t) => s + t.amount, 0)).toBeCloseTo(20, 12);
@@ -92,6 +94,30 @@ describe("household transfer funding", () => {
           { countryId: "FR", byCategory: { socialSecurity: 100 } },
         ],
         wallets,
+        new Map(),
+        new Map([
+          ["US", 1],
+          ["FR", 1],
+        ]),
+        12
+      )
+    ).toEqual([]);
+  });
+
+  it("scales the line by the plant economy's share of the country's economy", () => {
+    const out = householdTransferFunding(
+      [{ countryId: "US", byCategory: { socialSecurity: 1200 } }],
+      wallets,
+      new Map(),
+      new Map([["US", 0.01]]),
+      12
+    );
+    expect(out.reduce((s, t) => s + t.amount, 0)).toBeCloseTo(1, 12);
+    expect(
+      householdTransferFunding(
+        [{ countryId: "US", byCategory: { socialSecurity: 1200 } }],
+        wallets,
+        new Map(),
         new Map(),
         12
       )

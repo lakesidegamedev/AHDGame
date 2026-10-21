@@ -289,6 +289,7 @@ export async function buildProducerTurnDemand(
     }),
     [...householdWallets.values()],
     stateWeightsByCountry,
+    new Map(Object.entries(publicShareByCountry).map(([id, v]) => [id, v.share])),
     TURNS_PER_YEAR
   );
   const householdTransferTotal = householdTransfers.reduce((sum, t) => sum + t.amount, 0);
