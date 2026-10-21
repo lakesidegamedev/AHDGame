@@ -7,6 +7,10 @@ import type { CorporateSector, Corporation } from "@/lib/db/types";
 import { makeCorporation } from "@/lib/test-utils/factories";
 import { processAntitrustCompliance } from "./antitrustCompliance";
 
+// Breakup cases have their own tests; this file covers subsidiary and foreign orders.
+vi.mock("./antitrustBreakups", () => ({
+  processBreakupCases: vi.fn().mockResolvedValue({ opened: 0, ordered: 0, dismissed: 0 }),
+}));
 vi.mock("@/lib/mechanicalLaws/levels", () => ({ getMechanicalLawLevelsByCountry: vi.fn() }));
 vi.mock("@/lib/mechanicalLaws/forcedDivestiture", () => ({ executeForcedDivestiture: vi.fn() }));
 vi.mock("@/lib/notifications", () => ({ createNotifications: vi.fn() }));
@@ -118,7 +122,7 @@ describe("processAntitrustCompliance", () => {
       }),
     ]);
     expect(mockedNotify.mock.calls[0][0][0].message).toContain("by turn 548");
-    expect(result).toEqual({ ordered: 1, cleared: 0, sold: 0, deferred: 0 });
+    expect(result).toMatchObject({ ordered: 1, cleared: 0, sold: 0, deferred: 0 });
   });
 
   it("clears the order of a company that no longer breaches the law", async () => {
@@ -140,7 +144,7 @@ describe("processAntitrustCompliance", () => {
     ]);
     expect(sub.antitrustDivestiture).toBeUndefined();
     expect(mockedNotify).not.toHaveBeenCalled();
-    expect(result).toEqual({ ordered: 0, cleared: 1, sold: 0, deferred: 0 });
+    expect(result).toMatchObject({ ordered: 0, cleared: 1, sold: 0, deferred: 0 });
   });
 
   it("sells the stake and clears the order once the deadline has passed", async () => {
@@ -177,7 +181,7 @@ describe("processAntitrustCompliance", () => {
         title: "Stake in FR Sub sold",
       }),
     ]);
-    expect(result).toEqual({ ordered: 0, cleared: 0, sold: 1, deferred: 0 });
+    expect(result).toMatchObject({ ordered: 0, cleared: 0, sold: 1, deferred: 0 });
   });
 
   it("keeps the order when the forced sale has to wait for the market", async () => {
@@ -200,7 +204,7 @@ describe("processAntitrustCompliance", () => {
     expect(updateOne).not.toHaveBeenCalled();
     expect(mockedNotify).not.toHaveBeenCalled();
     expect(sub.antitrustDivestiture?.dueTurn).toBe(499);
-    expect(result).toEqual({ ordered: 0, cleared: 0, sold: 0, deferred: 1 });
+    expect(result).toMatchObject({ ordered: 0, cleared: 0, sold: 0, deferred: 1 });
   });
 
   it("writes nothing while every law sits at level 0", async () => {
@@ -243,6 +247,6 @@ describe("processAntitrustCompliance", () => {
     expect(updateOne).not.toHaveBeenCalled();
     expect(mockedDivest).not.toHaveBeenCalled();
     expect(mockedNotify).not.toHaveBeenCalled();
-    expect(result).toEqual({ ordered: 0, cleared: 0, sold: 0, deferred: 0 });
+    expect(result).toMatchObject({ ordered: 0, cleared: 0, sold: 0, deferred: 0 });
   });
 });

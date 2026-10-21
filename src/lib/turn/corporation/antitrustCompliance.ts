@@ -14,6 +14,7 @@
  * Every law starts open, so this pass changes nothing until a legislature
  * tightens one.
  */
+import { processBreakupCases } from "./antitrustBreakups";
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
@@ -41,6 +42,9 @@ export interface AntitrustComplianceResult {
   cleared: number;
   sold: number;
   deferred: number;
+  casesOpened?: number;
+  breakupsOrdered?: number;
+  casesDismissed?: number;
 }
 
 /** Pure: the control rows and industry rows the rules need, from the turn snapshot. */
@@ -77,7 +81,10 @@ export function complianceInputs(
 
 export async function processAntitrustCompliance(
   db: Db,
-  lookups: Pick<CorporationLookups, "corporations" | "sectorsByCorp" | "exchangeRatesByCurrency">,
+  lookups: Pick<
+    CorporationLookups,
+    "corporations" | "sectorsByCorp" | "exchangeRatesByCurrency" | "eraYear"
+  >,
   turn: number,
   now: Date = new Date()
 ): Promise<AntitrustComplianceResult> {
@@ -193,6 +200,19 @@ export async function processAntitrustCompliance(
   }
 
   if (settled.length > 0) await db.collection<Corporation>("corporations").bulkWrite(settled);
+
+  const breakups = await processBreakupCases(db, {
+    corporations: lookups.corporations,
+    rows,
+    industry,
+    competitionLevelByCountry: new Map([...levels].map(([cc, l]) => [cc, l.competition])),
+    turn,
+    currentYear: lookups.eraYear ?? null,
+    notices,
+  });
+  result.casesOpened = breakups.opened;
+  result.breakupsOrdered = breakups.ordered;
+  result.casesDismissed = breakups.dismissed;
 
   if (notices.length > 0) await createNotifications(notices);
   return result;
