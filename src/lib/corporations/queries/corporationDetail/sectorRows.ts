@@ -5,7 +5,7 @@ import {
   TRANSITION_WINDOW_TURNS,
 } from "@/lib/market/producerMarket/transitionRules";
 import type { Db } from "mongodb";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector, GameConfig } from "@/lib/db/types";
 import type { TurnReferenceData } from "@/lib/corporations/turnReferenceData";
 import type { FtaCoverage } from "@/lib/tariffs/ftaOverrides";
 import type { StateViewContext } from "./stateViewContext";
@@ -66,6 +66,36 @@ import {
 } from "@/lib/constants/sectorStrategies";
 import { applyExtractionResourceCapacityToSupply } from "@/lib/corporations/extractionResourceSupply";
 import { plantsNetMarginPct } from "@/lib/corporations/rules/netMargin";
+import {
+  computeSectorCommodityUnits,
+  type CorpCommodityFlowContext,
+  type FlowSector,
+} from "@/lib/corporations/corpCommodityFlows";
+import { plannedEconomyMediaSupplyFactor, isNewsMediaLane } from "@/lib/constants/sectorStrategies";
+import { isPlannedEconomy } from "@/lib/constants/commandEconomy";
+import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
+import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
+
+/**
+ * Advertising counted from one news-media sector's exact commodity ledger
+ * calculation, including the same economy, embargo, and diversion factors.
+ */
+export function mediaAdvertisingOutputForSector(
+  sector: FlowSector,
+  currentTurn: number,
+  context: CorpCommodityFlowContext
+): { units: number; factor: number } | null {
+  if (!isNewsMediaLane(sector.sectorType, sector.mediaDiscriminator)) return null;
+  const planned = isPlannedEconomy(
+    sector.countryId,
+    context.currentYear,
+    context.commandEconomyEnabled
+  );
+  return {
+    units: computeSectorCommodityUnits(sector, currentTurn, context).supply.get("advertising") ?? 0,
+    factor: plannedEconomyMediaSupplyFactor(sector.sectorType, planned, sector.mediaDiscriminator),
+  };
+}
 
 export function getEmptyStateMetricValues(): StateMetricValues {
   return {
@@ -85,6 +115,7 @@ export function getEmptyStateMetricValues(): StateMetricValues {
 export interface SectorModeFlags {
   labourWagesEnabled: boolean;
   plantsMode: boolean;
+  commandEconomyEnabled: boolean;
   realizedGrowthRate: number | null;
 }
 
@@ -110,6 +141,10 @@ export async function loadSectorModeFlags(
   // field. Below plants this is false and every field added below is null, so
   // a capital-tier world's payload is unchanged apart from the null keys.
   const plantsMode = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
+  const gameConfig = await db
+    .collection<GameConfig>("gameConfig")
+    .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+  const commandEconomyEnabled = gameConfig?.commandEconomyEnabled === true;
 
   // #922 — "Growth Rate always 0". Under plants, a sector's `currentGrowthRate`
   // no longer drives revenue (revenue comes from produced units against plant
@@ -139,7 +174,7 @@ export async function loadSectorModeFlags(
       )
     : null;
 
-  return { labourWagesEnabled, plantsMode, realizedGrowthRate };
+  return { labourWagesEnabled, plantsMode, commandEconomyEnabled, realizedGrowthRate };
 }
 
 export interface SectorRowContext {
@@ -149,6 +184,7 @@ export interface SectorRowContext {
   /** First funded turn of the market transition; absent before the funded market. */
   transitionFirstFundedTurn?: number;
   plantsMode: boolean;
+  commandEconomyEnabled?: boolean;
   labourWagesEnabled: boolean;
   revenueRealizationRatio: number;
   restatement: SectorCurrencyRestatement;
@@ -212,6 +248,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
     sectors,
     currentTurn,
     plantsMode,
+    commandEconomyEnabled = false,
     labourWagesEnabled,
     revenueRealizationRatio,
     restatement,
@@ -640,6 +677,26 @@ export function buildSectorDetails(ctx: SectorRowContext) {
           : null;
     const producedUnits =
       plantsMode && Number.isFinite(sector.producedUnits) ? (sector.producedUnits as number) : null;
+    const commodityContext: CorpCommodityFlowContext = {
+      plantsEnabled: plantsMode,
+      isNatcorp: corporation.countryOwnerId != null,
+      eraUnitScale: getEraUnitScale(resolvePresetIdFromGameState(stateCtx.gameState)),
+      currentYear: stateCtx.gameState?.currentYear,
+      commandEconomyEnabled,
+      preset: resolvePresetIdFromGameState(stateCtx.gameState),
+      hardwareInputReliefStartTurn: stateCtx.gameState?.hardwareInputReliefStartTurn,
+    };
+    const mediaAdvertisingOutput = mediaAdvertisingOutputForSector(
+      {
+        ...sector,
+        countryId: sectorCountryId,
+        revenueAnchor: restatement.toAnchor(sector.revenue ?? 0, sector),
+      },
+      currentTurn,
+      commodityContext
+    );
+    const mediaAdvertisingCampaignUnits = mediaAdvertisingOutput?.units ?? null;
+    const mediaAdvertisingCampaignFactor = mediaAdvertisingOutput?.factor ?? null;
     const soldUnits =
       plantsMode && Number.isFinite(sector.soldUnits) ? (sector.soldUnits as number) : null;
     const constructionInProgressAnchor = plantsMode
@@ -772,6 +829,8 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       capacityUnits,
       plantCount,
       producedUnits,
+      mediaAdvertisingCampaignUnits,
+      mediaAdvertisingCampaignFactor,
       soldUnits,
       // Exact ratio. The API layer replaces this with null (and keeps only the
       // band) for a viewer without insider access — see financialFogOfWar.

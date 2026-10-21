@@ -783,6 +783,10 @@ export interface SectorDetail {
   plantCount?: number | null;
   /** Units produced last turn. */
   producedUnits?: number | null;
+  /** Exact news-media advertising ledger supply, after the full commodity factor chain. */
+  mediaAdvertisingCampaignUnits?: number | null;
+  /** Authoritative factor applied to news-media advertising output. */
+  mediaAdvertisingCampaignFactor?: number | null;
   /** Units sold last turn. */
   soldUnits?: number | null;
   /**

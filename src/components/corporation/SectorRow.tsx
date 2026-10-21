@@ -2,6 +2,7 @@
 
 import { useWorldFlags } from "@/hooks/useWorldFlags";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import {
@@ -102,6 +103,7 @@ export function SectorRow({
   const [expanded, setExpanded] = useState(false);
 
   const { preset } = useWorldFlags();
+  const t = useTranslations("corporations.sectorInvestment");
   const operatingSectorType = getOperatingSectorType(
     sector.sectorType,
     sector.industryModel,
@@ -222,6 +224,18 @@ export function SectorRow({
           <span>Produced</span>
           <span className="tabular-nums">{formatUnits(sector.producedUnits)}</span>
         </div>
+        {sector.mediaAdvertisingCampaignUnits != null &&
+          sector.mediaAdvertisingCampaignFactor != null && (
+            <div className="flex justify-between gap-3">
+              <span>{t("advertisingCampaignsLabel")}</span>
+              <span className="tabular-nums">
+                {t("advertisingCampaignsValue", {
+                  units: formatUnits(sector.mediaAdvertisingCampaignUnits),
+                  factor: formatFillPercent(sector.mediaAdvertisingCampaignFactor),
+                })}
+              </span>
+            </div>
+          )}
         <div className="flex justify-between gap-3">
           <span>Sold</span>
           <span className="tabular-nums">{formatUnits(sector.soldUnits)}</span>
