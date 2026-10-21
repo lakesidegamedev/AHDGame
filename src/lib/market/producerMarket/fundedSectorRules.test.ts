@@ -87,3 +87,16 @@ describe("funded sector result keeps policy costs", () => {
     expect(r.costs).toBe(85);
   });
 });
+
+describe("funded sector result charges size costs as points of revenue", () => {
+  it("adds fundedSizeCostPp percent of receipt revenue to the costs", () => {
+    const r = fundedSectorResult({ ...legacy, fundedSizeCostPp: 5 }, receipt);
+    // receipt costs 70 + growth 10 + 5% of 100 revenue
+    expect(r.costs).toBeCloseTo(85);
+    expect(r.effectiveMargin).toBeCloseTo(15);
+  });
+
+  it("charges nothing extra when the legacy result carries no size cost", () => {
+    expect(fundedSectorResult(legacy, receipt).costs).toBe(80);
+  });
+});

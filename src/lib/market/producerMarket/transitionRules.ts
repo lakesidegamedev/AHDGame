@@ -69,18 +69,50 @@ export function inTransitionWindow(turn: number, firstFundedTurn: number): boole
 }
 
 /**
+ * A sector that lost money or sold nothing on a funded turn inside the window
+ * (owner decision 2026-10-21): it gets the same relief as an over-built one,
+ * since the frozen classification cannot see sectors that struggle later.
+ */
+export interface CutoverStruggling {
+  sinceTurn: number;
+  reason: "losing" | "zeroSales";
+}
+
+/** Why a sector on a funded turn is struggling, or null when it is not. */
+export function strugglingReason(receipt: {
+  soldUnits: number;
+  profit: number;
+}): CutoverStruggling["reason"] | null {
+  if (!(receipt.soldUnits > 0)) return "zeroSales";
+  if (receipt.profit < 0) return "losing";
+  return null;
+}
+
+/** Whether a sector gets the transition relief: over-built at opening, or struggling since. */
+export function transitionReliefEligible(sector: {
+  cutoverTransition?: SectorTransition | null;
+  cutoverStruggling?: CutoverStruggling | null;
+}): boolean {
+  return sector.cutoverTransition?.mismatched === true || sector.cutoverStruggling != null;
+}
+
+/**
  * The transition package's free conversion (owner decision 2026-10-20: free,
- * at book value, same or another industry): once per mismatched sector, while
+ * at book value, same or another industry): once per eligible sector, while
  * the window is open for the turn the change takes effect.
  */
 export function freeTransitionConversion(
-  sector: { cutoverTransition?: SectorTransition | null; cutoverConvertedAtTurn?: number | null },
+  sector: {
+    cutoverTransition?: SectorTransition | null;
+    cutoverStruggling?: CutoverStruggling | null;
+    cutoverConvertedAtTurn?: number | null;
+  },
   effectiveTurn: number,
   firstFundedTurn: number | undefined
 ): boolean {
   return (
     firstFundedTurn != null &&
-    sector.cutoverTransition?.mismatched === true &&
+    transitionReliefEligible(sector) &&
     sector.cutoverConvertedAtTurn == null &&
     inTransitionWindow(effectiveTurn, firstFundedTurn)
   );

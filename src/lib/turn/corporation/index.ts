@@ -1002,6 +1002,7 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
       exchangeRatesByCurrency: lookups.exchangeRatesByCurrency,
       bondsByCorpId: lookups.bondsByCorpId,
       sectorsByCorp: lookups.sectorsByCorp,
+      constructionLoanDebtByCorpId: lookups.constructionLoanDebtByCorpId,
       mediaProductSlatesEnabled,
       applyOperatingCashWrites: async () => {
         if (corpOps.length === 0) return;

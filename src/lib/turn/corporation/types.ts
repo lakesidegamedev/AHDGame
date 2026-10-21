@@ -223,6 +223,14 @@ export interface CorporationLookups {
    * count and gameConfig.managementOverheadPpPerDoubling. Absent = none.
    */
   managementOverheadPpByCorpId?: Map<string, number>;
+  /** gameConfig.fundedOverheadStage; absent = off. */
+  fundedOverheadStage?: number;
+  /**
+   * gameConfig.honestBalanceSheetsStage and, from stage 1, each corporation's
+   * outstanding bank construction-loan principal in anchor units. Absent = off.
+   */
+  honestBalanceSheetsStage?: number;
+  constructionLoanDebtByCorpId?: Map<string, number>;
   /** Control-group root per corporation for the dumping guard; null/absent = per corporation. */
   dumpingGuardRootByCorpId?: Map<string, string> | null;
   /**

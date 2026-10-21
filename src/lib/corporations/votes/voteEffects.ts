@@ -245,6 +245,19 @@ export async function applyPassedVoteEffects(opts: {
       break;
     }
 
+    case "ceo_salary": {
+      const { newCeoSalary } = vote.payload;
+      if (typeof newCeoSalary !== "number" || !Number.isFinite(newCeoSalary) || newCeoSalary < 0) {
+        return;
+      }
+      // Salary stays suspended during IMF restructuring whatever the vote said.
+      if (corporation.imfBailoutActive) return;
+      await db
+        .collection("corporations")
+        .updateOne({ _id: corporation._id }, { $set: { ceoSalary: newCeoSalary, updatedAt: now } });
+      break;
+    }
+
     case "dissolution": {
       await withCorporationSettlementLock(db, corporation._id, "dissolutionInProgressAt", now, () =>
         executeCorporationBondDefaultDissolution(db, corporation, {

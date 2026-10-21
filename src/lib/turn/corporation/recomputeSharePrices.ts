@@ -28,6 +28,7 @@ import {
   type SharePriceInput,
 } from "./sharePriceFormula";
 import { indexFundOwnershipFraction } from "@/lib/corporations/indexOwnership";
+import { valuationCashAnchor } from "@/lib/corporations/honestBalanceSheets";
 import { normalizedEarningsFromHistory } from "./earningsRollingAverage";
 import { applyEquityMethodEarnings } from "./equityMethodEarnings";
 import {
@@ -279,11 +280,15 @@ export async function recomputeSharePricesAfterBondTurn(
       // Issuance already scales the per-share price when new shares are created.
       // Cash that subsequently arrives is a real retained asset and belongs in
       // tangible book; subtracting it again double-counts dilution.
-      liquidCapitalAnchor: Math.max(0, liquidCapitalAnchor),
+      liquidCapitalAnchor: valuationCashAnchor(
+        liquidCapitalAnchor,
+        lookups.honestBalanceSheetsStage ?? 0
+      ),
       bankEquityAnchor,
       sectorNPVAnchor,
       issuedBondDebt:
         (lookups.issuedBondDebtByCorpId.get(id) ?? 0) +
+        (lookups.constructionLoanDebtByCorpId?.get(id) ?? 0) +
         corporateCashArrearsAnchor({
           operatingByCurrency: corp.operatingCashArrearsByCurrency,
           federalTaxByCountryAnchor: corp.federalTaxArrearsAnchorByCountry,
