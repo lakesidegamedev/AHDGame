@@ -22,3 +22,7 @@ areas: [frontend]
 - The credit rating sits on the full rating scale, and Peers lists your corporation beside the country and sector averages.
 - Charts has a row of metric chips over the chart and a trend line for each metric in the table. On a phone the chart comes first.
 - Snapshot draws each change as a bar that grows right for a rise and left for a fall.
+- The product studio sets a product in development out as a card, with its figures in a grid and decisions waiting on you marked in the warning colour.
+- Opening a plant sector's margins now shows how it gets from capacity to net profit, beside the margin build and production policy, with Build capacity, Details and Abandon to hand. Abandon asks you to confirm first.
+- Viewing a rival's plants, the margins drawer offers Split rival plants, which opens the split planner on that sector's page.
+- Active extraction contracts show how much of their term has run.

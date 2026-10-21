@@ -473,13 +473,16 @@ export function SectorRow({
   );
 
   const drawerButton =
-    "inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border px-2.5 text-xs";
+    "h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border px-2.5 text-xs";
+  // The phone row already carries Details, Build capacity and Abandon, so the
+  // drawer repeats them on desktop only; the rival split is drawer-only.
+  const desktopOnly = "hidden lg:inline-flex";
   const drawerActions = (
     <div className="flex flex-wrap items-center gap-2">
       {isCeo && (
         <Link
           href={sectorBuildUrl(corpId, sector._id)}
-          className={`${drawerButton} border-foreground bg-foreground font-medium text-background hover:bg-foreground/90`}
+          className={`${drawerButton} ${desktopOnly} border-foreground bg-foreground font-medium text-background hover:bg-foreground/90`}
         >
           Build capacity
         </Link>
@@ -487,7 +490,7 @@ export function SectorRow({
       {canSplitRivalPlants && !isCeo && (
         <Link
           href={sectorSplitUrl(corpId, sector._id)}
-          className={`${drawerButton} border-card-border text-foreground hover:bg-card-elevated`}
+          className={`${drawerButton} inline-flex border-card-border text-foreground hover:bg-card-elevated`}
           title="Plan a split of these plants on the sector page"
         >
           Split rival plants
@@ -495,18 +498,18 @@ export function SectorRow({
       )}
       <Link
         href={`/corporation/${corpId}/sector/${sector._id}`}
-        className={`${drawerButton} border-card-border text-foreground hover:bg-card-elevated`}
+        className={`${drawerButton} ${desktopOnly} border-card-border text-foreground hover:bg-card-elevated`}
       >
         Details
       </Link>
       {isCeo &&
         (drawerAbandonConfirm ? (
-          <span className="inline-flex flex-wrap items-center gap-2 text-xs text-error">
+          <span className="hidden flex-wrap items-center gap-2 text-xs text-error lg:inline-flex">
             Abandon? An NPP operator takes over most of its plants.
             <button
               type="button"
               onClick={() => setDrawerAbandonConfirm(false)}
-              className={`${drawerButton} border-card-border text-foreground hover:bg-card-elevated`}
+              className={`${drawerButton} inline-flex border-card-border text-foreground hover:bg-card-elevated`}
             >
               Keep
             </button>
@@ -517,7 +520,7 @@ export function SectorRow({
                 onAbandonSector(sector._id);
               }}
               disabled={abandoningSectorId === sector._id}
-              className={`${drawerButton} border-error/50 font-medium text-error hover:bg-error/10 disabled:opacity-50`}
+              className={`${drawerButton} inline-flex border-error/50 font-medium text-error hover:bg-error/10 disabled:opacity-50`}
             >
               {abandoningSectorId === sector._id ? "Abandoning…" : "Confirm abandon"}
             </button>
@@ -527,7 +530,7 @@ export function SectorRow({
             type="button"
             onClick={() => setDrawerAbandonConfirm(true)}
             disabled={abandoningSectorId === sector._id}
-            className={`${drawerButton} ml-auto border-error/50 font-medium text-error hover:bg-error/10 disabled:opacity-50`}
+            className={`${drawerButton} ${desktopOnly} ml-auto border-error/50 font-medium text-error hover:bg-error/10 disabled:opacity-50`}
           >
             {abandoningSectorId === sector._id ? "Abandoning…" : "Abandon"}
           </button>
