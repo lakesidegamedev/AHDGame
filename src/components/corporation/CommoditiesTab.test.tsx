@@ -376,6 +376,13 @@ describe("CommoditiesTab inputs and outputs", () => {
     expect(within(inputs).queryByText("+385")).toBeNull();
   });
 
+  it("shows input cost in red as money going out", async () => {
+    render(<CommoditiesTab corpId="7" isCeo />);
+    const inputs = await screen.findByRole("table", { name: "Inputs" });
+    // Coal: 56 consumed at 10.
+    expect(within(inputs).getByText("$560").className).toContain("text-error");
+  });
+
   it("keeps the private supply line with the inputs", async () => {
     render(<CommoditiesTab corpId="7" isCeo />);
     const inputs = await screen.findByRole("table", { name: "Inputs" });

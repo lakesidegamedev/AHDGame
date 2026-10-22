@@ -254,7 +254,7 @@ export default function CommoditiesTab({
                             <Td align="right" className="text-foreground">
                               {units(c.consumptionUnits)}
                             </Td>
-                            <Td align="right" className="text-muted">
+                            <Td align="right" className="text-error">
                               {price != null ? money(c.consumptionUnits * price) : ""}
                             </Td>
                           </>
