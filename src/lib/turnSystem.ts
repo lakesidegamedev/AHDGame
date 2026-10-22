@@ -73,6 +73,7 @@ import {
   getSingleplayerPhasePredicate,
 } from "@/simulation/phases/singleplayerPhases";
 import { runPostTurnIntegrityScans } from "@/lib/turn/postTurnScans";
+import { inProcessTurnRefusal } from "@/lib/turn/turnWorkerHandoff";
 import { announcePendingSuggestionCompletions } from "@/lib/suggestions/completionAnnouncement";
 import { runContestsAfterTurn } from "@/lib/contests/engine";
 import { getAnomalyScanCadencePredicate } from "@/simulation/phases/anomalyScanCadence";
@@ -246,7 +247,22 @@ export async function releaseLocalProcessingLock(reason: string): Promise<boolea
 /** What a crashed previous holder left behind, for a resumed turn. */
 type CrashedTurnRecovery = ValidatedTurnResume;
 
-export function processTurn(options: Parameters<typeof processTurnImpl>[0] = {}) {
+export function processTurn(
+  options: Parameters<typeof processTurnImpl>[0] = {}
+): ReturnType<typeof processTurnImpl> {
+  // When the worker owns turns, the web server never runs one: a turn holds the
+  // event loop and takes the site down for its whole duration (turn 372).
+  const refusal = inProcessTurnRefusal(process.env);
+  if (refusal) {
+    console.error(`[Turn System] Refused in-process turn: ${refusal}`);
+    return Promise.resolve({
+      success: false,
+      turn: 0,
+      message: refusal,
+      warnings: [],
+      health: null,
+    });
+  }
   return withServerTurnAnalytics(() => processTurnImpl(options));
 }
 

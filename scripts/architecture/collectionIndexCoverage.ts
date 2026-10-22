@@ -28,6 +28,8 @@ export const PRIMARY_KEY_INDEX_POLICIES: Readonly<Record<string, string>> = {
   productAdvertisingPayables:
     "Holds only owed payables, deleted once cleared; the clearing reads its family's small owed set.",
   productAdvertisingClearances: "Append-only receipts, inserted and looked up by payable _id.",
+  turnWorkerControl:
+    "One singleton (_id 'current'): the turn worker's heartbeat and the single open admin turn request, read and written by _id.",
   marketAdjustmentSignals:
     "One document per country, upserted and read by its country _id; the 12-point history lives inside it.",
 };

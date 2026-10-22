@@ -34,6 +34,7 @@
  * it on web.
  */
 import { isCronWorkerProcess } from "@/lib/startupMode";
+import { markTurnWorkerProcess, TURN_WORKER_TICK_MS } from "@/lib/turn/turnWorkerHandoff";
 
 const SHUTDOWN_TIMEOUT_MS = 2500;
 
@@ -50,6 +51,9 @@ async function main(): Promise<void> {
   // aborted turn 373's bankingTurn at ~120s under disk contention. Set before
   // anything opens the Mongo client. An explicit deployment value still wins.
   process.env.MONGODB_SOCKET_TIMEOUT_MS ||= String(5 * 60_000);
+  // The only process allowed to run a turn while CRON_OWNER=worker. processTurn
+  // refuses inside the web server; see turnWorkerHandoff.ts.
+  markTurnWorkerProcess(process.env);
 
   // Unlike next start, this entry point does not run instrumentation.ts.
   // Initialize the same error and memory reporting before loading the cron
@@ -79,6 +83,47 @@ async function main(): Promise<void> {
   console.log("[turn-worker] starting; this process owns the cron schedule");
   await initializeCronJobs();
   console.log("[turn-worker] cron initialized, waiting for the clock");
+
+  // Admin-requested turns: the web server queues them, this process runs them.
+  const { getDb: getHandoffDb } = await import("@/lib/mongodb");
+  const { processTurn } = await import("@/lib/turnSystem");
+  const { closeOrphanedTurnRequest, recordTurnWorkerHeartbeat, runTurnRequestTick } =
+    await import("@/lib/turn/turnWorkerHandoff");
+  const startedAt = new Date();
+  const build = process.env.BUILD_GIT_COMMIT_SHA || process.env.RAILWAY_GIT_COMMIT_SHA || null;
+  try {
+    if (await closeOrphanedTurnRequest(await getHandoffDb())) {
+      console.warn("[turn-worker] closed a turn request left open by a previous worker");
+    }
+  } catch (err) {
+    console.error("[turn-worker] could not check for an orphaned turn request:", err);
+  }
+  let handlingRequest = false;
+  setInterval(() => {
+    void (async () => {
+      try {
+        const db = await getHandoffDb();
+        if (handlingRequest) {
+          await recordTurnWorkerHeartbeat(db, { startedAt, build });
+          return;
+        }
+        handlingRequest = true;
+        try {
+          const done = await runTurnRequestTick({ db, processTurn, startedAt, build });
+          if (done) {
+            console.log(
+              `[turn-worker] turn request ${done.id} by ${done.requestedBy}: ${done.outcome}, ` +
+                `${done.completed}/${done.count}. ${done.message ?? ""}`
+            );
+          }
+        } finally {
+          handlingRequest = false;
+        }
+      } catch (err) {
+        console.error("[turn-worker] turn request tick failed:", err);
+      }
+    })();
+  }, TURN_WORKER_TICK_MS);
 
   const shutdown = async (signal: NodeJS.Signals) => {
     console.log(`[turn-worker] ${signal} received, stopping cron and releasing any turn lock`);

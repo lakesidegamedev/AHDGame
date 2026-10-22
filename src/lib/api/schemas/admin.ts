@@ -256,6 +256,11 @@ export const adminTurnBatchSchema = z.object({
   count: z.number().int().min(1).max(20),
 });
 
+// admin/turn/process POST (optional body; the turn worker queues `count` turns)
+export const adminTurnProcessSchema = z.object({
+  count: z.number().int().min(1).max(20).default(1),
+});
+
 // admin/law-types POST
 const effectTargetSchema = z.object({
   metricCategoryId: z.enum([
