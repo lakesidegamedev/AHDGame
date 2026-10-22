@@ -2,7 +2,8 @@
 
 import { useCallback, useState } from "react";
 import { useAbortableEffectFetch } from "@/hooks/useAbortableEffectFetch";
-import { DenseSection, InlineStatus, SmallButton, Td } from "./dense/DenseKit";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { DenseSection, InlineStatus, SmallButton, Td, useCorpMoney } from "./dense/DenseKit";
 
 /**
  * A7 part 2 surface, mirroring `MergerReviewPanel`: one panel serving both
@@ -46,15 +47,26 @@ interface InboxPetition {
   contributionAnchor: number;
 }
 
-function formatAnchor(value: number): string {
-  return `₳${Math.round(value).toLocaleString("en-US")}`;
-}
-
-export default function IndexCommitteePanel({ corpId }: { corpId: string }) {
+export default function IndexCommitteePanel({
+  corpId,
+  liquidCurrencyCode,
+  countryId,
+}: {
+  corpId: string;
+  /** The lobbying fee is typed in this currency and sent as anchor. */
+  liquidCurrencyCode?: string | null;
+  countryId?: string | null;
+}) {
+  const { formatAmount } = useCurrency();
+  const formatAnchor = (anchor: number) => formatAmount(anchor);
+  const money = useCorpMoney(liquidCurrencyCode, countryId);
+  const anchorPerLocal = money.toAnchor(1);
+  const toLocal = (anchor: number) => (anchorPerLocal > 0 ? anchor / anchorPerLocal : anchor);
   const [standing, setStanding] = useState<IssuerStanding | null>(null);
   const [inbox, setInbox] = useState<InboxPetition[]>([]);
   const [seatName, setSeatName] = useState<string | null>(null);
-  const [contribution, setContribution] = useState("");
+  // Null until the CEO types: then the suggested fee is filed exactly.
+  const [contribution, setContribution] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -68,9 +80,6 @@ export default function IndexCommitteePanel({ corpId }: { corpId: string }) {
         if (standingRes.ok) {
           const data: IssuerStanding = await standingRes.json();
           setStanding(data);
-          if (!contribution) {
-            setContribution(String(Math.round(data.suggestedContributionAnchor)));
-          }
         }
         if (inboxRes.ok) {
           const data = await inboxRes.json();
@@ -80,9 +89,6 @@ export default function IndexCommitteePanel({ corpId }: { corpId: string }) {
       } catch {
         // the panel is supplementary; the rest of the tab still works
       }
-      // `contribution` is deliberately not a dependency: refilling it on every
-      // reload would overwrite what the player is in the middle of typing.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     },
     [corpId]
   );
@@ -98,7 +104,12 @@ export default function IndexCommitteePanel({ corpId }: { corpId: string }) {
       const res = await fetch(`/api/corporations/${corpId}/index-petition`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contributionAnchor: Number(contribution) }),
+        body: JSON.stringify({
+          contributionAnchor:
+            contribution == null
+              ? (standing?.suggestedContributionAnchor ?? 0)
+              : money.toAnchor(Number(contribution)),
+        }),
       });
       if (!res.ok) throw new Error((await res.json()).error);
       reload();
@@ -180,12 +191,21 @@ export default function IndexCommitteePanel({ corpId }: { corpId: string }) {
                   <input
                     type="number"
                     min={1}
-                    value={contribution}
+                    value={
+                      contribution ??
+                      String(Math.ceil(toLocal(standing.suggestedContributionAnchor)))
+                    }
                     onChange={(e) => setContribution(e.target.value)}
-                    aria-label="Lobbying contribution"
+                    aria-label={
+                      money.code ? `Lobbying contribution, ${money.code}` : "Lobbying contribution"
+                    }
                     className="h-7 w-40 rounded-md border border-card-border bg-background px-2 text-right font-mono text-[13px] text-foreground focus:border-foreground focus:outline-none"
                   />
-                  <SmallButton tone="primary" disabled={loading || !contribution} onClick={file}>
+                  <SmallButton
+                    tone="primary"
+                    disabled={loading || (contribution != null && !(Number(contribution) > 0))}
+                    onClick={file}
+                  >
                     Ask to be included
                   </SmallButton>
                 </div>

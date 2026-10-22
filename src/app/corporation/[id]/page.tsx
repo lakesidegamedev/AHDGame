@@ -1249,7 +1249,14 @@ export default function CorporationDetailPage() {
             sticky
             renderContent={(superId, subId) => {
               if (superId === "bank") {
-                return <BankConsoleTab corporationId={id} isCeo={isCeo} />;
+                return (
+                  <BankConsoleTab
+                    corporationId={id}
+                    isCeo={isCeo}
+                    liquidCurrencyCode={corporation.liquidCurrencyCode}
+                    countryId={corporation.countryId}
+                  />
+                );
               }
               const tab = corpTabIdFor(visibleTabs, superId, subId) ?? "overview";
               return (
@@ -1509,8 +1516,16 @@ export default function CorporationDetailPage() {
 
                   {tab === "ceo" && isCeo && financials && (
                     <div className="space-y-6">
-                      <IndexCommitteePanel corpId={id} />
-                      <SponsoredFundPanel corpId={id} />
+                      <IndexCommitteePanel
+                        corpId={id}
+                        liquidCurrencyCode={corporation.liquidCurrencyCode}
+                        countryId={corporation.countryId}
+                      />
+                      <SponsoredFundPanel
+                        corpId={id}
+                        liquidCurrencyCode={corporation.liquidCurrencyCode}
+                        countryId={corporation.countryId}
+                      />
                       <CeoOfficeTab
                         corporation={corporation}
                         financials={financials}

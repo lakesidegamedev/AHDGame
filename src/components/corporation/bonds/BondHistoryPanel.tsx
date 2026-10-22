@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Skeleton } from "@/components/ui";
 import { countryUrl } from "@/lib/urls";
 import { LocalTime } from "@/components/time/LocalTime";
+import { useCurrency } from "@/contexts/CurrencyContext";
 import {
   DenseSection,
   InlineStatus,
@@ -64,12 +65,6 @@ function formatAmount(amount: number, currency: string): string {
   return `${sign}${formatted} ${currency}`;
 }
 
-function formatAnchor(amount: number): string {
-  const sign = amount < 0 ? "-" : amount > 0 ? "+" : "";
-  const abs = Math.abs(amount);
-  return `${sign}${abs.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ₳`;
-}
-
 function PartyLink({ party }: { party: BondHistoryParty | null }) {
   if (!party) return <span className="text-muted">none</span>;
   if (party.kind === "character" && party.characterId) {
@@ -111,6 +106,10 @@ function BondLink({ bond }: { bond: BondHistoryBondInfo | null }) {
 
 function TurnRows({ turn, entries }: { turn: number; entries: BondHistoryEntry[] }) {
   const [open, setOpen] = useState(false);
+  // The net sums each event's anchor snapshot, shown in the display currency.
+  const { formatAmount: formatDisplay } = useCurrency();
+  const formatNet = (anchor: number) =>
+    `${anchor < 0 ? "-" : anchor > 0 ? "+" : ""}${formatDisplay(Math.abs(anchor))}`;
   const totals = useMemo(() => {
     const incomes = new Map<string, number>();
     const payments = new Map<string, number>();
@@ -174,9 +173,9 @@ function TurnRows({ turn, entries }: { turn: number; entries: BondHistoryEntry[]
         <Td
           align="right"
           className={net > 0 ? "text-success" : net < 0 ? "text-error" : "text-muted"}
-          title="Anchor currency net, summed from each event's anchor snapshot"
+          title="Net for the turn, summed from each event's value when it happened"
         >
-          {totals.anchorComplete ? formatAnchor(net) : ""}
+          {totals.anchorComplete ? formatNet(net) : ""}
         </Td>
       </tr>
       {open && (
@@ -329,8 +328,8 @@ export default function BondHistoryPanel({ corpId, refreshKey }: BondHistoryPane
                   <Th align="right">Events</Th>
                   <Th align="right">Income</Th>
                   <Th align="right">Payments</Th>
-                  <Th align="right" title="Anchor currency net for the turn">
-                    Net (₳)
+                  <Th align="right" title="Net for the turn, in your display currency">
+                    Net
                   </Th>
                 </tr>
               </thead>
