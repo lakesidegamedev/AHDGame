@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getDb } from "@/lib/mongodb";
-import { getGameState } from "@/lib/gameState";
+import { getGameStateCore } from "@/lib/gameState";
 import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
 import { resolveCountryIdentities } from "@/lib/country/countryIdentity";
 import {
@@ -35,7 +35,7 @@ export default async function CurrencyCentralBankPage({ params }: PageProps) {
   const db = await getDb();
   const [registered, gameState] = await Promise.all([
     getRegisteredCountryIds(db),
-    getGameState(db),
+    getGameStateCore(db),
   ]);
   const memberIds = getCurrencyMemberCountries(resolved.code, registered);
   // A currency no registered country uses (only CAD today) has no live bank page.

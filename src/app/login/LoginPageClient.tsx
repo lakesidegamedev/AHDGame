@@ -12,7 +12,10 @@ import {
   OAUTH_FINGERPRINT_COOKIE,
   OAUTH_FINGERPRINT_MAX_AGE_SECONDS,
 } from "@/lib/auth/oauthFingerprint";
-import { generateFingerprintData, type StoredFingerprintComponents } from "@/lib/utils/fingerprint";
+import {
+  getFingerprintForSubmission,
+  scheduleFingerprintCapture,
+} from "@/lib/utils/fingerprintCapture";
 import { getOrCreateDeviceKey } from "@/lib/utils/deviceKey";
 import { loginDestination } from "@/lib/auth/lakesideLoginReturn";
 import { Input, Label, Button, SectionLabel } from "@/components/ui";
@@ -77,10 +80,6 @@ export default function LoginPageClient({
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [fingerprint, setFingerprint] = useState("");
-  const [fingerprintComponents, setFingerprintComponents] = useState<StoredFingerprintComponents>(
-    {}
-  );
   const [deviceKey, setDeviceKey] = useState("");
   const [formData, setFormData] = useState({
     email: "",
@@ -118,10 +117,9 @@ export default function LoginPageClient({
   }, [searchParams, t]);
 
   useEffect(() => {
-    generateFingerprintData().then(({ hash, components }) => {
-      setFingerprint(hash);
-      setFingerprintComponents(components);
-    });
+    // Fingerprinting probes canvas/WebGL/audio and is only needed on submit or
+    // an OAuth hop, so it waits for idle instead of competing with hydration.
+    scheduleFingerprintCapture();
     setDeviceKey(getOrCreateDeviceKey());
   }, []);
 
@@ -135,44 +133,30 @@ export default function LoginPageClient({
     return `${url.pathname}${url.search}`;
   };
 
-  const beginDiscordOAuth = () => {
+  /**
+   * OAuth hops carry the fingerprint in a short-lived cookie. The capture may
+   * still be running when the player clicks, so wait for the shared promise
+   * rather than shipping an empty cookie.
+   */
+  const beginOAuth = async (
+    path: "/api/auth/discord/login" | "/api/auth/google/login" | "/api/auth/apple/login"
+  ) => {
+    const captured = await getFingerprintForSubmission();
     const cookieSuffix = `; max-age=${OAUTH_FINGERPRINT_MAX_AGE_SECONDS}; path=/; samesite=lax${
       window.location.protocol === "https:" ? "; secure" : ""
     }`;
-    if (fingerprint) {
-      document.cookie = `${OAUTH_FINGERPRINT_COOKIE}=${encodeURIComponent(fingerprint)}${cookieSuffix}`;
+    if (captured.hash) {
+      document.cookie = `${OAUTH_FINGERPRINT_COOKIE}=${encodeURIComponent(captured.hash)}${cookieSuffix}`;
     }
     if (deviceKey) {
       document.cookie = `${OAUTH_DEVICE_KEY_COOKIE}=${encodeURIComponent(deviceKey)}${cookieSuffix}`;
     }
-    window.location.href = oauthLoginUrl("/api/auth/discord/login");
+    window.location.href = oauthLoginUrl(path);
   };
 
-  const beginAppleOAuth = () => {
-    const cookieSuffix = `; max-age=${OAUTH_FINGERPRINT_MAX_AGE_SECONDS}; path=/; samesite=lax${
-      window.location.protocol === "https:" ? "; secure" : ""
-    }`;
-    if (fingerprint) {
-      document.cookie = `${OAUTH_FINGERPRINT_COOKIE}=${encodeURIComponent(fingerprint)}${cookieSuffix}`;
-    }
-    if (deviceKey) {
-      document.cookie = `${OAUTH_DEVICE_KEY_COOKIE}=${encodeURIComponent(deviceKey)}${cookieSuffix}`;
-    }
-    window.location.href = oauthLoginUrl("/api/auth/apple/login");
-  };
-
-  const beginGoogleOAuth = () => {
-    const cookieSuffix = `; max-age=${OAUTH_FINGERPRINT_MAX_AGE_SECONDS}; path=/; samesite=lax${
-      window.location.protocol === "https:" ? "; secure" : ""
-    }`;
-    if (fingerprint) {
-      document.cookie = `${OAUTH_FINGERPRINT_COOKIE}=${encodeURIComponent(fingerprint)}${cookieSuffix}`;
-    }
-    if (deviceKey) {
-      document.cookie = `${OAUTH_DEVICE_KEY_COOKIE}=${encodeURIComponent(deviceKey)}${cookieSuffix}`;
-    }
-    window.location.href = oauthLoginUrl("/api/auth/google/login");
-  };
+  const beginDiscordOAuth = () => void beginOAuth("/api/auth/discord/login");
+  const beginAppleOAuth = () => void beginOAuth("/api/auth/apple/login");
+  const beginGoogleOAuth = () => void beginOAuth("/api/auth/google/login");
 
   const beginLakesideLogin = () => {
     // Full navigation is required because the route immediately leaves the application for OIDC.
@@ -186,13 +170,14 @@ export default function LoginPageClient({
     setError("");
 
     try {
+      const captured = await getFingerprintForSubmission();
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
-          fingerprint,
-          fingerprintComponents: fingerprint ? fingerprintComponents : undefined,
+          fingerprint: captured.hash,
+          fingerprintComponents: captured.hash ? captured.components : undefined,
           deviceKey: deviceKey || undefined,
         }),
       });

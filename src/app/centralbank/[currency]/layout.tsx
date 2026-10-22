@@ -4,7 +4,7 @@ import { resolveCountryIdentity } from "@/lib/country/countryIdentity";
 import { CountryFlag } from "@/components/CountryFlag";
 import { getCountryAccess } from "@/lib/countryAccess";
 import { getAuthUserWithCharacter } from "@/lib/auth";
-import { getGameState } from "@/lib/gameState";
+import { getGameStateCore } from "@/lib/gameState";
 import { resolveCentralBankCurrency } from "@/lib/centralBank/currencyRouting";
 
 interface Props {
@@ -26,7 +26,7 @@ export default async function CurrencyCentralBankLayout({ params, children }: Pr
   const [access, user, gameState] = await Promise.all([
     getCountryAccess(anchor),
     getAuthUserWithCharacter(),
-    getGameState(),
+    getGameStateCore(),
   ]);
   const isAdmin = user?.isAdmin === true;
   const { name } = await resolveCountryIdentity(await getDb(), anchor, gameState?.preset);

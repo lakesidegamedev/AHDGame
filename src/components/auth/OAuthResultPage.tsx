@@ -65,8 +65,14 @@ export function safeResultNext(value: string | null): string {
   return safeLakesideLoginReturn(value) ?? DEFAULT_NEXT;
 }
 
-/** Wait at most this long for the fingerprint beacon before leaving a successful sign-in. */
-const SUCCESS_REDIRECT_CAP_MS = 1200;
+/**
+ * Ceiling on the fingerprint beacon hand-off before a successful sign-in
+ * continues. The beacon is advisory and its POST is `keepalive`, so it
+ * survives the navigation; making the player wait the original 1.2s bought
+ * nothing but a slower sign-in (page-load telemetry ranked the OAuth callback
+ * routes the slowest in the game, at p75 3.6s).
+ */
+const SUCCESS_REDIRECT_CAP_MS = 250;
 const ERROR_REDIRECT_SECONDS = 5;
 
 export function OAuthResultPage({ provider }: { provider: "Google" | "Discord" | "Apple" }) {
