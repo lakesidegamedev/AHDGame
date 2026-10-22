@@ -41,6 +41,7 @@ import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { getRoundedPublicMarketCap } from "@/lib/corporations/marketQuote";
 import { computeTechAssetValueAnchor } from "@/lib/corporations/techAssetValue";
 import { calculateCorpStrengthProjection } from "@/lib/corporations/strengthProjection";
+import { loadStrengthUpkeepStage } from "@/lib/corporations/strengthUpkeep";
 
 export interface SectorTaxLine {
   federalTaxPaid: number;
@@ -460,6 +461,7 @@ export async function computeIncomeStatement(
 
   const currentLogisticsStrength = corporation.logisticsStrength ?? 0;
   const currentRdScore = corporation.rdScore ?? 0;
+  const strengthUpkeepStage = await loadStrengthUpkeepStage(db);
   const { marketingStrengthGrowth, logisticsStrengthNetChange, rdScoreNetChange } =
     calculateCorpStrengthProjection(
       {
@@ -470,6 +472,7 @@ export async function computeIncomeStatement(
         rdBudget: corporation.rdBudget ?? 0,
         rdScore: currentRdScore,
         liquidCurrencyCode: corpCurrency,
+        strengthUpkeepStage,
       },
       corpFxRate
     );
