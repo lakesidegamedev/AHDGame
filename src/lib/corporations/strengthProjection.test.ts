@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { calcLogisticsGrowth, calcMarketingGrowth } from "@/lib/constants/corporations";
 import { calculateCorpStrengthProjection } from "./strengthProjection";
+import { MARKETING_DECAY_RATE } from "./strengthUpkeep";
 
 describe("calculateCorpStrengthProjection", () => {
   it("normalizes local-currency budgets before projecting strength gains", () => {
@@ -25,6 +26,22 @@ describe("calculateCorpStrengthProjection", () => {
     );
     expect(projection.logisticsStrengthNetChange).toBeCloseTo(
       calcLogisticsGrowth(1_200_000 / 133.2808416448283) - 10 * 0.05,
+      8
+    );
+  });
+
+  it("subtracts marketing decay when upkeep stage 3 is active", () => {
+    const projection = calculateCorpStrengthProjection(
+      {
+        marketingBudget: 100_000,
+        marketingStrength: 100,
+        strengthUpkeepStage: 3,
+      },
+      1
+    );
+
+    expect(projection.marketingStrengthGrowth).toBeCloseTo(
+      calcMarketingGrowth(100_000, 100) - 100 * MARKETING_DECAY_RATE,
       8
     );
   });

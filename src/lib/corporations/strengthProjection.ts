@@ -7,6 +7,11 @@ import {
 } from "@/lib/constants/corporations";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
+import {
+  MARKETING_DECAY_RATE,
+  STRENGTH_UPKEEP_STAGE,
+  strengthUpkeepActive,
+} from "./strengthUpkeep";
 
 interface StrengthProjectionInput {
   marketingBudget?: number | null;
@@ -16,6 +21,7 @@ interface StrengthProjectionInput {
   rdBudget?: number | null;
   rdScore?: number | null;
   liquidCurrencyCode?: CurrencyCode | string | null;
+  strengthUpkeepStage?: number | null;
 }
 
 export interface StrengthProjection {
@@ -44,6 +50,15 @@ export function calculateCorpStrengthProjection(
     fxRate
   );
 
+  const currentMarketingStrength = corporation.marketingStrength ?? 0;
+  const marketingGrowth = calcMarketingGrowth(marketingBudgetAnchor, currentMarketingStrength);
+  const marketingDecay = strengthUpkeepActive(
+    corporation.strengthUpkeepStage,
+    STRENGTH_UPKEEP_STAGE.MARKETING_DECAY
+  )
+    ? currentMarketingStrength * MARKETING_DECAY_RATE
+    : 0;
+
   const currentLogisticsStrength = corporation.logisticsStrength ?? 0;
   const logisticsGrowth = calcLogisticsGrowth(logisticsBudgetAnchor);
   const logisticsDecay = currentLogisticsStrength * LOGISTICS_DECAY_RATE;
@@ -53,10 +68,7 @@ export function calculateCorpStrengthProjection(
   const rdDecay = currentRdScore * RD_DECAY_RATE;
 
   return {
-    marketingStrengthGrowth: calcMarketingGrowth(
-      marketingBudgetAnchor,
-      corporation.marketingStrength ?? 0
-    ),
+    marketingStrengthGrowth: marketingGrowth - marketingDecay,
     logisticsStrengthNetChange: logisticsGrowth - logisticsDecay,
     rdScoreNetChange: rdGrowth - rdDecay,
   };
