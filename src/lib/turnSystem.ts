@@ -85,6 +85,7 @@ import { startTurnMemorySampler, type TurnMemoryPeak } from "@/lib/turn/turnMemo
 import { captureTurnPosthog } from "@/lib/analytics/turnPosthog";
 import { currentTurnBuild } from "@/lib/turn/turnBuild";
 import { NPP_ENGINE_VERSION } from "@/lib/nppAutonomy/engineVersion";
+import { nextScheduledTurnAfter, resolveTurnCronMinute } from "@/lib/cron/turnCronMinute";
 
 /** Read once per process: the deployment does not change under a running server. */
 const turnBuild = currentTurnBuild();
@@ -109,9 +110,7 @@ export async function initializeGameState(): Promise<GameState> {
   if (existing) return existing;
 
   const now = new Date();
-  const nextHour = new Date(now);
-  nextHour.setMinutes(0, 0, 0);
-  nextHour.setHours(nextHour.getHours() + 1);
+  const nextHour = nextScheduledTurnAfter(now, resolveTurnCronMinute());
 
   const initialState: GameState = {
     _id: "current",
@@ -999,9 +998,7 @@ export async function startTurnSystem(): Promise<{ success: boolean; message: st
   try {
     const db = await getDb();
     const now = new Date();
-    const nextHour = new Date(now);
-    nextHour.setMinutes(0, 0, 0);
-    nextHour.setHours(nextHour.getHours() + 1);
+    const nextHour = nextScheduledTurnAfter(now, resolveTurnCronMinute());
 
     // Deadlines are turn-based, so resuming after a pause needs no Date-shift:
     // frozen turns kept every countdown frozen. (Phase 5 removed shiftDeadlinesOnResume.)
