@@ -275,6 +275,17 @@ export async function processBondTurn(
   const natcorpIds = new Set(
     corporations.filter((c) => !!c.countryOwnerId).map((c) => c._id.toString())
   );
+  // The rate pass needs one issuer's live bonds while iterating every bond.
+  // Re-filtering all 9k bonds per corporate bond made this quadratic; index
+  // the same set (active, non-defaulted corporate bonds) once by issuer.
+  const activeCorporateBondsByIssuer = new Map<string, typeof activeBonds>();
+  for (const bond of activeBonds) {
+    if (!isCorporateBond(bond) || bond.matured || bond.defaulted) continue;
+    const key = bond.corporationId.toString();
+    const rows = activeCorporateBondsByIssuer.get(key) ?? [];
+    rows.push(bond);
+    activeCorporateBondsByIssuer.set(key, rows);
+  }
 
   // FX rates for converting ₳-denominated coupon/face values into each corp's
   // liquidCapital home currency before $inc. Loaded once per turn.
@@ -1013,13 +1024,7 @@ export async function processBondTurn(
       let currentRate = primeRate;
       if (isCorporateBond(bond)) {
         // Get corp's current credit rating for effective rate
-        const corpBonds = activeBonds.filter(
-          (candidate) =>
-            isCorporateBond(candidate) &&
-            candidate.corporationId.toString() === corpIdStr &&
-            !candidate.matured &&
-            !candidate.defaulted
-        );
+        const corpBonds = activeCorporateBondsByIssuer.get(corpIdStr) ?? [];
 
         // Credit math runs in ₳. Every input (liquidCapital, sharePrice × shares,
         // totalDebt, annualInterest) must be normalized to the same unit or the
