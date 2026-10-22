@@ -41,6 +41,7 @@ import { buildFinancials } from "./corporationDetail/financials";
 import { loadArrearsView } from "./corporationDetail/arrears";
 import { buildShareholderList, loadShareholderContext } from "./corporationDetail/shareholders";
 import { buildPhysicalPnl } from "./corporationDetail/physicalPnl";
+import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 
 export async function loadCorporationDetailView(args: {
   db: Db;
@@ -402,6 +403,8 @@ export async function loadCorporationDetailView(args: {
       pendingCeoCharacterId: corporation.pendingCeoCharacterId?.toString() ?? null,
       lastRenameTurn: corporation.lastRenameTurn ?? null,
       countryOwnerId: corporation.countryOwnerId ?? null,
+      /** Owned by a country through either field; gates rival actions such as a plant split. */
+      isStateOwned: isStateOwned(corporation),
       isNationalized: corporation.isNationalized ?? false,
       isPrivate: corporation.isPrivate ?? false,
       lastIpoTurn: corporation.lastIpoTurn ?? undefined,

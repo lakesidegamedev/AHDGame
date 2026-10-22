@@ -879,17 +879,18 @@ describe("processCorporationTurn", () => {
     // realizes just under 100% instead of a hard-clamped exactly-100; (2) captured
     // revenue is scaled by market share, which is now measured over real market
     // revenue rather than an unowned pool (PR #1145). Together these land pre-tax
-    // income at ~172 with the specialized operating saving, and each jurisdiction
+    // income at ~180 with the specialized operating saving (size costs capped at
+    // 7.5pp since 2026-10-22), and each jurisdiction
     // taxes its own share. Values are the
     // deterministic engine output; rates (20/6, 23/1.5) are unchanged. Aggregate
     // totals and the jurisdiction breakdowns are rounded independently, so they
-    // can differ by a unit (37 vs 18+19 for federal tax).
-    expect(doc.corporateTaxPaid).toBe(43);
-    expect(doc.federalTaxPaid).toBe(37);
+    // can differ by a unit (39 vs 18+20 for federal tax).
+    expect(doc.corporateTaxPaid).toBe(46);
+    expect(doc.federalTaxPaid).toBe(39);
     expect(doc.stateTaxPaid).toBe(7);
-    expect(doc.incomePreDividends).toBeCloseTo(172, 0);
+    expect(doc.incomePreDividends).toBeCloseTo(180, 0);
     expect((doc.taxPaidByCountry as Record<string, number>).US).toBe(18);
-    expect((doc.taxPaidByCountry as Record<string, number>).JP).toBe(19);
+    expect((doc.taxPaidByCountry as Record<string, number>).JP).toBe(20);
     expect((doc.taxPaidByState as Record<string, number>).US_CA).toBe(5);
     expect((doc.taxPaidByState as Record<string, number>).KNS).toBe(1);
   });

@@ -4,7 +4,7 @@ import { isDeepStrictEqual } from "node:util";
 import * as Sentry from "@sentry/nextjs";
 import type { CentralBank, GameConfig } from "@/lib/db/types";
 import type { ActionAuditRecord } from "@/lib/db/types/actionAuditLog";
-import { DEFAULT_TURN_LENGTH_MINUTES } from "@/lib/db/types/financialTxLog";
+import { loadTurnLengthMinutes } from "@/lib/financialTxLog/expiresAt";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CountryId } from "@/lib/constants/countries";
 import { getAuditRequestContext } from "@/lib/observability/context";
@@ -201,7 +201,7 @@ async function prepare(
   };
   const config = await db
     .collection<GameConfig>("gameConfig")
-    .findOne({ _id: "default" }, { projection: { auditLog: 1, turnLengthMinutes: 1 } });
+    .findOne({ _id: "default" }, { projection: { auditLog: 1 } });
   if (isAuditLogEnabledFromConfig(config))
     receipt.audit = prepareAuditRecord(
       {
@@ -233,7 +233,7 @@ async function prepare(
       {
         turn: command.turn,
         ts: now,
-        turnLengthMinutes: config?.turnLengthMinutes ?? DEFAULT_TURN_LENGTH_MINUTES,
+        turnLengthMinutes: await loadTurnLengthMinutes(db),
       }
     );
   return receipt;

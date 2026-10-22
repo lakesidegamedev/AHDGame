@@ -13,7 +13,7 @@ areas: [engine]
 
 ## What changed
 
-- Marketing strength loses 3% a turn, like R&D, so it reflects recent marketing spend rather than a lifetime total.
+- Marketing strength loses 1.5% a turn, so it reflects recent marketing spend rather than a lifetime total.
 - Group synergy still pulls members toward the group's strongest company, but the strongest company now pays what the members gain.
 - Split rival plants reads each company's own marketing strength for both the share and the odds.
 - A tech dominance shield removes at most half of the dominance toll, and only techs from the current and previous decade count. The Tech tab marks older shield techs as expired.

@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback } from "react";
+import { Fragment, useCallback, useEffect, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Tooltip } from "@/components/Tooltip";
 
@@ -150,7 +150,29 @@ export interface SuperTabNavProps {
    * Governance's first visible sub-tab).
    */
   resolve?: (tabParam: string | null, subParam: string | null) => ResolvedTabs;
+  /**
+   * "folder" draws the open super-tab as a folder tab joined to a panel that
+   * holds the sub-tabs and content (the corporation page). Default unchanged.
+   */
+  variant?: "default" | "folder";
+  /**
+   * Below the lg breakpoint, keep the tab bar (and the folder variant's
+   * sub-tab row) stuck under the site navbar, offset by `--site-navbar-h`.
+   */
+  sticky?: boolean;
 }
+
+const FOLDER_TOP: Record<TabAccent, string> = {
+  primary: "border-t-primary",
+  warning: "border-t-warning",
+  error: "border-t-error",
+};
+
+const FOLDER_IDLE_TEXT: Record<TabAccent, string> = {
+  primary: "text-muted hover:text-foreground",
+  warning: "text-warning/80 hover:text-warning",
+  error: "text-error/80 hover:text-error",
+};
 
 export function SuperTabNav({
   tabs,
@@ -160,6 +182,8 @@ export function SuperTabNav({
   preTabContent,
   onNavigate,
   resolve,
+  variant = "default",
+  sticky = false,
 }: SuperTabNavProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -197,6 +221,110 @@ export function SuperTabNav({
 
   const currentSuperTab = findTab(tabs, activeSuper);
   const visibleSubTabs = subTabsOf(currentSuperTab);
+
+  // The folder tabs wrap to more rows on a narrow screen, so the sticky
+  // sub-tab row is offset by the bar's measured height, not a fixed guess.
+  const folderRootRef = useRef<HTMLDivElement>(null);
+  const tabBarRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const root = folderRootRef.current;
+    const bar = tabBarRef.current;
+    if (!sticky || !root || !bar || typeof ResizeObserver === "undefined") return;
+    const apply = () => root.style.setProperty("--corp-tabs-h", `${bar.offsetHeight}px`);
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(bar);
+    return () => observer.disconnect();
+  }, [sticky]);
+
+  if (variant === "folder") {
+    return (
+      <div ref={folderRootRef} className="min-w-0">
+        {preTabContent}
+
+        <div
+          ref={tabBarRef}
+          data-sticky-tabs={sticky ? "" : undefined}
+          className={`relative z-[1] -mb-px ${
+            sticky
+              ? "sticky top-[var(--site-navbar-h,0px)] z-30 -mx-4 bg-background px-4 pt-1.5 sm:-mx-6 sm:px-6 lg:static lg:mx-0 lg:bg-transparent lg:px-0 lg:pt-0"
+              : ""
+          }`}
+        >
+          <nav className="flex flex-wrap items-end gap-0.5">
+            {tabs.map((tab) => {
+              const accent = tab.accent ?? "primary";
+              const isActive = activeSuper === tab.id;
+              const button = (
+                <button
+                  type="button"
+                  onClick={() => setSuperTab(tab.id)}
+                  aria-current={isActive ? "page" : undefined}
+                  data-folder-tab={isActive ? "active" : "idle"}
+                  className={`flex min-h-12 items-center gap-2 rounded-t-[var(--corp-rad,6px)] border border-t-[3px] px-4 text-sm font-semibold transition-colors lg:px-5 ${
+                    isActive
+                      ? `border-card-border border-b-card bg-card text-foreground ${FOLDER_TOP[accent]}`
+                      : `border-transparent ${FOLDER_IDLE_TEXT[accent]}`
+                  }`}
+                >
+                  {tab.icon}
+                  {tab.label}
+                </button>
+              );
+              return (
+                <Fragment key={tab.id}>
+                  {tab.tooltip ? <Tooltip content={tab.tooltip}>{button}</Tooltip> : button}
+                </Fragment>
+              );
+            })}
+          </nav>
+        </div>
+
+        <div
+          data-folder-panel
+          className="min-w-0 rounded-b-[var(--corp-rad,6px)] rounded-tr-[var(--corp-rad,6px)] border border-card-border bg-card px-3.5 pb-5 lg:px-6 lg:pb-7"
+        >
+          {visibleSubTabs.length > 1 && (
+            <div
+              className={`-mx-3.5 border-b border-card-border px-3.5 lg:-mx-6 lg:px-6 ${
+                sticky
+                  ? "sticky top-[calc(var(--site-navbar-h,0px)+var(--corp-tabs-h,3.25rem))] z-20 bg-card lg:static"
+                  : ""
+              }`}
+              data-sticky-subtabs={sticky ? "" : undefined}
+            >
+              <nav className="flex flex-wrap items-center gap-x-6">
+                {visibleSubTabs.map((sub) => {
+                  const isActive = activeSub === sub.id;
+                  const button = (
+                    <button
+                      type="button"
+                      onClick={() => navigate(activeSuper, sub.id)}
+                      aria-current={isActive ? "page" : undefined}
+                      className={`-mb-px flex min-h-11 items-center gap-1.5 border-b-2 text-[13px] font-semibold transition-colors ${
+                        isActive
+                          ? "border-primary text-foreground"
+                          : "border-transparent text-muted hover:text-foreground"
+                      }`}
+                    >
+                      {sub.label}
+                      {sub.badge}
+                    </button>
+                  );
+                  return (
+                    <Fragment key={sub.id}>
+                      {sub.tooltip ? <Tooltip content={sub.tooltip}>{button}</Tooltip> : button}
+                    </Fragment>
+                  );
+                })}
+              </nav>
+            </div>
+          )}
+          <div className="pt-5">{renderContent(activeSuper, activeSub)}</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-w-0 overflow-x-hidden">

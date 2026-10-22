@@ -823,6 +823,7 @@ export default function SectorDetailPage() {
                   targetName={sector.displayName ?? corporation.name}
                   showAttack={!isCeo && !corporation.isStateOwned}
                   showSplit={!plantsEnabled}
+                  openPlannerOnMount={searchParams.get("split") === "1"}
                   attacking={attacking}
                   attackError={attackError}
                   attackMsg={attackMsg}

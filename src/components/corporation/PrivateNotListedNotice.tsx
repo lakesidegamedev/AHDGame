@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { NoticeStrip } from "./ledger/NoticeStrip";
 
 interface PrivateNotListedNoticeProps {
   corporationId: string;
@@ -44,21 +45,18 @@ export default function PrivateNotListedNotice({
   };
 
   return (
-    <div className="relative rounded-xl border border-info/30 bg-info/10 px-4 py-3 pr-10 text-sm">
+    <NoticeStrip
+      tone="info"
+      tag="Not listed"
+      onDismiss={dismiss}
+      dismissLabel="Dismiss not-listed notice"
+    >
       <p className="font-semibold text-foreground">Not listed on any exchange</p>
       <p className="mt-0.5 text-muted">
         {corporationName} is private, and private corporations do not appear on the stock market.
         Take it public from the Shares tab to list it. Buying your own shares back until nothing is
         left on the public float has the same effect as staying private.
       </p>
-      <button
-        type="button"
-        onClick={dismiss}
-        aria-label="Dismiss not-listed notice"
-        className="absolute top-2 right-2 rounded-md px-2 py-1 text-xs text-muted transition-colors hover:bg-card hover:text-foreground"
-      >
-        ✕
-      </button>
-    </div>
+    </NoticeStrip>
   );
 }

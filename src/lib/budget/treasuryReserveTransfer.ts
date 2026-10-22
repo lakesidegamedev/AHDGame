@@ -8,7 +8,6 @@ import type { ActionAuditRecord } from "@/lib/db/types/actionAuditLog";
 import type { CountryId } from "@/lib/constants/countries";
 import { TREASURY_TRANSFER_HISTORY_MAX, type CurrencyCode } from "@/lib/constants/currencies";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
-import { DEFAULT_TURN_LENGTH_MINUTES } from "@/lib/db/types/financialTxLog";
 import { effectiveBorrowingLimit } from "./borrowingLimit";
 import { validateTreasuryReserveTransfer } from "./rules/treasuryReserveTransfer";
 import { treasuryAnchorValuation } from "./rules/treasuryAccrual";
@@ -108,7 +107,6 @@ async function prepare(db: Db, command: Command): Promise<void> {
           treasuryCashLedgerEnabled: 1,
           ledgerShadow: 1,
           auditLog: 1,
-          turnLengthMinutes: 1,
         },
       }
     ),
@@ -302,7 +300,7 @@ async function prepare(db: Db, command: Command): Promise<void> {
       {
         turn: command.turn,
         ts: now,
-        turnLengthMinutes: config?.turnLengthMinutes ?? DEFAULT_TURN_LENGTH_MINUTES,
+        turnLengthMinutes: cadence,
       }
     );
   }

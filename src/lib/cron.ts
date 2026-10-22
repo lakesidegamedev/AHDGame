@@ -14,6 +14,7 @@ import { deploymentServiceSlug } from "@/lib/deploymentIdentity";
 import { sweepPlayerRandomEventsRealtime } from "@/lib/events/pree/driver";
 import { persistApiAbuseScan } from "@/lib/api/abuseDetection";
 import { runRetention } from "@/lib/retention/retention";
+import { pruneMoneyJournals } from "@/lib/retention/moneyJournalPrune";
 import { runAltScoring } from "@/lib/altDetection/run";
 import { runAltDigest } from "@/lib/altDetection/digest";
 import { runShareFillRecoveryPass } from "@/lib/corporations/commands/shareTrading/shareFillAudit";
@@ -89,6 +90,7 @@ const STUCK_LOCK_SWEEP_MIN_AGE_MS = 2 * TURN_LOCK_STALE_MS;
 let playerEventsSweepCron: ReturnType<typeof cron.schedule> | null = null;
 let apiAbuseScanCron: ReturnType<typeof cron.schedule> | null = null;
 let retentionCron: ReturnType<typeof cron.schedule> | null = null;
+let moneyJournalPruneCron: ReturnType<typeof cron.schedule> | null = null;
 let altScoringCron: ReturnType<typeof cron.schedule> | null = null;
 let altDigestCron: ReturnType<typeof cron.schedule> | null = null;
 let shareFillRecoveryCron: ReturnType<typeof cron.schedule> | null = null;
@@ -546,6 +548,30 @@ export async function initializeCronJobs() {
     { timezone: "UTC" }
   );
 
+  // Money-journal pruning: ledgerEntries and terminal bankMoneyMoves older than
+  // 168 turns. Runs between turns (minute 5, 15, ...; skips while a turn holds
+  // the lock) and is bounded per run, so a long-lived world drains its backlog
+  // over many runs instead of in one long delete.
+  moneyJournalPruneCron = cron.schedule(
+    "5,15,25,35,45,55 * * * *",
+    async () => {
+      try {
+        const db = await getDb();
+        const result = await pruneMoneyJournals(db);
+        if (result.ledgerEntries > 0 || result.bankMoneyMoves > 0) {
+          console.log(
+            `[Cron] Money-journal prune < turn ${result.cutoff}: ` +
+              `${result.bankMoneyMoves} money move(s), ${result.ledgerEntries} ledger entr(ies)`
+          );
+        }
+      } catch (error) {
+        console.error("[Cron] Money-journal prune failed:", error);
+        Sentry.captureException(error, { tags: { component: "cron", job: "moneyJournalPrune" } });
+      }
+    },
+    { timezone: "UTC" }
+  );
+
   // Alt-detection compute pass (forensics/alt-detection rework plan §3.2,
   // Phase 6 T6.1). Deliberately an HOURLY CRON, not a turn phase — an owner
   // decision to keep this off the turn loop (plan §7 open question 3).
@@ -746,6 +772,10 @@ export async function restartCronWithSchedule() {
     retentionCron.stop();
     retentionCron = null;
   }
+  if (moneyJournalPruneCron) {
+    moneyJournalPruneCron.stop();
+    moneyJournalPruneCron = null;
+  }
   if (altScoringCron) {
     altScoringCron.stop();
     altScoringCron = null;
@@ -802,6 +832,10 @@ export function stopCronJobs() {
   if (retentionCron) {
     retentionCron.stop();
     retentionCron = null;
+  }
+  if (moneyJournalPruneCron) {
+    moneyJournalPruneCron.stop();
+    moneyJournalPruneCron = null;
   }
   if (altScoringCron) {
     altScoringCron.stop();

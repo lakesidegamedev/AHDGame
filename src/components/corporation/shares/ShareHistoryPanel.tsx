@@ -1,5 +1,6 @@
 "use client";
 
+import { useCurrency } from "@/contexts/CurrencyContext";
 import { Fragment, useState } from "react";
 import Link from "next/link";
 import { ListRowSkeleton, Skeleton } from "@/components/ui";
@@ -43,11 +44,6 @@ const KIND_BADGE_CLASS: Record<ShareHistoryEntry["kind"], string> = {
   stock_split: "bg-cyan-500/15 text-cyan-300 border-cyan-500/30",
   reverse_split: "bg-fuchsia-500/15 text-fuchsia-300 border-fuchsia-500/30",
 };
-
-function fmtAnchor(n: number | null): string {
-  if (n === null || !Number.isFinite(n)) return "Unavailable";
-  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
 
 function fmtPercent(frac: number): string {
   return `${(frac * 100).toLocaleString("en-US", {
@@ -142,6 +138,12 @@ function PartyLink({ party }: { party: ShareHistoryEntry["from"] }) {
 }
 
 export default function ShareHistoryPanel({ corpId }: ShareHistoryPanelProps) {
+  // Trade values are anchor snapshots; show them in the viewer's display currency.
+  const { formatAmount, formatPrice } = useCurrency();
+  const fmtAnchorPrice = (n: number | null) =>
+    n === null || !Number.isFinite(n) ? "Unavailable" : formatPrice(n);
+  const fmtAnchorAmount = (n: number | null) =>
+    n === null || !Number.isFinite(n) ? "Unavailable" : formatAmount(n);
   const [page, setPage] = useState(1);
   const { entries, total, pageCount, loading, error } = useShareHistory(corpId, page, PAGE_SIZE);
 
@@ -194,8 +196,8 @@ export default function ShareHistoryPanel({ corpId }: ShareHistoryPanelProps) {
                 <th className="py-2 pr-3 font-medium">From</th>
                 <th className="py-2 pr-3 font-medium">To</th>
                 <th className="py-2 pr-3 text-right font-medium">Shares</th>
-                <th className="py-2 pr-3 text-right font-medium">Price (₳)</th>
-                <th className="py-2 text-right font-medium">Total (₳)</th>
+                <th className="py-2 pr-3 text-right font-medium">Price</th>
+                <th className="py-2 text-right font-medium">Total</th>
               </tr>
             </thead>
             <tbody>
@@ -246,10 +248,10 @@ export default function ShareHistoryPanel({ corpId }: ShareHistoryPanelProps) {
                           : e.shares.toLocaleString("en-US")}
                       </td>
                       <td className="py-2 pr-3 text-right font-mono text-muted">
-                        {isStructureChange ? "" : fmtAnchor(e.pricePerShareAnchor)}
+                        {isStructureChange ? "" : fmtAnchorPrice(e.pricePerShareAnchor)}
                       </td>
                       <td className="py-2 text-right font-mono">
-                        {isStructureChange ? "" : fmtAnchor(e.totalAnchor)}
+                        {isStructureChange ? "" : fmtAnchorAmount(e.totalAnchor)}
                       </td>
                     </tr>
                     {isStructureChange && e.structureChange && (

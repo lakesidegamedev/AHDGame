@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyFogToFinancials,
   applyFogToSectorPhysicals,
   booksAreExposed,
   buildQuarterlySnapshot,
@@ -10,6 +11,7 @@ import {
   realizedNetIncomePerTurn,
 } from "@/lib/corporations/financialFogOfWar";
 import type { CorporationHistory } from "@/lib/db/types";
+import type { Financials } from "@/components/corporation/CorporationPageTypes";
 import { ObjectId } from "mongodb";
 
 function makeHistory(
@@ -249,5 +251,41 @@ describe("booksAreExposed", () => {
   it("ignores a null or non-finite value rather than exposing the books", () => {
     expect(booksAreExposed({ booksExposedUntilTurn: null }, 100)).toBe(false);
     expect(booksAreExposed({ booksExposedUntilTurn: Number.NaN }, 100)).toBe(false);
+  });
+});
+
+describe("applyFogToFinancials by country", () => {
+  const country = {
+    countryId: "UK",
+    sectorCount: 4,
+    revenue: 1_000,
+    freightIncome: 50,
+    maintenanceCosts: 250,
+    laborCosts: 150,
+    freightCosts: 60,
+    growthCosts: 10,
+    regulatoryBurden: 20,
+    federalTax: 40,
+    stateTax: 15,
+    result: 505,
+  };
+  const financials = { federalTaxByCountry: {}, byCountry: [country] } as unknown as Financials;
+
+  it("scales every country's money by the same factor and keeps its plant count", () => {
+    const fogged = applyFogToFinancials(financials, 1.1).byCountry!;
+    expect(fogged).toHaveLength(1);
+    expect(fogged[0]).toMatchObject({
+      countryId: "UK",
+      sectorCount: 4,
+      revenue: 1_100,
+      maintenanceCosts: 275,
+      federalTax: 44,
+      result: 556,
+    });
+  });
+
+  it("keeps an absent breakdown absent", () => {
+    const fogged = applyFogToFinancials({ federalTaxByCountry: {} } as unknown as Financials, 1.1);
+    expect(fogged.byCountry).toBeUndefined();
   });
 });

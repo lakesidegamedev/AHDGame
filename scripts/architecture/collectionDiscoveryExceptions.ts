@@ -562,7 +562,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/retention/retention.ts",
     owner: "runRetention",
     argument: "policy.collection",
-    scopeHash: "ac77b8fdb1f2e214ea1a54e2eb2351da5a7b005589d2cb8f1de9216434a9e093",
+    scopeHash: "f4971b307f971bd515806c9e770f72bbd434b87e1aec5c8729e22f5239364831",
     count: 1,
     reason:
       "The named persistence operation receives its collection from a repository-owned caller.",

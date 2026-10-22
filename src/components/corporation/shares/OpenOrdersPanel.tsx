@@ -5,6 +5,7 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { MarketOrder } from "../CorporationPageTypes";
 import { DenseSection, Segmented, SmallButton, Td } from "../dense/DenseKit";
+import { ProportionBar } from "../ledger/ProportionBar";
 
 interface OpenOrdersPanelProps {
   marketOrders: MarketOrder[];
@@ -49,6 +50,9 @@ export default function OpenOrdersPanel({
       : formatPriceOrder(local);
   const buyOrders = marketOrders.filter((o) => o.type === "buy");
   const sellOrders = marketOrders.filter((o) => o.type === "sell");
+  // Depth bars share one scale across both sides, so a bid and an ask of the
+  // same size draw the same length.
+  const deepest = Math.max(0, ...marketOrders.map((o) => o.sharesRemaining));
   const myCorpLiquidCurrency = (myCorporation?.liquidCurrencyCode ?? "USD") as CurrencyCode;
   const myCorpLiquidInternal = myCorporation
     ? toInternalFrom(myCorporation.liquidCapital, myCorpLiquidCurrency)
@@ -80,7 +84,16 @@ export default function OpenOrdersPanel({
             <tbody>
               {orders.map((order) => (
                 <tr key={order._id} className={order.isMine ? "bg-card-elevated/40" : undefined}>
-                  <Td align="right">{order.sharesRemaining.toLocaleString("en-US")}</Td>
+                  <Td align="right">
+                    <span className="inline-flex w-full flex-col items-end gap-0.5">
+                      <span data-shares>{order.sharesRemaining.toLocaleString("en-US")}</span>
+                      <ProportionBar
+                        pct={deepest > 0 ? (order.sharesRemaining / deepest) * 100 : 0}
+                        tone={side === "buy" ? "success" : "error"}
+                        className="max-w-[5rem]"
+                      />
+                    </span>
+                  </Td>
                   <Td align="right">{displayPrice(order.pricePerShare)}</Td>
                   <Td className="max-w-[9rem] truncate text-xs text-muted">
                     {order.characterSequentialId ? (
@@ -122,7 +135,7 @@ export default function OpenOrdersPanel({
                           aria-label={`Shares to ${actionLabel.toLowerCase()}`}
                           min={1}
                           max={order.sharesRemaining}
-                          className="h-6 w-20 rounded border border-card-border bg-background px-1.5 text-right text-xs tabular-nums text-foreground focus:border-foreground focus:outline-none"
+                          className="h-6 w-20 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-1.5 text-right text-xs tabular-nums text-foreground focus:border-foreground focus:outline-none"
                         />
                         <SmallButton
                           tone="primary"

@@ -11,6 +11,8 @@ import {
 } from "@/lib/corporations/sharePriceFormula";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { DenseSection, KVList, KVRow, SmallButton, TableScroll, Td, Th } from "../dense/DenseKit";
+import { buildOwnershipSlices } from "../OwnershipDonut";
+import { StackBar } from "../ledger/StackBar";
 
 const PAGE_SIZE = 15;
 
@@ -117,6 +119,9 @@ export default function MarketOverviewPanel({
   const pendingIpo = corporation.pendingIpoShares ?? 0;
   const pageCount = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const pageRows = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  // The same slices as the Overview ring: top holders, the rest totalled, and
+  // shares still on the market, in brand-colour shades.
+  const ownershipSlices = buildOwnershipSlices(corporation, holderHref, myCharacterId);
 
   const superMultiplier = corporation.superShareMultiplier ?? 1;
   const dualClass = superMultiplier >= 2;
@@ -312,6 +317,22 @@ export default function MarketOverviewPanel({
           ) : undefined
         }
       >
+        {ownershipSlices.length > 0 && (
+          <div className="pb-3 pt-1">
+            <StackBar
+              label={`Ownership: ${ownershipSlices
+                .map((s) => `${s.label} ${s.pct.toFixed(1)}%`)
+                .join(", ")}`}
+              segments={ownershipSlices.map((s) => ({
+                key: s.key,
+                label: s.isYou ? `${s.label} (you)` : s.label,
+                value: s.shares,
+                display: `${s.pct.toFixed(1)}%`,
+                color: s.color,
+              }))}
+            />
+          </div>
+        )}
         {sorted.length === 0 && !hasFloat ? (
           <p className="py-2 text-xs text-muted">No shareholders on record.</p>
         ) : (

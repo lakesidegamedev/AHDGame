@@ -8,7 +8,7 @@ import { useFeatureSeen } from "@/hooks/useFeatureSeen";
 import { CORP_PAGE_FEATURE_KEYS } from "@/lib/ui/corpPageFeatureKeys";
 import { MarketSharePanel } from "./MarketSharePanel";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import { DenseSection, TableScroll, Td, Th, signTone } from "./dense/DenseKit";
+import { DenseSection, MiniSparkline, TableScroll, Td, Th, signTone } from "./dense/DenseKit";
 import { DenseLineChart, type LineSeries } from "./dense/DenseLineChart";
 
 type ChartMetric =
@@ -286,6 +286,7 @@ export default function ChartsTab({
               <Th align="right" title="Change over the charted history">
                 Change
               </Th>
+              <Th align="right">Trend</Th>
             </tr>
           </thead>
           <tbody>
@@ -322,6 +323,18 @@ export default function ChartsTab({
                   <Td align="right" className={signTone(change?.value)}>
                     {change?.text ?? ""}
                   </Td>
+                  <Td align="right">
+                    {s && (
+                      <span className="inline-flex justify-end">
+                        <MiniSparkline
+                          data={s.values}
+                          width={56}
+                          height={18}
+                          label={`${m.label} trend`}
+                        />
+                      </span>
+                    )}
+                  </Td>
                 </tr>
               );
             })}
@@ -329,6 +342,31 @@ export default function ChartsTab({
         </table>
       </TableScroll>
     </DenseSection>
+  );
+
+  // The same choice as the table, as a wrapping chip row over the chart.
+  const metricChips = (
+    <div role="radiogroup" aria-label="Charted metric" className="mb-3 flex flex-wrap gap-1.5">
+      {visibleMetrics.map((m) => {
+        const active = m.key === activeMetric;
+        return (
+          <button
+            key={m.key}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            onClick={() => selectMetric(m.key)}
+            className={`h-7 rounded-[calc(var(--corp-rad,6px)-2px)] border px-2.5 text-xs transition-colors ${
+              active
+                ? "border-foreground bg-foreground font-semibold text-background"
+                : "border-card-border text-muted hover:bg-card-elevated hover:text-foreground"
+            }`}
+          >
+            {m.label}
+          </button>
+        );
+      })}
+    </div>
   );
 
   const metricConfig = CHART_METRICS.find((m) => m.key === activeMetric)!;
@@ -467,9 +505,13 @@ export default function ChartsTab({
   }
 
   return (
-    <div className="grid gap-x-8 gap-y-6 lg:grid-cols-[300px_minmax(0,1fr)]">
+    <div className="grid gap-x-8 gap-y-6 lg:grid-cols-[360px_minmax(0,1fr)]">
       <div className="min-w-0">{metricTable}</div>
-      <div className="min-w-0">{chartPanel}</div>
+      {/* Chips and chart lead on a phone; the table sits beside them on desktop. */}
+      <div className="order-first min-w-0 lg:order-none">
+        {metricChips}
+        {chartPanel}
+      </div>
     </div>
   );
 }

@@ -17,6 +17,7 @@ import {
   SUPPLY_AGREEMENT_PRICE_BAND,
 } from "@/lib/db/types/supplyAgreement";
 import { useToast } from "@/contexts/ToastContext";
+import { useCurrency } from "@/contexts/CurrencyContext";
 import { supplyAgreementRequiresState } from "@/lib/market/commodityMarketScope";
 import { apiErrorText } from "@/lib/errors/catalog";
 import {
@@ -133,6 +134,7 @@ export default function SupplyAgreementsSection({
   countryId?: string;
 }) {
   const { showToast } = useToast();
+  const { formatAmount } = useCurrency();
   const locale = useLocale();
   const t = useTranslations("corporations.supplyAgreements");
   const [agreements, setAgreements] = useState<SupplyAgreement[]>([]);
@@ -436,7 +438,8 @@ export default function SupplyAgreementsSection({
       : undefined;
 
   const formatUnits = (value: number) => Math.round(value).toLocaleString(locale);
-  const formatAnchor = (value: number) => `₳${Math.round(value).toLocaleString(locale)}`;
+  // Damages are anchor values: show them in the viewer's display currency.
+  const formatAnchor = (value: number) => formatAmount(value);
   const formatCash = (value: number, currency?: string) => {
     if (!currency) return Math.round(value).toLocaleString(locale);
     try {

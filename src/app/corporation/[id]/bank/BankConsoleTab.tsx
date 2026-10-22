@@ -14,6 +14,9 @@ import { apiErrorText } from "@/lib/errors/catalog";
 interface Props {
   corporationId: string;
   isCeo: boolean;
+  /** The bank corporation currency, for amounts the CEO types. */
+  liquidCurrencyCode?: string | null;
+  countryId?: string | null;
 }
 
 interface ConsoleLoadState {
@@ -22,7 +25,7 @@ interface ConsoleLoadState {
   error: string | null;
 }
 
-export function BankConsoleTab({ corporationId, isCeo }: Props) {
+export function BankConsoleTab({ corporationId, isCeo, liquidCurrencyCode, countryId }: Props) {
   const { showToast } = useToast();
   const [{ data, loading, error }, updateLoadState] = useReducer(mergeState<ConsoleLoadState>, {
     data: null,
@@ -86,7 +89,11 @@ export function BankConsoleTab({ corporationId, isCeo }: Props) {
             showToast={showToast}
           />
           {canMutate && <CapsPanel data={data} />}
-          <BankFundsPanel corporationId={corporationId} />
+          <BankFundsPanel
+            corporationId={corporationId}
+            liquidCurrencyCode={liquidCurrencyCode}
+            countryId={countryId}
+          />
           {data.primaryUnderwritingEnabled && (
             <section className="space-y-3 rounded-lg border border-border bg-surface p-4">
               <div>

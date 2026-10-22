@@ -621,7 +621,7 @@ function LaneTree({
 
   return (
     <div
-      className={`min-w-0 overflow-hidden rounded-lg border border-card-border ${dimmed ? "opacity-60" : ""}`}
+      className={`min-w-0 overflow-hidden rounded-[var(--corp-rad,6px)] border border-card-border ${dimmed ? "opacity-60" : ""}`}
     >
       <div className="relative h-16 overflow-hidden bg-gray-900">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -775,7 +775,7 @@ function TechNodeCard({
   const expired = isOwned && !!node.effectExpired;
   return (
     <article
-      className={`w-full min-w-0 rounded-md border p-2.5 text-center ${
+      className={`w-full min-w-0 rounded-[calc(var(--corp-rad,6px)-2px)] border p-2.5 text-center ${
         expired
           ? "border-card-border bg-surface/40"
           : isOwned
