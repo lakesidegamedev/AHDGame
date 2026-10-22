@@ -206,3 +206,16 @@ describe("CeoBudgetPanel: autopilot note", () => {
     expect(screen.queryByTestId("budget-autopilot-note")).toBeNull();
   });
 });
+
+describe("CeoBudgetPanel: currency symbol", () => {
+  it("no ₳ rendered when the payload has no currency code", () => {
+    renderBudget({ corporation: { liquidCurrencyCode: undefined, countryId: "UK" } });
+    expect(document.body.textContent).not.toContain("₳");
+    expect(screen.getAllByText("£").length).toBeGreaterThan(0);
+  });
+
+  it("falls back to the game dollar, never ₳, with neither code nor country", () => {
+    renderBudget({ corporation: { liquidCurrencyCode: undefined, countryId: undefined } });
+    expect(document.body.textContent).not.toContain("₳");
+  });
+});

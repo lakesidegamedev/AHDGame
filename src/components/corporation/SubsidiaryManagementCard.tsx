@@ -8,6 +8,8 @@ import type { CorporationDetail } from "./CorporationPageTypes";
 import { AppointSubsidiaryCeoModal } from "./AppointSubsidiaryCeoModal";
 import { FormalizeSubsidiaryModal } from "./FormalizeSubsidiaryModal";
 import { SpinOffModal } from "./SpinOffModal";
+import { KVList, KVRow } from "./dense/DenseKit";
+import { GroupChart } from "./structure/GroupChart";
 
 interface SubsidiaryManagementCardProps {
   corporation: CorporationDetail;
@@ -43,8 +45,12 @@ export function SubsidiaryManagementCard({
   const showFormalizeAction = corporation.canFormalizeAsSubsidiary && parent;
   const showManage = corporation.canManageAsParent;
   const showSpinOffAction = corporation.canSpinOff;
+  // The group chart is worth showing to anyone once there is a group.
+  const hasGroup = !!parent || (corporation.subsidiaries?.length ?? 0) > 0;
+  const overheadPp = corporation.managementOverheadPp ?? 0;
 
-  if (!showBadge && !showFormalizeAction && !showManage && !showSpinOffAction) return null;
+  if (!hasGroup && !showBadge && !showFormalizeAction && !showManage && !showSpinOffAction)
+    return null;
 
   async function post(path: string, body: unknown, key: string) {
     setBusy(key);
@@ -73,6 +79,24 @@ export function SubsidiaryManagementCard({
       <div className="flex min-h-8 items-baseline border-b border-card-border pb-1.5">
         <h2 className="text-sm font-semibold text-foreground">Corporate structure</h2>
       </div>
+      <GroupChart
+        corporation={corporation}
+        onSpinOff={showSpinOffAction ? () => setShowSpinOff(true) : undefined}
+      />
+      {overheadPp > 0 && (
+        <div className="max-w-md">
+          <h3 className="pb-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted">
+            Group effects
+          </h3>
+          <KVList>
+            <KVRow
+              label="Management overhead"
+              value={`${overheadPp.toFixed(1)} pts of margin`}
+              hint="grows with every plant the whole group runs, subsidiaries included"
+            />
+          </KVList>
+        </div>
+      )}
       {showBadge && parent && (
         <div className="flex items-center gap-2 text-[13px]">
           <span className="text-muted">
@@ -97,7 +121,7 @@ export function SubsidiaryManagementCard({
           <button
             type="button"
             onClick={() => setShowFormalize(true)}
-            className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-foreground bg-foreground px-2.5 text-xs font-medium text-background hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Formalize as subsidiary
           </button>
@@ -112,7 +136,7 @@ export function SubsidiaryManagementCard({
             <button
               type="button"
               onClick={() => setShowAppoint(true)}
-              className="inline-flex h-7 items-center rounded-md border border-card-border px-2.5 text-xs font-medium text-foreground hover:bg-card-elevated"
+              className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border px-2.5 text-xs font-medium text-foreground hover:bg-card-elevated"
             >
               Appoint CEO
             </button>
@@ -127,14 +151,14 @@ export function SubsidiaryManagementCard({
                 min={0}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="h-7 w-40 rounded-md border border-card-border bg-background px-2 text-right font-mono text-[13px] text-foreground focus:border-foreground focus:outline-none"
+                className="h-7 w-40 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-2 text-right font-mono text-[13px] text-foreground focus:border-foreground focus:outline-none"
               />
             </div>
             <button
               type="button"
               disabled={busy !== null || !(Number(amount) > 0)}
               onClick={() => post("capital-injection", { amount: Number(amount) }, "inject")}
-              className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-foreground bg-foreground px-2.5 text-xs font-medium text-background hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy === "inject" ? "Working…" : "Inject"}
             </button>
@@ -152,14 +176,14 @@ export function SubsidiaryManagementCard({
                 max={MAX_DIVIDEND_RATE}
                 value={floorPct}
                 onChange={(e) => setFloorPct(e.target.value)}
-                className="h-7 w-40 rounded-md border border-card-border bg-background px-2 text-right font-mono text-[13px] text-foreground focus:border-foreground focus:outline-none"
+                className="h-7 w-40 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-2 text-right font-mono text-[13px] text-foreground focus:border-foreground focus:outline-none"
               />
             </div>
             <button
               type="button"
               disabled={busy !== null}
               onClick={() => post("dividend-floor", { floorPct: Number(floorPct) }, "floor")}
-              className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-foreground bg-foreground px-2.5 text-xs font-medium text-background hover:bg-foreground/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy === "floor" ? "Working…" : "Set floor"}
             </button>
@@ -179,26 +203,11 @@ export function SubsidiaryManagementCard({
               type="button"
               disabled={busy !== null}
               onClick={() => post("release", { dismissCaretaker }, "release")}
-              className="inline-flex h-7 items-center rounded-md border border-warning/50 px-2.5 text-xs font-medium text-warning hover:bg-warning/10 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-warning/50 px-2.5 text-xs font-medium text-warning hover:bg-warning/10 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy === "release" ? "Working…" : "Release subsidiary"}
             </button>
           </div>
-        </div>
-      )}
-
-      {showSpinOffAction && (
-        <div className="space-y-2">
-          <p className="text-xs text-muted">
-            Spin off one of your sector types into a new, wholly-owned private subsidiary.
-          </p>
-          <button
-            type="button"
-            onClick={() => setShowSpinOff(true)}
-            className="inline-flex h-7 items-center rounded-md border border-card-border px-2.5 text-xs font-medium text-foreground hover:bg-card-elevated"
-          >
-            Spin off a subsidiary
-          </button>
         </div>
       )}
 

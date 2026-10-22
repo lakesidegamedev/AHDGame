@@ -421,8 +421,7 @@
     "ba229c77878b3f8f3ee7e61795b784cf69abf30fb9d9cc1f9b950a9c25c6dba2": 1,
     "86eb0f4c1501e3caeb87306a252efc78c68ed671868f24c73e056a8992a4527d": 1,
     "b5f4fff1677b135febc02a02dbe25f3ec4eb2bc8efc3adecc8f93547679926c4": 1,
-    "269041b66749fac8157719f461db3e95ac8eecaaac75202d93fff20c9d103eab": 1,
-    "203f7dc2a931c75d16f35bbc67d4b547c73b4dfd0316c581217f770f5aff7058": 2,
+    "4da550d779aeb29af9d7c4075154306c48cb835cd8a2bb56abf6c7d536ce9277": 2,
     "d1e6523b9e89e410c409244a1d774b05371fddd1d49d0be1e9e452c484b8a1ec": 1,
     "5a5cad10b21805a9f676ffc9aff41d336efbb7591638b3b667d2eded5d6465b8": 1,
     "6485c3ade7a8a0b91dc349b18edcc6d1500f26bc59bfc57bd3a04d2dbd63cc4e": 1,
@@ -3698,24 +3697,17 @@
     },
     {
       "file": "src/lib/products/mediaProductAdvertisingSettlement.ts",
-      "operation": "findOne",
-      "owner": "settleProductAdvertisingObligations",
-      "expression": "journal.findOne({ _id: key }, { projection: { _id: 1 } })",
-      "fingerprint": "269041b66749fac8157719f461db3e95ac8eecaaac75202d93fff20c9d103eab"
+      "operation": "updateOne",
+      "owner": "settleRow",
+      "expression": "db.collection<Corporation>(\"corporations\").updateOne({ _id: row._id }, { $pull: { [obligationsField]: { projectId: obligation.projectId, turn: obligation.turn, }, } as Record<string, unknown>, })",
+      "fingerprint": "4da550d779aeb29af9d7c4075154306c48cb835cd8a2bb56abf6c7d536ce9277"
     },
     {
       "file": "src/lib/products/mediaProductAdvertisingSettlement.ts",
       "operation": "updateOne",
-      "owner": "settleProductAdvertisingObligations",
+      "owner": "settleRow",
       "expression": "db.collection<Corporation>(\"corporations\").updateOne({ _id: row._id }, { $pull: { [obligationsField]: { projectId: obligation.projectId, turn: obligation.turn, }, } as Record<string, unknown>, })",
-      "fingerprint": "203f7dc2a931c75d16f35bbc67d4b547c73b4dfd0316c581217f770f5aff7058"
-    },
-    {
-      "file": "src/lib/products/mediaProductAdvertisingSettlement.ts",
-      "operation": "updateOne",
-      "owner": "settleProductAdvertisingObligations",
-      "expression": "db.collection<Corporation>(\"corporations\").updateOne({ _id: row._id }, { $pull: { [obligationsField]: { projectId: obligation.projectId, turn: obligation.turn, }, } as Record<string, unknown>, })",
-      "fingerprint": "203f7dc2a931c75d16f35bbc67d4b547c73b4dfd0316c581217f770f5aff7058"
+      "fingerprint": "4da550d779aeb29af9d7c4075154306c48cb835cd8a2bb56abf6c7d536ce9277"
     },
     {
       "file": "src/lib/politicalMedia/journal.ts",

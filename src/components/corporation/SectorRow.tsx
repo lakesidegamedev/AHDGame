@@ -2,7 +2,6 @@
 
 import { useWorldFlags } from "@/hooks/useWorldFlags";
 import { useState } from "react";
-import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import {
@@ -27,24 +26,19 @@ import { SECTOR_TABLE_GRID, PLANTS_SECTOR_TABLE_GRID } from "./SectorTableHeader
 import {
   BuildQueueBadge,
   CAPACITY_UNIT_LABEL,
-  DELIVERY_LIMITED_MIN_SHARE,
   DeliveryLimitedPill,
   FillChip,
   MothballedPill,
-  formatFillPercent,
   formatUnits,
   sectorBuildUrl,
+  sectorSplitUrl,
 } from "./plantsPresentation";
 import { facilityPlural, facilitySingular } from "@/lib/constants/facilityVocabulary";
 import { facilitiesFromUnits } from "@/lib/constants/facilityQuantum";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { GROWTH_RATE_TURNS_PER_YEAR } from "@/lib/constants/corporations";
 import { SectorMarginDrilldown } from "./SectorMarginDrilldown";
-import {
-  FREIGHT_CLASS_LABELS,
-  freightClassAction,
-  freightClassExplanation,
-} from "@/lib/logistics/freightClass";
+import { CapacityChain } from "./sectors/CapacityChain";
 
 export interface SectorRowProps {
   sector: SectorDetail;
@@ -69,6 +63,8 @@ export interface SectorRowProps {
   /** Plants tier: swap growth columns for capacity + fill. */
   plantsMode?: boolean;
   mediaOperatingModelsEnabled?: boolean;
+  /** A rival viewer may plan a split of these plants on the sector page. */
+  canSplitRivalPlants?: boolean;
 }
 
 export function SectorRow({
@@ -93,6 +89,7 @@ export function SectorRow({
   fmtAnchor,
   plantsMode = false,
   mediaOperatingModelsEnabled = false,
+  canSplitRivalPlants = false,
 }: SectorRowProps) {
   const [pendingChange, setPendingChange] = useState<{
     sectorId: string;
@@ -100,10 +97,10 @@ export function SectorRow({
   } | null>(null);
   const [cancelPending, setCancelPending] = useState(false);
   const [mobileAbandonConfirm, setMobileAbandonConfirm] = useState(false);
+  const [drawerAbandonConfirm, setDrawerAbandonConfirm] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
   const { preset } = useWorldFlags();
-  const t = useTranslations("corporations.sectorInvestment");
   const operatingSectorType = getOperatingSectorType(
     sector.sectorType,
     sector.industryModel,
@@ -206,100 +203,23 @@ export function SectorRow({
   // The part of the fill shortfall that is a DELIVERY failure. Null outside
   // plants, when redacted/fogged, and until the freight pass writes it.
   const deliveryLimited = plantsMode ? (sector.deliveryLimitedFraction ?? null) : null;
-  const deliveryLimitedShown =
-    deliveryLimited != null &&
-    Number.isFinite(deliveryLimited) &&
-    deliveryLimited > DELIVERY_LIMITED_MIN_SHARE;
-  const deliveryClass = sector.deliveryLimitedFreightClass ?? null;
-  const deliveryClassLabel = deliveryClass ? FREIGHT_CLASS_LABELS[deliveryClass] : "Delivery";
+  const capacityChain = (variant: "tooltip" | "block") => (
+    <CapacityChain
+      sector={sector}
+      realized={realized}
+      operatingProfit={operatingProfit}
+      fillAdjusted={fillAdjusted}
+      deliveryLimited={deliveryLimited}
+      isMothballed={isMothballed}
+      fmtScaled={fmtScaled}
+      fmtMoney={fmtMoney}
+      scaleFactor={scaleFactor}
+      variant={variant}
+    />
+  );
   const plantsRevenueTooltip = (
     <>
-      <p className="font-semibold text-foreground mb-1">Capacity → net profit</p>
-      <div className="space-y-0.5 text-muted text-xs">
-        <div className="flex justify-between gap-3">
-          <span>Capacity</span>
-          <span className="tabular-nums">{formatUnits(sector.capacityUnits)}</span>
-        </div>
-        <div className="flex justify-between gap-3">
-          <span>Produced</span>
-          <span className="tabular-nums">{formatUnits(sector.producedUnits)}</span>
-        </div>
-        {sector.mediaAdvertisingCampaignUnits != null &&
-          sector.mediaAdvertisingCampaignFactor != null && (
-            <div className="flex justify-between gap-3">
-              <span>{t("advertisingCampaignsLabel")}</span>
-              <span className="tabular-nums">
-                {t("advertisingCampaignsValue", {
-                  units: formatUnits(sector.mediaAdvertisingCampaignUnits),
-                  factor: formatFillPercent(sector.mediaAdvertisingCampaignFactor),
-                })}
-              </span>
-            </div>
-          )}
-        <div className="flex justify-between gap-3">
-          <span>Sold</span>
-          <span className="tabular-nums">{formatUnits(sector.soldUnits)}</span>
-        </div>
-        <div className="flex justify-between gap-3 border-t border-card-border pt-0.5">
-          <span className="text-foreground">Revenue</span>
-          <span className="tabular-nums text-success">{fmtScaled(realized)}</span>
-        </div>
-        <div className="flex justify-between gap-3">
-          <span>× effective margin</span>
-          <span className="tabular-nums">{sector.effectiveProfitMargin}%</span>
-        </div>
-        <div className="flex justify-between gap-3">
-          <span>Operating profit</span>
-          <span className="tabular-nums">{fmtScaled(operatingProfit)}</span>
-        </div>
-        <div className="flex justify-between gap-3 border-t border-card-border pt-0.5 font-semibold">
-          <span className="text-foreground">Net profit</span>
-          <span className={`tabular-nums ${sector.profit >= 0 ? "text-success" : "text-error"}`}>
-            {fmtMoney(sector.profit * scaleFactor)}
-          </span>
-        </div>
-        {fillAdjusted != null && (
-          <div className="flex justify-between gap-3">
-            <span>Net margin</span>
-            <span className={`tabular-nums ${fillAdjusted >= 0 ? "text-success" : "text-error"}`}>
-              {fillAdjusted}%
-            </span>
-          </div>
-        )}
-      </div>
-      {fillAdjusted != null && (
-        <p className="mt-1.5 text-[10px] leading-snug text-muted">
-          The effective margin counts only units that sold. Net margin is profit over revenue after
-          paying for everything made, so unsold units pull it down.
-        </p>
-      )}
-      {deliveryLimitedShown && (
-        <p className="mt-1.5 text-[10px] leading-snug text-muted">
-          {deliveryClassLabel} limited {formatFillPercent(deliveryLimited)} of this sector&apos;s
-          output from reaching buyers outside the state.{" "}
-          {deliveryClass
-            ? freightClassExplanation(deliveryClass)
-            : "The delivery network, not demand, is the limit."}{" "}
-          {deliveryClass
-            ? freightClassAction(deliveryClass)
-            : "Add freight capacity or build nearer buyers."}
-        </p>
-      )}
-      {isMothballed && (
-        <p className="mt-1.5 text-[10px] leading-snug text-muted">
-          These plants are mothballed. They produce nothing and pay reduced upkeep until you
-          reactivate them.
-        </p>
-      )}
-      {sector.lastDecommission && (
-        <p className="mt-1.5 text-[10px] leading-snug text-muted">
-          Unused capacity worth {fmtScaled(sector.lastDecommission.retiredBookAnchor)} was retired
-          because this sector sold nothing for a long time.{" "}
-          {sector.lastDecommission.grantAnchor > 0
-            ? `A decommissioning grant of ${fmtScaled(sector.lastDecommission.grantAnchor)} was paid from unspent public funding.`
-            : "No grant was paid: the country had no unspent public funding."}
-        </p>
-      )}
+      {capacityChain("tooltip")}
       {isCeo &&
         sector.cutoverTransition &&
         !sector.cutoverTransition.converted &&
@@ -511,7 +431,7 @@ export function SectorRow({
           ⋯
         </button>
         <div
-          className={`${isMenuOpen ? "flex" : "hidden"} absolute right-0 z-20 min-w-[132px] flex-col rounded-md border border-card-border bg-card p-1 shadow-panel ${
+          className={`${isMenuOpen ? "flex" : "hidden"} absolute right-0 z-20 min-w-[132px] flex-col rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-card p-1 shadow-panel ${
             shouldOpenMenuUpward ? "bottom-full mb-1" : "top-full mt-1"
           }`}
           role="menu"
@@ -549,6 +469,72 @@ export function SectorRow({
           )}
         </div>
       </div>
+    </div>
+  );
+
+  const drawerButton =
+    "h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border px-2.5 text-xs";
+  // The phone row already carries Details, Build capacity and Abandon, so the
+  // drawer repeats them on desktop only; the rival split is drawer-only.
+  const desktopOnly = "hidden lg:inline-flex";
+  const drawerActions = (
+    <div className="flex flex-wrap items-center gap-2">
+      {isCeo && (
+        <Link
+          href={sectorBuildUrl(corpId, sector._id)}
+          className={`${drawerButton} ${desktopOnly} border-foreground bg-foreground font-medium text-background hover:bg-foreground/90`}
+        >
+          Build capacity
+        </Link>
+      )}
+      {canSplitRivalPlants && !isCeo && (
+        <Link
+          href={sectorSplitUrl(corpId, sector._id)}
+          className={`${drawerButton} inline-flex border-card-border text-foreground hover:bg-card-elevated`}
+          title="Plan a split of these plants on the sector page"
+        >
+          Split rival plants
+        </Link>
+      )}
+      <Link
+        href={`/corporation/${corpId}/sector/${sector._id}`}
+        className={`${drawerButton} ${desktopOnly} border-card-border text-foreground hover:bg-card-elevated`}
+      >
+        Details
+      </Link>
+      {isCeo &&
+        (drawerAbandonConfirm ? (
+          <span className="hidden flex-wrap items-center gap-2 text-xs text-error lg:inline-flex">
+            Abandon? An NPP operator takes over most of its plants.
+            <button
+              type="button"
+              onClick={() => setDrawerAbandonConfirm(false)}
+              className={`${drawerButton} inline-flex border-card-border text-foreground hover:bg-card-elevated`}
+            >
+              Keep
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setDrawerAbandonConfirm(false);
+                onAbandonSector(sector._id);
+              }}
+              disabled={abandoningSectorId === sector._id}
+              className={`${drawerButton} inline-flex border-error/50 font-medium text-error hover:bg-error/10 disabled:opacity-50`}
+            >
+              {abandoningSectorId === sector._id ? "Abandoning…" : "Confirm abandon"}
+            </button>
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setDrawerAbandonConfirm(true)}
+            disabled={abandoningSectorId === sector._id}
+            className={`${drawerButton} ${desktopOnly} ml-auto border-error/50 font-medium text-error hover:bg-error/10 disabled:opacity-50`}
+          >
+            {abandoningSectorId === sector._id ? "Abandoning…" : "Abandon"}
+          </button>
+        ))}
     </div>
   );
 
@@ -838,7 +824,7 @@ export function SectorRow({
           {plantsMode && isCeo && (
             <Link
               href={sectorBuildUrl(corpId, sector._id)}
-              className="inline-flex h-7 items-center rounded-md border border-primary bg-primary px-2.5 text-xs font-medium text-white hover:bg-primary/90"
+              className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-foreground bg-foreground px-2.5 text-xs font-medium text-background hover:bg-foreground/90"
             >
               Build capacity
             </Link>
@@ -847,7 +833,7 @@ export function SectorRow({
             type="button"
             onClick={() => setExpanded((v) => !v)}
             aria-expanded={expanded}
-            className="inline-flex h-7 items-center rounded-md border border-card-border px-2.5 text-xs text-foreground hover:bg-card-elevated"
+            className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border px-2.5 text-xs text-foreground hover:bg-card-elevated"
           >
             {expanded ? "Hide margins" : "Margins"}
           </button>
@@ -858,7 +844,7 @@ export function SectorRow({
                 <button
                   type="button"
                   onClick={() => setMobileAbandonConfirm(false)}
-                  className="inline-flex h-7 items-center rounded-md border border-card-border px-2.5 text-xs text-foreground hover:bg-card-elevated"
+                  className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border px-2.5 text-xs text-foreground hover:bg-card-elevated"
                 >
                   Keep
                 </button>
@@ -869,7 +855,7 @@ export function SectorRow({
                     onAbandonSector(sector._id);
                   }}
                   disabled={abandoningSectorId === sector._id}
-                  className="inline-flex h-7 items-center rounded-md border border-error/50 px-2.5 text-xs font-medium text-error hover:bg-error/10 disabled:opacity-50"
+                  className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-error/50 px-2.5 text-xs font-medium text-error hover:bg-error/10 disabled:opacity-50"
                 >
                   {abandoningSectorId === sector._id ? "Abandoning…" : "Abandon"}
                 </button>
@@ -879,7 +865,7 @@ export function SectorRow({
                 type="button"
                 onClick={() => setMobileAbandonConfirm(true)}
                 disabled={abandoningSectorId === sector._id}
-                className="inline-flex h-7 items-center rounded-md border border-error/50 px-2.5 text-xs font-medium text-error hover:bg-error/10 disabled:opacity-50"
+                className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-error/50 px-2.5 text-xs font-medium text-error hover:bg-error/10 disabled:opacity-50"
               >
                 {abandoningSectorId === sector._id ? "Abandoning…" : "Abandon"}
               </button>
@@ -887,8 +873,19 @@ export function SectorRow({
         </div>
       </div>
 
-      {/* Margin build and production-policy drill-down */}
-      {expanded && <SectorMarginDrilldown sector={sector} isCeo={isCeo} corpId={corpId} />}
+      {/* Margins drawer: under plants the capacity chain leads, then the margin
+          build and production policy, then the actions for this sector. */}
+      {expanded && (
+        <div role="region" aria-label={`Margins, ${sectorName}`}>
+          <SectorMarginDrilldown
+            sector={sector}
+            isCeo={isCeo}
+            corpId={corpId}
+            lead={plantsMode ? capacityChain("block") : undefined}
+            footer={plantsMode ? drawerActions : undefined}
+          />
+        </div>
+      )}
 
       {/* Strategy change confirmation */}
       {pendingChange && pendingChange.sectorId === sector._id && (

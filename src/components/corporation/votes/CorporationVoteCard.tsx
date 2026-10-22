@@ -217,7 +217,10 @@ export function CorporationVoteCard({
     }
   }
 
-  if (!vote) return <div className="h-16 animate-pulse border-b border-card-border/60" />;
+  if (!vote)
+    return (
+      <div className="mb-2 h-16 animate-pulse rounded-[var(--corp-rad,6px)] bg-card-muted/40 last:mb-0" />
+    );
 
   const eligibleVotes = totalVotingPower ?? totalShares;
   const myVotingPower = viewerVotingPower ?? viewerShares;
@@ -247,7 +250,7 @@ export function CorporationVoteCard({
         : "text-muted";
 
   return (
-    <div className="space-y-2 border-b border-card-border/60 py-2.5">
+    <div className="mb-2 space-y-2 rounded-[var(--corp-rad,6px)] border border-card-border bg-card-muted/40 p-3 last:mb-0">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
         <p className="text-[13px] font-medium text-foreground">
           {typeLabel(vote.type)}: {proposalSummary(vote)}
@@ -263,7 +266,7 @@ export function CorporationVoteCard({
 
       <div className="space-y-1">
         <div
-          className="relative h-1.5 overflow-hidden rounded-sm bg-card-elevated"
+          className="relative h-2 overflow-hidden rounded-[1px] bg-track"
           role="img"
           aria-label={`Yes ${yesPct.toFixed(1)}%, no ${noPct.toFixed(1)}%, needs ${thresholdPct}%`}
         >
@@ -316,7 +319,7 @@ export function CorporationVoteCard({
                     disabled={ident.hasVoted}
                     onClick={() => setSelectedIdentityId(ident.id)}
                     aria-pressed={isSelected}
-                    className={`h-7 rounded-md border px-2 text-xs transition-colors disabled:cursor-not-allowed disabled:line-through disabled:opacity-50 ${
+                    className={`h-7 rounded-[calc(var(--corp-rad,6px)-2px)] border px-2 text-xs transition-colors disabled:cursor-not-allowed disabled:line-through disabled:opacity-50 ${
                       isSelected
                         ? "border-foreground bg-foreground font-medium text-background"
                         : "border-card-border text-foreground hover:bg-card-elevated"

@@ -108,8 +108,10 @@ export default function CeoBudgetPanel({
   const [periodView, setPeriodView] = useState<MoneyPeriod>("turn");
   const [drafts, setDrafts] = useState<Partial<Record<BudgetKey, string>>>({});
   const money = useCorpMoney(corporation.liquidCurrencyCode, corporation.countryId);
-  const code = (corporation.liquidCurrencyCode as CurrencyCode | undefined) ?? undefined;
-  const symbol = code ? (CURRENCY_SYMBOLS[code] ?? "$") : "₳";
+  // Falls back to the HQ country's currency when the payload has no code, and
+  // to the game dollar when there is neither.
+  const code = (money.code as CurrencyCode | undefined) ?? undefined;
+  const symbol = code ? (CURRENCY_SYMBOLS[code] ?? "$") : "$";
   const suffix = MONEY_PERIOD_SUFFIX[periodView];
   const scale = (daily: number) => Math.round(scaleMoney(daily, periodView));
   const revenue = financials.totalRevenue;

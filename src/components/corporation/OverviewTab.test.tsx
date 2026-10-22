@@ -132,8 +132,10 @@ describe("OverviewTab", () => {
 
   it("shows the viewer's position with a trade action", () => {
     const { onTrade } = renderOverview();
-    expect(screen.getByText("Shares held")).toBeTruthy();
-    expect(screen.getByText("1,000,000")).toBeTruthy();
+    // The ownership ring also lists this holding, so read the position ticket itself.
+    const ticket = screen.getByRole("heading", { name: "Your position" }).closest("section")!;
+    expect(within(ticket).getByText("Shares held")).toBeTruthy();
+    expect(within(ticket).getByText("1,000,000")).toBeTruthy();
     fireEvent.click(screen.getByText("Buy / sell"));
     expect(onTrade).toHaveBeenCalled();
   });
@@ -197,7 +199,10 @@ describe("OverviewTab", () => {
     expect(screen.getByText("Biggest sectors")).toBeTruthy();
     expect(screen.getByText("Nothing needs you right now.")).toBeTruthy();
     // Top five only, largest first.
-    const rows = screen.getAllByRole("row").filter((r) => within(r).queryByText(/^Region \d+$/));
+    // The Simple ranking is a list; one item per sector.
+    const rows = screen
+      .getAllByRole("listitem")
+      .filter((r) => within(r).queryByText(/^Region \d+$/));
     expect(rows).toHaveLength(5);
     expect(within(rows[0]).getByText("Region 12")).toBeTruthy();
   });

@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import CreditRatingTab from "./CreditRatingTab";
 import type { BondInfo, CorporationDetail } from "./CorporationPageTypes";
 
@@ -75,5 +75,57 @@ describe("CreditRatingTab", () => {
 
     expect(screen.getByText("Leverage rating")).toBeTruthy();
     expect(screen.getByText("n/a")).toBeTruthy();
+  });
+
+  const rated = {
+    ...baseBondInfo,
+    creditRating: {
+      rating: "BBB",
+      compositeScore: 61,
+      effectiveCouponRate: 6.25,
+      components: { debtToEquity: 60, interestCoverage: 60, profitability: 60, liquidity: 60 },
+    },
+  } as BondInfo;
+
+  it("marks the rating on the full scale in the leverage section", () => {
+    render(
+      <CreditRatingTab bondInfo={rated} bondLoading={false} corporation={corporation} corpId="c" />
+    );
+    const scale = screen.getByRole("img", { name: /Rating scale from AAA to CCC/ });
+    expect(scale.querySelector("[data-active=true]")?.getAttribute("data-tier")).toBe("BBB");
+  });
+
+  it("lists this corporation as a You row beside the peer averages", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) =>
+        Promise.resolve(
+          url.includes("credit-peer-stats")
+            ? {
+                ok: true,
+                json: () =>
+                  Promise.resolve({
+                    countryId: "US",
+                    sectorType: "energy",
+                    you: { composite: 61, rating: "BBB" },
+                    countryPeers: { n: 12, avgComposite: 55.5, avgNewIssueCouponPct: 6.8 },
+                    sectorPeers: null,
+                  }),
+              }
+            : { ok: false, json: () => Promise.resolve({}) }
+        )
+      )
+    );
+    render(
+      <CreditRatingTab bondInfo={rated} bondLoading={false} corporation={corporation} corpId="c" />
+    );
+    const you = (await screen.findByText("You")).closest("tr")!;
+    expect(within(you).getByText("61")).toBeTruthy();
+    expect(within(you).getByText("6.25%")).toBeTruthy();
+    const country = screen.getByText("Country average").closest("tr")!;
+    expect(within(country).getByText("55.5")).toBeTruthy();
+    expect(within(country).getByText("12")).toBeTruthy();
+    const sector = screen.getByText("Sector average").closest("tr")!;
+    expect(within(sector).getAllByText("n/a").length).toBeGreaterThan(0);
   });
 });

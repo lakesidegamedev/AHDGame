@@ -16,6 +16,7 @@ import {
 import { CONTRACT_DEFAULT_MISSED_PAYMENTS } from "@/lib/constants/prospecting";
 import { DenseSection, SmallButton, TableScroll, Td, Th } from "./dense/DenseKit";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { ProportionBar } from "./ledger/ProportionBar";
 
 interface CorporationContractsTabProps {
   corpId: string;
@@ -93,6 +94,13 @@ export default function CorporationContractsTab({
   });
 
   const resource = (c: ExtractionContractRow) => COMMODITY_LABELS[c.resource] ?? c.resource;
+  // Share of the term already run, only when the contract says when it began
+  // and how long it lasts; past expiry it reads full.
+  const termUsed = (c: ExtractionContractRow) => {
+    if (c.activatedTurn == null || c.termTurns == null || !(c.termTurns > 0)) return null;
+    const used = Math.min(Math.max(currentTurn - c.activatedTurn, 0), c.termTurns);
+    return { used, term: c.termTurns, pct: (used / c.termTurns) * 100 };
+  };
   const royalty = (c: ExtractionContractRow) =>
     c.royaltyRatePerTurn != null ? `${(c.royaltyRatePerTurn * 100).toFixed(2)}%` : t("unavailable");
 
@@ -223,6 +231,7 @@ export default function CorporationContractsTab({
               <tbody>
                 {active.map((c) => {
                   const missed = c.missedPayments ?? 0;
+                  const term = termUsed(c);
                   return (
                     <tr key={c._id}>
                       <Td className="text-foreground">
@@ -250,6 +259,17 @@ export default function CorporationContractsTab({
                         {c.expiresTurn != null
                           ? t("turn", { turn: c.expiresTurn })
                           : t("perpetual")}
+                        {term && (
+                          <span data-term-used className="mt-1 ml-auto block w-24">
+                            <ProportionBar
+                              pct={term.pct}
+                              tone={term.used >= term.term ? "warning" : "info"}
+                            />
+                            <span className="mt-0.5 block text-[10px] text-muted">
+                              {t("termUsed", { used: term.used, term: term.term })}
+                            </span>
+                          </span>
+                        )}
                       </Td>
                       <Td align="right" numeric={false}>
                         {missed > 0 ? (

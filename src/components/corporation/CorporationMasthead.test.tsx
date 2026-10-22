@@ -94,10 +94,21 @@ describe("CorporationMasthead", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Keystone Industries" })).toBeTruthy();
     expect(screen.getByText("NYSE: KSTN")).toBeTruthy();
     expect(screen.getByText("$24.74")).toBeTruthy();
-    expect(screen.getByText("$24.19 / $25.18")).toBeTruthy();
+    // Bid, spread and ask are separate cells on the quote board.
+    expect(screen.getByText("$24.19")).toBeTruthy();
+    expect(screen.getByText("$25.18")).toBeTruthy();
     expect(screen.getByText("Retained/turn")).toBeTruthy();
     // 24,000/day is 1,000 per turn.
     expect(screen.getByText("+$1000")).toBeTruthy();
+  });
+
+  it("leaves the market quote off a private corporation, whose shares do not trade", () => {
+    // The CEO of a private corporation still sees its price, but no quote.
+    renderMasthead({ isPrivate: true, publicFloat: 0 }, { isCeo: true });
+    expect(screen.getByText("$24.74")).toBeTruthy();
+    expect(screen.queryByText("Bid")).toBeNull();
+    expect(screen.queryByText("$24.19")).toBeNull();
+    expect(screen.queryByText("$25.18")).toBeNull();
   });
 
   it("marks fogged figures as estimates and says where they come from", () => {
@@ -112,7 +123,8 @@ describe("CorporationMasthead", () => {
         },
       }
     );
-    expect(screen.getByText("~$2900000")).toBeTruthy();
+    // Cash appears in the phone summary and in the full strip.
+    expect(screen.getAllByText("~$2900000").length).toBeGreaterThan(0);
     expect(screen.getByText(/estimate from the turn 96 quarterly report/)).toBeTruthy();
   });
 
@@ -125,7 +137,7 @@ describe("CorporationMasthead", () => {
   it("shows private subsidiary valuation to the controlling parent CEO without settings", () => {
     renderMasthead({ isPrivate: true, viewerIsControllingParentCeo: true });
     expect(screen.getByText("$24.74")).toBeTruthy();
-    expect(screen.getByText("Mkt cap")).toBeTruthy();
+    expect(screen.getAllByText("Mkt cap").length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "Corporation settings" })).toBeNull();
   });
 

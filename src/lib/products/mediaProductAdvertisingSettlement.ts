@@ -12,6 +12,7 @@ import type { BankingTransition, TransitionLeg } from "@/lib/banking/rules/bound
 import { oid } from "@/lib/banking/rules/boundary";
 import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
 import { resumeSettlement, settleTransition } from "@/lib/banking/settlementJournal";
+import { KeyedQueue, interleaveByKey, runInLanes } from "@/lib/turn/settlementLanes";
 import {
   quoteFundedProductAdvertising,
   type ProductAdvertisingObligation,
@@ -31,6 +32,13 @@ import {
 } from "@/lib/products/productAdvertisingClearing";
 
 export type { ProductAdvertisingFamily } from "@/lib/products/productAdvertisingClearing";
+
+/**
+ * Concurrent buyers per settlement pass. Each order is a chain of about twenty
+ * dependent journal round trips, so buyers whose orders share no document
+ * settle side by side, as operating cash does.
+ */
+export const PRODUCT_ADVERTISING_LANES = 8;
 
 export type MediaAdvertisingSellerQuote = ProductAdvertisingSellerQuote;
 
@@ -355,24 +363,52 @@ export async function settleProductAdvertisingObligations(
   const journal = db.collection<{ _id: string }>(MONEY_MOVE_COLLECTION);
   const pools = new Set<string>();
 
-  for (const row of rows) {
+  const parsed = rows.map((row) => {
     const fields = row as unknown as Record<string, unknown>;
     const receipt = fields[receiptField] as
       { turn?: number; sellerCorporationIds?: string[] } | undefined;
     const obligations = Array.isArray(fields[obligationsField])
       ? (fields[obligationsField] as ProductAdvertisingObligation[])
       : [];
+    const due = receipt ? [] : obligations.filter((obligation) => obligation.turn <= currentTurn);
+    const keys = due.map((obligation) =>
+      productAdvertisingSettlementKey(row._id.toHexString(), obligation, family)
+    );
+    return { row, receipt, due, keys };
+  });
+
+  // One read for every order's prior journal record instead of one per order.
+  // A key this call has already handed to the journal is read live again, so a
+  // repeated legacy order sees exactly what the per-order read used to see.
+  const candidateKeys = parsed.flatMap((entry) => entry.keys);
+  const priorKeys = new Set(
+    candidateKeys.length === 0
+      ? []
+      : (
+          await journal.find({ _id: { $in: candidateKeys } }, { projection: { _id: 1 } }).toArray()
+        ).map((record) => record._id)
+  );
+  const attemptedKeys = new Set<string>();
+  const hasPrior = async (key: string) =>
+    attemptedKeys.has(key)
+      ? (await journal.findOne({ _id: key }, { projection: { _id: 1 } })) !== null
+      : priorKeys.has(key);
+
+  // Each row settles only its own buyer's orders, in order, and returns the
+  // corporations it touched; they are merged in row order afterwards so the
+  // result is the same list the sequential loop produced.
+  const settleRow = async ({ row, receipt, due }: (typeof parsed)[number]) => {
+    const rowTouched: string[] = [];
     if (receipt) {
-      touchCorporation(row._id.toHexString());
-      for (const sellerId of receipt.sellerCorporationIds ?? []) touchCorporation(sellerId);
+      rowTouched.push(row._id.toHexString());
+      for (const sellerId of receipt.sellerCorporationIds ?? []) rowTouched.push(sellerId);
     }
     // A receipt is a one-slot handoff to product progression. Do not settle a
     // second order until the consumer acknowledges and removes that receipt.
-    if (receipt) continue;
-    for (const obligation of obligations) {
-      if (obligation.turn > currentTurn) continue;
+    if (receipt) return rowTouched;
+    for (const obligation of due) {
       const key = productAdvertisingSettlementKey(row._id.toHexString(), obligation, family);
-      const prior = await journal.findOne({ _id: key }, { projection: { _id: 1 } });
+      const prior = await hasPrior(key);
       if (
         !prior &&
         (!obligation.buyerDenomination ||
@@ -400,6 +436,7 @@ export async function settleProductAdvertisingObligations(
       }
       // An existing key resumes from its own journal record, whatever its
       // shape: pre-clearing records still pay their sellers directly.
+      attemptedKeys.add(key);
       const result = prior
         ? await resumeSettlement(db, key)
         : await settleTransition(db, productAdvertisingTransition(row._id, obligation, family));
@@ -408,9 +445,9 @@ export async function settleProductAdvertisingObligations(
         result.status === "applied" ||
         (result.status === "replayed" && !result.error);
       if (moved) {
-        touchCorporation(row._id.toHexString());
+        rowTouched.push(row._id.toHexString());
         if (prior) {
-          for (const seller of obligation.sellerAllocations) touchCorporation(seller.corporationId);
+          for (const seller of obligation.sellerAllocations) rowTouched.push(seller.corporationId);
         }
       }
       if (result.status === "applied" || (result.status === "replayed" && !result.error)) {
@@ -435,7 +472,33 @@ export async function settleProductAdvertisingObligations(
         break;
       }
     }
-  }
+    return rowTouched;
+  };
+
+  // Orders of different buyers share no document except their currency's
+  // clearing pool, whose credit legs need one writer at a time. Rows therefore
+  // run in bounded lanes, serialized per buyer, per clearing pool and, for a
+  // resumed order that may still pay sellers directly, per seller.
+  const lock = new KeyedQueue();
+  const touchedByRow: string[][] = parsed.map(() => []);
+  const work = parsed.map((entry, index) => ({ entry, index }));
+  const poolKey = (entry: (typeof parsed)[number]) =>
+    entry.due[0] ? clearingPoolId(family, entry.due[0].buyerCurrencyCode) : "";
+  await runInLanes(
+    interleaveByKey(work, ({ entry }) => poolKey(entry)),
+    PRODUCT_ADVERTISING_LANES,
+    async ({ entry, index }) => {
+      const keys = [`corporations:${entry.row._id.toHexString()}`];
+      entry.due.forEach((obligation, i) => {
+        keys.push(`pool:${clearingPoolId(family, obligation.buyerCurrencyCode)}`);
+        if (!priorKeys.has(entry.keys[i])) return;
+        for (const seller of obligation.sellerAllocations)
+          keys.push(`corporations:${seller.corporationId}`);
+      });
+      touchedByRow[index] = await lock.run(keys, () => settleRow(entry));
+    }
+  );
+  for (const rowTouched of touchedByRow) for (const id of rowTouched) touchCorporation(id);
   // Stage 2 runs even when no order settled this call: payables a crash or a
   // deferred seller left owed are paid by the next clearing.
   if (!options.skipClearing) {

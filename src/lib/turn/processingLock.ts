@@ -22,7 +22,24 @@ export const TURN_LOCK_HEARTBEAT_MS = 30_000;
  * promptly while the drain barrier prevents later work from overlapping the
  * timed-out phase. A permanently hung function requires process recovery.
  */
-export const PHASE_TIMEOUT_MS = 4 * 60 * 1000;
+const DEFAULT_PHASE_TIMEOUT_MS = 4 * 60 * 1000;
+
+/**
+ * Per-phase timeout. Defaults to 4 minutes. A deployment can raise it with
+ * TURN_PHASE_TIMEOUT_MS (clamped to 1..30 minutes) when slow phases would
+ * otherwise time out and drop results that later phases depend on. The
+ * turn lock is heartbeat-renewed while a phase runs, so a longer phase does
+ * not make the lock look stale.
+ */
+export function resolvePhaseTimeoutMs(
+  raw: string | undefined = process.env.TURN_PHASE_TIMEOUT_MS
+): number {
+  const parsed = Number(raw);
+  if (!raw || !Number.isFinite(parsed) || parsed <= 0) return DEFAULT_PHASE_TIMEOUT_MS;
+  return Math.min(30 * 60 * 1000, Math.max(60 * 1000, Math.floor(parsed)));
+}
+
+export const PHASE_TIMEOUT_MS = resolvePhaseTimeoutMs();
 
 export type ProcessingLockSnapshot = Pick<
   GameState,

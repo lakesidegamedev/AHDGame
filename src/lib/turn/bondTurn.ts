@@ -37,6 +37,7 @@ import {
   freezeFundedSovereignBondMaturityQuote,
   settleFundedSovereignBondMaturity,
   settleSovereignBondMaturity,
+  sovereignMaturityCentralBankId,
 } from "@/lib/bonds/sovereign";
 import {
   addBankMaturityClaims,
@@ -1358,7 +1359,7 @@ export async function processBondTurn(
     if ((bond.centralBankHoldings ?? 0) > 0) {
       addHolderLeg(
         "centralBanks",
-        countryId,
+        sovereignMaturityCentralBankId(countryId),
         "reserveBalance",
         (bond.centralBankHoldings ?? 0) * BOND_UNIT_FACE_VALUE,
         bondCcy,

@@ -622,111 +622,124 @@ export default function CeoGovernancePanel({
 
       <CaretakerCeoCard corporation={corporation} corpId={corpId} onRefresh={onRefresh} />
 
-      <GovernanceRow
-        label="Resign as CEO"
-        summary="The seat falls vacant and shareholders vote for a successor. The corporation continues."
-        actionLabel="Resign"
-        tone="danger"
+      {/* The two ways out sit together, apart from the everyday governance. */}
+      <div
+        role="group"
+        aria-labelledby="ceo-leave-or-close"
+        className="mt-4 rounded-[var(--corp-rad,6px)] border border-error/50 px-3 pb-1 pt-2"
       >
-        <div className="flex flex-wrap items-center gap-1.5">
-          {showResignConfirm ? (
-            <>
-              <span className="text-xs text-foreground">Step down now?</span>
-              <SmallButton tone="danger" onClick={handleResign} disabled={resignLoading}>
-                {resignLoading ? "Resigning" : "Yes, resign"}
-              </SmallButton>
-              <SmallButton
-                onClick={() => dispatch({ type: "SET_SHOW_RESIGN_CONFIRM", value: false })}
-              >
-                Cancel
-              </SmallButton>
-            </>
-          ) : (
-            <SmallButton
-              tone="danger"
-              onClick={() => dispatch({ type: "SET_SHOW_RESIGN_CONFIRM", value: true })}
-            >
-              Resign as CEO
-            </SmallButton>
-          )}
-          <InlineStatus message={resignError} tone="error" />
-          <InlineStatus message={resignSuccess} tone="success" />
-        </div>
-      </GovernanceRow>
-
-      <GovernanceRow
-        label="Dissolve"
-        summary={
-          corporation.isPrivate
-            ? "Wind up the corporation and pay out shareholders. Cannot be undone."
-            : "Put winding up the corporation to a shareholder vote."
-        }
-        actionLabel="Dissolve"
-        tone="danger"
-      >
-        <div className="space-y-2">
-          <p className="text-xs text-muted">
-            Sectors return to the unowned pool, held bonds are redeemed at face value and holdings
-            in other corporations are sold at market. The proceeds go to every shareholder by share
-            count: corporate holders to their treasury, the public float to the central bank
-            reserve, your share to your personal funds.
-          </p>
-          {!showDissolveConfirm ? (
-            <SmallButton
-              tone="danger"
-              onClick={() => dispatch({ type: "SET_SHOW_DISSOLVE_CONFIRM", value: true })}
-            >
-              Preview payout
-            </SmallButton>
-          ) : (
-            <div className="space-y-2">
-              {dissolvePreviewLoading && (
-                <p className="text-xs text-muted">Loading the payout and market preview.</p>
-              )}
-              <InlineStatus message={dissolvePreviewError} tone="error" />
-              {dissolvePreview && !dissolvePreviewLoading && (
-                <DissolvePreview
-                  preview={dissolvePreview}
-                  corpCode={corpCode}
-                  formatFull={(amount, code) => formatFull(toInternalFrom(amount, code), code)}
-                />
-              )}
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-xs text-foreground">
-                  {corporation.isPrivate
-                    ? `Permanently dissolve ${corporation.name}?`
-                    : "Open a dissolution vote?"}
-                </span>
-                <SmallButton
-                  tone="danger"
-                  onClick={handleDissolve}
-                  disabled={
-                    dissolving ||
-                    (corporation.isPrivate
-                      ? dissolvePreviewLoading ||
-                        !!dissolvePreviewError ||
-                        !dissolvePreview ||
-                        !dissolvePreview.canQuickDissolve
-                      : (dissolvePreview?.dissolutionAgeTurnsRemaining ?? 0) > 0)
-                  }
-                >
-                  {dissolving
-                    ? "Working"
-                    : corporation.isPrivate
-                      ? "Yes, dissolve"
-                      : "Open dissolution vote"}
+        <h3
+          id="ceo-leave-or-close"
+          className="pb-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-error"
+        >
+          Leave or close
+        </h3>
+        <GovernanceRow
+          label="Resign as CEO"
+          summary="The seat falls vacant and shareholders vote for a successor. The corporation continues."
+          actionLabel="Resign"
+          tone="danger"
+        >
+          <div className="flex flex-wrap items-center gap-1.5">
+            {showResignConfirm ? (
+              <>
+                <span className="text-xs text-foreground">Step down now?</span>
+                <SmallButton tone="danger" onClick={handleResign} disabled={resignLoading}>
+                  {resignLoading ? "Resigning" : "Yes, resign"}
                 </SmallButton>
                 <SmallButton
-                  onClick={() => dispatch({ type: "SET_SHOW_DISSOLVE_CONFIRM", value: false })}
+                  onClick={() => dispatch({ type: "SET_SHOW_RESIGN_CONFIRM", value: false })}
                 >
                   Cancel
                 </SmallButton>
+              </>
+            ) : (
+              <SmallButton
+                tone="danger"
+                onClick={() => dispatch({ type: "SET_SHOW_RESIGN_CONFIRM", value: true })}
+              >
+                Resign as CEO
+              </SmallButton>
+            )}
+            <InlineStatus message={resignError} tone="error" />
+            <InlineStatus message={resignSuccess} tone="success" />
+          </div>
+        </GovernanceRow>
+
+        <GovernanceRow
+          label="Dissolve"
+          summary={
+            corporation.isPrivate
+              ? "Wind up the corporation and pay out shareholders. Cannot be undone."
+              : "Put winding up the corporation to a shareholder vote."
+          }
+          actionLabel="Dissolve"
+          tone="danger"
+        >
+          <div className="space-y-2">
+            <p className="text-xs text-muted">
+              Sectors return to the unowned pool, held bonds are redeemed at face value and holdings
+              in other corporations are sold at market. The proceeds go to every shareholder by
+              share count: corporate holders to their treasury, the public float to the central bank
+              reserve, your share to your personal funds.
+            </p>
+            {!showDissolveConfirm ? (
+              <SmallButton
+                tone="danger"
+                onClick={() => dispatch({ type: "SET_SHOW_DISSOLVE_CONFIRM", value: true })}
+              >
+                Preview payout
+              </SmallButton>
+            ) : (
+              <div className="space-y-2">
+                {dissolvePreviewLoading && (
+                  <p className="text-xs text-muted">Loading the payout and market preview.</p>
+                )}
+                <InlineStatus message={dissolvePreviewError} tone="error" />
+                {dissolvePreview && !dissolvePreviewLoading && (
+                  <DissolvePreview
+                    preview={dissolvePreview}
+                    corpCode={corpCode}
+                    formatFull={(amount, code) => formatFull(toInternalFrom(amount, code), code)}
+                  />
+                )}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-xs text-foreground">
+                    {corporation.isPrivate
+                      ? `Permanently dissolve ${corporation.name}?`
+                      : "Open a dissolution vote?"}
+                  </span>
+                  <SmallButton
+                    tone="danger"
+                    onClick={handleDissolve}
+                    disabled={
+                      dissolving ||
+                      (corporation.isPrivate
+                        ? dissolvePreviewLoading ||
+                          !!dissolvePreviewError ||
+                          !dissolvePreview ||
+                          !dissolvePreview.canQuickDissolve
+                        : (dissolvePreview?.dissolutionAgeTurnsRemaining ?? 0) > 0)
+                    }
+                  >
+                    {dissolving
+                      ? "Working"
+                      : corporation.isPrivate
+                        ? "Yes, dissolve"
+                        : "Open dissolution vote"}
+                  </SmallButton>
+                  <SmallButton
+                    onClick={() => dispatch({ type: "SET_SHOW_DISSOLVE_CONFIRM", value: false })}
+                  >
+                    Cancel
+                  </SmallButton>
+                </div>
               </div>
-            </div>
-          )}
-          <InlineStatus message={actionError} tone="error" />
-        </div>
-      </GovernanceRow>
+            )}
+            <InlineStatus message={actionError} tone="error" />
+          </div>
+        </GovernanceRow>
+      </div>
 
       {shareholderAddressOpen && (
         <MailComposerModal

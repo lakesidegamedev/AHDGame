@@ -2600,8 +2600,9 @@ describe("processSectors, dominance regulatory burden flows to corp earnings", (
     })();
 
     // With dominance at 100% share:
-    //   - margin penalty: -15pp → effective margin = 35% → maintenance = 650 → margin profit = 350
-    //   - regulatory burden: 5% of revenue = 50 → final profit = 350 - 50 = 300
+    //   - margin penalty: -15pp, capped with the other size costs at 7.5pp
+    //     → effective margin = 42.5% → margin profit = 425
+    //   - regulatory burden: 5% of revenue = 50 → final profit = 425 - 50 = 375
     //   - corp earnings (incomePreDividends) MUST reflect both, not just margin.
     const dominant = (() => {
       const corp = makeCorp();
@@ -2615,12 +2616,12 @@ describe("processSectors, dominance regulatory burden flows to corp earnings", (
     expect(baseline.totalIncomeGenerated).toBeCloseTo(500, 2);
 
     // Dominant corp's income must reflect BOTH the margin penalty AND the
-    // regulatory burden. Expected: 1000 × 0.35 - 1000 × 0.05 = 350 - 50 = 300.
-    expect(dominant.totalIncomeGenerated).toBeCloseTo(300, 2);
+    // regulatory burden. Expected: 1000 × 0.425 - 1000 × 0.05 = 425 - 50 = 375.
+    expect(dominant.totalIncomeGenerated).toBeCloseTo(375, 2);
 
     // Snapshot incomePreDividends should match the income (no corp-level overhead).
     const snap = dominant.corpSnapshots[0];
-    expect(snap.incomePreDividends).toBeCloseTo(300, 2);
+    expect(snap.incomePreDividends).toBeCloseTo(375, 2);
 
     // sectorNPV reflects post-burden yearly profit (positive, finite).
     expect(snap.sectorNPV).toBeGreaterThan(0);

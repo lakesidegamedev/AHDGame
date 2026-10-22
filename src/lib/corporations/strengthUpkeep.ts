@@ -31,8 +31,8 @@ export const STRENGTH_UPKEEP_STAGE = {
   MARKETING_DECAY: 3,
 } as const;
 
-/** Marketing strength lost per turn once decay is on, like R&D's 3%. */
-export const MARKETING_DECAY_RATE = 0.03;
+/** Marketing strength lost per turn once decay is on (halved from 3% on 2026-10-22). */
+export const MARKETING_DECAY_RATE = 0.015;
 
 /** Most of the dominance toll a tech shield may remove once capped. */
 export const DOMINANCE_SHIELD_UPKEEP_CAP = 0.5;
