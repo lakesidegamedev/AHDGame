@@ -46,6 +46,10 @@ async function main(): Promise<void> {
     );
     process.exit(1);
   }
+  // Turn phases run long aggregations; the web default (60s, one driver retry)
+  // aborted turn 373's bankingTurn at ~120s under disk contention. Set before
+  // anything opens the Mongo client. An explicit deployment value still wins.
+  process.env.MONGODB_SOCKET_TIMEOUT_MS ||= String(5 * 60_000);
 
   // Unlike next start, this entry point does not run instrumentation.ts.
   // Initialize the same error and memory reporting before loading the cron
