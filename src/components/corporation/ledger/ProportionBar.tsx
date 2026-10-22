@@ -21,8 +21,14 @@ export function ProportionBar({
   tone?: MeterTone | "muted";
   className?: string;
 }) {
+  // A caller-supplied width replaces the default; two width utilities on one
+  // element would leave the result to stylesheet order.
+  const width = /(^|\s)(sm:|md:|lg:)?w-/.test(className) ? "" : "w-full";
   return (
-    <div aria-hidden className={`h-1.5 w-full overflow-hidden rounded-[1px] bg-track ${className}`}>
+    <div
+      aria-hidden
+      className={`h-1.5 ${width} overflow-hidden rounded-[1px] bg-track ${className}`}
+    >
       <div data-fill className={`h-full ${FILL[tone]}`} style={{ width: pctWidth(pct) }} />
     </div>
   );

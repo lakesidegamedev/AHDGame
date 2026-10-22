@@ -223,3 +223,17 @@ describe("RatingScale tone", () => {
     );
   });
 });
+
+describe("ProportionBar width", () => {
+  it("fills its container by default", () => {
+    const { container } = render(<ProportionBar pct={40} />);
+    expect((container.firstChild as HTMLElement).className).toContain("w-full");
+  });
+
+  it("a width class replaces the full width instead of fighting it", () => {
+    const { container } = render(<ProportionBar pct={40} className="w-8" />);
+    const classes = (container.firstChild as HTMLElement).className.split(/\s+/);
+    expect(classes).toContain("w-8");
+    expect(classes).not.toContain("w-full");
+  });
+});

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Skeleton } from "@/components/ui";
-import { DenseSection, KVList, KVRow, Td, Th } from "./dense/DenseKit";
+import { DenseSection, KVList, KVRow, TableScroll, Td, Th } from "./dense/DenseKit";
 import { DenseLineChart } from "./dense/DenseLineChart";
 import { RatingScale } from "./ledger/RatingScale";
 import { ProportionBar } from "./ledger/ProportionBar";
@@ -125,7 +125,11 @@ function PeerRow({
       <Td align="right">
         {isFiniteNumber(composite) ? (
           <span className="inline-flex items-center justify-end gap-2">
-            <ProportionBar pct={composite} tone={you ? "info" : "muted"} className="w-12" />
+            <ProportionBar
+              pct={composite}
+              tone={you ? "info" : "muted"}
+              className="hidden w-8 sm:block"
+            />
             {composite}
           </span>
         ) : (
@@ -666,39 +670,45 @@ export default function CreditRatingTab({
 
         {peerStats && (
           <DenseSection title="Peers" meta="rated corporations">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr>
-                  <Th />
-                  <Th align="right" title="Rated corporations in the average">
-                    Peers
-                  </Th>
-                  <Th align="right">Composite</Th>
-                  <Th align="right">New-issue coupon</Th>
-                </tr>
-              </thead>
-              <tbody>
-                <PeerRow
-                  label="You"
-                  you
-                  n={null}
-                  composite={peerStats.you.composite ?? cr.compositeScore}
-                  coupon={cr.effectiveCouponRate}
-                />
-                <PeerRow
-                  label="Country average"
-                  n={peerStats.countryPeers?.n ?? null}
-                  composite={peerStats.countryPeers?.avgComposite}
-                  coupon={peerStats.countryPeers?.avgNewIssueCouponPct}
-                />
-                <PeerRow
-                  label="Sector average"
-                  n={peerStats.sectorPeers?.n ?? null}
-                  composite={peerStats.sectorPeers?.avgComposite}
-                  coupon={peerStats.sectorPeers?.avgNewIssueCouponPct}
-                />
-              </tbody>
-            </table>
+            {/* The sidebar is about 320px wide: short headers keep the table inside
+                it, and the scroll wrapper catches anything narrower. */}
+            <TableScroll>
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr>
+                    <Th />
+                    <Th align="right" title="Rated corporations in the average">
+                      Peers
+                    </Th>
+                    <Th align="right">Composite</Th>
+                    <Th align="right" title="Average coupon on new bond issues">
+                      Coupon
+                    </Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <PeerRow
+                    label="You"
+                    you
+                    n={null}
+                    composite={peerStats.you.composite ?? cr.compositeScore}
+                    coupon={cr.effectiveCouponRate}
+                  />
+                  <PeerRow
+                    label="Country average"
+                    n={peerStats.countryPeers?.n ?? null}
+                    composite={peerStats.countryPeers?.avgComposite}
+                    coupon={peerStats.countryPeers?.avgNewIssueCouponPct}
+                  />
+                  <PeerRow
+                    label="Sector average"
+                    n={peerStats.sectorPeers?.n ?? null}
+                    composite={peerStats.sectorPeers?.avgComposite}
+                    coupon={peerStats.sectorPeers?.avgNewIssueCouponPct}
+                  />
+                </tbody>
+              </table>
+            </TableScroll>
             {isFiniteNumber(peerStats.you.composite) &&
               isFiniteNumber(peerStats.countryPeers?.avgComposite) && (
                 <p className="pt-1.5 text-xs text-muted">
