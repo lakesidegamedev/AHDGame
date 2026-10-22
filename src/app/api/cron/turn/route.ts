@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { getGameState } from "@/lib/gameState";
 import { processTurn } from "@/lib/turnSystem";
+import { turnsOwnedByWorker } from "@/lib/turn/turnWorkerHandoff";
 import { logRequest } from "@/lib/api/requestLog";
 import { requireCron } from "@/lib/api/requireCron";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
@@ -47,6 +48,13 @@ export async function GET(req: Request) {
         console.warn("[cron/turn] Unauthorized: Authorization header present but secret mismatch");
       }
       return errorResponse(401, "Unauthorized");
+    }
+
+    // The worker runs the schedule itself; an external trigger here would run the
+    // turn inside the web server and block player requests for its duration.
+    if (turnsOwnedByWorker(process.env)) {
+      console.info("[cron/turn] Skipped: the turn worker owns turns (CRON_OWNER=worker)");
+      return NextResponse.json({ skipped: true, message: "The turn worker owns turns." });
     }
 
     const gameState = await getGameState();

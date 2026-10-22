@@ -4,10 +4,15 @@ import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { processTurn } from "@/lib/turnSystem";
 import { parseJsonBody } from "@/lib/api/validate";
 import { adminTurnBatchSchema } from "@/lib/api/schemas/admin";
+import { getDb } from "@/lib/mongodb";
+import { turnsOwnedByWorker } from "@/lib/turn/turnWorkerHandoff";
+import { queueAdminTurns } from "@/lib/turn/queueAdminTurns";
 
 // POST /api/admin/turn/batch — Processes multiple game turns in sequence and returns per-turn results.
+// When the turn worker owns turns (CRON_OWNER=worker) it queues them for the worker
+// and returns 202 instead of running them inside this server.
 // Auth: requireAdmin
-// Errors: 400, 403
+// Errors: 400, 403, 409 (a request is already open), 503 (turn worker offline)
 export async function POST(request: Request) {
   try {
     const auth = await requireAdmin();
@@ -18,6 +23,10 @@ export async function POST(request: Request) {
       return errorResponse(parsed.status, parsed.error);
     }
     const { count } = parsed.data;
+
+    if (turnsOwnedByWorker(process.env)) {
+      return queueAdminTurns(await getDb(), { count, requestedBy: auth.admin.username });
+    }
 
     const results: { turn: number; message: string; warnings?: string[] }[] = [];
     const start = performance.now();

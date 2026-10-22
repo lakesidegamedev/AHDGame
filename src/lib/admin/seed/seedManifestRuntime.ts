@@ -5,6 +5,12 @@ import type { CollectionEntry } from "./seedManifestTypes";
 
 export const RUNTIME: CollectionEntry[] = [
   {
+    name: "turnWorkerControl",
+    category: "runtime",
+    notes:
+      "Turn worker heartbeat and the admin turn request it claims. Operational state: the worker rewrites the heartbeat within seconds, and a request queued in the old world must not survive a reset.",
+  },
+  {
     name: "playerIncomeTaxAssessments",
     category: "runtime",
     notes:
