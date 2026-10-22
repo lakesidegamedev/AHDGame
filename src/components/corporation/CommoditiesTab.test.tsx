@@ -113,7 +113,11 @@ describe("CommoditiesTab private supply", () => {
     render(<CommoditiesTab corpId="624" isCeo />);
 
     await waitFor(() => expect(screen.getByText("Advertising & Media")).toBeTruthy());
-    expect(screen.getByText("Net production")).toBeTruthy();
+    // Consumption only: the inputs table carries it, outputs says there are none.
+    expect(
+      within(screen.getByRole("table", { name: "Inputs" })).getByText("Consumed")
+    ).toBeTruthy();
+    expect(screen.getByText("This corporation produces no commodities.")).toBeTruthy();
     expect(
       screen.getByText(/519,229 of 5,130,654 campaigns consumed came from private supply/)
     ).toBeTruthy();
@@ -125,7 +129,7 @@ describe("CommoditiesTab private supply", () => {
     ).toBeTruthy();
   });
 
-  it("links supply-deal actions to the Commodities tab where the form lives", async () => {
+  it("points to the supply agreement form from the intro, not from every row", async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -151,8 +155,10 @@ describe("CommoditiesTab private supply", () => {
 
     render(<CommoditiesTab corpId="604" isCeo />);
 
-    const link = await screen.findByRole("link", { name: "Supply deal" });
-    expect(link.getAttribute("href")).toBe("/corporation/604?tab=commodities#supply-agreements");
+    // The rows link to their market only; the intro sentence carries the way
+    // to the supply agreement form.
+    await screen.findByRole("link", { name: "Market" });
+    expect(screen.queryByRole("link", { name: "Supply deal" })).toBeNull();
     expect(screen.getByRole("link", { name: "Supply agreements" }).getAttribute("href")).toBe(
       "/corporation/604?tab=commodities#supply-agreements"
     );
@@ -292,5 +298,103 @@ describe("CommoditiesTab by region", () => {
     await screen.findByText("Nevada");
     expect(screen.queryByRole("button", { name: "Nevada" })).toBeNull();
     expect(screen.queryByRole("button", { name: /Nevada inputs and outputs/ })).toBeNull();
+  });
+});
+
+describe("CommoditiesTab inputs and outputs", () => {
+  const flow = (
+    commodity: string,
+    label: string,
+    outputUnits: number,
+    consumptionUnits: number,
+    extra: Record<string, unknown> = {}
+  ) => ({
+    commodity,
+    label,
+    icon: "",
+    color: "",
+    unit: "u",
+    outputUnits,
+    consumptionUnits,
+    netUnits: outputUnits - consumptionUnits,
+    market: { price: 10 },
+    ...extra,
+  });
+  const sector = (n: number) => ({ sectorId: `s${n}`, label: "Energy" });
+
+  beforeEach(() => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        clearingEnabled: true,
+        supplyAgreementsEnabled: true,
+        commodities: [
+          // Made and used: electricity plants burn some of their own output.
+          flow("electricity", "Electricity", 447, 62, {
+            outputSectors: [sector(1), sector(2), sector(3)],
+          }),
+          flow("coal", "Coal", 0, 56, {
+            privateSupply: {
+              contractedUnits: 40,
+              deliveredUnits: 30,
+              consumptionCoveredUnits: 30,
+              coveragePercent: 54,
+              turn: 6,
+              consumptionUnits: 56,
+            },
+          }),
+          flow("steel", "Steel", 12, 0, {
+            outputSectors: [{ sectorId: "m1", label: "Manufacturing" }],
+          }),
+        ],
+        regions: [],
+        marketShare: [],
+      }),
+    } as Response);
+  });
+
+  it("splits flows into an inputs table and an outputs table", async () => {
+    render(<CommoditiesTab corpId="7" isCeo />);
+    const inputs = await screen.findByRole("table", { name: "Inputs" });
+    const outputs = screen.getByRole("table", { name: "Outputs" });
+    expect(within(inputs).getByText("Coal")).toBeTruthy();
+    expect(within(inputs).queryByText("Steel")).toBeNull();
+    expect(within(outputs).getByText("Steel")).toBeTruthy();
+    expect(within(outputs).queryByText("Coal")).toBeNull();
+    // Inputs come first, as before.
+    expect(inputs.compareDocumentPosition(outputs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("lists a commodity it both makes and uses in both tables", async () => {
+    render(<CommoditiesTab corpId="7" isCeo />);
+    const inputs = await screen.findByRole("table", { name: "Inputs" });
+    const outputs = screen.getByRole("table", { name: "Outputs" });
+    expect(within(inputs).getByText("Electricity")).toBeTruthy();
+    expect(within(outputs).getByText("Electricity")).toBeTruthy();
+    // Net production belongs with outputs: own output minus own use.
+    expect(within(outputs).getByText("+385")).toBeTruthy();
+    expect(within(inputs).queryByText("+385")).toBeNull();
+  });
+
+  it("keeps the private supply line with the inputs", async () => {
+    render(<CommoditiesTab corpId="7" isCeo />);
+    const inputs = await screen.findByRole("table", { name: "Inputs" });
+    expect(within(inputs).getByText("Private supply")).toBeTruthy();
+  });
+
+  it("totals each table in its header", async () => {
+    render(<CommoditiesTab corpId="7" isCeo />);
+    await screen.findByRole("table", { name: "Inputs" });
+    // Inputs: (62 + 56) x 10. Outputs: (447 + 12) x 10.
+    expect(screen.getByText("2 commodities, $1180 per turn")).toBeTruthy();
+    expect(screen.getByText("2 commodities, $4590 per turn")).toBeTruthy();
+  });
+
+  it("links each row to its market only", async () => {
+    render(<CommoditiesTab corpId="7" isCeo />);
+    const outputs = await screen.findByRole("table", { name: "Outputs" });
+    expect(within(outputs).getAllByRole("link", { name: "Market" })).toHaveLength(2);
+    expect(within(outputs).queryByRole("link", { name: /^Pricing/ })).toBeNull();
+    expect(within(outputs).queryByRole("link", { name: "Supply deal" })).toBeNull();
   });
 });

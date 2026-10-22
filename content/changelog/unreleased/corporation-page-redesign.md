@@ -32,3 +32,4 @@ areas: [frontend]
 - Structure draws your group: the parent above, your corporation, and each subsidiary with the share you own. Any corporation in a group now has a Structure tab, and management overhead is listed under group effects.
 - In the CEO Office the dividend is set with a slider from 0% to the 25% cap, in single points, with any legal or parent minimum marked on the track. Resign and Dissolve sit together in a "Leave or close" group.
 - Money in the sponsored fund, bank fund, index listing, supply agreement, bond history and share history panels now shows in your display currency. Seed capital and lobbying fees are typed in your corporation's own currency.
+- Commodity flows split into Inputs and Outputs, each with its total per turn. A commodity a corporation both makes and uses appears in both. Each row links to its market; the supply agreement form is linked once from the intro.
