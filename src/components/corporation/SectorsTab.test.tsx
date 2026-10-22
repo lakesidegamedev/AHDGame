@@ -12,7 +12,7 @@ import {
 import { NextIntlClientProvider } from "next-intl";
 import messages from "../../../messages/en/corporations.json";
 import type { ReactElement, ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import SectorsTab from "./SectorsTab";
 import type { SectorDetail } from "./CorporationPageTypes";
 
@@ -426,5 +426,81 @@ describe("SectorsTab folded media lanes", () => {
     pickType("media::");
     expect(screen.getAllByText("Daily Courier").length).toBeGreaterThan(0);
     expect(screen.queryAllByText("Lakeshore Studios")).toHaveLength(0);
+  });
+});
+
+describe("SectorsTab margins drawer", () => {
+  beforeEach(() => {
+    // Panels inside the tab load their own data; keep these renders offline.
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, json: async () => ({}) }));
+  });
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  const openDrawer = () =>
+    fireEvent.click(screen.getAllByRole("button", { name: "Show margin breakdown" })[0]);
+
+  it("drawer shows capacity to net profit", () => {
+    render(
+      <SectorsTab
+        {...baseProps}
+        isCeo
+        sectors={[sector({ _id: "p1", sectorType: "manufacturing", displayName: "Akron Works" })]}
+      />
+    );
+    openDrawer();
+    const drawer = screen.getByRole("region", { name: "Margins, Akron Works" });
+    expect(within(drawer).getByRole("heading", { name: "Capacity → net profit" })).toBeTruthy();
+    for (const line of ["Capacity", "Produced", "Sold", "Operating profit", "Net profit"]) {
+      expect(within(drawer).getAllByText(line).length).toBeGreaterThan(0);
+    }
+    expect(within(drawer).getByText("Effective margin build")).toBeTruthy();
+    expect(within(drawer).getByText("Production policy")).toBeTruthy();
+    expect(within(drawer).getByRole("link", { name: "Build capacity" }).getAttribute("href")).toBe(
+      "/corporation/corp-1/sector/p1?build=1"
+    );
+    expect(within(drawer).getByRole("link", { name: "Details" }).getAttribute("href")).toBe(
+      "/corporation/corp-1/sector/p1"
+    );
+    expect(within(drawer).getByRole("button", { name: "Abandon" })).toBeTruthy();
+    // Splitting is a move against a rival, never on your own plants.
+    expect(within(drawer).queryByRole("link", { name: "Split rival plants" })).toBeNull();
+  });
+
+  it("offers a rival the split planner from the drawer", () => {
+    render(
+      <SectorsTab
+        {...baseProps}
+        isCeo={false}
+        canSplitRivalPlants
+        sectors={[sector({ _id: "p1", sectorType: "manufacturing", displayName: "Akron Works" })]}
+      />
+    );
+    openDrawer();
+    const drawer = screen.getByRole("region", { name: "Margins, Akron Works" });
+    expect(
+      within(drawer).getByRole("link", { name: "Split rival plants" }).getAttribute("href")
+    ).toBe("/corporation/corp-1/sector/p1?split=1");
+    expect(within(drawer).queryByRole("link", { name: "Build capacity" })).toBeNull();
+    expect(within(drawer).queryByRole("button", { name: "Abandon" })).toBeNull();
+  });
+
+  it("legacy rows keep the growth bar", () => {
+    render(
+      <SectorsTab
+        {...baseProps}
+        plantsMode={false}
+        isCeo
+        onGrowthChange={() => undefined}
+        sectors={[sector({ _id: "g1", sectorType: "manufacturing", displayName: "Old Mill" })]}
+      />
+    );
+    expect(screen.getAllByRole("slider").length).toBeGreaterThan(0);
+    openDrawer();
+    const drawer = screen.getByRole("region", { name: "Margins, Old Mill" });
+    expect(within(drawer).queryByRole("heading", { name: "Capacity → net profit" })).toBeNull();
+    expect(within(drawer).getByText("Effective margin build")).toBeTruthy();
   });
 });

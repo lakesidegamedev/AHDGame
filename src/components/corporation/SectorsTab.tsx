@@ -94,6 +94,8 @@ interface SectorsTabProps {
   expandStateId?: string;
   /** Called after consuming expand deep-link params (clear URL). */
   onExpandDeepLinkConsumed?: () => void;
+  /** A rival viewer may plan a split of these plants from the margins drawer. */
+  canSplitRivalPlants?: boolean;
 }
 
 export default function SectorsTab({
@@ -124,6 +126,7 @@ export default function SectorsTab({
   expandSectorType,
   expandStateId,
   onExpandDeepLinkConsumed,
+  canSplitRivalPlants = false,
 }: SectorsTabProps) {
   const { formatAmount, toInternalFrom } = useCurrency();
   // Post-v0.2.6: sector revenue / profit / growthCost are in corp currency.
@@ -371,7 +374,7 @@ export default function SectorsTab({
               id={typeSelectId}
               value={activeTypeFilter}
               onChange={(e) => setFilterType(e.target.value)}
-              className="h-7 rounded-md border border-card-border bg-background px-2 text-xs text-foreground focus:border-foreground focus:outline-none"
+              className="h-7 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-2 text-xs text-foreground focus:border-foreground focus:outline-none"
             >
               <option value="">All types ({sectors.length})</option>
               {sectorTypes.map((t) => (
@@ -441,7 +444,7 @@ export default function SectorsTab({
               aria-label="Filter sectors by name or state"
               value={filterText}
               onChange={(e) => setFilterText(e.target.value)}
-              className="h-7 w-28 rounded-md border border-card-border bg-background px-2 text-xs text-foreground placeholder:text-muted focus:border-foreground focus:outline-none"
+              className="h-7 w-28 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-2 text-xs text-foreground placeholder:text-muted focus:border-foreground focus:outline-none"
             />
           </>
         }
@@ -519,6 +522,7 @@ export default function SectorsTab({
                   fmtAnchor={fmtAnchor}
                   plantsMode={plantsMode}
                   mediaOperatingModelsEnabled={mediaOperatingModelsEnabled}
+                  canSplitRivalPlants={canSplitRivalPlants}
                 />
               ))}
             </ul>

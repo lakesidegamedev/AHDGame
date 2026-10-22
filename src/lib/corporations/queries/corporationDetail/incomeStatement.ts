@@ -1,3 +1,4 @@
+import type { CountryTax } from "./countryStatements";
 import type { Db } from "mongodb";
 import { applyLossCarryforward } from "@/lib/corporations/rules/lossCarryforward";
 import type { Corporation, FederalBudget } from "@/lib/db/types";
@@ -85,6 +86,8 @@ export interface IncomeStatementResult {
   passThroughPhase: number;
   displayStateTax: number;
   federalTaxByCountry: Record<string, number>;
+  /** Tax on each country's own sectors, after the loss carryforward. */
+  sectorTaxByCountry: Record<string, CountryTax>;
   perSectorTax: Map<string, SectorTaxLine>;
   corporateTax: number;
   corpTaxMultiplier: number;
@@ -287,6 +290,9 @@ export async function computeIncomeStatement(
   let displayFederalTax = 0;
   let displayStateTax = 0;
   const federalTaxByCountry: Record<string, number> = {};
+  // Tax on each country's own sectors only: the corp-wide coupon and
+  // pass-through owner taxes added below have no country of their own.
+  const sectorTaxByCountry: Record<string, CountryTax> = {};
   const perSectorTax = new Map<string, SectorTaxLine>();
   for (const sd of sectorDetails) {
     const revenueShare =
@@ -311,6 +317,9 @@ export async function computeIncomeStatement(
     displayFederalTax += fedTax;
     displayStateTax += stTax;
     federalTaxByCountry[sectorCountry] = (federalTaxByCountry[sectorCountry] ?? 0) + fedTax;
+    const countryTax = (sectorTaxByCountry[sectorCountry] ??= { federal: 0, state: 0 });
+    countryTax.federal += fedTax;
+    countryTax.state += stTax;
     perSectorTax.set(sd._id.toString(), {
       federalTaxPaid: fedTax,
       stateTaxPaid: stTax,
@@ -417,6 +426,10 @@ export async function computeIncomeStatement(
     passThroughOwnerTaxLocal = Math.round(passThroughOwnerTaxLocal * lossCarry.taxScale);
     for (const cc of Object.keys(federalTaxByCountry)) {
       federalTaxByCountry[cc] = Math.round(federalTaxByCountry[cc] * lossCarry.taxScale);
+    }
+    for (const tax of Object.values(sectorTaxByCountry)) {
+      tax.federal = Math.round(tax.federal * lossCarry.taxScale);
+      tax.state = Math.round(tax.state * lossCarry.taxScale);
     }
   }
   const taxLossCarryforwardLocal = Math.round(lossBankLocal);
@@ -582,6 +595,7 @@ export async function computeIncomeStatement(
     passThroughPhase,
     displayStateTax,
     federalTaxByCountry,
+    sectorTaxByCountry,
     perSectorTax,
     corporateTax,
     corpTaxMultiplier,

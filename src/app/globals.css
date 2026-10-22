@@ -1622,3 +1622,36 @@ ins.adsbygoogle[data-ad-status="unfilled"] {
 .adsense-container:has(ins.adsbygoogle[data-ad-status="unfilled"]) {
   display: none;
 }
+
+/* Corporation page "ledger" look (CorpLedgerProvider). Scoped to the page's
+   root so other pages keep their styling. Figures use Geist with fixed-width
+   digits instead of the mono face, and groups share one corner radius. */
+[data-corp-ledger] {
+  --corp-rad: 6px;
+}
+[data-corp-ledger] .font-mono {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Corporation pages: a six-hue categorical palette for breakdowns by entity
+   (revenue by country). Order validated for colour-blind separation between
+   neighbours, the wrap included; red and green are left out because they mean
+   loss and profit on these pages. Dark steps by default, light steps for the
+   light themes. */
+[data-corp-ledger] {
+  --corp-cat-1: #3987e5;
+  --corp-cat-2: #d95926;
+  --corp-cat-3: #199e70;
+  --corp-cat-4: #9085e9;
+  --corp-cat-5: #c98500;
+  --corp-cat-6: #d55181;
+}
+:is([data-theme="light"], [data-theme="pastel"], [data-theme="broadsheet"]) [data-corp-ledger] {
+  --corp-cat-1: #2a78d6;
+  --corp-cat-2: #eb6834;
+  --corp-cat-3: #1baf7a;
+  --corp-cat-4: #6250d6;
+  --corp-cat-5: #eda100;
+  --corp-cat-6: #e87ba4;
+}

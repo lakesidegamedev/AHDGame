@@ -28,6 +28,8 @@ interface AttackPanelProps {
    * PVP, not a growth lever.
    */
   showSplit: boolean;
+  /** Deep link from the corporation page drawer: open the plant-split planner. */
+  openPlannerOnMount?: boolean;
   attacking: boolean;
   attackError: string;
   attackMsg: string;
@@ -46,6 +48,7 @@ export default function AttackPanel({
   targetName,
   showAttack,
   showSplit,
+  openPlannerOnMount = false,
   attacking,
   attackError,
   attackMsg,
@@ -72,7 +75,7 @@ export default function AttackPanel({
   const activeStrength = affordableStrengths.includes(selectedStrength)
     ? selectedStrength
     : (affordableStrengths[0] ?? "full");
-  const [plannerOpen, setPlannerOpen] = useState(false);
+  const [plannerOpen, setPlannerOpen] = useState(openPlannerOnMount);
 
   const targetNativeCurrency = targetCurrencyCode ?? sectorCurrencyCode;
   const userNativeCurrency =

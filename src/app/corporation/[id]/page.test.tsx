@@ -5,11 +5,13 @@ import CorporationDetailPage from "./page";
 import { captureClientExceptionWithId } from "@/lib/observability/sentryClientLazy";
 
 const toast = vi.fn();
+// The query string the page reads; tests that need a tab set it.
+let search = "";
 vi.mock("@/contexts/ToastContext", () => ({ useToast: () => ({ showToast: toast }) }));
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "bad-id" }),
   useRouter: () => ({ push: vi.fn() }),
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => new URLSearchParams(search),
   usePathname: () => "/corporation/bad-id",
 }));
 vi.mock("@/hooks/useGameEvents", () => ({ useGameEvents: vi.fn() }));
@@ -41,11 +43,13 @@ vi.mock("@/components/corporation/CorporationMasthead", () => ({
   CorporationMasthead: ({
     corporation,
     onRefresh,
+    showBanner,
   }: {
     corporation: { name: string };
     onRefresh: () => void;
+    showBanner?: boolean;
   }) => (
-    <div>
+    <div data-testid="masthead" data-show-banner={String(showBanner === true)}>
       <span>{corporation.name}</span>
       <button type="button" onClick={onRefresh}>
         Refresh corporation
@@ -56,6 +60,38 @@ vi.mock("@/components/corporation/CorporationMasthead", () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  search = "";
+});
+
+describe("corporation banner", () => {
+  it("shows the uploaded banner on every tab, not only Overview", async () => {
+    search = "tab=finance";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) =>
+        String(input) === "/api/corporations/bad-id"
+          ? new Response(
+              JSON.stringify({
+                corporation: {
+                  _id: "corp-1",
+                  name: "Alder Works",
+                  isPrivate: true,
+                  type: "manufacturing",
+                },
+                ceo: null,
+                financials: null,
+                sectors: [],
+                balanceSheet: null,
+              }),
+              { status: 200 }
+            )
+          : new Response("{}", { status: 200 })
+      )
+    );
+    render(<CorporationDetailPage />);
+    expect((await screen.findAllByText("Alder Works")).length).toBeGreaterThan(0);
+    expect(screen.getByTestId("masthead").getAttribute("data-show-banner")).toBe("true");
+  });
 });
 
 describe("corporation load errors", () => {
