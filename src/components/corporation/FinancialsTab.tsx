@@ -23,6 +23,10 @@ import { TariffRestrictions } from "./TariffRestrictions";
 import { SubsidyBenefits } from "./SubsidyBenefits";
 import { GroupOverviewCard } from "./GroupOverviewCard";
 import { BalanceSheetRings } from "./finance/BalanceSheetRings";
+import { CountryRevenueRing } from "./finance/CountryRevenueRing";
+import { CountryStatement } from "./finance/CountryStatement";
+import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
+import type { CountryId } from "@/lib/constants/countries";
 import {
   buildAllocation,
   cashAfterContracts,
@@ -98,6 +102,11 @@ export default function FinancialsTab({
   const money = useCorpMoney(corporation.liquidCurrencyCode, corporation.countryId);
   const tArrears = useTranslations("corporations.arrears");
   const [view, setView] = useState<StatementView>("income");
+  // "all" or a country id. A country the corporation has left falls back to All.
+  const [country, setCountry] = useState("all");
+  const displayCountry = useCountryDisplayName();
+  // Country ids arrive from sector rows as plain strings.
+  const countryName = (id: string) => displayCountry(id as CountryId);
   const [npvPage, setNpvPage] = useState(0);
 
   const fogged = financialFogOfWar != null;
@@ -145,6 +154,13 @@ export default function FinancialsTab({
           .map(([country, amt]) => `${country} ${money.fmt(amt * MONEY_PERIOD_FACTOR[periodView])}`)
           .join(", ")}. Each sector pays its country's federal rate on its share of income.`
       : "Federal corporate income tax on profitable sectors.";
+
+  const countryRows = financials.byCountry ?? [];
+  const showCountries = countryRows.length >= 2;
+  const selectedCountry =
+    showCountries && country !== "all"
+      ? (countryRows.find((r) => r.countryId === country) ?? null)
+      : null;
 
   const operatingCountries = [...new Set(sectors.map((s) => s.countryId ?? corporation.countryId))];
   const hasForeignOperations = operatingCountries.some((c) => c !== corporation.countryId);
@@ -234,342 +250,390 @@ export default function FinancialsTab({
 
       {view === "income" && (
         <div className="grid gap-x-8 gap-y-6 lg:grid-cols-[minmax(0,1fr)_300px]">
-          <DenseSection title="Income statement" meta={MONEY_PERIOD_PER_LABEL[periodView]}>
-            <p className="py-2 text-xs text-muted">
-              Current estimates use today&apos;s sectors and budgets. Last-turn income is what the
-              engine recorded before later changes to capacity, production or spending.
-            </p>
-            <StatementTable>
-              <StatementGroup>Current estimate</StatementGroup>
-              <StatementLine
-                strong
-                label="Gross revenue"
-                amount={fmt(scale(revenue))}
-                pct={revenue > 0 ? "100%" : null}
-                note={`${financials.growthRateIsRealized ? "Grew" : "Growing"} ${(financials.currentGrowthRate ?? 0).toFixed(2)}%${financials.growthRateIsRealized ? " over the past year" : " a turn on average"}`}
-                title="Total gross revenue from every owned sector."
+          <DenseSection
+            title="Income statement"
+            meta={MONEY_PERIOD_PER_LABEL[periodView]}
+            actions={
+              showCountries ? (
+                <label className="flex items-center gap-1.5 text-xs text-muted">
+                  Country
+                  <select
+                    aria-label="Country"
+                    value={selectedCountry ? selectedCountry.countryId : "all"}
+                    onChange={(e) => setCountry(e.target.value)}
+                    className="h-7 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-2 text-xs text-foreground focus:border-foreground focus:outline-none"
+                  >
+                    <option value="all">All</option>
+                    {countryRows.map((r) => (
+                      <option key={r.countryId} value={r.countryId}>
+                        {countryName(r.countryId)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : undefined
+            }
+          >
+            {selectedCountry ? (
+              <CountryStatement
+                row={selectedCountry}
+                name={countryName(selectedCountry.countryId)}
+                money={(daily) => fmt(scale(daily))}
+                cost={cost}
+                signed={(daily) => fmtSigned(scale(daily))}
               />
-              {(financials.freightIncome ?? 0) > 0 && (
-                <StatementLine
-                  indent
-                  label="Freight revenue"
-                  amount={fmt(scale(financials.freightIncome ?? 0))}
-                  note="Included in gross revenue"
-                />
-              )}
-              <StatementLine
-                indent
-                label="Sector maintenance"
-                amount={cost(financials.maintenanceCosts)}
-                amountClass={financials.maintenanceCosts < 0 ? "text-success" : "text-foreground"}
-                pct={pctOf(financials.maintenanceCosts)}
-                title={
-                  financials.maintenanceCosts < 0
-                    ? "A credit: wages exceed the derived operating bill. Gross profit already nets it against wages."
-                    : "Non-labour running costs: upkeep, inputs, overhead."
-                }
-              />
-              {financials.laborCosts > 0 && (
-                <StatementLine
-                  indent
-                  label="Wages"
-                  amount={cost(financials.laborCosts)}
-                  pct={pctOf(financials.laborCosts)}
-                  title="Pay for workers in every sector. Moves with headcount, local pay and union demands."
-                />
-              )}
-              {(financials.freightCosts ?? 0) > 0 && (
-                <StatementLine
-                  indent
-                  label="Freight charges"
-                  amount={cost(financials.freightCosts ?? 0)}
-                  pct={pctOf(financials.freightCosts ?? 0)}
-                  title="Shipping paid for inbound commodities, recorded separately from plant operating costs."
-                />
-              )}
-              {financials.subsidyBenefit > 0 && (
-                <StatementLine
-                  indent
-                  label="Subsidy benefit"
-                  amount={fmt(scale(financials.subsidyBenefit))}
-                  amountClass="text-success"
-                  pct={pctOf(financials.subsidyBenefit)}
-                  title="Margin from active government subsidies, +7.5% each."
-                />
-              )}
-              {financials.growthCosts > 0 && (
-                <StatementLine
-                  indent
-                  label="Growth investment"
-                  amount={cost(financials.growthCosts)}
-                  pct={pctOf(financials.growthCosts)}
-                  title="Cost of growing sector revenue. Scales with revenue and growth rate."
-                />
-              )}
-              <StatementLine
-                strong
-                label="Gross profit"
-                amount={fmtSigned(scale(grossProfit))}
-                amountClass={signTone(grossProfit)}
-                pct={pctOf(grossProfit)}
-              />
-
-              <StatementGroup>Operating expenses</StatementGroup>
-              <StatementLine
-                indent
-                label="Marketing"
-                amount={cost(financials.marketingCosts)}
-                pct={pctOf(financials.marketingCosts)}
-              />
-              {financials.logisticsCosts > 0 && (
-                <StatementLine
-                  indent
-                  label="Logistics and operations"
-                  amount={cost(financials.logisticsCosts)}
-                  pct={pctOf(financials.logisticsCosts)}
-                />
-              )}
-              {financials.rdCosts > 0 && (
-                <StatementLine
-                  indent
-                  label="R&D"
-                  amount={cost(financials.rdCosts)}
-                  pct={pctOf(financials.rdCosts)}
-                />
-              )}
-              {financials.regulatoryBurden > 0 && (
-                <StatementLine
-                  indent
-                  label="Regulatory compliance"
-                  amount={cost(financials.regulatoryBurden)}
-                  pct={pctOf(financials.regulatoryBurden)}
-                  title="The cost of the rules in force where you operate. Moves when governments change them."
-                />
-              )}
-              {financials.pensionContributionCost > 0 && (
-                <StatementLine
-                  indent
-                  label="Pension contributions"
-                  amount={cost(financials.pensionContributionCost)}
-                  pct={pctOf(financials.pensionContributionCost)}
-                />
-              )}
-              {financials.pensionTopUpCost > 0 && (
-                <StatementLine
-                  indent
-                  label="Pension deficit top-up"
-                  amount={cost(financials.pensionTopUpCost)}
-                  pct={pctOf(financials.pensionTopUpCost)}
-                  note={`${financials.pensionSchemesInDeficit} scheme${financials.pensionSchemesInDeficit === 1 ? "" : "s"} in deficit`}
-                />
-              )}
-              {financials.ceoSalaryCost > 0 && (
-                <StatementLine
-                  indent
-                  label="CEO salary"
-                  amount={cost(financials.ceoSalaryCost)}
-                  pct={pctOf(financials.ceoSalaryCost)}
-                />
-              )}
-              <StatementLine
-                strong
-                label="Operating income"
-                amount={fmtSigned(scale(financials.operatingIncome))}
-                amountClass={signTone(financials.operatingIncome)}
-                pct={pctOf(financials.operatingIncome)}
-                title="Earnings before interest and tax."
-              />
-
-              {(financials.federalTax > 0 || financials.stateTax > 0) && (
-                <>
-                  <StatementGroup>Tax</StatementGroup>
-                  {financials.federalTax > 0 && (
-                    <StatementLine
-                      indent
-                      label="Federal tax"
-                      amount={cost(financials.federalTax)}
-                      pct={pctOf(financials.federalTax)}
-                      title={federalTitle}
-                    />
-                  )}
-                  {financials.stateTax > 0 && (
-                    <StatementLine
-                      indent
-                      label="State or regional tax"
-                      amount={cost(financials.stateTax)}
-                      pct={pctOf(financials.stateTax)}
-                    />
-                  )}
-                  {(financials.taxLossCarryforward ?? 0) > 0 && (
-                    <StatementLine
-                      indent
-                      label="Losses carried forward"
-                      amount={financials.taxLossCarryforward ?? 0}
-                      pct={pctOf(financials.taxLossCarryforward ?? 0)}
-                      title="Past losses are banked and offset up to 80% of taxable profit in later turns, so tax resumes gradually after a bad stretch."
-                    />
-                  )}
-                  {(financials.passThroughOwnerTax ?? 0) > 0 && (
-                    <StatementLine
-                      indent
-                      label={
-                        (corporation.passThroughTaxPhase ?? 1) < 1
-                          ? `Of which: owner tax on pass-through profit (${Math.round((corporation.passThroughTaxPhase ?? 0) * 100)}% phased in)`
-                          : "Of which: owner tax on pass-through profit"
-                      }
-                      amount={cost(financials.passThroughOwnerTax ?? 0)}
-                      pct={pctOf(financials.passThroughOwnerTax ?? 0)}
-                      title="Owners of a pass-through are taxed on their full share of the profit, paid out or not. The company pays it for them, so payouts are not taxed again."
-                    />
-                  )}
-                </>
-              )}
-
-              {(financials.bondInterestCost > 0 ||
-                financials.governmentBondSubsidy > 0 ||
-                financials.bondCouponIncome > 0 ||
-                financials.dividendIncomeReceived > 0 ||
-                financials.imfFacilityPaymentDaily > 0 ||
-                financials.imfFacilityReceiptsDaily > 0 ||
-                balanceSheet?.assets.bankEquity != null) && (
-                <>
-                  <StatementGroup>Interest and investment income</StatementGroup>
-                  {financials.bondInterestCost > 0 && (
-                    <StatementLine
-                      indent
-                      label="Bond interest"
-                      amount={cost(financials.bondInterestCost)}
-                      pct={pctOf(financials.bondInterestCost)}
-                    />
-                  )}
-                  {financials.governmentBondSubsidy > 0 && (
-                    <StatementLine
-                      indent
-                      label="Government bond subsidy"
-                      amount={fmt(scale(financials.governmentBondSubsidy))}
-                      amountClass="text-success"
-                    />
-                  )}
-                  {financials.bondCouponIncome > 0 && (
-                    <StatementLine
-                      indent
-                      label="Bond coupon income"
-                      amount={fmt(scale(financials.bondCouponIncome))}
-                      amountClass="text-success"
-                    />
-                  )}
-                  {balanceSheet?.assets.bankEquity != null && (
-                    <StatementLine
-                      indent
-                      label="Banking subsidiary income"
-                      amount={fmtSigned(scale(financials.bankingIncome ?? 0))}
-                      amountClass={signTone(financials.bankingIncome ?? 0)}
-                      title="Realized net income from the ring-fenced bank last turn: loan interest less deposit interest, insurance, defaults and facility interest."
-                    />
-                  )}
-                  {financials.dividendIncomeReceived > 0 && (
-                    <StatementLine
-                      indent
-                      label="Dividend income"
-                      amount={fmt(scale(financials.dividendIncomeReceived))}
-                      amountClass="text-success"
-                      note="half of it is taxed"
-                    />
-                  )}
-                  {financials.imfFacilityPaymentDaily > 0 && (
-                    <StatementLine
-                      indent
-                      label="IMF facility payment"
-                      amount={cost(financials.imfFacilityPaymentDaily)}
-                    />
-                  )}
-                  {financials.imfFacilityReceiptsDaily > 0 && (
-                    <StatementLine
-                      indent
-                      label="IMF facility receipts"
-                      amount={fmt(scale(financials.imfFacilityReceiptsDaily))}
-                      amountClass="text-success"
-                    />
-                  )}
-                </>
-              )}
-
-              {basis.isRealized && (
-                <>
+            ) : (
+              <>
+                {showCountries && (
+                  <CountryRevenueRing
+                    rows={countryRows}
+                    countryName={countryName}
+                    brandColor={corporation.brandColor}
+                    corpId={corporation._id}
+                    money={(daily) => fmt(scale(daily))}
+                    signed={(daily) => fmtSigned(scale(daily))}
+                    onSelect={setCountry}
+                  />
+                )}
+                <p className="py-2 text-xs text-muted">
+                  Current estimates use today&apos;s sectors and budgets. Last-turn income is what
+                  the engine recorded before later changes to capacity, production or spending.
+                </p>
+                <StatementTable>
+                  <StatementGroup>Current estimate</StatementGroup>
                   <StatementLine
                     strong
-                    label="Net income, current estimate"
-                    amount={fmtSigned(scale(financials.income))}
-                    amountClass={signTone(financials.income)}
+                    label="Gross revenue"
+                    amount={fmt(scale(revenue))}
+                    pct={revenue > 0 ? "100%" : null}
+                    note={`${financials.growthRateIsRealized ? "Grew" : "Growing"} ${(financials.currentGrowthRate ?? 0).toFixed(2)}%${financials.growthRateIsRealized ? " over the past year" : " a turn on average"}`}
+                    title="Total gross revenue from every owned sector."
                   />
-                  <StatementGroup>
-                    {financials.realizedIncomeTurn != null
-                      ? `Last turn recorded (turn ${financials.realizedIncomeTurn})`
-                      : "Last turn recorded"}
-                  </StatementGroup>
-                  <StatementLine
-                    indent
-                    label="Difference from current estimate"
-                    amount={fmtSigned(scale(basis.netIncome - financials.income))}
-                    amountClass={signTone(basis.netIncome - financials.income)}
-                    note="Recorded net income less the current estimate"
-                  />
-                </>
-              )}
-              <StatementLine
-                strong
-                label={basis.isRealized ? "Net income, last turn" : "Net income"}
-                amount={fmtSigned(scale(basis.netIncome))}
-                amountClass={signTone(basis.netIncome)}
-                pct={pctOf(basis.netIncome)}
-                title={
-                  basis.isRealized
-                    ? "What the engine booked last turn. The lines above are the current projection and can differ."
-                    : "Operating income after tax, interest and IMF flows, before dividends."
-                }
-              />
-              {basis.dividendPaid > 0 && (
-                <StatementLine
-                  indent
-                  label={`Dividends (${financials.effectiveDividendRate}%)`}
-                  amount={est(`(${money.fmt(Math.round(scale(basis.dividendPaid)))})`)}
-                  pct={pctOf(basis.dividendPaid)}
-                />
-              )}
-              <StatementLine
-                strong
-                label="Retained"
-                amount={fmtSigned(Math.round(scale(basis.retained)))}
-                amountClass={signTone(basis.retained)}
-                pct={pctOf(basis.retained)}
-              />
-              {hasContracts && (
-                <>
-                  <StatementLine
-                    indent
-                    label="Supply agreement settlements"
-                    amount={fmtSigned(Math.round(scale(settlement)))}
-                    amountClass={signTone(settlement)}
-                    title="Last turn's contract-for-difference cash on signed supply agreements. A cash transfer on top of operating income."
-                  />
-                  {unpaidSettlement > 0 && (
+                  {(financials.freightIncome ?? 0) > 0 && (
                     <StatementLine
                       indent
-                      label="Unpaid settlement, last turn"
-                      amount={money.fmt(unpaidSettlement)}
-                      amountClass="text-warning"
-                      note="retried next settlement"
+                      label="Freight revenue"
+                      amount={fmt(scale(financials.freightIncome ?? 0))}
+                      note="Included in gross revenue"
+                    />
+                  )}
+                  <StatementLine
+                    indent
+                    label="Sector maintenance"
+                    amount={cost(financials.maintenanceCosts)}
+                    amountClass={
+                      financials.maintenanceCosts < 0 ? "text-success" : "text-foreground"
+                    }
+                    pct={pctOf(financials.maintenanceCosts)}
+                    title={
+                      financials.maintenanceCosts < 0
+                        ? "A credit: wages exceed the derived operating bill. Gross profit already nets it against wages."
+                        : "Non-labour running costs: upkeep, inputs, overhead."
+                    }
+                  />
+                  {financials.laborCosts > 0 && (
+                    <StatementLine
+                      indent
+                      label="Wages"
+                      amount={cost(financials.laborCosts)}
+                      pct={pctOf(financials.laborCosts)}
+                      title="Pay for workers in every sector. Moves with headcount, local pay and union demands."
+                    />
+                  )}
+                  {(financials.freightCosts ?? 0) > 0 && (
+                    <StatementLine
+                      indent
+                      label="Freight charges"
+                      amount={cost(financials.freightCosts ?? 0)}
+                      pct={pctOf(financials.freightCosts ?? 0)}
+                      title="Shipping paid for inbound commodities, recorded separately from plant operating costs."
+                    />
+                  )}
+                  {financials.subsidyBenefit > 0 && (
+                    <StatementLine
+                      indent
+                      label="Subsidy benefit"
+                      amount={fmt(scale(financials.subsidyBenefit))}
+                      amountClass="text-success"
+                      pct={pctOf(financials.subsidyBenefit)}
+                      title="Margin from active government subsidies, +7.5% each."
+                    />
+                  )}
+                  {financials.growthCosts > 0 && (
+                    <StatementLine
+                      indent
+                      label="Growth investment"
+                      amount={cost(financials.growthCosts)}
+                      pct={pctOf(financials.growthCosts)}
+                      title="Cost of growing sector revenue. Scales with revenue and growth rate."
                     />
                   )}
                   <StatementLine
                     strong
-                    label="Cash after contracts"
-                    amount={fmtSigned(Math.round(scale(cashAfterContracts(financials))))}
-                    amountClass={signTone(cashAfterContracts(financials))}
+                    label="Gross profit"
+                    amount={fmtSigned(scale(grossProfit))}
+                    amountClass={signTone(grossProfit)}
+                    pct={pctOf(grossProfit)}
                   />
-                </>
-              )}
-            </StatementTable>
+
+                  <StatementGroup>Operating expenses</StatementGroup>
+                  <StatementLine
+                    indent
+                    label="Marketing"
+                    amount={cost(financials.marketingCosts)}
+                    pct={pctOf(financials.marketingCosts)}
+                  />
+                  {financials.logisticsCosts > 0 && (
+                    <StatementLine
+                      indent
+                      label="Logistics and operations"
+                      amount={cost(financials.logisticsCosts)}
+                      pct={pctOf(financials.logisticsCosts)}
+                    />
+                  )}
+                  {financials.rdCosts > 0 && (
+                    <StatementLine
+                      indent
+                      label="R&D"
+                      amount={cost(financials.rdCosts)}
+                      pct={pctOf(financials.rdCosts)}
+                    />
+                  )}
+                  {financials.regulatoryBurden > 0 && (
+                    <StatementLine
+                      indent
+                      label="Regulatory compliance"
+                      amount={cost(financials.regulatoryBurden)}
+                      pct={pctOf(financials.regulatoryBurden)}
+                      title="The cost of the rules in force where you operate. Moves when governments change them."
+                    />
+                  )}
+                  {financials.pensionContributionCost > 0 && (
+                    <StatementLine
+                      indent
+                      label="Pension contributions"
+                      amount={cost(financials.pensionContributionCost)}
+                      pct={pctOf(financials.pensionContributionCost)}
+                    />
+                  )}
+                  {financials.pensionTopUpCost > 0 && (
+                    <StatementLine
+                      indent
+                      label="Pension deficit top-up"
+                      amount={cost(financials.pensionTopUpCost)}
+                      pct={pctOf(financials.pensionTopUpCost)}
+                      note={`${financials.pensionSchemesInDeficit} scheme${financials.pensionSchemesInDeficit === 1 ? "" : "s"} in deficit`}
+                    />
+                  )}
+                  {financials.ceoSalaryCost > 0 && (
+                    <StatementLine
+                      indent
+                      label="CEO salary"
+                      amount={cost(financials.ceoSalaryCost)}
+                      pct={pctOf(financials.ceoSalaryCost)}
+                    />
+                  )}
+                  <StatementLine
+                    strong
+                    label="Operating income"
+                    amount={fmtSigned(scale(financials.operatingIncome))}
+                    amountClass={signTone(financials.operatingIncome)}
+                    pct={pctOf(financials.operatingIncome)}
+                    title="Earnings before interest and tax."
+                  />
+
+                  {(financials.federalTax > 0 || financials.stateTax > 0) && (
+                    <>
+                      <StatementGroup>Tax</StatementGroup>
+                      {financials.federalTax > 0 && (
+                        <StatementLine
+                          indent
+                          label="Federal tax"
+                          amount={cost(financials.federalTax)}
+                          pct={pctOf(financials.federalTax)}
+                          title={federalTitle}
+                        />
+                      )}
+                      {financials.stateTax > 0 && (
+                        <StatementLine
+                          indent
+                          label="State or regional tax"
+                          amount={cost(financials.stateTax)}
+                          pct={pctOf(financials.stateTax)}
+                        />
+                      )}
+                      {(financials.taxLossCarryforward ?? 0) > 0 && (
+                        <StatementLine
+                          indent
+                          label="Losses carried forward"
+                          amount={financials.taxLossCarryforward ?? 0}
+                          pct={pctOf(financials.taxLossCarryforward ?? 0)}
+                          title="Past losses are banked and offset up to 80% of taxable profit in later turns, so tax resumes gradually after a bad stretch."
+                        />
+                      )}
+                      {(financials.passThroughOwnerTax ?? 0) > 0 && (
+                        <StatementLine
+                          indent
+                          label={
+                            (corporation.passThroughTaxPhase ?? 1) < 1
+                              ? `Of which: owner tax on pass-through profit (${Math.round((corporation.passThroughTaxPhase ?? 0) * 100)}% phased in)`
+                              : "Of which: owner tax on pass-through profit"
+                          }
+                          amount={cost(financials.passThroughOwnerTax ?? 0)}
+                          pct={pctOf(financials.passThroughOwnerTax ?? 0)}
+                          title="Owners of a pass-through are taxed on their full share of the profit, paid out or not. The company pays it for them, so payouts are not taxed again."
+                        />
+                      )}
+                    </>
+                  )}
+
+                  {(financials.bondInterestCost > 0 ||
+                    financials.governmentBondSubsidy > 0 ||
+                    financials.bondCouponIncome > 0 ||
+                    financials.dividendIncomeReceived > 0 ||
+                    financials.imfFacilityPaymentDaily > 0 ||
+                    financials.imfFacilityReceiptsDaily > 0 ||
+                    balanceSheet?.assets.bankEquity != null) && (
+                    <>
+                      <StatementGroup>Interest and investment income</StatementGroup>
+                      {financials.bondInterestCost > 0 && (
+                        <StatementLine
+                          indent
+                          label="Bond interest"
+                          amount={cost(financials.bondInterestCost)}
+                          pct={pctOf(financials.bondInterestCost)}
+                        />
+                      )}
+                      {financials.governmentBondSubsidy > 0 && (
+                        <StatementLine
+                          indent
+                          label="Government bond subsidy"
+                          amount={fmt(scale(financials.governmentBondSubsidy))}
+                          amountClass="text-success"
+                        />
+                      )}
+                      {financials.bondCouponIncome > 0 && (
+                        <StatementLine
+                          indent
+                          label="Bond coupon income"
+                          amount={fmt(scale(financials.bondCouponIncome))}
+                          amountClass="text-success"
+                        />
+                      )}
+                      {balanceSheet?.assets.bankEquity != null && (
+                        <StatementLine
+                          indent
+                          label="Banking subsidiary income"
+                          amount={fmtSigned(scale(financials.bankingIncome ?? 0))}
+                          amountClass={signTone(financials.bankingIncome ?? 0)}
+                          title="Realized net income from the ring-fenced bank last turn: loan interest less deposit interest, insurance, defaults and facility interest."
+                        />
+                      )}
+                      {financials.dividendIncomeReceived > 0 && (
+                        <StatementLine
+                          indent
+                          label="Dividend income"
+                          amount={fmt(scale(financials.dividendIncomeReceived))}
+                          amountClass="text-success"
+                          note="half of it is taxed"
+                        />
+                      )}
+                      {financials.imfFacilityPaymentDaily > 0 && (
+                        <StatementLine
+                          indent
+                          label="IMF facility payment"
+                          amount={cost(financials.imfFacilityPaymentDaily)}
+                        />
+                      )}
+                      {financials.imfFacilityReceiptsDaily > 0 && (
+                        <StatementLine
+                          indent
+                          label="IMF facility receipts"
+                          amount={fmt(scale(financials.imfFacilityReceiptsDaily))}
+                          amountClass="text-success"
+                        />
+                      )}
+                    </>
+                  )}
+
+                  {basis.isRealized && (
+                    <>
+                      <StatementLine
+                        strong
+                        label="Net income, current estimate"
+                        amount={fmtSigned(scale(financials.income))}
+                        amountClass={signTone(financials.income)}
+                      />
+                      <StatementGroup>
+                        {financials.realizedIncomeTurn != null
+                          ? `Last turn recorded (turn ${financials.realizedIncomeTurn})`
+                          : "Last turn recorded"}
+                      </StatementGroup>
+                      <StatementLine
+                        indent
+                        label="Difference from current estimate"
+                        amount={fmtSigned(scale(basis.netIncome - financials.income))}
+                        amountClass={signTone(basis.netIncome - financials.income)}
+                        note="Recorded net income less the current estimate"
+                      />
+                    </>
+                  )}
+                  <StatementLine
+                    strong
+                    label={basis.isRealized ? "Net income, last turn" : "Net income"}
+                    amount={fmtSigned(scale(basis.netIncome))}
+                    amountClass={signTone(basis.netIncome)}
+                    pct={pctOf(basis.netIncome)}
+                    title={
+                      basis.isRealized
+                        ? "What the engine booked last turn. The lines above are the current projection and can differ."
+                        : "Operating income after tax, interest and IMF flows, before dividends."
+                    }
+                  />
+                  {basis.dividendPaid > 0 && (
+                    <StatementLine
+                      indent
+                      label={`Dividends (${financials.effectiveDividendRate}%)`}
+                      amount={est(`(${money.fmt(Math.round(scale(basis.dividendPaid)))})`)}
+                      pct={pctOf(basis.dividendPaid)}
+                    />
+                  )}
+                  <StatementLine
+                    strong
+                    label="Retained"
+                    amount={fmtSigned(Math.round(scale(basis.retained)))}
+                    amountClass={signTone(basis.retained)}
+                    pct={pctOf(basis.retained)}
+                  />
+                  {hasContracts && (
+                    <>
+                      <StatementLine
+                        indent
+                        label="Supply agreement settlements"
+                        amount={fmtSigned(Math.round(scale(settlement)))}
+                        amountClass={signTone(settlement)}
+                        title="Last turn's contract-for-difference cash on signed supply agreements. A cash transfer on top of operating income."
+                      />
+                      {unpaidSettlement > 0 && (
+                        <StatementLine
+                          indent
+                          label="Unpaid settlement, last turn"
+                          amount={money.fmt(unpaidSettlement)}
+                          amountClass="text-warning"
+                          note="retried next settlement"
+                        />
+                      )}
+                      <StatementLine
+                        strong
+                        label="Cash after contracts"
+                        amount={fmtSigned(Math.round(scale(cashAfterContracts(financials))))}
+                        amountClass={signTone(cashAfterContracts(financials))}
+                      />
+                    </>
+                  )}
+                </StatementTable>
+              </>
+            )}
           </DenseSection>
 
           <aside className="min-w-0 space-y-6">

@@ -1,3 +1,4 @@
+import type { CountryOperatingTotals } from "./countryStatements";
 import {
   freeTransitionConversion,
   transitionReliefEligible,
@@ -214,6 +215,8 @@ export function ceoSectorLevers(
 }
 
 export interface SectorFinancialTotals {
+  /** The same sector lines, summed per country (the sector's host country). */
+  byCountry: Record<string, CountryOperatingTotals>;
   totalRevenue: number;
   totalMaintenanceCosts: number;
   totalGrowthCosts: number;
@@ -285,6 +288,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
 
   let totalRevenue = 0;
   let totalMaintenanceCosts = 0;
+  const byCountry: Record<string, CountryOperatingTotals> = {};
   let totalGrowthCosts = 0;
   let totalSubsidyBenefit = 0;
   let totalRegulatoryBurden = 0;
@@ -653,6 +657,27 @@ export function buildSectorDetails(ctx: SectorRowContext) {
     }
     totalGrowthCosts += sectorGrowthCostLocal;
     totalRegulatoryBurden += sectorRegulatoryBurden;
+    // Same lines, kept per country for the country view of the statement.
+    const country = (byCountry[sectorCountryId] ??= {
+      sectorCount: 0,
+      revenue: 0,
+      freightIncome: 0,
+      maintenance: 0,
+      labor: 0,
+      freightCosts: 0,
+      growthCosts: 0,
+      regulatoryBurden: 0,
+    });
+    country.sectorCount += 1;
+    country.revenue += financialRevenue;
+    country.freightIncome += freightIncome;
+    country.maintenance += maintenance;
+    if (labourWagesEnabled && sectorLaborCostLocal != null && sectorLaborCostLocal > 0) {
+      country.labor += sectorLaborCostLocal;
+    }
+    country.freightCosts += freightCost;
+    country.growthCosts += sectorGrowthCostLocal;
+    country.regulatoryBurden += sectorRegulatoryBurden;
     totalSubsidyBenefit += financialRevenue * (subsidyMod / 100);
 
     // ── Plants-tier physicals ────────────────────────────────────────────
@@ -847,6 +872,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
   return {
     sectorDetails,
     totals: {
+      byCountry,
       totalRevenue,
       totalMaintenanceCosts,
       totalGrowthCosts,

@@ -1,3 +1,4 @@
+import { buildCountryStatements } from "./countryStatements";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
 import { MAX_DIVIDEND_RATE, TURNS_PER_DAY } from "@/lib/constants/corporations";
 import { getLegalStructureForCorp } from "@/lib/corporations/legalStructure";
@@ -110,6 +111,8 @@ export function buildFinancials(inputs: FinancialsInputs) {
     passThroughOwnerTax: inc.passThroughOwnerTaxLocal,
     taxLossCarryforward: inc.taxLossCarryforwardLocal,
     federalTaxByCountry: inc.federalTaxByCountry,
+    /** One statement per country the corporation has sectors in, largest first. */
+    byCountry: buildCountryStatements(totals.byCountry, inc.sectorTaxByCountry),
     bondInterestCost: Math.round(inc.dailyInterestLocal),
     bondCouponIncome: Math.round(inc.dailyCouponIncomeLocal),
     dividendIncomeReceived: portfolio.dividendIncomeReceivedDaily,

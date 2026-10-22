@@ -16,12 +16,15 @@ export function RingChart({
   centreValue,
   label,
   legendExtra,
+  legend = true,
 }: {
   segments: LedgerSegment[];
   centreLabel: string;
   centreValue: string;
   label: string;
   legendExtra?: (segment: LedgerSegment) => ReactNode;
+  /** False when a table beside the ring already names every segment. */
+  legend?: boolean;
 }) {
   const shown = segments.filter((s) => Number.isFinite(s.value) && s.value > 0);
   const total = positiveTotal(shown.map((s) => s.value));
@@ -76,39 +79,41 @@ export function RingChart({
           )}
         </div>
       </div>
-      <ul className="mt-3">
-        {arcs.map(({ segment, pct }) => (
-          <li
-            key={segment.key}
-            className="flex min-h-8 items-center gap-2 border-b border-card-border/60 text-xs"
-          >
-            <span
-              aria-hidden
-              className={`h-2.5 w-2.5 shrink-0 rounded-[2px] ${
-                segment.color ? "" : seriesBg(segment.tone ?? "info")
-              }`}
-              style={segment.color ? { background: segment.color } : undefined}
-            />
-            <span data-legend-name className="min-w-0 flex-1 truncate text-muted">
-              {segment.href ? (
-                <Link href={segment.href} className="hover:text-foreground hover:underline">
-                  {segment.label}
-                </Link>
-              ) : (
-                segment.label
-              )}
-              {segment.isYou && <span className="ml-1 text-foreground">(you)</span>}
-            </span>
-            {legendExtra?.(segment)}
-            <span className="font-mono font-semibold tabular-nums text-foreground">
-              {segment.display}
-            </span>
-            <span className="w-12 text-right font-mono tabular-nums text-muted">
-              {pct.toFixed(1)}%
-            </span>
-          </li>
-        ))}
-      </ul>
+      {legend && (
+        <ul className="mt-3">
+          {arcs.map(({ segment, pct }) => (
+            <li
+              key={segment.key}
+              className="flex min-h-8 items-center gap-2 border-b border-card-border/60 text-xs"
+            >
+              <span
+                aria-hidden
+                className={`h-2.5 w-2.5 shrink-0 rounded-[2px] ${
+                  segment.color ? "" : seriesBg(segment.tone ?? "info")
+                }`}
+                style={segment.color ? { background: segment.color } : undefined}
+              />
+              <span data-legend-name className="min-w-0 flex-1 truncate text-muted">
+                {segment.href ? (
+                  <Link href={segment.href} className="hover:text-foreground hover:underline">
+                    {segment.label}
+                  </Link>
+                ) : (
+                  segment.label
+                )}
+                {segment.isYou && <span className="ml-1 text-foreground">(you)</span>}
+              </span>
+              {legendExtra?.(segment)}
+              <span className="font-mono font-semibold tabular-nums text-foreground">
+                {segment.display}
+              </span>
+              <span className="w-12 text-right font-mono tabular-nums text-muted">
+                {pct.toFixed(1)}%
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

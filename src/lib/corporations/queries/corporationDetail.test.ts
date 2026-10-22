@@ -15,7 +15,7 @@ vi.mock("@/lib/corporations/turnReferenceData", () => ({
     commodityPrices: [],
     allStates: [{ _id: "CA", name: "California", countryId: "US", gdp: 1 }],
     allTariffs: [],
-    activeFtaPairs: [],
+    activeFtaPairs: new Set<string>(),
     activeSubsidies: [],
     exchangeRateDocs: [{ currencyCode: "USD", rate: 1 }],
     stateBudgetsForTax: [],
@@ -329,6 +329,86 @@ describe("loadCorporationDetailView", () => {
     expect(view.financials.regulatoryBurden).toBe(60);
     expect(view.financials.operatingIncome).toBe(-1284);
     expect(view.financials.realizedIncome).toBe(-1284);
+  });
+
+  it("splits revenue and sector costs by country, adding up to the statement", async () => {
+    const ceo = makeCharacter({ _id: new ObjectId(), userId: new ObjectId() });
+    const corporation = makeCorporation({
+      ceoId: ceo._id,
+      userId: ceo.userId,
+      countryId: "US",
+      headquartersState: "CA",
+      liquidCurrencyCode: "USD",
+      marketingBudget: 300,
+      logisticsBudget: 0,
+      rdBudget: 0,
+      ceoSalary: 0,
+      dividendRate: 0,
+      shareholders: [],
+      publicFloat: 0,
+    });
+    const sectorIn = (countryId: string, stateId: string, revenue: number) => ({
+      _id: new ObjectId(),
+      corporationId: corporation._id,
+      countryId,
+      stateId,
+      sectorType: "energy",
+      strategyId: "standard",
+      profitMargin: 35,
+      effectiveProfitMargin: 40,
+      revenue,
+      realizedRevenue: revenue,
+      laborCost: revenue / 10,
+      currentGrowthCost: 0,
+      currentGrowthRate: 0,
+      productionPolicyLevel: 0,
+      workers: 10,
+      freightBillingCharge: revenue / 20,
+      freightBillingCredit: 0,
+      plantsPnl: {
+        revenue,
+        inputs: revenue * 0.3,
+        labour: revenue / 10,
+        otherOpex: revenue * 0.2,
+        financialLegs: 0,
+        policyCredit: 0,
+        upkeep: revenue / 20,
+        compliance: revenue / 40,
+        inventoryCarry: 0,
+        operatingCost: revenue * 0.6,
+        totalCost: revenue * 0.7,
+        profit: revenue * 0.3,
+      },
+    });
+    db.collectionMocks.characters.findOne.mockResolvedValue(ceo);
+    db.collectionMocks.corporateSectors.find.mockReturnValue({
+      toArray: () => Promise.resolve([sectorIn("US", "CA", 2_400), sectorIn("UK", "LND", 1_200)]),
+    } as never);
+    db.collectionMocks.bonds.find.mockReturnValue({ toArray: () => Promise.resolve([]) } as never);
+    db.collectionMocks.corporationHistory.findOne.mockResolvedValue({ income: 0 });
+    const view = await loadCorporationDetailView({
+      db: db as unknown as Db,
+      corporation,
+      currentTurn: 10,
+      viewerUserId: ceo.userId!.toString(),
+    });
+    const f = view.financials;
+    const rows = f.byCountry;
+    expect(rows.map((r) => r.countryId).sort()).toEqual(["UK", "US"]);
+    expect(rows.find((r) => r.countryId === "US")?.sectorCount).toBe(1);
+    const sum = (key: keyof (typeof rows)[number]) =>
+      rows.reduce((s, r) => s + (r[key] as number), 0);
+    // Every sector-level line splits exactly; rounding allows one unit per country.
+    expect(Math.abs(sum("revenue") - f.totalRevenue)).toBeLessThanOrEqual(rows.length);
+    expect(Math.abs(sum("maintenanceCosts") - f.maintenanceCosts)).toBeLessThanOrEqual(rows.length);
+    expect(Math.abs(sum("laborCosts") - f.laborCosts)).toBeLessThanOrEqual(rows.length);
+    expect(Math.abs(sum("freightCosts") - (f.freightCosts ?? 0))).toBeLessThanOrEqual(rows.length);
+    expect(Math.abs(sum("regulatoryBurden") - f.regulatoryBurden)).toBeLessThanOrEqual(rows.length);
+    // Marketing is corporation-wide: no country carries it.
+    expect(rows.every((r) => !("marketingCosts" in r))).toBe(true);
+    // Country tax is the tax on that country's sectors, never more than the total.
+    expect(sum("federalTax")).toBeLessThanOrEqual(f.federalTax);
+    expect(sum("stateTax")).toBeLessThanOrEqual(f.stateTax);
   });
 
   it("labels a modelled vehicle corporation while preserving its manufacturing identity", async () => {

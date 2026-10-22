@@ -126,6 +126,26 @@ export function applyFogToFinancials(financials: Financials, factor: number): Fi
     federalTaxByCountry: Object.fromEntries(
       Object.entries(financials.federalTaxByCountry).map(([k, v]) => [k, fog(v, factor)])
     ),
+    // Same uniform scale per country, so the countries still add up to the
+    // fogged statement; the plant count is not money and stays exact.
+    ...(financials.byCountry
+      ? {
+          byCountry: financials.byCountry.map((c) => ({
+            countryId: c.countryId,
+            sectorCount: c.sectorCount,
+            revenue: fog(c.revenue, factor),
+            freightIncome: fog(c.freightIncome, factor),
+            maintenanceCosts: fog(c.maintenanceCosts, factor),
+            laborCosts: fog(c.laborCosts, factor),
+            freightCosts: fog(c.freightCosts, factor),
+            growthCosts: fog(c.growthCosts, factor),
+            regulatoryBurden: fog(c.regulatoryBurden, factor),
+            federalTax: fog(c.federalTax, factor),
+            stateTax: fog(c.stateTax, factor),
+            result: fog(c.result, factor),
+          })),
+        }
+      : {}),
     bondInterestCost: fog(financials.bondInterestCost, factor),
     bondCouponIncome: fog(financials.bondCouponIncome, factor),
     governmentBondSubsidy: fog(financials.governmentBondSubsidy, factor),
