@@ -158,6 +158,7 @@ import {
   NPP_FOUNDING_HEADROOM_SHARE,
   DEFAULT_ARCHETYPE,
 } from "@/lib/turn/npp/nppCorporationTuning";
+import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 
 export {
   NPP_GROWTH_MIN_SHORTAGE,
@@ -198,12 +199,15 @@ export async function processNppCorporationDecisions(
     : (
         await db
           .collection<Corporation>("corporations")
-          .find({
-            $or: [
-              { ceoType: "npp", suspended: { $ne: true } },
-              { autopilot: { $exists: true }, suspended: { $ne: true } },
-            ],
-          })
+          .find(
+            {
+              $or: [
+                { ceoType: "npp", suspended: { $ne: true } },
+                { autopilot: { $exists: true }, suspended: { $ne: true } },
+              ],
+            },
+            { projection: SETTLEMENT_HISTORY_EXCLUDED }
+          )
           .toArray()
       ).filter((corp) => corp.ceoType === "npp" || isAutopilotRun(corp));
 

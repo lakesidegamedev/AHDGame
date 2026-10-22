@@ -268,8 +268,11 @@ export async function rebalanceFundToTarget(
       ? await Promise.all([loadFxRatesByCurrency(db), getCurrentTurn(db)])
       : undefined;
   for (const leg of plan.sells) {
-    const refreshed = (await getFundById(db, fund._id)) ?? fund;
-    const res = await sellFundHoldingShares(db, refreshed, leg.corporationId, leg.shares, {
+    // The plan has one sell per corporation, and a sale only changes that
+    // holding plus cash. Re-reading the whole fund before every leg decoded
+    // the same document once per sell to find the holding this loop already
+    // has; the post-sale read below still refreshes it once for the buys.
+    const res = await sellFundHoldingShares(db, fund, leg.corporationId, leg.shares, {
       note: "Rebalance: trim overweight",
       fxByCurrency: sellInputs?.[0],
       turn: sellInputs?.[1],

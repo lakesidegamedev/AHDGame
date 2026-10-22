@@ -109,7 +109,39 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
         { $set: { hiddenFromExchange: false } }
       );
       const corporations = await corporationsCollection
-        .find({ hiddenFromExchange: { $ne: true }, isPrivate: { $ne: true } })
+        .find(
+          { hiddenFromExchange: { $ne: true }, isPrivate: { $ne: true } },
+          {
+            // The snapshot quotes name/ticker/price/share count and the
+            // currency needed to restate them. It never reads a balance sheet,
+            // portfolio or settlement history, and this is every public corp.
+            projection: {
+              name: 1,
+              sequentialId: 1,
+              tickerSymbol: 1,
+              type: 1,
+              industryModel: 1,
+              secondaryType: 1,
+              mediaDiscriminator: 1,
+              headquartersState: 1,
+              logoUrl: 1,
+              brandColor: 1,
+              dividendRate: 1,
+              ceoId: 1,
+              ceoType: 1,
+              ceoVacant: 1,
+              countryId: 1,
+              countryOwnerId: 1,
+              liquidCurrencyCode: 1,
+              sharePrice: 1,
+              totalShares: 1,
+              publicFloat: 1,
+              typeSwitchTurn: 1,
+              logisticsStrength: 1,
+              imfBailoutActive: 1,
+            },
+          }
+        )
         .sort({ createdAt: -1 })
         .toArray();
 

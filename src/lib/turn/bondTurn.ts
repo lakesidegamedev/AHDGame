@@ -77,6 +77,7 @@ import {
   filterInsolventCorps,
   resolveBondCurrency,
   rollbackDefaultedIssuerMaturityFlows,
+  indexActiveCorporateBondsByIssuer,
   type BondMaturityFlow,
 } from "./bondTurnHelpers";
 import { emitBondTurnLedger, snapshotBondHistory, type PartialTxEntry } from "./bondTurnLedger";
@@ -94,6 +95,7 @@ import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { roundSavingsAmount } from "@/lib/currency/savingsInterest";
 import { resumeSettlement } from "@/lib/banking/settlementJournal";
 import { KeyedQueue, interleaveByKey, runInLanes } from "@/lib/turn/settlementLanes";
+import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 
 /** Concurrent sovereign maturity settlements; one Treasury still runs one at a time. */
 const SOVEREIGN_MATURITY_LANES = 8;
@@ -265,6 +267,7 @@ export async function processBondTurn(
       : await db
           .collection<Corporation>("corporations")
           .find({ _id: { $in: [...allCorpIds].map((id) => new ObjectId(id)) } })
+          .project<Corporation>(SETTLEMENT_HISTORY_EXCLUDED)
           .toArray();
   const corpMap = new Map(corporations.map((c) => [c._id.toString(), c]));
   // Natcorp set is consulted in every later phase (coupon-cost skip, default
@@ -273,6 +276,9 @@ export async function processBondTurn(
   const natcorpIds = new Set(
     corporations.filter((c) => !!c.countryOwnerId).map((c) => c._id.toString())
   );
+  // Index the active, non-defaulted corporate bonds by issuer once; the rate
+  // pass re-filtered the whole book per bond before this.
+  const activeCorporateBondsByIssuer = indexActiveCorporateBondsByIssuer(activeBonds);
 
   // FX rates for converting ₳-denominated coupon/face values into each corp's
   // liquidCapital home currency before $inc. Loaded once per turn.
@@ -1011,13 +1017,7 @@ export async function processBondTurn(
       let currentRate = primeRate;
       if (isCorporateBond(bond)) {
         // Get corp's current credit rating for effective rate
-        const corpBonds = activeBonds.filter(
-          (candidate) =>
-            isCorporateBond(candidate) &&
-            candidate.corporationId.toString() === corpIdStr &&
-            !candidate.matured &&
-            !candidate.defaulted
-        );
+        const corpBonds = activeCorporateBondsByIssuer.get(corpIdStr) ?? [];
 
         // Credit math runs in ₳. Every input (liquidCapital, sharePrice × shares,
         // totalDebt, annualInterest) must be normalized to the same unit or the

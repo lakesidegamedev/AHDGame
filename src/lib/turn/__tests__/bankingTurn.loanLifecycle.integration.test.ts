@@ -171,6 +171,48 @@ describe("named loan lifecycle through the banking turn", () => {
     expect(money(db)).toBeCloseTo(before, 6);
   });
 
+  it("services a borrower's second loan against the balance the first left", async () => {
+    // Two equal loans, one payment of cash. The preload reads the borrower
+    // once; the running balance must carry the first loan's debit into the
+    // second decision, exactly as the old per-loan read did.
+    const { db, bankId, borrowerId } = makeWorld(150);
+    const native = db as unknown as Db;
+    const { getDb } = await import("@/lib/mongodb");
+    vi.mocked(getDb).mockResolvedValue(native);
+    const mkLoan = () => ({
+      _id: new ObjectId(),
+      bankCorporationId: bankId,
+      currency: "USD",
+      borrowerType: "corporation",
+      borrowerId,
+      principal: 100,
+      outstanding: 100,
+      ratePercent: 0,
+      originatedTurn: START - 1,
+      termTurns: 1,
+      charteredTurn: 1,
+      status: "current",
+      lastProcessedTurn: START - 1,
+    });
+    db.seed("bankLoans", [mkLoan(), mkLoan()]);
+    corp(db, bankId).bankCharter!.totalLoans = 200;
+
+    const bankCashBefore = corp(db, bankId).bankCharter!.cashReserves ?? 0;
+    await processBankingTurn(native, START + 1);
+
+    // The first loan takes its full 100; the second may only take the 50 that
+    // is left, and must be recorded as a partial payment. A stale preload
+    // would have asked for the full 100 and the guarded debit would have
+    // refused, leaving the second loan untouched.
+    expect(corp(db, borrowerId).liquidCapital).toBeCloseTo(0, 6);
+    expect((corp(db, bankId).bankCharter!.cashReserves ?? 0) - bankCashBefore).toBeCloseTo(150, 6);
+    const loans = db.collection("bankLoans").docs as unknown as BankLoan[];
+    expect(loans.filter((loan) => loan.lastProcessedTurn === START + 1)).toHaveLength(2);
+    expect(loans.filter((loan) => loan.status === "repaid")).toHaveLength(1);
+    const partial = loans.find((loan) => loan.status === "arrears");
+    expect(partial?.outstanding).toBeCloseTo(50, 6);
+  });
+
   it("runs from application to payoff, conserving money and advancing once per turn", async () => {
     const { db, bankId, borrowerId } = makeWorld(1_000_000);
     const { getDb } = await import("@/lib/mongodb");

@@ -93,21 +93,43 @@ export function* producerTrades(receipt: ProducerTradeReceipt): Generator<Produc
     rows.push(offer);
     books.set(key, rows);
   }
-  for (const rows of books.values())
+  // The replay asks for one price level at a time: an ordinary order can only
+  // take offers posted at the fill's price, so a book-wide filter every fill
+  // is quadratic in offers × fills. Bucket each book by posted price once,
+  // preserving the book's (price, id) order inside every bucket.
+  const priceBuckets = new Map<string, Map<number, ProducerOffer[]>>();
+  for (const [key, rows] of books) {
     rows.sort((a, b) => a.unitPrice - b.unitPrice || compareId(a.id, b.id));
+    const byPrice = new Map<number, ProducerOffer[]>();
+    for (const offer of rows) {
+      const bucket = byPrice.get(offer.unitPrice) ?? [];
+      bucket.push(offer);
+      byPrice.set(offer.unitPrice, bucket);
+    }
+    priceBuckets.set(key, byPrice);
+  }
   let tradeCount = 0;
   for (const fill of receipt.fills) {
     const order = orders.get(fill.orderId);
     if (!order) throw new Error("Missing producer trade order");
     const eligible = order.eligibleOfferIds ? new Set(order.eligibleOfferIds) : null;
     const internal = fill.kind === "internalTransfer";
-    const group = (books.get(bookKey(order.commodity, order.book)) ?? []).filter(
-      (offer) =>
-        (offer.accountId === order.accountId) === internal &&
-        (internal || (order.contractUnitPrice ?? offer.unitPrice) === fill.unitPrice) &&
-        (!order.supplierOfferId || offer.id === order.supplierOfferId) &&
-        (!eligible || eligible.has(offer.id))
-    );
+    const book = bookKey(order.commodity, order.book);
+    const matchesOrder = (offer: ProducerOffer) =>
+      (offer.accountId === order.accountId) === internal &&
+      (!order.supplierOfferId || offer.id === order.supplierOfferId) &&
+      (!eligible || eligible.has(offer.id));
+    // Internal transfers and contract/supplier orders ignore the posted price
+    // and keep the full-book scan. An ordinary public order takes exactly the
+    // offers posted at the fill's price, which the bucket already holds.
+    const group =
+      !internal && order.supplierOfferId == null && order.contractUnitPrice == null
+        ? (priceBuckets.get(book)?.get(fill.unitPrice) ?? []).filter(matchesOrder)
+        : (books.get(book) ?? []).filter(
+            (offer) =>
+              matchesOrder(offer) &&
+              (internal || (order.contractUnitPrice ?? offer.unitPrice) === fill.unitPrice)
+          );
     const pooled =
       !internal &&
       !order.eligibleOfferIds &&
