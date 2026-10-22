@@ -28,6 +28,33 @@ export function getExecutiveTermsServed(
   return Math.max(storedTerms, historicalTerms);
 }
 
+function getFoundingExecutiveTerms(
+  character: CharacterExecutiveTermSnapshot,
+  countryId: CountryId
+): number {
+  const officeKey = getCountryConfig(countryId).executiveTermLimit?.officeKey;
+  if (!officeKey) return 0;
+  return (
+    character.careerHistory?.filter(
+      (event) =>
+        event.foundingTerm === true &&
+        event.office?.type === officeKey &&
+        (event.type === "appointed" || event.type === "elected") &&
+        (event.partyCountryId === countryId || event.partyCountryId == null)
+    ).length ?? 0
+  );
+}
+
+export function getExecutiveTermsCountedTowardLimit(
+  character: CharacterExecutiveTermSnapshot,
+  countryId: CountryId
+): number {
+  return Math.max(
+    0,
+    getExecutiveTermsServed(character, countryId) - getFoundingExecutiveTerms(character, countryId)
+  );
+}
+
 export function getExecutiveTermLimit(countryId: CountryId): number | null {
   return getCountryConfig(countryId).executiveTermLimit?.maxTermsPerCharacter ?? null;
 }
@@ -37,7 +64,7 @@ export function hasReachedExecutiveTermLimit(
   countryId: CountryId
 ): boolean {
   const maxTerms = getExecutiveTermLimit(countryId);
-  return maxTerms !== null && getExecutiveTermsServed(character, countryId) >= maxTerms;
+  return maxTerms !== null && getExecutiveTermsCountedTowardLimit(character, countryId) >= maxTerms;
 }
 
 export function incrementExecutiveTermsServedUpdate(
