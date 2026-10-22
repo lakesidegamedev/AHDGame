@@ -41,6 +41,30 @@ describe("executiveTermLimits", () => {
     expect(hasReachedExecutiveTermLimit(legacyCharacter, "US")).toBe(true);
   });
 
+  it("excludes a founding elected term from the US limit while retaining total served", () => {
+    const character = {
+      executiveTermsServed: { US: 2 },
+      careerHistory: [
+        { ...legacyPresidentHistory[0], foundingTerm: true },
+        legacyPresidentHistory[0],
+      ],
+    };
+    expect(getExecutiveTermsServed(character, "US")).toBe(2);
+    expect(hasReachedExecutiveTermLimit(character, "US")).toBe(false);
+  });
+
+  it("reaches the US limit after two counted terms beyond a founding term", () => {
+    const character = {
+      executiveTermsServed: { US: 3 },
+      careerHistory: [
+        { ...legacyPresidentHistory[0], foundingTerm: true },
+        legacyPresidentHistory[0],
+        legacyPresidentHistory[0],
+      ],
+    };
+    expect(hasReachedExecutiveTermLimit(character, "US")).toBe(true);
+  });
+
   it("flags characters who have already reached the configured limit", () => {
     const character = { executiveTermsServed: { US: 2 } };
     expect(hasReachedExecutiveTermLimit(character, "US")).toBe(true);
