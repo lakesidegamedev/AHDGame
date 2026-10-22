@@ -102,6 +102,15 @@ describe("CorporationMasthead", () => {
     expect(screen.getByText("+$1000")).toBeTruthy();
   });
 
+  it("leaves the market quote off a private corporation, whose shares do not trade", () => {
+    // The CEO of a private corporation still sees its price, but no quote.
+    renderMasthead({ isPrivate: true, publicFloat: 0 }, { isCeo: true });
+    expect(screen.getByText("$24.74")).toBeTruthy();
+    expect(screen.queryByText("Bid")).toBeNull();
+    expect(screen.queryByText("$24.19")).toBeNull();
+    expect(screen.queryByText("$25.18")).toBeNull();
+  });
+
   it("marks fogged figures as estimates and says where they come from", () => {
     renderMasthead(
       {},

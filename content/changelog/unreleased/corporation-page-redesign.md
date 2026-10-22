@@ -35,3 +35,4 @@ areas: [frontend]
 - Commodity flows split into Inputs and Outputs, each with its total per turn. A commodity a corporation both makes and uses appears in both. Each row links to its market; the supply agreement form is linked once from the intro.
 - The income statement has a Country filter for corporations that operate in more than one country. On All, a ring shows revenue by country, with each country's plants, share of revenue and result. Picking a country, or clicking it in that table, narrows the statement to the revenue and the costs and tax of that country's own plants.
 - A corporation's uploaded banner now shows on every tab, not only on the Overview.
+- A private corporation no longer shows a market bid and ask, since its shares do not trade on the market. Listed corporations keep the quote.

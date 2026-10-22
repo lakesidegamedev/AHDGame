@@ -122,4 +122,18 @@ describe("KeyStatistics", () => {
     expect(screen.queryByText("Share price")).toBeNull();
     expect(screen.queryByRole("img", { name: /against book value/ })).toBeNull();
   });
+
+  it("shows the pool quote for a listed corporation only", () => {
+    const listed = render(<KeyStatistics {...props()} />);
+    expect(screen.getByText("Bid / ask")).toBeTruthy();
+    listed.unmount();
+    const base = props();
+    // A private corporation's shares do not trade on the market.
+    render(
+      <KeyStatistics
+        {...props({ corporation: { ...base.corporation, isPrivate: true, publicFloat: 0 } })}
+      />
+    );
+    expect(screen.queryByText("Bid / ask")).toBeNull();
+  });
 });

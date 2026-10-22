@@ -354,7 +354,10 @@ export function CorporationMasthead({
             dayChange={dayChange}
             bid={corporation.marketBidPrice}
             ask={corporation.marketAskPrice}
-            poolActive={corporation.equityMarketPoolActive === true}
+            // A private corporation has no market for its shares: no quote.
+            poolActive={
+              corporation.equityMarketPoolActive === true && corporation.isPrivate !== true
+            }
             currentTurn={corporation.currentTurn}
           />
         )}

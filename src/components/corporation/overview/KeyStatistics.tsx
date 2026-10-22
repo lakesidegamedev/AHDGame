@@ -184,6 +184,7 @@ export function KeyStatistics({
             />
           )}
           {canSeeMarket &&
+            corporation.isPrivate !== true &&
             corporation.equityMarketPoolActive &&
             Number.isFinite(corporation.marketBidPrice) &&
             Number.isFinite(corporation.marketAskPrice) && (
