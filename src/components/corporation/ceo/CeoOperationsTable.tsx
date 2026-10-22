@@ -110,7 +110,7 @@ const clampPolicy = (n: number) => Math.max(POLICY_MIN, Math.min(POLICY_MAX, Mat
 const perTurn = (daily: number) => Math.round(scaleMoney(daily, "turn"));
 
 const cellInput =
-  "h-6 rounded border bg-background px-1.5 text-right text-[13px] tabular-nums text-foreground focus:border-foreground focus:outline-none disabled:opacity-50";
+  "h-6 rounded-[calc(var(--corp-rad,6px)-2px)] border bg-background px-1.5 text-right text-[13px] tabular-nums text-foreground focus:border-foreground focus:outline-none disabled:opacity-50";
 
 /** A value the CEO just saved, shown until the refreshed sector catches up. */
 interface Pending<T> {
@@ -382,7 +382,7 @@ function OperationsRow({
               value={postureValue == null ? "auto" : String(postureValue)}
               disabled={busy}
               onChange={(e) => void commitPosture(e.target.value)}
-              className="h-6 rounded border border-card-border bg-background px-1 text-xs text-foreground focus:border-foreground focus:outline-none disabled:opacity-50"
+              className="h-6 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-1 text-xs text-foreground focus:border-foreground focus:outline-none disabled:opacity-50"
             >
               <option value="auto">Auto</option>
               {POSTURE_STEPS.map((p) => (
@@ -588,7 +588,7 @@ function BulkBar({
               setCapacityPreview(null);
               setMessage(null);
             }}
-            className="h-7 max-w-[16rem] rounded-md border border-card-border bg-background px-1.5 text-xs text-foreground focus:border-foreground focus:outline-none"
+            className="h-7 max-w-[16rem] rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-1.5 text-xs text-foreground focus:border-foreground focus:outline-none"
           >
             {scopes.map((s) => (
               <option key={s.key} value={s.key}>
@@ -633,7 +633,7 @@ function BulkBar({
               aria-label="Bulk pricing"
               value={posture}
               onChange={(e) => setPosture(e.target.value)}
-              className="h-7 rounded-md border border-card-border bg-background px-1 text-xs text-foreground focus:border-foreground focus:outline-none"
+              className="h-7 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-1 text-xs text-foreground focus:border-foreground focus:outline-none"
             >
               <option value="auto">Auto</option>
               {POSTURE_STEPS.map((p) => (
