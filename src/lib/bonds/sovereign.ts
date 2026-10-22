@@ -20,7 +20,7 @@
  * Cross-currency flows (a holder whose home currency differs from the bond's)
  * settle at coupon-payment time in the bond turn processor, not here.
  */
-import { ObjectId, type Db } from "mongodb";
+import { ObjectId, type Collection, type Db } from "mongodb";
 import type {
   Bond,
   BondMaturityTurns,
@@ -1117,14 +1117,26 @@ export async function resolveSovereignMaturityPayoutLegs(
     ids.push(leg.filter._id);
     idsByCollection.set(leg.collection, ids);
   }
-  const live = new Set<string>();
-  for (const [collection, ids] of idsByCollection) {
-    const rows = await db
-      .collection<{ _id: unknown }>(collection)
+  // One bounded $in read per holder kind (at most five), never one per leg.
+  const liveIds = async (name: string, collection: Collection<{ _id: unknown }>) => {
+    const ids = idsByCollection.get(name);
+    if (!ids?.length) return [];
+    const rows = await collection
       .find({ _id: { $in: ids } } as never, { projection: { _id: 1 } })
       .toArray();
-    for (const row of rows) live.add(`${collection}:${String(row._id)}`);
-  }
+    return rows.map((row) => `${name}:${String(row._id)}`);
+  };
+  const live = new Set(
+    (
+      await Promise.all([
+        liveIds("characters", db.collection<{ _id: unknown }>("characters")),
+        liveIds("imperialCharacters", db.collection<{ _id: unknown }>("imperialCharacters")),
+        liveIds("corporations", db.collection<{ _id: unknown }>("corporations")),
+        liveIds("indexFunds", db.collection<{ _id: unknown }>("indexFunds")),
+        liveIds("npps", db.collection<{ _id: unknown }>("npps")),
+      ])
+    ).flat()
+  );
   return legs.map((leg) => {
     if (leg.collection === "centralBanks") {
       const bankId = sovereignMaturityCentralBankId(String(leg.filter._id));

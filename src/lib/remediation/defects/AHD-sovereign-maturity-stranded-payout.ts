@@ -18,7 +18,7 @@
  * turn resumes the journal, delivers the remaining credits, applies the
  * projections, and retires the bond.
  */
-import type { Db } from "mongodb";
+import type { Collection, Db } from "mongodb";
 import {
   redirectUnclaimableSovereignMaturityLeg,
   sovereignMaturityCentralBankId,
@@ -112,28 +112,58 @@ async function survey(db: Db): Promise<PayoutPatch[]> {
     .collection<PayoutRecord>(MONEY_MOVE_COLLECTION)
     .find({ kind: PAYOUT_KIND, status: "partial" })
     .toArray();
-  const out: PayoutPatch[] = [];
+  // Batch every read: one $in for the bonds, one per holder kind for targets.
+  const candidates: { record: PayoutRecord; bondId: string; bondKey: unknown }[] = [];
+  const holderIds = new Map<string, unknown[]>();
   for (const record of records) {
     // Key shape: sovereign-maturity:<bondId>:<dueTurn>:payout
     const bondId = record._id.split(":")[1];
     const debit = record.legs.find((leg) => leg.kind === "debit" && leg.collection === "bonds");
     if (!bondId || !debit?.filter?._id) continue;
-    const bond = await db
+    candidates.push({ record, bondId, bondKey: debit.filter._id });
+    for (const leg of record.legs) {
+      if (leg.kind !== "credit" || leg.applied || !leg.collection) continue;
+      if (!HOLDER_COLLECTIONS.has(leg.collection)) continue;
+      const ids = holderIds.get(leg.collection) ?? [];
+      ids.push(leg.filter?._id);
+      holderIds.set(leg.collection, ids);
+    }
+  }
+  if (!candidates.length) return [];
+  const liveIds = async (name: string, collection: Collection<{ _id: unknown }>) => {
+    const ids = holderIds.get(name);
+    if (!ids?.length) return [];
+    const rows = await collection
+      .find({ _id: { $in: ids } } as never, { projection: { _id: 1 } })
+      .toArray();
+    return rows.map((row) => `${name}:${String(row._id)}`);
+  };
+  const [bonds, ...liveGroups] = await Promise.all([
+    db
       .collection<Bond>("bonds")
-      .findOne(
-        { _id: debit.filter._id as Bond["_id"] },
+      .find(
+        { _id: { $in: candidates.map((c) => c.bondKey as Bond["_id"]) } },
         { projection: { sovereignMaturityClaim: 1 } }
-      );
-    const quote = bond?.sovereignMaturityClaim;
+      )
+      .toArray(),
+    liveIds("characters", db.collection<{ _id: unknown }>("characters")),
+    liveIds("imperialCharacters", db.collection<{ _id: unknown }>("imperialCharacters")),
+    liveIds("corporations", db.collection<{ _id: unknown }>("corporations")),
+    liveIds("indexFunds", db.collection<{ _id: unknown }>("indexFunds")),
+    liveIds("npps", db.collection<{ _id: unknown }>("npps")),
+  ]);
+  const live = new Set(liveGroups.flat());
+  const bondsById = new Map(bonds.map((bond) => [String(bond._id), bond]));
+  const out: PayoutPatch[] = [];
+  for (const { record, bondId, bondKey } of candidates) {
+    const quote = bondsById.get(String(bondKey))?.sovereignMaturityClaim;
     if (!quote) continue;
     const pool = { currencyCode: quote.currencyCode, localPerAnchor: quote.treasuryLocalPerAnchor };
     const patches: LegPatch[] = [];
     for (const [index, leg] of record.legs.entries()) {
       if (leg.kind !== "credit" || leg.applied || !leg.collection) continue;
-      const exists =
-        (await db
-          .collection<{ _id: unknown }>(leg.collection)
-          .findOne({ _id: leg.filter?._id } as never, { projection: { _id: 1 } })) !== null;
+      // Only holder legs consult existence; every other kind ignores it.
+      const exists = live.has(`${leg.collection}:${String(leg.filter?._id)}`);
       const to = repairStrandedPayoutLeg(leg, exists, pool);
       if (to) patches.push({ index, from: leg, to });
     }
