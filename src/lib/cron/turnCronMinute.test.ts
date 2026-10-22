@@ -8,22 +8,23 @@ import {
 } from "./turnCronMinute";
 
 const at = (iso: string) => new Date(iso);
+const env = (e: Record<string, string>) => e as unknown as NodeJS.ProcessEnv;
 
 describe("resolveTurnCronMinute", () => {
   it("defaults to 0 when unset or blank", () => {
-    expect(resolveTurnCronMinute({})).toBe(0);
-    expect(resolveTurnCronMinute({ TURN_CRON_MINUTE: " " })).toBe(0);
+    expect(resolveTurnCronMinute(env({}))).toBe(0);
+    expect(resolveTurnCronMinute(env({ TURN_CRON_MINUTE: " " }))).toBe(0);
   });
 
   it("accepts 0 and 30", () => {
-    expect(resolveTurnCronMinute({ TURN_CRON_MINUTE: "0" })).toBe(0);
-    expect(resolveTurnCronMinute({ TURN_CRON_MINUTE: "30" })).toBe(30);
+    expect(resolveTurnCronMinute(env({ TURN_CRON_MINUTE: "0" }))).toBe(0);
+    expect(resolveTurnCronMinute(env({ TURN_CRON_MINUTE: "30" }))).toBe(30);
   });
 
   it("falls back to 0 with a warning for any other minute", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    expect(resolveTurnCronMinute({ TURN_CRON_MINUTE: "15" })).toBe(0);
-    expect(resolveTurnCronMinute({ TURN_CRON_MINUTE: "abc" })).toBe(0);
+    expect(resolveTurnCronMinute(env({ TURN_CRON_MINUTE: "15" }))).toBe(0);
+    expect(resolveTurnCronMinute(env({ TURN_CRON_MINUTE: "abc" }))).toBe(0);
     expect(warn).toHaveBeenCalledTimes(2);
     warn.mockRestore();
   });
