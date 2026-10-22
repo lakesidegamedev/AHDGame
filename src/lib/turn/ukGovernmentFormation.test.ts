@@ -64,10 +64,12 @@ describe("tallyCommonsSeatsByParty", () => {
     const result = await tallyCommonsSeatsByParty(db as unknown as Db);
 
     expect(result).toEqual({ "1": 350, "2": 200, "3": 100 });
-    expect(db.collectionMocks["electedOfficials"]!.find).toHaveBeenCalledWith({
-      officeType: "commons",
-      countryId: "UK",
-    });
+    // The shared tally projects to the two fields it reads; the seat count is
+    // what this test is about.
+    expect(db.collectionMocks["electedOfficials"]!.find).toHaveBeenCalledWith(
+      { officeType: "commons", countryId: "UK" },
+      { projection: { party: 1, seatsHeld: 1 } }
+    );
   }, 20_000);
 });
 
