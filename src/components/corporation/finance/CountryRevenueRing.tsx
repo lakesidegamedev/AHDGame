@@ -1,6 +1,5 @@
 "use client";
 
-import { brandShades, resolveCorpColor } from "@/lib/corporations/brandColor";
 import { RingChart } from "../ledger/RingChart";
 import type { LedgerSegment } from "../ledger/seriesColours";
 import { signTone, Td, Th } from "../dense/DenseKit";
@@ -12,25 +11,30 @@ type CountryRow = NonNullable<Financials["byCountry"]>[number];
 const MAX_NAMED = 6;
 
 /**
+ * Six distinct hues (globals.css, stepped per light or dark theme), in an order
+ * validated for colour-blind separation between neighbouring slices, the wrap
+ * from last to first included. Red and green are left out: here they mean loss
+ * and profit.
+ */
+const PALETTE = [1, 2, 3, 4, 5, 6].map((n) => `var(--corp-cat-${n})`);
+const OTHER_COLOUR = "var(--color-muted)";
+
+/**
  * Revenue by country: a ring sized by revenue and a table with each country's
- * plants, share and result. Slices are shades of the corporation's own colour
- * (the convention for one corporation's breakdowns), assigned in a fixed
- * country order so a country keeps its shade when the ranking changes. Red and
- * green stay free for the result column. Choosing a country selects it.
+ * plants, share and result. Each country gets its own hue, assigned in country
+ * order rather than by revenue, so a country keeps its colour when the ranking
+ * changes. The table names every slice, so colour is never the only label.
+ * Choosing a country selects it.
  */
 export function CountryRevenueRing({
   rows,
   countryName,
-  brandColor,
-  corpId,
   money,
   signed,
   onSelect,
 }: {
   rows: CountryRow[];
   countryName: (countryId: string) => string;
-  brandColor: string | null | undefined;
-  corpId: string;
   /** Formats a daily figure for the current period. */
   money: (daily: number) => string;
   signed: (daily: number) => string;
@@ -39,12 +43,14 @@ export function CountryRevenueRing({
   const total = rows.reduce((sum, r) => sum + Math.max(0, r.revenue), 0);
   if (!(total > 0)) return null;
 
-  const fixedOrder = rows.map((r) => r.countryId).sort();
-  const shades = brandShades(resolveCorpColor(brandColor, corpId), fixedOrder.length + 1);
-  const shadeOf = (countryId: string) => shades[fixedOrder.indexOf(countryId)];
-
   const named = rows.length > MAX_NAMED ? rows.slice(0, MAX_NAMED - 1) : rows;
   const rest = rows.slice(named.length);
+  // Colours follow the country, not its rank: assigned in country order.
+  const colourOrder = named.map((r) => r.countryId).sort();
+  const shadeOf = (countryId: string) => {
+    const i = colourOrder.indexOf(countryId);
+    return i >= 0 ? PALETTE[i] : OTHER_COLOUR;
+  };
   const segments: LedgerSegment[] = named.map((r) => ({
     key: r.countryId,
     label: countryName(r.countryId),
@@ -59,7 +65,7 @@ export function CountryRevenueRing({
       label: `${rest.length} other ${rest.length === 1 ? "country" : "countries"}`,
       value: restRevenue,
       display: money(restRevenue),
-      color: shades[fixedOrder.length],
+      color: OTHER_COLOUR,
     });
   }
   const share = (revenue: number) => `${((Math.max(0, revenue) / total) * 100).toFixed(1)}%`;

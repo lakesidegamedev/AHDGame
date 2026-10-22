@@ -288,8 +288,6 @@ export default function FinancialsTab({
                   <CountryRevenueRing
                     rows={countryRows}
                     countryName={countryName}
-                    brandColor={corporation.brandColor}
-                    corpId={corporation._id}
                     money={(daily) => fmt(scale(daily))}
                     signed={(daily) => fmtSigned(scale(daily))}
                     onSelect={setCountry}
