@@ -223,7 +223,11 @@ export function TurnControls() {
     try {
       const res = await fetch("/api/admin/turn/process", { method: "POST" });
       const data = await res.json();
-      if (res.ok) {
+      if (res.status === 202) {
+        // The turn worker runs it; the processing indicator below follows it.
+        setMessage(`✓ ${data.message}`);
+        await fetchGameState(true);
+      } else if (res.ok) {
         setTurnProgress(100);
         setCurrentPhase("Done");
         setLastCompletion({ turns: 1, durationSeconds: data.durationSeconds ?? 0 });
@@ -264,8 +268,20 @@ export function TurnControls() {
       for (let i = 0; i < n; i++) {
         setTurnProgress(0);
         setCurrentPhase(null);
-        const res = await fetch("/api/admin/turn/process", { method: "POST" });
+        // The first call carries the whole count: when the turn worker owns turns the
+        // server queues all n at once (202) and this loop stops. Otherwise each call
+        // runs one turn here, as before.
+        const res = await fetch("/api/admin/turn/process", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ count: i === 0 ? n : 1 }),
+        });
         const data = await res.json();
+        if (res.status === 202) {
+          setMessage(`✓ ${data.message}`);
+          completed = -1;
+          break;
+        }
         if (!res.ok) {
           setMessage(`✗ Turn ${i + 1} failed: ${apiErrorText(data, "Unknown error")}`);
           break;
@@ -276,6 +292,7 @@ export function TurnControls() {
       if (completed === n) {
         setLastCompletion({ turns: n, durationSeconds: 0 });
       }
+      // completed === -1: queued for the turn worker; nothing ran in this request.
       await fetchGameState(true);
     } catch {
       setMessage("✗ Network error");
