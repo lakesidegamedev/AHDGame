@@ -44,7 +44,7 @@ interface CorporationMastheadProps {
   onRefresh: () => void;
   /** Opens the trade ticket. Omitted when the viewer cannot trade here. */
   onTrade?: () => void;
-  /** Show the CEO-uploaded banner strip (the page passes true on Overview only). */
+  /** Show the CEO-uploaded banner strip (the corporation page shows it on every tab). */
   showBanner?: boolean;
 }
 
