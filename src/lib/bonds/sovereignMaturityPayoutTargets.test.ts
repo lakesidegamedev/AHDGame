@@ -1,14 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { buildSovereignMaturityPayoutLegs, settleFundedSovereignBondMaturity } from "./sovereign";
 import {
-  buildSovereignMaturityPayoutLegs,
   redirectUnclaimableSovereignMaturityLeg,
   resolveSovereignMaturityPayoutLegs,
-  settleFundedSovereignBondMaturity,
   sovereignMaturityCentralBankId,
   type SovereignMaturityCashLeg,
-} from "./sovereign";
+} from "./sovereignMaturityPayoutTargets";
 import { applyMoneyMove, MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
 import { legsNet } from "@/lib/banking/rules/invariants";
 import type { Bond } from "@/lib/db/types/bond";

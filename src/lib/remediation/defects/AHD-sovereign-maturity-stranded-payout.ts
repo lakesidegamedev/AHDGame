@@ -23,7 +23,7 @@ import {
   redirectUnclaimableSovereignMaturityLeg,
   sovereignMaturityCentralBankId,
   type SovereignMaturityCashLeg,
-} from "@/lib/bonds/sovereign";
+} from "@/lib/bonds/sovereignMaturityPayoutTargets";
 import { MONEY_MOVE_COLLECTION, type MoneyMoveRecordLeg } from "@/lib/banking/moneyMove";
 import type { Bond } from "@/lib/db/types/bond";
 import type { CurrencyCode } from "@/lib/constants/currencies";
