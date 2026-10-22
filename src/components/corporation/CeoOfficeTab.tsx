@@ -227,7 +227,11 @@ export default function CeoOfficeTab({
       >
         <span className="font-medium text-foreground">CEO Office</span>
         {SECTION_LINKS.map((link) => (
-          <a key={link.href} href={link.href} className="hover:text-foreground hover:underline">
+          <a
+            key={link.href}
+            href={link.href}
+            className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border px-2.5 hover:bg-card-elevated hover:text-foreground"
+          >
             {link.label}
           </a>
         ))}

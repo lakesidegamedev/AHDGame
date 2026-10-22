@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { fetchJson } from "@/lib/observability/fetchJson";
+import { NoticeStrip } from "./ledger/NoticeStrip";
 
 interface Status {
   hasStatus: boolean;
@@ -81,20 +82,22 @@ export function NationalizationStatusCard({
           : "This corporation has left state ownership.";
 
   return (
-    <p className="text-xs text-muted">
-      {message}
-      {status.canBid && status.auction && (
-        <>
-          {" "}
-          <Link
-            href={`/country/${status.auction.countryId.toLowerCase()}/nationalization#auction-${status.auction.auctionId}`}
-            className="underline"
-          >
-            Place a bid
-          </Link>
-          .
-        </>
-      )}
-    </p>
+    <NoticeStrip tone={t ? "error" : "info"} tag="State ownership">
+      <p className="m-0">
+        {message}
+        {status.canBid && status.auction && (
+          <>
+            {" "}
+            <Link
+              href={`/country/${status.auction.countryId.toLowerCase()}/nationalization#auction-${status.auction.auctionId}`}
+              className="underline"
+            >
+              Place a bid
+            </Link>
+            .
+          </>
+        )}
+      </p>
+    </NoticeStrip>
   );
 }

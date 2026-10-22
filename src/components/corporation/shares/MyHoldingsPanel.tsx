@@ -1,6 +1,7 @@
 "use client";
 
-import { DenseSection, KVList, KVRow } from "../dense/DenseKit";
+import { KVList, KVRow } from "../dense/DenseKit";
+import { LedgerTicket } from "../ledger/LedgerTicket";
 
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useTranslations } from "next-intl";
@@ -36,7 +37,7 @@ export default function MyHoldingsPanel({
   if (myShares === 0) return null;
 
   return (
-    <DenseSection title="Your holdings">
+    <LedgerTicket title="Your holdings">
       <KVList>
         {holdingTerms && (
           <>
@@ -78,6 +79,6 @@ export default function MyHoldingsPanel({
           ))}
         </ul>
       )}
-    </DenseSection>
+    </LedgerTicket>
   );
 }

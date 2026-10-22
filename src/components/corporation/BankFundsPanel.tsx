@@ -6,6 +6,8 @@ import {
   FUND_CHARTER_FEE_ANCHOR,
   FUND_MIN_SEED_CAPITAL_ANCHOR,
 } from "@/lib/indexFunds/sponsorship/constants";
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { useCorpMoney } from "./dense/DenseKit";
 
 type Payload = {
   canCreate: boolean;
@@ -14,12 +16,30 @@ type Payload = {
   funds: { id: string; slug: string; name: string; status: string; countryId: string | null }[];
 };
 
-export function BankFundsPanel({ corporationId }: { corporationId: string }) {
+export function BankFundsPanel({
+  corporationId,
+  liquidCurrencyCode,
+  countryId,
+}: {
+  corporationId: string;
+  /** The bank's currency: the seed is typed in it and sent as anchor. */
+  liquidCurrencyCode?: string | null;
+  countryId?: string | null;
+}) {
+  const { formatAmount } = useCurrency();
+  const money = useCorpMoney(liquidCurrencyCode, countryId);
+  const anchorPerLocal = money.toAnchor(1);
+  const minSeedLocal = Math.ceil(
+    anchorPerLocal > 0
+      ? FUND_MIN_SEED_CAPITAL_ANCHOR / anchorPerLocal
+      : FUND_MIN_SEED_CAPITAL_ANCHOR
+  );
   const [data, setData] = useState<Payload | null>(null);
   const [name, setName] = useState("");
   const [ticker, setTicker] = useState("");
   const [fee, setFee] = useState("0.50");
-  const [seed, setSeed] = useState(String(FUND_MIN_SEED_CAPITAL_ANCHOR));
+  // Null until the CEO types: then the exact minimum is sent.
+  const [seed, setSeed] = useState<string | null>(null);
   const [weights, setWeights] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -60,7 +80,8 @@ export function BankFundsPanel({ corporationId }: { corporationId: string }) {
           countryId: data!.countryId,
           kind: "broad",
           expenseRatioAnnual: Number(fee) / 100,
-          seedCapitalAnchor: Number(seed),
+          seedCapitalAnchor:
+            seed == null ? FUND_MIN_SEED_CAPITAL_ANCHOR : money.toAnchor(Number(seed)),
           pickedStocks: Object.entries(weights).map(([corporationId, weight]) => ({
             corporationId,
             weightBps: Math.round(Number(weight) * 100),
@@ -201,24 +222,23 @@ export function BankFundsPanel({ corporationId }: { corporationId: string }) {
               />
             </label>
             <label className="text-xs">
-              Bank seed investment (₳)
+              {money.code ? `Bank seed investment, ${money.code}` : "Bank seed investment"}
               <input
                 aria-label="Bank's seed investment"
                 type="number"
                 required
-                min={FUND_MIN_SEED_CAPITAL_ANCHOR}
+                min={minSeedLocal}
                 step="any"
-                value={seed}
+                value={seed ?? String(minSeedLocal)}
                 onChange={(e) => setSeed(e.target.value)}
                 className="block border border-card-border bg-background p-2"
               />
             </label>
           </div>
           <p className="text-xs text-muted">
-            Creation costs ₳{FUND_CHARTER_FEE_ANCHOR.toLocaleString("en-US")} plus your seed
-            investment, paid from corporate cash. The seed buys ordinary units that stay invested
-            while other investors or withdrawals remain. The fee and company choices are fixed for
-            this fund.
+            Creation costs {formatAmount(FUND_CHARTER_FEE_ANCHOR)} plus your seed investment, paid
+            from corporate cash. The seed buys ordinary units that stay invested while other
+            investors or withdrawals remain. The fee and company choices are fixed for this fund.
           </p>
           <button
             type="submit"

@@ -1,3 +1,4 @@
+import type { CountryStatement } from "@/lib/corporations/queries/corporationDetail/countryStatements";
 import type { CorporationType, OperatingSectorType } from "@/lib/constants/corporations";
 import type { ShareHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -302,6 +303,8 @@ export interface CorporationDetail {
   creditCompositeSnapshot?: number;
   /** Country owner ID for national corporations */
   countryOwnerId?: string;
+  /** Owned by a country, through `countryOwnerId` or a state ownership state. */
+  isStateOwned?: boolean;
   /** Whether this corporation is nationalized (margin penalty applies) */
   isNationalized?: boolean;
   /** Whether the corporation is private (financials hidden from non-CEO viewers) */
@@ -550,6 +553,8 @@ export interface Financials {
   passThroughOwnerTax?: number;
   /** Federal tax broken down by sector country (for tooltip display). */
   federalTaxByCountry: Record<string, number>;
+  /** Revenue and the costs of each country's own sectors, largest revenue first. */
+  byCountry?: CountryStatement[];
   bondInterestCost: number;
   bondCouponIncome: number;
   /**

@@ -5,14 +5,13 @@ import { Badge, Input, LoadingSpinner } from "@/components/ui";
 import {
   DenseSection,
   InlineStatus,
-  KVList,
-  KVRow,
   SmallButton,
   TableScroll,
   Td,
   Th,
   signTone,
 } from "./dense/DenseKit";
+import { FiguresGrid, type FigureCell } from "./ledger/FiguresGrid";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { apiErrorText } from "@/lib/errors/catalog";
@@ -285,11 +284,13 @@ function DomainPanel({
   return (
     <DenseSection id={`studio-${domain.domain}`} title={copy.title}>
       {showIntro && (
-        <div className="space-y-1 py-1">
+        <div className="my-1 space-y-1.5 border-l-2 border-info/60 py-0.5 pl-3">
           <p className="text-sm text-muted">{copy.intro}</p>
           <details className="text-xs text-muted">
-            <summary className="cursor-pointer">How quality and odds work</summary>
-            <p className="mt-1">{HOW_IT_WORKS}</p>
+            <summary className="cursor-pointer font-semibold hover:text-foreground">
+              How quality and odds work
+            </summary>
+            <p className="mt-1 max-w-prose">{HOW_IT_WORKS}</p>
           </details>
         </div>
       )}
@@ -313,7 +314,7 @@ function DomainPanel({
               </label>
               <select
                 id={`line-${domain.domain}`}
-                className="block h-9 w-full rounded-md border border-card-border bg-card px-2 text-sm"
+                className="block h-9 w-full rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-card px-2 text-sm"
                 value={selected?.id ?? ""}
                 onChange={(event) => setLineId(event.target.value)}
               >
@@ -332,7 +333,7 @@ function DomainPanel({
                 id={`name-${domain.domain}`}
                 value={name}
                 maxLength={60}
-                className="!h-9 !rounded-md !px-2 !py-1 !text-sm"
+                className="!h-9 !rounded-[calc(var(--corp-rad,6px)-2px)] !px-2 !py-1 !text-sm"
                 placeholder={copy.namePlaceholder}
                 onChange={(event) => setName(event.target.value)}
               />
@@ -389,8 +390,10 @@ function DomainPanel({
       ) : null}
 
       {hasPast && (
-        <div className="pt-2">
-          <h3 className="pb-1 text-xs font-medium text-muted">Past {copy.noun}s</h3>
+        <div className="pt-4">
+          <h3 className="pb-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted">
+            Past {copy.noun}s
+          </h3>
           <PastTable ventures={domain.recent} money={money} noun={copy.noun} />
         </div>
       )}
@@ -436,57 +439,28 @@ function ActiveVenture({
   const base = baseline?.baselineRevenueAnchor;
 
   return (
-    <div className="space-y-3 py-2" aria-label="Product in development">
+    <div
+      className="my-2 space-y-3 rounded-[var(--corp-rad,6px)] border border-card-border bg-card-elevated/30 p-3 sm:p-4"
+      aria-label="Product in development"
+    >
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-semibold">{venture.name}</span>
+        <span className="text-base font-semibold text-foreground">{venture.name}</span>
         <Badge color="info">{venture.lineLabel}</Badge>
-        <span className="text-xs text-muted">
+        <span className="ml-auto font-mono text-xs tabular-nums text-muted">
           {done} of {total} turns done
         </span>
       </div>
       <div
-        className="h-1.5 w-full overflow-hidden rounded bg-card-border"
+        className="h-2 w-full overflow-hidden rounded-[1px] bg-track"
         role="progressbar"
         aria-label="Development progress"
         aria-valuemin={0}
         aria-valuemax={total}
         aria-valuenow={done}
       >
-        <div className="h-full bg-primary" style={{ width: `${(done / total) * 100}%` }} />
+        <div className="h-full bg-info" style={{ width: `${(done / total) * 100}%` }} />
       </div>
-      <KVList className="grid gap-x-8 sm:grid-cols-2">
-        <KVRow label="Spent so far" value={money(venture.spentAnchor)} />
-        <KVRow
-          label="Release"
-          value={`Turn ${venture.endTurn}, in ${turnsToDays(venture.turnsRemaining)}`}
-        />
-        <KVRow label="Quality now" value={`${venture.currentQuality} of 100`} />
-        {venture.odds && (
-          <KVRow
-            label="Quality at release"
-            value={`${venture.odds.projectedQuality} of 100`}
-            title="Projected at the current spending"
-          />
-        )}
-        {venture.odds && (
-          <KVRow label="Chance of a hit" value={range(venture.odds.hitLow, venture.odds.hitHigh)} />
-        )}
-        {venture.odds && (
-          <KVRow
-            label="Revenue lift if it hits"
-            value={range(venture.odds.boostLow, venture.odds.boostHigh)}
-          />
-        )}
-        {venture.odds && base !== undefined && (
-          <KVRow
-            label="Lift in money per turn"
-            value={`${money(base * venture.odds.boostLow)} to ${money(base * venture.odds.boostHigh)}`}
-          />
-        )}
-        {venture.pendingChargeAnchor > 0 && (
-          <KVRow label="Decision costs still to pay" value={money(venture.pendingChargeAnchor)} />
-        )}
-      </KVList>
+      <FiguresGrid cells={ventureFigures(venture, base, money)} columns={{ base: 2, md: 4 }} />
 
       {studio.isCeo && (
         <FundingTable
@@ -518,11 +492,11 @@ function ActiveVenture({
         venture.pendingEvents.map((event) => (
           <div
             key={event.eventId}
-            className="rounded-md border border-primary p-3"
+            className="rounded-[var(--corp-rad,6px)] border border-warning/50 bg-warning/5 p-3"
             role="group"
             aria-label={event.title}
           >
-            <h4 className="text-sm font-semibold">{event.title}</h4>
+            <h4 className="text-sm font-semibold text-foreground">{event.title}</h4>
             <p className="mt-1 text-sm">{event.body}</p>
             <p className="mt-1 text-xs text-muted">
               {studio.isCeo
@@ -589,6 +563,55 @@ function ActiveVenture({
       )}
     </div>
   );
+}
+
+/** The figures of a product in development, in the order the CEO reads them. */
+function ventureFigures(
+  venture: VentureView,
+  base: number | undefined,
+  money: Money
+): FigureCell[] {
+  const cells: FigureCell[] = [
+    { key: "spent", label: "Spent so far", value: money(venture.spentAnchor) },
+    {
+      key: "release",
+      label: "Release",
+      value: `Turn ${venture.endTurn}, in ${turnsToDays(venture.turnsRemaining)}`,
+    },
+    { key: "quality", label: "Quality now", value: `${venture.currentQuality} of 100` },
+  ];
+  if (venture.odds) {
+    cells.push(
+      {
+        key: "projected",
+        label: "Quality at release",
+        value: `${venture.odds.projectedQuality} of 100`,
+        title: "Projected at the current spending",
+      },
+      {
+        key: "hit",
+        label: "Chance of a hit",
+        value: range(venture.odds.hitLow, venture.odds.hitHigh),
+      },
+      {
+        key: "lift",
+        label: "Revenue lift if it hits",
+        value: range(venture.odds.boostLow, venture.odds.boostHigh),
+      }
+    );
+    if (base !== undefined) {
+      const lift = `${money(base * venture.odds.boostLow)} to ${money(base * venture.odds.boostHigh)}`;
+      cells.push({ key: "lift-money", label: "Lift in money per turn", value: lift, title: lift });
+    }
+  }
+  if (venture.pendingChargeAnchor > 0) {
+    cells.push({
+      key: "pending",
+      label: "Decision costs still to pay",
+      value: money(venture.pendingChargeAnchor),
+    });
+  }
+  return cells;
 }
 
 function PastTable({

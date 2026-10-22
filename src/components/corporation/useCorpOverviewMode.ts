@@ -30,6 +30,12 @@ function readStored(): CorpOverviewMode | null {
   }
 }
 
+/** Below the lg breakpoint, where the page uses its phone layout. */
+function isPhoneWidth(): boolean {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
+  return window.matchMedia("(max-width: 1023px)").matches;
+}
+
 function writeStored(mode: CorpOverviewMode) {
   try {
     localStorage.setItem(CORP_OVERVIEW_MODE_KEY, mode);
@@ -65,6 +71,9 @@ export function useCorpOverviewMode(): {
     } else {
       const stored = readStored();
       if (stored) setModeState(stored);
+      // No saved choice anywhere: a phone opens on Simple. This is a device
+      // default, never written back as if the player had chosen it.
+      else if (isPhoneWidth()) setModeState("simple");
     }
     setSynced(true);
   }, [authLoading, authUser, synced]);

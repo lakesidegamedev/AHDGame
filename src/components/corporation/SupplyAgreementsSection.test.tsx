@@ -9,6 +9,13 @@ import enCorporations from "../../../messages/en/corporations.json";
 
 vi.mock("./SupplyOfferBoard", () => ({ SupplyOfferBoard: () => null }));
 
+vi.mock("@/contexts/CurrencyContext", () => ({
+  useCurrency: () => ({
+    formatAmount: (n: number) => `A${Math.round(n)}`,
+    toInternalFrom: (n: number) => n,
+  }),
+}));
+
 vi.mock("@/contexts/ToastContext", () => ({
   useToast: () => ({ showToast: vi.fn() }),
 }));
@@ -294,5 +301,14 @@ describe("SupplyAgreementsSection delivery outcome", () => {
         })
       )
     );
+  });
+});
+
+describe("SupplyAgreementsSection currency", () => {
+  it("no ₳ rendered", async () => {
+    const { container } = render(<SupplyAgreementsSection corpId="buyer" />);
+    await waitFor(() => expect(screen.getByText("As buyer")).toBeTruthy());
+    expect(screen.getAllByText("A250").length).toBeGreaterThan(0);
+    expect(container.textContent).not.toContain("₳");
   });
 });

@@ -18,8 +18,8 @@ import {
   MIN_EXPENSE_RATIO_ANNUAL,
 } from "@/lib/indexFunds/sponsorship/constants";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
-
-const fmt = (n: number) => "₳" + Math.round(n).toLocaleString("en-US");
+import { useCurrency } from "@/contexts/CurrencyContext";
+import { useCorpMoney } from "./dense/DenseKit";
 
 type SponsoredFund = {
   id: string;
@@ -46,8 +46,24 @@ const sponsoredFundHref = (f: SponsoredFund) => fundPageHref(f.scope, f.countryI
  * passes here should only fail on things the client cannot know (ticker
  * collisions, cash on hand).
  */
-export default function SponsoredFundPanel({ corpId }: { corpId: string }) {
+export default function SponsoredFundPanel({
+  corpId,
+  liquidCurrencyCode,
+  countryId: corpCountryId,
+}: {
+  corpId: string;
+  /** The sponsor's currency: seed capital is typed in it and sent as anchor. */
+  liquidCurrencyCode?: string | null;
+  countryId?: string | null;
+}) {
   const resolveCountryName = useCountryDisplayName();
+  // Fees are anchor values shown in the viewer's display currency.
+  const { formatAmount } = useCurrency();
+  const fmt = (anchor: number) => formatAmount(anchor);
+  const money = useCorpMoney(liquidCurrencyCode, corpCountryId);
+  // Anchor to the sponsor's currency, for showing the minimum in the input.
+  const anchorPerLocal = money.toAnchor(1);
+  const toLocal = (anchor: number) => (anchorPerLocal > 0 ? anchor / anchorPerLocal : anchor);
   const [availability, setAvailability] = useState<{
     corpId: string;
     canCreate: boolean;
@@ -60,7 +76,9 @@ export default function SponsoredFundPanel({ corpId }: { corpId: string }) {
   const [kind, setKind] = useState<"broad" | "sector">("broad");
   const [sectorType, setSectorType] = useState("");
   const [expensePct, setExpensePct] = useState("0.50");
-  const [seedCapital, setSeedCapital] = useState(String(FUND_MIN_SEED_CAPITAL_ANCHOR));
+  // Null until the CEO types: then the exact minimum is sent, whatever the
+  // exchange rate did between page load and submit.
+  const [seedCapital, setSeedCapital] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [chartered, setChartered] = useState<{ slug: string; ticker: string } | null>(null);
@@ -85,7 +103,9 @@ export default function SponsoredFundPanel({ corpId }: { corpId: string }) {
 
   const minPct = MIN_EXPENSE_RATIO_ANNUAL * 100;
   const maxPct = MAX_EXPENSE_RATIO_ANNUAL * 100;
-  const seed = Number(seedCapital);
+  const seed =
+    seedCapital == null ? FUND_MIN_SEED_CAPITAL_ANCHOR : money.toAnchor(Number(seedCapital));
+  const minSeedLocal = Math.ceil(toLocal(FUND_MIN_SEED_CAPITAL_ANCHOR));
   const totalCost = FUND_CHARTER_FEE_ANCHOR + (Number.isFinite(seed) ? Math.max(0, seed) : 0);
 
   function validate(): string | null {
@@ -289,13 +309,13 @@ export default function SponsoredFundPanel({ corpId }: { corpId: string }) {
               />
             </label>
             <label className="flex flex-col text-xs text-foreground">
-              Seed capital (₳)
+              {money.code ? `Seed capital, ${money.code}` : "Seed capital"}
               <input
                 type="number"
-                value={seedCapital}
+                value={seedCapital ?? String(minSeedLocal)}
                 onChange={(e) => setSeedCapital(e.target.value)}
-                min={FUND_MIN_SEED_CAPITAL_ANCHOR}
-                step="1000000"
+                min={minSeedLocal}
+                step="any"
                 className="mt-1 h-7 w-44 rounded-md border border-card-border bg-background px-2 text-[13px] text-foreground focus:border-foreground focus:outline-none"
                 required
               />

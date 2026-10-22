@@ -13,13 +13,13 @@ import {
 } from "@/lib/constants/moneyTimescale";
 import { STATE_FLAGS } from "@/lib/constants";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";
-import { formatEffectiveCouponPct, formatMarketingStrength } from "@/lib/utils/formatters";
+import { formatMarketingStrength } from "@/lib/utils/formatters";
 import { loyaltyLabel } from "@/lib/market/brandLoyalty";
 import { CorpEconomicModelBadge } from "@/components/economy/CorpEconomicModelBadge";
 import { GameMonthTime } from "@/components/time/GameMonthTime";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { corpIncomeBasis, netMarginPct } from "./financials/financialsModel";
-import { OwnershipDonut, buildOwnershipSlices } from "./OwnershipDonut";
+import { buildOwnershipSlices } from "./OwnershipDonut";
 import { CAPACITY_UNIT_LABEL, formatUnits } from "./plantsPresentation";
 import {
   DenseSection,
@@ -34,19 +34,19 @@ import {
   signTone,
   useCorpMoney,
 } from "./dense/DenseKit";
-import {
-  DataBar,
-  Delta,
-  DivergingBar,
-  Meter,
-  TEXT_TONE,
-  gradeTone,
-  toneOfSign,
-} from "./dense/InlineViz";
+import { DataBar, DivergingBar, Meter } from "./dense/InlineViz";
 import { OverviewSimple, type SimpleFigures } from "./OverviewSimple";
 import { GrowthLeversPanel } from "./GrowthLeversPanel";
 import { AntitrustCaseCard } from "./AntitrustCaseCard";
 import { TransitionReviewCard } from "./TransitionReviewCard";
+import { KeyStatistics } from "./overview/KeyStatistics";
+import { RevenueMixStrip } from "./overview/RevenueMixStrip";
+import { SectorCards } from "./overview/SectorCards";
+import { OwnershipRing } from "./overview/OwnershipRing";
+import { VoteDocket, type OpenVote } from "./overview/VoteDocket";
+import { CollapsibleSection } from "./ledger/CollapsibleSection";
+import { LedgerTicket } from "./ledger/LedgerTicket";
+import { sectorTypeTones } from "./ledger/sectorTypeTone";
 import {
   buildAttentionItems,
   sectorMargin,
@@ -83,19 +83,6 @@ interface OverviewTabProps {
 }
 
 const PERIOD_OPTIONS = MONEY_PERIODS.map((p) => ({ value: p, label: MONEY_PERIOD_LABEL[p] }));
-
-/** Links styled as quiet inline actions inside a table or list row. */
-function RowLink({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="shrink-0 text-xs text-muted underline decoration-card-border underline-offset-2 hover:text-foreground hover:decoration-foreground"
-    >
-      {children}
-    </button>
-  );
-}
 
 type SectorSortKey = "revenue" | "margin" | "profit" | "share" | "workers";
 
@@ -163,179 +150,196 @@ function SectorTable({
 
   return (
     <>
-      <TableScroll>
-        <table className="w-full min-w-[640px] border-collapse">
-          <thead>
-            <tr className="bg-card-border/15">
-              <Th>Region</Th>
-              <Th>Sector</Th>
-              {hasMoney && (
-                <Th align="right" onClick={() => sortBy("revenue")} sorted={sortState("revenue")}>
-                  Revenue{MONEY_PERIOD_SUFFIX[periodView]}
-                </Th>
-              )}
-              <Th
-                align="right"
-                onClick={() => sortBy("margin")}
-                sorted={sortState("margin")}
-                title="Profit over the full cost bill where plants report it, else the operating margin."
-              >
-                Margin
-              </Th>
-              <Th align="right" onClick={() => sortBy("profit")} sorted={sortState("profit")}>
-                Profit{MONEY_PERIOD_SUFFIX[periodView]}
-              </Th>
-              <Th
-                align="right"
-                onClick={() => sortBy("share")}
-                sorted={sortState("share")}
-                title="Share of this sector's market in the region."
-              >
-                Share
-              </Th>
-              {hasMoney && (
+      <div className="md:hidden">
+        <SectorCards
+          sectors={visible}
+          corpId={corpId}
+          plantsMode={plantsMode}
+          fogged={fogged}
+          fmt={fmt}
+          fmtSigned={fmtSigned}
+          scale={scale}
+          maxRevenue={maxRevenue}
+        />
+      </div>
+      <div className="hidden md:block">
+        <TableScroll>
+          <table className="w-full min-w-[640px] border-collapse">
+            <thead>
+              <tr className="bg-card-border/15">
+                <Th>Region</Th>
+                <Th>Sector</Th>
+                {hasMoney && (
+                  <Th align="right" onClick={() => sortBy("revenue")} sorted={sortState("revenue")}>
+                    Revenue{MONEY_PERIOD_SUFFIX[periodView]}
+                  </Th>
+                )}
                 <Th
                   align="right"
-                  onClick={() => sortBy("workers")}
-                  sorted={sortState("workers")}
-                  className="hidden sm:table-cell"
+                  onClick={() => sortBy("margin")}
+                  sorted={sortState("margin")}
+                  title="Profit over the full cost bill where plants report it, else the operating margin."
                 >
-                  Workers
+                  Margin
                 </Th>
-              )}
-              {plantsMode ? (
-                <>
-                  <Th align="right" className="hidden md:table-cell">
-                    Capacity
-                  </Th>
-                  <Th align="right">Fill</Th>
-                </>
-              ) : (
-                <Th align="right" title="Revenue growth rate per turn.">
-                  Growth
+                <Th align="right" onClick={() => sortBy("profit")} sorted={sortState("profit")}>
+                  Profit{MONEY_PERIOD_SUFFIX[periodView]}
                 </Th>
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {visible.map((s) => {
-              const flag = STATE_FLAGS[s.stateId];
-              const margin = sectorMargin(s);
-              return (
-                <tr key={s._id} className="even:bg-card-border/[0.07] hover:bg-card-elevated/40">
-                  <Td
-                    className={`border-l-2 ${
-                      typeof s.profit === "number" && s.profit < 0
-                        ? "border-l-error/70"
-                        : "border-l-transparent"
-                    }`}
+                <Th
+                  align="right"
+                  onClick={() => sortBy("share")}
+                  sorted={sortState("share")}
+                  title="Share of this sector's market in the region."
+                >
+                  Share
+                </Th>
+                {hasMoney && (
+                  <Th
+                    align="right"
+                    onClick={() => sortBy("workers")}
+                    sorted={sortState("workers")}
+                    className="hidden sm:table-cell"
                   >
-                    <Link
-                      href={`/corporation/${corpId}/sector/${s._id}`}
-                      className="inline-flex max-w-[14rem] items-center gap-1.5 truncate text-foreground hover:underline"
-                    >
-                      {flag && (
-                        <Image
-                          src={flag}
-                          alt=""
-                          width={16}
-                          height={11}
-                          className="h-[11px] w-4 shrink-0 rounded-[2px] object-cover"
-                          unoptimized={bypassNextImageOptimization(flag)}
-                        />
-                      )}
-                      <span className="truncate">{s.displayName ?? s.stateName}</span>
-                    </Link>
-                    {s.embargoSuspended && (
-                      <span className="ml-1.5 text-[11px] text-error" title="Suspended by embargo">
-                        embargo
-                      </span>
-                    )}
-                    {s.mothballed && (
-                      <span className="ml-1.5 text-[11px] text-muted" title="Mothballed">
-                        mothballed
-                      </span>
-                    )}
-                  </Td>
-                  <Td className="text-muted">{s.sectorLabel}</Td>
-                  {hasMoney && (
-                    <Td align="right">
-                      {typeof s.revenue === "number" ? est(fmt(scale(sectorRevenue(s)))) : "n/a"}
-                      <DataBar
-                        value={sectorRevenue(s)}
-                        max={maxRevenue}
-                        className="ml-auto mt-0.5 w-16"
-                      />
-                    </Td>
-                  )}
-                  <Td align="right" className={signTone(margin)}>
-                    <span className="inline-flex items-center gap-2">
-                      <DivergingBar value={margin} className="hidden w-10 md:inline-block" />
-                      {margin != null ? `${margin.toFixed(1)}%` : "n/a"}
-                    </span>
-                  </Td>
-                  <Td align="right" className={signTone(s.profit)}>
-                    {typeof s.profit === "number" ? est(fmtSigned(scale(s.profit))) : "n/a"}
-                  </Td>
-                  <Td align="right" className="text-muted">
-                    {typeof s.marketSharePercent === "number"
-                      ? `${s.marketSharePercent.toFixed(1)}%`
-                      : "n/a"}
-                  </Td>
-                  {hasMoney && (
-                    <Td align="right" className="hidden text-muted sm:table-cell">
-                      {typeof s.workers === "number" ? s.workers.toLocaleString("en-US") : "n/a"}
-                    </Td>
-                  )}
-                  {plantsMode ? (
-                    <>
-                      <Td align="right" className="hidden text-muted md:table-cell">
-                        {formatUnits(s.capacityUnits)}
-                      </Td>
-                      <Td align="right">
-                        <FillText fill={s.fillRate} band={s.fillRateBand} />
-                      </Td>
-                    </>
-                  ) : (
-                    <Td align="right" className="text-muted">
-                      {Number.isFinite(s.currentGrowthRate) ? `${s.currentGrowthRate}%` : "n/a"}
-                    </Td>
-                  )}
-                </tr>
-              );
-            })}
-          </tbody>
-          {hasMoney && sectors.length > 1 && (
-            <tfoot>
-              <tr className="border-t-2 border-card-border bg-card-border/15 font-semibold">
-                <Td className="text-muted">Total</Td>
-                <Td className="text-muted">{sectors.length} sectors</Td>
-                <Td align="right">{est(fmt(scale(totals.revenue)))}</Td>
-                <Td align="right" className={signTone(totals.revenue ? totals.profit : null)}>
-                  {totals.revenue > 0
-                    ? `${((totals.profit / totals.revenue) * 100).toFixed(1)}%`
-                    : "n/a"}
-                </Td>
-                <Td align="right" className={signTone(totals.profit)}>
-                  {est(fmtSigned(scale(totals.profit)))}
-                </Td>
-                <Td />
-                <Td align="right" className="hidden sm:table-cell">
-                  {totals.workers.toLocaleString("en-US")}
-                </Td>
+                    Workers
+                  </Th>
+                )}
                 {plantsMode ? (
                   <>
-                    <Td className="hidden md:table-cell" />
-                    <Td />
+                    <Th align="right" className="hidden md:table-cell">
+                      Capacity
+                    </Th>
+                    <Th align="right">Fill</Th>
                   </>
                 ) : (
-                  <Td />
+                  <Th align="right" title="Revenue growth rate per turn.">
+                    Growth
+                  </Th>
                 )}
               </tr>
-            </tfoot>
-          )}
-        </table>
-      </TableScroll>
+            </thead>
+            <tbody>
+              {visible.map((s) => {
+                const flag = STATE_FLAGS[s.stateId];
+                const margin = sectorMargin(s);
+                return (
+                  <tr key={s._id} className="even:bg-card-border/[0.07] hover:bg-card-elevated/40">
+                    <Td
+                      className={`border-l-2 ${
+                        typeof s.profit === "number" && s.profit < 0
+                          ? "border-l-error/70"
+                          : "border-l-transparent"
+                      }`}
+                    >
+                      <Link
+                        href={`/corporation/${corpId}/sector/${s._id}`}
+                        className="inline-flex max-w-[14rem] items-center gap-1.5 truncate text-foreground hover:underline"
+                      >
+                        {flag && (
+                          <Image
+                            src={flag}
+                            alt=""
+                            width={16}
+                            height={11}
+                            className="h-[11px] w-4 shrink-0 rounded-[2px] object-cover"
+                            unoptimized={bypassNextImageOptimization(flag)}
+                          />
+                        )}
+                        <span className="truncate">{s.displayName ?? s.stateName}</span>
+                      </Link>
+                      {s.embargoSuspended && (
+                        <span
+                          className="ml-1.5 text-[11px] text-error"
+                          title="Suspended by embargo"
+                        >
+                          embargo
+                        </span>
+                      )}
+                      {s.mothballed && (
+                        <span className="ml-1.5 text-[11px] text-muted" title="Mothballed">
+                          mothballed
+                        </span>
+                      )}
+                    </Td>
+                    <Td className="text-muted">{s.sectorLabel}</Td>
+                    {hasMoney && (
+                      <Td align="right">
+                        {typeof s.revenue === "number" ? est(fmt(scale(sectorRevenue(s)))) : "n/a"}
+                        <DataBar
+                          value={sectorRevenue(s)}
+                          max={maxRevenue}
+                          className="ml-auto mt-0.5 w-16"
+                        />
+                      </Td>
+                    )}
+                    <Td align="right" className={signTone(margin)}>
+                      <span className="inline-flex items-center gap-2">
+                        <DivergingBar value={margin} className="hidden w-10 md:inline-block" />
+                        {margin != null ? `${margin.toFixed(1)}%` : "n/a"}
+                      </span>
+                    </Td>
+                    <Td align="right" className={signTone(s.profit)}>
+                      {typeof s.profit === "number" ? est(fmtSigned(scale(s.profit))) : "n/a"}
+                    </Td>
+                    <Td align="right" className="text-muted">
+                      {typeof s.marketSharePercent === "number"
+                        ? `${s.marketSharePercent.toFixed(1)}%`
+                        : "n/a"}
+                    </Td>
+                    {hasMoney && (
+                      <Td align="right" className="hidden text-muted sm:table-cell">
+                        {typeof s.workers === "number" ? s.workers.toLocaleString("en-US") : "n/a"}
+                      </Td>
+                    )}
+                    {plantsMode ? (
+                      <>
+                        <Td align="right" className="hidden text-muted md:table-cell">
+                          {formatUnits(s.capacityUnits)}
+                        </Td>
+                        <Td align="right">
+                          <FillText fill={s.fillRate} band={s.fillRateBand} />
+                        </Td>
+                      </>
+                    ) : (
+                      <Td align="right" className="text-muted">
+                        {Number.isFinite(s.currentGrowthRate) ? `${s.currentGrowthRate}%` : "n/a"}
+                      </Td>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+            {hasMoney && sectors.length > 1 && (
+              <tfoot>
+                <tr className="border-t-2 border-card-border bg-card-border/15 font-semibold">
+                  <Td className="text-muted">Total</Td>
+                  <Td className="text-muted">{sectors.length} sectors</Td>
+                  <Td align="right">{est(fmt(scale(totals.revenue)))}</Td>
+                  <Td align="right" className={signTone(totals.revenue ? totals.profit : null)}>
+                    {totals.revenue > 0
+                      ? `${((totals.profit / totals.revenue) * 100).toFixed(1)}%`
+                      : "n/a"}
+                  </Td>
+                  <Td align="right" className={signTone(totals.profit)}>
+                    {est(fmtSigned(scale(totals.profit)))}
+                  </Td>
+                  <Td />
+                  <Td align="right" className="hidden sm:table-cell">
+                    {totals.workers.toLocaleString("en-US")}
+                  </Td>
+                  {plantsMode ? (
+                    <>
+                      <Td className="hidden md:table-cell" />
+                      <Td />
+                    </>
+                  ) : (
+                    <Td />
+                  )}
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        </TableScroll>
+      </div>
       {sectors.length > SECTOR_ROWS_COLLAPSED && (
         <div className="pt-2">
           <SmallButton onClick={() => setExpanded((v) => !v)}>
@@ -346,23 +350,6 @@ function SectorTable({
     </>
   );
 }
-
-interface OpenVote {
-  _id: string;
-  type: string;
-  deadlineAtTurn?: number;
-  payload?: Record<string, unknown>;
-}
-
-const VOTE_LABEL: Record<string, string> = {
-  governance_change: "Restructuring",
-  dissolution: "Dissolution",
-  relocation: "Relocation",
-  share_issuance: "Share issuance",
-  adopt_supershares: "Supershares",
-  ticker_change: "Ticker change",
-  ceo_salary: "CEO pay",
-};
 
 /**
  * Signed per-turn change for an operations metric. Absent when the route
@@ -397,9 +384,7 @@ export default function OverviewTab({
   const money = useCorpMoney(corporation.liquidCurrencyCode, corporation.countryId);
   const { fmt, fmtSigned, fmtPrice } = money;
   const fogged = financialFogOfWar != null;
-  const est = (text: string) => (fogged ? `~${text}` : text);
   const scale = (daily: number) => Math.round(scaleMoney(daily, periodView));
-  const suffix = MONEY_PERIOD_SUFFIX[periodView];
 
   const [openVotes, setOpenVotes] = useState<OpenVote[]>([]);
   useEffect(() => {
@@ -425,11 +410,15 @@ export default function OverviewTab({
       ? financials.currentGrowthRate
       : null;
   const stateCount = new Set(sectors.map((s) => s.stateId)).size;
-  const floatPct =
-    corporation.totalShares > 0 ? (corporation.publicFloat / corporation.totalShares) * 100 : null;
-  const bookValue = balanceSheet?.equity.bookValue ?? null;
-  const priceToBook =
-    bookValue != null && bookValue > 0 ? corporation.marketCapitalization / bookValue : null;
+  const primaryType = getOperatingSectorType(
+    corporation.type,
+    corporation.industryModel,
+    corporation.mediaDiscriminator
+  );
+  const sectorTones = sectorTypeTones(
+    sectors.map((s) => s.sectorType),
+    primaryType
+  );
   const activeBonds = bondInfo?.bonds.filter((b) => !b.defaulted && !b.matured).length ?? 0;
   const snapshotComposite = corporation.creditCompositeSnapshot;
   const liveComposite = bondInfo?.creditRating.compositeScore;
@@ -459,6 +448,7 @@ export default function OverviewTab({
           ? null
           : `/character/${sh.sequentialId ?? sh.characterId}`;
   const ownershipSlices = buildOwnershipSlices(corporation, holderHref, myCharacterId);
+  const holderCount = corporation.shareholders.filter((sh) => sh.shares > 0).length;
 
   const brand =
     corporation.brandLoyaltyLabel ??
@@ -485,9 +475,9 @@ export default function OverviewTab({
 
   const positionSection =
     myCharacterId && canTrade && !isCeo ? (
-      <DenseSection
+      <LedgerTicket
         title="Your position"
-        actions={
+        action={
           onTrade ? (
             <SmallButton tone="primary" onClick={onTrade}>
               {myShares > 0 ? "Buy / sell" : "Buy shares"}
@@ -496,18 +486,23 @@ export default function OverviewTab({
         }
       >
         {myShares > 0 ? (
-          <KVList>
-            <KVRow label="Shares held" value={myShares.toLocaleString("en-US")} />
-            <KVRow
-              label="Ownership"
-              value={`${((myShares / Math.max(1, corporation.totalShares)) * 100).toFixed(2)}%`}
-            />
-            <KVRow label="Market value" value={fmt(myShares * corporation.sharePrice)} />
-          </KVList>
+          <>
+            <div className="font-mono text-[28px] font-semibold leading-none tracking-tight tabular-nums text-foreground">
+              {fmt(myShares * corporation.sharePrice)}
+            </div>
+            <div className="mb-2 mt-1.5 text-xs text-muted">Market value</div>
+            <KVList>
+              <KVRow label="Shares held" value={myShares.toLocaleString("en-US")} />
+              <KVRow
+                label="Ownership"
+                value={`${((myShares / Math.max(1, corporation.totalShares)) * 100).toFixed(2)}%`}
+              />
+            </KVList>
+          </>
         ) : (
           <p className="py-1 text-xs text-muted">You hold no shares in this corporation.</p>
         )}
-      </DenseSection>
+      </LedgerTicket>
     ) : null;
 
   const growthPanel =
@@ -600,195 +595,26 @@ export default function OverviewTab({
               meta={fogged ? "~ estimated from the last quarterly report" : undefined}
               actions={periodControl}
             >
-              <div className="grid gap-x-8 sm:grid-cols-2 xl:grid-cols-3">
-                <KVList>
-                  {canSeeMarket && (
-                    <KVRow
-                      lead
-                      label="Share price"
-                      value={fmtPrice(corporation.sharePrice)}
-                      action={
-                        onTrade && canTrade ? <RowLink onClick={onTrade}>Trade</RowLink> : undefined
-                      }
-                    />
-                  )}
-                  {canSeeMarket &&
-                    corporation.equityMarketPoolActive &&
-                    Number.isFinite(corporation.marketBidPrice) &&
-                    Number.isFinite(corporation.marketAskPrice) && (
-                      <KVRow
-                        label="Bid / ask"
-                        value={`${fmtPrice(corporation.marketBidPrice as number)} / ${fmtPrice(corporation.marketAskPrice as number)}`}
-                      />
-                    )}
-                  {canSeeMarket && (
-                    <KVRow label="Market cap" value={fmt(corporation.marketCapitalization)} />
-                  )}
-                  {bookValue != null && (
-                    <KVRow
-                      label="Book value"
-                      value={est(fmt(bookValue))}
-                      hint={priceToBook != null ? `P/B ${priceToBook.toFixed(2)}` : undefined}
-                      title="Market cap can fall through a debt-funded build-out: the bond lands on the book at once, the new capacity only adds value as it starts earning."
-                    />
-                  )}
-                  <KVRow
-                    label="Shares outstanding"
-                    value={corporation.totalShares.toLocaleString("en-US")}
-                  />
-                  {!corporation.isPrivate && floatPct != null && (
-                    <KVRow
-                      label="Public float"
-                      mark={<Meter pct={floatPct} tone="muted" className="w-10" />}
-                      value={`${floatPct.toFixed(1)}%`}
-                      hint={corporation.publicFloat.toLocaleString("en-US")}
-                    />
-                  )}
-                  <KVRow
-                    label="Dividend"
-                    value={
-                      financials.effectiveDividendRate > 0
-                        ? `${financials.effectiveDividendRate}%`
-                        : "None"
-                    }
-                    hint={
-                      financials.effectiveDividendRate > (corporation.dividendRate ?? 0)
-                        ? "legal floor"
-                        : undefined
-                    }
-                    action={
-                      isCeo ? <RowLink onClick={() => onTabChange("ceo")}>Set</RowLink> : undefined
-                    }
-                  />
-                </KVList>
-
-                <KVList>
-                  <KVRow
-                    lead
-                    label={`Revenue${suffix}`}
-                    value={est(fmt(scale(financials.totalRevenue)))}
-                  />
-                  <KVRow
-                    label={`Operating income${suffix}`}
-                    value={
-                      <span className={signTone(financials.operatingIncome)}>
-                        {est(fmtSigned(scale(financials.operatingIncome)))}
-                      </span>
-                    }
-                  />
-                  {basis && (
-                    <KVRow
-                      lead
-                      accent={toneOfSign(basis.netIncome)}
-                      label={`Net income${suffix}`}
-                      value={
-                        <span className={signTone(basis.netIncome)}>
-                          {est(fmtSigned(scale(basis.netIncome)))}
-                        </span>
-                      }
-                      hint={basis.isRealized ? undefined : "projected"}
-                    />
-                  )}
-                  {basis && basis.dividendPaid > 0 && (
-                    <KVRow
-                      label={`Dividends paid${suffix}`}
-                      value={est(fmt(scale(basis.dividendPaid)))}
-                    />
-                  )}
-                  {basis && (
-                    <KVRow
-                      label={`Retained${suffix}`}
-                      value={
-                        <span className={signTone(basis.retained)}>
-                          {est(fmtSigned(scale(basis.retained)))}
-                        </span>
-                      }
-                    />
-                  )}
-                  {netMargin != null && (
-                    <KVRow
-                      label="Net margin"
-                      mark={<DivergingBar value={netMargin} />}
-                      value={<span className={signTone(netMargin)}>{netMargin.toFixed(1)}%</span>}
-                    />
-                  )}
-                  <KVRow
-                    label={financials.growthRateIsRealized ? "Revenue growth" : "Growth rate"}
-                    value={<Delta value={currentGrowthRate} digits={2} />}
-                    hint={
-                      currentGrowthRate == null
-                        ? undefined
-                        : financials.growthRateIsRealized
-                          ? "/yr"
-                          : "/turn"
-                    }
-                  />
-                </KVList>
-
-                <KVList>
-                  <KVRow
-                    lead
-                    accent={cashAccent}
-                    label="Cash"
-                    value={
-                      <span className={corporation.liquidCapital < 0 ? "text-error" : undefined}>
-                        {est(fmt(corporation.liquidCapital))}
-                      </span>
-                    }
-                    title={money.fmtFull(corporation.liquidCapital)}
-                  />
-                  {(corporation.shareEscrowBalance ?? 0) !== 0 && (
-                    <KVRow
-                      label="Buyback escrow"
-                      value={fmt(corporation.shareEscrowBalance ?? 0)}
-                      title="Held to fund share sell-backs; not spendable as cash."
-                    />
-                  )}
-                  {balanceSheet && (
-                    <KVRow label="Total assets" value={est(fmt(balanceSheet.assets.totalAssets))} />
-                  )}
-                  {bondInfo ? (
-                    <>
-                      <KVRow
-                        label="Total debt"
-                        value={fmt(bondInfo.totalDebt)}
-                        hint={
-                          activeBonds > 0
-                            ? `${activeBonds} bond${activeBonds === 1 ? "" : "s"}`
-                            : undefined
-                        }
-                        action={
-                          isCeo ? (
-                            <RowLink onClick={() => onTabChange("credit")}>Issue</RowLink>
-                          ) : undefined
-                        }
-                      />
-                      <KVRow
-                        label="Leverage rating"
-                        title="Measures debt load and the ability to service it, not profitability: a company with no debt rates AAA."
-                        value={
-                          <span className={`font-semibold ${TEXT_TONE[gradeTone(leverageRating)]}`}>
-                            {leverageRating}
-                          </span>
-                        }
-                        hint={creditComposite == null ? undefined : `${creditComposite}/100`}
-                        action={<RowLink onClick={() => onTabChange("credit")}>Details</RowLink>}
-                      />
-                      <KVRow
-                        label="Effective coupon"
-                        value={formatEffectiveCouponPct(bondInfo.creditRating.effectiveCouponRate)}
-                      />
-                    </>
-                  ) : (
-                    <KVRow
-                      label="Leverage"
-                      value={<span className="text-muted">Loading</span>}
-                      mono={false}
-                    />
-                  )}
-                  <KVRow label={`Costs${suffix}`} value={est(fmt(scale(financials.totalCosts)))} />
-                </KVList>
-              </div>
+              <KeyStatistics
+                corporation={corporation}
+                financials={financials}
+                basis={basis}
+                netMargin={netMargin}
+                currentGrowthRate={currentGrowthRate}
+                balanceSheet={balanceSheet}
+                bondInfo={bondInfo}
+                leverageRating={leverageRating}
+                creditComposite={creditComposite}
+                activeBonds={activeBonds}
+                money={money}
+                periodView={periodView}
+                fogged={fogged}
+                canSeeMarket={canSeeMarket}
+                isCeo={isCeo}
+                onTrade={onTrade && canTrade ? onTrade : undefined}
+                onTabChange={onTabChange}
+                cashAccent={cashAccent}
+              />
             </DenseSection>
           )}
 
@@ -805,11 +631,7 @@ export default function OverviewTab({
               <>
                 <CorpEconomicModelBadge
                   countryId={corporation.countryId}
-                  sectorType={getOperatingSectorType(
-                    corporation.type,
-                    corporation.industryModel,
-                    corporation.mediaDiscriminator
-                  )}
+                  sectorType={primaryType}
                 />
                 <SmallButton onClick={() => onTabChange("sectors")}>
                   {isCeo ? "Manage" : "Details"}
@@ -823,15 +645,18 @@ export default function OverviewTab({
                 {isCeo ? " Open Sectors to found the first plant." : ""}
               </p>
             ) : (
-              <SectorTable
-                sectors={sectors}
-                corpId={corpId}
-                periodView={periodView}
-                plantsMode={corporation.plantsMode === true}
-                fogged={fogged}
-                fmt={fmt}
-                fmtSigned={fmtSigned}
-              />
+              <>
+                <RevenueMixStrip sectors={sectors} tones={sectorTones} />
+                <SectorTable
+                  sectors={sectors}
+                  corpId={corpId}
+                  periodView={periodView}
+                  plantsMode={corporation.plantsMode === true}
+                  fogged={fogged}
+                  fmt={fmt}
+                  fmtSigned={fmtSigned}
+                />
+              </>
             )}
           </DenseSection>
         </div>
@@ -840,143 +665,156 @@ export default function OverviewTab({
           {positionSection}
 
           {openVotes.length > 0 && (
-            <DenseSection
-              title="Open shareholder votes"
-              actions={<SmallButton onClick={() => onTabChange("shares")}>Vote</SmallButton>}
-            >
-              <table className="w-full border-collapse">
-                <tbody>
-                  {openVotes.map((v) => (
-                    <tr key={v._id}>
-                      <Td className="text-foreground">{VOTE_LABEL[v.type] ?? v.type}</Td>
-                      <Td align="right" numeric={false} className="text-muted">
-                        {v.deadlineAtTurn != null ? `closes turn ${v.deadlineAtTurn}` : "open"}
-                      </Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </DenseSection>
+            <CollapsibleSection title="Shareholder votes" summary={`${openVotes.length} open`}>
+              <DenseSection
+                title="Open shareholder votes"
+                actions={<SmallButton onClick={() => onTabChange("shares")}>Vote</SmallButton>}
+              >
+                <VoteDocket votes={openVotes} currentTurn={corporation.currentTurn} />
+              </DenseSection>
+            </CollapsibleSection>
           )}
 
-          <DenseSection title="Operations" meta="change per turn">
-            <KVList>
-              <KVRow
-                label="Marketing strength"
-                value={formatMarketingStrength(corporation.marketingStrength)}
-                hint={perTurnChangeHint(corporation.marketingStrengthGrowth)}
-              />
-              <KVRow
-                label="Logistics"
-                value={formatMarketingStrength(corporation.logisticsStrength)}
-                hint={perTurnChangeHint(corporation.logisticsStrengthNetChange)}
-              />
-              <KVRow
-                label="R&D score"
-                value={formatMarketingStrength(corporation.rdScore)}
-                hint={perTurnChangeHint(corporation.rdScoreNetChange)}
-              />
-              {brand && <KVRow label="Brand loyalty" value={brand} mono={false} />}
-              {(corporation.managementOverheadPp ?? 0) > 0 && (
+          <CollapsibleSection
+            title="Operations"
+            summary={
+              physical?.fillRate != null
+                ? `${Math.round(physical.fillRate * 100)}% fill`
+                : `Marketing ${formatMarketingStrength(corporation.marketingStrength)}`
+            }
+          >
+            <DenseSection title="Operations" meta="change per turn">
+              <KVList>
                 <KVRow
-                  label="Management overhead"
-                  value={`${(corporation.managementOverheadPp ?? 0).toFixed(1)} pts of margin`}
-                  hint="grows with every plant the whole group runs, subsidiaries included"
+                  label="Marketing strength"
+                  value={formatMarketingStrength(corporation.marketingStrength)}
+                  hint={perTurnChangeHint(corporation.marketingStrengthGrowth)}
                 />
-              )}
-              {corporation.averageQuality != null && (
                 <KVRow
-                  label="Average quality"
-                  mark={<Meter pct={corporation.averageQuality} className="w-10" />}
-                  value={`${Math.round(corporation.averageQuality)} / 100`}
+                  label="Logistics"
+                  value={formatMarketingStrength(corporation.logisticsStrength)}
+                  hint={perTurnChangeHint(corporation.logisticsStrengthNetChange)}
                 />
-              )}
-              {physical && (
-                <>
+                <KVRow
+                  label="R&D score"
+                  value={formatMarketingStrength(corporation.rdScore)}
+                  hint={perTurnChangeHint(corporation.rdScoreNetChange)}
+                />
+                {brand && <KVRow label="Brand loyalty" value={brand} mono={false} />}
+                {(corporation.managementOverheadPp ?? 0) > 0 && (
                   <KVRow
-                    label="Capacity"
-                    value={formatUnits(physical.capacityUnits)}
-                    hint={CAPACITY_UNIT_LABEL}
+                    label="Management overhead"
+                    value={`${(corporation.managementOverheadPp ?? 0).toFixed(1)} pts of margin`}
+                    hint="grows with every plant the whole group runs, subsidiaries included"
                   />
+                )}
+                {corporation.averageQuality != null && (
                   <KVRow
-                    label="Fill"
-                    mark={
-                      physical.fillRate != null ? (
-                        <Meter pct={physical.fillRate * 100} className="w-10" />
-                      ) : undefined
-                    }
-                    value={
-                      physical.fillRate != null ? `${Math.round(physical.fillRate * 100)}%` : "n/a"
-                    }
-                    hint={
-                      physical.buildingSectorCount > 0
-                        ? `${physical.buildingSectorCount} building`
-                        : undefined
-                    }
+                    label="Average quality"
+                    mark={<Meter pct={corporation.averageQuality} className="w-10" />}
+                    value={`${Math.round(corporation.averageQuality)} / 100`}
                   />
-                </>
-              )}
-            </KVList>
-          </DenseSection>
+                )}
+                {physical && (
+                  <>
+                    <KVRow
+                      label="Capacity"
+                      value={formatUnits(physical.capacityUnits)}
+                      hint={CAPACITY_UNIT_LABEL}
+                    />
+                    <KVRow
+                      label="Fill"
+                      mark={
+                        physical.fillRate != null ? (
+                          <Meter pct={physical.fillRate * 100} className="w-10" />
+                        ) : undefined
+                      }
+                      value={
+                        physical.fillRate != null
+                          ? `${Math.round(physical.fillRate * 100)}%`
+                          : "n/a"
+                      }
+                      hint={
+                        physical.buildingSectorCount > 0
+                          ? `${physical.buildingSectorCount} building`
+                          : undefined
+                      }
+                    />
+                  </>
+                )}
+              </KVList>
+            </DenseSection>
+          </CollapsibleSection>
 
           {ownershipSlices.length > 0 && (
-            <DenseSection
-              title="Ownership"
-              meta={`${corporation.shareholders.filter((sh) => sh.shares > 0).length}`}
-              actions={<SmallButton onClick={() => onTabChange("shares")}>All</SmallButton>}
-            >
-              <OwnershipDonut slices={ownershipSlices} />
-            </DenseSection>
+            <CollapsibleSection title="Ownership" summary={`${holderCount} holders`}>
+              <DenseSection
+                title="Ownership"
+                meta={`${holderCount}`}
+                actions={<SmallButton onClick={() => onTabChange("shares")}>All</SmallButton>}
+              >
+                <OwnershipRing slices={ownershipSlices} holderCount={holderCount} />
+              </DenseSection>
+            </CollapsibleSection>
           )}
 
-          <DenseSection title="Structure">
-            <KVList>
-              <KVRow
-                label="Legal form"
-                value={
-                  corporation.legalStructureLabel
-                    ? corporation.legalStructureTaxLabel
-                      ? `${corporation.legalStructureLabel} (${corporation.legalStructureTaxLabel})`
-                      : corporation.legalStructureLabel
-                    : "n/a"
-                }
-                mono={false}
-              />
-              <KVRow label="Headquarters" value={corporation.headquartersStateName} mono={false} />
-              {corporation.parentCorporation && (
+          <CollapsibleSection
+            title="Structure"
+            summary={corporation.legalStructureLabel ?? undefined}
+          >
+            <DenseSection title="Structure">
+              <KVList>
                 <KVRow
-                  mono={false}
-                  label="Parent"
+                  label="Legal form"
                   value={
-                    <Link
-                      href={`/corporation/${corporation.parentCorporation.sequentialId ?? corporation.parentCorporation._id}`}
-                      className="hover:underline"
-                    >
-                      {corporation.parentCorporation.name}
-                    </Link>
+                    corporation.legalStructureLabel
+                      ? corporation.legalStructureTaxLabel
+                        ? `${corporation.legalStructureLabel} (${corporation.legalStructureTaxLabel})`
+                        : corporation.legalStructureLabel
+                      : "n/a"
                   }
-                  hint={`${corporation.parentCorporation.ownershipPct.toFixed(1)}%`}
+                  mono={false}
                 />
-              )}
-              {(corporation.subsidiaries ?? []).map((sub) => (
                 <KVRow
-                  key={sub._id}
+                  label="Headquarters"
+                  value={corporation.headquartersStateName}
                   mono={false}
-                  label="Subsidiary"
-                  value={
-                    <Link
-                      href={`/corporation/${sub.sequentialId ?? sub._id}`}
-                      className="hover:underline"
-                    >
-                      {sub.name}
-                    </Link>
-                  }
-                  hint={`${sub.ownershipPct.toFixed(1)}%`}
                 />
-              ))}
-              <KVRow label="Founded" value={<GameMonthTime value={corporation.createdAt} />} />
-            </KVList>
-          </DenseSection>
+                {corporation.parentCorporation && (
+                  <KVRow
+                    mono={false}
+                    label="Parent"
+                    value={
+                      <Link
+                        href={`/corporation/${corporation.parentCorporation.sequentialId ?? corporation.parentCorporation._id}`}
+                        className="hover:underline"
+                      >
+                        {corporation.parentCorporation.name}
+                      </Link>
+                    }
+                    hint={`${corporation.parentCorporation.ownershipPct.toFixed(1)}%`}
+                  />
+                )}
+                {(corporation.subsidiaries ?? []).map((sub) => (
+                  <KVRow
+                    key={sub._id}
+                    mono={false}
+                    label="Subsidiary"
+                    value={
+                      <Link
+                        href={`/corporation/${sub.sequentialId ?? sub._id}`}
+                        className="hover:underline"
+                      >
+                        {sub.name}
+                      </Link>
+                    }
+                    hint={`${sub.ownershipPct.toFixed(1)}%`}
+                  />
+                ))}
+                <KVRow label="Founded" value={<GameMonthTime value={corporation.createdAt} />} />
+              </KVList>
+            </DenseSection>
+          </CollapsibleSection>
         </aside>
       </div>
     </div>

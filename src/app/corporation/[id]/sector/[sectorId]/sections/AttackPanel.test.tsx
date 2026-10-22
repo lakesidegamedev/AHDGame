@@ -58,4 +58,47 @@ describe("AttackPanel plant split", () => {
     fireEvent.click(screen.getByRole("button", { name: "Confirm sector split" }));
     await waitFor(() => expect(onAttack).toHaveBeenCalledTimes(1));
   });
+
+  it("opens the planner straight away from the corporation page deep link", () => {
+    const onAttack = vi.fn().mockResolvedValue(true);
+    render(
+      <AttackPanel
+        attackInfo={{
+          attackCost: 0,
+          splitCost: 0,
+          splitEstimatedCapture: 0,
+          splitMsCost: 0,
+          userMarketingStrength: 150,
+          userLiquidCapital: 500_000,
+          stateId: "TX",
+          countryId: "US",
+          plantCount: 1_000,
+          plantSplitQuote: {
+            seizureFraction: 0.13,
+            plantsAtRisk: 130,
+            trancheBookValueAnchor: 260_000,
+            cashCostAnchor: 130_000,
+            marketingStrengthCost: 20,
+            successProbability: 0.6,
+          },
+        }}
+        plantsMode
+        targetName="Rival Steel"
+        showAttack
+        showSplit={false}
+        openPlannerOnMount
+        attacking={false}
+        attackError=""
+        attackMsg=""
+        onAttack={onAttack}
+        splitting={false}
+        splitError=""
+        splitMsg=""
+        onSplit={vi.fn()}
+        sectorCurrencyCode="USD"
+      />
+    );
+    expect(screen.getByText("Target: Rival Steel")).toBeTruthy();
+    expect(onAttack).not.toHaveBeenCalled();
+  });
 });

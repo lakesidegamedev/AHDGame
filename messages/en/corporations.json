@@ -976,6 +976,7 @@
       "turns": "{count, plural, one {# turn} other {# turns}}",
       "turn": "Turn {turn}",
       "perpetual": "Perpetual",
+      "termUsed": "{used} of {term} turns used",
       "pending": "Legacy offers",
       "active": "Active contracts",
       "history": "History",
