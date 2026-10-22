@@ -1,6 +1,7 @@
 /**
- * DRAFT, not registered in registry.ts. Register only after the paired code
- * fix is merged and its commit is pinned in `codeFix.requiredCommit`.
+ * Paired code fix: #4754 (sovereign maturity legs resolve to live targets at
+ * preparation). Kept registered as a detector for any journal that still
+ * strands, e.g. one resumed after its holder was deleted.
  *
  * A funded sovereign maturity payout applies its escrow debit first, then one
  * credit per frozen holder leg in order. Two kinds of credit leg could never
@@ -267,7 +268,7 @@ export const defect: Defect = {
   id: DEFECT_ID,
   title: "Sovereign maturity payouts stranded on dead credit targets",
   severity: "P1",
-  codeFix: { requiredCommit: "REPLACE_WITH_MERGED_FIX_SHA" },
+  codeFix: { requiredCommit: "115dc01265eec5b8a259099daeccb29bd664b88b" },
   seedFix: {
     status: "not-needed",
     note: "Runtime only: produced by frozen maturity quotes, not by any seed document.",

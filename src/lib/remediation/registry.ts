@@ -32,6 +32,7 @@ import { defect as natCorpSplitSectorType } from "./defects/AHD-1271-natcorp-spl
 import { defect as mergedPartyOrg } from "./defects/AHD-1372-merged-party-org";
 import { defect as freightOverbillingRestitution } from "./defects/AHD-1448-freight-overbilling-restitution";
 import { defect as dissolutionNppSuccessors } from "./defects/AHD-dissolution-npp-successors";
+import { defect as sovereignMaturityStrandedPayout } from "./defects/AHD-sovereign-maturity-stranded-payout";
 import type { Defect } from "./types";
 
 export const DEFECTS: Defect[] = [
@@ -82,6 +83,10 @@ export const DEFECTS: Defect[] = [
   // Dissolutions used to delete their plants into the unowned pool. Rebuilds
   // NPP successors for past exits from the restore tokens they left behind.
   dissolutionNppSuccessors,
+  // Sovereign maturity payouts whose unapplied credit legs named a shared
+  // central bank by country id or a deleted holder stayed partial forever.
+  // #4754 resolves legs to live targets; this re-points any that still strand.
+  sovereignMaturityStrandedPayout,
 ];
 
 export function getDefect(id: string): Defect | undefined {
