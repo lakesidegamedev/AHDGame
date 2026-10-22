@@ -30,3 +30,5 @@ areas: [frontend]
 - Your holdings sit on a share stub, and shareholder votes are set out as cards.
 - Acquisition offers are shown in your display currency, and you type an offer in your corporation's own currency. Picking a target shows its sector count, headquarters, and your cash against the offer. Outgoing offers show their premium over the target's estimated value.
 - Structure draws your group: the parent above, your corporation, and each subsidiary with the share you own. Any corporation in a group now has a Structure tab, and management overhead is listed under group effects.
+- In the CEO Office the dividend is set with a slider from 0% to the 25% cap, in single points, with any legal or parent minimum marked on the track. Resign and Dissolve sit together in a "Leave or close" group.
+- Money in the sponsored fund, bank fund, index listing, supply agreement, bond history and share history panels now shows in your display currency. Seed capital and lobbying fees are typed in your corporation's own currency.
