@@ -782,7 +782,7 @@ export default function CorporationDetailPage() {
               <div className="flex gap-3">
                 <button
                   onClick={handleAcceptCeo}
-                  className="rounded-lg bg-success px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-success/90"
+                  className="rounded-lg bg-success px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-success/90"
                 >
                   Accept position
                 </button>
