@@ -47,6 +47,7 @@ import { computeSoeEfficiencyPenalty } from "@/lib/nationalization/soeEfficiency
 import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 import { managementOverheadPpForCorp } from "../managementOverhead";
 import { appliedDominanceMarginPenalty } from "@/lib/corporations/rules/dominanceRunningCost";
+import { capSizeCosts } from "@/lib/corporations/rules/sizeCostCap";
 import { resolveSectorMandate } from "@/lib/nationalization/soeMandates";
 import { corpAlignmentModifier } from "@/lib/economicModels/effects";
 import type { getSectorTechEffects } from "@/lib/constants/techTree";
@@ -326,14 +327,14 @@ export function accumulateMarginModifiers(input: MarginStackInput): MarginStackR
   // on their own margin but still count toward corpSectorCount.
   // With gameConfig.soeSizeCostScale on, an SOE pays sprawl on its country's
   // total state sector count instead.
-  const sprawlMod = isSprawlExemptSectorType(operatingSectorType)
+  const rawSprawlMod = isSprawlExemptSectorType(operatingSectorType)
     ? 0
     : isStateOwned(corp)
       ? (lookups.soeSizeCostByCorpId?.get(corp._id.toString())?.sprawlPp ?? 0)
       : getSprawlModifier(corpSectorCount, corp.logisticsStrength ?? 0, !!corp.secondaryType);
   // Management overhead grows with total plant count (the whole control group's
   // once groupSizeCostsStage is on); SOEs are exempt like sprawl.
-  const managementOverheadMod = -managementOverheadPpForCorp(corp, lookups);
+  const rawManagementOverheadMod = -managementOverheadPpForCorp(corp, lookups);
   // National-level macroeconomic modifiers (inflation, debt-to-GDP, deficit)
   const inflationMod = lookups.macroInflationByCountry.get(sectorCountryId) ?? 0;
   const debtToGdpMod = lookups.macroDebtToGdpByCountry.get(sectorCountryId) ?? 0;
@@ -407,7 +408,7 @@ export function accumulateMarginModifiers(input: MarginStackInput): MarginStackR
         ),
       }
     : { local: sectorMarketSharePct, national: nationalDominanceSharePct };
-  const dominanceMarginPenalty = isStateOwned(corp)
+  const rawDominanceMarginPenalty = isStateOwned(corp)
     ? 0
     : appliedDominanceMarginPenalty({
         localSharePct: dominanceShares.local,
@@ -417,6 +418,15 @@ export function accumulateMarginModifiers(input: MarginStackInput): MarginStackR
         plantsRampLambda,
         runningScale: running?.scale ?? 0,
       });
+  // Size costs together never take more than SIZE_COST_CAP_PP margin points.
+  const cappedSize = capSizeCosts({
+    sprawl: rawSprawlMod,
+    overhead: rawManagementOverheadMod,
+    dominance: rawDominanceMarginPenalty,
+  });
+  const sprawlMod = cappedSize.sprawl;
+  const managementOverheadMod = cappedSize.overhead;
+  const dominanceMarginPenalty = cappedSize.dominance;
   // Sustained-negative-production margin penalty: counter-driven, see
   // `getSustainedNegativeProductionPenalty`. Punishes long-term parking at
   // negative production levels without preventing tactical short-term use.
