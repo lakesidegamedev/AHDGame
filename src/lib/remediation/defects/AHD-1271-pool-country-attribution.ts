@@ -177,6 +177,9 @@ export const defect: Defect = {
   codeFix: {
     issue: 1271,
     mergedTo: "development",
+    // Landed in f352648 (fix(economy): keep extraction sectors when a country
+    // absorbs another), which has since been promoted to main.
+    requiredCommit: "f352648ed2311d496bd8ce90ae2dddfabb2ef737",
   },
   // The seeder writes the pool from the state list itself
   // (`seedUnownedSectors` iterates states and stamps `state.countryId`), so a
@@ -188,10 +191,8 @@ export const defect: Defect = {
     note: "the seeder stamps the country from the state row it is iterating; only buildCapacity could substitute another country",
   },
   // Prod is listed because prod is where the corruption is, like every other
-  // defect in this ledger. `requiredCommit` is unpinned only because the squash
-  // SHA does not exist until this merges, which `evaluateCodeGate` names and
-  // passes. The operator gate (`--confirm-prod` plus an explicit
-  // `--deployed-sha`) is what holds until the SHA can be pinned.
+  // defect in this ledger. `requiredCommit` is pinned to the landed fix, so the
+  // code gate enforces it, on top of the operator passing `--confirm-prod`.
   envs: ["dev", "sandbox", "prod"],
   idempotent: true,
   guards: ["turn-lock-free", "money-conserving", "max-affected:500"],

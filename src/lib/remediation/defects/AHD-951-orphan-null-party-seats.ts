@@ -145,7 +145,10 @@ export const defect: Defect = {
     issue: 951,
     pr: 3135,
     mergedTo: "master",
-    requiredCommit: "b6e272979d214b07ac6b07cbf9bde07839d5fb96",
+    // The fix (b6e2729, 2026-07-12) predates this repository's public history,
+    // which begins at the "Initial public release" snapshot; the snapshot
+    // carries the fix in full, so it is the commit the code gate can find.
+    requiredCommit: "8972afb65990046691e36f44f88f94b0a3c0a4cf",
   },
   // Checked 2026-08-08. The roster seeder allocates seatsHeld proportionally
   // across default parties, so every seeded row carries a party, and "vacant"
