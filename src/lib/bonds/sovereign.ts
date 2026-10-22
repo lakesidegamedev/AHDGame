@@ -44,6 +44,12 @@ import {
 import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constants/countries";
 import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
 import { getBankId } from "@/lib/centralBank/helpers";
+import {
+  resolveSovereignMaturityPayoutLegs,
+  type SovereignMaturityCashLeg,
+} from "./sovereignMaturityPayoutTargets";
+
+export { sovereignMaturityCentralBankId } from "./sovereignMaturityPayoutTargets";
 import { federalSurplus } from "@/lib/budget/federalSurplus";
 import {
   calculateCreditRating,
@@ -1043,14 +1049,54 @@ async function marketSovereignRolloverCoupon(db: Db, countryId: CountryId): Prom
   );
 }
 
-export interface SovereignMaturityCashLeg {
-  collection: string;
-  filter: Record<string, unknown>;
-  path: string;
-  amount: number;
+/**
+ * The payout journal legs for one funded maturity: the escrow debit, then one
+ * credit per nonzero holder leg in frozen order. Shared with the remediation
+ * heal, so a repaired journal is compared against exactly what a replay would
+ * prepare.
+ */
+export function buildSovereignMaturityPayoutLegs(input: {
+  bondId: ObjectId;
+  claimId: string;
   currencyCode: CurrencyCode;
-  localPerAnchor: number;
-  note: string;
+  treasuryLocalPerAnchor: number;
+  amountLocal: number;
+  holderLegs: readonly SovereignMaturityCashLeg[];
+}) {
+  const valuation = {
+    currencyCode: input.currencyCode,
+    localPerAnchor: input.treasuryLocalPerAnchor,
+  };
+  return [
+    ...(input.amountLocal > 0
+      ? [
+          {
+            kind: "debit" as const,
+            amount: input.amountLocal,
+            valuation,
+            collection: "bonds",
+            filter: {
+              _id: input.bondId,
+              "sovereignMaturityClaim.id": input.claimId,
+              "sovereignMaturityClaim.escrowLocal": { $gte: input.amountLocal },
+            },
+            path: "sovereignMaturityClaim.escrowLocal",
+            note: "Pay non-bank sovereign maturity holders from funded claim escrow",
+          },
+        ]
+      : []),
+    ...input.holderLegs
+      .filter((leg) => leg.amount > 0)
+      .map((leg) => ({
+        kind: "credit" as const,
+        amount: leg.amount,
+        valuation: { currencyCode: leg.currencyCode, localPerAnchor: leg.localPerAnchor },
+        collection: leg.collection,
+        filter: leg.filter,
+        path: leg.path,
+        note: leg.note,
+      })),
+  ];
 }
 
 /** Freeze the due-turn holder snapshot before any maturity claim can be paid. */
@@ -1466,44 +1512,23 @@ export async function settleFundedSovereignBondMaturity(
         }
       : {};
   const payoutKey = `${claimId}:payout`;
+  const payoutHolderLegs = await resolveSovereignMaturityPayoutLegs(db, payoutQuote.holderLegs, {
+    currencyCode: payoutQuote.currencyCode,
+    localPerAnchor: payoutQuote.treasuryLocalPerAnchor,
+  });
   return settleTransition(db, {
     key: payoutKey,
     kind: "sovereign_maturity_payout",
     turn,
     currency: payoutQuote.currencyCode,
-    legs: [
-      ...(payoutQuote.amountLocal > 0
-        ? [
-            {
-              kind: "debit" as const,
-              amount: payoutQuote.amountLocal,
-              valuation: {
-                currencyCode: payoutQuote.currencyCode,
-                localPerAnchor: payoutQuote.treasuryLocalPerAnchor,
-              },
-              collection: "bonds",
-              filter: {
-                _id: bond._id,
-                "sovereignMaturityClaim.id": claimId,
-                "sovereignMaturityClaim.escrowLocal": { $gte: payoutQuote.amountLocal },
-              },
-              path: "sovereignMaturityClaim.escrowLocal",
-              note: "Pay non-bank sovereign maturity holders from funded claim escrow",
-            },
-          ]
-        : []),
-      ...payoutQuote.holderLegs
-        .filter((leg) => leg.amount > 0)
-        .map((leg) => ({
-          kind: "credit" as const,
-          amount: leg.amount,
-          valuation: { currencyCode: leg.currencyCode, localPerAnchor: leg.localPerAnchor },
-          collection: leg.collection,
-          filter: leg.filter,
-          path: leg.path,
-          note: leg.note,
-        })),
-    ],
+    legs: buildSovereignMaturityPayoutLegs({
+      bondId: bond._id,
+      claimId,
+      currencyCode: payoutQuote.currencyCode,
+      treasuryLocalPerAnchor: payoutQuote.treasuryLocalPerAnchor,
+      amountLocal: payoutQuote.amountLocal,
+      holderLegs: payoutHolderLegs,
+    }),
     projections: [
       {
         collection: "federalBudget",
