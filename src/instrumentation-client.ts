@@ -39,6 +39,11 @@ function shouldDeferSentryInit(pathname: string): boolean {
     "/banned",
     "/maintenance",
     "/supporters",
+    // OAuth callbacks are a landing page that immediately navigates away.
+    // Booting the ~450KB SDK here competed with that navigation on the
+    // sign-in path itself, which page-load telemetry ranks as the slowest
+    // route in the game.
+    "/auth",
   ];
   return deferred.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }

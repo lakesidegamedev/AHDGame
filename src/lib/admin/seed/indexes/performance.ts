@@ -215,6 +215,31 @@ export async function seedPerfIndexes(db: Db, log: (msg: string) => void) {
     log
   );
 
+  // electedOfficials — seats in one state, which is the shape every regional
+  // surface asks for: the region page, the governor's office, the state
+  // legislature and its API all filter `{ state }` (usually with `countryId`)
+  // and then sort by office. `{ party, state }` cannot serve a `state`-only
+  // equality, so each of those was a collection scan plus an in-memory sort
+  // over every federal, state and local seat in every country.
+  await ensureIndex(
+    db,
+    "electedOfficials",
+    { state: 1, countryId: 1, officeType: 1 },
+    { name: "electedOfficials_state_countryId_officeType" },
+    log
+  );
+
+  // electedOfficials — chamber rosters per country: /world tallies seats by
+  // party for every parliamentary country, and the legislature pages ask the
+  // same question per country.
+  await ensureIndex(
+    db,
+    "electedOfficials",
+    { countryId: 1, officeType: 1 },
+    { name: "electedOfficials_countryId_officeType" },
+    log
+  );
+
   // nppEndorsements — endorsements per election
   await ensureIndex(
     db,
@@ -605,11 +630,29 @@ export async function seedPerfIndexes(db: Db, log: (msg: string) => void) {
     { name: "share_orders_fund_open_bids", sparse: true, background: true },
     log
   );
+  // Subsidiary-group pages read every open CORPORATE sell order across the
+  // world (no corporationId predicate) to reconstruct effective ownership. That
+  // is a collection scan over the whole order history without its own index.
+  await ensureIndex(
+    db,
+    "shareOrders",
+    { type: 1, status: 1, placerCorporationId: 1 },
+    { name: "shareOrders_type_status_placerCorp" },
+    log
+  );
   await ensureIndex(
     db,
     "shareListings",
     { corporationId: 1, status: 1 },
     { name: "shareListings_corp_status" },
+    log
+  );
+  // Same world-level shape for listings: open corporate listings, no corp filter.
+  await ensureIndex(
+    db,
+    "shareListings",
+    { status: 1, sellerCorporationId: 1 },
+    { name: "shareListings_status_sellerCorp" },
     log
   );
   await ensureIndex(

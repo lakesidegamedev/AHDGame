@@ -1,39 +1,78 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { useParams } from "next/navigation";
 import { useCabinetOffice } from "./useCabinetOffice";
 import { useMergerReviewQueue } from "./useMergerReviewQueue";
-import IntelligenceTab from "./components/IntelligenceTab";
-import { MergerReviewQueuePanel } from "./components/MergerReviewQueuePanel";
-import { IndexListingQueuePanel } from "./components/IndexListingQueuePanel";
+const IntelligenceTab = dynamic(() => import("./components/IntelligenceTab"), {
+  loading: () => <Skeleton className="h-64 w-full" />,
+});
+const MergerReviewQueuePanel = dynamic(
+  () => import("./components/MergerReviewQueuePanel").then((m) => m.MergerReviewQueuePanel),
+  { loading: () => <Skeleton className="h-40 w-full" /> }
+);
+const IndexListingQueuePanel = dynamic(
+  () => import("./components/IndexListingQueuePanel").then((m) => m.IndexListingQueuePanel),
+  { loading: () => <Skeleton className="h-40 w-full" /> }
+);
 import { CabinetOfficeLayout } from "./components/CabinetOfficeLayout";
 import { RestrictedOfficeNotice } from "./components/RestrictedOfficeNotice";
 import { CabinetStatStrip } from "./components/CabinetStatStrip";
 import { CabinetPositionRail } from "./components/CabinetPositionRail";
-import { FlagshipRouter } from "./components/FlagshipRouter";
+const FlagshipRouter = dynamic(
+  () => import("./components/FlagshipRouter").then((m) => m.FlagshipRouter),
+  { loading: () => <Skeleton className="h-64 w-full" /> }
+);
 import { CabinetForceStrip } from "./components/CabinetForceStrip";
 import { CabinetEstateStrip } from "./components/CabinetEstateStrip";
 import { CabinetEnergyStrip } from "./components/CabinetEnergyStrip";
 import { CabinetInfraStrip } from "./components/CabinetInfraStrip";
 import { CabinetMonetaryStrip } from "./components/CabinetMonetaryStrip";
 import { CabinetBannerUploader } from "./components/CabinetBannerUploader";
-import { RegionalBreakdownTable } from "./components/RegionalBreakdownTable";
+const RegionalBreakdownTable = dynamic(
+  () => import("./components/RegionalBreakdownTable").then((m) => m.RegionalBreakdownTable),
+  { loading: () => <Skeleton className="h-40 w-full" /> }
+);
 import { TierSettingPanel } from "./components/TierSettingPanel";
 import { ActingLockProvider } from "./components/ActingLock";
 import { ActingOfficeNotice } from "./components/ActingOfficeNotice";
 import { RegionalTargetPanel } from "./components/RegionalTargetPanel";
 import { AdvocacyTogglePanel } from "./components/AdvocacyTogglePanel";
 import { MinisterialOrderPanel } from "./components/MinisterialOrderPanel";
-import { EmergencyMechanicPanel } from "./components/EmergencyMechanicPanel";
-import { ChancellorFundingPanel } from "./components/ChancellorFundingPanel";
-import { ForeignSecPanels } from "./components/ForeignSecPanels";
-import { StateEnterprisesPanel } from "./components/StateEnterprisesPanel";
-import { TradeEmbargoPanel } from "./components/TradeEmbargoPanel";
-import { GeologicalSurveyPanel } from "./components/GeologicalSurveyPanel";
-import { DoctrineTab } from "./components/military/DoctrineTab";
-import { CommandsTab } from "./components/military/CommandsTab";
+const EmergencyMechanicPanel = dynamic(
+  () => import("./components/EmergencyMechanicPanel").then((m) => m.EmergencyMechanicPanel),
+  { loading: () => <Skeleton className="h-40 w-full" /> }
+);
+const ChancellorFundingPanel = dynamic(
+  () => import("./components/ChancellorFundingPanel").then((m) => m.ChancellorFundingPanel),
+  { loading: () => <Skeleton className="h-40 w-full" /> }
+);
+const ForeignSecPanels = dynamic(
+  () => import("./components/ForeignSecPanels").then((m) => m.ForeignSecPanels),
+  { loading: () => <Skeleton className="h-64 w-full" /> }
+);
+const StateEnterprisesPanel = dynamic(
+  () => import("./components/StateEnterprisesPanel").then((m) => m.StateEnterprisesPanel),
+  { loading: () => <Skeleton className="h-40 w-full" /> }
+);
+const TradeEmbargoPanel = dynamic(
+  () => import("./components/TradeEmbargoPanel").then((m) => m.TradeEmbargoPanel),
+  { loading: () => <Skeleton className="h-40 w-full" /> }
+);
+const GeologicalSurveyPanel = dynamic(
+  () => import("./components/GeologicalSurveyPanel").then((m) => m.GeologicalSurveyPanel),
+  { loading: () => <Skeleton className="h-40 w-full" /> }
+);
+const DoctrineTab = dynamic(
+  () => import("./components/military/DoctrineTab").then((m) => m.DoctrineTab),
+  { loading: () => <Skeleton className="h-64 w-full" /> }
+);
+const CommandsTab = dynamic(
+  () => import("./components/military/CommandsTab").then((m) => m.CommandsTab),
+  { loading: () => <Skeleton className="h-64 w-full" /> }
+);
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
 import { useConflictsEnabled } from "@/contexts/AuthDataContext";
 import { latestEraIndex } from "@/lib/military/doctrineTree";
@@ -46,8 +85,13 @@ import {
   isCompetitionSeat,
   type CabinetTabId,
 } from "./cabinetTabs";
-import { DeclareWarPanel } from "./components/military/DeclareWarPanel";
-import { PeacePanel } from "./components/PeacePanel";
+const DeclareWarPanel = dynamic(
+  () => import("./components/military/DeclareWarPanel").then((m) => m.DeclareWarPanel),
+  { loading: () => <Skeleton className="h-40 w-full" /> }
+);
+const PeacePanel = dynamic(() => import("./components/PeacePanel").then((m) => m.PeacePanel), {
+  loading: () => <Skeleton className="h-40 w-full" />,
+});
 import { FOREIGN_AFFAIRS_POSITION_BY_COUNTRY } from "@/lib/constants/internationalOrganizations";
 import {
   getCabinetMechanics,
@@ -64,9 +108,21 @@ import { Skeleton } from "@/components/ui";
 import type { CountryId } from "@/lib/constants/countries";
 import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
-import { DepartmentProgramPanel } from "./components/DepartmentProgramPanel";
-import { DepartmentFinancePanel } from "./components/DepartmentFinancePanel";
-import { CabinetContractsPanel } from "@/components/governmentContracts/CabinetContractsPanel";
+const DepartmentProgramPanel = dynamic(
+  () => import("./components/DepartmentProgramPanel").then((m) => m.DepartmentProgramPanel),
+  { loading: () => <Skeleton className="h-40 w-full" /> }
+);
+const DepartmentFinancePanel = dynamic(
+  () => import("./components/DepartmentFinancePanel").then((m) => m.DepartmentFinancePanel),
+  { loading: () => <Skeleton className="h-40 w-full" /> }
+);
+const CabinetContractsPanel = dynamic(
+  () =>
+    import("@/components/governmentContracts/CabinetContractsPanel").then(
+      (m) => m.CabinetContractsPanel
+    ),
+  { loading: () => <Skeleton className="h-40 w-full" /> }
+);
 import { ResetCabinetActionPanel } from "./components/ResetCabinetActionPanel";
 
 export default function CabinetOfficePage() {

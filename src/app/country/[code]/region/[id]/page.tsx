@@ -331,16 +331,60 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
 
   const activePreset = gameStateDoc?.preset ?? DEFAULT_SEED_PRESET;
 
+  // The remaining reads below all depend only on data this batch already
+  // returned, so they resolve together instead of as three separate round
+  // trips: viewer party, office access and the region's major parties.
+  const [regionalConditionsOverviewEnabled, currentParty, officeCanManage, regionPartyDocs] =
+    await Promise.all([
+      // Pure config check — no round trip, kept in the batch for ordering.
+      Promise.resolve(isRegionalConditionsOverviewEnabled(gameConfig)),
+      // Viewer's party — used by the RegionDropdown to surface a "My Party" link
+      // to this region's party-branch page when the viewer is in this country.
+      getCurrentPartyNav(userData?.character),
+      // Whether the viewer may reach the regional executive's Office page — the
+      // human holder, OR an authorized party officer of an NPP-held office (state
+      // Chair/Vice, or national Chair/Vice when the state party has neither).
+      // Drives the "Office →" link visibility.
+      userData?.character?._id
+        ? resolveOfficeAccess(db, countryId, state._id, userData.character._id).then(
+            (access) => access.canManage
+          )
+        : Promise.resolve(false),
+      // Region major parties (with positions) for the Demographics dossier's
+      // preferred-party derivation. `isDefault` parties are the country's built-in
+      // major parties and are the only records that reliably carry econ/social
+      // positions; the semantic `majorPartyIds` codes have no PoliticalParty field
+      // to match against, so we select by `isDefault` here.
+      db
+        .collection<PoliticalParty>("politicalParties")
+        .find({ countryId, isDefault: true })
+        .project<
+          Pick<
+            PoliticalParty,
+            | "sequentialId"
+            | "name"
+            | "abbreviation"
+            | "color"
+            | "economicPosition"
+            | "socialPosition"
+          >
+        >({
+          sequentialId: 1,
+          name: 1,
+          abbreviation: 1,
+          color: 1,
+          economicPosition: 1,
+          socialPosition: 1,
+        })
+        .sort({ sequentialId: 1 })
+        .toArray(),
+    ]);
+
   // Per-bucket electorate profile for the Demographics tab. Derived from the
   // same granular units the vote engine uses, so the tab cannot disagree with
   // the result. Null for a region with no Layer-1 substrate — the tab keeps its
   // archetype fallback there.
   const bucketProfile = getBucketProfileForRegion(countryId, stateId, activePreset);
-  const regionalConditionsOverviewEnabled = await isRegionalConditionsOverviewEnabled(gameConfig);
-
-  // Viewer's party — used by the RegionDropdown to surface a "My Party" link
-  // to this region's party-branch page when the viewer is in this country.
-  const currentParty = await getCurrentPartyNav(userData?.character);
 
   const governmentApproval = approvalData?.approval ?? null;
   const approvalBaseScore = approvalData?.baseApproval ?? null;
@@ -402,44 +446,12 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
       }
     : null;
 
-  // Whether the viewer may reach the regional executive's Office page — the
-  // human holder, OR an authorized party officer of an NPP-held office (state
-  // Chair/Vice, or national Chair/Vice when the state party has neither). Drives
-  // the "Office →" link visibility so officers of NPP-held offices can navigate
-  // there, not just the holder.
-  const officeCanManage = userData?.character?._id
-    ? (await resolveOfficeAccess(db, countryId, state._id, userData.character._id)).canManage
-    : false;
-
   // Map country-specific office types to the generic officials buckets.
   // Chamber keys are not always the stored officeType (DD volkskammer vs
   // volkskammerDeputy, CN npc vs npcDelegate) — getRegionOfficialBuckets
   // unions both so seated deputies actually appear (ticket #1121).
   const countryConfig = getCountryConfig(countryId);
 
-  // Region major parties (with positions) for the Demographics dossier's
-  // preferred-party derivation. `isDefault` parties are the country's built-in
-  // major parties and are the only records that reliably carry econ/social
-  // positions; the semantic `majorPartyIds` codes have no PoliticalParty field
-  // to match against, so we select by `isDefault` here.
-  const regionPartyDocs = await db
-    .collection<PoliticalParty>("politicalParties")
-    .find({ countryId, isDefault: true })
-    .project<
-      Pick<
-        PoliticalParty,
-        "sequentialId" | "name" | "abbreviation" | "color" | "economicPosition" | "socialPosition"
-      >
-    >({
-      sequentialId: 1,
-      name: 1,
-      abbreviation: 1,
-      color: 1,
-      economicPosition: 1,
-      socialPosition: 1,
-    })
-    .sort({ sequentialId: 1 })
-    .toArray();
   const regionParties: RegionPartyPosition[] = regionPartyDocs.map((p) => ({
     partyId: String(p.sequentialId),
     name: p.name,

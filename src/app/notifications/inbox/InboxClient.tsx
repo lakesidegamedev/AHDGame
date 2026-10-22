@@ -15,6 +15,7 @@ import { MailThreadView } from "./MailThreadView";
 import { InboxEmpty } from "./InboxEmpty";
 import { PriorityLane } from "./PriorityLane";
 import type { InboxItem } from "@/lib/inbox";
+import { useOptionalAuthMe } from "@/contexts/AuthDataContext";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { Skeleton, ListRowSkeleton } from "@/components/ui";
 
@@ -112,30 +113,26 @@ function MonoCount({ n }: { n: number }) {
 export function InboxClient() {
   const { items, loading, error, refetch } = useInboxData();
   const [state, dispatch] = useReducer(inboxReducer, initialInboxState);
-  const [eyebrow, setEyebrow] = useState<EyebrowInfo | null>(null);
+  // The eyebrow is decorative identity text the shell already fetched for the
+  // navbar, so read it from the shared bootstrap instead of issuing a second
+  // full /api/auth/me session lookup on every inbox view.
+  const navData = useOptionalAuthMe()?.navData ?? null;
+  const eyebrow: EyebrowInfo | null = navData?.characterName
+    ? {
+        name: navData.characterName,
+        seat:
+          navData.cabinetOffice?.positionName ??
+          navData.governorOffice?.stateName ??
+          navData.currentParty?.name ??
+          "",
+      }
+    : null;
   const [showHistory, setShowHistory] = useState(false);
   // Mobile: false = rail visible, true = reading pane visible (full-screen).
   // Ignored at lg+ where both columns always show.
   const [mobileReader, setMobileReader] = useState(false);
   const [markAllError, setMarkAllError] = useState<string | null>(null);
   const [markingAll, setMarkingAll] = useState(false);
-
-  // Fetch character eyebrow info from /api/auth/me
-  useEffect(() => {
-    fetchJson<{
-      username?: string;
-      character?: { name?: string; officeName?: string; partyName?: string };
-    }>("/api/auth/me", { feature: "inbox-eyebrow" })
-      .then((data) => {
-        if (!data) return;
-        const name: string = data.character?.name ?? data.username ?? "";
-        const seat: string = data.character?.officeName ?? data.character?.partyName ?? "";
-        if (name) setEyebrow({ name, seat });
-      })
-      .catch(() => {
-        // Non-blocking; eyebrow is decorative
-      });
-  }, []);
 
   // Derive visible items for the active segment, hiding archived
   const visibleItems = useMemo(() => {

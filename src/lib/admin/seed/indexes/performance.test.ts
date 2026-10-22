@@ -60,6 +60,53 @@ describe("seedPerfIndexes", () => {
     expect(call![2]).toEqual({ party: 1, state: 1 });
   });
 
+  /**
+   * Every regional surface — the region page, the governor's office, the state
+   * legislature and its API — filters seats by `state` (usually with countryId)
+   * and sorts by office. `{ party, state }` cannot serve a state-only equality,
+   * so each of those was a collection scan plus an in-memory sort over every
+   * federal, state and local seat in every country. /world tallies seats by
+   * country, which the second index covers.
+   */
+  it("indexes electedOfficials by state and by country chamber roster", async () => {
+    const db = { collection: vi.fn() } as unknown as Db;
+    await seedPerfIndexes(db, () => {});
+
+    const stateCall = ensureIndexMock.mock.calls.find(
+      (c) => c[3]?.name === "electedOfficials_state_countryId_officeType"
+    );
+    expect(stateCall, "no electedOfficials state index is seeded").toBeTruthy();
+    expect(stateCall![2]).toEqual({ state: 1, countryId: 1, officeType: 1 });
+
+    const chamberCall = ensureIndexMock.mock.calls.find(
+      (c) => c[3]?.name === "electedOfficials_countryId_officeType"
+    );
+    expect(chamberCall, "no electedOfficials country/chamber index is seeded").toBeTruthy();
+    expect(chamberCall![2]).toEqual({ countryId: 1, officeType: 1 });
+  });
+
+  /**
+   * Subsidiary-group pages reconstruct effective ownership from every open
+   * CORPORATE sell order and listing in the world — no corporationId predicate —
+   * which was a collection scan over the whole order history.
+   */
+  it("indexes world-level corporate share sells for the group pages", async () => {
+    const db = { collection: vi.fn() } as unknown as Db;
+    await seedPerfIndexes(db, () => {});
+
+    const orderCall = ensureIndexMock.mock.calls.find(
+      (c) => c[3]?.name === "shareOrders_type_status_placerCorp"
+    );
+    expect(orderCall, "no world-level corporate sell index is seeded").toBeTruthy();
+    expect(orderCall![2]).toEqual({ type: 1, status: 1, placerCorporationId: 1 });
+
+    const listingCall = ensureIndexMock.mock.calls.find(
+      (c) => c[3]?.name === "shareListings_status_sellerCorp"
+    );
+    expect(listingCall, "no world-level corporate listing index is seeded").toBeTruthy();
+    expect(listingCall![2]).toEqual({ status: 1, sellerCorporationId: 1 });
+  });
+
   it("recreates election result snapshot indexes after a world reset", async () => {
     const db = { collection: vi.fn() } as unknown as Db;
     await seedPerfIndexes(db, () => {});

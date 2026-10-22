@@ -75,7 +75,10 @@ import type { DefenceContractView } from "@/app/country/[code]/executive/cabinet
 import { accrualPerTurn, upkeepPerTurn } from "@/lib/military/appropriation";
 import { resolveSeedRosterUpkeep } from "@/lib/military/seedRosterUpkeepPin";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
-import { getDefenceContractAvailability } from "@/lib/db/collections/defenceProcurementAllocations";
+import {
+  getDefenceContractAllocation,
+  getDefenceContractAvailability,
+} from "@/lib/db/collections/defenceProcurementAllocations";
 import {
   resolveEstatePortfolio,
   aggregateEstates,
@@ -510,6 +513,9 @@ export async function GET(_request: Request, { params }: RouteParams) {
       suppliers = await listDefenceSuppliers(db, countryId, liveYear ?? 0, lotPricePerLot ?? null);
       if (lotPricePerLot != null && lotPricePerLot > 0) {
         const defenseLine = resolveDefenseLineFrom(budget ?? null);
+        // Every supplier is quoted against the same quota window: read the
+        // allocation document once instead of once per supplier.
+        const allocation = await getDefenceContractAllocation(db, countryId, currentTurn);
         suppliers = await Promise.all(
           suppliers.map(async (supplier) => {
             const availability = await getDefenceContractAvailability(db, {
@@ -519,6 +525,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
               defenseLine,
               pricePerLot: lotPricePerLot as number,
               stateOwned: supplier.stateOwned,
+              allocation,
             });
             return {
               ...supplier,

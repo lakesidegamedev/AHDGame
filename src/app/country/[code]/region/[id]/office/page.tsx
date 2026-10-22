@@ -79,9 +79,12 @@ export default async function GovernorOfficePage({ params }: Props) {
   if (!auth?.character) notFound();
 
   const db = await getDb();
-  const state = await db
-    .collection<State>("states")
-    .findOne({ _id: stateId, countryId: countryId });
+  // Neither read depends on the other: the state document names the office, and
+  // office access is resolved from (country, state, viewer).
+  const [state, access] = await Promise.all([
+    db.collection<State>("states").findOne({ _id: stateId, countryId: countryId }),
+    resolveOfficeAccess(db, countryId, stateId, auth.character._id),
+  ]);
   if (!state) notFound();
 
   // Resolve office access. The human holder always qualifies; for an NPP-held
@@ -90,34 +93,12 @@ export default async function GovernorOfficePage({ params }: Props) {
   // institutional tabs (Orders / Legislation / Devolution). Admins may view any
   // office. `access.holder` is the real seat-holder regardless of viewer.
   const isAdmin = auth.isAdmin === true;
-  const access = await resolveOfficeAccess(db, countryId, stateId, auth.character._id);
   const officeHolder = access.holder;
   // 403-equivalent: surface as notFound so the page silently doesn't exist for
   // viewers who can neither manage it nor admin it.
   if (!access.canManage && !isAdmin) notFound();
 
-  // Fetch the holder character (for avatar) and their party (for chip) in
-  // parallel — neither lookup depends on the other.
   const hasHolderParty = officeHolder?.party != null && Number.isFinite(Number(officeHolder.party));
-  const [holderChar, holderPartyDoc] = await Promise.all([
-    officeHolder?.characterId
-      ? db
-          .collection<Character>("characters")
-          .findOne({ _id: officeHolder.characterId }, { projection: { avatarUrl: 1 } })
-      : Promise.resolve(null),
-    hasHolderParty
-      ? db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne(
-            { sequentialId: Number(officeHolder?.party), countryId },
-            { projection: { name: 1, abbreviation: 1, color: 1 } }
-          )
-      : Promise.resolve(null),
-  ]);
-  const officeHolderAvatarUrl: string | null = holderChar?.avatarUrl ?? null;
-  const officeHolderPartyName: string | null = holderPartyDoc?.name ?? null;
-  const officeHolderPartyAbbreviation: string | null = holderPartyDoc?.abbreviation ?? null;
-  const officeHolderPartyColor: string | null = holderPartyDoc?.color ?? null;
 
   const viewerIsHolder = access.viewerIsHolder;
   const viewerCanManage = access.canManage;
@@ -137,7 +118,13 @@ export default async function GovernorOfficePage({ params }: Props) {
   const legTypeCountryScope = code.toLowerCase() as LegislationType["countryScope"];
   const subNationalOffice = getSubNationalLegislatureKey(countryId);
   const voteScope = subNationalOffice ? { countryId, officeType: subNationalOffice } : null;
+  const allowedRaceTypes = getEndorseableElectionTypes(countryId);
+  // One batch for every independent read on this page. These used to run as a
+  // dozen consecutive waves after the chamber roster resolved, each paying its
+  // own round trip on a page the telemetry ranks in the slowest 20.
   const [
+    holderChar,
+    holderPartyDoc,
     officeState,
     awaitingAssentBills,
     activeOrders,
@@ -146,7 +133,25 @@ export default async function GovernorOfficePage({ params }: Props) {
     legislationTypes,
     recentAddresses,
     chamberOfficials,
+    scopedElections,
+    presidentialElection,
+    activeEndorsements,
+    candidatePartyDocs,
+    officePageGameTime,
   ] = await Promise.all([
+    officeHolder?.characterId
+      ? db
+          .collection<Character>("characters")
+          .findOne({ _id: officeHolder.characterId }, { projection: { avatarUrl: 1 } })
+      : Promise.resolve(null),
+    hasHolderParty
+      ? db
+          .collection<PoliticalParty>("politicalParties")
+          .findOne(
+            { sequentialId: Number(officeHolder?.party), countryId },
+            { projection: { name: 1, abbreviation: 1, color: 1 } }
+          )
+      : Promise.resolve(null),
     getOfficeState(db, countryId, stateId),
     db
       .collection<StateBill>("stateBills")
@@ -221,7 +226,47 @@ export default async function GovernorOfficePage({ params }: Props) {
         seatsHeld: 1,
       })
       .toArray(),
+    db
+      .collection<Election>("elections")
+      .find({
+        state: stateId,
+        countryId,
+        status: "active",
+        electionType: { $in: allowedRaceTypes },
+      })
+      .toArray(),
+    db
+      .collection<Election>("elections")
+      .findOne({ electionType: "president", countryId, status: "active" }),
+    db
+      .collection<GovernorEndorsement>("governorEndorsements")
+      .find({
+        countryId,
+        stateId,
+        endorsedByCharacterId: auth.character._id,
+        isActive: true,
+      })
+      .toArray(),
+    db
+      .collection<PoliticalParty>("politicalParties")
+      .find({ countryId })
+      .project<{ sequentialId: number; name: string; color: string; logoUrl?: string }>({
+        sequentialId: 1,
+        name: 1,
+        color: 1,
+        logoUrl: 1,
+      })
+      .toArray(),
+    // Use game-clock effective-now so phase labels match turn-based resolution
+    // even when real time has drifted ahead of the last successful turn.
+    getGameTime(),
   ]);
+  // Holder chip data, resolved in the batch above.
+  const officeHolderAvatarUrl: string | null = holderChar?.avatarUrl ?? null;
+  const officeHolderPartyName: string | null = holderPartyDoc?.name ?? null;
+  const officeHolderPartyAbbreviation: string | null = holderPartyDoc?.abbreviation ?? null;
+  const officeHolderPartyColor: string | null = holderPartyDoc?.color ?? null;
+
   const currentTurn = gameStateDoc?.currentTurn ?? 0;
   // Index legislation types by id so the order/history projections below are O(1)
   // lookups instead of a linear scan per row.
@@ -238,44 +283,21 @@ export default async function GovernorOfficePage({ params }: Props) {
   // code), so we fetch it separately and merge — a governor endorses the
   // national race because primary delegates / general electoral votes from
   // their state are at stake.
-  const allowedRaceTypes = getEndorseableElectionTypes(countryId);
-  const [scopedElections, presidentialElection] = await Promise.all([
-    db
-      .collection<Election>("elections")
-      .find({
-        state: stateId,
-        countryId,
-        status: "active",
-        electionType: { $in: allowedRaceTypes },
-      })
-      .toArray(),
-    db
-      .collection<Election>("elections")
-      .findOne({ electionType: "president", countryId, status: "active" }),
-  ]);
   const stateElections: Election[] = presidentialElection
     ? [...scopedElections, presidentialElection]
     : scopedElections;
   const electionIds = stateElections.map((e) => e._id);
-  const stateCandidates = electionIds.length
-    ? await db
-        .collection<ElectionCandidate>("electionCandidates")
-        .find({ electionId: { $in: electionIds }, status: "active" })
-        .toArray()
-    : [];
-  const activeEndorsements = await db
-    .collection<GovernorEndorsement>("governorEndorsements")
-    .find({
-      countryId,
-      stateId,
-      endorsedByCharacterId: auth.character._id,
-      isActive: true,
-    })
-    .toArray();
+  const [stateCandidates, resolvePartyId] = await Promise.all([
+    electionIds.length
+      ? db
+          .collection<ElectionCandidate>("electionCandidates")
+          .find({ electionId: { $in: electionIds }, status: "active" })
+          .toArray()
+      : Promise.resolve([]),
+    buildPartyIdResolver(db, countryId),
+  ]);
   const myEndorsedCandidateIds = new Set(activeEndorsements.map((e) => e.candidateId.toString()));
   const myParty = auth.character.party;
-
-  const resolvePartyId = await buildPartyIdResolver(db, countryId);
   const myCanonicalParty = resolvePartyId(myParty);
 
   const playerCharacterIds = [
@@ -292,21 +314,7 @@ export default async function GovernorOfficePage({ params }: Props) {
     playerCharacters.map((c) => [c._id.toString(), c.party ?? null])
   );
 
-  const candidatePartyDocs = await db
-    .collection<PoliticalParty>("politicalParties")
-    .find({ countryId })
-    .project<{ sequentialId: number; name: string; color: string; logoUrl?: string }>({
-      sequentialId: 1,
-      name: 1,
-      color: 1,
-      logoUrl: 1,
-    })
-    .toArray();
   const partyBySeq = new Map(candidatePartyDocs.map((p) => [String(p.sequentialId), p]));
-
-  // Use game-clock effective-now so phase labels match turn-based resolution
-  // even when real time has drifted ahead of the last successful turn.
-  const officePageGameTime = await getGameTime();
 
   // Sort by display-priority order from `getEndorseableElectionTypes`:
   // executive (President) → upper chamber → lower chamber → sub-national.

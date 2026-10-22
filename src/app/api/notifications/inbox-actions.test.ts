@@ -217,8 +217,24 @@ describe("GET notification preferences", () => {
     expect(matches).toHaveLength(3);
     for (const match of matches) expect(match.type.$nin).toEqual(["crisis"]);
     expect(matches[2].type.$eq).toBe("crisis");
-    expect(db.collectionMocks.notifications!.countDocuments).toHaveBeenCalledWith(
-      expect.objectContaining({ type: { $nin: ["crisis"], $eq: "crisis" }, read: false })
-    );
+    // The scoped unread badge is now counted inside the same $facet pass as the
+    // list and total, so it must carry the same muted-type filter rather than
+    // running its own countDocuments over the whole notification history.
+    const facetPipeline = db.collectionMocks.notifications!.aggregate.mock.calls.find(
+      ([pipeline]) => pipeline.some((stage: Record<string, unknown>) => stage.$facet)
+    )![0] as Array<Record<string, unknown>>;
+    const facet = facetPipeline.find((stage) => stage.$facet)!.$facet as Record<
+      string,
+      Array<Record<string, unknown>>
+    >;
+    expect(Object.keys(facet).sort()).toEqual(["notifications", "total", "unread"]);
+    // `unread` counts the same filtered set with `read: false`, so it only needs
+    // the read predicate: the muted-type filter is the facet's outer `$match`.
+    const unreadMatch = facet.unread.find((stage) => stage.$match)!.$match as Record<
+      string,
+      unknown
+    >;
+    expect(unreadMatch).toEqual({ read: false });
+    expect(db.collectionMocks.notifications!.countDocuments).not.toHaveBeenCalled();
   });
 });
