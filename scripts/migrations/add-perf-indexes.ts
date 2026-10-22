@@ -77,19 +77,6 @@ const INDEX_SPECS: ReadonlyArray<{
     key: { characterId: 1, officeType: 1 },
     name: "eo_characterId_officeType",
   },
-  // electedOfficials — regional pages (region page, governor office, state
-  // legislature and its API) all filter seats by state and sort by office.
-  {
-    collection: "electedOfficials",
-    key: { state: 1, countryId: 1, officeType: 1 },
-    name: "eo_state_countryId_officeType",
-  },
-  // electedOfficials — chamber roster tallies per country (/world, legislatures).
-  {
-    collection: "electedOfficials",
-    key: { countryId: 1, officeType: 1 },
-    name: "eo_countryId_officeType",
-  },
 
   // nppEndorsements — endorsements per election
   {

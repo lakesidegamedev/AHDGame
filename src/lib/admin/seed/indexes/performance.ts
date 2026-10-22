@@ -215,31 +215,6 @@ export async function seedPerfIndexes(db: Db, log: (msg: string) => void) {
     log
   );
 
-  // electedOfficials — seats in one state, which is the shape every regional
-  // surface asks for: the region page, the governor's office, the state
-  // legislature and its API all filter `{ state }` (usually with `countryId`)
-  // and then sort by office. `{ party, state }` cannot serve a `state`-only
-  // equality, so each of those was a collection scan plus an in-memory sort
-  // over every federal, state and local seat in every country.
-  await ensureIndex(
-    db,
-    "electedOfficials",
-    { state: 1, countryId: 1, officeType: 1 },
-    { name: "electedOfficials_state_countryId_officeType" },
-    log
-  );
-
-  // electedOfficials — chamber rosters per country: /world tallies seats by
-  // party for every parliamentary country, and the legislature pages ask the
-  // same question per country.
-  await ensureIndex(
-    db,
-    "electedOfficials",
-    { countryId: 1, officeType: 1 },
-    { name: "electedOfficials_countryId_officeType" },
-    log
-  );
-
   // nppEndorsements — endorsements per election
   await ensureIndex(
     db,
