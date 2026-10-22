@@ -5,8 +5,8 @@ import { processTurn } from "@/lib/turnSystem";
 import { getDb } from "@/lib/mongodb";
 import { turnsOwnedByWorker } from "@/lib/turn/turnWorkerHandoff";
 import { queueAdminTurns } from "@/lib/turn/queueAdminTurns";
-
-const MAX_QUEUED_TURNS = 20;
+import { parseJsonBody } from "@/lib/api/validate";
+import { adminTurnProcessSchema } from "@/lib/api/schemas/admin";
 
 // POST /api/admin/turn/process — Runs a single game turn now. When the turn worker
 // owns turns (CRON_OWNER=worker) it queues `count` turns (default 1, max 20) for the
@@ -21,15 +21,13 @@ export async function POST(request: Request) {
     if (!auth.ok) return auth.response;
 
     if (turnsOwnedByWorker(process.env)) {
+      // The body is optional: a bodiless click (an admin page loaded before this
+      // change) means one turn.
       let count = 1;
-      try {
-        const body = (await request.json()) as { count?: unknown };
-        if (typeof body?.count === "number" && Number.isInteger(body.count)) count = body.count;
-      } catch {
-        // No body: one turn.
-      }
-      if (count < 1 || count > MAX_QUEUED_TURNS) {
-        return errorResponse(400, `count must be between 1 and ${MAX_QUEUED_TURNS}`);
+      if (request.headers.get("content-type")?.includes("application/json")) {
+        const parsed = await parseJsonBody(request, adminTurnProcessSchema);
+        if (!parsed.success) return errorResponse(parsed.status, parsed.error);
+        count = parsed.data.count;
       }
       return queueAdminTurns(await getDb(), { count, requestedBy: auth.admin.username });
     }

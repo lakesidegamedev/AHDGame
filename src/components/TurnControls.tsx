@@ -221,7 +221,11 @@ export function TurnControls() {
     setTurnProgress(0);
     const poll = startPhasePolling();
     try {
-      const res = await fetch("/api/admin/turn/process", { method: "POST" });
+      const res = await fetch("/api/admin/turn/process", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ count: 1 }),
+      });
       const data = await res.json();
       if (res.status === 202) {
         // The turn worker runs it; the processing indicator below follows it.
