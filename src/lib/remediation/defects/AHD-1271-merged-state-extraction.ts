@@ -564,6 +564,9 @@ export const defect: Defect = {
   codeFix: {
     issue: 1271,
     mergedTo: "development",
+    // Landed in f352648 (fix(economy): keep extraction sectors when a country
+    // absorbs another), which has since been promoted to main.
+    requiredCommit: "f352648ed2311d496bd8ce90ae2dddfabb2ef737",
   },
   // The seed half is the gate itself, and it is fixed upstream (#1405):
   // `buildCommandSoeCorpEntries` resolves the capacity key through
@@ -589,14 +592,9 @@ export const defect: Defect = {
     seedCheck: { countryId: "DD", era: "1953-default" },
   },
   // PROD IS WHERE THE CORRUPTION IS, so prod is listed, like every other defect
-  // in this ledger. `requiredCommit` is unpinned only because the squash SHA
-  // does not exist until this merges, and `evaluateCodeGate` names that exact
-  // state ("no code half, or not yet pinned") and passes: it is what the
-  // framework is written to accommodate, not a hole to plug by making the heal
-  // unrunnable where it is needed. What actually stops a premature prod heal is
-  // the operator, who must pass `--confirm-prod` and an explicit
-  // `--deployed-sha` and read the plan first. Pin the SHA once this lands so the
-  // gate can enforce it mechanically too.
+  // in this ledger. `requiredCommit` is pinned to the landed fix, so the code
+  // gate enforces it mechanically, on top of the operator passing
+  // `--confirm-prod` and reading the plan first.
   envs: ["dev", "sandbox", "prod"],
   idempotent: true,
   guards: ["turn-lock-free", "money-conserving", "max-affected:500"],
