@@ -1105,14 +1105,16 @@ export async function toggleFastMode(): Promise<{
 
     invalidateGameStateCache();
 
-    // Restart cron with new schedule
+    // Rebuild the schedule if this process owns it; otherwise the worker must restart.
     const { restartCronWithSchedule } = await import("./cron");
-    await restartCronWithSchedule();
+    const restarted = await restartCronWithSchedule();
 
     console.log(`[Turn System] Fast mode ${newFastModeState ? "enabled" : "disabled"}`);
     return {
       success: true,
-      message: `Fast mode ${newFastModeState ? "enabled" : "disabled"}. Turns will run ${newFastModeState ? "every 30 minutes" : "every hour"}.`,
+      message:
+        `Fast mode ${newFastModeState ? "enabled" : "disabled"}. Turns will run ${newFastModeState ? "every 30 minutes" : "every hour"}` +
+        (restarted ? "." : " once the turn worker restarts."),
       fastMode: newFastModeState,
     };
   } catch (error) {

@@ -1224,6 +1224,14 @@ describe("cron jobs", () => {
         mockSchedule.mockReset();
       }
     });
+
+    it("does not start a schedule in a process that owns none", async () => {
+      const { restartCronWithSchedule, stopCronJobs } = await import("./cron");
+      stopCronJobs();
+      mockSchedule.mockClear();
+      expect(await restartCronWithSchedule()).toBe(false);
+      expect(mockSchedule).not.toHaveBeenCalled();
+    });
   });
 
   describe("market tick cron callback", () => {
