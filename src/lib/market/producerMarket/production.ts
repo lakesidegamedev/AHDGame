@@ -78,6 +78,8 @@ export interface ProductionPlan {
    * Absent means no markdown or write-down for this plant.
    */
   recentSoldUnits?: number;
+  /** Units delivered per output last turn, keyed `${commodity}|${book}`; overrides the plant total. */
+  recentSoldByOutput?: Readonly<Record<string, number>>;
 }
 
 export interface ProducerInputReservation {
@@ -193,6 +195,14 @@ function quoteVolumesExcept(
  * recipe is backed by funded, delivered inputs. Each trial uses the same
  * opening cash and stock; no preview transfers money or borrows sale proceeds.
  */
+/** Units an output sold last turn: its own row when the receipt has product rows, else the plant total. */
+function recentSoldOf(p: ProductionPlan, commodity: string, book: string): number | undefined {
+  if (p.recentSoldUnits == null) return undefined;
+  return p.recentSoldByOutput
+    ? (p.recentSoldByOutput[`${commodity}|${book}`] ?? 0)
+    : p.recentSoldUnits;
+}
+
 export function advanceProducerEconomy(input: {
   turn: number;
   accounts: readonly MarketAccount[];
@@ -630,7 +640,8 @@ export function advanceProducerEconomy(input: {
             ? { kind: "manual", unitPrice: output.referenceUnitPrice }
             : output.policy,
       });
-      const cover = p.recentSoldUnits != null ? stockCover(stock, p.recentSoldUnits) : 0;
+      const recentSold = recentSoldOf(p, output.commodity, output.book);
+      const cover = recentSold != null ? stockCover(stock, recentSold) : 0;
       pendingQuotes.push({
         markdown: {
           factor: markdownFactor(cover, { coverTurns: input.stockCoverTurns ?? 0 }),
@@ -906,16 +917,27 @@ export function advanceProducerEconomy(input: {
           ? unsold * (1 - carryLoss(output.commodity))
           : 0;
       // Stock beyond the cover is written down a little each turn (stockCoverRules).
+      const recentSoldOut = recentSoldOf(p, output.commodity, output.book);
       const writtenDown =
-        p.recentSoldUnits != null
+        recentSoldOut != null
           ? Math.min(
               carried,
-              writeDownUnits(carried, stockCover(opening, p.recentSoldUnits), {
+              writeDownUnits(carried, stockCover(opening, recentSoldOut), {
                 coverTurns: input.stockCoverTurns ?? 0,
               })
             )
           : 0;
       const kept = carried - writtenDown;
+      // The written-down stock is a real loss at its cost basis (profit and dividends see it).
+      if (writtenDown > 0 && openingRows.length > 0) {
+        const openingUnits = openingRows.reduce((sum, st) => sum + st.units, 0);
+        const basis =
+          openingUnits > 0
+            ? openingRows.reduce((sum, st) => sum + st.units * (st.quoteUnitCost ?? 0), 0) /
+              openingUnits
+            : 0;
+        inventoryWriteOff += writtenDown * basis;
+      }
       products.push({
         commodity: output.commodity,
         book: output.book,

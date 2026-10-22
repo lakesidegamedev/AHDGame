@@ -249,20 +249,24 @@ export function prepareProducerPhysicalSector(input: {
       const ratio = isStateScopedCommodity(commodity)
         ? lookups.statePriceRatioByState?.get(sector.stateId)?.get(commodity)
         : lookups.reachablePriceRatioByCountry?.get(countryId)?.get(commodity);
-      let reference =
+      const reference =
         prices[commodity] * (ratio ?? lookups.priceRatioByCommodity.get(commodity) ?? 1);
-      // A buyer's reference never sits under what the market last cleared at (capped at 3x its own).
+      // A buyer will bid up to what the market last cleared at (capped at 3x its own
+      // reference), but only on the bid side: the output reference and the 1.25x
+      // headroom stay on the unfloored reference, so the floor cannot feed on its own
+      // clearing prices turn after turn.
+      let bidFloor = 0;
       if ((env.clearingReferenceStage ?? 0) >= 1 && !isStateScopedCommodity(commodity)) {
         const cleared = env.lastClearingPriceByCommodity?.get(commodity);
         if (cleared != null && Number.isFinite(cleared) && cleared > reference)
-          reference = Math.min(cleared, reference * 3);
+          bidFloor = Math.min(cleared, reference * 3);
       }
       return [
         commodity,
         {
           book: isStateScopedCommodity(commodity) ? `state:${sector.stateId}` : "world",
           referenceUnitPrice: reference,
-          maximumInputUnitPrice: reference * input.inputPriceHeadroom,
+          maximumInputUnitPrice: Math.max(reference * input.inputPriceHeadroom, bidFloor),
         },
       ] as const;
     })
@@ -311,11 +315,32 @@ export function prepareProducerPhysicalSector(input: {
     operatingRecipientAccountId: producerWalletId(input.worldEpoch, scopes[1]),
   });
   const { plan } = prepared;
-  // Stock-cover markdown needs last turn's sales (see stockCoverRules).
+  // Stock-cover markdown needs last turn's sales per product (see stockCoverRules).
   if ((env.stockCoverTurns ?? 0) > 0) {
-    const last = (sector as { producerSettlement?: { soldUnits?: number; turn?: number } })
-      .producerSettlement;
-    plan.recentSoldUnits = last && last.turn === currentTurn - 1 ? (last.soldUnits ?? 0) : 0;
+    const last = (
+      sector as {
+        producerSettlement?: {
+          soldUnits?: number;
+          turn?: number;
+          products?: {
+            commodity: string;
+            book: string;
+            deliveredUnits?: number;
+            soldUnits?: number;
+          }[];
+        };
+      }
+    ).producerSettlement;
+    const current = last && last.turn === currentTurn - 1 ? last : null;
+    plan.recentSoldUnits = current?.soldUnits ?? 0;
+    // A product the last receipt did not list sold nothing; plants without product rows fall back to the plant total.
+    if (current?.products)
+      plan.recentSoldByOutput = Object.fromEntries(
+        current.products.map((x) => [
+          `${x.commodity}|${x.book}`,
+          x.deliveredUnits ?? x.soldUnits ?? 0,
+        ])
+      );
   }
   const suspended =
     lookups.corporateEmbargoSuppression?.has(`${countryId}|${corp.countryId}`) === true &&
