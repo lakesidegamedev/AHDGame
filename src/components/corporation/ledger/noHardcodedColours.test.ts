@@ -42,3 +42,22 @@ describe("corporation ledger colours", () => {
     expect(offenders).toEqual([]);
   });
 });
+
+/**
+ * White text on a tone fill fails contrast in the light themes, where the tone
+ * colours are bright; the redesign uses the theme background colour instead.
+ */
+const WHITE_ON_TONE = /\bbg-(error|success|warning|info|primary|gold)\b[^"`]*\btext-white\b/;
+
+describe("corporation tone fills", () => {
+  it("never put white text on a tone colour", () => {
+    const files = [
+      ...sourceFiles(),
+      join(process.cwd(), "src/app/corporation/[id]/page.tsx"),
+      join(process.cwd(), "src/components/corporation/SubsidiaryManagementCard.tsx"),
+      join(process.cwd(), "src/components/corporation/SectorRow.tsx"),
+    ];
+    const offenders = files.filter((file) => WHITE_ON_TONE.test(readFileSync(file, "utf8")));
+    expect(offenders).toEqual([]);
+  });
+});

@@ -1195,7 +1195,7 @@ export default function CorporationDetailPage() {
                   <button
                     type="button"
                     onClick={() => setBondDefaultModalOpen(true)}
-                    className="inline-flex h-7 shrink-0 items-center rounded-[calc(var(--corp-rad)-2px)] border border-error bg-error px-2.5 text-xs font-medium text-white hover:bg-error/90"
+                    className="inline-flex h-7 shrink-0 items-center rounded-[calc(var(--corp-rad)-2px)] border border-error bg-error px-2.5 text-xs font-medium text-background hover:bg-error/90"
                   >
                     Open resolution
                   </button>
@@ -1215,7 +1215,7 @@ export default function CorporationDetailPage() {
                   <button
                     type="button"
                     onClick={handleAcceptCeo}
-                    className="inline-flex h-7 items-center rounded-md border border-success bg-success px-2.5 text-xs font-medium text-white hover:bg-success/90"
+                    className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad)-2px)] border border-success bg-success px-2.5 text-xs font-medium text-background hover:bg-success/90"
                   >
                     Accept
                   </button>
