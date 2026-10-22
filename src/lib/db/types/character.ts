@@ -142,6 +142,8 @@ export interface CareerEvent {
   partyCountryId?: string;
   /** For election events */
   electionId?: string;
+  /** Executive term won at a founding (pre-iteration, cycle 0) election; excluded from the executive term limit, still a served term for display. */
+  foundingTerm?: boolean;
   /** For "relocated" events — from/to location context */
   fromState?: string;
   toState?: string;

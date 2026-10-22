@@ -192,9 +192,38 @@ describe("seatPresidentialExecutive", () => {
     expect(set["executiveTermsServed.US"]).toBeUndefined();
   });
 
+  it.each([
+    [0, true],
+    [1, false],
+  ] as const)("marks founding term status for cycle %i", async (cycle, foundingTerm) => {
+    const presId = new ObjectId();
+    const election = makeElection({ cycle });
+    const winnerCandidate = {
+      _id: new ObjectId(),
+      isNPP: false,
+      characterId: presId,
+      characterName: "Winner",
+      party: "1",
+    } as unknown as ElectionCandidate;
+
+    await seatPresidentialExecutive(db as unknown as Db, {
+      election,
+      winnerCandidate,
+      now: NOW,
+    });
+
+    const winnerUpdate = db.collectionMocks["characters"]!.updateOne.mock.calls.find(
+      (c) =>
+        (c[0] as Record<string, unknown>)?._id === presId && (c[1] as { $push?: unknown })?.$push
+    );
+    const event = (winnerUpdate![1] as { $push: { careerHistory: Record<string, unknown> } }).$push
+      .careerHistory;
+    expect(event.foundingTerm).toBe(foundingTerm ? true : undefined);
+  });
+
   it("seats an acting president without counting a term or recording an election win", async () => {
     const presId = new ObjectId();
-    const election = makeElection({});
+    const election = makeElection({ cycle: 0 });
     const winnerCandidate = {
       _id: new ObjectId(),
       isNPP: false,
@@ -217,10 +246,11 @@ describe("seatPresidentialExecutive", () => {
     expect(winnerUpdate).toBeDefined();
     const update = winnerUpdate![1] as {
       $set: Record<string, unknown>;
-      $push: { careerHistory: { type: string; officeLabel: string } };
+      $push: { careerHistory: { type: string; officeLabel: string; foundingTerm?: boolean } };
     };
     expect(Object.keys(update.$set).some((k) => k.startsWith("executiveTermsServed"))).toBe(false);
     expect(update.$push.careerHistory.type).toBe("appointed");
+    expect(update.$push.careerHistory.foundingTerm).toBeUndefined();
     expect(update.$push.careerHistory.officeLabel).toMatch(/^Acting /);
     const officialSet = db.collectionMocks["electedOfficials"]!.updateOne.mock.calls.find(
       (c) => (c[1] as { $set?: Record<string, unknown> })?.$set?.characterName === "Acting Person"
