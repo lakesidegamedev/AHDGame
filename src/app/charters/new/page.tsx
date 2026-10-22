@@ -28,11 +28,13 @@ export default async function NewCharterPage() {
   // F4 founding-cohort picker needs human-readable state names for the
   // dropdowns. Fetched server-side so no client-side round-trip is needed.
   const db = await getDb();
-  const { name: countryName } = await resolveCountryIdentity(db, countryCode as CountryId);
-  const states = await db
-    .collection<State>("states")
-    .find({ countryId: countryCode }, { projection: { _id: 1, name: 1 } })
-    .toArray();
+  const [{ name: countryName }, states] = await Promise.all([
+    resolveCountryIdentity(db, countryCode as CountryId),
+    db
+      .collection<State>("states")
+      .find({ countryId: countryCode }, { projection: { _id: 1, name: 1 } })
+      .toArray(),
+  ]);
   const stateNames: Record<string, string> = Object.fromEntries(
     states.map((s) => [s._id, s.name ?? s._id])
   );

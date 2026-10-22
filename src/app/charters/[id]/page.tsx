@@ -44,15 +44,25 @@ export default async function CharterDetailPage({ params }: PageParams) {
 
   const clock = await getGameClock();
 
-  // Look up display names for the founder characters.
-  const founderCharacters = await db
-    .collection<Character>("characters")
-    .find({ _id: { $in: charter.foundersCharacterIds } })
-    .project<{ _id: ObjectId; name: string; userId: ObjectId | null | undefined }>({
-      name: 1,
-      userId: 1,
-    })
-    .toArray();
+  // Everything below depends only on `charter`, so the display-name lookup,
+  // the ratified-party lookup and the country identity resolve together
+  // instead of in three consecutive round trips.
+  const [founderCharacters, ratifiedParty, countryIdentity] = await Promise.all([
+    db
+      .collection<Character>("characters")
+      .find({ _id: { $in: charter.foundersCharacterIds } })
+      .project<{ _id: ObjectId; name: string; userId: ObjectId | null | undefined }>({
+        name: 1,
+        userId: 1,
+      })
+      .toArray(),
+    charter.status === "ratified" && charter.partyId
+      ? db
+          .collection<PoliticalParty>("politicalParties")
+          .findOne({ countryId: charter.countryId, sequentialId: Number(charter.partyId) })
+      : Promise.resolve(null),
+    resolveCountryIdentity(db, charter.countryId),
+  ]);
   const characterById = new Map(
     founderCharacters.map((c) => [c._id.toString(), { name: c.name, userId: c.userId ?? null }])
   );
@@ -82,14 +92,8 @@ export default async function CharterDetailPage({ params }: PageParams) {
   // ratifications. Charter status `ratified` + party doc carrying
   // `regimeStatus: "banned"` means the player's new party is inert by
   // default and they need to know what that means.
-  const ratifiedParty =
-    charter.status === "ratified" && charter.partyId
-      ? await db
-          .collection<PoliticalParty>("politicalParties")
-          .findOne({ countryId: charter.countryId, sequentialId: Number(charter.partyId) })
-      : null;
   const isBannedAtCreation = ratifiedParty?.regimeStatus === "banned";
-  const { name: countryName } = await resolveCountryIdentity(db, charter.countryId);
+  const { name: countryName } = countryIdentity;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">

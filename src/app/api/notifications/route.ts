@@ -128,9 +128,10 @@ export const GET = withNoStore(async (request: Request) => {
     interface FacetResult {
       notifications: Notification[];
       total: { count: number }[];
+      unread: { count: number }[];
     }
 
-    const [unreadByUserAgg, unreadByCharacterAgg, listResult, unreadForScope] = await Promise.all([
+    const [unreadByUserAgg, unreadByCharacterAgg, listResult] = await Promise.all([
       db
         .collection<Notification>("notifications")
         .aggregate<{ _id: ObjectId; count: number }>([
@@ -160,19 +161,20 @@ export const GET = withNoStore(async (request: Request) => {
             $facet: {
               notifications: [{ $sort: { createdAt: -1 } }, { $skip: offset }, { $limit: limit }],
               total: [{ $count: "count" }],
+              // The scoped unread badge is the same match with `read: false`;
+              // folding it into this facet removes a second pass over the
+              // user's whole notification history on every inbox view.
+              unread: [{ $match: { read: false } }, { $count: "count" }],
             },
           },
         ])
         .toArray(),
-      db.collection<Notification>("notifications").countDocuments({
-        ...query,
-        read: false,
-      }),
     ]);
 
     const result = listResult[0];
     const notifications = result?.notifications ?? [];
     const total = result?.total[0]?.count ?? 0;
+    const unreadForScope = result?.unread?.[0]?.count ?? 0;
 
     const unreadByUserId: Record<string, number> = {};
     for (const row of unreadByUserAgg) {

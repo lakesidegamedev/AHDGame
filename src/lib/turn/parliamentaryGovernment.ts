@@ -110,7 +110,9 @@ export async function tallySeatsByParty(
 
   const officials = await db
     .collection<ElectedOfficial>("electedOfficials")
-    .find({ officeType: lowerOfficeType, countryId })
+    // Seat tallies only need the party key and seat count; the full official
+    // document is what made /world's per-country scans expensive.
+    .find({ officeType: lowerOfficeType, countryId }, { projection: { party: 1, seatsHeld: 1 } })
     .toArray();
 
   const seats: Record<string, number> = {};

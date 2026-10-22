@@ -36,11 +36,10 @@ export function useInboxData(): UseInboxDataResult {
       setError(null);
 
       try {
-        const [notifsRes, inboxRes, sentRes, authMeRes] = await Promise.all([
+        const [notifsRes, inboxRes, sentRes] = await Promise.all([
           fetch("/api/notifications?limit=100", { signal }),
           fetch("/api/mail?limit=50", { signal }),
           fetch("/api/mail/sent?limit=50", { signal }),
-          fetch("/api/auth/me", { signal }),
         ]);
 
         if (signal.aborted) return;
@@ -51,19 +50,18 @@ export function useInboxData(): UseInboxDataResult {
           return;
         }
 
-        const [notifsData, inboxData, sentData, authMeData] = await Promise.all([
+        const [notifsData, inboxData, sentData] = await Promise.all([
           notifsRes.json() as Promise<{ notifications: SerializedNotification[] }>,
-          inboxRes.json() as Promise<{ mails: SerializedMail[] }>,
+          inboxRes.json() as Promise<{ mails: SerializedMail[]; selfCharacterId?: string }>,
           sentRes.json() as Promise<{ mails: SerializedMail[] }>,
-          authMeRes.ok
-            ? (authMeRes.json() as Promise<{ character?: { id: string } | null }>)
-            : Promise.resolve(null),
         ]);
 
         if (signal.aborted) return;
 
         const now = Date.now();
-        const selfCharacterId: string = authMeData?.character?.id ?? "";
+        // Supplied by /api/mail: seeing which side of a thread the viewer is on
+        // used to cost a whole extra /api/auth/me bootstrap per inbox view.
+        const selfCharacterId: string = inboxData.selfCharacterId ?? "";
 
         const notifItems = (notifsData.notifications ?? []).map((n) =>
           notificationToInboxItem(n, now)

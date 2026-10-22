@@ -605,11 +605,29 @@ export async function seedPerfIndexes(db: Db, log: (msg: string) => void) {
     { name: "share_orders_fund_open_bids", sparse: true, background: true },
     log
   );
+  // Subsidiary-group pages read every open CORPORATE sell order across the
+  // world (no corporationId predicate) to reconstruct effective ownership. That
+  // is a collection scan over the whole order history without its own index.
+  await ensureIndex(
+    db,
+    "shareOrders",
+    { type: 1, status: 1, placerCorporationId: 1 },
+    { name: "shareOrders_type_status_placerCorp" },
+    log
+  );
   await ensureIndex(
     db,
     "shareListings",
     { corporationId: 1, status: 1 },
     { name: "shareListings_corp_status" },
+    log
+  );
+  // Same world-level shape for listings: open corporate listings, no corp filter.
+  await ensureIndex(
+    db,
+    "shareListings",
+    { status: 1, sellerCorporationId: 1 },
+    { name: "shareListings_status_sellerCorp" },
     log
   );
   await ensureIndex(
