@@ -227,6 +227,7 @@ export async function seatPresidentialExecutive(
       party: winnerCandidate.party,
       partyCountryId: election.countryId,
       electionId: election._id.toString(),
+      ...(!acting && election.cycle === 0 ? { foundingTerm: true } : {}),
       date: now,
     };
     const recorded = await db.collection<Character>("characters").updateOne(
