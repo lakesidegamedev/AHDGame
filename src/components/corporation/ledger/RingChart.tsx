@@ -68,7 +68,7 @@ export function RingChart({
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5">
           {centreLabel && (
-            <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted">
+            <span className="max-w-[5.5rem] text-center text-[10px] font-semibold uppercase leading-tight tracking-[0.1em] text-muted">
               {centreLabel}
             </span>
           )}

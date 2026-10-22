@@ -75,7 +75,7 @@ export function CountryRevenueRing({
       <RingChart
         segments={segments}
         label={`Revenue by country: ${segments.map((s) => `${s.label} ${share(s.value)}`).join(", ")}`}
-        centreLabel="Revenue"
+        centreLabel="Gross revenue"
         centreValue={money(total)}
         legend={false}
       />

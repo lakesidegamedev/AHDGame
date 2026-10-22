@@ -54,3 +54,19 @@ describe("CountryRevenueRing colours", () => {
     expect(after).toEqual(before);
   });
 });
+
+describe("CountryRevenueRing centre", () => {
+  it("labels the total as gross revenue, matching the statement line", () => {
+    render(
+      <CountryRevenueRing
+        rows={[row("US", 600), row("UK", 200)]}
+        countryName={(id) => id}
+        money={(n) => `$${n}`}
+        signed={(n) => `+$${n}`}
+        onSelect={vi.fn()}
+      />
+    );
+    expect(screen.getByText("Gross revenue")).toBeTruthy();
+    expect(screen.getByText("$800")).toBeTruthy();
+  });
+});
