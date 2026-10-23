@@ -235,4 +235,63 @@ describe("ExpandMarketModal plants market finder", () => {
     expect(screen.queryByRole("link", { name: "View state economy to split" })).toBeNull();
     expect(screen.queryByText(/You cannot split here currently/)).toBeNull();
   });
+  it("shows one country-shared demand estimate while keeping state selection", async () => {
+    const fetchMock = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: async () => ({
+          ...marketResponse,
+          countrySharedDemand: true,
+          countryDemandEstimates: [{ countryId: "US", headroomUnits: 543_000 }],
+          suggestions: [
+            { ...marketResponse.suggestions[0], headroomUnits: undefined },
+            {
+              ...marketResponse.suggestions[0],
+              stateId: "NY",
+              stateName: "New York",
+              headroomUnits: undefined,
+              foundingTotalAnchor: 1_800,
+            },
+          ],
+        }),
+      } as Response)
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <ExpandMarketModal
+        corpId="corp-1"
+        primaryType="agriculture"
+        liquidCapital={25_400}
+        plantsMode
+        onClose={() => undefined}
+      />
+    );
+
+    await screen.findByText("New York");
+    expect(screen.getAllByText("543k")).toHaveLength(1);
+    expect(screen.getByText(/shared demand, not guaranteed sales/)).toBeTruthy();
+    expect(screen.queryByText("facility equivalents")).toBeNull();
+
+    const newYorkRow = screen.getAllByRole("button", { name: /New York/ })[0];
+    fireEvent.click(newYorkRow);
+    expect(newYorkRow.getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("keeps per-state estimates for state-scoped or mixed output", async () => {
+    vi.stubGlobal("fetch", vi.fn(suggestionReply));
+
+    render(
+      <ExpandMarketModal
+        corpId="corp-1"
+        primaryType="agriculture"
+        liquidCapital={25_400}
+        plantsMode
+        onClose={() => undefined}
+      />
+    );
+
+    await screen.findByText("facility equivalents");
+    expect(screen.getByText("Demand estimate")).toBeTruthy();
+  });
 });
