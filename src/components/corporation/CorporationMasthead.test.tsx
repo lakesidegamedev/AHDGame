@@ -189,4 +189,18 @@ describe("CorporationMasthead", () => {
     renderMasthead({ headerImageUrl: "https://cdn.example/banner.png" }, { showBanner: true });
     expect(screen.getByTestId("banner")).toBeTruthy();
   });
+
+  it("calls a majority shareholder the majority owner until the subsidiary is formalized", () => {
+    const parentCorporation = { _id: "p1", sequentialId: 3, name: "Holdco", ownershipPct: 64.25 };
+    const { unmount } = renderMasthead({
+      parentCorporation,
+      isFormalizedSubsidiary: false,
+    });
+    expect(screen.getByText("Majority owner")).toBeTruthy();
+    expect(screen.queryByText("Subsidiary of")).toBeNull();
+    unmount();
+    renderMasthead({ parentCorporation, isFormalizedSubsidiary: true });
+    expect(screen.getByText("Subsidiary of")).toBeTruthy();
+    expect(screen.queryByText("Majority owner")).toBeNull();
+  });
 });
