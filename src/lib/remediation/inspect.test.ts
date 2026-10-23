@@ -76,7 +76,13 @@ describe("listCollections", () => {
     let peak = 0;
     const names = Array.from({ length: 40 }, (_, i) => `c${String(i).padStart(2, "0")}`);
     const db = {
-      listCollections: () => ({ toArray: async () => [...names].reverse().map((name) => ({ name })).concat([{ name: "system.views" }]) }),
+      listCollections: () => ({
+        toArray: async () =>
+          [...names]
+            .reverse()
+            .map((name) => ({ name }))
+            .concat([{ name: "system.views" }]),
+      }),
       collection: (name: string) => ({
         estimatedDocumentCount: async () => {
           active++;

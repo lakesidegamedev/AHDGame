@@ -98,6 +98,8 @@ export async function listCollections(db: Db): Promise<Array<{ name: string; cou
       rows[i] = { name: names[i], count: await db.collection(names[i]).estimatedDocumentCount() };
     }
   };
-  await Promise.all(Array.from({ length: Math.min(COLLECTION_COUNT_CONCURRENCY, names.length) }, worker));
+  await Promise.all(
+    Array.from({ length: Math.min(COLLECTION_COUNT_CONCURRENCY, names.length) }, worker)
+  );
   return rows;
 }
