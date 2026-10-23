@@ -93,21 +93,38 @@ describe("pruneMoneyJournals", () => {
     expect(await ids("ledgerEntries")).toEqual(["old"]);
   });
 
-  it("clears a bounded number of backlog turns per run", async () => {
+  it("deletes one batch of the oldest rows per run", async () => {
     await db.collection("ledgerEntries").insertMany(
-      [OLD - 4, OLD - 3, OLD - 2, OLD - 1, OLD].map((turn) => ({
+      [OLD, OLD - 1, OLD - 4, OLD - 2, OLD - 3].map((turn) => ({
         _id: `t${turn}`,
         turn,
       })) as never
     );
 
-    const first = await pruneMoneyJournals(db, { turnsPerRun: 2 });
-    expect(first.ledgerEntries).toBe(2);
-    expect(await ids("ledgerEntries")).toEqual([`t${OLD - 2}`, `t${OLD - 1}`, `t${OLD}`]);
+    const first = await pruneMoneyJournals(db, { ledgerBatch: 3 });
+    expect(first.ledgerEntries).toBe(3);
+    expect(await ids("ledgerEntries")).toEqual([`t${OLD - 1}`, `t${OLD}`]);
 
-    await pruneMoneyJournals(db, { turnsPerRun: 2 });
-    await pruneMoneyJournals(db, { turnsPerRun: 2 });
+    const second = await pruneMoneyJournals(db, { ledgerBatch: 3 });
+    expect(second.ledgerEntries).toBe(2);
     expect(await ids("ledgerEntries")).toEqual([]);
+  });
+
+  it("batches money moves separately from ledger entries", async () => {
+    const kind = "manufacturing.product.advertising";
+    await db.collection("bankMoneyMoves").insertMany(
+      [OLD - 2, OLD - 1, OLD].map((turn) => ({
+        _id: `m${turn}`,
+        kind,
+        status: "applied",
+        turn,
+      })) as never
+    );
+
+    const result = await pruneMoneyJournals(db, { moneyMoveBatch: 2 });
+
+    expect(result.bankMoneyMoves).toBe(2);
+    expect(await ids("bankMoneyMoves")).toEqual([`m${OLD}`]);
   });
 
   it("does nothing before the world is older than the window", async () => {

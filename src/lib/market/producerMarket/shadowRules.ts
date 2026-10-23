@@ -6,7 +6,7 @@
  * Pure: plans, cash and demand in; a summary out. Nothing here moves money.
  */
 import { advanceProducerEconomy, type ProductionPlan } from "./production";
-import { producerTrades, type MarketAccount, type PurchaseOrder } from "./rules";
+import { producerFillSpend, type MarketAccount, type PurchaseOrder } from "./rules";
 import type { HouseholdSpec } from "./householdDemandRules";
 import type { PublicPurchaseLine } from "./publicBuyerRules";
 import { nextReferencePrice } from "./referencePriceRules";
@@ -172,8 +172,8 @@ export function runProducerShadowDetailed(input: ShadowInput): {
   let marketingSpend = 0;
   const investmentIds = new Set(investmentOrders.map((o) => o.accountId));
   let investmentSpend = 0;
-  for (const t of producerTrades(result.tradeReceipt)) {
-    const value = t.units * t.unitPrice;
+  for (const t of producerFillSpend(result.tradeReceipt)) {
+    const value = t.amount;
     if (marketingOrderIds.has(t.orderId)) marketingSpend += value;
     else if (investmentIds.has(t.buyerAccountId)) investmentSpend += value;
     else if (householdIds.has(t.buyerAccountId)) householdSpend += value;

@@ -343,7 +343,7 @@ export async function processCabinetNominationLifecycle(
     .find({
       status: "active",
       $or: [
-        { votingEndsOnTurn: { $lte: currentTurn } },
+        { votingEndsOnTurn: { $lte: currentTurn + 1 } },
         { votingEndsOnTurn: { $exists: false }, votingEndsAt: { $lte: now } },
       ],
     })
