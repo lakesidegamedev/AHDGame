@@ -246,6 +246,13 @@ export interface GameConfig {
    * not read as idle and mothballed. Settlement is unchanged. 0 or absent = off.
    */
   producerCaptiveDeliveryStage?: number;
+  /**
+   * Funded producer market: >= 1 lets an AI owner reopen one mothballed plant a
+   * turn whose recipe's running plants face a measured shortage (units asked
+   * over delivered at least 1.5), instead of waiting on the legacy price
+   * ratio. 0 or absent = off.
+   */
+  producerFundedRestartStage?: number;
   /** Share (0 to 1) of that leftover paid to households when the stage is on. Absent = 1. */
   producerProcurementSpillShare?: number;
   /**

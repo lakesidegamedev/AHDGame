@@ -3,6 +3,7 @@
  * makeNppCorpDecision uses the corporation, market signals and CEO strategy to
  * return planned sector and cash changes for the turn processor to apply.
  */
+import { chooseFundedRestart } from "@/lib/market/producerMarket/fundedRestartRules";
 import {
   sectorOutputCommodities,
   toDominanceSector,
@@ -696,7 +697,25 @@ export function makeNppCorpDecision(
   // and site bills buy nothing; the glut restart above brings it back when the
   // market's price recovers. Player autopilot and caretakers never do this.
   if (ctx.transitionFirstFundedTurn != null && operator.role === "npp" && !corp.countryOwnerId) {
+    // Funded restart: reopen the mothballed plant whose recipe is shortest.
+    const reopen = ctx.fundedRestartPressureOf
+      ? chooseFundedRestart(
+          sectors,
+          ctx.fundedRestartPressureOf,
+          (s) =>
+            !divestedSectorIds.some((d) => d.equals(s._id)) &&
+            !(s.sectorType === "extraction" && s.capacityUtilization === 0)
+        )
+      : null;
+    if (reopen)
+      sectorUpdates.push({
+        filter: { _id: reopen._id, mothballed: true },
+        update: {
+          $set: { mothballed: false, producerZeroSalesTurns: 0, pnlLossTurns: 0, updatedAt: now },
+        },
+      });
     for (const sector of sectors) {
+      if (reopen && sector._id.equals(reopen._id)) continue;
       const id = sector._id.toString();
       if (sector.mothballed === true || newlyMothballedIds.has(id)) continue;
       if ((sector.producerZeroSalesTurns ?? 0) < AI_ZERO_SALES_MOTHBALL_TURNS) continue;

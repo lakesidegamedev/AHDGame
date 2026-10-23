@@ -84,6 +84,11 @@ export interface NppCorpDecisionContext {
   conversionBudgetOf?: (
     countryId: string
   ) => import("@/lib/market/producerMarket/transitionRules").ConversionBudget | undefined;
+  /** Funded shortage for a recipe (sector type and strategy); absent = funded restart off. */
+  fundedRestartPressureOf?: (
+    sectorType: string,
+    strategyId: string | null | undefined
+  ) => number | undefined;
   /** Player-appointed caretaker mandate. NPP-owned corporations are always active. */
   caretakerMandate?: "active" | "passive";
 }

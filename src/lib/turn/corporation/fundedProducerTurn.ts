@@ -77,7 +77,8 @@ import {
   offtakeUnits,
   type CaptiveProduct,
 } from "@/lib/market/producerMarket/captiveDeliveryRules";
-import { bookPressure } from "@/lib/market/producerMarket/shortageGrowthRules";
+import { bookPressure, plantPressure } from "@/lib/market/producerMarket/shortageGrowthRules";
+import { recipePressure } from "@/lib/market/producerMarket/fundedRestartRules";
 import { procurementSpill } from "@/lib/market/producerMarket/procurementSpillRules";
 import { newEntrantProducerBooks } from "@/lib/market/producerMarket/openingState";
 import {
@@ -758,6 +759,10 @@ export async function runFundedProducerTurn(
     stateOfProducer: (id) => sectorState.get(demand.planSector.get(id) ?? "") ?? null,
     unitScale: TURNS_PER_DAY,
   });
+  // Measured shortage per book (shortage growth) and per recipe (AI restarts).
+  const restartOn = (input.env.fundedRestartStage ?? 0) >= 1;
+  const pressureNow =
+    shortageOn || restartOn ? bookPressure(settled.result.orderOutcomes ?? []) : undefined;
   // World-book clearing price per commodity, for next turn's buyer references.
   const clearingPrices: Record<string, number> = {};
   for (const row of settled.result.prices)
@@ -798,7 +803,27 @@ export async function runFundedProducerTurn(
       rows,
       ...((input.env.clearingReferenceStage ?? 0) >= 1 ? { clearingPrices } : {}),
       ...(countryBooks && countryBooks.length > 0 ? { books: countryBooks } : {}),
-      ...(shortageOn ? { bookPressure: bookPressure(settled.result.orderOutcomes ?? []) } : {}),
+      ...(pressureNow ? { bookPressure: pressureNow } : {}),
+      ...(restartOn && pressureNow
+        ? {
+            recipePressure: recipePressure(
+              settled.closingSectors.flatMap((s) => {
+                const r = s.producerSettlement;
+                if (s.mothballed === true || !r || r.turn !== turn) return [];
+                const products = (r as { products?: Parameters<typeof plantPressure>[0] }).products;
+                return [
+                  {
+                    sectorType: s.sectorType,
+                    strategyId: s.strategyId,
+                    pressure: plantPressure(products, new Map(Object.entries(pressureNow))),
+                    deliveredUnits:
+                      (r as { deliveredUnits?: number }).deliveredUnits ?? r.soldUnits ?? 0,
+                  },
+                ];
+              })
+            ),
+          }
+        : {}),
       ...(demand.householdSource ? { householdSource: demand.householdSource } : {}),
       at: new Date(),
     } as never,
