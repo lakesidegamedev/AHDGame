@@ -38,7 +38,7 @@ export async function recordBondTurnCheckpoint(
   await Promise.all([
     checkpoints.replaceOne(
       { _id: turn },
-      { _id: turn, atParIssues: atParIssues.map((issue) => ({ ...issue })), createdAt: now },
+      { atParIssues: atParIssues.map((issue) => ({ ...issue })), createdAt: now },
       { upsert: true }
     ),
     checkpoints.deleteMany({ _id: { $lt: turn - RETAINED_TURNS } }),
