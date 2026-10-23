@@ -509,7 +509,7 @@ export function SharePurchaseAtMarketView({
                   <div
                     className={`mt-0.5 tabular-nums ${!sellAsCorp && !sellAsInvestmentBank ? "text-primary/70" : "text-muted/60"}`}
                   >
-                    {myShares.toLocaleString("en-US")} shares
+                    {totalPersonalShares.toLocaleString("en-US")} shares
                   </div>
                 </button>
                 <button
@@ -589,7 +589,7 @@ export function SharePurchaseAtMarketView({
                 {!sellAsCorp && !sellAsInvestmentBank && (
                   <>
                     <span className="mx-1.5 text-card-border">·</span>
-                    {myShares.toLocaleString("en-US")} owned
+                    {myShares.toLocaleString("en-US")} available in selected holding
                   </>
                 )}
               </label>
@@ -636,7 +636,7 @@ export function SharePurchaseAtMarketView({
               <p className="mt-1 text-xs text-error">
                 {sellAsCorp
                   ? `Corporation only holds ${myCorporationShares.toLocaleString("en-US")} shares.`
-                  : `You only own ${myShares.toLocaleString("en-US")} shares.`}
+                  : `The selected holding contains ${myShares.toLocaleString("en-US")} shares.`}
               </p>
             )}
             {marketDepthInsufficient && (
@@ -671,7 +671,9 @@ export function SharePurchaseAtMarketView({
                 </span>
               </div>
               <div className="flex justify-between border-t border-card-border pt-2">
-                <span className="text-muted">Shares remaining</span>
+                <span className="text-muted">
+                  {sellAsCorp ? "Shares remaining" : "Shares remaining in selected holding"}
+                </span>
                 <span className="tabular-nums font-medium text-foreground">
                   {Math.max(
                     0,
