@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { producerTrades, quoteProducer, settleProducerMarket } from "./rules";
+import { producerFillSpend, producerTrades, quoteProducer, settleProducerMarket } from "./rules";
 
 describe("one funded producer market", () => {
   it("credits an actual small sale without subtracting rounded huge stock values to infer revenue", () => {
@@ -94,6 +94,64 @@ describe("one funded producer market", () => {
         8
       );
     }
+  });
+
+  it("totals the same spend per order and per buyer as the expanded supplier trades", () => {
+    let seed = 4211;
+    let filledOrders = 0;
+    const next = () => {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      return seed;
+    };
+    for (let example = 0; example < 100; example++) {
+      const accounts = Array.from({ length: 6 }, (_, i) => ({
+        id: `account:${i}`,
+        cash: next() % 200,
+      }));
+      const offers = Array.from({ length: 20 }, (_, i) => ({
+        id: `offer:${i}`,
+        accountId: accounts[next() % 6].id,
+        commodity: "goods",
+        book: next() % 2 ? "world" : "state:A",
+        units: next() % 20,
+        unitPrice: 1 + (next() % 4),
+      }));
+      const orders = Array.from({ length: 16 }, (_, i) => ({
+        id: `order:${i}`,
+        accountId: accounts[next() % 6].id,
+        commodity: "goods",
+        book: next() % 2 ? "world" : "state:A",
+        units: next() % 25,
+        maximumUnitPrice: i % 4 === 0 ? 5 : 1 + (next() % 5),
+        ...(i % 4 === 0
+          ? { supplierOfferId: offers[next() % offers.length].id, contractUnitPrice: 2 }
+          : i % 4 === 1
+            ? { eligibleOfferIds: offers.filter(() => next() % 2).map((offer) => offer.id) }
+            : {}),
+      }));
+      const { tradeReceipt } = settleProducerMarket({ turn: 1, accounts, offers, orders });
+      const byOrder = new Map<string, number>();
+      const byBuyer = new Map<string, number>();
+      for (const trade of producerTrades(tradeReceipt)) {
+        byOrder.set(trade.orderId, (byOrder.get(trade.orderId) ?? 0) + trade.amount);
+        byBuyer.set(trade.buyerAccountId, (byBuyer.get(trade.buyerAccountId) ?? 0) + trade.amount);
+      }
+      const fillByOrder = new Map<string, number>();
+      const fillByBuyer = new Map<string, number>();
+      for (const spend of producerFillSpend(tradeReceipt)) {
+        fillByOrder.set(spend.orderId, (fillByOrder.get(spend.orderId) ?? 0) + spend.amount);
+        fillByBuyer.set(
+          spend.buyerAccountId,
+          (fillByBuyer.get(spend.buyerAccountId) ?? 0) + spend.amount
+        );
+      }
+      expect([...fillByOrder.keys()].sort()).toEqual([...byOrder.keys()].sort());
+      for (const [id, amount] of byOrder) expect(fillByOrder.get(id)).toBeCloseTo(amount, 8);
+      expect([...fillByBuyer.keys()].sort()).toEqual([...byBuyer.keys()].sort());
+      for (const [id, amount] of byBuyer) expect(fillByBuyer.get(id)).toBeCloseTo(amount, 8);
+      filledOrders += byOrder.size;
+    }
+    expect(filledOrders).toBeGreaterThan(300);
   });
 
   it("uses the same delivered trade for seller revenue, buyer cost and the observed price", () => {

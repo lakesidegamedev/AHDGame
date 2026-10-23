@@ -1,10 +1,11 @@
 import { prepareManagedMongo } from "@/lib/singleplayer/prepareManagedMongo";
-import { MongoClient, Db } from "mongodb";
+import { MongoClient, Db, type WriteConcernSettings } from "mongodb";
 import { getValidatedEnv } from "@/lib/env";
 import {
   attachMongoCommandMonitor,
   mongoCommandMonitoringWanted,
 } from "@/lib/observability/mongoMonitor";
+import { isTurnWorkerProcess } from "@/lib/turn/turnWorkerHandoff";
 
 declare global {
   var _mongoClientPromise: Promise<MongoClient> | undefined;
@@ -53,6 +54,28 @@ export function resolveMongoSocketTimeoutMs(env: Record<string, string | undefin
   return Math.min(MAX_SOCKET_TIMEOUT_MS, Math.max(MIN_SOCKET_TIMEOUT_MS, Math.round(raw)));
 }
 
+/**
+ * Client write concern. Unset keeps the server default (w:majority, which waits
+ * for the journal fsync on every write). On the production disk that wait is
+ * ~11 ms per write and a turn issues ~30k sequential writes, so it is about a
+ * third of the turn.
+ *
+ * TURN_WRITE_CONCERN=w1 makes the turn worker acknowledge writes once applied,
+ * without waiting for the journal. Mongo is a single node, and its journal
+ * recovers a prefix in log order, so a mongod crash leaves the state an earlier
+ * worker death would have left; turn crash-resume already handles that. Only
+ * the process marked as the turn worker honors it; the web server keeps the
+ * default whatever its environment says. Explicit write concerns (transactions,
+ * index builds) are unaffected.
+ */
+export function resolveMongoWriteConcern(
+  env: Record<string, string | undefined>
+): WriteConcernSettings | undefined {
+  if (env.TURN_WRITE_CONCERN?.trim().toLowerCase() !== "w1") return undefined;
+  if (!isTurnWorkerProcess(env)) return undefined;
+  return { w: 1 };
+}
+
 function getClientPromise(): Promise<MongoClient> {
   const uri =
     process.env.NODE_ENV === "test" ? process.env.MONGODB_URI : getValidatedEnv().MONGODB_URI;
@@ -75,6 +98,7 @@ function getClientPromise(): Promise<MongoClient> {
       serverSelectionTimeoutMS: 10_000, // Fail fast in serverless rather than blocking for 30 s
       // Prevent individual operations from hanging indefinitely; the turn worker raises it.
       socketTimeoutMS: resolveMongoSocketTimeoutMs(process.env),
+      writeConcern: resolveMongoWriteConcern(process.env),
       monitorCommands: mongoCommandMonitoringWanted(),
     });
     // Instrument every query (breadcrumbs + slow-query/failure capture) centrally.
