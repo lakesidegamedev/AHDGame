@@ -81,14 +81,25 @@ export async function runDistinct(
 }
 
 /** Collection names plus document counts. The "what is even in here" call. */
+const COLLECTION_COUNT_CONCURRENCY = 16;
+
 export async function listCollections(db: Db): Promise<Array<{ name: string; count: number }>> {
   const names = (await db.listCollections({}, { nameOnly: true }).toArray())
     .map((c) => c.name)
     .filter((n) => !n.startsWith("system."))
     .sort();
-  const rows = [];
-  for (const name of names) {
-    rows.push({ name, count: await db.collection(name).estimatedDocumentCount() });
-  }
+  // One count per collection, several hundred of them, over a remote link:
+  // run them in bounded parallel so the listing stays well under a minute.
+  const rows: Array<{ name: string; count: number }> = new Array(names.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < names.length) {
+      const i = next++;
+      rows[i] = { name: names[i], count: await db.collection(names[i]).estimatedDocumentCount() };
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(COLLECTION_COUNT_CONCURRENCY, names.length) }, worker)
+  );
   return rows;
 }

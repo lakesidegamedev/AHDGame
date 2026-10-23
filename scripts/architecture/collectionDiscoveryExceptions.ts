@@ -514,12 +514,12 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
   },
   {
     file: "src/lib/remediation/inspect.ts",
-    owner: "listCollections",
-    argument: "name",
-    scopeHash: "c748fe4e2edb65dc3c7fd075fc046e196c297126289e19e9b67aa07f2a60041f",
+    owner: "worker",
+    argument: "names[i]",
+    scopeHash: "f3e4532956c08ecaafe8b2ec286cd27be32f345298c8885957270169a57f60c4",
     count: 1,
     reason:
-      "Authenticated operator remediation specs select the collection for a reviewed repair operation.",
+      "Collection names come from the database's own listCollections result, counted read-only.",
   },
   {
     file: "src/lib/remediation/inspect.ts",
