@@ -294,6 +294,29 @@ describe("processRdInnovations", () => {
     expect(revenueBoost(op)).toBe(Math.round(100_000 * RD_REGULAR_BOOST_MIN));
   });
 
+  it("can select either equally constrained extraction operation", () => {
+    const corp = makeCorp({ rdScore: 200, type: "extraction" });
+    const sectors = [
+      makeSector(corp._id, { sectorType: "extraction", stateId: "US-CA" }),
+      makeSector(corp._id, { sectorType: "extraction", stateId: "US-TX" }),
+    ];
+    const lookups = baseLookups([corp], sectors);
+    for (const sector of sectors) {
+      lookups.extractionCapacityUtilBySector.set(sector._id.toString(), {
+        utilization: 1,
+        bindingResource: "iron",
+      });
+    }
+    for (const [roll, expected] of [
+      [0, 0],
+      [0.99, 1],
+    ] as const) {
+      const rng = vi.fn().mockReturnValueOnce(0).mockReturnValueOnce(roll).mockReturnValue(0);
+      const result = processRdInnovations(lookups, 6, now, rng);
+      expect(result.sectorBoostOps[0].updateOne.filter._id).toEqual(sectors[expected]._id);
+    }
+  });
+
   it("applies RD_EXTRACTION_BOOST_MAX for extraction corps when magnitude roll is 1.0", () => {
     const randSpy = vi.spyOn(Math, "random");
     // Extraction corps pick the sector by capacity utilization (no RNG sector

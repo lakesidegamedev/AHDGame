@@ -1,3 +1,4 @@
+import { extractionRdTargetIndex } from "./rules/rdTarget";
 import type { UpdateOneModel } from "mongodb";
 import type { CorporationLookups } from "./types";
 import type { CorporateSector } from "@/lib/db/types/corporation";
@@ -138,11 +139,15 @@ export function processRdInnovations(
     // for non-extraction corps where capacity is irrelevant.
     let sector;
     if (isExtraction) {
-      sector = [...sectors].sort((a, b) => {
-        const ua = lookups.extractionCapacityUtilBySector.get(a._id.toString())?.utilization ?? 1;
-        const ub = lookups.extractionCapacityUtilBySector.get(b._id.toString())?.utilization ?? 1;
-        return ub - ua;
-      })[0];
+      const index = extractionRdTargetIndex(
+        sectors.map(
+          (candidate) =>
+            lookups.extractionCapacityUtilBySector.get(candidate._id.toString())?.utilization
+        ),
+        rng
+      );
+      if (index === null) continue;
+      sector = sectors[index];
     } else {
       sector = sectors[Math.floor(rng() * sectors.length)];
     }
