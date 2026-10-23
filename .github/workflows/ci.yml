@@ -380,7 +380,19 @@ jobs:
             mongo_image=mirror.gcr.io/library/mongo:7.0
           fi
           echo "::notice::kernel $kernel, using $mongo_image"
-          docker pull "$mongo_image"
+          # The mirror has had multi-minute outages (token endpoint timeouts).
+          # Retry it, then fall back to Docker Hub's identical image.
+          pulled=0
+          for attempt in 1 2 3; do
+            if docker pull "$mongo_image"; then pulled=1; break; fi
+            echo "::warning::pull of $mongo_image failed (attempt $attempt)"
+            sleep $((attempt * 10))
+          done
+          if [ "$pulled" != 1 ]; then
+            mongo_image="docker.io/library/${mongo_image#mirror.gcr.io/library/}"
+            echo "::warning::falling back to $mongo_image"
+            docker pull "$mongo_image"
+          fi
           echo "::notice::$(docker image inspect --format 'mongo image {{index .RepoDigests 0}} created {{.Created}}' "$mongo_image" 2>&1)"
           docker run --detach --name federation-mongo --publish 27991:27017 "$mongo_image" --replSet federationQualification --bind_ip_all
           mongo_dump() {
