@@ -73,6 +73,7 @@ import {
   publicOrderId,
   type LineCarry,
 } from "@/lib/market/producerMarket/publicCarryRules";
+import { bookPressure } from "@/lib/market/producerMarket/shortageGrowthRules";
 import { procurementSpill } from "@/lib/market/producerMarket/procurementSpillRules";
 import { newEntrantProducerBooks } from "@/lib/market/producerMarket/openingState";
 import {
@@ -201,20 +202,32 @@ export async function runFundedProducerTurn(
           )
         )
       : undefined;
-  // Last turn's funded clearing price per reachable commodity (clearingReferenceStage).
-  const lastClearing =
-    (input.env.clearingReferenceStage ?? 0) >= 1
-      ? (
-          await db
-            .collection<{ _id: string; clearingPrices?: Record<string, number> }>(
-              PRODUCER_MARKET_OUTCOMES
-            )
-            .findOne({ _id: `${worldEpoch}:${turn - 1}` }, { projection: { clearingPrices: 1 } })
-        )?.clearingPrices
-      : undefined;
-  const demandEnv = lastClearing
-    ? { ...input.env, lastClearingPriceByCommodity: new Map(Object.entries(lastClearing)) }
-    : input.env;
+  // Last turn's funded clearing price per reachable commodity (clearingReferenceStage)
+  // and measured shortage per book (shortageGrowthStage), from one read.
+  const clearingOn = (input.env.clearingReferenceStage ?? 0) >= 1;
+  const shortageOn = (input.env.shortageGrowthStage ?? 0) >= 1;
+  const lastOutcome =
+    clearingOn || shortageOn
+      ? await db
+          .collection<{
+            _id: string;
+            clearingPrices?: Record<string, number>;
+            bookPressure?: Record<string, number>;
+          }>(PRODUCER_MARKET_OUTCOMES)
+          .findOne(
+            { _id: `${worldEpoch}:${turn - 1}` },
+            { projection: { clearingPrices: 1, bookPressure: 1 } }
+          )
+      : null;
+  const lastClearing = clearingOn ? lastOutcome?.clearingPrices : undefined;
+  const lastPressure = shortageOn ? lastOutcome?.bookPressure : undefined;
+  const demandEnv = {
+    ...input.env,
+    ...(lastClearing
+      ? { lastClearingPriceByCommodity: new Map(Object.entries(lastClearing)) }
+      : {}),
+    ...(lastPressure ? { pressureByBook: new Map(Object.entries(lastPressure)) } : {}),
+  };
   const demand = await buildProducerTurnDemand(db, {
     turn,
     worldEpoch,
@@ -770,6 +783,7 @@ export async function runFundedProducerTurn(
       rows,
       ...((input.env.clearingReferenceStage ?? 0) >= 1 ? { clearingPrices } : {}),
       ...(countryBooks && countryBooks.length > 0 ? { books: countryBooks } : {}),
+      ...(shortageOn ? { bookPressure: bookPressure(settled.result.orderOutcomes ?? []) } : {}),
       ...(demand.householdSource ? { householdSource: demand.householdSource } : {}),
       at: new Date(),
     } as never,

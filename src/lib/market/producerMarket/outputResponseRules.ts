@@ -102,7 +102,9 @@ export const DEMAND_PLAN_PROBE = 0.1;
  */
 export function demandPlanRunShare(
   prior: PriorReceipt | null | undefined,
-  floor: number = OUTPUT_RUN_FLOOR
+  floor: number = OUTPUT_RUN_FLOOR,
+  /** Growth factor for a line that sold out at a profit (see shortageGrowthRules). */
+  soldOutGrowth: number = 1 + OUTPUT_GROW_STEP
 ): number {
   if (!prior) return 1;
   const finite = (x: number) => (Number.isFinite(x) ? x : 0);
@@ -124,7 +126,7 @@ export function demandPlanRunShare(
   const contributionPerUnit =
     sold > 0 ? (finite(prior.revenue) - (runningCost * sold) / Math.max(produced, sold)) / sold : 0;
   if (sold > 0 && contributionPerUnit < 0) return Math.max(floor, run * (1 - OUTPUT_CUT_STEP));
-  if (sellThrough >= SOLD_OUT) return Math.min(1, run * (1 + OUTPUT_GROW_STEP));
+  if (sellThrough >= SOLD_OUT) return Math.min(1, run * soldOutGrowth);
   const expectedSales = sold * (1 + DEMAND_PLAN_PROBE);
   const heldStock = Math.max(0, offered - sold);
   const planned = Math.max(0, expectedSales - heldStock);

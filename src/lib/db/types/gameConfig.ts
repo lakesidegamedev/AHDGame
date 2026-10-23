@@ -233,6 +233,12 @@ export interface GameConfig {
    * 0 or absent = off.
    */
   producerProcurementSpillStage?: number;
+  /**
+   * Funded producer market: >= 1 lets a line that sold out at a profit grow by
+   * its book's measured shortage (units asked over units delivered last turn),
+   * at most doubling a turn, instead of a fixed step. 0 or absent = off.
+   */
+  producerShortageGrowthStage?: number;
   /** Share (0 to 1) of that leftover paid to households when the stage is on. Absent = 1. */
   producerProcurementSpillShare?: number;
   /**

@@ -38,6 +38,7 @@ export const CORPORATION_TURN_GAME_CONFIG_PROJECTION = {
   producerFundedBookStage: 1,
   producerProcurementSpillStage: 1,
   producerProcurementSpillShare: 1,
+  producerShortageGrowthStage: 1,
   producerIdleRetireStage: 1,
   decommissionGrantShare: 1,
   producerLowUseCostStage: 1,

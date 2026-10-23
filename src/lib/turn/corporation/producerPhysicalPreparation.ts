@@ -1,4 +1,5 @@
 /** Prepare work, recipes and plant constraints before any product money is moved. */
+import { plantPressure, shortageGrowth } from "@/lib/market/producerMarket/shortageGrowthRules";
 import {
   inTransitionWindow,
   TRANSITION_WINDOW_TURNS,
@@ -105,6 +106,10 @@ export type ProducerPhysicalEnv = Pick<
   clearingReferenceStage?: number;
   /** gameConfig.producerFundedBookStage: >= 1 prices the funded market from its own orders and cross-border fills. */
   fundedBookStage?: number;
+  /** gameConfig.producerShortageGrowthStage: >= 1 grows a sold-out line by its book's shortage. */
+  shortageGrowthStage?: number;
+  /** Units asked over delivered per commodity book, from last turn's settled orders. */
+  pressureByBook?: ReadonlyMap<string, number>;
   /** Last funded clearing price per reachable commodity, anchor per unit (from the previous turn's outcomes). */
   lastClearingPriceByCommodity?: ReadonlyMap<string, number>;
   /** gameConfig.producerIdleRetireStage: >= 1 retires capacity that persistently sells nothing. 0 or absent = off. */
@@ -359,7 +364,19 @@ export function prepareProducerPhysicalSector(input: {
   const lastReceipt = priorReceipt && priorReceipt.turn === currentTurn - 1 ? priorReceipt : null;
   const unpacedRunShare =
     (env.demandPlanStage ?? 0) >= 1
-      ? demandPlanRunShare(lastReceipt, runFloor)
+      ? demandPlanRunShare(
+          lastReceipt,
+          runFloor,
+          (env.shortageGrowthStage ?? 0) >= 1
+            ? shortageGrowth(
+                plantPressure(
+                  (lastReceipt as { products?: Parameters<typeof plantPressure>[0] } | null)
+                    ?.products,
+                  env.pressureByBook
+                )
+              )
+            : undefined
+        )
       : nextRunShare(lastReceipt, runFloor);
   // A plan that reads a glut sheds at most runPaceDrop of its run a turn; the workforce persists.
   const runShare = pacedRunShare(unpacedRunShare, lastReceipt, env.runPaceDrop ?? 0, runFloor);

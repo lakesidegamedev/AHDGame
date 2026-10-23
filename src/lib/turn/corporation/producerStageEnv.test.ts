@@ -16,3 +16,10 @@ describe("producer stage env", () => {
     ).toBe(0.4);
   });
 });
+
+describe("producer stage env shortage growth", () => {
+  it("passes the shortage growth stage through and leaves it off by default", () => {
+    expect(producerStageEnv(null).shortageGrowthStage).toBeUndefined();
+    expect(producerStageEnv({ producerShortageGrowthStage: 1 }).shortageGrowthStage).toBe(1);
+  });
+});
