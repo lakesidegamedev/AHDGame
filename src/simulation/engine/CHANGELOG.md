@@ -179,8 +179,20 @@ one transaction and skipping the per-leg guards inside it. That is a project of
 its own with its own parity harness, not a read-batching change, and it is the
 reason this entry ships a measured 0.3% rather than a claimed 5x.
 
-The next-largest items after the journal are `developmentCash` (3,073 commands,
-also journal) and `pass3-rebalance` (3,056, fund trades and their journal rows).
+The next-largest items on the current base, by substep (round trips, same copy):
+
+| phase           | substep                                     | round trips |
+| --------------- | ------------------------------------------- | ----------: |
+| bankingTurn     | `depositTakers` (loan + deposit settlement) |      11,354 |
+| corporationTurn | `developmentCash` (advertising settlements) |       3,040 |
+| treasuryTurn    | `budgets` (coupon claims)                   |       2,245 |
+| bankingTurn     | `deadBankLoans`                             |       2,138 |
+| corporationTurn | `operatingCashSettlement`                   |       1,886 |
+| indexFunds      | `pass1b-bonds`                              |         974 |
+| corporationTurn | `sector+corp bulkWrites`                    |         868 |
+
+Every one of those is the journal or a per-item guarded write inside it, which
+is why the next unit of work is the protocol, not more read batching.
 
 ### CPU, measured rather than inferred
 
