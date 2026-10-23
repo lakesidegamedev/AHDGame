@@ -129,6 +129,12 @@ export function PlantSplitPlannerModal({
           </div>
         </div>
 
+        <p className="text-xs leading-relaxed text-muted">
+          The committed cost is the upfront charge for this attempt. Running the acquired plants
+          adds labour and input costs; upkeep also applies to idle capacity. More plants do not
+          guarantee more demand or profit. Staffing adjusts gradually when production is reduced.
+        </p>
+
         {errorMessage && (
           <div className="flex gap-2 rounded-lg border border-error/30 bg-error/10 p-3 text-xs text-error">
             <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
