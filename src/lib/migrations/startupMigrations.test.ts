@@ -63,6 +63,7 @@ describe("runRequiredStartupMigrations", () => {
       "2026-10-15-live-world-npp-autonomy-v6",
       "2026-10-16-scotus-career-achievements",
       "2026-10-23-bank-money-move-unprojected-index",
+      "2026-10-23-drop-log-text-indexes",
     ]);
     expect(REQUIRED_STARTUP_MIGRATIONS.every((migration) => migration.idempotent)).toBe(true);
     expect(runMigrationsMock).toHaveBeenNthCalledWith(1, db, {

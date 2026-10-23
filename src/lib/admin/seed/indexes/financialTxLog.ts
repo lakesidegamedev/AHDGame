@@ -81,13 +81,5 @@ export async function seedFinancialTxLogIndexes(db: Db, log: (msg: string) => vo
     log
   );
 
-  await ensureIndex(
-    db,
-    "financialTxLog",
-    { subjectName: "text", counterpartyName: "text" },
-    { name: "financialTxLog_text_search", background: true },
-    log
-  );
-
   log("Financial tx log indexes ensured");
 }
