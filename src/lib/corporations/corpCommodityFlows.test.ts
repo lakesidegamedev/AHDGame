@@ -9,7 +9,6 @@ import {
 import { TRADE_EMBARGO_EXPORT_LOSS_SHARE } from "@/lib/trade/constants";
 import {
   MARKET_ECONOMY_MEDIA_SUPPLY_FACTOR,
-  PLANNED_ECONOMY_MEDIA_OUTPUT,
   PLANNED_ECONOMY_MEDIA_SUPPLY_FACTOR,
 } from "@/lib/constants/sectorStrategies";
 import type { CommodityFlow } from "@/lib/db/types/commodityFlow";
@@ -455,7 +454,7 @@ describe("computeCorpCommodityFlows — ledger parity legs (ticket #1177 audit)"
     expect(advertising.outputUnits).toBeCloseTo(1_000 * MARKET_ECONOMY_MEDIA_SUPPLY_FACTOR, 1);
   });
 
-  it("remaps planned-economy media output off advertising", () => {
+  it("sells planned-economy media output as derated advertising", () => {
     const { commodities } = computeCorpCommodityFlows(
       [
         mkSector({
@@ -472,10 +471,9 @@ describe("computeCorpCommodityFlows — ledger parity legs (ticket #1177 audit)"
       { ...plants, currentYear: 1953, commandEconomyEnabled: true }
     );
 
-    // A command economy has no advertising market: its media output is state
-    // information, and it carries the planned-economy supply factor.
-    expect(commodities.find((c) => c.commodity === "advertising")).toBeUndefined();
-    const planned = commodities.find((c) => c.commodity === PLANNED_ECONOMY_MEDIA_OUTPUT)!;
+    // A command economy's media sells advertising, bought domestically by the
+    // state media line, and carries the planned-economy supply factor.
+    const planned = commodities.find((c) => c.commodity === "advertising")!;
     expect(planned).toBeDefined();
     expect(planned.outputUnits).toBeCloseTo(1_000 * PLANNED_ECONOMY_MEDIA_SUPPLY_FACTOR, 1);
   });

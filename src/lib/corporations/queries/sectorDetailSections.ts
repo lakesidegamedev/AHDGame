@@ -835,6 +835,7 @@ export function computeSectorMarketPosition(args: {
     | "liquidCurrencyCode"
     | "ceoType"
     | "caretakerCeo"
+    | "marketingStrength"
   >[];
   siblingsSectors: CorporateSector[];
   siblingFxByCurrency: Awaited<ReturnType<typeof loadFxRatesByCurrency>>;
@@ -925,10 +926,50 @@ export function computeSectorMarketPosition(args: {
   const unownedRevenue = 0;
   const unownedPercent = 0;
 
+  // The defender's side of a sector split: what the strongest-marketing rival
+  // in this market would take from this sector, and its odds, with the same
+  // quote the attacker sees. Needs the persisted whole-plant ledger.
+  let attackExposure: {
+    rivalName: string;
+    plantsAtRisk: number;
+    plantCount: number;
+    successProbability: number;
+  } | null = null;
+  const ownId = corporation._id.toString();
+  const strongest = siblingCorps
+    .filter((c) => c._id.toString() !== ownId)
+    .reduce<(typeof siblingCorps)[number] | null>(
+      (best, c) => ((c.marketingStrength ?? 0) > (best?.marketingStrength ?? -1) ? c : best),
+      null
+    );
+  if (
+    strongest &&
+    Number.isInteger(sector.plantCount) &&
+    (sector.plantCount ?? 0) >= 2 &&
+    typeof sector.capacityBookAnchor === "number" &&
+    Number.isFinite(sector.capacityBookAnchor)
+  ) {
+    const quote = calculatePlantSectorSplit({
+      defenderPlantCount: sector.plantCount as number,
+      defenderBookValueAnchor: sector.capacityBookAnchor,
+      attackerMarketingStrength: strongest.marketingStrength ?? 0,
+      defenderMarketingStrength: corporation.marketingStrength ?? 0,
+    });
+    if (quote.plantsAtRisk > 0) {
+      attackExposure = {
+        rivalName: strongest.name,
+        plantsAtRisk: quote.plantsAtRisk,
+        plantCount: sector.plantCount as number,
+        successProbability: Math.round(quote.successProbability * 100) / 100,
+      };
+    }
+  }
+
   return {
     effectiveMarket,
     marketShare,
     competitors,
+    attackExposure,
     unownedRevenue,
     unownedPercent,
     siblingRevenueAnchorById,
@@ -1129,7 +1170,9 @@ export function computeSectorMarginSection(args: {
     },
     isStateOwned(corporation),
     regionalConditionsModifier,
-    regionalConditionsModifiers
+    regionalConditionsModifiers,
+    sector.sprawlMarginPp ?? null,
+    sector.dominanceMarginPenaltyPp ?? null
   );
   // Compute profit off the REALIZED (embargo/haircut-adjusted) revenue basis —
   // the same `sectorEconomicRevenue` the corp list and Financials page already
@@ -1404,6 +1447,10 @@ export function buildSectorPlantsSection(args: {
         cause: "policy",
         w: Math.min(1, Math.abs(sector.productionPolicyLevel ?? 0) / 10),
       });
+    }
+    const staffing = num(sector.labourStaffingFactor);
+    if (staffing != null && staffing < 1) {
+      weights.push({ cause: "staffing", w: 1 - Math.max(0, staffing) });
     }
     // A deposit constraint is only a yes/no signal, not a measured loss.
     // Assigning the entire remaining idle share to it fabricates a quantity,

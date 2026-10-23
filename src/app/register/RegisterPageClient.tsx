@@ -12,7 +12,10 @@ import {
   OAUTH_FINGERPRINT_MAX_AGE_SECONDS,
   OAUTH_REFERRAL_CODE_COOKIE,
 } from "@/lib/auth/oauthFingerprint";
-import { generateFingerprintData, type StoredFingerprintComponents } from "@/lib/utils/fingerprint";
+import {
+  getFingerprintForSubmission,
+  scheduleFingerprintCapture,
+} from "@/lib/utils/fingerprintCapture";
 import { getOrCreateDeviceKey } from "@/lib/utils/deviceKey";
 import { Button } from "@/components/ui";
 import { AccountSection, type SocialAvailability } from "./components/AccountSection";
@@ -34,10 +37,6 @@ export default function RegisterPageClient({ heroImageUrl }: { heroImageUrl?: st
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const errorRef = useRef<HTMLDivElement>(null);
-  const [fingerprint, setFingerprint] = useState("");
-  const [fingerprintComponents, setFingerprintComponents] = useState<StoredFingerprintComponents>(
-    {}
-  );
   const [deviceKey, setDeviceKey] = useState("");
   const [turnstileToken, setTurnstileToken] = useState("");
 
@@ -85,12 +84,10 @@ export default function RegisterPageClient({ heroImageUrl }: { heroImageUrl?: st
     setFormData((prev) => (prev.referralCode ? prev : { ...prev, referralCode: fromQuery }));
   }, [searchParams]);
 
-  // Generate fingerprint and check test mode on mount
+  // Check test mode on mount; fingerprint capture is deferred to idle because
+  // its canvas/WebGL/audio probes otherwise run during hydration of the form.
   useEffect(() => {
-    generateFingerprintData().then(({ hash, components }) => {
-      setFingerprint(hash);
-      setFingerprintComponents(components);
-    });
+    scheduleFingerprintCapture();
     setDeviceKey(getOrCreateDeviceKey());
 
     const fetchSignupMethods = async () => {
@@ -110,16 +107,17 @@ export default function RegisterPageClient({ heroImageUrl }: { heroImageUrl?: st
     fetchSignupMethods();
   }, []);
 
-  const beginSocialRegistration = (
+  const beginSocialRegistration = async (
     provider: "discord" | "google" | "apple",
     referralCode: string | null
   ) => {
     markSignupStarted(provider);
+    const captured = await getFingerprintForSubmission();
     const cookieSuffix = `; max-age=${OAUTH_FINGERPRINT_MAX_AGE_SECONDS}; path=/; samesite=lax${
       window.location.protocol === "https:" ? "; secure" : ""
     }`;
-    if (fingerprint) {
-      document.cookie = `${OAUTH_FINGERPRINT_COOKIE}=${encodeURIComponent(fingerprint)}${cookieSuffix}`;
+    if (captured.hash) {
+      document.cookie = `${OAUTH_FINGERPRINT_COOKIE}=${encodeURIComponent(captured.hash)}${cookieSuffix}`;
     }
     if (deviceKey) {
       document.cookie = `${OAUTH_DEVICE_KEY_COOKIE}=${encodeURIComponent(deviceKey)}${cookieSuffix}`;
@@ -176,6 +174,7 @@ export default function RegisterPageClient({ heroImageUrl }: { heroImageUrl?: st
 
     try {
       // Step 1: Create account
+      const captured = await getFingerprintForSubmission();
       const registerRes = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -188,8 +187,8 @@ export default function RegisterPageClient({ heroImageUrl }: { heroImageUrl?: st
           testSecret: formData.testSecret || undefined,
           ageConfirmed: formData.ageConfirmed,
           termsAccepted: formData.termsAccepted,
-          fingerprint,
-          fingerprintComponents: fingerprint ? fingerprintComponents : undefined,
+          fingerprint: captured.hash,
+          fingerprintComponents: captured.hash ? captured.components : undefined,
           deviceKey: deviceKey || undefined,
           turnstileToken: turnstileToken || undefined,
         }),
@@ -212,8 +211,8 @@ export default function RegisterPageClient({ heroImageUrl }: { heroImageUrl?: st
         body: JSON.stringify({
           email: formData.email,
           password: formData.password,
-          fingerprint,
-          fingerprintComponents: fingerprint ? fingerprintComponents : undefined,
+          fingerprint: captured.hash,
+          fingerprintComponents: captured.hash ? captured.components : undefined,
           deviceKey: deviceKey || undefined,
         }),
       });

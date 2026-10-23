@@ -42,6 +42,15 @@ export interface CandlePoint {
   totalTurns?: number;
 }
 
+/** Logarithmic price scales cannot represent zero or negative candle prices. */
+export function supportsLogarithmicScale(
+  candles: Array<Pick<CandlePoint, "open" | "high" | "low" | "close">>
+): boolean {
+  return candles.every((candle) =>
+    [candle.open, candle.high, candle.low, candle.close].every((value) => value > 0)
+  );
+}
+
 /** Each candle uses one valuation source for its entire OHLC. */
 export function buildCandles(
   points: CandleInput[],

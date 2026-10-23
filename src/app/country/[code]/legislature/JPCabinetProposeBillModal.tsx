@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { ladderBounds } from "@/lib/legislature/policyLadder";
 import { useToast } from "@/contexts/ToastContext";
 import { fetchJson } from "@/lib/observability/fetchJson";
@@ -62,6 +63,8 @@ function LegacyJPCabinetProposeBillModal({
   blockedProvisions,
   allowedPolicyDomains,
   adminOverride,
+  canSubmit = true,
+  hasActiveBill = false,
   onClose,
   onSuccess,
 }: {
@@ -70,10 +73,13 @@ function LegacyJPCabinetProposeBillModal({
   blockedProvisions?: { legislationTypeId: string; policyOptionId: string }[];
   allowedPolicyDomains?: string[] | null;
   adminOverride?: boolean;
+  canSubmit?: boolean;
+  hasActiveBill?: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }) {
   const { showToast } = useToast();
+  const t = useTranslations("layout.guidedLegislation");
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [category, setCategory] = useState<BillCategory>(BILL_CATEGORIES[0] as BillCategory);
@@ -135,6 +141,7 @@ function LegacyJPCabinetProposeBillModal({
   );
   const submitDisabled =
     submitting ||
+    !canSubmit ||
     !title.trim() ||
     !summary.trim() ||
     (isNatCat ? false : !legislationTypeId || !policyOptionId || filteredTypes.length === 0);
@@ -156,6 +163,10 @@ function LegacyJPCabinetProposeBillModal({
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    if (!canSubmit) {
+      showToast(t("activeBillProposalBlocked"), "error");
+      return;
+    }
     if (!title.trim() || !summary.trim()) {
       showToast("Title and summary are required.", "error");
       return;
@@ -238,6 +249,11 @@ function LegacyJPCabinetProposeBillModal({
 
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           {proposalWarning ? <BillAutoFailWarningBanner warning={proposalWarning} /> : null}
+          {(hasActiveBill || !canSubmit) && !adminOverride ? (
+            <div className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+              {t("activeBillProposalBlocked")}
+            </div>
+          ) : null}
 
           <div>
             <label className="mb-1 block text-xs text-muted">Bill title</label>
@@ -450,6 +466,8 @@ export function JPCabinetProposeBillModal(
         chambers={[]}
         initialChamber="cabinet"
         adminOverride={props.adminOverride}
+        canSubmit={props.canSubmit}
+        hasActiveBill={props.hasActiveBill}
         onClose={props.onClose}
         onSuccess={props.onSuccess}
       />

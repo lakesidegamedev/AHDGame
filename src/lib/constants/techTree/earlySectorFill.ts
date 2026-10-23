@@ -34,7 +34,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Munitions Quality Inspection",
         description: "Incoming inspection cuts scrap on defense lots.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
       {
         name: "Plant Layout Optimization",
@@ -44,7 +44,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Vendor Rating Boards",
         description: "Preferred-supplier boards stabilize component quality.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
       {
         name: "Spare Parts Catalogs",
@@ -54,7 +54,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Foreman Training Schools",
         description: "Trained floor leadership reduces downtime.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
     ],
     "1950": [
@@ -66,12 +66,12 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Preventive Maintenance Programs",
         description: "Scheduled upkeep raises uptime on automation.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
       {
         name: "Work Measurement Standards",
         description: "Time standards tighten labor cost control.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
       {
         name: "Materials Requirements Planning",
@@ -86,7 +86,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Supplier Development",
         description: "Coached vendors raise incoming yield.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
       {
         name: "Plant Safety Systems",
@@ -98,12 +98,12 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Hardened Tool Steels",
         description: "Longer tool life cuts changeover cost.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "In-Process Gaging",
         description: "On-machine checks catch drift early.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
       {
         name: "Conveyorized Assembly",
@@ -118,7 +118,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Process Capability Studies",
         description: "Capability charts lock in repeatable quality.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
       {
         name: "Tool Crib Automation",
@@ -135,7 +135,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Programmable Controllers",
         description: "Early PLCs stabilize automated sequences.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "Group Technology Coding",
@@ -160,12 +160,12 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Welding Automation Cells",
         description: "Dedicated weld cells raise throughput.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "Quality Audit Trails",
         description: "Lot traceability lowers recall exposure.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
     ],
   },
@@ -184,12 +184,12 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Refinery Throughput Discipline",
         description: "Tight unit scheduling raises utilization.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
       {
         name: "Fuel Oil Hedging Practices",
         description: "Contract hedges blunt feedstock swings.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
       {
         name: "Metering Modernization",
@@ -211,7 +211,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Unit Commitment Planning",
         description: "Dispatch planning raises fleet efficiency.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
       {
         name: "High-Voltage Expansion",
@@ -221,7 +221,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Oilfield Waterflood Pilots",
         description: "Secondary recovery lifts mature fields.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "Tank Farm Automation",
@@ -241,19 +241,19 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Gas Distribution Safety",
         description: "Leak detection cuts outage and liability cost.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
     ],
     "1960": [
       {
         name: "Pumped Storage Pilots",
         description: "Storage smooths peak and off-peak margins.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "Catalytic Reforming Upgrades",
         description: "Refinery upgrades lift light-product yield.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "SCADA Dispatch",
@@ -268,7 +268,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Environmental Stack Controls",
         description: "Early scrubbers cut compliance shutdowns.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
       {
         name: "Shared Spare Turbines",
@@ -285,7 +285,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Enhanced Recovery Chemicals",
         description: "Injectants lift remaining oil in place.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "Combined Heat Pilots",
@@ -300,7 +300,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Nuclear Fuel Cycle Planning",
         description: "Fuel planning stabilizes reactor uptime.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "Demand-Side Load Control",
@@ -315,7 +315,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Emissions Monitoring Labs",
         description: "In-house labs speed permit compliance.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
     ],
   },
@@ -324,7 +324,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Radar Component Lines",
         description: "Defense radar builds electronics capacity.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "plantOutput", pct: 0.01 }],
       },
       {
         name: "Clean-Room Discipline",
@@ -334,7 +334,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Military Spec Testing",
         description: "Mil-spec screens cut field failure cost.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.005 }],
       },
       {
         name: "Component Standardization",
@@ -366,7 +366,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Semiconductor Pilot Lines",
         description: "Pilot fabs raise device yields.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "plantOutput", pct: 0.01 }],
       },
       {
         name: "Business Computing Sales",
@@ -376,7 +376,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Magnetic Core Memory",
         description: "Core memory lifts reliable system capacity.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.005 }],
       },
       {
         name: "Systems Engineering Offices",
@@ -386,7 +386,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Component Incoming Test",
         description: "Screening raises board-level yields.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.005 }],
       },
       {
         name: "Field Engineer Corps",
@@ -398,7 +398,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Mask-Making Precision",
         description: "Better masks raise IC yields.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "plantOutput", pct: 0.01 }],
       },
       {
         name: "Software Libraries",
@@ -413,7 +413,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Burn-In Screening",
         description: "Burn-in weeds early failures.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.005 }],
       },
       {
         name: "Cleanroom Expansion",
@@ -435,7 +435,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "LSI Design Rules",
         description: "Denser rules raise chip value per wafer.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.015 }],
       },
       {
         name: "Personal Computing Pilots",
@@ -450,7 +450,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Firmware Update Programs",
         description: "Field firmware cuts recall hardware swaps.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "plantOutput", pct: 0.01 }],
       },
       {
         name: "Disk Drive Miniaturization",
@@ -460,7 +460,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Software Productization",
         description: "Packaged software lifts recurring margin.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "plantOutput", pct: 0.01 }],
       },
       {
         name: "Global Component Sourcing",
@@ -479,12 +479,12 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Credit File Standardization",
         description: "Shared files cut underwriting cost.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
       {
         name: "Trust Department Scale",
         description: "Fiduciary scale lifts fee income.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
       {
         name: "Teller Procedure Manuals",
@@ -511,7 +511,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Installment Loan Factories",
         description: "Specialized shops raise consumer loan throughput.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Magnetic Ink Encoding",
@@ -531,7 +531,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Credit Scoring Pilots",
         description: "Scorecards speed and standardize approvals.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
       {
         name: "Night Drop Networks",
@@ -541,7 +541,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Bond Trading Desks",
         description: "Active desks capture secondary market spread.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
     ],
     "1960": [
@@ -553,7 +553,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Eurodollar Desk",
         description: "Offshore dollar books open wholesale funding.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Mutual Fund Distribution",
@@ -568,7 +568,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Syndicate Underwriting",
         description: "Syndicates expand large-issue capacity.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Branch Site Analytics",
@@ -590,7 +590,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Floating Rate Instruments",
         description: "Floating books hedge rate volatility.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Cash Management Accounts",
@@ -605,12 +605,12 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Compliance Reporting Units",
         description: "Dedicated units cut regulatory friction.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
       {
         name: "Foreign Exchange Dealing",
         description: "FX desks capture spread on client flows.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Data Center Consolidation",
@@ -629,7 +629,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Affiliate Clearance Desks",
         description: "Clearance desks raise network fill rates.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
       {
         name: "Paper Rationing Discipline",
@@ -661,7 +661,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Prime-Time Scheduling",
         description: "Block scheduling lifts ad rates.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Offset Printing Upgrades",
@@ -676,7 +676,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Syndication Packages",
         description: "Packages monetize library inventory.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
       {
         name: "Remote Broadcast Units",
@@ -691,7 +691,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Classified Ad Systems",
         description: "Organized classifieds raise high-margin pages.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
     ],
     "1960": [
@@ -708,7 +708,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Franchise Magazine Titles",
         description: "Franchise titles lift subscription stickiness.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Tape Editing Suites",
@@ -735,7 +735,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Pay-TV Experiments",
         description: "Subscription experiments diversify revenue.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Satellite Uplink Trucks",
@@ -755,12 +755,12 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Format Radio Specialization",
         description: "Formats raise loyal listener share.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Rights Libraries",
         description: "Owned rights lift residual income.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Affiliate Incentive Plans",
@@ -774,7 +774,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Batch Reactor Controls",
         description: "Tighter controls raise batch yields.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "Solvent Recovery Loops",
@@ -804,19 +804,19 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Industrial Gas Capture",
         description: "Captured gases become saleable byproduct.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
     ],
     "1950": [
       {
         name: "Continuous Polymer Lines",
         description: "Continuous lines raise resin throughput.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "Pharmaceutical GMP Pilots",
         description: "GMP discipline lifts accepted lot rates.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
       {
         name: "Crackers Heat Integration",
@@ -841,14 +841,14 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Corrosion Control Programs",
         description: "Corrosion control extends unit life.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
     ],
     "1960": [
       {
         name: "Computerized Process Control",
         description: "Analog/digital control lifts yield.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "Herbicide Formulation Lines",
@@ -878,14 +878,14 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Hazardous Waste Protocols",
         description: "Protocols cut disposal and liability cost.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
     ],
     "1970": [
       {
         name: "High-Purity Specialty Grades",
         description: "Specialty grades command premium prices.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "Energy Cascade Projects",
@@ -895,7 +895,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Distributed Control Systems",
         description: "DCS stabilizes multi-unit plants.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "Just-in-Time Packaging",
@@ -910,7 +910,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Catalyst Lifetime Models",
         description: "Models time changeouts optimally.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
       {
         name: "Export Grade Certification",
@@ -934,7 +934,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Nursing Training Pipelines",
         description: "Pipelines ease staffing bottlenecks.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
       {
         name: "Blood Bank Networks",
@@ -961,7 +961,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Ward Modernization",
         description: "Modern wards raise bed turnover.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Group Practice Models",
@@ -971,7 +971,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Diagnostic Imaging Suites",
         description: "X-ray suites raise procedure volume.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
       {
         name: "Insurance Billing Offices",
@@ -998,7 +998,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Intensive Care Units",
         description: "ICUs raise complex-case capacity.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Lab Automation",
@@ -1023,7 +1023,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Coronary Care Protocols",
         description: "Protocols improve throughput and outcomes.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
       {
         name: "Ambulance Coordination",
@@ -1040,12 +1040,12 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Electronic Billing Pilots",
         description: "Electronic claims speed cash collection.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Device Sterilization Plants",
         description: "In-house plants protect device margins.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Case-Mix Planning",
@@ -1060,7 +1060,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Infection Control Teams",
         description: "Teams cut costly outbreak disruptions.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
       {
         name: "Shared Service Laundries",
@@ -1094,12 +1094,12 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Charge Account Ledgers",
         description: "House credit raises basket size.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
       {
         name: "Seasonal Markdown Discipline",
         description: "Timed markdowns protect margin.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
       {
         name: "Delivery Van Routes",
@@ -1121,7 +1121,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Private Label Pilots",
         description: "Private label lifts margin mix.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Regional Distribution Hubs",
@@ -1131,7 +1131,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Loss Prevention Patrols",
         description: "Patrols cut shrink.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
       {
         name: "Circular Advertising",
@@ -1148,7 +1148,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Planogram Discipline",
         description: "Planograms raise shelf productivity.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Discount Pricing Engines",
@@ -1195,7 +1195,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "SKU Rationalization",
         description: "Fewer SKUs raise turns and margin.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Warehouse Cross-Docking",
@@ -1215,7 +1215,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Vendor Chargeback Systems",
         description: "Chargebacks recover noncompliance cost.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
     ],
   },
@@ -1229,7 +1229,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Body Stamping Standardization",
         description: "Shared dies cut body cost.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
       {
         name: "Dealer Parts Pipelines",
@@ -1244,7 +1244,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Engine Dyno Testing",
         description: "Dyno screens cut warranty exposure.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
       {
         name: "Rail Car Loading Docks",
@@ -1266,7 +1266,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Automatic Transmission Lines",
         description: "Dedicated lines raise option attach.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "Dealer Network Expansion",
@@ -1281,7 +1281,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Warranty Claim Analytics",
         description: "Analytics target quality fixes.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
       {
         name: "Steel Coil Contracts",
@@ -1303,7 +1303,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Performance Trim Packages",
         description: "Packages lift ASP on volume platforms.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "Unitized Body Construction",
@@ -1318,7 +1318,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Options Configurators",
         description: "Configurators reduce misbuilt orders.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
       {
         name: "Fleet Sales Organizations",
@@ -1340,7 +1340,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Electronic Ignition",
         description: "Electronic systems cut warranty cost.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "Supplier Park Logistics",
@@ -1355,7 +1355,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Robot Weld Pilots",
         description: "Weld robots raise body consistency.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "Export Homologation Teams",
@@ -1384,12 +1384,12 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Seed Cleaning Plants",
         description: "Clean seed raises emergence rates.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
       {
         name: "Extension Service Ties",
         description: "Extension advice lifts yields.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
       {
         name: "Cold Storage Expansion",
@@ -1404,14 +1404,14 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Crop Insurance Literacy",
         description: "Insurance stabilizes farm cash flow.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
     ],
     "1950": [
       {
         name: "Anhydrous Ammonia Handling",
         description: "Safe NH3 handling raises fertilizer uptake.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "Combine Harvester Fleets",
@@ -1426,7 +1426,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Soil Testing Labs",
         description: "Tests target fertilizer spend.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
       {
         name: "Refrigerated Rail Cars",
@@ -1448,7 +1448,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Dwarf Variety Adoption",
         description: "High-yield dwarfs raise output per acre.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "Aerial Crop Dusting",
@@ -1463,7 +1463,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Commodity Grading Systems",
         description: "Grading captures quality premiums.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
       {
         name: "Farm Management Accounting",
@@ -1478,19 +1478,19 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Contour Farming Practices",
         description: "Contouring protects long-run soil yield.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
     ],
     "1970": [
       {
         name: "Center-Pivot Irrigation",
         description: "Pivots raise irrigated acre productivity.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "Futures Basis Trading",
         description: "Basis trading locks better prices.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "Large Tractor Economics",
@@ -1515,7 +1515,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Soil Compaction Control",
         description: "Controlled traffic protects yields.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
     ],
   },
@@ -1529,7 +1529,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Property Management Offices",
         description: "Professional PM raises occupancy.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
       {
         name: "Construction Lending Desks",
@@ -1544,7 +1544,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Rent Collection Systems",
         description: "Systems cut delinquency leakage.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
       {
         name: "Maintenance Crews",
@@ -1566,7 +1566,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Strip Center Anchors",
         description: "Anchors stabilize retail rents.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Broker Co-Broke Networks",
@@ -1591,14 +1591,14 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Escrow Coordination",
         description: "Coordination reduces failed closings.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
     ],
     "1960": [
       {
         name: "Mixed-Use Entitlements",
         description: "Mixed-use raises land residual value.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Elevator High-Rise Ops",
@@ -1613,7 +1613,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Parking Structure Design",
         description: "Parking raises net rentable appeal.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
       {
         name: "Lease Abstraction Systems",
@@ -1635,12 +1635,12 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Class-A Office Spec",
         description: "Spec buildings capture expanding HQ demand.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Condo Conversion Playbooks",
         description: "Conversions unlock locked value.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Energy Retrofit Programs",
@@ -1660,7 +1660,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Property Tax Appeals",
         description: "Appeals reduce carrying cost.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
       {
         name: "Portfolio Asset Management",
@@ -1689,7 +1689,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Jobsite Safety Officers",
         description: "Safety reduces stoppages and claims.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
       {
         name: "Equipment Yard Logistics",
@@ -1711,7 +1711,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Earthmoving Fleet Scale",
         description: "Scaled fleets win highway packages.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Prefab Component Yards",
@@ -1731,7 +1731,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Change-Order Discipline",
         description: "Discipline protects contract margin.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
       {
         name: "Public Bid Estimating",
@@ -1753,7 +1753,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Slipform Techniques",
         description: "Slipform raises vertical productivity.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Structural Steel Detailing",
@@ -1763,7 +1763,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "MEP Coordination Drawings",
         description: "Coordination prevents clash delays.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
       {
         name: "Regional Material Brokers",
@@ -1790,7 +1790,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "CM-at-Risk Playbooks",
         description: "CMAR captures larger program fees.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Heavy-Lift Logistics",
@@ -1805,7 +1805,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Safety Incentive Programs",
         description: "Incentives cut lost-time cost.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
       {
         name: "Computer Estimating",
@@ -1829,7 +1829,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Acceptance Test Rigs",
         description: "Rigs cut rejected delivery lots.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
       {
         name: "Classified Document Control",
@@ -1844,7 +1844,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Spare Kit Provisioning",
         description: "Kits raise field readiness revenue.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
       {
         name: "Prototype Shops",
@@ -1861,7 +1861,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Systems Integration Labs",
         description: "Labs de-risk complex platforms.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "Cost-Plus Discipline",
@@ -1876,7 +1876,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Depot Maintenance Lines",
         description: "Depots create sustainment revenue.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
       {
         name: "Configuration Management",
@@ -1898,7 +1898,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Avionics Integration",
         description: "Avionics packages raise platform value.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "Program Management Offices",
@@ -1918,7 +1918,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Reliability Growth Testing",
         description: "RGT cuts early field failures.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
       {
         name: "International Co-Production",
@@ -1935,7 +1935,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Guidance Package Lines",
         description: "PGM lines raise high-margin content.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "Logistics Command Interfaces",
@@ -1960,7 +1960,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Obsolescence Management",
         description: "Obsolescence plans protect margins.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "Multi-Year Procurement Bids",
@@ -1984,7 +1984,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Trunk Multiplexing",
         description: "Multiplexing raises circuit capacity.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
       {
         name: "Right-of-Way Crews",
@@ -2004,14 +2004,14 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Toll Settlement Systems",
         description: "Settlements protect interconnect revenue.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
     ],
     "1950": [
       {
         name: "Microwave Path Engineering",
         description: "Path engineering raises reliable hops.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Coax Amplifier Spacing",
@@ -2048,7 +2048,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Earth Station Operations",
         description: "Earth stations open long-haul capacity.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Telex Switching Centers",
@@ -2063,7 +2063,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Frequency Coordination",
         description: "Coordination raises usable spectrum.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
       {
         name: "Network Operations Centers",
@@ -2085,7 +2085,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Fiber Pilot Spans",
         description: "Fiber pilots prepare bandwidth growth.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Packet Network Trials",
@@ -2100,7 +2100,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Customer Premise Gear",
         description: "CPE attach raises installation margin.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Outside Plant Databases",
@@ -2144,7 +2144,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Propaganda Unit Experience",
         description: "Unit experience speeds sponsored content.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
       {
         name: "Costume and Prop Reuse",
@@ -2154,7 +2154,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Newsreel Adjacency",
         description: "Adjacency lifts theater ad inventory.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
     ],
     "1950": [
@@ -2171,7 +2171,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Residuals Administration",
         description: "Clean residuals prevent costly disputes.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
       {
         name: "Location Scouting Offices",
@@ -2181,7 +2181,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Syndication Clearance",
         description: "Clearance monetizes library deeper.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Fan Club Marketing",
@@ -2208,7 +2208,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Theme Park Licensing",
         description: "Licensing extends IP into attractions.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Color Telecine Transfer",
@@ -2235,7 +2235,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Home Video Rights",
         description: "Video rights create new windows.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Blockbuster Event Marketing",
@@ -2265,7 +2265,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Preview Screening Analytics",
         description: "Previews tune cuts before wide release.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
     ],
   },
@@ -2279,7 +2279,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Depot Inventory Control",
         description: "Controls cut lost shipments.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
       {
         name: "Convoy Routing Discipline",
@@ -2289,7 +2289,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Tariff Filing Expertise",
         description: "Filings protect legal rate structures.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
       {
         name: "Warehouse Labor Standards",
@@ -2304,7 +2304,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Claims Prevention Units",
         description: "Units cut damage payouts.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
     ],
     "1950": [
@@ -2316,7 +2316,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Owner-Operator Contracts",
         description: "Contracts flex capacity with demand.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Freight Bill Auditing",
@@ -2336,7 +2336,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Reefer Fleet Maintenance",
         description: "Maintenance protects cold-chain premiums.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.02 }],
       },
       {
         name: "Interstate Authority Expansion",
@@ -2353,7 +2353,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Air Freight Forwarding",
         description: "Air products capture time-sensitive premium.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Ship Stowage Planning",
@@ -2390,7 +2390,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Automated Sortation",
         description: "Sortation raises hub throughput.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Computerized Dispatch",
@@ -2405,7 +2405,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Fuel Surcharge Programs",
         description: "Surcharges protect operating margin.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Cross-Dock Facilities",
@@ -2429,7 +2429,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Ore Sorting on Belts",
         description: "Early sorting raises mill feed grade.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.005 }],
       },
       {
         name: "Rail Spur Construction",
@@ -2439,7 +2439,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Mine Safety Boards",
         description: "Safety boards reduce stoppages.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.005 }],
       },
       {
         name: "Survey Control Networks",
@@ -2454,7 +2454,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Royalty Negotiation Teams",
         description: "Teams improve lease economics.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.005 }],
       },
     ],
     "1950": [
@@ -2471,7 +2471,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Mill Circuit Balancing",
         description: "Balancing raises recovery.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "plantOutput", pct: 0.01 }],
       },
       {
         name: "Exploration Drill Campaigns",
@@ -2491,14 +2491,14 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Tailings Management",
         description: "Tailings plans avert costly shutdowns.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.005 }],
       },
     ],
     "1960": [
       {
         name: "Geostatistical Block Models",
         description: "Models improve mine plans.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "plantOutput", pct: 0.01 }],
       },
       {
         name: "In-Situ Leach Pilots",
@@ -2518,7 +2518,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Grade Control Sampling",
         description: "Sampling reduces ore dilution.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.005 }],
       },
       {
         name: "Equipment Availability KPIs",
@@ -2535,7 +2535,7 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Subsea Well Completions",
         description: "Completions unlock offshore barrels.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.015 }],
       },
       {
         name: "Environmental Baseline Studies",
@@ -2560,12 +2560,12 @@ export const SECTOR_EARLY_FILL: Partial<Record<OperatingSectorType, Record<strin
       {
         name: "Reserve Audit Discipline",
         description: "Audits improve capital allocation.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "plantOutput", pct: 0.01 }],
       },
       {
         name: "Longwall Mining Methods",
         description: "Longwall raises underground coal rates.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "plantOutput", pct: 0.01 }],
       },
     ],
   },

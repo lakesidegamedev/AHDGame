@@ -163,6 +163,8 @@ export async function creditCorpDividends(args: {
   lookups: CorporationLookups;
   corpDividendPaymentsAnchorByCorpId: Map<string, number>;
   corpDividendPaymentsAnchorByCorpCurrency: Map<string, Map<CurrencyCode, number>>;
+  /** Anchor amount of each corp's received dividends already taxed at source. */
+  corpDividendTaxedAtSourceAnchorByCorpId?: Map<string, number>;
   turn: number | undefined;
   now: Date;
   thresholds: TxThresholds;
@@ -175,6 +177,7 @@ export async function creditCorpDividends(args: {
     lookups,
     corpDividendPaymentsAnchorByCorpId,
     corpDividendPaymentsAnchorByCorpCurrency,
+    corpDividendTaxedAtSourceAnchorByCorpId,
     turn,
     now,
     thresholds,
@@ -230,7 +233,16 @@ export async function creditCorpDividends(args: {
       // Federal tax on 50% of the received dividend at recipient's home country DOMESTIC rate
       // (received-corp-to-received-corp dividend is domestic from the recipient's perspective).
       const fedRate = lookups.domesticCorpTaxRateByCountry.get(recipient.countryId) ?? 0;
-      const dividendTaxAnchor = grossAfterSpread * 0.5 * (fedRate / 100);
+      // Pass-through distributions were already taxed at source; only the rest
+      // is subject to the dividend-received tax.
+      const taxedAtSource = Math.min(
+        1,
+        Math.max(
+          0,
+          (corpDividendTaxedAtSourceAnchorByCorpId?.get(recipientCorpIdStr) ?? 0) / anchorAmount
+        )
+      );
+      const dividendTaxAnchor = grossAfterSpread * (1 - taxedAtSource) * 0.5 * (fedRate / 100);
       const netAnchor = Math.max(0, grossAfterSpread - dividendTaxAnchor);
       const liquidInc = anchorToCorpCapital(netAnchor, resolved, fx);
       if (!Number.isFinite(liquidInc) || liquidInc <= 0) continue;
@@ -489,6 +501,8 @@ export async function emitCorporationTurnTx(args: {
   ceoSalaryPayments: Map<string, Map<CurrencyCode, number>>;
   dividendPayments: Map<string, Map<CurrencyCode, number>>;
   capitalDividendPayments?: Map<string, Map<CurrencyCode, number>>;
+  /** Dividend amounts already taxed at source (pass-through reform). */
+  passThroughTaxedDividendPayments?: Map<string, Map<CurrencyCode, number>>;
   dividendTaxPaidByCountry: Map<string, Map<string, number>>;
   turn: number | undefined;
   now: Date;
@@ -501,6 +515,7 @@ export async function emitCorporationTurnTx(args: {
     ceoSalaryPayments,
     dividendPayments,
     capitalDividendPayments,
+    passThroughTaxedDividendPayments,
     dividendTaxPaidByCountry,
     turn,
     now,
@@ -534,7 +549,9 @@ export async function emitCorporationTurnTx(args: {
     // The cash writer keeps fractional native units. Witness the signed
     // pre-tax operating result and its tax debit at the same precision.
     // Losses consume cash even when there is no positive revenue row (#992).
-    const revenueAnchorPreTax = snap.income + Math.max(0, totalTaxAnchor);
+    // On a funded turn the settlement already witnessed the producer profit.
+    const revenueAnchorPreTax =
+      snap.income + Math.max(0, totalTaxAnchor) - (snap.settledProducerProfitAnchor ?? 0);
     const operatingLocal = anchorToCorpCapital(revenueAnchorPreTax, resolved, fx);
     if (Number.isFinite(operatingLocal) && operatingLocal !== 0) {
       txEntries.push({
@@ -700,6 +717,15 @@ export async function emitCorporationTurnTx(args: {
                     amount,
                     capitalDividendPayments.get(id)?.get(currency) ?? 0,
                     turn ?? 0
+                  ),
+                }
+              : {}),
+            ...(txType === "corp_dividend" &&
+            (passThroughTaxedDividendPayments?.get(id)?.get(currency) ?? 0) > 0
+              ? {
+                  passThroughTaxedAmount: Math.min(
+                    amount,
+                    passThroughTaxedDividendPayments!.get(id)!.get(currency)!
                   ),
                 }
               : {}),

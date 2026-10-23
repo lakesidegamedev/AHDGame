@@ -12,6 +12,8 @@ import type { FinancialTxType } from "@/lib/db/types/financialTxLog";
  * If the two diverge, `assertCoverage` below catches it at typecheck time.
  */
 export const ALL_TX_TYPES: readonly FinancialTxType[] = [
+  "producer_market_settlement",
+  "producer_market_transfer",
   "player_income_tax",
   "player_capital_gains_tax",
   // ── Character / imperial cash ──────────────────────────────────────────
@@ -46,6 +48,7 @@ export const ALL_TX_TYPES: readonly FinancialTxType[] = [
   // ── Bonds ──────────────────────────────────────────────────────────────
   "bond_purchase",
   "bond_sell",
+  "bond_buyback",
   "bond_pool_inflow",
   "bond_pool_sweep",
   "bond_coupon",
@@ -169,6 +172,8 @@ export const ALL_TX_TYPES: readonly FinancialTxType[] = [
 ] as const;
 
 export const TX_TYPE_LABELS: Record<FinancialTxType, string> = {
+  producer_market_settlement: "Producer market settlement",
+  producer_market_transfer: "Producer market transfer",
   player_income_tax: "Personal Income Tax",
   player_capital_gains_tax: "Personal Capital Gains Tax",
   corp_sector_founding: "Corporation Sector Founding",
@@ -201,6 +206,7 @@ export const TX_TYPE_LABELS: Record<FinancialTxType, string> = {
 
   bond_purchase: "Bond Purchase",
   bond_sell: "Bond Sell",
+  bond_buyback: "Bond Buyback",
   bond_pool_inflow: "Bond Pool Liquidity Inflow",
   bond_pool_sweep: "Bond Pool Liquidity Sweep",
   bond_coupon: "Bond Coupon",

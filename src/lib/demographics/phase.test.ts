@@ -133,6 +133,7 @@ describe("runDemographicFlows", () => {
           regionId: "CA",
           asOfTurn: 1,
           observations: { "19": { value: 250 } },
+          openingValues: { "19": 250 },
         },
       ]),
     });
@@ -185,6 +186,62 @@ describe("runDemographicFlows", () => {
     ).rejects.toThrow("V2 cohorts lack current health inputs");
     expect(plannedRegions(db)).toEqual([]);
   });
+
+  it.each(["US", "UK", "JP", "IE", "SCO", "WAL"] as const)(
+    "publishes age-specific owner receipts for %s",
+    async (countryId) => {
+      const { buildOpeningMetricSnapshots1991 } =
+        await import("@/lib/resetMetrics/seedOpening1991");
+      const openings = buildOpeningMetricSnapshots1991("test-reset-world", 1);
+      const donorCountry = countryId === "SCO" || countryId === "WAL" ? "UK" : countryId;
+      const source = openings.find(
+        (b) =>
+          b.countryId === donorCountry &&
+          b.scope === "regional" &&
+          (!(countryId === "SCO" || countryId === "WAL") || b.regionId === countryId)
+      )!;
+      const regionId = countryId === "SCO" ? "LOT" : countryId === "WAL" ? "CDF" : source.regionId!;
+      setDemos([{ _id: regionId, countryId, ages: vec(1_000_000) }]);
+      db.collection("states").find.mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([{ _id: regionId, countryId, population: 1_000_000 }]),
+      });
+      db.collection("macroMetrics").find.mockReturnValue({
+        project: vi
+          .fn()
+          .mockReturnValue({ toArray: vi.fn().mockResolvedValue([{ _id: regionId }]) }),
+      });
+      db.collection("gameState").findOne.mockResolvedValue({
+        currentTurn: 1,
+        resetWorldId: "test-reset-world",
+        metricsSystemVersion: "v2",
+        resetVersionSeeds: {
+          metrics: {
+            worldId: "test-reset-world",
+            revision: RESET_V2_SEED_REVISION.metrics,
+            sourceTurn: 1,
+            completedAt: "fixture",
+            verificationHash: "fixture",
+            countries: ["US", "UK", "JP", "IE", "SCO", "WAL"],
+          },
+        },
+      });
+      db.collection("resetMetricSnapshots").find.mockReturnValue({
+        toArray: vi
+          .fn()
+          .mockResolvedValue([{ ...source, _id: `${countryId}:${regionId}`, regionId, countryId }]),
+      });
+      const { runDemographicFlows } = await import("./phase");
+      await runDemographicFlows(db as unknown as Db, 2, undefined, { metrics: true });
+      expect(plannedRegions(db)[0]?.resetCohortReadingAfter).toMatchObject({
+        asOfTurn: 2,
+        fertility: { kind: "fertility", births: expect.any(Array), women: expect.any(Array) },
+        mortality: { kind: "mortality", maleExposure: expect.any(Array) },
+        fertilityPolicyIndex: expect.any(Number),
+        populationBefore: expect.any(Number),
+        populationAfter: expect.any(Number),
+      });
+    }
+  );
 
   it("writes a population SSOT equal to the Σ of the advanced vector", async () => {
     const { runDemographicFlows } = await import("./phase");

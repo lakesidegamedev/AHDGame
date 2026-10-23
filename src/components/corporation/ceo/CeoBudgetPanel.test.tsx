@@ -162,6 +162,13 @@ describe("CeoBudgetPanel: zero-revenue overhead rule (ticket #1237)", () => {
   });
 });
 
+describe("CeoBudgetPanel: marketing growth note", () => {
+  it("labels the marketing estimate as gross growth before decay", () => {
+    renderBudget({ corporation: { marketingBudget: 100, marketingStrength: 175.41 } });
+    expect(screen.getByText(/gross growth before decay/i)).toBeTruthy();
+  });
+});
+
 describe("CeoBudgetPanel: editing in place", () => {
   it("shows the operating-income change of an unsaved edit, and Reset drops it", () => {
     renderBudget({ financials: { totalRevenue: 100_000 } });
@@ -192,5 +199,30 @@ describe("parseDisplayDigits", () => {
     expect(parseDisplayDigits("1,234")).toBe(1234);
     expect(parseDisplayDigits("")).toBe(0);
     expect(parseDisplayDigits("9".repeat(40))).toBe(Number.MAX_SAFE_INTEGER);
+  });
+});
+
+describe("CeoBudgetPanel: autopilot note", () => {
+  it("tells the CEO budgets reset each turn while autopilot is on", () => {
+    renderBudget({ corporation: { autopilot: { enabledTurn: 1, advisories: [] } } });
+    expect(screen.getByTestId("budget-autopilot-note").textContent).toMatch(/reset on the next/);
+  });
+
+  it("shows no note when autopilot is off", () => {
+    renderBudget();
+    expect(screen.queryByTestId("budget-autopilot-note")).toBeNull();
+  });
+});
+
+describe("CeoBudgetPanel: currency symbol", () => {
+  it("no ₳ rendered when the payload has no currency code", () => {
+    renderBudget({ corporation: { liquidCurrencyCode: undefined, countryId: "UK" } });
+    expect(document.body.textContent).not.toContain("₳");
+    expect(screen.getAllByText("£").length).toBeGreaterThan(0);
+  });
+
+  it("falls back to the game dollar, never ₳, with neither code nor country", () => {
+    renderBudget({ corporation: { liquidCurrencyCode: undefined, countryId: undefined } });
+    expect(document.body.textContent).not.toContain("₳");
   });
 });

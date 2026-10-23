@@ -2,6 +2,15 @@ import { primaryMetrics } from "../catalog";
 import type { OpeningMetricObservation } from "./openingObservation";
 import { openingMetricHistory, validateMetricHistory, type ResetMetricHistory } from "./history";
 import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
+import type { HouseholdPublicationSource } from "./householdPublication";
+import type { HousingPublicationSource } from "./housingPublication";
+import type { HousingState } from "./housing";
+import type {
+  HouseholdDecodedReference,
+  HouseholdCurrentState,
+  HouseholdProductionStatus,
+  HouseholdIncomeModel,
+} from "./householdSources";
 
 export interface ResetMetricSnapshot {
   _id: string;
@@ -15,6 +24,25 @@ export interface ResetMetricSnapshot {
   lastRefreshFromTurn?: number;
   observations: Record<string, OpeningMetricObservation>;
   history?: ResetMetricHistory;
+  /** Immutable policy baseline, independent of the bounded history window. */
+  openingValues?: Record<string, number>;
+  /** First compatible gameplay baseline after a unit change; wiped on world reset. */
+  gameplayReferences?: Record<string, { value: number; unit?: string; definitionVersion: 2 }>;
+  /** Compact preceding owner values make lagged turn retries deterministic. */
+  priorValues?: Record<string, number | null>;
+  /** Reviewed upstream owner inputs. World-scoped; this entire collection is wiped on reset. */
+  householdSource?: HouseholdPublicationSource;
+  /** Reviewed source and economic-owner inputs; all wiped with this world-bound collection. */
+  householdReference?: HouseholdDecodedReference;
+  householdIncomeModel?: HouseholdIncomeModel;
+  householdCurrentState?: HouseholdCurrentState;
+  /** Bounded latest evaluation only. This is not a new measurement or a history series. */
+  householdProductionStatus?: HouseholdProductionStatus;
+  /** Latest housing readiness only; wiped with the metric snapshots on reset. */
+  housingProductionStatus?: HouseholdProductionStatus;
+  housingSource?: HousingPublicationSource;
+  /** Country source inputs and regional stock state are wiped with this world-bound collection. */
+  housingState?: HousingState;
 }
 
 /** Validate an entire scoped opening board before any v2 writer can consume it. */
@@ -49,7 +77,10 @@ export function buildResetMetricSnapshot(input: {
       !Number.isFinite(observed.value) ||
       observed.status === "unavailable" ||
       !observed.source ||
-      !observed.owner
+      !observed.owner ||
+      (observed.lastUpdatedTurn !== undefined &&
+        (!Number.isSafeInteger(observed.lastUpdatedTurn) ||
+          observed.lastUpdatedTurn < input.sourceTurn))
     ) {
       throw new Error(
         `Reset metric ${input.countryId}/${input.regionId ?? "national"}/${metric.id} is not ready`
@@ -98,10 +129,12 @@ export function resetMetricSnapshotPayload(rows: readonly ResetMetricSnapshot[])
             observation.source,
             observation.owner,
             observation.note,
+            observation.lastUpdatedTurn ?? null,
           ]),
         Object.entries(row.history ?? {})
           .sort(([a], [b]) => a.localeCompare(b))
           .map(([id, series]) => [id, series.map((point) => [point.turn, point.value])]),
+        Object.entries(row.openingValues ?? {}).sort(([a], [b]) => a.localeCompare(b)),
       ])
   );
 }

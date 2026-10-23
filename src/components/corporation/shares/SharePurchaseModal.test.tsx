@@ -101,6 +101,7 @@ describe("holding bucket sale selection", () => {
   it("shows purchase age and caps a personal sale to the selected bucket", () => {
     setup({
       myShares: 12,
+      myCorporation: { id: "other", name: "Other company", liquidCapital: 1000 },
       isCeo: true,
       corporation: corporation({
         shareholders: [
@@ -114,18 +115,30 @@ describe("holding bucket sale selection", () => {
               shortTermLots: [{ acquiredTurn: 190, shares: 5, costBasisAnchor: 15 }],
             },
           },
+          { corporationId: "other", name: "Other company", shares: 20 },
         ],
       }),
     });
     fireEvent.click(screen.getByRole("button", { name: "Sell" }));
+    expect(screen.getByRole("button", { name: /Personally\s+12 shares/ })).toBeTruthy();
+    expect(screen.getByText(/7 available in selected holding/)).toBeTruthy();
     expect(screen.getByText(/Capital Gains Tax for your income group/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /Short Term Holdings/ }));
     expect(screen.getByText(/Bought on turn 190.*38 turns/)).toBeTruthy();
     expect(screen.getByText(/subject to Income Tax/)).toBeTruthy();
+    expect(screen.getByText(/5 available in selected holding/)).toBeTruthy();
     expect(enterQuantity(9)).toBe("5");
     expect(screen.queryByText(/Selling all.*remaining/)).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /Long Term Holdings/ }));
     expect(enterQuantity(9)).toBe("7");
+    fireEvent.click(screen.getByRole("button", { name: "Limit Order" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sell order" }));
+    expect(screen.getByRole("button", { name: /Personally\s+12 shares/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Other company/ }));
+    expect(enterQuantity(3)).toBe("3");
+    expect(screen.getByText("Shares remaining after fill").parentElement?.textContent).toContain(
+      "17"
+    );
   });
 });
 
@@ -194,5 +207,55 @@ describe("personal CEO market purchases", () => {
     setup({ isCeo: false });
     expect(enterQuantity(200_000)).toBe("200000");
     expect(screen.queryByText(/CEO purchase limit/)).toBeNull();
+  });
+});
+
+describe("at-market buy limit notices", () => {
+  const noFloat = /No shares are for sale on the market right now/;
+  const ceoFull = /You have reached your CEO buying limit for this window/;
+  const bank = {
+    id: "buyer",
+    name: "Buyer",
+    liquidCapital: 1_000_000,
+    liquidCurrencyCode: "USD",
+    isInvestmentBank: true,
+  };
+  function fullWindow(overrides: Partial<CorporationDetail> = {}) {
+    const corp = corporation();
+    return corporation({
+      ceoShareWindow: { ...corp.ceoShareWindow!, reservedShares: 100_000, remainingShares: 0 },
+      ...overrides,
+    });
+  }
+
+  it("explains an empty float and points to a limit order", () => {
+    setup({ isCeo: false, corporation: corporation({ publicFloat: 0 }) });
+    expect(screen.getByText(noFloat)).toBeTruthy();
+    expect(screen.queryByText(ceoFull)).toBeNull();
+  });
+  it("does not show the empty float notice to an investment bank", () => {
+    setup({ myCorporation: bank, corporation: corporation({ publicFloat: 0 }) });
+    fireEvent.click(screen.getByText("Investment bank"));
+    expect(screen.queryByText(noFloat)).toBeNull();
+  });
+  it("explains a used-up CEO window", () => {
+    setup({ corporation: fullWindow() });
+    expect(screen.getByText(ceoFull)).toBeTruthy();
+    expect(screen.queryByText(noFloat)).toBeNull();
+  });
+  it("prefers the CEO notice when the float is also empty", () => {
+    setup({ corporation: fullWindow({ publicFloat: 0 }) });
+    expect(screen.getByText(ceoFull)).toBeTruthy();
+    expect(screen.queryByText(noFloat)).toBeNull();
+  });
+  it("drops the CEO notice when buying for a company", () => {
+    setup({ myCorporation: bank, corporation: fullWindow() });
+    fireEvent.click(screen.getByText("Buyer"));
+    expect(screen.queryByText(ceoFull)).toBeNull();
+  });
+  it("shows no notice with float and allowance left", () => {
+    setup();
+    expect(screen.queryByText(noFloat)).toBeNull();
+    expect(screen.queryByText(ceoFull)).toBeNull();
   });
 });

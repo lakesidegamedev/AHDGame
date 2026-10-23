@@ -102,7 +102,12 @@ export default function CeoOfficeTab({
         escrowFundingPerTurn: Math.max(0, Number(s.editEscrowFundingPerTurn) || 0),
       });
       if (ok) {
-        set({ actionSuccess: "Budgets saved." });
+        set({
+          actionSuccess:
+            typeof (data as { notice?: unknown } | null)?.notice === "string"
+              ? (data as { notice: string }).notice
+              : "Budgets saved.",
+        });
         onRefresh();
       } else {
         set({ actionError: apiErrorText(data, "Failed to save") });
@@ -189,6 +194,7 @@ export default function CeoOfficeTab({
       productionPolicy?: number; // pragma: allowlist secret
       pricingPosture?: number | null;
       wageLevel?: number;
+      capacity?: "mothball" | "reactivate";
       preview?: boolean;
     }
   ): Promise<BulkOperationsResult> {
@@ -205,6 +211,7 @@ export default function CeoOfficeTab({
         matchedCount: data.matchedCount as number | undefined,
         growth: data.growth as BulkOperationsResult["growth"],
         wages: data.wages as BulkOperationsResult["wages"],
+        capacity: data.capacity as BulkOperationsResult["capacity"],
       };
     } catch {
       return { ok: false, error: "Network error" };
@@ -220,7 +227,11 @@ export default function CeoOfficeTab({
       >
         <span className="font-medium text-foreground">CEO Office</span>
         {SECTION_LINKS.map((link) => (
-          <a key={link.href} href={link.href} className="hover:text-foreground hover:underline">
+          <a
+            key={link.href}
+            href={link.href}
+            className="inline-flex h-7 items-center rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border px-2.5 hover:bg-card-elevated hover:text-foreground"
+          >
             {link.label}
           </a>
         ))}

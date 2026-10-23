@@ -89,9 +89,20 @@ import type { State } from "@/lib/db/types/state";
 import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
 import type { CountryId } from "@/lib/constants/countries";
 import type { GameState } from "@/lib/db/types/gameState";
+import { readProducerPathClaim } from "@/lib/market/producerMarket/liveMode";
+import {
+  fundedLedgers,
+  PRODUCER_MARKET_OUTCOMES,
+  type FundedLedgerRow,
+} from "@/lib/market/producerMarket/fundedLedgerRules";
+
 import { clearAllCommodities } from "@/lib/trade/snapshot";
 import { buildReachableBooks } from "@/lib/trade/reachableBook";
-import { applyTradeConvergence, tradeConvergenceK } from "@/lib/trade/convergence";
+import {
+  applyTradeConvergence,
+  capClearingToSourcedTrade,
+  tradeConvergenceK,
+} from "@/lib/trade/convergence";
 import { buildTradeAffinity } from "@/lib/trade/tradeAffinity";
 import { loadActiveFtaPairs } from "@/lib/tariffs/ftaOverrides";
 import { reconcileSignedEmbargoBills } from "@/lib/trade/reconcileEmbargoes";
@@ -112,6 +123,7 @@ import {
   buildGdpGrowthData,
   buildPrimeRateByState,
   buildExtractionRevenueInputs,
+  withRealizedOutputCaps,
   accumulatePlantsUnits,
 } from "./commodity/sectorLedger";
 import {
@@ -389,6 +401,8 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
             commodity: 1,
             globalPrice: 1,
             statePrices: 1,
+            // Sourcing quotes these as each foreign seller's ask.
+            nationalPrices: 1,
             hardPeg: 1,
             stateHardPegs: 1,
             stateNudges: 1,
@@ -446,9 +460,14 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
         currentYear: 1,
         stateGdpAnchoredDemand: 1,
         hardwareInputReliefStartTurn: 1,
+        worldEpochId: 1,
       },
     }
   );
+  // The corporation phase claims this turn's producer path first. On a funded
+  // turn prices come from the settled market's supply and demand, never from
+  // the formula ledgers built below.
+  const producerPath = await readProducerPathClaim(db, presetState?.worldEpochId, turn);
   const activePreset = presetState?.preset ?? "";
   // One calibration lookup for the whole pass: the supply caps bound the
   // calibrated demand and `applyDemandCalibration` applies it (ticket 1370).
@@ -604,7 +623,8 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
       turn,
       LEDGER_BASE_PRICES,
       extractionOutputScaleEnabled,
-      realizedFractionBySectorId
+      realizedFractionBySectorId,
+      plantsLedgerEnabled
     );
 
     // P3b (plants only): deposits are FINITE. Ration against the
@@ -618,7 +638,9 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
     const plantsEnabled = plantsLedgerEnabled;
     const rationingDocs = plantsEnabled ? capacityDocs.map(depletedCapacityDoc) : capacityDocs;
     extractionMultipliers = computeExtractionCapacityMultipliers(
-      extractionInputs,
+      plantsEnabled
+        ? withRealizedOutputCaps(extractionInputs, realizedFractionBySectorId)
+        : extractionInputs,
       activeContracts,
       rationingDocs
     );
@@ -983,6 +1005,13 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
     capUnitsFor,
     importCostMultiplierFor
   );
+  // Books and convergence count only trade the sourcing pass actually shipped
+  // (active settlement only; shadow sourcing delivers nothing). The raw
+  // clearing result is still what the flow snapshot persists.
+  const shippedClearing = capClearingToSourcedTrade(
+    tradeClearing,
+    freightSettlementActive ? freightSettlement?.sourcing : undefined
+  );
   // Reachable books, built from the SAME pre-convergence balances the clearing
   // ran on. `applyTradeConvergence` mutates `byCountry` in place on the next
   // line, so this cannot move below it: post-convergence an importer's demand
@@ -993,14 +1022,14 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
   const reachableBooks = buildReachableBooks({
     countries,
     balances: byCountry,
-    clearing: tradeClearing,
+    clearing: shippedClearing,
     commodities: COMMODITY_TYPES,
     affinity: affinityFor,
   });
   applyTradeConvergence(
     countries,
     byCountry,
-    tradeClearing,
+    shippedClearing,
     tradeConvergenceK(ledgerConfig?.tradeConvergenceFullStartTurn, turn)
   );
 
@@ -1056,12 +1085,30 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
     nominalIndices.lagged
   );
 
+  if (producerPath === "funded") {
+    const outcomes = await db
+      .collection<{ _id: string; rows: FundedLedgerRow[] }>(PRODUCER_MARKET_OUTCOMES)
+      .findOne({ _id: `${presetState?.worldEpochId}:${turn}` });
+    if (!outcomes) throw new Error(`Funded turn ${turn} has no settled supply and demand`);
+    const funded = fundedLedgers(outcomes.rows);
+    global.clear();
+    for (const [c, b] of funded.global) global.set(c as CommodityType, b);
+    byState.clear();
+    for (const [stateId, m] of funded.byState)
+      byState.set(stateId, new Map([...m].map(([c, b]) => [c as CommodityType, b])));
+    byCountry.clear();
+    for (const [countryId, m] of aggregateByCountry(byState, stateToCountry))
+      byCountry.set(countryId, m);
+  }
   const pricingCtx: CommodityPricingContext = {
     ledgerBasePrices: LEDGER_BASE_PRICES,
     commodityNominalPriceIndex,
     scarcityDriftEnabled,
     commodityFixStage,
-    marketRecoveryStage: normalizeMarketRecoveryStage(fixStageCfg?.marketRecoveryStage),
+    marketRecoveryStage:
+      producerPath === "funded"
+        ? 0
+        : normalizeMarketRecoveryStage(fixStageCfg?.marketRecoveryStage),
     commandEconomyEnabled,
     priceCurrentYear,
     freightSettlementActive,

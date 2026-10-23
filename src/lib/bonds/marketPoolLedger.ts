@@ -104,6 +104,7 @@ const FLOW_ACCOUNTING: Partial<
   sweepOut: { txType: "bond_pool_sweep", reason: "bond_pool_excluded_liquidity" },
   couponsIn: { txType: "bond_coupon", reason: "bond_coupon_settlement" },
   maturitiesIn: { txType: "bond_maturity", reason: "bond_settlement" },
+  retiredIn: { txType: "bond_buyback", reason: "bond_settlement" },
 };
 
 /** Called only after a successful cash write, using its rounded native amount. */

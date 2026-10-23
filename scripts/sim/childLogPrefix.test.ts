@@ -73,7 +73,9 @@ describe("concurrent child log attribution (#2071)", () => {
   });
 });
 
-describe("budgeted engine lifetime", () => {
+// The watchdog deliberately requires POSIX process groups. Windows must reject
+// budgeted runs, not silently run an engine without the lifetime guarantee.
+describe.skipIf(process.platform === "win32")("budgeted engine lifetime", () => {
   it("terminates a stalled process group and reports timeout even for graceful exit", async () => {
     const result = await spawnWithPrefixedLogs(
       process.execPath,
@@ -97,47 +99,93 @@ describe("budgeted engine lifetime", () => {
   });
 });
 
-it("kills an owned descendant that ignores graceful termination", async () => {
-  const lines: string[] = [];
-  const stubborn =
-    "process.on('SIGTERM',()=>{}); console.log('descendant-ready'); setInterval(()=>{},1000)";
-  const parent = `require('child_process').spawn(process.execPath,['-e',${JSON.stringify(stubborn)}],{stdio:'inherit'}); process.on('SIGTERM',()=>process.exit(0)); setInterval(()=>{},1000)`;
-  const result = await spawnWithPrefixedLogs(
-    process.execPath,
-    ["-e", parent],
-    identityA,
-    (l) => lines.push(l),
-    { timeoutMs: 1500 }
-  );
-  expect(lines.some((l) => l.includes("descendant-ready"))).toBe(true);
-  expect(result.timedOut).toBe(true);
+it.skipIf(process.platform === "win32")(
+  "kills an owned descendant that ignores graceful termination",
+  async () => {
+    const lines: string[] = [];
+    const stubborn =
+      "process.on('SIGTERM',()=>{}); console.log('descendant-ready'); setInterval(()=>{},1000)";
+    const parent = `require('child_process').spawn(process.execPath,['-e',${JSON.stringify(stubborn)}],{stdio:'inherit'}); process.on('SIGTERM',()=>process.exit(0)); setInterval(()=>{},1000)`;
+    const result = await spawnWithPrefixedLogs(
+      process.execPath,
+      ["-e", parent],
+      identityA,
+      (l) => lines.push(l),
+      { timeoutMs: 1500 }
+    );
+    expect(lines.some((l) => l.includes("descendant-ready"))).toBe(true);
+    expect(result.timedOut).toBe(true);
+  }
+);
+
+it.skipIf(process.platform === "win32")(
+  "keeps the budget watchdog alive after its queue-worker parent dies",
+  async () => {
+    const { spawn } = await import("node:child_process");
+    const { join } = await import("node:path");
+    const watchdog = join(__dirname, "budgetProcess.mjs");
+    const engine = "console.log('engine-ready'); setInterval(()=>{},1000)";
+    const launcher = `require('child_process').spawn(process.execPath,[${JSON.stringify(watchdog)},'800',process.execPath,'-e',${JSON.stringify(engine)}],{stdio:'inherit'}); setInterval(()=>{},1000)`;
+    const worker = spawn(process.execPath, ["-e", launcher], { stdio: ["ignore", "pipe", "pipe"] });
+    let killed = false;
+    worker.stdout.on("data", (chunk) => {
+      if (String(chunk).includes("engine-ready")) {
+        killed = true;
+        worker.kill("SIGKILL");
+      }
+    });
+    const closed = await new Promise<boolean>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        worker.kill("SIGKILL");
+        reject(new Error("Orphan watchdog failed to close inherited engine pipes"));
+      }, 4000);
+      worker.on("error", reject);
+      worker.on("close", () => {
+        clearTimeout(timer);
+        resolve(true);
+      });
+    });
+    expect(killed).toBe(true);
+    expect(closed).toBe(true);
+  }
+);
+
+describe.runIf(process.platform === "win32")("Windows budget safety", () => {
+  it("rejects budgeted execution before starting an unsupported process group", async () => {
+    await expect(
+      spawnWithPrefixedLogs(process.execPath, ["-e", "process.exit(0)"], identityA, () => {}, {
+        timeoutMs: 500,
+      })
+    ).rejects.toThrow("Budgeted process-group termination requires POSIX");
+  });
+
+  it("rejects direct watchdog execution without starting the engine", async () => {
+    const { spawnSync } = await import("node:child_process");
+    const { join } = await import("node:path");
+    const result = spawnSync(
+      process.execPath,
+      [
+        join(__dirname, "budgetProcess.mjs"),
+        "800",
+        process.execPath,
+        "-e",
+        "console.log('must-not-run')",
+      ],
+      { encoding: "utf8", timeout: 5000 }
+    );
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("Invalid budgeted process configuration");
+  });
 });
 
-it("keeps the budget watchdog alive after its queue-worker parent dies", async () => {
-  const { spawn } = await import("node:child_process");
-  const { join } = await import("node:path");
-  const watchdog = join(__dirname, "budgetProcess.mjs");
-  const engine = "console.log('engine-ready'); setInterval(()=>{},1000)";
-  const launcher = `require('child_process').spawn(process.execPath,[${JSON.stringify(watchdog)},'800',process.execPath,'-e',${JSON.stringify(engine)}],{stdio:'inherit'}); setInterval(()=>{},1000)`;
-  const worker = spawn(process.execPath, ["-e", launcher], { stdio: ["ignore", "pipe", "pipe"] });
-  let killed = false;
-  worker.stdout.on("data", (chunk) => {
-    if (String(chunk).includes("engine-ready")) {
-      killed = true;
-      worker.kill("SIGKILL");
-    }
-  });
-  const closed = await new Promise<boolean>((resolve, reject) => {
-    const timer = setTimeout(() => {
-      worker.kill("SIGKILL");
-      reject(new Error("Orphan watchdog failed to close inherited engine pipes"));
-    }, 4000);
-    worker.on("error", reject);
-    worker.on("close", () => {
-      clearTimeout(timer);
-      resolve(true);
-    });
-  });
-  expect(killed).toBe(true);
-  expect(closed).toBe(true);
-});
+it.each([0, -1, NaN, Infinity, -Infinity])(
+  "rejects invalid timeout %s on every platform",
+  async (timeoutMs) => {
+    await expect(
+      spawnWithPrefixedLogs(process.execPath, ["-e", "process.exit(0)"], identityA, () => {}, {
+        timeoutMs,
+      })
+    ).rejects.toThrow("timeoutMs must be positive and finite");
+  }
+);

@@ -6,6 +6,7 @@ import type {
 } from "@/lib/constants/corporations";
 import type { MediaDiscriminator } from "@/lib/constants/corporations";
 import type { CommodityType } from "@/lib/constants/commodities";
+import type { CommodityDominanceSector } from "@/lib/corporations/rules/commodityDominance";
 import type { Corporation, CorporateSector, SectorBuildOrder } from "@/lib/db/types";
 import type { CeoArchetypeModifiers } from "@/lib/turn/ceoArchetype";
 import type { NppStrategyState } from "./corpStrategy";
@@ -72,6 +73,13 @@ export interface NppCorpDecisionContext {
    * dominates; 1 for the sector leader and healthy sectors. Absent reads as 1.
    */
   challengerBoostOf?: (sectorType: string, ownCorporationId: string) => number;
+  /** Resolved NPP operator permissions; absent derives them from the corporation. */
+  operator?: import("./rules/operatorPolicy").OperatorPermissions;
+  /**
+   * First funded turn of the world's market transition (opening turn + 1);
+   * absent before the funded market or outside a funded world.
+   */
+  transitionFirstFundedTurn?: number;
   /** Player-appointed caretaker mandate. NPP-owned corporations are always active. */
   caretakerMandate?: "active" | "passive";
 }
@@ -184,6 +192,11 @@ export interface NppPlantsContext {
    * capacity the way a player does.
    */
   commodityDemandOf?: (commodity: CommodityType) => number | null;
+  /**
+   * Every sector of a corporation's control group as dominance sectors, set
+   * once the group toll stage is on. Absent = price on the corporation alone.
+   */
+  groupDominanceSectorsOf?: (corporationId: string) => CommodityDominanceSector[];
   /** `gameConfig.commandEconomyEnabled`, for the planned-economy output remap. */
   commandEconomyEnabled?: boolean;
   /** Aggregate corporation share of one (country, sectorType) market. */

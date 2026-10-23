@@ -4,19 +4,23 @@ import { holdingMaturationWrites } from "./holdingMaturationWrites";
  * runs every sector's revenue, margin and costs, then charges corp-level marketing,
  * logistics, R&D and CEO salary (capped together at 1.5x gross revenue), bond
  * interest and dividends (up to MAX_DIVIDEND_RATE), accrues R&D score
- * (rdMoraleFactor, computeRdDemandFactor), and converts each sector from its host currency.
+ * (rdMoraleFactor), and converts each sector from its host currency.
  */
+import {
+  applyLossCarryforward,
+  openingCarryforward,
+  type LossCarryforwardState,
+} from "@/lib/corporations/rules/lossCarryforward";
 import { prepareInternalSupplySectorResults } from "./internalSupplySectorPass";
 import { holdingDividendSplit, positionHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
 import { formalizedSubsidiaryCountByParentId } from "@/lib/corporations/subsidiaries/helpers";
 import type { AnyBulkWriteOperation, ObjectId } from "mongodb";
-import type { Bond, Corporation, MediaProductAdvertisingObligationV1 } from "@/lib/db/types";
+import type { Corporation, MediaProductAdvertisingObligationV1 } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getLegalStructureForCorp } from "@/lib/corporations/legalStructure";
 import { getControllingCorporateParent } from "@/lib/corporations/corporateOwnership";
 import { activeParentDividendFloorPct } from "@/lib/corporations/subsidiaries/helpers";
 import { COUNTRY_CURRENCY_MAP, SECTOR_FX_SPREAD } from "@/lib/constants/currencies";
-import type { CommodityType } from "@/lib/constants/commodities";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { MARKET_DISABLED, type MarketContext } from "@/lib/market/marketContext";
 import {
@@ -35,6 +39,9 @@ import {
   CEO_SALARY_MAX_REVENUE_MULTIPLE,
   CORP_OVERHEAD_MAX_REVENUE_MULTIPLE,
 } from "@/lib/constants/corporations";
+import { marketingStrengthAfterTurn } from "@/lib/corporations/strengthUpkeep";
+import { managementOverheadPpForCorp } from "./managementOverhead";
+import { valuationCashAnchor } from "@/lib/corporations/honestBalanceSheets";
 import {
   bankNpvBoostMultiplier,
   sectorRiskPremiumAtTurn,
@@ -73,13 +80,18 @@ import type {
   FundDividendAccrual,
   SectorCalculationsResult,
 } from "./types";
-import { perTurnCouponPayment, BOND_UNIT_FACE_VALUE } from "@/lib/constants/bonds";
 import { imfFacilityPaymentAnchorPerTurn } from "@/lib/imf/imfFacilityFinancials";
 import { computeSharePrices, type SharePriceInput } from "./sharePriceFormula";
 import { getShareBuybackMode } from "@/lib/corporations/shareBuybackMode";
 import { computeEscrowFundingTransfer } from "@/lib/corporations/escrowFunding";
 import { pushEarningsHistory, normalizedEarningsFromHistory } from "./earningsRollingAverage";
 import { applyEquityMethodEarnings } from "./equityMethodEarnings";
+import {
+  fundedCashIncome,
+  fundedSectorOpsAll,
+  fundedSectorResult,
+  type FundedReceipt,
+} from "@/lib/market/producerMarket/fundedSectorRules";
 import { processSector, type SectorTurnEnv } from "./sectorTurn";
 import {
   perTurnIssuerBondInterestExpense,
@@ -97,48 +109,14 @@ import {
   quoteFundedProductAdvertising,
 } from "@/lib/products/rules/productAdvertising";
 import type { ManufacturingProductAdvertisingObligationV2 } from "@/lib/products/manufacturingProject";
-
-/** Primary commodities that proxy R&D conditions for each sector type. */
-const SECTOR_RD_COMMODITIES: Partial<Record<string, [string, string?]>> = {
-  energy: ["coal", "natural_gas"],
-  mining: ["iron_ore", "copper"],
-  agriculture: ["grain", "produce"],
-  manufacturing: ["steel", "industrial_chemicals"],
-  technology: ["electronics", "rare_earth"],
-  pharmaceuticals: ["pharmaceuticals", "industrial_chemicals"],
-  finance: ["consulting_services", "software"],
-  media: ["software", "consulting_services"],
-  retail: ["consumer_goods", "produce"],
-  healthcare: ["pharmaceuticals", "consulting_services"],
-  education: ["consulting_services", "software"],
-  transportation: ["petroleum", "steel"],
-  construction: ["steel", "timber"],
-  utilities: ["coal", "natural_gas"],
-  telecoms: ["electronics", "software"],
-  hospitality: ["produce", "consumer_goods"],
-  legal: ["consulting_services", "software"],
-};
-
-/**
- * R&D demand factor (0.85–1.15): ties R&D accrual to global commodity
- * market conditions. Base signal from software + consulting (tech ecosystem),
- * blended with 1–2 sector-specific commodities when available.
- * Neutral (1.0) when balanced or data is missing.
- */
-function computeRdDemandFactor(
-  software?: { supply: number; demand: number },
-  consulting?: { supply: number; demand: number },
-  sector1?: { supply: number; demand: number },
-  sector2?: { supply: number; demand: number }
-): number {
-  const ds = (b?: { supply: number; demand: number }) =>
-    !b || b.supply <= 0 ? 1 : b.demand / b.supply;
-  const ratios = [ds(software), ds(consulting)];
-  if (sector1) ratios.push(ds(sector1));
-  if (sector2) ratios.push(ds(sector2));
-  const avg = ratios.reduce((s, v) => s + v, 0) / ratios.length;
-  return Math.min(1.15, Math.max(0.85, 1 + (avg - 1) * 0.25));
-}
+import {
+  alreadyTaxedDistributionShare,
+  blendedOwnerRate,
+  corporateTaxMultiplierFor,
+  passThroughOwnerTax,
+  passThroughReformPhase,
+  passThroughTaxMode,
+} from "@/lib/corporations/rules/passThroughTax";
 
 export function processSectors(
   lookups: CorporationLookups,
@@ -159,8 +137,20 @@ export function processSectors(
   /** Currency pools that supersede issuer-funded share-buyback escrow. */
   equityMarketPoolCurrencies: ReadonlySet<CurrencyCode> = new Set(),
   /** Route modeled operating cash through the durable Treasury cash journal. */
-  treasuryCashLedgerEnabled: boolean = false
+  treasuryCashLedgerEnabled: boolean = false,
+  /**
+   * Funded producer turn: settled receipts replace legacy revenue and margin,
+   * settlement-owned sector fields are not written, and the producer profit the
+   * settlement already paid is not credited again. Absent on legacy turns.
+   */
+  funded?: {
+    receiptsBySectorId: ReadonlyMap<string, FundedReceipt>;
+    settledProfitByCorp: ReadonlyMap<string, number>;
+    headcountBySectorId?: ReadonlyMap<string, { desiredWorkers: number; workers: number }>;
+  }
 ): SectorCalculationsResult {
+  const fundedResults = new Map<string, ReturnType<typeof fundedSectorResult>>();
+  const fundedDaily = new Map<string, (anchorPerTurn: number) => number>();
   const currentTurn = typeof turn === "number" ? turn : 1;
 
   let totalRevenueGenerated = 0;
@@ -224,6 +214,8 @@ export function processSectors(
     automationIndexByState,
     labourDemandByState,
     labourDemandWageIndexByState,
+    fundedHeadcountBySectorId:
+      (lookups.fundedHeadcountStage ?? 0) >= 1 ? funded?.headcountBySectorId : undefined,
     pendingStrikeEvents,
     pendingCapacityBindingEvents,
     sectorOps,
@@ -235,7 +227,18 @@ export function processSectors(
   const ceoSalaryPayments = new Map<string, Map<CurrencyCode, number>>();
   const dividendPayments = new Map<string, Map<CurrencyCode, number>>();
   const capitalDividendPayments = new Map<string, Map<CurrencyCode, number>>();
+  // Portion of each character's dividends already taxed at source under the
+  // pass-through reform; the income-tax phase does not tax it again.
+  const passThroughTaxedDividendPayments = new Map<string, Map<CurrencyCode, number>>();
+  // Tax loss carryforward bank per corporation after this turn.
+  const lossCarryforwardByCorpId = new Map<string, LossCarryforwardState>();
   const corpDividendPaymentsAnchorByCorpId = new Map<string, number>();
+  // Same idea for corporate holders: excluded from the dividend-received tax.
+  const corpDividendTaxedAtSourceAnchorByCorpId = new Map<string, number>();
+  const passThroughPhase = passThroughReformPhase(
+    currentTurn,
+    lookups.passThroughOwnerTaxStartTurn
+  );
   // Same totals as above, but split by the PAYING corp's currency so a
   // cross-currency corp→corp dividend can be charged the FX spread downstream.
   const corpDividendPaymentsAnchorByCorpCurrency = new Map<string, Map<CurrencyCode, number>>();
@@ -356,28 +359,6 @@ export function processSectors(
     // Sector tech-tree bonuses (decade-gated R&D unlocks) — derived once per corp
     // from its unlocked node set. Inert (neutral 0pp / ×1) when the feature gate
     // is off. See lib/constants/techTree.
-    // R&D accrual is tied moderately to the software (technology output) and
-    // consulting-services markets: when demand for them runs ahead of supply the
-    // innovation ecosystem is hot and R&D compounds a little faster, and vice
-    // versa. Clamped to ±15%. Inert when the feature gate is off.
-    const rdDemandFactor = techTreesEnabled
-      ? (() => {
-          const [c1, c2] =
-            SECTOR_RD_COMMODITIES[
-              getOperatingSectorType(
-                corp.type,
-                corp.industryModel,
-                corp.mediaDiscriminator
-              ) as string
-            ] ?? [];
-          return computeRdDemandFactor(
-            lookups.globalCommodityBalances.get("software"),
-            lookups.globalCommodityBalances.get("consulting_services"),
-            c1 ? lookups.globalCommodityBalances.get(c1 as CommodityType) : undefined,
-            c2 ? lookups.globalCommodityBalances.get(c2 as CommodityType) : undefined
-          );
-        })()
-      : 1;
     const sectors = lookups.sectorsByCorp.get(corpId) ?? [];
     let corpRevenue = 0;
     let corpGrowthNumer = 0;
@@ -418,7 +399,7 @@ export function processSectors(
         corp,
         lookups.exchangeRatesByCurrency
       );
-      const r =
+      const legacyResult =
         internalSupplyResults?.get(sector._id.toString()) ??
         processSector(
           sectorTurnEnv,
@@ -428,6 +409,14 @@ export function processSectors(
           sectorCurrencyCode,
           sectorFxRate
         );
+      const fundedReceipt = funded?.receiptsBySectorId.get(sector._id.toString());
+      const r = fundedReceipt ? fundedSectorResult(legacyResult, fundedReceipt) : legacyResult;
+      if (fundedReceipt) {
+        fundedResults.set(sector._id.toString(), r);
+        fundedDaily.set(sector._id.toString(), (anchorPerTurn: number) =>
+          writeCorpEconomicLocal(anchorPerTurn * TURNS_PER_DAY, sectorCurrencyCode, sectorFxRate)
+        );
+      }
       corpGrowthNumer += (r.newCurrentGrowthRate / 100) * r.hourlyRevenue;
       corpGrowthDenom += r.hourlyRevenue;
       corpSectorNPV += r.npvContribution;
@@ -672,14 +661,11 @@ export function processSectors(
     const taxPaidByCountryForeign = new Map<string, number>();
     const taxPaidByStateDomestic = new Map<string, number>();
     const taxPaidByStateForeign = new Map<string, number>();
-    // Legal structure: pass_through → 0% corp tax; preferential → taxMultiplier× rate; standard → 1×
+    // Legal structure: preferential -> taxMultiplier x rate; standard -> 1x. A
+    // pass-through pays no company tax (its owners are taxed below), except a
+    // structure taxed as a company in reality, which phases in to 1x.
     const corpLegalStructure = getLegalStructureForCorp(corp);
-    const corpTaxMultiplier =
-      corpLegalStructure.taxTreatment === "pass_through"
-        ? 0
-        : corpLegalStructure.taxTreatment === "preferential"
-          ? (corpLegalStructure.taxMultiplier ?? 1)
-          : 1;
+    const corpTaxMultiplier = corporateTaxMultiplierFor(corpLegalStructure, passThroughPhase, corp);
 
     // Consolidated loss offset. Taxing each sector's positive income in
     // isolation (`max(0, sectorNetIncome)`) meant a diversified corp's losses
@@ -781,6 +767,57 @@ export function processSectors(
       );
     }
 
+    // Pass-through owner tax: the owners owe tax on their full share of the
+    // profit whether or not it is distributed, collected at source at the
+    // owners' rates and credited to the home country and headquarters state.
+    if (
+      passThroughTaxMode(corpLegalStructure, corp) === "ownerFlowThrough" &&
+      passThroughPhase > 0
+    ) {
+      const hqState = corp.headquartersState;
+      const ownerRates = blendedOwnerRate(
+        (corp.shareholders ?? []).map((sh) => ({
+          personal: !!sh.characterId || !!sh.imperialCharacterId,
+          shares: sh.shares,
+        })),
+        corp.totalShares ?? 0,
+        {
+          personalNationalPct: lookups.personalTopIncomeTaxRateByCountry?.get(corp.countryId) ?? 0,
+          personalStatePct: hqState
+            ? (lookups.personalTopIncomeTaxRateByState?.get(hqState) ?? 0)
+            : 0,
+          corporateNationalPct: lookups.domesticCorpTaxRateByCountry.get(corp.countryId) ?? 0,
+          corporateStatePct: hqState
+            ? (lookups.domesticStateCorpTaxRateByState.get(hqState) ?? 0)
+            : 0,
+        }
+      );
+      const ownerTax = passThroughOwnerTax({
+        taxableProfit: Math.max(0, consolidatedNet) + Math.max(0, perTurnBondCouponIncome),
+        phase: passThroughPhase,
+        rates: ownerRates,
+      });
+      if (ownerTax.national > 0) {
+        totalFederalTax += ownerTax.national;
+        taxPaidByCountry.set(
+          corp.countryId,
+          (taxPaidByCountry.get(corp.countryId) ?? 0) + ownerTax.national
+        );
+        taxPaidByCountryDomestic.set(
+          corp.countryId,
+          (taxPaidByCountryDomestic.get(corp.countryId) ?? 0) + ownerTax.national
+        );
+      }
+      if (ownerTax.state > 0 && hqState) {
+        totalStateTax += ownerTax.state;
+        taxPaidByState.set(hqState, (taxPaidByState.get(hqState) ?? 0) + ownerTax.state);
+        taxPaidByStateDomestic.set(
+          hqState,
+          (taxPaidByStateDomestic.get(hqState) ?? 0) + ownerTax.state
+        );
+      }
+    }
+
     // State-owned enterprises pay no corporate income tax. A nationalized industry is
     // owned by the state, and it already returns its profit to that same state through the
     // per-turn remittance (processSoeRemittance). Levying corporate tax on top charged one
@@ -794,6 +831,37 @@ export function processSectors(
       taxPaidByCountry.clear();
       taxPaidByCountryDomestic.clear();
       taxPaidByCountryForeign.clear();
+    }
+
+    // Tax loss carryforward: bank this turn's loss, or offset part of this
+    // turn's profit with banked losses (scaling every tax line alike).
+    if (!isStateOwned(corp)) {
+      const carry = applyLossCarryforward(
+        consolidatedNet + Math.max(0, perTurnBondCouponIncome),
+        openingCarryforward(corp.taxLossCarryforward, currentTurn)
+      );
+      if (carry.taxScale < 1) {
+        totalFederalTax *= carry.taxScale;
+        totalStateTax *= carry.taxScale;
+        for (const map of [
+          taxPaidByCountry,
+          taxPaidByState,
+          taxPaidByCountryDomestic,
+          taxPaidByCountryForeign,
+          taxPaidByStateDomestic,
+          taxPaidByStateForeign,
+        ]) {
+          for (const [k, v] of map) map.set(k, v * carry.taxScale);
+        }
+      }
+      const opening = openingCarryforward(corp.taxLossCarryforward, currentTurn);
+      if (carry.closing !== opening || corp.taxLossCarryforward?.turn === currentTurn) {
+        lossCarryforwardByCorpId.set(corp._id.toString(), {
+          anchor: carry.closing,
+          turn: currentTurn,
+          before: opening,
+        });
+      }
     }
 
     const corporateTaxOwed = totalFederalTax + totalStateTax;
@@ -853,12 +921,25 @@ export function processSectors(
           ? corp.pendingShareIssuance.remainingShares
           : 0;
       const totalShares = Math.max(1, (corp.totalShares ?? 10_000_000) - unplacedIpoShares);
+      const taxedAtSourceShare = alreadyTaxedDistributionShare(
+        corpLegalStructure,
+        passThroughPhase,
+        corp
+      );
       for (const sh of corp.shareholders) {
         const share = totalShares > 0 ? sh.shares / totalShares : 0;
         const payment = hourlyDividendPayout * share;
         if (payment > 0) {
           if (sh.characterId) {
             addToPaymentMap(dividendPayments, sh.characterId.toString(), payment, corp.countryId);
+            if (taxedAtSourceShare > 0) {
+              addToPaymentMap(
+                passThroughTaxedDividendPayments,
+                sh.characterId.toString(),
+                payment * taxedAtSourceShare,
+                corp.countryId
+              );
+            }
             const capital = holdingDividendSplit(
               positionHoldingTerms(sh, currentTurn, 0),
               payment,
@@ -877,6 +958,14 @@ export function processSectors(
               payment,
               corp.countryId
             );
+            if (taxedAtSourceShare > 0) {
+              addToPaymentMap(
+                passThroughTaxedDividendPayments,
+                `imperial:${sh.imperialCharacterId.toString()}`,
+                payment * taxedAtSourceShare,
+                corp.countryId
+              );
+            }
             const capital = holdingDividendSplit(
               positionHoldingTerms(sh, currentTurn, 0),
               payment,
@@ -908,6 +997,13 @@ export function processSectors(
               hid,
               (corpDividendPaymentsAnchorByCorpId.get(hid) ?? 0) + payment
             );
+            if (taxedAtSourceShare > 0) {
+              corpDividendTaxedAtSourceAnchorByCorpId.set(
+                hid,
+                (corpDividendTaxedAtSourceAnchorByCorpId.get(hid) ?? 0) +
+                  payment * taxedAtSourceShare
+              );
+            }
             // Track the same ₳ amount keyed by the paying corp's currency so the
             // recipient's cross-currency FX spread can be charged in Phase 3c.
             const payerCcy = (resolveCorpLiquidCurrencyCode(corp) ?? "USD") as CurrencyCode;
@@ -1004,6 +1100,15 @@ export function processSectors(
       marketingSettlementEnabled ? hourlyMarketing * TURNS_PER_DAY : marketingBudgetAnchor,
       corp.marketingStrength ?? 0
     );
+    // Strength upkeep (stage 3): marketing strength decays like R&D, so it has
+    // to be maintained with spend rather than banked.
+    const currentMarketingStrength = corp.marketingStrength ?? 0;
+    const marketingDelta =
+      marketingStrengthAfterTurn(
+        currentMarketingStrength,
+        marketingGrowth,
+        lookups.strengthUpkeepStage
+      ) - currentMarketingStrength;
 
     // Logistics strength: decays 5%/turn, grows with spending. No diminishing returns —
     // the decay naturally caps accumulation. Same anchor-threshold convention.
@@ -1023,14 +1128,13 @@ export function processSectors(
     // Grows on generic R&D only. Product development is handled as guarded
     // capitalized cash spend below and cannot also earn generic research score.
     const currentRdScore = corp.rdScore ?? 0;
-    // rdDemandFactor (±15%) ties R&D output to technology + consulting demand.
     // moraleFactor (#84, ±15%) rewards paying workers above baseline: happier
     // workers convert R&D spend more efficiently. Neutral when labour is off.
     const avgWageLevel = corpWageWeight > 0 ? corpWageWeighted / corpWageWeight : 1;
     const moraleFactor = rdMoraleFactor(avgWageLevel);
     const newRdScore = calcRdScoreAfterTurn(
       currentRdScore,
-      genericResearchSpend * TURNS_PER_DAY * rdDemandFactor * moraleFactor
+      genericResearchSpend * TURNS_PER_DAY * moraleFactor
     );
     const rdScoreDelta = newRdScore - currentRdScore;
 
@@ -1038,8 +1142,11 @@ export function processSectors(
     // order. Add back only that buyer's settled accounting expense here so the
     // pre-settlement cash leg is charged exactly once after the transfer lands.
     // With no sellers there is no transfer and the ordinary expense remains.
-    const cashIncomeBeforeMarketingSettlement =
+    const legacyCashIncome =
       income + (marketingSpendAnchorByBuyerId.has(corpId) ? hourlyMarketing : 0);
+    const cashIncomeBeforeMarketingSettlement = funded
+      ? fundedCashIncome(legacyCashIncome, funded.settledProfitByCorp.get(corpId) ?? 0)
+      : legacyCashIncome;
     const incomeForBalance = anchorToCorpCapital(
       cashIncomeBeforeMarketingSettlement,
       resolvedHomeCurrency,
@@ -1189,11 +1296,12 @@ export function processSectors(
         corp._id,
         currentTurn
       ),
-      otherLiabilitiesAnchor: corporateCashArrearsAnchor({
-        operatingByCurrency: corp.operatingCashArrearsByCurrency,
-        federalTaxByCountryAnchor: corp.federalTaxArrearsAnchorByCountry,
-        fxByCurrency: lookups.exchangeRatesByCurrency,
-      }),
+      otherLiabilitiesAnchor:
+        corporateCashArrearsAnchor({
+          operatingByCurrency: corp.operatingCashArrearsByCurrency,
+          federalTaxByCountryAnchor: corp.federalTaxArrearsAnchorByCountry,
+          fxByCurrency: lookups.exchangeRatesByCurrency,
+        }) + (lookups.constructionLoanDebtByCorpId?.get(corp._id.toString()) ?? 0),
     });
 
     // Capture snapshot for history charts + credit time series
@@ -1204,6 +1312,9 @@ export function processSectors(
       incomePreDividends,
       income,
       operatingCashIncomeLocal: incomeForBalance,
+      ...(funded
+        ? { settledProducerProfitAnchor: funded.settledProfitByCorp.get(corpId) ?? 0 }
+        : {}),
       operatingCashCurrency: resolvedHomeCurrency,
       federalTaxByCountryAnchor: new Map(taxPaidByCountry),
       operatingCashLocalPerAnchor: localFxRate,
@@ -1220,7 +1331,7 @@ export function processSectors(
       taxPaidByCountryForeign,
       taxPaidByStateDomestic,
       taxPaidByStateForeign,
-      marketingStrength: (corp.marketingStrength ?? 0) + marketingGrowth,
+      marketingStrength: currentMarketingStrength + marketingDelta,
       logisticsStrength: Math.round(newLogisticsStrength * 100) / 100,
       rdScore: Math.round(newRdScore * 100) / 100,
       dividendRate: payoutDividendRate,
@@ -1275,7 +1386,7 @@ export function processSectors(
           $inc: {
             liquidCapital: (treasuryCashLedgerEnabled ? 0 : incomeForBalance) - escrowFundingMove,
             ...(escrowFundingMove > 0 ? { shareEscrowBalance: escrowFundingMove } : {}),
-            marketingStrength: marketingGrowth,
+            marketingStrength: marketingDelta,
             logisticsStrength: logisticsDelta,
             rdScore: rdScoreDelta,
           },
@@ -1283,6 +1394,8 @@ export function processSectors(
             earningsHistory: updatedEarningsHistory,
             sharePrice: placeholderSharePrice,
             splitEscalation: newEscalation,
+            // Applied management overhead (group basis when on), for the sector page.
+            managementOverheadPp: managementOverheadPpForCorp(corp, lookups),
             countryId: corpCountryId,
             updatedAt: now,
             creditRatingSnapshot: creditPack.creditRating.rating,
@@ -1302,6 +1415,9 @@ export function processSectors(
             // also blocks — see dividends/route.ts) should force-clear the stored rate.
             ...(imfBailoutActive ? { dividendRate: 0, lastDividendChange: now } : {}),
             ...(shouldZeroCeoSalary || imfBailoutActive ? { ceoSalary: 0 } : {}),
+            ...(lossCarryforwardByCorpId.has(corpId)
+              ? { taxLossCarryforward: lossCarryforwardByCorpId.get(corpId) }
+              : {}),
           },
           ...(mediaAdvertisingObligationByBuyerId.has(corpId) ||
           manufacturingAdvertisingObligationByBuyerId.has(corpId)
@@ -1504,11 +1620,12 @@ export function processSectors(
           corp._id,
           currentTurn
         ),
-        otherLiabilitiesAnchor: corporateCashArrearsAnchor({
-          operatingByCurrency: corp.operatingCashArrearsByCurrency,
-          federalTaxByCountryAnchor: corp.federalTaxArrearsAnchorByCountry,
-          fxByCurrency: lookups.exchangeRatesByCurrency,
-        }),
+        otherLiabilitiesAnchor:
+          corporateCashArrearsAnchor({
+            operatingByCurrency: corp.operatingCashArrearsByCurrency,
+            federalTaxByCountryAnchor: corp.federalTaxArrearsAnchorByCountry,
+            fxByCurrency: lookups.exchangeRatesByCurrency,
+          }) + (lookups.constructionLoanDebtByCorpId?.get(corp._id.toString()) ?? 0),
       });
       snapshot.creditComposite = creditPack.creditRating.compositeScore;
       snapshot.creditRating = creditPack.creditRating.rating;
@@ -1598,10 +1715,15 @@ export function processSectors(
       // Issuance already scales the per-share price when new shares are created.
       // Cash that subsequently arrives is a real retained asset and belongs in
       // tangible book; subtracting it again double-counts dilution.
-      liquidCapitalAnchor: Math.max(0, s.liquidCapitalAnchorAfterIncome),
+      liquidCapitalAnchor: valuationCashAnchor(
+        s.liquidCapitalAnchorAfterIncome,
+        lookups.honestBalanceSheetsStage ?? 0
+      ),
       bankEquityAnchor,
       sectorNPVAnchor: s.sectorNPV + bankNpvAnchor,
-      issuedBondDebt: lookups.issuedBondDebtByCorpId.get(id) ?? 0,
+      issuedBondDebt:
+        (lookups.issuedBondDebtByCorpId.get(id) ?? 0) +
+        (lookups.constructionLoanDebtByCorpId?.get(id) ?? 0),
       bondHoldingsAnchor: lookups.bondAndImfPortfolioAnchorByCorpId.get(id) ?? 0,
       normalizedEarningsAnchor: adjustedEarningsMap.get(id) ?? 0,
       // Annualised bond-coupon income (snapshot value is per-turn ₳).
@@ -1648,7 +1770,26 @@ export function processSectors(
     }
   }
 
+  if (funded && fundedResults.size > 0) {
+    const kept = fundedSectorOpsAll(
+      sectorOps as Parameters<typeof fundedSectorOpsAll>[0],
+      new Map(
+        [...fundedResults].map(([sectorId, result]) => [
+          sectorId,
+          {
+            receipt: funded.receiptsBySectorId.get(sectorId)!,
+            result,
+            daily: fundedDaily.get(sectorId)!,
+          },
+        ])
+      ),
+      TURNS_PER_DAY
+    );
+    sectorOps.splice(0, sectorOps.length, ...(kept as typeof sectorOps));
+  }
+
   return {
+    sectorTurnEnv,
     sectorOps,
     corpOps: [
       ...(corpOps as AnyBulkWriteOperation<Corporation>[]),
@@ -1659,6 +1800,8 @@ export function processSectors(
     ceoSalaryPayments,
     dividendPayments,
     capitalDividendPayments,
+    passThroughTaxedDividendPayments,
+    corpDividendTaxedAtSourceAnchorByCorpId,
     corpDividendPaymentsAnchorByCorpId,
     corpDividendPaymentsAnchorByCorpCurrency,
     sectorFxSpreadFees,

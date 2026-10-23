@@ -1,6 +1,10 @@
 import { primaryMetrics } from "../catalog";
 import type { OpeningMetricObservation, ObservationStatus } from "./openingObservation";
 import type { ResetMetricHistoryPoint } from "./history";
+import { demographicRates } from "./demographicMeasurement";
+import { householdDistributionRollup } from "./householdDistribution";
+import { regionalCoverageKey } from "./householdPublication";
+import { outputGrowth, productivityGrowth } from "./productivity";
 
 export interface NationalMetricRegionReading {
   regionId: string;
@@ -53,6 +57,99 @@ function rollupStatus(
   // measures. Other catalog methods ultimately need their owner-specific
   // national numerator, denominator, asset, area, or hazard stock.
   return aggregation === "population_weighted" ? "derived" : "proxy";
+}
+
+/** Only same-observation counts can make a national ratio exact. */
+function ownerRatio(
+  metricId: string,
+  observations: readonly OpeningMetricObservation[],
+  regionIds?: readonly string[]
+): number | null {
+  if (!observations.length) return null;
+  if (["05", "06"].includes(metricId) && observations.some((o) => o.growthBasis)) {
+    const growth = metricId === "06" ? productivityGrowth : outputGrowth;
+    if (
+      observations.some(
+        (o) =>
+          !o.growthBasis ||
+          (o.observedAtTurn !== undefined && o.observedAtTurn !== o.growthBasis.endTurn) ||
+          growth([o.growthBasis]) === null ||
+          Math.abs(growth([o.growthBasis])! - o.value!) > 0.001
+      )
+    )
+      return null;
+    return growth(observations.map((o) => o.growthBasis!));
+  }
+  if (observations.some((o) => o?.definitionVersion === 2)) {
+    const first = observations[0]!;
+    const basis = first.countryBasis;
+    if (
+      !regionIds ||
+      !basis ||
+      !first.unit ||
+      !Number.isFinite(basis.value) ||
+      !Number.isSafeInteger(basis.measurementTurn) ||
+      basis.measurementTurn < 1 ||
+      basis.coverageKey !== regionalCoverageKey(regionIds) ||
+      observations.some(
+        (o) =>
+          o.definitionVersion !== 2 ||
+          o.unit !== first.unit ||
+          o.countryBasis?.countryId !== basis.countryId ||
+          o.countryBasis?.coverageKey !== basis.coverageKey ||
+          o.countryBasis?.measurementTurn !== basis.measurementTurn ||
+          o.observedAtTurn !== basis.measurementTurn ||
+          o.countryBasis?.value !== basis.value
+      )
+    )
+      throw new Error(`National metric ${metricId} has incomplete or mixed definition coverage`);
+    return basis.value;
+  }
+  if (["20", "55"].includes(metricId)) {
+    if (
+      observations.some(
+        (o) =>
+          !o?.demographicBasis ||
+          o.demographicBasis.kind !== (metricId === "20" ? "mortality" : "fertility")
+      )
+    )
+      return null;
+    return demographicRates(observations.map((o) => o.demographicBasis!));
+  }
+  if (["02", "04"].includes(metricId)) {
+    if (observations.some((o) => !o?.householdBasis)) return null;
+    if (
+      observations.some(
+        (o) =>
+          Math.abs(
+            o.value! - (metricId === "02" ? o.householdBasis!.median : o.householdBasis!.gini)
+          ) > 1e-6
+      )
+    )
+      return null;
+    const result = householdDistributionRollup(observations.map((o) => o.householdBasis!));
+    return result ? (metricId === "02" ? result.median : result.gini) : null;
+  }
+  if (!["01", "51", "54", "56"].includes(metricId)) return null;
+  let numerator = 0,
+    denominator = 0;
+  for (const observation of observations) {
+    if (!observation) return null;
+    const basis = observation.ratioBasis;
+    if (
+      !basis ||
+      !Number.isFinite(basis.numerator) ||
+      (metricId !== "54" && basis.numerator < 0) ||
+      !Number.isFinite(basis.denominator) ||
+      basis.denominator <= 0
+    )
+      return null;
+    if (Math.abs(observation.value! - (100 * basis.numerator) / basis.denominator) > 0.001)
+      return null;
+    numerator += basis.numerator;
+    denominator += basis.denominator;
+  }
+  return (100 * numerator) / denominator;
 }
 
 /**
@@ -109,20 +206,70 @@ export function aggregateNationalMetricObservations(
         if (totalWeight <= 0 || !kind) {
           throw new Error(`National metric rollup has no denominator for ${metric.id}`);
         }
-        const status = rollupStatus(observations, metric.aggregation, fallback);
+        const exactRatio = ownerRatio(
+          metric.id,
+          observations,
+          regions.map((r) => r.regionId)
+        );
+        const status =
+          exactRatio !== null
+            ? observations.some((o) => o.status === "proxy")
+              ? "proxy"
+              : "derived"
+            : rollupStatus(observations, metric.aggregation, fallback);
         const isProvisional = status === "proxy";
         return [
           metric.id,
           {
             metricId: metric.id,
             path: metric.path,
-            value: weightedValue / totalWeight,
+            value: exactRatio ?? weightedValue / totalWeight,
             status,
-            source: `${kind}-weighted national rollup of current regional v2 observations`,
+            source:
+              exactRatio !== null
+                ? ["05", "06"].includes(metric.id)
+                  ? "National growth recomputed from matching modeled output and hours levels"
+                  : ["20", "55"].includes(metric.id)
+                    ? "National synthetic lifetime recomputed from pooled age-specific owner flows"
+                    : ["02", "04"].includes(metric.id)
+                      ? "Pooled modeled household income distribution, including between-region differences"
+                      : "Owner-numerator/denominator national rollup of current regional observations"
+                : `${kind}-weighted national rollup of current regional v2 observations`,
             owner: metric.owner,
-            note: isProvisional
-              ? `Game-calibrated national rollup. The ${metric.aggregation} owner-specific national denominator is not yet persisted separately.`
-              : `National rollup using the catalog's ${metric.aggregation} aggregation rule.`,
+            ...(observations[0]!.definitionVersion === 2
+              ? {
+                  definitionVersion: 2 as const,
+                  unit: observations[0]!.unit,
+                  countryBasis: observations[0]!.countryBasis,
+                  source: "National outcome calculated by the reconciled country owner",
+                }
+              : {}),
+            ...(observations.every((o) => o.observedAtTurn !== undefined)
+              ? { observedAtTurn: Math.min(...observations.map((o) => o.observedAtTurn!)) }
+              : {}),
+            ...(observations.every((observation) => observation.lastUpdatedTurn !== undefined)
+              ? {
+                  lastUpdatedTurn: Math.min(
+                    ...observations.map((observation) => observation.lastUpdatedTurn!)
+                  ),
+                }
+              : {}),
+            note:
+              exactRatio !== null
+                ? ["05", "06"].includes(metric.id)
+                  ? "Matching 48-turn endpoints are pooled before growth is calculated. Productivity uses modeled hours, not timecards; output uses the economy engine's real-output level."
+                  : ["20", "55"].includes(metric.id)
+                    ? "Recomputed from pooled deaths/exposures or births/women at each age, not averaged regional lifetimes. These are modeled flows, not observed vital-registration statistics."
+                    : ["02", "04"].includes(metric.id)
+                      ? observations[0]!.definitionVersion === 2
+                        ? observations[0]!.note
+                        : "Discrete lognormal household model fitted to regional medians and Ginis. Population weights stand in for household counts; not a measured national income distribution."
+                      : "National rate recomputed from the sum of same-observation regional counts, not a mean weighted by a different population."
+                : metric.id === "03"
+                  ? "Population-weighted modeled poverty estimate, not a measured count of households below an official national threshold."
+                  : isProvisional
+                    ? `Game-calibrated national rollup. The ${metric.aggregation} owner-specific national denominator is not yet persisted separately.`
+                    : `National rollup using the catalog's ${metric.aggregation} aggregation rule.`,
           },
         ];
       })
@@ -133,6 +280,12 @@ export function aggregateNationalMetricValue(
   metricId: string,
   regions: readonly NationalMetricRegionReading[]
 ): number {
+  const exactRatio = ownerRatio(
+    metricId,
+    regions.map((r) => r.observations[metricId]!),
+    regions.map((r) => r.regionId)
+  );
+  if (exactRatio !== null) return exactRatio;
   let weightedValue = 0;
   let totalWeight = 0;
   for (const region of regions) {
@@ -172,6 +325,44 @@ export function aggregateNationalMetricHistory(
     throw new Error(`National metric history is not aligned for ${metricId}`);
   }
   return turns.map((turn, index) => {
+    if (
+      regions.some((region) => {
+        const basis = region.history[metricId]![index]!.countryBasis;
+        return basis && basis.measurementTurn > turn;
+      })
+    )
+      throw new Error(`National metric history has a future measurement for ${metricId}`);
+    const observations = regions.map((region) => ({
+      ...region.observations[metricId]!,
+      value: region.history[metricId]![index]!.value,
+      ratioBasis: region.history[metricId]![index]!.ratioBasis,
+      growthBasis: region.history[metricId]![index]!.growthBasis,
+      demographicBasis: region.history[metricId]![index]!.demographicBasis,
+      householdBasis: region.history[metricId]![index]!.householdBasis,
+      definitionVersion: region.history[metricId]![index]!.definitionVersion,
+      unit: region.history[metricId]![index]!.unit,
+      countryBasis: region.history[metricId]![index]!.countryBasis,
+      // Historical owner results carry their own window. Today's measurement
+      // date must not invalidate a valid older country-wide sample.
+      observedAtTurn: region.history[metricId]![index]!.countryBasis?.measurementTurn,
+    }));
+    const exactRatio = ownerRatio(
+      metricId,
+      observations,
+      regions.map((r) => r.regionId)
+    );
+    if (exactRatio !== null)
+      return {
+        turn,
+        value: exactRatio,
+        ...(observations[0]!.definitionVersion
+          ? {
+              definitionVersion: observations[0]!.definitionVersion,
+              unit: observations[0]!.unit,
+              countryBasis: observations[0]!.countryBasis,
+            }
+          : {}),
+      };
     let weightedValue = 0;
     let totalWeight = 0;
     for (const region of regions) {

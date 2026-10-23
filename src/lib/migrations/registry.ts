@@ -78,6 +78,7 @@ import { migration as crisesLivingEventPartialIndex } from "./entries/2026-08-25
 import { migration as ukRegionalPartyOrgBackfill } from "./entries/2026-08-26-uk-regional-party-org-backfill";
 import { migration as easternDepositsCnSoeIron } from "./entries/2026-08-25-eastern-deposits-cn-soe-iron";
 import { migration as backfillRedistrictingAuthorityTypes } from "./entries/2026-08-26-backfill-redistricting-authority-types";
+import { migration as backfillMechanicalLawTypes } from "./entries/2026-10-21-backfill-mechanical-law-types";
 import { migration as repairOutOfRangePolicyLevels } from "./entries/2026-08-26-repair-out-of-range-policy-levels";
 import { migration as dropOffRosterCommandCommanders } from "./entries/2026-08-26-drop-off-roster-command-commanders";
 import { migration as severEmigratedGenerals } from "./entries/2026-08-26-sever-emigrated-generals";
@@ -384,6 +385,7 @@ export const MIGRATIONS: Migration[] = [
   governmentContractBidding,
   incomeTaxPolicyParity,
   incomeTaxTiers,
+  backfillMechanicalLawTypes,
 ];
 
 // D13 rollback drill - registered but deliberately OUTSIDE the normal chain.

@@ -15,6 +15,9 @@
 import type { EconomicModelState } from "@/lib/constants/economicModels";
 import type { StateMetrics, StateMetricValue } from "./stateMetrics";
 import type { CrisisEconomicExposure } from "@/lib/livingConflict/rules/economicExposure";
+import type { EmploymentState } from "@/lib/labour/rules/employment";
+import type { ProductivityState } from "@/lib/resetMetrics/rules/productivity";
+import type { DemographicFlowCohortReading } from "@/lib/demographics/flowJournal";
 
 /**
  * Reset persistence contract:
@@ -27,17 +30,17 @@ import type { CrisisEconomicExposure } from "@/lib/livingConflict/rules/economic
  *   preset authors them, preventing `$set` omissions from retaining old state.
  */
 export interface MacroMetricsDoc {
+  /** Initialized from existing employment; cleared on reset before new-world seeding. */
+  labourEmployment?: EmploymentState;
+  /** Matching modeled output/hours, bounded to 49 turns; cleared on reset. */
+  labourProductivity?: ProductivityState;
   /** Bounded crisis pressure feeding actual civilian labour and GDP potential. */
   livingConflictExposure?: CrisisEconomicExposure;
   /** stateId, or a national-scope rollup id ("federal", "uk_national", …). */
   _id: string;
   countryId?: string;
   /** V2-only raw cohort owner reading; never reused as a legacy approval metric. */
-  resetCohortReading?: {
-    asOfTurn: number;
-    populationGrowthAnnualized: number;
-    realizedTfr: number | null;
-    dependencyBurden15To64: number | null;
+  resetCohortReading?: Omit<DemographicFlowCohortReading, "periodLifeExpectancy"> & {
     periodLifeExpectancy?: number | null;
   };
   economic: StateMetrics["economic"];

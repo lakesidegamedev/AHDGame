@@ -8,6 +8,8 @@ import {
 } from "@/lib/turn/npp/rules/autopilotReinvest";
 import type { CorpTabId, CorporationDetail } from "./CorporationPageTypes";
 import { DenseSection, InlineStatus, SmallButton } from "./dense/DenseKit";
+import { CeoPayCard } from "./ceo/CeoPayCard";
+import { OperatorPolicyCard } from "./ceo/OperatorPolicyCard";
 
 const CAPEX_PERCENT = Math.round(AUTOPILOT_CAPEX_CASH_SHARE * 100);
 const STEP_PERCENT = Math.round(AUTOPILOT_GROWTH_STEP_OF_RUN * 100);
@@ -76,8 +78,8 @@ export function AutopilotCard({
       <div className="space-y-2 py-1">
         <p className="text-xs text-muted">
           {on
-            ? "Autopilot sets budgets and dividends each turn, grows plants that sell in small steps once the extra capacity should pay for itself, pauses plants in a glut, and opens new plants when it has cash to spare. Budgets and dividends you change by hand are reset on the next turn while it is on. Everything else still works as normal."
-            : "Let the corporation run itself. Autopilot sets budgets and dividends, grows plants that sell, and opens new plants when it has cash to spare. It plays safe: it never borrows, picks research, retools, sells or closes plants, or buys rivals, and it tells you here when one of those is worth doing. You stay CEO, but a top-10 corporation on autopilot earns the standard CEO influence, not the major tier."}
+            ? "Autopilot sets budgets and dividends each turn, grows plants that sell in small steps once the extra capacity should pay for itself, reduces active capacity at demand-limited plants that lose money, restores it when buyers return, and opens new plants when it has cash to spare. It never sells the plant or its paid capacity. It may adjust active capacity at eligible plants, so a hand-set level there may change next turn. Everything else still works as normal."
+            : "Let the corporation run itself. Autopilot sets budgets and dividends, grows plants that sell, reduces active capacity at demand-limited plants that lose money, restores it when buyers return, and opens new plants when it has cash to spare. It never sells the plant or its paid capacity. It may adjust active capacity at eligible plants, so a hand-set level there may change next turn. It also never borrows, picks research, retools, sells or closes plants, or buys rivals; it tells you here when one of those is worth doing. You stay CEO, but a top-10 corporation on autopilot earns the standard CEO influence, not the major tier."}
         </p>
         {!on && confirming && (
           <div className="space-y-2 border-y border-card-border py-2">
@@ -87,7 +89,9 @@ export function AutopilotCard({
               gradually: each turn it commits at most {CAPEX_PERCENT}% of the cash above the
               reserve, and adds at most {STEP_PERCENT}% to any one plant, only where the plant is
               already making money and the new capacity should pay for itself. New plants take many
-              turns to come online, and that cash is not available while they build.
+              turns to come online, and that cash is not available while they build. It may also
+              reduce active capacity at eligible loss-making plants, while keeping the plant and its
+              paid capacity.
             </p>
             <div className="flex gap-2">
               <SmallButton tone="primary" onClick={toggle} disabled={busy}>
@@ -138,6 +142,12 @@ export function AutopilotCard({
         )}
         <InlineStatus message={error} tone="error" />
       </div>
+      {on && (
+        <>
+          <OperatorPolicyCard corpId={corpId} />
+          <CeoPayCard corpId={corpId} />
+        </>
+      )}
     </DenseSection>
   );
 }

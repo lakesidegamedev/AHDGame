@@ -22,6 +22,30 @@ describe("PATCH /api/discord-bot/tickets", () => {
     });
   });
 
+  it.each(["source", "target"])("refuses merging an investigation as %s", async (side) => {
+    db.collectionMocks.tickets.findOne
+      .mockResolvedValueOnce({
+        ticketNumber: 41,
+        status: "open",
+        category: side === "source" ? "investigation" : "bug",
+      })
+      .mockResolvedValueOnce({
+        ticketNumber: 42,
+        status: "open",
+        category: side === "target" ? "investigation" : "incident",
+      });
+    const { PATCH } = await import("./route");
+    const response = await PATCH(
+      new Request("https://example.com/api/discord-bot/tickets", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "merge", ticketNumber: 41, targetTicketNumber: 42 }),
+      })
+    );
+    expect(response.status).toBe(409);
+    expect(db.collectionMocks.tickets.updateOne).not.toHaveBeenCalled();
+  });
+
   it("records the channel receipt independently from the reporter DM", async () => {
     const { PATCH } = await import("./route");
     const response = await PATCH(
@@ -329,6 +353,20 @@ describe("PATCH /api/discord-bot/tickets", () => {
   });
 });
 
+it("advertises investigation intake only behind bot authentication", async () => {
+  const { GET } = await import("./route");
+  const { requireBotToken } = await import("@/lib/api/requireBotToken");
+  vi.mocked(requireBotToken).mockReturnValueOnce(false);
+  expect(
+    (await GET(new Request("https://example.com/api/discord-bot/tickets?capabilities=1"))).status
+  ).toBe(401);
+  vi.mocked(requireBotToken).mockReturnValueOnce(true);
+  const response = await GET(
+    new Request("https://example.com/api/discord-bot/tickets?capabilities=1")
+  );
+  expect(await response.json()).toEqual({ investigationIntake: true });
+});
+
 describe("POST /api/discord-bot/tickets filing context", () => {
   let db: MockDb;
 
@@ -350,6 +388,27 @@ describe("POST /api/discord-bot/tickets filing context", () => {
       body: JSON.stringify(body),
     });
   }
+
+  it("accepts a bot-authenticated investigation and preserves its deduplication key", async () => {
+    const { POST } = await import("./route");
+    const response = await POST(
+      post({
+        category: "investigation",
+        investigationKey: "character:aaaaaaaaaaaaaaaaaaaaaaaa",
+        title: "Private investigation",
+        description: "Synthetic detector evidence for staff review.",
+        discordUserId: "synthetic-bot",
+      })
+    );
+    expect(response.status).toBe(200);
+    expect(db.collectionMocks.tickets.insertOne).toHaveBeenCalledWith(
+      expect.objectContaining({
+        category: "investigation",
+        investigationKey: "character:aaaaaaaaaaaaaaaaaaaaaaaa",
+        discordUserId: "synthetic-bot",
+      })
+    );
+  });
 
   it("returns context questions and persists a versioned request for an unlinked reporter", async () => {
     const { POST } = await import("./route");

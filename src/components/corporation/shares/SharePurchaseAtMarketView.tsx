@@ -54,6 +54,8 @@ interface SharePurchaseAtMarketViewProps {
   floatAvailable: number;
   maxBuyableShares: number;
   maxMarketShares: number;
+  /** Personal CEO buy with no allowance left in the current window. */
+  ceoLimitReached: boolean;
   buyCost: number;
   activeBudget: number;
   personalBudgetLabel: string;
@@ -108,6 +110,7 @@ export function SharePurchaseAtMarketView({
   floatAvailable,
   maxBuyableShares,
   maxMarketShares,
+  ceoLimitReached,
   buyCost,
   activeBudget,
   personalBudgetLabel,
@@ -405,6 +408,14 @@ export function SharePurchaseAtMarketView({
               placeholder="Quantity"
               className="w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm focus:border-primary/60 focus:outline-none"
             />
+            {/* CEO limit first: a limit order counts toward the same window. */}
+            {(ceoLimitReached || (floatAvailable <= 0 && !buyAsInvestmentBank)) && (
+              <p className="mt-1.5 text-xs text-warning">
+                {ceoLimitReached
+                  ? "You have reached your CEO buying limit for this window. Open buy orders count toward it, so cancel unused orders to free room."
+                  : "No shares are for sale on the market right now. Use a Limit order to bid for shares from holders."}
+              </p>
+            )}
           </div>
 
           {quantity > 0 && (
@@ -498,7 +509,7 @@ export function SharePurchaseAtMarketView({
                   <div
                     className={`mt-0.5 tabular-nums ${!sellAsCorp && !sellAsInvestmentBank ? "text-primary/70" : "text-muted/60"}`}
                   >
-                    {myShares.toLocaleString("en-US")} shares
+                    {totalPersonalShares.toLocaleString("en-US")} shares
                   </div>
                 </button>
                 <button
@@ -578,7 +589,7 @@ export function SharePurchaseAtMarketView({
                 {!sellAsCorp && !sellAsInvestmentBank && (
                   <>
                     <span className="mx-1.5 text-card-border">·</span>
-                    {myShares.toLocaleString("en-US")} owned
+                    {myShares.toLocaleString("en-US")} available in selected holding
                   </>
                 )}
               </label>
@@ -625,7 +636,7 @@ export function SharePurchaseAtMarketView({
               <p className="mt-1 text-xs text-error">
                 {sellAsCorp
                   ? `Corporation only holds ${myCorporationShares.toLocaleString("en-US")} shares.`
-                  : `You only own ${myShares.toLocaleString("en-US")} shares.`}
+                  : `The selected holding contains ${myShares.toLocaleString("en-US")} shares.`}
               </p>
             )}
             {marketDepthInsufficient && (
@@ -660,7 +671,9 @@ export function SharePurchaseAtMarketView({
                 </span>
               </div>
               <div className="flex justify-between border-t border-card-border pt-2">
-                <span className="text-muted">Shares remaining</span>
+                <span className="text-muted">
+                  {sellAsCorp ? "Shares remaining" : "Shares remaining in selected holding"}
+                </span>
                 <span className="tabular-nums font-medium text-foreground">
                   {Math.max(
                     0,

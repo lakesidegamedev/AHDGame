@@ -17,6 +17,10 @@
  * decision handler.
  */
 
+import { mechanicalLawId } from "@/lib/mechanicalLaws/registry";
+import { getMechanicalLawLevel, getMechanicalLawLevels } from "@/lib/mechanicalLaws/levels";
+import { foreignInvestmentRuleForLevel } from "@/lib/mechanicalLaws/rules";
+import { controllingRoot } from "@/lib/mechanicalLaws/guards";
 import { ObjectId, type Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types";
 import type { MergerReview, MergerReviewTrigger } from "@/lib/db/types/mergerReview";
@@ -76,6 +80,19 @@ async function reviewApplies(db: Db, acquirer: Corporation, target: Corporation)
   return true;
 }
 
+/** Foreign Investment Act screening applies: buyer's group is foreign and the act is at screening or caps. */
+async function foreignScreeningApplies(
+  db: Db,
+  acquirer: Corporation,
+  target: Corporation
+): Promise<boolean> {
+  const levels = await getMechanicalLawLevels(db, target.countryId as CountryId);
+  const rule = foreignInvestmentRuleForLevel(levels.foreignInvestment).kind;
+  if (rule !== "screening" && rule !== "cap") return false;
+  const root = await controllingRoot(db, acquirer);
+  return root.countryId !== target.countryId;
+}
+
 /**
  * Evaluate clearance for a deal, opening a referral if one is warranted.
  *
@@ -119,18 +136,33 @@ export async function assertMergerClearance(
 
   if (!(await reviewApplies(db, acquirer, target))) return { ok: true };
 
+  // Foreign Investment Act screening: a takeover by a group headquartered
+  // abroad is referred even below the concentration threshold.
+  const screening = await foreignScreeningApplies(db, acquirer, target);
+
   // A table miss is not always "no statute": a country merge hands the survivor
   // the absorbed state's competition primary (post-reunification Germany owns
   // the GDR's), and the winner's law governs the unified state. Costs one
   // indexed lookup only on the miss path; still fails open when neither a
   // native nor a carried statute exists.
+  // New-generation competition primaries first; then the country's own
+  // Competition Act (mechanicalLaws); then a statute carried by a country merge.
+  const nativeLawId = ANTITRUST_LAW_BY_COUNTRY[target.countryId as CountryId];
+  const mechanicalId = nativeLawId
+    ? null
+    : mechanicalLawId(target.countryId as CountryId, "competition");
   const lawId =
-    ANTITRUST_LAW_BY_COUNTRY[target.countryId as CountryId] ??
+    nativeLawId ??
+    mechanicalId ??
     (await carriedLawIdFor(db, target.countryId, Object.values(ANTITRUST_LAW_BY_COUNTRY)));
-  if (!lawId) return { ok: true };
-  const level = await getEnactedLevel(db, target.countryId as LawCountryId, lawId);
+  if (!lawId && !screening) return { ok: true };
+  const level = !lawId
+    ? 0
+    : mechanicalId != null
+      ? await getMechanicalLawLevel(db, target.countryId as CountryId, "competition")
+      : await getEnactedLevel(db, target.countryId as LawCountryId, lawId);
   const threshold = thresholdForLevel(level);
-  if (threshold == null) return { ok: true };
+  if (threshold == null && !screening) return { ok: true };
 
   const gameState = await getGameState(db);
   const authority = await resolveMergerAuthority(
@@ -147,9 +179,14 @@ export async function assertMergerClearance(
     target,
     marketAtLeast(marketMode, "plants")
   );
-  if (!concentration.leadSectorType || concentration.combinedSharePercent < threshold) {
-    return { ok: true };
-  }
+  const concentrationReferral =
+    threshold != null &&
+    !!concentration.leadSectorType &&
+    concentration.combinedSharePercent >= threshold;
+  if (!concentrationReferral && !screening) return { ok: true };
+  // A screening-only referral auto-clears at its deadline unless the authority
+  // blocks it: its "threshold" sits at 100%, above any share the deal can hold.
+  const referralThreshold = concentrationReferral ? threshold! : 100;
 
   const now = new Date();
   const review: MergerReview = {
@@ -161,11 +198,12 @@ export async function assertMergerClearance(
     countryId: target.countryId,
     authoritySeatId: authority.seatId,
     lawLevel: level,
-    thresholdPercent: threshold,
-    leadSectorType: concentration.leadSectorType,
+    thresholdPercent: referralThreshold,
+    leadSectorType: (concentration.leadSectorType ?? target.type) as MergerReview["leadSectorType"],
     combinedSharePercent: concentration.combinedSharePercent,
     overlaps: concentration.overlaps,
     trigger,
+    reason: concentrationReferral ? "concentration" : "foreignScreening",
     status: "pending",
     openedAtTurn: currentTurn,
     decideByTurn: currentTurn + MERGER_REVIEW_TURNS,
@@ -190,7 +228,9 @@ export async function assertMergerClearance(
     notify(
       authority.holderUserId,
       "Merger referred for review",
-      `${acquirer.name}'s acquisition of ${target.name} would hold ${concentration.combinedSharePercent}% of the national market. As ${authority.seatName} you have until turn ${review.decideByTurn} to decide.`
+      concentrationReferral
+        ? `${acquirer.name}'s acquisition of ${target.name} would hold ${concentration.combinedSharePercent}% of the national market. As ${authority.seatName} you have until turn ${review.decideByTurn} to decide.`
+        : `${acquirer.name}, a group controlled from abroad, wants to take over ${target.name}. Under the Foreign Investment Act you may block it by turn ${review.decideByTurn}; otherwise it is cleared.`
     );
   }
   for (const userId of [acquirer.userId, target.userId]) {
@@ -207,6 +247,8 @@ export async function assertMergerClearance(
     ok: false,
     status: 409,
     review,
-    error: `This merger would hold ${concentration.combinedSharePercent}% of the national market, at or above the ${threshold}% threshold. It has been referred to the ${authority.seatName} and cannot complete until cleared.`,
+    error: concentrationReferral
+      ? `This merger would hold ${concentration.combinedSharePercent}% of the national market, at or above the ${threshold}% threshold. It has been referred to the ${authority.seatName} and cannot complete until cleared.`
+      : `This takeover by a foreign-controlled group needs Foreign Investment Act screening. It has been referred to the ${authority.seatName}, who has until turn ${review.decideByTurn} to block it; otherwise it is cleared.`,
   };
 }

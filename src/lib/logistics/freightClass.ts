@@ -36,6 +36,19 @@ import { COMMODITY_TYPES, type CommodityType } from "@/lib/constants/commodities
 export type FreightClass = "bulk" | "special" | "grid";
 export type HauledFreightClass = Exclude<FreightClass, "grid">;
 
+/** Freight TEU used per commodity unit for one state-line crossing. */
+export const FREIGHT_TEU_PER_UNIT_HOP: Record<FreightClass, number> = {
+  bulk: 0.04,
+  special: 0.12,
+  grid: 0,
+};
+
+/** TEU per commodity-unit per hop; freight capacity and commodity units share era scaling. */
+export function freightTeuPerUnitHop(freightClass: FreightClass, eraUnitScale = 1): number {
+  void eraUnitScale;
+  return FREIGHT_TEU_PER_UNIT_HOP[freightClass];
+}
+
 export const FREIGHT_CLASS_LABELS: Record<FreightClass, string> = {
   bulk: "Bulk freight",
   special: "Special freight",
@@ -97,7 +110,6 @@ export const FREIGHT_CLASS_BY_COMMODITY: Record<CommodityType, FreightClass | nu
   freight: null,
   consulting_services: null,
   network_services: null,
-  entertainment_services: null,
 };
 
 /** True when the class rides the haulage fleet and spends TEU capacity. */

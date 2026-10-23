@@ -40,47 +40,55 @@ describe("GET /api/public/v1/character/[id]", () => {
     await expect(res.json()).resolves.toMatchObject({ ok: false, code: "NOT_FOUND" });
   });
 
-  it("returns character detail by sequentialId", async () => {
-    const charId = new ObjectId();
-    const userId = new ObjectId();
-    db.collectionMocks.characters!.findOne.mockResolvedValue({
-      _id: charId,
-      userId,
-      name: "Rgold",
-      sequentialId: 75,
-      homeState: "OH",
-      countryId: "US",
-      party: "independent",
-    });
-    db.collectionMocks.politicalParties!.find.mockReturnValue({
-      toArray: vi.fn().mockResolvedValue([]),
-    } as never);
-    db.collectionMocks.states!.find.mockReturnValue({
-      toArray: vi.fn().mockResolvedValue([{ _id: "OH", name: "Ohio" }]),
-    } as never);
-    db.collectionMocks.users!.find.mockReturnValue({
-      project: vi.fn().mockReturnThis(),
-      toArray: vi.fn().mockResolvedValue([]),
-    } as never);
-    db.collectionMocks.electionCandidates!.find.mockReturnValue({
-      toArray: vi.fn().mockResolvedValue([]),
-    } as never);
-    db.collectionMocks.corporations!.find.mockReturnValue({
-      project: vi.fn().mockReturnThis(),
-      toArray: vi.fn().mockResolvedValue([]),
-    } as never);
-    db.collectionMocks.investorRankingSnapshots!.findOne.mockResolvedValue(null);
+  it.each([undefined, "https://example.com/profile-banner.png", "/api/uploads/banner.png"])(
+    "returns character detail with banner %s",
+    async (profileHeaderImageUrl) => {
+      const charId = new ObjectId();
+      const userId = new ObjectId();
+      db.collectionMocks.characters!.findOne.mockResolvedValue({
+        _id: charId,
+        userId,
+        name: "Rgold",
+        sequentialId: 75,
+        profileHeaderImageUrl,
+        homeState: "OH",
+        countryId: "US",
+        party: "independent",
+      });
+      db.collectionMocks.politicalParties!.find.mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([]),
+      } as never);
+      db.collectionMocks.states!.find.mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([{ _id: "OH", name: "Ohio" }]),
+      } as never);
+      db.collectionMocks.users!.find.mockReturnValue({
+        project: vi.fn().mockReturnThis(),
+        toArray: vi.fn().mockResolvedValue([]),
+      } as never);
+      db.collectionMocks.electionCandidates!.find.mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([]),
+      } as never);
+      db.collectionMocks.corporations!.find.mockReturnValue({
+        project: vi.fn().mockReturnThis(),
+        toArray: vi.fn().mockResolvedValue([]),
+      } as never);
+      db.collectionMocks.investorRankingSnapshots!.findOne.mockResolvedValue(null);
 
-    const { GET } = await import("./route");
-    const res = await GET(new Request("http://localhost/api/public/v1/character/75"), {
-      params: Promise.resolve({ id: "75" }),
-    });
-    expect(res.status).toBe(200);
-    const body = await res.json();
-    expect(body).toMatchObject({
-      ok: true,
-      found: true,
-      character: { id: charId.toString(), name: "Rgold" },
-    });
-  });
+      const { GET } = await import("./route");
+      const res = await GET(new Request("http://localhost/api/public/v1/character/75"), {
+        params: Promise.resolve({ id: "75" }),
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body).toMatchObject({
+        ok: true,
+        found: true,
+        character: {
+          id: charId.toString(),
+          name: "Rgold",
+          profileHeaderImageUrl: profileHeaderImageUrl ?? null,
+        },
+      });
+    }
+  );
 });

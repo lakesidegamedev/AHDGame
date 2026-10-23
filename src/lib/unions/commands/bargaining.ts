@@ -40,6 +40,7 @@ import {
   respondToBargainingMediation,
   settleBargainingCampaign,
   settleMediatedBargainingCampaign,
+  validateBargainingMandate,
   validateBargainingTerms,
   type BargainingTerms,
 } from "@/lib/unions/bargaining";
@@ -68,7 +69,7 @@ function campaignResult(campaign: BargainingCampaign): Extract<UnionActionResult
  * expectations were trended against the COL-adjusted wage by the corporation
  * turn, so the mandate has to read the same index or the comparison inverts.
  */
-async function costOfLivingByState(
+export async function costOfLivingByState(
   db: Db,
   locals: readonly Pick<CorporateSector, "stateId">[]
 ): Promise<Map<string, number>> {
@@ -290,6 +291,45 @@ function memoCostOfLiving(
     .sort()
     .join(",");
   return memoRead(cache, `col:${states}`, () => costOfLivingByState(db, locals));
+}
+
+/**
+ * Why the bargaining employer picker should refuse this employer right now.
+ * Same gates and wording as `openBargainingCampaignFromLiveConditions`, so the
+ * list never offers a company the open command would reject.
+ */
+export function employerBargainingOpenBlockedReason(args: {
+  hasOpenCampaign: boolean;
+  agreementExpiresAtTurn: number | null;
+  lastEndedAtTurn: number | null;
+  currentTurn: number;
+  locals: readonly MandateLocal[];
+  treasury: number;
+  laborTightness: number;
+  lawSupport: number;
+  costOfLivingByState: Map<string, number>;
+}): string | null {
+  if (args.hasOpenCampaign) {
+    return "An open bargaining campaign already exists with this employer.";
+  }
+  if (args.agreementExpiresAtTurn != null && args.agreementExpiresAtTurn > args.currentTurn) {
+    return `A collective agreement already covers this employer through turn ${args.agreementExpiresAtTurn}.`;
+  }
+  const reopenTurn =
+    args.lastEndedAtTurn != null ? args.lastEndedAtTurn + BARGAINING_REOPEN_COOLDOWN_TURNS : null;
+  if (reopenTurn != null && args.currentTurn < reopenTurn) {
+    return `Bargaining with this employer can reopen on turn ${reopenTurn}.`;
+  }
+  const mandate = mandateFromLocals({
+    locals: args.locals,
+    treasury: args.treasury,
+    laborTightness: args.laborTightness,
+    lawSupport: args.lawSupport,
+    costOfLivingByState: args.costOfLivingByState,
+  });
+  const mandateValidation = validateBargainingMandate(mandate);
+  if (!mandateValidation.ok) return mandateValidation.error;
+  return null;
 }
 
 export async function openBargainingCampaignFromLiveConditions(

@@ -31,12 +31,13 @@ export type IterationType = "Alpha" | "Beta" | "Iteration";
  *          verdicts into the next agenda, and holds its commitments instead of
  *          re-deciding every cycle. Adds no new lever: every V5 intent is
  *          executed through the same validation/execution paths v4 already
- *          uses. Singleplayer/Worldsim beta — see featureFlagDefaults.
+ *          uses. See featureFlagDefaults for per-mode defaults.
  *   - v6:  v5 + NPP engine 6 behavior (see `nppAutonomy/engineVersion.ts` and
  *          content/changelog/npp/). Engine 6 changes how well NPPs pursue the
  *          v5 activities and what they cost to run, never what they are
- *          allowed to do or how many resources they get. Inert on hosted
- *          worlds until an operator selects it.
+ *          allowed to do or how many resources they get. Active on any world
+ *          whose `nppAutonomyLevel` is set to v6; the running engine version
+ *          is stamped on each turn log as `nppEngineVersion`.
  * See plans/2026-06-23-npp-autonomy-v1-v2-plan.md.
  */
 export type NppAutonomyLevel = "off" | "v0" | "v1" | "v2" | "v3" | "v4" | "v5" | "v6";
@@ -81,6 +82,16 @@ export interface IterationStampFields {
 export interface GameState {
   /** Set only after the stock holding and capital-gains migration completes. */
   stockHoldingTaxStartTurn?: number;
+  /**
+   * First turn of the pass-through tax reform: owners are taxed on their full
+   * share of pass-through profit, phased in over 24 turns. Unset = legacy.
+   */
+  passThroughOwnerTaxStartTurn?: number;
+  /**
+   * First turn NPP CEOs are paid and level up. Pay reviews start no earlier
+   * than 24 turns after it, so owners see the first demand coming.
+   */
+  nppCeoPayStartTurn?: number;
   /** World-local activation boundary for the twelve-turn hardware input reduction. */
   hardwareInputReliefStartTurn?: number;
   /** Unique world identity for replay receipts; replaced on each reset. */
@@ -89,6 +100,12 @@ export interface GameState {
   worldEpochStartedAt?: Date;
   /** Written before journal-enabled population planning, distinguishing legacy crash recovery. */
   demographicFlowAttempt?: { worldEpochId: string; turn: number };
+  /**
+   * Funded-market cutover: the applied producer opening conversion (world,
+   * last legacy turn, plan digest). Stamped last by applyProducerOpening; the
+   * funded producer path refuses to start without it. Cleared on reset.
+   */
+  producerOpening?: { worldEpoch: string; turn: number; digest: string };
   /**
    * Snapshot of media regulation gates used by legislation endpoints that
    * already read this document. Admin market configuration keeps it current so
@@ -441,6 +458,17 @@ export interface GameState {
    * limited to `turnPhaseResumeResults.ts`.
    */
   processingPhaseResults?: Record<string, Record<string, unknown>> | null;
+  /**
+   * Turn engine that owns the in-flight turn, resolved once from
+   * `gameConfig.turnEngineVersion` when the turn started and cleared when it
+   * commits. A crash resume reads it back and finishes on the same engine:
+   * switching engines mid-turn would apply two sets of rules to one turn.
+   * Absent on an idle world and on turns that started before engines were
+   * versioned (those are v1 by definition).
+   */
+  processingEngine?: "v1" | "v2" | null;
+  /** Behaviour version of the in-flight turn's engine (e.g. "2.0.0"); stamped with `processingEngine`. */
+  processingEngineVersion?: string | null;
   /** Master gate for the automatic sector seeding system (fires every 48 turns). */
   autoSectorSeedEnabled?: boolean;
   autoSectorSeedEnabledBy?: string;

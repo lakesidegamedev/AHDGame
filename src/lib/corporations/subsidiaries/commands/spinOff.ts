@@ -1,4 +1,5 @@
 import type { Db, ObjectId } from "mongodb";
+import { assertSubsidiaryWithinCap } from "@/lib/mechanicalLaws/guards";
 import { isPrivateEnterpriseBlocked } from "@/lib/economy/queries/privateEnterpriseGate";
 import { ObjectId as Oid } from "mongodb";
 import type { Character, Corporation, CorporateSector } from "@/lib/db/types";
@@ -120,6 +121,10 @@ export async function spinOff(
   }
 
   if (!nameTrimmed) return fail("A corporation name is required.");
+
+  // The new company is headquartered in the parent's country.
+  const capRejection = await assertSubsidiaryWithinCap(db, parent, parent.countryId);
+  if (capRejection) return fail(capRejection.error, capRejection.status);
 
   // Parent must have ≥1 sector of the requested type.
   const sectors = await db

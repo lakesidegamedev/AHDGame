@@ -84,6 +84,8 @@ async function loadTurnReferenceData(db: Db): Promise<TurnReferenceData> {
             _id: 1,
             "taxRates.domesticCorporateTax": 1,
             "taxRates.foreignCorporateTax": 1,
+            "taxRates.incomeTaxHigh": 1,
+            "taxRates.incomeTax": 1,
           },
         }
       )

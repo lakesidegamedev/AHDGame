@@ -126,6 +126,26 @@ export function applyFogToFinancials(financials: Financials, factor: number): Fi
     federalTaxByCountry: Object.fromEntries(
       Object.entries(financials.federalTaxByCountry).map(([k, v]) => [k, fog(v, factor)])
     ),
+    // Same uniform scale per country, so the countries still add up to the
+    // fogged statement; the plant count is not money and stays exact.
+    ...(financials.byCountry
+      ? {
+          byCountry: financials.byCountry.map((c) => ({
+            countryId: c.countryId,
+            sectorCount: c.sectorCount,
+            revenue: fog(c.revenue, factor),
+            freightIncome: fog(c.freightIncome, factor),
+            maintenanceCosts: fog(c.maintenanceCosts, factor),
+            laborCosts: fog(c.laborCosts, factor),
+            freightCosts: fog(c.freightCosts, factor),
+            growthCosts: fog(c.growthCosts, factor),
+            regulatoryBurden: fog(c.regulatoryBurden, factor),
+            federalTax: fog(c.federalTax, factor),
+            stateTax: fog(c.stateTax, factor),
+            result: fog(c.result, factor),
+          })),
+        }
+      : {}),
     bondInterestCost: fog(financials.bondInterestCost, factor),
     bondCouponIncome: fog(financials.bondCouponIncome, factor),
     governmentBondSubsidy: fog(financials.governmentBondSubsidy, factor),
@@ -307,6 +327,8 @@ export interface SectorPhysicals {
   producedUnits: number | null;
   /** Units sold last turn. */
   soldUnits: number | null;
+  /** Exact advertising-ledger output, derived from produced units. */
+  mediaAdvertisingCampaignUnits?: number | null;
   /** Construction in progress, ₳ — capacity paid for but not yet productive. */
   constructionInProgressAnchor: number | null;
 }
@@ -374,6 +396,14 @@ export function applyFogToSectorPhysicals(
     capacityUnits: fogNullable(physicals.capacityUnits, factors.base),
     producedUnits: fogNullable(physicals.producedUnits, factors.produced),
     soldUnits: fogNullable(physicals.soldUnits, factors.sold),
+    ...(physicals.mediaAdvertisingCampaignUnits !== undefined
+      ? {
+          mediaAdvertisingCampaignUnits: fogNullable(
+            physicals.mediaAdvertisingCampaignUnits,
+            factors.produced
+          ),
+        }
+      : {}),
     constructionInProgressAnchor: fogNullable(physicals.constructionInProgressAnchor, factors.base),
     fillRate: null,
     fillRateBand: fillRateBand(computeFillRate(physicals.producedUnits, physicals.soldUnits)),

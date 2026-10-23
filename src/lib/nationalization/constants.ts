@@ -124,13 +124,18 @@ export const NPV_ANNUAL_DISCOUNT_RATE = 0.25;
  * left just 2pp of headroom before any other modifier — and in a command economy
  * EVERY producing sector is an SOE, so the whole economy started 2pp from
  * insolvency. Measured at -10.14pp average it was the second-largest drag on the
- * 1000-turn run. -6 still makes state ownership meaningfully less efficient than
- * private operation without pricing it below viability on day one.
+ * 1000-turn run. It was -6 until 2026-10-18.
+ *
+ * Owner decision 2026-10-18 (market recovery): no base penalty. A clean state
+ * company with no mandates runs like a private one; only corruption, weak
+ * governance, the mandates a government sets and an oversized state sector cost
+ * anything. Those are the government's own choices, which is where the
+ * distortion belongs.
  */
-export const BASE_SOE_PENALTY = -6;
+export const BASE_SOE_PENALTY = 0;
 
-/** Efficiency clamp (pp). A well-run SOE approaches MIN; a corrupt one MAX. */
-export const SOE_PENALTY_MIN = -5; // least drag (best case)
+/** Efficiency clamp (pp). A well-run SOE reaches MIN (no drag); a corrupt one MAX. */
+export const SOE_PENALTY_MIN = 0; // least drag (best case): never a bonus
 export const SOE_PENALTY_MAX = -25; // most drag (worst case)
 
 /** Corruption coefficient: at corruptionIndex=100, adds this many pp of drag. */

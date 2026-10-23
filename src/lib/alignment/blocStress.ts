@@ -1,3 +1,4 @@
+import { clamp01 } from "@/lib/numeric/rules";
 import type { AlignmentPoleId } from "@/lib/constants/alignmentEras";
 
 /**
@@ -144,11 +145,6 @@ export function blocStressLabel(stress: number): "Settled" | "Strained" | "Overe
   if (stress < 0.25) return "Settled";
   if (stress < 0.6) return "Strained";
   return "Overextended";
-}
-
-function clamp01(v: number): number {
-  if (!Number.isFinite(v)) return 0;
-  return Math.max(0, Math.min(1, v));
 }
 
 /** The pole a bloc pushes for, for callers mapping orgs to stress. */

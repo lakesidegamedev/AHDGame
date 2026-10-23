@@ -28,6 +28,14 @@ vi.mock("@/lib/bonds/sellFundBondUnits", () => ({
     .fn()
     .mockResolvedValue({ proceedsAnchor: 0, unitsSold: 0, bondsTouched: 0 }),
 }));
+vi.mock("@/lib/indexFunds/processQueuedRedemptions", () => ({
+  processQueuedRedemptions: vi.fn().mockResolvedValue(0),
+}));
+vi.mock("@/lib/indexFunds/fundValuation", () => ({
+  loadQueuedRedemptionUnitsByFundId: vi.fn().mockResolvedValue(new Map()),
+  loadOpenOrdersEscrowByFundId: vi.fn().mockResolvedValue(new Map()),
+}));
+vi.mock("@/lib/currency/featureFlag", () => ({ isForexEnabled: vi.fn().mockResolvedValue(true) }));
 // Mirrors the real contract: a fund_reserve position is the fund's own units
 // and is never paid out.
 vi.mock("./holderPayout", () => ({
@@ -41,6 +49,8 @@ import { creditCorpLiquidCapital } from "@/lib/financialTxLog/atomicCashGuard";
 import { sellFundHoldingsForRedemptionCash } from "@/lib/indexFunds/fundRedemptionLiquidity";
 import { sellFundBondHoldingsForCash } from "@/lib/bonds/sellFundBondUnits";
 import { payFundHolderCash } from "./holderPayout";
+import { processQueuedRedemptions } from "@/lib/indexFunds/processQueuedRedemptions";
+import { loadQueuedRedemptionUnitsByFundId } from "@/lib/indexFunds/fundValuation";
 import { advanceWindDowns, beginWindUp, completeWindUp } from "./windUp";
 
 const SPONSOR = new ObjectId();
@@ -78,6 +88,7 @@ function makeDb(opts: {
   claimed?: boolean;
   fund?: IndexFund;
   bondsRemaining?: () => number;
+  queuedRedemptions?: () => number;
 }) {
   const fundUpdate = vi.fn().mockResolvedValue({ modifiedCount: opts.claimed === false ? 0 : 1 });
   const positionsUpdateMany = vi.fn().mockResolvedValue({ modifiedCount: 1 });
@@ -107,6 +118,8 @@ function makeDb(opts: {
           })),
         };
       if (name === "indexFundTransactions") return { insertOne: txInsert };
+      if (name === "indexFundRedemptionQueue")
+        return { countDocuments: vi.fn(async () => opts.queuedRedemptions?.() ?? 0) };
       if (name === "corporations")
         return {
           findOne: vi
@@ -265,5 +278,68 @@ describe("advanceWindDowns", () => {
     const { db } = makeDb({ windingDown: [fund], positions: [] });
     const r = await advanceWindDowns(db, 200);
     expect(r.fundsCompleted).toBe(1);
+    expect(processQueuedRedemptions).not.toHaveBeenCalled();
+  });
+
+  it("pays queued withdrawals at the NAV the cash supports, then completes", async () => {
+    // Stale quote: 186 while the cash backs 1,431,000 / (7,000 + 155 burned) = 200.
+    const fund = makeFund({
+      status: "winding_down",
+      holdings: [],
+      cashAnchor: 1_431_000,
+      unitSupply: 7_000,
+      quotedNav: 186,
+    });
+    let queued = 3;
+    const { db, fundUpdate } = makeDb({
+      windingDown: [fund],
+      positions: [],
+      queuedRedemptions: () => queued,
+    });
+    vi.mocked(loadQueuedRedemptionUnitsByFundId).mockResolvedValueOnce(
+      new Map([[String(fund._id), 155]])
+    );
+    vi.mocked(processQueuedRedemptions).mockImplementationOnce(async () => {
+      queued = 0;
+      return 3;
+    });
+
+    const r = await advanceWindDowns(db, 356, { forexEnabled: false });
+
+    expect(fundUpdate.mock.calls[0][1].$set.quotedNav).toBeCloseTo(200, 9);
+    const [, servedFund, forex, turn] = vi.mocked(processQueuedRedemptions).mock.calls[0];
+    expect(servedFund.quotedNav).toBeCloseTo(200, 9);
+    expect(forex).toBe(false);
+    expect(turn).toBe(356);
+    expect(r.errors).toEqual([]);
+    expect(r.fundsCompleted).toBe(1);
+    expect(fundUpdate.mock.calls.at(-1)![1].$set.status).toBe("delisted");
+  });
+
+  it("does not complete while withdrawals are still queued", async () => {
+    const fund = makeFund({ status: "winding_down", holdings: [], cashAnchor: 10_000 });
+    const { db, fundUpdate } = makeDb({
+      windingDown: [fund],
+      positions: [{ fundId: fund._id, holderKind: "character", units: 10 }],
+      queuedRedemptions: () => 2,
+    });
+    const r = await advanceWindDowns(db, 356, { forexEnabled: true });
+    expect(processQueuedRedemptions).toHaveBeenCalledTimes(1);
+    expect(r.fundsCompleted).toBe(0);
+    expect(r.errors).toEqual(["NIT: Fund settlement must finish before wind-up"]);
+    expect(payFundHolderCash).not.toHaveBeenCalled();
+    expect(fundUpdate.mock.calls.every((c) => c[1].$set.status !== "delisted")).toBe(true);
+  });
+
+  it("leaves queued withdrawals alone while bonds remain", async () => {
+    const fund = makeFund({ status: "winding_down", holdings: [] });
+    const { db } = makeDb({
+      windingDown: [fund],
+      bondsRemaining: () => 1,
+      queuedRedemptions: () => 2,
+    });
+    const r = await advanceWindDowns(db, 356, { forexEnabled: true });
+    expect(processQueuedRedemptions).not.toHaveBeenCalled();
+    expect(r.errors).toEqual([]);
   });
 });

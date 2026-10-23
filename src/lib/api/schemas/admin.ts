@@ -14,6 +14,8 @@ export const adminSuggestionPatchSchema = z.object({
     .enum(["not_reviewed", "planned", "in_progress", "completed", "not_implementing"])
     .optional(),
   adminNotes: z.string().max(5000).optional(),
+  /** What shipped, in player-facing words. Posted to Discord when status becomes completed. */
+  implementationNote: z.string().trim().max(1000).optional(),
 });
 
 // admin/suggestions/merge POST
@@ -252,6 +254,11 @@ export const adminDemographicsPostSchema = z.object({
 // admin/turn/batch POST
 export const adminTurnBatchSchema = z.object({
   count: z.number().int().min(1).max(20),
+});
+
+// admin/turn/process POST (optional body; the turn worker queues `count` turns)
+export const adminTurnProcessSchema = z.object({
+  count: z.number().int().min(1).max(20).default(1),
 });
 
 // admin/law-types POST

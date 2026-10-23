@@ -12,7 +12,8 @@ import type { ObjectId } from "mongodb";
  * `incident` is a staff-opened catch-all for an outage or another event many
  * players hit at once; repeat tickets about it are merged into it.
  */
-export type TicketCategory = "bug" | "moderation" | "account" | "gameplay" | "other" | "incident";
+export type TicketCategory =
+  "bug" | "moderation" | "account" | "gameplay" | "other" | "incident" | "investigation";
 
 /** One report merged into this ticket (usually an incident). */
 export interface MergedTicketRef {
@@ -86,6 +87,8 @@ export interface Ticket {
   supportRecentVisits?: import("@/lib/tickets/intakeContext").TicketVisit[];
   /** Durable private intake card and reporter confirmation state. */
   intake?: import("@/lib/tickets/intakeState").TicketIntake;
+  /** Staff-only audit opened by the operator. Never expose through public receipts. */
+  investigationKey?: string;
   category: TicketCategory;
   /** Where the reporter was playing (bot picker value), when known. */
   platform?: TicketPlatform;

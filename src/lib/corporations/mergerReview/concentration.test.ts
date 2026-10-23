@@ -123,4 +123,61 @@ describe("computeMergerConcentration", () => {
     );
     expect(result.overlaps).toEqual([]);
   });
+
+  describe("on the control group", () => {
+    const SUB = new ObjectId();
+
+    async function runGrouped() {
+      const db: MockDb = createMockDb();
+      db.collection("corporateSectors");
+      db.collectionMocks.corporateSectors.find.mockReturnValue({
+        project: vi.fn().mockReturnThis(),
+        toArray: vi.fn().mockResolvedValue([{ sectorType: "chemical_industries" }]),
+      });
+      db.collection("gameConfig");
+      db.collectionMocks.gameConfig.findOne.mockResolvedValue({ groupSizeCostsStage: 5 });
+      // SUB is held 60/40 by the acquirer, so the acquirer's side includes it.
+      db.collection("corporations");
+      db.collectionMocks.corporations.find.mockReturnValue({
+        toArray: vi.fn().mockResolvedValue([
+          { _id: ACQUIRER, totalShares: 100, shareholders: [] },
+          {
+            _id: SUB,
+            totalShares: 100,
+            shareholders: [{ corporationId: ACQUIRER, shares: 60 }],
+          },
+          { _id: TARGET, totalShares: 100, shareholders: [] },
+        ]),
+      });
+      const { loadIndustryBasis } = await import("../corpMarketShare");
+      vi.mocked(loadIndustryBasis).mockResolvedValue(
+        new Map([
+          [
+            "chemical_industries" as CorporationType,
+            {
+              basisMarket: 1_000,
+              basisByCorp: new Map([
+                [ACQUIRER.toString(), 0],
+                [SUB.toString(), 300],
+                [TARGET.toString(), 200],
+              ]),
+            },
+          ],
+        ]) as unknown as Awaited<ReturnType<typeof loadIndustryBasis>>
+      );
+      return computeMergerConcentration(
+        db as unknown as Db,
+        { _id: ACQUIRER },
+        { _id: TARGET, countryId: "US" },
+        true
+      );
+    }
+
+    it("counts the acquirer's subsidiaries as the acquirer", async () => {
+      // The acquirer holds nothing itself; its subsidiary holds 30%.
+      const result = await runGrouped();
+      expect(result.leadSectorType).toBe("chemical_industries");
+      expect(result.combinedSharePercent).toBe(50);
+    });
+  });
 });

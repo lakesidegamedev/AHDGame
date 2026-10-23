@@ -6,6 +6,7 @@ import { projectBondMaturityAffordability } from "@/lib/bonds/bondMaturityAfford
 import { bondMaturitySchedule } from "@/lib/bonds/bondMaturitySchedule";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { BondInfo } from "./CorporationPageTypes";
+import { NoticeStrip } from "./ledger/NoticeStrip";
 
 interface BondMaturityNoticeProps {
   bondInfo: BondInfo | null;
@@ -121,9 +122,6 @@ export default function BondMaturityNotice({
     }
   };
 
-  const tone = persistentActionNeeded
-    ? "border-warning/40 bg-warning/10"
-    : "border-info/30 bg-info/10";
   const dueTurn = next.maturityTurn.toLocaleString("en-US");
   const shortfallDescription = affordability.usedProjection
     ? `projected cash at turn ${dueTurn} is short by ${formatAmount(affordability.shortfall)}`
@@ -141,8 +139,11 @@ export default function BondMaturityNotice({
           : "No action needed.";
 
   return (
-    <div
-      className={`relative rounded-xl border px-4 py-3 text-sm ${tone} ${!persistentActionNeeded ? "pr-10" : ""}`}
+    <NoticeStrip
+      tone={persistentActionNeeded ? "warning" : "info"}
+      tag={dueNow ? "Bond due now" : "Bond due"}
+      onDismiss={!persistentActionNeeded ? dismiss : undefined}
+      dismissLabel="Dismiss bond repayment notice"
     >
       <p className="font-semibold text-foreground">
         {dueNow
@@ -196,16 +197,6 @@ export default function BondMaturityNotice({
           )}
         </p>
       </details>
-      {!persistentActionNeeded && (
-        <button
-          type="button"
-          onClick={dismiss}
-          aria-label="Dismiss bond repayment notice"
-          className="absolute top-2 right-2 rounded-md px-2 py-1 text-xs text-muted transition-colors hover:bg-card hover:text-foreground"
-        >
-          ✕
-        </button>
-      )}
-    </div>
+    </NoticeStrip>
   );
 }

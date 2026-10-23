@@ -8,6 +8,7 @@
  * lending module with the servicing loop reading them from a turn file.
  */
 
+import { clampWithUpperPriority as clamp } from "@/lib/numeric/rules";
 import type { BankCharter, BankLoan } from "@/lib/db/types/bank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
@@ -57,10 +58,6 @@ export type NpcLoanBook = {
   volume: number;
   expectedDefaultRatePercent: number;
 };
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
 
 /**
  * Pure NPC household loan-book math.

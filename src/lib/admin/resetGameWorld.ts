@@ -3,6 +3,7 @@ import {
   archiveRetiredCareerLegislation,
   loadCareerLoans,
 } from "@/lib/world/careerEvidence";
+import { PASS_THROUGH_PHASE_IN_TURNS } from "@/lib/corporations/rules/passThroughTax";
 import { fetchExchangeRateMap } from "@/lib/world/forex";
 import { resolveStartingPartiesMode, type StartingPartiesMode } from "./startingParties";
 import { MongoServerError, ObjectId, type Db } from "mongodb";
@@ -238,6 +239,10 @@ export const GAME_STATE_RESET_PRESERVED_FIELD_REASONS: Readonly<Record<string, s
       "Turn-runner recovery evidence owned by processTurn and its shutdown recovery.",
     processingPhaseResults:
       "Turn-runner recovery evidence owned by processTurn and its shutdown recovery.",
+    processingEngine:
+      "Turn-engine selection for the in-flight turn, owned by processTurn; an idle world has none. Reset teardown does not rewrite it, and the next turn stamps it before any phase runs.",
+    processingEngineVersion:
+      "Turn-engine behaviour version for the in-flight turn, stamped with processingEngine; cleared when the turn commits or is released.",
     ...Object.fromEntries(
       GAME_STATE_OPERATOR_FLAG_AUDIT_FIELDS.map((field) => [
         field,
@@ -682,6 +687,11 @@ export async function resetGameWorld(
     currentTurn: resetDate.currentTurn,
     hardwareInputReliefStartTurn: resetDate.currentTurn,
     stockHoldingTaxStartTurn: resetDate.currentTurn,
+    // A fresh world starts with pass-through owners fully taxed; the phase-in
+    // only exists to ease a live world into the reform.
+    passThroughOwnerTaxStartTurn: resetDate.currentTurn - PASS_THROUGH_PHASE_IN_TURNS,
+    // NPP CEOs are paid from the first turn of a fresh world.
+    nppCeoPayStartTurn: resetDate.currentTurn,
     currentYear: resetDate.currentYear,
     resetStartDate: { year: resetDate.year, week: resetDate.week },
     startingYear,
@@ -726,6 +736,8 @@ export async function resetGameWorld(
     resetVersionSeeds: "",
   };
   gameStateUnset.demographicFlowAttempt = "";
+  // The outgoing world's producer opening marker; a new world needs its own.
+  gameStateUnset.producerOpening = "";
   // The outgoing world's last market tick; the fresh world has none yet.
   gameStateUnset.lastMarketTickAt = "";
   gameStateUpdate.preIterationTurns = 0;

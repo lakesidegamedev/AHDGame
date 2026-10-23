@@ -68,8 +68,6 @@ const COMMODITY_SUMMARIES: Record<CommodityType, string> = {
     "polymer and extrusion output: feedstock for manufacturing, healthcare packaging, automobiles, and construction.",
   network_services:
     "subscription-equivalent broadband and connectivity capacity: unique output of telecom sectors, with macro demand scaling with state GDP.",
-  entertainment_services:
-    "event-equivalent entertainment capacity: unique output of entertainment sectors, with macro demand scaling with state GDP.",
 };
 
 function formatSectorList(

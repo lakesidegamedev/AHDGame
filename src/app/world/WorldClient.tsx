@@ -12,7 +12,15 @@ import {
   TIER_COLORS,
   TIER_STROKES,
 } from "@/components/landing/countryTiers";
-import WorldMapSVG from "./components/WorldMapSVG";
+import dynamic from "next/dynamic";
+
+// The globe is the heaviest client surface on this page: d3-geo, topojson,
+// polygon-clipping, four geometry fetches and the SVG path build. Deferring its
+// chunk lets the nation tables, headings and filters paint first instead of
+// waiting on the map's module graph.
+const WorldMapSVG = dynamic(() => import("./components/WorldMapSVG"), {
+  loading: () => <div className="aspect-[2/1] w-full animate-pulse rounded-xl bg-card" />,
+});
 import { NationsTable, PlannedNationsTable, type NationRow } from "./components/NationsTable";
 import type { NationWorldSnapshot } from "@/lib/world/nationWorldSnapshots";
 import type { CountryAccessMap } from "./page";

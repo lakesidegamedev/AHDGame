@@ -1,4 +1,5 @@
 import { migration as incomeTaxTiers } from "./entries/2026-10-16-income-tax-tiers";
+import { migration as backfillMechanicalLawTypes } from "./entries/2026-10-21-backfill-mechanical-law-types";
 import { migration as incomeTaxPolicyParity } from "./entries/2026-10-15-income-tax-policy-parity";
 import { migration as governmentContractBidding } from "./entries/2026-10-14-government-contract-bidding";
 import { migration as contestAccountHistory } from "./entries/2026-10-14-contest-account-history";
@@ -43,6 +44,9 @@ import type { Migration } from "./types";
  * safely separated during a deploy.
  */
 export const REQUIRED_STARTUP_MIGRATIONS: readonly Migration[] = [
+  // The Competition, Subsidiary Limits and Foreign Investment Acts must exist
+  // before the merger gate reads them, or every new country fails open.
+  backfillMechanicalLawTypes,
   // Ownership and achievement definitions must exist before the next reset or settlement.
   contestAccountHistory,
   governmentContractBidding,

@@ -854,6 +854,18 @@ describe("commodityPriceTurn", () => {
       const projected = Object.keys(budgetFind![1].projection as Record<string, unknown>);
       expect(projected.some((k) => k.startsWith("spending.byCategory."))).toBe(false);
     });
+
+    it("projects last turn's national prices, the foreign asks the sourcing pass quotes", async () => {
+      // Without them every foreign seller was quoted at the base price (#4524).
+      setupMocks();
+      await processCommodityPriceTurn(100);
+
+      const priceFind = mockFind.mock.calls.find(
+        (call) => call?.[1]?.projection && "scarcityImbalanceHistory" in call[1].projection
+      );
+      expect(priceFind, "existing commodity price read").toBeDefined();
+      expect(priceFind![1].projection).toMatchObject({ nationalPrices: 1 });
+    });
   });
 
   describe("sublinear advertising demand (demand audit step 7)", () => {

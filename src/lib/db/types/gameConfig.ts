@@ -2,6 +2,14 @@ import type { EconomicInterventionPlan } from "@/lib/economy/interventionGoverna
 
 export interface GameConfig {
   _id: string;
+  /**
+   * Which turn engine processes a new turn: "v1" (default when absent) or "v2".
+   * Read ONCE at turn start and stamped on the in-flight turn, so flipping this
+   * never changes the engine of a turn already in progress; rollback is setting
+   * it back to "v1" between turns. Unknown values fall back to "v1" with a
+   * warning on the turn log. See `src/simulation/engine/turnEngine.ts`.
+   */
+  turnEngineVersion?: "v1" | "v2";
   /** Enables product-project reads and output adapters; absent remains off. */
   productLinesV2Enabled?: boolean;
   /** Enables media product project reads and bounded quality/brand overlays; absent remains off. */
@@ -150,6 +158,93 @@ export interface GameConfig {
    * See `@/lib/constants/commandEconomy`.
    */
   commandEconomyEnabled?: boolean;
+  /**
+   * Management overhead, in margin points per doubling of a corporation's
+   * plant count above MANAGEMENT_OVERHEAD_FREE_PLANTS. 0 or absent = off.
+   */
+  managementOverheadPpPerDoubling?: number;
+  /**
+   * Funded producer market: >= 1 plans each plant's output from expected sales
+   * minus held stock, so inputs and staffing follow the plan. 0 or absent = off.
+   */
+  producerDemandPlanStage?: number;
+  /**
+   * Funded producer market: >= 1 re-clears household spend that was stranded in
+   * sold-out lanes onto the household's other lanes with unsold supply, once, at
+   * the same posted prices. 0 or absent = off.
+   */
+  producerSpilloverStage?: number;
+  /** With producerSpilloverStage on: share (0 to 1) of stranded spend that substitutes. Absent = 0.7. */
+  producerSpilloverShare?: number;
+  /**
+   * Funded producer market: >= 1 keeps a share of each public budget line's
+   * unfilled money in the public wallet for the next turn (instead of burning
+   * it at close), capped at four turns of the line's outlay. Support and grants
+   * are paid from what is left. 0 or absent = off.
+   */
+  producerPublicCarryStage?: number;
+  /** Share of a short line's unfilled budget kept when the stage is on. Default 0.5. */
+  producerPublicCarryShare?: number;
+  /**
+   * Funded producer market: >= 1 retires, with no cash, a share of the
+   * capacity of plants that have sold nothing for several turns. 0 or absent = off.
+   */
+  producerIdleRetireStage?: number;
+  /**
+   * With producerIdleRetireStage on: share (0 to 1) of the book value of retired
+   * capacity paid to the owner from the country's unspent public funding.
+   * Absent = 0.5. Never paid when the pool is empty.
+   */
+  decommissionGrantShare?: number;
+  /**
+   * Funded producer market: >= 1 lets a plant that sells almost nothing run
+   * and staff a 1% probe instead of 10%, and cuts upkeep on parked and idle
+   * capacity to a tenth. 0 or absent = off.
+   */
+  producerLowUseCostStage?: number;
+  /** Strength upkeep rollout stage (corporations/strengthUpkeep). 0 or absent = off. */
+  strengthUpkeepStage?: number;
+  /**
+   * State-owned corporations pay management overhead and sprawl on their
+   * country's total plants and sectors, scaled by this (0 to 1). 0 or absent = off.
+   */
+  soeSizeCostScale?: number;
+  /**
+   * Running dominance cost: share (0 to 1) of the dominance margin penalty a
+   * group pays every turn on plants worlds, measured on the control group's
+   * share and fading to zero as that share falls to the threshold. 0 or absent = off.
+   */
+  dominanceRunningCostScale?: number;
+  /**
+   * Honest balance sheets rollout stage: 1 counts bank construction loans and
+   * overdrawn cash as debt in credit and share price. 0 or absent = off.
+   */
+  honestBalanceSheetsStage?: number;
+  /**
+   * A player CEO raising their own salary above this share of trailing daily
+   * net income needs a shareholder vote. 0 or absent = off.
+   */
+  ceoSalaryVoteNetIncomeShare?: number;
+  /**
+   * Funded producer path: 1 charges management overhead as points of revenue on
+   * funded sectors, since the margin stack that carries it is bypassed there.
+   * State-owned size cost and running dominance cost follow their own scale
+   * knobs. 0 or absent = off.
+   */
+  fundedOverheadStage?: number;
+  /**
+   * Funded producer path: 1 drives sector headcount, and the regional labour
+   * demand that unemployment reads, from the funded plan's staffed workers
+   * instead of nameplate staffing. 0 or absent = off.
+   */
+  fundedHeadcountStage?: number;
+  /**
+   * Market Adjustment event: 1 records each country's loss share of funded
+   * capacity every turn and lets the event fire when it holds. 0 or absent = off.
+   */
+  marketAdjustmentStage?: number;
+  /** Group size costs rollout stage (1 = management overhead on the control group, 2 = commodity build toll, 3 = dumping guard, 4 = monopoly trigger, 5 = merger concentration on the control group). 0 or absent = off. */
+  groupSizeCostsStage?: number;
   /** Public media editorial stance and audience response rules. Missing means off. */
   mediaEditorialEnabled?: boolean;
   /** Paid media and entertainment operating-model catalog. Default off. */
@@ -454,6 +549,24 @@ export interface GameConfig {
    * See src/lib/market/marketRecoveryStages.ts. Unset or 0 changes nothing.
    */
   marketRecoveryStage?: number;
+  /**
+   * Run the unified producer market in memory each turn beside the live engine
+   * and record a per-industry comparison in `producerMarketShadows`. Telemetry
+   * only: moves no money and writes no sector or corporation.
+   */
+  producerMarketShadowEnabled?: boolean;
+  /**
+   * First turn the funded producer market settles live (funded-market cutover).
+   * Unset keeps the legacy engine. Requires the opening conversion marker on the
+   * previous turn; once a funded turn has run, the world cannot return to
+   * legacy. See src/lib/market/producerMarket/liveMode.ts.
+   */
+  producerMarketLiveFromTurn?: number;
+  /**
+   * Turn the one-time entertainment commodity removal migration ran
+   * (migrateEntertainmentRemoval). Present means later turns skip it.
+   */
+  entertainmentCommodityRemovedAtTurn?: number;
   /**
    * When true, outstanding build orders in sectors whose output is in deep
    * shortage have their remaining build time halved, once per order. See

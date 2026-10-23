@@ -1,6 +1,6 @@
 {
   "name": "a-house-divided",
-  "version": "1.16.0",
+  "version": "1.17.0",
   "private": true,
   "engines": {
     "node": ">=20.19.0 <22.0.0 || >=22.12.0 <23.0.0 || >=23.2.0"
@@ -141,7 +141,7 @@
     "react-simple-maps": "^5.0.5",
     "recharts": "^3.10.1",
     "remark-gfm": "^4.0.1",
-    "sharp": "^0.35.4",
+    "sharp": "^0.35.5",
     "topojson-client": "^3.1.0",
     "tsx": "^4.23.15",
     "westminster-svg": "^2.0.0",
@@ -151,14 +151,14 @@
     "d3-color": ">=3.1.0",
     "picomatch": ">=4.0.0",
     "yaml": ">=2.8.3",
-    "shell-quote": ">=1.9.0",
+    "shell-quote": ">=1.11.0",
     "postcss": ">=8.5.18",
     "@opentelemetry/core": ">=2.8.0",
     "js-yaml": "^4.3.2",
     "brace-expansion@1": "1.1.21",
     "brace-expansion@5": "^5.0.12",
     "fast-uri": "^3.1.7",
-    "sharp": "^0.35.4",
+    "sharp": "^0.35.5",
     "@babel/core": "^7.29.7",
     "vite": "$vite",
     "braces": "$braces"
@@ -182,15 +182,15 @@
     "eslint": "^10.12.0",
     "eslint-config-next": "16.3.8",
     "eslint-config-prettier": "^10.1.8",
-    "happy-dom": "^20.11.6",
+    "happy-dom": "^21.0.1",
     "husky": "^9.1.7",
-    "knip": "^6.39.0",
+    "knip": "^6.41.0",
     "lint-staged": "^17.6.0",
-    "prettier": "^3.9.9",
+    "prettier": "^3.9.10",
     "tailwindcss": "^4",
     "topojson-server": "^3.0.1",
     "typescript": "6.0.2",
-    "vite": "^8.3.0",
+    "vite": "^8.3.4",
     "vitest": "^5.0.1"
   },
   "license": "PolyForm-Noncommercial-1.0.0"

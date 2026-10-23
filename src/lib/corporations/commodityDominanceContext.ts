@@ -12,11 +12,7 @@ import {
   COMMODITY_LABELS,
   type CommodityType,
 } from "@/lib/constants/commodities";
-import {
-  applyPlannedEconomyOutputMix,
-  getEffectiveStrategyRatesForOperatingModel,
-} from "@/lib/constants/sectorStrategies";
-import { isPlannedEconomy } from "@/lib/constants/commandEconomy";
+import { getEffectiveStrategyRatesForOperatingModel } from "@/lib/constants/sectorStrategies";
 import { undeliveredUnits } from "@/lib/corporations/buildDelivery";
 import type { CommodityTollModel } from "@/lib/corporations/rules/commodityDominanceRamp";
 import {
@@ -25,6 +21,49 @@ import {
   type CommodityDominanceSector,
 } from "@/lib/corporations/rules/commodityDominance";
 import { computeSupplierCommodityCapacityUnits } from "@/lib/corporations/supplyAgreementCapacity";
+import {
+  controlGroupMemberIds,
+  controlGroupRootByCorpId,
+} from "@/lib/corporations/groups/controlGroups";
+
+/** gameConfig.groupSizeCostsStage at which the commodity toll reads the whole control group. */
+export const GROUP_DOMINANCE_TOLL_STAGE = 2;
+
+export const FIRM_SECTOR_PROJECTION = {
+  sectorType: 1,
+  industryModel: 1,
+  mediaDiscriminator: 1,
+  capitalStock: 1,
+  strategyId: 1,
+  transitionFromStrategyId: 1,
+  transitionStartTurn: 1,
+  retoolRescaleApplied: 1,
+  activeCapacityPercent: 1,
+  productionPolicyLevel: 1,
+  countryId: 1,
+  stateId: 1,
+  buildQueue: 1,
+} as const;
+
+/**
+ * Ids of the corporations whose capacity counts toward `corporationId`'s
+ * toll: its whole control group once the group stage is on, else just itself.
+ */
+async function dominanceCorporationIds(
+  db: Db,
+  corporationId: Corporation["_id"],
+  groupSizeCostsStage: number
+): Promise<Corporation["_id"][]> {
+  if (groupSizeCostsStage < GROUP_DOMINANCE_TOLL_STAGE) return [corporationId];
+  const corps = await db
+    .collection<Corporation>("corporations")
+    .find({}, { projection: { shareholders: 1, totalShares: 1, superShareMultiplier: 1 } })
+    .toArray();
+  const roots = controlGroupRootByCorpId(corps);
+  const memberIds = new Set(controlGroupMemberIds(roots, corporationId.toString()));
+  const members = corps.filter((c) => memberIds.has(c._id.toString())).map((c) => c._id);
+  return members.length > 0 ? members : [corporationId];
+}
 
 /** Everything needed to price the commodity toll for one sector, any order size. */
 export interface CommodityDominanceContext {
@@ -83,7 +122,7 @@ export function toDominanceSector(row: FirmSectorRow, turn: number): CommodityDo
   };
 }
 
-/** Commodities a sector's output mix contains, honouring the planned-economy remap. */
+/** Commodities a sector's output mix contains. */
 export function sectorOutputCommodities(
   sector: Pick<
     CommodityDominanceSector,
@@ -93,11 +132,8 @@ export function sectorOutputCommodities(
     | "strategyId"
     | "transitionFromStrategyId"
     | "transitionStartTurn"
-    | "countryId"
   >,
-  turn: number,
-  currentYear: number,
-  commandEconomyEnabled: boolean
+  turn: number
 ): CommodityType[] {
   const rates = getEffectiveStrategyRatesForOperatingModel(
     sector.sectorType,
@@ -108,12 +144,7 @@ export function sectorOutputCommodities(
     sector.industryModel,
     sector.mediaDiscriminator
   );
-  const mix = applyPlannedEconomyOutputMix(
-    sector.sectorType,
-    rates.supply ?? {},
-    isPlannedEconomy(sector.countryId, currentYear, commandEconomyEnabled),
-    sector.mediaDiscriminator
-  );
+  const mix = rates.supply ?? {};
   return (Object.keys(mix) as CommodityType[]).filter(
     (c) => (mix[c] ?? 0) > 0 && COMMODITY_BASE_PRICES[c] > 0
   );
@@ -134,44 +165,26 @@ export async function loadCommodityDominanceContext(
   }
 ): Promise<CommodityDominanceContext | null> {
   try {
-    const [rows, config] = await Promise.all([
-      db
-        .collection<CorporateSector>("corporateSectors")
-        .find(
-          { corporationId: args.corporation._id },
-          {
-            projection: {
-              sectorType: 1,
-              industryModel: 1,
-              mediaDiscriminator: 1,
-              capitalStock: 1,
-              strategyId: 1,
-              transitionFromStrategyId: 1,
-              transitionStartTurn: 1,
-              retoolRescaleApplied: 1,
-              activeCapacityPercent: 1,
-              productionPolicyLevel: 1,
-              countryId: 1,
-              stateId: 1,
-              buildQueue: 1,
-            },
-          }
-        )
-        .toArray(),
-      db
-        .collection<{ commandEconomyEnabled?: boolean }>("gameConfig")
-        .findOne({ _id: "default" as never }, { projection: { commandEconomyEnabled: 1 } }),
-    ]);
+    const config = await db
+      .collection<{ commandEconomyEnabled?: boolean; groupSizeCostsStage?: number }>("gameConfig")
+      .findOne(
+        { _id: "default" as never },
+        { projection: { commandEconomyEnabled: 1, groupSizeCostsStage: 1 } }
+      );
+    const corporationIds = await dominanceCorporationIds(
+      db,
+      args.corporation._id,
+      typeof config?.groupSizeCostsStage === "number" ? config.groupSizeCostsStage : 0
+    );
+    const rows = await db
+      .collection<CorporateSector>("corporateSectors")
+      .find({ corporationId: { $in: corporationIds } }, { projection: FIRM_SECTOR_PROJECTION })
+      .toArray();
     const commandEconomyEnabled = config?.commandEconomyEnabled === true;
     const sectors = (rows as FirmSectorRow[]).map((r) => toDominanceSector(r, args.turn));
     const target = sectors.find((s) => String(s._id) === String(args.sector._id));
     if (!target) return null;
-    const commodities = sectorOutputCommodities(
-      target,
-      args.turn,
-      args.currentYear,
-      commandEconomyEnabled
-    );
+    const commodities = sectorOutputCommodities(target, args.turn);
     if (commodities.length === 0) return null;
     const priceDocs = await db
       .collection<CommodityPrice>("commodityPrices")

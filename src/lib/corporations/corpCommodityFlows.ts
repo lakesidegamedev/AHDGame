@@ -40,7 +40,6 @@ import {
 import type { CommodityType, ExtractableResource } from "@/lib/constants/commodities";
 import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
 import {
-  applyPlannedEconomyOutputMix,
   getEffectiveStrategyRatesForOperatingModel,
   plannedEconomyMediaSupplyFactor,
   getOperatingSectorType,
@@ -293,12 +292,7 @@ export function computeSectorCommodityUnits(
   // and without it the corp surfaces invent output it could never have made.
   const supplyRates = applyExtractionResourceCapacityToSupply(
     operatingType,
-    applyPlannedEconomyOutputMix(
-      sector.sectorType,
-      ledgerSupplyRates,
-      plannedEconomy,
-      sector.mediaDiscriminator
-    ),
+    ledgerSupplyRates,
     context.stateResourcesByState?.get(sector.stateId ?? "")
   );
 

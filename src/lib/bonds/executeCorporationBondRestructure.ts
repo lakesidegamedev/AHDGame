@@ -23,6 +23,7 @@ import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { logWireEvent, wireHeadlineCorpRestructured } from "@/lib/wireEvent";
 import { badRequest } from "@/lib/api/errors";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
+import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 
 export interface CorporationRestructureResult {
   /** Defaulted principal repaid in full, in ₳. */
@@ -300,7 +301,7 @@ export async function executeCorporationBondRestructure(
     const creditorIds = [...corpIncs.keys()].map((idStr) => new ObjectId(idStr));
     const creditorDocs = await db
       .collection<Corporation>("corporations")
-      .find({ _id: { $in: creditorIds } })
+      .find({ _id: { $in: creditorIds } }, { projection: SETTLEMENT_HISTORY_EXCLUDED })
       .toArray();
     const resolvedCreditors = creditorDocs.map((creditor) => {
       const fxRate = fxRateForCorpFromMap(creditor, fxByCurrency);

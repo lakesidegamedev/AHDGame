@@ -1,8 +1,8 @@
+import { withAdminRoute } from "@/lib/api/withAdminAuth";
 import { NextResponse } from "next/server";
-import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { errorResponse } from "@/lib/api/errors";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseJsonBody } from "@/lib/api/validate";
 import { z } from "zod";
 import type { User } from "@/lib/db/types";
@@ -26,50 +26,43 @@ const schema = z.object({
 // Grant sparingly on production: waiving it hands back the exact exploit the
 // cooldown exists to prevent. The common legitimate case is a freshly reset
 // sandbox, where the 168-turn cooldown outlives the test world.
-export async function POST(request: Request) {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
-
-    const parsed = await parseJsonBody(request, schema);
-    if (!parsed.success) {
-      return errorResponse(parsed.status, parsed.error);
-    }
-
-    if (!ObjectId.isValid(parsed.data.userId)) {
-      return errorResponse(400, "Invalid user ID");
-    }
-
-    const db = await getDb();
-    const userId = new ObjectId(parsed.data.userId);
-    const user = await db.collection<User>("users").findOne({ _id: userId });
-
-    if (!user) {
-      return errorResponse(404, "User not found");
-    }
-
-    if (user.lastCorporationFoundedTurn == null) {
-      return NextResponse.json({ message: "No founding cooldown was active" });
-    }
-
-    await db
-      .collection<User>("users")
-      .updateOne({ _id: userId }, { $unset: { lastCorporationFoundedTurn: "" } });
-
-    await db.collection("adminLogs").insertOne({
-      category: "system",
-      action: "founding_cooldown_reset",
-      username: user.username,
-      adminUsername: auth.admin.username,
-      details: `Cleared corporation-founding cooldown for ${user.username} (was set at turn ${user.lastCorporationFoundedTurn}).`,
-      createdAt: new Date(),
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: `Corporation-founding cooldown cleared for ${user.username}`,
-    });
-  } catch (error) {
-    return handleRouteError(error);
+export const POST = withAdminRoute(async (auth, request: Request) => {
+  const parsed = await parseJsonBody(request, schema);
+  if (!parsed.success) {
+    return errorResponse(parsed.status, parsed.error);
   }
-}
+
+  if (!ObjectId.isValid(parsed.data.userId)) {
+    return errorResponse(400, "Invalid user ID");
+  }
+
+  const db = await getDb();
+  const userId = new ObjectId(parsed.data.userId);
+  const user = await db.collection<User>("users").findOne({ _id: userId });
+
+  if (!user) {
+    return errorResponse(404, "User not found");
+  }
+
+  if (user.lastCorporationFoundedTurn == null) {
+    return NextResponse.json({ message: "No founding cooldown was active" });
+  }
+
+  await db
+    .collection<User>("users")
+    .updateOne({ _id: userId }, { $unset: { lastCorporationFoundedTurn: "" } });
+
+  await db.collection("adminLogs").insertOne({
+    category: "system",
+    action: "founding_cooldown_reset",
+    username: user.username,
+    adminUsername: auth.admin.username,
+    details: `Cleared corporation-founding cooldown for ${user.username} (was set at turn ${user.lastCorporationFoundedTurn}).`,
+    createdAt: new Date(),
+  });
+
+  return NextResponse.json({
+    success: true,
+    message: `Corporation-founding cooldown cleared for ${user.username}`,
+  });
+});

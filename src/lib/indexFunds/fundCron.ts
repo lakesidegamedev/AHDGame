@@ -115,6 +115,12 @@ export interface IndexFundCronOptions {
   currentTurn?: number;
   /** Test seam: claim budget for the queued-redemption pass. */
   queuedRedemptionClaimsPerPass?: number;
+  /**
+   * v2: hand the bid loop the turn's thresholds and cadence, which the cron
+   * already loaded and which the bid path was re-reading per bid. Pure config;
+   * the escrow, the order and the ledger row are unchanged.
+   */
+  reuseRebalanceReads?: boolean;
 }
 
 export async function runIndexFundCron(
@@ -246,14 +252,13 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
   const initialBondPrincipalByFundId = await sumFundBondHoldingsByFundId(db, funds, exchangeRates);
   // #992 tranche 6: one thresholds read for every bond-reserve purchase row
   // this turn; threaded through each deploy so N funds share it.
-  const [bondDeployThresholds, bondDeployTurnLengthMinutes, bondSettleInTransaction] =
-    await Promise.all([
-      loadTxThresholds(db),
-      loadTurnLengthMinutes(db),
-      // A replica set settles each fund's bond pass in one transaction; a
-      // standalone server (singleplayer, sandboxes) keeps per-purchase writes.
-      assertTransactionSupportAtBoot().catch(() => false),
-    ]);
+  const [bondDeployThresholds, turnLengthMinutes, bondSettleInTransaction] = await Promise.all([
+    loadTxThresholds(db),
+    loadTurnLengthMinutes(db),
+    // A replica set settles each fund's bond pass in one transaction; a
+    // standalone server (singleplayer, sandboxes) keeps per-purchase writes.
+    assertTransactionSupportAtBoot().catch(() => false),
+  ]);
 
   // Pass 1a: mark holdings and recompute NAV. Each task only writes its own
   // fund document, so bounded concurrency is safe and removes the serial
@@ -403,7 +408,7 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
             liquidityTargetEnabled: bondLiquidityEnabled,
             turn: currentTurn,
             thresholds: bondDeployThresholds,
-            turnLengthMinutes: bondDeployTurnLengthMinutes,
+            turnLengthMinutes,
             settleInTransaction: bondSettleInTransaction,
           }
         );
@@ -445,12 +450,25 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
 
   mark("pass1b-bonds");
   // Pass 2: recompute target weights before float absorption so buys use the
-  // current basket. Runs every financial day (24 turns) or on first init.
-  funds = (await listActiveFunds(db)).filter(
-    (fund) =>
-      navReadyFundIds.some((id) => id.toString() === fund._id.toString()) &&
-      !queuedUnitsByFundId.has(fund._id.toString())
-  );
+  // current basket. Runs on each fund's turn of the financial day, on first
+  // init, or on the first turn it can after missing that turn.
+  const nowMs = Date.now();
+  const rebalanceDue = (fund: IndexFund) =>
+    fund.kind !== "bond" &&
+    shouldRebalanceIndexFundConstituents(
+      currentTurn,
+      fund.targetConstituents.length,
+      fund._id.toString(),
+      { lastRebalancedAt: fund.lastRebalancedAt, nowMs, turnLengthMinutes }
+    );
+  funds = [];
+  for (const fund of await listActiveFunds(db)) {
+    if (!navReadyFundIds.some((id) => id.toString() === fund._id.toString())) continue;
+    if (!queuedUnitsByFundId.has(fund._id.toString())) funds.push(fund);
+    // Queued redemptions hold the fund out of trading; say so on the turn it was due.
+    else if (fund.targetConstituents.length > 0 && rebalanceDue(fund))
+      result.errors.push(`Fund ${fund.slug}: rebalance deferred, queued redemptions pending`);
+  }
   const rebalancedFundIds = new Set<string>();
 
   // A7 part 2: settle every petition whose deadline has passed BEFORE the
@@ -467,17 +485,8 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
   // One bulk insert for every fund's rebalance record instead of one per fund.
   const rebalanceRecords: Omit<IndexFundTransaction, "_id">[] = [];
   for (const fund of funds) {
-    // Bond funds hold no equities: nothing to select or rebalance here.
-    if (fund.kind === "bond") continue;
-    if (
-      !shouldRebalanceIndexFundConstituents(
-        currentTurn,
-        fund.targetConstituents.length,
-        fund._id.toString()
-      )
-    ) {
-      continue;
-    }
+    // Bond funds hold no equities, so they are never due.
+    if (!rebalanceDue(fund)) continue;
 
     try {
       const outcome = await rebalanceConstituents(
@@ -556,6 +565,12 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
           {
             audit: sharedAudit,
             bondPrincipalAnchor: bondPrincipalByFundId?.get(fund._id.toString()),
+            ...(options?.reuseRebalanceReads
+              ? {
+                  txThresholds: bondDeployThresholds,
+                  turnLengthMinutes,
+                }
+              : {}),
           }
         );
         result.floatPurchases += r.buys;
@@ -737,7 +752,7 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
 
   try {
     const { advanceWindDowns } = await import("@/lib/indexFunds/sponsorship/windUp");
-    const windDown = await advanceWindDowns(db, currentTurn);
+    const windDown = await advanceWindDowns(db, currentTurn, { forexEnabled });
     result.windDownsAdvanced = windDown.fundsProcessed;
     result.windDownsCompleted = windDown.fundsCompleted;
     if (windDown.errors.length > 0) result.errors.push(...windDown.errors);

@@ -2,6 +2,7 @@ import { closingFinancialSnapshotsPhase } from "./stateEffectsPhase";
 import { processPlayerIncomeTax } from "@/lib/budget/playerIncomeTax";
 import { refreshIncomeTaxShares } from "@/lib/budget/incomeTaxShares";
 import { expireGovernmentTenders } from "@/lib/governmentContracts/reservations";
+import { refreshOpenDefenceTenderMaxima } from "@/lib/governmentContracts/commands";
 import { getEraContext } from "@/lib/era/context";
 import { processStatePartyElections } from "@/lib/statePartyElections";
 import { processNationalPartyElections } from "@/lib/nationalPartyElections";
@@ -92,6 +93,7 @@ import { processColdWarTensionTurn } from "@/lib/turn/coldWarTensionTurn";
 import { processAutoSectorSeed } from "@/lib/turn/autoSectorSeed";
 import { processExtractionAutoStrategy } from "@/lib/turn/extractionAutoStrategy";
 import { processCorporationTurn } from "@/lib/turn/corporationTurn";
+import { processOffTypeHandover } from "@/lib/corporations/offTypeHandover";
 import { processUnionsTurn } from "@/lib/turn/unions";
 import { processNppUnionBehavior } from "@/lib/turn/unions/nppUnionBehavior";
 import { processDecolonizationTurn } from "@/lib/turn/decolonizationTurn";
@@ -148,6 +150,10 @@ import { runAutoReelectionEntry } from "@/lib/turn/autoReelectionEntry";
 import { withdrawInactiveCandidates } from "@/lib/turn/withdrawInactiveCandidates";
 import { stateEffectsAndNationalAggregationPhase } from "./stateEffectsPhase";
 import { runHuAssemblyReform } from "@/lib/turn/huAssemblyReform";
+import { selectPhaseImplementation } from "@/simulation/engine/turnEngine";
+import { processCorporationTurnV2 } from "@/simulation/engine/v2/corporationTurn";
+import { processBankingTurnV2 } from "@/simulation/engine/v2/bankingTurn";
+import { runIndexFundCronV2 } from "@/simulation/engine/v2/indexFunds";
 import type { TurnPhaseAdapter } from "@/simulation/engine/types";
 
 export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
@@ -284,7 +290,13 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
           ),
           corpActionsPaused
             ? Promise.resolve(null)
-            : runtime.runPhase("corporationTurn", () => processCorporationTurn(newTurn)),
+            : runtime.runPhase(
+                "corporationTurn",
+                selectPhaseImplementation(context.engine, "corporationTurn", {
+                  v1: () => processCorporationTurn(newTurn),
+                  v2: () => processCorporationTurnV2(newTurn),
+                })
+              ),
         ]);
 
         if (corpActionsPaused) {
@@ -300,6 +312,11 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
           // nppAutonomyAtLeast(v2); a no-op below the comingle tier.
           await runtime.runPhase("nppCorporateAttacks", () =>
             runNppCorporateAttacksPhase(gameNow, newTurn)
+          );
+          // Market recovery stage 5: AI companies hand one off-type plant each
+          // to a same-type AI company. No-op below stage 5.
+          await runtime.runPhase("offTypeHandover", () =>
+            processOffTypeHandover(context.db, newTurn)
           );
         }
 
@@ -435,8 +452,12 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
 
         // Private-bank deposits/loans - AFTER savingsInterestTurn so CB-held
         // accounts mint first and bank-held accounts are paid from bank cash here.
-        const bankingResult = await runtime.runPhase("bankingTurn", () =>
-          processBankingTurn(context.db, newTurn)
+        const bankingResult = await runtime.runPhase(
+          "bankingTurn",
+          selectPhaseImplementation(context.engine, "bankingTurn", {
+            v1: () => processBankingTurn(context.db, newTurn),
+            v2: () => processBankingTurnV2(context.db, newTurn),
+          })
         );
         if (bankingResult) {
           phaseResults.bankingTurn = {
@@ -631,6 +652,10 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
 
         await runtime.runPhase("governmentContractExpiry", () =>
           expireGovernmentTenders(context.db, newTurn)
+        );
+
+        await runtime.runPhase("governmentContractMaximaRefresh", () =>
+          refreshOpenDefenceTenderMaxima(context.db, context.realNow)
         );
 
         const lineOfCreditResult = await runtime.runPhase("lineOfCreditTurn", async () => {
@@ -1610,8 +1635,12 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         // with zero telemetry trace and zero Sentry slow-phase reporting in
         // production either. Wrapping it fixes both: visibility here, AND
         // production's existing >30s slow-phase alerting now covers this phase too.
-        const result = await runtime.runPhase("indexFunds", () =>
-          runIndexFundCron(db, { currentTurn: newTurn })
+        const result = await runtime.runPhase(
+          "indexFunds",
+          selectPhaseImplementation(context.engine, "indexFunds", {
+            v1: () => runIndexFundCron(db, { currentTurn: newTurn }),
+            v2: () => runIndexFundCronV2(db, { currentTurn: newTurn }),
+          })
         );
         if (!result) return; // runPhase already logged/warned on failure or timeout
 

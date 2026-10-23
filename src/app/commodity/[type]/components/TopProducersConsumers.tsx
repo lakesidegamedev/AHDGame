@@ -148,6 +148,8 @@ export default function TopProducersConsumers({
   )
     return null;
 
+  // The list holds every producer in this market, so shares are exact.
+  const producerTotalUnits = topProducers.reduce((sum, c) => sum + Math.max(0, c.units), 0);
   const pagedProducers = topProducers.slice(
     (producerPage - 1) * PAGE_SIZE,
     producerPage * PAGE_SIZE
@@ -164,8 +166,8 @@ export default function TopProducersConsumers({
           <h2 className="text-lg font-bold text-foreground mb-1">Top producers</h2>
           <p className="text-xs text-muted mb-3">
             {extractionBasis
-              ? "Largest corporations by production capacity, not dug output"
-              : "Largest corporations by output volume"}
+              ? "Largest corporations by production capacity, not dug output, with their share of the market"
+              : "Largest corporations by output volume, with their share of the market"}
             {marketLabel ? ` in the ${marketLabel.toLowerCase()}` : ""}
           </p>
           <div className="space-y-2">
@@ -192,6 +194,11 @@ export default function TopProducersConsumers({
                 </div>
                 <span className="text-success font-medium tabular-nums shrink-0 ml-2">
                   {formatUnits(c.units, unit)}
+                  {producerTotalUnits > 0 && (
+                    <span className="ml-1.5 text-xs text-muted">
+                      {Math.round((Math.max(0, c.units) / producerTotalUnits) * 100)}%
+                    </span>
+                  )}
                 </span>
               </Link>
             ))}

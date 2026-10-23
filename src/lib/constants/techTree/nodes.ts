@@ -62,18 +62,18 @@ export interface NodeSpec {
   cashRevenueFraction?: number;
 }
 
-/** rdScore cost per decade tier. First six decades are ~1/6 of v1 (40/55/70/85/100/120); the last four continue the curve. */
+/** rdScore cost per decade tier, 20% below the v2 curve (6/8/10/14/16/22/30/38/48/60). */
 const DECADE_COST: Record<string, number> = {
-  "1940": 6,
-  "1950": 8,
-  "1960": 10,
-  "1970": 14,
-  "1979": 16,
-  "1989": 22,
-  "1999": 30,
-  "2009": 38,
-  "2019": 48,
-  "2029": 60,
+  "1940": 5,
+  "1950": 6,
+  "1960": 8,
+  "1970": 11,
+  "1979": 13,
+  "1989": 18,
+  "1999": 24,
+  "2009": 30,
+  "2019": 38,
+  "2029": 48,
 };
 
 /**
@@ -117,7 +117,7 @@ const CORPORATE: Record<string, NodeSpec[]> = {
     {
       name: "Assembly Line Management",
       description: "Mass-production scheduling disciplines cut per-unit overhead.",
-      effects: [{ kind: "marginBonus", pp: 1 }],
+      effects: [{ kind: "plantOutput", pct: 0.01 }],
     },
     {
       name: "Wartime Supply Chain",
@@ -132,7 +132,7 @@ const CORPORATE: Record<string, NodeSpec[]> = {
     {
       name: "Standard Cost Accounting",
       description: "Factory cost standards sharpen pricing and budget discipline.",
-      effects: [{ kind: "marginBonus", pp: 0.5 }],
+      effects: [{ kind: "plantOutput", pct: 0.005 }],
     },
     {
       name: "Labor Efficiency Programs",
@@ -144,7 +144,7 @@ const CORPORATE: Record<string, NodeSpec[]> = {
     {
       name: "Management by Objectives",
       description: "Goal-setting frameworks align departments to financial targets.",
-      effects: [{ kind: "marginBonus", pp: 1 }],
+      effects: [{ kind: "plantOutput", pct: 0.01 }],
     },
     {
       name: "Batch Data Processing",
@@ -159,7 +159,7 @@ const CORPORATE: Record<string, NodeSpec[]> = {
     {
       name: "Operations Research",
       description: "Quantitative methods optimize scheduling and allocation.",
-      effects: [{ kind: "marginBonus", pp: 1 }],
+      effects: [{ kind: "plantOutput", pct: 0.01 }],
     },
     {
       name: "Corporate Organizational Design",
@@ -171,7 +171,7 @@ const CORPORATE: Record<string, NodeSpec[]> = {
     {
       name: "Long-Range Corporate Planning",
       description: "Five-year plans align investment with strategy.",
-      effects: [{ kind: "marginBonus", pp: 1 }],
+      effects: [{ kind: "plantOutput", pct: 0.01 }],
     },
     {
       name: "IBM Mainframe Adoption",
@@ -186,7 +186,7 @@ const CORPORATE: Record<string, NodeSpec[]> = {
     {
       name: "Divisional P&L Accounting",
       description: "Decentralized profit centers sharpen operating discipline.",
-      effects: [{ kind: "marginBonus", pp: 1 }],
+      effects: [{ kind: "plantOutput", pct: 0.01 }],
     },
     {
       name: "National Distribution Networks",
@@ -203,7 +203,7 @@ const CORPORATE: Record<string, NodeSpec[]> = {
     {
       name: "Minicomputer Administration",
       description: "Departmental minis automate mid-tier data and reporting tasks.",
-      effects: [{ kind: "marginBonus", pp: 1 }],
+      effects: [{ kind: "plantOutput", pct: 0.01 }],
     },
     {
       name: "Mass Market Advertising",
@@ -213,7 +213,7 @@ const CORPORATE: Record<string, NodeSpec[]> = {
     {
       name: "Portfolio Management Theory",
       description: "Diversification and risk models sharpen capital allocation.",
-      effects: [{ kind: "marginBonus", pp: 1 }],
+      effects: [{ kind: "plantOutput", pct: 0.01 }],
     },
     {
       name: "Containerization Adoption",
@@ -225,7 +225,7 @@ const CORPORATE: Record<string, NodeSpec[]> = {
     {
       name: "Mainframe Accounting",
       description: "Batch back-office automation trims clerical overhead.",
-      effects: [{ kind: "marginBonus", pp: 1 }],
+      effects: [{ kind: "plantOutput", pct: 0.01 }],
     },
     {
       name: "Inventory Control Systems",
@@ -240,7 +240,7 @@ const CORPORATE: Record<string, NodeSpec[]> = {
     {
       name: "Time-and-Motion Management",
       description: "Scientific scheduling lifts labor productivity.",
-      effects: [{ kind: "marginBonus", pp: 1 }],
+      effects: [{ kind: "plantOutput", pct: 0.01 }],
     },
     {
       name: "Centralized Procurement",
@@ -257,7 +257,7 @@ const CORPORATE: Record<string, NodeSpec[]> = {
     {
       name: "Spreadsheet Financial Modeling",
       description: "PC-based modeling tightens budgeting and pricing.",
-      effects: [{ kind: "marginBonus", pp: 1.5 }],
+      effects: [{ kind: "plantOutput", pct: 0.015 }],
     },
     {
       name: "EDI Supply Links",
@@ -273,7 +273,7 @@ const CORPORATE: Record<string, NodeSpec[]> = {
       name: "ERP Foundations",
       description: "Integrated resource planning reduces friction.",
       effects: [
-        { kind: "marginBonus", pp: 1 },
+        { kind: "plantOutput", pct: 0.01 },
         { kind: "growthCostReduction", pct: 0.03 },
       ],
     },
@@ -292,7 +292,7 @@ const CORPORATE: Record<string, NodeSpec[]> = {
     {
       name: "Business Intelligence",
       description: "Data warehousing sharpens operating decisions.",
-      effects: [{ kind: "marginBonus", pp: 2 }],
+      effects: [{ kind: "plantOutput", pct: 0.02 }],
     },
     {
       name: "VoIP & Remote Offices",
@@ -303,7 +303,7 @@ const CORPORATE: Record<string, NodeSpec[]> = {
       name: "CRM Platforms",
       description: "Customer relationship management lifts retention.",
       effects: [
-        { kind: "marginBonus", pp: 1.5 },
+        { kind: "plantOutput", pct: 0.015 },
         { kind: "marketingStrength", flat: 20 },
       ],
     },
@@ -317,7 +317,7 @@ const CORPORATE: Record<string, NodeSpec[]> = {
     {
       name: "Mobile Workforce",
       description: "Smartphone-enabled staff raise field productivity.",
-      effects: [{ kind: "marginBonus", pp: 1.5 }],
+      effects: [{ kind: "plantOutput", pct: 0.015 }],
     },
     {
       name: "Social Media Marketing",
@@ -327,7 +327,7 @@ const CORPORATE: Record<string, NodeSpec[]> = {
     {
       name: "Big Data Analytics",
       description: "Large-scale analytics squeeze out inefficiency.",
-      effects: [{ kind: "marginBonus", pp: 2 }],
+      effects: [{ kind: "plantOutput", pct: 0.02 }],
     },
     {
       name: "SaaS Operations",
@@ -340,7 +340,7 @@ const CORPORATE: Record<string, NodeSpec[]> = {
       name: "Robotic Process Automation",
       description: "Bots handle repetitive back-office work.",
       effects: [
-        { kind: "marginBonus", pp: 2 },
+        { kind: "plantOutput", pct: 0.02 },
         { kind: "growthCostReduction", pct: 0.04 },
         { kind: "laborCostReduction", pct: 0.1 },
       ],
@@ -348,7 +348,7 @@ const CORPORATE: Record<string, NodeSpec[]> = {
     {
       name: "Predictive Analytics",
       description: "Forecasting models optimize pricing and supply.",
-      effects: [{ kind: "marginBonus", pp: 2.5 }],
+      effects: [{ kind: "plantOutput", pct: 0.025 }],
     },
     {
       name: "Programmatic Advertising",
@@ -363,7 +363,7 @@ const CORPORATE: Record<string, NodeSpec[]> = {
     {
       name: "Zero-Trust Security",
       description: "Modern security averts costly breaches.",
-      effects: [{ kind: "marginBonus", pp: 1.5 }],
+      effects: [{ kind: "plantOutput", pct: 0.015 }],
     },
   ],
   "2029": [
@@ -371,7 +371,7 @@ const CORPORATE: Record<string, NodeSpec[]> = {
       name: "Generative AI Back Office",
       description: "AI runs large swaths of operations autonomously.",
       effects: [
-        { kind: "marginBonus", pp: 3 },
+        { kind: "plantOutput", pct: 0.03 },
         { kind: "growthCostReduction", pct: 0.06 },
       ],
     },
@@ -388,7 +388,7 @@ const CORPORATE: Record<string, NodeSpec[]> = {
     {
       name: "Quantum-Assisted Optimization",
       description: "Quantum methods crack hard logistics problems.",
-      effects: [{ kind: "marginBonus", pp: 3 }],
+      effects: [{ kind: "plantOutput", pct: 0.03 }],
     },
     {
       name: "Self-Optimizing Supply Chain",
@@ -409,7 +409,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Wartime Energy Contracts",
         description: "Defense-priority supply contracts guarantee output margins.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "Rural Electrification",
@@ -423,7 +423,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         description: "Early reactor expertise enables high-output nuclear generation.",
         effects: [
           { kind: "unlockStrategy", strategyId: "nuclear" },
-          { kind: "marginBonus", pp: 1 },
+          { kind: "inputEfficiency", pct: 0.03 },
         ],
       },
       {
@@ -436,7 +436,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Natural Gas Grid",
         description: "Interstate gas pipelines diversify the fuel mix.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "LNG Technology",
@@ -448,7 +448,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Offshore Continental Shelf",
         description: "OCS drilling programs expand domestic reserves.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "OPEC Shock Response",
@@ -460,7 +460,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Enhanced Oil Recovery",
         description: "Secondary recovery wrings more from existing fields.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Refinery Optimization",
@@ -475,14 +475,14 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Coal Plant Scaling",
         description: "Baseload coal capacity raises steady output.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "Nuclear Program",
         description: "Reactor expertise opens high-output nuclear generation.",
         effects: [
           { kind: "unlockStrategy", strategyId: "nuclear" },
-          { kind: "marginBonus", pp: 1 },
+          { kind: "inputEfficiency", pct: 0.03 },
         ],
       },
     ],
@@ -491,14 +491,14 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Combined-Cycle Turbines",
         description: "Gas-and-steam plants raise generating output per plant.",
         effects: [
-          { kind: "marginBonus", pp: 1.5 },
+          { kind: "inputEfficiency", pct: 0.045 },
           { kind: "outputRate", commodity: "energy", pct: 0.1 },
         ],
       },
       {
         name: "Offshore Platforms",
         description: "Offshore rigs open high-yield reserves.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
       {
         name: "Grid Interconnects",
@@ -508,26 +508,26 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Natural Gas Shift",
         description: "Cleaner gas generation hedges fuel cost.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "Emissions Scrubbers",
         description: "Pollution controls cut regulatory exposure.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
     ],
     "1999": [
       {
         name: "Deepwater Drilling",
         description: "Deep offshore wells reach premium reserves.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.09 }],
       },
       {
         name: "LNG Export",
         description: "Liquefied gas opens global markets.",
         effects: [
           { kind: "marketingStrength", flat: 30 },
-          { kind: "marginBonus", pp: 1 },
+          { kind: "inputEfficiency", pct: 0.03 },
         ],
       },
       {
@@ -535,7 +535,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         description: "Early solar and wind capability diversifies output.",
         effects: [
           { kind: "unlockStrategy", strategyId: "renewables" },
-          { kind: "marginBonus", pp: 1 },
+          { kind: "inputEfficiency", pct: 0.03 },
         ],
       },
       {
@@ -555,7 +555,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         description: "Horizontal fracking unlocks the high-output Hydraulic Fracturing method.",
         effects: [
           { kind: "unlockStrategy", strategyId: "fracking" },
-          { kind: "marginBonus", pp: 2 },
+          { kind: "inputEfficiency", pct: 0.06 },
         ],
       },
       {
@@ -563,7 +563,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         description: "Telemetry and demand response unlock smart-grid operations.",
         effects: [
           { kind: "unlockStrategy", strategyId: "smart_grid" },
-          { kind: "marginBonus", pp: 1.5 },
+          { kind: "inputEfficiency", pct: 0.045 },
         ],
       },
       {
@@ -574,32 +574,32 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Battery Pilots",
         description: "Early storage smooths peak pricing.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "Wind Farms",
         description: "Onshore wind hedges fuel exposure.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
     ],
     "2019": [
       {
         name: "Utility-Scale Renewables",
         description: "Solar-plus-wind portfolios dominate new capacity.",
-        effects: [{ kind: "marginBonus", pp: 3.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.105 }],
       },
       {
         name: "Grid Storage",
         description: "Large batteries arbitrage price and firm renewables.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "inputEfficiency", pct: 0.06 },
           { kind: "growthCostReduction", pct: 0.05 },
         ],
       },
       {
         name: "Carbon Capture",
         description: "CCS keeps thermal assets viable under carbon rules.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "EV Charging Networks",
@@ -618,26 +618,26 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         description: "Pilot fusion reactors anchor next-era baseload output.",
         effects: [
           { kind: "unlockStrategy", strategyId: "fusion" },
-          { kind: "marginBonus", pp: 2 },
+          { kind: "inputEfficiency", pct: 0.06 },
         ],
       },
       {
         name: "Long-Duration Storage",
         description: "Multi-day storage firms an all-renewable grid.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.09 }],
       },
       {
         name: "Smart Grid AI",
         description: "AI dispatch maximizes yield across the network.",
         effects: [
-          { kind: "marginBonus", pp: 2.5 },
+          { kind: "inputEfficiency", pct: 0.075 },
           { kind: "growthCostReduction", pct: 0.06 },
         ],
       },
       {
         name: "Green Hydrogen",
         description: "Electrolytic hydrogen opens industrial offtake.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Autonomous Grid",
@@ -651,7 +651,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Vacuum Tube Computing",
         description: "Early electronics capabilities open defense and research contracts.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "plantOutput", pct: 0.01 }],
       },
       {
         name: "Military Electronics",
@@ -663,7 +663,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Transistor Technology",
         description: "Bell Labs transistors replace vacuum tubes and slash hardware cost.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "plantOutput", pct: 0.02 }],
       },
       {
         name: "Commercial Mainframes",
@@ -675,7 +675,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Integrated Circuits",
         description: "IC chips shrink hardware cost and raise computational density.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.025 }],
       },
       {
         name: "Time-Sharing Systems",
@@ -687,7 +687,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Microprocessor Era",
         description: "Intel 4004-generation chips reshape computing economics.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "plantOutput", pct: 0.03 }],
       },
       {
         name: "Consumer Electronics",
@@ -699,12 +699,12 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Microprocessor Fabrication",
         description: "In-house chip fabs capture margin across the stack.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.025 }],
       },
       {
         name: "Minicomputers",
         description: "Departmental machines widen the customer base.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.015 }],
       },
       {
         name: "Operating Systems",
@@ -719,7 +719,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Semiconductor Scaling",
         description: "Process shrinks raise yield and margin.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "plantOutput", pct: 0.02 }],
       },
     ],
     "1989": [
@@ -727,7 +727,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Graphical Computing",
         description: "GUIs broaden the addressable market.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "plantOutput", pct: 0.02 },
           { kind: "growthCostReduction", pct: 0.05 },
         ],
       },
@@ -739,7 +739,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Relational Databases",
         description: "Enterprise data platforms add sticky revenue.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "plantOutput", pct: 0.02 }],
       },
       {
         name: "Consumer Software",
@@ -749,14 +749,14 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "RISC Architectures",
         description: "Efficient chips win workstation share.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "plantOutput", pct: 0.02 }],
       },
     ],
     "1999": [
       {
         name: "Broadband & E-Commerce",
         description: "Always-on access unlocks recurring revenue.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "plantOutput", pct: 0.03 }],
       },
       {
         name: "Search & Web Services",
@@ -771,13 +771,13 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Mobile Devices",
         description: "Handheld hardware opens a new category.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "plantOutput", pct: 0.02 }],
       },
       {
         name: "Data Centers",
         description: "Owned compute capacity firms up margins.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "plantOutput", pct: 0.02 },
           { kind: "growthCostReduction", pct: 0.04 },
         ],
       },
@@ -787,14 +787,14 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Cloud Platforms",
         description: "Elastic platforms capture recurring spend.",
         effects: [
-          { kind: "marginBonus", pp: 3 },
+          { kind: "plantOutput", pct: 0.03 },
           { kind: "growthCostReduction", pct: 0.05 },
         ],
       },
       {
         name: "Smartphones & Apps",
         description: "App ecosystems compound returns.",
-        effects: [{ kind: "marginBonus", pp: 3.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.035 }],
       },
       {
         name: "Social Networks",
@@ -809,14 +809,14 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Big Data",
         description: "Data pipelines monetize scale.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "plantOutput", pct: 0.02 }],
       },
     ],
     "2019": [
       {
         name: "Machine Learning at Scale",
         description: "Large models become defensible products.",
-        effects: [{ kind: "marginBonus", pp: 4 }],
+        effects: [{ kind: "plantOutput", pct: 0.04 }],
       },
       {
         name: "Edge Computing",
@@ -826,20 +826,20 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Cybersecurity Suite",
         description: "Security products add recurring margin.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "plantOutput", pct: 0.02 }],
       },
       {
         name: "SaaS Everywhere",
         description: "Subscription everything lifts retention.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "plantOutput", pct: 0.02 },
           { kind: "marketingStrength", flat: 40 },
         ],
       },
       {
         name: "GPU Acceleration",
         description: "Parallel compute powers premium services.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.025 }],
       },
     ],
     "2029": [
@@ -848,7 +848,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         description: "Frontier models unlock AI-platform operations.",
         effects: [
           { kind: "unlockStrategy", strategyId: "ai_platforms" },
-          { kind: "marginBonus", pp: 3 },
+          { kind: "plantOutput", pct: 0.03 },
           { kind: "growthCostReduction", pct: 0.1 },
         ],
       },
@@ -857,13 +857,13 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         description: "Quantum advantage unlocks the Quantum Computing production method.",
         effects: [
           { kind: "unlockStrategy", strategyId: "quantum_computing" },
-          { kind: "marginBonus", pp: 2.5 },
+          { kind: "plantOutput", pct: 0.025 },
         ],
       },
       {
         name: "Neuromorphic Chips",
         description: "Brain-like silicon slashes inference cost.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "plantOutput", pct: 0.03 }],
       },
       {
         name: "Autonomous Software",
@@ -882,7 +882,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Mass Production Scale",
         description: "Wartime surge expands assembly line capacity and expertise.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "Wartime Industrial Surge",
@@ -894,12 +894,12 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Early Factory Automation",
         description: "Transfer machines reduce manual assembly steps.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "Statistical Quality Control",
         description: "Deming-era SQC methods cut defect and rework cost.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
     ],
     "1960": [
@@ -911,14 +911,14 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Plastics Integration",
         description: "Lightweight plastic components cut materials cost.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
     ],
     "1970": [
       {
         name: "Early CNC Systems",
         description: "Computer-guided machining raises throughput and quality.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Industrial Robotics Pilots",
@@ -931,19 +931,19 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Just-in-Time Production",
         description: "Lean inventory frees working capital.",
         effects: [
-          { kind: "marginBonus", pp: 1.5 },
+          { kind: "inputEfficiency", pct: 0.045 },
           { kind: "growthCostReduction", pct: 0.06 },
         ],
       },
       {
         name: "Numerical Control",
         description: "NC machines raise precision and rate.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Quality Circles",
         description: "Shop-floor quality cuts defect cost.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "Assembly Automation",
@@ -961,7 +961,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Robotic Assembly",
         description: "Programmable robots cut labor and trim coal-fired energy input.",
         effects: [
-          { kind: "marginBonus", pp: 1.5 },
+          { kind: "inputEfficiency", pct: 0.045 },
           { kind: "inputCost", commodity: "coal", pct: 0.3 },
         ],
       },
@@ -973,17 +973,17 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Flexible Manufacturing",
         description: "Retoolable cells widen the product mix.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Six Sigma",
         description: "Statistical quality lifts yield.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Electronics Lines",
         description: "Circuit-board capability sharpens electronics-line margins.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
     ],
     "1999": [
@@ -991,7 +991,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Global Supply Chains",
         description: "Diversified offshore sourcing blunts tariff exposure.",
         effects: [
-          { kind: "marginBonus", pp: 1.5 },
+          { kind: "inputEfficiency", pct: 0.045 },
           { kind: "tariffShield", pct: 0.3 },
         ],
       },
@@ -1003,7 +1003,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Lean Six Sigma",
         description: "Combined lean and quality lift margin.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Outsourced Tooling",
@@ -1013,7 +1013,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Heavy Metals Scale",
         description: "Metals expertise lifts heavy-metals margins.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
     ],
     "2009": [
@@ -1022,26 +1022,26 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         description: "Industrial 3D printing unlocks the Additive Manufacturing method.",
         effects: [
           { kind: "unlockStrategy", strategyId: "additive_manufacturing" },
-          { kind: "marginBonus", pp: 2 },
+          { kind: "inputEfficiency", pct: 0.06 },
         ],
       },
       {
         name: "Industrial Robotics",
         description: "Faster robots raise throughput.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "inputEfficiency", pct: 0.06 },
           { kind: "growthCostReduction", pct: 0.05 },
         ],
       },
       {
         name: "Predictive Maintenance",
         description: "Sensor analytics cut downtime.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Composite Materials",
         description: "Advanced materials command premiums.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Nearshoring",
@@ -1054,7 +1054,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Smart Factories (IIoT)",
         description: "Connected sensors lift uptime and yield.",
         effects: [
-          { kind: "marginBonus", pp: 3 },
+          { kind: "inputEfficiency", pct: 0.09 },
           { kind: "growthCostReduction", pct: 0.06 },
         ],
       },
@@ -1067,14 +1067,14 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Collaborative Robots",
         description: "Cobots flex with demand.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "inputEfficiency", pct: 0.06 },
           { kind: "growthCostReduction", pct: 0.04 },
         ],
       },
       {
         name: "Advanced Robotics",
         description: "Dexterous robots automate complex tasks.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
       {
         name: "Supply-Chain Analytics",
@@ -1088,19 +1088,19 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         description: "Fully autonomous lines unlock autonomous manufacturing.",
         effects: [
           { kind: "unlockStrategy", strategyId: "autonomous_factory" },
-          { kind: "marginBonus", pp: 3 },
+          { kind: "inputEfficiency", pct: 0.09 },
           { kind: "growthCostReduction", pct: 0.12 },
         ],
       },
       {
         name: "Generative Design",
         description: "AI-designed parts cut weight and waste.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.09 }],
       },
       {
         name: "Self-Healing Materials",
         description: "Durable materials lower warranty cost.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
       {
         name: "Modular Microfactories",
@@ -1124,14 +1124,14 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Regulated Banking Operations",
         description: "Glass-Steagall stability framework reduces systemic risk cost.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
     ],
     "1950": [
       {
         name: "Consumer Credit Expansion",
         description: "Postwar credit and mortgage lending scale retail banking revenue.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Correspondent Banking",
@@ -1143,7 +1143,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Credit Card Issuance",
         description: "BankAmericard revolving credit opens a new revenue stream.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Institutional Asset Management",
@@ -1155,7 +1155,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Money Market Funds",
         description: "Rate deregulation and money funds diversify deposit products.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "SWIFT Network Access",
@@ -1167,12 +1167,12 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Electronic Trading Desks",
         description: "Computerized books shrink spreads.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Credit Scoring Models",
         description: "Statistical underwriting cuts losses.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "ATM Networks",
@@ -1194,17 +1194,17 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Derivatives Engineering",
         description: "Quant pricing opens structured products.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.12 }],
       },
       {
         name: "Program Trading",
         description: "Automated strategies capture flow.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Securitization",
         description: "Packaged assets free balance sheet.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Global Custody",
@@ -1214,7 +1214,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Risk Models",
         description: "VaR models temper losses.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
     ],
     "1999": [
@@ -1222,7 +1222,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Online Brokerage",
         description: "Self-serve trading cuts servicing cost.",
         effects: [
-          { kind: "marginBonus", pp: 2.5 },
+          { kind: "laborCostReduction", pct: 0.1 },
           { kind: "marketingStrength", flat: 40 },
         ],
       },
@@ -1230,14 +1230,14 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Electronic Exchanges",
         description: "ECNs tighten internal spreads.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "laborCostReduction", pct: 0.08 },
           { kind: "growthCostReduction", pct: 0.05 },
         ],
       },
       {
         name: "Structured Products",
         description: "Bespoke notes lift fee margin.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Straight-Through Processing",
@@ -1259,14 +1259,14 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         description: "Low-latency algos unlock the Algorithmic Trading method.",
         effects: [
           { kind: "unlockStrategy", strategyId: "algorithmic_trading" },
-          { kind: "marginBonus", pp: 2.5 },
+          { kind: "laborCostReduction", pct: 0.1 },
         ],
       },
       {
         name: "HFT Infrastructure",
         description: "Co-located systems win microstructure edge.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "laborCostReduction", pct: 0.08 },
           { kind: "growthCostReduction", pct: 0.04 },
         ],
       },
@@ -1291,7 +1291,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Fintech & Mobile Banking",
         description: "App-first banking trims branch cost.",
         effects: [
-          { kind: "marginBonus", pp: 3 },
+          { kind: "laborCostReduction", pct: 0.12 },
           { kind: "marketingStrength", flat: 60 },
         ],
       },
@@ -1299,7 +1299,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "RegTech Automation",
         description: "Automated compliance lowers overhead.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "laborCostReduction", pct: 0.08 },
           { kind: "growthCostReduction", pct: 0.05 },
         ],
       },
@@ -1311,12 +1311,12 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Open Banking APIs",
         description: "Platform APIs add fee revenue.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Quant Machine Learning",
         description: "ML signals sharpen execution.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.12 }],
       },
     ],
     "2029": [
@@ -1324,14 +1324,14 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "AI Underwriting",
         description: "AI risk pricing lifts margin and speed.",
         effects: [
-          { kind: "marginBonus", pp: 4 },
+          { kind: "laborCostReduction", pct: 0.16 },
           { kind: "growthCostReduction", pct: 0.08 },
         ],
       },
       {
         name: "Tokenized Assets",
         description: "On-chain assets open new markets.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.12 }],
       },
       {
         name: "On-Chain Settlement",
@@ -1341,7 +1341,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Autonomous Treasury",
         description: "Self-managing treasury optimizes yield.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Personalized Wealth AI",
@@ -1356,7 +1356,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Radio Network Dominance",
         description: "National radio networks lock in mass advertising revenue.",
         effects: [
-          { kind: "marginBonus", pp: 1 },
+          { kind: "laborCostReduction", pct: 0.04 },
           { kind: "unlockStrategy", strategyId: "radio_network" },
         ],
       },
@@ -1374,7 +1374,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Television Broadcasting",
         description: "TV network affiliates lock in prime-time advertising revenue.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "laborCostReduction", pct: 0.08 },
           { kind: "unlockStrategy", strategyId: "broadcast_tv" },
         ],
       },
@@ -1391,7 +1391,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Color Television",
         description: "Color programming commands significantly higher advertising rates.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Cable Access Pilots",
@@ -1403,7 +1403,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Cable Television Rollout",
         description: "HBO and cable channels add subscription revenue to ad income.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Satellite Distribution",
@@ -1420,12 +1420,12 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Color Production",
         description: "Color content commands premium rates.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Syndication Deals",
         description: "Library licensing adds recurring income.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Satellite Uplinks",
@@ -1435,7 +1435,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Ratings Analytics",
         description: "Audience measurement lifts ad yield.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
     ],
     "1989": [
@@ -1443,7 +1443,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Cable Syndication",
         description: "Niche channels multiply revenue.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "laborCostReduction", pct: 0.08 },
           { kind: "marketingStrength", flat: 50 },
           { kind: "unlockStrategy", strategyId: "cable_tv" },
         ],
@@ -1451,12 +1451,12 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Home Video",
         description: "Tape and disc create a second window.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Niche Channels",
         description: "Targeted programming raises CPMs.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Desktop Production",
@@ -1473,7 +1473,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Digital Publishing",
         description: "Web distribution collapses print cost.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Web Portals",
@@ -1484,7 +1484,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Online Advertising",
         description: "Banner and search ads add yield.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "laborCostReduction", pct: 0.08 },
           { kind: "marketingStrength", flat: 30 },
         ],
       },
@@ -1496,7 +1496,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Streaming Pilots",
         description: "Early streaming tests new formats.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
     ],
     "2009": [
@@ -1512,12 +1512,12 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Mobile Content",
         description: "On-the-go formats grow consumption.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Programmatic Ads",
         description: "Automated buying lifts ad efficiency.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Social Distribution",
@@ -1534,7 +1534,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Social & Programmatic",
         description: "Targeted ad tech lifts yield per view.",
-        effects: [{ kind: "marginBonus", pp: 3.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.14 }],
       },
       {
         name: "Influencer Networks",
@@ -1545,19 +1545,19 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Short-Form Video",
         description: "Snackable video boosts engagement.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "laborCostReduction", pct: 0.08 },
           { kind: "marketingStrength", flat: 40 },
         ],
       },
       {
         name: "Subscription Bundles",
         description: "Bundled services raise lifetime value.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Audience Analytics",
         description: "First-party data sharpens monetization.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
     "2029": [
@@ -1565,7 +1565,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "AI-Generated Content",
         description: "Generative pipelines slash production cost.",
         effects: [
-          { kind: "marginBonus", pp: 3 },
+          { kind: "laborCostReduction", pct: 0.12 },
           { kind: "growthCostReduction", pct: 0.1 },
         ],
       },
@@ -1577,7 +1577,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Immersive AR/VR",
         description: "Immersive formats open premium tiers.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Synthetic Voices",
@@ -1587,7 +1587,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Real-Time Localization",
         description: "Instant translation widens markets.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
   },
@@ -1596,31 +1596,31 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Synthetic Polymer Production",
         description: "Nylon and polyethylene industrialization improves plastics margins.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "Wartime Chemical Scale-Up",
         description: "Defense contracts fund large-scale chemical plant capacity.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
     ],
     "1950": [
       {
         name: "Pharmaceutical Mass Production",
         description: "Antibiotic and drug production scales specialty pharma margins.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "Petrochemical Revolution",
         description: "Postwar petrochemicals supply mass consumer goods markets.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
     ],
     "1960": [
       {
         name: "Agrochemical Industry",
         description: "Herbicides and pesticides expand the product portfolio.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "Environmental Compliance R&D",
@@ -1632,7 +1632,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Specialty Chemicals Emergence",
         description: "High-value fine chemicals command premium margin.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "Catalytic Process Improvements",
@@ -1644,7 +1644,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Continuous Process Control",
         description: "Automated reactors steady yields.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Catalytic Cracking",
@@ -1654,12 +1654,12 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Polymer Synthesis",
         description: "In-house polymers add product lines.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "Process Safety",
         description: "Safety systems cut incident cost.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "Bulk Logistics",
@@ -1672,7 +1672,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Advanced Catalysts",
         description: "Selective catalysts raise yield.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "inputEfficiency", pct: 0.06 },
           { kind: "growthCostReduction", pct: 0.06 },
         ],
       },
@@ -1681,13 +1681,13 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         description: "Fine-chemical expertise unlocks the Specialty Chemicals method.",
         effects: [
           { kind: "unlockStrategy", strategyId: "specialty_chemicals" },
-          { kind: "marginBonus", pp: 2 },
+          { kind: "inputEfficiency", pct: 0.06 },
         ],
       },
       {
         name: "Fertilizer Scale",
         description: "Nutrient expertise lifts fertilizer margins.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "Process Optimization",
@@ -1697,24 +1697,24 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Membrane Separation",
         description: "Efficient separation lowers cost.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
     ],
     "1999": [
       {
         name: "Pharmaceuticals",
         description: "Drug-manufacturing capability improves pharma margins.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "Plastics & Polymers",
         description: "Resin scale improves plastics margins.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "Green Chemistry",
         description: "Cleaner processes cut regulatory cost.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Supply Integration",
@@ -1725,7 +1725,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Continuous Reactors",
         description: "Flow chemistry raises throughput.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "inputEfficiency", pct: 0.06 },
           { kind: "growthCostReduction", pct: 0.05 },
         ],
       },
@@ -1734,20 +1734,20 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Biotech Feedstocks",
         description: "Bio-inputs replace costly petrochemicals.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
       {
         name: "Catalysis 2.0",
         description: "Next-gen catalysts lift selectivity.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "inputEfficiency", pct: 0.06 },
           { kind: "growthCostReduction", pct: 0.06 },
         ],
       },
       {
         name: "Specialty Coatings",
         description: "Performance coatings command premiums.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Process Intensification",
@@ -1757,14 +1757,14 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Emissions Control",
         description: "Abatement keeps plants compliant.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
     ],
     "2019": [
       {
         name: "Engineered Biology",
         description: "Synthetic routes open new products.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.09 }],
       },
       {
         name: "Digital Process Twins",
@@ -1774,18 +1774,18 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Advanced Materials",
         description: "Nanomaterials win high-value markets.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
       {
         name: "Carbon-Neutral Plants",
         description: "Decarbonized sites cut carbon cost.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Continuous Manufacturing",
         description: "End-to-end flow lowers unit cost.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "inputEfficiency", pct: 0.06 },
           { kind: "growthCostReduction", pct: 0.05 },
         ],
       },
@@ -1795,19 +1795,19 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "AI Materials Discovery",
         description: "ML-led R&D shortens time to market.",
         effects: [
-          { kind: "marginBonus", pp: 3.5 },
+          { kind: "inputEfficiency", pct: 0.105 },
           { kind: "growthCostReduction", pct: 0.1 },
         ],
       },
       {
         name: "Synthetic Biology",
         description: "Designer organisms produce specialty molecules.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.09 }],
       },
       {
         name: "CO2-to-Chemicals",
         description: "Carbon utilization turns waste into feedstock.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
       {
         name: "Self-Optimizing Reactors",
@@ -1817,7 +1817,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Programmable Polymers",
         description: "Smart polymers open premium uses.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
     ],
   },
@@ -1826,7 +1826,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Wartime Medical Networks",
         description: "Field medicine and triage protocols scale patient throughput.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Antibiotic Revolution",
@@ -1838,7 +1838,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Hospital Construction Boom",
         description: "Hill-Burton Act funding builds large public hospital capacity.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Health Insurance Expansion",
@@ -1850,7 +1850,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Medicare/Medicaid Readiness",
         description: "Government reimbursement programs guarantee steady revenue flow.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Diagnostic Technology",
@@ -1867,14 +1867,14 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Medical Devices Expansion",
         description: "Diagnostic and imaging devices raise procedure revenue.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
     ],
     "1979": [
       {
         name: "Clinical Lab Automation",
         description: "Automated diagnostics raise throughput.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Patient Records",
@@ -1884,7 +1884,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Medical Devices",
         description: "In-house devices add margin.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Pharmacy Systems",
@@ -1894,14 +1894,14 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Diagnostic Imaging",
         description: "Imaging suites command premium procedures.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
     "1989": [
       {
         name: "MRI/CT Imaging",
         description: "Advanced imaging lifts high-margin volume.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Hospital Information Systems",
@@ -1911,7 +1911,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Minimally Invasive Surgery",
         description: "Laparoscopy shortens stays.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Managed Care Networks",
@@ -1921,7 +1921,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Lab Robotics",
         description: "Automated labs scale testing.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
     ],
     "1999": [
@@ -1929,14 +1929,14 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Electronic Health Records",
         description: "Digitized records cut overhead.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "laborCostReduction", pct: 0.08 },
           { kind: "growthCostReduction", pct: 0.06 },
         ],
       },
       {
         name: "Genomics Pilots",
         description: "Early genomics opens premium tests.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Telehealth Pilots",
@@ -1946,12 +1946,12 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Pharmacy Benefit Mgmt",
         description: "PBM scale wins drug pricing.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Digital Imaging",
         description: "PACS streamlines radiology.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
     "2009": [
@@ -1966,17 +1966,17 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Genomic Medicine",
         description: "Targeted therapies open premium lines.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Robotic Surgery",
         description: "Surgical robots raise throughput.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Health Analytics",
         description: "Population analytics lower cost of care.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Connected Devices",
@@ -1988,12 +1988,12 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Precision Medicine",
         description: "Tailored therapies command premiums.",
-        effects: [{ kind: "marginBonus", pp: 3.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.14 }],
       },
       {
         name: "AI Diagnostics",
         description: "AI triage raises throughput and accuracy.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.12 }],
       },
       {
         name: "Wearable Monitoring",
@@ -2008,7 +2008,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Immunotherapies",
         description: "Breakthrough biologics drive growth.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
     ],
     "2029": [
@@ -2016,19 +2016,19 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "AI Care & Robotics",
         description: "AI and robots raise throughput and margin.",
         effects: [
-          { kind: "marginBonus", pp: 4 },
+          { kind: "laborCostReduction", pct: 0.16 },
           { kind: "growthCostReduction", pct: 0.08 },
         ],
       },
       {
         name: "Gene Editing Therapies",
         description: "Curative edits open premium markets.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.12 }],
       },
       {
         name: "Patient Digital Twins",
         description: "Simulated patients optimize treatment.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Autonomous Diagnostics",
@@ -2047,7 +2047,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Department Store Expansion",
         description: "Full-line department stores capture postwar suburban spending.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Mail Order Catalogs",
@@ -2059,7 +2059,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Shopping Mall Development",
         description: "Suburban enclosed malls concentrate retail foot traffic.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Self-Service Stores",
@@ -2071,7 +2071,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Discount Retail",
         description: "Kmart and Walmart high-volume, low-margin model scales nationally.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Credit Card Acceptance",
@@ -2095,7 +2095,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Barcode & POS",
         description: "Scanned checkout cuts shrink and labor.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Category Stores",
@@ -2110,7 +2110,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Private Label",
         description: "Own brands lift margin.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Catalog Sales",
@@ -2123,7 +2123,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Category Superstores",
         description: "Big-box scale wins buying power.",
         effects: [
-          { kind: "marginBonus", pp: 1.5 },
+          { kind: "laborCostReduction", pct: 0.06 },
           { kind: "marketingStrength", flat: 50 },
         ],
       },
@@ -2145,7 +2145,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Warehouse Clubs",
         description: "Membership model raises basket size.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
     "1999": [
@@ -2153,7 +2153,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "E-Commerce Storefronts",
         description: "Online sales extend reach cheaply.",
         effects: [
-          { kind: "marginBonus", pp: 2.5 },
+          { kind: "laborCostReduction", pct: 0.1 },
           { kind: "marketingStrength", flat: 60 },
         ],
       },
@@ -2200,7 +2200,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Dynamic Pricing",
         description: "Real-time pricing optimizes margin.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Cloud POS",
@@ -2213,7 +2213,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Personalized Mobile Commerce",
         description: "Recommendations raise basket size.",
         effects: [
-          { kind: "marginBonus", pp: 3 },
+          { kind: "laborCostReduction", pct: 0.12 },
           { kind: "marketingStrength", flat: 70 },
         ],
       },
@@ -2230,7 +2230,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Subscription Retail",
         description: "Recurring boxes raise lifetime value.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "AR Try-On",
@@ -2243,7 +2243,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Autonomous Retail",
         description: "Cashierless stores strip out labor cost.",
         effects: [
-          { kind: "marginBonus", pp: 3 },
+          { kind: "laborCostReduction", pct: 0.12 },
           { kind: "growthCostReduction", pct: 0.1 },
         ],
       },
@@ -2260,7 +2260,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "AI Demand Sensing",
         description: "Real-time demand cuts overstock.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Drone Delivery",
@@ -2274,7 +2274,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Wartime Vehicle Production",
         description: "Defense vehicle contracts build large-scale manufacturing expertise.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "Full-Frame Assembly Lines",
@@ -2286,7 +2286,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Post-War Consumer Boom",
         description: "Surging consumer demand for personal vehicles drives volume.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Model Year Marketing",
@@ -2298,7 +2298,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Safety Standards",
         description: "NHTSA safety regulations improve quality reputation.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "Pony Car Segment",
@@ -2310,7 +2310,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Catalytic Converter Compliance",
         description: "Emissions controls retain market access in regulated markets.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "CAFE Fuel Efficiency Programs",
@@ -2323,19 +2323,19 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Robotic Body Assembly",
         description: "Automated welding raises build quality.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "inputEfficiency", pct: 0.06 },
           { kind: "growthCostReduction", pct: 0.06 },
         ],
       },
       {
         name: "Fuel Injection",
         description: "Electronic injection improves efficiency.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Front-Wheel Drive",
         description: "Compact platforms cut material cost.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "Just-in-Time Parts",
@@ -2345,19 +2345,19 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Emission Controls",
         description: "Catalytic converters meet regulations.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
     ],
     "1989": [
       {
         name: "Lean Production System",
         description: "Just-in-time and kaizen cut waste.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
       {
         name: "Anti-Lock Brakes",
         description: "Safety tech commands premium trims.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Platform Sharing",
@@ -2367,7 +2367,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Airbag Systems",
         description: "Safety content lifts ASP.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "CAD Vehicle Design",
@@ -2379,12 +2379,12 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Onboard Electronics",
         description: "Electronic systems raise trim margins.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.09 }],
       },
       {
         name: "Common-Rail Diesel",
         description: "Efficient diesels win fleet demand.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Global Platforms",
@@ -2394,7 +2394,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Modular Assembly",
         description: "Module supply speeds the line.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Telematics Pilots",
@@ -2407,19 +2407,19 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Hybrid Drivetrains",
         description: "Efficient hybrids win share as fuel bites.",
         effects: [
-          { kind: "marginBonus", pp: 2.5 },
+          { kind: "inputEfficiency", pct: 0.075 },
           { kind: "growthCostReduction", pct: 0.06 },
         ],
       },
       {
         name: "Turbocharging",
         description: "Downsized turbos boost efficiency.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Lightweight Materials",
         description: "Aluminum and composites cut weight.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Infotainment",
@@ -2438,20 +2438,20 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         description: "Dedicated EV skateboards cut per-model cost and unlock EV production.",
         effects: [
           { kind: "unlockStrategy", strategyId: "ev" },
-          { kind: "marginBonus", pp: 3 },
+          { kind: "inputEfficiency", pct: 0.09 },
           { kind: "growthCostReduction", pct: 0.06 },
         ],
       },
       {
         name: "ADAS Sensors",
         description: "Driver assistance commands premiums.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
       {
         name: "Battery Gigafactories",
         description: "Cell scale lowers pack cost.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "inputEfficiency", pct: 0.06 },
           { kind: "growthCostReduction", pct: 0.05 },
         ],
       },
@@ -2472,14 +2472,14 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         description: "Self-driving software unlocks autonomous-vehicle production.",
         effects: [
           { kind: "unlockStrategy", strategyId: "autonomous_driving" },
-          { kind: "marginBonus", pp: 4 },
+          { kind: "inputEfficiency", pct: 0.12 },
           { kind: "growthCostReduction", pct: 0.08 },
         ],
       },
       {
         name: "Solid-State Batteries",
         description: "Next-gen cells extend range and margin.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.09 }],
       },
       {
         name: "Robotaxi Fleets",
@@ -2494,7 +2494,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Vehicle-to-Grid",
         description: "Bidirectional charging opens energy revenue.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
     ],
   },
@@ -2503,19 +2503,19 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Mechanized Cultivation",
         description: "Tractors and combines raise industrial-farming margins.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
       {
         name: "Hybrid Crop Programs",
         description: "Hybrid corn and wheat raise per-acre yields significantly.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.03 }],
       },
     ],
     "1950": [
       {
         name: "Chemical Fertilizer Adoption",
         description: "Postwar synthetic nitrogen fertilizers surge crop yields.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "Cooperative Distribution",
@@ -2527,19 +2527,19 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Green Revolution Seeds",
         description: "High-yield varieties transform staple crop production globally.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Organic Farming Movement",
         description: "Early organics certification lifts premium-niche margins.",
-        effects: [{ kind: "marginBonus", pp: 0.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.015 }],
       },
     ],
     "1970": [
       {
         name: "Large-Scale Irrigation",
         description: "Center-pivot systems expand arable land at scale.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "Commodity Futures Hedging",
@@ -2551,20 +2551,20 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Green Revolution Inputs",
         description: "High-yield seed and fertilizer lift output.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Mechanized Harvesting",
         description: "Machinery lowers labor cost.",
         effects: [
-          { kind: "marginBonus", pp: 1.5 },
+          { kind: "inputEfficiency", pct: 0.045 },
           { kind: "growthCostReduction", pct: 0.06 },
         ],
       },
       {
         name: "Hybrid Seeds",
         description: "Hybrids raise yield per acre.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Irrigation Systems",
@@ -2581,12 +2581,12 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Center-Pivot Irrigation",
         description: "Efficient irrigation expands arable yield.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Integrated Pest Management",
         description: "Smarter pest control cuts losses.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "Cold Chain",
@@ -2601,14 +2601,14 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Soil Testing",
         description: "Lab testing optimizes inputs.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
     ],
     "1999": [
       {
         name: "Biotech Crops",
         description: "Engineered traits cut pest and drought loss.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
       {
         name: "GPS Guidance Pilots",
@@ -2618,17 +2618,17 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Contract Farming",
         description: "Forward contracts stabilize revenue.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Commodity Hedging",
         description: "Hedging dampens price swings.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "Greenhouse Tech",
         description: "Controlled environments raise yield.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
     ],
     "2009": [
@@ -2636,14 +2636,14 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "GPS Precision Agriculture",
         description: "Variable-rate application cuts fertilizer use sharply.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "inputEfficiency", pct: 0.06 },
           { kind: "inputCost", commodity: "fertilizers", pct: 0.35 },
         ],
       },
       {
         name: "Variable-Rate Inputs",
         description: "Targeted application cuts waste.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Drip Irrigation",
@@ -2665,20 +2665,20 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Drone & Sensor Farming",
         description: "Aerial imaging fine-tunes yields.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.09 }],
       },
       {
         name: "Vertical Farming",
         description: "Indoor stacked farms unlock the Vertical Farming method.",
         effects: [
           { kind: "unlockStrategy", strategyId: "vertical_farming" },
-          { kind: "marginBonus", pp: 1.5 },
+          { kind: "inputEfficiency", pct: 0.045 },
         ],
       },
       {
         name: "Soil Microbiome",
         description: "Biologicals reduce fertilizer need.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Ag Analytics",
@@ -2689,7 +2689,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Robotic Harvesting",
         description: "Harvest robots cut peak labor.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "inputEfficiency", pct: 0.06 },
           { kind: "growthCostReduction", pct: 0.05 },
         ],
       },
@@ -2700,24 +2700,24 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         description: "Self-driving fleets unlock precision-ag operations.",
         effects: [
           { kind: "unlockStrategy", strategyId: "precision_ag" },
-          { kind: "marginBonus", pp: 3 },
+          { kind: "inputEfficiency", pct: 0.09 },
           { kind: "growthCostReduction", pct: 0.1 },
         ],
       },
       {
         name: "Gene-Edited Crops",
         description: "Edited crops resist stress and disease.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.09 }],
       },
       {
         name: "Cellular Agriculture",
         description: "Cultured products open new markets.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
       {
         name: "Climate-Resilient Seeds",
         description: "Resilient seeds protect yield.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Farm Robotics Fleet",
@@ -2731,7 +2731,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "FHA Mortgage Programs",
         description: "Federal housing insurance and wartime programs fuel early demand.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Urban Wartime Housing",
@@ -2743,7 +2743,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Suburban Expansion",
         description: "Postwar suburbanization drives mass residential development demand.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Shopping Strip Development",
@@ -2755,7 +2755,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Urban Renewal Programs",
         description: "Federal redevelopment funding drives large commercial projects.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Early REIT Structures",
@@ -2767,7 +2767,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Office Building Boom",
         description: "Corporate headquarters construction drives commercial leasing.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Condominium Conversions",
@@ -2779,12 +2779,12 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Computerized Property Mgmt",
         description: "Automated leasing cuts overhead.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "REIT Structuring",
         description: "Tax-efficient REITs lower capital cost.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Mortgage Automation",
@@ -2806,12 +2806,12 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Portfolio Diversification",
         description: "Diversified holdings smooth income.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "CMBS Financing",
         description: "Securitized debt lowers funding cost.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Property Databases",
@@ -2821,7 +2821,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Build-to-Suit",
         description: "Pre-leased builds de-risk development.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Brokerage Networks",
@@ -2834,24 +2834,24 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Online Listings",
         description: "Web marketplaces widen tenant reach.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "laborCostReduction", pct: 0.08 },
           { kind: "marketingStrength", flat: 50 },
         ],
       },
       {
         name: "REIT Analytics",
         description: "Data-driven asset management lifts NOI.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Green Building",
         description: "Efficient buildings cut operating cost.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Mixed-Use Development",
         description: "Blended use raises yield per parcel.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Facility Automation",
@@ -2863,7 +2863,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Portfolio Analytics",
         description: "Analytics improve occupancy and pricing.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Energy Management",
@@ -2878,7 +2878,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Smart Access",
         description: "Digital access lowers staffing.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Property Crowdfunding",
@@ -2898,7 +2898,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Smart Buildings",
         description: "IoT controls optimize operations.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Digital Leasing",
@@ -2913,7 +2913,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Build-to-Rent",
         description: "Purpose-built rentals add stable income.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
     "2029": [
@@ -2921,7 +2921,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "AI Valuation & Smart Buildings",
         description: "Automated pricing and building AI optimize yield.",
         effects: [
-          { kind: "marginBonus", pp: 3.5 },
+          { kind: "laborCostReduction", pct: 0.14 },
           { kind: "growthCostReduction", pct: 0.08 },
         ],
       },
@@ -2933,12 +2933,12 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Modular RE Construction",
         description: "Factory-built units lower dev cost.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Net-Zero Portfolios",
         description: "Decarbonized assets command premiums.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Digital Twin Estates",
@@ -2952,7 +2952,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Defense Facility Construction",
         description: "Military base and factory contracts scale project volume.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Standard Building Codes",
@@ -2964,7 +2964,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Highway Construction Contracts",
         description: "Eisenhower Interstate System drives large civil engineering projects.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Prefab Housing Methods",
@@ -2976,7 +2976,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "High-Rise Construction",
         description: "Steel-frame techniques enable cost-effective urban towers.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Concrete Formwork Systems",
@@ -2993,7 +2993,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Construction Management at Risk",
         description: "CM-at-risk delivery model reduces cost overruns and disputes.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
     ],
     "1979": [
@@ -3001,14 +3001,14 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Prefabrication",
         description: "Factory components speed projects.",
         effects: [
-          { kind: "marginBonus", pp: 1.5 },
+          { kind: "laborCostReduction", pct: 0.06 },
           { kind: "logisticsStrength", flat: 20 },
         ],
       },
       {
         name: "Tower Cranes",
         description: "Heavy lift enables taller builds.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Ready-Mix Concrete",
@@ -3018,7 +3018,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Critical-Path Scheduling",
         description: "CPM tightens timelines.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Heavy Equipment Fleet",
@@ -3030,12 +3030,12 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "CAD Engineering",
         description: "Digital design reduces rework.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Steel-Frame Systems",
         description: "Steel framing speeds erection.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Project Controls",
@@ -3045,7 +3045,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Curtain-Wall Systems",
         description: "Facade systems standardize builds.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Equipment Telematics",
@@ -3065,17 +3065,17 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Design-Build Delivery",
         description: "Single-source delivery cuts change orders.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Precast Systems",
         description: "Precast speeds structural work.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Value Engineering",
         description: "Optimized designs lower cost.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Supply Procurement",
@@ -3087,12 +3087,12 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Building Information Modeling",
         description: "Shared 3D models cut clashes.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Green Building Standards",
         description: "LEED builds win premium projects.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Modular Components",
@@ -3107,7 +3107,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Lean Construction",
         description: "Lean methods reduce waste.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
     "2019": [
@@ -3127,17 +3127,17 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Prefab Volumetric",
         description: "Whole-room prefab accelerates builds.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Construction Robotics",
         description: "Robotic tasks raise productivity.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Mass Timber",
         description: "Engineered timber lowers carbon and cost.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
     "2029": [
@@ -3145,7 +3145,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Robotic & 3D-Printed Builds",
         description: "On-site robotics and printing slash labor.",
         effects: [
-          { kind: "marginBonus", pp: 3 },
+          { kind: "laborCostReduction", pct: 0.12 },
           { kind: "growthCostReduction", pct: 0.12 },
         ],
       },
@@ -3157,7 +3157,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Self-Healing Concrete",
         description: "Durable concrete cuts maintenance.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "AI Project Delivery",
@@ -3167,7 +3167,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Carbon-Negative Materials",
         description: "Green materials win regulated projects.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
   },
@@ -3176,7 +3176,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Military-Industrial Scale",
         description: "WWII contracts establish large defense production capacity.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "Weapons Systems Integration",
@@ -3188,7 +3188,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Cold War R&D Contracts",
         description: "Pentagon funding accelerates advanced systems research.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Nuclear Systems Programs",
@@ -3200,7 +3200,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Vietnam War Procurement",
         description: "Combat operations drive sustained demand for ordnance and vehicles.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Space-Military Crossover",
@@ -3212,7 +3212,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Precision Guided Munitions",
         description: "Laser-guided munitions command premium contract pricing.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Logistics Modernization",
@@ -3224,17 +3224,17 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Precision Guidance",
         description: "Guided munitions win premium contracts.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
       {
         name: "Composite Armor",
         description: "Advanced armor commands higher value.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Radar Systems",
         description: "Sensor programs add sticky revenue.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Secure Comms",
@@ -3244,34 +3244,34 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Jet Propulsion",
         description: "Engine programs underpin platforms.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
     ],
     "1989": [
       {
         name: "Stealth Materials",
         description: "Low-observable tech wins flagship programs.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.09 }],
       },
       {
         name: "Smart Munitions",
         description: "Precision weapons lift margin.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
       {
         name: "Night Vision",
         description: "Optics dominance adds product lines.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Naval Systems",
         description: "Shipboard systems diversify revenue.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Electronic Countermeasures",
         description: "EW pods add high-value content.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
     ],
     "1999": [
@@ -3280,19 +3280,19 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         description: "Data links and cyberspace capabilities unlock cyber operations.",
         effects: [
           { kind: "unlockStrategy", strategyId: "cyber" },
-          { kind: "marginBonus", pp: 3 },
+          { kind: "inputEfficiency", pct: 0.09 },
         ],
       },
       {
         name: "GPS-Guided Weapons",
         description: "Affordable precision scales demand.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
       {
         name: "Systems Integration",
         description: "Prime integration locks in margin.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "inputEfficiency", pct: 0.06 },
           { kind: "growthCostReduction", pct: 0.05 },
         ],
       },
@@ -3312,24 +3312,24 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Unmanned Systems",
         description: "Drones open a fast-growing category.",
         effects: [
-          { kind: "marginBonus", pp: 3 },
+          { kind: "inputEfficiency", pct: 0.09 },
           { kind: "growthCostReduction", pct: 0.06 },
         ],
       },
       {
         name: "Precision Strike",
         description: "Long-range precision wins programs.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
       {
         name: "C4ISR",
         description: "Command and ISR suites add integration revenue.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Body Armor 2.0",
         description: "Lighter protection lifts demand.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Logistics Automation",
@@ -3341,28 +3341,28 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Cyber & Electronic Warfare",
         description: "Cyber/EW add software-like margins.",
-        effects: [{ kind: "marginBonus", pp: 3.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.105 }],
       },
       {
         name: "Hypersonics",
         description: "Hypersonic programs anchor new budgets.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.09 }],
       },
       {
         name: "Directed Energy",
         description: "Laser systems open a new category.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
       {
         name: "Space Systems",
         description: "Space programs diversify revenue.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "AI Targeting",
         description: "AI fire control raises effectiveness.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "inputEfficiency", pct: 0.06 },
           { kind: "growthCostReduction", pct: 0.05 },
         ],
       },
@@ -3372,19 +3372,19 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Autonomous Combat Systems",
         description: "AI-piloted platforms anchor contracts.",
         effects: [
-          { kind: "marginBonus", pp: 4 },
+          { kind: "inputEfficiency", pct: 0.12 },
           { kind: "growthCostReduction", pct: 0.08 },
         ],
       },
       {
         name: "Swarm Drones",
         description: "Coordinated swarms scale cheaply.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.09 }],
       },
       {
         name: "Quantum Sensing",
         description: "Quantum sensors defy jamming.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
       {
         name: "AI Command Systems",
@@ -3394,7 +3394,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Orbital Defense",
         description: "Space defense opens a frontier market.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
     ],
   },
@@ -3403,7 +3403,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Long-Distance Telephone",
         description: "National long-lines infrastructure monetizes voice traffic.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
       {
         name: "Military Communications Contracts",
@@ -3415,7 +3415,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Microwave Relay Networks",
         description: "Microwave towers carry long-distance calls at lower cost.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Coaxial Cable Infrastructure",
@@ -3427,7 +3427,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Satellite Communications",
         description: "Telstar and Early Bird open global voice and data circuits.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Telex and Data Networks",
@@ -3439,7 +3439,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Fiber Optic R&D",
         description: "Corning fiber research heralds high-capacity backbone potential.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Packet Switching Research",
@@ -3451,7 +3451,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Digital Switching",
         description: "Electronic exchanges cut maintenance cost.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Microwave Relay",
@@ -3461,7 +3461,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "PBX Systems",
         description: "Business telephony adds recurring revenue.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Trunk Networks",
@@ -3479,7 +3479,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Fiber Backbone",
         description: "Optical trunks slash per-bit cost.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "laborCostReduction", pct: 0.08 },
           { kind: "growthCostReduction", pct: 0.06 },
         ],
       },
@@ -3491,7 +3491,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "ISDN",
         description: "Digital lines add data revenue.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "SONET Rings",
@@ -3501,7 +3501,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Network Management",
         description: "OSS tooling lowers operating cost.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
     ],
     "1999": [
@@ -3509,14 +3509,14 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Mobile Networks",
         description: "Cellular buildout grows subscribers.",
         effects: [
-          { kind: "marginBonus", pp: 2.5 },
+          { kind: "laborCostReduction", pct: 0.1 },
           { kind: "marketingStrength", flat: 50 },
         ],
       },
       {
         name: "DSL Broadband",
         description: "DSL monetizes the copper plant.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "IP Backbone",
@@ -3540,14 +3540,14 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         description: "Triple-play and broadband infrastructure unlocks cloud service operations.",
         effects: [
           { kind: "unlockStrategy", strategyId: "cloud" },
-          { kind: "marginBonus", pp: 3 },
+          { kind: "laborCostReduction", pct: 0.12 },
         ],
       },
       {
         name: "3G Data",
         description: "Mobile data becomes a growth engine.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "laborCostReduction", pct: 0.08 },
           { kind: "marketingStrength", flat: 40 },
         ],
       },
@@ -3555,7 +3555,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Fiber-to-Home",
         description: "FTTH commands premium broadband.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "laborCostReduction", pct: 0.08 },
           { kind: "growthCostReduction", pct: 0.05 },
         ],
       },
@@ -3575,19 +3575,19 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "4G/LTE Data",
         description: "Mobile data dominates revenue.",
         effects: [
-          { kind: "marginBonus", pp: 3 },
+          { kind: "laborCostReduction", pct: 0.12 },
           { kind: "growthCostReduction", pct: 0.06 },
         ],
       },
       {
         name: "SD-WAN",
         description: "Software networking adds enterprise revenue.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Small Cells",
         description: "Dense cells boost capacity.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Cloud RAN",
@@ -3606,14 +3606,14 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         description: "Dense next-gen networks unlock 5G operations.",
         effects: [
           { kind: "unlockStrategy", strategyId: "mobile_5g" },
-          { kind: "marginBonus", pp: 3.5 },
+          { kind: "laborCostReduction", pct: 0.14 },
           { kind: "growthCostReduction", pct: 0.08 },
         ],
       },
       {
         name: "Satellite Broadband",
         description: "LEO constellations reach new markets.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.12 }],
       },
       {
         name: "Network AI",
@@ -3623,12 +3623,12 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Private 5G",
         description: "Enterprise networks add premium revenue.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Quantum Networking",
         description: "Secure quantum links open a frontier.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
     ],
   },
@@ -3638,7 +3638,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Hollywood Studio System",
         description: "Vertically integrated studios maximize film revenue and control.",
         effects: [
-          { kind: "marginBonus", pp: 1.5 },
+          { kind: "laborCostReduction", pct: 0.06 },
           { kind: "unlockStrategy", strategyId: "film_studio" },
         ],
       },
@@ -3652,7 +3652,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Television Studios",
         description: "TV production migrates entertainment spending from radio.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Record Labels",
@@ -3667,7 +3667,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Concert Touring",
         description: "Live music touring adds a high-margin revenue stream.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Theme Parks",
@@ -3679,7 +3679,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Home Video",
         description: "VHS and Betamax open catalog licensing and retail channels.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Blockbuster Film Economics",
@@ -3691,7 +3691,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Home Video Distribution",
         description: "Tape licensing creates a second window.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Multiplex Theaters",
@@ -3701,7 +3701,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Arcade Games",
         description: "Coin-op machines add cash revenue.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Record Distribution",
@@ -3719,24 +3719,24 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Console Gaming",
         description: "Console platforms capture recurring spend.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "laborCostReduction", pct: 0.08 },
           { kind: "marketingStrength", flat: 40 },
         ],
       },
       {
         name: "Cable Premium",
         description: "Premium channels add subscription revenue.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "CD Production",
         description: "Optical media lifts music margin.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Animation Studios",
         description: "Owned animation builds durable IP.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Licensing & Merch",
@@ -3748,12 +3748,12 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Digital Production",
         description: "CGI and editing cut production cost.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "DVD & Home Cinema",
         description: "DVD sales expand the home window.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Online Gaming",
@@ -3763,7 +3763,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Music Downloads",
         description: "Digital sales bypass physical cost.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Franchise IP",
@@ -3777,14 +3777,14 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         description: "Direct subscribers capture recurring revenue.",
         effects: [
           { kind: "unlockStrategy", strategyId: "streaming_platform" },
-          { kind: "marginBonus", pp: 3 },
+          { kind: "laborCostReduction", pct: 0.12 },
           { kind: "marketingStrength", flat: 70 },
         ],
       },
       {
         name: "Mobile Gaming",
         description: "Mobile titles reach mass audiences.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Social Games",
@@ -3808,7 +3808,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         description: "Live-ops monetization unlocks the Live-Service Platforms method.",
         effects: [
           { kind: "unlockStrategy", strategyId: "live_service" },
-          { kind: "marginBonus", pp: 2.5 },
+          { kind: "laborCostReduction", pct: 0.1 },
         ],
       },
       {
@@ -3819,7 +3819,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Subscription Bundles",
         description: "Bundled services raise retention.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Cloud Gaming",
@@ -3837,14 +3837,14 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Immersive & AI Experiences",
         description: "Generative content scales at low cost.",
         effects: [
-          { kind: "marginBonus", pp: 3 },
+          { kind: "laborCostReduction", pct: 0.12 },
           { kind: "growthCostReduction", pct: 0.1 },
         ],
       },
       {
         name: "VR Worlds",
         description: "Persistent VR opens premium tiers.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Generative Game Content",
@@ -3859,7 +3859,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Persistent Metaverse",
         description: "Always-on worlds add recurring revenue.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
     ],
   },
@@ -3868,7 +3868,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Military Supply Chain",
         description: "WWII theater logistics industrialize large-scale supply chain ops.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "ICC Regulated Freight",
@@ -3880,7 +3880,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Interstate Trucking Growth",
         description: "Highway network expansion enables efficient long-haul trucking.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Freight Forwarders",
@@ -3892,7 +3892,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Containerization Pioneers",
         description: "Malcolm McLean's container revolution slashes port handling cost.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Air Freight Expansion",
@@ -3904,12 +3904,12 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Rail Intermodal",
         description: "Double-stack intermodal pairs rail efficiency with truck reach.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Warehouse Automation Pilots",
         description: "Early conveyor and picker systems lay the groundwork for automation.",
-        effects: [{ kind: "marginBonus", pp: 1 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.04 }],
       },
     ],
     "1979": [
@@ -3917,7 +3917,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Containerization",
         description: "Standard containers transform handling cost.",
         effects: [
-          { kind: "marginBonus", pp: 1.5 },
+          { kind: "laborCostReduction", pct: 0.06 },
           { kind: "logisticsStrength", flat: 25 },
         ],
       },
@@ -3934,7 +3934,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Air Freight",
         description: "Air capacity wins premium shipments.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Bonded Warehousing",
@@ -3956,7 +3956,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         description: "Scanning and WMS unlock automated logistics operations.",
         effects: [
           { kind: "unlockStrategy", strategyId: "automated" },
-          { kind: "marginBonus", pp: 2 },
+          { kind: "laborCostReduction", pct: 0.08 },
         ],
       },
       {
@@ -3967,7 +3967,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Intermodal Rail",
         description: "Rail-truck mix lowers line-haul cost.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "EDI Freight",
@@ -3979,7 +3979,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Track-and-Trace",
         description: "End-to-end visibility cuts loss.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Web Booking",
@@ -3999,7 +3999,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Just-in-Time Delivery",
         description: "JIT service commands premium rates.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
     "2009": [
@@ -4007,14 +4007,14 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "GPS Fleet Optimization",
         description: "Real-time routing trims fuel and idle.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "laborCostReduction", pct: 0.08 },
           { kind: "logisticsStrength", flat: 30 },
         ],
       },
       {
         name: "E-Commerce Fulfillment",
         description: "Parcel fulfillment rides online growth.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Route Analytics",
@@ -4037,7 +4037,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Automated Warehousing",
         description: "Robotic fulfillment raises pick rates.",
         effects: [
-          { kind: "marginBonus", pp: 2.5 },
+          { kind: "laborCostReduction", pct: 0.1 },
           { kind: "growthCostReduction", pct: 0.06 },
         ],
       },
@@ -4049,7 +4049,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Visibility Platforms",
         description: "Real-time visibility wins shippers.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Cold-Chain IoT",
@@ -4059,7 +4059,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Predictive ETA",
         description: "Accurate ETAs improve service.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
     "2029": [
@@ -4089,7 +4089,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Hyperloop Freight",
         description: "Ultra-fast corridors open premium lanes.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
     ],
   },
@@ -4098,7 +4098,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Open-Pit Mining Scale",
         description: "Large open-pit operations cut per-ton extraction cost.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.015 }],
       },
       {
         name: "Wartime Mining Surge",
@@ -4110,7 +4110,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Dragline Excavators",
         description: "Walking draglines enable efficient stripping of overburden.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.015 }],
       },
       {
         name: "Postwar Resource Boom",
@@ -4122,7 +4122,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Solution Mining",
         description: "In-situ leaching opens access to low-grade deposits.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.015 }],
       },
       {
         name: "Computer-Aided Geology",
@@ -4134,7 +4134,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Deepwater Offshore Oil",
         description: "Continental shelf platforms add high-yield offshore reserve access.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "plantOutput", pct: 0.02 }],
       },
       {
         name: "Environmental Permitting",
@@ -4146,12 +4146,12 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Improved Drilling Rigs",
         description: "Better rigs raise recovery and uptime.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "plantOutput", pct: 0.02 }],
       },
       {
         name: "Open-Pit Scaling",
         description: "Large pits lower unit cost.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.015 }],
       },
       {
         name: "Ore Processing",
@@ -4166,7 +4166,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Seismic Survey",
         description: "Surveys cut dry-hole risk.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.015 }],
       },
     ],
     "1989": [
@@ -4174,19 +4174,19 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "3D Seismic Imaging",
         description: "High-res imaging targets the best zones.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "plantOutput", pct: 0.02 },
           { kind: "growthCostReduction", pct: 0.06 },
         ],
       },
       {
         name: "Heap Leaching",
         description: "Leaching unlocks low-grade ore.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "plantOutput", pct: 0.02 }],
       },
       {
         name: "Directional Drilling",
         description: "Steered wells reach more reserves.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "plantOutput", pct: 0.02 }],
       },
       {
         name: "Bulk Rail",
@@ -4196,24 +4196,24 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Mine Safety Systems",
         description: "Safety systems cut incident cost.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.015 }],
       },
     ],
     "1999": [
       {
         name: "Deepwater Extraction",
         description: "Offshore capability opens high-yield reserves.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "plantOutput", pct: 0.03 }],
       },
       {
         name: "In-Situ Recovery",
         description: "In-situ methods lower extraction cost.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "plantOutput", pct: 0.02 }],
       },
       {
         name: "Flotation Advances",
         description: "Better separation raises recovery.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "plantOutput", pct: 0.02 }],
       },
       {
         name: "Pipeline Tie-Ins",
@@ -4231,14 +4231,14 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Mine Automation",
         description: "Automated haulage lowers unit cost.",
         effects: [
-          { kind: "marginBonus", pp: 2.5 },
+          { kind: "plantOutput", pct: 0.025 },
           { kind: "growthCostReduction", pct: 0.06 },
         ],
       },
       {
         name: "Shale Extraction",
         description: "Fracking transforms supply economics.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.025 }],
       },
       {
         name: "Autonomous Haulage",
@@ -4248,25 +4248,25 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Ore Sorting",
         description: "Sensor sorting raises feed grade.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "plantOutput", pct: 0.02 }],
       },
       {
         name: "Tailings Management",
         description: "Better tailings reduce liability.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.015 }],
       },
     ],
     "2019": [
       {
         name: "Remote Sensing & Analytics",
         description: "Satellite data targets rich deposits.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "plantOutput", pct: 0.03 }],
       },
       {
         name: "Electric Mining Fleet",
         description: "Electrified fleets cut fuel cost.",
         effects: [
-          { kind: "marginBonus", pp: 2 },
+          { kind: "plantOutput", pct: 0.02 },
           { kind: "growthCostReduction", pct: 0.05 },
         ],
       },
@@ -4283,7 +4283,7 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
       {
         name: "Water Recycling",
         description: "Closed-loop water lowers cost and risk.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "plantOutput", pct: 0.02 }],
       },
     ],
     "2029": [
@@ -4291,19 +4291,19 @@ const SECTOR: Partial<Record<OperatingSectorType, Record<string, NodeSpec[]>>> =
         name: "Autonomous Extraction",
         description: "Fully autonomous mines run with minimal crews.",
         effects: [
-          { kind: "marginBonus", pp: 3 },
+          { kind: "plantOutput", pct: 0.03 },
           { kind: "growthCostReduction", pct: 0.1 },
         ],
       },
       {
         name: "Deep-Sea Mining",
         description: "Seabed nodules open vast new reserves.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.025 }],
       },
       {
         name: "Bioleaching",
         description: "Microbial extraction unlocks tough ores.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.025 }],
       },
       {
         name: "AI Exploration",
@@ -4327,7 +4327,7 @@ const CORPORATE_EXTRA: Record<string, NodeSpec[]> = {
     {
       name: "Industrial Psychology",
       description: "Worker motivation research improves productivity.",
-      effects: [{ kind: "marginBonus", pp: 0.5 }],
+      effects: [{ kind: "plantOutput", pct: 0.005 }],
     },
     {
       name: "Wartime Cost Controls",
@@ -4339,7 +4339,7 @@ const CORPORATE_EXTRA: Record<string, NodeSpec[]> = {
     {
       name: "Pension Fund Management",
       description: "Employee benefit programs improve retention and morale.",
-      effects: [{ kind: "marginBonus", pp: 0.5 }],
+      effects: [{ kind: "plantOutput", pct: 0.005 }],
     },
     {
       name: "Time-Sharing Services",
@@ -4363,7 +4363,7 @@ const CORPORATE_EXTRA: Record<string, NodeSpec[]> = {
     {
       name: "Strategic Planning Offices",
       description: "Dedicated planning units improve long-term allocation.",
-      effects: [{ kind: "marginBonus", pp: 1 }],
+      effects: [{ kind: "plantOutput", pct: 0.01 }],
     },
     {
       name: "Early Quality Management",
@@ -4375,7 +4375,7 @@ const CORPORATE_EXTRA: Record<string, NodeSpec[]> = {
     {
       name: "Industrial Engineering",
       description: "Work-study refines every process step.",
-      effects: [{ kind: "marginBonus", pp: 1 }],
+      effects: [{ kind: "plantOutput", pct: 0.01 }],
     },
     {
       name: "Vendor Consolidation",
@@ -4392,7 +4392,7 @@ const CORPORATE_EXTRA: Record<string, NodeSpec[]> = {
     {
       name: "MRP II",
       description: "Closed-loop planning ties finance to the shop floor.",
-      effects: [{ kind: "marginBonus", pp: 1.5 }],
+      effects: [{ kind: "plantOutput", pct: 0.015 }],
     },
   ],
   "1999": [
@@ -4411,7 +4411,7 @@ const CORPORATE_EXTRA: Record<string, NodeSpec[]> = {
     {
       name: "Real-Time Dashboards",
       description: "Live KPIs speed operating decisions.",
-      effects: [{ kind: "marginBonus", pp: 2 }],
+      effects: [{ kind: "plantOutput", pct: 0.02 }],
     },
     {
       name: "DevOps Automation",
@@ -4428,7 +4428,7 @@ const CORPORATE_EXTRA: Record<string, NodeSpec[]> = {
     {
       name: "Threat Intelligence",
       description: "Proactive defense averts breach losses.",
-      effects: [{ kind: "marginBonus", pp: 1.5 }],
+      effects: [{ kind: "plantOutput", pct: 0.015 }],
     },
   ],
   "2029": [
@@ -4451,7 +4451,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Secondary Recovery",
         description: "Water-flooding lifts field output.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Load Balancing",
@@ -4468,14 +4468,14 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Flue-Gas Treatment",
         description: "Cleaner stacks cut compliance cost.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
     ],
     "1999": [
       {
         name: "Subsea Completions",
         description: "Seafloor wellheads reach deeper reserves.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
       {
         name: "District Heating",
@@ -4487,7 +4487,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Microgrid Control",
         description: "Islandable grids improve reliability and margin.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Demand Response",
@@ -4499,19 +4499,19 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Floating Offshore Wind",
         description: "Deep-water wind opens vast new capacity.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
       {
         name: "Virtual Power Plant",
         description: "Aggregated DERs trade as one asset.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
     ],
     "2029": [
       {
         name: "Small Modular Reactors",
         description: "Factory-built reactors scale clean baseload.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.09 }],
       },
       {
         name: "Grid-Forming Inverters",
@@ -4525,7 +4525,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "VLSI Design",
         description: "Dense chips cut cost per function.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "plantOutput", pct: 0.02 }],
       },
       {
         name: "Compiler Toolchains",
@@ -4537,7 +4537,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Object-Oriented Platforms",
         description: "Reusable code accelerates products.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "plantOutput", pct: 0.02 }],
       },
       {
         name: "CD-ROM Distribution",
@@ -4549,7 +4549,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Application Servers",
         description: "Middleware monetizes enterprise apps.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.025 }],
       },
       {
         name: "Content Delivery Networks",
@@ -4573,19 +4573,19 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Transformer Models",
         description: "Foundation models power premium products.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "plantOutput", pct: 0.03 }],
       },
       {
         name: "Vector Databases",
         description: "Semantic search underpins AI features.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "plantOutput", pct: 0.02 }],
       },
     ],
     "2029": [
       {
         name: "Photonic Computing",
         description: "Light-based chips slash inference cost.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "plantOutput", pct: 0.03 }],
       },
       {
         name: "Agentic Dev Platforms",
@@ -4599,7 +4599,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Statistical Quality Control",
         description: "Control charts cut scrap and rework.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "Group Technology",
@@ -4611,7 +4611,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Cellular Manufacturing",
         description: "Work cells cut handling and WIP.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "MRP II Integration",
@@ -4628,14 +4628,14 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Six Sigma Black Belts",
         description: "Deep quality programs lift yield.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
     ],
     "2009": [
       {
         name: "Laser Cutting",
         description: "Precision cutting reduces material waste.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Cobot Cells",
@@ -4647,7 +4647,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Predictive Quality AI",
         description: "In-line AI catches defects early.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
       {
         name: "Digital Thread",
@@ -4664,7 +4664,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Closed-Loop Recycling",
         description: "In-house material loops cut input cost.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
     ],
   },
@@ -4673,7 +4673,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Portfolio Theory Models",
         description: "Mean-variance tools sharpen allocation.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Wire Transfer Networks",
@@ -4685,7 +4685,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Index Funds",
         description: "Low-cost passive products scale AUM.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Repo Markets",
@@ -4697,7 +4697,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Electronic Bond Trading",
         description: "Screen-based fixed income tightens spreads.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Online Wealth Tools",
@@ -4709,7 +4709,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Dark Pools",
         description: "Off-exchange venues capture block flow.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Cloud Core Banking",
@@ -4721,7 +4721,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Real-Time Fraud AI",
         description: "Instant detection cuts loss rates.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Embedded Finance",
@@ -4733,12 +4733,12 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "DeFi Liquidity Pools",
         description: "On-chain market-making earns fee yield.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.12 }],
       },
       {
         name: "AI Portfolio Management",
         description: "Autonomous strategies scale advisory.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
     ],
   },
@@ -4747,7 +4747,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "First-Run Syndication",
         description: "Direct-to-station sales bypass networks.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Affiliate Networks",
@@ -4759,7 +4759,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Pay-Per-View",
         description: "Event pricing captures premium demand.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Music Video Channels",
@@ -4771,12 +4771,12 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Ad Servers",
         description: "Targeted serving lifts ad yield.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Subscription Walls",
         description: "Paywalls add recurring revenue.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
     "2009": [
@@ -4788,7 +4788,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Original Programming",
         description: "Owned hits drive subscriber growth.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
     ],
     "2019": [
@@ -4800,7 +4800,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Dynamic Ad Insertion",
         description: "Server-side ads raise fill and yield.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
     "2029": [
@@ -4812,7 +4812,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Interactive Narratives",
         description: "Branching content commands premiums.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
     ],
   },
@@ -4826,14 +4826,14 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Catalyst Recovery",
         description: "Reclaimed catalysts lower input cost.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
     ],
     "1989": [
       {
         name: "Zeolite Catalysts",
         description: "Shape-selective catalysts raise yield.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Solvent Recovery",
@@ -4845,7 +4845,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "High-Throughput Screening",
         description: "Rapid R&D finds winning formulations.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Process Analytical Tech",
@@ -4857,7 +4857,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Enzyme Catalysis",
         description: "Mild biocatalysis lowers energy use.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Heat Integration",
@@ -4869,19 +4869,19 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Continuous Flow Chemistry",
         description: "Flow reactors raise safe throughput.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
       {
         name: "Bio-Based Monomers",
         description: "Renewable feedstocks hedge oil cost.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
     ],
     "2029": [
       {
         name: "Electrochemical Synthesis",
         description: "Electrified routes decarbonize output.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
       {
         name: "AI Reaction Design",
@@ -4895,24 +4895,24 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Automated Analyzers",
         description: "High-volume chemistry raises lab margin.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Sterile Processing",
         description: "Central sterilization cuts infection cost.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
     ],
     "1989": [
       {
         name: "Endoscopy",
         description: "Scope procedures shorten recovery.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Cardiac Devices",
         description: "Implantables open high-margin lines.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
     "1999": [
@@ -4924,7 +4924,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Clinical Decision Support",
         description: "Guideline tools reduce errors.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
     "2009": [
@@ -4936,14 +4936,14 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Minimally Invasive Robotics",
         description: "Robotic surgery lifts throughput.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
     "2019": [
       {
         name: "Liquid Biopsy",
         description: "Blood-based screening commands premiums.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Digital Therapeutics",
@@ -4955,7 +4955,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "mRNA Platforms",
         description: "Rapid biologics open new markets.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.12 }],
       },
       {
         name: "Surgical Autonomy",
@@ -4969,7 +4969,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Planogram Systems",
         description: "Optimized shelves lift sales per foot.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Regional DCs",
@@ -5005,7 +5005,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Buy-Online-Pickup",
         description: "BOPIS lifts conversion and footfall.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Mobile Wallets",
@@ -5017,7 +5017,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Computer-Vision Inventory",
         description: "Shelf cameras cut out-of-stocks.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Curbside Fulfillment",
@@ -5034,7 +5034,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Predictive Restock AI",
         description: "Demand AI keeps shelves full.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
     ],
   },
@@ -5043,7 +5043,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Unibody Construction",
         description: "Integrated bodies cut weight and cost.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "Robotic Painting",
@@ -5055,19 +5055,19 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Multi-Valve Engines",
         description: "Efficient engines win premium trims.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Crash Safety Cells",
         description: "Safety leadership lifts pricing.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
     ],
     "1999": [
       {
         name: "Drive-by-Wire",
         description: "Electronic controls cut mechanical cost.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Shared Architectures",
@@ -5079,19 +5079,19 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Dual-Clutch Transmissions",
         description: "Efficient gearboxes raise margins.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Active Safety",
         description: "ADAS content commands premiums.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
     ],
     "2019": [
       {
         name: "800V Architectures",
         description: "High-voltage EVs charge faster.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
       {
         name: "Cell-to-Pack Batteries",
@@ -5103,7 +5103,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Sensor Fusion AI",
         description: "Robust perception enables autonomy.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.09 }],
       },
       {
         name: "Megacasting",
@@ -5122,14 +5122,14 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Crop Rotation Science",
         description: "Rotations lift yield and cut inputs.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
     ],
     "1989": [
       {
         name: "Advanced Plant Breeding",
         description: "Better cultivars raise yield.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Grain Drying",
@@ -5141,7 +5141,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Drought-Tolerant Hybrids",
         description: "Resilient seed protects yield.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Satellite Yield Maps",
@@ -5153,7 +5153,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Variable-Rate Seeding",
         description: "Zone seeding optimizes stands.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Section Control",
@@ -5170,19 +5170,19 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Biological Crop Protection",
         description: "Biologicals reduce chemical spend.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
     ],
     "2029": [
       {
         name: "Robotic Weeding",
         description: "AI weeders slash herbicide use.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
       {
         name: "Gene-Edited Yield",
         description: "Edited traits push yield ceilings.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
     ],
   },
@@ -5191,7 +5191,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Sale-Leaseback Finance",
         description: "Off-balance-sheet capital fuels growth.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Energy Audits",
@@ -5204,7 +5204,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
         name: "Master-Planned Communities",
         description: "Repeatable large-scale schemes make new-market entry cheap.",
         effects: [
-          { kind: "marginBonus", pp: 1.5 },
+          { kind: "laborCostReduction", pct: 0.06 },
           { kind: "expansionDiscount", pct: 0.25 },
         ],
       },
@@ -5218,7 +5218,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Revenue Management",
         description: "Dynamic rents lift occupancy yield.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Virtual Tours",
@@ -5259,7 +5259,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Net-Zero Retrofits",
         description: "Decarbonized assets win premium tenants.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
   },
@@ -5268,7 +5268,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Slip-Form Casting",
         description: "Continuous pours speed concrete cores.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Crane Logistics",
@@ -5280,7 +5280,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Post-Tensioning",
         description: "Tensioned concrete spans more cheaply.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Fleet Maintenance Systems",
@@ -5297,14 +5297,14 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Off-Site Fabrication",
         description: "Shop-built assemblies cut site time.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
     "2009": [
       {
         name: "Clash Detection",
         description: "Model coordination avoids rework.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Laser Scanning",
@@ -5316,7 +5316,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Construction Exoskeletons",
         description: "Wearables lift worker output and safety.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Reality Capture",
@@ -5333,7 +5333,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Bio-Concrete",
         description: "Self-healing concrete cuts maintenance.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
   },
@@ -5342,60 +5342,60 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Inertial Navigation",
         description: "Precise nav commands premium systems.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Composite Airframes",
         description: "Lighter airframes win programs.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
     ],
     "1989": [
       {
         name: "Phased-Array Radar",
         description: "Electronic scanning dominates sensing.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
       {
         name: "Thermal Imaging",
         description: "Night dominance adds product lines.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
     ],
     "1999": [
       {
         name: "Tactical Datalinks",
         description: "Networked fires lock in integration.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Loitering Munitions",
         description: "Persistent strike opens new demand.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
     ],
     "2009": [
       {
         name: "ISR Fusion",
         description: "Sensor fusion sells as a service.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Counter-IED",
         description: "Protection systems win urgent budgets.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
     ],
     "2019": [
       {
         name: "Counter-UAS",
         description: "Drone defense becomes a fast-growth line.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
       {
         name: "Software-Defined Radio",
         description: "Reprogrammable comms add recurring value.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
     ],
     "2029": [
@@ -5404,7 +5404,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
         description: "Laser arrays unlock the Directed-Energy Systems method.",
         effects: [
           { kind: "unlockStrategy", strategyId: "directed_energy" },
-          { kind: "marginBonus", pp: 2.5 },
+          { kind: "inputEfficiency", pct: 0.075 },
         ],
       },
       {
@@ -5419,7 +5419,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Stored-Program Control",
         description: "Software switches cut maintenance.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Coaxial Trunking",
@@ -5455,7 +5455,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "LTE-Advanced",
         description: "Carrier aggregation lifts data revenue.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Carrier Wi-Fi",
@@ -5467,19 +5467,19 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Network Slicing",
         description: "Virtual networks sell tailored SLAs.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Massive MIMO",
         description: "Dense antennas multiply capacity.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
     "2029": [
       {
         name: "Terahertz Links",
         description: "Ultra-wideband backhaul unlocks bandwidth.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.12 }],
       },
       {
         name: "Non-Terrestrial Networks",
@@ -5493,7 +5493,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Stereo Sound Systems",
         description: "Premium audio lifts venue revenue.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Touring Productions",
@@ -5505,19 +5505,19 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Computer Animation",
         description: "CGI opens premium production lines.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Premium Cable Bundles",
         description: "Tiered channels add subscription revenue.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
     "1999": [
       {
         name: "Motion Capture",
         description: "Performance capture cuts animation cost.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Massively Multiplayer",
@@ -5529,7 +5529,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Free-to-Play Monetization",
         description: "In-app purchases scale lifetime value.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Second-Screen Apps",
@@ -5541,7 +5541,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Live-Service Worlds",
         description: "Persistent updates sustain spend.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Battle Pass Models",
@@ -5558,7 +5558,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Volumetric Capture",
         description: "Holographic capture opens new formats.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
     ],
   },
@@ -5608,7 +5608,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Reverse Logistics",
         description: "Returns handling adds a revenue line.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
     "2019": [
@@ -5641,7 +5641,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Rotary Drilling Advances",
         description: "Faster bits raise drilling rates.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.015 }],
       },
       {
         name: "Bulk Haulage",
@@ -5658,14 +5658,14 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Froth Flotation",
         description: "Better separation raises grade.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "plantOutput", pct: 0.02 }],
       },
     ],
     "1999": [
       {
         name: "Horizontal Drilling",
         description: "Lateral wells reach more reserve.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.025 }],
       },
       {
         name: "Autonomous Survey",
@@ -5677,7 +5677,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Multi-Stage Fracturing",
         description: "Staged fracs unlock tight rock.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.025 }],
       },
       {
         name: "Fleet Telemetry",
@@ -5689,7 +5689,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "Sensor-Based Sorting",
         description: "Ore sensing raises feed grade.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "plantOutput", pct: 0.02 }],
       },
       {
         name: "Electrified Haulage",
@@ -5701,7 +5701,7 @@ const SECTOR_EXTRA: Partial<Record<OperatingSectorType, Record<string, NodeSpec[
       {
         name: "In-Situ Leaching AI",
         description: "Controlled leaching lifts recovery.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.025 }],
       },
       {
         name: "Robotic Drill Rigs",
@@ -5720,7 +5720,7 @@ const CORPORATE_EXTRA2: Record<string, NodeSpec[]> = {
     {
       name: "Wartime Procurement",
       description: "Government contract expertise builds enduring supply chain ties.",
-      effects: [{ kind: "marginBonus", pp: 0.5 }],
+      effects: [{ kind: "plantOutput", pct: 0.005 }],
     },
     {
       name: "Union Negotiations",
@@ -5744,7 +5744,7 @@ const CORPORATE_EXTRA2: Record<string, NodeSpec[]> = {
     {
       name: "Conglomerate Structure",
       description: "Diversified holding structure spreads risk and captures synergies.",
-      effects: [{ kind: "marginBonus", pp: 0.5 }],
+      effects: [{ kind: "plantOutput", pct: 0.005 }],
     },
     {
       name: "Market Research",
@@ -5756,7 +5756,7 @@ const CORPORATE_EXTRA2: Record<string, NodeSpec[]> = {
     {
       name: "Portfolio Management",
       description: "BCG-style portfolio analysis directs capital to high-return units.",
-      effects: [{ kind: "marginBonus", pp: 1 }],
+      effects: [{ kind: "plantOutput", pct: 0.01 }],
     },
     {
       name: "Stagflation Hedging",
@@ -5785,7 +5785,7 @@ const CORPORATE_EXTRA2: Record<string, NodeSpec[]> = {
     {
       name: "Activity-Based Costing",
       description: "True cost visibility sharpens pricing.",
-      effects: [{ kind: "marginBonus", pp: 1.5 }],
+      effects: [{ kind: "plantOutput", pct: 0.015 }],
     },
   ],
   "1999": [
@@ -5804,7 +5804,7 @@ const CORPORATE_EXTRA2: Record<string, NodeSpec[]> = {
     {
       name: "Self-Service BI",
       description: "Everyone queries data, decisions speed up.",
-      effects: [{ kind: "marginBonus", pp: 1.5 }],
+      effects: [{ kind: "plantOutput", pct: 0.015 }],
     },
     {
       name: "Microservices",
@@ -5821,7 +5821,7 @@ const CORPORATE_EXTRA2: Record<string, NodeSpec[]> = {
     {
       name: "Security Orchestration",
       description: "Automated response contains incidents fast.",
-      effects: [{ kind: "marginBonus", pp: 1.5 }],
+      effects: [{ kind: "plantOutput", pct: 0.015 }],
     },
   ],
   "2029": [
@@ -5861,14 +5861,14 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Acid Gas Removal",
         description: "Sour-gas treatment opens new fields.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
     ],
     "1999": [
       {
         name: "FPSO Vessels",
         description: "Floating production reaches remote offshore.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
       {
         name: "SCADA Telemetry",
@@ -5880,31 +5880,31 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Battery Arbitrage",
         description: "Store cheap, sell dear across the day.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Wholesale Trading Desk",
         description: "Market trading captures price spreads.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
     ],
     "2019": [
       {
         name: "Green Hydrogen Pilots",
         description: "Electrolysis adds an industrial offtake.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
       {
         name: "Grid-Scale Batteries",
         description: "Utility storage firms renewable output.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
     ],
     "2029": [
       {
         name: "Tritium Breeding",
         description: "Closed fuel cycle de-risks fusion supply.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.09 }],
       },
       {
         name: "Superconducting Grid",
@@ -5923,14 +5923,14 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Networking Stack",
         description: "Owned protocols capture infrastructure value.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "plantOutput", pct: 0.02 }],
       },
     ],
     "1989": [
       {
         name: "Client-Server Architecture",
         description: "Distributed apps win the enterprise.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "plantOutput", pct: 0.02 }],
       },
       {
         name: "Localization Toolkits",
@@ -5966,19 +5966,19 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "MLOps Pipelines",
         description: "Industrialized ML ships models reliably.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "plantOutput", pct: 0.02 }],
       },
       {
         name: "Inference Accelerators",
         description: "Custom silicon cuts AI serving cost.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.025 }],
       },
     ],
     "2029": [
       {
         name: "Federated Learning",
         description: "Privacy-safe training widens data access.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.025 }],
       },
       {
         name: "Self-Healing Systems",
@@ -6004,7 +6004,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "SPC Networks",
         description: "Plant-wide quality data lifts yield.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "Concurrent Engineering",
@@ -6016,7 +6016,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Postponement Strategy",
         description: "Late customization cuts finished stock.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Supplier Portals",
@@ -6033,14 +6033,14 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Machine Vision Inspection",
         description: "Automated inspection catches defects.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
     ],
     "2019": [
       {
         name: "Edge Analytics",
         description: "On-machine analytics cut downtime.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Autonomous Mobile Robots",
@@ -6057,7 +6057,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Zero-Defect AI",
         description: "Predictive control approaches zero scrap.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
     ],
   },
@@ -6066,19 +6066,19 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Cash Management Systems",
         description: "Sweep accounts optimize idle balances.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Risk-Adjusted Pricing",
         description: "Price for risk to protect spread.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
     "1989": [
       {
         name: "Asset-Backed Securities",
         description: "Off-balance funding frees capital.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Treasury Workstations",
@@ -6102,7 +6102,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Smart Order Routing",
         description: "Best-execution routing tightens spreads.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "API Banking Core",
@@ -6114,7 +6114,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Behavioral Credit Models",
         description: "Alt-data scoring cuts default loss.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Instant Lending",
@@ -6126,7 +6126,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Programmable Money",
         description: "Smart-contract payments cut settlement cost.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.12 }],
       },
       {
         name: "Autonomous Underwriting",
@@ -6140,7 +6140,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Audience Research Panels",
         description: "Better ratings raise ad pricing power.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Barter Syndication",
@@ -6152,7 +6152,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Premium Sports Rights",
         description: "Marquee sports anchor subscriptions.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Home Shopping",
@@ -6169,7 +6169,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Metered Paywalls",
         description: "Soft paywalls convert loyal readers.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
     "2009": [
@@ -6188,7 +6188,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "First-Party Data Graphs",
         description: "Owned data sharpens targeting.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Shoppable Video",
@@ -6219,14 +6219,14 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "By-Product Recovery",
         description: "Captured by-products add revenue.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
     ],
     "1989": [
       {
         name: "Polymer Compounding",
         description: "Custom compounds command premiums.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Closed-Loop Cooling",
@@ -6238,12 +6238,12 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Combinatorial Chemistry",
         description: "Massively parallel R&D finds winners.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Specialty Surfactants",
         description: "High-value surfactants lift margin.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
     ],
     "2009": [
@@ -6255,7 +6255,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Bio-Refining",
         description: "Biomass routes diversify feedstock.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
     ],
     "2019": [
@@ -6267,14 +6267,14 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Carbon Capture Integration",
         description: "On-site CCS protects against carbon cost.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
     ],
     "2029": [
       {
         name: "Molecular Manufacturing",
         description: "Atom-precise synthesis opens new products.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.09 }],
       },
       {
         name: "CO2 Feedstock Loops",
@@ -6293,19 +6293,19 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Diagnostic Reagents",
         description: "Owned reagents add recurring revenue.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
     ],
     "1989": [
       {
         name: "Laparoscopic Suites",
         description: "Keyhole surgery raises throughput.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Implant Telemetry",
         description: "Connected implants enable follow-on care.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
     "1999": [
@@ -6317,7 +6317,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Disease Registries",
         description: "Outcome data drives premium programs.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
     "2009": [
@@ -6336,7 +6336,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "AI Imaging Triage",
         description: "AI prioritization speeds diagnosis.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "Care Navigation Apps",
@@ -6348,7 +6348,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Organ Bioprinting",
         description: "Printed tissue opens a frontier market.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.12 }],
       },
       {
         name: "Closed-Loop Therapeutics",
@@ -6362,7 +6362,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Shrinkage Control",
         description: "Loss prevention protects thin margins.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Vendor Compliance",
@@ -6375,7 +6375,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
         name: "Category Killers",
         description: "Category dominance withstands antitrust and political pushback.",
         effects: [
-          { kind: "marginBonus", pp: 1.5 },
+          { kind: "laborCostReduction", pct: 0.06 },
           { kind: "dominanceShield", pct: 0.25 },
         ],
       },
@@ -6406,7 +6406,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Endless Aisle",
         description: "In-store ordering captures lost sales.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
     "2019": [
@@ -6439,7 +6439,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Galvanized Bodies",
         description: "Rust-proofing lifts quality reputation.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "Synchronized Supply",
@@ -6451,7 +6451,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Engine Management ECUs",
         description: "Electronic control lifts efficiency.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Modular Interiors",
@@ -6463,7 +6463,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Brake-by-Wire",
         description: "Electronic braking reduces hardware cost.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Global Sourcing",
@@ -6475,7 +6475,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Stop-Start Systems",
         description: "Idle-off boosts fuel economy ratings.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "Connected Telematics",
@@ -6492,14 +6492,14 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Vehicle Operating System",
         description: "Owned OS adds recurring software value.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
     ],
     "2029": [
       {
         name: "Lidar Sensor Fusion",
         description: "Robust perception unlocks autonomy.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.09 }],
       },
       {
         name: "Battery Swapping",
@@ -6518,14 +6518,14 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Hybrid Vigor Seed",
         description: "Heterosis lifts yield per acre.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
     ],
     "1989": [
       {
         name: "Integrated Nutrient Mgmt",
         description: "Balanced nutrition raises yield.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
       {
         name: "On-Farm Storage",
@@ -6537,7 +6537,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Insect-Resistant Crops",
         description: "Built-in protection cuts losses.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Yield Monitoring",
@@ -6561,12 +6561,12 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Predictive Disease Models",
         description: "Early warning protects yield.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Managed Pollination",
         description: "Pollinator services lift fruit set.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
     ],
     "2029": [
@@ -6578,7 +6578,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Precision Fermentation",
         description: "Brewed proteins open new product lines.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
     ],
   },
@@ -6587,7 +6587,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Tax-Increment Financing",
         description: "Public financing de-risks development.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Centralized Leasing",
@@ -6599,7 +6599,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Mortgage Securitization",
         description: "Securitized debt lowers funding cost.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Facility Benchmarking",
@@ -6616,7 +6616,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Portfolio Optimization",
         description: "Data-driven mix raises blended yield.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
     "2009": [
@@ -6640,7 +6640,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Predictive Leasing",
         description: "Demand models cut vacancy.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
     "2029": [
@@ -6652,7 +6652,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Carbon-Negative Materials",
         description: "Green materials win regulated tenants.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
   },
@@ -6661,7 +6661,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Pre-Cast Panels",
         description: "Factory panels speed envelope work.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Site Logistics Planning",
@@ -6673,7 +6673,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Tilt-Up Construction",
         description: "On-site cast walls cut build time.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Equipment Pooling",
@@ -6690,14 +6690,14 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Modular MEP",
         description: "Prefab mechanical racks speed fit-out.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
     "2009": [
       {
         name: "Prefab Bathroom Pods",
         description: "Pod assemblies compress schedules.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "GPS Machine Control",
@@ -6709,7 +6709,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Robotic Bricklaying",
         description: "Bricklaying robots raise productivity.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Digital Permitting",
@@ -6726,7 +6726,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Self-Assembling Structures",
         description: "Programmable materials build themselves.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
     ],
   },
@@ -6735,31 +6735,31 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Terrain-Following Radar",
         description: "Low-altitude nav wins strike programs.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Ballistic Computers",
         description: "Fire-control electronics add value.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.045 }],
       },
     ],
     "1989": [
       {
         name: "Active Protection Systems",
         description: "Hard-kill defenses win vehicle programs.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
       {
         name: "Secure Satellite Comms",
         description: "Protected comms lock in customers.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
     ],
     "1999": [
       {
         name: "UAV Sensor Payloads",
         description: "ISR payloads ride the drone wave.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Precision Logistics",
@@ -6771,19 +6771,19 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Counter-Battery Radar",
         description: "Threat-locating sensors win urgent buys.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
       {
         name: "Soldier Systems",
         description: "Integrated kit adds recurring revenue.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.06 }],
       },
     ],
     "2019": [
       {
         name: "Hypersonic Defense",
         description: "Interceptors anchor new budgets.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
       {
         name: "AI Mission Planning",
@@ -6795,12 +6795,12 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Swarming Munitions",
         description: "Coordinated swarms scale cheaply.",
-        effects: [{ kind: "marginBonus", pp: 3 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.09 }],
       },
       {
         name: "Quantum-Secure Comms",
         description: "Unbreakable links command a premium.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "inputEfficiency", pct: 0.075 }],
       },
     ],
   },
@@ -6833,7 +6833,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "MPLS Backbones",
         description: "Traffic engineering improves margins.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "SMS Platforms",
@@ -6845,7 +6845,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Femtocells",
         description: "In-home cells offload macro networks.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "IP Multimedia Subsystem",
@@ -6862,14 +6862,14 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Edge CDN",
         description: "Operator edge caching adds revenue.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
     "2029": [
       {
         name: "Reconfigurable Surfaces",
         description: "Smart surfaces extend coverage cheaply.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
       {
         name: "AI Spectrum Sharing",
@@ -6883,7 +6883,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Surround Sound",
         description: "Premium audio lifts ticket value.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
       {
         name: "Merchandise Licensing",
@@ -6895,7 +6895,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Direct-to-Video",
         description: "Sell-through video adds a window.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Theme Park Attractions",
@@ -6907,12 +6907,12 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Real-Time 3D Engines",
         description: "Reusable engines cut game cost.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
       {
         name: "Digital Rights Management",
         description: "DRM protects distribution revenue.",
-        effects: [{ kind: "marginBonus", pp: 1.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.06 }],
       },
     ],
     "2009": [
@@ -6924,7 +6924,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Microtransactions",
         description: "In-game purchases lift lifetime value.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
     ],
     "2019": [
@@ -6948,7 +6948,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Haptic Immersion",
         description: "Full-body feedback commands premiums.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.1 }],
       },
     ],
   },
@@ -6974,7 +6974,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Dedicated Fleets",
         description: "Owned capacity wins premium contracts.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
     "1999": [
@@ -7010,7 +7010,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Predictive ETA AI",
         description: "Accurate ETAs cut expediting cost.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "laborCostReduction", pct: 0.08 }],
       },
     ],
     "2029": [
@@ -7043,19 +7043,19 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "4D Seismic Monitoring",
         description: "Time-lapse imaging lifts recovery.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "plantOutput", pct: 0.02 }],
       },
       {
         name: "Solvent Extraction",
         description: "SX-EW unlocks low-grade metal.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "plantOutput", pct: 0.02 }],
       },
     ],
     "1999": [
       {
         name: "Extended-Reach Wells",
         description: "Long laterals drain more reservoir.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.025 }],
       },
       {
         name: "Remote Operations Centers",
@@ -7067,7 +7067,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Proppant Optimization",
         description: "Tuned fracs raise well productivity.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "plantOutput", pct: 0.02 }],
       },
       {
         name: "Autonomous Drills",
@@ -7079,7 +7079,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Geometallurgy",
         description: "Ore-body modeling optimizes processing.",
-        effects: [{ kind: "marginBonus", pp: 2 }],
+        effects: [{ kind: "plantOutput", pct: 0.02 }],
       },
       {
         name: "Renewable-Powered Sites",
@@ -7091,7 +7091,7 @@ const SECTOR_EXTRA2: Partial<Record<OperatingSectorType, Record<string, NodeSpec
       {
         name: "Bioleaching at Scale",
         description: "Microbial extraction unlocks tough ore.",
-        effects: [{ kind: "marginBonus", pp: 2.5 }],
+        effects: [{ kind: "plantOutput", pct: 0.025 }],
       },
       {
         name: "Subsea Robotic Mining",

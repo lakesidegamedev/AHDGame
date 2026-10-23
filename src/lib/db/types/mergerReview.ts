@@ -46,6 +46,12 @@ export interface MergerReview {
   combinedSharePercent: number;
   overlaps: MergerOverlapFinding[];
   trigger: MergerReviewTrigger;
+  /**
+   * Why the deal was referred: market concentration under the Competition
+   * Act, or a foreign takeover under the Foreign Investment Act's screening.
+   * Absent on reviews opened before screening existed (concentration).
+   */
+  reason?: "concentration" | "foreignScreening";
   status: MergerReviewStatus;
   openedAtTurn: number;
   /** Turn at which an undecided review auto-resolves on the published bands. */

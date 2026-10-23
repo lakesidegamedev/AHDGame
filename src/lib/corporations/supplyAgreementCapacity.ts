@@ -10,7 +10,6 @@ import {
   type CommodityType,
 } from "@/lib/constants/commodities";
 import {
-  applyPlannedEconomyOutputMix,
   getEffectiveStrategyRatesForOperatingModel,
   plannedEconomyMediaSupplyFactor,
 } from "@/lib/constants/sectorStrategies";
@@ -113,12 +112,7 @@ export function computeSupplierCommodityCapacityUnits(args: {
     // the shortfall leg bills them for the gap every turn. A command economy's
     // media makes state information rather than advertising, and media supply
     // is derated in every economy.
-    const supplyMix = applyPlannedEconomyOutputMix(
-      s.sectorType,
-      rates.supply ?? {},
-      plannedEconomy,
-      s.mediaDiscriminator
-    );
+    const supplyMix = rates.supply ?? {};
     const scaled =
       plantsCapacityScaledUnits({
         capacityUnits: capacity,
@@ -164,12 +158,7 @@ export function computeSupplierCommodityAchievableUnits(args: {
       args.currentYear,
       args.commandEconomyEnabled
     );
-    const supplyMix = applyPlannedEconomyOutputMix(
-      sector.sectorType,
-      rates.supply ?? {},
-      plannedEconomy,
-      sector.mediaDiscriminator
-    );
+    const supplyMix = rates.supply ?? {};
     const weight = commodityMixWeight(supplyMix, COMMODITY_BASE_PRICES, args.commodity);
     if (!(weight > 0)) continue;
     const scaled = plantsSupplyScaledUnits({

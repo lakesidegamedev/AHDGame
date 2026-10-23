@@ -1,11 +1,23 @@
 /** New world collections need a bootstrap index plan or a reviewed primary-key policy. */
 export const PRIMARY_KEY_INDEX_POLICIES: Readonly<Record<string, string>> = {
+  producerEconomyTurnChunks:
+    "Immutable receipt chunks are written by SHA-256 _id and read only by the bounded list of hashes in one frozen turn manifest. Reset deletes all chunks; there are no secondary scans or TTL queries.",
   fundWritedownCompensationLedger: "Retired world receipts have no active secondary access path.",
   procurementRestrictions: "One restriction per country, read and updated by its country _id.",
   vietnamEscalation: "One singleton, read and upserted by _id.",
   appliedWorldTransitions:
     "One receipt per authored rule, upserted by _id; the bounded rule roster is read once.",
   bankingTelemetry: "Turn number is the _id used for upsert and latest-turn ordering.",
+  retiredCommodityArchive:
+    "Write-once archive keyed by source collection and _id; game logic never reads it.",
+  producerMarketShadows:
+    "Telemetry: one summary per turn, upserted by its turn _id; game logic never reads it.",
+  producerPathClaims: "One claim per world and turn, inserted and read by its _id.",
+  producerMarketOutcomes: "One document per world and turn, written and read by its _id.",
+  producerPublicCarry: "One document per world and turn, written and read by its _id.",
+  producerOpenings: "One record per applied opening, written and read by its plan digest _id.",
+  producerMarketShadowState:
+    "Shadow-only carried books, upserted by run and turn _id; at most two documents per run are kept, so the predecessor scan is bounded.",
   acquisitionSettlements: "Settlement recovery and writes address the offer identity through _id.",
   ngChamberLeadershipElections: "One election per chamber role, read and written by _id.",
   nppOperatorDiagnostics:
@@ -16,6 +28,10 @@ export const PRIMARY_KEY_INDEX_POLICIES: Readonly<Record<string, string>> = {
   productAdvertisingPayables:
     "Holds only owed payables, deleted once cleared; the clearing reads its family's small owed set.",
   productAdvertisingClearances: "Append-only receipts, inserted and looked up by payable _id.",
+  turnWorkerControl:
+    "One singleton (_id 'current'): the turn worker's heartbeat and the single open admin turn request, read and written by _id.",
+  marketAdjustmentSignals:
+    "One document per country, upserted and read by its country _id; the 12-point history lives inside it.",
 };
 
 export function missingCollectionIndexPolicies(

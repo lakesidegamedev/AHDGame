@@ -71,8 +71,27 @@ export async function getBankDepositCeiling(db: Db, corp: Corporation): Promise<
     loadWorldEraUnitScale(db),
   ]);
 
+  return depositCeilingFromSectors(charter, sectors, eraUnitScale);
+}
+
+/**
+ * The ceiling from already-loaded sectors.
+ *
+ * Split out for the v2 banking turn, which reads every deposit taker's
+ * financial sectors in one query instead of one query per bank. Same inputs,
+ * same arithmetic as {@link getBankDepositCeiling}.
+ */
+export function depositCeilingFromSectors(
+  charter: BankCharter | undefined,
+  sectors: readonly Pick<
+    CorporateSector,
+    "capitalStock" | "revenue" | "strategyId" | "sectorType"
+  >[],
+  eraUnitScale: number
+): number {
+  if (!isDepositTakingCharter(charter)) return 0;
   const capacity = sectors.reduce(
-    (sum, s) => sum + financialSectorCapacityUnits(s, eraUnitScale),
+    (sum, sector) => sum + financialSectorCapacityUnits(sector, eraUnitScale),
     0
   );
   return computeDepositCeiling(capacity, getBranchCapacityShare(charter));

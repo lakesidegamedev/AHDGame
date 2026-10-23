@@ -323,11 +323,11 @@ Aggressive policy maximizes revenue and commodity throughput but also raises inp
 
 ### Autopilot
 
-Your corporation's Overview has an **Autopilot** switch. You stay CEO and can still act by hand. Each turn, while it is on, autopilot sets the marketing, logistics and R&D budgets and the dividend, grows plants that are selling, pauses plants stuck in a glut, and opens new plants when there is spare cash. Budgets and dividends you set by hand are reset the next turn.
+Your corporation's Overview has an **Autopilot** switch. You stay CEO and can still act by hand. Each turn, while it is on, autopilot sets the marketing, logistics and R&D budgets and the dividend, grows plants that are selling, and opens new plants when there is spare cash. It can also reduce active capacity at a demand-limited plant that is losing money, then restore it when buyers return or production constraints clear. The plant and its paid capacity remain yours. Budgets and dividends you set by hand are reset each turn, unless you tell autopilot to leave them alone under **What the NPP may do** on the same card. Autopilot may also adjust active capacity at eligible plants, so a hand-set level there may change next turn.
 
 Autopilot reinvests slowly. Each turn it commits at most 15% of the cash above the corporation's reserve to new capacity, adds at most 5% to any one plant, and keeps only one growth order in flight per plant. It builds only where the plant made a profit last turn, sells nearly everything it makes, the market has room for more, the corporation's earnings are positive, and the extra output should repay the build within 30 turns of coming online. Turning it on asks you to confirm, and the Overview shows what it may spend, with a button to turn it off.
 
-It never borrows, picks research, retools, sells or closes plants, or buys rivals. When one of those is worth doing, it lists it on the Overview, and urgent items also arrive in your inbox. A corporation on autopilot is not penalised for an inactive CEO, but its CEO's national influence is capped at the standard rate rather than the higher top-listed-company rate. Appointing an NPP caretaker switches autopilot off.
+By default it never borrows, picks research, retools, sells or closes plants, or buys rivals. **What the NPP may do** lets you pick an attitude (Growth, Cost cutter, Advise only) or set each action yourself, including allowing it to sell or close plants, which removes them with no sale proceeds. When one of those is worth doing, it lists it on the Overview, and urgent items also arrive in your inbox. A corporation on autopilot is not penalised for an inactive CEO, but its CEO's national influence is capped at the standard rate rather than the higher top-listed-company rate. Appointing an NPP caretaker switches autopilot off.
 
 ### Simple and Pro views
 
@@ -371,7 +371,7 @@ Computer-run corporations may automatically retool a sector onto a better strate
 | Telecommunications | 5G/6G Networks, Standard, 5G/Infrastructure, Cloud Services | 4 |
 | Media (entertainment) | Live-Service Platforms, Standard, Streaming/Digital, Live/Venue | 4 |
 | Retail | E-Commerce Fulfillment, Standard, E-Commerce, Brick & Mortar | 4 |
-| Logistics | Autonomous Freight, Standard, Automated Logistics, Full-Service | 4 |
+| Logistics | Autonomous Freight, Standard, Freight Only, Automated Logistics, Full-Service | 5 |
 | Extraction & Mining | Diversified, Iron & Metals Mining, Oil & Gas, Rare Earth Minerals Mining, Coal Mining, Timber & Forestry | 6 |
 
 There is no separate Copper Mining strategy: copper was merged into the Rare Earth Minerals commodity, and Rare Earth Minerals Mining covers both markets.
@@ -380,11 +380,21 @@ For extraction sectors specifically, the **Diversified** strategy spreads output
 
 **Telecommunications** sectors produce **Network Services** (subscription-equivalent broadband/connectivity capacity) as their primary unique output alongside software. The three strategies (Standard, 5G/Infrastructure, Cloud Services) differ in how much network_services vs software they supply and in their hardware/energy input mix. Network services have background macro demand from GDP, so there is always a market even before player-built Telecom sectors are common.
 
-**Entertainment-line media** sectors produce **Entertainment Services** (event-equivalent entertainment capacity) as their primary unique output alongside advertising. The three strategies (Standard, Streaming/Digital, Live/Venue) differ in output split and input profile. Live/Venue supplies the most entertainment_services but demands construction and real estate inputs for physical venue infrastructure.
-
 ## Corporate taxes
 
 Two tax rates apply to each sector: a **domestic rate** and a **foreign rate**. A corporation headquartered in the US pays the US domestic rate on US sectors and the foreign rate of any other country where it operates. Both rates are set by legislation in each country. State-level corporate taxes also stack on top.
+
+### Pass-through companies
+
+An LLC, S-Corp or LLP pays no company tax. Instead, its owners are taxed on their **full share of the profit every turn, whether it is paid out or not**, the way real pass-through taxation works. The company pays this owner tax for them at the headquarters country's and state's rates: the top personal income rate for shares held by people, and the corporate rate for shares held by companies, NPPs and funds. Payouts from a pass-through are then not taxed again.
+
+Some forms are taxed as ordinary companies instead:
+
+- A pass-through whose **shares trade publicly** (any public float).
+- An **S-Corp with more than 100 holders, or any holder that is not a person**.
+- A Japanese **Godo Kaisha (GK)**, which is a company for tax purposes.
+
+This change phases in over 24 turns from its start, so the tax rises step by step.
 
 ## Economic effects on corporations
 

@@ -12,6 +12,7 @@ import {
 import { corpExitEquityAnchor } from "@/lib/bonds/corpExitEquity";
 import { buildPrimeRateMap } from "@/lib/bonds/corporateBondDefault";
 import { sumBondPrincipalAnchor } from "@/lib/bonds/bondPrincipalSum";
+import { isCorporateBond } from "@/lib/bonds/sovereign";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { getGameState } from "@/lib/gameState";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
@@ -296,4 +297,17 @@ export async function rollbackDefaultedIssuerMaturityFlows(args: {
       }
     }
   }
+}
+
+/** Active, non-defaulted corporate bonds grouped by issuer, built once per turn. */
+export function indexActiveCorporateBondsByIssuer(bonds: readonly Bond[]): Map<string, Bond[]> {
+  const byIssuer = new Map<string, Bond[]>();
+  for (const bond of bonds) {
+    if (!isCorporateBond(bond) || bond.matured || bond.defaulted) continue;
+    const key = bond.corporationId.toString();
+    const rows = byIssuer.get(key) ?? [];
+    rows.push(bond);
+    byIssuer.set(key, rows);
+  }
+  return byIssuer;
 }

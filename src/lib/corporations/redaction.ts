@@ -7,7 +7,9 @@ import type { Corporation } from "@/lib/db/types";
  */
 const PRIVATE_REDACTED_CORP_FIELDS = [
   "liquidCapital",
-  "liquidCurrencyCode",
+  // Keep liquidCurrencyCode: sector profit (and other intentionally public
+  // money) is denominated in it. HQ/country is already public, so the code is
+  // not a secret — stripping it made the UI treat local yen/etc. as anchor.
   "marketingBudget",
   "marketingStrength",
   "marketingStrengthGrowth",
@@ -76,6 +78,8 @@ const PRIVATE_REDACTED_SECTOR_FIELDS = [
   "capacityUnits",
   "producedUnits",
   "soldUnits",
+  "mediaAdvertisingCampaignUnits",
+  "mediaAdvertisingCampaignFactor",
   "fillRate",
   "fillRateBand",
   // Share of output a rival could not get to market. Same class of intel as the

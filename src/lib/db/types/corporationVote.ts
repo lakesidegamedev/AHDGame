@@ -9,7 +9,8 @@ export type CorporationVoteType =
   | "relocation"
   | "share_issuance"
   | "adopt_supershares"
-  | "ticker_change";
+  | "ticker_change"
+  | "ceo_salary";
 
 export type CorporationVoteStatus = "open" | "passed" | "failed" | "cancelled";
 
@@ -51,6 +52,8 @@ export interface CorporationVotePayload {
   superShareMultiplier?: number;
   /** ticker_change: the new ticker symbol (1–5 uppercase letters). */
   newTicker?: string;
+  /** ceo_salary: the daily CEO salary (corporation currency) the shareholders are asked to approve. */
+  newCeoSalary?: number;
 }
 
 export interface CorporationVote {

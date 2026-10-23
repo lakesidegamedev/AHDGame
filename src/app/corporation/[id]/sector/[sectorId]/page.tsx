@@ -730,7 +730,10 @@ export default function SectorDetailPage() {
                   <PlantPanel
                     plants={plants}
                     marketSupplies={commodities?.supplies ?? []}
+                    freightState={commodities?.freightState}
                     sectorType={sector.sectorType}
+                    mediaDiscriminator={sector.mediaDiscriminator}
+                    mediaAdvertisingCampaignFactor={sector.mediaAdvertisingCampaignFactor}
                     unionId={sector.unionId}
                     unionName={sector.unionName}
                     averageWageLevel={sector.wageLevel ?? 1}
@@ -820,6 +823,7 @@ export default function SectorDetailPage() {
                   targetName={sector.displayName ?? corporation.name}
                   showAttack={!isCeo && !corporation.isStateOwned}
                   showSplit={!plantsEnabled}
+                  openPlannerOnMount={searchParams.get("split") === "1"}
                   attacking={attacking}
                   attackError={attackError}
                   attackMsg={attackMsg}

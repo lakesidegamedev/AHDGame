@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { apiErrorText } from "@/lib/errors/catalog";
+import { HealPanelActions, HealPanelMessage } from "./HealPanelParts";
+
+import { useHealPanel } from "./useHealPanel";
 
 interface DiagnosticResult {
   affectedTallies: number;
@@ -15,49 +16,10 @@ interface DiagnosticResult {
 }
 
 export function HealWithdrawnTallies() {
-  const [loading, setLoading] = useState(false);
-  const [diagnostic, setDiagnostic] = useState<DiagnosticResult | null>(null);
-  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
-
-  const runDiagnostic = async () => {
-    setLoading(true);
-    setResult(null);
-    try {
-      const res = await fetch("/api/admin/elections/heal-withdrawn-tallies");
-      const data = await res.json();
-      if (res.ok) {
-        setDiagnostic(data);
-      } else {
-        setResult({ ok: false, message: apiErrorText(data, "Diagnostic failed") });
-      }
-    } catch {
-      setResult({ ok: false, message: "Network error" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const runHeal = async () => {
-    if (
-      !confirm(
-        "This will remove withdrawn candidates' vote data from all active election tallies.\n\nContinue?"
-      )
-    )
-      return;
-
-    setLoading(true);
-    setDiagnostic(null);
-    setResult(null);
-    try {
-      const res = await fetch("/api/admin/elections/heal-withdrawn-tallies", { method: "POST" });
-      const data = await res.json();
-      setResult({ ok: res.ok, message: data.message ?? apiErrorText(data, "Unknown response") });
-    } catch {
-      setResult({ ok: false, message: "Network error" });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { loading, diagnostic, result, runDiagnostic, runHeal } = useHealPanel<DiagnosticResult>(
+    "/api/admin/elections/heal-withdrawn-tallies",
+    "This will remove withdrawn candidates' vote data from all active election tallies.\n\nContinue?"
+  );
 
   return (
     <div className="rounded-xl border border-card-border bg-card p-5 space-y-4">
@@ -70,22 +32,14 @@ export function HealWithdrawnTallies() {
         </p>
       </div>
 
-      <div className="flex gap-2">
-        <button
-          onClick={runDiagnostic}
-          disabled={loading}
-          className="rounded-lg border border-card-border bg-background px-3 py-2 text-xs font-medium transition-colors hover:border-primary/50 disabled:opacity-50"
-        >
-          {loading ? "Running\u2026" : "Diagnose"}
-        </button>
-        <button
-          onClick={runHeal}
-          disabled={loading}
-          className="rounded-lg border border-error/40 bg-error/10 px-3 py-2 text-xs font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-50"
-        >
-          {loading ? "Healing\u2026" : "Heal now"}
-        </button>
-      </div>
+      <HealPanelActions
+        loading={loading}
+        onDiagnose={runDiagnostic}
+        onHeal={runHeal}
+        diagnosePendingLabel={"Running\u2026"}
+        healPendingLabel={"Healing\u2026"}
+        healLabel={"Heal now"}
+      />
 
       {diagnostic && (
         <div className="rounded-lg border border-card-border bg-background p-3 space-y-2 text-xs">
@@ -115,11 +69,7 @@ export function HealWithdrawnTallies() {
         </div>
       )}
 
-      {result && (
-        <p className={`text-xs font-medium ${result.ok ? "text-success" : "text-error"}`}>
-          {result.message}
-        </p>
-      )}
+      <HealPanelMessage result={result} />
     </div>
   );
 }

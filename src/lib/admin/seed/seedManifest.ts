@@ -138,7 +138,13 @@ const REFERENCE: CollectionEntry[] = [
   },
   { name: "legislationTypes", category: "reference", seededBy: "seedLegislationTypes" },
   { name: "achievements", category: "reference", seededBy: "seedAchievements" },
-  { name: "federalBudget", category: "reference", seededBy: "seedBudgets" },
+  {
+    name: "federalBudget",
+    category: "reference",
+    seededBy: "seedBudgets",
+    notes:
+      "Reset with world budgets, including optional independently settled all-household resource controls. Historical source imports never create these cash-flow receipts.",
+  },
   { name: "stateBudgets", category: "reference", seededBy: "seedBudgets" },
   {
     name: "regionalBudgets",
@@ -163,6 +169,54 @@ const REFERENCE: CollectionEntry[] = [
       "One vacant-head union per (countryId, sectorType). Wiped on reset; re-seeded at bootstrap with era-appropriate names.",
   },
   { name: "unionEndorsements", category: "runtime" },
+  {
+    name: "retiredCommodityArchive",
+    category: "runtime",
+    notes:
+      "Archive of documents keyed by a removed commodity (entertainment_services, 2026-10-19), copied before deletion. Never read by game logic.",
+  },
+  {
+    name: "producerMarketShadows",
+    category: "runtime",
+    notes:
+      "Telemetry for the unified producer market shadow (market recovery Phase 2): one per-industry comparison per turn. Never read by game logic.",
+  },
+  {
+    name: "producerMarketShadowState",
+    category: "runtime",
+    notes:
+      "Carried books for the producer market shadow: cash, stock, unpaid bills and prices per run and turn, last two turns kept. Read only by the shadow phase.",
+  },
+  {
+    name: "producerPathClaims",
+    category: "runtime",
+    notes:
+      "One row per turn recording whether it ran the legacy or funded producer path, so no turn can run both.",
+  },
+  {
+    name: "producerMarketOutcomes",
+    category: "runtime",
+    notes:
+      "Settled funded supply and demand per turn (requested and offered units by commodity and state), read by the price phase on funded turns.",
+  },
+  {
+    name: "producerPublicCarry",
+    category: "runtime",
+    notes:
+      "Kept public funding per country and budget line, one document per world and turn, read at the next turn by _id and upserted at close. Wiped on reset.",
+  },
+  {
+    name: "producerOpenings",
+    category: "runtime",
+    notes:
+      "One record per applied producer opening conversion (keyed by plan digest): reconciliation and the non-cash opening adjustments it made.",
+  },
+  {
+    name: "offTypeHandovers",
+    category: "runtime",
+    notes:
+      "Per-turn receipts for market recovery stage 5: one row per (turn, sector) AI off-type plant handover, advanced pending -> debited -> moved -> done so a retried turn resumes without repeating a money leg.",
+  },
   { name: "unionLeaderVotes", category: "runtime" },
   { name: "unionOrganizers", category: "runtime" },
   {

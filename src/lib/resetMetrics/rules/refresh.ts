@@ -2,6 +2,8 @@
 import { primaryMetrics } from "../catalog";
 import type { OpeningMetricObservation } from "./openingObservation";
 import type { ResetMetricSnapshot } from "./snapshot";
+import { validateHousingState, type HousingState } from "./housing";
+import type { HouseholdProductionStatus } from "./householdSources";
 
 export interface MetricRefreshInput {
   board: ResetMetricSnapshot;
@@ -12,6 +14,9 @@ export interface MetricRefreshInput {
   electionDue: boolean;
   /** Refresh overdue owners from current readings without manufacturing missed turns. */
   allowCatchUp?: boolean;
+  housingState?: HousingState;
+  householdProductionStatus?: HouseholdProductionStatus;
+  housingProductionStatus?: HouseholdProductionStatus;
 }
 
 export interface MetricRefreshResult {
@@ -46,7 +51,17 @@ function sameObservation(a: OpeningMetricObservation | undefined, b: OpeningMetr
     a.status === b.status &&
     a.source === b.source &&
     a.owner === b.owner &&
-    a.note === b.note
+    a.note === b.note &&
+    a.observedAtTurn === b.observedAtTurn &&
+    a.ratioBasis?.numerator === b.ratioBasis?.numerator &&
+    a.ratioBasis?.denominator === b.ratioBasis?.denominator &&
+    JSON.stringify(a.demographicBasis) === JSON.stringify(b.demographicBasis) &&
+    JSON.stringify(a.householdBasis) === JSON.stringify(b.householdBasis) &&
+    JSON.stringify(a.growthBasis) === JSON.stringify(b.growthBasis) &&
+    a.definitionVersion === b.definitionVersion &&
+    a.unit === b.unit &&
+    JSON.stringify(a.countryBasis) === JSON.stringify(b.countryBasis) &&
+    a.lastUpdatedTurn === b.lastUpdatedTurn
   );
 }
 
@@ -86,7 +101,35 @@ export function dueResetMetricIds(
  * visible as missing; callers must not certify the result as a live board.
  */
 export function refreshResetMetricBoard(input: MetricRefreshInput): MetricRefreshResult {
-  const { board, turn, updates, cohortDue, electionDue } = input;
+  const { board, turn, cohortDue, electionDue } = input;
+  for (const status of [input.householdProductionStatus, input.housingProductionStatus])
+    if (
+      status &&
+      (board.scope !== "national" ||
+        status.evaluatedAtTurn !== turn ||
+        !["produced", "legacy"].includes(status.path) ||
+        status.gaps.length > 64 ||
+        status.gaps.some((g) => typeof g !== "string" || !g || g.length > 200) ||
+        (status.path === "produced" && status.gaps.length > 0))
+    )
+      throw new Error("Invalid household production status");
+  if (input.housingState) {
+    validateHousingState(input.housingState);
+    if (
+      board.scope !== "regional" ||
+      input.housingState.worldId !== board.worldId ||
+      input.housingState.countryId !== board.countryId ||
+      input.housingState.regionId !== board.regionId ||
+      input.housingState.asOfTurn !== turn
+    )
+      throw new Error("Housing state is not bound to this board turn");
+  }
+  const updates = Object.fromEntries(
+    Object.entries(input.updates).map(([id, observation]) => [
+      id,
+      { ...observation, lastUpdatedTurn: turn },
+    ])
+  );
   if (
     !Number.isSafeInteger(turn) ||
     turn < board.asOfTurn ||
@@ -105,6 +148,12 @@ export function refreshResetMetricBoard(input: MetricRefreshInput): MetricRefres
     Object.keys(board.observations).some((id) => !expectedIds.has(id))
   ) {
     throw new Error("Reset metric board is incomplete before refresh");
+  }
+  if (
+    board.openingValues &&
+    expected.some((metric) => !Number.isFinite(board.openingValues![metric.id]))
+  ) {
+    throw new Error("Reset metric board has an incomplete immutable opening baseline");
   }
   for (const [id, observed] of Object.entries(updates)) {
     const metric = expected.find((entry) => entry.id === id);
@@ -132,7 +181,13 @@ export function refreshResetMetricBoard(input: MetricRefreshInput): MetricRefres
   if (turn === board.asOfTurn) {
     if (
       missingDueIds.length > 0 ||
-      changedIds.some((id) => !sameObservation(board.observations[id], updates[id]!))
+      changedIds.some((id) => !sameObservation(board.observations[id], updates[id]!)) ||
+      (input.householdProductionStatus &&
+        JSON.stringify(board.householdProductionStatus) !==
+          JSON.stringify(input.householdProductionStatus)) ||
+      (input.housingProductionStatus &&
+        JSON.stringify(board.housingProductionStatus) !==
+          JSON.stringify(input.housingProductionStatus))
     ) {
       throw new Error("Reset metric turn replay differs from its persisted owner readings");
     }
@@ -142,7 +197,29 @@ export function refreshResetMetricBoard(input: MetricRefreshInput): MetricRefres
     ...board,
     asOfTurn: turn,
     lastRefreshFromTurn: board.asOfTurn,
+    priorValues: Object.fromEntries(
+      Object.entries(board.observations).map(([id, o]) => [id, o.value])
+    ),
     observations: { ...board.observations, ...updates },
+    gameplayReferences: {
+      ...board.gameplayReferences,
+      ...Object.fromEntries(
+        Object.entries(updates).flatMap(([id, o]) =>
+          o.definitionVersion === 2 &&
+          o.value !== null &&
+          (board.gameplayReferences?.[id]?.unit !== o.unit || !board.gameplayReferences?.[id])
+            ? [[id, { value: o.value, unit: o.unit, definitionVersion: 2 as const }]]
+            : []
+        )
+      ),
+    },
+    ...(input.housingState ? { housingState: input.housingState } : {}),
+    ...(input.householdProductionStatus
+      ? { householdProductionStatus: input.householdProductionStatus }
+      : {}),
+    ...(input.housingProductionStatus
+      ? { housingProductionStatus: input.housingProductionStatus }
+      : {}),
   };
   return { board: next, replayed: false, dueIds, changedIds, missingDueIds };
 }

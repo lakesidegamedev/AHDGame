@@ -2,13 +2,10 @@
  * Core vote calculation helpers for the election engine.
  */
 
+import { clampPercentStat } from "@/lib/numeric/rules";
 import type { DemographicCategory, StateDemographics } from "@/lib/db/types";
 import { calcAppeal, MAX_APPEAL } from "@/lib/utils/demographicAppeal";
 import { normalizeNPI } from "@/lib/utils/normalizeNPI";
-
-function clampPercentStat(value: number): number {
-  return Math.min(100, Math.max(0, value));
-}
 
 /**
  * Calculate effective favorability for a specific archetype.

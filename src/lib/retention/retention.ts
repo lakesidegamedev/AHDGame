@@ -12,6 +12,7 @@
 import type { Db, Document } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { isR2Enabled } from "@/lib/r2";
+import { loadTurnLengthMinutes } from "@/lib/financialTxLog/expiresAt";
 import { archiveDocs } from "./archive";
 import {
   RETENTION_POLICIES,
@@ -19,8 +20,6 @@ import {
   DEFAULT_KEEP_EVERY_K,
   type RetentionPolicy,
 } from "./policy";
-
-const MS_PER_TURN = 3600_000; // turns are hourly
 
 export interface CollectionResult {
   collection: string;
@@ -46,11 +45,16 @@ export interface RetentionSummary {
 }
 
 /** Build the "older than the window" match filter for a policy. */
-function oldFilter(policy: RetentionPolicy, cutoff: number, now: number): Document {
+function oldFilter(
+  policy: RetentionPolicy,
+  cutoff: number,
+  now: number,
+  msPerTurn: number
+): Document {
   const base: Document = { [policy.timeKey]: { $lt: cutoff } };
   if (!policy.createdAtFallback) return base;
   const fallbackField = policy.createdAtFallback === true ? "createdAt" : policy.createdAtFallback;
-  const cutoffDate = new Date(now - policy.windowTurns * MS_PER_TURN);
+  const cutoffDate = new Date(now - policy.windowTurns * msPerTurn);
   return {
     $or: [
       base,
@@ -119,6 +123,7 @@ export async function runRetention(
     turn?: number;
   } | null;
   const currentTurn = gs?.currentTurn ?? gs?.turn ?? 0;
+  const msPerTurn = (await loadTurnLengthMinutes(db)) * 60_000;
   const r2Enabled = isR2Enabled();
 
   const policies = RETENTION_POLICIES.filter(
@@ -140,7 +145,7 @@ export async function runRetention(
     };
     try {
       const col = db.collection(policy.collection);
-      const base = oldFilter(policy, cutoff, now);
+      const base = oldFilter(policy, cutoff, now, msPerTurn);
       const matchCount = await col.countDocuments(base);
       res.matchCount = matchCount;
 

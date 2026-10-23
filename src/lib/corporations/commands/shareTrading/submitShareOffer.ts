@@ -2,6 +2,7 @@
  * Share offers reserve purchase funding while awaiting acceptance.
  * submitShareOffer includes the source monetary authority spread in corporate escrow.
  */
+import { assertForeignControlAllowed, wouldGainControl } from "@/lib/mechanicalLaws/guards";
 import { loadForexSpreadStrengths } from "@/lib/currency/euro/quotes";
 import { loadEuroMonetaryUnion } from "@/lib/currency/euro/service";
 import { NextResponse } from "next/server";
@@ -19,6 +20,7 @@ import { assertCeoTradeNotBlocked } from "@/lib/corporations/commands/privatizat
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import { getHomeCurrency, loadCharacterFxRate } from "@/lib/currency/characterFunds";
+import { autoConvertForPurchase } from "@/lib/currency/autoConvert";
 import {
   anchorToCorpLiquidCapital,
   corpLiquidCapitalToAnchor,
@@ -198,6 +200,12 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
       if (listing.sellerCorporationId && placerCorp._id.equals(listing.sellerCorporationId)) {
         return errorResponse(400, "Cannot offer on your own corporation's listing");
       }
+      if (listingCorp && wouldGainControl(listingCorp, placerCorp._id, shares)) {
+        const foreignRejection = await assertForeignControlAllowed(db, placerCorp, listingCorp, {
+          viaMarket: true,
+        });
+        if (foreignRejection) return errorResponse(foreignRejection.status, foreignRejection.error);
+      }
       const placerCurrency = (resolveCorpLiquidCurrencyCode(placerCorp) ?? "USD") as CurrencyCode;
       const targetCurrency = (resolveCorpLiquidCurrencyCode(listingCorp) ?? "USD") as CurrencyCode;
       const placerFxRate = await getCorpFxRate(db, placerCorp);
@@ -307,6 +315,21 @@ export async function submitShareOffer(request: Request, { params }: RouteParams
         charFxRate = fxResult.rate;
       }
       const escrowInHome = escrowAnchor * charFxRate;
+
+      // Match public share buys: consolidate other personal wallets into home
+      // currency when forex + auto-convert are on, before the escrow debit.
+      if (forexEnabled) {
+        const convertResult = await autoConvertForPurchase(db, {
+          character,
+          requiredCurrency: homeCurrency,
+          requiredAmount: escrowInHome,
+          turn: currentTurn,
+          forexEnabled,
+        });
+        if (convertResult.needed && !convertResult.success) {
+          return errorResponse(400, convertResult.error);
+        }
+      }
 
       // Atomic balance-gated escrow debit on character cash. Pre-fix used
       // getPersonalBalance() against a cached doc + non-atomic $inc.

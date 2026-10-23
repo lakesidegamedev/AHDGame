@@ -1224,6 +1224,14 @@ describe("cron jobs", () => {
         mockSchedule.mockReset();
       }
     });
+
+    it("does not start a schedule in a process that owns none", async () => {
+      const { restartCronWithSchedule, stopCronJobs } = await import("./cron");
+      stopCronJobs();
+      mockSchedule.mockClear();
+      expect(await restartCronWithSchedule()).toBe(false);
+      expect(mockSchedule).not.toHaveBeenCalled();
+    });
   });
 
   describe("market tick cron callback", () => {
@@ -1343,4 +1351,42 @@ describe("cron jobs", () => {
       expect(status.running).toBe(false);
     });
   });
+});
+
+describe("cron jobs with TURN_CRON_MINUTE=30", () => {
+  const previous = process.env.TURN_CRON_MINUTE;
+
+  beforeEach(() => {
+    process.env.TURN_CRON_MINUTE = "30";
+    vi.resetModules();
+  });
+
+  afterEach(() => {
+    if (previous === undefined) delete process.env.TURN_CRON_MINUTE;
+    else process.env.TURN_CRON_MINUTE = previous;
+    vi.resetModules();
+  });
+
+  it("schedules the turn and fog of war at :30, the backup at :00, and leaves the market tick alone", async () => {
+    const cron = await import("node-cron");
+    const turnSystem = await import("./turnSystem");
+    const schedule = vi.mocked(cron.schedule);
+    schedule.mockReturnValue({ start: vi.fn(), stop: vi.fn(), getStatus: vi.fn() } as any);
+    vi.mocked(turnSystem.initializeGameState).mockResolvedValue(undefined as any);
+    vi.mocked(turnSystem.getGameState).mockResolvedValue({
+      currentTurn: 1,
+      isActive: true,
+      fastMode: false,
+    } as any);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+
+    const { initializeCronJobs, MARKET_TICK_SCHEDULE } = await import("./cron");
+    await initializeCronJobs();
+
+    const expressions = schedule.mock.calls.map((call) => call[0]);
+    expect(expressions.filter((e) => e === "30 * * * *")).toHaveLength(2); // turn + fog of war
+    expect(expressions).toContain("0 * * * *"); // backup tick
+    expect(expressions).toContain(MARKET_TICK_SCHEDULE);
+    expect(MARKET_TICK_SCHEDULE).toBe("15,45 * * * *");
+  }, 30_000);
 });

@@ -48,7 +48,7 @@ import { eraForPreset, type EraId } from "@/lib/seeds/presetSelector";
  *     a stabilizer-dominated market, so a little goes a long way.
  *   - turn-960 sandbox (mature, 63 sectors): supply is large, so the same
  *     population-based demand is gentler. At 0.002 the mature economy sees
- *     retail ~+12%, oversupplied consumer goods (food/healthcare/entertainment)
+ *     retail ~+12%, oversupplied consumer goods (food/healthcare)
  *     nudged toward equilibrium, and pre-existing energy/electronics shortages
  *     ~unchanged. The mature economy is representative, so the default targets it.
  *
@@ -145,7 +145,6 @@ export const HOUSEHOLD_CONSUMER_BASKET: Partial<Record<CommodityType, number>> =
   real_estate_services: 0.1,
   financial_services: 0.05,
   network_services: 0.05,
-  entertainment_services: 0.05,
   software: 0.03,
   freight: 0.03,
   consulting_services: 0.02,
@@ -166,7 +165,6 @@ const HOUSEHOLD_BASKET_TIER_SLOPE: Partial<Record<CommodityType, number>> = {
   retail: -0.1,
   vehicles: 0.2,
   electronics: 0.25,
-  entertainment_services: 0.3,
   financial_services: 0.3,
   real_estate_services: 0.2,
   healthcare_services: 0.15,
@@ -187,7 +185,6 @@ const HOUSEHOLD_PRICE_ELASTICITY: Partial<Record<CommodityType, number>> = {
   retail: 0.3,
   vehicles: 0.6,
   electronics: 0.6,
-  entertainment_services: 0.6,
   financial_services: 0.4,
   real_estate_services: 0.4,
   software: 0.5,

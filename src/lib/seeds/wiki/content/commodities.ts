@@ -92,8 +92,6 @@ Beyond sector-level supply and demand, several macroeconomic forces inject addit
 
 **Network Services:** State GDP generates network_services demand, representing household and enterprise broadband/connectivity spending that scales with economic activity (fraction 4e-6 of GDP / base price per turn).
 
-**Entertainment Services:** State GDP generates entertainment_services demand, representing leisure and events spending (fraction 2.5e-6 of GDP / base price per turn).
-
 **Construction Services:** State GDP generates a background construction_services demand signal representing public and private infrastructure investment (fraction 5e-7 of GDP / base price per turn).
 
 ### Retail demand

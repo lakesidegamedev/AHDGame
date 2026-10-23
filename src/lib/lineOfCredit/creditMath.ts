@@ -1,13 +1,10 @@
+import { clamp } from "@/lib/numeric/rules";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 
 /** Map composite 0–100 to spread in percentage points vs prime (+5 at 0, −1 at 100). */
 export function spreadPercentPointsFromComposite(composite: number): number {
   const c = Math.max(0, Math.min(100, composite));
   return 5 - (c / 100) * 6;
-}
-
-function clamp(n: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, n));
 }
 
 /**

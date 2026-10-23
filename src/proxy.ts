@@ -7,6 +7,7 @@ import { AUTH_COOKIE_NAME } from "@/lib/authCookieName";
 import { CHARACTER_GATE_COOKIE, isCharacterGatedPath } from "@/lib/auth/characterGate";
 import { isLoopbackOrigin, isSingleplayer, singleplayerSessionClaims } from "@/lib/singleplayer";
 import { getAuthUserFromToken, verifyAuthToken, type AuthUser } from "@/lib/auth";
+import { legacyStockMarketRedirectUrl } from "@/lib/market/legacyStockMarketRedirect";
 import { errorResponse } from "@/lib/api/errors";
 import {
   ACQUISITION_COOKIE,
@@ -232,6 +233,31 @@ export async function proxy(request: NextRequest) {
     url.host = "ahousedividedgame.com";
     url.port = "";
     return NextResponse.redirect(url, 301);
+  }
+
+  // Legacy page families that exist only to redirect. Answering the 307 here
+  // instead of in the page means the request never runs the dynamic root
+  // layout (auth + country registry + the whole i18n catalog) just to emit a
+  // redirect. Page-load telemetry ranks both of these among the slowest
+  // routes precisely because a two-hop navigation paid for a full server
+  // render before the hop.
+  const stockMarketMatch = pathname.match(/^\/country\/([a-z]{2,3})\/stockmarket$/i);
+  if (stockMarketMatch) {
+    const search = Object.fromEntries(request.nextUrl.searchParams.entries());
+    return NextResponse.redirect(
+      new URL(legacyStockMarketRedirectUrl(stockMarketMatch[1], search), request.url)
+    );
+  }
+  if (pathname === "/world/legacy") {
+    const url = new URL("/contests", request.url);
+    url.searchParams.set("view", "rankings");
+    if (request.nextUrl.searchParams.get("scope") === "current") {
+      url.searchParams.set("scope", "current");
+    }
+    if (request.nextUrl.searchParams.get("rankBy") === "netWorth") {
+      url.searchParams.set("rankBy", "netWorth");
+    }
+    return NextResponse.redirect(url);
   }
 
   // Internal API routes get the read-gate, not the page maintenance/redirect

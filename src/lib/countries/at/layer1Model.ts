@@ -14,6 +14,7 @@
  * near-total, the VdU absorbing amnestied nationals, the KPÖ propped up in the
  * Soviet zone; society Catholic, rural and reconstruction-focused.
  */
+import { convertLayer1Census } from "@/lib/seeds/international/convertLayer1Census";
 import type { CountryLayer1Model, DemographicPosition } from "@/lib/seeds/international/types";
 import { atRegionCensusData, type ATRegionLayer1 } from "@/lib/seeds/at/atRegionCensusData";
 import { atRegionCensusData1953 } from "@/lib/seeds/at/atRegionCensusData1953";
@@ -204,22 +205,7 @@ const ERA_CENSUS: Partial<Record<EraId, Record<string, ATRegionLayer1>>> = {
   "2027": atRegionCensusData,
 };
 
-function convertCensus(
-  raw: Record<string, ATRegionLayer1>
-): Record<string, Record<string, Record<string, number>>> {
-  return Object.fromEntries(
-    Object.entries(raw).map(([regionId, layer1]) => [
-      regionId,
-      {
-        ethnicity: layer1.ethnicity as unknown as Record<string, number>,
-        age: layer1.age as unknown as Record<string, number>,
-        education: layer1.education as unknown as Record<string, number>,
-        income: layer1.income as unknown as Record<string, number>,
-        urbanization: layer1.urbanization as unknown as Record<string, number>,
-      },
-    ])
-  );
-}
+const convertCensus = convertLayer1Census<ATRegionLayer1>;
 
 export function getAtModel(era: EraId): CountryLayer1Model {
   const census = convertCensus(ERA_CENSUS[era] ?? atRegionCensusData);

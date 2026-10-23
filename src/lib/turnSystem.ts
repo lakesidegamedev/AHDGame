@@ -64,6 +64,7 @@ import {
   type ValidatedTurnResume,
 } from "@/simulation/engine/turnResumeBootstrap";
 import { buildTurnExecutionContext } from "@/simulation/engine/turnExecutionContext";
+import { selectEngineForAttempt, type TurnEngine } from "@/simulation/engine/turnEngine";
 import { recoverDemographicFlowsBeforeContext } from "@/lib/demographics/recoverFlows";
 import { getTurnPhaseRegistry } from "@/simulation/phases/turnPhaseRegistry";
 import { runWithLedgerTurn } from "@/lib/ledger/ledgerTurn";
@@ -73,6 +74,8 @@ import {
   getSingleplayerPhasePredicate,
 } from "@/simulation/phases/singleplayerPhases";
 import { runPostTurnIntegrityScans } from "@/lib/turn/postTurnScans";
+import { inProcessTurnRefusal } from "@/lib/turn/turnWorkerHandoff";
+import { announcePendingSuggestionCompletions } from "@/lib/suggestions/completionAnnouncement";
 import { runContestsAfterTurn } from "@/lib/contests/engine";
 import { getAnomalyScanCadencePredicate } from "@/simulation/phases/anomalyScanCadence";
 import { isSingleplayer } from "@/lib/singleplayer";
@@ -84,6 +87,7 @@ import { startTurnMemorySampler, type TurnMemoryPeak } from "@/lib/turn/turnMemo
 import { captureTurnPosthog } from "@/lib/analytics/turnPosthog";
 import { currentTurnBuild } from "@/lib/turn/turnBuild";
 import { NPP_ENGINE_VERSION } from "@/lib/nppAutonomy/engineVersion";
+import { nextScheduledTurnAfter, resolveTurnCronMinute } from "@/lib/cron/turnCronMinute";
 
 /** Read once per process: the deployment does not change under a running server. */
 const turnBuild = currentTurnBuild();
@@ -108,9 +112,7 @@ export async function initializeGameState(): Promise<GameState> {
   if (existing) return existing;
 
   const now = new Date();
-  const nextHour = new Date(now);
-  nextHour.setMinutes(0, 0, 0);
-  nextHour.setHours(nextHour.getHours() + 1);
+  const nextHour = nextScheduledTurnAfter(now, resolveTurnCronMinute());
 
   const initialState: GameState = {
     _id: "current",
@@ -245,7 +247,22 @@ export async function releaseLocalProcessingLock(reason: string): Promise<boolea
 /** What a crashed previous holder left behind, for a resumed turn. */
 type CrashedTurnRecovery = ValidatedTurnResume;
 
-export function processTurn(options: Parameters<typeof processTurnImpl>[0] = {}) {
+export function processTurn(
+  options: Parameters<typeof processTurnImpl>[0] = {}
+): ReturnType<typeof processTurnImpl> {
+  // When the worker owns turns, the web server never runs one: a turn holds the
+  // event loop and takes the site down for its whole duration (turn 372).
+  const refusal = inProcessTurnRefusal(process.env);
+  if (refusal) {
+    console.error(`[Turn System] Refused in-process turn: ${refusal}`);
+    return Promise.resolve({
+      success: false,
+      turn: 0,
+      message: refusal,
+      warnings: [],
+      health: null,
+    });
+  }
   return withServerTurnAnalytics(() => processTurnImpl(options));
 }
 
@@ -267,6 +284,11 @@ async function processTurnImpl(
   let activeGameNow: Date | null = null;
   let activeCurrentYear = STARTING_YEAR;
   let activeIteration: GameIteration | undefined;
+  /**
+   * Engine resolved for this attempt. Hoisted out of the lock block so the crash
+   * turn log can report it; null when the turn died before it was resolved.
+   */
+  let activeEngine: TurnEngine | null = null;
   const currentPhaseRef = { current: null as string | null };
   let phaseStatusesForFailure: TurnPhaseTelemetryMap | null = null;
   let phaseResultsForFailure: TurnLog["phases"] | null = null;
@@ -530,6 +552,17 @@ async function processTurnImpl(
     await recoverDemographicFlowsBeforeContext(db, gameState, resumedFromCrash?.appliedPhases);
 
     const config = await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" });
+    // One read of the selector per turn, before any phase runs. A resume pins the
+    // engine recorded by the holder that died, so config can only choose the engine
+    // for the NEXT turn — never for a turn that is already in progress.
+    const engineResolution = selectEngineForAttempt({
+      configured: config?.turnEngineVersion,
+      inFlightEngine: gameState.processingEngine,
+      isResume: resumedFromCrash != null,
+    });
+    const engine: TurnEngine = engineResolution.engine;
+    activeEngine = engine;
+    for (const engineWarning of engineResolution.warnings) warnings.push(engineWarning);
     // A resume starts from the inherited markers and stored results, so the
     // first status write below rewrites them rather than erasing them.
     const bootstrapRecord = bootstrapPhaseRecord(
@@ -559,6 +592,8 @@ async function processTurnImpl(
           ...(resumedFromCrash ? {} : { processingPhase: TURN_BOOTSTRAP_PHASE }),
           processingPhaseStatuses: phaseStatuses,
           processingPhaseResults: bootstrapRecord.results,
+          processingEngine: engine.selection,
+          processingEngineVersion: engine.version,
           updatedAt: lockAcquiredAt,
         },
       }
@@ -586,6 +621,7 @@ async function processTurnImpl(
         db,
         gameState,
         config,
+        engine,
         warnings,
         activeIteration,
         phaseStatuses,
@@ -689,6 +725,8 @@ async function processTurnImpl(
           processingPhase: null,
           processingPhaseStatuses: null,
           processingPhaseResults: null,
+          processingEngine: null,
+          processingEngineVersion: null,
           updatedAt: context.realNow,
           ...(localSingleplayer
             ? {
@@ -726,7 +764,11 @@ async function processTurnImpl(
       health: lastHealth,
       phaseStatuses,
       phases: context.phaseResults,
-      ...(turnBuild ? { build: turnBuild } : {}),
+      // Which engine produced this world, independent of which commit deployed it.
+      turnEngine: engine.selection,
+      engineVersion: engine.version,
+      ...(engine.v2Phases.length > 0 ? { v2Phases: [...engine.v2Phases] } : {}),
+      ...(turnBuild ? { build: { ...turnBuild, engineVersion: engine.version } } : {}),
       nppEngineVersion: NPP_ENGINE_VERSION,
       createdAt: context.realNow,
     };
@@ -740,6 +782,10 @@ async function processTurnImpl(
       );
       // Weekly contests read the committed turn's values; never blocks the turn.
       void runContestsAfterTurn(db, context.newTurn);
+      // Suggestions marked done by any tool get their Discord post here.
+      void announcePendingSuggestionCompletions(db).catch((err) =>
+        console.warn("[post-turn] suggestion completion announcements failed", err)
+      );
     }
 
     emit({
@@ -947,7 +993,18 @@ async function processTurnImpl(
           health: lastHealth,
           phaseStatuses: finalizedPhaseStatuses,
           phases: phaseResultsForFailure,
-          ...(turnBuild ? { build: turnBuild } : {}),
+          ...(activeEngine
+            ? {
+                turnEngine: activeEngine.selection,
+                engineVersion: activeEngine.version,
+                ...(activeEngine.v2Phases.length > 0
+                  ? { v2Phases: [...activeEngine.v2Phases] }
+                  : {}),
+                ...(turnBuild
+                  ? { build: { ...turnBuild, engineVersion: activeEngine.version } }
+                  : {}),
+              }
+            : {}),
           createdAt: failureTime,
         };
         await db.collection<TurnLog>("turnLogs").insertOne(crashTurnLog as TurnLog);
@@ -994,9 +1051,7 @@ export async function startTurnSystem(): Promise<{ success: boolean; message: st
   try {
     const db = await getDb();
     const now = new Date();
-    const nextHour = new Date(now);
-    nextHour.setMinutes(0, 0, 0);
-    nextHour.setHours(nextHour.getHours() + 1);
+    const nextHour = nextScheduledTurnAfter(now, resolveTurnCronMinute());
 
     // Deadlines are turn-based, so resuming after a pause needs no Date-shift:
     // frozen turns kept every countdown frozen. (Phase 5 removed shiftDeadlinesOnResume.)
@@ -1087,14 +1142,16 @@ export async function toggleFastMode(): Promise<{
 
     invalidateGameStateCache();
 
-    // Restart cron with new schedule
+    // Rebuild the schedule if this process owns it; otherwise the worker must restart.
     const { restartCronWithSchedule } = await import("./cron");
-    await restartCronWithSchedule();
+    const restarted = await restartCronWithSchedule();
 
     console.log(`[Turn System] Fast mode ${newFastModeState ? "enabled" : "disabled"}`);
     return {
       success: true,
-      message: `Fast mode ${newFastModeState ? "enabled" : "disabled"}. Turns will run ${newFastModeState ? "every 30 minutes" : "every hour"}.`,
+      message:
+        `Fast mode ${newFastModeState ? "enabled" : "disabled"}. Turns will run ${newFastModeState ? "every 30 minutes" : "every hour"}` +
+        (restarted ? "." : " once the turn worker restarts."),
       fastMode: newFastModeState,
     };
   } catch (error) {

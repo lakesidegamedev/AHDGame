@@ -44,6 +44,8 @@ export interface ManufacturingDevelopmentCashSettlementArgs {
   exchangeRatesByCurrency: Map<CurrencyCode, number>;
   bondsByCorpId: Map<string, Bond[]>;
   sectorsByCorp: Map<string, CorporateSector[]>;
+  /** Bank construction-loan principal per corporation (anchor), from the honest-balance-sheets stage. */
+  constructionLoanDebtByCorpId?: ReadonlyMap<string, number>;
   /** Feature gate; disabled turns do not read or settle title advertising obligations. */
   mediaProductSlatesEnabled?: boolean;
   productLinesV2Enabled?: boolean;
@@ -168,11 +170,12 @@ export async function settleManufacturingDevelopmentCash(
         corp._id,
         args.turn
       ),
-      otherLiabilitiesAnchor: corporateCashArrearsAnchor({
-        operatingByCurrency: corp.operatingCashArrearsByCurrency,
-        federalTaxByCountryAnchor: corp.federalTaxArrearsAnchorByCountry,
-        fxByCurrency: args.exchangeRatesByCurrency,
-      }),
+      otherLiabilitiesAnchor:
+        corporateCashArrearsAnchor({
+          operatingByCurrency: corp.operatingCashArrearsByCurrency,
+          federalTaxByCountryAnchor: corp.federalTaxArrearsAnchorByCountry,
+          fxByCurrency: args.exchangeRatesByCurrency,
+        }) + (args.constructionLoanDebtByCorpId?.get(corporationId) ?? 0),
     });
     snapshot.creditComposite = creditPack.creditRating.compositeScore;
     snapshot.creditRating = creditPack.creditRating.rating;

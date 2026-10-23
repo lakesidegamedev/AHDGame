@@ -5,6 +5,12 @@ import type { CollectionEntry } from "./seedManifestTypes";
 
 export const RUNTIME: CollectionEntry[] = [
   {
+    name: "turnWorkerControl",
+    category: "runtime",
+    notes:
+      "Turn worker heartbeat and the admin turn request it claims. Operational state: the worker rewrites the heartbeat within seconds, and a request queued in the old world must not survive a reset.",
+  },
+  {
     name: "playerIncomeTaxAssessments",
     category: "runtime",
     notes:
@@ -70,7 +76,7 @@ export const RUNTIME: CollectionEntry[] = [
     name: "resetMetricSnapshots",
     category: "runtime",
     notes:
-      "World-bound 1991 v2 primary-metric boards for US, UK, and JP. Wiped on every reset; populated and read back only when the metrics v2 opening is selected. Never replaces v1 working stores in place.",
+      "World-bound reviewed v2 primary-metric boards, including successor countries. Wiped on every reset, including decoded household references, reviewed income-model calibrations, current economic-owner inputs, latest household/housing production diagnostics, residential stocks, compact housing model/retry anchors and versioned observation/history metadata. Complete 1991 US/UK/JP boards may generate labeled public-calibrated household cohorts and residential source frames in memory; no survey microdata or per-turn cohort/payment arrays are persisted. Incomplete countries retain existing calculations. Never replaces v1 working stores in place.",
   },
   {
     name: "resetLawOpeningBoards",
@@ -432,6 +438,23 @@ export const RUNTIME: CollectionEntry[] = [
 
   // Private banking (1.1)
   { name: "bankLoans", category: "runtime" },
+  {
+    name: "producerEconomyAccounts",
+    category: "runtime",
+    notes:
+      "Funded non-corporate producer-market counterparties, scoped to one world. Cash is separate from bank reserves and deposits. Wiped on reset.",
+  },
+  {
+    name: "producerEconomyTurns",
+    category: "runtime",
+    notes:
+      "Immutable complete producer requests and settled results, scoped to the current world. Wiped with their cash journals on reset.",
+  },
+  {
+    name: "producerEconomyTurnChunks",
+    category: "runtime",
+    notes: "Content-addressed producer receipt chunks; the unique _id hash is the primary index.",
+  },
   { name: "financialCrisisFiscalActions", category: "runtime" },
   { name: "financialCrisisCreditHistory", category: "runtime" },
   { name: "bankMoneyMoves", category: "runtime" },
@@ -935,6 +958,12 @@ export const RUNTIME: CollectionEntry[] = [
   { name: "refugeeReceptionHistory", category: "runtime" },
   { name: "conflictCivilianLossHistory", category: "runtime" },
   { name: "conflictCapacityObligations", category: "runtime" },
+  {
+    name: "marketAdjustmentSignals",
+    category: "runtime",
+    notes:
+      "Per-country loss share of funded capacity, 12 turns of history, written by the crisis spawner when the market adjustment stage is on. Turn-based, so it resets with the world.",
+  },
   {
     name: "crisisAutoCooldowns",
     category: "runtime",

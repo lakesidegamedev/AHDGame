@@ -9,7 +9,6 @@ import { postBillProposalWithElectionConfirmation } from "@/components/bills/Bil
 import type { OrgSummary, OrgViewerInfo } from "./orgTypes";
 import { VoteButtons } from "./VoteButtons";
 import { VoteRoster } from "./VoteRoster";
-import type { ProposalVote } from "@/lib/db/types/internationalOrganization";
 import {
   dedupeOrganizationVotes,
   requiresUnanimity,
@@ -19,6 +18,7 @@ import { useEntityName } from "./useEntityName";
 import type { MembershipDefenseWarning } from "@/lib/internationalOrganizations/membershipDefenseWarnings";
 import type { PactEntryWarning } from "@/lib/military/treatyDefence";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { organizationVoteHandler } from "./proposalActions";
 
 interface Props {
   org: OrgSummary;
@@ -124,22 +124,7 @@ export function MembershipPanel({ org, viewer, currentTurn, votingWindowTurns, o
     }
   }
 
-  async function vote(proposalId: string, voteValue: ProposalVote) {
-    if (!viewerFmCountry) throw new Error("No diplomatic role");
-    const res = await fetch(
-      `/api/country/${viewerFmCountry}/international-organizations/proposals/${proposalId}/vote`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ vote: voteValue }),
-      }
-    );
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(apiErrorText(body, "Vote failed"));
-    }
-    onChange();
-  }
+  const vote = organizationVoteHandler(viewerFmCountry, onChange, "proposals");
 
   async function proposeLeave() {
     if (!viewerFmCountry) return;

@@ -6,6 +6,7 @@ import {
   COMMODITY_PRICE_DRIFT_RATE,
   COMMODITY_TYPES,
   NATIONAL_COMMODITY_STABILIZER,
+  NATIONAL_PRICE_ADJUSTMENT_RATE,
   blendPrice,
   computeMarketPrice,
   type CommodityType,
@@ -26,6 +27,7 @@ import { relativeLaggedPriceRatio } from "@/lib/market/commodityNominalIndex";
 import { latentShortageFields, latentShortagePersistence } from "@/lib/turn/latentShortage";
 import type { FreightSettlement } from "@/lib/logistics/settlement";
 import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
+import { applyExportPriceFeedback } from "./rules/exportPriceFeedback";
 import type { CountryLedger, GlobalLedger, StateLedger } from "./ledgerTypes";
 
 /** Admin-set one-turn global price nudges, keyed by commodity. */
@@ -37,6 +39,17 @@ export function buildNudgeMap(
       .filter((d): d is typeof d & { nudgePrice: number } => d.nudgePrice != null)
       .map((d) => [d.commodity, d.nudgePrice])
   );
+}
+
+/**
+ * One partial-adjustment step of a national price from last turn's value
+ * toward this turn's target. No usable previous price (new country, first
+ * turn, seeded world) takes the target as is.
+ */
+export function adjustNationalPrice(previous: number | undefined, target: number): number {
+  if (previous == null || !Number.isFinite(previous) || previous <= 0) return target;
+  if (!Number.isFinite(target)) return previous;
+  return Math.round((previous + NATIONAL_PRICE_ADJUSTMENT_RATE * (target - previous)) * 100) / 100;
 }
 
 /**
@@ -262,7 +275,8 @@ export function priceCommodity(
   // ── National prices per country ───────────────────────────────────────
   // Computed before state prices because the state-leg blend uses the
   // country's national price as one of its three legs.
-  const nationalPrices: Record<string, number> = {};
+  let nationalPrices: Record<string, number> = {};
+  const marketCountries = new Set<string>();
   const nationalSupply: Record<string, number> = {};
   const nationalDemand: Record<string, number> = {};
   for (const [countryId, countryBals] of byCountry) {
@@ -287,10 +301,26 @@ export function priceCommodity(
       const share = plannedShare(countryId, priceCurrentYear, commandEconomyEnabled);
       nationalPrices[countryId] = dualTrackPrice(administered, marketNationalPrice, share);
     } else {
+      marketCountries.add(countryId);
       nationalPrices[countryId] = marketNationalPrice;
     }
+    // Partial adjustment from last turn's price damps the exporter cobweb (#4605).
+    nationalPrices[countryId] = adjustNationalPrice(
+      existing?.nationalPrices?.[countryId],
+      nationalPrices[countryId]
+    );
     nationalSupply[countryId] = Math.round(bal.supply * 100) / 100;
     nationalDemand[countryId] = Math.round(bal.demand * 100) / 100;
+  }
+  if (freightSettlementActive && freightSettlement?.sourcing.foreignQuotes) {
+    nationalPrices = applyExportPriceFeedback({
+      commodity,
+      prices: nationalPrices,
+      marketCountries,
+      destinations: freightSettlement.sourcing.destinationAggregates,
+      pairs: freightSettlement.sourcing.pairAggregates,
+      quotes: freightSettlement.sourcing.foreignQuotes,
+    });
   }
   appliedNationalPrices.set(commodity, nationalPrices);
 

@@ -197,7 +197,10 @@ export const defect: Defect = {
   codeFix: {
     pr: 1230,
     mergedTo: "master",
-    requiredCommit: "3abeb353f",
+    // The fix (3abeb353f, 2026-04-26) predates this repository's public
+    // history; the "Initial public release" snapshot carries it (the guard now
+    // lives in the sector command modules), so the gate pins the snapshot.
+    requiredCommit: "8972afb65990046691e36f44f88f94b0a3c0a4cf",
   },
   // Checked 2026-08-08. Both halves of this defect are runtime-only:
   //   duplicates — the sovereign-issuer seeder upserts on

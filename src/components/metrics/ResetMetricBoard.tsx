@@ -19,6 +19,7 @@ import {
   metricQualityExplanation,
   metricQualityLabel,
   metricRefreshLabel,
+  metricFreshnessLabel,
   playerMetricDescription,
 } from "@/lib/resetMetrics/presentation";
 import { ResetMetricCompare } from "./ResetMetricCompare";
@@ -724,6 +725,12 @@ function MetricRow({
           <div className="mt-0.5 text-body-xs text-muted">
             {interpretationLabel(metric.interpretation)}
           </div>
+          <div className="mt-0.5 text-body-xs text-muted">
+            {metricFreshnessLabel(
+              metric.observation.observedAtTurn ?? metric.observation.lastUpdatedTurn,
+              metric.observation.source.includes("national rollup")
+            )}
+          </div>
         </div>
         <span className="flex-shrink-0 text-muted">→</span>
       </div>
@@ -1056,6 +1063,13 @@ function MetricDetail({
                 </dd>
                 <dt className="text-muted">Updated</dt>
                 <dd className="text-foreground">{metricRefreshLabel(metric.refresh)}</dd>
+                <dt className="text-muted">Latest publication</dt>
+                <dd className="text-foreground">
+                  {metricFreshnessLabel(
+                    metric.observation.observedAtTurn ?? metric.observation.lastUpdatedTurn,
+                    metric.observation.source.includes("national rollup")
+                  )}
+                </dd>
                 <dt className="text-muted">National figure</dt>
                 <dd className="text-foreground">{metricAggregationLabel(metric.aggregation)}</dd>
                 <dt className="text-muted">Data quality</dt>

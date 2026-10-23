@@ -1,3 +1,4 @@
+import { withAdminRoute } from "@/lib/api/withAdminAuth";
 /**
  * POST /api/admin/country/[code]/region/[id]/assign-seat
  * Admin: assign a politician to a seat in a region.
@@ -6,7 +7,6 @@
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
-import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseObjectId } from "@/lib/utils/objectId";
 import { parseJsonBody } from "@/lib/api/validate";
 import { adminAssignSeatSchema } from "@/lib/api/schemas/admin";
@@ -19,7 +19,7 @@ import {
 import { subNationalChamberSeats } from "@/lib/constants/states";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import type { ElectedOfficial, Character, NPP, State } from "@/lib/db/types";
-import { handleRouteError, errorResponse } from "@/lib/api/errors";
+import { errorResponse } from "@/lib/api/errors";
 import type { Db } from "mongodb";
 
 /** Seat total for a multi-seat group, read from the resolved State field. */
@@ -69,14 +69,12 @@ async function setCurrentOffice(
   }
 }
 
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ code: string; id: string }> }
-) {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
-
+export const POST = withAdminRoute(
+  async (
+    _auth,
+    request: Request,
+    { params }: { params: Promise<{ code: string; id: string }> }
+  ) => {
     const { code, id } = await params;
     const countryId = code.toUpperCase() as CountryId;
     if (!COUNTRY_CONFIGS[countryId]) {
@@ -317,7 +315,5 @@ export async function POST(
       success: true,
       message: `${characterName} assigned ${seatsToAssign} ${spec.label} seat(s) in ${state.name}`,
     });
-  } catch (error) {
-    return handleRouteError(error);
   }
-}
+);

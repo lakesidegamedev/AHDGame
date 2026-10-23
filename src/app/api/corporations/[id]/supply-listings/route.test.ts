@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
+import { COMMODITY_TYPES } from "@/lib/constants/commodities";
 import { GET, POST } from "./route";
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireAuth", () => ({ requireBasicAuth: vi.fn() }));
@@ -93,6 +94,7 @@ it("filters expired advertisements and does not cache private CEO context", asyn
   expect(response.headers.get("cache-control")).toContain("no-store");
   expect(db.collectionMocks.supplyListings.find).toHaveBeenCalledWith({
     expiresAtTurn: { $gt: 100 },
+    commodity: { $in: [...COMMODITY_TYPES] },
   });
   expect(db.collectionMocks.supplyAgreements).toBeUndefined();
 });

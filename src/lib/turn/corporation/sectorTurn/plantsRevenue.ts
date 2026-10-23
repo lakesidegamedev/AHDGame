@@ -60,10 +60,7 @@ export interface PlantsRevenueInput {
   >;
   corp: Pick<Corporation, "_id" | "countryId" | "bankCharter">;
   strategySupply: Partial<Record<CommodityType, number>> | undefined;
-  techEffects: Pick<
-    ReturnType<typeof getSectorTechEffects>,
-    "outputRateMult" | "priceRealizationBonus"
-  >;
+  techEffects: Pick<ReturnType<typeof getSectorTechEffects>, "outputRateMult">;
   plantsEnabled: boolean;
   /** Explicit clearing quotes settle at their offered price without ramp blending; tech price realization still applies on top. */
   costPlusPricingEnabled?: boolean;
@@ -179,7 +176,6 @@ export interface PlantsRevenueResult {
    * without a fresh clearing signal. Feeds idle capacity retirement.
    */
   demandFill: number | null;
-  plantsTechPriceLeg: number;
   plantsDerivedHourlyRevenue: number;
   marketHourlyRevenue: number;
   militaryDivertedFraction: number;
@@ -527,22 +523,8 @@ export function resolvePlantsRevenue(input: PlantsRevenueInput): PlantsRevenueRe
   // flip, capacity == impliedOutputUnits(nameplate) and every leg is unchanged,
   // so this reproduces the old realized revenue EXACTLY — which is why the
   // migration above seeds capacity from implied units.
-  // Tech price-realization: multiplies realised revenue only, beside the
-  // clearing leg. Deliberately NOT on `plantsMixPrice` (which would inflate the
-  // nameplate, the world supply ledger and idle upkeep) and NOT on the
-  // clearing/priceRealization factor (which feeds the launch governor and
-  // would clamp the bonus during the ramp).
-  // Cost-plus sectors take it too: their quote is recorded cost times
-  // (1 + markup), and the cost basis is recorded from NOMINAL revenue, so the
-  // bonus lands as extra markup on top of the posted price rather than being
-  // quoted into the next price. Without it the upgrade was dead for every
-  // sector that priced cost-plus.
-  const plantsTechPriceLeg = 1 + techEffects.priceRealizationBonus;
   const plantsDerivedHourlyRevenue = plantsEnabled
-    ? ((producedUnits * plantsMixPrice) / TURNS_PER_DAY) *
-      clearingRevenueLeg *
-      embargoRevenueFactor *
-      plantsTechPriceLeg
+    ? ((producedUnits * plantsMixPrice) / TURNS_PER_DAY) * clearingRevenueLeg * embargoRevenueFactor
     : 0;
   // Launch-safety governor, same shape as the clearing leg: bound the derived
   // revenue to within ±capEffective(λ) of the pre-flip baseline and fade that
@@ -626,7 +608,6 @@ export function resolvePlantsRevenue(input: PlantsRevenueInput): PlantsRevenueRe
     contractAchievableUnits,
     demandThrottleFactor,
     demandFill,
-    plantsTechPriceLeg,
     plantsDerivedHourlyRevenue,
     marketHourlyRevenue,
     militaryDivertedFraction,

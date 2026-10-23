@@ -90,26 +90,29 @@ export async function GET(request: Request) {
     const authUser = await getAuthUser().catch(() => null);
     const isAdmin = authUser?.isAdmin === true;
 
-    return NextResponse.json({
-      // Per-surface flag convention: the Congress Contracts tab (and other list
-      // consumers) read the issuance gate off this payload.
-      contractIssuanceEnabled: await isContractIssuanceEnabled(),
-      contracts: contracts.map((c) => {
-        const id = (c.corporationId as ObjectId).toString();
-        const { missedPayments, ...rest } = c;
-        const viewerIsCeo =
-          authUser != null &&
-          corpOwnerIds.get(id) != null &&
-          corpOwnerIds.get(id) === authUser.userId;
-        return {
-          ...rest,
-          _id: c._id.toString(),
-          corporationId: id,
-          corporationName: corpNames.get(id),
-          ...(isAdmin || viewerIsCeo ? { missedPayments } : {}),
-        };
-      }),
-    });
+    return NextResponse.json(
+      {
+        // Per-surface flag convention: the Congress Contracts tab (and other list
+        // consumers) read the issuance gate off this payload.
+        contractIssuanceEnabled: await isContractIssuanceEnabled(),
+        contracts: contracts.map((c) => {
+          const id = (c.corporationId as ObjectId).toString();
+          const { missedPayments, ...rest } = c;
+          const viewerIsCeo =
+            authUser != null &&
+            corpOwnerIds.get(id) != null &&
+            corpOwnerIds.get(id) === authUser.userId;
+          return {
+            ...rest,
+            _id: c._id.toString(),
+            corporationId: id,
+            corporationName: corpNames.get(id),
+            ...(isAdmin || viewerIsCeo ? { missedPayments } : {}),
+          };
+        }),
+      },
+      { headers: { "Cache-Control": "private, no-store" } }
+    );
   } catch (error) {
     return handleRouteError(error);
   }

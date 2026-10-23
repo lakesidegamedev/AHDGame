@@ -50,6 +50,12 @@ export interface BulkOperationsResult {
     missingCostCount: number;
     protectedCount: number;
   };
+  capacity?: {
+    action: "mothball" | "reactivate";
+    eligibleCount: number;
+    lockedCount: number;
+    changedCount: number;
+  };
   error?: string;
 }
 
@@ -61,6 +67,7 @@ export type BulkOperationsFn = (
     productionPolicy?: number; // pragma: allowlist secret
     pricingPosture?: number | null;
     wageLevel?: number;
+    capacity?: "mothball" | "reactivate";
     preview?: boolean;
   }
 ) => Promise<BulkOperationsResult>;
@@ -103,7 +110,7 @@ const clampPolicy = (n: number) => Math.max(POLICY_MIN, Math.min(POLICY_MAX, Mat
 const perTurn = (daily: number) => Math.round(scaleMoney(daily, "turn"));
 
 const cellInput =
-  "h-6 rounded border bg-background px-1.5 text-right text-[13px] tabular-nums text-foreground focus:border-foreground focus:outline-none disabled:opacity-50";
+  "h-6 rounded-[calc(var(--corp-rad,6px)-2px)] border bg-background px-1.5 text-right text-[13px] tabular-nums text-foreground focus:border-foreground focus:outline-none disabled:opacity-50";
 
 /** A value the CEO just saved, shown until the refreshed sector catches up. */
 interface Pending<T> {
@@ -375,7 +382,7 @@ function OperationsRow({
               value={postureValue == null ? "auto" : String(postureValue)}
               disabled={busy}
               onChange={(e) => void commitPosture(e.target.value)}
-              className="h-6 rounded border border-card-border bg-background px-1 text-xs text-foreground focus:border-foreground focus:outline-none disabled:opacity-50"
+              className="h-6 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-1 text-xs text-foreground focus:border-foreground focus:outline-none disabled:opacity-50"
             >
               <option value="auto">Auto</option>
               {POSTURE_STEPS.map((p) => (
@@ -490,8 +497,42 @@ function BulkBar({
     current: number;
     delta: number;
   } | null>(null);
+  const [capacityPreview, setCapacityPreview] = useState<{
+    action: "mothball" | "reactivate";
+    eligible: number;
+    locked: number;
+  } | null>(null);
 
   if (!scope) return null;
+
+  async function previewCapacity(action: "mothball" | "reactivate") {
+    setBusy(true);
+    setMessage(null);
+    const r = await onBulkOperations(scope.country, scope.sectorType, {
+      capacity: action,
+      preview: true,
+    });
+    setBusy(false);
+    if (!r.ok || !r.capacity) {
+      setMessage({ tone: "error", text: r.error ?? "Failed to preview" });
+      return;
+    }
+    if (r.capacity.eligibleCount === 0) {
+      setMessage({
+        tone: "error",
+        text:
+          action === "mothball"
+            ? "No running sectors in this scope can be mothballed."
+            : "No mothballed sectors in this scope.",
+      });
+      return;
+    }
+    setCapacityPreview({
+      action,
+      eligible: r.capacity.eligibleCount,
+      locked: r.capacity.lockedCount,
+    });
+  }
 
   async function apply(
     body: Parameters<BulkOperationsFn>[2],
@@ -544,9 +585,10 @@ function BulkBar({
             onChange={(e) => {
               setScopeKey(e.target.value);
               setPreview(null);
+              setCapacityPreview(null);
               setMessage(null);
             }}
-            className="h-7 max-w-[16rem] rounded-md border border-card-border bg-background px-1.5 text-xs text-foreground focus:border-foreground focus:outline-none"
+            className="h-7 max-w-[16rem] rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-1.5 text-xs text-foreground focus:border-foreground focus:outline-none"
           >
             {scopes.map((s) => (
               <option key={s.key} value={s.key}>
@@ -591,7 +633,7 @@ function BulkBar({
               aria-label="Bulk pricing"
               value={posture}
               onChange={(e) => setPosture(e.target.value)}
-              className="h-7 rounded-md border border-card-border bg-background px-1 text-xs text-foreground focus:border-foreground focus:outline-none"
+              className="h-7 rounded-[calc(var(--corp-rad,6px)-2px)] border border-card-border bg-background px-1 text-xs text-foreground focus:border-foreground focus:outline-none"
             >
               <option value="auto">Auto</option>
               {POSTURE_STEPS.map((p) => (
@@ -639,6 +681,24 @@ function BulkBar({
           </span>
         )}
 
+        {plantsMode && (
+          <span className={fieldLabel}>
+            Capacity
+            <SmallButton
+              disabled={busy || capacityPreview !== null}
+              onClick={() => void previewCapacity("mothball")}
+            >
+              Mothball all
+            </SmallButton>
+            <SmallButton
+              disabled={busy || capacityPreview !== null}
+              onClick={() => void previewCapacity("reactivate")}
+            >
+              Reactivate all
+            </SmallButton>
+          </span>
+        )}
+
         {labourEnabled && (
           <BulkWageControl
             key={scope.key}
@@ -672,6 +732,33 @@ function BulkBar({
             Confirm
           </SmallButton>
           <SmallButton disabled={busy} onClick={() => setPreview(null)}>
+            Cancel
+          </SmallButton>
+        </div>
+      )}
+      {capacityPreview && (
+        <div className="flex flex-wrap items-center gap-2 text-xs" role="status">
+          <span className="text-foreground">
+            {capacityPreview.action === "mothball" ? "Mothball" : "Reactivate"}{" "}
+            {capacityPreview.eligible} sectors. Production and upkeep adjust next turn.
+            {capacityPreview.locked > 0 &&
+              ` ${capacityPreview.locked} listed or financing sectors are left as they are.`}
+          </span>
+          <SmallButton
+            tone="primary"
+            disabled={busy}
+            onClick={async () => {
+              const action = capacityPreview.action;
+              setCapacityPreview(null);
+              await apply(
+                { capacity: action },
+                (n) => `${action === "mothball" ? "Mothballed" : "Reactivated"} ${n} sectors`
+              );
+            }}
+          >
+            Confirm
+          </SmallButton>
+          <SmallButton disabled={busy} onClick={() => setCapacityPreview(null)}>
             Cancel
           </SmallButton>
         </div>
@@ -711,7 +798,7 @@ export default function CeoOperationsTable({
 }: CeoOperationsTableProps) {
   const plantsMode = corporation.plantsMode === true;
   const labourEnabled = corporation.labourEnabled === true;
-  const money = useCorpMoney(corporation.liquidCurrencyCode);
+  const money = useCorpMoney(corporation.liquidCurrencyCode, corporation.countryId);
   const countryName = useCountryDisplayName();
   const [sortKey, setSortKey] = useState<SortKey>("revenue");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");

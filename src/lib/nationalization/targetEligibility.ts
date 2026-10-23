@@ -4,6 +4,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import { evaluateEligibility, type EligibilityResult } from "./eligibility";
 import { getDesignatedSectorTypes, corpHasStrategicSector } from "./strategicSectors";
 import { fetchMarketSharePercentForSectors } from "@/lib/corporations/marketShare";
+import { loadGroupTopMarketShares } from "./monopolyTrigger";
 
 export interface ResolvedCorpEligibility {
   ownerKind: "player" | "npc";
@@ -64,6 +65,8 @@ export async function resolveCorpEligibilityBatch(
   // One set of queries covering every (state, sectorType) bucket the corps
   // span; same canonical share computation as the per-sector helper.
   const shareBySectorId = await fetchMarketSharePercentForSectors(db, allSectors);
+  // Group basis (null while the knob is off): the whole control group's top cell.
+  const groupTopShare = await loadGroupTopMarketShares(db, corpIds);
 
   for (const corp of corps) {
     const key = String(corp._id);
@@ -81,6 +84,7 @@ export async function resolveCorpEligibilityBatch(
       const pct = shareBySectorId.get(String(sector._id)) ?? 0;
       if (pct > topMarketSharePercent) topMarketSharePercent = pct;
     }
+    topMarketSharePercent = groupTopShare?.get(key) ?? topMarketSharePercent;
 
     const financialDistressTurns =
       corp.financialDistressSinceTurn != null

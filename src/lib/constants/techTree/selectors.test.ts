@@ -1,7 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { getResearchableDecades, getDecadeForYear, TECH_DECADES } from "./decades";
 import { TECH_TREE, corpNodeId, sectorNodeId } from "./nodes";
-import { techNodeCashCost, techNodeCashFloorAnchor, TECH_NODE_CASH_FLOOR_ANCHOR } from "./costs";
+import {
+  techNodeCashCost,
+  techNodeCashFloorAnchor,
+  techNodeValuePerTurn,
+  TECH_NODE_CASH_FLOOR_ANCHOR,
+  TECH_NODE_PAYBACK_TURNS,
+  TECH_NODE_VALUED_FLOOR_FRACTION,
+} from "./costs";
 import {
   canUnlock,
   getCommittedLane,
@@ -12,6 +19,8 @@ import {
   getDecadeLaneNodes,
   getNodePrereqId,
   getSectorTechEffects,
+  getActiveTechDecadeIds,
+  isTechNodeEffectExpired,
   SLOT_PARENT,
   type TechCorpView,
 } from "./selectors";
@@ -159,10 +168,10 @@ describe("committed lane + effects", () => {
     expect(getCommittedLane(corp, "1999")).toBe("generic");
     expect(getCommittedLane(corp, "2009")).toBeUndefined();
   });
-  it("aggregates margin effects from unlocked nodes", () => {
+  it("aggregates plant effects from unlocked nodes", () => {
     const corp: TechCorpView = { type: "energy", unlockedTechNodeIds: [corpNodeId("2019", 1)] };
     expect(getActiveTechEffects(corp).length).toBeGreaterThan(0);
-    expect(getAggregatedTechEffects(corp).marginBonusPp).toBeCloseTo(2); // RPA = +2pp
+    expect(getAggregatedTechEffects(corp).plantOutputBonus).toBeCloseTo(0.02); // RPA = +2% output
   });
   it("surfaces unlocked production methods", () => {
     const corp: TechCorpView = {
@@ -173,22 +182,48 @@ describe("committed lane + effects", () => {
   });
 
   it("scopes effects: sector lane = primary only (full), corp lane = all (halved)", () => {
-    // energy-2019-1 (sector, +3.5pp) + corp-2019-1 (generic, +2pp).
+    // energy-2019-1 (sector, -10.5% inputs) + corp-2019-1 (generic, +2% output).
     const corp: TechCorpView = {
       type: "energy",
       unlockedTechNodeIds: [sectorNodeId("energy", "2019", 1), corpNodeId("2019", 1)],
     };
-    // Primary (energy) sector: corp 2×0.5=1 + sector 3.5 = 4.5pp.
-    expect(getSectorTechEffects(corp, "energy").marginBonusPp).toBeCloseTo(4.5);
-    // A non-primary sector: only the corp lane, halved → 1pp; no sector bonus.
-    expect(getSectorTechEffects(corp, "retail").marginBonusPp).toBeCloseTo(1);
+    // Primary (energy) sector: corp output halved to 1%, sector inputs at full strength.
+    expect(getSectorTechEffects(corp, "energy").plantOutputBonus).toBeCloseTo(0.01);
+    expect(getSectorTechEffects(corp, "energy").inputEfficiencyBonus).toBeCloseTo(0.105);
+    // A non-primary sector: only the corp lane, halved; no sector bonus.
+    expect(getSectorTechEffects(corp, "retail").plantOutputBonus).toBeCloseTo(0.01);
+    expect(getSectorTechEffects(corp, "retail").inputEfficiencyBonus).toBe(0);
+  });
+});
+
+describe("tech effect expiry", () => {
+  it("keeps the current and previous decade active", () => {
+    expect([...getActiveTechDecadeIds(1996)].sort()).toEqual(["1979", "1989"]);
+  });
+
+  it("marks an old node with a running plant effect as expired", () => {
+    const base = TECH_TREE.energy.find((n) => n.id === corpNodeId("2019", 1))!;
+    const running = {
+      ...base,
+      decadeId: "1969",
+      effects: [{ kind: "laborCostReduction" as const, pct: 0.1 }],
+    };
+    const strategyOnly = {
+      ...base,
+      decadeId: "1969",
+      effects: [{ kind: "unlockStrategy" as const, strategyId: "x" }],
+    };
+    const active = getActiveTechDecadeIds(1996);
+    expect(isTechNodeEffectExpired(running, active)).toBe(true);
+    expect(isTechNodeEffectExpired({ ...running, decadeId: "1979" }, active)).toBe(false);
+    expect(isTechNodeEffectExpired(strategyOnly as typeof base, active)).toBe(false);
   });
 });
 
 describe("cash cost", () => {
   it("scales with daily gross revenue and the node fraction", () => {
     const node = TECH_TREE.energy.find((n) => n.id === corpNodeId("2019", 1))!;
-    expect(techNodeCashCost(node, 100_000)).toBe(15_000); // default 0.15
+    expect(techNodeCashCost(node, 100_000)).toBe(5_000); // default 0.05
     expect(techNodeCashCost(node, 0)).toBe(0);
   });
 
@@ -196,10 +231,52 @@ describe("cash cost", () => {
     const node = TECH_TREE.energy.find((n) => n.id === corpNodeId("2019", 1))!;
     expect(techNodeCashCost(node, 0, 5_000_000)).toBe(5_000_000);
     expect(techNodeCashCost(node, 10_000_000, 5_000_000)).toBe(5_000_000);
-    // Large corps are priced off revenue exactly as before.
-    expect(techNodeCashCost(node, 550_000_000, 5_000_000)).toBe(82_500_000);
+    // Without a plant basis, large corps are priced off revenue.
+    expect(techNodeCashCost(node, 550_000_000, 5_000_000)).toBe(27_500_000);
     expect(techNodeCashCost(node, 0, Number.NaN)).toBe(0);
     expect(techNodeCashCost(node, 0, -1)).toBe(0);
+  });
+
+  it("prices a valued node at one game year of what it earns this corp", () => {
+    // corp-2019-1 is a Corporate-lane node (+2% plant output, −10% labour):
+    // half strength on every sector. Output is valued on contribution
+    // (revenue minus inputs), labour on the labour bill.
+    const node = TECH_TREE.energy.find((n) => n.id === corpNodeId("2019", 1))!;
+    const basis = {
+      primary: { revenue: 1_000_000, inputs: 300_000, labour: 200_000 },
+      all: { revenue: 2_000_000, inputs: 600_000, labour: 400_000 },
+    };
+    const value = techNodeValuePerTurn(node, basis);
+    expect(value).toBeCloseTo(0.5 * (0.02 * 1_400_000 + 0.1 * 400_000));
+    expect(techNodeCashCost(node, 48_000_000, 0, basis)).toBe(
+      Math.round(value * TECH_NODE_PAYBACK_TURNS)
+    );
+    // A valued node only needs a tenth of the floor, so a mid-size corp still
+    // pays value x 48 instead of the flat minimum.
+    expect(techNodeCashCost(node, 0, 5_000_000, basis)).toBe(
+      Math.round(value * TECH_NODE_PAYBACK_TURNS)
+    );
+    // A tiny corp whose node value is near zero still pays the reduced floor.
+    const tiny = {
+      primary: { revenue: 1_000, inputs: 300, labour: 200 },
+      all: { revenue: 2_000, inputs: 600, labour: 400 },
+    };
+    expect(techNodeCashCost(node, 0, 5_000_000, tiny)).toBe(
+      5_000_000 * TECH_NODE_VALUED_FLOOR_FRACTION
+    );
+  });
+
+  it("values a Sector-lane labour node on the primary sector only", () => {
+    const node = {
+      ...TECH_TREE.energy.find((n) => n.id === corpNodeId("2019", 1))!,
+      lane: "sector" as const,
+      effects: [{ kind: "laborCostReduction" as const, pct: 0.1 }],
+    };
+    const basis = {
+      primary: { revenue: 1_000_000, inputs: 300_000, labour: 200_000 },
+      all: { revenue: 2_000_000, inputs: 600_000, labour: 400_000 },
+    };
+    expect(techNodeValuePerTurn(node, basis)).toBeCloseTo(20_000);
   });
 
   it("scales the floor with the world era", () => {

@@ -233,3 +233,32 @@ describe("defence strategies cover every arsenal domain", () => {
     }
   });
 });
+
+describe("logistics freight-only strategy", () => {
+  const logistics = SECTOR_STRATEGIES.logistics;
+  const standard = logistics.find((s) => s.id === "standard")!;
+  const freightOnly = logistics.find((s) => s.id === "freight_only")!;
+  const total = (rates: Partial<Record<string, number>>) =>
+    Object.values(rates).reduce((sum: number, v) => sum + (v ?? 0), 0);
+
+  it("is a base strategy with no tech unlock or decade gate", () => {
+    expect(freightOnly).toBeDefined();
+    expect(freightOnly.requiresTechUnlock).toBeUndefined();
+    expect(freightOnly.minDecade).toBeUndefined();
+  });
+
+  it("supplies only freight, at standard's total output share", () => {
+    expect(Object.keys(freightOnly.supply)).toEqual(["freight"]);
+    expect(freightOnly.supply.freight).toBe(0.7);
+    expect(total(freightOnly.supply)).toBeCloseTo(total(standard.supply), 10);
+  });
+
+  it("has the same inputs as standard, and leaves standard unchanged", () => {
+    expect(freightOnly.demand).toEqual(standard.demand);
+    expect(standard.supply).toEqual({ freight: 0.45, consulting_services: 0.25 });
+  });
+
+  it("resolves through getStrategy in a 1991 world", () => {
+    expect(getStrategy("logistics", "freight_only", "1991-default")).toEqual(freightOnly);
+  });
+});

@@ -27,6 +27,7 @@ import {
 } from "@/lib/turn/npp/rules/marketSaturation";
 import {
   EXTRACTABLE_RESOURCES,
+  SECTOR_DEMAND,
   SECTOR_SUPPLY,
   type CommodityType,
   type ExtractableResource,
@@ -74,7 +75,7 @@ export const FRAGILE_MARKET_COMMODITIES_BY_SECTOR: Readonly<
   Partial<Record<OperatingSectorType, readonly CommodityType[]>>
 > = {
   media: ["advertising"],
-  media_entertainment: ["advertising", "entertainment_services"],
+  media_entertainment: ["advertising"],
   healthcare: ["healthcare_services"],
   chemical_industries: ["fertilizers"],
   logistics: ["freight"],
@@ -705,6 +706,24 @@ export function sectorShortageScore(
     totalWeight += rate;
   }
   return totalWeight > 0 ? weighted / totalWeight : 1;
+}
+
+/**
+ * Highest live price-over-base ratio among the commodities a sector type buys
+ * as inputs (1 when none is priced). A lane whose input is the scarcest good in
+ * the country cannot fill its plants however well its output sells.
+ */
+export function sectorInputPressure(
+  sectorType: OperatingSectorType,
+  countryId: string,
+  priceRatioOf: CommodityPriceRatioFn
+): number {
+  let peak = 1;
+  for (const { commodity } of SECTOR_DEMAND[sectorType] ?? []) {
+    const ratio = priceRatioOf(commodity, countryId);
+    if (ratio != null && Number.isFinite(ratio) && ratio > peak) peak = ratio;
+  }
+  return peak;
 }
 
 /**

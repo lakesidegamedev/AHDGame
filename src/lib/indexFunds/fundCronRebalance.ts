@@ -1,4 +1,5 @@
 import { bankFundAcceptsSubscriptions } from "./managerEligibility";
+import type { TxThresholds } from "@/lib/db/types/financialTxLog";
 import { loadFloatAuditContext, type FloatAuditContext } from "./fundFloatTradePlan";
 import { executeFundShareBuys, type FundShareBuyBatch } from "./fundFloatBuyExecution";
 import { ObjectId } from "mongodb";
@@ -189,16 +190,22 @@ export async function applyMarkToMarketIfNeeded(
 export function shouldRebalanceIndexFundConstituents(
   currentTurn: number,
   targetConstituentsLength: number,
-  fundId?: string
+  fundId?: string,
+  /** Catch-up for a fund that missed its stagger turn (e.g. queued redemptions blocked it). */
+  catchUp?: { lastRebalancedAt?: Date; nowMs: number; turnLengthMinutes: number }
 ): boolean {
   // Lock market-cap baskets to the financial-day cadence. Intraday recomputes
   // churn positions, trigger sell/buy loops, and repeatedly hit order-flow.
   // Each fund keeps its own fixed turn of the day, so the whole roster no
   // longer rebalances on one turn (that turn ran ~50-60 s longer).
   if (targetConstituentsLength === 0) return true;
-  return fundId === undefined
-    ? currentTurn > 0 && currentTurn % TURNS_PER_DAY === 0
-    : isStaggeredTurn(fundId, currentTurn, TURNS_PER_DAY);
+  if (fundId === undefined) return currentTurn > 0 && currentTurn % TURNS_PER_DAY === 0;
+  if (isStaggeredTurn(fundId, currentTurn, TURNS_PER_DAY)) return true;
+  // A fund skipped on its own turn would otherwise wait a full day for the
+  // same slot, which can be blocked every day. Over a day and a turn late, run now.
+  if (!catchUp?.lastRebalancedAt) return false;
+  const ageMs = catchUp.nowMs - new Date(catchUp.lastRebalancedAt).getTime(); // NaN if unreadable: no catch-up
+  return ageMs > (TURNS_PER_DAY + 1) * catchUp.turnLengthMinutes * 60_000;
 }
 
 /**
@@ -236,7 +243,13 @@ export async function rebalanceFundToTarget(
   capRemainingByCorpId: Map<string, number>,
   currentTurn: number,
   /** Pass-level reads shared by every fund, loaded once instead of once per fund. */
-  shared?: { bondPrincipalAnchor?: number; audit?: FloatAuditContext }
+  shared?: {
+    bondPrincipalAnchor?: number;
+    audit?: FloatAuditContext;
+    /** v2: the turn's tx thresholds, loaded once by the cron. */
+    txThresholds?: TxThresholds;
+    turnLengthMinutes?: number;
+  }
 ): Promise<{ buys: number; sells: number; bidsPlaced: number; bidsCancelled: number }> {
   if (fund.mandate?.mode === "picked_stocks" && !(await bankFundAcceptsSubscriptions(db, fund)))
     return { buys: 0, sells: 0, bidsPlaced: 0, bidsCancelled: 0 };
@@ -262,8 +275,11 @@ export async function rebalanceFundToTarget(
       ? await Promise.all([loadFxRatesByCurrency(db), getCurrentTurn(db)])
       : undefined;
   for (const leg of plan.sells) {
-    const refreshed = (await getFundById(db, fund._id)) ?? fund;
-    const res = await sellFundHoldingShares(db, refreshed, leg.corporationId, leg.shares, {
+    // The plan has one sell per corporation, and a sale only changes that
+    // holding plus cash. Re-reading the whole fund before every leg decoded
+    // the same document once per sell to find the holding this loop already
+    // has; the post-sale read below still refreshes it once for the buys.
+    const res = await sellFundHoldingShares(db, fund, leg.corporationId, leg.shares, {
       note: "Rebalance: trim overweight",
       fxByCurrency: sellInputs?.[0],
       turn: sellInputs?.[1],
@@ -366,6 +382,10 @@ export async function rebalanceFundToTarget(
         fxRate,
         turn: currentTurn,
         txSink: bidTxSink,
+        ...(shared?.txThresholds ? { thresholds: shared.txThresholds } : {}),
+        ...(shared?.turnLengthMinutes != null
+          ? { turnLengthMinutes: shared.turnLengthMinutes }
+          : {}),
       });
 
       if (result.ok) {

@@ -73,14 +73,21 @@ describe("stateFingerprint", () => {
 });
 
 describe("readTurnNumber", () => {
-  it("reads the active gameState", async () => {
+  it("reads the canonical gameState even when inactive", async () => {
     const { db } = makeStrictInMemoryStore({
       gameState: [
         { _id: "old", isActive: false, currentTurn: 5 },
-        { _id: "live", isActive: true, currentTurn: 42 },
+        { _id: "current", isActive: false, currentTurn: 42 },
       ],
     });
     expect(await readTurnNumber(db)).toBe(42);
+  });
+
+  it("ignores unrelated active rows when the canonical world is absent", async () => {
+    const { db } = makeStrictInMemoryStore({
+      gameState: [{ _id: "stray", isActive: true, currentTurn: 42 }],
+    });
+    expect(await readTurnNumber(db)).toBeNull();
   });
 
   it("returns null when there is no active world", async () => {

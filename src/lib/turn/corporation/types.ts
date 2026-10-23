@@ -25,6 +25,14 @@ export interface CorporationLookups {
   /** Originating reset preset selects the qualified input baskets. */
   preset?: string;
   stockHoldingTaxStartTurn?: number;
+  /** See GameState.passThroughOwnerTaxStartTurn. */
+  passThroughOwnerTaxStartTurn?: number;
+  /** National top personal income tax rate (percent) by country. */
+  personalTopIncomeTaxRateByCountry?: Map<string, number>;
+  /** State top personal income tax rate (percent) by state id. */
+  personalTopIncomeTaxRateByState?: Map<string, number>;
+  /** See GameState.nppCeoPayStartTurn. */
+  nppCeoPayStartTurn?: number;
   hardwareInputReliefStartTurn?: number;
   corporations: Corporation[];
   sectorsByCorp: Map<string, CorporateSector[]>;
@@ -211,6 +219,42 @@ export interface CorporationLookups {
    */
   marginLevelTrimPp?: number;
   /**
+   * Management overhead (positive pp) per corporation id, from its total plant
+   * count and gameConfig.managementOverheadPpPerDoubling. Absent = none.
+   */
+  managementOverheadPpByCorpId?: Map<string, number>;
+  /** gameConfig.fundedOverheadStage; absent = off. */
+  fundedOverheadStage?: number;
+  /** gameConfig.fundedHeadcountStage; absent = off. */
+  fundedHeadcountStage?: number;
+  /**
+   * gameConfig.honestBalanceSheetsStage and, from stage 1, each corporation's
+   * outstanding bank construction-loan principal in anchor units. Absent = off.
+   */
+  honestBalanceSheetsStage?: number;
+  constructionLoanDebtByCorpId?: Map<string, number>;
+  /** Control-group root per corporation for the dumping guard; null/absent = per corporation. */
+  dumpingGuardRootByCorpId?: Map<string, string> | null;
+  /**
+   * State-owned corporations' overhead and sprawl (gameConfig.soeSizeCostScale),
+   * keyed by corporation id from their country's totals. Absent = SOEs exempt.
+   */
+  soeSizeCostByCorpId?: Map<string, import("@/lib/corporations/rules/soeSizeCost").SoeSizeCost>;
+  /**
+   * Running dominance cost (gameConfig.dominanceRunningCostScale): the scale and
+   * each sector's control-group shares. Absent = off.
+   */
+  dominanceRunningCost?: {
+    scale: number;
+    localShareBySectorId: Map<string, number>;
+    nationalShareBySectorId: Map<string, number>;
+  } | null;
+  /**
+   * gameConfig.strengthUpkeepStage (see corporations/strengthUpkeep). Absent
+   * or 0 = strength upkeep off.
+   */
+  strengthUpkeepStage?: number;
+  /**
    * World price ratios overlaid with each country's reachable ratios, then
    * capped at the world ratio per commodity (`min(world, reachable)` via
    * `capInputPriceRatioAtWorld`). Cheap local inputs still win; expensive
@@ -263,6 +307,19 @@ export interface CorporationLookups {
    * present, the clearing pass runs one book per seller home country instead
    * of a single worldwide book. See market/tradePartition.ts.
    */
+  /**
+   * The trade matrix this turn's books were built from: route openness and the
+   * importer's tariff multiplier. Read by the producer-market shadow so it uses
+   * exactly the routes and tariffs the live trade step uses.
+   */
+  tradeRoutes?: {
+    affinityFor: (commodity: CommodityType, exporter: CountryId, importer: CountryId) => number;
+    importCostMultiplierFor: (
+      commodity: CommodityType,
+      exporter: CountryId,
+      importer: CountryId
+    ) => number;
+  } | null;
   countryClearingBooks: Map<
     CountryId,
     Map<CommodityType, { supply: number; demand: number }>
@@ -400,6 +457,12 @@ export interface CorpSnapshot {
   income: number;
   /** Net operating cash delta in the corporation's liquid currency for this turn. */
   operatingCashIncomeLocal?: number;
+  /**
+   * Funded producer turn: producer profit the settlement already moved as cash
+   * and witnessed in its own ledger entry (anchor). The legacy cash witness
+   * excludes it. Absent on legacy turns.
+   */
+  settledProducerProfitAnchor?: number;
   /** Currency used by the operating cash writer above. */
   operatingCashCurrency?: CurrencyCode;
   /** Per-country federal tax withholding in anchor units, frozen with this snapshot. */
@@ -477,7 +540,11 @@ export interface FundDividendAccrual {
  */
 export interface SectorUpdateOp {
   updateOne: {
-    filter: { _id: ObjectId };
+    filter: {
+      _id: ObjectId;
+      /** Compare the turn snapshot before changing the operating share. */
+      activeCapacityPercent?: number | { $exists: false };
+    };
     /**
      * C4: not just `$set`. The turn's build-queue write is a `$pull` of the
      * orders that landed plus an `$inc` of the CIP they held, so that an order
@@ -498,6 +565,8 @@ export interface SectorUpdateOp {
 
 /** Everything the sector-processing loop produces for downstream phases. */
 export interface SectorCalculationsResult {
+  /** The per-sector environment this turn ran with (read by the producer-market shadow). */
+  sectorTurnEnv: import("./sectorTurnTypes").SectorTurnEnv;
   sectorOps: SectorUpdateOp[];
   corpOps: AnyBulkWriteOperation<Corporation>[];
   /** Live-balance guarded product-development cash debits, applied after all other corp cash ops. */
@@ -507,6 +576,10 @@ export interface SectorCalculationsResult {
   dividendPayments: Map<string, Map<CurrencyCode, number>>;
   /** Long-term direct personal dividends, in the same credited currency as dividendPayments. */
   capitalDividendPayments: Map<string, Map<CurrencyCode, number>>;
+  /** Dividend amounts already taxed at source under the pass-through reform. */
+  passThroughTaxedDividendPayments: Map<string, Map<CurrencyCode, number>>;
+  /** Corp-held dividends (anchor) already taxed at source; excluded from the received-dividend tax. */
+  corpDividendTaxedAtSourceAnchorByCorpId: Map<string, number>;
   /** Dividends owed to corporate shareholders, amounts in ₳ (internal) — convert to treasury currency when applying. */
   corpDividendPaymentsAnchorByCorpId: Map<string, number>;
   /** Same dividends split by the PAYING corp's currency (recipientId → payerCcy → ₳), for cross-currency FX spread. */

@@ -26,7 +26,6 @@ export const COMMODITY_SPOILAGE_PER_TURN: Record<CommodityType, number> = {
   financial_services: 1,
   consulting_services: 1,
   network_services: 1,
-  entertainment_services: 1,
   advertising: 1,
   freight: 1,
   retail: 1,

@@ -103,6 +103,28 @@ describe("executeCharacterAction: partial batch", () => {
     expect(res.ok).toBe(false);
   });
 
+  it("logs safe timing totals and completed batch count", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    const character = makeCharacter(30);
+    const { db } = makeDb(character);
+    await executeCharacterAction(db, {
+      character,
+      characterQuery: { _id: character._id },
+      actionType: "fundraise",
+      count: 5,
+      actor: { userId: new ObjectId(), username: "tester" },
+    });
+    const timing = info.mock.calls.find(
+      ([label]) => label === "[action-core-timing]"
+    )?.[1] as Record<string, unknown>;
+    expect(timing).toEqual(
+      expect.objectContaining({ actionType: "fundraise", requestedCount: 5, completedCount: 5 })
+    );
+    expect(timing).toHaveProperty("dbUpdateMs");
+    expect(JSON.stringify(timing)).not.toMatch(/tester|Raiser|[0-9a-f]{24}/);
+    info.mockRestore();
+  });
+
   it("completes a full batch with no stop note", async () => {
     const character = makeCharacter(30);
     const { db } = makeDb(character);

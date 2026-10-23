@@ -83,7 +83,10 @@
         "term": "Term",
         "turns": "{count} turns",
         "volumePerTurn": "Volume cap per turn",
-        "pricePremium": "Price premium (%)"
+        "pricePremium": "Price premium (%)",
+        "cancelNotice": "Cancelling gives {turns} turns' notice. The contract keeps delivering and settling until then; agree a shorter term with the other side to end it sooner.",
+        "noticeServed": "Notice served. Ends on turn {turn}.",
+        "termEnds": "Term ends on turn {turn}."
       },
       "validation": {
         "positiveVolume": "Volume cap must be a positive number",
@@ -93,6 +96,11 @@
       }
     },
     "sectorInvestment": {
+      "advertisingCampaignsCounted": "Advertising campaigns counted: {units}/day ({factor} media output factor)",
+      "advertisingCampaignsLabel": "Advertising campaigns counted",
+      "advertisingCampaignsValue": "{units}/day ({factor} factor)",
+      "mediaAdvertisingExplanation": "Media run units measure total audience activity. The advertising market may apply further limits.",
+      "mediaEntertainmentExplanation": "Entertainment output is shown in its own commodity ledger.",
       "activeCapacity": "Keep {percent}% of capacity active",
       "recoveryExplanation": "Park surplus capacity while keeping a smaller operation running. Parked plants pay reduced upkeep. You keep the plants and can reopen them for free. Production, staffing and upkeep adjust next turn; supply commitments still apply.",
       "activeUnits": "Active capacity: {units, number} units/day",
@@ -101,6 +109,9 @@
       "mothballHelp": "Mothball all capacity or park just a share below. Cold capacity pays {percent}% of its anchored maintenance basis and produces nothing. Normal depreciation continues.",
       "cancelHelp": "Cancellation returns 75% of the cost of the capacity still under construction. Delivered capacity is kept.",
       "strandedOptions": "Options: park surplus capacity in the Plant panel, change to a strategy with stronger demand, stockpile storable goods during a temporary glut, or sell the sector. Growing capacity will help only where buyers can absorb it.",
+      "freightState": "State freight: {load} TEU used{turnLabel} of {capacity} TEU available.",
+      "freightStateTurn": " in turn {turn}",
+      "freightOneHopEstimate": "If this sector ran at full capacity and shipped all output one state away, it would need about {estimate} TEU per day. Local sales use no freight; longer routes use more.",
       "expansionDiscount": "Expansion cost adjustment",
       "expansionDiscountHelp": "New ordinary expansion receives this build-cost reduction. Founder pricing is separate.",
       "rampTitle": "Fully built in",
@@ -913,7 +924,8 @@
       "recordedBid": "Bid recorded",
       "historyEntry": "{corporation}: revision {revision}, turn {turn}, amount {amount}. {status}.",
       "notAuthorized": "You no longer hold authority to publish this type of tender. Open the country board to review current opportunities.",
-      "actionsLoadFailed": "Contract actions could not be loaded. Try again before publishing or bidding."
+      "actionsLoadFailed": "Contract actions could not be loaded. Try again before publishing or bidding.",
+      "regionResources": "View regional resources and active concessions"
     },
     "marketGroups": {
       "showNpp": "Show NPP groups ({count})",
@@ -946,6 +958,73 @@
       "parentGroup": "View owning group",
       "viewGroup": "View subsidiary group",
       "memberSummary": "{revenue} revenue / turn, {count, plural, one {# direct subsidiary} other {# direct subsidiaries}}"
+    },
+    "extractionContracts": {
+      "heading": "Extraction contracts",
+      "intro": "Bid on government tenders to reserve a share of a region’s resource capacity. The government selects a winner after sealed bidding closes; a winning bid activates after its signing fee settles.",
+      "allocationHint": "Without a contract, companies share the open-access pool in proportion to their extraction demand. A contract reserves capacity for the company across all its operations in that region. It caps extraction of that resource at the contracted allocation; it does not add open-access capacity or guarantee sales.",
+      "royaltyHint": "The company pays the government a signing fee and a royalty each turn. Royalties use reserved daily capacity and current resource prices, even if actual output or sales are lower. Three consecutive missed payments default the contract.",
+      "loadFailed": "Contracts could not be loaded.",
+      "retry": "Retry",
+      "loading": "Loading contracts…",
+      "empty": "No extraction contracts yet. Open Government Contracts to find tenders and bid.",
+      "actionFailed": "The contract action failed.",
+      "accepted": "Contract accepted.",
+      "declined": "Offer declined.",
+      "networkError": "Network error.",
+      "unavailable": "n/a",
+      "turns": "{count, plural, one {# turn} other {# turns}}",
+      "turn": "Turn {turn}",
+      "perpetual": "Perpetual",
+      "termUsed": "{used} of {term} turns used",
+      "pending": "Legacy offers",
+      "active": "Active contracts",
+      "history": "History",
+      "resource": "Resource",
+      "state": "Region",
+      "share": "Capacity share",
+      "signingFee": "Signing fee",
+      "royalty": "Royalty / turn",
+      "term": "Term",
+      "offerExpires": "Offer expires",
+      "respond": "Respond",
+      "decline": "Decline",
+      "expires": "Expires",
+      "status": "Status",
+      "royaltyBasis": "Fraction of reserved capacity market value paid each turn",
+      "working": "Working…",
+      "accept": "Accept",
+      "defaultWarning": "{count} of {limit} consecutive missed royalty payments before default",
+      "missedPayments": "{count, plural, one {# missed payment} other {# missed payments}}",
+      "awardRecord": "View award record",
+      "statuses": {
+        "offered": "Offered",
+        "active": "Active",
+        "declined": "Declined",
+        "expired": "Expired",
+        "defaulted": "Defaulted",
+        "revoked": "Revoked"
+      },
+      "resourcesLoadFailed": "Resource capacity could not be loaded.",
+      "revokeFailed": "The contract could not be revoked.",
+      "capacityPerDay": "Capacity / day",
+      "outputPerDay": "Output / day",
+      "nationalGovernment": "National government",
+      "regionalGovernment": "Regional government",
+      "reservationHint": "Open tenders reserve contract headroom until awarded, canceled or expired. Publishing a tender does not reduce open-access extraction until the winning contract activates."
+    },
+    "freightNetwork": {
+      "title": "Freight by state",
+      "explanation": "Corporate output with a measured run is scaled to installed capacity. Current noncorporate output is added. Each output unit is assumed to ship one state hop. Local sales use no freight; longer routes use more. This planning estimate is not a shortage forecast.",
+      "unavailableStates": " Estimates are unavailable for {count, plural, one {# state} other {# states}} without a measured corporate output mix.",
+      "state": "State",
+      "oneHopEstimate": "Full-capacity one-hop estimate",
+      "observedLoad": "Observed load{turnLabel}",
+      "turnLabel": " (turn {turn})",
+      "capacity": "All-state freight supply",
+      "estimateUnavailable": "Unavailable",
+      "subtotal": "Known-state estimate subtotal",
+      "total": "Visible state total"
     }
   }
 }

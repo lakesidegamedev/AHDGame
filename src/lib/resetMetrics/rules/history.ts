@@ -3,6 +3,13 @@ import type { OpeningMetricObservation } from "./openingObservation";
 export interface ResetMetricHistoryPoint {
   turn: number;
   value: number;
+  ratioBasis?: { numerator: number; denominator: number };
+  growthBasis?: OpeningMetricObservation["growthBasis"];
+  demographicBasis?: OpeningMetricObservation["demographicBasis"];
+  householdBasis?: OpeningMetricObservation["householdBasis"];
+  definitionVersion?: 2;
+  unit?: string;
+  countryBasis?: OpeningMetricObservation["countryBasis"];
 }
 
 export type ResetMetricHistory = Record<string, ResetMetricHistoryPoint[]>;
@@ -26,7 +33,7 @@ export function validateMetricHistory(
   for (const [id, series] of Object.entries(history)) {
     if (
       series.length === 0 ||
-      series[0]!.turn !== sourceTurn ||
+      series[0]!.turn < sourceTurn ||
       series.length > RESET_METRIC_HISTORY_LIMIT ||
       series.some(
         (point, index) =>
@@ -93,7 +100,16 @@ export function appendMetricHistory(
       const prior = history[id]!;
       const last = prior.at(-1);
       if (last?.turn === turn) {
-        if (last.value !== observation.value) {
+        if (
+          last.value !== observation.value ||
+          JSON.stringify(last.ratioBasis) !== JSON.stringify(observation.ratioBasis) ||
+          JSON.stringify(last.growthBasis) !== JSON.stringify(observation.growthBasis) ||
+          JSON.stringify(last.demographicBasis) !== JSON.stringify(observation.demographicBasis) ||
+          JSON.stringify(last.householdBasis) !== JSON.stringify(observation.householdBasis) ||
+          last.definitionVersion !== observation.definitionVersion ||
+          last.unit !== observation.unit ||
+          JSON.stringify(last.countryBasis) !== JSON.stringify(observation.countryBasis)
+        ) {
           throw new Error(`Metric history replay differs for ${id}`);
         }
         return [id, [...prior]];
@@ -101,7 +117,26 @@ export function appendMetricHistory(
       if (last && last.turn > turn) throw new Error(`Metric history turn regressed for ${id}`);
       return [
         id,
-        [...prior, { turn, value: observation.value }].slice(-RESET_METRIC_HISTORY_LIMIT),
+        [
+          ...prior,
+          {
+            turn,
+            value: observation.value,
+            ...(observation.ratioBasis ? { ratioBasis: observation.ratioBasis } : {}),
+            ...(observation.growthBasis ? { growthBasis: observation.growthBasis } : {}),
+            ...(observation.demographicBasis
+              ? { demographicBasis: observation.demographicBasis }
+              : {}),
+            ...(observation.householdBasis ? { householdBasis: observation.householdBasis } : {}),
+            ...(observation.definitionVersion
+              ? {
+                  definitionVersion: observation.definitionVersion,
+                  unit: observation.unit,
+                  countryBasis: observation.countryBasis,
+                }
+              : {}),
+          },
+        ].slice(-RESET_METRIC_HISTORY_LIMIT),
       ];
     })
   );

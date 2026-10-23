@@ -31,9 +31,15 @@ export const GET = withNoStore(async (request: Request) => {
     const limit = Number.isFinite(limitRaw) ? Math.min(50, Math.max(1, limitRaw)) : 20;
 
     const db = await getDb();
-    return NextResponse.json(
-      await getInboxMailPage(db, new ObjectId(auth.user.userId), offset, limit)
-    );
+    const page = await getInboxMailPage(db, new ObjectId(auth.user.userId), offset, limit);
+    // The inbox client groups received + sent mail into threads, which needs
+    // to know which side of a thread the viewer is on. Returning the viewer's
+    // character here saves the page a second full session bootstrap
+    // (`/api/auth/me`) just to learn one id.
+    return NextResponse.json({
+      ...page,
+      selfCharacterId: auth.user.character._id.toString(),
+    });
   } catch (err) {
     return handleRouteError(err);
   }

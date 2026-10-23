@@ -9,6 +9,9 @@ export interface SectorData {
   countryId?: string;
   stateName: string;
   sectorType: OperatingSectorType;
+  mediaDiscriminator?: "entertainment" | null;
+  /** Authoritative news-media advertising output factor from commodity accounting. */
+  mediaAdvertisingCampaignFactor?: number;
   sectorLabel: string;
   displayName?: string | null;
   /** Target growth rate (% per game year, 48 turns), player-set goal that currentGrowthRate ticks toward */
@@ -165,6 +168,7 @@ export interface CommoditySupplyDemandBlendPct {
 export interface CommoditiesData {
   supplies: CommodityFlow[];
   demands: CommodityFlow[];
+  freightState?: { observedLoad: number; capacity: number; turn: number | null };
   commodityMarginModifier: number;
   commoditySupplyDemandBlendPct?: CommoditySupplyDemandBlendPct;
   /**
@@ -475,6 +479,13 @@ export interface Market {
   totalMarket: number;
   marketShare: number;
   competitors: Competitor[];
+  /** What the strongest-marketing rival here could take in a sector split, and its odds. */
+  attackExposure?: {
+    rivalName: string;
+    plantsAtRisk: number;
+    plantCount: number;
+    successProbability: number;
+  } | null;
   unownedRevenue: number;
   unownedPercent: number;
 }
@@ -577,6 +588,7 @@ export type PlantIdleCauseKey =
   | "strike"
   | "disaster"
   | "policy"
+  | "staffing"
   | "bank"
   | "deposits"
   | "mothballed"

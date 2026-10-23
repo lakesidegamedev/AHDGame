@@ -35,7 +35,7 @@ describe("PlantSplitPlannerModal", () => {
     expect(screen.getByText("13%")).toBeTruthy();
     expect(screen.getByText("130")).toBeTruthy();
     expect(screen.getByText("60.0%")).toBeTruthy();
-    expect(screen.getByText(/not selectable/i)).toBeTruthy();
+    expect(screen.getByText(/sets both the share and the success chance/i)).toBeTruthy();
     expect(screen.getByText(/still spent/i)).toBeTruthy();
     expect(screen.getByText("₳130,000")).toBeTruthy();
     expect(screen.getByText("20 MS")).toBeTruthy();

@@ -2,6 +2,7 @@
  * Pure bank solvency confidence math. Provisional constants flagged for review.
  * No DB access; bankSolvencyTurn wires the inputs and writes the results.
  */
+import { clampWithUpperPriority as clamp } from "@/lib/numeric/rules";
 
 /** Provisional - weight on reserve cover in raw confidence. */
 export const CONFIDENCE_RESERVE_WEIGHT = 0.45;
@@ -78,10 +79,6 @@ export type ConfidenceResult = {
   confidence: number;
   band: ConfidenceBand;
 };
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
 
 function finiteOrZero(value: number | undefined): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;

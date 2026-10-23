@@ -10,9 +10,7 @@ import {
 } from "@/lib/constants/commodities";
 import {
   MARKET_ECONOMY_MEDIA_SUPPLY_FACTOR,
-  PLANNED_ECONOMY_MEDIA_OUTPUT,
   PLANNED_ECONOMY_MEDIA_SUPPLY_FACTOR,
-  applyPlannedEconomyOutputMix,
   getEffectiveStrategyRates,
 } from "@/lib/constants/sectorStrategies";
 
@@ -111,7 +109,7 @@ describe("computeSupplierCommodityCapacityUnits — parity with the production s
     );
   });
 
-  it("sizes a command economy's media on what it actually makes", () => {
+  it("sizes a command economy's media advertising with the planned derate", () => {
     const capitalStock = 10_000;
     const scaled =
       plantsCapacityScaledUnits({
@@ -120,7 +118,6 @@ describe("computeSupplierCommodityCapacityUnits — parity with the production s
         productionPolicyLevel: 0,
       }) ?? 0;
     const rates = getEffectiveStrategyRates("media", "standard", null, null, 10);
-    const remapped = applyPlannedEconomyOutputMix("media", rates.supply, true, null);
     const args = {
       sectors: [
         { sectorType: "media" as const, capitalStock, productionPolicyLevel: 0, countryId: "RU" },
@@ -131,17 +128,14 @@ describe("computeSupplierCommodityCapacityUnits — parity with the production s
       commandEconomyEnabled: true,
     };
 
-    // It makes state information, so that is what it can contract...
     expect(
-      computeSupplierCommodityCapacityUnits({ ...args, commodity: PLANNED_ECONOMY_MEDIA_OUTPUT })
+      computeSupplierCommodityCapacityUnits({ ...args, commodity: "advertising" })
     ).toBeCloseTo(
       scaled *
-        commodityMixWeight(remapped, COMMODITY_BASE_PRICES, PLANNED_ECONOMY_MEDIA_OUTPUT) *
+        commodityMixWeight(rates.supply, COMMODITY_BASE_PRICES, "advertising") *
         PLANNED_ECONOMY_MEDIA_SUPPLY_FACTOR,
       4
     );
-    // ...and it cannot contract advertising, a thing its economy does not sell.
-    expect(computeSupplierCommodityCapacityUnits({ ...args, commodity: "advertising" })).toBe(0);
   });
 });
 

@@ -1,3 +1,4 @@
+import { withAdminRoute } from "@/lib/api/withAdminAuth";
 /**
  * POST /api/admin/country/[code]/cabinet — admin cabinet seat management.
  * Actions: appoint (direct seat, bypasses PM appointment / Senate
@@ -14,9 +15,8 @@ import { ObjectId } from "mongodb";
 import type { Db } from "mongodb";
 import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
-import { requireAdmin } from "@/lib/api/requireAdmin";
 import { parseJsonBody } from "@/lib/api/validate";
-import { handleRouteError, badRequest, forbidden, notFound, errorResponse } from "@/lib/api/errors";
+import { badRequest, forbidden, notFound, errorResponse } from "@/lib/api/errors";
 import {
   COUNTRY_CONFIGS,
   type CountryId,
@@ -130,11 +130,8 @@ async function vacateSeat(
   return { characterId: member.characterId, characterName: member.characterName };
 }
 
-export async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
-  try {
-    const auth = await requireAdmin();
-    if (!auth.ok) return auth.response;
-
+export const POST = withAdminRoute(
+  async (_auth, request: Request, { params }: { params: Promise<{ code: string }> }) => {
     const { code } = await params;
     const countryId = code.toUpperCase() as CountryId;
     if (!COUNTRY_CONFIGS[countryId]) {
@@ -296,7 +293,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
     return NextResponse.json({
       message: `${targetChar.name} appointed as ${position.name}`,
     });
-  } catch (error) {
-    return handleRouteError(error);
   }
-}
+);

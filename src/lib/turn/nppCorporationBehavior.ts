@@ -58,6 +58,7 @@ import {
 
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 
+import { loadGroupDominanceSectorResolver } from "@/lib/corporations/groupDominanceSectors";
 import type { BuildCapexTxInput } from "@/lib/corporations/capexTxLog";
 
 import { buildNppNationalShareResolver } from "@/lib/turn/npp/nationalDominancePricing";
@@ -110,9 +111,12 @@ import {
   isAutopilotRun,
 } from "@/lib/corporations/autopilot";
 import type { CorpAutopilotAdvisory } from "@/lib/db/types/corporation";
+import { operatorPermissionsFor } from "@/lib/turn/npp/operatorPermissions";
+import { operatorMay } from "@/lib/turn/npp/rules/operatorPolicy";
 import { createNotifications } from "@/lib/notifications";
 import {
   corpDailyGrossRevenueLocalFromSectors,
+  corpTechPlantBasisFromSectors,
   corpTechCashFloorLocal,
 } from "@/lib/corporations/dailyGrossRevenue";
 import type { TechUnlockLedgerInput } from "@/lib/corporations/techTree/techUnlockLedger";
@@ -127,8 +131,10 @@ import { getOperatingSectorType, getStrategy } from "@/lib/constants/sectorStrat
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
 import {
   resolveNppMarketEntryCredit,
+  setNppMarketEntryReason,
   type NppMarketEntryDiagnostic,
 } from "@/lib/turn/npp/entryDiagnostics";
+import { createRelocationCreditBatch } from "@/simulation/engine/v2/relocationCreditBatch";
 
 import { createFrontierEntryTurnState } from "@/lib/turn/npp/frontierEntryCandidate";
 import type {
@@ -154,6 +160,7 @@ import {
   NPP_FOUNDING_HEADROOM_SHARE,
   DEFAULT_ARCHETYPE,
 } from "@/lib/turn/npp/nppCorporationTuning";
+import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 
 export {
   NPP_GROWTH_MIN_SHORTAGE,
@@ -194,12 +201,15 @@ export async function processNppCorporationDecisions(
     : (
         await db
           .collection<Corporation>("corporations")
-          .find({
-            $or: [
-              { ceoType: "npp", suspended: { $ne: true } },
-              { autopilot: { $exists: true }, suspended: { $ne: true } },
-            ],
-          })
+          .find(
+            {
+              $or: [
+                { ceoType: "npp", suspended: { $ne: true } },
+                { autopilot: { $exists: true }, suspended: { $ne: true } },
+              ],
+            },
+            { projection: SETTLEMENT_HISTORY_EXCLUDED }
+          )
           .toArray()
       ).filter((corp) => corp.ceoType === "npp" || isAutopilotRun(corp));
 
@@ -386,6 +396,8 @@ export async function processNppCorporationDecisions(
       commandEconomyEnabled: nppGameConfig?.commandEconomyEnabled === true,
       nationalShareOf,
     };
+    const groupResolver = await loadGroupDominanceSectorResolver(db, turn);
+    if (groupResolver) plants.groupDominanceSectorsOf = groupResolver;
   }
   const unownedDraws: NonNullable<NppCorpDecision["unownedDraws"]> = [];
   // Capacity-decision observations, aggregated in memory and flushed once for
@@ -466,9 +478,17 @@ export async function processNppCorporationDecisions(
         nppCorpStrategyEnabled: 1,
         frontierEntryExperimentEnabled: 1,
         subsidiaryCorporationsEnabled: 1,
+        worldEpochId: 1,
+        producerOpening: 1,
       },
     }
   );
+  // Funded-market transition window, for AI use of the free conversion.
+  const transitionFirstFundedTurn =
+    strategyGate?.producerOpening &&
+    strategyGate.producerOpening.worldEpoch === strategyGate.worldEpochId
+      ? strategyGate.producerOpening.turn + 1
+      : undefined;
   const groupMembership = await loadGroupDirectionMembership(
     db,
     strategyGate?.subsidiaryCorporationsEnabled === true,
@@ -492,9 +512,25 @@ export async function processNppCorporationDecisions(
     engineSixByCountry.set(countryId, await nppAutonomyAtLeast(db, countryId, NPP_ENGINE_LEVEL));
   }
 
+  // v2: one cohort bundle for the relocation-bond credit fan. Absent on v1,
+  // where `resolveNppMarketEntryCredit` reads per corporation.
+  const relocationCreditBatch = preloaded?.batchRelocationCredit
+    ? createRelocationCreditBatch({
+        db,
+        corporations: nppCorps,
+        sectorsByCorp,
+        heldBondsByCorpId,
+        fxByCurrency: fxByCurrency as ReadonlyMap<CurrencyCode, number>,
+        bankRates,
+        writeReason: setNppMarketEntryReason,
+      })
+    : null;
+
   for (const corp of nppCorps) {
     const sectors = sectorsByCorp.get(corp._id.toString()) ?? [];
     const autopilot = isAutopilotRun(corp);
+    const operator = operatorPermissionsFor(corp);
+    const borrowAllowed = operatorMay(operator, "borrow");
     const archetype =
       (corp.ceoId && archetypeByNppId.get(corp.ceoId.toString())) || DEFAULT_ARCHETYPE;
     const corpCurrency = resolveCorpLiquidCurrencyCode(corp);
@@ -521,9 +557,10 @@ export async function processNppCorporationDecisions(
       strategyEligible: entryCohortEligible,
       ordinaryEntryEligible: entryCohortEligible,
       criticalLogisticsEntryEligible: criticalLogisticsEligible,
-      criticalLogisticsShortageEligible: criticalLogisticsEligible && !autopilot,
-      // Autopilot never borrows: shortage entry draws market-entry credit.
-      shortageEntryEligible: entryCohortEligible && !autopilot,
+      criticalLogisticsShortageEligible: criticalLogisticsEligible && borrowAllowed,
+      operator,
+      // An operator barred from borrowing (autopilot by default) never takes shortage-entry credit.
+      shortageEntryEligible: entryCohortEligible && borrowAllowed,
       retailExpansionPaused,
       caretakerMandate: corp.caretakerCeo?.mandate ?? "active",
       strategyLoopEnabled,
@@ -541,6 +578,7 @@ export async function processNppCorporationDecisions(
       techTreesEnabled,
       frontierEntry: autopilot ? undefined : frontierEntryTurn,
       engineSix: engineSixByCountry.get(corp.countryId) === true,
+      transitionFirstFundedTurn,
     };
     let decision = makeNppCorpDecision(
       decisionContext,
@@ -551,25 +589,42 @@ export async function processNppCorporationDecisions(
       placementSignals
     );
 
-    decision = await resolveNppMarketEntryCredit({
-      db,
-      corporation: corp,
-      decision,
-      turn,
-      fxByCurrency: fxByCurrency as ReadonlyMap<CurrencyCode, number>,
-      bankRates,
-      corpFxRate,
-      retry: (creditLocal) =>
-        makeNppCorpDecision(
-          { ...decisionContext, shortageEntryCreditLocal: creditLocal },
-          unownedByCountry,
-          stateControlled,
-          priceRatioOf,
-          plants,
-          placementSignals
-        ),
-    });
-    if (nppConstructionFinanceEnabled && corpCurrency && !autopilot) {
+    decision = relocationCreditBatch
+      ? await relocationCreditBatch.resolve({
+          corporation: corp,
+          decision,
+          turn,
+          fxByCurrency: fxByCurrency as ReadonlyMap<CurrencyCode, number>,
+          corpFxRate,
+          retry: (creditLocal) =>
+            makeNppCorpDecision(
+              { ...decisionContext, shortageEntryCreditLocal: creditLocal },
+              unownedByCountry,
+              stateControlled,
+              priceRatioOf,
+              plants,
+              placementSignals
+            ),
+        })
+      : await resolveNppMarketEntryCredit({
+          db,
+          corporation: corp,
+          decision,
+          turn,
+          fxByCurrency: fxByCurrency as ReadonlyMap<CurrencyCode, number>,
+          bankRates,
+          corpFxRate,
+          retry: (creditLocal) =>
+            makeNppCorpDecision(
+              { ...decisionContext, shortageEntryCreditLocal: creditLocal },
+              unownedByCountry,
+              stateControlled,
+              priceRatioOf,
+              plants,
+              placementSignals
+            ),
+        });
+    if (nppConstructionFinanceEnabled && corpCurrency && borrowAllowed) {
       for (const intent of decision.constructionFinanceIntents ?? []) {
         constructionFinanceCandidates.push({
           ...intent,
@@ -627,7 +682,12 @@ export async function processNppCorporationDecisions(
     // Autopilot computes the same pick into scratch arrays and leaves it to the
     // owner: a tech lane commitment is permanent, so it is the owner's call.
     const techScratch: TechUnlockLedgerInput[] = [];
-    if (techTreesEnabled && decisionContext.caretakerMandate !== "passive") {
+    const researchPermission = operator.actions.research;
+    if (
+      techTreesEnabled &&
+      decisionContext.caretakerMandate !== "passive" &&
+      researchPermission !== "never"
+    ) {
       maybePushNppTechUnlock({
         corp,
         dailyGrossRevenueLocal: corpDailyGrossRevenueLocalFromSectors(sectors, corp, {
@@ -639,13 +699,16 @@ export async function processNppCorporationDecisions(
           eraUnitScale: plants?.eraUnitScale ?? 1,
           fxByCurrency: fxByCurrency as ReadonlyMap<CurrencyCode, number>,
         }),
+        techPlantBasis: corpTechPlantBasisFromSectors(sectors, corp, {
+          fxByCurrency: fxByCurrency as ReadonlyMap<CurrencyCode, number>,
+        }),
         techCurrentYear,
         turn,
         now,
-        corpUpdates: autopilot ? [] : corpUpdates,
+        corpUpdates: researchPermission === "allow" ? corpUpdates : [],
         liquidCapitalDelta: decision.liquidCapitalDelta,
         cashReserve: decision.cashFloorLocal,
-        techLedger: autopilot ? techScratch : techLedger,
+        techLedger: researchPermission === "allow" ? techLedger : techScratch,
       });
     }
 
@@ -695,6 +758,10 @@ export async function processNppCorporationDecisions(
       allDivestedSectorIds.push(...decision.divestedSectorIds);
     }
   }
+
+  // v2: every planned relocation bond lands in loop order, exactly where v1's
+  // per-corp `insertOne` would have put it, before the caller reads bonds again.
+  await relocationCreditBatch?.flush();
 
   const boundedConstructionFinance = nppConstructionFinanceEnabled
     ? boundNppConstructionFinanceCandidates(constructionFinanceCandidates)

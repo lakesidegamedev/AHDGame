@@ -216,6 +216,11 @@ export const setSectorStrategySchema = z.object({
   strategyId: z.string().min(1).max(50),
 });
 
+export const convertSectorIndustrySchema = z.object({
+  targetLane: z.enum(OPERATING_SECTOR_TYPES),
+  strategyId: z.string().min(1).max(50).optional(),
+});
+
 export const setSectorPolicySchema = z.object({
   productionPolicy: z.number().min(-25).max(25),
 });
@@ -250,16 +255,29 @@ export const bulkSectorOperationsSchema = z
     // Posted-price posture (−20%…+20% vs market); null = Auto. Requires clearing mode.
     pricingPosture: z.number().min(-0.2).max(0.2).nullable().optional(),
     wageLevel: z.number().min(WAGE_LEVEL_MIN).max(WAGE_LEVEL_MAX).optional(),
+    // Mothball or reactivate every eligible holding in scope. Plants tier only;
+    // sent on its own, never combined with the other levers.
+    capacity: z.enum(["mothball", "reactivate"]).optional(),
     preview: z.boolean().optional().default(false),
   })
   .refine(
     (d) =>
+      d.capacity === undefined ||
+      (d.targetGrowthRate === undefined &&
+        d.productionPolicy === undefined && // pragma: allowlist secret
+        d.pricingPosture === undefined &&
+        d.wageLevel === undefined),
+    { message: "Mothball or reactivate on its own" }
+  )
+  .refine(
+    (d) =>
+      d.capacity !== undefined ||
       d.targetGrowthRate !== undefined ||
       d.productionPolicy !== undefined || // pragma: allowlist secret
       d.pricingPosture !== undefined ||
       d.wageLevel !== undefined,
     {
-      message: "Need growth, production policy, pricing or wages", // pragma: allowlist secret
+      message: "Need growth, production policy, pricing, wages or capacity", // pragma: allowlist secret
     }
   );
 

@@ -19,6 +19,7 @@
  *
  * Pure: no database, clock, randomness or environment.
  */
+import { clamp } from "@/lib/numeric/rules";
 
 /** Signed domain emphasis in [-1, 1], keyed by the agenda's domain vocabulary. */
 export type MandateDomains = Record<string, number>;
@@ -112,10 +113,6 @@ const POLICY_DOMAIN_FALLBACK: Record<string, MandateDomains> = {
   crime: { public_safety: 0.8 },
   justice: { public_safety: 0.8 },
 };
-
-function clamp(value: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, value));
-}
 
 function finite(value: number): number {
   return Number.isFinite(value) ? value : 0;

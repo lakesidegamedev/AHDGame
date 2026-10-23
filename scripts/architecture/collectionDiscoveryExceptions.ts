@@ -189,9 +189,17 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/banking/fundedSovereignCoupons.ts",
     owner: "loadCouponTargetReadiness",
     argument: "collection",
-    scopeHash: "209598ea2428ad462da7d288545ba09b040819e633691fcf76061812ae3f2e56",
+    scopeHash: "48a2dd8cba7416a97190e9eef4f891661012086d546d79f4f7ca6883992befdc",
     count: 1,
     reason: "The persisted transaction or recovery record carries its destination collection.",
+  },
+  {
+    file: "src/lib/banking/recovery.ts",
+    owner: "existingTargetIds",
+    argument: "collection",
+    scopeHash: "a20eecd22c12debe43922f58d945d828b4f8e6cd5b733502035f4fd0b64bd51c",
+    count: 1,
+    reason: "The recovery worker checks the destinations a persisted money move names.",
   },
   {
     file: "src/lib/banking/moneyMove.ts",
@@ -205,7 +213,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/banking/moneyMove.ts",
     owner: "applyLeg",
     argument: "leg.collection",
-    scopeHash: "67b315a332c8f11b61a44b1386f8c4931cc5513dafa163b84d7276e1943a1a68",
+    scopeHash: "8ed6f2136b55af57af2a23b7d271f7b9b12dbf75a4ff9cab5cf5c3e933cd2499",
     count: 1,
     reason: "The persisted transaction or recovery record carries its destination collection.",
   },
@@ -219,9 +227,9 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
   },
   {
     file: "src/lib/banking/moneyMove.ts",
-    owner: "deliverCreditLegsInBatch",
+    owner: "deliverCashLegsInBatch",
     argument: "collection",
-    scopeHash: "32ba68d550b9c584eaddef67c9efd67356c448d00d3ab1ac719f6cc0c6320a93",
+    scopeHash: "1266e9e88f0746aa9ae40b71ffe3c8d49ec7a7139e0627aefd9863a4f4f01754",
     count: 1,
     reason: "The persisted transaction or recovery record carries its destination collection.",
   },
@@ -351,33 +359,6 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
       "Checked-in migration descriptors own the target collection for one-off index or schema work.",
   },
   {
-    file: "src/lib/migrations/entries/2026-06-06-route-performance-indexes.ts",
-    owner: "createPlannedIndexes",
-    argument: "plan.collection",
-    scopeHash: "4433de9a99dce79f7770aee954456041f5e1d453f2d4e47ca89b0ecdb14c0620",
-    count: 1,
-    reason:
-      "Checked-in migration descriptors own the target collection for one-off index or schema work.",
-  },
-  {
-    file: "src/lib/migrations/entries/2026-06-09-event-substrate-indexes.ts",
-    owner: "createPlannedIndexes",
-    argument: "plan.collection",
-    scopeHash: "43b92967364132f75c907f08ea65b9e5b0a2fb448b4c222a86764077cb98ae69",
-    count: 1,
-    reason:
-      "Checked-in migration descriptors own the target collection for one-off index or schema work.",
-  },
-  {
-    file: "src/lib/migrations/entries/2026-06-21-crisis-aid-indexes.ts",
-    owner: "createPlannedIndexes",
-    argument: "plan.collection",
-    scopeHash: "43b92967364132f75c907f08ea65b9e5b0a2fb448b4c222a86764077cb98ae69",
-    count: 1,
-    reason:
-      "Checked-in migration descriptors own the target collection for one-off index or schema work.",
-  },
-  {
     file: "src/lib/migrations/entries/2026-07-01-union-indexes.ts",
     owner: "createPlannedIndexes",
     argument: "dropped.collection",
@@ -396,109 +377,10 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
       "Checked-in migration descriptors own the target collection for one-off index or schema work.",
   },
   {
-    file: "src/lib/migrations/entries/2026-07-04-union-leadership-indexes.ts",
-    owner: "createPlannedIndexes",
-    argument: "plan.collection",
-    scopeHash: "43b92967364132f75c907f08ea65b9e5b0a2fb448b4c222a86764077cb98ae69",
-    count: 1,
-    reason:
-      "Checked-in migration descriptors own the target collection for one-off index or schema work.",
-  },
-  {
-    file: "src/lib/migrations/entries/2026-07-08-perf-n1-indexes.ts",
-    owner: "createPlannedIndexes",
-    argument: "plan.collection",
-    scopeHash: "4433de9a99dce79f7770aee954456041f5e1d453f2d4e47ca89b0ecdb14c0620",
-    count: 1,
-    reason:
-      "Checked-in migration descriptors own the target collection for one-off index or schema work.",
-  },
-  {
-    file: "src/lib/migrations/entries/2026-07-10-orgregledger-index.ts",
-    owner: "createPlannedIndexes",
-    argument: "plan.collection",
-    scopeHash: "4433de9a99dce79f7770aee954456041f5e1d453f2d4e47ca89b0ecdb14c0620",
-    count: 1,
-    reason:
-      "Checked-in migration descriptors own the target collection for one-off index or schema work.",
-  },
-  {
-    file: "src/lib/migrations/entries/2026-08-09-labour-relations-indexes.ts",
-    owner: "createPlannedIndexes",
-    argument: "plan.collection",
-    scopeHash: "defaf23fa2e0b7ae6a89836c2cd715bca33c71d42724513ca41cfbe9e62eba4b",
-    count: 1,
-    reason:
-      "Checked-in migration descriptors own the target collection for one-off index or schema work.",
-  },
-  {
-    file: "src/lib/migrations/entries/2026-08-10-index-fund-phase-indexes.ts",
-    owner: "createPlannedIndexes",
-    argument: "plan.collection",
-    scopeHash: "defaf23fa2e0b7ae6a89836c2cd715bca33c71d42724513ca41cfbe9e62eba4b",
-    count: 1,
-    reason:
-      "Checked-in migration descriptors own the target collection for one-off index or schema work.",
-  },
-  {
-    file: "src/lib/migrations/entries/2026-08-10-index-listing-petition-indexes.ts",
-    owner: "createPlannedIndexes",
-    argument: "plan.collection",
-    scopeHash: "defaf23fa2e0b7ae6a89836c2cd715bca33c71d42724513ca41cfbe9e62eba4b",
-    count: 1,
-    reason:
-      "Checked-in migration descriptors own the target collection for one-off index or schema work.",
-  },
-  {
-    file: "src/lib/migrations/entries/2026-08-10-pension-scheme-indexes.ts",
-    owner: "createPlannedIndexes",
-    argument: "plan.collection",
-    scopeHash: "defaf23fa2e0b7ae6a89836c2cd715bca33c71d42724513ca41cfbe9e62eba4b",
-    count: 1,
-    reason:
-      "Checked-in migration descriptors own the target collection for one-off index or schema work.",
-  },
-  {
-    file: "src/lib/migrations/entries/2026-08-11-pension-scheme-fund-positions.ts",
-    owner: "createPlannedIndexes",
-    argument: "plan.collection",
-    scopeHash: "defaf23fa2e0b7ae6a89836c2cd715bca33c71d42724513ca41cfbe9e62eba4b",
-    count: 1,
-    reason:
-      "Checked-in migration descriptors own the target collection for one-off index or schema work.",
-  },
-  {
-    file: "src/lib/migrations/entries/2026-08-11-ratification-ballot-indexes.ts",
-    owner: "createPlannedIndexes",
-    argument: "plan.collection",
-    scopeHash: "defaf23fa2e0b7ae6a89836c2cd715bca33c71d42724513ca41cfbe9e62eba4b",
-    count: 1,
-    reason:
-      "Checked-in migration descriptors own the target collection for one-off index or schema work.",
-  },
-  {
-    file: "src/lib/migrations/entries/2026-08-18-bank-money-move-indexes.ts",
-    owner: "createPlannedIndexes",
-    argument: "plan.collection",
-    scopeHash: "defaf23fa2e0b7ae6a89836c2cd715bca33c71d42724513ca41cfbe9e62eba4b",
-    count: 1,
-    reason:
-      "Checked-in migration descriptors own the target collection for one-off index or schema work.",
-  },
-  {
     file: "src/lib/migrations/entries/2026-08-31-intelligence-indexes.ts",
     owner: "execute",
     argument: "plan.collection",
     scopeHash: "359568d25c88efe8236d026b6fade60d4de0c26f0e19cf404c413082d2003e48",
-    count: 1,
-    reason:
-      "Checked-in migration descriptors own the target collection for one-off index or schema work.",
-  },
-  {
-    file: "src/lib/migrations/entries/2026-09-06-manifestos-index.ts",
-    owner: "createPlannedIndexes",
-    argument: "plan.collection",
-    scopeHash: "4433de9a99dce79f7770aee954456041f5e1d453f2d4e47ca89b0ecdb14c0620",
     count: 1,
     reason:
       "Checked-in migration descriptors own the target collection for one-off index or schema work.",
@@ -688,7 +570,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/retention/retention.ts",
     owner: "runRetention",
     argument: "policy.collection",
-    scopeHash: "ac77b8fdb1f2e214ea1a54e2eb2351da5a7b005589d2cb8f1de9216434a9e093",
+    scopeHash: "f4971b307f971bd515806c9e770f72bbd434b87e1aec5c8729e22f5239364831",
     count: 1,
     reason:
       "The named persistence operation receives its collection from a repository-owned caller.",

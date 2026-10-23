@@ -53,7 +53,7 @@ export interface ActiveModifier {
    * may be treated as a metric condition by the margin fallbacks or by the chip
    * tooltips.
    */
-  source?: "metric" | "address" | "war" | "banking" | "cabinet";
+  source?: "metric" | "address" | "war" | "banking" | "market" | "cabinet";
 }
 
 export interface EvaluateModifiersOptions {

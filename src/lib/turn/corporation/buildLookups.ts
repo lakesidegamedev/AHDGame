@@ -12,6 +12,7 @@ import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { RESET_V2_COUNTRIES, resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import type { Db } from "mongodb";
 import { findMergedRegionMetricsMany } from "@/lib/macroMetrics/merge";
+import { employmentStaffingTightness } from "@/lib/labour/rules/employment";
 import type {
   Character,
   Corporation,
@@ -31,6 +32,13 @@ import type { Crisis } from "@/lib/db/types/crisis";
 import { buildDisasterEffectsByState } from "@/lib/crises/disasterMarginPenalty";
 import { excludePendingFederationFirms } from "@/lib/world/succession/rules/pendingFirmActivity";
 import type { CommodityPrice } from "@/lib/db/types";
+import {
+  HONEST_LOANS_STAGE,
+  loadConstructionLoanDebtAnchorByCorpId,
+} from "@/lib/corporations/honestBalanceSheets";
+import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
+import { soeSizeCostByCorpId as soeSizeCostByCorpIdRule } from "@/lib/corporations/rules/soeSizeCost";
+import { buildGroupDominanceShares } from "@/lib/corporations/groups/groupDominanceShares";
 import type { TradeFlowSnapshot } from "@/lib/db/types/tradeFlowSnapshot";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { COUNTRY_CURRENCY_MAP, eraRateForCurrency } from "@/lib/constants/currencies";
@@ -74,11 +82,17 @@ import {
   getDebtToGdpMarginModifier,
   getDeficitToGdpMarginModifier,
   SECTOR_MARGIN_LEVEL_TRIM_PP,
+  managementOverheadPp,
 } from "@/lib/constants/corporations";
+import { controlGroupRootByCorpId, groupTotals } from "@/lib/corporations/groups/controlGroups";
 import { INVESTOR_CONFIDENCE_BASELINE } from "@/lib/nationalization/constants";
 import { NATIONAL_SCOPE, NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
 import { buildPoliticalBaseModifiers } from "@/lib/politicalLegislation/marginAdapter";
 import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
+import {
+  ownedPoliticalValues,
+  ownedPoliticalModifiers,
+} from "@/lib/resetMetrics/rules/ownedInputs";
 import { buildFlatMetrics } from "@/lib/utils/governmentApproval";
 import { evaluateModifiers } from "@/lib/utils/approvalModifiers";
 import { resolveGameYear } from "@/lib/era/era";
@@ -113,8 +127,10 @@ import {
   getOperatingSectorType,
 } from "@/lib/constants/sectorStrategies";
 import { retoolProductionMeasurements } from "@/lib/corporations/retooling/rules";
+import { activeCapacityFraction } from "@/lib/corporations/investment/rules";
 import {
   computeExtractionCapacityMultipliers,
+  fullOutputMultipliers,
   type ExtractionSectorInput,
 } from "@/lib/turn/extraction/extractionCapacity";
 import { depletedCapacityDoc } from "@/lib/extraction/depletion";
@@ -354,6 +370,9 @@ export async function buildCorporationLookups(
             gdp: 1,
             "taxRates.domesticCorporateTax": 1,
             "taxRates.foreignCorporateTax": 1,
+            // Pass-through owners are taxed at the top personal rate.
+            "taxRates.incomeTaxHigh": 1,
+            "taxRates.incomeTax": 1,
             // Per-country authored GDP-share targets (fiscal-scale audit,
             // 2026-07-29) - updateCorporateTaxBases below reads
             // taxBaseGdpShareBaseline.{domestic,foreign}CorporateProfits as the
@@ -369,9 +388,12 @@ export async function buildCorporationLookups(
             minimumWageKaitzRatio: 1,
             unionLawBias: 1,
             unionsBanned: 1,
+            // Producer market shadow: public buyers are funded from the budget
+            // outlay by category, converted from the budget's own currency.
+            currencyCode: 1,
+            "spending.byCategory": 1,
             ...(options?.politicalMediaMarketEnabled === true
               ? {
-                  currencyCode: 1,
                   treasuryCashLocal: 1,
                   treasuryBalance: 1,
                 }
@@ -389,6 +411,8 @@ export async function buildCorporationLookups(
             _id: 1,
             "taxRates.domesticCorporateTax": 1,
             "taxRates.foreignCorporateTax": 1,
+            "taxRates.incomeTaxHigh": 1,
+            "taxRates.incomeTax": 1,
           },
         }
       )
@@ -690,6 +714,7 @@ export async function buildCorporationLookups(
   // applies to all other corps. Per-sector selection happens in sectorCalculations.ts.
   const domesticCorpTaxRateByCountry = new Map<string, number>();
   const foreignCorpTaxRateByCountry = new Map<string, number>();
+  const personalTopIncomeTaxRateByCountry = new Map<string, number>();
   for (const budget of federalBudgets) {
     const cid = budget.countryId;
     if (!cid) continue;
@@ -708,6 +733,8 @@ export async function buildCorporationLookups(
     if (typeof domRate === "number") domesticCorpTaxRateByCountry.set(cid, domRate);
     const forRate = budget.taxRates?.foreignCorporateTax;
     if (typeof forRate === "number") foreignCorpTaxRateByCountry.set(cid, forRate);
+    const topIncome = budget.taxRates?.incomeTaxHigh ?? budget.taxRates?.incomeTax;
+    if (typeof topIncome === "number") personalTopIncomeTaxRateByCountry.set(cid, topIncome);
     investorConfidenceByCountry.set(cid, budget.investorConfidence ?? INVESTOR_CONFIDENCE_BASELINE);
     stateOwnershipConcentrationByCountry.set(cid, budget.stateOwnershipConcentration ?? 0);
   }
@@ -762,11 +789,14 @@ export async function buildCorporationLookups(
   // Build per-state domestic/foreign corporate tax rate maps for per-sector state tax.
   const domesticStateCorpTaxRateByState = new Map<string, number>();
   const foreignStateCorpTaxRateByState = new Map<string, number>();
+  const personalTopIncomeTaxRateByState = new Map<string, number>();
   for (const sb of stateBudgets) {
     const dom = sb.taxRates?.domesticCorporateTax;
     if (typeof dom === "number") domesticStateCorpTaxRateByState.set(sb._id, dom);
     const fgn = sb.taxRates?.foreignCorporateTax;
     if (typeof fgn === "number") foreignStateCorpTaxRateByState.set(sb._id, fgn);
+    const topIncome = sb.taxRates?.incomeTaxHigh ?? sb.taxRates?.incomeTax;
+    if (typeof topIncome === "number") personalTopIncomeTaxRateByState.set(sb._id, topIncome);
   }
 
   // Build global, national, and per-state commodity balance lookups for margin modifiers.
@@ -1000,7 +1030,12 @@ export async function buildCorporationLookups(
     if (typeof corrVal === "number") {
       corruptionByState.set(stateId, getCorruptionMarginModifier(corrVal));
     }
-    const tightnessVal = sm.economic?.labourTightness?.value;
+    const allocatedTightness = employmentStaffingTightness(sm.labourEmployment);
+    const coverageTightness = sm.economic?.labourTightness?.value;
+    const tightnessVal =
+      allocatedTightness === undefined
+        ? coverageTightness
+        : Math.max(Number.isFinite(coverageTightness) ? coverageTightness! : 0, allocatedTightness);
     if (typeof tightnessVal === "number" && Number.isFinite(tightnessVal)) {
       labourTightnessByState.set(stateId, tightnessVal);
     }
@@ -1044,6 +1079,108 @@ export async function buildCorporationLookups(
     sectorsByCorp.set(key, list);
   }
 
+  // Management overhead: a margin charge on every sector of a corporation that
+  // grows with its total whole-plant count (snowball brake). Off unless the
+  // gameConfig knob is set.
+  const overheadCfg = await db
+    .collection<{
+      _id: string;
+      managementOverheadPpPerDoubling?: number;
+      strengthUpkeepStage?: number;
+      groupSizeCostsStage?: number;
+      soeSizeCostScale?: number;
+      dominanceRunningCostScale?: number;
+      honestBalanceSheetsStage?: number;
+      fundedOverheadStage?: number;
+      fundedHeadcountStage?: number;
+    }>("gameConfig")
+    .findOne(
+      { _id: "default" },
+      {
+        projection: {
+          managementOverheadPpPerDoubling: 1,
+          strengthUpkeepStage: 1,
+          groupSizeCostsStage: 1,
+          soeSizeCostScale: 1,
+          dominanceRunningCostScale: 1,
+          honestBalanceSheetsStage: 1,
+          fundedOverheadStage: 1,
+          fundedHeadcountStage: 1,
+        },
+      }
+    );
+  const overheadPpPerDoubling = overheadCfg?.managementOverheadPpPerDoubling ?? 0;
+  const strengthUpkeepStage =
+    typeof overheadCfg?.strengthUpkeepStage === "number" ? overheadCfg.strengthUpkeepStage : 0;
+  const groupSizeCostsStage =
+    typeof overheadCfg?.groupSizeCostsStage === "number" ? overheadCfg.groupSizeCostsStage : 0;
+  const honestBalanceSheetsStage =
+    typeof overheadCfg?.honestBalanceSheetsStage === "number"
+      ? overheadCfg.honestBalanceSheetsStage
+      : 0;
+  const constructionLoanDebtByCorpId =
+    honestBalanceSheetsStage >= HONEST_LOANS_STAGE
+      ? await loadConstructionLoanDebtAnchorByCorpId(db, exchangeRatesByCurrency)
+      : new Map<string, number>();
+  // Control-group roots for size costs (contestability plan): every corp
+  // resolved to its ultimate controlling owner. Only built when a group size
+  // cost is on.
+  const dominanceRunningCostScale =
+    typeof overheadCfg?.dominanceRunningCostScale === "number"
+      ? Math.max(0, overheadCfg.dominanceRunningCostScale)
+      : 0;
+  const controlRootByCorpId =
+    groupSizeCostsStage >= 1 || dominanceRunningCostScale > 0
+      ? controlGroupRootByCorpId(loadedCorporations)
+      : null;
+  const managementOverheadPpByCorpId = new Map<string, number>();
+  if (overheadPpPerDoubling > 0) {
+    const plantsByCorpId = new Map<string, number>();
+    for (const [corpId, sectors] of sectorsByCorp) {
+      let plants = 0;
+      for (const s of sectors)
+        plants += Number.isFinite(s.plantCount) ? (s.plantCount as number) : 0;
+      plantsByCorpId.set(corpId, plants);
+    }
+    // Stage 1: measure overhead on the whole control group, so splitting a
+    // business into subsidiaries does not dodge it. Every member pays the
+    // group's rate on its own sectors.
+    const basis =
+      groupSizeCostsStage >= 1 && controlRootByCorpId
+        ? groupTotals(controlRootByCorpId, plantsByCorpId)
+        : plantsByCorpId;
+    for (const [corpId, plants] of basis) {
+      const pp = managementOverheadPp(plants, overheadPpPerDoubling);
+      if (pp > 0) managementOverheadPpByCorpId.set(corpId, pp);
+    }
+  }
+
+  // State-owned corporations: overhead and sprawl on the whole country's
+  // holdings (gameConfig.soeSizeCostScale). Empty when off.
+  const soeSizeCostScale =
+    typeof overheadCfg?.soeSizeCostScale === "number" ? overheadCfg.soeSizeCostScale : 0;
+  const soeSizeCostByCorpId =
+    soeSizeCostScale > 0
+      ? soeSizeCostByCorpIdRule({
+          corps: loadedCorporations
+            .filter((c) => isStateOwned(c))
+            .map((c) => {
+              const sectors = sectorsByCorp.get(c._id.toString()) ?? [];
+              return {
+                id: c._id.toString(),
+                country: c.countryOwnerId ?? c.countryId,
+                sectorCount: sectors.length,
+                plantCount: sectors.reduce(
+                  (sum, s) => sum + (Number.isFinite(s.plantCount) ? (s.plantCount as number) : 0),
+                  0
+                ),
+              };
+            }),
+          overheadPpPerDoubling,
+          scale: soeSizeCostScale,
+        })
+      : undefined;
+
   // Per-sector market share (₳-normalized) drives the dominance growth-cost
   // multiplier in calculateDailyGrowthCost. Built once per turn so every sector
   // pays the same dominance penalty the player-facing routes display.
@@ -1065,6 +1202,7 @@ export async function buildCorporationLookups(
   // baseline, and partitioning it would only re-derive the same world market
   // with extra moving parts. See market/tradePartition.ts for book semantics.
   let countryClearingBooks: ReturnType<typeof buildCountryClearingBooks> | null = null;
+  let tradeRoutes: CorporationLookups["tradeRoutes"] = null;
   if (eraUnitScale !== 1) {
     const blocsByCountry = new Map<string, Set<string>>();
     for (const m of orgMembershipDocs) {
@@ -1097,6 +1235,7 @@ export async function buildCorporationLookups(
       embargoes: activeEmbargoDocs,
       curtainedCountries,
     });
+    tradeRoutes = { affinityFor, importCostMultiplierFor };
     countryClearingBooks = buildCountryClearingBooks({
       countries,
       nationalBalances: nationalCommodityBalancesByCountry,
@@ -1138,6 +1277,24 @@ export async function buildCorporationLookups(
     exchangeRatesByCurrency,
     preset: marketSharePreset,
   });
+  // Running dominance cost reads the control group's combined shares.
+  const dominanceRunningCost =
+    dominanceRunningCostScale > 0 && controlRootByCorpId
+      ? (() => {
+          const g = buildGroupDominanceShares({
+            sectors: allSectors,
+            rootByCorpId: controlRootByCorpId,
+            localShareBySectorId: marketShareBySectorId,
+            nationalShareBySectorId: nationalDominanceShareBySectorId,
+            countryOf: (s) => s.countryId ?? stateById.get(s.stateId)?.countryId ?? "",
+          });
+          return {
+            scale: dominanceRunningCostScale,
+            localShareBySectorId: g.local,
+            nationalShareBySectorId: g.national,
+          };
+        })()
+      : null;
 
   // Extraction capacity utilization (sectorId → { utilization, bindingResource }).
   // Computed here, in the corp phase, because commodityPriceTurn (which computes
@@ -1209,11 +1366,26 @@ export async function buildCorporationLookups(
       const sectorId = sector._id.toString();
       ratesBySector.set(sectorId, rates);
       outputUnitsBySector.set(sectorId, revenueBasedOutput);
+      // Plants (#4503): parked or mothballed capacity digs nothing, so it does
+      // not claim a share of the deposit. This turn's demand throttle is not
+      // known yet here; the ledger caps at real output.
+      let plantOutputCap: ExtractionSectorInput["plantOutputCap"];
+      if (options?.plantsEnabled === true) {
+        const active = activeCapacityFraction(sector);
+        plantOutputCap = {};
+        for (const [resource, units] of Object.entries(revenueBasedOutput) as [
+          ExtractableResource,
+          number,
+        ][]) {
+          plantOutputCap[resource] = units * active;
+        }
+      }
       return {
         sectorId,
         stateId: sector.stateId,
         corporationId: sector.corporationId,
         revenueBasedOutput,
+        ...(plantOutputCap ? { plantOutputCap } : {}),
       };
     });
     // P3b: under plants the corp phase rations against the DEPLETION-ADJUSTED
@@ -1221,12 +1393,17 @@ export async function buildCorporationLookups(
     // Without this the sector's revenue-side utilization and the world's supply
     // ledger would disagree about how much ore is left. Below plants the raw
     // docs are used, byte-identically.
-    const multipliers = computeExtractionCapacityMultipliers(
+    // Utilization below stays a share of FULL output (the plants hard-min
+    // divides it by the active fraction), so capped grants are re-expressed.
+    const multipliers = fullOutputMultipliers(
       extractionInputs,
-      activeContracts,
-      options?.plantsEnabled === true
-        ? stateResourceCapacityDocs.map(depletedCapacityDoc)
-        : stateResourceCapacityDocs
+      computeExtractionCapacityMultipliers(
+        extractionInputs,
+        activeContracts,
+        options?.plantsEnabled === true
+          ? stateResourceCapacityDocs.map(depletedCapacityDoc)
+          : stateResourceCapacityDocs
+      )
     );
     // Scarcity relief: lift the haircut off resources in global shortage
     // (lagged balances — same one-turn lag as every market input) so the
@@ -1322,6 +1499,8 @@ export async function buildCorporationLookups(
         preset: 1,
         hardwareInputReliefStartTurn: 1,
         stockHoldingTaxStartTurn: 1,
+        passThroughOwnerTaxStartTurn: 1,
+        nppCeoPayStartTurn: 1,
         currentYear: 1,
         currentTurn: 1,
         startingYear: 1,
@@ -1371,6 +1550,30 @@ export async function buildCorporationLookups(
           )
           .toArray()
       : [];
+  const politicalById = new Map(politicalDocs.map((doc) => [String(doc._id), doc]));
+  for (const board of resetBoards) {
+    if (board.scope !== "regional" || !board.regionId) continue;
+    const prior = politicalById.get(board.regionId);
+    if (!prior || prior.countryId !== board.countryId) continue;
+    politicalBaseModifiersByState.set(
+      board.regionId,
+      ownedPoliticalModifiers(
+        prior.values,
+        board.observations,
+        board.countryId,
+        eraYear ?? gameState?.currentYear ?? 1991
+      )
+    );
+    politicalBoardByState.set(
+      board.regionId,
+      ownedPoliticalValues(
+        prior.values,
+        board.observations,
+        board.countryId,
+        eraYear ?? gameState?.currentYear ?? 1991
+      )
+    );
+  }
   const resetConditions = new Map(
     await Promise.all(
       resetCountries.map(
@@ -1514,6 +1717,10 @@ export async function buildCorporationLookups(
     preset: marketSharePreset,
     hardwareInputReliefStartTurn: gameState?.hardwareInputReliefStartTurn,
     stockHoldingTaxStartTurn: gameState?.stockHoldingTaxStartTurn,
+    passThroughOwnerTaxStartTurn: gameState?.passThroughOwnerTaxStartTurn,
+    personalTopIncomeTaxRateByCountry,
+    personalTopIncomeTaxRateByState,
+    nppCeoPayStartTurn: gameState?.nppCeoPayStartTurn,
     eraYear,
     eraUnitScale,
     corporations,
@@ -1576,6 +1783,17 @@ export async function buildCorporationLookups(
     priceRatioByCommodity,
     latentDemandFactorByCommodity,
     marginLevelTrimPp: SECTOR_MARGIN_LEVEL_TRIM_PP,
+    managementOverheadPpByCorpId,
+    honestBalanceSheetsStage,
+    constructionLoanDebtByCorpId,
+    fundedOverheadStage:
+      typeof overheadCfg?.fundedOverheadStage === "number" ? overheadCfg.fundedOverheadStage : 0,
+    fundedHeadcountStage:
+      typeof overheadCfg?.fundedHeadcountStage === "number" ? overheadCfg.fundedHeadcountStage : 0,
+    dumpingGuardRootByCorpId: groupSizeCostsStage >= 3 ? controlRootByCorpId : null,
+    soeSizeCostByCorpId,
+    dominanceRunningCost,
+    strengthUpkeepStage,
     reachablePriceRatioByCountry,
     reachableInputPriceRatiosByCountry,
     landedPremiumByState,
@@ -1589,6 +1807,7 @@ export async function buildCorporationLookups(
     freightHaulRevenueByOriginState,
     nationalCommodityBalancesByCountry,
     countryClearingBooks,
+    tradeRoutes,
     unmetForeignDemandByCountry,
     exportIntensityByCountry,
     rawStateBalances,

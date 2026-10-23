@@ -68,11 +68,31 @@ describe("redactPrivateCorporation", () => {
     expect((redacted as Record<string, unknown>).name).toBe("Acme");
     expect((redacted as Record<string, unknown>).creditRatingSnapshot).toBe("BBB");
     expect("liquidCapital" in redacted).toBe(false);
+    // Public sector profit is denominated in this code; strip it and the UI
+    // treats local yen as anchor (ticket #1612).
+    expect((redacted as Record<string, unknown>).liquidCurrencyCode).toBe("USD");
     expect("sharePrice" in redacted).toBe(false);
     expect("marketingBudget" in redacted).toBe(false);
     expect("dividendRate" in redacted).toBe(false);
     expect("earningsHistory" in redacted).toBe(false);
     expect("creditCompositeSnapshot" in redacted).toBe(false);
+  });
+
+  it("retains liquidCurrencyCode so public profit formats through FX", () => {
+    const corp = {
+      _id: new ObjectId(),
+      name: "Asian Broadcasting Company",
+      type: "media",
+      isPrivate: true,
+      countryId: "JP",
+      liquidCapital: 1,
+      liquidCurrencyCode: "JPY",
+      sharePrice: 1,
+    };
+    const redacted = redactPrivateCorporation(corp as never);
+    expect((redacted as Record<string, unknown>).liquidCurrencyCode).toBe("JPY");
+    expect((redacted as Record<string, unknown>).countryId).toBe("JP");
+    expect("liquidCapital" in redacted).toBe(false);
   });
 });
 
@@ -163,6 +183,8 @@ describe("redaction covers the plants-tier physical book", () => {
     capacityUnits: 5000,
     producedUnits: 4200,
     soldUnits: 1300,
+    mediaAdvertisingCampaignUnits: 420,
+    mediaAdvertisingCampaignFactor: 0.1,
     fillRate: 1300 / 4200,
     fillRateBand: "low",
     deliveryLimitedFraction: 0.25,
@@ -178,6 +200,8 @@ describe("redaction covers the plants-tier physical book", () => {
       "capacityUnits",
       "producedUnits",
       "soldUnits",
+      "mediaAdvertisingCampaignUnits",
+      "mediaAdvertisingCampaignFactor",
       "fillRate",
       "fillRateBand",
       "deliveryLimitedFraction",

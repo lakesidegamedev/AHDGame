@@ -142,6 +142,8 @@ export interface CareerEvent {
   partyCountryId?: string;
   /** For election events */
   electionId?: string;
+  /** Executive term won at a founding (pre-iteration, cycle 0) election; excluded from the executive term limit, still a served term for display. */
+  foundingTerm?: boolean;
   /** For "relocated" events — from/to location context */
   fromState?: string;
   toState?: string;
@@ -207,6 +209,22 @@ export interface Character {
   politicalInfluenceDecayMultiplier?: number;
   /** Chamber leadership plus Supreme Court AP granted at the last action refresh. */
   roleActionBonus?: number;
+  /**
+   * Last 48 per-turn action grants (personal refresh and party bonus), written
+   * atomically with each grant so support can reconcile the action balance.
+   * Private: never add to public character payloads.
+   */
+  actionGrantLog?: Array<{
+    turn: number;
+    source: "personal" | "party";
+    granted: number;
+    before: number;
+    after: number;
+    /** Hoarding penalty taken before the personal grant (personal only). */
+    hoardPenalty?: number;
+    cap: number;
+    at: Date;
+  }>;
   /** Position NI tier (plus international add-on) granted at the last action refresh. */
   positionNiBonus?: number;
   /** Party influence — accumulates per turn based on policy alignment and leadership. Floored at 0. */

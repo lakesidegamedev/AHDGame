@@ -107,9 +107,11 @@ export default function CeoBudgetPanel({
 }: CeoBudgetPanelProps) {
   const [periodView, setPeriodView] = useState<MoneyPeriod>("turn");
   const [drafts, setDrafts] = useState<Partial<Record<BudgetKey, string>>>({});
-  const money = useCorpMoney(corporation.liquidCurrencyCode);
-  const code = (corporation.liquidCurrencyCode as CurrencyCode | undefined) ?? undefined;
-  const symbol = code ? (CURRENCY_SYMBOLS[code] ?? "$") : "₳";
+  const money = useCorpMoney(corporation.liquidCurrencyCode, corporation.countryId);
+  // Falls back to the HQ country's currency when the payload has no code, and
+  // to the game dollar when there is neither.
+  const code = (money.code as CurrencyCode | undefined) ?? undefined;
+  const symbol = code ? (CURRENCY_SYMBOLS[code] ?? "$") : "$";
   const suffix = MONEY_PERIOD_SUFFIX[periodView];
   const scale = (daily: number) => Math.round(scaleMoney(daily, periodView));
   const revenue = financials.totalRevenue;
@@ -253,6 +255,12 @@ export default function CeoBudgetPanel({
         />
       }
     >
+      {corporation.autopilot != null && (
+        <p className="pb-2 text-xs text-muted" data-testid="budget-autopilot-note">
+          Autopilot sets these budgets every turn, so changes you save here are reset on the next
+          turn. Turn autopilot off to set them yourself.
+        </p>
+      )}
       <StatementTable>
         <StatementLine
           label="Gross revenue"
@@ -309,7 +317,7 @@ export default function CeoBudgetPanel({
           pct={pctOfRevenue(daily.marketing)}
           note={
             daily.marketing > 0
-              ? `+${msGain.toFixed(3)} strength/turn (now ${Math.round(currentMs)}, diminishing above ${MARKETING_DIMINISHING_THRESHOLD})`
+              ? `+${msGain.toFixed(3)} gross growth before decay/turn (now ${Math.round(currentMs)}, diminishing above ${MARKETING_DIMINISHING_THRESHOLD})`
               : `Strength ${Math.round(currentMs)}, no spend`
           }
         />

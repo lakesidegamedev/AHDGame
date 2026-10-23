@@ -1,6 +1,7 @@
+import { insiderConcentrationPenaltyApplies } from "@/lib/corporations/ceoOwnership";
 import type { Db } from "mongodb";
 import { loadPoolSellPacing } from "@/lib/equities/blockPacing";
-import type { Corporation, ShareListing, ShareOrder } from "@/lib/db/types";
+import type { Corporation, GameState, ShareListing, ShareOrder } from "@/lib/db/types";
 import {
   indexFundOwnershipFraction,
   qualifiesForIndexInclusionBenefit,
@@ -40,6 +41,7 @@ import { buildFinancials } from "./corporationDetail/financials";
 import { loadArrearsView } from "./corporationDetail/arrears";
 import { buildShareholderList, loadShareholderContext } from "./corporationDetail/shareholders";
 import { buildPhysicalPnl } from "./corporationDetail/physicalPnl";
+import { isStateOwned } from "@/lib/nationalization/nationalCorporation";
 
 export async function loadCorporationDetailView(args: {
   db: Db;
@@ -50,6 +52,15 @@ export async function loadCorporationDetailView(args: {
   const { db, corporation, currentTurn, viewerUserId } = args;
 
   const refDataPromise = getTurnReferenceData(db, currentTurn);
+  // Funded-market transition window, for the sector rows' transition panel.
+  const openingPromise = db
+    .collection<GameState>("gameState")
+    .findOne({ _id: "current" }, { projection: { worldEpochId: 1, producerOpening: 1 } })
+    .then((g) =>
+      g?.producerOpening && g.producerOpening.worldEpoch === g.worldEpochId
+        ? g.producerOpening.turn + 1
+        : undefined
+    );
   const equityQuotePromise = loadEquityQuote(db, corporation);
   const sellPacingPromise = loadPoolSellPacing(db, corporation._id);
   const viewerOwnsCorporation = !!viewerUserId && corporation.userId?.toString() === viewerUserId;
@@ -144,17 +155,17 @@ export async function loadCorporationDetailView(args: {
     sectorFieldToCorpCcy
   );
 
-  const { labourWagesEnabled, plantsMode, realizedGrowthRate } = await loadSectorModeFlags(
-    db,
-    corporation
-  );
+  const { labourWagesEnabled, plantsMode, commandEconomyEnabled, realizedGrowthRate } =
+    await loadSectorModeFlags(db, corporation);
 
   const { sectorDetails, totals, wageBillAnchorPerTurnBySectorId, physicalRollups } =
     buildSectorDetails({
       corporation,
       sectors,
       currentTurn,
+      transitionFirstFundedTurn: await openingPromise,
       plantsMode,
+      commandEconomyEnabled,
       labourWagesEnabled,
       revenueRealizationRatio,
       restatement,
@@ -293,6 +304,8 @@ export async function loadCorporationDetailView(args: {
       ceoSalary: income.ceoSalary,
       brandColor: corporation.brandColor,
       marketingStrength: roundMarketingStrength(corporation.marketingStrength),
+      // Size cost on the whole control group, in margin points, as applied last turn.
+      managementOverheadPp: Math.round((corporation.managementOverheadPp ?? 0) * 100) / 100,
       marketingStrengthGrowth: Math.round(income.marketingStrengthGrowth * 1000) / 1000,
       logisticsBudget: income.logisticsBudget,
       logisticsStrength: income.currentLogisticsStrength,
@@ -337,6 +350,9 @@ export async function loadCorporationDetailView(args: {
       lastShareholderAddressAt: corporation.lastShareholderAddressAt ?? null,
       legalStructure: corporation.legalStructure ?? undefined,
       legalStructureLabel: income.corpLegalStructure.shortName,
+      legalStructureTaxLabel: income.legalStructureTax,
+      passThroughTaxPhase: income.passThroughPhase,
+      passThroughOwnerTax: income.passThroughOwnerTaxLocal,
       legalStructureChangeCooldownUntilTurn:
         corporation.legalStructureChangeCooldownUntilTurn ?? null,
       lastShareStructureTurn: corporation.lastShareStructureTurn ?? null,
@@ -387,6 +403,8 @@ export async function loadCorporationDetailView(args: {
       pendingCeoCharacterId: corporation.pendingCeoCharacterId?.toString() ?? null,
       lastRenameTurn: corporation.lastRenameTurn ?? null,
       countryOwnerId: corporation.countryOwnerId ?? null,
+      /** Owned by a country through either field; gates rival actions such as a plant split. */
+      isStateOwned: isStateOwned(corporation),
       isNationalized: corporation.isNationalized ?? false,
       isPrivate: corporation.isPrivate ?? false,
       lastIpoTurn: corporation.lastIpoTurn ?? undefined,
@@ -408,6 +426,8 @@ export async function loadCorporationDetailView(args: {
         (corporation.isPrivate ?? false)
           ? false
           : qualifiesForIndexInclusionBenefit(indexFundOwnershipFraction(corporation)),
+      // The mirror notch: a public company whose CEO holds over 65% loses one.
+      insiderConcentrationActive: insiderConcentrationPenaltyApplies(corporation),
       parentCorporation: subsidiary.parentCorporationPayload,
       subsidiaries: subsidiary.subsidiariesPayload,
       hostileTakeoverEligibility: subsidiary.hostileTakeoverEligibility,

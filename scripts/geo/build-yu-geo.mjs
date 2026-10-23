@@ -22,6 +22,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { topology } from "topojson-server";
 import { merge as topoMerge } from "topojson-client";
+import { simplifyArc, rewind, roundGeometry } from "./geometry.mjs";
 
 const __d = path.dirname(fileURLToPath(import.meta.url));
 const pub = (f) => path.resolve(__d, "../../public", f);
@@ -68,31 +69,6 @@ const REGION_NAMES = {
 const SIMPLIFY_MIN_TRIANGLE = 1.2e-5;
 const ROUND = (v) => Math.round(v * 1e4) / 1e4;
 
-const simplifyArc = (arc) => {
-  if (arc.length <= 2) return arc;
-  const pts = arc.slice();
-  const triArea = (a, b, c) =>
-    Math.abs((b[0] - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (b[1] - a[1])) / 2;
-  let changed = true;
-  while (changed && pts.length > 2) {
-    changed = false;
-    let minArea = Infinity;
-    let minI = -1;
-    for (let i = 1; i < pts.length - 1; i++) {
-      const a = triArea(pts[i - 1], pts[i], pts[i + 1]);
-      if (a < minArea) {
-        minArea = a;
-        minI = i;
-      }
-    }
-    if (minArea < SIMPLIFY_MIN_TRIANGLE) {
-      pts.splice(minI, 1);
-      changed = true;
-    }
-  }
-  return pts;
-};
-
 // Drop islands smaller than this (deg²; ~60 km²) — sub-pixel at both render
 // scales. Keeps Krk/Cres/Brač/Hvar/Korčula; sheds the small-archipelago specks.
 const MIN_ISLAND_AREA = 5e-3;
@@ -109,34 +85,6 @@ const dropTinyIslands = (geometry) => {
   return kept.length === 1
     ? { type: "Polygon", coordinates: kept[0] }
     : { type: "MultiPolygon", coordinates: kept };
-};
-
-// > 0 => clockwise in (lon,lat).
-const windSignedArea = (r) => {
-  let s = 0;
-  for (let i = 0; i < r.length - 1; i++) s += (r[i + 1][0] - r[i][0]) * (r[i + 1][1] + r[i][1]);
-  return s;
-};
-const rewind = (geometry) => {
-  const fixRing = (ring, wantCW) => {
-    const a = windSignedArea(ring);
-    if (a === 0) return ring;
-    return a > 0 === wantCW ? ring : ring.slice().reverse();
-  };
-  const polys = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
-  const fixed = polys.map((poly) => poly.map((ring, i) => fixRing(ring, i === 0)));
-  return geometry.type === "Polygon"
-    ? { type: "Polygon", coordinates: fixed[0] }
-    : { type: "MultiPolygon", coordinates: fixed };
-};
-
-const roundGeometry = (geometry) => {
-  const roundRing = (r) => r.map(([x, y]) => [ROUND(x), ROUND(y)]);
-  const polys = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
-  const rounded = polys.map((poly) => poly.map(roundRing));
-  return geometry.type === "Polygon"
-    ? { type: "Polygon", coordinates: rounded[0] }
-    : { type: "MultiPolygon", coordinates: rounded };
 };
 
 async function fetchGB(iso, adm) {
@@ -180,13 +128,13 @@ console.log(`SRB ADM1 → YU_VOJ (${voj}), YU_SRB (${srbProper})`);
 // Unquantized topology: arcs keep absolute coordinates, so they can be
 // simplified in place (a quantized topology delta-encodes arcs).
 const topo = topology(objects);
-topo.arcs = topo.arcs.map(simplifyArc);
+topo.arcs = topo.arcs.map((arc) => simplifyArc(arc, SIMPLIFY_MIN_TRIANGLE));
 
 const out = [];
 for (const [regionId, na] of Object.entries(REGION_NAMES)) {
   const obj = topo.objects[regionId];
   if (!obj) throw new Error(`no source features mapped to ${regionId}`);
-  const geometry = rewind(roundGeometry(dropTinyIslands(topoMerge(topo, [obj]))));
+  const geometry = rewind(roundGeometry(dropTinyIslands(topoMerge(topo, [obj])), ROUND));
   out.push({
     type: "Feature",
     id: regionId,

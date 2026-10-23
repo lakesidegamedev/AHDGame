@@ -121,10 +121,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
     let myCharacterId: string | null = null;
     let canVoteCabinetReview = false;
     let canPropose = false;
+    let canBrowseProposal = false;
     let allowedPolicyDomains: string[] | null = [];
     if (authUser) {
       if (authUser.isAdmin) {
         canPropose = true;
+        canBrowseProposal = true;
         allowedPolicyDomains = null;
       } else {
         const character = await getCharacterByUserId(db, authUser.userId);
@@ -138,6 +140,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
           const isPM = gov?.pmCharacterId?.toString() === character._id.toString();
           canVoteCabinetReview = isPM;
           if (isPM) {
+            canBrowseProposal = true;
             canPropose = !existingActiveBill;
             allowedPolicyDomains = null;
           } else {
@@ -149,8 +152,9 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
               .find({ characterId: character._id, countryId })
               .project({ positionId: 1 })
               .toArray();
-            if (cabinetRows.length > 0 && !existingActiveBill) {
-              canPropose = true;
+            if (cabinetRows.length > 0) {
+              canBrowseProposal = true;
+              canPropose = !existingActiveBill;
               allowedPolicyDomains = unionLegislativeDomains(
                 cabinetRows.map((row) => {
                   const positionId = (row as { positionId?: string }).positionId;
@@ -340,6 +344,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
       blockedProvisions,
       proposalAccess: {
         canPropose,
+        canBrowse: canBrowseProposal,
         allowedPolicyDomains,
       },
     });

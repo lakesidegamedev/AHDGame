@@ -1,5 +1,12 @@
+import type { CountryOperatingTotals } from "./countryStatements";
+import {
+  freeTransitionConversion,
+  transitionReliefEligible,
+  inTransitionWindow,
+  TRANSITION_WINDOW_TURNS,
+} from "@/lib/market/producerMarket/transitionRules";
 import type { Db } from "mongodb";
-import type { Corporation, CorporateSector } from "@/lib/db/types";
+import type { Corporation, CorporateSector, GameConfig } from "@/lib/db/types";
 import type { TurnReferenceData } from "@/lib/corporations/turnReferenceData";
 import type { FtaCoverage } from "@/lib/tariffs/ftaOverrides";
 import type { StateViewContext } from "./stateViewContext";
@@ -17,10 +24,6 @@ import {
   softCapEffectiveMargin,
 } from "@/lib/constants/corporations";
 import type { StateMetricValues } from "@/lib/constants/corporations";
-import {
-  getSectorTechEffectsForYear,
-  getSectorTechEffects,
-} from "@/lib/constants/techTree/selectors";
 import { computeBlendedMarginModifiers } from "@/lib/constants/commodities";
 import type { CommodityType } from "@/lib/constants/commodities";
 import {
@@ -64,6 +67,36 @@ import {
 } from "@/lib/constants/sectorStrategies";
 import { applyExtractionResourceCapacityToSupply } from "@/lib/corporations/extractionResourceSupply";
 import { plantsNetMarginPct } from "@/lib/corporations/rules/netMargin";
+import {
+  computeSectorCommodityUnits,
+  type CorpCommodityFlowContext,
+  type FlowSector,
+} from "@/lib/corporations/corpCommodityFlows";
+import { plannedEconomyMediaSupplyFactor, isNewsMediaLane } from "@/lib/constants/sectorStrategies";
+import { isPlannedEconomy } from "@/lib/constants/commandEconomy";
+import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
+import { getEraUnitScale } from "@/lib/constants/sectorSeedEra";
+
+/**
+ * Advertising counted from one news-media sector's exact commodity ledger
+ * calculation, including the same economy, embargo, and diversion factors.
+ */
+export function mediaAdvertisingOutputForSector(
+  sector: FlowSector,
+  currentTurn: number,
+  context: CorpCommodityFlowContext
+): { units: number; factor: number } | null {
+  if (!isNewsMediaLane(sector.sectorType, sector.mediaDiscriminator)) return null;
+  const planned = isPlannedEconomy(
+    sector.countryId,
+    context.currentYear,
+    context.commandEconomyEnabled
+  );
+  return {
+    units: computeSectorCommodityUnits(sector, currentTurn, context).supply.get("advertising") ?? 0,
+    factor: plannedEconomyMediaSupplyFactor(sector.sectorType, planned, sector.mediaDiscriminator),
+  };
+}
 
 export function getEmptyStateMetricValues(): StateMetricValues {
   return {
@@ -83,6 +116,7 @@ export function getEmptyStateMetricValues(): StateMetricValues {
 export interface SectorModeFlags {
   labourWagesEnabled: boolean;
   plantsMode: boolean;
+  commandEconomyEnabled: boolean;
   realizedGrowthRate: number | null;
 }
 
@@ -108,6 +142,10 @@ export async function loadSectorModeFlags(
   // field. Below plants this is false and every field added below is null, so
   // a capital-tier world's payload is unchanged apart from the null keys.
   const plantsMode = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
+  const gameConfig = await db
+    .collection<GameConfig>("gameConfig")
+    .findOne({ _id: "default" }, { projection: { commandEconomyEnabled: 1 } });
+  const commandEconomyEnabled = gameConfig?.commandEconomyEnabled === true;
 
   // #922 — "Growth Rate always 0". Under plants, a sector's `currentGrowthRate`
   // no longer drives revenue (revenue comes from produced units against plant
@@ -137,14 +175,17 @@ export async function loadSectorModeFlags(
       )
     : null;
 
-  return { labourWagesEnabled, plantsMode, realizedGrowthRate };
+  return { labourWagesEnabled, plantsMode, commandEconomyEnabled, realizedGrowthRate };
 }
 
 export interface SectorRowContext {
   corporation: Corporation;
   sectors: CorporateSector[];
   currentTurn: number;
+  /** First funded turn of the market transition; absent before the funded market. */
+  transitionFirstFundedTurn?: number;
   plantsMode: boolean;
+  commandEconomyEnabled?: boolean;
   labourWagesEnabled: boolean;
   revenueRealizationRatio: number;
   restatement: SectorCurrencyRestatement;
@@ -154,7 +195,7 @@ export interface SectorRowContext {
   marketCtx: MarketViewContext;
   /**
    * The viewer is this corporation's CEO. Gates the sector levers only the
-   * CEO can set (posted-price posture, wage level): a rival reading them off
+   * CEO can set (product quote policy, wage level): a rival reading them off
    * the payload would see a competitor's pricing and pay stance for free.
    */
   viewerIsCeo?: boolean;
@@ -163,17 +204,19 @@ export interface SectorRowContext {
 /**
  * The sector levers only the CEO can set, for the CEO Office operations table.
  * Empty for every other viewer: a rival reading them off the payload would see
- * a competitor's posted-price posture and pay stance for free.
+ * a competitor's product quote policy and pay stance for free.
  */
 export function ceoSectorLevers(
-  sector: Pick<CorporateSector, "pricingPosture" | "wageLevel">,
+  sector: Pick<CorporateSector, "producerQuotes" | "wageLevel">,
   viewerIsCeo: boolean
-): { pricingPosture?: number | null; wageLevel?: number } {
+): { producerQuotes?: CorporateSector["producerQuotes"]; wageLevel?: number } {
   if (!viewerIsCeo) return {};
-  return { pricingPosture: sector.pricingPosture ?? null, wageLevel: sector.wageLevel ?? 1 };
+  return { producerQuotes: sector.producerQuotes ?? {}, wageLevel: sector.wageLevel ?? 1 };
 }
 
 export interface SectorFinancialTotals {
+  /** The same sector lines, summed per country (the sector's host country). */
+  byCountry: Record<string, CountryOperatingTotals>;
   totalRevenue: number;
   totalMaintenanceCosts: number;
   totalGrowthCosts: number;
@@ -208,6 +251,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
     sectors,
     currentTurn,
     plantsMode,
+    commandEconomyEnabled = false,
     labourWagesEnabled,
     revenueRealizationRatio,
     restatement,
@@ -242,17 +286,9 @@ export function buildSectorDetails(ctx: SectorRowContext) {
   const sectorFieldToCorpCcy = restatement.toCorpCurrency;
   const sectorFieldToAnchor = restatement.toAnchor;
 
-  const techCorpView = {
-    type: corporation.type,
-    industryModel: corporation.industryModel,
-    mediaDiscriminator: corporation.mediaDiscriminator,
-    unlockedTechNodeIds: corporation.unlockedTechNodeIds,
-    techDecadeLane: corporation.techDecadeLane,
-  };
-  const currentYear = gameState?.currentYear;
-
   let totalRevenue = 0;
   let totalMaintenanceCosts = 0;
+  const byCountry: Record<string, CountryOperatingTotals> = {};
   let totalGrowthCosts = 0;
   let totalSubsidyBenefit = 0;
   let totalRegulatoryBurden = 0;
@@ -441,7 +477,9 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       regionalConditionsModifiers.map((m) => ({
         label: m.label,
         marginEffect: m.marginEffect ?? 0,
-      }))
+      })),
+      sector.sprawlMarginPp ?? null,
+      sector.dominanceMarginPenaltyPp ?? null
     );
 
     // Realized revenue for this sector (#3001/#3002). Keep the CEO statement
@@ -477,23 +515,11 @@ export function buildSectorDetails(ctx: SectorRowContext) {
     });
     const soeEfficiency = ownershipTerms.soeEfficiencyModifier;
     const expropriationRisk = ownershipTerms.expropriationRiskModifier;
-    const techEffects =
-      currentYear != null
-        ? getSectorTechEffectsForYear(
-            techCorpView,
-            st,
-            currentYear,
-            sector.industryModel,
-            sector.mediaDiscriminator
-          )
-        : getSectorTechEffects(techCorpView, st, sector.industryModel, sector.mediaDiscriminator);
-    const techMarginBonus = techEffects.marginBonusPp;
     const stackMargin = softCapEffectiveMargin(
       mods.effective +
         soeEfficiency +
         expropriationRisk +
-        ownershipTerms.economicModelAlignmentModifier +
-        techMarginBonus
+        ownershipTerms.economicModelAlignmentModifier
     );
     // The margin the engine ACTUALLY applied last turn. Under plants the stored
     // field is an OUTPUT of the physical P&L (sectorTurn.ts P3.5:
@@ -524,12 +550,19 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       ? sectorFieldToCorpCcy(enginePnl.totalCost - enginePnl.compliance, sector) -
         sectorGrowthCostLocal
       : (financialRevenue - freightIncome) * (1 - effectiveProfitMargin / 100);
+    // Funded market: the owner's result counts transition support received and
+    // output sent to stock at cost, both written beside the booked profit.
+    const fundedResultAdjust = sectorFieldToCorpCcy(
+      (sector.plantsPnl?.transitionSupport ?? 0) + (sector.plantsPnl?.stockAddedAtCost ?? 0),
+      sector
+    );
     const profit =
       (enginePnl
         ? sectorFieldToCorpCcy(enginePnl.profit, sector)
         : financialRevenue - freightIncome - maintenance - sectorGrowthCostLocal) +
       freightIncome -
-      freightCost;
+      freightCost +
+      fundedResultAdjust;
     // Physical cost decomposition for the margin drilldown (ticket 1072: the
     // additive modifier list could not explain a physically-derived margin —
     // base + modifiers summed 40pts above the engine figure with no line
@@ -624,6 +657,27 @@ export function buildSectorDetails(ctx: SectorRowContext) {
     }
     totalGrowthCosts += sectorGrowthCostLocal;
     totalRegulatoryBurden += sectorRegulatoryBurden;
+    // Same lines, kept per country for the country view of the statement.
+    const country = (byCountry[sectorCountryId] ??= {
+      sectorCount: 0,
+      revenue: 0,
+      freightIncome: 0,
+      maintenance: 0,
+      labor: 0,
+      freightCosts: 0,
+      growthCosts: 0,
+      regulatoryBurden: 0,
+    });
+    country.sectorCount += 1;
+    country.revenue += financialRevenue;
+    country.freightIncome += freightIncome;
+    country.maintenance += maintenance;
+    if (labourWagesEnabled && sectorLaborCostLocal != null && sectorLaborCostLocal > 0) {
+      country.labor += sectorLaborCostLocal;
+    }
+    country.freightCosts += freightCost;
+    country.growthCosts += sectorGrowthCostLocal;
+    country.regulatoryBurden += sectorRegulatoryBurden;
     totalSubsidyBenefit += financialRevenue * (subsidyMod / 100);
 
     // ── Plants-tier physicals ────────────────────────────────────────────
@@ -648,6 +702,26 @@ export function buildSectorDetails(ctx: SectorRowContext) {
           : null;
     const producedUnits =
       plantsMode && Number.isFinite(sector.producedUnits) ? (sector.producedUnits as number) : null;
+    const commodityContext: CorpCommodityFlowContext = {
+      plantsEnabled: plantsMode,
+      isNatcorp: corporation.countryOwnerId != null,
+      eraUnitScale: getEraUnitScale(resolvePresetIdFromGameState(stateCtx.gameState)),
+      currentYear: stateCtx.gameState?.currentYear,
+      commandEconomyEnabled,
+      preset: resolvePresetIdFromGameState(stateCtx.gameState),
+      hardwareInputReliefStartTurn: stateCtx.gameState?.hardwareInputReliefStartTurn,
+    };
+    const mediaAdvertisingOutput = mediaAdvertisingOutputForSector(
+      {
+        ...sector,
+        countryId: sectorCountryId,
+        revenueAnchor: restatement.toAnchor(sector.revenue ?? 0, sector),
+      },
+      currentTurn,
+      commodityContext
+    );
+    const mediaAdvertisingCampaignUnits = mediaAdvertisingOutput?.units ?? null;
+    const mediaAdvertisingCampaignFactor = mediaAdvertisingOutput?.factor ?? null;
     const soldUnits =
       plantsMode && Number.isFinite(sector.soldUnits) ? (sector.soldUnits as number) : null;
     const constructionInProgressAnchor = plantsMode
@@ -741,7 +815,6 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       marginBasis: physicalCosts != null ? ("physical" as const) : ("additive" as const),
       physicalCosts,
       fillAdjustedMarginPct,
-      techMarginBonus: techMarginBonus !== 0 ? techMarginBonus : null,
       marketSharePercent: sectorMarketSharePct,
       ...mods,
       ...roundOwnershipTerms(ownershipTerms),
@@ -761,6 +834,8 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       transitionFromStrategyId: sector.transitionFromStrategyId ?? null,
       transitionStartTurn: sector.transitionStartTurn ?? null,
       transitionCooldownUntilTurn: sector.transitionCooldownUntilTurn ?? null,
+      cutoverTransition: transitionView(sector, ctx.currentTurn, ctx.transitionFirstFundedTurn),
+      lastDecommission: sector.lastDecommission ?? null,
       isReversing: sector.isReversing ?? false,
       productionPolicy: sector.productionPolicy ?? 0,
       productionPolicyLevel: sector.productionPolicyLevel ?? 0,
@@ -779,6 +854,8 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       capacityUnits,
       plantCount,
       producedUnits,
+      mediaAdvertisingCampaignUnits,
+      mediaAdvertisingCampaignFactor,
       soldUnits,
       // Exact ratio. The API layer replaces this with null (and keeps only the
       // band) for a viewer without insider access — see financialFogOfWar.
@@ -795,6 +872,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
   return {
     sectorDetails,
     totals: {
+      byCountry,
       totalRevenue,
       totalMaintenanceCosts,
       totalGrowthCosts,
@@ -819,3 +897,24 @@ export function buildSectorDetails(ctx: SectorRowContext) {
 
 export type SectorDetailsResult = ReturnType<typeof buildSectorDetails>;
 export type SectorDetailRow = SectorDetailsResult["sectorDetails"][number];
+
+/** The transition package as the sector row shows it; null when it does not apply. */
+function transitionView(
+  sector: CorporateSector,
+  currentTurn: number,
+  firstFundedTurn: number | undefined
+) {
+  if (firstFundedTurn == null || !transitionReliefEligible(sector)) return null;
+  const effectiveTurn = currentTurn + 1;
+  if (!inTransitionWindow(effectiveTurn, firstFundedTurn)) return null;
+  return {
+    reason:
+      sector.cutoverTransition?.mismatched === true
+        ? ("overBuilt" as const)
+        : (sector.cutoverStruggling?.reason ?? ("losing" as const)),
+    mothballed: sector.mothballed === true,
+    turnsLeft: firstFundedTurn + TRANSITION_WINDOW_TURNS - effectiveTurn,
+    freeConversion: freeTransitionConversion(sector, effectiveTurn, firstFundedTurn),
+    converted: sector.cutoverConvertedAtTurn != null,
+  };
+}

@@ -14,12 +14,27 @@ const roadCondition = primaryMetricById("26")!;
 const gradRate = primaryMetricById("11")!;
 
 describe("v2 proxy policy drift", () => {
+  it("preserves the old quarter-end trajectory when published every turn", () => {
+    const input = {
+      metric: roadCondition,
+      currentValue: 60,
+      openingValue: 60,
+      pressure: 0.4,
+      countryId: "JP" as const,
+      year: 1994,
+    };
+    const quarterly = driftProxyValue({ ...input, metric: { ...roadCondition, refresh: "12" } });
+    let currentValue = input.currentValue;
+    for (let turn = 0; turn < 12; turn++)
+      currentValue = driftProxyValue({ ...input, currentValue });
+    expect(currentValue).toBeCloseTo(quarterly, 5);
+  });
   it("closes a cadence-sized share of the gap with a 34 turn half-life", () => {
     expect(policyDriftFraction(1)).toBeCloseTo(0.02, 10);
     expect(policyDriftFraction(12)).toBeCloseTo(1 - 0.98 ** 12, 10);
     expect(policyDriftFraction(48)).toBeCloseTo(1 - 0.98 ** 48, 10);
-    expect(policyDriftCadence(energySecurity)).toBe(12);
-    expect(policyDriftCadence(roadCondition)).toBe(12);
+    expect(policyDriftCadence(energySecurity)).toBe(1);
+    expect(policyDriftCadence(roadCondition)).toBe(1);
     expect(policyDriftCadence(gradRate)).toBe(1);
   });
 
@@ -54,9 +69,9 @@ describe("v2 proxy policy drift", () => {
     const first = driftProxyValue(input);
     expect(first).toBeLessThan(80.24);
     expect(first).toBeGreaterThan(target);
-    expect((80.24 - first) / (80.24 - target)).toBeCloseTo(policyDriftFraction(12), 3);
+    expect((80.24 - first) / (80.24 - target)).toBeCloseTo(policyDriftFraction(1), 3);
     let value = first;
-    for (let i = 0; i < 200; i += 1) value = driftProxyValue({ ...input, currentValue: value });
+    for (let i = 0; i < 2400; i += 1) value = driftProxyValue({ ...input, currentValue: value });
     expect(value).toBe(target);
     expect(driftProxyValue({ ...input, currentValue: target })).toBe(target);
   });

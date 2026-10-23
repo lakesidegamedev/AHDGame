@@ -34,6 +34,7 @@ import { settleBankSovereignClaims } from "@/lib/banking/bankSovereignClaims";
 import { bankCouponClaim, bankCouponPlanForCountry } from "@/lib/banking/rules/sovereignClaims";
 import {
   budgetIdsWithOpenSovereignCouponClaims,
+  loadSovereignCouponPriorPayouts,
   openSovereignCouponHolderKeys,
   settleFundedSovereignCoupons,
   sovereignCouponHolderKeys,
@@ -225,9 +226,13 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
   // every coupon payee it may credit (frozen open claims and current bond
   // holders) and, when banks are involved, the shared bank-claim key, so any
   // document two countries share is still written one country at a time.
-  const openClaimHolderKeys = treasuryCashLedgerEnabled
-    ? await openSovereignCouponHolderKeys(db)
-    : new Map<string, Set<string>>();
+  const [openClaimHolderKeys, priorPayouts] = await Promise.all([
+    treasuryCashLedgerEnabled ? openSovereignCouponHolderKeys(db) : new Map<string, Set<string>>(),
+    // One indexed read for every budget's claim queue. Each budget filters it
+    // to the claims it loaded, instead of building an `$or` of one `_id` regex
+    // per open claim.
+    treasuryCashLedgerEnabled ? loadSovereignCouponPriorPayouts(db) : Promise.resolve(undefined),
+  ]);
   const bondHolderKeysByCountry = new Map<string, Set<string>>();
   for (const bond of sovereignBonds) {
     const country = String(bond.countryId);
@@ -270,6 +275,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
           anchorRate: b.sovereignCouponClaims?.[0]?.anchorRate ?? 0,
           forexEnabled,
           corporateQuotes: corporationQuotes,
+          priorPayouts,
         });
       }
       return;
@@ -295,6 +301,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
               anchorRate: valuation.anchorRate!,
               forexEnabled,
               corporateQuotes: corporationQuotes,
+              priorPayouts,
             });
           }
           return;
@@ -485,6 +492,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
               anchorRate: valuation.anchorRate!,
               forexEnabled,
               corporateQuotes: corporationQuotes,
+              priorPayouts,
             }
           );
         }

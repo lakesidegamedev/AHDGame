@@ -188,27 +188,29 @@ export function clampWageLevel(value: number): number {
  * Legacy (non-explicit) cost modes carve labour out of maintenance, where these
  * values are profit-invariant at wageLevel=1 and only set the wage lever's bite.
  * Under explicit plant costs they are billed directly and DO set margins. The
- * market recovery program relieves four of them at stage 1
- * (src/lib/market/marketRecoveryStages.ts) without changing this table.
+ * market recovery phase 1 (2026-10-18) recalibrated this table so every
+ * standard strategy earns 15-25% at base prices before policy bonuses; it
+ * replaces the temporary stage 1 service relief. The bench that produced these
+ * values is src/lib/economy/repricer/baseMargins.ts.
  */
 export const SECTOR_LABOR_INTENSITY: Record<OperatingSectorType, number> = {
-  technology: 0.4,
-  healthcare: 0.4,
+  technology: 0.35,
+  healthcare: 0.277,
   media: 0.28,
   media_entertainment: 0.28,
-  construction: 0.28,
-  financial: 0.4,
+  construction: 0.264,
+  financial: 0.325,
   defense: 0.24,
-  retail: 0.22,
+  retail: 0.191,
   telecommunications: 0.2,
-  manufacturing: 0.18,
+  manufacturing: 0.159,
   logistics: 0.18,
   agriculture: 0.16,
-  manufacturing_vehicles: 0.16,
+  manufacturing_vehicles: 0.141,
   chemical_industries: 0.15,
-  energy: 0.12,
+  energy: 0.1,
   extraction: 0.12,
-  real_estate: 0.32,
+  real_estate: 0.191,
 };
 
 /** Fallback labor share when a sector type isn't in the table. */

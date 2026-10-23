@@ -60,6 +60,16 @@ describe("queryCorporation", () => {
     expect(result).toBeNull();
   });
 
+  it.each([undefined, "https://example.com/corp-banner.png", "/api/uploads/corp-banner.png"])(
+    "returns headerImageUrl for banner %s",
+    async (headerImageUrl) => {
+      db.collectionMocks.corporations!.findOne.mockResolvedValue({ ...mockCorp, headerImageUrl });
+      const { queryCorporation } = await import("./corporation");
+      const result = await queryCorporation(db as unknown as Db, { id: "1" });
+      expect(result!.headerImageUrl).toBe(headerImageUrl ?? null);
+    }
+  );
+
   it("includes full bond shape with yieldToMaturity (merged from /financials)", async () => {
     db.collectionMocks.corporations!.findOne.mockResolvedValue(mockCorp);
     db.collectionMocks.characters!.findOne.mockResolvedValue({ _id: ceoId, name: "Jane CEO" });

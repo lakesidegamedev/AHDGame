@@ -19,6 +19,8 @@ describe("resetMacroMetricsRuntimeState", () => {
         population: { lifeExpectancy: { value: 72 } },
         governance: { debtToGdp: { value: 33 } },
         economicModel: "mixed",
+        labourEmployment: { lastTurn: 500, corporateEmployed: 123 },
+        labourProductivity: { points: [{ turn: 500, output: 100, hours: 30 }] },
         independenceDesire: { value: 54, trend: 0.7 },
         livingConflictExposure: { displacedShare: 0.1 },
         resetCohortReading: { asOfTurn: 500 },
@@ -71,6 +73,8 @@ describe("resetMacroMetricsRuntimeState", () => {
     expect([...NATIONAL_SCOPE_IDS]).toContain("uk_national");
     expect(MACRO_RUNTIME_UNSET_FIELDS).toContain("economic.gdpGrowth.simBaseline");
     expect(MACRO_RUNTIME_UNSET_FIELDS).toContain("economic.gdpGrowth.trend");
+    expect(MACRO_RUNTIME_UNSET_FIELDS).toContain("labourEmployment");
+    expect(MACRO_RUNTIME_UNSET_FIELDS).toContain("labourProductivity");
     for (const preserved of ["_id", "countryId", "economic", "population", "lastUpdated"]) {
       expect(MACRO_RUNTIME_UNSET_FIELDS).not.toContain(preserved);
     }

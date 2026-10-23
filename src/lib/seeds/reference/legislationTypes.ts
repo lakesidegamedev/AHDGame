@@ -28,6 +28,7 @@ import { csLegislationTypes } from "../cs/csLegislation";
 import { balLegislationTypes } from "../bal/balLegislation";
 import { brLegislationTypes } from "../br/brLegislationTypes";
 import { bankingSeparationLegislationTypes } from "../shared/bankingSeparationLegislation";
+import { mechanicalLegislationTypes } from "@/lib/mechanicalLaws/legislation";
 import { withLawAdministration } from "@/lib/governmentFinance/lawAdministrationCatalog";
 
 // ============================================================================
@@ -8774,6 +8775,7 @@ const rawLegislationTypes: LegislationType[] = [
 
   // ── Banking separation (reusable per-country charter law; all legislatures) ──
   ...bankingSeparationLegislationTypes,
+  ...mechanicalLegislationTypes,
 
   // ── Scotland / Wales legislation types — PURPOSEFULLY POSTPONED ────────────
   // The seceded devolved nations do NOT yet have their own legislation. This was

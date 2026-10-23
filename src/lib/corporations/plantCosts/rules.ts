@@ -1,8 +1,13 @@
+import { COLD_CAPACITY_UPKEEP_FRACTION } from "@/lib/corporations/investment/rules";
 import { STRATEGY_TRANSITION_TURNS } from "@/lib/constants/sectorStrategyTypes";
 import { eraLaborMultiplier, getSectorLaborShare } from "@/lib/labour/laborCost";
 
-/** Hardware retains the technology payroll intensity from before the service-payroll increase. */
-export const HARDWARE_LABOR_INTENSITY = 0.3;
+/**
+ * Hardware's own payroll intensity. 0.2625 is the 0.3 it had before, times the
+ * stage 1 relief live worlds already billed (0.875), so retiring that relief in
+ * the phase 1 recalibration does not raise hardware payroll.
+ */
+export const HARDWARE_LABOR_INTENSITY = 0.2625;
 
 /** Explicit plants price payroll for their production method, including a retool in progress. */
 export function plantLaborShare(args: {
@@ -41,6 +46,14 @@ export const PLANT_OVERHEAD_OUTPUT_SHARE = 0.04;
 export const PLANT_OVERHEAD_FIXED_SHARE = 0.5;
 
 /**
+ * Upkeep share on idle capacity of a running plant under the funded low-use
+ * cost stage (gameConfig.producerLowUseCostStage >= 1): a tenth of the usual
+ * cold share. A fully mothballed plant pays none, so parked plants stop losing
+ * money.
+ */
+export const LOW_USE_COLD_UPKEEP_FRACTION = 0.005;
+
+/**
  * Positive process overhead. Payroll, materials and idle-site upkeep are
  * separate bills. The nominal basket already carries the world's era price
  * level; market scarcity and target margin never enter, so the fixed half
@@ -74,4 +87,37 @@ export function computePlantOverhead(args: {
     (1 - PLANT_OVERHEAD_FIXED_SHARE) * producedUnits +
     PLANT_OVERHEAD_FIXED_SHARE * Math.max(producedUnits, capacity * active);
   return (nominalDailyRevenue / capacity / turnsPerDay) * billedUnits * PLANT_OVERHEAD_OUTPUT_SHARE;
+}
+
+/** Funded-market site invoices depend on owned capacity, never the asking price or sales. */
+export function standingProducerSiteBill(input: {
+  nominalHourlyCapacityValue: number;
+  activeFraction: number;
+  financialPenaltyPercent: number;
+  /** Funded-market transition window: idle capacity of an over-built plant pays no upkeep. */
+  coldUpkeepWaived?: boolean;
+  /** Funded market, low-use cost stage: idle and parked capacity pays this share instead. */
+  coldShareOverride?: number;
+}): number {
+  const { nominalHourlyCapacityValue, activeFraction, financialPenaltyPercent } = input;
+  const coldShare = input.coldUpkeepWaived
+    ? 0
+    : Math.min(
+        COLD_CAPACITY_UPKEEP_FRACTION,
+        Math.max(0, input.coldShareOverride ?? COLD_CAPACITY_UPKEEP_FRACTION)
+      );
+  if (
+    ![nominalHourlyCapacityValue, activeFraction, financialPenaltyPercent].every(Number.isFinite) ||
+    nominalHourlyCapacityValue < 0 ||
+    activeFraction < 0 ||
+    activeFraction > 1 ||
+    financialPenaltyPercent < 0
+  )
+    throw new Error("Invalid producer site cost basis");
+  const bill =
+    nominalHourlyCapacityValue *
+    (PLANT_OVERHEAD_OUTPUT_SHARE * (activeFraction + coldShare * (1 - activeFraction)) +
+      (activeFraction * financialPenaltyPercent) / 100);
+  if (!Number.isFinite(bill)) throw new Error("Producer site cost overflow");
+  return bill;
 }

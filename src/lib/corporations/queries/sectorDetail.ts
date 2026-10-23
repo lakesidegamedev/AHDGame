@@ -14,6 +14,7 @@ import { NextResponse } from "next/server";
 import { findMergedRegionMetrics } from "@/lib/macroMetrics/merge";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
+import { upkeptDominanceShield } from "@/lib/corporations/strengthUpkeep";
 import { getAuthUser } from "@/lib/auth";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import { getControllingCorporateParent } from "@/lib/corporations/corporateOwnership";
@@ -24,6 +25,8 @@ import { isPrivateEnterpriseBlocked } from "@/lib/economy/queries/privateEnterpr
 import { buildPoliticalBaseModifiers } from "@/lib/politicalLegislation/marginAdapter";
 import { isPoliticalApprovalCountry } from "@/lib/politicalLegislation/politicalApprovalProvider";
 import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
+import { loadOwnedMetricInputs } from "@/lib/resetMetrics/loadOwnedInputs";
+import { ownedPoliticalModifiers } from "@/lib/resetMetrics/rules/ownedInputs";
 import { isLabourWagesEnabled, isLabourFullMode } from "@/lib/labour/featureFlag";
 import { undergroundUnrestVisible } from "@/lib/unions/enforcementCosts";
 import { isProspectingEnabled } from "@/lib/extraction/featureFlag";
@@ -57,6 +60,7 @@ import { buildFtaCoverageLookup, loadActiveFtaPairs } from "@/lib/tariffs/ftaOve
 import {
   OPERATING_SECTOR_TYPE_LABELS,
   calculateWorkers,
+  managementOverheadPp,
   TURNS_PER_DAY,
 } from "@/lib/constants/corporations";
 import type {
@@ -86,10 +90,13 @@ import {
   getEffectiveStrategyRatesForOperatingModel,
   getOperatingSectorType,
   getSectorStrategies,
+  plannedEconomyMediaSupplyFactor,
 } from "@/lib/constants/sectorStrategies";
+import { isPlannedEconomy } from "@/lib/constants/commandEconomy";
 import { computeRetoolHint } from "@/lib/corporations/retoolHint";
 import { applyExtractionResourceCapacityToSupply } from "@/lib/corporations/extractionResourceSupply";
 import { capacityRescaleRatio } from "@/lib/constants/capacityEconomy";
+import type { SourcingNetworkDoc } from "@/lib/logistics/sourcingLedger";
 import { productionProductivityMultiplier } from "@/lib/corporations/rules/productionProductivity";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import {
@@ -158,6 +165,7 @@ type SiblingCorpProjection = Pick<
   | "liquidCurrencyCode"
   | "ceoType"
   | "caretakerCeo"
+  | "marketingStrength"
 >;
 
 /**
@@ -190,8 +198,11 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           marketGovernorGlideMode: 1,
           marketGovernorGlideFloor: 1,
           explicitPlantCostsEnabled: 1,
+          managementOverheadPpPerDoubling: 1,
+          strengthUpkeepStage: 1,
           mediaEditorialEnabled: 1,
           mediaOperatingModelsEnabled: 1,
+          commandEconomyEnabled: 1,
           privateBankingEnabled: 1,
           bankConstructionFinanceEnabled: 1,
           treasuryCashLedgerEnabled: 1,
@@ -401,8 +412,16 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
     const totalCorpSectors = allCorpSectors.length;
     // SP4 §4a: political margin overlay for playable regions (null elsewhere).
     const politicalDoc = await politicalDocPromise;
+    const ownedInputs = (await loadOwnedMetricInputs(db)).get(sector.stateId);
     const politicalBaseModifiers = politicalDoc
-      ? buildPoliticalBaseModifiers(politicalDoc.values)
+      ? ownedInputs?.countryId === sector.countryId
+        ? ownedPoliticalModifiers(
+            politicalDoc.values,
+            ownedInputs.observations,
+            ownedInputs.countryId,
+            ownedInputs.year
+          )
+        : buildPoliticalBaseModifiers(politicalDoc.values)
       : null;
 
     // Fetch federal budget for macroeconomic margin modifiers
@@ -529,6 +548,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
                 transitionStartTurn: 1,
                 operatingCapacityUnits: 1,
                 capitalStock: 1,
+                plantCount: 1,
                 producedUnits: 1,
                 buildQueue: 1,
               },
@@ -589,6 +609,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
               brandColor: 1,
               countryId: 1,
               liquidCurrencyCode: 1,
+              marketingStrength: 1,
               // Who actually OWNS the corp, for the market panel's player/NPP
               // split. `caretakerCeo` rides along because an NPP caretaker runs
               // a corp whose owner is still a player, and that corp belongs with
@@ -665,6 +686,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
       effectiveMarket,
       marketShare,
       competitors,
+      attackExposure,
       unownedRevenue,
       unownedPercent,
       siblingRevenueAnchorById,
@@ -905,7 +927,22 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
     const marketMode = await getMarketSystemMode();
     const plantsEnabled = marketAtLeast(marketMode, "plants");
     let plants: Awaited<ReturnType<typeof buildSectorPlantsSection>> | null = null;
+    let freightState: { observedLoad: number; capacity: number; turn: number | null } | undefined;
     if (plantsEnabled && !shouldRedact && !publicFinancialFog) {
+      const [latestSourcingNetwork] = await db
+        .collection<SourcingNetworkDoc>("sourcingNetworkLoad")
+        .find({})
+        .sort({ turn: -1 })
+        .limit(1)
+        .toArray();
+      const observedFreight = latestSourcingNetwork?.freightTeuByState[sector.stateId];
+      const freightPrice = commodityPrices.find((price) => price.commodity === "freight");
+      freightState = {
+        observedLoad:
+          Math.max(0, observedFreight?.bulk ?? 0) + Math.max(0, observedFreight?.special ?? 0),
+        capacity: Math.max(0, freightPrice?.stateSupply?.[sector.stateId] ?? 0),
+        turn: latestSourcingNetwork?.turn ?? null,
+      };
       const nationalMarketShare =
         buildNationalDominanceShareBySectorId({
           sectors: allSectorsRaw,
@@ -947,18 +984,15 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           )
         : null;
       const techBuildCostMultiplier = techBuildEffects?.growthCostMultiplier ?? 1;
-      const techDominanceShield = techBuildEffects?.dominanceShield ?? 0;
-      // Tech margin points ride `policyCredit` under plants like every other
-      // non-physical modifier, and `computeAllMarginModifiers` does not carry
-      // them, so name the row here rather than letting it fall into the scale
-      // factor unlabelled (ticket 1122).
-      const techMarginBonusPp = techTreesEnabled
-        ? getSectorTechEffects(
+      const techDominanceShield = techBuildEffects
+        ? upkeptDominanceShield(
             techCorpView,
             sectorType,
             sector.industryModel,
-            sector.mediaDiscriminator
-          ).marginBonusPp
+            sector.mediaDiscriminator,
+            techCurrentYear,
+            governorConfig?.strengthUpkeepStage
+          )
         : 0;
       // The physical input bill: the same demand rows the Inputs panel renders,
       // priced at the BILLED unit price (base x realization factor, the price
@@ -1364,7 +1398,26 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
           ? buildPolicyStackRows({
               policyCreditAnchor: sectorAmountAnchor(enginePnl.policyCredit),
               revenueAnchor: sectorAmountAnchor(enginePnl.revenue),
-              mods: { ...mods, ...ownershipTerms, techMarginBonus: techMarginBonusPp },
+              mods: {
+                ...mods,
+                ...ownershipTerms,
+                // The overhead the turn applied (group basis when on, SOEs
+                // exempt); before the first turn writes it, the corp's own
+                // plant count.
+                managementOverheadModifier: -(
+                  corporation.managementOverheadPp ??
+                  managementOverheadPp(
+                    allSectorsRaw.reduce(
+                      (sum, s) =>
+                        s.corporationId.equals(corporation._id) && Number.isFinite(s.plantCount)
+                          ? sum + (s.plantCount as number)
+                          : sum,
+                      0
+                    ),
+                    governorConfig?.managementOverheadPpPerDoubling ?? 0
+                  )
+                ),
+              },
               appliedPolicyPp: enginePnl.policyPp,
             })
           : [],
@@ -1471,6 +1524,16 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         countryId: sectorCountryId,
         stateName: state?.name ?? sector.stateId,
         sectorType: sector.sectorType,
+        mediaDiscriminator: sector.mediaDiscriminator ?? null,
+        mediaAdvertisingCampaignFactor: plannedEconomyMediaSupplyFactor(
+          sector.sectorType,
+          isPlannedEconomy(
+            sectorCountryId,
+            gameState?.currentYear,
+            governorConfig?.commandEconomyEnabled === true
+          ),
+          sector.mediaDiscriminator
+        ),
         industryModel: sector.industryModel ?? null,
         sectorLabel:
           sector.sectorType === "manufacturing" && sector.industryModel === "vehicles"
@@ -1582,6 +1645,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
       commodities: {
         supplies,
         demands: demandsWithShortage,
+        ...(freightState ? { freightState } : {}),
         commodityMarginModifier: mods.commodityModifier,
         commoditySupplyDemandBlendPct: blendPct,
         priceRealization,
@@ -1661,6 +1725,8 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         totalMarket: effectiveMarket,
         marketShare,
         competitors,
+        // Splits need the plants economy; below it the server refuses every attempt.
+        attackExposure: plantsEnabled ? attackExposure : null,
         unownedRevenue: Math.round(unownedRevenue),
         unownedPercent,
       },

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { GameMonthTime } from "@/components/time/GameMonthTime";
+import { Slider } from "@/components/ui";
+import { MAX_DIVIDEND_RATE } from "@/lib/constants/corporations";
 import { scaleMoney } from "@/lib/constants/moneyTimescale";
 import type { CorporationDetail, Financials } from "../CorporationPageTypes";
 import ShareIssuanceModal from "../shares/ShareIssuanceModal";
@@ -11,14 +13,12 @@ import {
   InlineStatus,
   KVList,
   KVRow,
-  Segmented,
   SmallButton,
   useCorpMoney,
 } from "../dense/DenseKit";
 import { CapitalInjectionPanel } from "./CapitalInjectionPanel";
 import { ShareBuybackEscrowPanel } from "./ShareBuybackEscrowPanel";
 
-const DIVIDEND_STEPS = [0, 5, 10, 15, 20, 25] as const;
 const ISSUANCE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 interface CeoCapitalPanelProps {
@@ -65,7 +65,7 @@ export default function CeoCapitalPanel({
   saving,
   onSaveSettings,
 }: CeoCapitalPanelProps) {
-  const money = useCorpMoney(corporation.liquidCurrencyCode);
+  const money = useCorpMoney(corporation.liquidCurrencyCode, corporation.countryId);
   const [fundModal, setFundModal] = useState<{ cooldownRemaining: number } | null>(null);
 
   const isPublic = !corporation.isPrivate && !corporation.countryOwnerId;
@@ -95,15 +95,42 @@ export default function CeoCapitalPanel({
     <div className="space-y-6">
       <DenseSection id="ceo-dividend" title="Dividend">
         <div className="space-y-2 pt-1">
-          <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-baseline justify-between gap-2">
             <span className="text-xs text-muted">Payout of net income</span>
-            <Segmented
-              ariaLabel="Dividend rate"
-              options={DIVIDEND_STEPS.map((r) => ({ value: r, label: `${r}%` }))}
+            <span className="font-mono text-lg font-semibold tabular-nums text-foreground">
+              {editDividendRate}%
+            </span>
+          </div>
+          {/* The server accepts 0 to MAX_DIVIDEND_RATE; a legal or parent floor
+              is marked on the track, since the books charge whichever is higher. */}
+          <div className="relative pb-4">
+            <Slider
+              min={0}
+              max={MAX_DIVIDEND_RATE}
+              step={1}
               value={editDividendRate}
-              onChange={setEditDividendRate}
+              onChange={(e) => setEditDividendRate(Number(e.target.value))}
               disabled={dividendSaving}
+              aria-label="Dividend rate"
+              className="w-full"
             />
+            {floorRate != null && (
+              <span
+                data-legal-minimum
+                aria-hidden
+                className="absolute top-full -mt-4 flex -translate-x-1/2 flex-col items-center"
+                style={{
+                  left: `${(Math.min(floorRate, MAX_DIVIDEND_RATE) / MAX_DIVIDEND_RATE) * 100}%`,
+                }}
+              >
+                <span className="h-2 w-px bg-warning" />
+                <span className="text-[10px] tabular-nums text-warning">min {floorRate}%</span>
+              </span>
+            )}
+            <span className="absolute bottom-0 left-0 text-[10px] tabular-nums text-muted">0%</span>
+            <span className="absolute bottom-0 right-0 text-[10px] tabular-nums text-muted">
+              {MAX_DIVIDEND_RATE}%
+            </span>
           </div>
           <KVList>
             {floorRate != null && (

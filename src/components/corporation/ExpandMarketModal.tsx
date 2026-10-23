@@ -130,6 +130,8 @@ export default function ExpandMarketModal({
   // the countries in the current top-N), so all of them are selectable.
   const [availableCountries, setAvailableCountries] = useState<{ id: string; name: string }[]>([]);
   const [foundingQuote, setFoundingQuote] = useState<FoundingQuote | null>(null);
+  const [countrySharedDemand, setCountrySharedDemand] = useState(false);
+  const [countryDemandEstimates, setCountryDemandEstimates] = useState<Record<string, number>>({});
   // Two-step under plants: pick the market, then read the terms and confirm.
   // Founding now spends real money on a plant that takes turns to arrive, so
   // it should not be one click away from a list.
@@ -176,6 +178,14 @@ export default function ExpandMarketModal({
         return;
       }
       setSuggestions(data.suggestions ?? []);
+      setCountrySharedDemand(data.countrySharedDemand === true);
+      setCountryDemandEstimates(
+        Object.fromEntries(
+          (
+            (data.countryDemandEstimates as { countryId: string; headroomUnits: number }[]) ?? []
+          ).map(({ countryId, headroomUnits }) => [countryId, headroomUnits])
+        )
+      );
       setAvailableCountries(
         ((data.availableCountries as string[]) ?? [])
           .map((id) => ({ id, name: resolveCountryName(id as CountryId) }))
@@ -261,6 +271,11 @@ export default function ExpandMarketModal({
   }
 
   const activeSuggestion = suggestions[activeIndex] ?? suggestions[0] ?? null;
+  const activeDemandUnits = activeSuggestion
+    ? countrySharedDemand
+      ? countryDemandEstimates[activeSuggestion.countryId]
+      : activeSuggestion.headroomUnits
+    : null;
   const selectedFacility = facilityVocabulary(selectedType);
   const selectedFacilityAction =
     selectedFacility.buildVerb.charAt(0).toUpperCase() + selectedFacility.buildVerb.slice(1);
@@ -601,7 +616,9 @@ export default function ExpandMarketModal({
                   )}
                   <p className="col-span-2 text-[11px] leading-snug text-muted">
                     {suggestionMode === "unowned"
-                      ? "Open demand is customer demand no corporation in that state is serving yet."
+                      ? countrySharedDemand
+                        ? "This daily demand estimate is shared across reachable markets in the country. It is not a sales guarantee."
+                        : "Some demand is local to each state. Other demand is shared across reachable markets in the same country, so state estimates can overlap. These estimates are not a sales guarantee."
                       : "Established markets are ranked by the current revenue of competing corporations."}
                   </p>
                 </div>
@@ -671,7 +688,9 @@ export default function ExpandMarketModal({
                     <div className="overflow-hidden rounded-lg border border-card-border">
                       <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-x-3 border-b border-card-border bg-card-elevated/40 px-3 py-2 text-sm font-semibold text-foreground">
                         <span>Market</span>
-                        <span className="text-right">Room for</span>
+                        <span className="text-right">
+                          {countrySharedDemand ? "Shared daily demand" : "Demand estimate"}
+                        </span>
                         <span className="text-right">Entry</span>
                       </div>
                       <ul className="list-none divide-y divide-card-border/40">
@@ -679,6 +698,9 @@ export default function ExpandMarketModal({
                           const facilityCount = foundingQuote?.starterUnits
                             ? Math.floor((s.headroomUnits ?? 0) / foundingQuote.starterUnits)
                             : 0;
+                          const showCountryEstimate =
+                            countrySharedDemand &&
+                            suggestions.findIndex((row) => row.countryId === s.countryId) === i;
                           const countryName = resolveCountryName(s.countryId as CountryId);
 
                           return (
@@ -717,18 +739,19 @@ export default function ExpandMarketModal({
                                   </span>
                                 </span>
                                 <span className="text-right text-xs font-semibold tabular-nums text-foreground">
-                                  {facilityCount.toLocaleString("en-US")}
+                                  {countrySharedDemand
+                                    ? showCountryEstimate
+                                      ? formatUnits(countryDemandEstimates[s.countryId])
+                                      : ""
+                                    : facilityCount.toLocaleString("en-US")}
                                   <span className="block text-[9px] font-normal text-muted">
-                                    {facilityCount === 1
-                                      ? facilitySingular(selectedType)
-                                      : facilityPlural(selectedType)}
+                                    {countrySharedDemand
+                                      ? showCountryEstimate
+                                        ? "shared demand, not guaranteed sales"
+                                        : "shared above"
+                                      : "facility equivalents"}
                                   </span>
-                                  {/* A market with no unmet demand is still open
-                                      to a build, you just start by taking sales
-                                      off the incumbents. That was only ever said
-                                      at the confirm step, so a board of zeroes
-                                      read as "every market is closed" (#1162). */}
-                                  {facilityCount === 0 && (
+                                  {!countrySharedDemand && facilityCount === 0 && (
                                     <span className="mt-0.5 block text-[9px] font-normal leading-snug text-warning">
                                       You can still build here
                                     </span>
@@ -760,8 +783,12 @@ export default function ExpandMarketModal({
                             {activeSuggestion.stateName}
                           </p>
                           <p className="text-[11px] text-muted">
-                            {formatUnits(activeSuggestion.headroomUnits)} {CAPACITY_UNIT_LABEL} open
-                            ·{" "}
+                            {!countrySharedDemand && (
+                              <>
+                                Estimated output-mix demand: {formatUnits(activeDemandUnits)}{" "}
+                                {CAPACITY_UNIT_LABEL}·{" "}
+                              </>
+                            )}
                             {activeSuggestion.foundingTotalAnchor != null
                               ? formatTreasuryAmount(activeSuggestion.foundingTotalAnchor)
                               : "Price unavailable"}
@@ -825,11 +852,22 @@ export default function ExpandMarketModal({
                       {plantsMode && foundingQuote && (
                         <div className="grid grid-cols-3 gap-2">
                           <div className="rounded-lg bg-background/60 px-3 py-2 text-center">
-                            <p className="text-body-sm font-medium text-muted">In-state demand</p>
-                            <p className="text-sm font-bold text-foreground tabular-nums">
-                              {formatUnits(activeSuggestion.headroomUnits)}
+                            <p
+                              className="text-body-sm font-medium text-muted"
+                              title="What buyers here want and are not getting, less plants already under construction. It does not limit what you can build."
+                            >
+                              {countrySharedDemand
+                                ? "Shared daily demand estimate"
+                                : "Unmet demand"}
                             </p>
-                            <p className="text-[10px] text-muted">{CAPACITY_UNIT_LABEL}</p>
+                            <p className="text-sm font-bold text-foreground tabular-nums">
+                              {formatUnits(activeDemandUnits)}
+                            </p>
+                            <p className="text-[10px] text-muted">
+                              {countrySharedDemand
+                                ? "shared, not guaranteed sales"
+                                : CAPACITY_UNIT_LABEL}
+                            </p>
                           </div>
                           <div className="rounded-lg bg-background/60 px-3 py-2 text-center">
                             <p className="text-body-sm font-medium text-muted">
@@ -1054,7 +1092,7 @@ export default function ExpandMarketModal({
                                   rate while you do, and that is the single most
                                   common way a new corp loses money quietly. */}
                               {(() => {
-                                const headroom = activeSuggestion.headroomUnits ?? 0;
+                                const headroom = activeDemandUnits ?? 0;
                                 const enough = headroom >= foundingQuote.starterUnits;
                                 return (
                                   <p

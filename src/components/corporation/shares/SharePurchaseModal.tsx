@@ -346,6 +346,8 @@ export default function SharePurchaseModal({
       ? ceoShareWindow.remainingShares
       : Number.MAX_SAFE_INTEGER
   );
+  const ceoLimitReached =
+    !buyAsCorp && !buyAsInvestmentBank && !!ceoShareWindow && ceoShareWindow.remainingShares <= 0;
 
   const maxBuyableShares = Math.max(
     0,
@@ -979,6 +981,7 @@ export default function SharePurchaseModal({
                 floatAvailable={floatAvailable}
                 maxBuyableShares={maxBuyableShares}
                 maxMarketShares={maxMarketShares}
+                ceoLimitReached={ceoLimitReached}
                 buyCost={buyCost}
                 activeBudget={activeBudget}
                 personalBudgetLabel={personalBudgetLabel}
@@ -1015,6 +1018,7 @@ export default function SharePurchaseModal({
                 onSuccess={onSuccess}
                 myCorporation={myCorporation}
                 myShares={personalSellShares}
+                totalPersonalShares={myShares}
                 myCorporationShares={myCorporationShares}
                 corpId={corpId}
                 corpCurrencyCode={corpCurrencyCode}

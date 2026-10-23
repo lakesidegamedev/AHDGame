@@ -23,6 +23,7 @@ export interface ContractAccess {
   currentTurn: number;
   currencyQuote?: ContractCurrencyQuote | null;
   defenceAnchorPrice?: number | null;
+  defenceSuggestedMaximumByGrade?: Partial<Record<0 | 1 | 2 | 3, number | null>> | null;
   maximumGrade?: number;
   uncommittedAppropriation?: number | null;
   defence: boolean;
@@ -243,11 +244,12 @@ export function PublishTenderForm({
               key={grade}
               name="maximumPricePerLot"
               defaultValue={
-                access.defenceAnchorPrice
+                access.defenceSuggestedMaximumByGrade?.[grade as 0 | 1 | 2 | 3] ??
+                (access.defenceAnchorPrice
                   ? Math.round(
                       access.defenceAnchorPrice * GRADE_PRICE_SCALE[grade as 0 | 1 | 2 | 3]
                     )
-                  : undefined
+                  : undefined)
               }
               min={1}
               step={1}

@@ -17,6 +17,7 @@ import {
   SUPPLY_AGREEMENT_PRICE_BAND,
 } from "@/lib/db/types/supplyAgreement";
 import { useToast } from "@/contexts/ToastContext";
+import { useCurrency } from "@/contexts/CurrencyContext";
 import { supplyAgreementRequiresState } from "@/lib/market/commodityMarketScope";
 import { apiErrorText } from "@/lib/errors/catalog";
 import {
@@ -41,6 +42,10 @@ interface SupplyAgreement {
   exclusive: boolean;
   durationTurns?: number;
   status: "pending" | "active" | "cancelling" | "cancelled";
+  expiresAtTurn?: number;
+  cancelEffectiveTurn?: number;
+  /** Turns of notice a one-sided cancellation would take now (active contracts only). */
+  cancelNoticeTurns?: number;
   proposedByCorpId: string;
   currentOffer?: SupplyAgreementOffer;
   offers?: SupplyAgreementOffer[];
@@ -129,6 +134,7 @@ export default function SupplyAgreementsSection({
   countryId?: string;
 }) {
   const { showToast } = useToast();
+  const { formatAmount } = useCurrency();
   const locale = useLocale();
   const t = useTranslations("corporations.supplyAgreements");
   const [agreements, setAgreements] = useState<SupplyAgreement[]>([]);
@@ -254,7 +260,9 @@ export default function SupplyAgreementsSection({
         showToast(
           action === "accept"
             ? t("negotiation.offerAccepted")
-            : t("negotiation.agreementCancelled"),
+            : typeof data.message === "string"
+              ? data.message
+              : t("negotiation.agreementCancelled"),
           "success"
         );
         await load();
@@ -430,7 +438,8 @@ export default function SupplyAgreementsSection({
       : undefined;
 
   const formatUnits = (value: number) => Math.round(value).toLocaleString(locale);
-  const formatAnchor = (value: number) => `₳${Math.round(value).toLocaleString(locale)}`;
+  // Damages are anchor values: show them in the viewer's display currency.
+  const formatAnchor = (value: number) => formatAmount(value);
   const formatCash = (value: number, currency?: string) => {
     if (!currency) return Math.round(value).toLocaleString(locale);
     try {
@@ -561,6 +570,21 @@ export default function SupplyAgreementsSection({
             ) : (
               "Awaiting first settlement"
             )}
+          </p>
+        )}
+
+        {a.status === "cancelling" && a.cancelEffectiveTurn != null && (
+          <p className="text-xs text-warning">
+            {t("negotiation.noticeServed", { turn: a.cancelEffectiveTurn })}
+          </p>
+        )}
+        {a.status === "active" && (
+          <p className="text-xs text-muted">
+            {a.expiresAtTurn != null && (
+              <>{t("negotiation.termEnds", { turn: a.expiresAtTurn })} </>
+            )}
+            {a.cancelNoticeTurns != null &&
+              t("negotiation.cancelNotice", { turns: a.cancelNoticeTurns })}
           </p>
         )}
 

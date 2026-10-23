@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { Meter } from "@/components/corporation/market/MarketPrimitives";
 import type { SectorDetail } from "./CorporationPageTypes";
 
@@ -58,10 +59,16 @@ export function SectorMarginDrilldown({
   sector,
   isCeo,
   corpId,
+  lead,
+  footer,
 }: {
   sector: SectorDetail;
   isCeo: boolean;
   corpId: string;
+  /** A card shown before the margin build (the plants capacity chain). */
+  lead?: ReactNode;
+  /** A full-width row after the cards (the plants sector actions). */
+  footer?: ReactNode;
 }) {
   // `profitMargin` (base) and `workers` are stripped for private corps viewed by
   // outsiders (redactPrivateSectorRow); effective margin, market share, and the
@@ -99,7 +106,6 @@ export function SectorMarginDrilldown({
     { label: "Home location", value: sector.homeLocationModifier },
     { label: "Foreign tariff", value: sector.foreignTariffModifier },
     { label: "Tariff friction", value: sector.domesticTariffMalus },
-    { label: "Tech tree bonus", value: sector.techMarginBonus },
     { label: "State enterprise efficiency", value: sector.soeEfficiencyModifier },
     { label: "Expropriation risk", value: sector.expropriationRiskModifier },
     { label: "Economic model fit", value: sector.economicModelAlignmentModifier },
@@ -140,9 +146,14 @@ export function SectorMarginDrilldown({
   const isDominant = sector.marketSharePercent >= 50;
 
   return (
-    <div className="grid gap-4 border-t border-card-border bg-card-muted/30 p-4 lg:grid-cols-2">
+    <div
+      className={`grid gap-4 border-t border-card-border bg-card-muted/30 p-4 ${
+        lead ? "lg:grid-cols-3" : "lg:grid-cols-2"
+      }`}
+    >
+      {lead}
       {/* Effective margin build */}
-      <div className="rounded-lg border border-card-border bg-card p-3.5">
+      <div className="rounded-[var(--corp-rad,6px)] border border-card-border bg-card p-3.5">
         <div className="mb-2 flex items-center justify-between">
           <span className="text-body-sm font-medium text-primary">Effective margin build</span>
           <span className="text-[11px] text-muted">
@@ -273,7 +284,7 @@ export function SectorMarginDrilldown({
       </div>
 
       {/* Production policy */}
-      <div className="rounded-lg border border-card-border bg-card p-3.5">
+      <div className="rounded-[var(--corp-rad,6px)] border border-card-border bg-card p-3.5">
         <div className="mb-2 flex items-center justify-between">
           <span className="text-body-sm font-medium text-primary">Production policy</span>
           <span className="text-[11px] text-muted">read-only</span>
@@ -339,6 +350,7 @@ export function SectorMarginDrilldown({
           </div>
         )}
       </div>
+      {footer && <div className="lg:col-span-full">{footer}</div>}
     </div>
   );
 }

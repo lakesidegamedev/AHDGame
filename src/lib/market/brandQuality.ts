@@ -1,3 +1,4 @@
+import { clamp01 } from "@/lib/numeric/rules";
 import { EXTRACTABLE_RESOURCES, type CommodityType } from "@/lib/constants/commodities";
 
 /**
@@ -50,11 +51,6 @@ export const QUALITY_OPS_REF = 15;
 export const QUALITY_WAGE_SLOPE = 0.6;
 /** Neutral input quality (0–100) used when a sector has no measurable inputs. */
 export const QUALITY_NEUTRAL_INPUT = 50;
-
-function clamp01(x: number): number {
-  if (!Number.isFinite(x)) return 0;
-  return Math.max(0, Math.min(1, x));
-}
 
 /** A pillar sub-score in [floor, 1] from a raw value and its par reference (√, diminishing). */
 function pillarScore(value: number, ref: number): number {

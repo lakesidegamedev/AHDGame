@@ -159,12 +159,20 @@ export function resolveSectorHeadcount(args: {
   labourDemandByState: LabourDemandByState;
   labourDemandWageIndexByState?: Map<string, import("@/lib/labour/laborCost").WageIndexAccumulator>;
   wageLevel?: number;
+  /**
+   * Funded producer turn: the plant's own staffed headcount at its funded run.
+   * It replaces the revenue-implied figure, so the labour market sees the
+   * workers the plan actually employs rather than nameplate staffing.
+   */
+  fundedHeadcount?: { desiredWorkers: number; workers: number };
 }): { desiredWorkers: number; workers: number } {
   const rawSkill =
     args.rawWorkforceSkillByState.get(args.stateId) ??
     args.politicalBoard?.["education.adultSkills"] ??
     null;
-  const desiredWorkers = calculateWorkers(args.revenue, rawSkill);
+  const desiredWorkers = args.fundedHeadcount
+    ? args.fundedHeadcount.desiredWorkers
+    : calculateWorkers(args.revenue, rawSkill);
   accumulateLabourDemand(args.labourDemandByState, args.stateId, desiredWorkers);
   if (args.labourDemandWageIndexByState) {
     let wageDemand = args.labourDemandWageIndexByState.get(args.stateId);
@@ -174,7 +182,12 @@ export function resolveSectorHeadcount(args: {
     }
     accumulateWageIndex(wageDemand, desiredWorkers, clampWageLevel(args.wageLevel ?? 1), 1);
   }
-  return { desiredWorkers, workers: filledWorkers(desiredWorkers, args.staffingFactor) };
+  return {
+    desiredWorkers,
+    workers: args.fundedHeadcount
+      ? args.fundedHeadcount.workers
+      : filledWorkers(desiredWorkers, args.staffingFactor),
+  };
 }
 
 export interface SectorLabourEconomicsInput {

@@ -28,6 +28,8 @@ interface AttackPanelProps {
    * PVP, not a growth lever.
    */
   showSplit: boolean;
+  /** Deep link from the corporation page drawer: open the plant-split planner. */
+  openPlannerOnMount?: boolean;
   attacking: boolean;
   attackError: string;
   attackMsg: string;
@@ -46,6 +48,7 @@ export default function AttackPanel({
   targetName,
   showAttack,
   showSplit,
+  openPlannerOnMount = false,
   attacking,
   attackError,
   attackMsg,
@@ -72,7 +75,7 @@ export default function AttackPanel({
   const activeStrength = affordableStrengths.includes(selectedStrength)
     ? selectedStrength
     : (affordableStrengths[0] ?? "full");
-  const [plannerOpen, setPlannerOpen] = useState(false);
+  const [plannerOpen, setPlannerOpen] = useState(openPlannerOnMount);
 
   const targetNativeCurrency = targetCurrencyCode ?? sectorCurrencyCode;
   const userNativeCurrency =
@@ -170,8 +173,8 @@ export default function AttackPanel({
             <div className="rounded-xl border border-error/20 bg-background/40 p-4">
               <h3 className="text-sm font-semibold text-foreground">Split rival plants</h3>
               <p className="mt-1 text-xs text-muted">
-                Relative MS automatically sets the share and success chance. You do not choose a
-                percentage.
+                Your MS against theirs sets the share, from 1% up to 20% of their plants, and the
+                success chance. Plants you win transfer intact.
               </p>
               {attackMsg && (
                 <div className="mt-3 rounded-lg border border-success/30 bg-success/10 p-3 text-xs text-success">

@@ -1,4 +1,8 @@
 import type { Db } from "mongodb";
+import {
+  assertForeignControlAllowed,
+  assertSubsidiaryWithinCap,
+} from "@/lib/mechanicalLaws/guards";
 import { positionHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
 import { recordCorporationExit } from "@/lib/corporations/exits/recordCorporationExit";
 import { ObjectId } from "mongodb";
@@ -239,6 +243,14 @@ async function runAgreedAcquisition(
     currentTurn
   );
   if (!clearance.ok) return { ok: false, error: clearance.error, status: clearance.status };
+
+  // Subsidiary Limits and Foreign Investment Acts of the target's country.
+  const lawRejection =
+    (await assertForeignControlAllowed(db, acquirer, target)) ??
+    (subsidiary
+      ? await assertSubsidiaryWithinCap(db, acquirer, target.countryId, target._id)
+      : null);
+  if (lawRejection) return { ok: false, error: lawRejection.error, status: lawRejection.status };
 
   // Only one live settlement may own a target: a second concurrently accepted
   // offer for the same corporation stops here instead of paying holders twice.

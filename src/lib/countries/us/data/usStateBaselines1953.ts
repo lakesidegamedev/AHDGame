@@ -57,12 +57,9 @@
  * so countries lacking those fields pass through unchanged.
  */
 
+import { clamp } from "@/lib/numeric/rules";
 import type { StateMetricBaseline } from "@/lib/db/types";
 import { getIncomeAnchor } from "@/lib/era/metricCatalog";
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
 
 /**
  * 1953 medianAge decay-target band — MUST stay identical to the live-metric

@@ -35,9 +35,16 @@ interface TechNode {
   exclusiveGroup?: string | null;
   cost: number;
   cashCost: number | null;
+  /** Estimated per-turn money the node is worth to this corp; null if none. */
+  valuePerTurn?: number | null;
+  /** Turns the cash price takes to earn back; null if the node has no running value. */
+  paybackTurns?: number | null;
   effects: TechEffectView[];
+  inputEfficiencyContributionPct?: number | null;
   unlocksStrategy: string | null;
   owned: boolean;
+  /** Owned, but from before the previous decade, so its plant effects no longer apply. */
+  effectExpired?: boolean;
   autoGranted: boolean;
   tierClosed: boolean;
   laneLocked: boolean;
@@ -70,15 +77,16 @@ interface TechResponse {
     defaultRevenueFraction: number;
     capacityFloorApplied: boolean;
   } | null;
-  activeMarginPp?: number | null;
-  marginCapPp?: number | null;
+  plantOutputPct?: number | null;
+  plantOutputCapPct?: number | null;
+  inputEfficiencyPct?: number | null;
+  inputEfficiencyCapPct?: number | null;
   unlockedStrategyNames?: string[];
   totalNodes?: number;
   techsUnlocked?: number;
   unlockableCount?: number;
   breakthroughChance?: number | null;
   breakthroughInterval?: number;
-  rdDemandFactor?: number | null;
   decades?: TechDecade[];
 }
 interface TechTabProps {
@@ -222,14 +230,6 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
   const previous = reached.find((d) => d.id === previousDecadeId);
   const methods = data.unlockedStrategyNames ?? [];
   const chancePct = Math.round((data.breakthroughChance ?? 0) * 100);
-  const ecosystem =
-    data.rdDemandFactor == null
-      ? null
-      : data.rdDemandFactor > 1
-        ? `+${Math.round((data.rdDemandFactor - 1) * 100)}%`
-        : data.rdDemandFactor < 1
-          ? `${Math.round((data.rdDemandFactor - 1) * 100)}%`
-          : "Neutral";
 
   return (
     <div className="space-y-6">
@@ -295,9 +295,14 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
               value={`${data.techsUnlocked ?? 0} / ${data.totalNodes ?? 0}`}
             />
             <KVRow
-              label="Tech margin"
-              value={`+${data.activeMarginPp ?? 0}pp`}
-              hint={`cap +${data.marginCapPp ?? 8}pp`}
+              label="Plant output"
+              value={`+${data.plantOutputPct ?? 0}%`}
+              hint={`cap +${data.plantOutputCapPct ?? 12}%`}
+            />
+            <KVRow
+              label="Plant inputs"
+              value={`−${data.inputEfficiencyPct ?? 0}%`}
+              hint={`cap −${data.inputEfficiencyCapPct ?? 30}%`}
             />
             <KVRow
               label="Production methods"
@@ -309,24 +314,6 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
               value={`${chancePct}%`}
               hint={`every ${data.breakthroughInterval ?? 6} turns`}
             />
-            {ecosystem && (
-              <KVRow
-                label="R&D ecosystem"
-                value={
-                  <span
-                    className={
-                      (data.rdDemandFactor ?? 1) > 1.02
-                        ? "text-success"
-                        : (data.rdDemandFactor ?? 1) < 0.98
-                          ? "text-error"
-                          : ""
-                    }
-                  >
-                    {ecosystem}
-                  </span>
-                }
-              />
-            )}
           </KVList>
         </DenseSection>
       </div>
@@ -358,6 +345,8 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
           fmtCash={fmtCashShort}
           rdScore={data.rdScore}
           liquidCapital={data.liquidCapital}
+          inputEfficiencyPct={data.inputEfficiencyPct}
+          inputEfficiencyCapPct={data.inputEfficiencyCapPct}
           busyNode={busyNode}
           onUnlock={(node, lane) => setConfirmNode({ node, lane, decade: current.id })}
           onAbandon={() => setConfirmAbandon(current)}
@@ -395,6 +384,8 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
                 fmtCash={fmtCashShort}
                 rdScore={data.rdScore}
                 liquidCapital={data.liquidCapital}
+                inputEfficiencyPct={data.inputEfficiencyPct}
+                inputEfficiencyCapPct={data.inputEfficiencyCapPct}
                 busyNode={busyNode}
                 onUnlock={(node, lane) => setConfirmNode({ node, lane, decade: decade.id })}
                 onAbandon={() => setConfirmAbandon(decade)}
@@ -477,6 +468,8 @@ function DecadeSection({
   fmtCash,
   rdScore,
   liquidCapital,
+  inputEfficiencyPct,
+  inputEfficiencyCapPct,
   busyNode,
   onUnlock,
   onAbandon,
@@ -488,6 +481,8 @@ function DecadeSection({
   fmtCash: (n: number | null | undefined) => string;
   rdScore: number | null | undefined;
   liquidCapital: number | null | undefined;
+  inputEfficiencyPct: number | null | undefined;
+  inputEfficiencyCapPct: number | null | undefined;
   busyNode: string | null;
   onUnlock: (node: TechNode, lane: Lane) => void;
   onAbandon: () => void;
@@ -539,6 +534,8 @@ function DecadeSection({
             fmtCash={fmtCash}
             rdScore={rdScore}
             liquidCapital={liquidCapital}
+            inputEfficiencyPct={inputEfficiencyPct}
+            inputEfficiencyCapPct={inputEfficiencyCapPct}
             busyNode={busyNode}
             onUnlock={onUnlock}
           />
@@ -555,6 +552,8 @@ function LaneTree({
   fmtCash,
   rdScore,
   liquidCapital,
+  inputEfficiencyPct,
+  inputEfficiencyCapPct,
   busyNode,
   onUnlock,
 }: {
@@ -564,6 +563,8 @@ function LaneTree({
   fmtCash: (n: number | null | undefined) => string;
   rdScore: number | null | undefined;
   liquidCapital: number | null | undefined;
+  inputEfficiencyPct: number | null | undefined;
+  inputEfficiencyCapPct: number | null | undefined;
   busyNode: string | null;
   onUnlock: (node: TechNode, lane: Lane) => void;
 }) {
@@ -635,7 +636,7 @@ function LaneTree({
 
   return (
     <div
-      className={`min-w-0 overflow-hidden rounded-lg border border-card-border ${dimmed ? "opacity-60" : ""}`}
+      className={`min-w-0 overflow-hidden rounded-[var(--corp-rad,6px)] border border-card-border ${dimmed ? "opacity-60" : ""}`}
     >
       <div className="relative h-16 overflow-hidden bg-gray-900">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -666,7 +667,13 @@ function LaneTree({
       <div className="space-y-3 p-3">
         {bySlot.get(1) && (
           <div className="mx-auto w-full max-w-sm">
-            <TechNodeCard node={bySlot.get(1)!} fmtCash={fmtCash} status={status(bySlot.get(1)!)} />
+            <TechNodeCard
+              node={bySlot.get(1)!}
+              fmtCash={fmtCash}
+              status={status(bySlot.get(1)!)}
+              inputEfficiencyPct={inputEfficiencyPct}
+              inputEfficiencyCapPct={inputEfficiencyCapPct}
+            />
           </div>
         )}
         {bySlot.has(2) || bySlot.has(3) ? (
@@ -693,7 +700,13 @@ function LaneTree({
                     return (
                       <div key={slot} className="flex w-full flex-col items-center">
                         {index > 0 && <TreeConnector active={parent?.owned ?? false} />}
-                        <TechNodeCard node={node} fmtCash={fmtCash} status={status(node)} />
+                        <TechNodeCard
+                          node={node}
+                          fmtCash={fmtCash}
+                          status={status(node)}
+                          inputEfficiencyPct={inputEfficiencyPct}
+                          inputEfficiencyCapPct={inputEfficiencyCapPct}
+                        />
                       </div>
                     );
                   })}
@@ -725,11 +738,23 @@ function LaneTree({
                 return (
                   <div key={slot} className="flex min-w-0 flex-col items-center">
                     <TreeConnector active={parentOwned} />
-                    <TechNodeCard node={node} fmtCash={fmtCash} status={status(node)} />
+                    <TechNodeCard
+                      node={node}
+                      fmtCash={fmtCash}
+                      status={status(node)}
+                      inputEfficiencyPct={inputEfficiencyPct}
+                      inputEfficiencyCapPct={inputEfficiencyCapPct}
+                    />
                     {capstone && (
                       <>
                         <TreeConnector active={node.owned} />
-                        <TechNodeCard node={capstone} fmtCash={fmtCash} status={status(capstone)} />
+                        <TechNodeCard
+                          node={capstone}
+                          fmtCash={fmtCash}
+                          status={status(capstone)}
+                          inputEfficiencyPct={inputEfficiencyPct}
+                          inputEfficiencyCapPct={inputEfficiencyCapPct}
+                        />
                       </>
                     )}
                   </div>
@@ -780,25 +805,47 @@ function TechNodeCard({
   node,
   fmtCash,
   status,
+  inputEfficiencyPct,
+  inputEfficiencyCapPct,
 }: {
   node: TechNode;
   fmtCash: (n: number | null | undefined) => string;
   status: ReactNode;
+  inputEfficiencyPct: number | null | undefined;
+  inputEfficiencyCapPct: number | null | undefined;
 }) {
   const isOwned = node.owned;
+  const expired = isOwned && !!node.effectExpired;
+  const remainingInputEfficiency =
+    inputEfficiencyPct != null && inputEfficiencyCapPct != null
+      ? Math.max(0, inputEfficiencyCapPct - inputEfficiencyPct)
+      : null;
+  const inputEfficiencyClipped =
+    !isOwned &&
+    remainingInputEfficiency != null &&
+    (node.inputEfficiencyContributionPct ?? 0) > remainingInputEfficiency;
   return (
     <article
-      className={`w-full min-w-0 rounded-md border p-2.5 text-center ${
-        isOwned
-          ? "border-success/50 bg-success/5"
-          : node.pathLocked
-            ? "border-card-border bg-surface/40 opacity-60"
-            : "border-card-border bg-surface/60"
+      className={`w-full min-w-0 rounded-[calc(var(--corp-rad,6px)-2px)] border p-2.5 text-center ${
+        expired
+          ? "border-card-border bg-surface/40"
+          : isOwned
+            ? "border-success/50 bg-success/5"
+            : node.pathLocked
+              ? "border-card-border bg-surface/40 opacity-60"
+              : "border-card-border bg-surface/60"
       }`}
       title={node.description}
     >
       <h4 className="text-xs font-semibold leading-snug text-foreground">{node.name}</h4>
       <p className="mt-1 line-clamp-3 text-[11px] leading-snug text-muted">{node.description}</p>
+      {inputEfficiencyClipped && (
+        <p className="mt-1.5 text-[10px] font-medium text-warning">
+          {remainingInputEfficiency === 0
+            ? `This input reduction adds nothing because the ${inputEfficiencyCapPct}% cap is reached.`
+            : `Some of this input reduction exceeds the ${inputEfficiencyCapPct}% cap.`}
+        </p>
+      )}
       {node.effects.length > 0 && (
         <ul className="mt-1.5 space-y-1 text-[11px] leading-snug text-muted">
           {node.effects.map((effect, index) => (
@@ -809,6 +856,20 @@ function TechNodeCard({
       {!isOwned && (
         <p className="mt-1.5 text-[10px] tabular-nums text-muted">
           {node.cost} R&amp;D · {fmtCash(node.cashCost)}
+        </p>
+      )}
+      {expired && (
+        <p
+          className="mt-1.5 text-[10px] font-medium text-warning"
+          title="A tech's plant effects and dominance shield apply only in its own decade and the one after it."
+        >
+          Effect expired: older than last decade
+        </p>
+      )}
+      {node.valuePerTurn != null && (
+        <p className="mt-0.5 text-[10px] tabular-nums text-muted">
+          Worth about {fmtCash(node.valuePerTurn)}/turn
+          {!isOwned && node.paybackTurns != null && ` · pays back in ${node.paybackTurns} turns`}
         </p>
       )}
       <div className="mt-2 text-[10px] leading-snug">{status}</div>

@@ -26,6 +26,8 @@ export async function applyPassedVoteEffects(opts: {
 
   switch (vote.type) {
     case "governance_change": {
+      // State patronage forms are for state-owned companies only.
+      if (vote.payload.newLegalStructure === "cn_soe" && !corporation.countryOwnerId) return;
       await db.collection("corporations").updateOne(
         { _id: corporation._id },
         {
@@ -240,6 +242,19 @@ export async function applyPassedVoteEffects(opts: {
       await db
         .collection("corporations")
         .updateOne({ _id: corporation._id }, { $set: { tickerSymbol: newTicker, updatedAt: now } });
+      break;
+    }
+
+    case "ceo_salary": {
+      const { newCeoSalary } = vote.payload;
+      if (typeof newCeoSalary !== "number" || !Number.isFinite(newCeoSalary) || newCeoSalary < 0) {
+        return;
+      }
+      // Salary stays suspended during IMF restructuring whatever the vote said.
+      if (corporation.imfBailoutActive) return;
+      await db
+        .collection("corporations")
+        .updateOne({ _id: corporation._id }, { $set: { ceoSalary: newCeoSalary, updatedAt: now } });
       break;
     }
 

@@ -13,6 +13,7 @@ import { CURRENCY_COLORS, CURRENCY_FLAG_CODE } from "@/components/forex/currency
 import { CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
 import { CountryFlag } from "@/components/CountryFlag";
 import { computeStrengthVsReferencePercent } from "@/lib/forex/rateSemantics";
+import { formatRate as formatAbsolute } from "./formatters";
 
 interface Props {
   rates: ExchangeRateDisplay[];
@@ -43,11 +44,6 @@ function normalizeToStrengthPercent(values: number[]): number[] {
 function formatPct(v: number): string {
   const sign = v >= 0 ? "+" : "";
   return `${sign}${v.toFixed(1)}%`;
-}
-
-function formatAbsolute(v: number): string {
-  if (v >= 10) return v.toFixed(2);
-  return v.toFixed(4);
 }
 
 export function RateChart({ rates, defaultCurrencyCodes }: Props) {

@@ -1,6 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
+export { Stat, ConfirmDialog } from "../officeUi";
+
+export { fmtMoneyM, fmtMoneyAbs } from "../formatMoney";
 
 // Inline-SVG glyphs keyed to the infra archetype icon keys (matches the energyUi /
 // estatesUi inline-icon pattern; no external icon dependency).
@@ -13,25 +15,6 @@ const ICON_PATHS: Record<string, string> = {
   truck: "M3 16V6h11v10M14 9h4l3 3v4h-7M7 19a2 2 0 100-0.01M18 19a2 2 0 100-0.01",
   plane: "M21 15l-9-3V5a2 2 0 00-4 0v7l-5 2v2l5-1v3l-2 1v1l4-1 4 1v-1l-2-1v-3l6 1z",
 };
-
-/** Format a millions-denominated figure into a currency string. */
-export function fmtMoneyM(sym: string, millions: number): string {
-  const v = millions * 1e6;
-  const abs = Math.abs(v);
-  if (abs >= 1e12) return `${sym}${(v / 1e12).toFixed(2)}T`;
-  if (abs >= 1e9) return `${sym}${(v / 1e9).toFixed(1)}B`;
-  if (abs >= 1e6) return `${sym}${(v / 1e6).toFixed(0)}M`;
-  return `${sym}${Math.round(v).toLocaleString("en-US")}`;
-}
-
-/** Format an absolute-currency figure into a string. */
-export function fmtMoneyAbs(sym: string, v: number): string {
-  const abs = Math.abs(v);
-  if (abs >= 1e12) return `${sym}${(v / 1e12).toFixed(2)}T`;
-  if (abs >= 1e9) return `${sym}${(v / 1e9).toFixed(1)}B`;
-  if (abs >= 1e6) return `${sym}${(v / 1e6).toFixed(0)}M`;
-  return `${sym}${Math.round(v).toLocaleString("en-US")}`;
-}
 
 export function InfraIcon({ name, className = "h-5 w-5" }: { name: string; className?: string }) {
   return (
@@ -70,79 +53,6 @@ export function AggTile({
       <div>
         <div className="dossier-label text-muted">{label}</div>
         <div className={`tabular mt-0.5 text-lg font-bold ${toneClass}`}>{value}</div>
-      </div>
-    </div>
-  );
-}
-
-export function Stat({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string | number;
-  tone?: "gov" | "up" | "down" | "warning";
-}) {
-  const toneClass =
-    tone === "up"
-      ? "text-success"
-      : tone === "down"
-        ? "text-error"
-        : tone === "warning"
-          ? "text-warning"
-          : tone === "gov"
-            ? "text-gov-soft"
-            : "text-foreground";
-  return (
-    <div>
-      <div className="dossier-label !text-[9px] text-muted">{label}</div>
-      <div className={`tabular mt-0.5 text-[14px] font-bold ${toneClass}`}>{value}</div>
-    </div>
-  );
-}
-
-export function ConfirmDialog({
-  open,
-  title,
-  body,
-  confirmLabel = "Confirm",
-  onConfirm,
-  onCancel,
-}: {
-  open: boolean;
-  title: string;
-  body: ReactNode;
-  confirmLabel?: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-}) {
-  if (!open) return null;
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-      onClick={onCancel}
-    >
-      <div
-        className="w-full max-w-md rounded-xl border border-card-border bg-card p-5 shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-base font-semibold text-foreground">{title}</h3>
-        <div className="mt-2 text-[13px] leading-relaxed text-muted">{body}</div>
-        <div className="mt-4 flex justify-end gap-2">
-          <button
-            onClick={onCancel}
-            className="rounded-lg border border-card-border px-4 py-2 text-[13px] font-medium text-muted hover:text-foreground"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            className="rounded-lg border border-error/40 bg-error/10 px-4 py-2 text-[13px] font-semibold text-error hover:bg-error/20"
-          >
-            {confirmLabel}
-          </button>
-        </div>
       </div>
     </div>
   );

@@ -12,7 +12,7 @@ export const RETAIL_V3: V3LaneContent = {
     {
       name: "Quality Goods Reputation",
       description: "A name for honest weights and unspoiled stock lets prices hold at the ceiling.",
-      effects: [{ kind: "priceRealization", pct: 0.011 }],
+      effects: [{ kind: "plantOutput", pct: 0.011 }],
     },
     {
       name: "Price Board Cooperation",
@@ -31,7 +31,7 @@ export const RETAIL_V3: V3LaneContent = {
       name: "Victory Counter Displays",
       description: "Patriotic displays and war-bond tie-ins pull crowds who pay full ticket.",
       effects: [
-        { kind: "priceRealization", pct: 0.021 },
+        { kind: "plantOutput", pct: 0.021 },
         { kind: "marketingStrength", flat: 27 },
       ],
     },
@@ -57,7 +57,7 @@ export const RETAIL_V3: V3LaneContent = {
       name: "Trading Stamp Programs",
       description: "Stamp books bring shoppers back weekly and blunt price comparison.",
       effects: [
-        { kind: "priceRealization", pct: 0.011 },
+        { kind: "plantOutput", pct: 0.011 },
         { kind: "marketingStrength", flat: 12 },
       ],
     },
@@ -80,7 +80,7 @@ export const RETAIL_V3: V3LaneContent = {
       description: "Sponsored television programs put the store name in every living room.",
       effects: [
         { kind: "marketingStrength", flat: 32 },
-        { kind: "priceRealization", pct: 0.02 },
+        { kind: "plantOutput", pct: 0.02 },
       ],
     },
     {
@@ -105,8 +105,8 @@ export const RETAIL_V3: V3LaneContent = {
       name: "House Brand Quality Lines",
       description: "Upgraded house brands sell near national-brand prices at better margin.",
       effects: [
-        { kind: "priceRealization", pct: 0.012 },
-        { kind: "marginBonus", pp: 0.5 },
+        { kind: "plantOutput", pct: 0.012 },
+        { kind: "laborCostReduction", pct: 0.02 },
       ],
     },
     {
@@ -127,7 +127,7 @@ export const RETAIL_V3: V3LaneContent = {
       name: "Flagship Downtown Renovations",
       description: "Showcase flagship stores set a premium image the whole chain prices against.",
       effects: [
-        { kind: "priceRealization", pct: 0.024 },
+        { kind: "plantOutput", pct: 0.024 },
         { kind: "marketingStrength", flat: 28 },
       ],
     },
@@ -150,7 +150,7 @@ export const RETAIL_V3: V3LaneContent = {
       name: "Designer Label Partnerships",
       description: "Exclusive designer lines let ordinary racks sell at boutique prices.",
       effects: [
-        { kind: "priceRealization", pct: 0.013 },
+        { kind: "plantOutput", pct: 0.013 },
         { kind: "marketingStrength", flat: 13 },
       ],
     },
@@ -173,8 +173,8 @@ export const RETAIL_V3: V3LaneContent = {
       name: "Lifestyle Department Concepts",
       description: "Curated lifestyle departments trade on taste and hold full price all season.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
-        { kind: "marginBonus", pp: 0.8 },
+        { kind: "plantOutput", pct: 0.025 },
+        { kind: "laborCostReduction", pct: 0.032 },
       ],
     },
     {
@@ -199,7 +199,7 @@ export const RETAIL_V3: V3LaneContent = {
     {
       name: "Premium Service Counters",
       description: "Staffed service counters justify prices the discounters cannot touch.",
-      effects: [{ kind: "priceRealization", pct: 0.012 }],
+      effects: [{ kind: "plantOutput", pct: 0.012 }],
     },
     {
       name: "Import Sourcing Offices",
@@ -219,7 +219,7 @@ export const RETAIL_V3: V3LaneContent = {
       description: "Coast-to-coast advertising makes the store name itself the draw.",
       effects: [
         { kind: "marketingStrength", flat: 34 },
-        { kind: "priceRealization", pct: 0.02 },
+        { kind: "plantOutput", pct: 0.02 },
       ],
     },
     {
@@ -245,7 +245,7 @@ export const RETAIL_V3: V3LaneContent = {
     {
       name: "Everyday Fair Price Positioning",
       description: "Stable honest pricing replaces sale whiplash and holds realized price up.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Community Store Formats",
@@ -264,7 +264,7 @@ export const RETAIL_V3: V3LaneContent = {
       name: "Loyalty Card Analytics",
       description: "Card data targets offers by household, lifting full-price sales chainwide.",
       effects: [
-        { kind: "priceRealization", pct: 0.024 },
+        { kind: "plantOutput", pct: 0.024 },
         { kind: "marketingStrength", flat: 27 },
       ],
     },
@@ -290,7 +290,7 @@ export const RETAIL_V3: V3LaneContent = {
       name: "Web Storefront Branding",
       description: "An early polished web store extends the brand to shoppers who pay list price.",
       effects: [
-        { kind: "priceRealization", pct: 0.012 },
+        { kind: "plantOutput", pct: 0.012 },
         { kind: "marketingStrength", flat: 14 },
       ],
     },
@@ -313,8 +313,8 @@ export const RETAIL_V3: V3LaneContent = {
       description:
         "Appointment shopping and registry services turn browsers into full-ticket buyers.",
       effects: [
-        { kind: "priceRealization", pct: 0.026 },
-        { kind: "marginBonus", pp: 0.8 },
+        { kind: "plantOutput", pct: 0.026 },
+        { kind: "laborCostReduction", pct: 0.032 },
       ],
     },
     {
@@ -336,8 +336,8 @@ export const RETAIL_V3: V3LaneContent = {
       name: "Curated Private Collections",
       description: "Design-led private collections earn brand prices without brand royalties.",
       effects: [
-        { kind: "priceRealization", pct: 0.013 },
-        { kind: "marginBonus", pp: 0.6 },
+        { kind: "plantOutput", pct: 0.013 },
+        { kind: "laborCostReduction", pct: 0.024 },
       ],
     },
     {
@@ -359,7 +359,7 @@ export const RETAIL_V3: V3LaneContent = {
       description: "Targeted digital campaigns reach buyers at the moment of intent.",
       effects: [
         { kind: "marketingStrength", flat: 36 },
-        { kind: "priceRealization", pct: 0.02 },
+        { kind: "plantOutput", pct: 0.02 },
       ],
     },
     {
@@ -382,7 +382,7 @@ export const RETAIL_V3: V3LaneContent = {
       description:
         "Selling ad space on owned screens and pages turns traffic into a second revenue line.",
       effects: [
-        { kind: "priceRealization", pct: 0.014 },
+        { kind: "plantOutput", pct: 0.014 },
         { kind: "marketingStrength", flat: 15 },
       ],
     },
@@ -405,7 +405,7 @@ export const RETAIL_V3: V3LaneContent = {
       name: "Livestream Shopping Events",
       description: "Hosted live selling events move premium stock at full price in minutes.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
+        { kind: "plantOutput", pct: 0.025 },
         { kind: "marketingStrength", flat: 30 },
       ],
     },
@@ -433,7 +433,7 @@ export const RETAIL_V3: V3LaneContent = {
       description:
         "Paying to be the default choice of shopping assistants captures orders before search.",
       effects: [
-        { kind: "priceRealization", pct: 0.015 },
+        { kind: "plantOutput", pct: 0.015 },
         { kind: "marketingStrength", flat: 16 },
       ],
     },
@@ -455,7 +455,7 @@ export const RETAIL_V3: V3LaneContent = {
       description:
         "Mixed-reality flagship experiences make the store a destination that sells at full price.",
       effects: [
-        { kind: "priceRealization", pct: 0.028 },
+        { kind: "plantOutput", pct: 0.028 },
         { kind: "marketingStrength", flat: 32 },
       ],
     },

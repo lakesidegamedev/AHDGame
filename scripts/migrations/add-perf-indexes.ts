@@ -58,6 +58,19 @@ const INDEX_SPECS: ReadonlyArray<{
   // electionVoteTallies — batch lookup by electionId
   { collection: "electionVoteTallies", key: { electionId: 1 }, name: "evt_electionId" },
 
+  // shareOrders / shareListings — open corporate sells across the world, read
+  // by the subsidiary-group pages (no corporationId predicate).
+  {
+    collection: "shareOrders",
+    key: { type: 1, status: 1, placerCorporationId: 1 },
+    name: "shareOrders_type_status_placerCorp",
+  },
+  {
+    collection: "shareListings",
+    key: { status: 1, sellerCorporationId: 1 },
+    name: "shareListings_status_sellerCorp",
+  },
+
   // electedOfficials — lookup a character's offices
   {
     collection: "electedOfficials",

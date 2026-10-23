@@ -4,6 +4,7 @@ import { getDb } from "@/lib/mongodb";
 import { primaryMetricById } from "@/lib/resetMetrics/catalog";
 import { readResetMetricBoard } from "@/lib/resetMetrics/readBoard";
 import { readResetMetricDetail } from "@/lib/resetMetrics/readMetricDetail";
+import { isResetV2Country } from "@/lib/resetVersions/rules";
 
 export async function GET(
   request: Request,
@@ -12,10 +13,7 @@ export async function GET(
   try {
     const { code, metricId } = await params;
     const countryId = code.toUpperCase();
-    if (
-      (countryId !== "US" && countryId !== "UK" && countryId !== "JP") ||
-      !primaryMetricById(metricId)
-    ) {
+    if (!isResetV2Country(countryId) || !primaryMetricById(metricId)) {
       return errorResponse(404, "V2 metric was not found");
     }
     const regionId = new URL(request.url).searchParams.get("region") ?? undefined;

@@ -1,4 +1,13 @@
 import { configureGroupSupply, groupForecastWriteOps } from "./groupSupplyTurn";
+import { migrateEntertainmentRemoval } from "./migrateEntertainmentRemoval";
+import { settleFundDividendAccruals } from "./settleFundDividendAccruals";
+import { runProducerMarketShadowPhase, shadowFitsPhaseBudget } from "./producerMarketShadowPhase";
+import { PHASE_TIMEOUT_MS } from "@/lib/turn/processingLock";
+import { claimProducerPath, loadProducerPath } from "@/lib/market/producerMarket/liveMode";
+import { producerStageEnv, runFundedProducerTurn } from "./fundedProducerTurn";
+import { TurnMustStopError } from "@/lib/turn/turnMustStop";
+import type { ProducerPhysicalEnv } from "./producerPhysicalPreparation";
+import { makeLabourDemandByState } from "@/lib/labour/labourMarket";
 import { resolvePhaseLookups } from "./phaseLookups";
 /**
  * Corporation turns settle operating results and distribute shareholder income.
@@ -22,7 +31,7 @@ import { shedVacantCeoSectorsToUnowned } from "./vacantCeoSectorShed";
 import { shedInactiveCeoSectorsToUnowned } from "./inactiveCeoSectorShed";
 import { installCaretakersForVacantCorps } from "./autoCaretakerVacantCorps";
 import { loadEngineSixCountries } from "./engineSixCountries";
-import { recordNppCeoTrackRecords } from "./nppCeoTrackRecord";
+import { runNppCeoCareerPasses } from "./nppCeoPay";
 import { processSectors } from "./sectorCalculations";
 import { getLabourSystemMode, labourAtLeast } from "@/lib/labour/featureFlag";
 import { getMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
@@ -36,10 +45,8 @@ import { consumeManufacturingDevelopmentReceiptsV2 } from "@/lib/products/manufa
 import { processAdvertisingTurn } from "@/lib/advertising/settlementTurn";
 import { loadAdvertisingEfficacyByCorp } from "@/lib/advertising/persistence";
 import type { CoverageSectorInput } from "@/lib/advertising/rules/coverage";
-import {
-  MANUFACTURING_PRODUCT_PROJECTS_V2,
-  type ManufacturingProductProject,
-} from "@/lib/products/manufacturingProject";
+import type { CorporationTurnOptions } from "./corporationTurnOptions";
+import { persistNppManufacturingProjects } from "./persistManufacturingProjects";
 import { getEffectiveStrategyRatesForOperatingModel } from "@/lib/constants/sectorStrategies";
 import { settleSupplyAgreements, type SettleableSupplyAgreement } from "./settleSupplyAgreements";
 import type { CommodityType } from "@/lib/constants/commodities";
@@ -147,9 +154,13 @@ const CORP_TURN_RNG_SALT = process.env.SIM_RNG_SALT ? `:${process.env.SIM_RNG_SA
  * Run the corporation economy, settlement, ownership, and reporting phases for one turn.
  */
 
-export async function processCorporationTurn(turn?: number): Promise<CorporationTurnResult> {
+export async function processCorporationTurn(
+  turn?: number,
+  options: CorporationTurnOptions = {}
+): Promise<CorporationTurnResult> {
   const db = await getDb();
   const now = new Date();
+  const phaseStartedAt = Date.now();
 
   const timer = createCorporationTurnTimer();
   const mark = timer.mark;
@@ -209,6 +220,12 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
   // Market share (which drives the dominance growth-cost multiplier) switches
   // to the owned-capacity basis under the plants tier.
   const plantsEnabledForMarketShare = marketAtLeast(marketSystemMode, "plants");
+  // One-time: entertainment commodity removal rescales stock before lookups load it.
+  await migrateEntertainmentRemoval(db, {
+    turn: turn ?? gameState?.currentTurn ?? 0,
+    plantsEnabled: plantsEnabledForMarketShare,
+    now,
+  });
   const interstateMoneyWiringEnabled =
     (marketGovernorConfig as { interstateMoneyWiringEnabled?: boolean } | null)
       ?.interstateMoneyWiringEnabled === true;
@@ -477,6 +494,15 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
     subsidiaryCorporationsEnabled,
     marketGovernorConfig?.groupSupplyCoordinationEnabled === true
   );
+  // The producer path is read here, before the clearing pre-pass, so a funded
+  // turn can skip legacy-only clearing work. It is claimed below, before any
+  // producer money moves.
+  const producerTurn = turn ?? gameState?.currentTurn ?? 0;
+  const producerPath = await loadProducerPath(db, {
+    turn: producerTurn,
+    worldEpoch: gameState?.worldEpochId,
+    liveFromTurn: marketGovernorConfig?.producerMarketLiveFromTurn,
+  });
   const {
     clearingInvariantBreaches,
     brandLoyaltyUpdates,
@@ -503,6 +529,7 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
     qualityPremiumPricingEnabled,
     politicalMediaOrders,
     treasuryCashLedgerEnabled,
+    fundedProducerTurn: producerPath === "funded",
   });
   const plannedPoliticalMediaOrders = new Map(
     politicalMediaSettlementPlans.map(({ orderId, plan }) => [orderId, plan])
@@ -662,11 +689,7 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
   // against sector peers into its CEO track record. Reads last turn's sector
   // results from the snapshot, before the sheds below mutate it. No decision
   // reads it below v6, so a failure only loses one sample.
-  try {
-    await recordNppCeoTrackRecords(db, lookups, turn ?? 0);
-  } catch (error) {
-    console.error("[corporationTurn] NPP CEO track record pass failed", error);
-  }
+  await runNppCeoCareerPasses(db, lookups, turn ?? 0);
   mark("nppCeoTrackRecord");
 
   // Forensics/alt-detection audit spine: aggregate, not-per-corp entries for
@@ -734,6 +757,60 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
   mark("shedSectors");
 
   // Phase 2: Process all corporations and sectors (pure computation, no DB calls)
+  // Funded-market cutover: one producer path per turn, claimed before any
+  // producer money moves. On a funded turn the market settles first and the
+  // legacy pass takes revenue and margin from its receipts.
+  if (gameState?.worldEpochId)
+    await claimProducerPath(db, {
+      worldEpoch: gameState.worldEpochId,
+      turn: producerTurn,
+      path: producerPath,
+      phase: "corporation",
+    });
+  let funded: Awaited<ReturnType<typeof runFundedProducerTurn>> | undefined;
+  if (producerPath === "funded") {
+    if (market.marketRecoveryStage)
+      throw new Error("marketRecoveryStage must be 0 on a funded producer turn");
+    const worldEpoch = gameState!.worldEpochId!;
+    const earlier = await db
+      .collection("producerEconomyTurns")
+      .findOne({ worldEpoch, turn: { $lt: producerTurn } }, { projection: { _id: 1 } });
+    // A failed funded settlement must stop the turn: advancing would leave every
+    // plant a generation behind, so no later funded turn could reconcile.
+    funded = await runFundedProducerTurn(db, {
+      turn: producerTurn,
+      worldEpoch,
+      lookups,
+      // Fresh collectors: the legacy pass below records labour telemetry once.
+      env: {
+        lookups,
+        currentTurn: producerTurn,
+        currentYear,
+        techTreesEnabled,
+        labour,
+        wageIndexByState: new Map(),
+        automationIndexByState: new Map(),
+        pendingStrikeEvents: [],
+        labourDemandByState: makeLabourDemandByState(),
+        labourDemandWageIndexByState: new Map(),
+        privateBankingEnabled,
+        advertisingInput: true,
+        ...producerStageEnv(marketGovernorConfig),
+        transitionFirstFundedTurn:
+          gameState?.producerOpening?.worldEpoch === worldEpoch
+            ? gameState.producerOpening.turn + 1
+            : undefined,
+      } as unknown as ProducerPhysicalEnv,
+      seedHouseholds: earlier == null,
+      firstFundedTurn:
+        gameState?.producerOpening?.worldEpoch === worldEpoch
+          ? gameState.producerOpening.turn + 1
+          : undefined,
+    }).catch((error: unknown) => {
+      throw new TurnMustStopError("corporationTurn", error);
+    });
+    mark("fundedProducerMarket");
+  }
   const {
     sectorOps,
     corpOps,
@@ -742,7 +819,9 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
     ceoSalaryPayments,
     dividendPayments,
     capitalDividendPayments,
+    passThroughTaxedDividendPayments,
     corpDividendPaymentsAnchorByCorpId,
+    corpDividendTaxedAtSourceAnchorByCorpId,
     corpDividendPaymentsAnchorByCorpCurrency,
     sectorFxSpreadFees,
     fundDividendAccruals,
@@ -764,6 +843,7 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
     capacityBindingEvents,
     settledMarketingSpendAnchorByBuyerId,
     advertisingDeliveredAnchorBySellerId,
+    sectorTurnEnv,
   } = processSectors(
     lookups,
     turn,
@@ -776,9 +856,25 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
     commandEconomyEnabled,
     privateBankingEnabled,
     new Set(equityPoolTurn.activeCurrencies),
-    treasuryCashLedgerEnabled
+    treasuryCashLedgerEnabled,
+    funded
   );
   mark("processSectors(CPU)");
+  await runProducerMarketShadowPhase(db, {
+    // Never measure a shadow beside the live funded market in the same turn.
+    // The shadow is telemetry inside this phase's timeout. Skip it when the
+    // phase has already used most of its budget; a skipped turn only starts a
+    // new shadow run next turn, a timed-out phase fails the economy.
+    enabled:
+      !funded &&
+      marketGovernorConfig?.producerMarketShadowEnabled === true &&
+      shadowFitsPhaseBudget(Date.now() - phaseStartedAt, PHASE_TIMEOUT_MS),
+    turn: turn ?? gameState?.currentTurn ?? 0,
+    worldEpoch: gameState?.worldEpochId,
+    lookups,
+    env: sectorTurnEnv,
+    sectorOps,
+  });
 
   // Phase 2b: NPP corporation AI decisions, budgets, expansion, dividends
   // Run before bulk writes so NPP decisions are applied this turn.
@@ -799,21 +895,11 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
     corporations: lookups.corporations,
     issuerBondsByCorpId: lookups.bondsByCorpId,
     heldBondsByCorpId: lookups.bondsHeldByCorpId,
+    ...(options.batchNppMarketEntryCredit ? { batchRelocationCredit: true } : {}),
   });
   mark("nppCorpDecisions");
 
-  for (const project of nppManufacturingProductProjects) {
-    try {
-      await db
-        .collection<ManufacturingProductProject>(MANUFACTURING_PRODUCT_PROJECTS_V2)
-        .insertOne(project);
-    } catch (error) {
-      if (typeof error === "object" && error !== null && "code" in error && error.code === 11000) {
-        continue;
-      }
-      throw error;
-    }
-  }
+  await persistNppManufacturingProjects(db, nppManufacturingProductProjects);
 
   corpOps.push(...groupForecastWriteOps(market, lookups));
   // Merge NPP corp updates into the main corpOps
@@ -908,6 +994,7 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
       exchangeRatesByCurrency: lookups.exchangeRatesByCurrency,
       bondsByCorpId: lookups.bondsByCorpId,
       sectorsByCorp: lookups.sectorsByCorp,
+      constructionLoanDebtByCorpId: lookups.constructionLoanDebtByCorpId,
       mediaProductSlatesEnabled,
       applyOperatingCashWrites: async () => {
         if (corpOps.length === 0) return;
@@ -1372,104 +1459,7 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
   // ordering + per-corporation tx-log granularity, while the ~32 independent
   // funds overlap. Per-corp dividend attribution is unchanged.
   mark("rdInnovations");
-  if (fundDividendAccruals.length > 0) {
-    const { isIndexFundsEnabled } = await import("@/lib/indexFunds/featureFlag");
-    if (await isIndexFundsEnabled()) {
-      // I/O batching. This step is ~42% of corporationTurn, dominated by ~5k
-      // serial DB round-trips/turn against prod's remote Mongo.
-      // processIndexFundDividendsBatch collapses them into a handful of bulk
-      // ops. It shipped off by default pending evidence it was equivalent;
-      // that evidence now exists, so it is on.
-      //
-      // Equivalence is proved two ways. scripts/perf/dividend-equivalence.ts
-      // runs both paths over identical real state and diffs all six written
-      // collections, including adversarial input (repeated fund/corp keys that
-      // must sum, sub-cent amounts that floor away individually, NaN/Infinity/
-      // negative amounts, zero and negative share counts).
-      //
-      // Measured at 500 accruals: 4,513 Mongo round trips collapse to 110, a
-      // 41x reduction. Wall clock is not the number to quote — on a local
-      // mongod a round trip is ~0.05ms, so the whole saving disappears into
-      // turn-to-turn noise there. Against production's remote Mongo the same
-      // 4,403 saved round trips are worth roughly 4s at 1ms RTT and 13s at
-      // 3ms.
-      //
-      // The two paths are NOT bit-identical and cannot be: N separate `$inc`s
-      // accumulate in a different order than one pre-summed `$inc`, and double
-      // addition is not associative. Measured worst drift is 1.5e-8 absolute /
-      // 3e-15 relative, i.e. a hundred-millionth of one anchor unit, which is
-      // six orders of magnitude below the cent that flooring already discards.
-      // The unit tests in dividendPassThrough.test.ts pin the aggregation
-      // arithmetic that result rests on so CI keeps it honest.
-      //
-      // Set AHD_BATCH_FUND_DIVIDENDS=off to fall back to the per-accrual path
-      // without a deploy, should a discrepancy ever surface in production.
-      if (process.env.AHD_BATCH_FUND_DIVIDENDS !== "off") {
-        const { processIndexFundDividendsBatch } =
-          await import("@/lib/indexFunds/dividendPassThrough");
-        try {
-          await processIndexFundDividendsBatch(db, fundDividendAccruals, {
-            turn: typeof turn === "number" ? turn : undefined,
-          });
-        } catch (err) {
-          console.warn("[corp-turn] Batched index-fund dividend pass-through failed:", err);
-        }
-      } else {
-        const { processIndexFundDividend } = await import("@/lib/indexFunds/dividendPassThrough");
-        const { getFundById, listFundPositions } = await import("@/lib/indexFunds/fundQueries");
-        type FundDividendPrefetch = NonNullable<
-          NonNullable<Parameters<typeof processIndexFundDividend>[5]>["prefetch"]
-        >;
-        const accrualsByFund = new Map<
-          string,
-          {
-            fundId: (typeof fundDividendAccruals)[number]["fundId"];
-            list: typeof fundDividendAccruals;
-          }
-        >();
-        for (const accrual of fundDividendAccruals) {
-          if (!Number.isFinite(accrual.amountAnchor) || accrual.amountAnchor <= 0) continue;
-          const key = accrual.fundId.toString();
-          const entry = accrualsByFund.get(key);
-          if (entry) entry.list.push(accrual);
-          else accrualsByFund.set(key, { fundId: accrual.fundId, list: [accrual] });
-        }
-        await Promise.all(
-          [...accrualsByFund.values()].map(async ({ fundId, list }) => {
-            // Read the fund + its unit-holder positions ONCE per fund, then reuse
-            // across all of this fund's accruals, they're constant during
-            // dividend processing (see processIndexFundDividend's prefetch doc).
-            let prefetch: FundDividendPrefetch | undefined;
-            try {
-              const fund = await getFundById(db, fundId);
-              if (fund) prefetch = { fund, positions: await listFundPositions(db, fundId) };
-            } catch {
-              prefetch = undefined; // fall back to per-call fetch on any read hiccup
-            }
-            for (const accrual of list) {
-              try {
-                await processIndexFundDividend(
-                  db,
-                  accrual.fundId,
-                  accrual.amountAnchor,
-                  accrual.corporationId,
-                  accrual.shares,
-                  { turn: typeof turn === "number" ? turn : undefined, prefetch }
-                );
-              } catch (err) {
-                console.warn("[corp-turn] Index fund dividend pass-through failed:", {
-                  fundId: accrual.fundId.toString(),
-                  corporationId: accrual.corporationId.toString(),
-                  error: err instanceof Error ? err.message : String(err),
-                });
-              }
-            }
-          })
-        );
-      }
-    }
-  }
-
+  await settleFundDividendAccruals(db, fundDividendAccruals, turn);
   mark("fundDividends");
   // Phase 3c: Credit dividends to corporate shareholders, see
   // creditCorpDividends (FX spread skim, 50% dividend-received deduction tax,
@@ -1481,6 +1471,7 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
     lookups,
     corpDividendPaymentsAnchorByCorpId,
     corpDividendPaymentsAnchorByCorpCurrency,
+    corpDividendTaxedAtSourceAnchorByCorpId,
     turn,
     now,
     thresholds,
@@ -1855,6 +1846,7 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
     corpSnapshots,
     ceoSalaryPayments,
     dividendPayments: taxableDividendPayments,
+    passThroughTaxedDividendPayments,
     dividendTaxPaidByCountry,
     capitalDividendPayments:
       lookups.stockHoldingTaxStartTurn !== undefined &&
@@ -1934,6 +1926,8 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
         await import("@/lib/corporations/mergerReview/lifecycle");
       const { resolved } = await resolveDueMergerReviews(db, turn);
       const { fined, totalAnchor } = await fineOverdueDivestitures(db, turn);
+      const { processAntitrustCompliance } = await import("./antitrustCompliance");
+      const antitrust = await processAntitrustCompliance(db, lookups, turn);
       if (resolved > 0 || fined > 0) {
         console.log(
           `[corporationTurn] merger review: ${resolved} referral(s) resolved on deadline, ${fined} overdue divestiture(s) fined`
@@ -1945,7 +1939,7 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
           phase: "corporationTurn",
           subject: { type: "corpBatch", name: "merger review sweep" },
           outcome: "ok",
-          meta: { resolved, fined, finesAnchor: totalAnchor },
+          meta: { resolved, fined, finesAnchor: totalAnchor, ...antitrust },
         });
       }
     } catch (err) {

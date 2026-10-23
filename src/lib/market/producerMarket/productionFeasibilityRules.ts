@@ -1,0 +1,250 @@
+/**
+ * Bounded production planning, before any order moves cash. The physical
+ * constraints have a feasible zero opening and each activity is bounded 0..1.
+ * A bounded-variable simplex keeps one row per commodity, rather than adding
+ * one dense row per plant just to enforce its nameplate ceiling.
+ */
+export function feasibleProduction(input: {
+  activities: readonly { id: string; value: number }[];
+  constraints: readonly { available: number; coefficients: readonly number[] }[];
+  maximumPivots?: number;
+}): number[] {
+  const n = input.activities.length;
+  const m = input.constraints.length;
+  const width = n + m;
+  const ids = new Set<string>();
+  for (const a of input.activities) {
+    if (!a.id || ids.has(a.id) || !Number.isFinite(a.value) || a.value < 0)
+      throw new Error("Invalid production activity");
+    ids.add(a.id);
+  }
+  const rows = input.constraints.map((constraint, i) => {
+    if (
+      !Number.isFinite(constraint.available) ||
+      constraint.available < 0 ||
+      constraint.coefficients.length !== n ||
+      constraint.coefficients.some((v) => !Number.isFinite(v))
+    )
+      throw new Error("Invalid production resource constraint");
+    const scale = Math.max(1e-12, ...constraint.coefficients.map(Math.abs));
+    const row = new Float64Array(width);
+    for (let j = 0; j < n; j++) row[j] = constraint.coefficients[j] / scale;
+    row[n + i] = 1;
+    return { row, value: constraint.available / scale };
+  });
+  // Identical columns affect the objective and every resource only through
+  // their total activity. Solve their aggregate once, then give each member
+  // the same fraction. This is an exact reduction, without rounded grouping.
+  const groups = new Map<string, number[]>();
+  for (let j = 0; j < n; j++) {
+    const key = JSON.stringify([
+      input.activities[j].value,
+      ...input.constraints.map((constraint) => constraint.coefficients[j]),
+    ]);
+    const members = groups.get(key) ?? [];
+    members.push(j);
+    groups.set(key, members);
+  }
+  if (groups.size < n) {
+    const members = [...groups.values()];
+    const fractions = feasibleProduction({
+      activities: members.map((indices) => ({
+        id: input.activities[indices[0]].id,
+        value: input.activities[indices[0]].value * indices.length,
+      })),
+      constraints: input.constraints.map((constraint) => ({
+        available: constraint.available,
+        coefficients: members.map(
+          (indices) => constraint.coefficients[indices[0]] * indices.length
+        ),
+      })),
+      maximumPivots: input.maximumPivots,
+    });
+    const result = Array<number>(n);
+    members.forEach((indices, i) =>
+      indices.forEach((j) => {
+        result[j] = fractions[i];
+      })
+    );
+    return reconcileProduction(result, input.constraints);
+  }
+  const coefficients = rows.map((r) => r.row);
+  const values = rows.map((r) => r.value);
+  const basic = rows.map((_, i) => n + i);
+  const isBasic = new Uint8Array(width);
+  for (const j of basic) isBasic[j] = 1;
+  const nonbasic = new Float64Array(width);
+  const reduced = new Float64Array(width);
+  const objectiveScale = Math.max(1, ...input.activities.map((a) => a.value));
+  for (let j = 0; j < n; j++) reduced[j] = input.activities[j].value / objectiveScale;
+  const tolerance = 1e-10;
+  const limit = input.maximumPivots ?? Math.max(1024, 10 * (n + m));
+  if (!Number.isSafeInteger(limit) || limit < 1) throw new Error("Invalid production pivot limit");
+  const upper = (j: number) => (j < n ? 1 : Infinity);
+  // Anti-cycling: a long run of degenerate pivots (steps of zero length) can
+  // cycle forever under the largest-improvement rule. After a streak of them,
+  // switch to Bland's rule (lowest-index improving column, lowest-index
+  // leaving row), which cannot cycle, until a pivot makes real progress.
+  let degenerateStreak = 0;
+  for (let pivot = 0; pivot < limit; pivot++) {
+    const bland = degenerateStreak >= DEGENERATE_PIVOTS_BEFORE_BLAND;
+    // Prefer a strong improving column; use stable activity order for ties.
+    let entering = -1;
+    let direction = 1;
+    let improvement = tolerance;
+    for (let j = 0; j < width; j++) {
+      if (isBasic[j]) continue;
+      const d = nonbasic[j] === 0 ? 1 : -1;
+      if (reduced[j] * d > improvement) {
+        entering = j;
+        direction = d;
+        improvement = reduced[j] * d;
+        if (bland) break;
+      }
+    }
+    if (entering < 0) {
+      const result = Array.from(nonbasic.slice(0, n));
+      for (let i = 0; i < m; i++) if (basic[i] < n) result[basic[i]] = values[i];
+      return reconcileProduction(result, input.constraints);
+    }
+    // A ratio tie must be exact: choosing a larger step, even within an
+    // absolute epsilon, can overdraw a scarce input after row rescaling.
+    let step = upper(entering);
+    let leaving = -1;
+    for (let i = 0; i < m; i++) {
+      const movement = coefficients[i][entering] * direction;
+      const available =
+        movement > tolerance
+          ? values[i] / movement
+          : movement < -tolerance
+            ? (upper(basic[i]) - values[i]) / -movement
+            : Infinity;
+      if (available < step || (available === step && (leaving < 0 || basic[i] < basic[leaving]))) {
+        step = Math.max(0, available);
+        leaving = i;
+      }
+    }
+    if (!Number.isFinite(step)) throw new Error("Unbounded production activity");
+    degenerateStreak = step > 1e-12 ? 0 : degenerateStreak + 1;
+    const enteringValue = nonbasic[entering] + direction * step;
+    for (let i = 0; i < m; i++) values[i] -= coefficients[i][entering] * direction * step;
+    if (leaving < 0) {
+      nonbasic[entering] = enteringValue;
+      continue;
+    }
+    const oldBasic = basic[leaving];
+    nonbasic[oldBasic] = values[leaving] < 0.5 * upper(oldBasic) ? 0 : upper(oldBasic);
+    // Slack variables have no finite upper bound, so a leaving slack is zero.
+    if (oldBasic >= n) nonbasic[oldBasic] = 0;
+    const pivotValue = coefficients[leaving][entering];
+    for (let j = 0; j < width; j++) coefficients[leaving][j] /= pivotValue;
+    for (let i = 0; i < m; i++) {
+      if (i === leaving) continue;
+      const factor = coefficients[i][entering];
+      if (Math.abs(factor) < 1e-15) continue;
+      for (let j = 0; j < width; j++) coefficients[i][j] -= factor * coefficients[leaving][j];
+    }
+    const cost = reduced[entering];
+    for (let j = 0; j < width; j++) reduced[j] -= cost * coefficients[leaving][j];
+    values[leaving] = enteringValue;
+    nonbasic[entering] = 0;
+    isBasic[oldBasic] = 0;
+    isBasic[entering] = 1;
+    basic[leaving] = entering;
+  }
+  // The pivot limit ran out (a degenerate cycle). Every simplex iterate is
+  // feasible, so the current one is a valid, if not optimal, plan: use it
+  // rather than halting the turn, and count it.
+  productionRepairStats.nonConverged++;
+  console.warn(
+    `[production] feasibility pivot limit reached (${productionRepairStats.nonConverged} so far): using the last feasible plan`
+  );
+  const fallback = Array.from(nonbasic.slice(0, n));
+  for (let i = 0; i < m; i++) if (basic[i] < n) fallback[basic[i]] = values[i];
+  return reconcileProduction(fallback, input.constraints);
+}
+
+/**
+ * The simplex solve eliminates dense, rescaled rows in floating point with no
+ * refactorisation, so on an ill-conditioned row a binding constraint can come
+ * back over its limit; the error grows with row size and coefficient spread
+ * (randomised large rows overshoot by far more than the few millionths seen in
+ * play). The result is never rejected: overdrawn rows first trim their net
+ * consumers, then, if any row is still over, every activity is scaled by one
+ * common factor. That always works: all limits are non-negative, so scaling
+ * toward the zero opening can only lower a row's net use. Repairs beyond
+ * rounding noise are counted and logged.
+ */
+/** Consecutive zero-length pivots after which the solve switches to Bland's rule. */
+const DEGENERATE_PIVOTS_BEFORE_BLAND = 48;
+
+export const productionRepairStats = {
+  repairs: 0,
+  uniformScales: 0,
+  worstRelative: 0,
+  /** Solves that hit the pivot limit and returned their last feasible iterate. */
+  nonConverged: 0,
+};
+const NOISE_RESIDUAL = 1e-9;
+const LOGGED_RESIDUAL = 1e-6;
+
+export function reconcileProduction(
+  result: number[],
+  constraints: readonly { available: number; coefficients: readonly number[] }[]
+): number[] {
+  for (let j = 0; j < result.length; j++) {
+    if (!Number.isFinite(result[j]) || result[j] < -1e-7 || result[j] > 1 + 1e-7)
+      throw new Error("Invalid feasible production bound");
+    result[j] = Math.max(0, Math.min(1, result[j]));
+  }
+  const usedOf = (constraint: { coefficients: readonly number[] }) =>
+    constraint.coefficients.reduce((sum, value, j) => sum + value * result[j], 0);
+  const scaleOf = (constraint: { available: number; coefficients: readonly number[] }) =>
+    Math.max(
+      1,
+      constraint.available,
+      constraint.coefficients.reduce((sum, v) => sum + Math.abs(v), 0)
+    );
+  const overBy = (constraint: { available: number; coefficients: readonly number[] }) =>
+    (usedOf(constraint) - constraint.available) / scaleOf(constraint);
+  let worst = 0;
+  for (const constraint of constraints) worst = Math.max(worst, overBy(constraint));
+  if (worst <= NOISE_RESIDUAL) return result;
+  productionRepairStats.repairs++;
+  productionRepairStats.worstRelative = Math.max(productionRepairStats.worstRelative, worst);
+  // Trimming consumers of one resource can raise another that those activities
+  // supply, so repeat until every row settles.
+  for (let pass = 0; pass < 8; pass++) {
+    let repaired = false;
+    for (const constraint of constraints) {
+      if (overBy(constraint) <= NOISE_RESIDUAL) continue;
+      let consumed = 0;
+      let supplied = 0;
+      constraint.coefficients.forEach((value, j) => {
+        if (value > 0) consumed += value * result[j];
+        else supplied += value * result[j];
+      });
+      const factor = Math.max(0, Math.min(1, (constraint.available - supplied) / consumed));
+      constraint.coefficients.forEach((value, j) => {
+        if (value > 0) result[j] *= factor;
+      });
+      repaired = true;
+    }
+    if (!repaired) break;
+  }
+  let scale = 1;
+  for (const constraint of constraints) {
+    const used = usedOf(constraint);
+    if (used > constraint.available + scaleOf(constraint) * NOISE_RESIDUAL)
+      scale = Math.min(scale, constraint.available / used);
+  }
+  if (scale < 1) {
+    productionRepairStats.uniformScales++;
+    for (let j = 0; j < result.length; j++) result[j] *= scale * (1 - 1e-12);
+  }
+  if (worst > LOGGED_RESIDUAL)
+    console.warn(
+      `[production] feasibility residual repaired: worst=${worst.toExponential(2)} uniformScale=${scale.toFixed(6)}`
+    );
+  return result;
+}

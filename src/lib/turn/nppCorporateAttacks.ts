@@ -48,19 +48,8 @@ import {
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor, writeCorpEconomicLocal } from "@/lib/currency/corpEconomyFields";
-import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
-import { emitBuildCapexTx } from "@/lib/corporations/capexTxLog";
 import { isCorporateSectorDuplicateKey } from "@/lib/corporations/sectorLocation";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
-import { capacityRescaleRatio } from "@/lib/constants/capacityEconomy";
-import {
-  attackCapacityBasisAnchor,
-  attackCostAnchorUnderPlants,
-  capacityCaptureUnits,
-  capacityCaptureBookUpdates,
-  resolveWorldYear,
-} from "@/lib/corporations/capacityCapture";
-import { plantCapacityDeltaPipeline, seedPlantLedger } from "@/lib/corporations/plantLedger";
 import { deriveCeoArchetype } from "./ceoArchetype";
 import { logWireEvent, wireHeadlineSectorAttack } from "@/lib/wireEvent";
 import { createNotification } from "@/lib/notifications";
@@ -74,6 +63,11 @@ import {
 import type { NPP, NPPPersonality } from "@/lib/db/types/npp";
 import { recordAuditBulk } from "@/lib/audit/recordAudit";
 import type { ActionAuditInput } from "@/lib/db/types/actionAuditLog";
+import { randomInt } from "node:crypto";
+import { emitTx } from "@/lib/financialTxLog/emit";
+import type { CountryId } from "@/lib/constants/countries";
+import { calculatePlantSectorSplit } from "@/lib/corporations/plantSectorSplit";
+import { attemptPlantSectorSplit } from "@/lib/corporations/commands/plantSectorSplitAttempt";
 
 /** Turns between autonomous attacks by the same corp (telegraphed, not a barrage). */
 export const ATTACK_COOLDOWN_TURNS = 24;
@@ -95,6 +89,7 @@ export interface AttackCandidate {
     | "revenue"
     | "capitalStock"
     | "capacityBookAnchor"
+    | "plantCount"
     | "strategyId"
   >;
   defender: Pick<
@@ -149,27 +144,18 @@ export interface NppAttackResult {
 }
 
 /**
- * Defender-facing message for an autonomous sector attack (suggestion #324).
- * Names the attacking corp, the sector, and the state, and says what the $
- * figure is: revenue moved below plants, plant capacity at book value under
- * plants. Pure, so notification copy can be pinned by unit test.
+ * Defender-facing message for an autonomous revenue attack below plants
+ * (suggestion #324). Names the attacking corp, the sector, and the state, and
+ * says what the $ figure is. Pure, so notification copy can be pinned by unit
+ * test. Plants-economy splits write their own copy in `executeNppPlantSplit`.
  */
 export function formatNppSectorAttackDefenderMessage(args: {
   attackerName: string;
   capturedAnchor: number;
   sectorLabel: string;
   stateLabel: string;
-  plantsEnabled: boolean;
-  capacityUnitsTaken: number;
 }): string {
   const { attackerName, capturedAnchor, sectorLabel, stateLabel } = args;
-  if (args.plantsEnabled) {
-    return (
-      `${attackerName} seized ${args.capacityUnitsTaken.toLocaleString("en-US", { maximumFractionDigits: 2 })}` +
-      ` capacity units (~$${capturedAnchor.toLocaleString()} book value) from your ${sectorLabel} sector in ${stateLabel}.` +
-      ` This is plant capacity moved to the attacker, not cash or profit.`
-    );
-  }
   return (
     `${attackerName} captured $${capturedAnchor.toLocaleString()} of revenue from your ${sectorLabel} sector in ${stateLabel}.` +
     ` This is revenue moved to the attacker's sector, not profit or your sector's total value.`
@@ -202,55 +188,23 @@ export async function executeNppSectorAttack(
     defender: AttackCandidate["defender"];
     currentTurn: number;
     now: Date;
-    /** `marketSystemMode >= "plants"` — capture transfers capacity, not revenue. */
-    plantsEnabled?: boolean;
-    /** World year, for the plants build-price floor on the attack cost. */
-    year?: number;
-    preset?: string;
-    /** Attacker capital in ₳ — checked again under plants, where the price is higher. */
-    capitalAnchor?: number;
   }
 ): Promise<NppAttackResult | null> {
-  const {
-    attacker,
-    targetSector,
-    defender,
-    currentTurn,
-    now,
-    // PLANTS-GATED: NPP attacks share the player attack's capacity-transfer path —
-    // defender loses units, attacker receives the post-attrition share. The revenue
-    // writes are ternary-gated and run only below plants.
-    plantsEnabled = false,
-    year,
-    capitalAnchor,
-  } = args;
+  const { attacker, targetSector, defender, currentTurn, now } = args;
   const attackerMS = attacker.marketingStrength ?? 0;
   const defenderMS = defender.marketingStrength ?? 0;
-  const eraUnitScale = await loadWorldEraUnitScale(db);
-
   const attackerFxRate = await getCorpFxRate(db, attacker);
   const defenderFxRate = await getCorpFxRate(db, defender);
   const attackerCurrencyCode = resolveCorpLiquidCurrencyCode(attacker);
   const defenderCurrencyCode = resolveCorpLiquidCurrencyCode(defender);
 
-  // ATTACK BASIS — capacity nameplate under plants, ₳ revenue below it. See
-  // `attackCapacityBasisAnchor`: sizing an attack off derived `revenue` made a
-  // mothballed defender simultaneously un-attackable (every threshold and the
-  // `actualCapture <= 0` abort read 0) and free to attack (the price is a
-  // fraction of the same 0). Identical substitution to the player route, so the
-  // two paths cannot disagree on what a target is worth taking.
-  const targetRevenueAnchor =
-    attackCapacityBasisAnchor(
-      {
-        sectorType: targetSector.sectorType as CorporationType,
-        industryModel: targetSector.industryModel,
-        mediaDiscriminator: targetSector.mediaDiscriminator,
-        capitalStock: targetSector.capitalStock,
-        strategyId: targetSector.strategyId,
-      },
-      plantsEnabled,
-      eraUnitScale
-    ) ?? readCorpEconomicAnchor(targetSector.revenue, defenderCurrencyCode, defenderFxRate);
+  // PLANTS-GATED: this revenue capture runs only below plants; under plants
+  // `runNppCorporateAttacks` calls `executeNppPlantSplit` instead.
+  const targetRevenueAnchor = readCorpEconomicAnchor(
+    targetSector.revenue,
+    defenderCurrencyCode,
+    defenderFxRate
+  );
 
   // Capture math — identical to the player attack-sector path.
   const { defenderSharePercent, attackerSharePercent } = await fetchAttackerDefenderShares(
@@ -271,50 +225,7 @@ export async function executeNppSectorAttack(
   );
   if (actualCapture <= 0) return null;
 
-  // Plants: the capture is a CAPACITY transfer with attrition, priced against
-  // the build table. Same translation the player route applies — see
-  // `capacityCapture.ts` for why revenue must not be written here.
-  const defenderStock =
-    typeof targetSector.capitalStock === "number" && Number.isFinite(targetSector.capitalStock)
-      ? Math.max(0, targetSector.capitalStock)
-      : 0;
-  const rawUnits = capacityCaptureUnits(
-    actualCapture,
-    targetSector.sectorType as CorporationType,
-    targetSector.strategyId,
-    eraUnitScale,
-    targetSector.industryModel,
-    targetSector.mediaDiscriminator
-  );
-  const unitsTaken = Math.min(defenderStock, rawUnits.unitsTaken);
-  const unitsReceivedAtDefenderMix =
-    rawUnits.unitsTaken > 0 ? rawUnits.unitsReceived * (unitsTaken / rawUnits.unitsTaken) : 0;
-
-  const attackCostAnchor = plantsEnabled
-    ? attackCostAnchorUnderPlants({
-        legacyCostAnchor: calculateAttackCostAnchor(targetRevenueAnchor),
-        unitsReceived: unitsReceivedAtDefenderMix,
-        sectorType: targetSector.sectorType as CorporationType,
-        industryModel: targetSector.industryModel,
-        mediaDiscriminator: targetSector.mediaDiscriminator,
-        // The units received are at the DEFENDER's mix, so the floor must price
-        // them at the defender's strategy too.
-        strategyId: targetSector.strategyId ?? null,
-        year: resolveWorldYear(year, currentTurn),
-        preset: args.preset,
-        eraUnitScale,
-      })
-    : calculateAttackCostAnchor(targetRevenueAnchor);
-  // The caller's affordability screen ran against the LEGACY price, which the
-  // plants floor can exceed. Re-check rather than let an NPP overdraw itself.
-  if (
-    plantsEnabled &&
-    typeof capitalAnchor === "number" &&
-    Number.isFinite(capitalAnchor) &&
-    capitalAnchor < attackCostAnchor
-  ) {
-    return null;
-  }
+  const attackCostAnchor = calculateAttackCostAnchor(targetRevenueAnchor);
   const msCost = calculateSplitMsCost(attacker.splitEscalation ?? 0);
 
   const captureInDefenderLocal = Math.round(
@@ -335,80 +246,21 @@ export async function executeNppSectorAttack(
     corporationId: attacker._id,
   });
 
-  // P5: the paid basis moves with the plant. Identical to the player route.
-  const captureBook = plantsEnabled
-    ? capacityCaptureBookUpdates({
-        defender: {
-          sectorType: targetSector.sectorType as CorporationType,
-          industryModel: targetSector.industryModel,
-          mediaDiscriminator: targetSector.mediaDiscriminator,
-          strategyId: targetSector.strategyId ?? null,
-          capitalStock: targetSector.capitalStock,
-          capacityBookAnchor: targetSector.capacityBookAnchor,
-        },
-        attacker: existing
-          ? {
-              sectorType: existing.sectorType,
-              industryModel: existing.industryModel,
-              mediaDiscriminator: existing.mediaDiscriminator,
-              strategyId: existing.strategyId ?? null,
-              capitalStock: existing.capitalStock,
-              capacityBookAnchor: existing.capacityBookAnchor,
-            }
-          : null,
-        unitsTaken,
-        unitsReceived: unitsReceivedAtDefenderMix,
-        year: resolveWorldYear(year, currentTurn),
-        preset: args.preset,
-        eraUnitScale,
-      })
-    : null;
-
-  // Reduce the defender: capacity units under plants, revenue below it.
+  // Reduce the defender's revenue.
   await db
     .collection<CorporateSector>("corporateSectors")
     .updateOne(
       { _id: targetSector._id },
-      plantsEnabled
-        ? plantCapacityDeltaPipeline(
-            targetSector.sectorType as CorporationType,
-            -(Math.round(unitsTaken * 100) / 100),
-            { updatedAt: now, ...(captureBook?.defenderSet ?? {}) },
-            targetSector.industryModel,
-            targetSector.mediaDiscriminator
-          )
-        : { $inc: { revenue: -captureInDefenderLocal }, $set: { updatedAt: now } }
+      { $inc: { revenue: -captureInDefenderLocal }, $set: { updatedAt: now } }
     );
-
-  // Nameplate-invariant across a strategy difference — see the player route.
-  const unitsForAttacker = plantsEnabled
-    ? unitsReceivedAtDefenderMix *
-      capacityRescaleRatio(
-        targetSector.sectorType as CorporationType,
-        targetSector.strategyId,
-        existing?.strategyId,
-        targetSector.industryModel,
-        targetSector.mediaDiscriminator
-      )
-    : 0;
-  const capitalStockDelta = Math.round(unitsForAttacker * 100) / 100;
 
   if (existing) {
-    await db.collection<CorporateSector>("corporateSectors").updateOne(
-      { _id: existing._id },
-      plantsEnabled
-        ? plantCapacityDeltaPipeline(
-            targetSector.sectorType as CorporationType,
-            capitalStockDelta,
-            {
-              updatedAt: now,
-              capacityBookAnchor: captureBook?.attackerBookAnchor ?? 0,
-            },
-            targetSector.industryModel,
-            targetSector.mediaDiscriminator
-          )
-        : { $inc: { revenue: captureInAttackerLocal }, $set: { updatedAt: now } }
-    );
+    await db
+      .collection<CorporateSector>("corporateSectors")
+      .updateOne(
+        { _id: existing._id },
+        { $inc: { revenue: captureInAttackerLocal }, $set: { updatedAt: now } }
+      );
   } else {
     const newSector: Omit<CorporateSector, "_id"> = {
       corporationId: attacker._id,
@@ -422,21 +274,7 @@ export async function executeNppSectorAttack(
       targetGrowthRate: 0,
       currentGrowthRate: 0,
       currentGrowthCost: 0,
-      // Plants: born with capacity, no revenue — the turn processor derives it.
-      revenue: plantsEnabled ? 0 : captureInAttackerLocal,
-      ...(plantsEnabled
-        ? {
-            capitalStock: capitalStockDelta,
-            ...seedPlantLedger(
-              targetSector.sectorType as CorporationType,
-              capitalStockDelta,
-              targetSector.industryModel,
-              targetSector.mediaDiscriminator
-            ),
-            capacityBookAnchor: captureBook?.attackerBookAnchor ?? 0,
-            plantsStartTurn: currentTurn,
-          }
-        : {}),
+      revenue: captureInAttackerLocal,
       profitMargin: DEFAULT_PROFIT_MARGIN,
       workers: DEFAULT_SECTOR_STARTING_WORKERS,
       createdAt: now,
@@ -456,18 +294,7 @@ export async function executeNppSectorAttack(
             industryModel: targetSector.industryModel ?? null,
             mediaDiscriminator: targetSector.mediaDiscriminator ?? null,
           },
-          plantsEnabled
-            ? plantCapacityDeltaPipeline(
-                targetSector.sectorType as CorporationType,
-                capitalStockDelta,
-                {
-                  updatedAt: now,
-                  capacityBookAnchor: captureBook?.attackerBookAnchor ?? 0,
-                },
-                targetSector.industryModel,
-                targetSector.mediaDiscriminator
-              )
-            : { $inc: { revenue: captureInAttackerLocal }, $set: { updatedAt: now } }
+          { $inc: { revenue: captureInAttackerLocal }, $set: { updatedAt: now } }
         );
       } else {
         throw error;
@@ -484,43 +311,6 @@ export async function executeNppSectorAttack(
       $set: { lastAutoAttackTurn: currentTurn, updatedAt: now },
     }
   );
-
-  // ─── Ledger leg for the attack fee (plants) ────────────────────────────────
-  //
-  // Byte-for-byte the same leg the PLAYER attack routes emit, for the same
-  // reason: the `liquidCapital` decrement just above is a bare `$inc` with no
-  // counterpart, and under plants `attackCostAnchorUnderPlants` floors the fee
-  // at the build price of the captured capacity times ATTACK_BUILD_PRICE_PREMIUM
-  // — an unattributed drain of that size reads to the shadow ledger as money
-  // vanishing from the world.
-  //
-  // NPP attackers move real money out of real corporations, so the turn path
-  // owes the ledger exactly what the API path owes it. It was the only one of
-  // the three attack paths that did not book the row; the omission was latent
-  // only because `nppCorporateAttacksEnabled` defaults off.
-  //
-  // Booked as capacity capex because that is what it is: the corp paid at least
-  // replacement cost and received real plant. Below plants the fee is still the
-  // legacy marketing spend and no row is emitted, so the ledger is
-  // byte-identical there. Best-effort, like every other capex leg — the cash has
-  // already moved, so a log failure must not abort the turn.
-  if (plantsEnabled && attackCostAnchor > 0 && attackCostLocal > 0) {
-    await emitBuildCapexTx(db, {
-      corporationId: attacker._id,
-      corporationName: attacker.name,
-      corporationSequentialId: attacker.sequentialId,
-      direction: "build",
-      amountLocal: Math.abs(attackCostLocal),
-      currencyCode: attackerCurrencyCode ?? "USD",
-      anchorAmount: attackCostAnchor,
-      turn: currentTurn,
-      createdAt: now,
-      sectorId: targetSector._id,
-      sectorType: targetSector.sectorType,
-      units: capitalStockDelta,
-      meta: { reason: "sectorAttackCapture" },
-    }).catch(() => {});
-  }
 
   // Stamp the DEFENDER's cooldown too. The attacker-side stamp above bounds how
   // often one NPP corp attacks; it says nothing about how often a given corp is
@@ -564,15 +354,11 @@ export async function executeNppSectorAttack(
     : 0;
   if (defender.userId && !defender.ceoVacant && canNotifyPlayer(notificationsSent)) {
     // Suggestion #324: name the sector AND the state, and say what the $ is.
-    // Below plants the capture moves revenue; under plants it moves plant
-    // capacity priced at book value (no cash or profit changes hands).
     const captureMessage = formatNppSectorAttackDefenderMessage({
       attackerName: attacker.name,
       capturedAnchor: actualCapture,
       sectorLabel,
       stateLabel: stateName?.name ?? stateId,
-      plantsEnabled,
-      capacityUnitsTaken: unitsTaken,
     });
     await createNotification({
       userId: defender.userId,
@@ -588,13 +374,133 @@ export async function executeNppSectorAttack(
         stateName: stateName?.name ?? null,
         countryId: targetSector.countryId,
         revenueLost: actualCapture,
-        captureKind: plantsEnabled ? "capacity" : "revenue",
-        ...(plantsEnabled ? { capacityUnitsTaken: unitsTaken } : {}),
+        captureKind: "revenue",
       },
     });
   }
 
   return { capturedAnchor: actualCapture, defenderName: defender.name, sectorType: sectorLabel };
+}
+
+/**
+ * Plants-economy NPP attack: the same whole-plant split a player runs
+ * (`attemptPlantSectorSplit`). MS sets the share and the odds, plants move
+ * intact on success, and the cash and MS are spent either way. Stamps both
+ * cooldowns whenever the attempt resolves, won or lost.
+ */
+export async function executeNppPlantSplit(
+  db: Db,
+  args: {
+    attacker: Corporation;
+    targetSector: Pick<CorporateSector, "_id" | "stateId" | "sectorType" | "countryId">;
+    defender: AttackCandidate["defender"];
+    currentTurn: number;
+    now: Date;
+  }
+): Promise<NppAttackResult | null> {
+  const { attacker, targetSector, defender, currentTurn, now } = args;
+  const attempt = await attemptPlantSectorSplit(db, {
+    attacker,
+    defender,
+    targetSector,
+    targetSectorId: targetSector._id,
+    stateId: targetSector.stateId,
+    countryId: targetSector.countryId as CountryId,
+    currentTurn,
+    attackerFxRate: await getCorpFxRate(db, attacker),
+    attackerCurrencyCode: resolveCorpLiquidCurrencyCode(attacker),
+    randomRoll: randomInt(0, 1_000_000_000) / 1_000_000_000,
+  });
+  if (!attempt.ok) return null;
+  const result = attempt.resolution;
+
+  // Same ledger row the player route books: the attacker's cash left with no
+  // other counterparty.
+  await emitTx(db, {
+    type: "corp_sector_split_cost",
+    turn: currentTurn,
+    createdAt: now,
+    subjectType: "corporation",
+    subjectId: attacker._id,
+    subjectName: attacker.name,
+    countryId: targetSector.countryId,
+    amount: -Math.abs(result.attackCostLocal),
+    anchorAmount: -Math.abs(result.quote.cashCostAnchor),
+    currencyCode: resolveCorpLiquidCurrencyCode(attacker) ?? "USD",
+    counterpartyType: "system",
+    counterpartyName: "Sector split campaign",
+    meta: {
+      targetSectorId: targetSector._id.toString(),
+      defenderCorporationId: defender._id.toString(),
+      plantsAtRisk: result.quote.plantsAtRisk,
+      plantsTransferred: result.plantsTransferred,
+      successProbability: result.quote.successProbability,
+      randomRoll: result.randomRoll,
+      succeeded: result.succeeded,
+      autonomous: true,
+    },
+  }).catch(() => {});
+
+  await db
+    .collection<Corporation>("corporations")
+    .updateOne(
+      { _id: attacker._id },
+      { $set: { lastAutoAttackTurn: currentTurn, updatedAt: now } }
+    );
+  await db
+    .collection<Corporation>("corporations")
+    .updateOne({ _id: defender._id }, { $set: { lastAutoAttackedTurn: currentTurn } });
+
+  const sectorLabel =
+    OPERATING_SECTOR_TYPE_LABELS[targetSector.sectorType as CorporationType] ??
+    targetSector.sectorType;
+  const stateName =
+    (
+      await db
+        .collection<State>("states")
+        .findOne({ _id: targetSector.stateId }, { projection: { name: 1 } })
+    )?.name ?? targetSector.stateId;
+  const plantsWord = result.plantsTransferred === 1 ? "plant" : "plants";
+  const outcomeText = result.succeeded
+    ? `${attacker.name} seized ${result.plantsTransferred.toLocaleString("en-US")} whole ${plantsWord} (~$${Math.round(result.bookValueTransferredAnchor).toLocaleString("en-US")} book value) from ${defender.name}'s ${sectorLabel} sector in ${stateName}.`
+    : `${attacker.name} failed to split ${defender.name}'s ${sectorLabel} sector in ${stateName}.`;
+  logWireEvent("sector_attack", outcomeText, {});
+
+  const notificationsSent = defender.userId
+    ? await countRecentNppNotifications(
+        db,
+        defender.userId,
+        ["corp_sector_attacked"],
+        new Date(now.getTime() - NPP_NOTIFICATION_WINDOW_TURNS * 60 * 60 * 1000)
+      )
+    : 0;
+  if (defender.userId && !defender.ceoVacant && canNotifyPlayer(notificationsSent)) {
+    await createNotification({
+      userId: defender.userId,
+      type: "corp_sector_attacked",
+      title: result.succeeded ? "Plants Seized" : "Sector Split Repelled",
+      message: outcomeText,
+      metadata: {
+        attackerCorporationName: attacker.name,
+        attackerCorporationId: attacker._id.toString(),
+        sectorType: targetSector.sectorType,
+        sectorLabel,
+        stateId: targetSector.stateId,
+        stateName,
+        countryId: targetSector.countryId,
+        plantsLost: result.plantsTransferred,
+        bookValueTransferredAnchor: result.bookValueTransferredAnchor,
+        captureKind: "capacity",
+        splitSucceeded: result.succeeded,
+      },
+    });
+  }
+
+  return {
+    capturedAnchor: Math.round(result.bookValueTransferredAnchor),
+    defenderName: defender.name,
+    sectorType: sectorLabel,
+  };
 }
 
 /**
@@ -652,7 +558,26 @@ export async function runNppCorporateAttacks(
 
   const nppCorps = await db
     .collection<Corporation>("corporations")
-    .find({ ceoType: "npp", suspended: { $ne: true } })
+    .find(
+      { ceoType: "npp", suspended: { $ne: true } },
+      {
+        // Only the fields this pass reads: attackers are filtered on country,
+        // CEO and cooldown, then quoted on cash, marketing strength and
+        // currency. The full document is a balance sheet plus settlement
+        // history the attack never touches.
+        projection: {
+          _id: 1,
+          name: 1,
+          countryId: 1,
+          ceoId: 1,
+          lastAutoAttackTurn: 1,
+          liquidCapital: 1,
+          liquidCurrencyCode: 1,
+          marketingStrength: 1,
+          splitEscalation: 1,
+        },
+      }
+    )
     .toArray();
   if (nppCorps.length === 0) return 0;
 
@@ -677,20 +602,9 @@ export async function runNppCorporateAttacks(
   // all corps) instead of per-attacker.
   const fxByCurrency = await loadFxRatesByCurrency(db);
 
-  // Market tier + world year, read once for the whole pass: under plants the
-  // attack moves capacity and is priced against the build table (which is
-  // era-indexed), so both are needed for every attack in this run.
+  // Market tier, read once for the whole pass: under plants every attack is a
+  // whole-plant split.
   const plantsEnabled = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
-  const eraUnitScale = await loadWorldEraUnitScale(db);
-  const gameStateDoc = await db
-    .collection("gameState")
-    .findOne({ _id: "current" } as Record<string, unknown>, {
-      projection: { currentYear: 1, preset: 1 },
-    });
-  const worldYear = resolveWorldYear(
-    (gameStateDoc as { currentYear?: number } | null)?.currentYear,
-    currentTurn
-  );
 
   const distinctCountries = [...new Set(nppCorps.map((c) => c.countryId))];
   const autonomyByCountry = new Map<string, boolean>();
@@ -735,6 +649,7 @@ export async function runNppCorporateAttacks(
           revenue: 1,
           capitalStock: 1,
           capacityBookAnchor: 1,
+          plantCount: 1,
           strategyId: 1,
           industryModel: 1,
           mediaDiscriminator: 1,
@@ -754,7 +669,29 @@ export async function runNppCorporateAttacks(
   }
 
   // All corporations, once — defenders may be player-owned (not in nppCorps).
-  const allCorps = await db.collection<Corporation>("corporations").find({}).toArray();
+  // Projected to the target/defender contract: the attack itself re-reads the
+  // defender inside its transaction, so the full balance sheet here would only
+  // be decoded to look up a name and a marketing strength.
+  const allCorps = await db
+    .collection<Corporation>("corporations")
+    .find(
+      {},
+      {
+        projection: {
+          _id: 1,
+          name: 1,
+          userId: 1,
+          ceoVacant: 1,
+          lastAutoAttackedTurn: 1,
+          marketingStrength: 1,
+          suspended: 1,
+          liquidCurrencyCode: 1,
+          countryId: 1,
+          countryOwnerId: 1,
+        },
+      }
+    )
+    .toArray();
   const corpById = new Map(allCorps.map((c) => [c._id.toString(), c]));
 
   let attacks = 0;
@@ -798,6 +735,17 @@ export async function runNppCorporateAttacks(
     for (const sector of rivalSectors) {
       const defender = corpById.get(sector.corporationId.toString());
       if (!defender) continue;
+      // Plants: a split needs a whole-plant ledger with a plant to take and one
+      // left for the defender.
+      if (
+        plantsEnabled &&
+        (!Number.isInteger(sector.plantCount) ||
+          (sector.plantCount ?? 0) < 2 ||
+          typeof sector.capacityBookAnchor !== "number" ||
+          !Number.isFinite(sector.capacityBookAnchor))
+      ) {
+        continue;
+      }
 
       // Player-defender protection. A player-run corp is a legitimate target —
       // that principle is unchanged — but only on a shared cooldown, and never
@@ -815,20 +763,11 @@ export async function runNppCorporateAttacks(
         continue;
       }
       const fx = fxRateForCorpFromMap(defender, fxByCurrency);
-      // Same basis the execution step uses, so selection, the MIN_TARGET
-      // threshold and the affordability check all rank targets by what is
-      // physically there to take rather than by last turn's market fill.
-      const revenueAnchor =
-        attackCapacityBasisAnchor(
-          {
-            sectorType: sector.sectorType as CorporationType,
-            industryModel: sector.industryModel,
-            capitalStock: sector.capitalStock,
-            strategyId: sector.strategyId,
-          },
-          plantsEnabled,
-          eraUnitScale
-        ) ?? readCorpEconomicAnchor(sector.revenue, resolveCorpLiquidCurrencyCode(defender), fx);
+      // Under plants, rank by the paid book value of the plants there to take
+      // rather than by last turn's market fill; below plants, by revenue.
+      const revenueAnchor = plantsEnabled
+        ? (sector.capacityBookAnchor as number)
+        : readCorpEconomicAnchor(sector.revenue, resolveCorpLiquidCurrencyCode(defender), fx);
       candidates.push({ sector, defender, revenueAnchor });
     }
 
@@ -838,8 +777,18 @@ export async function runNppCorporateAttacks(
     // Affordability against the chosen target's actual cost.
     const attackerFx = fxRateForCorpFromMap(attacker, fxByCurrency);
     const capitalAnchor = corpLiquidCapitalToAnchor(attacker.liquidCapital, attacker, attackerFx);
-    const attackCostAnchor = calculateAttackCostAnchor(target.revenueAnchor);
-    const msCost = calculateSplitMsCost(attacker.splitEscalation ?? 0);
+    const splitQuote = plantsEnabled
+      ? calculatePlantSectorSplit({
+          defenderPlantCount: target.sector.plantCount ?? 0,
+          defenderBookValueAnchor: target.sector.capacityBookAnchor ?? 0,
+          attackerMarketingStrength: attacker.marketingStrength ?? 0,
+          defenderMarketingStrength: target.defender.marketingStrength ?? 0,
+        })
+      : null;
+    const attackCostAnchor =
+      splitQuote?.cashCostAnchor ?? calculateAttackCostAnchor(target.revenueAnchor);
+    const msCost =
+      splitQuote?.marketingStrengthCost ?? calculateSplitMsCost(attacker.splitEscalation ?? 0);
     if (
       !canAttack({
         personality,
@@ -854,17 +803,21 @@ export async function runNppCorporateAttacks(
       continue;
     }
 
-    const result = await executeNppSectorAttack(db, {
-      attacker,
-      targetSector: target.sector,
-      defender: target.defender,
-      currentTurn,
-      now,
-      plantsEnabled,
-      year: worldYear,
-      preset: typeof gameStateDoc?.preset === "string" ? gameStateDoc.preset : undefined,
-      capitalAnchor,
-    });
+    const result = plantsEnabled
+      ? await executeNppPlantSplit(db, {
+          attacker,
+          targetSector: target.sector,
+          defender: target.defender,
+          currentTurn,
+          now,
+        })
+      : await executeNppSectorAttack(db, {
+          attacker,
+          targetSector: target.sector,
+          defender: target.defender,
+          currentTurn,
+          now,
+        });
     if (result) {
       attacks++;
       struckDefendersThisPass.add(target.defender._id.toString());

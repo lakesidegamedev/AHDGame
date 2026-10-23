@@ -1,3 +1,4 @@
+import { clamp } from "@/lib/numeric/rules";
 /** Portable consequences of a country's 0..100 Democratic Health score. */
 
 export const DEMOCRATIC_HEALTH_FALLOUT_THRESHOLD = 60;
@@ -22,10 +23,6 @@ export interface DemocraticHealthPressure {
   sovereignSpread: number;
   /** Relief after clamping to the supported temporary-relief range. */
   reliefPct: number;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }
 
 export function democraticHealthPressure(value: number, reliefPct = 0): DemocraticHealthPressure {

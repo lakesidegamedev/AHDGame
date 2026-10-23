@@ -23,6 +23,8 @@ export interface MergerReviewSummary {
   leadSectorType: string;
   combinedSharePercent: number;
   thresholdPercent: number;
+  /** Concentration (Competition Act) or a foreign takeover (Foreign Investment Act screening). */
+  reason?: "concentration" | "foreignScreening";
   status: "pending" | "cleared" | "clearedWithRemedy" | "blocked";
   openedAtTurn: number;
   decideByTurn: number;
@@ -68,8 +70,18 @@ export function MergerReviewCard({ review, onDecide, busy = false }: Props) {
         <span className="text-xs text-muted">{MERGER_STATUS_LABEL[review.status]}</span>
       </div>
       <p className="mt-1 text-xs text-muted">
-        Combined {review.combinedSharePercent}% of the {review.countryId} {review.leadSectorType}{" "}
-        market, against a {review.thresholdPercent}% threshold. Referred to the {review.seatName}.
+        {review.reason === "foreignScreening" ? (
+          <>
+            A takeover by a group controlled from abroad, screened under the {review.countryId}{" "}
+            Foreign Investment Act. Referred to the {review.seatName}.
+          </>
+        ) : (
+          <>
+            Combined {review.combinedSharePercent}% of the {review.countryId}{" "}
+            {review.leadSectorType} market, against a {review.thresholdPercent}% threshold. Referred
+            to the {review.seatName}.
+          </>
+        )}
       </p>
       {review.status === "pending" && (
         <p className="mt-1 text-xs text-muted">

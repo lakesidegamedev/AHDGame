@@ -17,7 +17,6 @@ import {
 } from "./brandLoyaltyTurn";
 import {
   getEffectiveStrategyRatesForOperatingModel,
-  applyPlannedEconomyOutputMix,
   plannedEconomyMediaSupplyFactor,
 } from "@/lib/constants/sectorStrategies";
 import { isPlannedEconomy } from "@/lib/constants/commandEconomy";
@@ -111,7 +110,28 @@ export interface ClearingPrePassInput {
   qualityPremiumPricingEnabled: boolean;
   politicalMediaOrders?: readonly PoliticalMediaOrderForClearing[];
   treasuryCashLedgerEnabled: boolean;
+  /**
+   * True on a funded producer turn. The funded market settles every plant's
+   * sales and input purchases itself and does not honour own-group sourcing,
+   * so own-group reservations run only on the books whose legacy clearing
+   * still moves money on that turn (see FUNDED_TURN_INTERNAL_SUPPLY_COMMODITIES).
+   * Absent or false on legacy turns, which are unchanged.
+   */
+  fundedProducerTurn?: boolean;
 }
+
+/**
+ * Books that keep own-group sourcing on a funded producer turn. Advertising
+ * stays on its legacy settlement there (marketing budgets pay media sellers by
+ * delivered value, political ad orders settle against the same fills), so its
+ * own-group reservations must still shape who delivers. On every other book the
+ * own-group allocation fed legacy plant revenue and the legacy input discount,
+ * both replaced by funded receipts, and it was the most expensive part of the
+ * pre-pass. Supply agreement settlement is unaffected: contracts reserve ahead
+ * of own-group trades, so their cleared take does not depend on them.
+ */
+export const FUNDED_TURN_INTERNAL_SUPPLY_COMMODITIES: ReadonlySet<CommodityType> =
+  new Set<CommodityType>(["advertising"]);
 
 export interface ClearingPrePassResult {
   clearingInvariantBreaches: string[];
@@ -143,6 +163,7 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
     qualityPremiumPricingEnabled,
     politicalMediaOrders = [],
     treasuryCashLedgerEnabled,
+    fundedProducerTurn = false,
   } = input;
   let { contractedByCorpCommodity } = input;
   const internalSupplyEnabled =
@@ -256,24 +277,14 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
         // sector sat at 0.435-0.498 against a 0.5 threshold and so read as
         // permanently oversupplied on output it could never have made.
         //
-        // Order matters: the planned-economy remap runs first (it can swap the
-        // commodity entirely), then the capacity filter culls what the state
-        // cannot extract. The helper no-ops for non-extraction sectors and for
-        // states with no capacity document, so nothing else moves.
+        // The capacity filter culls what the state cannot extract. The helper
+        // no-ops for non-extraction sectors and for states with no capacity
+        // document, so nothing else moves.
         const rates = {
           ...baseRates,
           supply: applyExtractionResourceCapacityToSupply(
             sector.sectorType,
-            applyPlannedEconomyOutputMix(
-              sector.sectorType,
-              baseRates.supply,
-              isPlannedEconomy(
-                (sector as { countryId?: string }).countryId,
-                currentYear,
-                commandEconomyEnabled
-              ),
-              sector.mediaDiscriminator
-            ),
+            baseRates.supply,
             lookups.stateResourceCapacityByState.get(sector.stateId)
           ),
         };
@@ -617,17 +628,21 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
           // the matching cash-side deduction lives in sectorTurn's revenue
           // leg, so nothing here double-applies.
           //
-          // EXTRACTION IS EXCLUDED, matching computeRawSupplyDemand's
-          // deliberate `st !== "extraction"` exclusion. Under plants the
-          // sector's revenue is restated to the capacity nameplate
-          // (sectorTurn), so world supply for extraction still comes from the
-          // legacy revenue derivation with the geological rationing applied
-          // exactly once. `producedUnits` for extraction is a DIFFERENT number
-          // (rationed by the plants hard-min lambda × throughput × policy), so
-          // offering it would flag the seller `realUnits` and switch OFF the
-          // normalization that is the only thing reconciling those two figures.
-          // Leaving it undefined keeps extraction on the nameplate offer and
-          // inside the normalization pass.
+          // EXTRACTION IS EXCLUDED from the clearing offer's `producedUnits`,
+          // matching computeRawSupplyDemand's deliberate `st !== "extraction"`
+          // exclusion. Under plants the sector's revenue is restated to the
+          // capacity nameplate (sectorTurn), so world supply for extraction
+          // still comes from the legacy revenue derivation with the geological
+          // rationing applied exactly once. `producedUnits` for extraction is a
+          // DIFFERENT number (rationed by the plants hard-min lambda ×
+          // throughput × policy), so offering it would flag the seller
+          // `realUnits` and switch OFF the normalization that is the only thing
+          // reconciling those two figures. Leaving it undefined keeps extraction
+          // on the nameplate offer and inside the normalization pass.
+          //
+          // Contracts still need the plants figure: `contractFillUnits` carries
+          // the same scaled plants chain without setting realUnits or replacing
+          // the nameplate offer (issue #4452 / ticket 1611).
           //
           // MOTHBALLED is checked EXPLICITLY, matching the ledger's
           // `plantsMothballed` guard in constants/commodities. It is not
@@ -636,9 +651,9 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
           // elsewhere. If that ever stops holding, a cold plant would offer
           // units the ledger has already excluded, and `realUnits` offers are
           // exempt from the normalization that would otherwise catch it.
-          producedUnits:
-            market.plantsEnabled && sector.sectorType !== "extraction" && sector.mothballed !== true
-              ? scaleMeasuredProducedUnits({
+          ...(market.plantsEnabled && sector.mothballed !== true
+            ? (() => {
+                const scaledPlants = scaleMeasuredProducedUnits({
                   producedUnits: sector.producedUnits,
                   isNatcorp: !!lookups.corpById.get(corpId)?.countryOwnerId,
                   embargoSupplyFactor:
@@ -659,8 +674,12 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
                   // fresh diversion) retains everything: non-contracted
                   // sectors are byte-identical to before.
                   militaryRetainedFraction: 1 - freshMilitaryDiversion(sector, turn ?? 0),
-                })
-              : undefined,
+                });
+                return sector.sectorType === "extraction"
+                  ? { contractFillUnits: scaledPlants }
+                  : { producedUnits: scaledPlants };
+              })()
+            : {}),
         };
         // Placement limits sales of each output independently. An unsold
         // byproduct must not erase another commodity's delivered own supply.
@@ -855,10 +874,14 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
           sectors: supplyAgreementDemandSectors,
           agreements: supplyAgreementsEnabled ? (settleableAgreements ?? []) : [],
           turn: turn ?? 0,
+          ...(fundedProducerTurn
+            ? { reserveCommodities: FUNDED_TURN_INTERNAL_SUPPLY_COMMODITIES }
+            : {}),
         })
       : undefined;
     market.clearingBySectorId = computeClearingFactors({
       groupSupply,
+      controlRootByCorpId: lookups.dumpingGuardRootByCorpId ?? undefined,
       sectors: clearingInputs,
       internalSupply,
       mediaOwnership,

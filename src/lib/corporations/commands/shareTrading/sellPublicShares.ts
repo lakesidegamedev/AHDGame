@@ -149,8 +149,9 @@ export async function sellPublicShares(request: Request, { params }: RouteParams
     // Issuer settlement for a sell into the float, routed by shareBuybackMode:
     //  - instant mode: bought back from the ISSUER's own liquidCapital (local
     //    currency), capped at what the treasury can cover (the gate below).
-    //  - escrow mode: debited from the market-making escrow with no cap (the
-    //    balance may go negative), so the gate always passes.
+    //  - escrow mode: debited from the market-making escrow floored at zero, the
+    //    rest from the treasury. With honestBalanceSheetsStage >= 3 the treasury
+    //    leg is capped at its cash like instant mode; otherwise it may overdraw.
     // Pre-fix the float minted the seller's proceeds with no counterparty debit.
     const issuerBuyback = shares * executionPrice;
     const issuerCurrency = resolveCorpLiquidCurrencyCode(corporation) ?? "USD";

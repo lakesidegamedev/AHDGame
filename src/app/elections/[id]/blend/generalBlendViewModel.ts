@@ -8,13 +8,19 @@
  */
 
 import type { ElectionDetail, CandidateDetail } from "../components/ElectionDetailTypes";
-import { buildGeneralElectionViewModel, type MarginTier } from "@/lib/elections/generalViewModel";
+import {
+  buildGeneralElectionViewModel,
+  type BattlegroundHoverCardData,
+  type MarginInfo,
+  type MarginTier,
+} from "@/lib/elections/generalViewModel";
 import { readableInk, shadeColorForTier } from "@/lib/elections/marginTierShade";
 import { BLEND_HEX } from "@/components/blend/tokens";
 import { computePersuasionDriverDisplay } from "@/lib/elections/computePersuasionDriverDisplay";
 import type { DriverDisplayInputs } from "@/lib/elections/computePersuasionDriverDisplay";
 import type { PersuasionDriverCandidate } from "@/components/elections/general/PersuasionDrivers";
 import { buildGeneralHeadline } from "./generalHeadline";
+import { STATE_NAMES } from "./presMap/usStates";
 
 export type GeneralRail = "overview" | "college" | "board" | "tickets";
 
@@ -124,6 +130,10 @@ export interface GeneralBlendVM {
   threshold: number;
   totalEv: number;
   tiles: BoardTileVM[];
+  /** The battleground view: margin tier per state, its hover cards, the five closest. */
+  marginByState: Record<string, MarginInfo>;
+  hoverCardByState: Record<string, BattlegroundHoverCardData>;
+  closestStates: string[];
   drivers: DriverRowVM[];
   coattailDrivers: DriverRowVM[];
   /**
@@ -320,6 +330,12 @@ export function buildGeneralBlendViewModel(inp: GeneralBlendInput): GeneralBlend
           Object.entries(gv.stateVoteData).map(([k, v]) => [k, v.votesByCandidate])
         )
       : undefined,
+    stateNameById: Object.fromEntries(
+      Object.keys(gv?.stateVoteData ?? {}).map((id) => [
+        id,
+        gv?.electoralMapData?.[id]?.label ?? STATE_NAMES[id] ?? id,
+      ])
+    ),
   });
 
   const tiles: BoardTileVM[] = Object.entries(model.marginByState)
@@ -545,6 +561,9 @@ export function buildGeneralBlendViewModel(inp: GeneralBlendInput): GeneralBlend
     threshold,
     totalEv,
     tiles,
+    marginByState: model.marginByState,
+    hoverCardByState: model.hoverCardByState,
+    closestStates: model.fiveClosestStates,
     drivers,
     coattailDrivers,
     driversNote:

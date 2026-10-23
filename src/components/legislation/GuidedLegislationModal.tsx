@@ -129,7 +129,7 @@ function metricDirectionClass(indicator: string): string {
   return indicator === "▲" || indicator === "▼" ? "inline-block text-sm leading-none" : "";
 }
 
-function categoryForDomain(domain: string): BillCategory {
+function categoryForDomain(domain: string, scope: "national" | "regional"): BillCategory {
   const normalized = domain.toLowerCase();
   if (normalized.includes("health")) return "healthcare";
   if (normalized.includes("education") || normalized.includes("skill")) return "education";
@@ -140,17 +140,20 @@ function categoryForDomain(domain: string): BillCategory {
     return "infrastructure";
   }
   if (normalized.includes("agriculture") || normalized.includes("food")) return "agriculture";
-  if (normalized.includes("trade")) return "trade";
+  if (normalized.includes("trade")) return scope === "regional" ? "economy" : "trade";
   if (normalized.includes("technology") || normalized.includes("research")) return "technology";
   if (normalized.includes("justice") || normalized.includes("policing")) return "public safety";
   if (normalized.includes("civil") || normalized.includes("governance")) return "social";
   return "economy";
 }
 
-function categoryForDraft(draft: readonly DraftProvision[]): BillCategory {
+function categoryForDraft(
+  draft: readonly DraftProvision[],
+  scope: "national" | "regional"
+): BillCategory {
   const categories = new Set(
     draft.map((provision) =>
-      provision.kind === "tax" ? "tax" : categoryForDomain(provision.family.domain)
+      provision.kind === "tax" ? "tax" : categoryForDomain(provision.family.domain, scope)
     )
   );
   return categories.size === 1 ? ([...categories][0] as BillCategory) : "custom";
@@ -164,6 +167,8 @@ export interface GuidedLegislationModalProps {
   scope?: "national" | "regional";
   regionId?: string;
   adminOverride?: boolean;
+  canSubmit?: boolean;
+  hasActiveBill?: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -176,6 +181,8 @@ export function GuidedLegislationModal({
   scope = "national",
   regionId,
   adminOverride,
+  canSubmit = true,
+  hasActiveBill = false,
   onClose,
   onSuccess,
 }: GuidedLegislationModalProps) {
@@ -435,6 +442,10 @@ export function GuidedLegislationModal({
   }
 
   async function submit() {
+    if (!canSubmit) {
+      showToast(t("activeBillProposalBlocked"), "error");
+      return;
+    }
     if (!title.trim() || !summary.trim() || (!isCustomBill && draft.length === 0)) {
       showToast(
         isCustomBill ? t("required") : "Add a title, summary, and at least one provision.",
@@ -469,7 +480,7 @@ export function GuidedLegislationModal({
           title: title.trim(),
           summary: summary.trim(),
           chamber,
-          category: isCustomBill ? "custom" : categoryForDraft(draft),
+          category: isCustomBill ? "custom" : categoryForDraft(draft, scope),
           provisions,
           ...(adminOverride ? { adminOverride: true } : {}),
         },
@@ -558,6 +569,11 @@ export function GuidedLegislationModal({
         </div>
 
         <main className="max-h-[72vh] overflow-y-auto p-5">
+          {(hasActiveBill || !canSubmit) && !adminOverride ? (
+            <div className="mb-4 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
+              {t("activeBillProposalBlocked")}
+            </div>
+          ) : null}
           {loadError && !isCustomBill ? (
             <div
               role="alert"
@@ -1090,6 +1106,7 @@ export function GuidedLegislationModal({
                       type="button"
                       disabled={
                         submitting ||
+                        !canSubmit ||
                         bodyTooLong ||
                         (!isCustomBill && draft.length === 0) ||
                         !title.trim() ||

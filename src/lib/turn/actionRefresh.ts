@@ -32,6 +32,7 @@ import type { SupremeCourtSeat } from "@/lib/db/types/scotus";
 import { getCabinetMembersCollection } from "@/lib/db/collections/cabinetMembers";
 import { awardOfficeHolderAchievements } from "@/lib/achievements/officeHolders";
 import { logger } from "../observability/logger";
+import { appendActionGrantLog } from "./actionGrantLog";
 import {
   observeGovernmentAccountability,
   memberAccountabilityDrain,
@@ -49,7 +50,7 @@ const MIN_BASE_ACTIONS_PER_TURN = 4;
 /*
  * Fallback if `gameConfig.chairActionBonus` is missing on legacy configs.
  * The per-country config in `countries.ts` sets each centralBankChair office
- * to 3 — keep this in sync if that changes.
+ * to 3 - keep this in sync if that changes.
  */
 const DEFAULT_CHAIR_ACTION_BONUS = 3;
 /*
@@ -116,7 +117,7 @@ export async function processActionRefresh(
 
   /*
    * Justice is a standalone role (#3598), stored on `supremeCourtSeats`, not
-   * on `character.currentOffice` — same reasoning as the central bank chair
+   * on `character.currentOffice` - same reasoning as the central bank chair
    * above: its AP bonus stacks on top of any elected office the character also
    * holds. Only player-held seats (justiceCharacterId set) draw the bonuses; NPP-
    * or historical-roster-held seats have no controlling player to benefit.
@@ -175,7 +176,7 @@ export async function processActionRefresh(
   /*
    * Cabinet membership lives in the unified `cabinetMembers` collection (the
    * SSOT across US/UK/parliamentary families), not on `character.currentOffice`.
-   * The cabinet action bonus STACKS on the holder's legislative seat — but
+   * The cabinet action bonus STACKS on the holder's legislative seat - but
    * appointment overwrites `currentOffice` with a cabinet office key, so the
    * seat itself is recovered from `electedOfficials`. Mirrors how the central
    * bank chair bonus stacks on top of an elected-office bonus.
@@ -238,7 +239,10 @@ export async function processActionRefresh(
   }
 
   const ops: {
-    updateOne: { filter: Record<string, unknown>; update: { $set: Record<string, unknown> } };
+    updateOne: {
+      filter: Record<string, unknown>;
+      update: { $set: Record<string, unknown> } | Array<{ $set: Record<string, unknown> }>;
+    };
   }[] = [];
 
   for (const character of characters) {
@@ -274,11 +278,6 @@ export async function processActionRefresh(
     // characters (no Energy stat) fall back to the baseline 200/100 via STAT_MIN.
     const { cap: energyCap, threshold: energyThreshold } = energyActionLimits(
       character.stats?.energy ?? STAT_MIN
-    );
-    const penalty = character.actions > energyThreshold ? ACTION_HOARD_PENALTY : 0;
-    const newActions = Math.min(
-      energyCap,
-      Math.max(0, character.actions - penalty + actionRefresh)
     );
 
     const currentInfluence = character.politicalInfluence ?? 0;
@@ -328,7 +327,7 @@ export async function processActionRefresh(
     const currentInfamy = character.infamy ?? 0;
     /*
      * Infamy decays 5% per turn (multiplied by 0.95), equivalent to a half-life
-     * of ~14 turns (just under 3.5 game months). This models the news cycle —
+     * of ~14 turns (just under 3.5 game months). This models the news cycle  -
      * scandals fade over time unless the character does something else notorious.
      */
     const newInfamy = Math.max(0, currentInfamy * 0.95);
@@ -343,7 +342,7 @@ export async function processActionRefresh(
       `character:${character._id}`
     );
     /*
-     * Infamy drain — the advertised "(infamy − 20) × 0.05 favorability per
+     * Infamy drain - the advertised "(infamy − 20) × 0.05 favorability per
      * turn" from the profile pages and stats wiki, now actually applied.
      * Uses the pre-decay infamy (the value the player sees this turn) and
      * clamps to the same 0..100 favorability bounds as the above-threshold
@@ -355,8 +354,44 @@ export async function processActionRefresh(
       Math.max(0, currentFavorability - favPenalty - infamyDrain - governmentDrain)
     );
 
+    // Personal AP grant always applies against the live balance. Matching the
+    // snapshotted actions value (optimistic concurrency) let a mid-turn spend
+    // cancel the whole refresh while partyInfluenceTurn still added its bonus
+    // via a live $actions pipeline - leaving only the party grant (Refs #4457).
+    const liveActions = { $ifNull: ["$actions", 0] };
+    const hoardPenalty = {
+      $cond: [{ $gt: [liveActions, energyThreshold] }, ACTION_HOARD_PENALTY, 0],
+    };
+    const newActions = {
+      $min: [
+        energyCap,
+        { $max: [0, { $add: [{ $subtract: [liveActions, hoardPenalty] }, actionRefresh] }] },
+      ],
+    };
+    ops.push({
+      updateOne: {
+        filter: { _id: character._id },
+        update: [
+          {
+            $set: {
+              actions: newActions,
+              actionGrantLog: appendActionGrantLog({
+                turn: currentTurn,
+                source: "personal",
+                granted: actionRefresh,
+                before: liveActions,
+                after: newActions,
+                hoardPenalty,
+                cap: energyCap,
+                at: now,
+              }),
+            },
+          },
+        ],
+      },
+    });
+
     const setFields: Record<string, unknown> = {
-      actions: newActions,
       politicalInfluence: newInfluence,
       nationalInfluence: newNational,
       infamy: newInfamy,
@@ -372,8 +407,8 @@ export async function processActionRefresh(
       updatedAt: now,
     };
 
-    // Stat drift — only for characters that have allocated stats. Generic-drift
-    // stats flush use-growth XP (no idle decay — stats are permanent unless lost
+    // Stat drift - only for characters that have allocated stats. Generic-drift
+    // stats flush use-growth XP (no idle decay - stats are permanent unless lost
     // through crisis events). Debate decays on its own real-time 72h clock via the
     // anchor.
     if (character.stats) {
@@ -387,12 +422,11 @@ export async function processActionRefresh(
 
     ops.push({
       updateOne: {
-        // The turn context is a bootstrap snapshot. If a player spends AP,
-        // earns influence, or changes stats after that read, skip this refresh
-        // instead of overwriting the committed mutation with stale values.
+        // Influence/stats still use optimistic concurrency so a mid-turn mutation
+        // of those fields is not overwritten with stale snapshot values. Actions
+        // are excluded - they are granted above against the live balance.
         filter: {
           _id: character._id,
-          actions: character.actions,
           politicalInfluence:
             character.politicalInfluence === undefined
               ? { $exists: false }

@@ -5,6 +5,8 @@ import {
   computeExpiresAtSync,
   loadTurnLengthMinutes,
   defaultExpiresAt,
+  effectiveTurnLengthMinutes,
+  FAST_MODE_TURN_LENGTH_MINUTES,
 } from "../expiresAt";
 import { TX_TTL_TURNS, DEFAULT_TURN_LENGTH_MINUTES } from "@/lib/db/types/financialTxLog";
 
@@ -53,6 +55,18 @@ describe("computeExpiresAt (async, reads gameConfig)", () => {
       createdAt.getTime() + TX_TTL_TURNS * DEFAULT_TURN_LENGTH_MINUTES * 60_000
     );
   });
+
+  it("sizes the window at the fast-mode cadence when fastMode is on", async () => {
+    db.collectionMocks.gameConfig.findOne.mockResolvedValue({ turnLengthMinutes: 60 });
+    db.collection("gameState");
+    db.collectionMocks.gameState.findOne.mockResolvedValue({ fastMode: true });
+    const createdAt = new Date("2026-04-27T00:00:00Z");
+
+    const expiresAt = await computeExpiresAt(db as never, createdAt);
+
+    // 168 turns at 30 min each, not 168 hourly turns (which would keep 336 fast-mode turns)
+    expect(expiresAt.getTime()).toBe(createdAt.getTime() + TX_TTL_TURNS * 30 * 60_000);
+  });
 });
 
 describe("computeExpiresAtSync", () => {
@@ -92,6 +106,37 @@ describe("loadTurnLengthMinutes", () => {
   it("falls back to default when missing", async () => {
     db.collectionMocks.gameConfig.findOne.mockResolvedValue(null);
     expect(await loadTurnLengthMinutes(db as never)).toBe(DEFAULT_TURN_LENGTH_MINUTES);
+  });
+
+  it("returns the fast-mode cadence while gameState.fastMode is on", async () => {
+    db.collectionMocks.gameConfig.findOne.mockResolvedValue({ turnLengthMinutes: 60 });
+    db.collection("gameState");
+    db.collectionMocks.gameState.findOne.mockResolvedValue({ fastMode: true });
+
+    expect(await loadTurnLengthMinutes(db as never)).toBe(FAST_MODE_TURN_LENGTH_MINUTES);
+    expect(db.collectionMocks.gameState.findOne).toHaveBeenCalledWith(
+      { _id: "current" },
+      { projection: { fastMode: 1 } }
+    );
+  });
+
+  it("keeps the configured value when fastMode is off", async () => {
+    db.collectionMocks.gameConfig.findOne.mockResolvedValue({ turnLengthMinutes: 45 });
+    db.collection("gameState");
+    db.collectionMocks.gameState.findOne.mockResolvedValue({ fastMode: false });
+
+    expect(await loadTurnLengthMinutes(db as never)).toBe(45);
+  });
+});
+
+describe("effectiveTurnLengthMinutes", () => {
+  it("overrides the configured length in fast mode", () => {
+    expect(effectiveTurnLengthMinutes(60, true)).toBe(30);
+  });
+
+  it("uses the configured length, then the default, outside fast mode", () => {
+    expect(effectiveTurnLengthMinutes(45, false)).toBe(45);
+    expect(effectiveTurnLengthMinutes(undefined, undefined)).toBe(DEFAULT_TURN_LENGTH_MINUTES);
   });
 });
 

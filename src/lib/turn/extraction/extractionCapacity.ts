@@ -1,7 +1,13 @@
+/**
+ * Extraction rights reserve a company's combined concessions before sharing the
+ * remaining capacity among open-access operators. All of a company's sectors
+ * share its allocation: see computeExtractionCapacityMultipliers.
+ */
 import type { ExtractableResource } from "@/lib/constants/commodities";
 import { EXTRACTABLE_RESOURCES } from "@/lib/constants/commodities";
 import type { StateResourceCapacity } from "@/lib/db/types/stateResourceCapacity";
 import type { ExtractionContract } from "@/lib/db/types/extractionContract";
+import { indexContractShares } from "@/lib/extraction/rules/contractShares";
 import type { ObjectId } from "mongodb";
 
 export interface ExtractionSectorInput {
@@ -14,6 +20,21 @@ export interface ExtractionSectorInput {
    * StateResourceCapacity for the same note.
    */
   revenueBasedOutput: Partial<Record<ExtractableResource, number>>;
+  /**
+   * Plants only: what the sector actually digs of each resource, same units as
+   * revenueBasedOutput. The deposit is shared by min(revenueBasedOutput, cap)
+   * and the multiplier is the fraction of THAT desire granted. Absent or
+   * non-finite: uncapped.
+   */
+  plantOutputCap?: Partial<Record<ExtractableResource, number>>;
+}
+
+function desiredOutput(sector: ExtractionSectorInput, resource: ExtractableResource): number {
+  const output = sector.revenueBasedOutput[resource] ?? 0;
+  const cap = sector.plantOutputCap?.[resource];
+  return typeof cap === "number" && Number.isFinite(cap)
+    ? Math.min(output, Math.max(0, cap))
+    : output;
 }
 
 /**
@@ -35,18 +56,14 @@ export function computeExtractionCapacityMultipliers(
     capacityByState.set(cap.stateId, cap);
   }
 
-  // Index active contracts: stateId → resource → corporationId string → share
-  const contractIndex = new Map<string, Map<ExtractableResource, Map<string, number>>>();
-  for (const contract of contracts) {
-    if (!contractIndex.has(contract.stateId)) {
-      contractIndex.set(contract.stateId, new Map());
-    }
-    const byResource = contractIndex.get(contract.stateId)!;
-    if (!byResource.has(contract.resource)) {
-      byResource.set(contract.resource, new Map());
-    }
-    byResource.get(contract.resource)!.set(contract.corporationId.toString(), contract.share);
-  }
+  const contractIndex = indexContractShares(
+    contracts.map((contract) => ({
+      stateId: contract.stateId,
+      corporationId: contract.corporationId.toString(),
+      resource: contract.resource,
+      share: contract.share,
+    }))
+  );
 
   const sectorsByState = new Map<string, ExtractionSectorInput[]>();
   for (const sector of sectors) {
@@ -99,36 +116,86 @@ export function computeExtractionCapacityMultipliers(
       // A contract belongs to the corporation, not to each of its sectors.
       // Price the corporation's combined demand against its one allocation so
       // opening another sector cannot duplicate the same extraction rights.
+      //
+      // A lease is a reserved floor, not a ceiling: whatever a holder wants
+      // beyond its reserved share competes for the open-access pool on the same
+      // terms as everyone else. Before ticket 1619 a holder was shut out of the
+      // pool entirely, so buying a 10% lease on a deposit the company was
+      // already mining alone cut its dig to 10% of the deposit.
+      const reservedByCorporation = new Map<string, { allocated: number; desired: number }>();
       for (const [corporationId, corporationSectors] of contractedByCorporation) {
         const share = contractsForResource!.get(corporationId)!;
-        const allocatedCap = totalCapacity * share;
-        const totalOutput = corporationSectors.reduce(
-          (sum, sector) => sum + (sector.revenueBasedOutput[resource] ?? 0),
+        const desired = corporationSectors.reduce(
+          (sum, sector) => sum + desiredOutput(sector, resource),
           0
         );
-        const multiplier = totalOutput > 0 ? Math.min(1, allocatedCap / totalOutput) : 1;
-        for (const sector of corporationSectors) {
-          setMultiplier(result, sector.sectorId, resource, multiplier);
-        }
+        reservedByCorporation.set(corporationId, {
+          allocated: Math.min(desired, totalCapacity * share),
+          desired,
+        });
       }
+      const residualOf = (sector: ExtractionSectorInput): number => {
+        const output = desiredOutput(sector, resource);
+        const reserved = reservedByCorporation.get(sector.corporationId.toString());
+        if (!reserved) return output;
+        if (!(reserved.desired > 0)) return 0;
+        return output * (1 - reserved.allocated / reserved.desired);
+      };
+      const totalOADemand = stateSectors.reduce((sum, s) => sum + residualOf(s), 0);
+      const poolFill =
+        openAccessPool <= 0 || totalOADemand <= 0 ? 0 : Math.min(1, openAccessPool / totalOADemand);
 
-      const totalOADemand = openAccess.reduce(
-        (sum, s) => sum + (s.revenueBasedOutput[resource] ?? 0),
-        0
-      );
-      for (const sector of openAccess) {
-        const output = sector.revenueBasedOutput[resource] ?? 0;
-        if (openAccessPool <= 0 || output <= 0) {
-          setMultiplier(result, sector.sectorId, resource, openAccessPool <= 0 ? 0 : 1);
-        } else if (totalOADemand <= openAccessPool) {
-          setMultiplier(result, sector.sectorId, resource, 1);
-        } else {
-          setMultiplier(result, sector.sectorId, resource, openAccessPool / totalOADemand);
+      for (const sector of stateSectors) {
+        const output = desiredOutput(sector, resource);
+        const reserved = reservedByCorporation.get(sector.corporationId.toString());
+        if (output <= 0) {
+          setMultiplier(
+            result,
+            sector.sectorId,
+            resource,
+            openAccessPool <= 0 && !reserved ? 0 : 1
+          );
+          continue;
         }
+        const reservedUnits =
+          reserved && reserved.desired > 0 ? output * (reserved.allocated / reserved.desired) : 0;
+        const poolUnits = residualOf(sector) * poolFill;
+        setMultiplier(
+          result,
+          sector.sectorId,
+          resource,
+          Math.min(1, (reservedUnits + poolUnits) / output)
+        );
       }
     }
   }
 
+  return result;
+}
+
+/**
+ * Plants corp phase (#4503): re-express multipliers computed against capped
+ * desire as the fraction of each sector's FULL revenueBasedOutput granted. The
+ * plants hard-min reads utilization over full output and divides by the active
+ * fraction, so a bound mine then digs exactly its grant. An unbound resource
+ * stays 1; sectors without a cap are returned unchanged.
+ */
+export function fullOutputMultipliers(
+  sectors: ExtractionSectorInput[],
+  multipliers: Map<string, Partial<Record<ExtractableResource, number>>>
+): Map<string, Partial<Record<ExtractableResource, number>>> {
+  const result = new Map(multipliers);
+  for (const sector of sectors) {
+    const mults = multipliers.get(sector.sectorId);
+    if (!sector.plantOutputCap || !mults) continue;
+    const full: Partial<Record<ExtractableResource, number>> = { ...mults };
+    for (const [resource, mult] of Object.entries(mults) as [ExtractableResource, number][]) {
+      const output = sector.revenueBasedOutput[resource] ?? 0;
+      if (mult < 1 && output > 0)
+        full[resource] = (mult * desiredOutput(sector, resource)) / output;
+    }
+    result.set(sector.sectorId, full);
+  }
   return result;
 }
 

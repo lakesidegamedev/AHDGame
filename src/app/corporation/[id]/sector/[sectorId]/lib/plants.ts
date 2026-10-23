@@ -81,6 +81,11 @@ export function idleCauseMeta(
       tone: "info",
       help: "You set output below full. Raise the output target to run more of your capacity.",
     },
+    staffing: {
+      label: "Short of workers",
+      tone: "warning",
+      help: `Your ${sites} did not have enough workers for a full run. Hire or raise pay until staffing catches up.`,
+    },
     bank: {
       label: "Reserved for your bank network",
       tone: "info",
@@ -105,10 +110,13 @@ export function idleCauseMeta(
 }
 
 /** Tailwind classes per tone, for meter fills and legend dots. */
-export const TONE_FILL: Record<IdleCauseMeta["tone"] | "sold" | "unsold", string> = {
+export const TONE_FILL: Record<IdleCauseMeta["tone"] | "sold" | "unsold", string> &
+  Partial<Record<PlantIdleCauseKey, string>> = {
   sold: "bg-success",
   unsold: "bg-warning",
   warning: "bg-warning/50",
+  inputs: "bg-warning/50",
+  staffing: "bg-orange-500/50",
   error: "bg-error/60",
   info: "bg-info/50",
   muted: "bg-muted/40",

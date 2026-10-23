@@ -303,15 +303,15 @@ describe("POST /api/country/[code]/region/[id]/economy/attack-sector", () => {
     expect(response.status).toBe(200);
     expect(data).toMatchObject({
       splitSucceeded: true,
-      plantsAtRisk: 25,
-      plantsTransferred: 25,
-      attackCost: 125_000,
+      plantsAtRisk: 20,
+      plantsTransferred: 20,
+      attackCost: 100_000,
       msCost: 14,
     });
     expect(db.collectionMocks.corporations.updateOne).toHaveBeenCalledWith(
       expect.objectContaining({ _id: attackerCorpId }),
       expect.objectContaining({
-        $inc: expect.objectContaining({ liquidCapital: -125_000, marketingStrength: -14 }),
+        $inc: expect.objectContaining({ liquidCapital: -100_000, marketingStrength: -14 }),
       }),
       expect.any(Object)
     );
@@ -319,9 +319,9 @@ describe("POST /api/country/[code]/region/[id]/economy/attack-sector", () => {
       expect.objectContaining({ _id: targetSectorId, plantCount: 100 }),
       expect.objectContaining({
         $set: expect.objectContaining({
-          plantCount: 75,
-          capitalStock: 750,
-          capacityBookAnchor: 750_000,
+          plantCount: 80,
+          capitalStock: 800,
+          capacityBookAnchor: 800_000,
         }),
       }),
       expect.any(Object)
@@ -329,9 +329,9 @@ describe("POST /api/country/[code]/region/[id]/economy/attack-sector", () => {
     expect(db.collectionMocks.corporateSectors.insertOne).toHaveBeenCalledWith(
       expect.objectContaining({
         corporationId: attackerCorpId,
-        plantCount: 25,
-        capitalStock: 250,
-        capacityBookAnchor: 250_000,
+        plantCount: 20,
+        capitalStock: 200,
+        capacityBookAnchor: 200_000,
       }),
       expect.any(Object)
     );
@@ -425,7 +425,7 @@ describe("POST /api/country/[code]/region/[id]/economy/attack-sector", () => {
 
     // The stale session must not surface as a 500; the retry commits the split.
     expect(response.status).toBe(200);
-    expect(data).toMatchObject({ splitSucceeded: true, plantsTransferred: 25 });
+    expect(data).toMatchObject({ splitSucceeded: true, plantsTransferred: 20 });
     expect(poisonedSession.withTransaction).toHaveBeenCalledTimes(1);
     expect(poisonedSession.endSession).toHaveBeenCalledTimes(1);
     expect(withTransaction).toHaveBeenCalledTimes(1);
@@ -571,7 +571,7 @@ describe("POST /api/country/[code]/region/[id]/economy/attack-sector", () => {
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data).toMatchObject({ splitSucceeded: true, plantsTransferred: 25 });
+    expect(data).toMatchObject({ splitSucceeded: true, plantsTransferred: 20 });
     // No transaction was ever opened, and the writes still landed.
     expect(withTransaction).not.toHaveBeenCalled();
     expect(db.collectionMocks.corporateSectors.insertOne).toHaveBeenCalled();
@@ -652,7 +652,7 @@ describe("POST /api/country/[code]/region/[id]/economy/attack-sector", () => {
     expect(db.collectionMocks.corporations.updateOne).toHaveBeenCalledWith(
       expect.objectContaining({ _id: attackerCorpId }),
       expect.objectContaining({
-        $inc: expect.objectContaining({ liquidCapital: 125_000, marketingStrength: 14 }),
+        $inc: expect.objectContaining({ liquidCapital: 100_000, marketingStrength: 14 }),
       })
     );
   });
@@ -781,7 +781,7 @@ describe("POST /api/country/[code]/region/[id]/economy/attack-sector", () => {
       countryId: "US",
       liquidCurrencyCode: "USD",
     };
-    // 2 plants, so a 25% share seizes exactly 1.
+    // 2 plants, so a 20% share seizes exactly 1.
     const target = {
       _id: targetSectorId,
       corporationId: defenderCorpId,

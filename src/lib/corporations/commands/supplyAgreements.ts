@@ -17,7 +17,7 @@ import {
   isAgreementPremiumLegal,
   SUPPLY_AGREEMENT_PRICE_BAND,
   CONTRACT_OVERCOMMIT_TOLERANCE,
-  CONTRACT_CANCEL_NOTICE_TURNS,
+  contractCancelEffectiveTurn,
   type SupplyAgreementOffer,
   type SupplyAgreement,
 } from "@/lib/db/types/supplyAgreement";
@@ -609,7 +609,7 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
       // C6 — a PENDING agreement was never accepted, so nothing is owed and it
       // is simply withdrawn. A LIVE one takes notice: it keeps delivering and
       // keeps settling (premium AND shortfall damages) for
-      // CONTRACT_CANCEL_NOTICE_TURNS turns. Without that, cancellation was a
+      // its notice period. Without that, cancellation was a
       // free option — the supplier can see its own production before settlement
       // runs, so it could cancel on exactly the turns it was going to be short
       // and the shortfall penalty only ever hit players who forgot to click.
@@ -619,7 +619,9 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
       const currentTurn = gameState?.currentTurn ?? 0;
       const immediate = agreement.status === "pending";
       const nextStatus: SupplyAgreement["status"] = immediate ? "cancelled" : "cancelling";
-      const cancelEffectiveTurn = currentTurn + CONTRACT_CANCEL_NOTICE_TURNS;
+      // Notice scales with the term left on a fixed-term contract.
+      const cancelEffectiveTurn = contractCancelEffectiveTurn(currentTurn, agreement.expiresAtTurn);
+      const noticeTurns = cancelEffectiveTurn - currentTurn;
       await db.collection<SupplyAgreement>("supplyAgreements").updateOne(
         { _id: agreement._id, status: agreement.status },
         {
@@ -664,10 +666,10 @@ export async function updateSupplyAgreement(request: Request, corpId: string, ag
       return NextResponse.json({
         success: true,
         status: nextStatus,
-        ...(immediate ? {} : { cancelEffectiveTurn, noticeTurns: CONTRACT_CANCEL_NOTICE_TURNS }),
+        ...(immediate ? {} : { cancelEffectiveTurn, noticeTurns }),
         message: immediate
           ? "Proposal withdrawn."
-          : `Notice served. This agreement keeps running and settling for ${CONTRACT_CANCEL_NOTICE_TURNS} more turns, then ends on turn ${cancelEffectiveTurn}.`,
+          : `Notice served. This agreement keeps running and settling for ${noticeTurns} more turns, then ends on turn ${cancelEffectiveTurn}.`,
       });
     }
 

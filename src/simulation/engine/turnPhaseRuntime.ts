@@ -36,6 +36,7 @@ import {
   type CrashedTurnPhaseState,
   type ResumeResultOutcome,
 } from "./turnPhaseResumeResults";
+import { TurnMustStopError } from "@/lib/turn/turnMustStop";
 
 /**
  * Phases that only READ state to produce a derivative/historical record
@@ -547,7 +548,7 @@ export function createTurnPhaseRuntime(input: {
       }
       const persistFailure = (substeps: TurnPhaseTelemetry["substeps"] | undefined) =>
         setPhaseStatus(name, "failed", {
-          reason: "other",
+          reason: err instanceof TurnMustStopError ? "mustStop" : "other",
           message,
           ...(substeps ? { substeps } : {}),
         }).catch((setErr) => console.warn(`[Turn] Failed to mark phase "${name}" failed`, setErr));
@@ -565,6 +566,10 @@ export function createTurnPhaseRuntime(input: {
         if (finalSubsteps) await persistFailure(finalSubsteps);
       } else {
         void initialFailureWrite;
+      }
+      if (err instanceof TurnMustStopError) {
+        await initialFailureWrite;
+        throw err;
       }
       return null;
     } finally {

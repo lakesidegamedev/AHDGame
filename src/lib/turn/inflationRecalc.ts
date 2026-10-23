@@ -21,8 +21,6 @@ import { currentMoneyGrowth } from "@/lib/moneySupply/rules/growthSignal";
 import type { Db } from "mongodb";
 import type { FederalBudget } from "@/lib/db/types/budget";
 import type { CentralBank } from "@/lib/db/types/centralBank";
-import type { CommodityPrice } from "@/lib/db/types/commodityPrice";
-import type { CommodityPriceHistory } from "@/lib/db/types/commodityPriceHistory";
 import type { ExchangeRate } from "@/lib/db/types/exchangeRate";
 import type { StateMetrics } from "@/lib/db/types/stateMetrics";
 import type { GameState } from "@/lib/db/types/gameState";
@@ -36,7 +34,6 @@ import { getNationalDocId } from "@/lib/constants/nationalScope";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import { ensureFederalBudget } from "@/lib/turn/ensureFederalBudget";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
-import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import {
   advanceHouseholdPriceIndex,
   HOUSEHOLD_PRICE_INDEX_BASELINE,
@@ -50,82 +47,14 @@ import {
 } from "@/lib/turn/subhour/stepBase";
 import { calculateFxInflationPressure } from "@/lib/turn/rules/fxInflationPressure";
 import {
+  commodityPressureForCountry,
+  loadCommodityPressureSnapshots,
+} from "@/lib/turn/commodityInflationPressure";
+import {
   countryTurnTariffInflationExposure,
   loadTurnTariffInflationExposure,
   measuredTariffInflationRate,
 } from "@/lib/tariffs/tariffInflationExposure";
-
-/**
- * Lookback for the commodity cost-push signal: half a game year, annualized.
- *
- * Window choice is a lag-vs-noise trade and was picked off live prod data at
- * turn 221. A full game year still carried a price ramp that had already ended
- * (US would have read +20%/yr against an actual recent trend of roughly zero);
- * a 12-turn window has to be raised to the 4th power to annualize, which
- * amplifies ordinary market jitter. Half a year squares, and reproduced the
- * observed direction for every country.
- */
-const COMMODITY_INFLATION_LOOKBACK_TURNS = TURNS_PER_YEAR / 2;
-/** Shorter fallback for worlds younger than the main window. */
-const COMMODITY_INFLATION_SHORT_LOOKBACK_TURNS = 12;
-
-interface CommodityPressureSnapshot {
-  commodity: string;
-  nationalPrices?: Record<string, number>;
-  /** The same commodity's national prices one lookback window ago. */
-  priorNationalPrices?: Record<string, number>;
-  /** Turns between the two snapshots, for annualizing the change. */
-  lookbackTurns: number;
-}
-
-function pickPreferredCommodityDoc(
-  current: CommodityPrice | undefined,
-  candidate: CommodityPrice
-): CommodityPrice {
-  if (!current) return candidate;
-  const currentTurn = typeof current.turn === "number" ? current.turn : -1;
-  const candidateTurn = typeof candidate.turn === "number" ? candidate.turn : -1;
-  if (candidateTurn !== currentTurn) {
-    return candidateTurn > currentTurn ? candidate : current;
-  }
-  const currentUpdated = current.updatedAt instanceof Date ? current.updatedAt.getTime() : 0;
-  const candidateUpdated = candidate.updatedAt instanceof Date ? candidate.updatedAt.getTime() : 0;
-  return candidateUpdated > currentUpdated ? candidate : current;
-}
-
-function buildCommodityPressureSnapshots(
-  commodityPriceDocs: CommodityPrice[],
-  commodityPriceHistoryDocs: CommodityPriceHistory[],
-  priorHistoryDocs: CommodityPriceHistory[],
-  lookbackTurns: number
-): CommodityPressureSnapshot[] {
-  const currentByCommodity = new Map<string, CommodityPrice>();
-  for (const doc of commodityPriceDocs) {
-    currentByCommodity.set(
-      doc.commodity,
-      pickPreferredCommodityDoc(currentByCommodity.get(doc.commodity), doc)
-    );
-  }
-
-  const historyByCommodity = new Map(
-    commodityPriceHistoryDocs.map((doc) => [doc.commodity, doc] as const)
-  );
-  const priorByCommodity = new Map(priorHistoryDocs.map((doc) => [doc.commodity, doc] as const));
-
-  return [...currentByCommodity.values()].map((doc) => ({
-    commodity: doc.commodity,
-    nationalPrices: historyByCommodity.get(doc.commodity)?.nationalPrices ?? doc.nationalPrices,
-    priorNationalPrices: priorByCommodity.get(doc.commodity)?.nationalPrices,
-    lookbackTurns,
-  }));
-}
-
-/** Median of a non-empty numeric list. */
-function median(values: number[]): number {
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = sorted.length >> 1;
-  return sorted.length % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-}
 
 export interface InflationRecalcOptions {
   /**
@@ -298,28 +227,9 @@ export async function runInflationRecalc(
   const gameStateDoc = await db.collection<GameState>("gameState").findOne({ _id: "current" });
   const preset = gameStateDoc?.preset ?? DEFAULT_SEED_PRESET;
 
-  // Pre-fetch commodity prices, exchange rates, and 12-turn savings flows once.
-  // Commodity national prices (written this turn by commodityPriceTurn) give cost-push.
+  // Pre-fetch exchange rates and 12-turn savings flows once.
   // Exchange rates used are previous turn's settled values (inflationRecalc runs before forexTurn).
-  const [
-    commodityPriceDocs,
-    commodityPriceHistoryDocs,
-    exchangeRateDocs,
-    moneyRows,
-    savingsFlowAgg,
-    tariffExposureSnapshot,
-  ] = await Promise.all([
-    db
-      .collection<CommodityPrice>("commodityPrices")
-      .find(
-        {},
-        { projection: { commodity: 1, basePrice: 1, nationalPrices: 1, turn: 1, updatedAt: 1 } }
-      )
-      .toArray(),
-    db
-      .collection<CommodityPriceHistory>("commodityPriceHistory")
-      .find({ turn: priceTurn }, { projection: { commodity: 1, nationalPrices: 1 } })
-      .toArray(),
+  const [exchangeRateDocs, moneyRows, savingsFlowAgg, tariffExposureSnapshot] = await Promise.all([
     db.collection<ExchangeRate>("exchangeRates").find({}).toArray(),
     db
       .collection("moneySupplySnapshots")
@@ -368,34 +278,11 @@ export async function runInflationRecalc(
   for (const row of moneyRows) {
     moneyGrowthByCurrency.set(row._id, currentMoneyGrowth(row));
   }
-  // The same national prices one game year back. The commodity cost-push signal
-  // is the CHANGE between the two, not today's level — see the pressure block
-  // below. Kept out of the Promise.all above on purpose: adding elements to that
-  // tuple pushes tsc's inference over a cliff and the typecheck OOMs.
-  const priorHistoryFor = (lookbackTurns: number): Promise<CommodityPriceHistory[]> =>
-    db
-      .collection<CommodityPriceHistory>("commodityPriceHistory")
-      .find(
-        { turn: priceTurn - lookbackTurns },
-        { projection: { commodity: 1, nationalPrices: 1 } }
-      )
-      .toArray();
-  const [commodityPriorYearDocs, commodityPriorQuarterDocs] = await Promise.all([
-    priorHistoryFor(COMMODITY_INFLATION_LOOKBACK_TURNS),
-    priorHistoryFor(COMMODITY_INFLATION_SHORT_LOOKBACK_TURNS),
-  ]);
-  // Prefer the full game-year window; fall back to the quarter window (scaled up
-  // to an annual rate) only while the world is too young to have the former.
-  const usableLookback =
-    commodityPriorYearDocs.length > 0
-      ? { docs: commodityPriorYearDocs, turns: COMMODITY_INFLATION_LOOKBACK_TURNS }
-      : { docs: commodityPriorQuarterDocs, turns: COMMODITY_INFLATION_SHORT_LOOKBACK_TURNS };
-  const commodityPressureSnapshots = buildCommodityPressureSnapshots(
-    commodityPriceDocs,
-    commodityPriceHistoryDocs,
-    usableLookback.docs,
-    usableLookback.turns
-  );
+  // The commodity cost-push signal is the CHANGE in national prices over the
+  // lookback, not today's level. Kept out of the Promise.all above on purpose:
+  // adding elements to that tuple pushes tsc's inference over a cliff and the
+  // typecheck OOMs.
+  const commodityPressureSnapshots = await loadCommodityPressureSnapshots(db, priceTurn);
   const exchangeRateByCountry = new Map(exchangeRateDocs.map((r) => [r.countryId, r]));
 
   // Build per-country savings flow map: { deposits, withdrawals } in local currency
@@ -415,13 +302,6 @@ export async function runInflationRecalc(
   // turn. Guard all derived pressure signals with a finite-only filter.
   const finiteOr = (v: unknown, fallback: number) =>
     typeof v === "number" && Number.isFinite(v) ? v : fallback;
-
-  // Per-commodity clamp on the ANNUALIZED price change. A row moving more than
-  // +200%/yr or less than -50%/yr is a market pathology (or corrupt data), not a
-  // consumer-price signal. The median below is already robust to a handful of
-  // outliers, so this only guards against garbage.
-  const COMMODITY_PRESSURE_ROW_FLOOR = -0.5;
-  const COMMODITY_PRESSURE_ROW_CEILING = 2.0;
 
   // Countries covered by a central bank, collected as we go so the unbanked
   // pass below knows who it still has to recompute.
@@ -485,30 +365,10 @@ export async function runInflationRecalc(
           // Median, not mean: a few commodities in acute scarcity (prod FR: mean
           // +70%/yr vs median +36%/yr) would otherwise drag the whole basket and
           // rebuild a spurious permanent term.
-          const pressures: number[] = [];
-          for (const doc of commodityPressureSnapshots) {
-            const nationalPrice = doc.nationalPrices?.[countryId];
-            const priorPrice = doc.priorNationalPrices?.[countryId];
-            if (
-              typeof nationalPrice === "number" &&
-              Number.isFinite(nationalPrice) &&
-              nationalPrice > 0 &&
-              typeof priorPrice === "number" &&
-              Number.isFinite(priorPrice) &&
-              priorPrice > 0 &&
-              doc.lookbackTurns > 0
-            ) {
-              // Scale a partial-year window up to an annual rate.
-              const annualized =
-                Math.pow(nationalPrice / priorPrice, TURNS_PER_YEAR / doc.lookbackTurns) - 1.0;
-              const clamped = Math.max(
-                COMMODITY_PRESSURE_ROW_FLOOR,
-                Math.min(COMMODITY_PRESSURE_ROW_CEILING, annualized)
-              );
-              if (Number.isFinite(clamped)) pressures.push(clamped);
-            }
-          }
-          const commodityPressureRaw = pressures.length > 0 ? median(pressures) : 0.0;
+          const commodityPressureRaw = commodityPressureForCountry(
+            commodityPressureSnapshots,
+            countryId
+          );
           const commodityPressure = finiteOr(commodityPressureRaw, 0);
 
           // Forex depreciation cost-push: annualized FX movement across the recent

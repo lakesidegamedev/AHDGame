@@ -40,6 +40,7 @@ import { resolveCountryPrimeRate } from "@/lib/corporations/sectorGrowthCost";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { emitBuildCapexTx } from "@/lib/corporations/capexTxLog";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
+import { loadStrengthUpkeepStage, upkeptDominanceShield } from "@/lib/corporations/strengthUpkeep";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import {
   anchorToCorpLiquidCapital,
@@ -166,17 +167,14 @@ export async function expandSector(request: Request, { params }: RouteParams) {
     // expansion discount applies to the entry fee; the growth-cost multiplier is
     // the same build-price discount `buildCapacity` applies, and is only read on
     // the plants path.
+    const techView = {
+      type: corporation.type,
+      industryModel: corporation.industryModel,
+      unlockedTechNodeIds: corporation.unlockedTechNodeIds,
+      techDecadeLane: corporation.techDecadeLane,
+    };
     const techEffects = (await isSectorTechTreesEnabled())
-      ? getSectorTechEffects(
-          {
-            type: corporation.type,
-            industryModel: corporation.industryModel,
-            unlockedTechNodeIds: corporation.unlockedTechNodeIds,
-            techDecadeLane: corporation.techDecadeLane,
-          },
-          corporation.type,
-          corporation.industryModel
-        )
+      ? getSectorTechEffects(techView, corporation.type, corporation.industryModel)
       : null;
     const expansionDiscount = techEffects?.expansionDiscount ?? 0;
     // Fee + starter size share helpers with expand-suggestions / NPP founding.
@@ -275,7 +273,16 @@ export async function expandSector(request: Request, { params }: RouteParams) {
         acumen: ceoChar?.stats?.businessAcumen ?? NEUTRAL_STAT,
         hostCostOfLivingIndex: hostMetrics?.economic?.costOfLiving?.value ?? null,
         techGrowthCostMultiplier: techEffects?.growthCostMultiplier ?? 1,
-        techDominanceShield: techEffects?.dominanceShield ?? 0,
+        techDominanceShield: techEffects
+          ? upkeptDominanceShield(
+              techView,
+              corporation.type,
+              corporation.industryModel,
+              undefined,
+              currentYear,
+              await loadStrengthUpkeepStage(db)
+            )
+          : 0,
         founding: true,
       }).totalAnchor;
 

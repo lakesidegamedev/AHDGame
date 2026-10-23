@@ -10,19 +10,23 @@ import type {
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { calendarTurn } from "@/lib/utils/gameDate";
 import { computeGameNow } from "@/lib/time/computeGameNow";
+import { nextScheduledTurnAfter, resolveTurnCronMinute } from "@/lib/cron/turnCronMinute";
 import type { Db } from "mongodb";
 import type { TurnExecutionContext } from "@/simulation/engine/types";
+import type { TurnEngine } from "@/simulation/engine/turnEngine";
 
 export async function buildTurnExecutionContext(input: {
   db: Db;
   gameState: GameState;
   config: GameConfig | null;
+  engine: TurnEngine;
   warnings: string[];
   activeIteration?: GameIteration;
   phaseStatuses: TurnPhaseTelemetryMap;
   startTimeMs: number;
 }): Promise<TurnExecutionContext> {
-  const { db, gameState, config, warnings, activeIteration, phaseStatuses, startTimeMs } = input;
+  const { db, gameState, config, engine, warnings, activeIteration, phaseStatuses, startTimeMs } =
+    input;
   const newTurn = gameState.currentTurn + 1;
   // Preset-aware: read the calendar baseline from GameState so 1991 games
   // advance their year correctly. Legacy rows fall back to STARTING_YEAR.
@@ -45,20 +49,7 @@ export async function buildTurnExecutionContext(input: {
     fastMode: gameState.fastMode,
   });
 
-  const nextTurnTime = new Date(realNow);
-  nextTurnTime.setSeconds(0, 0);
-  if (gameState.fastMode) {
-    const mins = nextTurnTime.getMinutes();
-    if (mins < 30) {
-      nextTurnTime.setMinutes(30);
-    } else {
-      nextTurnTime.setMinutes(0);
-      nextTurnTime.setHours(nextTurnTime.getHours() + 1);
-    }
-  } else {
-    nextTurnTime.setMinutes(0, 0, 0);
-    nextTurnTime.setHours(nextTurnTime.getHours() + 1);
-  }
+  const nextTurnTime = nextScheduledTurnAfter(realNow, resolveTurnCronMinute(), gameState.fastMode);
 
   // Turn-init projections (#2166): the full character/state documents are never
   // needed here. The turn path reads only:
@@ -108,6 +99,7 @@ export async function buildTurnExecutionContext(input: {
     gameState,
     config,
     activeIteration,
+    engine,
     newTurn,
     calendarTurn: calTurn,
     currentYear,

@@ -1,5 +1,6 @@
 import type { PrimaryMetricDefinition } from "./catalog";
 import { politicalScoreFromLegacyValue } from "@/lib/politicalMetrics/derive/legacyInversion";
+import { legacyMetricCalibration } from "./rules/metricCalibration";
 
 export type ResetMetricScoreCountry = "US" | "UK" | "JP" | "IE" | "SCO" | "WAL";
 
@@ -24,34 +25,6 @@ function preferredBandScore(
   if (value < preferredLow) return linearScore(value, outerLow, preferredLow);
   return linearScore(value, outerHigh, preferredHigh);
 }
-
-type LegacyAdapter = {
-  category: string;
-  metricId: string;
-  value: (value: number) => number;
-};
-
-const LEGACY_ADAPTERS: Partial<Record<string, LegacyAdapter>> = {
-  "02": { category: "economic", metricId: "medianIncome", value: (value) => value },
-  "12": { category: "education", metricId: "testPerformance", value: (value) => value },
-  "16": {
-    category: "healthcare",
-    metricId: "uninsuredRate",
-    value: (value) => 100 - value,
-  },
-  "18": { category: "healthcare", metricId: "nhsWaitingTime", value: (value) => value },
-  "32": { category: "publicSafety", metricId: "crimeRate", value: (value) => value },
-  "35": {
-    category: "environment",
-    metricId: "airQuality",
-    value: (value) => 100 - value,
-  },
-  "56": {
-    category: "population",
-    metricId: "dependencyRatio",
-    value: (value) => value / 100,
-  },
-};
 
 /**
  * Display-only 0-100 condition normalization for domain summaries.
@@ -82,10 +55,10 @@ export function resetMetricConditionScore(
       return linearScore(value, 100, 0);
   }
 
-  const adapter = LEGACY_ADAPTERS[metric.id];
-  const category = adapter?.category ?? metric.path.split(".")[0];
-  const metricId = adapter?.metricId ?? metric.path.split(".")[1];
+  const adapter = legacyMetricCalibration(metric);
+  const category = adapter.category;
+  const metricId = adapter.id;
   if (!category || !metricId) return null;
-  const adaptedValue = adapter ? adapter.value(value) : value;
+  const adaptedValue = (value - adapter.offset) / adapter.scale;
   return politicalScoreFromLegacyValue(category, metricId, adaptedValue, countryId, year);
 }

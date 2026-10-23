@@ -15,8 +15,12 @@ import { RD_INNOVATION_SCORE_THRESHOLD } from "@/lib/constants/corporations";
 
 // ── Prospecting ──────────────────────────────────────────────────────────────
 
-/** Turns from launch to resolution (12 turns = one game quarter at 48/yr). */
-export const PROSPECT_DURATION_TURNS = 12;
+/**
+ * Turns from launch to resolution (6 turns = half a game quarter at 48/yr).
+ * BALANCE: was 12. Seeded deposits were binding in the busiest oil states while
+ * surveys took 13+ turns at 1991 era scaling, too slow to keep up with demand.
+ */
+export const PROSPECT_DURATION_TURNS = 6;
 
 /** Base survey cost, anchor units, before escalation. */
 export const PROSPECT_BASE_COST_ANCHOR = 500_000;
@@ -49,16 +53,29 @@ export const PROSPECT_YIELD_MAX = 0.08;
 /** Hard cap on a single survey's capacity gain: 20% of current capacity. */
 export const PROSPECT_MAX_GAIN_FRACTION = 0.2;
 
-/** Max active surveys per initiator (corp or government). */
-export const PROSPECT_MAX_ACTIVE_PER_INITIATOR = 3;
+/** Max active surveys per initiator (corp or government). BALANCE: was 3. */
+export const PROSPECT_MAX_ACTIVE_PER_INITIATOR = 6;
 
 /**
- * Corp success chance from rdScore: 0.25 + 0.55 × min(1, rdScore / 200).
- * 25% at rdScore 0 → 80% at the innovation threshold (200) and above.
+ * Corp success chance from rdScore: 0.4 + 0.4 × min(1, rdScore / 200).
+ * 40% at rdScore 0 → 80% at the innovation threshold (200) and above.
+ * BALANCE: the floor was 25%. Live extraction corps sit around rdScore 10-60,
+ * which landed most surveys near 30% and made prospecting a poor bet.
  */
 export function prospectCorpSuccessChance(rdScore: number): number {
-  return 0.25 + 0.55 * Math.min(1, Math.max(0, rdScore) / RD_INNOVATION_SCORE_THRESHOLD);
+  return 0.4 + 0.4 * Math.min(1, Math.max(0, rdScore) / RD_INNOVATION_SCORE_THRESHOLD);
 }
+
+/**
+ * Finder's rights: a corp whose survey strikes new deposits gets a royalty-free
+ * extraction contract covering what it found, for this many turns (two game
+ * years). The share is the found capacity over the state's new capacity, capped
+ * by the contract headroom (GOVT_CONTRACT_MAX_TOTAL_SHARE).
+ */
+export const PROSPECT_FINDER_RIGHTS_TERM_TURNS = 96;
+
+/** Legislature id recorded on finder's-rights contracts. */
+export const PROSPECT_FINDER_RIGHTS_GRANTOR = "prospecting_discovery";
 
 /**
  * Corp yield multiplier from rdScore: 1 + min(1, rdScore / 200).

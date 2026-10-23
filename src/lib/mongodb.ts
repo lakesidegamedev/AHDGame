@@ -1,10 +1,11 @@
 import { prepareManagedMongo } from "@/lib/singleplayer/prepareManagedMongo";
-import { MongoClient, Db } from "mongodb";
+import { MongoClient, Db, type WriteConcernSettings } from "mongodb";
 import { getValidatedEnv } from "@/lib/env";
 import {
   attachMongoCommandMonitor,
   mongoCommandMonitoringWanted,
 } from "@/lib/observability/mongoMonitor";
+import { isTurnWorkerProcess } from "@/lib/turn/turnWorkerHandoff";
 
 declare global {
   var _mongoClientPromise: Promise<MongoClient> | undefined;
@@ -36,6 +37,45 @@ export function resolveMongoDbName(env: MongoDbNameEnv): string {
   return extractMongoDbNameFromUri(env.MONGODB_URI || env.MONGO_URL) ?? DEFAULT_MONGODB_DB_NAME;
 }
 
+export const DEFAULT_MONGODB_SOCKET_TIMEOUT_MS = 60_000;
+const MIN_SOCKET_TIMEOUT_MS = 10_000;
+const MAX_SOCKET_TIMEOUT_MS = 15 * 60_000;
+
+/**
+ * Per-operation socket timeout. 60s suits the web server: a player request should
+ * fail fast rather than hang. Turn phases are different: a single aggregation on
+ * a busy disk can legitimately run past a minute, and with the driver's one read
+ * retry a 60s timeout aborts the phase at ~120s (turn 373's bankingTurn, 2026-10-22).
+ * MONGODB_SOCKET_TIMEOUT_MS lets the turn worker raise it; clamped to 10s-15min.
+ */
+export function resolveMongoSocketTimeoutMs(env: Record<string, string | undefined>): number {
+  const raw = Number(env.MONGODB_SOCKET_TIMEOUT_MS);
+  if (!Number.isFinite(raw) || raw <= 0) return DEFAULT_MONGODB_SOCKET_TIMEOUT_MS;
+  return Math.min(MAX_SOCKET_TIMEOUT_MS, Math.max(MIN_SOCKET_TIMEOUT_MS, Math.round(raw)));
+}
+
+/**
+ * Client write concern. Unset keeps the server default (w:majority, which waits
+ * for the journal fsync on every write). On the production disk that wait is
+ * ~11 ms per write and a turn issues ~30k sequential writes, so it is about a
+ * third of the turn.
+ *
+ * TURN_WRITE_CONCERN=w1 makes the turn worker acknowledge writes once applied,
+ * without waiting for the journal. Mongo is a single node, and its journal
+ * recovers a prefix in log order, so a mongod crash leaves the state an earlier
+ * worker death would have left; turn crash-resume already handles that. Only
+ * the process marked as the turn worker honors it; the web server keeps the
+ * default whatever its environment says. Explicit write concerns (transactions,
+ * index builds) are unaffected.
+ */
+export function resolveMongoWriteConcern(
+  env: Record<string, string | undefined>
+): WriteConcernSettings | undefined {
+  if (env.TURN_WRITE_CONCERN?.trim().toLowerCase() !== "w1") return undefined;
+  if (!isTurnWorkerProcess(env)) return undefined;
+  return { w: 1 };
+}
+
 function getClientPromise(): Promise<MongoClient> {
   const uri =
     process.env.NODE_ENV === "test" ? process.env.MONGODB_URI : getValidatedEnv().MONGODB_URI;
@@ -56,7 +96,9 @@ function getClientPromise(): Promise<MongoClient> {
       minPoolSize: 5, // Keep warm connections alive for Railway proxy (prevents ECONNRESET)
       maxIdleTimeMS: 0, // Never idle-timeout pooled connections; proxy handles its own lifecycle
       serverSelectionTimeoutMS: 10_000, // Fail fast in serverless rather than blocking for 30 s
-      socketTimeoutMS: 60_000, // Prevent individual operations from hanging indefinitely
+      // Prevent individual operations from hanging indefinitely; the turn worker raises it.
+      socketTimeoutMS: resolveMongoSocketTimeoutMs(process.env),
+      writeConcern: resolveMongoWriteConcern(process.env),
       monitorCommands: mongoCommandMonitoringWanted(),
     });
     // Instrument every query (breadcrumbs + slow-query/failure capture) centrally.

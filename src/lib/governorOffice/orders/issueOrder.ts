@@ -1,3 +1,4 @@
+import { clamp } from "@/lib/numeric/rules";
 import type { Db, ObjectId } from "mongodb";
 import { ObjectId as MongoObjectId } from "mongodb";
 import type {
@@ -48,10 +49,6 @@ export interface IssueOrderResult {
     policyOptionIndexAfter?: number;
     expiresAtTurn?: number;
   };
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }
 
 /**

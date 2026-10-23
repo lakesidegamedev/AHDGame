@@ -1,4 +1,5 @@
 import { effectiveInterventionPolicy } from "@/lib/currency/intervention/rules";
+import { buildDefencePreviewContext } from "@/lib/currency/intervention/previewContext";
 import { currentMoneyGrowth } from "@/lib/moneySupply/rules/growthSignal";
 import { ObjectId, type Db } from "mongodb";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
@@ -15,7 +16,7 @@ import {
 import { getEraMonetaryBaseline, getEraTrendGdpGrowth } from "@/lib/constants/monetaryEra";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
-import { getGameState } from "@/lib/gameState";
+import { getGameStateCore } from "@/lib/gameState";
 import { getDb } from "@/lib/mongodb";
 import type {
   CentralBank,
@@ -195,7 +196,7 @@ export async function loadCountryCentralBankDetail(params: {
   }
 
   const [gameState, { bankId, memberCountries, intorgId }] = await Promise.all([
-    getGameState(),
+    getGameStateCore(db),
     getCentralBankScope(db, countryId),
   ]);
   const bank = await db
@@ -786,6 +787,16 @@ export async function loadCountryCentralBankDetail(params: {
             }
           : null,
       intervention: {
+        previewContext:
+          (isPolicyChair || isAdmin) && policyFx
+            ? buildDefencePreviewContext(
+                policyFx,
+                policyBank,
+                rateMap ?? {},
+                currentTurn,
+                gameState?.currentYear
+              )
+            : null,
         fxRegime: policyFx?.fxRegime ?? (interventionPolicy ? "band" : "float"),
         currencyCode: policyCurrency ?? nationalCurrency,
         baseRate: policyFx?.baseRate ?? null,
@@ -794,6 +805,7 @@ export async function loadCountryCentralBankDetail(params: {
           ? {
               floor: interventionPolicy.floor,
               ceiling: interventionPolicy.ceiling,
+              maxSpendPerTurn: interventionPolicy.maxSpendPerTurn,
               setByCharacterName: interventionPolicy.setByCharacterName,
               setAtTurn: interventionPolicy.setAtTurn,
               lastAdjustedAtTurn: interventionPolicy.lastAdjustedAtTurn,

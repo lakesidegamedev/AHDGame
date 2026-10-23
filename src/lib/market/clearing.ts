@@ -153,6 +153,22 @@ export interface ClearingSeller {
    * the lagged-supply normalization below. Absent/false ⇒ normalized as before.
    */
   realUnits?: boolean;
+  /**
+   * Optional contract-reservation basis (plants units) when the open-market
+   * offer must stay on the revenue nameplate — extraction under plants. Does
+   * not set realUnits or replace `units`. Absent ⇒ contracts reserve against
+   * `units` as before.
+   */
+  contractFillUnits?: number;
+}
+
+/** Plants contract-fill basis, else the open-market offer. */
+function sellerContractFillBasis(s: ClearingSeller): number {
+  return typeof s.contractFillUnits === "number" &&
+    Number.isFinite(s.contractFillUnits) &&
+    s.contractFillUnits >= 0
+    ? s.contractFillUnits
+    : Math.max(0, s.units);
 }
 
 /**
@@ -183,7 +199,8 @@ export function clearCommodityMarket(
   demandUnits: number,
   sellers: readonly ClearingSeller[],
   loyaltyById?: ReadonlyMap<string, number>,
-  contractedUnitsById?: ReadonlyMap<string, number>
+  contractedUnitsById?: ReadonlyMap<string, number>,
+  contractedTakeOut?: Map<string, number>
 ): Map<string, number> {
   const result = new Map<string, number>();
   let remaining = Math.max(0, demandUnits);
@@ -200,14 +217,25 @@ export function clearCommodityMarket(
   // ── Contracted pre-pass (private supply agreements) ────────────────────────
   // Runs FIRST: contracted units are guaranteed-sold for the supplier and leave
   // the open market (demand is reduced), before loyalty or cheapest-first.
+  // Extraction under plants may pass `contractFillUnits` above the nameplate
+  // offer: reserve against that plants basis, but never leave nameplate residual
+  // that the larger take already consumed (`max(0, offer − take)`).
   if (contractedUnitsById) {
     for (const s of sellers) {
       const contracted = contractedUnitsById.get(s.id) ?? 0;
       if (contracted <= 0) continue;
-      const take = Math.min(contracted, offerUnits.get(s.id) ?? 0);
+      const offered = offerUnits.get(s.id) ?? 0;
+      const fillBasis =
+        typeof s.contractFillUnits === "number" &&
+        Number.isFinite(s.contractFillUnits) &&
+        s.contractFillUnits >= 0
+          ? s.contractFillUnits
+          : offered;
+      const take = Math.min(contracted, fillBasis);
       if (take <= 0) continue;
       filledUnits.set(s.id, (filledUnits.get(s.id) ?? 0) + take);
-      offerUnits.set(s.id, (offerUnits.get(s.id) ?? 0) - take);
+      offerUnits.set(s.id, Math.max(0, offered - take));
+      contractedTakeOut?.set(s.id, take);
       remaining -= take;
     }
     remaining = Math.max(0, remaining);
@@ -343,6 +371,12 @@ export interface SectorClearingInput {
    * the legacy revenue-derived offer.
    */
   producedUnits?: number | null;
+  /**
+   * Plants contract-fill basis for sectors that must keep a nameplate clearing
+   * offer (extraction). Same scale chain as `producedUnits` would use; never
+   * sets `realUnits`. Absent ⇒ contracts use the offered units.
+   */
+  contractFillUnits?: number | null;
   /** Share of advertising output available to its audience, default 1. */
   editorialAdvertisingAvailability?: number;
 }
@@ -592,6 +626,12 @@ export function computeClearingFactors(args: {
    */
   plantsEnabled?: boolean;
   /**
+   * Control-group root per corporation. When present, the dumping guard sums a
+   * firm's sold units over its whole control group, so splitting output across
+   * subsidiaries does not dodge it. Omitted ⇒ each corporation on its own.
+   */
+  controlRootByCorpId?: ReadonlyMap<string, string>;
+  /**
    * Market partition (era worlds, marketPartition): sectorId → market-group key
    * (the seller's home country). Together with `balancesByGroup`, each
    * commodity clears one book PER GROUP against that group's reachable
@@ -743,6 +783,14 @@ export function computeClearingFactors(args: {
       const availability = editorialAvailability * productAvailability;
       const placement = s.offerPlacementByCommodity?.[commodity] ?? 1;
       const units = physicalUnits * availability * placement;
+      // Extraction contract-fill: same availability/placement/mix as a plants
+      // offer would use, without replacing the nameplate `units` or setting realUnits.
+      const contractFillPhysical =
+        typeof s.contractFillUnits === "number" && s.contractFillUnits >= 0
+          ? s.contractFillUnits * mixWeight(s.supplyRates, basePrices, commodity)
+          : null;
+      const contractFillUnits =
+        contractFillPhysical != null ? contractFillPhysical * availability * placement : undefined;
       if (
         units <= 0 &&
         !Number.isFinite(s.offerAvailabilityByCommodity?.[commodity]) &&
@@ -760,6 +808,7 @@ export function computeClearingFactors(args: {
           availability,
           posture,
           realUnits: plantsUnits != null,
+          ...(contractFillUnits != null ? { contractFillUnits } : {}),
           ...(s.inputCostIndex !== undefined
             ? {
                 quotedPosture:
@@ -788,16 +837,19 @@ export function computeClearingFactors(args: {
     for (const [commodity, sellers] of sellersByCommodity) {
       const worldSupply = balances.get(commodity)?.supply ?? 0;
       if (!(worldSupply > 0)) continue;
+      const guardKey = (corpId: string): string => args.controlRootByCorpId?.get(corpId) ?? corpId;
       const soldByCorp = new Map<string, number>();
       for (const seller of sellers) {
         const source = sourceBySector.get(seller.id);
         if (!source?.corporationId) continue;
         const sold = seller.units * (source.lastSoldFraction ?? 1);
-        soldByCorp.set(source.corporationId, (soldByCorp.get(source.corporationId) ?? 0) + sold);
+        const key = guardKey(source.corporationId);
+        soldByCorp.set(key, (soldByCorp.get(key) ?? 0) + sold);
       }
       for (const seller of sellers) {
         const corpId = sourceBySector.get(seller.id)?.corporationId;
-        if (!corpId || !isDumpingGuarded(soldByCorp.get(corpId) ?? 0, worldSupply)) continue;
+        if (!corpId || !isDumpingGuarded(soldByCorp.get(guardKey(corpId)) ?? 0, worldSupply))
+          continue;
         seller.posture = guardedPricingPosture(seller.posture, true);
         if (seller.quotedPosture !== undefined) {
           seller.quotedPosture = guardedPricingPosture(seller.quotedPosture, true);
@@ -897,13 +949,14 @@ export function computeClearingFactors(args: {
       for (const s of sellers) {
         const corpId = args.sectorCorpId.get(s.id);
         if (!corpId) continue;
-        corpUnitsTotal.set(corpId, (corpUnitsTotal.get(corpId) ?? 0) + s.units);
+        corpUnitsTotal.set(corpId, (corpUnitsTotal.get(corpId) ?? 0) + sellerContractFillBasis(s));
       }
     }
 
     const sold = new Map<string, number>();
     const contractedCorpBySector = new Map<string, string>();
     const contractedShareBySector = new Map<string, number>();
+    const contractedTakeBySector = new Map<string, number>();
     // Which reservation(s) a sector's contracted share came from, so the
     // settlement sink can credit a state contract and a corporation-wide one
     // separately. Shares sum to `contractedShareBySector`.
@@ -945,7 +998,7 @@ export function computeClearingFactors(args: {
           const corpId = args.sectorCorpId.get(s.id);
           if (!corpId) continue;
           const e = unitsByCorp.get(corpId) ?? { total: 0, sellers: [] };
-          e.total += s.units;
+          e.total += sellerContractFillBasis(s);
           e.sellers.push(s);
           unitsByCorp.set(corpId, e);
         }
@@ -962,17 +1015,18 @@ export function computeClearingFactors(args: {
           // Both reservations shrink together when the book cannot cover them.
           const fillRatio = take / contracted;
           for (const s of e.sellers) {
-            const sectorShare = (take * s.units) / e.total;
+            const basis = sellerContractFillBasis(s);
+            const sectorShare = (take * basis) / e.total;
             contractedUnitsById.set(s.id, sectorShare);
             contractedCorpBySector.set(s.id, corpId);
             contractedShareBySector.set(s.id, sectorShare);
             const keys: Array<{ key: string; share: number }> = [];
             if (wide > 0)
-              keys.push({ key: commodity, share: (wide * fillRatio * s.units) / e.total });
+              keys.push({ key: commodity, share: (wide * fillRatio * basis) / e.total });
             if (stateContracted > 0 && stateKey != null) {
               keys.push({
                 key: stateKey,
-                share: (stateContracted * fillRatio * s.units) / e.total,
+                share: (stateContracted * fillRatio * basis) / e.total,
               });
             }
             contractedKeysBySector.set(s.id, keys);
@@ -1171,7 +1225,8 @@ export function computeClearingFactors(args: {
           units: Math.max(0, s.units - (groupReserved.get(s.id) ?? 0)),
         })),
         loyaltyBySectorId,
-        internalReservations ?? contractedUnitsById
+        internalReservations ?? contractedUnitsById,
+        contractedTakeBySector
       );
       for (const seller of groupSellers) {
         const reserved = groupReserved.get(seller.id) ?? 0;
@@ -1217,6 +1272,10 @@ export function computeClearingFactors(args: {
         const after = seller.units > 0 ? units / seller.units : 0;
         sold.set(seller.id, after);
         if (before - after > 0) blocked.set(seller.id, before - after);
+        // Contract take was recorded before this law trimmed delivery. Cap it
+        // so settlement cannot credit units the ownership law excluded.
+        const take = contractedTakeBySector.get(seller.id);
+        if (take != null) contractedTakeBySector.set(seller.id, Math.min(take, units));
       }
       regulationBlockedByCommodityBySector.set(commodity, blocked);
     }
@@ -1263,7 +1322,13 @@ export function computeClearingFactors(args: {
         if (!corpId) continue;
         const seller = sellers.find((x) => x.id === sectorId);
         const filledFraction = sold.get(sectorId) ?? 0;
-        const filledUnits = seller ? Math.min(contractedShare, filledFraction * seller.units) : 0;
+        const recordedTake = contractedTakeBySector.get(sectorId);
+        const filledUnits = seller
+          ? Math.min(
+              contractedShare,
+              recordedTake != null ? recordedTake : filledFraction * seller.units
+            )
+          : 0;
         if (filledUnits <= 0) continue;
         const byKey = args.contractSettlementOut.get(corpId) ?? new Map<string, number>();
         // Credit each reservation its share of what actually filled.

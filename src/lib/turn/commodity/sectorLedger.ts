@@ -261,7 +261,8 @@ export function buildExtractionRevenueInputs(
   turn: number,
   ledgerBasePrices: Record<CommodityType, number>,
   extractionOutputScaleEnabled: boolean,
-  realizedFractionBySectorId: Map<string, number>
+  realizedFractionBySectorId: Map<string, number>,
+  plantsEnabled = false
 ): ExtractionSectorInput[] {
   return extractionSectors.map((sector) => {
     const hasStrategy = sector.strategyId && sector.strategyId !== "standard";
@@ -277,19 +278,6 @@ export function buildExtractionRevenueInputs(
             sector.mediaDiscriminator
           )
         : null;
-
-    const revenueBasedOutput: Partial<Record<ExtractableResource, number>> = {};
-    for (const resource of EXTRACTABLE_RESOURCES) {
-      const rate = strategyRates
-        ? (strategyRates.supply[resource] ?? 0)
-        : ((SECTOR_SUPPLY["extraction"] ?? []).find((f) => f.commodity === resource)?.rate ?? 0);
-      if (rate > 0) {
-        // Same scale applied to the S/D accumulation, so the capacity haircut
-        // is computed against the boosted output (fills idle deposit capacity).
-        const scale = extractionOutputScaleFor(resource, extractionOutputScaleEnabled);
-        revenueBasedOutput[resource] = (sector.revenue * rate * scale) / ledgerBasePrices[resource];
-      }
-    }
 
     // sectorId -> realized/nameplate output units, for the depletion booking.
     // Nameplate here is `impliedOutputUnits(revenue)` — the SAME quantity
@@ -319,12 +307,55 @@ export function buildExtractionRevenueInputs(
       }
     }
 
+    // Plants with a realized measurement: nameplate x fraction is already the
+    // real tonnage, so the output scale does not apply to it.
+    const realized = plantsEnabled && realizedFractionBySectorId.has(sector.sectorId!);
+    const revenueBasedOutput: Partial<Record<ExtractableResource, number>> = {};
+    for (const resource of EXTRACTABLE_RESOURCES) {
+      const rate = strategyRates
+        ? (strategyRates.supply[resource] ?? 0)
+        : ((SECTOR_SUPPLY["extraction"] ?? []).find((f) => f.commodity === resource)?.rate ?? 0);
+      if (rate > 0) {
+        // Same scale applied to the S/D accumulation, so the capacity haircut
+        // is computed against the boosted output (fills idle deposit capacity).
+        const scale = realized
+          ? 1
+          : extractionOutputScaleFor(resource, extractionOutputScaleEnabled);
+        revenueBasedOutput[resource] = (sector.revenue * rate * scale) / ledgerBasePrices[resource];
+      }
+    }
+
     return {
       sectorId: sector.sectorId!,
       stateId: sector.stateId,
       corporationId: sector.corporationId,
       revenueBasedOutput,
     };
+  });
+}
+
+/**
+ * Plants only (#4503): share the deposit by what each mine actually dug, not by
+ * its nameplate. The cap is nameplate x the same realized fraction depletion
+ * and the supply leg apply, so with the multiplier read as the fraction of
+ * that capped desire granted, both book exactly the granted units. Sectors
+ * without a realized measurement stay uncapped.
+ */
+export function withRealizedOutputCaps(
+  inputs: ExtractionSectorInput[],
+  realizedFractionBySectorId: ReadonlyMap<string, number>
+): ExtractionSectorInput[] {
+  return inputs.map((input) => {
+    const fraction = realizedFractionBySectorId.get(input.sectorId);
+    if (typeof fraction !== "number") return input;
+    const plantOutputCap: ExtractionSectorInput["revenueBasedOutput"] = {};
+    for (const [resource, units] of Object.entries(input.revenueBasedOutput) as [
+      ExtractableResource,
+      number,
+    ][]) {
+      plantOutputCap[resource] = units * fraction;
+    }
+    return { ...input, plantOutputCap };
   });
 }
 

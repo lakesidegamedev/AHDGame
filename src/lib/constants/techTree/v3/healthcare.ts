@@ -13,7 +13,7 @@ export const HEALTHCARE_V3: V3LaneContent = {
       name: "Private Room Services",
       description:
         "Private rooms and attending physicians earn premium rates from paying patients.",
-      effects: [{ kind: "priceRealization", pct: 0.012 }],
+      effects: [{ kind: "plantOutput", pct: 0.012 }],
     },
     {
       name: "Civil Defense Designation",
@@ -33,7 +33,7 @@ export const HEALTHCARE_V3: V3LaneContent = {
       description:
         "Dedicated convalescent wings for officers and executives bill at the top of the rate card.",
       effects: [
-        { kind: "priceRealization", pct: 0.022 },
+        { kind: "plantOutput", pct: 0.022 },
         { kind: "marketingStrength", flat: 25 },
       ],
     },
@@ -61,7 +61,7 @@ export const HEALTHCARE_V3: V3LaneContent = {
       name: "Specialist Referral Prestige",
       description: "Named specialists draw referrals that pay well above general ward rates.",
       effects: [
-        { kind: "priceRealization", pct: 0.012 },
+        { kind: "plantOutput", pct: 0.012 },
         { kind: "marketingStrength", flat: 12 },
       ],
     },
@@ -84,7 +84,7 @@ export const HEALTHCARE_V3: V3LaneContent = {
       description:
         "A flagship center with a national reputation lifts rates across the whole network.",
       effects: [
-        { kind: "priceRealization", pct: 0.023 },
+        { kind: "plantOutput", pct: 0.023 },
         { kind: "marketingStrength", flat: 27 },
       ],
     },
@@ -111,7 +111,7 @@ export const HEALTHCARE_V3: V3LaneContent = {
     {
       name: "Cardiac Program Reputation",
       description: "A famous cardiac program justifies premium billing across the hospital.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Medicare Certification Drive",
@@ -133,7 +133,7 @@ export const HEALTHCARE_V3: V3LaneContent = {
       description:
         "University affiliation brings residents, research money, and top-of-market rates.",
       effects: [
-        { kind: "priceRealization", pct: 0.024 },
+        { kind: "plantOutput", pct: 0.024 },
         { kind: "outputRate", commodity: "healthcare_services", pct: 0.06 },
       ],
     },
@@ -157,8 +157,8 @@ export const HEALTHCARE_V3: V3LaneContent = {
       name: "Executive Physical Programs",
       description: "Corporate physical packages sell preventive care at concierge prices.",
       effects: [
-        { kind: "priceRealization", pct: 0.013 },
-        { kind: "marginBonus", pp: 0.5 },
+        { kind: "plantOutput", pct: 0.013 },
+        { kind: "laborCostReduction", pct: 0.02 },
       ],
     },
     {
@@ -179,7 +179,7 @@ export const HEALTHCARE_V3: V3LaneContent = {
       description:
         "Transplant and trauma programs make the system the referral of last resort at premium rates.",
       effects: [
-        { kind: "priceRealization", pct: 0.026 },
+        { kind: "plantOutput", pct: 0.026 },
         { kind: "marketingStrength", flat: 26 },
       ],
     },
@@ -205,7 +205,7 @@ export const HEALTHCARE_V3: V3LaneContent = {
       name: "Birthing Suite Marketing",
       description: "Hotel-style birthing suites win choosy families who pay full private rates.",
       effects: [
-        { kind: "priceRealization", pct: 0.012 },
+        { kind: "plantOutput", pct: 0.012 },
         { kind: "marketingStrength", flat: 13 },
       ],
     },
@@ -226,8 +226,8 @@ export const HEALTHCARE_V3: V3LaneContent = {
       name: "Centers of Excellence Billing",
       description: "Named centers of excellence negotiate carve-out rates payers accept.",
       effects: [
-        { kind: "priceRealization", pct: 0.025 },
-        { kind: "marginBonus", pp: 0.8 },
+        { kind: "plantOutput", pct: 0.025 },
+        { kind: "laborCostReduction", pct: 0.032 },
       ],
     },
     {
@@ -251,7 +251,7 @@ export const HEALTHCARE_V3: V3LaneContent = {
     {
       name: "Preferred Network Contracts",
       description: "Exclusive insurer contracts trade volume for rates that still beat the market.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Community Benefit Reporting",
@@ -271,7 +271,7 @@ export const HEALTHCARE_V3: V3LaneContent = {
       name: "Destination Specialty Institutes",
       description: "Patients fly in for named institutes, and payers meet the price to send them.",
       effects: [
-        { kind: "priceRealization", pct: 0.027 },
+        { kind: "plantOutput", pct: 0.027 },
         { kind: "marketingStrength", flat: 30 },
       ],
     },
@@ -294,7 +294,7 @@ export const HEALTHCARE_V3: V3LaneContent = {
       name: "Quality Scorecard Publicity",
       description: "Published outcome scorecards win contracts at rates quality justifies.",
       effects: [
-        { kind: "priceRealization", pct: 0.013 },
+        { kind: "plantOutput", pct: 0.013 },
         { kind: "marketingStrength", flat: 14 },
       ],
     },
@@ -317,8 +317,8 @@ export const HEALTHCARE_V3: V3LaneContent = {
       description:
         "Retainer-based practices bill affluent patients directly at rates insurers never pay.",
       effects: [
-        { kind: "priceRealization", pct: 0.028 },
-        { kind: "marginBonus", pp: 0.9 },
+        { kind: "plantOutput", pct: 0.028 },
+        { kind: "laborCostReduction", pct: 0.036 },
       ],
     },
     {
@@ -342,7 +342,7 @@ export const HEALTHCARE_V3: V3LaneContent = {
     {
       name: "Patient Experience Ratings",
       description: "Top satisfaction scores feed pay-for-performance bonuses and pricing leverage.",
-      effects: [{ kind: "priceRealization", pct: 0.013 }],
+      effects: [{ kind: "plantOutput", pct: 0.013 }],
     },
     {
       name: "Accountable Care Contracts",
@@ -363,7 +363,7 @@ export const HEALTHCARE_V3: V3LaneContent = {
       description:
         "Flagship equipment suites attract self-pay and premium-plan patients nationwide.",
       effects: [
-        { kind: "priceRealization", pct: 0.026 },
+        { kind: "plantOutput", pct: 0.026 },
         { kind: "marketingStrength", flat: 28 },
       ],
     },
@@ -390,8 +390,8 @@ export const HEALTHCARE_V3: V3LaneContent = {
       name: "Genomic Screening Packages",
       description: "Cash-pay genomic screening sells prevention to patients at software margins.",
       effects: [
-        { kind: "priceRealization", pct: 0.014 },
-        { kind: "marginBonus", pp: 0.5 },
+        { kind: "plantOutput", pct: 0.014 },
+        { kind: "laborCostReduction", pct: 0.02 },
       ],
     },
     {
@@ -412,7 +412,7 @@ export const HEALTHCARE_V3: V3LaneContent = {
       description:
         "Matched-therapy cancer programs command the highest negotiated rates in medicine.",
       effects: [
-        { kind: "priceRealization", pct: 0.028 },
+        { kind: "plantOutput", pct: 0.028 },
         { kind: "inputCost", commodity: "pharmaceuticals", pct: 0.1 },
       ],
     },
@@ -437,7 +437,7 @@ export const HEALTHCARE_V3: V3LaneContent = {
       name: "Longevity Clinic Memberships",
       description: "Subscription longevity programs bill healthy patients year after year.",
       effects: [
-        { kind: "priceRealization", pct: 0.015 },
+        { kind: "plantOutput", pct: 0.015 },
         { kind: "marketingStrength", flat: 15 },
       ],
     },
@@ -459,7 +459,7 @@ export const HEALTHCARE_V3: V3LaneContent = {
       name: "Curative Therapy Center",
       description: "One-time curative treatments price against a lifetime of avoided care.",
       effects: [
-        { kind: "priceRealization", pct: 0.03 },
+        { kind: "plantOutput", pct: 0.03 },
         { kind: "outputRate", commodity: "healthcare_services", pct: 0.06 },
       ],
     },

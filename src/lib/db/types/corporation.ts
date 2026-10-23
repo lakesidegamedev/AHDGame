@@ -218,7 +218,61 @@ export interface CorporationAutopilot {
   notifiedTurn?: Partial<Record<CorpAutopilotAdvisoryKind, number>>;
 }
 
+/** Moves an NPP operator can make for a corporation. */
+export type CorpOperatorAction =
+  "found" | "grow" | "divest" | "retool" | "borrow" | "budgets" | "dividends" | "research";
+
+/** `ask` records an advisory for the owner instead of acting, where one exists. */
+export type CorpOperatorPermission = "allow" | "ask" | "never";
+
+/**
+ * Owner-set limits on what an NPP operator (autopilot, caretaker or an NPP CEO
+ * of a subsidiary) may do. Absent keeps each role's default behavior exactly.
+ */
+export interface CorporationOperatorPolicy {
+  /** Per-action overrides; an action left out keeps its role default. */
+  actions?: Partial<Record<CorpOperatorAction, CorpOperatorPermission>>;
+  /** Operating sector types the operator may found or grow in; absent means any. */
+  sectorTypes?: string[];
+  /** Countries the operator may found or grow in; absent means any. */
+  countryIds?: string[];
+  /**
+   * Standing answer to an NPP CEO's pay demand when nobody responds in time:
+   * accept a raise costing up to this share of trailing profit, else replace
+   * the CEO. Absent means the default (3%).
+   */
+  ceoPayAutoAcceptShare?: number;
+  setTurn: number;
+}
+
+/** NPP CEO career and pay state for a corporation run by an NPP CEO. */
+export interface CorporationCeoPay {
+  /** The NPP this state belongs to; a different ceoId restarts the schedule. */
+  ceoId: string;
+  appointedTurn: number;
+  nextReviewTurn: number;
+  /** CEO level at the last review (1 to 10); drives the overhead discount. */
+  level?: number;
+  /** Open pay demand awaiting the owner, in the company's currency per day. */
+  demand?: {
+    amount: number;
+    turn: number;
+    expiresTurn: number;
+    level: number;
+    trailingProfit: number;
+  };
+  /** Last resolved review, for the company page. */
+  lastDecision?: {
+    turn: number;
+    outcome: "accepted" | "countered" | "replaced";
+    salary?: number;
+    bySystem: boolean;
+  };
+}
+
 export interface Corporation {
+  /** Unified producer market (#4322): creditor claims, written only once the new market settles. */
+  producerPayables?: import("./producerEconomy").ProducerPayablesState;
   /** Frozen migration fallback for unrecorded legacy personal cost basis. */
   stockHoldingRolloutAnchorPrice?: number;
   stockHoldingRolloutTurn?: number;
@@ -582,6 +636,11 @@ export interface Corporation {
   lastShareStructureTurn?: number | null;
   /** Split escalation level, MS cost per split is 2^splitEscalation. Decays by 1 each turn. */
   splitEscalation?: number;
+  /**
+   * Management overhead (margin points) applied last turn, on the control-group
+   * basis when gameConfig.groupSizeCostsStage is on. Written by the turn.
+   */
+  managementOverheadPp?: number;
   /** Whether the CEO position is currently vacant (resigned or no CEO accepted yet) */
   ceoVacant?: boolean;
   /** Turn when the CEO position became vacant (for display in admin UI) */
@@ -658,6 +717,39 @@ export interface Corporation {
    * `advisories` for the owner. Absent means the player runs the corp.
    */
   autopilot?: CorporationAutopilot;
+  /** Owner limits on the NPP operator running this corporation. */
+  operatorPolicy?: CorporationOperatorPolicy;
+  /** Banked tax losses offsetting up to 80% of later taxable profit (anchor). */
+  taxLossCarryforward?: import("@/lib/corporations/rules/lossCarryforward").LossCarryforwardState;
+  /** NPP CEO career and pay demands (only while ceoType is "npp"). */
+  ceoPay?: CorporationCeoPay;
+  /**
+   * A Subsidiary Limits or Foreign Investment Act order against this company:
+   * its controlling group must give up control by `dueTurn`, or the excess
+   * stake is sold at book value into the equity market. Cleared when cured.
+   */
+  /**
+   * An open Competition Act breakup case against this group root (levels 3
+   * and 4). The competition authority orders a breakup or dismisses it by
+   * `decideByTurn`; undecided cases resolve on the measured share then.
+   */
+  antitrustCase?: {
+    countryId: string;
+    sectorType: string;
+    sharePercent: number;
+    thresholdPercent: number;
+    openedTurn: number;
+    decideByTurn: number;
+    decision?: "order" | "dismiss";
+    decidedTurn?: number;
+  };
+  antitrustDivestiture?: {
+    reason: "subsidiaryCap" | "foreignBan" | "foreignShareCap";
+    countryId: string;
+    rootCorporationId: string;
+    sinceTurn: number;
+    dueTurn: number;
+  };
   /** Country owner for state-owned / nationalized corporations */
   countryOwnerId?: CountryId;
   /** Hide the corporation from stock-exchange style equity listings */
@@ -998,6 +1090,35 @@ export interface SectorBuildOrder {
 }
 
 export interface CorporateSector {
+  /** Unified producer market (#4322): written only once the new market settles a turn. */
+  producerSettlement?: import("./producerEconomy").ProducerSectorSettlement;
+  /**
+   * Funded-market cutover transition package: the classification frozen into
+   * the reviewed opening plan. Written once by applyProducerOpening, never after.
+   */
+  cutoverTransition?: import("@/lib/market/producerMarket/transitionRules").SectorTransition;
+  /**
+   * Last turn capacity of this sector was retired for persistently selling
+   * nothing: book value written off and the decommissioning grant paid from
+   * unspent public funding (anchor units).
+   */
+  lastDecommission?: { turn: number; retiredBookAnchor: number; grantAnchor: number };
+  /** Lost money or sold nothing on a funded turn inside the window; gets the transition relief. */
+  cutoverStruggling?: import("@/lib/market/producerMarket/transitionRules").CutoverStruggling;
+  /** Turn the owner used the transition package's free conversion; ends floor support. */
+  cutoverConvertedAtTurn?: number;
+  /** Funded market: consecutive settled turns this sector sold nothing. */
+  producerZeroSalesTurns?: number;
+  /** Physical opening generation, advanced atomically with the operating receipt. */
+  producerCapacity?: import("./producerEconomy").ProducerGenerationStamp;
+  producerInventory?: import("./producerEconomy").ProducerInventoryState;
+  /** Per-product asking policies. Fixed unit prices are anchor money, never revenue multipliers. */
+  producerQuotes?: Partial<
+    Record<
+      import("../../constants/commodities").CommodityType,
+      import("@/lib/market/producerMarket/rules").ProducerQuotePolicy
+    >
+  >;
   _id: ObjectId;
   /** Recoverable defence award or factory-allocation operation holding this plant. */
   contractMutationOwner?: string;
@@ -1176,6 +1297,14 @@ export interface CorporateSector {
    * stored margin showed min == max for an entire run.
    */
   effectiveProfitMargin?: number;
+  /** Logistical sprawl margin (pp, negative) the turn applied to this sector last turn. */
+  sprawlMarginPp?: number;
+  /**
+   * Dominance margin penalty (pp, negative) the turn applied to this sector last
+   * turn, after the plants fade, tech shield and any running-cost scale. The
+   * sector page shows it instead of re-deriving it from the share.
+   */
+  dominanceMarginPenaltyPp?: number;
   /**
    * Labour system telemetry: most recent per-turn labor cost written when
    * labourSystemMode ≥ "wages" (home currency, daily basis like `revenue`).
@@ -1544,6 +1673,10 @@ export interface CorporateSector {
     inventoryRevenue: number;
     /** Inventory carrying cost inside `totalCost`. */
     inventoryCarry: number;
+    /** Funded market: inputs in output that went to stock unsold this turn, at cost (reported beside profit). */
+    stockAddedAtCost?: number;
+    /** Funded market: transition floor support received this turn (reported beside profit). */
+    transitionSupport?: number;
     inputs: number;
     labour: number;
     upkeep: number;
@@ -1669,6 +1802,11 @@ export interface CorporateSector {
    * opex-anchor heal.
    */
   retoolRescaleApplied?: boolean;
+  /**
+   * Set once the entertainment commodity removal rescaled this sector's owned
+   * units onto the advertising basis (migrateEntertainmentRemoval).
+   */
+  entertainmentRemovalRescaleApplied?: boolean;
   /** Turn after which a new strategy change is allowed (transition end + cooldown) */
   transitionCooldownUntilTurn?: number | null;
   /** Turn the extraction auto-strategy phase adopted a focused mining strategy here (audit trail). */

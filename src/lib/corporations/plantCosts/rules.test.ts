@@ -1,14 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { PLANT_OVERHEAD_FIXED_SHARE, computePlantOverhead, plantLaborShare } from "./rules";
+import {
+  PLANT_OVERHEAD_FIXED_SHARE,
+  computePlantOverhead,
+  plantLaborShare,
+  LOW_USE_COLD_UPKEEP_FRACTION,
+  standingProducerSiteBill,
+} from "./rules";
 import { getSectorLaborShare } from "@/lib/labour/laborCost";
 
 describe("explicit production-method payroll", () => {
   const args = { sectorType: "technology", strategyId: "hardware", currentTurn: 100, year: 1991 };
 
   it.each([
-    [1953, 0.375],
-    [1991, 0.33],
-    [2027, 0.3],
+    [1953, 0.328125],
+    [1991, 0.28875],
+    [2027, 0.2625],
   ])("restores hardware intensity in %s", (year, expected) => {
     expect(plantLaborShare({ ...args, year })).toBeCloseTo(expected, 12);
   });
@@ -30,14 +36,14 @@ describe("explicit production-method payroll", () => {
   });
 
   it.each([
-    ["software", "hardware", 100, 0.44],
-    ["software", "hardware", 106, 0.385],
-    ["software", "hardware", 112, 0.33],
-    ["hardware", "software", 100, 0.33],
-    ["hardware", "software", 106, 0.385],
-    ["hardware", "software", 112, 0.44],
-    ["hardware", "software", 99, 0.33],
-    ["hardware", "software", 113, 0.44],
+    ["software", "hardware", 100, 0.385],
+    ["software", "hardware", 106, 0.336875],
+    ["software", "hardware", 112, 0.28875],
+    ["hardware", "software", 100, 0.28875],
+    ["hardware", "software", 106, 0.336875],
+    ["hardware", "software", 112, 0.385],
+    ["hardware", "software", 99, 0.28875],
+    ["hardware", "software", 113, 0.385],
   ])(
     "blends %s to %s at turn %s",
     (transitionFromStrategyId, strategyId, currentTurn, expected) => {
@@ -54,8 +60,8 @@ describe("explicit production-method payroll", () => {
   );
 
   it("uses the target when transition metadata is incomplete", () => {
-    expect(plantLaborShare({ ...args, transitionFromStrategyId: "software" })).toBeCloseTo(0.33);
-    expect(plantLaborShare({ ...args, transitionStartTurn: 99 })).toBeCloseTo(0.33);
+    expect(plantLaborShare({ ...args, transitionFromStrategyId: "software" })).toBeCloseTo(0.28875);
+    expect(plantLaborShare({ ...args, transitionStartTurn: 99 })).toBeCloseTo(0.28875);
   });
 });
 
@@ -100,5 +106,39 @@ describe("explicit plant overhead", () => {
       expect(computePlantOverhead({ ...base, producedUnits: bad })).toBe(0);
     }
     expect(computePlantOverhead({ ...base, mothballed: true })).toBe(0);
+  });
+});
+
+describe("transition window upkeep waiver", () => {
+  it("charges no cold upkeep on idle capacity when waived", () => {
+    const base = { nominalHourlyCapacityValue: 100, activeFraction: 0, financialPenaltyPercent: 0 };
+    expect(standingProducerSiteBill(base)).toBeGreaterThan(0);
+    expect(standingProducerSiteBill({ ...base, coldUpkeepWaived: true })).toBe(0);
+    expect(standingProducerSiteBill({ ...base, activeFraction: 1, coldUpkeepWaived: true })).toBe(
+      standingProducerSiteBill({ ...base, activeFraction: 1 })
+    );
+  });
+});
+
+describe("low-use cold upkeep", () => {
+  const base = { nominalHourlyCapacityValue: 100, activeFraction: 0, financialPenaltyPercent: 0 };
+
+  it("cuts the bill on parked capacity to a tenth", () => {
+    const normal = standingProducerSiteBill(base);
+    const low = standingProducerSiteBill({
+      ...base,
+      coldShareOverride: LOW_USE_COLD_UPKEEP_FRACTION,
+    });
+    expect(low).toBeGreaterThan(0);
+    expect(low / normal).toBeCloseTo(0.1, 10);
+  });
+
+  it("never raises the cold share above the normal rate and leaves a running plant alone", () => {
+    expect(standingProducerSiteBill({ ...base, coldShareOverride: 5 })).toBe(
+      standingProducerSiteBill(base)
+    );
+    expect(standingProducerSiteBill({ ...base, activeFraction: 1, coldShareOverride: 0.001 })).toBe(
+      standingProducerSiteBill({ ...base, activeFraction: 1 })
+    );
   });
 });

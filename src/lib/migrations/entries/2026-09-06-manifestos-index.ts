@@ -1,12 +1,5 @@
-import type { CreateIndexesOptions, Db, IndexSpecification } from "mongodb";
-import type { Migration, MigrationResult } from "../types";
-
-type IndexPlan = {
-  collection: string;
-  keys: IndexSpecification;
-  options: CreateIndexesOptions & { name: string };
-};
-
+import { createPlannedIndexes, type IndexPlan } from "../indexPlans";
+import type { Migration } from "../types";
 const INDEXES: IndexPlan[] = [
   {
     // `manifestos` shipped with no index beyond _id. Every read is on this
@@ -21,31 +14,10 @@ const INDEXES: IndexPlan[] = [
   },
 ];
 
-async function createPlannedIndexes(db: Db, dryRun: boolean): Promise<MigrationResult> {
-  const notes: string[] = [];
-
-  for (const plan of INDEXES) {
-    const label = `${plan.collection}.${plan.options.name}`;
-    if (dryRun) {
-      notes.push(`would create ${label}`);
-      continue;
-    }
-
-    await db.collection(plan.collection).createIndex(plan.keys, plan.options);
-    notes.push(`created/verified ${label}`);
-  }
-
-  return {
-    documentsScanned: INDEXES.length,
-    documentsUpdated: dryRun ? 0 : INDEXES.length,
-    notes,
-  };
-}
-
 export const migration: Migration = {
   id: "2026-09-06-manifestos-index",
   description:
     "Compound manifestos index (countryId, electionId, party) — the collection had only _id, so every manifesto read on the elections page was a collection scan.",
   idempotent: true,
-  execute: async (db, ctx) => createPlannedIndexes(db, ctx.dryRun),
+  execute: async (db, ctx) => createPlannedIndexes(db, ctx.dryRun, INDEXES),
 };

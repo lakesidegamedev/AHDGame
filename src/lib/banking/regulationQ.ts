@@ -1,3 +1,4 @@
+import { clampWithUpperPriority as clamp } from "@/lib/numeric/rules";
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { BankCharter } from "@/lib/db/types/bank";
@@ -91,10 +92,6 @@ export async function getRateCorridors(db: Db, countryId: CountryId): Promise<Ra
     lending:
       law?.lendingCorridor ?? (historical ? HISTORICAL_LENDING_CORRIDOR : MODERN_LENDING_CORRIDOR),
   };
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }
 
 /**

@@ -27,6 +27,7 @@ function makeNode(overrides: Record<string, unknown> = {}) {
     cost: 8,
     cashCost: 0,
     effects: [{ category: "growth", label: "+1% growth" }],
+    inputEfficiencyContributionPct: null,
     unlocksStrategy: null,
     owned: false,
     autoGranted: false,
@@ -60,6 +61,8 @@ function responseWithTree(
     redacted: false,
     rdScore: 10,
     liquidCapital: 1_000_000,
+    inputEfficiencyPct: 0,
+    inputEfficiencyCapPct: 30,
     cashPricing: {
       dailyGrossOperatingScale: 2_635_025_294,
       defaultRevenueFraction: 0.15,
@@ -204,6 +207,52 @@ describe("TechTab cash pricing", () => {
   });
 });
 
+describe("TechTab input efficiency cap warnings", () => {
+  async function renderWithEfficiency(current: number, contribution: number, mixed = false) {
+    const tree = responseWithTree();
+    tree.inputEfficiencyPct = current;
+    tree.inputEfficiencyCapPct = 30;
+    Object.assign(tree.decades[1].lanes.generic[0], {
+      inputEfficiencyContributionPct: contribution,
+      effects: mixed
+        ? [
+            { category: "input", label: "−12% plant inputs" },
+            { category: "growth", label: "−3% growth costs" },
+          ]
+        : [{ category: "input", label: "−12% plant inputs" }],
+    });
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => tree } as Response);
+    renderTechTab();
+    return screen.findByRole("heading", { name: "Corporate track" });
+  }
+
+  it("does not warn when the current bonus is at cap and the node adds no input efficiency", async () => {
+    await renderWithEfficiency(30, 0);
+    expect(screen.queryByText(/plant input cap/)).toBeNull();
+  });
+
+  it("does not warn when the full node contribution fits below cap", async () => {
+    await renderWithEfficiency(10, 6);
+    expect(screen.queryByText(/plant input cap/)).toBeNull();
+  });
+
+  it("warns when part of the node contribution is clipped", async () => {
+    await renderWithEfficiency(26, 6);
+    expect(
+      await screen.findByText("Some of this input reduction exceeds the 30% cap.")
+    ).toBeTruthy();
+  });
+
+  it("warns when the full input contribution is clipped and preserves other effects and unlock", async () => {
+    await renderWithEfficiency(30, 6, true);
+    expect(
+      await screen.findByText("This input reduction adds nothing because the 30% cap is reached.")
+    ).toBeTruthy();
+    expect(screen.getByText("−3% growth costs")).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: "Unlock" }).length).toBeGreaterThan(0);
+  });
+});
+
 describe("TechTab research tree", () => {
   it("restores tech illustrations and explains baseline grants, prerequisites, and funding gaps", async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
@@ -221,6 +270,18 @@ describe("TechTab research tree", () => {
     expect(screen.getByText("Needs 18 more R&D and $17,000,000 more cash")).toBeTruthy();
     expect(screen.getByText("Unlock Sector research foundation first")).toBeTruthy();
     expect(screen.getAllByText("Baseline, no cost")).toHaveLength(2);
+  });
+
+  it("marks owned techs whose plant effects have expired", async () => {
+    const tree = responseWithTree();
+    Object.assign(tree.decades[0].lanes.generic[0], { effectExpired: true });
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => tree } as Response);
+
+    renderTechTab();
+
+    expect(await screen.findByRole("heading", { name: "Corporate track" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Earlier decades/ }));
+    expect(screen.getAllByText("Effect expired: older than last decade")).toHaveLength(1);
   });
 
   it("explains track commitment before confirming the first research choice", async () => {

@@ -84,6 +84,24 @@ export function getAggregatedTechEffects(corp: TechCorpView): AggregatedTechEffe
 }
 
 /**
+ * True when a sector of `sectorType` is the corp's primary sector type, the
+ * only sectors Sector-lane nodes apply to.
+ */
+export function isPrimaryTechSector(
+  corp: Pick<TechCorpView, "type" | "industryModel" | "mediaDiscriminator">,
+  sectorType: OperatingSectorType,
+  industryModel?: ManufacturingIndustryModel | null,
+  mediaDiscriminator?: MediaDiscriminator | null
+): boolean {
+  return (
+    getOperatingSectorType(sectorType, industryModel, mediaDiscriminator) ===
+      getOperatingSectorType(corp.type, corp.industryModel, corp.mediaDiscriminator) &&
+    (industryModel ?? null) === (corp.industryModel ?? null) &&
+    (mediaDiscriminator ?? null) === (corp.mediaDiscriminator ?? null)
+  );
+}
+
+/**
  * Effects that actually apply to a sector of `sectorType`:
  *  - Corporate-lane nodes apply to every sector at CORP_LANE_EFFECT_SCALE strength;
  *  - Sector-lane nodes apply only to the corp's primary sector type, full strength.
@@ -95,11 +113,7 @@ export function getSectorTechEffects(
   industryModel?: ManufacturingIndustryModel | null,
   mediaDiscriminator?: MediaDiscriminator | null
 ): AggregatedTechEffects {
-  const isPrimary =
-    getOperatingSectorType(sectorType, industryModel, mediaDiscriminator) ===
-      getOperatingSectorType(corp.type, corp.industryModel, corp.mediaDiscriminator) &&
-    (industryModel ?? null) === (corp.industryModel ?? null) &&
-    (mediaDiscriminator ?? null) === (corp.mediaDiscriminator ?? null);
+  const isPrimary = isPrimaryTechSector(corp, sectorType, industryModel, mediaDiscriminator);
   const effects = getUnlockedNodes(corp).flatMap((node) => {
     if (node.lane === "generic")
       return node.effects.map((e) => scaleEffect(e, CORP_LANE_EFFECT_SCALE));
@@ -343,6 +357,43 @@ export function decadeLabel(decadeId: string): string {
  * effects) are ignored here — they're tracked separately via
  * getUnlockedStrategyIds and are permanent.
  */
+/**
+ * Decades whose owned techs still apply their running plant effects in the
+ * turn: the current decade and the one before it. Older techs stay owned but
+ * stop applying (shown as expired on the Tech tab).
+ */
+export function getActiveTechDecadeIds(currentYear: number): Set<string> {
+  const currentDecade = getDecadeForYear(currentYear);
+  const currentIdx = TECH_DECADES.findIndex((d) => d.id === currentDecade.id);
+  const prevDecade = currentIdx > 0 ? TECH_DECADES[currentIdx - 1] : null;
+  return new Set([currentDecade.id, ...(prevDecade ? [prevDecade.id] : [])]);
+}
+
+/** Effect kinds the turn applies per plant, which expire with their decade. */
+const RUNNING_TECH_EFFECT_KINDS = new Set<TechEffect["kind"]>([
+  "plantOutput",
+  "inputEfficiency",
+  "laborCostReduction",
+  "inputCost",
+  "outputRate",
+]);
+
+/** True when an owned node from an expired decade has lost a running effect. */
+export function isTechNodeEffectExpired(
+  node: TechTreeNode,
+  activeDecadeIds: ReadonlySet<string>,
+  options: { shieldExpires?: boolean } = {}
+): boolean {
+  return (
+    !activeDecadeIds.has(node.decadeId) &&
+    node.effects.some(
+      (e) =>
+        RUNNING_TECH_EFFECT_KINDS.has(e.kind) ||
+        (options.shieldExpires === true && e.kind === "dominanceShield")
+    )
+  );
+}
+
 export function getSectorTechEffectsForYear(
   corp: TechCorpView,
   sectorType: OperatingSectorType,
@@ -350,16 +401,9 @@ export function getSectorTechEffectsForYear(
   industryModel?: ManufacturingIndustryModel | null,
   mediaDiscriminator?: MediaDiscriminator | null
 ): AggregatedTechEffects {
-  const currentDecade = getDecadeForYear(currentYear);
-  const currentIdx = TECH_DECADES.findIndex((d) => d.id === currentDecade.id);
-  const prevDecade = currentIdx > 0 ? TECH_DECADES[currentIdx - 1] : null;
-  const allowedIds = new Set([currentDecade.id, ...(prevDecade ? [prevDecade.id] : [])]);
+  const allowedIds = getActiveTechDecadeIds(currentYear);
 
-  const isPrimary =
-    getOperatingSectorType(sectorType, industryModel, mediaDiscriminator) ===
-      getOperatingSectorType(corp.type, corp.industryModel, corp.mediaDiscriminator) &&
-    (industryModel ?? null) === (corp.industryModel ?? null) &&
-    (mediaDiscriminator ?? null) === (corp.mediaDiscriminator ?? null);
+  const isPrimary = isPrimaryTechSector(corp, sectorType, industryModel, mediaDiscriminator);
   const effects = getUnlockedNodes(corp).flatMap((node) => {
     if (!allowedIds.has(node.decadeId)) return [];
     if (node.lane === "generic")

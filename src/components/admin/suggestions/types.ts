@@ -28,6 +28,8 @@ export interface SuggestionAdminDetail {
   priority?: number | null;
   status: string;
   adminNotes?: string;
+  implementationNote?: string;
+  reporterImplementedCount?: number;
   screenshotUrl?: string | null;
   githubIssueUrl?: string | null;
   githubIssueNumber?: number | null;

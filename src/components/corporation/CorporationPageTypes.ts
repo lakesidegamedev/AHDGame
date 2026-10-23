@@ -1,3 +1,4 @@
+import type { CountryStatement } from "@/lib/corporations/queries/corporationDetail/countryStatements";
 import type { CorporationType, OperatingSectorType } from "@/lib/constants/corporations";
 import type { ShareHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -212,6 +213,8 @@ export interface CorporationDetail {
   logisticsStrength: number;
   /** Absent for outside viewers of a private corporation (redacted). */
   logisticsStrengthNetChange?: number;
+  /** Management overhead applied last turn, margin points, measured on the whole control group. */
+  managementOverheadPp?: number;
   rdBudget: number;
   rdScore: number;
   /** Absent for outside viewers of a private corporation (redacted). */
@@ -294,10 +297,14 @@ export interface CorporationDetail {
    * credit upgrade and the share-price premium.
    */
   indexInclusionActive?: boolean;
+  /** One-notch credit downgrade: a public company whose CEO holds over 65% of the shares. */
+  insiderConcentrationActive?: boolean;
   /** Persisted smoothed composite score matching `creditRatingSnapshot`. */
   creditCompositeSnapshot?: number;
   /** Country owner ID for national corporations */
   countryOwnerId?: string;
+  /** Owned by a country, through `countryOwnerId` or a state ownership state. */
+  isStateOwned?: boolean;
   /** Whether this corporation is nationalized (margin penalty applies) */
   isNationalized?: boolean;
   /** Whether the corporation is private (financials hidden from non-CEO viewers) */
@@ -344,6 +351,12 @@ export interface CorporationDetail {
   lastShareholderAddressAt?: string | null;
   /** Active legal structure short name (e.g. "LLC", "C-Corp"). */
   legalStructureLabel?: string;
+  /** Player-facing tax treatment of the legal form for this corporation. */
+  legalStructureTaxLabel?: string;
+  /** Pass-through tax reform progress 0 to 1 (0 before it starts). */
+  passThroughTaxPhase?: number;
+  /** Owner tax on pass-through profit collected at source (per day). */
+  passThroughOwnerTax?: number;
   /** Active legal structure ID (defaults to country default when absent). */
   legalStructure?: string;
   /** Turn when CEO may next change legal structure (48-turn cooldown). */
@@ -534,8 +547,14 @@ export interface Financials {
   federalTax: number;
   /** State/regional corporate tax this turn (aggregated across sectors at each sector's state rate). */
   stateTax: number;
+  /** Part of federal + state tax that is owner tax on pass-through profit. */
+  /** Banked tax losses offsetting up to 80% of future taxable profit. */
+  taxLossCarryforward?: number;
+  passThroughOwnerTax?: number;
   /** Federal tax broken down by sector country (for tooltip display). */
   federalTaxByCountry: Record<string, number>;
+  /** Revenue and the costs of each country's own sectors, largest revenue first. */
+  byCountry?: CountryStatement[];
   bondInterestCost: number;
   bondCouponIncome: number;
   /**
@@ -619,6 +638,17 @@ export interface CommoditySupplyDemandBlendPct {
 
 export interface SectorDetail {
   _id: string;
+  /** Funded-market transition package while its window is open for this sector. */
+  cutoverTransition?: {
+    /** Why the sector gets relief: over-built at the switch, or losing / selling nothing since. */
+    reason: "overBuilt" | "losing" | "zeroSales";
+    mothballed: boolean;
+    turnsLeft: number;
+    freeConversion: boolean;
+    converted: boolean;
+  } | null;
+  /** Capacity retired for selling nothing, and the grant paid for it (anchor units). */
+  lastDecommission?: { turn: number; retiredBookAnchor: number; grantAnchor: number } | null;
   stateId: string;
   /** Country where this sector operates */
   countryId?: string;
@@ -691,7 +721,6 @@ export interface SectorDetail {
   foreignTariffModifier: number;
   domesticTariffMalus: number;
   /** Margin bonus from unlocked tech-tree nodes (pp). Null when zero or tech trees disabled. */
-  techMarginBonus?: number | null;
   /** State enterprise efficiency (pp, <= 0). 0 for private corps. */
   soeEfficiencyModifier?: number;
   /** Expropriation-risk drag from low investor confidence (pp). 0 for state enterprises. */
@@ -759,6 +788,10 @@ export interface SectorDetail {
   plantCount?: number | null;
   /** Units produced last turn. */
   producedUnits?: number | null;
+  /** Exact news-media advertising ledger supply, after the full commodity factor chain. */
+  mediaAdvertisingCampaignUnits?: number | null;
+  /** Authoritative factor applied to news-media advertising output. */
+  mediaAdvertisingCampaignFactor?: number | null;
   /** Units sold last turn. */
   soldUnits?: number | null;
   /**

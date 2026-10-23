@@ -115,7 +115,7 @@ it.each(cases)(
 );
 
 it.each(cases)(
-  "pairs actual coupon and maturity receipts with the issuer in $currency",
+  "pairs actual coupon, maturity and buyback receipts with the issuer in $currency",
   async ({ currency, rate }) => {
     const { memory, db } = fixture(currency, rate);
     const issuer = new ObjectId();
@@ -126,6 +126,7 @@ it.each(cases)(
     for (const [kind, txType, paid] of [
       ["couponsIn", "bond_coupon", 2.35],
       ["maturitiesIn", "bond_maturity", 100],
+      ["retiredIn", "bond_buyback", 30.6],
     ] as const) {
       await db
         .collection("corporations")
@@ -149,7 +150,7 @@ it.each(cases)(
       .collection<LedgerEntry>("ledgerEntries")
       .find({ turn: TURN })
       .toArray();
-    expect(entries).toHaveLength(4);
+    expect(entries).toHaveLength(6);
     const report = reconcileLedger({
       turn: TURN,
       entries,

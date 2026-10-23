@@ -1,5 +1,5 @@
 /** Bulk persistence shell for owner-supplied v2 metric turn readings. */
-import type { Db } from "mongodb";
+import type { Db, Document } from "mongodb";
 import type { GameState } from "@/lib/db/types/gameState";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import {
@@ -9,13 +9,19 @@ import {
 } from "@/lib/resetVersions/rules";
 import type { OpeningMetricObservation } from "./rules/openingObservation";
 import { refreshResetMetricBoard } from "./rules/refresh";
+import { primaryMetrics } from "./catalog";
 import type { ResetMetricSnapshot } from "./rules/snapshot";
-import { appendMetricHistory, metricHistoryDue } from "./rules/history";
+import { appendMetricHistory, metricHistoryDue, RESET_METRIC_HISTORY_LIMIT } from "./rules/history";
+import type { HousingState } from "./rules/housing";
+import type { HouseholdProductionStatus } from "./rules/householdSources";
 
 export interface MetricOwnerTurnReadings {
   updates: Readonly<Record<string, OpeningMetricObservation>>;
   cohortDue: boolean;
   electionDue: boolean;
+  housingState?: HousingState;
+  householdProductionStatus?: HouseholdProductionStatus;
+  housingProductionStatus?: HouseholdProductionStatus;
 }
 
 export type MetricOwnerTurnReadingsByBoard = Readonly<Record<string, MetricOwnerTurnReadings>>;
@@ -67,9 +73,45 @@ export async function refreshResetMetricSnapshotsTurn(input: {
           asOfTurn: 1,
           lastRefreshFromTurn: 1,
           observations: 1,
-          // History carries each metric's opening value, which policy drift
-          // (collectOwnerReadings) anchors to; it is written back only on cadence.
-          history: 1,
+          openingValues: 1,
+          householdSource: 1,
+          householdIncomeModel: 1,
+          // Raw survey component columns are offline evidence, never turn inputs.
+          ...Object.fromEntries(
+            [
+              "version",
+              "countryId",
+              "sourceId",
+              "incomeYear",
+              "currency",
+              "population",
+              "distribution",
+              "gaps",
+              "calibration",
+              "cells.id",
+              "cells.sourceArea",
+              "cells.households",
+              "cells.adults",
+              "cells.children",
+              "cells.marketIncome",
+              "cells.cashTransfers",
+              "cells.directTaxes",
+              "cells.employeeContributions",
+              "cells.labourIncome",
+              "cells.otherDirectTaxes",
+              "cells.propertyTaxBase",
+            ].map((field) => [`householdReference.${field}`, 1])
+          ),
+          householdCurrentState: 1,
+          householdProductionStatus: 1,
+          housingProductionStatus: 1,
+          housingSource: 1,
+          housingState: 1,
+          gameplayReferences: 1,
+          // Ordinary turns need only the legacy baseline, not the full chart.
+          ...(recordHistory
+            ? { history: 1 }
+            : Object.fromEntries(primaryMetrics.map(({ id }) => [`history.${id}`, { $slice: 1 }]))),
         },
       }
     )
@@ -117,10 +159,46 @@ export async function refreshResetMetricSnapshotsTurn(input: {
   const pending = next.filter((result) => !result.replayed);
   if (pending.length > 0) {
     const written = await collection.bulkWrite(
-      pending.map(({ board }) => {
+      pending.map(({ board, changedIds }) => {
         const history = recordHistory
           ? appendMetricHistory(board.history ?? {}, board.observations, turn)
           : undefined;
+        const fields: Document = {
+          asOfTurn: turn,
+          lastRefreshFromTurn: board.lastRefreshFromTurn,
+          priorValues: board.priorValues,
+          gameplayReferences: board.gameplayReferences,
+        };
+        for (const id of changedIds) fields[`observations.${id}`] = board.observations[id];
+        if (board.housingState?.asOfTurn === turn) fields.housingState = board.housingState;
+        if (board.householdProductionStatus?.evaluatedAtTurn === turn)
+          fields.householdProductionStatus = board.householdProductionStatus;
+        if (board.housingProductionStatus?.evaluatedAtTurn === turn)
+          fields.housingProductionStatus = board.housingProductionStatus;
+        // Upgrade old boards once, before bounded appends can trim their baseline.
+        if (!board.openingValues) {
+          if (
+            Object.keys(board.observations).some(
+              (id) => board.history?.[id]?.[0]?.turn !== board.sourceTurn
+            )
+          ) {
+            throw new Error(`Reset metric board lacks its immutable opening baseline ${board._id}`);
+          }
+          fields.openingValues = Object.fromEntries(
+            Object.entries(board.history ?? {}).map(([id, series]) => [id, series[0]!.value])
+          );
+        }
+        const pushes: Document = {};
+        if (history) {
+          for (const [id, series] of Object.entries(history)) {
+            if (board.history?.[id]?.at(-1)?.turn !== turn) {
+              pushes[`history.${id}`] = {
+                $each: [series.at(-1)!],
+                $slice: -RESET_METRIC_HISTORY_LIMIT,
+              };
+            }
+          }
+        }
         return {
           updateOne: {
             filter: {
@@ -129,12 +207,8 @@ export async function refreshResetMetricSnapshotsTurn(input: {
               asOfTurn: board.lastRefreshFromTurn!,
             },
             update: {
-              $set: {
-                asOfTurn: turn,
-                lastRefreshFromTurn: board.lastRefreshFromTurn,
-                observations: board.observations,
-                ...(history ? { history } : {}),
-              },
+              $set: fields,
+              ...(Object.keys(pushes).length ? { $push: pushes } : {}),
             },
           },
         };

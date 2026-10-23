@@ -136,6 +136,25 @@ describe("POST /api/country/[code]/region/[id]/party/[partyId]/ps-investment", (
     expect(response.status).toBe(400);
   });
 
+  it("logs safe endpoint and database timings", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    const { POST } = await import("./route");
+    const response = await POST(makeRequest({ budget: STATE_RATE * 2 }), {
+      params: Promise.resolve({ code: "us", id: "CA", partyId: "1" }),
+    });
+    expect(response.status).toBe(200);
+    const timing = info.mock.calls.find(
+      ([label]) => label === "[ps-investment-timing]"
+    )?.[1] as Record<string, unknown>;
+    expect(timing).toEqual(expect.objectContaining({ status: 200, result: "success" }));
+    expect(timing).toHaveProperty("stateReadMs");
+    expect(timing).toHaveProperty("partyReadMs");
+    expect(timing).toHaveProperty("orgReadMs");
+    expect(timing).toHaveProperty("updateMs");
+    expect(JSON.stringify(timing)).not.toMatch(/stateChair|California|CA_1|125000/);
+    info.mockRestore();
+  });
+
   it("allows the state chair to set a valid budget", async () => {
     const { POST } = await import("./route");
     const response = await POST(makeRequest({ budget: STATE_RATE * 2 }), {

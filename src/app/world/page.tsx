@@ -5,9 +5,8 @@ import { getDb } from "@/lib/mongodb";
 import { getGameStateCollection } from "@/lib/db/collections";
 import { getNationWorldSnapshots } from "@/lib/world/nationWorldSnapshots";
 import { publicPageMetadata } from "@/lib/siteMetadata";
-import type { WorldEntityMapSnapshot } from "@/lib/world/worldEntityMap";
 import { loadWorldEntityMapSnapshot } from "@/lib/world/worldEntityMapLoader";
-import { loadBlocMapData, type BlocMapData } from "@/lib/world/blocMembership";
+import { loadBlocMapData } from "@/lib/world/blocMembership";
 import { loadLegacyServiceSnapshots } from "@/lib/world/succession/legacyServiceSnapshot";
 import WorldClient from "./WorldClient";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
@@ -32,18 +31,27 @@ export type CountryAccessMap = Record<
 
 export default async function WorldPage() {
   const db = await getDb();
-  const [countryAccess, nationSnapshots, gameState] = await Promise.all([
+  // Stage 1: everything that only needs the database handle, plus the preset
+  // that the rest of the page's loaders are keyed on.
+  const [countryAccess, gameState] = await Promise.all([
     getAllCountryAccess(),
-    getNationWorldSnapshots(db),
     getGameStateCollection(db).then((col) =>
       col.findOne({ _id: "current" }, { projection: { conflictsEnabled: 1, preset: 1 } })
     ),
   ]);
   const preset = gameState?.preset ?? DEFAULT_SEED_PRESET;
-  const worldEntities: WorldEntityMapSnapshot = await loadWorldEntityMapSnapshot(db, preset);
-  // Bloc mode colours the globe from live membership, so the roll has to come
-  // down with the page rather than being re-derived from a static table.
-  const blocMapData: BlocMapData = await loadBlocMapData(db, preset);
+  // Stage 2: four independent loaders. They used to run one after another (and
+  // `loadLegacyServiceSnapshots` was awaited inside JSX, after everything else),
+  // which put ~14 round trips of latency on a page whose map is already the
+  // client's slowest surface.
+  const [nationSnapshots, worldEntities, blocMapData, legacyFinances] = await Promise.all([
+    getNationWorldSnapshots(db, preset),
+    loadWorldEntityMapSnapshot(db, preset),
+    // Bloc mode colours the globe from live membership, so the roll has to come
+    // down with the page rather than being re-derived from a static table.
+    loadBlocMapData(db, preset),
+    loadLegacyServiceSnapshots(db, preset),
+  ]);
   return (
     <WorldClient
       countryAccess={countryAccess}
@@ -51,7 +59,7 @@ export default async function WorldPage() {
       conflictsEnabled={!!gameState?.conflictsEnabled}
       worldEntities={worldEntities}
       blocMapData={blocMapData}
-      legacyFinances={await loadLegacyServiceSnapshots(db, preset)}
+      legacyFinances={legacyFinances}
     />
   );
 }

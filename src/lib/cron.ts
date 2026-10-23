@@ -7,6 +7,7 @@ import { runHalfHourTick } from "@/lib/turn/subhour/halfHourTick";
 import { updateCampaignFogOfWar } from "@/lib/campaigns/fogOfWar";
 import { processTurn, getGameState, initializeGameState } from "./turnSystem";
 import { shouldFireBackupTurn } from "./cron/backupFireGuard";
+import { backupTurnSchedule, resolveTurnCronMinute, turnCronSchedule } from "./cron/turnCronMinute";
 import { getProcessingLockState, TURN_LOCK_STALE_MS } from "./turn/processingLock";
 import { recordTurnHeapDelta } from "@/lib/observability/heapWatchdog";
 import { getDb } from "@/lib/mongodb";
@@ -14,6 +15,7 @@ import { deploymentServiceSlug } from "@/lib/deploymentIdentity";
 import { sweepPlayerRandomEventsRealtime } from "@/lib/events/pree/driver";
 import { persistApiAbuseScan } from "@/lib/api/abuseDetection";
 import { runRetention } from "@/lib/retention/retention";
+import { pruneMoneyJournals } from "@/lib/retention/moneyJournalPrune";
 import { runAltScoring } from "@/lib/altDetection/run";
 import { runAltDigest } from "@/lib/altDetection/digest";
 import { runShareFillRecoveryPass } from "@/lib/corporations/commands/shareTrading/shareFillAudit";
@@ -39,8 +41,10 @@ export function deriveTurnCronMonitorSlug(env: NodeJS.ProcessEnv = process.env):
   return `turn-cron-${deploymentServiceSlug(env)}`;
 }
 const TURN_CRON_MONITOR_SLUG = deriveTurnCronMonitorSlug();
+/** Minute of the hour (UTC) this world takes its turn; see cron/turnCronMinute.ts. */
+const TURN_CRON_MINUTE = resolveTurnCronMinute();
 const TURN_CRON_MONITOR_CONFIG = {
-  schedule: { type: "crontab" as const, value: "0 * * * *" },
+  schedule: { type: "crontab" as const, value: turnCronSchedule(TURN_CRON_MINUTE) },
   checkinMargin: 5,
   maxRuntime: 5,
   timezone: "UTC",
@@ -89,6 +93,7 @@ const STUCK_LOCK_SWEEP_MIN_AGE_MS = 2 * TURN_LOCK_STALE_MS;
 let playerEventsSweepCron: ReturnType<typeof cron.schedule> | null = null;
 let apiAbuseScanCron: ReturnType<typeof cron.schedule> | null = null;
 let retentionCron: ReturnType<typeof cron.schedule> | null = null;
+let moneyJournalPruneCron: ReturnType<typeof cron.schedule> | null = null;
 let altScoringCron: ReturnType<typeof cron.schedule> | null = null;
 let altDigestCron: ReturnType<typeof cron.schedule> | null = null;
 let shareFillRecoveryCron: ReturnType<typeof cron.schedule> | null = null;
@@ -103,7 +108,13 @@ let patreonReconcileRunning = false;
  */
 export const SHARE_FILL_RECOVERY_SCHEDULE = "7,22,37,52 * * * *";
 
-/** Quarter-hour market tick; :00 (turn) and :30 (half-hour tick) run it themselves. */
+/** Money-journal prune: one small batch a minute (see retention/moneyJournalPrune.ts). */
+export const MONEY_JOURNAL_PRUNE_SCHEDULE = "* * * * *";
+
+/**
+ * Quarter-hour market tick; :00 and :30 (the turn and the half-hour tick, in either
+ * order under TURN_CRON_MINUTE) run it themselves.
+ */
 export const MARKET_TICK_SCHEDULE = "15,45 * * * *";
 
 /** Patreon benefits and grace expiry are reconciled four times each UTC day. */
@@ -111,11 +122,11 @@ export const PATREON_RECONCILIATION_SCHEDULE = "13 */6 * * *";
 
 /**
  * Get the cron schedule expression based on game state fastMode setting.
- * - Normal mode: "0 * * * *" (top of every hour)
+ * - Normal mode: "0 * * * *" (top of every hour), or "30 * * * *" with TURN_CRON_MINUTE=30
  * - Fast mode: "0,30 * * * *" (every 30 minutes)
  */
 function getCronSchedule(fastMode?: boolean): string {
-  return fastMode ? "0,30 * * * *" : "0 * * * *";
+  return turnCronSchedule(TURN_CRON_MINUTE, fastMode);
 }
 
 /**
@@ -171,7 +182,11 @@ export async function initializeCronJobs() {
   // Get current game state to determine schedule
   const gameState = await getGameState();
   const schedule = getCronSchedule(gameState?.fastMode);
-  const scheduleDescription = gameState?.fastMode ? "every 30 minutes" : "the top of every hour";
+  const scheduleDescription = gameState?.fastMode
+    ? "every 30 minutes"
+    : TURN_CRON_MINUTE === 0
+      ? "the top of every hour"
+      : `minute ${TURN_CRON_MINUTE} of every hour`;
 
   // Create cron job with dynamic schedule based on fastMode
   cronJob = cron.schedule(
@@ -272,9 +287,10 @@ export async function initializeCronJobs() {
     }
   );
 
-  // Backup turn at :30 — only fires if primary (:00) missed
+  // Backup turn half an hour after the turn (:30, or :00 with TURN_CRON_MINUTE=30);
+  // only fires if the primary missed.
   backupCron = cron.schedule(
-    "30 * * * *",
+    backupTurnSchedule(TURN_CRON_MINUTE),
     async () => {
       try {
         const currentState = await getGameState();
@@ -462,7 +478,7 @@ export async function initializeCronJobs() {
   );
 
   fogOfWarCron = cron.schedule(
-    "0 * * * *",
+    turnCronSchedule(TURN_CRON_MINUTE),
     async () => {
       try {
         // Skip when the turn cron is paused (manual or auto-drift) — fog of
@@ -541,6 +557,30 @@ export async function initializeCronJobs() {
       } catch (error) {
         console.error("[Cron] Retention pass failed:", error);
         Sentry.captureException(error, { tags: { component: "cron", job: "retention" } });
+      }
+    },
+    { timezone: "UTC" }
+  );
+
+  // Money-journal pruning: ledgerEntries and terminal bankMoneyMoves older than
+  // 168 turns. Runs every minute between turns (skips while a turn holds the
+  // lock), deleting one small batch per journal each run, so a long-lived world
+  // drains its backlog in short deletes instead of one long one.
+  moneyJournalPruneCron = cron.schedule(
+    MONEY_JOURNAL_PRUNE_SCHEDULE,
+    async () => {
+      try {
+        const db = await getDb();
+        const result = await pruneMoneyJournals(db);
+        if (result.ledgerEntries > 0 || result.bankMoneyMoves > 0) {
+          console.log(
+            `[Cron] Money-journal prune < turn ${result.cutoff}: ` +
+              `${result.bankMoneyMoves} money move(s), ${result.ledgerEntries} ledger entr(ies)`
+          );
+        }
+      } catch (error) {
+        console.error("[Cron] Money-journal prune failed:", error);
+        Sentry.captureException(error, { tags: { component: "cron", job: "moneyJournalPrune" } });
       }
     },
     { timezone: "UTC" }
@@ -715,9 +755,19 @@ export async function initializeCronJobs() {
 }
 
 /**
- * Restart the cron job with a new schedule (e.g., when toggling fastMode)
+ * Restart the cron job with a new schedule (e.g., when toggling fastMode).
+ *
+ * Only the process that already runs the schedule rebuilds it. With
+ * CRON_OWNER=worker the admin toggle executes in the web process, which owns no
+ * cron; re-initialising there would start a second turn scheduler beside the
+ * worker. Returns false when this process owns no schedule (restart the worker
+ * to apply a new one).
  */
-export async function restartCronWithSchedule() {
+export async function restartCronWithSchedule(): Promise<boolean> {
+  if (!cronJob) {
+    console.log("[Cron] No schedule in this process; restart the turn worker to apply the change.");
+    return false;
+  }
   if (cronJob) {
     cronJob.stop();
     cronJob = null;
@@ -746,6 +796,10 @@ export async function restartCronWithSchedule() {
     retentionCron.stop();
     retentionCron = null;
   }
+  if (moneyJournalPruneCron) {
+    moneyJournalPruneCron.stop();
+    moneyJournalPruneCron = null;
+  }
   if (altScoringCron) {
     altScoringCron.stop();
     altScoringCron = null;
@@ -763,6 +817,7 @@ export async function restartCronWithSchedule() {
     patreonReconcileCron = null;
   }
   await initializeCronJobs();
+  return true;
 }
 
 /**
@@ -802,6 +857,10 @@ export function stopCronJobs() {
   if (retentionCron) {
     retentionCron.stop();
     retentionCron = null;
+  }
+  if (moneyJournalPruneCron) {
+    moneyJournalPruneCron.stop();
+    moneyJournalPruneCron = null;
   }
   if (altScoringCron) {
     altScoringCron.stop();

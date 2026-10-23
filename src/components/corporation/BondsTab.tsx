@@ -11,6 +11,7 @@ import { BOND_DEFAULT_CREDIT_PENALTY_TURNS } from "@/lib/constants/bonds";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { BondData, BondInfo, CorporationDetail, Financials } from "./CorporationPageTypes";
 import BondHistoryPanel from "./bonds/BondHistoryPanel";
+import { BondMaturityTimeline } from "./finance/BondMaturityTimeline";
 import {
   DenseSection,
   InlineStatus,
@@ -85,6 +86,24 @@ export default function BondsTab({
     const anchor = liquidCode ? toInternalFrom(val, liquidCode) : val;
     return formatAmount(anchor, liquidCode);
   };
+  // Formatted in the BOND's currency, not the corp's. A relocation
+  // re-denominates the corporation and leaves its outstanding bonds where they
+  // were, so `fmtMoney` (which assumes the corp's code) labelled a pre-move
+  // bond with a currency it is not in. `value` stays in anchor units so bonds
+  // compare on the maturity timeline.
+  const bondFace = (bond: BondData) =>
+    bond.totalIssuedAnchor !== undefined
+      ? {
+          value: bond.totalIssuedAnchor,
+          display: formatAmount(
+            bond.totalIssuedAnchor,
+            bond.currencyCode as CurrencyCode | undefined
+          ),
+        }
+      : {
+          value: liquidCode ? toInternalFrom(bond.totalIssued, liquidCode) : bond.totalIssued,
+          display: fmtMoney(bond.totalIssued),
+        };
   const router = useRouter();
   const [activeSubTab, setActiveSubTab] = useState<BondsSubTab>("overview");
   const [bondIssueFaceValue, setBondIssueFaceValue] = useState(0);
@@ -586,81 +605,76 @@ export default function BondsTab({
             <p className="py-2 text-xs text-muted">No bonds issued yet.</p>
           )
         ) : (
-          <TableScroll>
-            <table className="w-full border-collapse">
-              <thead>
-                <tr>
-                  <Th>Coupon</Th>
-                  <Th align="right">Face value</Th>
-                  <Th align="right" title="Market price as a share of face value">
-                    Price
-                  </Th>
-                  <Th align="right">Maturity</Th>
-                  <Th align="right" title="Units available to buy">
-                    Float
-                  </Th>
-                  <Th>Status</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {bondInfo.bonds.map((bond) => {
-                  const href = `/bond/${bond._id}`;
-                  return (
-                    <tr
-                      key={bond._id}
-                      className="cursor-pointer hover:bg-card-elevated/50"
-                      onClick={(e) => {
-                        if ((e.target as HTMLElement).closest("a")) return;
-                        router.push(href);
-                      }}
-                    >
-                      <Td className="font-mono">
-                        <Link href={href} className="text-foreground hover:underline">
-                          {bond.couponRate.toFixed(2)}%
-                        </Link>
-                      </Td>
-                      {/* Formatted in the BOND's currency, not the corp's.
-                          A relocation re-denominates the corporation and
-                          leaves its outstanding bonds where they were, so
-                          `fmtMoney` (which assumes the corp's code) labelled
-                          a pre-move bond with a currency it is not in. */}
-                      <Td align="right">
-                        {bond.totalIssuedAnchor !== undefined
-                          ? formatAmount(
-                              bond.totalIssuedAnchor,
-                              bond.currencyCode as CurrencyCode | undefined
-                            )
-                          : fmtMoney(bond.totalIssued)}
-                      </Td>
-                      <Td
-                        align="right"
-                        className={
-                          bond.marketPrice > 1
-                            ? "text-success"
-                            : bond.marketPrice < 0.95
-                              ? "text-error"
-                              : "text-foreground"
-                        }
+          <>
+            <BondMaturityTimeline
+              bonds={bondInfo.bonds}
+              currentTurn={bondInfo.currentTurn}
+              toDisplay={bondFace}
+            />
+            <TableScroll>
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr>
+                    <Th>Coupon</Th>
+                    <Th align="right">Face value</Th>
+                    <Th align="right" title="Market price as a share of face value">
+                      Price
+                    </Th>
+                    <Th align="right">Maturity</Th>
+                    <Th align="right" title="Units available to buy">
+                      Float
+                    </Th>
+                    <Th>Status</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bondInfo.bonds.map((bond) => {
+                    const href = `/bond/${bond._id}`;
+                    return (
+                      <tr
+                        key={bond._id}
+                        className="cursor-pointer hover:bg-card-elevated/50"
+                        onClick={(e) => {
+                          if ((e.target as HTMLElement).closest("a")) return;
+                          router.push(href);
+                        }}
                       >
-                        {(bond.marketPrice * 100).toFixed(2)}%
-                      </Td>
-                      <Td align="right">
-                        {bond.matured
-                          ? "Matured"
-                          : bond.defaulted
-                            ? "Default"
-                            : `${bond.turnsRemaining} turns`}
-                      </Td>
-                      <Td align="right">{bond.publicFloat.toLocaleString("en-US")}</Td>
-                      <Td>
-                        <BondStatus bond={bond} />
-                      </Td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </TableScroll>
+                        <Td className="font-mono">
+                          <Link href={href} className="text-foreground hover:underline">
+                            {bond.couponRate.toFixed(2)}%
+                          </Link>
+                        </Td>
+                        <Td align="right">{bondFace(bond).display}</Td>
+                        <Td
+                          align="right"
+                          className={
+                            bond.marketPrice > 1
+                              ? "text-success"
+                              : bond.marketPrice < 0.95
+                                ? "text-error"
+                                : "text-foreground"
+                          }
+                        >
+                          {(bond.marketPrice * 100).toFixed(2)}%
+                        </Td>
+                        <Td align="right">
+                          {bond.matured
+                            ? "Matured"
+                            : bond.defaulted
+                              ? "Default"
+                              : `${bond.turnsRemaining} turns`}
+                        </Td>
+                        <Td align="right">{bond.publicFloat.toLocaleString("en-US")}</Td>
+                        <Td>
+                          <BondStatus bond={bond} />
+                        </Td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </TableScroll>
+          </>
         )}
       </DenseSection>
     </div>

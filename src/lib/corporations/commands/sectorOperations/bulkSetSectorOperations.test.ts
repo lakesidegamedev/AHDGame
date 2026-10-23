@@ -286,3 +286,97 @@ describe("bulk wage controls", () => {
     ).toBe(400);
   });
 });
+
+describe("bulkSetSectorOperations capacity", () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    db = createMockDb();
+    db.collection("corporateSectors");
+    const { getMarketSystemMode } = await import("@/lib/market/featureFlag");
+    vi.mocked(getMarketSystemMode).mockResolvedValue("plants");
+  });
+
+  function bulkWriteResult(modifiedCount: number) {
+    db.collectionMocks.corporateSectors.bulkWrite.mockResolvedValue({ modifiedCount } as never);
+  }
+
+  it("mothballs every running holding in scope and skips locked ones", async () => {
+    const running = [energySector("CA"), energySector("NY")];
+    const listed = { ...energySector("TX"), forSale: { price: 1 } };
+    const financing = {
+      ...energySector("WA"),
+      constructionFinancing: { status: "funding" },
+    };
+    const already = { ...energySector("OR"), mothballed: true };
+    await wire([...running, listed, financing, already]);
+    bulkWriteResult(2);
+
+    const res = await bulkSetSectorOperations(req({ countryId: "US", capacity: "mothball" }), {
+      params,
+    });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.capacity).toEqual({
+      action: "mothball",
+      eligibleCount: 2,
+      lockedCount: 2,
+      changedCount: 2,
+    });
+    const ops = db.collectionMocks.corporateSectors.bulkWrite.mock.calls[0][0];
+    expect(
+      ops.map((o: { updateOne: { filter: { _id: ObjectId } } }) => o.updateOne.filter._id)
+    ).toEqual(running.map((s) => s._id));
+    expect(ops[0].updateOne.filter.forSale).toBeNull();
+    expect(ops[0].updateOne.update.$set).toMatchObject({
+      mothballed: true,
+      activeCapacityPercent: 100,
+    });
+  });
+
+  it("reactivates only mothballed holdings", async () => {
+    const parked = { ...energySector("CA"), mothballed: true };
+    await wire([parked, energySector("NY")]);
+    bulkWriteResult(1);
+
+    const res = await bulkSetSectorOperations(req({ countryId: "US", capacity: "reactivate" }), {
+      params,
+    });
+    const body = await res.json();
+
+    expect(body.capacity.changedCount).toBe(1);
+    const ops = db.collectionMocks.corporateSectors.bulkWrite.mock.calls[0][0];
+    expect(ops).toHaveLength(1);
+    expect(ops[0].updateOne.update.$set.mothballed).toBe(false);
+  });
+
+  it("previews counts without writing", async () => {
+    await wire([energySector("CA"), energySector("NY")]);
+    const res = await bulkSetSectorOperations(
+      req({ countryId: "US", capacity: "mothball", preview: true }),
+      { params }
+    );
+    const body = await res.json();
+    expect(body.capacity.eligibleCount).toBe(2);
+    expect(db.collectionMocks.corporateSectors.bulkWrite).not.toHaveBeenCalled();
+  });
+
+  it("refuses below the plants tier", async () => {
+    const { getMarketSystemMode } = await import("@/lib/market/featureFlag");
+    vi.mocked(getMarketSystemMode).mockResolvedValue("clearing");
+    await wire([energySector("CA")]);
+    const res = await bulkSetSectorOperations(req({ countryId: "US", capacity: "mothball" }), {
+      params,
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects capacity combined with another lever", async () => {
+    await wire([energySector("CA")]);
+    const res = await bulkSetSectorOperations(
+      req({ countryId: "US", capacity: "mothball", productionPolicy: 5 }),
+      { params }
+    );
+    expect(res.status).toBe(400);
+  });
+});

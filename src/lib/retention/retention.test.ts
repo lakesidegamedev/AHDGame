@@ -101,6 +101,34 @@ describe("runRetention — indexFundTransactions null-turn fallback", () => {
   });
 });
 
+describe("runRetention — fast-mode cadence", () => {
+  it("sizes the timestamp fallback window at 30-minute turns", async () => {
+    db.collection("gameState").findOne = vi
+      .fn()
+      .mockResolvedValue({ currentTurn: 1009, fastMode: true });
+    const col = db.collection("indexFundTransactions");
+    const seen: Record<string, unknown>[] = [];
+    col.countDocuments = vi.fn().mockImplementation((f: Record<string, unknown>) => {
+      seen.push(f);
+      return Promise.resolve(0);
+    });
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-22T12:00:00Z"));
+    try {
+      await runRetention({ dryRun: true, collections: ["indexFundTransactions"] });
+    } finally {
+      vi.useRealTimers();
+    }
+
+    const fallback = (seen[0].$or as Record<string, unknown>[])[1] as {
+      $and: Record<string, { $lt?: Date }>[];
+    };
+    const cutoffDate = fallback.$and[1].createdAt.$lt as Date;
+    // 168 turns x 30 min = 84 h before now
+    expect(cutoffDate.toISOString()).toBe("2026-10-19T00:00:00.000Z");
+  });
+});
+
 describe("runRetention — archive-only never deletes", () => {
   it("archives actionLogs but issues no deleteMany", async () => {
     const col = db.collection("actionLogs");

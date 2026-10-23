@@ -6,7 +6,6 @@ import { Button } from "@/components/ui";
 
 import { CountryFlag } from "@/components/CountryFlag";
 import type { CountryId } from "@/lib/constants/countries";
-import type { ProposalVote } from "@/lib/db/types/internationalOrganization";
 import type { OrgSummary, OrgViewerInfo } from "./orgTypes";
 import { VoteButtons } from "./VoteButtons";
 import { VoteRoster } from "./VoteRoster";
@@ -16,6 +15,7 @@ import {
 } from "@/lib/internationalOrganizations/resolutionRules";
 import { useEntityName } from "./useEntityName";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { organizationVoteHandler } from "./proposalActions";
 
 interface Props {
   org: OrgSummary;
@@ -105,22 +105,7 @@ export function LeadershipPanel({ org, viewer, currentTurn, votingWindowTurns, o
     }
   }
 
-  async function vote(electionId: string, voteValue: ProposalVote) {
-    if (!viewerFmCountry) throw new Error("No diplomatic role");
-    const res = await fetch(
-      `/api/country/${viewerFmCountry}/international-organizations/leadership-elections/${electionId}/vote`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ vote: voteValue }),
-      }
-    );
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(apiErrorText(body, "Vote failed"));
-    }
-    onChange();
-  }
+  const vote = organizationVoteHandler(viewerFmCountry, onChange, "leadership-elections");
 
   return (
     <section className="space-y-4">

@@ -9,7 +9,11 @@ import {
 
 const world = vi.hoisted(() => ({ currentTurn: 120, currentYear: 2027, preset: "2027" }));
 
-vi.mock("@/lib/gameState", () => ({ getGameState: async () => world }));
+vi.mock("@/lib/gameState", () => ({
+  getGameState: async () => world,
+  // The detail loader reads the world scalars through the projected accessor.
+  getGameStateCore: async () => world,
+}));
 
 describe("alignInflationBreakdownToDisplayRate", () => {
   it("keeps the tooltip total aligned with the displayed inflation rate", () => {
@@ -341,6 +345,7 @@ describe("loadCountryCentralBankDetail money supply", () => {
       policy: { floor: 0.5, ceiling: 0.5, recentInterventions: [] },
       forexRevenue: null,
       reserveBalance: null,
+      previewContext: null,
     });
   });
   it("returns the stored money supply for a public viewer when enabled", async () => {
