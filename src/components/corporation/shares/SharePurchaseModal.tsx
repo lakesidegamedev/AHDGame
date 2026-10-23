@@ -1018,6 +1018,7 @@ export default function SharePurchaseModal({
                 onSuccess={onSuccess}
                 myCorporation={myCorporation}
                 myShares={personalSellShares}
+                totalPersonalShares={myShares}
                 myCorporationShares={myCorporationShares}
                 corpId={corpId}
                 corpCurrencyCode={corpCurrencyCode}

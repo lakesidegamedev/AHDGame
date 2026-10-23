@@ -31,6 +31,7 @@ interface SharePurchaseLimitViewProps {
     liquidCurrencyCode?: string;
   } | null;
   myShares: number;
+  totalPersonalShares?: number;
   myCorporationShares: number;
   corpId: string;
   corpCurrencyCode: CurrencyCode | undefined;
@@ -74,6 +75,7 @@ export function SharePurchaseLimitView({
   onSuccess,
   myCorporation,
   myShares,
+  totalPersonalShares = myShares,
   myCorporationShares,
   corpId,
   corpCurrencyCode,
@@ -168,7 +170,7 @@ export function SharePurchaseLimitView({
             >
               {orderSide === "buy"
                 ? `${formatAmount(personalCashAnchor)} cash`
-                : `${myShares.toLocaleString("en-US")} shares`}
+                : `${totalPersonalShares.toLocaleString("en-US")} shares`}
             </div>
           </button>
           <button
@@ -267,7 +269,7 @@ export function SharePurchaseLimitView({
             <p className="mt-1 text-xs text-error">
               {limitAsCorp
                 ? `Corporation holds only ${myCorporationShares.toLocaleString("en-US")} shares.`
-                : `You only own ${myShares.toLocaleString("en-US")} shares.`}
+                : `The selected holding contains ${myShares.toLocaleString("en-US")} shares.`}
             </p>
           )}
         </div>
@@ -382,9 +384,11 @@ export function SharePurchaseLimitView({
                 <span className="tabular-nums font-medium">{quantity.toLocaleString("en-US")}</span>
               </div>
               <div className="flex justify-between border-t border-card-border pt-2">
-                <span className="text-muted">Shares remaining after fill</span>
+                <span className="text-muted">
+                  {limitAsCorp ? "Shares remaining after fill" : "Selected holding after fill"}
+                </span>
                 <span className="tabular-nums font-medium text-muted">
-                  {(myShares - quantity).toLocaleString("en-US")}
+                  {(limitSellSharesAvail - quantity).toLocaleString("en-US")}
                 </span>
               </div>
             </>
