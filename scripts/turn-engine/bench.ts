@@ -170,18 +170,67 @@ const HEX24_RE = /[0-9a-f]{24,32}/gi;
  * ids cannot hide a missing or different insert.
  */
 function runtimeIds(left: RunResult, right: RunResult): Set<string> {
-  const leftIds = insertedIds(left);
-  const rightIds = insertedIds(right);
   const generated = new Set<string>();
-  for (const id of leftIds) if (!rightIds.has(id)) generated.add(id);
-  for (const id of rightIds) if (!leftIds.has(id)) generated.add(id);
+  const addOneSided = (a: Set<string>, b: Set<string>) => {
+    for (const id of a) if (!b.has(id)) generated.add(id);
+  };
+  const leftInserted = insertedIds(left);
+  const rightInserted = insertedIds(right);
+  addOneSided(leftInserted, rightInserted);
+  addOneSided(rightInserted, leftInserted);
+  const leftMentioned = mentionedIds(left);
+  const rightMentioned = mentionedIds(right);
+  addOneSided(leftMentioned, rightMentioned);
+  addOneSided(rightMentioned, leftMentioned);
   return generated;
 }
 
 function insertedIds(run: RunResult): Set<string> {
   const ids = new Set<string>();
   for (const collection of Object.values(run.writes)) {
-    for (const id of collection.insertIds ?? []) ids.add(String(id).toLowerCase());
+    for (const id of collection.insertIds ?? []) {
+      const key = String(id).toLowerCase();
+      ids.add(key);
+      // A move id can be a settlement key (`corp-operating-net-batch:374:<hex>`),
+      // and that hex tail is what other documents embed. Register every 24-32
+      // hex fragment of the id, not just the whole string.
+      for (const match of key.matchAll(HEX24_RE)) ids.add(match[0]);
+    }
+  }
+  return ids;
+}
+
+/**
+ * Ids that only one run's documents mention at all.
+ *
+ * `insertedIds` covers ids of documents a run created. This adds ids that are
+ * not document ids — a claim token, a move key fragment — which can still be
+ * embedded in a written document. A stable entity id touched on only one side
+ * is not hidden by this: updates are keyed by `_id` and reported as a missing
+ * document, and deletes are compared as sets before masking.
+ */
+function mentionedIds(run: RunResult): Set<string> {
+  const ids = new Set<string>();
+  const collect = (value: unknown): void => {
+    if (typeof value === "string") {
+      for (const match of value.matchAll(HEX24_RE)) ids.add(match[0].toLowerCase());
+      return;
+    }
+    if (Array.isArray(value)) {
+      for (const item of value) collect(item);
+      return;
+    }
+    if (value && typeof value === "object") {
+      for (const item of Object.values(value as Record<string, unknown>)) collect(item);
+    }
+  };
+  for (const collection of Object.values(run.writes)) {
+    for (const [key, doc] of Object.entries(collection.updates)) {
+      collect(key);
+      collect(doc);
+    }
+    for (const doc of collection.inserts) collect(doc);
+    for (const id of collection.deletes) collect(id);
   }
   return ids;
 }
