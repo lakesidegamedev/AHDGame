@@ -109,13 +109,23 @@ export function idleCauseMeta(
   };
 }
 
-/** Tailwind classes per tone, for meter fills and legend dots. */
+/**
+ * Tailwind classes per tone, for meter fills and legend dots.
+ *
+ * Tones carry severity, not identity, so two warning causes paint the same
+ * colour unless they name their own fill here. `inputs` does: a sector waiting
+ * on bought-in goods and a sector holding back for demand both read as
+ * warnings, but they ask the player to do opposite things, so they must not
+ * share a swatch. Chart swatches are the documented exception to the
+ * semantic-token rule (docs/DESIGN.md): a capacity meter needs more hues than
+ * the status tokens provide.
+ */
 export const TONE_FILL: Record<IdleCauseMeta["tone"] | "sold" | "unsold", string> &
   Partial<Record<PlantIdleCauseKey, string>> = {
   sold: "bg-success",
   unsold: "bg-warning",
   warning: "bg-warning/50",
-  inputs: "bg-warning/50",
+  inputs: "bg-amber-600/60",
   staffing: "bg-orange-500/50",
   error: "bg-error/60",
   info: "bg-info/50",

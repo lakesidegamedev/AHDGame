@@ -29,4 +29,16 @@ describe("idle cause meter colors", () => {
     expect(causes.staffing.tone).toBe("warning");
     expect(TONE_FILL.inputs).not.toBe(TONE_FILL.staffing);
   });
+
+  it("gives a sector waiting on inputs its own swatch, separate from demand limited", () => {
+    const causes = idleCauseMeta("manufacturing");
+
+    expect(causes.inputs.tone).toBe("warning");
+    expect(causes.demand.tone).toBe("warning");
+    // Both stay warning severity, but the capacity chart must not paint them
+    // the same: buying inputs and waiting for buyers are different remedies.
+    expect(TONE_FILL.inputs).toBeDefined();
+    expect(TONE_FILL.inputs).not.toBe(TONE_FILL.warning);
+    expect(TONE_FILL.inputs).not.toBe(TONE_FILL[causes.demand.tone]);
+  });
 });
