@@ -89,10 +89,25 @@ Same copy, same turn, both engines:
 | indexFunds      |          6,096 |          6,050 |      37.7 |      37.4 |
 | **whole turn**  |     **44,839** |     **44,693** | **582.0** | **588.9** |
 
-**v2 removes 0.3% of the turn's round trips.** That is the honest result: the
-three phases above were optimized, they are at parity, and they do not move the
-turn, because the cost is not in their reads. The local wall-clock difference is
-inside run-to-run noise (±1.5%) and is not evidence of anything.
+Re-measured on the current development base, which already contains #4740
+(projected reads, settlement recovery, loan batching) and #4781 (producer shadow
+spend per fill) — the same turn on the same kind of copy:
+
+| phase           | v1 round trips | v2 round trips |      v1 s |      v2 s |
+| --------------- | -------------: | -------------: | --------: | --------: |
+| corporationTurn |          8,430 |          8,338 |     187.1 |     200.7 |
+| bankingTurn     |         13,889 |         13,892 |      63.2 |      68.4 |
+| indexFunds      |          2,874 |          2,866 |      25.9 |      23.9 |
+| **whole turn**  |     **38,853** |     **38,779** | **417.9** | **441.3** |
+
+**v2 removes 0.2% of the turn's round trips on the current base** (0.3% before
+#4781). That is the honest result: the three phases above were optimized, they
+are at parity, and they do not move the turn, because the cost is not in their
+reads. The local wall-clock difference is inside run-to-run noise and points the
+wrong way; it is not evidence of anything.
+
+The base itself got much faster while this branch was open — the same copy went
+from 582s to 418s — and that gain belongs to #4740/#4781/#4789, not to this PR.
 
 ### Parity evidence
 
