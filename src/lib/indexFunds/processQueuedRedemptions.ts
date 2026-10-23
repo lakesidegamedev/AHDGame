@@ -44,6 +44,14 @@ export interface QueuedRedemptionClaimBudget {
   claimsLeft: number;
 }
 
+/** Holder lookup key for a queue entry, matching the keys built below. */
+function queuedHolderKey(entry: IndexFundRedemptionQueueEntry): string | undefined {
+  if (entry.characterId) return `characters:${entry.characterId}`;
+  if (entry.imperialCharacterId) return `imperialCharacters:${entry.imperialCharacterId}`;
+  if (entry.nppId) return `npps:${entry.nppId}`;
+  return undefined;
+}
+
 export async function processQueuedRedemptions(
   db: Db,
   fund: IndexFund,
@@ -192,6 +200,20 @@ export async function processQueuedRedemptions(
         );
     };
 
+    // A row with no holder can never be paid. Close it instead of restoring it
+    // to the queue for another doomed attempt.
+    const cancelUnpayableClaim = async () => {
+      await db
+        .collection<IndexFundRedemptionQueueEntry>(FUND_REDEMPTION_QUEUE_COLLECTION)
+        .updateOne(
+          { _id: entry._id, status: "processing", settlementClaimId: claimId },
+          {
+            $set: { status: "cancelled", updatedAt: new Date() },
+            $unset: { processingStartedAt: "", settlementClaimId: "", processingTurn: "" },
+          }
+        );
+    };
+
     const unitsRemaining = remainingRedemptionUnits(entry);
     if (unitsRemaining <= 0) {
       await db
@@ -203,6 +225,29 @@ export async function processQueuedRedemptions(
             $unset: { processingStartedAt: "", settlementClaimId: "", processingTurn: "" },
           }
         );
+      continue;
+    }
+
+    // A holder that no longer exists can never be paid. Rows whose units left
+    // unitSupply at request time are cash payables only, so a holderless one is
+    // unpayable and the fund keeps the cash: cancel it. Leaving it queued froze
+    // that fund's rebalancing for good (#4848). Rows whose units are still live
+    // holdings are different: cancelling those would delete a claim with no
+    // payout, so they stay queued and say so until a human reconciles them.
+    const holderKey = queuedHolderKey(entry);
+    if (!holderKey || !holders.has(holderKey)) {
+      if (entry.unitsBurnedAtRequest === true) {
+        await cancelUnpayableClaim();
+        unservedUnits = Math.max(0, unservedUnits - unitsRemaining);
+        console.warn(
+          `[indexfund-cron] cancelled queued redemption ${entry._id} for ${fund.slug}: ${holderKey ? "holder" : "entry"} ${holderKey ?? "(no holder id)"} no longer exists and its units left the fund at request`
+        );
+      } else {
+        await restoreQueueClaim();
+        console.warn(
+          `[indexfund-cron] queued redemption ${entry._id} for ${fund.slug}: ${holderKey ? "holder" : "entry"} ${holderKey ?? "(no holder id)"} no longer exists; its units were not burned at request, so the row stays queued`
+        );
+      }
       continue;
     }
 
@@ -314,13 +359,7 @@ export async function processQueuedRedemptions(
       forexEnabled,
       nppCurrency: nppCurrencyById.get(entry.nppId?.toString() ?? "") ?? "USD",
       audit,
-      holder: holders.get(
-        entry.characterId
-          ? `characters:${entry.characterId}`
-          : entry.imperialCharacterId
-            ? `imperialCharacters:${entry.imperialCharacterId}`
-            : `npps:${entry.nppId}`
-      ),
+      holder: holders.get(holderKey),
     });
     if (!settled) {
       await restoreQueueClaim();

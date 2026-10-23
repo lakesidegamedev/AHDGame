@@ -203,9 +203,20 @@ describe("batched queued NPP payouts", () => {
     expect(w.memory.collection("indexFundTransactions").docs).toHaveLength(paidCount);
     expect(w.memory.collection("financialTxLog").docs).toHaveLength(paidCount);
 
-    // A later pass leaves the orphaned claims owed and pays nothing twice.
+    // A later pass cancels the orphaned claims instead of retrying them for
+    // ever, and pays nothing twice. The refunded cash stays in the fund.
     expect(await pass(w, 8)).toBe(0);
     expect(w.memory.collection("indexFundTransactions").docs).toHaveLength(paidCount);
+    const orphanRows = await w.db
+      .collection<IndexFundRedemptionQueueEntry>("indexFundRedemptionQueue")
+      .find({ nppId: { $in: gone } })
+      .toArray();
+    expect(orphanRows).toHaveLength(gone.length * PER_NPP);
+    for (const row of orphanRows) expect(row.status).toBe("cancelled");
+    const fundAfterCancel = await w.db
+      .collection<IndexFund>("indexFunds")
+      .findOne({ _id: w.fundId });
+    expect(fundAfterCancel!.cashAnchor).toBeCloseTo(100_000 - paidOut, 6);
   });
 
   it("releases a batch that never reached the journal only in a later turn, then pays once", async () => {
