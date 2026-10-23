@@ -133,9 +133,27 @@ export function selectEngineForAttempt(input: {
   inFlightEngine?: unknown;
   isResume: boolean;
 }): TurnEngineResolution {
+  if (!input.isResume) {
+    return resolveTurnEngine({ configured: input.configured });
+  }
+  // A turn that started before engines were versioned has no stamp, and it was
+  // necessarily a v1 turn. Treat the absence as v1 rather than falling back to
+  // config: flipping config to v2 while such a turn is in flight must not
+  // switch it mid-turn.
+  if (!isTurnEngineSelection(input.inFlightEngine)) {
+    const resolution = resolveTurnEngine({ configured: input.configured, resumed: "v1" });
+    return {
+      engine: resolution.engine,
+      warnings: [
+        `[turn-engine] resumed turn has no engine stamp (it started before engines were ` +
+          `versioned); finishing on ${DEFAULT_TURN_ENGINE}`,
+        ...resolution.warnings,
+      ],
+    };
+  }
   return resolveTurnEngine({
     configured: input.configured,
-    resumed: input.isResume ? input.inFlightEngine : undefined,
+    resumed: input.inFlightEngine,
   });
 }
 

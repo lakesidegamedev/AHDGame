@@ -112,6 +112,17 @@ describe("selectEngineForAttempt", () => {
     expect(warnings).toEqual([]);
   });
 
+  it("treats an unstamped resumed turn as v1 even when config now says v2", () => {
+    const { engine, warnings } = selectEngineForAttempt({
+      configured: "v2",
+      inFlightEngine: undefined,
+      isResume: true,
+    });
+    expect(engine.selection).toBe("v1");
+    expect(engine.source).toBe("resumed");
+    expect(warnings[0]).toContain("no engine stamp");
+  });
+
   it("starts a fresh turn on v1 when config is absent, stamp or not", () => {
     const { engine } = selectEngineForAttempt({ inFlightEngine: "v2", isResume: false });
     expect(engine.selection).toBe("v1");
