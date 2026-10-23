@@ -345,7 +345,8 @@ describe("banking turn sub-step telemetry", () => {
       processBankingTurn(world.db as unknown as Db, TURN + 1)
     );
     expect(Object.keys(phaseStatuses.bankingTurn?.substeps ?? {})).toEqual([
-      "resume+recovery",
+      "resume",
+      "recovery",
       "load",
       "depositTakers",
       "loanBookOnly",
