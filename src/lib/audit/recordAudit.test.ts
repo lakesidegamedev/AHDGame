@@ -132,3 +132,62 @@ describe("recordAudit / recordAuditBulk", () => {
     expect(docs[0].delta).toHaveLength(8);
   });
 });
+
+/**
+ * The money mirror is narrowed at enqueue time, after the actor is resolved,
+ * so every money path is covered rather than only emitTx. The turn's system
+ * settlement legs are ~54k inserts per turn; the anomaly scan excludes them.
+ */
+describe("money mirror policy", () => {
+  let db: MockDb;
+
+  beforeEach(() => {
+    resetRecordAuditBufferForTest();
+    vi.clearAllMocks();
+    db = createMockDb();
+    db.collection("actionAuditLog");
+    db.collection("gameState");
+    db.collection("gameConfig");
+    vi.mocked(getDb).mockResolvedValue(db as never);
+    isAuditLogEnabled.mockResolvedValue(true);
+  });
+
+  it("drops a routine system money leg with no detector reading it", async () => {
+    const { runInAuditContext } = await import("@/lib/observability/context");
+    runInAuditContext(
+      "turn:400:bondTurn",
+      () => recordAudit(baseEntry({ action: "bond.coupon", source: "system" })),
+      { kind: "system" }
+    );
+
+    await flushRecordAuditBufferForTest();
+    expect(db.collectionMocks.actionAuditLog.insertMany).not.toHaveBeenCalled();
+  });
+
+  it("keeps a system supply-agreement settlement for the related-party check", async () => {
+    const { runInAuditContext } = await import("@/lib/observability/context");
+    runInAuditContext(
+      "turn:400:corporationTurn",
+      () => recordAudit(baseEntry({ action: "corp.supply_agreement", source: "system" })),
+      { kind: "system" }
+    );
+
+    await flushRecordAuditBufferForTest();
+    const [docs] = db.collectionMocks.actionAuditLog.insertMany.mock.calls[0];
+    expect(docs).toHaveLength(1);
+    expect(docs[0]).toMatchObject({ action: "corp.supply_agreement" });
+  });
+
+  it("keeps a player action on the same tx type", async () => {
+    const { runInAuditContext } = await import("@/lib/observability/context");
+    runInAuditContext(
+      "api:request",
+      () => recordAudit(baseEntry({ action: "bond.coupon", source: "api" })),
+      { kind: "player" }
+    );
+
+    await flushRecordAuditBufferForTest();
+    const [docs] = db.collectionMocks.actionAuditLog.insertMany.mock.calls[0];
+    expect(docs).toHaveLength(1);
+  });
+});

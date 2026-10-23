@@ -44,7 +44,23 @@ type PhaseCounts = {
   documents: number;
   /** BSON bytes of the documents returned: what deserialization actually costs. */
   bytes: number;
-  byCollection: Map<string, { roundTrips: number; documents: number; bytes: number }>;
+  /** Write commands issued (insert/update/delete/findAndModify). */
+  writeCommands: number;
+  /** Documents inserted or modified by those commands. */
+  documentsWritten: number;
+  /** BSON payload bytes of inserted documents, only under the profiler. */
+  writeBytes: number;
+  byCollection: Map<
+    string,
+    {
+      roundTrips: number;
+      documents: number;
+      bytes: number;
+      writeCommands: number;
+      documentsWritten: number;
+      writeBytes: number;
+    }
+  >;
 };
 
 interface ProfilerState {
@@ -107,7 +123,15 @@ export function beginPhaseProfiling(phase: string): void {
   const s = state();
   s.currentPhase = phase;
   if (!s.counts.has(phase)) {
-    s.counts.set(phase, { total: 0, documents: 0, bytes: 0, byCollection: new Map() });
+    s.counts.set(phase, {
+      total: 0,
+      documents: 0,
+      bytes: 0,
+      writeCommands: 0,
+      documentsWritten: 0,
+      writeBytes: 0,
+      byCollection: new Map(),
+    });
   }
 }
 
@@ -183,7 +207,15 @@ function phaseEntry(s: ProfilerState): PhaseCounts {
   const phase = currentPhaseName(s);
   let entry = s.counts.get(phase);
   if (!entry) {
-    entry = { total: 0, documents: 0, bytes: 0, byCollection: new Map() };
+    entry = {
+      total: 0,
+      documents: 0,
+      bytes: 0,
+      writeCommands: 0,
+      documentsWritten: 0,
+      writeBytes: 0,
+      byCollection: new Map(),
+    };
     s.counts.set(phase, entry);
   }
   return entry;
@@ -192,7 +224,14 @@ function phaseEntry(s: ProfilerState): PhaseCounts {
 function collectionEntry(entry: PhaseCounts, collection: string) {
   let row = entry.byCollection.get(collection);
   if (!row) {
-    row = { roundTrips: 0, documents: 0, bytes: 0 };
+    row = {
+      roundTrips: 0,
+      documents: 0,
+      bytes: 0,
+      writeCommands: 0,
+      documentsWritten: 0,
+      writeBytes: 0,
+    };
     entry.byCollection.set(collection, row);
   }
   return row;
@@ -210,6 +249,27 @@ export function recordDocumentsReturned(collection: string, count: number, bytes
   const row = collectionEntry(entry, collection);
   row.documents += count;
   row.bytes += bytes;
+}
+
+/**
+ * A write command completed, attributed to the open phase. `documents` is the
+ * number of documents actually inserted or modified (from the server reply, not
+ * the number of statements sent), and `bytes` is the payload size when BSON
+ * accounting is on.
+ *
+ * This is the metric the disk actually pays for. Round trips say how many
+ * commands crossed the wire; this says how many documents and index entries
+ * Mongo had to write, which is what makes a turn slow on a self-hosted primary.
+ */
+export function recordWriteCommand(collection: string, documents: number, bytes = 0): void {
+  const entry = phaseEntry(state());
+  entry.writeCommands += 1;
+  entry.documentsWritten += documents;
+  entry.writeBytes += bytes;
+  const row = collectionEntry(entry, collection);
+  row.writeCommands += 1;
+  row.documentsWritten += documents;
+  row.writeBytes += bytes;
 }
 
 /**
@@ -233,8 +293,19 @@ export interface RoundTripPhaseReport {
   roundTrips: number;
   documents: number;
   bytes: number;
+  writeCommands: number;
+  documentsWritten: number;
+  writeBytes: number;
   /** The collections this phase pulls the most bytes from, heaviest first. */
-  topCollections: { collection: string; roundTrips: number; documents: number; bytes: number }[];
+  topCollections: {
+    collection: string;
+    roundTrips: number;
+    documents: number;
+    bytes: number;
+    writeCommands: number;
+    documentsWritten: number;
+    writeBytes: number;
+  }[];
 }
 
 /** Phases by round-trip count, heaviest first. Does not clear the counters. */
@@ -245,6 +316,9 @@ export function roundTripReport(topPhases = 20): RoundTripPhaseReport[] {
       roundTrips: entry.total,
       documents: entry.documents,
       bytes: entry.bytes,
+      writeCommands: entry.writeCommands,
+      documentsWritten: entry.documentsWritten,
+      writeBytes: entry.writeBytes,
       topCollections: [...entry.byCollection.entries()]
         .map(([collection, row]) => ({ collection, ...row }))
         .sort(
@@ -268,6 +342,37 @@ export function currentTurnPhase(): string | null {
 
 export function phaseRoundTrips(phase: string): number {
   return state().counts.get(phase)?.total ?? 0;
+}
+
+/**
+ * Write volume for one phase. `commands` is write commands issued, `documents`
+ * is documents actually inserted or modified, `bytes` is insert payload bytes
+ * (only under the BSON profiler). `topCollections` is the heaviest write
+ * targets, for naming the log or entity that dominates a phase.
+ */
+export function phaseWriteStats(
+  phase: string,
+  topCollections = 3
+): {
+  commands: number;
+  documents: number;
+  bytes: number;
+  topCollections: { collection: string; documents: number }[];
+} {
+  const entry = state().counts.get(phase);
+  if (!entry) {
+    return { commands: 0, documents: 0, bytes: 0, topCollections: [] };
+  }
+  return {
+    commands: entry.writeCommands,
+    documents: entry.documentsWritten,
+    bytes: entry.writeBytes,
+    topCollections: [...entry.byCollection.entries()]
+      .filter(([, row]) => row.documentsWritten > 0)
+      .map(([collection, row]) => ({ collection, documents: row.documentsWritten }))
+      .sort((a, b) => b.documents - a.documents || a.collection.localeCompare(b.collection))
+      .slice(0, topCollections),
+  };
 }
 
 /** Largest command sources in a phase, available without BSON byte profiling. */
@@ -301,6 +406,24 @@ export function totalBytesReturned(): number {
   return total;
 }
 
+export function totalWriteCommands(): number {
+  let total = 0;
+  for (const entry of state().counts.values()) total += entry.writeCommands;
+  return total;
+}
+
+export function totalDocumentsWritten(): number {
+  let total = 0;
+  for (const entry of state().counts.values()) total += entry.documentsWritten;
+  return total;
+}
+
+export function totalWriteBytes(): number {
+  let total = 0;
+  for (const entry of state().counts.values()) total += entry.writeBytes;
+  return total;
+}
+
 function formatMb(bytes: number): string {
   return (bytes / 1_048_576).toFixed(1) + "M";
 }
@@ -326,18 +449,27 @@ export function formatRoundTripReport(topPhases = 20): string | null {
   const trips = totalRoundTrips();
   const docs = totalDocumentsReturned();
   const bytes = totalBytesReturned();
+  const writeTrips = totalWriteCommands();
+  const written = totalDocumentsWritten();
+  const writeBytes = totalWriteBytes();
+  const writeSize = writeBytes > 0 ? ` (${formatMb(writeBytes)} payload)` : "";
   const lines = [
-    `[roundtrips] ${trips} round trips, ${docs} documents, ${formatMb(bytes)} BSON returned this turn.`,
-    `  ranked by bytes (what deserialization costs); documents and round trips alongside:`,
-    `  ${"bytes".padStart(8)} ${"share".padStart(6)} ${"docs".padStart(8)} ${"trips".padStart(7)}  phase`,
+    `[roundtrips] ${trips} round trips, ${docs} documents, ${formatMb(bytes)} BSON returned this turn; ` +
+      `${writeTrips} write commands, ${written} documents written${writeSize}.`,
+    `  ranked by bytes returned (what deserialization costs); writes are what the disk pays for:`,
+    `  ${"bytes".padStart(8)} ${"share".padStart(6)} ${"docs".padStart(8)} ${"written".padStart(8)} ${"trips".padStart(7)}  phase`,
   ];
   for (const row of report) {
     const share = bytes > 0 ? ((row.bytes / bytes) * 100).toFixed(1) : "0.0";
     const where = row.topCollections
-      .map((c) => `${c.collection} ${formatMb(c.bytes)}/${c.documents}d/${c.roundTrips}t`)
+      .map(
+        (c) =>
+          `${c.collection} ${formatMb(c.bytes)}/${c.documents}d/${c.roundTrips}t` +
+          (c.documentsWritten > 0 ? `/${c.documentsWritten}w` : "")
+      )
       .join(", ");
     lines.push(
-      `  ${formatMb(row.bytes).padStart(8)} ${(share + "%").padStart(6)} ${String(row.documents).padStart(8)} ${String(row.roundTrips).padStart(7)}  ${row.phase}  (${where})`
+      `  ${formatMb(row.bytes).padStart(8)} ${(share + "%").padStart(6)} ${String(row.documents).padStart(8)} ${String(row.documentsWritten).padStart(8)} ${String(row.roundTrips).padStart(7)}  ${row.phase}  (${where})`
     );
   }
   return lines.join("\n");
