@@ -76,8 +76,11 @@ export async function materializeFederationCustody(input: {
       )
         throw new Error("Federation custody force changed location or kind");
       if (assignment.disposition === "retain-detailed") {
-        // Unlocated or off-map (sea/air zone) forces have no transfer and stay with the source.
-        if (transfer?.leavesDetailedSource)
+        // A ground unit is stationed on a strategic map region (eeu, nat) or
+        // nowhere, never a state id, so its station cannot prove it sits in
+        // departed territory. Only a retained strategic force carries a
+        // state-level station that must follow its region (#4590).
+        if (assignment.kind === "strategic-force" && transfer?.leavesDetailedSource)
           throw new Error("Retained federation force needs an approved playable station");
       } else {
         if (
