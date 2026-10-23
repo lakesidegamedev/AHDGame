@@ -7,7 +7,7 @@ import { useParams } from "next/navigation";
 import { NominationPageErrorBoundary } from "@/components/NominationPageErrorBoundary";
 import { NominationDetailSkeleton } from "./components/NominationDetailSkeleton";
 import { WhippedBadge } from "@/components/bills/WhippedBadge";
-import { useCountdown } from "@/hooks/useCountdown";
+import { NominationVotingDeadline } from "./components/NominationVotingDeadline";
 import { GameMonthTime } from "@/components/time/GameMonthTime";
 
 import type { CountryId } from "@/lib/constants/countries";
@@ -26,6 +26,7 @@ interface NominationDetail {
   votesAgainst: number;
   votesAbstain: number;
   votingEndsAt: string | null;
+  votingEndsOnTurn?: number | null;
   proposedAt: string;
   myVote: "for" | "against" | "abstain" | null;
   myWhippedFrom: string | null;
@@ -61,8 +62,6 @@ function NominationDetailContent() {
   useEffect(() => {
     fetchNom();
   }, [fetchNom]);
-
-  const countdown = useCountdown(nom?.status === "active" ? (nom.votingEndsAt ?? null) : null);
 
   if (!id) {
     return <NominationDetailSkeleton />;
@@ -187,12 +186,11 @@ function NominationDetailContent() {
         <div className="rounded-xl border border-card-border bg-card shadow-panel p-5 space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <h3 className="text-sm font-semibold">Senate vote</h3>
-            {nom.votingEndsAt && nom.status === "active" && (
-              <span
-                className={`text-xs tabular-nums font-mono ${countdown === "Expired" ? "text-error" : "text-yellow-400"}`}
-              >
-                ⏱ {countdown}
-              </span>
+            {nom.status === "active" && (
+              <NominationVotingDeadline
+                votingEndsAt={nom.votingEndsAt}
+                votingEndsOnTurn={nom.votingEndsOnTurn}
+              />
             )}
           </div>
 
