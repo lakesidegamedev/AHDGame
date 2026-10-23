@@ -173,7 +173,7 @@ describe("queued payout receipt and claim boundaries", () => {
     await retryPayout(f);
     await assertPaidOnce(f);
   });
-  it("leaves missing holders unpaid without debiting fund cash", async () => {
+  it("cancels a missing holder's burned claim without debiting fund cash", async () => {
     const f = fixture();
     await f.db.collection("npps").deleteMany({});
     expect(await processQueuedRedemptions(f.db, f.fund, false, 7)).toBe(0);
@@ -181,9 +181,29 @@ describe("queued payout receipt and claim boundaries", () => {
       cashAnchor: 1000,
       unitSupply: 100,
     });
+    // No holder is left to pay, and the units already left the fund, so the
+    // claim is closed rather than restored to the queue for another pass.
+    expect(
+      await f.db.collection("indexFundRedemptionQueue").findOne({ _id: f.entryId })
+    ).toMatchObject({ status: "cancelled", units: 10 });
+    expect(f.memory.collection(MONEY_MOVE_COLLECTION).docs).toHaveLength(0);
+  });
+  it("keeps a legacy missing-holder claim queued instead of deleting live units", async () => {
+    const f = fixture();
+    await f.db
+      .collection("indexFundRedemptionQueue")
+      .updateOne({ _id: f.entryId }, { $unset: { unitsBurnedAtRequest: "" } });
+    await f.db.collection("npps").deleteMany({});
+    expect(await processQueuedRedemptions(f.db, f.fund, false, 7)).toBe(0);
+    // These units are still in unitSupply: cancelling would destroy a claim
+    // with no payout, so the row waits with a warning instead.
     expect(
       await f.db.collection("indexFundRedemptionQueue").findOne({ _id: f.entryId })
     ).toMatchObject({ status: "queued", units: 10 });
+    expect(await f.db.collection("indexFunds").findOne({ _id: f.fundId })).toMatchObject({
+      cashAnchor: 1000,
+      unitSupply: 100,
+    });
     expect(f.memory.collection(MONEY_MOVE_COLLECTION).docs).toHaveLength(0);
   });
   it("burns legacy supply with the debit and never burns it again on recovery", async () => {

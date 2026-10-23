@@ -89,7 +89,7 @@ describe("queued NPC redemption cash witness", () => {
       cashAnchor: 9000,
     });
   });
-  it("does not debit a fund or emit a witness when its holder is gone", async () => {
+  it("cancels the claim without debiting a fund or emitting a witness when its holder is gone", async () => {
     const f = world();
     await f.db.collection("npps").deleteMany({});
     expect(await processQueuedRedemptions(f.db, f.fund, false, 7)).toBe(0);
@@ -97,9 +97,11 @@ describe("queued NPC redemption cash witness", () => {
     expect(await f.db.collection("indexFunds").findOne({ _id: f.fundId })).toMatchObject({
       cashAnchor: 10000,
     });
+    // The units left the fund at request time, so there is nothing left to pay
+    // and nothing to burn again: the row is closed instead of retried for ever.
     expect(
       await f.db.collection("indexFundRedemptionQueue").findOne({ _id: f.entry._id })
-    ).toMatchObject({ status: "queued", units: 10 });
+    ).toMatchObject({ status: "cancelled", units: 10 });
   });
   it("mirrors an anchor-stated cross-currency redemption onto the fund's own key", async () => {
     const f = world("UK");
