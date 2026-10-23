@@ -150,6 +150,8 @@ export interface GeneralVotes {
   seatsEstimate: Record<string, number> | null;
   /** Live proportional races: votes to the next seat and cushion before losing one. */
   seatMargins?: Record<string, SeatMargin>;
+  /** True when seatsEstimate came from the district-by-district resolver. */
+  seatsByDistrict?: boolean;
   turnSnapshots: VoteTurnSnapshot[];
   /** President only: electoral votes per candidate */
   electoralVotesByCandidate?: Record<string, number>;

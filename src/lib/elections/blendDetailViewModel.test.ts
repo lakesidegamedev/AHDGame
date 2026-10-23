@@ -352,3 +352,51 @@ describe("seat margin note", () => {
     expect(seatMarginNote(undefined)).toBeNull();
   });
 });
+
+describe("buildBlendDetail — district-resolved House races", () => {
+  /** A redistricted US House race: seats come from the district resolver. */
+  function districtInput(over: Partial<BlendDetailInput> = {}): BlendDetailInput {
+    return houseInput({ seatsByDistrict: true, ...over });
+  }
+
+  it("describes the seats as district decisions, not a statewide quota", () => {
+    const m = buildBlendDetail(districtInput());
+    expect(m.standfirst).toContain("district by district");
+    expect(m.standfirst).toContain("district results decide which districts it takes");
+    expect(m.standfirst).not.toContain("Hare quota");
+    expect(m.facts.some((f) => f.key === "Quota")).toBe(false);
+    expect(m.hemiNote).toBe("10 seats · decided district by district");
+    expect(m.rows.every((r) => r.math.some((x) => x.key === "Quota"))).toBe(false);
+    expect(m.rows.every((r) => r.math.some((x) => x.key === "Whole quotas"))).toBe(false);
+    expect(m.rows[0].mathNote).toContain("from the district results");
+    expect(m.rows[0].mathNote).not.toContain("whole quotas");
+  });
+
+  it("explains why a live district race carries no votes-to-next-seat line", () => {
+    const m = buildBlendDetail(districtInput());
+    expect(m.allocationNote).toContain("decided district by district");
+    expect(m.allocationNote).toContain("district by district");
+    expect(m.allocationNote).toContain("does not show a statewide votes-to-next-seat figure");
+    // The line only exists for statewide-allocator races, so no row gets a
+    // statewide margin even when one is supplied by the response.
+    expect(
+      buildBlendDetail(
+        districtInput({ seatMargins: { c1: { toGain: 900, toLose: 400 } } })
+      ).rows.every((r) => r.seatMarginNote === null)
+    ).toBe(true);
+  });
+
+  it("drops the explanation once the count is final", () => {
+    expect(buildBlendDetail(districtInput({ isEnded: true })).allocationNote).toBeNull();
+  });
+
+  it("leaves the statewide quota and margin copy untouched for other races", () => {
+    const m = buildBlendDetail(houseInput({ seatMargins: { c1: { toGain: 900, toLose: 400 } } }));
+    expect(m.allocationNote).toBeNull();
+    expect(m.standfirst).toContain("Hare quota");
+    expect(m.facts.some((f) => f.key === "Quota")).toBe(true);
+    expect(m.rows.find((r) => r.candidateId === "c1")!.seatMarginNote).toBe(
+      "900 more votes to gain a seat, 401 fewer votes to lose one"
+    );
+  });
+});

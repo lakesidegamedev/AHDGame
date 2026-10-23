@@ -481,6 +481,8 @@ export async function _enrichElection(
     (election.hungarianAssemblyRound?.ruleVersion === "mixed-1989-v1" ||
       election.hungarianModernByElection != null ||
       election.hungarianModernAssembly != null);
+  /** True when the district resolver below supplied `seatsEstimate`. */
+  let seatsByDistrict = false;
   let seatsEstimate =
     seatedAllocation ??
     (isBgOrdinary || isHu1991Pending
@@ -540,6 +542,7 @@ export async function _enrichElection(
     });
     if (districted?.seatsEstimate && Object.keys(districted.seatsEstimate).length > 0) {
       seatsEstimate = districted.seatsEstimate;
+      seatsByDistrict = true;
     }
   }
 
@@ -883,6 +886,7 @@ export async function _enrichElection(
         finalized: resolvedTally.finalized,
         seatsEstimate,
         ...(seatMargins ? { seatMargins } : {}),
+        ...(seatsByDistrict ? { seatsByDistrict: true } : {}),
         turnSnapshots: resolvedTally.turnSnapshots.slice(-96).map((t) => {
           const persisted =
             t.seatsEstimate && Object.keys(t.seatsEstimate).length > 0

@@ -86,6 +86,7 @@ export function NonPresidentialResultsPanel({
         totalVotes: tally.totalVotes,
         seatsEstimate: tally.seatsEstimate,
         seatMargins: tally.seatMargins ?? null,
+        seatsByDistrict: tally.seatsByDistrict === true,
         totalSeats,
         electionType,
         cycle,

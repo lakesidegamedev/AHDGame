@@ -61,6 +61,13 @@ export interface GeneralVotesData {
   seatsEstimate: Record<string, number> | null;
   /** Live proportional races: votes to gain the next seat / cushion before losing one. */
   seatMargins?: Record<string, import("@/lib/elections/seatMargins").SeatMargin>;
+  /**
+   * True when `seatsEstimate` came from the district-by-district resolver (US
+   * House with redistricting on) rather than the statewide allocator. The race
+   * page describes those seats as district results and does not quote a
+   * statewide quota or votes-to-next-seat figure against them.
+   */
+  seatsByDistrict?: boolean;
   turnSnapshots: Array<{
     turn: number;
     recordedAt: Date;

@@ -135,6 +135,11 @@ export interface BlendDetailModel {
 
   tallyTitle: string;
   tallyMeta: string;
+  /**
+   * Live district-resolved race: why the panel carries no statewide
+   * votes-to-next-seat line. Null when that line applies (or the count is in).
+   */
+  allocationNote: string | null;
   rows: BlendDetailTallyRow[];
   showSeatCol: boolean;
 }
@@ -155,6 +160,13 @@ export interface BlendDetailInput {
   seatsEstimate: Record<string, number> | null;
   /** Live proportional races: votes to the next seat and cushion before losing one. */
   seatMargins?: Record<string, SeatMargin> | null;
+  /**
+   * True when the seat estimate came from the district-by-district resolver
+   * (US House with redistricting on). Those seats are settled district by
+   * district, so the panel describes district results and does not quote a
+   * statewide quota or a statewide votes-to-next-seat margin.
+   */
+  seatsByDistrict?: boolean;
   totalSeats: number | null;
   electionType: string;
   countryId: CountryId;
@@ -301,7 +313,11 @@ export function buildBlendDetail(input: BlendDetailInput): BlendDetailModel {
   const multiSeat = isMultiSeat(input);
   const totalSeats = input.totalSeats ?? 1;
   const grand = rows.reduce((a, r) => a + r.votes, 0);
-  const quota = detailQuota(input);
+  const districtSeats = input.seatsByDistrict === true;
+  // A district-resolved race never divides one statewide field into seats, so
+  // the Hare-quota arithmetic would describe a different engine than the one
+  // that actually settles these seats (#4863).
+  const quota = districtSeats ? null : detailQuota(input);
   const split = quotaSplit(rows, quota);
   const agg = byParty(rows, input.partyAbbr);
   const lead = rows[0];
@@ -331,11 +347,13 @@ export function buildBlendDetail(input: BlendDetailInput): BlendDetailModel {
       ? "Regional votes are counted. Seat allocation awaits the complete nationwide count and party eligibility."
       : nationalDhondt
         ? `${totalSeats} regional mandates from a 240-seat national D'Hondt count. Parties qualify at 4% nationwide; district lists preserve the national allocation.`
-        : multiSeat
-          ? quota
-            ? `${totalSeats} seats, apportioned by share. A Hare quota of ${fmtInt(quota)} votes buys one seat; ${remSeats} of the ${totalSeats} were settled on largest remainder.`
-            : `${totalSeats} seats, apportioned by share of ${fmtInt(grand)} votes cast.`
-          : `A single seat, decided on plurality. ${lead?.c.characterName ?? "The leader"} ${input.isEnded ? "took" : "holds"} ${lead ? lead.pct.toFixed(1) : "0.0"}% against ${runnerUp ? runnerUp.pct.toFixed(1) : "0.0"}% for the nearest rival.`;
+        : districtSeats
+          ? `${totalSeats} seats, decided district by district. The statewide vote sets how many seats each party wins; district results decide which districts it takes.`
+          : multiSeat
+            ? quota
+              ? `${totalSeats} seats, apportioned by share. A Hare quota of ${fmtInt(quota)} votes buys one seat; ${remSeats} of the ${totalSeats} were settled on largest remainder.`
+              : `${totalSeats} seats, apportioned by share of ${fmtInt(grand)} votes cast.`
+            : `A single seat, decided on plurality. ${lead?.c.characterName ?? "The leader"} ${input.isEnded ? "took" : "holds"} ${lead ? lead.pct.toFixed(1) : "0.0"}% against ${runnerUp ? runnerUp.pct.toFixed(1) : "0.0"}% for the nearest rival.`;
 
   const facts: BlendDetailFact[] = [];
   if (input.electorate && input.electorate.count > 0 && counted) {
@@ -434,9 +452,11 @@ export function buildBlendDetail(input: BlendDetailInput): BlendDetailModel {
 
     const mathNote = !multiSeat
       ? `${fmtInt(r.votes)} votes, ${r.pct.toFixed(1)}% of the ${fmtInt(grand)} cast. A single seat goes to the plurality, so nothing is apportioned by share here.`
-      : quota && s
-        ? `${fmtInt(r.votes)} votes buys ${s.whole} whole ${s.whole === 1 ? "quota" : "quotas"} at ${fmtInt(quota)} each, leaving a remainder of ${fmtInt(s.remainder)}${s.remainderSeats > 0 ? `, which took ${s.remainderSeats} further ${s.remainderSeats === 1 ? "seat" : "seats"} on largest remainder` : ""}.`
-        : `${fmtInt(r.votes)} votes, ${r.pct.toFixed(1)}% of the ${fmtInt(grand)} cast, for ${r.seats} of ${totalSeats} seats.`;
+      : districtSeats
+        ? `${fmtInt(r.votes)} votes, ${r.pct.toFixed(1)}% of the ${fmtInt(grand)} cast, for ${r.seats} of ${totalSeats} seats from the district results.`
+        : quota && s
+          ? `${fmtInt(r.votes)} votes buys ${s.whole} whole ${s.whole === 1 ? "quota" : "quotas"} at ${fmtInt(quota)} each, leaving a remainder of ${fmtInt(s.remainder)}${s.remainderSeats > 0 ? `, which took ${s.remainderSeats} further ${s.remainderSeats === 1 ? "seat" : "seats"} on largest remainder` : ""}.`
+          : `${fmtInt(r.votes)} votes, ${r.pct.toFixed(1)}% of the ${fmtInt(grand)} cast, for ${r.seats} of ${totalSeats} seats.`;
 
     const won =
       input.isEnded && (multiSeat ? r.seats > 0 : rows[0]?.c.id === r.c.id && r.votes > 0);
@@ -458,7 +478,7 @@ export function buildBlendDetail(input: BlendDetailInput): BlendDetailModel {
       seatWord: r.seats === 1 ? "Seat" : "Seats",
       isWinner: won,
       seatMarginNote:
-        input.isEnded || allocationPending || !multiSeat
+        input.isEnded || allocationPending || !multiSeat || districtSeats
           ? null
           : seatMarginNote(input.seatMargins?.[r.c.id]),
       mathNote,
@@ -474,9 +494,11 @@ export function buildBlendDetail(input: BlendDetailInput): BlendDetailModel {
     facts,
     isSeatRace: multiSeat && counted && !allocationPending,
     allocLabel: input.isEnded ? "Final seat allocation" : "Projected seat allocation",
-    hemiNote: quota
-      ? `${totalSeats} seats · ${floorSeats} on whole quotas, ${remSeats} on remainders`
-      : `${totalSeats} seats apportioned by vote share`,
+    hemiNote: districtSeats
+      ? `${totalSeats} seats · decided district by district`
+      : quota
+        ? `${totalSeats} seats · ${floorSeats} on whole quotas, ${remSeats} on remainders`
+        : `${totalSeats} seats apportioned by vote share`,
     blockRows,
     blockRuns,
     blocksSingleRow: totalSeats <= 25,
@@ -487,6 +509,10 @@ export function buildBlendDetail(input: BlendDetailInput): BlendDetailModel {
     blockHeight: totalSeats <= 25 ? 44 : totalSeats <= 80 ? 26 : 18,
     isBench,
     bench: isBench ? buildBench(rows, totalSeats, agg, input) : null,
+    allocationNote:
+      districtSeats && !input.isEnded && counted && !allocationPending
+        ? "Seats here are decided district by district, so the count does not show a statewide votes-to-next-seat figure. District results are further down the page."
+        : null,
     tallyTitle: input.isEnded ? "Final results" : counted ? "Live vote tally" : "No votes cast yet",
     tallyMeta: `${fmtInt(grand)} votes cast${input.turnCount ? ` · ${input.turnCount} turn${input.turnCount === 1 ? "" : "s"}` : ""}`,
     rows: tallyRows,

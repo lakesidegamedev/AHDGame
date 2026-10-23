@@ -34,6 +34,12 @@ export function BlendDetailTally({ model, renderEndorse, hrefFor }: BlendDetailT
         <span className="text-[11px] tabular-nums text-muted">{model.tallyMeta}</span>
       </div>
 
+      {model.allocationNote && (
+        <p className="border-b border-card-border px-4 py-2.5 text-[11px] text-muted">
+          {model.allocationNote}
+        </p>
+      )}
+
       {model.rows.length === 0 && (
         <p className="px-4 py-6 text-sm text-muted">No candidates in this race.</p>
       )}
