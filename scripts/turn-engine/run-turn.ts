@@ -132,9 +132,13 @@ function installCallSiteTrace(collections: string): void {
 async function startWriteCapture(db: Db): Promise<{
   changes: ChangeRecord[];
   ready: Promise<void>;
+  /** Resolves once no write has landed for `idleMs`, or after `capMs`. */
+  waitIdle: (idleMs: number, capMs: number) => Promise<void>;
   stop: () => Promise<void>;
 }> {
   const changes: ChangeRecord[] = [];
+  let lastEventAt = Date.now();
+  let eventCount = 0;
   const stream = db.watch([], { maxAwaitTimeMS: 500 });
   let resolveReady: () => void = () => undefined;
   const ready = new Promise<void>((resolve) => {
@@ -153,6 +157,8 @@ async function startWriteCapture(db: Db): Promise<{
         continue;
       }
       if (TELEMETRY_COLLECTIONS.has(collection)) continue;
+      lastEventAt = Date.now();
+      eventCount += 1;
       if (operation === "insert") changes.push({ collection, id: key, kind: "insert" });
       else if (operation === "delete") changes.push({ collection, id: key, kind: "delete" });
       else if (operation === "update" || operation === "replace") {
@@ -172,6 +178,15 @@ async function startWriteCapture(db: Db): Promise<{
   return {
     changes,
     ready,
+    waitIdle: async (idleMs: number, capMs: number) => {
+      const deadline = Date.now() + capMs;
+      let seen = eventCount;
+      while (Date.now() < deadline) {
+        if (eventCount === seen && Date.now() - lastEventAt >= idleMs) return;
+        seen = eventCount;
+        await sleep(250);
+      }
+    },
     stop: async () => {
       await stream.close();
     },
@@ -258,7 +273,10 @@ async function main(): Promise<void> {
   const result = await processTurn();
   const durationMs = Date.now() - startedAt;
 
-  await sleep(settleMs);
+  // Fire-and-forget writes (post-turn scans, telemetry) land after `processTurn`
+  // returns. Wait for the stream to go quiet rather than for a fixed guess, so
+  // the capture window is the same shape on a fast and a slow run.
+  await writes.waitIdle(settleMs, Math.max(settleMs * 5, 30_000));
   await writes.stop();
 
   const turn = startedFrom.currentTurn + 1;
@@ -342,6 +360,10 @@ async function main(): Promise<void> {
     }
     writeReport[collection] = {
       inserts: insertedDocs,
+      // The raw ids of documents this run inserted. `bench.ts` masks only ids
+      // that appear here, so an id that exists in the starting snapshot and is
+      // touched on one side only is NOT masked and still reports as a diff.
+      insertIds: [...inserts],
       insertsMissing,
       updates: updatedDocs,
       deletes: [...deletes],

@@ -39,6 +39,8 @@ import {
 
 interface WriteReport {
   inserts: unknown[];
+  /** Ids of documents this run inserted (the only ones safe to mask). */
+  insertIds: string[];
   insertsMissing: number;
   updates: Record<string, Record<string, unknown>>;
   deletes: string[];
@@ -152,55 +154,35 @@ async function startingState(uri: string): Promise<{
 const HEX24_RE = /[0-9a-f]{24,32}/gi;
 
 /**
- * Ids that exist in one run's documents but not the other's.
+ * Runtime-generated ids, and only those.
  *
- * New documents get runtime ObjectIds, and those ids are embedded in other
- * documents (`subjectId`, `refs`, settlement keys). Comparing the values
- * directly would report every reference as a difference while saying nothing
- * about the outcome. An id present in only one run is by definition a runtime
- * id; it is masked on BOTH sides, so the documents still have to agree on every
- * other field, including every pre-existing id they reference.
+ * An id is generated when one run inserted a document carrying it and the other
+ * run inserted none with that id: new documents get runtime ObjectIds and those
+ * ids are embedded in other documents (`subjectId`, `refs`, settlement keys),
+ * so comparing them directly would report every reference as a difference while
+ * saying nothing about the outcome.
+ *
+ * Deliberately NOT "any id present in only one run's documents": a pre-existing
+ * entity that one engine touched and the other did not must stay visible, and
+ * that is exactly what the insert sets distinguish. Inserted documents are
+ * still compared by content (a multiset with `_id` removed), so masking their
+ * ids cannot hide a missing or different insert.
  */
-function generatedIds(left: RunResult, right: RunResult): Set<string> {
-  const leftIds = collectIds(left);
-  const rightIds = collectIds(right);
+function runtimeIds(left: RunResult, right: RunResult): Set<string> {
+  const leftIds = insertedIds(left);
+  const rightIds = insertedIds(right);
   const generated = new Set<string>();
   for (const id of leftIds) if (!rightIds.has(id)) generated.add(id);
   for (const id of rightIds) if (!leftIds.has(id)) generated.add(id);
   return generated;
 }
 
-function collectIds(run: RunResult): Set<string> {
+function insertedIds(run: RunResult): Set<string> {
   const ids = new Set<string>();
   for (const collection of Object.values(run.writes)) {
-    for (const [key, doc] of Object.entries(collection.updates)) {
-      if (HEX24_RE.test(key)) ids.add(key.toLowerCase());
-      HEX24_RE.lastIndex = 0;
-      collectIdsFromValue(doc, ids);
-    }
-    for (const doc of collection.inserts) collectIdsFromValue(doc, ids);
-    for (const id of collection.deletes) {
-      if (HEX24_RE.test(id)) ids.add(id.toLowerCase());
-      HEX24_RE.lastIndex = 0;
-    }
+    for (const id of collection.insertIds ?? []) ids.add(String(id).toLowerCase());
   }
   return ids;
-}
-
-function collectIdsFromValue(value: unknown, ids: Set<string>): void {
-  if (typeof value === "string") {
-    for (const match of value.matchAll(HEX24_RE)) ids.add(match[0].toLowerCase());
-    return;
-  }
-  if (Array.isArray(value)) {
-    for (const item of value) collectIdsFromValue(item, ids);
-    return;
-  }
-  if (value && typeof value === "object") {
-    for (const item of Object.values(value as Record<string, unknown>)) {
-      collectIdsFromValue(item, ids);
-    }
-  }
 }
 
 function maskIds(run: RunResult, ids: Set<string>): void {
@@ -229,6 +211,29 @@ function maskIds(run: RunResult, ids: Set<string>): void {
     collection.updates = updates;
     collection.inserts = collection.inserts.map((doc) => mask(doc));
   }
+}
+
+/**
+ * Acceptance for one side, checked independently. A merged phase map lets one
+ * side's success overwrite the other's failure, and a turn that reports
+ * `success: false` or left a phase unfinished never produced a world worth
+ * comparing.
+ */
+function acceptanceFailures(run: RunResult, label: string): string[] {
+  const failures: string[] = [];
+  if (!run.processTurnResult.success) {
+    failures.push(`${label}: processTurn reported failure (${run.processTurnResult.message})`);
+  }
+  for (const [phase, status] of Object.entries(run.phaseStatuses)) {
+    const message = String(status.message ?? "").toLowerCase();
+    if (status.status === "failed") failures.push(`${label}: phase ${phase} failed`);
+    if (status.status === "notReached" || status.status === "pending") {
+      failures.push(`${label}: phase ${phase} was never reached (${status.status})`);
+    }
+    if (status.status === "running") failures.push(`${label}: phase ${phase} never finished`);
+    if (message.includes("timed out")) failures.push(`${label}: phase ${phase} timed out`);
+  }
+  return failures;
 }
 
 interface Difference {
@@ -451,10 +456,10 @@ async function main(): Promise<void> {
   const v1 = await readRun(v1Path);
   const v2 = await readRun(v2Path);
 
-  // Kill runtime-id noise before comparing: see `generatedIds`.
-  const runtimeIds = generatedIds(v1, v2);
-  maskIds(v1, runtimeIds);
-  maskIds(v2, runtimeIds);
+  // Kill runtime-id noise before comparing: see `runtimeIds`.
+  const generated = runtimeIds(v1, v2);
+  maskIds(v1, generated);
+  maskIds(v2, generated);
 
   const parity = compareWrites(v1, v2);
   const moneyDiffs = compareMoney(v1.money, v2.money);
@@ -463,13 +468,18 @@ async function main(): Promise<void> {
   // A timed-out phase keeps the writes it already committed and is not retried,
   // so two timed-out runs can differ for reasons that have nothing to do with
   // the engine. Surface it as a failed comparison instead of a parity result.
-  const timedOut = [...Object.entries({ ...v1.phaseStatuses, ...v2.phaseStatuses })]
-    .filter(([, status]) =>
-      String(status.message ?? "")
-        .toLowerCase()
-        .includes("timed out")
-    )
-    .map(([phase]) => phase);
+  const acceptance = [...acceptanceFailures(v1, "v1"), ...acceptanceFailures(v2, "v2")];
+
+  // Warnings are how a degraded turn explains itself. A warning on one side and
+  // not the other means the engines did not run the same turn, even when the
+  // documents happen to agree.
+  const warningDiff = (() => {
+    const left = [...v1.processTurnResult.warnings].sort();
+    const right = [...v2.processTurnResult.warnings].sort();
+    const onlyLeft = left.filter((warning) => !right.includes(warning));
+    const onlyRight = right.filter((warning) => !left.includes(warning));
+    return [...onlyLeft.map((w) => `v1 only: ${w}`), ...onlyRight.map((w) => `v2 only: ${w}`)];
+  })();
 
   const byCollection = new Map<string, number>();
   for (const difference of differences) {
@@ -529,6 +539,8 @@ async function main(): Promise<void> {
           collections: parity.collections,
           documentsCompared: parity.documentsCompared,
           differences,
+          acceptance,
+          warningDiff,
         },
       },
       null,
@@ -536,14 +548,14 @@ async function main(): Promise<void> {
     )
   );
 
-  if (timedOut.length > 0) {
-    console.log(`[bench] phases timed out on at least one engine: ${timedOut.join(", ")}`);
-  }
+  for (const failure of acceptance) console.log(`[bench] ${failure}`);
+  for (const warning of warningDiff.slice(0, 20)) console.log(`[bench] warning ${warning}`);
   const ok =
     differences.length === 0 &&
     v1.trialBalance.unbalanced === 0 &&
     v2.trialBalance.unbalanced === 0 &&
-    timedOut.length === 0;
+    acceptance.length === 0 &&
+    warningDiff.length === 0;
   console.log(ok ? "\n[bench] PASS" : "\n[bench] FAIL");
   process.exitCode = ok ? 0 : 1;
 }
