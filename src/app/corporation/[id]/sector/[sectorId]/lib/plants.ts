@@ -110,10 +110,13 @@ export function idleCauseMeta(
 }
 
 /** Tailwind classes per tone, for meter fills and legend dots. */
-export const TONE_FILL: Record<IdleCauseMeta["tone"] | "sold" | "unsold", string> = {
+export const TONE_FILL: Record<IdleCauseMeta["tone"] | "sold" | "unsold", string> &
+  Partial<Record<PlantIdleCauseKey, string>> = {
   sold: "bg-success",
   unsold: "bg-warning",
   warning: "bg-warning/50",
+  inputs: "bg-warning/50",
+  staffing: "bg-orange-500/50",
   error: "bg-error/60",
   info: "bg-info/50",
   muted: "bg-muted/40",
