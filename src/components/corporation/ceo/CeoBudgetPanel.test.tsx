@@ -162,6 +162,13 @@ describe("CeoBudgetPanel: zero-revenue overhead rule (ticket #1237)", () => {
   });
 });
 
+describe("CeoBudgetPanel: marketing growth note", () => {
+  it("labels the marketing estimate as gross growth before decay", () => {
+    renderBudget({ corporation: { marketingBudget: 100, marketingStrength: 175.41 } });
+    expect(screen.getByText(/gross growth before decay/i)).toBeTruthy();
+  });
+});
+
 describe("CeoBudgetPanel: editing in place", () => {
   it("shows the operating-income change of an unsaved edit, and Reset drops it", () => {
     renderBudget({ financials: { totalRevenue: 100_000 } });

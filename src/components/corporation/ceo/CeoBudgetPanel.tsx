@@ -317,7 +317,7 @@ export default function CeoBudgetPanel({
           pct={pctOfRevenue(daily.marketing)}
           note={
             daily.marketing > 0
-              ? `+${msGain.toFixed(3)} strength/turn (now ${Math.round(currentMs)}, diminishing above ${MARKETING_DIMINISHING_THRESHOLD})`
+              ? `+${msGain.toFixed(3)} gross growth before decay/turn (now ${Math.round(currentMs)}, diminishing above ${MARKETING_DIMINISHING_THRESHOLD})`
               : `Strength ${Math.round(currentMs)}, no spend`
           }
         />
