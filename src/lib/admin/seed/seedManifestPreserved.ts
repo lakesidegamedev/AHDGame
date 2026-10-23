@@ -269,6 +269,12 @@ export const PRESERVED: CollectionEntry[] = [
     notes: "Operator broadcast delivery receipts are cross-world accountability records.",
   },
   {
+    name: "diagnostics",
+    category: "preserved",
+    notes:
+      "Bounded operational timing samples used to diagnose slow API requests. Not game state, and support needs the recent window to outlive a world reset.",
+  },
+  {
     name: "healBackups",
     category: "preserved",
     notes: "Remediation backup archive is operational data.",
