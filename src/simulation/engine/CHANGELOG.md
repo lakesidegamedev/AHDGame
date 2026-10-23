@@ -23,7 +23,9 @@ deploy, and the turn log has to answer _which rules produced this world_.
 
 Measured on one turn of a full restored production copy (turn 373 of the
 2026-10-22 US world; 42.5M documents), with `TURN_PHASE_TIMEOUT_MS` raised so no
-phase could time out mid-turn. Production's own turn at the time was ~807s and
+phase could time out mid-turn. The v1/v2 pair below was taken **before** #4781
+(producerFillSpend) landed; the branch is rebased onto it, and re-measuring on
+the new base is the next step, not a different result to assume. Production's own turn at the time was ~807s and
 43,769 round trips; the local copy is faster per round trip (Mongo on the same
 host) and slower per document (cold cache, one process), so **round trips are
 the number that transfers**, and the local seconds are quoted only beside them.
