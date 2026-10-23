@@ -53,6 +53,34 @@ export function QuoteBoard({
   const drawn = series.length >= 2 ? sparkPaths(series, dayChange?.prevClose ?? null) : null;
   const moneyChange = dayChange != null ? price - dayChange.prevClose : null;
 
+  // The line covers the whole drawn window, so it is coloured by the change
+  // across that window and not by the last turn. Colouring an eighteen-turn
+  // rise red because yesterday ticked down is what players reported as a bug.
+  // The badge above stays the previous-turn figure and says so.
+  const spanFirst = series.length >= 2 ? series[0] : null;
+  const spanLast = series.length >= 2 ? series[series.length - 1] : null;
+  const spanChangePct =
+    spanFirst != null && spanLast != null && spanFirst !== 0
+      ? ((spanLast - spanFirst) / Math.abs(spanFirst)) * 100
+      : null;
+  const trendStroke =
+    spanChangePct == null || spanChangePct === 0
+      ? "stroke-muted"
+      : spanChangePct > 0
+        ? "stroke-success"
+        : "stroke-error";
+  const trendFill =
+    spanChangePct == null || spanChangePct === 0
+      ? "fill-muted/10"
+      : spanChangePct > 0
+        ? "fill-success/10"
+        : "fill-error/10";
+  const spanChangeText = (() => {
+    if (spanChangePct == null) return "";
+    if (spanChangePct === 0) return `, flat over that span`;
+    return `, ${spanChangePct > 0 ? "up" : "down"} ${Math.abs(spanChangePct).toFixed(2)}% over that span`;
+  })();
+
   return (
     <section
       aria-label="Share quote"
@@ -88,11 +116,12 @@ export function QuoteBoard({
               preserveAspectRatio="none"
               className="block h-14 w-full lg:h-[84px]"
               role="img"
-              aria-label={`Share price over the last ${series.length} turns${
+              aria-label={`Share price over the last ${series.length} turns${spanChangeText}${
                 dayChange ? ", with the previous turn's close marked" : ""
               }`}
             >
-              <path d={drawn.area} className={up ? "fill-success/10" : "fill-error/10"} />
+              <title>{`Share price, last ${series.length} turns${spanChangeText}`}</title>
+              <path d={drawn.area} className={trendFill} />
               {drawn.prevY != null && (
                 <line
                   x1="0"
@@ -108,13 +137,13 @@ export function QuoteBoard({
               <path
                 d={drawn.line}
                 fill="none"
-                className={up ? "stroke-success" : "stroke-error"}
+                className={trendStroke}
                 strokeWidth={2}
                 vectorEffect="non-scaling-stroke"
               />
             </svg>
           </div>
-          <div className="hidden justify-between px-3.5 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted lg:flex">
+          <div className="flex justify-between px-3.5 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted">
             <span>{series.length} turns</span>
             <span>
               Low {money.fmtPrice(Math.min(...series))} · High {money.fmtPrice(Math.max(...series))}
