@@ -10,7 +10,9 @@ export async function acquireConstructionServiceLease(
   loan: BankLoan,
   key: string,
   turn: number,
-  kind: "servicing" | "recovery" = "servicing"
+  kind: "servicing" | "recovery" = "servicing",
+  /** A servicing batch records every loan it owns so recovery can release them all. */
+  batchLoanIds?: string[]
 ): Promise<boolean> {
   if (!loan.constructionCollateral || loan.charteredTurn === undefined) return false;
   const corporations = db.collection<Corporation>("corporations");
@@ -42,6 +44,7 @@ export async function acquireConstructionServiceLease(
             ...(kind === "recovery"
               ? { sectorId: String(loan.constructionCollateral.sectorId) }
               : {}),
+            ...(batchLoanIds?.length ? { loanIds: batchLoanIds } : {}),
           },
         },
       },
@@ -66,17 +69,33 @@ export async function releaseConstructionServiceLease(
   bankId: ObjectId,
   loanId: ObjectId,
   key: string,
-  kind: "servicing" | "recovery" = "servicing"
+  kind: "servicing" | "recovery" = "servicing",
+  /** The other loans a servicing batch owns under the same key. */
+  batchLoanIds: readonly ObjectId[] = []
 ): Promise<void> {
-  await db.collection<Corporation>("corporations").updateOne(
-    {
-      _id: bankId,
-      "bankConstructionFunding.kind": kind,
-      "bankConstructionFunding.loanId": String(loanId),
-      "bankConstructionFunding.service.key": key,
-    },
-    { $unset: { bankConstructionFunding: "" } }
-  );
+  const lease = {
+    _id: bankId,
+    "bankConstructionFunding.kind": kind,
+    "bankConstructionFunding.loanId": String(loanId),
+    "bankConstructionFunding.service.key": key,
+  };
+  if (batchLoanIds.length > 0) {
+    // Locks first: recovery reaches a batch's locks only through its lease,
+    // so the lease must outlive them.
+    await db
+      .collection<BankLoan>("bankLoans")
+      .updateMany(
+        { _id: { $in: [loanId, ...batchLoanIds] }, constructionSettlementOwner: key },
+        { $unset: { constructionSettlementOwner: "" } }
+      );
+    await db
+      .collection<Corporation>("corporations")
+      .updateOne(lease, { $unset: { bankConstructionFunding: "" } });
+    return;
+  }
+  await db
+    .collection<Corporation>("corporations")
+    .updateOne(lease, { $unset: { bankConstructionFunding: "" } });
   await db
     .collection<BankLoan>("bankLoans")
     .updateOne(
@@ -161,7 +180,17 @@ export async function recoverConstructionServiceLeases(
       }
     }
     // An earlier-turn admission with no journal never took borrower cash.
-    await releaseConstructionServiceLease(db, bank._id, new ObjectId(lease.loanId), key);
+    const batchLoanIds = (lease.service.loanIds ?? [])
+      .filter((id) => ObjectId.isValid(id))
+      .map((id) => new ObjectId(id));
+    await releaseConstructionServiceLease(
+      db,
+      bank._id,
+      new ObjectId(lease.loanId),
+      key,
+      "servicing",
+      batchLoanIds
+    );
   }
   return unfinished;
 }

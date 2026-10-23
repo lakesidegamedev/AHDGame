@@ -318,7 +318,13 @@ export interface Corporation {
     kind: "funding" | "aborting" | "returning" | "servicing" | "recovery";
     /** Written with the actual vault debit, never from a quote or cached book. */
     disbursed: boolean;
-    service?: { key: string; turn: number; sectorId?: string };
+    service?: {
+      key: string;
+      turn: number;
+      sectorId?: string;
+      /** A bank-level construction servicing batch: every loan its key owns. */
+      loanIds?: string[];
+    };
     depositReturn?: {
       cause: "failure" | "revocation" | "admin_unwind" | "charter_switch";
       turn: number;
