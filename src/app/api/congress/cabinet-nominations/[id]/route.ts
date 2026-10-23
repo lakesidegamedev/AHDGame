@@ -98,6 +98,7 @@ export const GET = withNoStore(async function GET(
       votesAgainst: tally.votesAgainst,
       votesAbstain: tally.votesAbstain,
       votingEndsAt: nomination.votingEndsAt?.toISOString() ?? null,
+      votingEndsOnTurn: nomination.votingEndsOnTurn ?? null,
       proposedAt: nomination.proposedAt?.toISOString() ?? new Date().toISOString(),
       myVote,
       myWhippedFrom,
