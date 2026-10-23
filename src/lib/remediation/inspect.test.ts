@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { makeStrictInMemoryStore } from "@/lib/test-utils/inMemoryStore";
-import { MAX_QUERY_LIMIT, runCount, runDistinct, runQuery } from "./inspect";
+import { listCollections, MAX_QUERY_LIMIT, runCount, runDistinct, runQuery } from "./inspect";
 
 function seed() {
   return makeStrictInMemoryStore({
@@ -67,5 +67,36 @@ describe("runDistinct", () => {
     await expect(runDistinct(db, "widgets", "kind", { $where: "1" })).rejects.toThrow(
       /not permitted/
     );
+  });
+});
+
+describe("listCollections", () => {
+  it("counts collections concurrently and returns them sorted", async () => {
+    let active = 0;
+    let peak = 0;
+    const names = Array.from({ length: 40 }, (_, i) => `c${String(i).padStart(2, "0")}`);
+    const db = {
+      listCollections: () => ({
+        toArray: async () =>
+          [...names]
+            .reverse()
+            .map((name) => ({ name }))
+            .concat([{ name: "system.views" }]),
+      }),
+      collection: (name: string) => ({
+        estimatedDocumentCount: async () => {
+          active++;
+          peak = Math.max(peak, active);
+          await new Promise((r) => setTimeout(r, 2));
+          active--;
+          return Number(name.slice(1));
+        },
+      }),
+    } as unknown as Parameters<typeof listCollections>[0];
+    const rows = await listCollections(db);
+    expect(rows.map((r) => r.name)).toEqual(names);
+    expect(rows[7]).toEqual({ name: "c07", count: 7 });
+    expect(peak).toBeGreaterThan(1);
+    expect(peak).toBeLessThanOrEqual(16);
   });
 });
