@@ -94,14 +94,12 @@ describe("pruneMoneyJournals", () => {
   });
 
   it("deletes one batch of the oldest rows per run", async () => {
-    await db
-      .collection("ledgerEntries")
-      .insertMany(
-        [OLD, OLD - 1, OLD - 4, OLD - 2, OLD - 3].map((turn) => ({
-          _id: `t${turn}`,
-          turn,
-        })) as never
-      );
+    await db.collection("ledgerEntries").insertMany(
+      [OLD, OLD - 1, OLD - 4, OLD - 2, OLD - 3].map((turn) => ({
+        _id: `t${turn}`,
+        turn,
+      })) as never
+    );
 
     const first = await pruneMoneyJournals(db, { ledgerBatch: 3 });
     expect(first.ledgerEntries).toBe(3);
