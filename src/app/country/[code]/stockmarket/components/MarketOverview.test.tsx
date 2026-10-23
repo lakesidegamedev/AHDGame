@@ -254,6 +254,25 @@ describe("MarketOverview loading", () => {
     await waitFor(() => expect(applyPriceOptions).toHaveBeenCalledWith({ mode: 1 }));
   });
 
+  it("keeps zero-valued candles in linear mode and blocks logarithmic mode", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ points: [{ ...candle, open: 0, low: 0, high: 5, close: 2 }] }),
+      }))
+    );
+    render(<MarketOverview exchangeFilter="global" />);
+    await waitFor(() =>
+      expect(setCandleData).toHaveBeenCalledWith([
+        { time: 1000, open: 0, high: 5, low: 0, close: 2 },
+      ])
+    );
+    fireEvent.click(screen.getByRole("button", { name: "ALL" }));
+    await waitFor(() => expect(applyPriceOptions).toHaveBeenCalledWith({ mode: 0 }));
+    expect(screen.getByRole("button", { name: "Linear scale" })).toHaveProperty("disabled", true);
+  });
+
   it("offers only accessible national exchanges and plots a sector comparison", async () => {
     vi.stubGlobal(
       "fetch",
