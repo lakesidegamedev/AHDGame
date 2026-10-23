@@ -224,6 +224,10 @@ export function advanceProducerEconomy(input: {
   carryLossByCommodity?: Readonly<Record<string, number>>;
   /** Turns of recent sales a seller may carry before marking down (stockCoverRules); 0 or absent = off. */
   stockCoverTurns?: number;
+  /** Country of a producing site, so offers and its input orders carry one. */
+  countryOfProducer?: (producerId: string) => string | undefined;
+  /** Build the per-country funded book on the final settlement (see fundedBookRules). */
+  trackCountryBooks?: boolean;
 }): {
   accounts: MarketAccount[];
   payables: ProducerPayable[];
@@ -242,9 +246,12 @@ export function advanceProducerEconomy(input: {
   }>;
   /** Household spend stranded in sold-out lanes and how much the extra clearing placed. */
   spillover?: { strandedSpend: number; extraRequested: number; recovered: number };
+  /** Per-country funded book from the settled clearing, when `trackCountryBooks` is on. */
+  countryBooks?: ReturnType<typeof settleProducerMarket>["countryBooks"];
 } {
   const carryRates: Readonly<Record<string, number>> =
     input.carryLossByCommodity ?? COMMODITY_SPOILAGE_PER_TURN;
+  const countryOfProducer = input.countryOfProducer;
   const carryLoss = (commodity: string) => {
     const rate = carryRates[commodity] ?? 0;
     if (!Number.isFinite(rate) || rate < 0 || rate > 1)
@@ -530,6 +537,7 @@ export function advanceProducerEconomy(input: {
           maximumUnitPrice: recipe.maximumUnitPrice,
           priority: 1,
           eligibleOfferIds: input.eligibleOffersByOrder?.[id],
+          ...(countryOfProducer?.(p.id) ? { countryId: countryOfProducer(p.id) } : {}),
           ...(quantityGroup ? { quantityGroup } : {}),
         };
         return [
@@ -654,6 +662,7 @@ export function advanceProducerEconomy(input: {
           book: output.book,
           units,
           unitPrice: quote.unitPrice,
+          ...(countryOfProducer?.(p.id) ? { countryId: countryOfProducer(p.id) } : {}),
         },
         quote: quoteInput,
       });
@@ -683,7 +692,7 @@ export function advanceProducerEconomy(input: {
     });
   }
   const postedOffers = new Map(offers.map((o) => [o.id, o]));
-  const trial = () => {
+  const trial = (track = false) => {
     const proposedOffers: ProducerOffer[] = [...(input.externalOffers ?? [])];
     for (const p of plans)
       for (const output of p.outputs) {
@@ -701,6 +710,7 @@ export function advanceProducerEconomy(input: {
       accounts: [...cash].map(([id, value]) => ({ id, cash: value })),
       offers: proposedOffers,
       orders: [...consumerOrders, ...inputOrders()],
+      ...(track ? { trackCountryBooks: true } : {}),
     });
   };
   let market: ReturnType<typeof settleProducerMarket> | undefined;
@@ -762,7 +772,7 @@ export function advanceProducerEconomy(input: {
   }
   // Clear once more at the settled plan so every sale is backed by what is
   // actually produced (the last pass may have lowered plans after clearing).
-  market = trial();
+  market = trial(input.trackCountryBooks === true);
   if (!market) throw new Error("Missing producer market settlement");
   let spillover: { strandedSpend: number; extraRequested: number; recovered: number } | undefined;
   if ((input.spilloverShare ?? 0) > 0 && householdIds.size > 0) {
@@ -798,7 +808,7 @@ export function advanceProducerEconomy(input: {
       };
       const before = spend(market.orders);
       consumerOrders = next.orders;
-      market = trial();
+      market = trial(input.trackCountryBooks === true);
       spillover = { ...next.stats, recovered: spend(market.orders) - before };
     }
   }
@@ -1032,6 +1042,7 @@ export function advanceProducerEconomy(input: {
     tradeReceipt: market.tradeReceipt,
     prices: market.prices,
     ...(spillover ? { spillover } : {}),
+    ...(market.countryBooks ? { countryBooks: market.countryBooks } : {}),
     orderOutcomes: (() => {
       const meta = new Map(
         [...consumerOrders, ...inputOrders()].map((o) => [
