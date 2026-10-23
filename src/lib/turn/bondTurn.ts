@@ -88,6 +88,7 @@ import { bondPoolCurrency, creditBondPool } from "@/lib/bonds/marketPool";
 import { processBondMarketPoolTurn } from "@/lib/bonds/marketPoolTurn";
 import { placeUnsoldBondUnits, settlePlacementProceeds } from "@/lib/bonds/primaryMarket";
 import { sovereignIssuanceFlowsByCountry } from "@/lib/resetFinance/rules/sovereignProceeds";
+import { recordBondTurnCheckpoint } from "@/lib/turn/bondTurnResume";
 import { sovereignBondOutstanding } from "@/lib/bonds/sovereignPrincipal";
 import { payNppBondReturns, type NppBondReturns } from "./nppBondCash";
 import { treasuryAnchorValuation } from "@/lib/budget/rules/treasuryAccrual";
@@ -175,6 +176,7 @@ export async function processBondTurn(
       }
       atParIssues.push({ countryId: bond.countryId, face: bond.totalIssued });
     }
+    await recordBondTurnCheckpoint(db, turn, atParIssues, now);
   }
   // Size each currency's bond market pool, let savings flow toward its target,
   // and refresh its appetite for each sovereign issuer before anyone trades.
