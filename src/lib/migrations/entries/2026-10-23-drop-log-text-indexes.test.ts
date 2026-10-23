@@ -3,7 +3,7 @@ import type { Db } from "mongodb";
 import { migration } from "./2026-10-23-drop-log-text-indexes";
 
 const dbWith = (dropIndex: ReturnType<typeof vi.fn>) => {
-  const collection = vi.fn(() => ({ dropIndex }));
+  const collection = vi.fn((_name: string) => ({ dropIndex }));
   return { db: { collection } as unknown as Db, collection };
 };
 
