@@ -67,6 +67,41 @@ describe("freight classes", () => {
 });
 
 describe("runSourcingPass", () => {
+  it.each(["coal", "energy"] as const)(
+    "exposes eligible %s quote terms matching actual landed prices",
+    (commodity) => {
+      const result = runSourcingPass(
+        makeInputs({
+          states: [{ stateId: "A1", countryId: "US" }],
+          byState: new Map([["A1", new Map([[commodity, { supply: 0, demand: 100 }]])]]),
+          byCountry: new Map([
+            ["US", new Map([[commodity, { supply: 0, demand: 100 }]])],
+            ["UK", new Map([[commodity, { supply: 500, demand: 0 }]])],
+            ["JP", new Map([[commodity, { supply: 500, demand: 0 }]])],
+          ]),
+          nationalPricesFor: () => ({ UK: 80, JP: 10 }),
+          statePricesFor: () => ({ A1: 200 }),
+          tariffRatePct: () => 20,
+          isBlocked: (_commodity, exporter) => exporter === "JP",
+        })
+      );
+      const flow = result.flows.find(
+        (f) => f.commodity === commodity && f.originType === "country"
+      )!;
+      expect(flow).toBeDefined();
+      const terms = result.foreignQuotes!.find(
+        (q) => q.commodity === commodity && q.exporter === flow.originId && q.importer === "US"
+      )!;
+      expect(terms).toBeDefined();
+      const shipping =
+        flow.ask * terms.shippingAskShare +
+        Math.min(terms.rawShippingPerUnit, flow.ask * terms.shippingMaxAskShare);
+      expect(shipping).toBeCloseTo(flow.shippingPerUnit);
+      expect(flow.ask * (1 + terms.tariffRatePct / 100) + shipping).toBeCloseTo(flow.landedPrice);
+      expect(result.foreignQuotes!.some((q) => q.exporter === "JP")).toBe(false);
+    }
+  );
+
   it.each([
     ["coal", 0.5],
     ["energy", 100],
