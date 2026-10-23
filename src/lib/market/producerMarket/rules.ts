@@ -165,6 +165,32 @@ export function* producerTrades(receipt: ProducerTradeReceipt): Generator<Produc
   if (tradeCount !== receipt.tradeCount) throw new Error("Producer trade count mismatch");
 }
 
+export interface ProducerFillSpend {
+  orderId: string;
+  buyerAccountId: string;
+  amount: number;
+}
+
+/**
+ * Settled spend per fill, without expanding supplier-level trades. A fill's
+ * supplier legs split its units pro rata, so they sum to the fill's units and
+ * its spend is units × price. Consumers that only total spend by buyer or by
+ * order use this instead of `producerTrades`, which allocates one trade per
+ * supplier per fill.
+ */
+export function producerFillSpend(receipt: ProducerTradeReceipt): ProducerFillSpend[] {
+  const orders = new Map(receipt.orders.map((order) => [order.id, order]));
+  return receipt.fills.map((fill) => {
+    const order = orders.get(fill.orderId);
+    if (!order) throw new Error("Missing producer trade order");
+    return {
+      orderId: order.id,
+      buyerAccountId: order.accountId,
+      amount: fill.units * fill.unitPrice,
+    };
+  });
+}
+
 export interface ProducerMarketResult {
   accounts: MarketAccount[];
   tradeReceipt: ProducerTradeReceipt;

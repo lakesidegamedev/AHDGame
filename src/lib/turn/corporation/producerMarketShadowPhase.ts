@@ -24,7 +24,7 @@ import {
   type ShadowCarryState,
   type ShadowPlantCarry,
 } from "@/lib/market/producerMarket/shadowCarryRules";
-import { producerTrades } from "@/lib/market/producerMarket/rules";
+import { producerFillSpend } from "@/lib/market/producerMarket/rules";
 import type { ProducerPhysicalEnv } from "./producerPhysicalPreparation";
 import type { CorporationLookups } from "./types";
 import { buildProducerTurnDemand } from "./producerTurnDemand";
@@ -141,11 +141,8 @@ export async function runProducerMarketShadowPhase(
           (wagesByWallet.get(pay.creditorAccountId) ?? 0) + pay.amount
         );
     const spendByBuyer = new Map<string, number>();
-    for (const t of producerTrades(result.tradeReceipt))
-      spendByBuyer.set(
-        t.buyerAccountId,
-        (spendByBuyer.get(t.buyerAccountId) ?? 0) + t.units * t.unitPrice
-      );
+    for (const t of producerFillSpend(result.tradeReceipt))
+      spendByBuyer.set(t.buyerAccountId, (spendByBuyer.get(t.buyerAccountId) ?? 0) + t.amount);
     const distByWallet = new Map<string, number>();
     const opIncomeByWallet = new Map<string, number>();
     for (const t of close.transfers) {
