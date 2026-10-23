@@ -106,6 +106,7 @@ export async function queryCorporation(db: Db, params: { name?: string; id?: str
         : corp.type),
     brandColor: ((corp as Record<string, unknown>).brandColor as string) ?? null,
     logoUrl: ((corp as Record<string, unknown>).logoUrl as string) ?? null,
+    headerImageUrl: corp.headerImageUrl ?? null,
     countryId: ((corp as Record<string, unknown>).countryId as string) ?? null,
     headquartersState: ((corp as Record<string, unknown>).headquartersState as string) ?? null,
     corpUrl: `${BASE_URL}/corporations/${corp.sequentialId}`,
