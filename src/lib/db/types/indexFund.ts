@@ -165,7 +165,10 @@ export type IndexFundTransactionKind =
   | "sponsor_seed_capital"
   | "expense_fee"
   | "wind_up_distribution"
-  | "seed_capital_return";
+  | "seed_capital_return"
+  /** Residual whose holder or sponsor no longer exists: escheated to the
+   * central bank reserve of the fund's anchor currency. */
+  | "wind_up_escheat";
 
 export interface IndexFundTransaction {
   _id: ObjectId;

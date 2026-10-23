@@ -36,6 +36,7 @@ import {
 } from "@/lib/indexFunds/fundValuation";
 import { processQueuedRedemptions } from "@/lib/indexFunds/processQueuedRedemptions";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
+import { escheatWindUpResidual } from "./escheatWindUpResidual";
 
 const FUND_TX = "indexFundTransactions";
 const REDEMPTION_QUEUE = "indexFundRedemptionQueue";
@@ -286,6 +287,10 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
   );
   let holdersPaid = corporatePayout.holdersPaid;
   let distributedAnchor = corporatePayout.distributedAnchor;
+  // Claims whose holder record is gone cannot be paid to anyone. They are not
+  // an error: the cash still exists, so it escheats below instead of throwing
+  // and aborting every other holder's payout on every turn.
+  let unclaimedAnchor = corporatePayout.unclaimedAnchor;
   for (const position of positions) {
     if (position.holderKind === "corporation") continue;
     const payoutAnchor =
@@ -295,7 +300,8 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
     if (payoutAnchor <= 0) continue;
     const paid = await payFundHolderCash(db, fund, position, payoutAnchor, currentTurn, now);
     if (!paid) {
-      if (position.holderKind !== "fund_reserve") throw new Error("Fund holder payout failed");
+      if (position.holderKind === "fund_reserve") continue;
+      unclaimedAnchor += payoutAnchor;
       continue;
     }
     distributedAnchor += payoutAnchor;
@@ -308,54 +314,66 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
 
   const remainingAnchor = Math.max(0, fund.cashAnchor - distributedAnchor);
 
-  if (fund.sponsorCorporationId && remainingAnchor > 0) {
-    const sponsor = await db
-      .collection<Corporation>("corporations")
-      .findOne({ _id: fund.sponsorCorporationId });
-    if (!sponsor) throw new Error("Fund sponsor payout failed");
-    if (sponsor) {
-      const fxRate = await getCorpFxRate(db, sponsor);
-      if (!Number.isFinite(fxRate) || fxRate <= 0)
-        throw new Error("Sponsor exchange rate unavailable");
-      const localAmount = anchorToCorpLiquidCapital(remainingAnchor, sponsor, fxRate);
-      if (localAmount > 0) {
-        await creditCorpLiquidCapital(db, sponsor._id, localAmount);
-        const witness = await emitTx(db, {
-          type: "corp_capital_seed",
-          turn: currentTurn,
-          createdAt: now,
-          subjectType: "corporation",
-          subjectId: sponsor._id,
-          subjectName: sponsor.name,
-          amount: localAmount,
-          currencyCode: (resolveCorpLiquidCurrencyCode(sponsor) ?? "USD") as CurrencyCode,
-          counterpartyType: "system",
-          counterpartyName: fund.name,
-          meta: {
-            kind: "fund_seed_capital_return",
-            fundId: fund._id.toString(),
-            // #992 tranche 3: lets the shadow ledger mirror this row against
-            // the fund cash account (fail-closed on currency mismatch).
-            fundCurrency: fund.anchorCurrencyCode,
-            seedCapitalAnchor: fund.seedCapitalAnchor ?? 0,
-            returnedAnchor: remainingAnchor,
-          },
-        });
-        if (witness === "failed") throw new Error("Fund residual witness failed");
-      }
-    }
+  // A sponsor that dissolved while the fund was winding down leaves the
+  // residual unowned. Unclaimed holder cash and an unowned residual both
+  // escheat to the central bank reserve (the bug #0540 convention) rather than
+  // being destroyed or paid to somebody else.
+  const sponsor =
+    fund.sponsorCorporationId && remainingAnchor > 0
+      ? await db.collection<Corporation>("corporations").findOne({ _id: fund.sponsorCorporationId })
+      : null;
+  let escheatAnchor = 0;
+  let sponsorAnchor = 0;
+  if (!sponsor) {
+    escheatAnchor = remainingAnchor;
+  } else {
+    escheatAnchor = Math.min(unclaimedAnchor, remainingAnchor);
+    sponsorAnchor = remainingAnchor - escheatAnchor;
   }
+  await escheatWindUpResidual(db, fund, escheatAnchor, currentTurn, now, await isForexEnabled());
 
-  await db.collection<IndexFundTransaction>(FUND_TX).insertOne({
-    _id: new ObjectId(),
-    fundId: fund._id,
-    kind: "seed_capital_return",
-    turn: currentTurn,
-    ...(fund.sponsorCorporationId ? { corporationId: fund.sponsorCorporationId } : {}),
-    amountAnchor: remainingAnchor,
-    note: `Wind-up complete: ${holdersPaid} holder(s) paid, ₳${Math.round(remainingAnchor).toLocaleString()} returned to sponsor`,
-    createdAt: now,
-  } as IndexFundTransaction);
+  if (sponsor && sponsorAnchor > 0) {
+    const fxRate = await getCorpFxRate(db, sponsor);
+    if (!Number.isFinite(fxRate) || fxRate <= 0)
+      throw new Error("Sponsor exchange rate unavailable");
+    const localAmount = anchorToCorpLiquidCapital(sponsorAnchor, sponsor, fxRate);
+    if (localAmount > 0) {
+      await creditCorpLiquidCapital(db, sponsor._id, localAmount);
+      const witness = await emitTx(db, {
+        type: "corp_capital_seed",
+        turn: currentTurn,
+        createdAt: now,
+        subjectType: "corporation",
+        subjectId: sponsor._id,
+        subjectName: sponsor.name,
+        amount: localAmount,
+        currencyCode: (resolveCorpLiquidCurrencyCode(sponsor) ?? "USD") as CurrencyCode,
+        counterpartyType: "system",
+        counterpartyName: fund.name,
+        meta: {
+          kind: "fund_seed_capital_return",
+          fundId: fund._id.toString(),
+          // #992 tranche 3: lets the shadow ledger mirror this row against
+          // the fund cash account (fail-closed on currency mismatch).
+          fundCurrency: fund.anchorCurrencyCode,
+          seedCapitalAnchor: fund.seedCapitalAnchor ?? 0,
+          returnedAnchor: sponsorAnchor,
+        },
+      });
+      if (witness === "failed") throw new Error("Fund residual witness failed");
+    }
+
+    await db.collection<IndexFundTransaction>(FUND_TX).insertOne({
+      _id: new ObjectId(),
+      fundId: fund._id,
+      kind: "seed_capital_return",
+      turn: currentTurn,
+      ...(fund.sponsorCorporationId ? { corporationId: fund.sponsorCorporationId } : {}),
+      amountAnchor: sponsorAnchor,
+      note: `Wind-up complete: ${holdersPaid} holder(s) paid, ₳${Math.round(sponsorAnchor).toLocaleString()} returned to sponsor`,
+      createdAt: now,
+    } as IndexFundTransaction);
+  }
 
   await db.collection<IndexFund>("indexFunds").updateOne(
     { _id: fund._id },
@@ -385,7 +403,8 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
         finalNav,
         holdersPaid,
         distributedAnchor,
-        returnedToSponsorAnchor: remainingAnchor,
+        returnedToSponsorAnchor: sponsorAnchor,
+        escheatedAnchor: escheatAnchor,
         seedCapitalAnchor: fund.seedCapitalAnchor ?? 0,
       },
     });

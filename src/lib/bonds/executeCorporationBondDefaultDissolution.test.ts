@@ -42,6 +42,12 @@ vi.mock("@/lib/api/errors", () => ({
 vi.mock("@/lib/corporations/releaseHeldSharesToFloat", () => ({
   releaseCorporationHeldSharesToFloat: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("@/lib/indexFunds/releaseCorporationHeldPositionsToFloat", () => ({
+  releaseCorporationHeldIndexFundPositionsToFloat: vi.fn().mockResolvedValue({
+    unitsReleased: 0,
+    positionsReleased: 0,
+  }),
+}));
 vi.mock("@/lib/corporations/distributeCrossEquityInKind", () => ({
   distributeCrossEquityInKind: vi.fn().mockResolvedValue(undefined),
 }));
@@ -60,6 +66,7 @@ vi.mock("@/lib/turn/currentTurn", () => ({
 }));
 
 import { emitTxBulk } from "@/lib/financialTxLog/emit";
+import { releaseCorporationHeldIndexFundPositionsToFloat } from "@/lib/indexFunds/releaseCorporationHeldPositionsToFloat";
 import { executeCorporationBondDefaultDissolution } from "./executeCorporationBondDefaultDissolution";
 import type { Corporation, Bond } from "@/lib/db/types";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
@@ -333,5 +340,17 @@ describe("executeCorporationBondDefaultDissolution ledger rows (#3237)", () => {
       $inc: { cashAnchor: 500_000 },
       $pull: { holdings: { corporationId: corp._id } },
     });
+  });
+
+  it("releases the dying corporation's own fund positions before deleting it", async () => {
+    const corp = baseCorp({ shareholders: [{ characterId: CHAR_ID, shares: 100 }] });
+    const db = makeDb({ corp: corp as unknown as Record<string, unknown>, issuerBonds: [] });
+
+    await executeCorporationBondDefaultDissolution(db, corp, { requireDefaultedBonds: false });
+
+    expect(releaseCorporationHeldIndexFundPositionsToFloat).toHaveBeenCalledWith(db, [corp._id]);
+    const release = vi.mocked(releaseCorporationHeldIndexFundPositionsToFloat);
+    const del = vi.mocked(db.collection("corporations").deleteOne);
+    expect(release.mock.invocationCallOrder[0]).toBeLessThan(del.mock.invocationCallOrder[0]);
   });
 });

@@ -366,6 +366,7 @@ describe("corporation fund accounting", () => {
     expect(await payCorporateWindUpHolders(db, fund, positions, 25, 5, new Date())).toEqual({
       holdersPaid: 2,
       distributedAnchor: 100,
+      unclaimedAnchor: 0,
     });
     expect(memory.collection("corporations").docs[0].liquidCapital).toBe(105000);
     expect(memory.collection("corporations").docs[1].liquidCapital).toBe(1100);
