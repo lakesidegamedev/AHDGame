@@ -184,14 +184,26 @@ describe("#3393 seed writers and loader", { timeout: 60_000 }, () => {
       }
     });
 
-    it(`${c}: 1953, 1979 and 2019 seeds are not touched and clear the stamp`, async () => {
-      for (const preset of ["1953-default", "1979-default", "2019-default"]) {
+    it(`${c}: 1953 and 2019 seeds are not touched and clear the stamp`, async () => {
+      for (const preset of ["1953-default", "2019-default"]) {
         const { metrics, stamps } = await seededIncome(c, preset);
         expect(stamps).toEqual([{ $unset: { [`incomeStartVintages.${c}`]: "" } }]);
         expect(seededIncomeVintageId(c, preset)).toBeNull();
         const hits = [...metrics].filter(([id, v]) => INCOME_1991_REGIONAL[c][id] === v);
         expect(hits).toHaveLength(0);
       }
+    });
+
+    it(`${c}: the 1979 seed keeps its bundle and stamps the 1979 vintage (#3398)`, async () => {
+      const { metrics, stamps } = await seededIncome(c, "1979-default");
+      expect(stamps).toEqual([
+        { $set: { [`incomeStartVintages.${c}`]: `${c.toLowerCase()}-1979-household-authored` } },
+      ]);
+      expect(seededIncomeVintageId(c, "1979-default")).toBe(
+        `${c.toLowerCase()}-1979-household-authored`
+      );
+      const hits = [...metrics].filter(([id, v]) => INCOME_1991_REGIONAL[c][id] === v);
+      expect(hits).toHaveLength(0);
     });
   }
 });
@@ -360,16 +372,29 @@ describe("#3393 provenance gate through computeNationalMetrics", { timeout: 60_0
     for (const c of WEST) expect(Object.values(NATIONAL_SCOPE)).not.toContain(c);
   });
 
-  it("bootstrap re-applies all seven stamps for a 1991 world and clears them otherwise", async () => {
+  it("bootstrap stamps each start year and clears the rest", async () => {
     const db = createMockDb();
     await stampSeededIncomeVintages(db as unknown as Db, "1991-default");
     await stampSeededIncomeVintages(db as unknown as Db, "1979-default");
-    const [fresh, other] = db.collectionMocks.gameState!.updateOne.mock.calls.map((c) => c[1]);
+    await stampSeededIncomeVintages(db as unknown as Db, "2019-default");
+    const [fresh, seventyNine, legacy] = db.collectionMocks.gameState!.updateOne.mock.calls.map(
+      (c) => c[1]
+    );
     for (const c of WEST) {
       expect(fresh.$set[`incomeStartVintages.${c}`]).toBe(FRESH[c]);
-      expect(other.$unset[`incomeStartVintages.${c}`]).toBe("");
+      // #3398: a 1979 world seeds the ~1979 bundle and carries its own vintage.
+      expect(seventyNine.$set[`incomeStartVintages.${c}`]).toBe(
+        `${c.toLowerCase()}-1979-household-authored`
+      );
+      expect(legacy.$unset[`incomeStartVintages.${c}`]).toBe("");
     }
-    expect(other.$set).toBeUndefined();
+    // NG, CN and TR have no 1979 vintage, so their 1979 seeds stay legacy.
+    expect(seventyNine.$unset).toEqual({
+      "incomeStartVintages.NG": "",
+      "incomeStartVintages.CN": "",
+      "incomeStartVintages.TR": "",
+    });
+    expect(legacy.$set).toBeUndefined();
   });
 
   for (const c of WEST) {

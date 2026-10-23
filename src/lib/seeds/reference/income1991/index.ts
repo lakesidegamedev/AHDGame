@@ -30,6 +30,7 @@
 
 import type { CountryId } from "@/lib/constants/countries";
 import { getIncomeStartVintage } from "@/lib/era/metricCatalog";
+import { getStartingYearForPreset } from "@/lib/constants/turnTime";
 import type { StateMetrics } from "@/lib/db/types";
 import type { StateMetricBaseline } from "@/lib/db/types/statePolicy";
 import { ngRegions1991 } from "@/lib/countries/ng/data/ngRegions1991";
@@ -225,10 +226,14 @@ export const INCOME_1991_VINTAGE_YEAR = 1991;
  * Provenance id of the incomes the seed writers write for `preset`, or null when
  * they write the legacy bundle. Writers stamp this on gameState next to the
  * values, so scoring switches anchors only for data that carries it.
+ *
+ * Keyed on the preset's start year, not on 1991 alone: a 1979 world seeds the
+ * ~1979 bundle and now has its own dated anchor (#3398), while a 1953 world
+ * keeps the 1953 overlay and a 2019 world the legacy bundle, so both still
+ * clear the stamp. Countries with no vintage at that year return null.
  */
 export function seededIncomeVintageId(countryId: string, preset: string): string | null {
-  if (preset !== "1991-default" || !(countryId in INCOME_1991_REGIONAL)) return null;
-  return getIncomeStartVintage(countryId, INCOME_1991_VINTAGE_YEAR)?.id ?? null;
+  return getIncomeStartVintage(countryId, getStartingYearForPreset(preset))?.id ?? null;
 }
 
 /** Replace a 1991 metric doc's median income with its dated vintage, if authored. */
