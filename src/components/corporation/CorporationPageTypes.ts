@@ -399,6 +399,8 @@ export interface CorporationDetail {
    * of the strength it gains. The budget projections leave that payment out.
    */
   groupStrengthTransfer?: { subsidiaryCount: number } | null;
+  /** Turns left before this corporation may spin off again; 0 when ready. */
+  spinOffCooldownTurnsRemaining?: number;
   /** Active parent-set dividend floor (percent), honored while the setter still controls >50%. */
   parentDividendFloorPct?: number;
 }

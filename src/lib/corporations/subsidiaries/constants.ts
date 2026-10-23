@@ -35,4 +35,19 @@ export function spinOffCostAnchor(sectorCount: number): number {
   return SPIN_OFF_BASE_COST_ANCHOR + SPIN_OFF_PER_SECTOR_COST_ANCHOR * Math.max(0, sectorCount);
 }
 
+/**
+ * Turns left before this parent may spin off again.
+ *
+ * The command refuses a spin-off while this is above zero, and the UI shows the
+ * same number, so the countdown a player reads is the countdown that blocks
+ * them. Returns 0 when no spin-off has been recorded.
+ */
+export function spinOffCooldownTurnsRemaining(
+  lastSpinOffTurn: number | null | undefined,
+  currentTurn: number
+): number {
+  if (lastSpinOffTurn == null) return 0;
+  return Math.max(0, SPIN_OFF_COOLDOWN_TURNS - (currentTurn - lastSpinOffTurn));
+}
+
 // Synergy constants intentionally omitted (deferred, separate flag).
