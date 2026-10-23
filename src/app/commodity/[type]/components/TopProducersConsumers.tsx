@@ -6,6 +6,7 @@ import { CorporationLogo } from "@/components/corporation/CorporationLogo";
 import { formatUnits } from "../lib/helpers";
 import { formatCurrencyFull } from "@/lib/utils/formatters";
 import type { MarketingBudget, CorpVolume, SyntheticDemandSource } from "../types";
+import { EXTRACTABLE_RESOURCES } from "@/lib/constants/commodities";
 
 const PAGE_SIZE = 10;
 
@@ -135,6 +136,9 @@ export default function TopProducersConsumers({
   const [consumerPage, setConsumerPage] = useState(1);
 
   const showMarketingBudgets = commodity === "advertising" && marketingBudgets !== undefined;
+  // Mining supply on this surface is the nameplate/state-capacity basis, not the
+  // units actually dug, so the caption must not call it output volume.
+  const extractionBasis = (EXTRACTABLE_RESOURCES as readonly string[]).includes(commodity);
 
   if (
     !showMarketingBudgets &&
@@ -161,7 +165,9 @@ export default function TopProducersConsumers({
         <div className="rounded-xl border border-card-border bg-card p-6">
           <h2 className="text-lg font-bold text-foreground mb-1">Top producers</h2>
           <p className="text-xs text-muted mb-3">
-            Largest corporations by output volume, with their share of the market
+            {extractionBasis
+              ? "Largest corporations by production capacity, not dug output, with their share of the market"
+              : "Largest corporations by output volume, with their share of the market"}
             {marketLabel ? ` in the ${marketLabel.toLowerCase()}` : ""}
           </p>
           <div className="space-y-2">

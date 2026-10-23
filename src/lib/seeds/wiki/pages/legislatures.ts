@@ -21,14 +21,14 @@ export const legislaturesPages: readonly WikiSeedPage[] = [
     slug: "bills-legislation",
     title: "Bills & Legislation",
     description:
-      "How bills are drafted, introduced, voted on in both chambers, and signed into law: including provision costs, NPP auto-voting, and what happens when a bill is enacted.",
+      "How bills are drafted, voted, vetoed, and enacted: costs, NPP voting, the three economic laws, budget gates, and where a bill can die.",
     content: billsLegislationContent,
     category: "legislatures",
     extraTags: ["bills", "whip"],
     featured: true,
     difficulty: "intermediate",
     contentType: "guide",
-    estimatedReadTime: 8,
+    estimatedReadTime: 10,
     designDocUrl: "design/bills-legislation.html",
   },
   {
