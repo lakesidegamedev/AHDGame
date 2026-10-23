@@ -46,6 +46,54 @@ describe("processCabinetNominationLifecycle — holder seating", () => {
     db.collection("electedOfficials");
   });
 
+  it("closes nominations due on the incoming turn but leaves later deadlines open", async () => {
+    const due = {
+      _id: new ObjectId(),
+      status: "active",
+      countryId: "US",
+      positionId: "secretary_of_treasury",
+      nomineeCharacterId: new ObjectId(),
+      nomineeCharacterName: "Due Nominee",
+      nomineeParty: "democrat",
+      proposedByPresidentId: new ObjectId(),
+      votingEndsOnTurn: 101,
+      votes: {},
+    };
+    const future = { ...due, _id: new ObjectId(), votingEndsOnTurn: 102 };
+    const nominations = [due, future];
+
+    db.collectionMocks.cabinetNominations.find.mockImplementation(
+      (query: Record<string, unknown>) => {
+        const turnClause = (query.$or as Array<{ votingEndsOnTurn: Record<string, number> }>)[0]
+          .votingEndsOnTurn;
+        const found =
+          "$lte" in turnClause
+            ? nominations.filter((nom) => nom.votingEndsOnTurn <= turnClause.$lte)
+            : nominations.filter((nom) => nom.votingEndsOnTurn > turnClause.$gt);
+        return { toArray: vi.fn().mockResolvedValue(found) } as never;
+      }
+    );
+    const { computeCabinetNominationTally } =
+      await import("@/lib/congress/governmentVoteBreakdown");
+    vi.mocked(computeCabinetNominationTally).mockResolvedValue({
+      votesFor: 40,
+      votesAgainst: 60,
+      votesAbstain: 0,
+    } as never);
+
+    const { processCabinetNominationLifecycle } = await import("./cabinetNominationLifecycle");
+    await processCabinetNominationLifecycle(new Date(0));
+
+    expect(db.collectionMocks.cabinetNominations.updateOne).toHaveBeenCalledWith(
+      { _id: due._id },
+      expect.objectContaining({ $set: expect.objectContaining({ status: "rejected" }) })
+    );
+    expect(db.collectionMocks.cabinetNominations.updateOne).not.toHaveBeenCalledWith(
+      { _id: future._id },
+      expect.anything()
+    );
+  });
+
   it("resets the position's setting cooldowns when a nominee is confirmed", async () => {
     const nomination = {
       _id: new ObjectId(),
