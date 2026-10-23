@@ -135,6 +135,58 @@ describe("GET /api/country/[code]/parties/[id]/whippable-leadership — motion t
     } as never);
   });
 
+  it.each([
+    ["majority_leader_house", "house"],
+    ["majority_leader_senate", "senate"],
+  ] as const)("allows the matching US %s chamber leader", async (role, chamber) => {
+    const { requireAuthWithCharacter } = await import("@/lib/api/requireAuth");
+    vi.mocked(requireAuthWithCharacter).mockResolvedValue({
+      ok: true,
+      user: { userId: new ObjectId().toString(), isAdmin: false, character: { _id: chairId } },
+    } as never);
+    db.collection("congressLeaders").findOne.mockImplementation(async (query: unknown) => {
+      const q = query as { role?: { $in?: string[] }; characterId?: ObjectId; party?: string };
+      return q.role?.$in?.includes(role) && q.characterId?.equals(chairId) && q.party === "1"
+        ? { role, characterId: chairId, party: "1" }
+        : null;
+    });
+    expect((await get()).status).toBe(200);
+    expect(db.collection("congressLeaders").findOne).toHaveBeenCalledWith(
+      expect.objectContaining({ role: { $in: expect.arrayContaining([role]) }, party: "1" })
+    );
+    expect(chamber).toBe(role.endsWith("house") ? "house" : "senate");
+  });
+
+  it.each([
+    { role: "majority_leader_house", party: "2", code: "us" },
+    { role: "member", party: "1", code: "us" },
+    { role: "majority_leader_house", party: "1", code: "uk" },
+  ])(
+    "denies a nonmatching or non-US chamber leader: $role / $party / $code",
+    async ({ role, party, code }) => {
+      const { requireAuthWithCharacter } = await import("@/lib/api/requireAuth");
+      vi.mocked(requireAuthWithCharacter).mockResolvedValue({
+        ok: true,
+        user: { userId: new ObjectId().toString(), isAdmin: false, character: { _id: chairId } },
+      } as never);
+      const { findPartyBySequentialId } = await import("@/lib/db/partyLookup");
+      vi.mocked(findPartyBySequentialId).mockResolvedValue({
+        sequentialId: 1,
+        countryId: code.toUpperCase(),
+        isDefault: true,
+        chairId: new ObjectId(),
+        viceChairId: null,
+      } as never);
+      db.collection("congressLeaders").findOne.mockImplementation(async (query: unknown) => {
+        const q = query as { party?: string; characterId?: ObjectId; role?: { $in?: string[] } };
+        return q.party === party && q.characterId?.equals(chairId) && q.role?.$in?.includes(role)
+          ? { role, party, characterId: chairId }
+          : null;
+      });
+      expect((await get(code)).status).toBe(403);
+    }
+  );
+
   it("surfaces active Supreme Court nominations for Senate whips", async () => {
     const nominationId = new ObjectId();
     db.collection("scotusNominations").find.mockReturnValue(

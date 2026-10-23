@@ -109,7 +109,6 @@ import { resolveProspects } from "@/lib/turn/prospecting/resolveProspects";
 import { settleExtractionContracts } from "@/lib/turn/extraction/contractSettlement";
 import { isProspectingEnabled, isContractIssuanceEnabled } from "@/lib/extraction/featureFlag";
 import { processBondTurn } from "@/lib/turn/bondTurn";
-import { rebuildBondTurnFlowsFromJournal } from "@/lib/turn/bondTurnResume";
 import {
   hasCompleteSovereignFlows,
   TurnPhaseResultIncompleteError,
@@ -567,35 +566,9 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
         if (captureV2SovereignCash) {
           // On a crash resume this is the result bondTurn stored with its
           // completed status, never a rerun and never an assumed zero (#3429).
-          // When bondTurn died mid-phase, here or in a previous process, its
-          // flows are rebuilt from what it committed; anything the evidence
-          // cannot prove keeps the turn failing closed.
-          const resumeOutcome = runtime.resumeResultOutcome("bondTurn");
-          const interrupted =
-            bondTurnResult === null &&
-            (runtime.phaseFailed?.("bondTurn") === true ||
-              resumeOutcome === "interrupted" ||
-              resumeOutcome === "missing");
-          let recoveredBondFlows: Awaited<ReturnType<typeof processBondTurn>> | null = null;
-          if (interrupted) {
-            const rebuilt = await rebuildBondTurnFlowsFromJournal(context.db, newTurn, {
-              treasuryCashLedgerEnabled: context.config?.treasuryCashLedgerEnabled === true,
-            });
-            if (rebuilt.ok) {
-              recoveredBondFlows = rebuilt.result;
-              console.warn(
-                `[Turn] bondTurn was interrupted; rebuilt its sovereign flows from the ${rebuilt.source} and committed primary receipts`
-              );
-              (phaseResults as Record<string, unknown>).bondTurnRecovery = {
-                source: rebuilt.source,
-              };
-            } else {
-              console.error(`[Turn] bondTurn flows could not be rebuilt: ${rebuilt.reason}`);
-            }
-          }
           const bondFlows = runtime.requirePhaseResult(
             "bondTurn",
-            bondTurnResult ?? recoveredBondFlows,
+            bondTurnResult,
             "resetTreasuryCash"
           );
           if (!hasCompleteSovereignFlows(bondFlows)) {

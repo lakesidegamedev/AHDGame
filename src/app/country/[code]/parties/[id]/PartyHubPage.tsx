@@ -440,6 +440,7 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
   const searchParams = useSearchParams();
   const requestedCountry = parseCountryParam(countryCode?.toLowerCase() ?? null);
   const [user, setUser] = useState<NationalUserData | null>(null);
+  const [isChamberLeaderForParty, setIsChamberLeaderForParty] = useState(false);
   const [party, setParty] = useState<PartyData | null>(null);
   const [loading, setLoading] = useState(true);
   const [electionData, setElectionData] = useState<NationalElectionsState | null>(null);
@@ -596,7 +597,43 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
   const isCampaignerEarly =
     hasCharEarly && !!party?.campaigners?.some((c) => c.id === user?.character?.id);
   const canManageNppsEarly = canUsePartyInfluenceEarly || isCampaignerEarly;
-  const canViewExtendedTabsEarly = user?.isAdmin || isInPartyEarly || modViewEnabled;
+  const canViewExtendedTabsEarly =
+    user?.isAdmin || isInPartyEarly || modViewEnabled || isChamberLeaderForParty;
+
+  useEffect(() => {
+    if (
+      !party ||
+      party.countryId !== "US" ||
+      !user?.character?.id ||
+      user.isAdmin ||
+      isChairEarly ||
+      isViceChairEarly
+    ) {
+      setIsChamberLeaderForParty(false);
+      return;
+    }
+    let cancelled = false;
+    fetch(`${partyApiUrl(requestedCountry?.toLowerCase() ?? "us", id)}/whippable-bills`, {
+      credentials: "same-origin",
+    })
+      .then((response) => {
+        if (!cancelled) setIsChamberLeaderForParty(response.ok);
+      })
+      .catch(() => {
+        if (!cancelled) setIsChamberLeaderForParty(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    party,
+    id,
+    requestedCountry,
+    user?.character?.id,
+    user?.isAdmin,
+    isChairEarly,
+    isViceChairEarly,
+  ]);
 
   useEffect(() => {
     if (canViewExtendedTabsEarly) {
@@ -810,7 +847,8 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
   // Campaigners only get the Management sub-tab, so the stored "recruitment"
   // default has to collapse to it rather than rendering an empty panel.
   const effectiveNppSubTab: NppSubTab = canUsePartyInfluence ? nppSubTab : "management";
-  const canViewExtendedTabs = user?.isAdmin || isInParty || modViewEnabled;
+  const canViewExtendedTabs =
+    user?.isAdmin || isInParty || modViewEnabled || isChamberLeaderForParty;
   const sortedMembers = [...party.members].sort((a, b) => a.name.localeCompare(b.name));
   const candidatePositions = POSITIONS.filter((p) => electionData?.isCandidate[p]);
 
@@ -1057,7 +1095,7 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
           countryId={party.countryId}
           partyId={String(party.id)}
           partyColor={party.color}
-          canUsePartyInfluence={!!canUsePartyInfluence}
+          canUsePartyInfluence={!!canUsePartyInfluence || isChamberLeaderForParty}
           eligibleStates={eligibleStates}
         />
       )}
@@ -1534,11 +1572,11 @@ function StatePartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "state
   const canChangeTax = canManageTreas;
   const canInfluence = user?.isAdmin || isChair || isViceChair;
   const isStateCampaigner =
-    hasChar && !!user?.character?.id && stateParty?.campaigner?.id === user.character.id;
+    hasChar && !!user?.character?.id && stateParty?.campaigner?.id === user?.character?.id;
   const isNatCampaigner =
     hasChar &&
     !!user?.character?.id &&
-    !!stateParty?.nationalCampaignerIds?.includes(user.character.id);
+    !!stateParty?.nationalCampaignerIds?.includes(user?.character?.id ?? "");
   const canBuildOrg =
     user?.isAdmin ||
     isChair ||

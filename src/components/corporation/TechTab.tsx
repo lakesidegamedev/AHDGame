@@ -40,6 +40,7 @@ interface TechNode {
   /** Turns the cash price takes to earn back; null if the node has no running value. */
   paybackTurns?: number | null;
   effects: TechEffectView[];
+  inputEfficiencyContributionPct?: number | null;
   unlocksStrategy: string | null;
   owned: boolean;
   /** Owned, but from before the previous decade, so its plant effects no longer apply. */
@@ -344,6 +345,8 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
           fmtCash={fmtCashShort}
           rdScore={data.rdScore}
           liquidCapital={data.liquidCapital}
+          inputEfficiencyPct={data.inputEfficiencyPct}
+          inputEfficiencyCapPct={data.inputEfficiencyCapPct}
           busyNode={busyNode}
           onUnlock={(node, lane) => setConfirmNode({ node, lane, decade: current.id })}
           onAbandon={() => setConfirmAbandon(current)}
@@ -381,6 +384,8 @@ export default function TechTab({ corporationId, isCeo }: TechTabProps) {
                 fmtCash={fmtCashShort}
                 rdScore={data.rdScore}
                 liquidCapital={data.liquidCapital}
+                inputEfficiencyPct={data.inputEfficiencyPct}
+                inputEfficiencyCapPct={data.inputEfficiencyCapPct}
                 busyNode={busyNode}
                 onUnlock={(node, lane) => setConfirmNode({ node, lane, decade: decade.id })}
                 onAbandon={() => setConfirmAbandon(decade)}
@@ -463,6 +468,8 @@ function DecadeSection({
   fmtCash,
   rdScore,
   liquidCapital,
+  inputEfficiencyPct,
+  inputEfficiencyCapPct,
   busyNode,
   onUnlock,
   onAbandon,
@@ -474,6 +481,8 @@ function DecadeSection({
   fmtCash: (n: number | null | undefined) => string;
   rdScore: number | null | undefined;
   liquidCapital: number | null | undefined;
+  inputEfficiencyPct: number | null | undefined;
+  inputEfficiencyCapPct: number | null | undefined;
   busyNode: string | null;
   onUnlock: (node: TechNode, lane: Lane) => void;
   onAbandon: () => void;
@@ -525,6 +534,8 @@ function DecadeSection({
             fmtCash={fmtCash}
             rdScore={rdScore}
             liquidCapital={liquidCapital}
+            inputEfficiencyPct={inputEfficiencyPct}
+            inputEfficiencyCapPct={inputEfficiencyCapPct}
             busyNode={busyNode}
             onUnlock={onUnlock}
           />
@@ -541,6 +552,8 @@ function LaneTree({
   fmtCash,
   rdScore,
   liquidCapital,
+  inputEfficiencyPct,
+  inputEfficiencyCapPct,
   busyNode,
   onUnlock,
 }: {
@@ -550,6 +563,8 @@ function LaneTree({
   fmtCash: (n: number | null | undefined) => string;
   rdScore: number | null | undefined;
   liquidCapital: number | null | undefined;
+  inputEfficiencyPct: number | null | undefined;
+  inputEfficiencyCapPct: number | null | undefined;
   busyNode: string | null;
   onUnlock: (node: TechNode, lane: Lane) => void;
 }) {
@@ -652,7 +667,13 @@ function LaneTree({
       <div className="space-y-3 p-3">
         {bySlot.get(1) && (
           <div className="mx-auto w-full max-w-sm">
-            <TechNodeCard node={bySlot.get(1)!} fmtCash={fmtCash} status={status(bySlot.get(1)!)} />
+            <TechNodeCard
+              node={bySlot.get(1)!}
+              fmtCash={fmtCash}
+              status={status(bySlot.get(1)!)}
+              inputEfficiencyPct={inputEfficiencyPct}
+              inputEfficiencyCapPct={inputEfficiencyCapPct}
+            />
           </div>
         )}
         {bySlot.has(2) || bySlot.has(3) ? (
@@ -679,7 +700,13 @@ function LaneTree({
                     return (
                       <div key={slot} className="flex w-full flex-col items-center">
                         {index > 0 && <TreeConnector active={parent?.owned ?? false} />}
-                        <TechNodeCard node={node} fmtCash={fmtCash} status={status(node)} />
+                        <TechNodeCard
+                          node={node}
+                          fmtCash={fmtCash}
+                          status={status(node)}
+                          inputEfficiencyPct={inputEfficiencyPct}
+                          inputEfficiencyCapPct={inputEfficiencyCapPct}
+                        />
                       </div>
                     );
                   })}
@@ -711,11 +738,23 @@ function LaneTree({
                 return (
                   <div key={slot} className="flex min-w-0 flex-col items-center">
                     <TreeConnector active={parentOwned} />
-                    <TechNodeCard node={node} fmtCash={fmtCash} status={status(node)} />
+                    <TechNodeCard
+                      node={node}
+                      fmtCash={fmtCash}
+                      status={status(node)}
+                      inputEfficiencyPct={inputEfficiencyPct}
+                      inputEfficiencyCapPct={inputEfficiencyCapPct}
+                    />
                     {capstone && (
                       <>
                         <TreeConnector active={node.owned} />
-                        <TechNodeCard node={capstone} fmtCash={fmtCash} status={status(capstone)} />
+                        <TechNodeCard
+                          node={capstone}
+                          fmtCash={fmtCash}
+                          status={status(capstone)}
+                          inputEfficiencyPct={inputEfficiencyPct}
+                          inputEfficiencyCapPct={inputEfficiencyCapPct}
+                        />
                       </>
                     )}
                   </div>
@@ -766,13 +805,25 @@ function TechNodeCard({
   node,
   fmtCash,
   status,
+  inputEfficiencyPct,
+  inputEfficiencyCapPct,
 }: {
   node: TechNode;
   fmtCash: (n: number | null | undefined) => string;
   status: ReactNode;
+  inputEfficiencyPct: number | null | undefined;
+  inputEfficiencyCapPct: number | null | undefined;
 }) {
   const isOwned = node.owned;
   const expired = isOwned && !!node.effectExpired;
+  const remainingInputEfficiency =
+    inputEfficiencyPct != null && inputEfficiencyCapPct != null
+      ? Math.max(0, inputEfficiencyCapPct - inputEfficiencyPct)
+      : null;
+  const inputEfficiencyClipped =
+    !isOwned &&
+    remainingInputEfficiency != null &&
+    (node.inputEfficiencyContributionPct ?? 0) > remainingInputEfficiency;
   return (
     <article
       className={`w-full min-w-0 rounded-[calc(var(--corp-rad,6px)-2px)] border p-2.5 text-center ${
@@ -788,6 +839,13 @@ function TechNodeCard({
     >
       <h4 className="text-xs font-semibold leading-snug text-foreground">{node.name}</h4>
       <p className="mt-1 line-clamp-3 text-[11px] leading-snug text-muted">{node.description}</p>
+      {inputEfficiencyClipped && (
+        <p className="mt-1.5 text-[10px] font-medium text-warning">
+          {remainingInputEfficiency === 0
+            ? `This input reduction adds nothing because the ${inputEfficiencyCapPct}% cap is reached.`
+            : `Some of this input reduction exceeds the ${inputEfficiencyCapPct}% cap.`}
+        </p>
+      )}
       {node.effects.length > 0 && (
         <ul className="mt-1.5 space-y-1 text-[11px] leading-snug text-muted">
           {node.effects.map((effect, index) => (

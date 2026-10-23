@@ -24,7 +24,11 @@ import {
   getNoConfidenceVotesCollection,
 } from "@/lib/db/collections/governmentFormation";
 import type { CountryId } from "@/lib/constants/countries";
-import { getCabinetWhipChamber, getConfidenceWhipChamber } from "@/lib/partyWhips/constraints";
+import {
+  getCabinetWhipChamber,
+  getConfidenceWhipChamber,
+  getChamberLeaderRole,
+} from "@/lib/partyWhips/constraints";
 import { officialsCountryScope } from "@/lib/db/electedOfficialScope";
 import { getOfficeTypeForChamber } from "@/lib/legislature/chamberOfficeType";
 import {
@@ -119,12 +123,21 @@ export async function GET(request: Request, { params }: RouteParams) {
     const partyIdStr = String(party.sequentialId);
 
     // Check authorization - only Chair and Vice Chair
-    const characterId = authData.character._id;
-    const isChair = party.chairId?.equals(characterId);
-    const isViceChair = party.viceChairId?.equals(characterId);
+    const characterId = authData.character?._id;
+    const isChair = !!characterId && !!party.chairId?.equals(characterId);
+    const isViceChair = !!characterId && !!party.viceChairId?.equals(characterId);
     const isAdmin = authData.isAdmin;
-
-    if (!isChair && !isViceChair && !isAdmin) {
+    const leaderChambers: string[] = [];
+    if (countryId === COUNTRY_CONFIGS.US.id && characterId) {
+      const [houseLeader, senateLeader] = await Promise.all([
+        getChamberLeaderRole(db, characterId, "house", partyIdStr),
+        getChamberLeaderRole(db, characterId, "senate", partyIdStr),
+      ]);
+      if (houseLeader) leaderChambers.push("house");
+      if (senateLeader) leaderChambers.push("senate");
+    }
+    const canViewAllChambers = isChair || isViceChair || isAdmin;
+    if (!canViewAllChambers && leaderChambers.length === 0) {
       return NextResponse.json(
         forbidden("Only the Chair or Vice Chair can view whippable elections").toJson(),
         { status: 403 }
@@ -639,7 +652,13 @@ export async function GET(request: Request, { params }: RouteParams) {
       }
     }
 
-    return NextResponse.json(result);
+    return NextResponse.json(
+      canViewAllChambers
+        ? result
+        : Object.fromEntries(
+            Object.entries(result).filter(([chamber]) => leaderChambers.includes(chamber))
+          )
+    );
   } catch (error) {
     return handleRouteError(error);
   }

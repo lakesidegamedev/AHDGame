@@ -78,7 +78,7 @@ export default function RunMeter({
         key: `idle-${c.cause}`,
         label: meta.label,
         units: c.units,
-        fill: TONE_FILL[meta.tone],
+        fill: TONE_FILL[c.cause] ?? TONE_FILL[meta.tone],
         help: meta.help,
       };
     }),
