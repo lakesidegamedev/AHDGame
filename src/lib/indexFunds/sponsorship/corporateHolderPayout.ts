@@ -48,11 +48,15 @@ export async function payCorporateWindUpHolders(
   let distributedAnchor = 0;
   for (const position of corporatePositions) {
     const corp = byId.get(position.corporationId!.toString());
+    // A dissolved corporation cannot be paid. Every position's units are
+    // zeroed by the caller either way, and this holder's share stays in the
+    // residual cash the sponsor gets back, so the wind-up finishes instead of
+    // aborting on every pass.
+    if (!corp) continue;
     const amountAnchor =
       fund.seedAccounting === "paid_units"
         ? position.units * finalNav
         : Math.floor(position.units * finalNav);
-    if (!corp) throw new Error("Corporate fund holder no longer exists");
     if (amountAnchor <= 0) continue;
     const currency = resolveCorpLiquidCurrencyCode(corp);
     const rate = forex && currency ? rates[currency] : 1;
