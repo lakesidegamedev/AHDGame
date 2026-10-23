@@ -558,7 +558,26 @@ export async function runNppCorporateAttacks(
 
   const nppCorps = await db
     .collection<Corporation>("corporations")
-    .find({ ceoType: "npp", suspended: { $ne: true } })
+    .find(
+      { ceoType: "npp", suspended: { $ne: true } },
+      {
+        // Only the fields this pass reads: attackers are filtered on country,
+        // CEO and cooldown, then quoted on cash, marketing strength and
+        // currency. The full document is a balance sheet plus settlement
+        // history the attack never touches.
+        projection: {
+          _id: 1,
+          name: 1,
+          countryId: 1,
+          ceoId: 1,
+          lastAutoAttackTurn: 1,
+          liquidCapital: 1,
+          liquidCurrencyCode: 1,
+          marketingStrength: 1,
+          splitEscalation: 1,
+        },
+      }
+    )
     .toArray();
   if (nppCorps.length === 0) return 0;
 
@@ -650,7 +669,29 @@ export async function runNppCorporateAttacks(
   }
 
   // All corporations, once — defenders may be player-owned (not in nppCorps).
-  const allCorps = await db.collection<Corporation>("corporations").find({}).toArray();
+  // Projected to the target/defender contract: the attack itself re-reads the
+  // defender inside its transaction, so the full balance sheet here would only
+  // be decoded to look up a name and a marketing strength.
+  const allCorps = await db
+    .collection<Corporation>("corporations")
+    .find(
+      {},
+      {
+        projection: {
+          _id: 1,
+          name: 1,
+          userId: 1,
+          ceoVacant: 1,
+          lastAutoAttackedTurn: 1,
+          marketingStrength: 1,
+          suspended: 1,
+          liquidCurrencyCode: 1,
+          countryId: 1,
+          countryOwnerId: 1,
+        },
+      }
+    )
+    .toArray();
   const corpById = new Map(allCorps.map((c) => [c._id.toString(), c]));
 
   let attacks = 0;

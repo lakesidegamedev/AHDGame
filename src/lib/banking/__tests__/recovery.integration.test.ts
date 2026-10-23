@@ -303,6 +303,73 @@ describe("recovery worker", () => {
     expect(gated.reasons.join(" ")).toMatch(/unfinished/);
   });
 
+  it("leaves a settlement with a deleted target alone until the target exists", async () => {
+    const missingTarget = new ObjectId();
+    await db.collection("bankMoneyMoves").insertOne({
+      _id: `deleted-payee:${TURN}`,
+      kind: "test_move",
+      turn: TURN,
+      status: "partial",
+      genericMoneyMoveVersion: 2,
+      createdAt: new Date(),
+      projections: [],
+      legs: [
+        {
+          kind: "debit",
+          amount: 100,
+          note: "landed before the crash",
+          applied: true,
+          collection: "corporations",
+          filter: { _id: BANK },
+          path: "bankCharter.cashReserves",
+        },
+        {
+          kind: "credit",
+          amount: 100,
+          note: "payee was deleted",
+          applied: false,
+          collection: "corporations",
+          filter: { _id: missingTarget },
+          path: "liquidCapital",
+        },
+      ],
+    });
+
+    const before = bank(db).bankCharter.cashReserves;
+    const deferred = await recoverBankingSettlements(db as unknown as Db, TURN + 1);
+    expect(deferred.resumedSettlements).toEqual([]);
+    expect(deferred.stillPartial).toHaveLength(1);
+    expect(deferred.stillPartial[0]).toMatchObject({
+      key: `deleted-payee:${TURN}`,
+      kind: "test_move",
+      turn: TURN,
+    });
+    expect(deferred.stillPartial[0].error).toMatch(/target .* is missing/);
+    expect(bank(db).bankCharter.cashReserves).toBe(before);
+
+    // The target coming back is not a permanent write-off: the next pass
+    // finishes the same record.
+    await db.collection("corporations").insertOne({
+      _id: missingTarget,
+      name: "Late Payee",
+      type: "industrial",
+      countryId: "US",
+      liquidCapital: 0,
+      liquidCurrencyCode: "USD",
+    });
+    const recovered = await recoverBankingSettlements(db as unknown as Db, TURN + 2);
+    expect(
+      recovered.resumedSettlements,
+      recovered.stillPartial.map((row) => row.error).join("; ")
+    ).toEqual([`deleted-payee:${TURN}`]);
+    const payee = db
+      .collection("corporations")
+      .docs.find((row) => String(row._id) === missingTarget.toString()) as {
+      liquidCapital: number;
+    };
+    expect(payee.liquidCapital).toBe(100);
+  });
+
   it("reports a record whose resume throws and still finishes the records after it", async () => {
     const before = totalMoney(db);
     await db.collection("bankMoneyMoves").insertOne({

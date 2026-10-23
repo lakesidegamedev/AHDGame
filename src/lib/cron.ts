@@ -752,9 +752,19 @@ export async function initializeCronJobs() {
 }
 
 /**
- * Restart the cron job with a new schedule (e.g., when toggling fastMode)
+ * Restart the cron job with a new schedule (e.g., when toggling fastMode).
+ *
+ * Only the process that already runs the schedule rebuilds it. With
+ * CRON_OWNER=worker the admin toggle executes in the web process, which owns no
+ * cron; re-initialising there would start a second turn scheduler beside the
+ * worker. Returns false when this process owns no schedule (restart the worker
+ * to apply a new one).
  */
-export async function restartCronWithSchedule() {
+export async function restartCronWithSchedule(): Promise<boolean> {
+  if (!cronJob) {
+    console.log("[Cron] No schedule in this process; restart the turn worker to apply the change.");
+    return false;
+  }
   if (cronJob) {
     cronJob.stop();
     cronJob = null;
@@ -804,6 +814,7 @@ export async function restartCronWithSchedule() {
     patreonReconcileCron = null;
   }
   await initializeCronJobs();
+  return true;
 }
 
 /**

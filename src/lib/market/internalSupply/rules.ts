@@ -182,6 +182,23 @@ export function allocateInternalSupply(args: {
     return s.corporationId + "|" + origin + "|" + dest;
   };
 
+  // Own-plant and group eligibility are necessary conditions, so index the
+  // buyers once instead of scanning every buyer for every seller (the books
+  // are both O(1,000), which made this pass quadratic).
+  const buyersByCorporation = new Map<string, InternalSupplyBuyer[]>();
+  const buyersByRoot = new Map<string, InternalSupplyBuyer[]>();
+  for (const b of buyers) {
+    const byCorp = buyersByCorporation.get(b.corporationId) ?? [];
+    byCorp.push(b);
+    buyersByCorporation.set(b.corporationId, byCorp);
+    const root = args.policies.get(b.corporationId)?.root;
+    if (!root) continue;
+    const byRoot = buyersByRoot.get(root) ?? [];
+    byRoot.push(b);
+    buyersByRoot.set(root, byRoot);
+  }
+  const stateOf = (sectorId: string) => args.deliveryStateBySector?.get(sectorId);
+
   // Own plants go first across ALL suppliers. Group plants follow, with
   // proportional allocation so array order never gives one buyer a monopoly.
   for (const ownOnly of [true, false]) {
@@ -193,32 +210,30 @@ export function allocateInternalSupply(args: {
         (!ownOnly && setting.policy.priority !== "group")
       )
         continue;
-      const sameCorpOk = (b: InternalSupplyBuyer) =>
-        !(ownOnly ? b.corporationId !== s.corporationId : b.corporationId === s.corporationId) &&
-        (ownOnly || args.policies.get(b.corporationId)?.root === setting.root);
-      const eligible = buyers.filter((b) => {
-        if (
-          args.deliveryStateBySector &&
-          (!args.deliveryStateBySector.has(s.sectorId) ||
-            args.deliveryStateBySector.get(s.sectorId) !==
-              args.deliveryStateBySector.get(b.sectorId))
-        )
-          return false;
-        return sameCorpOk(b);
-      });
+      const sellerState = stateOf(s.sectorId);
+      const ownCandidates = buyersByCorporation.get(s.corporationId) ?? [];
+      const rootCandidates = buyersByRoot.get(setting.root) ?? [];
+      const sameState = (b: InternalSupplyBuyer) =>
+        !args.deliveryStateBySector ||
+        (sellerState !== undefined && sellerState === stateOf(b.sectorId));
+      const eligible = ownOnly
+        ? ownCandidates.filter(sameState)
+        : rootCandidates.filter((b) => b.corporationId !== s.corporationId && sameState(b));
       const groupCrossState =
         !ownOnly &&
         setting.policy.priority === "group" &&
         setting.policy.ownFirstAcrossStates === true;
+      const routeEligible = (b: InternalSupplyBuyer) => {
+        const key = routeFor(s, b);
+        return !!key && (routeLeft.get(key) ?? 0) > 0;
+      };
       const crossState =
         args.deliveryStateBySector && routeLeft.size
-          ? buyers.filter((b) => {
-              const key = routeFor(s, b);
-              const routeEligible = ownOnly
-                ? b.corporationId === s.corporationId
-                : groupCrossState && args.policies.get(b.corporationId)?.root === setting.root;
-              return !!key && (routeLeft.get(key) ?? 0) > 0 && routeEligible;
-            })
+          ? ownOnly
+            ? ownCandidates.filter(routeEligible)
+            : groupCrossState
+              ? rootCandidates.filter(routeEligible)
+              : []
           : [];
       const allocate = (group: InternalSupplyBuyer[], capped: boolean) => {
         const needOf = (b: InternalSupplyBuyer) => {

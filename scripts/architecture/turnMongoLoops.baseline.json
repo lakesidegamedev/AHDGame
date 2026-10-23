@@ -39,7 +39,7 @@
     "547a157128cbf8591396515aacce2b564ba758be49590cee3e960d6c8024577e": 1,
     "fc692ad231b4e6cfba25b39cc2570bebfcd53e5806a5f6de552ca08507ca6792": 1,
     "9d87e218e1bed28ccea23c7e75f381e61206eb42b9fcfcea8f794f03bfdbf5aa": 1,
-    "4f62d7d16cbec7e421bad3cc3c6725b5193a1a77a13e58596a02ceb4dafb0bbb": 1,
+    "4c077f0cb731f3d322209f255a78a2efe9d911efe920fe64e1fa8e3ae95b1cef": 1,
     "0fcac4908f576ce0e7403fac4ff209a6ac3df8f01ea768430566990645c69dcd": 1,
     "cdc2b00a67c0d4d80b01972e0f0c40d95296b9df671d65c11f08bb0dfa56429d": 1,
     "f14cef7ff5bc98f00b2e00a87fb40c2490cf5ac9cb84545c6504ef2d28352141": 1,
@@ -955,8 +955,8 @@
       "file": "src/lib/banking/moneyMove.ts",
       "operation": "findOne",
       "owner": "applyLeg",
-      "expression": "records.findOne({ _id: key }, { projection: { status: 1, genericMoneyMoveVersion: 1, retryCreditLegOnGuardFailure: 1, legs: 1, }, })",
-      "fingerprint": "4f62d7d16cbec7e421bad3cc3c6725b5193a1a77a13e58596a02ceb4dafb0bbb"
+      "expression": "records.findOne({ _id: key }, { projection: { status: 1, genericMoneyMoveVersion: 1, retryCreditLegOnGuardFailure: 1, legs: { $slice: [i, 1] }, }, })",
+      "fingerprint": "4c077f0cb731f3d322209f255a78a2efe9d911efe920fe64e1fa8e3ae95b1cef"
     },
     {
       "file": "src/lib/banking/moneyMove.ts",
