@@ -392,6 +392,13 @@ export interface CorporationDetail {
   canManageAsParent?: boolean;
   /** Viewer is CEO of this (parent-eligible) corp and may spin off a sector into a new subsidiary. */
   canSpinOff?: boolean;
+  /**
+   * Group strength transfer (#1669). Present only for the CEO of a group
+   * leader while the world runs strength upkeep with the group paid by the
+   * leader: each turn this corporation hands its formalized subsidiaries part
+   * of the strength it gains. The budget projections leave that payment out.
+   */
+  groupStrengthTransfer?: { subsidiaryCount: number } | null;
   /** Active parent-set dividend floor (percent), honored while the setter still controls >50%. */
   parentDividendFloorPct?: number;
 }
