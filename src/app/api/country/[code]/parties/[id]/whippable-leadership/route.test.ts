@@ -144,7 +144,7 @@ describe("GET /api/country/[code]/parties/[id]/whippable-leadership — motion t
       ok: true,
       user: { userId: new ObjectId().toString(), isAdmin: false, character: { _id: chairId } },
     } as never);
-    db.collection("congressLeaders").findOne.mockImplementation(async (query) => {
+    db.collection("congressLeaders").findOne.mockImplementation(async (query: unknown) => {
       const q = query as { role?: { $in?: string[] }; characterId?: ObjectId; party?: string };
       return q.role?.$in?.includes(role) && q.characterId?.equals(chairId) && q.party === "1"
         ? { role, characterId: chairId, party: "1" }
@@ -177,7 +177,7 @@ describe("GET /api/country/[code]/parties/[id]/whippable-leadership — motion t
         chairId: new ObjectId(),
         viceChairId: null,
       } as never);
-      db.collection("congressLeaders").findOne.mockImplementation(async (query) => {
+      db.collection("congressLeaders").findOne.mockImplementation(async (query: unknown) => {
         const q = query as { party?: string; characterId?: ObjectId; role?: { $in?: string[] } };
         return q.party === party && q.characterId?.equals(chairId) && q.role?.$in?.includes(role)
           ? { role, party, characterId: chairId }
