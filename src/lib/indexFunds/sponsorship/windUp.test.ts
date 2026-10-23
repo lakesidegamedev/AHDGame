@@ -15,6 +15,10 @@ vi.mock("@/lib/currency/corporationCapital", () => ({
   anchorToCorpLiquidCapital: (a: number) => a,
   getCorpFxRate: vi.fn().mockResolvedValue(1),
   resolveCorpLiquidCurrencyCode: () => "USD",
+  loadFxRatesRecord: vi.fn().mockResolvedValue({}),
+}));
+vi.mock("./escheatWindUpResidual", () => ({
+  escheatWindUpResidual: vi.fn().mockResolvedValue(0),
 }));
 vi.mock("@/lib/indexFunds/fundRedemptionLiquidity", () => ({
   sellFundHoldingsForRedemptionCash: vi.fn().mockResolvedValue({
@@ -52,6 +56,7 @@ import { payFundHolderCash } from "./holderPayout";
 import { processQueuedRedemptions } from "@/lib/indexFunds/processQueuedRedemptions";
 import { loadQueuedRedemptionUnitsByFundId } from "@/lib/indexFunds/fundValuation";
 import { advanceWindDowns, beginWindUp, completeWindUp } from "./windUp";
+import { escheatWindUpResidual } from "./escheatWindUpResidual";
 
 const SPONSOR = new ObjectId();
 
@@ -85,6 +90,7 @@ function makeDb(opts: {
   positions?: Partial<IndexFundPosition>[];
   windingDown?: IndexFund[];
   sponsorExists?: boolean;
+  liveCorporationIds?: ObjectId[];
   claimed?: boolean;
   fund?: IndexFund;
   bondsRemaining?: () => number;
@@ -120,14 +126,24 @@ function makeDb(opts: {
       if (name === "indexFundTransactions") return { insertOne: txInsert };
       if (name === "indexFundRedemptionQueue")
         return { countDocuments: vi.fn(async () => opts.queuedRedemptions?.() ?? 0) };
-      if (name === "corporations")
+      if (name === "corporations") {
+        const live = opts.liveCorporationIds ?? (opts.sponsorExists === false ? [] : [SPONSOR]);
+        const isLive = (id: ObjectId) => live.some((candidate) => candidate.equals(id));
+        const corpDoc = (id: ObjectId) => ({
+          _id: id,
+          name: "Sponsor Co",
+          liquidCurrencyCode: "USD",
+          countryId: "US",
+        });
         return {
-          findOne: vi
-            .fn()
-            .mockResolvedValue(
-              opts.sponsorExists === false ? null : { _id: SPONSOR, name: "Sponsor Co" }
-            ),
+          findOne: vi.fn(async (filter: { _id?: ObjectId }) =>
+            filter?._id && isLive(filter._id) ? corpDoc(filter._id) : null
+          ),
+          find: vi.fn((filter: { _id?: { $in?: ObjectId[] } }) => ({
+            toArray: async () => (filter?._id?.$in ?? []).filter(isLive).map((id) => corpDoc(id)),
+          })),
         };
+      }
       return { countDocuments: vi.fn().mockResolvedValue(0) };
     }),
   } as unknown as Db;
@@ -215,6 +231,90 @@ describe("completeWindUp", () => {
     expect(set.unitSupply).toBe(0);
     expect(set.cashAnchor).toBe(0);
     expect(positionsUpdateMany).toHaveBeenCalled();
+  });
+
+  it("pays the surviving holders and escheats a dissolved corporate holder's share", async () => {
+    const gone = new ObjectId();
+    const positions = [
+      {
+        _id: new ObjectId(),
+        units: 500,
+        holderKind: "character" as const,
+        characterId: new ObjectId(),
+      },
+      { _id: new ObjectId(), units: 500, holderKind: "corporation" as const, corporationId: gone },
+    ];
+    const fund = makeFund({ status: "winding_down", cashAnchor: 100_000, unitSupply: 1_000 });
+    const { db } = makeDb({ positions, fund, liveCorporationIds: [SPONSOR] });
+
+    await completeWindUp(db, fund, 200);
+
+    // NAV 100: the character is paid 50,000; the missing corporation's 50,000
+    // has no owner and escheats instead of throwing.
+    expect(vi.mocked(payFundHolderCash)).toHaveBeenCalled();
+    expect(vi.mocked(escheatWindUpResidual)).toHaveBeenCalledWith(
+      db,
+      fund,
+      50_000,
+      200,
+      expect.any(Date),
+      true
+    );
+    // Nothing left over for the sponsor after the orphaned claim is escheated.
+    expect(vi.mocked(creditCorpLiquidCapital)).not.toHaveBeenCalled();
+  });
+
+  it("completes and escheats the residual when the sponsor corporation has been dissolved", async () => {
+    const positions = [
+      {
+        _id: new ObjectId(),
+        units: 500,
+        holderKind: "character" as const,
+        characterId: new ObjectId(),
+      },
+      { _id: new ObjectId(), units: 500, holderKind: "fund_reserve" as const },
+    ];
+    const fund = makeFund({ status: "winding_down", cashAnchor: 100_000, unitSupply: 1_000 });
+    const { db } = makeDb({ positions, fund, sponsorExists: false });
+
+    await completeWindUp(db, fund, 200);
+
+    expect(vi.mocked(escheatWindUpResidual)).toHaveBeenCalledWith(
+      db,
+      fund,
+      50_000,
+      200,
+      expect.any(Date),
+      true
+    );
+    expect(vi.mocked(creditCorpLiquidCapital)).not.toHaveBeenCalled();
+  });
+
+  it("does not abort the wind-up when a surviving holder record is gone", async () => {
+    const positions = [
+      {
+        _id: new ObjectId(),
+        units: 1_000,
+        holderKind: "character" as const,
+        characterId: new ObjectId(),
+      },
+    ];
+    const fund = makeFund({ status: "winding_down", cashAnchor: 100_000, unitSupply: 1_000 });
+    const { db } = makeDb({ positions, fund });
+    vi.mocked(payFundHolderCash).mockResolvedValueOnce(false);
+
+    await expect(completeWindUp(db, fund, 200)).resolves.toBe(0);
+
+    // The unpayable claim escheats; the sponsor gets nothing because the
+    // orphaned units were the whole supply.
+    expect(vi.mocked(escheatWindUpResidual)).toHaveBeenCalledWith(
+      db,
+      fund,
+      100_000,
+      200,
+      expect.any(Date),
+      true
+    );
   });
 });
 

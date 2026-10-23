@@ -27,7 +27,8 @@ export async function payCorporateWindUpHolders(
   const corporatePositions = positions.filter(
     (p) => p.holderKind === "corporation" && p.corporationId && p.units > 0
   );
-  if (!corporatePositions.length) return { holdersPaid: 0, distributedAnchor: 0 };
+  if (!corporatePositions.length)
+    return { holdersPaid: 0, distributedAnchor: 0, unclaimedAnchor: 0 };
   const corporations = await db
     .collection<Corporation>("corporations")
     .find(
@@ -46,14 +47,21 @@ export async function payCorporateWindUpHolders(
   }> = [];
   const transactions: IndexFundTransaction[] = [];
   let distributedAnchor = 0;
+  let unclaimedAnchor = 0;
   for (const position of corporatePositions) {
     const corp = byId.get(position.corporationId!.toString());
     const amountAnchor =
       fund.seedAccounting === "paid_units"
         ? position.units * finalNav
         : Math.floor(position.units * finalNav);
-    if (!corp) throw new Error("Corporate fund holder no longer exists");
     if (amountAnchor <= 0) continue;
+    // The holder corporation was dissolved while the fund was winding down.
+    // Its claim has no owner; the caller escheats it to the central bank
+    // reserve rather than throwing and aborting every other holder's payout.
+    if (!corp) {
+      unclaimedAnchor += amountAnchor;
+      continue;
+    }
     const currency = resolveCorpLiquidCurrencyCode(corp);
     const rate = forex && currency ? rates[currency] : 1;
     if (!rate || !Number.isFinite(rate) || rate <= 0)
@@ -87,5 +95,5 @@ export async function payCorporateWindUpHolders(
       throw new Error("Corporate fund payout failed");
     await db.collection<IndexFundTransaction>("indexFundTransactions").insertMany(transactions);
   }
-  return { holdersPaid: operations.length, distributedAnchor };
+  return { holdersPaid: operations.length, distributedAnchor, unclaimedAnchor };
 }
