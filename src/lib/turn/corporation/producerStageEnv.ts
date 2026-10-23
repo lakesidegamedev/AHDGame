@@ -22,6 +22,7 @@ export function producerStageEnv(
         producerProcurementSpillStage?: number;
         producerProcurementSpillShare?: number;
         producerShortageGrowthStage?: number;
+        producerCaptiveDeliveryStage?: number;
       }
     | null
     | undefined
@@ -33,6 +34,7 @@ export function producerStageEnv(
     decommissionGrantShare: config?.decommissionGrantShare,
     fundedBookStage: config?.producerFundedBookStage,
     shortageGrowthStage: config?.producerShortageGrowthStage,
+    captiveDeliveryStage: config?.producerCaptiveDeliveryStage,
     spilloverShare:
       (config?.producerSpilloverStage ?? 0) >= 1
         ? (config?.producerSpilloverShare ?? SPILLOVER_DEFAULT_SHARE)

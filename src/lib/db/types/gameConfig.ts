@@ -239,6 +239,13 @@ export interface GameConfig {
    * at most doubling a turn, instead of a fixed step. 0 or absent = off.
    */
   producerShortageGrowthStage?: number;
+  /**
+   * Funded producer market: >= 1 counts a plant's deliveries to its own
+   * company's sites as sales for the demand plan and the zero-sales counter
+   * (valued at its asking price for the profit test), so a captive supplier is
+   * not read as idle and mothballed. Settlement is unchanged. 0 or absent = off.
+   */
+  producerCaptiveDeliveryStage?: number;
   /** Share (0 to 1) of that leftover paid to households when the stage is on. Absent = 1. */
   producerProcurementSpillShare?: number;
   /**

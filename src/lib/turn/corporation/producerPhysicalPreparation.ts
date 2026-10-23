@@ -1,4 +1,8 @@
 /** Prepare work, recipes and plant constraints before any product money is moved. */
+import {
+  withCaptiveDeliveries,
+  type CaptiveProduct,
+} from "@/lib/market/producerMarket/captiveDeliveryRules";
 import { plantPressure, shortageGrowth } from "@/lib/market/producerMarket/shortageGrowthRules";
 import {
   inTransitionWindow,
@@ -108,6 +112,8 @@ export type ProducerPhysicalEnv = Pick<
   fundedBookStage?: number;
   /** gameConfig.producerShortageGrowthStage: >= 1 grows a sold-out line by its book's shortage. */
   shortageGrowthStage?: number;
+  /** gameConfig.producerCaptiveDeliveryStage: >= 1 counts internal deliveries as sales for planning. */
+  captiveDeliveryStage?: number;
   /** Units asked over delivered per commodity book, from last turn's settled orders. */
   pressureByBook?: ReadonlyMap<string, number>;
   /** Last funded clearing price per reachable commodity, anchor per unit (from the previous turn's outcomes). */
@@ -361,7 +367,11 @@ export function prepareProducerPhysicalSector(input: {
     .producerSettlement;
   const lowUse = (env.lowUseCostStage ?? 0) >= 1;
   const runFloor = lowUse ? LOW_USE_RUN_FLOOR : OUTPUT_RUN_FLOOR;
-  const lastReceipt = priorReceipt && priorReceipt.turn === currentTurn - 1 ? priorReceipt : null;
+  const settledLast = priorReceipt && priorReceipt.turn === currentTurn - 1 ? priorReceipt : null;
+  const lastReceipt =
+    settledLast && (env.captiveDeliveryStage ?? 0) >= 1
+      ? withCaptiveDeliveries(settledLast as PriorReceipt & { products?: CaptiveProduct[] })
+      : settledLast;
   const unpacedRunShare =
     (env.demandPlanStage ?? 0) >= 1
       ? demandPlanRunShare(

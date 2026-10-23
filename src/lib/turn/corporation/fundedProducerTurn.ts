@@ -73,6 +73,10 @@ import {
   publicOrderId,
   type LineCarry,
 } from "@/lib/market/producerMarket/publicCarryRules";
+import {
+  offtakeUnits,
+  type CaptiveProduct,
+} from "@/lib/market/producerMarket/captiveDeliveryRules";
 import { bookPressure } from "@/lib/market/producerMarket/shortageGrowthRules";
 import { procurementSpill } from "@/lib/market/producerMarket/procurementSpillRules";
 import { newEntrantProducerBooks } from "@/lib/market/producerMarket/openingState";
@@ -661,8 +665,16 @@ export async function runFundedProducerTurn(
       { ordered: false }
     );
   const receiptsBySectorId = new Map<string, FundedReceipt>();
+  // Sectors whose plant delivered to its own company's sites (captiveDeliveryStage).
+  const captiveOn = (input.env.captiveDeliveryStage ?? 0) >= 1;
+  const offtakeBySectorId = new Map<string, number>();
   for (const sector of settled.closingSectors) {
     const r = sector.producerSettlement;
+    if (captiveOn && r && r.worldEpoch === worldEpoch && r.turn === turn)
+      offtakeBySectorId.set(
+        sector._id.toHexString(),
+        offtakeUnits(r as { soldUnits?: number; products?: CaptiveProduct[] })
+      );
     if (r && r.worldEpoch === worldEpoch && r.turn === turn)
       receiptsBySectorId.set(sector._id.toHexString(), {
         revenue: r.revenue,
@@ -677,7 +689,10 @@ export async function runFundedProducerTurn(
   const zeroSales: ObjectId[] = [];
   const sold: ObjectId[] = [];
   for (const [id, r] of receiptsBySectorId)
-    (r.soldUnits > 0 ? sold : zeroSales).push(new ObjectId(id));
+    ((captiveOn ? (offtakeBySectorId.get(id) ?? r.soldUnits) : r.soldUnits) > 0
+      ? sold
+      : zeroSales
+    ).push(new ObjectId(id));
   const sectorDocs = db.collection<CorporateSector>("corporateSectors");
   if (zeroSales.length > 0)
     await sectorDocs.updateMany(
