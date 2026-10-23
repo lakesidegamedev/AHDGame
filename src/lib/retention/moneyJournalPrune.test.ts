@@ -93,21 +93,73 @@ describe("pruneMoneyJournals", () => {
     expect(await ids("ledgerEntries")).toEqual(["old"]);
   });
 
-  it("clears a bounded number of backlog turns per run", async () => {
-    await db.collection("ledgerEntries").insertMany(
-      [OLD - 4, OLD - 3, OLD - 2, OLD - 1, OLD].map((turn) => ({
-        _id: `t${turn}`,
-        turn,
-      })) as never
-    );
+  it("deletes oldest first in batches and stops at the row cap", async () => {
+    await db
+      .collection("ledgerEntries")
+      .insertMany(
+        [OLD, OLD - 1, OLD - 4, OLD - 2, OLD - 3].map((turn) => ({
+          _id: `t${turn}`,
+          turn,
+        })) as never
+      );
+    const pauses: number[] = [];
 
-    const first = await pruneMoneyJournals(db, { turnsPerRun: 2 });
-    expect(first.ledgerEntries).toBe(2);
-    expect(await ids("ledgerEntries")).toEqual([`t${OLD - 2}`, `t${OLD - 1}`, `t${OLD}`]);
+    const first = await pruneMoneyJournals(db, {
+      batchSize: 2,
+      maxRowsPerRun: 3,
+      pauseMs: 7,
+      sleep: async (ms) => {
+        pauses.push(ms);
+      },
+    });
 
-    await pruneMoneyJournals(db, { turnsPerRun: 2 });
-    await pruneMoneyJournals(db, { turnsPerRun: 2 });
+    expect(first).toMatchObject({ ledgerEntries: 3, stoppedBy: "row-cap" });
+    expect(await ids("ledgerEntries")).toEqual([`t${OLD - 1}`, `t${OLD}`]);
+    expect(pauses).toEqual([7]);
+
+    const second = await pruneMoneyJournals(db, { batchSize: 2, sleep: async () => {} });
+    expect(second.ledgerEntries).toBe(2);
+    expect(second.stoppedBy).toBeUndefined();
     expect(await ids("ledgerEntries")).toEqual([]);
+  });
+
+  it("stops between batches when a turn takes the lock", async () => {
+    await db
+      .collection("ledgerEntries")
+      .insertMany(
+        [OLD - 3, OLD - 2, OLD - 1, OLD].map((turn) => ({ _id: `t${turn}`, turn })) as never
+      );
+
+    const result = await pruneMoneyJournals(db, {
+      batchSize: 2,
+      sleep: async () => {
+        await db
+          .collection<{ _id: string }>("gameState")
+          .updateOne({ _id: "current" }, { $set: { isProcessing: true } });
+      },
+    });
+
+    expect(result).toMatchObject({ ledgerEntries: 2, stoppedBy: "turn-started" });
+    expect(await ids("ledgerEntries")).toEqual([`t${OLD - 1}`, `t${OLD}`]);
+  });
+
+  it("stops at the time cap", async () => {
+    await db
+      .collection("ledgerEntries")
+      .insertMany([OLD - 2, OLD - 1, OLD].map((turn) => ({ _id: `t${turn}`, turn })) as never);
+    let clock = 0;
+
+    const result = await pruneMoneyJournals(db, {
+      batchSize: 1,
+      maxMsPerRun: 100,
+      now: () => clock,
+      sleep: async () => {
+        clock += 60;
+      },
+    });
+
+    expect(result).toMatchObject({ ledgerEntries: 2, stoppedBy: "time-cap" });
+    expect(await ids("ledgerEntries")).toEqual([`t${OLD}`]);
   });
 
   it("does nothing before the world is older than the window", async () => {

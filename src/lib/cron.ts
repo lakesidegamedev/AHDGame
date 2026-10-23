@@ -561,8 +561,9 @@ export async function initializeCronJobs() {
 
   // Money-journal pruning: ledgerEntries and terminal bankMoneyMoves older than
   // 168 turns. Runs between turns (minute 5, 15, ...; skips while a turn holds
-  // the lock) and is bounded per run, so a long-lived world drains its backlog
-  // over many runs instead of in one long delete.
+  // the lock and stops if one takes it) and deletes in small batches under a
+  // per-run row and time cap, so a long-lived world drains its backlog over
+  // many runs instead of in one long delete.
   moneyJournalPruneCron = cron.schedule(
     "5,15,25,35,45,55 * * * *",
     async () => {
@@ -572,7 +573,8 @@ export async function initializeCronJobs() {
         if (result.ledgerEntries > 0 || result.bankMoneyMoves > 0) {
           console.log(
             `[Cron] Money-journal prune < turn ${result.cutoff}: ` +
-              `${result.bankMoneyMoves} money move(s), ${result.ledgerEntries} ledger entr(ies)`
+              `${result.bankMoneyMoves} money move(s), ${result.ledgerEntries} ledger entr(ies)` +
+              (result.stoppedBy ? ` (stopped: ${result.stoppedBy})` : "")
           );
         }
       } catch (error) {
