@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { idleCauseMeta, TONE_FILL } from "./plants";
+import { IDLE_CAUSE_FILL, idleCauseMeta, TONE_FILL } from "./plants";
 
 describe("bank capacity explanation", () => {
   it("explains the configured branch share and its deposit ceiling benefit", () => {
@@ -27,7 +27,7 @@ describe("idle cause meter colors", () => {
 
     expect(causes.inputs.tone).toBe("warning");
     expect(causes.staffing.tone).toBe("warning");
-    expect(TONE_FILL.inputs).not.toBe(TONE_FILL.staffing);
+    expect(IDLE_CAUSE_FILL.inputs).not.toBe(IDLE_CAUSE_FILL.staffing);
   });
 
   it("gives a sector waiting on inputs its own swatch, separate from demand limited", () => {
@@ -37,8 +37,16 @@ describe("idle cause meter colors", () => {
     expect(causes.demand.tone).toBe("warning");
     // Both stay warning severity, but the capacity chart must not paint them
     // the same: buying inputs and waiting for buyers are different remedies.
-    expect(TONE_FILL.inputs).toBeDefined();
-    expect(TONE_FILL.inputs).not.toBe(TONE_FILL.warning);
-    expect(TONE_FILL.inputs).not.toBe(TONE_FILL[causes.demand.tone]);
+    expect(IDLE_CAUSE_FILL.inputs).not.toBe(IDLE_CAUSE_FILL.demand);
+    expect(IDLE_CAUSE_FILL.inputs).not.toBe(TONE_FILL.warning);
+  });
+
+  it("gives every idle cause a unique swatch so no two legend dots collide", () => {
+    const entries = Object.entries(IDLE_CAUSE_FILL);
+
+    expect(entries).toHaveLength(11);
+    const fills = new Set(entries.map(([, fill]) => fill));
+    expect(fills.size).toBe(entries.length);
+    for (const fill of fills) expect(fill).toMatch(/^bg-/);
   });
 });
