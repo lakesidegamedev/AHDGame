@@ -60,6 +60,7 @@ import {
 import type { ShadowCarryState } from "@/lib/market/producerMarket/shadowCarryRules";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { ProducerPhysicalEnv } from "./producerPhysicalPreparation";
+import type { FundedCountryBookRow } from "@/lib/market/producerMarket/fundedBookRules";
 import type { CorporationLookups } from "./types";
 import { buildProducerTurnDemand } from "./producerTurnDemand";
 import type { SettlementClose } from "@/lib/market/producerMarket/settlement";
@@ -578,6 +579,12 @@ export async function runFundedProducerTurn(
       eligibleOffersByOrder: demand.eligibleOffersByOrder,
       spilloverShare: input.env.spilloverShare,
       stockCoverTurns: input.env.stockCoverTurns,
+      ...((input.env.fundedBookStage ?? 0) >= 1
+        ? {
+            countryOfProducer: (id: string) => demand.planCountry.get(id),
+            trackCountryBooks: true,
+          }
+        : {}),
     },
     close: closeAtSettlement,
   });
@@ -695,6 +702,19 @@ export async function runFundedProducerTurn(
   for (const row of settled.result.prices)
     if (row.book === "world" && row.units > 0 && row.value > 0)
       clearingPrices[row.commodity] = row.value / row.units;
+  // Per-country funded book, on the price phase's per-turn basis. The price
+  // phase reads it instead of the modelled clearing when the stage is on.
+  const countryBooks =
+    (input.env.fundedBookStage ?? 0) >= 1
+      ? settled.result.countryBooks?.map((row): FundedCountryBookRow => ({
+          countryId: row.countryId,
+          commodity: row.commodity,
+          supply: row.supply * TURNS_PER_DAY,
+          demand: row.demand * TURNS_PER_DAY,
+          imports: row.imports * TURNS_PER_DAY,
+          exports: row.exports * TURNS_PER_DAY,
+        }))
+      : undefined;
   if (demand.householdSource && openingShareByCountry && openingShareByCountry.size === 0)
     await db.collection<{ _id: string }>("producerHouseholdSource").updateOne(
       { _id: worldEpoch },
@@ -716,6 +736,7 @@ export async function runFundedProducerTurn(
       turn,
       rows,
       ...((input.env.clearingReferenceStage ?? 0) >= 1 ? { clearingPrices } : {}),
+      ...(countryBooks && countryBooks.length > 0 ? { books: countryBooks } : {}),
       ...(demand.householdSource ? { householdSource: demand.householdSource } : {}),
       at: new Date(),
     } as never,

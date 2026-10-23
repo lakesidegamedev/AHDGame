@@ -219,6 +219,13 @@ export interface GameConfig {
    */
   producerClearingReferenceStage?: number;
   /**
+   * Funded producer market: >= 1 rebuilds each country's reachable book for the
+   * price phase from the funded market's own orders and cross-border fills
+   * instead of the modelled trade clearing. Receipts carry the seller and buyer
+   * country so the book is measured, not inferred. 0 or absent = off.
+   */
+  producerFundedBookStage?: number;
+  /**
    * Funded producer market: >= 1 retires, with no cash, a share of the
    * capacity of plants that have sold nothing for several turns. 0 or absent = off.
    */

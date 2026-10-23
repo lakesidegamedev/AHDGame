@@ -101,6 +101,8 @@ export type ProducerPhysicalEnv = Pick<
   stockCoverTurns?: number;
   /** gameConfig.producerClearingReferenceStage: >= 1 floors a buyer's reference at the last funded clearing price of a reachable good. */
   clearingReferenceStage?: number;
+  /** gameConfig.producerFundedBookStage: >= 1 prices the funded market from its own orders and cross-border fills. */
+  fundedBookStage?: number;
   /** Last funded clearing price per reachable commodity, anchor per unit (from the previous turn's outcomes). */
   lastClearingPriceByCommodity?: ReadonlyMap<string, number>;
   /** gameConfig.producerIdleRetireStage: >= 1 retires capacity that persistently sells nothing. 0 or absent = off. */

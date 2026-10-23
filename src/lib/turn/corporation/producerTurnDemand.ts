@@ -93,6 +93,10 @@ export async function buildProducerTurnDemand(
     [];
   const legacyBySectorId = legacyPnlBySectorId(input.sectorOps);
   const env = isolatedShadowEnv(input.env);
+  // Country tags exist only for the funded book (see fundedBookRules); with the
+  // stage off they are omitted so a receipt is byte-identical to before.
+  const tagCountry = (countryId: string | undefined) =>
+    (env.fundedBookStage ?? 0) >= 1 && countryId ? { countryId } : {};
   const { lookups } = input;
   const base = eraScaledBasePrices(lookups.eraUnitScale);
   const refPrice = (commodity: CommodityType, stateId: string): number | null => {
@@ -443,18 +447,27 @@ export async function buildProducerTurnDemand(
     priceHeadroom: PRICE_HEADROOM,
   }).map((h) => ({
     ...h,
+    ...tagCountry(walletCountry.get(h.accountId)),
     products: h.products.map((p) => ({
       ...p,
       book: shadowBook(p.book, p.commodity, walletCountry.get(h.accountId) ?? ""),
     })),
   }));
   const publicBuyerOrders = publicOrders(
-    carriedFunding.map((f) => ({ accountId: publicAccountId(f.countryId), lines: f.lines })),
+    carriedFunding.map((f) => ({
+      accountId: publicAccountId(f.countryId),
+      ...tagCountry(f.countryId),
+      lines: f.lines,
+    })),
     (c, book) => refPrice(c as CommodityType, book.startsWith("state:") ? book.slice(6) : ""),
     PRICE_HEADROOM
   );
   const investmentBuyerOrders = publicOrders(
-    investmentFunding.map((f) => ({ accountId: investmentAccountId(f.countryId), lines: f.lines })),
+    investmentFunding.map((f) => ({
+      accountId: investmentAccountId(f.countryId),
+      ...tagCountry(f.countryId),
+      lines: f.lines,
+    })),
     (c, book) => refPrice(c as CommodityType, book.startsWith("state:") ? book.slice(6) : ""),
     PRICE_HEADROOM
   );
@@ -480,7 +493,10 @@ export async function buildProducerTurnDemand(
     ];
   });
   const marketingOrders = publicOrders(
-    marketingBuyerLines(marketingBudgets, TURNS_PER_DAY),
+    marketingBuyerLines(marketingBudgets, TURNS_PER_DAY).map((b) => ({
+      ...b,
+      ...tagCountry(corpCountry.get(b.accountId)),
+    })),
     (c) => refPrice(c as CommodityType, ""),
     PRICE_HEADROOM
   ).map((o) => ({ ...o, id: `marketing:${o.accountId}` }));

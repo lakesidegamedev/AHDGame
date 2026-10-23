@@ -17,6 +17,7 @@ export function producerStageEnv(
         producerHouseholdIncomeFloor?: number;
         producerStockCover?: number;
         producerClearingReferenceStage?: number;
+        producerFundedBookStage?: number;
       }
     | null
     | undefined
@@ -26,6 +27,7 @@ export function producerStageEnv(
     lowUseCostStage: config?.producerLowUseCostStage,
     idleRetireStage: config?.producerIdleRetireStage,
     decommissionGrantShare: config?.decommissionGrantShare,
+    fundedBookStage: config?.producerFundedBookStage,
     spilloverShare:
       (config?.producerSpilloverStage ?? 0) >= 1
         ? (config?.producerSpilloverShare ?? SPILLOVER_DEFAULT_SHARE)
