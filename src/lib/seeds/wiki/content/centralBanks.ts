@@ -4,6 +4,20 @@ Each active country has a central bank with an appointed **Central Bank Chair**,
 
 Fully command economies run a passive monobank instead: the automatic rate setter does not fire. See [Planned / Command Economies](/wiki/planned-economies).
 
+## The policy cockpit
+
+The Chair has five levers. They are not interchangeable, and the order matters.
+
+| Lever | What it moves | Best used for | What it costs |
+| --- | --- | --- | --- |
+| **Prime rate** | Credit costs, inflation expectations, exchange rate, corporate margins | The default tool for inflation and demand | One change every 6 turns; scrutiny when you are wrong or late |
+| **Reserve requirement** | How much private banks may lend against deposits | Credit running hot or cold when the rate is constrained | Bank profitability and lending capacity |
+| **QE / QT** | Money stock, bond prices, liquidity | Broken bond markets, or a rate already at its bound | Bond-market risk and a lag before real activity responds |
+| **FX band** | The exchange rate | Defending a peg or a published corridor | Reserves, and failure infamy if the band breaks |
+| **Independence** | Who sets the rate | A government that wants direct control | Institutional scrutiny: 12 for a rate override, 18 for dismissal, 22 for a statute |
+
+QE and QT are not growth buttons. They move money and bond prices first, and real activity later. The prime rate is the instrument you will use most turns.
+
 ## The Central Bank Chair role
 
 The Chair is the most economically powerful non-executive position in the game. Unlike elected offices, it is an **appointed** position with a 4-year term (192 turns).
@@ -57,6 +71,16 @@ The way out is not results. It is nerve.
 Each turn the bank's stance is checked against the rate corridor: above-target inflation calls for a restrictive stance, below-target for accommodative, inside the band for neutral. Hold the correct stance for **3 consecutive turns** and scrutiny falls by **6**, whether or not inflation has responded yet. Then the clock restarts.
 
 This is the escape hatch, and it is deliberately an action you control rather than an outcome you do not. A Chair willing to hold an unpopular line can always climb out. Break the stance and the streak resets to zero, and the relief has to be earned again.
+
+### Term survival checklist
+
+- [ ] **Scrutiny below 25.** Above that you lose 1.5 actions a turn and your inflation expectations multiplier starts to weaken.
+- [ ] **Inflation within about one point of target.** A small miss is normal; a persistent miss is what builds scrutiny.
+- [ ] **Growth near 2% or better.** Slow growth adds scrutiny even when inflation is calm.
+- [ ] **A stance you can defend.** Above-target inflation needs a restrictive stance, below-target needs accommodative. Hold it for three turns and the bank recovers 6 scrutiny.
+- [ ] **Reserves for one turn of defense.** A band with no reserves is a promise you cannot keep.
+- [ ] **No open FX breach.** A breach adds 15 infamy and tells the market the band is not credible.
+- [ ] **A rate you can still move.** If you are pinned at 0% or 25%, the rate is no longer your lever. QE, QT, and the reserve requirement are.
 
 ## Independence, and what it costs to take it
 
@@ -121,7 +145,23 @@ The selected candidate must **accept** the offer. If they decline, the next elig
 
 ## Setting the prime rate
 
-The Chair sets monetary policy by adjusting the prime rate. The prime rate can be set between **0% and 25%** in **0.25% increments** (e.g., 2.00%, 2.25%, 2.50%). This is done through the character's available actions on the Central Bank page. A single move can raise the rate by at most **0.75 points** and cut it by at most **1.75 points**, with one change every 6 turns. When inflation is at least **5 points above target**, the hike limit widens to **3 points** for as long as that holds, so a bank can catch up with runaway inflation in a few moves; the Central Bank page shows the range you can use this turn. Cuts below the normal 0.75 point band cost scrutiny. At the US Federal Reserve the Chair proposes and the FOMC votes (see [FOMC / Rate-Setting Board](/wiki/fomc)); every other bank's governor sets the rate alone, or the government does where the bank is not independent. When a bank's chair is computer-controlled, its automatic rate setter now targets measured slack: it weighs the output gap and unemployment, not raw GDP growth. The prime rate affects:
+The Chair sets monetary policy by adjusting the prime rate. The prime rate can be set between **0% and 25%** in **0.25% increments** (e.g., 2.00%, 2.25%, 2.50%). This is done through the character's available actions on the Central Bank page. A single move can raise the rate by at most **0.75 points** and cut it by at most **1.75 points**, with one change every 6 turns. When inflation is at least **5 points above target**, the hike limit widens to **3 points** for as long as that holds, so a bank can catch up with runaway inflation in a few moves; the Central Bank page shows the range you can use this turn. Cuts below the normal 0.75 point band cost scrutiny. At the US Federal Reserve the Chair proposes and the FOMC votes (see [FOMC / Rate-Setting Board](/wiki/fomc)); every other bank's governor sets the rate alone, or the government does where the bank is not independent. When a bank's chair is computer-controlled, its automatic rate setter now targets measured slack: it weighs the output gap and unemployment, not raw GDP growth.
+
+\`\`\`guide-screenshot
+central-bank
+\`\`\`
+
+*The Federal Reserve page. The header shows the prime rate, inflation, savings flow, and reserves. The rate corridor below shows the prime rate against the inflation band, and the left panel shows the Chair's term and public scrutiny.*
+
+### A rate decision in five steps
+
+1. **Work out the real rate.** Real rate = prime rate minus inflation. A 2% prime rate with 5% inflation is a negative real rate, which is accommodative even if the number looks normal.
+2. **Compare it with neutral.** The page shows the country's neutral prime rate. Above neutral is restrictive; below is accommodative; at neutral is roughly neutral.
+3. **Check slack.** High unemployment and a negative output gap mean a cut is less inflationary. An overheating economy with low unemployment means a hike is doing real work.
+4. **Check the exchange-rate regime.** If the currency is pegged or banded with an open capital account, the policy rate is not yours to set. Float or impose capital controls first.
+5. **Move within the limits and hold the stance.** You can raise 0.75 points or cut 1.75 points per move, with 6 turns between moves. Once you are on the correct side of the corridor, hold it for three turns to earn the 6-point scrutiny reduction.
+
+The prime rate affects:
 
 ### 1. Corporate bond costs
 
@@ -309,6 +349,26 @@ go negative or near zero.
 During the current pricing phase-in, central-bank-held deposits also receive a
 temporary bonus that reaches 0.25 percentage points over 8 turns. Private-bank
 deposit rates remain controlled by their own charters.
+
+## Country differences
+
+| Bank | Who sets the rate | What is different |
+| --- | --- | --- |
+| **US Federal Reserve** | Chair proposes, FOMC votes | Board terms, nominations, and committee motions. The Chair alone cannot move the rate. |
+| **Bank of England** | Treasury before 1997, then the Bank | Independence is a statute, not a date. A world played past 1997 still needs the law. |
+| **Euro area** | Shared central bank | One policy rate for every member. A national parliament cannot legislate the shared bank's independence. |
+| **Command economies** | The plan | The automatic rate setter does not fire. See [Planned / Command Economies](/wiki/planned-economies). |
+| **Other national banks** | The seated Chair, or the government where the bank is not independent | The Chair sets the rate alone, subject to the same move limits and scrutiny. |
+
+## Common mistakes
+
+- **Pegging with an open capital account, then trying to set the rate.** The peg wins. Float or impose capital controls first.
+- **Watching the nominal rate instead of the real rate.** A 2% prime rate with 5% inflation is loose, not neutral.
+- **Hiking too late.** Scrutiny compounds. A bank that waits for inflation to peak has already lost credibility.
+- **Cutting into a supply shock.** Easier credit does not create oil, food, or steel. It can make the inflation worse.
+- **Burning reserves on a band the market does not believe.** A band defended past exhaustion adds 15 infamy and still breaks.
+- **Firing the Chair to reset scrutiny.** A dismissal keeps 100% of the record and adds 18. Term turnover keeps 75%. Waiting is cheaper.
+- **Using QE as a growth button.** QE moves money and bond prices first. Real activity responds later, if at all.
 
 See also: [Currency Exchange](/wiki/currency-exchange), [National Metrics](/wiki/national-metrics), [Sovereign Bonds](/wiki/sovereign-bonds), [Corporate Bonds](/wiki/corporate-bonds), [Private Banking](/wiki/private-banking), [Government Approval](/wiki/government-approval), [Planned / Command Economies](/wiki/planned-economies), [FOMC / Rate-Setting Board](/wiki/fomc)
 `;

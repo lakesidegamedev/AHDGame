@@ -17,7 +17,7 @@ export const gettingStartedPages: readonly WikiSeedPage[] = [
     slug: "getting-started",
     title: "Getting Started",
     description:
-      "Welcome, country pick, first-ten-minutes path, and links to every core guide for new players.",
+      "A first-session path, the six numbers that matter, a 25-action starting plan, contests, money pools, and country hubs.",
     content: gettingStartedContent,
     category: "getting-started",
     extraTags: ["onboarding", "new-player"],
@@ -25,7 +25,7 @@ export const gettingStartedPages: readonly WikiSeedPage[] = [
     featured: true,
     difficulty: "beginner",
     contentType: "guide",
-    estimatedReadTime: 5,
+    estimatedReadTime: 8,
   },
   {
     slug: "strategy-guides",
