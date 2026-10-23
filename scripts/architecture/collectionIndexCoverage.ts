@@ -20,6 +20,8 @@ export const PRIMARY_KEY_INDEX_POLICIES: Readonly<Record<string, string>> = {
     "Shadow-only carried books, upserted by run and turn _id; at most two documents per run are kept, so the predecessor scan is bounded.",
   acquisitionSettlements: "Settlement recovery and writes address the offer identity through _id.",
   ngChamberLeadershipElections: "One election per chamber role, read and written by _id.",
+  bondTurnCheckpoints:
+    "Turn number is _id; the resume read and the bounded 48-turn retention delete both use it.",
   nppOperatorDiagnostics:
     "Turn number is _id; only the bounded 48-turn retention scan uses another key.",
   capacityDecisionFunnels:
