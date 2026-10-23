@@ -83,7 +83,10 @@ export async function getBankDepositCeiling(db: Db, corp: Corporation): Promise<
  */
 export function depositCeilingFromSectors(
   charter: BankCharter | undefined,
-  sectors: readonly Pick<CorporateSector, "capitalStock" | "revenue" | "strategyId" | "sectorType">[],
+  sectors: readonly Pick<
+    CorporateSector,
+    "capitalStock" | "revenue" | "strategyId" | "sectorType"
+  >[],
   eraUnitScale: number
 ): number {
   if (!isDepositTakingCharter(charter)) return 0;

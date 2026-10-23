@@ -52,10 +52,7 @@ import { settleLegacyDepositInterest } from "@/lib/banking/legacyDepositInterest
 import { settleTransition } from "@/lib/banking/settlementJournal";
 import { oid, type TransitionLeg, type TransitionProjection } from "@/lib/banking/rules/boundary";
 import { effectiveBankRatesFromPrime, playerDepositRatePercent } from "@/lib/banking/rates";
-import {
-  depositCeilingFromSectors,
-  getBankDepositCeiling,
-} from "@/lib/banking/capacityAllocation";
+import { depositCeilingFromSectors, getBankDepositCeiling } from "@/lib/banking/capacityAllocation";
 import { roundSavingsAmount, savingsApyPercent } from "@/lib/currency/savingsInterest";
 import { loadCentralBankPricingAdjustment } from "@/lib/monetaryPolicy/centralBankPricing";
 import { emitTx, emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
@@ -563,11 +560,7 @@ async function processOneBank(
   // alone above the ceiling are grandfathered: NPC target contribution → 0.
   const preloadedSectors = caches.depositCeilingSectorsByBankId?.get(bankIdHex);
   const capacityCeiling = preloadedSectors
-    ? depositCeilingFromSectors(
-        live.bankCharter,
-        preloadedSectors,
-        await loadWorldEraUnitScale(db)
-      )
+    ? depositCeilingFromSectors(live.bankCharter, preloadedSectors, await loadWorldEraUnitScale(db))
     : await getBankDepositCeiling(db, {
         ...corp,
         bankCharter: live.bankCharter,

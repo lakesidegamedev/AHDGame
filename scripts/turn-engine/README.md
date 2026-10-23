@@ -61,13 +61,13 @@ npx tsx scripts/turn-engine/bench.ts \
 
 Options:
 
-| flag | default | meaning |
-| --- | --- | --- |
-| `--v1-uri`, `--v2-uri` | required | local Mongo URIs, same starting world |
-| `--out` | required | directory for `v1.json.gz`, `v2.json.gz`, `summary.json` |
-| `--settle-ms` | `4000` | wait after the turn for fire-and-forget writes to land |
-| `--trace` | off | comma-separated collections to count driver calls per call site |
-| `--control` | off | run v1 on BOTH copies: measures the turn's own nondeterminism |
+| flag                   | default  | meaning                                                         |
+| ---------------------- | -------- | --------------------------------------------------------------- |
+| `--v1-uri`, `--v2-uri` | required | local Mongo URIs, same starting world                           |
+| `--out`                | required | directory for `v1.json.gz`, `v2.json.gz`, `summary.json`        |
+| `--settle-ms`          | `4000`   | wait after the turn for fire-and-forget writes to land          |
+| `--trace`              | off      | comma-separated collections to count driver calls per call site |
+| `--control`            | off      | run v1 on BOTH copies: measures the turn's own nondeterminism   |
 
 Results are written to `--out` and **must not be committed**: they contain the
 world's documents, including player data.
@@ -93,12 +93,12 @@ rounding numbers to six decimals (float noise, not a decision).
 
 Ignored fields, and why:
 
-| scope | fields | why |
-| --- | --- | --- |
-| every collection | `createdAt`, `updatedAt` | wall-clock stamps; no game decision reads them |
-| `gameState` | `processingStartedAt`, `processingHeartbeatAt`, `processingPhase`, `processingPhaseStatuses`, `processingPhaseResults`, `processingTargetTurn`, `processingEngine`, `processingEngineVersion`, `processingAbandonedAt`, `nextScheduledTurn` | the in-flight turn block: heartbeats, phase status, lock and the engine stamp itself |
-| `savingsAccounts` | `lastSettlementKey`, `settledKeys`, `settlementProjectionRevision` | idempotency bookkeeping keyed by per-run move ids; balances and interest are still compared |
-| `bankMoneyMoves` | `settlementKey` | same |
+| scope             | fields                                                                                                                                                                                                                                      | why                                                                                         |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| every collection  | `createdAt`, `updatedAt`                                                                                                                                                                                                                    | wall-clock stamps; no game decision reads them                                              |
+| `gameState`       | `processingStartedAt`, `processingHeartbeatAt`, `processingPhase`, `processingPhaseStatuses`, `processingPhaseResults`, `processingTargetTurn`, `processingEngine`, `processingEngineVersion`, `processingAbandonedAt`, `nextScheduledTurn` | the in-flight turn block: heartbeats, phase status, lock and the engine stamp itself        |
+| `savingsAccounts` | `lastSettlementKey`, `settledKeys`, `settlementProjectionRevision`                                                                                                                                                                          | idempotency bookkeeping keyed by per-run move ids; balances and interest are still compared |
+| `bankMoneyMoves`  | `settlementKey`                                                                                                                                                                                                                             | same                                                                                        |
 
 Collections that are pure telemetry are not captured at all: `actionAuditLog`,
 `apiAccessLog`, `analyticsRecords`, `turnLogs`, `postTurnScans`,
