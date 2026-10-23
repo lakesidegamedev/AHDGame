@@ -122,13 +122,5 @@ export async function seedActionAuditLogIndexes(db: Db, log: (msg: string) => vo
     log
   );
 
-  await ensureIndex(
-    db,
-    "actionAuditLog",
-    { "actor.name": "text", "subject.name": "text" },
-    { name: "actionAuditLog_text_search", background: true },
-    log
-  );
-
   log("Action audit log indexes ensured");
 }
