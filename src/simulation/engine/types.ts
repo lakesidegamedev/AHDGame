@@ -9,12 +9,19 @@ import type {
   TurnPhaseSkipReason,
   TurnPhaseTelemetryMap,
 } from "@/lib/db/types";
+import type { TurnEngine } from "@/simulation/engine/turnEngine";
 
 export interface TurnExecutionContext {
   db: Db;
   gameState: GameState;
   config: GameConfig | null;
   activeIteration?: GameIteration;
+  /**
+   * Engine this turn started on. Every phase implementation choice goes through
+   * `selectPhaseImplementation(context.engine, ...)`, so a turn resolves its
+   * engine exactly once and cannot mix engines across phases.
+   */
+  engine: TurnEngine;
   newTurn: number;
   calendarTurn: number;
   currentYear: number;

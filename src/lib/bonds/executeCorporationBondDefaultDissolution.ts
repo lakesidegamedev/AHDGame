@@ -45,6 +45,7 @@ import { badRequest } from "@/lib/api/errors";
 import { releaseCorporationHeldSharesToFloat } from "@/lib/corporations/releaseHeldSharesToFloat";
 import { distributeCrossEquityInKind } from "@/lib/corporations/distributeCrossEquityInKind";
 import { payFundShareholderRows } from "@/lib/corporations/payFundShareholders";
+import { writeOffFundHoldingsInDissolvedCorporation } from "@/lib/indexFunds/fundHoldingWriteOff";
 import { disposeLeavingSectors } from "@/lib/corporations/nppPickup";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { stampSubjectDeleted } from "@/lib/financialTxLog/stampDeleted";
@@ -734,6 +735,11 @@ export async function executeCorporationBondDefaultDissolution(
   const disposal = await disposeLeavingSectors(db, refreshedCorporation, sectors, now);
   await db.collection<Bond>("bonds").deleteMany({ corporationId: refreshedCorporation._id });
   await releaseCorporationHeldSharesToFloat(db, refreshedCorporation._id, now);
+
+  // A zero-pool wind-down pays funds nothing, so payFundShareholderRows never
+  // pulled their holdings. Drop them now instead of leaving a stale mark in
+  // NAV until each fund's next constituent rebalance.
+  await writeOffFundHoldingsInDissolvedCorporation(db, refreshedCorporation._id, now);
 
   // Stamp tx history before deleting the corp so the bond_default +
   // bond_dissolution_payout rows emitted earlier in this function still

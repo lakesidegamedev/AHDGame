@@ -32,6 +32,19 @@ export interface TurnLog {
   /** Deployed source the turn ran on; absent outside a hosted deployment. */
   build?: TurnBuild;
   /**
+   * Turn engine that produced this turn (`gameConfig.turnEngineVersion`, or the
+   * engine of the in-flight turn when this was a crash resume). Absent on logs
+   * written before the versioned engine shipped, which are v1 by definition.
+   */
+  turnEngine?: "v1" | "v2";
+  /**
+   * Behaviour version of that engine (e.g. "2.0.0"), independent of `build.commit`.
+   * A resumed turn keeps the version it started on.
+   */
+  engineVersion?: string;
+  /** Phases that ran a v2 implementation this turn. Absent when none did. */
+  v2Phases?: string[];
+  /**
    * NPP engine the turn ran (`NPP_ENGINE_VERSION`). Engine-6 behavior is live
    * only where the world's `nppAutonomyLevel` is v6 or above. Absent before 6.0.0.
    */

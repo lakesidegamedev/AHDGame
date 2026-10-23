@@ -13,17 +13,20 @@ import { computeGameNow } from "@/lib/time/computeGameNow";
 import { nextScheduledTurnAfter, resolveTurnCronMinute } from "@/lib/cron/turnCronMinute";
 import type { Db } from "mongodb";
 import type { TurnExecutionContext } from "@/simulation/engine/types";
+import type { TurnEngine } from "@/simulation/engine/turnEngine";
 
 export async function buildTurnExecutionContext(input: {
   db: Db;
   gameState: GameState;
   config: GameConfig | null;
+  engine: TurnEngine;
   warnings: string[];
   activeIteration?: GameIteration;
   phaseStatuses: TurnPhaseTelemetryMap;
   startTimeMs: number;
 }): Promise<TurnExecutionContext> {
-  const { db, gameState, config, warnings, activeIteration, phaseStatuses, startTimeMs } = input;
+  const { db, gameState, config, engine, warnings, activeIteration, phaseStatuses, startTimeMs } =
+    input;
   const newTurn = gameState.currentTurn + 1;
   // Preset-aware: read the calendar baseline from GameState so 1991 games
   // advance their year correctly. Legacy rows fall back to STARTING_YEAR.
@@ -96,6 +99,7 @@ export async function buildTurnExecutionContext(input: {
     gameState,
     config,
     activeIteration,
+    engine,
     newTurn,
     calendarTurn: calTurn,
     currentYear,

@@ -22,7 +22,8 @@ export const ENDPOINTS: PublicEndpointDefinition[] = [
   {
     method: "GET",
     path: "/api/public/v1/character",
-    description: "Search characters by name (partial) or discordId.",
+    description:
+      "Search characters by name (partial) or discordId. Includes profileHeaderImageUrl (hero banner URL or null).",
     params: [
       { name: "name", required: false },
       { name: "discordId", required: false },
@@ -43,7 +44,8 @@ export const ENDPOINTS: PublicEndpointDefinition[] = [
   {
     method: "GET",
     path: "/api/public/v1/character/[id]",
-    description: "Full character detail by sequential id or ObjectId.",
+    description:
+      "Full character detail by sequential id or ObjectId. Includes profileHeaderImageUrl (hero banner URL or null).",
     params: [{ name: "id", required: true, inPath: true }],
   },
   {
@@ -294,7 +296,8 @@ export const ENDPOINTS: PublicEndpointDefinition[] = [
   {
     method: "GET",
     path: "/api/public/v1/corporation",
-    description: "Corporation detail; id is the sequentialId.",
+    description:
+      "Corporation detail; id is the sequentialId. Includes headerImageUrl (hero banner URL or null).",
     params: [
       { name: "name", required: false },
       { name: "id", required: false },

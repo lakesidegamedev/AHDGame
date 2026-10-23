@@ -71,6 +71,20 @@ describe("ownsConfiguredWebhooks (#1208)", () => {
     expect(ownsConfiguredWebhooks("main-site")).toBe(false);
   });
 
+  it("lets each world's turn worker post for its own web service", () => {
+    process.env.RAILWAY_SERVICE_NAME = "AHD Turn Worker";
+    expect(ownsConfiguredWebhooks("ahd-production")).toBe(true);
+    process.env.RAILWAY_SERVICE_NAME = "AHD Staging Turn Worker";
+    expect(ownsConfiguredWebhooks("ahd-staging")).toBe(true);
+  });
+
+  it("blocks a turn worker from posting for another world", () => {
+    process.env.RAILWAY_SERVICE_NAME = "AHD Staging Turn Worker";
+    expect(ownsConfiguredWebhooks("ahd-production")).toBe(false);
+    process.env.RAILWAY_SERVICE_NAME = "AHD Turn Worker";
+    expect(ownsConfiguredWebhooks("ahd-staging")).toBe(false);
+  });
+
   it("blocks a run outside Railway entirely", () => {
     expect(ownsConfiguredWebhooks("main-site")).toBe(false);
   });

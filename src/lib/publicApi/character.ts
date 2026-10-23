@@ -48,6 +48,7 @@ export interface PublicCharacter {
   donorBaseLevel: number;
   policies: { economic: number; social: number };
   avatarUrl: string | null;
+  profileHeaderImageUrl: string | null;
   discordAvatarUrl: string | null;
   discordUsername: string | null;
   profileUrl: string;
@@ -222,6 +223,7 @@ async function enrichPublicCharacters(db: Db, characters: Character[]): Promise<
         donorBaseLevel: char.donorBaseLevel ?? 0,
         policies: char.policies ?? { economic: 0, social: 0 },
         avatarUrl: char.avatarUrl ?? null,
+        profileHeaderImageUrl: char.profileHeaderImageUrl ?? null,
         discordAvatarUrl:
           user?.discordId && user?.discordAvatar
             ? getDiscordAvatarUrl(user.discordId, user.discordAvatar)

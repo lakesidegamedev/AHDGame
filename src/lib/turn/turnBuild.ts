@@ -6,6 +6,12 @@
 export interface TurnBuild {
   /** Full or abbreviated lowercase git commit SHA of the running deployment. */
   commit: string;
+  /**
+   * Behaviour version of the turn engine that ran the turn (e.g. "2.0.0").
+   * Stamped per turn, because the engine can be switched by config without a
+   * deploy; `commit` alone cannot say which rules produced a world.
+   */
+  engineVersion?: string;
 }
 
 /** Read the deployed commit from the hosting environment, if it is known. */

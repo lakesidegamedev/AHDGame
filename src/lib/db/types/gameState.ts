@@ -458,6 +458,17 @@ export interface GameState {
    * limited to `turnPhaseResumeResults.ts`.
    */
   processingPhaseResults?: Record<string, Record<string, unknown>> | null;
+  /**
+   * Turn engine that owns the in-flight turn, resolved once from
+   * `gameConfig.turnEngineVersion` when the turn started and cleared when it
+   * commits. A crash resume reads it back and finishes on the same engine:
+   * switching engines mid-turn would apply two sets of rules to one turn.
+   * Absent on an idle world and on turns that started before engines were
+   * versioned (those are v1 by definition).
+   */
+  processingEngine?: "v1" | "v2" | null;
+  /** Behaviour version of the in-flight turn's engine (e.g. "2.0.0"); stamped with `processingEngine`. */
+  processingEngineVersion?: string | null;
   /** Master gate for the automatic sector seeding system (fires every 48 turns). */
   autoSectorSeedEnabled?: boolean;
   autoSectorSeedEnabledBy?: string;

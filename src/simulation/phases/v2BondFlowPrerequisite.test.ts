@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { TurnPhaseResultIncompleteError } from "@/simulation/engine/turnPhaseResumeResults";
+import { resolveTurnEngine } from "@/simulation/engine/turnEngine";
 
 const settleResetTreasuryCashTurn = vi.fn(async () => ({ countries: 1 }));
 vi.mock("@/lib/resetFinance/settleCashTurn", () => ({
@@ -52,6 +53,7 @@ async function runWithBondResult(bond: unknown) {
     db: {},
     characters: [],
     config: null,
+    engine: resolveTurnEngine({}).engine,
     gameNow: new Date(),
     stateMap: new Map(),
     gameState: { currentTurn: 11, forexEnabled: false },

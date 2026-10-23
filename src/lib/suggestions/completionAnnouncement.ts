@@ -62,16 +62,21 @@ export async function countImplementedSuggestions(db: Db, reporter: ReporterKey)
   });
 }
 
-/** What shipped: the explicit note first, then the done-status history note, then admin notes. */
+/**
+ * What shipped: the explicit note first, then the note written when the
+ * suggestion was marked done, then admin notes. Edits after completion append
+ * done-status entries too ("content update: gameSystem"), so the note comes
+ * from the first entry of the latest run of done statuses, not the newest one.
+ */
 export function suggestionImplementationNote(s: Suggestion): string | null {
   const explicit = s.implementationNote?.trim();
   if (explicit) return explicit;
   const history = s.statusHistory ?? [];
-  for (let i = history.length - 1; i >= 0; i--) {
-    const entry = history[i];
-    if (isSuggestionDoneStatus(entry.status) && entry.note?.trim()) return entry.note.trim();
+  let note: string | null = null;
+  for (let i = history.length - 1; i >= 0 && isSuggestionDoneStatus(history[i].status); i--) {
+    note = history[i].note?.trim() || note;
   }
-  return s.adminNotes?.trim() || null;
+  return note || s.adminNotes?.trim() || null;
 }
 
 export interface CompletionEmbedInput {

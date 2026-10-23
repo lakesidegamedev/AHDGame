@@ -13,6 +13,7 @@ vi.mock("@/lib/extraction/featureFlag", () => ({
 }));
 
 import { getTurnPhaseRegistry } from "@/simulation/phases/turnPhaseRegistry";
+import { resolveTurnEngine } from "@/simulation/engine/turnEngine";
 
 /** Runs only lineOfCreditTurn; every other phase yields no result, as a resume skip does. */
 async function runLineOfCredit(gameState: Record<string, unknown>) {
@@ -38,6 +39,7 @@ async function runLineOfCredit(gameState: Record<string, unknown>) {
     db: {},
     characters: [],
     config: null,
+    engine: resolveTurnEngine({}).engine,
     gameNow: new Date(),
     stateMap: new Map(),
     gameState: { currentTurn: 11, ...gameState },

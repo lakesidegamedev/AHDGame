@@ -45,10 +45,8 @@ import { consumeManufacturingDevelopmentReceiptsV2 } from "@/lib/products/manufa
 import { processAdvertisingTurn } from "@/lib/advertising/settlementTurn";
 import { loadAdvertisingEfficacyByCorp } from "@/lib/advertising/persistence";
 import type { CoverageSectorInput } from "@/lib/advertising/rules/coverage";
-import {
-  MANUFACTURING_PRODUCT_PROJECTS_V2,
-  type ManufacturingProductProject,
-} from "@/lib/products/manufacturingProject";
+import type { CorporationTurnOptions } from "./corporationTurnOptions";
+import { persistNppManufacturingProjects } from "./persistManufacturingProjects";
 import { getEffectiveStrategyRatesForOperatingModel } from "@/lib/constants/sectorStrategies";
 import { settleSupplyAgreements, type SettleableSupplyAgreement } from "./settleSupplyAgreements";
 import type { CommodityType } from "@/lib/constants/commodities";
@@ -156,7 +154,10 @@ const CORP_TURN_RNG_SALT = process.env.SIM_RNG_SALT ? `:${process.env.SIM_RNG_SA
  * Run the corporation economy, settlement, ownership, and reporting phases for one turn.
  */
 
-export async function processCorporationTurn(turn?: number): Promise<CorporationTurnResult> {
+export async function processCorporationTurn(
+  turn?: number,
+  options: CorporationTurnOptions = {}
+): Promise<CorporationTurnResult> {
   const db = await getDb();
   const now = new Date();
   const phaseStartedAt = Date.now();
@@ -894,21 +895,11 @@ export async function processCorporationTurn(turn?: number): Promise<Corporation
     corporations: lookups.corporations,
     issuerBondsByCorpId: lookups.bondsByCorpId,
     heldBondsByCorpId: lookups.bondsHeldByCorpId,
+    ...(options.batchNppMarketEntryCredit ? { batchRelocationCredit: true } : {}),
   });
   mark("nppCorpDecisions");
 
-  for (const project of nppManufacturingProductProjects) {
-    try {
-      await db
-        .collection<ManufacturingProductProject>(MANUFACTURING_PRODUCT_PROJECTS_V2)
-        .insertOne(project);
-    } catch (error) {
-      if (typeof error === "object" && error !== null && "code" in error && error.code === 11000) {
-        continue;
-      }
-      throw error;
-    }
-  }
+  await persistNppManufacturingProjects(db, nppManufacturingProductProjects);
 
   corpOps.push(...groupForecastWriteOps(market, lookups));
   // Merge NPP corp updates into the main corpOps
