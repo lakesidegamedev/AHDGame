@@ -8,11 +8,21 @@ import {
   bucketCandles,
   chartBucketTurns,
   mergeQuarterCandles,
+  supportsLogarithmicScale,
   type QuarterTick,
 } from "./candles";
 
 const pts = (caps: number[]): CandleInput[] =>
   caps.map((cap, i) => ({ turn: 100 + i, time: 1_700_000_000 + i * 3600, cap, volume: 10 }));
+
+describe("supportsLogarithmicScale", () => {
+  it("rejects candles with any non-positive OHLC value", () => {
+    const positive = { open: 1, high: 2, low: 1, close: 2 };
+    expect(supportsLogarithmicScale([positive])).toBe(true);
+    expect(supportsLogarithmicScale([{ ...positive, low: 0 }])).toBe(false);
+    expect(supportsLogarithmicScale([{ ...positive, close: -1 }])).toBe(false);
+  });
+});
 
 describe("buildCandles", () => {
   it("opens each candle at the previous close without intraday data", () => {

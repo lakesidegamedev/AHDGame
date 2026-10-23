@@ -3,6 +3,7 @@
 import { MARKET_POLLING_TEARDOWN } from "@/lib/observability/sentryFilters";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { marketTurnLabel } from "@/lib/stockExchange/rules/calendar";
+import { supportsLogarithmicScale } from "@/lib/stockExchange/rules/candles";
 import type { GameDateAnchor } from "@/lib/utils/gameDate";
 import { LocalTime, RelativeTime } from "@/components/time/LocalTime";
 import { Skeleton } from "@/components/ui";
@@ -168,6 +169,8 @@ export function MarketOverview({
   const [totalTurns, setTotalTurns] = useState(0);
   const [firstIntradayTurn, setFirstIntradayTurn] = useState<number | null>(null);
   const [logScale, setLogScale] = useState(false);
+  const canUseLogScale = supportsLogarithmicScale(candles);
+  const effectiveLogScale = logScale && canUseLogScale;
   const [intradayTurns, setIntradayTurns] = useState(0);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -196,6 +199,10 @@ export function MarketOverview({
       localization: { priceFormatter: (value: number) => formatAmount(Math.round(value)) },
     });
   }, [formatAmount, chartReady]);
+
+  useEffect(() => {
+    if (!canUseLogScale) setLogScale(false);
+  }, [canUseLogScale]);
 
   /* ---------------- chart lifecycle (mount once) ---------------- */
   useEffect(() => {
@@ -429,13 +436,13 @@ export function MarketOverview({
     void import("lightweight-charts").then(({ PriceScaleMode }) => {
       if (!cancelled)
         candleRef.current?.priceScale().applyOptions({
-          mode: logScale ? PriceScaleMode.Logarithmic : PriceScaleMode.Normal,
+          mode: effectiveLogScale ? PriceScaleMode.Logarithmic : PriceScaleMode.Normal,
         });
     });
     return () => {
       cancelled = true;
     };
-  }, [logScale, chartReady]);
+  }, [effectiveLogScale, chartReady]);
 
   // Mark the first live-print bucket on the price series as well as in the legend.
   useEffect(() => {
@@ -650,12 +657,13 @@ export function MarketOverview({
               </button>
             ))}
             <button
-              onClick={() => setLogScale((v) => !v)}
-              aria-pressed={logScale}
+              onClick={() => canUseLogScale && setLogScale((v) => !v)}
+              disabled={!canUseLogScale}
+              aria-pressed={effectiveLogScale}
               title="Logarithmic price scale keeps large historical spikes visible"
               className="px-2.5 py-1 rounded-md text-xs font-medium border border-card-border text-muted"
             >
-              {logScale ? "Log scale" : "Linear scale"}
+              {effectiveLogScale ? "Log scale" : "Linear scale"}
             </button>
             <span className="mx-1 h-4 w-px bg-card-border" />
             <button
