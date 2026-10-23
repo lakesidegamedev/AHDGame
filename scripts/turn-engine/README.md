@@ -17,7 +17,12 @@ scripts/turn-engine/lib.ts          canonicalisation, money totals, trial balanc
 ```
 
 `run-turn.ts` is a separate process per engine because the app's Mongo client is
-a process-wide singleton. Each child:
+a process-wide singleton. It pins the clock the turn sees: the producer shadow
+reads wall-clock time, so two runs of the same turn minutes apart produce
+different spend even when nothing else differs. The pinned instant is derived
+from the snapshot (`lastTurnProcessed + turnLengthMinutes`), so both copies see
+the same one without an arbitrary constant. Pass `--clock-ms` to override or
+`--no-freeze-clock` to disable. Each child:
 
 1. refuses a non-local URI, and refuses a copy that still holds a turn lock;
 2. sets `gameConfig.turnEngineVersion` (`v1` unsets it, so v1 runs the default

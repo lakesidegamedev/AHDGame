@@ -243,6 +243,27 @@ async function main(): Promise<void> {
     lastTurnProcessed: (state.lastTurnProcessed as Date | undefined)?.toISOString() ?? null,
   };
 
+  // Pin the clock the turn sees.
+  //
+  // The producer shadow reads wall-clock time, so two runs of the same turn
+  // minutes apart produce different household spend even when nothing else
+  // differs (handoff 2026-10-23). The pinned instant is derived from the
+  // snapshot itself — the turn's scheduled time — so it is identical on both
+  // copies without being an arbitrary constant. `new Date()` still returns the
+  // real clock; the harness drops wall-clock fields, and the game clock
+  // (`gameState.lastTurnProcessed`, `turnLog.gameTime`) is compared.
+  const configForClock = db.collection<{ _id: string; turnLengthMinutes?: number }>("gameConfig");
+  const turnLengthMinutes = Number(
+    (await configForClock.findOne({ _id: "default" }, { projection: { turnLengthMinutes: 1 } }))
+      ?.turnLengthMinutes ?? 60
+  );
+  const frozenNowMs =
+    Number(argValue("--clock-ms")) ||
+    (state.lastTurnProcessed instanceof Date
+      ? state.lastTurnProcessed.getTime() + turnLengthMinutes * 60_000
+      : Date.now());
+  const realDateNow = Date.now;
+
   // Selection is config-driven for real turns, and the bench is the only thing
   // allowed to flip it — on this local copy only. v1 runs UNSET so it exercises
   // the default path every live world is on today.
@@ -269,9 +290,13 @@ async function main(): Promise<void> {
   seedRandom();
 
   const { processTurn } = await import("@/lib/turnSystem");
-  const startedAt = Date.now();
+  if (!process.argv.includes("--no-freeze-clock")) {
+    Date.now = () => frozenNowMs;
+  }
+  const startedAt = realDateNow();
   const result = await processTurn();
-  const durationMs = Date.now() - startedAt;
+  Date.now = realDateNow;
+  const durationMs = realDateNow() - startedAt;
 
   // Fire-and-forget writes (post-turn scans, telemetry) land after `processTurn`
   // returns. Wait for the stream to go quiet rather than for a fixed guess, so
