@@ -1423,6 +1423,9 @@ export function processSector(
         plantsCapacity > 0
           ? ((plantsNameplateRevenue / TURNS_PER_DAY) * producedUnits) / plantsCapacity
           : 0,
+      // Bounds the fixed-cost spread at the demand throttle's 10% floor, so a
+      // throttled plant cannot raise its quote into a spiral (#4352).
+      nominalFullRunRevenue: plantsNameplateRevenue / TURNS_PER_DAY,
       inputCostIndex: inputBasketCostIndex(
         effectiveDemand ?? {},
         lookups.reachableInputPriceRatiosByCountry?.get(sectorCountryId) ??
