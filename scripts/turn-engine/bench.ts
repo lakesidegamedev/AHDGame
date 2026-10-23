@@ -30,6 +30,7 @@ import { gunzipSync } from "node:zlib";
 import { MongoClient } from "mongodb";
 
 import {
+  TIMESTAMP_FIELDS,
   assertLocalMongoUri,
   canonicalKey,
   diffDocs,
@@ -185,10 +186,31 @@ function insertedIds(run: RunResult): Set<string> {
   return ids;
 }
 
+/**
+ * Drop wall-clock fields from an already-canonicalised document.
+ *
+ * Runs are captured at different times and the capture format is what the
+ * comparison sees, so the strip has to be applied here as well as at capture:
+ * that keeps `--compare-only` valid on artifacts written before a timestamp
+ * field was added to the list.
+ */
+function stripWallClock(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stripWallClock);
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+      if (TIMESTAMP_FIELDS.has(key)) continue;
+      out[key] = stripWallClock(item);
+    }
+    return out;
+  }
+  return value;
+}
+
 function maskIds(run: RunResult, ids: Set<string>): void {
-  if (ids.size === 0) return;
   const mask = (value: unknown): unknown => {
     if (typeof value === "string") {
+      if (ids.size === 0) return value;
       return value.replace(HEX24_RE, (match) =>
         ids.has(match.toLowerCase()) ? "<runtime-id>" : match
       );
@@ -206,10 +228,10 @@ function maskIds(run: RunResult, ids: Set<string>): void {
   for (const collection of Object.values(run.writes)) {
     const updates: Record<string, Record<string, unknown>> = {};
     for (const [key, doc] of Object.entries(collection.updates)) {
-      updates[key] = mask(doc) as Record<string, unknown>;
+      updates[key] = stripWallClock(mask(doc)) as Record<string, unknown>;
     }
     collection.updates = updates;
-    collection.inserts = collection.inserts.map((doc) => mask(doc));
+    collection.inserts = collection.inserts.map((doc) => stripWallClock(mask(doc)));
   }
 }
 

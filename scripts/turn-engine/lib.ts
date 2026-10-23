@@ -53,6 +53,41 @@ export const IGNORED_FIELDS: Record<string, readonly string[]> = {
   bankMoneyMoves: ["settlementKey"],
 };
 
+/**
+ * Field names whose value is a wall-clock instant, dropped at any depth.
+ *
+ * Two runs of the SAME engine start minutes apart, so every one of these
+ * differs by construction and says nothing about the outcome. The game clock
+ * that does matter is `gameState.currentTurn` and `turnLogs.gameTime`, which are
+ * compared. Kept as an explicit list (not a `/At$/` pattern) so a new field has
+ * to be looked at before it is silenced.
+ */
+export const TIMESTAMP_FIELDS = new Set([
+  "createdAt",
+  "updatedAt",
+  "lastUpdated",
+  "lastMarketTickAt",
+  "lastTurnProcessed",
+  "expiresAt",
+  "timestamp",
+  "computedAt",
+  "proposedAt",
+  "lastDecayApplied",
+  "at",
+  "completedAt",
+  "startedAt",
+  "resolvedAt",
+  "settledAt",
+  "openedAt",
+  "closedAt",
+  "paidAt",
+  "postedAt",
+  "fundedAt",
+  "recordedAt",
+  "generatedAt",
+  "observedAt",
+]);
+
 export function isLocalMongoUri(uri: string): boolean {
   if (!uri || uri.startsWith("mongodb+srv://")) return false;
   const hostPart = uri
@@ -126,6 +161,7 @@ function canonicalValue(value: unknown): unknown {
   if (typeof value === "object") {
     const out: Record<string, unknown> = {};
     for (const key of Object.keys(value as Record<string, unknown>).sort()) {
+      if (TIMESTAMP_FIELDS.has(key)) continue;
       out[key] = canonicalValue((value as Record<string, unknown>)[key]);
     }
     return out;
