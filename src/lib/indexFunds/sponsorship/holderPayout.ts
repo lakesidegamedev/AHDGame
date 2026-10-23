@@ -8,7 +8,10 @@
  * mispriced every non-USD fund, so the two paths are kept explicitly apart.
  *
  * `fund_reserve` positions are skipped: the reserve is the fund's own units,
- * and paying it would be the fund paying itself.
+ * and paying it would be the fund paying itself. A `false` result also covers a
+ * holder record that no longer exists (a dissolved corporation, a deleted
+ * character or NPP). The caller writes that holder's share off rather than
+ * aborting the whole wind-up, so one deleted holder cannot strand the rest.
  */
 
 import {

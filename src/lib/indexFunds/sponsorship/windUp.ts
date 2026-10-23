@@ -293,11 +293,13 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
         ? position.units * finalNav
         : Math.floor(position.units * finalNav);
     if (payoutAnchor <= 0) continue;
+    // A holder whose record is gone cannot be paid. Its units are zeroed with
+    // the rest below and its share stays in the residual cash returned to the
+    // sponsor, exactly as a fund_reserve position is handled. Throwing here
+    // rolled the whole wind-up back on every pass, so one deleted holder
+    // stranded every other holder's payout and the fund never delisted.
     const paid = await payFundHolderCash(db, fund, position, payoutAnchor, currentTurn, now);
-    if (!paid) {
-      if (position.holderKind !== "fund_reserve") throw new Error("Fund holder payout failed");
-      continue;
-    }
+    if (!paid) continue;
     distributedAnchor += payoutAnchor;
     holdersPaid += 1;
   }
