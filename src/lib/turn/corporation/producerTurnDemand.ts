@@ -582,6 +582,7 @@ export async function buildProducerTurnDemand(
     householdSource,
     householdWallets,
     households,
+    wageBillByWallet,
     investmentBuyerOrders,
     investmentFunding,
     investmentFundingTotal,

@@ -226,6 +226,16 @@ export interface GameConfig {
    */
   producerFundedBookStage?: number;
   /**
+   * Funded producer market: >= 1 pays a share of the public funding left after
+   * the line carry, transition support and grants to the same country's
+   * households (weighted by wages) instead of burning it at close. Nothing is
+   * minted; the money is the funding the treasury outlay already paid for.
+   * 0 or absent = off.
+   */
+  producerProcurementSpillStage?: number;
+  /** Share (0 to 1) of that leftover paid to households when the stage is on. Absent = 1. */
+  producerProcurementSpillShare?: number;
+  /**
    * Funded producer market: >= 1 retires, with no cash, a share of the
    * capacity of plants that have sold nothing for several turns. 0 or absent = off.
    */

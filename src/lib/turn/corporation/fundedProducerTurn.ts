@@ -73,6 +73,7 @@ import {
   publicOrderId,
   type LineCarry,
 } from "@/lib/market/producerMarket/publicCarryRules";
+import { procurementSpill } from "@/lib/market/producerMarket/procurementSpillRules";
 import { newEntrantProducerBooks } from "@/lib/market/producerMarket/openingState";
 import {
   createProducerWallets,
@@ -173,6 +174,7 @@ export async function runFundedProducerTurn(
     producerWalletId(worldEpoch, investmentScope(countryId));
 
   const carryShare = input.env.publicCarryShare ?? 0;
+  const spillShare = input.env.procurementSpillShare ?? 0;
   const publicCarryIn =
     carryShare > 0
       ? await readPublicCarryIn(
@@ -492,6 +494,7 @@ export async function runFundedProducerTurn(
     // claimed twice and nothing is paid from an empty one.
     const retiredBookBySector: Record<string, number> = {};
     const grantBySector: Record<string, number> = {};
+    const grantByCountry = new Map<string, number>();
     const grantShare = input.env.decommissionGrantShare ?? DECOMMISSION_GRANT_DEFAULT_SHARE;
     if (
       grantShare > 0 &&
@@ -522,6 +525,7 @@ export async function runFundedProducerTurn(
       const grants = decommissionGrant({ claims, poolByCountry: poolAfterSupport });
       for (const g of grants.payments) {
         grantBySector[g.sectorId] = g.claim;
+        grantByCountry.set(g.countryId, (grantByCountry.get(g.countryId) ?? 0) + g.claim);
         const owner = sectorOwner.get(g.sectorId)!;
         const from = publicWallet(g.countryId);
         const key = `decommission:${owner}:${from}`;
@@ -551,6 +555,34 @@ export async function runFundedProducerTurn(
       byPayee.set(key, row);
     }
     transfers.push(...byPayee.values());
+    // What is still left of the public funding after carry, support and grants
+    // goes to the same country's households instead of being burned.
+    const spillByCountry: Record<string, number> = {};
+    if (spillShare > 0) {
+      const spill = procurementSpill({
+        poolByCountry: new Map(
+          [...poolAfterSupport].map(([c, pool]) => [
+            c,
+            Math.max(0, pool - (grantByCountry.get(c) ?? 0)),
+          ])
+        ),
+        wallets: [...demand.householdWallets.values()].map((w) => ({
+          accountId: w.accountId,
+          countryId: w.countryId,
+          wageBill: demand.wageBillByWallet.get(w.accountId) ?? 0,
+        })),
+        share: spillShare,
+      });
+      for (const p of spill) {
+        spillByCountry[p.countryId] = (spillByCountry[p.countryId] ?? 0) + p.amountAnchor;
+        transfers.push({
+          reason: "procurement_spill",
+          fromAccountId: publicWallet(p.countryId),
+          toAccountId: p.accountId,
+          amountAnchor: p.amountAnchor,
+        });
+      }
+    }
     return {
       transfers,
       meta: {
@@ -560,6 +592,7 @@ export async function runFundedProducerTurn(
         grantBySector,
         coverageByCountry: Object.fromEntries(support.coverageByCountry),
         publicCarryTarget: carryTargetByCountry,
+        ...(spillShare > 0 ? { procurementSpillByCountry: spillByCountry } : {}),
       },
     };
   };

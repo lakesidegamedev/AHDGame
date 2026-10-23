@@ -93,6 +93,8 @@ export type ProducerPhysicalEnv = Pick<
   spilloverShare?: number;
   /** Share of unfilled public budget kept per line for next turn (0 = off). */
   publicCarryShare?: number;
+  /** gameConfig.producerProcurementSpillStage share: leftover public funding paid to households (0 = off). */
+  procurementSpillShare?: number;
   /** gameConfig.producerRunPaceDrop: largest share of last turn's run a plant may shed in one turn (0 or absent = off). */
   runPaceDrop?: number;
   /** gameConfig.producerHouseholdIncomeFloor: target household income per turn, anchor (0 or absent = off). */
