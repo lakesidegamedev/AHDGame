@@ -33,6 +33,25 @@ export interface TurnPhaseTelemetry {
   /** True when roundTrips exceeded roundTripBudget. Warn-only, never fails the turn. */
   overBudget?: boolean;
   /**
+   * Write commands (insert/update/delete/findAndModify) the phase issued.
+   * Counted from the driver command monitor; see mongoRoundTrips.ts.
+   */
+  writeCommands?: number;
+  /**
+   * Documents inserted or modified by those write commands. This is the
+   * number that matters on production: disk cost is per written document and
+   * per index entry, not per game entity changed.
+   */
+  documentsWritten?: number;
+  /** BSON payload bytes of inserted documents. Recorded only under the profiler. */
+  writeBytes?: number;
+  /**
+   * Largest write targets, recorded for phases that wrote at least
+   * `TOP_WRITE_COLLECTIONS_MIN_DOCUMENTS` documents, so a phase writing a
+   * forensic log row per money leg is obvious from the turn log.
+   */
+  topWriteCollections?: Array<{ collection: string; documents: number }>;
+  /**
    * Largest command sources, recorded for phases with at least
    * TOP_COLLECTIONS_MIN_ROUND_TRIPS round trips so N+1s are visible without a
    * profiled replay (#2689).

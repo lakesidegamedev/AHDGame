@@ -14,6 +14,7 @@ import {
   endPhaseProfiling,
   phaseRoundTrips,
   phaseTopCollectionsByRoundTrips,
+  phaseWriteStats,
   roundTripCountsAvailable,
 } from "@/lib/observability/mongoRoundTrips";
 import { roundTripBudgetFor } from "./turnPhaseBudgets";
@@ -50,6 +51,9 @@ import { TurnMustStopError } from "@/lib/turn/turnMustStop";
  */
 /** Phases below this many round trips do not record their top collections. */
 export const TOP_COLLECTIONS_MIN_ROUND_TRIPS = 100;
+
+/** Phases below this many written documents do not record their top write targets. */
+export const TOP_WRITE_COLLECTIONS_MIN_DOCUMENTS = 100;
 
 const READ_ONLY_PHASES = new Set<string>([
   "financialSuspectScan",
@@ -497,10 +501,27 @@ export function createTurnPhaseRuntime(input: {
         roundTrips != null && roundTrips >= TOP_COLLECTIONS_MIN_ROUND_TRIPS
           ? phaseTopCollectionsByRoundTrips(name, 3)
           : undefined;
+      // Write volume. Round trips say how many commands crossed the wire;
+      // documentsWritten says how many documents and index entries Mongo had to
+      // write, which is what the disk actually pays for. Available whenever
+      // command monitoring is on, which is every hosted process.
+      const writeStats = roundTripCountsAvailable() ? phaseWriteStats(name) : undefined;
+      const writeTelemetry =
+        writeStats && writeStats.commands > 0
+          ? {
+              writeCommands: writeStats.commands,
+              documentsWritten: writeStats.documents,
+              ...(writeStats.bytes > 0 ? { writeBytes: writeStats.bytes } : {}),
+              ...(writeStats.documents >= TOP_WRITE_COLLECTIONS_MIN_DOCUMENTS
+                ? { topWriteCollections: writeStats.topCollections }
+                : {}),
+            }
+          : {};
       const completionTelemetry = {
         ...(roundTrips == null ? {} : { roundTrips, roundTripBudget }),
         ...(topCollections ? { topCollections } : {}),
         ...(substeps ? { substeps } : {}),
+        ...writeTelemetry,
       };
       if (phaseRequiresResumeResult(name)) {
         // A dependent phase consumes this result, so the completed marker and

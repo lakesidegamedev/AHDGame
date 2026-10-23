@@ -8,6 +8,7 @@ import { getAuditRequestContext } from "@/lib/observability/context";
 import { getGameState } from "@/lib/gameState";
 import { loadTurnLengthMinutes } from "@/lib/financialTxLog/expiresAt";
 import { DEFAULT_TURN_LENGTH_MINUTES } from "@/lib/db/types/financialTxLog";
+import { shouldMirrorMoneyAudit } from "@/lib/audit/moneyMirrorPolicy";
 import type {
   ActionAuditActor,
   ActionAuditDelta,
@@ -40,6 +41,34 @@ const FLUSH_INTERVAL_MS = 250;
 const FLUSH_SIZE_THRESHOLD = 200;
 /** Keep the envelope small — this is a summary spine, not a full document diff. */
 const MAX_DELTA_ENTRIES = 8;
+
+/**
+ * Read once per process: this is a debugging escape hatch, not a per-row knob.
+ * See `moneyMirrorPolicy.ts` for why the money mirror is narrowed at all.
+ */
+const FULL_SYSTEM_MONEY_MIRROR = process.env.AUDIT_MIRROR_SYSTEM_MONEY === "1";
+
+/**
+ * Drop the routine system money rows no detector reads. This lives at enqueue
+ * time, after the actor has been resolved, so every money path is covered:
+ * `emitTx`, `emitTxBulk`, banking events, NPP reinvestment witnesses. The
+ * frozen records built by `prepareAuditRecord` for a committed settlement plan
+ * are not filtered here; they belong to that plan's receipt.
+ *
+ * The actor for the decision is the explicit envelope actor or the ambient
+ * context, never `withContextDefaults`' fallback: the fallback makes every
+ * out-of-context caller look like a system actor, and an unknown caller must
+ * keep its forensics.
+ */
+function shouldKeepAuditEntry(entry: ActionAuditInput, normalized: NormalizedAuditEntry): boolean {
+  if (normalized.category !== "money") return true;
+  const actorKind = entry.actor?.kind ?? getAuditRequestContext()?.actor?.kind;
+  return shouldMirrorMoneyAudit({
+    candidate: { action: normalized.action, counterpartyType: normalized.counterparty?.type },
+    actorKind,
+    fullSystemMoneyMirror: FULL_SYSTEM_MONEY_MIRROR,
+  });
+}
 
 /** An entry once `traceId`/`actor` have been resolved (from the caller or
  * the ambient context) — `turn`/`ts`/`expiresAt` are still pending, filled
@@ -109,7 +138,9 @@ function scheduleFlush(): void {
 }
 
 function enqueue(entry: ActionAuditInput): void {
-  buffer.push(withContextDefaults({ ...entry, delta: trimDelta(entry.delta) }));
+  const normalized = withContextDefaults({ ...entry, delta: trimDelta(entry.delta) });
+  if (!shouldKeepAuditEntry(entry, normalized)) return;
+  buffer.push(normalized);
   scheduleFlush();
 }
 
@@ -208,10 +239,14 @@ export function recordAudit(entry: ActionAuditInput): void {
 export function recordAuditBulk(entries: ActionAuditInput[]): void {
   if (entries.length === 0) return;
   try {
+    let added = 0;
     for (const entry of entries) {
-      buffer.push(withContextDefaults({ ...entry, delta: trimDelta(entry.delta) }));
+      const normalized = withContextDefaults({ ...entry, delta: trimDelta(entry.delta) });
+      if (!shouldKeepAuditEntry(entry, normalized)) continue;
+      buffer.push(normalized);
+      added += 1;
     }
-    scheduleFlush();
+    if (added > 0) scheduleFlush();
   } catch (err) {
     Sentry.captureException(err, {
       extra: { phase: "recordAuditBulk.enqueue", count: entries.length },

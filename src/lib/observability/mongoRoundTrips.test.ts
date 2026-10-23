@@ -13,6 +13,11 @@ import {
   roundTripReport,
   totalDocumentsReturned,
   totalRoundTrips,
+  recordWriteCommand,
+  phaseWriteStats,
+  totalDocumentsWritten,
+  totalWriteCommands,
+  totalWriteBytes,
 } from "./mongoRoundTrips";
 
 const ORIGINAL = process.env.AHD_TURN_ROUNDTRIP_PROFILE;
@@ -110,6 +115,9 @@ describe("round-trip profiler", () => {
       roundTrips: 300,
       documents: 0,
       bytes: 0,
+      writeCommands: 0,
+      documentsWritten: 0,
+      writeBytes: 0,
     });
   });
 
@@ -172,6 +180,9 @@ describe("document counting", () => {
       roundTrips: 1,
       documents: 61398,
       bytes: 0,
+      writeCommands: 0,
+      documentsWritten: 0,
+      writeBytes: 0,
     });
   });
 
@@ -332,5 +343,76 @@ describe("attribution via the audit context", () => {
     expect(byPhase.get("corporationTurn")).toBe(2);
     expect(byPhase.get("indexFunds")).toBe(1);
     expect(byPhase.get("state:elections")).toBe(1);
+  });
+});
+
+/**
+ * Write volume is the other half of the production cost. A turn is not slow
+ * because it issues commands; it is slow because those commands write
+ * documents and every index entry on them. The counters have to survive the
+ * same trace-id attribution as reads so a phase can be blamed for its writes.
+ */
+describe("write counting", () => {
+  it("attributes written documents to the open phase and collection", () => {
+    beginPhaseProfiling("corporationTurn");
+    recordWriteCommand("financialTxLog", 120, 4096);
+    recordWriteCommand("actionAuditLog", 30, 0);
+    endPhaseProfiling("corporationTurn");
+
+    expect(phaseWriteStats("corporationTurn")).toEqual({
+      commands: 2,
+      documents: 150,
+      bytes: 4096,
+      topCollections: [
+        { collection: "financialTxLog", documents: 120 },
+        { collection: "actionAuditLog", documents: 30 },
+      ],
+    });
+    expect(totalWriteCommands()).toBe(2);
+    expect(totalDocumentsWritten()).toBe(150);
+    expect(totalWriteBytes()).toBe(4096);
+  });
+
+  it("counts a write command that matched nothing, with zero documents", () => {
+    beginPhaseProfiling("bankingTurn");
+    recordWriteCommand("bankLoans", 0);
+    endPhaseProfiling("bankingTurn");
+
+    expect(phaseWriteStats("bankingTurn")).toMatchObject({ commands: 1, documents: 0 });
+  });
+
+  it("ranks write targets by documents, not by command count", () => {
+    beginPhaseProfiling("mixed");
+    recordWriteCommand("rareButHuge", 5000);
+    for (let i = 0; i < 20; i++) recordWriteCommand("chattyButSmall", 1);
+    endPhaseProfiling("mixed");
+
+    expect(phaseWriteStats("mixed", 2).topCollections).toEqual([
+      { collection: "rareButHuge", documents: 5000 },
+      { collection: "chattyButSmall", documents: 20 },
+    ]);
+  });
+
+  it("resolves the phase from the turn trace id, like reads", async () => {
+    const { runInAuditContext, turnPhaseTraceId } = await import("@/lib/observability/context");
+
+    runInAuditContext(turnPhaseTraceId(122, "bankingTurn"), () => {
+      recordWriteCommand("bankMoneyMoves", 900, 34_000_000);
+    });
+
+    expect(phaseWriteStats("bankingTurn")).toMatchObject({ commands: 1, documents: 900 });
+    expect(phaseWriteStats("(outside any phase)").documents).toBe(0);
+  });
+
+  it("prints written documents alongside returned bytes", () => {
+    enable();
+    beginPhaseProfiling("corporationTurn");
+    recordRoundTrip("financialTxLog");
+    recordWriteCommand("financialTxLog", 52000, 36_000_000);
+    endPhaseProfiling("corporationTurn");
+
+    const text = formatRoundTripReport()!;
+    expect(text).toContain("1 write commands, 52000 documents written");
+    expect(text).toContain("financialTxLog 0.0M/0d/1t/52000w");
   });
 });
