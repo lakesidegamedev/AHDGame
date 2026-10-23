@@ -1172,12 +1172,6 @@ export const RUNTIME: CollectionEntry[] = [
     notes: "Turn-keyed operator diagnostics belong to one world.",
   },
   {
-    name: "bondTurnCheckpoints",
-    category: "runtime",
-    notes:
-      "bondTurn's per-turn at-par issuance snapshot, used to rebuild an interrupted bondTurn's sovereign flows. Turn-keyed, 48 turns retained, belongs to one world.",
-  },
-  {
     name: "capacityDecisionFunnels",
     category: "runtime",
     notes: "Turn-keyed capacity diagnostics belong to one world.",
