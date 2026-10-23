@@ -1,4 +1,5 @@
 ---
+title: Regional economic bill proposals
 date: 2026-10-23
 tags: [legislature]
 badges: [patch]
