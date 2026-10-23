@@ -11,6 +11,7 @@ import {
   sealProviderLinkContext,
 } from "@/lib/auth/providerLinkContext";
 import { getDiscordOAuthUrl } from "@/lib/discord";
+import { discordRedirectUri } from "@/lib/discordRedirect";
 import { getBaseUrl, getClientIp } from "@/lib/utils/network";
 import { AUTH_LIMITS, checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { withNoStore } from "@/lib/api/withNoStore";
@@ -34,7 +35,7 @@ export const GET = withNoStore(async function GET(request: Request) {
     }
 
     const clientId = process.env.DISCORD_CLIENT_ID;
-    const redirectUri = process.env.DISCORD_REDIRECT_URI;
+    const redirectUri = discordRedirectUri();
 
     if (!clientId || !redirectUri) {
       return NextResponse.redirect(
