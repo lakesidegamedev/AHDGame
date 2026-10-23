@@ -108,6 +108,9 @@ let patreonReconcileRunning = false;
  */
 export const SHARE_FILL_RECOVERY_SCHEDULE = "7,22,37,52 * * * *";
 
+/** Money-journal prune: one small batch a minute (see retention/moneyJournalPrune.ts). */
+export const MONEY_JOURNAL_PRUNE_SCHEDULE = "* * * * *";
+
 /**
  * Quarter-hour market tick; :00 and :30 (the turn and the half-hour tick, in either
  * order under TURN_CRON_MINUTE) run it themselves.
@@ -560,12 +563,11 @@ export async function initializeCronJobs() {
   );
 
   // Money-journal pruning: ledgerEntries and terminal bankMoneyMoves older than
-  // 168 turns. Runs between turns (minute 5, 15, ...; skips while a turn holds
-  // the lock and stops if one takes it) and deletes in small batches under a
-  // per-run row and time cap, so a long-lived world drains its backlog over
-  // many runs instead of in one long delete.
+  // 168 turns. Runs every minute between turns (skips while a turn holds the
+  // lock), deleting one small batch per journal each run, so a long-lived world
+  // drains its backlog in short deletes instead of one long one.
   moneyJournalPruneCron = cron.schedule(
-    "5,15,25,35,45,55 * * * *",
+    MONEY_JOURNAL_PRUNE_SCHEDULE,
     async () => {
       try {
         const db = await getDb();
@@ -573,8 +575,7 @@ export async function initializeCronJobs() {
         if (result.ledgerEntries > 0 || result.bankMoneyMoves > 0) {
           console.log(
             `[Cron] Money-journal prune < turn ${result.cutoff}: ` +
-              `${result.bankMoneyMoves} money move(s), ${result.ledgerEntries} ledger entr(ies)` +
-              (result.stoppedBy ? ` (stopped: ${result.stoppedBy})` : "")
+              `${result.bankMoneyMoves} money move(s), ${result.ledgerEntries} ledger entr(ies)`
           );
         }
       } catch (error) {

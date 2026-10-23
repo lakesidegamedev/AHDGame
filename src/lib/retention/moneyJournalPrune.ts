@@ -45,32 +45,23 @@ export const PRUNABLE_MONEY_MOVE_KINDS: readonly string[] = Object.freeze([
 ]);
 
 /**
- * Batch shape. A single deleteMany over a couple of turns of ledgerEntries
- * (~60k rows a turn) held the primary's write path for ~20s, so deletes go out
- * in small _id batches with a pause between them, and each run stops at a row
- * cap and a time cap. Six runs an hour at these caps drain a large backlog in
- * a day or two while each batch stays short.
+ * Rows deleted per collection per run. A single deleteMany over a couple of
+ * turns of ledgerEntries (~60k rows a turn) held the write path for ~20s, so
+ * each run now deletes one small batch and the cron runs every minute: the
+ * minute between runs is the pause. 5,000 ledger rows a minute drains a large
+ * backlog in a day or two; money moves are ~23 KB each, so their batch is
+ * smaller.
  */
-export const MONEY_JOURNAL_PRUNE_BATCH = 2_000;
-export const MONEY_JOURNAL_PRUNE_PAUSE_MS = 150;
-export const MONEY_JOURNAL_PRUNE_MAX_ROWS_PER_RUN = 50_000;
-export const MONEY_JOURNAL_PRUNE_MAX_MS_PER_RUN = 60_000;
+export const LEDGER_PRUNE_BATCH = 5_000;
+export const MONEY_MOVE_PRUNE_BATCH = 500;
 
 export interface MoneyJournalPruneOptions {
-  batchSize?: number;
-  pauseMs?: number;
-  /** Rows per collection per run. */
-  maxRowsPerRun?: number;
-  /** Wall time for the whole run, both collections. */
-  maxMsPerRun?: number;
-  sleep?: (ms: number) => Promise<void>;
-  now?: () => number;
+  ledgerBatch?: number;
+  moneyMoveBatch?: number;
 }
 
 export interface MoneyJournalPruneResult {
   skipped?: "turn-processing" | "no-game-state";
-  /** Set when the run stopped early: a turn took the lock, or a cap was reached. */
-  stoppedBy?: "turn-started" | "row-cap" | "time-cap";
   cutoff: number;
   ledgerEntries: number;
   bankMoneyMoves: number;
@@ -94,56 +85,33 @@ export function bankMoneyMovesPruneFilter(cutoff: number): Document {
 
 type GameStateLock = { _id: string; currentTurn?: number; isProcessing?: boolean };
 
-async function turnIsProcessing(db: Db): Promise<boolean> {
-  const state = await db
-    .collection<GameStateLock>("gameState")
-    .findOne({ _id: "current" }, { projection: { isProcessing: 1 } });
-  return state?.isProcessing === true;
-}
-
 /**
- * Deletes the oldest prunable rows in small _id batches. Re-checks the turn
- * lock before every batch, and stops at the row or time cap; later runs carry
- * on from the oldest remaining turn.
+ * Deletes one batch of the oldest prunable rows. Ids are read with an _id-only
+ * projection, and the delete re-applies the filter so a row that changed since
+ * the read is kept.
  */
-async function deleteInBatches(
+async function deleteOldestBatch(
   db: Db,
   collection: "ledgerEntries" | "bankMoneyMoves",
   filter: Document,
-  limits: Required<
-    Pick<MoneyJournalPruneOptions, "batchSize" | "pauseMs" | "maxRowsPerRun" | "sleep" | "now">
-  > & {
-    deadline: number;
-  }
-): Promise<{ deleted: number; stoppedBy?: MoneyJournalPruneResult["stoppedBy"] }> {
+  batch: number
+): Promise<number> {
   const col = db.collection(collection);
-  let deleted = 0;
-  for (;;) {
-    if (deleted >= limits.maxRowsPerRun) return { deleted, stoppedBy: "row-cap" };
-    if (limits.now() >= limits.deadline) return { deleted, stoppedBy: "time-cap" };
-    if (await turnIsProcessing(db)) return { deleted, stoppedBy: "turn-started" };
-    const size = Math.min(limits.batchSize, limits.maxRowsPerRun - deleted);
-    const rows = await col
-      .find(filter, { projection: { _id: 1 } })
-      .sort({ turn: 1 })
-      .limit(size)
-      .toArray();
-    const ids = rows.map((row) => row._id);
-    if (ids.length === 0) return { deleted };
-    // The filter is re-applied so a row that changed since the read is kept.
-    const result = await col.deleteMany({ ...filter, _id: { $in: ids } });
-    deleted += result.deletedCount ?? 0;
-    if (ids.length < size) return { deleted };
-    if (deleted >= limits.maxRowsPerRun) return { deleted, stoppedBy: "row-cap" };
-    await limits.sleep(limits.pauseMs);
-  }
+  const rows = await col
+    .find(filter, { projection: { _id: 1 } })
+    .sort({ turn: 1 })
+    .limit(batch)
+    .toArray();
+  if (rows.length === 0) return 0;
+  const result = await col.deleteMany({ ...filter, _id: { $in: rows.map((row) => row._id) } });
+  return result.deletedCount ?? 0;
 }
 
 /**
- * Delete money-journal rows older than {@link MONEY_JOURNAL_RETENTION_TURNS}.
- * Skips while a turn holds the processing lock and stops as soon as one takes
- * it, so it never competes with the turn for the database. Deletes go out in
- * small batches under a per-run row and time cap; later runs pick up the rest.
+ * Delete one batch of money-journal rows older than
+ * {@link MONEY_JOURNAL_RETENTION_TURNS} from each journal. Skips while a turn
+ * holds the processing lock so it never competes with the turn for the
+ * database. Runs every minute; each run is one short batch per collection.
  */
 export async function pruneMoneyJournals(
   db: Db,
@@ -162,36 +130,17 @@ export async function pruneMoneyJournals(
   }
   if (cutoff <= 0) return { cutoff, ledgerEntries: 0, bankMoneyMoves: 0 };
 
-  const now = opts.now ?? Date.now;
-  const limits = {
-    batchSize: opts.batchSize ?? MONEY_JOURNAL_PRUNE_BATCH,
-    pauseMs: opts.pauseMs ?? MONEY_JOURNAL_PRUNE_PAUSE_MS,
-    maxRowsPerRun: opts.maxRowsPerRun ?? MONEY_JOURNAL_PRUNE_MAX_ROWS_PER_RUN,
-    sleep: opts.sleep ?? ((ms: number) => new Promise<void>((done) => setTimeout(done, ms))),
-    now,
-    deadline: now() + (opts.maxMsPerRun ?? MONEY_JOURNAL_PRUNE_MAX_MS_PER_RUN),
-  };
-  const moves = await deleteInBatches(
+  const bankMoneyMoves = await deleteOldestBatch(
     db,
     "bankMoneyMoves",
     bankMoneyMovesPruneFilter(cutoff),
-    limits
+    opts.moneyMoveBatch ?? MONEY_MOVE_PRUNE_BATCH
   );
-  if (moves.stoppedBy === "turn-started" || moves.stoppedBy === "time-cap") {
-    return { cutoff, ledgerEntries: 0, bankMoneyMoves: moves.deleted, stoppedBy: moves.stoppedBy };
-  }
-  const ledger = await deleteInBatches(
+  const ledgerEntries = await deleteOldestBatch(
     db,
     "ledgerEntries",
     ledgerEntriesPruneFilter(cutoff),
-    limits
+    opts.ledgerBatch ?? LEDGER_PRUNE_BATCH
   );
-  return {
-    cutoff,
-    ledgerEntries: ledger.deleted,
-    bankMoneyMoves: moves.deleted,
-    ...(ledger.stoppedBy || moves.stoppedBy
-      ? { stoppedBy: ledger.stoppedBy ?? moves.stoppedBy }
-      : {}),
-  };
+  return { cutoff, ledgerEntries, bankMoneyMoves };
 }
