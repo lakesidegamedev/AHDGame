@@ -12,7 +12,7 @@ import { resumeReservePoolTransfers } from "@/lib/centralBank/reservePoolTransfe
 import { resumeMonetaryOperations } from "@/lib/moneySupply/monetaryOperationJournal";
 import { resumeLiquidityAdvances } from "@/lib/moneySupply/liquidityAdvance";
 import { MONETARY_OPERATION_COOLDOWN_TURNS } from "@/lib/moneySupply/operations";
-import type { Character, Corporation } from "@/lib/db/types";
+import type { Character, Corporation, CorporateSector } from "@/lib/db/types";
 import type { BankCharter, BankLoan } from "@/lib/db/types/bank";
 import type { CentralBank } from "@/lib/db/types/centralBank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -52,10 +52,12 @@ import { settleLegacyDepositInterest } from "@/lib/banking/legacyDepositInterest
 import { settleTransition } from "@/lib/banking/settlementJournal";
 import { oid, type TransitionLeg, type TransitionProjection } from "@/lib/banking/rules/boundary";
 import { effectiveBankRatesFromPrime, playerDepositRatePercent } from "@/lib/banking/rates";
-import { getBankDepositCeiling } from "@/lib/banking/capacityAllocation";
+import { depositCeilingFromSectors, getBankDepositCeiling } from "@/lib/banking/capacityAllocation";
 import { roundSavingsAmount, savingsApyPercent } from "@/lib/currency/savingsInterest";
 import { loadCentralBankPricingAdjustment } from "@/lib/monetaryPolicy/centralBankPricing";
 import { emitTx, emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
+import type { TxThresholds } from "@/lib/db/types/financialTxLog";
+import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { isDepositTakingCharter, isNamedLendingCharter } from "@/lib/banking/charterKinds";
 import { charterCapabilities, charterMay } from "@/lib/banking/rules/capabilities";
 import { getCashReserves, bankEquity } from "@/lib/banking/bankCash";
@@ -99,14 +101,31 @@ type DepositTaker = {
  * `currentTurn` is only advanced after all phases finish, so callers must pass
  * the turn explicitly for idempotency keys.
  */
-export async function processBankingTurn(db: Db, turn: number): Promise<BankingTurnSummary> {
+export interface BankingTurnOptions {
+  /**
+   * v2: one cohort read for the per-bank deposit-ceiling sectors and one
+   * thresholds read per turn, instead of one of each per bank. Reads only, and
+   * every value is the one the per-bank path would have fetched.
+   */
+  batchPerBankReads?: boolean;
+}
+
+export async function processBankingTurn(
+  db: Db,
+  turn: number,
+  options: BankingTurnOptions = {}
+): Promise<BankingTurnSummary> {
   // Every settlement in the pass bumps the turn's banking telemetry document.
   // Unbatched, that was about 150 concurrent increments on one document per
   // turn; batched, one write when the pass ends. Counts are unchanged.
-  return withBankingTelemetryBatch(db, turn, () => runBankingTurn(db, turn));
+  return withBankingTelemetryBatch(db, turn, () => runBankingTurn(db, turn, options));
 }
 
-async function runBankingTurn(db: Db, turn: number): Promise<BankingTurnSummary> {
+async function runBankingTurn(
+  db: Db,
+  turn: number,
+  options: BankingTurnOptions = {}
+): Promise<BankingTurnSummary> {
   // Persisted per-stage timings and round trips for this phase (#2689).
   const steps = substepMarker();
   await resumeReservePoolTransfers(db);
@@ -240,19 +259,42 @@ async function runBankingTurn(db: Db, turn: number): Promise<BankingTurnSummary>
   // A depositor saving in two currencies at two banks orders those banks.
   const lockKeysByBank = await bankPassLockKeys(db, turn, depositTakers);
   const lock = new KeyedQueue();
+  // v2: the per-bank reads that do not depend on the bank's pass. Both are
+  // turn-level snapshots, so hoisting them cannot reorder a money movement.
+  const passCaches: BankPassCaches = { npcShareByBankId, cbById, premiumReceiptByKey };
+  if (options.batchPerBankReads && depositTakers.length > 0) {
+    const sectors = await db
+      .collection<CorporateSector>("corporateSectors")
+      .find(
+        {
+          corporationId: { $in: depositTakers.map((row) => row.corp._id) },
+          sectorType: "financial",
+        },
+        {
+          projection: {
+            corporationId: 1,
+            capitalStock: 1,
+            revenue: 1,
+            strategyId: 1,
+            sectorType: 1,
+          },
+        }
+      )
+      .toArray();
+    const byBank = new Map<string, CorporateSector[]>();
+    for (const sector of sectors) {
+      const id = sector.corporationId?.toString();
+      if (!id) continue;
+      const list = byBank.get(id) ?? [];
+      list.push(sector);
+      byBank.set(id, list);
+    }
+    passCaches.depositCeilingSectorsByBankId = byBank;
+    passCaches.txThresholds = await loadTxThresholds(db);
+  }
   const runBank = async (row: DepositTaker) => {
     const bankResult = await lock.run(lockKeysByBank.get(row.corp._id.toString()) ?? [], () =>
-      processOneBank(
-        db,
-        turn,
-        row,
-        {
-          npcShareByBankId,
-          cbById,
-          premiumReceiptByKey,
-        },
-        policy
-      )
+      processOneBank(db, turn, row, passCaches, policy)
     );
     summary.banksProcessed += 1;
     summary.depositInterestPaid += bankResult.depositInterestPaid;
@@ -361,6 +403,13 @@ type BankPassCaches = {
     string,
     Pick<CentralBank, "_id" | "primeRate" | "inflationHistory" | "externalBroadMoney">
   >;
+  /** v2 only: financial sectors per deposit taker, read once for the cohort. */
+  depositCeilingSectorsByBankId?: ReadonlyMap<
+    string,
+    readonly Pick<CorporateSector, "capitalStock" | "revenue" | "strategyId" | "sectorType">[]
+  >;
+  /** v2 only: the turn's transaction-log thresholds, read once. */
+  txThresholds?: TxThresholds;
 };
 
 type BankPassResult = {
@@ -509,11 +558,14 @@ async function processOneBank(
   // Deposit ceiling from financial-sector capacity × branch share. Caps NPC
   // target (and therefore inflow). Outflow always allowed. Player deposits
   // alone above the ceiling are grandfathered: NPC target contribution → 0.
-  const capacityCeiling = await getBankDepositCeiling(db, {
-    ...corp,
-    bankCharter: live.bankCharter,
-    liquidCapital: live.liquidCapital,
-  });
+  const preloadedSectors = caches.depositCeilingSectorsByBankId?.get(bankIdHex);
+  const capacityCeiling = preloadedSectors
+    ? depositCeilingFromSectors(live.bankCharter, preloadedSectors, await loadWorldEraUnitScale(db))
+    : await getBankDepositCeiling(db, {
+        ...corp,
+        bankCharter: live.bankCharter,
+        liquidCapital: live.liquidCapital,
+      });
   // Capacity sizes the ceiling, but a bank may only anchor a deposit base it has
   // the capital to stand behind. Cap the ceiling at a leverage multiple of book
   // equity so an undercapitalized bank (little/negative equity) cannot grow — or
@@ -750,7 +802,7 @@ async function processOneBank(
     });
     if (settled.status === "applied" || settled.status === "replayed") {
       playerInterestSettled = playerInterestPaid;
-      const thresholds = await loadTxThresholds(db);
+      const thresholds = caches.txThresholds ?? (await loadTxThresholds(db));
       await emitTxBulk(
         db,
         credits.map(({ pc, paid }) => ({

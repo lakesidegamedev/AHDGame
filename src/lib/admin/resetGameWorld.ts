@@ -239,6 +239,10 @@ export const GAME_STATE_RESET_PRESERVED_FIELD_REASONS: Readonly<Record<string, s
       "Turn-runner recovery evidence owned by processTurn and its shutdown recovery.",
     processingPhaseResults:
       "Turn-runner recovery evidence owned by processTurn and its shutdown recovery.",
+    processingEngine:
+      "Turn-engine selection for the in-flight turn, owned by processTurn; an idle world has none. Reset teardown does not rewrite it, and the next turn stamps it before any phase runs.",
+    processingEngineVersion:
+      "Turn-engine behaviour version for the in-flight turn, stamped with processingEngine; cleared when the turn commits or is released.",
     ...Object.fromEntries(
       GAME_STATE_OPERATOR_FLAG_AUDIT_FIELDS.map((field) => [
         field,

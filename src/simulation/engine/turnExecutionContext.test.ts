@@ -3,6 +3,10 @@ import type { Db } from "mongodb";
 import type { GameState } from "@/lib/db/types";
 import { getCharactersCollection } from "@/lib/db/collections";
 import { buildTurnExecutionContext } from "./turnExecutionContext";
+import { resolveTurnEngine } from "./turnEngine";
+
+/** v1, the engine every world gets when config says nothing. */
+const engine = resolveTurnEngine({}).engine;
 
 vi.mock("@/lib/db/collections", () => ({
   getCharactersCollection: vi.fn(),
@@ -85,6 +89,7 @@ describe("buildTurnExecutionContext reads", () => {
       db: makeDb(),
       gameState: makeGameState(),
       config: null,
+      engine,
       warnings: [],
       phaseStatuses: {},
       startTimeMs: 0,
@@ -111,6 +116,7 @@ describe("buildTurnExecutionContext reads", () => {
       db: makeDb(),
       gameState: makeGameState(),
       config: null,
+      engine,
       warnings: [],
       phaseStatuses: {},
       startTimeMs: 0,
@@ -138,6 +144,7 @@ describe("buildTurnExecutionContext reads", () => {
         preIterationTurns: 48,
       } as GameState,
       config: null,
+      engine,
       warnings: [],
       phaseStatuses: {},
       startTimeMs: 0,

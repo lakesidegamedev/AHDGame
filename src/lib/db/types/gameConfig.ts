@@ -2,6 +2,14 @@ import type { EconomicInterventionPlan } from "@/lib/economy/interventionGoverna
 
 export interface GameConfig {
   _id: string;
+  /**
+   * Which turn engine processes a new turn: "v1" (default when absent) or "v2".
+   * Read ONCE at turn start and stamped on the in-flight turn, so flipping this
+   * never changes the engine of a turn already in progress; rollback is setting
+   * it back to "v1" between turns. Unknown values fall back to "v1" with a
+   * warning on the turn log. See `src/simulation/engine/turnEngine.ts`.
+   */
+  turnEngineVersion?: "v1" | "v2";
   /** Enables product-project reads and output adapters; absent remains off. */
   productLinesV2Enabled?: boolean;
   /** Enables media product project reads and bounded quality/brand overlays; absent remains off. */

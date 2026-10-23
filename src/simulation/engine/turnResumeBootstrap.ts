@@ -121,6 +121,10 @@ export function staleRecoveryEvidenceReset(locked: RecoveryFields) {
     processingPhase: TURN_BOOTSTRAP_PHASE,
     processingPhaseStatuses: null,
     processingPhaseResults: null,
+    // A rejected in-flight turn leaves no engine stamp behind: the next turn
+    // starts on whatever config selects now, and must not inherit this one's.
+    processingEngine: null,
+    processingEngineVersion: null,
   };
 }
 
