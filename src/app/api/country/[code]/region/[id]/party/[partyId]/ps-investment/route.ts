@@ -7,6 +7,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { findPartyBySequentialId, getStatePartyOrgDocumentId } from "@/lib/db/partyLookup";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { recordApiRequestTimingSafely } from "@/lib/observability/requestTimings";
 import {
   PS_INVESTMENT_MAX_TIERS,
   psInvestmentRate,
@@ -62,6 +63,14 @@ export async function POST(request: Request, { params }: RouteParams) {
       status: response.status,
       result: response.status < 400 ? "success" : response.status >= 500 ? "error" : "rejected",
       ...timings,
+    });
+    recordApiRequestTimingSafely({
+      at: new Date(startedAt),
+      route: "/api/country/[code]/region/[id]/party/[partyId]/ps-investment",
+      durationMs: Date.now() - startedAt,
+      status: response.status,
+      result: response.status < 400 ? "success" : response.status >= 500 ? "error" : "rejected",
+      stages: timings,
     });
     return response;
   };
