@@ -13,6 +13,8 @@ import {
   priceCommodity,
   type CommodityPricingContext,
 } from "./pricing";
+import { settleFreightNetwork } from "@/lib/logistics/settlement";
+import type { CountryId } from "@/lib/constants/countries";
 import type { CountryLedger, GlobalLedger, StateLedger } from "./ledgerTypes";
 
 const BASE = Object.fromEntries(COMMODITY_TYPES.map((c) => [c, 100])) as Record<
@@ -257,4 +259,80 @@ it("prices the reachable markets of runtime successors", () => {
   expect(prices.scarcityMultByCountry?.SCO).toBeGreaterThan(
     prices.scarcityMultByCountry?.WAL ?? Infinity
   );
+});
+
+describe("export price feedback", () => {
+  it("keeps a competitive small exporter selling instead of alternating full offer and zero", () => {
+    const countries: CountryId[] = ["IE", "JP", "US"];
+    const balances = [
+      { supply: 2100, demand: 100 },
+      { supply: 10000, demand: 5000 },
+      { supply: 0, demand: 3000 },
+    ];
+    let prices: Record<string, number> = { IE: 260, JP: 275, US: 300 };
+    const exports: number[] = [];
+    for (let turn = 0; turn < 12; turn++) {
+      const byCountry: CountryLedger = new Map(
+        countries.map((c, i) => [
+          c,
+          new Map(
+            COMMODITY_TYPES.map((k) => [
+              k,
+              k === "food" ? { ...balances[i] } : { supply: 0, demand: 0 },
+            ])
+          ),
+        ])
+      );
+      const byState: StateLedger = new Map(
+        [...byCountry].map(([c, b]) => [c, new Map([...b].map(([k, v]) => [k, { ...v }]))])
+      );
+      const freightSettlement = settleFreightNetwork({
+        states: countries.map((c) => ({ stateId: c, countryId: c })),
+        byCountry,
+        byState,
+        nationalPricesFor: () => prices,
+        statePricesFor: () => ({ IE: 300, JP: 300, US: 300 }),
+        basePriceFor: () => 300,
+        freightPrice: 0,
+        hops: () => null,
+        tariffRatePct: () => 0,
+        isBlocked: () => false,
+      });
+      const pairs = freightSettlement.sourcing.pairAggregates.filter(
+        (p) => p.commodity === "food" && p.exporter !== p.importer
+      );
+      exports.push(
+        pairs.filter((p) => p.exporter === "IE").reduce((n, p) => n + p.dispatchedUnits, 0)
+      );
+      for (const p of pairs) {
+        byCountry.get(p.exporter)!.get("food")!.supply -= p.dispatchedUnits;
+        byCountry.get(p.importer)!.get("food")!.demand -= p.deliveredUnits;
+      }
+      const ctx = pricingContext(
+        { supply: 12100, demand: 8100 },
+        {
+          ledgerBasePrices: Object.fromEntries(COMMODITY_TYPES.map((c) => [c, 300])) as Record<
+            CommodityType,
+            number
+          >,
+          byCountry,
+          byState,
+          allStates: countries.map((_id) => ({ _id })),
+          stateToCountry: new Map(countries.map((c) => [c, c])),
+          freightSettlementActive: true,
+          freightSettlement,
+          existingPriceMap: new Map([
+            ["food", commodityPrice({ nationalPrices: prices, globalPrice: 300 })],
+          ]),
+        }
+      );
+      priceCommodity(ctx, "food", new Set());
+      prices = ctx.appliedNationalPrices.get("food")!;
+    }
+    expect(exports[0]).toBeCloseTo(2000);
+    expect(
+      exports.every((units) => units > 1999.9),
+      JSON.stringify(exports)
+    ).toBe(true);
+  });
 });

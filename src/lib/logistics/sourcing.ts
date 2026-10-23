@@ -327,7 +327,20 @@ export interface ImportAggregate {
   importValue: number;
 }
 
+/** Ephemeral eligible overseas quote terms for next-turn price feedback. */
+export interface SourcingForeignQuote {
+  commodity: CommodityType;
+  exporter: string;
+  importer: string;
+  tariffRatePct: number;
+  rawShippingPerUnit: number;
+  shippingAskShare: number;
+  shippingMaxAskShare: number;
+}
+
 export interface SourcingResult {
+  /** Full eligible quotes, independent of the diagnostic flow sample. Not persisted. */
+  foreignQuotes?: SourcingForeignQuote[];
   flows: SourcingFlow[];
   ownRouteDelivered: SourcingOwnRoute[];
   summaries: SourcingCommoditySummary[];
@@ -591,6 +604,7 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
   const deliveryLimitedSupplyByState = new Map<CommodityType, Map<string, number>>();
   const freightChargesByDestState = new Map<string, Map<CommodityType, number>>();
   const haulRevenueByOriginState = new Map<string, number>();
+  const foreignQuotes = new Map<string, SourcingForeignQuote>();
   const pairAggregates: SourcingPairAggregate[] = [];
   const destinationAggregates: SourcingDestinationAggregate[] = [];
 
@@ -781,6 +795,17 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
         : boundedShippingPerUnit(shippingPerUnitPerHop * SEA_FREIGHT_HOP_EQUIV, ask);
       const ratePct = tariffRatePct(commodity, cid, buyer.countryId);
       const tariffPerUnit = ask * (ratePct / 100);
+      const quoteKey = `${commodity}|${cid}|${buyer.countryId}`;
+      if (!foreignQuotes.has(quoteKey))
+        foreignQuotes.set(quoteKey, {
+          commodity,
+          exporter: cid,
+          importer: buyer.countryId,
+          tariffRatePct: ratePct,
+          rawShippingPerUnit: isGrid ? 0 : shippingPerUnitPerHop * SEA_FREIGHT_HOP_EQUIV,
+          shippingAskShare: isGrid ? GRID_WHEELING_PER_HOP_FRACTION * SEA_FREIGHT_HOP_EQUIV : 0,
+          shippingMaxAskShare: isGrid ? 0 : FREIGHT_SHIPPING_MAX_ASK_SHARE,
+        });
       return {
         originType: "country",
         originId: cid,
@@ -1346,6 +1371,7 @@ export function runSourcingPass(inputs: SourcingInputs): SourcingResult {
     freightChargesByDestState,
     haulRevenueByOriginState,
     pairAggregates,
+    foreignQuotes: [...foreignQuotes.values()],
     destinationAggregates,
   };
 }
