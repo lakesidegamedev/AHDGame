@@ -131,8 +131,10 @@ import { getOperatingSectorType, getStrategy } from "@/lib/constants/sectorStrat
 import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
 import {
   resolveNppMarketEntryCredit,
+  setNppMarketEntryReason,
   type NppMarketEntryDiagnostic,
 } from "@/lib/turn/npp/entryDiagnostics";
+import { createRelocationCreditBatch } from "@/simulation/engine/v2/relocationCreditBatch";
 
 import { createFrontierEntryTurnState } from "@/lib/turn/npp/frontierEntryCandidate";
 import type {
@@ -510,6 +512,20 @@ export async function processNppCorporationDecisions(
     engineSixByCountry.set(countryId, await nppAutonomyAtLeast(db, countryId, NPP_ENGINE_LEVEL));
   }
 
+  // v2: one cohort bundle for the relocation-bond credit fan. Absent on v1,
+  // where `resolveNppMarketEntryCredit` reads per corporation.
+  const relocationCreditBatch = preloaded?.batchRelocationCredit
+    ? createRelocationCreditBatch({
+        db,
+        corporations: nppCorps,
+        sectorsByCorp,
+        heldBondsByCorpId,
+        fxByCurrency: fxByCurrency as ReadonlyMap<CurrencyCode, number>,
+        bankRates,
+        writeReason: setNppMarketEntryReason,
+      })
+    : null;
+
   for (const corp of nppCorps) {
     const sectors = sectorsByCorp.get(corp._id.toString()) ?? [];
     const autopilot = isAutopilotRun(corp);
@@ -573,24 +589,41 @@ export async function processNppCorporationDecisions(
       placementSignals
     );
 
-    decision = await resolveNppMarketEntryCredit({
-      db,
-      corporation: corp,
-      decision,
-      turn,
-      fxByCurrency: fxByCurrency as ReadonlyMap<CurrencyCode, number>,
-      bankRates,
-      corpFxRate,
-      retry: (creditLocal) =>
-        makeNppCorpDecision(
-          { ...decisionContext, shortageEntryCreditLocal: creditLocal },
-          unownedByCountry,
-          stateControlled,
-          priceRatioOf,
-          plants,
-          placementSignals
-        ),
-    });
+    decision = relocationCreditBatch
+      ? await relocationCreditBatch.resolve({
+          corporation: corp,
+          decision,
+          turn,
+          fxByCurrency: fxByCurrency as ReadonlyMap<CurrencyCode, number>,
+          corpFxRate,
+          retry: (creditLocal) =>
+            makeNppCorpDecision(
+              { ...decisionContext, shortageEntryCreditLocal: creditLocal },
+              unownedByCountry,
+              stateControlled,
+              priceRatioOf,
+              plants,
+              placementSignals
+            ),
+        })
+      : await resolveNppMarketEntryCredit({
+          db,
+          corporation: corp,
+          decision,
+          turn,
+          fxByCurrency: fxByCurrency as ReadonlyMap<CurrencyCode, number>,
+          bankRates,
+          corpFxRate,
+          retry: (creditLocal) =>
+            makeNppCorpDecision(
+              { ...decisionContext, shortageEntryCreditLocal: creditLocal },
+              unownedByCountry,
+              stateControlled,
+              priceRatioOf,
+              plants,
+              placementSignals
+            ),
+        });
     if (nppConstructionFinanceEnabled && corpCurrency && borrowAllowed) {
       for (const intent of decision.constructionFinanceIntents ?? []) {
         constructionFinanceCandidates.push({
@@ -725,6 +758,10 @@ export async function processNppCorporationDecisions(
       allDivestedSectorIds.push(...decision.divestedSectorIds);
     }
   }
+
+  // v2: every planned relocation bond lands in loop order, exactly where v1's
+  // per-corp `insertOne` would have put it, before the caller reads bonds again.
+  await relocationCreditBatch?.flush();
 
   const boundedConstructionFinance = nppConstructionFinanceEnabled
     ? boundNppConstructionFinanceCandidates(constructionFinanceCandidates)

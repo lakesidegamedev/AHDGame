@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { getTurnPhaseRegistry } from "@/simulation/phases/turnPhaseRegistry";
 import { TURN_PHASE_NAMES } from "@/simulation/phases/turnPhaseNames";
+import { resolveTurnEngine } from "@/simulation/engine/turnEngine";
 
 describe("turn phase registry", () => {
   it("stops turn advancement when player-tax settlement fails", async () => {
@@ -422,6 +423,7 @@ describe("turn phase registry", () => {
       return {
         characters: [],
         config: { baseActionsPerTurn: 4 },
+        engine: resolveTurnEngine({}).engine,
         gameNow: new Date(),
         stateMap: new Map(),
         gameState: { corporationActionsPaused, forexEnabled: false },
@@ -592,6 +594,7 @@ describe("independent phase overlaps", () => {
       {
         characters: [],
         config: { baseActionsPerTurn: 4 },
+        engine: resolveTurnEngine({}).engine,
         gameNow: new Date(),
         stateMap: new Map(),
         gameState: { corporationActionsPaused: false, forexEnabled: false },
