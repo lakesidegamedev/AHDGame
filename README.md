@@ -34,7 +34,7 @@ Stack: Next.js 16, React 19, TypeScript, Tailwind 4, MongoDB, Vitest and Playwri
 
 ## Running it locally
 
-Requires Node 20+ (CI runs Node 22) and a MongoDB instance.
+Requires Node 20.19+ or 22.12+ (CI runs Node 22) and a MongoDB instance.
 
 ```bash
 git clone https://github.com/lakesidegamedev/AHDGame.git
@@ -114,7 +114,7 @@ The machine-readable catalog at `/api/public/v1/meta` includes MCP setup metadat
 
 ## Contributing
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for what's welcome and what needs discussion first. The short version: bug fixes, UI polish, tests, docs, and country content are welcome; balance changes need a worldsim report before they merge. Exploits and vulnerabilities go through [SECURITY.md](./SECURITY.md), never public issues.
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for what's welcome and what needs discussion first. The short version: bug fixes, UI polish, tests, docs, and country content are welcome; balance and economy changes get extra review. Exploits and vulnerabilities go through [SECURITY.md](./SECURITY.md), never public issues.
 
 ## License
 
