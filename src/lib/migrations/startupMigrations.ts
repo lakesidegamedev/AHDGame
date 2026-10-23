@@ -1,5 +1,6 @@
 import { migration as incomeTaxTiers } from "./entries/2026-10-16-income-tax-tiers";
 import { migration as backfillMechanicalLawTypes } from "./entries/2026-10-21-backfill-mechanical-law-types";
+import { migration as bankMoneyMoveUnprojectedIndex } from "./entries/2026-10-23-bank-money-move-unprojected-index";
 import { migration as incomeTaxPolicyParity } from "./entries/2026-10-15-income-tax-policy-parity";
 import { migration as governmentContractBidding } from "./entries/2026-10-14-government-contract-bidding";
 import { migration as contestAccountHistory } from "./entries/2026-10-14-contest-account-history";
@@ -98,6 +99,8 @@ export const REQUIRED_STARTUP_MIGRATIONS: readonly Migration[] = [
   liveWorldNppAutonomyV6,
   // Justice confirmations must reach career history and the new achievements.
   scotusCareerAchievements,
+  // Banking recovery reads this queue every turn; unindexed it scans the journal.
+  bankMoneyMoveUnprojectedIndex,
 ];
 
 /** Index metadata can disappear on reset even when migration markers survive. */
@@ -116,6 +119,7 @@ export const REQUIRED_STARTUP_INDEX_MIGRATIONS: readonly Migration[] = [
   marketCapTickIndexes,
   supplyAgreementStatusIndex,
   corporateFundPositions,
+  bankMoneyMoveUnprojectedIndex,
 ];
 
 export async function runRequiredStartupMigrations(db: Db): Promise<RunSummary> {
