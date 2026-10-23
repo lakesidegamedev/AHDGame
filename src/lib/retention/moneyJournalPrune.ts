@@ -45,12 +45,20 @@ export const PRUNABLE_MONEY_MOVE_KINDS: readonly string[] = Object.freeze([
 ]);
 
 /**
- * Turns of backlog one run may clear per collection. Runs fire six times an
- * hour, so a long-lived world drains its backlog several times faster than
- * hourly (or half-hourly) turns add to it, while each delete stays bounded to
- * a couple of turns of rows.
+ * Rows deleted per collection per run. A single deleteMany over a couple of
+ * turns of ledgerEntries (~60k rows a turn) held the write path for ~20s, so
+ * each run now deletes one small batch and the cron runs every minute: the
+ * minute between runs is the pause. 5,000 ledger rows a minute drains a large
+ * backlog in a day or two; money moves are ~23 KB each, so their batch is
+ * smaller.
  */
-export const MONEY_JOURNAL_PRUNE_TURNS_PER_RUN = 2;
+export const LEDGER_PRUNE_BATCH = 5_000;
+export const MONEY_MOVE_PRUNE_BATCH = 500;
+
+export interface MoneyJournalPruneOptions {
+  ledgerBatch?: number;
+  moneyMoveBatch?: number;
+}
 
 export interface MoneyJournalPruneResult {
   skipped?: "turn-processing" | "no-game-state";
@@ -75,37 +83,42 @@ export function bankMoneyMovesPruneFilter(cutoff: number): Document {
   };
 }
 
+type GameStateLock = { _id: string; currentTurn?: number; isProcessing?: boolean };
+
 /**
- * One bounded delete: from the oldest prunable turn up to `turnsPerRun` turns
- * later, never past the retention cutoff.
+ * Deletes one batch of the oldest prunable rows. Ids are read with an _id-only
+ * projection, and the delete re-applies the filter so a row that changed since
+ * the read is kept.
  */
-async function deleteOldestTurns(
+async function deleteOldestBatch(
   db: Db,
   collection: "ledgerEntries" | "bankMoneyMoves",
   filter: Document,
-  cutoff: number,
-  turnsPerRun: number
+  batch: number
 ): Promise<number> {
   const col = db.collection(collection);
-  const oldest = await col.findOne(filter, { sort: { turn: 1 }, projection: { turn: 1 } });
-  if (typeof oldest?.turn !== "number") return 0;
-  const upper = Math.min(cutoff, oldest.turn + turnsPerRun);
-  const result = await col.deleteMany({ ...filter, turn: { $lt: upper } });
+  const rows = await col
+    .find(filter, { projection: { _id: 1 } })
+    .sort({ turn: 1 })
+    .limit(batch)
+    .toArray();
+  if (rows.length === 0) return 0;
+  const result = await col.deleteMany({ ...filter, _id: { $in: rows.map((row) => row._id) } });
   return result.deletedCount ?? 0;
 }
 
 /**
- * Delete money-journal rows older than {@link MONEY_JOURNAL_RETENTION_TURNS}.
- * Skips while a turn holds the processing lock so it never competes with the
- * turn for the database. Each run clears at most `turnsPerRun` turns of
- * backlog per collection; later runs pick up the rest.
+ * Delete one batch of money-journal rows older than
+ * {@link MONEY_JOURNAL_RETENTION_TURNS} from each journal. Skips while a turn
+ * holds the processing lock so it never competes with the turn for the
+ * database. Runs every minute; each run is one short batch per collection.
  */
 export async function pruneMoneyJournals(
   db: Db,
-  opts: { turnsPerRun?: number } = {}
+  opts: MoneyJournalPruneOptions = {}
 ): Promise<MoneyJournalPruneResult> {
   const state = await db
-    .collection<{ _id: string; currentTurn?: number; isProcessing?: boolean }>("gameState")
+    .collection<GameStateLock>("gameState")
     .findOne({ _id: "current" }, { projection: { currentTurn: 1, isProcessing: 1 } });
   const currentTurn = state?.currentTurn;
   if (typeof currentTurn !== "number" || !Number.isFinite(currentTurn)) {
@@ -117,20 +130,17 @@ export async function pruneMoneyJournals(
   }
   if (cutoff <= 0) return { cutoff, ledgerEntries: 0, bankMoneyMoves: 0 };
 
-  const turnsPerRun = opts.turnsPerRun ?? MONEY_JOURNAL_PRUNE_TURNS_PER_RUN;
-  const bankMoneyMoves = await deleteOldestTurns(
+  const bankMoneyMoves = await deleteOldestBatch(
     db,
     "bankMoneyMoves",
     bankMoneyMovesPruneFilter(cutoff),
-    cutoff,
-    turnsPerRun
+    opts.moneyMoveBatch ?? MONEY_MOVE_PRUNE_BATCH
   );
-  const ledgerEntries = await deleteOldestTurns(
+  const ledgerEntries = await deleteOldestBatch(
     db,
     "ledgerEntries",
     ledgerEntriesPruneFilter(cutoff),
-    cutoff,
-    turnsPerRun
+    opts.ledgerBatch ?? LEDGER_PRUNE_BATCH
   );
   return { cutoff, ledgerEntries, bankMoneyMoves };
 }
