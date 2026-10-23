@@ -1,17 +1,17 @@
-/** Preserve bottleneck priority while giving equal research targets a fair tie-break. */
+/** Lower capacity fulfillment means a tighter deposit constraint; break equal ties fairly. */
 export function extractionRdTargetIndex(
   utilizations: readonly (number | undefined)[],
   rng: () => number
 ): number | null {
-  let highest = -Infinity;
+  let lowest = Infinity;
   let candidates: number[] = [];
   for (let index = 0; index < utilizations.length; index++) {
     const observed = utilizations[index];
     const utilization = observed !== undefined && Number.isFinite(observed) ? observed : 1;
-    if (utilization > highest) {
-      highest = utilization;
+    if (utilization < lowest) {
+      lowest = utilization;
       candidates = [index];
-    } else if (utilization === highest) {
+    } else if (utilization === lowest) {
       candidates.push(index);
     }
   }

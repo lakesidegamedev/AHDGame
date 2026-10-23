@@ -1,11 +1,11 @@
 ---
 date: 2026-10-23
 title: Fair research breakthrough targets
-summary: Equally constrained operations now share the chance of receiving a research breakthrough.
+summary: Research targets the most capacity-constrained operations and shares equal-priority ties fairly.
 tags: [economy, corporations]
 badges: [patch]
 areas: [fullstack]
 ---
 
 - Research no longer repeatedly picks the first operation when several operations have the same capacity priority.
-- The preference for the most constrained operation, breakthrough odds and improvement size are unchanged.
+- Research now correctly prioritizes operations that can produce the smallest fraction of their desired output. Breakthrough odds and improvement size are unchanged.

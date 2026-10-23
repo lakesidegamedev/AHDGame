@@ -317,6 +317,22 @@ describe("processRdInnovations", () => {
     }
   });
 
+  it("prioritizes lower producible output rather than the least constrained mine", () => {
+    const corp = makeCorp({ rdScore: 200, type: "extraction" });
+    const sectors = [makeSector(corp._id), makeSector(corp._id)];
+    const lookups = baseLookups([corp], sectors);
+    lookups.extractionCapacityUtilBySector.set(sectors[0]._id.toString(), {
+      utilization: 0.9,
+      bindingResource: "iron",
+    });
+    lookups.extractionCapacityUtilBySector.set(sectors[1]._id.toString(), {
+      utilization: 0.3,
+      bindingResource: "iron",
+    });
+    const result = processRdInnovations(lookups, 6, now, () => 0);
+    expect(result.sectorBoostOps[0].updateOne.filter._id).toEqual(sectors[1]._id);
+  });
+
   it("applies RD_EXTRACTION_BOOST_MAX for extraction corps when magnitude roll is 1.0", () => {
     const randSpy = vi.spyOn(Math, "random");
     // Extraction corps pick the sector by capacity utilization (no RNG sector

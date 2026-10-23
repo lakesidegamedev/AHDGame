@@ -133,9 +133,10 @@ export function processRdInnovations(
 
     const isExtraction = corp.type === "extraction";
 
-    // For extraction corps, prefer the sector closest to capacity — R&D capacity
+    // For extraction corps, prefer the sector with the smallest producible output fraction — R&D capacity
     // boosts are most valuable where extraction is already constrained. Missing
-    // utilization entry = unconstrained (treated as 1.0). Fall back to random
+    // utilization entry = unconstrained (treated as 1.0). Break equal constraints
+    // with the injected RNG. Fall back to random
     // for non-extraction corps where capacity is irrelevant.
     let sector;
     if (isExtraction) {
