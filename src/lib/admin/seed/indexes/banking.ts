@@ -4,7 +4,6 @@ import { ensureIndex } from "./helpers";
 import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
 import { SOVEREIGN_COUPON_CLAIMS_COLLECTION } from "@/lib/banking/fundedSovereignCoupons";
 import { POLITICAL_MEDIA_ORDER_INDEXES } from "@/lib/politicalMedia/indexes";
-import { BANK_MONEY_MOVE_UNPROJECTED_INDEX } from "@/lib/migrations/entries/2026-10-23-bank-money-move-unprojected-index";
 
 export const BANK_TREASURY_TRADES_INDEX = {
   collection: "bankTreasuryTrades",
@@ -58,11 +57,16 @@ export async function seedBankingIndexes(db: Db, log: (msg: string) => void) {
     log
   );
 
+  // The recovery queue's applied-but-unprojected branch, read every banking
+  // turn. The status index cannot narrow it; this makes it one null bound.
   await ensureIndex(
     db,
-    BANK_MONEY_MOVE_UNPROJECTED_INDEX.collection,
-    BANK_MONEY_MOVE_UNPROJECTED_INDEX.keys,
-    BANK_MONEY_MOVE_UNPROJECTED_INDEX.options,
+    MONEY_MOVE_COLLECTION,
+    { projectionsCompletedAt: 1, createdAt: 1 },
+    {
+      name: "bankMoneyMoves_unprojected_applied",
+      partialFilterExpression: { status: "applied", "projections.0": { $exists: true } },
+    },
     log
   );
 
