@@ -1,10 +1,10 @@
 export const corporationsContent = `# Corporations
 
-Corporations are player-owned businesses that generate revenue, employ workers, and interact with state economies. A character can hold one active CEO seat at a time. Founding starts a 168-turn per-user cooldown before that user may found another corporation. The clock starts at founding, not when the CEO later leaves. Corporations earn money each turn, respond to economic conditions, and can become a significant source of personal wealth and political leverage.
+Corporations are player-owned businesses that generate revenue, employ workers, and interact with state economies. A character can hold one active CEO seat at a time. A user who ends a corporation must wait 96 turns, about four real days, before founding another. The clock starts when the corporation ends, not when it was founded. Corporations earn money each turn, respond to economic conditions, and can become a significant source of personal wealth and political leverage.
 
 ## Founding a corporation
 
-To found a corporation, you need ₳1,000,000 in personal cash. That cost is deducted immediately, and your new corporation starts with ₳1,000,000 in liquid capital. You can optionally commit up to ₳50,000,000 in additional starting capital (deducted from your personal cash).
+The headline founding fee is **₳1,000,000** in modern money, and the new corporation starts with **₳1,000,000** in liquid capital. World presets scale both figures to the era's money, so a 1953 or 1991 world charges a smaller local-currency fee, and the founding dialog always shows the exact amount before you confirm. Low investor confidence can add up to **25%** to the fee, paid to the country treasury; the corporation's starting capital is never reduced. You can optionally commit up to **₳50,000,000** in additional starting capital, deducted from your personal cash.
 
 At founding you choose from **17 sector lines**: the 15 corporation types, plus the vehicles line of manufacturing and the entertainment line of media:
 
@@ -28,9 +28,34 @@ At founding you choose from **17 sector lines**: the 15 corporation types, plus 
 | chemical_industries | Chemical Industries |
 | construction | Construction |
 
-Your chosen type is the corporation's **primary type**. Sectors matching your primary type receive a +5 percentage-point operating margin bonus. You can later add a **secondary type** for a +2.5 percentage-point bonus on sectors of that type.
+Your chosen type is the corporation's **primary type**. Sectors matching your primary type receive a +5 percentage-point operating margin bonus. You can later add a **secondary type** for a +2.5 percentage-point bonus on sectors of that type. A sector that matches neither type takes a **-15 percentage-point mismatch penalty**, so the type choice is a real constraint on where you build.
+
+A secondary type also **doubles the logistical sprawl penalty**. Changing your primary or secondary type costs a **-10pp margin penalty for 24 turns** and starts a **48-turn cooldown** before another change.
 
 The CEO receives 10,000,000 shares at ₳0.10 initial price. Your corporation's HQ is set to your current home state.
+
+### Legal structure
+
+Every corporation is founded with its country's default legal form: a C-Corp in the United States, a PLC in the United Kingdom, a KK in Japan, an AG in Germany, and so on. The form sets tax treatment and shareholder rights.
+
+- **Standard forms** pay company tax, then shareholders pay tax on dividends.
+- **Pass-through forms** pay no company tax. Owners are taxed on their full share of profit every turn, whether or not it is distributed. US S-Corps are capped at 100 individual holders and must pay out at least 20% of profit; LLCs and UK LLPs carry their own minimum payouts.
+- A listed-only form cannot be worn by a private corporation, and a private-only form cannot be worn by a public one.
+- Changing legal structure is a shareholder vote and carries a 48-turn cooldown.
+
+### Founding checklist
+
+Before you confirm the dialog:
+
+- [ ] You have the full fee in personal cash, not campaign funds.
+- [ ] You chose the type you actually intend to build in. Off-type sectors lose 15 margin points.
+- [ ] You understand that a secondary type doubles sprawl and is harder to change later.
+- [ ] You chose private or public deliberately. A public IPO brings cash but dilutes control.
+- [ ] You know your HQ state, because home-state sectors get the location bonus.
+
+![The Found a Corporation dialog, showing the founding fee, private or public choice, name, ticker, primary sector, secondary sector, and starting treasury](/static/wiki/plants-corp-guide/found-corporation.png)
+
+*The founding dialog. The fee and treasury are shown in the world's local currency. This screenshot is from a 1953 world, so the dollar figure is era-scaled; your world shows its own amount.*
 
 ### Where you cannot found one
 
@@ -91,6 +116,14 @@ The turn processor sweeps open corporation votes every turn, so passed or failed
 When a corporation abandons a sector, dissolves (by the CEO, a shareholder vote, bond default, or insolvency), or liquidates sectors in a bond restructure, its plants do not simply shut. An NPP operator in the same industry takes over about three quarters of each plant's built capacity: one already running that industry in the same region if there is one, otherwise one elsewhere in the same country, otherwise a new NPP corporation. The rest of the capacity closes, and that share of the market reopens to anyone who builds into it.
 
 Unfinished construction is not handed over. It is refunded and cancelled exactly as before. Payouts to the leaving corporation and its shareholders are unchanged. Extraction concessions and defence contracts move with the plants that hold them.
+
+### Subsidiaries and control groups
+
+You can control more corporations than the one you run directly. A corporation counts as your **subsidiary** when you control more than **50% of its voting power** and you formalize the relationship. The subsidiary keeps its own CEO, cash, and shares. The parent can inject capital (up to 25% of parent liquid capital per injection, with a 24-turn cooldown), set a dividend floor, appoint its CEO, and spin off sectors into a new wholly owned company.
+
+Spin-offs cost a base fee plus a per-sector fee and have a **168-turn cooldown**. A group cannot chain subsidiaries, a formalized subsidiary cannot issue equity, and a subsidiary must have a different sitting human CEO from the parent. See [Subsidiary Corporations](/wiki/subsidiary-corporations).
+
+A **control group** is wider than the formal subsidiary list: it is every corporation you control with more than 50% of the votes, whether or not the relationship is formalized. Size costs, merger concentration, and the monopoly trigger read the whole control group, so splitting a business into shells does not hide its size.
 
 ## Expanding into markets
 
@@ -231,7 +264,7 @@ Many factors adjust your sector profit margins. These are additive:
 | Deficit stimulus | up to +5% | +0.5% per 1% of GDP deficit |
 | Subsidies | +7.5% per subsidy | Federal and state stack |
 | Logistical sprawl | up to -0.5%/2 sectors | Penalty above 15 sectors; see Logistical Sprawl below |
-| Type switch penalty | -10% | Active for 24 turns after switching primary or secondary type; 72-turn cooldown (24 penalty + 48 cooldown) before another switch |
+| Type switch penalty | -10% | Active for 24 turns after switching primary or secondary type; a 48-turn cooldown starts at the switch |
 | Strategy transition | -5% | Active during the 12-turn window when changing operating strategy |
 | Tariff (foreign corp) | -(rate / 2)% | If your corp HQ is abroad and a tariff targets your origin country or sector |
 | Tariff (domestic malus) | up to -10% | Economy-wide and sector tariffs create friction for all corps |
@@ -239,11 +272,24 @@ Many factors adjust your sector profit margins. These are additive:
 | Commodity output demand | ±50pp per commodity (soft cap) | Logarithmic; shortages in commodities you sell boost margins |
 | Dominance margin penalty | up to -15% | Scales from 0 at ≤50% market share to -15pp at 100% share |
 | Dominance regulatory burden | up to 5% of revenue | Compliance/antitrust cost; scales with market share above 50% |
+| Combined size cost cap | -7.5pp | Sprawl, management overhead, and dominance are capped together, each scaled down proportionally |
 | Sustained negative production | up to -45% | Builds after 48 turns of negative production policy; full penalty at 144 turns |
 | Sovereign default | up to -15% | Crisis-driven margin penalty from national or global default events |
 | Nationalized (SOE efficiency) | -5% to -25% | Government-owned corporations only; dynamic penalty from corruption, governance quality, price-control/employment-guarantee mandates, and state-holding overreach |
 
 Sectors that don't match your primary or secondary type receive a **-15% penalty**. Focused corporations outperform diversified ones unless you manage logistics carefully.
+
+### Size costs
+
+Being big is not a free multiplier. Three charges are measured on your **control group**, not just the company page you are looking at:
+
+- **Logistical sprawl:** sectors above 15 cost margin, and a secondary type doubles the slope.
+- **Management overhead:** a plant-count charge when the world enables it.
+- **Dominance:** above 50% of a state's sector, ramping to -15pp at 100% share, plus a compliance burden of up to 5% of revenue.
+
+The three margin charges are capped at **7.5 points combined**, scaled down proportionally when they would exceed the cap. A dominant company still pays for its position, but size alone cannot zero out its margin.
+
+The other ceiling is legal. Competition law can refer a merger, order a divestiture, or break up a dominant group. A Subsidiary Limits Act caps how many companies one group may run, and a Foreign Investment Act can screen or cap foreign-controlled ownership. The thresholds are in [Bills & Legislation](/wiki/bills-legislation#the-three-economic-laws).
 
 ## CEO tools
 
@@ -287,9 +333,9 @@ Starting MS is 10, and it has three uses:
 | **Defence** | Your MS is the denominator of every attacker's share. A defender holding 150 MS gives a 50 MS raider a quarter of the contested amount instead of all of it |
 | **Ammunition** | Every split and attack spends MS. Run out and you cannot act at all |
 
-**MS does not decay.** Logistics strength bleeds 5% a turn and R&D score 3%, but marketing strength only falls when you spend it, or when you rename the corporation (-25%). That makes it a stockpile rather than a maintained level, so funding it hard early and then cutting back banks a permanent reserve.
+**Marketing Strength decays every turn.** In the live 1991 world it loses **1.5% per turn**, on top of what you spend on splits and attacks. Logistics strength bleeds 5% a turn and R&D score 3%. A budget that only replaces what you spend is not enough; it has to cover decay too. Group synergy, when enabled, is a **transfer** from the group leader rather than free strength, so a group shares strength instead of minting it.
 
-If nobody is attacking you and you have no intention of splitting or attacking, marketing spend buys you nothing, and it still counts against the 150% overhead cap.
+Marketing spend buys you nothing if nobody is attacking you and you have no intention of splitting or attacking, and it still counts against the 150% overhead cap.
 
 **Marketing Strength is not brand loyalty.** Loyalty is a separate reputation earned through consistent pricing and delivery, and no amount of marketing spend contributes to it. See [Brand Loyalty](/wiki/brand-loyalty).
 
@@ -396,6 +442,12 @@ Some forms are taxed as ordinary companies instead:
 
 This change phases in over 24 turns from its start, so the tax rises step by step.
 
+### Balance sheet and financing
+
+A corporation's share price is anchored to tangible book, so the balance sheet is not cosmetic. Construction in progress counts as an asset, and any construction loan that paid for it counts as debt. Overdrawn cash counts as a negative, not as zero. A company that borrows to build can therefore look cheaper on earnings than a cash-rich rival while still being worth the capacity it owns.
+
+That is deliberate. A company that reinvests earnings into capacity is worth at least what that capacity is worth, even while current profit is temporarily lower. The share price is meant to reflect the assets the company owns, not just this turn's earnings. See [Private Banking](/wiki/private-banking) for construction and corporate lending.
+
 ## Economic effects on corporations
 
 Your corporation's sectors respond to state and national conditions:
@@ -449,6 +501,12 @@ When two corporations become one, the state may have a say. This applies to an a
 
 **Blocked is blocked.** A blocked pairing cannot be retried. A cleared one does not need a second referral, so a hostile takeover that was referred can simply be run again once it clears.
 
+**Breakups.** At Structural enforcement (50%) or Open markets charter (40%), the competition authority can also open a breakup case against a group whose national share in an industry is above the threshold. The case stays open for six turns. The authority can order the group to sell down, or dismiss it. A breakup order is measured on the control group, so moving the business into a subsidiary does not satisfy it.
+
+**Foreign investment.** A Foreign Investment Act adds a second gate at the border. At level 1, new foreign-controlled subsidiaries and acquisitions need the authority's approval. At level 2 the group's share of a national industry is capped at a quarter, at level 3 at a tenth, and at level 4 foreign-controlled subsidiaries may not operate at all. A group outside a tightened rule has 48 turns to comply before the excess is sold at auction.
+
+**Subsidiary limits.** A Subsidiary Limits Act caps how many companies one group may run in the country: twelve, eight, five, or three depending on the level. A group over the limit when the law tightens has 48 turns to sell or spin off the excess, after which the excess is auctioned.
+
 ## Interaction with politics
 
 Corporations connect to politics in several ways:
@@ -458,5 +516,19 @@ Corporations connect to politics in several ways:
 - The national budget receives corporate tax revenue: profitable corps help state finances
 - The IMF facility and crisis systems can affect corporate borrowing costs and credit ratings
 
-See also: [Running a Corporation under the Plants System](/wiki/plants-corp-guide), [Market System: A Player's Guide](/wiki/market-system-guide), [Private Banking](/wiki/private-banking), [Logistics: Freight, Sourcing, and Supply Chains](/wiki/logistics-guide), [Brand Loyalty](/wiki/brand-loyalty), [Output Quality](/wiki/output-quality), [Corporate Bonds](/wiki/corporate-bonds), [Corporate R&D & Tech Trees](/wiki/corporate-r-and-d), [Labour & Wages](/wiki/labour-and-wages), [Unions](/wiki/unions), [Stock Market](/wiki/stock-market), [Commodities](/wiki/commodities), [National Budget](/wiki/national-budget)
+## A healthy corporation, at a glance
+
+There is no single winning build, but a company in good shape usually clears these tests. Use them as diagnostics, not targets to game.
+
+| Test | Healthy sign | What to do if it fails |
+| --- | --- | --- |
+| Margin | Positive after tax and overhead for several turns | Check the margin breakdown before adding capacity. A commodity input or a size charge is usually the cause. |
+| Fill | Most of what you produce is selling | Lower price posture, retool to a scarcer output, or stop building into a glut. |
+| Cash | More than a few turns of operating cost | Cut overhead, pause growth, fundraise, or use a corporate bond only if the project pays it back. |
+| Debt | Debt is tied to assets that earn | Construction debt is fine if the plant will sell; debt for losses is not. |
+| Sectors | Mostly primary or secondary type | Off-type sectors lose 15 margin points. Sell them, retool, or accept them as a deliberate diversification. |
+| Size | Below the local dominance threshold, or earning enough to pay for it | Above 50% local share, the margin penalty and regulatory burden start to bite. |
+| Strength | Marketing, logistics, and R&D funded above decay | A budget that does not cover decay is a shrinking budget. |
+
+## See also [Running a Corporation under the Plants System](/wiki/plants-corp-guide), [Market System: A Player's Guide](/wiki/market-system-guide), [Private Banking](/wiki/private-banking), [Logistics: Freight, Sourcing, and Supply Chains](/wiki/logistics-guide), [Brand Loyalty](/wiki/brand-loyalty), [Output Quality](/wiki/output-quality), [Corporate Bonds](/wiki/corporate-bonds), [Corporate R&D & Tech Trees](/wiki/corporate-r-and-d), [Labour & Wages](/wiki/labour-and-wages), [Unions](/wiki/unions), [Stock Market](/wiki/stock-market), [Commodities](/wiki/commodities), [National Budget](/wiki/national-budget)
 `;
