@@ -132,6 +132,7 @@ async function runBankingTurn(
   await resumeMonetaryOperations(db, MONETARY_OPERATION_COOLDOWN_TURNS);
   await resumeLiquidityAdvances(db, MONETARY_OPERATION_COOLDOWN_TURNS);
   await resumeTreasuryReserveTransfers(db);
+  steps.mark("resume");
   // One config read per turn. Every stage below decides from this snapshot,
   // so a flag flipped mid-turn cannot split the pass between two policies.
   const policy = await loadBankingPolicy(db);
@@ -153,7 +154,7 @@ async function runBankingTurn(
   // that crashed between two legs, an estate claimed and never settled. Doing
   // it first means nothing below builds on money still in flight.
   const recovered = await recoverBankingSettlements(db, turn, policy);
-  steps.mark("resume+recovery");
+  steps.mark("recovery");
   const recovery = {
     resumedSettlements: recovered.resumedSettlements.length,
     stillPartial: recovered.stillPartial.length,

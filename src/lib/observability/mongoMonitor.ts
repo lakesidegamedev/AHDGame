@@ -23,6 +23,7 @@ import { calculateObjectSize } from "bson";
 import {
   recordDocumentsReturned,
   recordRoundTrip,
+  recordWriteCommand,
   roundTripProfilingEnabled,
 } from "@/lib/observability/mongoRoundTrips";
 import { isSingleplayer } from "@/lib/singleplayer";
@@ -47,6 +48,13 @@ const IGNORED_COMMANDS = new Set([
 
 // Hard cap on unmatched command events per client.
 const MAX_PENDING = 2000;
+
+/**
+ * Write commands whose effect we count per phase. `bulkWrite` is deliberately
+ * absent: the Node driver expands it into insert/update/delete commands, so
+ * counting it here would double-count.
+ */
+const WRITE_COMMANDS = new Set(["insert", "update", "delete", "findAndModify", "findandmodify"]);
 
 // Span-status codes (see @sentry/core SpanStatus): 1 = OK, 2 = ERROR.
 const SPAN_STATUS_OK = 1 as const;
@@ -97,6 +105,80 @@ function batchBytes(batch: unknown[]): number {
   return bytes;
 }
 
+/** What the monitor remembers about a write between commandStarted and
+ * commandSucceeded: how many statements were sent, plus insert payload bytes
+ * when BSON accounting is on. */
+export interface PendingWrite {
+  statements: number;
+  bytes: number;
+}
+
+/**
+ * Write metadata for a command, computed once on `commandStarted`.
+ *
+ * Counting documents here, not just commands, is the point: a `bulkWrite` of
+ * 6,000 sectors is one command but 6,000 document writes and tens of thousands
+ * of index entries. Round trips alone cannot see the disk cost.
+ *
+ * Byte accounting only runs under AHD_TURN_ROUNDTRIP_PROFILE=1. Sizing every
+ * inserted document on the production hot path would cost more than it
+ * measures; document counts are always cheap.
+ */
+export function writeCommandInfo(
+  commandName: string,
+  command: Record<string, unknown>,
+  sizeBytes = false
+): PendingWrite | undefined {
+  if (!WRITE_COMMANDS.has(commandName)) return undefined;
+  if (commandName === "insert") {
+    const documents = Array.isArray(command.documents)
+      ? (command.documents as unknown[])
+      : ([] as unknown[]);
+    let bytes = 0;
+    if (sizeBytes) {
+      for (const doc of documents) {
+        if (doc && typeof doc === "object")
+          bytes += calculateObjectSize(doc as Record<string, unknown>);
+      }
+    }
+    return { statements: documents.length, bytes };
+  }
+  if (commandName === "update") {
+    return { statements: Array.isArray(command.updates) ? command.updates.length : 0, bytes: 0 };
+  }
+  if (commandName === "delete") {
+    return { statements: Array.isArray(command.deletes) ? command.deletes.length : 0, bytes: 0 };
+  }
+  return { statements: 1, bytes: 0 };
+}
+
+/**
+ * Documents a successful write command actually wrote, from its reply.
+ *
+ * `nModified` rather than `n` for updates: an update that matches but changes
+ * nothing costs a read, not a write. Upserts count as writes.
+ */
+export function writeReplyCount(commandName: string, reply: unknown, fallback: number): number {
+  const r = reply as
+    { n?: number; nModified?: number; value?: unknown; upserted?: unknown[] } | undefined;
+  switch (commandName) {
+    case "insert":
+      return typeof r?.n === "number" ? r.n : fallback;
+    case "update": {
+      const upserted = Array.isArray(r?.upserted) ? r.upserted.length : 0;
+      if (typeof r?.nModified === "number") return r.nModified + upserted;
+      return typeof r?.n === "number" ? r.n : fallback;
+    }
+    case "delete":
+      return typeof r?.n === "number" ? r.n : 0;
+    case "findAndModify":
+    case "findandmodify":
+      return r?.value != null ? 1 : 0;
+    default:
+      return 0;
+  }
+}
+
 let attachedClients = new WeakSet<MongoClient>();
 
 /**
@@ -129,14 +211,14 @@ export function attachMongoCommandMonitor(client: MongoClient): void {
   if (attachedClients.has(client) || !mongoCommandMonitoringWanted()) return;
   attachedClients.add(client);
   const remoteTelemetry = process.env.NODE_ENV !== "test" && mongoMonitorWanted();
-  const pendingCollections = new Map<number, string>();
+  const pendingCommands = new Map<number, { collection: string; write?: PendingWrite }>();
   const pendingSpans = new Map<number, Span>();
 
   client.on("commandStarted", (event) => {
     if (IGNORED_COMMANDS.has(event.commandName)) return;
-    if (pendingCollections.size >= MAX_PENDING) {
-      pendingCollections.clear();
-      // Drop orphaned spans alongside the collections they map to, so a storm
+    if (pendingCommands.size >= MAX_PENDING) {
+      pendingCommands.clear();
+      // Drop orphaned spans alongside the commands they map to, so a storm
       // of unmatched events can't leak unfinished spans either.
       for (const span of pendingSpans.values()) span.end();
       pendingSpans.clear();
@@ -145,7 +227,12 @@ export function attachMongoCommandMonitor(client: MongoClient): void {
       event.commandName,
       event.command as Record<string, unknown>
     );
-    pendingCollections.set(event.requestId, collection);
+    const write = writeCommandInfo(
+      event.commandName,
+      event.command as Record<string, unknown>,
+      roundTripProfilingEnabled()
+    );
+    pendingCommands.set(event.requestId, write ? { collection, write } : { collection });
     // Per-phase round-trip attribution (AHD_TURN_ROUNDTRIP_PROFILE=1). A
     // boolean check when off.
     recordRoundTrip(collection);
@@ -174,8 +261,9 @@ export function attachMongoCommandMonitor(client: MongoClient): void {
 
   client.on("commandSucceeded", (event) => {
     if (IGNORED_COMMANDS.has(event.commandName)) return;
-    const collection = pendingCollections.get(event.requestId) ?? "unknown";
-    pendingCollections.delete(event.requestId);
+    const pending = pendingCommands.get(event.requestId);
+    const collection = pending?.collection ?? "unknown";
+    pendingCommands.delete(event.requestId);
 
     // Documents returned, for the round-trip profiler. Round trips rank what
     // production pays (latency per call); documents rank what singleplayer
@@ -187,6 +275,16 @@ export function attachMongoCommandMonitor(client: MongoClient): void {
       batch.length,
       roundTripProfilingEnabled() ? batchBytes(batch) : 0
     );
+
+    // Write volume, for the same per-phase breakdown. Counted on success so a
+    // failed command that writes nothing does not inflate the phase.
+    if (pending?.write) {
+      recordWriteCommand(
+        collection,
+        writeReplyCount(event.commandName, event.reply, pending.write.statements),
+        pending.write.bytes
+      );
+    }
 
     const span = pendingSpans.get(event.requestId);
     if (span) {
@@ -213,8 +311,9 @@ export function attachMongoCommandMonitor(client: MongoClient): void {
 
   client.on("commandFailed", (event) => {
     if (IGNORED_COMMANDS.has(event.commandName)) return;
-    const collection = pendingCollections.get(event.requestId) ?? "unknown";
-    pendingCollections.delete(event.requestId);
+    const pending = pendingCommands.get(event.requestId);
+    const collection = pending?.collection ?? "unknown";
+    pendingCommands.delete(event.requestId);
 
     const span = pendingSpans.get(event.requestId);
     if (span) {

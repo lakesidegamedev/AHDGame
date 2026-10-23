@@ -57,6 +57,19 @@ export async function seedBankingIndexes(db: Db, log: (msg: string) => void) {
     log
   );
 
+  // The recovery queue's applied-but-unprojected branch, read every banking
+  // turn. The status index cannot narrow it; this makes it one null bound.
+  await ensureIndex(
+    db,
+    MONEY_MOVE_COLLECTION,
+    { projectionsCompletedAt: 1, createdAt: 1 },
+    {
+      name: "bankMoneyMoves_unprojected_applied",
+      partialFilterExpression: { status: "applied", "projections.0": { $exists: true } },
+    },
+    log
+  );
+
   for (const index of POLITICAL_MEDIA_ORDER_INDEXES) {
     await ensureIndex(db, MONEY_MOVE_COLLECTION, index.keys, index.options, log);
   }

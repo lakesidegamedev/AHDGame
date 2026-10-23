@@ -359,7 +359,9 @@ export async function emitTxBulk(
         .insertMany(docs, { ordered: false });
     await shadowLedgerFromTx(db, docs);
     // BULK path so the hot loop (bondTurn / corporationTurn, hundreds of
-    // entries/turn) pays one insertMany at flush time, not one per row.
+    // entries/turn) pays one insertMany at flush time, not one per row. The
+    // mirror is narrowed by moneyMirrorPolicy: system settlement legs live in
+    // financialTxLog only.
     recordAuditBulk(docs.map(buildAuditEnvelope));
   } catch (err) {
     Sentry.captureException(err, { extra: { phase: "emitTxBulk", count: entries.length } });

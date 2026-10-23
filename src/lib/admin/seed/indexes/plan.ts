@@ -114,13 +114,11 @@ export const isTtlIndex = (entry: SeedIndexPlanEntry) =>
 const TEXT_REASON = "text index: insert-cost decision before building on a live world";
 const TTL_REASON = "TTL index: building it deletes every already-expired document";
 export const LIVE_WORLD_MANUAL_SEED_INDEXES: Readonly<Record<string, string>> = {
-  "actionAuditLog.actionAuditLog_text_search": TEXT_REASON,
   "activityLog.activityLog_text_search": TEXT_REASON,
   "characters.characters_text_search": TEXT_REASON,
   "corporations.corporations_text_search": TEXT_REASON,
   "electedOfficials.electedOfficials_text_search": TEXT_REASON,
   "elections.elections_text_search": TEXT_REASON,
-  "financialTxLog.financialTxLog_text_search": TEXT_REASON,
   "legislation.legislation_text_search": TEXT_REASON,
   "npps.npps_text_search": TEXT_REASON,
   "stateBills.stateBills_text_search": TEXT_REASON,
