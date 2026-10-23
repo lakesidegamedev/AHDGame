@@ -90,12 +90,15 @@ describe("applyExportPriceFeedback", () => {
   });
   it("allows shortage price growth when all offers sell", () => {
     const args = input();
-    args.pairs.push({
-      ...args.pairs[0],
-      exporter: "JP",
-      dispatchedUnits: 500,
-      deliveredUnits: 500,
-    });
+    args.pairs = [
+      ...args.pairs,
+      {
+        ...args.pairs[0],
+        exporter: "JP",
+        dispatchedUnits: 500,
+        deliveredUnits: 500,
+      },
+    ];
     expect(applyExportPriceFeedback(args)).toEqual(args.prices);
   });
   it("ignores a rival without enough surplus to replace the route", () => {
