@@ -113,8 +113,16 @@ describe("ExpandMarketModal plants market finder", () => {
     const optionEls = within(sectorTypeSelect).getAllByRole("option");
     expect(optionEls).toHaveLength(OPERATING_SECTOR_TYPES.length);
     expect(optionEls.map((option) => option.textContent)).toContain("Retail (secondary)");
+    expect(screen.getByText("Demand estimate")).toBeTruthy();
     expect(screen.getByText("9,050")).toBeTruthy();
-    expect(screen.getByText("farms")).toBeTruthy();
+    expect(screen.getByText("facility equivalents")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Some demand is local to each state. Other demand is shared across reachable markets in the same country, so state estimates can overlap. These estimates are not a sales guarantee."
+      )
+    ).toBeTruthy();
+    expect(screen.getByText(/Estimated output-mix demand:/)).toBeTruthy();
+    expect(screen.queryByText(/units\/day open/)).toBeNull();
     expect(screen.getByText("Best fit")).toBeTruthy();
 
     fireEvent.change(screen.getByLabelText("Sector type"), { target: { value: "retail" } });

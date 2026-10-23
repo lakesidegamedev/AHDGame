@@ -601,7 +601,7 @@ export default function ExpandMarketModal({
                   )}
                   <p className="col-span-2 text-[11px] leading-snug text-muted">
                     {suggestionMode === "unowned"
-                      ? "Open demand is customer demand no corporation in that state is serving yet."
+                      ? "Some demand is local to each state. Other demand is shared across reachable markets in the same country, so state estimates can overlap. These estimates are not a sales guarantee."
                       : "Established markets are ranked by the current revenue of competing corporations."}
                   </p>
                 </div>
@@ -671,7 +671,7 @@ export default function ExpandMarketModal({
                     <div className="overflow-hidden rounded-lg border border-card-border">
                       <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-x-3 border-b border-card-border bg-card-elevated/40 px-3 py-2 text-sm font-semibold text-foreground">
                         <span>Market</span>
-                        <span className="text-right">Room for</span>
+                        <span className="text-right">Demand estimate</span>
                         <span className="text-right">Entry</span>
                       </div>
                       <ul className="list-none divide-y divide-card-border/40">
@@ -719,9 +719,7 @@ export default function ExpandMarketModal({
                                 <span className="text-right text-xs font-semibold tabular-nums text-foreground">
                                   {facilityCount.toLocaleString("en-US")}
                                   <span className="block text-[9px] font-normal text-muted">
-                                    {facilityCount === 1
-                                      ? facilitySingular(selectedType)
-                                      : facilityPlural(selectedType)}
+                                    facility equivalents
                                   </span>
                                   {/* A market with no unmet demand is still open
                                       to a build, you just start by taking sales
@@ -760,8 +758,8 @@ export default function ExpandMarketModal({
                             {activeSuggestion.stateName}
                           </p>
                           <p className="text-[11px] text-muted">
-                            {formatUnits(activeSuggestion.headroomUnits)} {CAPACITY_UNIT_LABEL} open
-                            ·{" "}
+                            Estimated output-mix demand:{" "}
+                            {formatUnits(activeSuggestion.headroomUnits)} {CAPACITY_UNIT_LABEL}·{" "}
                             {activeSuggestion.foundingTotalAnchor != null
                               ? formatTreasuryAmount(activeSuggestion.foundingTotalAnchor)
                               : "Price unavailable"}
