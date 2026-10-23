@@ -133,15 +133,21 @@ function stubCatalog(response: unknown = catalog, legislationTypes: unknown[] = 
 
 function renderModal(
   onSuccess = vi.fn(),
-  countryId: "US" | "JP" = "US",
+  countryId: "US" | "JP" | "UK" = "US",
   onClose = vi.fn(),
-  options: { canSubmit?: boolean; hasActiveBill?: boolean } = {}
+  options: { canSubmit?: boolean; hasActiveBill?: boolean; scope?: "national" | "regional" } = {}
 ) {
   render(
     <NextIntlClientProvider locale="en" messages={messages}>
       <GuidedLegislationModal
         countryId={countryId}
-        endpoint="/api/congress/bills"
+        endpoint={
+          options.scope === "regional"
+            ? "/api/country/UK/region/NIR/legislature/bills"
+            : "/api/congress/bills"
+        }
+        scope={options.scope}
+        regionId={options.scope === "regional" ? "NIR" : undefined}
         chambers={[
           { value: "house", label: "House" },
           { value: "senate", label: "Senate" },
@@ -174,6 +180,40 @@ afterEach(() => {
 });
 
 describe("GuidedLegislationModal", () => {
+  it.each([
+    ["regional", "economy"],
+    ["national", "trade"],
+  ] as const)(
+    "submits the economic domain using a valid %s category",
+    async (scope, expectedCategory) => {
+      const domain = "Economy, Work, Trade and Financial Affairs";
+      stubCatalog({
+        ...catalog,
+        families: [{ ...catalog.families[0], domain, title: "Household Relief and Work Credits" }],
+      });
+      mocks.postBill.mockResolvedValue({ response: { ok: true }, data: {}, cancelled: false });
+      renderModal(vi.fn(), scope === "regional" ? "UK" : "US", vi.fn(), { scope });
+      await addProvision(domain, "Household Relief and Work Credits", "Community clinic expansion");
+      fireEvent.change(screen.getByLabelText("Bill title"), {
+        target: { value: "Household Support Act" },
+      });
+      fireEvent.change(screen.getByLabelText("Summary"), {
+        target: { value: "Support households through local authorities." },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Propose bill" }));
+      await waitFor(() => expect(mocks.postBill).toHaveBeenCalledOnce());
+      const request = mocks.postBill.mock.calls[0][0];
+      expect(request.body.category).toBe(expectedCategory);
+      expect(request.body.provisions[0]).toEqual({
+        type: "reset_law",
+        familyId: "L19",
+        scope,
+        choice: "center_left",
+        ...(scope === "regional" ? { regionId: "NIR" } : {}),
+      });
+    }
+  );
+
   it("allows drafting during an active bill but disables and guards submission", async () => {
     stubCatalog();
     renderModal(vi.fn(), "JP", vi.fn(), { canSubmit: false, hasActiveBill: true });
