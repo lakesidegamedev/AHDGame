@@ -11,6 +11,7 @@ import { getHouseComposition } from "@/lib/congress/houseComposition";
 import { getPartyMap } from "@/lib/db/partyMap";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import { getGovernmentFormationsCollection } from "@/lib/db/collections/governmentFormation";
+import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
 import { tallySeatsByParty, getLargestParty } from "@/lib/turn/parliamentaryGovernment";
 
 export type NationExecutiveSnapshot = {
@@ -107,9 +108,14 @@ async function resolvePresidentExecutive(db: Db): Promise<NationExecutiveSnapsho
 
 async function resolveParliamentaryExecutive(
   db: Db,
-  countryId: CountryId
+  countryId: CountryId,
+  /** Already-loaded formation doc, so the caller does not read it twice. */
+  govDoc?: GovernmentFormation | null
 ): Promise<NationExecutiveSnapshot> {
-  const gov = await getGovernmentFormationsCollection(db).findOne({ _id: countryId });
+  const gov =
+    govDoc !== undefined
+      ? govDoc
+      : await getGovernmentFormationsCollection(db).findOne({ _id: countryId });
   if (!gov?.pmCharacterId) {
     return {
       name: "Vacant",
@@ -123,7 +129,12 @@ async function resolveParliamentaryExecutive(
     };
   }
 
-  const char = await db.collection<Character>("characters").findOne({ _id: gov.pmCharacterId });
+  const char = await db
+    .collection<Character>("characters")
+    .findOne(
+      { _id: gov.pmCharacterId },
+      { projection: { name: 1, avatarUrl: 1, borderKey: 1, tintColor: 1, sequentialId: 1 } }
+    );
   if (!char) {
     return {
       name: gov.pmName ?? "Vacant",
@@ -171,7 +182,12 @@ async function legislaturePartyFromSequentialId(
   };
 }
 
-async function snapshotForCountry(db: Db, countryId: CountryId): Promise<NationWorldSnapshot> {
+async function snapshotForCountry(
+  db: Db,
+  countryId: CountryId,
+  /** World preset, threaded in so each country does not re-read gameState. */
+  preset?: string
+): Promise<NationWorldSnapshot> {
   const config = COUNTRY_CONFIGS[countryId];
   const usId = COUNTRY_CONFIGS.US.id;
 
@@ -190,10 +206,10 @@ async function snapshotForCountry(db: Db, countryId: CountryId): Promise<NationW
   }
 
   if (isParliamentarySystem(config)) {
-    const [executive, gov, seatsByParty] = await Promise.all([
-      resolveParliamentaryExecutive(db, countryId),
-      getGovernmentFormationsCollection(db).findOne({ _id: countryId }),
-      tallySeatsByParty(db, countryId),
+    const gov = await getGovernmentFormationsCollection(db).findOne({ _id: countryId });
+    const [executive, seatsByParty] = await Promise.all([
+      resolveParliamentaryExecutive(db, countryId, gov),
+      tallySeatsByParty(db, countryId, preset),
     ]);
 
     let legSeq: string | null = null;
@@ -223,13 +239,14 @@ async function snapshotForCountry(db: Db, countryId: CountryId): Promise<NationW
 }
 
 export async function getNationWorldSnapshots(
-  db: Db
+  db: Db,
+  preset?: string
 ): Promise<Record<CountryId, NationWorldSnapshot>> {
   // Build for every REGISTERED country (COUNTRY_ORDER ∪ runtime-activated SCO/WAL)
   // so a seceded nation's /world card has a snapshot — matching getAllCountryAccess.
   const ids = await getRegisteredCountryIds(db);
   const entries = await Promise.all(
-    ids.map(async (id) => [id, await snapshotForCountry(db, id)] as const)
+    ids.map(async (id) => [id, await snapshotForCountry(db, id, preset)] as const)
   );
   return Object.fromEntries(entries) as Record<CountryId, NationWorldSnapshot>;
 }

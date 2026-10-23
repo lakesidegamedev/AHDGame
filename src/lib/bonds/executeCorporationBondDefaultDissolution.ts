@@ -53,6 +53,7 @@ import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import { reserveSectorsForRestore } from "@/lib/corporations/securedConstructionProperty";
+import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 
 export interface CorporationDissolutionResult {
   bondRecoveryPool: number;
@@ -499,7 +500,7 @@ export async function executeCorporationBondDefaultDissolution(
     const creditorIds = [...corpBondPay.keys()].map((id) => new ObjectId(id));
     const creditorDocs = await db
       .collection<Corporation>("corporations")
-      .find({ _id: { $in: creditorIds } })
+      .find({ _id: { $in: creditorIds } }, { projection: SETTLEMENT_HISTORY_EXCLUDED })
       .toArray();
     const creditorMap = new Map(creditorDocs.map((c) => [c._id.toString(), c]));
     const corpOps = [...corpBondPay.entries()].map(([corpIdStr, amt]) => {

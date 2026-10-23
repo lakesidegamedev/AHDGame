@@ -130,10 +130,15 @@ function ForexPageInner({ params }: { params: Promise<{ code: string }> }) {
     if (!background) setLoading(true);
     setError("");
     try {
-      const [exchangeRes, ordersRes, macroRes, countriesRes] = await Promise.all([
+      // Five fetches, one round trip. `/api/character/me` used to be awaited
+      // after this batch resolved, adding a full serial RTT (on top of its own
+      // ~10-query chain) before the wallet strip could render; the monetary
+      // policy payload is no longer fetched here at all — only the policy tab
+      // reads it, so it loads when that tab opens.
+      const [exchangeRes, ordersRes, meRes, countriesRes] = await Promise.all([
         fetch("/api/forex/exchange"),
         fetch("/api/forex/orders"),
-        fetch("/api/forex/monetary-policy"),
+        fetch("/api/character/me"),
         fetch("/api/countries", { cache: "no-store" }),
       ]);
 
@@ -178,7 +183,6 @@ function ForexPageInner({ params }: { params: Promise<{ code: string }> }) {
       }
 
       try {
-        const meRes = await fetch("/api/character/me");
         if (meRes.ok) {
           const meData = await meRes.json();
           const char = meData.character;
@@ -215,17 +219,6 @@ function ForexPageInner({ params }: { params: Promise<{ code: string }> }) {
       setOrderBook(exchangeData.orderBook ?? []);
       setReserveLeaders((exchangeData.reserveLeaders ?? []) as ReserveLeaderDisplay[]);
 
-      if (macroRes.ok) {
-        try {
-          const macroData = await macroRes.json();
-          setMacroCountries((macroData.countries ?? []) as CountryMacroSnapshot[]);
-        } catch {
-          setMacroCountries([]);
-        }
-      } else {
-        setMacroCountries([]);
-      }
-
       if (ordersRes.ok) {
         const ordersData = await ordersRes.json();
         setMyOrders(ordersData.orders ?? []);
@@ -241,6 +234,30 @@ function ForexPageInner({ params }: { params: Promise<{ code: string }> }) {
   useEffect(() => {
     fetchData(); // eslint-disable-line react-hooks/set-state-in-effect -- initial data fetch
   }, [fetchData]);
+
+  // Monetary policy is a policy-tab-only payload (~22 countries x 3 history
+  // series). Loading it with the rates view wasted a request and thousands of
+  // chart points on most visits.
+  const [macroLoaded, setMacroLoaded] = useState(false);
+  useEffect(() => {
+    if (activeTab !== "policy" || macroLoaded) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/forex/monetary-policy");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        setMacroCountries((data.countries ?? []) as CountryMacroSnapshot[]);
+        setMacroLoaded(true);
+      } catch {
+        /* the policy tab shows its own empty state */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, macroLoaded]);
 
   useGameEvents(() => void fetchData(true), ["turn_complete", "market_tick"]);
 

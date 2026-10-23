@@ -9,7 +9,11 @@ import {
 
 const world = vi.hoisted(() => ({ currentTurn: 120, currentYear: 2027, preset: "2027" }));
 
-vi.mock("@/lib/gameState", () => ({ getGameState: async () => world }));
+vi.mock("@/lib/gameState", () => ({
+  getGameState: async () => world,
+  // The detail loader reads the world scalars through the projected accessor.
+  getGameStateCore: async () => world,
+}));
 
 describe("alignInflationBreakdownToDisplayRate", () => {
   it("keeps the tooltip total aligned with the displayed inflation rate", () => {

@@ -4,10 +4,11 @@ import { CDN_LOGO_URL } from "@/lib/images/staticCdnAssets";
 import Link from "next/link";
 import { getDb } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
-import type { GameConfig, GameState } from "@/lib/db/types";
+import type { GameState } from "@/lib/db/types";
 import type { RetiredCharacter } from "@/lib/db/types/retiredCharacter";
 import type { CharacterRecap } from "@/lib/recap/types";
 import { getAuthUser } from "@/lib/auth";
+import { getCachedMaintenanceStatus } from "@/lib/maintenanceStatus";
 import { publicPageMetadata } from "@/lib/siteMetadata";
 import { MaintenanceCountdown } from "./MaintenanceCountdown";
 import { MaintenanceRecapLauncher } from "./MaintenanceRecapLauncher";
@@ -24,19 +25,19 @@ export const metadata: Metadata = publicPageMetadata({
 
 export default async function MaintenancePage() {
   const db = await getDb();
-  const config = await db.collection<GameConfig>("gameConfig").findOne(
-    { _id: "default" },
-    {
-      projection: {
-        maintenanceMode: 1,
-        maintenanceReason: 1,
-        maintenanceExpectedEnd: 1,
-      },
-    }
-  );
+  // The wall is the one page every player hits while the game is closed, so
+  // it must not pay a chain of round trips. The config read is the same three
+  // fields for everybody and changes only when an admin flips the switch;
+  // the session read is independent of it, so both start together.
+  const [maintenance, authUser] = await Promise.all([
+    // The proxy gate already keeps this snapshot warm for every request; reusing
+    // it means the wall costs no config round trip at all.
+    getCachedMaintenanceStatus().catch(() => null),
+    getAuthUser().catch(() => null),
+  ]);
 
-  const reason = config?.maintenanceReason || "";
-  const expectedEnd = config?.maintenanceExpectedEnd || "";
+  const reason = maintenance?.reason || "";
+  const expectedEnd = maintenance?.expectedEnd || "";
 
   // While the game is between iterations, a returning player can still log in
   // and relive their season. Fetch their most recent recap (if the feature is
@@ -49,7 +50,6 @@ export default async function MaintenancePage() {
   // nothing to them; they need to know the account is saved and when to return.
   let newAccount = false;
   try {
-    const authUser = await getAuthUser();
     if (authUser) {
       const [gs, retired, anyRetired] = await Promise.all([
         db

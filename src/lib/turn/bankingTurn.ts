@@ -48,15 +48,6 @@ import {
   fundedNpcFlowDelta,
   perTurnInterest,
 } from "@/lib/banking/rules/loans";
-import { loanServiceTransition, loanServiceKey } from "@/lib/banking/rules/loanServicing";
-import {
-  acquireConstructionLoanLock,
-  releaseConstructionLoanLock,
-} from "@/lib/banking/constructionLoanLock";
-import {
-  acquireConstructionServiceLease,
-  releaseConstructionServiceLease,
-} from "@/lib/banking/constructionServiceLease";
 import { settleLegacyDepositInterest } from "@/lib/banking/legacyDepositInterest";
 import { settleTransition } from "@/lib/banking/settlementJournal";
 import { oid, type TransitionLeg, type TransitionProjection } from "@/lib/banking/rules/boundary";
@@ -69,6 +60,11 @@ import { isDepositTakingCharter, isNamedLendingCharter } from "@/lib/banking/cha
 import { charterCapabilities, charterMay } from "@/lib/banking/rules/capabilities";
 import { getCashReserves, bankEquity } from "@/lib/banking/bankCash";
 import { processDeadBankLoans } from "@/lib/banking/deadBankLoans";
+import {
+  serviceNamedLoanBook,
+  servicePlayerLoan,
+  type LoanServiceResult,
+} from "@/lib/banking/namedLoanBook";
 import { loanCharterEpoch, loanCharterEpochFilter } from "@/lib/banking/loanEpoch";
 import { turnMoveKey, type MoneyTarget } from "@/lib/banking/moneyMove";
 import {
@@ -297,7 +293,7 @@ async function runBankingTurn(db: Db, turn: number): Promise<BankingTurnSummary>
   const deadBankResult = await processDeadBankLoans(
     db,
     turn,
-    async (loan, bank, target, trackInsuranceRecovery) => {
+    async (loan, bank, target, trackInsuranceRecovery, txEntries) => {
       if (loan.borrowerType === "npcBulk") {
         const recovered = await serviceDeadNpcBulkLoan(
           db,
@@ -320,7 +316,8 @@ async function runBankingTurn(db: Db, turn: number): Promise<BankingTurnSummary>
         bank.currency,
         bank.name,
         target,
-        trackInsuranceRecovery
+        trackInsuranceRecovery,
+        txEntries
       );
       summary.loanInterestCollected += serviced.interestCollected;
       summary.loanPrincipalRepaid += serviced.principalRepaid;
@@ -1056,77 +1053,7 @@ async function processOneBank(
   return result;
 }
 
-type LoanServiceResult = {
-  interestCollected: number;
-  principalRepaid: number;
-  writtenOff: number;
-  bankCredit: number;
-  totalLoansDelta: number;
-};
-
 type LoanBookOnlyBank = { corp: Corporation; charter: BankCharter };
-
-/**
- * Service every named loan a bank holds, whatever kind of charter it has.
- *
- * Fans out across borrowers and stays serial per borrower: a borrower with two
- * loans must have them serviced in order so the affordability pre-check in
- * `servicePlayerLoan` sees the first loan's debit.
- */
-async function serviceNamedLoanBook(
-  db: Db,
-  turn: number,
-  corp: Pick<Corporation, "_id" | "name">,
-  currency: CurrencyCode,
-  charteredTurn: number
-): Promise<LoanServiceResult> {
-  const total: LoanServiceResult = {
-    interestCollected: 0,
-    principalRepaid: 0,
-    writtenOff: 0,
-    bankCredit: 0,
-    totalLoansDelta: 0,
-  };
-  const loans = await db
-    .collection<BankLoan>("bankLoans")
-    .find({
-      bankCorporationId: corp._id,
-      borrowerType: { $in: ["character", "corporation"] },
-      status: { $in: ["current", "arrears"] },
-      lastProcessedTurn: { $ne: turn },
-      ...loanCharterEpochFilter(charteredTurn),
-    })
-    .toArray();
-
-  const loansByBorrower = new Map<string, typeof loans>();
-  for (const loan of loans) {
-    const key = `${loan.borrowerType}:${String(loan.borrowerId)}`;
-    const list = loansByBorrower.get(key) ?? [];
-    list.push(loan);
-    loansByBorrower.set(key, list);
-  }
-  const serviceBorrower = async (borrowerLoans: typeof loans) => {
-    for (const loan of borrowerLoans) {
-      const loanResult = await servicePlayerLoan(db, turn, corp._id, loan, currency, corp.name);
-      total.interestCollected += loanResult.interestCollected;
-      total.principalRepaid += loanResult.principalRepaid;
-      total.writtenOff += loanResult.writtenOff;
-      total.bankCredit += loanResult.bankCredit;
-      total.totalLoansDelta += loanResult.totalLoansDelta;
-    }
-  };
-  const borrowerGroups = [...loansByBorrower.values()];
-  await Promise.all(
-    borrowerGroups
-      .filter((group) => !group.some((loan) => loan.constructionCollateral))
-      .map(serviceBorrower)
-  );
-  // Construction receipts hold one lender epoch. Keep their borrower groups
-  // serial so parallel admission cannot repeatedly starve all but one loan.
-  for (const group of borrowerGroups)
-    if (group.some((loan) => loan.constructionCollateral)) await serviceBorrower(group);
-  return total;
-}
 
 /**
  * The banking pass for a charter that lends but takes no deposits (today: an
@@ -1234,191 +1161,6 @@ async function processLoanBookOnlyBank(
     if (publication.matchedCount > 0) return serviced;
   }
   throw new Error(`Bank ${corp._id.toHexString()} income publication changed too often`);
-}
-
-async function servicePlayerLoan(
-  db: Db,
-  turn: number,
-  bankCorporationId: ObjectId,
-  loan: BankLoan,
-  currency: CurrencyCode,
-  bankName: string,
-  /**
-   * Where the payment lands. A live bank's vault for a normal turn; whoever
-   * stood behind the bank when it was wound up, if the lender is dead. The
-   * servicing arithmetic is identical either way, so it is a parameter rather
-   * than a second copy of this function.
-   */
-  creditTarget: MoneyTarget = {
-    collection: "corporations",
-    filter: { _id: bankCorporationId },
-    path: "bankCharter.cashReserves",
-    note: "instalment reaches the lending bank",
-  },
-  trackInsuranceRecovery = false
-): Promise<LoanServiceResult> {
-  const empty: LoanServiceResult = {
-    interestCollected: 0,
-    principalRepaid: 0,
-    writtenOff: 0,
-    bankCredit: 0,
-    totalLoansDelta: 0,
-  };
-  if (loan.lastProcessedTurn === turn) return empty;
-  if (loan.constructionCollateral) {
-    const owned = await acquireConstructionLoanLock(
-      db,
-      loan,
-      loanServiceKey(String(loan._id), turn)
-    );
-    if (!owned) return empty;
-    loan = owned;
-    if (!["current", "arrears"].includes(loan.status) || loan.lastProcessedTurn === turn) {
-      await releaseConstructionLoanLock(db, loan, loanServiceKey(String(loan._id), turn));
-      return empty;
-    }
-  }
-  const serviceKey = loanServiceKey(String(loan._id), turn);
-  const holdBankEpoch =
-    !!loan.constructionCollateral &&
-    creditTarget.collection === "corporations" &&
-    creditTarget.path === "bankCharter.cashReserves";
-  if (holdBankEpoch) {
-    if (!(await acquireConstructionServiceLease(db, loan, serviceKey, turn))) {
-      await releaseConstructionLoanLock(db, loan, serviceKey);
-      return empty;
-    }
-    creditTarget = {
-      ...creditTarget,
-      filter: {
-        ...creditTarget.filter,
-        "bankCharter.charteredTurn": loan.charteredTurn,
-        "bankConstructionFunding.kind": "servicing",
-        "bankConstructionFunding.service.key": serviceKey,
-      },
-    };
-  }
-  const releaseService = async () => {
-    if (holdBankEpoch)
-      await releaseConstructionServiceLease(db, bankCorporationId, loan._id, serviceKey);
-    else await releaseConstructionLoanLock(db, loan, serviceKey);
-  };
-
-  // The decision is pure; the transition carries the borrower's debit, the
-  // lender's credit and the loan-document update guarded on the turn stamp.
-  // The journal lands all of it exactly once under the per-loan-per-turn key,
-  // so a retried turn can neither charge the borrower twice nor advance the
-  // loan twice, and a crash between money and record is a visible partial.
-  const available = await readBorrowerAvailable(db, loan, currency);
-  const { decision, transition } = loanServiceTransition({
-    loan,
-    borrowerAvailable: available,
-    turn,
-    creditTarget: {
-      collection: creditTarget.collection,
-      filter: creditTarget.filter,
-      path: creditTarget.path,
-      note: creditTarget.note,
-    },
-    bankId: bankCorporationId.toString(),
-    trackInsuranceRecovery,
-  });
-  if (decision.outcome === "closed") {
-    const closed = await settleTransition(db, transition);
-    if (!closed.error && ["applied", "replayed"].includes(closed.status)) await releaseService();
-    return empty;
-  }
-
-  const settled = await settleTransition(db, transition);
-  if (
-    (!settled.error && ["applied", "replayed"].includes(settled.status)) ||
-    (settled.status === "rejected" &&
-      settled.appliedLegs.length === 0 &&
-      settled.appliedProjections.length === 0)
-  )
-    await releaseService();
-  if (settled.status === "rejected") return empty;
-  const moneyLanded =
-    transition.legs.length > 0 && settled.appliedLegs.length === transition.legs.length;
-  const advanced = settled.appliedProjections.length === transition.projections.length;
-
-  if (settled.status === "applied" && moneyLanded && decision.payment > 0) {
-    const borrowerName = await readBorrowerName(db, loan);
-    await emitTx(db, {
-      type: "bank_loan_repayment",
-      turn,
-      createdAt: new Date(),
-      subjectType: loan.borrowerType === "character" ? "character" : "corporation",
-      subjectId: loan.borrowerId,
-      subjectName: borrowerName,
-      amount: -decision.payment,
-      currencyCode: currency,
-      counterpartyType: "corporation",
-      counterpartyId: loan.bankCorporationId,
-      counterpartyName: bankName,
-      meta: { loanId: loan._id.toString(), settlementId: transition.key },
-    });
-  }
-  if (settled.status === "applied" && advanced) {
-    emitBankingAuditEvent(
-      {
-        ...transition.event,
-        turn,
-        outcome: "ok",
-        currency,
-        bankId: bankCorporationId.toString(),
-        settlementId: transition.key,
-      },
-      db
-    );
-  }
-
-  // What this pass may count: the money that actually landed, and the book
-  // movement only when the loan record advanced.
-  const collected = moneyLanded ? decision.payment : 0;
-  return {
-    interestCollected: advanced ? decision.interestPaid : 0,
-    principalRepaid: advanced ? decision.principalPaid : 0,
-    writtenOff: advanced ? decision.writtenOff : 0,
-    bankCredit: collected,
-    totalLoansDelta: advanced ? decision.totalLoansDelta : 0,
-  };
-}
-
-/** Borrower display name for the ledger leg. One read per serviced loan. */
-async function readBorrowerName(db: Db, loan: BankLoan): Promise<string> {
-  if (!loan.borrowerId) return "Borrower";
-  if (loan.borrowerType === "character") {
-    const ch = await db
-      .collection<Character>("characters")
-      .findOne({ _id: loan.borrowerId }, { projection: { name: 1 } });
-    return ch?.name ?? "Borrower";
-  }
-  const corp = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: loan.borrowerId }, { projection: { name: 1 } });
-  return corp?.name ?? "Borrower";
-}
-
-async function readBorrowerAvailable(
-  db: Db,
-  loan: BankLoan,
-  currency: CurrencyCode
-): Promise<number> {
-  if (!loan.borrowerId) return 0;
-  if (loan.borrowerType === "character") {
-    const ch = await db
-      .collection<Character>("characters")
-      .findOne(
-        { _id: loan.borrowerId },
-        { projection: { [`currencyBalances.personal.${currency}`]: 1 } }
-      );
-    return Math.max(0, ch?.currencyBalances?.personal?.[currency] ?? 0);
-  }
-  const corp = await db
-    .collection<Corporation>("corporations")
-    .findOne({ _id: loan.borrowerId }, { projection: { liquidCapital: 1 } });
-  return Math.max(0, corp?.liquidCapital ?? 0);
 }
 
 type NpcBulkState = {

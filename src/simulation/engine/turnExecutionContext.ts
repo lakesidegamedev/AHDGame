@@ -10,6 +10,7 @@ import type {
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { calendarTurn } from "@/lib/utils/gameDate";
 import { computeGameNow } from "@/lib/time/computeGameNow";
+import { nextScheduledTurnAfter, resolveTurnCronMinute } from "@/lib/cron/turnCronMinute";
 import type { Db } from "mongodb";
 import type { TurnExecutionContext } from "@/simulation/engine/types";
 
@@ -45,20 +46,7 @@ export async function buildTurnExecutionContext(input: {
     fastMode: gameState.fastMode,
   });
 
-  const nextTurnTime = new Date(realNow);
-  nextTurnTime.setSeconds(0, 0);
-  if (gameState.fastMode) {
-    const mins = nextTurnTime.getMinutes();
-    if (mins < 30) {
-      nextTurnTime.setMinutes(30);
-    } else {
-      nextTurnTime.setMinutes(0);
-      nextTurnTime.setHours(nextTurnTime.getHours() + 1);
-    }
-  } else {
-    nextTurnTime.setMinutes(0, 0, 0);
-    nextTurnTime.setHours(nextTurnTime.getHours() + 1);
-  }
+  const nextTurnTime = nextScheduledTurnAfter(realNow, resolveTurnCronMinute(), gameState.fastMode);
 
   // Turn-init projections (#2166): the full character/state documents are never
   // needed here. The turn path reads only:

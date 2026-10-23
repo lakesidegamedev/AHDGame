@@ -90,30 +90,88 @@ export async function loadPartyLeaders(
 }
 
 export async function getPartyDetail(db: Db, party: PoliticalParty): Promise<PartyData> {
-  const leaderById = await loadPartyLeaders(db, [
-    party.chairId,
-    party.viceChairId,
-    party.treasurerId,
-    ...(party.campaignerIds ?? []),
+  // Leadership lookup and the turn number are independent reads; issuing them
+  // together removes a round trip from every party hub load (7.3k views/30d).
+  const [leaderById, currentTurn] = await Promise.all([
+    loadPartyLeaders(db, [
+      party.chairId,
+      party.viceChairId,
+      party.treasurerId,
+      ...(party.campaignerIds ?? []),
+    ]),
+    getCurrentTurn(db),
   ]);
   const leader = (id: ObjectId | null | undefined) =>
     id ? (leaderById.get(id.toString()) ?? null) : null;
-  const [chair, viceChair, treasurer, currentTurn] = await Promise.all([
-    Promise.resolve(leader(party.chairId)),
-    Promise.resolve(leader(party.viceChairId)),
-    Promise.resolve(leader(party.treasurerId)),
-    getCurrentTurn(db),
-  ]);
+  const chair = leader(party.chairId);
+  const viceChair = leader(party.viceChairId);
+  const treasurer = leader(party.treasurerId);
+
   const campaigners = (party.campaignerIds ?? [])
     .map((id) => leader(id))
     .filter((c): c is NonNullable<typeof c> => c !== null);
 
   const partyCountry = party.countryId ?? "US";
-  const allMembers = await db
-    .collection<Character>("characters")
-    .find({ party: String(party.sequentialId), countryId: partyCountry })
-    .sort({ name: 1 })
-    .toArray();
+  // Party rosters were read as whole documents: `Character` and `NPP` both
+  // carry fat policy/audit arrays that this page never renders, so a
+  // few-hundred-member party decoded megabytes per view. Project the fields the
+  // roster, influence math and generation estimate actually consume, and read
+  // the roster, the NPP list, the game config and the turnout divisor together
+  // instead of one after another.
+  const [allMembers, npps, gameConfig, regionCount] = await Promise.all([
+    db
+      .collection<Character>("characters")
+      .find(
+        { party: String(party.sequentialId), countryId: partyCountry },
+        {
+          projection: {
+            sequentialId: 1,
+            name: 1,
+            homeState: 1,
+            currentOffice: 1,
+            partyInfluence: 1,
+            userId: 1,
+            donorBaseLevel: 1,
+            politicalInfluence: 1,
+            countryId: 1,
+            "policies.economic": 1,
+            "policies.social": 1,
+          },
+        }
+      )
+      .sort({ name: 1 })
+      .toArray(),
+    db
+      .collection<NPP>("npps")
+      .find(
+        { party: String(party.sequentialId), retiredAt: null, countryId: partyCountry },
+        {
+          projection: {
+            sequentialId: 1,
+            name: 1,
+            homeState: 1,
+            currentOffice: 1,
+            donorBaseLevel: 1,
+            funds: 1,
+            countryId: 1,
+          },
+        }
+      )
+      .sort({ name: 1 })
+      .toArray(),
+    db.collection<GameConfig>("gameConfig").findOne({ _id: "default" }),
+    db.collection("stateDemographicTurnout").countDocuments(
+      partyCountry === DEFAULT_LEGACY_COUNTRY_ID
+        ? {
+            $or: [
+              { countryId: partyCountry },
+              { countryId: null },
+              { countryId: { $exists: false } },
+            ],
+          }
+        : { countryId: partyCountry }
+    ),
+  ]);
 
   const memberUsers =
     allMembers.length > 0
@@ -157,11 +215,6 @@ export async function getPartyDetail(db: Db, party: PoliticalParty): Promise<Par
     partyInfluence: member.partyInfluence ?? 0,
   }));
 
-  const npps = await db
-    .collection<NPP>("npps")
-    .find({ party: String(party.sequentialId), retiredAt: null, countryId: partyCountry })
-    .sort({ name: 1 })
-    .toArray();
   const nppMembers: PartyMember[] = npps.map((npp) => ({
     id: npp._id.toString(),
     sequentialId: npp.sequentialId,
@@ -176,31 +229,37 @@ export async function getPartyDetail(db: Db, party: PoliticalParty): Promise<Par
   const uniqueStates = [
     ...new Set([...members.map((member) => member.homeState), ...npps.map((npp) => npp.homeState)]),
   ];
-  const states =
+  const budgetCollection = await getPartyBudgetCollection();
+  const [states, preset, campaignRates, priceLevel, nationalBudget] = await Promise.all([
     uniqueStates.length > 0
-      ? await db
+      ? db
           .collection<State>("states")
-          .find({ _id: { $in: uniqueStates } })
+          .find({ _id: { $in: uniqueStates } }, { projection: { population: 1, gdp: 1 } })
           .toArray()
-      : [];
+      : Promise.resolve([]),
+    getGameStatePresetOrDefault(db),
+    loadCampaignCurrencyRates(db),
+    loadCampaignPriceLevel(db),
+    findPartyBudgetForScope(budgetCollection, {
+      countryId: party.countryId,
+      partyId: String(party.sequentialId),
+      scope: "national",
+    }),
+  ]);
   const statePopMap = new Map(states.map((state) => [state._id, state.population]));
   // Pass raw state.gdp (undefined when absent → country-average scalar 1.0,
   // matching the turn processor; do NOT coalesce to 0, which clamps to 0.9).
   const stateGdpMap = new Map(states.map((state) => [state._id, state.gdp]));
 
-  const gameConfig = await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" });
   // NPPs only generate/are taxed when the economy is enabled (mirrors
   // processNppFundGeneration); otherwise they contribute $0 to revenue.
   const nppEconomyEnabled = gameConfig?.nppEconomyEnabled !== false;
 
   // GDP-baseline era for income math: the world's reset preset, so historical
   // worlds estimate in their own denomination (issue #798).
-  const preset = await getGameStatePresetOrDefault(db);
   // Campaign-fund estimate is LOCAL at the frozen world-seeded currency basis
   // (mirrors the turn processors) — never live forex. A party is country-scoped,
   // so one rate applies to every member/NPP.
-  const campaignRates = await loadCampaignCurrencyRates(db);
-  const priceLevel = await loadCampaignPriceLevel(db);
   const campaignRate = campaignLocalRate(partyCountry, campaignRates, preset);
   const toLocal = (anchor: number) =>
     campaignAnchorToLocal(anchor * priceLevel, partyCountry, campaignRates, preset);
@@ -263,26 +322,9 @@ export async function getPartyDetail(db: Db, party: PoliticalParty): Promise<Par
     }
   }
 
-  const budgetCollection = await getPartyBudgetCollection();
-  const nationalBudget = await findPartyBudgetForScope(budgetCollection, {
-    countryId: party.countryId,
-    partyId: String(party.sequentialId),
-    scope: "national",
-  });
   // Region count backing the national GOTV/suppression/registration per-state
   // estimates. Must match the turn engine's divisor: turnout docs for this
   // country, counting legacy docs without a countryId as US (ticket #1265).
-  const regionCount = await db.collection("stateDemographicTurnout").countDocuments(
-    partyCountry === DEFAULT_LEGACY_COUNTRY_ID
-      ? {
-          $or: [
-            { countryId: partyCountry },
-            { countryId: null },
-            { countryId: { $exists: false } },
-          ],
-        }
-      : { countryId: partyCountry }
-  );
   const effectiveBudget = getEffectivePartyBudgetSpending(nationalBudget, party.treasury);
   const gotvBudgetPercent = effectiveBudget.gotvBudgetPercent;
   const gotvEstimatedSpend =

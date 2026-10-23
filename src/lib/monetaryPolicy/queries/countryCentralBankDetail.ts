@@ -16,7 +16,7 @@ import {
 import { getEraMonetaryBaseline, getEraTrendGdpGrowth } from "@/lib/constants/monetaryEra";
 import { getNationalDocId } from "@/lib/constants/nationalScope";
 import { getNationalBudgetId } from "@/lib/bonds/sovereign";
-import { getGameState } from "@/lib/gameState";
+import { getGameStateCore } from "@/lib/gameState";
 import { getDb } from "@/lib/mongodb";
 import type {
   CentralBank,
@@ -196,7 +196,7 @@ export async function loadCountryCentralBankDetail(params: {
   }
 
   const [gameState, { bankId, memberCountries, intorgId }] = await Promise.all([
-    getGameState(),
+    getGameStateCore(db),
     getCentralBankScope(db, countryId),
   ]);
   const bank = await db

@@ -7,7 +7,7 @@ import {
   type DefenceContractWindow,
 } from "@/lib/military/defenceContractLimits";
 
-interface DefenceProcurementAllocation {
+export interface DefenceProcurementAllocation {
   _id: string;
   countryId: string;
   windowIndex: number;
@@ -40,6 +40,16 @@ function supplierField(corporationId: string): string {
   return `supplierAmounts.${corporationId}`;
 }
 
+/** The current quota window's allocation document, for callers quoting many suppliers at once. */
+export async function getDefenceContractAllocation(
+  db: Db,
+  countryId: string,
+  currentTurn: number
+): Promise<DefenceProcurementAllocation | null> {
+  const window = defenceContractWindow(countryId, currentTurn);
+  return allocations(db).findOne({ _id: window.id });
+}
+
 export async function getDefenceContractAvailability(
   db: Db,
   input: {
@@ -50,12 +60,21 @@ export async function getDefenceContractAvailability(
     pricePerLot: number;
     /** National Corporations skip the private anti-dumping cap (ticket #1134). */
     stateOwned?: boolean;
+    /**
+     * Already-loaded allocation document. The cabinet briefing quotes every
+     * supplier against the same window, and reading it once here replaces one
+     * identical findOne per supplier.
+     */
+    allocation?: DefenceProcurementAllocation | null;
   }
 ): Promise<DefenceContractAvailability> {
   const window = defenceContractWindow(input.countryId, input.currentTurn);
   const caps = defenceContractLotCaps(input.defenseLine, input.pricePerLot);
   const share = defenceSupplierCapShare(input.stateOwned === true);
-  const allocation = await allocations(db).findOne({ _id: window.id });
+  const allocation =
+    input.allocation !== undefined
+      ? input.allocation
+      : await allocations(db).findOne({ _id: window.id });
   const countryAmount = allocation?.countryAmount ?? 0;
   const supplierAmount = allocation?.supplierAmounts?.[input.corporationId] ?? 0;
   const countryRemainingAmount = Math.max(0, caps.procurementNotional - countryAmount);
