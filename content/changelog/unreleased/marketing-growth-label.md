@@ -6,7 +6,7 @@ summary: >-
   can be compared with the net change shown on the company page.
 tags: [corporations, ui]
 badges: [minor]
-areas: [corporations]
+areas: [frontend]
 ---
 
 ## What changed
