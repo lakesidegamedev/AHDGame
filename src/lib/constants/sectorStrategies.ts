@@ -130,8 +130,11 @@ export function getMediaOperatingModelStrategies(sectorType: string): SectorStra
 
 /**
  * Look up a strategy by sector type and strategy ID.
- * Falls back to the sector's first strategy if the strategy ID is unknown.
- * Unknown persisted sector types use an inert strategy until repaired.
+ *
+ * An unknown ID falls back to the sector's named `standard` recipe, never to
+ * `strategies[0]`: several catalogs prepend future recipes, so index 0 can be a
+ * locked 2019 recipe and an obsolete persisted ID would silently become one
+ * (#4244). Unknown persisted sector types use an inert strategy until repaired.
  */
 function strategyForPreset(
   sectorType: string,
@@ -170,7 +173,8 @@ export function getStrategy(
   const strategy =
     strategies.find((s) => s.id === strategyId) ??
     getMediaOperatingModelStrategies(sectorType).find((s) => s.id === strategyId) ??
-    strategies[0];
+    strategies.find((s) => s.id === "standard") ??
+    UNKNOWN_SECTOR_STRATEGY;
   const resolved = strategyForPreset(sectorType, strategy, preset);
   if (!options?.advertisingInput) return resolved;
   const overlay =
