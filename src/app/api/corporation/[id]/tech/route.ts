@@ -53,6 +53,7 @@ import {
   describeTechEffect,
   techEffectCategory,
   TECH_INPUT_EFFICIENCY_CAP,
+  CORP_LANE_EFFECT_SCALE,
   TECH_PLANT_OUTPUT_CAP,
   TECH_NODE_CASH_REVENUE_FRACTION,
   type TechCorpView,
@@ -205,6 +206,15 @@ export async function GET(_request: Request, { params }: RouteParams) {
           cashCost: redact ? null : cashCost,
           valuePerTurn: redact || valuePerTurn <= 0 ? null : Math.round(valuePerTurn),
           paybackTurns: redact ? null : paybackTurns,
+          inputEfficiencyContributionPct: redact
+            ? null
+            : Math.round(
+                node.effects
+                  .filter((effect) => effect.kind === "inputEfficiency")
+                  .reduce((sum, effect) => sum + effect.pct, 0) *
+                  (lane === "generic" ? CORP_LANE_EFFECT_SCALE : 1) *
+                  1000
+              ) / 10,
           effects: node.effects.map((e) => ({
             category: techEffectCategory(e.kind),
             label: describeTechEffect(e),
