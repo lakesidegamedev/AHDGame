@@ -93,9 +93,41 @@ export type ExecuteCharacterActionResult =
  * Execute a political action (optionally batched) against a character and apply
  * its effects. Mirrors the historical route loop exactly; see file header.
  */
+type ActionTiming = {
+  dbReadMs: number;
+  dbUpdateMs: number;
+  actionLogMs: number;
+  completedCount: number;
+};
+
 export async function executeCharacterAction(
   db: Db,
   params: ExecuteCharacterActionParams
+): Promise<ExecuteCharacterActionResult> {
+  const startedAt = Date.now();
+  const timing: ActionTiming = { dbReadMs: 0, dbUpdateMs: 0, actionLogMs: 0, completedCount: 0 };
+  let result: ExecuteCharacterActionResult | undefined;
+  try {
+    result = await executeCharacterActionImpl(db, params, timing);
+    return result;
+  } finally {
+    console.info("[action-core-timing]", {
+      actionType: params.actionType,
+      requestedCount: params.count ?? 1,
+      completedCount: timing.completedCount,
+      durationMs: Date.now() - startedAt,
+      dbReadMs: timing.dbReadMs,
+      dbUpdateMs: timing.dbUpdateMs,
+      actionLogMs: timing.actionLogMs,
+      result: result ? (result.ok ? "success" : "rejected") : "error",
+    });
+  }
+}
+
+async function executeCharacterActionImpl(
+  db: Db,
+  params: ExecuteCharacterActionParams,
+  timing: ActionTiming
 ): Promise<ExecuteCharacterActionResult> {
   const {
     character,
@@ -112,7 +144,10 @@ export async function executeCharacterAction(
   if (!action) return { ok: false, error: "Invalid action type", status: 400 };
 
   const forexEnabled = await isForexEnabled();
+  let dbStartedAt = Date.now();
   const gameState = await getGameState();
+  timing.dbReadMs += Date.now() - dbStartedAt;
+  dbStartedAt = Date.now();
   const gameConfig = await db.collection<GameConfig>("gameConfig").findOne(
     { _id: "default" },
     {
@@ -123,6 +158,7 @@ export async function executeCharacterAction(
       },
     }
   );
+  timing.dbReadMs += Date.now() - dbStartedAt;
   const priceLevel = resolveCampaignPriceLevel(
     gameConfig?.campaignEraPriceLevelEnabled,
     gameState?.preset
@@ -141,7 +177,9 @@ export async function executeCharacterAction(
     return { ok: false, error: "The game is currently paused.", status: 409 };
   }
 
+  dbStartedAt = Date.now();
   const campaignRates = await loadCampaignCurrencyRates(db);
+  timing.dbReadMs += Date.now() - dbStartedAt;
   const homeCurrency = getHomeCurrency(character, gameState?.preset);
   // Campaign funds are DECOUPLED from live forex: costs/effects convert anchor →
   // local at the frozen world-seeded currency basis (US ×1.0), never the live
@@ -163,9 +201,11 @@ export async function executeCharacterAction(
 
   let state: State | null = null;
   if (stateId) {
+    dbStartedAt = Date.now();
     state = await db
       .collection<State>("states")
       .findOne({ _id: stateId, countryId: character.countryId });
+    timing.dbReadMs += Date.now() - dbStartedAt;
     if (action.requiresState && !state) {
       return { ok: false, error: "Invalid state", status: 400 };
     }
@@ -193,8 +233,10 @@ export async function executeCharacterAction(
   let stoppedReason: string | null = null;
 
   for (let i = 0; i < count; i++) {
+    dbStartedAt = Date.now();
     const current =
       i === 0 ? character : await db.collection<Character>("characters").findOne(characterQuery);
+    if (i > 0) timing.dbReadMs += Date.now() - dbStartedAt;
 
     if (!current) {
       if (completed > 0) {
@@ -474,9 +516,11 @@ export async function executeCharacterAction(
       };
     }
 
+    dbStartedAt = Date.now();
     const updated = await db
       .collection<Character>("characters")
       .findOneAndUpdate(updateFilter, [{ $set: pipelineSet }], { returnDocument: "after" });
+    timing.dbUpdateMs += Date.now() - dbStartedAt;
     if (!updated) {
       const error =
         "Your available resources changed before the action completed. Please try again.";
@@ -488,6 +532,7 @@ export async function executeCharacterAction(
     }
 
     completed += 1;
+    timing.completedCount = completed;
     updatedCharacter = updated ?? null;
     lastMessage = effect.message;
 
@@ -524,6 +569,7 @@ export async function executeCharacterAction(
       const balanceAnchor = forexEnabled ? balanceLocal / campaignRate : balanceLocal;
       const newFunds = balanceAnchor + actionFundsChange;
       const userOid = actor.userId;
+      dbStartedAt = Date.now();
       const [actionLogResult] = await Promise.all([
         db.collection("actionLogs").insertOne(actionLog),
         checkActionAchievements(userOid, current._id, actionType, gameState?.currentTurn).catch(
@@ -534,6 +580,7 @@ export async function executeCharacterAction(
         ),
       ]);
 
+      timing.actionLogMs += Date.now() - dbStartedAt;
       auditEntries.push({
         source: "api",
         action: `character.${actionType}`,

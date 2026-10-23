@@ -29,6 +29,7 @@ import type {
 } from "@/lib/db/types";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { computeUnownedHeadroomUnits } from "@/lib/market/unownedHeadroom";
+import { commodityMarketScope } from "@/lib/market/rules/commodityMarketScope";
 import { getStrategyForOperatingModel } from "@/lib/constants/sectorStrategies";
 import {
   CAPACITY_BUILD_TURNS,
@@ -51,6 +52,7 @@ import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 
 import type { CountryId } from "@/lib/constants/countries";
+import type { CommodityType } from "@/lib/constants/commodities";
 import { calculateSplitCostAnchor } from "@/lib/corporations/marketActionCosts";
 import { loadCommandEconomyBlockedCountries } from "@/lib/economy/queries/commandEconomyMarketGate";
 import { resolvePresetIdFromGameState } from "@/lib/world/countryReadinessContract";
@@ -174,13 +176,23 @@ export async function GET(request: Request, { params }: RouteParams) {
       getStrategyForOperatingModel(sectorType, "standard", industryModel, mediaDiscriminator)
         .supply ?? {};
     const buildRoom = plantsMode ? await loadBuildRoomContext(db) : null;
+    const positiveOutputCommodities = Object.entries(supplyMix).filter(([, rate]) => rate > 0);
+    const countrySharedDemand =
+      plantsMode &&
+      positiveOutputCommodities.length > 0 &&
+      positiveOutputCommodities.every(
+        ([commodity]) => commodityMarketScope(commodity as CommodityType) === "reachable"
+      );
     const demandGapUnitsByState = new Map<string, number>();
+    const demandGapUnitsByCountry = new Map<string, number>();
     const demandGapUnitsFor = (stateId: string, countryId: string): number => {
       if (!buildRoom) return Number.POSITIVE_INFINITY;
-      const cached = demandGapUnitsByState.get(stateId);
+      const cache = countrySharedDemand ? demandGapUnitsByCountry : demandGapUnitsByState;
+      const key = countrySharedDemand ? countryId : stateId;
+      const cached = cache.get(key);
       if (cached !== undefined) return cached;
       const gap = buildRoom.demandGapUnits(supplyMix, stateId, countryId);
-      demandGapUnitsByState.set(stateId, gap);
+      cache.set(key, gap);
       return gap;
     };
 
@@ -469,6 +481,15 @@ export async function GET(request: Request, { params }: RouteParams) {
       if (queued > 0)
         queuedUnitsByState.set(s.stateId, (queuedUnitsByState.get(s.stateId) ?? 0) + queued);
     }
+    const queuedUnitsByCountry = new Map<string, number>();
+    if (countrySharedDemand) {
+      for (const [stateId, queued] of queuedUnitsByState) {
+        const countryId = stateMap.get(stateId)?.countryId;
+        if (countryId)
+          queuedUnitsByCountry.set(countryId, (queuedUnitsByCountry.get(countryId) ?? 0) + queued);
+      }
+    }
+    const countryDemandEstimateByCountry = new Map<string, number>();
     const siblingsByState = new Map<string, typeof siblingCorpSectors>();
     for (const s of siblingCorpSectors) {
       if (!siblingsByState.has(s.stateId)) siblingsByState.set(s.stateId, []);
@@ -514,8 +535,19 @@ export async function GET(request: Request, { params }: RouteParams) {
         // already under construction for it. The unowned pool is legacy market
         // share, not physical demand, so it no longer caps this figure (a
         // market can be short with an empty pool).
+        const countryDemandEstimate =
+          countrySharedDemand && poolHeadroomUnits != null
+            ? (countryDemandEstimateByCountry.get(state.countryId) ??
+              buildRoomUnits(
+                demandGapUnitsFor(state._id, state.countryId),
+                queuedUnitsByCountry.get(state.countryId) ?? 0
+              ))
+            : null;
+        if (countryDemandEstimate != null && !countryDemandEstimateByCountry.has(state.countryId)) {
+          countryDemandEstimateByCountry.set(state.countryId, countryDemandEstimate);
+        }
         const headroomUnits =
-          poolHeadroomUnits != null
+          poolHeadroomUnits != null && !countrySharedDemand
             ? buildRoomUnits(
                 demandGapUnitsFor(state._id, state.countryId),
                 queuedUnitsByState.get(state._id) ?? 0
@@ -569,7 +601,7 @@ export async function GET(request: Request, { params }: RouteParams) {
           splitCost,
           estimatedRevenueCapture,
           // Plants-tier fields; null in every other world.
-          headroomUnits,
+          ...(countrySharedDemand ? {} : { headroomUnits }),
           starterBuildCostAnchor:
             starterBuildCostAnchor == null ? null : Math.round(starterBuildCostAnchor),
           foundingTotalAnchor,
@@ -599,13 +631,23 @@ export async function GET(request: Request, { params }: RouteParams) {
               // sector. Keep affordable markets first, then compare the unmet
               // demand available to the first facility.
               Number(b.canAfford) - Number(a.canAfford) ||
-              (b.headroomUnits ?? 0) - (a.headroomUnits ?? 0)
+              (countrySharedDemand
+                ? (countryDemandEstimateByCountry.get(b.countryId) ?? 0) -
+                  (countryDemandEstimateByCountry.get(a.countryId) ?? 0)
+                : (b.headroomUnits ?? 0) - (a.headroomUnits ?? 0))
             : b.estimatedRevenueCapture - a.estimatedRevenueCapture
       );
     const suggestions = pinStateInTopSuggestions(ranked, pinStateId, 5);
 
     return NextResponse.json({
       suggestions,
+      countrySharedDemand,
+      countryDemandEstimates: countrySharedDemand
+        ? [...countryDemandEstimateByCountry].map(([countryId, headroomUnits]) => ({
+            countryId,
+            headroomUnits,
+          }))
+        : [],
       availableCountries,
       liquidCapital: liquidCapitalAnchor,
       liquidCurrencyCode,

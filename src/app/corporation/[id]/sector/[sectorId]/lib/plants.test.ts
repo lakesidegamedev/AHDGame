@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { idleCauseMeta } from "./plants";
+import { idleCauseMeta, TONE_FILL } from "./plants";
 
 describe("bank capacity explanation", () => {
   it("explains the configured branch share and its deposit ceiling benefit", () => {
@@ -18,5 +18,15 @@ describe("staffing idle explanation", () => {
     expect(staffing.label).toBe("Short of workers");
     expect(staffing.tone).toBe("warning");
     expect(staffing.help.toLowerCase()).toContain("workers");
+  });
+});
+
+describe("idle cause meter colors", () => {
+  it("distinguishes input shortages from worker shortages without changing their warning severity", () => {
+    const causes = idleCauseMeta("media");
+
+    expect(causes.inputs.tone).toBe("warning");
+    expect(causes.staffing.tone).toBe("warning");
+    expect(TONE_FILL.inputs).not.toBe(TONE_FILL.staffing);
   });
 });
