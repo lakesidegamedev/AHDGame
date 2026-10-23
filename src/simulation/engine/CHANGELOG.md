@@ -146,9 +146,30 @@ one transaction and skipping the per-leg guards inside it. That is a project of
 its own with its own parity harness, not a read-batching change, and it is the
 reason this entry ships a measured 0.3% rather than a claimed 5x.
 
-The next-largest items after the journal are `nppCorpDecisions` (CPU, not round
-trips: 116s for 218 commands), `developmentCash` (3,073 commands, also journal),
-and `pass3-rebalance` (3,056, fund trades and their journal rows).
+The next-largest items after the journal are `developmentCash` (3,073 commands,
+also journal) and `pass3-rebalance` (3,056, fund trades and their journal rows).
+
+### CPU, measured rather than inferred
+
+A CPU profile of one v1 turn on the same copy (493s sampled, 31.6% idle, 10.8%
+garbage collection) puts the on-CPU cost here:
+
+| inclusive CPU | site                                                                                                                                     |
+| ------------: | ---------------------------------------------------------------------------------------------------------------------------------------- |
+|         35.2s | `runProducerMarketShadowPhase` (net: this copy is not on the funded producer path, so it ran; it is telemetry and changes no game state) |
+|         22.3s | `processSectors`                                                                                                                         |
+|         11.9s | `runClearingPrePass`                                                                                                                     |
+|          9.5s | `processNppCorporationDecisions`                                                                                                         |
+|          5.3s | `makeNppCorpDecision`                                                                                                                    |
+|          2.6s | `buildCorporationLookups`                                                                                                                |
+|           55s | BSON deserialisation (1.29GB returned this turn)                                                                                         |
+|           53s | garbage collection                                                                                                                       |
+
+This is why the phase timer's `nppCorpDecisions` line (116s locally, 159s in
+production) is not a useful ranking: that bracket also covers the shadow market
+and its await time, while the decision brain itself is 9.5s of CPU on 11.7k
+sectors. The next change should target the shadow's placement in the bracket and
+the document decode/GC cost, not more batching of the NPP decision loop.
 
 ## Reproducing
 
