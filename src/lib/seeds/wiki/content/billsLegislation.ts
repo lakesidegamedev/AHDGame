@@ -100,7 +100,7 @@ Bills move through a strict status pipeline managed automatically by the turn pr
 legislature
 \`\`\`
 
-*The Senate bills tab. The tabs separate all bills from those still voting, those awaiting presidential action, signed bills, and failed bills. Each card shows the live count and the closing countdown.*
+*The House bills tab. The tabs separate all bills from those still voting, those awaiting presidential action, signed bills, and failed bills. Each card shows the live count and the closing countdown.*
 
 | Status | Meaning |
 | --- | --- |
