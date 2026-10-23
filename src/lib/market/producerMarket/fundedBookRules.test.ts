@@ -9,11 +9,11 @@ import {
 } from "./fundedBookRules";
 
 const countries = ["US", "UK"] as CountryId[];
-const commodities = ["gas", "food"] as CommodityType[];
+const commodities = ["natural_gas", "food"] as CommodityType[];
 
 const row = (over: Partial<FundedCountryBookRow> = {}): FundedCountryBookRow => ({
   countryId: "US",
-  commodity: "gas",
+  commodity: "natural_gas",
   supply: 0,
   demand: 0,
   imports: 0,
@@ -31,7 +31,7 @@ describe("funded reachable books", () => {
       countries,
       commodities
     );
-    expect(books.get("US")!.get("gas")).toMatchObject({
+    expect(books.get("US")!.get("natural_gas")).toMatchObject({
       supply: 100,
       demand: 150,
       domesticDemand: 200,
@@ -41,7 +41,7 @@ describe("funded reachable books", () => {
       untradedSupply: 0,
       unmetForeignDemand: 0,
     });
-    expect(books.get("UK")!.get("gas")).toMatchObject({
+    expect(books.get("UK")!.get("natural_gas")).toMatchObject({
       supply: 0,
       demand: 40,
       domesticDemand: 40,
@@ -72,7 +72,7 @@ describe("funded reachable books", () => {
       countries,
       commodities
     );
-    expect(books.get("US")!.has("gas")).toBe(false);
+    expect(books.get("US")!.has("natural_gas")).toBe(false);
     expect(books.get("US")!.has("food")).toBe(false);
   });
 
@@ -82,7 +82,7 @@ describe("funded reachable books", () => {
       countries,
       commodities
     );
-    expect(books.get("US")!.get("gas")).toMatchObject({ demand: 220, domesticDemand: 100 });
+    expect(books.get("US")!.get("natural_gas")).toMatchObject({ demand: 220, domesticDemand: 100 });
   });
 
   it("keeps the modelled book until the stage is on and the funded market published rows", () => {
@@ -103,13 +103,13 @@ describe("funded reachable books", () => {
   it("sorts rows deterministically by commodity then country", () => {
     const rows = [
       row({ countryId: "UK", commodity: "food" }),
-      row({ countryId: "US", commodity: "gas" }),
+      row({ countryId: "US", commodity: "natural_gas" }),
       row({ countryId: "US", commodity: "food" }),
     ];
     expect(sortFundedCountryBookRows(rows).map((r) => `${r.commodity}:${r.countryId}`)).toEqual([
       "food:UK",
       "food:US",
-      "gas:US",
+      "natural_gas:US",
     ]);
   });
 });
