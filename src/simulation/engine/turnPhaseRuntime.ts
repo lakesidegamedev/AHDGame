@@ -147,6 +147,9 @@ export function createTurnPhaseRuntime(input: {
     onPhaseCompleted,
   } = input;
   const resumeOutcomes = new Map<string, ResumeResultOutcome>();
+  // Phases that threw or timed out in this process (a timed-out phase is
+  // returned only after its function has stopped).
+  const failedPhases = new Set<string>();
   const turn = input.turn ?? 0;
   let lastFlushAtMs = 0;
   let nextInvocationId = 0;
@@ -556,6 +559,7 @@ export function createTurnPhaseRuntime(input: {
         drained ? peekPhaseSubsteps(name) : takePhaseSubsteps(name)
       );
       warnings.push(`${name}: ${message}`);
+      failedPhases.add(name);
       if (drained) {
         await drained;
         // The prompt timeout marker and final drained snapshot both replace
@@ -594,5 +598,6 @@ export function createTurnPhaseRuntime(input: {
     drainTimedOutPhases: waitForDrainingPhases,
     requirePhaseResult,
     resumeResultOutcome: (phase: string) => resumeOutcomes.get(phase) ?? null,
+    phaseFailed: (phase: string) => failedPhases.has(phase),
   };
 }

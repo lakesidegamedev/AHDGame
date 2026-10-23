@@ -47,6 +47,8 @@ export interface TurnPhaseRuntime {
   requirePhaseResult<T>(phase: string, result: T | null, dependent: string): T;
   /** How a crash resume answered a result-carrying phase; null when it ran normally. */
   resumeResultOutcome(phase: string): "restored" | "missing" | "interrupted" | null;
+  /** True when the phase threw or timed out in this process and has stopped. */
+  phaseFailed?(phase: string): boolean;
 }
 
 export interface CompletedTurnPhaseObservation {
