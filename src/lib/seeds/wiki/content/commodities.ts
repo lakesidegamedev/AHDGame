@@ -1,8 +1,8 @@
 export const commoditiesContent = `# Commodities
 
-The commodity market tracks 28 raw materials and services that flow between corporate sectors. Commodity prices shift each turn based on supply and demand from all active corporations. These prices directly affect corporate profit margins, sometimes dramatically.
+The commodity market tracks **27** raw materials and services that flow between corporate sectors. Commodity prices shift each turn based on supply and demand from all active corporations. These prices directly affect corporate profit margins, sometimes dramatically.
 
-## The 28 commodities
+## The 27 commodities
 
 | Commodity | Typical suppliers | Typical buyers |
 | --- | --- | --- |
@@ -33,9 +33,10 @@ The commodity market tracks 28 raw materials and services that flow between corp
 | Ordnance & Weapons Systems | Defense | Extraction focused strategies (mining explosives) |
 | Plastics & Polymers | Chemical Industries (all strategies co-produce; Plastics strategy maximises output) | Manufacturing, Healthcare, Agriculture, Automobiles, Construction, Retail |
 | **Network Services** | **Telecommunications (all strategies)** | (macro demand from GDP: broadband/connectivity) |
-| **Entertainment Services** | **Entertainment (all strategies)** | (macro demand from GDP: leisure spending) |
 
 Copper is not a standalone commodity: its market was merged into Rare Earth Minerals, which now covers both and is priced as a demand-weighted blend of the two.
+
+Entertainment Services was retired as a separate commodity. Entertainment companies still operate as media companies and still supply advertising, but there is no separate entertainment commodity to build a strategy around.
 
 ## How prices work
 
@@ -253,18 +254,74 @@ ceiling; it does not raise that ceiling. Prospecting and corporate R&D can add
 capacity. These multipliers are applied before prices and margin modifiers are
 computed.
 
-## Viewing commodity data
+## Reading a commodity page
 
-From the Commodity pages (/commodity/[type]), you can see:
-- Current price and price history chart
-- Global supply vs. demand breakdown
-- Which sector types are the main suppliers and buyers
+\`\`\`guide-screenshot
+commodities-energy
+\`\`\`
+
+*The Electricity page. The header gives price, rolling one-year change, global supply, global demand, and the balance. The panels below break the balance into cleared, unmet, and surplus volume.*
+
+Read the page from top to bottom. Do not start with the price chart.
+
+1. **Choose the market scope.** **Global** is the world market. A country exchange shows that country's national price and its own balance. The same commodity can be short globally and long in one country.
+2. **Compare price with base.** The percentage under the price is the move from the commodity's base price. A high price is only meaningful next to supply and demand.
+3. **Read the balance.** Supply, demand, and the balance tell you whether the market is short or long right now. A positive balance is a surplus; a negative balance is a shortage.
+4. **Read the raw D/S ratio.** This is the number the price and margin curves use. Below 1 is oversupply, above 1 is shortage.
+5. **Read the pooled ledger.** Cleared, unmet, and surplus volume tell you whether the imbalance actually traded or merely sat there. Unmet demand with a high price is a real shortage. Surplus with a high price is a stale price or a storage problem.
+6. **Read the price history last.** A one-turn spike is noise. A persistent trend is a build signal. Price history is retained for **5 game years** (240 turns) and pruned automatically.
+
+| Field | What it means | What to do with it |
+| --- | --- | --- |
+| Market price | Current clearing price, in the world's local currency. | Compare with base and with your input costs. |
+| Rolling 1Y | Change over the last 48 turns. | Tells you whether the move is new or a trend. |
+| Global supply / demand | Units offered and units wanted per day. | The balance is the first signal. |
+| Balance | Surplus or shortage. | A shortage rewards sellers; a surplus rewards buyers. |
+| Raw D/S | Demand divided by supply before the soft-knee. | Above 1 means shortage; below 1 means oversupply. |
+| Pooled ledger | Cleared, unmet, and surplus units. | Shows whether the market actually cleared. |
+| Price chart | Price, supply, and demand history. | Use it to separate a spike from a trend. |
 
 ![The Freight and Transportation commodity page showing price, supply, demand, market flows, and price history](/static/wiki/player-guides/freight-market.png)
 
-Read the page from top to bottom. First choose the market scope: Global or a country exchange. Then compare supply with demand, check how much volume cleared or stayed unmet, and only then use the price chart to decide whether the imbalance is new or persistent. A high price by itself is not a build signal if supply already exceeds demand.
+*Freight in shortage. The price is above base, the market is undersupplied, and the flows show unmet demand. That is a build signal for logistics capacity, not for a freight buyer.*
 
-Price history is retained for **5 game years** (240 turns) and pruned automatically after that.
+## Storage and spoilage
+
+Storable commodities accumulate stock when production exceeds sales and draw down when demand exceeds what producers delivered. The pooled ledger shows stock and days of cover. Non-storable goods do not store at all.
+
+| Goods | Per-turn loss | What it means |
+| --- | ---: | --- |
+| Services and utilities: energy, freight, advertising, construction, healthcare, real estate, financial, consulting, network, retail | 100% | Nothing carries over. Produce what clears this turn. |
+| Food | 4% | Short shelf life. Do not build for a glut. |
+| Pharmaceuticals, natural gas | 1% | Small carry cost. |
+| Electronics, chemicals, fertilizers | 0.5% | Obsolescence or handling loss. |
+| Vehicles, timber | 0.3% | Lot depreciation and degrade. |
+| Steel, building materials, ordnance, plastics | 0.2% | Cheap to hold, but not free. |
+| Iron, coal, oil, rare earth | 0.1% | Cheapest to hold. |
+| Software | 0% | Licences, not crates. |
+
+Stock above a very large cover threshold can spoil faster in worlds that enable the legacy-overhang cap. The point for a player is simple: a commodity that stores well can be held through a glut; a service cannot.
+
+## Worked example: a steel shortage
+
+Suppose steel demand is twice supply, so the raw D/S ratio is 2.0.
+
+- A **buyer** that consumes steel at rate 1.0 sees an input-cost modifier of roughly **-27.7 margin points**.
+- A **seller** that produces steel sees an output bonus of roughly **+27.7 margin points**.
+- If the seller's realized price is also above base, price realization adds revenue on top. A 2x price gives a realization factor of about **1.41x**, capped at 1.5x.
+
+That is why vertical integration works: the same shortage that hurts a steel-consuming manufacturer helps a steel-producing extraction sector. It is also why a shortage is not automatically a build signal. If supply is already rising and the price is near the top of its run, you may be buying capacity at the peak.
+
+## Before you build into a shortage
+
+A shortage is a signal, not an instruction. Run these six checks before you commit capital.
+
+1. **Is the shortage real?** Raw D/S above 1 with unmet demand in the ledger is real. A high price with a surplus in the ledger is not.
+2. **Is it new?** Check the one-year chart. A spike that is already fading is a bad entry.
+3. **Can you produce the right output?** The sector must have a strategy that supplies the scarce commodity at a useful rate. A diversified extraction sector produces a little of everything; a focused strategy produces three to five times more of one resource.
+4. **What are your inputs?** A steel shortage may make a steel plant profitable, but it also raises input costs for anything that consumes steel. Check the margin stack, not just the output price.
+5. **How long until your capacity arrives?** New plants arrive on a build delay. By the time your capacity lands, the shortage may have cleared. Short, sharp shortages reward existing capacity, not new construction.
+6. **Who else is building?** If every player reads the same signal, the next wave of capacity turns the shortage into a glut. That is the commodity cycle. Enter early or stay small.
 
 ## How commodity prices affect your corporation
 

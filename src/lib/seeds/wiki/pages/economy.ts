@@ -40,13 +40,13 @@ export const economyPages: readonly WikiSeedPage[] = [
     slug: "corporations",
     title: "Corporations",
     description:
-      "How to found and run a corporation: sectors as owned plants, revenue, profit margins, splits and attacks, and political interactions.",
+      "How to found and run a corporation: legal structure, sectors as owned plants, revenue, margins, size costs, antitrust, subsidiaries, taxes, and political interactions.",
     content: corporationsContent,
     category: "economy",
     featured: true,
     difficulty: "intermediate",
     contentType: "guide",
-    estimatedReadTime: 11,
+    estimatedReadTime: 14,
     designDocUrl: "design/corporations.html",
   },
   {
@@ -164,13 +164,13 @@ export const economyPages: readonly WikiSeedPage[] = [
     slug: "commodities",
     title: "Commodities",
     description:
-      "The 28-commodity market: supply, demand, dynamic pricing, three-tier margin blends, and how shortages affect corporate margins.",
+      "The 27-commodity market: supply, demand, dynamic pricing, three-tier margin blends, storage, and how shortages affect corporate margins.",
     content: commoditiesContent,
     category: "commodities",
     extraTags: ["economy", "prices", "supply"],
     difficulty: "intermediate",
     contentType: "reference",
-    estimatedReadTime: 8,
+    estimatedReadTime: 13,
   },
   {
     slug: "household-economy",
@@ -282,13 +282,13 @@ export const economyPages: readonly WikiSeedPage[] = [
     slug: "central-banks",
     title: "Central Banks",
     description:
-      "The Central Bank Chair position, prime rate mechanics, and how interest rates ripple through the entire economy.",
+      "The Central Bank Chair position, prime rate mechanics, the policy cockpit, rate decisions, scrutiny, FX defense, and how interest rates ripple through the economy.",
     content: centralBanksContent,
     category: "economy",
     extraTags: ["fed", "prime-rate", "monetary"],
     difficulty: "advanced",
     contentType: "guide",
-    estimatedReadTime: 8,
+    estimatedReadTime: 11,
   },
   {
     slug: "fomc",

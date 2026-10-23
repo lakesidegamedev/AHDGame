@@ -4,22 +4,16 @@ Most laws in A House Divided start as bills drafted by sitting national legislat
 
 ## Who can propose bills
 
-| Country | Eligible legislators |
+The general rule: any sitting member of a chamber that can originate the bill may propose it. The bill composer only offers the chambers your country actually has. If a chamber is appointed, such as the Bundesrat or the House of Lords, players cannot introduce there; the elected chamber does the work.
+
+| Scope | Who can propose |
 | --- | --- |
-| US | Any sitting House or Senate member |
-| UK | Any sitting Commons member |
-| JP | Any sitting Shūgiin or Sangiin member |
-| DE | Any sitting Bundestag member |
-| IE | Any sitting Dáil member |
-| BR | Any sitting Chamber of Deputies or Senate member |
-| NG | Any sitting House or Senate member |
-| CN | Any sitting NPC delegate whose party is not banned |
-| RU | Any sitting Supreme Soviet deputy whose party is not banned |
-| DD | Any sitting Volkskammer deputy whose party is not banned |
-
-Countries nobody plays are not idle: their autonomous governments sponsor and move national bills through the full lifecycle too (France, Italy, Spain, Sweden, Turkey, Austria, Finland, Greece, Brazil and Nigeria included).
-
-Admins can propose bills from any country at any time and are exempt from all proposal costs.
+| National, lower chamber | Any sitting member of the House, Commons, Shūgiin, Bundestag, Dáil, Chamber of Deputies, NPC, Supreme Soviet, Volkskammer, or the country's equivalent. |
+| National, upper chamber | Any sitting member of the Senate, Sangiin, or the country's elected upper house, where the constitution lets that chamber originate bills. |
+| State or regional | Any sitting member of that state's legislature. State bills use the same composer, but the state governor signs or auto-signs them. |
+| Restricted systems | China, Russia, and East Germany require the delegate's party to be legal. A banned party's delegates cannot propose. |
+| Unplayed countries | The autonomous government sponsors and moves national bills through the full lifecycle, so the country is not frozen. |
+| Admins | Admins can propose from any country and are exempt from proposal costs. |
 
 ## Bill structure
 
@@ -48,6 +42,21 @@ Bills can contain the following kinds of provisions:
 14. **Join-conflict provisions**: created from a passed international-organization resolution, not from the ordinary bill composer. Autonomous governments file and ratify these themselves.
 15. **Budget bills** (UK): the Chancellor's annual Budget bundles real tax rates and statutory programme levels into one Commons confidence vote, sharing the same fiscal ledger as ordinary Acts, so a later Act or a later Budget controls the setting. If no Chancellor is appointed, the Prime Minister may table it.
 16. **Redistricting laws** (US states): the State Redistricting Authority, District Compactness and Electoral Fairness Acts, proposable in state legislatures. See [US House Redistricting](/wiki/us-house-redistricting).
+17. **Competition Act provisions**: set the country's merger-review threshold and whether the authority may order breakups.
+18. **Subsidiary Limits Act provisions**: cap how many subsidiaries one corporate group may run in the country.
+19. **Foreign Investment Act provisions**: screen, cap, or ban foreign-controlled ownership.
+
+The last three are national-only economic bills. They change a mechanical law level rather than a metric, and they are available in every era.
+
+### The three economic laws
+
+| Law | Level 0 | Level 1 | Level 2 | Level 3 | Level 4 |
+| --- | --- | --- | --- | --- | --- |
+| **Competition Act** | No review | Review at 75% of a national industry | Review at 60% | Review at 50%, breakups allowed | Review at 40%, breakups allowed |
+| **Subsidiary Limits Act** | No limit | 12 subsidiaries | 8 subsidiaries | 5 subsidiaries | 3 subsidiaries |
+| **Foreign Investment Act** | Open | Screening for new foreign-controlled subsidiaries and acquisitions | Foreign groups capped at 25% of a national industry | Capped at 10% | Foreign-controlled subsidiaries banned |
+
+A group caught by a tightened subsidiary or foreign-investment limit has **48 turns** to sell or spin off the excess. After that the excess is sold at auction. A competition breakup case stays open for **six turns** while the authority decides whether to order a sale or dismiss it. See [Corporations](/wiki/corporations#merger-review) for how the review works in practice.
 
 ### Proposal costs
 
@@ -87,6 +96,12 @@ The system enforces several hard constraints on bill proposals:
 
 Bills move through a strict status pipeline managed automatically by the turn processor each hour.
 
+\`\`\`guide-screenshot
+legislature
+\`\`\`
+
+*The Senate bills tab. The tabs separate all bills from those still voting, those awaiting presidential action, signed bills, and failed bills. Each card shows the live count and the closing countdown.*
+
 | Status | Meaning |
 | --- | --- |
 | \`proposed\` | Drafted but not yet active (used for some internal flows) |
@@ -120,6 +135,8 @@ In a sequential bicameral flow, passage opens a fresh vote in the second chamber
 
 In presidential systems, a bill that clears every required chamber is \`enrolled\`. The president has 10 hours to sign or veto. If no action is taken within 10 hours, the bill is **automatically signed**.
 
+A veto sends the bill back for an override vote. The override requires **two-thirds of seats**, not two-thirds of votes cast. Vacancies and abstentions do not lower the bar. If the override fails, the bill dies; if it passes, the bill becomes law without the president's signature.
+
 Parliamentary executives do not receive an ordinary bill veto. Their bills enact after the configured chamber and cabinet stages complete. International-organization membership bills can also skip presidential action under their special lifecycle.
 
 ### US Senate filibuster
@@ -148,6 +165,16 @@ For full details on whip mechanics and the force model, see [Voting & Whips](/wi
 
 Each provision applies its policy effects to state or national metrics. Federal US bills divide their effect by 50 (one per state); UK national bills divide by 12 (one per region). Effects apply each turn the policy is active; see [Policy Effects](/wiki/policy-effects) for the full math.
 
+### The budget gate
+
+A bill is not automatically affordable just because it passed.
+
+- **National bills** record their cost against the federal budget. Validation is advisory: an enacted national bill is not blocked, but a breach of the debt ceiling can arm a debt-ceiling crisis.
+- **State bills** are stricter. If the state budget cannot fund the bill, the enactment gate rejects it at signature or auto-sign time. A bill that passed the legislature can still fail here.
+- **Subsidy, tariff, and budget bills** change the fiscal ledger directly. A later Act or Budget can replace an earlier setting, so the last enacted instrument controls.
+
+If you are sponsoring an expensive programme, check the budget before you spend the NPI. A bill that cannot be funded is a wasted legislative cycle.
+
 ### Archetype approval for legislators
 
 Legislators who voted **For** the enacted bill receive demographic archetype approval changes based on how far the policy shifted on each axis:
@@ -169,6 +196,36 @@ You need majorities in both chambers plus executive support. Strategies:
 ### Parliamentary differences
 
 In parliamentary countries (UK, JP, DE), the lower chamber (Commons, Shūgiin, or Bundestag) does most of the legislative work. The upper chambers (Lords, Sangiin) can also vote on bills; the Bundesrat is appointed by Land governments, and players cannot interact with it directly. If the government has no PM/Chancellor seated (including the window after a successful no-confidence vote or a snap dissolution), legislation is fully frozen: no new bills can be proposed and active bills stay in place until the freeze lifts.
+
+## Where a bill dies
+
+Most bills do not become law. Knowing the failure points saves actions and NPI.
+
+| Failure point | What happened | What you can do |
+| --- | --- | --- |
+| Proposal rejected | You lacked the actions, NPI, eligibility, or an open chamber. | Check the cost preview and your office before submitting. |
+| First chamber | The vote failed, or the bill was withdrawn. | Whip earlier, narrow the provisions, or negotiate before the vote opens. |
+| Second chamber | The first chamber passed, but the second did not. | Build a second-chamber majority before you start. Sequential flows give you time. |
+| Cabinet or committee stage | The country's flow parked the bill and it did not clear. | Check the country's lifecycle. Not every system has this stage. |
+| Presidential veto | The executive rejected the bill. | An override needs two-thirds of seats, not votes cast. |
+| Override failed | The override did not reach two-thirds of seats. | The bill is dead. Start a new bill with a narrower scope. |
+| Pocket expiry | The executive neither signed nor vetoed inside 10 hours. | This signs the bill automatically, so it is not a failure. |
+| Budget gate | The state could not fund the bill at enactment. | Reduce the cost, pass a funding bill first, or move the programme to the national budget. |
+
+## Sponsor checklist
+
+- [ ] You are a sitting member of a chamber that can originate this bill.
+- [ ] You have 10 actions and the NPI for every provision you selected.
+- [ ] The bill has no more than three provisions, and every provision fits the category.
+- [ ] You know which chamber votes first and whether the flow is sequential or concurrent.
+- [ ] You have the votes, not just the argument. Count the chamber before you file.
+- [ ] You have checked the whip situation and any cooldown on your party's whips.
+- [ ] You have checked the budget, especially for a state bill with a real cost.
+- [ ] You know what happens after passage: signature, auto-sign, cabinet stage, or referendum.
+
+## A realistic time budget
+
+A simple bill in a bicameral presidential system can take two to three real days from filing to law: 24 hours in the first chamber, 24 hours in the second, and up to 10 hours for executive action. Concurrent chambers shorten that. A filibuster adds about 12 hours to the Senate stage. Plan your NPI and your political capital around the whole pipeline, not just the first vote.
 
 ## Viewing bills
 
