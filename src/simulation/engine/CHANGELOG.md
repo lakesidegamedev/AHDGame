@@ -125,8 +125,24 @@ run (a runtime id by definition), and normalises the runtime UUIDs that
 settlement keys embed. A `--control` run executes **v1 on both copies**; its
 diff is the floor against which v1-vs-v2 is read.
 
-See the run's `summary.json` for the exact collections compared and every
-remaining difference, and the PR body for the numbers from the final pair.
+On the current development base the two comparisons land on top of each other:
+
+| pair               | document differences | money buckets differing | trial balance |
+| ------------------ | -------------------: | ----------------------: | ------------- |
+| v1 vs v2           |              147,612 |                       5 | green / green |
+| v1 vs v1 (control) |              147,426 |                       2 | green / green |
+
+Both are dominated by the same class — `financialTxLog` rows whose embedded
+amounts differ because the turn's independent funds and banks settle in
+concurrent lanes, so the order in which two of them reach the same bond or
+share pool can differ between runs (145,421 vs 145,406 rows in that collection
+alone). The USD cash total differs by exactly the same 100.65 in both pairs.
+v2 adds 186 differing documents out of 191k compared (0.1%).
+
+That is the parity claim this PR makes, and the limit of it: v2 is
+indistinguishable from a second v1 run on the same snapshot, but the turn
+itself is not deterministic enough to demand a zero-document diff. Making the
+turn bit-identical needs the lane ordering pinned, which is a separate change.
 
 ### What v2 does not change
 
