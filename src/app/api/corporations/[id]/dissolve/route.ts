@@ -45,6 +45,7 @@ import { withCorporationSettlementLock } from "@/lib/corporations/settlementLock
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
 import { allocateShareholderPool } from "@/lib/bonds/corporateBondDefault";
 import { payFundShareholderRows } from "@/lib/corporations/payFundShareholders";
+import { writeOffFundHoldingsInDissolvedCorporation } from "@/lib/indexFunds/fundHoldingWriteOff";
 import { getBankId } from "@/lib/centralBank/helpers";
 import { writeGovBudgetLocal } from "@/lib/currency/govBudgetFields";
 
@@ -557,6 +558,10 @@ export async function POST(_request: Request, { params }: RouteParams) {
         // continues; the rest returns to the unowned pool.
         const disposal = await disposeLeavingSectors(db, refreshedCorporation, sectors, now);
         await releaseCorporationHeldSharesToFloat(db, refreshedCorporation._id, now);
+
+        // Zero-pool dissolutions pay funds nothing, so their holdings were
+        // never pulled above. Write them off now rather than at the next rebalance.
+        await writeOffFundHoldingsInDissolvedCorporation(db, refreshedCorporation._id, now);
 
         await stampSubjectDeleted(db, refreshedCorporation._id, {
           sequentialId: refreshedCorporation.sequentialId,

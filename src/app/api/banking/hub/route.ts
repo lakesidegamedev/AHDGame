@@ -15,9 +15,11 @@ import { getBankId } from "@/lib/centralBank/helpers";
 import { loadBankingPolicy } from "@/lib/banking/policy";
 import { savingsReadsAuthoritative } from "@/lib/banking/rules/policy";
 import { lifecycleStage } from "@/lib/banking/rules/lifecycle";
-import { getEffectiveBankRates } from "@/lib/banking/rates";
+import { effectiveBankRatesFromPrime } from "@/lib/banking/rates";
 import { cashBackedDeposits, getCashReserves } from "@/lib/banking/bankCash";
-import { getLendableHeadroom, getReserveRequirement } from "@/lib/banking/reserves";
+import { getLendableHeadroom } from "@/lib/banking/reserves";
+import { defaultReserveRequirement } from "@/lib/banking/rules/reserves";
+import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 import {
   averageCorpIncomePerTurn,
   characterIncomeInLoanCurrency,
@@ -111,6 +113,7 @@ async function handleGET() {
           primeRate: 1,
           currentInflation: 1,
           intorgId: 1,
+          bankReserveRequirement: 1,
         })
         .toArray(),
     ]);
@@ -273,52 +276,64 @@ async function handleGET() {
         ])
       );
 
+      // Rates and reserve ratios come from the central banks loaded above, so
+      // the table costs no query per charter (same resolution as
+      // getEffectiveBankRates / getReserveRequirement).
+      const bankForCurrency = (currency: CurrencyCode) =>
+        bankById.get(getBankId(getCountryIdForCurrency(currency)));
+      let eraDefaultReserve: number | undefined;
       const reserveByCurrency = new Map<CurrencyCode, number>();
-      privateBanks = await Promise.all(
-        chartered.map(async (corp) => {
-          const charter = corp.bankCharter!;
-          const rates = await getEffectiveBankRates(db, charter);
-          const countryId = (corp.countryId ??
-            getCountryIdForCurrency(charter.currency)) as CountryId;
-          let reserveRatio = reserveByCurrency.get(charter.currency);
-          if (reserveRatio === undefined) {
-            reserveRatio = await getReserveRequirement(db, charter.currency);
-            reserveByCurrency.set(charter.currency, reserveRatio);
-          }
-          return {
-            corporationId: corp._id.toString(),
-            sequentialId: corp.sequentialId ?? null,
-            name: corp.name,
-            countryId,
-            countryName: countryName(countryId),
-            currency: charter.currency,
-            operatorType: corp.ceoType === "npp" ? "npp" : "player",
-            charterType: charter.type,
-            stage: lifecycleStage(charter),
-            depositRatePercent: rates.depositRatePercent,
-            lendingRatePercent: rates.lendingRatePercent,
-            warningBand: charter.warningBand ?? null,
-            confidence: typeof charter.confidence === "number" ? charter.confidence : null,
-            totalDeposits: savingsReadsAuthoritative(policy, charter.currency)
-              ? cashBackedDeposits(charter, { playerDepositsAreLiabilities: true })
-              : (charter.totalDeposits ?? 0),
-            cashReserves: getCashReserves(charter),
-            lendableHeadroom: getLendableHeadroom(charter, reserveRatio, {
-              playerDepositsAreLiabilities: savingsReadsAuthoritative(policy, charter.currency),
-            }),
-            requireApproval: charter.requireApproval === true,
-            logoUrl: corp.logoUrl,
-            ceoName: corp.ceoVacant ? null : (ceoById.get(corp.ceoId.toString())?.name ?? null),
-            ceoAvatarUrl: corp.ceoVacant
-              ? null
-              : (ceoById.get(corp.ceoId.toString())?.avatarUrl ?? null),
-            href: `/corporation/${corporationPathIdFromDoc({
-              _id: corp._id as ObjectId,
-              sequentialId: corp.sequentialId,
-            })}?tab=bank`,
-          };
-        })
-      );
+      for (const currency of new Set(chartered.map((corp) => corp.bankCharter!.currency))) {
+        const stored = bankForCurrency(currency)?.bankReserveRequirement;
+        if (typeof stored === "number" && Number.isFinite(stored)) {
+          reserveByCurrency.set(currency, stored);
+          continue;
+        }
+        eraDefaultReserve ??= defaultReserveRequirement(await loadWorldEraUnitScale(db));
+        reserveByCurrency.set(currency, eraDefaultReserve);
+      }
+      privateBanks = chartered.map((corp) => {
+        const charter = corp.bankCharter!;
+        const rates = effectiveBankRatesFromPrime(
+          charter,
+          bankForCurrency(charter.currency)?.primeRate
+        );
+        const countryId = (corp.countryId ??
+          getCountryIdForCurrency(charter.currency)) as CountryId;
+        const reserveRatio = reserveByCurrency.get(charter.currency)!;
+        return {
+          corporationId: corp._id.toString(),
+          sequentialId: corp.sequentialId ?? null,
+          name: corp.name,
+          countryId,
+          countryName: countryName(countryId),
+          currency: charter.currency,
+          operatorType: corp.ceoType === "npp" ? "npp" : "player",
+          charterType: charter.type,
+          stage: lifecycleStage(charter),
+          depositRatePercent: rates.depositRatePercent,
+          lendingRatePercent: rates.lendingRatePercent,
+          warningBand: charter.warningBand ?? null,
+          confidence: typeof charter.confidence === "number" ? charter.confidence : null,
+          totalDeposits: savingsReadsAuthoritative(policy, charter.currency)
+            ? cashBackedDeposits(charter, { playerDepositsAreLiabilities: true })
+            : (charter.totalDeposits ?? 0),
+          cashReserves: getCashReserves(charter),
+          lendableHeadroom: getLendableHeadroom(charter, reserveRatio, {
+            playerDepositsAreLiabilities: savingsReadsAuthoritative(policy, charter.currency),
+          }),
+          requireApproval: charter.requireApproval === true,
+          logoUrl: corp.logoUrl,
+          ceoName: corp.ceoVacant ? null : (ceoById.get(corp.ceoId.toString())?.name ?? null),
+          ceoAvatarUrl: corp.ceoVacant
+            ? null
+            : (ceoById.get(corp.ceoId.toString())?.avatarUrl ?? null),
+          href: `/corporation/${corporationPathIdFromDoc({
+            _id: corp._id as ObjectId,
+            sequentialId: corp.sequentialId,
+          })}?tab=bank`,
+        };
+      });
       privateBanks.sort(
         (a, b) =>
           Number(a.operatorType === "npp") - Number(b.operatorType === "npp") ||

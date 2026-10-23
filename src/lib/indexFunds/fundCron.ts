@@ -115,6 +115,12 @@ export interface IndexFundCronOptions {
   currentTurn?: number;
   /** Test seam: claim budget for the queued-redemption pass. */
   queuedRedemptionClaimsPerPass?: number;
+  /**
+   * v2: hand the bid loop the turn's thresholds and cadence, which the cron
+   * already loaded and which the bid path was re-reading per bid. Pure config;
+   * the escrow, the order and the ledger row are unchanged.
+   */
+  reuseRebalanceReads?: boolean;
 }
 
 export async function runIndexFundCron(
@@ -559,6 +565,12 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
           {
             audit: sharedAudit,
             bondPrincipalAnchor: bondPrincipalByFundId?.get(fund._id.toString()),
+            ...(options?.reuseRebalanceReads
+              ? {
+                  txThresholds: bondDeployThresholds,
+                  turnLengthMinutes,
+                }
+              : {}),
           }
         );
         result.floatPurchases += r.buys;
@@ -740,7 +752,7 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
 
   try {
     const { advanceWindDowns } = await import("@/lib/indexFunds/sponsorship/windUp");
-    const windDown = await advanceWindDowns(db, currentTurn);
+    const windDown = await advanceWindDowns(db, currentTurn, { forexEnabled });
     result.windDownsAdvanced = windDown.fundsProcessed;
     result.windDownsCompleted = windDown.fundsCompleted;
     if (windDown.errors.length > 0) result.errors.push(...windDown.errors);

@@ -1,4 +1,5 @@
 import { bankFundAcceptsSubscriptions } from "./managerEligibility";
+import type { TxThresholds } from "@/lib/db/types/financialTxLog";
 import { loadFloatAuditContext, type FloatAuditContext } from "./fundFloatTradePlan";
 import { executeFundShareBuys, type FundShareBuyBatch } from "./fundFloatBuyExecution";
 import { ObjectId } from "mongodb";
@@ -242,7 +243,13 @@ export async function rebalanceFundToTarget(
   capRemainingByCorpId: Map<string, number>,
   currentTurn: number,
   /** Pass-level reads shared by every fund, loaded once instead of once per fund. */
-  shared?: { bondPrincipalAnchor?: number; audit?: FloatAuditContext }
+  shared?: {
+    bondPrincipalAnchor?: number;
+    audit?: FloatAuditContext;
+    /** v2: the turn's tx thresholds, loaded once by the cron. */
+    txThresholds?: TxThresholds;
+    turnLengthMinutes?: number;
+  }
 ): Promise<{ buys: number; sells: number; bidsPlaced: number; bidsCancelled: number }> {
   if (fund.mandate?.mode === "picked_stocks" && !(await bankFundAcceptsSubscriptions(db, fund)))
     return { buys: 0, sells: 0, bidsPlaced: 0, bidsCancelled: 0 };
@@ -375,6 +382,10 @@ export async function rebalanceFundToTarget(
         fxRate,
         turn: currentTurn,
         txSink: bidTxSink,
+        ...(shared?.txThresholds ? { thresholds: shared.txThresholds } : {}),
+        ...(shared?.turnLengthMinutes != null
+          ? { turnLengthMinutes: shared.turnLengthMinutes }
+          : {}),
       });
 
       if (result.ok) {

@@ -64,6 +64,7 @@ import {
   type ValidatedTurnResume,
 } from "@/simulation/engine/turnResumeBootstrap";
 import { buildTurnExecutionContext } from "@/simulation/engine/turnExecutionContext";
+import { selectEngineForAttempt, type TurnEngine } from "@/simulation/engine/turnEngine";
 import { recoverDemographicFlowsBeforeContext } from "@/lib/demographics/recoverFlows";
 import { getTurnPhaseRegistry } from "@/simulation/phases/turnPhaseRegistry";
 import { runWithLedgerTurn } from "@/lib/ledger/ledgerTurn";
@@ -283,6 +284,11 @@ async function processTurnImpl(
   let activeGameNow: Date | null = null;
   let activeCurrentYear = STARTING_YEAR;
   let activeIteration: GameIteration | undefined;
+  /**
+   * Engine resolved for this attempt. Hoisted out of the lock block so the crash
+   * turn log can report it; null when the turn died before it was resolved.
+   */
+  let activeEngine: TurnEngine | null = null;
   const currentPhaseRef = { current: null as string | null };
   let phaseStatusesForFailure: TurnPhaseTelemetryMap | null = null;
   let phaseResultsForFailure: TurnLog["phases"] | null = null;
@@ -546,6 +552,17 @@ async function processTurnImpl(
     await recoverDemographicFlowsBeforeContext(db, gameState, resumedFromCrash?.appliedPhases);
 
     const config = await db.collection<GameConfig>("gameConfig").findOne({ _id: "default" });
+    // One read of the selector per turn, before any phase runs. A resume pins the
+    // engine recorded by the holder that died, so config can only choose the engine
+    // for the NEXT turn — never for a turn that is already in progress.
+    const engineResolution = selectEngineForAttempt({
+      configured: config?.turnEngineVersion,
+      inFlightEngine: gameState.processingEngine,
+      isResume: resumedFromCrash != null,
+    });
+    const engine: TurnEngine = engineResolution.engine;
+    activeEngine = engine;
+    for (const engineWarning of engineResolution.warnings) warnings.push(engineWarning);
     // A resume starts from the inherited markers and stored results, so the
     // first status write below rewrites them rather than erasing them.
     const bootstrapRecord = bootstrapPhaseRecord(
@@ -575,6 +592,8 @@ async function processTurnImpl(
           ...(resumedFromCrash ? {} : { processingPhase: TURN_BOOTSTRAP_PHASE }),
           processingPhaseStatuses: phaseStatuses,
           processingPhaseResults: bootstrapRecord.results,
+          processingEngine: engine.selection,
+          processingEngineVersion: engine.version,
           updatedAt: lockAcquiredAt,
         },
       }
@@ -602,6 +621,7 @@ async function processTurnImpl(
         db,
         gameState,
         config,
+        engine,
         warnings,
         activeIteration,
         phaseStatuses,
@@ -705,6 +725,8 @@ async function processTurnImpl(
           processingPhase: null,
           processingPhaseStatuses: null,
           processingPhaseResults: null,
+          processingEngine: null,
+          processingEngineVersion: null,
           updatedAt: context.realNow,
           ...(localSingleplayer
             ? {
@@ -742,7 +764,11 @@ async function processTurnImpl(
       health: lastHealth,
       phaseStatuses,
       phases: context.phaseResults,
-      ...(turnBuild ? { build: turnBuild } : {}),
+      // Which engine produced this world, independent of which commit deployed it.
+      turnEngine: engine.selection,
+      engineVersion: engine.version,
+      ...(engine.v2Phases.length > 0 ? { v2Phases: [...engine.v2Phases] } : {}),
+      ...(turnBuild ? { build: { ...turnBuild, engineVersion: engine.version } } : {}),
       nppEngineVersion: NPP_ENGINE_VERSION,
       createdAt: context.realNow,
     };
@@ -967,7 +993,18 @@ async function processTurnImpl(
           health: lastHealth,
           phaseStatuses: finalizedPhaseStatuses,
           phases: phaseResultsForFailure,
-          ...(turnBuild ? { build: turnBuild } : {}),
+          ...(activeEngine
+            ? {
+                turnEngine: activeEngine.selection,
+                engineVersion: activeEngine.version,
+                ...(activeEngine.v2Phases.length > 0
+                  ? { v2Phases: [...activeEngine.v2Phases] }
+                  : {}),
+                ...(turnBuild
+                  ? { build: { ...turnBuild, engineVersion: activeEngine.version } }
+                  : {}),
+              }
+            : {}),
           createdAt: failureTime,
         };
         await db.collection<TurnLog>("turnLogs").insertOne(crashTurnLog as TurnLog);

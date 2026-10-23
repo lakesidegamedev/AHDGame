@@ -1,9 +1,13 @@
-import type { Db } from "mongodb";
+import type { Db, UpdateFilter } from "mongodb";
 import { ObjectId } from "mongodb";
 
 import type { IndexFund, IndexFundHolding } from "@/lib/db/types";
 import { computeHoldingsValueAnchor } from "@/lib/indexFunds/fundAllocation";
-import { insertFundTransaction, updateFundHoldings } from "@/lib/indexFunds/fundQueries";
+import {
+  insertFundTransaction,
+  insertFundTransactionsBulk,
+  updateFundHoldings,
+} from "@/lib/indexFunds/fundQueries";
 
 export interface DeadHoldingWriteOffResult {
   /** Holdings removed at zero because the corporation no longer exists. */
@@ -102,4 +106,65 @@ export function selectDeadHoldingIds(
   return holdings
     .filter((h) => h.shares > 0 && !live.has(h.corporationId.toString()))
     .map((h) => h.corporationId);
+}
+
+/**
+ * Write off every index-fund holding in a corporation that is being wound
+ * down, at the moment it is wound down.
+ *
+ * `payFundShareholderRows` only pulls a fund's holding when that fund is paid
+ * a positive slice, and `allocateShareholderPool` emits no fund rows at all
+ * when the shareholder pool is empty. So an insolvent wind-down (NPP
+ * insolvency, zero-equity dissolution) deleted the corporation but left its
+ * holdings in every fund, still marked at `lastValueAnchor`. NAV overstated
+ * that backing until the fund's next constituent rebalance found the corp
+ * gone and wrote it off. Call this after any payout and before deleting the
+ * corporation: funds that were already paid no longer hold it and are not
+ * touched, so it never double-counts a settled position.
+ */
+export async function writeOffFundHoldingsInDissolvedCorporation(
+  db: Db,
+  corporationId: ObjectId,
+  now: Date
+): Promise<{ fundCount: number; writtenOffValueAnchor: number }> {
+  const funds = await db
+    .collection<IndexFund>("indexFunds")
+    .find(
+      { "holdings.corporationId": corporationId },
+      { projection: { _id: 1, quotedNav: 1, holdings: 1 } }
+    )
+    .toArray();
+
+  let writtenOffValueAnchor = 0;
+  const fundIds: ObjectId[] = [];
+  const transactions: Parameters<typeof insertFundTransactionsBulk>[1] = [];
+  for (const fund of funds) {
+    const held = (fund.holdings ?? []).filter((h) => h.corporationId.equals(corporationId));
+    if (held.length === 0) continue;
+    const value = computeHoldingsValueAnchor({ holdings: held });
+    fundIds.push(fund._id);
+    writtenOffValueAnchor += value;
+    if (held.some((h) => h.shares > 0)) {
+      transactions.push({
+        fundId: fund._id,
+        kind: "holding_writeoff",
+        navAnchor: fund.quotedNav,
+        amountAnchor: -value,
+        note:
+          `Wrote off a holding in a corporation wound down with nothing left ` +
+          `for shareholders. Its shares are worth zero.`,
+        createdAt: now,
+      });
+    }
+  }
+
+  if (fundIds.length > 0) {
+    await db.collection<IndexFund>("indexFunds").updateMany({ _id: { $in: fundIds } }, {
+      $pull: { holdings: { corporationId } },
+      $set: { updatedAt: now },
+    } as unknown as UpdateFilter<IndexFund>);
+  }
+  await insertFundTransactionsBulk(db, transactions);
+  const fundCount = fundIds.length;
+  return { fundCount, writtenOffValueAnchor };
 }

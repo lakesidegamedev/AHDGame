@@ -37,10 +37,22 @@ const reportedSuppressions = new Set<string>();
  * Unstamped config posts as before — this must never silence a live world that
  * simply has not re-saved its webhooks yet.
  */
+/**
+ * Each world's turn worker is a separate Railway service sharing its web
+ * service's database. Webhooks are saved from the web admin page, so the stamp
+ * names the web service; the worker posts turn-time events on its behalf. Exact
+ * names only: a restored database under any other service stays silent.
+ */
+const TURN_WORKER_WEB_SERVICE: Readonly<Record<string, string>> = {
+  "ahd-turn-worker": "ahd-production",
+  "ahd-staging-turn-worker": "ahd-staging",
+};
+
 export function ownsConfiguredWebhooks(owner: string | undefined): boolean {
   if (!owner) return true;
   const self = deploymentServiceSlug();
   if (owner === self) return true;
+  if (TURN_WORKER_WEB_SERVICE[self] === owner) return true;
   const pair = `${owner} -> ${self}`;
   if (!reportedSuppressions.has(pair)) {
     reportedSuppressions.add(pair);

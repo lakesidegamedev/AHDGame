@@ -7,6 +7,12 @@ export interface NppCorporationDecisionPreload {
   corporations: readonly Corporation[];
   issuerBondsByCorpId: ReadonlyMap<string, Bond[]>;
   heldBondsByCorpId: ReadonlyMap<string, { bond: Bond; units: number }[]>;
+  /**
+   * v2 engine only: batch the relocation-bond credit fan across the cohort
+   * (one preload + one `insertMany`) instead of reading per corporation.
+   * Absent on v1, whose reads and inserts are unchanged.
+   */
+  batchRelocationCredit?: boolean;
 }
 
 export async function loadNppCorporationBondLookups(
