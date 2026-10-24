@@ -173,7 +173,7 @@ describe("queued payout receipt and claim boundaries", () => {
     await retryPayout(f);
     await assertPaidOnce(f);
   });
-  it("leaves missing holders unpaid without debiting fund cash", async () => {
+  it("writes off missing holders without debiting fund cash", async () => {
     const f = fixture();
     await f.db.collection("npps").deleteMany({});
     expect(await processQueuedRedemptions(f.db, f.fund, false, 7)).toBe(0);
@@ -181,9 +181,11 @@ describe("queued payout receipt and claim boundaries", () => {
       cashAnchor: 1000,
       unitSupply: 100,
     });
+    // Nothing can receive this payout, so the claim is closed rather than held
+    // open forever. The cash it had reserved stays in the fund and no money moves.
     expect(
       await f.db.collection("indexFundRedemptionQueue").findOne({ _id: f.entryId })
-    ).toMatchObject({ status: "queued", units: 10 });
+    ).toMatchObject({ status: "cancelled", cancelReason: "holder_missing", units: 10 });
     expect(f.memory.collection(MONEY_MOVE_COLLECTION).docs).toHaveLength(0);
   });
   it("burns legacy supply with the debit and never burns it again on recovery", async () => {

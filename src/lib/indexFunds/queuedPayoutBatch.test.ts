@@ -154,7 +154,7 @@ describe("batched queued NPP payouts", () => {
     expect(batched.memory.collection("ledgerEntries").docs).toHaveLength(paid * 2);
   });
 
-  it("returns refused credits to the fund and keeps those claims owed", async () => {
+  it("returns refused credits to the fund, then writes off claims nobody can receive", async () => {
     const w = world({ burned: true, cash: 100_000 });
     const gone = w.npps.slice(0, 2).map((n) => n._id);
     const queue = w.memory.collection("indexFundRedemptionQueue");
@@ -203,9 +203,19 @@ describe("batched queued NPP payouts", () => {
     expect(w.memory.collection("indexFundTransactions").docs).toHaveLength(paidCount);
     expect(w.memory.collection("financialTxLog").docs).toHaveLength(paidCount);
 
-    // A later pass leaves the orphaned claims owed and pays nothing twice.
+    // A later pass writes off the claims nobody can receive, paying nothing twice.
     expect(await pass(w, 8)).toBe(0);
     expect(w.memory.collection("indexFundTransactions").docs).toHaveLength(paidCount);
+    const writtenOff = (
+      await w.db
+        .collection<IndexFundRedemptionQueueEntry>("indexFundRedemptionQueue")
+        .find({})
+        .toArray()
+    ).filter((row) => gone.some((id) => id.equals(row.nppId!)));
+    expect(writtenOff).toHaveLength(2 * PER_NPP);
+    for (const row of writtenOff)
+      expect(row).toMatchObject({ status: "cancelled", paidAmountAnchor: 0 });
+    expect(w.memory.collection(MONEY_MOVE_COLLECTION).docs).toHaveLength(2);
   });
 
   it("releases a batch that never reached the journal only in a later turn, then pays once", async () => {

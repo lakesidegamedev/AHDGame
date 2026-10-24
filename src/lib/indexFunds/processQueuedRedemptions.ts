@@ -44,6 +44,37 @@ export interface QueuedRedemptionClaimBudget {
   claimsLeft: number;
 }
 
+/** The holder collection key this queue entry pays, or null when it names none. */
+function holderKey(entry: IndexFundRedemptionQueueEntry): string | null {
+  if (entry.characterId) return `characters:${entry.characterId}`;
+  if (entry.imperialCharacterId) return `imperialCharacters:${entry.imperialCharacterId}`;
+  if (entry.nppId) return `npps:${entry.nppId}`;
+  return null;
+}
+
+/**
+ * Close a claimed queue row whose holder no longer exists. Nothing can receive
+ * the cash, so the claim is written off like a dead constituent holding: no
+ * debit and no receipts, and the fund keeps what it had already reserved.
+ * Leaving the row queued retried it every pass forever, held the fund out of
+ * Pass 2/3 trading on each due turn and kept its cash subtracted from NAV
+ * backing (#4848). Cancelled is terminal: `isRetryableRedemptionEntry` skips
+ * it, and the queued-unit and payable aggregates only read queued/partial.
+ */
+async function cancelUnclaimableQueueClaim(
+  db: Db,
+  entryId: IndexFundRedemptionQueueEntry["_id"],
+  claimId: string
+): Promise<void> {
+  await db.collection<IndexFundRedemptionQueueEntry>(FUND_REDEMPTION_QUEUE_COLLECTION).updateOne(
+    { _id: entryId, status: "processing", settlementClaimId: claimId },
+    {
+      $set: { status: "cancelled", cancelReason: "holder_missing", updatedAt: new Date() },
+      $unset: { processingStartedAt: "", settlementClaimId: "", processingTurn: "" },
+    }
+  );
+}
+
 export async function processQueuedRedemptions(
   db: Db,
   fund: IndexFund,
@@ -122,6 +153,7 @@ export async function processQueuedRedemptions(
 
   const audit = await loadQueuedPayoutAuditContext(db);
   let paid = recovery.recovered;
+  let cancelled = 0;
   let fundState = fund;
   let availableCash = fund.cashAnchor;
   // #992 tranche 6: thresholds for the bond-sale ledger rows below, loaded
@@ -206,6 +238,17 @@ export async function processQueuedRedemptions(
       continue;
     }
 
+    // A holder can leave the game while its claim waits: an NPP culled by a
+    // party merge, or a character who retired. No pass can ever pay that cash,
+    // so write the claim off rather than restoring it to the queue forever.
+    const holderLookupKey = holderKey(entry);
+    const holder = holderLookupKey ? holders.get(holderLookupKey) : undefined;
+    if (!holder) {
+      await cancelUnclaimableQueueClaim(db, entry._id, claimId);
+      cancelled += 1;
+      continue;
+    }
+
     // Forward pricing. The payout is struck at the fund's CURRENT NAV, never at
     // `requestedNavAnchor` (kept only as the record of what was quoted at
     // request). Honouring a locked price across many turns is what let one
@@ -277,22 +320,19 @@ export async function processQueuedRedemptions(
 
     const paidAmount = quote.paidAmountAnchor;
     if (isBatchablePayout(entry)) {
-      const holder = holders.get(`npps:${entry.nppId}`);
-      if (holder) {
-        batch.push({
-          entry,
-          claimId,
-          paidAmount,
-          units: quote.redeemableUnits,
-          remainingUnits: quote.queuedUnits,
-          nav: redemptionNav,
-          holder,
-          nppCurrency: nppCurrencyById.get(entry.nppId?.toString() ?? "") ?? "USD",
-        });
-        availableCash -= paidAmount;
-        if (batch.length >= QUEUED_PAYOUT_BATCH_MAX) await flushBatch();
-        continue;
-      }
+      batch.push({
+        entry,
+        claimId,
+        paidAmount,
+        units: quote.redeemableUnits,
+        remainingUnits: quote.queuedUnits,
+        nav: redemptionNav,
+        holder,
+        nppCurrency: nppCurrencyById.get(entry.nppId?.toString() ?? "") ?? "USD",
+      });
+      availableCash -= paidAmount;
+      if (batch.length >= QUEUED_PAYOUT_BATCH_MAX) await flushBatch();
+      continue;
     }
     await flushBatch();
     // Native-currency equivalent for personal wallet credits (₳ × blended rate).
@@ -314,13 +354,7 @@ export async function processQueuedRedemptions(
       forexEnabled,
       nppCurrency: nppCurrencyById.get(entry.nppId?.toString() ?? "") ?? "USD",
       audit,
-      holder: holders.get(
-        entry.characterId
-          ? `characters:${entry.characterId}`
-          : entry.imperialCharacterId
-            ? `imperialCharacters:${entry.imperialCharacterId}`
-            : `npps:${entry.nppId}`
-      ),
+      holder,
     });
     if (!settled) {
       await restoreQueueClaim();
@@ -333,6 +367,11 @@ export async function processQueuedRedemptions(
     paid++;
   }
   await flushBatch();
+
+  if (cancelled > 0)
+    console.warn(
+      `[indexfund-cron] wrote off ${cancelled} queued redemption(s) for ${fund.slug}: holder no longer exists`
+    );
 
   return paid;
 }
