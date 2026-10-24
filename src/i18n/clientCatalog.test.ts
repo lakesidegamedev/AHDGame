@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import type { AbstractIntlMessages } from "next-intl";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -32,8 +33,8 @@ const NAMESPACES = [
   "governmentConfidence",
 ] as const;
 
-function englishCatalog(): Record<string, unknown> {
-  const catalog: Record<string, unknown> = {};
+function englishCatalog(): AbstractIntlMessages {
+  const catalog: AbstractIntlMessages = {};
   for (const file of NAMESPACES) {
     catalog[file] = JSON.parse(readFileSync(join(messagesDir, `${file}.json`), "utf8"));
   }
