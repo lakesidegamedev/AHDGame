@@ -1,3 +1,4 @@
+import { drainDeferredTurnWork } from "@/lib/turn/deferredTurnWork";
 import { rewindHalfTick } from "@/lib/turn/subhour/rewindHalfTick";
 import {
   withServerTurnAnalytics,
@@ -263,7 +264,12 @@ export function processTurn(
       health: null,
     });
   }
-  return withServerTurnAnalytics(() => processTurnImpl(options));
+  return withServerTurnAnalytics(() => processTurnImpl(options)).then((result) => {
+    // The lock is released by now on every path; deferred telemetry runs in
+    // the gap before the next turn instead of inside this one.
+    void drainDeferredTurnWork();
+    return result;
+  });
 }
 
 async function processTurnImpl(
