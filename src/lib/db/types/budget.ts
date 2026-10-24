@@ -651,6 +651,8 @@ export interface FederalBudget {
   treasuryBalance: number;
   /** Feature-gated spendable native cash. Missing legacy value means zero when enabled. */
   treasuryCashLocal?: number;
+  /** Digest of the economy-only reset whose treasury credits this budget already received. */
+  economyResetDigest?: string;
   /** Applied automatic disaster crisis IDs; keeps fiscal debits replay-safe. */
   disasterFiscalReceipts?: string[];
   /**

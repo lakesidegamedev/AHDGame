@@ -24,6 +24,8 @@ export async function rejectDuringTurn(db: Db): Promise<NextResponse | null> {
 
   if (gameState?.processingKind === "stockTaxMigration")
     return errorResponse(409, "Stock holding maintenance is in progress, try again shortly.");
+  if (gameState?.processingKind === "economyReset")
+    return errorResponse(409, "Economy maintenance is in progress, try again shortly.");
   if (!gameState || !isTurnProcessingNow(gameState)) return null;
 
   return errorResponse(409, "The game is processing this turn, try again shortly.");

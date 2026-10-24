@@ -455,7 +455,7 @@ async function processTurnImpl(
     const lockResult = await db.collection<GameState>("gameState").findOneAndUpdate(
       {
         _id: "current",
-        processingKind: { $ne: "stockTaxMigration" },
+        processingKind: { $nin: ["stockTaxMigration", "economyReset"] },
         $or: [
           { isProcessing: { $ne: true } },
           { processingHeartbeatAt: { $lt: staleLockCutoff } },
