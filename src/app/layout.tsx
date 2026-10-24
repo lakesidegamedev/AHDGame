@@ -43,7 +43,7 @@ import { AuthConnectivityGate } from "@/components/AuthConnectivityGate";
 import { StatAllocationGate } from "@/components/stats/StatAllocationGate";
 import { SeasonRecapGate } from "@/components/recap/SeasonRecapGate";
 import { SiteTrafficTracker } from "@/components/SiteTrafficTracker";
-import { PostHogTracker } from "@/components/PostHogTracker";
+import { DeferredAnalytics } from "@/components/DeferredAnalytics";
 import { CDN_LOGO_URL } from "@/lib/images/staticCdnAssets";
 import {
   buildGoogleTagBootstrapScript,
@@ -438,7 +438,7 @@ export default async function RootLayout({
                           >
                             <SiteTrafficTracker />
                             {!singleplayer && !isNativeApp && !isWikiSubdomain && (
-                              <PostHogTracker />
+                              <DeferredAnalytics />
                             )}
                             {children}
                           </main>
