@@ -335,6 +335,7 @@ export function createTurnPhaseRuntime(input: {
     const invocationChain = [...(phaseInvocationChain.getStore() ?? []), invocationId];
     // Set by the timeout once it fires; settles when the timed-out function does.
     let drained: Promise<void> | null = null;
+    const lateCompletion: { value?: { result: T } } = {};
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
     const timeoutPromise = new Promise<never>((_, reject) => {
       timeoutId = setTimeout(() => {
@@ -400,7 +401,8 @@ export function createTurnPhaseRuntime(input: {
       }, TURN_LOCK_HEARTBEAT_MS);
       const settled = work
         .then(
-          () => {
+          (result) => {
+            lateCompletion.value = { result };
             console.warn(`[Turn] Timed-out phase "${name}" finished after its timeout`);
           },
           (lateErr) => {
@@ -443,8 +445,7 @@ export function createTurnPhaseRuntime(input: {
       )
     );
 
-    try {
-      const result = await Promise.race([work, timeoutPromise]);
+    async function completePhase(result: T): Promise<T> {
       const phaseDurationMs = Date.now() - phaseStart;
       if (onPhaseCompleted) await onPhaseCompleted({ name, result });
       Sentry.addBreadcrumb({
@@ -541,6 +542,10 @@ export function createTurnPhaseRuntime(input: {
         console.warn(`[Turn] Failed to mark phase "${name}" completed`, err)
       );
       return result;
+    }
+
+    try {
+      return await completePhase(await Promise.race([work, timeoutPromise]));
     } catch (err) {
       if (err instanceof TurnPhaseCompletionPersistError) {
         // Writes landed, so this is not a phase failure to log and continue past.
@@ -583,6 +588,22 @@ export function createTurnPhaseRuntime(input: {
         // the phase status. Serialize them so a slow first write cannot land
         // last and overwrite substeps recorded while the callback drained.
         await initialFailureWrite;
+        if (lateCompletion.value && phaseRequiresResumeResult(name)) {
+          // A timeout cannot cancel writes. Once this exact invocation returns
+          // successfully, retain its real flows rather than stranding treasury
+          // settlement or replaying the bond phase. Persist completion and its
+          // validated result atomically, after the prompt failure marker.
+          // Rejection, missing output and an unavailable primary still fail
+          // closed; elapsed time alone never establishes committed flows.
+          try {
+            return await completePhase(lateCompletion.value.result);
+          } catch (completionErr) {
+            if (completionErr instanceof TurnPhaseCompletionPersistError) {
+              warnings.push(`${name}: ${completionErr.message}`);
+            }
+            throw completionErr;
+          }
+        }
         const finalSubsteps = takePhaseSubsteps(name);
         if (finalSubsteps) await persistFailure(finalSubsteps);
       } else {
