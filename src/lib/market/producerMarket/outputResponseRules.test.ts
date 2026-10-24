@@ -6,6 +6,7 @@ import {
   OUTPUT_CUT_STEP,
   OUTPUT_GROW_STEP,
   OUTPUT_RUN_FLOOR,
+  pacedRunShare,
 } from "./outputResponseRules";
 
 const receipt = (over: Partial<Parameters<typeof nextRunShare>[0] & object> = {}) => ({
@@ -120,5 +121,20 @@ describe("low-use probe floor", () => {
     expect(nextRunShare(sold0, LOW_USE_RUN_FLOOR)).toBe(LOW_USE_RUN_FLOOR);
     expect(demandPlanRunShare(sold0)).toBe(OUTPUT_RUN_FLOOR);
     expect(demandPlanRunShare(sold0, LOW_USE_RUN_FLOOR)).toBe(LOW_USE_RUN_FLOOR);
+  });
+});
+
+describe("paced run share", () => {
+  it("limits how much of last turn's run a plant sheds, never growth", () => {
+    // Last turn ran 50 of 100 units.
+    expect(pacedRunShare(0.01, receipt(), 0.15)).toBeCloseTo(0.5 * 0.85, 12);
+    expect(pacedRunShare(0.45, receipt(), 0.15)).toBeCloseTo(0.45, 12);
+    expect(pacedRunShare(0.9, receipt(), 0.15)).toBeCloseTo(0.9, 12);
+  });
+
+  it("is a no-op when off, with no history, or without capacity", () => {
+    expect(pacedRunShare(0.01, receipt(), 0)).toBe(0.01);
+    expect(pacedRunShare(0.01, null, 0.15)).toBe(0.01);
+    expect(pacedRunShare(0.01, receipt({ activeUnits: 0 }), 0.15)).toBe(0.01);
   });
 });

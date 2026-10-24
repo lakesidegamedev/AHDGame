@@ -1,8 +1,13 @@
+import { recipeKey } from "@/lib/market/producerMarket/fundedRestartRules";
 import { loadGroupDirectionMembership } from "./npp/groupDirectionMembership";
 /**
  * NPP corporation decisions use shared market and funding observations.
  * processNppCorporationDecisions loads them and prepares corporation and sector writes.
  */
+import {
+  chargeConversionBudget,
+  conversionBudgets as buildConversionBudgets,
+} from "@/lib/market/producerMarket/transitionRules";
 import {
   challengerBoost,
   computeSectorConcentration,
@@ -362,6 +367,8 @@ export async function processNppCorporationDecisions(
   const manufacturingProductProjectState = await loadNppProductProjectsV2(db, nppCorps);
   const plantsEnabled = manufacturingProductProjectState.plantsEnabled;
   let plants: NppPlantsContext | undefined;
+  let conversionPaceShare = 0;
+  let fundedRestartStage = 0;
   let bankRates: RelocationPrimeBank[] | undefined;
   if (plantsEnabled) {
     const gsPlants = await db
@@ -383,8 +390,23 @@ export async function processNppCorporationDecisions(
     const colByState = await loadNppCostOfLivingByState(db);
     const nationalShareOf = buildNppNationalShareResolver(globalSectors);
     const nppGameConfig = await db
-      .collection<{ commandEconomyEnabled?: boolean }>("gameConfig")
-      .findOne({ _id: "default" as never }, { projection: { commandEconomyEnabled: 1 } });
+      .collection<{
+        commandEconomyEnabled?: boolean;
+        producerConversionPaceShare?: number;
+        producerFundedRestartStage?: number;
+      }>("gameConfig")
+      .findOne(
+        { _id: "default" as never },
+        {
+          projection: {
+            commandEconomyEnabled: 1,
+            producerConversionPaceShare: 1,
+            producerFundedRestartStage: 1,
+          },
+        }
+      );
+    conversionPaceShare = nppGameConfig?.producerConversionPaceShare ?? 0;
+    fundedRestartStage = nppGameConfig?.producerFundedRestartStage ?? 0;
     plants = {
       enabled: true,
       year: plantsYear,
@@ -489,6 +511,29 @@ export async function processNppCorporationDecisions(
     strategyGate.producerOpening.worldEpoch === strategyGate.worldEpochId
       ? strategyGate.producerOpening.turn + 1
       : undefined;
+  // Shortage per recipe from the latest funded settlement, for AI restarts.
+  const recipePressureByKey =
+    fundedRestartStage >= 1 && transitionFirstFundedTurn != null && strategyGate?.worldEpochId
+      ? new Map(
+          Object.entries(
+            (
+              await db
+                .collection<{
+                  worldEpoch: string;
+                  turn: number;
+                  recipePressure?: Record<string, number>;
+                }>("producerMarketOutcomes")
+                .find(
+                  { worldEpoch: strategyGate.worldEpochId, turn: { $lte: turn } },
+                  { projection: { recipePressure: 1 } }
+                )
+                .sort({ turn: -1 })
+                .limit(1)
+                .toArray()
+            )[0]?.recipePressure ?? {}
+          )
+        )
+      : null;
   const groupMembership = await loadGroupDirectionMembership(
     db,
     strategyGate?.subsidiaryCorporationsEnabled === true,
@@ -503,6 +548,18 @@ export async function processNppCorporationDecisions(
   );
 
   const labourWagesEnabled = isLabourSystemMode(labourMode) && labourAtLeast(labourMode, "wages");
+
+  // Pace AI free conversions: a per-country allowance of capacity book value per turn.
+  const capacityBookByCountry = new Map<string, number>();
+  if (conversionPaceShare > 0)
+    for (const corpSectors of sectorsByCorp.values())
+      for (const s of corpSectors)
+        if (s.mothballed !== true && s.countryId)
+          capacityBookByCountry.set(
+            String(s.countryId),
+            (capacityBookByCountry.get(String(s.countryId)) ?? 0) + (s.capacityBookAnchor ?? 0)
+          );
+  const conversionBudgets = buildConversionBudgets(capacityBookByCountry, conversionPaceShare);
 
   const autopilotAlerts: Array<{ corp: Corporation; kinds: CorpAutopilotAdvisory[] }> = [];
 
@@ -526,7 +583,11 @@ export async function processNppCorporationDecisions(
       })
     : null;
 
-  for (const corp of nppCorps) {
+  const orderedCorps =
+    conversionPaceShare > 0
+      ? [...nppCorps].sort((a, b) => (a._id.toString() < b._id.toString() ? -1 : 1))
+      : nppCorps;
+  for (const corp of orderedCorps) {
     const sectors = sectorsByCorp.get(corp._id.toString()) ?? [];
     const autopilot = isAutopilotRun(corp);
     const operator = operatorPermissionsFor(corp);
@@ -579,6 +640,11 @@ export async function processNppCorporationDecisions(
       frontierEntry: autopilot ? undefined : frontierEntryTurn,
       engineSix: engineSixByCountry.get(corp.countryId) === true,
       transitionFirstFundedTurn,
+      conversionBudgetOf:
+        conversionPaceShare > 0 ? (countryId) => conversionBudgets.get(countryId) : undefined,
+      fundedRestartPressureOf: recipePressureByKey
+        ? (sectorType, strategyId) => recipePressureByKey.get(recipeKey(sectorType, strategyId))
+        : undefined,
     };
     let decision = makeNppCorpDecision(
       decisionContext,
@@ -624,6 +690,12 @@ export async function processNppCorporationDecisions(
               placementSignals
             ),
         });
+    // Charge the pacing allowance once, for the decision that is applied.
+    if (decision.conversionCharge)
+      chargeConversionBudget(
+        conversionBudgets.get(decision.conversionCharge.countryId),
+        decision.conversionCharge.cost
+      );
     if (nppConstructionFinanceEnabled && corpCurrency && borrowAllowed) {
       for (const intent of decision.constructionFinanceIntents ?? []) {
         constructionFinanceCandidates.push({

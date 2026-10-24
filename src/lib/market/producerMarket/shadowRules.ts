@@ -60,7 +60,12 @@ export interface ShadowSummary {
 
 /** Public purchase lines become funded orders from one public-buyer wallet per country. */
 export function publicOrders(
-  buyers: readonly { accountId: string; lines: readonly PublicPurchaseLine[] }[],
+  buyers: readonly {
+    accountId: string;
+    /** Country the public buyer funds; tags the order for the funded book. */
+    countryId?: string;
+    lines: readonly PublicPurchaseLine[];
+  }[],
   referencePrice: (commodity: string, book: string) => number | null,
   priceHeadroom: number
 ): PurchaseOrder[] {
@@ -78,6 +83,7 @@ export function publicOrders(
         units: l.amountLocal / price,
         maximumUnitPrice: max,
         maximumSpend: l.amountLocal,
+        ...(b.countryId ? { countryId: b.countryId } : {}),
       });
     }
   return orders;

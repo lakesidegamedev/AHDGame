@@ -186,6 +186,76 @@ export interface GameConfig {
   /** Share of a short line's unfilled budget kept when the stage is on. Default 0.5. */
   producerPublicCarryShare?: number;
   /**
+   * Funded producer market: > 0 limits how much of last turn's run a plant may
+   * shed in one turn (for example 0.15 = at most 15% a turn), so output and
+   * wages follow a glut down over several turns. 0 or absent = off.
+   */
+  producerRunPaceDrop?: number;
+  /**
+   * Funded producer market: > 0 caps AI free conversions per turn at this share
+   * of each country's operating capacity book value (for example 0.02). Unconverted
+   * losing sectors stay in the queue for the next turn. 0 or absent = off.
+   */
+  producerConversionPaceShare?: number;
+  /**
+   * Funded producer market: > 0 keeps household income steady. Each country's
+   * household transfer share is held at its first-funded-turn level, and when
+   * planned household income (wages, operating payments, transfers) is under this
+   * many anchor units per turn, every country's transfers rise out of its own
+   * budget transfer lines until it is met. 0 or absent = off.
+   */
+  producerHouseholdIncomeFloor?: number;
+  /**
+   * Funded producer market: > 0 makes a seller mark its ask down as carried stock
+   * exceeds this many turns of its recent sales (down to the market floor) and
+   * write off a small share of the excess each turn. 0 or absent = off.
+   */
+  producerStockCover?: number;
+  /**
+   * Funded producer market: >= 1 floors each buyer's reference price for a
+   * reachable good at the last funded clearing price (capped at 3x), so a country
+   * whose lagged price signal is stale can still compete in a short market.
+   * 0 or absent = off.
+   */
+  producerClearingReferenceStage?: number;
+  /**
+   * Funded producer market: >= 1 rebuilds each country's reachable book for the
+   * price phase from the funded market's own orders and cross-border fills
+   * instead of the modelled trade clearing. Receipts carry the seller and buyer
+   * country so the book is measured, not inferred. 0 or absent = off.
+   */
+  producerFundedBookStage?: number;
+  /**
+   * Funded producer market: >= 1 pays a share of the public funding left after
+   * the line carry, transition support and grants to the same country's
+   * households (weighted by wages) instead of burning it at close. Nothing is
+   * minted; the money is the funding the treasury outlay already paid for.
+   * 0 or absent = off.
+   */
+  producerProcurementSpillStage?: number;
+  /**
+   * Funded producer market: >= 1 lets a line that sold out at a profit grow by
+   * its book's measured shortage (units asked over units delivered last turn),
+   * at most doubling a turn, instead of a fixed step. 0 or absent = off.
+   */
+  producerShortageGrowthStage?: number;
+  /**
+   * Funded producer market: >= 1 counts a plant's deliveries to its own
+   * company's sites as sales for the demand plan and the zero-sales counter
+   * (valued at its asking price for the profit test), so a captive supplier is
+   * not read as idle and mothballed. Settlement is unchanged. 0 or absent = off.
+   */
+  producerCaptiveDeliveryStage?: number;
+  /**
+   * Funded producer market: >= 1 lets an AI owner reopen one mothballed plant a
+   * turn whose recipe's running plants face a measured shortage (units asked
+   * over delivered at least 1.5), instead of waiting on the legacy price
+   * ratio. 0 or absent = off.
+   */
+  producerFundedRestartStage?: number;
+  /** Share (0 to 1) of that leftover paid to households when the stage is on. Absent = 1. */
+  producerProcurementSpillShare?: number;
+  /**
    * Funded producer market: >= 1 retires, with no cash, a share of the
    * capacity of plants that have sold nothing for several turns. 0 or absent = off.
    */

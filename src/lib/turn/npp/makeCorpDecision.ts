@@ -3,6 +3,7 @@
  * makeNppCorpDecision uses the corporation, market signals and CEO strategy to
  * return planned sector and cash changes for the turn processor to apply.
  */
+import { chooseFundedRestart } from "@/lib/market/producerMarket/fundedRestartRules";
 import {
   sectorOutputCommodities,
   toDominanceSector,
@@ -109,6 +110,7 @@ import {
   chooseTransitionConversion,
   sectorsAfterConversion,
 } from "@/lib/turn/npp/rules/transitionConversion";
+import { hasConversionBudget } from "@/lib/market/producerMarket/transitionRules";
 import { industryConversionFields } from "@/lib/corporations/retooling/conversion";
 import {
   computeMacroProductionPolicy,
@@ -648,6 +650,7 @@ export function makeNppCorpDecision(
   // sector toward the country's real shortage (funded market only). The
   // owner's retool permission gates it, so autopilot and parent-owned
   // corporations never convert on their own.
+  let conversionCharge: { countryId: string; cost: number } | undefined;
   let conversionApplied: { sectorId: string; set: Partial<(typeof sectors)[number]> } | null = null;
   if (ctx.transitionFirstFundedTurn != null && operatorMay(operator, "retool")) {
     const choice = chooseTransitionConversion({
@@ -662,7 +665,13 @@ export function makeNppCorpDecision(
     });
     const target = choice && sectors.find((s) => s._id.toString() === choice.sectorId);
     const fields = target && industryConversionFields(target, choice.lane);
-    if (target && fields?.ok) {
+    if (
+      target &&
+      fields?.ok &&
+      hasConversionBudget(
+        ctx.conversionBudgetOf?.(String(target.countryId ?? corp.countryId ?? ""))
+      )
+    ) {
       sectorUpdates.push({
         filter: { _id: target._id, cutoverConvertedAtTurn: { $exists: false } },
         update: {
@@ -676,6 +685,10 @@ export function makeNppCorpDecision(
       });
       newlyMothballedIds.add(target._id.toString());
       conversionApplied = { sectorId: target._id.toString(), set: fields.set };
+      conversionCharge = {
+        countryId: String(target.countryId ?? corp.countryId ?? ""),
+        cost: target.capacityBookAnchor ?? 0,
+      };
     }
   }
 
@@ -684,7 +697,25 @@ export function makeNppCorpDecision(
   // and site bills buy nothing; the glut restart above brings it back when the
   // market's price recovers. Player autopilot and caretakers never do this.
   if (ctx.transitionFirstFundedTurn != null && operator.role === "npp" && !corp.countryOwnerId) {
+    // Funded restart: reopen the mothballed plant whose recipe is shortest.
+    const reopen = ctx.fundedRestartPressureOf
+      ? chooseFundedRestart(
+          sectors,
+          ctx.fundedRestartPressureOf,
+          (s) =>
+            !divestedSectorIds.some((d) => d.equals(s._id)) &&
+            !(s.sectorType === "extraction" && s.capacityUtilization === 0)
+        )
+      : null;
+    if (reopen)
+      sectorUpdates.push({
+        filter: { _id: reopen._id, mothballed: true },
+        update: {
+          $set: { mothballed: false, producerZeroSalesTurns: 0, pnlLossTurns: 0, updatedAt: now },
+        },
+      });
     for (const sector of sectors) {
+      if (reopen && sector._id.equals(reopen._id)) continue;
       const id = sector._id.toString();
       if (sector.mothballed === true || newlyMothballedIds.has(id)) continue;
       if ((sector.producerZeroSalesTurns ?? 0) < AI_ZERO_SALES_MOTHBALL_TURNS) continue;
@@ -1885,6 +1916,7 @@ export function makeNppCorpDecision(
       constructionFinanceIntents.length > 0 ? constructionFinanceIntents : undefined,
     shortageCreditRequest,
     entryDiagnostic,
+    conversionCharge,
     strategy: strategyDecision?.state,
     capacityObservations,
     ...(autopilot

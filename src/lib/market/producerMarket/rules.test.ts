@@ -643,3 +643,226 @@ describe("quote policies", () => {
     ).toMatchObject({ breakEvenUnitPrice: null, expectedSoldUnits: 0, expectedProfit: -200 });
   });
 });
+
+describe("country-tagged funded settlement", () => {
+  const base = {
+    accounts: [
+      { id: "buyer-us", cash: 1_000 },
+      { id: "buyer-uk", cash: 1_000 },
+      { id: "seller-us", cash: 0 },
+    ] as const,
+    offers: [
+      {
+        id: "offer-us-low",
+        accountId: "seller-us",
+        commodity: "gas",
+        book: "world",
+        units: 10,
+        unitPrice: 2,
+        countryId: "US",
+      },
+      {
+        id: "offer-us-high",
+        accountId: "seller-us",
+        commodity: "gas",
+        book: "world",
+        units: 10,
+        unitPrice: 3,
+        countryId: "US",
+      },
+    ] as const,
+    orders: [
+      {
+        id: "order-us",
+        accountId: "buyer-us",
+        commodity: "gas",
+        book: "world",
+        units: 6,
+        maximumUnitPrice: 3,
+        countryId: "US",
+      },
+      {
+        id: "order-uk",
+        accountId: "buyer-uk",
+        commodity: "gas",
+        book: "world",
+        units: 8,
+        maximumUnitPrice: 3,
+        countryId: "UK",
+      },
+    ] as const,
+  };
+
+  it("places supply, demand and executed cross-border units on each country", () => {
+    const result = settleProducerMarket({ turn: 1, ...base, trackCountryBooks: true });
+    const rows = new Map(
+      (result.countryBooks ?? []).map((r) => [`${r.countryId}:${r.commodity}`, r])
+    );
+    expect(rows.get("US:gas")).toMatchObject({
+      supply: 20,
+      demand: 6,
+      imports: 0,
+      exports: 8,
+    });
+    expect(rows.get("UK:gas")).toMatchObject({ supply: 0, demand: 8, imports: 8, exports: 0 });
+    // The book never invents a unit: every import is an export somewhere else.
+    const imports = (result.countryBooks ?? []).reduce((n, r) => n + r.imports, 0);
+    expect(imports).toBe(8);
+  });
+
+  it("tags replay legs and fills with the seller and buyer country", () => {
+    const result = settleProducerMarket({ turn: 1, ...base, trackCountryBooks: true });
+    const ukFills = result.tradeReceipt.fills.filter((f) => f.orderId === "order-uk");
+    expect(ukFills).toHaveLength(1);
+    expect(ukFills[0]).toMatchObject({
+      sellerCountry: "US",
+      buyerCountry: "UK",
+      units: 8,
+    });
+    const crossBorder = [...producerTrades(result.tradeReceipt)].filter(
+      (t) => t.sellerCountry !== t.buyerCountry
+    );
+    expect(crossBorder).toHaveLength(1);
+    expect(crossBorder[0]).toMatchObject({
+      sellerCountry: "US",
+      buyerCountry: "UK",
+      units: 8,
+      amount: 16,
+    });
+  });
+
+  it("splits a pooled fill across seller countries without changing its units", () => {
+    const result = settleProducerMarket({
+      turn: 1,
+      accounts: [
+        { id: "buyer", cash: 1_000 },
+        { id: "seller-a", cash: 0 },
+        { id: "seller-b", cash: 0 },
+      ],
+      offers: [
+        {
+          id: "a",
+          accountId: "seller-a",
+          commodity: "gas",
+          book: "world",
+          units: 10,
+          unitPrice: 2,
+          countryId: "US",
+        },
+        {
+          id: "b",
+          accountId: "seller-b",
+          commodity: "gas",
+          book: "world",
+          units: 10,
+          unitPrice: 2,
+          countryId: "UK",
+        },
+      ],
+      orders: [
+        {
+          id: "order",
+          accountId: "buyer",
+          commodity: "gas",
+          book: "world",
+          units: 10,
+          maximumUnitPrice: 2,
+          countryId: "FR",
+        },
+      ],
+      trackCountryBooks: true,
+    });
+    expect(result.tradeReceipt.fills).toHaveLength(1);
+    expect(result.tradeReceipt.fills[0].sellerCountry).toBeUndefined();
+    expect(result.tradeReceipt.fills[0].buyerCountry).toBe("FR");
+    const rows = new Map((result.countryBooks ?? []).map((r) => [r.countryId, r]));
+    expect(rows.get("FR")!.imports).toBe(10);
+    expect(rows.get("US")!.exports).toBe(5);
+    expect(rows.get("UK")!.exports).toBe(5);
+  });
+
+  it("counts every reservation order as the state ledger does", () => {
+    const result = settleProducerMarket({
+      turn: 1,
+      accounts: [
+        { id: "buyer", cash: 1_000 },
+        { id: "seller", cash: 0 },
+      ],
+      offers: [
+        {
+          id: "offer",
+          accountId: "seller",
+          commodity: "gas",
+          book: "world",
+          units: 10,
+          unitPrice: 2,
+          countryId: "US",
+        },
+      ],
+      orders: [
+        {
+          id: "public",
+          accountId: "buyer",
+          commodity: "gas",
+          book: "world",
+          units: 10,
+          maximumUnitPrice: 2,
+          countryId: "UK",
+          quantityGroup: { id: "group", maximumUnits: 10 },
+        },
+        {
+          id: "reservation",
+          accountId: "buyer",
+          commodity: "gas",
+          book: "world",
+          units: 4,
+          maximumUnitPrice: 2,
+          countryId: "UK",
+          quantityGroup: { id: "group", maximumUnits: 10 },
+          supplierOfferId: "offer",
+          contractUnitPrice: 2,
+        },
+      ],
+      trackCountryBooks: true,
+    });
+    const uk = (result.countryBooks ?? []).find((r) => r.countryId === "UK")!;
+    expect(uk.demand).toBe(14);
+    expect(uk.imports).toBe(10);
+  });
+
+  it("ignores untagged rows and builds no book when tracking is off", () => {
+    const untagged = settleProducerMarket({
+      turn: 1,
+      accounts: [
+        { id: "buyer", cash: 10 },
+        { id: "seller", cash: 0 },
+      ],
+      offers: [
+        {
+          id: "offer",
+          accountId: "seller",
+          commodity: "gas",
+          book: "world",
+          units: 1,
+          unitPrice: 2,
+        },
+      ],
+      orders: [
+        {
+          id: "order",
+          accountId: "buyer",
+          commodity: "gas",
+          book: "world",
+          units: 1,
+          maximumUnitPrice: 2,
+          countryId: "UK",
+        },
+      ],
+      trackCountryBooks: true,
+    });
+    expect(untagged.countryBooks).toEqual([
+      { countryId: "UK", commodity: "gas", supply: 0, demand: 1, imports: 0, exports: 0 },
+    ]);
+    expect(settleProducerMarket({ turn: 1, ...base }).countryBooks).toBeUndefined();
+  });
+});

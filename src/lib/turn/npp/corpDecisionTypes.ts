@@ -80,6 +80,15 @@ export interface NppCorpDecisionContext {
    * absent before the funded market or outside a funded world.
    */
   transitionFirstFundedTurn?: number;
+  /** Per-country allowance of capacity that may start converting this turn; absent = unpaced. */
+  conversionBudgetOf?: (
+    countryId: string
+  ) => import("@/lib/market/producerMarket/transitionRules").ConversionBudget | undefined;
+  /** Funded shortage for a recipe (sector type and strategy); absent = funded restart off. */
+  fundedRestartPressureOf?: (
+    sectorType: string,
+    strategyId: string | null | undefined
+  ) => number | undefined;
   /** Player-appointed caretaker mandate. NPP-owned corporations are always active. */
   caretakerMandate?: "active" | "passive";
 }
@@ -93,6 +102,8 @@ export type NppSectorUpdateDoc = {
 
 export interface NppCorpDecision {
   corpId: ObjectId;
+  /** Capacity book a conversion in this decision consumes from its country's pacing allowance; charged by the caller once the decision is final. */
+  conversionCharge?: { countryId: string; cost: number };
   /** Situation flags a player-owned autopilot corp turns into owner advisories. */
   autopilotSignals?: {
     chronicLowFill: boolean;
