@@ -23,6 +23,8 @@ import { runIndexFundCron, rebalanceFundToTarget } from "@/lib/indexFunds/fundCr
 import { fundBidLimitPriceLocal } from "@/lib/indexFunds/fundBidPolicy";
 import { placeFundShareBuyOrder } from "@/lib/indexFunds/fundShareOrders";
 import { sellFundHoldingShares } from "@/lib/indexFunds/fundRedemptionLiquidity";
+import { isStaggeredTurn } from "@/lib/turn/staggerPhase";
+import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 
 // ── Module mocks (external I/O boundaries only) ──────────────────────────────
 
@@ -169,7 +171,11 @@ function createStatefulDb(seed: Record<string, Doc[]>) {
   return { db: memory as unknown as Db, collection: memory.collection.bind(memory) };
 }
 
-const FUND_ID = new ObjectId();
+// Fixed id, not a random ObjectId: the daily constituent rebalance is staggered
+// by a hash of each fund id, so about one random id in 24 lands on turn 5 — the
+// turn the queue is still pending in these tests — and the fund then reports a
+// deferral the assertions below do not expect.
+const FUND_ID = new ObjectId("000000000000000000000025");
 const CORP_ID = new ObjectId();
 const NPP_ID = new ObjectId();
 
@@ -261,6 +267,12 @@ function fundDoc(state: ReturnType<typeof createStatefulDb>): Doc {
 describe("index fund subscribe -> redeem round trip via fundCron (#2120)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("keeps the fixture fund off the turns exercised below, so its rebalance never defers", () => {
+    for (const turn of [4, 5, 6, 7]) {
+      expect(isStaggeredTurn(FUND_ID.toHexString(), turn, TURNS_PER_DAY)).toBe(false);
+    }
   });
 
   it("subscribes via the NPP path and queues a bounded autonomous redemption that debits units and burns supply", async () => {
