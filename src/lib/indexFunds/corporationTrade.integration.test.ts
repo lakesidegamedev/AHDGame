@@ -366,12 +366,55 @@ describe("corporation fund accounting", () => {
     expect(await payCorporateWindUpHolders(db, fund, positions, 25, 5, new Date())).toEqual({
       holdersPaid: 2,
       distributedAnchor: 100,
+      unpaidClaims: [],
     });
     expect(memory.collection("corporations").docs[0].liquidCapital).toBe(105000);
     expect(memory.collection("corporations").docs[1].liquidCapital).toBe(1100);
     expect(find).toHaveBeenCalledTimes(1);
     expect(bulk).toHaveBeenCalledTimes(1);
     expect(memory.collection("indexFundTransactions").docs).toHaveLength(2);
+  });
+  it("skips a corporate holder whose corporation document was deleted", async () => {
+    vi.mocked(isForexEnabled).mockResolvedValue(true);
+    const { memory, db } = setup(100000, "JPY");
+    const missingCorporationId = new ObjectId();
+    const missingPositionId = new ObjectId();
+    const positions = [
+      {
+        _id: new ObjectId(),
+        fundId,
+        holderKind: "corporation" as const,
+        corporationId,
+        units: 2,
+        legacyUnits: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        _id: missingPositionId,
+        fundId,
+        holderKind: "corporation" as const,
+        corporationId: missingCorporationId,
+        units: 2,
+        legacyUnits: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ];
+    expect(await payCorporateWindUpHolders(db, fund, positions, 25, 5, new Date())).toEqual({
+      holdersPaid: 1,
+      distributedAnchor: 50,
+      unpaidClaims: [
+        {
+          positionId: missingPositionId,
+          holderKind: "corporation",
+          units: 2,
+          amountAnchor: 50,
+        },
+      ],
+    });
+    expect(memory.collection("corporations").docs[0].liquidCapital).toBe(105000);
+    expect(memory.collection("indexFundTransactions").docs).toHaveLength(1);
   });
 });
 
