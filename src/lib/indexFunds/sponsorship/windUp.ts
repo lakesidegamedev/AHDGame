@@ -24,7 +24,7 @@ import { creditCorpLiquidCapital } from "@/lib/financialTxLog/atomicCashGuard";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { sellFundHoldingsForRedemptionCash } from "@/lib/indexFunds/fundRedemptionLiquidity";
 import { sellFundBondHoldingsForCash } from "@/lib/bonds/sellFundBondUnits";
-import { payCorporateWindUpHolders } from "./corporateHolderPayout";
+import { payCorporateWindUpHolders, type WindUpUnpaidClaim } from "./corporateHolderPayout";
 import { payFundHolderCash } from "./holderPayout";
 import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 import { recordAudit } from "@/lib/audit/recordAudit";
@@ -316,6 +316,7 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
   );
   let holdersPaid = corporatePayout.holdersPaid;
   let distributedAnchor = corporatePayout.distributedAnchor;
+  const unpaidClaims: WindUpUnpaidClaim[] = [...corporatePayout.unpaidClaims];
   for (const position of positions) {
     if (position.holderKind === "corporation") continue;
     const payoutAnchor =
@@ -325,7 +326,13 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
     if (payoutAnchor <= 0) continue;
     const paid = await payFundHolderCash(db, fund, position, payoutAnchor, currentTurn, now);
     if (!paid) {
-      if (position.holderKind !== "fund_reserve") throw new Error("Fund holder payout failed");
+      if (position.holderKind === "fund_reserve") continue;
+      unpaidClaims.push({
+        positionId: position._id,
+        holderKind: position.holderKind,
+        units: position.units,
+        amountAnchor: payoutAnchor,
+      });
       continue;
     }
     distributedAnchor += payoutAnchor;
@@ -417,6 +424,14 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
         distributedAnchor,
         returnedToSponsorAnchor: remainingAnchor,
         seedCapitalAnchor: fund.seedCapitalAnchor ?? 0,
+        unpaidHolderCount: unpaidClaims.length,
+        unpaidAnchor: unpaidClaims.reduce((sum, claim) => sum + claim.amountAnchor, 0),
+        unpaidHolders: unpaidClaims.map((claim) => ({
+          positionId: claim.positionId.toString(),
+          holderKind: claim.holderKind,
+          units: claim.units,
+          amountAnchor: claim.amountAnchor,
+        })),
       },
     });
   });

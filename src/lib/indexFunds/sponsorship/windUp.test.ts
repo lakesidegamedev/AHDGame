@@ -56,6 +56,7 @@ import { sellFundHoldingsForRedemptionCash } from "@/lib/indexFunds/fundRedempti
 import { sellFundBondHoldingsForCash } from "@/lib/bonds/sellFundBondUnits";
 import { payFundHolderCash } from "./holderPayout";
 import { processQueuedRedemptions } from "@/lib/indexFunds/processQueuedRedemptions";
+import { recordAudit } from "@/lib/audit/recordAudit";
 import { loadQueuedRedemptionUnitsByFundId } from "@/lib/indexFunds/fundValuation";
 import { advanceWindDowns, beginWindUp, completeWindUp } from "./windUp";
 import { cancelFundShareOrder } from "@/lib/indexFunds/fundShareOrders";
@@ -218,6 +219,35 @@ describe("completeWindUp", () => {
     const { db } = makeDb({ positions: [], fund });
     await completeWindUp(db, fund, 200);
     expect(vi.mocked(creditCorpLiquidCapital)).toHaveBeenCalledWith(db, SPONSOR, 250_000);
+  });
+
+  it("pays the surviving holders and returns a missing holder's share to the sponsor", async () => {
+    const survivorId = new ObjectId();
+    const missingId = new ObjectId();
+    const positions = [
+      { _id: survivorId, units: 750, holderKind: "character" as const },
+      { _id: missingId, units: 250, holderKind: "npp" as const },
+    ];
+    const fund = makeFund({ status: "winding_down", cashAnchor: 100_000, unitSupply: 1_000 });
+    const { db, fundUpdate } = makeDb({ positions, fund });
+    vi.mocked(payFundHolderCash).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+
+    await expect(completeWindUp(db, fund, 200)).resolves.toBe(1);
+
+    expect(vi.mocked(payFundHolderCash)).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(creditCorpLiquidCapital)).toHaveBeenCalledWith(db, SPONSOR, 25_000);
+    expect(fundUpdate.mock.calls[0][1].$set.status).toBe("delisted");
+    const meta = vi.mocked(recordAudit).mock.calls[0][0].meta;
+    expect(meta?.unpaidHolderCount).toBe(1);
+    expect(meta?.unpaidAnchor).toBe(25_000);
+    expect(meta?.unpaidHolders).toEqual([
+      {
+        positionId: missingId.toString(),
+        holderKind: "npp",
+        units: 250,
+        amountAnchor: 25_000,
+      },
+    ]);
   });
 
   it("delists the fund and zeroes its units", async () => {
