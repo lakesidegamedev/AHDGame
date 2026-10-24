@@ -738,6 +738,8 @@ export async function resetGameWorld(
   gameStateUnset.demographicFlowAttempt = "";
   // The outgoing world's producer opening marker; a new world needs its own.
   gameStateUnset.producerOpening = "";
+  // An economy-only reset marker belongs to the outgoing world.
+  gameStateUnset.economyReset = "";
   // The outgoing world's last market tick; the fresh world has none yet.
   gameStateUnset.lastMarketTickAt = "";
   gameStateUpdate.preIterationTurns = 0;
