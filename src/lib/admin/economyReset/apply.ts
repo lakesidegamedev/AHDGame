@@ -34,6 +34,7 @@ import {
   captureEconomyResetPlan,
 } from "./census";
 import { economyResetObjectId } from "./digest";
+import { loadEconomyResetPlan, storeEconomyResetPlan } from "./planStore";
 import { isPrivateMaturityLeg, keptCouponHolders } from "./rules/bonds";
 import { primaryLegTotals, witnessDeltas, witnessEntry } from "./rules/ledger";
 import { NPP_MONEY_UNSET, characterMoneyUpdate, imperialMoneyUpdate } from "./rules/money";
@@ -44,7 +45,6 @@ import {
 } from "./reseed";
 import {
   ECONOMY_RESET_PHASES,
-  ECONOMY_RESET_PLANS_COLLECTION,
   type EconomyResetMarker,
   type EconomyResetPhase,
   type EconomyResetPlan,
@@ -456,17 +456,29 @@ async function phaseDiagnostic(db: Db, plan: EconomyResetPlan, log: Log): Promis
   const [sovereign, corporations] = await Promise.all([
     db
       .collection<Document>("bonds")
-      .find({ issuerType: "sovereign", matured: false }, { projection: { corporationId: 1 } })
+      .find(
+        { issuerType: "sovereign", matured: false },
+        { projection: { corporationId: 1, countryId: 1 } }
+      )
       .toArray(),
     db
       .collection<Document>("corporations")
-      .find({}, { projection: { _id: 1 } })
+      .find({}, { projection: { _id: 1, countryOwnerId: 1, isPrimaryNationalCorporation: 1 } })
       .toArray(),
   ]);
   const ids = new Set(corporations.map((row) => String(row._id)));
-  const orphaned = sovereign.filter((bond) => !ids.has(String(bond.corporationId))).length;
+  // Countries without a national corporation issue under a synthetic id by
+  // design; only an issuer that should resolve and does not is a finding.
+  const issuers = new Set(
+    corporations
+      .filter((row) => row.isPrimaryNationalCorporation === true)
+      .map((row) => String(row.countryOwnerId))
+  );
+  const orphaned = sovereign.filter(
+    (bond) => issuers.has(String(bond.countryId)) && !ids.has(String(bond.corporationId))
+  ).length;
   if (orphaned > 0)
-    log(`Economy reset: ${orphaned} sovereign bonds name an issuer that is not a corporation`);
+    log(`Economy reset: ${orphaned} sovereign bonds name a national issuer that does not exist`);
   const { checkEconomicOpening } = await import("@/lib/admin/seedDiagnostic/economicOpening");
   const checks = await checkEconomicOpening(db, plan.preset);
   const failures = checks.filter((row) => row.severity !== "ok");
@@ -590,14 +602,6 @@ async function runPhase(
 
 // --- Orchestration ---------------------------------------------------------
 
-async function loadStoredPlan(db: Db, digest: string): Promise<EconomyResetPlan> {
-  const row = await db
-    .collection<{ _id: string; plan: EconomyResetPlan }>(ECONOMY_RESET_PLANS_COLLECTION)
-    .findOne({ _id: digest });
-  if (!row) throw new Error("The approved economy reset plan is not stored; re-run the census");
-  return row.plan;
-}
-
 export async function applyEconomyReset(
   db: Db,
   options: ApplyEconomyResetOptions
@@ -698,7 +702,7 @@ export async function applyEconomyReset(
   try {
     if (existing) {
       marker = existing;
-      plan = await loadStoredPlan(db, digest);
+      plan = await loadEconomyResetPlan(db, digest);
     } else {
       const census = await captureEconomyResetPlan(db, {
         expectedWorldEpoch: options.expectedWorldEpoch,
@@ -712,13 +716,8 @@ export async function applyEconomyReset(
       if (census.plan.blockers.length > 0)
         throw new Error(`Economy reset has blockers: ${census.plan.blockers.join(", ")}`);
       plan = census.plan;
-      await db
-        .collection<{ _id: string }>(ECONOMY_RESET_PLANS_COLLECTION)
-        .updateOne(
-          { _id: digest },
-          { $setOnInsert: { plan, createdAt: acquiredAt } },
-          { upsert: true }
-        );
+      const chunks = await storeEconomyResetPlan(db, digest, plan, acquiredAt);
+      log(`Economy reset: stored the approved plan in ${chunks} chunk(s)`);
       marker = {
         digest,
         approvalReference: options.approvalReference,
@@ -745,6 +744,7 @@ export async function applyEconomyReset(
     for (const phase of ECONOMY_RESET_PHASES) {
       if (marker.phasesDone.includes(phase)) continue;
       log(`Economy reset phase: ${phase}`);
+      const phaseStarted = Date.now();
       const result = await runPhase(db, phase, plan, digest, marker, log);
       witnessEntries += result.witnessEntries ?? 0;
       if (result.diagnosticFailures !== undefined) diagnosticFailures = result.diagnosticFailures;
@@ -754,6 +754,9 @@ export async function applyEconomyReset(
           ? { $set: { "economyReset.diagnosticFailures": result.diagnosticFailures } }
           : {}),
       } as never);
+      log(
+        `Economy reset phase: ${phase} done in ${((Date.now() - phaseStarted) / 1000).toFixed(1)}s`
+      );
       marker.phasesDone.push(phase);
       phasesRun.push(phase);
     }
@@ -766,6 +769,8 @@ export async function applyEconomyReset(
           action: "economy_reset",
           username: "system",
           details: `Economy-only reset ${digest} (${options.approvalReference})`,
+          // Bounded by currencies and collections, never by world size; the
+          // full plan lives in its chunks under economyResetPlans.
           economyReset: {
             digest,
             worldEpochId: plan.worldEpochId,

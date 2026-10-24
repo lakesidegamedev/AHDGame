@@ -313,6 +313,6 @@ export const PRESERVED: CollectionEntry[] = [
     name: "economyResetPlans",
     category: "preserved",
     notes:
-      "Approved economy-only reset plans, one per digest. The apply resumes from the stored plan after a failure, and the record stays as the audit of what the reset removed.",
+      "Approved economy-only reset plans, stored as ordered chunk documents per digest so a real-size plan stays under the BSON limit. The apply resumes from the stored plan after a failure, and the record stays as the audit of what the reset removed.",
   },
 ];
