@@ -501,14 +501,13 @@ export async function _enrichElection(
   // proportional estimate above — so the live "Projected Seats" panel matches
   // how the race will actually resolve. Falls back to the proportional estimate
   // for states with no districts drawn.
-  let districtedMarginProjection: SeatProjection | null = null;
-  if (
-    !seatedAllocation &&
+  const redistrictedHouseRace =
     election.electionType === "house" &&
     (countryId ?? "US") === "US" &&
-    isRedistrictingEnabled(gameState) &&
-    tally
-  ) {
+    isRedistrictingEnabled(gameState);
+  let districtsForState: CongressionalDistrict[] | null = null;
+  let districtedMarginProjection: SeatProjection | null = null;
+  if (redistrictedHouseRace && !seatedAllocation && tally) {
     const candidateVotes: Record<string, number> = {};
     const candidateParty: Record<string, string> = {};
     for (const c of activeCandidates) {
@@ -522,6 +521,7 @@ export async function _enrichElection(
           .collection<CongressionalDistrict>("congressionalDistricts")
           .find({ countryId: "US", stateId: election.state as string })
           .toArray();
+    districtsForState = districts;
     if (districts.length > 0) {
       const projectionInput = {
         countryId: "US",
@@ -547,6 +547,19 @@ export async function _enrichElection(
       }
     }
   }
+
+  // The resolver falls back to the statewide allocator when a state has no
+  // districts drawn, so the race page must not claim district seats there. Ended
+  // races skip the projection above; a one-document check settles those without
+  // loading the whole state's districts.
+  if (redistrictedHouseRace && districtsForState === null && isFull) {
+    districtsForState = await db
+      .collection<CongressionalDistrict>("congressionalDistricts")
+      .find({ countryId: "US", stateId: election.state as string })
+      .limit(1)
+      .toArray();
+  }
+  const seatsDecidedByDistrict = redistrictedHouseRace && (districtsForState?.length ?? 0) > 0;
 
   // National Front chambers: project with the SAME quota the resolver will use,
   // for the same reason the districted branch above exists. `computeSeatEstimates`
@@ -1283,6 +1296,7 @@ export async function _enrichElection(
     byParty,
     polling,
     seatsEstimate,
+    seatsDecidedByDistrict: isFull ? seatsDecidedByDistrict : false,
     incumbent: incumbentDisplay,
 
     // Full-view fields

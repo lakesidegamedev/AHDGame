@@ -203,7 +203,8 @@ export async function loadCorporationDetailView(args: {
     db,
     corporationForControl,
     corporation,
-    viewerUserId
+    viewerUserId,
+    currentTurn
   );
 
   const financials = buildFinancials({
@@ -436,6 +437,7 @@ export async function loadCorporationDetailView(args: {
       canManageAsParent: subsidiary.canManageAsParent,
       canSpinOff: subsidiary.canSpinOff,
       groupStrengthTransfer: subsidiary.groupStrengthTransfer,
+      spinOffCooldownTurnsRemaining: subsidiary.spinOffCooldownTurnsRemaining,
       parentDividendFloorPct: subsidiary.activeFloorPct > 0 ? subsidiary.activeFloorPct : undefined,
     },
     ceo:

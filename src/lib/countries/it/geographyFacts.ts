@@ -137,6 +137,7 @@ export const IT_INCOME_ANCHORS: NormalAnchor[] = [
  * seeds/reference/income1991 (#3393). The 1953 point above is the 1953 overlay's USD level.
  */
 export const IT_INCOME_START_VINTAGES: Record<number, IncomeStartVintage> = {
+  1979: { value: 7_000_000, id: "it-1979-household-authored" },
   1991: { value: 38140233, id: "it-1991-household-r1" },
 };
 

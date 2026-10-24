@@ -140,6 +140,43 @@ describe("federation custody materialization", () => {
     ).rejects.toThrow("approved playable station");
   });
 
+  it("keeps a retained ground force whatever its strategic station says (#4590)", async () => {
+    // Ground stations are strategic regions (eeu, nat) or empty. A region code
+    // can collide with a state id, but that still is not proof the unit belongs
+    // to a departing successor: the custody plan already decided it is retained.
+    const regionId = new ObjectId("000000000000000000000067");
+    const collisionId = new ObjectId("000000000000000000000068");
+    const mem = createInMemoryDb();
+    mem.seed("militaryUnits", [
+      { _id: regionId, countryId: "RU", domain: "ground", station: "eeu" },
+      { _id: collisionId, countryId: "RU", domain: "ground", station: "UKRAINE" },
+    ]);
+    const db = mem as unknown as Db;
+    const retained = (id: ObjectId) => ({
+      assetId: `force:${id.toString()}`,
+      kind: "conventional-force" as const,
+      custodianEntityId: "RU",
+      disposition: "retain-detailed" as const,
+    });
+
+    expect(
+      await materializeFederationCustody({
+        db,
+        session: {} as ClientSession,
+        applicationId,
+        sourceCountryId: "RU",
+        assignments: [retained(regionId), retained(collisionId)],
+        transfers,
+      })
+    ).toBe(2);
+    // Both units stay in the continuing state's army.
+    expect(await db.collection("militaryUnits").countDocuments({ countryId: "RU" })).toBe(2);
+    const records = await db.collection("federationCustodyRecords").find({}).toArray();
+    expect(records.map((r) => r.assignment.assetId).sort()).toEqual(
+      [`force:${regionId.toString()}`, `force:${collisionId.toString()}`].sort()
+    );
+  });
+
   it("keeps retained forces with no station or an off-map station", async () => {
     const groundId = new ObjectId("000000000000000000000064");
     const navalId = new ObjectId("000000000000000000000065");

@@ -33,6 +33,7 @@ import { needsCharacterHint } from "@/lib/auth/characterGate";
 import { setCharacterGateCookie } from "@/lib/auth/characterGateCookie";
 import { AUTH_COOKIE_NAME } from "@/lib/authCookieName";
 import { exchangeCodeForToken, fetchDiscordUser } from "@/lib/discord";
+import { discordRedirectUri } from "@/lib/discordRedirect";
 import { createAdminLog } from "@/lib/adminLog";
 import { createNotification } from "@/lib/notifications";
 import { OAUTH_DEVICE_KEY_COOKIE, OAUTH_FINGERPRINT_COOKIE } from "@/lib/auth/oauthFingerprint";
@@ -140,7 +141,7 @@ export async function GET(request: Request) {
 
   const clientId = process.env.DISCORD_CLIENT_ID;
   const clientSecret = process.env.DISCORD_CLIENT_SECRET;
-  const redirectUri = process.env.DISCORD_REDIRECT_URI;
+  const redirectUri = discordRedirectUri();
 
   if (!clientId || !clientSecret || !redirectUri) {
     return linkRedirect(resultUrl("error", "not_configured"));

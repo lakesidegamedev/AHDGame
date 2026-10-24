@@ -36,6 +36,12 @@ vi.mock("@/lib/indexFunds/fundValuation", () => ({
   loadOpenOrdersEscrowByFundId: vi.fn().mockResolvedValue(new Map()),
 }));
 vi.mock("@/lib/currency/featureFlag", () => ({ isForexEnabled: vi.fn().mockResolvedValue(true) }));
+vi.mock("@/lib/indexFunds/fundShareOrders", () => ({
+  cancelFundShareOrder: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("@/lib/indexFunds/subscriptions", () => ({
+  refundQueuedSubscriptionsForFund: vi.fn().mockResolvedValue(0),
+}));
 // Mirrors the real contract: a fund_reserve position is the fund's own units
 // and is never paid out.
 vi.mock("./holderPayout", () => ({
@@ -52,6 +58,8 @@ import { payFundHolderCash } from "./holderPayout";
 import { processQueuedRedemptions } from "@/lib/indexFunds/processQueuedRedemptions";
 import { loadQueuedRedemptionUnitsByFundId } from "@/lib/indexFunds/fundValuation";
 import { advanceWindDowns, beginWindUp, completeWindUp } from "./windUp";
+import { cancelFundShareOrder } from "@/lib/indexFunds/fundShareOrders";
+import { refundQueuedSubscriptionsForFund } from "@/lib/indexFunds/subscriptions";
 
 const SPONSOR = new ObjectId();
 
@@ -89,6 +97,7 @@ function makeDb(opts: {
   fund?: IndexFund;
   bondsRemaining?: () => number;
   queuedRedemptions?: () => number;
+  openFundOrders?: Array<{ _id: ObjectId }>;
 }) {
   const fundUpdate = vi.fn().mockResolvedValue({ modifiedCount: opts.claimed === false ? 0 : 1 });
   const positionsUpdateMany = vi.fn().mockResolvedValue({ modifiedCount: 1 });
@@ -120,6 +129,11 @@ function makeDb(opts: {
       if (name === "indexFundTransactions") return { insertOne: txInsert };
       if (name === "indexFundRedemptionQueue")
         return { countDocuments: vi.fn(async () => opts.queuedRedemptions?.() ?? 0) };
+      if (name === "shareOrders")
+        return {
+          find: () => ({ toArray: async () => opts.openFundOrders ?? [] }),
+          countDocuments: vi.fn(async () => (opts.openFundOrders ?? []).length),
+        };
       if (name === "corporations")
         return {
           findOne: vi
@@ -341,5 +355,42 @@ describe("advanceWindDowns", () => {
     const r = await advanceWindDowns(db, 356, { forexEnabled: true });
     expect(processQueuedRedemptions).not.toHaveBeenCalled();
     expect(r.errors).toEqual([]);
+  });
+});
+
+describe("#4219 wind-up clears settlement blockers", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("cancels resting fund orders and refunds queued subscriptions before completing", async () => {
+    const orderId = new ObjectId();
+    const openOrders = [{ _id: orderId }];
+    const fund = makeFund({ status: "winding_down", holdings: [], cashAnchor: 10_000 });
+    const { db, fundUpdate } = makeDb({
+      windingDown: [fund],
+      positions: [],
+      openFundOrders: openOrders,
+    });
+
+    // First pass: the order is still on the book, so completion must wait. The
+    // helpers are the only things that can clear it.
+    const blocked = await advanceWindDowns(db, 356, { forexEnabled: true });
+    expect(cancelFundShareOrder).toHaveBeenCalledWith(db, orderId, 356);
+    expect(refundQueuedSubscriptionsForFund).toHaveBeenCalledWith(db, fund._id, 356);
+    expect(blocked.fundsCompleted).toBe(0);
+
+    // Cancelling (mocked) removes the order; the next pass finishes the fund
+    // instead of repeating the warning forever.
+    openOrders.length = 0;
+    const done = await advanceWindDowns(db, 357, { forexEnabled: true });
+    expect(done.fundsCompleted).toBe(1);
+    expect(done.errors).toEqual([]);
+    expect(fundUpdate.mock.calls.at(-1)![1].$set.status).toBe("delisted");
+  });
+
+  it("does not repeat the warning when the blockers are gone", async () => {
+    const fund = makeFund({ status: "winding_down", holdings: [], cashAnchor: 10_000 });
+    const { db } = makeDb({ windingDown: [fund], positions: [], openFundOrders: [] });
+    const r = await advanceWindDowns(db, 356, { forexEnabled: true });
+    expect(r.errors).not.toContain("NIT: Fund settlement must finish before wind-up");
   });
 });

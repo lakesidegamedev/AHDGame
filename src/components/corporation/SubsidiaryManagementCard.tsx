@@ -217,6 +217,7 @@ export function SubsidiaryManagementCard({
         <SpinOffModal
           corporationId={corporation._id}
           sectorOptions={sectorOptions}
+          cooldownTurnsRemaining={corporation.spinOffCooldownTurnsRemaining ?? 0}
           onClose={() => setShowSpinOff(false)}
           onSpunOff={() => {
             setShowSpinOff(false);

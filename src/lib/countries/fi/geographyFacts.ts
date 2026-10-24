@@ -135,6 +135,7 @@ export const FI_INCOME_ANCHORS: NormalAnchor[] = [
  * seeds/reference/income1991 (#3393). The 1953 point above is in pre-1963 markka.
  */
 export const FI_INCOME_START_VINTAGES: Record<number, IncomeStartVintage> = {
+  1979: { value: 52_000, id: "fi-1979-household-authored" },
   1991: { value: 127787, id: "fi-1991-household-r1" },
 };
 

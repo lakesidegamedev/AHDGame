@@ -109,17 +109,46 @@ export function idleCauseMeta(
   };
 }
 
-/** Tailwind classes per tone, for meter fills and legend dots. */
-export const TONE_FILL: Record<IdleCauseMeta["tone"] | "sold" | "unsold", string> &
-  Partial<Record<PlantIdleCauseKey, string>> = {
+/**
+ * Tailwind classes per tone, for meter fills and legend dots.
+ *
+ * Tones carry severity, not identity. A capacity meter needs identity: several
+ * causes can share a severity while asking the player to do different things,
+ * so each cause takes its own swatch from `IDLE_CAUSE_FILL`. Chart swatches are
+ * the documented exception to the semantic-token rule (docs/DESIGN.md): a
+ * capacity meter needs more hues than the status tokens provide.
+ */
+export const TONE_FILL: Record<IdleCauseMeta["tone"] | "sold" | "unsold", string> = {
   sold: "bg-success",
   unsold: "bg-warning",
   warning: "bg-warning/50",
-  inputs: "bg-warning/50",
-  staffing: "bg-orange-500/50",
   error: "bg-error/60",
   info: "bg-info/50",
   muted: "bg-muted/40",
+};
+
+/**
+ * One swatch per idle cause, used for both the meter segment and its legend
+ * dot so the two can always be matched.
+ *
+ * The hues are deliberately spread around the wheel rather than grouped by
+ * severity: "waiting on inputs" and "demand limited" are both warnings, but one
+ * is solved by buying and the other by waiting, so they must not look alike.
+ * Keep every entry unique; `plants.test.ts` fails the build if two causes
+ * collide, because a legend with two identical dots teaches nothing.
+ */
+export const IDLE_CAUSE_FILL: Record<PlantIdleCauseKey, string> = {
+  inputs: "bg-amber-500/60",
+  demand: "bg-rose-500/50",
+  ramping: "bg-sky-400/60",
+  strike: "bg-error/80",
+  disaster: "bg-fuchsia-600/55",
+  policy: "bg-indigo-400/55",
+  staffing: "bg-orange-600/60",
+  bank: "bg-teal-400/55",
+  deposits: "bg-lime-500/55",
+  mothballed: "bg-muted/45",
+  other: "bg-slate-500/30",
 };
 
 /**

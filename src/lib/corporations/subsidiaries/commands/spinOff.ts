@@ -45,7 +45,7 @@ import {
 } from "../helpers";
 import { collectSiblingSubsidiaryCeoUserIds, resolveParentCeoUserId } from "../parentContext";
 import { pickOrCreateNppCeoForNewCorp } from "../nppCeoSelection";
-import { SPIN_OFF_COOLDOWN_TURNS, spinOffCostAnchor } from "../constants";
+import { spinOffCooldownTurnsRemaining, spinOffCostAnchor } from "../constants";
 import { fail, type SubsidiaryCommandResult } from "../commandTypes";
 import {
   releaseConstructionPropertyTransition,
@@ -103,9 +103,9 @@ export async function spinOff(
     );
   }
   // Cooldown.
-  if (parent.lastSpinOffTurn != null && turn - parent.lastSpinOffTurn < SPIN_OFF_COOLDOWN_TURNS) {
-    const remaining = SPIN_OFF_COOLDOWN_TURNS - (turn - parent.lastSpinOffTurn);
-    return fail(`Spin-off is on cooldown for ${remaining} more turn(s).`);
+  const cooldownRemaining = spinOffCooldownTurnsRemaining(parent.lastSpinOffTurn, turn);
+  if (cooldownRemaining > 0) {
+    return fail(`Spin-off is on cooldown for ${cooldownRemaining} more turn(s).`);
   }
 
   const nameTrimmed = name.trim();

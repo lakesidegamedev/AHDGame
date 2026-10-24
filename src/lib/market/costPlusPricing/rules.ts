@@ -36,6 +36,17 @@ export function clampPricingPosture(value: number): number {
   return Math.max(PRICING_POSTURE_MIN, Math.min(PRICING_POSTURE_MAX, value));
 }
 
+/**
+ * Lowest utilisation the per-unit fixed cost is spread over.
+ *
+ * Matches the demand throttle's 10% floor. Below it a plant still runs a probe,
+ * and dividing full-run overhead by a 1% run multiplies its quote by a hundred
+ * every turn: higher price, fewer buyers, lower run, higher price again (#4352).
+ * Spreading no further than the floor bounds the quote at what a plant
+ * throttled to that floor would charge.
+ */
+export const COST_PLUS_MIN_UTILISATION = 0.1;
+
 export interface CostPlusCostBasis {
   inputCostShare: number;
   fixedCostShare: number;
@@ -63,6 +74,13 @@ export function recordCostPlusBasis(input: {
   inputsCost: number;
   fixedCost: number;
   nominalProducedRevenue: number;
+  /**
+   * Revenue at a full-nameplate run for the same period. When supplied, fixed
+   * cost is never spread over less than {@link COST_PLUS_MIN_UTILISATION} of
+   * it. Omit where the full-run value is unknown; the produced-revenue divisor
+   * then applies unchanged.
+   */
+  nominalFullRunRevenue?: number;
   inputCostIndex: number;
   turn: number;
 }): CostPlusCostBasis | undefined {
@@ -73,9 +91,16 @@ export function recordCostPlusBasis(input: {
     input.inputCostIndex <= 0
   )
     return undefined;
+  const fullRun = input.nominalFullRunRevenue;
+  // Inputs scale with output, so only the fixed share can spiral. Do not let it
+  // exceed what the throttle floor would already charge.
+  const fixedDenominator =
+    typeof fullRun === "number" && Number.isFinite(fullRun) && fullRun > 0
+      ? Math.max(input.nominalProducedRevenue, fullRun * COST_PLUS_MIN_UTILISATION)
+      : input.nominalProducedRevenue;
   const basis = {
     inputCostShare: input.inputsCost / input.inputCostIndex / input.nominalProducedRevenue,
-    fixedCostShare: input.fixedCost / input.nominalProducedRevenue,
+    fixedCostShare: input.fixedCost / fixedDenominator,
     turn: input.turn,
   };
   return validCostPlusBasis(basis) ? basis : undefined;

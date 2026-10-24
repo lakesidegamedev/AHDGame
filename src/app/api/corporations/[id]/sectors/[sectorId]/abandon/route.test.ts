@@ -100,6 +100,7 @@ describe("POST /api/corporations/[id]/sectors/[sectorId]/abandon", () => {
           constructionPropertyTransition: {
             key: `restore:${sectorId.toHexString()}`,
             kind: "restore",
+            stage: "reserved",
           },
         },
       },
@@ -230,7 +231,7 @@ describe("abandoning a sector that feeds the company's bank", () => {
       }),
       { params: Promise.resolve({ id: "1", sectorId: sectorId.toString() }) }
     );
-    return { response, data: await response.json() };
+    return { response, data: await response.json(), corpId, sectorId, POST };
   }
 
   it("refuses the last financial sector until the CEO acknowledges the deposit ceiling falls to zero (ticket 1553)", async () => {
@@ -245,9 +246,42 @@ describe("abandoning a sector that feeds the company's bank", () => {
   });
 
   it("goes ahead once acknowledged", async () => {
-    db.collectionMocks.corporateSectors.findOneAndUpdate.mockResolvedValue(null);
-    const { response } = await setup(true);
-    expect(response.status).not.toBe(409);
+    const { corpId: testCorpId, sectorId: testSectorId, POST } = await setup(true);
+    // The acknowledgement releases the 409 gate, so the command reserves the
+    // row and disposes of it. Without a reservation there is nothing to abandon.
+    db.collectionMocks.corporateSectors.findOneAndUpdate.mockResolvedValue({
+      _id: testSectorId,
+      corporationId: testCorpId,
+      stateId: "MN",
+      sectorType: "financial",
+      revenue: 1_000,
+    });
+    db.collectionMocks.unownedSectors.findOneAndUpdate.mockResolvedValue(null);
+    db.collectionMocks.corporateSectors.deleteMany.mockResolvedValue({ deletedCount: 1 });
+    db.collectionMocks.states.findOne.mockResolvedValue({ _id: "MN", name: "Minnesota" });
+    // Disposal returns the sector to the unowned pool, which loads the owners
+    // in one batch and needs this corporation among them.
+    db.collectionMocks.corporations.findOne.mockResolvedValue({
+      _id: testCorpId,
+      name: "Fixture Corporation",
+      countryId: "US",
+      liquidCurrencyCode: "USD",
+    });
+    db.collectionMocks.corporations.find.mockReturnValue({
+      project: vi.fn().mockReturnValue({
+        toArray: async () => [{ _id: testCorpId, countryId: "US", liquidCurrencyCode: "USD" }],
+      }),
+    });
+
+    const res = await POST(
+      new Request("http://localhost/api/corporations/1/sectors/1/abandon", {
+        method: "POST",
+        body: JSON.stringify({ acknowledgeBankImpact: true }),
+      }),
+      { params: Promise.resolve({ id: "1", sectorId: testSectorId.toString() }) }
+    );
+
+    expect(res.status).toBe(200);
     expect(db.collectionMocks.corporateSectors.findOneAndUpdate).toHaveBeenCalled();
   });
 });

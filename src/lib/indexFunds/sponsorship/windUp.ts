@@ -36,6 +36,8 @@ import {
 } from "@/lib/indexFunds/fundValuation";
 import { processQueuedRedemptions } from "@/lib/indexFunds/processQueuedRedemptions";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
+import { cancelFundShareOrder } from "@/lib/indexFunds/fundShareOrders";
+import { refundQueuedSubscriptionsForFund } from "@/lib/indexFunds/subscriptions";
 
 const FUND_TX = "indexFundTransactions";
 const REDEMPTION_QUEUE = "indexFundRedemptionQueue";
@@ -175,6 +177,11 @@ export async function advanceWindDowns(
   for (const fund of bondPhase) {
     if (stillHoldingBonds.has(String(fund._id))) continue;
     try {
+      // Orders and subscriptions both block completion and neither is served
+      // once the fund is winding down, so clear them here (#4219). Cancelling an
+      // order returns its unspent escrow to the fund; refunding a subscription
+      // returns the investor's reserved cash.
+      await clearSettlementBlockers(db, fund, currentTurn);
       // The regular redemption pass only serves open funds, so withdrawals
       // queued before or during wind-up are paid here, before completion
       // checks that the queue is empty.
@@ -191,6 +198,29 @@ export async function advanceWindDowns(
   }
 
   return result;
+}
+
+/**
+ * Cancel the fund's resting share orders and refund its queued subscriptions.
+ *
+ * Both are settlement work the regular passes no longer perform for a fund in
+ * wind-down, and `completeWindUp` refuses while either exists. Cancelling and
+ * refunding is safe to repeat: an already-cancelled order or refunded
+ * subscription is a no-op.
+ */
+async function clearSettlementBlockers(
+  db: Db,
+  fund: IndexFund,
+  currentTurn: number
+): Promise<void> {
+  const openOrders = await db
+    .collection("shareOrders")
+    .find({ placerFundId: fund._id, status: "open" }, { projection: { _id: 1 } })
+    .toArray();
+  for (const order of openOrders) {
+    await cancelFundShareOrder(db, order._id as ObjectId, currentTurn);
+  }
+  await refundQueuedSubscriptionsForFund(db, fund._id, currentTurn);
 }
 
 async function hasUnsettledRedemptions(db: Db, fund: IndexFund): Promise<boolean> {

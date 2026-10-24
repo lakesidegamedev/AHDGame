@@ -150,6 +150,35 @@ describe("OverviewTab", () => {
     expect(screen.queryByText("Buy / sell")).toBeNull();
   });
 
+  it("calls a majority shareholder the parent only when the subsidiary is formalized", () => {
+    const parentCorporation = {
+      _id: "p1",
+      sequentialId: 3,
+      name: "Holdco",
+      ownershipPct: 64.25,
+    };
+
+    renderOverview({
+      corporation: { ...corporation, parentCorporation, isFormalizedSubsidiary: false },
+    });
+    expect(screen.getByText("Controlling shareholder")).toBeTruthy();
+    expect(screen.getByText("64.3% of votes, no management control")).toBeTruthy();
+    expect(screen.queryByText("Parent")).toBeNull();
+  });
+
+  it("still calls a formalized subsidiary's owner the parent", () => {
+    renderOverview({
+      corporation: {
+        ...corporation,
+        parentCorporation: { _id: "p1", sequentialId: 3, name: "Holdco", ownershipPct: 64.25 },
+        isFormalizedSubsidiary: true,
+      },
+    });
+    expect(screen.getByText("Parent")).toBeTruthy();
+    expect(screen.getByText("64.3%")).toBeTruthy();
+    expect(screen.queryByText("Controlling shareholder")).toBeNull();
+  });
+
   it("switches the money period from the statistics header", () => {
     const { onPeriodViewChange } = renderOverview();
     fireEvent.click(screen.getByRole("radio", { name: "Daily" }));

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getDiscordOAuthUrl } from "@/lib/discord";
+import { discordRedirectUri } from "@/lib/discordRedirect";
 import { getBaseUrl, getClientIp } from "@/lib/utils/network";
 import { AUTH_LIMITS, checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { getOAuthStateCookieOptions } from "@/lib/auth";
@@ -21,7 +22,7 @@ export async function GET(request: Request) {
   if (!limit.ok) return rateLimitResponse(limit.retryAfter);
   try {
     const clientId = process.env.DISCORD_CLIENT_ID;
-    const redirectUri = process.env.DISCORD_REDIRECT_URI;
+    const redirectUri = discordRedirectUri();
 
     if (!clientId || !redirectUri) {
       return NextResponse.redirect(
