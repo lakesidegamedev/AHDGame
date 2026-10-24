@@ -50,9 +50,26 @@ candidate or an HTTP success for durable evidence.
 npx vitest run src/lib/auth/unifiedCompletion.test.ts
 ```
 
-The eight cases cover the exact order, already-unified replay, enrolling and
-credentialed denial, non-committed provisioning, stale-proof redrive, missing
-password denial, non-unified activation and operation/account mismatch.
+The cases cover the exact order, already-unified replay, enrolling and
+credentialed denial, non-committed provisioning, stale/unavailable proof
+redrive, missing-password denial, ambiguous source-fence commit, exact source
+replay, non-unified activation and operation/account mismatch.
+
+## Failure-matrix evidence
+
+| Injected outcome                                       | Required result                         |
+| ------------------------------------------------------ | --------------------------------------- |
+| Disabled target provision pending/aborted              | stop before central fence               |
+| Source fence `STALE` or `UNAVAILABLE` plus password    | same-operation redrive                  |
+| Source fence `STALE` or `UNAVAILABLE` without password | stop; never legacy fallback             |
+| Source fence `COMMIT_UNKNOWN`                          | distinct error; no import or activation |
+| Source fence `REPLAY_NO_MUTATION`                      | continue from durable evidence          |
+| Activation not `unified`                               | failure; never report success           |
+| Enrollment already `unified`                           | idempotent return with target subject   |
+| Enrollment `enrolling` or `credentialed`               | pending; operator/redrive path          |
+
+This is orchestration-level evidence. The production-shaped drill against the
+deployed issuer, coordinator database and source Mongo remains a gate.
 
 ## Remaining wiring
 
