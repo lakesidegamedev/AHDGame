@@ -10,6 +10,20 @@ export const MAIN_MODES: { id: PurchaseMode; label: string }[] = [
   { id: "private", label: "Private Deal" },
 ];
 
+/**
+ * Modes the trade dialog offers.
+ *
+ * A private company's shares do not have a public order book: a resting order
+ * there is visible to its holders but the private-sale band cannot match its
+ * price, so the CEO could leave a bid nobody can fill (#4461). Private
+ * companies trade through Private Deal only, and the server refuses order-book
+ * orders for them.
+ */
+export function mainModesFor(isPrivate: boolean): { id: PurchaseMode; label: string }[] {
+  if (!isPrivate) return MAIN_MODES;
+  return MAIN_MODES.filter((mode) => mode.id === "float" || mode.id === "private");
+}
+
 export interface SharePurchaseModalProps {
   corporation: CorporationDetail;
   corpId: string;

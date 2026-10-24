@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { computeClearingFactors, costPlusPriceFactor } from "../clearing";
-import { inputBasketCostIndex, recordCostPlusBasis } from "./rules";
+import { COST_PLUS_MIN_UTILISATION, inputBasketCostIndex, recordCostPlusBasis } from "./rules";
 import { computeInputsCost } from "@/lib/corporations/physicalPnl";
+import { DEMAND_THROTTLE_FLOOR } from "@/lib/turn/corporation/rules/demandThrottle";
 import { COMMODITY_BASE_PRICES, type CommodityType } from "@/lib/constants/commodities";
 
 describe("cost-plus offers", () => {
@@ -128,5 +129,67 @@ describe("cost-plus offers", () => {
       costPlusPriceFactor(index, markup, basis.inputCostShare, basis.fixedCostShare) * nominal;
     expect(quote(0)).toBeCloseTo(bill + fixedCost, 6);
     expect(quote(0.05) - (bill + fixedCost)).toBeCloseTo(0.05 * (bill + fixedCost), 6);
+  });
+});
+
+describe("#4352 fixed-cost spread is bounded at the throttle floor", () => {
+  it("spreads fixed cost over at least the same 10% the demand throttle keeps running", () => {
+    expect(COST_PLUS_MIN_UTILISATION).toBe(DEMAND_THROTTLE_FLOOR);
+  });
+
+  it("leaves a full run's basis unchanged", () => {
+    const full = recordCostPlusBasis({
+      inputsCost: 100,
+      fixedCost: 20,
+      nominalProducedRevenue: 200,
+      nominalFullRunRevenue: 200,
+      inputCostIndex: 1,
+      turn: 5,
+    });
+    expect(full?.fixedCostShare).toBeCloseTo(0.1);
+  });
+
+  it("does not multiply the quote when output falls to the floor", () => {
+    // A tenth of the run: revenue 20 instead of 200. Unbounded, the fixed share
+    // would be 1.0 and the quote ten times the full-run price.
+    const atFloor = recordCostPlusBasis({
+      inputsCost: 10,
+      fixedCost: 20,
+      nominalProducedRevenue: 20,
+      nominalFullRunRevenue: 200,
+      inputCostIndex: 1,
+      turn: 5,
+    });
+    expect(atFloor?.fixedCostShare).toBeCloseTo(1);
+    // 20 / (200 x 0.1) = 1: ten times the full-run share, exactly what a plant
+    // throttled to the floor owes per unit. Without the bound a 1% run would
+    // spread the same bill over a hundredth of the revenue.
+    expect(atFloor!.fixedCostShare / 0.1).toBeCloseTo(10);
+    const perUnit = costPlusPriceFactor(1, 0, atFloor!.inputCostShare, atFloor!.fixedCostShare);
+    expect(perUnit).toBeCloseTo(1.5);
+  });
+
+  it("caps the spread below the floor instead of letting it grow without limit", () => {
+    const deep = recordCostPlusBasis({
+      inputsCost: 1,
+      fixedCost: 20,
+      nominalProducedRevenue: 2,
+      nominalFullRunRevenue: 200,
+      inputCostIndex: 1,
+      turn: 5,
+    });
+    // Same cap as the floor: 20 / 20 = 1, not 20 / 2 = 10.
+    expect(deep?.fixedCostShare).toBeCloseTo(1);
+  });
+
+  it("keeps the produced-revenue divisor when the full-run value is unknown", () => {
+    const basis = recordCostPlusBasis({
+      inputsCost: 1,
+      fixedCost: 20,
+      nominalProducedRevenue: 2,
+      inputCostIndex: 1,
+      turn: 5,
+    });
+    expect(basis?.fixedCostShare).toBeCloseTo(10);
   });
 });

@@ -134,9 +134,12 @@ export const ES_INCOME_ANCHORS: NormalAnchor[] = [
  * Income anchor for a world that STARTS in the given year. Used only at the
  * exact start year; never interpolated, so a 1953 world running forward keeps
  * its flat 1953 anchor. 1991 is the derived peseta household median from
- * seeds/reference/income1991 (#3393).
+ * seeds/reference/income1991 (#3393). 1979 is the authored national level of
+ * the ~1979 seed bundle, labelled as a gameplay level rather than a sourced
+ * statistic (#3398).
  */
 export const ES_INCOME_START_VINTAGES: Record<number, IncomeStartVintage> = {
+  1979: { value: 700_000, id: "es-1979-household-authored" },
   1991: { value: 2565869, id: "es-1991-household-r1" },
 };
 

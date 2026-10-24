@@ -123,6 +123,18 @@ export async function placeShareOrder(request: Request, { params }: RouteParams)
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
+
+    // Private companies trade through Private sale only (#4461). A limit order
+    // on a private company leaves a resting bid that the only holders able to
+    // fill it cannot see, and the private-sale band cannot match an order-book
+    // price. Refuse at the source so the asymmetry cannot be created.
+    if (corporation.isPrivate === true) {
+      return errorResponse(
+        400,
+        `${corporation.name} is a private company. Private shares change hands through a private sale, not the order book.`
+      );
+    }
+
     const marketQuote = await loadEquityQuote(db, corporation);
     const executionPrice = type === "buy" ? marketQuote.askPriceLocal : marketQuote.bidPriceLocal;
     const orderFlowEligible = isOrderFlowPriceEligible(

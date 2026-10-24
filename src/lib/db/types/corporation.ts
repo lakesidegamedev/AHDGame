@@ -1564,7 +1564,15 @@ export interface CorporateSector {
   /** Frozen funded build claim and its cash escrow; absent on legacy sectors. */
   constructionFinancing?: import("@/lib/banking/rules/constructionBuild").ConstructionBuildClaim;
   /** A durable owner mutation excludes new construction claims until completion. */
-  constructionPropertyTransition?: { key: string; kind: string };
+  constructionPropertyTransition?: {
+    key: string;
+    kind: string;
+    /**
+     * Abandon resume bookkeeping (#4190). Records the last durable step so a
+     * retry resumes instead of repeating a brand hit or a build refund.
+     */
+    stage?: "reserved" | "brandApplied" | "refunded";
+  };
   /** Stable mode marker for an interrupted funded single-sector nationalization. */
   pendingFundedNationalization?: { operationKey: string };
   /**

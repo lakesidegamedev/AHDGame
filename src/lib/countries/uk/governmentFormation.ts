@@ -25,6 +25,7 @@ import {
   tickConfidenceForGov,
 } from "@/lib/uk/confidence/confidenceGaugeStore";
 import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
+import { loadUkBrokenPromiseMeter } from "@/lib/countries/uk/manifesto/deliveryMeter";
 import { tickNhsFromBudget } from "@/lib/uk/nhs/nhsStore";
 import { triggerSnapElection } from "@/lib/turn/snapElection";
 import { getGameState } from "@/lib/gameState";
@@ -96,9 +97,10 @@ export async function updateGovernmentSeats(): Promise<void> {
  */
 export async function tickUkGovernmentGauges(db: Db, now: Date): Promise<void> {
   const nhsGameState = await getGameState(db);
-  const approvalDoc = await db
-    .collection<GovernmentApproval>("governmentApprovals")
-    .findOne({ _id: "UK" });
+  const [approvalDoc, brokenPromiseMeter] = await Promise.all([
+    db.collection<GovernmentApproval>("governmentApprovals").findOne({ _id: "UK" }),
+    loadUkBrokenPromiseMeter(db),
+  ]);
   if (approvalDoc) {
     const erosionScale = getUkConfidenceErosionScale(
       approvalDoc.headOfGovernmentSinceTurn,
@@ -107,6 +109,10 @@ export async function tickUkGovernmentGauges(db: Db, now: Date): Promise<void> {
     );
     const gauge = await tickConfidenceForGov(db, {
       approval: approvalDoc.approvalRating,
+      // Broken manifesto pledges bleed confidence every turn. Omitted when the
+      // government has no judgeable manifesto, so silence is not read as total
+      // failure.
+      brokenPromiseMeter,
       erosionScale,
       now,
       turn: nhsGameState?.currentTurn,

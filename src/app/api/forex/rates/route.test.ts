@@ -79,5 +79,8 @@ it("publishes the declared target before the hourly turn without reserve history
     ceiling: 0.5,
     setAtTurn: null,
     defending: true,
+    turnsToReach: 50,
+    unreachable: true,
+    gapPct: 0.5,
   });
 });

@@ -81,7 +81,12 @@ describe("income vintage provenance gate", () => {
     );
     // Every id is unique, so one country's stamp can never activate another's.
     expect(new Set(Object.values(FRESH)).size).toBe(ALL.length);
-    expect(incomeVintageStampsFor(1979)).toEqual({});
+    // #3398: the seven west countries also seed a 1979 bundle, so a 1979
+    // start year has its own vintage. NG, CN and TR stay legacy there.
+    const west = ALL.filter((c) => !FIXED.includes(c as (typeof FIXED)[number]));
+    expect(incomeVintageStampsFor(1979)).toEqual(
+      Object.fromEntries(west.map((c) => [c, INCOME_START_VINTAGES[c]![1979].id]))
+    );
     expect(incomeVintageStampsFor(2019)).toEqual({});
     expect(incomeVintageStampsFor(null)).toEqual({});
   });
@@ -166,7 +171,10 @@ describe("seed writers stamp the provenance they write", () => {
     for (const c of ALL) {
       expect(seededIncomeVintageId(c, "1991-default")).toBe(FRESH[c]);
       expect(seededIncomeVintageId(c, "2019-default")).toBeNull();
-      expect(seededIncomeVintageId(c, "1979-default")).toBeNull();
+      // #3398: west countries stamp a 1979 vintage; NG, CN and TR do not.
+      expect(seededIncomeVintageId(c, "1979-default")).toBe(
+        INCOME_START_VINTAGES[c]![1979]?.id ?? null
+      );
     }
     expect(seededIncomeVintageId("UK", "1991-default")).toBeNull();
     // Every authored vintage has a writer that stamps it, and bootstrap re-applies it.

@@ -211,7 +211,7 @@ describe("computePlantsCapacity — plants capacity advance + P5 basis (#588)", 
   // (far more on extreme pairs).
   it("seeds a flip-turn transition in destination units", () => {
     const from = "standard";
-    const to = "premium";
+    const to = "heavy_metals";
     const startTurn = CURRENT_TURN - 5;
     const effective = getEffectiveStrategyRates("manufacturing", to, from, startTurn, CURRENT_TURN);
     expect(effective.isTransitioning).toBe(true);

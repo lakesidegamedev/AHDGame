@@ -301,11 +301,14 @@ describe("other start years keep their pre-#3316 anchors and bands", () => {
     expect(getIncomeAnchor("CN", 1991)).toBe(9_000);
   });
 
-  it("start vintages exist only at 1991, for NG, CN, TR and the #3393 countries", () => {
+  it("start vintages are 1991 everywhere and 1979 in the #3393 west (#3398)", () => {
     const west = ["AT", "ES", "FI", "FR", "GR", "IT", "SE"] as const;
     expect(Object.keys(INCOME_START_VINTAGES).sort()).toEqual([...FIXED, ...west].sort());
-    for (const c of [...FIXED, ...west]) {
+    for (const c of FIXED) {
       expect(Object.keys(INCOME_START_VINTAGES[c]!)).toEqual(["1991"]);
+    }
+    for (const c of west) {
+      expect(Object.keys(INCOME_START_VINTAGES[c]!).sort()).toEqual(["1979", "1991"]);
     }
   });
 

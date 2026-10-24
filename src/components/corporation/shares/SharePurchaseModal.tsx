@@ -24,7 +24,7 @@ import {
   estimateCorpMaxSpendableTargetAmount,
   estimateCorpWalletSpend,
 } from "@/lib/currency/corpWalletSpend";
-import { MAIN_MODES } from "./sharePurchaseModalTypes";
+import { mainModesFor } from "./sharePurchaseModalTypes";
 import type { PurchaseMode, OrderSide } from "./sharePurchaseModalTypes";
 import { SharePurchaseAtMarketView } from "./SharePurchaseAtMarketView";
 import { SharePurchaseLimitView } from "./SharePurchaseLimitView";
@@ -91,6 +91,7 @@ export default function SharePurchaseModal({
   const corpCurrencyCode = corporation.liquidCurrencyCode as CurrencyCode | undefined;
 
   const [mode, setMode] = useState<PurchaseMode>("float");
+  const modes = mainModesFor(corporation.isPrivate === true);
   const myHoldingTerms = corporation.shareholders.find(
     (holder) => holder.characterId === myCharacterId
   )?.holdingTerms;
@@ -897,7 +898,7 @@ export default function SharePurchaseModal({
           {mode !== "orders" && (
             <div className="shrink-0 border-b border-card-border px-6 py-4">
               <div className="flex overflow-hidden rounded-lg border border-card-border text-sm">
-                {MAIN_MODES.map((m, i) => (
+                {modes.map((m, i) => (
                   <button
                     key={m.id}
                     type="button"
