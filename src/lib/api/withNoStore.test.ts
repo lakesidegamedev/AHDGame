@@ -33,7 +33,7 @@ describe("withNoStore", () => {
 
   it("compresses a large JSON body at the origin when the client accepts gzip", async () => {
     const rows = Array.from({ length: 200 }, (_, i) => ({ i, label: "repetitive value" }));
-    const handler = withNoStore(async () => NextResponse.json({ rows }));
+    const handler = withNoStore(async (_request: Request) => NextResponse.json({ rows }));
     const res = await handler(
       new Request("https://example.test/api/thing", {
         headers: { "accept-encoding": "gzip" },
@@ -48,7 +48,9 @@ describe("withNoStore", () => {
 
   it("does not compress when the handler opts out", async () => {
     const rows = Array.from({ length: 200 }, (_, i) => ({ i }));
-    const handler = withNoStore(async () => NextResponse.json({ rows }), { compress: false });
+    const handler = withNoStore(async (_request: Request) => NextResponse.json({ rows }), {
+      compress: false,
+    });
     const res = await handler(
       new Request("https://example.test/api/thing", {
         headers: { "accept-encoding": "gzip" },

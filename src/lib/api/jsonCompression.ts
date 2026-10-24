@@ -132,7 +132,7 @@ export async function compressJsonResponse(
 
   // Rebuild even when we do not compress, because the original body has been
   // consumed by the read above.
-  const rebuild = (body: Uint8Array) => {
+  const rebuild = (body: Uint8Array<ArrayBuffer>) => {
     headers.delete("content-length");
     return new Response(body, {
       status: response.status,
@@ -153,9 +153,14 @@ export async function compressJsonResponse(
   // Incompressible (tiny or already dense) payloads are sent as-is.
   if (compressed.byteLength >= raw.byteLength) return rebuild(raw);
 
+  // Copy into a fresh ArrayBuffer: Node's zlib buffers are typed as
+  // Uint8Array<ArrayBufferLike>, which BodyInit does not accept.
+  const compressedBytes = new Uint8Array(compressed.byteLength);
+  compressedBytes.set(compressed);
+
   headers.set("content-encoding", encoding);
-  headers.set("content-length", String(compressed.byteLength));
-  return new Response(new Uint8Array(compressed), {
+  headers.set("content-length", String(compressedBytes.byteLength));
+  return new Response(compressedBytes, {
     status: response.status,
     statusText: response.statusText,
     headers,
