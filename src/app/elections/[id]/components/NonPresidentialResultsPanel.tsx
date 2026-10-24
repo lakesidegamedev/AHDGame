@@ -31,6 +31,8 @@ interface NonPresidentialResultsPanelProps {
   lineSeries: LineSeries[];
   countryId: CountryId;
   electionType: string;
+  /** Seats decided district by district, not apportioned by statewide share. */
+  districted?: boolean;
   cycle?: number;
   /** Region the race is fought in, as displayed. */
   regionName: string;
@@ -58,6 +60,7 @@ export function NonPresidentialResultsPanel({
   lineSeries,
   countryId,
   electionType,
+  districted,
   cycle,
   regionName,
   countryName,
@@ -88,6 +91,7 @@ export function NonPresidentialResultsPanel({
         seatMargins: tally.seatMargins ?? null,
         totalSeats,
         electionType,
+        districted,
         cycle,
         countryId,
         preset: activePreset,
@@ -107,6 +111,7 @@ export function NonPresidentialResultsPanel({
       tally,
       totalSeats,
       electionType,
+      districted,
       cycle,
       countryId,
       activePreset,

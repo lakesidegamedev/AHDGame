@@ -352,3 +352,34 @@ describe("seat margin note", () => {
     expect(seatMarginNote(undefined)).toBeNull();
   });
 });
+
+describe("buildBlendDetail — districted House races", () => {
+  it("says seats are decided district by district instead of quoting a Hare quota", () => {
+    const m = buildBlendDetail(houseInput({ districted: true }));
+    expect(m.standfirst).not.toContain("Hare quota");
+    expect(m.standfirst).not.toContain("apportioned by share");
+    expect(m.standfirst).toContain("decided district by district");
+    expect(m.facts.some((f) => f.key === "Quota")).toBe(false);
+    expect(m.hemiNote).toContain("decided district by district");
+    for (const row of m.rows) {
+      expect(row.mathNote).not.toContain("whole quota");
+      expect(row.mathNote).not.toContain("largest remainder");
+    }
+  });
+
+  it("keeps the quota wording for a non-districted Hare-quota race", () => {
+    const m = buildBlendDetail(houseInput());
+    expect(m.standfirst).toContain("Hare quota");
+    expect(m.facts.some((f) => f.key === "Quota")).toBe(true);
+  });
+
+  it("does not use district wording before any votes are counted", () => {
+    const m = buildBlendDetail(houseInput({ districted: true, totalVotes: {} }));
+    expect(m.standfirst).toBe("No ballots have been counted in this race.");
+  });
+
+  it("does not use district wording for a single-winner race", () => {
+    const m = buildBlendDetail(senateInput({ districted: true }));
+    expect(m.standfirst).toContain("A single seat, decided on plurality.");
+  });
+});
