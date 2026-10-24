@@ -4,7 +4,7 @@ import { useGameEvents } from "@/hooks/useGameEvents";
 
 import { useState, useEffect, use, Suspense, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import * as Sentry from "@sentry/nextjs";
+import { captureClientException } from "@/lib/observability/sentryClientLazy";
 import { HeroImage } from "@/components/HeroImage";
 import BackButton from "@/components/BackButton";
 import { Skeleton } from "@/components/ui";
@@ -151,7 +151,7 @@ function CurrencyDetailInner({ params }: { params: Promise<{ code: string; curre
       }
     } catch (err) {
       setLoadError(true);
-      Sentry.captureException(err, { tags: { feature: "forex.currencyDetail" } });
+      captureClientException(err, { tags: { feature: "forex.currencyDetail" } });
     } finally {
       setLoading(false);
     }
