@@ -25,6 +25,7 @@ import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { getDb } from "@/lib/mongodb";
 import { refreshNationalBudgetRevenue } from "@/lib/budget/revenue";
 import { buildCorporationLookups } from "./buildLookups";
+import { deferAfterTurn, drainDeferredTurnWork } from "@/lib/turn/deferredTurnWork";
 import { buildFreightBillingBySector } from "./freightBillingTurn";
 import { USE_GROWTH_INCREMENT, businessAcumenGrowthMultiplier } from "@/lib/stats/statsConstants";
 import { shedVacantCeoSectorsToUnowned } from "./vacantCeoSectorShed";
@@ -860,6 +861,8 @@ export async function processCorporationTurn(
     funded
   );
   mark("processSectors(CPU)");
+  // The previous turn's deferred shadow must land before this one reads it.
+  await drainDeferredTurnWork();
   await runProducerMarketShadowPhase(db, {
     // Never measure a shadow beside the live funded market in the same turn.
     // The shadow is telemetry inside this phase's timeout. Skip it when the
@@ -874,6 +877,8 @@ export async function processCorporationTurn(
     lookups,
     env: sectorTurnEnv,
     sectorOps,
+    // Telemetry only: the market run, close and evidence finish after the turn.
+    defer: deferAfterTurn,
   });
 
   // Phase 2b: NPP corporation AI decisions, budgets, expansion, dividends

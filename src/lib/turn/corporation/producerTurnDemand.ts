@@ -73,6 +73,8 @@ export async function buildProducerTurnDemand(
     investmentAccountId?: (countryId: string) => string;
     /** Last turn's unspent public funding kept per budget line, by country (funded turn only). */
     publicCarryIn?: ReadonlyMap<string, LineCarry>;
+    /** Optional timing hook, called at the end of each numbered step. */
+    stage?: (name: string) => void;
   }
 ) {
   const { worldEpoch, carry } = input;
@@ -204,6 +206,7 @@ export async function buildProducerTurnDemand(
     }
   }
 
+  input.stage?.("demand.plants");
   // 2. Households: carried savings, or a new run's opening of a few turns of
   //    the wages they are paid (owner decision 2026-10-18). Income-derived;
   //    no GDP or population sizing.
@@ -219,6 +222,7 @@ export async function buildProducerTurnDemand(
     }
   }
 
+  input.stage?.("demand.households");
   // 3. Public buyers: the existing budget outlay times the plant economy's
   //    share of GDP, so only the plant market's slice of a budget is spent here.
   const states = await db
@@ -342,6 +346,7 @@ export async function buildProducerTurnDemand(
     }));
   const investmentFundingTotal = investmentFunding.reduce((s, f) => s + f.fundingLocal, 0);
 
+  input.stage?.("demand.public");
   // 4. Accounts: company cash, households, funded public buyers, payees (empty at open).
   const roles: ShadowAccountRole[] = [];
   const accounts: MarketAccount[] = [];
@@ -375,6 +380,7 @@ export async function buildProducerTurnDemand(
     }
   const openingById = new Map(accounts.map((a) => [a.id, a.cash]));
 
+  input.stage?.("demand.accounts");
   // 5. Orders and trade routes: world-book buyers only reach sellers in their
   //    own country or on routes the live trade matrix leaves open.
   const walletCountry = new Map(
