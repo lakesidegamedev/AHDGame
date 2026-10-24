@@ -48,7 +48,7 @@ durable source proof store, reserves the exact coordinator identifiers, and
 admits the operation. Success is `202` with:
 
 ```json
-{"operationId":"<uuid>","status":"eligible"}
+{ "operationId": "<uuid>", "status": "eligible" }
 ```
 
 It never returns the password, proof body, canonical account ID or a session
@@ -64,14 +64,14 @@ account `unified`.
 
 ## Configuration
 
-| Variable | Contract |
-| --- | --- |
-| `AHD_MIGRATION_PROOF_LOAD_ENABLED` | Exactly `true` to expose proof load |
-| `AHD_MIGRATION_PROOF_LOAD_SECRET` | 32-512 token-alphabet characters |
-| `AHD_MIGRATION_START_ENABLED` | Exactly `true` to expose the start route |
-| `AHD_MIGRATION_COORDINATOR_URL` | Exact HTTPS origin, no path/query/fragment |
-| `AHD_MIGRATION_COORDINATOR_SECRET` | 32-512 token-alphabet characters |
-| `AHD_MIGRATION_SOURCE_ISSUER` | Defaults to `urn:lakeside:legacy:ahd:production` |
+| Variable                           | Contract                                         |
+| ---------------------------------- | ------------------------------------------------ |
+| `AHD_MIGRATION_PROOF_LOAD_ENABLED` | Exactly `true` to expose proof load              |
+| `AHD_MIGRATION_PROOF_LOAD_SECRET`  | 32-512 token-alphabet characters                 |
+| `AHD_MIGRATION_START_ENABLED`      | Exactly `true` to expose the start route         |
+| `AHD_MIGRATION_COORDINATOR_URL`    | Exact HTTPS origin, no path/query/fragment       |
+| `AHD_MIGRATION_COORDINATOR_SECRET` | 32-512 token-alphabet characters                 |
+| `AHD_MIGRATION_SOURCE_ISSUER`      | Defaults to `urn:lakeside:legacy:ahd:production` |
 
 The coordinator URL is the private enrollment-admission service. The
 coordinator's proof loader must use the proof-load secret. Both routes are
