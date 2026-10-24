@@ -20,7 +20,7 @@ import {
 } from "@/contexts/CharacterStatsContext";
 import { useGameTurnStatus } from "@/hooks/useGameEvents";
 import { isLightweightLayoutPath } from "@/lib/constants/layoutPaths";
-import { buildClientStatusUrl } from "@/lib/statusBar/clientStatusRequest";
+import { buildClientStatusUrl, fetchClientStatusJson } from "@/lib/statusBar/clientStatusRequest";
 import {
   ACTION_CAP,
   ACTION_HOARDING_PENALTY,
@@ -194,23 +194,22 @@ export function StatusBar({
   // cutting egress on this large, every-session payload.
   const refetchStats = useCallback(async () => {
     if (!signedIn) return;
-    try {
-      const res = await fetch(buildClientStatusUrl(layout), {
-        signal: AbortSignal.timeout(10_000),
-        cache: "no-cache",
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-      if (data.status === "no-character") return;
-      if (typeof data.cashOnHand === "number" && prevCashRef.current != null) {
-        const delta = data.cashOnHand - prevCashRef.current;
-        if (delta !== 0) setCashDelta(delta);
-        prevCashRef.current = data.cashOnHand;
-      }
-      patchStats(buildStatusPatch(data));
-    } catch {
-      /* network/timeout — chips stay as-is until the next trigger */
+    // Shared with the navbar, which needs the same payload in the same commit:
+    // whichever mounts first issues one request and both map the result.
+    const result = await fetchClientStatusJson(buildClientStatusUrl(layout), {
+      signal: AbortSignal.timeout(10_000),
+      cache: "no-cache",
+    });
+    if (!result.ok) return;
+    const data = result.data;
+    if (!data) return;
+    if (data.status === "no-character") return;
+    if (typeof data.cashOnHand === "number" && prevCashRef.current != null) {
+      const delta = data.cashOnHand - prevCashRef.current;
+      if (delta !== 0) setCashDelta(delta);
+      prevCashRef.current = data.cashOnHand;
     }
+    patchStats(buildStatusPatch(data));
   }, [layout, patchStats, signedIn]);
 
   // Trade flows (bonds/shares/forex/savings/transfers) that mutate wallet state

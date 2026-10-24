@@ -11,9 +11,15 @@ import { useCharacterStats } from "@/contexts/CharacterStatsContext";
 import { ACTION_CAP, ACTION_HOARDING_THRESHOLD } from "@/lib/actions/recommendationsConstants";
 import { useAuthMe } from "@/contexts/AuthDataContext";
 import { useInterface } from "@/contexts/InterfaceContext";
-import { buildClientStatusUrl } from "@/lib/statusBar/clientStatusRequest";
+import { buildClientStatusUrl, fetchClientStatusJson } from "@/lib/statusBar/clientStatusRequest";
 import { Navbar } from "./Navbar";
-import { ExperimentalNavbar } from "./ExperimentalNavbar";
+import dynamic from "next/dynamic";
+// Only one navbar variant renders at a time. Code-splitting the new one means
+// a legacy-interface player never downloads it (and vice versa) while both stay
+// server-rendered, so there is no layout shift on first paint.
+const ExperimentalNavbar = dynamic(() =>
+  import("./ExperimentalNavbar").then((m) => m.ExperimentalNavbar)
+);
 import { Wordmark } from "./Wordmark";
 import { NavbarTopFlair } from "./NavbarTopFlair";
 import { FeedbackModal } from "./FeedbackModal";
@@ -323,21 +329,19 @@ export function NavbarWrapper({
   const fetchStatusData = useCallback(
     async (layout: string | null | undefined, retryCount = 0) => {
       let shouldRetry = false;
-      try {
-        const res = await fetch(buildClientStatusUrl(layout), {
-          signal: AbortSignal.timeout(10_000),
-          credentials: "same-origin",
-          cache: "no-store",
-        });
+      // Shared with StatusBar, which needs the same payload: one request and one
+      // set of Mongo reads per page view instead of two.
+      const result = await fetchClientStatusJson(buildClientStatusUrl(layout), {
+        signal: AbortSignal.timeout(10_000),
+        cache: "no-store",
+      });
 
-        if (!res.ok) {
-          if (res.status >= 500 && retryCount === 0) {
-            shouldRetry = true;
-          }
-          return;
+      if (!result.ok) {
+        if ((result.status >= 500 || result.status === 0) && retryCount === 0) {
+          shouldRetry = true;
         }
-
-        const data = await res.json();
+      } else {
+        const data = result.data ?? {};
 
         if (data.status === "no-character") {
           setCharacterStats(null);
@@ -370,16 +374,12 @@ export function NavbarWrapper({
           bondIncome: data.bondIncome ?? 0,
           electionStats: data.electionStats ?? null,
         });
-      } catch {
-        if (retryCount === 0) {
-          shouldRetry = true;
-        }
-      } finally {
-        if (shouldRetry) {
-          setTimeout(() => {
-            void fetchStatusData(layout, 1);
-          }, 2_000);
-        }
+      }
+
+      if (shouldRetry) {
+        setTimeout(() => {
+          void fetchStatusData(layout, 1);
+        }, 2_000);
       }
     },
     [setCharacterStats]
