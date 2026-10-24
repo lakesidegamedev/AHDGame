@@ -43,6 +43,8 @@ export async function requireCorporationActionsEnabled(db: Db): Promise<NextResp
 
   if (gameState?.processingKind === "stockTaxMigration")
     return errorResponse(409, "Stock holding maintenance is in progress, try again shortly.");
+  if (gameState?.processingKind === "economyReset")
+    return errorResponse(409, "Economy maintenance is in progress, try again shortly.");
   if (gameState?.corporationActionsPaused) {
     return errorResponse(403, "Corporation actions are currently paused by an admin");
   }
