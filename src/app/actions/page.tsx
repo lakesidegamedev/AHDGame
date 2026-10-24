@@ -121,6 +121,12 @@ export default function ActionsPage() {
       if (charRes.ok) {
         const char: Character = await charRes.json();
         setCharacter(char);
+        // The character is enough to paint the action grid; the state read below
+        // only refines GDP-scaled costs. Unblock first paint now and let the
+        // state land as a background refinement, rather than holding the whole
+        // page on a second serial round trip (measured 2026-10-24: this was the
+        // second RTT in the /actions gate).
+        setLoading(false);
         // State data is needed to compute accurate GDP-scaled action costs.
         if (char.homeState) {
           try {
@@ -135,9 +141,12 @@ export default function ActionsPage() {
             // State data failed — page will use fallback costs
           }
         }
+      } else {
+        setLoading(false);
       }
     } catch (err) {
       console.error("Failed to fetch character:", err);
+      setLoading(false);
     } finally {
       setLoading(false);
     }
@@ -176,7 +185,9 @@ export default function ActionsPage() {
   useEffect(() => {
     const fetchPortfolio = async () => {
       try {
-        const res = await fetch("/api/character/portfolio");
+        // Four scalar totals are all this page renders; `summary=1` skips the
+        // 500-row history chart (and its per-row FX snapshots).
+        const res = await fetch("/api/character/portfolio?summary=1");
         if (res.ok) {
           const data = await res.json();
           setPortfolioData({
