@@ -1,6 +1,6 @@
 import type { ClientSession, MongoClient, TransactionOptions } from "mongodb";
 import { ReadPreference } from "mongodb";
-import { getMongoClient } from "@/lib/mongodb";
+import { getMongoClient, resolveMongoDbName } from "@/lib/mongodb";
 
 const DEFAULT_TRANSACTION_TIMEOUT_MS = 15_000;
 const DEFAULT_MAX_COMMIT_TIME_MS = 5_000;
@@ -102,6 +102,7 @@ export async function runRequiredTransaction<T>(
   }
 
   const client = options.client ?? (await getMongoClient());
+  await awaitMajorityBarrier(client);
   const session = client.startSession();
   const transactionOptions: TransactionOptions & { timeoutMS: number } = {
     readConcern: { level: "snapshot" },
@@ -137,4 +138,36 @@ export async function runRequiredTransaction<T>(
     throw failure;
   }
   return result as T;
+}
+
+/** Where the barrier write lands: one document, never read. */
+const BARRIER_COLLECTION = "turnWorkerControl";
+const BARRIER_ID = "transactionMajorityBarrier";
+
+/**
+ * A transaction reads a majority-committed snapshot. A client that
+ * acknowledges writes at w:1 (the turn worker, #4789) can open a transaction
+ * before its own previous write is majority-committed, so the snapshot does
+ * not contain it: production turn 396 failed when a public-float novation's
+ * transaction could not see the reservation written just before it.
+ *
+ * One w:majority write first closes that gap. The oplog is ordered, so once
+ * this write is majority-acknowledged every earlier write on the node is too.
+ * Clients already at the server default (majority) skip it.
+ */
+export async function awaitMajorityBarrier(client: MongoClient): Promise<void> {
+  if (!acknowledgesBelowMajority(client)) return;
+  await client
+    .db(resolveMongoDbName(process.env as Parameters<typeof resolveMongoDbName>[0]))
+    .collection<{ _id: string; at: Date }>(BARRIER_COLLECTION)
+    .updateOne(
+      { _id: BARRIER_ID },
+      { $set: { at: new Date() } },
+      { upsert: true, writeConcern: { w: "majority" } }
+    );
+}
+
+function acknowledgesBelowMajority(client: MongoClient): boolean {
+  const w = client.writeConcern?.w;
+  return w !== undefined && w !== "majority";
 }
