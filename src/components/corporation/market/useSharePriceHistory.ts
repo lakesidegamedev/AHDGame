@@ -35,7 +35,10 @@ export function useSharePriceHistory(corpId: string, enabled: boolean): SharePri
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`/api/corporations/${corpId}/history`);
+        // 20 points of (turn, sharePrice) — the sparkline and the day change
+        // need the last two. `/history` without this flag returns 500 rows of
+        // ~30 fields (~430 KB) for the Charts tab.
+        const res = await fetch(`/api/corporations/${corpId}/history?sparkline=1`);
         if (!res.ok) {
           if (!cancelled) setState({ series: [], dayChange: null, loading: false });
           return;
