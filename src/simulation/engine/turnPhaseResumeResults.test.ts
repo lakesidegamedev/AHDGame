@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { TurnPhaseTelemetryMap } from "@/lib/db/types";
 import type { BondTurnResult } from "@/lib/turn/bondTurn";
 import { TurnMustStopError } from "@/lib/turn/turnMustStop";
+import { PHASE_TIMEOUT_MS } from "@/lib/turn/processingLock";
 import { createTurnPhaseRuntime } from "@/simulation/engine/turnPhaseRuntime";
 import {
   hasCompleteSovereignFlows,
@@ -42,7 +43,7 @@ function createGameStateDb(failWhen?: (set: Record<string, unknown>) => boolean)
     }
     return { acknowledged: true };
   });
-  return { doc, db: { collection: vi.fn(() => ({ updateOne })) } as never };
+  return { doc, updateOne, db: { collection: vi.fn(() => ({ updateOne })) } as never };
 }
 
 const BOND_RESULT: BondTurnResult = {
@@ -91,6 +92,144 @@ function resumedRuntime(doc: Record<string, unknown>, db: never) {
 }
 
 describe("crash resume of result-carrying phases (#3429)", () => {
+  it("retains a bond result completed during timeout drain and resumes treasury without replay", async () => {
+    vi.useFakeTimers();
+    try {
+      const { doc, db } = createGameStateDb();
+      let finish!: (value: BondTurnResult) => void;
+      const work = new Promise<BondTurnResult>((resolve) => {
+        finish = resolve;
+      });
+      const bondWrite = vi.fn(() => work);
+      const warnings: string[] = [];
+      const runtime = createTurnPhaseRuntime({
+        db,
+        phaseStatuses: {},
+        warnings,
+        currentPhaseRef: { current: null },
+      });
+      const running = runtime.runPhase("bondTurn", bondWrite);
+
+      await vi.advanceTimersByTimeAsync(PHASE_TIMEOUT_MS);
+      expect(doc.processingPhaseStatuses).toMatchObject({ bondTurn: { status: "failed" } });
+      finish(BOND_RESULT);
+      await expect(running).resolves.toEqual(BOND_RESULT);
+      expect(doc.processingPhaseStatuses).toMatchObject({ bondTurn: { status: "completed" } });
+      expect(doc.processingPhaseResults).toEqual({ bondTurn: BOND_RESULT });
+      expect(warnings).toHaveLength(1);
+
+      const settle = vi.fn(async () => ({ countries: 1 }));
+      await runBondAndTreasury(resumedRuntime(doc, db), bondWrite, settle);
+      expect(bondWrite).toHaveBeenCalledTimes(1);
+      expect(settle).toHaveBeenCalledExactlyOnceWith(BOND_RESULT);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not invent bond flows when the timed-out callback rejects", async () => {
+    vi.useFakeTimers();
+    try {
+      const { doc, db } = createGameStateDb();
+      let reject!: (error: Error) => void;
+      const work = new Promise<BondTurnResult>((_resolve, fail) => {
+        reject = fail;
+      });
+      const runtime = createTurnPhaseRuntime({
+        db,
+        phaseStatuses: {},
+        warnings: [],
+        currentPhaseRef: { current: null },
+      });
+      const running = runtime.runPhase("bondTurn", () => work);
+      await vi.advanceTimersByTimeAsync(PHASE_TIMEOUT_MS);
+      reject(new Error("settlement stopped after a partial write"));
+      await expect(running).resolves.toBeNull();
+      expect(doc.processingPhaseStatuses).toMatchObject({ bondTurn: { status: "failed" } });
+      expect(doc.processingPhaseResults).toEqual({});
+      const settle = vi.fn(async () => null);
+      await expect(
+        runBondAndTreasury(
+          resumedRuntime(doc, db),
+          vi.fn(async () => BOND_RESULT),
+          settle
+        )
+      ).rejects.toBeInstanceOf(TurnResumeResultUnavailableError);
+      expect(settle).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("fails closed if the drained bond result cannot be persisted", async () => {
+    vi.useFakeTimers();
+    try {
+      const { doc, db } = createGameStateDb((set) => "processingPhaseResults.bondTurn" in set);
+      let finish!: (value: BondTurnResult) => void;
+      const work = new Promise<BondTurnResult>((resolve) => {
+        finish = resolve;
+      });
+      const runtime = createTurnPhaseRuntime({
+        db,
+        phaseStatuses: {},
+        warnings: [],
+        currentPhaseRef: { current: null },
+      });
+      const running = runtime.runPhase("bondTurn", () => work);
+      await vi.advanceTimersByTimeAsync(PHASE_TIMEOUT_MS);
+      finish(BOND_RESULT);
+      await expect(running).rejects.toBeInstanceOf(TurnPhaseCompletionPersistError);
+      expect(doc.processingPhaseStatuses).toMatchObject({ bondTurn: { status: "failed" } });
+      expect(doc.processingPhaseResults).toEqual({});
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("serializes a delayed timeout marker before persisting successful bond completion", async () => {
+    vi.useFakeTimers();
+    try {
+      const { doc, db, updateOne } = createGameStateDb();
+      const persist = updateOne.getMockImplementation()!;
+      let releaseMarker!: () => void;
+      const marker = new Promise<void>((resolve) => {
+        releaseMarker = resolve;
+      });
+      updateOne.mockImplementation(async (filter, update) => {
+        const status = update.$set["processingPhaseStatuses.bondTurn"];
+        if (
+          status &&
+          typeof status === "object" &&
+          "status" in status &&
+          status.status === "failed"
+        )
+          await marker;
+        return persist(filter, update);
+      });
+      let finish!: (value: BondTurnResult) => void;
+      const work = new Promise<BondTurnResult>((resolve) => {
+        finish = resolve;
+      });
+      const runtime = createTurnPhaseRuntime({
+        db,
+        phaseStatuses: {},
+        warnings: [],
+        currentPhaseRef: { current: null },
+      });
+      const running = runtime.runPhase("bondTurn", () => work);
+      await vi.advanceTimersByTimeAsync(PHASE_TIMEOUT_MS);
+      finish(BOND_RESULT);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(doc.processingPhaseResults).toEqual({});
+      releaseMarker();
+      await expect(running).resolves.toEqual(BOND_RESULT);
+      expect(doc.processingPhaseStatuses).toMatchObject({ bondTurn: { status: "completed" } });
+      expect(doc.processingPhaseResults).toEqual({ bondTurn: BOND_RESULT });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("restores the exact bond flows, never reruns bondTurn, and settles the treasury once", async () => {
     const { doc, db } = createGameStateDb();
     const bondWrite = vi.fn(async () => BOND_RESULT);
