@@ -71,9 +71,18 @@ for (const route of routes) {
       const entry = performance.getEntriesByType("navigation")[0];
       return entry ? entry.encodedBodySize : 0;
     });
-    const rendered = await page.textContent("body");
-    if (/MISSING_MESSAGE|IntlError/.test(rendered ?? "")) {
+    const rendered = (await page.textContent("body")) ?? "";
+    if (/MISSING_MESSAGE|IntlError/.test(rendered)) {
       problems.push("rendered page contains a missing-message marker");
+    }
+    // next-intl renders the key path when a namespace is absent, and the console
+    // error alone can be missed if the SDK batches it. Look for dotted keys that
+    // start with a catalog namespace.
+    const rawKeys = rendered.match(
+      /\b(?:layout|nav|settings|tutorial|auth|profile|elections|corporations|worldConflicts|worldOrganizations|centralBank|parties|contests|governmentConfidence)\.[a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)+/g
+    );
+    if (rawKeys?.length) {
+      problems.push(`rendered ${rawKeys.length} raw message key(s), e.g. ${rawKeys[0]}`);
     }
   } catch (error) {
     problems.push(`navigation: ${String(error).slice(0, 200)}`);
