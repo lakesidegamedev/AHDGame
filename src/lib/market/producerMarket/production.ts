@@ -3,6 +3,7 @@
  * Input shortages constrain the whole recipe; purchases and consumed stock
  * retain their receipt cost instead of being billed again at a reference price.
  */
+import { markdownFactor, markedDownAsk, stockCover, writeDownUnits } from "./stockCoverRules";
 import {
   quoteProducer,
   settleProducerMarket,
@@ -72,6 +73,13 @@ export interface ProductionPlan {
   inputStock: readonly PurchasedStock[];
   /** Previously produced, unsold stock available beside current production. */
   outputStock: readonly ProducedStock[];
+  /**
+   * Units this plant sold last turn, for stock-cover markdown (stockCoverRules).
+   * Absent means no markdown or write-down for this plant.
+   */
+  recentSoldUnits?: number;
+  /** Units delivered per output last turn, keyed `${commodity}|${book}`; overrides the plant total. */
+  recentSoldByOutput?: Readonly<Record<string, number>>;
 }
 
 export interface ProducerInputReservation {
@@ -187,6 +195,14 @@ function quoteVolumesExcept(
  * recipe is backed by funded, delivered inputs. Each trial uses the same
  * opening cash and stock; no preview transfers money or borrows sale proceeds.
  */
+/** Units an output sold last turn: its own row when the receipt has product rows, else the plant total. */
+function recentSoldOf(p: ProductionPlan, commodity: string, book: string): number | undefined {
+  if (p.recentSoldUnits == null) return undefined;
+  return p.recentSoldByOutput
+    ? (p.recentSoldByOutput[`${commodity}|${book}`] ?? 0)
+    : p.recentSoldUnits;
+}
+
 export function advanceProducerEconomy(input: {
   turn: number;
   accounts: readonly MarketAccount[];
@@ -206,6 +222,12 @@ export function advanceProducerEconomy(input: {
   spilloverShare?: number;
   /** Explicit carry policy for alternate catalogs; ordinary worlds use commodity spoilage. */
   carryLossByCommodity?: Readonly<Record<string, number>>;
+  /** Turns of recent sales a seller may carry before marking down (stockCoverRules); 0 or absent = off. */
+  stockCoverTurns?: number;
+  /** Country of a producing site, so offers and its input orders carry one. */
+  countryOfProducer?: (producerId: string) => string | undefined;
+  /** Build the per-country funded book on the final settlement (see fundedBookRules). */
+  trackCountryBooks?: boolean;
 }): {
   accounts: MarketAccount[];
   payables: ProducerPayable[];
@@ -224,9 +246,12 @@ export function advanceProducerEconomy(input: {
   }>;
   /** Household spend stranded in sold-out lanes and how much the extra clearing placed. */
   spillover?: { strandedSpend: number; extraRequested: number; recovered: number };
+  /** Per-country funded book from the settled clearing, when `trackCountryBooks` is on. */
+  countryBooks?: ReturnType<typeof settleProducerMarket>["countryBooks"];
 } {
   const carryRates: Readonly<Record<string, number>> =
     input.carryLossByCommodity ?? COMMODITY_SPOILAGE_PER_TURN;
+  const countryOfProducer = input.countryOfProducer;
   const carryLoss = (commodity: string) => {
     const rate = carryRates[commodity] ?? 0;
     if (!Number.isFinite(rate) || rate < 0 || rate > 1)
@@ -512,6 +537,7 @@ export function advanceProducerEconomy(input: {
           maximumUnitPrice: recipe.maximumUnitPrice,
           priority: 1,
           eligibleOfferIds: input.eligibleOffersByOrder?.[id],
+          ...(countryOfProducer?.(p.id) ? { countryId: countryOfProducer(p.id) } : {}),
           ...(quantityGroup ? { quantityGroup } : {}),
         };
         return [
@@ -533,8 +559,11 @@ export function advanceProducerEconomy(input: {
       })
     );
   orders.push(...inputOrders());
-  const pendingQuotes: Array<{ offer: ProducerOffer; quote: Parameters<typeof quoteProducer>[0] }> =
-    [];
+  const pendingQuotes: Array<{
+    offer: ProducerOffer;
+    quote: Parameters<typeof quoteProducer>[0];
+    markdown: { factor: number; reference: number };
+  }> = [];
   const requestedSpend = new Map<string, number>();
   const groupedSpend = new Map<string, { accountId: string; maximumSpend: number }>();
   for (const order of orders) {
@@ -619,7 +648,13 @@ export function advanceProducerEconomy(input: {
             ? { kind: "manual", unitPrice: output.referenceUnitPrice }
             : output.policy,
       });
+      const recentSold = recentSoldOf(p, output.commodity, output.book);
+      const cover = recentSold != null ? stockCover(stock, recentSold) : 0;
       pendingQuotes.push({
+        markdown: {
+          factor: markdownFactor(cover, { coverTurns: input.stockCoverTurns ?? 0 }),
+          reference: output.referenceUnitPrice,
+        },
         offer: {
           id: JSON.stringify([p.id, "output", output.commodity]),
           accountId: p.accountId,
@@ -627,6 +662,7 @@ export function advanceProducerEconomy(input: {
           book: output.book,
           units,
           unitPrice: quote.unitPrice,
+          ...(countryOfProducer?.(p.id) ? { countryId: countryOfProducer(p.id) } : {}),
         },
         quote: quoteInput,
       });
@@ -646,10 +682,17 @@ export function advanceProducerEconomy(input: {
         pending.offer.id
       ),
     });
-    offers.push({ ...pending.offer, unitPrice: quote.unitPrice });
+    offers.push({
+      ...pending.offer,
+      unitPrice: markedDownAsk(
+        quote.unitPrice,
+        pending.markdown.reference,
+        pending.markdown.factor
+      ),
+    });
   }
   const postedOffers = new Map(offers.map((o) => [o.id, o]));
-  const trial = () => {
+  const trial = (track = false) => {
     const proposedOffers: ProducerOffer[] = [...(input.externalOffers ?? [])];
     for (const p of plans)
       for (const output of p.outputs) {
@@ -667,6 +710,7 @@ export function advanceProducerEconomy(input: {
       accounts: [...cash].map(([id, value]) => ({ id, cash: value })),
       offers: proposedOffers,
       orders: [...consumerOrders, ...inputOrders()],
+      ...(track ? { trackCountryBooks: true } : {}),
     });
   };
   let market: ReturnType<typeof settleProducerMarket> | undefined;
@@ -728,7 +772,7 @@ export function advanceProducerEconomy(input: {
   }
   // Clear once more at the settled plan so every sale is backed by what is
   // actually produced (the last pass may have lowered plans after clearing).
-  market = trial();
+  market = trial(input.trackCountryBooks === true);
   if (!market) throw new Error("Missing producer market settlement");
   let spillover: { strandedSpend: number; extraRequested: number; recovered: number } | undefined;
   if ((input.spilloverShare ?? 0) > 0 && householdIds.size > 0) {
@@ -764,7 +808,7 @@ export function advanceProducerEconomy(input: {
       };
       const before = spend(market.orders);
       consumerOrders = next.orders;
-      market = trial();
+      market = trial(input.trackCountryBooks === true);
       spillover = { ...next.stats, recovered: spend(market.orders) - before };
     }
   }
@@ -878,10 +922,32 @@ export function advanceProducerEconomy(input: {
       if (sold.deliveredUnits - available > Math.max(1e-8, available * 1e-12))
         throw new Error("Sold output exceeded input-backed production");
       const unsold = Math.max(0, available - sold.deliveredUnits);
-      const kept =
+      const carried =
         output.storable && sold.deliveredUnits < available * (1 - 1e-12)
           ? unsold * (1 - carryLoss(output.commodity))
           : 0;
+      // Stock beyond the cover is written down a little each turn (stockCoverRules).
+      const recentSoldOut = recentSoldOf(p, output.commodity, output.book);
+      const writtenDown =
+        recentSoldOut != null
+          ? Math.min(
+              carried,
+              writeDownUnits(carried, stockCover(opening, recentSoldOut), {
+                coverTurns: input.stockCoverTurns ?? 0,
+              })
+            )
+          : 0;
+      const kept = carried - writtenDown;
+      // The written-down stock is a real loss at its cost basis (profit and dividends see it).
+      if (writtenDown > 0 && openingRows.length > 0) {
+        const openingUnits = openingRows.reduce((sum, st) => sum + st.units, 0);
+        const basis =
+          openingUnits > 0
+            ? openingRows.reduce((sum, st) => sum + st.units * (st.quoteUnitCost ?? 0), 0) /
+              openingUnits
+            : 0;
+        inventoryWriteOff += writtenDown * basis;
+      }
       products.push({
         commodity: output.commodity,
         book: output.book,
@@ -976,6 +1042,7 @@ export function advanceProducerEconomy(input: {
     tradeReceipt: market.tradeReceipt,
     prices: market.prices,
     ...(spillover ? { spillover } : {}),
+    ...(market.countryBooks ? { countryBooks: market.countryBooks } : {}),
     orderOutcomes: (() => {
       const meta = new Map(
         [...consumerOrders, ...inputOrders()].map((o) => [

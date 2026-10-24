@@ -60,6 +60,7 @@ import {
 import type { ShadowCarryState } from "@/lib/market/producerMarket/shadowCarryRules";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { ProducerPhysicalEnv } from "./producerPhysicalPreparation";
+import type { FundedCountryBookRow } from "@/lib/market/producerMarket/fundedBookRules";
 import type { CorporationLookups } from "./types";
 import { buildProducerTurnDemand } from "./producerTurnDemand";
 import type { SettlementClose } from "@/lib/market/producerMarket/settlement";
@@ -72,6 +73,13 @@ import {
   publicOrderId,
   type LineCarry,
 } from "@/lib/market/producerMarket/publicCarryRules";
+import {
+  offtakeUnits,
+  type CaptiveProduct,
+} from "@/lib/market/producerMarket/captiveDeliveryRules";
+import { bookPressure, plantPressure } from "@/lib/market/producerMarket/shortageGrowthRules";
+import { recipePressure } from "@/lib/market/producerMarket/fundedRestartRules";
+import { procurementSpill } from "@/lib/market/producerMarket/procurementSpillRules";
 import { newEntrantProducerBooks } from "@/lib/market/producerMarket/openingState";
 import {
   createProducerWallets,
@@ -172,6 +180,7 @@ export async function runFundedProducerTurn(
     producerWalletId(worldEpoch, investmentScope(countryId));
 
   const carryShare = input.env.publicCarryShare ?? 0;
+  const spillShare = input.env.procurementSpillShare ?? 0;
   const publicCarryIn =
     carryShare > 0
       ? await readPublicCarryIn(
@@ -183,13 +192,56 @@ export async function runFundedProducerTurn(
           (c) => rateOf(countryCurrency.get(c))
         )
       : undefined;
+  const incomeFloor = input.env.householdIncomeFloor ?? 0;
+  const openingShareByCountry =
+    incomeFloor > 0
+      ? new Map(
+          Object.entries(
+            (
+              await db
+                .collection<{ _id: string; shareByCountry?: Record<string, number> }>(
+                  "producerHouseholdSource"
+                )
+                .findOne({ _id: worldEpoch })
+            )?.shareByCountry ?? {}
+          )
+        )
+      : undefined;
+  // Last turn's funded clearing price per reachable commodity (clearingReferenceStage)
+  // and measured shortage per book (shortageGrowthStage), from one read.
+  const clearingOn = (input.env.clearingReferenceStage ?? 0) >= 1;
+  const shortageOn = (input.env.shortageGrowthStage ?? 0) >= 1;
+  const lastOutcome =
+    clearingOn || shortageOn
+      ? await db
+          .collection<{
+            _id: string;
+            clearingPrices?: Record<string, number>;
+            bookPressure?: Record<string, number>;
+          }>(PRODUCER_MARKET_OUTCOMES)
+          .findOne(
+            { _id: `${worldEpoch}:${turn - 1}` },
+            { projection: { clearingPrices: 1, bookPressure: 1 } }
+          )
+      : null;
+  const lastClearing = clearingOn ? lastOutcome?.clearingPrices : undefined;
+  const lastPressure = shortageOn ? lastOutcome?.bookPressure : undefined;
+  const demandEnv = {
+    ...input.env,
+    ...(lastClearing
+      ? { lastClearingPriceByCommodity: new Map(Object.entries(lastClearing)) }
+      : {}),
+    ...(lastPressure ? { pressureByBook: new Map(Object.entries(lastPressure)) } : {}),
+  };
   const demand = await buildProducerTurnDemand(db, {
     turn,
     worldEpoch,
     lookups,
-    env: input.env,
+    env: demandEnv,
     sectorOps: [],
     publicCarryIn,
+    householdIncomeFloor: incomeFloor,
+    openingShareByCountry,
     carry: liveCarry(lookups, worldEpoch, turn),
     publicAccountId: publicWallet,
     investmentAccountId: investmentWallet,
@@ -460,6 +512,7 @@ export async function runFundedProducerTurn(
     // claimed twice and nothing is paid from an empty one.
     const retiredBookBySector: Record<string, number> = {};
     const grantBySector: Record<string, number> = {};
+    const grantByCountry = new Map<string, number>();
     const grantShare = input.env.decommissionGrantShare ?? DECOMMISSION_GRANT_DEFAULT_SHARE;
     if (
       grantShare > 0 &&
@@ -490,6 +543,7 @@ export async function runFundedProducerTurn(
       const grants = decommissionGrant({ claims, poolByCountry: poolAfterSupport });
       for (const g of grants.payments) {
         grantBySector[g.sectorId] = g.claim;
+        grantByCountry.set(g.countryId, (grantByCountry.get(g.countryId) ?? 0) + g.claim);
         const owner = sectorOwner.get(g.sectorId)!;
         const from = publicWallet(g.countryId);
         const key = `decommission:${owner}:${from}`;
@@ -519,6 +573,34 @@ export async function runFundedProducerTurn(
       byPayee.set(key, row);
     }
     transfers.push(...byPayee.values());
+    // What is still left of the public funding after carry, support and grants
+    // goes to the same country's households instead of being burned.
+    const spillByCountry: Record<string, number> = {};
+    if (spillShare > 0) {
+      const spill = procurementSpill({
+        poolByCountry: new Map(
+          [...poolAfterSupport].map(([c, pool]) => [
+            c,
+            Math.max(0, pool - (grantByCountry.get(c) ?? 0)),
+          ])
+        ),
+        wallets: [...demand.householdWallets.values()].map((w) => ({
+          accountId: w.accountId,
+          countryId: w.countryId,
+          wageBill: demand.wageBillByWallet.get(w.accountId) ?? 0,
+        })),
+        share: spillShare,
+      });
+      for (const p of spill) {
+        spillByCountry[p.countryId] = (spillByCountry[p.countryId] ?? 0) + p.amountAnchor;
+        transfers.push({
+          reason: "procurement_spill",
+          fromAccountId: publicWallet(p.countryId),
+          toAccountId: p.accountId,
+          amountAnchor: p.amountAnchor,
+        });
+      }
+    }
     return {
       transfers,
       meta: {
@@ -528,6 +610,7 @@ export async function runFundedProducerTurn(
         grantBySector,
         coverageByCountry: Object.fromEntries(support.coverageByCountry),
         publicCarryTarget: carryTargetByCountry,
+        ...(spillShare > 0 ? { procurementSpillByCountry: spillByCountry } : {}),
       },
     };
   };
@@ -546,6 +629,13 @@ export async function runFundedProducerTurn(
       externalOrders: [...demand.publicBuyerOrders, ...demand.investmentBuyerOrders],
       eligibleOffersByOrder: demand.eligibleOffersByOrder,
       spilloverShare: input.env.spilloverShare,
+      stockCoverTurns: input.env.stockCoverTurns,
+      ...((input.env.fundedBookStage ?? 0) >= 1
+        ? {
+            countryOfProducer: (id: string) => demand.planCountry.get(id),
+            trackCountryBooks: true,
+          }
+        : {}),
     },
     close: closeAtSettlement,
   });
@@ -576,8 +666,16 @@ export async function runFundedProducerTurn(
       { ordered: false }
     );
   const receiptsBySectorId = new Map<string, FundedReceipt>();
+  // Sectors whose plant delivered to its own company's sites (captiveDeliveryStage).
+  const captiveOn = (input.env.captiveDeliveryStage ?? 0) >= 1;
+  const offtakeBySectorId = new Map<string, number>();
   for (const sector of settled.closingSectors) {
     const r = sector.producerSettlement;
+    if (captiveOn && r && r.worldEpoch === worldEpoch && r.turn === turn)
+      offtakeBySectorId.set(
+        sector._id.toHexString(),
+        offtakeUnits(r as { soldUnits?: number; products?: CaptiveProduct[] })
+      );
     if (r && r.worldEpoch === worldEpoch && r.turn === turn)
       receiptsBySectorId.set(sector._id.toHexString(), {
         revenue: r.revenue,
@@ -592,7 +690,10 @@ export async function runFundedProducerTurn(
   const zeroSales: ObjectId[] = [];
   const sold: ObjectId[] = [];
   for (const [id, r] of receiptsBySectorId)
-    (r.soldUnits > 0 ? sold : zeroSales).push(new ObjectId(id));
+    ((captiveOn ? (offtakeBySectorId.get(id) ?? r.soldUnits) : r.soldUnits) > 0
+      ? sold
+      : zeroSales
+    ).push(new ObjectId(id));
   const sectorDocs = db.collection<CorporateSector>("corporateSectors");
   if (zeroSales.length > 0)
     await sectorDocs.updateMany(
@@ -658,13 +759,76 @@ export async function runFundedProducerTurn(
     stateOfProducer: (id) => sectorState.get(demand.planSector.get(id) ?? "") ?? null,
     unitScale: TURNS_PER_DAY,
   });
-  await db
-    .collection<{ _id: string }>(PRODUCER_MARKET_OUTCOMES)
-    .replaceOne(
-      { _id: `${worldEpoch}:${turn}` },
-      { _id: `${worldEpoch}:${turn}`, worldEpoch, turn, rows, at: new Date() } as never,
+  // Measured shortage per book (shortage growth) and per recipe (AI restarts).
+  const restartOn = (input.env.fundedRestartStage ?? 0) >= 1;
+  const pressureNow =
+    shortageOn || restartOn ? bookPressure(settled.result.orderOutcomes ?? []) : undefined;
+  // World-book clearing price per commodity, for next turn's buyer references.
+  const clearingPrices: Record<string, number> = {};
+  for (const row of settled.result.prices)
+    if (row.book === "world" && row.units > 0 && row.value > 0)
+      clearingPrices[row.commodity] = row.value / row.units;
+  // Per-country funded book, on the price phase's per-turn basis. The price
+  // phase reads it instead of the modelled clearing when the stage is on.
+  const countryBooks =
+    (input.env.fundedBookStage ?? 0) >= 1
+      ? settled.result.countryBooks?.map((row): FundedCountryBookRow => ({
+          countryId: row.countryId,
+          commodity: row.commodity,
+          supply: row.supply * TURNS_PER_DAY,
+          demand: row.demand * TURNS_PER_DAY,
+          imports: row.imports * TURNS_PER_DAY,
+          exports: row.exports * TURNS_PER_DAY,
+        }))
+      : undefined;
+  if (demand.householdSource && openingShareByCountry && openingShareByCountry.size === 0)
+    await db.collection<{ _id: string }>("producerHouseholdSource").updateOne(
+      { _id: worldEpoch },
+      {
+        $setOnInsert: {
+          worldEpoch,
+          turn,
+          shareByCountry: demand.householdSource.currentShares,
+          at: new Date(),
+        },
+      } as never,
       { upsert: true }
     );
+  await db.collection<{ _id: string }>(PRODUCER_MARKET_OUTCOMES).replaceOne(
+    { _id: `${worldEpoch}:${turn}` },
+    {
+      _id: `${worldEpoch}:${turn}`,
+      worldEpoch,
+      turn,
+      rows,
+      ...((input.env.clearingReferenceStage ?? 0) >= 1 ? { clearingPrices } : {}),
+      ...(countryBooks && countryBooks.length > 0 ? { books: countryBooks } : {}),
+      ...(pressureNow ? { bookPressure: pressureNow } : {}),
+      ...(restartOn && pressureNow
+        ? {
+            recipePressure: recipePressure(
+              settled.closingSectors.flatMap((s) => {
+                const r = s.producerSettlement;
+                if (s.mothballed === true || !r || r.turn !== turn) return [];
+                const products = (r as { products?: Parameters<typeof plantPressure>[0] }).products;
+                return [
+                  {
+                    sectorType: s.sectorType,
+                    strategyId: s.strategyId,
+                    pressure: plantPressure(products, new Map(Object.entries(pressureNow))),
+                    deliveredUnits:
+                      (r as { deliveredUnits?: number }).deliveredUnits ?? r.soldUnits ?? 0,
+                  },
+                ];
+              })
+            ),
+          }
+        : {}),
+      ...(demand.householdSource ? { householdSource: demand.householdSource } : {}),
+      at: new Date(),
+    } as never,
+    { upsert: true }
+  );
 
   // Close and transition support settled with the market (see closeAtSettlement).
   const close = settled.result.close;

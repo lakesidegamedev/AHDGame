@@ -23,6 +23,8 @@ export const HOUSEHOLD_CONSUMER_BASKET: Partial<Record<CommodityType, number>> =
 
 export function householdPurchaseOrders(input: {
   accountId: string;
+  /** Country the spending wallet belongs to; the funded book places demand here. */
+  countryId?: string;
   /** Opening wallet plus wages already paid into it. No imputed GDP or bank deposits. */
   cash: number;
   spendFraction: number;
@@ -86,6 +88,7 @@ export function householdPurchaseOrders(input: {
         maximumUnitPrice: p.maximumUnitPrice,
         maximumSpend,
         eligibleOfferIds: p.eligibleOfferIds,
+        ...(input.countryId ? { countryId: input.countryId } : {}),
       };
     });
 }

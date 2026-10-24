@@ -95,6 +95,10 @@ import {
   PRODUCER_MARKET_OUTCOMES,
   type FundedLedgerRow,
 } from "@/lib/market/producerMarket/fundedLedgerRules";
+import {
+  selectFundedReachableBooks,
+  type FundedCountryBookRow,
+} from "@/lib/market/producerMarket/fundedBookRules";
 
 import { clearAllCommodities } from "@/lib/trade/snapshot";
 import { buildReachableBooks } from "@/lib/trade/reachableBook";
@@ -1046,6 +1050,7 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
         commodityScarcityDriftEnabled: 1,
         stockCoverCapEnabled: 1,
         commandEconomyEnabled: 1,
+        producerFundedBookStage: 1,
       },
     });
   const scarcityDriftEnabled = marketFlagsConfig?.commodityScarcityDriftEnabled === true;
@@ -1085,9 +1090,12 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
     nominalIndices.lagged
   );
 
+  let fundedBookRows: readonly FundedCountryBookRow[] | undefined;
   if (producerPath === "funded") {
     const outcomes = await db
-      .collection<{ _id: string; rows: FundedLedgerRow[] }>(PRODUCER_MARKET_OUTCOMES)
+      .collection<{ _id: string; rows: FundedLedgerRow[]; books?: FundedCountryBookRow[] }>(
+        PRODUCER_MARKET_OUTCOMES
+      )
       .findOne({ _id: `${presetState?.worldEpochId}:${turn}` });
     if (!outcomes) throw new Error(`Funded turn ${turn} has no settled supply and demand`);
     const funded = fundedLedgers(outcomes.rows);
@@ -1099,7 +1107,19 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
     byCountry.clear();
     for (const [countryId, m] of aggregateByCountry(byState, stateToCountry))
       byCountry.set(countryId, m);
+    fundedBookRows = outcomes.books;
   }
+  // The funded market already knows which country's buyers ordered and which
+  // units actually crossed a border. Price from that measured book when the
+  // stage is on; the persisted snapshot keeps the modelled book so the
+  // clearing and room signals that read it are unchanged.
+  const pricingBooks = selectFundedReachableBooks({
+    stage: marketFlagsConfig?.producerFundedBookStage,
+    rows: fundedBookRows,
+    countries,
+    commodities: COMMODITY_TYPES,
+    modelled: reachableBooks,
+  });
   const pricingCtx: CommodityPricingContext = {
     ledgerBasePrices: LEDGER_BASE_PRICES,
     commodityNominalPriceIndex,
@@ -1117,7 +1137,7 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
     existingPriceMap,
     nudgeMap,
     laggedRatios,
-    reachableBooks,
+    reachableBooks: pricingBooks,
     global,
     byCountry,
     byState,

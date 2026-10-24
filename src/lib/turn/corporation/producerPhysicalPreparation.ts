@@ -1,5 +1,10 @@
 /** Prepare work, recipes and plant constraints before any product money is moved. */
 import {
+  withCaptiveDeliveries,
+  type CaptiveProduct,
+} from "@/lib/market/producerMarket/captiveDeliveryRules";
+import { plantPressure, shortageGrowth } from "@/lib/market/producerMarket/shortageGrowthRules";
+import {
   inTransitionWindow,
   TRANSITION_WINDOW_TURNS,
   transitionReliefEligible,
@@ -35,6 +40,7 @@ import { getSectorTypeMatchModifier } from "@/lib/corporations/specialization/ru
 import { organisationalOutputFactor } from "@/lib/market/producerMarket/efficiencyRules";
 import {
   demandPlanRunShare,
+  pacedRunShare,
   LOW_USE_RUN_FLOOR,
   nextRunShare,
   OUTPUT_RUN_FLOOR,
@@ -92,6 +98,28 @@ export type ProducerPhysicalEnv = Pick<
   spilloverShare?: number;
   /** Share of unfilled public budget kept per line for next turn (0 = off). */
   publicCarryShare?: number;
+  /** gameConfig.producerProcurementSpillStage share: leftover public funding paid to households (0 = off). */
+  procurementSpillShare?: number;
+  /** gameConfig.producerRunPaceDrop: largest share of last turn's run a plant may shed in one turn (0 or absent = off). */
+  runPaceDrop?: number;
+  /** gameConfig.producerHouseholdIncomeFloor: target household income per turn, anchor (0 or absent = off). */
+  householdIncomeFloor?: number;
+  /** gameConfig.producerStockCover: turns of recent sales a seller may carry before marking down (0 or absent = off). */
+  stockCoverTurns?: number;
+  /** gameConfig.producerClearingReferenceStage: >= 1 floors a buyer's reference at the last funded clearing price of a reachable good. */
+  clearingReferenceStage?: number;
+  /** gameConfig.producerFundedBookStage: >= 1 prices the funded market from its own orders and cross-border fills. */
+  fundedBookStage?: number;
+  /** gameConfig.producerShortageGrowthStage: >= 1 grows a sold-out line by its book's shortage. */
+  shortageGrowthStage?: number;
+  /** gameConfig.producerCaptiveDeliveryStage: >= 1 counts internal deliveries as sales for planning. */
+  captiveDeliveryStage?: number;
+  /** gameConfig.producerFundedRestartStage: >= 1 publishes shortage per recipe for AI restarts. */
+  fundedRestartStage?: number;
+  /** Units asked over delivered per commodity book, from last turn's settled orders. */
+  pressureByBook?: ReadonlyMap<string, number>;
+  /** Last funded clearing price per reachable commodity, anchor per unit (from the previous turn's outcomes). */
+  lastClearingPriceByCommodity?: ReadonlyMap<string, number>;
   /** gameConfig.producerIdleRetireStage: >= 1 retires capacity that persistently sells nothing. 0 or absent = off. */
   idleRetireStage?: number;
   /** gameConfig.decommissionGrantShare: share of retired book paid from unspent public funding. */
@@ -240,12 +268,22 @@ export function prepareProducerPhysicalSector(input: {
         : lookups.reachablePriceRatioByCountry?.get(countryId)?.get(commodity);
       const reference =
         prices[commodity] * (ratio ?? lookups.priceRatioByCommodity.get(commodity) ?? 1);
+      // A buyer will bid up to what the market last cleared at (capped at 3x its own
+      // reference), but only on the bid side: the output reference and the 1.25x
+      // headroom stay on the unfloored reference, so the floor cannot feed on its own
+      // clearing prices turn after turn.
+      let bidFloor = 0;
+      if ((env.clearingReferenceStage ?? 0) >= 1 && !isStateScopedCommodity(commodity)) {
+        const cleared = env.lastClearingPriceByCommodity?.get(commodity);
+        if (cleared != null && Number.isFinite(cleared) && cleared > reference)
+          bidFloor = Math.min(cleared, reference * 3);
+      }
       return [
         commodity,
         {
           book: isStateScopedCommodity(commodity) ? `state:${sector.stateId}` : "world",
           referenceUnitPrice: reference,
-          maximumInputUnitPrice: reference * input.inputPriceHeadroom,
+          maximumInputUnitPrice: Math.max(reference * input.inputPriceHeadroom, bidFloor),
         },
       ] as const;
     })
@@ -294,6 +332,33 @@ export function prepareProducerPhysicalSector(input: {
     operatingRecipientAccountId: producerWalletId(input.worldEpoch, scopes[1]),
   });
   const { plan } = prepared;
+  // Stock-cover markdown needs last turn's sales per product (see stockCoverRules).
+  if ((env.stockCoverTurns ?? 0) > 0) {
+    const last = (
+      sector as {
+        producerSettlement?: {
+          soldUnits?: number;
+          turn?: number;
+          products?: {
+            commodity: string;
+            book: string;
+            deliveredUnits?: number;
+            soldUnits?: number;
+          }[];
+        };
+      }
+    ).producerSettlement;
+    const current = last && last.turn === currentTurn - 1 ? last : null;
+    plan.recentSoldUnits = current?.soldUnits ?? 0;
+    // A product the last receipt did not list sold nothing; plants without product rows fall back to the plant total.
+    if (current?.products)
+      plan.recentSoldByOutput = Object.fromEntries(
+        current.products.map((x) => [
+          `${x.commodity}|${x.book}`,
+          x.deliveredUnits ?? x.soldUnits ?? 0,
+        ])
+      );
+  }
   const suspended =
     lookups.corporateEmbargoSuppression?.has(`${countryId}|${corp.countryId}`) === true &&
     lookups.embargoTradeExposureEnabled !== true;
@@ -304,11 +369,29 @@ export function prepareProducerPhysicalSector(input: {
     .producerSettlement;
   const lowUse = (env.lowUseCostStage ?? 0) >= 1;
   const runFloor = lowUse ? LOW_USE_RUN_FLOOR : OUTPUT_RUN_FLOOR;
-  const lastReceipt = priorReceipt && priorReceipt.turn === currentTurn - 1 ? priorReceipt : null;
-  const runShare =
+  const settledLast = priorReceipt && priorReceipt.turn === currentTurn - 1 ? priorReceipt : null;
+  const lastReceipt =
+    settledLast && (env.captiveDeliveryStage ?? 0) >= 1
+      ? withCaptiveDeliveries(settledLast as PriorReceipt & { products?: CaptiveProduct[] })
+      : settledLast;
+  const unpacedRunShare =
     (env.demandPlanStage ?? 0) >= 1
-      ? demandPlanRunShare(lastReceipt, runFloor)
+      ? demandPlanRunShare(
+          lastReceipt,
+          runFloor,
+          (env.shortageGrowthStage ?? 0) >= 1
+            ? shortageGrowth(
+                plantPressure(
+                  (lastReceipt as { products?: Parameters<typeof plantPressure>[0] } | null)
+                    ?.products,
+                  env.pressureByBook
+                )
+              )
+            : undefined
+        )
       : nextRunShare(lastReceipt, runFloor);
+  // A plan that reads a glut sheds at most runPaceDrop of its run a turn; the workforce persists.
+  const runShare = pacedRunShare(unpacedRunShare, lastReceipt, env.runPaceDrop ?? 0, runFloor);
   // Wages and site running costs follow the line the plant runs: idle lines
   // employ no one (their workers count as unemployed) and idle capacity pays
   // cold upkeep only.
