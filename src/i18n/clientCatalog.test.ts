@@ -62,6 +62,21 @@ describe("clientNamespacesForPath", () => {
     expect(clientNamespacesForPath("")).toBeNull();
   });
 
+  it("matches a country subpage pattern and beats the family prefix", () => {
+    expect(clientNamespacesForPath("/country/us/map")).toEqual(["elections", "nav", "tutorial"]);
+    expect(clientNamespacesForPath("/country/us/map/")).toEqual(["elections", "nav", "tutorial"]);
+    expect(clientNamespacesForPath("/country/uk/budget")).toEqual(["nav", "tutorial"]);
+    expect(clientNamespacesForPath("/country/jp/legislature")).toContain("parties");
+  });
+
+  it("keeps the family union for a country page without its own rule", () => {
+    const union = clientNamespacesForPath("/country/us");
+    expect(union).toContain("corporations");
+    expect(clientNamespacesForPath("/country/us/some-new-page")).toEqual(union);
+    // A pattern only matches its own shape.
+    expect(clientNamespacesForPath("/country/us/map/extra")).toEqual(union);
+  });
+
   it("matches the landing page exactly, not as a prefix", () => {
     expect(clientNamespacesForPath("/")).toEqual(["auth", "nav", "tutorial", "worldConflicts"]);
     expect(clientNamespacesForPath("/anything-else")).toBeNull();

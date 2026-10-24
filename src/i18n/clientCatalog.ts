@@ -50,6 +50,11 @@ export interface ClientCatalogRule {
   prefix: string;
   /** Only the exact path matches. Used for `/`, which would otherwise match all. */
   exact?: boolean;
+  /**
+   * Segment pattern with `:name` placeholders, e.g. `/country/:code/map`.
+   * A pattern rule beats the broader prefix rule it refines.
+   */
+  pattern?: string;
   /** Top-level namespaces the client tree under this prefix can translate. */
   namespaces: readonly string[];
 }
@@ -74,9 +79,88 @@ export const CLIENT_CATALOG_RULES: readonly ClientCatalogRule[] = [
   { prefix: "/elections", namespaces: ["elections", "nav", "tutorial"] },
   // 6,244 views.
   { prefix: "/market", namespaces: ["corporations", "nav", "tutorial"] },
-  // 57,368 views, the second-largest family. The union is wide because the
-  // subtree covers legislatures, parties, budgets and regional pages; it still
-  // drops settings, auth and contests.
+  // 57,368 views, the second-largest family. These per-page rules beat the
+  // broad `/country` rule below: a map page does not need the corporations or
+  // profile copy, and the budget/economy/forex pages need none of them.
+  {
+    prefix: "/country",
+    pattern: "/country/:code/map",
+    namespaces: ["elections", "nav", "tutorial"],
+  },
+  {
+    prefix: "/country",
+    pattern: "/country/:code/elections",
+    namespaces: ["elections", "nav", "tutorial"],
+  },
+  {
+    prefix: "/country",
+    pattern: "/country/:code/legislature",
+    namespaces: [
+      "elections",
+      "layout",
+      "parties",
+      "worldConflicts",
+      "worldOrganizations",
+      "nav",
+      "tutorial",
+    ],
+  },
+  {
+    prefix: "/country",
+    pattern: "/country/:code/executive",
+    namespaces: ["governmentConfidence", "profile", "nav", "tutorial"],
+  },
+  {
+    prefix: "/country",
+    pattern: "/country/:code/approval",
+    namespaces: ["layout", "nav", "tutorial"],
+  },
+  {
+    prefix: "/country",
+    pattern: "/country/:code/budget",
+    namespaces: ["nav", "tutorial"],
+  },
+  {
+    prefix: "/country",
+    pattern: "/country/:code/economy",
+    namespaces: ["nav", "tutorial"],
+  },
+  {
+    prefix: "/country",
+    pattern: "/country/:code/metrics",
+    namespaces: ["nav", "tutorial"],
+  },
+  {
+    prefix: "/country",
+    pattern: "/country/:code/central-bank",
+    namespaces: ["nav", "tutorial"],
+  },
+  {
+    prefix: "/country",
+    pattern: "/country/:code/forex",
+    namespaces: ["nav", "tutorial"],
+  },
+  {
+    prefix: "/country",
+    pattern: "/country/:code/state-ownership",
+    namespaces: ["nav", "tutorial"],
+  },
+  {
+    prefix: "/country",
+    pattern: "/country/:code/navair",
+    namespaces: ["nav", "tutorial"],
+  },
+  {
+    prefix: "/country",
+    pattern: "/country/:code/referendums",
+    namespaces: ["nav", "tutorial"],
+  },
+  {
+    prefix: "/country",
+    pattern: "/country/:code/parties",
+    namespaces: ["nav", "tutorial"],
+  },
+  // Everything else under /country keeps the family union.
   {
     prefix: "/country",
     namespaces: [
@@ -111,7 +195,26 @@ export const CLIENT_CATALOG_RULES: readonly ClientCatalogRule[] = [
   { prefix: "/wiki", namespaces: ["nav", "tutorial"] },
 ];
 
-/** Longest matching rule wins, so a future narrower rule can refine a broad one. */
+function matchesPattern(pattern: string, pathname: string): boolean {
+  const want = pattern.split("/").filter(Boolean);
+  const got = pathname.split("/").filter(Boolean);
+  if (want.length !== got.length) return false;
+  return want.every((segment, index) =>
+    segment.startsWith(":") ? got[index].length > 0 : segment === got[index]
+  );
+}
+
+/** Specificity score: exact beats pattern beats the longest prefix. */
+function ruleScore(rule: ClientCatalogRule): number {
+  if (rule.exact) return 10_000;
+  if (rule.pattern) {
+    const literals = rule.pattern.split("/").filter((s) => s && !s.startsWith(":")).length;
+    return 5_000 + literals * 10;
+  }
+  return rule.prefix.length;
+}
+
+/** Most specific matching rule wins, so a narrow rule can refine a broad one. */
 export function clientNamespacesForPath(
   pathname: string | null | undefined
 ): readonly string[] | null {
@@ -121,9 +224,11 @@ export function clientNamespacesForPath(
   for (const rule of CLIENT_CATALOG_RULES) {
     const matches = rule.exact
       ? normalized === rule.prefix
-      : normalized === rule.prefix || normalized.startsWith(`${rule.prefix}/`);
+      : rule.pattern
+        ? matchesPattern(rule.pattern, normalized)
+        : normalized === rule.prefix || normalized.startsWith(`${rule.prefix}/`);
     if (!matches) continue;
-    if (!best || rule.prefix.length > best.prefix.length) best = rule;
+    if (!best || ruleScore(rule) > ruleScore(best)) best = rule;
   }
   return best?.namespaces ?? null;
 }
