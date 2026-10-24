@@ -94,7 +94,7 @@ describe("migrateSourceAccount", () => {
       reservation: RESERVATION,
       proofId: PROOF,
       sourceAccountId: SOURCE_ID,
-      idempotencyKey: expect.stringMatching(/^[A-Za-z0-9_-]{43}$/),
+      idempotencyKey: PROOF,
       provenance: "test:migration",
     });
   });

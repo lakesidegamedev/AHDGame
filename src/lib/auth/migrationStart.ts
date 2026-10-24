@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { ObjectId, type Db } from "mongodb";
 import { isAuthMigrationFenced } from "@/lib/auth/sourceFence";
 import type { SourceOwnershipProofStore } from "@/lib/auth/sourceOwnershipProof";
@@ -96,9 +95,10 @@ export async function migrateSourceAccount(input: {
     throw new MigrationStartError(409, "migration_conflict");
   }
 
-  const idempotencyKey = createHash("sha256")
-    .update(`${reservation.enrollmentOperationId}:${proof.proofId}`)
-    .digest("base64url");
+  // The proof UUID is unique, deterministic for an exact retry, and already
+  // within the coordinator's 32-256 character idempotency-key contract. Do not
+  // derive a key from the proof object with a password-style hash.
+  const idempotencyKey = proof.proofId;
   const admitted = await input.coordinator.admit({
     reservation,
     proofId: proof.proofId,
