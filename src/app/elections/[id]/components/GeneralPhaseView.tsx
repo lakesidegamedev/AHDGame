@@ -454,6 +454,7 @@ export function GeneralPhaseView({
             isEnded={localIsEnded}
             totalSeats={election.totalSeats}
             electionType={election.electionType}
+            districted={election.seatsDecidedByDistrict === true}
             cycle={election.cycle}
             electionId={election.id}
             myCharId={election.myCharId}

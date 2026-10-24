@@ -92,6 +92,43 @@ describe("QuoteBoard", () => {
     expect(screen.getByText(/1\.84%/)).toBeTruthy();
     expect(screen.getByText(/\+\$0\.76 on prev\. turn/)).toBeTruthy();
   });
+
+  it("colours the line by its own span and labels that span on every screen", () => {
+    // Four turns up 10%, but the last turn fell 2.2%. The badge describes the
+    // last turn; the line describes its own window and must not borrow the
+    // badge's colour, or a rising chart reads red.
+    const { container } = render(
+      <QuoteBoard
+        money={money}
+        price={44}
+        series={[40, 42, 45, 44]}
+        dayChange={{ changePct: -2.22, prevClose: 45 }}
+        poolActive={false}
+      />
+    );
+
+    expect(screen.getByText(/2\.22%/)).toBeTruthy();
+    const line = container.querySelector("svg path[fill='none']");
+    expect(line?.getAttribute("class")).toBe("stroke-success");
+    expect(screen.getByText(/up 10\.00% over that span/)).toBeTruthy();
+    // The span label is visible at phone width too, not only on large screens.
+    expect(screen.getByText("4 turns").parentElement?.className).not.toContain("hidden");
+  });
+
+  it("keeps a flat line neutral instead of painting it green", () => {
+    const { container } = render(
+      <QuoteBoard
+        money={money}
+        price={40}
+        series={[40, 41, 40]}
+        dayChange={{ changePct: -2.44, prevClose: 41 }}
+        poolActive={false}
+      />
+    );
+    const line = container.querySelector("svg path[fill='none']");
+    expect(line?.getAttribute("class")).toBe("stroke-muted");
+    expect(screen.getByText(/flat over that span/)).toBeTruthy();
+  });
 });
 
 const privateCorp = {

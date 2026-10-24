@@ -32,6 +32,9 @@ it("publishes effective peg bounds without exposing intervention history", async
     ceiling: 0.5,
     setAtTurn: null,
     defending: true,
+    turnsToReach: 50,
+    unreachable: true,
+    gapPct: 0.5,
   });
   expect(body.rates[0]).not.toHaveProperty("interventionPolicy");
 });

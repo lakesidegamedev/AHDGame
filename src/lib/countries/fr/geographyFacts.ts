@@ -137,6 +137,7 @@ export const FR_INCOME_ANCHORS: NormalAnchor[] = [
  * seeds/reference/income1991 (#3393). The 1953 point above is in anciens francs.
  */
 export const FR_INCOME_START_VINTAGES: Record<number, IncomeStartVintage> = {
+  1979: { value: 50_000, id: "fr-1979-household-authored" },
   1991: { value: 146451, id: "fr-1991-household-r1" },
 };
 

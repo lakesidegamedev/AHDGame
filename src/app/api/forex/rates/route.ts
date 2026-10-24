@@ -3,6 +3,7 @@ import { euroCurrencyRate } from "@/lib/currency/euro/rules";
 import { loadEuroMonetaryUnion } from "@/lib/currency/euro/service";
 import { clampForexSpreadStrength } from "@/lib/constants/currencies";
 import { NextResponse } from "next/server";
+import { publicBandStatus } from "@/lib/currency/interventionBandStatus";
 import { getDb } from "@/lib/mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
@@ -34,7 +35,15 @@ export async function GET() {
     const interventionBands: Partial<
       Record<
         CurrencyCode,
-        { floor: number; ceiling: number; setAtTurn: number | null; defending: boolean }
+        {
+          floor: number;
+          ceiling: number;
+          setAtTurn: number | null;
+          defending: boolean;
+          turnsToReach: number;
+          unreachable: boolean;
+          gapPct: number;
+        }
       >
     > = {};
     for (const row of rateRows) {
@@ -48,7 +57,7 @@ export async function GET() {
           floor: p.floor,
           ceiling: p.ceiling,
           setAtTurn: p.setAtTurn,
-          defending: row.rate < p.floor || row.rate > p.ceiling,
+          ...publicBandStatus(row.rate, p.floor, p.ceiling),
         };
       }
     }

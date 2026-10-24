@@ -153,6 +153,33 @@ export async function cancelBankFundSubscription(
   });
 }
 
+/**
+ * Refund every queued subscription for a fund that is winding down (#4219).
+ *
+ * The regular subscription pass never runs for a winding-down fund, so a queued
+ * command would hold `completeWindUp` forever and repeat its warning every
+ * turn. Refund in one transaction, using the same refund path as a player
+ * cancel so the ledger rows and the command receipt agree.
+ */
+export async function refundQueuedSubscriptionsForFund(
+  db: Db,
+  fundId: ObjectId,
+  turn: number
+): Promise<number> {
+  return withSessionDb(db, async (tx) => {
+    const fund = await tx
+      .collection<IndexFund>("indexFunds")
+      .findOne({ _id: fundId }, { projection: { floatSettlementPlan: 0 } });
+    if (!fund) return 0;
+    const orders = await tx
+      .collection<BankSubscription>("indexFundCommands")
+      .find({ "subscription.fundId": fundId, "subscription.status": "queued" })
+      .toArray();
+    for (const order of orders) await refundSubscription(tx, fund, order, turn);
+    return orders.length;
+  });
+}
+
 /** One transaction per bounded fund batch gives all subscribers the same marked NAV. */
 export async function settleBankFundSubscriptions(
   db: Db,

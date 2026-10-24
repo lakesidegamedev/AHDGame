@@ -7,6 +7,12 @@ export interface PublicInterventionBand {
   ceiling: number;
   setAtTurn: number | null;
   defending: boolean;
+  /** Turns of maximum-strength defence to reach the nearest boundary. 0 in band. */
+  turnsToReach?: number;
+  /** True when even a full game year of maximum defence would not close the gap. */
+  unreachable?: boolean;
+  /** Distance to the nearest boundary as a fraction of the live rate. */
+  gapPct?: number;
 }
 
 /** Exchange rate as returned by GET /api/forex/exchange */

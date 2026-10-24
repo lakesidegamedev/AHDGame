@@ -4,6 +4,7 @@ import { effectiveInterventionPolicy } from "@/lib/currency/intervention/rules";
 // Auth: requireBasicAuth (POST), isForexEnabled gate (GET)
 // Errors: 400 (validation), 401, 403 (forex disabled), 500
 import { NextResponse } from "next/server";
+import { publicBandStatus } from "@/lib/currency/interventionBandStatus";
 import { ObjectId } from "mongodb";
 import { z } from "zod";
 import { getDb } from "@/lib/mongodb";
@@ -112,7 +113,7 @@ export async function GET() {
                   floor: policy.floor,
                   ceiling: policy.ceiling,
                   setAtTurn: policy.setAtTurn,
-                  defending: r.rate < policy.floor || r.rate > policy.ceiling,
+                  ...publicBandStatus(r.rate, policy.floor, policy.ceiling),
                 }
               : null,
           };

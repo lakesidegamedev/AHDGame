@@ -2,7 +2,7 @@
 
 import { InfoTooltip } from "@/components/InfoTooltip";
 import type { PlantIdleCause } from "../types";
-import { idleCauseMeta, TONE_FILL, fmtUnits, fmtPct } from "../lib/plants";
+import { idleCauseMeta, IDLE_CAUSE_FILL, TONE_FILL, fmtUnits, fmtPct } from "../lib/plants";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import { facilityPlural } from "@/lib/constants/facilityVocabulary";
 
@@ -78,7 +78,9 @@ export default function RunMeter({
         key: `idle-${c.cause}`,
         label: meta.label,
         units: c.units,
-        fill: TONE_FILL[c.cause] ?? TONE_FILL[meta.tone],
+        // Per cause, not per tone: the bar segment and the legend dot below
+        // share this one value, so a cause can never carry two colours.
+        fill: IDLE_CAUSE_FILL[c.cause] ?? TONE_FILL[meta.tone],
         help: meta.help,
       };
     }),

@@ -135,9 +135,9 @@ describe("resolveSectorStrategy", () => {
 
   it("resolves a stored id the type no longer has the way the engine does", () => {
     const stale = sector({ sectorType: "manufacturing", strategyId: "a_removed_method" });
-    // getStrategy falls back to the type's first strategy; the panel and this
-    // module must agree with it or a site goes missing from one of them.
-    expect(resolveSectorStrategy(stale)?.id).toBe(SECTOR_STRATEGIES.manufacturing[0].id);
+    // getStrategy falls back to the named standard recipe (#4244); the panel
+    // and this module must agree with it or a site goes missing from one.
+    expect(resolveSectorStrategy(stale)?.id).toBe("standard");
   });
 
   it("still counts a sector on a removed strategy in the output mix", () => {

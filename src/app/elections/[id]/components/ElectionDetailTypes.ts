@@ -202,6 +202,8 @@ export type ElectionType =
   | "nationalAssembly";
 
 export interface ElectionDetail {
+  /** Seats decided district by district (see ElectionResponse). */
+  seatsDecidedByDistrict?: boolean;
   id: string;
   seatId: string | null;
   electionType: ElectionType;

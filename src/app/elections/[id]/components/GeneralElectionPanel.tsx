@@ -54,6 +54,7 @@ export function GeneralElectionPanel({
   isEnded,
   totalSeats,
   electionType = "governor",
+  districted,
   cycle,
   electionId,
   myCharId,
@@ -76,6 +77,8 @@ export function GeneralElectionPanel({
   electionType?:
     "senate" | "house" | "stateSenate" | "governor" | "president" | "commons" | (string & {});
   cycle?: number;
+  /** Seats decided district by district, not apportioned by statewide share. */
+  districted?: boolean;
   electionId?: string;
   myCharId?: string | null;
   myEndorsedCandidateId?: string | null;
@@ -701,6 +704,7 @@ export function GeneralElectionPanel({
       lineSeries={lineSeries}
       countryId={countryId}
       electionType={electionType}
+      districted={districted}
       cycle={cycle}
       regionName={regionName ?? ""}
       countryName={countryName ?? ""}

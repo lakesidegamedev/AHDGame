@@ -783,7 +783,9 @@ export default function OverviewTab({
                 {corporation.parentCorporation && (
                   <KVRow
                     mono={false}
-                    label="Parent"
+                    label={
+                      corporation.isFormalizedSubsidiary ? "Parent" : "Controlling shareholder"
+                    }
                     value={
                       <Link
                         href={`/corporation/${corporation.parentCorporation.sequentialId ?? corporation.parentCorporation._id}`}
@@ -792,7 +794,11 @@ export default function OverviewTab({
                         {corporation.parentCorporation.name}
                       </Link>
                     }
-                    hint={`${corporation.parentCorporation.ownershipPct.toFixed(1)}%`}
+                    hint={
+                      corporation.isFormalizedSubsidiary
+                        ? `${corporation.parentCorporation.ownershipPct.toFixed(1)}%`
+                        : `${corporation.parentCorporation.ownershipPct.toFixed(1)}% of votes, no management control`
+                    }
                   />
                 )}
                 {(corporation.subsidiaries ?? []).map((sub) => (

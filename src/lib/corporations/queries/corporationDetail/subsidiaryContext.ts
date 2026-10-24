@@ -29,6 +29,7 @@ import {
   loadStrengthUpkeepStage,
   strengthUpkeepActive,
 } from "@/lib/corporations/strengthUpkeep";
+import { spinOffCooldownTurnsRemaining } from "@/lib/corporations/subsidiaries/constants";
 
 async function buildHostileTakeoverEligibility(
   db: Db,
@@ -108,6 +109,8 @@ export interface SubsidiaryContextResult {
   canManageAsParent: boolean;
   canFormalizeAsSubsidiary: boolean;
   canSpinOff: boolean;
+  /** Turns left before this corporation may spin off again; 0 when ready. */
+  spinOffCooldownTurnsRemaining: number;
   hostileTakeoverEligibility: Awaited<ReturnType<typeof buildHostileTakeoverEligibility>>;
   /**
    * #1669: present only for the CEO of a group leader whose group runs under
@@ -131,7 +134,8 @@ export async function loadSubsidiaryContext(
   db: Db,
   corporationForControl: Corporation,
   corporation: Corporation,
-  viewerUserId: string | null | undefined
+  viewerUserId: string | null | undefined,
+  currentTurn: number
 ): Promise<SubsidiaryContextResult> {
   const controllingParent = getControllingCorporateParent(corporationForControl);
   // The parent-corp lookup, the subsidiary-candidates query, and the hostile-
@@ -297,6 +301,12 @@ export async function loadSubsidiaryContext(
     corporation.ceoVacant !== true &&
     corporation.userId?.toString() === viewerUserId &&
     isEligibleAsSubsidiaryParent(corporation);
+  // The command enforces this cooldown, so the page counts it down from the
+  // same helper instead of showing a button that is guaranteed to fail.
+  const spinOffCooldownRemaining = spinOffCooldownTurnsRemaining(
+    corporation.lastSpinOffTurn,
+    currentTurn
+  );
   if (subsidiaryCorporationsEnabled && viewerUserId) {
     canManageAsParent = await canActOnCorporationAsParent(
       db,
@@ -341,6 +351,7 @@ export async function loadSubsidiaryContext(
     canManageAsParent,
     canFormalizeAsSubsidiary,
     canSpinOff,
+    spinOffCooldownTurnsRemaining: spinOffCooldownRemaining,
     hostileTakeoverEligibility,
     groupStrengthTransfer,
   };
