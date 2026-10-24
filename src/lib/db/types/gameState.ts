@@ -107,6 +107,12 @@ export interface GameState {
    */
   producerOpening?: { worldEpoch: string; turn: number; digest: string };
   /**
+   * Economy-only reset progress (scripts/migrations/resetEconomyOnly.ts): the
+   * approved plan digest and the phases already applied, so a retried apply
+   * resumes instead of repeating. Cleared on a full world reset.
+   */
+  economyReset?: import("@/lib/admin/economyReset/types").EconomyResetMarker;
+  /**
    * Snapshot of media regulation gates used by legislation endpoints that
    * already read this document. Admin market configuration keeps it current so
    * flag-off law pickers need no additional config query.
@@ -434,7 +440,7 @@ export interface GameState {
   /** Concurrency guard - true while a turn is being processed */
   isProcessing?: boolean;
   /** Which workflow currently owns the processing lock */
-  processingKind?: "turn" | "forexMigration" | "stockTaxMigration" | null;
+  processingKind?: "turn" | "forexMigration" | "stockTaxMigration" | "economyReset" | null;
   /** When the active turn lock was acquired; used to recover stale locks after crashed runs */
   processingStartedAt?: Date | null;
   /** The turn number currently being processed while the lock is held */

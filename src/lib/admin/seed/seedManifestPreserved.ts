@@ -309,4 +309,10 @@ export const PRESERVED: CollectionEntry[] = [
     category: "preserved",
     notes: "Security receipts survive world resets.",
   },
+  {
+    name: "economyResetPlans",
+    category: "preserved",
+    notes:
+      "Approved economy-only reset plans, one per digest. The apply resumes from the stored plan after a failure, and the record stays as the audit of what the reset removed.",
+  },
 ];
