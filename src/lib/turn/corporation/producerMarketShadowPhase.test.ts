@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { ObjectId } from "mongodb";
 import {
   isolatedShadowEnv,
   legacyPnlBySectorId,
@@ -63,5 +64,32 @@ describe("shadow phase budget", () => {
   it("runs only when two minutes of the phase budget remain", () => {
     expect(shadowFitsPhaseBudget(100_000, 240_000)).toBe(true);
     expect(shadowFitsPhaseBudget(121_000, 240_000)).toBe(false);
+  });
+});
+
+describe("detached shadow demand", () => {
+  it("deep-copies plain demand and shares the phase's own states read", async () => {
+    const { detachShadowDemand } = await import("./producerMarketShadowPhase");
+    const states = [{ _id: new ObjectId(), countryId: "US" }];
+    const demand = {
+      accounts: [{ id: "corp", cash: 10 }],
+      planSector: new Map([["plan", "sector"]]),
+      states,
+    };
+    const detached = detachShadowDemand(demand);
+    expect(detached).not.toBeNull();
+    expect(detached!.accounts).toEqual(demand.accounts);
+    expect(detached!.accounts).not.toBe(demand.accounts);
+    expect(detached!.planSector.get("plan")).toBe("sector");
+    expect(detached!.states).toBe(states);
+    demand.accounts[0].cash = 99;
+    expect(detached!.accounts[0].cash).toBe(10);
+  });
+
+  it("keeps the run inline when the demand holds a driver ObjectId or a function", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { detachShadowDemand } = await import("./producerMarketShadowPhase");
+    expect(detachShadowDemand({ accounts: [{ id: new ObjectId() }], states: [] })).toBeNull();
+    expect(detachShadowDemand({ roles: { pick: () => 1 }, states: [] })).toBeNull();
   });
 });
