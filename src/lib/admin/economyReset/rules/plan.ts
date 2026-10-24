@@ -17,11 +17,14 @@ import {
   type CurrencyTotals,
   type EconomyResetPlan,
   type LegacyCouponClaimPatch,
+  type MaturityClaimPatch,
+  type VoidedMoneyMove,
   type SovereignBondRehome,
 } from "../types";
 import {
   rehomeSovereignBond,
   trimCouponClaim,
+  trimMaturityClaim,
   type CouponClaimHolder,
   type SovereignBondSource,
 } from "./bonds";
@@ -37,6 +40,7 @@ import {
   type CurrencyAmounts,
   type LineOfCreditBook,
 } from "./money";
+import { classifyPartialMoneyMove, type PartialMoneyMoveSource } from "./moneyMoves";
 
 /** Real account kinds whose balances the reset removes or rewrites. */
 export const DESTROYED_ACCOUNT_KINDS: readonly string[] = Object.freeze([
@@ -109,7 +113,9 @@ export interface EconomyResetSource {
   pensionSchemes: { id: string; assetsAnchor: number; investedValueAnchor?: number }[];
   incomeTax: { open: number; collected: number };
   openMoneyFlowReceipts: number;
-  partialBankMoneyMoves: number;
+  partialMoneyMoves: PartialMoneyMoveSource[];
+  /** Collections the reset deletes outright; money owed to them is void. */
+  wipedCollections: string[];
   bankLoanCount: number;
   openingBalances: Record<string, number>;
 }
@@ -202,6 +208,11 @@ export function buildEconomyResetPlan(source: EconomyResetSource): EconomyResetP
     blockers.push(...result.blockers);
     if (result.rehome) sovereignBonds.push(result.rehome);
   }
+  const maturityClaims: MaturityClaimPatch[] = [];
+  for (const bond of byId(source.sovereignBonds)) {
+    const patch = bond.maturityClaim ? trimMaturityClaim(bond.id, bond.maturityClaim) : null;
+    if (patch) maturityClaims.push(patch);
+  }
   const couponClaims: CouponClaimPatch[] = [];
   for (const claim of byId(source.couponClaims)) {
     if (claim.pendingProjection) blockers.push(`coupon-claim-settling:${claim.id}`);
@@ -252,8 +263,13 @@ export function buildEconomyResetPlan(source: EconomyResetSource): EconomyResetP
   // --- In-flight money ---------------------------------------------------
   if (source.openMoneyFlowReceipts > 0)
     blockers.push(`open-money-flow-receipts:${source.openMoneyFlowReceipts}`);
-  if (source.partialBankMoneyMoves > 0)
-    blockers.push(`partial-bank-money-moves:${source.partialBankMoneyMoves}`);
+  const wiped = new Set(source.wipedCollections);
+  const voidedMoneyMoves: VoidedMoneyMove[] = [];
+  for (const move of byId(source.partialMoneyMoves)) {
+    const result = classifyPartialMoneyMove(move, wiped);
+    if (result.blocker) blockers.push(result.blocker);
+    if (result.voided) voidedMoneyMoves.push(result.voided);
+  }
   if (source.incomeTax.collected > 0)
     blockers.push(`collected-income-tax-in-flight:${source.incomeTax.collected}`);
 
@@ -268,6 +284,20 @@ export function buildEconomyResetPlan(source: EconomyResetSource): EconomyResetP
     totals.anchor += anchor;
     totals.native += rate > 0 ? anchor * rate : anchor;
   }
+  const maturityClaimsCancelledByCurrency: Record<string, number> = {};
+  const maturityEscrowSurplusByCurrency: Record<string, number> = {};
+  for (const patch of maturityClaims) {
+    maturityClaimsCancelledByCurrency[patch.currency] =
+      (maturityClaimsCancelledByCurrency[patch.currency] ?? 0) + patch.privateAmountLocal;
+    if (patch.escrowSurplusLocal > 0)
+      maturityEscrowSurplusByCurrency[patch.currency] =
+        (maturityEscrowSurplusByCurrency[patch.currency] ?? 0) + patch.escrowSurplusLocal;
+  }
+  const voidedInFlightByCurrency: Record<string, number> = {};
+  for (const move of voidedMoneyMoves)
+    for (const leg of move.pendingLegs)
+      voidedInFlightByCurrency[leg.currency] =
+        (voidedInFlightByCurrency[leg.currency] ?? 0) + leg.amount;
   const corporateBondFaceByCurrency: Record<string, number> = {};
   for (const bond of source.corporateBonds)
     corporateBondFaceByCurrency[bond.currency] =
@@ -298,6 +328,18 @@ export function buildEconomyResetPlan(source: EconomyResetSource): EconomyResetP
       .sort(),
     sovereignBonds,
     corporateBondIds: source.corporateBonds.map((bond) => bond.id).sort(),
+    maturityClaims: maturityClaims.map((patch) => ({
+      ...patch,
+      amountLocalBefore: round(patch.amountLocalBefore),
+      amountLocalAfter: round(patch.amountLocalAfter),
+      privateAmountLocal: round(patch.privateAmountLocal),
+      escrowLocal: round(patch.escrowLocal),
+      escrowSurplusLocal: round(patch.escrowSurplusLocal),
+    })),
+    voidedMoneyMoves: voidedMoneyMoves.map((move) => ({
+      ...move,
+      pendingLegs: move.pendingLegs.map((leg) => ({ ...leg, amount: round(leg.amount) })),
+    })),
     couponClaims: couponClaims.map((claim) => ({
       ...claim,
       amountLocalBefore: round(claim.amountLocalBefore),
@@ -333,6 +375,9 @@ export function buildEconomyResetPlan(source: EconomyResetSource): EconomyResetP
       ),
       endowmentsByCurrency: sortedRecord(endowmentsByCurrency, round),
       corporateBondFaceByCurrency: sortedRecord(corporateBondFaceByCurrency, round),
+      maturityClaimsCancelledByCurrency: sortedRecord(maturityClaimsCancelledByCurrency, round),
+      maturityEscrowSurplusByCurrency: sortedRecord(maturityEscrowSurplusByCurrency, round),
+      voidedInFlightByCurrency: sortedRecord(voidedInFlightByCurrency, round),
       bankLoanCount: source.bankLoanCount,
     },
     openingBalances: sortedRecord(source.openingBalances, round),

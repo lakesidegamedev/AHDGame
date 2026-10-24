@@ -23,15 +23,13 @@ import {
   type EconomyResetFullWipeCollection,
 } from "./collections";
 import { economyResetPlanDigest } from "./digest";
-import { PRIVATE_HOLDER_COLLECTIONS } from "./rules/bonds";
+import { PRIVATE_HOLDER_COLLECTIONS, type MaturityClaimSource } from "./rules/bonds";
+import type { PartialMoneyMoveSource } from "./rules/moneyMoves";
 import { buildEconomyResetPlan, type EconomyResetSource } from "./rules/plan";
 import type { EconomyResetPlan } from "./types";
 
 export const ECONOMY_RESET_PROCESSING_KIND = "economyReset";
 
-/** Bank money moves kept by the partial wipe: sovereign coupon payout journals. */
-export const KEPT_BANK_MONEY_MOVE_FILTER = { _id: { $regex: "^sovereign-coupon:" } };
-export const WIPED_BANK_MONEY_MOVE_FILTER = { _id: { $not: { $regex: "^sovereign-coupon:" } } };
 export const VOIDED_INCOME_TAX_FILTER = { status: { $in: ["plan", "unpaid"] } };
 export const CORPORATE_BOND_FILTER = { issuerType: { $ne: "sovereign" } };
 
@@ -89,6 +87,103 @@ function amounts(value: unknown): Record<string, number> {
   return out;
 }
 
+function maturityClaimSource(
+  bond: Document,
+  payoutsInFlight: ReadonlySet<string>
+): MaturityClaimSource | null {
+  const claim = bond.sovereignMaturityClaim;
+  if (!claim || claim.paid === true) return null;
+  return {
+    currency: String(claim.currencyCode ?? bond.currencyCode ?? ""),
+    treasuryLocalPerAnchor: Number(claim.treasuryLocalPerAnchor ?? 1),
+    amountLocal: Number(claim.amountLocal ?? 0),
+    escrowLocal: Number(claim.escrowLocal ?? 0),
+    legs: ((claim.holderLegs ?? []) as Document[]).map((leg) => ({
+      collection: String(leg.collection),
+      amount: Number(leg.amount ?? 0),
+      currencyCode: String(leg.currencyCode ?? ""),
+      localPerAnchor: Number(leg.localPerAnchor ?? 1),
+    })),
+    payoutInFlight: payoutsInFlight.has(hex(bond._id)),
+  };
+}
+
+/** Collections a money move leg can credit or debit whose target existence decides the plan. */
+const MONEY_MOVE_TARGET_COLLECTIONS = [
+  "characters",
+  "imperialCharacters",
+  "npps",
+  "corporations",
+  "indexFunds",
+  "campaigns",
+  "centralBanks",
+  "federalBudget",
+  "bondMarketPools",
+  "bonds",
+  "bankMoneyMoves",
+  "politicalParties",
+  "statePartyOrg",
+  "unions",
+  "organizationFunds",
+  "pensionSchemes",
+] as const;
+type MoneyMoveTargetCollection = (typeof MONEY_MOVE_TARGET_COLLECTIONS)[number];
+
+function isMoneyMoveTarget(name: unknown): name is MoneyMoveTargetCollection {
+  return (MONEY_MOVE_TARGET_COLLECTIONS as readonly unknown[]).includes(name);
+}
+
+/**
+ * Pending legs of each partial money move, with one existence read per target
+ * collection. A leg naming any other collection is treated as an existing
+ * target, so it can only void when the reset wipes that collection.
+ */
+async function partialMoneyMoveSources(
+  db: Db,
+  moves: Document[]
+): Promise<PartialMoneyMoveSource[]> {
+  const pending = moves.map((move) => ({
+    move,
+    legs: ((move.legs ?? []) as Document[]).filter((leg) => leg.applied !== true),
+  }));
+  const idsByCollection = new Map<MoneyMoveTargetCollection, unknown[]>();
+  for (const { legs } of pending)
+    for (const leg of legs) {
+      if (!isMoneyMoveTarget(leg.collection) || leg.filter?._id === undefined) continue;
+      const ids = idsByCollection.get(leg.collection) ?? [];
+      ids.push(leg.filter._id);
+      idsByCollection.set(leg.collection, ids);
+    }
+  const existing = new Set<string>();
+  for (const collection of MONEY_MOVE_TARGET_COLLECTIONS) {
+    const ids = idsByCollection.get(collection);
+    if (!ids) continue;
+    const rows = await db
+      .collection<Document>(collection)
+      .find({ _id: { $in: ids } } as never, { projection: { _id: 1 } })
+      .toArray();
+    for (const row of rows) existing.add(`${collection}:${String(row._id)}`);
+  }
+  return pending.map(({ move, legs }) => ({
+    id: String(move._id),
+    kind: String(move.kind ?? ""),
+    turn: typeof move.turn === "number" ? move.turn : null,
+    pendingLegs: legs.map((leg) => {
+      const targetId = leg.filter?._id === undefined ? null : String(leg.filter._id);
+      return {
+        collection: leg.collection ? String(leg.collection) : null,
+        targetId,
+        path: leg.path ? String(leg.path) : null,
+        amount: Number(leg.amount ?? 0),
+        currency: String(leg.valuation?.currencyCode ?? "UNKNOWN"),
+        targetExists: !isMoneyMoveTarget(leg.collection)
+          ? true
+          : targetId !== null && existing.has(`${leg.collection}:${targetId}`),
+      };
+    }),
+  }));
+}
+
 async function loadSource(
   db: Db,
   fence: Fence,
@@ -133,7 +228,6 @@ async function loadSource(
     openReceipts,
     partialMoves,
     bankLoanCount,
-    wipedMoves,
     openingBalances,
     epoch,
   ] = await Promise.all([
@@ -197,7 +291,14 @@ async function loadSource(
             holders: 1,
             matured: 1,
             "sovereignMaturityClaim.paid": 1,
+            "sovereignMaturityClaim.currencyCode": 1,
+            "sovereignMaturityClaim.treasuryLocalPerAnchor": 1,
+            "sovereignMaturityClaim.amountLocal": 1,
+            "sovereignMaturityClaim.escrowLocal": 1,
             "sovereignMaturityClaim.holderLegs.collection": 1,
+            "sovereignMaturityClaim.holderLegs.amount": 1,
+            "sovereignMaturityClaim.holderLegs.currencyCode": 1,
+            "sovereignMaturityClaim.holderLegs.localPerAnchor": 1,
           },
         }
       )
@@ -247,11 +348,11 @@ async function loadSource(
     db
       .collection(NON_ATOMIC_MONEY_FLOW_RECEIPTS_COLLECTION)
       .countDocuments({ status: "in_progress" }),
-    db.collection("bankMoneyMoves").countDocuments({ status: "partial" }),
-    db.collection("bankLoans").countDocuments({}),
     db
-      .collection<{ _id: string }>("bankMoneyMoves")
-      .countDocuments(WIPED_BANK_MONEY_MOVE_FILTER as never),
+      .collection<Document>("bankMoneyMoves")
+      .find({ status: "partial" }, { projection: { kind: 1, turn: 1, legs: 1 } })
+      .toArray(),
+    db.collection("bankLoans").countDocuments({}),
     collectBalances(db, { treasuryCashLedgerEnabled }),
     Promise.resolve(fence.worldEpochId!),
   ]);
@@ -260,6 +361,13 @@ async function loadSource(
   for (const row of rates)
     if (typeof row.rate === "number" && Number.isFinite(row.rate) && row.rate > 0)
       anchorRates[row.currencyCode] = row.rate;
+
+  // A maturity payout journal is `sovereign-maturity:<bondId>:<turn>:payout`.
+  const payoutsInFlight = new Set(
+    partialMoves
+      .map((move) => String(move._id).match(/^sovereign-maturity:([0-9a-f]{24}):/)?.[1])
+      .filter((id): id is string => !!id)
+  );
 
   const userIds = [...new Set(characters.map((c) => c.userId).filter(Boolean))];
   const referredUsers = new Set(
@@ -312,7 +420,6 @@ async function loadSource(
     partialWipeCounts: {
       bonds: corporate.length,
       bondHistory: corporateBondHistory,
-      bankMoneyMoves: wipedMoves,
       playerIncomeTaxAssessments: openIncomeTax,
     },
     campaignRates,
@@ -345,28 +452,28 @@ async function loadSource(
         : null,
     })),
     sovereignBonds: sovereign
-      .filter((bond) => Array.isArray(bond.holders) && bond.holders.length > 0)
-      .map((bond) => {
-        const claim = bond.sovereignMaturityClaim;
-        const legs = claim && claim.paid !== true ? (claim.holderLegs ?? []) : [];
-        return {
-          id: hex(bond._id),
-          countryId: String(bond.countryId ?? ""),
-          currency: String(bond.currencyCode ?? ""),
-          totalIssued: Number(bond.totalIssued ?? 0),
-          publicFloat: Number(bond.publicFloat ?? 0),
-          holders: (bond.holders as Document[]).map((holder) => ({
-            units: Number(holder.units ?? 0),
-            ...(holder.bankTreasuryTradeId
-              ? { bankTreasuryTradeId: String(holder.bankTreasuryTradeId) }
-              : {}),
-            ...(holder.saleIntentId ? { saleIntentId: hex(holder.saleIntentId) } : {}),
-          })),
-          privateMaturityLegs: (legs as { collection?: string }[]).filter((leg) =>
-            PRIVATE_HOLDER_COLLECTIONS.includes(String(leg.collection))
-          ).length,
-        };
-      }),
+      .map((bond) => ({ bond, claim: maturityClaimSource(bond, payoutsInFlight) }))
+      .filter(
+        ({ bond, claim }) =>
+          (Array.isArray(bond.holders) && bond.holders.length > 0) ||
+          (claim !== null &&
+            claim.legs.some((leg) => PRIVATE_HOLDER_COLLECTIONS.includes(leg.collection)))
+      )
+      .map(({ bond, claim }) => ({
+        id: hex(bond._id),
+        countryId: String(bond.countryId ?? ""),
+        currency: String(bond.currencyCode ?? ""),
+        totalIssued: Number(bond.totalIssued ?? 0),
+        publicFloat: Number(bond.publicFloat ?? 0),
+        holders: ((bond.holders ?? []) as Document[]).map((holder) => ({
+          units: Number(holder.units ?? 0),
+          ...(holder.bankTreasuryTradeId
+            ? { bankTreasuryTradeId: String(holder.bankTreasuryTradeId) }
+            : {}),
+          ...(holder.saleIntentId ? { saleIntentId: hex(holder.saleIntentId) } : {}),
+        })),
+        maturityClaim: claim,
+      })),
     corporateBonds: corporate.map((bond) => ({
       id: hex(bond._id),
       currency: String(bond.currencyCode ?? ""),
@@ -438,7 +545,8 @@ async function loadSource(
     })),
     incomeTax: { open: openIncomeTax, collected: collectedIncomeTax },
     openMoneyFlowReceipts: openReceipts,
-    partialBankMoneyMoves: partialMoves,
+    partialMoneyMoves: await partialMoneyMoveSources(db, partialMoves),
+    wipedCollections: wipeCollections,
     bankLoanCount,
     openingBalances,
   };

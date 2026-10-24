@@ -106,8 +106,6 @@ export const ECONOMY_RESET_PARTIAL_WIPE_COLLECTIONS: Readonly<Record<string, str
   Object.freeze({
     bonds: "Corporate bonds are deleted; sovereign bonds stay with their treasuries.",
     bondHistory: "History rows of deleted corporate bonds are removed.",
-    bankMoneyMoves:
-      "Bank money moves are removed except sovereign coupon payout journals, which coupon settlement still reads.",
     playerIncomeTaxAssessments: "Open plans and unpaid assessments are voided; settled ones stay.",
   });
 
@@ -128,6 +126,10 @@ export const ECONOMY_RESET_EXTRA_WIPE_COLLECTIONS = Object.freeze([
  * pension schemes, gameState); none are deleted.
  */
 export const ECONOMY_RESET_KEEP_COLLECTIONS: readonly string[] = Object.freeze([
+  // The money move journal is the replay witness for kept accounts too
+  // (organization dues, campaign media, treasury and sovereign payouts), so it
+  // stays whole; stuck partial moves are voided or block the census instead.
+  "bankMoneyMoves",
   "actingAppointmentCharges",
   "actionLogs",
   "activityLog",

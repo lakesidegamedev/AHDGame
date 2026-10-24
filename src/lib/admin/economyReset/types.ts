@@ -16,6 +16,7 @@ export const ECONOMY_RESET_PHASES = [
   "bonds",
   "centralBanks",
   "treasury",
+  "moneyMoves",
   "wipe",
   "unset",
   "indexes",
@@ -63,6 +64,31 @@ export interface CouponClaimPatch {
   amountLocalBefore: number;
   amountLocalAfter: number;
   currency: string;
+}
+
+export interface MaturityClaimPatch {
+  bondId: string;
+  currency: string;
+  legsRemoved: number;
+  amountLocalBefore: number;
+  amountLocalAfter: number;
+  privateAmountLocal: number;
+  escrowLocal: number;
+  escrowSurplusLocal: number;
+}
+
+/** A stuck partial bank money move the reset voids: nothing it still owes can land on a kept account. */
+export interface VoidedMoneyMove {
+  id: string;
+  kind: string;
+  turn: number | null;
+  pendingLegs: {
+    collection: string;
+    targetId: string;
+    reason: "missing" | "private";
+    amount: number;
+    currency: string;
+  }[];
 }
 
 export interface LegacyCouponClaimPatch {
@@ -130,6 +156,8 @@ export interface EconomyResetPlan {
   sovereignBonds: SovereignBondRehome[];
   corporateBondIds: string[];
   couponClaims: CouponClaimPatch[];
+  maturityClaims: MaturityClaimPatch[];
+  voidedMoneyMoves: VoidedMoneyMove[];
   legacyCouponClaims: LegacyCouponClaimPatch[];
   centralBanks: CentralBankAdjustment[];
   publicBuyerSweeps: PublicBuyerSweep[];
@@ -141,6 +169,15 @@ export interface EconomyResetPlan {
     destroyedByKind: Record<string, Record<string, CurrencyTotals>>;
     endowmentsByCurrency: Record<string, number>;
     corporateBondFaceByCurrency: Record<string, number>;
+    /** Private shares of unpaid maturity quotes cancelled, kept by the treasury. */
+    maturityClaimsCancelledByCurrency: Record<string, number>;
+    /** Funded escrow above a shrunken maturity quote, left in the bond's escrow. */
+    maturityEscrowSurplusByCurrency: Record<string, number>;
+    /**
+     * Amounts voided moves still owed. Their source legs already applied in the
+     * past, so voiding moves no balance now; the record is the audit trail.
+     */
+    voidedInFlightByCurrency: Record<string, number>;
     bankLoanCount: number;
   };
   /** Opening balance of every shadow-ledger real account, in anchor units. */

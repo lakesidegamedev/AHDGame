@@ -7,7 +7,7 @@
  * are treasury money and are untouched. Coupons frozen for the dropped holders
  * are cancelled, so the treasury keeps that money and nothing is minted.
  */
-import type { CouponClaimPatch, SovereignBondRehome } from "../types";
+import type { CouponClaimPatch, MaturityClaimPatch, SovereignBondRehome } from "../types";
 
 export interface SovereignBondSource {
   id: string;
@@ -20,8 +20,25 @@ export interface SovereignBondSource {
     bankTreasuryTradeId?: string;
     saleIntentId?: string;
   }[];
-  /** Unpaid maturity claim legs that would credit a private holder. */
-  privateMaturityLegs: number;
+  /** The bond's unpaid frozen maturity quote, when it has one. */
+  maturityClaim?: MaturityClaimSource | null;
+}
+
+export interface MaturityClaimLeg {
+  collection: string;
+  amount: number;
+  currencyCode: string;
+  localPerAnchor: number;
+}
+
+export interface MaturityClaimSource {
+  currency: string;
+  treasuryLocalPerAnchor: number;
+  amountLocal: number;
+  escrowLocal: number;
+  legs: MaturityClaimLeg[];
+  /** A payout journal for this quote has started; it settles through the money move rules. */
+  payoutInFlight: boolean;
 }
 
 /** Kinds of maturity payout legs that credit a private holder. */
@@ -33,6 +50,46 @@ export const PRIVATE_HOLDER_COLLECTIONS: readonly string[] = Object.freeze([
   "npps",
 ]);
 
+/** Claim-currency value of one frozen payout leg. Anchor legs convert at the quote's rate. */
+export function maturityLegLocal(leg: MaturityClaimLeg, claim: MaturityClaimSource): number {
+  if (leg.currencyCode === claim.currency) return leg.amount;
+  const perAnchor = leg.localPerAnchor > 0 ? leg.localPerAnchor : 1;
+  return (leg.amount / perAnchor) * claim.treasuryLocalPerAnchor;
+}
+
+export function isPrivateMaturityLeg(leg: { collection: string }): boolean {
+  return PRIVATE_HOLDER_COLLECTIONS.includes(leg.collection);
+}
+
+/**
+ * Cancel the private holders' share of an unpaid maturity quote, as for coupon
+ * claims: their legs are removed and the quote shrinks by their value, so the
+ * treasury keeps that money. Escrow already funded stays in the bond's escrow
+ * and still pays the kept legs; nothing is paid out here. Returns null when the
+ * quote owes no private holder or its payout journal is already running.
+ */
+export function trimMaturityClaim(
+  bondId: string,
+  claim: MaturityClaimSource
+): MaturityClaimPatch | null {
+  if (claim.payoutInFlight) return null;
+  const removed = claim.legs.filter(isPrivateMaturityLeg);
+  if (removed.length === 0) return null;
+  const removedLocal = removed.reduce((sum, leg) => sum + maturityLegLocal(leg, claim), 0);
+  const amountLocalAfter = Math.max(0, claim.amountLocal - removedLocal);
+  return {
+    bondId,
+    currency: claim.currency,
+    legsRemoved: removed.length,
+    amountLocalBefore: claim.amountLocal,
+    amountLocalAfter,
+    privateAmountLocal: removedLocal,
+    escrowLocal: claim.escrowLocal,
+    /** Escrow beyond the shrunken quote stays in escrow for the treasury. */
+    escrowSurplusLocal: Math.max(0, claim.escrowLocal - amountLocalAfter),
+  };
+}
+
 export function rehomeSovereignBond(bond: SovereignBondSource): {
   rehome: SovereignBondRehome | null;
   blockers: string[];
@@ -42,12 +99,16 @@ export function rehomeSovereignBond(bond: SovereignBondSource): {
     blockers.push(`in-flight-bank-treasury-trade:${bond.id}`);
   if (bond.holders.some((holder) => holder.saleIntentId && holder.units > 0))
     blockers.push(`in-flight-bond-sale:${bond.id}`);
-  if (bond.privateMaturityLegs > 0) blockers.push(`open-private-maturity-claim:${bond.id}`);
   if (bond.holders.length === 0) return { rehome: null, blockers };
-  const unitsMoved = bond.holders.reduce(
-    (sum, holder) => sum + (Number.isFinite(holder.units) && holder.units > 0 ? holder.units : 0),
-    0
-  );
+  // Units of a bond with a frozen maturity quote are already redeemed by that
+  // quote; moving them to the float would hand the pool units it is not paid for.
+  const units = bond.maturityClaim
+    ? 0
+    : bond.holders.reduce(
+        (sum, holder) =>
+          sum + (Number.isFinite(holder.units) && holder.units > 0 ? holder.units : 0),
+        0
+      );
   const publicFloatBefore = Number.isFinite(bond.publicFloat) ? bond.publicFloat : 0;
   return {
     rehome: {
@@ -56,9 +117,9 @@ export function rehomeSovereignBond(bond: SovereignBondSource): {
       currency: bond.currency,
       totalIssued: bond.totalIssued,
       publicFloatBefore,
-      publicFloatAfter: publicFloatBefore + unitsMoved,
+      publicFloatAfter: publicFloatBefore + units,
       holdersRemoved: bond.holders.length,
-      unitsMoved,
+      unitsMoved: units,
     },
     blockers,
   };

@@ -31,11 +31,10 @@ import {
   CORPORATE_BOND_FILTER,
   ECONOMY_RESET_PROCESSING_KIND,
   VOIDED_INCOME_TAX_FILTER,
-  WIPED_BANK_MONEY_MOVE_FILTER,
   captureEconomyResetPlan,
 } from "./census";
 import { economyResetObjectId } from "./digest";
-import { keptCouponHolders } from "./rules/bonds";
+import { isPrivateMaturityLeg, keptCouponHolders } from "./rules/bonds";
 import { primaryLegTotals, witnessDeltas, witnessEntry } from "./rules/ledger";
 import { NPP_MONEY_UNSET, characterMoneyUpdate, imperialMoneyUpdate } from "./rules/money";
 import {
@@ -238,6 +237,41 @@ async function phaseBonds(db: Db, plan: EconomyResetPlan): Promise<void> {
     );
   }
 
+  // Unpaid maturity quotes drop their private legs and holders; the quote
+  // shrinks by the planned amount, and any funded escrow stays on the bond.
+  for (const patches of chunks(plan.maturityClaims, 1000)) {
+    const bonds = await db
+      .collection<Document>("bonds")
+      .find(
+        { _id: { $in: patches.map((patch) => oid(patch.bondId)) } },
+        { projection: { "sovereignMaturityClaim.holderLegs": 1 } }
+      )
+      .toArray();
+    const byId = new Map(patches.map((patch) => [patch.bondId, patch]));
+    await bulk(
+      db,
+      "bonds",
+      bonds.map((bond) => {
+        const patch = byId.get(String(bond._id))!;
+        const legs = (bond.sovereignMaturityClaim?.holderLegs ?? []) as { collection: string }[];
+        return {
+          updateOne: {
+            filter: { _id: bond._id, "sovereignMaturityClaim.paid": { $ne: true } },
+            update: {
+              $set: {
+                "sovereignMaturityClaim.holderLegs": legs.filter(
+                  (leg) => !isPrivateMaturityLeg(leg)
+                ),
+                "sovereignMaturityClaim.sourceHolders": [],
+                "sovereignMaturityClaim.amountLocal": patch.amountLocalAfter,
+              },
+            },
+          },
+        };
+      })
+    );
+  }
+
   if (plan.legacyCouponClaims.length > 0) {
     const budgets = await db
       .collection<Document>("federalBudget")
@@ -325,15 +359,33 @@ async function phaseTreasury(db: Db, plan: EconomyResetPlan, digest: string): Pr
   await db.collection("playerIncomeTaxAssessments").deleteMany(VOIDED_INCOME_TAX_FILTER);
 }
 
+/** Stuck partial moves that owe nothing to a kept account are closed as rejected. */
+async function phaseMoneyMoves(db: Db, plan: EconomyResetPlan, digest: string): Promise<void> {
+  const now = new Date();
+  await bulk(
+    db,
+    "bankMoneyMoves",
+    plan.voidedMoneyMoves.map((move) => ({
+      updateOne: {
+        filter: { _id: move.id as never, status: "partial" },
+        update: {
+          $set: {
+            status: "rejected",
+            error: `Voided by economy reset ${digest}: every pending leg targets money the reset removes`,
+            economyResetVoidedAt: now,
+          },
+        },
+      },
+    }))
+  );
+}
+
 async function phaseWipe(db: Db): Promise<void> {
   for (const name of economyResetFullWipeCollections()) {
     // Reference rows are deleted so the collection and its indexes stay.
     if (name === "unownedSectors") await db.collection(name).deleteMany({});
     else await dropIfExists(db, name);
   }
-  await db
-    .collection<{ _id: string }>("bankMoneyMoves")
-    .deleteMany(WIPED_BANK_MONEY_MOVE_FILTER as never);
 }
 
 async function phaseUnset(db: Db): Promise<void> {
@@ -440,6 +492,8 @@ async function runPhase(
       return phaseCentralBanks(db, plan).then(() => ({}));
     case "treasury":
       return phaseTreasury(db, plan, digest).then(() => ({}));
+    case "moneyMoves":
+      return phaseMoneyMoves(db, plan, digest).then(() => ({}));
     case "wipe":
       return phaseWipe(db).then(() => ({}));
     case "unset":

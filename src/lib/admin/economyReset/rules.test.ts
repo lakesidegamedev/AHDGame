@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { getWealthBonus } from "@/lib/constants/characterWealth";
 import { economyResetPlanDigest } from "./digest";
-import { rehomeSovereignBond, trimCouponClaim, isSovereignBond } from "./rules/bonds";
+import {
+  isSovereignBond,
+  rehomeSovereignBond,
+  trimCouponClaim,
+  trimMaturityClaim,
+  type MaturityClaimSource,
+} from "./rules/bonds";
+import { classifyPartialMoneyMove, type PartialMoneyMoveSource } from "./rules/moneyMoves";
 import { countryCorporationSeeds } from "./rules/countryCorporations";
 import { primaryLegTotals, witnessDeltas, witnessEntry } from "./rules/ledger";
 import {
@@ -170,13 +177,12 @@ describe("sovereign bonds", () => {
       totalIssued: 1000,
       publicFloat: 3,
       holders: [{ units: 2 }, { units: 5 }],
-      privateMaturityLegs: 0,
     });
     expect(blockers).toEqual([]);
     expect(rehome).toMatchObject({ publicFloatBefore: 3, publicFloatAfter: 10, unitsMoved: 7 });
   });
 
-  it("blocks in-flight trades, sales and private maturity payouts", () => {
+  it("blocks in-flight trades and sales", () => {
     const { blockers } = rehomeSovereignBond({
       id: "b",
       countryId: "US",
@@ -187,13 +193,55 @@ describe("sovereign bonds", () => {
         { units: 1, bankTreasuryTradeId: "t" },
         { units: 1, saleIntentId: "s" },
       ],
-      privateMaturityLegs: 1,
     });
-    expect(blockers.sort()).toEqual([
-      "in-flight-bank-treasury-trade:b",
-      "in-flight-bond-sale:b",
-      "open-private-maturity-claim:b",
-    ]);
+    expect(blockers.sort()).toEqual(["in-flight-bank-treasury-trade:b", "in-flight-bond-sale:b"]);
+  });
+
+  const quote = (overrides: Partial<MaturityClaimSource> = {}): MaturityClaimSource => ({
+    currency: "PLZ",
+    treasuryLocalPerAnchor: 10,
+    amountLocal: 1000 + 20 * 10 + 50 + 300,
+    escrowLocal: 0,
+    legs: [
+      { collection: "bondMarketPools", amount: 1000, currencyCode: "PLZ", localPerAnchor: 10 },
+      { collection: "indexFunds", amount: 20, currencyCode: "USD", localPerAnchor: 1 },
+      { collection: "corporations", amount: 50, currencyCode: "PLZ", localPerAnchor: 10 },
+      { collection: "centralBanks", amount: 300, currencyCode: "PLZ", localPerAnchor: 10 },
+    ],
+    payoutInFlight: false,
+    ...overrides,
+  });
+
+  it("cancels the private share of an unpaid maturity quote and keeps the treasury legs", () => {
+    expect(trimMaturityClaim("m", quote())).toEqual({
+      bondId: "m",
+      currency: "PLZ",
+      legsRemoved: 2,
+      amountLocalBefore: 1550,
+      amountLocalAfter: 1300,
+      privateAmountLocal: 250,
+      escrowLocal: 0,
+      escrowSurplusLocal: 0,
+    });
+  });
+
+  it("keeps funded escrow on the bond when the quote shrinks below it", () => {
+    expect(trimMaturityClaim("m", quote({ escrowLocal: 1500 }))?.escrowSurplusLocal).toBe(200);
+  });
+
+  it("leaves a maturity quote alone while its payout journal runs, and never moves its units", () => {
+    expect(trimMaturityClaim("m", quote({ payoutInFlight: true }))).toBeNull();
+    const { rehome, blockers } = rehomeSovereignBond({
+      id: "m",
+      countryId: "PL",
+      currency: "PLZ",
+      totalIssued: 10,
+      publicFloat: 0,
+      holders: [{ units: 4 }],
+      maturityClaim: quote(),
+    });
+    expect(blockers).toEqual([]);
+    expect(rehome).toMatchObject({ publicFloatAfter: 0, unitsMoved: 0, holdersRemoved: 1 });
   });
 
   it("cancels the private share of an open coupon so the treasury keeps it", () => {
@@ -346,12 +394,99 @@ function source(overrides: Partial<EconomyResetSource> = {}): EconomyResetSource
     pensionSchemes: [],
     incomeTax: { open: 2, collected: 0 },
     openMoneyFlowReceipts: 0,
-    partialBankMoneyMoves: 0,
+    partialMoneyMoves: [],
+    wipedCollections: ["corporations", "indexFunds"],
     bankLoanCount: 1,
     openingBalances: { "corporation:c:USD": 12.3456789, "character:a:USD": 1 },
     ...overrides,
   };
 }
+
+describe("partial bank money moves", () => {
+  const wiped = new Set(["corporations", "indexFunds"]);
+  const leg = (overrides: Partial<PartialMoneyMoveSource["pendingLegs"][number]>) => ({
+    collection: "characters",
+    targetId: "x",
+    path: "currencyBalances.campaign",
+    amount: 10,
+    currency: "USD",
+    targetExists: true,
+    ...overrides,
+  });
+
+  it("voids a refund whose campaign and character are gone", () => {
+    const result = classifyPartialMoneyMove(
+      {
+        id: "political-media-refund:a",
+        kind: "political-media-refund",
+        turn: 148,
+        pendingLegs: [
+          leg({ collection: "campaigns", path: "funds", targetExists: false }),
+          leg({ targetExists: false }),
+        ],
+      },
+      wiped
+    );
+    expect(result.blocker).toBeNull();
+    expect(result.voided?.pendingLegs.map((l) => l.reason)).toEqual(["missing", "missing"]);
+  });
+
+  it("voids legs owed to wiped collections and private wallets", () => {
+    const result = classifyPartialMoneyMove(
+      {
+        id: "move",
+        kind: "loan_service",
+        turn: 1,
+        pendingLegs: [
+          leg({ collection: "corporations", path: "liquidCapital" }),
+          leg({ path: "currencyBalances.personal.USD" }),
+          leg({ collection: "npps", path: "nppInvestmentCashAnchor", targetExists: false }),
+        ],
+      },
+      wiped
+    );
+    expect(result.blocker).toBeNull();
+    expect(result.voided?.pendingLegs.length).toBe(3);
+  });
+
+  it("blocks a move still owed to a kept account, with the reason", () => {
+    const result = classifyPartialMoneyMove(
+      {
+        id: "dues",
+        kind: "organization_dues",
+        turn: 1,
+        pendingLegs: [
+          leg({ collection: "corporations", path: "liquidCapital" }),
+          leg({ collection: "organizationFunds", targetId: "org", path: "balanceLocal" }),
+        ],
+      },
+      wiped
+    );
+    expect(result.voided).toBeNull();
+    expect(result.blocker).toBe(
+      "kept-account-money-move:dues: still owes kept accounts organizationFunds:org.balanceLocal; run one turn or reconcile this move, then re-run the census"
+    );
+    expect(
+      classifyPartialMoneyMove({ id: "c", kind: "x", turn: 1, pendingLegs: [leg({})] }, wiped)
+        .blocker
+    ).toMatch(/^kept-account-money-move:c: .*characters:x\.currencyBalances\.campaign/);
+  });
+
+  it("blocks a sovereign maturity payout even when only private legs are pending", () => {
+    const result = classifyPartialMoneyMove(
+      {
+        id: "sovereign-maturity:b:276:payout",
+        kind: "sovereign_maturity_payout",
+        turn: 276,
+        pendingLegs: [
+          leg({ collection: "npps", path: "nppInvestmentCashAnchor", targetExists: false }),
+        ],
+      },
+      wiped
+    );
+    expect(result.blocker).toMatch(/^sovereign-payout-in-flight:sovereign-maturity:b:276:payout: /);
+  });
+});
 
 describe("plan builder", () => {
   it("is deterministic regardless of input order", () => {
@@ -366,6 +501,61 @@ describe("plan builder", () => {
     expect(a.money.destroyedByKind.corporation.USD.anchor).toBeCloseTo(12.345679, 6);
     expect(a.centralBanks[0]).toMatchObject({ centralBankSavingsDestroyed: 30, locWrittenOff: 5 });
     expect(a.blockers).toEqual([]);
+  });
+
+  it("reports maturity cancellations and voided moves in the money census", () => {
+    const plan = buildEconomyResetPlan(
+      source({
+        sovereignBonds: [
+          {
+            id: "m",
+            countryId: "PL",
+            currency: "PLZ",
+            totalIssued: 10,
+            publicFloat: 0,
+            holders: [{ units: 4 }],
+            maturityClaim: {
+              currency: "PLZ",
+              treasuryLocalPerAnchor: 10,
+              amountLocal: 300,
+              escrowLocal: 0,
+              legs: [
+                {
+                  collection: "bondMarketPools",
+                  amount: 100,
+                  currencyCode: "PLZ",
+                  localPerAnchor: 10,
+                },
+                { collection: "npps", amount: 20, currencyCode: "USD", localPerAnchor: 1 },
+              ],
+              payoutInFlight: false,
+            },
+          },
+        ],
+        partialMoneyMoves: [
+          {
+            id: "political-media-refund:a",
+            kind: "political-media-refund",
+            turn: 1,
+            pendingLegs: [
+              {
+                collection: "campaigns",
+                targetId: "c",
+                path: "funds",
+                amount: 7,
+                currency: "USD",
+                targetExists: false,
+              },
+            ],
+          },
+        ],
+      })
+    );
+    expect(plan.blockers).toEqual([]);
+    expect(plan.maturityClaims).toMatchObject([{ bondId: "m", amountLocalAfter: 100 }]);
+    expect(plan.money.maturityClaimsCancelledByCurrency).toEqual({ PLZ: 200 });
+    expect(plan.voidedMoneyMoves.map((m) => m.id)).toEqual(["political-media-refund:a"]);
+    expect(plan.money.voidedInFlightByCurrency).toEqual({ USD: 7 });
   });
 
   it("reports in-flight money and an unconverted euro treasury as blockers", () => {

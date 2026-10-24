@@ -135,6 +135,35 @@ beforeAll(async () => {
     },
   });
 
+  // Standing residue of a live world: a refund whose campaign was deleted.
+  await db.collection("bankMoneyMoves").insertOne({
+    _id: "political-media-refund:gone" as never,
+    kind: "political-media-refund",
+    status: "partial",
+    turn: 3,
+    legs: [
+      {
+        kind: "debit",
+        amount: 9,
+        note: "escrow",
+        applied: true,
+        collection: "bankMoneyMoves",
+        filter: { _id: "political-media-order:gone" },
+        path: "x",
+      },
+      {
+        kind: "credit",
+        amount: 7,
+        note: "refund",
+        applied: false,
+        valuation: { currencyCode: "USD", localPerAnchor: 1 },
+        collection: "campaigns",
+        filter: { _id: new ObjectId() },
+        path: "funds",
+      },
+    ],
+  });
+
   for (const name of [
     "federalBudget",
     "enactedLaws",
@@ -260,6 +289,15 @@ describe("economy-only reset end to end", () => {
     expect(state!.economyReset.digest).toBe(digest);
     expect(state!.economyReset.completedAt).toBeInstanceOf(Date);
     expect(state!.worldEpochId).toBe(EPOCH);
+  });
+
+  it("voids a stuck move that owes nothing to a kept account", async () => {
+    expect(plan.voidedMoneyMoves.map((move) => move.id)).toEqual(["political-media-refund:gone"]);
+    expect(plan.money.voidedInFlightByCurrency).toEqual({ USD: 7 });
+    const move = await db
+      .collection("bankMoneyMoves")
+      .findOne({ _id: "political-media-refund:gone" as never });
+    expect(move!.status).toBe("rejected");
   });
 
   it("is a no-op when applied again with the same digest", async () => {
