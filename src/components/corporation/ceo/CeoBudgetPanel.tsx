@@ -155,6 +155,11 @@ export default function CeoBudgetPanel({
   const msGain = calcMarketingGrowth(anchor(daily.marketing), currentMs);
   const currentLs = corporation.logisticsStrength ?? 0;
   const lsNet = calcLogisticsGrowth(anchor(daily.logistics)) - currentLs * LOGISTICS_DECAY_RATE;
+  // #1669: a group leader pays its formalized subsidiaries part of the strength
+  // they gain, which comes off this corporation's own total. The figure above
+  // counts only the budget's growth and the decay, so say so rather than
+  // promising a rise the turn will not deliver.
+  const groupTransfer = corporation.groupStrengthTransfer ?? null;
   const lsEquilibrium =
     daily.logistics > 0 ? calcLogisticsGrowth(anchor(daily.logistics)) / LOGISTICS_DECAY_RATE : 0;
   const currentRd = corporation.rdScore ?? 0;
@@ -331,7 +336,19 @@ export default function CeoBudgetPanel({
               {daily.logistics > 0 ? (
                 <>
                   {lsNet >= 0 ? "+" : ""}
-                  {lsNet.toFixed(2)}/turn, settles near {Math.round(lsEquilibrium)}
+                  {lsNet.toFixed(2)}/turn
+                  {groupTransfer ? (
+                    <>
+                      {" "}
+                      before the group payment. Your company also hands strength to its{" "}
+                      {groupTransfer.subsidiaryCount === 1
+                        ? "subsidiary"
+                        : `${groupTransfer.subsidiaryCount} subsidiaries`}{" "}
+                      each turn, which is not counted here.
+                    </>
+                  ) : (
+                    <>, settles near {Math.round(lsEquilibrium)}</>
+                  )}
                 </>
               ) : currentLs > 0 ? (
                 <span className="text-warning">

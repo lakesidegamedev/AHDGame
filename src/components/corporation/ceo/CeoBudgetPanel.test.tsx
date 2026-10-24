@@ -226,3 +226,25 @@ describe("CeoBudgetPanel: currency symbol", () => {
     expect(document.body.textContent).not.toContain("₳");
   });
 });
+
+describe("CeoBudgetPanel: group payment disclosure (#1669)", () => {
+  it("says the logistics forecast leaves out the strength paid to subsidiaries", () => {
+    renderBudget({
+      corporation: {
+        logisticsBudget: 72_000_000,
+        logisticsStrength: 153,
+        groupStrengthTransfer: { subsidiaryCount: 3 },
+      },
+    });
+    expect(document.body.textContent).toMatch(/hands strength to its\s+3 subsidiaries/);
+    expect(document.body.textContent).not.toMatch(/settles near/);
+  });
+
+  it("keeps the settled-strength note when no group payment applies", () => {
+    renderBudget({
+      corporation: { logisticsBudget: 72_000_000, logisticsStrength: 153 },
+    });
+    expect(document.body.textContent).toMatch(/settles near/);
+    expect(document.body.textContent).not.toMatch(/hands strength to/);
+  });
+});

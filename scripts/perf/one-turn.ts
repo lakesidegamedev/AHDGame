@@ -114,6 +114,13 @@ async function main() {
   if (result.warnings.length > 0) {
     for (const warning of result.warnings) console.log(`  warning: ${warning}`);
   }
+
+  // Post-turn telemetry (the producer-market shadow) runs after the turn; let
+  // it finish before the process exits, outside the profiled turn.
+  const { drainDeferredTurnWork } = await import("@/lib/turn/deferredTurnWork");
+  const drainStarted = Date.now();
+  await drainDeferredTurnWork();
+  console.log(`deferred turn work: ${((Date.now() - drainStarted) / 1000).toFixed(1)}s`);
 }
 
 main()

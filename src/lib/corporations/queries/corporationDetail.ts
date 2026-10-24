@@ -435,6 +435,7 @@ export async function loadCorporationDetailView(args: {
       canFormalizeAsSubsidiary: subsidiary.canFormalizeAsSubsidiary,
       canManageAsParent: subsidiary.canManageAsParent,
       canSpinOff: subsidiary.canSpinOff,
+      groupStrengthTransfer: subsidiary.groupStrengthTransfer,
       parentDividendFloorPct: subsidiary.activeFloorPct > 0 ? subsidiary.activeFloorPct : undefined,
     },
     ceo:
