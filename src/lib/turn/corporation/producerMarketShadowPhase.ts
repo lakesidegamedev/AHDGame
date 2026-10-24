@@ -57,6 +57,15 @@ export async function runProducerMarketShadowPhase(
       { sort: { at: -1 } }
     );
     const continuity = resolveShadowContinuity(predecessor, { worldEpoch, turn: input.turn });
+    // Where the shadow's time goes, so it can be moved off the turn with
+    // evidence rather than a guess (#4828).
+    const stageMs: Record<string, number> = {};
+    let stageStarted = Date.now();
+    const stage = (name: string) => {
+      const now = Date.now();
+      stageMs[name] = now - stageStarted;
+      stageStarted = now;
+    };
     const carry = continuity.mode === "continue" ? continuity.predecessor : null;
 
     const {
@@ -94,7 +103,9 @@ export async function runProducerMarketShadowPhase(
       env: input.env,
       sectorOps: input.sectorOps,
       carry,
+      stage,
     });
+    stage("demand.orders");
     const { summary, result } = runProducerShadowDetailed({
       turn: input.turn,
       references,
@@ -108,6 +119,7 @@ export async function runProducerMarketShadowPhase(
       eligibleOffersByOrder,
       payables: (carry?.payables ?? []).filter((p) => cashByCorp.has(p.debtorAccountId)),
     });
+    stage("market");
 
     // 6. Close: AI profit to households, operating payees to their state's
     //    households, unspent public funding back to the treasury.
@@ -125,6 +137,7 @@ export async function runProducerMarketShadowPhase(
       householdFor: (id) => householdForPayee.get(id) ?? firstWalletByCorp.get(id)?.wallet ?? null,
     });
 
+    stage("close");
     // 7. Gate A: money loop per household wallet, per country and globally.
     const wagesByWallet = new Map<string, number>();
     const planRecipient = new Map(
@@ -311,6 +324,7 @@ export async function runProducerMarketShadowPhase(
       return [{ sectorId, legacy: p.legacy.revenue, funded: fundedByPlan.get(p.plan.id) ?? 0 }];
     });
 
+    stage("evidence");
     // 9. Persist next turn's opening (shadow-only) and the turn summary.
     const valueAddedByCountry: Record<string, number> = {};
     const plants: Record<string, ShadowPlantCarry> = {};
@@ -353,6 +367,7 @@ export async function runProducerMarketShadowPhase(
       { upsert: true }
     );
     await stateCollection.deleteMany({ runId: continuity.runId, turn: { $lt: input.turn - 1 } });
+    stage("stateWrite");
     await db.collection(PRODUCER_SHADOW_COLLECTION).replaceOne(
       { _id: input.turn as never },
       {
@@ -371,6 +386,7 @@ export async function runProducerMarketShadowPhase(
         worldEpoch,
         codeSha: nextState.codeSha,
         ms: Date.now() - started,
+        stageMs,
         at: new Date(),
       },
       { upsert: true }
