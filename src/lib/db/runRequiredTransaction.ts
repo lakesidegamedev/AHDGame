@@ -158,7 +158,7 @@ const BARRIER_ID = "transactionMajorityBarrier";
 export async function awaitMajorityBarrier(client: MongoClient): Promise<void> {
   if (!acknowledgesBelowMajority(client)) return;
   await client
-    .db(resolveMongoDbName(process.env))
+    .db(resolveMongoDbName(process.env as Parameters<typeof resolveMongoDbName>[0]))
     .collection<{ _id: string; at: Date }>(BARRIER_COLLECTION)
     .updateOne(
       { _id: BARRIER_ID },
