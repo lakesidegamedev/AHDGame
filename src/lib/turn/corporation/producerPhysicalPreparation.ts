@@ -116,6 +116,8 @@ export type ProducerPhysicalEnv = Pick<
   captiveDeliveryStage?: number;
   /** gameConfig.producerFundedRestartStage: >= 1 publishes shortage per recipe for AI restarts. */
   fundedRestartStage?: number;
+  /** Funded build speedup factor for short plants (gameConfig.producerShortageBuildFactor). */
+  shortageBuildFactor?: number;
   /** Units asked over delivered per commodity book, from last turn's settled orders. */
   pressureByBook?: ReadonlyMap<string, number>;
   /** Last funded clearing price per reachable commodity, anchor per unit (from the previous turn's outcomes). */

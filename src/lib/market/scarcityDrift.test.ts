@@ -216,3 +216,12 @@ describe("updateScarcityMultiplierFunded", () => {
     expect(updateScarcityMultiplierFunded(undefined, 100, 100)).toBe(1);
   });
 });
+
+describe("updateScarcityMultiplierFunded pace", () => {
+  it("honours a slower per-turn move and a lower ceiling", async () => {
+    const { updateScarcityMultiplierFunded } = await import("./scarcityDrift");
+    expect(updateScarcityMultiplierFunded(1, 100, 200, { maxMove: 0.02 })).toBeCloseTo(1.02, 9);
+    expect(updateScarcityMultiplierFunded(2.99, 100, 200, { maxMultiplier: 3 })).toBe(3);
+    expect(updateScarcityMultiplierFunded(1, 100, 200, { maxMove: 0 })).toBeCloseTo(1.06, 9);
+  });
+});
