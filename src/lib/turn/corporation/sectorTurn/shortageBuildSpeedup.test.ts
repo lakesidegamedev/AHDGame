@@ -99,3 +99,33 @@ describe("shortageBuildSpeedupOps", () => {
     });
   });
 });
+
+describe("fundedShortageBuildOps", () => {
+  const order = { startTurn: 100, onlineTurn: 196, unitsOrdered: 10, costPaidAnchor: 1 } as never;
+  it("shortens outstanding builds of a short plant by the factor, once", async () => {
+    const { fundedShortageBuildOps } = await import("./shortageBuildSpeedup");
+    const ops = fundedShortageBuildOps({
+      sectors: [{ _id: "a", buildQueue: [order], pressure: 2 }],
+      currentTurn: 100,
+      factor: 0.25,
+      now: new Date(0),
+    });
+    expect(ops).toHaveLength(1);
+    expect(ops[0].updateOne.update.$set["buildQueue.$[o].onlineTurn"]).toBe(124);
+  });
+  it("does nothing when off, when the plant is not short, or when it is mothballed", async () => {
+    const { fundedShortageBuildOps } = await import("./shortageBuildSpeedup");
+    const base = { _id: "a", buildQueue: [order], pressure: 2 };
+    const run = (s: object, factor: number | undefined) =>
+      fundedShortageBuildOps({
+        sectors: [{ ...base, ...s }],
+        currentTurn: 100,
+        factor,
+        now: new Date(0),
+      });
+    expect(run({}, undefined)).toEqual([]);
+    expect(run({}, 1)).toEqual([]);
+    expect(run({ pressure: 1.1 }, 0.25)).toEqual([]);
+    expect(run({ mothballed: true }, 0.25)).toEqual([]);
+  });
+});

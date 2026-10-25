@@ -43,6 +43,7 @@ export const CORPORATION_TURN_GAME_CONFIG_PROJECTION = {
   producerFundedRestartStage: 1,
   producerIdleRetireStage: 1,
   producerTransitionPackageEnabled: 1,
+  producerShortageBuildFactor: 1,
   decommissionGrantShare: 1,
   producerLowUseCostStage: 1,
   shortageBuildSpeedupEnabled: 1,

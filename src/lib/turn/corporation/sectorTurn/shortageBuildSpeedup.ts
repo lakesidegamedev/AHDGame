@@ -75,6 +75,8 @@ export function shortageBuildSpeedupOps(args: {
   currentTurn: number;
   unmetShare: number;
   now: Date;
+  /** Remaining-time multiplier; defaults to SHORTAGE_BUILD_TIME_FACTOR. */
+  factor?: number;
 }): Array<{
   updateOne: {
     filter: Record<string, unknown>;
@@ -83,10 +85,11 @@ export function shortageBuildSpeedupOps(args: {
   };
 }> {
   const { enabled, sectorId, outstanding, currentTurn, unmetShare, now } = args;
+  const factor = args.factor ?? SHORTAGE_BUILD_TIME_FACTOR;
   if (!enabled || !(unmetShare > SHORTAGE_BUILD_UNMET_THRESHOLD)) return [];
   const ops = [];
   for (const order of outstanding) {
-    const next = acceleratedBuildWindow(order, currentTurn);
+    const next = acceleratedBuildWindow(order, currentTurn, factor);
     if (!next) continue;
     ops.push({
       updateOne: {
@@ -111,4 +114,42 @@ export function shortageBuildSpeedupOps(args: {
     });
   }
   return ops;
+}
+
+/**
+ * Funded-turn build speedup. The legacy pass reads the formula ledger, which a
+ * funded turn does not produce, so on funded worlds the speedup never fired.
+ * Here each plant's shortage is its main product's measured book pressure
+ * (units asked over delivered, see shortageGrowthRules), turned into an unmet
+ * share (1 - 1/pressure), and its outstanding orders are shortened by
+ * `factor` once, through the same window rewrite as the legacy rule.
+ */
+export function fundedShortageBuildOps(args: {
+  sectors: readonly {
+    _id: unknown;
+    buildQueue?: readonly SectorBuildOrder[] | null;
+    mothballed?: boolean | null;
+    pressure: number | undefined;
+  }[];
+  currentTurn: number;
+  factor: number | undefined;
+  now: Date;
+}): ReturnType<typeof shortageBuildSpeedupOps> {
+  const factor = args.factor;
+  if (!(typeof factor === "number" && factor > 0 && factor < 1)) return [];
+  return args.sectors.flatMap((s) => {
+    const pressure = s.pressure;
+    if (s.mothballed === true || !(typeof pressure === "number" && pressure > 1)) return [];
+    const outstanding = (s.buildQueue ?? []).filter((o) => o.onlineTurn > args.currentTurn);
+    if (outstanding.length === 0) return [];
+    return shortageBuildSpeedupOps({
+      enabled: true,
+      sectorId: s._id,
+      outstanding,
+      currentTurn: args.currentTurn,
+      unmetShare: 1 - 1 / pressure,
+      now: args.now,
+      factor,
+    });
+  });
 }
