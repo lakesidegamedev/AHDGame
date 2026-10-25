@@ -1,3 +1,4 @@
+import { requireNoTurnInProgress } from "@/lib/api/requireCorporationActions";
 import { NextResponse } from "next/server";
 import { recordCorporationExit } from "@/lib/corporations/exits/recordCorporationExit";
 import { ObjectId, type AnyBulkWriteOperation } from "mongodb";
@@ -94,6 +95,8 @@ export async function POST(_request: Request, { params }: RouteParams) {
 
     const { id } = await params;
     const db = await getDb();
+    const turnGuard = await requireNoTurnInProgress(db);
+    if (turnGuard) return turnGuard;
 
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;

@@ -1,5 +1,6 @@
 // POST /api/country/[code]/region/[id]/economy/attack-sector
 // Attempt to split whole plants from a rival corporation in the same market.
+import { requireNoTurnInProgress } from "@/lib/api/requireCorporationActions";
 import { randomInt } from "node:crypto";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
@@ -46,6 +47,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const db = await getDb();
+
+    const turnGuard = await requireNoTurnInProgress(db);
+
+    if (turnGuard) return turnGuard;
     const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
     if (gameState?.corporationActionsPaused) {
       return errorResponse(403, "Corporation actions are currently paused");

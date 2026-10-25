@@ -73,4 +73,25 @@ describe("requireCorporationActions / requireGameActive", () => {
     const { requireCorporationActionsEnabled } = await import("./requireCorporationActions");
     expect(await requireCorporationActionsEnabled(db as unknown as Db)).toBeNull();
   });
+
+  it("requireCorporationActionsEnabled rejects only during the corporation phase, running or held", async () => {
+    const { requireCorporationActionsEnabled, requireNoTurnInProgress } =
+      await import("./requireCorporationActions");
+    for (const state of [
+      { isProcessing: true, processingPhase: "corporationTurn" },
+      { isProcessing: false, processingPhase: "corporationTurn" },
+    ]) {
+      db.collectionMocks.gameState!.findOne.mockResolvedValue({ _id: "current", ...state });
+      expect((await requireCorporationActionsEnabled(db as unknown as Db))?.status).toBe(409);
+      expect((await requireNoTurnInProgress(db as unknown as Db))?.status).toBe(409);
+    }
+    for (const state of [
+      { isProcessing: false, processingPhase: null },
+      { isProcessing: true, processingPhase: "bankingTurn" },
+    ]) {
+      db.collectionMocks.gameState!.findOne.mockResolvedValue({ _id: "current", ...state });
+      expect(await requireCorporationActionsEnabled(db as unknown as Db)).toBeNull();
+      expect(await requireNoTurnInProgress(db as unknown as Db)).toBeNull();
+    }
+  });
 });
