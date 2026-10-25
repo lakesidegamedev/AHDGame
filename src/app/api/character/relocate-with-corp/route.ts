@@ -8,7 +8,6 @@
  * - Imperial CEO flows as `paymentMethod: "imperial-free"` with cost 0.
  */
 
-import { requireNoTurnInProgress } from "@/lib/api/requireCorporationActions";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { z } from "zod";
@@ -108,10 +107,6 @@ export async function POST(request: Request) {
     ).toUpperCase() as import("@/lib/constants/countries").CountryId;
 
     const db = await getDb();
-
-    const turnGuard = await requireNoTurnInProgress(db);
-
-    if (turnGuard) return turnGuard;
     return await withPartyTerritoryMutation(
       db,
       [{ countryId: auth.character.countryId ?? "US", partyId: auth.character.party }],
