@@ -14,6 +14,7 @@ vi.mock("@/lib/financialTxLog/atomicCashGuard", () => ({
 vi.mock("@/lib/currency/corporationCapital", () => ({
   anchorToCorpLiquidCapital: (a: number) => a,
   getCorpFxRate: vi.fn().mockResolvedValue(1),
+  loadFxRatesRecord: vi.fn().mockResolvedValue({ USD: 1 }),
   resolveCorpLiquidCurrencyCode: () => "USD",
 }));
 vi.mock("@/lib/indexFunds/fundRedemptionLiquidity", () => ({
@@ -51,6 +52,7 @@ vi.mock("./holderPayout", () => ({
   ),
 }));
 
+import { recordAudit } from "@/lib/audit/recordAudit";
 import { creditCorpLiquidCapital } from "@/lib/financialTxLog/atomicCashGuard";
 import { sellFundHoldingsForRedemptionCash } from "@/lib/indexFunds/fundRedemptionLiquidity";
 import { sellFundBondHoldingsForCash } from "@/lib/bonds/sellFundBondUnits";
@@ -98,6 +100,7 @@ function makeDb(opts: {
   bondsRemaining?: () => number;
   queuedRedemptions?: () => number;
   openFundOrders?: Array<{ _id: ObjectId }>;
+  corporations?: Array<{ _id: ObjectId; name: string }>;
 }) {
   const fundUpdate = vi.fn().mockResolvedValue({ modifiedCount: opts.claimed === false ? 0 : 1 });
   const positionsUpdateMany = vi.fn().mockResolvedValue({ modifiedCount: 1 });
@@ -126,7 +129,11 @@ function makeDb(opts: {
                 : [],
           })),
         };
-      if (name === "indexFundTransactions") return { insertOne: txInsert };
+      if (name === "indexFundTransactions")
+        return {
+          insertOne: txInsert,
+          insertMany: vi.fn().mockResolvedValue({ insertedCount: 1 }),
+        };
       if (name === "indexFundRedemptionQueue")
         return { countDocuments: vi.fn(async () => opts.queuedRedemptions?.() ?? 0) };
       if (name === "shareOrders")
@@ -136,11 +143,15 @@ function makeDb(opts: {
         };
       if (name === "corporations")
         return {
+          find: () => ({
+            toArray: async () => opts.corporations ?? [{ _id: SPONSOR, name: "Sponsor Co" }],
+          }),
           findOne: vi
             .fn()
             .mockResolvedValue(
               opts.sponsorExists === false ? null : { _id: SPONSOR, name: "Sponsor Co" }
             ),
+          bulkWrite: vi.fn(async (ops: unknown[]) => ({ matchedCount: ops.length })),
         };
       return { countDocuments: vi.fn().mockResolvedValue(0) };
     }),
@@ -218,6 +229,113 @@ describe("completeWindUp", () => {
     const { db } = makeDb({ positions: [], fund });
     await completeWindUp(db, fund, 200);
     expect(vi.mocked(creditCorpLiquidCapital)).toHaveBeenCalledWith(db, SPONSOR, 250_000);
+  });
+
+  it("writes off a corporate holder whose corporation record is gone and completes", async () => {
+    // #4846: a deleted corporate investor used to throw out of the batch
+    // payout, so the fund retried the same failure every turn forever. The
+    // unclaimed units are a write-off; the cash behind them falls through to
+    // the sponsor residual like any other unpaid units.
+    const f = makeFund({ status: "winding_down", cashAnchor: 50_000, unitSupply: 500 });
+    const missingId = new ObjectId();
+    const positions = [
+      {
+        _id: new ObjectId(),
+        fundId: f._id,
+        holderKind: "corporation" as const,
+        corporationId: missingId,
+        units: 500,
+      },
+    ];
+    const { db, fundUpdate, positionsUpdateMany } = makeDb({
+      positions,
+      fund: f,
+      corporations: [],
+    });
+
+    await expect(completeWindUp(db, f, 200)).resolves.toBe(0);
+
+    expect(positionsUpdateMany).toHaveBeenCalled();
+    expect(fundUpdate.mock.calls.at(-1)![1].$set.status).toBe("delisted");
+    expect(vi.mocked(creditCorpLiquidCapital)).toHaveBeenCalledWith(db, SPONSOR, 50_000);
+    expect(recordAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "indexFund.windUp.complete",
+        meta: expect.objectContaining({
+          writtenOffHolders: [
+            {
+              holderKind: "corporation",
+              holderId: missingId.toString(),
+              units: 500,
+              amountAnchor: 50_000,
+            },
+          ],
+        }),
+      })
+    );
+  });
+
+  it("writes off a character holder whose record is gone and completes", async () => {
+    // #4846: a deleted player holder used to throw out of the payout loop, so
+    // the fund retried the same failure every turn forever.
+    const f = makeFund({ status: "winding_down", cashAnchor: 50_000, unitSupply: 500 });
+    const characterId = new ObjectId();
+    const positions = [
+      {
+        _id: new ObjectId(),
+        fundId: f._id,
+        holderKind: "character" as const,
+        characterId,
+        units: 500,
+      },
+    ];
+    const { db, fundUpdate, positionsUpdateMany } = makeDb({ positions, fund: f });
+    vi.mocked(payFundHolderCash).mockResolvedValueOnce(false);
+
+    await expect(completeWindUp(db, f, 200)).resolves.toBe(0);
+
+    expect(positionsUpdateMany).toHaveBeenCalled();
+    expect(fundUpdate.mock.calls.at(-1)![1].$set.status).toBe("delisted");
+    // NAV 100 × 500 unclaimed units falls through to the sponsor residual.
+    expect(vi.mocked(creditCorpLiquidCapital)).toHaveBeenCalledWith(db, SPONSOR, 50_000);
+    expect(recordAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "indexFund.windUp.complete",
+        meta: expect.objectContaining({
+          writtenOffHolders: [
+            expect.objectContaining({
+              holderKind: "character",
+              holderId: characterId.toString(),
+              units: 500,
+              amountAnchor: 50_000,
+            }),
+          ],
+        }),
+      })
+    );
+  });
+
+  it("completes when the sponsor corporation record is gone", async () => {
+    // #4846: a deleted sponsor used to throw before completion, so the fund
+    // sat in wind-up forever with its cash locked. A fund with no sponsor at
+    // all already completes this way, so a deleted one must too.
+    const f = makeFund({ status: "winding_down", cashAnchor: 250_000, unitSupply: 0 });
+    const { db, fundUpdate } = makeDb({ positions: [], fund: f, sponsorExists: false });
+
+    await expect(completeWindUp(db, f, 200)).resolves.toBe(0);
+
+    expect(fundUpdate.mock.calls.at(-1)![1].$set.status).toBe("delisted");
+    expect(fundUpdate.mock.calls.at(-1)![1].$set.cashAnchor).toBe(0);
+    expect(vi.mocked(creditCorpLiquidCapital)).not.toHaveBeenCalled();
+    expect(recordAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "indexFund.windUp.complete",
+        meta: expect.objectContaining({
+          unreturnedResidualAnchor: 250_000,
+          returnedToSponsorAnchor: 0,
+        }),
+      })
+    );
   });
 
   it("delists the fund and zeroes its units", async () => {

@@ -24,7 +24,7 @@ import { creditCorpLiquidCapital } from "@/lib/financialTxLog/atomicCashGuard";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { sellFundHoldingsForRedemptionCash } from "@/lib/indexFunds/fundRedemptionLiquidity";
 import { sellFundBondHoldingsForCash } from "@/lib/bonds/sellFundBondUnits";
-import { payCorporateWindUpHolders } from "./corporateHolderPayout";
+import { payCorporateWindUpHolders, type WrittenOffHolder } from "./corporateHolderPayout";
 import { payFundHolderCash } from "./holderPayout";
 import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 import { recordAudit } from "@/lib/audit/recordAudit";
@@ -293,6 +293,17 @@ export async function completeWindUp(
   });
 }
 
+function holderIdOf(position: IndexFundPosition): string | null {
+  const id =
+    position.corporationId ??
+    position.characterId ??
+    position.imperialCharacterId ??
+    position.nppId ??
+    position.pensionSchemeId ??
+    null;
+  return id ? id.toString() : null;
+}
+
 async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promise<number> {
   const now = new Date();
   const positions = await db
@@ -316,6 +327,7 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
   );
   let holdersPaid = corporatePayout.holdersPaid;
   let distributedAnchor = corporatePayout.distributedAnchor;
+  const writtenOffHolders: WrittenOffHolder[] = corporatePayout.missingHolders;
   for (const position of positions) {
     if (position.holderKind === "corporation") continue;
     const payoutAnchor =
@@ -325,7 +337,17 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
     if (payoutAnchor <= 0) continue;
     const paid = await payFundHolderCash(db, fund, position, payoutAnchor, currentTurn, now);
     if (!paid) {
-      if (position.holderKind !== "fund_reserve") throw new Error("Fund holder payout failed");
+      // The holder's record is gone, so there is nobody to credit. A deleted
+      // holder must not freeze the whole wind-up (issue #4846): write the
+      // position off at zero and let completion proceed. The unclaimed cash
+      // falls through to the sponsor residual, like any other unpaid units.
+      if (position.holderKind === "fund_reserve") continue;
+      writtenOffHolders.push({
+        holderKind: position.holderKind,
+        holderId: holderIdOf(position),
+        units: position.units,
+        amountAnchor: payoutAnchor,
+      });
       continue;
     }
     distributedAnchor += payoutAnchor;
@@ -337,13 +359,18 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
     .updateMany({ fundId: fund._id }, { $set: { units: 0, updatedAt: now } });
 
   const remainingAnchor = Math.max(0, fund.cashAnchor - distributedAnchor);
+  let unreturnedResidualAnchor = 0;
 
   if (fund.sponsorCorporationId && remainingAnchor > 0) {
     const sponsor = await db
       .collection<Corporation>("corporations")
       .findOne({ _id: fund.sponsorCorporationId });
-    if (!sponsor) throw new Error("Fund sponsor payout failed");
-    if (sponsor) {
+    if (!sponsor) {
+      // The sponsor corporation is gone, so the residual has nowhere to go.
+      // That is the same outcome as a fund with no sponsor at all, and it must
+      // not block completion forever. Record the unreturned cash for the audit.
+      unreturnedResidualAnchor = remainingAnchor;
+    } else {
       const fxRate = await getCorpFxRate(db, sponsor);
       if (!Number.isFinite(fxRate) || fxRate <= 0)
         throw new Error("Sponsor exchange rate unavailable");
@@ -383,7 +410,13 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
     turn: currentTurn,
     ...(fund.sponsorCorporationId ? { corporationId: fund.sponsorCorporationId } : {}),
     amountAnchor: remainingAnchor,
-    note: `Wind-up complete: ${holdersPaid} holder(s) paid, ₳${Math.round(remainingAnchor).toLocaleString()} returned to sponsor`,
+    note: `Wind-up complete: ${holdersPaid} holder(s) paid${
+      writtenOffHolders.length ? `, ${writtenOffHolders.length} missing holder(s) written off` : ""
+    }, ${
+      unreturnedResidualAnchor
+        ? `₳${Math.round(unreturnedResidualAnchor).toLocaleString()} unreturned: sponsor record missing`
+        : `₳${Math.round(remainingAnchor).toLocaleString()} returned to sponsor`
+    }`,
     createdAt: now,
   } as IndexFundTransaction);
 
@@ -415,8 +448,10 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
         finalNav,
         holdersPaid,
         distributedAnchor,
-        returnedToSponsorAnchor: remainingAnchor,
+        returnedToSponsorAnchor: Math.max(0, remainingAnchor - unreturnedResidualAnchor),
         seedCapitalAnchor: fund.seedCapitalAnchor ?? 0,
+        ...(writtenOffHolders.length ? { writtenOffHolders } : {}),
+        ...(unreturnedResidualAnchor ? { unreturnedResidualAnchor } : {}),
       },
     });
   });

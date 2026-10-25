@@ -16,6 +16,14 @@ import {
 } from "@/lib/currency/corporationCapital";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 
+/** A holder whose record no longer exists, written off at zero value. */
+export type WrittenOffHolder = {
+  holderKind: string;
+  holderId: string | null;
+  units: number;
+  amountAnchor: number;
+};
+
 export async function payCorporateWindUpHolders(
   db: Db,
   fund: IndexFund,
@@ -27,7 +35,8 @@ export async function payCorporateWindUpHolders(
   const corporatePositions = positions.filter(
     (p) => p.holderKind === "corporation" && p.corporationId && p.units > 0
   );
-  if (!corporatePositions.length) return { holdersPaid: 0, distributedAnchor: 0 };
+  if (!corporatePositions.length)
+    return { holdersPaid: 0, distributedAnchor: 0, missingHolders: [] };
   const corporations = await db
     .collection<Corporation>("corporations")
     .find(
@@ -45,6 +54,7 @@ export async function payCorporateWindUpHolders(
     };
   }> = [];
   const transactions: IndexFundTransaction[] = [];
+  const missingHolders: WrittenOffHolder[] = [];
   let distributedAnchor = 0;
   for (const position of corporatePositions) {
     const corp = byId.get(position.corporationId!.toString());
@@ -52,7 +62,19 @@ export async function payCorporateWindUpHolders(
       fund.seedAccounting === "paid_units"
         ? position.units * finalNav
         : Math.floor(position.units * finalNav);
-    if (!corp) throw new Error("Corporate fund holder no longer exists");
+    if (!corp) {
+      // The corporation record is gone, so there is nobody to credit. A
+      // deleted holder must not freeze the whole wind-up: write the position
+      // off at zero and let completion proceed. The unclaimed cash falls
+      // through to the sponsor residual, like any other unpaid units.
+      missingHolders.push({
+        holderKind: "corporation",
+        holderId: position.corporationId!.toString(),
+        units: position.units,
+        amountAnchor,
+      });
+      continue;
+    }
     if (amountAnchor <= 0) continue;
     const currency = resolveCorpLiquidCurrencyCode(corp);
     const rate = forex && currency ? rates[currency] : 1;
@@ -87,5 +109,5 @@ export async function payCorporateWindUpHolders(
       throw new Error("Corporate fund payout failed");
     await db.collection<IndexFundTransaction>("indexFundTransactions").insertMany(transactions);
   }
-  return { holdersPaid: operations.length, distributedAnchor };
+  return { holdersPaid: operations.length, distributedAnchor, missingHolders };
 }
