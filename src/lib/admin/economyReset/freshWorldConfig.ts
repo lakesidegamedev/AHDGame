@@ -1,0 +1,110 @@
+/**
+ * Game configuration a rebuilt economy starts from.
+ *
+ * The economy-only reset keeps the political world but rebuilds every company
+ * and plant from the era seed. Those plants must meet the same configuration a
+ * fresh bootstrap gives them: the fresh-world gameplay flags, and none of the
+ * knobs that were staged onto the old economy to steer it. Every stage, glide,
+ * governor bound and funded-market lever below describes the economy the reset
+ * deletes, so it is unset here. Market mechanics that are not tied to one
+ * economy's history are listed in FRESH_PLANTS_CONFIG_KEPT with the reason,
+ * and freshWorldConfig.test.ts fails when a new staged knob is in neither list.
+ */
+import type { UpdateFilter } from "mongodb";
+import type { GameConfig } from "@/lib/db/types/gameConfig";
+import {
+  STALE_MARKET_MODE_STAMP_UNSET,
+  STALE_PER_WORLD_GAME_CONFIG_UNSET,
+} from "@/lib/admin/seed/coreGameConfigUpdate";
+import { FRESH_WORLD_GAME_CONFIG_FLAGS } from "@/lib/seeds/reference/featureFlagDefaults";
+
+/** Staged knobs that only ever steered the economy the reset deletes. */
+export const FRESH_PLANTS_CONFIG_UNSET: Readonly<Record<string, "">> = Object.freeze({
+  // Legacy market recovery ladder (price memory damping, margin trim relief,
+  // service labour relief): patches for the old formula market.
+  marketRecoveryStage: "",
+  // Launch-safety governor on the plants tier: cap, ramp and every glide field.
+  // A rebuilt plants economy starts clean, with no deviation cap to glide off.
+  marketGovernorCap: "",
+  marketGovernorRampTurns: "",
+  marketGovernorGlideTurns: "",
+  marketGovernorGlideStartTurn: "",
+  marketGovernorGlideMode: "",
+  marketGovernorGlideFloor: "",
+  // Launch guard references measured on the old market's valuation.
+  marketGuardReferenceMcap: "",
+  marketGuardReferenceFundamentalMcap: "",
+  marketGuardReferenceTurn: "",
+  marketGuardTrippedAt: "",
+  // Funded producer market levers. They are set again, deliberately, by the
+  // opening that moves the rebuilt economy onto the funded path.
+  producerMarketLiveFromTurn: "",
+  producerDemandPlanStage: "",
+  producerSpilloverStage: "",
+  producerSpilloverShare: "",
+  producerPublicCarryStage: "",
+  producerPublicCarryShare: "",
+  producerRunPaceDrop: "",
+  producerConversionPaceShare: "",
+  producerHouseholdIncomeFloor: "",
+  producerStockCover: "",
+  producerClearingReferenceStage: "",
+  producerFundedBookStage: "",
+  producerProcurementSpillStage: "",
+  producerProcurementSpillShare: "",
+  producerShortageGrowthStage: "",
+  producerCaptiveDeliveryStage: "",
+  producerFundedRestartStage: "",
+  producerIdleRetireStage: "",
+  decommissionGrantShare: "",
+  producerLowUseCostStage: "",
+  fundedOverheadStage: "",
+  fundedHeadcountStage: "",
+  marketAdjustmentStage: "",
+});
+
+/**
+ * Staged knobs the reset keeps, and why. Each is a market mechanic that is
+ * true of every plants economy, not a steer applied to the old one.
+ */
+export const FRESH_PLANTS_CONFIG_KEPT: Readonly<Record<string, string>> = Object.freeze({
+  commodityFixStage:
+    "closed the demand-equals-prior-supply treadmill in the price engine; a mechanic, not a steer",
+  strengthUpkeepStage: "plant strength upkeep is a standing cost rule",
+  groupSizeCostsStage: "management overhead and concentration rules on groups",
+  soeSizeCostScale: "state-owned size cost rule",
+  dominanceRunningCostScale: "running dominance cost rule",
+  honestBalanceSheetsStage: "debt counted in credit and share price",
+  managementOverheadPpPerDoubling: "management overhead rule",
+  ceoSalaryVoteNetIncomeShare: "governance rule on CEO pay",
+  commandEconomySecondEconomyTolerance: "era regime setting, rewritten per preset",
+  producerMarketShadowEnabled:
+    "telemetry switch; the shadow must keep running so the rebuilt economy can be classified for its opening",
+});
+
+/** Central bank series written by the old economy's turns; chair, board and reserves stay. */
+export const CENTRAL_BANK_HISTORY_RESET: Readonly<Record<string, unknown>> = Object.freeze({
+  rateHistory: [],
+  interestRateHistory: [],
+  inflationHistory: [],
+  gdpGrowthHistory: [],
+  savingsFlowHistory: [],
+  forexRevenue: 0,
+  tradeGrowth: 0,
+});
+
+/**
+ * The gameConfig write for a rebuilt economy: fresh-world gameplay flags on,
+ * the pricing phase-in restarted, and every per-world stamp and staged knob
+ * gone. Ops keys (maintenance, webhooks, registration) are untouched.
+ */
+export function freshPlantsGameConfigUpdate(): UpdateFilter<GameConfig> {
+  return {
+    $set: { ...FRESH_WORLD_GAME_CONFIG_FLAGS, centralBankPricingPhaseIn: {} },
+    $unset: {
+      ...STALE_PER_WORLD_GAME_CONFIG_UNSET,
+      ...STALE_MARKET_MODE_STAMP_UNSET,
+      ...FRESH_PLANTS_CONFIG_UNSET,
+    },
+  };
+}
