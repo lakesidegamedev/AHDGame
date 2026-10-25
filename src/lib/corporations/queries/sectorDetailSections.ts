@@ -1773,7 +1773,8 @@ export function buildSectorPlantsSection(args: {
       currentYear,
       eraUnitScale,
       sector.industryModel,
-      sector.mediaDiscriminator
+      sector.mediaDiscriminator,
+      sector.strategyId
     ),
     governor: {
       active: governorTurnsRemaining > 0,
