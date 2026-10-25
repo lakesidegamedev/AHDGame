@@ -180,6 +180,8 @@ export const NON_GAMEPLAY_GAME_CONFIG_FIELDS: Readonly<Record<string, string>> =
   maintenanceMode: "ops maintenance switch",
   producerMarketShadowEnabled:
     "telemetry only: runs the unified producer market in memory beside the live engine; changes no gameplay",
+  producerTransitionPackageEnabled:
+    "cutover switch: absent means the transition package runs as today; the economy-only reset writes it off because a rebuilt economy has nothing to land softly",
   pollBannerEnabled: "ops announcement banner",
   sandboxTesterAccessEnabled: "ops access gate for sandbox tester grants (no supporter perks)",
   publicReviewMode: "ops access gate for anonymous page reads",
