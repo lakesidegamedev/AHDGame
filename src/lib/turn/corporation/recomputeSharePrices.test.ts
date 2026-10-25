@@ -11,6 +11,10 @@ import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import type { Bond, Corporation, CorporationHistory } from "@/lib/db/types";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
+const { applyMultipliers } = vi.hoisted(() => ({ applyMultipliers: vi.fn() }));
+vi.mock("@/lib/corporations/applyPriceMultipliers", () => ({
+  applyPriceMultipliers: applyMultipliers,
+}));
 
 function makeCursor(docs: unknown[]) {
   return {
@@ -458,5 +462,48 @@ describe("recomputeSharePricesAfterBondTurn", () => {
       intraHour: true,
     });
     expect(tick).toEqual({ corpsRepriced: 0, corpsSkipped: 1 });
+  });
+
+  describe("recomputeTurnSharePrices", () => {
+    beforeEach(() => {
+      applyMultipliers.mockResolvedValue({ updated: 1, pulseCount: 0 });
+    });
+
+    it("applies investor sentiment on the same db after the fundamental recompute", async () => {
+      const { recomputeTurnSharePrices } = await import("./recomputeSharePrices");
+      const result = await recomputeTurnSharePrices(turn, db as unknown as Db);
+
+      // Phase telemetry/result shape is the recompute result, unchanged.
+      expect(result).toEqual({ corpsRepriced: 1, corpsSkipped: 0 });
+      expect(applyMultipliers).toHaveBeenCalledTimes(1);
+      expect(applyMultipliers).toHaveBeenCalledWith(db);
+      // The turn's exchange snapshot and live prices are built after this
+      // phase, so the multipliers must land after recompute wrote the raw price.
+      expect(applyMultipliers.mock.invocationCallOrder[0]).toBeGreaterThan(
+        db.collectionMocks.corporationHistory.bulkWrite.mock.invocationCallOrder[0]
+      );
+    });
+
+    it("leaves the raw formula price in corporationHistory", async () => {
+      // The next turn reads turn-1 history as the rate-limiter/smoothing prior,
+      // so a multiplied price there would compound every turn.
+      const { recomputeTurnSharePrices } = await import("./recomputeSharePrices");
+      await recomputeTurnSharePrices(turn, db as unknown as Db);
+
+      type CorpOps = Array<{ updateOne: { update: { $set: { sharePrice: number } } } }>;
+      type HistOps = Array<{ updateOne: { update: { $set: { sharePrice: number } } } }>;
+
+      const rawPrice = (db.collectionMocks.corporations.bulkWrite.mock.calls[0][0] as CorpOps)[0]
+        .updateOne.update.$set.sharePrice;
+      const histPrice = (
+        db.collectionMocks.corporationHistory.bulkWrite.mock.calls[0][0] as HistOps
+      )[0].updateOne.update.$set.sharePrice;
+
+      expect(histPrice).toBe(rawPrice);
+      // The helper issues no second history write of its own.
+      expect(db.collectionMocks.corporationHistory.bulkWrite).toHaveBeenCalledTimes(1);
+      expect(db.collectionMocks.corporationHistory.updateOne).not.toHaveBeenCalled();
+      expect(db.collectionMocks.corporationHistory.updateMany).not.toHaveBeenCalled();
+    });
   });
 });
