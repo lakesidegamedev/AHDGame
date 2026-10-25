@@ -1,4 +1,3 @@
-import { requireNoTurnInProgress } from "@/lib/api/requireCorporationActions";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -96,10 +95,6 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const db = await getDb();
-
-    const turnGuard = await requireNoTurnInProgress(db);
-
-    if (turnGuard) return turnGuard;
 
     // Block sector splits when corporation actions are paused by admin
     const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
