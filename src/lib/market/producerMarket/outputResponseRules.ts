@@ -49,6 +49,30 @@ export interface PriorReceipt {
   otherOperatingArrears?: number;
 }
 
+/**
+ * Whether a plant's last run lost money in a way that running less would fix.
+ * A plant that sold out at a price above the materials each unit consumed is
+ * not losing on the margin: its loss is the minimum crew and site bill spread
+ * over a small run, and running more spreads it thinner. Braking it would
+ * shrink it further and raise the per-unit bill again, a spiral into
+ * mothballing (fresh-economy proof, 2026-10-25: 332 of 343 sold-out losing
+ * plants covered their materials, median run 0.4%). Plants that never become
+ * profitable are still caught by the chronic-loss mothball.
+ */
+export function marginalLoss(input: {
+  sold: number;
+  produced: number;
+  sellThrough: number;
+  revenue: number;
+  inputsConsumed: number;
+  contributionPerUnit: number;
+}): boolean {
+  if (!(input.sold > 0) || !(input.contributionPerUnit < 0)) return false;
+  if (input.sellThrough < SOLD_OUT) return true;
+  const materialsPerUnit = input.inputsConsumed / Math.max(input.produced, input.sold);
+  return !(input.revenue / input.sold > materialsPerUnit);
+}
+
 export function nextRunShare(
   prior: PriorReceipt | null | undefined,
   floor: number = OUTPUT_RUN_FLOOR
@@ -76,8 +100,16 @@ export function nextRunShare(
   const contributionPerUnit =
     sold > 0 ? (finite(prior.revenue) - (runningCost * sold) / Math.max(produced, sold)) / sold : 0;
   let next: number;
+  const losing = marginalLoss({
+    sold,
+    produced,
+    sellThrough,
+    revenue: finite(prior.revenue),
+    inputsConsumed: finite(prior.inputsConsumed),
+    contributionPerUnit,
+  });
   if (offered > 0 && sellThrough < GLUT_SELL_THROUGH) next = floor;
-  else if (sold > 0 && contributionPerUnit < 0) next = run * (1 - OUTPUT_CUT_STEP);
+  else if (losing) next = run * (1 - OUTPUT_CUT_STEP);
   else if (sellThrough >= SOLD_OUT) next = run * (1 + OUTPUT_GROW_STEP);
   else {
     const target = run * sellThrough * (1 + OUTPUT_PROBE);
@@ -135,7 +167,17 @@ export function demandPlanRunShare(
     finite(prior.otherOperatingArrears ?? 0);
   const contributionPerUnit =
     sold > 0 ? (finite(prior.revenue) - (runningCost * sold) / Math.max(produced, sold)) / sold : 0;
-  if (sold > 0 && contributionPerUnit < 0) return Math.max(floor, run * (1 - OUTPUT_CUT_STEP));
+  if (
+    marginalLoss({
+      sold,
+      produced,
+      sellThrough,
+      revenue: finite(prior.revenue),
+      inputsConsumed: finite(prior.inputsConsumed),
+      contributionPerUnit,
+    })
+  )
+    return Math.max(floor, run * (1 - OUTPUT_CUT_STEP));
   if (sellThrough >= SOLD_OUT) return Math.min(1, run * soldOutGrowth);
   const expectedSales = sold * (1 + DEMAND_PLAN_PROBE);
   const heldStock = Math.max(0, offered - sold);
