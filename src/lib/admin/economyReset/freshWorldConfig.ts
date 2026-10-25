@@ -69,7 +69,7 @@ export const FRESH_PLANTS_CONFIG_UNSET: Readonly<Record<string, "">> = Object.fr
  */
 export const FRESH_PLANTS_CONFIG_KEPT: Readonly<Record<string, string>> = Object.freeze({
   commodityFixStage:
-    "closed the demand-equals-prior-supply treadmill in the price engine; a mechanic, not a steer",
+    "acts on the legacy warm-up turns only: it closes the formula-demand treadmill there; funded turns price by the funded rule (updateScarcityMultiplierFunded) regardless of the stage",
   strengthUpkeepStage: "plant strength upkeep is a standing cost rule",
   groupSizeCostsStage: "management overhead and concentration rules on groups",
   soeSizeCostScale: "state-owned size cost rule",
