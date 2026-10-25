@@ -78,6 +78,8 @@ export const FRESH_PLANTS_CONFIG_KEPT: Readonly<Record<string, string>> = Object
   managementOverheadPpPerDoubling: "management overhead rule",
   ceoSalaryVoteNetIncomeShare: "governance rule on CEO pay",
   commandEconomySecondEconomyTolerance: "era regime setting, rewritten per preset",
+  producerTransitionPackageEnabled:
+    "switched off explicitly by FRESH_PLANTS_INTERVENTIONS_OFF: a rebuilt economy gets no transition package",
   producerMarketShadowEnabled:
     "telemetry switch; the shadow must keep running so the rebuilt economy can be classified for its opening",
 });
@@ -97,6 +99,8 @@ export const FRESH_PLANTS_INTERVENTIONS_OFF = Object.freeze({
   indexFundBondLiquidityEnabled: false,
   nppMarketCoverageEnabled: false,
   nppFragileMarketSupplyEnabled: false,
+  // No transition package: a rebuilt economy has no over-built class to land.
+  producerTransitionPackageEnabled: false,
 } as const satisfies Partial<GameConfig>);
 
 /**
