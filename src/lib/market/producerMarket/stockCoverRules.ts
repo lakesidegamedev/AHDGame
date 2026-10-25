@@ -61,3 +61,19 @@ export function writeDownUnits(
   const excess = Number.isFinite(cover) ? 1 - n / cover : 1;
   return stockUnits * WRITE_DOWN_RATE * excess;
 }
+
+/**
+ * Stock carried into the next turn is valued at cost, but the cost of a run
+ * that made almost nothing is a loss of the period, not an asset: labour and
+ * site bills divided by a near-zero output would value a few units of stock
+ * at billions, and the stock-cover write-down would then book that as a real
+ * loss (a Finnish timber plant on the fresh-economy proof wrote off 31 billion
+ * anchor on five millionths of a unit). The unit cost basis is capped at a
+ * multiple of the reference price; whatever is above it was already expensed.
+ */
+export const MAX_STOCK_COST_MULTIPLE = 3;
+export function cappedStockUnitCost(unitCost: number, referenceUnitPrice: number): number {
+  if (!(Number.isFinite(unitCost) && unitCost > 0)) return 0;
+  if (!(Number.isFinite(referenceUnitPrice) && referenceUnitPrice > 0)) return unitCost;
+  return Math.min(unitCost, MAX_STOCK_COST_MULTIPLE * referenceUnitPrice);
+}
