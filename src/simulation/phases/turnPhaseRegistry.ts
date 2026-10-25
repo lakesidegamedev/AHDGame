@@ -119,7 +119,7 @@ import { resetSystemVersionsFrom } from "@/lib/resetVersions/rules";
 import { reconcileResetLawEnactments } from "@/lib/resetLegislation/reconcileEnactments";
 import { processFederationFacilityPaymentTurn } from "@/lib/world/succession/facilityPaymentTurn";
 import { processDefenceWindfallRecoveryTurn } from "@/lib/turn/defenceWindfallRecoveryTurn";
-import { recomputeSharePricesAfterBondTurn } from "@/lib/turn/corporation/recomputeSharePrices";
+import { recomputeTurnSharePrices } from "@/lib/turn/corporation/recomputeSharePrices";
 import { processSavingsInterestTurn } from "@/lib/turn/savingsInterestTurn";
 import { processNpcBankPolicyTurn } from "@/lib/banking/npcBanks";
 import { processBankingTurn } from "@/lib/turn/bankingTurn";
@@ -684,9 +684,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
           };
         }
 
-        await runtime.runPhase("recomputeSharePrices", () =>
-          recomputeSharePricesAfterBondTurn(newTurn)
-        );
+        await runtime.runPhase("recomputeSharePrices", () => recomputeTurnSharePrices(newTurn));
 
         // Private-bank solvency/flight/contagion - AFTER recomputeSharePrices so
         // prop-book marking (phase 7) can land against fresh prices with this
