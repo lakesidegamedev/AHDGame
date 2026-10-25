@@ -35,10 +35,18 @@ describe("output follows price", () => {
     );
   });
 
-  it("each unit covered its inputs but not its wages and site costs: runs a step less", () => {
+  it("sold out, covered its materials but not its crew and site bill: runs a step more to spread them", () => {
     expect(
       nextRunShare(receipt({ labourPaid: 200, labourArrears: 50, otherOperatingPaid: 100 }))
-    ).toBeCloseTo(0.5 * (1 - OUTPUT_CUT_STEP), 12);
+    ).toBeCloseTo(0.5 * (1 + OUTPUT_GROW_STEP), 12);
+  });
+
+  it("sold only part and lost money on wages and site costs: runs a step less", () => {
+    expect(
+      nextRunShare(
+        receipt({ soldUnits: 40, revenue: 400, labourPaid: 200, otherOperatingPaid: 100 })
+      )
+    ).toBeLessThan(0.5);
   });
 
   it("sold only part: moves toward what sold, never faster than a step", () => {
@@ -88,6 +96,22 @@ describe("production follows demand", () => {
       receipt({ soldUnits: 50, offeredUnits: 50, revenue: 100, inputsConsumed: 200 })
     );
     expect(share).toBeCloseTo(0.5 * (1 - OUTPUT_CUT_STEP), 12);
+  });
+
+  it("a sold-out line that covers its materials grows even while its crew bill makes it lose", () => {
+    const share = demandPlanRunShare(
+      receipt({
+        activeUnits: 1000,
+        producedUnits: 20,
+        offeredUnits: 20,
+        soldUnits: 20,
+        revenue: 200,
+        inputsConsumed: 40,
+        labourPaid: 2000,
+      }),
+      LOW_USE_RUN_FLOOR
+    );
+    expect(share).toBeCloseTo(0.02 * (1 + OUTPUT_GROW_STEP), 12);
   });
 
   it("cuts straight to expected sales rather than a step a turn", () => {
