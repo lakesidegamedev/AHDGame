@@ -190,3 +190,29 @@ describe("updateScarcityMultiplierMomentum (commodity treadmill fix stage 1)", (
     );
   });
 });
+
+describe("updateScarcityMultiplierFunded", () => {
+  it("rises at most 6% a turn on a steady real shortage, every turn it lasts", async () => {
+    const { updateScarcityMultiplierFunded, FUNDED_SCARCITY_MAX_MOVE } =
+      await import("./scarcityDrift");
+    let m = 1;
+    for (let t = 0; t < 12; t++) m = updateScarcityMultiplierFunded(m, 100, 200);
+    expect(m).toBeCloseTo((1 + FUNDED_SCARCITY_MAX_MOVE) ** 12, 6);
+  });
+
+  it("moves by half the imbalance when that is under the cap, falls on a glut, and holds with no market", async () => {
+    const { updateScarcityMultiplierFunded } = await import("./scarcityDrift");
+    expect(updateScarcityMultiplierFunded(2, 100, 104)).toBeCloseTo(2 * (1 + 0.5 * (4 / 104)), 9);
+    expect(updateScarcityMultiplierFunded(2, 300, 100)).toBeCloseTo(2 * 0.94, 9);
+    expect(updateScarcityMultiplierFunded(1.7, 0, 0)).toBe(1.7);
+  });
+
+  it("stays inside wide bounds instead of the formula-era 2.5x cap", async () => {
+    const { updateScarcityMultiplierFunded, FUNDED_SCARCITY_MAX, FUNDED_SCARCITY_MIN } =
+      await import("./scarcityDrift");
+    expect(updateScarcityMultiplierFunded(3, 1, 100)).toBeCloseTo(3.18, 9);
+    expect(updateScarcityMultiplierFunded(FUNDED_SCARCITY_MAX, 1, 100)).toBe(FUNDED_SCARCITY_MAX);
+    expect(updateScarcityMultiplierFunded(FUNDED_SCARCITY_MIN, 100, 1)).toBe(FUNDED_SCARCITY_MIN);
+    expect(updateScarcityMultiplierFunded(undefined, 100, 100)).toBe(1);
+  });
+});
