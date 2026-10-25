@@ -58,6 +58,11 @@ export function nextRunShare(
   const active = finite(prior.activeUnits);
   const produced = finite(prior.producedUnits);
   if (!(active > 0)) return 1;
+  // A plant that has not yet made or offered anything has no demand signal:
+  // keep running in full until the market answers. On a cold start every
+  // secondary producer begins with empty input stock and zero output, and a
+  // plan read from that zero would park the whole chain at the floor forever.
+  if (!(finite(prior.producedUnits) > 0) && !(finite(prior.offeredUnits) > 0)) return 1;
   const run = Math.max(floor, Math.min(1, produced / active));
   const offered = finite(prior.offeredUnits);
   const sold = finite(prior.soldUnits);
@@ -110,6 +115,11 @@ export function demandPlanRunShare(
   const finite = (x: number) => (Number.isFinite(x) ? x : 0);
   const active = finite(prior.activeUnits);
   if (!(active > 0)) return 1;
+  // A plant that has not yet made or offered anything has no demand signal:
+  // keep running in full until the market answers. On a cold start every
+  // secondary producer begins with empty input stock and zero output, and a
+  // plan read from that zero would park the whole chain at the floor forever.
+  if (!(finite(prior.producedUnits) > 0) && !(finite(prior.offeredUnits) > 0)) return 1;
   const produced = finite(prior.producedUnits);
   const run = Math.max(floor, Math.min(1, produced / active));
   const offered = finite(prior.offeredUnits);

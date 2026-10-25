@@ -3,7 +3,13 @@
  * Input shortages constrain the whole recipe; purchases and consumed stock
  * retain their receipt cost instead of being billed again at a reference price.
  */
-import { markdownFactor, markedDownAsk, stockCover, writeDownUnits } from "./stockCoverRules";
+import {
+  cappedStockUnitCost,
+  markdownFactor,
+  markedDownAsk,
+  stockCover,
+  writeDownUnits,
+} from "./stockCoverRules";
 import {
   quoteProducer,
   settleProducerMarket,
@@ -912,11 +918,14 @@ export function advanceProducerEconomy(input: {
       const knownOpeningCost = openingRows.every((stock) => stock.quoteUnitCost != null);
       const quoteUnitCost =
         available > 0 && knownOpeningCost && (made === 0 || outputValue > 0)
-          ? finite(
-              (openingRows.reduce((sum, stock) => sum + stock.units * stock.quoteUnitCost!, 0) +
-                (made > 0 ? (consumed + p.labourCost + p.otherOperatingCost) * weight : 0)) /
-                available,
-              "closing stock quote cost"
+          ? cappedStockUnitCost(
+              finite(
+                (openingRows.reduce((sum, stock) => sum + stock.units * stock.quoteUnitCost!, 0) +
+                  (made > 0 ? (consumed + p.labourCost + p.otherOperatingCost) * weight : 0)) /
+                  available,
+                "closing stock quote cost"
+              ),
+              output.referenceUnitPrice
             )
           : undefined;
       if (sold.deliveredUnits - available > Math.max(1e-8, available * 1e-12))
@@ -941,11 +950,13 @@ export function advanceProducerEconomy(input: {
       // The written-down stock is a real loss at its cost basis (profit and dividends see it).
       if (writtenDown > 0 && openingRows.length > 0) {
         const openingUnits = openingRows.reduce((sum, st) => sum + st.units, 0);
-        const basis =
+        const basis = cappedStockUnitCost(
           openingUnits > 0
             ? openingRows.reduce((sum, st) => sum + st.units * (st.quoteUnitCost ?? 0), 0) /
-              openingUnits
-            : 0;
+                openingUnits
+            : 0,
+          output.referenceUnitPrice
+        );
         inventoryWriteOff += writtenDown * basis;
       }
       products.push({
