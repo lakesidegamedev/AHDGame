@@ -370,6 +370,54 @@ describe("paid sponsor units at wind-up", () => {
     expect(await completeWindUp(f.db, fund, 12)).toBe(0);
   });
 
+  it("finishes when a holder record was deleted, leaving its share to the sponsor", async () => {
+    const f = fixture();
+    await charterFund(f.db, f.input);
+    const character = new ObjectId();
+    // The NPP was culled by a party merge: no document remains.
+    const goneNpp = new ObjectId();
+    f.memory.seed("characters", [{ _id: character, currencyBalances: { personal: { USD: 0 } } }]);
+    f.memory.seed("indexFundPositions", [
+      {
+        _id: new ObjectId(),
+        fundId: f.book()._id,
+        holderKind: "npp",
+        nppId: goneNpp,
+        units: 1,
+        legacyUnits: 0,
+      },
+      {
+        _id: new ObjectId(),
+        fundId: f.book()._id,
+        holderKind: "character",
+        characterId: character,
+        units: 1,
+        legacyUnits: 0,
+      },
+    ]);
+    await f.db
+      .collection("indexFunds")
+      .updateOne(
+        { _id: f.book()._id },
+        { $set: { status: "winding_down" }, $inc: { unitSupply: 2, cashAnchor: 200 } }
+      );
+    const before = f.totalCash();
+    const nav = f.book().cashAnchor / f.book().unitSupply;
+
+    expect(await completeWindUp(f.db, f.book(), 12)).toBe(2);
+
+    expect(f.book().status).toBe("delisted");
+    expect(f.book().cashAnchor).toBe(0);
+    expect(f.memory.collection("npps").docs).toHaveLength(0);
+    const wallet = await f.db.collection("characters").findOne({ _id: character });
+    const paidAnchor = Number(wallet?.currencyBalances.personal.USD) / 1.7;
+    expect(paidAnchor).toBeCloseTo(nav, 8);
+    expect(f.memory.collection("indexFundPositions").docs.every((p) => p.units === 0)).toBe(true);
+    // No cash vanished: the orphan's share went to the sponsor with the residual.
+    expect(f.totalCash() + paidAnchor).toBeCloseTo(before, 8);
+    expect(await completeWindUp(f.db, f.book(), 12)).toBe(0);
+  });
+
   it("rolls back payouts when the final fund write fails, then pays once on retry", async () => {
     const f = fixture();
     await charterFund(f.db, f.input);

@@ -60,6 +60,7 @@ import { loadQueuedRedemptionUnitsByFundId } from "@/lib/indexFunds/fundValuatio
 import { advanceWindDowns, beginWindUp, completeWindUp } from "./windUp";
 import { cancelFundShareOrder } from "@/lib/indexFunds/fundShareOrders";
 import { refundQueuedSubscriptionsForFund } from "@/lib/indexFunds/subscriptions";
+import { recordAudit } from "@/lib/audit/recordAudit";
 
 const SPONSOR = new ObjectId();
 
@@ -98,8 +99,25 @@ function makeDb(opts: {
   bondsRemaining?: () => number;
   queuedRedemptions?: () => number;
   openFundOrders?: Array<{ _id: ObjectId }>;
+  existingHolders?: Partial<
+    Record<
+      "characters" | "imperialCharacters" | "corporations" | "npps" | "pensionSchemes",
+      ObjectId[]
+    >
+  >;
 }) {
   const fundUpdate = vi.fn().mockResolvedValue({ modifiedCount: opts.claimed === false ? 0 : 1 });
+  // Holder-existence reads find nothing unless the test says the record is
+  // still there.
+  const holderFind = (collectionName: string) =>
+    vi.fn((filter: { _id?: { $in?: ObjectId[] } }) => ({
+      toArray: async () => {
+        const wanted = filter._id?.$in ?? [];
+        const live = opts.existingHolders?.[collectionName as keyof typeof opts.existingHolders];
+        const kept = live ? wanted.filter((id) => live.some((entry) => entry.equals(id))) : [];
+        return kept.map((_id) => ({ _id }));
+      },
+    }));
   const positionsUpdateMany = vi.fn().mockResolvedValue({ modifiedCount: 1 });
   const txInsert = vi.fn().mockResolvedValue({ acknowledged: true });
   const db = {
@@ -141,7 +159,10 @@ function makeDb(opts: {
             .mockResolvedValue(
               opts.sponsorExists === false ? null : { _id: SPONSOR, name: "Sponsor Co" }
             ),
+          find: holderFind(name),
         };
+      if (["characters", "imperialCharacters", "npps", "pensionSchemes"].includes(name))
+        return { find: holderFind(name) };
       return { countDocuments: vi.fn().mockResolvedValue(0) };
     }),
   } as unknown as Db;
@@ -218,6 +239,150 @@ describe("completeWindUp", () => {
     const { db } = makeDb({ positions: [], fund });
     await completeWindUp(db, fund, 200);
     expect(vi.mocked(creditCorpLiquidCapital)).toHaveBeenCalledWith(db, SPONSOR, 250_000);
+  });
+
+  it("skips a position whose NPP holder was deleted and lets its cash reach the sponsor", async () => {
+    // The NPP was culled by a party merge, so its position can never be paid.
+    // It must not abort the wind-up: the other holder is paid at the shared
+    // NAV and the orphan's share falls through to the sponsor.
+    const orphan = {
+      _id: new ObjectId(),
+      holderKind: "npp" as const,
+      nppId: new ObjectId(),
+      units: 100,
+    };
+    const survivor = {
+      _id: new ObjectId(),
+      holderKind: "character" as const,
+      characterId: new ObjectId(),
+      units: 100,
+    };
+    const fund = makeFund({ status: "winding_down", cashAnchor: 30_000, unitSupply: 200 });
+    const { db, positionsUpdateMany } = makeDb({
+      positions: [orphan, survivor],
+      fund,
+      existingHolders: { characters: [survivor.characterId] },
+    });
+
+    const holdersPaid = await completeWindUp(db, fund, 200);
+
+    expect(holdersPaid).toBe(1);
+    expect(vi.mocked(payFundHolderCash)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(payFundHolderCash).mock.calls[0][2]._id).toEqual(survivor._id);
+    // The orphan position is zeroed with the rest.
+    expect(positionsUpdateMany).toHaveBeenCalledWith({ fundId: fund._id }, expect.anything());
+    expect(vi.mocked(creditCorpLiquidCapital)).toHaveBeenCalledWith(db, SPONSOR, 15_000);
+    expect(vi.mocked(recordAudit).mock.calls.at(-1)![0].meta!.holdersSkipped).toBe(1);
+  });
+
+  it("skips deleted corporation, character, imperial character and pension scheme holders", async () => {
+    const positions = [
+      {
+        _id: new ObjectId(),
+        holderKind: "corporation" as const,
+        corporationId: new ObjectId(),
+        units: 100,
+      },
+      {
+        _id: new ObjectId(),
+        holderKind: "character" as const,
+        characterId: new ObjectId(),
+        units: 100,
+      },
+      {
+        _id: new ObjectId(),
+        holderKind: "imperial_character" as const,
+        imperialCharacterId: new ObjectId(),
+        units: 100,
+      },
+      {
+        _id: new ObjectId(),
+        holderKind: "pension_scheme" as const,
+        pensionSchemeId: new ObjectId(),
+        units: 100,
+      },
+    ];
+    const fund = makeFund({ status: "winding_down", cashAnchor: 40_000, unitSupply: 400 });
+    const { db, fundUpdate } = makeDb({ positions, fund });
+
+    const holdersPaid = await completeWindUp(db, fund, 200);
+
+    expect(holdersPaid).toBe(0);
+    expect(vi.mocked(payFundHolderCash)).not.toHaveBeenCalled();
+    expect(vi.mocked(creditCorpLiquidCapital)).toHaveBeenCalledWith(db, SPONSOR, 40_000);
+    expect(fundUpdate.mock.calls.at(-1)![1].$set.status).toBe("delisted");
+  });
+
+  it("still fails loudly when an existing holder's payout matches no document", async () => {
+    const position = {
+      _id: new ObjectId(),
+      holderKind: "character" as const,
+      characterId: new ObjectId(),
+      units: 100,
+    };
+    const fund = makeFund({ status: "winding_down", cashAnchor: 10_000 });
+    const { db, fundUpdate } = makeDb({
+      positions: [position],
+      fund,
+      existingHolders: { characters: [position.characterId] },
+    });
+    vi.mocked(payFundHolderCash).mockResolvedValueOnce(false);
+
+    await expect(completeWindUp(db, fund, 200)).rejects.toThrow("Fund holder payout failed");
+    expect(fundUpdate).not.toHaveBeenCalled();
+  });
+
+  it("still fails loudly for a malformed position with no holder id", async () => {
+    // A position that names no holder cannot be proven orphaned; it is corrupt
+    // data, and must not be quietly skipped as if its holder had been deleted.
+    const malformed = { _id: new ObjectId(), holderKind: "npp" as const, units: 100 };
+    const fund = makeFund({ status: "winding_down", cashAnchor: 10_000 });
+    const { db, fundUpdate } = makeDb({ positions: [malformed], fund });
+    // The payout itself refuses a position with no holder to credit.
+    vi.mocked(payFundHolderCash).mockResolvedValueOnce(false);
+
+    await expect(completeWindUp(db, fund, 200)).rejects.toThrow("Fund holder payout failed");
+    // It was attempted, not filtered out as a deleted holder.
+    expect(vi.mocked(payFundHolderCash).mock.calls[0][2]._id).toEqual(malformed._id);
+    expect(fundUpdate).not.toHaveBeenCalled();
+  });
+
+  it("conserves cash: holder payouts plus sponsor residual equal the fund balance", async () => {
+    const orphanNpp = {
+      _id: new ObjectId(),
+      holderKind: "npp" as const,
+      nppId: new ObjectId(),
+      units: 100,
+    };
+    const orphanCorp = {
+      _id: new ObjectId(),
+      holderKind: "corporation" as const,
+      corporationId: new ObjectId(),
+      units: 50,
+    };
+    const survivor = {
+      _id: new ObjectId(),
+      holderKind: "character" as const,
+      characterId: new ObjectId(),
+      units: 250,
+    };
+    const fund = makeFund({ status: "winding_down", cashAnchor: 80_000, unitSupply: 400 });
+    const { db } = makeDb({
+      positions: [orphanNpp, orphanCorp, survivor],
+      fund,
+      existingHolders: { characters: [survivor.characterId] },
+    });
+
+    await completeWindUp(db, fund, 200);
+
+    // NAV = 80,000 / 400 = 200. The character takes 50,000 of it.
+    const paidAnchor = vi
+      .mocked(payFundHolderCash)
+      .mock.calls.reduce((sum, call) => sum + call[3], 0);
+    const residualAnchor = vi.mocked(creditCorpLiquidCapital).mock.calls[0][2];
+    expect(paidAnchor).toBe(50_000);
+    expect(residualAnchor).toBe(30_000);
+    expect(paidAnchor + residualAnchor).toBe(fund.cashAnchor);
   });
 
   it("delists the fund and zeroes its units", async () => {

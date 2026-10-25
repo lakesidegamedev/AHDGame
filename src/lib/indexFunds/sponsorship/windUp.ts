@@ -26,6 +26,7 @@ import { sellFundHoldingsForRedemptionCash } from "@/lib/indexFunds/fundRedempti
 import { sellFundBondHoldingsForCash } from "@/lib/bonds/sellFundBondUnits";
 import { payCorporateWindUpHolders } from "./corporateHolderPayout";
 import { payFundHolderCash } from "./holderPayout";
+import { findMissingFundHolders } from "./holderExistence";
 import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { recomputeNav } from "@/lib/indexFunds/fundNav";
@@ -303,20 +304,30 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
   const totalUnits = positions.reduce((sum, p) => sum + p.units, 0);
   // Final NAV is what the cash actually supports, not the last quote. If the
   // portfolio sold for less than it was marked at, holders take that loss here
-  // rather than the sponsor covering an unfundable quote.
+  // rather than the sponsor covering an unfundable quote. Units of a holder
+  // whose record is gone stay in the denominator: their unpayable share is not
+  // distributed and falls to the sponsor residual below.
   const finalNav = totalUnits > 0 ? fund.cashAnchor / totalUnits : 0;
+
+  // A position whose holder record no longer exists (an NPP culled by a party
+  // merge, or any other deleted holder) cannot be paid and must not strand the
+  // whole wind-up. Skip it and let its cash reach the sponsor residual. Any
+  // other payout failure below still throws.
+  const missingHolders = await findMissingFundHolders(db, positions);
+  const payablePositions = positions.filter((p) => !missingHolders.has(String(p._id)));
+  const holdersSkipped = positions.length - payablePositions.length;
 
   const corporatePayout = await payCorporateWindUpHolders(
     db,
     fund,
-    positions,
+    payablePositions,
     finalNav,
     currentTurn,
     now
   );
   let holdersPaid = corporatePayout.holdersPaid;
   let distributedAnchor = corporatePayout.distributedAnchor;
-  for (const position of positions) {
+  for (const position of payablePositions) {
     if (position.holderKind === "corporation") continue;
     const payoutAnchor =
       fund.seedAccounting === "paid_units"
@@ -414,6 +425,7 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
         tickerSymbol: fund.tickerSymbol,
         finalNav,
         holdersPaid,
+        holdersSkipped,
         distributedAnchor,
         returnedToSponsorAnchor: remainingAnchor,
         seedCapitalAnchor: fund.seedCapitalAnchor ?? 0,
