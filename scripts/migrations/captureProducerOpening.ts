@@ -235,7 +235,15 @@ export async function captureProducerOpening(
         const paidBookAnchor = sector.capacityBookAnchor;
         if (!Number.isFinite(ownedDailyUnits) || ownedDailyUnits < 0)
           blockers.push(`missing-physical-capacity:${id}`);
-        if ((!Number.isFinite(paidBookAnchor) || paidBookAnchor < 0) && ownedDailyUnits !== 0)
+        // A plant founded in the completed turn has not been through a sector
+        // turn yet, so it has no paid basis. It opens at a zero basis, the same
+        // rule the funded market applies to entrants (newEntrantProducerBooks).
+        const neverProcessed = sector.operatingCapacityTurn == null;
+        if (
+          (!Number.isFinite(paidBookAnchor) || paidBookAnchor < 0) &&
+          ownedDailyUnits !== 0 &&
+          !neverProcessed
+        )
           blockers.push(`missing-paid-capacity-basis:${id}`);
         return {
           id,
@@ -451,6 +459,7 @@ async function captureSource(db: import("mongodb").Db) {
     transitionStartTurn: 1,
     capitalStock: 1,
     capacityBookAnchor: 1,
+    operatingCapacityTurn: 1,
     buildQueue: 1,
     inventoryUnits: 1,
     inventoryValueAnchor: 1,

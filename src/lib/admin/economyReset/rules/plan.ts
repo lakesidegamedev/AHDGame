@@ -65,6 +65,8 @@ export interface EconomyResetSource {
   };
   wipeCounts: Record<string, number>;
   partialWipeCounts: Record<string, number>;
+  /** Rows in the reference collections the reset reseeds (commodityPrices, exchangeRates). */
+  reseedCounts: Record<string, number>;
   campaignRates: CampaignCurrencyRates;
   /** Live local-per-anchor rate by currency. */
   anchorRates: Record<string, number>;
@@ -320,6 +322,9 @@ export function buildEconomyResetPlan(source: EconomyResetSource): EconomyResetP
     partialWipe: Object.keys(source.partialWipeCounts)
       .sort()
       .map((collection) => ({ collection, count: source.partialWipeCounts[collection] })),
+    reseed: Object.keys(source.reseedCounts)
+      .sort()
+      .map((collection) => ({ collection, count: source.reseedCounts[collection] })),
     characters,
     imperialCharacterIds: [...source.imperialCharacterIds].sort(),
     nppIdsWithMoney: source.npps
