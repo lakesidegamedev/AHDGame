@@ -22,6 +22,23 @@ export const TRANSITION_BASIS_TURNS = 5;
 export const POOL_FLOAT_MARGIN = 1e-9;
 /** Turns the package runs after the first funded turn. */
 export const TRANSITION_WINDOW_TURNS = 48;
+
+/**
+ * The turn the transition window is anchored to. With the package switched
+ * off (gameConfig.producerTransitionPackageEnabled false, as on an economy
+ * rebuilt from the seed) the anchor sits a full window back, so support,
+ * struggling marks and free conversion never apply and idle retirement runs
+ * from the first funded turn. Undefined before any opening.
+ */
+export function transitionAnchorTurn(
+  openingFirstFundedTurn: number | undefined,
+  packageEnabled: boolean | undefined
+): number | undefined {
+  if (openingFirstFundedTurn == null) return undefined;
+  return packageEnabled === false
+    ? openingFirstFundedTurn - TRANSITION_WINDOW_TURNS
+    : openingFirstFundedTurn;
+}
 /** Capacity built after this turn chased the reverted advertising spike; reported only. */
 export const TRANSITION_SPIKE_COHORT_AFTER_TURN = 314;
 

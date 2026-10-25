@@ -47,7 +47,7 @@ import { processAdvertisingTurn } from "@/lib/advertising/settlementTurn";
 import { loadAdvertisingEfficacyByCorp } from "@/lib/advertising/persistence";
 import type { CoverageSectorInput } from "@/lib/advertising/rules/coverage";
 import type { CorporationTurnOptions } from "./corporationTurnOptions";
-import { TRANSITION_WINDOW_TURNS } from "@/lib/market/producerMarket/transitionRules";
+import { transitionAnchorTurn } from "@/lib/market/producerMarket/transitionRules";
 import { persistNppManufacturingProjects } from "./persistManufacturingProjects";
 import { getEffectiveStrategyRatesForOperatingModel } from "@/lib/constants/sectorStrategies";
 import { settleSupplyAgreements, type SettleableSupplyAgreement } from "./settleSupplyAgreements";
@@ -774,20 +774,12 @@ export async function processCorporationTurn(
     if (market.marketRecoveryStage)
       throw new Error("marketRecoveryStage must be 0 on a funded producer turn");
     const worldEpoch = gameState!.worldEpochId!;
-    // The transition window is anchored at the first funded turn. With the
-    // package switched off (a rebuilt economy), the anchor is moved back a full
-    // window so support, struggling marks and free conversion never apply and
-    // idle retirement runs from the first funded turn.
-    const openingFirstFundedTurn =
+    const transitionAnchor = transitionAnchorTurn(
       gameState?.producerOpening?.worldEpoch === worldEpoch
         ? gameState.producerOpening.turn + 1
-        : undefined;
-    const transitionAnchorTurn =
-      openingFirstFundedTurn == null
-        ? undefined
-        : marketGovernorConfig?.producerTransitionPackageEnabled === false
-          ? openingFirstFundedTurn - TRANSITION_WINDOW_TURNS
-          : openingFirstFundedTurn;
+        : undefined,
+      marketGovernorConfig?.producerTransitionPackageEnabled
+    );
     const earlier = await db
       .collection("producerEconomyTurns")
       .findOne({ worldEpoch, turn: { $lt: producerTurn } }, { projection: { _id: 1 } });
@@ -812,10 +804,10 @@ export async function processCorporationTurn(
         privateBankingEnabled,
         advertisingInput: true,
         ...producerStageEnv(marketGovernorConfig),
-        transitionFirstFundedTurn: transitionAnchorTurn,
+        transitionFirstFundedTurn: transitionAnchor,
       } as unknown as ProducerPhysicalEnv,
       seedHouseholds: earlier == null,
-      firstFundedTurn: transitionAnchorTurn,
+      firstFundedTurn: transitionAnchor,
     }).catch((error: unknown) => {
       throw new TurnMustStopError("corporationTurn", error);
     });
