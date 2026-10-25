@@ -285,7 +285,15 @@ describe("economy-only reset end to end", () => {
       marketSystemMode: "plants",
       ledgerShadow: true,
       centralBankPricingPhaseIn: {},
+      marketGuardEnabled: false,
+      equityLiquidityFacilityEnabled: false,
+      indexFundBondLiquidityEnabled: false,
+      nppMarketCoverageEnabled: false,
+      nppFragileMarketSupplyEnabled: false,
     });
+    const state = (await db.collection("gameState").findOne({ _id: "current" as never }))!;
+    expect(state.hardwareInputReliefStartTurn).toBe(plan.currentTurn);
+    expect(state.stockHoldingTaxStartTurn).toBe(plan.currentTurn);
     expect(plan.reseed).toEqual([
       { collection: "commodityPrices", count: expect.any(Number) },
       { collection: "exchangeRates", count: expect.any(Number) },

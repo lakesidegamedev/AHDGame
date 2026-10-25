@@ -82,6 +82,33 @@ export const FRESH_PLANTS_CONFIG_KEPT: Readonly<Record<string, string>> = Object
     "telemetry switch; the shadow must keep running so the rebuilt economy can be classified for its opening",
 });
 
+/**
+ * Automatic market interventions switched off for a rebuilt economy. Each one
+ * was added to steer the old market from outside: the launch guard steps the
+ * market tier down on a valuation drop (the governor family), and the four
+ * Markets Watch programmes have index funds quote equities and absorb unheld
+ * sovereign paper and have NPPs founded into thin markets by rule. A fresh
+ * plants economy runs on its own rules; an operator may switch any of these on
+ * later as a deliberate decision.
+ */
+export const FRESH_PLANTS_INTERVENTIONS_OFF = Object.freeze({
+  marketGuardEnabled: false,
+  equityLiquidityFacilityEnabled: false,
+  indexFundBondLiquidityEnabled: false,
+  nppMarketCoverageEnabled: false,
+  nppFragileMarketSupplyEnabled: false,
+} as const satisfies Partial<GameConfig>);
+
+/**
+ * gameState turn anchors a fresh world sets to its first turn. On the kept
+ * clock they restart at the reset turn so the phase-ins run from the rebuilt
+ * economy's first turn, not from the old world's.
+ */
+export const FRESH_PLANTS_GAME_STATE_TURN_ANCHORS = Object.freeze([
+  "hardwareInputReliefStartTurn",
+  "stockHoldingTaxStartTurn",
+] as const);
+
 /** Central bank series written by the old economy's turns; chair, board and reserves stay. */
 export const CENTRAL_BANK_HISTORY_RESET: Readonly<Record<string, unknown>> = Object.freeze({
   rateHistory: [],
@@ -95,12 +122,17 @@ export const CENTRAL_BANK_HISTORY_RESET: Readonly<Record<string, unknown>> = Obj
 
 /**
  * The gameConfig write for a rebuilt economy: fresh-world gameplay flags on,
- * the pricing phase-in restarted, and every per-world stamp and staged knob
- * gone. Ops keys (maintenance, webhooks, registration) are untouched.
+ * outside interventions off, the pricing phase-in restarted, and every
+ * per-world stamp and staged knob gone. Ops keys (maintenance, webhooks,
+ * registration) are untouched.
  */
 export function freshPlantsGameConfigUpdate(): UpdateFilter<GameConfig> {
   return {
-    $set: { ...FRESH_WORLD_GAME_CONFIG_FLAGS, centralBankPricingPhaseIn: {} },
+    $set: {
+      ...FRESH_WORLD_GAME_CONFIG_FLAGS,
+      ...FRESH_PLANTS_INTERVENTIONS_OFF,
+      centralBankPricingPhaseIn: {},
+    },
     $unset: {
       ...STALE_PER_WORLD_GAME_CONFIG_UNSET,
       ...STALE_MARKET_MODE_STAMP_UNSET,

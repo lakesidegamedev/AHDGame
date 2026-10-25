@@ -70,6 +70,9 @@ describe("fresh plants world configuration", () => {
     expect(update.$set).toMatchObject({
       marketSystemMode: "plants",
       centralBankPricingPhaseIn: {},
+      marketGuardEnabled: false,
+      equityLiquidityFacilityEnabled: false,
+      nppMarketCoverageEnabled: false,
     });
     const set = new Set(Object.keys(update.$set ?? {}));
     for (const name of removed) expect(set.has(name), name).toBe(false);

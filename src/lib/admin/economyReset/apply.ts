@@ -34,7 +34,11 @@ import {
   captureEconomyResetPlan,
 } from "./census";
 import { economyResetObjectId } from "./digest";
-import { CENTRAL_BANK_HISTORY_RESET, freshPlantsGameConfigUpdate } from "./freshWorldConfig";
+import {
+  CENTRAL_BANK_HISTORY_RESET,
+  FRESH_PLANTS_GAME_STATE_TURN_ANCHORS,
+  freshPlantsGameConfigUpdate,
+} from "./freshWorldConfig";
 import { loadEconomyResetPlan, storeEconomyResetPlan } from "./planStore";
 import { isPrivateMaturityLeg, keptCouponHolders } from "./rules/bonds";
 import { primaryLegTotals, witnessDeltas, witnessEntry } from "./rules/ledger";
@@ -377,11 +381,13 @@ async function phaseWipe(db: Db): Promise<void> {
   }
 }
 
-async function phaseUnset(db: Db): Promise<void> {
-  await gameState(db).updateOne(
-    { _id: "current" },
-    { $unset: { producerOpening: "", lastMarketTickAt: "" } }
-  );
+async function phaseUnset(db: Db, plan: EconomyResetPlan): Promise<void> {
+  await gameState(db).updateOne({ _id: "current" }, {
+    $unset: { producerOpening: "", lastMarketTickAt: "" },
+    $set: Object.fromEntries(
+      FRESH_PLANTS_GAME_STATE_TURN_ANCHORS.map((field) => [field, plan.currentTurn])
+    ),
+  } as never);
   // The rebuilt plants start from fresh-world configuration: gameplay flags on,
   // and no governor, recovery stage, funded lever or turn stamp from the old economy.
   await db
@@ -517,7 +523,7 @@ async function runPhase(
     case "wipe":
       return phaseWipe(db).then(() => ({}));
     case "unset":
-      return phaseUnset(db).then(() => ({}));
+      return phaseUnset(db, plan).then(() => ({}));
     case "indexes": {
       const marketIndexes = MIGRATIONS.filter((m) => ECONOMY_RESET_INDEX_MIGRATIONS.includes(m.id));
       if (marketIndexes.length > 0)

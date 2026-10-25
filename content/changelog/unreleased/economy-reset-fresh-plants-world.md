@@ -8,7 +8,7 @@ summary: >-
   budgets and debt are untouched. Admin tooling only.
 tags: [economy, admin, reset]
 badges: [patch]
-areas: [engine, admin]
+areas: [backend]
 ---
 
 ## What changed
@@ -24,6 +24,10 @@ areas: [engine, admin]
 - Price history, commodity flow and sourcing ledgers, trade history and
   snapshots, the retired commodity archive, portfolio history and wealth list
   snapshots are deleted with the rest of the old economy.
+- The launch guard and the four Markets Watch programmes (fund equity quotes,
+  fund absorption of unheld sovereign paper, rule-based NPP founding into
+  empty and thin markets) start switched off. The input relief and holding
+  tax phase-ins restart at the reset turn.
 - The census reports the reseeded reference rows beside the wiped ones.
 
 No live world changes until an operator runs the reset.
