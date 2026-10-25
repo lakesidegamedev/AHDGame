@@ -73,4 +73,24 @@ describe("requireCorporationActions / requireGameActive", () => {
     const { requireCorporationActionsEnabled } = await import("./requireCorporationActions");
     expect(await requireCorporationActionsEnabled(db as unknown as Db)).toBeNull();
   });
+
+  it("requireCorporationActionsEnabled rejects while a turn is processing or held part way", async () => {
+    const { requireCorporationActionsEnabled, requireNoTurnInProgress } =
+      await import("./requireCorporationActions");
+    for (const state of [
+      { isProcessing: true, processingPhase: "corporationTurn" },
+      { isProcessing: false, processingPhase: "corporationTurn" },
+    ]) {
+      db.collectionMocks.gameState!.findOne.mockResolvedValue({ _id: "current", ...state });
+      expect((await requireCorporationActionsEnabled(db as unknown as Db))?.status).toBe(409);
+      expect((await requireNoTurnInProgress(db as unknown as Db))?.status).toBe(409);
+    }
+    db.collectionMocks.gameState!.findOne.mockResolvedValue({
+      _id: "current",
+      isProcessing: false,
+      processingPhase: null,
+    });
+    expect(await requireCorporationActionsEnabled(db as unknown as Db)).toBeNull();
+    expect(await requireNoTurnInProgress(db as unknown as Db)).toBeNull();
+  });
 });

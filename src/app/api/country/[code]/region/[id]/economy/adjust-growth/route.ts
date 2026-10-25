@@ -1,3 +1,4 @@
+import { requireNoTurnInProgress } from "@/lib/api/requireCorporationActions";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -63,6 +64,8 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const { sectorId, direction } = parsed.data;
     const db = await getDb();
+    const turnGuard = await requireNoTurnInProgress(db);
+    if (turnGuard) return turnGuard;
 
     // Get player's character and corporation
     const character = auth.user.character;

@@ -246,7 +246,15 @@ async function verifyPhysicalTargets(db: Db, frozen: FrozenProducerTurn): Promis
       sector.corporationId.toHexString() !== target.corporationId ||
       (prior && (prior.worldEpoch !== frozen.worldEpoch || prior.turn > turn))
     )
-      throw new Error("Producer ownership or receipt generation changed");
+      throw new Error(
+        `Producer ownership or receipt generation changed: sector ${target.sectorId} ${
+          !sector
+            ? "is missing"
+            : sector.corporationId.toHexString() !== target.corporationId
+              ? `is owned by ${sector.corporationId.toHexString()}, planned for ${target.corporationId}`
+              : `carries receipt ${prior?.worldEpoch}:${prior?.turn} at turn ${turn}`
+        }`
+      );
     const state = prior?.turn === turn ? capacities.get(target.producerId)!.state : target.capacity;
     if (
       sector.producerCapacity?.worldEpoch !== frozen.worldEpoch ||
