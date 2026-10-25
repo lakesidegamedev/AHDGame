@@ -107,6 +107,20 @@ export const FRESH_PLANTS_INTERVENTIONS_OFF = Object.freeze({
 } as const satisfies Partial<GameConfig>);
 
 /**
+ * Funded-market settings a rebuilt economy starts with (owner 2026-10-25,
+ * chosen on the fresh-economy test arms: arm D grew every turn to 8.4M anchor
+ * revenue by funded turn 23 with an 18% losing share and median prices 2.4x
+ * base, where 6%/10x crashed mid-run and 3%/5x crashed by turn 8). A seeded
+ * world starts far short of real demand: short plants build in a quarter of
+ * the time, and prices move at most 2% a turn up to 3x.
+ */
+export const FRESH_PLANTS_SETTINGS = Object.freeze({
+  producerShortageBuildFactor: 0.25,
+  producerPriceMaxMove: 0.02,
+  producerPriceMaxMultiplier: 3,
+} as const satisfies Partial<GameConfig>);
+
+/**
  * gameState turn anchors a fresh world sets to its first turn. On the kept
  * clock they restart at the reset turn so the phase-ins run from the rebuilt
  * economy's first turn, not from the old world's.
@@ -138,6 +152,7 @@ export function freshPlantsGameConfigUpdate(): UpdateFilter<GameConfig> {
     $set: {
       ...FRESH_WORLD_GAME_CONFIG_FLAGS,
       ...FRESH_PLANTS_INTERVENTIONS_OFF,
+      ...FRESH_PLANTS_SETTINGS,
       centralBankPricingPhaseIn: {},
     },
     $unset: {
