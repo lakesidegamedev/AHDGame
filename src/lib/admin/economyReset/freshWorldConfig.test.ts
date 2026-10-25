@@ -73,6 +73,9 @@ describe("fresh plants world configuration", () => {
       marketGuardEnabled: false,
       equityLiquidityFacilityEnabled: false,
       nppMarketCoverageEnabled: false,
+      producerShortageBuildFactor: 0.25,
+      producerPriceMaxMove: 0.02,
+      producerPriceMaxMultiplier: 3,
     });
     const set = new Set(Object.keys(update.$set ?? {}));
     for (const name of removed) expect(set.has(name), name).toBe(false);
