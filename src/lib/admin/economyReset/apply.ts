@@ -34,6 +34,11 @@ import {
   captureEconomyResetPlan,
 } from "./census";
 import { economyResetObjectId } from "./digest";
+import {
+  CENTRAL_BANK_HISTORY_RESET,
+  FRESH_PLANTS_GAME_STATE_TURN_ANCHORS,
+  freshPlantsGameConfigUpdate,
+} from "./freshWorldConfig";
 import { loadEconomyResetPlan, storeEconomyResetPlan } from "./planStore";
 import { isPrivateMaturityLeg, keptCouponHolders } from "./rules/bonds";
 import { primaryLegTotals, witnessDeltas, witnessEntry } from "./rules/ledger";
@@ -64,18 +69,6 @@ export const STATE_SECTOR_UNSET_FIELDS: readonly string[] = Object.freeze([
   "corpGrowthInvestmentAnchor",
   "corpGrowthInvestmentTurn",
   "topSectorsCache",
-]);
-
-/** Market stamps anchored to the wiped producer economy. Configuration knobs stay. */
-export const GAME_CONFIG_MARKET_UNSET_FIELDS: readonly string[] = Object.freeze([
-  "producerMarketLiveFromTurn",
-  "marketGuardReferenceMcap",
-  "marketGuardReferenceFundamentalMcap",
-  "marketGuardReferenceTurn",
-  "marketGuardTrippedAt",
-  "marketGovernorGlideStartTurn",
-  "marketGovernorGlideMode",
-  "marketGovernorGlideFloor",
 ]);
 
 const WRITE_CHUNK = 1000;
@@ -388,20 +381,41 @@ async function phaseWipe(db: Db): Promise<void> {
   }
 }
 
-async function phaseUnset(db: Db): Promise<void> {
-  await gameState(db).updateOne(
-    { _id: "current" },
-    { $unset: { producerOpening: "", lastMarketTickAt: "" } }
-  );
+async function phaseUnset(db: Db, plan: EconomyResetPlan): Promise<void> {
+  await gameState(db).updateOne({ _id: "current" }, {
+    $unset: { producerOpening: "", lastMarketTickAt: "" },
+    $set: Object.fromEntries(
+      FRESH_PLANTS_GAME_STATE_TURN_ANCHORS.map((field) => [field, plan.currentTurn])
+    ),
+  } as never);
+  // The rebuilt plants start from fresh-world configuration: gameplay flags on,
+  // and no governor, recovery stage, funded lever or turn stamp from the old economy.
   await db
-    .collection("gameConfig")
-    .updateOne(
-      { _id: "default" as never },
-      { $unset: Object.fromEntries(GAME_CONFIG_MARKET_UNSET_FIELDS.map((f) => [f, ""])) }
-    );
+    .collection<Document>("gameConfig")
+    .updateOne({ _id: "default" as never }, freshPlantsGameConfigUpdate() as never);
   await db
     .collection("states")
     .updateMany({}, { $unset: Object.fromEntries(STATE_SECTOR_UNSET_FIELDS.map((f) => [f, ""])) });
+}
+
+/**
+ * Current prices and exchange rates back to their seed values, and the central
+ * banks' per-turn series cleared. Chairs, boards, policy rates, reserves and
+ * the external money baseline stay. Runs after the witness so the revaluation
+ * of kept local balances is never written up as created or destroyed money.
+ */
+async function phaseReseedPrices(db: Db, plan: EconomyResetPlan, log: Log): Promise<void> {
+  const { seedCommodityPrices } = await import("@/lib/admin/seed/seedCommodityPrices");
+  await seedCommodityPrices(db, true, log, plan.preset);
+  await db.collection("exchangeRates").deleteMany({});
+  await db
+    .collection("centralBanks")
+    .updateMany({}, { $set: { ...CENTRAL_BANK_HISTORY_RESET, updatedAt: new Date() } });
+  const { seedForex } = await import("@/lib/admin/seed/seedForex");
+  await seedForex(db, log, plan.preset);
+  // seedForex writes a turn-0 money supply row; the cleared economy was
+  // measured at the current turn by the moneySupply phase, so only that stays.
+  await db.collection("moneySupplySnapshots").deleteMany({ turn: { $lt: plan.currentTurn } });
 }
 
 async function phaseWitness(
@@ -509,7 +523,7 @@ async function runPhase(
     case "wipe":
       return phaseWipe(db).then(() => ({}));
     case "unset":
-      return phaseUnset(db).then(() => ({}));
+      return phaseUnset(db, plan).then(() => ({}));
     case "indexes": {
       const marketIndexes = MIGRATIONS.filter((m) => ECONOMY_RESET_INDEX_MIGRATIONS.includes(m.id));
       if (marketIndexes.length > 0)
@@ -595,6 +609,8 @@ async function runPhase(
     }
     case "witness":
       return { witnessEntries: await phaseWitness(db, plan, digest, marker.startedAt) };
+    case "reseedPrices":
+      return phaseReseedPrices(db, plan, log).then(() => ({}));
     case "diagnostic":
       return { diagnosticFailures: await phaseDiagnostic(db, plan, log) };
   }

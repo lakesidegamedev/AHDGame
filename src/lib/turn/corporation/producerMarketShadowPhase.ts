@@ -11,6 +11,7 @@
  * `producerMarketShadowState`, nothing else. It never moves live money, never
  * touches a sector or corporation, and a failure is logged, never thrown.
  */
+import { currentTurnBuild } from "@/lib/turn/turnBuild";
 import type { Db } from "mongodb";
 import { runProducerShadowDetailed } from "@/lib/market/producerMarket/shadowRules";
 import {
@@ -366,7 +367,7 @@ export async function runProducerMarketShadowPhase(
         turn: input.turn,
         predecessorTurn: carry ? carry.turn : null,
         schemaVersion: SHADOW_STATE_SCHEMA_VERSION,
-        codeSha: process.env.RAILWAY_GIT_COMMIT_SHA ?? null,
+        codeSha: currentTurnBuild()?.commit ?? null,
         accounts: close.accounts,
         plants,
         payables: result.payables,
