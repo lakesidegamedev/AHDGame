@@ -159,6 +159,31 @@ describe("LOC accepted income event", () => {
     expect(db.collection("centralBanks").docs[0]).toMatchObject({ reserveBalance: 10 });
     expect(db.collection("locLedger").docs).toHaveLength(1);
   });
+  it("identifies the changed accepted income fields without replaying paid money", async () => {
+    const memory = world();
+    await bind(memory);
+    await garnishLocFromIncome(memory as unknown as Db, income(), 12, "ceo_dividend", {
+      auxiliaryPayments: [income(50)],
+    });
+    const before = structuredClone(memory.collection("characters").docs[0]);
+    const rows = memory.collection("bankMoneyMoves").docs.length;
+    let mismatch: unknown;
+    try {
+      await garnishLocFromIncome(memory as unknown as Db, income(160), 12, "ceo_dividend", {
+        auxiliaryPayments: [income(60)],
+      });
+    } catch (error) {
+      mismatch = error;
+    }
+    expect(mismatch).toMatchObject({
+      name: "LocIncomeEventMismatchError",
+      eventKey: `loc:garnish:ceo_dividend:12:${owner.toHexString()}`,
+      changedFields: ["income.USD", "auxiliary.0.USD"],
+    });
+    expect(memory.collection("characters").docs[0]).toEqual(before);
+    expect(memory.collection("bankMoneyMoves").docs.length).toBe(rows);
+  });
+
   it("stops a changed same-turn source quote rather than paying it as new income", async () => {
     const db = world();
     await bind(db);

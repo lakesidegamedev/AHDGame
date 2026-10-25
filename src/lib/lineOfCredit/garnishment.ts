@@ -12,6 +12,35 @@ import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import { loadLocSettlement, locInterestCredits, settleLocPlan, type LocEffect } from "./settlement";
 import { isDeepStrictEqual } from "node:util";
 
+/** A changed source is evidence to reconcile, never another payment command. */
+export class LocIncomeEventMismatchError extends Error {
+  readonly name = "LocIncomeEventMismatchError";
+  readonly changedFields: string[];
+  constructor(
+    readonly eventKey: string,
+    accepted: unknown,
+    attempted: unknown
+  ) {
+    const changedFields: string[] = [];
+    const visit = (before: unknown, after: unknown, path: string) => {
+      if (isDeepStrictEqual(before, after)) return;
+      if (before && after && typeof before === "object" && typeof after === "object") {
+        const a = before as Record<string, unknown>,
+          b = after as Record<string, unknown>;
+        for (const key of new Set([...Object.keys(a), ...Object.keys(b)])) {
+          visit(a[key], b[key], path ? `${path}.${key}` : key);
+        }
+      } else changedFields.push(path || "request");
+    };
+    visit(accepted, attempted, "");
+    if (!changedFields.length) changedFields.push("request");
+    super(
+      `Accepted LOC income event changed; payout stopped for reconciliation: ${eventKey}; changed fields: ${changedFields.join(", ")}`
+    );
+    this.changedFields = changedFields;
+  }
+}
+
 export interface GarnishmentResult {
   borrowersGarnished: number;
   totalInternalGarnished: number;
@@ -54,7 +83,7 @@ export async function garnishLocFromIncome(
     let result: Record<string, unknown>;
     if (original) {
       if (!isDeepStrictEqual(original.locSettlement.request, request))
-        throw new Error("Accepted LOC income event changed; payout stopped for reconciliation");
+        throw new LocIncomeEventMismatchError(key, original.locSettlement.request, request);
       const settled = await settleLocPlan(db, key, turn, original.locSettlement);
       if (settled.error) throw new Error(settled.error);
       result = settled.result;
