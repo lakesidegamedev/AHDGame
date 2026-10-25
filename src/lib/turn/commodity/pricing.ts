@@ -86,6 +86,8 @@ export interface CommodityPricingContext {
    * formula-era level or momentum ratchet.
    */
   fundedPricing?: boolean;
+  /** Funded price pace (gameConfig.producerPriceMaxMove / producerPriceMaxMultiplier). */
+  fundedPricePace?: { maxMove?: number; maxMultiplier?: number };
   /** Market recovery stage; stages 3 and 4 damp price memory. */
   marketRecoveryStage?: number;
   commandEconomyEnabled: boolean;
@@ -146,6 +148,7 @@ export function priceCommodity(
     scarcityDriftEnabled,
     commodityFixStage,
     fundedPricing,
+    fundedPricePace,
     marketRecoveryStage,
     commandEconomyEnabled,
     priceCurrentYear,
@@ -189,7 +192,8 @@ export function priceCommodity(
     scarcityMult = updateScarcityMultiplierFunded(
       existing?.scarcityMult,
       globalBal.supply,
-      globalBal.demand
+      globalBal.demand,
+      fundedPricePace
     );
   } else if (scarcityDriftEnabled && momentumMode) {
     const next = updateScarcityMultiplierMomentum(
@@ -229,7 +233,8 @@ export function priceCommodity(
         scarcityMultByCountry[countryId] = updateScarcityMultiplierFunded(
           prevCountry,
           book.supply,
-          book.demand
+          book.demand,
+          fundedPricePace
         );
       } else if (momentumMode) {
         const next = updateScarcityMultiplierMomentum(

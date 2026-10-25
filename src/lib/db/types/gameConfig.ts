@@ -269,6 +269,18 @@ export interface GameConfig {
    */
   producerTransitionPackageEnabled?: boolean;
   /**
+   * Funded producer market: between 0 and 1, the remaining build time of each
+   * outstanding order in a plant whose output is short (measured on the
+   * funded book) is multiplied by this once. Absent or 1 = off. A fresh world
+   * starts far short of real demand, and 24 to 96 turn builds leave it short
+   * for days; the economy-only reset sets this.
+   */
+  producerShortageBuildFactor?: number;
+  /** Funded-turn price pace: largest per-turn move of a scarcity multiplier. Absent = 0.06. */
+  producerPriceMaxMove?: number;
+  /** Funded-turn price ceiling: largest scarcity multiplier. Absent = 10. */
+  producerPriceMaxMultiplier?: number;
+  /**
    * With producerIdleRetireStage on: share (0 to 1) of the book value of retired
    * capacity paid to the owner from the country's unspent public funding.
    * Absent = 0.5. Never paid when the pool is empty.
