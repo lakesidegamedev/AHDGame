@@ -276,19 +276,25 @@ export const FUNDED_SCARCITY_MAX = 10;
 export function updateScarcityMultiplierFunded(
   previous: number | null | undefined,
   supplyUnits: number,
-  demandUnits: number
+  demandUnits: number,
+  pace: { maxMove?: number; maxMultiplier?: number } = {}
 ): number {
+  const maxMove =
+    typeof pace.maxMove === "number" && pace.maxMove > 0 && pace.maxMove <= 1
+      ? pace.maxMove
+      : FUNDED_SCARCITY_MAX_MOVE;
+  const ceiling =
+    typeof pace.maxMultiplier === "number" && pace.maxMultiplier >= 1
+      ? pace.maxMultiplier
+      : FUNDED_SCARCITY_MAX;
   const prev =
     typeof previous === "number" && Number.isFinite(previous) && previous > 0 ? previous : 1;
   const supply = Number.isFinite(supplyUnits) ? Math.max(0, supplyUnits) : 0;
   const demand = Number.isFinite(demandUnits) ? Math.max(0, demandUnits) : 0;
   const larger = Math.max(supply, demand);
   // No market: hold, so a lane that pauses keeps its last real price.
-  if (!(larger > 0)) return Math.max(FUNDED_SCARCITY_MIN, Math.min(FUNDED_SCARCITY_MAX, prev));
+  if (!(larger > 0)) return Math.max(FUNDED_SCARCITY_MIN, Math.min(ceiling, prev));
   const imbalance = (demand - supply) / larger;
-  const move = Math.max(
-    -FUNDED_SCARCITY_MAX_MOVE,
-    Math.min(FUNDED_SCARCITY_MAX_MOVE, FUNDED_SCARCITY_IMBALANCE_GAIN * imbalance)
-  );
-  return Math.max(FUNDED_SCARCITY_MIN, Math.min(FUNDED_SCARCITY_MAX, prev * (1 + move)));
+  const move = Math.max(-maxMove, Math.min(maxMove, FUNDED_SCARCITY_IMBALANCE_GAIN * imbalance));
+  return Math.max(FUNDED_SCARCITY_MIN, Math.min(ceiling, prev * (1 + move)));
 }

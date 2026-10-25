@@ -78,6 +78,9 @@ export const FRESH_PLANTS_CONFIG_KEPT: Readonly<Record<string, string>> = Object
   managementOverheadPpPerDoubling: "management overhead rule",
   ceoSalaryVoteNetIncomeShare: "governance rule on CEO pay",
   commandEconomySecondEconomyTolerance: "era regime setting, rewritten per preset",
+  producerShortageBuildFactor: "fresh-world setting written by the reset (FRESH_PLANTS_SETTINGS)",
+  producerPriceMaxMove: "fresh-world setting written by the reset (FRESH_PLANTS_SETTINGS)",
+  producerPriceMaxMultiplier: "fresh-world setting written by the reset (FRESH_PLANTS_SETTINGS)",
   producerTransitionPackageEnabled:
     "switched off explicitly by FRESH_PLANTS_INTERVENTIONS_OFF: a rebuilt economy gets no transition package",
   producerMarketShadowEnabled:

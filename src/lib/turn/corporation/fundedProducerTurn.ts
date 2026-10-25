@@ -78,6 +78,7 @@ import {
   type CaptiveProduct,
 } from "@/lib/market/producerMarket/captiveDeliveryRules";
 import { bookPressure, plantPressure } from "@/lib/market/producerMarket/shortageGrowthRules";
+import { fundedShortageBuildOps } from "./sectorTurn/shortageBuildSpeedup";
 import { recipePressure } from "@/lib/market/producerMarket/fundedRestartRules";
 import { procurementSpill } from "@/lib/market/producerMarket/procurementSpillRules";
 import { newEntrantProducerBooks } from "@/lib/market/producerMarket/openingState";
@@ -761,8 +762,12 @@ export async function runFundedProducerTurn(
   });
   // Measured shortage per book (shortage growth) and per recipe (AI restarts).
   const restartOn = (input.env.fundedRestartStage ?? 0) >= 1;
+  const buildFactor = input.env.shortageBuildFactor;
+  const buildSpeedupOn = typeof buildFactor === "number" && buildFactor > 0 && buildFactor < 1;
   const pressureNow =
-    shortageOn || restartOn ? bookPressure(settled.result.orderOutcomes ?? []) : undefined;
+    shortageOn || restartOn || buildSpeedupOn
+      ? bookPressure(settled.result.orderOutcomes ?? [])
+      : undefined;
   // World-book clearing price per commodity, for next turn's buyer references.
   const clearingPrices: Record<string, number> = {};
   for (const row of settled.result.prices)
@@ -923,6 +928,33 @@ export async function runFundedProducerTurn(
       )
     )
   );
+  // Faster construction where the funded book is short (fresh worlds start far
+  // short of real demand; gameConfig.producerShortageBuildFactor).
+  if (buildSpeedupOn && pressureNow) {
+    const pressureByBook = new Map(Object.entries(pressureNow));
+    const ops = fundedShortageBuildOps({
+      sectors: settled.closingSectors.map((s) => {
+        const r = s.producerSettlement;
+        return {
+          _id: s._id,
+          buildQueue: s.buildQueue,
+          mothballed: s.mothballed,
+          pressure:
+            r && r.turn === turn
+              ? plantPressure(
+                  (r as { products?: Parameters<typeof plantPressure>[0] }).products,
+                  pressureByBook
+                )
+              : undefined,
+        };
+      }),
+      currentTurn: turn,
+      factor: buildFactor,
+      now: new Date(),
+    });
+    if (ops.length > 0)
+      await db.collection("corporateSectors").bulkWrite(ops as never, { ordered: false });
+  }
   await apply(
     batchProducerMoves(
       worldEpoch,
