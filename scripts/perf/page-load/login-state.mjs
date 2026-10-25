@@ -64,11 +64,12 @@ for (const raw of setCookies) {
     if (key === "httponly") cookie.httpOnly = true;
     if (key === "secure") cookie.secure = true;
     if (key === "samesite") {
-      cookie.sameSite = valueRaw.toLowerCase() === "none"
-        ? "None"
-        : valueRaw.toLowerCase() === "strict"
-          ? "Strict"
-          : "Lax";
+      cookie.sameSite =
+        valueRaw.toLowerCase() === "none"
+          ? "None"
+          : valueRaw.toLowerCase() === "strict"
+            ? "Strict"
+            : "Lax";
     }
     if (key === "max-age") {
       const seconds = Number(valueRaw);
@@ -84,11 +85,7 @@ for (const raw of setCookies) {
 
 await writeFile(
   out,
-  JSON.stringify(
-    { cookies, origins: [{ origin: base, localStorage: [] }] },
-    null,
-    2
-  )
+  JSON.stringify({ cookies, origins: [{ origin: base, localStorage: [] }] }, null, 2)
 );
 
 console.log(`logged in as ${user}; ${cookies.length} cookies written to ${out}`);

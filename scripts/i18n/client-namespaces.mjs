@@ -53,7 +53,8 @@ function read(file) {
   return fileCache.get(file);
 }
 
-const STATIC_IMPORT = /(?:^|\n)\s*(?:import|export)\s+(?:type\s+)?(?:[^"'`;]*?\s+from\s+)?["']([^"']+)["']/g;
+const STATIC_IMPORT =
+  /(?:^|\n)\s*(?:import|export)\s+(?:type\s+)?(?:[^"'`;]*?\s+from\s+)?["']([^"']+)["']/g;
 const DYNAMIC_IMPORT = /\bimport\s*\(\s*["']([^"']+)["']\s*\)/g;
 
 function analyze(entries) {
@@ -119,10 +120,10 @@ for (const dir of subtrees) {
     .filter(Boolean);
 
   const result = analyze([...entries, "src/app/layout.tsx"]);
-  console.log(`\n/${dir}: pages=${entries.length} files=${result.files} needsWholeCatalog=${result.needsAll}`);
   console.log(
-    `  namespaces: ${result.namespaces.join(", ")}`
+    `\n/${dir}: pages=${entries.length} files=${result.files} needsWholeCatalog=${result.needsAll}`
   );
+  console.log(`  namespaces: ${result.namespaces.join(", ")}`);
   console.log(
     `  rule: { prefix: "/${dir}", namespaces: [${result.namespaces
       .map((n) => `"${n}"`)
