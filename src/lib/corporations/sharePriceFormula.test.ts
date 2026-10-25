@@ -3,10 +3,12 @@ import {
   annualizedTrailingGrowthRate,
   clampSplitCooldownPrevAnchor,
   computeSharePrices,
+  insiderConcentrationMultiplier,
   subsidiarySprawlMultiplier,
   type SharePriceInput,
 } from "./sharePriceFormula";
 import {
+  SHARE_PRICE_MAX_TURN_MOVE,
   STOCK_SPLIT_PREV_ANCHOR_MAX_RATIO,
   STOCK_SPLIT_SMOOTHING_PREV_WEIGHT,
 } from "@/lib/constants/corporations";
@@ -174,5 +176,69 @@ describe("subsidiary sprawl discount (suggestion #363)", () => {
     // Rate-limited path seeded at the discounted price stays put turn over turn.
     const settled = price({ subsidiaryCount: 9, previousSharePrice: undiscounted * 0.5 });
     expect(settled).toBeCloseTo(undiscounted * 0.5, 1);
+  });
+});
+
+describe("rate limiter works in the post-multiplier price space", () => {
+  // Public corp, CEO holds 9,993,397 of 10,000,000 shares. M = the
+  // insider-concentration multiplier (~0.7011) is below 1/1.35, so multiplying
+  // AFTER the limiter made the persisted price decay by 1.35 x M (~0.9465) every
+  // turn while the raw fundamental stayed far above it: the up-ceiling bound
+  // every turn, and the price only "rescued" itself by decaying to the ₳1.00
+  // limiter floor and snapping back to M x fundamental in one turn.
+  const CEO_OWNERSHIP = 0.9993397;
+  const M = insiderConcentrationMultiplier(CEO_OWNERSHIP, false);
+  const shared: Partial<SharePriceInput> = {
+    isPrivate: false,
+    ceoOwnershipFraction: CEO_OWNERSHIP,
+    indexFundOwnershipFraction: 0,
+    totalShares: 10_000_000,
+    sectorNPVAnchor: 1_000_000_000_000,
+  };
+
+  it("M sits inside the decay band the bug required", () => {
+    expect(M).toBeLessThan(1 / (1 + SHARE_PRICE_MAX_TURN_MOVE));
+  });
+
+  it("converges up to the discounted fundamental instead of decaying", () => {
+    // prev <= ₳1.00 bypasses the limiter, so this is M x fundamental.
+    const target = price({ ...shared, previousSharePrice: 1 });
+    const start = 4930;
+    // The reported shape: raw fundamental at least 10x the prior price.
+    expect(target / M).toBeGreaterThanOrEqual(10 * start);
+
+    const prices: number[] = [];
+    let prev = start;
+    for (let n = 0; n < 25; n++) {
+      prev = price({ ...shared, previousSharePrice: prev });
+      prices.push(prev);
+    }
+    const reference = (n: number) => (n === 0 ? start : prices[n - 1]);
+
+    // The limiter bounds each step against the persisted prior itself: at most
+    // +35% per turn. (Under the old ordering the step was 1.35 * M because the
+    // two sides of that comparison were on different scales, which is the bug.)
+    const maxStep = start * (1 + SHARE_PRICE_MAX_TURN_MOVE);
+    expect(prices[0]).toBeLessThanOrEqual(maxStep + 0.01);
+    expect(prices[0]).toBeGreaterThanOrEqual(start * (1 - SHARE_PRICE_MAX_TURN_MOVE) - 0.01);
+    // Every turn moves toward the discounted fundamental; none moves away.
+    for (let n = 0; n < prices.length; n++) {
+      expect(prices[n]).toBeGreaterThanOrEqual(reference(n) - 0.01);
+      expect(prices[n]).toBeLessThanOrEqual(reference(n) * (1 + SHARE_PRICE_MAX_TURN_MOVE) + 0.01);
+      expect(prices[n]).toBeLessThanOrEqual(target * 1.001);
+    }
+    // Converged, then held: from the first turn inside 1% it never falls back.
+    const settled = prices.findIndex((p) => p >= 0.99 * target);
+    expect(settled).toBeGreaterThanOrEqual(0);
+    for (let n = settled; n < prices.length; n++) {
+      expect(prices[n]).toBeGreaterThanOrEqual(0.99 * target);
+    }
+  });
+
+  it("is unchanged when the concentration multiplier is 1", () => {
+    // M = 1 and no index premium: the price is the plain +35% limiter step.
+    expect(price({ ...shared, ceoOwnershipFraction: 0, previousSharePrice: 4930 })).toBe(
+      4930 * (1 + SHARE_PRICE_MAX_TURN_MOVE)
+    );
   });
 });
