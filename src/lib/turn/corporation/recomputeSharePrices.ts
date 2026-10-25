@@ -47,6 +47,7 @@ import { ceoOwnershipFraction } from "@/lib/corporations/ceoOwnership";
 import { bankEquity } from "@/lib/banking/balanceSheet";
 import { bankNpvFromPerTurnIncome } from "@/lib/banking/valuation";
 import { bankIncomeIncludingUnbookedSovereignAssets } from "@/lib/banking/rules/sovereignClaims";
+import { applyPriceMultipliers } from "@/lib/corporations/applyPriceMultipliers";
 
 export interface RecomputeSharePricesResult {
   corpsRepriced: number;
@@ -415,6 +416,27 @@ export async function recomputeSharePricesAfterBondTurn(
   }
 
   return { corpsRepriced: corpOps.length, corpsSkipped: skipped };
+}
+
+/**
+ * Turn-time share price pass: re-run the fundamental formula against the
+ * post-bondTurn state, then apply investor sentiment and order flow so the
+ * turn's live prices and exchange snapshot already include them. Without this
+ * the :15 market tick was the first to apply the multipliers, so the index and
+ * every price dropped at each turn and recovered fifteen minutes later.
+ *
+ * Only corporations.sharePrice is multiplied. The corporationHistory row keeps
+ * the raw formula price because the next turn's rate limiter and split-cooldown
+ * smoothing read turn-1 history as `previousSharePrice`.
+ */
+export async function recomputeTurnSharePrices(
+  turn: number,
+  db?: Db
+): Promise<RecomputeSharePricesResult> {
+  const database = db ?? (await getDb());
+  const result = await recomputeSharePricesAfterBondTurn(turn, database);
+  await applyPriceMultipliers(database);
+  return result;
 }
 
 /**
