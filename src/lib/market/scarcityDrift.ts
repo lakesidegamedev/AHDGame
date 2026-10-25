@@ -255,3 +255,40 @@ function decayToward1(prev: number): number {
   // Snap when within rounding distance so the stored value settles exactly.
   return Math.abs(next - 1) < 0.0005 ? 1 : clampMultiplier(next);
 }
+
+/**
+ * Funded market pricing. On a funded producer turn the supply and demand in
+ * the ledger are real: units offered by producers and units ordered by buyers
+ * with money. Neither brake above fits that book. The level integrator steps
+ * 0.4% a turn toward a 2.5x cap, and momentum mode reads a steady real
+ * shortage as no signal at all, so a market short two to one for a dozen turns
+ * barely moved its price (fresh-economy proof, 2026-10-25: food +11% over 14
+ * turns). This is the funded market's own reference rule
+ * (producerMarket/referencePriceRules.ts) applied to the multiplier: it moves
+ * by half the signed imbalance, at most FUNDED_SCARCITY_MAX_MOVE a turn, inside
+ * wide bounds so a deep shortage can show in the price.
+ */
+export const FUNDED_SCARCITY_MAX_MOVE = 0.06;
+export const FUNDED_SCARCITY_IMBALANCE_GAIN = 0.5;
+export const FUNDED_SCARCITY_MIN = 0.25;
+export const FUNDED_SCARCITY_MAX = 10;
+
+export function updateScarcityMultiplierFunded(
+  previous: number | null | undefined,
+  supplyUnits: number,
+  demandUnits: number
+): number {
+  const prev =
+    typeof previous === "number" && Number.isFinite(previous) && previous > 0 ? previous : 1;
+  const supply = Number.isFinite(supplyUnits) ? Math.max(0, supplyUnits) : 0;
+  const demand = Number.isFinite(demandUnits) ? Math.max(0, demandUnits) : 0;
+  const larger = Math.max(supply, demand);
+  // No market: hold, so a lane that pauses keeps its last real price.
+  if (!(larger > 0)) return Math.max(FUNDED_SCARCITY_MIN, Math.min(FUNDED_SCARCITY_MAX, prev));
+  const imbalance = (demand - supply) / larger;
+  const move = Math.max(
+    -FUNDED_SCARCITY_MAX_MOVE,
+    Math.min(FUNDED_SCARCITY_MAX_MOVE, FUNDED_SCARCITY_IMBALANCE_GAIN * imbalance)
+  );
+  return Math.max(FUNDED_SCARCITY_MIN, Math.min(FUNDED_SCARCITY_MAX, prev * (1 + move)));
+}
