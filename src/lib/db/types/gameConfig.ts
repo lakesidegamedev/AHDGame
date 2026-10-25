@@ -261,6 +261,14 @@ export interface GameConfig {
    */
   producerIdleRetireStage?: number;
   /**
+   * Funded producer market transition package (classification of over-built
+   * sectors at the opening, struggling marks, support and free conversion for
+   * 48 turns after the switch). Absent or true = on. False = no package: an
+   * economy rebuilt from the seed has nothing to land softly, so its window is
+   * treated as already closed and idle retirement runs from the first turn.
+   */
+  producerTransitionPackageEnabled?: boolean;
+  /**
    * With producerIdleRetireStage on: share (0 to 1) of the book value of retired
    * capacity paid to the owner from the country's unspent public funding.
    * Absent = 0.5. Never paid when the pool is empty.
