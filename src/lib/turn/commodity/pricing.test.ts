@@ -132,6 +132,39 @@ describe("priceCommodity", () => {
     expect(ctx.appliedNationalPrices.get("food")!["US"]).toBe(nationalPrices?.["US"]);
   });
 
+  it("moves the scarcity multiplier by the funded rule on a funded turn, not the momentum ratchet", () => {
+    const existing = new Map([
+      [
+        "food",
+        {
+          commodity: "food",
+          basePrice: 200,
+          globalPrice: 300,
+          scarcityMult: 1.5,
+          scarcityImbalanceHistory: [0.5, 0.5, 0.5, 0.5, 0.5],
+        },
+      ],
+    ]) as unknown as CommodityPricingContext["existingPriceMap"];
+    const funded = pricingContext(
+      { supply: 100, demand: 200 },
+      {
+        scarcityDriftEnabled: true,
+        commodityFixStage: 6,
+        fundedPricing: true,
+        existingPriceMap: existing,
+      }
+    );
+    priceCommodity(funded, "food", new Set());
+    expect(funded.scarcityMultByCommodity.get("food")).toBeCloseTo(1.5 * 1.06, 9);
+    const legacy = pricingContext(
+      { supply: 100, demand: 200 },
+      { scarcityDriftEnabled: true, commodityFixStage: 6, existingPriceMap: existing }
+    );
+    priceCommodity(legacy, "food", new Set());
+    // A flat shortage reads as no change in momentum mode: no rise.
+    expect(legacy.scarcityMultByCommodity.get("food")!).toBeLessThanOrEqual(1.5);
+  });
+
   it("drifts the state price toward target at the drift rate", () => {
     const bal = { supply: 100, demand: 200 };
     const first = pricingContext(bal);

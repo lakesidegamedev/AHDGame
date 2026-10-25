@@ -1125,6 +1125,7 @@ export async function processCommodityPriceTurn(turn: number): Promise<Commodity
     commodityNominalPriceIndex,
     scarcityDriftEnabled,
     commodityFixStage,
+    fundedPricing: producerPath === "funded",
     marketRecoveryStage:
       producerPath === "funded"
         ? 0

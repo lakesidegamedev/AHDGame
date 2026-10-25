@@ -16,6 +16,7 @@ import { computeGlobalCommodityPrice } from "@/lib/market/globalCommodityPrice";
 import { getPriceSoftKnee } from "@/lib/constants/commodities";
 import {
   updateScarcityMultiplier,
+  updateScarcityMultiplierFunded,
   updateScarcityMultiplierMomentum,
 } from "@/lib/market/scarcityDrift";
 import { COMMODITY_FIX_STAGE, commodityFixStageActive } from "@/lib/market/commodityFixStages";
@@ -79,6 +80,12 @@ export interface CommodityPricingContext {
   scarcityDriftEnabled: boolean;
   /** Commodity treadmill fix stage (0..6); >= 1 switches the ratchet to momentum mode. */
   commodityFixStage?: number;
+  /**
+   * Funded producer turn: the ledger is the funded market's real book, so the
+   * scarcity multipliers move by updateScarcityMultiplierFunded instead of the
+   * formula-era level or momentum ratchet.
+   */
+  fundedPricing?: boolean;
   /** Market recovery stage; stages 3 and 4 damp price memory. */
   marketRecoveryStage?: number;
   commandEconomyEnabled: boolean;
@@ -138,6 +145,7 @@ export function priceCommodity(
     commodityNominalPriceIndex,
     scarcityDriftEnabled,
     commodityFixStage,
+    fundedPricing,
     marketRecoveryStage,
     commandEconomyEnabled,
     priceCurrentYear,
@@ -172,13 +180,18 @@ export function priceCommodity(
   // Momentum mode (commodity treadmill fix stage 1): the ratchet integrates
   // the CHANGE in imbalance against a trailing window, so a residual pinned by
   // the final-demand caps no longer reads as an ever-worsening shortage.
-  const momentumMode = commodityFixStageActive(
-    commodityFixStage,
-    COMMODITY_FIX_STAGE.RATCHET_MOMENTUM
-  );
+  const momentumMode =
+    !fundedPricing &&
+    commodityFixStageActive(commodityFixStage, COMMODITY_FIX_STAGE.RATCHET_MOMENTUM);
   let scarcityImbalanceHistory: number[] | undefined;
   let scarcityMult = 1;
-  if (scarcityDriftEnabled && momentumMode) {
+  if (scarcityDriftEnabled && fundedPricing) {
+    scarcityMult = updateScarcityMultiplierFunded(
+      existing?.scarcityMult,
+      globalBal.supply,
+      globalBal.demand
+    );
+  } else if (scarcityDriftEnabled && momentumMode) {
     const next = updateScarcityMultiplierMomentum(
       existing?.scarcityMult,
       globalBal.supply,
@@ -212,7 +225,13 @@ export function priceCommodity(
       const book = reachableBooks.get(countryId)?.get(commodity);
       if (!book || (book.supply <= 0 && book.demand <= 0)) continue;
       const prevCountry = existing?.scarcityMultByCountry?.[countryId] ?? existing?.scarcityMult;
-      if (momentumMode) {
+      if (fundedPricing) {
+        scarcityMultByCountry[countryId] = updateScarcityMultiplierFunded(
+          prevCountry,
+          book.supply,
+          book.demand
+        );
+      } else if (momentumMode) {
         const next = updateScarcityMultiplierMomentum(
           prevCountry,
           book.supply + NATIONAL_COMMODITY_STABILIZER,
