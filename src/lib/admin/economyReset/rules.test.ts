@@ -358,6 +358,7 @@ function source(overrides: Partial<EconomyResetSource> = {}): EconomyResetSource
     config: { commandEconomyEnabled: false, ledgerShadow: true, treasuryCashLedgerEnabled: false },
     wipeCounts: { corporations: 3, bankLoans: 1 },
     partialWipeCounts: { bonds: 1 },
+    reseedCounts: { commodityPrices: 27, exchangeRates: 23 },
     campaignRates: { USD: 1 },
     anchorRates: { USD: 1 },
     characters: [

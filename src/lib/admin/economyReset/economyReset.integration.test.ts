@@ -22,6 +22,7 @@ let freshCorporations = 0;
 let freshSectors = 0;
 let sovereignFaceBefore = 0;
 let heldBondId: ObjectId;
+let basePriceBefore = 0;
 let plan: EconomyResetPlan;
 let digest: string;
 let first: ApplyEconomyResetResult;
@@ -53,9 +54,49 @@ beforeAll(async () => {
       },
     }
   );
+  // The old economy's steering: recovery ladder, governor glide, funded levers,
+  // nominal index and a drifted price and rate. None of it may survive.
+  await db.collection("gameConfig").updateOne(
+    { _id: "default" as never },
+    {
+      $set: {
+        ledgerShadow: true,
+        marketRecoveryStage: 4,
+        commodityFixStage: 6,
+        marketGovernorCap: 0.3,
+        marketGovernorGlideStartTurn: 203,
+        marketGovernorGlideMode: "proportional",
+        producerHouseholdIncomeFloor: 95_000_000,
+        producerFundedBookStage: 1,
+        commodityNominalPriceIndex: 1.54,
+        countryRecessions: [{ countryId: "JP", startTurn: 216, turns: 12 }],
+      },
+    }
+  );
+  const seededPrice = await db.collection("commodityPrices").findOne({ commodity: "steel" });
+  basePriceBefore = seededPrice!.basePrice;
   await db
-    .collection("gameConfig")
-    .updateOne({ _id: "default" as never }, { $set: { ledgerShadow: true } });
+    .collection("commodityPrices")
+    .updateOne(
+      { commodity: "steel" },
+      { $set: { globalPrice: basePriceBefore * 2.07, turn: 412 } }
+    );
+  await db.collection("commodityPriceHistory").insertOne({ commodity: "steel", turn: 412 });
+  const seededRate = await db.collection("exchangeRates").findOne({ _id: "UK" as never });
+  await db
+    .collection("exchangeRates")
+    .updateOne({ _id: "UK" as never }, { $set: { rate: seededRate!.rate * 1.3 } });
+  await db.collection("centralBanks").updateOne(
+    { countryId: "US" },
+    {
+      $set: {
+        chairCharacterId: characterId,
+        chairCharacterName: "Test Player",
+        rateHistory: [{ previousRate: 5, newRate: 6, changedBy: "x", changedAt: new Date() }],
+        forexRevenue: 1234,
+      },
+    }
+  );
   freshCorporations = await db.collection("corporations").countDocuments({});
   freshSectors = await db.collection("corporateSectors").countDocuments({});
 
@@ -223,6 +264,61 @@ describe("economy-only reset end to end", () => {
     const strip = (rows: Document[]) =>
       rows.map(({ economyResetDigest: _d, updatedAt: _u, ...rest }) => rest);
     expect(strip(await all("federalBudget"))).toEqual(strip(before.federalBudget));
+  });
+
+  it("starts the rebuilt plants from fresh-world configuration with no legacy steering", async () => {
+    const config = (await db.collection("gameConfig").findOne({ _id: "default" as never }))!;
+    for (const name of [
+      "marketRecoveryStage",
+      "marketGovernorCap",
+      "marketGovernorGlideStartTurn",
+      "marketGovernorGlideMode",
+      "producerHouseholdIncomeFloor",
+      "producerFundedBookStage",
+      "producerMarketLiveFromTurn",
+      "commodityNominalPriceIndex",
+      "countryRecessions",
+    ])
+      expect(config[name], name).toBeUndefined();
+    expect(config).toMatchObject({
+      commodityFixStage: 6,
+      marketSystemMode: "plants",
+      ledgerShadow: true,
+      centralBankPricingPhaseIn: {},
+      marketGuardEnabled: false,
+      equityLiquidityFacilityEnabled: false,
+      indexFundBondLiquidityEnabled: false,
+      nppMarketCoverageEnabled: false,
+      nppFragileMarketSupplyEnabled: false,
+    });
+    const state = (await db.collection("gameState").findOne({ _id: "current" as never }))!;
+    expect(state.hardwareInputReliefStartTurn).toBe(plan.currentTurn);
+    expect(state.stockHoldingTaxStartTurn).toBe(plan.currentTurn);
+    expect(plan.reseed).toEqual([
+      { collection: "commodityPrices", count: expect.any(Number) },
+      { collection: "exchangeRates", count: expect.any(Number) },
+    ]);
+  });
+
+  it("reseeds prices and exchange rates and clears the price, trade and wealth series", async () => {
+    const steel = (await db.collection("commodityPrices").findOne({ commodity: "steel" }))!;
+    expect(steel).toMatchObject({
+      basePrice: basePriceBefore,
+      globalPrice: basePriceBefore,
+      turn: 0,
+    });
+    const uk = (await db.collection("exchangeRates").findOne({ _id: "UK" as never }))!;
+    expect(uk.rate).toBe(uk.baseRate);
+    expect(uk.rateHistory).toEqual([]);
+    for (const name of ["commodityPriceHistory", "tradeHistory", "wealthListSnapshots"])
+      expect(await db.collection(name).countDocuments({}), name).toBe(0);
+    const bank = (await db.collection("centralBanks").findOne({ countryId: "US" }))!;
+    expect(bank.chairCharacterId).toEqual(characterId);
+    expect(bank.rateHistory).toEqual([]);
+    expect(bank.forexRevenue).toBe(0);
+    expect(typeof bank.primeRate).toBe("number");
+    const snapshots = await db.collection("moneySupplySnapshots").distinct("turn");
+    expect(snapshots).toEqual([plan.currentTurn]);
   });
 
   it("resets the character's cash to the creation endowment and keeps identity and campaign funds", async () => {
