@@ -43,7 +43,7 @@ import { AuthConnectivityGate } from "@/components/AuthConnectivityGate";
 import { StatAllocationGate } from "@/components/stats/StatAllocationGate";
 import { SeasonRecapGate } from "@/components/recap/SeasonRecapGate";
 import { SiteTrafficTracker } from "@/components/SiteTrafficTracker";
-import { PostHogTracker } from "@/components/PostHogTracker";
+import { DeferredAnalytics } from "@/components/DeferredAnalytics";
 import { CDN_LOGO_URL } from "@/lib/images/staticCdnAssets";
 import {
   buildGoogleTagBootstrapScript,
@@ -64,6 +64,7 @@ import { getMarketedWorldSafe } from "@/lib/marketing/marketedWorldServer";
 import { getEraConfig } from "@/components/landing/eraThemes";
 import { verifyAuth } from "@/lib/auth";
 import { getCachedMaintenanceStatus, isMaintenanceBypassPath } from "@/lib/maintenanceStatus";
+import { pickClientNamespaces, SHELL_CLIENT_NAMESPACES } from "@/i18n/clientCatalog";
 import { resolveNavbarPageCountry } from "@/lib/navigation/resolveNavbarPageCountry";
 import "./globals.css";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
@@ -306,6 +307,12 @@ export default async function RootLayout({
     pathname,
     search: requestHeaders.get("x-search"),
   });
+  // The root layout does not re-render on a client-side navigation, so it ships
+  // only what its own client tree renders: the navbar and the tutorial coach.
+  // `app/template.tsx` adds the rest for the current route and refreshes it on
+  // every navigation. Measured 2026-10-24: the full catalog was 70,586 bytes
+  // gzipped, almost the whole 78,378-byte /corporation/1 document.
+  const clientMessages = pickClientNamespaces(intlMessages, SHELL_CLIENT_NAMESPACES);
   const adSenseClientId = getAdSenseClientId();
   // Never load the AdSense page tag (auto ads + CMP) inside the native app
   // WebView: AdSense is not permitted in app WebViews, and its third-party
@@ -384,7 +391,7 @@ export default async function RootLayout({
         >
           {t("skipToMainContent")}
         </a>
-        <NextIntlClientProvider locale={locale} messages={intlMessages}>
+        <NextIntlClientProvider locale={locale} messages={clientMessages}>
           <RegisteredCountriesProvider
             value={{
               registered: registeredCountries,
@@ -431,7 +438,7 @@ export default async function RootLayout({
                           >
                             <SiteTrafficTracker />
                             {!singleplayer && !isNativeApp && !isWikiSubdomain && (
-                              <PostHogTracker />
+                              <DeferredAnalytics />
                             )}
                             {children}
                           </main>

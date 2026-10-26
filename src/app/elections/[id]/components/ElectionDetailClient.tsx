@@ -1,7 +1,5 @@
 "use client";
 
-import { BgFoundingConstituencyPicker } from "./BgFoundingConstituencyPicker";
-import { Hu1991ConstituencyPicker } from "./Hu1991ConstituencyPicker";
 import Link from "next/link";
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -16,9 +14,35 @@ import { ElectionHeader } from "./ElectionHeader";
 import { AdminSection } from "./AdminSection";
 import { ElectionScheduleCard } from "./ElectionScheduleCard";
 import { PrimaryPhaseNote } from "./PrimaryPhaseNote";
-import { UpcomingElectionView } from "./UpcomingElectionView";
-import { GeneralPhaseView } from "./GeneralPhaseView";
-import { PrimaryPhaseView } from "./PrimaryPhaseView";
+import dynamic from "next/dynamic";
+// Mutually exclusive phase bodies: an election is upcoming, in a primary, or in
+// its general phase, and the country pickers only exist for their own country.
+// They are loaded on demand so a presidential race in the US never downloads
+// the Hungarian constituency picker.
+const PhaseFallback = () => (
+  <div className="h-64 animate-pulse rounded-lg bg-muted" aria-hidden="true" />
+);
+
+const UpcomingElectionView = dynamic(
+  () => import("./UpcomingElectionView").then((m) => m.UpcomingElectionView),
+  { loading: PhaseFallback }
+);
+const GeneralPhaseView = dynamic(
+  () => import("./GeneralPhaseView").then((m) => m.GeneralPhaseView),
+  { loading: PhaseFallback }
+);
+const PrimaryPhaseView = dynamic(
+  () => import("./PrimaryPhaseView").then((m) => m.PrimaryPhaseView),
+  { loading: PhaseFallback }
+);
+const BgFoundingConstituencyPicker = dynamic(
+  () => import("./BgFoundingConstituencyPicker").then((m) => m.BgFoundingConstituencyPicker),
+  { loading: PhaseFallback }
+);
+const Hu1991ConstituencyPicker = dynamic(
+  () => import("./Hu1991ConstituencyPicker").then((m) => m.Hu1991ConstituencyPicker),
+  { loading: PhaseFallback }
+);
 import { PrimaryMapPills } from "./PrimaryMapPills";
 import { ElectionDetailSkeleton } from "./ElectionDetailSkeleton";
 import { StateOrganizationTab } from "@/app/political-operations/components/StateOrganizationTab";
