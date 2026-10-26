@@ -15,6 +15,8 @@ vi.mock("@/lib/financialTxLog/emit", () => ({
     await db.collection("financialTxLog").insertOne({ _id: new ObjectId(), ...entry });
     return "applied";
   }),
+  // The fee path now loads the thresholds once for the whole pass.
+  loadTxThresholds: vi.fn(async () => ({})),
 }));
 vi.mock("@/lib/currency/featureFlag", () => ({ isForexEnabled: vi.fn(async () => true) }));
 vi.mock("@/lib/currency/corporationCapital", async (original) => ({

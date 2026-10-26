@@ -6,7 +6,6 @@ import type { Character } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import type { PartyTenure } from "@/lib/parties/historyQuery";
 import { getOfficeCountry } from "@/lib/utils/politics";
-import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { formatGameMonth, type GameDateAnchor } from "@/lib/utils/gameDate";
 import { formatStableUtc } from "@/lib/time/localTime";
 import { EmptyState } from "@/components/ui";
@@ -25,6 +24,15 @@ interface CareerHistoryProps {
    *  passing ObjectId fields (`_id`, `userId`, `factionId`) through the
    *  RSC boundary, which Next.js rejects as non-plain. */
   character: Pick<Character, "careerHistory" | "currentOffice" | "countryId">;
+  /**
+   * Title for the office the character holds now, resolved on the server.
+   *
+   * Office titles come from `getOfficeLabel`, whose country cabinet tables are
+   * a large client download. The page already has the full registry loaded, so
+   * it resolves the title and this card just prints it. Career events carry
+   * their resolved title in `officeLabel` the same way.
+   */
+  currentOfficeLabel: string;
   /** Map of "countryId:sequentialId" → display name, resolved from the DB */
   partyNames?: Record<string, string>;
   /** Game-time anchor used to render event dates as in-game month/year. */
@@ -121,9 +129,7 @@ function EventItem({
   t: CareerT;
 }) {
   const isRelocation = event.type === "relocated";
-  const officeText = event.office
-    ? getOfficeLabel(event.office, countryId)
-    : (event.officeLabel ?? "");
+  const officeText = event.officeLabel ?? "";
 
   let text: string;
   if (isRelocation) {
@@ -318,6 +324,7 @@ function TabStrip({
 
 export function CareerHistory({
   character,
+  currentOfficeLabel,
   partyNames = {},
   gameDateAnchor,
   partyHistory = [],
@@ -382,11 +389,7 @@ export function CareerHistory({
   const hasMore = activeListLength > PREVIEW_COUNT;
 
   const incumbentRow = character.currentOffice ? (
-    <HistoryRow
-      date={t("incumbent")}
-      title={getOfficeLabel(character.currentOffice, character.countryId)}
-      emphasis
-    />
+    <HistoryRow date={t("incumbent")} title={currentOfficeLabel} emphasis />
   ) : null;
 
   return (

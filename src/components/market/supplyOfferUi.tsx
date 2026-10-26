@@ -9,6 +9,7 @@ import {
   type CommodityType,
 } from "@/lib/constants/commoditiesCore";
 import type { SupplyListingView } from "@/lib/db/types/supplyListing";
+import type { OfferCorporation } from "./SupplyOfferRow";
 
 export type OfferKindFilter = "player" | "npp" | "all";
 export type OfferSideFilter = "both" | "sell" | "buy";
@@ -28,6 +29,24 @@ export const DEFAULT_OFFER_FILTERS: OfferFilters = {
   commodity: "",
   sort: "newest",
 };
+
+/**
+ * Offers per page. Lives here rather than in `SupplyDealsPanel` so the hub's
+ * one-row preview query does not statically import the whole panel, the offer
+ * rows and the commodity catalogue behind it.
+ */
+export const SUPPLY_PAGE_SIZE = 20;
+
+/** GET /api/supply-offers, as both the hub preview and the deals panel read it. */
+export interface SupplyOffersResponse {
+  enabled: boolean;
+  offers: SupplyListingView[];
+  myCorporations: OfferCorporation[];
+  currentTurn: number;
+  page: number;
+  hasMore: boolean;
+  total: number;
+}
 
 /** Query string for GET /api/supply-offers; omits anything left at its default. */
 export function offersQuery(filters: OfferFilters, page?: number, pageSize?: number): string {

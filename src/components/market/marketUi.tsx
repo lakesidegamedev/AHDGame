@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
+import type { CommodityData } from "@/app/country/[code]/stockmarket/types";
 
 export function pctText(value: number | null | undefined, digits = 1): string {
   if (value == null || !Number.isFinite(value)) return "n/a";
@@ -11,6 +12,15 @@ export function pctText(value: number | null | undefined, digits = 1): string {
 export function toneClass(value: number | null | undefined): string {
   if (value == null || value === 0) return "text-muted";
   return value > 0 ? "text-success" : "text-error";
+}
+
+/**
+ * Change against the commodity's base price, as a percentage. Shared by the
+ * overview movers list and the commodities tab; it used to sit in the tab module,
+ * which dragged the whole catalogue into the eager overview.
+ */
+export function vsBasePct(c: Pick<CommodityData, "globalPrice" | "basePrice">): number | null {
+  return c.basePrice > 0 ? (c.globalPrice / c.basePrice - 1) * 100 : null;
 }
 
 export function PanelState({

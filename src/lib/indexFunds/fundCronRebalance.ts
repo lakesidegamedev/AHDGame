@@ -49,6 +49,8 @@ import {
 } from "@/lib/indexFunds/fundBidPolicy";
 import { type CurrencyCode } from "@/lib/constants/currencies";
 import { loadEquityPoolsByCurrency } from "@/lib/equities/marketPool";
+import type { EquityMarketPool } from "@/lib/db/types";
+import { emitTx, emitTxBulk, type TxInput } from "@/lib/financialTxLog/emit";
 import { isStaggeredTurn } from "@/lib/turn/staggerPhase";
 
 export type FundCronResult = {
@@ -156,6 +158,30 @@ const INDEX_FUND_CORP_QUERY = {
   totalShares: { $gt: 0 },
 } as const;
 
+/**
+ * Every rebalancing fund's resting buy bids, in one query. The per-fund loop
+ * re-read this same collection once per fund with a single-id filter.
+ */
+export async function loadOpenBuyBidsByFundId(
+  db: Db,
+  fundIds: ObjectId[]
+): Promise<Map<string, ShareOrder[]>> {
+  const byFundId = new Map<string, ShareOrder[]>();
+  if (fundIds.length === 0) return byFundId;
+  const orders = await db
+    .collection<ShareOrder>("shareOrders")
+    .find({ placerFundId: { $in: fundIds }, type: "buy", status: "open" })
+    .toArray();
+  for (const order of orders) {
+    const key = order.placerFundId?.toString();
+    if (!key) continue;
+    const group = byFundId.get(key) ?? [];
+    group.push(order);
+    byFundId.set(key, group);
+  }
+  return byFundId;
+}
+
 /** All exchange-listed corporations eligible for index composition (market-cap ranked). */
 export async function loadIndexFundCandidateCorporations(db: Db): Promise<EligibleCorpRow[]> {
   const corps = await db
@@ -249,6 +275,18 @@ export async function rebalanceFundToTarget(
     /** v2: the turn's tx thresholds, loaded once by the cron. */
     txThresholds?: TxThresholds;
     turnLengthMinutes?: number;
+    /**
+     * Pass-level equity pool snapshot. Every settled buy and sale advances it,
+     * so later funds quote against the cash earlier trades left, exactly as a
+     * per-fund read would have seen.
+     */
+    equityPools?: Map<CurrencyCode, EquityMarketPool>;
+    /** Sale-history turn, resolved once for the pass instead of per fund. */
+    resolveSellTurn?: () => Promise<number>;
+    /** This fund's open buy bids, loaded for every rebalancing fund in one read. */
+    openBids?: ShareOrder[];
+    /** Bid ledger rows, flushed once by the caller after the pass. */
+    ledgerSink?: TxInput[];
   }
 ): Promise<{ buys: number; sells: number; bidsPlaced: number; bidsCancelled: number }> {
   if (fund.mandate?.mode === "picked_stocks" && !(await bankFundAcceptsSubscriptions(db, fund)))
@@ -269,10 +307,15 @@ export async function rebalanceFundToTarget(
       ? (shared?.audit ?? (await loadFloatAuditContext(db)))
       : undefined;
   const pools =
-    plan.sells.length + plan.buys.length > 0 ? await loadEquityPoolsByCurrency(db) : undefined;
+    plan.sells.length + plan.buys.length > 0
+      ? (shared?.equityPools ?? (await loadEquityPoolsByCurrency(db)))
+      : undefined;
   const sellInputs =
     plan.sells.length > 0
-      ? await Promise.all([loadFxRatesByCurrency(db), getCurrentTurn(db)])
+      ? await Promise.all([
+          loadFxRatesByCurrency(db),
+          shared?.resolveSellTurn ? shared.resolveSellTurn() : getCurrentTurn(db),
+        ])
       : undefined;
   for (const leg of plan.sells) {
     // The plan has one sell per corporation, and a sale only changes that
@@ -309,10 +352,12 @@ export async function rebalanceFundToTarget(
   const inBasketIds = new Set(fund.targetConstituents.map((t) => t.corporationId.toString()));
 
   // Cancel stale or off-basket open bids for this fund before placing new ones.
-  const allOpenFundBids = await db
-    .collection<ShareOrder>("shareOrders")
-    .find({ placerFundId: fund._id, type: "buy", status: "open" })
-    .toArray();
+  const allOpenFundBids =
+    shared?.openBids ??
+    (await db
+      .collection<ShareOrder>("shareOrders")
+      .find({ placerFundId: fund._id, type: "buy", status: "open" })
+      .toArray());
 
   const now = Date.now();
   const cancelledBidIds = new Set<string>();
@@ -359,6 +404,7 @@ export async function rebalanceFundToTarget(
   );
 
   const bidTxSink: Omit<IndexFundTransaction, "_id">[] = [];
+  const bidLedgerSink: TxInput[] = [];
   for (const leg of fund.mandate?.mode === "picked_stocks" ? [] : plan.bids) {
     const corpIdStr = leg.corporationId.toString();
     // Never stack: skip if an open bid already exists for this (fund, corp).
@@ -382,6 +428,9 @@ export async function rebalanceFundToTarget(
         fxRate,
         turn: currentTurn,
         txSink: bidTxSink,
+        // The mandate this loop already filtered on is the same document.
+        verifiedNotPickedStocks: true,
+        ...(shared?.ledgerSink ? { ledgerSink: bidLedgerSink } : {}),
         ...(shared?.txThresholds ? { thresholds: shared.txThresholds } : {}),
         ...(shared?.turnLengthMinutes != null
           ? { turnLengthMinutes: shared.turnLengthMinutes }
@@ -400,6 +449,13 @@ export async function rebalanceFundToTarget(
     }
   }
   await insertFundTransactionsBulk(db, bidTxSink);
+  if (shared?.ledgerSink) {
+    shared.ledgerSink.push(...bidLedgerSink);
+  } else if (bidLedgerSink.length > 0) {
+    // No pass-level flush was handed in: emit this fund's rows in one write.
+    if (shared?.txThresholds) await emitTxBulk(db, bidLedgerSink, shared.txThresholds);
+    else for (const entry of bidLedgerSink) await emitTx(db, entry);
+  }
 
   return { buys, sells, bidsPlaced, bidsCancelled };
 }

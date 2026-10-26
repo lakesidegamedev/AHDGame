@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { CampaignActionModal } from "./components/CampaignActionModal";
 import { useTranslations } from "next-intl";
 import { useCurrency } from "@/contexts/CurrencyContext";
@@ -27,10 +28,24 @@ import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmoun
 import ActionCard from "./components/ActionCard";
 import ActionCardCompact from "./components/ActionCardCompact";
 import ActionsHero from "./components/ActionsHero";
-import PlayerEventCard from "./components/PlayerEventCard";
-import DebateCard from "./components/DebateCard";
-import CrisisActionCard from "./components/CrisisActionCard";
-import EndorsePresidentCard from "./components/EndorsePresidentCard";
+
+// Conditional banners: each renders nothing unless the player has a pending
+// event, a live debate, an active crisis or an unendorsed home presidential
+// race. They are code-split so the action grid's first load does not carry
+// them or the metric catalogue behind the crisis card. Each still
+// server-renders when it has something to show, so nothing reserves space and
+// then moves.
+const NullFallback = () => null;
+const PlayerEventCard = dynamic(() => import("./components/PlayerEventCard"), {
+  loading: NullFallback,
+});
+const DebateCard = dynamic(() => import("./components/DebateCard"), { loading: NullFallback });
+const CrisisActionCard = dynamic(() => import("./components/CrisisActionCard"), {
+  loading: NullFallback,
+});
+const EndorsePresidentCard = dynamic(() => import("./components/EndorsePresidentCard"), {
+  loading: NullFallback,
+});
 import CategoryFilter from "./components/CategoryFilter";
 import ViewToggle from "./components/ViewToggle";
 import CategoryHeading from "./components/CategoryHeading";

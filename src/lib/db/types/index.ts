@@ -196,7 +196,7 @@ export type {
   CorporationVoteType,
   CorporationVoteStatus,
 } from "./corporationVote";
-export type { ShareListing, ShareOffer } from "./shareListings";
+export type { NegotiatedSaleTerms, ShareListing, ShareOffer } from "./shareListings";
 export type { ShareTradeHistory, ShareTradeKind, ShareTradeParty } from "./shareTradeHistory";
 export type { EquityMarketPool, EquityMarketPoolFlowKind } from "./equityMarketPool";
 export type { CommodityFlow } from "./commodityFlow";

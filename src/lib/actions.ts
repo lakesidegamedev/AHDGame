@@ -1,6 +1,6 @@
 import type { Character, State, ActionType } from "@/lib/db/types";
 import { getHomeCurrency, getTotalPersonalLiquidWealth } from "@/lib/currency/characterFunds";
-import { CURRENCY_SYMBOLS, type CurrencyCode } from "@/lib/constants/currencies";
+import { CURRENCY_SYMBOLS, type CurrencyCode } from "@/lib/constants/currencyCodes";
 import { campaignAnchorToLocal } from "@/lib/campaigns/campaignCurrency";
 import type { StatKey } from "@/lib/stats/statsConstants";
 import {
