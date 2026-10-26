@@ -1,4 +1,4 @@
-import { formatFundsCompact } from "@/lib/utils/formatters";
+import { formatFundsCompact } from "@/lib/utils/formattersCore";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
 import { getPollActionCost, getPollBaseFundCost } from "@/lib/actions";
 import {

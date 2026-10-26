@@ -775,10 +775,17 @@ export default async function CharacterPage({ params }: PageProps) {
 
             <CareerHistory
               character={{
-                careerHistory: character.careerHistory,
+                // Titles are resolved here, where the country registry is
+                // already loaded, rather than in the browser bundle.
+                careerHistory: (character.careerHistory ?? []).map((event) =>
+                  event.office
+                    ? { ...event, officeLabel: getOfficeLabel(event.office, character.countryId) }
+                    : event
+                ),
                 currentOffice: character.currentOffice,
                 countryId: character.countryId,
               }}
+              currentOfficeLabel={officeLabel}
               partyNames={partyNames}
               gameDateAnchor={gameDateAnchor}
               partyHistory={partyHistory}

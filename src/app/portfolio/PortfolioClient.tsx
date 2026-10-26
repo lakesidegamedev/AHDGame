@@ -4,6 +4,7 @@ import { PlayerIncomeTaxStatement } from "@/components/portfolio/PlayerIncomeTax
 import type { PlayerTaxStatement } from "@/lib/budget/playerIncomeTaxSummary";
 import { useGameEvents } from "@/hooks/useGameEvents";
 
+import dynamic from "next/dynamic";
 import { useState, useEffect, Suspense, useMemo, useCallback, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { captureClientException } from "@/lib/observability/sentryClientLazy";
@@ -12,16 +13,8 @@ import { isTransientRequestFailure } from "@/lib/errors/transient";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { Skeleton } from "@/components/ui";
 import BackButton from "@/components/BackButton";
-import { StockHoldingsView, StockHoldingValues } from "@/components/portfolio/StockHoldingsView";
+import { StockHoldingValues, StockHoldingsView } from "@/components/portfolio/StockHoldingsView";
 import { PortfolioChart } from "@/components/charts/PortfolioChart";
-import { PortfolioBreakdownChart } from "@/components/charts/PortfolioBreakdownChart";
-import { WireTransferCard } from "./components/WireTransferCard";
-import { CurrencyWallet } from "@/components/forex/CurrencyWallet";
-import { DisplayPreferenceToggle } from "@/components/forex/DisplayPreferenceToggle";
-import CorporationPortfolioView from "./components/CorporationPortfolioView";
-import { FundHoldingsPanel } from "./components/FundHoldingsPanel";
-import { OpenShareOrdersPanel } from "./components/OpenShareOrdersPanel";
-import { TradeHistoryPanel } from "./components/TradeHistoryPanel";
 import {
   PortfolioShell,
   OwnerToggle,
@@ -37,8 +30,57 @@ import {
   type PortfolioRailItem,
 } from "./components/PortfolioShell";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import { LoansPane, type LocSnapshot } from "./components/LoansPane";
-import { BondsTable, type Holding, type BondHolding } from "@/components/portfolio/HoldingsTables";
+import type { LocSnapshot } from "./components/LoansPane";
+import type { Holding, BondHolding } from "@/components/portfolio/HoldingsTables";
+
+// One section renders at a time: the overview is the default and stays eager,
+// every other rail entry mounts only after it is picked. Statically importing
+// them shipped the fund trade panel, its currency rules, the loans pane and the
+// transfer form on every portfolio visit (5.4k views / 30 days) for a screen
+// most readers never opened.
+const SectionFallback = () => (
+  <div className="h-64 animate-pulse rounded-lg bg-muted" aria-hidden="true" />
+);
+
+const CorporationPortfolioView = dynamic(() => import("./components/CorporationPortfolioView"), {
+  loading: SectionFallback,
+});
+const FundHoldingsPanel = dynamic(
+  () => import("./components/FundHoldingsPanel").then((m) => m.FundHoldingsPanel),
+  { loading: SectionFallback }
+);
+const OpenShareOrdersPanel = dynamic(
+  () => import("./components/OpenShareOrdersPanel").then((m) => m.OpenShareOrdersPanel),
+  { loading: SectionFallback }
+);
+const TradeHistoryPanel = dynamic(
+  () => import("./components/TradeHistoryPanel").then((m) => m.TradeHistoryPanel),
+  { loading: SectionFallback }
+);
+const LoansPane = dynamic(() => import("./components/LoansPane").then((m) => m.LoansPane), {
+  loading: SectionFallback,
+});
+const WireTransferCard = dynamic(
+  () => import("./components/WireTransferCard").then((m) => m.WireTransferCard),
+  { loading: SectionFallback }
+);
+const CurrencyWallet = dynamic(
+  () => import("@/components/forex/CurrencyWallet").then((m) => m.CurrencyWallet),
+  { loading: SectionFallback }
+);
+const DisplayPreferenceToggle = dynamic(
+  () => import("@/components/forex/DisplayPreferenceToggle").then((m) => m.DisplayPreferenceToggle),
+  { loading: SectionFallback }
+);
+const BondsTable = dynamic(
+  () => import("@/components/portfolio/HoldingsTables").then((m) => m.BondsTable),
+  { loading: SectionFallback }
+);
+const PortfolioBreakdownChart = dynamic(
+  () =>
+    import("@/components/charts/PortfolioBreakdownChart").then((m) => m.PortfolioBreakdownChart),
+  { loading: SectionFallback }
+);
 
 interface MeCeoCorporation {
   _id: string;

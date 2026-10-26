@@ -10,10 +10,7 @@ import {
 } from "react";
 import { BLEND, FONT } from "@/components/blend/tokens";
 
-/** The stage headline: "The 1992 Presidential Election". */
-export function presidentialTitle(year: number | string | null | undefined): string {
-  return year ? `The ${year} Presidential Election` : "The Presidential Election";
-}
+export { presidentialTitle } from "./presidentialTitle";
 
 export interface PresidentialStageProps {
   /** "The 1992 Presidential Election". */

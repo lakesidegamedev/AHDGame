@@ -1,29 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import type { SupplyListingView } from "@/lib/db/types/supplyListing";
 import { useMarketJson } from "./useMarketJson";
 import { PanelState } from "./marketUi";
 import type { CommodityData } from "@/app/country/[code]/stockmarket/types";
-import { SupplyOfferHeader, SupplyOfferRow, type OfferCorporation } from "./SupplyOfferRow";
+import { SupplyOfferHeader, SupplyOfferRow } from "./SupplyOfferRow";
 import {
   DEFAULT_OFFER_FILTERS,
+  SUPPLY_PAGE_SIZE,
   SupplyFilterBar,
   offersQuery,
   type OfferFilters,
+  type SupplyOffersResponse,
 } from "./supplyOfferUi";
-
-export const SUPPLY_PAGE_SIZE = 20;
-
-export interface SupplyOffersResponse {
-  enabled: boolean;
-  offers: SupplyListingView[];
-  myCorporations: OfferCorporation[];
-  currentTurn: number;
-  page: number;
-  hasMore: boolean;
-  total: number;
-}
 
 export function SupplyDealsPanel() {
   const [page, setPage] = useState(1);
