@@ -63,7 +63,7 @@ const profiles = families.map((family) => {
     secondaryResponseFactors: vectors[3],
     responseMeaning:
       family.id === "L49"
-        ? "country-relative entry access, not migration flow"
+        ? "country-relative entry access; demographics scales policy inflow by this factor"
         : family.id === "L50" || family.id === "L51"
           ? "legal access only; safety and health outcomes unscored"
           : "illustrative normalized response, not approved game balance",
