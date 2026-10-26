@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useRef, useCallback } from "react";
+import React, { useEffect, useRef, useCallback, useState } from "react";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { useClickOutside } from "@/hooks/useClickOutside";
 import { fetchJson } from "@/lib/observability/fetchJson";
@@ -9,13 +10,12 @@ import { isActionRequiredType } from "@/lib/inbox/priority";
 import type { NotificationType } from "@/lib/db/types/notifications";
 import Link from "next/link";
 import Image from "next/image";
-import { CDN_LOGO_URL } from "@/lib/images/staticCdnAssets";
+import { CDN_LOGO_URL } from "@/lib/images/cdnStaticUrls";
 import { usePathname } from "next/navigation";
 import { StateDropdown } from "./StateDropdown";
 import { SingleplayerEndTurnButton } from "@/components/singleplayer/SingleplayerEndTurnButton";
 import { StaffDropdown } from "./StaffDropdown";
 import { NationDropdown } from "./NationDropdown";
-import { MobileNationalDetails } from "./navbar/MobileNationalDetails";
 import { WorldDropdown } from "./WorldDropdown";
 import { SettingsDropdown } from "./SettingsDropdown";
 import { CountryFlag } from "@/components/CountryFlag";
@@ -27,7 +27,30 @@ import {
   HELP_SUPPORT_EMAIL,
   HELP_STATUS_URL,
 } from "./HelpDropdown";
-import { UniversalSearch } from "./UniversalSearch";
+// Interaction-only panels load on first open (or on hover/focus of the trigger),
+// so they stay out of the first-paint graph. The triggers themselves stay eager.
+const UniversalSearch = dynamic(() => import("./UniversalSearch").then((m) => m.UniversalSearch), {
+  ssr: false,
+});
+const ProfileSwitcher = dynamic(
+  () => import("./navbar/ProfileSwitcher").then((m) => m.ProfileSwitcher),
+  { ssr: false }
+);
+const NavbarNotificationPanel = dynamic(
+  () => import("./NavbarNotificationPanel").then((m) => m.NavbarNotificationPanel),
+  { ssr: false }
+);
+const preloadSearch = () => import("./UniversalSearch");
+const preloadProfileSwitcher = () => import("./navbar/ProfileSwitcher");
+const preloadNotificationPanel = () => import("./NavbarNotificationPanel");
+const MobileWorldLinks = dynamic(
+  () => import("./navbar/MobileWorldLinks").then((m) => m.MobileWorldLinks),
+  { ssr: false }
+);
+const MobileNationalDetails = dynamic(
+  () => import("./navbar/MobileNationalDetails").then((m) => m.MobileNationalDetails),
+  { ssr: false }
+);
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
 import { useCountryContext } from "@/hooks/useCountryContext";
@@ -43,14 +66,10 @@ import {
   countryUrl,
   scotusJusticeOfficeUrl,
 } from "@/lib/urls";
-import { ProfileSwitcher, ImperialMark } from "./navbar/ProfileSwitcher";
+import { ImperialMark } from "./navbar/ImperialMark";
 import { viewerIsSingleplayerOwner, visibleStaffNavItems } from "@/components/navbar/staffNavItems";
-import { visibleWorldNavItems } from "@/components/navbar/worldNavItems";
 import { Wordmark } from "@/components/Wordmark";
-import {
-  MOBILE_MENU_PANEL_CLASS,
-  NOTIFICATION_LIST_CLASS,
-} from "@/components/navbar/dropdownStyles";
+import { MOBILE_MENU_PANEL_CLASS } from "@/components/navbar/dropdownStyles";
 
 interface AdminCharacter {
   id: string;
@@ -199,6 +218,11 @@ export const Navbar = React.memo(function Navbar({
   const profileDropdownRef = useRef<HTMLDivElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const notifDropdownRef = useRef<HTMLDivElement>(null);
+  // Search is interactive only; keep it mounted after the first open so closing
+  // and reopening keeps the query, but do not ship it on first paint.
+  // Search is interactive only; mount it on first open and keep it mounted so
+  // closing and reopening keeps the query, but keep it off first paint.
+  const [searchMounted, setSearchMounted] = useState(false);
 
   // Derive country context from URL, path, or the server-resolved page country.
   const { pageCountry, userCountry, isUKContext } = useCountryContext(
@@ -419,6 +443,8 @@ export const Navbar = React.memo(function Navbar({
               <div className="relative" ref={profileDropdownRef}>
                 <button
                   onClick={() => dispatch({ type: "TOGGLE_DROPDOWN", key: "profile" })}
+                  onPointerEnter={preloadProfileSwitcher}
+                  onFocus={preloadProfileSwitcher}
                   className={`relative flex items-center gap-2 px-2.5 py-1 text-sm transition-colors hover:text-foreground ${isNavActive(pathname, "/profile") ? "font-medium text-foreground after:absolute after:bottom-0 after:left-1 after:right-1 after:h-px after:rounded-full after:bg-primary after:opacity-70" : "text-muted"}`}
                   aria-expanded={profileOpen}
                   aria-haspopup="menu"
@@ -561,14 +587,21 @@ export const Navbar = React.memo(function Navbar({
               }`}
               style={{ pointerEvents: searchOpen ? "auto" : "none" }}
             >
-              <UniversalSearch
-                open={searchOpen}
-                onNavigate={() => dispatch({ type: "SET_POPOVER", key: "search", open: false })}
-              />
+              {searchMounted && (
+                <UniversalSearch
+                  open={searchOpen}
+                  onNavigate={() => dispatch({ type: "SET_POPOVER", key: "search", open: false })}
+                />
+              )}
             </div>
 
             <button
-              onClick={() => dispatch({ type: "SET_POPOVER", key: "search", open: !searchOpen })}
+              onClick={() => {
+                if (!searchOpen) setSearchMounted(true);
+                dispatch({ type: "SET_POPOVER", key: "search", open: !searchOpen });
+              }}
+              onPointerEnter={preloadSearch}
+              onFocus={preloadSearch}
               className={`relative flex items-center justify-center rounded-lg p-2 transition-colors hover:bg-card hover:text-foreground ${searchOpen ? "text-foreground bg-card" : "text-muted"}`}
               aria-label={t("common.search")}
               aria-expanded={searchOpen}
@@ -605,6 +638,8 @@ export const Navbar = React.memo(function Navbar({
               <div className="relative" ref={notifDropdownRef}>
                 <button
                   onClick={() => dispatch({ type: "SET_POPOVER", key: "notif", open: !notifOpen })}
+                  onPointerEnter={preloadNotificationPanel}
+                  onFocus={preloadNotificationPanel}
                   className={`relative flex items-center justify-center rounded-lg p-2 transition-colors hover:bg-card hover:text-foreground ${isNavActive(pathname, "/notifications") ? "text-foreground" : "text-muted"} ${notifPreviews.some((n) => !n.read && isActionRequiredType(n.type as NotificationType)) ? "ahd-bell-pulse" : ""}`}
                   aria-label={
                     unreadCount > 0
@@ -630,119 +665,12 @@ export const Navbar = React.memo(function Navbar({
                   )}
                 </button>
                 {notifOpen && (
-                  <div className="absolute right-0 z-50 mt-2 w-80 max-w-[calc(100vw-1rem)] rounded-xl border border-card-border bg-card shadow-modal overflow-hidden">
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-card-border">
-                      <span className="text-sm font-semibold">{t("common.notifications")}</span>
-                      <Link
-                        href="/notifications"
-                        onClick={() => dispatch({ type: "SET_POPOVER", key: "notif", open: false })}
-                        className="text-xs text-primary hover:text-primary/80 transition-colors"
-                      >
-                        {t("notifications.openInbox")}
-                      </Link>
-                    </div>
-                    {notifPreviews.some(
-                      (n) => !n.read && isActionRequiredType(n.type as NotificationType)
-                    ) && (
-                      <div className="flex items-center gap-2 px-4 py-2 bg-primary/5 border-b border-card-border">
-                        <span className="ahd-bell-pulse h-2 w-2 shrink-0 rounded-full bg-primary" />
-                        <span className="text-xs text-fg-2">
-                          {t("notifications.awaitingInput", {
-                            count: notifPreviews.filter(
-                              (n) => !n.read && isActionRequiredType(n.type as NotificationType)
-                            ).length,
-                          })}
-                        </span>
-                      </div>
-                    )}
-                    <div className={`py-1 ${NOTIFICATION_LIST_CLASS}`}>
-                      {notifPreviews.length === 0 ? (
-                        <p className="px-4 py-6 text-center text-sm text-muted">
-                          {t("notifications.empty")}
-                        </p>
-                      ) : (
-                        [...notifPreviews]
-                          .sort(
-                            (a, b) =>
-                              Number(!b.read && isActionRequiredType(b.type as NotificationType)) -
-                              Number(!a.read && isActionRequiredType(a.type as NotificationType))
-                          )
-                          .map((n) => (
-                            <div
-                              key={n._id}
-                              className={`group flex items-start gap-2 px-4 py-3 text-sm transition-colors hover:bg-card-elevated ${n.read ? "opacity-60" : ""}`}
-                            >
-                              {!n.read && (
-                                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                              )}
-                              <Link
-                                href="/notifications"
-                                onClick={() =>
-                                  dispatch({ type: "SET_POPOVER", key: "notif", open: false })
-                                }
-                                className="flex-1 min-w-0"
-                              >
-                                {!n.read && isActionRequiredType(n.type as NotificationType) && (
-                                  <span className="mb-0.5 inline-block rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-primary bg-primary/10">
-                                    {t("notifications.needsYou")}
-                                  </span>
-                                )}
-                                <p
-                                  className={`font-medium truncate ${n.read ? "text-muted" : "text-foreground"}`}
-                                >
-                                  {n.title}
-                                </p>
-                                <p className="text-xs text-muted line-clamp-1 mt-0.5">
-                                  {n.message}
-                                </p>
-                              </Link>
-                              <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                {!n.read && (
-                                  <button
-                                    onClick={(e) => markNotifRead(n._id, e)}
-                                    className="p-1 rounded text-muted hover:text-foreground hover:bg-card-muted transition-colors"
-                                    title={t("notifications.markRead")}
-                                  >
-                                    <svg
-                                      className="h-3.5 w-3.5"
-                                      fill="none"
-                                      viewBox="0 0 24 24"
-                                      stroke="currentColor"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M5 13l4 4L19 7"
-                                      />
-                                    </svg>
-                                  </button>
-                                )}
-                                <button
-                                  onClick={(e) => deleteNotif(n._id, e)}
-                                  className="p-1 rounded text-muted hover:text-error hover:bg-card-muted transition-colors"
-                                  title={t("notifications.delete")}
-                                >
-                                  <svg
-                                    className="h-3.5 w-3.5"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                    />
-                                  </svg>
-                                </button>
-                              </div>
-                            </div>
-                          ))
-                      )}
-                    </div>
-                  </div>
+                  <NavbarNotificationPanel
+                    previews={notifPreviews}
+                    onMarkRead={markNotifRead}
+                    onDelete={deleteNotif}
+                    onClose={() => dispatch({ type: "SET_POPOVER", key: "notif", open: false })}
+                  />
                 )}
               </div>
             )}
@@ -822,6 +750,8 @@ export const Navbar = React.memo(function Navbar({
               <div>
                 <button
                   onClick={() => dispatch({ type: "TOGGLE_DROPDOWN", key: "profile" })}
+                  onPointerEnter={preloadProfileSwitcher}
+                  onFocus={preloadProfileSwitcher}
                   className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-white/5"
                   aria-expanded={profileOpen}
                 >
@@ -1201,43 +1131,17 @@ export const Navbar = React.memo(function Navbar({
                   <ChevronIcon open={worldOpen} />
                 </button>
                 {worldOpen && (
-                  <div className="ml-3 mt-0.5 space-y-0.5 border-l border-card-border/60 pl-3">
-                    {visibleWorldNavItems({
-                      myCorporationHasGroup,
-                      countryId: pageCountry,
-                      myCorporationId,
-                      myUnionId,
-                      conflictsEnabled,
-                      unionsEnabled,
-                      settlementCrisisLive,
-                    }).map((item) => (
-                      <Link
-                        key={item.id}
-                        href={item.href}
-                        onClick={closeMobileMenu}
-                        className={`flex items-center rounded-lg px-3 py-2 text-sm transition-colors hover:bg-white/5 ${
-                          item.primary
-                            ? isNavActive(pathname, item.href)
-                              ? "bg-white/5 font-medium"
-                              : "text-primary"
-                            : isNavActive(pathname, item.href) ||
-                                (item.id === "stockMarket" && pathname.includes("/stockmarket")) ||
-                                (item.id === "forex" && pathname.includes("/forex"))
-                              ? "bg-white/5 font-medium"
-                              : "text-muted"
-                        }`}
-                        aria-current={
-                          isNavActive(pathname, item.href) ||
-                          (item.id === "stockMarket" && pathname.includes("/stockmarket")) ||
-                          (item.id === "forex" && pathname.includes("/forex"))
-                            ? "page"
-                            : undefined
-                        }
-                      >
-                        {t(item.labelKey)}
-                      </Link>
-                    ))}
-                  </div>
+                  <MobileWorldLinks
+                    pathname={pathname}
+                    onNavigate={closeMobileMenu}
+                    countryId={pageCountry}
+                    myCorporationId={myCorporationId}
+                    myCorporationHasGroup={myCorporationHasGroup}
+                    myUnionId={myUnionId}
+                    conflictsEnabled={conflictsEnabled}
+                    unionsEnabled={unionsEnabled}
+                    settlementCrisisLive={settlementCrisisLive}
+                  />
                 )}
               </div>
             )}
