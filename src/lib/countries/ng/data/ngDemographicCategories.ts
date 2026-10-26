@@ -17,17 +17,6 @@ import type { DemographicCategory } from "@/lib/db/types";
  *
  * demographicProfileId: "ng_voterGroups"
  */
-export const NG_VOTER_GROUP_BASELINES: Record<string, number> = {
-  northern_muslim_conservative: 45,
-  yoruba_moderate: 55,
-  igbo_business: 60,
-  niger_delta_youth: 50,
-  christian_conservative: 50,
-  urban_young_progressive: 40,
-  rural_agrarian: 35,
-  lagos_cosmopolitan: 55,
-};
-
 export const ngDemographicCategories: DemographicCategory[] = [
   {
     _id: "ng_voterGroups",

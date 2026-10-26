@@ -6,34 +6,13 @@ import {
   DEMOGRAPHIC_LABELS as US_GROUP_LABELS,
   demographicCategories as usVoterArchetypeCategories,
 } from "@/lib/seeds/demographicCategories";
-import {
-  ukDemographicCategories,
-  UK_VOTER_GROUP_BASELINES,
-} from "@/lib/seeds/uk/ukDemographicCategories";
-import {
-  jpDemographicCategories,
-  JP_VOTER_GROUP_BASELINES,
-} from "@/lib/countries/jp/data/jpDemographicCategories";
-import {
-  deDemographicCategories,
-  DE_VOTER_GROUP_BASELINES,
-} from "@/lib/seeds/de/deDemographicCategories";
-import {
-  ieDemographicCategories,
-  IE_VOTER_GROUP_BASELINES,
-} from "@/lib/seeds/ie/ieDemographicCategories";
-import {
-  cnDemographicCategories,
-  CN_VOTER_GROUP_BASELINES,
-} from "@/lib/seeds/cn/cnDemographicCategories";
-import {
-  brDemographicCategories,
-  BR_VOTER_GROUP_BASELINES,
-} from "@/lib/seeds/br/brDemographicCategories";
-import {
-  ddDemographicCategories,
-  DD_VOTER_GROUP_BASELINES,
-} from "@/lib/seeds/dd/ddDemographicCategories";
+import { ukDemographicCategories } from "@/lib/seeds/uk/ukDemographicCategories";
+import { jpDemographicCategories } from "@/lib/countries/jp/data/jpDemographicCategories";
+import { deDemographicCategories } from "@/lib/seeds/de/deDemographicCategories";
+import { ieDemographicCategories } from "@/lib/seeds/ie/ieDemographicCategories";
+import { cnDemographicCategories } from "@/lib/seeds/cn/cnDemographicCategories";
+import { brDemographicCategories } from "@/lib/seeds/br/brDemographicCategories";
+import { ddDemographicCategories } from "@/lib/seeds/dd/ddDemographicCategories";
 
 export interface CanvassGroup {
   id: string;
@@ -101,38 +80,30 @@ function fromSeed(seed: DemographicCategory[]): CanvassCategory[] {
 
 interface ProfileEntry {
   categories: CanvassCategory[];
-  baselines: Record<string, number> | null;
 }
 
 /** Registry keyed by demographicProfileId. */
 const PROFILE_REGISTRY: Record<string, () => ProfileEntry> = {
   uk_archetypes: () => ({
     categories: fromSeed(ukDemographicCategories),
-    baselines: UK_VOTER_GROUP_BASELINES,
   }),
   jp_archetypes: () => ({
     categories: fromSeed(jpDemographicCategories),
-    baselines: JP_VOTER_GROUP_BASELINES,
   }),
   de_archetypes: () => ({
     categories: fromSeed(deDemographicCategories),
-    baselines: DE_VOTER_GROUP_BASELINES,
   }),
   ie_archetypes: () => ({
     categories: fromSeed(ieDemographicCategories),
-    baselines: IE_VOTER_GROUP_BASELINES,
   }),
   cn_archetypes: () => ({
     categories: fromSeed(cnDemographicCategories),
-    baselines: CN_VOTER_GROUP_BASELINES,
   }),
   br_archetypes: () => ({
     categories: fromSeed(brDemographicCategories),
-    baselines: BR_VOTER_GROUP_BASELINES,
   }),
   dd_archetypes: () => ({
     categories: fromSeed(ddDemographicCategories),
-    baselines: DD_VOTER_GROUP_BASELINES,
   }),
 };
 
@@ -142,7 +113,7 @@ function resolveProfile(countryId: string | undefined): ProfileEntry {
     : undefined;
   const entry = profileId ? PROFILE_REGISTRY[profileId] : undefined;
   // US (us_archetypes) and any unknown/unseeded profile (incl. ng_archetypes) → US default.
-  return entry ? entry() : { categories: buildUsCategories(), baselines: null };
+  return entry ? entry() : { categories: buildUsCategories() };
 }
 
 /** Full category → group structure for a country (UI + validation). */
@@ -162,13 +133,6 @@ export function resolveCanvassGroup(
   const group = category?.groups.find((g) => g.id === groupId);
   if (!group) return null;
   return { economicLean: group.economicLean, socialLean: group.socialLean, categoryKey };
-}
-
-/** Voter-group baseline turnout for a single-category country (region page). null for US. */
-export function getVoterGroupBaselines(
-  countryId: string | undefined
-): Record<string, number> | null {
-  return resolveProfile(countryId).baselines;
 }
 
 // ─── Voter-archetype layer ────────────────────────────────────────────────────
