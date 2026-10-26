@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import type { BillChamber } from "@/lib/db/types/legislation";
 import { mapStateBillToBillDisplay } from "@/lib/legislature/mapStateBillToBillDisplay";
 import { useGameClock } from "@/contexts/useGameClock";
@@ -10,10 +11,19 @@ import { BillListControls, type BillVoteFilter } from "@/components/bills/BillLi
 import { EmptyState } from "@/app/congress/components/CongressShared";
 import { regionApiSubUrl, regionStateBillUrl } from "@/lib/urls";
 import { type CountryId } from "@/lib/constants/countriesCore";
-import { getRegionalBillAssentTitleForState } from "@/lib/constants/countryClientConfig";
+import { getRegionalBillAssentTitleForState } from "@/lib/constants/countryOfficesClient";
 import type { StateBillDisplay } from "@/lib/legislature/dto/stateLegislature";
 import { BillEffectsSection } from "./BillEffectsSection";
-import { ProposeStateBillModal } from "./ProposeStateBillModal";
+// The propose flow only exists behind a click, and it brings the guided
+// legislation wizard, the metric catalog, the demographic weights and the
+// sector strategy tables with it. Kept out of the list's chunk; the placeholder
+// is the modal's own dimmed backdrop, so opening it never moves the page.
+const ProposeStateBillModal = dynamic(
+  () => import("./ProposeStateBillModal").then((m) => ({ default: m.ProposeStateBillModal })),
+  {
+    loading: () => <div className="fixed inset-0 z-50 bg-black/60" />,
+  }
+);
 
 export function BillsTab({
   bills,

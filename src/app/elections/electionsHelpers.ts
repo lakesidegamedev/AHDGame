@@ -1,4 +1,3 @@
-import { electionToLarpYear } from "@/lib/utils/formatters";
 import { electionRegionUrl } from "@/lib/urls";
 import type { ElectionDisplay } from "@/lib/db/types";
 import { isCloseRace } from "@/lib/elections/rules/closeRace";
@@ -109,23 +108,6 @@ export const ELECTION_STATE_NAMES: Record<string, string> = {
   NIR: "Northern Ireland",
   EAE: "East of England",
 };
-
-/**
- * Compute the LARP election year from election metadata (type, cycle, class).
- *
- * Prefer `resolveElectionYear(election)` when an Election doc is in hand —
- * that path uses the doc's baked `electionYear` and only falls back to cycle
- * math for legacy/un-backfilled rows. This helper is retained for callers
- * that only have positional pieces of the doc.
- */
-export function electionGameYearFromState(
-  electionType: string,
-  cycle: number,
-  senateClass?: number | null,
-  chamberClass?: number | null
-): number {
-  return electionToLarpYear(electionType, cycle, senateClass, chamberClass);
-}
 
 /** The shared "Close" rule (see `@/lib/elections/rules/closeRace`). */
 export function isCompetitiveElection(e: ElectionDisplay): boolean {

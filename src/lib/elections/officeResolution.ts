@@ -19,13 +19,13 @@
 
 import { type CountryId } from "@/lib/constants/countriesCore";
 import {
-  COUNTRY_CLIENT_CONFIGS,
-  type CountryClientChamberConfig,
-  type CountryClientOfficeType,
-} from "@/lib/constants/countryClientConfig";
+  COUNTRY_OFFICES,
+  type CountryOfficeChamberConfig,
+  type CountryOfficeTypeConfig,
+} from "@/lib/constants/countryOfficesClient";
 
 export interface ElectionOffice {
-  /** Stable grouping + URL key. Always the `CountryClientOfficeType.key`. */
+  /** Stable grouping + URL key. Always the `CountryOfficeTypeConfig.key`. */
   key: string;
   /** Singular office label, e.g. "Senator". */
   label: string;
@@ -55,19 +55,19 @@ const SPECIAL_TO_REGULAR: Readonly<Record<string, string>> = {
   special_commons: "commons",
 };
 
-function chambersOf(countryId: CountryId): CountryClientChamberConfig[] {
-  const config = COUNTRY_CLIENT_CONFIGS[countryId];
+function chambersOf(countryId: CountryId): CountryOfficeChamberConfig[] {
+  const config = COUNTRY_OFFICES[countryId];
   if (!config) return [];
   return [
     config.legislature?.lowerChamber,
     config.legislature?.upperChamber,
     config.subNationalChamber,
-  ].filter((c): c is CountryClientChamberConfig => !!c);
+  ].filter((c): c is CountryOfficeChamberConfig => !!c);
 }
 
 function orderOf(
-  office: CountryClientOfficeType,
-  chamber: CountryClientChamberConfig | null
+  office: CountryOfficeTypeConfig,
+  chamber: CountryOfficeChamberConfig | null
 ): number {
   if (office.isExecutive) return 0;
   if (office.isHeadOfState) return 1;
@@ -86,7 +86,7 @@ function orderOf(
  * allowlist.
  */
 export function listCountryOffices(countryId: CountryId): ElectionOffice[] {
-  const config = COUNTRY_CLIENT_CONFIGS[countryId];
+  const config = COUNTRY_OFFICES[countryId];
   if (!config) return [];
   const chambers = chambersOf(countryId);
 
@@ -122,7 +122,7 @@ export function resolveOfficeKeyForElectionType(
   countryId: CountryId,
   electionType: string
 ): string | null {
-  const config = COUNTRY_CLIENT_CONFIGS[countryId];
+  const config = COUNTRY_OFFICES[countryId];
   if (!config) return null;
 
   const type =
@@ -145,8 +145,8 @@ export function resolveOfficeKeyForElectionType(
 export function resolveChamberForOffice(
   countryId: CountryId,
   officeKey: string
-): CountryClientChamberConfig | null {
-  const config = COUNTRY_CLIENT_CONFIGS[countryId];
+): CountryOfficeChamberConfig | null {
+  const config = COUNTRY_OFFICES[countryId];
   const office = config?.officeTypes.find((o) => o.key === officeKey);
   if (!office?.chamberKey) return null;
   return chambersOf(countryId).find((c) => c.key === office.chamberKey) ?? null;

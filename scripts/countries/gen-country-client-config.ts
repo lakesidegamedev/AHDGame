@@ -33,6 +33,7 @@ import {
 import type { CountryId } from "../../src/lib/constants/countriesCore";
 
 const OUT = "src/lib/constants/countryClientConfig.ts";
+const OFFICES_OUT = "src/lib/constants/countryOfficesClient.ts";
 const REGENERATE = "npx tsx scripts/countries/gen-country-client-config.ts";
 
 /** `true` keeps the whole value; an object keeps only the named projection. */
@@ -147,6 +148,62 @@ const CLIENT_FIELDS: { readonly [key: string]: Projection } = {
   usdExchangeRate: true,
 };
 
+/**
+ * The chamber and office slice, written to `countryOfficesClient.ts`.
+ *
+ * The elections list groups races by office and builds its race filter from
+ * these tables, and `officeResolution.ts` maps an election type to the office
+ * it fills. All three read nothing else from a country, so they take this
+ * projection instead of the full client config: same values, without the
+ * names, routes, currencies, central banks and election systems.
+ */
+const OFFICE_FIELDS: { readonly [key: string]: Projection } = {
+  governmentType: true,
+  regionLabel: true,
+  regionalBillAssentTitle: true,
+  legislature: {
+    name: true,
+    lowerChamber: {
+      key: true,
+      name: true,
+      shortName: true,
+      seats: true,
+      description: true,
+      regionElectedClasses: true,
+    },
+    upperChamber: {
+      key: true,
+      name: true,
+      shortName: true,
+      seats: true,
+      description: true,
+      elected: true,
+      regionElectedClasses: true,
+    },
+  },
+  subNationalChamber: {
+    key: true,
+    name: true,
+    shortName: true,
+    regionalModel: true,
+  },
+  officeTypes: {
+    "[]": {
+      key: true,
+      label: true,
+      labelPlural: true,
+      chamberKey: true,
+      isExecutive: true,
+      isSubNational: true,
+      isHeadOfState: true,
+    },
+  },
+  // Whether either chamber can be dissolved early. The elections list needs it
+  // to recognise a snap race's type as belonging to that chamber.
+  lowerElectionSystem: { snapElectionsAllowed: true },
+  upperElectionSystem: { snapElectionsAllowed: true },
+};
+
 /** Drop keys from a source object that the projection does not name. */
 function project(value: unknown, projection: Projection, path: string): unknown {
   if (projection === true) return value;
@@ -241,6 +298,35 @@ for (const [preset, byCountry] of Object.entries(ERA_COUNTRY_CONFIG_OVERRIDES)) 
     if (Object.keys(changed).length > 0) projected[id] = changed;
   }
   if (Object.keys(projected).length > 0) eraOverrides[preset] = projected;
+}
+
+const officeConfigs: Record<string, unknown> = {};
+for (const id of ids) {
+  officeConfigs[id] = project(COUNTRY_CONFIGS[id], OFFICE_FIELDS as Projection, id);
+}
+
+/**
+ * The office projection's era overlays, diffed against its own base the same
+ * way the full client config's are: an era override carries a whole country,
+ * so only the chambers and offices it actually changes are written out.
+ */
+const officeEraOverrides: Record<string, Record<string, unknown>> = {};
+for (const [preset, byCountry] of Object.entries(ERA_COUNTRY_CONFIG_OVERRIDES)) {
+  const projected: Record<string, unknown> = {};
+  for (const [id, override] of Object.entries(byCountry)) {
+    if (!override) continue;
+    const value = project(override, OFFICE_FIELDS as Projection, `${preset}.${id}`) as Record<
+      string,
+      unknown
+    >;
+    const base = officeConfigs[id] as Record<string, unknown>;
+    const changed: Record<string, unknown> = {};
+    for (const [key, field] of Object.entries(value)) {
+      if (!deepEqual(field, base[key])) changed[key] = field;
+    }
+    if (Object.keys(changed).length > 0) projected[id] = changed;
+  }
+  if (Object.keys(projected).length > 0) officeEraOverrides[preset] = projected;
 }
 
 const eraNames: Record<string, Record<string, string>> = {};
@@ -535,6 +621,149 @@ export function getExecutiveOrderNamePlural(countryId: CountryId): string {
 }
 `;
 
+const officeText = `/**
+ * GENERATED FILE. DO NOT EDIT BY HAND.
+ *
+ *   ${REGENERATE}
+ *
+ * The institutional slice of the country registry: chambers, office types,
+ * government type and the regional executive.
+ *
+ * The elections list groups races into office sections and builds its race
+ * filter from these tables, \`officeResolution.ts\` maps an election type to the
+ * office and chamber it fills, and the state legislature and bill pages need
+ * the chamber that signs regional bills and what that office is called.
+ * Reading them from \`countryClientConfig\` shipped that whole 154 KB projection
+ * (names, routes, currencies, central banks, election systems, descriptors) to
+ * the browser for it; this file carries only the institutions those modules
+ * read.
+ *
+ * \`countryOfficesClient.test.ts\` pins every entry, including the per-era
+ * overlays, to \`COUNTRY_CLIENT_CONFIGS\`.
+ */
+import type { CountryId, GovernmentType } from "./countriesCore";
+
+/** One chamber, as the office tables need it. */
+export interface CountryOfficeChamberConfig {
+  key: string;
+  name: string;
+  shortName: string;
+  seats: number;
+  description?: string;
+  elected?: boolean;
+  regionElectedClasses?: boolean;
+  regionalModel?: boolean;
+}
+
+/** The national chambers a country's offices sit in. */
+export interface CountryOfficeLegislatureConfig {
+  /** Chamber name for the whole legislature ("Congress", "Bundestag"). */
+  name: string;
+  lowerChamber: CountryOfficeChamberConfig;
+  upperChamber?: CountryOfficeChamberConfig;
+}
+
+/** One office type an election can fill. */
+export interface CountryOfficeTypeConfig {
+  key: string;
+  label: string;
+  labelPlural: string;
+  chamberKey?: string;
+  isExecutive: boolean;
+  isSubNational: boolean;
+  isHeadOfState?: boolean;
+}
+
+/** Everything a country contributes to office resolution and the race filter. */
+export interface CountryOfficeConfig {
+  governmentType: GovernmentType;
+  /** Singular label for the country's regions ("State", "Land"). */
+  regionLabel: string;
+  /** Era-neutral title of the office that signs or vetoes regional bills. */
+  regionalBillAssentTitle?: string;
+  legislature: CountryOfficeLegislatureConfig;
+  subNationalChamber?: Pick<
+    CountryOfficeChamberConfig,
+    "key" | "name" | "shortName" | "regionalModel"
+  >;
+  officeTypes: CountryOfficeTypeConfig[];
+  lowerElectionSystem: { snapElectionsAllowed: boolean };
+  upperElectionSystem?: { snapElectionsAllowed: boolean };
+}
+
+/** Every country's chambers and offices. */
+export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = ${literal(officeConfigs)};
+
+/** Per-era chamber and office overlays, applied by {@link getCountryOfficeConfig}. */
+const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
+  string,
+  Partial<Record<CountryId, Partial<CountryOfficeConfig>>>
+> = ${literal(officeEraOverrides)};
+
+/** Client-safe office config for a country, honoring a preset's overlays. */
+export function getCountryOfficeConfig(id: CountryId, preset?: string): CountryOfficeConfig {
+  const base = COUNTRY_OFFICES[id];
+  const override = preset ? COUNTRY_OFFICE_ERA_OVERRIDES[preset]?.[id] : undefined;
+  if (!override) return base;
+  return { ...base, ...override };
+}
+
+/** \`COUNTRY_OFFICES[id].officeTypes\` entry for one office key, or undefined. */
+export function getCountryOfficeType(
+  id: CountryId,
+  officeKey: string
+): CountryOfficeTypeConfig | undefined {
+  return COUNTRY_OFFICES[id].officeTypes.find((o) => o.key === officeKey);
+}
+
+/**
+ * The office type of each country's regional chief executive. Countries the
+ * registry does not list fall back to the US-style "governor" key.
+ */
+const REGIONAL_BILL_ASSENT_OFFICE_KEY: Partial<Record<CountryId, string>> = ${literal(
+  regionalAssentOfficeKeys
+)};
+
+/** The officeType key of the country's regional chief executive. */
+export function getRegionalExecutiveOfficeKey(countryId: CountryId): string {
+  return REGIONAL_BILL_ASSENT_OFFICE_KEY[countryId] ?? "governor";
+}
+
+/** Short label for the regional chief executive who signs or vetoes regional bills. */
+export function getRegionalBillAssentTitle(countryId: CountryId): string {
+  const cfg = COUNTRY_OFFICES[countryId];
+  if (cfg.regionalBillAssentTitle) return cfg.regionalBillAssentTitle;
+  const key = REGIONAL_BILL_ASSENT_OFFICE_KEY[countryId];
+  const office = key ? cfg.officeTypes.find((o) => o.key === key) : undefined;
+  return office?.label ?? "Governor";
+}
+
+/** The United Kingdom's id, for the region-specific executive titles below. */
+const UK_COUNTRY_ID: CountryId = "UK";
+
+/**
+ * Region-aware regional-executive label. Two countries give particular regions
+ * a distinct title (London's mayor, Ireland's lord mayors and mayors), so the
+ * plain country title is not always what the page should print.
+ */
+export function getRegionalBillAssentTitleForState(
+  countryId: CountryId,
+  stateId: string | undefined | null
+): string {
+  if (countryId === UK_COUNTRY_ID && stateId && stateId.toUpperCase() === "LON") {
+    return "Mayor of London";
+  }
+  if (countryId === "IE" && stateId) {
+    const upper = stateId.toUpperCase();
+    if (upper === "DUB") return "Lord Mayor of Dublin";
+    if (upper === "COR") return "Lord Mayor of Cork";
+    if (upper === "LIM") return "Mayor of Limerick";
+    if (upper === "GAL") return "Mayor of Galway";
+  }
+  return getRegionalBillAssentTitle(countryId);
+}
+`;
+
 async function format(source: string): Promise<string> {
   const prettier = await import("prettier");
   const config = (await prettier.resolveConfig(OUT)) ?? {};
@@ -545,6 +774,12 @@ async function main(): Promise<void> {
   const formatted = await format(text);
   writeFileSync(OUT, formatted);
   console.log(`wrote ${OUT} (${formatted.length} bytes) from ${ids.length} countries`);
+
+  const officesFormatted = await format(officeText);
+  writeFileSync(OFFICES_OUT, officesFormatted);
+  console.log(
+    `wrote ${OFFICES_OUT} (${officesFormatted.length} bytes) from ${ids.length} countries`
+  );
 }
 
 void main();

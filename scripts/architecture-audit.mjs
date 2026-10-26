@@ -282,6 +282,12 @@ const SIZE_CAP_EXEMPT = [
   // helpers. Splitting it would put one data table across several files without
   // shrinking the browser bundle, which is the only reason it exists.
   "src/lib/constants/countryClientConfig.ts",
+  // GENERATED chamber/office projection of the same registry, written by the
+  // same script: one typed record per country plus the per-era overlay rows,
+  // with six lookup helpers and no branching of its own. It exists so the
+  // elections, region and bill pages stop shipping the full client config; the
+  // data is the same, so splitting the table would only add files.
+  "src/lib/constants/countryOfficesClient.ts",
   // Pure-data crisis/disaster template declarations (one object per template).
   "src/lib/crises/templates.ts",
   // Pure-data tech-tree node declarations (NodeSpec records, no logic).
