@@ -12,7 +12,7 @@ import BackButton from "@/components/BackButton";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { getCountryConfig } from "@/lib/constants/countries";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import { STATE_IDS } from "@/lib/constants/states";
 import { EXTRACTABLE_RESOURCES, COMMODITY_LABELS } from "@/lib/constants/commodities";
 import type { ExtractableResource } from "@/lib/constants/commodities";
@@ -152,7 +152,7 @@ export function USMapWithModes({
   onRegionClick,
 }: {
   mapData: MapOverviewResponse | null;
-  config: ReturnType<typeof getCountryConfig>;
+  config: ReturnType<typeof getCountryClientConfig>;
   onRegionClick: (id: string) => void;
 }) {
   const t = useTranslations("elections.atlas");

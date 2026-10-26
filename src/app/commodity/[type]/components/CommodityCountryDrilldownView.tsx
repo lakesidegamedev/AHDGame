@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import type { CountryId } from "@/lib/constants/countries";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { CountryFlag } from "@/components/CountryFlag";
 import { getStateDisplayName } from "@/lib/commodity-map";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -52,7 +52,7 @@ export default function CommodityCountryDrilldownView({
   exchangeRates,
   onBack,
 }: CommodityCountryDrilldownViewProps) {
-  const config = COUNTRY_CONFIGS[countryId];
+  const config = COUNTRY_CLIENT_CONFIGS[countryId];
   const router = useRouter();
   const currencyCode = getCommodityDisplayCurrency(countryId);
 

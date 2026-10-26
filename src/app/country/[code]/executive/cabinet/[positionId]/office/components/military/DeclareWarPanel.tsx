@@ -4,7 +4,7 @@ import { apiErrorText } from "@/lib/errors/catalog";
 import { useEffect, useState } from "react";
 import { SectionCard, Badge } from "../dossier";
 import { WAR_GOALS, WAR_DECLARATION_COOLDOWN_TURNS } from "@/lib/military/warGoals";
-import { type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import { useEnabledCountryIds } from "@/lib/hooks/useEnabledCountryIds";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { BILL_PROPOSE_ACTION_COST } from "@shared/constants/legislation";

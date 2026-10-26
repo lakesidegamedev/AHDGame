@@ -1295,8 +1295,10 @@ export function makeNppCorpDecision(
   // carry `countryOwnerId` and no `ownershipState`, so the old local check saw
   // them as private.
   if (plants?.enabled && !isStateOwned(corp) && groupDirection?.allowInvestment !== false) {
-    // Shared-snapshot pool lookup; see reinvestCandidatePool.
-    const poolFor = createReinvestPoolLookup(unownedByCountry);
+    // Shared-snapshot pool lookup; see reinvestCandidatePool. The shell builds
+    // one for the cohort: the index is a pure function of the pool snapshot, so
+    // rebuilding it per corporation walked every unowned row again per corp.
+    const poolFor = ctx.reinvestPoolFor ?? createReinvestPoolLookup(unownedByCountry);
 
     const candidates: ReinvestCandidate[] = [];
     // Autopilot commits at most a fixed share of cash above the floor to new

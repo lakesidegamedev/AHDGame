@@ -4,12 +4,12 @@ import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useToast } from "@/contexts/ToastContext";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import {
-  COUNTRY_CONFIGS,
-  getCountryConfig,
+  COUNTRY_CLIENT_CONFIGS,
+  getCountryClientConfig,
   getSubNationalLegislatureKey,
-  type CountryId,
-} from "@/lib/constants/countries";
+} from "@/lib/constants/countryClientConfig";
 import type { PlayerWhipMode } from "@/lib/db/types";
 import { regionApiSubUrl, partyApiUrl, legislatureUrl } from "@/lib/urls";
 import { fetchJson } from "@/lib/observability/fetchJson";
@@ -105,7 +105,7 @@ export function NppWhipPanel({
 }: NppWhipPanelProps) {
   const t = useTranslations("parties.whips");
   const { showToast } = useToast();
-  const resolvedCountryId = (countryId ?? COUNTRY_CONFIGS.US.id).toUpperCase() as CountryId;
+  const resolvedCountryId = (countryId ?? COUNTRY_CLIENT_CONFIGS.US.id).toUpperCase() as CountryId;
   const effectiveCountryId = resolvedCountryId.toLowerCase();
   const subNationalChamberKey = getSubNationalLegislatureKey(resolvedCountryId);
   const billsUrl =
@@ -125,7 +125,7 @@ export function NppWhipPanel({
   const [cabinetItems, setCabinetItems] = useState<LeadershipElectionItem[]>([]);
 
   const preferredBillChamberKey = useMemo(() => {
-    const config = getCountryConfig(resolvedCountryId);
+    const config = getCountryClientConfig(resolvedCountryId);
     const chamberKeys = [
       ...(config.upperElectionSystem && config.legislature.upperChamber
         ? [config.legislature.upperChamber.key]
@@ -325,11 +325,11 @@ export function NppWhipPanel({
         election.type === "speaker" ||
         election.type === "majority_leader" ||
         election.type === "minority_leader"
-          ? getCountryConfig((countryId ?? "US").toUpperCase() as CountryId).legislature
+          ? getCountryClientConfig((countryId ?? "US").toUpperCase() as CountryId).legislature
               .lowerChamber.key
-          : (getCountryConfig((countryId ?? "US").toUpperCase() as CountryId).legislature
+          : (getCountryClientConfig((countryId ?? "US").toUpperCase() as CountryId).legislature
               .upperChamber?.key ??
-            getCountryConfig((countryId ?? "US").toUpperCase() as CountryId).legislature
+            getCountryClientConfig((countryId ?? "US").toUpperCase() as CountryId).legislature
               .lowerChamber.key);
       const url = endpointConfig?.whipUrl
         ? endpointConfig.whipUrl
@@ -373,7 +373,7 @@ export function NppWhipPanel({
   ) => {
     setWhippingId(`cv_${voteId}_${direction}`);
     try {
-      const config = getCountryConfig((countryId ?? "US").toUpperCase() as CountryId);
+      const config = getCountryClientConfig((countryId ?? "US").toUpperCase() as CountryId);
       const chamber = chamberOverride ?? config.legislature.lowerChamber.key;
       // A state party panel must post to its own region route. This handler
       // previously always resolved the national URL, which was harmless while
@@ -413,7 +413,7 @@ export function NppWhipPanel({
     const nominationId = item.id;
     setWhippingId(`cab_${nominationId}_${direction}`);
     try {
-      const config = getCountryConfig((countryId ?? "US").toUpperCase() as CountryId);
+      const config = getCountryClientConfig((countryId ?? "US").toUpperCase() as CountryId);
       const chamber = config.upperElectionSystem
         ? (config.legislature.upperChamber?.key ?? config.legislature.lowerChamber.key)
         : config.legislature.lowerChamber.key;

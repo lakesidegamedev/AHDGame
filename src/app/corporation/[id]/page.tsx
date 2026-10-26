@@ -1108,7 +1108,8 @@ export default function CorporationDetailPage() {
               // structures (e.g. S-Corp, capped at 100). Hidden for CEO-only
               // private structures and for public corps.
               const legalStructure = getLegalStructureForCorp({
-                countryId: corporation.countryId as import("@/lib/constants/countries").CountryId,
+                countryId:
+                  corporation.countryId as import("@/lib/constants/countriesCore").CountryId,
                 legalStructure: corporation.legalStructure as
                   import("@/lib/constants/legalStructures").LegalStructureId | undefined,
                 isPrivate: corporation.isPrivate === true,

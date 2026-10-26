@@ -6,7 +6,8 @@ import { ladderBounds } from "@/lib/legislature/policyLadder";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { captureProductEvent } from "@/lib/analytics/capture";
 import { regionApiSubUrl } from "@/lib/urls";
-import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import {
   STATE_BILL_CATEGORIES,
   SUBSIDY_BILL_CATEGORIES,
@@ -91,7 +92,7 @@ function LegacyProposeStateBillModal({
   const blockedProvisionKeys = new Set(
     (blockedProvisions ?? []).map((bp) => `${bp.legislationTypeId}:${bp.policyOptionId}`)
   );
-  const countryConfig = getCountryConfig(countryId as CountryId);
+  const countryConfig = getCountryClientConfig(countryId as CountryId);
   const country = countryConfig.id.toLowerCase();
   // Use "Regional" for regional-model sub-national tiers (e.g. UK Regional Councils);
   // "State" for the US-style state model (which also has a sub-national chamber).

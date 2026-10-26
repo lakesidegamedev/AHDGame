@@ -1,6 +1,5 @@
 "use client";
 
-import { GAME_VERSION } from "@/lib/marketing/marketedWorld";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 
@@ -31,7 +30,7 @@ function readNavigationDurationMs(): number | null {
  * Deferred first-party page view ping — runs after paint via requestIdleCallback
  * (or setTimeout fallback) and prefers sendBeacon so navigations are not blocked.
  */
-export function SiteTrafficTracker() {
+export function SiteTrafficTracker({ gameVersion }: { gameVersion: string }) {
   const pathname = usePathname();
   const lastRef = useRef<{ path: string; at: number } | null>(null);
 
@@ -47,7 +46,7 @@ export function SiteTrafficTracker() {
       const loadTimeMs = readNavigationDurationMs();
       const body = JSON.stringify({
         path: pathname,
-        gameVersion: GAME_VERSION,
+        gameVersion,
         ...(loadTimeMs !== null ? { loadTimeMs } : {}),
       });
       try {

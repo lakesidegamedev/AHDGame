@@ -21,7 +21,11 @@ import { DefenseFundingNote } from "@/components/budget/treasury/DefenseFundingN
 import { BudgetAuthoringPanel } from "@/components/uk/budget/BudgetAuthoringPanel";
 import { PlannedEconomyPanel } from "@/components/economy/PlannedEconomyPanel";
 import { Button, Skeleton, CardSkeleton, StatGridSkeleton, ListRowSkeleton } from "@/components/ui";
-import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import {
+  COUNTRY_CLIENT_CONFIGS,
+  getCountryClientConfig,
+} from "@/lib/constants/countryClientConfig";
 import { concentrationStatus } from "@/lib/nationalization/concentrationStatus";
 import { getTreasuryIdentity } from "@/lib/constants/treasuryIdentity";
 import { budgetUsdEquivalent } from "@/lib/currency/budgetUsdEquivalent";
@@ -46,10 +50,10 @@ export function NationalBudgetClient() {
   const { preset, loaded: worldFlagsLoaded } = useWorldFlags();
   const countryParam = code?.toUpperCase() as CountryId | undefined;
   const countryId: CountryId =
-    countryParam && countryParam in COUNTRY_CONFIGS
+    countryParam && countryParam in COUNTRY_CLIENT_CONFIGS
       ? (countryParam as CountryId)
-      : COUNTRY_CONFIGS.US.id;
-  const config = getCountryConfig(countryId);
+      : COUNTRY_CLIENT_CONFIGS.US.id;
+  const config = getCountryClientConfig(countryId);
 
   const [data, setData] = useState<BudgetData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -85,7 +89,7 @@ export function NationalBudgetClient() {
   }, [countryId, selectedFY, reloadNonce]);
 
   const budgetCountryKey = (
-    countryId in COUNTRY_LABELS ? countryId : COUNTRY_CONFIGS.US.id
+    countryId in COUNTRY_LABELS ? countryId : COUNTRY_CLIENT_CONFIGS.US.id
   ) as keyof typeof COUNTRY_LABELS;
   const labels = COUNTRY_LABELS[budgetCountryKey];
   const moneyPrefix = getCurrencyPrefix(countryId, data?.budget.currencyCode);
@@ -451,7 +455,7 @@ export function NationalBudgetClient() {
           />
         ) : null}
 
-        {isLive && countryId === COUNTRY_CONFIGS.UK.id ? (
+        {isLive && countryId === COUNTRY_CLIENT_CONFIGS.UK.id ? (
           <BudgetAuthoringPanel countryCode="uk" />
         ) : null}
 

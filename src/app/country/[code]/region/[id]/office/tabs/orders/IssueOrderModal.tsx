@@ -13,7 +13,8 @@ import {
 } from "@/lib/constants/governorOffice";
 import { ladderBounds } from "@/lib/legislature/policyLadder";
 import { BILL_CATEGORIES, STATE_BILL_CATEGORIES } from "@shared/constants/legislation";
-import { getExecutiveOrderName, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getExecutiveOrderName } from "@/lib/constants/countryClientConfig";
 
 interface Props {
   open: boolean;

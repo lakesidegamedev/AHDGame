@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { getExecutiveSurface, termClockBadge } from "@/lib/constants/executiveSurface";
 import { getExecutiveTermLimit } from "@/lib/elections/executiveTermLimits";
 import { executiveApiUrl } from "@/lib/urls";
@@ -132,7 +133,7 @@ export function ExecutiveActivitySection({
   // configured executiveTermLimit applies to the head of state (e.g. IE's
   // Uachtarán), which is the page's executive only in presidential systems.
   const surfaceTermLimit =
-    COUNTRY_CONFIGS[countryId].governmentType === "presidential"
+    COUNTRY_CLIENT_CONFIGS[countryId].governmentType === "presidential"
       ? (getExecutiveTermLimit(countryId) ?? undefined)
       : undefined;
   const badge = termClockBadge(surfaceTermLimit, clock?.currentTerm);
@@ -201,7 +202,7 @@ export function ExecutiveActivitySection({
             filled={roster?.filled}
             total={roster?.total}
             footer={{
-              href: `${COUNTRY_CONFIGS[countryId].executivePath}/cabinet`,
+              href: `${COUNTRY_CLIENT_CONFIGS[countryId].executivePath}/cabinet`,
               label: "All positions",
             }}
           />

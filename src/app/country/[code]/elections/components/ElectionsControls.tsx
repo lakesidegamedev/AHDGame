@@ -10,7 +10,8 @@
  */
 
 import { MobileSelect } from "@/components/ui";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { listCountryOffices } from "@/lib/elections/officeResolution";
 import { ELECTION_STATE_NAMES } from "@/app/elections/electionsHelpers";
 import type { ContestFilter, PrimaryFilter, RaceFilter } from "../electionsUrlState";
@@ -32,7 +33,7 @@ export interface RaceOption {
  * long-standing `?type=senate&class=N` deep links.
  */
 export function buildRaceOptions(countryId: CountryId): RaceOption[] {
-  const config = COUNTRY_CONFIGS[countryId];
+  const config = COUNTRY_CLIENT_CONFIGS[countryId];
   const classedUpperKey = config?.legislature?.upperChamber?.regionElectedClasses
     ? config.legislature.upperChamber.key
     : null;

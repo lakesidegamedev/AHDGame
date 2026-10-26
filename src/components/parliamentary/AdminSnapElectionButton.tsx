@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useToast } from "@/contexts/ToastContext";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { apiErrorText } from "@/lib/errors/catalog";
 
 interface Props {

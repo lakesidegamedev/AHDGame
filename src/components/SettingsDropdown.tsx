@@ -4,8 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import { useEnabledCountries } from "@/contexts/RegisteredCountriesContext";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { useCountryDisplayName, useEnabledCountries } from "@/contexts/RegisteredCountriesContext";
 import { CountryFlag } from "@/components/CountryFlag";
 import { hasSandboxAccess } from "@/lib/sandbox/access";
 import { countryUrl } from "@/lib/urls";
@@ -82,6 +82,7 @@ export function SettingsDropdown({
 }: SettingsDropdownProps) {
   const t = useTranslations("nav");
   const [isOpen, setIsOpen] = useState(false);
+  const countryName = useCountryDisplayName();
   const [showNationPicker, setShowNationPicker] = useState(false);
   const enabledCountries = useEnabledCountries();
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -169,7 +170,6 @@ export function SettingsDropdown({
               </div>
               <div className="grid grid-cols-2 gap-1.5 p-2">
                 {enabledCountries.map((id) => {
-                  const cfg = COUNTRY_CONFIGS[id];
                   const isHome = id === userCountry;
                   const isCurrent = id === pageCountry;
                   return (
@@ -186,7 +186,7 @@ export function SettingsDropdown({
                     >
                       <CountryFlag country={id} size="lg" />
                       <span className="text-xs leading-tight text-foreground truncate w-full">
-                        {cfg.name}
+                        {countryName(id)}
                       </span>
                       {isHome && (
                         <span className="text-[10px] text-muted leading-none">

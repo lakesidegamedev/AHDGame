@@ -1,4 +1,5 @@
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import type {
   CharacterDemographics,
   CharacterGender,
@@ -34,7 +35,7 @@ const EDUCATION_LABELS: Record<CharacterEducation, string> = {
 };
 
 function isCountryId(value: string): value is CountryId {
-  return value in COUNTRY_CONFIGS;
+  return value in COUNTRY_CLIENT_CONFIGS;
 }
 
 export function getGenderLabel(gender?: CharacterGender | null): string | null {
@@ -59,7 +60,7 @@ export function getEducationLabel(education?: CharacterEducation | null): string
 
 export function getNationalityLabel(countryId?: string | null): string | null {
   if (!countryId || !isCountryId(countryId)) return null;
-  const config = COUNTRY_CONFIGS[countryId];
+  const config = COUNTRY_CLIENT_CONFIGS[countryId];
   return config.name;
 }
 

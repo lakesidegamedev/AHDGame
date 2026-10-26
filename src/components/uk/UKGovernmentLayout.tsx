@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { PartyChip } from "@/app/congress/components/CongressShared";
 import { fetchJson } from "@/lib/observability/fetchJson";
-import type { CountryId } from "@/lib/constants/countries";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import {
   approvalApiUrl,
   approvalUrl,
@@ -75,7 +75,7 @@ export function UKGovernmentLayout({
 }: UKGovernmentLayoutProps) {
   const [approval, setApproval] = useState<number | null>(null);
   const [approvalModifiers, setApprovalModifiers] = useState<ActiveModifier[]>([]);
-  const cid: CountryId = countryIdProp ?? COUNTRY_CONFIGS.UK.id;
+  const cid: CountryId = countryIdProp ?? COUNTRY_CLIENT_CONFIGS.UK.id;
 
   useEffect(() => {
     let cancelled = false;
@@ -93,7 +93,7 @@ export function UKGovernmentLayout({
     };
   }, [cid]);
   const imperialPossessive = useImperialPossessive(cid);
-  const config = COUNTRY_CONFIGS[cid];
+  const config = COUNTRY_CLIENT_CONFIGS[cid];
   const lowerChamberShort = config?.legislature?.lowerChamber?.shortName ?? "Commons";
   const legislatureName = config?.legislature?.name ?? "Parliament";
   const defaultHero = {

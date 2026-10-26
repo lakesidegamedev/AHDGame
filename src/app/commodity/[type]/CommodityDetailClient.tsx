@@ -5,8 +5,8 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui";
-import type { CountryId } from "@/lib/constants/countries";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { CommodityDetail } from "./types";
 import type { MapMode } from "./components/CommodityMapModeToggle";
@@ -301,7 +301,7 @@ export default function CommodityDetailClient({ initialData }: CommodityDetailCl
                 onModeChange={setMapMode}
                 onDrillDown={(countryId) => handleSelectCountry(countryId)}
                 onViewCountryPage={(countryId) => {
-                  const config = COUNTRY_CONFIGS[countryId];
+                  const config = COUNTRY_CLIENT_CONFIGS[countryId];
                   if (config) router.push(config.overviewPath);
                 }}
               />

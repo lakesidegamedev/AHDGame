@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { EmptyState } from "@/components/ui";
 import { Pagination } from "../Pagination";
-import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import { LocalTime } from "@/components/time/LocalTime";
 import { apiErrorText } from "@/lib/errors/catalog";
 
@@ -110,7 +111,7 @@ export function AdminBillsSection({ countryId }: AdminBillsSectionProps) {
     if (res.ok) fetchBills();
   };
 
-  const config = getCountryConfig(countryId);
+  const config = getCountryClientConfig(countryId);
   const proposeBillHref = config.legislature.path ?? "/congress?tab=bills";
 
   return (

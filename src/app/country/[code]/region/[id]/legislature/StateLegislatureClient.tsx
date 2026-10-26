@@ -4,12 +4,11 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { UK_NATIONS, UK_REGIONS, getUKCouncilName } from "@/lib/constants/uk";
 import { regionUrl, regionApiSubUrl } from "@/lib/urls";
+import { type CountryId, isParliamentarySystem } from "@/lib/constants/countriesCore";
 import {
-  COUNTRY_CONFIGS,
+  COUNTRY_CLIENT_CONFIGS,
   getSubNationalLegislatureKey,
-  isParliamentarySystem,
-  type CountryId,
-} from "@/lib/constants/countries";
+} from "@/lib/constants/countryClientConfig";
 import type { BillChamber } from "@/lib/db/types/legislation";
 import { LegislatureData, StateBillDisplay } from "./legislatureTypes";
 import { BillsTab } from "./components/BillsTab";
@@ -160,7 +159,7 @@ export function StateLegislatureClient({
     { id: "composition", label: "Composition" },
   ];
 
-  const countryConfig = COUNTRY_CONFIGS[countryId as CountryId];
+  const countryConfig = COUNTRY_CLIENT_CONFIGS[countryId as CountryId];
   const billChamber = getSubNationalLegislatureKey(countryId as CountryId) as BillChamber;
   const subChamber = countryConfig?.subNationalChamber;
   // UK uses per-region council names (Scottish Parliament, Senedd, etc.); other

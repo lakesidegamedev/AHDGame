@@ -7,8 +7,8 @@ import {
   CURRENCY_ANCHOR_COUNTRY,
   getEraAwareCurrencySymbol,
   type CurrencyCode,
-} from "@/lib/constants/currencies";
-import type { DisplayCurrencyPreference } from "@/lib/utils/formatters";
+} from "@/lib/constants/currencyCodes";
+import type { DisplayCurrencyPreference } from "@/lib/utils/formattersCore";
 
 export type DisplayRates = Partial<Record<CurrencyCode, number>>;
 export interface CurrencyDisplayContext {

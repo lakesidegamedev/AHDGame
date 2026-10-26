@@ -15,7 +15,7 @@ import { useMemo, useState } from "react";
 import { useTheme, type Theme } from "@/contexts/ThemeContext";
 import { SandboxHome } from "@/app/_landing-v2/SandboxHome";
 import { ERA_CONFIGS, type EraId } from "@/components/landing/eraThemes";
-import type { GovernmentType } from "@/lib/constants/countries";
+import type { GovernmentType } from "@/lib/constants/countriesCore";
 import { fallbackMarketedWorld, toEraId, type MarketedWorld } from "@/lib/marketing/marketedWorld";
 
 const ERA_PICKER = Object.values(ERA_CONFIGS).map((config) => ({

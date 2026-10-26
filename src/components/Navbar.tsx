@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useClickOutside } from "@/hooks/useClickOutside";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { useNavbarState } from "./navbar/useNavbarState";
-import { isActionRequiredType } from "@/lib/inbox";
+import { isActionRequiredType } from "@/lib/inbox/priority";
 import type { NotificationType } from "@/lib/db/types/notifications";
 import Link from "next/link";
 import Image from "next/image";
@@ -28,7 +28,7 @@ import {
   HELP_STATUS_URL,
 } from "./HelpDropdown";
 import { UniversalSearch } from "./UniversalSearch";
-import { type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
 import { useCountryContext } from "@/hooks/useCountryContext";
 import { useActiveCharters } from "@/hooks/useActiveCharters";

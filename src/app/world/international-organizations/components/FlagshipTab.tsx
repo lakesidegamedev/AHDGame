@@ -9,7 +9,7 @@ import {
 } from "@/lib/constants/orgPosture";
 import { getDirectiveDef } from "@/lib/constants/orgDirectives";
 import { getAgencyDef } from "@/lib/constants/orgAgencies";
-import { type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import type { OrganizationResolutionType } from "@/lib/db/types/internationalOrganization";
 import type { OrgSummary } from "../orgTypes";
 import { MetricTile } from "./OrgPrimitives";

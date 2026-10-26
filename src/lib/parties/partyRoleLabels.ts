@@ -1,4 +1,5 @@
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import type { PartyLeadershipTitleKey, PartyLeadershipTitles } from "@/lib/db/types/party";
 
 export type PartyRoleLabelKey = PartyLeadershipTitleKey | "committee";
@@ -28,7 +29,7 @@ export function getPartyRoleLabel(
   const partyTitle = key === "committee" ? null : leadershipTitles?.[key]?.trim();
   if (partyTitle) return partyTitle;
 
-  const config = COUNTRY_CONFIGS[countryId.toUpperCase() as CountryId];
+  const config = COUNTRY_CLIENT_CONFIGS[countryId.toUpperCase() as CountryId];
   const override = config?.partyRoleLabels?.[key];
   return override ?? DEFAULT_PARTY_ROLE_LABELS[key];
 }

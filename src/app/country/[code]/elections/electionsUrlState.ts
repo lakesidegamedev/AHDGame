@@ -8,7 +8,8 @@
  * it is the documented public shape for inbound links.
  */
 
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 
 /**
  * A race filter is an office key, a chamber key, or `senate-N` for the classed
@@ -23,8 +24,8 @@ export type RaceFilter = string;
 
 /** Every office key and chamber key defined by any country, built once. */
 const KNOWN_RACE_KEYS: ReadonlySet<string> = new Set(
-  Object.keys(COUNTRY_CONFIGS).flatMap((id) =>
-    (COUNTRY_CONFIGS[id as CountryId].officeTypes ?? []).flatMap((o) =>
+  Object.keys(COUNTRY_CLIENT_CONFIGS).flatMap((id) =>
+    (COUNTRY_CLIENT_CONFIGS[id as CountryId].officeTypes ?? []).flatMap((o) =>
       o.chamberKey ? [o.key, o.chamberKey] : [o.key]
     )
   )

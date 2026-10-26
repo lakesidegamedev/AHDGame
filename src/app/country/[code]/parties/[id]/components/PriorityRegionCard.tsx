@@ -5,7 +5,7 @@ import { partyApiUrl } from "@/lib/urls";
 import { getMessageStyle } from "@/lib/utils/formatters";
 import { adjacentStates } from "@/lib/constants/stateAdjacency";
 import { isClusterConnected } from "@/lib/parties/priorityRegion";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { PartyData } from "./types";
 import { apiErrorText } from "@/lib/errors/catalog";
 

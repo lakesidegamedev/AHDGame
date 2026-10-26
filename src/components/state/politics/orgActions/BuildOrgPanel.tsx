@@ -10,7 +10,7 @@ import {
 } from "@/lib/politicalStrength/strengthConstants";
 import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
 import { orgBuildCashPrice } from "@/lib/politicalStrength/buildOrgFunding";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { EstimateBox } from "./EstimateBox";
 import { PsSpendButtons } from "./PsSpendButtons";
 import { usePsSpendScope } from "./usePsSpendScope";

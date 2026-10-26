@@ -1,6 +1,6 @@
 "use client";
 
-import { type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import { COMMODITY_TYPES, COMMODITY_LABELS } from "@/lib/constants/commodities";
 import { MAX_PROVISIONS } from "@shared/constants/legislation";
 import type { EmbargoProvisionInput } from "./embargoProvisionTypes";

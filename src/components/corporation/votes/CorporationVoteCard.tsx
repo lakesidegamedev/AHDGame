@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import { useAbortableEffectFetch } from "@/hooks/useAbortableEffectFetch";
 import type { CorporationVote } from "@/lib/db/types/corporationVote";
 import { LEGAL_STRUCTURES } from "@/lib/constants/legalStructures";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { InlineStatus, SmallButton } from "../dense/DenseKit";
 
 interface VotingIdentity {
@@ -52,7 +52,9 @@ function proposalSummary(vote: CorporationVote): string {
       return "Dissolve the corporation";
     case "relocation": {
       const cfg = vote.payload.destinationCountryId
-        ? COUNTRY_CONFIGS[vote.payload.destinationCountryId as keyof typeof COUNTRY_CONFIGS]
+        ? COUNTRY_CLIENT_CONFIGS[
+            vote.payload.destinationCountryId as keyof typeof COUNTRY_CLIENT_CONFIGS
+          ]
         : null;
       return `Relocate HQ to ${cfg?.name ?? vote.payload.destinationCountryId}`;
     }

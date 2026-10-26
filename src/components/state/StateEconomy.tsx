@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui";
 import { Tooltip } from "@/components/Tooltip";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import {
   COMMODITY_ICONS,
   COMMODITY_COLORS,
@@ -222,7 +222,6 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
         })
         .catch(() => {})
         .finally(() => setLoading(false));
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     },
     [countryId, stateId]
   );

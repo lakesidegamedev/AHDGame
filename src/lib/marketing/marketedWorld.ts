@@ -23,17 +23,12 @@
  *
  * `publicCopy.test.ts` fails the build if a surface goes back to hardcoding.
  */
-import {
-  COUNTRY_CONFIGS,
-  COUNTRY_ORDER,
-  getCountryDisplayName,
-  type CountryId,
-} from "@/lib/constants/countries";
+import { COUNTRY_ORDER, type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS, getCountryDisplayName } from "@/lib/constants/countryClientConfig";
 import { ERA_CONFIGS, type EraId } from "@/components/landing/eraThemes";
-import pkg from "../../../package.json";
+import { GAME_VERSION } from "./gameVersion";
 
-/** The live release, minted by `npm run changelog:release`. */
-export const GAME_VERSION: string = pkg.version;
+export { GAME_VERSION };
 
 /**
  * Countries with an authored world behind them, playable or not. This is the
@@ -81,7 +76,7 @@ export function toEraId(seedYear: number): EraId {
  */
 export function eraRoster(eraId: EraId): { player: CountryId[]; econ: CountryId[] } {
   const nations = ERA_CONFIGS[eraId].nations;
-  const known = (id: string): id is CountryId => Object.hasOwn(COUNTRY_CONFIGS, id);
+  const known = (id: string): id is CountryId => Object.hasOwn(COUNTRY_CLIENT_CONFIGS, id);
   return {
     player: nations.filter((n) => n.tier === "player" && known(n.id)).map((n) => n.id as CountryId),
     econ: nations.filter((n) => n.tier === "econ" && known(n.id)).map((n) => n.id as CountryId),

@@ -4,7 +4,7 @@ import { InlineError } from "@/components/ui/InlineError";
 import { useState } from "react";
 import { Button } from "@/components/ui";
 import { CountryFlag } from "@/components/CountryFlag";
-import { COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
+import { COUNTRY_ORDER, type CountryId } from "@/lib/constants/countriesCore";
 import { COMMODITY_TYPES } from "@/lib/constants/commodities";
 import { canTableResolutionType } from "@/lib/constants/orgCategory";
 import type { OrgSummary, OrgViewerInfo } from "../orgTypes";

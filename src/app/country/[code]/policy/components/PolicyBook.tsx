@@ -11,7 +11,7 @@
  */
 
 import { useMemo, useState } from "react";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { PolicyRecordResponse } from "@/lib/policy/types";
 import type { StateTaxRates } from "@/lib/db/types/budget";
 import { computeDomainAxes, computeNationalAxes } from "@/lib/policy/nationalAxes";

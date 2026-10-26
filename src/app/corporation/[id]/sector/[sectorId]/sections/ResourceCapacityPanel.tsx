@@ -9,7 +9,7 @@ import {
 } from "@/lib/constants/commodities";
 import type { ExtractableResource } from "@/lib/constants/commodities";
 import { regionUrl } from "@/lib/urls";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { useProspectingSurveys } from "@/hooks/useProspectingSurveys";
 import { ProspectingSurveyList } from "@/components/extraction/ProspectingSurveyList";
 import type { ExtractionCapacityRow, ResourceOpportunity } from "../types";

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { COUNTRY_CONFIGS, COUNTRY_ORDER } from "@/lib/constants/countries";
+import { COUNTRY_ORDER } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import type { AutoCooldownRow, AutoTemplate } from "./crisisAdminTypes";
 import { apiErrorText } from "@/lib/errors/catalog";
 
@@ -113,7 +114,7 @@ export function AutoCrisisPanel({
             >
               {COUNTRY_ORDER.map((c) => (
                 <option key={c} value={c}>
-                  {COUNTRY_CONFIGS[c].name}
+                  {COUNTRY_CLIENT_CONFIGS[c].name}
                 </option>
               ))}
             </select>

@@ -20,7 +20,8 @@ import { useCountdownTimer } from "@/hooks/useCountdownTimer";
 import { useCountryManifestos } from "@/hooks/useCountryManifestos";
 import { useElectionActions } from "@/hooks/useElectionActions";
 import { useWorldFlags } from "@/hooks/useWorldFlags";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { getMessageStyle } from "@/lib/utils/formatters";
 import type { CharacterBasic, ElectionDisplay, GameStateDisplay } from "@/lib/db/types";
 import type { CompositionResponse } from "@/lib/elections/electionResponseTypes";
@@ -108,7 +109,7 @@ interface ElectionsClientProps {
 
 export default function ElectionsClient({ code, initialElections }: ElectionsClientProps) {
   const countryId = code.toUpperCase() as CountryId;
-  const config = COUNTRY_CONFIGS[countryId];
+  const config = COUNTRY_CLIENT_CONFIGS[countryId];
   const countryName = config?.name ?? countryId;
   const regionLabel = config?.regionLabel ?? "State";
   const regionLabelPlural = config?.regionLabelPlural ?? "States";
