@@ -79,7 +79,7 @@ function loan(
   borrowerId: ObjectId,
   id: ObjectId,
   overrides: Partial<BankLoan> = {}
-): BankLoan {
+): BankLoan & Record<string, unknown> {
   return {
     _id: id,
     bankCorporationId: bankId,
@@ -94,7 +94,7 @@ function loan(
     originatedTurn: 55,
     status: "current",
     ...overrides,
-  } as BankLoan;
+  } as BankLoan & Record<string, unknown>;
 }
 
 /**
