@@ -3,7 +3,14 @@ import { ObjectId } from "mongodb";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { mergeCorporationCashOps } from "./mergeCorporationCashOps";
 
-type Op = { updateOne: { filter: Record<string, unknown>; update: Record<string, unknown> } };
+type Op =
+  | {
+      updateOne: {
+        filter: Record<string, unknown>;
+        update: Record<string, unknown> | Record<string, unknown>[];
+      };
+    }
+  | { replaceOne: { filter: Record<string, unknown>; replacement: Record<string, unknown> } };
 
 const updatedAt = new Date("2026-10-26T00:00:00Z");
 
@@ -14,7 +21,7 @@ async function applySequentially(ops: Op[], seed: Record<string, unknown>[]) {
   const collection = db.collection("corporations");
   for (const op of ops) {
     if (!("updateOne" in op)) throw new Error("test expects updateOne ops only");
-    await collection.updateOne(op.updateOne.filter, op.updateOne.update);
+    await collection.updateOne(op.updateOne.filter, op.updateOne.update as never);
   }
   return db.collection("corporations").docs;
 }
