@@ -4,7 +4,7 @@ import {
   OPERATING_SECTOR_TYPES,
   OPERATING_SECTOR_TYPE_LABELS,
   type OperatingSectorType,
-} from "@/lib/constants/corporations";
+} from "@/lib/constants/corporationsClient";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { MAX_PROVISIONS } from "@shared/constants/legislation";
 import type { TariffProvisionInput } from "./tariffProvisionTypes";

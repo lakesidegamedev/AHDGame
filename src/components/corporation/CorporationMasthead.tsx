@@ -4,7 +4,7 @@ import { apiErrorText } from "@/lib/errors/catalog";
 import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { HeroImage } from "@/components/HeroImage";
-import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
+import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporationsClient";
 import { MONEY_PERIOD_SUFFIX, scaleMoney, type MoneyPeriod } from "@/lib/constants/moneyTimescale";
 import { loyaltyLabel } from "@/lib/market/brandLoyalty";
 import { formatCompactNumber, formatMarketingStrength } from "@/lib/utils/formatters";

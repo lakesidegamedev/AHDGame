@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui";
 import { CountryFlag } from "@/components/CountryFlag";
 import { COUNTRY_ORDER, type CountryId } from "@/lib/constants/countriesCore";
-import { COMMODITY_TYPES } from "@/lib/constants/commodities";
+import { COMMODITY_TYPES } from "@/lib/constants/commoditiesCore";
 import { canTableResolutionType } from "@/lib/constants/orgCategory";
 import type { OrgSummary, OrgViewerInfo } from "../orgTypes";
 import { orgProposingCountry } from "../orgTypes";

@@ -408,10 +408,14 @@ async function evaluateOneBank(
       if (outflow === 0) {
         const unfinished = await db
           .collection<{ _id: string; status?: string }>(MONEY_MOVE_COLLECTION)
-          .findOne({
-            _id: flightKey,
-            status: "partial",
-          });
+          .findOne(
+            {
+              _id: flightKey,
+              status: "partial",
+            },
+            // Existence only: recovery loads the record it needs.
+            { projection: { _id: 1 } }
+          );
         if (unfinished) return null;
       }
       const cbDocId = getBankId(getCountryIdForCurrency(currency));

@@ -1,17 +1,14 @@
 /**
  * Unit tests for the shift-impact calculation.
  *
- * `calculateShiftImpacts` returns Layer-1 census BUCKET impacts now, not
- * archetype impacts, so every assertion here names a bucket. The archetype
- * tables this module still exports are the record of where the bucket values
- * in `bucketAffinities.ts` were projected from; nothing reads them at runtime.
+ * `calculateShiftImpacts` returns Layer-1 census BUCKET impacts, and every
+ * assertion here names a bucket.
  */
 
 import { describe, it, expect } from "vitest";
 import {
   calculateShiftImpacts,
   getDomainForPolicyDomain,
-  DOMAIN_AFFINITIES,
   SHIFT_IMPACT_SCALE,
 } from "./archetypeAffinities";
 import { DOMAIN_BUCKET_AFFINITIES } from "./bucketAffinities";
@@ -192,19 +189,6 @@ describe("DOMAIN_BUCKET_AFFINITIES coverage", () => {
         for (const value of Object.values(affinities)) {
           expect(value).toBeGreaterThanOrEqual(-100);
           expect(value).toBeLessThanOrEqual(100);
-        }
-      }
-    }
-  });
-});
-
-describe("DOMAIN_AFFINITIES (historical archetype tables)", () => {
-  it("still holds valid values in the documented range", () => {
-    for (const affinities of Object.values(DOMAIN_AFFINITIES)) {
-      for (const value of Object.values(affinities)) {
-        if (value !== undefined) {
-          expect(value).toBeGreaterThanOrEqual(-50);
-          expect(value).toBeLessThanOrEqual(50);
         }
       }
     }

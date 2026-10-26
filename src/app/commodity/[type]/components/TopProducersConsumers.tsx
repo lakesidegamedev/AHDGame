@@ -6,7 +6,7 @@ import { CorporationLogo } from "@/components/corporation/CorporationLogo";
 import { formatUnits } from "../lib/helpers";
 import { formatCurrencyFull } from "@/lib/utils/formatters";
 import type { MarketingBudget, CorpVolume, SyntheticDemandSource } from "../types";
-import { EXTRACTABLE_RESOURCES } from "@/lib/constants/commodities";
+import { EXTRACTABLE_RESOURCES } from "@/lib/constants/commoditiesCore";
 
 const PAGE_SIZE = 10;
 

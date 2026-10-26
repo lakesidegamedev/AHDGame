@@ -1,5 +1,8 @@
 import type { CountryId } from "@/lib/constants/countries";
-import { OPERATING_SECTOR_TYPES, type OperatingSectorType } from "@/lib/constants/corporations";
+import {
+  OPERATING_SECTOR_TYPES,
+  type OperatingSectorType,
+} from "@/lib/constants/corporationsClient";
 import { getCountryIdForCurrency, type CurrencyCode } from "@/lib/constants/currencies";
 import { SOE_PERF_BASELINE } from "@/lib/economy/soe";
 

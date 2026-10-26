@@ -31,21 +31,6 @@ export const DE_GROUP_EN_LABELS: Record<string, string> = {
   mittelstand_selbstaendige: "Self-Employed Mittelstand",
 };
 
-export const DE_VOTER_GROUP_BASELINES: Record<string, number> = {
-  katholische_konservative: 82,
-  gewerkschafter: 78,
-  urbane_progressive: 80,
-  wirtschaftsliberale: 83,
-  ost_post_industriell: 70,
-  gruene_mittelschicht: 85,
-  rentner_west: 86,
-  migranten_communities: 62,
-  landwirte_dorf: 80,
-  junge_grossstadt: 63,
-  protest_waehler_ost: 72,
-  mittelstand_selbstaendige: 82,
-};
-
 export const deDemographicCategories: DemographicCategory[] = [
   {
     _id: "de_voterGroups",

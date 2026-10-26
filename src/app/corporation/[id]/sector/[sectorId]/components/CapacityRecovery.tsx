@@ -1,6 +1,6 @@
 "use client";
 
-import { TURNS_PER_DAY } from "@/lib/constants/corporations";
+import { TURNS_PER_DAY } from "@/lib/constants/corporationsClient";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui";

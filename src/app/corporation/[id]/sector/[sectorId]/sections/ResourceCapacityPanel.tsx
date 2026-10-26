@@ -7,7 +7,7 @@ import {
   COMMODITY_UNITS,
   EXTRACTABLE_RESOURCES,
 } from "@/lib/constants/commodities";
-import type { ExtractableResource } from "@/lib/constants/commodities";
+import type { ExtractableResource } from "@/lib/constants/commoditiesCore";
 import { regionUrl } from "@/lib/urls";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import { useProspectingSurveys } from "@/hooks/useProspectingSurveys";

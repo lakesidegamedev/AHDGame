@@ -11,7 +11,7 @@ import {
   findUkConstituency,
   getConstituenciesForUkRegion,
 } from "@/lib/constituencies/ukWestminster2024";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 
 type CommonsOffice = {
   type: "commons";

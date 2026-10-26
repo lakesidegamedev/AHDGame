@@ -6,7 +6,7 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import {
   OPERATING_SECTOR_TYPE_LABELS,
   type OperatingSectorType,
-} from "@/lib/constants/corporations";
+} from "@/lib/constants/corporationsClient";
 import {
   spinOffCostAnchor,
   SPIN_OFF_COOLDOWN_TURNS,

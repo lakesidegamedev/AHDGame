@@ -15,7 +15,7 @@ import type { OfficeType } from "@/lib/db/types/character";
 import { CABINET_POSITIONS, getCabinetPositionById } from "@/lib/constants";
 import { UK_CABINET_POSITIONS } from "@/lib/constants/ukCabinet";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { resetCabinetSettingCooldowns } from "@/lib/db/collections/cabinetSettings";
 import { getGameTime } from "@/lib/time/gameTime";
 import { z } from "zod";
