@@ -286,19 +286,22 @@ describe("GET /api/banking/corporation/[id]", () => {
         "primaryUnderwritingEnabled",
         "primeRate",
         "privateBankingEnabled",
+        "propAssetOptions",
         "rates",
         "reserveRatio",
         "risk",
         "switchableTypes",
+        "underwritingReceipts",
         "visible",
       ]);
       expect(body.depositorBook).toEqual({ source: "legacy", rows: [], total: 0 });
       expect(body).toMatchObject({
-        bankPropForexFeesEnabled: false,
-        bankTreasury: null,
-        bankTreasuryEnabled: false,
-        primaryUnderwritingEnabled: false,
+        bankPropForexFeesEnabled: true,
+        bankTreasury: expect.objectContaining({ currency: "USD" }),
+        bankTreasuryEnabled: true,
+        primaryUnderwritingEnabled: true,
       });
+      expect(body.bankUnderwritingReceipts).toBeUndefined();
       expect(sortedKeys(body.charter)).toEqual([
         "appliedStressLossFraction",
         "blacklist",
@@ -417,16 +420,18 @@ describe("GET /api/banking/corporation/[id]", () => {
         "primaryUnderwritingEnabled",
         "primeRate",
         "privateBankingEnabled",
+        "propAssetOptions",
         "rates",
         "reserveRatio",
         "switchableTypes",
+        "underwritingReceipts",
         "visible",
       ]);
       expect(body).toMatchObject({
-        bankPropForexFeesEnabled: false,
+        bankPropForexFeesEnabled: true,
         bankTreasury: null,
-        bankTreasuryEnabled: false,
-        primaryUnderwritingEnabled: false,
+        bankTreasuryEnabled: true,
+        primaryUnderwritingEnabled: true,
       });
     },
     CONSOLE_TEST_TIMEOUT_MS

@@ -26,10 +26,7 @@ export async function fundCreationEligibility(
       .findOne({ _id: "current" }, { projection: { corporationActionsPaused: 1 } }),
     db
       .collection<GameConfig>("gameConfig")
-      .findOne(
-        { _id: "default" },
-        { projection: { playerFundSponsorshipEnabled: 1, indexFundsMode: 1, indexFundsEnabled: 1 } }
-      ),
+      .findOne({ _id: "default" }, { projection: { indexFundsMode: 1, indexFundsEnabled: 1 } }),
     db
       .collection("indexFunds")
       .countDocuments({ sponsorCorporationId: sponsor._id, status: { $ne: "delisted" } }),
@@ -42,8 +39,6 @@ export async function fundCreationEligibility(
   if (state?.corporationActionsPaused) return "Corporation actions are currently paused.";
   if (!(await isIndexFundsEnabled(config))) return "Investment funds are not enabled.";
   const bank = fundBankCharter(sponsor.bankCharter);
-  if (!bank && !config?.playerFundSponsorshipEnabled)
-    return "Player-sponsored index funds are not available yet.";
   if (!options?.replay && bank && liveFunds >= 3)
     return "A bank can manage at most three live funds.";
   const rate = await getCorpFxRate(db, sponsor);

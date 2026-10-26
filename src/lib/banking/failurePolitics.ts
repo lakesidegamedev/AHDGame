@@ -17,11 +17,8 @@ export async function loadBankFailureEffects(
   if (enabled === undefined) {
     const config = await db
       .collection<GameConfig>("gameConfig")
-      .findOne(
-        { _id: "default" },
-        { projection: { bankFailurePoliticsEnabled: 1, privateBankingEnabled: 1 } }
-      );
-    enabled = config?.privateBankingEnabled === true && config?.bankFailurePoliticsEnabled === true;
+      .findOne({ _id: "default" }, { projection: { privateBankingEnabled: 1 } });
+    enabled = config?.privateBankingEnabled === true;
   }
   if (!enabled) return new Map();
   let events = await db

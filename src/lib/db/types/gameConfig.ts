@@ -341,27 +341,6 @@ export interface GameConfig {
   mediaOperatingModelsEnabled?: boolean;
   /** Media ownership limits and censorship effects in the advertising market. Default off. */
   mediaRegulationEnabled?: boolean;
-  /**
-   * Sovereignty transitions (decolonization). Absent/false ⇒ the phase is a
-   * no-op, which is the required default: the evaluator returns a "strong
-   * default to resolve" score once a rule is PAST its historical window, so an
-   * ungated phase in a modern-era world would immediately re-apply every
-   * independence that already happened. Only meaningful in a world whose
-   * in-game year is inside the decolonization era.
-   */
-  worldTransitionsEnabled?: boolean;
-  worldTransitionsEnabledBy?: string;
-  worldTransitionsEnabledAt?: string;
-  /**
-   * Bretton Woods exit: gold-convertibility suspension and the managed float that
-   * follows (see src/lib/monetary/brettonWoods.ts). Absent/false is byte-identical
-   * to the pegged world — no gold cover is tracked, no regime is written, band and
-   * drift keep their current constants. Only meaningful in a world that actually
-   * reaches ~1971 in game-time.
-   */
-  brettonWoodsExitEnabled?: boolean;
-  brettonWoodsExitEnabledBy?: string;
-  brettonWoodsExitEnabledAt?: string;
   /** Who last toggled the command-economy regime. */
   commandEconomyEnabledBy?: string;
   /** When the command-economy regime was last toggled. */
@@ -396,35 +375,12 @@ export interface GameConfig {
   bankConstructionAdmissions?: import("@/lib/banking/constructionAdmission").ConstructionAdmission[];
   bankConstructionAdmissionClosing?: boolean;
   bankConstructionAdmissionClosingToken?: string;
-  /** Enable funded sovereign-bill holdings for private bank treasuries. Default off. */
-  bankTreasuryEnabled?: boolean;
-  /** Fund unplaced sovereign units from investment-bank vault cash. Default off. */
-  bankSovereignPrimaryEnabled?: boolean;
   /** Experimental funded spendable government-cash ledger. Absent means off. */
   treasuryCashLedgerEnabled?: boolean;
-  /**
-   * Gate on player-chartered ADVANCED bank types. When absent/false, players may
-   * only charter (or switch to) a RETAIL bank; investment and universal charters
-   * are withheld until this is turned on. Existing charters are grandfathered —
-   * this only gates creation and type switches.
-   */
-  playerAdvancedBankChartersEnabled?: boolean;
-  /**
-   * Gate on players SPONSORING their own index funds. When absent/false, the
-   * default (system) funds still trade normally, but a corporation cannot
-   * charter a new sponsored fund. Independent of `indexFundsMode`.
-   */
-  playerFundSponsorshipEnabled?: boolean;
   /** Kill switch: investment-bank proprietary trading (incl. leveraged forex). Default on when banking is on. */
   bankPropTradingEnabled?: boolean;
-  /** Size-priced forex prop orders and their fee journal. Default off. */
-  bankPropForexFeesEnabled?: boolean;
-  /** Funded corporate primary-market underwriting fees. Default off. */
-  bankUnderwritingEnabled?: boolean;
   /** Kill switch: bank-failure contagion cascade. Default on when banking is on. */
   bankContagionEnabled?: boolean;
-  /** Funded bank failures affect approval and consumer confidence. Default off. */
-  bankFailurePoliticsEnabled?: boolean;
   /** Funded plant construction loans. Off unless explicitly enabled. */
   bankConstructionFinanceEnabled?: boolean;
   /**
@@ -658,12 +614,6 @@ export interface GameConfig {
    */
   entertainmentCommodityRemovedAtTurn?: number;
   /**
-   * When true, outstanding build orders in sectors whose output is in deep
-   * shortage have their remaining build time halved, once per order. See
-   * turn/corporation/sectorTurn/shortageBuildSpeedup.ts.
-   */
-  shortageBuildSpeedupEnabled?: boolean;
-  /**
    * Money wiring (interstate-logistics plan step 5, phase A): when true, a
    * sector's input bill adds the landed-price premium for out-of-state
    * sourcing (last turn's sourcingNetworkLoad doc) on top of the global lagged
@@ -843,15 +793,6 @@ export interface GameConfig {
    * discovery/UI gate.
    */
   nppCorpsAttackable?: boolean;
-  /**
-   * Whether NPP-run corporations may launch SECTOR ATTACKS against owned
-   * sectors (economic aggression). DEFAULT OFF — decoupled from the political
-   * NPP-autonomy tier so raising autonomy (e.g. v3 for government formation)
-   * does NOT also unleash corporate attacks. At the current stage NPP corps
-   * only expand into UNOWNED market; flip this on to allow aggression (the
-   * per-country nppAutonomyAtLeast(v2) gate still applies on top).
-   */
-  nppCorporateAttacksEnabled?: boolean;
   /**
    * Launch guard (automated kill switch, opt-in). When `marketGuardEnabled` and
    * the mode is clearing/capital, the turn stamps a reference market cap and

@@ -72,9 +72,8 @@ describe("shortageBuildSpeedupOps", () => {
     expect(sectorOutputUnmetShare({ energy: 1 }, balanced)).toBe(0);
   });
 
-  const run = (enabled: boolean, unmetShare: number) =>
+  const run = (unmetShare: number) =>
     shortageBuildSpeedupOps({
-      enabled,
       sectorId: "s1",
       outstanding: [order(), order({ accelerated: true, startTurn: 160, onlineTurn: 208 })],
       currentTurn: 191,
@@ -82,13 +81,12 @@ describe("shortageBuildSpeedupOps", () => {
       now: new Date(0),
     });
 
-  it("is inert when switched off or when the sector is not deeply short", () => {
-    expect(run(false, 0.5)).toEqual([]);
-    expect(run(true, 0.2)).toEqual([]);
+  it("is inert when the sector is not deeply short", () => {
+    expect(run(0.2)).toEqual([]);
   });
 
   it("emits one positional update per un-accelerated order, matched by identity", () => {
-    const ops = run(true, 0.3);
+    const ops = run(0.3);
     expect(ops).toHaveLength(1);
     expect(ops[0].updateOne.update.$set["buildQueue.$[o].onlineTurn"]).toBe(197);
     expect(ops[0].updateOne.update.$set["buildQueue.$[o].accelerated"]).toBe(true);
