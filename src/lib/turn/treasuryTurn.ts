@@ -36,6 +36,7 @@ import {
   budgetIdsWithOpenSovereignCouponClaims,
   claimIdOfMove,
   loadSovereignCouponPriorPayouts,
+  loadSovereignCouponSettlementPrefetch,
   settleableSovereignCouponHolderKeys,
   settleFundedSovereignCoupons,
   sovereignCouponHolderKeys,
@@ -316,6 +317,15 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
   const settleableClaimKeys = treasuryCashLedgerEnabled
     ? await settleableSovereignCouponHolderKeys(db, couponCashBounds, receiptClaimIds)
     : new Map<string, Set<string>>();
+  // One read per collection for every budget's coupon facts, before the lanes
+  // start. A budget with no cash to settle from then costs no probe of its own.
+  const couponPrefetch = treasuryCashLedgerEnabled
+    ? await loadSovereignCouponSettlementPrefetch(db, {
+        budgets,
+        turn: _turn,
+        receiptClaimIds,
+      })
+    : undefined;
   const bondHolderKeysByCountry = new Map<string, Set<string>>();
   for (const bond of sovereignBonds) {
     const country = String(bond.countryId);
@@ -360,6 +370,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
           corporateQuotes: corporationQuotes,
           priorPayouts,
           lockedCashBoundLocal: couponCashBounds.get(String(b._id)),
+          prefetch: couponPrefetch,
         });
       }
       return;
@@ -387,6 +398,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
               corporateQuotes: corporationQuotes,
               priorPayouts,
               lockedCashBoundLocal: couponCashBounds.get(String(b._id)),
+              prefetch: couponPrefetch,
             });
           }
           return;
@@ -579,6 +591,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
               corporateQuotes: corporationQuotes,
               priorPayouts,
               lockedCashBoundLocal: couponCashBounds.get(String(b._id)),
+              prefetch: couponPrefetch,
             }
           );
         }
