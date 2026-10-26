@@ -170,7 +170,7 @@ export function stepWarExhaustion(input: WarExhaustionStep): number {
 }
 
 /** How far war effort can swing in either direction. */
-export const WAR_EFFORT_BOUND = 2;
+const WAR_EFFORT_BOUND = 2;
 const POSITION_WEIGHT = 1.4;
 const MOMENTUM_WEIGHT = 0.6;
 /** Turns at which the front is "expected" to have reached its half-way expectation. */
@@ -266,9 +266,9 @@ export function warEffort(input: WarEffortInput): number {
 }
 
 /** How far alliance contribution can swing in either direction. */
-export const ALLIANCE_CONTRIBUTION_BOUND = 1;
+const ALLIANCE_CONTRIBUTION_BOUND = 1;
 /** Turns after entry during which a country cannot be penalised for absence. */
-export const ALLIANCE_GRACE_TURNS = 6;
+const ALLIANCE_GRACE_TURNS = 6;
 
 export interface AllianceContributionInput {
   /** Personnel this country has deployed to this conflict's theatre. */

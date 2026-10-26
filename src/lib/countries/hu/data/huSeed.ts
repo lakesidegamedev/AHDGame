@@ -99,5 +99,5 @@ export function getHuSeedConfig(preset: string): EasternBlocSeedConfig {
   };
 }
 
-export const huSeedConfig: EasternBlocSeedConfig = getHuSeedConfig("2019-default");
+const huSeedConfig: EasternBlocSeedConfig = getHuSeedConfig("2019-default");
 export default huSeedConfig;

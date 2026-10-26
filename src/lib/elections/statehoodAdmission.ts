@@ -89,7 +89,7 @@ export const INITIAL_HOUSE_SEATS_ON_ADMISSION = 1;
  * gravity off the history. `statehoodAdmission.test.ts` pins the historical year
  * as the modal year, so this constant cannot drift back.
  */
-export const POST_WINDOW_RAMP_EXPONENT = 0.7;
+const POST_WINDOW_RAMP_EXPONENT = 0.7;
 
 /**
  * Cumulative probability that `t` has been admitted by the end of `year`.

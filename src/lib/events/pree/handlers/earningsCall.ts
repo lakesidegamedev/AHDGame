@@ -76,5 +76,3 @@ const handler: EventHandler = {
 };
 
 registerEventHandler(handler);
-
-export { handler as earningsCallHandler };

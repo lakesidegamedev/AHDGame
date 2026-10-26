@@ -207,7 +207,7 @@ const initialState: CorporationsAdminState = {
   spawnNppLoading: false,
 };
 
-export function corporationsAdminReducer(
+function corporationsAdminReducer(
   state: CorporationsAdminState,
   action: CorporationsAdminAction
 ): CorporationsAdminState {

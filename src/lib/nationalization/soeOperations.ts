@@ -111,7 +111,7 @@ type MetricBulkOp = {
  * once the sector is sold or shut down. A residual would instead bank every
  * turn's contribution permanently and never let go.
  */
-export function buildMandateBoardDeltas(
+function buildMandateBoardDeltas(
   contributions: MandateContribution[]
 ): Array<{ familyId: string; scoreDelta: number }> {
   const out: Array<{ familyId: string; scoreDelta: number }> = [];

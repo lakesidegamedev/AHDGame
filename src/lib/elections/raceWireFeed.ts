@@ -18,7 +18,7 @@ export const RACE_WIRE_MAX_LIMIT = 20;
  * Exported so the route and the tests agree on the bounds rather than
  * duplicating the numbers.
  */
-export function clampRaceWireLimit(limit: number | undefined): number {
+function clampRaceWireLimit(limit: number | undefined): number {
   if (limit === undefined || !Number.isFinite(limit)) return RACE_WIRE_DEFAULT_LIMIT;
   return Math.max(1, Math.min(RACE_WIRE_MAX_LIMIT, Math.floor(limit)));
 }

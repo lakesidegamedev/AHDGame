@@ -46,7 +46,7 @@ export function calculateRecruitmentSlots(stateOrg: number): number {
  * talent in a battleground) while still refusing "move the entire party into one
  * region".
  */
-export const RELOCATION_FAIR_SHARE_MULTIPLIER = 1.5;
+const RELOCATION_FAIR_SHARE_MULTIPLIER = 1.5;
 
 /**
  * Maximum NPPs of one party a region may hold *as a relocation target*.

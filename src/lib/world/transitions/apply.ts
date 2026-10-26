@@ -11,7 +11,7 @@ import {
 import type { SphereMembership } from "@/lib/world/spheres/types";
 import { getMacroCountriesCollection } from "@/lib/db/collections/macroCountries";
 import { buildDependencyRetirement } from "@/lib/world/macro/retirement";
-import { evaluateTransition, evaluateTransitionWithDefaults } from "./evaluate";
+import { evaluateTransition } from "./evaluate";
 import { getTransitionMacroCountry } from "./rosterMacros";
 import {
   DEFAULT_TRANSITION_PRESSURES,
@@ -264,5 +264,3 @@ export async function runGoldCoastTransition(
 ): Promise<{ evaluation: TransitionEvaluation; application: SovereigntyApplication | null }> {
   return runTransition(GOLD_COAST_TO_GHANA_RULE_ID, year, turn, pressures, options);
 }
-
-export { evaluateTransitionWithDefaults };

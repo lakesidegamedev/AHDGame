@@ -35,7 +35,7 @@ export interface RegistrationDecision {
  * of the SHA-256, so we look up both the full incoming hash and its legacy
  * prefix to keep collision detection working across the rollout.
  */
-export function fingerprintMatchCandidates(fingerprint: string | null | undefined): string[] {
+function fingerprintMatchCandidates(fingerprint: string | null | undefined): string[] {
   if (!fingerprint) return [];
   const candidates = new Set<string>([fingerprint]);
   if (fingerprint.length > LEGACY_FINGERPRINT_LENGTH) {

@@ -5,10 +5,7 @@
 import type { LegislationType } from "@/lib/db/types/legislation";
 import { INCOME_TIERS, INCOME_TAX_KEYS, INCOME_TIER_LABELS } from "./rules/incomeTaxTiers";
 import { CAPITAL_GAINS_TAX_KEYS } from "./rules/capitalGainsTax";
-export const INCOME_TAX_SUFFIX = "__income_";
-export function legacyIncomeTaxId(id: string): string {
-  return id.split(/__(?:income|capital)_/)[0];
-}
+const INCOME_TAX_SUFFIX = "__income_";
 export function isLegacyIncomeTax(
   type: Pick<LegislationType, "taxRateChange" | "taxSlider">
 ): boolean {

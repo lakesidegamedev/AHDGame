@@ -54,7 +54,7 @@ export interface Hu1991AssemblyRecord {
   settled?: import("./rules/mandates1991").Hu1991InstalledMandates;
 }
 
-export async function materializeHu1991FirstCount(input: {
+async function materializeHu1991FirstCount(input: {
   db: Db;
   session: ClientSession;
   cycle: number;

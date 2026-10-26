@@ -35,7 +35,7 @@ export const DEFENCE_PROCUREMENT_PAUSED_MESSAGE =
  * can plan around, while one that only says "no" is a wall. Player-facing copy, so
  * no em or en dashes.
  */
-export function procurementRestrictedMessage(until: number): string {
+function procurementRestrictedMessage(until: number): string {
   return (
     "This country cannot award new defence contracts under the terms of a peace settlement. " +
     `The restriction lapses on turn ${until}. Existing contracts continue to deliver, and ` +

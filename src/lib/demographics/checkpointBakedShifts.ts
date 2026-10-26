@@ -70,7 +70,7 @@ import { ERA_CHECKPOINTS, type EraCheckpoint } from "./eraCheckpoints";
  * The only `startingYear` whose worlds run era checkpoints. Must stay in sync
  * with the gate in `src/lib/turn/eraCheckpointTurn.ts` — see the module doc.
  */
-export const CHECKPOINT_SEED_YEAR = 1953;
+const CHECKPOINT_SEED_YEAR = 1953;
 
 /**
  * Axes a baseline table can carry. The two lean axes live on the position
@@ -91,7 +91,7 @@ export type BakedAxis = "economicLean" | "socialLean" | "turnout";
  * under-subtracting leaves a visible double-count to find, while
  * over-subtracting silently moves the electorate the wrong way.
  */
-export function historicalDeliveredFraction(checkpoint: EraCheckpoint, year: number): number {
+function historicalDeliveredFraction(checkpoint: EraCheckpoint, year: number): number {
   const win = checkpoint.historicalWindow;
   if (!win) return 0;
   if (year <= win.startYear) return 0;

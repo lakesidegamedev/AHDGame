@@ -66,7 +66,7 @@ export type LedgerAccountKind =
  * publish direct primary witnesses; financialTxLog subjects still need no org
  * mapping because these cash writers own their ledger entries.
  */
-export const REAL_ACCOUNT_KINDS: readonly LedgerAccountKind[] = [
+const REAL_ACCOUNT_KINDS: readonly LedgerAccountKind[] = [
   "character",
   "character_savings",
   "corporation",
@@ -100,11 +100,6 @@ export function accountKind(account: string): string {
 
 export function isRealAccount(account: string): boolean {
   return (REAL_ACCOUNT_KINDS as readonly string[]).includes(accountKind(account));
-}
-
-export function isSystemAccount(account: string): boolean {
-  const kind = accountKind(account);
-  return kind === "mint" || kind === "sink" || kind === "fx";
 }
 
 /** Map a financialTxLog subject to a real account id. Returns null when unmappable. */

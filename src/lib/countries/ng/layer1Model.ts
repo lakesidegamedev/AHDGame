@@ -28,7 +28,7 @@ import type { EraId } from "@/lib/seeds/presetSelector";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-export const NG_GROUP_IDS = [
+const NG_GROUP_IDS = [
   "northern_muslim_conservative",
   "yoruba_moderate",
   "igbo_business",
@@ -356,8 +356,3 @@ export function getNgModel(era: EraId): CountryLayer1Model {
     census,
   };
 }
-
-// ── Backwards-compat export (2019 era, single model) ──────────────────────────
-
-export const ngLayer1Model: CountryLayer1Model = getNgModel("2019");
-export const ngGroupIds = [...NG_GROUP_IDS];

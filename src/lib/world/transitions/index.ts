@@ -59,8 +59,8 @@ export {
   getSovereignSphereMembership,
   getGhanaSphereMembership,
 } from "./apply";
-export { buildGhanaMacroSeed, getGhanaMacroCountry } from "./ghana";
-export { getTransitionMacroCountry, hasTransitionMacroSeed } from "./rosterMacros";
+export { getGhanaMacroCountry } from "./ghana";
+export { getTransitionMacroCountry } from "./rosterMacros";
 export { getTransitionDiagnostics, getGoldCoastTransitionDiagnostics } from "./diagnostics";
 export type {
   HistoricalWindow,

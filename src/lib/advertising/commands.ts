@@ -35,7 +35,7 @@ import {
 } from "@/lib/advertising/persistence";
 import { countAdvertisingMediaSectorModels } from "@/lib/advertising/suppliers";
 
-export function serializeAdvertisingAgreement(agreement: AdvertisingAgreement) {
+function serializeAdvertisingAgreement(agreement: AdvertisingAgreement) {
   return {
     id: agreement._id,
     buyerCorpId: agreement.buyerCorpId,

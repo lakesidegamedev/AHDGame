@@ -197,7 +197,7 @@ class UnownedSeedCapacityExhaustedError extends Error {}
  * parties + `"independent"`) already controls, and which of its active NPPs are
  * not yet a CEO and so free to take one.
  */
-export async function gatherNppCorpCeoAffiliations(
+async function gatherNppCorpCeoAffiliations(
   db: Db,
   countryId: CountryId,
   options: GatherNppCeoAffiliationsOptions = {}
@@ -482,7 +482,7 @@ export interface GrantNppSectorFromUnownedPoolInput {
  * Insert one NPP sector granted directly from the unowned pool (capacity
  * instant, no build window) and draw the pool down by what it took.
  */
-export async function grantNppSectorFromUnownedPool(
+async function grantNppSectorFromUnownedPool(
   db: Db,
   input: GrantNppSectorFromUnownedPoolInput
 ): Promise<{ sectorId: ObjectId; capacityUnits: number }> {

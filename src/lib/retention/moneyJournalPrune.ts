@@ -24,7 +24,7 @@ import { TX_TTL_TURNS } from "@/lib/db/types/financialTxLog";
 export const MONEY_JOURNAL_RETENTION_TURNS = TX_TTL_TURNS;
 
 /** Money-move kinds safe to prune once terminal and older than the window. */
-export const PRUNABLE_MONEY_MOVE_KINDS: readonly string[] = Object.freeze([
+const PRUNABLE_MONEY_MOVE_KINDS: readonly string[] = Object.freeze([
   "manufacturing.product.advertising",
   "manufacturing.product.advertising.clearing",
   "corporate_operating_gross_receipt",
@@ -52,8 +52,8 @@ export const PRUNABLE_MONEY_MOVE_KINDS: readonly string[] = Object.freeze([
  * backlog in a day or two; money moves are ~23 KB each, so their batch is
  * smaller.
  */
-export const LEDGER_PRUNE_BATCH = 5_000;
-export const MONEY_MOVE_PRUNE_BATCH = 500;
+const LEDGER_PRUNE_BATCH = 5_000;
+const MONEY_MOVE_PRUNE_BATCH = 500;
 
 export interface MoneyJournalPruneOptions {
   ledgerBatch?: number;
@@ -67,11 +67,11 @@ export interface MoneyJournalPruneResult {
   bankMoneyMoves: number;
 }
 
-export function ledgerEntriesPruneFilter(cutoff: number): Document {
+function ledgerEntriesPruneFilter(cutoff: number): Document {
   return { turn: { $lt: cutoff } };
 }
 
-export function bankMoneyMovesPruneFilter(cutoff: number): Document {
+function bankMoneyMovesPruneFilter(cutoff: number): Document {
   return {
     turn: { $lt: cutoff },
     kind: { $in: [...PRUNABLE_MONEY_MOVE_KINDS] },

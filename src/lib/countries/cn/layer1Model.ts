@@ -533,8 +533,3 @@ export function getCnModel(era: EraId): CountryLayer1Model {
     census,
   };
 }
-
-// ── Backwards-compat export (2019 era, single model) ─────────────────────────
-
-export const cnLayer1Model: CountryLayer1Model = getCnModel("2019");
-export const cnGroupIds = [...CN_GROUP_IDS];

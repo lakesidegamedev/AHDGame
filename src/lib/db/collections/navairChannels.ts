@@ -5,7 +5,7 @@ import type { RegionCode } from "@/lib/military/types";
 import { channelKey, emptyChannels } from "@/lib/navair/channels";
 import type { RegionChannels } from "@/lib/navair/types";
 
-export function getNavairChannelsCollection(db: Db) {
+function getNavairChannelsCollection(db: Db) {
   return db.collection<NavairChannelDoc>("navairChannels");
 }
 

@@ -111,7 +111,7 @@ export function SideBadge({ side }: { side: "buy" | "sell" }) {
   );
 }
 
-export function NppBadge() {
+function NppBadge() {
   return (
     <span className="rounded bg-card-elevated px-1.5 py-0.5 text-[11px] font-medium text-muted">
       NPP

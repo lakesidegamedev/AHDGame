@@ -15,7 +15,7 @@ type ProgramCostScaleBaselines = Pick<
   "programCostScaleBaseline" | "programCostScaleByCategoryBaseline"
 >;
 
-export function programCostScaleOrDefault(value: number | null | undefined): number {
+function programCostScaleOrDefault(value: number | null | undefined): number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1
     ? value
     : 1;

@@ -20,7 +20,7 @@ import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFla
 import { sumRealizedRevenue } from "@/lib/turn/gdpGrowth";
 
 /** Real-world fiscal inefficiency premium on top of the corp-delivered benefit. Tunable. */
-export const SUBSIDY_DEADWEIGHT_FACTOR = 1.4;
+const SUBSIDY_DEADWEIGHT_FACTOR = 1.4;
 /**
  * Multiplier converting one turn's subsidized revenue into annualized budget cost.
  * A subsidy delivers `SUBSIDY_MARGIN_BONUS` percentage points of margin (= that

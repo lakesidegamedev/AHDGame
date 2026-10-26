@@ -66,12 +66,6 @@ export const ENERGY_MAX_HOARD_THRESHOLD = 125;
 /** XP added to a stat each time its qualifying action is performed. */
 export const USE_GROWTH_INCREMENT = 0.03;
 /**
- * Per-turn idle decay applied to a generic-drift stat ONLY when the stat was not
- * engaged that turn (clamped ≥ STAT_MIN). "Use it or lose it": engaging a stat's
- * loop staves off decay so active play never nets a loss on the stat it trained.
- */
-export const IDLE_DECAY_RATE = 0.05;
-/**
  * Energy is a stamina stat, not a skill: it accrues XP on every action, so a flat
  * "any use → no decay" rule would make it a free ratchet. Instead it only avoids
  * decay when the turn's accrued activity clears this maintenance threshold

@@ -16,12 +16,9 @@
  */
 
 import { getActionImage } from "./actionImages";
+import { CDN_HERO_LINCOLN_URL, CDN_STATIC_BASE } from "./cdnStaticUrls";
 
-export const CDN_LOGO_URL = "https://cdn.ahousedividedgame.com/static/ahd-logo.png";
-export const CDN_HERO_LINCOLN_URL =
-  "https://cdn.ahousedividedgame.com/static/lincoln-memorial.webp";
-
-const CDN_STATIC_BASE = "https://cdn.ahousedividedgame.com/static";
+export { CDN_HERO_LINCOLN_URL, CDN_LOGO_URL } from "./cdnStaticUrls";
 
 /**
  * THE era → hero-image source of truth. Every surface that shows an era hero
@@ -83,9 +80,8 @@ export function getLoginImage(era: string | number): string {
  * Era-specific character-creation page hero images.
  *
  * None of these have ever been sourced/uploaded (every `create-<year>.webp` key
- * 404s on R2) — the map is intentionally empty so `getCreateCharacterImage`
- * always falls back to the Lincoln Memorial hero below instead of rendering a
- * broken image. To add a real one: source + optimize the WebP, upload it to
+ * 404s on R2) — the map is intentionally empty so every era falls back to the
+ * Lincoln Memorial hero below instead of rendering a broken image. To add a real one: source + optimize the WebP, upload it to
  * R2 at `static/create-character/create-<year>.webp` via
  * `scripts/upload-create-character-images-to-r2.mjs`, then re-add the entry
  * here.
@@ -94,10 +90,6 @@ export function getLoginImage(era: string | number): string {
  * Sourcing guidance is in `scripts/create-character-images/README.md`.
  */
 export const CDN_CREATE_CHARACTER_IMAGES: Record<string, string> = {};
-
-export function getCreateCharacterImage(era: string | number): string {
-  return CDN_CREATE_CHARACTER_IMAGES[String(era)] ?? CDN_HERO_LINCOLN_URL;
-}
 
 /**
  * Era-neutral action card + actions-page hero images (WebP on R2). Used by

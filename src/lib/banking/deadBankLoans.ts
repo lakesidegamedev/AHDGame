@@ -27,9 +27,17 @@
  *    distribute its snapshot, so recovery goes to the insurer as a safe
  *    fallback for legacy data that predates the unresolved-estate guard.
  *
- * Both destinations go through the same money primitive under the same per-loan
- * key as a normal servicing pass, so a retried turn cannot charge a borrower
- * twice.
+ * Both destinations go through the same money primitive under a deterministic
+ * per-turn key (the book's batch key, or the loan's own key when it cannot join
+ * the batch), so a retried turn cannot charge a borrower twice.
+ *
+ * A whole epoch's book is serviced in one journaled move: the decisions are
+ * still taken loan by loan against a running borrower balance, but the debits
+ * are summed per borrower, the credit is summed once and the loan records ride
+ * the same receipt. The per-loan path remains for the loans that cannot join
+ * it: household-pool tranches (whose cash comes from the central bank rather
+ * than a borrower) and collateralised construction loans (which own a lease
+ * and a loan lock per receipt).
  */
 
 import type { Db, ObjectId } from "mongodb";
@@ -41,11 +49,21 @@ import { getCountryIdForCurrency } from "@/lib/constants/currencies";
 import { getBankId } from "@/lib/centralBank/helpers";
 import type { MoneyTarget } from "@/lib/banking/moneyMove";
 import { ensureFund } from "@/lib/banking/insurance";
+import { loanServiceTransition } from "@/lib/banking/rules/loanServicing";
+import { settleTransition } from "@/lib/banking/settlementJournal";
+import {
+  batchedLoanServiceMove,
+  recordLoanServiceBatch,
+  type LoanServiceBatchRow,
+} from "@/lib/banking/loanServiceBatch";
 import { emitTxBulk, loadTxThresholds, type TxInput } from "@/lib/financialTxLog/emit";
 
 export type DeadBankLoanSummary = {
   /** Loans belonging to a wound-up bank that were serviced this turn. */
   loansServiced: number;
+  interestCollected: number;
+  principalRepaid: number;
+  defaultsWrittenOff: number;
   /** Cash recovered into a bank still awaiting resolution. */
   recoveredToEstate: number;
   /** Cash recovered into the insurance fund after resolution closed. */
@@ -54,6 +72,9 @@ export type DeadBankLoanSummary = {
 
 export const ZERO_DEAD_BANK_SUMMARY: DeadBankLoanSummary = {
   loansServiced: 0,
+  interestCollected: 0,
+  principalRepaid: 0,
+  defaultsWrittenOff: 0,
   recoveredToEstate: 0,
   recoveredToInsurer: 0,
 };
@@ -241,6 +262,9 @@ export type DeadBankLoanPrefetch = {
 /** One loan's servicing result, with the balance movement the prefetch must follow. */
 export type DeadBankLoanServiceResult = {
   collected: number;
+  interestCollected: number;
+  principalRepaid: number;
+  writtenOff: number;
   /** Cash that actually left the borrower this pass. */
   paidLocal?: number;
   /** The settlement was already applied; the prefetched balance is stale. */
@@ -387,7 +411,11 @@ function prefetchForLoan(
  *
  * `serviceLoan` is injected rather than imported so this module does not depend
  * on the turn file that depends on it, and so the servicing arithmetic stays in
- * exactly one place.
+ * exactly one place. It serves the loans a bank-level batch cannot express:
+ * household-pool tranches (whose cash comes from the central bank, not a named
+ * borrower) and collateralised construction loans (which own a lease and loan
+ * lock per receipt). Every other loan in the book goes through one journaled
+ * move per bank epoch.
  */
 export async function processDeadBankLoans(
   db: Db,
@@ -407,7 +435,7 @@ export async function processDeadBankLoans(
 
   // One loan read for every dead book, then grouped per bank in collection
   // order, instead of one query per bank. Each bank still services its own
-  // loans serially and in the same order.
+  // loans in the same order.
   const allLoans: BankLoan[] = await db
     .collection<BankLoan>("bankLoans")
     .find({
@@ -424,6 +452,7 @@ export async function processDeadBankLoans(
     else loansByBankKey.set(key, [loan]);
   }
   const prefetchState = await loadDeadBankLoanPrefetch(db, allLoans);
+  const multiCurrency = multiCurrencyCorporations(allLoans);
   // One fund document per currency: several wound-up charters can share one,
   // and the upsert is idempotent, so the estate read is per currency.
   const fundsByCurrency = new Map<CurrencyCode, Awaited<ReturnType<typeof ensureFund>>>();
@@ -458,12 +487,119 @@ export async function processDeadBankLoans(
         bank.measuredClaimTurn >= fund.pricingEvidenceStartTurn;
     }
 
-    // Serial per bank: two loans from the same borrower must see each other's
-    // debit, exactly as the live path does. Repayment ledger rows are queued
-    // and flushed once per bank so each row does not reload the tx thresholds
-    // and the anchor-rate map.
+    // Repayment ledger rows are queued and flushed once per bank so each row
+    // does not reload the tx thresholds and the anchor-rate map.
     const txEntries: TxInput[] = [];
+
+    // A borrower's loans are batched together or serviced per loan together:
+    // either way, each loan of theirs sees what the previous one left, which is
+    // the order of precedence the serial pass had. A borrower whose book holds
+    // a loan the batch cannot express keeps every loan on the per-loan path.
+    const byBorrower = new Map<string, BankLoan[]>();
     for (const loan of loans) {
+      const key = borrowerKeyOf(loan);
+      const group = byBorrower.get(key);
+      if (group) group.push(loan);
+      else byBorrower.set(key, [loan]);
+    }
+    const batchGroups: BankLoan[][] = [];
+    const perLoan: BankLoan[] = [];
+    for (const group of byBorrower.values()) {
+      if (group.every((loan) => batchCanService(loan, prefetchState, multiCurrency)))
+        batchGroups.push(group);
+      else perLoan.push(...group);
+    }
+
+    // One journaled move per bank epoch: N borrower debits, one summed credit,
+    // one loan projection per loan. The decisions are taken against the same
+    // prefetched running balance the per-loan path used.
+    const batchRows: LoanServiceBatchRow[] = [];
+    for (const group of batchGroups) {
+      for (const loan of group) {
+        const key = borrowerKeyOf(loan);
+        const preloaded = prefetchState.borrowerState.get(key)!;
+        const { decision, transition } = loanServiceTransition({
+          loan,
+          borrowerAvailable: preloaded.available,
+          turn,
+          creditTarget: target,
+          bankId: bank.corporationId.toString(),
+          trackInsuranceRecovery,
+        });
+        preloaded.available = Math.max(0, preloaded.available - decision.payment);
+        batchRows.push({ loan, decision, transition, borrowerKey: key });
+      }
+    }
+    if (batchRows.length > 0) {
+      const batchKey = deadBankLoanServiceKey(bank, turn);
+      const settled = await settleTransition(db, {
+        ...batchedLoanServiceMove(batchRows, target, {
+          totalLoansFilter: {
+            _id: bank.corporationId,
+            // Legacy loans are matched by origination turn; the live path omits
+            // the epoch guard for them, so the batch does too.
+            ...(batchRows.every((row) => row.loan.charteredTurn !== undefined)
+              ? { "bankCharter.charteredTurn": bank.charteredTurn }
+              : {}),
+          },
+          ...(trackInsuranceRecovery && target.collection === "depositInsuranceFunds"
+            ? { measuredRecoveryFilter: target.filter }
+            : {}),
+        }),
+        key: batchKey,
+        kind: "loan_service_batch",
+        turn,
+        currency: bank.currency,
+        batchIndependentDebits: true,
+        event: {
+          kind: "monetary.executed",
+          command: "turn.loanService.deadBankBatch",
+          subjectType: "corporation",
+          subjectId: bank.corporationId.toString(),
+          amount: batchRows.reduce((sum, row) => sum + Math.max(0, row.decision.payment), 0),
+          meta: { loans: batchRows.length, charteredTurn: bank.charteredTurn },
+        },
+      });
+      if (settled.status === "applied") {
+        const recorded = recordLoanServiceBatch({
+          db,
+          rows: batchRows,
+          turn,
+          currency: bank.currency,
+          bankName: bank.name,
+          settlementId: batchKey,
+          borrowerName: (row) =>
+            prefetchState.borrowerState.get(row.borrowerKey)?.name ?? "Borrower",
+        });
+        summary.loansServiced += batchRows.length;
+        summary.interestCollected += recorded.totals.interestCollected;
+        summary.principalRepaid += recorded.totals.principalRepaid;
+        summary.defaultsWrittenOff += recorded.totals.writtenOff;
+        if (bank.resolved) summary.recoveredToInsurer += recorded.totals.bankCredit;
+        else summary.recoveredToEstate += recorded.totals.bankCredit;
+        txEntries.push(...recorded.txEntries);
+      } else if (settled.status === "partial") {
+        // Money is half delivered and the journal owns the repair, exactly as a
+        // per-loan partial did. Nothing further is charged this pass, and the
+        // prefetched balances are dropped so any later book reads the truth.
+        summary.loansServiced += batchRows.length;
+        for (const row of batchRows) prefetchState.borrowerState.delete(row.borrowerKey);
+      } else if (settled.status === "rejected") {
+        // A refused batch moved nothing: every loan retries on its own key.
+        // Dropping the prefetched balance makes the per-loan path read the
+        // truth instead of a balance the refused decisions already spent.
+        for (const row of batchRows) prefetchState.borrowerState.delete(row.borrowerKey);
+        for (const row of batchRows) perLoan.push(row.loan);
+      } else {
+        // replayed: the batch key already owns this epoch's servicing, and the
+        // journal is the only writer that may finish it. Whether its debit has
+        // landed is not knowable here, so a later book reads the balance.
+        summary.loansServiced += batchRows.length;
+        for (const row of batchRows) prefetchState.borrowerState.delete(row.borrowerKey);
+      }
+    }
+
+    for (const loan of perLoan) {
       const prefetch = prefetchForLoan(prefetchState, loan);
       const result = await serviceLoan(
         loan,
@@ -474,6 +610,9 @@ export async function processDeadBankLoans(
         prefetch
       );
       summary.loansServiced += 1;
+      summary.interestCollected += result.interestCollected;
+      summary.principalRepaid += result.principalRepaid;
+      summary.defaultsWrittenOff += result.writtenOff;
       if (bank.resolved) summary.recoveredToInsurer += result.collected;
       else summary.recoveredToEstate += result.collected;
       if (prefetch?.borrower) {
@@ -497,4 +636,49 @@ export async function processDeadBankLoans(
   }
 
   return summary;
+}
+
+/**
+ * Corporations whose dead-bank loans span more than one currency. A
+ * corporation's treasury is one pot, but the prefetch models it once per loan
+ * currency, so summing such a borrower's debits would spend the same cash
+ * twice. Every one of its loans stays on the per-loan path, whose debit guard
+ * refuses the second currency exactly as it does today.
+ */
+function multiCurrencyCorporations(loans: readonly BankLoan[]): ReadonlySet<string> {
+  const currencies = new Map<string, Set<CurrencyCode>>();
+  for (const loan of loans) {
+    if (loan.borrowerType !== "corporation" || !loan.borrowerId) continue;
+    const key = String(loan.borrowerId);
+    const held = currencies.get(key) ?? new Set<CurrencyCode>();
+    held.add(loan.currency);
+    currencies.set(key, held);
+  }
+  return new Set([...currencies].filter(([, held]) => held.size > 1).map(([id]) => id));
+}
+
+/**
+ * A loan the bank-level move can carry on its own: a named borrower whose
+ * balance was preloaded, and no construction receipt of its own to lease.
+ *
+ * Everything else keeps the per-loan path: household-pool tranches (no named
+ * borrower, cash from the central bank), collateralised construction loans
+ * (their own lease and loan lock), a loan whose borrower has no document to
+ * read, and a corporation whose dead-bank book spans currencies.
+ */
+function batchCanService(
+  loan: BankLoan,
+  state: DeadBankLoanPrefetchState,
+  multiCurrency: ReadonlySet<string>
+): boolean {
+  if (loan.borrowerType !== "character" && loan.borrowerType !== "corporation") return false;
+  if (!loan.borrowerId || loan.constructionCollateral) return false;
+  if (loan.borrowerType === "corporation" && multiCurrency.has(String(loan.borrowerId)))
+    return false;
+  return state.borrowerState.has(borrowerKeyOf(loan));
+}
+
+/** Deterministic key per bank, turn and charter epoch, so a retry replays rather than repeats. */
+function deadBankLoanServiceKey(bank: DeadBank, turn: number): string {
+  return `dead-bank-loan-service-batch:${bank.corporationId.toString()}:${bank.charteredTurn}:${turn}`;
 }

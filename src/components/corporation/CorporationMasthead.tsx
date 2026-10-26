@@ -9,7 +9,12 @@ import { MONEY_PERIOD_SUFFIX, scaleMoney, type MoneyPeriod } from "@/lib/constan
 import { loyaltyLabel } from "@/lib/market/brandLoyalty";
 import { formatCompactNumber, formatMarketingStrength } from "@/lib/utils/formatters";
 import { corporationWikiSlug } from "@/lib/wiki/playerPages";
-import { CeoCorporationSettingsModal } from "./ceo/CeoCorporationSettingsModal";
+import dynamic from "next/dynamic";
+
+const CeoCorporationSettingsModal = dynamic(
+  () => import("./ceo/CeoCorporationSettingsModal").then((m) => m.CeoCorporationSettingsModal),
+  { ssr: false }
+);
 import { deriveTicker } from "./market/corpIdentity";
 import { useSharePriceHistory } from "./market/useSharePriceHistory";
 import { SmallButton, signTone, useCorpMoney } from "./dense/DenseKit";
@@ -427,7 +432,7 @@ export function CorporationMasthead({
         </p>
       )}
 
-      {isCeo && (
+      {isCeo && settingsOpen && (
         <CeoCorporationSettingsModal
           open={settingsOpen}
           onClose={() => setSettingsOpen(false)}

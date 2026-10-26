@@ -55,7 +55,7 @@ import {
 import { NPP_MARKET_ENTRY_FUNNEL_COLLECTION } from "@/lib/turn/npp/entryDiagnostics";
 
 export const ECONOMIC_VITAL_SIGNS_COLLECTION = "economicVitalSigns";
-export const ECONOMIC_VITAL_SIGNS_WINDOW_TURNS = 48 as const;
+const ECONOMIC_VITAL_SIGNS_WINDOW_TURNS = 48 as const;
 
 type Inputs = {
   turn: number;
@@ -613,7 +613,7 @@ export interface RingFencedCashSummary {
  * escrow rows are buyback debt, not money, and floor per row exactly like the
  * modeled balance stocks in `monetaryActivity`.
  */
-export function summarizeRingFencedCash(
+function summarizeRingFencedCash(
   rows: RingFencedCashRow[],
   rates: Record<string, number>
 ): RingFencedCashSummary {

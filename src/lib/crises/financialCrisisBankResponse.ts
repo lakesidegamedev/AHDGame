@@ -46,7 +46,7 @@ interface PendingFinancialGuarantee {
 }
 
 /** Weakest active domestic banks first; stable ordering makes retries deterministic. */
-export function rankBanksForFinancialIntervention(
+function rankBanksForFinancialIntervention(
   banks: Pick<Corporation, "_id" | "bankCharter">[]
 ): Pick<Corporation, "_id" | "bankCharter">[] {
   return [...banks]

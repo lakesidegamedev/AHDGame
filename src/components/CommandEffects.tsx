@@ -5,7 +5,7 @@ import { COMMAND_TYPES, POSTURE_FX } from "@/lib/military/config";
  *  speed", "− higher supply cost"). The sign sets the tone. Shared by every
  *  surface that names a command's posture or type, so the cabinet builder and
  *  the commanding general's read-only page say the same thing. */
-export function EffectLines({
+function EffectLines({
   lines,
   label,
   className = "",

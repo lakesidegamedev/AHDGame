@@ -31,7 +31,7 @@ export const PRIMARY_STATE_SWING_SIGMA = 0.15;
 /** The swing's z-score is clamped here so no state gets a freak multiplier. */
 export const PRIMARY_STATE_SWING_Z_CAP = 2.5;
 /** Exponent applied to group appeal in presidential primaries. 1 would be the old behaviour. */
-export const PRIMARY_APPEAL_SHARPNESS = 1.5;
+const PRIMARY_APPEAL_SHARPNESS = 1.5;
 /** Bonus across the candidate's home census division, outside the home state itself. */
 export const HOME_DIVISION_BONUS_PRIMARY = 0.06;
 
@@ -114,11 +114,11 @@ export function homeDivisionMultiplier(
  * How strongly a candidate's ideology, relative to the rest of the field,
  * moves their share between a state's left- and right-leaning counties.
  */
-export const PRIMARY_COUNTY_LEAN_BETA = 0.15;
+const PRIMARY_COUNTY_LEAN_BETA = 0.15;
 /** County lean (Cook PVI points) that counts as one unit of "more left / more right". */
-export const PRIMARY_COUNTY_LEAN_SCALE = 12;
+const PRIMARY_COUNTY_LEAN_SCALE = 12;
 /** Fixed per-county texture, smaller than the state swing. */
-export const PRIMARY_COUNTY_SWING_SIGMA = 0.08;
+const PRIMARY_COUNTY_SWING_SIGMA = 0.08;
 
 export interface PrimaryCountyInput {
   id: string;
@@ -208,11 +208,11 @@ export function distributePrimaryCounties(
  * flattening the regional swing.
  */
 /** Percent of vote per state won, in the wave just gone. */
-export const PRIMARY_WIN_MOMENTUM_PER_STATE = 1.5;
+const PRIMARY_WIN_MOMENTUM_PER_STATE = 1.5;
 /** Weight of a win per wave of age: a win two waves back counts 0.85^2. */
-export const PRIMARY_WIN_MOMENTUM_DECAY = 0.85;
+const PRIMARY_WIN_MOMENTUM_DECAY = 0.85;
 /** Ceiling on the boost, in percent. */
-export const PRIMARY_WIN_MOMENTUM_CAP = 8;
+const PRIMARY_WIN_MOMENTUM_CAP = 8;
 
 /**
  * Momentum multiplier per candidate, from the waves already run.

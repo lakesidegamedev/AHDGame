@@ -9,9 +9,9 @@
  */
 
 /** Infamy at or above this opens a recall petition immediately. */
-export const RECALL_INFAMY_THRESHOLD = 70;
+const RECALL_INFAMY_THRESHOLD = 70;
 /** Favorability at or below this counts as a low-approval turn. */
-export const RECALL_LOW_APPROVAL_LINE = 25;
+const RECALL_LOW_APPROVAL_LINE = 25;
 /** Consecutive low-approval turns that open a recall petition. */
 export const RECALL_SUSTAINED_TURNS = 4;
 /** Player signatures that open a petition from a watch. */
@@ -19,7 +19,7 @@ export const RECALL_SIGNATURES_REQUIRED = 5;
 /** Turns a petition stays open collecting signatures before it expires. */
 export const RECALL_PETITION_OPEN_TURNS = 12;
 /** Length of the constituency support-check window, in turns. */
-export const RECALL_SUPPORT_WINDOW_TURNS = 6;
+const RECALL_SUPPORT_WINDOW_TURNS = 6;
 /** Filings window for the by-election itself. */
 export const COMMONS_BY_ELECTION_FILING_TURNS = 24;
 /** General window for the by-election itself. */
@@ -32,7 +32,7 @@ export const COMMONS_BY_ELECTION_RETRY_COOLDOWN_TURNS = 48;
  * petition that splits the constituency evenly retains the MP; removal needs
  * to beat retention by more than this plus the favorability drag.
  */
-export const RECALL_RETAIN_BIAS = 2;
+const RECALL_RETAIN_BIAS = 2;
 
 export type RecallAutoTrigger = "infamy" | "lowApproval" | null;
 

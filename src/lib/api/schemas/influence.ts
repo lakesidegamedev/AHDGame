@@ -56,19 +56,3 @@ export const partyInfluenceQueueSchema = z.object({
     .min(1)
     .max(20),
 });
-
-export const nppInfluenceSchema = z.object({
-  influenceType: z.enum([
-    "boost_favorability",
-    "boost_influence",
-    "boost_loyalty",
-    "reduce_stubbornness",
-    "relocate_state",
-    "endorse_candidate",
-    "withdraw_election",
-    "oppose_candidate",
-    "support_leadership",
-  ]),
-  fundAmount: z.number().min(0).optional().default(0),
-  context: influenceContextSchema.default({}),
-});

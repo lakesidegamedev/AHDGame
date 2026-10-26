@@ -16,14 +16,14 @@ export const LOC_DEPOSIT_FRACTION = 0.7;
  * at a level whose declining-balance per-turn payment stays within a realistic
  * service window.
  */
-export const LOC_DTI_MAX_FRACTION = 0.7;
+const LOC_DTI_MAX_FRACTION = 0.7;
 
 /**
  * Secondary equity ceiling for total LOC exposure.
  * A borrower cannot owe more than their current economic equity, which stops
  * debt-funded asset purchases from recursively expanding the credit limit.
  */
-export const LOC_NET_WORTH_LIMIT_MULTIPLIER = 1;
+const LOC_NET_WORTH_LIMIT_MULTIPLIER = 1;
 
 /**
  * Per-turn auto-payment rate as a fraction of outstanding balance.

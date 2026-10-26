@@ -102,7 +102,7 @@ export const PRESERVED_ACTIVITY_LOG_TYPES: readonly string[] = Object.freeze([
  * Moderators carry `role: "moderator"` without `isAdmin`, so `isAdmin` alone
  * deleted the moderation team.
  */
-export const FULL_RESET_DELETABLE_USERS_FILTER = Object.freeze({
+const FULL_RESET_DELETABLE_USERS_FILTER = Object.freeze({
   isAdmin: { $ne: true },
   role: { $nin: ["admin", "moderator"] },
   isBanned: { $ne: true },

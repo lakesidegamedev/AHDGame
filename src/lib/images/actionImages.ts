@@ -168,11 +168,6 @@ export function countryArtSlugs(): Record<string, Record<string, readonly Action
   return ERA_COUNTRY_SLUGS;
 }
 
-/** Eras with at least one country-specific image, for tests and tooling. */
-export function erasWithCountryArt(): string[] {
-  return Object.keys(ERA_COUNTRY_SLUGS);
-}
-
 /** True when this (era, country, slug) has bespoke national art, not the generic. */
 export function hasCountryActionImage(
   slug: ActionImageSlug,

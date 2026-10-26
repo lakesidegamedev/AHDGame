@@ -4,7 +4,7 @@ import { birthRateIndexToTFR } from "@/lib/demographics/flows/fertility";
 import { tfrToBirthRateIndex } from "./fertilityOpening";
 
 /** Conservative game calibration, not an empirical causal estimate: max +/-0.24 children at capped pressure. */
-export const FERTILITY_CHILDREN_PER_PRESSURE = 0.2;
+const FERTILITY_CHILDREN_PER_PRESSURE = 0.2;
 
 export function fertilityPolicyIndex(
   opening: number,

@@ -700,7 +700,7 @@ export const DEPARTMENT_DEFINITIONS: readonly DepartmentDefinition[] = [
   ...OFFICE_DEPARTMENTS,
 ];
 
-export function isDepartmentActive(
+function isDepartmentActive(
   definition: DepartmentDefinition,
   year: number | null,
   enabledSeats?: ReadonlySet<string>

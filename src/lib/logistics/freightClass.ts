@@ -117,9 +117,6 @@ export function isHauledClass(freightClass: FreightClass): boolean {
   return freightClass !== "grid";
 }
 
-/** The two haulage classes, the ones that share a state's freight supply. */
-export const HAULED_FREIGHT_CLASSES: readonly FreightClass[] = ["bulk", "special"];
-
 /** Shipped commodities only, the set the sourcing pass iterates. */
 export const SHIPPED_COMMODITIES: readonly CommodityType[] = COMMODITY_TYPES.filter(
   (c) => FREIGHT_CLASS_BY_COMMODITY[c] !== null

@@ -25,7 +25,7 @@ export interface WikiWidgetProps {
   data?: string;
 }
 
-export const WIKI_COMPONENT_REGISTRY: Record<string, ComponentType<WikiWidgetProps>> = {
+const WIKI_COMPONENT_REGISTRY: Record<string, ComponentType<WikiWidgetProps>> = {
   "flowchart-turn": TurnProcessingFlowchart,
   "favorability-decay": FavorabilityDecayDiagram,
   "senate-classes": SenateClassesDiagram,

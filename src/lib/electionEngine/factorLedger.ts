@@ -50,7 +50,7 @@ export type FactorKey =
 
 /** Player-facing label per factor key. Carried in the data like the National
  *  Mood component rows, so the card renders it directly. */
-export const FACTOR_LABELS: Record<FactorKey, string> = {
+const FACTOR_LABELS: Record<FactorKey, string> = {
   stateBaseline: "State lean & standing",
   nationalEnvironment: "National mood",
   candidateFit: "Policy fit",
@@ -534,7 +534,7 @@ export function assembleNationalLedger(
 
 /** Reconstruction tolerance — the waterfall is exact by construction of the
  *  `uncertainty` residual, so any drift beyond float noise is a real bug. */
-export const LEDGER_RECONSTRUCT_EPSILON = 1e-6;
+const LEDGER_RECONSTRUCT_EPSILON = 1e-6;
 
 /**
  * Assert the ledger reconstructs: for every national candidate,

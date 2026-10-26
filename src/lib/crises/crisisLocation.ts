@@ -1,14 +1,14 @@
 import type { Db } from "mongodb";
 import type { Crisis } from "@/lib/db/types/crisis";
 import type { State } from "@/lib/db/types/state";
-import { COUNTRY_CONFIGS, COUNTRY_ORDER, type CountryId } from "@/lib/constants/countries";
+import { COUNTRY_CONFIGS, COUNTRY_ORDER } from "@/lib/constants/countries";
 
 const COUNTRY_NAMES: Record<string, string> = Object.fromEntries(
   COUNTRY_ORDER.map((id) => [id, COUNTRY_CONFIGS[id].name])
 );
 
 /** Country code → full display name ("US" → "United States"), code if unknown. */
-export function countryName(id: string): string {
+function countryName(id: string): string {
   return COUNTRY_NAMES[id] ?? id;
 }
 
@@ -57,9 +57,4 @@ export async function resolveCrisisLocationName(
     return joinNames(crisis.countryIds.map((c) => countryName(c)));
   }
   return "communities around the world";
-}
-
-/** Country-scope helper for the synchronous create paths (no state lookup needed). */
-export function locationNameForCountries(countryIds: CountryId[] | string[]): string {
-  return joinNames(countryIds.map((c) => countryName(c)));
 }

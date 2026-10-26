@@ -13,7 +13,7 @@ export interface PosterStat {
 }
 
 /** The six numbers on the poster, most personal first; empty stats drop out. */
-export function posterStats(r: CharacterRecap): PosterStat[] {
+function posterStats(r: CharacterRecap): PosterStat[] {
   const out: PosterStat[] = [];
   if (r.actions.total > 0) out.push({ label: "Actions", value: fmt(r.actions.total) });
   if (r.elections.entered > 0)

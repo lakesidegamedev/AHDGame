@@ -169,8 +169,8 @@ export function resolveTurnWindow(args: {
 export const ELECTION_DAY_TURNS = 4 as const; // sharp final-day spike band
 export const RAMP_TURNS = 8 as const; // gentle build-up band before it
 // Pool shares by tier — early / ramp / election-day. Must sum to 1.
-export const EARLY_POOL_SHARE = 0.5 as const;
-export const RAMP_POOL_SHARE = 0.2 as const;
+const EARLY_POOL_SHARE = 0.5 as const;
+const RAMP_POOL_SHARE = 0.2 as const;
 export const FINAL_POOL_SHARE = 0.3 as const;
 
 export function turnVoteWeight(

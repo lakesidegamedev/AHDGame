@@ -211,7 +211,7 @@ export const ELECTORATE_REPRESENTATION_FRACTION = 0.5;
 /** Lean quantization step for coalescing cells into units. */
 export const LEAN_QUANT = 0.5;
 /** Turnout quantization step (percentage points) for coalescing. */
-export const TURNOUT_QUANT = 5;
+const TURNOUT_QUANT = 5;
 /** Synthetic category id the engines iterate when the flag is on. */
 export const GRANULAR_CATEGORY_ID = "granularCells";
 

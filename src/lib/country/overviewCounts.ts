@@ -3,7 +3,7 @@
  * their lander, and only when the subsystem is switched on: every other country
  * reaches the hub through the World nav instead.
  */
-export const COLD_WAR_PRINCIPAL_IDS = ["US", "RU"] as const;
+const COLD_WAR_PRINCIPAL_IDS = ["US", "RU"] as const;
 
 export function isColdWarPrincipal(countryId: string): boolean {
   return (COLD_WAR_PRINCIPAL_IDS as readonly string[]).includes(countryId);

@@ -47,7 +47,7 @@ export function Chevron({ open, className = "" }: { open: boolean; className?: s
 }
 
 // Inline icons keyed by nav item — matches the design's stroke set.
-export const NAV_ICONS: Record<string, React.ReactNode> = {
+const NAV_ICONS: Record<string, React.ReactNode> = {
   Home: <path d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3v-6h6v6h3a1 1 0 001-1V10" />,
   Map: (
     <path d="M9 20l-5.4-2.7A1 1 0 013 16.4V5.6a1 1 0 011.4-.9L9 7m0 13l6-3m-6 3V7m6 10l4.6 2.3A1 1 0 0021 18.4V7.6a1 1 0 00-.6-.9L15 4m0 13V4m0 0L9 7" />

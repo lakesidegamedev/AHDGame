@@ -18,7 +18,7 @@ import { OUTPUT_GROW_STEP } from "./outputResponseRules";
 
 export const SHORTAGE_GROWTH_CAP = 2;
 
-export function bookKey(commodity: string, book: string): string {
+function bookKey(commodity: string, book: string): string {
   return `${commodity}|${book}`;
 }
 

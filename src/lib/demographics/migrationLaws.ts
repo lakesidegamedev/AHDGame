@@ -12,8 +12,8 @@ import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
 import { openingChoice1991 } from "@/lib/resetLegislation/rules/reviewCatalog";
 import type { MigrationLawPosition } from "./flows/internationalMigration";
 
-export const ENTRY_AND_RESIDENCE_FAMILY_ID = "L49";
-export const LABOUR_MIGRATION_FAMILY_ID = "L52";
+const ENTRY_AND_RESIDENCE_FAMILY_ID = "L49";
+const LABOUR_MIGRATION_FAMILY_ID = "L52";
 
 export interface MigrationLawPositions {
   entry: MigrationLawPosition;

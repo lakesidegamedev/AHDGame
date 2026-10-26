@@ -3,7 +3,7 @@
 import { useReducer, useEffect, useCallback, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
-import { CDN_LOGO_URL } from "@/lib/images/staticCdnAssets";
+import { CDN_LOGO_URL } from "@/lib/images/cdnStaticUrls";
 import { usePathname, useRouter } from "next/navigation";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import { useToast } from "@/contexts/ToastContext";

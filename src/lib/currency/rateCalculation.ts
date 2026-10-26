@@ -197,7 +197,7 @@ export function breadthFactor(effectiveTraders: number | undefined): number {
  * smoothly: half the cap at ORGANIC_VOLUME_HALF_PRESSURE_ANCHOR of net ₳, so
  * everyday conversions barely register and only large, broad flows approach it.
  */
-export function computeOrganicVolumePressure(volumes: VolumeInputs): number {
+function computeOrganicVolumePressure(volumes: VolumeInputs): number {
   const net = volumes.buyVolume24 - volumes.sellVolume24;
   if (!Number.isFinite(net) || net === 0) return 0;
   const saturating = net / (Math.abs(net) + ORGANIC_VOLUME_HALF_PRESSURE_ANCHOR);
@@ -205,7 +205,7 @@ export function computeOrganicVolumePressure(volumes: VolumeInputs): number {
 }
 
 /** Raw pressure (within +/-VOLUME_PRESSURE_CAP) from central-bank intervention. */
-export function computeInterventionVolumePressure(syntheticNet: number | undefined): number {
+function computeInterventionVolumePressure(syntheticNet: number | undefined): number {
   if (syntheticNet == null || !Number.isFinite(syntheticNet) || syntheticNet === 0) return 0;
   return clampToCap(syntheticNet * VOLUME_PRESSURE_SENSITIVITY, VOLUME_PRESSURE_CAP);
 }

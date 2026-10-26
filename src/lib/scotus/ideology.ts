@@ -10,9 +10,9 @@
  */
 
 /** Weight applied to the justice's own personal policy position. */
-export const JUSTICE_IDEOLOGY_PERSONAL_WEIGHT = 0.65;
+const JUSTICE_IDEOLOGY_PERSONAL_WEIGHT = 0.65;
 /** Weight applied to the justice's party's matching position. */
-export const JUSTICE_IDEOLOGY_PARTY_WEIGHT = 0.35;
+const JUSTICE_IDEOLOGY_PARTY_WEIGHT = 0.35;
 
 export interface JusticePersonalPositions {
   economic: number;

@@ -30,7 +30,7 @@ export const COMMODITY_FIX_STAGE = {
   VERIFY: 6,
 } as const;
 
-export const COMMODITY_FIX_STAGE_MAX = COMMODITY_FIX_STAGE.VERIFY;
+const COMMODITY_FIX_STAGE_MAX = COMMODITY_FIX_STAGE.VERIFY;
 
 /** Normalise a raw config value to an integer stage in [0, 6]. */
 export function normalizeCommodityFixStage(raw: unknown): number {
@@ -82,7 +82,7 @@ export function demandSupplyCapForStage(
  * is closed) on top of the standard +15% at policy +25. Returns a factor >= 1
  * that scales BOTH the output and input policy multipliers.
  */
-export const SHORTAGE_HEADROOM_UNMET_THRESHOLD = 0.25;
+const SHORTAGE_HEADROOM_UNMET_THRESHOLD = 0.25;
 export const SHORTAGE_HEADROOM_MAX_BONUS = 0.1;
 
 export function shortagePolicyHeadroom(args: {

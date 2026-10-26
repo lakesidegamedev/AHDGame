@@ -133,7 +133,7 @@ export function labourUnemploymentTightnessPressure(tightness: number | undefine
  * a halving as 33, and saturates at e^2 (7.4x oversubscribed) and e^-2, so the
  * observed 200x readings all score 100 rather than stretching the scale.
  */
-export const LABOUR_TIGHTNESS_SCORE_K = 25;
+const LABOUR_TIGHTNESS_SCORE_K = 25;
 
 /**
  * Map a measured tightness ratio onto the 0-100 bargaining score (#791).
@@ -230,10 +230,10 @@ export function relativeWageBid(
 }
 
 /** Maximum participation uplift created by sustained labour shortages. */
-export const LABOUR_PARTICIPATION_SHORTAGE_MAX_PP = 6;
+const LABOUR_PARTICIPATION_SHORTAGE_MAX_PP = 6;
 
 /** Maximum change in the shortage participation uplift per turn. */
-export const LABOUR_PARTICIPATION_SHORTAGE_MAX_MOVE_PP = 0.25;
+const LABOUR_PARTICIPATION_SHORTAGE_MAX_MOVE_PP = 0.25;
 
 /**
  * Move the effective participation bonus toward the shortage implied target.

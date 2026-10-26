@@ -16,8 +16,6 @@ import {
   offerValuePerTurn,
 } from "./supplyOfferUi";
 
-export { offerPremiumLabel } from "./supplyOfferUi";
-
 export interface OfferCorporation {
   id: string;
   name: string;
@@ -28,7 +26,7 @@ const control =
   "h-8 rounded-md border border-card-border bg-background px-2 text-[13px] text-foreground focus:border-foreground focus:outline-none";
 
 /** Column template shared by the header and every row (md and up). */
-export const OFFER_GRID =
+const OFFER_GRID =
   "md:grid md:grid-cols-[minmax(11rem,1.6fr)_5.5rem_minmax(7rem,1fr)_minmax(6rem,0.9fr)_minmax(6rem,0.9fr)_5.5rem_minmax(7rem,1fr)] md:items-center md:gap-3";
 
 export function SupplyOfferHeader() {

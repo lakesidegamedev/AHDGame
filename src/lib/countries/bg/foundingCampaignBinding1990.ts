@@ -10,7 +10,7 @@ import { scalePoolToRegistered } from "@/lib/electionEngine/rules/registration";
 import { BG_1990_LIST_DISTRICTS } from "./data/foundingDistricts1990";
 import { isBgOrdinaryCapacity } from "./rules/assemblyTransition";
 
-export async function materializeBgFoundingCampaignBinding(input: {
+async function materializeBgFoundingCampaignBinding(input: {
   db: Db;
   session: ClientSession;
   cycle: number;

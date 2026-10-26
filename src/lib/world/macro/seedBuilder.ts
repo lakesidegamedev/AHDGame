@@ -11,7 +11,7 @@ import type {
 import { macroTickBucket } from "./schedule";
 
 export const MACRO_TURNS_PER_YEAR = 48;
-export const MACRO_1953_PRESET_ID = "1953-default";
+const MACRO_1953_PRESET_ID = "1953-default";
 
 /** Authored seed inputs for a sphere-macro country. Never inherit another era. */
 export interface MacroCountrySeedSpec {
@@ -100,7 +100,7 @@ export function buildSectorsFromSpec(
  * Assess authored-seed completeness. Fallback fields must stay empty — Tier-2
  * countries never silently inherit modern-preset bundles (#3719).
  */
-export function assessMacroSeedDataQuality(
+function assessMacroSeedDataQuality(
   spec: MacroCountrySeedSpec,
   sectors: Partial<Record<OperatingSectorType, MacroSectorState>>
 ): MacroCountryDataQuality {

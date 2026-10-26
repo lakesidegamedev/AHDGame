@@ -539,11 +539,11 @@ export const OPS_TREES: Record<UpgradeCategory, OpsTreeDef> = {
  * levers were never a real spending decision. Upkeep is doubled and the tier-3
  * purchase is 1.5x. Fundraising and opposition research are unchanged.
  */
-export const OPS_UPKEEP_MULTIPLIER: Readonly<Partial<Record<UpgradeCategory, number>>> = {
+const OPS_UPKEEP_MULTIPLIER: Readonly<Partial<Record<UpgradeCategory, number>>> = {
   groundGame: 2,
   mediaSpending: 2,
 };
-export const OPS_TIER3_FUNDS_MULTIPLIER: Readonly<Partial<Record<UpgradeCategory, number>>> = {
+const OPS_TIER3_FUNDS_MULTIPLIER: Readonly<Partial<Record<UpgradeCategory, number>>> = {
   groundGame: 1.5,
   mediaSpending: 1.5,
 };

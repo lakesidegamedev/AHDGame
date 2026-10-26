@@ -70,5 +70,3 @@ export const trRegionsModern: State[] = trRegions.map((region) => ({
 
 /** All modern presets project the same source vintage, by explicit decision. */
 export const trRegions2019 = trRegionsModern;
-export const trRegions2023 = trRegionsModern;
-export const trRegions2027 = trRegionsModern;

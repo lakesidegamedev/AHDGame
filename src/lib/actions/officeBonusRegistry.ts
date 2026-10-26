@@ -78,19 +78,19 @@ export function resolveOfficeActionBonusForType(
 }
 
 /** NI tier for a national head of government or executive head of state. */
-export const NATIONAL_EXECUTIVE_NI_BONUS = 2.5;
+const NATIONAL_EXECUTIVE_NI_BONUS = 2.5;
 /** NI tier for a deputy national executive (vice president, tánaiste). */
-export const DEPUTY_EXECUTIVE_NI_BONUS = 2.0;
+const DEPUTY_EXECUTIVE_NI_BONUS = 2.0;
 /** NI tier for a confirmed cabinet member or a sub-national executive. */
 export const CABINET_NI_BONUS = 1.5;
 /** NI tier for an acting cabinet member, who was never confirmed. */
 export const ACTING_CABINET_NI_BONUS = 0.75;
 /** NI tier for a ceremonial head of state. */
-export const CEREMONIAL_HEAD_OF_STATE_NI_BONUS = 1.0;
+const CEREMONIAL_HEAD_OF_STATE_NI_BONUS = 1.0;
 /** NI tier for a national legislator. */
-export const NATIONAL_LEGISLATOR_NI_BONUS = 1.0;
+const NATIONAL_LEGISLATOR_NI_BONUS = 1.0;
 /** NI tier for a sub-national legislator. */
-export const SUBNATIONAL_LEGISLATOR_NI_BONUS = 0.5;
+const SUBNATIONAL_LEGISLATOR_NI_BONUS = 0.5;
 
 /** Office keys that are not in any country registry but carry an NI tier. */
 const OFFICE_NI_BONUS_OVERRIDES: Partial<Record<string, number>> = {

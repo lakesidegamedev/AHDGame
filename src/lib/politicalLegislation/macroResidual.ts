@@ -27,7 +27,7 @@ import { TIER2_SOURCES } from "@/lib/politicalMetrics/macroFamilySources";
 import { politicalScoreFromLegacyValue } from "@/lib/politicalMetrics/derive/legacyInversion";
 
 /** Fraction of the macro-vs-law gap that reaches the target. */
-export const MACRO_WEIGHT = 0.5;
+const MACRO_WEIGHT = 0.5;
 /** Hard cap in board points, either direction. Keeps the law signal dominant. */
 export const MACRO_BOUND = 12;
 

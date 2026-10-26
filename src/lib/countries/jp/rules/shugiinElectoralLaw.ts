@@ -52,7 +52,7 @@ export interface JapanShugiinResolvedRegionalRule {
   resolvedAtTurn: number;
 }
 
-export const JP_SHUGIIN_1991_SNTV: JapanShugiinRuleSnapshot = {
+const JP_SHUGIIN_1991_SNTV: JapanShugiinRuleSnapshot = {
   law: "sntv-1991-v1",
   totalSeats: 512,
   districtSeats: 512,

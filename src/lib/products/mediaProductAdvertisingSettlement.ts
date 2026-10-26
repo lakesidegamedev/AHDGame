@@ -38,7 +38,7 @@ export type { ProductAdvertisingFamily } from "@/lib/products/productAdvertising
  * dependent journal round trips, so buyers whose orders share no document
  * settle side by side, as operating cash does.
  */
-export const PRODUCT_ADVERTISING_LANES = 8;
+const PRODUCT_ADVERTISING_LANES = 8;
 
 export type MediaAdvertisingSellerQuote = ProductAdvertisingSellerQuote;
 
@@ -71,13 +71,6 @@ export function createMediaProductAdvertisingObligation(input: {
     turn: input.turn,
     ...quote,
   };
-}
-
-export function mediaProductAdvertisingSettlementKey(
-  corporationId: string,
-  obligation: Pick<MediaProductAdvertisingObligationV1, "projectId" | "turn">
-): string {
-  return productAdvertisingSettlementKey(corporationId, obligation);
 }
 
 export function productAdvertisingSettlementKey(

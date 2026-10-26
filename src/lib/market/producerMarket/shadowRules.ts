@@ -13,7 +13,7 @@ import { nextReferencePrice } from "./referencePriceRules";
 import type { ProducerPayable } from "./payablesRules";
 
 /** Planning passes the shadow allows per turn (see the t300 replay note above). */
-export const SHADOW_PLANNING_PASSES = 8;
+const SHADOW_PLANNING_PASSES = 8;
 
 export interface ShadowProducer {
   plan: ProductionPlan;

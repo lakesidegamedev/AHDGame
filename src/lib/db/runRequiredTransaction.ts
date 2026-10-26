@@ -155,7 +155,7 @@ const BARRIER_ID = "transactionMajorityBarrier";
  * this write is majority-acknowledged every earlier write on the node is too.
  * Clients already at the server default (majority) skip it.
  */
-export async function awaitMajorityBarrier(client: MongoClient): Promise<void> {
+async function awaitMajorityBarrier(client: MongoClient): Promise<void> {
   if (!acknowledgesBelowMajority(client)) return;
   await client
     .db(resolveMongoDbName(process.env as Parameters<typeof resolveMongoDbName>[0]))
