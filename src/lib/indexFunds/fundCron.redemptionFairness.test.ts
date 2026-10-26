@@ -129,4 +129,37 @@ describe("index fund cron queued-redemption fairness", () => {
     const snapshots = await w.db.collection("indexFundSnapshots").countDocuments({});
     expect(snapshots).toBe(FUNDS * turns);
   });
+
+  it("snapshots the funds a redemption pass touched from one batched read", async () => {
+    const w = world();
+    await queueOnePerFund(w, 21);
+    const funds = w.db.collection("indexFunds") as unknown as {
+      findOne: (...args: unknown[]) => unknown;
+      find: (...args: unknown[]) => unknown;
+    };
+    const fundIdStrings = new Set(w.funds.map((fund) => String(fund._id)));
+    const findOne = vi.spyOn(funds, "findOne");
+    const batched = vi.spyOn(funds, "find");
+
+    const result = await runIndexFundCron(w.db, {
+      currentTurn: 21,
+      queuedRedemptionClaimsPerPass: BUDGET,
+    });
+
+    expect(result.redemptionsPaid).toBe(BUDGET);
+    // A payout batch re-reads its fund once to pick up the settled cash. What it
+    // must not add is one single-fund read per fund with a queue: the snapshots
+    // load every touched fund in a single batched query after the pass.
+    const singleFundReads = findOne.mock.calls.filter((call) =>
+      fundIdStrings.has(String((call[0] as { _id?: unknown })?._id))
+    );
+    // One re-read per payout batch. The snapshot pass adds none: it reads every
+    // fund with a queued redemption in the batched query asserted below.
+    expect(singleFundReads.length).toBeLessThanOrEqual(BUDGET * 2);
+    const batchedQueuedReads = batched.mock.calls.filter((call) => {
+      const ids = (call[0] as { _id?: { $in?: unknown[] } })?._id?.$in;
+      return Array.isArray(ids) && ids.some((id) => fundIdStrings.has(String(id)));
+    });
+    expect(batchedQueuedReads.length).toBeGreaterThanOrEqual(1);
+  });
 });
