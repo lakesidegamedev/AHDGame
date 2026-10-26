@@ -54,7 +54,6 @@ describe("banking charter", () => {
       privateBankingEnabled: true,
       // Default the advanced-charter gate open so the separation-law tests
       // exercise the jurisdiction logic; the gate has its own tests below.
-      playerAdvancedBankChartersEnabled: true,
     });
     db.collectionMocks.gameState!.findOne.mockResolvedValue({
       _id: "current",
@@ -214,23 +213,6 @@ describe("banking charter", () => {
       ]);
     });
 
-    it("offers only retail while the advanced-charter gate is off", async () => {
-      // Flag absent/false withholds investment + universal from players even
-      // where the jurisdiction would allow them.
-      db.collectionMocks.gameConfig!.findOne.mockResolvedValue({
-        _id: "default",
-        privateBankingEnabled: true,
-        playerAdvancedBankChartersEnabled: false,
-      });
-      db.collectionMocks.bankingLaws!.findOne.mockResolvedValue({
-        _id: "US",
-        separation: "universal",
-        enactedTurn: 5,
-      });
-      const { getLegalCharterTypes } = await importSeparationLaw();
-      await expect(getLegalCharterTypes(db as unknown as Db, "US")).resolves.toEqual(["retail"]);
-    });
-
     it("offers no charters in a command economy", async () => {
       db.collectionMocks.gameState!.findOne.mockResolvedValue({
         _id: "current",
@@ -388,9 +370,7 @@ describe("banking charter", () => {
     function charterWorld(corp: Corporation) {
       const memory = createInMemoryDb();
       memory.seed("corporations", [{ ...corp }]);
-      memory.seed("gameConfig", [
-        { _id: "default", privateBankingEnabled: true, playerAdvancedBankChartersEnabled: true },
-      ]);
+      memory.seed("gameConfig", [{ _id: "default", privateBankingEnabled: true }]);
       memory.seed("gameState", [{ _id: "current", preset: "2019-default", currentTurn: 42 }]);
       memory.seed("corporateSectors", [
         { _id: new ObjectId(), corporationId: corp._id, sectorType: "financial" },

@@ -29,7 +29,7 @@ beforeEach(() => {
   vi.mocked(isIndexFundsEnabled).mockResolvedValue(true);
   vi.mocked(listFundsBySponsor).mockResolvedValue([]);
   db.collection("corporations").findOne.mockImplementation(async () => corp);
-  db.collection("gameConfig").findOne.mockResolvedValue({ playerFundSponsorshipEnabled: true });
+  db.collection("gameConfig").findOne.mockResolvedValue({ indexFundsMode: "full" });
   db.collection("federalBudget").findOne.mockResolvedValue({
     countryId: corp.countryId,
     currencyCode: "USD",
@@ -59,10 +59,7 @@ describe("fund creation capability", () => {
     corp.ceoVacant = true;
     expect((await read()).canCreate).toBe(false);
   });
-  it("denies creation when sponsorship, funds or corporation actions are disabled", async () => {
-    db.collection("gameConfig").findOne.mockResolvedValue({ playerFundSponsorshipEnabled: false });
-    expect((await read()).canCreate).toBe(false);
-    db.collection("gameConfig").findOne.mockResolvedValue({ playerFundSponsorshipEnabled: true });
+  it("denies creation when funds or corporation actions are disabled", async () => {
     vi.mocked(isIndexFundsEnabled).mockResolvedValue(false);
     expect((await read()).canCreate).toBe(false);
     vi.mocked(isIndexFundsEnabled).mockResolvedValue(true);

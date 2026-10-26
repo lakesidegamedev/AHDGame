@@ -1517,7 +1517,6 @@ export function processSector(
   if (plantsEnabled) {
     sectorOps.push(
       ...(shortageBuildSpeedupOps({
-        enabled: market.shortageBuildSpeedupEnabled === true,
         sectorId: sector._id,
         outstanding: existingQueue.filter((o) => o.onlineTurn > currentTurn),
         currentTurn,

@@ -40,8 +40,6 @@ describe("1991 charter access", () => {
     expect(playerInvestmentBankingSeedFlags(1991)).toEqual({
       privateBankingEnabled: true,
       bankPropTradingEnabled: true,
-      playerAdvancedBankChartersEnabled: true,
-      bankPropForexFeesEnabled: true,
     });
     expect(playerInvestmentBankingSeedFlags(2019)).toEqual({});
     expect(playerInvestmentBankingSeedFlags(1953)).toEqual({});

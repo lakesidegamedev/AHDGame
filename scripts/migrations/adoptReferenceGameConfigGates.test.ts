@@ -108,10 +108,7 @@ describe("adoptReferenceGameConfigGates — gates", () => {
   });
 
   it("never fills an absent fresh-world gameplay flag on a running world", async () => {
-    const { db, updates } = fakeDb(
-      fullyPopulated({ treasuryCashLedgerEnabled: undefined, bankUnderwritingEnabled: undefined }),
-      500
-    );
+    const { db, updates } = fakeDb(fullyPopulated({ treasuryCashLedgerEnabled: undefined }), 500);
     await runAdoptReferenceGameConfigGates(db, {});
     expect(updates).toHaveLength(0);
   });
