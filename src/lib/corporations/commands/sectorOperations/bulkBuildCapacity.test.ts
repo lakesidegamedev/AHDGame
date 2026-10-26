@@ -179,7 +179,7 @@ describe("bulkBuildCapacity", () => {
     fakeBuildPath({ "US-AL": 60, "US-NY": 50, "US-TX": 10 });
 
     const json = await (
-      await call({ rule: { kind: "facilities", count: 2 }, mode: "apply" })
+      await call({ rule: { kind: "facilities", count: 2 }, mode: "apply", maxTotalLocal: 1_000 })
     ).json();
 
     expect(
@@ -220,7 +220,7 @@ describe("bulkBuildCapacity", () => {
         : { ok: false, status: 400, code: "insufficient_cash", error: "Not enough cash" }
     );
     const json = await (
-      await call({ rule: { kind: "facilities", count: 1 }, mode: "apply" })
+      await call({ rule: { kind: "facilities", count: 1 }, mode: "apply", maxTotalLocal: 1_000 })
     ).json();
     expect(json.rows.map((r: { status: string }) => r.status)).toEqual(["skipped", "skipped"]);
     // The second sector is never attempted after the first refusal.
@@ -262,9 +262,16 @@ describe("bulkBuildCapacity", () => {
       403
     );
     corporation.ceoType = "npp";
-    expect((await call({ rule: { kind: "facilities", count: 1 }, mode: "apply" })).status).toBe(
-      403
-    );
+    expect(
+      (await call({ rule: { kind: "facilities", count: 1 }, mode: "apply", maxTotalLocal: 10 }))
+        .status
+    ).toBe(403);
+    expect(placeCapacityBuild).not.toHaveBeenCalled();
+  });
+
+  it("refuses to spend without a confirmed total", async () => {
+    const res = await call({ rule: { kind: "facilities", count: 1 }, mode: "apply" });
+    expect(res.status).toBe(400);
     expect(placeCapacityBuild).not.toHaveBeenCalled();
   });
 });

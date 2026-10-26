@@ -96,6 +96,9 @@ export async function bulkBuildCapacity(request: Request, { params }: RouteParam
     const parsed = await parseJsonBody(request, bulkBuildCapacitySchema);
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
     const body = parsed.data;
+    if (body.mode === "apply" && body.maxTotalLocal === undefined) {
+      return errorResponse(400, "Confirm the total before building");
+    }
 
     // Separate buckets: previews follow the filters as the CEO changes them,
     // while an apply runs up to BULK_BUILD_MAX_SECTORS money-moving builds.
@@ -247,7 +250,7 @@ export async function bulkBuildCapacity(request: Request, { params }: RouteParam
     }
 
     // ─── apply: quote, then place, one sector at a time ──────────────────────
-    const budget = body.maxTotalLocal ?? Number.POSITIVE_INFINITY;
+    const budget = body.maxTotalLocal!;
     let spentLocal = 0;
     let stopped = false;
     let builtCount = 0;
