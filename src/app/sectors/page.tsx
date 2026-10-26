@@ -39,6 +39,8 @@ type SectorRow = {
 
 type SectorsResponse = {
   view: SectorView;
+  /** Plants worlds enter markets by building; unowned revenue is a legacy figure. */
+  plantsMode?: boolean;
   sort: SectorSort;
   dir: "asc" | "desc";
   page: number;
@@ -270,7 +272,7 @@ export default function SectorsPage() {
           {/* Sector cards grid */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {data.sectors.map((s) => (
-              <SectorCard key={s.id} sector={s} view={view} />
+              <SectorCard key={s.id} sector={s} view={view} plantsMode={data.plantsMode === true} />
             ))}
           </div>
 
@@ -310,7 +312,19 @@ export default function SectorsPage() {
   );
 }
 
-function SectorCard({ sector, view }: { sector: SectorRow; view: SectorView }) {
+function SectorCard({
+  sector,
+  view,
+  plantsMode,
+}: {
+  sector: SectorRow;
+  view: SectorView;
+  plantsMode: boolean;
+}) {
+  // Under plants nobody buys into the unowned pool any more: a market is
+  // entered by building a plant, sized by room to build. Say so, so this
+  // figure is not read as the amount available to a new entrant.
+  const legacyPool = view === "unowned" && plantsMode;
   const sectorHref =
     view !== "unowned" && sector.corporationId
       ? `/corporation/${sector.corporationSequentialId ?? sector.corporationId}/sector/${sector.id}`
@@ -337,7 +351,9 @@ function SectorCard({ sector, view }: { sector: SectorRow; view: SectorView }) {
             <div className="text-lg font-bold tabular-nums leading-none text-foreground">
               ₳{formatNumber(sector.revenueAnchor)}
             </div>
-            <div className="text-body-sm font-medium text-muted mt-0.5">/day</div>
+            <div className="text-body-sm font-medium text-muted mt-0.5">
+              {legacyPool ? "unclaimed legacy revenue /day" : "/day"}
+            </div>
           </div>
         </div>
       </Link>
@@ -366,7 +382,9 @@ function SectorCard({ sector, view }: { sector: SectorRow; view: SectorView }) {
         {view === "unowned" && (
           <div className="flex flex-col px-4 py-2.5">
             <span className="text-body-sm font-medium text-muted mb-1">Status</span>
-            <span className="text-xs text-muted leading-tight">Available</span>
+            <span className="text-xs text-muted leading-tight">
+              {legacyPool ? "Enter by building a plant" : "Available"}
+            </span>
           </div>
         )}
         {sector.margin != null && (

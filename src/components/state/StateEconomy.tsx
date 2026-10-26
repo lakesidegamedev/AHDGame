@@ -110,6 +110,8 @@ interface EconomySector {
   unownedPercent: number;
   /** Plants tier: unmet demand in this market, output units per day. */
   headroomUnits?: number | null;
+  /** "country" when that room is one figure shared across the whole country. */
+  headroomScope?: "state" | "country" | null;
   splitCost: number;
   estimatedCapture: number;
   estimatedCapturePercent: number;
@@ -637,17 +639,34 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
               <span className="text-[10px] font-normal text-muted">/day</span>
             </span>
           </div>
-          <div>
-            <Tooltip content={marketCurrencyNote}>
-              <span className="block w-fit cursor-help border-b border-dashed border-card-border/70 text-sm font-semibold text-foreground">
-                Unowned revenue
+          {data.plantsMode ? (
+            // Under plants a market is entered by building, so the figure that
+            // matters is room to build, the same one the expansion screen shows.
+            // Legacy unowned revenue does not limit building and is not shown.
+            <div>
+              <Tooltip content={roomToBuildNote(sector.headroomScope)}>
+                <span className="block w-fit cursor-help border-b border-dashed border-card-border/70 text-sm font-semibold text-foreground">
+                  Room to build
+                </span>
+              </Tooltip>
+              <span className="text-sm font-bold text-foreground tabular-nums">
+                {formatUnits(sector.headroomUnits)}
+                <span className="text-[10px] font-normal text-muted"> {CAPACITY_UNIT_LABEL}</span>
               </span>
-            </Tooltip>
-            <span className="text-sm font-bold text-foreground tabular-nums">
-              {fmtMarket(sector.unownedRevenue)}
-              <span className="text-[10px] font-normal text-muted">/day</span>
-            </span>
-          </div>
+            </div>
+          ) : (
+            <div>
+              <Tooltip content={marketCurrencyNote}>
+                <span className="block w-fit cursor-help border-b border-dashed border-card-border/70 text-sm font-semibold text-foreground">
+                  Unowned revenue
+                </span>
+              </Tooltip>
+              <span className="text-sm font-bold text-foreground tabular-nums">
+                {fmtMarket(sector.unownedRevenue)}
+                <span className="text-[10px] font-normal text-muted">/day</span>
+              </span>
+            </div>
+          )}
           <div>
             <span className="block text-body-sm font-medium text-muted">Corporations</span>
             <span className="text-sm font-bold text-foreground">{playerOwners.length}</span>
@@ -1019,7 +1038,7 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
               <span
                 className={`font-semibold text-sm ${data.plantsMode ? "text-foreground" : "text-muted"}`}
               >
-                {data.plantsMode ? "Untapped market" : "Unowned market"}
+                {data.plantsMode ? "Room to build" : "Unowned market"}
               </span>
               <div className="text-right">
                 <div
@@ -1037,23 +1056,24 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
 
             {data.plantsMode && (
               <p className="px-4 pb-3 text-xs leading-snug text-muted">
-                Buyers in {data.stateName} want about {formatUnits(sector.headroomUnits)}{" "}
-                {CAPACITY_UNIT_LABEL} more than they are getting, after plants already under
-                construction.
+                {sector.headroomScope === "country"
+                  ? `Buyers across this country want about ${formatUnits(sector.headroomUnits)} ${CAPACITY_UNIT_LABEL} more than they are getting, after plants already under construction. Every state in the country shares this figure.`
+                  : `Buyers in ${data.stateName} want about ${formatUnits(sector.headroomUnits)} ${CAPACITY_UNIT_LABEL} more than they are getting, after plants already under construction.`}
               </p>
             )}
 
-            {/* Stats row */}
-            <div className="flex border-t border-card-border/40">
-              <div className="flex flex-col px-4 py-2.5">
-                <span className="text-body-sm font-medium text-muted mb-1">
-                  {data.plantsMode ? "Worth" : "Revenue"}
-                </span>
-                <span className="text-xs font-semibold text-muted tabular-nums leading-tight">
-                  {fmtMarket(sector.unownedRevenue)}/day
-                </span>
+            {/* Stats row. Legacy pool revenue only: under plants it is always
+                zero here and is not what a build is sized against. */}
+            {!data.plantsMode && (
+              <div className="flex border-t border-card-border/40">
+                <div className="flex flex-col px-4 py-2.5">
+                  <span className="text-body-sm font-medium text-muted mb-1">Revenue</span>
+                  <span className="text-xs font-semibold text-muted tabular-nums leading-tight">
+                    {fmtMarket(sector.unownedRevenue)}/day
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Build-here affordance. Deep-links into the corp expand modal with
                 this state + sector type preselected so the player is not dumped
@@ -1359,6 +1379,13 @@ function splitNppOwners(owners: SectorOwner[]): {
  * (state, sector) cells, including the 546 with no corporation in them at all
  * (ticket #1162), which players correctly read as "this market is closed to me".
  */
+/** Tooltip for the plants-tier room-to-build figure. */
+function roomToBuildNote(scope: "state" | "country" | null | undefined): string {
+  return scope === "country"
+    ? "Demand buyers in this country are not getting, less plants already under construction. Shared by every state in the country, and the same figure the expansion screen shows. Legacy unowned revenue does not limit building."
+    : "Demand buyers in this state are not getting, less plants already under construction. The same figure the expansion screen shows. Legacy unowned revenue does not limit building.";
+}
+
 function largestSharePercent(owners: { marketShare: number }[]): number | null {
   if (owners.length === 0) return null;
   return owners.reduce((max, o) => Math.max(max, o.marketShare), 0);

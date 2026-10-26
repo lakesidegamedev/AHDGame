@@ -27,20 +27,21 @@ import {
   DEFAULT_SECTOR_STARTING_WORKERS,
   operatingSectorIdentity,
 } from "@/lib/constants/corporations";
+import { revenuePerCapacityUnit } from "@/lib/constants/capacityEconomy";
+import { sectorEntryFeeAnchor } from "@/lib/corporations/foundingPlant";
 import {
-  CAPACITY_BUILD_TURNS,
-  techBuildTurns,
-  computeBuildCost,
-  revenuePerCapacityUnit,
-} from "@/lib/constants/capacityEconomy";
-import { foundingStarterUnits, sectorEntryFeeAnchor } from "@/lib/corporations/foundingPlant";
+  evaluateMarketEntry,
+  quoteFoundingEntry,
+  type MarketEntryBlockReason,
+  type MarketEntryFacts,
+} from "@/lib/corporations/rules/marketEntry";
+import { loadFoundingTechEffects } from "@/lib/corporations/foundingTechEffects";
 import { unownedPoolDrawdown } from "@/lib/market/unownedPoolDraw";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { resolveCountryPrimeRate } from "@/lib/corporations/sectorGrowthCost";
 import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 import { emitBuildCapexTx } from "@/lib/corporations/capexTxLog";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
-import { loadStrengthUpkeepStage, upkeptDominanceShield } from "@/lib/corporations/strengthUpkeep";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import {
   anchorToCorpLiquidCapital,
@@ -54,8 +55,6 @@ import { writeCorpEconomicLocal } from "@/lib/currency/corpEconomyFields";
 import { safeDistributeConversionSpread } from "@/lib/currency/marketMaker";
 import { corpToSectorCountrySpread } from "@/lib/currency/sectorFxSpread";
 import { isCorporateSectorDuplicateKey } from "@/lib/corporations/sectorLocation";
-import { getSectorTechEffects } from "@/lib/constants/techTree";
-import { isSectorTechTreesEnabled } from "@/lib/corporations/techTree/featureFlag";
 import { insufficientCapitalMessage } from "@/lib/currency/insufficientCapitalMessage";
 import { loadCommandEconomyBlockedCountries } from "@/lib/economy/queries/commandEconomyMarketGate";
 import type { CountryId } from "@/lib/constants/countries";
@@ -64,6 +63,16 @@ import {
   retailCapacityExpansionPaused,
   retailDemandTransitionTurnsRemaining,
 } from "@/lib/market/retailDemandTransition";
+
+/** HTTP status for each entry refusal. */
+const MARKET_ENTRY_STATUS: Record<MarketEntryBlockReason, number> = {
+  actions_paused: 403,
+  player_control_required: 403,
+  command_economy: 403,
+  already_operating: 400,
+  retail_paused: 409,
+  insufficient_capital: 400,
+};
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -99,13 +108,6 @@ export async function expandSector(request: Request, { params }: RouteParams) {
     const ceoCheck = requireCeo(corporation, auth.user.userId);
     if (ceoCheck) return ceoCheck;
 
-    if (corporation.ceoType === "npp") {
-      return errorResponse(
-        403,
-        "Resume player control before building plants for this corporation"
-      );
-    }
-
     const plantsEnabled = marketAtLeast(await getMarketSystemModeForDb(db), "plants");
     // Building is allowed in any sector type. The corp's primary and secondary
     // types are highlighted in the UI and carry a margin bonus; off-type sectors
@@ -132,18 +134,15 @@ export async function expandSector(request: Request, { params }: RouteParams) {
       return errorResponse(400, "Invalid state");
     }
 
-    // Suggestions already hide these markets, but the write command is the
-    // authority. Eastern-bloc production belongs to state enterprises; a
-    // private corporation cannot bypass that rule by posting a state id
-    // directly. The gate also follows dynamic marketization for countries such
-    // as China, so it opens automatically when the canonical model does.
+    // Every entry rule runs through `evaluateMarketEntry`, the same pure helper
+    // expand-suggestions uses to label each market, so the picker and this
+    // command cannot disagree about which markets are open.
+    //
+    // Eastern-bloc production belongs to state enterprises; a private
+    // corporation cannot bypass that rule by posting a state id directly. The
+    // gate also follows dynamic marketization for countries such as China, so
+    // it opens automatically when the canonical model does.
     const blockedCountries = await loadCommandEconomyBlockedCountries(db, [state.countryId]);
-    if (blockedCountries.has(state.countryId as CountryId)) {
-      return errorResponse(
-        403,
-        "This market is state-controlled under a command economy and is closed to private sector expansion."
-      );
-    }
 
     // Check not already in this state
     const existingSector = await db.collection<CorporateSector>("corporateSectors").findOne(
@@ -157,28 +156,8 @@ export async function expandSector(request: Request, { params }: RouteParams) {
           }
         : { corporationId: corporation._id, stateId }
     );
-    if (existingSector) {
-      return errorResponse(400, "You already have operations in this state");
-    }
-
-    // Check liquid capital (liquidCapital is in corp home currency; cost is in ₳)
-    const corpFxRate = await getCorpFxRate(db, corporation);
-    // Sector tech-tree effects (scoped to the corp's primary type). The
-    // expansion discount applies to the entry fee; the growth-cost multiplier is
-    // the same build-price discount `buildCapacity` applies, and is only read on
-    // the plants path.
-    const techView = {
-      type: corporation.type,
-      industryModel: corporation.industryModel,
-      unlockedTechNodeIds: corporation.unlockedTechNodeIds,
-      techDecadeLane: corporation.techDecadeLane,
-    };
-    const techEffects = (await isSectorTechTreesEnabled())
-      ? getSectorTechEffects(techView, corporation.type, corporation.industryModel)
-      : null;
-    const expansionDiscount = techEffects?.expansionDiscount ?? 0;
-    // Fee + starter size share helpers with expand-suggestions / NPP founding.
     const gameState = await db.collection<GameState>("gameState").findOne({ _id: "current" });
+    let retailPauseTurnsRemaining: number | null = null;
     if (plantsEnabled && sectorType === "retail") {
       const currentTurn = gameState?.currentTurn ?? 0;
       const transition = await db.collection<GameConfig>("gameConfig").findOne(
@@ -191,15 +170,45 @@ export async function expandSector(request: Request, { params }: RouteParams) {
         }
       );
       if (retailCapacityExpansionPaused(transition, currentTurn)) {
-        const remaining = retailDemandTransitionTurnsRemaining(transition, currentTurn);
-        return errorResponse(
-          409,
-          `New Retail sectors are paused while consumer demand is rebalanced (${remaining} turns remaining).`
-        );
+        retailPauseTurnsRemaining = retailDemandTransitionTurnsRemaining(transition, currentTurn);
       }
     }
+
+    // Check liquid capital (liquidCapital is in corp home currency; cost is in ₳)
+    const corpFxRate = await getCorpFxRate(db, corporation);
+    const corpCapitalAnchor = corpLiquidCapitalToAnchor(
+      corporation.liquidCapital,
+      corporation,
+      corpFxRate
+    );
+    // The corporation-actions pause already ran as `requireCorporationActionsEnabled`.
+    const entryFacts: MarketEntryFacts = {
+      actionsPausedMessage: null,
+      nppControlled: corporation.ceoType === "npp",
+      commandEconomy: blockedCountries.has(state.countryId as CountryId),
+      alreadyOperating: existingSector != null,
+      retailPauseTurnsRemaining,
+      liquidCapitalAnchor: corpCapitalAnchor,
+      entryCostAnchor: null,
+    };
+    const entryGate = evaluateMarketEntry(entryFacts);
+    if (!entryGate.canEnter) {
+      return errorResponse(MARKET_ENTRY_STATUS[entryGate.reason], entryGate.message);
+    }
+
     const worldPreset = resolvePresetIdFromGameState(gameState);
-    const baseExpansionCost = sectorEntryFeeAnchor(worldPreset, expansionDiscount);
+    const quoteYear =
+      gameState?.currentYear ??
+      STARTING_YEAR + Math.floor((Math.max(1, gameState?.currentTurn ?? 0) - 1) / TURNS_PER_YEAR);
+    // Tech effects scoped to the lane being founded, exactly as `buildCapacity`
+    // scopes every later build in it, and as the picker quotes.
+    const techEffects = await loadFoundingTechEffects(
+      db,
+      corporation,
+      { sectorType, industryModel, mediaDiscriminator },
+      quoteYear
+    );
+    const baseExpansionCost = sectorEntryFeeAnchor(worldPreset, techEffects.expansionDiscount);
 
     // ─── Plants: founding a sector is a FIRST BUILD, not a free grant ─────────
     //
@@ -227,13 +236,7 @@ export async function expandSector(request: Request, { params }: RouteParams) {
     let eraUnitScale = 1;
     if (plantsEnabled) {
       currentTurn = gameState?.currentTurn ?? 0;
-      const currentYear =
-        gameState?.currentYear ??
-        STARTING_YEAR + Math.floor((Math.max(1, currentTurn) - 1) / TURNS_PER_YEAR);
       eraUnitScale = getEraUnitScale(worldPreset);
-
-      // One facility quantum — the honest "first plant", not a $1M/day nameplate.
-      starterUnits = foundingStarterUnits(sectorType, industryModel, mediaDiscriminator);
 
       const [primeRate, ceoChar, hostMetrics, nationalMarketSharePercent] = await Promise.all([
         resolveCountryPrimeRate(db, state.countryId),
@@ -254,44 +257,24 @@ export async function expandSector(request: Request, { params }: RouteParams) {
         }),
       ]);
 
-      starterBuildAnchor = computeBuildCost({
-        sectorType,
-        industryModel,
-        mediaDiscriminator,
-        units: starterUnits,
-        // A founded sector is created with no strategy, so it runs the
-        // sector-type default; quote it at the same price it will be charged.
-        strategyId: null,
-        year: currentYear,
+      // One facility quantum, the honest "first plant", priced through the
+      // same quote the expansion picker shows.
+      const quote = quoteFoundingEntry({
+        identity: { sectorType, industryModel, mediaDiscriminator },
         preset: worldPreset,
+        currentYear: quoteYear,
         eraUnitScale,
-        // No local sector here yet, but an incumbent can still dominate this
-        // industry nationally. Greenfield entry must not bypass that toll.
-        marketSharePercent: 0,
+        techExpansionDiscount: techEffects.expansionDiscount,
+        techGrowthCostMultiplier: techEffects.growthCostMultiplier,
+        techDominanceShield: techEffects.dominanceShield,
         nationalMarketSharePercent,
         primeRate,
         acumen: ceoChar?.stats?.businessAcumen ?? NEUTRAL_STAT,
         hostCostOfLivingIndex: hostMetrics?.economic?.costOfLiving?.value ?? null,
-        techGrowthCostMultiplier: techEffects?.growthCostMultiplier ?? 1,
-        techDominanceShield: techEffects
-          ? upkeptDominanceShield(
-              techView,
-              corporation.type,
-              corporation.industryModel,
-              undefined,
-              currentYear,
-              await loadStrengthUpkeepStage(db)
-            )
-          : 0,
-        founding: true,
-      }).totalAnchor;
-
-      starterOnlineTurn =
-        currentTurn +
-        techBuildTurns(
-          CAPACITY_BUILD_TURNS(sectorType, true),
-          techEffects?.growthCostMultiplier ?? 1
-        );
+      });
+      starterUnits = quote.starterUnits;
+      starterBuildAnchor = quote.starterBuildAnchor;
+      starterOnlineTurn = currentTurn + quote.buildTurns;
     }
 
     // Cross-border expansion (target state in a different-currency country) pays
@@ -305,12 +288,11 @@ export async function expandSector(request: Request, { params }: RouteParams) {
       foundingCostAnchor
     );
     const totalExpansionCostAnchor = foundingCostAnchor + expansionSpread.spreadAnchor;
-    const corpCapitalAnchor = corpLiquidCapitalToAnchor(
-      corporation.liquidCapital,
-      corporation,
-      corpFxRate
-    );
-    if (corpCapitalAnchor < totalExpansionCostAnchor) {
+    const capitalGate = evaluateMarketEntry({
+      ...entryFacts,
+      entryCostAnchor: totalExpansionCostAnchor,
+    });
+    if (!capitalGate.canEnter) {
       return errorResponse(
         400,
         insufficientCapitalMessage(
