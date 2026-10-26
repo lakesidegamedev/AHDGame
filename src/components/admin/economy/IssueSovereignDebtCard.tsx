@@ -4,7 +4,7 @@ import { useState } from "react";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { Button, Input, Label } from "@/components/ui";
 import { type CountryId } from "@/lib/constants/countriesCore";
-import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
+import { getCountryDisplayName } from "@/lib/country/countryDisplayNames";
 import { useRegisteredCountries } from "@/contexts/RegisteredCountriesContext";
 
 interface IssueResult {
@@ -84,7 +84,7 @@ export function IssueSovereignDebtCard() {
           >
             {registered.map((id) => (
               <option key={id} value={id}>
-                {COUNTRY_CLIENT_CONFIGS[id].name}
+                {getCountryDisplayName(id as CountryId)}
               </option>
             ))}
           </select>

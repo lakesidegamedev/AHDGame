@@ -21,18 +21,17 @@ import { useCountryManifestos } from "@/hooks/useCountryManifestos";
 import { useElectionActions } from "@/hooks/useElectionActions";
 import { useWorldFlags } from "@/hooks/useWorldFlags";
 import { type CountryId } from "@/lib/constants/countriesCore";
-import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
-import { getMessageStyle } from "@/lib/utils/formatters";
+import { getCountryDisplayName } from "@/lib/country/countryDisplayNames";
+import { getCountryRegionLabels } from "@/lib/country/countryRegionLabels";
+import { getMessageStyle } from "@/lib/utils/formattersCore";
 import type { CharacterBasic, ElectionDisplay, GameStateDisplay } from "@/lib/db/types";
 import type { CompositionResponse } from "@/lib/elections/electionResponseTypes";
 import { EmptyState } from "@/components/ui";
 import { isMapAvailable, selectElectionGroups } from "@/app/elections/components/electionsMapModel";
-import { ChamberComposition } from "@/app/elections/components/ChamberComposition";
-import { EmbeddedParliamentaryResults } from "@/components/elections/liveResults/EmbeddedParliamentaryResults";
 import {
   electionNightTitle,
   pickElectionNightAnchor,
-} from "@/lib/elections/liveResults/electionNight";
+} from "@/lib/elections/liveResults/electionNightChrome";
 import { resolveChamberForOffice } from "@/lib/elections/officeResolution";
 import { CommonsCarveUpPanel } from "@/components/uk/elections/CommonsCarveUpPanel";
 import { ManifestoFlavorBar } from "@/components/uk/elections/ManifestoFlavorBar";
@@ -62,6 +61,35 @@ const ElectionMap = dynamic(
     ssr: false,
     loading: () => (
       <div className="h-[400px] w-full animate-pulse rounded-xl border border-card-border bg-card" />
+    ),
+  }
+);
+
+// Chamber composition only renders once the viewer narrows to a single office,
+// so it is interaction-only. It drags in the seat chart with it; keeping the
+// panel's own frame while the chunk loads means the list below does not jump.
+const ChamberComposition = dynamic(
+  () => import("@/app/elections/components/ChamberComposition").then((m) => m.ChamberComposition),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-64 w-full animate-pulse rounded-xl border border-card-border bg-card" />
+    ),
+  }
+);
+
+// Live results only render on an election night, and the embed's chain reaches
+// the turn engine's seat allocation tables. Its own loading state is the same
+// 10rem placeholder, so the lazy chunk lands in exactly the space it reserves.
+const EmbeddedParliamentaryResults = dynamic(
+  () =>
+    import("@/components/elections/liveResults/EmbeddedParliamentaryResults").then(
+      (m) => m.EmbeddedParliamentaryResults
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="mb-6 h-40 animate-pulse rounded-xl border border-card-border bg-card" />
     ),
   }
 );
@@ -109,10 +137,10 @@ interface ElectionsClientProps {
 
 export default function ElectionsClient({ code, initialElections }: ElectionsClientProps) {
   const countryId = code.toUpperCase() as CountryId;
-  const config = COUNTRY_CLIENT_CONFIGS[countryId];
-  const countryName = config?.name ?? countryId;
-  const regionLabel = config?.regionLabel ?? "State";
-  const regionLabelPlural = config?.regionLabelPlural ?? "States";
+  const countryName = getCountryDisplayName(countryId);
+  const regionLabels = getCountryRegionLabels(countryId);
+  const regionLabel = regionLabels?.singular ?? "State";
+  const regionLabelPlural = regionLabels?.plural ?? "States";
 
   const searchParams = useSearchParams();
   const router = useRouter();

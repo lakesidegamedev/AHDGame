@@ -1,27 +1,71 @@
 "use client";
 
 import Link from "next/link";
-import { StatePartyLeadershipElections } from "@/components/StatePartyLeadershipElections";
-import { WhipTabs } from "@/components/party/WhipTabs";
-import { NppRecruitmentPanel } from "@/components/party/NppRecruitmentPanel";
+import dynamic from "next/dynamic";
 import { PsStrengthCard } from "@/components/party-hub/PsStrengthCard";
 import { Avatar } from "@/components/Avatar";
 import { EmptyState } from "@/components/ui";
-import { DiscussionTab } from "@/components/party/DiscussionTab";
 import { BuildOrgPanel } from "@/components/state/politics/orgActions/BuildOrgPanel";
+import { TabFallback } from "@/components/state/TabFallback";
+
+// The hub opens on Overview. Every other tab is one click away and each drags a
+// heavy tree of its own (slate assignment pulls the office tables, recruiting
+// pulls the action-cost rules, fundraising pulls the demographic seats), so they
+// load with the shared tab skeleton instead of on first paint.
+const StatePartyLeadershipElections = dynamic(
+  () =>
+    import("@/components/StatePartyLeadershipElections").then((m) => ({
+      default: m.StatePartyLeadershipElections,
+    })),
+  { loading: TabFallback }
+);
+const WhipTabs = dynamic(
+  () => import("@/components/party/WhipTabs").then((m) => ({ default: m.WhipTabs })),
+  { loading: TabFallback }
+);
+const NppRecruitmentPanel = dynamic(
+  () =>
+    import("@/components/party/NppRecruitmentPanel").then((m) => ({
+      default: m.NppRecruitmentPanel,
+    })),
+  { loading: TabFallback }
+);
+const DiscussionTab = dynamic(
+  () => import("@/components/party/DiscussionTab").then((m) => ({ default: m.DiscussionTab })),
+  { loading: TabFallback }
+);
+const SlateTab = dynamic(
+  () =>
+    import("@/app/country/[code]/parties/[id]/components/SlateTab").then((m) => ({
+      default: m.SlateTab,
+    })),
+  { loading: TabFallback }
+);
+const StatePartyFundraisingPanel = dynamic(
+  () =>
+    import("./StatePartyFundraisingPanel").then((m) => ({ default: m.StatePartyFundraisingPanel })),
+  { loading: TabFallback }
+);
+const StatePartyAdminTab = dynamic(
+  () => import("./StatePartyAdminTab").then((m) => ({ default: m.StatePartyAdminTab })),
+  { loading: TabFallback }
+);
+const StatePartyInfluencePanel = dynamic(
+  () => import("./StatePartyInfluencePanel").then((m) => ({ default: m.StatePartyInfluencePanel })),
+  { loading: TabFallback }
+);
+const StatePartyAnalyticsTab = dynamic(
+  () => import("./StatePartyAnalyticsTab").then((m) => ({ default: m.StatePartyAnalyticsTab })),
+  { loading: TabFallback }
+);
 import {
   STATE_PS_CAP_DEFAULT,
   STATE_PASSIVE_PS_PER_TURN,
 } from "@/lib/politicalStrength/strengthConstants";
 import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { regionPartyApiUrl } from "@/lib/urls";
-import { SlateTab } from "@/app/country/[code]/parties/[id]/components/SlateTab";
 import { StatePartyLeadershipPanel } from "./StatePartyLeadershipPanel";
 import { StatePartyMetricsPanel } from "./StatePartyMetricsPanel";
-import { StatePartyFundraisingPanel } from "./StatePartyFundraisingPanel";
-import { StatePartyAdminTab } from "./StatePartyAdminTab";
-import { StatePartyInfluencePanel } from "./StatePartyInfluencePanel";
-import { StatePartyAnalyticsTab } from "./StatePartyAnalyticsTab";
 import { fmt } from "./helpers";
 import type { MainTab, StatePartyData, UserData } from "./types";
 import type { StatePartyAnalyticsPayload } from "@/lib/partyAnalytics";

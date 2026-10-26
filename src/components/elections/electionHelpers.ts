@@ -1,6 +1,6 @@
 import { electionRegionUrl } from "@/lib/urls";
 import { type CountryId } from "@/lib/constants/countriesCore";
-import { getRegionalBillAssentTitleForState } from "@/lib/constants/countryClientConfig";
+import { getRegionalBillAssentTitleForState } from "@/lib/constants/countryOfficesClient";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
 
 // Static 2020 electoral vote allocation per state

@@ -11,7 +11,7 @@
 
 import Link from "next/link";
 import { useGameClock } from "@/contexts/useGameClock";
-import { getTimerUrgencyStyle } from "@/lib/utils/formatters";
+import { getTimerUrgencyStyle } from "@/lib/utils/formattersCore";
 import type { ElectionDisplay } from "@/lib/db/types";
 import { ELECTION_STATE_NAMES, isCompetitiveElection } from "@/app/elections/electionsHelpers";
 import type { EntryAction } from "@/lib/elections/entryEligibility";

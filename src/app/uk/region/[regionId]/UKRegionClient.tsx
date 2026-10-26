@@ -22,7 +22,7 @@ import type {
 } from "@/components/state/StatePageTabsTypes";
 import type { RegionCensus } from "@/lib/seeds/regionCensusData";
 import type { ActiveModifier } from "@/lib/utils/approvalModifiers";
-import { getCountryFlagUrl } from "@/lib/constants";
+import { getCountryFlagUrl } from "@/lib/constants/flags";
 import type { StateOverviewResult } from "@/lib/states/overview/types";
 
 export interface SerializedMP {
