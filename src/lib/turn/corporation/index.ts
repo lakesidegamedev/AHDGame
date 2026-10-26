@@ -203,7 +203,7 @@ export async function processCorporationTurn(
     getLabourSystemMode(),
   ]);
   mark("preamble");
-  if (marketGovernorConfig?.bankUnderwritingEnabled === true) {
+  if (marketGovernorConfig?.privateBankingEnabled === true) {
     await resumeFoundingUnderwritingPlans(db, now);
   }
   const equityPoolTurn = await processEquityMarketPoolTurn(
@@ -460,7 +460,6 @@ export async function processCorporationTurn(
   market.marketRecoveryStage = normalizeMarketRecoveryStage(
     marketGovernorConfig?.marketRecoveryStage
   );
-  market.shortageBuildSpeedupEnabled = marketGovernorConfig?.shortageBuildSpeedupEnabled === true;
   market.mediaRegulationEnabled = mediaRegulationEnabled;
   market.mediaEditorialEnabled = mediaEditorialEnabled;
   if (mediaRegulationEnabled) {

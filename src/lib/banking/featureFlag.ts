@@ -8,11 +8,7 @@ import {
 
 type BankingFlags = Pick<
   GameConfig,
-  | "privateBankingEnabled"
-  | "bankPropTradingEnabled"
-  | "bankContagionEnabled"
-  | "bankUnderwritingEnabled"
-  | "playerAdvancedBankChartersEnabled"
+  "privateBankingEnabled" | "bankPropTradingEnabled" | "bankContagionEnabled"
 >;
 
 /**
@@ -46,13 +42,6 @@ export async function isBankContagionEnabled(
   preloadedConfig?: BankingFlags | null
 ): Promise<boolean> {
   return resolveBankingPolicy(await loadFlags(preloadedConfig)).contagion;
-}
-
-/** Funded primary underwriting is off unless explicitly enabled. */
-export async function isBankUnderwritingEnabled(
-  preloadedConfig?: BankingFlags | null
-): Promise<boolean> {
-  return resolveBankingPolicy(await loadFlags(preloadedConfig)).primaryUnderwriting === true;
 }
 
 async function loadFlags(

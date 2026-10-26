@@ -36,8 +36,6 @@ beforeEach(() => {
     {
       _id: "default",
       privateBankingEnabled: true,
-      bankTreasuryEnabled: true,
-      bankSovereignPrimaryEnabled: true,
       treasuryCashLedgerEnabled: true,
     },
   ]);
@@ -118,7 +116,7 @@ describe("sovereign primary subscription route", () => {
     expect(memory.collection("bonds").docs[0].totalIssued).toBe(2_000);
   });
   it("returns feature-off before looking up the bank or bond", async () => {
-    memory.collection("gameConfig").docs[0].bankSovereignPrimaryEnabled = false;
+    memory.collection("gameConfig").docs[0].treasuryCashLedgerEnabled = false;
     const spy = vi.spyOn(memory, "collection");
     expect((await POST(request(ticket), params)).status).toBe(404);
     expect(spy.mock.calls.map(([collection]) => collection)).not.toContain("corporations");
