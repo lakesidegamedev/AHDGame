@@ -84,27 +84,3 @@ export function openingLawReference(
       reference.country === country && reference.scope === scope && reference.familyId === familyId
   );
 }
-
-/**
- * Law families added after the 1991 launch. Worlds seeded before a family
- * existed have opening boards without its reference; readers fill it from
- * this crosswalk so the family is proposable without rewriting live boards.
- */
-export const POST_LAUNCH_FAMILY_IDS: ReadonlySet<string> = new Set(["L52"]);
-
-/** A stored board's references plus any post-launch family it predates. */
-export function withPostLaunchReferences(board: {
-  countryId: ResetCountry;
-  scope: "national" | "regional";
-  references: Record<string, OpeningLawReference>;
-}): Record<string, OpeningLawReference> {
-  let references = board.references;
-  for (const familyId of POST_LAUNCH_FAMILY_IDS) {
-    if (references[familyId]) continue;
-    const reference = openingLawReference(board.countryId, board.scope, familyId);
-    if (!reference) continue;
-    if (references === board.references) references = { ...board.references };
-    references[familyId] = { ...reference, key: `${board.countryId}:${board.scope}:${familyId}` };
-  }
-  return references;
-}

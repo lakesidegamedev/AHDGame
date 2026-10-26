@@ -18,7 +18,7 @@ import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { resetMetricConditionScore } from "@/lib/resetMetrics/conditionScore";
 import { readResetGovernanceStyle } from "@/lib/resetMetrics/readGovernanceStyle";
 import { resetLawFamilies, resetLawFamilyById } from "@/lib/resetLegislation/catalog";
-import { withPostLaunchReferences } from "@/lib/resetLegislation/openingLaw";
+import { withPostLaunchReferences } from "@/lib/resetLegislation/rules/postLaunchReferences";
 import { resetCabinetActions } from "@/lib/resetCabinet/catalog";
 import type { ResetLawOpeningBoard } from "@/lib/resetLegislation/rules/openingBoard";
 import { buildMetricLawStatuses } from "@/lib/resetLegislation/rules/metricPolicyStatus";

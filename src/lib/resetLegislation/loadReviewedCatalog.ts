@@ -4,7 +4,7 @@ import type { FederalBudget } from "@/lib/db/types/budget";
 import type { State } from "@/lib/db/types/state";
 import type { ResetDepartmentAccountSnapshot } from "@/lib/resetFinance/rules/liveDepartmentAccount";
 import { resetLawFamilies } from "./catalog";
-import { withPostLaunchReferences } from "./openingLaw";
+import { withPostLaunchReferences } from "./rules/postLaunchReferences";
 import { fundingSeatForLaw, type ResetCountry } from "./fundingOwner";
 import type { ResetLawOpeningBoard } from "./rules/openingBoard";
 import { regionalLawLevel } from "./regionalCatalog";

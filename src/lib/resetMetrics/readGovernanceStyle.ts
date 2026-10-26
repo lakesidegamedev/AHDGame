@@ -6,7 +6,6 @@ import type { GovernanceStyleScore } from "@/lib/governanceStyle/score";
 import { resetLawFamilies, type LegislativePosition } from "@/lib/resetLegislation/catalog";
 import type { ResetLawOpeningBoard } from "@/lib/resetLegislation/rules/openingBoard";
 import { openingChoice1991 } from "@/lib/resetLegislation/rules/reviewCatalog";
-import { withPostLaunchReferences } from "@/lib/resetLegislation/openingLaw";
 import type { LawChoice } from "@/lib/resetLegislation/rules/eligibility";
 import type { ResetCountry } from "@/lib/resetLegislation/fundingOwner";
 import {
@@ -43,7 +42,6 @@ export async function readResetGovernanceStyle(input: {
       .findOne({ _id: boardId, worldId: input.worldId }, { projection: { references: 1 } }),
   ]);
   if (!openingBoard) return null;
-  const openingReferences = withPostLaunchReferences(openingBoard);
 
   const activeChoices = new Map(
     input.programs.map((program) => [program.familyId, program.choice])
@@ -57,7 +55,7 @@ export async function readResetGovernanceStyle(input: {
       if (isLegislativePosition(activeChoice)) positions.push(activeChoice);
       continue;
     }
-    const reference = openingReferences[family.id];
+    const reference = openingBoard.references[family.id];
     if (reference) positions.push(openingChoice1991(reference));
   }
 

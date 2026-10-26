@@ -102,7 +102,7 @@ describe("1991 current-law boards", () => {
 
 describe("law families added after launch", () => {
   it("accepts a stored board that predates them and fills their reference on read", async () => {
-    const { withPostLaunchReferences } = await import("./openingLaw");
+    const { withPostLaunchReferences } = await import("./rules/postLaunchReferences");
     const [national] = buildOpeningLawBoards1991("world-test", 1).filter(
       (board) => board.scope === "national" && board.countryId === "JP"
     );

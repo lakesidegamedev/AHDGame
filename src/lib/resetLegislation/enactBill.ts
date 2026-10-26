@@ -9,7 +9,7 @@ import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { RESET_V2_COUNTRIES, resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import type { ResetCountry } from "./fundingOwner";
 import { resetLawFamilyById } from "./catalog";
-import { withPostLaunchReferences } from "./openingLaw";
+import { withPostLaunchReferences } from "./rules/postLaunchReferences";
 import type { ResetLawOpeningBoard } from "./rules/openingBoard";
 import { enactReviewedBill } from "./rules/billEnactment";
 import type { ResetDepartmentAccountSnapshot } from "@/lib/resetFinance/rules/liveDepartmentAccount";

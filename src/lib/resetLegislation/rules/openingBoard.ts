@@ -1,4 +1,5 @@
-import { POST_LAUNCH_FAMILY_IDS, type OpeningLawReference } from "../openingLaw";
+import type { OpeningLawReference } from "../openingLaw";
+import { POST_LAUNCH_FAMILY_IDS } from "./postLaunchReferences";
 import type { ResetCountry } from "../fundingOwner";
 import type { UkTerritorialTaxOpening } from "@/lib/countries/uk/resetLegislation/ukTerritorialTax1991";
 
