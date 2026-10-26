@@ -1,5 +1,6 @@
 import { ObjectId, type Db } from "mongodb";
 import { applyMoneyMove } from "@/lib/banking/moneyMove";
+import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import type { FinancialTxLogEntry } from "@/lib/db/types/financialTxLog";
 import { emitTxBulk, loadTxThresholds } from "@/lib/financialTxLog/emit";
 import {
@@ -30,7 +31,12 @@ export async function processDefenceWindfallRecoveryTurn(
 ): Promise<DefenceWindfallRecoveryTurnResult> {
   const corporations = await db
     .collection<RecoveringCorporation>("corporations")
-    .find({ [`${MARKER_PATH}.outstandingAmount`]: { $gt: 0 } })
+    .find(
+      { [`${MARKER_PATH}.outstandingAmount`]: { $gt: 0 } },
+      // The sweep reads cash and its own marker; the settlement stamps every
+      // money move appends are five eighths of a corporation document.
+      { projection: SETTLEMENT_HISTORY_EXCLUDED }
+    )
     .toArray();
   let amountRecovered = 0;
   const receipts: Omit<FinancialTxLogEntry, "_id" | "expiresAt" | "flagged">[] = [];
