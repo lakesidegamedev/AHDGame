@@ -87,6 +87,13 @@ const INDEXES: IndexPlan[] = [
     keys: { issuerType: 1, countryId: 1, matured: 1 },
     options: { name: "bonds_issuer_country_matured" },
   },
+  // A player's holdings: every corporation listing a character as shareholder
+  // (portfolio, profile and share pages).
+  {
+    collection: "corporations",
+    keys: { "shareholders.characterId": 1 },
+    options: { name: "corporations_shareholder_character" },
+  },
   // The money journal prune runs every minute and looks for old applied or
   // rejected moves of the prunable kinds. With only the turn index it fetched
   // every old move (tens of thousands of large documents) to find one batch.
@@ -100,7 +107,7 @@ const INDEXES: IndexPlan[] = [
 export const migration: Migration = {
   id: "2026-10-27-player-read-indexes",
   description:
-    "Indexes for corporation, trade, bond and supply agreement page reads and the money journal prune, which were scanning whole collections.",
+    "Indexes for corporation, shareholder, trade, bond and supply agreement page reads and the money journal prune, which were scanning whole collections.",
   idempotent: true,
   execute: async (db, ctx) => createPlannedIndexes(db, ctx.dryRun, INDEXES),
 };
