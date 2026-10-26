@@ -499,6 +499,14 @@ export interface SectorClearingResult {
    */
   soldByCommodity?: Partial<Record<CommodityType, number>>;
   /**
+   * Editorial audience fit actually applied to each output's offer, for outputs
+   * where it cut the offer (today: advertising for an outlet whose stance does
+   * not match its audience). The cut shrinks the offer, not demand, so a sold
+   * out outlet's fill reads below 1 and its sold-out headroom needs this
+   * restored. Absent when no output was cut.
+   */
+  editorialAvailabilityByCommodity?: Partial<Record<CommodityType, number>>;
+  /**
    * Offered fraction buyers took but a media ownership law refused, overall
    * and per output. Not sold and not paid; production feedback counts it as
    * demand so a capped outlet does not shrink because of a legal limit.
@@ -1375,6 +1383,7 @@ export function computeClearingFactors(args: {
     const offerFactorByCommodity: Partial<Record<CommodityType, number>> = {};
     const revenueWeightByCommodity: Partial<Record<CommodityType, number>> = {};
     const regulationBlockedByCommodity: Partial<Record<CommodityType, number>> = {};
+    const editorialAvailabilityByCommodity: Partial<Record<CommodityType, number>> = {};
     let blockedSum = 0;
     const sectorGroup = args.groupBySector?.get(s.sectorId);
     const groupRatios = sectorGroup != null ? args.priceRatioByGroup?.get(sectorGroup) : undefined;
@@ -1398,6 +1407,8 @@ export function computeClearingFactors(args: {
         ? Math.max(0, Math.min(1, s.offerAvailabilityByCommodity?.[commodity] ?? 1))
         : 1;
       const availability = editorialAvailability * productAvailability;
+      if (editorialAvailability < 1)
+        editorialAvailabilityByCommodity[commodity] = editorialAvailability;
       // Placement shrank the offer; without this leg the sold fraction is a
       // share of that shrunken offer, so output nobody bought was still paid.
       const placementLeg = placementRevenueLeg(
@@ -1475,6 +1486,9 @@ export function computeClearingFactors(args: {
       factor: factorSum / rateSum,
       soldFraction: soldSum / rateSum,
       soldByCommodity,
+      ...(Object.keys(editorialAvailabilityByCommodity).length > 0
+        ? { editorialAvailabilityByCommodity }
+        : {}),
       marketSupplyShareByCommodity,
       ...(args.recordDelivery ? { deliveredUnitsByCommodity } : {}),
       ...(blockedSum > 0
