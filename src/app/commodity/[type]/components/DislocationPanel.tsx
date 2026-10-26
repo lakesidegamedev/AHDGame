@@ -1,7 +1,7 @@
 "use client";
 
 import { CountryFlag } from "@/components/CountryFlag";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { getStateDisplayName } from "@/lib/commodity-map";
 import { formatUnits } from "../lib/helpers";
 import { postImportBalance } from "@/lib/trade/postImportGap";

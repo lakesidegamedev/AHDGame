@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { SVG_W, SVG_H, WORLD_GEO_URL } from "@/app/world/worldConstants";
 import { isoNumericToCountryId } from "@/lib/constants/countryIso";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { REGION_SHARDS } from "@/lib/maps/regionManifest";
 import { computeRegionBlobs } from "@/lib/maps/regionOverlay";
 import { WORLD_OVERLAY_OWNER_FOLD } from "@/lib/maps/germanyGeometry";
@@ -224,12 +225,12 @@ export function OrgWorldMap({ orgs }: { orgs: OrgSummary[] }) {
    * The country a path stands for: a blob's live owner, or the base feature's
    * own mapping. Undefined for territory the game does not model as a country,
    * which is what keeps the country card from opening on something that has no
-   * config behind it. A blob owner is checked against `COUNTRY_CONFIGS` rather
+   * config behind it. A blob owner is checked against `COUNTRY_CLIENT_CONFIGS` rather
    * than trusted, since it arrives from live region ownership.
    */
   function countryIdFor(key: string): CountryId | undefined {
     const owner = blobOwners.get(key);
-    if (owner) return owner in COUNTRY_CONFIGS ? (owner as CountryId) : undefined;
+    if (owner) return owner in COUNTRY_CLIENT_CONFIGS ? (owner as CountryId) : undefined;
     return isoNumericToCountryId(key);
   }
 

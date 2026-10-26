@@ -8,7 +8,7 @@ import { PlatformSliders, type PlatformValue } from "./PlatformSliders";
 import { FounderPicker } from "./FounderPicker";
 import { FoundingCohortPicker, defaultCohort } from "./FoundingCohortPicker";
 import { adjacentStates } from "@/lib/constants/stateAdjacency";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { FoundingCohortPick } from "@/lib/db/types";
 import { PartySwitchElectionWarning } from "@/components/party/PartySwitchElectionWarning";
 

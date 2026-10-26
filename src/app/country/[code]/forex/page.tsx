@@ -33,7 +33,7 @@ import {
   partitionForexRates,
   type ForexCountryAccess,
 } from "@/components/forex/partitionForexCurrencies";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 
 const HERO_IMAGE_URL =
   "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/NY_stock_exchange_traders_floor_LC-U9-10548-6.jpg/960px-NY_stock_exchange_traders_floor_LC-U9-10548-6.jpg";

@@ -18,7 +18,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useInterface, type InterfaceMode } from "@/contexts/InterfaceContext";
 import { useToast } from "@/contexts/ToastContext";
 import { buildCharacterHref } from "@/lib/utils/profileUrls";
-import { type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import {
   ChevronDown,
   Database,

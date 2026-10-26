@@ -3,7 +3,7 @@
 import { InlineError } from "@/components/ui/InlineError";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { PlayerSelector } from "@/components/PlayerSelector";
 import { CentralBankSection } from "./CentralBankSection";
 import { apiErrorText } from "@/lib/errors/catalog";

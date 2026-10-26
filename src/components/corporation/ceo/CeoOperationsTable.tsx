@@ -16,7 +16,7 @@ import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimizatio
 import { WAGE_LEVEL_MAX, WAGE_LEVEL_MIN } from "@/lib/labour/laborCost";
 import { getPolicyEffectInfo } from "@/lib/utils/productionPolicy";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { CorporationDetail, SectorDetail } from "../CorporationPageTypes";
 import { formatUnits, sectorBuildUrl } from "../plantsPresentation";
 import {

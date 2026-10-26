@@ -19,6 +19,7 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/contexts/RegisteredCountriesContext", () => ({
   useEnabledCountries: () => ["US", "UK"],
+  useCountryDisplayName: () => (id: string) => (id === "UK" ? "United Kingdom" : "United States"),
 }));
 
 vi.mock("@/components/CountryFlag", () => ({

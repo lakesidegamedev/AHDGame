@@ -7,7 +7,8 @@ import Link from "next/link";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { Tooltip } from "@/components/ui";
 import { CorporationLogo } from "@/components/corporation/CorporationLogo";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
 import type { StockListing, SortField, SortDir } from "../types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -82,7 +83,7 @@ function buildRows(
   listings: StockListing[],
   /**
    * How to name the owning country of a state-enterprise group. Passed in
-   * rather than read from `COUNTRY_CONFIGS` here, so a country renamed at
+   * rather than read from `COUNTRY_CLIENT_CONFIGS` here, so a country renamed at
    * runtime does not head its own group with the name it no longer uses.
    */
   countryName: (id: CountryId) => string

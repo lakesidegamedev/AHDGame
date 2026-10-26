@@ -8,8 +8,8 @@ import {
   formatCurrencyFull,
   formatRealTimeCountdown,
   rawTurnToLarpDate,
-} from "@/lib/utils/formatters";
-import { CURRENCY_SYMBOLS, type CurrencyCode } from "@/lib/constants/currencies";
+} from "@/lib/utils/formattersCore";
+import { CURRENCY_SYMBOLS, type CurrencyCode } from "@/lib/constants/currencyCodes";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useRefetchNav, useSignedIn } from "@/contexts/AuthDataContext";
 import { CHARACTER_STATS_UPDATED, CHARACTER_STATS_REFETCH } from "@/lib/characterStatsSync";

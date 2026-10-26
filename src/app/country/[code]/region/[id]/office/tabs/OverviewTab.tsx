@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { getExecutiveOrderNamePlural, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getExecutiveOrderNamePlural } from "@/lib/constants/countryClientConfig";
 import {
   EXEC_ORDER_SLOT_CAP,
   GUBERNATORIAL_ACTION_CAP,

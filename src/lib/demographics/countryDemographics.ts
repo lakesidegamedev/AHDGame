@@ -1,5 +1,6 @@
 import type { DemographicCategory } from "@/lib/db/types";
-import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import { LAYER1_DEMOGRAPHICS } from "@/lib/demographics/usDemographics";
 import {
   DEMOGRAPHIC_LABELS as US_GROUP_LABELS,
@@ -137,7 +138,7 @@ const PROFILE_REGISTRY: Record<string, () => ProfileEntry> = {
 
 function resolveProfile(countryId: string | undefined): ProfileEntry {
   const profileId = countryId
-    ? getCountryConfig(countryId as CountryId)?.demographicProfileId
+    ? getCountryClientConfig(countryId as CountryId)?.demographicProfileId
     : undefined;
   const entry = profileId ? PROFILE_REGISTRY[profileId] : undefined;
   // US (us_archetypes) and any unknown/unseeded profile (incl. ng_archetypes) → US default.
@@ -190,7 +191,7 @@ export function getVoterArchetypeCategoriesForCountry(
   countryId: string | undefined
 ): CanvassCategory[] {
   const profileId = countryId
-    ? getCountryConfig(countryId as CountryId)?.demographicProfileId
+    ? getCountryClientConfig(countryId as CountryId)?.demographicProfileId
     : undefined;
   const entry = profileId ? PROFILE_REGISTRY[profileId] : undefined;
   // US (us_archetypes) and any unknown/unseeded profile → US 12-archetype voterGroups.

@@ -18,7 +18,7 @@ import { LawProvisionComparison } from "@/components/bills/LawProvisionCompariso
 import { SubsidySectorSelect } from "@/components/bills/SubsidySectorSelect";
 import { TaxRateSliderControl } from "@/components/legislation/TaxRateSliderControl";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
-import { type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 
 export interface EligibleNpp {
   _id: string;

@@ -19,7 +19,7 @@ import {
 import { ESTATE_CATALOG, ESTATE_PORTFOLIO_BY_COUNTRY } from "@/lib/constants/cabinetEstates";
 import { ENERGY_POSITION_BY_COUNTRY, ENERGY_SOURCES } from "@/lib/constants/cabinetEnergy";
 import { INFRA_ARCHETYPES, INFRA_POSITION_BY_COUNTRY } from "@/lib/constants/cabinetInfra";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 
 // ── Country tabs ─────────────────────────────────────────────────────────────
 

@@ -11,7 +11,7 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import { regionUrl } from "@/lib/urls";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
-import { type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import { CorporationLogo } from "@/components/corporation/CorporationLogo";
 import { CAPACITY_UNIT_LABEL, formatUnits } from "./plantsPresentation";
 import {

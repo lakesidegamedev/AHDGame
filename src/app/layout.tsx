@@ -26,6 +26,7 @@ import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { RegisteredCountriesProvider } from "@/contexts/RegisteredCountriesContext";
 import { getRegisteredCountryIds } from "@/lib/country/registeredCountries";
 import { loadCountryNameOverrides } from "@/lib/country/countryIdentity";
+import { buildCurrencyBaselineRates } from "@/lib/currency/baselineRates";
 import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { getEnabledCountryIds } from "@/lib/countryAccess";
 import { getDb } from "@/lib/mongodb";
@@ -303,6 +304,11 @@ export default async function RootLayout({
   const isWikiSubdomain =
     host === "wiki.ahousedividedgame.com" || (host?.startsWith("wiki.") ?? false);
 
+  // Fallback display rates for currencies outside the forex set. Built here on
+  // the server so the client does not need the whole country config to price an
+  // economy-anchored label.
+  const currencyBaselineRates = buildCurrencyBaselineRates(activePreset);
+
   const initialPageCountry = await resolveNavbarPageCountry({
     pathname,
     search: requestHeaders.get("x-search"),
@@ -401,7 +407,7 @@ export default async function RootLayout({
             }}
           >
             <AppInterfaceProvider initialMode={interfaceMode}>
-              <CurrencyProvider>
+              <CurrencyProvider baselineRates={currencyBaselineRates}>
                 <ThemeProvider>
                   <BrowserPreferencesProvider>
                     <FeedbackProvider>
@@ -436,7 +442,7 @@ export default async function RootLayout({
                             className="min-w-0 overflow-x-clip pb-[max(3.5rem,var(--status-bar-height,0px))]"
                             tabIndex={-1}
                           >
-                            <SiteTrafficTracker />
+                            <SiteTrafficTracker gameVersion={world.version} />
                             {!singleplayer && !isNativeApp && !isWikiSubdomain && (
                               <DeferredAnalytics />
                             )}

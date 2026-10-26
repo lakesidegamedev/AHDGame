@@ -5,7 +5,8 @@ import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { PartyLogo } from "@/components/PartyLogo";
 import { CountryFlag } from "@/components/CountryFlag";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { getCountryFlagUrlForEra } from "@/lib/constants";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";
 import { useActivePreset, useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
@@ -103,7 +104,7 @@ export function NationsTable({ rows }: { rows: NationRow[] }) {
         </thead>
         <tbody>
           {rows.map((row) => {
-            const config = COUNTRY_CONFIGS[row.id];
+            const config = COUNTRY_CLIENT_CONFIGS[row.id];
             const snapshot = row.snapshot ?? VACANT_SNAPSHOT;
             const executive = snapshot.executive;
             const party = snapshot.legislatureParty;
@@ -247,7 +248,7 @@ export function PlannedNationsTable({
       </thead>
       <tbody>
         {hidden.map((row) => {
-          const config = COUNTRY_CONFIGS[row.id];
+          const config = COUNTRY_CLIENT_CONFIGS[row.id];
           return (
             <tr key={row.id}>
               <td className={TD}>

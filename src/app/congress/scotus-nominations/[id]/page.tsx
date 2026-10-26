@@ -9,7 +9,7 @@ import { NominationDetailSkeleton } from "@/app/congress/nominations/[id]/compon
 import { WhippedBadge } from "@/components/bills/WhippedBadge";
 import { useCountdown } from "@/hooks/useCountdown";
 import { GameMonthTime } from "@/components/time/GameMonthTime";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { NppAbbr } from "@/components/elections/NppAbbr";
 
 interface NominationDetail {

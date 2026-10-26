@@ -5,7 +5,7 @@ import { metricFreshnessLabel } from "@/lib/resetMetrics/presentation";
 import { Button } from "@/components/ui/Button";
 import { CategoryIcon } from "@/app/country/[code]/political-metrics/components/categoryIcons";
 import { scoreTone } from "@/app/country/[code]/political-metrics/components/tones";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { currencySymbolSep } from "@/lib/currency/symbolSep";
 import { getCurrencyPrefix } from "@/lib/utils/budgetCalculations";
 import { useWorldFlags } from "@/hooks/useWorldFlags";
@@ -117,7 +117,7 @@ export function ResetMetricCompare({
           key: countryId,
           countryId,
           regionId: null,
-          name: COUNTRY_CONFIGS[countryId].name,
+          name: COUNTRY_CLIENT_CONFIGS[countryId].name,
         }))
       : []
   );
@@ -145,7 +145,7 @@ export function ResetMetricCompare({
         key: countryId,
         countryId,
         regionId: null,
-        name: COUNTRY_CONFIGS[countryId].name,
+        name: COUNTRY_CLIENT_CONFIGS[countryId].name,
       }))
     );
     setSelected([...nationalCountries]);

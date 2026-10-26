@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { formatGDP, formatCurrencyCompactChip } from "@/lib/utils/formatters";
 import { getCurrencyPrefix } from "@/lib/utils/budgetCalculations";
 import { budgetUrl } from "@/lib/urls";
@@ -71,7 +72,7 @@ function Cell({
  * position as Budget's fiscal stat strip and Metrics' headline tiles.
  */
 export function PulseStrip({ countryId, pulse }: PulseStripProps) {
-  const config = COUNTRY_CONFIGS[(countryId as string).toUpperCase() as CountryId];
+  const config = COUNTRY_CLIENT_CONFIGS[(countryId as string).toUpperCase() as CountryId];
   const prefix = getCurrencyPrefix(countryId as CountryId);
   const regionWord = (config?.regionLabel ?? "State").toLowerCase();
 

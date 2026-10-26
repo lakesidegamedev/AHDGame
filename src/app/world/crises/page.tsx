@@ -12,7 +12,7 @@ import { rawTurnToLarpDate } from "@/lib/utils/formatters";
 import type { CalendarClock } from "@/lib/utils/gameDate";
 import { STARTING_YEAR } from "@/lib/constants/turnTime";
 import type { Crisis } from "@/lib/db/types/crisis";
-import { type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import { useRegisteredCountries } from "@/contexts/RegisteredCountriesContext";
 import { crisisSeverity } from "@/lib/crises/severity";
 import { crisisBoardCounts, crisisListedInScope } from "@/lib/crises/boardCounts";

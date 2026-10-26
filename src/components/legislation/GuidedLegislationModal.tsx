@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { LawChoice } from "@/lib/resetLegislation/rules/eligibility";
 import { useToast } from "@/contexts/ToastContext";
 import { postBillProposalWithElectionConfirmation } from "@/components/bills/BillAutoFailWarning";

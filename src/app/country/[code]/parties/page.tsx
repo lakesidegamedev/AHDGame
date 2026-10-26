@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { fetchJson } from "@/lib/observability/fetchJson";
-import { type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { Button, EmptyState, Skeleton } from "@/components/ui";
 import { useToast } from "@/contexts/ToastContext";

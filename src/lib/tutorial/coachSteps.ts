@@ -1,5 +1,6 @@
 import type { Character } from "@/lib/db/types";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { legislatureUrl } from "@/lib/urls";
 import type { TutorialChapterId } from "@/lib/onboarding/tutorialPlan";
 import type { TutorialFactKey } from "@/lib/tutorial/facts";
@@ -100,7 +101,7 @@ export type CoachCharacter = Pick<Character, "countryId" | "homeState">;
 
 /** Lowercased per-country region noun ("state", "nation", "land", "region"). */
 export function regionNoun(countryId: string): string {
-  const label = COUNTRY_CONFIGS[countryId as CountryId]?.regionLabel ?? "State";
+  const label = COUNTRY_CLIENT_CONFIGS[countryId as CountryId]?.regionLabel ?? "State";
   return label.toLowerCase();
 }
 
@@ -124,7 +125,7 @@ export function coachCountryContext(
   world: TutorialWorld = DEFAULT_TUTORIAL_WORLD
 ): CoachCountryContext {
   const countryId = character.countryId;
-  const config = COUNTRY_CONFIGS[countryId as CountryId];
+  const config = COUNTRY_CLIENT_CONFIGS[countryId as CountryId];
   return {
     countryId,
     homeState: character.homeState,

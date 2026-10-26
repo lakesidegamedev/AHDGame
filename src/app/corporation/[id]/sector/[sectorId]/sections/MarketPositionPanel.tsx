@@ -7,7 +7,7 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import { Tooltip } from "@/components/Tooltip";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import MarketPie from "../components/MarketPie";
 import { playerSlotColor, NPP_ARC_COLOR } from "../lib/marketColors";
 import type { Market, SectorData, CorporationRef, Financials, Competitor } from "../types";

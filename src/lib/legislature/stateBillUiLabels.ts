@@ -1,4 +1,5 @@
-import { getRegionalBillAssentTitleForState, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getRegionalBillAssentTitleForState } from "@/lib/constants/countryClientConfig";
 import { STATUS_LABELS } from "@/lib/legislature/dto/stateLegislature";
 
 /**

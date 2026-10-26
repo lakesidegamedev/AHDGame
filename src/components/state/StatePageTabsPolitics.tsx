@@ -1,12 +1,12 @@
 "use client";
 
 import type { State } from "@/lib/db/types";
+import { isParliamentarySystem } from "@/lib/constants/countriesCore";
 import {
-  getCountryConfig,
+  getCountryClientConfig,
   getRegionalBillAssentTitleForState,
   getRegionalExecutiveOfficeKey,
-  isParliamentarySystem,
-} from "@/lib/constants/countries";
+} from "@/lib/constants/countryClientConfig";
 import { getStateLean } from "@/lib/utils/demographics";
 import { PositionLabel } from "@/components/PositionLabel";
 import { positionBucketHex, usesEuropeanLeanColours } from "@/lib/utils/politics";
@@ -147,7 +147,7 @@ export function PoliticsTab({
   regLedger: StateRegLedgerResult;
   isAdmin?: boolean;
 }) {
-  const config = getCountryConfig(state.countryId);
+  const config = getCountryClientConfig(state.countryId);
   const isParliamentary = isParliamentarySystem(config);
   // `calculateStateLean` returns on the −5..+5 scale (same as candidate/group
   // leans), and every other surface — the map tooltip (`leanService`), the

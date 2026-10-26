@@ -3,7 +3,8 @@
 import dynamic from "next/dynamic";
 import { RegionTabNav, type SuperTabId } from "./state/RegionTabNav";
 import type { StatePageTabsProps } from "./state/StatePageTabsTypes";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { POLITICAL_METRIC_COUNTRY_IDS } from "@/lib/politicalMetrics/types";
 import { partiesUrl } from "@/lib/urls";
 import { makeUSPartyFlavor, compareUSParties } from "@/components/region/regionPartiesUSFlavor";
@@ -153,7 +154,8 @@ export function StatePageTabs({
       }
       if (subTab === "parties") {
         const stateCountryId = state.countryId as CountryId;
-        const regionNoun = COUNTRY_CONFIGS[stateCountryId]?.regionLabel.toLowerCase() ?? "region";
+        const regionNoun =
+          COUNTRY_CLIENT_CONFIGS[stateCountryId]?.regionLabel.toLowerCase() ?? "region";
         const sharedConfig = {
           regionNoun,
           emptyStateLink: {

@@ -3,7 +3,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import type { MapOverviewResponse } from "@/lib/map/overviewTypes";
 import { regionUrl } from "@/lib/urls";
 import { USMapWithModes } from "./components/USMapWithModes";
@@ -35,7 +36,7 @@ const CUSTOM_MAP_RENDERERS: Partial<
     CountryId,
     (props: {
       mapData: MapOverviewResponse | null;
-      config: ReturnType<typeof getCountryConfig>;
+      config: ReturnType<typeof getCountryClientConfig>;
       onRegionClick: (id: string) => void;
     }) => React.ReactNode
   >
@@ -52,7 +53,7 @@ function CountryMapContent({ countryId }: CountryMapClientProps) {
   const t = useTranslations("elections.atlas");
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
   const [attempt, setAttempt] = useState(0);
-  const config = getCountryConfig(countryId);
+  const config = getCountryClientConfig(countryId);
   const [mapData, setMapData] = useState<MapOverviewResponse | null>(null);
 
   useEffect(() => {

@@ -3,7 +3,8 @@
 import { useCallback } from "react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { formatFundAmount } from "./fundCurrency";
 
 /**
@@ -17,7 +18,7 @@ import { formatFundAmount } from "./fundCurrency";
  *
  * `formatAmount` works in anchor units, so a fund-currency figure is multiplied
  * by the anchor-per-fund-unit rate first. That rate MUST come from the server,
- * which resolves it for the active era: deriving it here from `COUNTRY_CONFIGS`
+ * which resolves it for the active era: deriving it here from `COUNTRY_CLIENT_CONFIGS`
  * would price a 1953 world at 1979 rates (refs #3778). Without it the fund's own
  * currency stands in, rather than a guess.
  */
@@ -31,7 +32,8 @@ export function useFundFormatter(fund: {
   const { formatAmount } = useCurrency();
   const countryId = fund.currencyCountryId ?? fund.fundCurrencyCountryId;
   const code =
-    fund.currencyCode ?? (countryId ? (COUNTRY_CONFIGS[countryId]?.currencyCode ?? "USD") : "USD");
+    fund.currencyCode ??
+    (countryId ? (COUNTRY_CLIENT_CONFIGS[countryId]?.currencyCode ?? "USD") : "USD");
   const rate = fund.usdToFundRate;
   return useCallback(
     (localAmount: number) =>

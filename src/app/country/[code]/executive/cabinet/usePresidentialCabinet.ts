@@ -4,7 +4,7 @@ import { apiErrorText } from "@/lib/errors/catalog";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useToast } from "@/contexts/ToastContext";
 import type { CabinetGroup } from "@/lib/constants/cabinetPositionGroups";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 
 export interface PositionMember {
   characterId: string;

@@ -1,4 +1,5 @@
-import { COUNTRY_CONFIGS, type CountryId, type CountryStatus } from "@/lib/constants/countries";
+import { type CountryId, type CountryStatus } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { resolveCountryAvailability } from "@/lib/countryAvailability";
 import type { MetricCategoryId } from "@/lib/db/types";
 import { WORLD_COUNTRY_ISO_TO_ID } from "@/lib/worldCountryRegistry";
@@ -60,8 +61,8 @@ export function getMapTooltipAccessDisplay(
 
   if (countryId) {
     const fallback = resolveCountryAvailability(countryId, {
-      enabledForPlayers: COUNTRY_CONFIGS[countryId].status === "active",
-      status: COUNTRY_CONFIGS[countryId].status,
+      enabledForPlayers: COUNTRY_CLIENT_CONFIGS[countryId].status === "active",
+      status: COUNTRY_CLIENT_CONFIGS[countryId].status,
       economyPreview: false,
     });
     return { label: fallback.label, tone: fallback.tone };

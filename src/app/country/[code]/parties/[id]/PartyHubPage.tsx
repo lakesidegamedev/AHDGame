@@ -12,7 +12,8 @@ import { Button, CardSkeleton, Skeleton } from "@/components/ui";
 import { PartyLogo } from "@/components/PartyLogo";
 import { RegimeOffersInbox } from "@/components/parties/RegimeOffersInbox";
 import { AgendaBannerWithEdit } from "@/components/party-hub/AgendaBannerWithEdit";
-import { COUNTRY_CONFIGS, CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { parseCountryParam } from "@/lib/db/partyLookup";
 import { partyApiUrl, partyUrl, regionPartyApiUrl, regionPartyUrl, regionUrl } from "@/lib/urls";
 import { PlainPositionLabel } from "@/components/party/PlainPositionLabel";
@@ -46,7 +47,6 @@ import { PartyPageSkeleton } from "./PartyPageSkeleton";
 import { resolveTreasuryPermissions } from "./treasuryPermissions";
 import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
 import { resolveScopeSwitcherRegionId } from "./resolveScopeSwitcherRegion";
-
 import { useStatePartyData } from "../../region/[id]/party/[partyId]/components/useStatePartyData";
 import { useStatePartyTreasuryActions } from "../../region/[id]/party/[partyId]/components/useStatePartyTreasuryActions";
 import { StatePartyHubBody } from "../../region/[id]/party/[partyId]/components/StatePartyHubBody";
@@ -811,7 +811,7 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
   );
 
   const regionLabel =
-    COUNTRY_CONFIGS[(party?.countryId ?? "US") as CountryId]?.regionLabel ?? "Region";
+    COUNTRY_CLIENT_CONFIGS[(party?.countryId ?? "US") as CountryId]?.regionLabel ?? "Region";
 
   if (loading) return <PartyPageSkeleton />;
   if (!party) {
@@ -1241,7 +1241,7 @@ function NationalPartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "na
                   ? "National leadership"
                   : sub === "committee"
                     ? getPartyRoleLabel(party?.countryId ?? "US", "committee")
-                    : `${COUNTRY_CONFIGS[(party?.countryId ?? "US") as CountryId]?.regionLabelPlural ?? "State parties"}`}
+                    : `${COUNTRY_CLIENT_CONFIGS[(party?.countryId ?? "US") as CountryId]?.regionLabelPlural ?? "State parties"}`}
               </button>
             ))}
           </div>
@@ -1536,7 +1536,8 @@ function StatePartyHub({ scope }: { scope: Extract<PartyHubScope, { kind: "state
   );
 
   const regionLabel =
-    COUNTRY_CONFIGS[(stateParty?.countryId ?? countryCode) as CountryId]?.regionLabel ?? "Region";
+    COUNTRY_CLIENT_CONFIGS[(stateParty?.countryId ?? countryCode) as CountryId]?.regionLabel ??
+    "Region";
 
   if (loading) return <PartyPageSkeleton />;
   if (!stateParty) {

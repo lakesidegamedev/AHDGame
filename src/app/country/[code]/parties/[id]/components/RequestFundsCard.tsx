@@ -7,7 +7,7 @@ import { parseMoneyAmountInput } from "@/lib/utils/parseMoneyAmountInput";
 import { partyApiUrl } from "@/lib/urls";
 import { getMessageStyle } from "@/lib/utils/formatters";
 import type { PartyData } from "./types";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import {
   getEffectivePlayerPayoutCap,
   PAYOUT_CAP_MULTI_OFFICER_MULTIPLIER,

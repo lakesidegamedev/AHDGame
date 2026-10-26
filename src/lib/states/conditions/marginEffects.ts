@@ -1,4 +1,4 @@
-import type { ActiveModifier } from "@/lib/utils/approvalModifiers";
+import type { ActiveModifier } from "@/lib/approval/activeModifier";
 
 /** Max stacked regional-condition margin swing (percentage points). */
 export const REGIONAL_CONDITION_MARGIN_CAP = 3;

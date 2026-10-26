@@ -14,7 +14,7 @@ import {
 import type { Bloc } from "@/lib/military/bloc";
 import { isCustomAlignmentPoleId } from "@/lib/constants/alignmentEras";
 import { DEFENSE_POSITION_BY_COUNTRY } from "@/lib/constants/military";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { useTheaterState } from "./useTheaterState";
 
 const mono = MIL_FONT.mono;

@@ -10,7 +10,7 @@ import {
   OPERATING_SECTOR_TYPE_LABELS,
   type OperatingSectorType,
 } from "@/lib/constants/corporations";
-import { ALL_COUNTRY_IDS } from "@/lib/constants/countries";
+import { ALL_COUNTRY_IDS } from "@/lib/constants/countryClientConfig";
 import {
   FUND_CHARTER_FEE_ANCHOR,
   FUND_MIN_SEED_CAPITAL_ANCHOR,

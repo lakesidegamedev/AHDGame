@@ -61,7 +61,7 @@ import { resolveFinancePosition } from "@/lib/constants/cabinetMonetary";
 import { getCabinetIdentity } from "@/lib/constants/cabinetIdentity";
 import { TRADE_MINISTER_POSITION_BY_COUNTRY } from "@/lib/constants/internationalOrganizations";
 import { Skeleton } from "@/components/ui";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
 import { DepartmentProgramPanel } from "./components/DepartmentProgramPanel";

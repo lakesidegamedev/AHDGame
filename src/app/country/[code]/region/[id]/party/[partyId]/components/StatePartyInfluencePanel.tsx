@@ -12,7 +12,8 @@ import {
 } from "@/components/influence/InfluencePanelShared";
 import type { ActionOption, NPPOption } from "@/components/influence/types";
 import { NppRosterPanel } from "@/components/influence/NppRosterPanel";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 
 interface StatePartyInfluenceData {
   partyId: string;
@@ -44,7 +45,8 @@ export function StatePartyInfluencePanel({
   partyColor,
   onPartyRefresh,
 }: StatePartyInfluencePanelProps) {
-  const currencyCode = COUNTRY_CONFIGS[countryId.toUpperCase() as CountryId]?.currencyCode ?? "USD";
+  const currencyCode =
+    COUNTRY_CLIENT_CONFIGS[countryId.toUpperCase() as CountryId]?.currencyCode ?? "USD";
   const searchParams = useSearchParams();
   const { showToast } = useToast();
   const [data, setData] = useState<StatePartyInfluenceData | null>(null);

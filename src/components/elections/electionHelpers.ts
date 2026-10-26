@@ -1,5 +1,6 @@
 import { electionRegionUrl } from "@/lib/urls";
-import { getRegionalBillAssentTitleForState, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getRegionalBillAssentTitleForState } from "@/lib/constants/countryClientConfig";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
 
 export function partyFallbackColor(partyId: string): string {
