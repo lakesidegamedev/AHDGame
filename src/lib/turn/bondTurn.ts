@@ -9,9 +9,11 @@ import { loadConversionQuoteContext } from "@/lib/currency/euro/quotes";
 import { roundedAggregateCredit } from "@/lib/bonds/rules/roundedAggregateCredit";
 import { readForcedRolloverFaceLocal } from "@/lib/bonds/forcedSovereignRollover";
 import {
-  loadSovereignMaturityLiveTargets,
-  type SovereignMaturityCashLeg,
-} from "@/lib/bonds/sovereignMaturityPayoutTargets";
+  isUnfundableOverdueMaturity,
+  loadSovereignMaturityWave,
+  planSovereignMaturityWave,
+} from "@/lib/bonds/sovereignMaturityWave";
+import { loadSovereignMaturityLiveTargets } from "@/lib/bonds/sovereignMaturityPayoutTargets";
 import { getDb } from "@/lib/mongodb";
 import { ObjectId, type AnyBulkWriteOperation } from "mongodb";
 import type {
@@ -99,31 +101,13 @@ import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { roundSavingsAmount } from "@/lib/currency/savingsInterest";
 import { resumeSettlement } from "@/lib/banking/settlementJournal";
 import { KeyedQueue, interleaveByKey, runInLanes } from "@/lib/turn/settlementLanes";
+import type { BondTurnResult, SovereignMaturityPlan } from "./bondTurnTypes";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 
 /** Concurrent sovereign maturity settlements; one Treasury still runs one at a time. */
 const SOVEREIGN_MATURITY_LANES = 8;
 
-export interface BondTurnResult {
-  bondsProcessed: number;
-  couponsPaid: number;
-  bondsMatured: number;
-  bondsDefaulted: number;
-  totalCouponsPaid: number;
-  bondHistorySnapshots: number;
-  /** Bonds cured this turn by forced auto-restructuring (sector sale) of lingering defaults. */
-  bondsAutoRestructured: number;
-  /** Bonds cured this turn by auto-refinance (replacement bond, no sale) of lingering defaults. */
-  bondsAutoRefinanced: number;
-  /** Actual at-par issuance plus later placements, for the v2 cash shell. */
-  sovereignCashProceedsByCountry?: Record<string, number>;
-  /** New debt face, which can differ from actual placement consideration. */
-  sovereignDebtFaceIssuedByCountry?: Record<string, number>;
-  /** Actual sovereign coupon and maturity obligations already paid by this bond phase. */
-  sovereignCouponPaidByCountry?: Record<string, number>;
-  sovereignMaturityCashPaidByCountry?: Record<string, number>;
-  sovereignDebtFaceRetiredByCountry?: Record<string, number>;
-}
+export type { BondTurnResult } from "./bondTurnTypes";
 
 /**
  * Process all active bonds each turn:
@@ -1143,65 +1127,9 @@ export async function processBondTurn(
       sovereignMaturityCandidateIds.has(bond._id.toHexString()) &&
       bond.countryId
   );
-  const dueBudgetIds =
-    dueSovereignBonds.length === 0
-      ? []
-      : [...new Set(dueSovereignBonds.map((bond) => getNationalBudgetId(bond.countryId!)))];
-  // One projected read answers both questions the settlement used to ask once
-  // per bond: does this Treasury already hold bank claims, and how much
-  // spendable cash did it have when the phase reached this point. This phase
-  // only debits Treasury cash, so a frozen claim asking for more than that
-  // cannot fund this turn and is skipped instead of re-reading its budget,
-  // quote and receipts every turn it stays overdue.
-  const dueBudgetRows =
-    dueBudgetIds.length === 0
-      ? []
-      : await db
-          .collection<{
-            _id: string;
-            treasuryCashLocal?: number | null;
-            bankSovereignClaims?: Array<{ id?: string }>;
-          }>("federalBudget")
-          .find(
-            { _id: { $in: dueBudgetIds } },
-            { projection: { _id: 1, treasuryCashLocal: 1, "bankSovereignClaims.id": 1 } }
-          )
-          .toArray();
-  // A maturity with a half-applied funding or payout receipt, or a paid claim
-  // whose payout is still being published, must reach the settlement code that
-  // resumes it, whatever the Treasury holds now. One read on the status/kind
-  // index covers the wave; partial receipts are rare.
-  const inFlightMaturityClaimIds = new Set<string>(
-    dueSovereignBonds.length === 0
-      ? []
-      : (
-          await db
-            .collection<{ _id: string }>("bankMoneyMoves")
-            .find(
-              {
-                status: "partial",
-                kind: { $in: ["sovereign_maturity_funding", "sovereign_maturity_payout"] },
-              },
-              { projection: { _id: 1 } }
-            )
-            .toArray()
-        ).map((row) => row._id.replace(/:(fund:.*|payout)$/, ""))
-  );
-  const phaseStartTreasuryCash = new Map<string, number>();
-  const budgetsWithBankClaims = new Set<string>();
-  for (const row of dueBudgetRows) {
-    if (typeof row.treasuryCashLocal === "number")
-      phaseStartTreasuryCash.set(String(row._id), row.treasuryCashLocal);
-    if ((row.bankSovereignClaims?.length ?? 0) > 0) budgetsWithBankClaims.add(String(row._id));
-  }
+  const maturityWave = await loadSovereignMaturityWave(db, dueSovereignBonds);
+  const budgetsWithBankClaims = maturityWave.budgetsWithBankClaims;
   const lock = new KeyedQueue();
-  interface SovereignMaturityPlan {
-    treasuryValuation: NonNullable<ReturnType<typeof treasuryAnchorValuation>>;
-    bankUnits: number;
-    nonBankRepaymentLocal: number;
-    holderLegs: SovereignMaturityCashLeg[];
-    maturityEntries: PartialTxEntry[];
-  }
   const buildSovereignMaturityPlan = (bond: Bond): SovereignMaturityPlan | null => {
     if (!bond.countryId) return null;
     const countryId = bond.countryId;
@@ -1214,47 +1142,7 @@ export async function processBondTurn(
     });
     if (!treasuryValuation || !(treasuryValuation.anchorRate > 0)) return null;
 
-    // A frozen claim that already asked for more spendable cash than this
-    // Treasury held when the phase started cannot settle this turn: nothing in
-    // this phase credits a Treasury. The one exception is the unfunded pool
-    // rollover, which rebases the claim onto a replacement bond and can pay a
-    // zero cash residual, so a claim that could still roll over is attempted
-    // exactly as before. Skipping the rest is the same outcome as the guarded
-    // funding debit refusing it, without re-reading the budget, the quote and
-    // the receipts on every turn the bond stays overdue.
-    const frozenClaim = bond.sovereignMaturityClaim;
-    if (frozenClaim) {
-      const requiredCashLocal =
-        frozenClaim.publicFloatDisposition?.mode === "novation"
-          ? (frozenClaim.publicFloatDisposition.residualAmountLocal ?? 0)
-          : frozenClaim.amountLocal;
-      const couldRollOver =
-        !frozenClaim.forcedRollover &&
-        frozenClaim.escrowLocal === 0 &&
-        frozenClaim.fundingAttemptTurn === undefined &&
-        (bond.restructureHaircutPercent ?? 0) === 0 &&
-        bond.publicFloat > 0 &&
-        (frozenClaim.publicFloatDisposition?.mode !== "novation" ||
-          frozenClaim.publicFloatDisposition.status === "applied") &&
-        frozenClaim.holderLegs.some(
-          (leg) => leg.collection === "bondMarketPools" && String(leg.filter._id) === bondCcy
-        );
-      const phaseStartCash = phaseStartTreasuryCash.get(getNationalBudgetId(countryId));
-      const inFlight =
-        frozenClaim.paid === true ||
-        inFlightMaturityClaimIds.has(frozenClaim.id) ||
-        (frozenClaim.publicFloatDisposition?.mode === "novation" &&
-          frozenClaim.publicFloatDisposition.status !== "applied");
-      if (
-        !couldRollOver &&
-        !inFlight &&
-        Number.isFinite(requiredCashLocal) &&
-        (frozenClaim.escrowLocal ?? 0) < requiredCashLocal &&
-        phaseStartCash !== undefined &&
-        phaseStartCash < requiredCashLocal
-      )
-        return null;
-    }
+    if (isUnfundableOverdueMaturity(bond, bondCcy, maturityWave)) return null;
 
     const bankUnits = (bond.holders ?? []).reduce(
       (sum, holder) =>
@@ -1452,21 +1340,11 @@ export async function processBondTurn(
     return { treasuryValuation, bankUnits, nonBankRepaymentLocal, holderLegs, maturityEntries };
   };
 
-  const maturityPlans = new Map<string, SovereignMaturityPlan>();
-  const waveLegs: SovereignMaturityCashLeg[][] = [];
-  for (const bond of dueSovereignBonds) {
-    const plan = buildSovereignMaturityPlan(bond);
-    if (!plan) continue;
-    maturityPlans.set(bond._id.toHexString(), plan);
-    waveLegs.push(plan.holderLegs);
-    // A retry pays the frozen quote, not today's snapshot, so its payees are
-    // part of the same wave-wide read.
-    if (bond.sovereignMaturityClaim?.holderLegs?.length)
-      waveLegs.push(bond.sovereignMaturityClaim.holderLegs);
-  }
-  // One read per holder kind for the whole wave. Resolving payees inside each
-  // bond's settlement repeated the same lookup once per bond, which is what a
-  // ladder maturity turn pays for hundreds of times.
+  const { maturityPlans, waveLegs } = planSovereignMaturityWave(
+    dueSovereignBonds,
+    buildSovereignMaturityPlan
+  );
+  // One read per holder kind for the whole wave, not one per bond.
   const liveTargets =
     waveLegs.length === 0 ? undefined : await loadSovereignMaturityLiveTargets(db, waveLegs);
 
