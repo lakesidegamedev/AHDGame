@@ -17,6 +17,97 @@ import { settleAtomicDocumentTransition } from "@/lib/banking/atomicDocumentSett
 import { oid, type BankingTransition } from "@/lib/banking/rules/boundary";
 import { bankSovereignMaturityCostBasis } from "@/lib/banking/rules/sovereignClaims";
 
+type ClaimReceiptRow = { _id: string; kind?: string; turn?: number; status?: string };
+
+/** Receipt suffixes a paid claim can own: vault payout, insurance payout, orphan insurance. */
+const CLAIM_RECEIPT_SUFFIXES = [":bank:", ":insurance:", ":orphan-insurance:"] as const;
+
+function escapeRegex(value: string): string {
+  return value.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&");
+}
+
+/**
+ * Match ids starting with any of the prefixes. Each branch is a plain anchored
+ * prefix, which the server answers with a bounded `_id` range. An alternation
+ * such as `^id:(bank|insurance):` is not a simple prefix, so the server walks
+ * the whole `_id` index for it instead.
+ */
+function idPrefixFilter(prefixes: readonly string[]) {
+  return { $or: prefixes.map((prefix) => ({ _id: { $regex: `^${escapeRegex(prefix)}` } })) };
+}
+
+function claimIdFromReceipt(receiptId: string): string {
+  return receiptId.replace(/:(bank|insurance|orphan-insurance):.*$/, "");
+}
+
+/**
+ * Every settlement receipt a claim book's claims could own, in one read instead
+ * of two reads per claim. A claim book that outlives its funding is swept again
+ * on every maturity and every Treasury turn, so the per-claim lookups used to
+ * multiply the retries by the number of bonds in the wave.
+ */
+async function loadClaimReceipts(
+  db: Db,
+  claimIds: readonly string[]
+): Promise<Map<string, ClaimReceiptRow[]>> {
+  const byClaim = new Map<string, ClaimReceiptRow[]>();
+  const unique = [...new Set(claimIds)];
+  if (unique.length === 0) return byClaim;
+  const rows = await db
+    .collection<ClaimReceiptRow>("bankMoneyMoves")
+    .find(
+      idPrefixFilter(unique.flatMap((id) => CLAIM_RECEIPT_SUFFIXES.map((suffix) => id + suffix))),
+      { projection: { _id: 1, kind: 1, turn: 1, status: 1 } }
+    )
+    .toArray();
+  for (const row of rows) {
+    const claimId = claimIdFromReceipt(String(row._id));
+    const existing = byClaim.get(claimId);
+    if (existing) existing.push(row);
+    else byClaim.set(claimId, [row]);
+  }
+  return byClaim;
+}
+
+/** Claims whose payout receipt already landed, in one read per bond. */
+async function loadPaidClaimIds(
+  db: Db,
+  claims: readonly BankSovereignClaim[],
+  input: { turn: number; treasuryCashLedgerEnabled?: boolean }
+): Promise<Set<string>> {
+  const paid = new Set<string>();
+  if (claims.length === 0) return paid;
+  const rows =
+    input.treasuryCashLedgerEnabled === true
+      ? await db
+          .collection<{ _id: string }>("bankMoneyMoves")
+          .find(
+            {
+              ...idPrefixFilter(
+                claims.flatMap((claim) => [`${claim.id}:bank:`, `${claim.id}:insurance:`])
+              ),
+              status: "applied",
+            },
+            { projection: { _id: 1 } }
+          )
+          .toArray()
+      : await db
+          .collection<{ _id: string }>("bankMoneyMoves")
+          .find(
+            {
+              _id: { $in: claims.map((claim) => `${claim.id}:funding:${input.turn}`) },
+              status: "applied",
+            },
+            { projection: { _id: 1 } }
+          )
+          .toArray();
+  for (const row of rows) {
+    const claimId = String(row._id).replace(/:(bank|insurance|funding):.*$/, "");
+    paid.add(claimId);
+  }
+  return paid;
+}
+
 /** Add a stable principal claim before the legacy holder payout loop can run. */
 export async function addBankMaturityClaims(
   db: Db,
@@ -31,7 +122,6 @@ export async function addBankMaturityClaims(
     treasuryCashLedgerEnabled?: boolean;
   }
 ): Promise<BankSovereignClaim[]> {
-  const claims: BankSovereignClaim[] = [];
   const unitsByEpoch = new Map<
     string,
     { bankId: ObjectId; charteredTurn: number; units: number }
@@ -61,6 +151,7 @@ export async function addBankMaturityClaims(
     existing.units += Math.max(0, holder.units);
     unitsByEpoch.set(key, existing);
   }
+  const built: BankSovereignClaim[] = [];
   for (const holder of unitsByEpoch.values()) {
     const amountLocal = roundSavingsAmount(holder.units * BOND_UNIT_FACE_VALUE, input.currencyCode);
     if (amountLocal <= 0) continue;
@@ -70,7 +161,7 @@ export async function addBankMaturityClaims(
       holder.charteredTurn,
       input.currencyCode
     );
-    const claim: BankSovereignClaim = {
+    built.push({
       id: `bank-sovereign-maturity:${input.bond._id.toHexString()}:${holder.bankId.toHexString()}:${holder.charteredTurn}`,
       kind: "maturity",
       bankId: holder.bankId.toHexString(),
@@ -86,60 +177,104 @@ export async function addBankMaturityClaims(
       ...(input.anchorRate !== undefined ? { anchorRate: input.anchorRate } : {}),
       ...(input.ledgerShadow ? { ledgerShadow: true } : {}),
       ...(input.treasuryCashLedgerEnabled ? { treasuryCashLedgerEnabled: true } : {}),
-    };
-    // A paid bank leg belongs to the immutable due claim, not its funding turn.
-    // BondTurn can replay in a later turn while non-bank holders still await
-    // cash, so recover the terminal witness before deciding whether to push.
-    const paidClaim =
-      input.treasuryCashLedgerEnabled === true
-        ? await db.collection<{ _id: string }>("bankMoneyMoves").findOne(
-            {
-              _id: { $regex: `^${claim.id}:(bank|insurance):` },
-              status: "applied",
-            },
-            { projection: { _id: 1 } }
-          )
-        : await db
-            .collection<{ _id: string; status: string }>("bankMoneyMoves")
-            .findOne(
-              { _id: `${claim.id}:funding:${input.turn}`, status: "applied" },
-              { projection: { _id: 1 } }
-            );
+    });
+  }
+  // A paid bank leg belongs to the immutable due claim, not its funding turn.
+  // BondTurn can replay in a later turn while non-bank holders still await
+  // cash, so recover the terminal witness before deciding whether to push.
+  const paidIds =
+    built.length === 0
+      ? new Set<string>()
+      : await loadPaidClaimIds(db, built, {
+          turn: input.turn,
+          treasuryCashLedgerEnabled: input.treasuryCashLedgerEnabled,
+        });
+  const pending: BankSovereignClaim[] = [];
+  const resolved = new Map<string, BankSovereignClaim>();
+  for (const claim of built) {
     const frozenPaid =
       input.treasuryCashLedgerEnabled === true &&
       input.bond.sovereignMaturityClaim?.paidBankClaimIds?.includes(claim.id);
-    if (paidClaim || frozenPaid) {
-      if (input.treasuryCashLedgerEnabled && paidClaim) await recordMaturityBankPayment(db, claim);
+    if (paidIds.has(claim.id) || frozenPaid) {
+      if (input.treasuryCashLedgerEnabled && paidIds.has(claim.id))
+        await recordMaturityBankPayment(db, claim);
       continue;
     }
-    const result = await db
-      .collection<FederalBudget>("federalBudget")
-      .updateOne(
-        { _id: input.budgetId, "bankSovereignClaims.id": { $ne: claim.id } },
-        { $push: { bankSovereignClaims: claim } }
-      );
-    if (result.matchedCount === 1) {
-      claims.push(claim);
-      continue;
-    }
-    const existing = await db
-      .collection<FederalBudget>("federalBudget")
-      .findOne(
-        { _id: input.budgetId, "bankSovereignClaims.id": claim.id },
-        { projection: { bankSovereignClaims: 1 } }
-      );
-    const saved = existing?.bankSovereignClaims?.find((row) => row.id === claim.id);
+    pending.push(claim);
+  }
+  if (pending.length === 0) return [];
+
+  // One projected read of the book decides which claims are already frozen,
+  // so the normal replay pays for one read and one guarded push per bond
+  // instead of two reads per bank epoch.
+  const book = await db
+    .collection<FederalBudget>("federalBudget")
+    .findOne({ _id: input.budgetId }, { projection: { bankSovereignClaims: 1 } });
+  const frozenById = new Map((book?.bankSovereignClaims ?? []).map((row) => [row.id, row]));
+  for (const claim of pending) {
+    const saved = frozenById.get(claim.id);
+    if (!saved) continue;
     if (
-      !saved ||
       saved.amountLocal !== claim.amountLocal ||
       saved.charteredTurn !== claim.charteredTurn ||
       saved.treasuryCashLedgerEnabled !== claim.treasuryCashLedgerEnabled ||
       (saved.dueTurn !== undefined && saved.dueTurn !== claim.dueTurn)
     )
       throw new Error(`Bank maturity claim ${claim.id} changed after it was frozen`);
-    claims.push(saved);
+    resolved.set(claim.id, saved);
   }
-  return claims;
+  const missing = pending.filter((claim) => !resolved.has(claim.id));
+
+  // One guarded push for every claim this bond still needs. A competing writer
+  // that froze part of the book between the read and the push makes the guard
+  // refuse it; that case falls back to the per-claim comparison below.
+  if (missing.length > 0) {
+    const pushed = await db.collection<FederalBudget>("federalBudget").updateOne(
+      {
+        _id: input.budgetId,
+        "bankSovereignClaims.id": { $nin: missing.map((claim) => claim.id) },
+      },
+      { $push: { bankSovereignClaims: { $each: missing } } }
+    );
+    if (pushed.matchedCount === 1) {
+      for (const claim of missing) resolved.set(claim.id, claim);
+    } else {
+      for (const claim of missing) {
+        const existing = await db
+          .collection<FederalBudget>("federalBudget")
+          .findOne(
+            { _id: input.budgetId, "bankSovereignClaims.id": claim.id },
+            { projection: { bankSovereignClaims: 1 } }
+          );
+        const saved = existing?.bankSovereignClaims?.find((row) => row.id === claim.id);
+        if (!saved) {
+          const result = await db
+            .collection<FederalBudget>("federalBudget")
+            .updateOne(
+              { _id: input.budgetId, "bankSovereignClaims.id": { $ne: claim.id } },
+              { $push: { bankSovereignClaims: claim } }
+            );
+          if (result.matchedCount === 1) {
+            resolved.set(claim.id, claim);
+            continue;
+          }
+        }
+        if (
+          !saved ||
+          saved.amountLocal !== claim.amountLocal ||
+          saved.charteredTurn !== claim.charteredTurn ||
+          saved.treasuryCashLedgerEnabled !== claim.treasuryCashLedgerEnabled ||
+          (saved.dueTurn !== undefined && saved.dueTurn !== claim.dueTurn)
+        )
+          throw new Error(`Bank maturity claim ${claim.id} changed after it was frozen`);
+        resolved.set(claim.id, saved);
+      }
+    }
+  }
+  return built.flatMap((claim) => {
+    const row = resolved.get(claim.id);
+    return row ? [row] : [];
+  });
 }
 
 async function recordMaturityBankPayment(db: Db, claim: BankSovereignClaim): Promise<void> {
@@ -648,13 +783,10 @@ async function payFromEscrow(
 async function recoverCompletedClaim(
   db: Db,
   claim: BankSovereignClaim,
-  budgetId: string
+  budgetId: string,
+  receipts: readonly ClaimReceiptRow[]
 ): Promise<boolean> {
-  const records = await db
-    .collection<{ _id: string; kind?: string; turn?: number; status?: string }>("bankMoneyMoves")
-    .find({ _id: { $regex: `^${claim.id}:(bank|insurance|orphan-insurance):` } })
-    .toArray();
-  for (const record of records) {
+  for (const record of receipts) {
     if (record.status !== "partial" && record.status !== "applied") continue;
     const settled = await resumeSettlement(db, record._id);
     if (settled.status !== "applied" && (settled.status !== "replayed" || settled.error)) continue;
@@ -678,7 +810,10 @@ async function recoverCompletedClaim(
 /** Fund due claims once, then release from epoch-scoped escrow or to insurance. */
 export async function settleBankSovereignClaims(
   db: Db,
-  budget: Pick<FederalBudget, "_id" | "countryId" | "bankSovereignClaims">,
+  budget: Pick<FederalBudget, "_id" | "countryId" | "bankSovereignClaims"> & {
+    treasuryCashLocal?: number;
+    treasuryBalance?: number;
+  },
   attemptTurn: number
 ): Promise<{ paidClaimIds: string[] }> {
   const claims = [...(budget.bankSovereignClaims ?? [])].sort(
@@ -686,24 +821,55 @@ export async function settleBankSovereignClaims(
   );
   if (!claims.length) return { paidClaimIds: [] };
   const paidClaimIds: string[] = [];
+  const budgetId = String(budget._id);
+  const validClaims = claims.filter((claim) => ObjectId.isValid(claim.bankId));
+  // Both per-claim lookups below become one read for the whole book: the
+  // receipts a claim owns, and the bank documents (existence, charter epoch and
+  // funded escrow) that decide where its cash goes.
+  const receiptsByClaim = await loadClaimReceipts(
+    db,
+    validClaims.map((claim) => claim.id)
+  );
+  const bankIds = [...new Set(validClaims.map((claim) => claim.bankId))].map(
+    (bankId) => new ObjectId(bankId)
+  );
+  const bankRows: CorporationCharterState[] =
+    bankIds.length === 0
+      ? []
+      : await db
+          .collection<CorporationCharterState>("corporations")
+          .find(
+            { _id: { $in: bankIds } },
+            { projection: { _id: 1, bankCharter: 1, bankSovereignEscrows: 1 } }
+          )
+          .toArray();
+  const bankById = new Map(bankRows.map((row) => [String(row._id), row] as const));
+  // This sweep only debits the Treasury, so a claim worth more than the cash
+  // (or signed balance) the caller read cannot fund here. Skipping it is the
+  // same outcome as the guarded debit refusing it, without the round trips.
+  const availableCash = Number.isFinite(budget.treasuryCashLocal)
+    ? budget.treasuryCashLocal
+    : undefined;
+  const availableBalance = Number.isFinite(budget.treasuryBalance)
+    ? budget.treasuryBalance
+    : undefined;
 
   for (const claim of claims) {
     if (!ObjectId.isValid(claim.bankId)) continue;
-    const budgetId = String(budget._id);
-    if (await recoverCompletedClaim(db, claim, budgetId)) {
+    const receipts = receiptsByClaim.get(claim.id) ?? [];
+    const bank = bankById.get(claim.bankId);
+    const escrowedLocal = bank?.bankSovereignEscrows?.[claim.id]?.amountLocal ?? 0;
+    if (await recoverCompletedClaim(db, claim, budgetId, receipts)) {
       if (claim.treasuryCashLedgerEnabled) await recordMaturityBankPayment(db, claim);
       paidClaimIds.push(claim.id);
       continue;
     }
-    const unfinishedPayout = await db.collection<{ _id: string }>("bankMoneyMoves").findOne({
-      _id: { $regex: `^${claim.id}:(bank|insurance|orphan-insurance):` },
-      status: "partial",
-    });
-    if (unfinishedPayout) continue;
-    const corporation = await db
-      .collection<CorporationCharterState>("corporations")
-      .findOne({ _id: new ObjectId(claim.bankId) }, { projection: { _id: 1 } });
-    if (!corporation) {
+    if (receipts.some((record) => record.status === "partial")) continue;
+    if (escrowedLocal < claim.amountLocal) {
+      const available = claim.treasuryCashLedgerEnabled === true ? availableCash : availableBalance;
+      if (available !== undefined && available < claim.amountLocal) continue;
+    }
+    if (!bank) {
       await ensureFund(db, claim.currencyCode);
       const orphaned = await settleTransition(
         db,
