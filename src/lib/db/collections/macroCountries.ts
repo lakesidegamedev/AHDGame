@@ -2,7 +2,7 @@ import type { Db } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import type { MacroCountryState } from "@/lib/world/macro/types";
 
-const MACRO_COUNTRIES_COLLECTION = "macroCountries";
+export const MACRO_COUNTRIES_COLLECTION = "macroCountries";
 
 export async function getMacroCountriesCollection(db?: Db) {
   const database = db ?? (await getDb());

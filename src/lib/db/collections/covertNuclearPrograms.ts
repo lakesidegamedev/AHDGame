@@ -3,7 +3,7 @@ import type { CountryId } from "@/lib/constants/countries";
 import type { CovertNuclearProgram } from "@/lib/db/types/covertNuclearProgram";
 import { emptyCovertProgram } from "@/lib/military/covertNuclear";
 
-const COVERT_NUCLEAR_PROGRAMS_COLLECTION = "covertNuclearPrograms";
+export const COVERT_NUCLEAR_PROGRAMS_COLLECTION = "covertNuclearPrograms";
 
 export function getCovertNuclearProgramsCollection(db: Db) {
   return db.collection<CovertNuclearProgram>(COVERT_NUCLEAR_PROGRAMS_COLLECTION);

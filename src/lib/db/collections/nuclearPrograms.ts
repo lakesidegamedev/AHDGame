@@ -2,7 +2,7 @@ import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { NuclearProgram } from "@/lib/db/types/nuclearProgram";
 
-const NUCLEAR_PROGRAMS_COLLECTION = "nuclearPrograms";
+export const NUCLEAR_PROGRAMS_COLLECTION = "nuclearPrograms";
 
 export function getNuclearProgramsCollection(db: Db) {
   return db.collection<NuclearProgram>(NUCLEAR_PROGRAMS_COLLECTION);

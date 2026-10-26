@@ -1,8 +1,8 @@
 import type { Db } from "mongodb";
 import type { CountryTurnRow, SecurityTelemetryRow } from "@/lib/telemetry/research/rules";
 
-const COUNTRY_TURN_TELEMETRY_COLLECTION = "countryTurnTelemetry";
-const SECURITY_TELEMETRY_COLLECTION = "securityTelemetry";
+export const COUNTRY_TURN_TELEMETRY_COLLECTION = "countryTurnTelemetry";
+export const SECURITY_TELEMETRY_COLLECTION = "securityTelemetry";
 
 export function getCountryTurnTelemetryCollection(db: Db) {
   return db.collection<CountryTurnRow>(COUNTRY_TURN_TELEMETRY_COLLECTION);

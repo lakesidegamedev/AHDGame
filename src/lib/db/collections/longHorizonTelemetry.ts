@@ -4,8 +4,8 @@ import type {
   MacroTelemetryPoint,
 } from "@/lib/db/types/longHorizonTelemetry";
 
-const APPROVAL_TELEMETRY_COLLECTION = "approvalTelemetry";
-const MACRO_TELEMETRY_COLLECTION = "macroTelemetry";
+export const APPROVAL_TELEMETRY_COLLECTION = "approvalTelemetry";
+export const MACRO_TELEMETRY_COLLECTION = "macroTelemetry";
 
 export function getApprovalTelemetryCollection(db: Db) {
   return db.collection<ApprovalTelemetryPoint>(APPROVAL_TELEMETRY_COLLECTION);
