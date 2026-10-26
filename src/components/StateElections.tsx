@@ -9,10 +9,11 @@ import type { ElectionDisplay, CharacterBasic, GameStateDisplay } from "@/lib/db
 import type { ElectionResponse } from "@/lib/elections/resolveElection";
 import { partiesApiUrl, countryElectionsUrl } from "@/lib/urls";
 import { type CountryId, isParliamentarySystem } from "@/lib/constants/countriesCore";
+import { getCountryRegionLabels } from "@/lib/country/countryRegionLabels";
 import {
-  COUNTRY_CLIENT_CONFIGS,
+  getCountryOfficeConfig,
   getRegionalExecutiveOfficeKey,
-} from "@/lib/constants/countryClientConfig";
+} from "@/lib/constants/countryOfficesClient";
 import {
   getLowerChamberOfficeType,
   getUpperChamberOfficeType,
@@ -87,7 +88,7 @@ export function StateElections({
   >({});
 
   const countryId = propCountryId ?? "US";
-  const regionLabel = COUNTRY_CLIENT_CONFIGS[countryId as CountryId]?.regionLabel ?? "State";
+  const regionLabel = getCountryRegionLabels(countryId as CountryId)?.singular ?? "State";
 
   /**
    * Party lookup for the Blend cards. The abbreviation is what the card's party
@@ -265,7 +266,7 @@ export function StateElections({
   });
 
   // Split elections into categories
-  const isParliamentary = isParliamentarySystem(COUNTRY_CLIENT_CONFIGS[countryId as CountryId]);
+  const isParliamentary = isParliamentarySystem(getCountryOfficeConfig(countryId as CountryId));
 
   /** Compute LARP election year from election metadata (matches election detail page). */
   const electionGameYear = (election: ElectionDisplay): number | null => {
@@ -274,7 +275,7 @@ export function StateElections({
   };
 
   // National-level chamber elections (federal/parliamentary)
-  const config = COUNTRY_CLIENT_CONFIGS[countryId as CountryId];
+  const config = getCountryOfficeConfig(countryId as CountryId);
   const lowerOfficeType = getLowerChamberOfficeType(countryId as CountryId);
   const upperOfficeType = getUpperChamberOfficeType(countryId as CountryId);
 

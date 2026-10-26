@@ -4,9 +4,9 @@
  */
 import { type CountryId } from "@/lib/constants/countriesCore";
 import {
-  getCountryClientConfig,
-  type CountryClientConfig,
-} from "@/lib/constants/countryClientConfig";
+  getCountryOfficeConfig,
+  type CountryOfficeConfig,
+} from "@/lib/constants/countryOfficesClient";
 
 /**
  * Resolve the office-type key for a given chamber key in a country.
@@ -23,9 +23,9 @@ export function getOfficeTypeForChamber(
   countryId: CountryId,
   chamberKey: string,
   preset?: string,
-  runtimeCountry?: CountryClientConfig
+  runtimeCountry?: CountryOfficeConfig
 ): string {
-  const office = (runtimeCountry ?? getCountryClientConfig(countryId, preset)).officeTypes.find(
+  const office = (runtimeCountry ?? getCountryOfficeConfig(countryId, preset)).officeTypes.find(
     (o) => "chamberKey" in o && o.chamberKey === chamberKey
   );
   return office?.key ?? chamberKey;
@@ -46,9 +46,9 @@ export function getChamberKeyForOfficeType(
   countryId: CountryId,
   officeType: string,
   preset?: string,
-  runtimeCountry?: CountryClientConfig
+  runtimeCountry?: CountryOfficeConfig
 ): string {
-  const office = (runtimeCountry ?? getCountryClientConfig(countryId, preset)).officeTypes.find(
+  const office = (runtimeCountry ?? getCountryOfficeConfig(countryId, preset)).officeTypes.find(
     (o) => o.key === officeType
   );
   if (office && "chamberKey" in office && office.chamberKey) {
@@ -59,7 +59,7 @@ export function getChamberKeyForOfficeType(
 
 /** Convenience wrapper for the lower chamber. */
 export function getLowerChamberOfficeType(countryId: CountryId, preset?: string): string {
-  const lowerKey = getCountryClientConfig(countryId, preset).legislature.lowerChamber.key;
+  const lowerKey = getCountryOfficeConfig(countryId, preset).legislature.lowerChamber.key;
   return getOfficeTypeForChamber(countryId, lowerKey, preset);
 }
 
@@ -71,9 +71,9 @@ export function getUpperChamberOfficeType(
   countryId: CountryId,
   preset?: string
 ): string | undefined {
-  const upperKey = getCountryClientConfig(countryId, preset).legislature.upperChamber?.key;
+  const upperKey = getCountryOfficeConfig(countryId, preset).legislature.upperChamber?.key;
   if (!upperKey) return undefined;
-  const office = getCountryClientConfig(countryId, preset).officeTypes.find(
+  const office = getCountryOfficeConfig(countryId, preset).officeTypes.find(
     (o) => "chamberKey" in o && o.chamberKey === upperKey
   );
   return office?.key;
@@ -87,7 +87,7 @@ export function getUpperChamberOfficeType(
  * chambers (UK Lords, CN CPPCC) are excluded.
  */
 export function getJointSittingOfficeTypes(countryId: CountryId, preset?: string): string[] {
-  const config = getCountryClientConfig(countryId, preset);
+  const config = getCountryOfficeConfig(countryId, preset);
   const types = [getLowerChamberOfficeType(countryId, preset)];
   if (config.legislature.upperChamber && config.upperElectionSystem) {
     const upper = getUpperChamberOfficeType(countryId, preset);
@@ -104,7 +104,7 @@ export function getJointSittingOfficeTypes(countryId: CountryId, preset?: string
  * For China it is only npcDelegate (no senate equivalent in cabinet).
  */
 export function getCabinetEligibleOfficeTypes(countryId: CountryId, preset?: string): string[] {
-  const config = getCountryClientConfig(countryId, preset);
+  const config = getCountryOfficeConfig(countryId, preset);
   const types: string[] = [];
 
   const lower = config.officeTypes.find(
@@ -139,7 +139,7 @@ export function getRegionOfficialBuckets(
   houseRepTypes: Set<string>;
   stateSenatorTypes: Set<string>;
 } {
-  const config = getCountryClientConfig(countryId, preset);
+  const config = getCountryOfficeConfig(countryId, preset);
   const upperChamberKey = config.legislature.upperChamber?.key;
   const lowerChamberKey = config.legislature.lowerChamber.key;
   const subNationalChamberKey = config.subNationalChamber?.key;

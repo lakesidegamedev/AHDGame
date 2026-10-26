@@ -675,7 +675,7 @@
     "e54ef0dc8a1525b6ea8904bb3e860c6282b9e49f23a9f687633ba83328afd1ad": 1,
     "a9ede6674d692d5180505a301712299bb9a0fadd03e15dd1923e2a5d29194472": 1,
     "7879fff949225c0c8a92dc6f2d926e9d25779281386bf392cb351432446c3e47": 1,
-    "5a5eb0a74ba31d29109f1b85850290e6aebdb28aad86e67eb3c43f65b66e683d": 1,
+    "28b8481843172e0158631aa352ca7c67afcc754f1e0bea52d53ea65d31eee37b": 1,
     "2f9e842027f9a9b9f56119c9c1807f0a7cac53fbfa196de3deb3850bb2af7a7d": 1,
     "7ad8f1ad1fc256ef9d1054f229e410d52637d583d303e6b59c54878f3f5a807d": 1,
     "65e3ca1ee5f3ccfa8996ab7ee5180c6704508823fe28494e5f3a5b3aa056327c": 1,
@@ -5583,7 +5583,7 @@
       "operation": "findOne",
       "owner": "settleBudget",
       "expression": "db.collection<FederalBudget>(\"federalBudget\").findOne({ _id: b._id })",
-      "fingerprint": "5a5eb0a74ba31d29109f1b85850290e6aebdb28aad86e67eb3c43f65b66e683d"
+      "fingerprint": "28b8481843172e0158631aa352ca7c67afcc754f1e0bea52d53ea65d31eee37b"
     }
   ],
   "adoptedReleaseCommit": "81812055b6",

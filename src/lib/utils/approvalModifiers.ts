@@ -23,9 +23,14 @@ import {
 import { getEraConditionShift, isMetricActive } from "@/lib/era/metricCatalog";
 import { marginEffectForModifier } from "@/lib/states/conditions/marginEffects";
 import { resolveModifierDef } from "@/lib/states/conditions/resolveModifierDef";
-import type { ActiveModifier } from "@/lib/approval/activeModifier";
+import {
+  netModifierEffect,
+  POSITIVE_MODIFIER_NET_CAP,
+  type ActiveModifier,
+} from "@/lib/approval/activeModifier";
 
-export { netModifierEffect, type ActiveModifier } from "@/lib/approval/activeModifier";
+export { netModifierEffect, POSITIVE_MODIFIER_NET_CAP };
+export type { ActiveModifier };
 
 export interface Condition {
   category: string;
@@ -65,7 +70,6 @@ const HEADLINE_MODIFIER_CAP = 8;
  * region into the high-60s before any player action. Negatives remain uncapped
  * so crises still compound. Headline UI cap above is display-only and unrelated.
  */
-export const POSITIVE_MODIFIER_NET_CAP = 8;
 
 const MODIFIER_DEFS: ModifierDef[] = [
   // ── Positive ───────────────────────────────────────────────────────────────

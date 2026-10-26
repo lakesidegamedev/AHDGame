@@ -37,6 +37,7 @@ import { isPrimaryEnded } from "@/lib/elections/phases";
 import { ObjectId } from "mongodb";
 import {
   getEndorseableElectionTypes,
+  getExecutiveOrderNamePlural,
   getSubNationalLegislatureKey,
 } from "@/lib/constants/countries";
 import { getOfficeState } from "@/lib/governorOffice/queries";
@@ -532,6 +533,9 @@ export default async function GovernorOfficePage({ params }: Props) {
         stateName={state.name}
         stateBannerImage={state.bannerImage ?? null}
         regionalTitle={getRegionalBillAssentTitleForState(countryId, stateId)}
+        // Resolved here so the overview card title does not pull the client
+        // country config into the browser for one label.
+        ordersLabel={getExecutiveOrderNamePlural(countryId)}
         officeHolderName={officeHolder?.characterName ?? null}
         officeHolderAvatarUrl={officeHolderAvatarUrl}
         officeHolderPartyName={officeHolderPartyName}
