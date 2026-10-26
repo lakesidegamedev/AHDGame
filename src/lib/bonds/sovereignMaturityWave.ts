@@ -121,19 +121,19 @@ export function isUnfundableOverdueMaturity(
  * once per holder kind. A retry pays the frozen quote, not today's snapshot, so
  * its payees are part of the same wave-wide read.
  */
-export function planSovereignMaturityWave<Plan extends { holderLegs: Leg[] }, Leg>(
+export function planSovereignMaturityWave<Plan extends { holderLegs: readonly unknown[] }>(
   dueSovereignBonds: readonly Bond[],
   build: (bond: Bond) => Plan | null
-): { maturityPlans: Map<string, Plan>; waveLegs: Leg[][] } {
+): { maturityPlans: Map<string, Plan>; waveLegs: Array<Plan["holderLegs"]> } {
   const maturityPlans = new Map<string, Plan>();
-  const waveLegs: Leg[][] = [];
+  const waveLegs: Array<Plan["holderLegs"]> = [];
   for (const bond of dueSovereignBonds) {
     const plan = build(bond);
     if (!plan) continue;
     maturityPlans.set(bond._id.toHexString(), plan);
     waveLegs.push(plan.holderLegs);
-    const frozenLegs = bond.sovereignMaturityClaim?.holderLegs as Leg[] | undefined;
-    if (frozenLegs?.length) waveLegs.push(frozenLegs);
+    const frozenLegs = bond.sovereignMaturityClaim?.holderLegs;
+    if (frozenLegs?.length) waveLegs.push(frozenLegs as unknown as Plan["holderLegs"]);
   }
   return { maturityPlans, waveLegs };
 }
