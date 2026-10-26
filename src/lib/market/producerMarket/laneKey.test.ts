@@ -11,7 +11,7 @@ const BOOKS = ["world", "state:CA", "state:MN", "state:NY", "state:TX", "country
 const STATES = [null, "CA", "MN", "NY", "TX"];
 
 /** Distinct fixture pairs a key builder must keep apart. */
-function collisionsOf(build: (commodity: string, second: string) => string, seconds: string[]) {
+function collisionsOf<S>(build: (commodity: string, second: S) => string, seconds: readonly S[]) {
   const seen = new Map<string, string>();
   const collisions: string[] = [];
   for (const commodity of COMMODITY_TYPES) {
