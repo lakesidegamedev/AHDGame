@@ -121,8 +121,8 @@ interface SettleableHolderKeyRow {
  * These keys exist to order the payees a payout may credit, and the payout loop
  * only acts on what `loadSettleableOpenSovereignCouponClaims` returns: a claim
  * within the cash the budget holds, or one a journal receipt already owns.
- * Reading every open claim to build the keys cost 168 MB on a backlog of 326k
- * claims to settle about 1,100 of them, and a Treasury that can settle nothing
+ * Reading every open claim to build the keys moved the whole backlog every
+ * turn to settle a small fraction of it, and a Treasury that can settle nothing
  * still held the locks of every payee in its backlog. Asking the server for the
  * same predicate and grouping it down to distinct keys keeps the claim
  * documents that cross the wire to the ones that can actually move.
