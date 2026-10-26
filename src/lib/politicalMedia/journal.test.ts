@@ -3,12 +3,14 @@ import type { Db } from "mongodb";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import {
   applyPoliticalMediaOrderEffect,
+  applyPoliticalMediaOrderEffects,
   fundPoliticalMediaOrder,
   loadPoliticalMediaOrdersForClearing,
   politicalMediaOrderKey,
   resumePoliticalMediaOrderFunding,
   savePoliticalMediaSettlementPlan,
   savePoliticalMediaSettlementPlans,
+  settleLoadedPoliticalMediaOrder,
   settlePoliticalMediaOrder,
 } from "./journal";
 import { settlePoliticalAdMarket } from "./market";
@@ -331,5 +333,87 @@ describe("political media settlement plans saved as one turn batch", () => {
       ])
     ).rejects.toThrow("Political media order order-missing is not fully funded.");
     expect(JSON.stringify(journal.docs)).toBe(before);
+  });
+});
+
+/** Dates differ between two runs of the same fixture; everything else must match. */
+function plain(value: unknown): unknown {
+  if (value instanceof Date) return "<date>";
+  if (Array.isArray(value)) return value.map(plain);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, plain(item)]));
+  }
+  return value;
+}
+
+function dump(memory: ReturnType<typeof createInMemoryDb>): unknown {
+  return Object.fromEntries(
+    [...memory.collections.entries()]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([name, collection]) => [
+        name,
+        [...collection.docs]
+          .sort((left, right) => String(left._id).localeCompare(String(right._id)))
+          .map((doc) => plain(doc)),
+      ])
+  );
+}
+
+async function fundedWithPlan(orderIds: string[]) {
+  const env = setup();
+  await fundOrders(env.db, env.memory, orderIds);
+  await savePoliticalMediaSettlementPlans(
+    env.db,
+    orderIds.map((orderId) => ({ orderId, plan }))
+  );
+  return env;
+}
+
+describe("political media settlement from clearing-loaded orders", () => {
+  it("settles a loaded order to the same documents as the reloaded path", async () => {
+    const reloaded = await fundedWithPlan(["order-1"]);
+    await settlePoliticalMediaOrder(reloaded.db, "order-1", 12);
+
+    const loaded = await fundedWithPlan(["order-1"]);
+    const clearing = await loadPoliticalMediaOrdersForClearing(loaded.db, 12);
+    expect(clearing).toHaveLength(1);
+    await settleLoadedPoliticalMediaOrder(loaded.db, clearing[0], 12);
+
+    expect(dump(loaded.memory)).toEqual(dump(reloaded.memory));
+  });
+
+  it("skips the per-order header read when the order is already loaded", async () => {
+    const env = await fundedWithPlan(["order-1"]);
+    const clearing = await loadPoliticalMediaOrdersForClearing(env.db, 12);
+    const readOrder = vi.spyOn(env.memory.collection("bankMoneyMoves"), "findOne");
+
+    await settleLoadedPoliticalMediaOrder(env.db, clearing[0], 12);
+
+    const headerReads = readOrder.mock.calls.filter(([filter]) => {
+      const keys = Object.keys(filter as Record<string, unknown>);
+      return (
+        (filter as Record<string, unknown>)._id === politicalMediaOrderKey("order-1") &&
+        keys.includes("kind")
+      );
+    });
+    expect(headerReads).toHaveLength(0);
+  });
+
+  it("applies a cohort of effects with one read and the same result", async () => {
+    const orderIds = ["order-1", "order-2", "order-3"];
+    const perOrder = await fundedWithPlan(orderIds);
+    for (const orderId of orderIds) {
+      await settlePoliticalMediaOrder(perOrder.db, orderId, 12);
+      expect(await applyPoliticalMediaOrderEffect(perOrder.db, orderId)).toBe(true);
+    }
+
+    const batched = await fundedWithPlan(orderIds);
+    for (const orderId of orderIds) await settlePoliticalMediaOrder(batched.db, orderId, 12);
+    const find = vi.spyOn(batched.memory.collection("bankMoneyMoves"), "find");
+
+    expect(await applyPoliticalMediaOrderEffects(batched.db, orderIds)).toBe(3);
+
+    expect(find).toHaveBeenCalledTimes(1);
+    expect(dump(batched.memory)).toEqual(dump(perOrder.memory));
   });
 });

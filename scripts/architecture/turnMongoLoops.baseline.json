@@ -422,9 +422,9 @@
     "86eb0f4c1501e3caeb87306a252efc78c68ed671868f24c73e056a8992a4527d": 1,
     "b5f4fff1677b135febc02a02dbe25f3ec4eb2bc8efc3adecc8f93547679926c4": 1,
     "4da550d779aeb29af9d7c4075154306c48cb835cd8a2bb56abf6c7d536ce9277": 2,
-    "d1e6523b9e89e410c409244a1d774b05371fddd1d49d0be1e9e452c484b8a1ec": 1,
-    "5a5cad10b21805a9f676ffc9aff41d336efbb7591638b3b667d2eded5d6465b8": 1,
-    "6485c3ade7a8a0b91dc349b18edcc6d1500f26bc59bfc57bd3a04d2dbd63cc4e": 1,
+    "c574e52d6b6bfd240c0663965bfda3a52ffeea30a42fdac3bb88ac98e13c1c3d": 1,
+    "b7eec63af8fe8992136451e6b146114b33e47af7ceb54c5b45ef46610985e600": 1,
+    "2aa92551c9fb7c0ae0aceabf39d1ca742aad6b65fe7f52f66e4bb0d16240bb95": 1,
     "493bf8fbee58dbe0cf2201bed803fe8b23700f96c8e2138c09dca7c53215273f": 1,
     "7fd3c995cd71069e10dd50e0a1111201dd208fd48d51b757146c03f2b4cdb43c": 1,
     "4bb911bf7150c318234ac063adb0d54cda24593edf0630f7e4c54002e8d7ed08": 1,
@@ -3712,23 +3712,23 @@
     {
       "file": "src/lib/politicalMedia/journal.ts",
       "operation": "findOne",
-      "owner": "applyPoliticalMediaOrderEffect",
+      "owner": "applyPoliticalMediaOrderEffectToOrder",
       "expression": "targets.findOne({ _id: targetId, [effectReceiptPath]: true })",
-      "fingerprint": "d1e6523b9e89e410c409244a1d774b05371fddd1d49d0be1e9e452c484b8a1ec"
+      "fingerprint": "c574e52d6b6bfd240c0663965bfda3a52ffeea30a42fdac3bb88ac98e13c1c3d"
     },
     {
       "file": "src/lib/politicalMedia/journal.ts",
       "operation": "findOne",
-      "owner": "applyPoliticalMediaOrderEffect",
+      "owner": "applyPoliticalMediaOrderEffectToOrder",
       "expression": "targets.findOne({ _id: targetId }, { projection: { targetedAds: 1, targetedAdsRevision: 1 } })",
-      "fingerprint": "5a5cad10b21805a9f676ffc9aff41d336efbb7591638b3b667d2eded5d6465b8"
+      "fingerprint": "b7eec63af8fe8992136451e6b146114b33e47af7ceb54c5b45ef46610985e600"
     },
     {
       "file": "src/lib/politicalMedia/journal.ts",
       "operation": "updateOne",
-      "owner": "applyPoliticalMediaOrderEffect",
+      "owner": "applyPoliticalMediaOrderEffectToOrder",
       "expression": "targets.updateOne({ _id: targetId, [effectReceiptPath]: { $exists: false }, ...revisionFilter }, { $set: { targetedAds: nextAds, targetedAdsRevision: revision + 1, [effectReceiptPath]: true, }, })",
-      "fingerprint": "6485c3ade7a8a0b91dc349b18edcc6d1500f26bc59bfc57bd3a04d2dbd63cc4e"
+      "fingerprint": "2aa92551c9fb7c0ae0aceabf39d1ca742aad6b65fe7f52f66e4bb0d16240bb95"
     },
     {
       "file": "src/lib/equities/primaryMarket.ts",

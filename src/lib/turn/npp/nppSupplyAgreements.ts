@@ -318,6 +318,36 @@ export function decideNppSupplyAgreements(args: {
   const proposedSupplier = new Set<string>();
   const proposedBuyer = new Set<string>();
 
+  // The proposal step asks the same buyer/commodity question once per supplier,
+  // so a starved buyer was rescanned for every candidate supplier in the
+  // country. The answers depend only on the party, commodity, price ratio and
+  // state scope, all of which are fixed for this call, so memoise them.
+  const starvedCache = new Map<string, boolean>();
+  const starved = (
+    party: NppAgreementParty,
+    commodity: CommodityType,
+    priceRatio: number | null,
+    stateId?: string
+  ): boolean => {
+    const key = `${party.corpId}|${commodity}|${String(priceRatio)}|${stateId ?? NO_STATE}`;
+    const cached = starvedCache.get(key);
+    if (cached !== undefined) return cached;
+    const answer = buyerStarved(party, commodity, turn, priceRatio, stateId);
+    starvedCache.set(key, answer);
+    return answer;
+  };
+  // Same pair of outputs for the same supplier commodity every time it is asked
+  // (supply has one fill per commodity), so cache that scan too.
+  const fillCache = new Map<string, number | null>();
+  const fillOf = (party: NppAgreementParty, commodity: CommodityType): number | null => {
+    const key = `${party.corpId}|${commodity}`;
+    const cached = fillCache.get(key);
+    if (cached !== undefined) return cached;
+    const answer = sellerFill(party, commodity, turn);
+    fillCache.set(key, answer);
+    return answer;
+  };
+
   // 1. Auto-accept inbound pending proposals the NPP buyer actually needs.
   for (const a of agreements) {
     if (a.status !== "pending") continue;
@@ -485,7 +515,7 @@ export function decideNppSupplyAgreements(args: {
       const volumeCap = uncommitted * NPP_CONTRACT_CAPACITY_SHARE;
       if (!(volumeCap > 0)) continue;
 
-      const fill = sellerFill(supplier, commodity, turn);
+      const fill = fillOf(supplier, commodity);
       const priceRatio = priceRatioOf(commodity, supplier.countryId);
       const premium = nppContractPremium(fill, priceRatio);
 
@@ -497,7 +527,7 @@ export function decideNppSupplyAgreements(args: {
         if (proposedBuyer.has(buyer.corpId) || acceptedBuyer.has(buyer.corpId)) continue;
         if (live.pairExists(supplier.corpId, buyer.corpId, commodity, stateId)) continue;
         const buyerRatio = priceRatioOf(commodity, buyer.countryId);
-        if (!buyerStarved(buyer, commodity, turn, buyerRatio, stateId)) continue;
+        if (!starved(buyer, commodity, buyerRatio, stateId)) continue;
         const score = (fill == null ? 0.5 : 1 - fill) + Math.max(0, (buyerRatio ?? 1) - 1);
         if (!best || score > best.score) {
           best = { buyer, commodity, stateId, volumeCap, pricePremium: premium, score };
