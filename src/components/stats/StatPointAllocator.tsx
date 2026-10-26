@@ -14,7 +14,9 @@ import {
 import { STAT_META, statBonus } from "@/lib/stats/statMeta";
 import { CDN_ACTION_IMAGE_URLS } from "@/lib/images/staticCdnAssets";
 
-export { defaultStatBuild, isLopsided, pointsRemaining, pointsSpent } from "./statBuild";
+import { defaultStatBuild, isLopsided, pointsRemaining, pointsSpent } from "./statBuild";
+
+export { defaultStatBuild, isLopsided, pointsRemaining, pointsSpent };
 
 /**
  * Backdrop art per stat — the action each stat actually powers, so the image
