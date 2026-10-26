@@ -1,5 +1,5 @@
 import type { ObjectId } from "mongodb";
-import { createNotification } from "@/lib/notifications";
+import { createNotification, type NotificationInput } from "@/lib/notifications";
 import type { Corporation } from "@/lib/db/types/corporation";
 import type { CommodityType } from "@/lib/constants/commodities";
 
@@ -14,22 +14,22 @@ const VERB: Record<SupplyAgreementEvent, string> = {
 };
 
 /**
- * Tell one CEO a supply agreement changed state. `actor` names who caused it
- * and is omitted for expiry, which nobody caused. A vacant corporation has no
- * one to tell.
+ * The notification one CEO gets when a supply agreement changes state. `actor`
+ * names who caused it and is omitted for expiry, which nobody caused. A vacant
+ * corporation has no one to tell, so the input is null.
  */
-export async function notifySupplyAgreementEvent(args: {
+export function supplyAgreementNotification(args: {
   recipient: Pick<Corporation, "_id" | "userId">;
   actor?: Pick<Corporation, "name">;
   agreementId: ObjectId;
   commodity: CommodityType;
   event: SupplyAgreementEvent;
   detail?: string;
-}): Promise<void> {
-  if (!args.recipient.userId) return;
+}): NotificationInput | null {
+  if (!args.recipient.userId) return null;
   const link = args.event === "started" ? "with" : "by";
   const by = args.actor?.name ? ` ${link} ${args.actor.name}` : "";
-  await createNotification({
+  return {
     userId: args.recipient.userId,
     type: "corp_supply_agreement_update",
     title: `Supply agreement ${VERB[args.event]}`,
@@ -39,5 +39,13 @@ export async function notifySupplyAgreementEvent(args: {
       agreementId: args.agreementId.toString(),
       event: args.event,
     },
-  });
+  };
+}
+
+/** Tell one CEO a supply agreement changed state. */
+export async function notifySupplyAgreementEvent(
+  args: Parameters<typeof supplyAgreementNotification>[0]
+): Promise<void> {
+  const input = supplyAgreementNotification(args);
+  if (input) await createNotification(input);
 }

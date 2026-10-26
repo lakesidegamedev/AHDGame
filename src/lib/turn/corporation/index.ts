@@ -119,10 +119,10 @@ import { placePendingShareIssuances } from "@/lib/equities/primaryMarket";
 import { creditEquityPoolsBatch } from "@/lib/equities/marketPool";
 import { partitionedBulkWrite } from "./partitionedBulkWrite";
 import {
-  applyPoliticalMediaOrderEffect,
+  applyPoliticalMediaOrderEffects,
   loadPoliticalMediaOrdersForClearing,
   savePoliticalMediaSettlementPlans,
-  settlePoliticalMediaOrder,
+  settleLoadedPoliticalMediaOrder,
   type PoliticalMediaOrderForClearing,
 } from "@/lib/politicalMedia/journal";
 import { applyMediaEditorialEffects } from "@/lib/mediaEditorial/applyEffects";
@@ -1175,13 +1175,15 @@ export async function processCorporationTurn(
   }
   const paidPoliticalSellerBySectorId = new Map<string, PaidPoliticalMediaSellerAmount>();
   if (politicalMediaMarketEnabled) {
+    const effectOrderIds = politicalMediaOrders.map((order) => order.orderId);
     for (const order of politicalMediaOrders) {
       // New plans were already durably saved before sector P&L writes. The
       // loaded order is an opening snapshot, so do not issue the same plan
       // read/CAS a second time after bulk writes.
       if (!order.settlementPlan && !plannedPoliticalMediaOrders.has(order.orderId)) continue;
-      const results = await settlePoliticalMediaOrder(db, order.orderId, turn ?? 0);
       const plan = order.settlementPlan ?? plannedPoliticalMediaOrders.get(order.orderId);
+      const loadedOrder = { ...order, settlementPlan: plan };
+      const results = await settleLoadedPoliticalMediaOrder(db, loadedOrder, turn ?? 0);
       if (mediaProductSlatesEnabled && plan?.plannedTurn === currentTurnNumber) {
         for (const seller of paidPoliticalMediaSellerReceipts({
           orderId: order.orderId,
@@ -1211,8 +1213,8 @@ export async function processCorporationTurn(
           settlementPlan: plan,
         });
       }
-      await applyPoliticalMediaOrderEffect(db, order.orderId);
     }
+    await applyPoliticalMediaOrderEffects(db, effectOrderIds);
   }
 
   if (mediaProductSlatesEnabled && lookups.mediaProductProjectsBySectorId) {

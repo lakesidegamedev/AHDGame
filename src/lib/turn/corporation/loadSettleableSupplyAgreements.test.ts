@@ -25,19 +25,21 @@ describe("loadSettleableSupplyAgreements", () => {
     expect(loaded).toEqual({ agreements: [], legacyStateLocalAgreementLive: false });
   });
 
-  it("tells both CEOs when a fixed-term agreement expires", async () => {
+  it("tells both CEOs when a fixed-term agreement expires, in one batch", async () => {
     vi.resetModules();
+    const createNotifications = vi.fn();
     const createNotification = vi.fn();
-    vi.doMock("@/lib/notifications", () => ({ createNotification }));
+    vi.doMock("@/lib/notifications", () => ({ createNotifications, createNotification }));
     const { loadSettleableSupplyAgreements: load } =
       await import("./loadSettleableSupplyAgreements");
     const db = createMockDb();
     const supplier = { _id: new ObjectId(), userId: new ObjectId() };
     const buyer = { _id: new ObjectId(), userId: new ObjectId() };
+    const agreementId = new ObjectId();
     db.collection("supplyAgreements").find.mockReturnValueOnce({
       toArray: vi.fn().mockResolvedValue([
         {
-          _id: new ObjectId(),
+          _id: agreementId,
           supplierCorpId: supplier._id,
           buyerCorpId: buyer._id,
           commodity: "steel",
@@ -49,12 +51,19 @@ describe("loadSettleableSupplyAgreements", () => {
       toArray: vi.fn().mockResolvedValue([supplier, buyer]),
     });
     await load({ db: db as unknown as Db, turn: 68, now: new Date() });
-    expect(createNotification).toHaveBeenCalledTimes(2);
-    expect(createNotification).toHaveBeenCalledWith(
+    expect(createNotification).not.toHaveBeenCalled();
+    expect(createNotifications).toHaveBeenCalledTimes(1);
+    const inputs = createNotifications.mock.calls[0][0] as Array<Record<string, unknown>>;
+    expect(inputs).toHaveLength(2);
+    expect(inputs.map((input) => input.userId)).toEqual([supplier.userId, buyer.userId]);
+    expect(inputs[0]).toEqual(
       expect.objectContaining({
-        userId: supplier.userId,
         type: "corp_supply_agreement_update",
-        metadata: expect.objectContaining({ event: "expired" }),
+        metadata: expect.objectContaining({
+          corporationId: supplier._id.toString(),
+          agreementId: agreementId.toString(),
+          event: "expired",
+        }),
       })
     );
   });
