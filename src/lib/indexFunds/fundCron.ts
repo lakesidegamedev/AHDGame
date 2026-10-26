@@ -39,7 +39,6 @@ import type { Db } from "mongodb";
 import type { GameConfig, IndexFund, IndexFundTransaction } from "@/lib/db/types";
 import { isIndexFundsEnabled, INDEX_FUNDS_DISABLED_MESSAGE } from "@/lib/indexFunds/featureFlag";
 import {
-  getFundById,
   listFundsByIds,
   listActiveFunds,
   listServiceableFunds,
@@ -755,21 +754,32 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
       claimsLeft -= allotted - share.claimsLeft;
     }
   }
+  const settledRedemptionFunds =
+    currentTurn > 0
+      ? new Map(
+          (
+            await listFundsByIds(
+              db,
+              funds
+                .filter((fund) => queuedUnitsByFundId.has(fund._id.toString()))
+                .map((fund) => fund._id)
+            )
+          ).map((fund) => [fund._id.toString(), fund])
+        )
+      : new Map<string, IndexFund>();
   for (const fund of funds) {
     // A failed redemption pass skips the fund's snapshot, as before.
     if (redemptionFailedFundIds.has(fund._id.toString())) continue;
     try {
-      // `funds` was just re-read above and nothing writes between; the old
-      // per-fund re-read here was a duplicate round trip.
-      const refreshedFund = fund;
+      // `funds` was just re-read above and nothing writes between, so a fund
+      // with no queued units snapshots that document. A fund the redemption
+      // processor could have mutated is read once for the whole batch, above,
+      // instead of one round trip inside this loop per fund.
       const hasQueuedRedemptions = queuedUnitsByFundId.has(fund._id.toString());
-
       if (currentTurn > 0) {
-        // A fund with no queued units cannot have been mutated by the
-        // redemption processor, which is skipped above. Snapshot the fresh
-        // batch-loaded document directly; only redemption-bearing funds need
-        // a post-settlement reread.
-        const finalFund = hasQueuedRedemptions ? await getFundById(db, fund._id) : refreshedFund;
+        const finalFund = hasQueuedRedemptions
+          ? (settledRedemptionFunds.get(fund._id.toString()) ?? null)
+          : fund;
         if (finalFund) {
           const holdingValue = computeHoldingsValueAnchor(finalFund);
           fundSnapshots.push({

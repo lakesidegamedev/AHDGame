@@ -1,6 +1,7 @@
 import { ObjectId, type Db } from "mongodb";
 import { describe, expect, it, vi } from "vitest";
 import { createInMemoryDb, type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import { countRoundTrips } from "@/lib/test-utils/roundTripCounter";
 import { withInjectedCrash } from "@/lib/test-utils/faultyDb";
 import type { Bond } from "@/lib/db/types/bond";
 import type { BankCharter } from "@/lib/db/types/bank";
@@ -417,8 +418,10 @@ describe("bank sovereign claims", () => {
 
     await settleBankSovereignClaims(memory as unknown as Db, budget(memory), 13);
 
-    // Both reads only ask "is a partial funding receipt still open"; the record
-    // itself is loaded by resumeSettlement under its own projection.
+    // One read asks "is a partial funding receipt still open"; the record itself
+    // is loaded by resumeSettlement under its own projection. The predicate is
+    // not re-read afterwards: the rows this find returned were each resumed to a
+    // terminal state, and one that stayed partial refuses the claim below.
     const partialProbe = (call: unknown[]) =>
       (call[0] as { status?: string } | undefined)?.status === "partial";
     // The in-memory double takes no options argument; the calls still carry them.
@@ -430,8 +433,44 @@ describe("bank sovereign claims", () => {
       _id: { $regex: `^${claim.id}:funding:` },
       status: "partial",
     });
-    expect(fundingFindOne).toHaveLength(1);
-    expect(fundingFindOne[0]?.[1]).toEqual({ projection: { _id: 1 } });
+    expect(fundingFindOne).toHaveLength(0);
+  });
+
+  it("reads the bank book for the escrow and the charter in the same call", async () => {
+    const claim = couponClaim();
+    const memory = world(claim);
+    const escrowAndCharter = (call: unknown[]) =>
+      JSON.stringify(call[1] ?? {}) ===
+      JSON.stringify({ projection: { bankCharter: 1, bankSovereignEscrows: 1 } });
+    const findOne = vi.spyOn(memory.collection("corporations"), "findOne");
+
+    await settleBankSovereignClaims(memory as unknown as Db, budget(memory), 13);
+
+    // The pre-funding escrow probe and the post-funding confirmation both need
+    // the charter the payout guards on, so neither is a second read.
+    expect(findOne.mock.calls.filter(escrowAndCharter)).toHaveLength(2);
+    expect(
+      findOne.mock.calls.filter(
+        (call) =>
+          JSON.stringify(call[1] ?? {}) ===
+          JSON.stringify({ projection: { bankSovereignEscrows: 1 } })
+      )
+    ).toHaveLength(0);
+    expect(budget(memory).bankSovereignClaims).toEqual([]);
+    expect(vault(memory)).toBe(15);
+  });
+
+  it("settles one funded claim inside a bounded round-trip count", async () => {
+    const claim = couponClaim();
+    const memory = world(claim);
+    const trips = countRoundTrips(memory);
+
+    await settleBankSovereignClaims(memory as unknown as Db, budget(memory), 13);
+
+    // Funding receipt, escrow and charter, vault payout, the claim pull off the
+    // budget and the journal records. A per-claim probe or a separate charter
+    // read raises this by one each, so the bound is the measured 29 plus one.
+    expect(trips.total(), trips.summary()).toBeLessThanOrEqual(30);
   });
 
   it("sends a closed or rechartered epoch's recovery to the currency insurance fund", async () => {

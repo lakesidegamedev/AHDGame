@@ -57,6 +57,46 @@ const TREASURY_LANES = 8;
 const BANK_CLAIMS_KEY = "bankSovereignClaims";
 
 /**
+ * The fields this phase reads off a budget, and nothing else.
+ *
+ * A whole `federalBudget` document also carries the reserve-transfer receipt
+ * keys and history, the department sub-ledgers and the reset baselines, none of
+ * which the treasury accrual reads. On production those arrays put tens of
+ * kilobytes on some budgets, and this read happens once per budget per turn, so
+ * the projection is the difference between loading the fiscal position and
+ * loading the whole bookkeeping of the country. The frozen-through map is only
+ * read by the funded coupon path; a world with that ledger off does not need to
+ * decode it.
+ */
+function treasuryBudgetProjection(treasuryCashLedgerEnabled: boolean): Record<string, number> {
+  return {
+    countryId: 1,
+    currencyCode: 1,
+    "revenue.total": 1,
+    spending: 1,
+    "debt.principal": 1,
+    taxRates: 1,
+    taxRatePhaseIn: 1,
+    incomeTaxShares: 1,
+    gdp: 1,
+    gdpSmoothed: 1,
+    investorConfidence: 1,
+    imfSovereignBailoutActive: 1,
+    sovereignRiskAnchor: 1,
+    unionsBanned: 1,
+    unionEnforcementPosture: 1,
+    treasuryBalance: 1,
+    treasuryCashLocal: 1,
+    treasuryAccrual: 1,
+    bankSovereignClaims: 1,
+    sovereignCouponClaims: 1,
+    financialCrisisAusterityUntilTurn: 1,
+    financialCrisisAusterityBaseSpending: 1,
+    ...(treasuryCashLedgerEnabled ? { sovereignCouponFrozenThrough: 1 } : {}),
+  };
+}
+
+/**
  * Per-turn fiscal accrual (spec §4). For each country's federalBudget, move a
  * 1/TURNS_PER_YEAR slice of the current primary balance (revenue minus spending
  * excluding debt interest) into the signed treasuryBalance, then deduct live
@@ -105,19 +145,8 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
     })
   );
 
-  const allBudgets = await db.collection<FederalBudget>("federalBudget").find({}).toArray();
-  // Dissolved countries keep their budget doc but must not be simulated against
-  // it; see `getRegisteredCountryIdSet`.
-  const [liveCountries, budgetsOwingCoupons] = await Promise.all([
-    getRegisteredCountryIdSet(db),
-    budgetIdsWithOpenSovereignCouponClaims(db),
-  ]);
-  const owesCoupons = (b: FederalBudget) =>
-    (b.sovereignCouponClaims?.length ?? 0) > 0 || budgetsOwingCoupons.has(String(b._id));
-  const budgets = allBudgets.filter(
-    (b) => liveCountries.has(String(b.countryId ?? b._id)) || owesCoupons(b)
-  );
-
+  // Flag posture first: it decides which optional fields the budget read below
+  // has to decode.
   const [config, rates] = await Promise.all([
     db.collection<GameConfig>("gameConfig").findOne(
       { _id: "default" },
@@ -139,6 +168,24 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
   const ledgerShadow = config?.ledgerShadow === true;
   const bankTreasuryEnabled = config?.bankTreasuryEnabled === true;
   const treasuryCashLedgerEnabled = config?.treasuryCashLedgerEnabled === true;
+
+  // Projected read: see `treasuryBudgetProjection`. The rows are a narrower
+  // shape than `FederalBudget`; every field the settle path reads is included.
+  const allBudgets = await db
+    .collection<FederalBudget>("federalBudget")
+    .find({}, { projection: treasuryBudgetProjection(treasuryCashLedgerEnabled) })
+    .toArray();
+  // Dissolved countries keep their budget doc but must not be simulated against
+  // it; see `getRegisteredCountryIdSet`.
+  const [liveCountries, budgetsOwingCoupons] = await Promise.all([
+    getRegisteredCountryIdSet(db),
+    budgetIdsWithOpenSovereignCouponClaims(db),
+  ]);
+  const owesCoupons = (b: FederalBudget) =>
+    (b.sovereignCouponClaims?.length ?? 0) > 0 || budgetsOwingCoupons.has(String(b._id));
+  const budgets = allBudgets.filter(
+    (b) => liveCountries.has(String(b.countryId ?? b._id)) || owesCoupons(b)
+  );
   // Read once for every flag posture: the coupon book prices debt service on
   // the stock (issue #2089) even when bank/treasury cash ledgers are off.
   // Holder arrays are only needed by the funded coupon paths.
@@ -538,7 +585,12 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
         countriesProcessed += 1;
         return;
       }
-      const refreshed = await db.collection<FederalBudget>("federalBudget").findOne({ _id: b._id });
+      const refreshed = await db
+        .collection<FederalBudget>("federalBudget")
+        .findOne(
+          { _id: b._id },
+          { projection: treasuryBudgetProjection(treasuryCashLedgerEnabled) }
+        );
       if (!refreshed) throw new Error(`Treasury budget ${b._id} disappeared during accrual`);
       b = refreshed;
       if (attempt === 3) throw new Error(`Treasury accrual ${b._id}:${_turn} could not claim cash`);

@@ -57,6 +57,60 @@ describe("processTreasuryTurn", () => {
     expect(db.collectionMocks.corporations.find).not.toHaveBeenCalled();
   });
 
+  it("reads budgets through the treasury projection, not as whole documents", async () => {
+    mockBudgets([budgetDoc({})]);
+    const { processTreasuryTurn } = await import("./treasuryTurn");
+    await processTreasuryTurn(10);
+
+    const projection = (
+      db.collectionMocks.federalBudget.find.mock.calls[0]?.[1] as {
+        projection?: Record<string, number>;
+      }
+    )?.projection;
+    // Every field the settle path reads.
+    expect(projection).toMatchObject({
+      countryId: 1,
+      currencyCode: 1,
+      "revenue.total": 1,
+      spending: 1,
+      "debt.principal": 1,
+      taxRates: 1,
+      taxRatePhaseIn: 1,
+      incomeTaxShares: 1,
+      treasuryBalance: 1,
+      treasuryCashLocal: 1,
+      treasuryAccrual: 1,
+      bankSovereignClaims: 1,
+      sovereignCouponClaims: 1,
+    });
+    // The reserve-transfer receipts, department sub-ledgers and reset baselines
+    // are tens of kilobytes on production budgets and nothing here reads them.
+    expect(projection).not.toHaveProperty("settledKeys");
+    expect(projection).not.toHaveProperty("treasuryTransferHistory");
+    expect(projection).not.toHaveProperty("departmentAccounts");
+    expect(projection).not.toHaveProperty("baselineSpendingByCategory");
+    expect(projection).not.toHaveProperty("subhourBase");
+    // Funded coupon cash is off, so the frozen-through map is not decoded.
+    expect(projection).not.toHaveProperty("sovereignCouponFrozenThrough");
+  });
+
+  it("decodes the frozen-through map only when funded coupon cash is on", async () => {
+    db.collection("gameConfig").findOne.mockResolvedValue({
+      _id: "default",
+      treasuryCashLedgerEnabled: true,
+    });
+    mockBudgets([budgetDoc({})]);
+    const { processTreasuryTurn } = await import("./treasuryTurn");
+    await processTreasuryTurn(10);
+
+    const projection = (
+      db.collectionMocks.federalBudget.find.mock.calls[0]?.[1] as {
+        projection?: Record<string, number>;
+      }
+    )?.projection;
+    expect(projection).toMatchObject({ sovereignCouponFrozenThrough: 1 });
+  });
+
   it("does NOT accrue for a country that has been dissolved", async () => {
     // A dissolved country keeps its budget doc — for history, and so a merge has
     // somewhere to stamp `mergedInto` — and this phase scans every one of them.

@@ -76,6 +76,18 @@ export async function processQueuedRedemptions(
   // npp:<id>:<homeCurrency> snapshot key) without a per-entry read.
   const holders = new Map<string, Document>();
   const nppCurrencyById = new Map<string, CurrencyCode>();
+  /** Holder document key for a queue entry, matching the batched reads above. */
+  const holderKeyOf = (
+    entry: Pick<IndexFundRedemptionQueueEntry, "characterId" | "imperialCharacterId" | "nppId">
+  ) =>
+    entry.characterId
+      ? `characters:${entry.characterId}`
+      : entry.imperialCharacterId
+        ? `imperialCharacters:${entry.imperialCharacterId}`
+        : `npps:${entry.nppId}`;
+  const holderOf = (
+    entry: Pick<IndexFundRedemptionQueueEntry, "characterId" | "imperialCharacterId" | "nppId">
+  ) => holders.get(holderKeyOf(entry));
   const queuedNppObjectIds = pending.flatMap((e) => (e.nppId ? [e.nppId] : []));
   if (queuedNppObjectIds.length > 0) {
     const nppDocs = await db
@@ -153,6 +165,20 @@ export async function processQueuedRedemptions(
 
   for (const pendingEntry of ordered) {
     if (budget.claimsLeft <= 0) break;
+    // An entry whose holder document is gone can never be paid: both payout
+    // paths need the holder record, because the credit leg is guarded on its id
+    // and settleQueuedPayout refuses without it. Such an entry used to be
+    // fenced, break the NPP payout batch, possibly liquidate the fund for cash
+    // and be restored, every turn, forever (a merged or dissolved NPP leaves
+    // exactly this row). Leave the obligation untouched and do not spend a claim
+    // on it. Its units still leave the pro-rata denominator at this point in the
+    // order, exactly as they did after the old claim, so every entry that can
+    // pay sees the same share it saw before.
+    const owedUnits = remainingRedemptionUnits(pendingEntry);
+    if (owedUnits > 0 && !holderOf(pendingEntry)) {
+      unservedUnits = Math.max(0, unservedUnits - owedUnits);
+      continue;
+    }
     budget.claimsLeft--;
     // Fence this claim before liquidation or payout. Its frozen journal, not
     // current prices or an acknowledgement, determines every recovery.
@@ -277,7 +303,7 @@ export async function processQueuedRedemptions(
 
     const paidAmount = quote.paidAmountAnchor;
     if (isBatchablePayout(entry)) {
-      const holder = holders.get(`npps:${entry.nppId}`);
+      const holder = holderOf(entry);
       if (holder) {
         batch.push({
           entry,
@@ -314,13 +340,7 @@ export async function processQueuedRedemptions(
       forexEnabled,
       nppCurrency: nppCurrencyById.get(entry.nppId?.toString() ?? "") ?? "USD",
       audit,
-      holder: holders.get(
-        entry.characterId
-          ? `characters:${entry.characterId}`
-          : entry.imperialCharacterId
-            ? `imperialCharacters:${entry.imperialCharacterId}`
-            : `npps:${entry.nppId}`
-      ),
+      holder: holderOf(entry),
     });
     if (!settled) {
       await restoreQueueClaim();
