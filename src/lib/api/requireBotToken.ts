@@ -23,14 +23,3 @@ export function requireBotToken(request: Request, allowPublicKey = true): boolea
 
   return false;
 }
-
-/**
- * Validates X-Bot-Token strictly against PUBLIC_BOT_API_KEY.
- * Use for read-only public bot endpoints that should not require private/admin keys.
- */
-export function requirePublicBotToken(request: Request): boolean {
-  const token = request.headers.get("X-Bot-Token");
-  if (!token) return false;
-  const publicKey = process.env.PUBLIC_BOT_API_KEY;
-  return !!publicKey && timingSafeCompare(token, publicKey);
-}

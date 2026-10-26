@@ -41,7 +41,7 @@ export const PEACE_INDEMNITY_MAX_GDP_SHARE = 2;
  *
  * BALANCE CONSTANT. Changing it needs an issue and a simulation report.
  */
-export const PRINCIPAL_BUYOUT_PROGRESS = 0.75;
+const PRINCIPAL_BUYOUT_PROGRESS = 0.75;
 
 /**
  * The indemnity ceiling for a payer with the given GDP, or null when GDP is

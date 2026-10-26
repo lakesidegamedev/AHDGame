@@ -82,7 +82,3 @@ export function enactedLawFundingControl(input: {
   if (REQUIRED_FAMILIES.has(input.familyId)) return "required";
   return REQUIRED_CHOICES[input.familyId]?.has(input.choice) ? "required" : "adjustable";
 }
-
-export function fundingControlLocksAllocation(control: LawFundingControl): boolean {
-  return control !== "adjustable";
-}

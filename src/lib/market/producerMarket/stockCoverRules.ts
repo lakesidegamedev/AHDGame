@@ -24,9 +24,9 @@ export interface StockCoverPolicy {
 /** Ask never falls below this share of what the cover rule alone would allow. */
 export const MARKDOWN_MIN_FACTOR = 0.5;
 /** Rate at which stock beyond the cover is written down each turn. */
-export const WRITE_DOWN_RATE = 0.02;
+const WRITE_DOWN_RATE = 0.02;
 /** Markdown never takes an ask below this share of the reference price (the existing market floor). */
-export const MARKDOWN_REFERENCE_FLOOR = 0.6;
+const MARKDOWN_REFERENCE_FLOOR = 0.6;
 const EXPONENT = 0.5;
 
 /** Turns of recent sales the stock represents; infinity when nothing sold. */

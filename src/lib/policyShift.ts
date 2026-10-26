@@ -14,7 +14,7 @@ export interface AxisTargets {
 export type BillVote = "for" | "against" | "abstain";
 
 /** Maximum net movement per axis a single bill may cause. */
-export const VOTE_SHIFT_STEP = 0.25;
+const VOTE_SHIFT_STEP = 0.25;
 const POSITION_MIN = -5;
 const POSITION_MAX = 5;
 const AXES = ["economic", "social"] as const;

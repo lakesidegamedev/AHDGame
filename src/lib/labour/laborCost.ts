@@ -501,7 +501,7 @@ export function labourUnemploymentAutomationPressure(delta: number): number {
  * baseline fewer. Bounded so it can only modulate the (v0) output-gap pull, not
  * dominate it. At the baseline index (1.0) the factor is exactly 1.0 (parity).
  */
-export const LABOUR_MIGRATION_WAGE_K = 0.5;
+const LABOUR_MIGRATION_WAGE_K = 0.5;
 export function labourMigrationWageFactor(wageIndex: number): number {
   const idx = Number.isFinite(wageIndex) ? wageIndex : 1;
   const f = 1 + (idx - 1) * LABOUR_MIGRATION_WAGE_K;

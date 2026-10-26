@@ -328,22 +328,3 @@ export function getMetricBadge(score: number): MetricBadge {
     return { label: "Bad", className: "bg-orange-500/15 text-orange-400 border-orange-500/25" };
   return { label: "Very Bad", className: "bg-red-500/20 text-red-400 border-red-500/30" };
 }
-
-/**
- * Score all metrics in a category map and return the average 0–100.
- * Skips metrics with no defined threshold.
- */
-export function scoreMetricMap(categoryMap: Record<string, Record<string, number>>): number {
-  let sum = 0;
-  let count = 0;
-  for (const [, metrics] of Object.entries(categoryMap)) {
-    for (const [metricId, value] of Object.entries(metrics)) {
-      const s = scoreMetric(metricId, value);
-      if (s !== null) {
-        sum += s;
-        count++;
-      }
-    }
-  }
-  return count === 0 ? 50 : sum / count;
-}

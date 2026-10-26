@@ -17,12 +17,3 @@ export async function getPartyMap(
     .toArray();
   return new Map(parties.map((p) => [String(p.sequentialId), p]));
 }
-
-/**
- * Load ALL parties into a map with composite keys: "countryId:sequentialId".
- * Use this only when you need parties from multiple countries in a single map.
- */
-export async function getGlobalPartyMap(db: Db): Promise<Map<string, PoliticalParty>> {
-  const parties = await db.collection<PoliticalParty>("politicalParties").find({}).toArray();
-  return new Map(parties.map((p) => [`${p.countryId ?? "US"}:${p.sequentialId}`, p]));
-}

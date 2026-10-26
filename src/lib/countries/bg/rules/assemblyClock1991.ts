@@ -5,9 +5,9 @@
  */
 import type { Election } from "@/lib/db/types";
 import { BG_ORDINARY_ASSEMBLY_START_TURN } from "./assemblyTransition";
-export const BG_ASSEMBLY_TERM_TURNS = 192;
-export const BG_FIRST_ORDINARY_PRIMARY_TURNS = 4;
-export const BG_FIRST_ORDINARY_GENERAL_TURNS = 2;
+const BG_ASSEMBLY_TERM_TURNS = 192;
+const BG_FIRST_ORDINARY_PRIMARY_TURNS = 4;
+const BG_FIRST_ORDINARY_GENERAL_TURNS = 2;
 
 export function bgGrandAssemblyRegularAnchor(input: {
   startingYear: number;

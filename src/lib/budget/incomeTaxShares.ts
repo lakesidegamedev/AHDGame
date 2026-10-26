@@ -18,7 +18,7 @@ import {
   type IncomeShares,
 } from "./rules/incomeTaxTiers";
 
-export function regionIncomePopulation(
+function regionIncomePopulation(
   state: Pick<State, "_id" | "countryId">,
   preset: string,
   year?: number | null

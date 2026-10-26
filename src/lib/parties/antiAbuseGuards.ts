@@ -18,16 +18,16 @@ export function isFreePartyMoveWindowOpen(
   return gameState?.freePartyMovesOpen === true;
 }
 
-export const PARTY_SWITCH_COOLDOWN_MS = 24 * 60 * 60 * 1000;
-export const PARTY_NPP_CONTROL_TENURE_MS = 48 * 60 * 60 * 1000;
-export const PARTY_NPP_ENTRY_MIN_PARTY_AGE_MS = 48 * 60 * 60 * 1000;
+const PARTY_SWITCH_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const PARTY_NPP_CONTROL_TENURE_MS = 48 * 60 * 60 * 1000;
+const PARTY_NPP_ENTRY_MIN_PARTY_AGE_MS = 48 * 60 * 60 * 1000;
 /**
  * A world reset with no starting parties begins with every party brand new and
  * every member freshly joined, so the 48-hour NPP control gates would lock the
  * whole server out of slating and whipping at once. For this long after the
  * world epoch starts, those gates are lifted in no-starting-parties worlds only.
  */
-export const FOUNDING_NPP_CONTROL_WINDOW_MS = 240 * 60 * 60 * 1000;
+const FOUNDING_NPP_CONTROL_WINDOW_MS = 240 * 60 * 60 * 1000;
 
 export interface GuardResult {
   ok: boolean;
@@ -67,7 +67,7 @@ export function getPartySwitchCooldown(
   return result;
 }
 
-export function getPartyPowerTenureCooldown(
+function getPartyPowerTenureCooldown(
   character: Pick<Character, "partyJoinedAt" | "lastPartySwitchAt">,
   now = new Date()
 ): GuardResult {
@@ -82,7 +82,7 @@ export function getPartyPowerTenureCooldown(
   return result;
 }
 
-export function isFoundingNppControlWindowOpen(
+function isFoundingNppControlWindowOpen(
   gameState: Pick<GameState, "startingPartiesMode" | "worldEpochStartedAt"> | null | undefined,
   now = new Date()
 ): boolean {

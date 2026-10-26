@@ -109,5 +109,5 @@ export function getPlSeedConfig(preset: string): EasternBlocSeedConfig {
   };
 }
 
-export const plSeedConfig: EasternBlocSeedConfig = getPlSeedConfig("2019-default");
+const plSeedConfig: EasternBlocSeedConfig = getPlSeedConfig("2019-default");
 export default plSeedConfig;

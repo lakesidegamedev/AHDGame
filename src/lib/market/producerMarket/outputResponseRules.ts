@@ -28,10 +28,10 @@ export const OUTPUT_RUN_FLOOR = 0.1;
 export const LOW_USE_RUN_FLOOR = 0.01;
 export const OUTPUT_GROW_STEP = 0.15;
 export const OUTPUT_CUT_STEP = 0.1;
-export const OUTPUT_PROBE = 0.1;
-export const SOLD_OUT = 0.99;
+const OUTPUT_PROBE = 0.1;
+const SOLD_OUT = 0.99;
 /** Sell-through below which the last run is treated as a glut: drop to the probe run. */
-export const GLUT_SELL_THROUGH = 0.05;
+const GLUT_SELL_THROUGH = 0.05;
 
 export interface PriorReceipt {
   /** Units the plant could run at (capacity x active share) last turn. */
@@ -59,7 +59,7 @@ export interface PriorReceipt {
  * plants covered their materials, median run 0.4%). Plants that never become
  * profitable are still caught by the chronic-loss mothball.
  */
-export function marginalLoss(input: {
+function marginalLoss(input: {
   sold: number;
   produced: number;
   sellThrough: number;
@@ -122,7 +122,7 @@ export function nextRunShare(
 }
 
 /** Probe above last turn's sales, so a demand-planned plant keeps testing for more. */
-export const DEMAND_PLAN_PROBE = 0.1;
+const DEMAND_PLAN_PROBE = 0.1;
 
 /**
  * Production follows demand (gameConfig.producerDemandPlanStage >= 1).

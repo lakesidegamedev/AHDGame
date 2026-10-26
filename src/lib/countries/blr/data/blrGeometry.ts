@@ -25,17 +25,3 @@ export const BLR_REGION_CODES = [
   "BLR_MOG",
   "BLR_VIT",
 ] as const;
-
-/** Compact on-map labels — the long names overflow the small map tiles. */
-export const BLR_LABEL_OVERRIDES: Record<string, string> = {
-  BLR_MIN: "Minsk",
-  BLR_BRE: "Brest",
-  BLR_HOM: "Gomel",
-  BLR_GRO: "Grodno",
-  BLR_MOG: "Mogilev",
-  BLR_VIT: "Vitebsk",
-};
-
-export function isByelorussiaRegion(code: string): boolean {
-  return (BLR_REGION_CODES as readonly string[]).includes(code);
-}

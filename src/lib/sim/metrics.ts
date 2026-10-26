@@ -1044,7 +1044,7 @@ async function collectMilitaryMetrics(db: Db): Promise<MilitaryMetrics> {
   };
 }
 
-export async function collectBankingGateMetrics(db: Db): Promise<BankingGateMetrics> {
+async function collectBankingGateMetrics(db: Db): Promise<BankingGateMetrics> {
   const empty: BankingGateMetrics = {
     gateOpen: true,
     gateReasons: [],

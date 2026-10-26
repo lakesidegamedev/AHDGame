@@ -13,13 +13,13 @@
  */
 
 /** Fall over the lookback (fraction) that triggers a defence band. */
-export const DEFENCE_TRIGGER = 0.15;
+const DEFENCE_TRIGGER = 0.15;
 /** Move back inside which the chair removes its own band. */
-export const DEFENCE_RELEASE = 0.05;
+const DEFENCE_RELEASE = 0.05;
 /** Ceiling above today's rate: further weakening the band allows. */
-export const DEFENCE_CEILING_ROOM = 0.05;
+const DEFENCE_CEILING_ROOM = 0.05;
 /** Floor below today's rate. */
-export const DEFENCE_FLOOR_ROOM = 0.1;
+const DEFENCE_FLOOR_ROOM = 0.1;
 
 /** Band for a defence, clamped to the guardrails; null if it cannot fit. */
 export function defenceBand(

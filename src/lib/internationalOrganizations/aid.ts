@@ -48,7 +48,7 @@ export function aidGrowthBoost(amountUsd: number): number {
  * (`$inc` on `economic.gdpGrowth.value`, the crisis-shock pattern — the metric
  * engine smooths it back over subsequent turns). No-op when the boost rounds to 0.
  */
-export async function applyOrganizationAidBoost(
+async function applyOrganizationAidBoost(
   db: Db,
   recipient: CountryId,
   amountUsd: number

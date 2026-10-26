@@ -24,12 +24,12 @@ import { emitTx } from "@/lib/financialTxLog/emit";
  * mint/sink pair, the same as other system counterparties.
  */
 export const CASINO_FUND_NAME = "blackjack_prize_pool" as const;
-export const CASINO_SEED_ANCHOR = 200_000_000;
+const CASINO_SEED_ANCHOR = 200_000_000;
 
 /** Largest single stake, as a share of the house bank. */
 export const MAX_STAKE_SHARE = 0.125;
 /** Largest single payout, as a share of the house bank. Bigger wins are clipped to it. */
-export const MAX_PAYOUT_SHARE = 0.25;
+const MAX_PAYOUT_SHARE = 0.25;
 
 export type CasinoGame =
   "blackjack" | "slots" | "roulette" | "crash" | "craps" | "highlow" | "race" | "lottery" | "poker";

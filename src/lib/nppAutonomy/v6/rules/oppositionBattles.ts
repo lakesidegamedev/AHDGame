@@ -11,7 +11,7 @@
  */
 
 /** Government-side share of the chamber at which an opposition bloc is futile. */
-export const OPPOSITION_FUTILE_SHARE = 0.55;
+const OPPOSITION_FUTILE_SHARE = 0.55;
 
 /** Government-side share of seats, from a live chamber tally. */
 export function governmentSeatShare(

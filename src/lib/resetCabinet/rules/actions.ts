@@ -79,7 +79,7 @@ export function rechargeActionCharges(
   };
 }
 
-export function actionDuration(action: ResetCabinetAction): number {
+function actionDuration(action: ResetCabinetAction): number {
   return action.costClass === "Staff" ? 12 : 24;
 }
 

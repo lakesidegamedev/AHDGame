@@ -1,10 +1,10 @@
 import type { NppForeignPolicyMode, NppForeignPolicyStage } from "@/lib/db/types/gameState";
 import type { ForeignPolicyActionType } from "./foreignPolicy";
 
-export const DEFAULT_FOREIGN_POLICY_MODE: NppForeignPolicyMode = "active";
-export const DEFAULT_FOREIGN_POLICY_STAGE: NppForeignPolicyStage = "votes";
+const DEFAULT_FOREIGN_POLICY_MODE: NppForeignPolicyMode = "active";
+const DEFAULT_FOREIGN_POLICY_STAGE: NppForeignPolicyStage = "votes";
 
-export const FOREIGN_POLICY_STAGES: readonly NppForeignPolicyStage[] = [
+const FOREIGN_POLICY_STAGES: readonly NppForeignPolicyStage[] = [
   "votes",
   "proposals",
   "trade",
@@ -32,7 +32,7 @@ export function foreignPolicyStageFrom(value: unknown): NppForeignPolicyStage {
     : DEFAULT_FOREIGN_POLICY_STAGE;
 }
 
-export function foreignPolicyActionStage(type: ForeignPolicyActionType): NppForeignPolicyStage {
+function foreignPolicyActionStage(type: ForeignPolicyActionType): NppForeignPolicyStage {
   if (type === "vote_org_yes" || type === "vote_org_no") return "votes";
   if (
     type === "propose_fta" ||

@@ -1,24 +1,5 @@
 import type { DemographicCategory } from "@/lib/db/types";
 
-/**
- * France Voter Archetypes — 7 groups across the 1979 Fifth-Republic spectrum.
- * Region character comes from per-region shares derived from the FR Layer-1 model.
- *
- *   defaultEconomicLean: -5 (statist/left) … +5 (market/right)
- *   defaultSocialLean:   -5 (liberal/secular) … +5 (traditional/Catholic)
- *
- * demographicProfileId "fr_archetypes"; category _id "fr_voterGroups".
- */
-export const FR_VOTER_GROUP_BASELINES: Record<string, number> = {
-  bourgeois_right: 88,
-  catholic_conservative: 86,
-  centrist_liberal: 84,
-  social_democrat: 84,
-  communist_worker: 82,
-  rural_farmer: 86,
-  youth_student: 72,
-};
-
 export const frDemographicCategories: DemographicCategory[] = [
   {
     _id: "fr_voterGroups",

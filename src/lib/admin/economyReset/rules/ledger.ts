@@ -13,10 +13,10 @@ import { accountCurrency, mintSinkAccount } from "@/lib/ledger/accounts";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { LedgerEntryInput } from "@/lib/ledger/types";
 
-export const ECONOMY_RESET_LEDGER_REASON = "economy_reset";
+const ECONOMY_RESET_LEDGER_REASON = "economy_reset";
 
 /** Smallest anchor change worth a witness; matches the ledger's own epsilon floor. */
-export const WITNESS_EPSILON_ANCHOR = 0.01;
+const WITNESS_EPSILON_ANCHOR = 0.01;
 
 export interface WitnessDelta {
   account: string;

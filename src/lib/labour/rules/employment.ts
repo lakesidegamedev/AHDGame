@@ -64,18 +64,18 @@ export interface EmploymentResult {
   targetUnemployment: number;
 }
 
-export const EMPLOYMENT_RECOVERY_HALF_LIFE_YEARS = 0.5;
+const EMPLOYMENT_RECOVERY_HALF_LIFE_YEARS = 0.5;
 /** Turns for half of a company's open positions to be filled at average skill. */
-export const CORPORATE_VACANCY_HALF_LIFE_TURNS = 2;
-export const OUTPUT_GAP_UNEMPLOYMENT_COEFFICIENT = 0.4;
-export const EMPLOYMENT_UNEMPLOYMENT_BOUNDS = [1, 100] as const;
+const CORPORATE_VACANCY_HALF_LIFE_TURNS = 2;
+const OUTPUT_GAP_UNEMPLOYMENT_COEFFICIENT = 0.4;
+const EMPLOYMENT_UNEMPLOYMENT_BOUNDS = [1, 100] as const;
 
 const finite = (v: number | undefined, fallback: number): number =>
   typeof v === "number" && Number.isFinite(v) ? v : fallback;
 const clamp = (v: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, v));
 const nonnegative = (v: number | undefined): number => Math.max(0, finite(v, 0));
 
-export function employmentUnemployment(state: EmploymentState): number {
+function employmentUnemployment(state: EmploymentState): number {
   if (state.laborForce <= 0) return 0;
   return clamp(
     (100 * (state.laborForce - state.corporateEmployed - state.backgroundEmployed)) /

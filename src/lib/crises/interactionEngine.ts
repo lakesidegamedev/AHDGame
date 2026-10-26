@@ -283,7 +283,7 @@ export function isMultiResponderNode(
  * regardless of the crisis's broader scope. Used for per-leader responses so one
  * nation's choice only touches that nation, never the whole globe.
  */
-export async function applyEffectsForCountry(
+async function applyEffectsForCountry(
   db: Db,
   countryId: string,
   effects: CrisisEffect[]

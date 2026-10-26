@@ -32,7 +32,7 @@ import type { EraId } from "@/lib/seeds/presetSelector";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-export const JP_GROUP_IDS = [
+const JP_GROUP_IDS = [
   "salaryman_conservative",
   "urban_progressive",
   "rural_traditionalist",

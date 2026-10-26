@@ -31,7 +31,7 @@ import {
 export const VIETNAM_WIRE_SOURCE = "Vietnam Desk";
 
 /** The two audiences with their own channel, keyed by country. */
-export const VIETNAM_AUDIENCES = Object.keys(VIETNAM_LADDER_SIDES);
+const VIETNAM_AUDIENCES = Object.keys(VIETNAM_LADDER_SIDES);
 
 export interface VietnamHeadline {
   title: string;

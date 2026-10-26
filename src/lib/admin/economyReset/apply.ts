@@ -58,7 +58,7 @@ import {
 type Log = (message: string) => void;
 
 /** Sector-derived region caches; the macro state (capitalStock, outputGap) is kept. */
-export const STATE_SECTOR_UNSET_FIELDS: readonly string[] = Object.freeze([
+const STATE_SECTOR_UNSET_FIELDS: readonly string[] = Object.freeze([
   "sectorRealizedRevenue",
   "sectorRealizedRevenueTurn",
   "sectorRealizedRevenueUnit",

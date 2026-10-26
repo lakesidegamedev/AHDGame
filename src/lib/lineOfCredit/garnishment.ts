@@ -5,7 +5,7 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import { FOREX_ACTIVE_CURRENCIES, getCountryIdForCurrency } from "@/lib/constants/currencies";
 import type { LocGarnishmentSource } from "@/lib/db/types/locLedger";
 import { isLineOfCreditEnabled } from "./featureFlag";
-import { allocateInternalPaymentToLoc, fromInternalUnits, toInternalUnits } from "./locMath";
+import { allocateInternalPaymentToLoc, toInternalUnits } from "./locMath";
 import { loadExchangeRatesMap } from "./netWorth";
 import { roundSavingsAmount } from "@/lib/currency/savingsInterest";
 import { getHomeCurrency } from "@/lib/currency/characterFunds";
@@ -232,4 +232,3 @@ export async function garnishLocFromIncome(
   }
   return { borrowersGarnished, totalInternalGarnished };
 }
-export { fromInternalUnits };

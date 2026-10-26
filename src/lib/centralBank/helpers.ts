@@ -103,7 +103,7 @@ export function getRepresentativeCentralBankCountry(intorgId: string): CountryId
   );
 }
 
-export async function getIntorgMemberCountries(db: Db, intorgId: string): Promise<CountryId[]> {
+async function getIntorgMemberCountries(db: Db, intorgId: string): Promise<CountryId[]> {
   const builtIn = INTERNATIONAL_ORGANIZATIONS[intorgId as keyof typeof INTERNATIONAL_ORGANIZATIONS];
   const defaults = (builtIn?.foundingMembers ?? []) as CountryId[];
   const docs = await db
@@ -114,10 +114,6 @@ export async function getIntorgMemberCountries(db: Db, intorgId: string): Promis
   return [...new Set([...defaults, ...docs.map((d) => d.countryId)])].filter(
     (countryId): countryId is CountryId => countryId in COUNTRY_CLIENT_CONFIGS
   );
-}
-
-export async function getIntorgBankForOrg(db: Db, orgId: string): Promise<CentralBank | null> {
-  return db.collection<CentralBank>("centralBanks").findOne({ intorgId: orgId });
 }
 
 function getDefaultBank(

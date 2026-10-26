@@ -20,7 +20,7 @@ export interface ProcurementRestrictionDoc {
 
 const COLLECTION = "procurementRestrictions";
 
-export function getProcurementRestrictionsCollection(db: Db) {
+function getProcurementRestrictionsCollection(db: Db) {
   return db.collection<ProcurementRestrictionDoc>(COLLECTION);
 }
 

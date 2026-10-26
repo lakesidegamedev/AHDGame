@@ -7,7 +7,7 @@ import { getBankId } from "@/lib/centralBank/helpers";
 import { SETTLED_KEYS_CAP } from "@/lib/banking/moneyMove";
 import type { LocPlan } from "./settlement";
 
-export function locAdmissionBanks(plan: LocPlan): string[] {
+function locAdmissionBanks(plan: LocPlan): string[] {
   const next = plan.effect.locAfter;
   if (!next) return [];
   const currencies = new Set([

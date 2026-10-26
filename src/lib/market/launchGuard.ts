@@ -26,11 +26,11 @@ import type { MarketSystemMode } from "@/lib/market/modes";
 export const DEFAULT_GUARD_DROP_PCT = 0.25;
 /** Grace window (turns) after the flip before the guard can trip — the ramp
  *  needs a few turns of signal before a drop is meaningful. */
-export const DEFAULT_GUARD_GRACE_TURNS = 5;
+const DEFAULT_GUARD_GRACE_TURNS = 5;
 /** Minimum share of aggregate mcap that must carry a fundamental valuation
  *  before we trust the fundamentals-relative comparison. Below this we fall
  *  back to the raw drawdown so partial data can never silently disarm us. */
-export const FUNDAMENTAL_COVERAGE_FLOOR = 0.8;
+const FUNDAMENTAL_COVERAGE_FLOOR = 0.8;
 
 /**
  * Where the guard reverts to from `mode`.

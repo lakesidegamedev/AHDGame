@@ -57,7 +57,7 @@ export function regionalApprovalDrift(approval: number, policy: DevolutionPolicy
 }
 
 /** Westminster has half the local government's direct and approval influence. */
-export const WESTMINSTER_INFLUENCE = 0.5;
+const WESTMINSTER_INFLUENCE = 0.5;
 export function westminsterPolicyDrift(policy: DevolutionPolicy): number {
   return DEVOLUTION_POLICY_DRIFT[policy] * WESTMINSTER_INFLUENCE;
 }

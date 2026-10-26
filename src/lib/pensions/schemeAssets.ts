@@ -17,7 +17,7 @@ import { ObjectId, type Db } from "mongodb";
 import type { IndexFund, IndexFundPosition } from "@/lib/db/types/indexFund";
 import type { PensionScheme } from "@/lib/db/types/pensionScheme";
 
-export const FUND_POSITIONS = "indexFundPositions";
+const FUND_POSITIONS = "indexFundPositions";
 export const INDEX_FUNDS = "indexFunds";
 export const PENSION_SCHEMES = "pensionSchemes";
 

@@ -48,7 +48,7 @@ import { applyBoardDelta } from "@/lib/politicalLegislation/boardWrite";
 import type { PoliticalMetricsDoc } from "@/lib/db/types/politicalMetrics";
 
 /** National pseudo-state ids (federal, uk_national, …) vs real sub-national regions (XB, TX, …). */
-export function getNonPolicyProvisionScope(stateId: string | undefined): "national" | "state" {
+function getNonPolicyProvisionScope(stateId: string | undefined): "national" | "state" {
   if (!stateId || inferCountryIdFromStateId(stateId)) {
     return "national";
   }

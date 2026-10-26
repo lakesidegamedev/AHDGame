@@ -69,7 +69,7 @@ export interface TopUpPersonalBalanceResult {
  * until `minimumBalance` is met or no further progress is possible.
  * Used so purchases denominated in one currency can spend liquid held in others.
  */
-export async function topUpPersonalBalanceInCurrency(
+async function topUpPersonalBalanceInCurrency(
   db: Db,
   params: TopUpPersonalBalanceParams
 ): Promise<TopUpPersonalBalanceResult> {

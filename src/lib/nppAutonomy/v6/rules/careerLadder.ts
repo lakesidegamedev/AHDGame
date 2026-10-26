@@ -11,9 +11,9 @@
 import { nppCandidateStrength } from "./candidatePlacement";
 
 /** Ambition an incumbent needs before it gives up a safe seat to climb. */
-export const CAREER_AMBITION_MIN = 70;
+const CAREER_AMBITION_MIN = 70;
 /** Strength (influence plus favorability, out of 200) it needs. */
-export const CAREER_STRENGTH_MIN = 100;
+const CAREER_STRENGTH_MIN = 100;
 
 export function isCareerClimber(npp: {
   _id: { toString(): string };

@@ -116,7 +116,7 @@ export interface StudioView {
   domains: DomainView[];
 }
 
-export function ventureView(input: {
+function ventureView(input: {
   venture: ProductVenture;
   corporation: Pick<Corporation, "averageQuality" | "countryId" | "liquidCurrencyCode">;
   sectors: readonly CorporateSector[];

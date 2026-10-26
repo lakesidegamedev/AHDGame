@@ -2,14 +2,14 @@ import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { NuclearProgram } from "@/lib/db/types/nuclearProgram";
 
-export const NUCLEAR_PROGRAMS_COLLECTION = "nuclearPrograms";
+const NUCLEAR_PROGRAMS_COLLECTION = "nuclearPrograms";
 
 export function getNuclearProgramsCollection(db: Db) {
   return db.collection<NuclearProgram>(NUCLEAR_PROGRAMS_COLLECTION);
 }
 
 /** The empty programme; never persisted on read (nationalDoctrine pattern). */
-export function emptyNuclearProgram(countryId: CountryId): NuclearProgram {
+function emptyNuclearProgram(countryId: CountryId): NuclearProgram {
   return {
     _id: countryId,
     adopted: {},

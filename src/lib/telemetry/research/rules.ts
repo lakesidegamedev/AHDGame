@@ -1125,7 +1125,7 @@ export function totalReturnSeries(
 
 // ── Bounded export query ─────────────────────────────────────────────────────
 
-export const RESEARCH_PANELS = ["country-turn", "annual-fiscal", "trade", "securities"] as const;
+const RESEARCH_PANELS = ["country-turn", "annual-fiscal", "trade", "securities"] as const;
 export type ResearchPanel = (typeof RESEARCH_PANELS)[number];
 
 /** Longest inclusive turn window a single request may span (10 game years). */
@@ -1144,8 +1144,8 @@ export const RESEARCH_TELEMETRY_RETENTION_TURNS = RESEARCH_MAX_TURN_SPAN + 24;
  * limit. Crossing it fails loudly instead of as an opaque BSON write error.
  */
 export const RESEARCH_MAX_SECURITIES_PER_ROW = 20_000;
-export const RESEARCH_DEFAULT_LIMIT = 500;
-export const RESEARCH_MAX_LIMIT = 2000;
+const RESEARCH_DEFAULT_LIMIT = 500;
+const RESEARCH_MAX_LIMIT = 2000;
 
 export interface ResearchQuery {
   panel: ResearchPanel;
@@ -1229,7 +1229,7 @@ export function parseResearchQuery(
 export const RESEARCH_MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
 
 /** Approximate serialized size of a row; the page ceiling is enforced on this. */
-export function estimateRowBytes(row: unknown): number {
+function estimateRowBytes(row: unknown): number {
   return JSON.stringify(row)?.length ?? 0;
 }
 
@@ -1331,7 +1331,7 @@ export interface ResearchRetentionBoundary {
 }
 
 /** Turns the live export can serve for a panel, ending at the current turn. */
-export function researchRetentionTurns(panel: ResearchPanel, tradeRetentionTurns: number): number {
+function researchRetentionTurns(panel: ResearchPanel, tradeRetentionTurns: number): number {
   return panel === "trade" ? tradeRetentionTurns : RESEARCH_TELEMETRY_RETENTION_TURNS;
 }
 

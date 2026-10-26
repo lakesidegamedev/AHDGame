@@ -16,7 +16,7 @@ import {
   passesRussianDumaLawChamber,
 } from "./rules/dumaElectoralLaw";
 
-export const RUSSIAN_DUMA_LAW_PROPOSALS_COLLECTION = "russianDumaLawProposals";
+const RUSSIAN_DUMA_LAW_PROPOSALS_COLLECTION = "russianDumaLawProposals";
 const ID = "1991-default:ru-duma:law1995";
 export interface RussianDuma1995Proposal {
   _id: string;

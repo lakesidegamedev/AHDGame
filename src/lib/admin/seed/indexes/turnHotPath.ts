@@ -3,7 +3,7 @@ import { ensureIndex } from "./helpers";
 
 // Equality/range prefixes used by turn queries. Keep these in bootstrap and
 // the existing-world installer so a reset cannot reintroduce collection scans.
-export const TURN_HOT_PATH_INDEXES: ReadonlyArray<{
+const TURN_HOT_PATH_INDEXES: ReadonlyArray<{
   collection: string;
   key: IndexSpecification;
   name: string;

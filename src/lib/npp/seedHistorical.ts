@@ -846,7 +846,7 @@ export async function seedHistoricalOfficials(
   // `resetGameWorld` wipes electedOfficials before this runs, making the guard a
   // no-op there; it earns its keep on the seed-only / re-run paths
   // (`bootstrapGameWorld({ seedOnly })`, the admin re-seed buttons) that do NOT
-  // wipe first. `seedHistoricalOfficialsForCountry` is left on append semantics.
+  // wipe first.
   // presetId flows through so rostered presets seat real officeholders.
   const result = await seedFromSeats(db, seats, seedMode, {
     skipAlreadySeatedChambers: true,
@@ -871,36 +871,4 @@ export async function seedHistoricalOfficials(
   await seedBRGovernmentFormation(db, () => {});
 
   return result;
-}
-
-/**
- * Seed historical officials for all active countries (uses 2019-default preset)
- * @deprecated Use seedHistoricalOfficials with a preset ID instead
- */
-export async function seedAllHistoricalOfficials(db: Db): Promise<SeedResult> {
-  return seedHistoricalOfficials(db, "2019-default");
-}
-
-/**
- * Seed historical officials for a single country. Filters the preset seats
- * by state ownership so a run doesn't disturb other countries' data.
- */
-export async function seedHistoricalOfficialsForCountry(
-  db: Db,
-  countryId: CountryId,
-  presetId: string = "2019-default"
-): Promise<SeedResult> {
-  const allSeats = getPresetSeats(presetId);
-  const countryStateIds = new Set(
-    (
-      await db
-        .collection<State>("states")
-        .find({ countryId }, { projection: { _id: 1 } })
-        .toArray()
-    ).map((s) => s._id)
-  );
-  const scoped = allSeats.filter((s) => countryStateIds.has(s.state));
-  // Order-preserving country filter: (country, office, state, party) tuples
-  // are country-scoped, so ordinals match the full-preset roster compilation.
-  return seedFromSeats(db, scoped, "winners", { presetId });
 }

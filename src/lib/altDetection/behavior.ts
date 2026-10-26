@@ -56,7 +56,7 @@ export const MIN_RHYTHM_EVENTS = 25;
  * waking window sits around 0.85-0.92 and is excluded, while one clustered
  * into a few consistent hours lands below it.
  */
-export const MAX_RHYTHM_ENTROPY = 0.82;
+const MAX_RHYTHM_ENTROPY = 0.82;
 
 /** Minimum combined similarity for `activity_rhythm` to fire. High because
  * concentrated profiles are compared — near-identical, not merely similar. */
@@ -179,16 +179,16 @@ export const SESSION_GAP_MS = 30 * 60 * 1000;
 /** Maximum gap between one account's last event and the other's first for
  * the transition to count as a handoff. Ten minutes is about how long it
  * takes to log out, switch accounts, and log back in. */
-export const HANDOFF_MAX_GAP_MS = 10 * 60 * 1000;
+const HANDOFF_MAX_GAP_MS = 10 * 60 * 1000;
 
 /** Minimum handoff transitions before the pattern is treated as evidence.
  * Two accounts will alternate by chance occasionally; four times without a
  * single concurrent session is a pattern. */
-export const MIN_HANDOFFS = 4;
+const MIN_HANDOFFS = 4;
 
 /** Minimum sessions per side. A pair with two sessions each can hit four
  * handoffs trivially. */
-export const MIN_SESSIONS_PER_SIDE = 4;
+const MIN_SESSIONS_PER_SIDE = 4;
 
 /**
  * Maximum share of the shorter account's online time that may overlap with
@@ -196,7 +196,7 @@ export const MIN_SESSIONS_PER_SIDE = 4;
  * a single stray event (a background tab firing a request, a page left
  * open) shouldn't erase an otherwise clean alternation pattern.
  */
-export const MAX_CONCURRENT_OVERLAP_RATIO = 0.02;
+const MAX_CONCURRENT_OVERLAP_RATIO = 0.02;
 
 /**
  * Collapse a timestamp list into sessions, splitting on gaps larger than
@@ -364,11 +364,11 @@ export function jaccard(a: Set<string>, b: Set<string>): number {
 /** Minimum distinct shared targets before a target-overlap observation is
  * emitted. One shared target is a coincidence in a game where popular
  * states and prominent characters attract everybody. */
-export const MIN_SHARED_TARGETS = 3;
+const MIN_SHARED_TARGETS = 3;
 
 /** Minimum Jaccard overlap alongside `MIN_SHARED_TARGETS`. Guards the case
  * where two prolific accounts share three targets out of two hundred each. */
-export const MIN_TARGET_JACCARD = 0.3;
+const MIN_TARGET_JACCARD = 0.3;
 
 export interface TargetOverlapResult {
   shared: string[];

@@ -27,11 +27,11 @@ import { reconcileCommandEconomyUnowned } from "@/lib/admin/seed/reconcileComman
  * {@link getMinUnownedSectorRevenue}.
  */
 export const MIN_UNOWNED_SECTOR_REVENUE = MODERN_MIN_UNOWNED_SECTOR_REVENUE;
-export const UNOWNED_REVENUE_MULTIPLIER = 1.0;
+const UNOWNED_REVENUE_MULTIPLIER = 1.0;
 // Per-country uplift removed — the UK 2.53x multiplier was a temporary fix for
 // undersized seed revenue that caused runaway commodity supply dominance once
 // those sectors were nationalized into the NatCorp and boosted by the auto-seeder.
-export const COUNTRY_UNOWNED_REVENUE_MULTIPLIER: Partial<Record<CountryId, number>> = {};
+const COUNTRY_UNOWNED_REVENUE_MULTIPLIER: Partial<Record<CountryId, number>> = {};
 
 /**
  * Per-country, per-sector seed multiplier for DOWNSTREAM (input-consuming)

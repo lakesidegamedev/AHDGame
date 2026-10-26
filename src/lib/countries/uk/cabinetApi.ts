@@ -1040,20 +1040,3 @@ export async function reshuffleCabinetHandler(request: Request, countryId: Count
     return handleRouteError(error);
   }
 }
-
-// ── Legacy UK-specific wrappers (for backward compat) ──────────────────────
-
-/** @deprecated Use getCabinetCharactersHandler with countryId */
-export function getUKCabinetCharactersHandler(request: Request) {
-  return getCabinetCharactersHandler(request, "UK");
-}
-
-/** @deprecated Use appointCabinetMemberHandler with countryId */
-export function appointUKCabinetMemberHandler(request: Request) {
-  return appointCabinetMemberHandler(request, "UK");
-}
-
-/** @deprecated Use fireCabinetMemberHandler with countryId */
-export function fireUKCabinetMemberHandler(request: Request) {
-  return fireCabinetMemberHandler(request, "UK");
-}

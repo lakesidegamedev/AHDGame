@@ -18,7 +18,7 @@ import { JP_REGIONAL_GRANT_FIELD } from "@/lib/countries/jp/economy";
  * cannot quietly hand back another country's number, and a country added later
  * shows up as absent instead of as zero.
  */
-export const REGIONAL_GRANT_FIELD: Partial<
+const REGIONAL_GRANT_FIELD: Partial<
   Record<
     CountryId,
     | "nationalGrant"

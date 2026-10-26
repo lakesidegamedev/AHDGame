@@ -16,7 +16,7 @@ import { itRegionCensusData, type ITRegionLayer1 } from "@/lib/seeds/it/itRegion
 import { itRegionCensusData1953 } from "@/lib/seeds/it/itRegionCensusData1953";
 import type { EraId } from "@/lib/seeds/presetSelector";
 
-export const IT_GROUP_IDS = [
+const IT_GROUP_IDS = [
   "catholic_dc",
   "industrial_north",
   "communist_worker",
@@ -202,6 +202,3 @@ export function getItModel(era: EraId): CountryLayer1Model {
     census: convertCensus(census),
   };
 }
-
-export const itLayer1Model: CountryLayer1Model = getItModel("1979");
-export const itGroupIds = [...IT_GROUP_IDS];

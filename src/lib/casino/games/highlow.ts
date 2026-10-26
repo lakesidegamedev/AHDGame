@@ -14,7 +14,7 @@ export function drawHighLowCard(rng: Rng): number {
   return rollInt(rng, 1, 13);
 }
 
-export function highLowWinChance(card: number, guess: HighLowGuess): number {
+function highLowWinChance(card: number, guess: HighLowGuess): number {
   return guess === "higher" ? (13 - card) / 13 : (card - 1) / 13;
 }
 

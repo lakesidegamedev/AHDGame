@@ -23,12 +23,8 @@
  */
 
 import type { Db } from "mongodb";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { NppForeignPolicyMode } from "@/lib/db/types";
-import type { GovernmentFormation } from "@/lib/db/types/governmentFormation";
-import { hasBillLifecycle } from "@/lib/legislature/hasBillLifecycle";
-import { getMembers } from "@/lib/internationalOrganizations/service";
-import { votingMembers } from "@/lib/internationalOrganizations/orgMembership";
+
 import { foreignPolicyModeFrom } from "@/lib/nppAutonomy/foreignPolicyRollout";
 
 /** The foreign-policy rollout mode, read once per phase pass. */
@@ -37,34 +33,4 @@ export async function readForeignPolicyMode(db: Db): Promise<NppForeignPolicyMod
     .collection<{ _id: string; nppForeignPolicyMode?: NppForeignPolicyMode }>("gameState")
     .findOne({ _id: "current" }, { projection: { nppForeignPolicyMode: 1 } });
   return foreignPolicyModeFrom(rollout?.nppForeignPolicyMode);
-}
-
-/**
- * Voting roster for policy decisions. Shadow/off preserve the player-only
- * baseline. Active mode adds modelled members that have a formed NPP government
- * and a legislature capable of resolving the consequences of their vote.
- */
-export async function policyVotingMembers(
-  db: Db,
-  organizationId: string,
-  mode?: NppForeignPolicyMode
-): Promise<CountryId[]> {
-  const players = await votingMembers(db, organizationId);
-  const rolloutMode = mode ?? (await readForeignPolicyMode(db));
-  if (rolloutMode !== "active") return players;
-
-  const modelledMembers = (await getMembers(db, organizationId as never)).filter(
-    (member): member is CountryId =>
-      member in COUNTRY_CONFIGS && hasBillLifecycle(member as CountryId)
-  );
-  if (modelledMembers.length === 0) return players;
-  const formations = await db
-    .collection<GovernmentFormation>("governmentFormations")
-    .find({
-      _id: { $in: modelledMembers },
-      status: "formed",
-      $or: [{ pmNppId: { $ne: null } }, { presidentNppId: { $ne: null } }],
-    })
-    .toArray();
-  return Array.from(new Set([...players, ...formations.map((formation) => formation.countryId)]));
 }

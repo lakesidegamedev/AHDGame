@@ -82,7 +82,7 @@ export const publicTrustNode: RegistryNode = {
 // that store the metric. First-pass coefficients (balance pass).
 
 /** Per-capita defense spend at which the channel reaches half its max response. */
-export const DEF_SPEND_HALF_SAT = 2;
+const DEF_SPEND_HALF_SAT = 2;
 
 // UK-origin, uniform-seeded broadly.
 export const devolutionSatisfactionNode: RegistryNode = {

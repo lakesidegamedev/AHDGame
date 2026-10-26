@@ -3,24 +3,6 @@ import { type CountryId } from "@/lib/constants/countriesCore";
 import { getRegionalBillAssentTitleForState } from "@/lib/constants/countryClientConfig";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
 
-export function partyFallbackColor(partyId: string): string {
-  if (partyId === "democrat") return "#3b82f6";
-  if (partyId === "republican") return "#ef4444";
-  return "#6b7280";
-}
-
-/** Lighten a hex color toward white by `factor` (0–1). */
-export function lightenHex(hex: string, factor: number): string {
-  const h = hex.replace("#", "");
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
-  const nr = Math.round(Math.min(255, r + (255 - r) * factor));
-  const ng = Math.round(Math.min(255, g + (255 - g) * factor));
-  const nb = Math.round(Math.min(255, b + (255 - b) * factor));
-  return `#${nr.toString(16).padStart(2, "0")}${ng.toString(16).padStart(2, "0")}${nb.toString(16).padStart(2, "0")}`;
-}
-
 // Static 2020 electoral vote allocation per state
 export const STATE_EV: Record<string, number> = {
   AL: 9,
@@ -76,7 +58,7 @@ export const STATE_EV: Record<string, number> = {
   WY: 3,
 };
 
-export const SENATE_CLASS_ROMAN: Record<number, string> = { 1: "I", 2: "II", 3: "III" };
+const SENATE_CLASS_ROMAN: Record<number, string> = { 1: "I", 2: "II", 3: "III" };
 
 /** Translator shape accepted by `electionRaceTitle` for the class/seats suffixes. */
 type RaceTitleTranslator = (key: string, values?: Record<string, string | number>) => string;

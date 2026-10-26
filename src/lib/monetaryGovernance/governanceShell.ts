@@ -37,7 +37,7 @@ function idOrNull(value: string | null | undefined): ObjectId | null {
   }
 }
 
-export function seatToState(seat: FomcSeat): SeatState {
+function seatToState(seat: FomcSeat): SeatState {
   return {
     seatId: seat.seatId,
     isChair: seat.isChair,
@@ -54,7 +54,7 @@ export function seatToState(seat: FomcSeat): SeatState {
   };
 }
 
-export function meetingToState(meeting: FomcMeeting): MeetingState {
+function meetingToState(meeting: FomcMeeting): MeetingState {
   return {
     meetingId: meeting.meetingId,
     openedAtTurn: meeting.openedAtTurn,
@@ -135,7 +135,7 @@ export function stateToSeat(seat: SeatState): FomcSeat {
   };
 }
 
-export function stateToMeeting(meeting: MeetingState, now: Date): FomcMeeting {
+function stateToMeeting(meeting: MeetingState, now: Date): FomcMeeting {
   return {
     meetingId: meeting.meetingId,
     openedAtTurn: meeting.openedAtTurn,

@@ -8,9 +8,9 @@ import { lossShareByCountry } from "./lossShare";
 
 export const MARKET_ADJUSTMENT_SIGNALS = "marketAdjustmentSignals";
 /** Turns of loss-share history kept per country. */
-export const LOSS_SHARE_HISTORY_TURNS = 12;
+const LOSS_SHARE_HISTORY_TURNS = 12;
 /** gameConfig.marketAdjustmentStage at which the signal is recorded and the event can fire. */
-export const MARKET_ADJUSTMENT_ENABLED_STAGE = 1;
+const MARKET_ADJUSTMENT_ENABLED_STAGE = 1;
 
 interface SignalDoc {
   _id: string;
@@ -18,7 +18,7 @@ interface SignalDoc {
   points?: { turn: number; value: number }[];
 }
 
-export async function marketAdjustmentStage(db: Db): Promise<number> {
+async function marketAdjustmentStage(db: Db): Promise<number> {
   const cfg = await db
     .collection<{ marketAdjustmentStage?: number }>("gameConfig")
     .findOne({ _id: "default" as never }, { projection: { marketAdjustmentStage: 1 } });
