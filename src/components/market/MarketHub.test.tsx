@@ -204,7 +204,11 @@ describe("MarketHub", () => {
   it("labels NPP offers and defaults the supply tab to players", async () => {
     search = "tab=supply";
     render(<MarketHub />);
-    await waitFor(() => expect(screen.getAllByText("NPP").length).toBeGreaterThan(0));
+    // The supply panel is a dynamic chunk; a cold transform in the test
+    // runner takes longer than the 1s default wait.
+    await waitFor(() => expect(screen.getAllByText("NPP").length).toBeGreaterThan(0), {
+      timeout: 5000,
+    });
     expect(screen.queryByText("AI")).toBeNull();
     expect(screen.getByRole("button", { name: "Players" }).getAttribute("aria-pressed")).toBe(
       "true"
@@ -221,7 +225,7 @@ describe("MarketHub", () => {
   it("shows volume, value and a premium chip for an offer", async () => {
     search = "tab=supply";
     render(<MarketHub />);
-    await waitFor(() => expect(screen.getByText("+10%")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("+10%")).toBeTruthy(), { timeout: 5000 });
     expect(screen.getByText("Offering")).toBeTruthy();
     expect(screen.getByText("~A660")).toBeTruthy();
   });

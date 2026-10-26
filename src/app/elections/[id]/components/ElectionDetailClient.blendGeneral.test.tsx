@@ -97,8 +97,9 @@ describe("the Blend general page does not print the same standing twice", () => 
     // trends, the schedule. What the stage cannot hold (campaign presence,
     // trends, state drivers, turnout, the factor ledger) comes back as the
     // detail-only tab section, and nothing else of the old page does.
-    const { getByTestId, queryByTestId, findByTestId } = renderPage();
-    expect(getByTestId("hero")).toBeTruthy();
+    const { queryByTestId, findByTestId } = renderPage();
+    // The stage screens are dynamic chunks, so they land a tick after paint.
+    expect(await findByTestId("hero")).toBeTruthy();
     // GeneralPhaseView loads on demand now, so it lands a tick after first paint.
     await findByTestId("general-phase");
     expect(queryByTestId("schedule")).toBeNull();
@@ -114,17 +115,17 @@ describe("the Blend general page does not print the same standing twice", () => 
     // carries campaign operations and the rail carries your campaign. The
     // detail-only tab section (presence, factor ledger and so on) is all that
     // joins it, and hides any tab with no data yet.
-    const { getByTestId, queryByTestId, findByTestId } = renderPage({ inPrimary: true });
-    expect(getByTestId("primary-stage")).toBeTruthy();
+    const { queryByTestId, findByTestId } = renderPage({ inPrimary: true });
+    expect(await findByTestId("primary-stage")).toBeTruthy();
     expect(queryByTestId("presence-map")).toBeNull();
     await findByTestId("general-phase");
     expect(generalPhaseProps.at(-1)?.detailOnly).toBe(true);
   });
 
-  it("keeps the presence builder on an upcoming race, where nothing else carries it", () => {
-    const { getByTestId, queryByTestId } = renderPage({ isUpcoming: true });
+  it("keeps the presence builder on an upcoming race, where nothing else carries it", async () => {
+    const { queryByTestId, findByTestId } = renderPage({ isUpcoming: true });
     expect(queryByTestId("primary-stage")).toBeNull();
-    expect(getByTestId("presence-map")).toBeTruthy();
+    expect(await findByTestId("presence-map")).toBeTruthy();
   });
 
   it("leaves both blocks whole on a race with no Blend hero above them", () => {

@@ -141,6 +141,20 @@ describe("index fund cron round trips", () => {
     expect(trips.count("indexFundSnapshots")).toBeLessThanOrEqual(2);
   }, 280_000);
 
+  it("reads the equity pools and open bids once for the whole rebalance pass", async () => {
+    const w = world(12);
+    const trips = countRoundTrips(w.memory);
+    const result = await runIndexFundCron(w.db, { currentTurn: 48 });
+    expect(result.errors).toEqual([]);
+    expect(result.floatPurchases).toBeGreaterThan(150);
+    // One snapshot for every quoting fund: buys and sales advance it in memory.
+    expect(trips.count("equityMarketPools", "find"), trips.summary()).toBeLessThanOrEqual(2);
+    // One query for every rebalancing fund's resting bids, not one per fund.
+    expect(trips.count("shareOrders", "find"), trips.summary()).toBeLessThan(w.funds);
+    // The bid escrow journal rows are flushed once for the pass.
+    expect(trips.count("financialTxLog", "insertMany"), trips.summary()).toBeLessThanOrEqual(2);
+  }, 280_000);
+
   it("does not grow the quiet-turn per-fund cost as funds are added", async () => {
     const small = world(4);
     await runIndexFundCron(small.db, { currentTurn: 48 });

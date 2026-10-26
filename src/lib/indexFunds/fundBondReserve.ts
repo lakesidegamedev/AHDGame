@@ -6,9 +6,8 @@
 
 import { withBondPoolLedgerSnapshot } from "@/lib/bonds/marketPoolLedger";
 import { ObjectId, type Db } from "mongodb";
-import type { Bond, IndexFund, IndexFundTransaction } from "@/lib/db/types";
+import type { Bond, BondMarketPool, IndexFund, IndexFundTransaction } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import { corpCapitalToAnchor, loadFxRatesRecord } from "@/lib/currency/corporationCapital";
 import { advanceBondPoolSnapshot, loadBondPoolsByCurrency } from "@/lib/bonds/marketPool";
@@ -30,25 +29,27 @@ import {
   INDEX_FUND_RESERVE_CASH_BUFFER_FRACTION,
 } from "@/lib/indexFunds/fundAllocation";
 import { sovereignBondRemainingCapacityUnits } from "@/lib/bonds/holderCap";
+import { getNationalBudgetId } from "@/lib/bonds/sovereign";
 import type { BondFundUniverse } from "@/lib/indexFunds/fundDefinitions";
 import { resolveFundMandate } from "./mandate";
-import { CREDIT_RATINGS, type CreditRating } from "@/lib/db/types/centralBank";
-import { getNationalBudgetId } from "@/lib/bonds/sovereign";
+import type { CurrencyCode } from "@/lib/constants/currencies";
+import {
+  fundBondCandidates,
+  isGlobalFundBondEligible,
+  MAX_GLOBAL_SOVEREIGN_ISSUES_PER_PASS,
+  rankSovereignIssuesForBreadth,
+  ratingWithinUniverse,
+  resolveFundBondCountryId,
+  type FundBondCandidateSource,
+} from "@/lib/bonds/fundBondCandidates";
 
-export const MAX_GLOBAL_SOVEREIGN_ISSUES_PER_PASS = 48;
-
-export function resolveFundBondCountryId(
-  fund: Pick<IndexFund, "countryId" | "anchorCurrencyCode" | "scope">
-): CountryId {
-  if (fund.countryId) return fund.countryId;
-
-  const byCurrency = Object.entries(COUNTRY_CURRENCY_MAP).find(
-    ([, currency]) => currency === fund.anchorCurrencyCode
-  );
-  if (byCurrency) return byCurrency[0] as CountryId;
-
-  return "US";
-}
+export { MAX_GLOBAL_SOVEREIGN_ISSUES_PER_PASS };
+export {
+  isGlobalFundBondEligible,
+  rankSovereignIssuesForBreadth,
+  ratingWithinUniverse,
+  resolveFundBondCountryId,
+};
 
 export type DeployBondReserveResult = {
   deployedAnchor: number;
@@ -71,71 +72,6 @@ function costPerUnitAnchor(bond: Bond, fxRates: Record<string, number>): number 
   const fx = fxRates[bondCurrency] && fxRates[bondCurrency]! > 0 ? fxRates[bondCurrency]! : 1;
   const costLocal = BOND_UNIT_FACE_VALUE * bond.marketPrice;
   return corpCapitalToAnchor(costLocal, bondCurrency, fx);
-}
-
-function bondCurrencyCode(bond: Bond): string {
-  return (
-    bond.currencyCode ??
-    (bond.countryId ? COUNTRY_CURRENCY_MAP[bond.countryId] : undefined) ??
-    "USD"
-  );
-}
-
-export function isGlobalFundBondEligible(
-  bond: Bond,
-  homeCountryId: CountryId,
-  tradableCurrencies: ReadonlySet<string>,
-  controlledCurrencies: ReadonlySet<string>
-): boolean {
-  if (bond.countryId === homeCountryId) return true;
-  const currencyCode = bondCurrencyCode(bond);
-  return tradableCurrencies.has(currencyCode) && !controlledCurrencies.has(currencyCode);
-}
-
-export function rankSovereignIssuesForBreadth(bonds: Bond[]): Bond[] {
-  const isHeld = (bond: Bond) => bond.holders.some((holder) => holder.units > 0);
-  const byMaturityThenId = (a: Bond, b: Bond) =>
-    a.maturityTurn - b.maturityTurn || a._id.toString().localeCompare(b._id.toString());
-  const ranked: Bond[] = [];
-  // Unheld issues first; within each held tier, interleave issuers
-  // round-robin so a capped slice spreads across countries instead of
-  // being filled by whichever countryId sorts first.
-  for (const heldTier of [false, true]) {
-    const byCountry = new Map<string, Bond[]>();
-    for (const bond of bonds) {
-      if (isHeld(bond) !== heldTier) continue;
-      const key = String(bond.countryId ?? "");
-      const group = byCountry.get(key);
-      if (group) group.push(bond);
-      else byCountry.set(key, [bond]);
-    }
-    const groups = [...byCountry.keys()]
-      .sort((a, b) => a.localeCompare(b))
-      .map((key) => [...byCountry.get(key)!].sort(byMaturityThenId));
-    const roundCount = groups.reduce((max, group) => Math.max(max, group.length), 0);
-    for (let round = 0; round < roundCount; round++) {
-      for (const group of groups) {
-        if (round < group.length) ranked.push(group[round]!);
-      }
-    }
-  }
-  return ranked;
-}
-
-function ratingIndex(rating: string | undefined, fallback: CreditRating = "BBB"): number {
-  const idx = CREDIT_RATINGS.indexOf((rating ?? fallback) as CreditRating);
-  return idx >= 0 ? idx : CREDIT_RATINGS.indexOf(fallback);
-}
-
-/** Inclusive rating bounds: `minRating` is the worst grade allowed, `maxRating` the best. */
-export function ratingWithinUniverse(
-  rating: string | undefined,
-  universe: Pick<BondFundUniverse, "minRating" | "maxRating">
-): boolean {
-  const idx = ratingIndex(rating);
-  if (universe.minRating && idx > CREDIT_RATINGS.indexOf(universe.minRating)) return false;
-  if (universe.maxRating && idx < CREDIT_RATINGS.indexOf(universe.maxRating)) return false;
-  return true;
 }
 
 /**
@@ -260,6 +196,24 @@ async function deployBondReserve(
      * any guard misses, nothing commits and the pass re-runs per purchase.
      */
     settleInTransaction?: boolean;
+    /**
+     * Pass-level bond issue source. When supplied, one read serves every fund
+     * in the turn instead of one candidate scan per fund; the source follows
+     * each settled purchase so later funds see the same live float.
+     */
+    bondCandidates?: FundBondCandidateSource;
+    /**
+     * Pass-level bond pool snapshot, advanced by every settled purchase, so a
+     * fund's quote sees the cash earlier funds credited rather than re-reading
+     * the pools.
+     */
+    bondPools?: Map<CurrencyCode, BondMarketPool>;
+    /**
+     * Pass-level sink for the fund-subject ledger rows of settled purchases.
+     * Those rows already commit after the purchase transaction, so the caller
+     * writes them once for the pass instead of once per fund.
+     */
+    ledgerSink?: TxInput[];
   }
 ): Promise<DeployBondReserveResult> {
   const breakdown = computeFundAllocationBreakdown(fund, {
@@ -292,6 +246,7 @@ async function deployBondReserve(
     return { deployedAnchor: 0, markedValueAnchor: 0, unitsPurchased: 0, countryId };
   }
   const globalDemandEnabled = options?.liquidityTargetEnabled === true && fund.scope === "global";
+  const candidateSource = options?.bondCandidates;
   const bondQuery = {
     issuerType: "sovereign",
     ...(globalDemandEnabled ? {} : { countryId }),
@@ -299,15 +254,21 @@ async function deployBondReserve(
     defaulted: { $ne: true },
     publicFloat: { $gt: 0 },
   } as const;
-  let bonds = bondUniverse
-    ? await loadBondFundCandidates(db, fund, bondUniverse)
-    : await db
-        .collection<Bond>("bonds")
-        .find(bondQuery)
-        .sort({ maturityTurn: 1, publicFloat: -1 })
-        .toArray();
+  let bonds = candidateSource
+    ? fundBondCandidates(await candidateSource.load(), {
+        fund,
+        ...(bondUniverse ? { universe: bondUniverse } : {}),
+        globalDemandEnabled,
+      })
+    : bondUniverse
+      ? await loadBondFundCandidates(db, fund, bondUniverse)
+      : await db
+          .collection<Bond>("bonds")
+          .find(bondQuery)
+          .sort({ maturityTurn: 1, publicFloat: -1 })
+          .toArray();
 
-  if (globalDemandEnabled && !bondUniverse) {
+  if (globalDemandEnabled && !bondUniverse && !candidateSource) {
     const currencyRows = await db
       .collection<{ currencyCode?: string; rate?: number; capitalControls?: boolean }>(
         "exchangeRates"
@@ -338,7 +299,9 @@ async function deployBondReserve(
 
   const fxRates = await loadFxRatesRecord(db);
   // One pool read for the whole pass; each purchase advances the snapshot.
-  const bondPools = await loadBondPoolsByCurrency(db);
+  // A pass-level snapshot skips the read and already carries earlier funds'
+  // credits.
+  const bondPools = options?.bondPools ?? (await loadBondPoolsByCurrency(db));
   // One thresholds read for the whole pass, shared by every purchase row.
   const thresholds =
     options?.turn !== undefined ? (options?.thresholds ?? (await loadTxThresholds(db))) : undefined;
@@ -403,6 +366,16 @@ async function deployBondReserve(
 
   const transactions: Omit<IndexFundTransaction, "_id">[] = [];
   const ledgerEntries: TxInput[] = [];
+  // Fund-subject rows land after the purchase commit; a pass-level sink turns
+  // one journal write per fund into one for the whole pass.
+  const flushLedgerEntries = async (entries: TxInput[]): Promise<void> => {
+    if (entries.length === 0) return;
+    if (options?.ledgerSink) {
+      options.ledgerSink.push(...entries);
+      return;
+    }
+    if (thresholds) await emitTxBulk(db, entries, thresholds);
+  };
 
   if (options?.settleInTransaction) {
     // Plan against a copy of the pool snapshot so a fallback starts clean.
@@ -453,7 +426,20 @@ async function deployBondReserve(
       ledgerEntries.length = 0;
     }
     if (transactions.length > 0) {
-      if (thresholds) await emitTxBulk(db, ledgerEntries, thresholds);
+      await flushLedgerEntries(ledgerEntries);
+      // The pass snapshot and the shared issue list both move with a settled
+      // batch: the next fund's quote prices off the credited pool and its
+      // sizing sees the float this fund took.
+      if (options?.bondPools) {
+        for (const { plan } of planned) {
+          advanceBondPoolSnapshot(options.bondPools, plan.currency, plan.costLocal);
+        }
+      }
+      if (candidateSource) {
+        for (const { plan } of planned) {
+          candidateSource.applyPurchase(plan.bond, fund._id, plan.units, plan.pricePerUnit);
+        }
+      }
       return totals;
     }
   }
@@ -470,7 +456,9 @@ async function deployBondReserve(
         thresholds,
         turnLengthMinutes: options?.turnLengthMinutes,
       });
-      return purchase.ok ? purchase : null;
+      if (!purchase.ok) return null;
+      candidateSource?.applyPurchase(bond, fund._id, purchase.units, purchase.pricePerUnit);
+      return purchase;
     });
   } finally {
     // Preserve receipts for purchases already committed if a later issue fails.
@@ -478,7 +466,7 @@ async function deployBondReserve(
     try {
       await insertFundTransactionsBulk(db, transactions);
     } finally {
-      if (thresholds) await emitTxBulk(db, ledgerEntries, thresholds);
+      await flushLedgerEntries(ledgerEntries);
     }
   }
 }

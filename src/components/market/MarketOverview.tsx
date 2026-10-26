@@ -9,10 +9,9 @@ import {
   type BondsResponse,
   type FundsResponse,
   type SectorsForSaleResponse,
-} from "./MarketPanels";
-import { vsBasePct } from "./CommoditiesPanel";
-import type { SupplyOffersResponse } from "./SupplyDealsPanel";
-import { PreviewCard, PreviewRow, pctText, toneClass } from "./marketUi";
+} from "./marketEndpoints";
+import type { SupplyOffersResponse } from "./supplyOfferUi";
+import { PreviewCard, PreviewRow, pctText, toneClass, vsBasePct } from "./marketUi";
 import { useMarketJson } from "./useMarketJson";
 import { CorporationLogo } from "@/components/corporation/CorporationLogo";
 import { COMMODITY_LABELS } from "@/lib/constants/commoditiesCore";
