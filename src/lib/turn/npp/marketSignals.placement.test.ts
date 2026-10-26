@@ -1,6 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { ObjectId } from "mongodb";
-import { findBestUnownedSector, HQ_STATE_SCORE_BONUS, markMarketsActive } from "./marketSignals";
+import {
+  findBestUnownedSector,
+  HQ_STATE_SCORE_BONUS,
+  markMarketsActive,
+  sectorShortageScore,
+} from "./marketSignals";
+import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import type { UnownedSector } from "@/lib/db/types/unownedSector";
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { CountryId } from "@/lib/constants/countries";
@@ -519,5 +525,90 @@ describe("essential-shortage valve only where no same-type builder exists", () =
 
   it("crosses into logistics when no logistics builder exists in the country", () => {
     expect(pick(false)?.sectorType).toBe("logistics");
+  });
+});
+
+describe("candidate ranking is memoized, not re-derived per comparison", () => {
+  // The reference ranking recomputes a candidate's score on every comparison,
+  // which is what the scan did before: market size times the state's shortage
+  // score, with the HQ bonus. The memoized scan must land on the same pick.
+  const referencePick = (candidates: UnownedSector[], hqState: string) => {
+    const scoreOf = (candidate: UnownedSector) => {
+      const shortage = sectorShortageScore(
+        getOperatingSectorType(
+          candidate.sectorType,
+          candidate.industryModel,
+          candidate.mediaDiscriminator
+        ),
+        "US",
+        (commodity) => (candidate.stateId === "NY" ? (commodity === "freight" ? 2 : 1.4) : 1)
+      );
+      return (
+        candidate.revenue * shortage * (candidate.stateId === hqState ? HQ_STATE_SCORE_BONUS : 1)
+      );
+    };
+    return [...candidates].sort((a, b) => scoreOf(b) - scoreOf(a))[0];
+  };
+
+  it("picks the candidate with the highest market-weighted shortage score", () => {
+    const candidates = [
+      us("logistics", "PA", 90_000),
+      us("logistics", "NY", 100_000),
+      us("logistics", "TX", 60_000),
+      us("logistics", "OH", 120_000),
+    ];
+    const pool = new Map([["US", candidates]]);
+    const pick = findBestUnownedSector(
+      "US",
+      "PA",
+      "logistics",
+      null,
+      new Set(),
+      pool,
+      new Set(),
+      ratios({}),
+      false,
+      1,
+      {
+        statePriceRatioOf: (commodity, stateId) =>
+          stateId === "NY" ? (commodity === "freight" ? 2 : 1.4) : 1,
+      }
+    );
+
+    expect(pick).toEqual(referencePick(candidates, "PA"));
+    // The starved small market beats the big base-priced one.
+    expect(pick?.stateId).toBe("NY");
+  });
+
+  it("reads each candidate's state prices once, however many tiers rank it", () => {
+    const candidates = Array.from({ length: 24 }, (_, index) =>
+      us("logistics", `S${index}`, 10_000 + index * 1_000)
+    );
+    const pool = new Map([["US", candidates]]);
+    const lookups = new Map<string, number>();
+    findBestUnownedSector(
+      "US",
+      "PA",
+      "logistics",
+      null,
+      new Set(),
+      pool,
+      new Set(),
+      ratios({}),
+      false,
+      1,
+      {
+        statePriceRatioOf: (commodity, stateId) => {
+          const key = `${stateId}:${commodity}`;
+          lookups.set(key, (lookups.get(key) ?? 0) + 1);
+          return 1 + (Number(stateId.slice(1)) % 3) * 0.25;
+        },
+      }
+    );
+
+    // Before the memo the sort alone re-read a candidate's prices on every
+    // comparison, so a state appeared dozens of times. One per commodity is
+    // what a single score pass costs.
+    expect(Math.max(...lookups.values())).toBeLessThanOrEqual(2);
   });
 });

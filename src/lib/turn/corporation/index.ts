@@ -121,7 +121,7 @@ import { partitionedBulkWrite } from "./partitionedBulkWrite";
 import {
   applyPoliticalMediaOrderEffect,
   loadPoliticalMediaOrdersForClearing,
-  savePoliticalMediaSettlementPlan,
+  savePoliticalMediaSettlementPlans,
   settlePoliticalMediaOrder,
   type PoliticalMediaOrderForClearing,
 } from "@/lib/politicalMedia/journal";
@@ -533,12 +533,14 @@ export async function processCorporationTurn(
     treasuryCashLedgerEnabled,
     fundedProducerTurn: producerPath === "funded",
   });
+  // One read, one guarded bulk write and one re-read for the whole turn's
+  // plans, instead of two round trips per order. The map below stays keyed by
+  // THIS turn's clearing output, exactly as before; the durable copy the saver
+  // returns is what a replay settles from.
+  await savePoliticalMediaSettlementPlans(db, politicalMediaSettlementPlans);
   const plannedPoliticalMediaOrders = new Map(
     politicalMediaSettlementPlans.map(({ orderId, plan }) => [orderId, plan])
   );
-  for (const { orderId, plan } of politicalMediaSettlementPlans) {
-    await savePoliticalMediaSettlementPlan(db, orderId, plan);
-  }
   contractedByCorpCommodity = clearingContractedByCorpCommodity;
   if (mediaEditorialEnabled && !mediaOperatingModelsEnabled && market.editorialOutletsByState) {
     await applyMediaEditorialEffects({

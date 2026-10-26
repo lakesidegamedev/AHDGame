@@ -166,6 +166,7 @@ import {
   DEFAULT_ARCHETYPE,
 } from "@/lib/turn/npp/nppCorporationTuning";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
+import { createReinvestPoolLookup } from "@/lib/turn/npp/reinvestCandidatePool";
 
 export {
   NPP_GROWTH_MIN_SHORTAGE,
@@ -363,6 +364,11 @@ export async function processNppCorporationDecisions(
       weight: s.capitalStock ?? 0,
     }))
   );
+
+  // One unowned-pool index for the whole cohort; each corporation's reinvest
+  // decision reads it and the draws the loop applies stay visible through the
+  // shared row objects, exactly as the per-corporation copies did.
+  const reinvestPoolFor = createReinvestPoolLookup(unownedByCountry);
 
   const manufacturingProductProjectState = await loadNppProductProjectsV2(db, nppCorps);
   const plantsEnabled = manufacturingProductProjectState.plantsEnabled;
@@ -642,6 +648,7 @@ export async function processNppCorporationDecisions(
       transitionFirstFundedTurn,
       conversionBudgetOf:
         conversionPaceShare > 0 ? (countryId) => conversionBudgets.get(countryId) : undefined,
+      reinvestPoolFor,
       fundedRestartPressureOf: recipePressureByKey
         ? (sectorType, strategyId) => recipePressureByKey.get(recipeKey(sectorType, strategyId))
         : undefined,

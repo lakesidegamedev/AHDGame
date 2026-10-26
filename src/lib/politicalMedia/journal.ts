@@ -4,7 +4,6 @@
  * refund uses that original order record and a stable movement key.
  */
 
-import { isDeepStrictEqual } from "node:util";
 import { ObjectId, type Db, type Document } from "mongodb";
 import {
   applyMoneyMove,
@@ -487,33 +486,101 @@ export async function savePoliticalMediaSettlementPlan(
   orderId: string,
   plan: PoliticalMediaSettlementPlan
 ): Promise<PoliticalMediaSettlementPlan> {
-  const key = politicalMediaOrderKey(orderId);
+  const saved = await savePoliticalMediaSettlementPlans(db, [{ orderId, plan }]);
+  return saved.get(orderId) ?? plan;
+}
+
+/**
+ * The whole turn's plans in three round trips instead of two per order.
+ *
+ * Each plan keeps exactly the guards the per-order saver applied: the order must
+ * have funded (status `applied`), the plan must validate against the order's
+ * frozen identity, an order that already carries a plan keeps its own copy, and
+ * the write is a compare-and-set on (applied, open, no plan). A compare-and-set
+ * that loses is answered by re-reading that order once, exactly as before, and a
+ * stored plan that disagrees with the one offered still wins.
+ */
+export async function savePoliticalMediaSettlementPlans(
+  db: Db,
+  plans: readonly { orderId: string; plan: PoliticalMediaSettlementPlan }[]
+): Promise<Map<string, PoliticalMediaSettlementPlan>> {
+  const saved = new Map<string, PoliticalMediaSettlementPlan>();
+  if (plans.length === 0) return saved;
   const orders = db.collection<PoliticalMediaMoveRecord>(MONEY_MOVE_COLLECTION);
-  const stored = await orders.findOne({ _id: key, kind: POLITICAL_MEDIA_ORDER_KIND });
-  if (!stored || stored.status !== "applied" || !stored.politicalMediaOrder)
-    throw new Error(`Political media order ${orderId} is not fully funded.`);
-  validateSettlementPlan(stored.politicalMediaOrder.identity, plan);
-  if (stored.politicalMediaOrder.settlementPlan) return stored.politicalMediaOrder.settlementPlan;
-  const result = await orders.updateOne(
-    {
-      _id: key,
-      kind: POLITICAL_MEDIA_ORDER_KIND,
-      status: "applied",
-      "politicalMediaOrder.status": "open",
-      "politicalMediaOrder.settlementPlan": { $exists: false },
-    },
-    {
-      $set: {
-        "politicalMediaOrder.status": "settling",
-        "politicalMediaOrder.settlementPlan": plan,
-      },
-    }
+  const keys = plans.map((entry) => politicalMediaOrderKey(entry.orderId));
+  const stored = new Map(
+    (
+      await orders
+        .find(
+          { _id: { $in: keys }, kind: POLITICAL_MEDIA_ORDER_KIND },
+          {
+            projection: {
+              status: 1,
+              "politicalMediaOrder.identity": 1,
+              "politicalMediaOrder.settlementPlan": 1,
+            },
+          }
+        )
+        .toArray()
+    ).map((row) => [row._id, row])
   );
-  if (result.modifiedCount) return plan;
-  const replay = await orders.findOne({ _id: key, kind: POLITICAL_MEDIA_ORDER_KIND });
-  const saved = replay?.politicalMediaOrder?.settlementPlan;
-  if (!saved) throw new Error(`Political media order ${orderId} has no durable settlement plan.`);
-  if (!isDeepStrictEqual(saved, plan)) return saved;
+
+  const pending: { key: string; orderId: string; plan: PoliticalMediaSettlementPlan }[] = [];
+  // Validated in input order, so the first bad plan raises the same error the
+  // per-order loop raised, before anything is written.
+  for (let index = 0; index < plans.length; index++) {
+    const { orderId, plan } = plans[index];
+    const key = keys[index];
+    const row = stored.get(key);
+    if (!row || row.status !== "applied" || !row.politicalMediaOrder)
+      throw new Error(`Political media order ${orderId} is not fully funded.`);
+    validateSettlementPlan(row.politicalMediaOrder.identity, plan);
+    const existing = row.politicalMediaOrder.settlementPlan;
+    if (existing) saved.set(orderId, existing);
+    else pending.push({ key, orderId, plan });
+  }
+  if (pending.length === 0) return saved;
+
+  await orders.bulkWrite(
+    pending.map(({ key, plan }) => ({
+      updateOne: {
+        filter: {
+          _id: key,
+          kind: POLITICAL_MEDIA_ORDER_KIND,
+          status: "applied",
+          "politicalMediaOrder.status": "open",
+          "politicalMediaOrder.settlementPlan": { $exists: false },
+        },
+        update: {
+          $set: {
+            "politicalMediaOrder.status": "settling",
+            "politicalMediaOrder.settlementPlan": plan,
+          },
+        },
+      },
+    })),
+    { ordered: false }
+  );
+
+  // A compare-and-set that did not modify was claimed by someone else; their
+  // stored plan is authoritative for that order.
+  const reread = new Map(
+    (
+      await orders
+        .find(
+          { _id: { $in: pending.map((entry) => entry.key) } },
+          { projection: { "politicalMediaOrder.settlementPlan": 1 } }
+        )
+        .toArray()
+    ).map((row) => [row._id, row])
+  );
+  for (const { key, orderId } of pending) {
+    const row = reread.get(key);
+    const durable = row?.politicalMediaOrder?.settlementPlan;
+    if (!durable)
+      throw new Error(`Political media order ${orderId} has no durable settlement plan.`);
+    saved.set(orderId, durable);
+  }
   return saved;
 }
 

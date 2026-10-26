@@ -91,6 +91,13 @@ export interface NppCorpDecisionContext {
   ) => number | undefined;
   /** Player-appointed caretaker mandate. NPP-owned corporations are always active. */
   caretakerMandate?: "active" | "passive";
+  /**
+   * Unowned-pool lookup shared across the whole cohort. The index it builds is a
+   * pure function of the pool snapshot, which every corporation's decision in
+   * one turn reads unchanged, so it is built once instead of once per
+   * corporation. Absent builds a private one.
+   */
+  reinvestPoolFor?: import("./reinvestCandidatePool").ReinvestPoolLookup;
 }
 
 /** A composable sector write emitted by the NPP corporation decision engine. */
