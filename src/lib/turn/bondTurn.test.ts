@@ -2221,7 +2221,8 @@ describe("processBondTurn", () => {
           totalInterestPaid: expect.any(Number),
           createdAt: expect.any(Date),
         }),
-      ])
+      ]),
+      { ordered: false }
     );
   });
 
