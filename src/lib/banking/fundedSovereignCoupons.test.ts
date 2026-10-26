@@ -12,7 +12,9 @@ import {
   loadSettleableOpenSovereignCouponClaims,
   loadSovereignCouponPriorPayouts,
   openSovereignCouponPoolCurrencies,
+  settleableSovereignCouponHolderKeys,
   settleFundedSovereignCoupons,
+  unfinishedSovereignCouponBatchClaimIds,
   type SovereignCouponClaimRecord,
 } from "./fundedSovereignCoupons";
 import { withInjectedCrash } from "@/lib/test-utils/faultyDb";
@@ -1056,5 +1058,228 @@ describe("bounded open-claim load", () => {
       "sovereign-coupon:a:10:attempt:12",
       "sovereign-coupon:a:11:attempt:12",
     ]);
+  });
+});
+
+describe("coupon payee lock keys", () => {
+  const firstPayeeId = new ObjectId("650000000000000000000021");
+  const secondPayeeId = new ObjectId("650000000000000000000022");
+  const arrearsPayeeId = new ObjectId("650000000000000000000023");
+
+  function seededClaim(input: {
+    id: string;
+    dueTurn: number;
+    amountLocal: number;
+    holderId: ObjectId;
+  }): SovereignCouponClaimRecord {
+    return {
+      _id: input.id,
+      budgetId: "US",
+      order: 0,
+      createdAt: new Date(),
+      claim: {
+        id: input.id,
+        bondId: bondId.toHexString(),
+        dueTurn: input.dueTurn,
+        countryId: "US",
+        currencyCode: "USD",
+        amountLocal: input.amountLocal,
+        anchorRate: 1,
+        holders: [
+          {
+            kind: "character",
+            id: input.holderId.toHexString(),
+            amountLocal: input.amountLocal,
+            amountAnchor: input.amountLocal,
+            currencyCode: "USD",
+            personalBalancePath: "cashOnHand",
+          },
+        ],
+      } as unknown as FundedSovereignCouponClaim,
+    };
+  }
+
+  function characterCash(db: InMemoryDb, id: ObjectId): number {
+    const row = db
+      .collection("characters")
+      .docs.find((doc) => String(doc._id) === id.toHexString()) as
+      { cashOnHand?: number } | undefined;
+    return row?.cashOnHand ?? 0;
+  }
+
+  function snapshot(db: InMemoryDb): Map<string, Map<string, string>> {
+    const out = new Map<string, Map<string, string>>();
+    for (const [name, collection] of db.collections)
+      out.set(name, new Map(collection.docs.map((doc) => [String(doc._id), JSON.stringify(doc)])));
+    return out;
+  }
+
+  function writtenKeys(
+    before: Map<string, Map<string, string>>,
+    after: Map<string, Map<string, string>>
+  ): string[] {
+    const keys: string[] = [];
+    for (const [name, docs] of after) {
+      const previous = before.get(name) ?? new Map<string, string>();
+      for (const [id, body] of docs) if (previous.get(id) !== body) keys.push(`${name}:${id}`);
+    }
+    return keys;
+  }
+
+  it("locks only the payees of claims the budget's cash can pay", async () => {
+    const db = world(5_000);
+    db.seed("sovereignCouponClaims", [
+      seededClaim({
+        id: "sovereign-coupon:c:8",
+        dueTurn: 8,
+        amountLocal: 4_000,
+        holderId: firstPayeeId,
+      }),
+      seededClaim({
+        id: "sovereign-coupon:c:9",
+        dueTurn: 9,
+        amountLocal: 9_000,
+        holderId: arrearsPayeeId,
+      }),
+    ] as unknown as Array<Record<string, unknown>>);
+
+    const keys = await settleableSovereignCouponHolderKeys(
+      db as unknown as Db,
+      new Map([["US", 5_000]]),
+      []
+    );
+    expect([...(keys.get("US") ?? [])]).toEqual([`characters:${firstPayeeId.toHexString()}`]);
+
+    // A Treasury with nothing to spend settles nothing, so it holds no payee
+    // lock and no longer serialises the lanes of every country it shares one
+    // with.
+    const empty = await settleableSovereignCouponHolderKeys(
+      db as unknown as Db,
+      new Map([["US", 0]]),
+      []
+    );
+    expect(empty.has("US")).toBe(false);
+  });
+
+  it("keeps the payee lock of a claim a partial receipt still owns", async () => {
+    const db = world(0);
+    const claim = seededClaim({
+      id: "sovereign-coupon:c:10",
+      dueTurn: 10,
+      amountLocal: 50_000,
+      holderId: arrearsPayeeId,
+    });
+    db.seed("sovereignCouponClaims", [claim] as unknown as Array<Record<string, unknown>>);
+
+    const keys = await settleableSovereignCouponHolderKeys(
+      db as unknown as Db,
+      new Map([["US", 0]]),
+      [claim._id]
+    );
+    expect([...(keys.get("US") ?? [])]).toEqual([`characters:${arrearsPayeeId.toHexString()}`]);
+  });
+
+  it("keeps the payees of a grouped receipt that never landed", async () => {
+    const db = world(0);
+    const claim = seededClaim({
+      id: "sovereign-coupon:c:11",
+      dueTurn: 11,
+      amountLocal: 50_000,
+      holderId: arrearsPayeeId,
+    });
+    db.seed("sovereignCouponClaims", [claim] as unknown as Array<Record<string, unknown>>);
+    db.seed("bankMoneyMoves", [
+      {
+        _id: couponBatchKey("US", 11),
+        status: "partial",
+        event: { kind: "monetary.executed", meta: { claimIds: claim._id, claims: 1 } },
+      },
+      {
+        _id: couponBatchKey("US", 10),
+        status: "applied",
+        projectionsCompletedAt: new Date(),
+        event: { kind: "monetary.executed", meta: { claimIds: claim._id, claims: 1 } },
+      },
+    ]);
+
+    expect(await unfinishedSovereignCouponBatchClaimIds(db as unknown as Db)).toEqual([claim._id]);
+    const keys = await settleableSovereignCouponHolderKeys(
+      db as unknown as Db,
+      new Map([["US", 0]]),
+      [claim._id]
+    );
+    expect([...(keys.get("US") ?? [])]).toEqual([`characters:${arrearsPayeeId.toHexString()}`]);
+  });
+
+  it("locks a superset of the documents it writes and pays in due order", async () => {
+    const db = world(1_000);
+    db.seed("characters", [
+      { _id: firstPayeeId, cashOnHand: 0 },
+      { _id: secondPayeeId, cashOnHand: 0 },
+      { _id: arrearsPayeeId, cashOnHand: 0 },
+    ]);
+    db.seed("sovereignCouponClaims", [
+      seededClaim({
+        id: "sovereign-coupon:c:9",
+        dueTurn: 9,
+        amountLocal: 200,
+        holderId: secondPayeeId,
+      }),
+      seededClaim({
+        id: "sovereign-coupon:c:8",
+        dueTurn: 8,
+        amountLocal: 300,
+        holderId: firstPayeeId,
+      }),
+      seededClaim({
+        id: "sovereign-coupon:c:10",
+        dueTurn: 10,
+        amountLocal: 50_000,
+        holderId: arrearsPayeeId,
+      }),
+    ] as unknown as Array<Record<string, unknown>>);
+
+    // Same key set the phase holds while it settles: the settleable claims plus
+    // the budget, its bond pool and the bank-claim key.
+    const locked = new Set<string>([
+      ...((
+        await settleableSovereignCouponHolderKeys(db as unknown as Db, new Map([["US", 1_000]]), [])
+      ).get("US") ?? []),
+      "federalBudget:US",
+      "bondMarketPools:USD",
+    ]);
+    const before = snapshot(db);
+
+    await settleFundedSovereignCoupons(db as unknown as Db, savedBudget(db), {
+      turn: 12,
+      bonds: [],
+      anchorRate: 1,
+      forexEnabled: false,
+      corporateQuotes: new Map(),
+      priorPayouts: [],
+    });
+
+    expect(savedBudget(db).treasuryCashLocal).toBe(500);
+    expect(characterCash(db, firstPayeeId)).toBe(300);
+    expect(characterCash(db, secondPayeeId)).toBe(200);
+    expect(characterCash(db, arrearsPayeeId)).toBe(0);
+    const batch = db
+      .collection("bankMoneyMoves")
+      .docs.find((doc) => doc._id === couponBatchKey("US", 12)) as {
+      event?: { meta?: { claimIds?: string } };
+    };
+    expect(batch.event?.meta?.claimIds).toBe("sovereign-coupon:c:8,sovereign-coupon:c:9");
+
+    // Receipts and claim records are per budget by construction, so the lock
+    // set only has to cover the money documents.
+    const moneyWrites = writtenKeys(before, snapshot(db)).filter(
+      (key) => !key.startsWith("bankMoneyMoves:") && !key.startsWith("sovereignCouponClaims:")
+    );
+    expect(moneyWrites.sort()).toEqual([
+      "characters:650000000000000000000021",
+      "characters:650000000000000000000022",
+      "federalBudget:US",
+    ]);
+    for (const key of moneyWrites) expect(locked.has(key)).toBe(true);
   });
 });

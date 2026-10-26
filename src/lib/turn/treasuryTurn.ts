@@ -34,10 +34,12 @@ import { settleBankSovereignClaims } from "@/lib/banking/bankSovereignClaims";
 import { bankCouponClaim, bankCouponPlanForCountry } from "@/lib/banking/rules/sovereignClaims";
 import {
   budgetIdsWithOpenSovereignCouponClaims,
+  claimIdOfMove,
   loadSovereignCouponPriorPayouts,
-  openSovereignCouponHolderKeys,
+  settleableSovereignCouponHolderKeys,
   settleFundedSovereignCoupons,
   sovereignCouponHolderKeys,
+  unfinishedSovereignCouponBatchClaimIds,
 } from "@/lib/banking/fundedSovereignCoupons";
 import { KeyedQueue, interleaveByKey, runInLanes } from "@/lib/turn/settlementLanes";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
@@ -223,16 +225,50 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
   steps.mark("load");
   let countriesProcessed = 0;
   // Countries settle in bounded lanes. Each holds its budget, its bond pool,
-  // every coupon payee it may credit (frozen open claims and current bond
-  // holders) and, when banks are involved, the shared bank-claim key, so any
-  // document two countries share is still written one country at a time.
-  const [openClaimHolderKeys, priorPayouts] = await Promise.all([
-    treasuryCashLedgerEnabled ? openSovereignCouponHolderKeys(db) : new Map<string, Set<string>>(),
+  // every coupon payee it can move money for this turn (the settleable frozen
+  // claims and the current bond holders) and, when banks are involved, the
+  // shared bank-claim key, so any document two countries share is still written
+  // one country at a time.
+  const [priorPayouts, unfinishedBatchClaimIds] = await Promise.all([
     // One indexed read for every budget's claim queue. Each budget filters it
     // to the claims it loaded, instead of building an `$or` of one `_id` regex
     // per open claim.
     treasuryCashLedgerEnabled ? loadSovereignCouponPriorPayouts(db) : Promise.resolve(undefined),
+    treasuryCashLedgerEnabled
+      ? unfinishedSovereignCouponBatchClaimIds(db)
+      : Promise.resolve<string[]>([]),
   ]);
+  // Payee locks only have to cover claims this pass can move money for. The
+  // settle step bounds its claim load by `treasuryCashLocal`, read after this
+  // phase's accrual, which writes `treasuryBalance` and leaves the cash ledger
+  // alone, and after bank claims, which can only debit it. The value on the
+  // budget loaded here is therefore an upper bound on the figure it settles
+  // against, and the settle step is capped at it as well, so cash credited
+  // later in the phase cannot reach a claim whose payees are unlocked. A budget
+  // with no queued claim gets no cap; this turn's fresh claims pay current bond
+  // holders, whose keys are always held.
+  const couponCashBounds = new Map<string, number>();
+  if (treasuryCashLedgerEnabled) {
+    for (const b of budgets) {
+      if (!budgetsOwingCoupons.has(String(b._id))) continue;
+      const cash = b.treasuryCashLocal;
+      couponCashBounds.set(
+        String(b._id),
+        typeof cash === "number" && Number.isFinite(cash) ? Math.max(0, cash) : 0
+      );
+    }
+  }
+  // A partially applied per-claim receipt is resumed whatever the claim is
+  // worth now, so its payees keep their locks even outside the cash bound.
+  const receiptClaimIds = [
+    ...(priorPayouts ?? [])
+      .filter((move) => move.status === "partial")
+      .map((move) => claimIdOfMove(move._id)),
+    ...unfinishedBatchClaimIds,
+  ];
+  const settleableClaimKeys = treasuryCashLedgerEnabled
+    ? await settleableSovereignCouponHolderKeys(db, couponCashBounds, receiptClaimIds)
+    : new Map<string, Set<string>>();
   const bondHolderKeysByCountry = new Map<string, Set<string>>();
   for (const bond of sovereignBonds) {
     const country = String(bond.countryId);
@@ -253,7 +289,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
     const keys = [
       `federalBudget:${String(b._id)}`,
       `bondMarketPools:${resolveCountryCurrencyCode(b) ?? "USD"}`,
-      ...(openClaimHolderKeys.get(String(b._id)) ?? []),
+      ...(settleableClaimKeys.get(String(b._id)) ?? []),
       ...(bondHolderKeysByCountry.get(country) ?? []),
       ...(b.sovereignCouponClaims ?? []).flatMap(sovereignCouponHolderKeys),
     ];
@@ -276,6 +312,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
           forexEnabled,
           corporateQuotes: corporationQuotes,
           priorPayouts,
+          lockedCashBoundLocal: couponCashBounds.get(String(b._id)),
         });
       }
       return;
@@ -302,6 +339,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
               forexEnabled,
               corporateQuotes: corporationQuotes,
               priorPayouts,
+              lockedCashBoundLocal: couponCashBounds.get(String(b._id)),
             });
           }
           return;
@@ -493,6 +531,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
               forexEnabled,
               corporateQuotes: corporationQuotes,
               priorPayouts,
+              lockedCashBoundLocal: couponCashBounds.get(String(b._id)),
             }
           );
         }

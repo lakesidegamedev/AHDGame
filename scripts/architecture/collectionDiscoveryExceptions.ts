@@ -189,7 +189,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/banking/fundedSovereignCoupons.ts",
     owner: "loadCouponTargetReadiness",
     argument: "collection",
-    scopeHash: "48a2dd8cba7416a97190e9eef4f891661012086d546d79f4f7ca6883992befdc",
+    scopeHash: "f06c601e0066c7da7ea9ef0dd9a56f357ab9cb9bd062da4bf4aa154ffb10bcfa",
     count: 1,
     reason: "The persisted transaction or recovery record carries its destination collection.",
   },
