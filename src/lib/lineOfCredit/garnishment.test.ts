@@ -197,4 +197,39 @@ describe("LOC accepted income event", () => {
       currencyBalances: { personal: { USD: 50 } },
     });
   });
+
+  it("reads every accepted income record in one batched lookup", async () => {
+    const db = world();
+    const second = new ObjectId();
+    db.seed("characters", [
+      {
+        _id: second,
+        name: "Second borrower",
+        countryId: "US",
+        lineOfCredit: { balances: { USD: 10 }, arrears: {}, drawFrozen: true },
+        currencyBalances: { personal: { USD: 0 } },
+      },
+    ]);
+    await bind(db);
+    const find = vi.spyOn(db.collection("bankMoneyMoves"), "find");
+    const payments = new Map([
+      [owner.toHexString(), new Map<CurrencyCode, number>([["USD", 150]])],
+      [second.toHexString(), new Map<CurrencyCode, number>([["USD", 20]])],
+    ]);
+
+    const result = await garnishLocFromIncome(db as unknown as Db, payments, 12, "bond_coupon");
+
+    expect(result.borrowersGarnished).toBe(2);
+    const preloads = find.mock.calls.filter(([filter]) => {
+      const ids = (filter as { _id?: { $in?: string[] } })._id?.$in;
+      return Array.isArray(ids);
+    });
+    expect(preloads).toHaveLength(1);
+    expect((preloads[0]![0] as { _id: { $in: string[] } })._id.$in).toEqual(
+      expect.arrayContaining([
+        `loc:garnish:bond_coupon:12:${owner.toHexString()}`,
+        `loc:garnish:bond_coupon:12:${second.toHexString()}`,
+      ])
+    );
+  });
 });

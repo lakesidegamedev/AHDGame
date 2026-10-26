@@ -80,6 +80,7 @@ import { migration as easternDepositsCnSoeIron } from "./entries/2026-08-25-east
 import { migration as backfillRedistrictingAuthorityTypes } from "./entries/2026-08-26-backfill-redistricting-authority-types";
 import { migration as backfillMechanicalLawTypes } from "./entries/2026-10-21-backfill-mechanical-law-types";
 import { migration as bankMoneyMoveUnprojectedIndex } from "./entries/2026-10-23-bank-money-move-unprojected-index";
+import { migration as turnGrowthIndexes } from "./entries/2026-10-26-turn-growth-indexes";
 import { migration as dropLogTextIndexes } from "./entries/2026-10-23-drop-log-text-indexes";
 import { migration as repairOutOfRangePolicyLevels } from "./entries/2026-08-26-repair-out-of-range-policy-levels";
 import { migration as dropOffRosterCommandCommanders } from "./entries/2026-08-26-drop-off-roster-command-commanders";
@@ -389,6 +390,7 @@ export const MIGRATIONS: Migration[] = [
   incomeTaxTiers,
   backfillMechanicalLawTypes,
   bankMoneyMoveUnprojectedIndex,
+  turnGrowthIndexes,
   dropLogTextIndexes,
 ];
 
