@@ -6,15 +6,6 @@ import type { DemographicCategory } from "@/lib/db/types";
  *   defaultSocialLean:   -5 (secular/liberal) … +5 (traditional)
  * demographicProfileId "dd_archetypes"; category _id "dd_voterGroups".
  */
-export const DD_VOTER_GROUP_BASELINES: Record<string, number> = {
-  party_nomenklatura: 96,
-  industrial_worker: 95,
-  collective_farmer: 94,
-  intelligentsia: 95,
-  christian_milieu: 92,
-  youth: 90,
-};
-
 export const ddDemographicCategories: DemographicCategory[] = [
   {
     _id: "dd_voterGroups",

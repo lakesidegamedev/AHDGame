@@ -1,9 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { deRegionDemographics } from "./deRegionDemographics";
 import { deRegions } from "./deRegions";
-import { DE_VOTER_GROUP_BASELINES } from "./deDemographicCategories";
+import { deDemographicCategories } from "./deDemographicCategories";
 
-const EXPECTED_ARCHETYPE_KEYS = new Set(Object.keys(DE_VOTER_GROUP_BASELINES));
+const EXPECTED_ARCHETYPE_KEYS = new Set(
+  deDemographicCategories.flatMap((category) => category.groups.map((group) => group.id))
+);
 
 describe("deRegionDemographics", () => {
   it("has one document per Bundesland", () => {
