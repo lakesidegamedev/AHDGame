@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { useRegisteredCountries } from "@/contexts/RegisteredCountriesContext";
 import { PlayerSelector } from "@/components/PlayerSelector";
 import { apiErrorText } from "@/lib/errors/catalog";
@@ -78,7 +79,7 @@ export function CharacterStateManager({ context = "admin" }: CharacterStateManag
   // `countryGameStates` activation pathway) flows through without edits here.
   // The backend route still validates enablement (`isCountryEnabledForPlayers`).
   const COUNTRIES = useMemo<{ id: CountryId; label: string }[]>(
-    () => registered.map((id) => ({ id, label: COUNTRY_CONFIGS[id].name })),
+    () => registered.map((id) => ({ id, label: COUNTRY_CLIENT_CONFIGS[id].name })),
     [registered]
   );
   const apiBase = context === "moderator" ? "/api/moderator" : "/api/admin";

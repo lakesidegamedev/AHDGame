@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 
 /**
  * Parse the `/api/game/countries` payload into a list of uppercase {@link CountryId}.
@@ -26,7 +27,7 @@ export function parseEnabledCountryIds(data: unknown): CountryId[] {
           : undefined;
     if (!raw) continue;
     const upper = raw.toUpperCase() as CountryId;
-    if (COUNTRY_CONFIGS[upper]) ids.push(upper);
+    if (COUNTRY_CLIENT_CONFIGS[upper]) ids.push(upper);
   }
   return ids;
 }

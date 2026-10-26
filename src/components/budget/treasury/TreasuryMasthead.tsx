@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { TreasuryIdentity } from "@/lib/constants/treasuryIdentity";
 import { NationalSeal } from "@/components/national/NationalSeal";
 import { hexToRgba } from "@/components/national/identityColor";

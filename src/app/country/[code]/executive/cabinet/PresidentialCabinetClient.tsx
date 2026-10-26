@@ -4,7 +4,8 @@ import Link from "next/link";
 import { HeroImage } from "@/components/HeroImage";
 import { Button, Skeleton } from "@/components/ui";
 import { CABINET_HERO } from "@/app/whitehouse/cabinet/CabinetConstants";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { legislatureUrl } from "@/lib/urls";
 import { useState } from "react";
 import { CabinetAdminTab } from "./CabinetAdminTab";
@@ -24,7 +25,7 @@ export default function PresidentialCabinetClient({ countryId }: { countryId: Co
   // US keeps its Congress deep-link; other presidential systems point at their
   // own national legislature (where the confirmation vote is surfaced).
   const senateLink =
-    countryId === COUNTRY_CONFIGS.US.id
+    countryId === COUNTRY_CLIENT_CONFIGS.US.id
       ? "/congress?chamber=senate&tab=bills"
       : legislatureUrl(countryId);
   const cabinet = usePresidentialCabinet(countryId);
@@ -64,7 +65,9 @@ export default function PresidentialCabinetClient({ countryId }: { countryId: Co
             href={`/country/${code}/executive`}
             className="text-muted transition-colors hover:text-foreground"
           >
-            {countryId === COUNTRY_CONFIGS.US.id ? "Back to White House" : "Back to executive"}
+            {countryId === COUNTRY_CLIENT_CONFIGS.US.id
+              ? "Back to White House"
+              : "Back to executive"}
           </Link>
           <span className="text-muted">-</span>
           <Link href={senateLink} className="text-muted transition-colors hover:text-foreground">

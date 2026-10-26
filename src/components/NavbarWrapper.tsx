@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import Image from "next/image";
 import { CDN_LOGO_URL } from "@/lib/images/staticCdnAssets";
 import { usePathname, useRouter } from "next/navigation";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { useToast } from "@/contexts/ToastContext";
 import { useCharacterStats } from "@/contexts/CharacterStatsContext";
 import { ACTION_CAP, ACTION_HOARDING_THRESHOLD } from "@/lib/actions/recommendationsConstants";
@@ -22,7 +22,10 @@ const ExperimentalNavbar = dynamic(() =>
 );
 import { Wordmark } from "./Wordmark";
 import { NavbarTopFlair } from "./NavbarTopFlair";
-import { FeedbackModal } from "./FeedbackModal";
+const FeedbackModal = dynamic(
+  () => import("./FeedbackModal").then((module) => module.FeedbackModal),
+  { ssr: false }
+);
 import { isChromeHiddenPath, isLightweightLayoutPath } from "@/lib/constants/layoutPaths";
 import { getPostHogClient } from "@/lib/analytics/posthogClient";
 import { navigationVariantForAssignment } from "@/lib/analytics/navigationVariant";
@@ -694,12 +697,14 @@ export function NavbarWrapper({
               initialPageCountry={initialPageCountry}
             />
           )}
-          <FeedbackModal
-            isOpen={state.feedbackOpen}
-            onClose={handleCloseFeedback}
-            initialScreenshotDataUrl={state.screenshotDataUrl}
-            autoCaptureFailed={state.screenshotCaptureFailed}
-          />
+          {state.feedbackOpen && (
+            <FeedbackModal
+              isOpen
+              onClose={handleCloseFeedback}
+              initialScreenshotDataUrl={state.screenshotDataUrl}
+              autoCaptureFailed={state.screenshotCaptureFailed}
+            />
+          )}
         </>
       )}
     </>

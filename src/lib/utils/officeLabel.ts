@@ -1,4 +1,5 @@
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import type { OfficeType } from "@/lib/db/types";
 
 /**
@@ -14,12 +15,12 @@ import type { OfficeType } from "@/lib/db/types";
  */
 export function officeLabelFor(countryId: CountryId, currentOffice: OfficeType | null): string {
   if (!currentOffice) return "Private Citizen";
-  const config = COUNTRY_CONFIGS[countryId];
+  const config = COUNTRY_CLIENT_CONFIGS[countryId];
   const match = config?.officeTypes.find((o) => o.key === currentOffice.type);
   if (!match) return "Office Holder";
   // US House is the only office that surfaces seat-count in the label.
   if (
-    countryId === COUNTRY_CONFIGS.US.id &&
+    countryId === COUNTRY_CLIENT_CONFIGS.US.id &&
     currentOffice.type === "house" &&
     "seatsHeld" in currentOffice &&
     typeof currentOffice.seatsHeld === "number"

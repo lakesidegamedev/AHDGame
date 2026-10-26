@@ -2,7 +2,8 @@
 
 import { describeMediaPull } from "@/lib/mediaEditorial/opinionPullCopy";
 import { useState, type ReactNode } from "react";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { REGION_CENSUS_LABELS } from "@/lib/constants/regionCensusLabels";
 import { LocalTime } from "@/components/time/LocalTime";
 import { LivePopulationPanel } from "@/components/demographics/LivePopulationPanel";
@@ -606,7 +607,7 @@ export function DemographicsAndTurnoutTab({
   // caller has to pass a per-country boolean.
   const upperCountryId = countryId?.toUpperCase() as CountryId | undefined;
   const profileId = upperCountryId
-    ? COUNTRY_CONFIGS[upperCountryId]?.demographicProfileId
+    ? COUNTRY_CLIENT_CONFIGS[upperCountryId]?.demographicProfileId
     : undefined;
   const isArchetypeBased = /^[a-z]{2}_archetypes$/.test(profileId ?? "");
 

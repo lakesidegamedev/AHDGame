@@ -7,7 +7,8 @@ import { US_STATE_ID_NAME_PAIRS } from "@/lib/constants/usStateNames";
 import { JP_REGIONS } from "@/lib/constants/japan";
 import { UK_REGIONS } from "@/lib/constants/uk";
 import { CN_MACRO_REGIONS } from "@/lib/constants/cn";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 
 /** Ireland NUTS-III planning regions — id → display name. */
 const IE_REGIONS: [string, string][] = [
@@ -23,19 +24,19 @@ const IE_REGIONS: [string, string][] = [
 
 /** [id, displayName] tuples for the national-party → regional org transfer dropdown. */
 export function getNationalPartyTransferTargets(countryId: CountryId): [string, string][] {
-  if (countryId === COUNTRY_CONFIGS.US.id) {
+  if (countryId === COUNTRY_CLIENT_CONFIGS.US.id) {
     return US_STATE_ID_NAME_PAIRS;
   }
-  if (countryId === COUNTRY_CONFIGS.UK.id) {
+  if (countryId === COUNTRY_CLIENT_CONFIGS.UK.id) {
     return UK_REGIONS.map((r) => [r.id, r.name]);
   }
-  if (countryId === COUNTRY_CONFIGS.JP.id) {
+  if (countryId === COUNTRY_CLIENT_CONFIGS.JP.id) {
     return JP_REGIONS.map((r) => [r.id, r.name]);
   }
-  if (countryId === COUNTRY_CONFIGS.IE.id) {
+  if (countryId === COUNTRY_CLIENT_CONFIGS.IE.id) {
     return IE_REGIONS;
   }
-  if (countryId === COUNTRY_CONFIGS.CN.id) {
+  if (countryId === COUNTRY_CLIENT_CONFIGS.CN.id) {
     return CN_MACRO_REGIONS;
   }
   return [];

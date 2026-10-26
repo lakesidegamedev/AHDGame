@@ -1,12 +1,20 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { useAuthMe } from "@/contexts/AuthDataContext";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { Button } from "@/components/ui";
-import { StatPointAllocator, defaultStatBuild, pointsRemaining } from "./StatPointAllocator";
+import { defaultStatBuild, pointsRemaining } from "./statBuild";
 import type { CharacterStats } from "@/lib/stats/statsConstants";
 import { apiErrorText } from "@/lib/errors/catalog";
+
+// The allocator UI only renders for a character that predates the stat system.
+// Most page loads never see it, so it stays out of the first-load chunk.
+const StatPointAllocator = dynamic(
+  () => import("./StatPointAllocator").then((module) => module.StatPointAllocator),
+  { ssr: false }
+);
 
 /**
  * Global blocking gate for grandfathered characters. When the active character

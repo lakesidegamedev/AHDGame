@@ -32,14 +32,15 @@
  * twice.
  */
 
-import type { Db } from "mongodb";
+import type { Db, ObjectId } from "mongodb";
 import { lifecycleStage, stageAllows } from "@/lib/banking/rules/lifecycle";
-import type { Corporation } from "@/lib/db/types";
+import type { Character, Corporation } from "@/lib/db/types";
 import type { BankCharterHistoryEntry, BankLoan } from "@/lib/db/types/bank";
 import type { CurrencyCode } from "@/lib/constants/currencies";
+import { getCountryIdForCurrency } from "@/lib/constants/currencies";
+import { getBankId } from "@/lib/centralBank/helpers";
 import type { MoneyTarget } from "@/lib/banking/moneyMove";
 import { ensureFund } from "@/lib/banking/insurance";
-import { loanCharterEpochFilter } from "@/lib/banking/loanEpoch";
 import { emitTxBulk, loadTxThresholds, type TxInput } from "@/lib/financialTxLog/emit";
 
 export type DeadBankLoanSummary = {
@@ -76,7 +77,30 @@ type DeadBank = {
 export async function findDeadBanksWithLoans(db: Db): Promise<DeadBank[]> {
   const history = await db
     .collection<BankCharterHistoryEntry>("bankCharterHistory")
-    .find({})
+    .find(
+      {},
+      {
+        projection: {
+          corporationId: 1,
+          // Every field `lifecycleStage` reads, plus the two stamps the
+          // recovery routing below needs: the archived charter decides whether
+          // the estate is open, exactly as the full document did.
+          "charter.type": 1,
+          "charter.status": 1,
+          "charter.warningBand": 1,
+          "charter.capitalStanding": 1,
+          "charter.undercapitalizedSinceTurn": 1,
+          "charter.depositorsResolvedTurn": 1,
+          "charter.resolutionClaimedTurn": 1,
+          "charter.failedTurn": 1,
+          "charter.revokedTurn": 1,
+          "charter.currency": 1,
+          "charter.charteredTurn": 1,
+          "charter.insuranceResolutionTurn": 1,
+          "charter.insuranceMeasuredClaimTurn": 1,
+        },
+      }
+    )
     .toArray();
   const historicalCorporationIds = [
     ...new Map(
@@ -203,6 +227,162 @@ export function recoveryTargetFor(
 }
 
 /**
+ * Everything the servicing pass can know about a loan before it services it.
+ * The per-loan path used to read the borrower (and the currency's household
+ * pool) once per loan; both are turn-level facts read once per cohort now.
+ */
+export type DeadBankLoanPrefetch = {
+  /** Borrower cash and name, kept in sync between that borrower's loans. */
+  borrower?: { available: number; name: string };
+  /** Central-bank household pool for an `npcBulk` tranche, kept in sync likewise. */
+  householdPool?: number;
+};
+
+/** One loan's servicing result, with the balance movement the prefetch must follow. */
+export type DeadBankLoanServiceResult = {
+  collected: number;
+  /** Cash that actually left the borrower this pass. */
+  paidLocal?: number;
+  /** The settlement was already applied; the prefetched balance is stale. */
+  replayed?: boolean;
+  /** Some legs landed; the prefetched balance may be stale. */
+  partial?: boolean;
+};
+
+type DeadBankLoanPrefetchState = {
+  borrowerState: Map<string, { available: number; name: string }>;
+  householdPoolByCurrency: Map<CurrencyCode, number>;
+};
+
+function borrowerKeyOf(loan: BankLoan): string {
+  return `${loan.borrowerType}:${String(loan.borrowerId)}:${loan.currency}`;
+}
+
+/** True when the loan belongs to this charter epoch, matching `loanCharterEpochFilter`. */
+function loanInEpoch(loan: BankLoan, charteredTurn: number, nextCharteredTurn?: number): boolean {
+  if (loan.charteredTurn !== undefined) return loan.charteredTurn === charteredTurn;
+  const originated = loan.originatedTurn;
+  if (typeof originated !== "number") return false;
+  if (originated < charteredTurn) return false;
+  return nextCharteredTurn === undefined || originated < nextCharteredTurn;
+}
+
+/**
+ * One read per collection for the whole dead-bank cohort. The borrower read
+ * answers the same question the per-loan one did (the balance in the loan's
+ * currency and the name) for every borrower at once, from the personal balance
+ * map rather than a single projected currency; the caller keeps the running
+ * balance between a borrower's loans, exactly as the serial reads saw it after
+ * each settled debit. A document missing from the preload falls back to the
+ * per-loan read, so a mocked or partial collection cannot invent a state.
+ */
+async function loadDeadBankLoanPrefetch(
+  db: Db,
+  loans: readonly BankLoan[]
+): Promise<DeadBankLoanPrefetchState> {
+  const characterIds = new Map<string, ObjectId>();
+  const corporationIds = new Map<string, ObjectId>();
+  const npcCurrencies = new Set<CurrencyCode>();
+  for (const loan of loans) {
+    if (loan.borrowerType === "npcBulk") {
+      npcCurrencies.add(loan.currency);
+      continue;
+    }
+    if (!loan.borrowerId) continue;
+    if (loan.borrowerType === "character")
+      characterIds.set(String(loan.borrowerId), loan.borrowerId);
+    else corporationIds.set(String(loan.borrowerId), loan.borrowerId);
+  }
+
+  const [characters, corporations, centralBanks] = await Promise.all([
+    characterIds.size > 0
+      ? db
+          .collection<Character>("characters")
+          .find(
+            { _id: { $in: [...characterIds.values()] } },
+            { projection: { name: 1, "currencyBalances.personal": 1 } }
+          )
+          .toArray()
+      : Promise.resolve([]),
+    corporationIds.size > 0
+      ? db
+          .collection<Corporation>("corporations")
+          .find(
+            { _id: { $in: [...corporationIds.values()] } },
+            { projection: { name: 1, liquidCapital: 1 } }
+          )
+          .toArray()
+      : Promise.resolve([]),
+    npcCurrencies.size > 0
+      ? db
+          .collection<{ _id: string; externalBroadMoney?: number }>("centralBanks")
+          .find(
+            {
+              _id: {
+                $in: [
+                  ...new Set(
+                    [...npcCurrencies].map((currency) =>
+                      getBankId(getCountryIdForCurrency(currency))
+                    )
+                  ),
+                ],
+              },
+            },
+            { projection: { externalBroadMoney: 1 } }
+          )
+          .toArray()
+      : Promise.resolve([]),
+  ]);
+
+  const characterById = new Map(characters.map((row) => [String(row._id), row]));
+  const corporationById = new Map(corporations.map((row) => [String(row._id), row]));
+  const borrowerState = new Map<string, { available: number; name: string }>();
+  for (const loan of loans) {
+    if (loan.borrowerType === "npcBulk" || !loan.borrowerId) continue;
+    const key = borrowerKeyOf(loan);
+    if (borrowerState.has(key)) continue;
+    if (loan.borrowerType === "character") {
+      const character = characterById.get(String(loan.borrowerId));
+      if (!character) continue;
+      borrowerState.set(key, {
+        available: Math.max(0, character.currencyBalances?.personal?.[loan.currency] ?? 0),
+        name: character.name ?? "Borrower",
+      });
+    } else {
+      const corporation = corporationById.get(String(loan.borrowerId));
+      if (!corporation) continue;
+      borrowerState.set(key, {
+        available: Math.max(0, corporation.liquidCapital ?? 0),
+        name: corporation.name ?? "Borrower",
+      });
+    }
+  }
+
+  const householdPoolByCurrency = new Map<CurrencyCode, number>();
+  for (const row of centralBanks) {
+    const currency = [...npcCurrencies].find(
+      (code) => getBankId(getCountryIdForCurrency(code)) === row._id
+    );
+    if (currency) householdPoolByCurrency.set(currency, Math.max(0, row.externalBroadMoney ?? 0));
+  }
+
+  return { borrowerState, householdPoolByCurrency };
+}
+
+/** The prefetch a loan is serviced with, or undefined when it has none. */
+function prefetchForLoan(
+  state: DeadBankLoanPrefetchState,
+  loan: BankLoan
+): DeadBankLoanPrefetch | undefined {
+  if (loan.borrowerType === "npcBulk") {
+    const householdPool = state.householdPoolByCurrency.get(loan.currency);
+    return householdPool === undefined ? undefined : { householdPool };
+  }
+  const borrower = state.borrowerState.get(borrowerKeyOf(loan));
+  return borrower ? { borrower } : undefined;
+}
+
+/**
  * Service every loan still owed to a wound-up bank.
  *
  * `serviceLoan` is injected rather than imported so this module does not depend
@@ -217,23 +397,48 @@ export async function processDeadBankLoans(
     bank: DeadBank,
     creditTarget: MoneyTarget,
     trackInsuranceRecovery: boolean,
-    txEntries: TxInput[]
-  ) => Promise<{ collected: number }>
+    txEntries: TxInput[],
+    prefetch?: DeadBankLoanPrefetch
+  ) => Promise<DeadBankLoanServiceResult>
 ): Promise<DeadBankLoanSummary> {
   const summary: DeadBankLoanSummary = { ...ZERO_DEAD_BANK_SUMMARY };
   const deadBanks = await findDeadBanksWithLoans(db);
   if (deadBanks.length === 0) return summary;
 
+  // One loan read for every dead book, then grouped per bank in collection
+  // order, instead of one query per bank. Each bank still services its own
+  // loans serially and in the same order.
+  const allLoans: BankLoan[] = await db
+    .collection<BankLoan>("bankLoans")
+    .find({
+      bankCorporationId: { $in: deadBanks.map((bank) => bank.corporationId) },
+      status: { $in: ["current", "arrears"] },
+      lastProcessedTurn: { $ne: turn },
+    })
+    .toArray();
+  const loansByBankKey = new Map<string, BankLoan[]>();
+  for (const loan of allLoans) {
+    const key = String(loan.bankCorporationId);
+    const group = loansByBankKey.get(key);
+    if (group) group.push(loan);
+    else loansByBankKey.set(key, [loan]);
+  }
+  const prefetchState = await loadDeadBankLoanPrefetch(db, allLoans);
+  // One fund document per currency: several wound-up charters can share one,
+  // and the upsert is idempotent, so the estate read is per currency.
+  const fundsByCurrency = new Map<CurrencyCode, Awaited<ReturnType<typeof ensureFund>>>();
+  // The thresholds document is one row for the whole turn; read it once rather
+  // than once per bank that emitted rows.
+  let txThresholds: Awaited<ReturnType<typeof loadTxThresholds>> | undefined;
+  const thresholds = async () => {
+    txThresholds ??= await loadTxThresholds(db);
+    return txThresholds;
+  };
+
   for (const bank of deadBanks) {
-    const loans = await db
-      .collection<BankLoan>("bankLoans")
-      .find({
-        bankCorporationId: bank.corporationId,
-        status: { $in: ["current", "arrears"] },
-        lastProcessedTurn: { $ne: turn },
-        ...loanCharterEpochFilter(bank.charteredTurn, bank.nextCharteredTurn),
-      })
-      .toArray();
+    const loans = (loansByBankKey.get(String(bank.corporationId)) ?? []).filter((loan) =>
+      loanInEpoch(loan, bank.charteredTurn, bank.nextCharteredTurn)
+    );
     if (loans.length === 0) continue;
 
     const target = recoveryTargetFor(bank);
@@ -242,7 +447,11 @@ export async function processDeadBankLoans(
       // The fund document has to exist before anything is paid into it: a
       // recovery credited to a missing fund is money that silently stops
       // existing, which is the whole class of bug this work is about.
-      const fund = await ensureFund(db, bank.currency);
+      let fund = fundsByCurrency.get(bank.currency);
+      if (!fund) {
+        fund = await ensureFund(db, bank.currency);
+        fundsByCurrency.set(bank.currency, fund);
+      }
       trackInsuranceRecovery =
         typeof bank.measuredClaimTurn === "number" &&
         typeof fund.pricingEvidenceStartTurn === "number" &&
@@ -255,18 +464,36 @@ export async function processDeadBankLoans(
     // and the anchor-rate map.
     const txEntries: TxInput[] = [];
     for (const loan of loans) {
-      const { collected } = await serviceLoan(
+      const prefetch = prefetchForLoan(prefetchState, loan);
+      const result = await serviceLoan(
         loan,
         bank,
         target,
         trackInsuranceRecovery,
-        txEntries
+        txEntries,
+        prefetch
       );
       summary.loansServiced += 1;
-      if (bank.resolved) summary.recoveredToInsurer += collected;
-      else summary.recoveredToEstate += collected;
+      if (bank.resolved) summary.recoveredToInsurer += result.collected;
+      else summary.recoveredToEstate += result.collected;
+      if (prefetch?.borrower) {
+        // A replay or a partial move may have changed the balance behind this
+        // snapshot; drop it so the next loan on the borrower reads the truth.
+        if (result.replayed || result.partial)
+          prefetchState.borrowerState.delete(borrowerKeyOf(loan));
+        else if ((result.paidLocal ?? 0) > 0)
+          prefetch.borrower.available = Math.max(
+            0,
+            prefetch.borrower.available - result.paidLocal!
+          );
+      }
+      if (prefetch?.householdPool !== undefined) {
+        if (result.replayed || result.partial)
+          prefetchState.householdPoolByCurrency.delete(loan.currency);
+        else prefetch.householdPool = Math.max(0, prefetch.householdPool - result.collected);
+      }
     }
-    if (txEntries.length > 0) await emitTxBulk(db, txEntries, await loadTxThresholds(db));
+    if (txEntries.length > 0) await emitTxBulk(db, txEntries, await thresholds());
   }
 
   return summary;

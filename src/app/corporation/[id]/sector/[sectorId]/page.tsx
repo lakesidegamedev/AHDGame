@@ -8,7 +8,7 @@ import Link from "next/link";
 import { Skeleton } from "@/components/ui";
 import BackButton from "@/components/BackButton";
 import { getExchangeForCountry } from "@/lib/constants/exchangeRegistry";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { regionApiSubUrl, regionUrl } from "@/lib/urls";
 import type { StateResources, ExtractionCapacityRow, ResourceOpportunity } from "./types";

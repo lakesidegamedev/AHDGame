@@ -6,10 +6,10 @@ import {
   type ResetMetricBoardResponse,
   type ResetMetricCountry,
 } from "@/components/metrics/ResetMetricBoard";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 
 export function ResetMetricsPage({ country }: { country: ResetMetricCountry }) {
-  const config = COUNTRY_CONFIGS[country];
+  const config = COUNTRY_CLIENT_CONFIGS[country];
   const [board, setBoard] = useState<ResetMetricBoardResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);

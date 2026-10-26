@@ -7,7 +7,8 @@ import { US_STATES } from "@/lib/constants";
 import { UK_REGIONS } from "@/lib/constants/uk";
 import { JP_REGIONS } from "@/lib/constants/japan";
 import { deRegions } from "@/lib/seeds/de/deRegions";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { useRegisteredCountries } from "@/contexts/RegisteredCountriesContext";
 import { NppEconomyPanel } from "@/components/admin/politics/NppEconomyPanel";
 import { partiesApiUrl } from "@/lib/urls";
@@ -406,7 +407,9 @@ export function NPPManagement() {
                     : "border-card-border bg-card text-muted hover:text-foreground"
                 }`}
               >
-                {scope === "all" ? "All" : (COUNTRY_CONFIGS[scope as CountryId]?.name ?? scope)}
+                {scope === "all"
+                  ? "All"
+                  : (COUNTRY_CLIENT_CONFIGS[scope as CountryId]?.name ?? scope)}
               </button>
             ))}
           </div>
@@ -420,7 +423,8 @@ export function NPPManagement() {
                 ? "States"
                 : countryScope === "all"
                   ? "States / Regions"
-                  : (COUNTRY_CONFIGS[countryScope as CountryId]?.regionLabelPlural ?? "Regions")}
+                  : (COUNTRY_CLIENT_CONFIGS[countryScope as CountryId]?.regionLabelPlural ??
+                    "Regions")}
             </label>
             <button
               onClick={() => setShowStateSelector(!showStateSelector)}
@@ -468,7 +472,8 @@ export function NPPManagement() {
                 : countryScope === "all"
                   ? "states/regions"
                   : (
-                      COUNTRY_CONFIGS[countryScope as CountryId]?.regionLabelPlural ?? "regions"
+                      COUNTRY_CLIENT_CONFIGS[countryScope as CountryId]?.regionLabelPlural ??
+                      "regions"
                     ).toLowerCase()}{" "}
               selected
             </p>

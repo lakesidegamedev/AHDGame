@@ -3,7 +3,7 @@
 import FederationFinances from "./components/FederationFinances";
 import type { LegacyServiceSnapshot } from "@/lib/world/succession/legacyServiceSnapshot";
 import Link from "next/link";
-import { type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import { resolveCountryAvailability } from "@/lib/countryAvailability";
 import { WORLD_ROADMAP_COUNTRIES } from "@/lib/worldCountryRegistry";
 import {

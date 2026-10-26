@@ -58,7 +58,8 @@ import {
   BillFiscalImpactStrip,
   LawProvisionComparison,
 } from "@/components/bills/LawProvisionComparison";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { getNationalStateId } from "@/lib/policy/nationalStateId";
 import { TaxRateSliderControl } from "@/components/legislation/TaxRateSliderControl";
@@ -240,7 +241,7 @@ function LegacyProposeLegislationModal({
     setElectoralLaw((current) => ({ ...current, [key]: value }));
   }
   const canProposeJapanShugiinReform =
-    countryId === COUNTRY_CONFIGS.JP.id &&
+    countryId === COUNTRY_CLIENT_CONFIGS.JP.id &&
     worldFlags.preset === "1991-default" &&
     (worldFlags.currentYear ?? 0) >= 1994;
   // Central bank independence — opt-in, economy category. grant hands

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { PartyChip } from "@/app/congress/components/CongressShared";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { InstitutionIdentity } from "@/lib/constants/institutionIdentity";
 import { hexToRgba } from "@/components/national/identityColor";
 

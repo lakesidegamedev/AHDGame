@@ -3,7 +3,7 @@
 import { useId, useState } from "react";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { ActiveModifier } from "@/lib/utils/approvalModifiers";
 import { netModifierEffect, prioritizeModifiers } from "@/lib/utils/approvalModifiers";
 import { regionApprovalUrl } from "@/lib/urls";

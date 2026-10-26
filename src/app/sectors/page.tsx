@@ -3,12 +3,12 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
-import type { CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { Skeleton } from "@/components/ui";
 import { CorporationLogo } from "@/components/corporation/CorporationLogo";
 import { useAuthMe } from "@/contexts/AuthDataContext";
 import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { regionUrl } from "@/lib/urls";
 
 type SectorView = "unowned" | "owned" | "forSale";
@@ -98,7 +98,7 @@ export default function SectorsPage() {
       setTypeFilter(corpType);
     }
     const country = corpCountry || charCountry;
-    if (country && country in COUNTRY_CONFIGS) {
+    if (country && country in COUNTRY_CLIENT_CONFIGS) {
       setCountryFilter(country);
     }
     setDefaultsApplied(true);

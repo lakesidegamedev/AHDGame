@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button, Skeleton } from "@/components/ui";
 import { COMMODITY_TYPES, COMMODITY_LABELS, type CommodityType } from "@/lib/constants/commodities";
-import { type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import { useEnabledCountryIds } from "@/lib/hooks/useEnabledCountryIds";
 import { formatEmbargoProvisionLabel } from "@/lib/legislature/embargoProvisionLabel";
 import {

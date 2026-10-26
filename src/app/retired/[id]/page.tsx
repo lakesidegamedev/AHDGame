@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { getOfficeLabel } from "@/lib/utils/politics";
 import { formatGameMonth, type GameDateAnchor } from "@/lib/utils/gameDate";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";

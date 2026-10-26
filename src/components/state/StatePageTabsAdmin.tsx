@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import type { State } from "@/lib/db/types";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import {
-  getRegionalExecutiveOfficeKey,
   getOfficeTypeConfig,
-  type CountryId,
-} from "@/lib/constants/countries";
+  getRegionalExecutiveOfficeKey,
+} from "@/lib/constants/countryClientConfig";
 import type { SerializedPlayer, NPPDisplaySimple } from "./StatePageTabsTypes";
 import { apiErrorText } from "@/lib/errors/catalog";
 

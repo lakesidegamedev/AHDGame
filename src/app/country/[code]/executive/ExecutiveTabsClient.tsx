@@ -10,11 +10,11 @@ import { WhiteHouseEndorsementsTab } from "@/app/whitehouse/WhiteHouseEndorsemen
 import { RegimeHealthTab } from "./RegimeHealthTab";
 import { AdminRegimePanel } from "@/app/admin/country/[code]/regime/AdminRegimePanel";
 import { AdminAppointPmButton } from "./components/AdminAppointPmModal";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import {
-  COUNTRY_CONFIGS,
+  COUNTRY_CLIENT_CONFIGS,
   getExecutiveOrderNamePlural,
-  type CountryId,
-} from "@/lib/constants/countries";
+} from "@/lib/constants/countryClientConfig";
 import { ExecutiveActivitySection } from "./components/ExecutiveActivitySection";
 import { ForeignAffairsTab } from "./components/ForeignAffairsTab";
 import { useConflictsEnabled } from "@/contexts/AuthDataContext";
@@ -77,7 +77,7 @@ export function ExecutiveTabsClient({
 }: Props) {
   const t = useTranslations("nav.devolution");
   const canSeePrivateTabs = viewerIsLeader || viewerIsAdmin;
-  const canSeeDevolution = countryId === COUNTRY_CONFIGS.UK.id && canSeePrivateTabs;
+  const canSeeDevolution = countryId === COUNTRY_CLIENT_CONFIGS.UK.id && canSeePrivateTabs;
   // Seeded from `?tab=`, so a link can open a specific tab. Follows the pattern
   // `CentralBankClient` and `CongressClient` already use. Initial state only: once
   // the page is open, clicking a tab keeps working exactly as before without
@@ -161,8 +161,8 @@ export function ExecutiveTabsClient({
             countryId={countryId}
             cabinetSource="parliamentary"
             ledgerFooter={{
-              href: COUNTRY_CONFIGS[countryId].legislature.path,
-              label: `${COUNTRY_CONFIGS[countryId].legislature.name} page`,
+              href: COUNTRY_CLIENT_CONFIGS[countryId].legislature.path,
+              label: `${COUNTRY_CLIENT_CONFIGS[countryId].legislature.name} page`,
             }}
           />
         </div>

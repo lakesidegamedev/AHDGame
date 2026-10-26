@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { Character } from "@/lib/db/types";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { PartyTenure } from "@/lib/parties/historyQuery";
 import { getOfficeCountry, getOfficeLabel } from "@/lib/utils/politics";
 import { formatGameMonth, type GameDateAnchor } from "@/lib/utils/gameDate";

@@ -22,7 +22,8 @@ import { ForeignAffairsTab } from "@/app/country/[code]/executive/components/For
 import { useConflictsEnabled } from "@/contexts/AuthDataContext";
 import { getExecutiveSurface } from "@/lib/constants/executiveSurface";
 import { getExecutiveSeal } from "@/lib/constants/executiveSeals";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { AdministrationTable } from "@/app/country/[code]/executive/cabinet/AdministrationTable";
 import { usePresidentialCabinet } from "@/app/country/[code]/executive/cabinet/usePresidentialCabinet";
 import { ExecutiveActivitySection } from "@/app/country/[code]/executive/components/ExecutiveActivitySection";
@@ -409,7 +410,7 @@ export default function WhiteHouseClient({ countryId = "US" }: { countryId?: Cou
     data.isAdmin && !data.presidentOfficialId && !data.vicePresidentOfficialId;
 
   const surface = getExecutiveSurface(countryId);
-  const config = COUNTRY_CONFIGS[countryId];
+  const config = COUNTRY_CLIENT_CONFIGS[countryId];
   const legislaturePath = config.legislature.path;
   const upperChamberShort = config.legislature.upperChamber?.shortName ?? "Senate";
   const administrationChip = data.president
@@ -637,7 +638,10 @@ export default function WhiteHouseClient({ countryId = "US" }: { countryId?: Cou
                   : undefined
               }
               ledgerFooter={{
-                href: countryId === COUNTRY_CONFIGS.US.id ? "/congress?tab=bills" : legislaturePath,
+                href:
+                  countryId === COUNTRY_CLIENT_CONFIGS.US.id
+                    ? "/congress?tab=bills"
+                    : legislaturePath,
                 label: `${config.legislature.name} page`,
               }}
             >
@@ -649,7 +653,7 @@ export default function WhiteHouseClient({ countryId = "US" }: { countryId?: Cou
                     key: "president",
                     office: data.president?.isActing ? "Acting President" : "President",
                     note:
-                      countryId === COUNTRY_CONFIGS.US.id
+                      countryId === COUNTRY_CLIENT_CONFIGS.US.id
                         ? "Elected by the Electoral College"
                         : "Directly elected head of state",
                     holder: data.president
@@ -711,7 +715,7 @@ export default function WhiteHouseClient({ countryId = "US" }: { countryId?: Cou
                         )}
                         {/* The 25th-Amendment VP nomination is a US mechanic; other
                             presidential countries fill the VP on the elected ticket. */}
-                        {countryId === COUNTRY_CONFIGS.US.id &&
+                        {countryId === COUNTRY_CLIENT_CONFIGS.US.id &&
                           data.isPresident &&
                           !data.vicePresident &&
                           !data.vpNomination && (
@@ -743,7 +747,7 @@ export default function WhiteHouseClient({ countryId = "US" }: { countryId?: Cou
                   <>
                     {/* SCOTUS is a US-only mechanic (#3581) — other presidential
                         countries have no judiciary subsystem modeled yet. */}
-                    {countryId === COUNTRY_CONFIGS.US.id && (
+                    {countryId === COUNTRY_CLIENT_CONFIGS.US.id && (
                       <Link
                         href={scotusUrl(countryId)}
                         className="rounded-md border border-card-border px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:text-foreground"
@@ -837,7 +841,7 @@ export default function WhiteHouseClient({ countryId = "US" }: { countryId?: Cou
                             <td className="max-w-[420px] px-4 py-2.5">
                               <Link
                                 href={
-                                  countryId === COUNTRY_CONFIGS.US.id
+                                  countryId === COUNTRY_CLIENT_CONFIGS.US.id
                                     ? `/congress/bills/${b.id}`
                                     : `${legislaturePath}/bills/${b.id}`
                                 }

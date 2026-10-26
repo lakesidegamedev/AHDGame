@@ -17,7 +17,8 @@ interface StateBudgetSectionProps {
   regionCode: string;
 }
 
-import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import { getCurrencyPrefix } from "@/lib/utils/budgetCalculations";
 
 const TAX_BASE_LABELS: Record<string, string> = {
@@ -124,7 +125,7 @@ export function StateBudgetSection({ stateId, countryId, regionCode }: StateBudg
                     <div className="flex items-center gap-2">
                       <span className="capitalize">
                         {key === "federalGrants"
-                          ? getCountryConfig(countryId as CountryId).centralGovernmentLabel
+                          ? getCountryClientConfig(countryId as CountryId).centralGovernmentLabel
                           : key.replace(/([A-Z])/g, " $1")}
                       </span>
                       {taxRate !== undefined && (
@@ -172,7 +173,7 @@ export function StateBudgetSection({ stateId, countryId, regionCode }: StateBudg
       {/* Grants Breakdown */}
       <div className="rounded-xl border border-card-border bg-card p-4">
         <h3 className="font-medium mb-3">
-          {getCountryConfig(countryId as CountryId).centralGovernmentLabel} Received
+          {getCountryClientConfig(countryId as CountryId).centralGovernmentLabel} Received
         </h3>
         <div className="space-y-2 text-sm">
           {grantBreakdown.map((grant) => (

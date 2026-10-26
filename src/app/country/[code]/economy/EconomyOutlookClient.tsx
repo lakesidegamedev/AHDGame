@@ -7,7 +7,8 @@ import { useParams } from "next/navigation";
 import BackButton from "@/components/BackButton";
 import { Skeleton } from "@/components/ui";
 import { useCurrency } from "@/contexts/CurrencyContext";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { getEconomyIdentity } from "@/lib/constants/economyIdentity";
 import { deriveEconomicOutlook } from "@/lib/economy/outlook";
@@ -30,7 +31,9 @@ export function EconomyOutlookClient() {
   const { code } = useParams<{ code: string }>();
   const countryParam = (code ?? "us").toUpperCase();
   const countryId: CountryId =
-    countryParam in COUNTRY_CONFIGS ? (countryParam as CountryId) : COUNTRY_CONFIGS.US.id;
+    countryParam in COUNTRY_CLIENT_CONFIGS
+      ? (countryParam as CountryId)
+      : COUNTRY_CLIENT_CONFIGS.US.id;
 
   const [fetchState, setFetchState] = useState<{
     status: "loading" | "error" | "ready";
@@ -67,7 +70,7 @@ export function EconomyOutlookClient() {
   const prefix = getCurrencyPrefix(countryId);
 
   const identity = getEconomyIdentity(countryId);
-  const config = COUNTRY_CONFIGS[countryId];
+  const config = COUNTRY_CLIENT_CONFIGS[countryId];
   const outlook = data
     ? deriveEconomicOutlook({
         gdpGrowth: data.pulse.gdpGrowth.value,

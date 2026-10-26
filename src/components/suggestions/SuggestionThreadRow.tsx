@@ -8,7 +8,7 @@ import { PlayerBadge } from "./PlayerBadge";
 import { StatusBadge } from "./StatusBadge";
 import { SuggestionVotes } from "./SuggestionVotes";
 import { RelativeTime } from "@/components/time/LocalTime";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 
 export interface SuggestionThreadItem {
   id: string;

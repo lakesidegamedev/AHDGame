@@ -1,5 +1,5 @@
-import { getEraAwareCurrencySymbol, type CurrencyCode } from "@/lib/constants/currencies";
-import { formatSharePrice } from "@/lib/utils/formatters";
+import { getEraAwareCurrencySymbol, type CurrencyCode } from "@/lib/constants/currencyCodes";
+import { formatSharePrice } from "@/lib/utils/formattersCore";
 
 /**
  * One authoritative share quote: the price a corporation's shares trade at, in

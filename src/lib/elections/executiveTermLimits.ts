@@ -1,4 +1,5 @@
-import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import type { Character } from "@/lib/db/types";
 
 type CharacterExecutiveTermSnapshot = Pick<Character, "careerHistory" | "executiveTermsServed">;
@@ -7,7 +8,7 @@ function getHistoricalExecutiveTermsServed(
   character: CharacterExecutiveTermSnapshot,
   countryId: CountryId
 ): number {
-  const officeKey = getCountryConfig(countryId).executiveTermLimit?.officeKey;
+  const officeKey = getCountryClientConfig(countryId).executiveTermLimit?.officeKey;
   if (!officeKey) return 0;
   return (
     character.careerHistory?.filter(
@@ -32,7 +33,7 @@ function getFoundingExecutiveTerms(
   character: CharacterExecutiveTermSnapshot,
   countryId: CountryId
 ): number {
-  const officeKey = getCountryConfig(countryId).executiveTermLimit?.officeKey;
+  const officeKey = getCountryClientConfig(countryId).executiveTermLimit?.officeKey;
   if (!officeKey) return 0;
   return (
     character.careerHistory?.filter(
@@ -56,7 +57,7 @@ export function getExecutiveTermsCountedTowardLimit(
 }
 
 export function getExecutiveTermLimit(countryId: CountryId): number | null {
-  return getCountryConfig(countryId).executiveTermLimit?.maxTermsPerCharacter ?? null;
+  return getCountryClientConfig(countryId).executiveTermLimit?.maxTermsPerCharacter ?? null;
 }
 
 export function hasReachedExecutiveTermLimit(

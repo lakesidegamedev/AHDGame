@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { type ActiveModifier } from "@/lib/utils/approvalModifiers";
 import { regionUrl, regionApiSubUrl, approvalUrl } from "@/lib/urls";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { ModifierList } from "@/components/approval/ModifierChip";
 import { computeRegionalConditionMargin } from "@/lib/states/conditions/marginEffects";
 
@@ -29,7 +30,7 @@ export function RegionApprovalClient({
   stateId: string;
 }) {
   const t = useTranslations("layout.approval");
-  const config = COUNTRY_CONFIGS[countryId];
+  const config = COUNTRY_CLIENT_CONFIGS[countryId];
   const countryShortLabel = config?.code ?? countryId;
 
   const [data, setData] = useState<StateApprovalData | null>(null);

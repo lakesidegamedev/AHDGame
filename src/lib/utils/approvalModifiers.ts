@@ -23,6 +23,9 @@ import {
 import { getEraConditionShift, isMetricActive } from "@/lib/era/metricCatalog";
 import { marginEffectForModifier } from "@/lib/states/conditions/marginEffects";
 import { resolveModifierDef } from "@/lib/states/conditions/resolveModifierDef";
+import type { ActiveModifier } from "@/lib/approval/activeModifier";
+
+export { netModifierEffect, type ActiveModifier } from "@/lib/approval/activeModifier";
 
 export interface Condition {
   category: string;
@@ -38,22 +41,6 @@ interface ModifierDef {
   label: string;
   effect: number; // positive = boost, negative = malus
   conditions: Condition[]; // all must be true (AND)
-}
-
-export interface ActiveModifier {
-  id: string;
-  label: string;
-  effect: number;
-  /** Stacked profit-margin swing in percentage points (capped at turn time). */
-  marginEffect?: number;
-  /**
-   * Where the modifier originated — metric thresholds, a governor address, or
-   * the war block. The war block contributes one chip per term (effort,
-   * exhaustion, alliance contribution), each declaring `marginEffect: 0`; none
-   * may be treated as a metric condition by the margin fallbacks or by the chip
-   * tooltips.
-   */
-  source?: "metric" | "address" | "war" | "banking" | "market" | "cabinet";
 }
 
 export interface EvaluateModifiersOptions {
@@ -855,20 +842,6 @@ export function prioritizeModifiers(
     headline: sorted.slice(0, max),
     remainder: sorted.slice(max),
   };
-}
-
-/**
- * Sum modifier effects for display, rounded to the tenth the chips render at.
- *
- * The rounding is not cosmetic. Metric conditions are whole numbers, but the war
- * chips carry tenths, and binary floating point cannot hold a tenth exactly: the
- * war block alone can sum to `0.8999999999999999`, which is what a raw reduce
- * puts on screen. One combined war chip made this rare enough to go unnoticed;
- * one chip per term makes it the common case.
- */
-export function netModifierEffect(modifiers: ActiveModifier[]): number {
-  const raw = modifiers.reduce((sum, modifier) => sum + modifier.effect, 0);
-  return Number.isFinite(raw) ? Math.round(raw * 10) / 10 : 0;
 }
 
 /**

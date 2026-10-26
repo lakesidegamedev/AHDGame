@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { PartyLogo } from "@/components/PartyLogo";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { regionPartyUrl } from "@/lib/urls";
 
 /**

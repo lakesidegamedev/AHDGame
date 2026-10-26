@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getCountryConfig } from "@/lib/constants/countries";
-import type { CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import { GameMonthTime } from "@/components/time/GameMonthTime";
@@ -19,7 +19,7 @@ type SubsidyEntry = {
 };
 
 export function SubsidiesTab({ countryId }: { countryId: CountryId }) {
-  const regionLabel = getCountryConfig(countryId).regionLabel;
+  const regionLabel = getCountryClientConfig(countryId).regionLabel;
   const [subsidies, setSubsidies] = useState<SubsidyEntry[]>([]);
   const [loading, setLoading] = useState(true);
 

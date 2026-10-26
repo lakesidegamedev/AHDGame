@@ -10,7 +10,7 @@ import {
   FOREX_ACTIVE_CURRENCIES,
   type CurrencyCode,
 } from "@/lib/constants/currencies";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { formatCompactNumber } from "@/lib/utils/formatters";
 import { RESERVE_POOL_TRANSFER_MAX_FRACTION } from "@/lib/centralBank/reservePoolTransfer";
 import type { BalanceSheet, BankFinancials } from "./centralBankTypes";

@@ -21,7 +21,7 @@ import {
   type NatProvisionInput,
 } from "@/components/bills/NationalizationProvisionEditor";
 import { legislatureApiUrl } from "@/lib/urls";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { getNationalStateId } from "@/lib/policy/nationalStateId";
 import { PolicyEffectIndicators } from "@/components/legislation/PolicyEffectIndicators";
 import {

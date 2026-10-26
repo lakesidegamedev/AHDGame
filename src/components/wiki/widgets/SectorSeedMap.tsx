@@ -13,7 +13,7 @@ import { brRegions } from "@/lib/seeds/br/brRegions";
 import { CDN_GEO } from "@/lib/images/cdnUrls";
 import { OPERATING_SECTOR_TYPES, OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { getStateSectorWeights } from "@/lib/seeds/reference/sectorSeedWeights";
 import type { RegionMapData } from "@/components/RegionMapPaths";
 import type { StateMapData } from "@/components/USAMapPaths";

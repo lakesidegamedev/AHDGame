@@ -6,7 +6,7 @@ import { ComposableMap, Geographies, Geography, ZoomableGroup } from "react-simp
 import { getCountryMapConfig } from "@/lib/commodity-map";
 import { commodityColor, priceColor } from "@/lib/commodity-map";
 import { getStateDisplayName } from "@/lib/commodity-map";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import {
   convertCommodityPrice,

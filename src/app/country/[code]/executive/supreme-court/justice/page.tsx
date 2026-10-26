@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Skeleton } from "@/components/ui";
-import { type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import { scotusUrl } from "@/lib/urls";
 import { formatDivergentDeathChance } from "@/lib/scotus/tenure";
 import { useJusticeOffice } from "./useJusticeOffice";
