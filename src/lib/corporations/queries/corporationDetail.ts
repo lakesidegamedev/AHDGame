@@ -105,7 +105,8 @@ export async function loadCorporationDetailView(args: {
   const { refData, sectors, blendPresenceKeys, ftaCoverage } = await loadReferenceSectors(
     db,
     corporation,
-    refDataPromise
+    refDataPromise,
+    currentTurn
   );
   const {
     commodityPrices,
