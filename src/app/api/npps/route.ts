@@ -4,7 +4,7 @@ import { getDb } from "@/lib/mongodb";
 import { getAuthUser } from "@/lib/auth";
 import { getEnabledCountryIds } from "@/lib/countryAccess";
 import type { NPP, NPPDisplay } from "@/lib/db/types";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 
 /**
  * Convert NPP to display format

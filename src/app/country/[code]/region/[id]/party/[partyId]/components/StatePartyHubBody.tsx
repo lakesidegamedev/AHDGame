@@ -13,7 +13,7 @@ import {
   STATE_PS_CAP_DEFAULT,
   STATE_PASSIVE_PS_PER_TURN,
 } from "@/lib/politicalStrength/strengthConstants";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { regionPartyApiUrl } from "@/lib/urls";
 import { SlateTab } from "@/app/country/[code]/parties/[id]/components/SlateTab";
 import { StatePartyLeadershipPanel } from "./StatePartyLeadershipPanel";

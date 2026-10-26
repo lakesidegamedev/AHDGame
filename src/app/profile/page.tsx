@@ -36,7 +36,7 @@ import type {
   ElectedOfficial,
 } from "@/lib/db/types";
 import { getAuthUser } from "@/lib/auth";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { gameDateAnchorFromState } from "@/lib/utils/gameDate";
 import {
   calculateFullFundDistribution,

@@ -2,7 +2,7 @@
 
 import { HeroImage } from "@/components/HeroImage";
 import { COMMODITY_HERO_SLUGS, COMMODITY_HERO_ALTS } from "@/lib/constants/commodities";
-import type { CommodityType } from "@/lib/constants/commodities";
+import type { CommodityType } from "@/lib/constants/commoditiesCore";
 import { formatCurrencyPrecise } from "@/lib/utils/formatters";
 import BackButton from "@/components/BackButton";
 import { formatUnits } from "../lib/helpers";

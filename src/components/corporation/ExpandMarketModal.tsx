@@ -6,10 +6,13 @@ import { apiErrorText } from "@/lib/errors/catalog";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { OPERATING_SECTOR_TYPES, OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
+import {
+  OPERATING_SECTOR_TYPES,
+  OPERATING_SECTOR_TYPE_LABELS,
+} from "@/lib/constants/corporationsClient";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { regionUrl } from "@/lib/urls";
-import type { OperatingSectorType } from "@/lib/constants/corporations";
+import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { CorporationLogo } from "@/components/corporation/CorporationLogo";

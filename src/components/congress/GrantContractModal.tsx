@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { EXTRACTABLE_RESOURCES, COMMODITY_LABELS } from "@/lib/constants/commodities";
-import type { ExtractableResource } from "@/lib/constants/commodities";
+import { EXTRACTABLE_RESOURCES, COMMODITY_LABELS } from "@/lib/constants/commoditiesCore";
+import type { ExtractableResource } from "@/lib/constants/commoditiesCore";
 import { Modal } from "@/components/ui";
 import { apiErrorText } from "@/lib/errors/catalog";
 

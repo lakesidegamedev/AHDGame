@@ -1,6 +1,6 @@
 import type { Db, Sort, Filter } from "mongodb";
 import type { Character, PoliticalParty } from "@/lib/db/types";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { buildCharacterHref } from "@/lib/utils/profileUrls";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import type { CountryId } from "@/lib/constants/countries";

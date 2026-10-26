@@ -39,7 +39,7 @@ import { CareerHistory } from "@/app/profile/components/CareerHistory";
 import { ProfileSocial } from "@/app/profile/components/ProfileSocial";
 import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
 import { getAuthUserWithCharacter } from "@/lib/auth";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import {
   calculateFavorabilityAboveThresholdPenalty,
   calculateNetNationalInfluencePerTurn,

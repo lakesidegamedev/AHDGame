@@ -1,7 +1,7 @@
 "use client";
 
 import { type CountryId } from "@/lib/constants/countriesCore";
-import { COMMODITY_TYPES, COMMODITY_LABELS } from "@/lib/constants/commodities";
+import { COMMODITY_TYPES, COMMODITY_LABELS } from "@/lib/constants/commoditiesCore";
 import { MAX_PROVISIONS } from "@shared/constants/legislation";
 import type { EmbargoProvisionInput } from "./embargoProvisionTypes";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";

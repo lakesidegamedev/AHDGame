@@ -6,7 +6,7 @@ import {
   OPERATING_SECTOR_TYPES,
   OPERATING_SECTOR_TYPE_LABELS,
   type OperatingSectorType,
-} from "@/lib/constants/corporations";
+} from "@/lib/constants/corporationsClient";
 import { MAX_STRATEGIC_SECTOR_DESIGNATIONS } from "@/lib/nationalization/constants";
 import type { NatOfficialActions } from "../NationalCorporationView";
 import { apiErrorText } from "@/lib/errors/catalog";

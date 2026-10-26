@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import type { OperatingSectorType } from "@/lib/constants/corporations";
+import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { Skeleton } from "@/components/ui";
 import { CorporationLogo } from "@/components/corporation/CorporationLogo";
 import { useAuthMe } from "@/contexts/AuthDataContext";
-import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
+import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporationsClient";
 import { regionUrl } from "@/lib/urls";
 
 type SectorView = "unowned" | "owned" | "forSale";

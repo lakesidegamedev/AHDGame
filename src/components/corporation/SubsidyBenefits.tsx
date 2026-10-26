@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
-import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
-import type { OperatingSectorType } from "@/lib/constants/corporations";
+import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporationsClient";
+import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import type { SectorDetail } from "./CorporationPageTypes";
 
 interface SubsidyEntry {

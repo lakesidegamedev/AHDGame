@@ -2,8 +2,8 @@
 
 import type { Dispatch, SetStateAction } from "react";
 import type { CrisisEffect } from "@/lib/db/types/crisis";
-import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
-import type { CorporationType } from "@/lib/constants/corporations";
+import { OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporationsClient";
+import type { CorporationType } from "@/lib/constants/corporationsClient";
 import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
 import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { useRegisteredCountries } from "@/contexts/RegisteredCountriesContext";
