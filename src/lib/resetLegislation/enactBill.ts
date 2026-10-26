@@ -9,6 +9,7 @@ import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { RESET_V2_COUNTRIES, resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import type { ResetCountry } from "./fundingOwner";
 import { resetLawFamilyById } from "./catalog";
+import { withPostLaunchReferences } from "./openingLaw";
 import type { ResetLawOpeningBoard } from "./rules/openingBoard";
 import { enactReviewedBill } from "./rules/billEnactment";
 import type { ResetDepartmentAccountSnapshot } from "@/lib/resetFinance/rules/liveDepartmentAccount";
@@ -80,12 +81,13 @@ export async function applyResetLawBillEnactment(
         .toArray(),
     ]);
     if (!board) throw new Error("The v2 current-law board is unavailable at enactment");
+    const references = withPostLaunchReferences(board);
     const existingByFamily = new Map(
       existingPrograms.map((program) => [program.familyId, program])
     );
     const reviewed = frozen.map((provision) => {
       const family = resetLawFamilyById(provision.familyId);
-      const reference = board.references[provision.familyId];
+      const reference = references[provision.familyId];
       if (
         !family ||
         !reference ||
@@ -124,7 +126,7 @@ export async function applyResetLawBillEnactment(
         addDelta(current.fundingAccountId, provision.familyId, -current.annualAgencyAllocation);
       } else {
         const newlySuperseded = new Set(provision.reviewedOption.supersedesSourceIds);
-        const openingReduction = board.references[provision.familyId]!.sourceComponents.reduce(
+        const openingReduction = references[provision.familyId]!.sourceComponents.reduce(
           (sum, source) =>
             sum +
             (newlySuperseded.has(source.sourceId) &&
@@ -316,9 +318,10 @@ async function applyRegionalResetLawBillEnactment(
         .toArray(),
     ]);
     if (!board) throw new Error("The regional v2 current-law board is unavailable at enactment");
+    const references = withPostLaunchReferences(board);
     const reviewed = frozen.map((provision) => {
       const family = resetLawFamilyById(provision.familyId);
-      const reference = board.references[provision.familyId];
+      const reference = references[provision.familyId];
       if (
         !family ||
         !reference ||

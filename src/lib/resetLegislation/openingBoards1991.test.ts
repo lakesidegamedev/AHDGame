@@ -4,13 +4,13 @@ import { buildResetLawOpeningBoard } from "./rules/openingBoard";
 import { openingLawReference } from "./openingLaw";
 
 describe("1991 current-law boards", () => {
-  it("builds four national and 79 regional boards with all 60 law and tax types", () => {
+  it("builds four national and 79 regional boards with all 61 law and tax types", () => {
     const boards = buildOpeningLawBoards1991("world-test", 1);
     expect(boards).toHaveLength(83);
     expect(boards.filter((board) => board.scope === "national")).toHaveLength(4);
     expect(new Set(boards.map((board) => board._id)).size).toBe(83);
     for (const board of boards) {
-      expect(Object.keys(board.references)).toHaveLength(60);
+      expect(Object.keys(board.references)).toHaveLength(61);
       expect(board.references.L19?.currentLaw).toBeTruthy();
       expect(board.references.T01?.currentLaw).toBeTruthy();
       if (board.countryId === "UK" && board.scope === "regional") {
@@ -97,5 +97,27 @@ describe("1991 current-law boards", () => {
         references,
       })
     ).toThrow("Invalid");
+  });
+});
+
+describe("law families added after launch", () => {
+  it("accepts a stored board that predates them and fills their reference on read", async () => {
+    const { withPostLaunchReferences } = await import("./openingLaw");
+    const [national] = buildOpeningLawBoards1991("world-test", 1).filter(
+      (board) => board.scope === "national" && board.countryId === "JP"
+    );
+    const { L52: _added, ...stored } = national!.references;
+    const rebuilt = buildResetLawOpeningBoard({
+      worldId: "world-test",
+      countryId: "JP",
+      sourceTurn: 1,
+      references: Object.values(stored),
+    });
+    expect(rebuilt.references.L52).toBeUndefined();
+    const read = withPostLaunchReferences(rebuilt);
+    expect(read.L52?.key).toBe("JP:national:L52");
+    expect(read.L52?.status).toBe("no-dedicated-law");
+    expect(rebuilt.references.L52).toBeUndefined();
+    expect(withPostLaunchReferences(national!)).toBe(national!.references);
   });
 });

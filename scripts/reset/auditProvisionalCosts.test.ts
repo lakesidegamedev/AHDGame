@@ -5,8 +5,8 @@ describe("1991 provisional cost-to-source audit", () => {
   const rows = auditProvisionalCosts1991();
 
   it("covers every national family for US, UK, and JP without approving options", () => {
-    expect(rows).toHaveLength(153);
-    expect(new Set(rows.map((row) => `${row.country}:${row.familyId}`)).size).toBe(153);
+    expect(rows).toHaveLength(156);
+    expect(new Set(rows.map((row) => `${row.country}:${row.familyId}`)).size).toBe(156);
     expect(rows.every((row) => row.status === "provisional-design-only")).toBe(true);
     expect(
       rows.every((row) =>

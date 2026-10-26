@@ -1,4 +1,4 @@
-import type { OpeningLawReference } from "../openingLaw";
+import { POST_LAUNCH_FAMILY_IDS, type OpeningLawReference } from "../openingLaw";
 import type { ResetCountry } from "../fundingOwner";
 import type { UkTerritorialTaxOpening } from "@/lib/countries/uk/resetLegislation/ukTerritorialTax1991";
 
@@ -37,7 +37,12 @@ export function buildResetLawOpeningBoard(input: {
   if (input.ukTerritorialTax && input.ukTerritorialTax.regionId !== input.regionId) {
     throw new Error("UK territorial tax fixture belongs to a different region");
   }
-  if (input.references.length !== 60) {
+  // 51 launch families plus nine tax rows. Families added after launch are
+  // optional so a board built from an older world's references stays valid.
+  const launchReferences = input.references.filter(
+    (reference) => !POST_LAUNCH_FAMILY_IDS.has(reference.familyId)
+  );
+  if (launchReferences.length !== 60) {
     throw new Error(`Incomplete ${input.countryId}/${scope} 1991 current-law crosswalk`);
   }
   const ids = new Set<string>();
