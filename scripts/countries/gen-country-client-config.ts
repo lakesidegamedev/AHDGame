@@ -379,7 +379,11 @@ export interface CountryClientConfig {
     blocksRunningMateSelection: boolean;
   };
   legislature: CountryClientLegislatureConfig;
-  subNationalChamber?: CountryClientChamberConfig;
+  /** Sub-national chambers ship without seat counts; no client reads them. */
+  subNationalChamber?: Pick<
+    CountryClientChamberConfig,
+    "key" | "name" | "shortName" | "regionalModel"
+  >;
   officeTypes: CountryClientOfficeType[];
   electionSystems: Partial<Record<ElectionPosition, ElectionMethod>>;
   lowerElectionSystem: { snapElectionsAllowed: boolean };
