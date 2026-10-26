@@ -31,7 +31,11 @@ import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 // Re-export the client-safe core so every existing import from this module
 // keeps working; client components import corporationsClient directly.
 export * from "./corporationsClient";
-import { OPERATING_SECTOR_TYPES, TURNS_PER_DAY } from "./corporationsClient";
+import {
+  OPERATING_SECTOR_TYPES,
+  TURNS_PER_DAY,
+  type OperatingSectorType,
+} from "./corporationsClient";
 
 /** Cost deducted from character funds to found a corporation */
 export const CORPORATION_FOUNDING_COST = 1_000_000;
