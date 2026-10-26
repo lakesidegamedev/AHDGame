@@ -452,7 +452,7 @@ describe("bank sovereign claims", () => {
     expect(
       findOne.mock.calls.filter(
         (call) =>
-          JSON.stringify(call[1] ?? {}) ===
+          JSON.stringify((call as unknown[])[1] ?? {}) ===
           JSON.stringify({ projection: { bankSovereignEscrows: 1 } })
       )
     ).toHaveLength(0);
