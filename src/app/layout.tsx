@@ -14,8 +14,12 @@ import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { NavbarWrapper } from "@/components/NavbarWrapper";
 import { BugReportFab } from "@/components/BugReportFab";
 import { StatusBar } from "@/components/StatusBar";
-import { TurnProgressToast } from "@/components/turn-progress/TurnProgressToast";
-import { TutorialCoachMount } from "@/components/tutorial/TutorialCoachMount";
+import {
+  DeferredSeasonRecapGate,
+  DeferredStatAllocationGate,
+  DeferredTutorialCoachMount,
+  DeferredTurnProgressToast,
+} from "@/components/DeferredShellOverlays";
 import { FeedbackProvider } from "@/contexts/FeedbackContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { BrowserPreferencesProvider } from "@/contexts/BrowserPreferencesContext";
@@ -41,11 +45,9 @@ import { AdSenseSlot } from "@/components/AdSenseSlot";
 import { CookieConsentBanner } from "@/components/CookieConsent";
 import { SiteFooter } from "@/components/SiteFooter";
 import { AuthConnectivityGate } from "@/components/AuthConnectivityGate";
-import { StatAllocationGate } from "@/components/stats/StatAllocationGate";
-import { SeasonRecapGate } from "@/components/recap/SeasonRecapGate";
 import { SiteTrafficTracker } from "@/components/SiteTrafficTracker";
 import { DeferredAnalytics } from "@/components/DeferredAnalytics";
-import { CDN_LOGO_URL } from "@/lib/images/staticCdnAssets";
+import { CDN_LOGO_URL } from "@/lib/images/cdnStaticUrls";
 import {
   buildGoogleTagBootstrapScript,
   getAdSenseClientId,
@@ -429,8 +431,8 @@ export default async function RootLayout({
                             signed-out visitors too. */}
                           {!isWikiSubdomain && <PollBannerNotice />}
                           <AuthConnectivityGate />
-                          <StatAllocationGate />
-                          <SeasonRecapGate />
+                          <DeferredStatAllocationGate />
+                          <DeferredSeasonRecapGate />
                           {/* overflow-x-CLIP, not -hidden: hidden makes this element the
                             scroll container for every `position: sticky` descendant
                             (admin status bar / sidebars / table headers), which both
@@ -457,8 +459,8 @@ export default async function RootLayout({
                               turnStatusLink={!singleplayer}
                             />
                           )}
-                          {!isWikiSubdomain && singleplayer && <TurnProgressToast />}
-                          {!isWikiSubdomain && <TutorialCoachMount />}
+                          {!isWikiSubdomain && singleplayer && <DeferredTurnProgressToast />}
+                          {!isWikiSubdomain && <DeferredTutorialCoachMount />}
                           {!isWikiSubdomain && <LiveRefreshBanner />}
                           {!isNativeApp && <CookieConsentBanner />}
                           {/* A singleplayer build runs on the player's machine with no

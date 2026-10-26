@@ -16,12 +16,9 @@
  */
 
 import { getActionImage } from "./actionImages";
+import { CDN_HERO_LINCOLN_URL, CDN_STATIC_BASE } from "./cdnStaticUrls";
 
-export const CDN_LOGO_URL = "https://cdn.ahousedividedgame.com/static/ahd-logo.png";
-export const CDN_HERO_LINCOLN_URL =
-  "https://cdn.ahousedividedgame.com/static/lincoln-memorial.webp";
-
-const CDN_STATIC_BASE = "https://cdn.ahousedividedgame.com/static";
+export { CDN_HERO_LINCOLN_URL, CDN_LOGO_URL } from "./cdnStaticUrls";
 
 /**
  * THE era → hero-image source of truth. Every surface that shows an era hero

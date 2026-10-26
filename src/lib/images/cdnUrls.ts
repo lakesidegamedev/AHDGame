@@ -77,5 +77,3 @@ export const CDN_GEO = {
 
 /** @deprecated Use CDN_GEO.worldCountries */
 export const CDN_WORLD_GEO_URL = CDN_GEO.worldCountries;
-
-/** @deprecated Use cdnHero("actions") — kept for existing imports */
