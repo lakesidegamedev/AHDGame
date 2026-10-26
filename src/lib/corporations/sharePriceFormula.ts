@@ -4,7 +4,9 @@
  * + tech assets + 0.75x bonds held, minus bond debt) plus 0.5x earnings power and 0.15x a
  * growth premium; weak earnings, living off bond coupons (bondRelianceValuationPenalty) or a
  * CEO holding over 65% (insiderConcentrationMultiplier) all cut the price.
- * rateLimitPrice caps the move at 35% per turn.
+ * The concentration and index-inclusion multipliers are applied first, then the
+ * per-turn path (rateLimitPrice, or the split-cooldown blend) works on that
+ * already-multiplied price, capped at 35% of the persisted price per turn.
  */
 /**
  * Three-component fundamental share-price formula.
@@ -224,19 +226,15 @@ export function computeSharePrices(
     // cooldown avoids double-smoothing and keeps the split re-scaling intact.
     //
     // The previous-price anchor is clamped to within
-    // STOCK_SPLIT_PREV_ANCHOR_MAX_RATIO of the fresh fundamentalValue before
-    // blending. Without the clamp, the cooldown path (which skips the rate
-    // limiter by design) blended whatever the LIVE price happened to be —
-    // including a price pumped intra-turn via structure-change abuse or wash
-    // trades — directly into the new fundamental (2026-08-20 incident: a live
-    // price ~250x fundamentals became ~0.5x of itself the new fundamental).
-    // Honest splits rescale price and fundamental by the same share-count
-    // ratio, so prev/fundamental stays near 1 and the clamp never binds.
-    const clampedPrev = clampSplitCooldownPrevAnchor(i.previousSharePrice, fundamentalValue);
-    const rawPrice = inSplitCooldown
-      ? STOCK_SPLIT_SMOOTHING_PREV_WEIGHT * clampedPrev +
-        (1 - STOCK_SPLIT_SMOOTHING_PREV_WEIGHT) * fundamentalValue
-      : rateLimitPrice(fundamentalValue, i.previousSharePrice);
+    // STOCK_SPLIT_PREV_ANCHOR_MAX_RATIO of the fresh multipliedFundamental
+    // before blending, so both sides are on the same post-multiplier scale.
+    // Without the clamp, the cooldown path (which skips the rate limiter by
+    // design) blended whatever the LIVE price happened to be — including a
+    // price pumped intra-turn via structure-change abuse or wash trades —
+    // directly into the new fundamental (2026-08-20 incident: a live price
+    // ~250x fundamentals became ~0.5x of itself the new fundamental). Honest
+    // splits rescale price and fundamental by the same share-count ratio, so
+    // prev/fundamental stays near 1 and the clamp never binds.
 
     // Insider-concentration discount: smooth quadratic penalty on public corps
     // where the character CEO holds > INSIDER_CONCENTRATION_THRESHOLD of all shares.
@@ -253,11 +251,23 @@ export function computeSharePrices(
     const inclusionMultiplier =
       (i.isPrivate ?? false) ? 1 : indexInclusionPriceMultiplier(i.indexFundOwnershipFraction ?? 0);
 
+    // Both multipliers belong INSIDE the limiter's price space. The persisted
+    // previous price already carries them, so rate-limiting the unmultiplied
+    // fundamental against it compared two different scales: with M < 1/1.35 the
+    // up-ceiling bound every turn and the price decayed by 1.35 * M per turn
+    // (corp 44: M = 0.7011, ratio 0.9465 for 18 turns) until it fell to the
+    // ₳1.00 limiter floor and snapped back to M x fundamental in one turn.
+    const multipliedFundamental = fundamentalValue * concentrationMultiplier * inclusionMultiplier;
+
+    const clampedPrev = clampSplitCooldownPrevAnchor(i.previousSharePrice, multipliedFundamental);
+    const rawPrice = inSplitCooldown
+      ? STOCK_SPLIT_SMOOTHING_PREV_WEIGHT * clampedPrev +
+        (1 - STOCK_SPLIT_SMOOTHING_PREV_WEIGHT) * multipliedFundamental
+      : rateLimitPrice(multipliedFundamental, i.previousSharePrice);
+
     const clampedPrice = Math.max(
       MIN_SHARE_PRICE,
-      Number.isFinite(rawPrice)
-        ? rawPrice * concentrationMultiplier * inclusionMultiplier
-        : MIN_SHARE_PRICE
+      Number.isFinite(rawPrice) ? rawPrice : MIN_SHARE_PRICE
     );
     const finalPrice = i.imfBailoutActive
       ? Math.round(clampedPrice * IMF_BAILOUT_SHARE_PRICE_MULTIPLIER * 100) / 100
@@ -274,9 +284,11 @@ export function computeSharePrices(
  *
  * Clamps `rawPrice` to within ±{@link SHARE_PRICE_MAX_TURN_MOVE} of `prevPrice`
  * so the fundamental price can never jump/collapse more than 35% in a single
- * turn. This kills the equity knife-edge: when issued bond debt ≈ total assets,
- * the tangible-book floor flips through zero and the raw fundamental snaps ~200x
- * in one turn. The move direction is preserved and the price still converges to
+ * turn. Callers pass the concentration/index-inclusion-adjusted fundamental and
+ * the persisted previous price, so both sides of the comparison carry the same
+ * multipliers. This kills the equity knife-edge: when issued bond debt
+ * ≈ total assets, the tangible-book floor flips through zero and the raw
+ * fundamental snaps ~200x in one turn. The move direction is preserved and the price still converges to
  * the true fundamental, just over several turns.
  *
  * Two guards:
