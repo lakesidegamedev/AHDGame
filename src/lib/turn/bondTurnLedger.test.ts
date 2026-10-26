@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
+import type { Bond } from "@/lib/db/types/bond";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
-import { BOND_HISTORY_INTEREST_INDEX_KEY, loadPriorBondInterest } from "./bondTurnLedger";
+import {
+  BOND_HISTORY_INTEREST_INDEX_KEY,
+  loadPriorBondInterest,
+  snapshotBondHistory,
+} from "./bondTurnLedger";
 
 const byId = (rows: Array<{ _id: ObjectId; maxInterest: number }>) =>
   Object.fromEntries(rows.map((row) => [row._id.toHexString(), row.maxInterest]));
@@ -104,5 +109,41 @@ describe("loadPriorBondInterest", () => {
     await expect(loadPriorBondInterest(memory as unknown as Db, ids)).rejects.toThrow(
       "socket closed"
     );
+  });
+});
+
+describe("snapshotBondHistory", () => {
+  it("writes every live bond snapshot in one unordered insert", async () => {
+    const memory = createInMemoryDb();
+    const bond = {
+      _id: new ObjectId(),
+      couponRate: 0.05,
+      holders: [{ units: 10 }],
+      currencyCode: "USD",
+      countryId: "US",
+      matured: false,
+      marketPrice: 98.5,
+    } as unknown as Bond;
+    memory.seed("bonds", [{ _id: bond._id, matured: false, marketPrice: bond.marketPrice }]);
+    const insertMany = vi.spyOn(memory.collection("bondHistory"), "insertMany");
+
+    const written = await snapshotBondHistory({
+      db: memory as unknown as Db,
+      activeBonds: [bond],
+      fxByCurrency: new Map([["USD", 1]]),
+      turn: 7,
+      now: new Date(),
+    });
+
+    expect(written).toBe(1);
+    expect(insertMany).toHaveBeenCalledTimes(1);
+    const [docs, options] = insertMany.mock.calls[0] as unknown as [
+      Array<Record<string, unknown>>,
+      { ordered?: boolean },
+    ];
+    expect(options).toEqual({ ordered: false });
+    expect(docs).toEqual([
+      expect.objectContaining({ bondId: bond._id, turn: 7, marketPrice: 98.5 }),
+    ]);
   });
 });
