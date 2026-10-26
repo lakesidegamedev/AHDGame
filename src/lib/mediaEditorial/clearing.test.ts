@@ -74,3 +74,39 @@ describe("editorial audience fit through commercial clearing", () => {
     expect(legacyDivergent.factor).toBeCloseTo(0.5);
   });
 });
+
+describe("editorial audience fit recorded for the sold-out headroom", () => {
+  const runOutlet = (editorialAvailability?: number) => {
+    const sectors: SectorClearingInput[] = [
+      {
+        sectorId: "outlet",
+        revenue: 100,
+        supplyRates: { advertising: 1 },
+        posture: 0,
+        ...(editorialAvailability != null
+          ? { editorialAdvertisingAvailability: editorialAvailability }
+          : {}),
+      },
+    ];
+    return computeClearingFactors({
+      sectors,
+      // Short book: buyers want more than the outlet offers.
+      balances: new Map([["advertising", { supply: 100, demand: 200 }]]),
+      priceRatioByCommodity: new Map([["advertising", 1]]),
+      basePrices,
+      plantsEnabled: false,
+    }).get("outlet")!;
+  };
+
+  it("reports the applied offer availability without moving the fill", () => {
+    const divergent = runOutlet(0.9614);
+    expect(divergent.editorialAvailabilityByCommodity?.advertising).toBeCloseTo(0.9614, 6);
+    expect(divergent.soldByCommodity?.advertising).toBeCloseTo(0.9614, 6);
+  });
+
+  it("omits the field for an outlet whose stance matches its audience", () => {
+    const neutral = runOutlet();
+    expect(neutral.editorialAvailabilityByCommodity).toBeUndefined();
+    expect(neutral.soldByCommodity?.advertising).toBeCloseTo(1, 6);
+  });
+});
