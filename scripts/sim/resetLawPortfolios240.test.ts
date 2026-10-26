@@ -4,9 +4,9 @@ import { runResetLawPortfolios240 } from "./resetLawPortfolios240";
 describe("provisional combined national-law portfolio stress", () => {
   const runs = runResetLawPortfolios240();
 
-  it("exercises 51 families in each country under four mixes and two rollouts", () => {
+  it("exercises 52 families in each country under four mixes and two rollouts", () => {
     expect(runs).toHaveLength(24);
-    expect(runs.every((run) => run.provisions === 51)).toBe(true);
+    expect(runs.every((run) => run.provisions === 52)).toBe(true);
     expect(runs.every((run) => Math.abs(run.accountDeltaResidual) < 0.01)).toBe(true);
     expect(runs.every((run) => run.maximumAccountingResidual < 0.1)).toBe(true);
   });

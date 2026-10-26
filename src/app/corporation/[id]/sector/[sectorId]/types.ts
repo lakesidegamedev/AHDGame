@@ -2,6 +2,7 @@ import type { OperatingSectorType } from "@/lib/constants/corporations";
 import type { StateMetricMarginContribution } from "@/lib/corporations/stateMetricMarginTypes";
 import type { PlantSectorSplitQuote } from "@/lib/corporations/plantSectorSplit";
 import type { RetoolHint } from "@/lib/corporations/retoolHint";
+import type { StateLabourPoolView } from "@/lib/labour/rules/stateLabourPool";
 
 export interface SectorData {
   _id: string;
@@ -25,6 +26,11 @@ export interface SectorData {
   workers: number;
   workersDesired?: number;
   labourStaffingFactor?: number;
+  /**
+   * The sector's state labour pool: workers available there against workers
+   * every employer there wants. Null when the state has no readings yet.
+   */
+  stateLabourMarket?: StateLabourPoolView | null;
   productionPolicy: number;
   productionPolicyLevel: number;
   /** Labour system: CEO wage-level lever (1.0 = baseline). */

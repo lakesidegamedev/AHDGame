@@ -114,6 +114,79 @@ describe("PlantPanel workforce", () => {
     ).toBe(true);
   });
 
+  it("shows the state labour pool against every employer's wanted workers", () => {
+    render(
+      <PlantPanel
+        plants={plants}
+        sectorType="manufacturing"
+        averageWageLevel={1.5}
+        stateName="Ohio"
+        stateLabourMarket={{
+          labourForce: 1_000_000,
+          labourDemand: 2_000_000,
+          corporateEmployed: null,
+          tightness: 2,
+          stateWageIndex: 1.2,
+          sectorRelativeBid: 1.25,
+          targetStaffingFactor: 0.625,
+        }}
+        isCeo={false}
+        busy={false}
+        message=""
+        onOpenBuild={noop}
+        onCancelOrder={noop}
+        onMothball={noop}
+        onReactivate={noop}
+      />
+    );
+
+    expect(screen.getByText("Workers available in Ohio")).toBeTruthy();
+    expect(screen.getByText("1,000,000")).toBeTruthy();
+    expect(screen.getByText("Workers all employers in Ohio want")).toBeTruthy();
+    expect(screen.getByText("2,000,000")).toBeTruthy();
+    expect(screen.getByText("Your pay vs the Ohio average")).toBeTruthy();
+    expect(screen.getByText("1.25×")).toBeTruthy();
+    expect(
+      screen.getByText(
+        /Raising pay only wins you a bigger share compared with other employers here; it does not add workers\./
+      )
+    ).toBeTruthy();
+    expect(screen.getByText(/At this pay you can fill about 63% of your jobs/)).toBeTruthy();
+    expect(screen.queryByText(/Higher pay can win a larger share/)).toBeNull();
+  });
+
+  it("says the pool is large enough when only this sector's staffing is catching up", () => {
+    render(
+      <PlantPanel
+        plants={plants}
+        sectorType="manufacturing"
+        averageWageLevel={1}
+        stateName="Ohio"
+        stateLabourMarket={{
+          labourForce: 1_000_000,
+          labourDemand: 400_000,
+          corporateEmployed: null,
+          tightness: 0.4,
+          stateWageIndex: null,
+          sectorRelativeBid: null,
+          targetStaffingFactor: 1,
+        }}
+        isCeo={false}
+        busy={false}
+        message=""
+        onOpenBuild={noop}
+        onCancelOrder={noop}
+        onMothball={noop}
+        onReactivate={noop}
+      />
+    );
+
+    expect(
+      screen.getByText(/There are enough workers in this state for every employer/)
+    ).toBeTruthy();
+    expect(screen.queryByText(/Your pay vs/)).toBeNull();
+  });
+
   it("separates a media sector's audience run from contractable ledger output", () => {
     render(
       <PlantPanel

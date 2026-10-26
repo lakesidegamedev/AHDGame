@@ -737,6 +737,8 @@ export default function SectorDetailPage() {
                     unionId={sector.unionId}
                     unionName={sector.unionName}
                     averageWageLevel={sector.wageLevel ?? 1}
+                    stateLabourMarket={sector.stateLabourMarket}
+                    stateName={sector.stateName}
                     isCeo={isCeo}
                     busy={capacityBusy}
                     message={capacityMessage}
@@ -1112,6 +1114,8 @@ export default function SectorDetailPage() {
             open={buildOpen}
             onClose={() => setBuildOpen(false)}
             plants={plants}
+            stateLabourMarket={sector.stateLabourMarket}
+            stateName={sector.stateName}
             sectorType={sector.sectorType}
             sectorLabel={sector.displayName || sector.sectorLabel}
             submitting={capacityBusy}

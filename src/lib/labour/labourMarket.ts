@@ -207,11 +207,26 @@ export function staffingFactorFromTightness(
   stateDemandWageIndex: number = 1
 ): number {
   if (typeof tightness !== "number" || !Number.isFinite(tightness) || tightness <= 1) return 1;
+  return Math.max(
+    0,
+    Math.min(1, relativeWageBid(sectorWageLevel, stateDemandWageIndex) / tightness)
+  );
+}
+
+/**
+ * A sector's pay relative to the desired-worker-weighted pay of every employer
+ * in its state, clamped to [0.25, 4]. This is the only lever pay has on a
+ * rationed sector's share: if every employer raises pay together the ratio,
+ * and so every allocation, stays where it was.
+ */
+export function relativeWageBid(
+  sectorWageLevel: number = 1,
+  stateDemandWageIndex: number = 1
+): number {
   const wage = Number.isFinite(sectorWageLevel) && sectorWageLevel > 0 ? sectorWageLevel : 1;
   const marketWage =
     Number.isFinite(stateDemandWageIndex) && stateDemandWageIndex > 0 ? stateDemandWageIndex : 1;
-  const relativeBid = Math.max(0.25, Math.min(4, wage / marketWage));
-  return Math.max(0, Math.min(1, relativeBid / tightness));
+  return Math.max(0.25, Math.min(4, wage / marketWage));
 }
 
 /** Maximum participation uplift created by sustained labour shortages. */

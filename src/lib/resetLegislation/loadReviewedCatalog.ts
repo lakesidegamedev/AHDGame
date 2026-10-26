@@ -4,6 +4,7 @@ import type { FederalBudget } from "@/lib/db/types/budget";
 import type { State } from "@/lib/db/types/state";
 import type { ResetDepartmentAccountSnapshot } from "@/lib/resetFinance/rules/liveDepartmentAccount";
 import { resetLawFamilies } from "./catalog";
+import { withPostLaunchReferences } from "./rules/postLaunchReferences";
 import { fundingSeatForLaw, type ResetCountry } from "./fundingOwner";
 import type { ResetLawOpeningBoard } from "./rules/openingBoard";
 import { regionalLawLevel } from "./regionalCatalog";
@@ -97,6 +98,7 @@ export async function loadReviewedLawCatalog(input: {
       .toArray(),
   ]);
   if (!board) throw new Error("The v2 current-law board is unavailable");
+  const references = withPostLaunchReferences(board);
   // GDP is stored as a float (the turn writes fractional values); the catalog only
   // needs whole currency units, so round rather than reject (ticket #1468).
   const resolvedJurisdictionGdp =
@@ -112,7 +114,7 @@ export async function loadReviewedLawCatalog(input: {
   return resetLawFamilies
     .filter((family) => family.availability[scope].includes(country))
     .map((family): ReviewedLawFamilyCatalog => {
-      const reference = board.references[family.id];
+      const reference = references[family.id];
       const profile = profileByFamily.get(family.id);
       if (!reference || !profile) throw new Error(`Missing reviewed inputs for ${family.id}`);
       const seatId = scope === "national" ? fundingSeatForLaw(family, country) : null;
