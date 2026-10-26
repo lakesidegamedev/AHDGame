@@ -57,6 +57,13 @@ function claimStore(db: Db) {
       { budgetId: 1, settledTurn: 1, "claim.dueTurn": 1, order: 1 },
       { name: "sovereignCouponClaims_budget_settled_due", background: true }
     ),
+    // The cash bound is the predicate that decides which claims a pass can act
+    // on at all. In the index it is one range per budget instead of a fetch of
+    // every open claim the budget owns.
+    store.createIndex(
+      { budgetId: 1, settledTurn: 1, "claim.amountLocal": 1 },
+      { name: "sovereignCouponClaims_budget_settled_amount", background: true }
+    ),
   ]).catch((error) => {
     claimIndexReady = null;
     throw error;
@@ -70,40 +77,95 @@ export async function budgetIdsWithOpenSovereignCouponClaims(db: Db): Promise<Se
   return new Set(ids.map(String));
 }
 
+/** Lock key of one frozen coupon holder, or null when it credits no document. */
+function couponHolderKey(
+  kind: FundedSovereignCouponClaim["holders"][number]["kind"],
+  id: string | undefined,
+  currencyCode: string
+): string | null {
+  if (kind === "publicFloat") return `bondMarketPools:${currencyCode}`;
+  if (!id) return null;
+  if (kind === "character") return `characters:${id}`;
+  if (kind === "imperial") return `imperialCharacters:${id}`;
+  if (kind === "corporation") return `corporations:${id}`;
+  if (kind === "fund") return `indexFunds:${id}`;
+  if (kind === "npp") return `npps:${id}`;
+  return null;
+}
+
 /**
  * Lock keys for every document a coupon payout can credit, as
  * `<collection>:<id>`. Matches the credit legs built in payoutTransition.
  */
 export function sovereignCouponHolderKeys(claim: FundedSovereignCouponClaim): string[] {
   return claim.holders.flatMap((holder) => {
-    if (holder.kind === "publicFloat") return [`bondMarketPools:${claim.currencyCode}`];
-    if (!holder.id) return [];
-    if (holder.kind === "character") return [`characters:${holder.id}`];
-    if (holder.kind === "imperial") return [`imperialCharacters:${holder.id}`];
-    if (holder.kind === "corporation") return [`corporations:${holder.id}`];
-    if (holder.kind === "fund") return [`indexFunds:${holder.id}`];
-    if (holder.kind === "npp") return [`npps:${holder.id}`];
-    return [];
+    const key = couponHolderKey(holder.kind, holder.id, claim.currencyCode);
+    return key ? [key] : [];
   });
 }
 
-/** Holder lock keys of every stored unpaid coupon claim, by budget id. */
-export async function openSovereignCouponHolderKeys(db: Db): Promise<Map<string, Set<string>>> {
+/** One distinct `(budget, holder)` pair from the lock-key aggregation. */
+interface SettleableHolderKeyRow {
+  _id: {
+    budgetId: string;
+    currencyCode: string;
+    kind: FundedSovereignCouponClaim["holders"][number]["kind"];
+    holderId?: string | null;
+  };
+}
+
+/**
+ * Holder lock keys of the claims each budget can move money for this pass, by
+ * budget id.
+ *
+ * These keys exist to order the payees a payout may credit, and the payout loop
+ * only acts on what `loadSettleableOpenSovereignCouponClaims` returns: a claim
+ * within the cash the budget holds, or one a journal receipt already owns.
+ * Reading every open claim to build the keys cost 168 MB on a backlog of 326k
+ * claims to settle about 1,100 of them, and a Treasury that can settle nothing
+ * still held the locks of every payee in its backlog. Asking the server for the
+ * same predicate and grouping it down to distinct keys keeps the claim
+ * documents that cross the wire to the ones that can actually move.
+ *
+ * `cashLocalByBudget` must be the figure the settle step bounds by or larger;
+ * the Treasury phase passes the `treasuryCashLocal` it loaded, which accrual
+ * does not touch and bank claims can only reduce.
+ */
+export async function settleableSovereignCouponHolderKeys(
+  db: Db,
+  cashLocalByBudget: ReadonlyMap<string, number>,
+  receiptClaimIds: readonly string[]
+): Promise<Map<string, Set<string>>> {
+  const branches: Array<Record<string, unknown>> = [];
+  for (const [budgetId, cashLocal] of cashLocalByBudget)
+    branches.push({ budgetId, "claim.amountLocal": { $lte: Math.max(0, cashLocal) } });
+  // A claim a receipt already owns is loaded and resumed whatever it is worth.
+  const receipts = [...new Set(receiptClaimIds)];
+  if (receipts.length > 0) branches.push({ _id: { $in: receipts } });
+  if (!branches.length) return new Map();
   const rows = await claimStore(db)
-    .find(OPEN_CLAIM, {
-      projection: {
-        budgetId: 1,
-        "claim.currencyCode": 1,
-        "claim.holders.kind": 1,
-        "claim.holders.id": 1,
+    .aggregate<SettleableHolderKeyRow>([
+      { $match: { settledTurn: { $exists: false }, $or: branches } },
+      { $unwind: "$claim.holders" },
+      {
+        $group: {
+          _id: {
+            budgetId: "$budgetId",
+            currencyCode: "$claim.currencyCode",
+            kind: "$claim.holders.kind",
+            holderId: "$claim.holders.id",
+          },
+        },
       },
-    })
+    ])
     .toArray();
   const keys = new Map<string, Set<string>>();
   for (const row of rows) {
-    const set = keys.get(row.budgetId) ?? new Set<string>();
-    for (const key of sovereignCouponHolderKeys(row.claim)) set.add(key);
-    keys.set(row.budgetId, set);
+    const key = couponHolderKey(row._id.kind, row._id.holderId ?? undefined, row._id.currencyCode);
+    if (!key) continue;
+    const set = keys.get(row._id.budgetId) ?? new Set<string>();
+    set.add(key);
+    keys.set(row._id.budgetId, set);
   }
   return keys;
 }
@@ -246,7 +308,8 @@ async function findPriorPayouts(
 
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-const claimIdOfMove = (moveId: string) => moveId.slice(0, moveId.indexOf(":attempt:"));
+/** The claim a journal attempt move belongs to. */
+export const claimIdOfMove = (moveId: string) => moveId.slice(0, moveId.indexOf(":attempt:"));
 
 /**
  * Move a budget's legacy array claims into the claim store. A claim with a
@@ -439,6 +502,12 @@ export async function settleFundedSovereignCoupons(
      * load-every-open-claim behaviour.
      */
     priorPayouts?: ReadonlyArray<{ _id: string; status: string }>;
+    /**
+     * Cash figure the caller built this budget's payee locks from. The claim
+     * load never reaches past it, so cash credited after the locks were taken
+     * cannot pull in a claim whose payees are unlocked; it settles next turn.
+     */
+    lockedCashBoundLocal?: number;
   }
 ): Promise<void> {
   const budgetId = String(budget._id);
@@ -469,7 +538,11 @@ export async function settleFundedSovereignCoupons(
       ? Math.min(...pinnedLegacy.map((claim) => claim.dueTurn))
       : null;
     [cashBound, batches, poolCurrencies] = await Promise.all([
-      readBudgetCash(db, budget._id),
+      readBudgetCash(db, budget._id).then((cash) =>
+        input.lockedCashBoundLocal === undefined
+          ? cash
+          : Math.min(cash, Math.max(0, input.lockedCashBoundLocal))
+      ),
       (async () => {
         const storeFirst = await firstOpenSovereignCouponDueTurn(db, budgetId);
         // With no queued claim at all the historical loader would still probe
@@ -764,6 +837,27 @@ async function loadCouponBatches(
 }
 
 /**
+ * Claims owned by a grouped coupon receipt that never landed. A receipt with a
+ * refused leg is resumed on a later pass and finishes its remaining credits
+ * then, so its members keep their payee locks even when this pass's cash bound
+ * no longer covers their amounts. A landed receipt only closes its claim
+ * records and needs no payee lock.
+ */
+export async function unfinishedSovereignCouponBatchClaimIds(db: Db): Promise<string[]> {
+  const rows = await db
+    .collection<CouponBatchRecord>("bankMoneyMoves")
+    .find(
+      {
+        status: { $in: ["partial", "replayed"] },
+        _id: { $regex: "^sovereign-coupon-batch:" },
+      },
+      { projection: { "event.meta.claimIds": 1 } }
+    )
+    .toArray();
+  return rows.flatMap(batchMembers);
+}
+
+/**
  * Close the claim records a landed batch paid. The receipt, not the record, is
  * the authority: a crash before this write leaves the record open and the next
  * attempt finds it in the batch membership and closes it here, paying nothing.
@@ -912,17 +1006,24 @@ async function loadCouponTargetReadiness(
       claim.holders.some((holder) => holder.kind === "publicFloat") ? [claim.currencyCode] : []
     ),
   ]);
-  await Promise.all(
-    [...poolCurrencies].map((currencyCode) =>
-      db
-        .collection<{ _id: string }>("bondMarketPools")
-        .updateOne(
-          { _id: currencyCode },
-          { $setOnInsert: { targetCashLocal: 0, createdAt: new Date() } },
-          { upsert: true }
-        )
-    )
-  );
+  if (poolCurrencies.size > 0) {
+    try {
+      await db.collection<{ _id: string }>("bondMarketPools").bulkWrite(
+        [...poolCurrencies].map((currencyCode) => ({
+          updateOne: {
+            filter: { _id: currencyCode },
+            update: { $setOnInsert: { targetCashLocal: 0, createdAt: new Date() } },
+            upsert: true,
+          },
+        })),
+        { ordered: false }
+      );
+    } catch (error) {
+      // Two Treasuries creating the same missing pool at once is the only way
+      // this can race, and the loser's document is already the one it wanted.
+      if (!isDuplicateKeyError(error)) throw error;
+    }
+  }
   const collections = new Map<string, Set<string>>();
   for (const claim of claims) {
     for (const holder of claim.holders) {
