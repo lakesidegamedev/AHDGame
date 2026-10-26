@@ -721,7 +721,7 @@ describe("sovereign maturity wave", () => {
     // each bond under its own guard) and shares every other read and write, so
     // it must be far below the per-bond chain.
     expect(perBondTripsPerBond).toBeGreaterThan(50);
-    expect(perBondTripsPerBond / waveTripsPerBond, wave.summary).toBeGreaterThan(4);
+    expect(perBondTripsPerBond / waveTripsPerBond, `wave ${wave.trips} trips`).toBeGreaterThan(4);
     expect(waveTripsPerBond, `wave ${wave.trips} trips for 700 bonds`).toBeLessThan(15);
   }, 600_000);
 

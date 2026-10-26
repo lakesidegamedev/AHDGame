@@ -1,5 +1,6 @@
 import { ObjectId, type Db } from "mongodb";
 import type { Bond } from "@/lib/db/types";
+import type { CountryId } from "@/lib/constants/countries";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import type { treasuryAnchorValuation } from "@/lib/budget/rules/treasuryAccrual";
 import type { PartialTxEntry } from "@/lib/turn/bondTurnLedger";
@@ -374,7 +375,7 @@ export function planSovereignMaturityCountryWaves(
   const waves: SovereignMaturityWaveCountry[] = [];
   const perBond: Bond[] = [];
   for (const [countryId, group] of byCountry) {
-    const budgetId = getNationalBudgetId(countryId);
+    const budgetId = getNationalBudgetId(countryId as CountryId);
     const currencyCode = group[0]!.plan.currencyCode;
     const localPerAnchor = group[0]!.plan.treasuryValuation.anchorRate;
     // One debit funds the whole wave, so the whole wave must be affordable on
