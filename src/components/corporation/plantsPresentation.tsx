@@ -17,11 +17,10 @@
  * the same period.
  */
 
-import {
-  FILL_RATE_BAND_LABEL,
-  FILL_RATE_BAND_SHORT,
-  type FillRateBand,
-} from "@/lib/corporations/financialFogOfWar";
+import { type FillRateBand } from "@/lib/corporations/financialFogOfWar";
+import { FILL_BAND_TEXT, fillBandSentence, fillBandShort, formatFillPercent } from "./fillBand";
+
+export { FILL_BAND_TEXT, fillBandSentence, fillBandShort, formatFillPercent } from "./fillBand";
 import type { BuildQueueSummary } from "@/lib/corporations/sectorBuildQueue";
 import type { OperatingSectorType } from "@/lib/constants/corporations";
 import { capitalizeFacility, facilityPlural } from "@/lib/constants/facilityVocabulary";
@@ -49,35 +48,6 @@ export function formatUnits(value: number | null | undefined): string {
   if (abs >= 10_000) return `${(value / 1_000).toFixed(0)}k`;
   if (abs >= 1_000) return `${(value / 1_000).toFixed(1)}k`;
   return Math.round(value).toLocaleString("en-US");
-}
-
-/** Fill rate as a whole-percent string. "n/a" when there is no fill rate. */
-export function formatFillPercent(fill: number | null | undefined): string {
-  if (fill == null || !Number.isFinite(fill)) return "n/a";
-  return `${Math.round(fill * 100)}%`;
-}
-
-/**
- * Text colour per fill band.
- *
- * This is where the surface spends its colour: across twenty rows the band is
- * the only thing a CEO needs to scan to find the plant that is making things
- * nobody is buying. Everything else on the row stays neutral so this reads.
- */
-export const FILL_BAND_TEXT: Record<FillRateBand, string> = {
-  high: "text-success",
-  medium: "text-warning",
-  low: "text-error",
-};
-
-/** Explanatory sentence for a band, for tooltips and the rival view. */
-export function fillBandSentence(band: FillRateBand): string {
-  return FILL_RATE_BAND_LABEL[band];
-}
-
-/** Short band word for a chip that has no room for a number. */
-export function fillBandShort(band: FillRateBand): string {
-  return FILL_RATE_BAND_SHORT[band];
 }
 
 /**

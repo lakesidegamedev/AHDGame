@@ -26,8 +26,8 @@ export interface ChamberTally {
  * a numerator/denominator seat share compared with exact integer math, so
  * retuning either bar is a one-line constant edit.
  */
-export const IMPEACHMENT_HOUSE_BAR = { num: 1, den: 2 } as const;
-export const IMPEACHMENT_SENATE_BAR = { num: 2, den: 3 } as const;
+const IMPEACHMENT_HOUSE_BAR = { num: 1, den: 2 } as const;
+const IMPEACHMENT_SENATE_BAR = { num: 2, den: 3 } as const;
 
 /** Smallest seat-weighted aye count that carries the House bar at `seats` seats. */
 export function houseImpeachmentVotesNeeded(seats: number): number {

@@ -42,9 +42,9 @@
  */
 
 /** Unmet-demand share (of demand) above which prices ratchet up. */
-export const SCARCITY_DRIFT_UNMET_THRESHOLD = 0.15;
+const SCARCITY_DRIFT_UNMET_THRESHOLD = 0.15;
 /** Surplus share (of supply) above which prices ratchet down. */
-export const SCARCITY_DRIFT_SURPLUS_THRESHOLD = 0.15;
+const SCARCITY_DRIFT_SURPLUS_THRESHOLD = 0.15;
 /** Per-turn ratchet step while an imbalance persists. */
 export const SCARCITY_DRIFT_STEP = 0.004;
 /** Geometric decay toward 1 per balanced turn (~34 turns to halve). */
@@ -57,9 +57,9 @@ export const SCARCITY_DRIFT_MIN = 0.6;
  * Between the ratchet threshold and this, the target scales linearly, so mild
  * shortages settle at a proportional mid-range instead of railing at the cap.
  */
-export const SCARCITY_DRIFT_SEVERE_UNMET = 0.45;
+const SCARCITY_DRIFT_SEVERE_UNMET = 0.45;
 /** Surplus share at (and above) which the down-target reaches SCARCITY_DRIFT_MIN. */
-export const SCARCITY_DRIFT_SEVERE_SURPLUS = 0.45;
+const SCARCITY_DRIFT_SEVERE_SURPLUS = 0.45;
 
 /**
  * Fraction (0..1) of the way from the ratchet threshold to the "severe" point.
@@ -134,7 +134,7 @@ export const SCARCITY_MOMENTUM_HISTORY_TURNS = 12;
 /** Minimum history before a trailing reference exists; before that, flat. */
 export const SCARCITY_MOMENTUM_MIN_HISTORY = 4;
 /** Imbalance change (share points) inside which the market reads as flat. */
-export const SCARCITY_MOMENTUM_DEAD_BAND = 0.02;
+const SCARCITY_MOMENTUM_DEAD_BAND = 0.02;
 /**
  * Geometric decay toward 1 per turn while an imbalance is EASING (~17 turns to
  * halve). Recovery must unwind scarcity memory at least as fast as a flat
@@ -269,7 +269,7 @@ function decayToward1(prev: number): number {
  * wide bounds so a deep shortage can show in the price.
  */
 export const FUNDED_SCARCITY_MAX_MOVE = 0.06;
-export const FUNDED_SCARCITY_IMBALANCE_GAIN = 0.5;
+const FUNDED_SCARCITY_IMBALANCE_GAIN = 0.5;
 export const FUNDED_SCARCITY_MIN = 0.25;
 export const FUNDED_SCARCITY_MAX = 10;
 

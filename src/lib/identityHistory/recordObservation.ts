@@ -29,7 +29,7 @@ export type RecordObservationOutcome = "extended" | "opened" | "rejected" | "deb
  * costs one indexed lookup and skips the write, so a run's counter stays a
  * meaningful "how many separate times was this seen".
  */
-export const IDENTITY_OBSERVATION_DEBOUNCE_MS = 60_000;
+const IDENTITY_OBSERVATION_DEBOUNCE_MS = 60_000;
 
 /**
  * Append an observation to the user's history for one track.

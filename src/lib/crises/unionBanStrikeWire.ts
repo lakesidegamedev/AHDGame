@@ -22,7 +22,7 @@ import { struckTradesFor } from "./unionBanStrikeCopy";
  * decade, a party or a personality.
  */
 
-export const UNION_BAN_STRIKE_WIRE_SOURCE = "Labour Desk";
+const UNION_BAN_STRIKE_WIRE_SOURCE = "Labour Desk";
 
 export interface StrikeHeadline {
   title: string;
@@ -88,7 +88,7 @@ const OUTCOME_COPY: Record<string, { global: StrikeHeadline; national: StrikeHea
 };
 
 /** A headline as a Discord embed. Pure, so the copy is testable without a network. */
-export function buildStrikeEmbed(headline: StrikeHeadline, countryId: string): DiscordEmbed {
+function buildStrikeEmbed(headline: StrikeHeadline, countryId: string): DiscordEmbed {
   return {
     title: headline.title,
     description: headline.body,

@@ -229,7 +229,7 @@ export const CONTRACT_CANCEL_NOTICE_TURNS = 4;
  * at a financial day, keeps leaving possible without making it free. Both
  * sides can still end it sooner by agreeing a shorter term (amend).
  */
-export const CONTRACT_CANCEL_NOTICE_TERM_SHARE = 0.25;
+const CONTRACT_CANCEL_NOTICE_TERM_SHARE = 0.25;
 export const CONTRACT_CANCEL_NOTICE_MAX_TURNS = 24;
 
 /**

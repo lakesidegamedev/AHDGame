@@ -24,26 +24,26 @@ import {
 } from "@/lib/countries/us/data/usPollClosing";
 
 /** How long a wave's night lasts, in real hours. */
-export const PRIMARY_NIGHT_HOURS = 8;
+const PRIMARY_NIGHT_HOURS = 8;
 export const PRIMARY_NIGHT_MS = PRIMARY_NIGHT_HOURS * 60 * 60 * 1000;
 /** First and last poll closing, as fractions of the night. */
-export const PRIMARY_NIGHT_FIRST_CLOSE = 0.04;
-export const PRIMARY_NIGHT_LAST_CLOSE = 0.6;
+const PRIMARY_NIGHT_FIRST_CLOSE = 0.04;
+const PRIMARY_NIGHT_LAST_CLOSE = 0.6;
 /**
  * Each state closes on its own, not in hourly batches: states sharing a real
  * closing hour are spread across this share of the gap to the next hour.
  */
-export const PRIMARY_NIGHT_SAME_HOUR_SPREAD = 0.8;
+const PRIMARY_NIGHT_SAME_HOUR_SPREAD = 0.8;
 /** Fraction of the night a state takes from closing to full reporting. */
-export const PRIMARY_NIGHT_RAMP = 0.38;
+const PRIMARY_NIGHT_RAMP = 0.38;
 /** Reporting never reads 100% inside the night; the final count lands when it ends. */
-export const PRIMARY_NIGHT_REPORTING_CAP = 0.99;
+const PRIMARY_NIGHT_REPORTING_CAP = 0.99;
 /** Below this reporting % a state shows nothing but "counting". */
-export const PRIMARY_NIGHT_COUNTING_FLOOR = 1;
+const PRIMARY_NIGHT_COUNTING_FLOOR = 1;
 /** Below this reporting % no leader is shown. */
-export const PRIMARY_NIGHT_LEADER_FLOOR = 8;
+const PRIMARY_NIGHT_LEADER_FLOOR = 8;
 /** Largest seeded noise on a displayed share (fraction) at 0% reporting. */
-export const PRIMARY_NIGHT_NOISE_MAX = 0.08;
+const PRIMARY_NIGHT_NOISE_MAX = 0.08;
 
 const REPORTING_CURVE_EXPONENT = 2.2;
 
@@ -66,10 +66,6 @@ export interface PrimaryNightState {
 /** Fraction of full reporting after `x` (0..1) of the ramp. Concave: fast early returns. */
 function reportingCurve(x: number): number {
   return 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), REPORTING_CURVE_EXPONENT);
-}
-
-function reportingCurveInverse(p: number): number {
-  return 1 - Math.pow(1 - Math.min(1, Math.max(0, p)), 1 / REPORTING_CURVE_EXPONENT);
 }
 
 /** When a state's polls close inside the night, as a fraction of the night. */
@@ -200,26 +196,6 @@ export function primaryNightState(input: PrimaryNightInput): PrimaryNightState {
 /** Whether the real result may be shown: the night is over, or the state is called. */
 export function isPrimaryStateSettled(state: PrimaryNightState): boolean {
   return state.status === "final" || state.status === "called";
-}
-
-/** When the call lands for a state (ms epoch), or null when it is only called at the end. */
-export function primaryCallAtMs(input: Omit<PrimaryNightInput, "nowMs">): number | null {
-  const ranked = Object.values(input.finalVotes)
-    .filter((v) => v > 0)
-    .sort((a, b) => b - a);
-  const total = ranked.reduce((s, v) => s + v, 0);
-  if (total <= 0) return null;
-  const marginPp = ranked.length > 1 ? ((ranked[0] - ranked[1]) / total) * 100 : 100;
-  const floor = primaryCallFloor(marginPp) / 100;
-  const closeMs =
-    input.waveAtMs +
-    primaryNightCloseFraction(input.electionId, input.stateId, input.waveStates) * PRIMARY_NIGHT_MS;
-  const rampMs =
-    PRIMARY_NIGHT_RAMP *
-    (0.85 + hashFraction(`${input.electionId}:${input.partyId}:${input.stateId}:pn-ramp`) * 0.3) *
-    PRIMARY_NIGHT_MS;
-  const at = closeMs + reportingCurveInverse(floor / PRIMARY_NIGHT_REPORTING_CAP) * rampMs;
-  return at < input.waveAtMs + PRIMARY_NIGHT_MS ? at : null;
 }
 
 /** Wave history as the tally stores it. */

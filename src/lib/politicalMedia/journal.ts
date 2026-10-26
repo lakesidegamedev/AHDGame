@@ -16,8 +16,8 @@ import { AD_BONUS_CAP, adExposure, type TargetedAd } from "@/lib/campaignTargeti
 import { politicalMediaFillRatio } from "./rules";
 
 export const POLITICAL_MEDIA_ORDER_KIND = "political-media-order";
-export const POLITICAL_MEDIA_ESCROW_CURRENCY = "AHD";
-export const POLITICAL_MEDIA_ESCROW_RATE = 1;
+const POLITICAL_MEDIA_ESCROW_CURRENCY = "AHD";
+const POLITICAL_MEDIA_ESCROW_RATE = 1;
 
 export type PoliticalMediaOrderSource = "advertise" | "targeted_ad" | "campaign_maintenance";
 

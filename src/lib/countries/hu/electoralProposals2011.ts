@@ -154,7 +154,7 @@ export async function openHu2011ElectoralProposal(
   );
 }
 
-export async function authorizeHu2011ElectoralProposal(
+async function authorizeHu2011ElectoralProposal(
   db: Db,
   game: Calendar,
   turn: number,

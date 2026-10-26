@@ -21,7 +21,7 @@ export const MACRO_CATEGORIES: ReadonlySet<string> = new Set(["economic", "popul
  * through TIER2_SOURCES, which reads the MACRO store, so Bridge B could never
  * see them where they were.
  */
-export const MACRO_GOVERNANCE_PATHS: ReadonlySet<string> = new Set([
+const MACRO_GOVERNANCE_PATHS: ReadonlySet<string> = new Set([
   "governance.independenceDesire",
   "governance.budgetBalance",
   "governance.debtToGdp",

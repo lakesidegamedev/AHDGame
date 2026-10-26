@@ -179,7 +179,7 @@ export async function openRo1992ElectoralProposal(
   );
 }
 
-export async function authorizeRo1992ElectoralProposal(
+async function authorizeRo1992ElectoralProposal(
   db: Db,
   game: Calendar,
   turn: number,

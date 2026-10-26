@@ -9,7 +9,7 @@ export function getNuclearProgramsCollection(db: Db) {
 }
 
 /** The empty programme; never persisted on read (nationalDoctrine pattern). */
-export function emptyNuclearProgram(countryId: CountryId): NuclearProgram {
+function emptyNuclearProgram(countryId: CountryId): NuclearProgram {
   return {
     _id: countryId,
     adopted: {},

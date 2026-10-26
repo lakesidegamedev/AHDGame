@@ -90,7 +90,11 @@ import {
   corpIncomeBasis,
   scaleToPeriod,
 } from "@/components/corporation/financials/financialsModel";
-import { NationalCorporationView } from "@/components/national/NationalCorporationView";
+const NationalCorporationView = dynamic(
+  () =>
+    import("@/components/national/NationalCorporationView").then((m) => m.NationalCorporationView),
+  { loading: SectionFallback }
+);
 import {
   TabFallback,
   SectorsTab,
@@ -110,7 +114,11 @@ import {
   DefaultedBondCrisisModal,
 } from "@/components/corporation/CorporationPageTabs";
 import { EditorialStancePanel } from "@/components/corporation/EditorialStancePanel";
-import { LegacyProductProjects } from "@/components/corporation/LegacyProductProjects";
+const LegacyProductProjects = dynamic(
+  () =>
+    import("@/components/corporation/LegacyProductProjects").then((m) => m.LegacyProductProjects),
+  { loading: () => null }
+);
 import type {
   CorporationDetail,
   CEO,

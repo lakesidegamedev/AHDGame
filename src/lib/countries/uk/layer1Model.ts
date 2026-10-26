@@ -32,7 +32,7 @@ import { UK_SOCIAL_ATTITUDES_1991 } from "./data/ukSocialAttitudes1991";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-export const UK_GROUP_IDS = [
+const UK_GROUP_IDS = [
   "post_industrial_workers",
   "urban_progressives",
   "suburban_homeowners",

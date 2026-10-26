@@ -23,7 +23,7 @@ export interface PatreonWebhookEnvelope {
   };
 }
 
-export function verifyPatreonWebhookSignature(body: string, signature: string | null): boolean {
+function verifyPatreonWebhookSignature(body: string, signature: string | null): boolean {
   const secret = getPatreonWebhookSecret();
   if (!secret || !signature) return false;
 

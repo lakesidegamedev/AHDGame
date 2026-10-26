@@ -11,7 +11,7 @@
 
 import type { LawCountryId } from "./types";
 
-export const SEED_TAX_TYPES = [
+const SEED_TAX_TYPES = [
   "incomeTax",
   "domesticCorporateTax",
   "foreignCorporateTax",

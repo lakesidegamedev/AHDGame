@@ -86,7 +86,7 @@ export async function readTurnLock(db: Db, now: Date): Promise<TurnLockState> {
   };
 }
 
-export function parseMaxAffected(guard: GuardName): number | null {
+function parseMaxAffected(guard: GuardName): number | null {
   const match = /^max-affected:(\d+)$/.exec(guard);
   return match ? Number(match[1]) : null;
 }

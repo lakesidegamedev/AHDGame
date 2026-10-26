@@ -78,5 +78,5 @@ export function getBgSeedConfig(preset: string): EasternBlocSeedConfig {
   };
 }
 
-export const bgSeedConfig: EasternBlocSeedConfig = getBgSeedConfig("2019-default");
+const bgSeedConfig: EasternBlocSeedConfig = getBgSeedConfig("2019-default");
 export default bgSeedConfig;

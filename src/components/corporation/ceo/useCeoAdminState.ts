@@ -147,7 +147,7 @@ function makeInitialState(initialCountryId: CountryId): CeoAdminState {
   };
 }
 
-export function ceoAdminReducer(state: CeoAdminState, action: CeoAdminAction): CeoAdminState {
+function ceoAdminReducer(state: CeoAdminState, action: CeoAdminAction): CeoAdminState {
   switch (action.type) {
     case "SET_RELOCATE_TARGET":
       return { ...state, relocateTarget: action.value };

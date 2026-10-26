@@ -16,16 +16,12 @@ import {
   type FertilityBasis,
   type MortalityBasis,
 } from "@/lib/resetMetrics/rules/demographicMeasurement";
-import {
-  demographicFlowBatchId,
-  demographicRecoveryDecision,
-  type DemographicFlowReceiptStatus,
-} from "./rules/flowReceipt";
+import { demographicFlowBatchId, type DemographicFlowReceiptStatus } from "./rules/flowReceipt";
 
 export const DEMOGRAPHIC_FLOW_RECEIPTS = "demographicFlowReceipts";
 export const DEMOGRAPHIC_FLOW_PROJECTIONS = "demographicFlowProjections";
-export const DEMOGRAPHIC_FLOW_PENDING_INDEX = "demographic_flow_pending_epoch_turn";
-export const DEMOGRAPHIC_FLOW_PLAN_REGION_INDEX = "demographic_flow_plan_region_unique";
+const DEMOGRAPHIC_FLOW_PENDING_INDEX = "demographic_flow_pending_epoch_turn";
+const DEMOGRAPHIC_FLOW_PLAN_REGION_INDEX = "demographic_flow_plan_region_unique";
 
 const STAMP_FIELD = "populationFlowStamp";
 
@@ -450,7 +446,7 @@ async function createJournalIndexes(db: Db): Promise<void> {
     );
 }
 
-export async function ensureDemographicFlowJournalIndexes(db: Db): Promise<void> {
+async function ensureDemographicFlowJournalIndexes(db: Db): Promise<void> {
   let pending = indexReadiness.get(db);
   if (!pending) {
     pending = createJournalIndexes(db).catch((error) => {
@@ -623,5 +619,3 @@ export async function freezeAndApplyDemographicFlowPlan(
   }
   return (await materializeReceipt(db, receipt)).stats;
 }
-
-export { demographicFlowBatchId, demographicRecoveryDecision };

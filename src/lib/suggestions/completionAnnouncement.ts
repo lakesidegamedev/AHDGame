@@ -13,7 +13,7 @@ import { resolveSuggestionReporterIdentity } from "@/lib/suggestions/reporterIde
  * Status values that mean a suggestion shipped. The site writes `completed`;
  * the support tooling has historically written `implemented`.
  */
-export const SUGGESTION_DONE_STATUSES = ["completed", "implemented"] as const;
+const SUGGESTION_DONE_STATUSES = ["completed", "implemented"] as const;
 
 export function isSuggestionDoneStatus(status: string | null | undefined): boolean {
   return (SUGGESTION_DONE_STATUSES as readonly string[]).includes(status ?? "");
@@ -23,7 +23,7 @@ export function isSuggestionDoneStatus(status: string | null | undefined): boole
  * Suggestions finished before announcements existed must never flood the
  * channel. Only completions recorded at or after this instant are announced.
  */
-export const COMPLETION_ANNOUNCEMENTS_START = new Date("2026-10-20T00:00:00Z");
+const COMPLETION_ANNOUNCEMENTS_START = new Date("2026-10-20T00:00:00Z");
 
 /** Embed field limit is 1024 characters. */
 const NOTE_MAX = 1000;

@@ -18,7 +18,7 @@ import {
   RUSSIAN_PRESIDENTIAL_RESULTS_COLLECTION,
   type RussianPresidentialResultRecord,
 } from "./presidentialElectionResult";
-export const RUSSIAN_PRESIDENTIAL_ARCHIVES_COLLECTION = "russianPresidentialOfficeArchives";
+const RUSSIAN_PRESIDENTIAL_ARCHIVES_COLLECTION = "russianPresidentialOfficeArchives";
 interface Archive {
   _id: string;
   preset: "1991-default";

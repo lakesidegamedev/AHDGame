@@ -43,7 +43,7 @@ export interface NppMortalityResult {
 export type ReplacementMinter = (dead: NPP, year: number) => Promise<NPP>;
 
 /** Production minter: a fully random NPP of the same party, aimed at the same office. */
-export async function mintRandomSuccessor(
+async function mintRandomSuccessor(
   db: Db,
   dead: NPP,
   year: number,

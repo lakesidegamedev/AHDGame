@@ -27,7 +27,7 @@ import {
  * session left idle past `expiresAt` is cashed out for the player by the
  * sweeper rather than forfeited.
  */
-export const HIGHLOW_SESSION_MS = 10 * 60_000;
+const HIGHLOW_SESSION_MS = 10 * 60_000;
 
 export type HighLowStatus = "active" | "lost" | "cashed";
 

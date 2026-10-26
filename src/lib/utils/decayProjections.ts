@@ -4,7 +4,7 @@ import {
 } from "@shared/constants/formulas";
 
 /** 5% per-turn infamy decay rate. Mirrors the turn processor's infamy decay in policyEffects. */
-export const INFAMY_DECAY_RATE = 0.05;
+const INFAMY_DECAY_RATE = 0.05;
 
 export interface DecayProjection {
   current: number;

@@ -6,7 +6,7 @@
 export type ProductLifecycleStage =
   "development" | "launch" | "growth" | "mature" | "decline" | "retired";
 
-export const PRODUCT_LIFECYCLE_STAGE_TURNS: Partial<Record<ProductLifecycleStage, number>> = {
+const PRODUCT_LIFECYCLE_STAGE_TURNS: Partial<Record<ProductLifecycleStage, number>> = {
   launch: 24,
   growth: 48,
   mature: 120,

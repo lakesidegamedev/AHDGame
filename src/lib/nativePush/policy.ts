@@ -20,7 +20,7 @@ export function shouldPush(
 }
 
 /** The inbox route. 2.3.x apps only act on a push whose `path` is exactly this. */
-export const INBOX_PATH = "/notifications";
+const INBOX_PATH = "/notifications";
 
 /** Used when a notification has no readable text of its own. */
 export const PUSH_PREVIEW = {

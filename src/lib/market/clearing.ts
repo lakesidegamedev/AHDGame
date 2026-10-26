@@ -71,8 +71,8 @@ import { clampPricingPosture, costPlusPriceFactor } from "./costPlusPricing/rule
  * rate sits near zero. These thresholds make the autopilot read its own
  * lagged soldFraction before it prices.
  */
-export const AUTO_POSTURE_FILL_CHASE = 0.35;
-export const AUTO_POSTURE_FILL_HEALTHY = 0.7;
+const AUTO_POSTURE_FILL_CHASE = 0.35;
+const AUTO_POSTURE_FILL_HEALTHY = 0.7;
 
 /**
  * Quality → premium pricing coupling (Package B, qualityPremiumPricingEnabled).
@@ -433,8 +433,8 @@ export interface ClearingBookDiagnostic {
  * is exactly the pinned pharmaceuticals/ordnance shape, and canonicalization
  * leaves no legitimate way to offer thousands of units the ledger never saw.
  */
-export const CLEARING_BOOK_INVARIANT_MIN_MATERIAL_GAP = 250;
-export const CLEARING_BOOK_INVARIANT_MAX_GROWTH_FACTOR = 2;
+const CLEARING_BOOK_INVARIANT_MIN_MATERIAL_GAP = 250;
+const CLEARING_BOOK_INVARIANT_MAX_GROWTH_FACTOR = 2;
 
 /** Pure predicate behind ClearingBookDiagnostic.invariantBreach. */
 export function isClearingBookBreach(

@@ -43,7 +43,7 @@ import {
 import { classifyPartialMoneyMove, type PartialMoneyMoveSource } from "./moneyMoves";
 
 /** Real account kinds whose balances the reset removes or rewrites. */
-export const DESTROYED_ACCOUNT_KINDS: readonly string[] = Object.freeze([
+const DESTROYED_ACCOUNT_KINDS: readonly string[] = Object.freeze([
   "character",
   "character_savings",
   "corporation",
@@ -123,7 +123,7 @@ export interface EconomyResetSource {
 }
 
 /** Round to a fixed precision so float noise never changes the digest. */
-export function roundAmount(value: number): number {
+function roundAmount(value: number): number {
   if (!Number.isFinite(value)) return 0;
   return Math.round(value * 1e6) / 1e6;
 }
@@ -143,7 +143,7 @@ function byId<T extends { id: string }>(rows: T[]): T[] {
  * yet in EUR. On a kept budget that would rescale live fiscal state, so a
  * member treasury that is not already in EUR blocks the reset.
  */
-export function currencyTopologyBlockers(
+function currencyTopologyBlockers(
   budgets: { countryId: string; storedCurrencyCode: string | null }[],
   preset: string
 ): string[] {

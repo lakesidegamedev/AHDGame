@@ -96,7 +96,7 @@ export const FRESH_PLANTS_CONFIG_KEPT: Readonly<Record<string, string>> = Object
  * plants economy runs on its own rules; an operator may switch any of these on
  * later as a deliberate decision.
  */
-export const FRESH_PLANTS_INTERVENTIONS_OFF = Object.freeze({
+const FRESH_PLANTS_INTERVENTIONS_OFF = Object.freeze({
   marketGuardEnabled: false,
   equityLiquidityFacilityEnabled: false,
   indexFundBondLiquidityEnabled: false,
@@ -114,7 +114,7 @@ export const FRESH_PLANTS_INTERVENTIONS_OFF = Object.freeze({
  * world starts far short of real demand: short plants build in a quarter of
  * the time, and prices move at most 2% a turn up to 3x.
  */
-export const FRESH_PLANTS_SETTINGS = Object.freeze({
+const FRESH_PLANTS_SETTINGS = Object.freeze({
   producerShortageBuildFactor: 0.25,
   producerPriceMaxMove: 0.02,
   producerPriceMaxMultiplier: 3,

@@ -19,7 +19,7 @@ function budgets(db: Db) {
  * defence line from the same document — can resolve the pot without a second `findOne`, and
  * without the heal's write when it is about to `$set` the whole sub-document anyway.
  */
-export function appropriationFrom(budget: FederalBudget | null): DefenseAppropriation {
+function appropriationFrom(budget: FederalBudget | null): DefenseAppropriation {
   if (!budget) return { ...EMPTY };
   if (budget.defenseAppropriation) return budget.defenseAppropriation;
   return {

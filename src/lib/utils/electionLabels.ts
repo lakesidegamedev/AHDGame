@@ -136,7 +136,7 @@ export const ELECTION_TYPE_SHORT_LABEL: Record<string, string> = {
  * before ELECTION_TYPE_LABEL_MAP so a country can rename a generic type
  * (e.g. NG "house" → "House of Representatives") without a new election type.
  */
-export const COUNTRY_ELECTION_TYPE_LABELS: Partial<Record<CountryId, Record<string, string>>> = {
+const COUNTRY_ELECTION_TYPE_LABELS: Partial<Record<CountryId, Record<string, string>>> = {
   NG: {
     house: "House of Representatives",
     regionalCouncil: "State House of Assembly",

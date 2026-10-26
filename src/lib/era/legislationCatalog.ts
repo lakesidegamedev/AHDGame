@@ -766,7 +766,7 @@ export const GATED_REVENUE_ACK = new Set<string>([
 ]);
 
 /** In-game years a freshly-unlocked type wears the "New this era" badge. */
-export const NEW_BADGE_YEARS = 2;
+const NEW_BADGE_YEARS = 2;
 
 /**
  * True if the type may exist at `year`. Null year (flag off / legacy) ⇒ true.

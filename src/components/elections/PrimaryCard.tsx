@@ -27,7 +27,7 @@ interface PrimaryCardProps {
   isUncontested: boolean;
 }
 
-export function PrimaryCard({
+function PrimaryCard({
   partyId,
   partyName,
   partyColor,

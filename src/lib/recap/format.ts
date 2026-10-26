@@ -42,7 +42,7 @@ export function pct(n: number, digits = 1): string {
 }
 
 /** The recap's money symbol: frozen at build time (v2), else derived from the country (v1). */
-export function currencySymbol(
+function currencySymbol(
   recap: Pick<CharacterRecap, "currency" | "currencySymbol" | "countryId">
 ): string {
   if (recap.currencySymbol) return recap.currencySymbol;

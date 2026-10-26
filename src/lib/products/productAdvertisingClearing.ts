@@ -67,7 +67,7 @@ export const PRODUCT_ADVERTISING_CLEARING_COLLECTION = "productAdvertisingCleari
 /** Owed per-order seller payables, inserted by stage 1 and removed once cleared. */
 export const PRODUCT_ADVERTISING_PAYABLES_COLLECTION = "productAdvertisingPayables";
 /** Append-only clearance receipts, inserted by the stage 2 projection. */
-export const PRODUCT_ADVERTISING_CLEARANCES_COLLECTION = "productAdvertisingClearances";
+const PRODUCT_ADVERTISING_CLEARANCES_COLLECTION = "productAdvertisingClearances";
 /** Native cash balance field on a pool document. */
 export const CLEARING_POOL_BALANCE_PATH = "cashLocal";
 
@@ -105,7 +105,7 @@ export function clearingPoolId(family: ProductAdvertisingFamily, currencyCode: s
   return `${family}:${currencyCode}`;
 }
 
-export function clearingTransitionKind(family: ProductAdvertisingFamily): string {
+function clearingTransitionKind(family: ProductAdvertisingFamily): string {
   return `${ADVERTISING_FAMILY[family].kind}.clearing`;
 }
 
@@ -162,7 +162,7 @@ function denominationKey(witness: ProductAdvertisingDenominationWitness): string
 }
 
 /** Deterministic stage 2 key: the same owed set in the same turn is the same transition. */
-export function clearingSettlementKey(
+function clearingSettlementKey(
   family: ProductAdvertisingFamily,
   turn: number,
   payableIds: readonly string[]
@@ -395,7 +395,7 @@ function paidSellerIds(record: ClearingJournalRecord | null): ObjectId[] {
 }
 
 /** Matches the raw-field guard `denominationConditions` builds, evaluated on a read row. */
-export function denominationMatches(
+function denominationMatches(
   row: { liquidCurrencyCode?: unknown; countryId?: unknown },
   witness: ProductAdvertisingDenominationWitness
 ): boolean {

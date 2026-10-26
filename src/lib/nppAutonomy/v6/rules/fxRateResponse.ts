@@ -15,11 +15,11 @@
 
 export const FX_LOOKBACK_TURNS = 24;
 /** Moves inside this fraction are treated as noise. */
-export const FX_DEAD_BAND = 0.05;
+const FX_DEAD_BAND = 0.05;
 /** Rate points per unit of move past the band: 0.1 points per 1%. */
-export const FX_RATE_COEF = 10;
+const FX_RATE_COEF = 10;
 /** Appreciation is answered more slowly than depreciation. */
-export const FX_APPRECIATION_WEIGHT = 0.5;
+const FX_APPRECIATION_WEIGHT = 0.5;
 /** Largest shift the term can apply to the target, in rate points. */
 export const FX_MAX_ADJUSTMENT = 3;
 

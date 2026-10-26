@@ -16,7 +16,7 @@ export const ADMIN_SEED_FILE = path.join(
 /**
  * Escape special characters in strings for TypeScript source code.
  */
-export function escapeString(str: string): string {
+function escapeString(str: string): string {
   return str
     .replace(/\\/g, "\\\\")
     .replace(/"/g, '\\"')
@@ -68,7 +68,7 @@ export function formatValue(value: unknown, indent: number = 2): string {
 /**
  * Generate the admin seed file content from permanent legislation types.
  */
-export function generateAdminSeedFile(types: LegislationType[]): string {
+function generateAdminSeedFile(types: LegislationType[]): string {
   const timestamp = new Date().toISOString();
 
   let content = `/**

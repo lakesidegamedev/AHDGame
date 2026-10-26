@@ -2,7 +2,7 @@
 
 import { poolLiquidityAllocation } from "@/lib/moneySupply/rules/poolTarget";
 import type { Db } from "mongodb";
-import type { Corporation, EquityMarketPool } from "@/lib/db/types";
+import type { Corporation } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { EQUITY_MARKET_POOLS_COLLECTION } from "@/lib/db/types/equityMarketPool";
 import { issuanceDilutionFactorExpr } from "@/lib/corporations/shareConsolidation";
@@ -22,13 +22,13 @@ import {
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 
 /** Maximum share of the pool's equity-liquidity allocation committed to one issue. */
-export const EQUITY_PRIMARY_COMMIT_SHARE = 0.2;
+const EQUITY_PRIMARY_COMMIT_SHARE = 0.2;
 /** Portion of an approved issue that may be placed on any later turn. */
-export const EQUITY_PENDING_PLACEMENT_SHARE_PER_TURN = 0.02;
+const EQUITY_PENDING_PLACEMENT_SHARE_PER_TURN = 0.02;
 /** Portion of spendable pool cash available to all pending placements each turn. */
-export const EQUITY_PENDING_CASH_SHARE_PER_TURN = 0.1;
+const EQUITY_PENDING_CASH_SHARE_PER_TURN = 0.1;
 /** Preserve half the target as secondary-market bid depth. */
-export const EQUITY_PENDING_RESERVE_SHARE = 0.5;
+const EQUITY_PENDING_RESERVE_SHARE = 0.5;
 
 function wholeShares(value: number): number {
   return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
@@ -444,20 +444,4 @@ export async function placePendingShareIssuances(
     });
   }
   return result;
-}
-
-/** Narrow read used by admin/debug surfaces without exposing Mongo details. */
-export async function readEquityPrimaryPool(
-  db: Db,
-  currency: CurrencyCode
-): Promise<Pick<
-  EquityMarketPool,
-  "cashLocal" | "targetCashLocal" | "m2Local" | "poolAccountingVersion"
-> | null> {
-  return db
-    .collection<EquityMarketPool>(EQUITY_MARKET_POOLS_COLLECTION)
-    .findOne(
-      { _id: currency },
-      { projection: { cashLocal: 1, targetCashLocal: 1, m2Local: 1, poolAccountingVersion: 1 } }
-    );
 }

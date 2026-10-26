@@ -32,7 +32,7 @@ export const ECONOMY_RESET_PROCESSING_KIND = "economyReset";
 
 export const VOIDED_INCOME_TAX_FILTER = { status: { $in: ["plan", "unpaid"] } };
 /** Reference collections replaced by their seeders after the wipe. */
-export const ECONOMY_RESET_RESEED_COLLECTIONS = ["commodityPrices", "exchangeRates"] as const;
+const ECONOMY_RESET_RESEED_COLLECTIONS = ["commodityPrices", "exchangeRates"] as const;
 export const CORPORATE_BOND_FILTER = { issuerType: { $ne: "sovereign" } };
 
 const FENCE_PROJECTION = {

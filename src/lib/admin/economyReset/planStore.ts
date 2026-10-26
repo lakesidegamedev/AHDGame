@@ -17,7 +17,7 @@ import { ECONOMY_RESET_PLANS_COLLECTION, type EconomyResetPlan } from "./types";
  * most 8 MB even if every character were multi-byte; the plan is almost all
  * ASCII, so a chunk is about 2 MB in practice.
  */
-export const PLAN_CHUNK_CHARS = 2_000_000;
+const PLAN_CHUNK_CHARS = 2_000_000;
 
 export interface EconomyResetPlanChunk {
   _id: string;

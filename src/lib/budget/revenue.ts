@@ -827,7 +827,7 @@ const CAPITAL_RETURNS_PREMIUM = 1.0;
  * passive, undirected drift. 0.08 ⇒ ~8-9yr half-life: a multi-year deliberate
  * push clearly outruns it, a one-turn wobble is barely felt.
  */
-export const TAX_BASE_GDP_SHARE_GRAVITY_ANNUAL = 0.08;
+const TAX_BASE_GDP_SHARE_GRAVITY_ANNUAL = 0.08;
 
 /**
  * Ceiling on how far a tax base's growth rate may exceed the growth of the GDP

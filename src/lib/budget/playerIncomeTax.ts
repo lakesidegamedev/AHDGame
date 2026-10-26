@@ -33,14 +33,12 @@ import {
   annualizedIncome,
 } from "./rules/incomeTaxTiers";
 
-export const PLAYER_TAX_KIND = "player_income_tax";
-
 /**
  * Pass-through distributions already taxed at source (the owner tax on
  * pass-through profit) are not taxed again. The exempt amount comes off the
  * income portion first, then the capital portion.
  */
-export function excludeTaxedAtSource<
+function excludeTaxedAtSource<
   T extends { income: number; capital: number; assessmentTurn?: number },
 >(entry: { type: string; meta?: Record<string, unknown> }, taxable: T): T {
   if (entry.type !== "corp_dividend") return taxable;

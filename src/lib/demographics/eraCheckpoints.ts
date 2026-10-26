@@ -409,12 +409,11 @@ const YANKEE_STATES = ["ME", "NH", "VT", "MA", "RI", "CT"] as const;
  *    begin leaving the old Republican column (1958: Muskie's Maine).
  *
  * Validation anchor: the endpoint world state should rank-correlate with the
- * real 1960 state margins (MARGINS_1960 in
- * `src/lib/data/historicalPresidentialMargins.ts`) outside the org-dominated
- * South, with a near-even national mean (1960 two-party margin D+0.2; House
- * 1958 D+12 fading to 1960 D+5.5).
+ * real 1960 state two-party margins outside the org-dominated South, with a
+ * near-even national mean (1960 two-party margin D+0.2; House 1958 D+12
+ * fading to 1960 D+5.5).
  */
-export const ROAD_TO_1960_CHECKPOINT: EraCheckpoint = {
+const ROAD_TO_1960_CHECKPOINT: EraCheckpoint = {
   id: "road-to-1960",
   countryId: "US",
   title: "The Road to 1960 — Late-Fifties Realignments",
@@ -503,16 +502,6 @@ export const NATIONAL_CIVIL_RIGHTS_ACT_CHECKPOINT: EraCheckpoint = {
 };
 
 /**
- * States covered by the Voting Rights Act's original Section 5 "coverage
- * formula" (a jurisdiction used a literacy/character test AND had under 50%
- * registration or turnout in the 1964 presidential election): Alabama,
- * Georgia, Louisiana, Mississippi, South Carolina, and Virginia (the formula
- * also covered 26 North Carolina counties, not modeled at county
- * granularity here). Source: Voting Rights Act of 1965, 42 U.S.C. § 1973b.
- */
-export const VRA_SECTION5_STATES = ["AL", "GA", "LA", "MS", "SC", "VA"] as const;
-
-/**
  * Voting Rights Act of 1965 — Black voter ENFRANCHISEMENT, modeled on the
  * TURNOUT axis rather than lean. This is deliberately separate from
  * `NATIONAL_CIVIL_RIGHTS_ACT_CHECKPOINT` above, which captures a different
@@ -550,7 +539,7 @@ export const VRA_SECTION5_STATES = ["AL", "GA", "LA", "MS", "SC", "VA"] as const
  * pushing the opposite direction on the same bucket) nets against it every
  * turn exactly like any other durable channel.
  */
-export const VOTING_RIGHTS_ACT_ENFRANCHISEMENT_CHECKPOINT: EraCheckpoint = {
+const VOTING_RIGHTS_ACT_ENFRANCHISEMENT_CHECKPOINT: EraCheckpoint = {
   id: "voting-rights-act-enfranchisement-1965",
   countryId: "US",
   title: "Voting Rights Act — Black Voter Enfranchisement",
@@ -591,7 +580,7 @@ export const VOTING_RIGHTS_ACT_ENFRANCHISEMENT_CHECKPOINT: EraCheckpoint = {
  * delays this checkpoint to its fallback, same mechanism as the Southern
  * realignment above.
  */
-export const ENGEL_SCHOOL_PRAYER_CHECKPOINT: EraCheckpoint = {
+const ENGEL_SCHOOL_PRAYER_CHECKPOINT: EraCheckpoint = {
   id: "engel-school-prayer-1962",
   countryId: "US",
   title: "Engel v. Vitale — Religious-Conservative Reaction",
@@ -673,7 +662,7 @@ export const REYNOLDS_REAPPORTIONMENT_CHECKPOINT: EraCheckpoint = {
  * cell vocabulary, race/age/education/wealth only; see `GRANULAR_DIMENSIONS`).
  * Modeled as a national `age:young` bucket target. Composition-driven.
  */
-export const GRISWOLD_PRIVACY_CHECKPOINT: EraCheckpoint = {
+const GRISWOLD_PRIVACY_CHECKPOINT: EraCheckpoint = {
   id: "griswold-privacy-1965",
   countryId: "US",
   title: "Griswold v. Connecticut — Privacy Realignment",
@@ -696,7 +685,7 @@ export const GRISWOLD_PRIVACY_CHECKPOINT: EraCheckpoint = {
  * authoring a near-duplicate second checkpoint keyed to a different case.
  * Composition-driven.
  */
-export const MIRANDA_LAW_AND_ORDER_CHECKPOINT: EraCheckpoint = {
+const MIRANDA_LAW_AND_ORDER_CHECKPOINT: EraCheckpoint = {
   id: "miranda-law-and-order-1966",
   countryId: "US",
   title: "Miranda v. Arizona — Law-and-Order Salience",
@@ -793,7 +782,7 @@ export function computeCheckpointRawDelta(
  * not rails: a player campaigning hard enough against the tide can hold a
  * targeted state.
  */
-export const COUNTER_PRESSURE_MULTIPLIER = 1;
+const COUNTER_PRESSURE_MULTIPLIER = 1;
 
 /**
  * Net a checkpoint's raw per-turn delta against an opposing legislative shift

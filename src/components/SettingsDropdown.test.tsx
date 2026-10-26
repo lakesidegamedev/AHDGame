@@ -35,40 +35,40 @@ const baseUser = {
 };
 
 describe("SettingsDropdown", () => {
-  it("opens from an avatar trigger showing the username initial", () => {
+  it("opens from an avatar trigger showing the username initial", async () => {
     render(
       <SettingsDropdown user={baseUser} onSignOut={vi.fn()} pageCountry="US" userCountry="US" />
     );
 
     fireEvent.click(screen.getByLabelText("User menu"));
 
-    expect(screen.getByText("Profile Settings")).toBeTruthy();
+    expect(await screen.findByText("Profile Settings")).toBeTruthy();
     expect(screen.queryByText("Admin Panel")).toBeNull();
     expect(screen.queryByText("Mod Panel")).toBeNull();
     expect(screen.getByText("Sign Out")).toBeTruthy();
   });
 
-  it("groups entries under Account and View sections", () => {
+  it("groups entries under Account and View sections", async () => {
     render(
       <SettingsDropdown user={baseUser} onSignOut={vi.fn()} pageCountry="US" userCountry="US" />
     );
 
     fireEvent.click(screen.getByLabelText("User menu"));
 
-    expect(screen.getByText("Account")).toBeTruthy();
+    expect(await screen.findByText("Account")).toBeTruthy();
     expect(screen.getByText("View")).toBeTruthy();
     expect(screen.getByText("testuser")).toBeTruthy();
     // Avatar initial appears in the trigger and the signed-in header.
     expect(screen.getAllByText("T").length).toBeGreaterThanOrEqual(2);
   });
 
-  it("opens the nation picker and returns via back", () => {
+  it("opens the nation picker and returns via back", async () => {
     render(
       <SettingsDropdown user={baseUser} onSignOut={vi.fn()} pageCountry="US" userCountry="US" />
     );
 
     fireEvent.click(screen.getByLabelText("User menu"));
-    fireEvent.click(screen.getByText("Switch nation view"));
+    fireEvent.click(await screen.findByText("Switch nation view"));
 
     expect(screen.getByText("Select Nation")).toBeTruthy();
 
@@ -76,7 +76,7 @@ describe("SettingsDropdown", () => {
     expect(screen.getByText("Profile Settings")).toBeTruthy();
   });
 
-  it("does not expose account sign-out for the fixed local session", () => {
+  it("does not expose account sign-out for the fixed local session", async () => {
     render(
       <SettingsDropdown
         user={{ ...baseUser, singleplayer: true }}
@@ -87,6 +87,7 @@ describe("SettingsDropdown", () => {
     );
 
     fireEvent.click(screen.getByLabelText("User menu"));
+    expect(await screen.findByText("Profile Settings")).toBeTruthy();
     expect(screen.queryByText("Sign Out")).toBeNull();
   });
 });

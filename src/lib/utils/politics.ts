@@ -585,7 +585,7 @@ export function buildGeneralColors(
  * Shades are pre-computed for blue and red; for custom parties we derive them
  * by alpha-blending the base colour toward white.
  */
-export function buildPrimaryShades(partyId: string, storedColor: string, count: number): string[] {
+function buildPrimaryShades(partyId: string, storedColor: string, count: number): string[] {
   if (count === 1) return [getPartyHex(partyId, storedColor)];
 
   // For Democrat (blue) and Republican (red) use high-contrast shades so close races

@@ -29,7 +29,7 @@ const HELD_OFFICE_EVENT_TYPES: ReadonlySet<string> = new Set([
  * Hall of Fame leaderboard's office-tier score bonus — both need to agree on
  * what outranks what.
  */
-export const OFFICE_RANK: Readonly<Record<string, number>> = {
+const OFFICE_RANK: Readonly<Record<string, number>> = {
   regionalCouncil: 1,
   stateSenate: 2,
   house: 3,

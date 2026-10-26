@@ -240,7 +240,7 @@ export async function loadSeedProtectedBucketKeys(db: Db): Promise<Set<string>> 
  * the national corp fully controls the corporate market (sole owner or bill
  * nationalization). Used by the admin heal path after mistaken unowned seeding.
  */
-export function computeErroneousUnownedBuckets(
+function computeErroneousUnownedBuckets(
   corpSectors: Pick<
     CorporateSector,
     | "stateId"
@@ -385,16 +385,5 @@ export async function healCapturedMarkets(
     ownedSectorsMergedCount: toMergeOwned.length,
     ownedRevenueMerged,
     sampleKeys,
-  };
-}
-
-/** @deprecated Use healCapturedMarkets */
-export async function healErroneousUnownedSectors(db: Db, opts: { dryRun?: boolean } = {}) {
-  const result = await healCapturedMarkets(db, opts);
-  return {
-    dryRun: result.dryRun,
-    absorbedCount: result.unownedAbsorbedCount,
-    revenueTransferred: result.unownedRevenueTransferred,
-    sampleKeys: result.sampleKeys,
   };
 }

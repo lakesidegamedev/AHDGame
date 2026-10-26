@@ -16,7 +16,7 @@ import {
  * funding channel. With no ledger, funding sits at the neutral baseline.
  */
 
-export function getUKNhsCollection(db: Db) {
+function getUKNhsCollection(db: Db) {
   return db.collection<UKNhsState>("ukNhsState");
 }
 

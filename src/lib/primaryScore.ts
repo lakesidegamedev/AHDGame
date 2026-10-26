@@ -155,7 +155,7 @@ export function calcPrimaryScore(
  * closer without ever flipping them, because a better challenger still loses to
  * an opponent held at the cap.
  */
-export const PRESIDENT_PRIMARY_ALIGNMENT_WEIGHT = 40;
+const PRESIDENT_PRIMARY_ALIGNMENT_WEIGHT = 40;
 export const PRESIDENT_PRIMARY_PARTY_INFLUENCE_WEIGHT = 20;
 export const PRESIDENT_PRIMARY_NATIONAL_REACH_WEIGHT = 15;
 export const PRESIDENT_PRIMARY_FAVORABILITY_WEIGHT = 25;

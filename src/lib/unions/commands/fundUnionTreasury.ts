@@ -32,7 +32,7 @@ import type { UnionActionResult } from "./unionActions";
  * fractional-amount request from spending a turn's rate limit on a treasury
  * movement that rounds to nothing.
  */
-export const MIN_UNION_CONTRIBUTION = 1;
+const MIN_UNION_CONTRIBUTION = 1;
 
 /**
  * Fund the treasury of the union `character` leads.

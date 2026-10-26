@@ -1,7 +1,7 @@
 const CONTROL = /[\u0000-\u001f\u007f]/u;
 const SECRET = /^[A-Za-z0-9._~+/-]+=*$/u;
 
-export const DEFAULT_MIGRATION_SOURCE_ISSUER = "urn:lakeside:legacy:ahd:production";
+const DEFAULT_MIGRATION_SOURCE_ISSUER = "urn:lakeside:legacy:ahd:production";
 
 export function migrationRoutesEnabled(name: string): boolean {
   return process.env[name] === "true";

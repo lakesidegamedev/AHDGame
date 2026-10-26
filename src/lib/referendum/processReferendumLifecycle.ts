@@ -96,7 +96,7 @@ export interface ReferendumLifecycleResult {
  * Deterministic [-1, 1] variance from referendum id + turn — avoids
  * `Math.random` so a re-run / resumed turn produces the same result.
  */
-export function seededVariance(id: string, turn: number): number {
+function seededVariance(id: string, turn: number): number {
   let h = 2166136261;
   const s = `${id}:${turn}`;
   for (let i = 0; i < s.length; i++) {

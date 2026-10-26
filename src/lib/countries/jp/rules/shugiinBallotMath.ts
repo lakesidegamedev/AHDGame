@@ -33,7 +33,7 @@ function stableIndex(value: string, length: number): number {
 }
 
 /** Build each district's ballot from explicit player nominations and existing NPP slates. */
-export function buildJapanDistrictSlate(
+function buildJapanDistrictSlate(
   regionId: string,
   candidates: ReadonlyArray<JapanBallotCandidate>
 ): Record<string, Record<string, string>> {

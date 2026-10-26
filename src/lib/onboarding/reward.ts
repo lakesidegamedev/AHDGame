@@ -12,7 +12,7 @@ import { onboardingRewardLocalAmount } from "./rules";
  * expressed as a fraction of the flat starting campaign funds
  * (gameConfig.startingFunds, ₳250,000 by default → ₳50,000 reward).
  */
-export const ONBOARDING_REWARD_FRACTION = 0.2;
+const ONBOARDING_REWARD_FRACTION = 0.2;
 
 /** Fallback when gameConfig is missing (matches seeds/reference/gameConfig.ts). */
 const DEFAULT_STARTING_FUNDS = 250_000;

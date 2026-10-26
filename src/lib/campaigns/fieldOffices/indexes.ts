@@ -2,7 +2,7 @@ import type { Db } from "mongodb";
 import type { CampaignFieldOffice } from "@/lib/db/types";
 import { FIELD_OFFICES_COLLECTION } from "./commands";
 
-export const FIELD_OFFICE_UNIQUE_SUBDIVISION_INDEX = "campaignFieldOffices_campaign_subdivision";
+const FIELD_OFFICE_UNIQUE_SUBDIVISION_INDEX = "campaignFieldOffices_campaign_subdivision";
 
 /**
  * Engine reads by election, the campaign room by campaign, and county-scope

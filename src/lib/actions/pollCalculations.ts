@@ -48,7 +48,7 @@ export interface OpponentForShare {
  * effectiveFavorability = favorability + archetypeApproval * 0.5
  * Clamped to 0-100 range.
  */
-export function calcEffectiveFavorability(
+function calcEffectiveFavorability(
   baseFavorability: number,
   archetypeApproval: number | undefined
 ): number {

@@ -13,7 +13,7 @@ import { getServerPosthogClient } from "./serverPosthog";
  * which is what the privacy policy's "aggregate, non-identifying counts"
  * sentence promises.
  */
-export const INTAKE_EVENTS = [
+const INTAKE_EVENTS = [
   // Page surfaces
   "landing_viewed",
   "landing_cta_clicked",
