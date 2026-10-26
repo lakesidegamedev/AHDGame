@@ -1,6 +1,7 @@
 import { migration as incomeTaxTiers } from "./entries/2026-10-16-income-tax-tiers";
 import { migration as backfillMechanicalLawTypes } from "./entries/2026-10-21-backfill-mechanical-law-types";
 import { migration as bankMoneyMoveUnprojectedIndex } from "./entries/2026-10-23-bank-money-move-unprojected-index";
+import { migration as turnGrowthIndexes } from "./entries/2026-10-26-turn-growth-indexes";
 import { migration as dropLogTextIndexes } from "./entries/2026-10-23-drop-log-text-indexes";
 import { migration as incomeTaxPolicyParity } from "./entries/2026-10-15-income-tax-policy-parity";
 import { migration as governmentContractBidding } from "./entries/2026-10-14-government-contract-bidding";
@@ -123,6 +124,8 @@ export const REQUIRED_STARTUP_INDEX_MIGRATIONS: readonly Migration[] = [
   supplyAgreementStatusIndex,
   corporateFundPositions,
   bankMoneyMoveUnprojectedIndex,
+  // Turn-phase probes on bonds and money moves stay bounded by live work.
+  turnGrowthIndexes,
 ];
 
 export async function runRequiredStartupMigrations(db: Db): Promise<RunSummary> {
