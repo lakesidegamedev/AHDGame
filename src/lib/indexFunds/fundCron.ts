@@ -52,9 +52,18 @@ import { calculateBackingRatio } from "@/lib/indexFunds/unitAccounting";
 import { loadActiveWaiverIds, resolveDueListingPetitions } from "./petitions/service";
 import { resolveShareExecutionPrice } from "@/lib/corporations/marketExecution";
 import { computeHoldingsValueAnchor } from "@/lib/indexFunds/fundAllocation";
-import { recomputeNav, refreshFundNavAfterBondDeployment, restoreFundCashBuffer } from "./fundNav";
+import {
+  recomputeNav,
+  refreshFundNavAfterBondDeployment,
+  refreshFundNavsAfterBondDeployment,
+  restoreFundCashBuffer,
+  type BondDeploymentNavRefresh,
+} from "./fundNav";
 export { recomputeNav, refreshFundNavAfterBondDeployment, restoreFundCashBuffer } from "./fundNav";
 import { deployBondReserveFromCash } from "@/lib/indexFunds/fundBondReserve";
+import { lazyFundBondCandidates } from "@/lib/bonds/fundBondCandidates";
+import { loadBondPoolsByCurrency } from "@/lib/bonds/marketPool";
+import type { BondMarketPool } from "@/lib/db/types";
 import {
   domesticCoverageEnabled,
   ensureDomesticSovereignBondFunds,
@@ -82,8 +91,9 @@ import { refreshEquityLiquidityFacility } from "@/lib/indexFunds/equityLiquidity
 import { boundedParallelMap } from "@/lib/indexFunds/boundedParallelMap";
 import {
   INDEX_FUND_NAV_CONCURRENCY,
-  loadExchangeRates,
   loadIndexFundCandidateCorporations,
+  loadOpenBuyBidsByFundId,
+  loadExchangeRates,
   applyMarkToMarketIfNeeded,
   shouldRebalanceIndexFundConstituents,
   shouldRunCrossFundRebalancing,
@@ -91,6 +101,10 @@ import {
   rebalanceConstituents,
   type FundCronResult,
 } from "./fundCronRebalance";
+import { loadEquityPoolsByCurrency } from "@/lib/equities/marketPool";
+import { getCurrentTurn } from "@/lib/turn/currentTurn";
+import { emitTxBulk, type TxInput } from "@/lib/financialTxLog/emit";
+import type { EquityMarketPool, ShareOrder } from "@/lib/db/types";
 export {
   INDEX_FUND_NAV_CONCURRENCY,
   shouldRebalanceIndexFundConstituents,
@@ -385,7 +399,14 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
     return result;
   }
 
-  // Pass 1b: deploy bond reserves in the original stable fund order.
+  // Pass 1b: deploy bond reserves in the original stable fund order. Funds
+  // compete for shared public float, so the loop stays sequential; the issue
+  // read, the rating table and the pool snapshot are loaded once for the pass
+  // and followed with each settled purchase, instead of one scan per fund.
+  const bondCandidates = lazyFundBondCandidates(db);
+  let bondPools: Map<CurrencyCode, BondMarketPool> | undefined;
+  const pendingNavRefreshes: BondDeploymentNavRefresh[] = [];
+  const bondLedgerEntries: TxInput[] = [];
   for (const preparation of navPreparations) {
     if (preparation.kind === "error") {
       result.errors.push(preparation.error);
@@ -400,6 +421,7 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
     if (preparation.warning) result.errors.push(preparation.warning);
     try {
       if (preparation.queuedUnits <= 0 && preparation.fund.mandate?.mode !== "picked_stocks") {
+        bondPools ??= await loadBondPoolsByCurrency(db);
         const bondDeploy = await deployBondReserveFromCash(
           db,
           preparation.fund,
@@ -410,16 +432,19 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
             thresholds: bondDeployThresholds,
             turnLengthMinutes,
             settleInTransaction: bondSettleInTransaction,
+            bondCandidates,
+            bondPools,
+            ledgerSink: bondLedgerEntries,
           }
         );
         if (bondDeploy.deployedAnchor > 0) {
           result.bondDeployments++;
-          await refreshFundNavAfterBondDeployment(
-            db,
-            preparation.fund._id,
-            preparation.bondPrincipalAnchor + bondDeploy.markedValueAnchor,
-            openOrdersEscrowByFundId.get(preparation.fund._id.toString()) ?? 0
-          );
+          pendingNavRefreshes.push({
+            fund: preparation.fund,
+            bondPrincipalAnchor: preparation.bondPrincipalAnchor + bondDeploy.markedValueAnchor,
+            openOrdersEscrowAnchor:
+              openOrdersEscrowByFundId.get(preparation.fund._id.toString()) ?? 0,
+          });
         }
       }
       navReadyFundIds.push(preparation.fund._id);
@@ -445,6 +470,41 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
           `Fund ${preparation.fund.slug} post-bond NAV: ${refreshError instanceof Error ? refreshError.message : String(refreshError)}`
         );
       }
+    }
+  }
+
+  // Publish every deployed fund's NAV in one read and one bulk write.
+  if (bondLedgerEntries.length > 0) {
+    try {
+      await emitTxBulk(db, bondLedgerEntries, bondDeployThresholds);
+    } catch (err) {
+      result.errors.push(
+        `Bond deployment ledger: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
+  if (pendingNavRefreshes.length > 0) {
+    try {
+      const published = await refreshFundNavsAfterBondDeployment(db, pendingNavRefreshes);
+      if (published.failed.length > 0) {
+        const failed = new Set(published.failed.map((entry) => entry.fundId.toString()));
+        for (let index = navReadyFundIds.length - 1; index >= 0; index--) {
+          if (failed.has(navReadyFundIds[index]!.toString())) navReadyFundIds.splice(index, 1);
+        }
+        for (const entry of published.failed) {
+          result.errors.push(`Fund ${entry.slug}: ${entry.message}`);
+        }
+      }
+    } catch (err) {
+      // The batch read or write failed: no deployed fund's NAV was published,
+      // so none of them may trade on the pre-deployment quote.
+      const pending = new Set(pendingNavRefreshes.map((entry) => entry.fund._id.toString()));
+      for (let index = navReadyFundIds.length - 1; index >= 0; index--) {
+        if (pending.has(navReadyFundIds[index]!.toString())) navReadyFundIds.splice(index, 1);
+      }
+      result.errors.push(
+        `Bond deployment NAV: ${err instanceof Error ? err.message : String(err)}`
+      );
     }
   }
 
@@ -542,10 +602,21 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
     // neither can change between funds.
     let bondPrincipalByFundId: Map<string, number> | undefined;
     let sharedAudit: FloatAuditContext | undefined;
+    // Pass-level reads: one equity pool snapshot (every settled trade advances
+    // it), one sale-history turn and one query for every fund's open buy bids.
+    let equityPools: Map<CurrencyCode, EquityMarketPool> | undefined;
+    let sellTurn: Promise<number> | undefined;
+    const resolveSellTurn = (): Promise<number> => (sellTurn ??= getCurrentTurn(db));
+    let openBidsByFundId: Map<string, ShareOrder[]> | undefined;
     try {
-      [bondPrincipalByFundId, sharedAudit] = await Promise.all([
+      [bondPrincipalByFundId, sharedAudit, equityPools, openBidsByFundId] = await Promise.all([
         sumFundBondHoldingsByFundId(db, rebalancing, exchangeRates),
         loadFloatAuditContext(db),
+        loadEquityPoolsByCurrency(db),
+        loadOpenBuyBidsByFundId(
+          db,
+          rebalancing.map((fund) => fund._id)
+        ),
       ]);
     } catch (err) {
       // Each fund falls back to its own reads, so a failure here changes nothing but cost.
@@ -553,6 +624,7 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
         `Rebalance shared reads: ${err instanceof Error ? err.message : String(err)}`
       );
     }
+    const bidLedgerEntries: TxInput[] = [];
     for (const fund of rebalancing) {
       try {
         const r = await rebalanceFundToTarget(
@@ -565,6 +637,12 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
           {
             audit: sharedAudit,
             bondPrincipalAnchor: bondPrincipalByFundId?.get(fund._id.toString()),
+            ...(equityPools ? { equityPools } : {}),
+            resolveSellTurn,
+            ...(openBidsByFundId
+              ? { openBids: openBidsByFundId.get(fund._id.toString()) ?? [] }
+              : {}),
+            ledgerSink: bidLedgerEntries,
             ...(options?.reuseRebalanceReads
               ? {
                   txThresholds: bondDeployThresholds,
@@ -577,6 +655,16 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         result.errors.push(`Fund ${fund.slug} rebalance: ${message}`);
+      }
+    }
+    // One journal write for every bid escrow row the pass placed.
+    if (bidLedgerEntries.length > 0) {
+      try {
+        await emitTxBulk(db, bidLedgerEntries, bondDeployThresholds);
+      } catch (err) {
+        result.errors.push(
+          `Rebalance bid ledger: ${err instanceof Error ? err.message : String(err)}`
+        );
       }
     }
   }
