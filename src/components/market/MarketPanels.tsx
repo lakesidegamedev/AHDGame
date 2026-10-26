@@ -15,6 +15,8 @@ import {
   FUNDS_URL,
   sectorsUrl,
   stocksUrl,
+  type BondsResponse,
+  type FundsResponse,
   type SectorsForSaleResponse,
 } from "./marketEndpoints";
 

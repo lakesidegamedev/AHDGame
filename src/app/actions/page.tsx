@@ -40,10 +40,9 @@ const PlayerEventCard = dynamic(() => import("./components/PlayerEventCard"), {
   loading: NullFallback,
 });
 const DebateCard = dynamic(() => import("./components/DebateCard"), { loading: NullFallback });
-const CrisisActionCard = dynamic(
-  () => import("./components/CrisisActionCard").then((m) => m.CrisisActionCard),
-  { loading: NullFallback }
-);
+const CrisisActionCard = dynamic(() => import("./components/CrisisActionCard"), {
+  loading: NullFallback,
+});
 const EndorsePresidentCard = dynamic(() => import("./components/EndorsePresidentCard"), {
   loading: NullFallback,
 });
