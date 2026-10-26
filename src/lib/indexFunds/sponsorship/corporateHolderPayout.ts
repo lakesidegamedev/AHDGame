@@ -52,7 +52,10 @@ export async function payCorporateWindUpHolders(
       fund.seedAccounting === "paid_units"
         ? position.units * finalNav
         : Math.floor(position.units * finalNav);
-    if (!corp) throw new Error("Corporate fund holder no longer exists");
+    // A holder whose corporation record was deleted is unpayable, not an
+    // error: skip the position so the rest of the batch (and the wind-up) can
+    // still settle.
+    if (!corp) continue;
     if (amountAnchor <= 0) continue;
     const currency = resolveCorpLiquidCurrencyCode(corp);
     const rate = forex && currency ? rates[currency] : 1;

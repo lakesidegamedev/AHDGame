@@ -220,6 +220,99 @@ describe("completeWindUp", () => {
     expect(vi.mocked(creditCorpLiquidCapital)).toHaveBeenCalledWith(db, SPONSOR, 250_000);
   });
 
+  it("skips a holder whose character record is gone instead of failing the payout", async () => {
+    const goneId = new ObjectId();
+    const liveId = new ObjectId();
+    const positions = [
+      { _id: new ObjectId(), units: 400, holderKind: "character" as const, characterId: goneId },
+      { _id: new ObjectId(), units: 600, holderKind: "character" as const, characterId: liveId },
+    ];
+    const fund = makeFund({ status: "winding_down", cashAnchor: 100_000, unitSupply: 1_000 });
+    const { db, fundUpdate } = makeDb({ positions, fund });
+    // payFundHolderCash returns false when its character update matches no row:
+    // the holder is gone, which must not abort the other holders' payouts.
+    vi.mocked(payFundHolderCash).mockResolvedValueOnce(false);
+
+    await completeWindUp(db, fund, 200);
+
+    expect(payFundHolderCash).toHaveBeenCalledTimes(2);
+    expect(fundUpdate.mock.calls.at(-1)![1].$set.status).toBe("delisted");
+    // The gone holder's 40,000 is not redistributed: the live holder takes
+    // 60,000 and the untouched residual falls through to the sponsor.
+    expect(vi.mocked(creditCorpLiquidCapital)).toHaveBeenCalledWith(db, SPONSOR, 40_000);
+  });
+
+  it("delists and records an unclaimed residual when the sponsor corporation is gone", async () => {
+    // The reserve half is never paid, so 50,000 would have gone back to the
+    // sponsor. Its corporation record is gone, which must not block delisting.
+    const positions = [
+      { _id: new ObjectId(), units: 500, holderKind: "character" as const },
+      { _id: new ObjectId(), units: 500, holderKind: "fund_reserve" as const },
+    ];
+    const fund = makeFund({ status: "winding_down", cashAnchor: 100_000, unitSupply: 1_000 });
+    const { db, fundUpdate, txInsert } = makeDb({ positions, fund, sponsorExists: false });
+
+    await completeWindUp(db, fund, 200);
+
+    expect(creditCorpLiquidCapital).not.toHaveBeenCalled();
+    expect(fundUpdate.mock.calls.at(-1)![1].$set.status).toBe("delisted");
+    expect(txInsert.mock.calls[0][0]).toMatchObject({
+      kind: "seed_capital_return",
+      amountAnchor: 50_000,
+    });
+    expect(txInsert.mock.calls[0][0].note).toMatch(/sponsor no longer exists/i);
+  });
+
+  it("skips a gone holder under paid-unit accounting without moving its share", async () => {
+    // paid_units funds carry fractional payouts, so the skipped share must not
+    // leak into the surviving holder's amount through rounding either.
+    const positions = [
+      {
+        _id: new ObjectId(),
+        units: 333,
+        holderKind: "character" as const,
+        characterId: new ObjectId(),
+      },
+      {
+        _id: new ObjectId(),
+        units: 667,
+        holderKind: "character" as const,
+        characterId: new ObjectId(),
+      },
+    ];
+    const fund = makeFund({
+      status: "winding_down",
+      seedAccounting: "paid_units",
+      cashAnchor: 100_000,
+      unitSupply: 1_000,
+    });
+    const { db } = makeDb({ positions, fund });
+    vi.mocked(payFundHolderCash).mockResolvedValueOnce(false);
+
+    await completeWindUp(db, fund, 200);
+
+    const payouts = vi.mocked(payFundHolderCash).mock.calls.map((call) => call[3]);
+    expect(payouts).toEqual([33_300, 66_700]);
+  });
+
+  it("keeps the sponsor note for a fund seeded without a sponsor", async () => {
+    // A world seeded before any sponsor existed has no sponsorCorporationId;
+    // the sponsor block is skipped entirely and the note is unchanged.
+    const positions = [{ _id: new ObjectId(), units: 1_000, holderKind: "character" as const }];
+    const fund = makeFund({
+      status: "winding_down",
+      sponsorCorporationId: undefined,
+      cashAnchor: 100_000,
+      unitSupply: 1_000,
+    });
+    const { db, txInsert } = makeDb({ positions, fund });
+
+    await completeWindUp(db, fund, 200);
+
+    expect(creditCorpLiquidCapital).not.toHaveBeenCalled();
+    expect(txInsert.mock.calls[0][0].note).toMatch(/returned to sponsor/);
+  });
+
   it("delists the fund and zeroes its units", async () => {
     const fund = makeFund({ status: "winding_down", cashAnchor: 0, unitSupply: 0 });
     const { db, fundUpdate, positionsUpdateMany } = makeDb({ positions: [], fund });
@@ -274,6 +367,40 @@ describe("advanceWindDowns", () => {
     expect(r.errors).toEqual([]);
     expect(fundUpdate.mock.calls[0][1].$set.status).toBe("delisted");
     expect(creditCorpLiquidCapital).toHaveBeenCalledWith(db, SPONSOR, 15_000);
+  });
+
+  it("finishes a fund already stuck in wind-down on the first pass after the switch", async () => {
+    // The live state of a fund that has been failing its payout every turn:
+    // cash only, no holdings or bonds, and one holder whose record is gone.
+    const positions = [
+      {
+        _id: new ObjectId(),
+        units: 400,
+        holderKind: "character" as const,
+        characterId: new ObjectId(),
+      },
+      {
+        _id: new ObjectId(),
+        units: 600,
+        holderKind: "character" as const,
+        characterId: new ObjectId(),
+      },
+    ];
+    const fund = makeFund({ status: "winding_down", cashAnchor: 100_000, unitSupply: 1_000 });
+    const { db, fundUpdate, positionsUpdateMany } = makeDb({
+      windingDown: [fund],
+      positions,
+      fund,
+    });
+    vi.mocked(payFundHolderCash).mockResolvedValueOnce(false);
+
+    const r = await advanceWindDowns(db, 445);
+
+    expect(r.errors).toEqual([]);
+    expect(r.fundsCompleted).toBe(1);
+    expect(r.holdersPaid).toBe(1);
+    expect(positionsUpdateMany).toHaveBeenCalled();
+    expect(fundUpdate.mock.calls.at(-1)![1].$set.status).toBe("delisted");
   });
 
   it("waits without an error when bond units remain after a sale", async () => {

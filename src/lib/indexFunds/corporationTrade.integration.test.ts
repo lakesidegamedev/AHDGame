@@ -373,6 +373,32 @@ describe("corporation fund accounting", () => {
     expect(bulk).toHaveBeenCalledTimes(1);
     expect(memory.collection("indexFundTransactions").docs).toHaveLength(2);
   });
+  it("skips a corporate holder whose corporation record is gone and pays the rest", async () => {
+    vi.mocked(isForexEnabled).mockResolvedValue(true);
+    const { memory, db } = setup(1000, "USD");
+    const goneId = new ObjectId();
+    const positions = [corporationId, goneId].map((id) => ({
+      _id: new ObjectId(),
+      fundId,
+      holderKind: "corporation" as const,
+      corporationId: id,
+      units: 2,
+      legacyUnits: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+    expect(await payCorporateWindUpHolders(db, fund, positions, 25, 5, new Date())).toEqual({
+      holdersPaid: 1,
+      distributedAnchor: 50,
+    });
+    expect(memory.collection("corporations").docs).toHaveLength(1);
+    expect(memory.collection("corporations").docs[0].liquidCapital).toBe(1050);
+    expect(memory.collection("indexFundTransactions").docs).toHaveLength(1);
+    expect(memory.collection("indexFundTransactions").docs[0]).toMatchObject({
+      corporationId,
+      amountAnchor: 50,
+    });
+  });
 });
 
 describe("sponsor unit withdrawal lock", () => {

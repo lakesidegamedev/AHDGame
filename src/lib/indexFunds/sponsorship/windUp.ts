@@ -324,10 +324,9 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
         : Math.floor(position.units * finalNav);
     if (payoutAnchor <= 0) continue;
     const paid = await payFundHolderCash(db, fund, position, payoutAnchor, currentTurn, now);
-    if (!paid) {
-      if (position.holderKind !== "fund_reserve") throw new Error("Fund holder payout failed");
-      continue;
-    }
+    // A holder whose character or imperial character record is gone cannot be
+    // paid; that position is dropped rather than aborting every other payout.
+    if (!paid) continue;
     distributedAnchor += payoutAnchor;
     holdersPaid += 1;
   }
@@ -338,11 +337,15 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
 
   const remainingAnchor = Math.max(0, fund.cashAnchor - distributedAnchor);
 
+  // A sponsor corporation that no longer exists cannot receive its residual.
+  // That is unpayable, not fatal: the fund still delists, and the transaction
+  // record below says the residual was not returned instead of claiming it was.
+  let sponsorMissing = false;
   if (fund.sponsorCorporationId && remainingAnchor > 0) {
     const sponsor = await db
       .collection<Corporation>("corporations")
       .findOne({ _id: fund.sponsorCorporationId });
-    if (!sponsor) throw new Error("Fund sponsor payout failed");
+    sponsorMissing = !sponsor;
     if (sponsor) {
       const fxRate = await getCorpFxRate(db, sponsor);
       if (!Number.isFinite(fxRate) || fxRate <= 0)
@@ -383,7 +386,9 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
     turn: currentTurn,
     ...(fund.sponsorCorporationId ? { corporationId: fund.sponsorCorporationId } : {}),
     amountAnchor: remainingAnchor,
-    note: `Wind-up complete: ${holdersPaid} holder(s) paid, ₳${Math.round(remainingAnchor).toLocaleString()} returned to sponsor`,
+    note: sponsorMissing
+      ? `Wind-up complete: ${holdersPaid} holder(s) paid, sponsor no longer exists, ₳${Math.round(remainingAnchor).toLocaleString()} unclaimed`
+      : `Wind-up complete: ${holdersPaid} holder(s) paid, ₳${Math.round(remainingAnchor).toLocaleString()} returned to sponsor`,
     createdAt: now,
   } as IndexFundTransaction);
 
