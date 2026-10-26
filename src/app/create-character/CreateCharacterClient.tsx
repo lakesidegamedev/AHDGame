@@ -19,7 +19,7 @@ import {
 } from "@/lib/constants/characterWealth";
 import { ideologyLabel, nearestParty, type CompassPoint } from "@/lib/registration/alignment";
 import type { State } from "@/lib/db/types";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { PartyOption, CountryCreationInfo } from "../register/components/registerTypes";
 import { DiscordLinkSection } from "./DiscordLinkSection";
 import {

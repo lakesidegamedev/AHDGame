@@ -26,7 +26,7 @@ import { CorporationLogo } from "@/components/corporation/CorporationLogo";
 import { Avatar } from "@/components/Avatar";
 import { CHARACTER_LOAN_SPREAD_PP, convertFaceBetweenCurrencies } from "@/lib/banking/lendingMath";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { BankCharterType } from "@/lib/db/types/bank";
 
 type HubCentralBank = {

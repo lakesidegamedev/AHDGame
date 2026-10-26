@@ -3,7 +3,7 @@
 import { DevolutionDesireReadout } from "@/components/uk/DevolutionDesireReadout";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import {
   DEVOLUTION_POLICY_CHANGE_AP_COST,
   DEVOLUTION_POLICY_CHANGE_COOLDOWN_TURNS,

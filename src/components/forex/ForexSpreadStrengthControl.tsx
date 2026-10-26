@@ -3,7 +3,7 @@
 import { InlineError } from "@/components/ui/InlineError";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useState } from "react";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { Button } from "@/components/ui";
 import type { ForexSpreadView } from "@/app/centralbank/[currency]/components/CentralBankInterventionTab";

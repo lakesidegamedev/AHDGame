@@ -21,7 +21,7 @@ import {
   COUNTRY_TO_ISO_NUMERIC,
   type CountryCommodityData,
 } from "@/lib/commodity-map";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import {
   convertCommodityPrice,

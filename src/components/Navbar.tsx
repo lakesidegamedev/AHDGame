@@ -28,7 +28,7 @@ import {
   HELP_STATUS_URL,
 } from "./HelpDropdown";
 import { UniversalSearch } from "./UniversalSearch";
-import { type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
 import { useCountryContext } from "@/hooks/useCountryContext";
 import { useActiveCharters } from "@/hooks/useActiveCharters";

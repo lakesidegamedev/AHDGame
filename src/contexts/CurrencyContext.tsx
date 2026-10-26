@@ -18,7 +18,7 @@ import {
 } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { useWorldFlags } from "@/hooks/useWorldFlags";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { useAuthMe } from "@/contexts/AuthDataContext";
 import { useGameEvents } from "@/hooks/useGameEvents";
 import {

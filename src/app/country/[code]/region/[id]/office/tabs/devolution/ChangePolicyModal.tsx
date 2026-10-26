@@ -2,7 +2,7 @@
 
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useState } from "react";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import {
   DEVOLUTION_POLICY_CHANGE_AP_COST,
   getDevolutionPolicyLabel,

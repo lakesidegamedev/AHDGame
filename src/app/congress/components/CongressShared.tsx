@@ -1,6 +1,6 @@
 "use client";
 
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { PartyLogo } from "@/components/PartyLogo";
 import { EmptyState as UIEmptyState } from "@/components/ui";
 import { ensureReadableOnDark } from "@/lib/utils/politics";

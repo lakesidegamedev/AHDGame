@@ -20,7 +20,7 @@ import {
 } from "@/lib/elections/blendRegionViewModel";
 import { electionRaceTitle, buildElectionHref } from "@/components/elections/electionHelpers";
 import type { CharacterBasic, ElectionDisplay } from "@/lib/db/types";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { BlendRaceCard } from "./BlendRaceCard";
 
 interface BlendBallotSectionProps {

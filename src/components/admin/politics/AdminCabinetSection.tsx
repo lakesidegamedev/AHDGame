@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { EmptyState } from "@/components/ui";
 import { Pagination } from "../Pagination";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { LocalTime } from "@/components/time/LocalTime";
 import { apiErrorText } from "@/lib/errors/catalog";
 

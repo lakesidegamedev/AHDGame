@@ -5,7 +5,7 @@ import {
   OPERATING_SECTOR_TYPE_LABELS,
   type OperatingSectorType,
 } from "@/lib/constants/corporations";
-import { type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import { MAX_PROVISIONS } from "@shared/constants/legislation";
 import type { TariffProvisionInput } from "./tariffProvisionTypes";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";

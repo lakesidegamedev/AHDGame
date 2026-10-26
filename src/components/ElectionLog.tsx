@@ -6,7 +6,7 @@ import type { ElectionLogEntry } from "@/lib/elections/electionResponseTypes";
 import { PartyLogo } from "@/components/PartyLogo";
 import { CardSkeleton, Skeleton } from "@/components/ui";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { LocalTime } from "@/components/time/LocalTime";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

@@ -34,7 +34,7 @@ import {
   getMetricFilterHighlight,
   ISO_TO_COUNTRY_ID,
 } from "../worldMetricHighlight";
-import { type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
 import { useActivePreset, useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
 import type { WorldEntityMapSnapshot } from "@/lib/world/worldEntityMap";
 import { backgroundMacroFeatureIds } from "@/lib/world/worldEntityMapInspection";

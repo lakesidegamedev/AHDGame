@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Badge } from "@/components/ui";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { ORGANIZATION_CATEGORY_META } from "@/lib/constants/orgCategory";
 import type { OrgSummary, OrgViewerInfo } from "../orgTypes";
 import { useCurrency } from "@/contexts/CurrencyContext";

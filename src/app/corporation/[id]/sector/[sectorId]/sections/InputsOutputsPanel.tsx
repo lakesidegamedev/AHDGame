@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import { ArrowDownToLine, ArrowUpFromLine, Pickaxe } from "lucide-react";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import { COMMODITY_LABELS, type CommodityType } from "@/lib/constants/commodities";
 import { THROUGHPUT_MIN } from "@/lib/market/throughput";
 import type { CurrencyCode } from "@/lib/constants/currencies";

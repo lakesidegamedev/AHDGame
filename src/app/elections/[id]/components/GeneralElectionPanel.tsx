@@ -42,7 +42,7 @@ import {
 } from "@/lib/campaigns/campaignStrength";
 import { campaignLocalRate, getCampaignCurrency } from "@/lib/campaigns/campaignCurrency";
 import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmount";
-import type { CountryId } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 
 /** ×1, one of the batch steps, or "as many as I can pay for right now". */
