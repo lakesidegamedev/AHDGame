@@ -347,11 +347,11 @@ async function runBankingTurn(
           trackInsuranceRecovery,
           prefetch?.householdPool
         );
-        summary.loanInterestCollected += recovered.interest;
-        summary.loanPrincipalRepaid += recovered.principal;
-        summary.defaultsWrittenOff += recovered.writtenOff;
         return {
           collected: recovered.collected,
+          interestCollected: recovered.interest,
+          principalRepaid: recovered.principal,
+          writtenOff: recovered.writtenOff,
           ...(recovered.replayed ? { replayed: true } : {}),
         };
       }
@@ -367,11 +367,11 @@ async function runBankingTurn(
         txEntries,
         prefetch?.borrower
       );
-      summary.loanInterestCollected += serviced.interestCollected;
-      summary.loanPrincipalRepaid += serviced.principalRepaid;
-      summary.defaultsWrittenOff += serviced.writtenOff;
       return {
         collected: serviced.bankCredit,
+        interestCollected: serviced.interestCollected,
+        principalRepaid: serviced.principalRepaid,
+        writtenOff: serviced.writtenOff,
         paidLocal: serviced.paidLocal,
         replayed: serviced.replayed,
         partial: serviced.partial,
@@ -379,6 +379,9 @@ async function runBankingTurn(
     }
   );
   summary.deadBankLoansServiced = deadBankResult.loansServiced;
+  summary.loanInterestCollected += deadBankResult.interestCollected;
+  summary.loanPrincipalRepaid += deadBankResult.principalRepaid;
+  summary.defaultsWrittenOff += deadBankResult.defaultsWrittenOff;
   summary.deadBankRecoveredToEstate = deadBankResult.recoveredToEstate;
   summary.deadBankRecoveredToInsurer = deadBankResult.recoveredToInsurer;
   recordBankingStage(db, turn, "deadBankLoans", Date.now() - deadBankStarted);
