@@ -15,8 +15,8 @@ import {
   COUNTRY_CURRENCY_MAP,
   FOREX_ACTIVE_CURRENCIES,
   getEraAwareCurrencySymbol,
-} from "@/lib/constants/currencies";
-import type { CurrencyCode } from "@/lib/constants/currencies";
+  type CurrencyCode,
+} from "@/lib/constants/currencyCodes";
 import { useWorldFlags } from "@/hooks/useWorldFlags";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import { useAuthMe } from "@/contexts/AuthDataContext";
@@ -28,7 +28,7 @@ import {
   formatSharePriceOrder,
   formatCurrencyFull,
   type DisplayCurrencyPreference,
-} from "@/lib/utils/formatters";
+} from "@/lib/utils/formattersCore";
 import { displayQuote, validDisplayRate } from "@/lib/currency/rules/display";
 import { resolveForcedDisplay } from "@/lib/currency/resolveForcedDisplay";
 import { formatListingQuote } from "@/lib/currency/listingQuote";
@@ -279,7 +279,17 @@ const USD_FALLBACK: CurrencyContextValue = {
   forexEnabled: false,
 };
 
-export function CurrencyProvider({ children }: { children: ReactNode }) {
+export function CurrencyProvider({
+  children,
+  baselineRates,
+}: {
+  children: ReactNode;
+  /**
+   * Era baseline local-units-per-anchor by currency, built server-side from the
+   * country client configs. Used only when live forex rates are unavailable.
+   */
+  baselineRates?: RateMap;
+}) {
   const { user, navData } = useAuthMe();
   const worldFlags = useWorldFlags();
   const [ratesState, dispatchRates] = useReducer(ratesReducer, {
@@ -530,11 +540,12 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
         currencyCode,
         effectiveRates,
         worldFlags.preset,
-        worldFlags.eurozoneEnabled
+        worldFlags.eurozoneEnabled,
+        baselineRates
       );
       return formatFundsCompact(Math.round(value), symbol);
     },
-    [effectiveRates, worldFlags.preset, worldFlags.eurozoneEnabled]
+    [effectiveRates, worldFlags.preset, worldFlags.eurozoneEnabled, baselineRates]
   );
 
   const formatAmountChipInFn = useCallback(
@@ -544,11 +555,12 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
         currencyCode,
         effectiveRates,
         worldFlags.preset,
-        worldFlags.eurozoneEnabled
+        worldFlags.eurozoneEnabled,
+        baselineRates
       );
       return formatCurrencyCompactChip(value, symbol);
     },
-    [effectiveRates, worldFlags.preset, worldFlags.eurozoneEnabled]
+    [effectiveRates, worldFlags.preset, worldFlags.eurozoneEnabled, baselineRates]
   );
 
   const formatPriceFn = useCallback(
@@ -566,11 +578,12 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
         currencyCode,
         effectiveRates,
         worldFlags.preset,
-        worldFlags.eurozoneEnabled
+        worldFlags.eurozoneEnabled,
+        baselineRates
       );
       return formatSharePrice(value, symbol);
     },
-    [effectiveRates, worldFlags.preset, worldFlags.eurozoneEnabled]
+    [effectiveRates, worldFlags.preset, worldFlags.eurozoneEnabled, baselineRates]
   );
 
   const formatListingPriceFn = useCallback(

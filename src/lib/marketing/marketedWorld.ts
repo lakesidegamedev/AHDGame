@@ -26,10 +26,9 @@
 import { COUNTRY_ORDER, type CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_CLIENT_CONFIGS, getCountryDisplayName } from "@/lib/constants/countryClientConfig";
 import { ERA_CONFIGS, type EraId } from "@/components/landing/eraThemes";
-import pkg from "../../../package.json";
+import { GAME_VERSION } from "./gameVersion";
 
-/** The live release, minted by `npm run changelog:release`. */
-export const GAME_VERSION: string = pkg.version;
+export { GAME_VERSION };
 
 /**
  * Countries with an authored world behind them, playable or not. This is the

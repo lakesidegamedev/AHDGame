@@ -14,15 +14,7 @@ import {
 import { STAT_META, statBonus } from "@/lib/stats/statMeta";
 import { CDN_ACTION_IMAGE_URLS } from "@/lib/images/staticCdnAssets";
 
-/** Free points spent so far above the 1-floor on every stat. */
-export function pointsSpent(stats: CharacterStats): number {
-  return STAT_KEYS.reduce((sum, k) => sum + (stats[k] - STAT_MIN), 0);
-}
-
-/** Remaining distributable points (0 when a build is complete/legal). */
-export function pointsRemaining(stats: CharacterStats): number {
-  return STAT_FREE_POINTS - pointsSpent(stats);
-}
+export { defaultStatBuild, isLopsided, pointsRemaining, pointsSpent } from "./statBuild";
 
 /**
  * Backdrop art per stat — the action each stat actually powers, so the image
@@ -39,19 +31,6 @@ const STAT_BACKDROP: Record<StatKey, string> = {
   statecraft: CDN_ACTION_IMAGE_URLS.hero,
   intellect: CDN_ACTION_IMAGE_URLS.poll,
 };
-
-/**
- * A build is flagged as lopsided once the spread between the best and worst
- * stat opens this far while at least two stats are still on the floor. Advisory
- * only — the allocation is legal, it just carries a real cost.
- */
-const LOPSIDED_SPREAD = 6;
-
-export function isLopsided(stats: CharacterStats): boolean {
-  const values = STAT_KEYS.map((k) => stats[k]);
-  const atFloor = values.filter((v) => v <= STAT_MIN).length;
-  return Math.max(...values) - Math.min(...values) >= LOPSIDED_SPREAD && atFloor >= 2;
-}
 
 interface StatPointAllocatorProps {
   value: CharacterStats;
@@ -230,15 +209,4 @@ export function StatPointAllocator({ value, onChange }: StatPointAllocatorProps)
       </div>
     </div>
   );
-}
-
-/**
- * The opening build: every stat on the floor, all {@link STAT_FREE_POINTS}
- * still to spend, so nothing is pre-assigned for the player.
- */
-export function defaultStatBuild(): CharacterStats {
-  return STAT_KEYS.reduce((acc, k) => {
-    acc[k] = STAT_MIN;
-    return acc;
-  }, {} as CharacterStats);
 }

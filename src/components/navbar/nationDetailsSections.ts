@@ -7,10 +7,8 @@
  * their option is supplied; empty sections are dropped.
  */
 import { isDirectElection, type CountryId } from "@/lib/constants/countriesCore";
-import {
-  COUNTRY_CLIENT_CONFIGS,
-  getCountryClientConfig,
-} from "@/lib/constants/countryClientConfig";
+import { getCountryNavLabels } from "@/lib/country/countryNavLabels";
+import { getCountryMapPath } from "@/lib/country/mapPaths";
 import {
   budgetUrl,
   countryElectionsUrl,
@@ -80,7 +78,7 @@ export function buildNationalDetailsSections(
   countryId: CountryId,
   opts: NationDetailsOpts = {}
 ): NationDetailSection[] {
-  const config = getCountryClientConfig(countryId);
+  const config = getCountryNavLabels(countryId);
 
   // Traffic-ordered: election pages outdraw party pages, which outdraw the
   // politician roster (see the share breakdown above `sections` below).
@@ -197,13 +195,20 @@ export function buildNationalDetailsSections(
     {
       title: "Other",
       titleKey: "menus.nation.sections.other",
-      items: [{ id: "map", label: "Map", labelKey: "menus.nation.map", href: config.mapPath }],
+      items: [
+        {
+          id: "map",
+          label: "Map",
+          labelKey: "menus.nation.map",
+          href: getCountryMapPath(countryId),
+        },
+      ],
     },
     {
       title: "Government",
       titleKey: "menus.nation.sections.government",
       items: [
-        { id: "legislature", label: config.legislature.name, href: config.legislature.path },
+        { id: "legislature", label: config.legislatureName, href: config.legislaturePath },
         { id: "executive", label: config.executiveLabel, href: config.executivePath },
         {
           id: "policy",
@@ -213,7 +218,7 @@ export function buildNationalDetailsSections(
         },
         // SCOTUS is a US-only mechanic (#3581) — same country-literal
         // convention as the executive surface / CountryOverviewClient.
-        ...(countryId === COUNTRY_CLIENT_CONFIGS.US.id
+        ...(config.id === "US"
           ? [
               {
                 id: "scotus" as const,

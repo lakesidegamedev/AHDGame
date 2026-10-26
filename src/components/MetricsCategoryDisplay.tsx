@@ -6,7 +6,7 @@ import type { MetricCategoryId, StateMetricValue } from "@/lib/db/types";
 import { regionMetricUrl } from "@/lib/urls";
 import { getCurrencyPrefix } from "@/lib/utils/budgetCalculations";
 import { type CountryId } from "@/lib/constants/countriesCore";
-import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
+import { getCountryRegionLabels } from "@/lib/country/countryRegionLabels";
 import {
   METRIC_DEFS_BY_CATEGORY,
   getMetricDisplayName,
@@ -68,10 +68,9 @@ export function MetricsCategoryDisplay({
   }
 
   const useRedesign = Boolean(stateId && countryId);
-  const regionLabelPlural =
-    countryId && countryId in COUNTRY_CLIENT_CONFIGS
-      ? COUNTRY_CLIENT_CONFIGS[countryId as CountryId].regionLabelPlural.toLowerCase()
-      : "regions";
+  const regionLabelPlural = countryId
+    ? (getCountryRegionLabels(countryId as CountryId)?.plural.toLowerCase() ?? "regions")
+    : "regions";
 
   return (
     <div className="space-y-4">

@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useClickOutside } from "@/hooks/useClickOutside";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { useNavbarState } from "./navbar/useNavbarState";
-import { isActionRequiredType } from "@/lib/inbox";
+import { isActionRequiredType } from "@/lib/inbox/priority";
 import type { NotificationType } from "@/lib/db/types/notifications";
 import Link from "next/link";
 import Image from "next/image";
