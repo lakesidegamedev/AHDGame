@@ -13,7 +13,7 @@ import type {
   Achievement,
 } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { getDiscordAvatarUrl } from "@/lib/discord";
 import { escapeRegex } from "@/lib/utils/escapeRegex";
 import { buildCharacterHref, parseCharacterId } from "@/lib/utils/profileUrls";

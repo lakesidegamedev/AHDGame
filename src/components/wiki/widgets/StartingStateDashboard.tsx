@@ -17,9 +17,9 @@ import {
   Vote,
   Wallet,
 } from "lucide-react";
-import { COMMODITY_LABELS } from "@/lib/constants/commodities";
+import { COMMODITY_LABELS } from "@/lib/constants/commoditiesCore";
 import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
-import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
+import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporationsClient";
 import {
   SectorSpecialtyPanel,
   SectorSpecialtySummaryChips,

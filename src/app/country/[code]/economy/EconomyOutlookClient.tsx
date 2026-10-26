@@ -3,6 +3,7 @@
 import { useGameEvents } from "@/hooks/useGameEvents";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import BackButton from "@/components/BackButton";
 import { Skeleton } from "@/components/ui";
@@ -20,7 +21,12 @@ import { PulseStrip } from "@/components/economy/PulseStrip";
 import { NationalSectorBoard } from "@/components/economy/NationalSectorBoard";
 import { RealEconomyPanel } from "@/components/economy/RealEconomyPanel";
 import { MarketsStrip } from "@/components/economy/MarketsStrip";
-import { PlannedEconomyPanel } from "@/components/economy/PlannedEconomyPanel";
+// Planned-economy metrics render only for command economies and sit below the
+// fold, so the panel (and its commodity and SOE tables) loads with its section.
+const PlannedEconomyPanel = dynamic(
+  () => import("@/components/economy/PlannedEconomyPanel").then((m) => m.PlannedEconomyPanel),
+  { ssr: false }
+);
 
 /**
  * National Economic Outlook page client — masthead with verdict seal and the

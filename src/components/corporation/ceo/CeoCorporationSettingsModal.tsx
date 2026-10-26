@@ -6,13 +6,16 @@ import { useEffect, useId, useState } from "react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { Modal } from "@/components/ui/Modal";
-import { OPERATING_SECTOR_TYPE_LABELS, OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
+import {
+  OPERATING_SECTOR_TYPE_LABELS,
+  OPERATING_SECTOR_TYPES,
+} from "@/lib/constants/corporationsClient";
 import {
   CORPORATION_RENAME_COST,
   CORPORATION_RENAME_MS_PENALTY,
   CORPORATION_RENAME_COOLDOWN_TURNS,
 } from "@/lib/constants/corporations";
-import type { OperatingSectorType } from "@/lib/constants/corporations";
+import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import { UPLOAD_IMAGE_HINTS } from "@/lib/constants/uploadImageHints";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import type { CorporationDetail } from "../CorporationPageTypes";

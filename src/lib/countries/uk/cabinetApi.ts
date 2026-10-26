@@ -21,7 +21,7 @@ import type { Db } from "mongodb";
 import { getCabinetPositions } from "@/lib/constants/cabinetMechanics";
 import { isSeatActive } from "@/lib/cabinet/rosterEra";
 import { getLiveGameYear } from "@/lib/cabinet/liveGameYear";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
 import type { Character, ElectedOfficial, CareerEvent, PoliticalParty } from "@/lib/db/types";
 import { isBannedParty } from "@/lib/turn/onePartyConstraints";

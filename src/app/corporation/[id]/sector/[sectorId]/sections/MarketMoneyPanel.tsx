@@ -10,9 +10,9 @@ import type { PlantsData, Financials, CorporationRef } from "../types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import DetailsDisclosure from "../components/DetailsDisclosure";
 import { fmtUnits, fmtPct, PLANTS_CLOCK_NOTE } from "../lib/plants";
-import type { OperatingSectorType } from "@/lib/constants/corporations";
+import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import { facilityPlural } from "@/lib/constants/facilityVocabulary";
-import { COMMODITY_LABELS, type CommodityType } from "@/lib/constants/commodities";
+import { COMMODITY_LABELS, type CommodityType } from "@/lib/constants/commoditiesCore";
 import { DELIVERY_LIMITED_MIN_SHARE } from "@/components/corporation/plantsPresentation";
 import {
   FREIGHT_CLASS_LABELS,

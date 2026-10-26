@@ -9,7 +9,7 @@ import type {
   CareerEvent,
   OfficeType,
 } from "@/lib/db/types";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { createNotifications, type NotificationInput } from "@/lib/notifications";
 import { sendCountryGameEvent, DISCORD_COLORS, type DiscordEmbed } from "@/lib/discordWebhooks";
 import { recordCountryEvent } from "@/lib/turn/history/recordCountryEvent";

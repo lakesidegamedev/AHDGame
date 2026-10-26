@@ -20,7 +20,7 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import { AlertTriangle, ChevronDown, Info, TrendingUp } from "lucide-react";
 import type { PlantsData } from "../types";
 import { fmtUnits, fmtMult, fmtPct } from "../lib/plants";
-import type { OperatingSectorType } from "@/lib/constants/corporations";
+import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import {
   capitalizeFacility,
   facilityPlural,

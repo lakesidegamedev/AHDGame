@@ -19,7 +19,7 @@ import BackButton from "@/components/BackButton";
 import { useToast } from "@/contexts/ToastContext";
 import { getExchangeForCountry } from "@/lib/constants/exchangeRegistry";
 import type { MoneyPeriod } from "@/lib/constants/moneyTimescale";
-import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
+import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporationsClient";
 import { CorporationMasthead } from "@/components/corporation/CorporationMasthead";
 import { HostileTakeoverCard } from "@/components/corporation/HostileTakeoverCard";
 import { SubsidiaryManagementCard } from "@/components/corporation/SubsidiaryManagementCard";

@@ -15,7 +15,7 @@ import type { SupplyOffersResponse } from "./SupplyDealsPanel";
 import { PreviewCard, PreviewRow, pctText, toneClass } from "./marketUi";
 import { useMarketJson } from "./useMarketJson";
 import { CorporationLogo } from "@/components/corporation/CorporationLogo";
-import { COMMODITY_LABELS } from "@/lib/constants/commodities";
+import { COMMODITY_LABELS } from "@/lib/constants/commoditiesCore";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 
 const byDesc =

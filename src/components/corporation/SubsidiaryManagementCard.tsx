@@ -3,7 +3,7 @@
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useState } from "react";
 import Link from "next/link";
-import { MAX_DIVIDEND_RATE } from "@/lib/constants/corporations";
+import { MAX_DIVIDEND_RATE } from "@/lib/constants/corporationsClient";
 import type { CorporationDetail } from "./CorporationPageTypes";
 import { AppointSubsidiaryCeoModal } from "./AppointSubsidiaryCeoModal";
 import { FormalizeSubsidiaryModal } from "./FormalizeSubsidiaryModal";

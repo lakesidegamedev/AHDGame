@@ -22,7 +22,7 @@ import { FILL_BAND_TEXT, fillBandSentence, fillBandShort, formatFillPercent } fr
 
 export { FILL_BAND_TEXT, fillBandSentence, fillBandShort, formatFillPercent } from "./fillBand";
 import type { BuildQueueSummary } from "@/lib/corporations/sectorBuildQueue";
-import type { OperatingSectorType } from "@/lib/constants/corporations";
+import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import { capitalizeFacility, facilityPlural } from "@/lib/constants/facilityVocabulary";
 import {
   FREIGHT_CLASS_LABELS,

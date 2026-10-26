@@ -89,16 +89,16 @@ export const FOREX_AND_MACRO_CHART_HISTORY_TURNS = TURNS_PER_YEAR * 5;
  * day's worth of revenue/costs spans 24 turns).
  *
  * Sector **growth rate** compounding uses {@link GROWTH_RATE_TURNS_PER_YEAR} (48)
- * instead — one player "day" of growth is spread across a full game year of turns.
+ * instead; one player "day" of growth is spread across a full game year of turns.
  *
- * Re-exports the authoritative constant from `@/lib/constants/corporations`
- * so there's exactly one source of truth — previously this file declared `2`,
+ * Re-exports the authoritative constant from `@/lib/constants/corporationsClient`
+ * so there's exactly one source of truth; previously this file declared `2`,
  * which disagreed with every call site except stockExchangeSnapshot.ts and
  * caused the snapshot's `dailyInterestCost` to come out 12× smaller than the
  * rest of the codebase expected. The constant is intentionally re-exported
  * here so existing imports from `@/lib/constants/turnTime` keep working.
  */
-export { TURNS_PER_DAY, GROWTH_RATE_TURNS_PER_YEAR } from "@/lib/constants/corporations";
+export { TURNS_PER_DAY, GROWTH_RATE_TURNS_PER_YEAR } from "@/lib/constants/corporationsClient";
 
 /**
  * Turn at which the US House initial (Nov 2020) compressed bootstrap ends.

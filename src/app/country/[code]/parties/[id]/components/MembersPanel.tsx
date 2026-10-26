@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { EmptyState } from "@/components/ui";
 import type { PartyData } from "./types";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { PARTY_SECTION_HEADING_CLASS } from "@/components/party/partyPageStyles";
 import { NppAbbr } from "@/components/elections/NppAbbr";
 import type { PartyLeadershipTitleKey } from "@/lib/db/types/party";
