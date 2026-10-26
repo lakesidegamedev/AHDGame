@@ -30,7 +30,7 @@ import {
   operatingSectorTypeFor,
   type ManufacturingIndustryModel,
   type OperatingSectorType,
-} from "./corporations";
+} from "./corporationsClient";
 import type { CommodityType } from "./commodities";
 import {
   MEDIA_OPERATING_MODELS,

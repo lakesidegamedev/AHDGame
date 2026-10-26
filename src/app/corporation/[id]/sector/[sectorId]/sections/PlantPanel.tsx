@@ -11,8 +11,8 @@ import { UnionEmblem } from "@/components/unions/UnionEmblem";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { Factory, Hammer, PauseCircle, PlayCircle, ShieldCheck, X } from "lucide-react";
 import type { CommodityFlow, PlantsData } from "../types";
-import type { OperatingSectorType } from "@/lib/constants/corporations";
-import type { MediaDiscriminator } from "@/lib/constants/corporations";
+import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
+import type { MediaDiscriminator } from "@/lib/constants/corporationsClient";
 import {
   capitalizeFacility,
   facilityPlural,

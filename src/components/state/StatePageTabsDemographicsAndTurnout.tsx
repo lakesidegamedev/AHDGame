@@ -431,7 +431,7 @@ function CensusCard({ title, rows, viewMode }: CensusCardProps) {
   );
 }
 
-// ─── voter groups collapsible ────────────────────────────────────────────────
+// ─── electorate buckets collapsible ──────────────────────────────────────────
 
 function leanBarColor(v: number) {
   if (v < -0.4) return "#60a5fa";

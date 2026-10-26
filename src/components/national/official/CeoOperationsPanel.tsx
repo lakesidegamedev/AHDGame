@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { CorporationType } from "@/lib/constants/corporations";
+import type { CorporationType } from "@/lib/constants/corporationsClient";
 import { facilityPlural } from "@/lib/constants/facilityVocabulary";
 import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
 import { Button, SectionLabel, Slider } from "@/components/ui";

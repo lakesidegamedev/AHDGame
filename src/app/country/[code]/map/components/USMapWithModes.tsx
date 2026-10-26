@@ -14,8 +14,8 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import { STATE_IDS } from "@/lib/constants/states";
-import { EXTRACTABLE_RESOURCES, COMMODITY_LABELS } from "@/lib/constants/commodities";
-import type { ExtractableResource } from "@/lib/constants/commodities";
+import { COMMODITY_LABELS, EXTRACTABLE_RESOURCES } from "@/lib/constants/commoditiesCore";
+import type { ExtractableResource } from "@/lib/constants/commoditiesCore";
 import type { MapOverviewResponse } from "@/lib/map/overviewTypes";
 import {
   type LeanAxis,

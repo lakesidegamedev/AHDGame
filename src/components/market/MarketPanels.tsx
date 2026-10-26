@@ -13,7 +13,7 @@ import type {
   WealthEntry,
 } from "@/app/country/[code]/stockmarket/types";
 import type { FundListItem } from "@/components/indexFunds/types";
-import type { CorporationType } from "@/lib/constants/corporations";
+import type { CorporationType } from "@/lib/constants/corporationsClient";
 import { PanelState, pctText, toneClass } from "./marketUi";
 import { useMarketJson } from "./useMarketJson";
 

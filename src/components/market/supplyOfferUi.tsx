@@ -3,7 +3,11 @@
 import Link from "next/link";
 import { CorporationLogo } from "@/components/corporation/CorporationLogo";
 import { Avatar } from "@/components/Avatar";
-import { COMMODITY_LABELS, COMMODITY_TYPES, type CommodityType } from "@/lib/constants/commodities";
+import {
+  COMMODITY_LABELS,
+  COMMODITY_TYPES,
+  type CommodityType,
+} from "@/lib/constants/commoditiesCore";
 import type { SupplyListingView } from "@/lib/db/types/supplyListing";
 
 export type OfferKindFilter = "player" | "npp" | "all";

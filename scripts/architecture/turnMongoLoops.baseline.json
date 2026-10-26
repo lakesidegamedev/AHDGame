@@ -305,7 +305,7 @@
     "377c0a3e5d17da8745824ddb5fc217834e88956ebf4f66bb29810c32b2e2fa33": 1,
     "3ce4ee468bd963f9eb65dc4bb8e8d183523058a2042459da527b8ab6a44e072f": 1,
     "e34041d9e049565c421670d7b365ab198a0c792b1936da96daefb18535cc48ca": 1,
-    "4ff8b5e251c3f30a531974e2d7e1d8c71db455598ee4cdf506c507f22fc06adf": 1,
+    "8a0aa58392556d9c3a85fe0f637dfeb0ca80ff7376ab8a74c8a52d128ec394d4": 1,
     "7339dad52e27f26f0caa60ef91e5443b4acc37ec23858c1fe3d436b9746d3aaa": 1,
     "5a2a5ce4dfb68c3249a49fc58d4786e48f566be3c0f60a5882d8d457aee432dc": 1,
     "eac51beba8da1ed6cefc0a7d5316485a23076bf0e30f87c3025134cd1d081a89": 1,
@@ -2845,8 +2845,8 @@
       "file": "src/lib/turn/defenceDeliveryTurn.ts",
       "operation": "findOne",
       "owner": "applyDefenceDeliveries",
-      "expression": "db.collection<Corporation>(\"corporations\").findOne({ _id: contract.corporationId })",
-      "fingerprint": "4ff8b5e251c3f30a531974e2d7e1d8c71db455598ee4cdf506c507f22fc06adf"
+      "expression": "db .collection<Corporation>(\"corporations\") .findOne({ _id: contract.corporationId }, { projection: SETTLEMENT_HISTORY_EXCLUDED })",
+      "fingerprint": "8a0aa58392556d9c3a85fe0f637dfeb0ca80ff7376ab8a74c8a52d128ec394d4"
     },
     {
       "file": "src/lib/turn/defenceDeliveryTurn.ts",

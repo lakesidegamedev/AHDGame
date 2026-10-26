@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useGameTurnStatus } from "@/hooks/useGameEvents";
 import { privateEnterpriseBlockedByYear } from "@/lib/economy/queries/privateEnterpriseRegime";
-import { OPERATING_SECTOR_TYPES, OPERATING_SECTOR_TYPE_LABELS } from "@/lib/constants/corporations";
+import {
+  OPERATING_SECTOR_TYPES,
+  OPERATING_SECTOR_TYPE_LABELS,
+} from "@/lib/constants/corporationsClient";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import { fetchJson } from "@/lib/observability/fetchJson";

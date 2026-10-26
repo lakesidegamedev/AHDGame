@@ -1,5 +1,5 @@
 import { ObjectId, type Db } from "mongodb";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createInMemoryDb, type InMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { withInjectedCrash } from "@/lib/test-utils/faultyDb";
 import type { Bond } from "@/lib/db/types/bond";
@@ -406,6 +406,32 @@ describe("bank sovereign claims", () => {
     expect(budget(memory).treasuryBalance).toBe(80);
     expect(budget(memory).bankSovereignClaims).toEqual([]);
     expect(vault(memory)).toBe(125);
+  });
+
+  it("probes the claim's funding receipts by key, without decoding their plans", async () => {
+    const claim = couponClaim();
+    const memory = world(claim);
+    const journal = memory.collection("bankMoneyMoves");
+    const find = vi.spyOn(journal, "find");
+    const findOne = vi.spyOn(journal, "findOne");
+
+    await settleBankSovereignClaims(memory as unknown as Db, budget(memory), 13);
+
+    // Both reads only ask "is a partial funding receipt still open"; the record
+    // itself is loaded by resumeSettlement under its own projection.
+    const partialProbe = (call: unknown[]) =>
+      (call[0] as { status?: string } | undefined)?.status === "partial";
+    // The in-memory double takes no options argument; the calls still carry them.
+    const fundingFind = find.mock.calls.filter(partialProbe) as unknown as unknown[][];
+    const fundingFindOne = findOne.mock.calls.filter(partialProbe) as unknown as unknown[][];
+    expect(fundingFind).toHaveLength(1);
+    expect(fundingFind[0]?.[1]).toEqual({ projection: { _id: 1 } });
+    expect(fundingFind[0]?.[0]).toEqual({
+      _id: { $regex: `^${claim.id}:funding:` },
+      status: "partial",
+    });
+    expect(fundingFindOne).toHaveLength(1);
+    expect(fundingFindOne[0]?.[1]).toEqual({ projection: { _id: 1 } });
   });
 
   it("sends a closed or rechartered epoch's recovery to the currency insurance fund", async () => {

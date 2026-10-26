@@ -1,6 +1,6 @@
 "use client";
 
-import { COMMODITY_LABELS } from "@/lib/constants/commodities";
+import { COMMODITY_LABELS } from "@/lib/constants/commoditiesCore";
 import type { ProspectingSurveyRow } from "./types";
 
 interface ProspectingSurveyListProps {

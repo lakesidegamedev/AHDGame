@@ -10,7 +10,7 @@ import {
   EXTRACTABLE_RESOURCES,
   COMMODITY_LABELS,
   type ExtractableResource,
-} from "@/lib/constants/commodities";
+} from "@/lib/constants/commoditiesCore";
 import {
   PROSPECT_DURATION_TURNS,
   PROSPECT_BASE_COST_ANCHOR,

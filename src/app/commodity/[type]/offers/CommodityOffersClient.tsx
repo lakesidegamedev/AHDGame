@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { COMMODITY_LABELS, type CommodityType } from "@/lib/constants/commodities";
+import { COMMODITY_LABELS, type CommodityType } from "@/lib/constants/commoditiesCore";
 import type { SupplyListingView } from "@/lib/db/types/supplyListing";
 import { apiErrorText } from "@/lib/errors/catalog";
 import {

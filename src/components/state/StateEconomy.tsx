@@ -22,7 +22,7 @@ import {
   COMMODITY_UNITS,
   EXTRACTABLE_RESOURCES,
 } from "@/lib/constants/commodities";
-import type { ExtractableResource } from "@/lib/constants/commodities";
+import type { ExtractableResource } from "@/lib/constants/commoditiesCore";
 import {
   MAX_GROWTH_RATE,
   MIN_GROWTH_RATE,

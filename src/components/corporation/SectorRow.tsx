@@ -10,7 +10,7 @@ import {
   STRATEGY_TRANSITION_TURNS,
   CANCEL_COST_FRACTION,
 } from "@/lib/constants/sectorStrategies";
-import { type CorporationType, type OperatingSectorType } from "@/lib/constants/corporations";
+import { type CorporationType, type OperatingSectorType } from "@/lib/constants/corporationsClient";
 import { isExtractionStrategyZeroYield } from "@/lib/corporations/extractionStrategyAvailability";
 import StrategyChangeConfirm from "./StrategyChangeConfirm";
 import { TransitionPanel } from "./TransitionPanel";
@@ -36,7 +36,7 @@ import {
 import { facilityPlural, facilitySingular } from "@/lib/constants/facilityVocabulary";
 import { facilitiesFromUnits } from "@/lib/constants/facilityQuantum";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
-import { GROWTH_RATE_TURNS_PER_YEAR } from "@/lib/constants/corporations";
+import { GROWTH_RATE_TURNS_PER_YEAR } from "@/lib/constants/corporationsClient";
 import { SectorMarginDrilldown } from "./SectorMarginDrilldown";
 import { CapacityChain } from "./sectors/CapacityChain";
 

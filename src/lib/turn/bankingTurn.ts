@@ -30,6 +30,7 @@ import {
   withBankingTelemetryBatch,
 } from "@/lib/banking/telemetry";
 import { MONEY_MOVE_COLLECTION } from "@/lib/banking/moneyMove";
+import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
 import { computeNpcDepositShare, equityCappedDepositCeiling } from "@/lib/banking/deposits";
 import { domesticDepositRetention } from "@/lib/centralBank/marketEffects";
 import {
@@ -175,7 +176,13 @@ async function runBankingTurn(
   // for deposit-taking charters; loan servicing runs for any charter with a
   // loan book.
   const [corps, banks] = await Promise.all([
-    db.collection<Corporation>("corporations").find({ "bankCharter.status": "active" }).toArray(),
+    // The banking stages read the charter, cash and deposit book. The
+    // settlement stamps on the same document are most of its bytes and are
+    // only read by the journal, under its own projection.
+    db
+      .collection<Corporation>("corporations")
+      .find({ "bankCharter.status": "active" }, { projection: SETTLEMENT_HISTORY_EXCLUDED })
+      .toArray(),
     db
       .collection<CentralBank>("centralBanks")
       .find({})
@@ -1293,7 +1300,10 @@ async function serviceNpcBulkBook(
       projections?: { projection: TransitionProjection }[];
       event?: { meta?: { originationFees?: number; interestPaid?: number; writtenOff?: number } };
     }>(MONEY_MOVE_COLLECTION)
-    .findOne({ _id: settlementKey });
+    // A finished settlement re-arms from its own quote (legs, projections,
+    // event meta). Its receipt history and stamps are never read here and are
+    // most of the record's bytes.
+    .findOne({ _id: settlementKey }, { projection: { legs: 1, projections: 1, "event.meta": 1 } });
   if (recorded) {
     // The original quote owns the cash AND the book. A retry can see a pool
     // already debited by that quote, so it must finish the recorded writes

@@ -684,10 +684,14 @@ async function fundClaimEscrow(
   );
   const pending = await db
     .collection<{ _id: string }>("bankMoneyMoves")
-    .find({
-      _id: { $regex: `^${claim.id}:funding:` },
-      status: "partial",
-    })
+    .find(
+      {
+        _id: { $regex: `^${claim.id}:funding:` },
+        status: "partial",
+      },
+      // Only the key is read: resumeSettlement loads the record it needs.
+      { projection: { _id: 1 } }
+    )
     .toArray();
   for (const row of pending) {
     const resumed = await resumeSettlement(db, row._id);
@@ -697,10 +701,13 @@ async function fundClaimEscrow(
       return false;
     }
   }
-  const unresolved = await db.collection<{ _id: string }>("bankMoneyMoves").findOne({
-    _id: { $regex: `^${claim.id}:funding:` },
-    status: "partial",
-  });
+  const unresolved = await db.collection<{ _id: string }>("bankMoneyMoves").findOne(
+    {
+      _id: { $regex: `^${claim.id}:funding:` },
+      status: "partial",
+    },
+    { projection: { _id: 1 } }
+  );
   if (unresolved) return false;
 
   let corporation = await corps.findOne(

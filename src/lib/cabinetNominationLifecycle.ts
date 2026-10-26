@@ -13,7 +13,7 @@ import { getCabinetPositionById } from "@/lib/constants";
 import { isDirectAppointmentSeat } from "@/lib/constants/cabinetMechanics";
 import { didPass } from "@/lib/billLifecycleHelpers";
 import { computeCabinetNominationTally } from "@/lib/congress/governmentVoteBreakdown";
-import { getOfficeLabel } from "@/lib/utils/politics";
+import { getOfficeLabel } from "@/lib/utils/officeTitle";
 import { getGameState } from "@/lib/gameState";
 import { resetCabinetSettingCooldowns } from "@/lib/db/collections/cabinetSettings";
 import { getExecutiveOfficialFilter } from "@/lib/elections/executiveOfficeFilters";
