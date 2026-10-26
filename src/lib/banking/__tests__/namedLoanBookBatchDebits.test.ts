@@ -35,7 +35,7 @@ describe("batchedLoanServiceMove", () => {
         filter: { _id: oid("6acba7267f0eaca56be74741") },
         path: "x",
       } as never,
-      {}
+      { totalLoansFilter: {} }
     );
     const debits = legs.filter((leg) => leg.kind === "debit");
     expect(debits).toHaveLength(2);

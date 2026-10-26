@@ -202,7 +202,12 @@ describe("loans owed to a bank that no longer exists", () => {
         borrowerType: "corporation",
         borrowerId: borrower,
         charteredTurn: 1,
-        constructionCollateral: { sectorId: new ObjectId(), claimId: "claim" },
+        constructionCollateral: {
+          sectorId: new ObjectId(),
+          claimId: "claim",
+          quotedCostLocal: 0,
+          constructionCostLocal: 0,
+        },
       }),
     ]);
 

@@ -421,13 +421,15 @@ describe("a dead bank's book in one journaled move", () => {
 
     // The same fixture, stated outright so a shared mistake in both paths
     // cannot hide inside a green comparison.
-    const c1 = batchedWorld.collection("characters").docs.find((row) => row._id.equals(C1)) as {
+    const c1 = batchedWorld
+      .collection("characters")
+      .docs.find((row) => (row._id as ObjectId).equals(C1)) as {
       currencyBalances: { personal: { USD: number } };
     };
     expect(c1.currencyBalances.personal.USD).toBe(0);
     const open = batchedWorld
       .collection("corporations")
-      .docs.find((row) => row._id.equals(OPEN)) as {
+      .docs.find((row) => (row._id as ObjectId).equals(OPEN)) as {
       bankCharter: { cashReserves: number; totalLoans: number };
     };
     expect(open.bankCharter.cashReserves).toBe(370);
@@ -442,7 +444,7 @@ describe("a dead bank's book in one journaled move", () => {
     expect(fund.measuredRecoveriesSincePricingStart).toBe(81.25);
     const closedBank = batchedWorld
       .collection("corporations")
-      .docs.find((row) => row._id.equals(CLOSED)) as {
+      .docs.find((row) => (row._id as ObjectId).equals(CLOSED)) as {
       bankCharter: { cashReserves: number; totalLoans: number };
     };
     // No cached loan total moves for a book recovered by the insurer.
@@ -450,7 +452,7 @@ describe("a dead bank's book in one journaled move", () => {
     expect(closedBank.bankCharter.cashReserves).toBe(0);
     const defaulted = batchedWorld
       .collection("bankLoans")
-      .docs.find((row) => row._id.equals(LOAN_IDS[1])) as Record<string, unknown>;
+      .docs.find((row) => (row._id as ObjectId).equals(LOAN_IDS[1])) as Record<string, unknown>;
     expect(defaulted).toMatchObject({
       outstanding: 980,
       status: "defaulted",
@@ -470,7 +472,9 @@ describe("a dead bank's book in one journaled move", () => {
     await serviceBookPerLoan(perLoanWorld as unknown as Db);
 
     const balance = (world: InMemoryDb, id: ObjectId) => {
-      const row = world.collection("characters").docs.find((doc) => doc._id.equals(id)) as {
+      const row = world
+        .collection("characters")
+        .docs.find((doc) => (doc._id as ObjectId).equals(id)) as {
         currencyBalances: { personal: { USD: number } };
       };
       return row.currencyBalances.personal.USD;
@@ -481,7 +485,7 @@ describe("a dead bank's book in one journaled move", () => {
     expect(balance(perLoanWorld, C1)).toBe(0);
     const crossBank = batchedWorld
       .collection("corporations")
-      .docs.find((row) => row._id.equals(C5)) as { liquidCapital: number };
+      .docs.find((row) => (row._id as ObjectId).equals(C5)) as { liquidCapital: number };
     expect(crossBank.liquidCapital).toBe(0);
   });
 
@@ -570,13 +574,18 @@ describe("a dead bank's book in one journaled move", () => {
     expect(economicState(batchedWorld)).toEqual(economicState(perLoanWorld));
     const corporation = batchedWorld
       .collection("corporations")
-      .docs.find((row) => row._id.equals(CURRENCY_IDS.corporation)) as { liquidCapital: number };
+      .docs.find((row) => (row._id as ObjectId).equals(CURRENCY_IDS.corporation)) as {
+      liquidCapital: number;
+    };
     // The first currency's instalment landed; the second was refused by its
     // debit guard, exactly as the per-loan path refused it before this change.
     expect(corporation.liquidCapital).toBe(20);
     const eurLoan = batchedWorld
       .collection("bankLoans")
-      .docs.find((row) => row._id.equals(CURRENCY_IDS.eurLoan)) as Record<string, unknown>;
+      .docs.find((row) => (row._id as ObjectId).equals(CURRENCY_IDS.eurLoan)) as Record<
+      string,
+      unknown
+    >;
     expect(eurLoan.outstanding).toBe(1_000);
     expect(eurLoan.lastProcessedTurn).toBeUndefined();
     const keys = batchedWorld.collection(MONEY_MOVE_COLLECTION).docs.map((row) => row._id);
