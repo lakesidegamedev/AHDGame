@@ -3,12 +3,14 @@ import {
   DEMAND_PROBE_MARGIN,
   DEMAND_THROTTLE_FLOOR,
   demandThrottleFactor,
+  SOLD_OUT_FILL,
   soldOutMarketHeadroomUnits,
   throttleSoldUnits,
   FOREIGN_DEMAND_CLAIM_PER_TURN,
   withForeignDemand,
   withLatentDemand,
   withRegulationBlockedFill,
+  withEditorialAvailabilityRestored,
   liftedThrottleBalance,
 } from "./demandThrottle";
 
@@ -379,6 +381,69 @@ describe("withRegulationBlockedFill", () => {
     const fill = { advertising: 0.5 };
     expect(withRegulationBlockedFill(fill, undefined)).toBe(fill);
     expect(withRegulationBlockedFill(undefined, { advertising: 0.2 })).toBeUndefined();
+  });
+});
+
+describe("withEditorialAvailabilityRestored", () => {
+  it("restores the offer a divergent outlet's audience fit cut", () => {
+    // Live shape: a divergent outlet sold its whole shrunken offer, so the raw
+    // fill reads 0.961 while the market was short.
+    const restored = withEditorialAvailabilityRestored(
+      { advertising: 0.961 },
+      {
+        advertising: 0.9614,
+      }
+    );
+    expect(restored!.advertising).toBeGreaterThanOrEqual(SOLD_OUT_FILL);
+    expect(restored!.advertising).toBeCloseTo(1, 3);
+  });
+
+  it("leaves outputs alone without a listed availability, and clamps at a full fill", () => {
+    const fill = { advertising: 0.5, software: 0.5 };
+    expect(withEditorialAvailabilityRestored({ ...fill }, undefined)).toEqual(fill);
+    expect(
+      withEditorialAvailabilityRestored({ advertising: 0.9 }, { advertising: 0.5 })!.advertising
+    ).toBe(1);
+    expect(withEditorialAvailabilityRestored({ software: 0.5 }, { advertising: 0.9614 })).toEqual({
+      software: 0.5,
+    });
+    expect(
+      withEditorialAvailabilityRestored({ advertising: 0.5 }, { advertising: 1 })!.advertising
+    ).toBe(0.5);
+    expect(
+      withEditorialAvailabilityRestored({ advertising: 0.5 }, { advertising: 0 })!.advertising
+    ).toBe(0.5);
+    expect(withEditorialAvailabilityRestored(undefined, { advertising: 0.5 })).toBeUndefined();
+  });
+
+  it("does not turn a genuinely weak fill into a sold-out one", () => {
+    // Sold 70% of a 96.14% offer: still clearly unsold, so no headroom.
+    const restored = withEditorialAvailabilityRestored(
+      { advertising: 0.7 },
+      {
+        advertising: 0.9614,
+      }
+    );
+    expect(restored!.advertising).toBeCloseTo(0.728, 3);
+    expect(restored!.advertising).toBeLessThan(SOLD_OUT_FILL);
+  });
+
+  it("gives a divergent outlet the sold-out headroom a neutral outlet gets", () => {
+    const headroom = (soldByCommodity: Partial<Record<string, number>>) =>
+      soldOutMarketHeadroomUnits({
+        soldByCommodity,
+        supplyRates: { advertising: 1 },
+        mixWeightFor: () => 1,
+        marketShareFor: () => 0.5,
+        balanceFor: () => ({ supply: 1_000, demand: 2_000 }),
+        priceRatioFor: () => 1,
+      });
+    const availability = { advertising: 0.9614 };
+    // The bug: the raw fill never reaches SOLD_OUT_FILL, so no headroom at all.
+    expect(headroom({ advertising: 0.961 })).toBe(0);
+    expect(
+      headroom(withEditorialAvailabilityRestored({ advertising: 0.961 }, availability)!)
+    ).toBeCloseTo(500, 6);
   });
 });
 
