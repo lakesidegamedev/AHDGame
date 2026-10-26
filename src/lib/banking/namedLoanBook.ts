@@ -268,6 +268,12 @@ type BatchDecision = {
   borrowerKey: string;
 };
 
+/** A stable string for a leg's `_id` filter, whether it is an id, a hex string or an `{ $oid }` ref. */
+function debitTargetId(id: unknown): string {
+  if (id && typeof id === "object" && "$oid" in id) return String((id as { $oid: unknown }).$oid);
+  return String(id);
+}
+
 /**
  * The legs and projections of one bank-level servicing move. One debit per
  * borrower (and currency) rather than one per loan: the decisions already
@@ -276,7 +282,7 @@ type BatchDecision = {
  * journal deliver the whole run in a batch. Each loan's own book increment
  * folds into one, applied under `totalLoansFilter`.
  */
-function batchedServiceMove(
+export function batchedServiceMove(
   decisions: readonly BatchDecision[],
   creditTarget: MoneyTarget,
   totalLoansFilter: Record<string, unknown>
@@ -286,7 +292,10 @@ function batchedServiceMove(
   for (const row of decisions) {
     for (const leg of row.transition.legs) {
       if (leg.kind !== "debit") continue;
-      const key = `${leg.collection}\u0000${String(leg.filter?._id)}\u0000${leg.path}`;
+      // Borrower filters address `_id` as an `{ $oid }` ref; String() of that is
+      // "[object Object]" for every borrower, which merged all borrowers of one
+      // collection into the first one's debit.
+      const key = `${leg.collection}\u0000${debitTargetId(leg.filter?._id)}\u0000${leg.path}`;
       const existing = debitByTarget.get(key);
       if (existing) existing.amount += leg.amount;
       else debitByTarget.set(key, { ...leg });
