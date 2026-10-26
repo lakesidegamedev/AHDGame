@@ -20,6 +20,8 @@ import {
   facilityVocabulary,
 } from "@/lib/constants/facilityVocabulary";
 import RunMeter from "../components/RunMeter";
+import StateLabourPool from "../components/StateLabourPool";
+import type { StateLabourPoolView } from "@/lib/labour/rules/stateLabourPool";
 import DetailsDisclosure from "../components/DetailsDisclosure";
 import { fmtUnits, fmtPct } from "../lib/plants";
 import { facilitiesFromUnits, plantSizeUnits } from "@/lib/constants/facilityQuantum";
@@ -39,6 +41,9 @@ interface PlantPanelProps {
   unionName?: string | null;
   /** Worker-wide wage multiplier for this local, where 1.00 is baseline. */
   averageWageLevel: number;
+  /** The state's shared labour pool, shown when this sector has unfilled jobs. */
+  stateLabourMarket?: StateLabourPoolView | null;
+  stateName?: string;
   isCeo: boolean;
   /** True while any capacity command is in flight. */
   busy: boolean;
@@ -75,6 +80,8 @@ export default function PlantPanel({
   unionId,
   unionName,
   averageWageLevel,
+  stateLabourMarket,
+  stateName,
   isCeo,
   busy,
   message,
@@ -347,13 +354,19 @@ export default function PlantPanel({
         />
       </div>
 
-      {staffingShortfall > 0.001 && (
-        <p className="mt-3 rounded-lg border border-warning/30 bg-warning/10 p-3 text-body-sm text-foreground">
-          Local worker shortage is limiting this run. Higher pay can win a larger share of the
-          available workforce, while participation and migration respond gradually over future
-          turns.
-        </p>
-      )}
+      {staffingShortfall > 0.001 &&
+        (stateLabourMarket ? (
+          <div className="mt-3 rounded-lg border border-warning/30 bg-warning/10 p-3 text-body-sm text-foreground">
+            <p className="mb-2 font-semibold">Local worker shortage is limiting this run.</p>
+            <StateLabourPool pool={stateLabourMarket} stateName={stateName ?? "this state"} />
+          </div>
+        ) : (
+          <p className="mt-3 rounded-lg border border-warning/30 bg-warning/10 p-3 text-body-sm text-foreground">
+            Local worker shortage is limiting this run. Higher pay can win a larger share of the
+            available workforce, while participation and migration respond gradually over future
+            turns.
+          </p>
+        ))}
 
       {/* Build queue ───────────────────────────────────────────────────────*/}
       {plants.buildQueue.length > 0 && (
