@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { batchedServiceMove } from "@/lib/banking/namedLoanBook";
+import { batchedLoanServiceMove } from "@/lib/banking/loanServiceBatch";
 import { oid } from "@/lib/banking/rules/boundary";
 
-type Decisions = Parameters<typeof batchedServiceMove>[0];
+type Decisions = Parameters<typeof batchedLoanServiceMove>[0];
 
 function decision(borrowerHex: string, payment: number) {
   return {
@@ -24,11 +24,11 @@ function decision(borrowerHex: string, payment: number) {
   };
 }
 
-describe("batchedServiceMove", () => {
+describe("batchedLoanServiceMove", () => {
   it("keeps one debit per borrower when filters use $oid refs", () => {
     const a = "6ac5202ca08893ef7ac1d8ac";
     const b = "6ac3e240c6e9f850d9777c06";
-    const { legs } = batchedServiceMove(
+    const { legs } = batchedLoanServiceMove(
       [decision(a, 100), decision(b, 40), decision(a, 10)] as unknown as Decisions,
       {
         collection: "corporations",

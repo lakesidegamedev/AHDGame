@@ -148,7 +148,7 @@ describe("loans owed to a bank that no longer exists", () => {
       55,
       async (_l, bank, target) => {
         seen.push({ bank: bank.name, target: target.collection });
-        return { collected: 100 };
+        return { collected: 100, interestCollected: 0, principalRepaid: 0, writtenOff: 0 };
       }
     );
 
@@ -172,15 +172,61 @@ describe("loans owed to a bank that no longer exists", () => {
     let called = 0;
     const summary = await processDeadBankLoans(db as unknown as Db, 55, async () => {
       called += 1;
-      return { collected: 1 };
+      return { collected: 1, interestCollected: 0, principalRepaid: 0, writtenOff: 0 };
     });
 
     expect(called).toBe(0);
     expect(summary).toEqual({
       loansServiced: 0,
+      interestCollected: 0,
+      principalRepaid: 0,
+      defaultsWrittenOff: 0,
       recoveredToEstate: 0,
       recoveredToInsurer: 0,
     });
+  });
+
+  it("hands a per-loan sibling the running balance and drops it after a replay", async () => {
+    const db = createInMemoryDb();
+    const bank = new ObjectId();
+    const borrower = new ObjectId();
+    db.seed("corporations", [
+      { _id: bank, name: "Failed", countryId: "US", bankCharter: charter("failed") },
+      { _id: borrower, name: "Borrower", countryId: "US", liquidCapital: 70 },
+    ]);
+    // The collateralised sibling is what keeps both loans on the per-loan path,
+    // which is the path that carries the prefetched running balance.
+    db.seed("bankLoans", [
+      loan(bank, { borrowerType: "corporation", borrowerId: borrower, charteredTurn: 1 }),
+      loan(bank, {
+        borrowerType: "corporation",
+        borrowerId: borrower,
+        charteredTurn: 1,
+        constructionCollateral: { sectorId: new ObjectId(), claimId: "claim" },
+      }),
+    ]);
+
+    const seen: Array<number | undefined> = [];
+    await processDeadBankLoans(
+      db as unknown as Db,
+      55,
+      async (_loan, _bank, _target, _track, _tx, prefetch) => {
+        seen.push(prefetch?.borrower?.available);
+        const paid = 40;
+        return {
+          collected: paid,
+          interestCollected: 0,
+          principalRepaid: 0,
+          writtenOff: 0,
+          paidLocal: paid,
+          replayed: seen.length === 1,
+        };
+      }
+    );
+
+    // The second loan sees the 70 minus the first debit; a replay may have
+    // changed the balance behind the snapshot, so the next one reads afresh.
+    expect(seen).toEqual([70, undefined]);
   });
 
   it("services a resolved prior epoch after recharter and sends recovery to insurance", async () => {
@@ -240,7 +286,7 @@ describe("loans owed to a bank that no longer exists", () => {
             { _id: currentLoan._id },
             { $set: { lastProcessedTurn: 55, status: "repaid", outstanding: 0 } }
           );
-        return { collected: 100 };
+        return { collected: 100, interestCollected: 0, principalRepaid: 0, writtenOff: 0 };
       }
     );
 
@@ -306,7 +352,7 @@ describe("loans owed to a bank that no longer exists", () => {
     const cohortEligibility: boolean[] = [];
     await processDeadBankLoans(db as unknown as Db, 55, async (_loan, _bank, _target, counted) => {
       cohortEligibility.push(counted);
-      return { collected: 100 };
+      return { collected: 100, interestCollected: 0, principalRepaid: 0, writtenOff: 0 };
     });
 
     expect(cohortEligibility.sort()).toEqual([false, false, true]);
