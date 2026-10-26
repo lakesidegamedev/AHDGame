@@ -1,7 +1,9 @@
 import type { CountryId } from "@/lib/constants/countries";
 import { getCountryConfig, getOfficeTypeConfig } from "@/lib/constants/countries";
 import { UK_REGIONS } from "@/lib/constants/uk";
-import { getCabinetPositions } from "@/lib/constants/cabinetMechanics";
+// Positions only: importing the mechanics barrel here pulled every country's
+// cabinet policy into any client bundle that needed a seat label.
+import { getCabinetPositions } from "@/lib/constants/cabinetPositions";
 
 /** Shape shared by {@link Character.currentOffice} and career-history snapshots. */
 type OfficeLike = {

@@ -6,7 +6,7 @@ import { useGameEvents } from "@/hooks/useGameEvents";
 
 import { useState, useEffect, Suspense, useMemo, useCallback, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import * as Sentry from "@sentry/nextjs";
+import { captureClientException } from "@/lib/observability/sentryClientLazy";
 import { fetchJson, HttpError } from "@/lib/observability/fetchJson";
 import { isTransientRequestFailure } from "@/lib/errors/transient";
 import { useCurrency } from "@/contexts/CurrencyContext";
@@ -103,7 +103,7 @@ type PortfolioSeed = any;
 function reportPortfolioLoadError(err: unknown): void {
   if (err instanceof HttpError && err.status >= 400 && err.status < 500) return;
   if (isTransientRequestFailure(err)) return;
-  Sentry.captureException(err, { tags: { feature: "portfolio" } });
+  captureClientException(err, { tags: { feature: "portfolio" } });
 }
 
 interface PortfolioClientProps {
