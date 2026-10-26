@@ -11,7 +11,7 @@ import type { Db, ObjectId } from "mongodb";
 import { VOLUME_LOOKBACK_TURNS } from "@/lib/constants/currencies";
 import type { ExchangeRate, TradeHistoryEntry, TradeSource } from "@/lib/db/types";
 
-export const PLAYER_TRADE_SOURCES: ReadonlySet<TradeSource> = new Set<TradeSource>([
+const PLAYER_TRADE_SOURCES: ReadonlySet<TradeSource> = new Set<TradeSource>([
   "manual",
   "api",
   "limit_order",

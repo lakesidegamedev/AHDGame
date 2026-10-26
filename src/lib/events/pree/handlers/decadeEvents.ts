@@ -17,8 +17,6 @@ import "./decadeEvents1970s";
 import "./decadeEvents1980s";
 import "./decadeEvents1990s";
 
-export { apply };
-
 // ──────────────────────────────── 1950s ────────────────────────────────────
 
 registerEventHandler({

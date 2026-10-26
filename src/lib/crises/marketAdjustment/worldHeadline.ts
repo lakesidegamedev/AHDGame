@@ -10,8 +10,8 @@ import { createSystemNewsPost } from "@/lib/news";
 import { MARKET_ADJUSTMENT_TEMPLATE_KEY } from "./template";
 import { MARKET_ADJUSTMENT_SIGNALS } from "./signals";
 
-export const HEADLINE_OPEN_AT = 3;
-export const HEADLINE_CLOSE_BELOW = 2;
+const HEADLINE_OPEN_AT = 3;
+const HEADLINE_CLOSE_BELOW = 2;
 const WORLD_DOC_ID = "__worldHeadline";
 
 /** Whether the headline should now be open, given whether it is and how many countries adjust. */

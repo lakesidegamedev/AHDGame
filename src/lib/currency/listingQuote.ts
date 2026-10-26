@@ -26,12 +26,3 @@ export function formatListingQuote(
     getEraAwareCurrencySymbol(currencyCode, preset, eurozoneEnabled)
   );
 }
-
-/**
- * The as-of note under a quote board: the game turn the snapshot belongs to,
- * when known. Returns null when there is nothing to say.
- */
-export function quoteTurnLabel(turn: number | null | undefined): string | null {
-  if (turn == null || !Number.isFinite(turn) || turn <= 0) return null;
-  return `turn ${Math.floor(turn).toLocaleString("en-US")}`;
-}

@@ -38,7 +38,7 @@ export interface Hu2011AssemblyRecord {
   officialIds?: import("mongodb").ObjectId[];
   settled?: Hu1991InstalledMandates;
 }
-export async function materializeHu2011Count(input: {
+async function materializeHu2011Count(input: {
   db: Db;
   session: ClientSession;
   cycle: number;

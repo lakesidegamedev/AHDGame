@@ -16,7 +16,6 @@ import {
   autoAyeNPPsForParliamentaryAppointment,
   resolveParliamentaryAppointmentVote,
   resolveParliamentaryNoConfidenceVote,
-  processParliamentaryGovernmentVotes,
   processParliamentaryNPPAutoAye,
 } from "@/lib/turn/parliamentaryGovernment";
 
@@ -58,16 +57,6 @@ export async function resolvePMAppointmentVote(voteId: ObjectId, now: Date): Pro
 export async function resolveNoConfidenceVote(voteId: ObjectId, now: Date): Promise<void> {
   const db = await getDb();
   await resolveParliamentaryNoConfidenceVote(db, "UK", voteId, now);
-}
-
-/**
- * Process expired votes for UK parliamentary government.
- * Delegates to shared processParliamentaryGovernmentVotes with countryId: "UK".
- * FIXED: now filters by countryId (previously had no filter).
- */
-export async function processGovernmentVotes(now: Date): Promise<void> {
-  const db = await getDb();
-  await processParliamentaryGovernmentVotes(db, "UK", now);
 }
 
 /**

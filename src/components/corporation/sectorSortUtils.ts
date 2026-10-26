@@ -90,7 +90,7 @@ function compareNullable(a: number | null | undefined, b: number | null | undefi
   return av < bv ? -1 : 1;
 }
 
-export function compareSectors(
+function compareSectors(
   a: SectorDetail,
   b: SectorDetail,
   key: SectorSortKey,

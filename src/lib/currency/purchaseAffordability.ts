@@ -29,7 +29,7 @@ export interface ImplicitAutoConvertEstimate {
   spreadFees: Partial<Record<CurrencyCode, number>>;
 }
 
-export function getMarketMakerTolerance(currency: CurrencyCode): number {
+function getMarketMakerTolerance(currency: CurrencyCode): number {
   return currency === "JPY" ? 1 : 0.02;
 }
 

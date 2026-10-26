@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 
 export interface GameEvent {
   /**
@@ -332,18 +332,4 @@ export function useGameEvents(
       }
     });
   }, [enabled]);
-}
-
-/**
- * Convenience hook: reload the page when a turn completes.
- * Use on pages that show turn-dependent data.
- */
-export function useLiveRefresh(enabled = true) {
-  useGameEvents(
-    useCallback(() => {
-      window.location.reload();
-    }, []),
-    ["turn_complete"],
-    enabled
-  );
 }

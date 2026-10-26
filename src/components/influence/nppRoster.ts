@@ -12,9 +12,9 @@ export interface RosterNpp {
   activeCandidacyLabel?: string | null;
 }
 
-export const ATTENTION_LOYALTY = 35;
-export const ATTENTION_FAV = 35;
-export const ATTENTION_STUBBORN = 70;
+const ATTENTION_LOYALTY = 35;
+const ATTENTION_FAV = 35;
+const ATTENTION_STUBBORN = 70;
 
 /** Triage flags for an NPP based on its stats. Empty when nothing needs attention. */
 export function needsAttention(s: NPPStats): string[] {

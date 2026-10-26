@@ -250,11 +250,6 @@ export function usedDevVersions(): string[] {
     .filter((v): v is string => Boolean(v));
 }
 
-/** Notes waiting for a release, oldest filename first. */
-export function unreleasedNoteFiles(): string[] {
-  return listMarkdown(UNRELEASED_DIR);
-}
-
 export const ENTRY_DIRS: { dir: string; label: string; kind: EntryKind }[] = [
   { dir: DEV_POSTS_DIR, label: "dev", kind: "release" },
   { dir: PUBLIC_POSTS_DIR, label: "public", kind: "release" },

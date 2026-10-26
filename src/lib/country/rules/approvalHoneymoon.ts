@@ -30,7 +30,7 @@ export function expectationsRampTurns(
 }
 
 /** Approval penalty for a country with no cabinet seat filled. */
-export const NO_CABINET_PENALTY = 7.5;
+const NO_CABINET_PENALTY = 7.5;
 
 /**
  * The public expectations modifier for a head of government who took office on

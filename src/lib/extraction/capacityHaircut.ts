@@ -38,7 +38,7 @@ export const RAMP_REANCHOR_DELTA = 0.25;
  * sudden deposit change cannot dump a step of new supply and input demand into
  * one turn. 0.05 takes a mine from fully bound to unbound over 20 turns.
  */
-export const EXTRACTION_UTILIZATION_MAX_RISE_PER_TURN = 0.05;
+const EXTRACTION_UTILIZATION_MAX_RISE_PER_TURN = 0.05;
 
 /** `next` utilization, held to at most MAX_RISE above last turn's persisted value. */
 export function limitExtractionUtilizationRise(
@@ -79,8 +79,8 @@ export const EXTRACTION_CAPACITY_HAIRCUT_FLOOR = 0.5;
  * This is an incentive, not a handout — the moment supply catches up, the
  * relief self-deactivates and the physical clamp resumes.
  */
-export const HAIRCUT_SCARCITY_RELIEF_FULL_SD = 0.5;
-export const HAIRCUT_SCARCITY_RELIEF_NONE_SD = 1.0;
+const HAIRCUT_SCARCITY_RELIEF_FULL_SD = 0.5;
+const HAIRCUT_SCARCITY_RELIEF_NONE_SD = 1.0;
 
 /** Relief fraction (0..1) for a resource, given its global supply/demand. */
 export function haircutScarcityRelief(

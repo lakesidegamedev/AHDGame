@@ -81,7 +81,7 @@ function Driver({
   );
 }
 
-export function CommandEconomyDashboardView({ countryId }: Props) {
+function CommandEconomyDashboardView({ countryId }: Props) {
   const [data, setData] = useState<Dashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

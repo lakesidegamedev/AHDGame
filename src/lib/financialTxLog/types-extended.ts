@@ -336,7 +336,3 @@ const _assertAllCovered: Record<_Coverage, true> = Object.fromEntries(
 ) as Record<_Coverage, true>;
 
 const _coverageCheck: Record<FinancialTxType, true> = _assertAllCovered;
-
-export function getTxTypeLabel(type: FinancialTxType): string {
-  return TX_TYPE_LABELS[type] ?? type;
-}

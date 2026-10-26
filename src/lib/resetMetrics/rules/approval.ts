@@ -25,7 +25,7 @@ function observedMetricValues(observations: Readonly<Record<string, OpeningMetri
   return metrics;
 }
 
-export function resetApprovalMetricValues(
+function resetApprovalMetricValues(
   observations: Readonly<Record<string, OpeningMetricObservation>>
 ) {
   const metrics = observedMetricValues(observations);

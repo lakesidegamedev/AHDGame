@@ -20,7 +20,7 @@ export const CORPORATE_NO_HOLDER_BOND_SHARE_TARGET = 0.35;
  * spike and a 2-observation median splits the difference. Anything thinner
  * reports insufficient data instead of warning or clearing.
  */
-export const CORPORATE_NO_HOLDER_MEDIAN_MIN_OBSERVATIONS = 3;
+const CORPORATE_NO_HOLDER_MEDIAN_MIN_OBSERVATIONS = 3;
 
 export type CorporateNoHolderAlertStatus = "within-target" | "above-target" | "insufficient-data";
 

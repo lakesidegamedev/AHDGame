@@ -7,7 +7,7 @@
 // up via onChange; the parent debounces the actual fetch.
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { type AuditFilterState, CATEGORY_OPTIONS, EMPTY_FILTERS } from "./types";
+import { type AuditFilterState, CATEGORY_OPTIONS } from "./types";
 import { fetchAdminDirectoryUsers } from "../userDirectory";
 
 const INPUT_CLS =
@@ -401,5 +401,3 @@ export function AuditFilters({
     </div>
   );
 }
-
-export { EMPTY_FILTERS };

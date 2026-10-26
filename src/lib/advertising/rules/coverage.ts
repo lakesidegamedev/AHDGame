@@ -16,7 +16,7 @@ import { clamp01, round4 } from "@/lib/numeric/rules";
 import { effectiveMediaOperatingModelId } from "@/lib/mediaOperatingModels/catalog";
 
 /** National reach per operating model. Provisional: worldsim re-tunes. */
-export const MODEL_NATIONAL_REACH: Record<string, number> = {
+const MODEL_NATIONAL_REACH: Record<string, number> = {
   broadcast_tv: 0.5,
   cable_tv: 0.4,
   streaming_platform: 0.45,
@@ -28,13 +28,13 @@ export const MODEL_NATIONAL_REACH: Record<string, number> = {
 };
 
 /** How much of the national model reach carries into any single state. */
-export const AD_STATE_CARRY = 0.6;
+const AD_STATE_CARRY = 0.6;
 /** Coverage boost for states where the supplier runs an active sector. */
-export const AD_FOOTPRINT_BOOST = 0.35;
+const AD_FOOTPRINT_BOOST = 0.35;
 /** Technology lift per relevant unlocked technology. */
-export const AD_TECH_LIFT_EACH = 0.02;
+const AD_TECH_LIFT_EACH = 0.02;
 /** Cap on the total technology lift. */
-export const AD_TECH_LIFT_CAP = 0.1;
+const AD_TECH_LIFT_CAP = 0.1;
 /** Efficacy ceiling: full-overlap contracted spend is worth at most this much extra. */
 export const AD_MAX_COVERAGE_BONUS = 0.5;
 

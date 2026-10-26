@@ -216,7 +216,7 @@ async function runReferendumActuationInTransaction(
  * Admin blocks a passed referendum's conversion — the region does NOT transfer.
  * Sets `cancelled` + a cooldown, and withdraws any active consent bill.
  */
-export async function blockReferendumConversion(
+async function blockReferendumConversion(
   db: Db,
   ref: Referendum,
   currentTurn: number

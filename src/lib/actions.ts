@@ -254,9 +254,9 @@ export function getDonorActionCost(
  * gain, and curving the pre-doubled value would let the doubled result clear
  * decay again in exactly the turns that cast 30% of the vote.
  */
-export const PASSIVE_FAV_DIMINISH_THRESHOLD = 80;
-export const PASSIVE_FAV_DIMINISH_RATE = 0.15;
-export const PASSIVE_FAV_MIN_PER_TURN = 0.5;
+const PASSIVE_FAV_DIMINISH_THRESHOLD = 80;
+const PASSIVE_FAV_DIMINISH_RATE = 0.15;
+const PASSIVE_FAV_MIN_PER_TURN = 0.5;
 
 export function diminishPassiveFavorabilityGain(
   rawGain: number,

@@ -134,7 +134,7 @@ export async function getActivePoliciesForState(
  * @param metricId - The metric ID (e.g., "unemploymentRate")
  * @returns The baseline value (defaults to 50 if not found)
  */
-export function getMetricBaselineFromDoc(
+function getMetricBaselineFromDoc(
   baselineDoc: StateMetricBaseline | null,
   categoryId: MetricCategoryId,
   metricId: string
@@ -145,28 +145,6 @@ export function getMetricBaselineFromDoc(
   }
 
   return value;
-}
-
-/**
- * Get the baseline value for a specific metric in a state
- * @param db - MongoDB database instance
- * @param stateId - The state ID
- * @param categoryId - The metric category (e.g., "economic")
- * @param metricId - The metric ID (e.g., "unemploymentRate")
- * @returns The baseline value (defaults to 50 if not found)
- * @deprecated Use getMetricBaselineFromDoc with a pre-fetched baseline document for better performance
- */
-export async function getMetricBaseline(
-  db: Db,
-  stateId: string,
-  categoryId: MetricCategoryId,
-  metricId: string
-): Promise<number> {
-  const stateBaselines = db.collection<StateMetricBaseline>("stateBaselines");
-
-  const baselineDoc = await stateBaselines.findOne({ _id: stateId });
-
-  return getMetricBaselineFromDoc(baselineDoc, categoryId, metricId);
 }
 
 /**

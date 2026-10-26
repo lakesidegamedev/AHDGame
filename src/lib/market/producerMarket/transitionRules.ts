@@ -15,7 +15,7 @@
  */
 
 /** Funded revenue below this share of legacy revenue marks a sector over-built. */
-export const TRANSITION_MISMATCH_SHARE = 0.6;
+const TRANSITION_MISMATCH_SHARE = 0.6;
 /** Shadow turns averaged for the classification. */
 export const TRANSITION_BASIS_TURNS = 5;
 /** Share of a fully claimed pool held back so float error never overdraws it. */
@@ -39,8 +39,6 @@ export function transitionAnchorTurn(
     ? openingFirstFundedTurn - TRANSITION_WINDOW_TURNS
     : openingFirstFundedTurn;
 }
-/** Capacity built after this turn chased the reverted advertising spike; reported only. */
-export const TRANSITION_SPIKE_COHORT_AFTER_TURN = 314;
 
 export interface SectorRevenueSample {
   /** Legacy revenue, anchor per turn. */

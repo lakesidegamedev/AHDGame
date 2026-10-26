@@ -62,7 +62,7 @@ export function applyEconomicPull(base: number, pull: number): number {
 }
 
 /** Maximum annual migration-rate bonus from an undersupplied labour market. */
-export const LABOUR_SHORTAGE_MIGRATION_MAX_PCT = 0.5;
+const LABOUR_SHORTAGE_MIGRATION_MAX_PCT = 0.5;
 
 /**
  * Extra annual migration pull from jobs that cannot be filled locally.
@@ -91,7 +91,7 @@ export type MigrationLawPosition =
  * are the family's authored country-relative entry access. Emigration is left
  * alone: narrowing admissions does not push residents out.
  */
-export const ENTRY_ACCESS_MIGRATION_FACTOR: Record<MigrationLawPosition, number> = {
+const ENTRY_ACCESS_MIGRATION_FACTOR: Record<MigrationLawPosition, number> = {
   far_left: 1.7,
   center_left: 1.3,
   center: 1,

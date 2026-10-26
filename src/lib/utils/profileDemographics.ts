@@ -38,12 +38,12 @@ function isCountryId(value: string): value is CountryId {
   return value in COUNTRY_CLIENT_CONFIGS;
 }
 
-export function getGenderLabel(gender?: CharacterGender | null): string | null {
+function getGenderLabel(gender?: CharacterGender | null): string | null {
   if (!gender) return null;
   return GENDER_LABELS[gender] ?? null;
 }
 
-export function getEthnicityLabel(race?: CharacterRace | null): string | null {
+function getEthnicityLabel(race?: CharacterRace | null): string | null {
   if (!race) return null;
   return ETHNICITY_LABELS[race] ?? null;
 }
@@ -53,7 +53,7 @@ export function getStartingClassLabel(wealth?: CharacterWealth | null): string |
   return STARTING_CLASS_LABELS[wealth] ?? null;
 }
 
-export function getEducationLabel(education?: CharacterEducation | null): string | null {
+function getEducationLabel(education?: CharacterEducation | null): string | null {
   if (!education) return null;
   return EDUCATION_LABELS[education] ?? null;
 }

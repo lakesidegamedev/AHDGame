@@ -37,7 +37,7 @@ import type { EventInstance } from "@/lib/db/types/events";
 import type { CharacterEventContext } from "./eligibility";
 
 /** Synthetic ledger key for broadcast fired-markers (scope "country", key "broadcast"). */
-export function broadcastScopeId() {
+function broadcastScopeId() {
   return countryScopeId("broadcast");
 }
 

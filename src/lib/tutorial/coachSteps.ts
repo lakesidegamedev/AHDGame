@@ -100,7 +100,7 @@ export interface TourStep extends CoachStep {
 export type CoachCharacter = Pick<Character, "countryId" | "homeState">;
 
 /** Lowercased per-country region noun ("state", "nation", "land", "region"). */
-export function regionNoun(countryId: string): string {
+function regionNoun(countryId: string): string {
   const label = COUNTRY_CLIENT_CONFIGS[countryId as CountryId]?.regionLabel ?? "State";
   return label.toLowerCase();
 }

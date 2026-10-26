@@ -28,7 +28,7 @@ export function getBgModel(era: EraId): CountryLayer1Model {
   );
 }
 
-export const BG_MODERN_GROUP_IDS = [
+const BG_MODERN_GROUP_IDS = [
   "social_conservative",
   "urban_reformist",
   "centre_right",

@@ -40,7 +40,7 @@ export function isBucketTarget(id: string): boolean {
  * dimension; anything else is treated as a legacy archetype id and keeps the
  * `voterGroups` field so existing rows stay reversible.
  */
-export function turnoutModifierField(id: string): string {
+function turnoutModifierField(id: string): string {
   if (isBucketTarget(id)) {
     const [dim, ...rest] = id.split(":");
     return `${dim}.${rest.join(":")}`;

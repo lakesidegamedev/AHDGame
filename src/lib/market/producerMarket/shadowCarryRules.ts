@@ -90,7 +90,7 @@ export function plantEconomyShare(valueAddedPerTurn: number, gdpPerTurn: number)
 }
 
 /** Freight sells anywhere in its own country in the shadow (owner yes, 2026-10-19). */
-export const COUNTRY_SCOPED_SHADOW_COMMODITIES: ReadonlySet<string> = new Set(["freight"]);
+const COUNTRY_SCOPED_SHADOW_COMMODITIES: ReadonlySet<string> = new Set(["freight"]);
 
 export function shadowBook(book: string, commodity: string, countryId: string): string {
   if (!COUNTRY_SCOPED_SHADOW_COMMODITIES.has(commodity) || !book.startsWith("state:")) return book;

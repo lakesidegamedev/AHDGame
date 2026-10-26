@@ -24,9 +24,9 @@ export const NG_ZONES = [
 ] as const;
 
 /** Two-thirds of the six geopolitical zones. */
-export const NG_SPREAD_ZONES_REQUIRED = 4;
+const NG_SPREAD_ZONES_REQUIRED = 4;
 /** Minimum vote share required in each "cleared" zone. */
-export const NG_SPREAD_THRESHOLD = 0.25;
+const NG_SPREAD_THRESHOLD = 0.25;
 
 export interface NigeriaPresidentialResult {
   outcome: "won" | "runoff";

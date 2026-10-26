@@ -2,10 +2,9 @@ import type { Db } from "mongodb";
 import type { State } from "@/lib/db/types/state";
 import type { FederalBudget, StateBudget } from "@/lib/db/types/budget";
 import { NATIONAL_SCOPE_IDS } from "@/lib/constants/nationalScope";
-import type { ExternalAggregateProvider } from "./providers";
 
 /** Budget categories the engine consumes as spending channels (P2+/P3+). */
-export const SPENDING_CHANNEL_CATEGORIES = [
+const SPENDING_CHANNEL_CATEGORIES = [
   "education",
   "healthcare",
   "infrastructure",
@@ -174,8 +173,3 @@ export async function spendingProvider(db: Db): Promise<SpendingRollup> {
 
   return { perCapitaByRegion, publicCapitalAnnualLocalMillionsByRegion };
 }
-
-export const SPENDING_PROVIDER: ExternalAggregateProvider<SpendingRollup> = {
-  name: "spending",
-  run: spendingProvider,
-};

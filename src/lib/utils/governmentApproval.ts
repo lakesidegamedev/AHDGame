@@ -430,7 +430,6 @@ export function computeStateApprovalBase(
 
 /**
  * Pre-modifier national approval — pure metric comparison on flat averages maps (0–100).
- * Use calculateApprovalFromAverages for the modifier-adjusted final score.
  */
 export function computeApprovalBaseFromAverages(
   values: Record<string, Record<string, number>>,
@@ -523,32 +522,6 @@ export function calculateStateApproval(
       year,
     });
   return applyModifiers(base, [...metricModifiers, ...extraModifiers]);
-}
-
-/**
- * Score a country's national averages against global averages (all countries combined).
- * Applies named modifiers on top of the base score. Returns 0–100.
- */
-export function calculateApprovalFromAverages(
-  values: Record<string, Record<string, number>>,
-  referenceAverages: Record<string, Record<string, number>>,
-  preset?: string | null,
-  countryId?: string | null,
-  /** Live year from getEraContext (null while the era-aware flag is off). */
-  year?: number | null,
-  /** SP4: hybrid political base for LAW_COUNTRY_IDS (see calculateStateApproval). */
-  baseOverride?: number
-): number {
-  const base = Number.isFinite(baseOverride)
-    ? (baseOverride as number)
-    : computeApprovalBaseFromAverages(
-        values,
-        referenceAverages,
-        preset ?? undefined,
-        countryId,
-        year ?? null
-      );
-  return applyModifiers(base, evaluateModifiers(values, { preset, countryId, year }));
 }
 
 /**

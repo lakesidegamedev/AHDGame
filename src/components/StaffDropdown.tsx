@@ -11,8 +11,6 @@ import {
   type StaffNavOpts,
 } from "@/components/navbar/staffNavItems";
 
-export { DOCS_URL } from "@/components/navbar/staffNavItems";
-
 type StaffDropdownProps = StaffNavOpts;
 
 /**

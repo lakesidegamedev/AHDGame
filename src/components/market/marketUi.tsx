@@ -13,39 +13,6 @@ export function toneClass(value: number | null | undefined): string {
   return value > 0 ? "text-success" : "text-error";
 }
 
-/** Headline figure in the dashboard strip. */
-export function StatTile({
-  label,
-  value,
-  sub,
-  tone,
-  href,
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-  tone?: string;
-  href?: string;
-}) {
-  const body = (
-    <>
-      <span className="text-body-sm font-medium text-muted">{label}</span>
-      <span className={`mt-1 block text-xl font-bold tabular-nums ${tone ?? "text-foreground"}`}>
-        {value}
-      </span>
-      {sub && <span className="mt-0.5 block text-[11px] text-muted">{sub}</span>}
-    </>
-  );
-  const cls = "block rounded-xl border border-card-border bg-card px-4 py-3 shadow-card";
-  return href ? (
-    <Link href={href} className={`${cls} transition-colors hover:border-foreground/30`}>
-      {body}
-    </Link>
-  ) : (
-    <div className={cls}>{body}</div>
-  );
-}
-
 export function PanelState({
   loading,
   error,

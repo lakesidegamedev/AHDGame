@@ -46,7 +46,7 @@ function getFoundingExecutiveTerms(
   );
 }
 
-export function getExecutiveTermsCountedTowardLimit(
+function getExecutiveTermsCountedTowardLimit(
   character: CharacterExecutiveTermSnapshot,
   countryId: CountryId
 ): number {

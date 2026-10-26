@@ -11,7 +11,7 @@
  * That keeps a missing collection or an unseeded country from blanking a card.
  */
 
-export const TUTORIAL_FACT_KEYS = [
+const TUTORIAL_FACT_KEYS = [
   /** Current turn and how long until the next one. */
   "turn",
   /** The player's home region, by its country's own noun. */
@@ -42,7 +42,7 @@ export interface TutorialFact {
 /** Every fact the server managed to compute, keyed by id. */
 export type TutorialFacts = Partial<Record<TutorialFactKey, TutorialFact>>;
 
-export function isTutorialFactKey(value: unknown): value is TutorialFactKey {
+function isTutorialFactKey(value: unknown): value is TutorialFactKey {
   return typeof value === "string" && (TUTORIAL_FACT_KEYS as readonly string[]).includes(value);
 }
 

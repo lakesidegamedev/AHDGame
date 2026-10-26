@@ -41,7 +41,7 @@ const TutorialWelcome = dynamic(
 const FRESH_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 /** Fire from anywhere (the /tutorial hub) to re-open the two-question flow. */
-export const TUTORIAL_CHOOSE_EVENT = "ahd:choose-tutorial";
+const TUTORIAL_CHOOSE_EVENT = "ahd:choose-tutorial";
 
 export function openTutorialChooser(): void {
   if (typeof window !== "undefined") window.dispatchEvent(new Event(TUTORIAL_CHOOSE_EVENT));

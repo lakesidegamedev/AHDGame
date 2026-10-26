@@ -34,7 +34,7 @@ function stableId(key: string): ObjectId {
   return new ObjectId(createHash("sha256").update(key).digest("hex").slice(0, 24));
 }
 
-export async function materializeBgFoundingAssemblySeating(input: {
+async function materializeBgFoundingAssemblySeating(input: {
   db: Db;
   session: ClientSession;
   cycle: number;

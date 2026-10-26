@@ -5,7 +5,7 @@
  */
 
 /** Historical unattributed adjustments lose half their effect over 48 turns. */
-export const POVERTY_OFFSET_RETENTION = Math.pow(0.5, 1 / 48);
+const POVERTY_OFFSET_RETENTION = Math.pow(0.5, 1 / 48);
 
 /** Round decayed offsets toward zero so two-decimal storage cannot preserve a tail forever. */
 export function decayPovertyOffset(delta: number, fundedLawOwner = true): number {

@@ -188,7 +188,7 @@ export function chartBucketTurns(_turns: number, count: number): number {
 }
 
 /** Legacy real-week helper retained for callers outside the game-calendar chart. */
-export const WEEK_TURNS = 168;
+const WEEK_TURNS = 168;
 
 export function bucketWeekly(candles: CandlePoint[]): CandlePoint[] {
   return bucketCandles(candles, WEEK_TURNS);

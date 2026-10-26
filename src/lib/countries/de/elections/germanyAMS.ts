@@ -212,7 +212,7 @@ export function aggregateDirectMandates(officials: ElectedOfficial[]): DirectMan
 }
 
 /** Read DE Bundestag direct-mandate officials (seatSource direct or absent) and aggregate. */
-export async function fetchDirectMandates(db: Db): Promise<DirectMandates> {
+async function fetchDirectMandates(db: Db): Promise<DirectMandates> {
   const officials = await db
     .collection<ElectedOfficial>("electedOfficials")
     .find({

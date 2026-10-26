@@ -46,7 +46,7 @@ function commodityLabel(commodity: string): string {
   return commodity.replace(/_/g, " ");
 }
 
-export function ventureLines(domain: VentureDomain): VentureLine[] {
+function ventureLines(domain: VentureDomain): VentureLine[] {
   if (domain === "media") {
     return MEDIA_PRODUCT_KINDS.map((kind) => ({
       id: kind.id,

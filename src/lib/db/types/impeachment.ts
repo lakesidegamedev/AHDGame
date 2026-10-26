@@ -60,5 +60,3 @@ export interface Impeachment {
   createdAt: Date;
   updatedAt: Date;
 }
-
-export const IMPEACHMENTS_COLLECTION = "impeachments";

@@ -13,7 +13,7 @@ export interface PromoCampaign {
   label: string;
 }
 
-export const PROMO_CAMPAIGNS = {
+const PROMO_CAMPAIGNS = {
   "itch-boost-2026-10": { amountAnchor: 5_000_000, label: "itch.io community boost" },
 } as const satisfies Record<string, PromoCampaign>;
 

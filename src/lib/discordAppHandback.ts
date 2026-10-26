@@ -14,7 +14,7 @@ import { isStoreAppUserAgent } from "@/lib/displayMode";
  * prefix gets a page that hands the same callback URL back to the app, where
  * the webview still holds the state cookie that authorizes it.
  */
-export const APP_STATE_PREFIX = "app-";
+const APP_STATE_PREFIX = "app-";
 
 const ANDROID_PACKAGE = "net.lakesidegames.ahdclient";
 

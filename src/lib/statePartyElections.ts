@@ -148,63 +148,6 @@ const POSITION_FIELD: Record<
   treasurer: "treasurerId",
 };
 
-// ─── Create ──────────────────────────────────────────────────────────────────
-
-/**
- * Create a new leadership election for a state party position.
- * Resolution is keyed off game turns; wall-clock endTime is for display only.
- */
-export async function createElection(
-  stateId: string,
-  partyId: string,
-  position: StatePartyElectionPosition,
-  currentTurn: number,
-  durationTurns = ELECTION_DURATION_TURNS,
-  countryId?: CountryId,
-  effectiveNow = new Date(),
-  options: CreateMissingStateElectionsOptions = {}
-): Promise<ObjectId> {
-  const db = await getDb();
-  const now = new Date(effectiveNow);
-  const window = createTurnBackedWindow({ currentTurn, durationTurns, effectiveNow: now });
-  const founding = options.founding === true;
-
-  const election: Omit<StatePartyElection, "_id"> = {
-    stateId,
-    partyId,
-    countryId,
-    position,
-    status: "voting",
-    startTime: window.startTime,
-    endTime: window.endTime,
-    startTurn: window.startTurn,
-    endTurn: window.endTurn,
-    durationTurns,
-    ...(founding ? { founding: true as const } : {}),
-    winnerId: null,
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  const result = await db.collection("statePartyElections").insertOne(election);
-
-  console.log(
-    `[StatePartyElections] Created ${position} election for ${stateId}_${partyId} ` +
-      `(turns ${currentTurn}–${currentTurn + durationTurns})`
-  );
-
-  // Notify all state party members that a new election has opened
-  await notifyMembersElectionOpened(
-    stateId,
-    partyId,
-    countryId ?? DEFAULT_LEGACY_COUNTRY_ID,
-    position,
-    durationTurns
-  );
-
-  return result.insertedId;
-}
-
 // ─── Create Missing ──────────────────────────────────────────────────────────
 
 /**
@@ -855,58 +798,7 @@ export async function processStatePartyElections(
   }
 }
 
-// ─── Init (seeding) ──────────────────────────────────────────────────────────
-
-export async function initializeElections(
-  currentTurn: number,
-  effectiveNow = new Date()
-): Promise<number> {
-  const db = await getDb();
-  const founding = await isFoundingPhaseActive(db);
-  const created = await createMissingElections(
-    currentTurn,
-    founding ? FOUNDING_STATE_ELECTION_DURATION_TURNS : ELECTION_DURATION_TURNS,
-    effectiveNow,
-    undefined,
-    { founding }
-  );
-  if (created > 0) {
-    console.log(
-      `[StatePartyElections] Initialized ${created} elections` + (founding ? " (founding)" : "")
-    );
-  }
-  return created;
-}
-
 // ─── Notification helpers ────────────────────────────────────────────────────
-
-async function notifyMembersElectionOpened(
-  stateId: string,
-  partyId: string,
-  countryId: CountryId,
-  position: StatePartyElectionPosition,
-  durationTurns: number
-): Promise<void> {
-  const db = await getDb();
-  const members = await db
-    .collection<Character>("characters")
-    .find({ homeState: stateId, party: partyId, countryId })
-    .project<{ _id: ObjectId; userId: ObjectId }>({ _id: 1, userId: 1 })
-    .toArray();
-
-  const label = POSITION_LABELS[position];
-  await createNotifications(
-    members.map((m) => ({
-      userId: m.userId,
-      type: "leadership_election_opened",
-      title: `${label} Election Open`,
-      message:
-        `A new ${label} election has opened for the ${stateId} party. ` +
-        `Voting is open for ${durationTurns} turns. Declare your candidacy or cast your vote on the state party page.`,
-      metadata: { stateId, partyId, position, recipientCharacterId: m._id.toString() },
-    }))
-  );
-}
 
 async function notifyMembersElectionsOpenedBatch(
   openings: {

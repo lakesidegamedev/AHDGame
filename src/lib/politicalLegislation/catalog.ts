@@ -171,8 +171,3 @@ export function getAllNewGenerationLawIds(): string[] {
     ]),
   ];
 }
-
-/** True iff the id belongs to the new political-legislation catalogs. */
-export function isNewGenerationLawId(id: string): boolean {
-  return getLaw(id) !== null;
-}

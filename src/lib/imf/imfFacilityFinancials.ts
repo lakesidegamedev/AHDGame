@@ -7,7 +7,7 @@ import {
 } from "@/lib/imf/constants";
 import { computeImfFacilityPaymentTurn } from "@/lib/imf/imfFacilityMath";
 import type { ImfFacilityReceivableRow } from "@/lib/corporations/imfPortfolioReceivables";
-import { findImfFacilityReceivablesForLender } from "@/lib/corporations/imfPortfolioReceivables";
+
 import { TURNS_PER_DAY } from "@/lib/constants/corporations";
 
 const PRINCIPAL_EPS = 1e-6;
@@ -89,17 +89,6 @@ export async function sumImfLenderReceiptsAnchorPerTurnForReceivables(
     total += split.actualPayment;
   }
   return total;
-}
-
-/**
- * Total IMF facility cash received by the lender this turn (anchor ₳).
- */
-export async function totalImfLenderReceiptsAnchorPerTurn(
-  db: Db,
-  lenderCorporationId: ObjectId
-): Promise<number> {
-  const { receivables } = await findImfFacilityReceivablesForLender(db, lenderCorporationId);
-  return sumImfLenderReceiptsAnchorPerTurnForReceivables(db, receivables);
 }
 
 /** Scale per-turn anchor flows to the same "daily" units as bond coupon lines on the corp page. */

@@ -47,8 +47,8 @@ export const RU_REGION_ORG_1979: Record<string, RuRegionOrg> = {
   MOL: { cpsu: 94 },
 };
 
-export const RU_PARTY_TREASURY_1953 = { cpsu: 250_000 };
-export const RU_PARTY_TREASURY_1979 = { cpsu: 350_000 };
+const RU_PARTY_TREASURY_1953 = { cpsu: 250_000 };
+const RU_PARTY_TREASURY_1979 = { cpsu: 350_000 };
 
 export function getRuRegionOrg(preset: string): Record<string, RuRegionOrg> {
   return preset === "1979-default" ? RU_REGION_ORG_1979 : RU_REGION_ORG_1953;

@@ -13,7 +13,7 @@ export interface AdminPin {
 const STORAGE_KEY = "ahd-admin-pinned";
 const MAX_PINS = 8;
 
-export function pinKey(tab: string, sub: string): string {
+function pinKey(tab: string, sub: string): string {
   return sub ? `${tab}/${sub}` : tab;
 }
 

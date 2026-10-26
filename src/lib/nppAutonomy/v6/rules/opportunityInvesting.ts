@@ -33,11 +33,11 @@ export const OPPORTUNITY_BUY_CAP = 2;
  */
 export const OPPORTUNITY_SELL_CAP = 2.5;
 /** Contrast of the stock value edge: a 20% better edge weighs 1.44x. */
-export const STOCK_EDGE_EXPONENT = 2;
+const STOCK_EDGE_EXPONENT = 2;
 /** Bond yields spread wider than value ratios, so the edge is damped. */
-export const BOND_EDGE_EXPONENT = 0.5;
+const BOND_EDGE_EXPONENT = 0.5;
 /** Contrast of the sell signal: 1.2x fundamentals weighs 1.73x, 0.8x weighs 0.51x. */
-export const SELL_EDGE_EXPONENT = 3;
+const SELL_EDGE_EXPONENT = 3;
 
 function finitePositive(value: number): number {
   return Number.isFinite(value) && value > 0 ? value : 0;

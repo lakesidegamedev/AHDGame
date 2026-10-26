@@ -32,7 +32,7 @@ export interface RaceCampaignEffectsMemo {
   groundGameByElection?: Promise<GroundGameByElection>;
 }
 
-export async function loadGroundGameByElection(
+async function loadGroundGameByElection(
   db: Db,
   electionId?: { toString(): string }
 ): Promise<GroundGameByElection> {
