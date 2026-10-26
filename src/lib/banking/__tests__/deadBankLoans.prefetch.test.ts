@@ -80,7 +80,7 @@ function makeWorld(): InMemoryDb {
     loan(DEAD_BANK, BORROWER, LOAN_IDS[1]),
     loan(DEAD_BANK, SECOND_BORROWER, LOAN_IDS[2]),
     loan(OTHER_DEAD_BANK, BORROWER, LOAN_IDS[3]),
-  ]);
+  ] as unknown as Parameters<InMemoryDb["seed"]>[1]);
   return db;
 }
 
@@ -145,8 +145,8 @@ async function run(usePrefetchedBorrower: boolean) {
       };
     }
   );
-  const byId = (a: { _id: ObjectId }, b: { _id: ObjectId }) =>
-    a._id.toHexString() < b._id.toHexString() ? -1 : 1;
+  const byId = (a: Record<string, unknown>, b: Record<string, unknown>) =>
+    String(a._id) < String(b._id) ? -1 : 1;
   // Settlement writes stamp `updatedAt` with the wall clock; the comparison is
   // about money and book state, not when the test ran.
   const withoutStamp = <T extends Record<string, unknown>>(rows: T[]) =>
@@ -181,10 +181,11 @@ describe("dead-bank loans serviced from a cohort-wide borrower read", () => {
 
     // Both paths collect the same money, and the same amount left the borrower:
     // a stale prefetched balance would have collected more from it.
-    const borrower = batched.corporations.find((row) => row._id.equals(BORROWER)) as
+    const borrower = batched.corporations.find((row) => (row._id as ObjectId).equals(BORROWER)) as
       Corporation | undefined;
-    const serialBorrower = serial.corporations.find((row) => row._id.equals(BORROWER)) as
-      Corporation | undefined;
+    const serialBorrower = serial.corporations.find((row) =>
+      (row._id as ObjectId).equals(BORROWER)
+    ) as Corporation | undefined;
     expect(borrower?.liquidCapital).toBe(serialBorrower?.liquidCapital);
     expect(batched.summary.loansServiced).toBe(4);
   });
