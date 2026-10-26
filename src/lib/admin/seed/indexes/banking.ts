@@ -102,6 +102,18 @@ export async function seedBankingIndexes(db: Db, log: (msg: string) => void) {
     log
   );
 
+  // The cash bound is what decides which claims a Treasury pass can act on.
+  // Without it in the index, the bound is a filter applied after fetching every
+  // open claim the budget owns, which on a long unpaid backlog is the whole
+  // collection every turn.
+  await ensureIndex(
+    db,
+    SOVEREIGN_COUPON_CLAIMS_COLLECTION,
+    { budgetId: 1, settledTurn: 1, "claim.amountLocal": 1 },
+    { name: "sovereignCouponClaims_budget_settled_amount", background: true },
+    log
+  );
+
   // Charter-status lookups: the dead-bank loan servicer scans corporations for
   // failed/revoked charters every banking turn, and solvency/supervision passes
   // filter on active status. Sparse-ish in practice (most corporations have no

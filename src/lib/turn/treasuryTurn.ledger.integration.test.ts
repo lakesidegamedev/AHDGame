@@ -165,6 +165,31 @@ describe("treasury accrual stock-flow ownership", () => {
     expect(db.collection("bondMarketPools").docs[0].cashLocal).toBe(50);
   });
 
+  it("does not read an unfunded coupon backlog to build payee locks", async () => {
+    // The production shape: a Treasury with no cash against a long backlog. The
+    // payee locks used to come from every open claim document; now the server
+    // groups the settleable ones down to distinct keys, so every claim read is
+    // scoped to one budget and its cash bound.
+    const { db } = fundedCouponWorld(11, 0);
+    await processTreasuryTurn(8);
+    expect(
+      db.collection("sovereignCouponClaims").docs.filter((row) => row.settledTurn === undefined)
+    ).toHaveLength(1);
+
+    const claims = db.collection("sovereignCouponClaims");
+    const find = vi.spyOn(claims, "find");
+    const aggregate = vi.spyOn(claims, "aggregate");
+
+    await processTreasuryTurn(10);
+
+    expect(aggregate).toHaveBeenCalledTimes(1);
+    expect(find.mock.calls.length).toBeGreaterThan(0);
+    for (const [filter] of find.mock.calls) {
+      const scoped = filter as Record<string, unknown>;
+      expect(scoped.budgetId ?? scoped._id).toBeDefined();
+    }
+  });
+
   it("does not treat modeled revenue totals as spendable cash under the funded-cash flag", async () => {
     const db = world(false);
     await db

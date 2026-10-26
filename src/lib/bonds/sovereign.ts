@@ -47,6 +47,7 @@ import { getBankId } from "@/lib/centralBank/helpers";
 import {
   resolveSovereignMaturityPayoutLegs,
   type SovereignMaturityCashLeg,
+  type SovereignMaturityLiveTargets,
 } from "./sovereignMaturityPayoutTargets";
 
 export { sovereignMaturityCentralBankId } from "./sovereignMaturityPayoutTargets";
@@ -1179,6 +1180,15 @@ export async function freezeFundedSovereignBondMaturityQuote(
 }
 
 /**
+ * A funded settlement, plus the face a forced rollover moved to a replacement
+ * bond instead of paying from Treasury cash. Callers subtract it from the cash
+ * they book without re-reading the retired bond's claim.
+ */
+export type SovereignMaturitySettlement = SettlementResult & {
+  forcedRolloverFaceLocal?: number;
+};
+
+/**
  * Settle the non-bank holders of one matured sovereign bond from actual
  * spendable Treasury cash. The due-turn key freezes the original holder and
  * FX snapshot across retries. The budget's signed fiscal position and debt
@@ -1197,10 +1207,12 @@ export async function settleFundedSovereignBondMaturity(
     nonBankRepaymentLocal: number;
     holderLegs: readonly SovereignMaturityCashLeg[];
     now: Date;
+    /** Payee existence for the whole maturity wave, so this bond need not read it. */
+    liveTargets?: SovereignMaturityLiveTargets;
     /** Test seam for the isolated native-Mongo settlement fixture. */
     transactionClient?: import("mongodb").MongoClient;
   }
-): Promise<SettlementResult | null> {
+): Promise<SovereignMaturitySettlement | null> {
   const {
     bond,
     turn,
@@ -1232,10 +1244,19 @@ export async function settleFundedSovereignBondMaturity(
   // Finish a previous attempt before opening another generation. A rejected
   // insufficient-cash attempt has no applied legs and is terminal by design;
   // its stable claim quote allows a new turn-keyed attempt without changing
-  // payees, amounts, or FX.
-  const pendingFunding = await db
+  // payees, amounts, or FX. An unfinished funding attempt and an unfinished
+  // payout receipt are answered by one read, not one lookup each.
+  const priorReceipts = await db
     .collection<{ _id: string; status?: string }>("bankMoneyMoves")
-    .find({ _id: { $regex: `^${claimId}:fund:` }, status: "partial" })
+    .find(
+      // Two plain branches, not `^id:(fund:|payout$)`: an alternation is not a
+      // simple prefix, so the server would walk the whole `_id` index for it.
+      {
+        $or: [{ _id: { $regex: `^${claimId}:fund:` } }, { _id: `${claimId}:payout` }],
+        status: "partial",
+      },
+      { projection: { _id: 1, status: 1 } }
+    )
     .toArray();
   const currentBond = await db
     .collection<Bond>("bonds")
@@ -1248,8 +1269,14 @@ export async function settleFundedSovereignBondMaturity(
     const completedPayout = await db
       .collection<{ _id: string }>("bankMoneyMoves")
       .findOne({ _id: `${claimId}:payout` }, { projection: { _id: 1 } });
-    return completedPayout ? resumeSettlement(db, completedPayout._id) : null;
+    if (!completedPayout) return null;
+    return {
+      ...(await resumeSettlement(db, completedPayout._id)),
+      forcedRolloverFaceLocal: quote.forcedRollover?.faceLocal ?? 0,
+    };
   }
+  const pendingFunding = priorReceipts.filter((row) => row._id !== `${claimId}:payout`);
+  const previousPayoutReceipt = priorReceipts.find((row) => row._id === `${claimId}:payout`);
 
   const sourceCountryId =
     quote.publicFloatDisposition?.mode === "novation"
@@ -1340,9 +1367,7 @@ export async function settleFundedSovereignBondMaturity(
       ? (quote.publicFloatDisposition.residualAmountLocal ?? 0)
       : quote.amountLocal;
 
-  const previousPayout = await db
-    .collection<{ _id: string; status?: string }>("bankMoneyMoves")
-    .findOne({ _id: `${claimId}:payout`, status: "partial" });
+  const previousPayout = previousPayoutReceipt;
   if (previousPayout) {
     const recovered = await resumeSettlement(db, previousPayout._id);
     if (recovered.status === "applied" || (recovered.status === "replayed" && !recovered.error))
@@ -1512,11 +1537,16 @@ export async function settleFundedSovereignBondMaturity(
         }
       : {};
   const payoutKey = `${claimId}:payout`;
-  const payoutHolderLegs = await resolveSovereignMaturityPayoutLegs(db, payoutQuote.holderLegs, {
-    currencyCode: payoutQuote.currencyCode,
-    localPerAnchor: payoutQuote.treasuryLocalPerAnchor,
-  });
-  return settleTransition(db, {
+  const payoutHolderLegs = await resolveSovereignMaturityPayoutLegs(
+    db,
+    payoutQuote.holderLegs,
+    {
+      currencyCode: payoutQuote.currencyCode,
+      localPerAnchor: payoutQuote.treasuryLocalPerAnchor,
+    },
+    input.liveTargets
+  );
+  const settled = await settleTransition(db, {
     key: payoutKey,
     kind: "sovereign_maturity_payout",
     turn,
@@ -1591,6 +1621,7 @@ export async function settleFundedSovereignBondMaturity(
       meta: { bondId: bond._id.toHexString(), dueTurn },
     },
   });
+  return { ...settled, forcedRolloverFaceLocal: quote.forcedRollover?.faceLocal ?? 0 };
 }
 
 export interface SovereignPrincipalResync {
