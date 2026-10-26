@@ -12,7 +12,8 @@ import {
 } from "./components/shared/legislaturePresentation";
 
 import { useState } from "react";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { LegislatureMembersTab } from "./components/shared/LegislatureMembersTab";
 import { BillsList } from "@/components/bills/BillsList";
 import { BillListControls, type BillVoteFilter } from "@/components/bills/BillListControls";
@@ -147,7 +148,7 @@ export function NGAssemblyPage({ countryId }: { countryId: CountryId }) {
   const [activeTab, setActiveTab] = useState<PageTab>("composition");
   const { members, bills, loading, error, refetch } = useLegislatureData(countryId, activeChamber);
 
-  const config = COUNTRY_CONFIGS[countryId];
+  const config = COUNTRY_CLIENT_CONFIGS[countryId];
   const lower = config.legislature.lowerChamber;
   const upper = config.legislature.upperChamber!;
   const chamberConfig = activeChamber === "house" ? lower : upper;

@@ -6,12 +6,11 @@
  * election, party charters, referendums) are appended in that order only when
  * their option is supplied; empty sections are dropped.
  */
+import { isDirectElection, type CountryId } from "@/lib/constants/countriesCore";
 import {
-  COUNTRY_CONFIGS,
-  getCountryConfig,
-  isDirectElection,
-  type CountryId,
-} from "@/lib/constants/countries";
+  COUNTRY_CLIENT_CONFIGS,
+  getCountryClientConfig,
+} from "@/lib/constants/countryClientConfig";
 import {
   budgetUrl,
   countryElectionsUrl,
@@ -81,7 +80,7 @@ export function buildNationalDetailsSections(
   countryId: CountryId,
   opts: NationDetailsOpts = {}
 ): NationDetailSection[] {
-  const config = getCountryConfig(countryId);
+  const config = getCountryClientConfig(countryId);
 
   // Traffic-ordered: election pages outdraw party pages, which outdraw the
   // politician roster (see the share breakdown above `sections` below).
@@ -214,7 +213,7 @@ export function buildNationalDetailsSections(
         },
         // SCOTUS is a US-only mechanic (#3581) — same country-literal
         // convention as the executive surface / CountryOverviewClient.
-        ...(countryId === COUNTRY_CONFIGS.US.id
+        ...(countryId === COUNTRY_CLIENT_CONFIGS.US.id
           ? [
               {
                 id: "scotus" as const,

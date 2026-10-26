@@ -3,7 +3,8 @@
 import { LegislatureCompositionSection } from "@/components/legislature/LegislatureCompositionSection";
 import type { LegislatureCompositionData, LegislatureMember } from "@/components/legislature/types";
 import type { CongressMembersResponse } from "@/lib/congress/types";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { LEADER_BADGE_SHORT, getSenateClassLabel } from "./CongressConstants";
 import type { ChamberTab, SenateClassFilter, LeaderStrip } from "./CongressConstants";
 
@@ -131,8 +132,8 @@ export function CongressCompositionTab({
 
   const chamberLabel =
     activeTab === "senate"
-      ? COUNTRY_CONFIGS.US.legislature.upperChamber!.name
-      : COUNTRY_CONFIGS.US.legislature.lowerChamber.name;
+      ? COUNTRY_CLIENT_CONFIGS.US.legislature.upperChamber!.name
+      : COUNTRY_CLIENT_CONFIGS.US.legislature.lowerChamber.name;
 
   // Senate class filter — uses the original CongressMember data for senateClass field
   const senateClassMap = new Map(

@@ -1,4 +1,4 @@
-import { compactRegionCode, type CountryId } from "@/lib/constants/countries";
+import { compactRegionCode, type CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 
 // ── Internal helpers ──

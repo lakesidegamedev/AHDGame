@@ -154,6 +154,28 @@ export function canonicalRegionId(countryId: CountryId | string, regionParam: st
     : regionParam;
 }
 
+/** Vote-to-seat/office allocation method for one political position.
+ *  See docs/superpowers/specs/2026-06-27-election-systems-field-design.md. */
+export type ElectionMethod =
+  | "fptp" // single-seat plurality
+  | "pr_hareQuota" // multi-seat Largest Remainder (Hare quota)
+  | "pr_dhondt" // national highest-averages party allocation
+  | "sntv" // candidate plurality in a multi-member constituency; at most one seat each
+  | "pr_sainteLague" // odd-divisor proportional (DE Landtag)
+  | "ams" // additional-member system (DE Bundestag)
+  | "electoralCollege" // per-unit FPTP aggregated to a majority (US President)
+  | "parliamentary" // head of gov via coalition/confidence vote (no popular ballot)
+  | "ceremonial"; // head of state not contested in-system (monarch / appointed)
+
+/** Political positions whose election method a country can configure. */
+export type ElectionPosition =
+  | "lowerChamber"
+  | "upperChamber"
+  | "subNationalChamber"
+  | "subNationalExecutive"
+  | "headOfGovernment"
+  | "headOfState";
+
 /**
  * Number of candidates that advance from a party primary to the general
  * election, keyed by governmentType.

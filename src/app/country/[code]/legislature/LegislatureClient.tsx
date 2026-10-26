@@ -3,7 +3,8 @@
 import { Suspense, type ComponentType } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 
 import { LegislatureSkeleton } from "./LegislatureSkeleton";
 import FederationDecisionPanel from "./FederationDecisionPanel";
@@ -87,7 +88,7 @@ export default function LegislatureClient({
   bulgarianConstitutionalDecision,
 }: Props) {
   const t = useTranslations("worldConflicts.russianLegislature");
-  const config = COUNTRY_CONFIGS[countryId];
+  const config = COUNTRY_CLIENT_CONFIGS[countryId];
   const displayedName = legislatureName ?? config.legislature.name;
   const PageComponent = LEGISLATURE_COMPONENTS[countryId];
 

@@ -7,7 +7,8 @@ import Image from "next/image";
 import { regionUrl } from "@/lib/urls";
 import { resolveRegionOfficeBannerImage } from "@/lib/constants/regionBanner";
 import { HeroImage } from "@/components/HeroImage";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { GUBERNATORIAL_ACTION_CAP } from "@/lib/constants/governorOffice";
 import type { OfficePoolTopUpStatus } from "@/lib/actions/officePoolTopUpRules";
 import { OfficePoolTopUpButton } from "@/components/officials/OfficePoolTopUpButton";
@@ -96,7 +97,7 @@ function buildTabs(showDevolution: boolean): Array<{ key: TabKey; label: string 
 
 export function GovernorOfficeClient(props: Props) {
   const showDevolution =
-    props.countryId === COUNTRY_CONFIGS.UK.id &&
+    props.countryId === COUNTRY_CLIENT_CONFIGS.UK.id &&
     isUKDevolutionRegion(props.stateId) &&
     props.devolution != null;
   const tabs = buildTabs(showDevolution);

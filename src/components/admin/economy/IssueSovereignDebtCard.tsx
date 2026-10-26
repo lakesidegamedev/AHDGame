@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { Button, Input, Label } from "@/components/ui";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
-import type { CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { useRegisteredCountries } from "@/contexts/RegisteredCountriesContext";
 
 interface IssueResult {
@@ -84,7 +84,7 @@ export function IssueSovereignDebtCard() {
           >
             {registered.map((id) => (
               <option key={id} value={id}>
-                {COUNTRY_CONFIGS[id].name}
+                {COUNTRY_CLIENT_CONFIGS[id].name}
               </option>
             ))}
           </select>

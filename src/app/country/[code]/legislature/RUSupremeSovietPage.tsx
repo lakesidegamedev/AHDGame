@@ -16,8 +16,8 @@ import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
 import { BillsList } from "@/components/bills/BillsList";
 import { BillListControls, type BillVoteFilter } from "@/components/bills/BillListControls";
-import type { CountryId } from "@/lib/constants/countries";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { LegislatureMembersTab } from "./components/shared/LegislatureMembersTab";
 import { TariffsTab } from "@/components/legislature/TariffsTab";
 import { SubsidiesTab } from "@/components/legislature/SubsidiesTab";
@@ -329,7 +329,7 @@ export function RUSupremeSovietPage({ countryId }: { countryId: CountryId }) {
     fetchGovernmentData();
   }, [fetchGovernmentData]);
 
-  const config = COUNTRY_CONFIGS[countryId];
+  const config = COUNTRY_CLIENT_CONFIGS[countryId];
   const lowerChamber = config.legislature.lowerChamber;
   const upperChamber = config.legislature.upperChamber;
   const activeChamber =

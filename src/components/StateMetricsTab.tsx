@@ -6,7 +6,8 @@ import { BudgetSummaryPanel } from "@/components/budget/BudgetSummaryPanel";
 import { regionApiSubUrl, metricsApiUrl, approvalUrl } from "@/lib/urls";
 import type { MetricCategoryId, StateMetrics } from "@/lib/db/types";
 import { getCurrencyPrefix } from "@/lib/utils/budgetCalculations";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { getStatsIdentity } from "@/lib/constants/nationalStatsIdentity";
 import { RegionalMetricsHeader } from "@/components/metrics/RegionalMetricsHeader";
 import { GdpDecompositionCard } from "@/components/metrics/GdpDecompositionCard";
@@ -397,7 +398,10 @@ export function StateMetricsTab({ stateId, countryId }: StateMetricsTabProps) {
   const categoryNationalAverages = nationalAverages?.[activeTab.id];
   const categoryTickRates = tickRates[activeTab.id];
   const identity = getStatsIdentity(countryId);
-  const config = countryId in COUNTRY_CONFIGS ? COUNTRY_CONFIGS[countryId as CountryId] : undefined;
+  const config =
+    countryId in COUNTRY_CLIENT_CONFIGS
+      ? COUNTRY_CLIENT_CONFIGS[countryId as CountryId]
+      : undefined;
   const dossier = config ? `${config.name} · ${config.regionLabel}` : identity.officeEn;
   const rollupData = toRollupShape(metrics, visibleTabs);
 

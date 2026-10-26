@@ -3,7 +3,8 @@
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import { COUNTRY_CURRENCY_MAP, CURRENCY_SYMBOLS } from "@/lib/constants/currencies";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { Button } from "@/components/ui/Button";
@@ -101,7 +102,7 @@ interface Props {
 }
 
 export function CentralBankLoanTab({ countryId }: Props) {
-  const config = getCountryConfig(countryId);
+  const config = getCountryClientConfig(countryId);
   const cbCurrency = COUNTRY_CURRENCY_MAP[countryId];
   const sym = CURRENCY_SYMBOLS[cbCurrency] ?? "$";
   const { formatAmount } = useCurrency();

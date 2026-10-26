@@ -7,7 +7,8 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { partyApiUrl } from "@/lib/urls";
 import { useToast } from "@/contexts/ToastContext";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { formatLocalFunds } from "@/lib/actions";
 import { useInfluencePanelState } from "./influence/useInfluencePanelState";
 import {
@@ -105,8 +106,8 @@ export function NationalPartyInfluencePanel({
   const searchParams = useSearchParams();
   const { showToast } = useToast();
   const countryUpper = country.toUpperCase() as CountryId;
-  const regionLabel = COUNTRY_CONFIGS[countryUpper]?.regionLabel ?? "State";
-  const currencyCode = COUNTRY_CONFIGS[countryUpper]?.currencyCode ?? "USD";
+  const regionLabel = COUNTRY_CLIENT_CONFIGS[countryUpper]?.regionLabel ?? "State";
+  const currencyCode = COUNTRY_CLIENT_CONFIGS[countryUpper]?.currencyCode ?? "USD";
   const regionLabelLower = regionLabel.toLowerCase();
 
   const [data, setData] = useState<InfluenceData | null>(null);

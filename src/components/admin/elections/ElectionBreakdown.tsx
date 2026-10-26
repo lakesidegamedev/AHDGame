@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { CountryFlag } from "@/components/CountryFlag";
 import {
   isElectionInPrimaryPhase,
@@ -61,7 +61,7 @@ export function ElectionBreakdown({
         byCountry.get(cid)!.push(e);
       }
       for (const [cid, list] of byCountry) {
-        const cfg = COUNTRY_CONFIGS[cid as keyof typeof COUNTRY_CONFIGS];
+        const cfg = COUNTRY_CLIENT_CONFIGS[cid as keyof typeof COUNTRY_CLIENT_CONFIGS];
         const counts = phaseCounts(list, currentTurn);
         result.push({
           label: cfg?.name ?? cid,

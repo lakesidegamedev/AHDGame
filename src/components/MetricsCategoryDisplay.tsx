@@ -5,7 +5,8 @@ import { RegionalMetricCard } from "@/components/metrics/RegionalMetricCard";
 import type { MetricCategoryId, StateMetricValue } from "@/lib/db/types";
 import { regionMetricUrl } from "@/lib/urls";
 import { getCurrencyPrefix } from "@/lib/utils/budgetCalculations";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import {
   METRIC_DEFS_BY_CATEGORY,
   getMetricDisplayName,
@@ -68,8 +69,8 @@ export function MetricsCategoryDisplay({
 
   const useRedesign = Boolean(stateId && countryId);
   const regionLabelPlural =
-    countryId && countryId in COUNTRY_CONFIGS
-      ? COUNTRY_CONFIGS[countryId as CountryId].regionLabelPlural.toLowerCase()
+    countryId && countryId in COUNTRY_CLIENT_CONFIGS
+      ? COUNTRY_CLIENT_CONFIGS[countryId as CountryId].regionLabelPlural.toLowerCase()
       : "regions";
 
   return (

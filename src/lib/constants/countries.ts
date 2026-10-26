@@ -14,18 +14,18 @@ import type { CurrencyCode } from "./currencies";
 import { RU_NATIONALITIES_SEATS } from "./ruSeats";
 
 import type { EraSeedModels } from "./economicModels";
+import { getRegionalExecutiveOfficeKey, getSubNationalLegislatureKey } from "./countryClientConfig";
 import {
-  COUNTRY_ORDER,
   SINGLE_WINNER_EXECUTIVE_ELECTION_TYPES,
   getApprovalSourceForGovernmentType,
   getExecutiveFormationForGovernmentType,
-  getExecutiveOrderNameForGovernmentType,
-  getExecutiveOrderNamePluralForGovernmentType,
   getPrimaryWinnersForGovernmentType,
   isDirectElection,
   type ApprovalSource,
   type CountryId,
   type CountryStatus,
+  type ElectionMethod,
+  type ElectionPosition,
   type ExecutiveFormation,
   type GovernmentType,
   type OpsVoteMultipliers,
@@ -216,28 +216,6 @@ export interface OfficeTypeConfig {
    */
   partyStrengthWeight: number;
 }
-
-/** Vote-to-seat/office allocation method for one political position.
- *  See docs/superpowers/specs/2026-06-27-election-systems-field-design.md. */
-export type ElectionMethod =
-  | "fptp" // single-seat plurality
-  | "pr_hareQuota" // multi-seat Largest Remainder (Hare quota)
-  | "pr_dhondt" // national highest-averages party allocation
-  | "sntv" // candidate plurality in a multi-member constituency; at most one seat each
-  | "pr_sainteLague" // odd-divisor proportional (DE Landtag)
-  | "ams" // additional-member system (DE Bundestag)
-  | "electoralCollege" // per-unit FPTP aggregated to a majority (US President)
-  | "parliamentary" // head of gov via coalition/confidence vote (no popular ballot)
-  | "ceremonial"; // head of state not contested in-system (monarch / appointed)
-
-/** Political positions whose election method a country can configure. */
-export type ElectionPosition =
-  | "lowerChamber"
-  | "upperChamber"
-  | "subNationalChamber"
-  | "subNationalExecutive"
-  | "headOfGovernment"
-  | "headOfState";
 
 /**
  * Electoral system definition for one chamber.
@@ -1271,17 +1249,6 @@ export const ERA_COUNTRY_NAMES: Record<string, Partial<Record<CountryId, string>
   },
 };
 
-/** Country name for display, honoring per-era overrides when a preset is known. */
-export function getCountryDisplayName(id: CountryId, preset?: string): string {
-  const override = preset ? ERA_COUNTRY_NAMES[preset]?.[id] : undefined;
-  // Callers (ShortageHeatMap, commodity scope) sometimes pass an empty or
-  // stale id via `as CountryId`. Indexing COUNTRY_CONFIGS blindly threw
-  // "Cannot read properties of undefined (reading 'name')" and crashed the
-  // commodities tab (ticket #1115; same class as #1101).
-  const config = Object.hasOwn(COUNTRY_CONFIGS, id) ? COUNTRY_CONFIGS[id] : undefined;
-  return override ?? config?.name ?? id;
-}
-
 /**
  * Returns the top-level executive office key for a country
  * (e.g. "primeMinister" for UK/JP, "chancellor" for DE, "president" for US).
@@ -1305,20 +1272,6 @@ export function getHeadOfGovernmentOfficeKey(countryId: CountryId, preset?: stri
       candidate.isExecutive && !candidate.isSubNational && candidate.label === config.executiveTitle
   );
   return office?.key ?? getExecutiveOfficeKey(countryId, preset);
-}
-
-const COUNTRY_NAME_TO_ID: Record<string, CountryId> = Object.fromEntries(
-  COUNTRY_ORDER.map((id) => [COUNTRY_CONFIGS[id].name, id])
-);
-
-/**
- * Reverse lookup: full country name ("United Kingdom") → ISO `CountryId` ("UK").
- * Returns null when the name doesn't match a configured country, so callers can
- * decide whether to fall back (e.g. pass the name through to a flag API that
- * understands ISO codes and will 404 gracefully).
- */
-export function getCountryIdByName(name: string): CountryId | null {
-  return COUNTRY_NAME_TO_ID[name] ?? null;
 }
 
 /**
@@ -1406,53 +1359,6 @@ export const REGIONAL_BILL_ASSENT_OFFICE_KEY: Partial<Record<CountryId, string>>
 };
 
 /**
- * State-aware regional-executive label. Overrides the country-level title
- * for regions whose executive has a distinct title (UK LON → "Mayor of
- * London"); falls back to {@link getRegionalBillAssentTitle} otherwise.
- *
- * Mirrors the per-state branching in `getRegionalExecutive` so bill-flow
- * UI (sponsor notifications, office page titles, bill-detail headers)
- * renders the right executive name for each region.
- */
-export function getRegionalBillAssentTitleForState(
-  countryId: CountryId,
-  stateId: string | undefined | null
-): string {
-  if (countryId === "UK" && stateId && stateId.toUpperCase() === "LON") {
-    return "Mayor of London";
-  }
-  if (countryId === "IE" && stateId) {
-    const upper = stateId.toUpperCase();
-    if (upper === "DUB") return "Lord Mayor of Dublin";
-    if (upper === "COR") return "Lord Mayor of Cork";
-    if (upper === "LIM") return "Mayor of Limerick";
-    if (upper === "GAL") return "Mayor of Galway";
-    // Other IE regions fall through to default "Cathaoirleach" via
-    // regionalBillAssentTitle on the country config.
-  }
-  return getRegionalBillAssentTitle(countryId);
-}
-
-/**
- * Short label for the regional chief executive who signs or vetoes sub-national bills
- * (filters, timeline, status badges). Uses {@link CountryConfig.regionalBillAssentTitle} when set.
- *
- * For per-region UI surfaces, prefer {@link getRegionalBillAssentTitleForState} so
- * regions with distinct executive titles (e.g. UK LON's Mayor of London)
- * render the right label.
- */
-export function getRegionalBillAssentTitle(countryId: CountryId): string {
-  const cfg = COUNTRY_CONFIGS[countryId];
-  if (cfg.regionalBillAssentTitle) return cfg.regionalBillAssentTitle;
-  const key = REGIONAL_BILL_ASSENT_OFFICE_KEY[countryId];
-  if (key) {
-    const office = getOfficeTypeConfig(countryId, key);
-    if (office) return office.label;
-  }
-  return "Governor";
-}
-
-/**
  * Returns the `officeType` key used on `electedOfficials` for the country's
  * regional chief executive — "governor" for US / UK / JP, "ministerPresident"
  * for DE. UK and JP recycle the "governor" key for their devolved executives
@@ -1461,10 +1367,6 @@ export function getRegionalBillAssentTitle(countryId: CountryId): string {
  * Display labels diverge per-country (and per-state for UK) and are resolved
  * by `getRegionalExecutive` in `src/lib/states/regionalExecutive.ts`.
  */
-export function getRegionalExecutiveOfficeKey(countryId: CountryId): string {
-  return REGIONAL_BILL_ASSENT_OFFICE_KEY[countryId] ?? "governor";
-}
-
 /**
  * Returns the set of major party IDs for FPTP spoiler modelling.
  * For the UK, the set is region-dependent (SNP/Labour in Scotland, etc.).
@@ -1511,21 +1413,6 @@ export function getMajorPartiesForRegion(
  */
 export function getPartyStrengthWeight(countryId: CountryId, officeKey: string): number {
   return getOfficeTypeConfig(countryId, officeKey)?.partyStrengthWeight ?? 0.9;
-}
-
-/**
- * Returns the office-type key for the sub-national legislature (e.g. "stateSenate" for US,
- * "regionalCouncil" for UK/JP). Uses the explicit `subNationalChamber` config when
- * available; otherwise falls back to "stateSenate".
- *
- * Why: the naïve `officeTypes.find(o => o.isSubNational && !o.isExecutive)` picks up
- * sub-national *executive* roles (governor, premier) first because `isExecutive` only
- * tracks national-level executives.
- */
-export function getSubNationalLegislatureKey(countryId: CountryId): string {
-  const config = getCountryConfig(countryId);
-  if (config.subNationalChamber) return config.subNationalChamber.key;
-  return "stateSenate";
 }
 
 /** Behavioral shape of a region-appointable seat in the admin seat appointer. */
@@ -1719,9 +1606,9 @@ export function getExecutiveEndorseableElectionTypes(countryId: CountryId): stri
 /**
  * ⚠️ `?.` IS LOAD-BEARING, NOT DEFENSIVE NOISE. The registry is `Partial`, and
  * `addressNames` is optional in the country contract because China has no row
- * here at all -- its reader below falls back to "Address to the Nation". A
- * country that omits the field therefore stays omitted rather than acquiring
- * someone else's phrase.
+ * here at all -- `getNationalAddressName` falls back to "Address to the
+ * Nation". A country that omits the field therefore stays omitted rather than
+ * acquiring someone else's phrase.
  */
 export const NATIONAL_ADDRESS_NAME: Partial<Record<CountryId, string>> = {
   US: US_IDENTITY.addressNames?.national,
@@ -1732,30 +1619,18 @@ export const NATIONAL_ADDRESS_NAME: Partial<Record<CountryId, string>> = {
 };
 
 /**
- * User-facing name of the national-level address (head of government's
- * equivalent to the governor's State of the State). Defaults to "Address
- * to the Nation" when no country-specific override exists.
+ * Display and label helpers now live in `countryClientConfig.ts` (generated,
+ * client-safe). They are re-exported here so every existing server import keeps
+ * working, and the two this module still uses are imported above.
  */
-export function getNationalAddressName(countryId: CountryId): string {
-  return NATIONAL_ADDRESS_NAME[countryId] ?? "Address to the Nation";
-}
-
-/**
- * User-facing name for the head-of-government order at the national scope.
- * Presidential systems use "Executive Order"; parliamentary systems use
- * "Order in Council" (the historical British constitutional term, applied
- * across all parliamentary countries in the sim for consistency).
- */
-export function getExecutiveOrderName(countryId: CountryId): string {
-  const config = COUNTRY_CONFIGS[countryId];
-  return getExecutiveOrderNameForGovernmentType(config?.governmentType);
-}
-
-/**
- * Plural form for headers ("Executive Orders" vs "Orders in Council") — the
- * naive `+ "s"` would produce "Order in Councils" which is grammatically wrong.
- */
-export function getExecutiveOrderNamePlural(countryId: CountryId): string {
-  const config = COUNTRY_CONFIGS[countryId];
-  return getExecutiveOrderNamePluralForGovernmentType(config?.governmentType);
-}
+export {
+  getCountryDisplayName,
+  getCountryIdByName,
+  getExecutiveOrderName,
+  getExecutiveOrderNamePlural,
+  getNationalAddressName,
+  getRegionalBillAssentTitle,
+  getRegionalBillAssentTitleForState,
+  getRegionalExecutiveOfficeKey,
+  getSubNationalLegislatureKey,
+} from "./countryClientConfig";

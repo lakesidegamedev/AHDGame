@@ -6,14 +6,14 @@ import { EmptyState } from "./CongressShared";
 import { STATUS_LABELS } from "./CongressConstants";
 import { ProposeBillModal } from "./ProposeBillModal";
 import type { ChamberTab } from "./CongressConstants";
-import type { CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import type { BillProposalAutoFailWarning } from "@/lib/legislature/billAutoFailWarning";
 import { BillCard } from "@/components/bills/BillCard";
 import { BillListItem, BillListStack } from "@/components/bills/BillListItem";
 import { ListRowSkeleton } from "@/components/ui";
 import { BillListControls, type BillVoteFilter } from "@/components/bills/BillListControls";
 import { LegislatureSeal } from "@/components/legislature/LegislatureSeal";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
 import { NominationCard, type NominationDisplay } from "./NominationCard";
 import {
   getCurrentCongressBillVote,
@@ -159,7 +159,7 @@ export function CongressBillsTab({
     (a, b) => b.priority - a.priority || new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
-  const chamberConfig = COUNTRY_CONFIGS[countryId].legislature;
+  const chamberConfig = COUNTRY_CLIENT_CONFIGS[countryId].legislature;
   const chamber = activeTab === "senate" ? chamberConfig.upperChamber : chamberConfig.lowerChamber;
   const STATUS_KEYS = ["all", "active", "enrolled", "signed", "failed"] as const;
   const statusCounts = Object.fromEntries(

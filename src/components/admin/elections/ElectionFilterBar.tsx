@@ -4,7 +4,7 @@ import { US_STATES } from "@/lib/constants";
 import { UK_REGIONS } from "@/lib/constants/uk";
 import { JP_REGIONS } from "@/lib/constants/japan";
 import { ieRegions } from "@/lib/seeds/ie/ieRegions";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { useRegisteredCountries } from "@/contexts/RegisteredCountriesContext";
 import type {
   ElectionsManageAction,
@@ -48,7 +48,7 @@ export function ElectionFilterBar({
         <option value="">All countries</option>
         {registered.map((id) => (
           <option key={id} value={id}>
-            {COUNTRY_CONFIGS[id].name} Only
+            {COUNTRY_CLIENT_CONFIGS[id].name} Only
           </option>
         ))}
       </select>

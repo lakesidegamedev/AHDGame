@@ -1,4 +1,5 @@
-import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 
 export type WorldNavSection = "corporate" | "leaderboard" | "main";
 
@@ -97,7 +98,7 @@ export function buildWorldNavItems({
       id: "map",
       label: "Country Map",
       labelKey: "menus.world.map",
-      href: getCountryConfig(countryId as CountryId).mapPath,
+      href: getCountryClientConfig(countryId as CountryId).mapPath,
       section: "main",
       show: true,
     },

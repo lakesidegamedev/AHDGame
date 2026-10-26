@@ -1,5 +1,5 @@
-import type { CountryId } from "@/lib/constants/countries";
-import { getCountryConfig, getOfficeTypeConfig } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
+import { getCountryClientConfig, getOfficeTypeConfig } from "@/lib/constants/countryClientConfig";
 import { UK_REGIONS } from "@/lib/constants/uk";
 // Positions only: importing the mechanics barrel here pulled every country's
 // cabinet policy into any client bundle that needed a seat label.
@@ -621,7 +621,7 @@ export function getOfficeLabel(office: OfficeLike | null, countryId?: CountryId)
   if (!office) return "Private Citizen";
 
   const cfg = countryId ? getOfficeTypeConfig(countryId, office.type) : undefined;
-  const nation = countryId ? getCountryConfig(countryId) : undefined;
+  const nation = countryId ? getCountryClientConfig(countryId) : undefined;
   const realm = nation ? (nation.executiveRealmPhrase ?? nation.name) : undefined;
 
   if (cfg?.key === "centralBankChair") {

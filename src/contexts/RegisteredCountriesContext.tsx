@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useCallback, useContext, type ReactNode } from "react";
-import { COUNTRY_ORDER, getCountryDisplayName, type CountryId } from "@/lib/constants/countries";
+import { COUNTRY_ORDER, type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryDisplayName } from "@/lib/constants/countryClientConfig";
 
 /**
  * The two runtime country sets, resolved server-side and hydrated into the client

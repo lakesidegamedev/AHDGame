@@ -4,7 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { useEnabledCountries } from "@/contexts/RegisteredCountriesContext";
 import { CountryFlag } from "@/components/CountryFlag";
 import { hasSandboxAccess } from "@/lib/sandbox/access";
@@ -169,7 +170,7 @@ export function SettingsDropdown({
               </div>
               <div className="grid grid-cols-2 gap-1.5 p-2">
                 {enabledCountries.map((id) => {
-                  const cfg = COUNTRY_CONFIGS[id];
+                  const cfg = COUNTRY_CLIENT_CONFIGS[id];
                   const isHome = id === userCountry;
                   const isCurrent = id === pageCountry;
                   return (

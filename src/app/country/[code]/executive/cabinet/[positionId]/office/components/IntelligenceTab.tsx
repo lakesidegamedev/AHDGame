@@ -1,7 +1,8 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { fetchJson } from "@/lib/observability/fetchJson";
-import { COUNTRY_CONFIGS, getCountryDisplayName, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS, getCountryDisplayName } from "@/lib/constants/countryClientConfig";
 import { fmtMoneyAbs } from "./energy/energyUi";
 import { apiErrorText } from "@/lib/errors/catalog";
 
@@ -126,7 +127,7 @@ const FUNDING_LABEL: Record<NetworkFundingLevel, string> = {
 };
 
 /** Every country a service could work against, its own excluded. */
-const TARGET_IDS = (Object.keys(COUNTRY_CONFIGS) as CountryId[]).sort();
+const TARGET_IDS = (Object.keys(COUNTRY_CLIENT_CONFIGS) as CountryId[]).sort();
 
 const TIER_LABEL: Record<string, string> = {
   none: "No assessment",

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
-import type { CountryId, CountryStatus } from "@/lib/constants/countries";
+import { type CountryId, type CountryStatus } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { useToast } from "@/contexts/ToastContext";
 import { useRuntimeCountryConfig } from "@/hooks/useRuntimeCountryConfig";
 import { CountryFlag } from "@/components/CountryFlag";
@@ -56,7 +56,7 @@ const ELECTION_SYSTEM_LABELS: Record<string, string> = {
 
 export default function CountryOverviewCard({ countryId }: Props) {
   const { showToast } = useToast();
-  const config = COUNTRY_CONFIGS[countryId];
+  const config = COUNTRY_CLIENT_CONFIGS[countryId];
   // Runtime governmentType so the admin "Type" display reflects mid-game
   // mutations (Stage-4 conversion etc.). Falls back to seed while loading.
   const { config: runtime } = useRuntimeCountryConfig(countryId);

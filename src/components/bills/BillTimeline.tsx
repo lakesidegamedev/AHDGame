@@ -1,6 +1,7 @@
 "use client";
 
-import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import { useActivePreset } from "@/contexts/RegisteredCountriesContext";
 import { LocalTime } from "@/components/time/LocalTime";
 import { GameMonthTime } from "@/components/time/GameMonthTime";
@@ -165,7 +166,7 @@ export function BillTimeline({
     variant === "national" &&
     originChamber !== "cabinet" &&
     !!countryId &&
-    !getCountryConfig(countryId, preset).legislature.bicameral;
+    !getCountryClientConfig(countryId, preset).legislature.bicameral;
   const nodes =
     variant === "state"
       ? stateTimelineNodes(stateExecutiveLabel)

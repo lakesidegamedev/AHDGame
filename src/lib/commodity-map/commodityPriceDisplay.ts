@@ -1,9 +1,10 @@
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { convertFromInternal, formatCurrencyPrecise } from "@/lib/utils/formatters";
 
 export function getCommodityDisplayCurrency(countryId: CountryId): CurrencyCode {
-  return COUNTRY_CONFIGS[countryId]?.currencyCode ?? "USD";
+  return COUNTRY_CLIENT_CONFIGS[countryId]?.currencyCode ?? "USD";
 }
 
 export function convertCommodityPrice(

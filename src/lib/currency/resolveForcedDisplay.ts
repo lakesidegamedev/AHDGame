@@ -2,7 +2,11 @@ import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { getEraAwareCurrencySymbol } from "@/lib/constants/currencies";
 import { validDisplayRate } from "@/lib/currency/rules/display";
-import { COUNTRY_CONFIGS, getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import {
+  COUNTRY_CLIENT_CONFIGS,
+  getCountryClientConfig,
+} from "@/lib/constants/countryClientConfig";
 
 type RateMap = Partial<Record<CurrencyCode, number>>;
 
@@ -24,8 +28,8 @@ function localPerAnchorFor(preset?: string): Partial<Record<CurrencyCode, number
   const cached = localPerAnchorByPreset.get(key);
   if (cached) return cached;
   const map: Partial<Record<CurrencyCode, number>> = {};
-  for (const countryId of Object.keys(COUNTRY_CONFIGS) as CountryId[]) {
-    const config = getCountryConfig(countryId, preset);
+  for (const countryId of Object.keys(COUNTRY_CLIENT_CONFIGS) as CountryId[]) {
+    const config = getCountryClientConfig(countryId, preset);
     if (config?.currencyCode && map[config.currencyCode] === undefined) {
       const anchorPerLocal = config.usdExchangeRate;
       if (anchorPerLocal > 0) map[config.currencyCode] = 1 / anchorPerLocal;

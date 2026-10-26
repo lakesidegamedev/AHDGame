@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import BackButton from "@/components/BackButton";
 import { SectionLabel } from "@/components/ui";
-import { getCountryConfig } from "@/lib/constants/countries";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
 import { EXTRACTABLE_RESOURCES, COMMODITY_LABELS } from "@/lib/constants/commodities";
 import type { ExtractableResource } from "@/lib/constants/commodities";
@@ -21,7 +21,7 @@ import type { CountryMapConfig, MapGameTime } from "./countryMapConfigs";
 
 interface UnifiedMapWithModesProps {
   mapData: MapOverviewResponse | null;
-  config: ReturnType<typeof getCountryConfig>;
+  config: ReturnType<typeof getCountryClientConfig>;
   countryConfig: CountryMapConfig;
   onRegionClick: (id: string) => void;
 }

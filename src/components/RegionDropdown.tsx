@@ -4,7 +4,8 @@ import { useState, useRef, useCallback } from "react";
 import { useClickOutside } from "@/hooks/useClickOutside";
 import Link from "next/link";
 import { UK_NATIONS } from "@/lib/constants/uk";
-import { getCountryConfig, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
 import {
   regionUrl,
   regionPartyUrl,
@@ -44,7 +45,7 @@ export function RegionDropdown({
   // the same country as the region being viewed. Per-region party branch
   // pages exist at /country/<code>/region/<regionId>/party/<partyId>.
   const regionPartyLinkVisible = currentParty?.countryId === regionCountryId;
-  const countryCfg = getCountryConfig(regionCountryId);
+  const countryCfg = getCountryClientConfig(regionCountryId);
   const legislatureLabel = countryCfg?.legislature?.name ?? "Legislature";
   const countryDisplayName = countryCfg?.name ?? regionCountryId;
   const [isOpen, setIsOpen] = useState(false);

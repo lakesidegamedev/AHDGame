@@ -4,7 +4,7 @@ import { currencySymbolSep } from "@/lib/currency/symbolSep";
 import {
   COUNTRIES_WITH_CONCURRENT_GENERAL_ELECTIONS,
   type CountryId,
-} from "@/lib/constants/countries";
+} from "@/lib/constants/countriesCore";
 import { parseCountryParam } from "@/lib/db/partyLookup";
 import { STARTING_YEAR } from "@/lib/constants/turnTime";
 import { calendarTurn, type CalendarClock } from "@/lib/utils/gameDate";

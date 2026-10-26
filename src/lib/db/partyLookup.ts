@@ -1,6 +1,7 @@
 import type { Db } from "mongodb";
 import type { PoliticalParty, StatePartyOrg } from "@/lib/db/types";
-import { ALL_COUNTRY_IDS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { ALL_COUNTRY_IDS } from "@/lib/constants/countryClientConfig";
 
 /**
  * Look up a party by its sequential ID and country.

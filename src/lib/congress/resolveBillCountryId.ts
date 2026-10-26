@@ -1,6 +1,6 @@
 import type { Db } from "mongodb";
-import type { CountryId } from "@/lib/constants/countries";
-import { COUNTRY_CONFIGS } from "@/lib/constants/countries";
+import type { CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { NATIONAL_SCOPE } from "@/lib/constants/nationalScope";
 import type { Bill } from "@/lib/db/types";
 import type { State } from "@/lib/db/types";
@@ -15,7 +15,7 @@ export function inferCountryIdFromStateId(stateId: string): CountryId | undefine
 
   if (stateId.endsWith("_national")) {
     const prefix = stateId.slice(0, -"_national".length).toUpperCase();
-    if (prefix in COUNTRY_CONFIGS) {
+    if (prefix in COUNTRY_CLIENT_CONFIGS) {
       return prefix as CountryId;
     }
   }

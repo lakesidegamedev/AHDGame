@@ -15,7 +15,8 @@ import { formatNativeCurrency } from "./components/centralBankUtils";
 import { EconomicTrendsChart } from "@/components/charts/EconomicTrendsChart";
 import { Button } from "@/components/ui";
 import BackButton from "@/components/BackButton";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { centralBankApiUrl } from "@/lib/urls";
 import { CREDIT_RATINGS } from "@/lib/db/types/centralBank";
 import {
@@ -140,7 +141,7 @@ interface Props {
 }
 
 export default function CentralBankClient({ countryId, apiBasePath, members }: Props) {
-  const config = COUNTRY_CONFIGS[countryId];
+  const config = COUNTRY_CLIENT_CONFIGS[countryId];
   const bankApiBasePath = apiBasePath ?? centralBankApiUrl(countryId);
   const {
     currencyCode: viewerHomeCurrency,

@@ -1,6 +1,7 @@
 import { aggregateByCountry } from "@/lib/commodity-map/commodityAggregation";
 import { getStateDisplayName } from "@/lib/commodity-map";
-import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
+import { type CountryId } from "@/lib/constants/countriesCore";
+import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { isStateRegister } from "@/lib/constants/exchangeRegistry";
 import { importCoverage, stateImportsShare } from "@/lib/trade/postImportGap";
 import type { CommodityDetail, CorpVolume, SyntheticDemandSource } from "../types";
@@ -98,11 +99,11 @@ export function buildCommodityMarketScope(
     // stateCountryMap comes from the server as Record<string, string>. If a
     // state maps to a country code the client no longer has a config for
     // (removed/renamed country, stale seed data), treating it as a trusted
-    // CountryId crashes every COUNTRY_CONFIGS[stateCountry] lookup below and
+    // CountryId crashes every COUNTRY_CLIENT_CONFIGS[stateCountry] lookup below and
     // downstream (HeroPanel, drilldown view). Validate before trusting it.
     const rawStateCountry = stateCountryMap[activeState];
     const stateCountry =
-      (rawStateCountry && rawStateCountry in COUNTRY_CONFIGS
+      (rawStateCountry && rawStateCountry in COUNTRY_CLIENT_CONFIGS
         ? (rawStateCountry as CountryId)
         : undefined) ?? activeCountry;
     const stateSupply = data.stateSupply?.[activeState] ?? 0;
@@ -123,7 +124,7 @@ export function buildCommodityMarketScope(
       activeState,
       marketLabel: `${stateName} Market`,
       marketCaption: stateCountry
-        ? `Filtered to ${stateName}, ${COUNTRY_CONFIGS[stateCountry]?.name ?? stateCountry}.`
+        ? `Filtered to ${stateName}, ${COUNTRY_CLIENT_CONFIGS[stateCountry]?.name ?? stateCountry}.`
         : `Filtered to ${stateName}.`,
       marketPrice: statePrice,
       priceChange: percentChangeFromBase(statePrice, data.basePrice),
@@ -211,8 +212,8 @@ export function buildCommodityMarketScope(
   // register is a listing venue for its enterprises, not a price-setting
   // exchange, so it falls back to the country name ("Russia Market", not
   // "GOSPLAN Market") — the same branch venue-less countries already took.
-  const activeCountryConfig = COUNTRY_CONFIGS[activeCountry] as
-    (typeof COUNTRY_CONFIGS)[CountryId] | undefined;
+  const activeCountryConfig = COUNTRY_CLIENT_CONFIGS[activeCountry] as
+    (typeof COUNTRY_CLIENT_CONFIGS)[CountryId] | undefined;
   const marketVenue = isStateRegister(activeCountry)
     ? undefined
     : activeCountryConfig?.exchangeName;
