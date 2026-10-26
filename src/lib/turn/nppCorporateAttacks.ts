@@ -238,13 +238,17 @@ export async function executeNppSectorAttack(
   // Credit the attacker's matching sector (existing or new). Read BEFORE the
   // defender is written so the P5 basis transfer sees both sides' pre-attack state.
   const stateId = targetSector.stateId;
-  const existing = await db.collection<CorporateSector>("corporateSectors").findOne({
-    stateId,
-    sectorType: targetSector.sectorType,
-    industryModel: targetSector.industryModel ?? null,
-    mediaDiscriminator: targetSector.mediaDiscriminator ?? null,
-    corporationId: attacker._id,
-  });
+  // Only the match is wanted: the found sector is credited in place by _id.
+  const existing = await db.collection<Pick<CorporateSector, "_id">>("corporateSectors").findOne(
+    {
+      stateId,
+      sectorType: targetSector.sectorType,
+      industryModel: targetSector.industryModel ?? null,
+      mediaDiscriminator: targetSector.mediaDiscriminator ?? null,
+      corporationId: attacker._id,
+    },
+    { projection: { _id: 1 } }
+  );
 
   // Reduce the defender's revenue.
   await db

@@ -265,6 +265,11 @@ export async function buildCorporationLookups(
             // Money-move settlement history: most of each document's bytes,
             // read only by the settlement protocol under its own projection.
             ...SETTLEMENT_HISTORY_EXCLUDED,
+            // Per-order political advertising receipts: written by the money
+            // move that pays the seller, then never read back (the guard is
+            // the move key). Two kilobytes of pure write-only history on every
+            // corporation, decoded by every turn read.
+            politicalMediaReceipts: 0,
             groupSupplyBasis: 0,
             ...(options?.mediaEditorialEnabled === true ? {} : { editorialStance: 0 }),
             ...(options?.productLinesV2Enabled === true
@@ -290,6 +295,12 @@ export async function buildCorporationLookups(
     // sectorTurn as a complete overwrite and never reads the prior value.
     // `soldByCommodity` IS read: the demand throttle values last turn's sales
     // leg by leg (ticket 1370), so it must not be projected out.
+    // `constructionFinancing` and `constructionPropertyTransition` are the
+    // construction-lending claim on the sector: no turn module reads either
+    // field (the banking commands do, under their own projections), so the
+    // whole turn pays to decode them for nothing. Nothing writes a sector back
+    // as a whole document either: sectorTurn emits targeted $set/$inc/$pull/
+    // $push ops, so an excluded field cannot be blanked by a write-back.
     db
       .collection<CorporateSector>("corporateSectors")
       .find(
@@ -297,6 +308,8 @@ export async function buildCorporationLookups(
         {
           projection: {
             plantsPnl: 0,
+            constructionFinancing: 0,
+            constructionPropertyTransition: 0,
             ...(options?.explicitPlantCostsEnabled === true
               ? {}
               : { pricingMode: 0, costPlusCostBasis: 0 }),
