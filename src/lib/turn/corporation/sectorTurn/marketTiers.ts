@@ -221,7 +221,7 @@ export function computeMarketTiers(input: MarketTiersInput): MarketTiersResult {
   // same blended units the plants tier operates (1 off-transition and for any
   // stock not yet converted, so non-retool sectors are byte-identical).
   const capitalStockOnImpliedBasis =
-    market.capitalEnabled && market.plantsEnabled
+    market.capitalEnabled && market.plantsEnabled && sector.retoolRescaleApplied === true
       ? newCapitalStock * retoolOperatingCapacityRatio({ ...sector, currentTurn })
       : newCapitalStock;
   const capitalFactor = market.capitalEnabled

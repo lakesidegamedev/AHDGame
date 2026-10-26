@@ -18,10 +18,11 @@ import {
   type InternalSupplyClearing,
 } from "./internalSupply/clearing";
 import { normalizedOfferShare } from "./rules/demandAllocation";
+import { appendToBook, indexRowsById } from "./rules/bookAssembly";
+import { commodityMixWeights, mixWeightFor } from "./rules/commodityMixWeights";
 import { placementRevenueLeg } from "./placementRevenuePhase";
 import { capDeliveredMediaUnits, type MediaOwnershipMarket } from "@/lib/mediaRegulation/rules";
 import { COMMODITY_BASE_PRICES, type CommodityType } from "@/lib/constants/commodities";
-import { commodityMixWeight as mixWeight } from "@/lib/constants/commodities";
 import { priceRealizationFactor } from "@/lib/market/priceRealization";
 import { LOYAL_POOL_FRACTION, SLICE_NOISE_FLOOR } from "@/lib/market/brandLoyalty";
 import { isStateScopedCommodity, supplyAgreementScopeKey } from "@/lib/market/commodityMarketScope";
@@ -745,6 +746,14 @@ export function computeClearingFactors(args: {
       ...Object.keys(s.supplyRates),
       ...Object.keys(s.outputUnitsByCommodity ?? {}),
     ] as CommodityType[]);
+    // The output mix's rate/base weights are one table per sector. Rebuilding
+    // them per commodity made the split below O(commodities^2) with a fresh
+    // array per leg.
+    let mixWeights: Map<CommodityType, number> | undefined;
+    const mixWeightForSector = (commodity: CommodityType): number => {
+      mixWeights ??= commodityMixWeights(s.supplyRates, basePrices);
+      return mixWeightFor(mixWeights, commodity);
+    };
     for (const commodity of commodities) {
       const rate = s.supplyRates[commodity] ?? 0;
       const hasExactProductOffer = s.outputUnitsByCommodity != null;
@@ -778,7 +787,7 @@ export function computeClearingFactors(args: {
         args.plantsEnabled && hasExactProductOffer && typeof productUnits === "number"
           ? Math.max(0, productUnits)
           : args.plantsEnabled && typeof s.producedUnits === "number" && s.producedUnits >= 0
-            ? s.producedUnits * mixWeight(s.supplyRates, basePrices, commodity)
+            ? s.producedUnits * mixWeightForSector(commodity)
             : null;
       const physicalUnits = plantsUnits ?? (base > 0 ? (s.revenue * rate) / base : 0);
       const editorialAvailability =
@@ -795,7 +804,7 @@ export function computeClearingFactors(args: {
       // offer would use, without replacing the nameplate `units` or setting realUnits.
       const contractFillPhysical =
         typeof s.contractFillUnits === "number" && s.contractFillUnits >= 0
-          ? s.contractFillUnits * mixWeight(s.supplyRates, basePrices, commodity)
+          ? s.contractFillUnits * mixWeightForSector(commodity)
           : null;
       const contractFillUnits =
         contractFillPhysical != null ? contractFillPhysical * availability * placement : undefined;
@@ -805,33 +814,25 @@ export function computeClearingFactors(args: {
         !Number.isFinite(s.offerPlacementByCommodity?.[commodity])
       )
         continue;
-      sellersByCommodity.set(commodity, [
-        ...(sellersByCommodity.get(commodity) ?? []),
-        {
-          id: s.sectorId,
-          units,
-          physicalUnits,
-          editorialAvailability,
-          productAvailability,
-          availability,
-          posture,
-          realUnits: plantsUnits != null,
-          ...(contractFillUnits != null ? { contractFillUnits } : {}),
-          ...(s.inputCostIndex !== undefined
-            ? {
-                quotedPosture:
-                  costPlusPriceFactor(
-                    s.inputCostIndex,
-                    posture,
-                    s.inputCostShare,
-                    s.fixedCostShare
-                  ) /
-                    realizedPriceFor(commodity, s.sectorId) -
-                  1,
-              }
-            : {}),
-        },
-      ]);
+      appendToBook(sellersByCommodity, commodity, {
+        id: s.sectorId,
+        units,
+        physicalUnits,
+        editorialAvailability,
+        productAvailability,
+        availability,
+        posture,
+        realUnits: plantsUnits != null,
+        ...(contractFillUnits != null ? { contractFillUnits } : {}),
+        ...(s.inputCostIndex !== undefined
+          ? {
+              quotedPosture:
+                costPlusPriceFactor(s.inputCostIndex, posture, s.inputCostShare, s.fixedCostShare) /
+                  realizedPriceFor(commodity, s.sectorId) -
+                1,
+            }
+          : {}),
+      });
     }
   }
 
@@ -889,7 +890,7 @@ export function computeClearingFactors(args: {
     if (args.balancesByGroup || args.stateMarkets) {
       for (const s of sellers) {
         const g = bookKeyFor(commodity, s.id);
-        partitioned.set(g, [...(partitioned.get(g) ?? []), s]);
+        appendToBook(partitioned, g, s);
       }
     } else {
       partitioned.set("", sellers);
@@ -1080,8 +1081,11 @@ export function computeClearingFactors(args: {
             )
           : new Map<string, number>();
         for (const [rootId, basis] of groupContext.forecastByRoot ?? []) {
-          const ownSellers = allSellers.filter((s) => basis.memberIds.includes(s.memberId));
-          const ownBuyers = buyers.filter((b) => basis.memberIds.includes(b.memberId));
+          // Membership is a set test inside two filters; scanning the id list
+          // for every seller and buyer made this O(rows x members) per root.
+          const memberIds = new Set(basis.memberIds);
+          const ownSellers = allSellers.filter((s) => memberIds.has(s.memberId));
+          const ownBuyers = buyers.filter((b) => memberIds.has(b.memberId));
           if (!ownSellers.length && !ownBuyers.length) continue;
           if (
             basis.books.length >= 128 ||
@@ -1325,10 +1329,13 @@ export function computeClearingFactors(args: {
     // Settlement sink: record the contracted units that actually cleared, per
     // supplier corp, for the caller's bilateral premium settlement.
     if (args.contractSettlementOut && contractedShareBySector.size > 0) {
+      // One lookup table per commodity instead of scanning the book for every
+      // contracted sector.
+      const sellerById = indexRowsById(sellers);
       for (const [sectorId, contractedShare] of contractedShareBySector) {
         const corpId = contractedCorpBySector.get(sectorId);
         if (!corpId) continue;
-        const seller = sellers.find((x) => x.id === sectorId);
+        const seller = sellerById.get(sectorId);
         const filledFraction = sold.get(sectorId) ?? 0;
         const recordedTake = contractedTakeBySector.get(sectorId);
         const filledUnits = seller

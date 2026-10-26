@@ -12,7 +12,10 @@ export function settleGroupDiscounts(
   committedOutput?: ReadonlyMap<string, ReadonlyMap<string, number>>
 ): Map<string, number> {
   const reserved = new Map<string, number>();
-  const key = (buyer: string, commodity: string) => JSON.stringify([buyer, commodity]);
+  // Plain concatenation, not JSON.stringify: these keys are local to this pass
+  // and a sector id and commodity name cannot contain the separator. Keying
+  // each receipt once also removes two stringify calls per row.
+  const key = (buyer: string, commodity: string) => buyer + "|" + commodity;
   const positive = (n: number | undefined) => (n != null && Number.isFinite(n) && n > 0 ? n : 0);
   for (const r of receipts) {
     const k = key(r.buyerSectorId, r.commodity);
@@ -26,21 +29,20 @@ export function settleGroupDiscounts(
   const costs = new Map<string, number>();
   for (const r of receipts) {
     if (!(positive(r.units) > 0 && positive(r.amountAnchor) > 0)) continue;
+    const buyerKey = key(r.buyerSectorId, r.commodity);
+    const supplierKey = key(r.supplierSectorId, r.commodity);
     const actual = Math.max(
       0,
       positive(consumption.get(r.buyerSectorId)?.get(r.commodity)) -
         positive(committed?.get(r.buyerSectorId)?.get(r.commodity))
     );
-    const fraction = Math.min(1, actual / (reserved.get(key(r.buyerSectorId, r.commodity)) || 1));
+    const fraction = Math.min(1, actual / (reserved.get(buyerKey) || 1));
     const available = Math.max(
       0,
       positive(production?.get(r.supplierSectorId)?.get(r.commodity)) -
         positive(committedOutput?.get(r.supplierSectorId)?.get(r.commodity))
     );
-    const outputFraction = Math.min(
-      1,
-      available / (supplied.get(key(r.supplierSectorId, r.commodity)) || 1)
-    );
+    const outputFraction = Math.min(1, available / (supplied.get(supplierKey) || 1));
     const rebate =
       positive(r.amountAnchor) *
       clampGroupDiscount(r.discount) *
