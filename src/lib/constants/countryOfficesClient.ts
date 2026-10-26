@@ -26,6 +26,7 @@ export interface CountryOfficeChamberConfig {
   name: string;
   shortName: string;
   seats: number;
+  description?: string;
   elected?: boolean;
   regionElectedClasses?: boolean;
   regionalModel?: boolean;
@@ -53,6 +54,8 @@ export interface CountryOfficeTypeConfig {
 /** Everything a country contributes to office resolution and the race filter. */
 export interface CountryOfficeConfig {
   governmentType: GovernmentType;
+  /** Singular label for the country's regions ("State", "Land"). */
+  regionLabel: string;
   /** Era-neutral title of the office that signs or vetoes regional bills. */
   regionalBillAssentTitle?: string;
   legislature: CountryOfficeLegislatureConfig;
@@ -69,6 +72,7 @@ export interface CountryOfficeConfig {
 export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
   US: {
     governmentType: "presidential",
+    regionLabel: "State",
     legislature: {
       name: "Congress",
       lowerChamber: {
@@ -76,12 +80,14 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
         name: "House of Representatives",
         shortName: "House",
         seats: 435,
+        description: "435 representatives, two-year terms. All revenue bills originate here.",
       },
       upperChamber: {
         key: "senate",
         name: "Senate",
         shortName: "Senate",
         seats: 100,
+        description: "100 senators, six-year staggered terms. Confirms judges and cabinet.",
         elected: true,
         regionElectedClasses: true,
       },
@@ -153,6 +159,7 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
   },
   UK: {
     governmentType: "parliamentaryMonarchy",
+    regionLabel: "Nation",
     regionalBillAssentTitle: "First Minister",
     legislature: {
       name: "Parliament",
@@ -161,12 +168,15 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
         name: "House of Commons",
         shortName: "Commons",
         seats: 650,
+        description:
+          "650 elected MPs from single-member constituencies. The primary legislative chamber.",
       },
       upperChamber: {
         key: "lords",
         name: "House of Lords",
         shortName: "Lords",
         seats: 784,
+        description: "Appointed and hereditary peers. Revises and scrutinises legislation.",
       },
     },
     subNationalChamber: {
@@ -220,6 +230,7 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
   },
   DE: {
     governmentType: "parliamentaryRepublic",
+    regionLabel: "Land",
     regionalBillAssentTitle: "Minister-President",
     legislature: {
       name: "Bundestag",
@@ -228,12 +239,15 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
         name: "Bundestag",
         shortName: "Bundestag",
         seats: 630,
+        description:
+          "630 members elected via mixed-member proportional representation (2023 reform).",
       },
       upperChamber: {
         key: "bundesrat",
         name: "Bundesrat",
         shortName: "Bundesrat",
         seats: 69,
+        description: "69 members representing the 16 German Länder.",
       },
     },
     subNationalChamber: {
@@ -287,6 +301,7 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
   },
   JP: {
     governmentType: "parliamentaryMonarchy",
+    regionLabel: "Region",
     legislature: {
       name: "Kokkai",
       lowerChamber: {
@@ -294,12 +309,16 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
         name: "Shūgiin",
         shortName: "Shūgiin",
         seats: 465,
+        description:
+          "465 members elected by FPTP from regional constituencies. Invests confidence in the Cabinet.",
       },
       upperChamber: {
         key: "sangiin",
         name: "Sangiin",
         shortName: "Sangiin",
         seats: 248,
+        description:
+          "248 councillors elected on staggered 6-year terms. Half are contested every 3 years. Cannot be dissolved.",
         elected: true,
       },
     },
@@ -365,6 +384,7 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
   },
   IE: {
     governmentType: "parliamentaryRepublic",
+    regionLabel: "Region",
     regionalBillAssentTitle: "Cathaoirleach",
     legislature: {
       name: "Oireachtas",
@@ -373,12 +393,16 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
         name: "Dáil Éireann",
         shortName: "Dáil",
         seats: 160,
+        description:
+          "160 TDs elected by proportional representation using the Single Transferable Vote across multi-seat constituencies.",
       },
       upperChamber: {
         key: "seanad",
         name: "Seanad Éireann",
         shortName: "Seanad",
         seats: 60,
+        description:
+          "60 senators - 43 elected from vocational panels, 11 nominated by the Taoiseach, 6 from universities.",
       },
     },
     subNationalChamber: {
@@ -447,6 +471,7 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
   },
   SCO: {
     governmentType: "parliamentaryRepublic",
+    regionLabel: "Region",
     regionalBillAssentTitle: "Provost",
     legislature: {
       name: "Scottish Parliament",
@@ -455,6 +480,8 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
         name: "Scottish Parliament",
         shortName: "Holyrood",
         seats: 129,
+        description:
+          "129 MSPs elected by the Additional Member System - 73 constituency seats plus 56 regional list seats.",
       },
     },
     subNationalChamber: {
@@ -508,6 +535,7 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
   },
   WAL: {
     governmentType: "parliamentaryRepublic",
+    regionLabel: "Region",
     regionalBillAssentTitle: "Leader",
     legislature: {
       name: "Senedd Cymru",
@@ -516,6 +544,8 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
         name: "Senedd Cymru",
         shortName: "Senedd",
         seats: 60,
+        description:
+          "60 Members of the Senedd elected by the Additional Member System - 40 constituency seats plus 20 regional list seats.",
       },
     },
     subNationalChamber: {
@@ -569,6 +599,7 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
   },
   BR: {
     governmentType: "presidential",
+    regionLabel: "State",
     legislature: {
       name: "National Congress",
       lowerChamber: {
@@ -576,12 +607,16 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
         name: "Chamber of Deputies",
         shortName: "Chamber",
         seats: 513,
+        description:
+          "513 deputies elected by open-list proportional representation from 27 multi-member constituencies. Four-year terms.",
       },
       upperChamber: {
         key: "senate",
         name: "Federal Senate",
         shortName: "Senate",
         seats: 81,
+        description:
+          "81 senators - three per state - serving eight-year staggered terms. Reviews legislation from the Chamber.",
         elected: true,
       },
     },
@@ -640,6 +675,7 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
   },
   CN: {
     governmentType: "onePartyState",
+    regionLabel: "Province",
     legislature: {
       name: "National People's Congress",
       lowerChamber: {
@@ -647,12 +683,16 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
         name: "National People's Congress",
         shortName: "NPC",
         seats: 2980,
+        description:
+          "2,980 delegates representing provinces, municipalities, autonomous regions, the armed forces, and special administrative regions. Five-year terms.",
       },
       upperChamber: {
         key: "cppcc",
         name: "CPPCC",
         shortName: "CPPCC",
         seats: 2169,
+        description:
+          "2,169 members of the Chinese People's Political Consultative Conference - an advisory body representing diverse social and economic constituencies.",
       },
     },
     subNationalChamber: {
@@ -714,6 +754,7 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
   },
   NG: {
     governmentType: "presidential",
+    regionLabel: "Zone",
     legislature: {
       name: "National Assembly",
       lowerChamber: {
@@ -721,12 +762,16 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
         name: "House of Representatives",
         shortName: "House",
         seats: 360,
+        description:
+          "360 representatives elected from single-member constituencies across the Nigerian federation.",
       },
       upperChamber: {
         key: "senate",
         name: "Senate",
         shortName: "Senate",
         seats: 109,
+        description:
+          "109 senators elected from constituencies across the Nigerian federation for four-year terms.",
         elected: true,
       },
     },
@@ -792,6 +837,7 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
   },
   HU: {
     governmentType: "onePartyState",
+    regionLabel: "Region",
     legislature: {
       name: "National Assembly",
       lowerChamber: {
@@ -799,12 +845,16 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
         name: "National Assembly",
         shortName: "Assembly",
         seats: 352,
+        description:
+          "352 deputies of the Országgyűlés, elected to five-year terms in the Hungarian People's Republic - in practice a single-list body controlled by the ruling socialist workers' party.",
       },
       upperChamber: {
         key: "presidentialCouncil",
         name: "Presidential Council",
         shortName: "Council",
         seats: 21,
+        description:
+          "The Elnöki Tanács - a 21-member collective head of state that exercised standing legislative authority between Assembly sessions; members chosen by the National Assembly.",
         elected: false,
       },
     },
@@ -846,6 +896,7 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
   },
   PL: {
     governmentType: "onePartyState",
+    regionLabel: "Region",
     legislature: {
       name: "Sejm",
       lowerChamber: {
@@ -853,12 +904,16 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
         name: "Sejm",
         shortName: "Sejm",
         seats: 460,
+        description:
+          "460 deputies of the Sejm, elected to four-year terms - a single-list body led by the ruling workers' party within the National Unity Front.",
       },
       upperChamber: {
         key: "councilOfState",
         name: "Council of State",
         shortName: "Council",
         seats: 17,
+        description:
+          "The Rada Państwa - a collective head of state exercising standing authority between Sejm sessions; chosen by the Sejm.",
         elected: false,
       },
     },
@@ -900,6 +955,7 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
   },
   RO: {
     governmentType: "onePartyState",
+    regionLabel: "Region",
     legislature: {
       name: "Grand National Assembly",
       lowerChamber: {
@@ -907,12 +963,16 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
         name: "Grand National Assembly",
         shortName: "Assembly",
         seats: 369,
+        description:
+          "369 deputies of the Marea Adunare Națională, elected to five-year terms - a single-list body controlled by the ruling communist party.",
       },
       upperChamber: {
         key: "stateCouncil",
         name: "State Council",
         shortName: "Council",
         seats: 21,
+        description:
+          "A collective head of state exercising standing authority between Assembly sessions; chosen by the Grand National Assembly.",
         elected: false,
       },
     },
@@ -954,6 +1014,7 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
   },
   YU: {
     governmentType: "onePartyState",
+    regionLabel: "Republic",
     legislature: {
       name: "Federal Assembly",
       lowerChamber: {
@@ -961,12 +1022,16 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
         name: "Federal Assembly",
         shortName: "Assembly",
         seats: 308,
+        description:
+          "308 delegates of the Skupština, drawn from the republics and provinces under the self-management system led by the League of Communists.",
       },
       upperChamber: {
         key: "presidency",
         name: "Presidency",
         shortName: "Presidency",
         seats: 9,
+        description:
+          "The collective State Presidency - a rotating federal head of state representing the republics and provinces.",
         elected: false,
       },
     },
@@ -1001,6 +1066,7 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
   },
   BG: {
     governmentType: "onePartyState",
+    regionLabel: "Region",
     legislature: {
       name: "National Assembly",
       lowerChamber: {
@@ -1008,12 +1074,16 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
         name: "National Assembly",
         shortName: "Assembly",
         seats: 400,
+        description:
+          "400 deputies of the Narodno Sabranie, elected to five-year terms - a single-list body controlled by the ruling communist party within the Fatherland Front.",
       },
       upperChamber: {
         key: "stateCouncil",
         name: "State Council",
         shortName: "Council",
         seats: 21,
+        description:
+          "A collective head of state exercising standing authority between Assembly sessions.",
         elected: false,
       },
     },
@@ -1055,6 +1125,7 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
   },
   BLR: {
     governmentType: "onePartyState",
+    regionLabel: "Region",
     legislature: {
       name: "Supreme Soviet",
       lowerChamber: {
@@ -1062,12 +1133,16 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
         name: "Supreme Soviet",
         shortName: "Soviet",
         seats: 360,
+        description:
+          "Deputies of the Byelorussian SSR Supreme Soviet, elected to single-list terms under the Communist Party.",
       },
       upperChamber: {
         key: "presidium",
         name: "Presidium",
         shortName: "Presidium",
         seats: 21,
+        description:
+          "The Presidium of the Supreme Soviet - a standing organ acting between sessions.",
         elected: false,
       },
     },
@@ -1109,6 +1184,7 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
   },
   CS: {
     governmentType: "onePartyState",
+    regionLabel: "Region",
     legislature: {
       name: "Federal Assembly",
       lowerChamber: {
@@ -1116,12 +1192,16 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
         name: "Chamber of the People",
         shortName: "People",
         seats: 200,
+        description:
+          "200 deputies of the Chamber of the People, elected to five-year terms - a single-list body controlled by the ruling communist party within the National Front.",
       },
       upperChamber: {
         key: "chamberOfNations",
         name: "Chamber of Nations",
         shortName: "Nations",
         seats: 150,
+        description:
+          "The Chamber of Nations - the federal chamber representing the Czech and Slovak republics.",
         elected: true,
       },
     },
@@ -1163,6 +1243,7 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
   },
   UKR: {
     governmentType: "onePartyState",
+    regionLabel: "Region",
     legislature: {
       name: "Supreme Soviet",
       lowerChamber: {
@@ -1170,12 +1251,16 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
         name: "Supreme Soviet",
         shortName: "Soviet",
         seats: 435,
+        description:
+          "Deputies of the Ukrainian SSR Supreme Soviet, elected to single-list terms under the Communist Party.",
       },
       upperChamber: {
         key: "presidium",
         name: "Presidium",
         shortName: "Presidium",
         seats: 21,
+        description:
+          "The Presidium of the Supreme Soviet - a standing organ acting between sessions.",
         elected: false,
       },
     },
@@ -1217,6 +1302,7 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
   },
   BAL: {
     governmentType: "onePartyState",
+    regionLabel: "Republic",
     legislature: {
       name: "Supreme Soviet",
       lowerChamber: {
@@ -1224,12 +1310,16 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
         name: "Supreme Soviet",
         shortName: "Soviet",
         seats: 300,
+        description:
+          "Combined deputies of the Estonian, Latvian and Lithuanian SSR Supreme Soviets, elected to single-list terms under the Communist Party.",
       },
       upperChamber: {
         key: "presidium",
         name: "Presidium",
         shortName: "Presidium",
         seats: 21,
+        description:
+          "The Presidium of the Supreme Soviet - a standing organ acting between sessions.",
         elected: false,
       },
     },
@@ -1271,6 +1361,7 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
   },
   RU: {
     governmentType: "onePartyState",
+    regionLabel: "Republic",
     legislature: {
       name: "Supreme Soviet",
       lowerChamber: {
@@ -1278,12 +1369,16 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
         name: "Soviet of the Union",
         shortName: "Union",
         seats: 559,
+        description:
+          "559 deputies elected by population to the Supreme Soviet of the USSR; four-year terms, single-list elections under the Communist Party.",
       },
       upperChamber: {
         key: "sovietOfNationalities",
         name: "Soviet of Nationalities",
         shortName: "Nationalities",
         seats: 515,
+        description:
+          "Deputies representing the union republics and autonomous republics of the Soviet Union - the nationalities chamber of the Supreme Soviet, seated by republic rather than by population.",
         elected: true,
       },
     },
@@ -1357,6 +1452,7 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
   },
   FR: {
     governmentType: "presidential",
+    regionLabel: "Region",
     legislature: {
       name: "Parliament",
       lowerChamber: {
@@ -1364,12 +1460,16 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
         name: "National Assembly",
         shortName: "Assemblée",
         seats: 491,
+        description:
+          "491 deputies elected from single-member constituencies by two-round majority vote for five-year terms.",
       },
       upperChamber: {
         key: "senat",
         name: "Senate",
         shortName: "Sénat",
         seats: 305,
+        description:
+          "305 senators elected indirectly by an electoral college of local officials for nine-year terms.",
         elected: true,
       },
     },
@@ -1422,6 +1522,7 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
   },
   IT: {
     governmentType: "parliamentaryRepublic",
+    regionLabel: "Region",
     legislature: {
       name: "Parliament",
       lowerChamber: {
@@ -1429,12 +1530,15 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
         name: "Chamber of Deputies",
         shortName: "Camera",
         seats: 630,
+        description: "630 deputies elected by proportional representation for five-year terms.",
       },
       upperChamber: {
         key: "senato",
         name: "Senate of the Republic",
         shortName: "Senato",
         seats: 315,
+        description:
+          "315 elected senators (plus a few senators-for-life), elected on a regional basis for five-year terms.",
         elected: true,
       },
     },
@@ -1487,6 +1591,7 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
   },
   ES: {
     governmentType: "parliamentaryMonarchy",
+    regionLabel: "Autonomous Community",
     legislature: {
       name: "Cortes Generales",
       lowerChamber: {
@@ -1494,12 +1599,16 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
         name: "Congress of Deputies",
         shortName: "Congreso",
         seats: 350,
+        description:
+          "350 deputies elected by proportional representation (D'Hondt) in provincial constituencies for four-year terms.",
       },
       upperChamber: {
         key: "senado",
         name: "Senate",
         shortName: "Senado",
         seats: 208,
+        description:
+          "208 senators elected on a provincial basis (plus regional appointees) for four-year terms.",
         elected: true,
       },
     },
@@ -1552,6 +1661,7 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
   },
   SE: {
     governmentType: "parliamentaryMonarchy",
+    regionLabel: "County",
     legislature: {
       name: "Riksdag",
       lowerChamber: {
@@ -1559,12 +1669,16 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
         name: "Riksdag",
         shortName: "Riksdag",
         seats: 349,
+        description:
+          "349 members elected by proportional representation (with a 4% threshold) for fixed terms.",
       },
       upperChamber: {
         key: "forstaKammaren",
         name: "First Chamber (abolished 1970)",
         shortName: "First Chamber",
         seats: 151,
+        description:
+          "The former indirectly-elected upper house, abolished in the 1970 unicameral reform. Not part of the legislative loop.",
       },
     },
     officeTypes: [
@@ -1605,6 +1719,7 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
   },
   TR: {
     governmentType: "parliamentaryRepublic",
+    regionLabel: "Region",
     legislature: {
       name: "Grand National Assembly",
       lowerChamber: {
@@ -1612,12 +1727,16 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
         name: "National Assembly",
         shortName: "Meclis",
         seats: 450,
+        description:
+          "450 deputies elected by proportional representation (D'Hondt) for four-year terms.",
       },
       upperChamber: {
         key: "senato",
         name: "Senate of the Republic",
         shortName: "Senato",
         seats: 184,
+        description:
+          "184 senators (the Cumhuriyet Senatosu, abolished after the 1980 coup), partly elected and partly appointed.",
         elected: true,
       },
     },
@@ -1670,6 +1789,7 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
   },
   GR: {
     governmentType: "parliamentaryRepublic",
+    regionLabel: "Region",
     legislature: {
       name: "Hellenic Parliament",
       lowerChamber: {
@@ -1677,6 +1797,8 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
         name: "Hellenic Parliament",
         shortName: "Vouli",
         seats: 300,
+        description:
+          "300 deputies of the unicameral Vouli ton Ellinon, elected by reinforced proportional representation for four-year terms.",
       },
     },
     officeTypes: [
@@ -1717,6 +1839,7 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
   },
   AT: {
     governmentType: "parliamentaryRepublic",
+    regionLabel: "Region",
     legislature: {
       name: "Nationalrat",
       lowerChamber: {
@@ -1724,12 +1847,15 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
         name: "Nationalrat",
         shortName: "Nationalrat",
         seats: 183,
+        description: "183 deputies elected by proportional representation for four-year terms.",
       },
       upperChamber: {
         key: "bundesrat",
         name: "Bundesrat",
         shortName: "Bundesrat",
         seats: 61,
+        description:
+          "61 members delegated by the nine Landtage in proportion to Land population; a suspensive-veto chamber outside the confidence loop.",
       },
     },
     officeTypes: [
@@ -1770,6 +1896,7 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
   },
   FI: {
     governmentType: "parliamentaryRepublic",
+    regionLabel: "Region",
     legislature: {
       name: "Eduskunta",
       lowerChamber: {
@@ -1777,6 +1904,8 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
         name: "Eduskunta",
         shortName: "Eduskunta",
         seats: 200,
+        description:
+          "200 members elected by open-list proportional representation for four-year terms — the unicameral parliament Finland has kept since 1906.",
       },
     },
     officeTypes: [
@@ -1817,6 +1946,7 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
   },
   DD: {
     governmentType: "onePartyState",
+    regionLabel: "Region",
     legislature: {
       name: "Volkskammer",
       lowerChamber: {
@@ -1824,12 +1954,16 @@ export const COUNTRY_OFFICES: Record<CountryId, CountryOfficeConfig> = {
         name: "People's Chamber",
         shortName: "Volkskammer",
         seats: 500,
+        description:
+          "500 deputies of the Volkskammer elected on the single National Front list, led by the ruling SED.",
       },
       upperChamber: {
         key: "staatsrat",
         name: "Council of State",
         shortName: "Staatsrat",
         seats: 25,
+        description:
+          "The Staatsrat - a collective head of state exercising standing authority between Volkskammer sessions.",
         elected: false,
       },
     },
@@ -1907,6 +2041,8 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
           name: "National Assembly",
           shortName: "Assembly",
           seats: 199,
+          description:
+            "199 deputies elected for four-year terms, with 106 single-member constituencies and 93 national-list seats.",
         },
       },
       officeTypes: [
@@ -1954,12 +2090,16 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
           name: "Chamber of Deputies",
           shortName: "Chamber",
           seats: 331,
+          description:
+            "331 deputies elected for four-year terms by closed-list proportional representation with a 5% national threshold.",
         },
         upperChamber: {
           key: "senat",
           name: "Senate",
           shortName: "Senate",
           seats: 134,
+          description:
+            "134 senators elected for four-year terms by closed-list proportional representation with a 5% national threshold.",
           elected: true,
         },
       },
@@ -2019,6 +2159,7 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
           name: "National Assembly",
           shortName: "Assembly",
           seats: 240,
+          description: "240 deputies elected by proportional representation for a four-year term.",
         },
       },
       officeTypes: [
@@ -2066,12 +2207,16 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
           name: "Sejm",
           shortName: "Sejm",
           seats: 460,
+          description:
+            "460 deputies elected by proportional representation to four-year terms, resting on the October 2023 result.",
         },
         upperChamber: {
           key: "senat",
           name: "Senate",
           shortName: "Senate",
           seats: 100,
+          description:
+            "100 senators elected by first-past-the-post in single-member constituencies to four-year terms.",
           elected: true,
         },
       },
@@ -2131,12 +2276,16 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
           name: "State Duma",
           shortName: "Duma",
           seats: 450,
+          description:
+            "450 deputies elected for five-year terms, with 225 single-member constituencies and 225 party-list seats subject to a 5% threshold.",
         },
         upperChamber: {
           key: "federationCouncil",
           name: "Federation Council",
           shortName: "Federation Council",
           seats: 178,
+          description:
+            "178 members delegated two per federal subject by regional legislatures and executives; not popularly elected.",
           elected: false,
         },
       },
@@ -2194,12 +2343,16 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
           name: "Shūgiin",
           shortName: "Shūgiin",
           seats: 512,
+          description:
+            "512 members elected from multi-member constituencies under the pre-1994 system.",
         },
         upperChamber: {
           key: "sangiin",
           name: "Sangiin",
           shortName: "Sangiin",
           seats: 252,
+          description:
+            "252 councillors elected on staggered 6-year terms. Half are contested every 3 years. Cannot be dissolved.",
           elected: true,
         },
       },
@@ -2213,12 +2366,15 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
           name: "Sejm",
           shortName: "Sejm",
           seats: 460,
+          description: "460 deputies elected through proportional representation.",
         },
         upperChamber: {
           key: "senat",
           name: "Senate",
           shortName: "Senate",
           seats: 100,
+          description:
+            "100 elected senators, two per voivodeship with extra seats for Warsaw and Katowice.",
           elected: true,
         },
       },
@@ -2278,6 +2434,7 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
           name: "National Assembly",
           shortName: "Assembly",
           seats: 386,
+          description: "386 deputies elected in a mixed constituency and list system in 1990.",
         },
       },
       officeTypes: [
@@ -2325,12 +2482,14 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
           name: "Chamber of the People",
           shortName: "People",
           seats: 150,
+          description: "150 deputies elected by proportional representation in 1990.",
         },
         upperChamber: {
           key: "chamberOfNations",
           name: "Chamber of Nations",
           shortName: "Nations",
           seats: 150,
+          description: "150 deputies, equally divided between the Czech and Slovak republics.",
           elected: true,
         },
       },
@@ -2390,6 +2549,7 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
           name: "Grand National Assembly",
           shortName: "Assembly",
           seats: 400,
+          description: "400 deputies elected in the multiparty June 1990 election.",
         },
       },
       officeTypes: [
@@ -2437,12 +2597,14 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
           name: "Federal Chamber",
           shortName: "Federal",
           seats: 220,
+          description: "220 delegates chosen through the republic and province delegate system.",
         },
         upperChamber: {
           key: "councilRepublicsProvinces",
           name: "Council of Republics and Provinces",
           shortName: "Republics",
           seats: 88,
+          description: "Twelve delegates per republic and eight per autonomous province.",
           elected: false,
         },
       },
@@ -2496,12 +2658,14 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
           name: "Assembly of Deputies",
           shortName: "Assembly",
           seats: 396,
+          description: "396 deputies elected in May 1990 under Decree-Law 92/1990.",
         },
         upperChamber: {
           key: "senat",
           name: "Senate",
           shortName: "Senate",
           seats: 119,
+          description: "119 senators elected in May 1990 under Decree-Law 92/1990.",
           elected: true,
         },
       },
@@ -2551,6 +2715,7 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
     },
     RU: {
       governmentType: "parliamentaryRepublic",
+      regionLabel: "Economic Region",
       legislature: {
         name: "Congress of People's Deputies of the Soviet Union",
         lowerChamber: {
@@ -2558,6 +2723,8 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
           name: "Congress of People's Deputies of the Soviet Union",
           shortName: "Union Congress",
           seats: 2250,
+          description:
+            "The 1989 Congress had 1,500 territorial and national-territorial deputies plus 750 representatives of public organizations. It selected the inner Supreme Soviet.",
         },
         upperChamber: undefined,
       },
@@ -2599,12 +2766,14 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
           name: "House of Representatives",
           shortName: "House",
           seats: 435,
+          description: "435 representatives, two-year terms. All revenue bills originate here.",
         },
         upperChamber: {
           key: "senate",
           name: "Senate",
           shortName: "Senate",
           seats: 96,
+          description: "96 senators from 48 states, six-year staggered terms.",
           elected: true,
           regionElectedClasses: true,
         },
@@ -2618,6 +2787,8 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
           name: "Grand National Assembly",
           shortName: "Meclis",
           seats: 487,
+          description:
+            "487 deputies of the unicameral Türkiye Büyük Millet Meclisi (1950 election size; Senate created only by the 1961 constitution).",
         },
       },
       officeTypes: [
@@ -2689,6 +2860,8 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
           name: "Nationalrat",
           shortName: "Nationalrat",
           seats: 165,
+          description:
+            "165 deputies of the Nationalrat (the pre-1971 chamber size), elected by proportional representation under the ÖVP–SPÖ grand coalition.",
         },
       },
     },
@@ -2701,12 +2874,16 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
           name: "National Assembly",
           shortName: "Assemblée",
           seats: 627,
+          description:
+            "627 deputies elected in the June 1951 election by proportional representation. The chamber that made and unmade Fourth Republic cabinets.",
         },
         upperChamber: {
           key: "senat",
           name: "Council of the Republic",
           shortName: "Conseil",
           seats: 320,
+          description:
+            "320 councillors of the Conseil de la République, elected indirectly by local authorities for six-year terms. A weaker revising chamber under the Fourth Republic.",
           elected: true,
         },
       },
@@ -2753,6 +2930,7 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
     },
     ES: {
       governmentType: "onePartyState",
+      regionLabel: "Province",
       legislature: {
         name: "Cortes Españolas",
         lowerChamber: {
@@ -2760,6 +2938,8 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
           name: "Cortes Españolas",
           shortName: "Cortes",
           seats: 350,
+          description:
+            "350 procuradores of the Cortes Españolas — a corporatist chamber seated by 'organic democracy' (syndicates, municipalities, families, and direct Franco appointment), not by competitive election.",
         },
       },
       officeTypes: [
@@ -2800,12 +2980,16 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
           name: "Second Chamber",
           shortName: "Andra kammaren",
           seats: 230,
+          description:
+            "230 members elected by proportional representation — the directly elected, confidence-giving chamber of the bicameral Riksdag.",
         },
         upperChamber: {
           key: "forstaKammaren",
           name: "First Chamber",
           shortName: "Första kammaren",
           seats: 150,
+          description:
+            "150 members indirectly elected by county and city councils on staggered eight-year terms. May revise or delay legislation, but the Second Chamber ultimately prevails. Not player-managed.",
         },
       },
       officeTypes: [
@@ -2849,12 +3033,15 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
           name: "House of Commons",
           shortName: "Commons",
           seats: 625,
+          description:
+            "625 elected MPs from single-member constituencies (1950–1955 redistribution). The primary legislative chamber.",
         },
         upperChamber: {
           key: "lords",
           name: "House of Lords",
           shortName: "Lords",
           seats: 784,
+          description: "Appointed and hereditary peers. Revises and scrutinises legislation.",
         },
       },
     },
@@ -2866,12 +3053,16 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
           name: "Chamber of Deputies",
           shortName: "Camera",
           seats: 590,
+          description:
+            "590 deputies elected by proportional representation (Camera size in force 1948–1963).",
         },
         upperChamber: {
           key: "senato",
           name: "Senate of the Republic",
           shortName: "Senato",
           seats: 280,
+          description:
+            "280 elected senators on a regional basis for five-year terms (1953 First Republic apportionment).",
           elected: true,
         },
       },
@@ -2884,12 +3075,16 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
           name: "Bundestag",
           shortName: "Bundestag",
           seats: 487,
+          description:
+            "487 members of the 2nd Bundestag (1953) elected via mixed-member proportional representation.",
         },
         upperChamber: {
           key: "bundesrat",
           name: "Bundesrat",
           shortName: "Bundesrat",
           seats: 69,
+          description:
+            "Members representing the West German Länder (appointed by state governments).",
         },
       },
     },
@@ -2901,12 +3096,16 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
           name: "Shūgiin",
           shortName: "Shūgiin",
           seats: 466,
+          description:
+            "466 members elected in the April 1953 general election from regional constituencies.",
         },
         upperChamber: {
           key: "sangiin",
           name: "Sangiin",
           shortName: "Sangiin",
           seats: 248,
+          description:
+            "248 councillors elected on staggered 6-year terms. Half are contested every 3 years. Cannot be dissolved.",
           elected: true,
         },
       },
@@ -2919,12 +3118,16 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
           name: "Dáil Éireann",
           shortName: "Dáil",
           seats: 147,
+          description:
+            "147 TDs elected by PR-STV across multi-seat constituencies (1948 redistribution).",
         },
         upperChamber: {
           key: "seanad",
           name: "Seanad Éireann",
           shortName: "Seanad",
           seats: 60,
+          description:
+            "60 senators - 43 elected from vocational panels, 11 nominated by the Taoiseach, 6 from universities.",
         },
       },
     },
@@ -2936,12 +3139,16 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
           name: "Chamber of Deputies",
           shortName: "Chamber",
           seats: 304,
+          description:
+            "304 deputies of the 1950 legislature elected by open-list proportional representation.",
         },
         upperChamber: {
           key: "senate",
           name: "Federal Senate",
           shortName: "Senate",
           seats: 81,
+          description:
+            "81 senators - three per state - serving eight-year staggered terms. Reviews legislation from the Chamber.",
           elected: true,
         },
       },
@@ -2954,12 +3161,15 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
           name: "National People's Congress",
           shortName: "NPC",
           seats: 1226,
+          description: "1,226 deputies of the First National People's Congress (1954 convocation).",
         },
         upperChamber: {
           key: "cppcc",
           name: "CPPCC",
           shortName: "CPPCC",
           seats: 2169,
+          description:
+            "Members of the Chinese People's Political Consultative Conference - an advisory body representing diverse social and economic constituencies.",
         },
       },
     },
@@ -2971,12 +3181,15 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
           name: "House of Representatives",
           shortName: "House",
           seats: 136,
+          description:
+            "136 representatives of the Federal House under the Lyttelton Constitution (1954).",
         },
         upperChamber: {
           key: "senate",
           name: "Senate",
           shortName: "Senate",
           seats: 109,
+          description: "Senators elected from constituencies across the Nigerian federation.",
           elected: true,
         },
       },
@@ -2989,12 +3202,16 @@ const COUNTRY_OFFICE_ERA_OVERRIDES: Record<
           name: "Soviet of the Union",
           shortName: "Union",
           seats: 526,
+          description:
+            "526 deputies of the Soviet of the Union (RU's share of the 1954 convocation), elected by population.",
         },
         upperChamber: {
           key: "sovietOfNationalities",
           name: "Soviet of Nationalities",
           shortName: "Nationalities",
           seats: 515,
+          description:
+            "Deputies representing the union republics and autonomous republics of the Soviet Union.",
           elected: true,
         },
       },

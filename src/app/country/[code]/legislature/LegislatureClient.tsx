@@ -1,5 +1,7 @@
 "use client";
 
+import { getCountryDisplayName } from "@/lib/country/countryDisplayNames";
+
 import { Suspense, type ComponentType } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
@@ -139,7 +141,9 @@ export default function LegislatureClient({
         <p data-coach="nav-legislature" className="text-2xl font-bold text-foreground">
           {displayedName}
         </p>
-        <p className="mt-2 text-muted">{config.name} legislature coming soon.</p>
+        <p className="mt-2 text-muted">
+          {getCountryDisplayName(countryId)} legislature coming soon.
+        </p>
       </div>
     </div>
   );

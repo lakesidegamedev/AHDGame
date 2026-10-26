@@ -159,6 +159,7 @@ const CLIENT_FIELDS: { readonly [key: string]: Projection } = {
  */
 const OFFICE_FIELDS: { readonly [key: string]: Projection } = {
   governmentType: true,
+  regionLabel: true,
   regionalBillAssentTitle: true,
   legislature: {
     name: true,
@@ -167,6 +168,7 @@ const OFFICE_FIELDS: { readonly [key: string]: Projection } = {
       name: true,
       shortName: true,
       seats: true,
+      description: true,
       regionElectedClasses: true,
     },
     upperChamber: {
@@ -174,6 +176,7 @@ const OFFICE_FIELDS: { readonly [key: string]: Projection } = {
       name: true,
       shortName: true,
       seats: true,
+      description: true,
       elected: true,
       regionElectedClasses: true,
     },
@@ -646,6 +649,7 @@ export interface CountryOfficeChamberConfig {
   name: string;
   shortName: string;
   seats: number;
+  description?: string;
   elected?: boolean;
   regionElectedClasses?: boolean;
   regionalModel?: boolean;
@@ -673,6 +677,8 @@ export interface CountryOfficeTypeConfig {
 /** Everything a country contributes to office resolution and the race filter. */
 export interface CountryOfficeConfig {
   governmentType: GovernmentType;
+  /** Singular label for the country's regions ("State", "Land"). */
+  regionLabel: string;
   /** Era-neutral title of the office that signs or vetoes regional bills. */
   regionalBillAssentTitle?: string;
   legislature: CountryOfficeLegislatureConfig;
