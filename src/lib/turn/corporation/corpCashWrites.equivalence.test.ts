@@ -76,7 +76,7 @@ function corporationOps(fixtures: Fixture[]): AnyBulkWriteOperation<Document>[] 
           $push: { mediaProductAdvertisingObligationsV1: { projectId: "p1", turn: TURN } },
         },
       },
-    });
+    } as unknown as AnyBulkWriteOperation<Document>);
   }
   return ops;
 }
@@ -93,7 +93,7 @@ describe("corporation cash write merging", () => {
 
     const unmerged = createInMemoryDb();
     unmerged.seed("corporations", docs);
-    await unmerged.collection("corporations").bulkWrite(ops);
+    await unmerged.collection("corporations").bulkWrite(ops as never);
 
     expect(merged.collection("corporations").docs).toEqual(
       unmerged.collection("corporations").docs

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { ObjectId, type AnyBulkWriteOperation, type Document } from "mongodb";
+import { ObjectId } from "mongodb";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { mergeCorporationCashOps } from "./mergeCorporationCashOps";
 
-type Op = AnyBulkWriteOperation<Document>;
+type Op = { updateOne: { filter: Record<string, unknown>; update: Record<string, unknown> } };
 
 const updatedAt = new Date("2026-10-26T00:00:00Z");
 
@@ -22,7 +22,7 @@ async function applySequentially(ops: Op[], seed: Record<string, unknown>[]) {
 async function applyMerged(ops: Op[], seed: Record<string, unknown>[]) {
   const db = createInMemoryDb();
   db.seed("corporations", seed);
-  await db.collection("corporations").bulkWrite(mergeCorporationCashOps(ops));
+  await db.collection("corporations").bulkWrite(mergeCorporationCashOps(ops) as never);
   return db.collection("corporations").docs;
 }
 

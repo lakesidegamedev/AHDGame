@@ -205,12 +205,12 @@ function stateToUpdate(state: MergeState): Update {
  * the position of the first one. Ops that cannot be merged safely are returned
  * in their original order and untouched.
  */
-export function mergeCorporationCashOps<Op extends AnyOp>(operations: readonly Op[]): Op[] {
+export function mergeCorporationCashOps<Op extends object>(operations: readonly Op[]): Op[] {
   const candidates = new Map<string, number[]>();
   const guardedById = new Map<string, Update[]>();
   const unbatchable = new Set<string>();
   for (let index = 0; index < operations.length; index++) {
-    const op = operations[index];
+    const op = operations[index] as unknown as AnyOp;
     const id = updatedId(op);
     if (id === null) continue;
     const key = String(id);
@@ -238,21 +238,21 @@ export function mergeCorporationCashOps<Op extends AnyOp>(operations: readonly O
   for (const [key, indexes] of candidates) {
     if (indexes.length < 2 || unbatchable.has(key)) continue;
     const state = emptyState();
-    for (const index of indexes) applyToState(state, mergeableUpdate(operations[index])!);
+    for (const index of indexes)
+      applyToState(state, mergeableUpdate(operations[index] as unknown as AnyOp)!);
     const merged = stateToUpdate(state);
     if (Object.keys(merged).length === 0) continue;
     if (hasInternalConflict(merged)) continue;
     if (conflictsWithGuarded(merged, guardedById.get(key) ?? [])) continue;
 
     const first = operations[indexes[0]];
-    replaced.set(indexes[0], {
-      updateOne: { ...(first as { updateOne: object }).updateOne, update: merged },
-    });
+    const firstUpdate = (first as unknown as { updateOne: Record<string, unknown> }).updateOne;
+    replaced.set(indexes[0], { updateOne: { ...firstUpdate, update: merged } } as unknown as AnyOp);
     for (const index of indexes.slice(1)) dropped.add(index);
   }
 
   if (replaced.size === 0) return [...operations];
-  const out: AnyOp[] = [];
+  const out: unknown[] = [];
   for (let index = 0; index < operations.length; index++) {
     if (dropped.has(index)) continue;
     out.push(replaced.get(index) ?? operations[index]);
