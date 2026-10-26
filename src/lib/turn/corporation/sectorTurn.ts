@@ -163,6 +163,10 @@ export function processSector(
   const useTradeExposureEmbargo = lookups.embargoTradeExposureEnabled === true;
   const plantsEnabled = market.plantsEnabled;
   const explicitPlantCostsEnabled = plantsEnabled && market.explicitPlantCostsEnabled === true;
+  // The era-scaled base price table depends only on the world's unit scale, so
+  // this sector builds it once and every leg below reads the same object
+  // instead of rebuilding all 27 rows per reader.
+  const basePrices = eraScaledBasePrices(lookups.eraUnitScale);
   const {
     brakedTargetRate,
     newCurrentGrowthRate,
@@ -678,11 +682,7 @@ export function processSector(
           : lookups.unmetForeignDemandByCountry?.get(sectorCountryId)?.get(commodity)
       ),
     throttleLegMixWeight: (commodity) =>
-      commodityMixWeight(
-        strategyRates.supply,
-        eraScaledBasePrices(lookups.eraUnitScale),
-        commodity
-      ),
+      commodityMixWeight(strategyRates.supply, basePrices, commodity),
   });
   if (capacityBindingEvent) {
     pendingCapacityBindingEvents.push(capacityBindingEvent);
@@ -1046,7 +1046,7 @@ export function processSector(
           allocationShare: productAllocation.share,
           stage: productProject.stage,
           outputCommodity: productKind.outputCommodity,
-          basePrices: eraScaledBasePrices(lookups.eraUnitScale),
+          basePrices,
           currentSectorQualityByCommodity: Object.fromEntries(
             [
               ...new Set([...Object.keys(strategyRates.supply ?? {}), productKind.outputCommodity]),
@@ -1607,11 +1607,7 @@ export function processSector(
         Object.keys(strategyRates.supply ?? {}).map((commodity) => [
           commodity,
           Math.max(0, mothballed ? 0 : producedUnits) *
-            commodityMixWeight(
-              strategyRates.supply ?? {},
-              eraScaledBasePrices(lookups.eraUnitScale),
-              commodity as CommodityType
-            ),
+            commodityMixWeight(strategyRates.supply ?? {}, basePrices, commodity as CommodityType),
         ])
       );
     result.internalSupplyInputUnits = new Map(

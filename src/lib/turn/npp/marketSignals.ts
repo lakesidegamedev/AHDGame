@@ -535,6 +535,21 @@ export function findBestUnownedSector(
     if (c.stateId === hqState) s *= HQ_STATE_SCORE_BONUS;
     return s;
   };
+  // Every tier below ranks the same candidate list again, and a sort compares
+  // pairs, so calling these straight from a comparator re-derived a candidate's
+  // market size, shortage score and deposit headroom O(n log n) times per tier
+  // for values that depend only on the candidate. One value each, per scan.
+  const memoOf = <T>(compute: (candidate: UnownedSector) => T) => {
+    const cache = new Map<UnownedSector, T>();
+    return (candidate: UnownedSector): T => {
+      if (cache.has(candidate)) return cache.get(candidate)!;
+      const value = compute(candidate);
+      cache.set(candidate, value);
+      return value;
+    };
+  };
+  const candidateScore = memoOf(score);
+  const byScore = (a: UnownedSector, b: UnownedSector) => candidateScore(b) - candidateScore(a);
   const candidatePriceRatioOf =
     (c: UnownedSector): CommodityPriceRatioFn =>
     (commodity, cid) =>
@@ -571,14 +586,19 @@ export function findBestUnownedSector(
       countryId,
       depositAwarePriceRatioOf(c.sectorType, c.stateId, signals, priceRatioOf)
     );
+  const candidatePeakShortage = memoOf(peakShortageOf);
+  const candidateFragileScore = memoOf(fragileScore);
+  const byFragileScore = (a: UnownedSector, b: UnownedSector) =>
+    candidateFragileScore(b) - candidateFragileScore(a);
   // Highest market-weighted score wins; the HQ state gets a score bonus, not
   // the old unconditional first pick (see HQ_STATE_SCORE_BONUS).
-  const best = (list: UnownedSector[]) => list.sort((a, b) => score(b) - score(a))[0];
+  const best = (list: UnownedSector[]) => list.sort(byScore)[0];
 
-  const physicallyShort = (c: UnownedSector) =>
+  const physicallyShort = memoOf((c: UnownedSector) =>
     isPhysicallyShort(signals?.unmetDemandUnitsOf, () =>
       signals!.unmetDemandUnitsOf!(c, { aggregate: "max" })
-    );
+    )
+  );
 
   const isPrimary = (c: UnownedSector) =>
     c.sectorType === primaryType && (c.industryModel ?? null) === (primaryIndustryModel ?? null);
@@ -593,7 +613,7 @@ export function findBestUnownedSector(
       (c) => fragileScore(c) > 0 && (inType(c) || physicallyShort(c))
     );
     if (fragileCandidates.length > 0) {
-      return fragileCandidates.sort((a, b) => fragileScore(b) - fragileScore(a))[0];
+      return fragileCandidates.sort(byFragileScore)[0];
     }
   }
 
@@ -607,9 +627,11 @@ export function findBestUnownedSector(
     signals?.hasSameTypeNppIn ? !signals.hasSameTypeNppIn(c.countryId, c.sectorType) : true;
   const critical = entryCandidates.filter(
     (c) =>
-      physicallyShort(c) && peakShortageOf(c) >= ESSENTIAL_SHORTAGE_SCORE && noSameTypeBuilder(c)
+      physicallyShort(c) &&
+      candidatePeakShortage(c) >= ESSENTIAL_SHORTAGE_SCORE &&
+      noSameTypeBuilder(c)
   );
-  if (critical.length > 0) return critical.sort((a, b) => score(b) - score(a))[0];
+  if (critical.length > 0) return critical.sort(byScore)[0];
 
   // Then the corp's own field. A sector outside the primary or secondary type
   // carries SECTOR_TYPE_MISMATCH_PENALTY (-15pp) for as long as it runs: on
@@ -627,9 +649,9 @@ export function findBestUnownedSector(
   // A corp with no market in its own field may still fill another essential
   // shortage, physically confirmed.
   const otherCritical = entryCandidates.filter(
-    (c) => physicallyShort(c) && peakShortageOf(c) >= ESSENTIAL_SHORTAGE_SCORE
+    (c) => physicallyShort(c) && candidatePeakShortage(c) >= ESSENTIAL_SHORTAGE_SCORE
   );
-  if (otherCritical.length > 0) return otherCritical.sort((a, b) => score(b) - score(a))[0];
+  if (otherCritical.length > 0) return otherCritical.sort(byScore)[0];
 
   // No open-market tier for founding: a sector outside the corp's primary or
   // secondary type carries SECTOR_TYPE_MISMATCH_PENALTY (-15pp) for as long as

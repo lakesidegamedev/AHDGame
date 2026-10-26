@@ -336,7 +336,7 @@ async function runBankingTurn(
   const deadBankResult = await processDeadBankLoans(
     db,
     turn,
-    async (loan, bank, target, trackInsuranceRecovery, txEntries) => {
+    async (loan, bank, target, trackInsuranceRecovery, txEntries, prefetch) => {
       if (loan.borrowerType === "npcBulk") {
         const recovered = await serviceDeadNpcBulkLoan(
           db,
@@ -344,12 +344,16 @@ async function runBankingTurn(
           loan,
           bank.currency,
           target,
-          trackInsuranceRecovery
+          trackInsuranceRecovery,
+          prefetch?.householdPool
         );
         summary.loanInterestCollected += recovered.interest;
         summary.loanPrincipalRepaid += recovered.principal;
         summary.defaultsWrittenOff += recovered.writtenOff;
-        return { collected: recovered.collected };
+        return {
+          collected: recovered.collected,
+          ...(recovered.replayed ? { replayed: true } : {}),
+        };
       }
       const serviced = await servicePlayerLoan(
         db,
@@ -360,12 +364,18 @@ async function runBankingTurn(
         bank.name,
         target,
         trackInsuranceRecovery,
-        txEntries
+        txEntries,
+        prefetch?.borrower
       );
       summary.loanInterestCollected += serviced.interestCollected;
       summary.loanPrincipalRepaid += serviced.principalRepaid;
       summary.defaultsWrittenOff += serviced.writtenOff;
-      return { collected: serviced.bankCredit };
+      return {
+        collected: serviced.bankCredit,
+        paidLocal: serviced.paidLocal,
+        replayed: serviced.replayed,
+        partial: serviced.partial,
+      };
     }
   );
   summary.deadBankLoansServiced = deadBankResult.loansServiced;
@@ -1611,16 +1621,30 @@ async function serviceDeadNpcBulkLoan(
   loan: BankLoan,
   currency: CurrencyCode,
   creditTarget: MoneyTarget,
-  trackInsuranceRecovery: boolean
-): Promise<{ collected: number; interest: number; principal: number; writtenOff: number }> {
+  trackInsuranceRecovery: boolean,
+  preloadedHouseholdPool?: number
+): Promise<{
+  collected: number;
+  interest: number;
+  principal: number;
+  writtenOff: number;
+  replayed?: boolean;
+  partial?: boolean;
+}> {
   const empty = { collected: 0, interest: 0, principal: 0, writtenOff: 0 };
   if (loan.lastProcessedTurn === turn) return empty;
 
   const cbDocId = getBankId(getCountryIdForCurrency(currency));
-  const cb = await db
-    .collection<CentralBank>("centralBanks")
-    .findOne({ _id: cbDocId }, { projection: { externalBroadMoney: 1 } });
-  const pool = Math.max(0, cb?.externalBroadMoney ?? 0);
+  const cb =
+    preloadedHouseholdPool === undefined
+      ? await db
+          .collection<CentralBank>("centralBanks")
+          .findOne({ _id: cbDocId }, { projection: { externalBroadMoney: 1 } })
+      : undefined;
+  const pool =
+    preloadedHouseholdPool === undefined
+      ? Math.max(0, cb?.externalBroadMoney ?? 0)
+      : Math.max(0, preloadedHouseholdPool);
   const current = Math.max(0, loan.outstanding ?? 0);
   const principalDelta = fundedNpcFlowDelta(current, 0, {
     cashReserves: 0,
@@ -1700,6 +1724,6 @@ async function serviceDeadNpcBulkLoan(
   if (settled.status === "partial" || settled.status === "rejected" || settled.error) {
     throw new Error(settled.error ?? "Resolved household loan recovery could not settle");
   }
-  if (settled.status === "replayed") return empty;
+  if (settled.status === "replayed") return { ...empty, replayed: true };
   return { collected, interest, principal, writtenOff };
 }

@@ -1526,6 +1526,16 @@ export function processSectors(
       };
     };
     if (totalAdvertisingDeliveredValueAnchor > 0) {
+      // Every buyer pays every seller, so the per-corp settlement info (a
+      // currency and FX resolution) is read once per corp rather than once per
+      // pair, in the same order the pair loop read it.
+      const sellerInfos = advertisingSellerDeliveredValues.map(
+        ([sellerId, deliveredValueAnchor]) => ({
+          sellerId,
+          deliveredValueAnchor,
+          seller: corpInfo(sellerId),
+        })
+      );
       for (const [buyerId, spendAnchor] of marketingSpendAnchorByBuyerId) {
         const buyer = corpInfo(buyerId);
         if (!buyer) continue;
@@ -1535,12 +1545,11 @@ export function processSectors(
         );
         const ordinarySpendAnchor = Math.max(0, spendAnchor - deferredTitleAnchor);
         let allocatedAnchor = 0;
-        for (let i = 0; i < advertisingSellerDeliveredValues.length; i++) {
-          const [sellerId, deliveredValueAnchor] = advertisingSellerDeliveredValues[i];
-          const seller = corpInfo(sellerId);
+        for (let i = 0; i < sellerInfos.length; i++) {
+          const { sellerId, deliveredValueAnchor, seller } = sellerInfos[i];
           if (!seller) continue;
           const amountAnchor =
-            i === advertisingSellerDeliveredValues.length - 1
+            i === sellerInfos.length - 1
               ? ordinarySpendAnchor - allocatedAnchor
               : ordinarySpendAnchor * (deliveredValueAnchor / totalAdvertisingDeliveredValueAnchor);
           allocatedAnchor += amountAnchor;
