@@ -31,10 +31,13 @@ import { isLabourWagesEnabled, isLabourFullMode } from "@/lib/labour/featureFlag
 import { undergroundUnrestVisible } from "@/lib/unions/enforcementCosts";
 import { isProspectingEnabled } from "@/lib/extraction/featureFlag";
 import {
+  clampWageLevel,
   sectorWageLevel,
   MEDIAN_SECTOR_WAGE_LEVEL,
   minWageFloorMultiplier,
 } from "@/lib/labour/laborCost";
+import { employmentStaffingTightness } from "@/lib/labour/rules/employment";
+import { buildStateLabourPoolView } from "@/lib/labour/rules/stateLabourPool";
 import type {
   Corporation,
   CorporateSector,
@@ -1548,6 +1551,19 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         workersDesired:
           sector.workersDesired ?? calculateWorkers(sectorRevenueAnchor, metrics.workforceSkill),
         labourStaffingFactor: sector.labourStaffingFactor ?? 1,
+        // The state's shared labour pool: workers available against workers
+        // every employer there wants. State aggregates are public, so this is
+        // not redacted with the sector's own workforce figures.
+        stateLabourMarket: buildStateLabourPoolView({
+          laborForce: stateMetrics?.economic?.laborForce?.value,
+          labourDemand: stateMetrics?.economic?.labourDemand?.value,
+          coverageTightness: stateMetrics?.economic?.labourTightness?.value,
+          allocatedTightness: employmentStaffingTightness(stateMetrics?.labourEmployment),
+          corporateEmployed: stateMetrics?.labourEmployment?.corporateEmployed,
+          demandWageIndex: stateMetrics?.economic?.labourDemandWageIndex?.value,
+          wagesEnabled: labourWagesEnabled,
+          sectorWageLevel: clampWageLevel(sector.wageLevel ?? 1),
+        }),
         productionPolicy: sector.productionPolicy ?? 0,
         productionPolicyLevel: sector.productionPolicyLevel ?? 0,
         // Labour system: CEO wage-level lever (1.0 = baseline), the sector's pay

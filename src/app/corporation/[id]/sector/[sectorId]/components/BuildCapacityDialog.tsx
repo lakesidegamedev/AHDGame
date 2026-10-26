@@ -28,11 +28,16 @@ import {
   facilityVocabulary,
 } from "@/lib/constants/facilityVocabulary";
 import { facilitiesFromUnits, plantSizeUnits } from "@/lib/constants/facilityQuantum";
+import type { StateLabourPoolView } from "@/lib/labour/rules/stateLabourPool";
+import { poolOversubscribed } from "./StateLabourPool";
 
 interface BuildCapacityDialogProps {
   open: boolean;
   onClose: () => void;
   plants: PlantsData;
+  /** The state's shared labour pool, for the unfilled-jobs warning. */
+  stateLabourMarket?: StateLabourPoolView | null;
+  stateName?: string;
   /** Drives the facility noun throughout the dialog. */
   sectorType: OperatingSectorType;
   sectorLabel: string;
@@ -80,6 +85,8 @@ export default function BuildCapacityDialog({
   open,
   onClose,
   plants,
+  stateLabourMarket,
+  stateName,
   sectorType,
   sectorLabel,
   submitting,
@@ -611,6 +618,14 @@ export default function BuildCapacityDialog({
               This sector currently fills {fmtPct(labourStaffingFactor)} of its jobs. Building this
               adds {fmtUnits(preview.workersNeeded)} wanted workers, but those jobs may remain
               vacant unless you raise pay or the local workforce grows.
+              {stateLabourMarket && poolOversubscribed(stateLabourMarket) && (
+                <>
+                  {" "}
+                  {stateName ?? "This state"} has {fmtUnits(stateLabourMarket.labourForce)} workers
+                  and its employers already want {fmtUnits(stateLabourMarket.labourDemand)}. Pay
+                  only moves your share of that pool.
+                </>
+              )}
             </span>
           </p>
         )}
