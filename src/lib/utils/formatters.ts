@@ -9,8 +9,6 @@ import {
   COUNTRIES_WITH_CONCURRENT_GENERAL_ELECTIONS,
   type CountryId,
 } from "@/lib/constants/countriesCore";
-import { STARTING_YEAR } from "@/lib/constants/calendar";
-import { calendarTurn, type CalendarClock } from "@/lib/utils/gameDate";
 import {
   CANONICAL_REAL_ELECTION_YEARS_BY_PRESET,
   DEFAULT_CYCLE_ANCHOR_CONTEXT,
@@ -227,49 +225,4 @@ export function electionToLarpYear(
     default:
       return years.governorStateSenate + (cycle - 1) * 4;
   }
-}
-
-/**
- * Compute the LARP election year from an election's endTime.
- *
- * Uses currentTurn + lastTurnProcessed for an absolute (not relative) calculation
- * so elections with a past endTime are labelled correctly.
- *
- * Elections that end exactly on "Week 1" of a new year are displayed as
- * "Week 52" of the previous year — matching turnToLarpDate's special-case for
- * turn 48 and honouring the user preference that a race barely crossing a year
- * boundary keeps the prior year's label.
- *
- * @param endTime - ISO string or Date for the election's endTime
- * @param currentTurn - Current game turn (1-based)
- * @param lastTurnProcessed - Real-world timestamp of the last processed turn
- */
-export function endTimeToGameYear(
-  endTime: string | Date,
-  currentTurn: number,
-  lastTurnProcessed: string | Date,
-  startingYear: number = STARTING_YEAR,
-  /**
-   * Founding-phase clock. `currentTurn` is RAW, so without it an election year
-   * reads a game year ahead of the status bar on a world that burned turns
-   * before its calendar started (#1208).
-   */
-  clock?: CalendarClock
-): number {
-  const TURNS_PER_YEAR = 48;
-  const MS_PER_TURN = 3_600_000;
-
-  const end = new Date(endTime);
-  const ref = new Date(lastTurnProcessed);
-  const turnsFromNow = Math.round((end.getTime() - ref.getTime()) / MS_PER_TURN);
-  // Convert to the display calendar BEFORE the boundary test, so the "Week 1
-  // belongs to the previous year" rule is applied to the year players see.
-  const turnAtEnd = calendarTurn(currentTurn + turnsFromNow, clock);
-
-  // Treat elections ending on "Week 1" of year N as belonging to year N-1
-  // (same logic as turnToLarpDate's turn-48 → Week 52 special case).
-  const isAtYearBoundary = turnAtEnd > 1 && (turnAtEnd - 1) % TURNS_PER_YEAR === 0;
-  const effectiveTurn = isAtYearBoundary ? turnAtEnd - 1 : turnAtEnd;
-
-  return startingYear + Math.floor((effectiveTurn - 1) / TURNS_PER_YEAR);
 }

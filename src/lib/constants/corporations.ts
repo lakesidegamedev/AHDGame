@@ -103,12 +103,6 @@ export const RESTRUCTURE_SECTOR_SALVAGE_FRACTION = 0.85;
  */
 export const MIN_CORPORATION_DISSOLUTION_AGE_TURNS = 24;
 
-/** Fraction of market capitalization charged to relocate corporate headquarters */
-export const RELOCATION_COST_FRACTION = 0.07;
-
-/** Multiplier applied to base relocation cost when the HQ crosses into a new country */
-export const CROSS_COUNTRY_RELOCATION_MULTIPLIER = 2;
-
 /** Flat cost in anchor currency (₳) to rename a corporation */
 export const CORPORATION_RENAME_COST = 500_000;
 

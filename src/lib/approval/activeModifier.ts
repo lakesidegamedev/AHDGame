@@ -23,6 +23,13 @@ export interface ActiveModifier {
   source?: "metric" | "address" | "war" | "banking" | "market" | "cabinet";
 }
 
+/**
+ * Positives are summed and capped at this value; negatives are uncapped, so a
+ * crisis stack still hurts. The rule engine and the display breakdown must
+ * agree on it, so it lives with the arithmetic rather than with the engine.
+ */
+export const POSITIVE_MODIFIER_NET_CAP = 8;
+
 /** Sum of every modifier's approval effect, rounded to one decimal. */
 export function netModifierEffect(modifiers: ActiveModifier[]): number {
   const raw = modifiers.reduce((sum, modifier) => sum + modifier.effect, 0);

@@ -28,6 +28,12 @@ export const GROWTH_RATE_TURNS_PER_YEAR = 48;
 /** Turns per day, daily rates are divided by this for per-turn processing */
 export const TURNS_PER_DAY = 24;
 
+/** Fraction of market capitalization charged to relocate corporate headquarters */
+export const RELOCATION_COST_FRACTION = 0.07;
+
+/** Multiplier applied to base relocation cost when the HQ crosses into a new country */
+export const CROSS_COUNTRY_RELOCATION_MULTIPLIER = 2;
+
 export const CORPORATION_TYPES = [
   "financial",
   "media",

@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { type ActiveModifier } from "@/lib/utils/approvalModifiers";
 import { regionUrl, regionApiSubUrl, approvalUrl } from "@/lib/urls";
 import { type CountryId } from "@/lib/constants/countriesCore";
-import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
+import { getCountryCode } from "@/lib/country/countryCodes";
 import { ModifierList } from "@/components/approval/ModifierChip";
 import { computeRegionalConditionMargin } from "@/lib/states/conditions/marginEffects";
 
@@ -30,8 +30,7 @@ export function RegionApprovalClient({
   stateId: string;
 }) {
   const t = useTranslations("layout.approval");
-  const config = COUNTRY_CLIENT_CONFIGS[countryId];
-  const countryShortLabel = config?.code ?? countryId;
+  const countryShortLabel = getCountryCode(countryId);
 
   const [data, setData] = useState<StateApprovalData | null>(null);
   const [loading, setLoading] = useState(true);

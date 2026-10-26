@@ -662,26 +662,34 @@ async function fundClaimEscrow(
   db: Db,
   claim: BankSovereignClaim,
   budgetId: string,
-  attemptTurn: number
-): Promise<boolean> {
+  attemptTurn: number,
+  escrowExists: boolean
+): Promise<{ charter: CorporationCharterState["bankCharter"] } | null> {
   const corps = db.collection<CorporationCharterState>("corporations");
-  await corps.updateOne(
-    {
-      _id: new ObjectId(claim.bankId),
-      [`bankSovereignEscrows.${claim.id}`]: { $exists: false },
-    },
-    {
-      $set: {
-        [`bankSovereignEscrows.${claim.id}`]: {
-          bankId: claim.bankId,
-          charteredTurn: claim.charteredTurn,
-          currencyCode: claim.currencyCode,
-          amountLocal: 0,
-          claimKind: claim.kind,
-        },
+  // The caller already read this claim's escrow slot off the bank book, so the
+  // placeholder only needs writing when the slot is missing. It used to be an
+  // unmatched guarded write on every claim of every turn.
+  if (!escrowExists)
+    await corps.updateOne(
+      {
+        _id: new ObjectId(claim.bankId),
+        [`bankSovereignEscrows.${claim.id}`]: { $exists: false },
       },
-    }
-  );
+      {
+        $set: {
+          [`bankSovereignEscrows.${claim.id}`]: {
+            bankId: claim.bankId,
+            charteredTurn: claim.charteredTurn,
+            currencyCode: claim.currencyCode,
+            amountLocal: 0,
+            claimKind: claim.kind,
+          },
+        },
+      }
+    );
+  // One probe for every open attempt. Each is resumed to a terminal state, and
+  // any that stays partial refuses the claim below, so a second read of the
+  // same predicate ("is a funding attempt still open?") only cost a round trip.
   const pending = await db
     .collection<{ _id: string }>("bankMoneyMoves")
     .find(
@@ -698,25 +706,19 @@ async function fundClaimEscrow(
     if (resumed.status !== "applied" && (resumed.status !== "replayed" || resumed.error)) {
       // A prior treasury debit may already have landed. Never open a new
       // attempt while that receipt still owns an unfinished credit leg.
-      return false;
+      return null;
     }
   }
-  const unresolved = await db.collection<{ _id: string }>("bankMoneyMoves").findOne(
-    {
-      _id: { $regex: `^${claim.id}:funding:` },
-      status: "partial",
-    },
-    { projection: { _id: 1 } }
-  );
-  if (unresolved) return false;
 
+  // The escrow read also returns the charter the payout below guards on, so the
+  // caller does not re-read the bank book for it.
   let corporation = await corps.findOne(
     { _id: new ObjectId(claim.bankId) },
-    { projection: { bankSovereignEscrows: 1 } }
+    { projection: { bankCharter: 1, bankSovereignEscrows: 1 } }
   );
   let escrowAmount = corporation?.bankSovereignEscrows?.[claim.id]?.amountLocal ?? 0;
-  if (escrowAmount >= claim.amountLocal) return true;
-  if (!corporation) return false;
+  if (escrowAmount >= claim.amountLocal) return { charter: corporation?.bankCharter };
+  if (!corporation) return null;
 
   const transition = fundingTransition(claim, budgetId, attemptTurn);
   let settled = await settleTransition(db, transition);
@@ -724,10 +726,10 @@ async function fundClaimEscrow(
     settled = await resumeSettlement(db, transition.key);
   corporation = await corps.findOne(
     { _id: new ObjectId(claim.bankId) },
-    { projection: { bankSovereignEscrows: 1 } }
+    { projection: { bankCharter: 1, bankSovereignEscrows: 1 } }
   );
   escrowAmount = corporation?.bankSovereignEscrows?.[claim.id]?.amountLocal ?? 0;
-  return escrowAmount >= claim.amountLocal;
+  return escrowAmount >= claim.amountLocal ? { charter: corporation?.bankCharter } : null;
 }
 
 async function payFromEscrow(
@@ -865,7 +867,8 @@ export async function settleBankSovereignClaims(
     if (!ObjectId.isValid(claim.bankId)) continue;
     const receipts = receiptsByClaim.get(claim.id) ?? [];
     const bank = bankById.get(claim.bankId);
-    const escrowedLocal = bank?.bankSovereignEscrows?.[claim.id]?.amountLocal ?? 0;
+    const escrow = bank?.bankSovereignEscrows?.[claim.id];
+    const escrowedLocal = escrow?.amountLocal ?? 0;
     if (await recoverCompletedClaim(db, claim, budgetId, receipts)) {
       if (claim.treasuryCashLedgerEnabled) await recordMaturityBankPayment(db, claim);
       paidClaimIds.push(claim.id);
@@ -888,14 +891,11 @@ export async function settleBankSovereignClaims(
       }
       continue;
     }
-    if (!(await fundClaimEscrow(db, claim, budgetId, attemptTurn))) continue;
-    const corp = await db
-      .collection<CorporationCharterState>("corporations")
-      .findOne(
-        { _id: new ObjectId(claim.bankId) },
-        { projection: { bankCharter: 1, bankSovereignEscrows: 1 } }
-      );
-    const settled = await payFromEscrow(db, claim, budgetId, attemptTurn, corp?.bankCharter);
+    // The funding leg returns the charter this claim now pays into, read in the
+    // same round trip that confirms the escrow landed.
+    const funded = await fundClaimEscrow(db, claim, budgetId, attemptTurn, escrow !== undefined);
+    if (!funded) continue;
+    const settled = await payFromEscrow(db, claim, budgetId, attemptTurn, funded.charter);
     if (settled?.status === "applied" || (settled?.status === "replayed" && !settled.error)) {
       if (claim.treasuryCashLedgerEnabled) await recordMaturityBankPayment(db, claim);
       paidClaimIds.push(claim.id);
