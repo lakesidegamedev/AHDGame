@@ -25,9 +25,7 @@ import { HostileTakeoverCard } from "@/components/corporation/HostileTakeoverCar
 import { SubsidiaryManagementCard } from "@/components/corporation/SubsidiaryManagementCard";
 import { PrivatizationVotePanel } from "@/components/corporation/PrivatizationVotePanel";
 import { ManagePrivateShareholdersPanel } from "@/components/corporation/ManagePrivateShareholdersPanel";
-import PrivateSalePanel from "@/components/corporation/shares/PrivateSalePanel";
 import IndexCommitteePanel from "@/components/corporation/IndexCommitteePanel";
-import SponsoredFundPanel from "@/components/corporation/SponsoredFundPanel";
 import { NationalizationStatusCard } from "@/components/corporation/NationalizationStatusCard";
 import { CorpLedgerProvider } from "@/components/corporation/ledger/LedgerContext";
 import { NoticeStrip } from "@/components/corporation/ledger/NoticeStrip";
@@ -56,7 +54,37 @@ import {
   filterPrivateCorpBaseTabs,
   getPrivateCorpTabAccess,
 } from "@/components/corporation/privateCorpTabAccess";
-import FinancialsTab from "@/components/corporation/FinancialsTab";
+import dynamic from "next/dynamic";
+
+// Section bodies that only mount on a non-default tab are code-split: the
+// corporation page is the highest-traffic route family (67k views / 30 days),
+// and its statically imported tab bodies made up most of its 172 KB of
+// route-specific JS. Each still renders on demand with a skeleton in between.
+const SectionFallback = () => (
+  <div className="h-40 animate-pulse rounded-lg bg-muted" aria-hidden="true" />
+);
+
+const FinancialsTab = dynamic(() => import("@/components/corporation/FinancialsTab"), {
+  loading: SectionFallback,
+});
+const PrivateSalePanel = dynamic(() => import("@/components/corporation/shares/PrivateSalePanel"), {
+  loading: SectionFallback,
+});
+const AdvertisingAgreementsPanel = dynamic(
+  () => import("@/components/corporation/AdvertisingAgreementsPanel"),
+  { loading: SectionFallback }
+);
+const ProductStudio = dynamic(
+  () => import("@/components/corporation/ProductStudio").then((m) => m.ProductStudio),
+  { loading: SectionFallback }
+);
+const SponsoredFundPanel = dynamic(() => import("@/components/corporation/SponsoredFundPanel"), {
+  loading: SectionFallback,
+});
+const BankConsoleTab = dynamic(
+  () => import("./bank/BankConsoleTab").then((m) => m.BankConsoleTab),
+  { loading: SectionFallback }
+);
 import { AutopilotCard } from "@/components/corporation/AutopilotCard";
 import {
   corpIncomeBasis,
@@ -81,11 +109,8 @@ import {
   SupplyAgreementsSection,
   DefaultedBondCrisisModal,
 } from "@/components/corporation/CorporationPageTabs";
-import { BankConsoleTab } from "./bank/BankConsoleTab";
 import { EditorialStancePanel } from "@/components/corporation/EditorialStancePanel";
-import { ProductStudio } from "@/components/corporation/ProductStudio";
 import { LegacyProductProjects } from "@/components/corporation/LegacyProductProjects";
-import AdvertisingAgreementsPanel from "@/components/corporation/AdvertisingAgreementsPanel";
 import type {
   CorporationDetail,
   CEO,

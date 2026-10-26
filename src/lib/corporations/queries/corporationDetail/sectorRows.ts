@@ -482,6 +482,10 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       sector.dominanceMarginPenaltyPp ?? null
     );
 
+    // See the spread site below: the corporation-detail payload deliberately
+    // omits the per-metric rationale list, which only the sector sub-page uses.
+    const { stateMetricContributions: _stateMetricContributions, ...modsForApi } = mods;
+
     // Realized revenue for this sector (#3001/#3002). Keep the CEO statement
     // and settings cap on one basis: exact per-sector realization when present,
     // otherwise the history-derived corp ratio, plus freight credits. Every
@@ -816,7 +820,12 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       physicalCosts,
       fillAdjustedMarginPct,
       marketSharePercent: sectorMarketSharePct,
-      ...mods,
+      // The per-metric rationale list (`stateMetricContributions`) is computed
+      // above for the sector sub-page's margins payload, but it is ~188 entries
+      // and ~54 KB per sector on a live corporation — 94% of this response —
+      // and nothing that consumes the corporation detail payload reads it.
+      // MarginsPanel gets its own copy from GET /api/corporations/:id/sectors/:sectorId.
+      ...modsForApi,
       ...roundOwnershipTerms(ownershipTerms),
       commoditySupplyDemandBlendPct,
       profit: Math.round(profit),
