@@ -71,4 +71,26 @@ describe("seedSlowQueryIndexes", () => {
       name: "countryGameStates_status",
     });
   });
+
+  it("indexes the bond pool's batched turn reads and the turn-log stamp", async () => {
+    const db = {} as unknown as Db;
+    await seedSlowQueryIndexes(db, vi.fn());
+
+    const created = ensureIndexMock.mock.calls.map((call) => ({
+      collection: call[1],
+      key: call[2],
+      name: call[3]?.name,
+    }));
+
+    expect(created).toEqual(
+      expect.arrayContaining([
+        {
+          collection: "bonds",
+          key: { matured: 1, maturityTurn: 1 },
+          name: "bonds_matured_maturityTurn",
+        },
+        { collection: "bonds", key: { issuedAtTurn: 1 }, name: "bonds_issuedAtTurn" },
+      ])
+    );
+  });
 });

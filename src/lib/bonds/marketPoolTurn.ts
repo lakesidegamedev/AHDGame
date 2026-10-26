@@ -15,7 +15,6 @@
  * Runs at the top of the bond turn, before any coupon or trade.
  */
 
-import { boundedParallelMap } from "@/lib/indexFunds/boundedParallelMap";
 import { calibratedPoolTarget, poolLiquidityAllocation } from "@/lib/moneySupply/rules/poolTarget";
 import type { Db } from "mongodb";
 import type { BondMarketPool } from "@/lib/db/types";
@@ -72,9 +71,6 @@ export function countriesForCurrency(currency: CurrencyCode): CountryId[] {
     .map(([countryId]) => countryId);
 }
 
-/** Pools whose inputs are read at once. Each pool issues two reads. */
-const POOL_READ_CONCURRENCY = 6;
-
 /** Face of live sovereign paper in `currency` maturing within the next issuance interval. */
 export async function sovereignFaceMaturingSoon(
   db: Db,
@@ -95,6 +91,75 @@ export async function sovereignFaceMaturingSoon(
     )
     .toArray();
   return rows.reduce((sum, row) => sum + Math.max(0, row.totalIssued ?? 0), 0);
+}
+
+/** The same live-face sum for every currency in one pass, keyed by currency. */
+export async function sovereignFaceMaturingSoonByCurrency(
+  db: Db,
+  turn: number
+): Promise<Map<string, number>> {
+  const rows = await db
+    .collection<{ currencyCode?: string; totalIssued?: number }>("bonds")
+    .aggregate<{ _id: string | null; face: number }>([
+      {
+        $match: {
+          issuerType: "sovereign",
+          matured: false,
+          defaulted: false,
+          maturityTurn: { $gte: turn, $lt: turn + SOVEREIGN_ISSUANCE_INTERVAL_TURNS },
+        },
+      },
+      {
+        $group: {
+          _id: "$currencyCode",
+          face: {
+            $sum: {
+              $cond: [
+                { $gt: [{ $ifNull: ["$totalIssued", 0] }, 0] },
+                { $ifNull: ["$totalIssued", 0] },
+                0,
+              ],
+            },
+          },
+        },
+      },
+    ])
+    .toArray();
+  const faces = new Map<string, number>();
+  for (const row of rows) if (row._id) faces.set(row._id, row.face);
+  return faces;
+}
+
+/**
+ * The latest snapshot for every requested currency in one read instead of one
+ * sorted probe per pool.
+ */
+export async function latestMoneySupplyByCurrency(
+  db: Db,
+  currencies: readonly CurrencyCode[]
+): Promise<Map<string, { m2?: number; turn: number; accountingVersion?: number }>> {
+  if (currencies.length === 0) return new Map();
+  const rows = await db
+    .collection<{
+      currencyCode: string;
+      m2?: number;
+      turn: number;
+      accountingVersion?: number;
+    }>("moneySupplySnapshots")
+    .aggregate<{ _id: string; m2?: number; turn: number; accountingVersion?: number }>([
+      { $match: { currencyCode: { $in: [...new Set(currencies)] } } },
+      { $sort: { currencyCode: 1, turn: -1 } },
+      {
+        $group: {
+          _id: "$currencyCode",
+          m2: { $first: "$m2" },
+          turn: { $first: "$turn" },
+          accountingVersion: { $first: "$accountingVersion" },
+        },
+      },
+    ])
+    .toArray();
+  return new Map(rows.map((row) => [row._id, row]));
 }
 
 export async function processBondMarketPoolTurn(
@@ -118,43 +183,26 @@ export async function processBondMarketPoolTurn(
     ledgerContext === undefined ? await loadBondPoolLedgerContext(db, turn) : ledgerContext;
 
   // Every read the pass needs, for every pool, up front: none of them touch the
-  // bond pools the loop below writes, so gathering them concurrently gives the
-  // same inputs the old pool-by-pool, country-by-country chain did while the
-  // writes keep their order. The sovereign snapshots for every issuer country
-  // come from one batched load (a read per collection, not about nine reads per
-  // country) and assemble to the same values the single-country loader gives.
+  // bond pools the loop below writes. The per-currency money-supply probe, the
+  // maturing-face sum and the sovereign snapshots are each one batched read for
+  // the whole pass instead of a query per pool, and assemble to the same values
+  // the single-pool loaders give.
   const countriesByPool = pools.map((pool) => countriesForCurrency(pool._id));
-  const [reads, snapshotByCountry] = await Promise.all([
-    boundedParallelMap(pools, POOL_READ_CONCURRENCY, async (pool) => {
-      const currency = pool._id;
-      const [latest, rolloverLocal] = await Promise.all([
-        db
-          .collection<{
-            currencyCode: string;
-            m2?: number;
-            turn: number;
-            accountingVersion?: number;
-          }>("moneySupplySnapshots")
-          .find(
-            { currencyCode: currency },
-            { projection: { m2: 1, turn: 1, accountingVersion: 1 }, sort: { turn: -1 }, limit: 1 }
-          )
-          .toArray(),
-        // Working balance: the pool re-buys every quarter's rollover before the
-        // maturing series pays it back, so it must hold one quarter of maturing
-        // sovereign face on top of its secondary-liquidity share of M2.
-        sovereignFaceMaturingSoon(db, currency, turn),
-      ]);
-      return { latest, rolloverLocal };
-    }),
+  const [latestByCurrency, rolloverByCurrency, snapshotByCountry] = await Promise.all([
+    latestMoneySupplyByCurrency(
+      db,
+      pools.map((pool) => pool._id)
+    ),
+    sovereignFaceMaturingSoonByCurrency(db, turn),
     loadCountrySovereignSnapshots(db, countriesByPool.flat(), turn),
   ]);
 
   return withBondPoolLedgerBatch(db, context, async (batch) => {
     for (const [index, pool] of pools.entries()) {
       const currency = pool._id;
-      const { latest, rolloverLocal } = reads[index]!;
-      const m2 = latest[0]?.m2;
+      const latest = latestByCurrency.get(currency);
+      const rolloverLocal = rolloverByCurrency.get(currency) ?? 0;
+      const m2 = latest?.m2;
       const calibration = calibratedPoolTarget({
         previousLiquidityTarget: poolLiquidityAllocation({
           calibratedTarget: pool.liquidityTargetLocal,
@@ -165,7 +213,7 @@ export async function processBondMarketPoolTurn(
         previousM2: pool.m2Local,
         previousVersion: pool.poolAccountingVersion,
         latestM2: m2,
-        latestVersion: latest[0]?.accountingVersion,
+        latestVersion: latest?.accountingVersion,
         share: BOND_POOL_M2_SHARE,
       });
       const liquidityTarget = calibration.liquidityTargetLocal;
