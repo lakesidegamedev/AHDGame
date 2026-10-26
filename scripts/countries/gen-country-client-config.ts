@@ -66,6 +66,7 @@ const CLIENT_FIELDS: { readonly [key: string]: Projection } = {
   currencyCode: true,
   centralGovernmentLabel: true,
   exchangeName: true,
+  exchangeKind: true,
   financeMinisterCabinetId: true,
   demographicProfileId: true,
   regionalBillAssentTitle: true,
@@ -355,6 +356,8 @@ export interface CountryClientConfig {
   currencyCode: CurrencyCode;
   centralGovernmentLabel: string;
   exchangeName?: string;
+  /** "market" = tradable bourse; "stateRegister" = command-economy enterprise register. */
+  exchangeKind?: "market" | "stateRegister";
   financeMinisterCabinetId?: string;
   demographicProfileId: string;
   regionalBillAssentTitle?: string;

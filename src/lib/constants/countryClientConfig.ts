@@ -92,6 +92,8 @@ export interface CountryClientConfig {
   currencyCode: CurrencyCode;
   centralGovernmentLabel: string;
   exchangeName?: string;
+  /** "market" = tradable bourse; "stateRegister" = command-economy enterprise register. */
+  exchangeKind?: "market" | "stateRegister";
   financeMinisterCabinetId?: string;
   demographicProfileId: string;
   regionalBillAssentTitle?: string;
@@ -1373,6 +1375,7 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     currencyCode: "HUF",
     centralGovernmentLabel: "Central Plan",
     exchangeName: "OT",
+    exchangeKind: "stateRegister",
     financeMinisterCabinetId: "minister_of_finance",
     demographicProfileId: "hu_archetypes",
     rulingPartyId: 1,
@@ -1474,6 +1477,7 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     currencyCode: "PLZ",
     centralGovernmentLabel: "Central Plan",
     exchangeName: "PKPG",
+    exchangeKind: "stateRegister",
     financeMinisterCabinetId: "minister_of_finance",
     demographicProfileId: "pl_archetypes",
     rulingPartyId: 1,
@@ -1575,6 +1579,7 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     currencyCode: "ROL",
     centralGovernmentLabel: "Central Plan",
     exchangeName: "CSP",
+    exchangeKind: "stateRegister",
     financeMinisterCabinetId: "minister_of_finance",
     demographicProfileId: "ro_archetypes",
     rulingPartyId: 1,
@@ -1677,6 +1682,7 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     currencyCode: "YUD",
     centralGovernmentLabel: "Federal Plan",
     exchangeName: "SZP",
+    exchangeKind: "stateRegister",
     financeMinisterCabinetId: "minister_of_finance",
     demographicProfileId: "yu_archetypes",
     rulingPartyId: 1,
@@ -1772,6 +1778,7 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     currencyCode: "BGL",
     centralGovernmentLabel: "Central Plan",
     exchangeName: "DKP",
+    exchangeKind: "stateRegister",
     financeMinisterCabinetId: "minister_of_finance",
     demographicProfileId: "bg_archetypes",
     rulingPartyId: 1,
@@ -1873,6 +1880,7 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     currencyCode: "SUR",
     centralGovernmentLabel: "Central Plan",
     exchangeName: "GOSPLAN BSSR",
+    exchangeKind: "stateRegister",
     financeMinisterCabinetId: "minister_of_finance",
     demographicProfileId: "by_archetypes",
     rulingPartyId: 1,
@@ -1975,6 +1983,7 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     currencyCode: "CSK",
     centralGovernmentLabel: "Central Plan",
     exchangeName: "SPK",
+    exchangeKind: "stateRegister",
     financeMinisterCabinetId: "minister_of_finance",
     demographicProfileId: "cs_archetypes",
     rulingPartyId: 1,
@@ -2077,6 +2086,7 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     currencyCode: "SUR",
     centralGovernmentLabel: "Central Plan",
     exchangeName: "GOSPLAN URSR",
+    exchangeKind: "stateRegister",
     financeMinisterCabinetId: "minister_of_finance",
     demographicProfileId: "ua_archetypes",
     rulingPartyId: 1,
@@ -2179,6 +2189,7 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     currencyCode: "SUR",
     centralGovernmentLabel: "Central Plan",
     exchangeName: "GOSPLAN SSR",
+    exchangeKind: "stateRegister",
     financeMinisterCabinetId: "minister_of_finance",
     demographicProfileId: "bal_archetypes",
     majorPartyIds: ["cpsu_baltic"],
@@ -2281,6 +2292,7 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     currencyCode: "SUR",
     centralGovernmentLabel: "Central Plan",
     exchangeName: "GOSPLAN",
+    exchangeKind: "stateRegister",
     financeMinisterCabinetId: "minister_of_finance",
     demographicProfileId: "su_archetypes",
     rulingPartyId: 1,
@@ -3240,6 +3252,7 @@ export const COUNTRY_CLIENT_CONFIGS: Record<CountryId, CountryClientConfig> = {
     currencyCode: "DDM",
     centralGovernmentLabel: "Central Plan",
     exchangeName: "VVB",
+    exchangeKind: "stateRegister",
     financeMinisterCabinetId: "minister_of_finance",
     demographicProfileId: "dd_archetypes",
     rulingPartyId: 1,
@@ -3398,6 +3411,7 @@ const COUNTRY_CLIENT_ERA_CONFIG_OVERRIDES: Record<
         "The Prime Minister governs with the confidence of the 199-seat National Assembly, elected by a mixed constituency and list vote.",
       centralGovernmentLabel: "National Government",
       exchangeName: "Budapest Stock Exchange",
+      exchangeKind: "market",
       rulingPartyId: undefined,
       majorPartyIds: ["tisza", "fidesz-kdnp", "mi hazank"],
       legislature: {
@@ -3465,6 +3479,7 @@ const COUNTRY_CLIENT_ERA_CONFIG_OVERRIDES: Record<
       currencyCode: "RON",
       centralGovernmentLabel: "National Government",
       exchangeName: "Bucharest Stock Exchange",
+      exchangeKind: "market",
       rulingPartyId: undefined,
       majorPartyIds: ["psd", "aur", "pnl", "usr"],
       legislature: {
@@ -3697,6 +3712,7 @@ const COUNTRY_CLIENT_ERA_CONFIG_OVERRIDES: Record<
         "The President governs with a Prime Minister accountable to the 450-seat State Duma, elected by a mixed constituency and list vote, alongside the 178-member delegated Federation Council.",
       centralGovernmentLabel: "Federal Government",
       exchangeName: "Moscow Exchange",
+      exchangeKind: "market",
       rulingPartyId: undefined,
       majorPartyIds: ["er", "kprf", "ldpr", "srzp", "np"],
       legislature: {
@@ -3895,6 +3911,7 @@ const COUNTRY_CLIENT_ERA_CONFIG_OVERRIDES: Record<
       governmentType: "parliamentaryRepublic",
       governmentTypeLabel: "Parliamentary Republic",
       exchangeName: "Budapest Stock Exchange",
+      exchangeKind: "market",
       rulingPartyId: undefined,
       majorPartyIds: ["mdf", "szdsz", "fkgp", "mszp", "fidesz", "kdnp"],
       legislature: {

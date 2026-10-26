@@ -8,13 +8,11 @@ import type { CommodityData } from "@/app/country/[code]/stockmarket/types";
 import { MARKET_TABS, parseMarketTab, type MarketTab } from "@/lib/market/hubTabs";
 import dynamic from "next/dynamic";
 import { MarketOverview } from "./MarketOverview";
-import { sectorsUrl, type SectorsForSaleResponse } from "./MarketPanels";
-import { SUPPLY_PAGE_SIZE, type SupplyOffersResponse } from "./SupplyDealsPanel";
-import { DEFAULT_OFFER_FILTERS, offersQuery } from "./supplyOfferUi";
+import { sectorsUrl, type SectorsForSaleResponse } from "./marketEndpoints";
+import { DEFAULT_OFFER_FILTERS, offersQuery, SUPPLY_PAGE_SIZE } from "./supplyOfferUi";
+import type { SupplyOffersResponse } from "./supplyOfferUi";
 import { StockMarketChart } from "@/app/country/[code]/stockmarket/components/MarketOverview";
 import { useMarketJson } from "./useMarketJson";
-
-import { MarketCorporationAction } from "./MarketCorporationAction";
 import { useEnabledCountries, useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
 import { buildRuntimeExchangeMeta } from "@/app/country/[code]/stockmarket/stockMarketRouting";
 import {
@@ -66,6 +64,19 @@ const SubsidiaryGroupsPanel = dynamic(
 );
 
 const CHART_KEY = "market.chartOpen";
+
+// Header CTA: a link or a button that opens the founding modal. Its module
+// reaches the founding-cost rules and every country's economy constants (about
+// 250 KB of source) for one button, so it loads after the hub paints. The
+// placeholder holds the button's height so the heading row does not move.
+const MarketCorporationAction = dynamic(
+  () => import("./MarketCorporationAction").then((m) => m.MarketCorporationAction),
+  {
+    loading: () => (
+      <div className="h-9 w-36 animate-pulse rounded-lg bg-muted" aria-hidden="true" />
+    ),
+  }
+);
 
 /** Chart visibility, remembered per browser; expanded until the player hides it. */
 function useChartOpen(): [boolean, (open: boolean) => void] {
