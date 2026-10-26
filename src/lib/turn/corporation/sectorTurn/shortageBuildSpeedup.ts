@@ -2,10 +2,10 @@
  * Faster builds for plants whose output is in deep shortage.
  *
  * Construction is a pure function of an order's `startTurn`/`onlineTurn`
- * (see corporations/buildDelivery.ts). While `gameConfig.shortageBuildSpeedupEnabled`
- * is on, each outstanding order in a sector whose own output clears into a
- * market more than SHORTAGE_BUILD_UNMET_THRESHOLD unmet has its REMAINING
- * build time multiplied by SHORTAGE_BUILD_TIME_FACTOR, once per order. The
+ * (see corporations/buildDelivery.ts). Each outstanding order in a sector
+ * whose own output clears into a market more than SHORTAGE_BUILD_UNMET_THRESHOLD
+ * unmet has its REMAINING build time multiplied by SHORTAGE_BUILD_TIME_FACTOR,
+ * once per order. The
  * window is rewritten so the share already delivered at the current turn is
  * unchanged: no capacity or construction-in-progress jumps, the rest of the
  * order just arrives sooner. Covers orders placed before the switch and new
@@ -69,7 +69,6 @@ export function acceleratedBuildWindow(
  * immutable identity so a concurrently placed order is never touched.
  */
 export function shortageBuildSpeedupOps(args: {
-  enabled: boolean;
   sectorId: unknown;
   outstanding: readonly SectorBuildOrder[];
   currentTurn: number;
@@ -84,9 +83,9 @@ export function shortageBuildSpeedupOps(args: {
     arrayFilters: Record<string, unknown>[];
   };
 }> {
-  const { enabled, sectorId, outstanding, currentTurn, unmetShare, now } = args;
+  const { sectorId, outstanding, currentTurn, unmetShare, now } = args;
   const factor = args.factor ?? SHORTAGE_BUILD_TIME_FACTOR;
-  if (!enabled || !(unmetShare > SHORTAGE_BUILD_UNMET_THRESHOLD)) return [];
+  if (!(unmetShare > SHORTAGE_BUILD_UNMET_THRESHOLD)) return [];
   const ops = [];
   for (const order of outstanding) {
     const next = acceleratedBuildWindow(order, currentTurn, factor);
@@ -143,7 +142,6 @@ export function fundedShortageBuildOps(args: {
     const outstanding = (s.buildQueue ?? []).filter((o) => o.onlineTurn > args.currentTurn);
     if (outstanding.length === 0) return [];
     return shortageBuildSpeedupOps({
-      enabled: true,
       sectorId: s._id,
       outstanding,
       currentTurn: args.currentTurn,

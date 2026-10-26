@@ -13,11 +13,9 @@ vi.mock("@/lib/currency/featureFlag", () => ({ isForexEnabled: vi.fn().mockResol
 describe("founding underwriting bank choices", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("returns no bank rows while disabled", async () => {
+  it("returns no bank rows while private banking is off", async () => {
     const db = createInMemoryDb();
-    db.seed("gameConfig", [
-      { _id: "default", privateBankingEnabled: true, bankUnderwritingEnabled: false },
-    ]);
+    db.seed("gameConfig", [{ _id: "default", privateBankingEnabled: false }]);
     vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
     const collections = vi.spyOn(db, "collection");
     const response = await GET(
@@ -29,9 +27,7 @@ describe("founding underwriting bank choices", () => {
 
   it("lists only currently eligible banks in the founding currency", async () => {
     const db = createInMemoryDb();
-    db.seed("gameConfig", [
-      { _id: "default", privateBankingEnabled: true, bankUnderwritingEnabled: true },
-    ]);
+    db.seed("gameConfig", [{ _id: "default", privateBankingEnabled: true }]);
     db.seed("gameState", [{ _id: "current", preset: "default" }]);
     db.seed("corporations", [
       {

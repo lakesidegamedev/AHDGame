@@ -67,9 +67,7 @@ function fixture() {
   } as Corporation;
   memory.seed("corporations", [sponsor as unknown as Record<string, unknown>]);
   memory.seed("exchangeRates", [{ _id: new ObjectId(), currencyCode: "USD", rate: 1.7 }]);
-  memory.seed("gameConfig", [
-    { _id: "default", playerFundSponsorshipEnabled: true, indexFundsMode: "full" },
-  ]);
+  memory.seed("gameConfig", [{ _id: "default", indexFundsMode: "full" }]);
   memory.seed("corporateSectors", [
     { _id: new ObjectId(), corporationId: sponsor._id, sectorType: "financial" },
   ]);

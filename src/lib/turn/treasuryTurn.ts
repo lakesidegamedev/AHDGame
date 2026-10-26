@@ -124,7 +124,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
       {
         projection: {
           ledgerShadow: 1,
-          bankTreasuryEnabled: 1,
+          privateBankingEnabled: 1,
           treasuryCashLedgerEnabled: 1,
         },
       }
@@ -137,12 +137,12 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
   const rateByCurrency = new Map(rates.map((r) => [r.currencyCode, r.rate]));
   const forexEnabled = await isForexEnabled();
   const ledgerShadow = config?.ledgerShadow === true;
-  const bankTreasuryEnabled = config?.bankTreasuryEnabled === true;
+  const bankTreasury = config?.privateBankingEnabled === true;
   const treasuryCashLedgerEnabled = config?.treasuryCashLedgerEnabled === true;
   // Read once for every flag posture: the coupon book prices debt service on
   // the stock (issue #2089) even when bank/treasury cash ledgers are off.
   // Holder arrays are only needed by the funded coupon paths.
-  const holderPathsEnabled = bankTreasuryEnabled || treasuryCashLedgerEnabled;
+  const holderPathsEnabled = bankTreasury || treasuryCashLedgerEnabled;
   const sovereignBonds = await db
     .collection<Bond>("bonds")
     .find(
@@ -403,7 +403,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
       );
       const currencyCode = resolveCountryCurrencyCode(b) ?? "USD";
       const valuation = valuationFor(b);
-      const bankCouponPlan = bankTreasuryEnabled
+      const bankCouponPlan = bankTreasury
         ? bankCouponPlanForCountry(sovereignBonds, String(b.countryId ?? b._id), currencyCode)
         : [];
       const bankCouponAmount = bankCouponPlan.reduce((sum, plan) => sum + plan.amountLocal, 0);
@@ -422,7 +422,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
       const receipt: TreasuryAccrualReceipt = {
         ...accrualReceipt,
         ...(treasuryCashLedgerEnabled ? { treasuryCashLedgerEnabled: true } : {}),
-        ...(bankTreasuryEnabled
+        ...(bankTreasury
           ? {
               bankCouponPlan: bankCouponPlan.map(
                 ({ bankId, charteredTurn, amountLocal, bondIds }) => ({

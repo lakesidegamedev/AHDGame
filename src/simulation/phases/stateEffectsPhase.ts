@@ -521,8 +521,8 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
       processCommandEconomyTurn(db, newTurn, currentYear)
     );
 
-    // Bretton Woods exit tracker (gameConfig `brettonWoodsExitEnabled`, issue
-    // #7). Self-gates: flag off is a single config read and zero writes.
+    // Bretton Woods exit tracker (issue #7). Self-gates on the era and the
+    // gold-cover model, so a world that never reaches 1971 writes nothing.
     // Runs after inflationRecalc (the gold-cover drain reads this turn's
     // settled US inflation gap) and before forexTurn (which applies the
     // persisted regime's band and drift the same turn). Forex reads the
@@ -738,8 +738,7 @@ export const stateEffectsAndNationalAggregationPhase: TurnPhaseAdapter = {
             db,
             newTurn,
             longHorizonCtx ?? undefined,
-            context.config?.privateBankingEnabled === true &&
-              context.config?.bankFailurePoliticsEnabled === true,
+            context.config?.privateBankingEnabled === true,
             context.config?.marketAdjustmentStage ?? 0
           )
         ),

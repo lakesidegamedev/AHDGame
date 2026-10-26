@@ -13,9 +13,9 @@ import { ObjectId } from "mongodb";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 
-function world(bankTreasuryEnabled = false) {
+function world(privateBankingEnabled = false) {
   const db = createInMemoryDb();
-  db.seed("gameConfig", [{ _id: "default", ledgerShadow: true, bankTreasuryEnabled }]);
+  db.seed("gameConfig", [{ _id: "default", ledgerShadow: true, privateBankingEnabled }]);
   db.seed("gameState", [{ _id: "current", currentTurn: 10 }]);
   db.seed("exchangeRates", [{ _id: "USD", currencyCode: "USD", rate: 1 }]);
   db.seed("federalBudget", [
