@@ -338,11 +338,19 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
 
   const remainingAnchor = Math.max(0, fund.cashAnchor - distributedAnchor);
 
+  // A sponsor corporation can be dissolved while its fund is still winding
+  // down. Its residual seed cash then has no recipient. That is not a fatal
+  // error: throwing left the fund in winding_down forever, writing a warning
+  // every turn and never finishing. The residual is left on the delisted fund
+  // and recorded as unclaimed, so nothing is paid, burned or handed to someone
+  // who never owned it.
+  let unclaimedAnchor = 0;
+
   if (fund.sponsorCorporationId && remainingAnchor > 0) {
     const sponsor = await db
       .collection<Corporation>("corporations")
       .findOne({ _id: fund.sponsorCorporationId });
-    if (!sponsor) throw new Error("Fund sponsor payout failed");
+    if (!sponsor) unclaimedAnchor = remainingAnchor;
     if (sponsor) {
       const fxRate = await getCorpFxRate(db, sponsor);
       if (!Number.isFinite(fxRate) || fxRate <= 0)
@@ -382,8 +390,11 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
     kind: "seed_capital_return",
     turn: currentTurn,
     ...(fund.sponsorCorporationId ? { corporationId: fund.sponsorCorporationId } : {}),
-    amountAnchor: remainingAnchor,
-    note: `Wind-up complete: ${holdersPaid} holder(s) paid, ₳${Math.round(remainingAnchor).toLocaleString()} returned to sponsor`,
+    amountAnchor: unclaimedAnchor > 0 ? 0 : remainingAnchor,
+    note:
+      unclaimedAnchor > 0
+        ? `Wind-up complete: ${holdersPaid} holder(s) paid; ₳${Math.round(unclaimedAnchor).toLocaleString()} unclaimed because the sponsor corporation no longer exists`
+        : `Wind-up complete: ${holdersPaid} holder(s) paid, ₳${Math.round(remainingAnchor).toLocaleString()} returned to sponsor`,
     createdAt: now,
   } as IndexFundTransaction);
 
@@ -392,7 +403,7 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
     {
       $set: {
         status: "delisted",
-        cashAnchor: 0,
+        cashAnchor: unclaimedAnchor,
         unitSupply: 0,
         reserveUnits: 0,
         quotedNav: finalNav,
@@ -415,7 +426,8 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
         finalNav,
         holdersPaid,
         distributedAnchor,
-        returnedToSponsorAnchor: remainingAnchor,
+        returnedToSponsorAnchor: remainingAnchor - unclaimedAnchor,
+        unclaimedAnchor,
         seedCapitalAnchor: fund.seedCapitalAnchor ?? 0,
       },
     });

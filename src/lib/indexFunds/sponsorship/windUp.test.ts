@@ -220,6 +220,24 @@ describe("completeWindUp", () => {
     expect(vi.mocked(creditCorpLiquidCapital)).toHaveBeenCalledWith(db, SPONSOR, 250_000);
   });
 
+  it("completes when the sponsor corporation no longer exists, keeping the unclaimed cash", async () => {
+    // The sponsor was dissolved while the fund was winding down. There is
+    // nothing to pay, but the fund must still finish instead of warning every
+    // turn; the residual stays on the delisted fund and is recorded.
+    const fund = makeFund({ status: "winding_down", cashAnchor: 938_916.74, unitSupply: 0 });
+    const { db, fundUpdate, txInsert } = makeDb({ positions: [], fund, sponsorExists: false });
+
+    await expect(completeWindUp(db, fund, 434)).resolves.toBe(0);
+
+    const set = fundUpdate.mock.calls[0][1].$set;
+    expect(set.status).toBe("delisted");
+    expect(set.cashAnchor).toBeCloseTo(938_916.74, 2);
+    expect(vi.mocked(creditCorpLiquidCapital)).not.toHaveBeenCalled();
+    const tx = txInsert.mock.calls[0][0];
+    expect(tx.amountAnchor).toBe(0);
+    expect(tx.note).toMatch(/unclaimed/);
+  });
+
   it("delists the fund and zeroes its units", async () => {
     const fund = makeFund({ status: "winding_down", cashAnchor: 0, unitSupply: 0 });
     const { db, fundUpdate, positionsUpdateMany } = makeDb({ positions: [], fund });
