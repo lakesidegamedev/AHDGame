@@ -368,7 +368,12 @@ export function holdingMarketSnapshotValues(
 ): ReturnType<typeof holdingMarketValues> {
   cost(stockValue);
   cost(shortTermStockValue);
-  if (shortTermStockValue > stockValue + 1e-7)
+  // The total and the term split can arrive from different conversion routes
+  // ((shares * price) / fx versus shares * (price / fx)). At portfolio
+  // magnitudes those routes differ by more than a fixed absolute tolerance
+  // absorbs, so scale the tolerance with the value; a genuine split above the
+  // total (double the holdings, say) is still rejected.
+  if (shortTermStockValue > stockValue + Math.max(1e-7, stockValue * 1e-9))
     throw new Error("Short-term value exceeds total holdings");
   const total = Math.round(stockValue * 100) / 100;
   const short = Math.min(total, Math.round(shortTermStockValue * 100) / 100);

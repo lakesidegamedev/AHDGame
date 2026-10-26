@@ -29,6 +29,19 @@ describe("holding market values", () => {
     });
     expect(() => holdingMarketSnapshotValues(1, 2)).toThrow();
   });
+  it("accepts a split that only exceeds the total by double rounding", () => {
+    // The snapshot total is (shares * price) / fx while the term split is
+    // shares * (price / fx). At portfolio magnitudes those routes differ by
+    // more than one double ULP, so an entirely short-term holding can look
+    // fractionally over its own total.
+    expect(holdingMarketSnapshotValues(126594936708.86075, 126594936708.86076)).toEqual({
+      stockValue: 126594936708.86,
+      shortTermStockValue: 126594936708.86,
+      longTermStockValue: 0,
+    });
+    // A genuine split above the total is still rejected.
+    expect(() => holdingMarketSnapshotValues(1000, 2000)).toThrow();
+  });
   it("moves value at exactly 48 turns and preserves the combined total", () => {
     const position = {
       shares: 10,

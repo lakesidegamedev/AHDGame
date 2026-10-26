@@ -508,6 +508,50 @@ describe("portfolioSnapshot", () => {
       const insertedDocs = mockInsertMany.mock.calls[0][0];
       expect(insertedDocs[0].totalValue).toBe(0);
     });
+
+    it("writes the snapshot when a large short-term holding rounds above its total", async () => {
+      const holder = new ObjectId();
+      // (shares * price) / fx and shares * (price / fx) differ by ~1.5e-5 at
+      // this size, so an entirely short-term holding used to trip the guard
+      // and lose the whole turn portfolio history.
+      mockCollection.mockReturnValueOnce(createMockChain([])); // characters
+      mockCollection.mockReturnValueOnce(createMockChain([])); // imperialCharacters
+      mockCollection.mockReturnValueOnce(
+        createMockChain([
+          {
+            _id: new ObjectId(),
+            sharePrice: 100.01,
+            liquidCurrencyCode: "USD",
+            countryId: "US",
+            shareholders: [
+              {
+                characterId: holder,
+                shares: 1_000_000_000,
+                holdingTerms: {
+                  longTermShares: 0,
+                  longTermCostBasisAnchor: 0,
+                  shortTermLots: [{ shares: 1_000_000_000, acquiredTurn: 100, costBasisAnchor: 0 }],
+                },
+              },
+            ],
+          },
+        ])
+      ); // corporations
+      mockCollection.mockReturnValueOnce(createMockChain([])); // bonds
+      // loadValuationFxRates reads the live exchange rate before the snapshot runs.
+      mockCollection.mockReturnValueOnce(createMockChain([{ currencyCode: "USD", rate: 0.79 }]));
+      mockCollection.mockReturnValueOnce(createMockChain([])); // gameState preset
+
+      await snapshotPortfolioValues(147, 100);
+
+      const rows = mockInsertMany.mock.calls[0][0];
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        stockValue: 126594936708.86,
+        shortTermStockValue: 126594936708.86,
+        longTermStockValue: 0,
+      });
+    });
   });
 
   describe("snapshotCorporationPortfolioValues", () => {
