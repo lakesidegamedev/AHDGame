@@ -180,7 +180,9 @@ function operatingLossBatchTransition(args: {
       subjectType: "corporation",
       subjectId: corporationIds[0],
       amount: paidTotal,
-      meta: { corporationIds, sourceCurrency },
+      // A comma-joined list: event meta holds scalars, and the next pass reads
+      // it back to fence the members of a claimed book.
+      meta: { corporationIds: corporationIds.join(","), sourceCurrency },
     },
   };
 }
@@ -1015,11 +1017,13 @@ async function settleCorporateOperatingCashBatched(
   const lossBatchedCorpIds = new Set<string>();
   for (const row of claimedLossBatches as unknown as {
     _id: string;
-    event?: { meta?: { corporationIds?: string[] } };
+    event?: { meta?: { corporationIds?: string | string[] } };
   }[]) {
     // The members are fenced like the net batch's, so a resumed wave is the
     // only receipt they ever get this turn.
-    for (const id of row.event?.meta?.corporationIds ?? []) {
+    const members = row.event?.meta?.corporationIds;
+    const ids = Array.isArray(members) ? members : (members ?? "").split(",").filter(Boolean);
+    for (const id of ids) {
       lossBatchedCorpIds.add(id);
       batchedCorpIds.add(id);
     }

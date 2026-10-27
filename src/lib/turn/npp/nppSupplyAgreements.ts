@@ -901,7 +901,9 @@ export async function syncAiSupplyListings(
   // refresh travel in one unordered batch instead of two writes.
   const ops: AnyBulkWriteOperation<SupplyListing>[] = [
     ...writes,
-    ...stale.map((id) => ({ deleteOne: { filter: { _id: id, aiListed: true } } })),
+    ...stale.map((id): AnyBulkWriteOperation<SupplyListing> => ({
+      deleteOne: { filter: { _id: id, aiListed: true } },
+    })),
   ];
   if (ops.length > 0) await collection.bulkWrite(ops, { ordered: false });
   return { upserted: writes.length, removed: stale.length };

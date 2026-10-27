@@ -87,7 +87,7 @@ function snapshot(
     dividendPaidPerTurn: 0,
     federalTaxPaid: 20,
     stateTaxPaid: 0,
-    taxPaidByCountry: input.federalTaxByCountryAnchor,
+    taxPaidByCountry: input.federalTaxByCountryAnchor ?? new Map(),
     taxPaidByState: new Map(),
     taxPaidByCountryDomestic: new Map(),
     taxPaidByCountryForeign: new Map(),
