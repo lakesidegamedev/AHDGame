@@ -10,7 +10,11 @@ import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 
 import type { CommodityType } from "@/lib/constants/commodities";
-import { commodityMixWeight, eraScaledBasePrices } from "@/lib/constants/commodities";
+import { eraScaledBasePrices } from "@/lib/constants/commodities";
+import {
+  commodityMixWeights,
+  mixWeightFor as mixWeightFrom,
+} from "@/lib/market/rules/commodityMixWeights";
 import { trendProductionPolicy, getRevenueMultiplier } from "@/lib/utils/productionPolicy";
 import {
   calculateDailyGrowthCost,
@@ -520,10 +524,9 @@ export function processSector(
     corp,
     sector,
     // Market recovery stage 2 lowers the flat margin trim (marketRecoveryStages.ts).
-    lookups: {
-      ...lookups,
-      marginLevelTrimPp: stagedMarginTrimPp(lookups.marginLevelTrimPp, market.marketRecoveryStage),
-    },
+    // Resolved here, once per sector, instead of copying the whole lookups object.
+    lookups,
+    marginLevelTrimPp: stagedMarginTrimPp(lookups.marginLevelTrimPp, market.marketRecoveryStage),
     strategySupply: strategyRates.supply,
     strategyDemand: strategyRates.demand,
     strategyIsTransitioning: strategyRates.isTransitioning,
@@ -562,6 +565,8 @@ export function processSector(
   const restarting =
     plantsEnabled && !mothballed && plantsCapacity > 0 && sector.producedUnits === 0;
   const restartRunShare = restarting ? RESTART_RUN_SHARE : 1;
+  // Per-sector output mix weights, built on first use by the throttle legs.
+  let throttleMixWeights: Map<CommodityType, number> | undefined;
   // A cold plant (no crew on site last turn) hires straight to its run; one
   // whose crew stayed through an outage keeps the gradual-layoff path.
   const coldRestart = restarting && (sector.workers ?? 0) <= 1;
@@ -681,8 +686,12 @@ export function processSector(
           ? 0
           : lookups.unmetForeignDemandByCountry?.get(sectorCountryId)?.get(commodity)
       ),
-    throttleLegMixWeight: (commodity) =>
-      commodityMixWeight(strategyRates.supply, basePrices, commodity),
+    throttleLegMixWeight: (commodity) => {
+      // One mix total for the whole sector, built only when a sold-out plant
+      // asks for a leg weight.
+      throttleMixWeights ??= commodityMixWeights(strategyRates.supply, basePrices);
+      return mixWeightFrom(throttleMixWeights, commodity);
+    },
   });
   if (capacityBindingEvent) {
     pendingCapacityBindingEvents.push(capacityBindingEvent);
@@ -1601,14 +1610,18 @@ export function processSector(
     countryId: sectorCountryId,
   };
   if ((market.internalSupplyTrades?.length || market.groupSupplyDiscountsEnabled) && physicalPnl) {
-    if (market.groupSupplyDiscountsEnabled)
+    if (market.groupSupplyDiscountsEnabled) {
+      // One mix table for every output leg instead of one full mix total per
+      // commodity.
+      const outputMixWeights = commodityMixWeights(strategyRates.supply ?? {}, basePrices);
+      const outputUnits = Math.max(0, mothballed ? 0 : producedUnits);
       result.groupSupplyOutputUnits = new Map(
         Object.keys(strategyRates.supply ?? {}).map((commodity) => [
           commodity,
-          Math.max(0, mothballed ? 0 : producedUnits) *
-            commodityMixWeight(strategyRates.supply ?? {}, basePrices, commodity as CommodityType),
+          outputUnits * mixWeightFrom(outputMixWeights, commodity as CommodityType),
         ])
       );
+    }
     result.internalSupplyInputUnits = new Map(
       [...inputUnitsByCommodity].map(([commodity, units]) => [
         commodity,

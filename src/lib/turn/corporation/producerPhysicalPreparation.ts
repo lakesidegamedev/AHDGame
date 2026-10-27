@@ -154,17 +154,44 @@ export type ProducerPhysicalEnv = Pick<
   >;
 };
 
-function scaledRates(
+/** Per-commodity rate scaling for one plant's recipe. */
+export function scaledCommodityRates(
   rates: Partial<Record<CommodityType, number>>,
   factors: Record<string, number>,
   multiplier = 1
 ) {
-  return Object.fromEntries(
-    Object.entries(rates).map(([commodity, rate]) => [
-      commodity,
-      rate! * (factors[commodity] ?? 1) * multiplier,
-    ])
-  );
+  // One pass, no entry array and no second object: this runs twice per plant.
+  const scaled: Partial<Record<CommodityType, number>> = {};
+  for (const [commodity, rate] of Object.entries(rates))
+    scaled[commodity as CommodityType] = rate! * (factors[commodity] ?? 1) * multiplier;
+  return scaled;
+}
+
+/** Membership test for the catalogue, so a plant's commodity lookup is O(1). */
+const COMMODITY_TYPE_SET: ReadonlySet<string> = new Set<string>(COMMODITY_TYPES);
+
+/** The catalogue entry for a plant's recipe key, or a loud failure. */
+export function producerCommodity(key: string): CommodityType {
+  if (!COMMODITY_TYPE_SET.has(key)) throw new Error("Unrecognized producer commodity");
+  return key as CommodityType;
+}
+
+/**
+ * The commodities a plant's plan touches: both recipe legs plus anything it
+ * still holds as sellable stock.
+ */
+export function producerRecipeCommodities(
+  recipe: {
+    supply: Partial<Record<CommodityType, number>>;
+    demand: Partial<Record<CommodityType, number>>;
+  },
+  sector: Pick<CorporateSector, "producerInventory">
+): Set<string> {
+  const commodities = new Set<string>(Object.keys(recipe.supply));
+  for (const commodity of Object.keys(recipe.demand)) commodities.add(commodity);
+  for (const stock of sector.producerInventory?.outputStock ?? [])
+    if (stock.units > 0) commodities.add(stock.commodity);
+  return commodities;
 }
 
 /**
@@ -238,7 +265,7 @@ export function prepareProducerPhysicalSector(input: {
     recipe.supply,
     lookups.stateResourceCapacityByState.get(sector.stateId)
   );
-  const supply = scaledRates(resourceSupply, tech.outputRateMult);
+  const supply = scaledCommodityRates(resourceSupply, tech.outputRateMult);
   const outputYield =
     (Object.entries(supply).reduce(
       (sum, [commodity, rate]) => sum + rate / COMMODITY_BASE_PRICES[commodity as CommodityType],
@@ -251,20 +278,16 @@ export function prepareProducerPhysicalSector(input: {
     sector.productionPolicy ?? 0
   );
   const policyOutput = getOutputMultiplier(policyLevel);
-  const demand = scaledRates(
+  const demand = scaledCommodityRates(
     recipe.demand,
     tech.inputRateMult,
     getInputMultiplier(policyLevel) / policyOutput
   );
   const prices = eraScaledBasePrices(lookups.eraUnitScale);
-  const commodities = new Set(Object.keys({ ...recipe.supply, ...recipe.demand }));
-  for (const stock of sector.producerInventory?.outputStock ?? []) {
-    if (stock.units > 0) commodities.add(stock.commodity);
-  }
+  const commodities = producerRecipeCommodities(recipe, sector);
   const markets = new Map(
     [...commodities].map((key) => {
-      const commodity = COMMODITY_TYPES.find((item) => item === key);
-      if (!commodity) throw new Error("Unrecognized producer commodity");
+      const commodity = producerCommodity(key);
       const ratio = isStateScopedCommodity(commodity)
         ? lookups.statePriceRatioByState?.get(sector.stateId)?.get(commodity)
         : lookups.reachablePriceRatioByCountry?.get(countryId)?.get(commodity);
@@ -310,7 +333,10 @@ export function prepareProducerPhysicalSector(input: {
     },
     markets,
     outputMultiplier: 0,
-    operatingRecipeRatio: retoolOperatingCapacityRatio({ ...sector, currentTurn }),
+    operatingRecipeRatio:
+      sector.retoolRescaleApplied === true && sector.transitionFromStrategyId
+        ? retoolOperatingCapacityRatio({ ...sector, currentTurn })
+        : 1,
     recessionCapacityFactor:
       (lookups.recessionCapacityFactorByCountry?.get(countryId) ?? 1) *
       (1 -

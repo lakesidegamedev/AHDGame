@@ -51,6 +51,38 @@ interface Suggestion {
   starterBuildCostAnchor?: number | null;
   /** Plants tier: entry fee + starter build, the all-in price (₳). */
   foundingTotalAnchor?: number | null;
+  /**
+   * Plants tier: the founding command's verdict for this market right now,
+   * computed server-side from the same rules the command enforces.
+   */
+  entry?: { canEnter: boolean; reason: EntryBlockReason | null; message: string | null } | null;
+  /** Plants tier: room to build here, capacity units per day. */
+  roomToBuildUnits?: number | null;
+  /** Plants tier: "country" when that room is one figure shared by the country. */
+  roomScope?: "state" | "country" | null;
+}
+
+type EntryBlockReason =
+  | "actions_paused"
+  | "player_control_required"
+  | "command_economy"
+  | "already_operating"
+  | "retail_paused"
+  | "insufficient_capital";
+
+/** Short row label for why a market cannot be entered now. */
+const ENTRY_BLOCK_LABEL: Record<EntryBlockReason, string> = {
+  actions_paused: "Actions paused",
+  player_control_required: "Resume control first",
+  command_economy: "State-run market",
+  already_operating: "You operate here",
+  retail_paused: "Retail paused",
+  insufficient_capital: "Not enough cash",
+};
+
+/** Whether a plants row can be founded now. Older payloads fall back to cash only. */
+function canEnterNow(s: Suggestion): boolean {
+  return s.entry ? s.entry.canEnter : s.canAfford;
 }
 
 /** Plants-tier founding terms that do not vary by state. */
@@ -274,11 +306,18 @@ export default function ExpandMarketModal({
   }
 
   const activeSuggestion = suggestions[activeIndex] ?? suggestions[0] ?? null;
-  const activeDemandUnits = activeSuggestion
-    ? countrySharedDemand
-      ? countryDemandEstimates[activeSuggestion.countryId]
-      : activeSuggestion.headroomUnits
-    : null;
+  // Room to build: the same figure the state board shows for this market.
+  const roomFor = (s: Suggestion): number | null =>
+    s.roomToBuildUnits ??
+    (countrySharedDemand ? countryDemandEstimates[s.countryId] : s.headroomUnits) ??
+    null;
+  const activeDemandUnits = activeSuggestion ? roomFor(activeSuggestion) : null;
+  const activeCanEnter = activeSuggestion ? canEnterNow(activeSuggestion) : false;
+  const activeBlockMessage =
+    activeSuggestion && !activeCanEnter
+      ? (activeSuggestion.entry?.message ??
+        "You do not have enough capital for the entry fee and first plant.")
+      : null;
   const selectedFacility = facilityVocabulary(selectedType);
   const selectedFacilityAction =
     selectedFacility.buildVerb.charAt(0).toUpperCase() + selectedFacility.buildVerb.slice(1);
@@ -292,7 +331,7 @@ export default function ExpandMarketModal({
   const marketCurrencyTitle = `Forex-normalized market revenue. Local display mode shows ${activeMarketCurrency}, the target state's home currency; other display modes convert from the same underlying value.`;
 
   async function handleFoundFirstPlant() {
-    if (!activeSuggestion || !activeSuggestion.canAfford) return;
+    if (!activeSuggestion || !canEnterNow(activeSuggestion)) return;
     setFoundingBusy(true);
     setFoundingError("");
     try {
@@ -691,23 +730,45 @@ export default function ExpandMarketModal({
                     <div className="overflow-hidden rounded-lg border border-card-border">
                       <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-x-3 border-b border-card-border bg-card-elevated/40 px-3 py-2 text-sm font-semibold text-foreground">
                         <span>Market</span>
-                        <span className="text-right">
-                          {countrySharedDemand ? "Shared daily demand" : "Demand estimate"}
+                        <span
+                          className="text-right"
+                          title="Demand buyers are not getting, less plants already under construction. Matches the state market page. Legacy unowned revenue does not limit building."
+                        >
+                          Room to build
                         </span>
                         <span className="text-right">Entry</span>
                       </div>
                       <ul className="list-none divide-y divide-card-border/40">
                         {suggestions.map((s, i) => {
-                          const facilityCount = foundingQuote?.starterUnits
-                            ? Math.floor((s.headroomUnits ?? 0) / foundingQuote.starterUnits)
-                            : 0;
+                          const room = roomFor(s);
+                          const sharedRoom =
+                            (s.roomScope ?? null) === "country" || countrySharedDemand;
                           const showCountryEstimate =
-                            countrySharedDemand &&
+                            !sharedRoom ||
                             suggestions.findIndex((row) => row.countryId === s.countryId) === i;
                           const countryName = resolveCountryName(s.countryId as CountryId);
+                          const open = canEnterNow(s);
+                          // Group header whenever the open / not-open run changes,
+                          // so the list reads "Can enter now" then "Not available now".
+                          const groupStarts =
+                            suggestionMode === "unowned" &&
+                            (i === 0 || canEnterNow(suggestions[i - 1]) !== open);
+                          const blockLabel =
+                            s.entry?.reason != null
+                              ? ENTRY_BLOCK_LABEL[s.entry.reason]
+                              : open
+                                ? "Can enter now"
+                                : "Not enough cash";
 
                           return (
                             <li key={s.stateId}>
+                              {groupStarts && (
+                                <p
+                                  className={`border-b border-card-border/40 bg-card-elevated/20 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide ${open ? "text-success" : "text-muted"}`}
+                                >
+                                  {open ? "Can enter now" : "Not available now"}
+                                </p>
+                              )}
                               <button
                                 type="button"
                                 onClick={() => {
@@ -726,9 +787,9 @@ export default function ExpandMarketModal({
                                     >
                                       {s.stateName}
                                     </span>
-                                    {i === 0 && suggestionMode === "unowned" && (
+                                    {i === 0 && suggestionMode === "unowned" && open && (
                                       <span className="shrink-0 rounded bg-success/15 px-1 py-0.5 text-[9px] font-bold text-success">
-                                        {s.canAfford ? "Best fit" : "Most demand"}
+                                        Best fit
                                       </span>
                                     )}
                                   </span>
@@ -742,33 +803,27 @@ export default function ExpandMarketModal({
                                   </span>
                                 </span>
                                 <span className="text-right text-xs font-semibold tabular-nums text-foreground">
-                                  {countrySharedDemand
-                                    ? showCountryEstimate
-                                      ? formatUnits(countryDemandEstimates[s.countryId])
-                                      : ""
-                                    : facilityCount.toLocaleString("en-US")}
+                                  {showCountryEstimate ? formatUnits(room) : ""}
                                   <span className="block text-[9px] font-normal text-muted">
-                                    {countrySharedDemand
+                                    {sharedRoom
                                       ? showCountryEstimate
-                                        ? "shared demand, not guaranteed sales"
+                                        ? `${CAPACITY_UNIT_LABEL}, shared across ${countryName}`
                                         : "shared above"
-                                      : "facility equivalents"}
+                                      : CAPACITY_UNIT_LABEL}
                                   </span>
-                                  {!countrySharedDemand && facilityCount === 0 && (
+                                  {open && showCountryEstimate && (room ?? 0) <= 0 && (
                                     <span className="mt-0.5 block text-[9px] font-normal leading-snug text-warning">
                                       You can still build here
                                     </span>
                                   )}
                                 </span>
                                 <span
-                                  className={`text-right text-xs tabular-nums ${s.canAfford ? "text-foreground" : "text-error"}`}
+                                  className={`text-right text-xs tabular-nums ${open ? "text-foreground" : "text-error"}`}
                                 >
                                   {s.foundingTotalAnchor != null
                                     ? formatTreasuryAmount(s.foundingTotalAnchor)
                                     : "Not quoted"}
-                                  <span className="block text-[9px] font-normal">
-                                    {s.canAfford ? "Affordable" : "Not enough cash"}
-                                  </span>
+                                  <span className="block text-[9px] font-normal">{blockLabel}</span>
                                 </span>
                               </button>
                             </li>
@@ -786,16 +841,15 @@ export default function ExpandMarketModal({
                             {activeSuggestion.stateName}
                           </p>
                           <p className="text-[11px] text-muted">
-                            {!countrySharedDemand && (
-                              <>
-                                Estimated output-mix demand: {formatUnits(activeDemandUnits)}{" "}
-                                {CAPACITY_UNIT_LABEL}·{" "}
-                              </>
-                            )}
+                            Room to build: {formatUnits(activeDemandUnits)} {CAPACITY_UNIT_LABEL}
+                            {" · "}
                             {activeSuggestion.foundingTotalAnchor != null
                               ? formatTreasuryAmount(activeSuggestion.foundingTotalAnchor)
                               : "Price unavailable"}
                           </p>
+                          {activeBlockMessage && !activeSuggestion.ownedSectorId && (
+                            <p className="text-[11px] text-error">{activeBlockMessage}</p>
+                          )}
                         </div>
                         <button
                           type="button"
@@ -857,18 +911,16 @@ export default function ExpandMarketModal({
                           <div className="rounded-lg bg-background/60 px-3 py-2 text-center">
                             <p
                               className="text-body-sm font-medium text-muted"
-                              title="What buyers here want and are not getting, less plants already under construction. It does not limit what you can build."
+                              title="What buyers want and are not getting, less plants already under construction. The same figure the state market page shows. It does not limit what you can build."
                             >
-                              {countrySharedDemand
-                                ? "Shared daily demand estimate"
-                                : "Unmet demand"}
+                              Room to build
                             </p>
                             <p className="text-sm font-bold text-foreground tabular-nums">
                               {formatUnits(activeDemandUnits)}
                             </p>
                             <p className="text-[10px] text-muted">
-                              {countrySharedDemand
-                                ? "shared, not guaranteed sales"
+                              {activeSuggestion.roomScope === "country" || countrySharedDemand
+                                ? `${CAPACITY_UNIT_LABEL}, shared across the country`
                                 : CAPACITY_UNIT_LABEL}
                             </p>
                           </div>
@@ -891,6 +943,20 @@ export default function ExpandMarketModal({
                             </p>
                           </div>
                         </div>
+                      )}
+
+                      {/* The state market lists can still show a leftover legacy
+                          revenue pool here. Name it so the two screens read the
+                          same, and say it is not what entry is sized against. */}
+                      {plantsMode && activeSuggestion.unownedRevenue > 0 && (
+                        <p
+                          className="text-[11px] leading-snug text-muted"
+                          title={marketCurrencyTitle}
+                        >
+                          Unclaimed legacy revenue here:{" "}
+                          {formatMarketAmount(activeSuggestion.unownedRevenue)}/day. You enter by
+                          building, so room to build is the figure that matters.
+                        </p>
                       )}
 
                       {/* Stats row */}
@@ -1123,9 +1189,9 @@ export default function ExpandMarketModal({
                                 <p className="mt-1 text-muted">{t("buildRisk")}</p>
                               </div>
 
-                              {!activeSuggestion.canAfford && (
+                              {activeBlockMessage && (
                                 <p className="rounded-md border border-error/30 bg-error/10 px-2 py-1.5 text-[11px] text-error">
-                                  You do not have enough capital for this build.
+                                  {activeBlockMessage}
                                 </p>
                               )}
 
@@ -1146,9 +1212,9 @@ export default function ExpandMarketModal({
                                 <button
                                   type="button"
                                   onClick={() => void handleFoundFirstPlant()}
-                                  disabled={foundingBusy || !activeSuggestion.canAfford}
+                                  disabled={foundingBusy || !activeCanEnter}
                                   className={`flex-1 rounded-lg px-3 py-2 text-center text-xs font-semibold text-white transition-colors ${
-                                    activeSuggestion.canAfford
+                                    activeCanEnter
                                       ? "bg-primary hover:bg-primary/90"
                                       : "bg-primary/40"
                                   } disabled:cursor-not-allowed`}

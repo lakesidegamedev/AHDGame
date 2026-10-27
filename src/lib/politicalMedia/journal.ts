@@ -596,6 +596,25 @@ export async function settlePoliticalMediaOrder(
   const saved = order?.politicalMediaOrder;
   if (!order || order.status !== "applied" || !saved?.settlementPlan)
     throw new Error(`Political media order ${orderId} has no funded settlement plan.`);
+  return settleLoadedPoliticalMediaOrder(db, { ...saved, orderId }, turn);
+}
+
+/**
+ * Settle an order the turn already loaded for clearing, without re-reading its
+ * 4 KB record. Every money move keeps its own idempotency read; only the order
+ * header read is skipped, and a replay still returns early on `settled`.
+ */
+export async function settleLoadedPoliticalMediaOrder(
+  db: Db,
+  order: Pick<PoliticalMediaOrderForClearing, "orderId" | "status" | "identity" | "settlementPlan">,
+  turn: number
+): Promise<MoneyMoveResult[]> {
+  const { orderId } = order;
+  const key = politicalMediaOrderKey(orderId);
+  const orders = db.collection<PoliticalMediaMoveRecord>(MONEY_MOVE_COLLECTION);
+  const saved = order;
+  if (!saved.settlementPlan)
+    throw new Error(`Political media order ${orderId} has no funded settlement plan.`);
   if (saved.status === "settled") return [];
   const plan = saved.settlementPlan;
   const results: MoneyMoveResult[] = [];
@@ -793,8 +812,49 @@ export async function applyPoliticalMediaOrderEffect(db: Db, orderId: string): P
     kind: POLITICAL_MEDIA_ORDER_KIND,
     status: "applied",
   });
-  const order = record?.politicalMediaOrder;
-  if (!order || order.status !== "settled" || !order.settlementPlan) return false;
+  if (!record?.politicalMediaOrder) return false;
+  return applyPoliticalMediaOrderEffectToOrder(db, orderId, record.politicalMediaOrder);
+}
+
+/**
+ * Apply the effects of many orders with one read for the whole set.
+ *
+ * The per-order entry point re-read the full 97 KB money-move record for each
+ * order, and the turn then called it for every order it had loaded. One `$in`
+ * read of the affected orders replaces that, and each order's effect still runs
+ * through the same guarded target update, so a replay is unchanged.
+ */
+export async function applyPoliticalMediaOrderEffects(
+  db: Db,
+  orderIds: readonly string[]
+): Promise<number> {
+  if (orderIds.length === 0) return 0;
+  const orders = db.collection<PoliticalMediaMoveRecord>(MONEY_MOVE_COLLECTION);
+  const keys = orderIds.map(politicalMediaOrderKey);
+  const records = await orders
+    .find(
+      { _id: { $in: keys }, kind: POLITICAL_MEDIA_ORDER_KIND, status: "applied" },
+      { projection: { politicalMediaOrder: 1 } }
+    )
+    .toArray();
+  const byKey = new Map(records.map((record) => [record._id, record.politicalMediaOrder]));
+  let applied = 0;
+  for (const orderId of orderIds) {
+    const order = byKey.get(politicalMediaOrderKey(orderId));
+    if (!order) continue;
+    if (await applyPoliticalMediaOrderEffectToOrder(db, orderId, order)) applied += 1;
+  }
+  return applied;
+}
+
+async function applyPoliticalMediaOrderEffectToOrder(
+  db: Db,
+  orderId: string,
+  order: PoliticalMediaOrderRecord
+): Promise<boolean> {
+  const key = politicalMediaOrderKey(orderId);
+  const orders = db.collection<PoliticalMediaMoveRecord>(MONEY_MOVE_COLLECTION);
+  if (order.status !== "settled" || !order.settlementPlan) return false;
   if (order.effectApplied) return true;
 
   const rawEffect = order.identity.details.effect;

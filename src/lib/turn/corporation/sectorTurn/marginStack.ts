@@ -109,6 +109,12 @@ export interface MarginStackInput {
   wideCommodityBalances: CorporationLookups["globalCommodityBalances"];
   /** Raw political board for playable regions; also feeds labour headcount. */
   politicalBoard: Record<PoliticalMetricId, number> | undefined;
+  /**
+   * Flat margin charge (pp) for this turn. Resolved by the phase once from
+   * `lookups.marginLevelTrimPp` and the recovery stage, so the stack never has
+   * to copy the whole lookups object per sector.
+   */
+  marginLevelTrimPp: number;
 }
 
 export interface MarginStackResult {
@@ -189,6 +195,7 @@ export function accumulateMarginModifiers(input: MarginStackInput): MarginStackR
     strikeMarginModifier,
     wideCommodityBalances,
     politicalBoard,
+    marginLevelTrimPp,
   } = input;
   const operatingSectorType = getOperatingSectorType(
     sector.sectorType,
@@ -493,7 +500,7 @@ export function accumulateMarginModifiers(input: MarginStackInput): MarginStackR
     disasterMarginMod +
     regionalConditionMarginMod +
     strikeMarginMod -
-    (lookups.marginLevelTrimPp ?? 0);
+    marginLevelTrimPp;
   // Dynamic SOE efficiency (spec §11.3) replaces the old flat −15%. Driven
   // by state governance quality + the sector's price-control posture; private
   // corps get 0. Same shared function feeds the budget estimate + display.

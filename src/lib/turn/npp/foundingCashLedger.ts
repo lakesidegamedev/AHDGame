@@ -12,6 +12,7 @@ import type { BuildCapexTxInput } from "@/lib/corporations/capexTxLog";
 import type { UnownedSector } from "@/lib/db/types/unownedSector";
 import type { Corporation } from "@/lib/db/types";
 import { buildNppCorpUpdateOp } from "./nppCashWrite";
+import { mergeCorporationCashOps } from "@/lib/turn/corporation/mergeCorporationCashOps";
 import type { NppCorpDecision } from "./corpDecisionTypes";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { accountId, mintSinkAccount } from "@/lib/ledger/accounts";
@@ -190,7 +191,9 @@ export async function applyCorporationCashWrites(
   reinvestments: readonly NppReinvestmentCashWitness[] = []
 ) {
   try {
-    return await db.collection("corporations").bulkWrite(operations);
+    // Every op rewrites a 20 KB corporation document, so collapse the unguarded
+    // writes per document into one update before the bulk call.
+    return await db.collection("corporations").bulkWrite(mergeCorporationCashOps(operations));
   } finally {
     // Ordered failures may have landed earlier debits. Atomic stamps prove them.
     await flushNppFoundingCashWitnesses(db, pending);

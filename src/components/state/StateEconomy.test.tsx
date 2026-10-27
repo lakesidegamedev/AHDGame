@@ -174,13 +174,39 @@ describe("StateEconomy", () => {
       })
     );
     render(<StateEconomy stateId="TX" countryId="US" />);
-    await waitFor(() => expect(screen.getByText("Untapped market")).toBeTruthy());
+    await waitFor(() => expect(screen.getAllByText("Room to build").length).toBeGreaterThan(0));
     expect(screen.queryByText("Split strength")).toBeNull();
     expect(screen.queryByRole("button", { name: /^Split/ })).toBeNull();
     const buildHere = screen.getByRole("link", { name: /Build here/i });
     expect(buildHere.getAttribute("href")).toBe(
       "/corporation/corp-me?tab=sectors&expand=1&state=TX&sectorType=energy"
     );
+  });
+
+  it("labels the plants figure as room to build, not legacy unowned revenue", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          ...payload,
+          plantsMode: true,
+          userCorporationId: "corp-me",
+          sectors: payload.sectors.map((s) => ({
+            ...s,
+            unownedRevenue: 0,
+            splitCost: 0,
+            headroomUnits: 1_200,
+            headroomScope: "country",
+          })),
+        }),
+      })
+    );
+    render(<StateEconomy stateId="TX" countryId="US" />);
+    await waitFor(() => expect(screen.getAllByText("Room to build").length).toBe(2));
+    expect(screen.queryByText("Unowned revenue")).toBeNull();
+    expect(screen.queryByText("Worth")).toBeNull();
+    expect(screen.getByText(/Every state in the country shares this figure/)).toBeTruthy();
   });
 
   it("keeps a build path available when a plants market has no headroom", async () => {

@@ -31,6 +31,11 @@ import {
   useCorpMoney,
 } from "../dense/DenseKit";
 import { BulkWageControl } from "./BulkWageControl";
+import BulkBuildCapacityDialog, {
+  type BulkBuildRequestFn,
+  type BulkBuildResponse,
+} from "./BulkBuildCapacityDialog";
+import { apiErrorText } from "@/lib/errors/catalog";
 
 /** Result shape returned by the atomic bulk endpoint helper. */
 export interface BulkOperationsResult {
@@ -472,11 +477,14 @@ function BulkBar({
   labourEnabled,
   pricingEnabled,
   onBulkOperations,
+  onOpenBulkBuild,
   fmt,
   fmtSigned,
 }: {
   scopes: Scope[];
   plantsMode: boolean;
+  /** Opens the build-across-sectors dialog (plants tier only). */
+  onOpenBulkBuild?: () => void;
   labourEnabled: boolean;
   pricingEnabled: boolean;
   onBulkOperations: BulkOperationsFn;
@@ -696,6 +704,11 @@ function BulkBar({
             >
               Reactivate all
             </SmallButton>
+            {onOpenBulkBuild && (
+              <SmallButton tone="primary" disabled={busy} onClick={onOpenBulkBuild}>
+                Build capacity across sectors
+              </SmallButton>
+            )}
           </span>
         )}
 
@@ -779,6 +792,8 @@ interface CeoOperationsTableProps {
   onSetWage: (sectorId: string, wageLevel: number) => Promise<SectorLeverResult>;
   onBulkOperations: BulkOperationsFn;
   onSectorGrowth: SectorGrowthFn;
+  /** Refresh the page after a bulk build placed orders. */
+  onCapacityBuilt?: () => void;
 }
 
 /**
@@ -795,6 +810,7 @@ export default function CeoOperationsTable({
   onSetWage,
   onBulkOperations,
   onSectorGrowth,
+  onCapacityBuilt,
 }: CeoOperationsTableProps) {
   const plantsMode = corporation.plantsMode === true;
   const labourEnabled = corporation.labourEnabled === true;
@@ -802,6 +818,22 @@ export default function CeoOperationsTable({
   const countryName = useCountryDisplayName();
   const [sortKey, setSortKey] = useState<SortKey>("revenue");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [bulkBuildOpen, setBulkBuildOpen] = useState(false);
+
+  const requestBulkBuild: BulkBuildRequestFn = async (body) => {
+    try {
+      const res = await fetch(`/api/corporations/${corpId}/sectors/bulk-build`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+      if (!res.ok) return { ok: false, error: apiErrorText(data, "Could not price these builds") };
+      return { ok: true, data: data as unknown as BulkBuildResponse };
+    } catch {
+      return { ok: false, error: "Network error" };
+    }
+  };
 
   const pricingEnabled = sectors.some((s) => s.pricingPosture !== undefined);
   const wagesEnabled = labourEnabled && sectors.some((s) => s.wageLevel !== undefined);
@@ -889,9 +921,23 @@ export default function CeoOperationsTable({
             labourEnabled={wagesEnabled}
             pricingEnabled={pricingEnabled}
             onBulkOperations={onBulkOperations}
+            onOpenBulkBuild={plantsMode ? () => setBulkBuildOpen(true) : undefined}
             fmt={money.fmt}
             fmtSigned={money.fmtSigned}
           />
+          {plantsMode && (
+            <BulkBuildCapacityDialog
+              open={bulkBuildOpen}
+              onClose={() => setBulkBuildOpen(false)}
+              sectors={sectors}
+              homeCountry={homeCountry}
+              countryLabel={(c) => countryName(c as CountryId)}
+              fmt={money.fmt}
+              cashLocal={corporation.liquidCapital}
+              onRequest={requestBulkBuild}
+              onApplied={() => onCapacityBuilt?.()}
+            />
+          )}
           <TableScroll>
             <table className="w-full min-w-[860px] border-collapse">
               <thead>

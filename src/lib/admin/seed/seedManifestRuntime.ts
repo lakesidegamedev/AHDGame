@@ -177,7 +177,13 @@ export const RUNTIME: CollectionEntry[] = [
     name: "productAdvertisingPayables",
     category: "runtime",
     notes:
-      "Owed per-order advertising seller payables, inserted with each funded order and removed once a clearing pays them. Wiped with the world.",
+      "Owed per-order advertising seller payables (totals only), inserted with each funded order and removed once a clearing pays them. Wiped with the world.",
+  },
+  {
+    name: "productAdvertisingAllocations",
+    category: "runtime",
+    notes:
+      "One frozen per-seller advertising table per funded order, written with the order's move key and removed with its payable. Wiped with the world.",
   },
   {
     name: "productAdvertisingClearances",

@@ -29,6 +29,7 @@ export const ECONOMY_RESET_WIPE_COLLECTIONS = Object.freeze([
   "productVentures",
   "productAdvertisingClearing",
   "productAdvertisingPayables",
+  "productAdvertisingAllocations",
   "productAdvertisingClearances",
   "advertisingAgreements",
   "advertisingSettlements",
