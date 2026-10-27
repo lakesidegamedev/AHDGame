@@ -6,6 +6,7 @@ import type { Db } from "mongodb";
 import type { Character, PoliticalParty, ElectedOfficial, NPP, Bill } from "@/lib/db/types";
 import type { CountryId } from "@/lib/constants/countries";
 import { isSameCountry } from "@/lib/api/sameCountry";
+import { officialsCountryScope } from "@/lib/db/electedOfficialScope";
 import { NATIONAL_TERMINAL_STATUSES } from "@/lib/congress/billProposalLimits";
 import { buildActiveNationalBillFilter } from "../nationalBillScope";
 import { hasPartyNppSeats } from "../rules/partyNppProposal";
@@ -52,7 +53,7 @@ export async function resolveNationalPartyNppAccess(
     .collection<ElectedOfficial>("electedOfficials")
     .find(
       {
-        countryId,
+        ...officialsCountryScope(countryId),
         officeType: { $in: chambers.map((c) => c.officeType) },
         isNPP: true,
       },
