@@ -225,6 +225,7 @@ export default function PlantPanel({
               soldUnits={plants.soldUnits ?? 0}
               idleCauses={plants.idleCauses}
               sectorType={sectorType}
+              localMarketOutputs={plants.localMarketOutputs}
               dimmed={mothballed}
             />
             {primaryMediaSupply && (
