@@ -18,10 +18,15 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 describe("National party chair proposal action", () => {
-  function show(blocked = false) {
+  function show(blocked = false, unavailable = false) {
     render(
       <NextIntlClientProvider locale="en" messages={messages}>
-        <NationalPartyBillActionClient countryId="US" initialChamber="house" blocked={blocked} />
+        <NationalPartyBillActionClient
+          countryId="US"
+          initialChamber="house"
+          blocked={blocked}
+          unavailable={unavailable}
+        />
       </NextIntlClientProvider>
     );
   }
@@ -47,5 +52,16 @@ describe("National party chair proposal action", () => {
       ).disabled
     ).toBe(true);
     expect(mocks.composer).not.toHaveBeenCalled();
+  });
+  it("explains a missing seated NPP instead of hiding the chair action", () => {
+    show(false, true);
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Propose through party legislator",
+        }) as HTMLButtonElement
+      ).disabled
+    ).toBe(true);
+    expect(screen.getByText(/Your party needs an active NPP/)).toBeTruthy();
   });
 });

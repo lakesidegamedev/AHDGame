@@ -31,12 +31,13 @@ export async function NationalPartyBillAction({ countryId }: { countryId: Countr
       officeType: getOfficeTypeForChamber(countryId, c.key, state?.preset, config),
     }))
   );
-  if (!access.authorized || (!access.blocked && !access.sponsor)) return null;
+  if (!access.authorized) return null;
   return (
     <NationalPartyBillActionClient
       countryId={countryId}
       initialChamber={lower.key}
       blocked={access.blocked}
+      unavailable={!access.blocked && !access.sponsor}
     />
   );
 }
