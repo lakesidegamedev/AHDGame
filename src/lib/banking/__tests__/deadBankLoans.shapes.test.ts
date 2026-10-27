@@ -660,14 +660,14 @@ describe("a dead bank's book, every shape, as journaled moves", () => {
     // Another writer drains the pool between the prefetch and the claim, which
     // is exactly what the pooled debit's guard exists to catch.
     let drained = false;
-    moves.insertOne = (async (doc: Parameters<typeof insertOne>[0], options?: unknown) => {
+    moves.insertOne = (async (doc: Parameters<typeof insertOne>[0]) => {
       if (!drained) {
         drained = true;
         await world
           .collection("centralBanks")
           .updateOne({ _id: CB_US }, { $set: { externalBroadMoney: 0 } });
       }
-      return insertOne(doc, options as Parameters<typeof insertOne>[1]);
+      return insertOne(doc);
     }) as typeof moves.insertOne;
 
     const summary = await runBatched(world as unknown as Db);
