@@ -7,12 +7,15 @@
  * The sale is one primary placement through the same settlement journal as
  * scheduled issuance (pool cash debit, Treasury cash credit, principal and
  * coupon projections, ledger witnesses), plus a projection that records the
- * refunded face on the maturing claim in the same receipt. The key is per
+ * refunded face on the maturing claim in the same receipt. A bank claim's
+ * refunding also carries the escrow funding legs in that receipt, so the
+ * proceeds can never sit in Treasury cash where other outflows spend them. The key is per
  * claim, scope and turn: a replay in the same turn returns the receipt that
  * already landed, and a later turn may only refund what the claim's cap still
  * allows. See rules/sovereignMaturityRefunding.ts for the debt-ceiling rule.
  */
 import type { Db, ObjectId } from "mongodb";
+import type { TransitionLeg, TransitionProjection } from "@/lib/banking/rules/boundary";
 import type { Bond } from "@/lib/db/types";
 import { BOND_UNIT_FACE_VALUE } from "@/lib/db/types/bond";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -35,18 +38,34 @@ export interface SovereignMaturityRefundingInput {
   /** The maturing bond; its issuer identity is copied onto the refunding issue. */
   sourceBond: Pick<Bond, "_id" | "countryId" | "corporationId" | "issuerName">;
   claimId: string;
-  /** Face the claim retires. Caps every refunding ever made for it. */
-  retiringFaceLocal: number;
-  alreadyRefundedLocal: number;
   shortfallLocal: number;
   countryId: string;
   budgetId: string;
   currencyCode: CurrencyCode;
   couponRate: number;
   scope: "bank" | "holders";
+  /**
+   * Cash this scope of the claim owes in total, and what earlier refundings
+   * already raised for it. Bounds every refunding ever made for the scope, so
+   * proceeds that went astray can never be re-borrowed without limit.
+   */
+  scopeOwedLocal: number;
+  scopeRefundedLocal: number;
+  /**
+   * Legs and projections that carry the proceeds straight on to the claim in
+   * the same receipt (the bank claim escrow funding). When present the issue
+   * must cover the whole shortfall or nothing is sold, because the follow-on
+   * debit needs the full amount in Treasury cash.
+   */
+  followOn?: { legs: TransitionLeg[]; projections: TransitionProjection[] };
   turn: number;
   now: Date;
 }
+
+const SCOPE_COUNTER = {
+  bank: "sovereignMaturityClaim.refundedBankFaceLocal",
+  holders: "sovereignMaturityClaim.refundedHolderFaceLocal",
+} as const;
 
 export type SovereignMaturityRefundingResult =
   | { status: "issued" | "replayed"; key: string; bondId: ObjectId; faceLocal: number }
@@ -89,11 +108,13 @@ export async function refundSovereignMaturityShortfall(
   });
   const plan = planSovereignMaturityRefunding({
     shortfallLocal: input.shortfallLocal,
-    retiringFaceLocal: input.retiringFaceLocal,
-    alreadyRefundedLocal: input.alreadyRefundedLocal,
+    retiringFaceLocal: input.scopeOwedLocal,
+    alreadyRefundedLocal: input.scopeRefundedLocal,
     marketCapacityUnits: capacity.placedUnits,
   });
   if (plan.refusal) return { status: "refused", key, refusal: plan.refusal };
+  if (input.followOn && plan.faceLocal < input.shortfallLocal)
+    return { status: "refused", key, refusal: "no_market_capacity" };
 
   const { units, faceLocal } = plan;
   const annualCoupon = (faceLocal * input.couponRate) / 100;
@@ -152,13 +173,18 @@ export async function refundSovereignMaturityShortfall(
           collection: "bonds",
           filter: { _id: input.sourceBond._id, "sovereignMaturityClaim.id": input.claimId },
           update: {
-            $inc: { "sovereignMaturityClaim.refundedFaceLocal": faceLocal },
+            $inc: {
+              "sovereignMaturityClaim.refundedFaceLocal": faceLocal,
+              [SCOPE_COUNTER[input.scope]]: faceLocal,
+            },
             $set: { updatedAt: input.now },
           },
           note: "Record refunded face on the maturing claim",
         },
+        ...(input.followOn?.projections ?? []),
       ],
-      accounting
+      accounting,
+      input.followOn ? routeProceeds(input.followOn.legs, faceLocal, input.budgetId) : undefined
     );
   } catch {
     // The pool cash guard refused or the receipt is still settling: no new
@@ -166,4 +192,40 @@ export async function refundSovereignMaturityShortfall(
     return { status: "refused", key, refusal: "not_settled" };
   }
   return { status: "issued", key, bondId, faceLocal };
+}
+
+/**
+ * Net a follow-on escrow funding against the sale in one receipt. The escrows
+ * are credited in full; the sale's proceeds cover as much as they can and the
+ * Treasury's existing cash covers the rest. Proceeds above the escrows (unit
+ * rounding) stay in Treasury cash. The journal runs debits before credits, so
+ * the Treasury debit is sized to cash that already exists.
+ */
+function routeProceeds(
+  followOnLegs: readonly TransitionLeg[],
+  faceLocal: number,
+  budgetId: string
+): { routedLocal: number; legs: TransitionLeg[] } {
+  const credits = followOnLegs.filter((leg) => leg.kind === "credit");
+  const owed = credits.reduce((sum, leg) => sum + leg.amount, 0);
+  const routedLocal = Math.min(faceLocal, owed);
+  const fromTreasury = owed - routedLocal;
+  return {
+    routedLocal,
+    legs: [
+      ...(fromTreasury > 0
+        ? [
+            {
+              kind: "debit" as const,
+              amount: fromTreasury,
+              collection: "federalBudget",
+              filter: { _id: budgetId },
+              path: "treasuryCashLocal",
+              note: "Treasury cash share of a refinanced bank claim escrow",
+            },
+          ]
+        : []),
+      ...credits,
+    ],
+  };
 }
