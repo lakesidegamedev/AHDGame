@@ -25,7 +25,7 @@ import { type CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_DISPLAY_LABELS } from "@/lib/constants/countryDisplayLabels";
 import { concentrationStatus } from "@/lib/nationalization/concentrationStatus";
 import { getTreasuryIdentity } from "@/lib/constants/treasuryIdentity";
-import { budgetUsdEquivalent } from "@/lib/currency/budgetUsdEquivalent";
+import { budgetUsdEquivalentFromRate } from "@/lib/currency/budgetUsdEquivalentFromRate";
 import { currencySymbolSep } from "@/lib/currency/symbolSep";
 import { useWorldFlags } from "@/hooks/useWorldFlags";
 import { budgetApiUrl } from "@/lib/urls";
@@ -43,8 +43,7 @@ import {
 } from "./BudgetPanels";
 
 // Planned-economy metrics render only for command economies and sit below the
-// fold, so the panel (and its commodity and SOE tables) loads with its section,
-// the same way the economy outlook page already mounts it.
+// fold, so the panel and its commodity/SOE tables load with the section.
 const PlannedEconomyPanel = dynamic(
   () => import("@/components/economy/PlannedEconomyPanel").then((m) => m.PlannedEconomyPanel),
   { ssr: false }
@@ -52,7 +51,7 @@ const PlannedEconomyPanel = dynamic(
 
 export function NationalBudgetClient() {
   const { code } = useParams<{ code: string }>();
-  const { preset, loaded: worldFlagsLoaded } = useWorldFlags();
+  const { loaded: worldFlagsLoaded } = useWorldFlags();
   const countryParam = code?.toUpperCase() as CountryId | undefined;
   const countryId: CountryId =
     countryParam && countryParam in COUNTRY_DISPLAY_LABELS
@@ -434,7 +433,9 @@ export function NationalBudgetClient() {
               compare={compare}
               prev={prevFyPoint}
               toUsd={
-                worldFlagsLoaded ? (n) => budgetUsdEquivalent(n, countryId, preset) : undefined
+                worldFlagsLoaded
+                  ? (n) => budgetUsdEquivalentFromRate(n, data?.usdExchangeRate)
+                  : undefined
               }
             />
           }

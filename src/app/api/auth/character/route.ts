@@ -628,10 +628,13 @@ export async function POST(request: Request) {
 }
 
 // GET /api/auth/character — Returns the current user's character document.
+// `?include=homeState` adds the GDP and population the action cost quotes need,
+// so /actions can price its cards from its first character request instead of
+// following it with a state round trip.
 // Auth: requireBasicAuth
 // Errors: 401, 404
 // GET endpoint to fetch current user's character
-async function handleGET() {
+async function handleGET(request?: Request) {
   try {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
@@ -653,7 +656,28 @@ async function handleGET() {
       return errorResponse(404, "Character not found");
     }
 
-    return NextResponse.json(character);
+    const includeHomeState = request
+      ? new URL(request.url).searchParams.get("include")?.split(",").includes("homeState")
+      : false;
+    if (!includeHomeState || !character.homeState) {
+      return NextResponse.json(character);
+    }
+
+    // Only the economics the cost quotes read, projected out of the state doc.
+    const state = await db
+      .collection<State>("states")
+      .findOne(
+        { _id: character.homeState, countryId: character.countryId },
+        { projection: { gdp: 1, population: 1 } }
+      );
+
+    return NextResponse.json({
+      ...character,
+      homeStateEconomics:
+        state && typeof state.gdp === "number" && typeof state.population === "number"
+          ? { gdp: state.gdp, population: state.population }
+          : null,
+    });
   } catch (error) {
     return handleRouteError(error);
   }

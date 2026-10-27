@@ -76,10 +76,84 @@ function isTypeOnlyClause(clause) {
   return false;
 }
 
+/**
+ * Remove comments while leaving string and template contents intact.
+ *
+ * The raw scan matched imports inside comments too: a docblock saying
+ * `import x from "./y"` for illustration became a real edge, and a commented
+ * out import kept a module in the graph after it was deleted (goal 8 found
+ * those phantom edges). Each comment becomes a space so two tokens either side
+ * of it cannot fuse.
+ */
+function stripComments(source) {
+  let out = "";
+  let state = "code";
+  for (let i = 0; i < source.length; i++) {
+    const ch = source[i];
+    const next = source[i + 1];
+
+    if (state === "code") {
+      if (ch === "/" && next === "/") {
+        state = "line";
+        i++;
+        continue;
+      }
+      if (ch === "/" && next === "*") {
+        state = "block";
+        out += " ";
+        i++;
+        continue;
+      }
+      out += ch;
+      if (ch === "'") state = "single";
+      else if (ch === '"') state = "double";
+      else if (ch === "`") state = "template";
+      continue;
+    }
+
+    if (state === "line") {
+      if (ch === "\n") {
+        state = "code";
+        out += ch;
+      }
+      continue;
+    }
+
+    if (state === "block") {
+      if (ch === "*" && next === "/") {
+        state = "code";
+        i++;
+      } else if (ch === "\n") {
+        out += ch;
+      }
+      continue;
+    }
+
+    // Inside a string or template literal: copy verbatim, honouring escapes.
+    out += ch;
+    if (ch === "\\") {
+      if (next !== undefined) {
+        out += next;
+        i++;
+      }
+      continue;
+    }
+    if (
+      (state === "single" && ch === "'") ||
+      (state === "double" && ch === '"') ||
+      (state === "template" && ch === "`")
+    ) {
+      state = "code";
+    }
+  }
+  return out;
+}
+
 /** Eager and dynamic specifiers in source order; type-only imports are dropped. */
 function scanImports(source) {
   const eager = [];
   const dynamic = [];
+  source = stripComments(source);
 
   for (const m of source.matchAll(/\bimport\s*\(\s*["']([^"']+)["']\s*\)/g)) {
     dynamic.push(m[1]);

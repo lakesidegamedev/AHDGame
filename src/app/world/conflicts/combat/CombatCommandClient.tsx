@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
 import type { NatMods } from "@/lib/military/doctrineTree";
 import type { ConflictAssignment } from "@/lib/military/assignments";
@@ -9,9 +10,23 @@ import { ClassificationStrip } from "../_coldwar/ClassificationStrip";
 import { MIL_COLOR, MIL_FONT } from "../military/theme";
 import { useCombatState } from "./useCombatState";
 import { OrderOfBattle } from "./components/OrderOfBattle";
-import { UnitDossier } from "./components/UnitDossier";
-import { DoctrineCommand } from "./components/DoctrineCommand";
-import { TheaterWarRoom } from "./components/TheaterWarRoom";
+
+// Only the order of battle is on screen at first paint. The dossier, doctrine
+// and theater screens carry the unit tables, doctrine trees and the regional
+// map, so they load when the officer picks them.
+const TabFallback = () => <div className="h-64 animate-pulse rounded-lg bg-card" aria-hidden />;
+const UnitDossier = dynamic(
+  () => import("./components/UnitDossier").then((m) => ({ default: m.UnitDossier })),
+  { loading: TabFallback }
+);
+const DoctrineCommand = dynamic(
+  () => import("./components/DoctrineCommand").then((m) => ({ default: m.DoctrineCommand })),
+  { loading: TabFallback }
+);
+const TheaterWarRoom = dynamic(
+  () => import("./components/TheaterWarRoom").then((m) => ({ default: m.TheaterWarRoom })),
+  { loading: TabFallback }
+);
 
 const mono = MIL_FONT.mono;
 

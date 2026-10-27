@@ -95,13 +95,7 @@ export function getConfiguredSharedBankMemberCountries(
     .map((config) => config.id);
 }
 
-export function getRepresentativeCentralBankCountry(intorgId: string): CountryId | null {
-  return (
-    COUNTRY_ORDER.map((id) => COUNTRY_CLIENT_CONFIGS[id])
-      .filter((config) => config.centralBank.centralBankIntorgId === intorgId)
-      .map((config) => config.id)[0] ?? null
-  );
-}
+export { getRepresentativeCentralBankCountry } from "./intorgRepresentative";
 
 async function getIntorgMemberCountries(db: Db, intorgId: string): Promise<CountryId[]> {
   const builtIn = INTERNATIONAL_ORGANIZATIONS[intorgId as keyof typeof INTERNATIONAL_ORGANIZATIONS];

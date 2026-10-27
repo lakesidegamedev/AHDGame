@@ -20,8 +20,8 @@ import {
   getStateDisplayName,
   groupStatesByCountry,
 } from "@/lib/commodity-map/commodityRegionMappings";
-import { buildCommodityMarketScope } from "./lib/marketScope";
 import { countryUrl } from "@/lib/urls";
+import { buildCommodityMarketScope } from "./lib/marketScope";
 
 const FreightNetworkPanel = dynamic(() => import("./components/FreightNetworkPanel"), {
   ssr: false,

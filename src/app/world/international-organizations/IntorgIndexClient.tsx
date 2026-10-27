@@ -5,26 +5,22 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui";
 import { useWorldView } from "./useWorldView";
-
-// The map is a browser-only visual and the create form only matters once the
-// viewer opens it; both drag the org constants and the region manifest in.
-// Reserving their height up front keeps the directory below from jumping as
-// they land.
-const OrgWorldMap = dynamic(
-  () => import("./components/OrgWorldMap").then((m) => ({ default: m.OrgWorldMap })),
-  {
-    ssr: false,
-    loading: () => <Skeleton className="h-[360px] w-full rounded-xl" />,
-  }
-);
-const CreateOrgForm = dynamic(
-  () => import("./components/CreateOrgForm").then((m) => ({ default: m.CreateOrgForm })),
-  { loading: () => <Skeleton className="h-12 w-full rounded-xl" /> }
-);
 import { orgHref } from "./orgRouting";
 import { OrgDirectory } from "./components/OrgDirectory";
 import { YourDelegations } from "./components/YourDelegations";
 import { GlobalResolutionsFeed } from "./components/GlobalResolutionsFeed";
+
+// The map loads d3/topojson and every region shard, and the create form carries
+// the org catalogue. Both sit around the directory, so defer them rather than
+// holding the page on ~150 KB of graphics and registry code.
+const OrgWorldMap = dynamic(
+  () => import("./components/OrgWorldMap").then((m) => ({ default: m.OrgWorldMap })),
+  { ssr: false, loading: () => <Skeleton className="h-[420px] w-full rounded-2xl" /> }
+);
+const CreateOrgForm = dynamic(
+  () => import("./components/CreateOrgForm").then((m) => ({ default: m.CreateOrgForm })),
+  { ssr: false, loading: () => <Skeleton className="h-28 w-full rounded-xl" /> }
+);
 
 /**
  * International Organizations index: the page header, your delegations, a create
