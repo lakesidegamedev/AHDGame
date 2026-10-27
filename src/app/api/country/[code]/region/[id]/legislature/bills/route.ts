@@ -71,6 +71,7 @@ export async function POST(
       effectDirection: z.number().optional(),
       provisions: z.array(stateBillProvisionSchema).max(MAX_PROVISIONS).optional(),
       adminOverride: z.boolean().optional(),
+      proposeViaPartyNpp: z.boolean().optional(),
     });
 
     const parsed = await parseJsonBody(request, billSchema);

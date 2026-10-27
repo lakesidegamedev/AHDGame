@@ -4,7 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { PositionBadges } from "@/components/PositionBadges";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";
-import { getUKRegionImage, type UKRegion, type UKNation } from "@/lib/constants/uk";
+import {
+  getUKCouncilName,
+  getUKRegionImage,
+  type UKRegion,
+  type UKNation,
+} from "@/lib/constants/uk";
 import { formatPopulation, formatGDP } from "@/lib/utils/formatters";
 import BackButton from "@/components/BackButton";
 import { HeroImage } from "@/components/HeroImage";
@@ -143,6 +148,15 @@ export default function UKRegionClient({
 }: UKRegionClientProps) {
   const _nationColor = NATION_COLORS[region.nationId] ?? "#4f7ac7";
 
+  const legislatureLink = (
+    <Link
+      href={regionUrl("UK", region.id) + "/legislature"}
+      className="inline-flex items-center rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/25 transition-colors"
+    >
+      {getUKCouncilName(region.id)}
+    </Link>
+  );
+
   const population = state?.population ?? nation?.population ?? 0;
   const gdp = state?.gdp ?? 0;
   const constituencies = region.constituencies;
@@ -262,10 +276,13 @@ export default function UKRegionClient({
                 )}
               </span>
             </div>
+            {!executiveLabel && (
+              <div className="flex items-center px-5 py-3">{legislatureLink}</div>
+            )}
             {executiveLabel && (
               <div className="flex flex-col px-5 py-3 min-w-max">
                 <span className="text-body-sm font-medium text-muted">{executiveLabel}</span>
-                <span className="text-base font-bold tabular-nums mt-0.5 flex items-center gap-2">
+                <span className="text-base font-bold tabular-nums mt-0.5 flex flex-wrap items-center gap-2">
                   {executive && (executive.characterId || executive.nppId)
                     ? (executive.characterName ?? "Unknown")
                     : "Vacant"}
@@ -277,6 +294,7 @@ export default function UKRegionClient({
                       Office →
                     </Link>
                   )}
+                  {legislatureLink}
                 </span>
               </div>
             )}

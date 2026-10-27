@@ -1,3 +1,4 @@
+import { migration as partyNppRegionalBills } from "./entries/2026-10-27-party-npp-regional-bills";
 import { migration as incomeTaxTiers } from "./entries/2026-10-16-income-tax-tiers";
 import { migration as stockHoldingTaxTiers } from "./entries/2026-10-16-stock-holding-tax-tiers";
 import { migration as incomeTaxPolicyParity } from "./entries/2026-10-15-income-tax-policy-parity";
@@ -394,6 +395,7 @@ export const MIGRATIONS: Migration[] = [
   turnGrowthIndexes,
   playerReadIndexes,
   dropLogTextIndexes,
+  partyNppRegionalBills,
 ];
 
 // D13 rollback drill - registered but deliberately OUTSIDE the normal chain.

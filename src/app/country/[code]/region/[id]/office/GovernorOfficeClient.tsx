@@ -54,6 +54,7 @@ const DevolutionTab = dynamic(
 type TabKey = "overview" | "devolution" | "legislation" | "orders" | "address" | "endorsements";
 
 interface Props {
+  legislationVersion: "v1" | "v2";
   countryId: CountryId;
   stateId: string;
   stateName: string;
@@ -287,6 +288,7 @@ export function GovernorOfficeClient(props: Props) {
           )}
           {active === "legislation" && (
             <LegislationTab
+              legislationVersion={props.legislationVersion}
               countryId={props.countryId}
               stateId={props.stateId}
               awaitingAssentBills={props.awaitingAssentBills}
