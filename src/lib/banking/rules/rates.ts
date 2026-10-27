@@ -64,3 +64,25 @@ export function playerDepositRatePercent(
   );
   return Math.max(0, depositRatePercent - base);
 }
+
+/**
+ * Total APY a saver earns with a private bank as savings holder. Outside an
+ * authoritative currency the bank pays only its premium
+ * ({@link playerDepositRatePercent}) and savingsInterestTurn still pays the CB
+ * base on the balance, so the two add up.
+ */
+export function privateHolderSavingsApyPercent(
+  depositRatePercent: number,
+  playerDepositsAreLiabilities: boolean,
+  primeRate: number,
+  inflationRate: number,
+  centralBankApyPercent: number
+): number {
+  const bankRate = playerDepositRatePercent(
+    depositRatePercent,
+    playerDepositsAreLiabilities,
+    primeRate,
+    inflationRate
+  );
+  return bankRate + (playerDepositsAreLiabilities ? 0 : centralBankApyPercent);
+}

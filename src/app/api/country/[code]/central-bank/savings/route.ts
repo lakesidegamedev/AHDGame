@@ -29,7 +29,10 @@ import { getBankId } from "@/lib/centralBank/helpers";
 import { loadCentralBankPricingAdjustment } from "@/lib/monetaryPolicy/centralBankPricing";
 import { loadBankingPolicy } from "@/lib/banking/policy";
 import { savingsReadsAuthoritative } from "@/lib/banking/rules/policy";
-import { effectiveBankRatesFromPrime, playerDepositRatePercent } from "@/lib/banking/rules/rates";
+import {
+  effectiveBankRatesFromPrime,
+  privateHolderSavingsApyPercent,
+} from "@/lib/banking/rules/rates";
 
 const DEFAULT_PRIME = 2.5;
 
@@ -123,13 +126,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
         primeRate
       ).depositRatePercent;
       const authoritative = savingsReadsAuthoritative(bankingPolicy, nationalCurrency);
-      const privateRate = playerDepositRatePercent(
+      accrualApyPercent = privateHolderSavingsApyPercent(
         postedRate,
         authoritative,
         primeRate,
-        inflationRate
+        inflationRate,
+        centralBankApyPercent
       );
-      accrualApyPercent = privateRate + (authoritative ? 0 : centralBankApyPercent);
       apyPercent = Math.round(accrualApyPercent * 100) / 100;
       savingsHolderType = "private-bank";
       savingsHolderName = holderBank.name ?? "Private bank";

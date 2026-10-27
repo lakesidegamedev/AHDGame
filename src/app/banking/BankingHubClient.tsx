@@ -50,6 +50,7 @@ type HubPrivateBank = {
   operatorType: "player" | "npp";
   charterType: BankCharterType;
   depositRatePercent: number;
+  saverApyPercent: number;
   lendingRatePercent: number;
   warningBand: "green" | "amber" | "red" | null;
   confidence: number | null;

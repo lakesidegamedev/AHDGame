@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { playerDepositRatePercent, startingBankOffsets } from "./rates";
+import {
+  playerDepositRatePercent,
+  privateHolderSavingsApyPercent,
+  startingBankOffsets,
+} from "./rates";
 
 describe("startingBankOffsets", () => {
   it("uses the midpoint of the world's actual legal corridors", () => {
@@ -35,5 +39,23 @@ describe("playerDepositRatePercent", () => {
   it("treats a missing prime as zero prime, keeping the floor", () => {
     // Base = max(0.5, 0 - 0) / 2 = 0.25; 4 - 0.25 = 3.75.
     expect(playerDepositRatePercent(4, false, Number.NaN, 0)).toBeCloseTo(3.75, 10);
+  });
+});
+
+describe("privateHolderSavingsApyPercent", () => {
+  // Prime 20.75, inflation 19.8: base = 0.95 / 2 = 0.475; CB APY with a 0.25 bonus = 0.725.
+  it("adds the CB APY to the bank premium for pointer balances", () => {
+    expect(privateHolderSavingsApyPercent(19.75, false, 20.75, 19.8, 0.725)).toBeCloseTo(
+      19.75 - 0.475 + 0.725,
+      10
+    );
+  });
+
+  it("still earns the CB APY when the posted rate sits below base", () => {
+    expect(privateHolderSavingsApyPercent(0.05, false, 4, 0, 2.25)).toBe(2.25);
+  });
+
+  it("pays only the posted rate once player balances are cash-backed", () => {
+    expect(privateHolderSavingsApyPercent(4, true, 4, 0, 2.25)).toBe(4);
   });
 });

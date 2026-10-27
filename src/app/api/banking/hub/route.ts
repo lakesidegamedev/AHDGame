@@ -16,6 +16,7 @@ import { loadBankingPolicy } from "@/lib/banking/policy";
 import { savingsReadsAuthoritative } from "@/lib/banking/rules/policy";
 import { lifecycleStage } from "@/lib/banking/rules/lifecycle";
 import { effectiveBankRatesFromPrime } from "@/lib/banking/rates";
+import { privateHolderSavingsApyPercent } from "@/lib/banking/rules/rates";
 import { cashBackedDeposits, getCashReserves } from "@/lib/banking/bankCash";
 import { getLendableHeadroom } from "@/lib/banking/reserves";
 import { defaultReserveRequirement } from "@/lib/banking/rules/reserves";
@@ -46,6 +47,8 @@ import type { ObjectId } from "mongodb";
 // Auth: requireAuth
 // Errors: 401
 
+const roundRatePercent = (rate: number) => Math.round(rate * 100) / 100;
+
 type HubCentralBank = {
   currency: CurrencyCode;
   bankName: string;
@@ -66,7 +69,10 @@ type HubPrivateBank = {
   currency: CurrencyCode;
   operatorType: "player" | "npp";
   charterType: BankCharterType;
+  /** The bank's posted deposit rate (prime + offset). */
   depositRatePercent: number;
+  /** What a saver earns holding savings here: the posted rate as the turn pays it. */
+  saverApyPercent: number;
   lendingRatePercent: number;
   warningBand: "green" | "amber" | "red" | null;
   confidence: number | null;
@@ -149,6 +155,38 @@ async function handleGET() {
     }
 
     const bankById = new Map(banks.map((b) => [String(b._id), b]));
+    // A currency's CB savings quote from the bank loaded above, priced as the
+    // savings desk and savingsInterestTurn price it: half the real prime plus
+    // the deposit bonus, rounded to the cent as the desk rounds it.
+    const centralBankSavingsQuote = (currency: CurrencyCode) => {
+      const bank = bankById.get(getBankId(getCountryIdForCurrency(currency)));
+      const prime =
+        typeof bank?.primeRate === "number" && Number.isFinite(bank.primeRate) ? bank.primeRate : 0;
+      const latestInflation = bank?.inflationHistory?.at(-1)?.rate;
+      const inflation =
+        typeof latestInflation === "number" && Number.isFinite(latestInflation)
+          ? latestInflation
+          : 0;
+      const apyPercent = roundRatePercent(
+        savingsApyPercent(prime, inflation, centralBankPricing.depositBonusPercentPoints)
+      );
+      return { prime, inflation, apyPercent };
+    };
+    // What a saver earns with a private bank as holder, as the desk quotes it:
+    // outside authoritative currencies the CB base still accrues on top of the
+    // bank's premium.
+    const privateHolderApyPercent = (currency: CurrencyCode, postedDepositRatePercent: number) => {
+      const { prime, inflation, apyPercent } = centralBankSavingsQuote(currency);
+      return roundRatePercent(
+        privateHolderSavingsApyPercent(
+          postedDepositRatePercent,
+          savingsReadsAuthoritative(policy, currency),
+          prime,
+          inflation,
+          apyPercent
+        )
+      );
+    };
     const centralBanks: HubCentralBank[] = [];
     for (const currency of [...currencies].sort()) {
       const anchor = getCountryIdForCurrency(currency);
@@ -162,26 +200,15 @@ async function handleGET() {
       const bank = bankById.get(bankId);
       const configRow = COUNTRY_CONFIGS[anchor];
       if (!configRow) continue;
-      const prime =
-        typeof bank?.primeRate === "number" && Number.isFinite(bank.primeRate) ? bank.primeRate : 0;
-      // Same inflation source as the savings desk and the turn that pays it.
-      const latestInflation = bank?.inflationHistory?.at(-1)?.rate;
-      const inflation =
-        typeof latestInflation === "number" && Number.isFinite(latestInflation)
-          ? latestInflation
-          : 0;
+      const quote = centralBankSavingsQuote(currency);
       centralBanks.push({
         currency,
         bankName: bank?.name ?? configRow.centralBank.name,
         countryId: anchor,
         countryName: countryName(anchor),
         href: currencyCentralBankUrl(currency),
-        primeRate: prime,
-        savingsApyPercent: savingsApyPercent(
-          prime,
-          inflation,
-          centralBankPricing.depositBonusPercentPoints
-        ),
+        primeRate: quote.prime,
+        savingsApyPercent: quote.apyPercent,
         isPrimary: currency === primaryCurrency,
       });
     }
@@ -324,6 +351,7 @@ async function handleGET() {
           charterType: charter.type,
           stage: lifecycleStage(charter),
           depositRatePercent: rates.depositRatePercent,
+          saverApyPercent: privateHolderApyPercent(charter.currency, rates.depositRatePercent),
           lendingRatePercent: rates.lendingRatePercent,
           warningBand: charter.warningBand ?? null,
           confidence: typeof charter.confidence === "number" ? charter.confidence : null,
@@ -379,7 +407,7 @@ async function handleGET() {
             .map((b) => ({
               holder: b.corporationId,
               label: b.name,
-              depositRatePercent: b.depositRatePercent,
+              depositRatePercent: b.saverApyPercent,
             })),
         ];
         savings.push({
