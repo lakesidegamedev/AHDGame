@@ -18,7 +18,7 @@ import {
 import { TURNS_PER_YEAR } from "../../src/lib/constants/turnTime";
 
 const cells = z.array(z.number().finite().nonnegative()).length(101);
-const inputSchema = z.object({
+export const demographicReceiptInputSchema = z.object({
   turn: z.number().int().positive(),
   observedMigrationPct: z.number().finite(),
   regions: z
@@ -45,11 +45,19 @@ const inputSchema = z.object({
     )
     .min(1),
 });
-export type DemographicReceiptInput = z.infer<typeof inputSchema>;
+export type DemographicReceiptInput = z.infer<typeof demographicReceiptInputSchema>;
 
 /** Conditional sensitivities, not a full-world economic forecast or a replacement migration rule. */
-export function simulateReceiptTiming(raw: DemographicReceiptInput, years = 10) {
-  const input = inputSchema.parse(raw);
+export function simulateReceiptTiming(
+  raw: DemographicReceiptInput,
+  years = 10,
+  options: { maxBoost?: number; currentOnly?: boolean } = {}
+) {
+  const input = demographicReceiptInputSchema.parse(raw);
+  // Preserve the receipt-only experiment's original calibration unless a
+  // balance experiment explicitly supplies another ceiling.
+  const maxBoost = options.maxBoost ?? 0.24;
+  if (!Number.isFinite(maxBoost) || maxBoost < 0) throw Error("Invalid fertility boost");
   if (!Number.isInteger(years) || years < 1 || years > 50) throw Error("Invalid horizon");
   if (new Set(input.regions.map((r) => r.id)).size !== input.regions.length)
     throw Error("Duplicate region");
@@ -74,9 +82,12 @@ export function simulateReceiptTiming(raw: DemographicReceiptInput, years = 10) 
     { name: "fixed timing, no net migration", fixed: true, migration: 0 },
     { name: "fixed timing, 0.3% net migration", fixed: true, migration: 0.3 },
     { name: "fixed timing, 0.5% net migration", fixed: true, migration: 0.5 },
-  ];
+  ].filter(
+    (scenario) => !options.currentOnly || scenario.name === "fixed timing, observed migration"
+  );
   return {
     sourceTurn: input.turn,
+    maxBoost,
     turnsPerYear: TURNS_PER_YEAR,
     years,
     assumptions: [
@@ -114,7 +125,9 @@ export function simulateReceiptTiming(raw: DemographicReceiptInput, years = 10) 
           r.index = fertilityPolicyIndex(
             r.openingIndex,
             r.index,
-            scenario.fixed ? r.currentPressure : r.laggedPressure
+            scenario.fixed ? r.currentPressure : r.laggedPressure,
+            2.06,
+            maxBoost
           );
           const net = (totalPopulation(r.ages) * scenario.migration) / (100 * TURNS_PER_YEAR);
           const result = advanceCohort(
