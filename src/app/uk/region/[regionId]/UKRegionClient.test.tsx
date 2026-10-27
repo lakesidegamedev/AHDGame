@@ -1,8 +1,8 @@
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import UKRegionClient from "./UKRegionClient";
-import { UK_REGIONS } from "@/lib/constants/uk";
+import { getUKCouncilName, UK_REGIONS } from "@/lib/constants/uk";
 import { regionUrl } from "@/lib/urls";
 vi.mock("@/components/RegionDropdown", () => ({ RegionDropdown: () => null }));
 vi.mock("@/components/RelocateButton", () => ({ RelocateButton: () => null }));
@@ -35,7 +35,12 @@ describe("UK regional hero legislature navigation", () => {
       expect(screen.getByRole("link", { name: "Scottish Parliament" }).getAttribute("href")).toBe(
         regionUrl("UK", "SCO") + "/legislature"
       );
-      expect(screen.queryByRole("link", { name: "Office →" }) !== null).toBe(canManageOffice);
+      const actions = screen.getByRole("navigation", { name: "Regional government" });
+      expect(within(actions).queryByRole("link", { name: "Office" }) !== null).toBe(
+        canManageOffice
+      );
+      expect(within(actions).getByRole("link", { name: "Scottish Parliament" })).toBeTruthy();
+      expect(actions.closest(".overflow-x-auto")).toBeNull();
     }
   );
   it("also links a regional council when there is no devolved executive", () => {
@@ -46,4 +51,19 @@ describe("UK regional hero legislature navigation", () => {
       regionUrl("UK", "SEE") + "/legislature"
     );
   });
+  it.each(UK_REGIONS.map((region) => [region.id, region] as const))(
+    "keeps %s legislature navigation outside scrolling statistics",
+    (_id, region) => {
+      render(<UKRegionClient {...props} region={region} />);
+      const actions = screen.getByRole("navigation", { name: "Regional government" });
+      expect(
+        within(actions)
+          .getByRole("link", { name: getUKCouncilName(region.id) })
+          .getAttribute("href")
+      ).toBe(regionUrl("UK", region.id) + "/legislature");
+      expect(actions.closest("header")).not.toBeNull();
+      expect(actions.closest(".overflow-x-auto")).toBeNull();
+      expect(actions.classList.contains("flex-wrap")).toBe(true);
+    }
+  );
 });
