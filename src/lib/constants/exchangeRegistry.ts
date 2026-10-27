@@ -5,11 +5,11 @@
  * Adding a country with an exchangeName automatically registers its exchange.
  * No hardcoded NYSE/FTSE/Nikkei values outside this file and countries.ts.
  *
- * Reads `COUNTRY_DISPLAY_LABELS` rather than the client registry: that sliver
- * carries `exchangeName` and `exchangeKind`, and this module is on the stock
- * market, election and commodity page graphs. Importing the full projection
- * here pulled every country's legislature, offices and central bank into those
- * bundles for two fields.
+ * Reads `COUNTRY_DISPLAY_LABELS` rather than the full registry: the generated
+ * projection carries `exchangeName` and `exchangeKind`, and this module is on
+ * the stock market and election page graphs. Importing `countries.ts` here
+ * pulled every country's institutions, economy and era files into those
+ * bundles for two string fields.
  */
 
 import { COUNTRY_ORDER, type CountryId } from "./countriesCore";

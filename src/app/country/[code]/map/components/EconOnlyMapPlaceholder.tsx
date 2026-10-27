@@ -6,7 +6,7 @@ import Link from "next/link";
 import BackButton from "@/components/BackButton";
 import { SectionLabel } from "@/components/ui";
 import { type CountryId } from "@/lib/constants/countriesCore";
-import { getCountryClientConfig } from "@/lib/constants/countryClientConfig";
+import type { CountryMapViewConfig } from "../mapViewConfig";
 import { ieRegions } from "@/lib/seeds/ie/ieRegions";
 import { scoRegions } from "@/lib/seeds/sco/scoRegions";
 import { walRegions } from "@/lib/seeds/wal/walRegions";
@@ -277,7 +277,7 @@ export function EconOnlyMapPlaceholder({
   onRegionClick,
 }: {
   countryId: CountryId;
-  config: ReturnType<typeof getCountryClientConfig>;
+  config: CountryMapViewConfig;
   mapData: MapOverviewResponse | null;
   onRegionClick: (id: string) => void;
 }) {

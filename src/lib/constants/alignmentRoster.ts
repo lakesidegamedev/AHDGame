@@ -7,7 +7,7 @@
  * project's own historical entity ids (NVN, SVN, YE, MM, TANG, ...).
  *
  * Authoring deliberately covers nations the game does not implement yet, so
- * adding a country later is a COUNTRY_DISPLAY_LABELS change with no alignment content
+ * adding a country later is a COUNTRY_CONFIGS change with no alignment content
  * pass. Unimplemented entries are inert data — they never get a document.
  *
  * GENERATED from the ops report, then RECONCILED against the canonical world
@@ -22,8 +22,8 @@
  *
  * Client-safe: no db imports.
  */
-import { COUNTRY_DISPLAY_LABELS } from "./countryDisplayLabels";
-import type { CountryId } from "./countriesCore";
+import { type CountryId } from "./countriesCore";
+import { isCountryId } from "@/lib/country/countryIds";
 
 export type AlignmentCountryKey =
   | "AD"
@@ -1859,7 +1859,7 @@ export const ROSTER_BY_KEY: Record<AlignmentCountryKey, AlignmentRosterEntry> = 
 ) as Record<AlignmentCountryKey, AlignmentRosterEntry>;
 
 /**
- * Adding a country to COUNTRY_DISPLAY_LABELS with no roster entry must be a TYPE
+ * Adding a country to COUNTRY_CONFIGS with no roster entry must be a TYPE
  * ERROR, not a silent neutral seed. `noUncheckedIndexedAccess` is off in this
  * repo, so an index-signature lookup would never surface the gap — the check
  * has to be assignability against the literal key union.
@@ -2066,5 +2066,5 @@ export function statusAt(key: AlignmentCountryKey, year: number): AlignmentEntit
 
 /** True when the key names a country the game actually implements. */
 export function isLiveCountryKey(key: AlignmentCountryKey): key is CountryId & AlignmentCountryKey {
-  return key in COUNTRY_DISPLAY_LABELS;
+  return isCountryId(key);
 }

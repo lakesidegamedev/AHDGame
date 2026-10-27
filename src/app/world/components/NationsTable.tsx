@@ -6,7 +6,6 @@ import { Avatar } from "@/components/Avatar";
 import { PartyLogo } from "@/components/PartyLogo";
 import { CountryFlag } from "@/components/CountryFlag";
 import { type CountryId } from "@/lib/constants/countriesCore";
-import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { getCountryFlagUrlForEra } from "@/lib/constants";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";
 import { useActivePreset, useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
@@ -14,7 +13,7 @@ import type { CountryAvailability, CountryAvailabilityState } from "@/lib/countr
 import type { NationWorldSnapshot } from "@/lib/world/nationWorldSnapshots";
 import type { WorldRoadmapCountry } from "@/lib/worldCountryRegistry";
 import { useWorldMetricFilterOptional } from "../WorldMetricFilterContext";
-import { getMetricFilterHighlight } from "../worldMetricHighlight";
+import { getMetricFilterHighlight } from "../worldMetricFilterHighlight";
 
 /** A nation's status as one plain word, the same vocabulary the map tooltip uses. */
 const STATUS_WORD: Record<CountryAvailabilityState, string> = {
@@ -47,6 +46,9 @@ export interface NationRow {
   id: CountryId;
   availability: CountryAvailability;
   snapshot?: NationWorldSnapshot;
+  /** Resolved on the server from the country registry, one row at a time. */
+  governmentTypeLabel: string;
+  executiveTitle: string;
 }
 
 /**
@@ -104,7 +106,6 @@ export function NationsTable({ rows }: { rows: NationRow[] }) {
         </thead>
         <tbody>
           {rows.map((row) => {
-            const config = COUNTRY_CLIENT_CONFIGS[row.id];
             const snapshot = row.snapshot ?? VACANT_SNAPSHOT;
             const executive = snapshot.executive;
             const party = snapshot.legislatureParty;
@@ -133,9 +134,9 @@ export function NationsTable({ rows }: { rows: NationRow[] }) {
                     )}
                   </div>
                   <div className="mt-1 space-y-0.5 text-body-sm text-muted md:hidden">
-                    <p>{config.governmentTypeLabel}</p>
+                    <p>{row.governmentTypeLabel}</p>
                     <p>
-                      {config.executiveTitle}:{" "}
+                      {row.executiveTitle}:{" "}
                       <span className={executive.isVacant ? "" : "text-foreground"}>
                         {executiveName}
                       </span>
@@ -160,7 +161,7 @@ export function NationsTable({ rows }: { rows: NationRow[] }) {
                   {STATUS_WORD[row.availability.displayState]}
                 </td>
                 <td className={`${TD} hidden text-muted md:table-cell`}>
-                  {config.governmentTypeLabel}
+                  {row.governmentTypeLabel}
                 </td>
                 <td className={`${TD} hidden md:table-cell`}>
                   <div className="flex items-center gap-2">
@@ -180,7 +181,7 @@ export function NationsTable({ rows }: { rows: NationRow[] }) {
                       >
                         {executiveName}
                       </p>
-                      <p className="text-body-sm text-muted">{config.executiveTitle}</p>
+                      <p className="text-body-sm text-muted">{row.executiveTitle}</p>
                     </div>
                   </div>
                 </td>
@@ -248,7 +249,6 @@ export function PlannedNationsTable({
       </thead>
       <tbody>
         {hidden.map((row) => {
-          const config = COUNTRY_CLIENT_CONFIGS[row.id];
           return (
             <tr key={row.id}>
               <td className={TD}>
@@ -258,16 +258,12 @@ export function PlannedNationsTable({
                     {countryName(row.id)}
                   </span>
                 </div>
-                <p className="mt-1 text-body-sm text-muted sm:hidden">
-                  {config.governmentTypeLabel}
-                </p>
+                <p className="mt-1 text-body-sm text-muted sm:hidden">{row.governmentTypeLabel}</p>
               </td>
               <td className={`${TD} whitespace-nowrap text-muted`}>
                 {STATUS_WORD[row.availability.displayState]}
               </td>
-              <td className={`${TD} hidden text-muted sm:table-cell`}>
-                {config.governmentTypeLabel}
-              </td>
+              <td className={`${TD} hidden text-muted sm:table-cell`}>{row.governmentTypeLabel}</td>
             </tr>
           );
         })}

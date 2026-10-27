@@ -293,6 +293,18 @@ function PortfolioPageInner({ initialPortfolio }: PortfolioClientProps) {
           setHomeCurrency(me.character.homeCurrency);
         }
       }
+      if (me?.fundPositions !== undefined) {
+        // null means the index-funds feature is off for this world, which hides
+        // the section; an array (even empty) enables it and feeds net worth.
+        setFundsFeatureEnabled(me.fundPositions !== null);
+        setFundHoldingsValue(
+          (me.fundPositions ?? []).reduce(
+            (sum: number, pos: { marketValueAnchor: number | null }) =>
+              sum + (pos.marketValueAnchor ?? 0),
+            0
+          )
+        );
+      }
       if (me?.corporation && !me.corporation.isNationalCorp) {
         setCeoCorporation(me.corporation as MeCeoCorporation);
       } else {
@@ -318,8 +330,11 @@ function PortfolioPageInner({ initialPortfolio }: PortfolioClientProps) {
       // any to match the previous untyped r.json() consumption below.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       fetchJson<any>("/api/character/portfolio", { feature: "portfolio" }),
+      // `include=funds` rides the response this page already waits for: the
+      // fund positions used to be a second id-keyed request issued only after
+      // this one resolved, costing every portfolio visit an extra round trip.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      fetchJson<any>("/api/character/me", { feature: "portfolio" }),
+      fetchJson<any>("/api/character/me?include=funds", { feature: "portfolio" }),
       corpQ
         ? fetch(`/api/corporations/${corpQ}`).then((r) => (r.ok ? r.json() : null))
         : Promise.resolve(null),
@@ -333,9 +348,7 @@ function PortfolioPageInner({ initialPortfolio }: PortfolioClientProps) {
     });
   }, [corpQuery, applyPortfolio, applySecondary]);
 
-  const [marketRefreshKey, setMarketRefreshKey] = useState(0);
   useGameEvents(() => {
-    setMarketRefreshKey((key) => key + 1);
     void loadPortfolioAndMe().catch(reportPortfolioLoadError);
   }, ["turn_complete", "market_tick"]);
 
@@ -345,8 +358,11 @@ function PortfolioPageInner({ initialPortfolio }: PortfolioClientProps) {
   const loadSecondaryOnly = useCallback(() => {
     const corpQ = corpQuery;
     return Promise.all([
+      // `include=funds` rides the response this page already waits for: the
+      // fund positions used to be a second id-keyed request issued only after
+      // this one resolved, costing every portfolio visit an extra round trip.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      fetchJson<any>("/api/character/me", { feature: "portfolio" }),
+      fetchJson<any>("/api/character/me?include=funds", { feature: "portfolio" }),
       corpQ
         ? fetch(`/api/corporations/${corpQ}`).then((r) => (r.ok ? r.json() : null))
         : Promise.resolve(null),
@@ -380,33 +396,6 @@ function PortfolioPageInner({ initialPortfolio }: PortfolioClientProps) {
       })
       .finally(() => setLoading(false));
   }, [loadPortfolioAndMe, loadSecondaryOnly, applyPortfolio, initialPortfolio]);
-
-  useEffect(() => {
-    if (!myCharacterId) return;
-    let cancelled = false;
-    void fetchJson<{ positions?: { marketValueAnchor: number | null }[] }>(
-      `/api/character/${myCharacterId}/fund-portfolio`,
-      { cache: "no-store", feature: "portfolio-funds" }
-    )
-      .then((data) => {
-        if (cancelled) return;
-        setFundsFeatureEnabled(true);
-        const positions = data.positions ?? [];
-        setFundHoldingsValue(positions.reduce((s, p) => s + (p.marketValueAnchor ?? 0), 0));
-      })
-      .catch((err) => {
-        // 403 = funds feature disabled for this player (expected) — hide the
-        // section. fetchJson already reported any network/5xx fault; leave the
-        // holdings value untouched in that case.
-        if (err instanceof HttpError && err.status === 403 && !cancelled) {
-          setFundsFeatureEnabled(false);
-          setFundHoldingsValue(0);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [myCharacterId, marketRefreshKey]);
 
   const setPortfolioOwner = (owner: "character" | "corporation") => {
     const params = new URLSearchParams(searchParams.toString());

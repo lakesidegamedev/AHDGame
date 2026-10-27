@@ -12,7 +12,7 @@
 import type { NatMods } from "./doctrineTree";
 import type { GenMods } from "./generals";
 import type { MilitaryUnit } from "@/lib/db/types/militaryUnit";
-import { VETM, eqAvg, computeEffectivePower } from "@/lib/constants/military";
+import { VETM, eqAvg, computeEffectivePower } from "@/lib/constants/militaryCore";
 import { NAVAL_REACH, FRONT_CAPACITY_BASE, TERRAIN_CAPACITY } from "./config";
 
 // VETM + eqAvg live canonically in constants/military.ts (the one power model);

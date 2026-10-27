@@ -10,7 +10,7 @@ import type { InfluenceTarget, OrgInfluenceView } from "@/lib/alignment/queries/
 import { formatShare, roundToShareGrid } from "@/lib/alignment/normalize";
 import { MIN_PLAY_POINTS } from "@/lib/alignment/influence";
 import { PER_NATION_TURN_CAP } from "@/lib/constants/alignmentEras";
-import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import { parseMoneyAmountInput } from "@/lib/utils/parseMoneyAmountInput";
 import { useFundFormatter } from "../useFundFormatter";
 import { formatFundAmount } from "../fundCurrency";

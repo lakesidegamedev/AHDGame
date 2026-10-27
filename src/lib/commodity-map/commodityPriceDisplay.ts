@@ -1,5 +1,6 @@
 import { type CountryId } from "@/lib/constants/countriesCore";
-import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
+import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
+import type { CurrencyCode } from "@/lib/constants/currencies";
 import { convertFromInternal, formatCurrencyPrecise } from "@/lib/utils/formatters";
 
 export function getCommodityDisplayCurrency(countryId: CountryId): CurrencyCode {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type Dispatch } from "react";
-import { RESERVE_THEATER_ID } from "@/lib/military/theaters";
+import { RESERVE_THEATER_ID } from "@/lib/military/theaterConstants";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import type { NatMods } from "@/lib/military/doctrineTree";
 import { MIL_COLOR, MIL_FONT } from "../../military/theme";

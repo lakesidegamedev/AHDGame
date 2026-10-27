@@ -107,6 +107,13 @@ export {
  * convention. `effect.fundsChange` is in ANCHOR units, so `formatFunds` is
  * responsible for the anchor→local conversion and the local symbol.
  */
+/**
+ * The home-state economics every action quote reads. Callers that already have
+ * the full State document can pass it unchanged; the /actions client receives
+ * only these two figures with its character request.
+ */
+export type ActionStateEconomics = Pick<State, "gdp" | "population">;
+
 export interface ActionEffectContext {
   formatFunds: (anchorAmount: number) => string;
   /**
@@ -152,7 +159,11 @@ export interface ActionDefinition {
   description: string;
   baseCost: number;
   requiresState?: boolean;
-  effect: (character: Character, state?: State, ctx?: ActionEffectContext) => ActionResult;
+  effect: (
+    character: Character,
+    state?: ActionStateEconomics,
+    ctx?: ActionEffectContext
+  ) => ActionResult;
 }
 
 export interface ActionResult {
@@ -284,7 +295,7 @@ export const ACTIONS: Record<ActionType, ActionDefinition> = {
     description: "Raise money from your donor base",
     baseCost: FUNDRAISE_ACTION_COST,
     requiresState: false,
-    effect: (character: Character, _state?: State, ctx?: ActionEffectContext) => {
+    effect: (character: Character, _state?: ActionStateEconomics, ctx?: ActionEffectContext) => {
       // Single source of truth: the UI card, the advisor and the projection
       // quote this same quote, so the advertised yield can never drift from
       // the credited result. canPerformAction runs the quote first; the throw
@@ -315,7 +326,7 @@ export const ACTIONS: Record<ActionType, ActionDefinition> = {
       "Increase your political influence — up to +1%, with diminishing returns above 50% (cost scales with current influence and state GDP)",
     baseCost: 1, // dynamic — actual cost computed via getCampaignActionCost()
     requiresState: false,
-    effect: (character: Character, state?: State, ctx?: ActionEffectContext) => {
+    effect: (character: Character, state?: ActionStateEconomics, ctx?: ActionEffectContext) => {
       // Single source of truth: the UI card quotes this same quote, so the
       // advertised cost/gain can never drift from the debited/credited result.
       // canPerformAction runs the quote first; the throw below is a defensive
@@ -351,7 +362,7 @@ export const ACTIONS: Record<ActionType, ActionDefinition> = {
     description: "Run ads to boost your favorability rating",
     baseCost: 5,
     requiresState: false,
-    effect: (character: Character, state?: State, ctx?: ActionEffectContext) => {
+    effect: (character: Character, state?: ActionStateEconomics, ctx?: ActionEffectContext) => {
       // Single source of truth: the UI card quotes this same quote, so the
       // advertised cost/gain can never drift from the debited/credited result.
       // canPerformAction runs the quote first; the throw below is a defensive
@@ -388,7 +399,7 @@ export const ACTIONS: Record<ActionType, ActionDefinition> = {
     description: "Expand your donor base to increase fundraising effectiveness",
     baseCost: 6,
     requiresState: false,
-    effect: (character: Character, state?: State, ctx?: ActionEffectContext) => {
+    effect: (character: Character, state?: ActionStateEconomics, ctx?: ActionEffectContext) => {
       // Single source of truth: the UI card quotes this same quote, so the
       // advertised cost/gain can never drift from the debited/credited result.
       // canPerformAction runs the quote first; the throw below is a defensive
@@ -426,7 +437,7 @@ export const ACTIONS: Record<ActionType, ActionDefinition> = {
       "Commission a quick poll — see your topline appeal and best/worst demographic groups ($25,000)",
     baseCost: POLL_ACTION_COST,
     requiresState: false,
-    effect: (character: Character, _state?: State, ctx?: ActionEffectContext) => {
+    effect: (character: Character, _state?: ActionStateEconomics, ctx?: ActionEffectContext) => {
       // Single source of truth: the poll page quotes this same quote and the
       // poll API route debits it, so the advertised cost can never drift from
       // the charged result. canPerformAction runs the quote first; the throw
@@ -453,7 +464,7 @@ export const ACTIONS: Record<ActionType, ActionDefinition> = {
       "Commission a comprehensive poll — full breakdown across every demographic group and category ($75,000)",
     baseCost: POLL_LARGE_ACTION_COST,
     requiresState: false,
-    effect: (character: Character, _state?: State, ctx?: ActionEffectContext) => {
+    effect: (character: Character, _state?: ActionStateEconomics, ctx?: ActionEffectContext) => {
       // Single source of truth: the poll page quotes this same quote and the
       // poll API route debits it, so the advertised cost can never drift from
       // the charged result. canPerformAction runs the quote first; the throw
@@ -580,7 +591,7 @@ export type CanPerformActionOptions = {
 export function canPerformAction(
   character: Character,
   actionType: ActionType,
-  state?: State,
+  state?: ActionStateEconomics,
   options?: CanPerformActionOptions
 ): { canPerform: boolean; reason?: string } {
   const forexEnabled = options?.forexEnabled ?? false;
@@ -803,7 +814,7 @@ export function getActionPointCost(character: Character, actionType: ActionType)
 function applyEffectToCharacter(
   character: Character,
   actionType: ActionType,
-  state: State | undefined,
+  state: ActionStateEconomics | undefined,
   forexEnabled = false,
   homeFxRate?: number,
   pricing: Pick<ActionEffectContext, "preset" | "priceLevel"> = {}
@@ -869,7 +880,7 @@ export type SimulateActionBatchResult =
  */
 export function simulateActionBatch(
   character: Character,
-  state: State | undefined,
+  state: ActionStateEconomics | undefined,
   actionType: ActionType,
   count: number,
   forexEnabled = false,
@@ -924,7 +935,7 @@ export interface BatchAffordability {
  */
 export function getBatchAffordability(
   character: Character,
-  state: State | undefined,
+  state: ActionStateEconomics | undefined,
   actionType: ActionType,
   count: number,
   forexEnabled = false,

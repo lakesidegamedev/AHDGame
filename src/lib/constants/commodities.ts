@@ -11,8 +11,10 @@ import { eraForPreset } from "@/lib/seeds/presetSelector";
 export * from "./commoditiesCore";
 import {
   COMMODITY_LABELS,
+  COMMODITY_PRESSURE_SOFT_KNEE,
   COMMODITY_TYPES,
   EXTRACTABLE_RESOURCES,
+  computeEffectiveCommodityPressureRatio,
   type CommodityType,
   type ExtractableResource,
 } from "./commoditiesCore";
@@ -173,6 +175,36 @@ export const COMMODITIES_NATIONAL_REGIONAL_PRICE_BLEND: ReadonlySet<CommodityTyp
   "real_estate_services",
 ]);
 
+export const COMMODITY_ICONS: Record<CommodityType, string> = {
+  steel: "Fe",
+  electronics: "Si",
+  energy: "kW",
+  chemicals: "Ch",
+  pharmaceuticals: "Rx",
+  fertilizers: "NPK",
+  food: "Ag",
+  building_materials: "BM",
+  construction_services: "Cn",
+  healthcare_services: "HC",
+  real_estate_services: "RE",
+  software: "SW",
+  financial_services: "Fi",
+  advertising: "Ad",
+  vehicles: "Ve",
+  retail: "CG",
+  freight: "Fr",
+  consulting_services: "Cs",
+  iron: "Fe",
+  coal: "Co",
+  oil: "Oi",
+  rare_earth: "RE",
+  timber: "Ti",
+  natural_gas: "NG",
+  ordnance: "Ord",
+  plastics: "Pl",
+  network_services: "NS",
+};
+
 /**
  * Base price per unit for each commodity (in dollars).
  * Used to convert dollar-equivalent flows into unit quantities.
@@ -259,13 +291,6 @@ export const COMMODITY_UNITS: Record<CommodityType, string> = {
   plastics: "tons",
   network_services: "subscriptions",
 };
-
-/**
- * Small unit floor for commodity markets and sector modifiers.
- * Prevents divide-by-zero while still letting no-supply / no-demand scenarios
- * keep moving as the opposite side grows.
- */
-export const MIN_COMMODITY_FLOW_UNITS = 0.01;
 
 /**
  * Base supply and demand added to every commodity at the global level.
@@ -452,27 +477,6 @@ function applyUnownedCommodityDrift(
     balance.demand += stab * UNOWNED_DRIFT_AMPLITUDE * Math.sin(angle + Math.PI);
   }
 }
-
-/**
- * How strongly log supply/demand pressure moves market prices away from base.
- * Higher values make shortages and surpluses bite harder, while still applying
- * diminishing returns via the logarithm.
- */
-export const COMMODITY_PRICE_LOG_SCALE = 0.7;
-
-/**
- * Soft-knee for commodity pressure. Raw D/S remains visible in displays and
- * diagnostics, but price and margin math compress the tail beyond 3x shortage
- * or 3x oversupply so extreme markets still worsen without dominating balance.
- */
-export const COMMODITY_PRESSURE_SOFT_KNEE = 3;
-
-/**
- * Tail slope applied in log space after COMMODITY_PRESSURE_SOFT_KNEE.
- * At 0.25, each 4x increase in raw tail pressure acts like a 1.41x increase
- * in effective pressure. This is symmetric for shortages and oversupply.
- */
-export const COMMODITY_PRESSURE_TAIL_SLOPE = 0.25;
 
 /**
  * Wider soft-knee for the six EXTRACTABLE resources in PRICE math.
@@ -664,11 +668,6 @@ export const CONSTRUCTION_SERVICES_GDP_DEMAND_FRACTION = 5e-7;
  * balance pass wants a state-inefficiency discount (e.g. 0.85).
  */
 export const NATCORP_COMMODITY_MULTIPLIER = 1.0;
-
-/** Blend weights: 50% global / 25% national (country-aggregate) / 25% regional (state). */
-export const GLOBAL_PRICE_WEIGHT = 0.5;
-export const NATIONAL_PRICE_WEIGHT = 0.25;
-export const REGIONAL_PRICE_WEIGHT = 0.25;
 
 /**
  * Per-turn drift rate for commodity prices toward supply/demand equilibrium.
@@ -871,48 +870,6 @@ export function commodityMixWeight(
   const rate = supplyRates[commodity] ?? 0;
   if (!(total > 0) || !(base > 0) || rate <= 0) return 0;
   return rate / base / total;
-}
-
-/**
- * Calculate market price from effective supply/demand pressure with
- * logarithmic diminishing returns and no hard cap.
- *
- * If one side of the market is empty, the other side can keep pushing price
- * further as it grows; the soft-knee and log curve slow the rate of change.
- * If both are 0, returns base price.
- */
-export function computeMarketPrice(
-  basePrice: number,
-  supplyUnits: number,
-  demandUnits: number,
-  softKnee?: number
-): number {
-  const ratio = computeEffectiveCommodityPressureRatio(supplyUnits, demandUnits, softKnee);
-  const logPressure = Math.log(ratio);
-  const multiplier =
-    logPressure >= 0
-      ? 1 + COMMODITY_PRICE_LOG_SCALE * logPressure
-      : 1 / (1 + COMMODITY_PRICE_LOG_SCALE * -logPressure);
-  return Math.round(basePrice * multiplier * 100) / 100;
-}
-
-/**
- * Blend global, national, and regional prices.
- * blendedPrice = 0.5 * globalPrice + 0.25 * nationalPrice + 0.25 * regionalPrice
- */
-export function blendPrice(
-  globalPrice: number,
-  nationalPrice: number,
-  regionalPrice: number
-): number {
-  return (
-    Math.round(
-      (GLOBAL_PRICE_WEIGHT * globalPrice +
-        NATIONAL_PRICE_WEIGHT * nationalPrice +
-        REGIONAL_PRICE_WEIGHT * regionalPrice) *
-        100
-    ) / 100
-  );
 }
 
 // ─── Retail consumer demand GDP scaling ──────────────────────────────────────
@@ -1162,44 +1119,6 @@ export const COMMODITY_AGGREGATE_SURPLUS_CAP = 30;
  * handedly bankrupt an otherwise well-run firm.
  */
 export const COMMODITY_COMBINED_FLOOR = 15;
-
-/**
- * Convert raw supply/demand into a stable pressure ratio.
- * When one side is near zero, the floor keeps the ratio finite without
- * introducing a hard cap — pressure can still keep growing as the opposite
- * side increases.
- */
-export function computeCommodityPressureRatio(supplyUnits: number, demandUnits: number): number {
-  if (supplyUnits <= 0 && demandUnits <= 0) return 1;
-  const supply = Math.max(supplyUnits, MIN_COMMODITY_FLOW_UNITS);
-  const demand = Math.max(demandUnits, MIN_COMMODITY_FLOW_UNITS);
-  return demand / supply;
-}
-
-/**
- * Convert raw supply/demand pressure into the effective pressure used by price
- * and margin math. Ratios within the soft-knee (default 3x; callers pass
- * EXTRACTABLE_PRESSURE_SOFT_KNEE (8) for extractable prices) are unchanged.
- * Beyond that soft-knee, the log-pressure tail keeps increasing at a steeply
- * diminishing rate. The transform is symmetric around 1x.
- */
-export function computeEffectiveCommodityPressureRatio(
-  supplyUnits: number,
-  demandUnits: number,
-  softKnee: number = COMMODITY_PRESSURE_SOFT_KNEE
-): number {
-  const rawRatio = computeCommodityPressureRatio(supplyUnits, demandUnits);
-  if (rawRatio <= 0 || !Number.isFinite(rawRatio)) return 1;
-
-  const logPressure = Math.log(rawRatio);
-  const absLogPressure = Math.abs(logPressure);
-  const kneeLogPressure = Math.log(softKnee);
-  if (absLogPressure <= kneeLogPressure) return rawRatio;
-
-  const compressedLogPressure =
-    kneeLogPressure + (absLogPressure - kneeLogPressure) * COMMODITY_PRESSURE_TAIL_SLOPE;
-  return Math.exp(Math.sign(logPressure) * compressedLogPressure);
-}
 
 /**
  * Compute commodity margin modifier for a sector that BUYS commodities (input costs).
