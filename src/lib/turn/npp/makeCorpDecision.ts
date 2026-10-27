@@ -12,6 +12,7 @@ import {
   commodityDominanceRatio,
   type CommodityDominanceSector,
 } from "@/lib/corporations/rules/commodityDominance";
+import { supplierCommoditySupplyMix } from "@/lib/corporations/supplyAgreementCapacity";
 import { groupOperator } from "@/lib/corporations/groups/operator";
 import {
   activeGroupDirection,
@@ -223,6 +224,22 @@ export function makeNppCorpDecision(
   // corp's potential output (owned plus queued plus the order) of each
   // commodity the sector makes, over world demand. 0 when demand is unknown.
   let dominanceSectorsCache: CommodityDominanceSector[] | undefined;
+  // One mix per sector per decision: the toll prices every sector the corp might
+  // build on, and the recipe behind each term does not change across those
+  // calls. Resolving it per call made the toll quadratic with a strategy lookup
+  // in every term.
+  let dominanceSupplyMixes:
+    WeakMap<CommodityDominanceSector, Partial<Record<CommodityType, number>>> | undefined;
+  const dominanceSupplyMixOf = (
+    sector: CommodityDominanceSector
+  ): Partial<Record<CommodityType, number>> => {
+    dominanceSupplyMixes ??= new WeakMap();
+    const cached = dominanceSupplyMixes.get(sector);
+    if (cached) return cached;
+    const mix = supplierCommoditySupplyMix(sector, ctx.turn);
+    dominanceSupplyMixes.set(sector, mix);
+    return mix;
+  };
   const commodityRatioFor = (sector: CorporateSector, extraUnits: number): number => {
     const demandOf = plants?.commodityDemandOf;
     if (!plants || !demandOf) return 0;
@@ -239,6 +256,7 @@ export function makeNppCorpDecision(
       turn: ctx.turn,
       currentYear: plants.year,
       commandEconomyEnabled: plants.commandEconomyEnabled === true,
+      supplyMixOf: dominanceSupplyMixOf,
     }).ratio;
   };
   const capacityObservations: CapacityDecisionObservation[] = [];

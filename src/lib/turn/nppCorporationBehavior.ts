@@ -24,7 +24,11 @@ import type { Corporation, CorporateSector, GameState, ExchangeRate } from "@/li
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { currencyForCountry } from "@/lib/currency/sectorFxSpread";
 import { netPerTurnDebtServiceAnchor } from "@/lib/bonds/corpBondCashflows";
-import { buildActiveMarketBuckets, markMarketsActive } from "@/lib/turn/npp/marketSignals";
+import {
+  buildActiveMarketBuckets,
+  createPlacementSectorFacts,
+  markMarketsActive,
+} from "@/lib/turn/npp/marketSignals";
 
 export {
   sectorShortageScore,
@@ -57,6 +61,7 @@ import type { ManufacturingProductProject } from "@/lib/products/manufacturingPr
 import { labourAtLeast, isLabourSystemMode } from "@/lib/labour/modes";
 
 import {
+  bucketKey,
   computeStateControlledBuckets,
   loadNationalCorpIds,
 } from "@/lib/nationalization/stateControlledBuckets";
@@ -96,7 +101,7 @@ import {
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
 
 import { loadNppBehaviorConfig } from "@/lib/turn/npp/behaviorConfig";
-import { nppAutonomyAtLeast } from "@/lib/nppAutonomy/featureFlag";
+import { nppAutonomyAtLeast, withNppAutonomySnapshot } from "@/lib/nppAutonomy/featureFlag";
 import { NPP_ENGINE_LEVEL } from "@/lib/nppAutonomy/engineVersion";
 import {
   boundNppConstructionFinanceCandidates,
@@ -271,6 +276,10 @@ export async function processNppCorporationDecisions(
 
   const placementSignals = await loadNppPlacementSignals(db, turn, allSectors, statePriceRatioOf);
   placementSignals.stateDemandOf = stateDemandOf;
+  // The whole cohort ranks the same unowned snapshot, so the price-derived
+  // shortage scores are resolved once for the turn instead of per corp. Market
+  // size stays live inside the scan: founding draws move it during the pass.
+  placementSignals.sectorFacts = createPlacementSectorFacts();
 
   const { open: openUnowned, blocked } = await partitionOpenMarkets(db, unownedSectors);
 
@@ -308,8 +317,25 @@ export async function processNppCorporationDecisions(
   const stateControlled = computeStateControlledBuckets(globalSectors, nationalCorpIds);
   placementSignals.activeMarketBuckets = buildActiveMarketBuckets(globalSectors);
   const saturationIndex = buildMarketSaturationIndex(globalSectors);
-  placementSignals.marketSaturationOf = (cell, excluding) =>
-    marketSaturationOf(saturationIndex, cell, excluding);
+  // The index is a snapshot of this turn's sectors and nothing in the pass
+  // writes it, so a cell's saturation is one number for the whole cohort. The
+  // entry scan asks for it on every candidate of every corporation. The
+  // `excluding` form is a single plant's own view and stays uncached.
+  const saturationByCell = new Map<string, number | null>();
+  placementSignals.marketSaturationOf = (cell, excluding) => {
+    if (excluding) return marketSaturationOf(saturationIndex, cell, excluding);
+    const key = bucketKey(
+      cell.stateId,
+      cell.sectorType,
+      cell.industryModel,
+      cell.mediaDiscriminator
+    );
+    const cached = saturationByCell.get(key);
+    if (cached !== undefined) return cached;
+    const value = marketSaturationOf(saturationIndex, cell);
+    saturationByCell.set(key, value);
+    return value;
+  };
   // Last turn's state and national books, already loaded as price docs.
   // Same-type NPP builders per country, for the essential-shortage valve.
   const sameTypeNpp = new Set<string>();
@@ -569,11 +595,18 @@ export async function processNppCorporationDecisions(
 
   const autopilotAlerts: Array<{ corp: Corporation; kinds: CorpAutopilotAdvisory[] }> = [];
 
-  // NPP engine 6 corporate decisions, resolved once per country.
-  const engineSixByCountry = new Map<string, boolean>();
-  for (const countryId of new Set(nppCorps.map((corp) => corp.countryId))) {
-    engineSixByCountry.set(countryId, await nppAutonomyAtLeast(db, countryId, NPP_ENGINE_LEVEL));
-  }
+  // NPP engine 6 corporate decisions, resolved once per country. The snapshot
+  // reads the world's autonomy level once instead of once per country, and the
+  // per-country enablement reads run together rather than in sequence.
+  const engineSixByCountry = await withNppAutonomySnapshot(db, async () => {
+    const engineSix = new Map<string, boolean>();
+    const countryIds = [...new Set(nppCorps.map((corp) => corp.countryId))];
+    const levels = await Promise.all(
+      countryIds.map((countryId) => nppAutonomyAtLeast(db, countryId, NPP_ENGINE_LEVEL))
+    );
+    countryIds.forEach((countryId, index) => engineSix.set(countryId, levels[index] === true));
+    return engineSix;
+  });
 
   // v2: one cohort bundle for the relocation-bond credit fan. Absent on v1,
   // where `resolveNppMarketEntryCredit` reads per corporation.
