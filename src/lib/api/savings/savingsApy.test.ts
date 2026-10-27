@@ -93,4 +93,15 @@ describe("loadSavingsApyForCharacter", () => {
       expect(apy.USD).toBe(3.25);
     }
   });
+
+  it("quotes no rate for a stale holder in an authoritative currency, where nothing accrues", async () => {
+    const failed = bank("retail", "failed");
+    corporations = [failed];
+    vi.mocked(savingsReadsAuthoritative).mockReturnValue(true);
+    const apy = await loadSavingsApyForCharacter(db, {
+      currencyBalances: { savingsHolder: { USD: failed._id.toHexString() } },
+    } as never);
+    expect(apy.USD).toBeUndefined();
+    expect(apy.GBP).toBe(3.25);
+  });
 });

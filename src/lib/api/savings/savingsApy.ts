@@ -108,11 +108,19 @@ export async function loadSavingsApyForCharacter(
   for (const [currency, holderId] of bankHeld) {
     const charter = charterById.get(new ObjectId(holderId).toString());
     const quote = inputs[currency];
-    if (!quote || !charter || !holdsPlayerSavings(charter, currency)) continue;
+    if (!quote) continue;
+    const authoritative = savingsReadsAuthoritative(policy, currency);
+    if (!charter || !holdsPlayerSavings(charter, currency)) {
+      // A stale pointer earns no premium. Outside authoritative currencies the
+      // CB base still accrues (savingsInterestTurn); inside them nothing does,
+      // so quote no rate, as the savings desk shows none.
+      if (authoritative) delete out[currency];
+      continue;
+    }
     out[currency] = roundRatePercent(
       privateHolderSavingsApyPercent(
         effectiveBankRatesFromPrime(charter, quote.prime).depositRatePercent,
-        savingsReadsAuthoritative(policy, currency),
+        authoritative,
         quote.prime,
         quote.inflation,
         quote.apyPercent
