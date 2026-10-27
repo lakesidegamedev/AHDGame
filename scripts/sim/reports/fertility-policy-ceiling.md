@@ -60,4 +60,14 @@ npx tsx scripts/sim/fertilityCeilingComparison.ts <external-input.json> <externa
 
 The comparison explicitly sets each candidate ceiling, so changing the production default does not invalidate the paired arms. The script rejects missing/duplicate countries, inconsistent source turns, invalid vectors and invalid mortality. Tests verify neutral funding invariance, candidate ordering, bounded positive effects, unchanged negative effects, expiry, gradual response and source immutability. The balance change adds no turn reads or writes and changes no persisted schema or country readiness gates.
 
-Verification: 662 demographic, funding and simulation tests passed with two existing skips; all 178 architecture contracts passed. TypeScript, changed-file lint and formatting passed, and the architecture audit reported zero blocking findings. The full repository test suite and Next production build were not run for this balance-only change.
+Verification: 662 demographic, funding and simulation tests passed with two existing skips; all 178 architecture contracts passed. TypeScript, changed-file lint and formatting passed, and the architecture audit reported zero blocking findings.
+
+Follow-up full validation on 2026-10-27:
+
+- `npm run test:run -- --maxWorkers=6`: 58,003 tests passed, 577 skipped and one todo across 6,223 files (6,145 passed and 78 skipped).
+- `npm run verify:build`: passed, including production compilation and generation of all 778 static pages.
+- Final `npm run typecheck`, including generated production-build types: passed.
+- Repository-wide `npm run format:check`: passed. The changed client-boundary test also passed focused formatting and lint checks.
+- The full client-import boundary scan receives a dedicated 60-second test timeout after a loaded run took about 17 seconds against the default 15-second budget. Its assertions and exact legacy boundary remain unchanged; all 122 assertions passed in isolation and in the completed full suite.
+
+Supplemental native Node CI scripts were also attempted on Windows: 116 tests passed and 27 failed on POSIX-specific fixture requirements, including Bash execution, newline filenames, symlink permissions, signals and file-URL path handling. These Linux CI checks remain unqualified on this host; no checks were skipped or weakened to make that attempt pass. The full Vitest suite and production build above completed successfully. Receipt timing and fertility balance remain separate implementation commits.
