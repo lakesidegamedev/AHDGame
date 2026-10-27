@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { RegionalHeroActions } from "./RegionalHeroActions";
 import { ApprovalTooltip } from "@/components/ApprovalTooltip";
 import { Avatar } from "@/components/Avatar";
 import BackButton from "@/components/BackButton";
@@ -132,14 +133,6 @@ export function RegionHeader(props: RegionHeaderProps) {
     currentParty,
   } = props;
   const holderHref = executive ? executiveHref(executive) : null;
-  const legislatureLink = legislature ? (
-    <Link
-      href={legislature.href}
-      className="shrink-0 text-body-sm font-medium text-foreground underline decoration-card-border underline-offset-4 hover:decoration-foreground"
-    >
-      {legislature.label}
-    </Link>
-  ) : null;
   const european = usesEuropeanLeanColours(countryId);
   const executiveName = executive && holderHref ? (executive.characterName ?? "Unknown") : null;
 
@@ -325,28 +318,10 @@ export function RegionHeader(props: RegionHeaderProps) {
                   {executive.partyAbbreviation}
                 </span>
               )}
-              {officeHref && (
-                <Link
-                  href={officeHref}
-                  className="shrink-0 text-body-sm font-medium text-foreground underline decoration-card-border underline-offset-4 hover:decoration-foreground"
-                >
-                  Office
-                </Link>
-              )}
-              {legislatureLink}
             </span>
           ) : (
             <span className="flex flex-wrap items-center gap-2">
               <span className="text-body-lg text-muted">Vacant</span>
-              {officeHref && (
-                <Link
-                  href={officeHref}
-                  className="text-body-sm font-medium text-foreground underline decoration-card-border underline-offset-4 hover:decoration-foreground"
-                >
-                  Office
-                </Link>
-              )}
-              {legislatureLink}
             </span>
           )}
         </Fact>
@@ -359,6 +334,7 @@ export function RegionHeader(props: RegionHeaderProps) {
           </div>
         )}
       </dl>
+      <RegionalHeroActions officeHref={officeHref} legislature={legislature} />
     </header>
   );
 }

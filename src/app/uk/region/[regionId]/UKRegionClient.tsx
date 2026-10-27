@@ -1,7 +1,7 @@
 "use client";
 import type { BucketProfileSection } from "@/lib/demographics/bucketProfile";
 import Image from "next/image";
-import Link from "next/link";
+import { RegionalHeroActions } from "@/components/state/RegionalHeroActions";
 import { PositionBadges } from "@/components/PositionBadges";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";
 import {
@@ -103,7 +103,7 @@ interface UKRegionClientProps {
   executiveLabel?: string | null;
   /**
    * Whether the viewer may reach the executive's Office page — the holder OR an
-   * authorized party officer of an NPP-held office. Gates the "Office →" link.
+   * authorized party officer of an NPP-held office. Gates the Office link.
    */
   canManageOffice?: boolean;
   regionalConditionsOverviewEnabled?: boolean;
@@ -147,15 +147,6 @@ export default function UKRegionClient({
   approvalModifiersForOverview = [],
 }: UKRegionClientProps) {
   const _nationColor = NATION_COLORS[region.nationId] ?? "#4f7ac7";
-
-  const legislatureLink = (
-    <Link
-      href={regionUrl("UK", region.id) + "/legislature"}
-      className="inline-flex items-center rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/25 transition-colors"
-    >
-      {getUKCouncilName(region.id)}
-    </Link>
-  );
 
   const population = state?.population ?? nation?.population ?? 0;
   const gdp = state?.gdp ?? 0;
@@ -276,9 +267,6 @@ export default function UKRegionClient({
                 )}
               </span>
             </div>
-            {!executiveLabel && (
-              <div className="flex items-center px-5 py-3">{legislatureLink}</div>
-            )}
             {executiveLabel && (
               <div className="flex flex-col px-5 py-3 min-w-max">
                 <span className="text-body-sm font-medium text-muted">{executiveLabel}</span>
@@ -286,19 +274,21 @@ export default function UKRegionClient({
                   {executive && (executive.characterId || executive.nppId)
                     ? (executive.characterName ?? "Unknown")
                     : "Vacant"}
-                  {(canManageOffice || isAdmin) && (
-                    <Link
-                      href={`/country/uk/region/${region.id.toLowerCase()}/office`}
-                      className="inline-flex items-center rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/25 transition-colors"
-                    >
-                      Office →
-                    </Link>
-                  )}
-                  {legislatureLink}
                 </span>
               </div>
             )}
           </div>
+          <RegionalHeroActions
+            officeHref={
+              executiveLabel && (canManageOffice || isAdmin)
+                ? regionUrl("UK", region.id) + "/office"
+                : null
+            }
+            legislature={{
+              href: regionUrl("UK", region.id) + "/legislature",
+              label: getUKCouncilName(region.id),
+            }}
+          />
         </header>
 
         {/* Tabbed Content */}

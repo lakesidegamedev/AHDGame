@@ -58,7 +58,8 @@ export default async function StateLegislaturePage({
       legislationVersion={
         resetSystemVersionsForCountry(gameState, RESET_V2_READY, countryId).legislation
       }
-      canProposeViaPartyNpp={partyAccess.authorized && partyAccess.npp !== null}
+      canProposeViaPartyNpp={partyAccess.authorized}
+      partyNppUnavailable={partyAccess.npp === null}
       stateId={state._id}
       countryId={code.toUpperCase()}
       stateName={state.name}

@@ -62,6 +62,8 @@ describe("Regional hero legislature shortcut", () => {
     const office = screen.getByRole("link", { name: "Office" });
     const legislature = screen.getByRole("link", { name: "Scottish Parliament" });
     expect(office.parentElement).toBe(legislature.parentElement);
+    expect(office.closest("nav")?.getAttribute("aria-label")).toBe("Regional government");
+    expect(legislature.closest("dl")).toBeNull();
   });
   it("does not invent a legislature shortcut for a country without one", () => {
     render(<RegionHeader {...props} legislature={null} />);

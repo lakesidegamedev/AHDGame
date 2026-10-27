@@ -15,10 +15,12 @@ export function NationalPartyBillActionClient({
   countryId,
   initialChamber,
   blocked,
+  unavailable = false,
 }: {
   countryId: CountryId;
   initialChamber: string;
   blocked: boolean;
+  unavailable?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
@@ -28,10 +30,16 @@ export function NationalPartyBillActionClient({
     <section className="mx-auto max-w-7xl px-4 pt-6 sm:px-8">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-card-border bg-card p-4">
         <p className="text-sm text-muted">
-          {t(blocked ? "nationalPartyBillBlocked" : "nationalPartyBillHelp")}
+          {t(
+            blocked
+              ? "nationalPartyBillBlocked"
+              : unavailable
+                ? "nationalPartyBillUnavailable"
+                : "nationalPartyBillHelp"
+          )}
         </p>
         <button
-          disabled={blocked}
+          disabled={blocked || unavailable}
           onClick={() => setOpen(true)}
           className="rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
         >

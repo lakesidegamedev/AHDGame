@@ -119,6 +119,38 @@ describe("onBillEnacted", () => {
     }
   );
 
+  it.each([false, true])(
+    "refunds governor-queued bills (explicit payer=%s)",
+    async (explicitPayer) => {
+      const governorId = new ObjectId();
+      const explicitId = new ObjectId();
+      db.collection("characters").findOne.mockResolvedValue({
+        actions: 30,
+        nationalInfluence: 45,
+        stats: { energy: 1 },
+      });
+      const bill = {
+        ...createBill({ stateId: "SCO", countryId: "UK" }),
+        countryId: "UK" as const,
+        legislationTypeId: undefined,
+        provisions: [{ type: "end_subsidy" as const, scopeType: "economy_wide" as const }],
+        sponsorId: null,
+        proposedByGovernor: { characterId: governorId, name: "Governor" },
+        ...(explicitPayer ? { proposalPayerId: explicitId } : {}),
+        proposalActionCost: 10,
+        proposalNpiCost: 5,
+      };
+      await onBillEnacted(db as unknown as Db, bill, 100);
+      expect(db.collection("characters").updateOne).toHaveBeenCalledWith(
+        { _id: explicitPayer ? explicitId : governorId },
+        expect.objectContaining({
+          $inc: { nationalInfluence: 5 },
+          $set: expect.objectContaining({ actions: 40 }),
+        })
+      );
+    }
+  );
+
   const createLegislationType = (
     id: string,
     policyDomain: string = "economy",
