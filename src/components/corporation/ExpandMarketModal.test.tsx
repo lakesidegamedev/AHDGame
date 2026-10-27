@@ -56,6 +56,9 @@ const marketResponse = {
       headroomUnits: 543_000,
       starterBuildCostAnchor: 1_100,
       foundingTotalAnchor: 1_600,
+      entry: { canEnter: true, reason: null, message: null },
+      roomToBuildUnits: 543_000,
+      roomScope: "state",
     },
   ],
   availableCountries: ["US"],
@@ -113,15 +116,15 @@ describe("ExpandMarketModal plants market finder", () => {
     const optionEls = within(sectorTypeSelect).getAllByRole("option");
     expect(optionEls).toHaveLength(OPERATING_SECTOR_TYPES.length);
     expect(optionEls.map((option) => option.textContent)).toContain("Retail (secondary)");
-    expect(screen.getByText("Demand estimate")).toBeTruthy();
-    expect(screen.getByText("9,050")).toBeTruthy();
-    expect(screen.getByText("facility equivalents")).toBeTruthy();
+    expect(screen.getByText("Room to build")).toBeTruthy();
+    expect(screen.getByText("543k")).toBeTruthy();
+    expect(screen.getAllByText("Can enter now").length).toBeGreaterThan(0);
     expect(
       screen.getByText(
         "Some demand is local to each state. Other demand is shared across reachable markets in the same country, so state estimates can overlap. These estimates are not a sales guarantee."
       )
     ).toBeTruthy();
-    expect(screen.getByText(/Estimated output-mix demand:/)).toBeTruthy();
+    expect(screen.getByText(/Room to build: 543k units\/day/)).toBeTruthy();
     expect(screen.queryByText(/units\/day open/)).toBeNull();
     expect(screen.getByText("Best fit")).toBeTruthy();
 
@@ -177,7 +180,9 @@ describe("ExpandMarketModal plants market finder", () => {
           ok: true,
           json: async () => ({
             ...marketResponse,
-            suggestions: [{ ...marketResponse.suggestions[0], headroomUnits: 0 }],
+            suggestions: [
+              { ...marketResponse.suggestions[0], headroomUnits: 0, roomToBuildUnits: 0 },
+            ],
           }),
         } as Response)
       )
@@ -244,12 +249,13 @@ describe("ExpandMarketModal plants market finder", () => {
           countrySharedDemand: true,
           countryDemandEstimates: [{ countryId: "US", headroomUnits: 543_000 }],
           suggestions: [
-            { ...marketResponse.suggestions[0], headroomUnits: undefined },
+            { ...marketResponse.suggestions[0], headroomUnits: undefined, roomScope: "country" },
             {
               ...marketResponse.suggestions[0],
               stateId: "NY",
               stateName: "New York",
               headroomUnits: undefined,
+              roomScope: "country",
               foundingTotalAnchor: 1_800,
             },
           ],
@@ -270,8 +276,8 @@ describe("ExpandMarketModal plants market finder", () => {
 
     await screen.findByText("New York");
     expect(screen.getAllByText("543k")).toHaveLength(1);
-    expect(screen.getByText(/shared demand, not guaranteed sales/)).toBeTruthy();
-    expect(screen.queryByText("facility equivalents")).toBeNull();
+    expect(screen.getByText(/units\/day, shared across/)).toBeTruthy();
+    expect(screen.getByText("shared above")).toBeTruthy();
 
     const newYorkRow = screen.getAllByRole("button", { name: /New York/ })[0];
     fireEvent.click(newYorkRow);
@@ -291,7 +297,87 @@ describe("ExpandMarketModal plants market finder", () => {
       />
     );
 
-    await screen.findByText("facility equivalents");
-    expect(screen.getByText("Demand estimate")).toBeTruthy();
+    await screen.findByText("543k");
+    expect(screen.queryByText(/units\/day, shared across/)).toBeNull();
+  });
+
+  it("groups markets by whether they can be entered now and explains the refusal", async () => {
+    const pausedMessage =
+      "New Retail sectors are paused while consumer demand is rebalanced (40 turns remaining).";
+    const fetchMock = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: async () => ({
+          ...marketResponse,
+          suggestions: [
+            marketResponse.suggestions[0],
+            {
+              ...marketResponse.suggestions[0],
+              stateId: "NY",
+              stateName: "New York",
+              canAfford: true,
+              entry: { canEnter: false, reason: "retail_paused", message: pausedMessage },
+            },
+          ],
+        }),
+      } as Response)
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <ExpandMarketModal
+        corpId="corp-1"
+        primaryType="agriculture"
+        liquidCapital={25_400}
+        plantsMode
+        onClose={() => undefined}
+      />
+    );
+
+    await screen.findByText("New York");
+    expect(screen.getAllByText("Can enter now").length).toBeGreaterThan(0);
+    expect(screen.getByText("Not available now")).toBeTruthy();
+    expect(screen.getByText("Retail paused")).toBeTruthy();
+
+    fireEvent.click(screen.getAllByRole("button", { name: /New York/ })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Review farm" }));
+    await screen.findByText("Review New York");
+    const buildButton = screen.getByRole("button", { name: "Build it" }) as HTMLButtonElement;
+    expect(buildButton.disabled).toBe(true);
+    expect(screen.getAllByText(pausedMessage).length).toBeGreaterThan(0);
+    fireEvent.click(buildButton);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("names a leftover pool as unclaimed legacy revenue, apart from room to build", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          json: async () => ({
+            ...marketResponse,
+            suggestions: [
+              { ...marketResponse.suggestions[0], unownedRevenue: 2_400, roomToBuildUnits: 0 },
+            ],
+          }),
+        } as Response)
+      )
+    );
+
+    render(
+      <ExpandMarketModal
+        corpId="corp-1"
+        primaryType="agriculture"
+        liquidCapital={25_400}
+        plantsMode
+        onClose={() => undefined}
+      />
+    );
+
+    await screen.findByText("Best fit");
+    expect(screen.getByText(/Room to build: 0 units\/day/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Review farm" }));
+    expect(await screen.findByText(/Unclaimed legacy revenue here: \$2,400\/day/)).toBeTruthy();
   });
 });
