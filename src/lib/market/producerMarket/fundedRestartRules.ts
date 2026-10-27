@@ -12,8 +12,14 @@
  * FUNDED_RESTART_PRESSURE. A reopened plant starts from its probe run and must
  * sell to stay open, so a wrong reading costs a turn, not a glut.
  *
+ * A recipe with every plant mothballed has no running plant to publish a
+ * reading, so it reads its own output lanes in the funded book instead; without
+ * that a fully cold recipe could never reopen however short its buyers were.
+ *
  * Pure: plant readings in, pressure per recipe out; sectors in, the one to reopen out.
  */
+import { laneKeyOf } from "./laneKey";
+
 export const FUNDED_RESTART_PRESSURE = 1.5;
 
 export function recipeKey(sectorType: string, strategyId: string | null | undefined): string {
@@ -24,15 +30,26 @@ function positive(x: number | undefined): number {
   return typeof x === "number" && Number.isFinite(x) && x > 0 ? x : 0;
 }
 
+export interface PressurePlant {
+  sectorType: string;
+  strategyId?: string | null;
+  pressure?: number;
+  deliveredUnits: number;
+}
+
+/**
+ * A mothballed plant's own output lanes, from its last settled turn. It
+ * delivered nothing, so it carries no reading of its own; these lanes are what
+ * its recipe sells into.
+ */
+export interface MothballedRecipePlant {
+  sectorType: string;
+  strategyId?: string | null;
+  products?: readonly { commodity: string; book: string }[];
+}
+
 /** Delivered-weighted shortage per recipe across running plants with a reading. */
-export function recipePressure(
-  plants: readonly {
-    sectorType: string;
-    strategyId?: string | null;
-    pressure?: number;
-    deliveredUnits: number;
-  }[]
-): Record<string, number> {
+export function recipePressure(plants: readonly PressurePlant[]): Record<string, number> {
   const weight = new Map<string, number>();
   const sum = new Map<string, number>();
   for (const p of plants) {
@@ -45,6 +62,38 @@ export function recipePressure(
   }
   const out: Record<string, number> = {};
   for (const k of [...weight.keys()].sort()) out[k] = sum.get(k)! / weight.get(k)!;
+  return out;
+}
+
+/**
+ * Pressure per recipe including recipes whose plants are all mothballed.
+ *
+ * Only a running plant publishes the shortage it reads, so a recipe with every
+ * plant mothballed publishes nothing and could never reopen however short its
+ * buyers were. For a recipe with no running plant the funded book is read
+ * instead: the deepest of its mothballed plants' output lanes stands in for the
+ * missing reading. Any lane where buyers asked for more than was delivered is
+ * unmet demand, so the recipe reads at least the restart threshold; its
+ * recorded pressure orders it against the recipes that are still running.
+ */
+export function fundedRecipePressure(input: {
+  running: readonly PressurePlant[];
+  mothballed: readonly MothballedRecipePlant[];
+  pressureByBook: ReadonlyMap<string, number> | undefined;
+}): Record<string, number> {
+  const out = recipePressure(input.running);
+  const runningRecipes = new Set(Object.keys(out));
+  for (const plant of input.mothballed) {
+    const key = recipeKey(plant.sectorType, plant.strategyId);
+    if (runningRecipes.has(key)) continue;
+    let deepest = out[key] ?? 0;
+    for (const product of plant.products ?? []) {
+      const lane = laneKeyOf(product.commodity, product.book);
+      deepest = Math.max(deepest, positive(input.pressureByBook?.get(lane)));
+    }
+    // A reading of 1 is asked equal to delivered: the lane was served.
+    if (deepest > 1) out[key] = Math.max(FUNDED_RESTART_PRESSURE, deepest);
+  }
   return out;
 }
 

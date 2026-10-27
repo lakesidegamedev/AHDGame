@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   fundedCashIncome,
+  fundedDemandThrottle,
   fundedSectorOps,
   fundedSectorResult,
   SETTLEMENT_OWNED_SECTOR_FIELDS,
@@ -78,6 +79,24 @@ describe("funded sector ops", () => {
 describe("funded cash income", () => {
   it("removes the producer profit the settlement already paid", () => {
     expect(fundedCashIncome(50, 70)).toBe(-20);
+  });
+});
+
+describe("funded demand throttle", () => {
+  it("reads the share of capacity the funded settlement sold", () => {
+    expect(fundedDemandThrottle(25, 100)).toBe(0.25);
+    expect(fundedDemandThrottle(100, 100)).toBe(1);
+  });
+
+  it("clamps a multi-output plant's combined sales at full capacity", () => {
+    expect(fundedDemandThrottle(120, 100)).toBe(1);
+    expect(fundedDemandThrottle(-5, 100)).toBe(0);
+  });
+
+  it("reads 1 when the plant could produce nothing", () => {
+    expect(fundedDemandThrottle(0, 0)).toBe(1);
+    expect(fundedDemandThrottle(10, Number.NaN)).toBe(1);
+    expect(fundedDemandThrottle(Number.NaN, 100)).toBe(0);
   });
 });
 
