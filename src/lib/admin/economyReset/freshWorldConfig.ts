@@ -85,6 +85,8 @@ export const FRESH_PLANTS_CONFIG_KEPT: Readonly<Record<string, string>> = Object
     "switched off explicitly by FRESH_PLANTS_INTERVENTIONS_OFF: a rebuilt economy gets no transition package",
   producerMarketShadowEnabled:
     "telemetry switch; the shadow must keep running so the rebuilt economy can be classified for its opening",
+  economyPauseUntilTurn:
+    "scheduled economy-only pause window: it describes the rebuilt world, not the economy being deleted, so the fresh-world update must not clear it",
 });
 
 /**
