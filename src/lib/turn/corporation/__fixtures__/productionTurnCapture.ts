@@ -57,6 +57,77 @@ function captureCorpOps(result: Pick<SectorCalculationsResult, "corpOps">): Json
   );
 }
 
+/**
+ * Fields the shadow stamps with compute or wall time. They are telemetry about
+ * the run, not its result, so they never enter the golden.
+ */
+const SHADOW_VOLATILE_FIELDS: ReadonlySet<string> = new Set([
+  "at",
+  "codeSha",
+  "ms",
+  "msOnTurn",
+  "stageMs",
+]);
+
+export interface ShadowCapture {
+  plants: number;
+  skipped: number;
+  prices: number;
+  nextPrices: number;
+  householdSpend: number;
+  publicSpend: number;
+  accounts: number;
+  carriedPlants: number;
+  payables: number;
+  sha256: string;
+}
+
+/**
+ * The producer-market shadow's whole persistent surface, hashed: the turn
+ * summary and the carry state the next shadow turn opens from. The shadow is
+ * telemetry, but it must compute the same market no matter how its isolation
+ * and document copies are made cheaper, so this capture is part of the same
+ * golden gate.
+ */
+export function captureProducerShadow(documents: {
+  summary: Record<string, unknown> | null;
+  state: Record<string, unknown> | null;
+}): ShadowCapture {
+  const strip = (doc: Record<string, unknown> | null) =>
+    doc == null
+      ? null
+      : Object.fromEntries(Object.entries(doc).filter(([key]) => !SHADOW_VOLATILE_FIELDS.has(key)));
+  const document = canonical({
+    summary: strip(documents.summary),
+    state: strip(documents.state),
+  });
+  const summary = documents.summary as {
+    plants?: number;
+    skipped?: number;
+    prices?: unknown[];
+    nextPrices?: unknown[];
+    householdSpend?: number;
+    publicSpend?: number;
+  } | null;
+  const state = documents.state as {
+    accounts?: Record<string, number>;
+    plants?: Record<string, unknown>;
+    payables?: unknown[];
+  } | null;
+  return {
+    plants: summary?.plants ?? -1,
+    skipped: summary?.skipped ?? -1,
+    prices: summary?.prices?.length ?? 0,
+    nextPrices: summary?.nextPrices?.length ?? 0,
+    householdSpend: summary?.householdSpend ?? 0,
+    publicSpend: summary?.publicSpend ?? 0,
+    accounts: Object.keys(state?.accounts ?? {}).length,
+    carriedPlants: Object.keys(state?.plants ?? {}).length,
+    payables: state?.payables?.length ?? 0,
+    sha256: createHash("sha256").update(JSON.stringify(document)).digest("hex"),
+  };
+}
+
 interface TurnCapture {
   sectors: number;
   sectorOps: number;
