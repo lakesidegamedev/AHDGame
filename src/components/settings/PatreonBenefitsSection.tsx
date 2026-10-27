@@ -3,13 +3,13 @@
 import { apiErrorText } from "@/lib/errors/catalog";
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { PATREON_BORDER_OPTIONS, PATREON_HIGHLIGHT_COLORS } from "@/lib/db/types";
+import { PATREON_BORDER_OPTIONS, PATREON_HIGHLIGHT_COLORS } from "@/lib/db/types/patreon";
 import type {
   PatreonBorderOption,
   ProfileBorderKey,
   PatreonTier,
   SupporterProvider,
-} from "@/lib/db/types";
+} from "@/lib/db/types/patreon";
 import { ProfileBorder } from "@/components/patreon/ProfileBorder";
 import { LocalTime } from "@/components/time/LocalTime";
 

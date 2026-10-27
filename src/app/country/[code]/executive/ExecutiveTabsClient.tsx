@@ -10,11 +10,7 @@ import { WhiteHouseEndorsementsTab } from "@/app/whitehouse/WhiteHouseEndorsemen
 import { RegimeHealthTab } from "./RegimeHealthTab";
 import { AdminRegimePanel } from "@/app/admin/country/[code]/regime/AdminRegimePanel";
 import { AdminAppointPmButton } from "./components/AdminAppointPmModal";
-import { type CountryId } from "@/lib/constants/countriesCore";
-import {
-  COUNTRY_CLIENT_CONFIGS,
-  getExecutiveOrderNamePlural,
-} from "@/lib/constants/countryClientConfig";
+import { type CountryId, type GovernmentType } from "@/lib/constants/countriesCore";
 import { ExecutiveActivitySection } from "./components/ExecutiveActivitySection";
 import { ForeignAffairsTab } from "./components/ForeignAffairsTab";
 import { useConflictsEnabled } from "@/contexts/AuthDataContext";
@@ -58,6 +54,20 @@ interface Props {
    * conversion immediately hides the tab.
    */
   isOnePartyState?: boolean;
+  /**
+   * Registry copy the server hub already holds: legislature labels and path,
+   * the orders-tab label, and the static government type. Passing it in keeps
+   * the country registry out of this shell's client bundle.
+   */
+  chrome: {
+    governmentType: GovernmentType;
+    executiveTermLimit: number | null;
+    /** Whether this country runs the devolved legislature tab. */
+    hasDevolution: boolean;
+    ordersLabel: string;
+    legislatureName: string;
+    legislaturePath: string;
+  };
 }
 
 /**
@@ -74,10 +84,11 @@ export function ExecutiveTabsClient({
   viewerIsLeader,
   viewerIsAdmin,
   isOnePartyState,
+  chrome,
 }: Props) {
   const t = useTranslations("nav.devolution");
   const canSeePrivateTabs = viewerIsLeader || viewerIsAdmin;
-  const canSeeDevolution = countryId === COUNTRY_CLIENT_CONFIGS.UK.id && canSeePrivateTabs;
+  const canSeeDevolution = chrome.hasDevolution && canSeePrivateTabs;
   // Seeded from `?tab=`, so a link can open a specific tab. Follows the pattern
   // `CentralBankClient` and `CongressClient` already use. Initial state only: once
   // the page is open, clicking a tab keeps working exactly as before without
@@ -99,7 +110,7 @@ export function ExecutiveTabsClient({
     return openable ? requested : "overview";
   });
   const conflictsEnabled = useConflictsEnabled();
-  const ordersLabel = getExecutiveOrderNamePlural(countryId);
+  const ordersLabel = chrome.ordersLabel;
 
   return (
     <>
@@ -159,10 +170,12 @@ export function ExecutiveTabsClient({
               the US White House overview. */}
           <ExecutiveActivitySection
             countryId={countryId}
+            governmentType={chrome.governmentType}
+            executiveTermLimit={chrome.executiveTermLimit}
             cabinetSource="parliamentary"
             ledgerFooter={{
-              href: COUNTRY_CLIENT_CONFIGS[countryId].legislature.path,
-              label: `${COUNTRY_CLIENT_CONFIGS[countryId].legislature.name} page`,
+              href: chrome.legislaturePath,
+              label: `${chrome.legislatureName} page`,
             }}
           />
         </div>

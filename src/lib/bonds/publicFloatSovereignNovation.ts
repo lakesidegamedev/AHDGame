@@ -11,7 +11,10 @@ import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currenc
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 import type { FederalBudget } from "@/lib/db/types";
 import { readPoolForPrimary } from "@/lib/bonds/primaryMarket";
-import { planPublicFloatNovation } from "@/lib/bonds/rules/publicFloatNovation";
+import {
+  planPublicFloatNovation,
+  type PublicFloatNovationPlan,
+} from "@/lib/bonds/rules/publicFloatNovation";
 import { runRequiredTransaction } from "@/lib/db/runRequiredTransaction";
 import { primaryDocumentId } from "./sovereignPrimarySettlement";
 
@@ -19,6 +22,30 @@ type MaturityClaim = NonNullable<Bond["sovereignMaturityClaim"]>;
 type Disposition = NonNullable<MaturityClaim["publicFloatDisposition"]>;
 
 const REPLACEMENT_MATURITY: BondMaturityTurns = 48;
+
+/**
+ * The disposition a maturity freezes when no pool float is accepted: the whole
+ * claim pays cash. Shared so a batched funding turn records the identical field
+ * on a bond that carries no pool float at all.
+ */
+export function refusedPublicFloatDisposition(
+  plan: PublicFloatNovationPlan,
+  allowNovation: boolean
+): {
+  mode: "cash";
+  status: "refused";
+  acceptedUnits: 0;
+  refusal: string;
+} {
+  return {
+    mode: "cash",
+    status: "refused",
+    acceptedUnits: 0,
+    refusal: allowNovation
+      ? (plan.refusal ?? "invalid_replacement_coupon")
+      : "existing_maturity_funding",
+  };
+}
 
 function nationalBudgetId(countryId: CountryId): string {
   return countryId === COUNTRY_CONFIGS.US.id ? "federal" : countryId;
@@ -106,14 +133,7 @@ async function freezeDisposition(
           claim.amountLocal - plan.acceptedUnits * BOND_UNIT_FACE_VALUE
         ),
       }
-    : {
-        mode: "cash",
-        status: "refused",
-        acceptedUnits: 0,
-        refusal: allowNovation
-          ? (plan.refusal ?? "invalid_replacement_coupon")
-          : "existing_maturity_funding",
-      };
+    : refusedPublicFloatDisposition(plan, allowNovation);
   await db.collection<Bond>("bonds").updateOne(
     {
       _id: bond._id,

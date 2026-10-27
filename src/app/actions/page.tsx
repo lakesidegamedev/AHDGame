@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import type { Character, State } from "@/lib/db/types";
+import type { Character } from "@/lib/db/types";
 import { calculatePoliticalInfluenceDecay } from "@shared/constants/formulas";
 import {
   getCampaignActionCost,
@@ -17,6 +17,7 @@ import {
   quoteCampaignAction,
   quoteAdvertiseAction,
   quoteBuildDonorBaseAction,
+  type ActionStateEconomics,
 } from "@/lib/actions";
 import { getHomeCurrency, getTotalPersonalLiquidWealth } from "@/lib/currency/characterFunds";
 import { notifyCharacterStatsUpdated } from "@/lib/characterStatsSync";
@@ -67,7 +68,7 @@ export default function ActionsPage() {
   const router = useRouter();
   const worldFlags = useWorldFlags();
   const [character, setCharacter] = useState<Character | null>(null);
-  const [homeState, setHomeState] = useState<State | null>(null);
+  const [homeState, setHomeState] = useState<ActionStateEconomics | null>(null);
   const [executing, setExecuting] = useState<string | null>(null);
   const [flash, setFlash] = useState<{
     type: string;
@@ -116,7 +117,10 @@ export default function ActionsPage() {
     try {
       const [meRes, charRes] = await Promise.all([
         fetch("/api/auth/me"),
-        fetch("/api/auth/character"),
+        // The GDP and population the cost quotes need ride the character
+        // response, so the grid paints at final prices without a second,
+        // serial state round trip.
+        fetch("/api/auth/character?include=homeState"),
       ]);
       if (meRes.status === 401 || meRes.status === 403) {
         router.push("/login");
@@ -134,28 +138,11 @@ export default function ActionsPage() {
         localStorage.setItem("actionsViewMode", meData.user.actionsViewMode);
       }
       if (charRes.ok) {
-        const char: Character = await charRes.json();
+        const char: Character & { homeStateEconomics?: ActionStateEconomics | null } =
+          await charRes.json();
         setCharacter(char);
-        // The character is enough to paint the action grid; the state read below
-        // only refines GDP-scaled costs. Unblock first paint now and let the
-        // state land as a background refinement, rather than holding the whole
-        // page on a second serial round trip (measured 2026-10-24: this was the
-        // second RTT in the /actions gate).
+        if (char.homeStateEconomics) setHomeState(char.homeStateEconomics);
         setLoading(false);
-        // State data is needed to compute accurate GDP-scaled action costs.
-        if (char.homeState) {
-          try {
-            const stateRes = await fetch(
-              `/api/state/${encodeURIComponent(char.homeState)}?country=${encodeURIComponent(char.countryId)}`
-            );
-            if (stateRes.ok) {
-              const data = await stateRes.json();
-              if (data) setHomeState(data);
-            }
-          } catch {
-            // State data failed — page will use fallback costs
-          }
-        }
       } else {
         setLoading(false);
       }

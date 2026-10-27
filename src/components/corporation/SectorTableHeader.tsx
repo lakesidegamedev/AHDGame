@@ -1,6 +1,6 @@
 "use client";
 
-import { MIN_GROWTH_RATE, MAX_GROWTH_RATE } from "@/lib/constants/corporations";
+import { MIN_GROWTH_RATE, MAX_GROWTH_RATE } from "@/lib/constants/corporationsClient";
 import {
   MONEY_PERIOD_HELP,
   MONEY_PERIOD_LABEL,

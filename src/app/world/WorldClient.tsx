@@ -3,9 +3,6 @@
 import FederationFinances from "./components/FederationFinances";
 import type { LegacyServiceSnapshot } from "@/lib/world/succession/legacyServiceSnapshot";
 import Link from "next/link";
-import { type CountryId } from "@/lib/constants/countriesCore";
-import { resolveCountryAvailability } from "@/lib/countryAvailability";
-import { WORLD_ROADMAP_COUNTRIES } from "@/lib/worldCountryRegistry";
 import {
   TIER_ORDER,
   TIER_LABELS,
@@ -22,16 +19,18 @@ const WorldMapSVG = dynamic(() => import("./components/WorldMapSVG"), {
   loading: () => <div className="aspect-[2/1] w-full animate-pulse rounded-xl bg-card" />,
 });
 import { NationsTable, PlannedNationsTable, type NationRow } from "./components/NationsTable";
-import type { NationWorldSnapshot } from "@/lib/world/nationWorldSnapshots";
+import type { WorldRoadmapCountry } from "@/lib/worldCountryRegistry";
 import type { CountryAccessMap } from "./page";
 import { WorldMetricFilterProvider } from "./WorldMetricFilterContext";
 import type { WorldEntityMapSnapshot } from "@/lib/world/worldEntityMap";
 import type { BlocMapData } from "@/lib/world/blocMembership";
 
 interface WorldClientProps {
+  /** Server-resolved availability and labels, one entry per registered nation. */
+  rows: NationRow[];
+  roadmap: WorldRoadmapCountry[];
   legacyFinances?: LegacyServiceSnapshot[];
   countryAccess: CountryAccessMap;
-  nationSnapshots: Record<CountryId, NationWorldSnapshot>;
   /** Gates the Conflicts entry; mirrors the World navbar link. */
   conflictsEnabled: boolean;
   worldEntities: WorldEntityMapSnapshot;
@@ -51,30 +50,21 @@ const MAIN_HEADING = "text-heading-lg font-semibold tracking-tight text-foregrou
 const ASIDE_HEADING = "text-body-lg font-semibold text-foreground";
 
 export default function WorldClient({
+  rows: allRows,
+  roadmap,
   countryAccess,
-  nationSnapshots,
   conflictsEnabled,
   worldEntities,
   blocMapData,
   legacyFinances = [],
 }: WorldClientProps) {
-  // `countryAccess` is keyed by the runtime registered set (getAllCountryAccess →
-  // COUNTRY_ORDER ∪ active countryGameStates), so its keys are the SSOT for which
-  // countries to render here, so an activated SCO/WAL enters without a redeploy.
-  const registeredCountryIds = Object.keys(countryAccess) as CountryId[];
-  const rows: NationRow[] = registeredCountryIds.map((id) => ({
-    id,
-    availability: resolveCountryAvailability(id, countryAccess[id]),
-    snapshot: nationSnapshots[id],
-  }));
-
   // Nations you can play, then nations you can only browse, then nations that
   // are not in the game yet.
-  const playableRows = rows.filter((row) => row.availability.accessMode === "full");
-  const econOnlyRows = rows
+  const playableRows = allRows.filter((row) => row.availability.accessMode === "full");
+  const econOnlyRows = allRows
     .filter((row) => row.availability.accessMode === "econ-only")
     .sort((a, b) => a.availability.sortOrder - b.availability.sortOrder);
-  const hiddenRows = rows.filter((row) => row.availability.accessMode === "hidden");
+  const hiddenRows = allRows.filter((row) => row.availability.accessMode === "hidden");
   const openRows = [...playableRows, ...econOnlyRows];
 
   const links: WorldLink[] = [
@@ -169,7 +159,7 @@ export default function WorldClient({
                 </section>
               )}
 
-              {(hiddenRows.length > 0 || WORLD_ROADMAP_COUNTRIES.length > 0) && (
+              {(hiddenRows.length > 0 || roadmap.length > 0) && (
                 <section>
                   <h2 className={MAIN_HEADING}>Planned nations</h2>
                   <p className="mt-2 max-w-2xl text-body text-muted">
@@ -177,7 +167,7 @@ export default function WorldClient({
                     and regional politics.
                   </p>
                   <div className="mt-4">
-                    <PlannedNationsTable hidden={hiddenRows} roadmap={WORLD_ROADMAP_COUNTRIES} />
+                    <PlannedNationsTable hidden={hiddenRows} roadmap={roadmap} />
                   </div>
                 </section>
               )}

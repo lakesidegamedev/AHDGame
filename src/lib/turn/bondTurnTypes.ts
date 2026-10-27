@@ -1,15 +1,4 @@
-import type { treasuryAnchorValuation } from "@/lib/budget/rules/treasuryAccrual";
-import type { SovereignMaturityCashLeg } from "@/lib/bonds/sovereignMaturityPayoutTargets";
-import type { PartialTxEntry } from "./bondTurnLedger";
-
-/** Everything one sovereign maturity settles, built before any money moves. */
-export interface SovereignMaturityPlan {
-  treasuryValuation: NonNullable<ReturnType<typeof treasuryAnchorValuation>>;
-  bankUnits: number;
-  nonBankRepaymentLocal: number;
-  holderLegs: SovereignMaturityCashLeg[];
-  maturityEntries: PartialTxEntry[];
-}
+export type { SovereignMaturityPlan } from "@/lib/bonds/sovereignMaturityWave";
 
 /** Counters and per-country flows one bond phase reports. */
 export interface BondTurnResult {

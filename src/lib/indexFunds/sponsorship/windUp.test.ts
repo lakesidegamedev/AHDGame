@@ -43,13 +43,42 @@ vi.mock("@/lib/indexFunds/subscriptions", () => ({
   refundQueuedSubscriptionsForFund: vi.fn().mockResolvedValue(0),
 }));
 // Mirrors the real contract: a fund_reserve position is the fund's own units
-// and is never paid out.
-vi.mock("./holderPayout", () => ({
-  payFundHolderCash: vi.fn(
-    async (_db: unknown, _fund: unknown, position: { holderKind: string }) =>
-      position.holderKind !== "fund_reserve"
-  ),
-}));
+// and is never paid out. `payFundHoldersCash` settles a whole book in one call
+// in production; the shim below keeps this suite's per-holder assertions valid.
+vi.mock("./holderPayout", async () => {
+  const payFundHolderCash = vi.fn(
+    async (
+      _db: unknown,
+      _fund: unknown,
+      position: { holderKind: string },
+      _payoutAnchor?: number
+    ) => position.holderKind !== "fund_reserve"
+  );
+  return {
+    payFundHolderCash,
+    payFundHoldersCash: vi.fn(
+      async (
+        db: unknown,
+        fund: unknown,
+        payouts: Array<{
+          position: { holderKind: string };
+          payoutAnchor: number;
+        }>
+      ) => {
+        const paid: Array<{ holderKind: string }> = [];
+        const unpaid: Array<{ holderKind: string }> = [];
+        let distributedAnchor = 0;
+        for (const { position, payoutAnchor } of payouts) {
+          if (await payFundHolderCash(db, fund, position, payoutAnchor)) {
+            paid.push(position);
+            distributedAnchor += payoutAnchor;
+          } else if (position.holderKind !== "fund_reserve") unpaid.push(position);
+        }
+        return { paid, unpaid, distributedAnchor };
+      }
+    ),
+  };
+});
 
 import { creditCorpLiquidCapital } from "@/lib/financialTxLog/atomicCashGuard";
 import { sellFundHoldingsForRedemptionCash } from "@/lib/indexFunds/fundRedemptionLiquidity";

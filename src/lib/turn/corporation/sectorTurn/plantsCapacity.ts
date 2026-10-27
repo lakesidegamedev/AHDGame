@@ -47,6 +47,13 @@ export interface PlantsCapacityInput {
     | "otherOpexPerUnitAnchor"
   >;
   corp: Pick<Corporation, "ceoType">;
+  /**
+   * Active-capacity percent the turn runs the plant at (the NPP/autopilot
+   * operating target when one applies). Falls back to the stored field, so the
+   * caller can keep the sector document immutable instead of cloning it for
+   * one override.
+   */
+  activeCapacityPercent?: number | null;
   plantsEnabled: boolean;
   isFlipTurn: boolean;
   preFlipNameplateRevenue: number;
@@ -110,6 +117,7 @@ export function computePlantsCapacity(input: PlantsCapacityInput): PlantsCapacit
   const {
     sector,
     corp,
+    activeCapacityPercent,
     plantsEnabled,
     isFlipTurn,
     preFlipNameplateRevenue,
@@ -198,7 +206,12 @@ export function computePlantsCapacity(input: PlantsCapacityInput): PlantsCapacit
   // as its offer under plants, so 0 produced ⇒ 0 offered, automatically), and
   // pay only MOTHBALL_UPKEEP_FRACTION of running maintenance.
   const mothballed = plantsEnabled && sector.mothballed === true;
-  const activeFraction = plantsEnabled ? activeCapacityFraction(sector) : 1;
+  const activeFraction = plantsEnabled
+    ? activeCapacityFraction({
+        mothballed: sector.mothballed,
+        activeCapacityPercent: activeCapacityPercent ?? sector.activeCapacityPercent,
+      })
+    : 1;
   // The capacity the advance starts from, hoisted out of the `advanceCapitalStock`
   // call below so the P5 book basis can be scaled by exactly the same
   // depreciation factor the stock takes. See the long comment inside the call.

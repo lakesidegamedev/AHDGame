@@ -37,6 +37,19 @@ const SHARED_RESULT_MS = 1_500;
 
 let inflight: InflightRequest | null = null;
 let lastResult: { url: string; at: number; result: ClientStatusJsonResult } | null = null;
+let unauthorized = false;
+
+/**
+ * True once this page load has been told 401 by the status route.
+ *
+ * The status request starts at mount off a server cookie hint, which can be a
+ * stale or revoked token. The first 401 is the whole cost of that; without this
+ * flag the bar's 60 second poll would keep re-asking the origin for the rest of
+ * the visit.
+ */
+export function clientStatusUnauthorized(): boolean {
+  return unauthorized;
+}
 
 /**
  * Fetch `/api/client-status` once per page load.
@@ -68,6 +81,7 @@ export function fetchClientStatusJson(
         credentials: "same-origin",
         ...init,
       });
+      if (res.status === 401) unauthorized = true;
       if (!res.ok) return { ok: false, status: res.status, data: null };
       const data = (await res.json()) as ClientStatusJson;
       const result: ClientStatusJsonResult = { ok: true, status: res.status, data };

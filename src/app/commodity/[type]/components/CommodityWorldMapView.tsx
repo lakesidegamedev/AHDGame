@@ -13,14 +13,18 @@ import {
   aggregateByCountry,
   getMaxValue,
   getMaxPriceDeviation,
+  type CountryCommodityData,
+} from "@/lib/commodity-map/commodityAggregation";
+import {
   commodityColor,
   capacityColor,
   priceColor,
   reachableColor,
+} from "@/lib/commodity-map/commodityMapColorScale";
+import {
   ISO_NUMERIC_TO_COUNTRY,
   COUNTRY_TO_ISO_NUMERIC,
-  type CountryCommodityData,
-} from "@/lib/commodity-map";
+} from "@/lib/commodity-map/commodityRegionMappings";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import {

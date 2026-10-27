@@ -14,6 +14,7 @@ import {
   isAdoptedByName,
   missingPrerequisites,
   pills,
+  latestEraIndex,
   type NodeStatus,
   type DoctrineState,
 } from "@/lib/military/doctrineTree";
@@ -40,13 +41,14 @@ const STATUS_DOT: Record<NodeStatus, string> = {
  * Office (Doctrine tab). Cabinet-styled; client-state mockup via useDoctrineState.
  */
 export function DoctrineTab({
-  currentEra,
+  currentEra = latestEraIndex(),
   doctrine,
   countryCode,
   positionId,
   onAdopt,
 }: {
-  currentEra: number;
+  /** Live in-game era, or the latest catalogued one when the payload has none. */
+  currentEra?: number;
   doctrine: DoctrineState;
   countryCode: string;
   positionId: string;

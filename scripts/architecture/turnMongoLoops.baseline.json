@@ -169,7 +169,7 @@
     "aac01e9c382029b98523f66b00add47ebd0601174978c1666cd103af97f97c78": 1,
     "f4224b8240845b57e766ee5bdb418cbb42984429a9f34fad846ad5553dd11a37": 1,
     "a6e4841829cefb5ce0ad1bd089a68084df967c4968a4de80e18e9cb63e5e406a": 1,
-    "220d32729b9a21ce656ed8aa9e8a13b4ffa79322c9ea47c10aaf6342177062b7": 1,
+    "4fcd7856e8a24a4457baa56cf196eca0755a7c03545fed72a16e1489bed0a033": 1,
     "2b9bf114e1279b5afb41e133db016b239bfe00997a4bc13d68b46b982a947201": 1,
     "f01540aa996b62ac45900f1fa932b9beafd0095285ddde54d640e8a7922e65ae": 1,
     "e6362272e873201241e480bc0d8e813cdb11d4d01a2aa30abb7851a0db1c2af8": 1,
@@ -1871,9 +1871,9 @@
     {
       "file": "src/lib/indexFunds/processQueuedRedemptions.ts",
       "operation": "find",
-      "owner": "processQueuedRedemptions",
+      "owner": "prepareQueuedRedemptionPass",
       "expression": "db .collection(collection) .find({ _id: { $in: ids } })",
-      "fingerprint": "220d32729b9a21ce656ed8aa9e8a13b4ffa79322c9ea47c10aaf6342177062b7"
+      "fingerprint": "4fcd7856e8a24a4457baa56cf196eca0755a7c03545fed72a16e1489bed0a033"
     },
     {
       "file": "src/lib/indexFunds/processQueuedRedemptions.ts",

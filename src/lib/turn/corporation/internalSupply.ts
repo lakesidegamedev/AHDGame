@@ -3,7 +3,7 @@
  * the same physical input demand basis as supply agreements, without new reads.
  */
 import {
-  computeSupplyAgreementBuyerDemand,
+  computeSupplyAgreementSectorDemand,
   type SupplyAgreementDemandSector,
   type SettleableSupplyAgreement,
 } from "./settleSupplyAgreements";
@@ -13,6 +13,15 @@ import type { CorporationLookups } from "./types";
 import type { MarketContext } from "@/lib/market/marketContext";
 import type { CommodityType } from "@/lib/constants/commodities";
 import { isStateScopedCommodity } from "@/lib/market/commodityMarketScope";
+
+interface InternalSupplyBuyer {
+  sectorId: string;
+  corporationId: string;
+  stateId?: string;
+  demand: Map<CommodityType, number>;
+  committed: Map<CommodityType, number>;
+  availability?: Map<CommodityType, number>;
+}
 
 export function buildInternalSupplyContext(args: {
   lookups: CorporationLookups;
@@ -35,30 +44,45 @@ export function buildInternalSupplyContext(args: {
     policy: c.internalSupplyPolicy,
   }));
   const policies = resolveSupplyPolicies(owners);
-  if (![...policies.values()].some((p) => p.policy.priority !== "market")) return undefined;
-  const buyers = args.sectors.map((s) => ({
-    sectorId: s.sectorId,
-    corporationId: s.corporationId,
-    stateId: s.stateId,
-    demand:
-      computeSupplyAgreementBuyerDemand({
+  let anyPriority = false;
+  for (const policy of policies.values())
+    if (policy.policy.priority !== "market") {
+      anyPriority = true;
+      break;
+    }
+  if (!anyPriority) return undefined;
+  const buyers: InternalSupplyBuyer[] = [];
+  // Explicit promises claim their buyers' physical demand first. Splitting
+  // across consuming plants prevents priority from reserving the same demand.
+  // Indexed by corporation so each agreement scans only its buyer's sectors
+  // instead of every sector in the world.
+  const buyersByCorpId = new Map<string, InternalSupplyBuyer[]>();
+  for (const s of args.sectors) {
+    const buyer: InternalSupplyBuyer = {
+      sectorId: s.sectorId,
+      corporationId: s.corporationId,
+      stateId: s.stateId,
+      demand: computeSupplyAgreementSectorDemand({
         preset: args.lookups.preset,
         hardwareInputReliefStartTurn: args.lookups.hardwareInputReliefStartTurn,
-        sectors: [s],
+        sector: s,
         currentTurn: args.turn,
         unitScale: args.lookups.eraUnitScale,
         plantsEnabled: true,
-      }).get(s.corporationId) ?? new Map<CommodityType, number>(),
-    committed: new Map<CommodityType, number>(),
-    availability: args.lookups.stateInputAvailabilityByState.get(s.stateId ?? ""),
-  }));
-  // Explicit promises claim their buyers' physical demand first. Splitting
-  // across consuming plants prevents priority from reserving the same demand.
+      }),
+      committed: new Map<CommodityType, number>(),
+      availability: args.lookups.stateInputAvailabilityByState.get(s.stateId ?? ""),
+    };
+    buyers.push(buyer);
+    const rows = buyersByCorpId.get(buyer.corporationId);
+    if (rows) rows.push(buyer);
+    else buyersByCorpId.set(buyer.corporationId, [buyer]);
+  }
   for (const a of args.agreements) {
-    const eligible = buyers.filter(
-      (b) =>
-        b.corporationId === a.buyerCorpId &&
-        (!isStateScopedCommodity(a.commodity) || !a.stateId || b.stateId === a.stateId)
+    const corpBuyers = buyersByCorpId.get(a.buyerCorpId);
+    if (!corpBuyers) continue;
+    const eligible = corpBuyers.filter(
+      (b) => !isStateScopedCommodity(a.commodity) || !a.stateId || b.stateId === a.stateId
     );
     const remaining = eligible.map((b) =>
       Math.max(0, (b.demand.get(a.commodity) ?? 0) - (b.committed.get(a.commodity) ?? 0))
@@ -85,7 +109,7 @@ export function buildInternalSupplyContext(args: {
     discountCostOut,
     tradesOut: [],
     deliveryStateBySector: args.freightSettlementActive
-      ? new Map(args.sectors.filter((s) => !!s.stateId).map((s) => [s.sectorId, s.stateId!]))
+      ? deliveryStateBySector(args.sectors)
       : undefined,
     ownRouteDeliveredByKey: args.freightSettlementActive
       ? args.lookups.ownRouteDeliveredByKey
@@ -135,4 +159,12 @@ export function finishInternalSupplyContext(
       )
       .map((t) => ({ ...t, marketPrice: book.marketPrice }))
   );
+}
+
+function deliveryStateBySector(
+  sectors: readonly { sectorId: string; stateId?: string }[]
+): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const sector of sectors) if (sector.stateId) out.set(sector.sectorId, sector.stateId);
+  return out;
 }

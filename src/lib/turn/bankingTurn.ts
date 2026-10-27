@@ -46,6 +46,7 @@ import {
   ARREARS_DEFAULT_TURNS,
   MAX_NPC_FLOW_PER_TURN_FRACTION,
   npcFlowDelta,
+  npcBulkInstalment,
   fundedNpcFlowDelta,
   perTurnInterest,
 } from "@/lib/banking/rules/loans";
@@ -1628,7 +1629,13 @@ async function serviceNpcBulkBook(
   return { cashReserves, totalLoans, interestCollected, feesCollected, writtenOff, shortfall };
 }
 
-async function serviceDeadNpcBulkLoan(
+/**
+ * The per-loan path for one household tranche of a wound-up bank. The batch
+ * takes the same decision through `npcBulkInstalment`; this stays for a
+ * tranche the pooled debit could not carry, and for the tests that compare the
+ * two.
+ */
+export async function serviceDeadNpcBulkLoan(
   db: Db,
   turn: number,
   loan: BankLoan,
@@ -1658,23 +1665,15 @@ async function serviceDeadNpcBulkLoan(
     preloadedHouseholdPool === undefined
       ? Math.max(0, cb?.externalBroadMoney ?? 0)
       : Math.max(0, preloadedHouseholdPool);
-  const current = Math.max(0, loan.outstanding ?? 0);
-  const principalDelta = fundedNpcFlowDelta(current, 0, {
-    cashReserves: 0,
-    requiredReserves: 0,
+  const defaultRate = getCreditBand(loan.creditBand).defaultRatePercent;
+  const instalment = npcBulkInstalment({
+    outstanding: loan.outstanding ?? 0,
+    ratePercent: loan.ratePercent ?? 0,
+    defaultRatePercent: defaultRate,
+    currency,
     householdPool: pool,
   });
-  const principal = Math.min(current, Math.max(0, -principalDelta));
-  const afterPrincipal = Math.max(0, current - principal);
-  const interestDue = perTurnInterest(afterPrincipal, loan.ratePercent, currency);
-  const interest = Math.min(interestDue, Math.max(0, pool - principal));
-  const defaultRate = getCreditBand(loan.creditBand).defaultRatePercent;
-  const writtenOff = Math.min(
-    afterPrincipal,
-    (afterPrincipal * (defaultRate / 100)) / TURNS_PER_YEAR
-  );
-  const outstanding = Math.max(0, afterPrincipal - writtenOff);
-  const collected = principal + interest;
+  const { principal, interest, writtenOff, outstanding, collected } = instalment;
   const key = `npc-loan-service:${loan._id.toString()}:${turn}`;
   const settled = await settleTransition(db, {
     key,

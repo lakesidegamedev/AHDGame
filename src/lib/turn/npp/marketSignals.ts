@@ -242,12 +242,44 @@ export interface PlacementSignals {
     },
     options?: { strategyId?: string | null; aggregate?: "mean" | "max" }
   ) => number | null;
+  /** Turn-scoped memo of per-candidate facts that do not move during the pass. */
+  sectorFacts?: PlacementSectorFacts;
   /**
    * Whether an NPP corp whose primary or secondary type is `sectorType`
    * operates in `countryId`. Gates the essential-shortage valve: it crosses a
    * corp's own field only when no same-type builder exists there.
    */
   hasSameTypeNppIn?: (countryId: string, sectorType: string) => boolean;
+}
+
+/**
+ * Candidate facts that depend only on the turn's snapshot: the two shortage
+ * scores behind the ranking. Every NPP corp ranks the same pool, so re-deriving
+ * them per corp spent a handful of price reads on each candidate a few hundred
+ * times a turn.
+ *
+ * Market SIZE and the fragile score are deliberately NOT here: both read the
+ * pool's live headroom, which founding draws move between corporations in the
+ * same pass. Remembering them would hand a later corp the market an earlier one
+ * already built into.
+ */
+export interface PlacementSectorFacts {
+  shortage: Map<string, number>;
+  peakShortage: Map<string, number>;
+}
+
+export function createPlacementSectorFacts(): PlacementSectorFacts {
+  return { shortage: new Map(), peakShortage: new Map() };
+}
+
+/** Read a remembered value, or compute and remember it. */
+function remembered(store: Map<string, number> | undefined, key: string, compute: () => number) {
+  if (!store) return compute();
+  const cached = store.get(key);
+  if (cached !== undefined) return cached;
+  const value = compute();
+  store.set(key, value);
+  return value;
 }
 
 export function buildActiveMarketBuckets(sectors: readonly CorporateSector[]): Set<string> {
@@ -519,14 +551,18 @@ export function findBestUnownedSector(
   // Shortage at the candidate's own state when a state price exists, country
   // otherwise. This is what routes a founding to the state that is actually
   // starved instead of treating every state in the country as one market.
+  const facts = signals?.sectorFacts;
+  const factKey = (c: UnownedSector) => `${c._id ? String(c._id) : ""}|${countryId}`;
   const shortageOf = (c: UnownedSector) =>
-    sectorShortageScore(
-      getOperatingSectorType(c.sectorType, c.industryModel, c.mediaDiscriminator),
-      countryId,
-      depositAwarePriceRatioOf(c.sectorType, c.stateId, signals, (commodity, cid) => {
-        const stateRatio = signals?.statePriceRatioOf?.(commodity, c.stateId);
-        return stateRatio ?? priceRatioOf(commodity, cid);
-      })
+    remembered(facts?.shortage, factKey(c), () =>
+      sectorShortageScore(
+        getOperatingSectorType(c.sectorType, c.industryModel, c.mediaDiscriminator),
+        countryId,
+        depositAwarePriceRatioOf(c.sectorType, c.stateId, signals, (commodity, cid) => {
+          const stateRatio = signals?.statePriceRatioOf?.(commodity, c.stateId);
+          return stateRatio ?? priceRatioOf(commodity, cid);
+        })
+      )
     );
   const score = (c: UnownedSector) => {
     // Extraction ranks on deposit x shortage (via marketSizeOf); demand-side
@@ -581,10 +617,12 @@ export function findBestUnownedSector(
   // override gates on the peak so freight at 2.0x triggers logistics even
   // though consulting is at base.
   const peakShortageOf = (c: UnownedSector): number =>
-    sectorPeakShortageScore(
-      getOperatingSectorType(c.sectorType, c.industryModel, c.mediaDiscriminator),
-      countryId,
-      depositAwarePriceRatioOf(c.sectorType, c.stateId, signals, priceRatioOf)
+    remembered(facts?.peakShortage, factKey(c), () =>
+      sectorPeakShortageScore(
+        getOperatingSectorType(c.sectorType, c.industryModel, c.mediaDiscriminator),
+        countryId,
+        depositAwarePriceRatioOf(c.sectorType, c.stateId, signals, priceRatioOf)
+      )
     );
   const candidatePeakShortage = memoOf(peakShortageOf);
   const candidateFragileScore = memoOf(fragileScore);

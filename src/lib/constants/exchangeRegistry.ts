@@ -5,7 +5,7 @@
  * Adding a country with an exchangeName automatically registers its exchange.
  * No hardcoded NYSE/FTSE/Nikkei values outside this file and countries.ts.
  *
- * Reads `COUNTRY_CLIENT_CONFIGS` rather than the full registry: the generated
+ * Reads `COUNTRY_DISPLAY_LABELS` rather than the full registry: the generated
  * projection carries `exchangeName` and `exchangeKind`, and this module is on
  * the stock market and election page graphs. Importing `countries.ts` here
  * pulled every country's institutions, economy and era files into those
@@ -13,7 +13,7 @@
  */
 
 import { COUNTRY_ORDER, type CountryId } from "./countriesCore";
-import { COUNTRY_CLIENT_CONFIGS } from "./countryClientConfig";
+import { COUNTRY_DISPLAY_LABELS } from "./countryDisplayLabels";
 
 export interface ExchangeInfo {
   countryId: CountryId;
@@ -48,13 +48,13 @@ function toApiKey(exchangeName: string): string {
 function buildCountryEntries(): ExchangeInfo[] {
   const ordered: CountryId[] = [
     ...COUNTRY_ORDER,
-    ...(Object.keys(COUNTRY_CLIENT_CONFIGS) as CountryId[]).filter(
+    ...(Object.keys(COUNTRY_DISPLAY_LABELS) as CountryId[]).filter(
       (id) => !COUNTRY_ORDER.includes(id)
     ),
   ];
 
   return ordered
-    .map((id) => [id, COUNTRY_CLIENT_CONFIGS[id]] as const)
+    .map((id) => [id, COUNTRY_DISPLAY_LABELS[id]] as const)
     .filter(([, config]) => config?.exchangeName)
     .map(([id, config]) => ({
       countryId: id,
