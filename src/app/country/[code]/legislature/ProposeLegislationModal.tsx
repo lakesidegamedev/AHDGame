@@ -1304,6 +1304,7 @@ export function ProposeLegislationModal(
         chambers={props.chambers}
         initialChamber={props.defaultChamber ?? props.chambers[0]?.value ?? ""}
         adminOverride={props.adminOverride}
+        domesticOnlyLabel={props.domesticOnlyLabel}
         onClose={props.onClose}
         onSuccess={props.onSuccess}
       />

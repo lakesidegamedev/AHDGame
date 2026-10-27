@@ -465,6 +465,7 @@ export function JPCabinetProposeBillModal(
         endpoint={`${legislatureApiUrl(props.countryId)}/cabinet-bills`}
         chambers={[]}
         initialChamber="cabinet"
+        offerSubsidies={false}
         adminOverride={props.adminOverride}
         canSubmit={props.canSubmit}
         hasActiveBill={props.hasActiveBill}

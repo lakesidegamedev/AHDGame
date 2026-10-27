@@ -590,6 +590,26 @@ describe("GuidedLegislationModal", () => {
     });
   });
 
+  it("hides the Subsidies domain where the endpoint takes only reviewed laws and taxes", async () => {
+    stubCatalog();
+    render(
+      <NextIntlClientProvider locale="en" messages={messages}>
+        <GuidedLegislationModal
+          countryId="JP"
+          endpoint="/api/country/jp/legislature/cabinet-bills"
+          chambers={[]}
+          initialChamber="cabinet"
+          offerSubsidies={false}
+          onClose={vi.fn()}
+          onSuccess={vi.fn()}
+        />
+      </NextIntlClientProvider>
+    );
+
+    await screen.findByRole("option", { name: "Health and care" });
+    expect(screen.queryByRole("option", { name: "Subsidies" })).toBeNull();
+  });
+
   it("does not offer tax instruments that lack exact-rate metadata", async () => {
     stubCatalog({
       ...catalog,
@@ -608,5 +628,114 @@ describe("GuidedLegislationModal", () => {
     const domain = await screen.findByLabelText("Policy domain");
     expect(screen.queryByRole("option", { name: "Taxes" })).toBeNull();
     expect(domain).toBeTruthy();
+  });
+
+  it("drafts subsidies as industry bills and mixes them into multi-domain bills", async () => {
+    stubCatalog();
+    mocks.postBill.mockResolvedValue({ response: { ok: true }, data: {}, cancelled: false });
+    renderModal();
+
+    fireEvent.change(await screen.findByLabelText("Policy domain"), {
+      target: { value: "Subsidies" },
+    });
+    fireEvent.click(screen.getByText("Grant a subsidy").closest("button")!);
+    fireEvent.change(screen.getByLabelText("Coverage"), { target: { value: "sector" } });
+    const review = screen.getByRole("button", { name: "Review" });
+    expect(review.hasAttribute("disabled")).toBe(true);
+    fireEvent.change(screen.getByLabelText("Sector"), { target: { value: "manufacturing" } });
+    fireEvent.click(screen.getByLabelText("Domestic companies only"));
+    fireEvent.click(screen.getByRole("button", { name: "Review" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add to draft bill" }));
+    expect(screen.getByText("Grant subsidy: Manufacturing")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Add another provision" }));
+    fireEvent.change(await screen.findByLabelText("Policy domain"), {
+      target: { value: "Subsidies" },
+    });
+    fireEvent.click(screen.getByText("End a subsidy").closest("button")!);
+    expect(screen.queryByLabelText("Domestic companies only")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Review" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add to draft bill" }));
+
+    fireEvent.change(screen.getByLabelText("Bill title"), {
+      target: { value: "Industrial Support Act" },
+    });
+    fireEvent.change(screen.getByLabelText("Summary"), {
+      target: { value: "Support domestic manufacturing." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Propose bill" }));
+    await waitFor(() => expect(mocks.postBill).toHaveBeenCalledOnce());
+    expect(mocks.postBill.mock.calls[0][0].body).toMatchObject({
+      category: "industry",
+      provisions: [
+        {
+          type: "subsidy",
+          scopeType: "sector",
+          targetSectorType: "manufacturing",
+          domesticOnly: true,
+        },
+        { type: "end_subsidy", scopeType: "economy_wide" },
+      ],
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Add another provision" }));
+    await addProvision("Health and care", "Primary care access", "Community clinic expansion");
+    fireEvent.click(screen.getByRole("button", { name: "Propose bill" }));
+    await waitFor(() => expect(mocks.postBill).toHaveBeenCalledTimes(2));
+    expect(mocks.postBill.mock.calls[1][0].body.category).toBe("custom");
+    expect(mocks.postBill.mock.calls[1][0].body.provisions).toHaveLength(3);
+  });
+
+  it("queues a governor bill for a chosen NPP without offering flavor-only bills", async () => {
+    stubCatalog();
+    mocks.postBill.mockResolvedValue({ response: { ok: true }, data: {}, cancelled: false });
+    const onSuccess = vi.fn();
+    render(
+      <NextIntlClientProvider locale="en" messages={messages}>
+        <GuidedLegislationModal
+          countryId="UK"
+          endpoint="/api/country/uk/region/sco/office/legislation/queue"
+          scope="regional"
+          regionId="SCO"
+          chambers={[]}
+          initialChamber="regional"
+          queue={{ eligibleNpps: [{ _id: "npp-1", name: "Morag Campbell" }] }}
+          onClose={vi.fn()}
+          onSuccess={onSuccess}
+        />
+      </NextIntlClientProvider>
+    );
+
+    expect(screen.getByRole("heading", { name: "Queue a bill" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Custom Bill" })).toBeNull();
+    await addProvision("Health and care", "Primary care access", "Community clinic expansion");
+    expect(screen.queryByLabelText("Originating chamber")).toBeNull();
+    fireEvent.change(screen.getByLabelText("Bill title"), {
+      target: { value: "Clinic Access Act" },
+    });
+    fireEvent.change(screen.getByLabelText("Summary"), {
+      target: { value: "Expand community clinics." },
+    });
+    const queueButton = screen.getByRole("button", { name: "Queue bill" });
+    expect(queueButton.hasAttribute("disabled")).toBe(true);
+    fireEvent.change(screen.getByLabelText("Introducing NPP"), { target: { value: "npp-1" } });
+    fireEvent.click(screen.getByRole("button", { name: "Queue bill" }));
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledOnce());
+    const request = mocks.postBill.mock.calls[0][0];
+    expect(request.url).toBe("/api/country/uk/region/sco/office/legislation/queue");
+    expect(request.body).toMatchObject({
+      targetNppId: "npp-1",
+      provisions: [
+        {
+          type: "reset_law",
+          familyId: "L19",
+          scope: "regional",
+          regionId: "SCO",
+          choice: "center_left",
+        },
+      ],
+    });
+    expect(mocks.showToast).toHaveBeenCalledWith("Bill queued.", "success");
   });
 });

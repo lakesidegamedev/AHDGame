@@ -297,9 +297,19 @@ jobs:
           key: ${{ runner.os }}-${{ runner.arch }}-node22-turbopack-v1-${{ hashFiles('package-lock.json', 'package.json', 'next.config.ts', 'tsconfig*.json', 'postcss.config.*') }}-${{ hashFiles('src/**', 'content/**', 'messages/**', 'public/**', 'sentry.*.config.ts') }}
           restore-keys: |
             ${{ runner.os }}-${{ runner.arch }}-node22-turbopack-v1-${{ hashFiles('package-lock.json', 'package.json', 'next.config.ts', 'tsconfig*.json', 'postcss.config.*') }}-
+      # A timed-out restore can leave its tar still extracting into the
+      # directory, and a plain rm then races it ("Directory not empty").
+      # Stop the extraction first, then move the directory aside so the
+      # build never sees a half-written cache.
       - name: Discard an incomplete compiler cache restore
         if: steps.compiler-cache.outcome == 'failure'
-        run: rm -rf .next/cache/turbopack
+        run: |
+          pkill -f 'tar -xf .*cache.tzst' || true
+          for _ in 1 2 3 4 5 6 7 8 9 10; do pgrep -f 'tar -xf .*cache.tzst' >/dev/null || break; sleep 1; done
+          if [ -d .next/cache/turbopack ]; then
+            mv .next/cache/turbopack "$RUNNER_TEMP/turbopack-discarded-$$"
+            rm -rf "$RUNNER_TEMP/turbopack-discarded-$$" || true
+          fi
       # The compile reaches the 16 GB runner's limit (15.7 GB on the last good
       # build, then the agent killed mid-compile on every run from 2026-10-09).
       # Swap absorbs the peak instead of losing the runner.
