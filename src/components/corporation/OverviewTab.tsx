@@ -80,6 +80,14 @@ interface OverviewTabProps {
   myCharacterId: string | null;
   /** Opens the trade ticket; omitted when the viewer cannot trade here. */
   onTrade?: () => void;
+  /**
+   * Open votes for this corporation, when the page has already asked for them.
+   *
+   * The page starts the request with its first paint, in parallel with the
+   * corporation payload, so the docket does not wait a second round trip after
+   * the page's own data arrives. Omitted, the tab fetches them itself.
+   */
+  openVotes?: OpenVote[];
 }
 
 const PERIOD_OPTIONS = MONEY_PERIODS.map((p) => ({ value: p, label: MONEY_PERIOD_LABEL[p] }));
@@ -380,28 +388,33 @@ export default function OverviewTab({
   isCeo,
   myCharacterId,
   onTrade,
+  openVotes: seededOpenVotes,
 }: OverviewTabProps) {
   const money = useCorpMoney(corporation.liquidCurrencyCode, corporation.countryId);
   const { fmt, fmtSigned, fmtPrice } = money;
   const fogged = financialFogOfWar != null;
   const scale = (daily: number) => Math.round(scaleMoney(daily, periodView));
 
-  const [openVotes, setOpenVotes] = useState<OpenVote[]>([]);
+  const [fetchedVotes, setFetchedVotes] = useState<OpenVote[]>([]);
+  const openVotes = seededOpenVotes ?? fetchedVotes;
   useEffect(() => {
+    // The page already asked for these with its first paint; fetching again
+    // would be the second round trip this prop exists to remove.
+    if (seededOpenVotes !== undefined) return;
     let cancelled = false;
     fetchJson<unknown>(
       `/api/corporations/${corporation.sequentialId ?? corporation._id}/votes?status=open`,
       { feature: "corp-open-votes" }
     )
       .then((data) => {
-        if (!cancelled && Array.isArray(data)) setOpenVotes(data as OpenVote[]);
+        if (!cancelled && Array.isArray(data)) setFetchedVotes(data as OpenVote[]);
       })
       // fetchJson has already reported the failure; the list just stays empty.
       .catch(() => undefined);
     return () => {
       cancelled = true;
     };
-  }, [corporation._id, corporation.sequentialId]);
+  }, [corporation._id, corporation.sequentialId, seededOpenVotes]);
 
   const basis = financials ? corpIncomeBasis(financials) : null;
   const netMargin = financials ? netMarginPct(financials) : null;
