@@ -183,7 +183,7 @@ describe("GET /api/banking/hub private-bank table", () => {
     expect(rateBy.A).toBe(9.25);
     // Posted 0.5 sits below base: no premium, but the CB APY still accrues.
     expect(rateBy.Low).toBe(3.25);
-    // The bank's own posted rate is unchanged in the private-bank table.
+    // Each row still carries the bank's posted rate beside what the saver earns.
     const posted = Object.fromEntries(
       body.privateBanks.map((b: { name: string; depositRatePercent: number }) => [
         b.name,
