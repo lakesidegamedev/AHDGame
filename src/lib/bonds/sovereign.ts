@@ -89,6 +89,11 @@ import { loadDemocraticHealth } from "@/lib/governanceStyle/loadDemocraticHealth
 import { democraticHealthSovereignSpread } from "@/lib/governanceStyle/rules/democraticConsequences";
 import { settleSovereignPublicFloatDisposition } from "./publicFloatSovereignNovation";
 import {
+  sovereignMaturityBondRetireProjection,
+  sovereignMaturityBudgetRetirementInc,
+  sovereignMaturityRetirementFigures,
+} from "./sovereignMaturityRetirement";
+import {
   FORCED_ROLLOVER_MATURITY,
   rollOverUnfundedSovereignPoolFloat,
 } from "./forcedSovereignRollover";
@@ -1350,18 +1355,6 @@ export async function settleFundedSovereignBondMaturity(
     quote.publicFloatDisposition?.mode === "novation"
       ? quote.publicFloatDisposition.acceptedUnits
       : 0;
-  const originalTotalIssued =
-    quote.publicFloatDisposition?.mode === "novation"
-      ? quote.publicFloatDisposition.sourceTotalIssued
-      : bond.totalIssued;
-  const originalCouponRate =
-    quote.publicFloatDisposition?.mode === "novation"
-      ? quote.publicFloatDisposition.sourceCouponRate
-      : bond.couponRate;
-  const originalHaircut =
-    quote.publicFloatDisposition?.mode === "novation"
-      ? (quote.publicFloatDisposition.sourceRestructureHaircutPercent ?? null)
-      : (bond.restructureHaircutPercent ?? null);
   const cashAmountLocal =
     quote.publicFloatDisposition?.mode === "novation"
       ? (quote.publicFloatDisposition.residualAmountLocal ?? 0)
@@ -1498,16 +1491,7 @@ export async function settleFundedSovereignBondMaturity(
     quote = fundedQuote;
   }
 
-  const remainingIssued = Math.max(0, originalTotalIssued - novatedUnits * BOND_UNIT_FACE_VALUE);
-  const remainingPublicFloat = Math.max(0, quote.sourcePublicFloat - novatedUnits);
-  const maturedFace = sovereignBondOutstanding({
-    issuerType: "sovereign",
-    matured: false,
-    defaulted: false,
-    totalIssued: remainingIssued,
-    restructureHaircutPercent: originalHaircut,
-  });
-  const annualCouponCost = (originalCouponRate / 100) * remainingIssued;
+  const retirement = sovereignMaturityRetirementFigures(bond, quote);
   const payoutQuote =
     novatedUnits > 0
       ? {
@@ -1567,50 +1551,22 @@ export async function settleFundedSovereignBondMaturity(
           // Delta projection preserves concurrent issuance and maturity
           // changes on the same country's budget. A stale $set here could
           // overwrite a second bond's newly issued or retired principal.
-          $inc: {
-            "debt.principal": -maturedFace,
-            "spending.debtInterest": -annualCouponCost,
-            "spending.total": -annualCouponCost,
-            surplus: annualCouponCost,
-          },
+          $inc: sovereignMaturityBudgetRetirementInc(retirement),
           $set: { updatedAt: now },
         },
         note: "Retire matured sovereign debt after funded payouts",
       },
-      {
-        collection: "bonds",
-        filter: {
-          _id: bond._id,
-          issuerType: "sovereign",
-          countryId: sourceCountryId,
-          ...frozenSourceIdentity,
-          maturityTurn: dueTurn,
-          matured: false,
-          defaulted: false,
-          "sovereignMaturityClaim.id": claimId,
-          "sovereignMaturityClaim.escrowLocal": 0,
-          holders: quote.sourceHolders,
-          publicFloat: remainingPublicFloat,
-          totalIssued: remainingIssued,
-          ...(quote.sourceCentralBankHoldings === undefined
-            ? { centralBankHoldings: { $exists: false } }
-            : { centralBankHoldings: quote.sourceCentralBankHoldings }),
-        },
-        update: {
-          $set: {
-            "sovereignMaturityClaim.escrowLocal": 0,
-            "sovereignMaturityClaim.paid": true,
-            matured: true,
-            redeemedAtTurn: turn,
-            marketPrice: 1,
-            publicFloat: 0,
-            holders: [],
-            centralBankHoldings: 0,
-            updatedAt: now,
-          },
-        },
-        note: "Retire sovereign bond after every funded holder leg lands",
-      },
+      sovereignMaturityBondRetireProjection({
+        bond,
+        quote,
+        claimId,
+        dueTurn,
+        sourceCountryId,
+        figures: retirement,
+        turn,
+        now,
+        frozenSourceIdentity,
+      }),
     ],
     event: {
       kind: "monetary.executed",
