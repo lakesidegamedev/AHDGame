@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
 import { ObjectId } from "mongodb";
-import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
+import { createAsyncIterableCursor, createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 
 const mockCanManageOffice = vi.fn();
 const mockCancelQueue = vi.fn();
@@ -112,6 +112,71 @@ describe("processGovernorLegislationQueue — NPP-office officer authority", () 
       expect.anything(),
       "invalid_provisions"
     );
+  });
+
+  it("cancels (refunds) a queued v2 law whose family an active bill already carries", async () => {
+    mockCanManageOffice.mockResolvedValue(true);
+    const lawEntry = {
+      ...pendingEntry(),
+      provisions: [
+        {
+          type: "reset_law",
+          familyId: "L10",
+          scope: "regional",
+          regionId: "TX",
+          choice: "center_left",
+        },
+      ],
+    };
+    db.collection("governorLegislationQueue").find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([lawEntry]),
+    });
+    db.collection("stateBills").find.mockReturnValue(
+      createAsyncIterableCursor([
+        { countryId: "US", stateId: "TX", provisions: [{ type: "reset_law", familyId: "L10" }] },
+      ])
+    );
+    const { processGovernorLegislationQueue } = await import("./governorLegislationQueue");
+    const result = await processGovernorLegislationQueue(db as unknown as Db, 201);
+
+    expect(result).toEqual({ fired: 0, cancelled: 1 });
+    expect(db.collection("stateBills").insertOne).not.toHaveBeenCalled();
+    expect(mockCancelQueue).toHaveBeenCalledWith(
+      expect.anything(),
+      lawEntry._id,
+      "invalid_provisions"
+    );
+    expect(db.collection("stateBills").find).toHaveBeenCalledTimes(1);
+  });
+
+  it("fires a queued v2 law when no active bill carries its family", async () => {
+    mockCanManageOffice.mockResolvedValue(true);
+    db.collection("governorLegislationQueue").find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([
+        {
+          ...pendingEntry(),
+          provisions: [
+            {
+              type: "reset_law",
+              familyId: "L10",
+              scope: "regional",
+              regionId: "TX",
+              choice: "center_left",
+            },
+          ],
+        },
+      ]),
+    });
+    db.collection("stateBills").find.mockReturnValue(
+      createAsyncIterableCursor([
+        { countryId: "US", stateId: "TX", provisions: [{ type: "reset_law", familyId: "L19" }] },
+      ])
+    );
+    const { processGovernorLegislationQueue } = await import("./governorLegislationQueue");
+    const result = await processGovernorLegislationQueue(db as unknown as Db, 201);
+
+    expect(result).toEqual({ fired: 1, cancelled: 0 });
+    expect(mockCancelQueue).not.toHaveBeenCalled();
   });
 
   it("still fires when queued provisions are valid sub-national provisions", async () => {
