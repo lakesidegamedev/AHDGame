@@ -51,6 +51,7 @@ import { DangerZoneSection } from "./components/DangerZoneSection";
 import { ReferralsSection } from "./components/ReferralsSection";
 import { SupporterPerksSection } from "./components/SupporterPerksSection";
 import { ApiKeysSection } from "./components/ApiKeysSection";
+import { ExperimentalFeaturesSection } from "./components/ExperimentalFeaturesSection";
 
 import {
   type CharacterData,
@@ -576,6 +577,8 @@ export function SettingsPageContent() {
             onInterfaceModeChange={handleInterfaceModeChange}
           />
         );
+      case "experimental":
+        return <ExperimentalFeaturesSection />;
       case "patreon":
         return <PatreonBenefitsSection />;
       case "supporter-perks":

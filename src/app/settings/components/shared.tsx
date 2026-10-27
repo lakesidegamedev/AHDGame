@@ -15,6 +15,7 @@ export type SectionId =
   | "retired-characters"
   | "security"
   | "api-keys"
+  | "experimental"
   | "danger"
   | "profile"
   | "demographics"
@@ -87,6 +88,16 @@ export function SectionIcon({ id }: { id: SectionId }) {
             strokeLinecap="round"
             strokeLinejoin="round"
             d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+          />
+        </svg>
+      );
+    case "experimental":
+      return (
+        <svg className={cls} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M9 3h6M10 3v6l-5 9a2 2 0 001.7 3h10.6a2 2 0 001.7-3l-5-9V3M7.5 15h9"
           />
         </svg>
       );
