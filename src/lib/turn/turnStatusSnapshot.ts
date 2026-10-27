@@ -2,7 +2,7 @@
  * Turn progress polls share a small public snapshot for at most half a second.
  * Gameplay writes and lock acquisition always read authoritative state directly.
  */
-import { getGameStateCollection } from "@/lib/db/collections";
+import { getGameConfigCollection, getGameStateCollection } from "@/lib/db/collections";
 import type { GameState } from "@/lib/db/types";
 import { isSingleplayer } from "@/lib/singleplayer";
 
@@ -36,21 +36,43 @@ export const TURN_STATUS_PROJECTION = {
   fastMode: 1,
 } as const;
 
-type TurnStatusSnapshot = Pick<
+type TurnStatusState = Pick<
   GameState,
   Exclude<keyof typeof TURN_STATUS_PROJECTION, "preIteration.active"> | "preIteration"
 >;
+
+/**
+ * The public turn status row plus the one gameConfig knob the status payload
+ * needs. `economyPauseUntilTurn` rides along so a poll costs the same coalesced
+ * pair of projected reads instead of a second uncached lookup per client.
+ */
+export type TurnStatusSnapshot = TurnStatusState & {
+  /** gameConfig.economyPauseUntilTurn, null when absent or unreadable. */
+  economyPauseUntilTurn: number | null;
+};
 
 let cached: TurnStatusSnapshot | null = null;
 let expiresAt = 0;
 let pending: Promise<TurnStatusSnapshot | null> | null = null;
 
 async function readSnapshot(): Promise<TurnStatusSnapshot | null> {
-  const collection = await getGameStateCollection();
-  return collection.findOne<TurnStatusSnapshot>(
-    { _id: "current" },
-    { projection: TURN_STATUS_PROJECTION }
-  );
+  const [state, config] = await Promise.all([
+    getGameStateCollection().then((collection) =>
+      collection.findOne<TurnStatusState>(
+        { _id: "current" },
+        { projection: TURN_STATUS_PROJECTION }
+      )
+    ),
+    // The pause window is a display nicety: a failed gameConfig read must not
+    // take the whole status endpoint down, so it degrades to "no pause".
+    getGameConfigCollection()
+      .then((collection) =>
+        collection.findOne({ _id: "default" }, { projection: { economyPauseUntilTurn: 1 } })
+      )
+      .catch(() => null),
+  ]);
+  if (!state) return null;
+  return { ...state, economyPauseUntilTurn: config?.economyPauseUntilTurn ?? null };
 }
 
 export async function getTurnStatusSnapshot(): Promise<TurnStatusSnapshot | null> {

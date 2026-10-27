@@ -335,6 +335,7 @@ describe("resetGameWorld", () => {
           ...STALE_MARKET_MODE_STAMP_UNSET,
           fresh1991VehicleModelSeed: "",
           fresh1991MediaTaxonomySeed: "",
+          economyPauseUntilTurn: "",
         },
       }
     );
@@ -345,6 +346,7 @@ describe("resetGameWorld", () => {
     expect(configUpdate.$unset).not.toHaveProperty("sandboxTesterAccessEnabled");
     expect(configUpdate.$unset).toHaveProperty("retailDemandTransitionStartTurn");
     expect(configUpdate.$unset).toHaveProperty("commodityNominalPriceIndex");
+    expect(configUpdate.$unset).toHaveProperty("economyPauseUntilTurn");
   });
 
   it.each(["none", "default"] as const)(
