@@ -98,6 +98,7 @@ import {
   rollOverUnfundedSovereignPoolFloat,
 } from "./forcedSovereignRollover";
 import { publicFloatNovationShare } from "./rules/publicFloatNovation";
+import { refundSovereignMaturityShortfall } from "./sovereignMaturityRefunding";
 
 export const SOVEREIGN_ISSUANCE_INTERVAL_TURNS = 12;
 export const SOVEREIGN_BOND_MATURITY_TURNS: BondMaturityTurns = 48;
@@ -1034,7 +1035,7 @@ export async function settleSovereignBondMaturity(
 }
 
 /** Coupon a fresh sovereign bond would carry now: prime, term, rating, credibility, democracy. */
-async function marketSovereignRolloverCoupon(db: Db, countryId: CountryId): Promise<number> {
+export async function marketSovereignRolloverCoupon(db: Db, countryId: CountryId): Promise<number> {
   const [budget, centralBank, democraticSpreadPp] = await Promise.all([
     db
       .collection<FederalBudget>("federalBudget")
@@ -1375,23 +1376,56 @@ export async function settleFundedSovereignBondMaturity(
         { _id: budgetId, ...frozenBudgetIdentity },
         { projection: { treasuryCashLocal: 1 } }
       );
-    if ((currentBudget?.treasuryCashLocal ?? 0) < cashAmountLocal) {
-      // An unfundable maturity rolls its pool holding into a par replacement
-      // bond rather than sitting unpaid forever. Retry once on the rebased claim.
-      if (quote.forcedRollover || !bond.countryId) return null;
-      const rolled = await rollOverUnfundedSovereignPoolFloat(db, {
-        bond: (await db.collection<Bond>("bonds").findOne({ _id: bond._id })) ?? bond,
-        claim: quote,
+    const cashOnHand = currentBudget?.treasuryCashLocal ?? 0;
+    if (cashOnHand < cashAmountLocal) {
+      // An unfundable maturity first rolls its pool holding into a par
+      // replacement bond: the pool takes new paper, not cash. Retry once on
+      // the rebased claim.
+      if (!quote.forcedRollover && bond.countryId) {
+        const rolled = await rollOverUnfundedSovereignPoolFloat(db, {
+          bond: (await db.collection<Bond>("bonds").findOne({ _id: bond._id })) ?? bond,
+          claim: quote,
+          turn,
+          now,
+          couponRate: await marketSovereignRolloverCoupon(db, bond.countryId),
+          budgetId,
+          client: transactionClient,
+        });
+        if (rolled) {
+          const rebased = await db.collection<Bond>("bonds").findOne({ _id: bond._id });
+          if (!rebased?.sovereignMaturityClaim?.forcedRollover) return null;
+          return settleFundedSovereignBondMaturity(db, { ...input, bond: rebased });
+        }
+      }
+      // Every other holder is paid in cash. The Treasury refinances what it
+      // lacks by selling a refunding issue to the market, never by defaulting.
+      if (!budget.countryId || getNationalBudgetId(budget.countryId as CountryId) !== budgetId)
+        return null;
+      const liveBond = await db
+        .collection<Bond>("bonds")
+        .findOne({ _id: bond._id }, { projection: { totalIssued: 1 } });
+      const refunded = await refundSovereignMaturityShortfall(db, {
+        sourceBond: bond,
+        claimId,
+        retiringFaceLocal: liveBond?.totalIssued ?? bond.totalIssued,
+        alreadyRefundedLocal: quote.refundedFaceLocal ?? 0,
+        shortfallLocal: cashAmountLocal - cashOnHand,
+        countryId: budget.countryId,
+        budgetId,
+        currencyCode: quote.currencyCode,
+        couponRate: await marketSovereignRolloverCoupon(db, budget.countryId as CountryId),
+        scope: "holders",
         turn,
         now,
-        couponRate: await marketSovereignRolloverCoupon(db, bond.countryId),
-        budgetId,
-        client: transactionClient,
       });
-      if (!rolled) return null;
-      const rebased = await db.collection<Bond>("bonds").findOne({ _id: bond._id });
-      if (!rebased?.sovereignMaturityClaim?.forcedRollover) return null;
-      return settleFundedSovereignBondMaturity(db, { ...input, bond: rebased });
+      if (refunded.status === "refused") return null;
+      const refinanced = await db
+        .collection<FederalBudget>("federalBudget")
+        .findOne(
+          { _id: budgetId, ...frozenBudgetIdentity },
+          { projection: { treasuryCashLocal: 1 } }
+        );
+      if ((refinanced?.treasuryCashLocal ?? 0) < cashAmountLocal) return null;
     }
     if (quote.fundingAttemptTurn !== turn) {
       const priorAttemptTurn = quote.fundingAttemptTurn;

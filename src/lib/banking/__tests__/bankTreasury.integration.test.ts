@@ -915,6 +915,43 @@ describe("funded bank treasury settlement", () => {
     expect(after.mark).toBe(0);
     expect(after.cash).toBeGreaterThan(90_000);
   });
+
+  it("closes a failed estate without trying to sell a bond already in redemption", async () => {
+    const db = world();
+    const buy = await tradeBankTreasuryBill(db as unknown as Db, {
+      bankId: BANK,
+      bondId: BOND,
+      side: "buy",
+      units: 5,
+      turn: TURN,
+      policy: POLICY,
+      tradeId: "treasury-estate-due-buy",
+    });
+    expect(buy.status).toBe("completed");
+    // The bond falls due and its maturity quote freezes: holder trades refuse
+    // from here, and the lot is paid at par through the bank maturity claim.
+    const bond = db.collection("bonds").docs[0] as unknown as Bond;
+    bond.maturityTurn = TURN;
+    (bond as unknown as Record<string, unknown>).sovereignMaturityClaim = {
+      id: `sovereign-maturity:${BOND.toHexString()}:${TURN}`,
+      dueTurn: TURN,
+    };
+    await db
+      .collection("corporations")
+      .updateOne(
+        { _id: BANK },
+        { $set: { "bankCharter.status": "failed", "bankCharter.failedTurn": TURN } }
+      );
+    const result = await returnDepositBook(db as unknown as Db, BANK, {
+      cause: "failure",
+      turn: TURN,
+      releaseResidualToOwner: false,
+    });
+    expect(result.error).toBeUndefined();
+    expect(result.returned).toBe(true);
+    // The lot stays for the maturity claim to redeem; nothing was sold.
+    expect(balance(db).bond.holders).toHaveLength(1);
+  });
 });
 
 const PRIMARY_POLICY = resolveBankingPolicy({

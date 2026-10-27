@@ -176,13 +176,14 @@ async function loadPartialWaveReceipts(db: Db, wave: SovereignMaturityWave): Pro
 
 /**
  * A frozen claim that already asked for more spendable cash than its Treasury
- * held when the phase started cannot settle this turn: nothing in the bond
- * phase credits a Treasury after this point. Skipping it is the same outcome as
- * the guarded funding debit refusing it, without re-reading the budget, the
- * quote and the receipts on every turn the bond stays overdue.
+ * held when the phase started, and that has no refunding headroom left, cannot
+ * settle this turn. Skipping it is the same outcome as the guarded funding
+ * debit refusing it, without re-reading the budget, the quote and the receipts
+ * on every turn the bond stays overdue.
  *
  * Never skipped: a claim that could still roll its pool float over (the
- * rollover can pay a zero cash residual), a paid claim whose payout is still
+ * rollover can pay a zero cash residual), a claim the Treasury can still
+ * refinance with a refunding issue, a paid claim whose payout is still
  * being published, an unfinished novation, and a claim with a half-applied
  * funding or payout receipt. Those must reach the code that resumes them.
  */
@@ -206,6 +207,11 @@ export function isUnfundableOverdueMaturity(
     claim.holderLegs.some(
       (leg) => leg.collection === "bondMarketPools" && String(leg.filter._id) === bondCurrency
     );
+  // A Treasury short of cash refinances the gap with a refunding issue in the
+  // bond phase, so a claim is only out of reach once its refunding cap (the
+  // face it retires) is spent.
+  const couldRefund =
+    (claim.refundedFaceLocal ?? 0) + BOND_UNIT_FACE_VALUE <= Math.max(0, bond.totalIssued);
   const inFlight =
     claim.paid === true ||
     wave.inFlightMaturityClaimIds.has(claim.id) ||
@@ -213,6 +219,7 @@ export function isUnfundableOverdueMaturity(
   const phaseStartCash = wave.phaseStartTreasuryCash.get(getNationalBudgetId(bond.countryId));
   return (
     !couldRollOver &&
+    !couldRefund &&
     !inFlight &&
     Number.isFinite(requiredCashLocal) &&
     (claim.escrowLocal ?? 0) < requiredCashLocal &&
@@ -305,7 +312,7 @@ export function noPublicFloatMaturityDisposition(currencyCode: CurrencyCode): {
  * - a funding or payout receipt a crash left half applied (it must be resumed),
  * - bank lots, which settle through the claim book and its escrow, and
  * - a Treasury whose phase-start cash cannot cover the whole wave, where the
- *   per-bond path may roll individual bonds over.
+ *   per-bond path may roll individual bonds over or refinance them.
  */
 export function sovereignMaturityWaveIneligibility(
   bond: Bond,

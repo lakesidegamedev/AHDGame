@@ -745,14 +745,23 @@ async function payFromEscrow(
     !exactEpoch ||
     (charter?.status === "failed" && charter.depositorsResolvedTurn != null) ||
     charter?.status === "revoked";
-  if (exactEpoch && charter?.status === "active") {
+  // A failed bank whose depositors are not yet resolved is an open estate.
+  // Its matured sovereign principal is an estate asset and lands in the
+  // estate's vault, the same place an estate bill sale credits. Waiting for
+  // the estate to close instead deadlocks: the estate cannot sell a bond whose
+  // maturity quote is frozen, and the claim would wait on the estate forever.
+  const openEstate = charter?.status === "failed" && charter.depositorsResolvedTurn == null;
+  const payableStatus = charter?.status === "active" || openEstate;
+  if (exactEpoch && payableStatus) {
     const transition = bankPayoutTransition(claim, attemptTurn);
     let settled = await settleAtomicDocumentTransition(db, transition, {
       identity: { _id: oid(claim.bankId) },
       guard: {
         "bankCharter.currency": claim.currencyCode,
         "bankCharter.charteredTurn": claim.charteredTurn,
-        "bankCharter.status": "active",
+        ...(openEstate
+          ? { "bankCharter.status": "failed", "bankCharter.depositorsResolvedTurn": null }
+          : { "bankCharter.status": "active" }),
       },
     });
     if (settled.status === "partial" || (settled.status === "replayed" && settled.error))
@@ -770,11 +779,13 @@ async function payFromEscrow(
     const current = await db
       .collection<CorporationCharterState>("corporations")
       .findOne({ _id: new ObjectId(claim.bankId) }, { projection: { bankCharter: 1 } });
-    const stillExactActive =
+    const stillExactPayable =
       current?.bankCharter?.currency === claim.currencyCode &&
       current.bankCharter.charteredTurn === claim.charteredTurn &&
-      current.bankCharter.status === "active";
-    if (stillExactActive) return settled;
+      (current.bankCharter.status === "active" ||
+        (current.bankCharter.status === "failed" &&
+          current.bankCharter.depositorsResolvedTurn == null));
+    if (stillExactPayable) return settled;
   } else if (!closedEstate) {
     return null;
   }
