@@ -1736,6 +1736,12 @@ export async function liquidateFailedBankTreasury(
       issuerType: "sovereign",
       matured: { $ne: true },
       defaulted: { $ne: true },
+      // A due bond is being redeemed at par through the bank maturity claim,
+      // which pays this estate's vault while it is open and deposit insurance
+      // once it closes. Its frozen quote refuses holder trades, so selling it
+      // here would only fail and hold the whole waterfall.
+      maturityTurn: { $gt: turn },
+      sovereignMaturityClaim: { $exists: false },
       holders: {
         $elemMatch: {
           bankId,
