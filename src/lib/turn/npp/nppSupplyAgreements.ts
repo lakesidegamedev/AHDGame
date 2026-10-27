@@ -17,7 +17,7 @@
  */
 
 import { substepMarker } from "@/lib/observability/phaseSubsteps";
-import type { Db } from "mongodb";
+import type { AnyBulkWriteOperation, Db } from "mongodb";
 import { ObjectId } from "mongodb";
 import type { Corporation, CorporateSector, GameConfig, GameState } from "@/lib/db/types";
 import type { TradeEmbargo } from "@/lib/db/types/tradeEmbargo";
@@ -863,7 +863,7 @@ export async function syncAiSupplyListings(
   const existingById = new Map(existing.map((e) => [e._id, e]));
   const slotByCorp = new Map<string, number>();
   const wanted = new Set<string>();
-  const writes = [];
+  const writes: AnyBulkWriteOperation<SupplyListing>[] = [];
   for (const spec of desired) {
     const id = aiListingId(spec);
     wanted.add(id);
@@ -897,10 +897,13 @@ export async function syncAiSupplyListings(
     writes.push({ replaceOne: { filter: { _id: id }, replacement: row, upsert: true } });
   }
   const stale = existing.filter((e) => !wanted.has(e._id)).map((e) => e._id);
-  await Promise.all([
-    writes.length > 0 ? collection.bulkWrite(writes, { ordered: false }) : null,
-    stale.length > 0 ? collection.deleteMany({ _id: { $in: stale }, aiListed: true }) : null,
-  ]);
+  // A wanted listing and a stale one are different rows, so both halves of the
+  // refresh travel in one unordered batch instead of two writes.
+  const ops: AnyBulkWriteOperation<SupplyListing>[] = [
+    ...writes,
+    ...stale.map((id) => ({ deleteOne: { filter: { _id: id, aiListed: true } } })),
+  ];
+  if (ops.length > 0) await collection.bulkWrite(ops, { ordered: false });
   return { upserted: writes.length, removed: stale.length };
 }
 
