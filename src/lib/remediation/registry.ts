@@ -27,6 +27,7 @@ import { defect as usMarineLotProgress } from "./defects/AHD-1171-us-marine-lot-
 import { defect as defenceSupplierWindfall } from "./defects/AHD-defence-supplier-windfall";
 import { defect as vfBankRestitution } from "./defects/AHD-1267-vf-bank-restitution";
 import { defect as injectedBankRestoration } from "./defects/AHD-1694-injected-bank-restoration";
+import { defect as greenbaumRestoration } from "./defects/AHD-1694-greenbaum-restoration";
 import { defect as mergedStateExtraction } from "./defects/AHD-1271-merged-state-extraction";
 import { defect as poolCountryAttribution } from "./defects/AHD-1271-pool-country-attribution";
 import { defect as natCorpSplitSectorType } from "./defects/AHD-1271-natcorp-split-sector-type";
@@ -69,6 +70,11 @@ export const DEFECTS: Defect[] = [
   // them. Refunds the interest and reopens the closed banks. Applied to prod
   // 2026-10-27 (run_2026-10-27044343_c9ba214a).
   injectedBankRestoration,
+  // Incident #1694, Greenbaum Group: a solvent bond-heavy bank failed the
+  // cash-only run test (code fix #5062). Owner-approved 2026-10-27: return the
+  // 3.005B posted capital from the USD insurance fund and reopen the bank.
+  // Applied to prod 2026-10-27 (run_2026-10-27224005_552bfcf6).
+  greenbaumRestoration,
   // Ticket #1271: extraction is the one SOE sector gated on a per-state
   // `country:state` capacity key, so a country merge strands every state it
   // absorbs. Reunification left the eleven western Laender with no extraction
