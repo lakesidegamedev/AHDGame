@@ -30,7 +30,7 @@ describe("organization bucket rules", () => {
     });
   });
 
-  it("adds exactly one unit per build and derives share from the accumulated bucket", () => {
+  it("adds one fixed contribution per build and derives share from the accumulated bucket", () => {
     const result = applyOrganizationBuild(
       [
         { id: "established", organization: 80, organizationUnits: 80 },
@@ -41,12 +41,12 @@ describe("organization bucket rules", () => {
     );
 
     expect(result.rows.find((row) => row.id === "fresh")).toMatchObject({
-      organizationUnits: 1,
-      organization: 0.5525,
+      organizationUnits: 1.333333,
+      organization: 0.7353,
       lastOrganizationBuildTurn: 500,
     });
     expect(result.rows.find((row) => row.id === "established")?.organization).toBeCloseTo(
-      44.1989,
+      44.1176,
       4
     );
   });
@@ -62,10 +62,10 @@ describe("organization bucket rules", () => {
       42
     );
 
-    expect(result.denominatorUnits).toBe(201);
+    expect(result.denominatorUnits).toBe(201.333333);
     expect(result.unaffiliatedUnits).toBe(100);
-    expect(result.rows.find((row) => row.id === "fresh")?.organization).toBeCloseTo(0.4975, 4);
-    expect(result.rows.find((row) => row.id === "a")?.organization).toBeCloseTo(29.8507, 4);
+    expect(result.rows.find((row) => row.id === "fresh")?.organization).toBeCloseTo(0.6623, 4);
+    expect(result.rows.find((row) => row.id === "a")?.organization).toBeCloseTo(29.8013, 4);
     expect(result.rows.find((row) => row.id === "a")?.delta).toBeLessThan(0);
     expect(
       result.rows.reduce((sum, row) => sum + row.organization, 0) +
@@ -93,8 +93,8 @@ describe("organization bucket rules", () => {
     expect(beforeBoundary.rows.find((row) => row.id === "stale")?.organizationUnits).toBe(50);
 
     const atBoundary = applyOrganizationDecay(rows, ORG_DECAY_GRACE_TURNS);
-    expect(atBoundary.rows.find((row) => row.id === "stale")?.organizationUnits).toBe(49.5);
-    expect(atBoundary.rows.find((row) => row.id === "stale")?.organization).toBeCloseTo(24.812, 3);
+    expect(atBoundary.rows.find((row) => row.id === "stale")?.organizationUnits).toBe(49.333333);
+    expect(atBoundary.rows.find((row) => row.id === "stale")?.organization).toBeCloseTo(24.749, 3);
   });
 
   it("gives legacy rows a fresh decay clock", () => {
@@ -123,10 +123,10 @@ describe("organization bucket rules", () => {
       ORG_DECAY_GRACE_TURNS
     );
 
-    expect(result.rows[0]?.organizationUnits).toBe(24.75);
-    expect(result.rows[0]?.organization).toBeCloseTo(19.8397, 4);
+    expect(result.rows[0]?.organizationUnits).toBe(24.666667);
+    expect(result.rows[0]?.organization).toBeCloseTo(19.7861, 4);
     expect(result.unaffiliatedUnits).toBe(100);
-    expect(result.denominatorUnits).toBe(124.75);
+    expect(result.denominatorUnits).toBe(124.666667);
   });
 
   it("resets the inactivity clock without changing the fixed contribution size", () => {
@@ -144,8 +144,8 @@ describe("organization bucket rules", () => {
     );
 
     expect(result.rows[0]).toMatchObject({
-      organizationUnits: 11,
-      organization: 9.9099,
+      organizationUnits: 11.333333,
+      organization: 10.1796,
       lastOrganizationBuildTurn: 999,
     });
   });

@@ -1,3 +1,4 @@
+import { ORG_BUILD_UNITS_PER_CLICK } from "@/lib/constants/partyOrg";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -153,7 +154,8 @@ describe("POST /api/country/[code]/region/[id]/party/[partyId]/build-org", () =>
       return {
         ...current,
         organizationUnits:
-          (current.organizationUnits ?? (current.organization ?? 0) * legacyScale) + 1,
+          (current.organizationUnits ?? (current.organization ?? 0) * legacyScale) +
+          ORG_BUILD_UNITS_PER_CLICK,
         lastOrganizationBuildTurn: 100,
       };
     });
@@ -630,8 +632,8 @@ describe("POST /api/country/[code]/region/[id]/party/[partyId]/build-org", () =>
     });
     expect(response.status).toBe(200);
     const body = await response.json();
-    expect(body.contributionUnits).toBe(1);
-    expect(body.organizationUnits).toBe(101);
+    expect(body.contributionUnits).toBe(ORG_BUILD_UNITS_PER_CLICK);
+    expect(body.organizationUnits).toBeCloseTo(100 + ORG_BUILD_UNITS_PER_CLICK, 5);
     expect(body.orgGain).toBeGreaterThan(0);
     expect(db.collectionMocks["orgRegLedger"]!.insertMany).toHaveBeenCalledWith(
       expect.arrayContaining([
@@ -687,7 +689,7 @@ describe("POST /api/country/[code]/region/[id]/party/[partyId]/build-org", () =>
       expect.arrayContaining([
         expect.objectContaining({
           updateOne: expect.objectContaining({
-            filter: { _id: spenderRowId, organizationUnits: 41 },
+            filter: { _id: spenderRowId, organizationUnits: 41.333333 },
             update: expect.objectContaining({
               $set: expect.objectContaining({ organization: expect.any(Number) }),
             }),
@@ -710,8 +712,8 @@ describe("POST /api/country/[code]/region/[id]/party/[partyId]/build-org", () =>
       ])
     );
 
-    expect(body.contributionUnits).toBe(1);
-    expect(body.organizationUnits).toBe(41);
+    expect(body.contributionUnits).toBe(ORG_BUILD_UNITS_PER_CLICK);
+    expect(body.organizationUnits).toBe(41.333333);
   });
 
   it("dilutes rival shares proportionally in a saturated bucket", async () => {
@@ -992,7 +994,7 @@ describe("POST /api/country/[code]/region/[id]/party/[partyId]/build-org", () =>
 
     expect(halfResponse.status).toBe(200);
     expect(halfBody.fundedFraction).toBeCloseTo(0.5, 6);
-    expect(halfBody.contributionUnits).toBe(1);
+    expect(halfBody.contributionUnits).toBe(ORG_BUILD_UNITS_PER_CLICK);
     expect(halfBody.orgGain).toBeCloseTo(fullBody.orgGain, 6);
   });
 

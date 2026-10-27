@@ -1,3 +1,4 @@
+import { ORG_BUILD_UNITS_PER_CLICK } from "@/lib/constants/partyOrg";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -116,8 +117,8 @@ describe("GET /api/country/[code]/region/[id]/party/[partyId]/build-org/preview"
     expect(body.ok).toBe(true);
     expect(body.effectiveCost).toBeGreaterThanOrEqual(1);
     expect(body.projectedGain).toBeGreaterThan(0);
-    expect(body.contributionUnits).toBe(1);
-    expect(body.projectedOrganizationUnits).toBe(41);
+    expect(body.contributionUnits).toBe(ORG_BUILD_UNITS_PER_CLICK);
+    expect(body.projectedOrganizationUnits).toBeCloseTo(40 + ORG_BUILD_UNITS_PER_CLICK, 5);
     expect(body.scope).toBe("state");
     expect(body.pressureValue).toBe(1);
   });
@@ -175,7 +176,7 @@ describe("GET /api/country/[code]/region/[id]/party/[partyId]/build-org/preview"
     const body = await response.json();
     expect(body.ok).toBe(true);
     expect(body.projectedGain).toBeGreaterThan(0);
-    expect(body.contributionUnits).toBe(1);
+    expect(body.contributionUnits).toBe(ORG_BUILD_UNITS_PER_CLICK);
     expect(body.dilutions).toHaveLength(2);
   });
 
@@ -319,8 +320,8 @@ describe("GET /api/country/[code]/region/[id]/party/[partyId]/build-org/preview"
     });
     const body = await response.json();
     expect(body.ok).toBe(true);
-    expect(body.contributionUnits).toBe(1);
-    expect(body.projectedOrganizationUnits).toBe(101);
+    expect(body.contributionUnits).toBe(ORG_BUILD_UNITS_PER_CLICK);
+    expect(body.projectedOrganizationUnits).toBeCloseTo(100 + ORG_BUILD_UNITS_PER_CLICK, 5);
     expect(body.projectedGain).toBeGreaterThan(0);
   });
 

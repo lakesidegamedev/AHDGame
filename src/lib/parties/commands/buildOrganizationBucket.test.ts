@@ -18,7 +18,7 @@ describe("buildOrganizationBucket", () => {
     collection.find.mockReturnValue(cursor(rows));
     collection.findOneAndUpdate.mockResolvedValue({
       ...rows[0],
-      organizationUnits: 41,
+      organizationUnits: 41.333333,
       lastOrganizationBuildTurn: 100,
     });
 
@@ -32,7 +32,7 @@ describe("buildOrganizationBucket", () => {
     });
 
     expect(result?.rows.find((row) => row.id === "CA_1")).toMatchObject({
-      organizationUnits: 41,
+      organizationUnits: 41.333333,
       lastOrganizationBuildTurn: 100,
     });
     expect(collection.findOneAndUpdate).toHaveBeenCalledWith(
@@ -49,7 +49,7 @@ describe("buildOrganizationBucket", () => {
       };
     }>;
     const spenderShareWrite = operations.find(
-      (operation) => operation.updateOne?.filter?.organizationUnits === 41
+      (operation) => operation.updateOne?.filter?.organizationUnits === 41.333333
     );
     expect(spenderShareWrite?.updateOne?.update.$set).not.toHaveProperty("organizationUnits");
   });
@@ -76,8 +76,8 @@ describe("buildOrganizationBucket", () => {
       },
     ];
     const afterConcurrentBuild = [
-      { ...before[0], organizationUnits: 61 },
-      { ...before[1], organizationUnits: 41 },
+      { ...before[0], organizationUnits: 61.333333 },
+      { ...before[1], organizationUnits: 41.333333 },
     ];
     collection.find
       .mockReturnValueOnce(cursor(before))
@@ -85,7 +85,7 @@ describe("buildOrganizationBucket", () => {
       .mockReturnValueOnce(cursor(afterConcurrentBuild));
     collection.findOneAndUpdate.mockResolvedValue({
       ...before[0],
-      organizationUnits: 61,
+      organizationUnits: 61.333333,
       lastOrganizationBuildTurn: 200,
     });
 
@@ -99,10 +99,10 @@ describe("buildOrganizationBucket", () => {
     });
 
     expect(collection.bulkWrite).toHaveBeenCalledTimes(2);
-    expect(result?.totalUnits).toBe(102);
-    expect(result?.denominatorUnits).toBe(202);
-    expect(result?.rows.find((row) => row.id === "CA_2")?.organization).toBeCloseTo(20.297, 3);
-    expect(result?.rows.find((row) => row.id === "CA_1")?.delta).toBeCloseTo(0.3473, 4);
-    expect(result?.rows.find((row) => row.id === "CA_2")?.delta).toBeCloseTo(-0.101, 4);
+    expect(result?.totalUnits).toBe(102.666666);
+    expect(result?.denominatorUnits).toBe(202.666666);
+    expect(result?.rows.find((row) => row.id === "CA_2")?.organization).toBeCloseTo(20.3947, 3);
+    expect(result?.rows.find((row) => row.id === "CA_1")?.delta).toBeCloseTo(0.4619, 4);
+    expect(result?.rows.find((row) => row.id === "CA_2")?.delta).toBeCloseTo(-0.1351, 4);
   });
 });

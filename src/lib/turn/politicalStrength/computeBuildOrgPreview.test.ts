@@ -1,3 +1,4 @@
+import { ORG_BUILD_UNITS_PER_CLICK } from "@/lib/constants/partyOrg";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
@@ -221,8 +222,8 @@ describe("computeBuildOrgPreview", () => {
 
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.contributionUnits).toBe(1);
-      expect(result.projectedOrganizationUnits).toBe(101);
+      expect(result.contributionUnits).toBe(ORG_BUILD_UNITS_PER_CLICK);
+      expect(result.projectedOrganizationUnits).toBeCloseTo(100 + ORG_BUILD_UNITS_PER_CLICK, 5);
       expect(result.projectedGain).toBeGreaterThan(0);
     }
   });
@@ -320,7 +321,7 @@ describe("computeBuildOrgPreview", () => {
     expect(short.ok).toBe(true);
     if (short.ok) {
       expect(short.fundedFraction).toBeCloseTo(0.5, 6);
-      expect(short.contributionUnits).toBe(1);
+      expect(short.contributionUnits).toBe(ORG_BUILD_UNITS_PER_CLICK);
       expect(short.projectedGain).toBeCloseTo(funded.projectedGain, 6);
     }
   });

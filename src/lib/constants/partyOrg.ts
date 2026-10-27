@@ -42,7 +42,8 @@ export const DOLLARS_PER_ORG = 75000;
  * stake plus all party contributions.
  */
 export const ORG_BUCKET_BASELINE_UNITS = 100;
-export const ORG_BUILD_UNITS_PER_CLICK = 1;
+/** Raised from 1 so each click moves a region's shares a third further. */
+export const ORG_BUILD_UNITS_PER_CLICK = 4 / 3;
 
 /**
  * Legacy percentages need enough starting units to coexist with the permanent
@@ -53,20 +54,20 @@ export const ORG_BUILD_UNITS_PER_CLICK = 1;
 export const ORG_LEGACY_UNITS_PER_PERCENT_MAX = 10;
 
 /**
- * A party gets 96 turns without investment before its accumulated units begin
- * to decay. At the standard hourly cadence, this is four real-time days. Any
+ * A party gets 72 turns without investment before its accumulated units begin
+ * to decay. At the standard hourly cadence, this is three real-time days. Any
  * successful Build Org action resets this clock for that party in that region.
  */
-export const ORG_DECAY_GRACE_TURNS = 96;
+export const ORG_DECAY_GRACE_TURNS = 72;
 
 /**
- * Proportional unit decay once the inactivity grace period is reached. At 1%
- * per turn, an inactive balance loses about 21.4% per real-time day and has a
- * half-life of roughly 69 turns, or 2.9 days, after decay starts. Decaying
+ * Proportional unit decay once the inactivity grace period is reached. At 4/3%
+ * per turn, an inactive balance loses about 27.5% per real-time day and has a
+ * half-life of roughly 52 turns, or 2.2 days, after decay starts. Decaying
  * units, instead of percentage points, preserves the bucket's accumulated-
  * investment semantics.
  */
-export const ORG_UNIT_DECAY_RATE = 0.01;
+export const ORG_UNIT_DECAY_RATE = 0.04 / 3;
 
 // ─── Default Tax Rates ─────────────────────────────────────────────────────────
 

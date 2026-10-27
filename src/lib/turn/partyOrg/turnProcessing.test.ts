@@ -67,8 +67,8 @@ describe("processPartyOrgTurn", () => {
     await processPartyOrgTurn(ORG_DECAY_GRACE_TURNS, new Date("2026-10-04T12:00:00Z"));
 
     const update = mockBulkWrite.mock.calls[0][0][0].updateOne.update.$set;
-    expect(update.organizationUnits).toBe(49.5);
-    expect(update.organization).toBeCloseTo(33.1104, 4);
+    expect(update.organizationUnits).toBe(49.333333);
+    expect(update.organization).toBeCloseTo(33.0357, 4);
     expect(update.lastOrganizationBuildTurn).toBe(0);
   });
 
@@ -117,7 +117,7 @@ describe("processPartyOrgTurn", () => {
 
     const operations = mockBulkWrite.mock.calls[0][0];
     expect(operations).toHaveLength(2);
-    expect(operations[0].updateOne.update.$set.organization).toBeCloseTo(30.5556, 4);
-    expect(operations[1].updateOne.update.$set.organization).toBeCloseTo(30.8642, 4);
+    expect(operations[0].updateOne.update.$set.organization).toBeCloseTo(30.484, 4);
+    expect(operations[1].updateOne.update.$set.organization).toBeCloseTo(30.896, 4);
   });
 });
