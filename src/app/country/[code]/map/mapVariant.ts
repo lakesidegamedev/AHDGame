@@ -1,4 +1,3 @@
-import { COUNTRY_DISPLAY_LABELS } from "@/lib/constants/countryDisplayLabels";
 import type { CountryId } from "@/lib/constants/countriesCore";
 
 /**
@@ -24,6 +23,6 @@ export function isParliamentaryMapCountry(id: string): id is ParliamentaryMapCou
 export type CountryMapVariant = "us" | "parliamentary" | "econOnly";
 
 export function mapVariantFor(countryId: CountryId): CountryMapVariant {
-  if (countryId === COUNTRY_DISPLAY_LABELS.US.id) return "us";
+  if (countryId === ("US" as CountryId)) return "us";
   return isParliamentaryMapCountry(countryId) ? "parliamentary" : "econOnly";
 }

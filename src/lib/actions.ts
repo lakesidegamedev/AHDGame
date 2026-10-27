@@ -112,7 +112,7 @@ export {
  * the full State document can pass it unchanged; the /actions client receives
  * only these two figures with its character request.
  */
-export type ActionStateEconomics = Pick<State, "gdp" | "population">;
+export type ActionStateEconomics = Pick<State, "gdp" | "population"> & { name?: string };
 
 export interface ActionEffectContext {
   formatFunds: (anchorAmount: number) => string;

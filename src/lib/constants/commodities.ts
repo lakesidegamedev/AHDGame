@@ -175,36 +175,6 @@ export const COMMODITIES_NATIONAL_REGIONAL_PRICE_BLEND: ReadonlySet<CommodityTyp
   "real_estate_services",
 ]);
 
-export const COMMODITY_ICONS: Record<CommodityType, string> = {
-  steel: "Fe",
-  electronics: "Si",
-  energy: "kW",
-  chemicals: "Ch",
-  pharmaceuticals: "Rx",
-  fertilizers: "NPK",
-  food: "Ag",
-  building_materials: "BM",
-  construction_services: "Cn",
-  healthcare_services: "HC",
-  real_estate_services: "RE",
-  software: "SW",
-  financial_services: "Fi",
-  advertising: "Ad",
-  vehicles: "Ve",
-  retail: "CG",
-  freight: "Fr",
-  consulting_services: "Cs",
-  iron: "Fe",
-  coal: "Co",
-  oil: "Oi",
-  rare_earth: "RE",
-  timber: "Ti",
-  natural_gas: "NG",
-  ordnance: "Ord",
-  plastics: "Pl",
-  network_services: "NS",
-};
-
 /**
  * Base price per unit for each commodity (in dollars).
  * Used to convert dollar-equivalent flows into unit quantities.
