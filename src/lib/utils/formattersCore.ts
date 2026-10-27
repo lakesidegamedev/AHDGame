@@ -222,6 +222,18 @@ export function formatCompactNumber(value: number): string {
  * Rounds to a whole number; non-finite input renders the anchor with an em
  * placeholder value ("— / 100").
  */
+/**
+ * Signed gain or loss percentage for a holding: "+874.3%", "-12.5%",
+ * "+110,067.2%". Callers used to print the raw float (ticket 1701).
+ */
+export function formatSignedPercent(value: number): string {
+  const sign = value >= 0 ? "+" : "-";
+  return `${sign}${Math.abs(value).toLocaleString("en-US", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })}%`;
+}
+
 export function formatIndex100(value: number): string {
   if (!Number.isFinite(value)) return "— / 100";
   const clamped = Math.max(0, Math.min(100, Math.round(value)));
