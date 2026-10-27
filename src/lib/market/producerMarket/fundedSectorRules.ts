@@ -201,9 +201,9 @@ export function fundedDemandThrottle(
   soldUnits: number | null | undefined,
   capacityUnits: number | null | undefined
 ): number {
-  const capacity = finite(capacityUnits);
+  const capacity = finite(capacityUnits ?? 0);
   if (!(capacity > 0)) return 1;
-  return Math.max(0, Math.min(1, finite(soldUnits) / capacity));
+  return Math.max(0, Math.min(1, finite(soldUnits ?? 0) / capacity));
 }
 
 function rootOf(field: string): string {
