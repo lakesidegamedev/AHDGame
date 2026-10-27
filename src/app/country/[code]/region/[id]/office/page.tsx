@@ -49,6 +49,7 @@ import { ADDRESS_COOLDOWN_TURNS } from "@/lib/constants/governorOffice";
 import { formatElectionTypeLabel } from "@/lib/utils/electionLabels";
 import { buildPartyIdResolver } from "@/lib/parties/partyMatch";
 import { officePoolTopUpStatus } from "@/lib/actions/officePoolTopUpRules";
+import { resolveRegionOfficeBannerImage } from "@/lib/constants/regionBanner";
 
 interface Props {
   params: Promise<{ code: string; id: string }>;
@@ -531,7 +532,9 @@ export default async function GovernorOfficePage({ params }: Props) {
         countryId={countryId}
         stateId={stateId}
         stateName={state.name}
-        stateBannerImage={state.bannerImage ?? null}
+        bannerSrc={
+          resolveRegionOfficeBannerImage(countryId, stateId, state.bannerImage ?? null) ?? null
+        }
         regionalTitle={getRegionalBillAssentTitleForState(countryId, stateId)}
         // Resolved here so the overview card title does not pull the client
         // country config into the browser for one label.

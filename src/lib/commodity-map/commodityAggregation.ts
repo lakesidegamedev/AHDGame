@@ -11,7 +11,7 @@
  */
 
 import type { CountryId } from "@/lib/constants/countries";
-import { blendPrice, computeMarketPrice } from "@/lib/constants/commodities";
+import { blendPrice, computeMarketPrice } from "@/lib/constants/commoditiesCore";
 
 export interface CountryCommodityData {
   countryId: CountryId;

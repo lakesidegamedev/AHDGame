@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { CountryFlag } from "@/components/CountryFlag";
-import { getStateDisplayName } from "@/lib/commodity-map";
+import { getStateDisplayName } from "@/lib/commodity-map/commodityRegionMappings";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import {
   formatCommodityPrice,

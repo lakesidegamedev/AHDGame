@@ -27,5 +27,5 @@ areas: [frontend]
 The faster-pages release split the translation catalog in two: the site frame
 sends the navbar and tutorial text, and each page adds its own. The page half
 replaced the frame's text instead of adding to it, so anything inside a page that
-used navbar or tutorial text lost it. The page half now adds to the frame's text,
-and each page still downloads only the text it needs.
+used navbar or tutorial text lost it, for staff and players alike. The page half
+now adds to the frame's text instead of replacing it.

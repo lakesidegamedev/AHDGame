@@ -1,5 +1,5 @@
-import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
-import { COMMODITY_LABELS } from "@/lib/constants/commodities";
+import { COUNTRY_DISPLAY_LABELS } from "@/lib/constants/countryDisplayLabels";
+import { COMMODITY_LABELS } from "@/lib/constants/commoditiesCore";
 import type { EmbargoProvision, EndEmbargoProvision } from "@/lib/db/types/legislation";
 
 /**
@@ -35,7 +35,7 @@ export function formatEmbargoProvisionLabel(
   provision: EmbargoProvision | EndEmbargoProvision
 ): EmbargoProvisionLabel {
   const country = withCountryArticle(
-    COUNTRY_CLIENT_CONFIGS[provision.targetCountry]?.name ?? provision.targetCountry
+    COUNTRY_DISPLAY_LABELS[provision.targetCountry]?.name ?? provision.targetCountry
   );
   const goods = provision.commodity === "all" ? "all goods" : COMMODITY_LABELS[provision.commodity];
   const goodsLower =

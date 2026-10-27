@@ -49,7 +49,6 @@ import { getPartyRoleLabel } from "@/lib/parties/partyRoleLabels";
 import { resolveScopeSwitcherRegionId } from "./resolveScopeSwitcherRegion";
 import { useStatePartyData } from "../../region/[id]/party/[partyId]/components/useStatePartyData";
 import { useStatePartyTreasuryActions } from "../../region/[id]/party/[partyId]/components/useStatePartyTreasuryActions";
-import { StatePartyHubBody } from "../../region/[id]/party/[partyId]/components/StatePartyHubBody";
 import { getOrgLabel, fmt as stateFmt } from "../../region/[id]/party/[partyId]/components/helpers";
 import type { MainTab as StateMainTab } from "../../region/[id]/party/[partyId]/components/types";
 import type { StatePartyAnalyticsPayload } from "@/lib/partyAnalytics";
@@ -72,6 +71,26 @@ export function PartyHubPage({ scope }: { scope: PartyHubScope }) {
   }
   return <StatePartyHub scope={scope} />;
 }
+
+// The state-scope body is the only path that pulls the office-title table and
+// every country's cabinet positions in, and the national hub never renders it.
+// It loads on demand for the state hub, behind a card skeleton so the panel
+// below the tab bar keeps its height.
+const StatePartyHubBody = dynamic(
+  () =>
+    import("../../region/[id]/party/[partyId]/components/StatePartyHubBody").then((m) => ({
+      default: m.StatePartyHubBody,
+    })),
+  {
+    loading: () => (
+      <CardSkeleton className="min-h-[320px] space-y-4">
+        <Skeleton className="h-6 w-48" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-2/3" />
+      </CardSkeleton>
+    ),
+  }
+);
 
 const PanelFallback = () => (
   <CardSkeleton className="min-h-[240px] space-y-4">

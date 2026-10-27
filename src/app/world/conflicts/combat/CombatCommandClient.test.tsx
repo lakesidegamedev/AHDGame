@@ -84,30 +84,32 @@ describe("CombatCommandClient (smoke render)", () => {
     expect(screen.getAllByText("CV").length).toBeGreaterThan(0);
   });
 
-  it("declares an offensive from the War room (fires the declare route)", () => {
+  it("declares an offensive from the War room (fires the declare route)", async () => {
     renderClient();
     fireEvent.click(screen.getByText("War room"));
-    expect(screen.getByText("ACTIVE FRONTS")).toBeTruthy();
+    expect(await screen.findByText("ACTIVE FRONTS", {}, { timeout: 5000 })).toBeTruthy();
     // a unit is deployed to afghan (first contested front) → the declare control shows
-    fireEvent.click(screen.getByText("⚔ DECLARE OFFENSIVE"));
+    fireEvent.click(await screen.findByText("⚔ DECLARE OFFENSIVE", {}, { timeout: 5000 }));
     const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
     expect(fetchMock).toHaveBeenCalled();
     const url = fetchMock.mock.calls[fetchMock.mock.calls.length - 1][0] as string;
     expect(url).toContain("/battle/declare");
   });
 
-  it("navigates to Doctrine & command", () => {
+  it("navigates to Doctrine & command", async () => {
     renderClient();
     fireEvent.click(screen.getByText("Doctrine & command"));
-    expect(screen.getByText("NATIONAL DOCTRINE · FORCE-WIDE")).toBeTruthy();
+    expect(await screen.findByText("NATIONAL DOCTRINE · FORCE-WIDE")).toBeTruthy();
   });
 
-  it("makes order controls read-only for a viewer who does not hold defence", () => {
+  it("makes order controls read-only for a viewer who does not hold defence", async () => {
     renderClient({ canWrite: false });
     expect(screen.getByText(/read-only view/i)).toBeTruthy();
     fireEvent.click(screen.getByText("Unit dossier"));
-    expect(screen.getByLabelText("Posture")).toHaveProperty("disabled", true);
-    expect(screen.getByLabelText("Battle role")).toHaveProperty("disabled", true);
+    const posture = await screen.findByLabelText("Posture");
+    expect(posture).toHaveProperty("disabled", true);
+    const role = await screen.findByLabelText("Battle role");
+    expect(role).toHaveProperty("disabled", true);
   });
 });
 
