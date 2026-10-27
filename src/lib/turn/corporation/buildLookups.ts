@@ -107,10 +107,7 @@ import {
 } from "@/lib/corporations/portfolioAnchorValuation";
 import { corpCapitalToAnchor } from "@/lib/currency/corporationCapital";
 import { buildNationalCommodityBalances } from "@/lib/commodity-map";
-import {
-  buildMarketShareBySectorId,
-  buildNationalDominanceShareBySectorId,
-} from "@/lib/corporations/marketShare";
+import { buildSectorShareMaps } from "@/lib/corporations/marketShare";
 import { loadWorldPreset } from "@/lib/currency/gdpAnchorRate";
 import { buildSovereignDefaultMarginByCorpId } from "@/lib/sovereignDefault/marginPenalty/buildPerCorpMap";
 import { getCurrentTurn } from "@/lib/turn/currentTurn";
@@ -568,9 +565,24 @@ export async function buildCorporationLookups(
     if (options?.plantsEnabled && sector.transitionFromStrategyId) {
       Object.assign(
         sector,
+        // The retool basis reads a dozen fields; spreading the whole sector
+        // document copied every telemetry block it carries, per retooling
+        // sector, on a 14,000-row world.
         retoolProductionMeasurements({
-          ...sector,
+          sectorType: sector.sectorType,
+          industryModel: sector.industryModel,
+          mediaDiscriminator: sector.mediaDiscriminator,
+          strategyId: sector.strategyId,
+          transitionFromStrategyId: sector.transitionFromStrategyId,
+          transitionStartTurn: sector.transitionStartTurn,
+          retoolRescaleApplied: sector.retoolRescaleApplied,
           currentTurn: options.productionTurn ?? embargoTurn,
+          operatingCapacityTurn: sector.operatingCapacityTurn,
+          operatingCapacityUnits: sector.operatingCapacityUnits,
+          capitalStock: sector.capitalStock,
+          producedUnits: sector.producedUnits,
+          soldUnits: sector.soldUnits,
+          contractAchievableUnits: sector.contractAchievableUnits,
         })
       );
     }
@@ -1271,7 +1283,7 @@ export async function buildCorporationLookups(
     }
     if (row.size > 0) unmetForeignDemandByCountry.set(countryId, row);
   }
-  const marketShareBySectorId = buildMarketShareBySectorId({
+  const { marketShareBySectorId, nationalDominanceShareBySectorId } = buildSectorShareMaps({
     sectors: allSectors,
     corpById,
     stateById,
@@ -1279,16 +1291,6 @@ export async function buildCorporationLookups(
     exchangeRatesByCurrency,
     preset: marketSharePreset,
     plantsEnabled: options?.plantsEnabled === true,
-  });
-  // National dominance share (revenue-basis, era-cancelling) so antitrust tolls
-  // charge on max(local, national) and geographic spread can't dodge them.
-  const nationalDominanceShareBySectorId = buildNationalDominanceShareBySectorId({
-    sectors: allSectors,
-    corpById,
-    stateById,
-    unownedSectors: unownedSectorDocs,
-    exchangeRatesByCurrency,
-    preset: marketSharePreset,
   });
   // Running dominance cost reads the control group's combined shares.
   const dominanceRunningCost =

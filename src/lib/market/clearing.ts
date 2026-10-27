@@ -16,6 +16,7 @@ import {
   reserveInternalSupply,
   finishInternalSupplyCommodity,
   type InternalSupplyClearing,
+  type InternalSupplyContextBuyer,
 } from "./internalSupply/clearing";
 import { normalizedOfferShare } from "./rules/demandAllocation";
 import { appendToBook, indexRowsById } from "./rules/bookAssembly";
@@ -882,6 +883,30 @@ export function computeClearingFactors(args: {
   for (const [commodity, sellers] of args.groupSupply
     ? [...sellersByCommodity].sort(([a], [b]) => a.localeCompare(b))
     : sellersByCommodity) {
+    // A seller's clearing book and realized price are pure functions of
+    // (commodity, sector) for the whole commodity pass. A state-scoped market
+    // clears one book per state, so the same sector is asked again for every
+    // book it could belong to; resolving the state, the group and the price
+    // ratio on each ask made the pass quadratic in states. Memoise per
+    // commodity instead: the maps die with the commodity.
+    const bookKeyBySectorId = new Map<string, string>();
+    const realizedPriceBySectorId = new Map<string, number>();
+    const bookKeyOf = (sectorId: string): string => {
+      let key = bookKeyBySectorId.get(sectorId);
+      if (key === undefined) {
+        key = bookKeyFor(commodity, sectorId);
+        bookKeyBySectorId.set(sectorId, key);
+      }
+      return key;
+    };
+    const realizedPriceOf = (sectorId: string): number => {
+      let price = realizedPriceBySectorId.get(sectorId);
+      if (price === undefined) {
+        price = realizedPriceFor(commodity, sectorId);
+        realizedPriceBySectorId.set(sectorId, price);
+      }
+      return price;
+    };
     // Market partition: split the commodity's sellers into per-group books
     // (seller's home country) and clear each book against ITS reachable
     // balances. Without partition args this is one worldwide group ("") over
@@ -889,11 +914,25 @@ export function computeClearingFactors(args: {
     const partitioned = new Map<string, ClearingSeller[]>();
     if (args.balancesByGroup || args.stateMarkets) {
       for (const s of sellers) {
-        const g = bookKeyFor(commodity, s.id);
+        const g = bookKeyOf(s.id);
         appendToBook(partitioned, g, s);
       }
     } else {
       partitioned.set("", sellers);
+    }
+
+    // Own-group reservations: the bridge needs the buyers of ONE book, and it
+    // used to filter the whole buyer list for every book. Group them once per
+    // commodity so a state-scoped market pays one pass, not one per state.
+    if (args.internalSupply && !args.groupSupply && args.sectorCorpId) {
+      const buyersByBook = new Map<string, InternalSupplyContextBuyer[]>();
+      for (const buyer of args.internalSupply.buyers) {
+        const key = bookKeyOf(buyer.sectorId);
+        const rows = buyersByBook.get(key);
+        if (rows) rows.push(buyer);
+        else buyersByBook.set(key, [buyer]);
+      }
+      args.internalSupply.buyersByBook = buyersByBook;
     }
 
     for (const [g, groupSellers] of partitioned) {
@@ -1050,11 +1089,10 @@ export function computeClearingFactors(args: {
       let groupUnits = 0;
       if (groupContext && args.sectorCorpId && commodity !== "advertising") {
         const buyers = (groupContext.buyersByCommodity.get(commodity) ?? []).filter(
-          (b) => bookKeyFor(commodity, b.sectorId) === g
+          (b) => bookKeyOf(b.sectorId) === g
         );
         const price =
-          (basePrices[commodity] * realizedPriceFor(commodity, groupSellers[0]?.id ?? "")) /
-          TURNS_PER_DAY;
+          (basePrices[commodity] * realizedPriceOf(groupSellers[0]?.id ?? "")) / TURNS_PER_DAY;
         const allSellers = groupSellers.map((s) => ({
           sectorId: s.id,
           memberId: args.sectorCorpId!.get(s.id) ?? "",
@@ -1102,7 +1140,7 @@ export function computeClearingFactors(args: {
             supply: bal?.supply ?? 0,
             demand: bal?.demand ?? 0,
             unitPriceAnchor: price,
-            benchmarkFactor: realizedPriceFor(commodity, groupSellers[0]?.id ?? ""),
+            benchmarkFactor: realizedPriceOf(groupSellers[0]?.id ?? ""),
             freightSettlementActive: groupContext.freightSettlementActive,
             buyers: ownBuyers,
             sellers: ownSellers.map((s) => {
@@ -1119,7 +1157,7 @@ export function computeClearingFactors(args: {
                 quoteFactor:
                   offerPriceFactor({
                     posture: postureBySector.get(s.sectorId) ?? 0,
-                    priceLeg: realizedPriceFor(commodity, s.sectorId),
+                    priceLeg: realizedPriceOf(s.sectorId),
                     qualityPremiumEnabled: args.qualityPremiumEnabled,
                     quality:
                       sourceBySector.get(s.sectorId)?.productQualityByCommodity?.[commodity] ??
@@ -1127,7 +1165,7 @@ export function computeClearingFactors(args: {
                     inputCostIndex: sourceBySector.get(s.sectorId)?.inputCostIndex,
                     inputCostShare: sourceBySector.get(s.sectorId)?.inputCostShare,
                     fixedCostShare: sourceBySector.get(s.sectorId)?.fixedCostShare,
-                  }) / realizedPriceFor(commodity, s.sectorId),
+                  }) / realizedPriceOf(s.sectorId),
               };
             }),
           };
@@ -1203,7 +1241,7 @@ export function computeClearingFactors(args: {
             TURNS_PER_DAY;
           byCommodity.set(commodity, {
             units: (prev?.units ?? 0) + units,
-            marketFactor: realizedPriceFor(commodity, receipt.supplierSectorId),
+            marketFactor: realizedPriceOf(receipt.supplierSectorId),
           });
           groupContext.inputAllocationsBySector.set(receipt.buyerSectorId, byCommodity);
         }
@@ -1218,7 +1256,7 @@ export function computeClearingFactors(args: {
               corporationBySector: args.sectorCorpId,
               committed: contractedUnitsById,
               book: g,
-              bookForSector: (id) => bookKeyFor(commodity, id),
+              bookForSector: (id) => bookKeyOf(id),
               supply: Math.min(laggedSupply, offeredUnits),
               demand: bal?.demand ?? 0,
               reservationRoom: Math.max(
@@ -1226,8 +1264,7 @@ export function computeClearingFactors(args: {
                 demandForPass -
                   [...(contractedUnitsById?.values() ?? [])].reduce((n, u) => n + u, 0)
               ),
-              marketPrice:
-                basePrices[commodity] * realizedPriceFor(commodity, groupSellers[0]?.id ?? ""),
+              marketPrice: basePrices[commodity] * realizedPriceOf(groupSellers[0]?.id ?? ""),
             })
           : undefined;
       const groupSold = clearCommodityMarket(
