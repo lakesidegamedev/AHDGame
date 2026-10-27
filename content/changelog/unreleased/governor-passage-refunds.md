@@ -12,5 +12,6 @@ areas: [backend]
 - Preserve the governor's payer ID when a queued bill is introduced by a party NPP.
 - Use the governor attribution on older bills when no explicit payer ID is recorded.
 - Keep ordinary player and party-chair proposal refunds unchanged.
+- Atomically accept one governor decision so competing assent or veto requests cannot repeat enactment or overwrite each other.
 
 Tracks #5052.
