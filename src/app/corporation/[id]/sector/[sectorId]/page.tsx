@@ -13,7 +13,7 @@ import type { CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { regionApiSubUrl, regionUrl } from "@/lib/urls";
 import type { StateResources, ExtractionCapacityRow, ResourceOpportunity } from "./types";
-import { MAX_GROWTH_RATE, MIN_GROWTH_RATE } from "@/lib/constants/corporations";
+import { MAX_GROWTH_RATE, MIN_GROWTH_RATE } from "@/lib/constants/corporationsClient";
 import { useToast } from "@/contexts/ToastContext";
 import { useSectorPageState } from "./useSectorPageState";
 import HeroCard from "./components/HeroCard";

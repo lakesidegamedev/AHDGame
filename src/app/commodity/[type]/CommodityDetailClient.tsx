@@ -16,7 +16,10 @@ import SupplyDemandBar from "./components/SupplyDemandBar";
 import FlowLedgerStrip from "./components/FlowLedgerStrip";
 import CommodityChart from "./components/charts/CommodityChart";
 import TopProducersConsumers from "./components/TopProducersConsumers";
-import { getStateDisplayName, groupStatesByCountry } from "@/lib/commodity-map/commodityRegionMappings";
+import {
+  getStateDisplayName,
+  groupStatesByCountry,
+} from "@/lib/commodity-map/commodityRegionMappings";
 import { buildCommodityMarketScope } from "./lib/marketScope";
 import { countryUrl } from "@/lib/urls";
 
