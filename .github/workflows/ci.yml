@@ -143,11 +143,14 @@ jobs:
 
   # These checks are independent. Running them as separate jobs makes the CI
   # critical path track the slowest check instead of the sum of all three.
-  lint:
+  # lint, format and typecheck share one runner and one npm ci (2026-10-27):
+  # each finishes in a few minutes, and three separate jobs were mostly time
+  # spent queueing for the hosted runner pool.
+  static:
     needs: changes
     if: needs.changes.outputs.full_suite == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
@@ -192,20 +195,6 @@ jobs:
       - name: Architecture audit
         run: npm run architecture:audit
 
-  format:
-    needs: changes
-    if: needs.changes.outputs.full_suite == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci --no-audit --no-fund
       - uses: actions/cache@v4
         with:
           path: .cache/prettier
@@ -226,18 +215,6 @@ jobs:
             npm run format:check
           fi
 
-  typecheck:
-    needs: changes
-    if: needs.changes.outputs.full_suite == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci --no-audit --no-fund
       - uses: actions/cache@v4
         with:
           path: tsconfig.tsbuildinfo
@@ -262,7 +239,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        shard: [1, 2, 3, 4, 5]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -463,9 +440,7 @@ jobs:
       [
         changes,
         content-checks,
-        lint,
-        format,
-        typecheck,
+        static,
         test,
         bootstrap-integration,
         build,
@@ -483,9 +458,7 @@ jobs:
           CAN_REUSE: ${{ (github.event_name == 'pull_request' && github.head_ref == 'staging' && github.base_ref == 'main' && github.event.pull_request.head.repo.id == github.event.repository.id && github.event.pull_request.base.repo.id == github.event.repository.id) || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
           REUSE_RESULT: ${{ needs['reuse-staging-qualification'].result }}
           CONTENT_RESULT: ${{ needs.content-checks.result }}
-          LINT_RESULT: ${{ needs.lint.result }}
-          FORMAT_RESULT: ${{ needs.format.result }}
-          TYPECHECK_RESULT: ${{ needs.typecheck.result }}
+          STATIC_RESULT: ${{ needs.static.result }}
           TEST_RESULT: ${{ needs.test.result }}
           BOOTSTRAP_RESULT: ${{ needs['bootstrap-integration'].result }}
           BUILD_RESULT: ${{ needs.build.result }}
@@ -514,15 +487,12 @@ jobs:
             exit $?
           fi
 
-          printf 'lint=%s format=%s typecheck=%s test=%s build=%s\n' \
-            "$LINT_RESULT" "$FORMAT_RESULT" "$TYPECHECK_RESULT" \
-            "$TEST_RESULT" "$BUILD_RESULT"
+          printf 'static=%s test=%s build=%s\n' \
+            "$STATIC_RESULT" "$TEST_RESULT" "$BUILD_RESULT"
           printf 'bootstrap-integration=%s\n' "$BOOTSTRAP_RESULT"
           printf 'federation-transactions=%s\n' "$FEDERATION_RESULT"
 
-          if [[ "$LINT_RESULT" != "success" || \
-                "$FORMAT_RESULT" != "success" || \
-                "$TYPECHECK_RESULT" != "success" || \
+          if [[ "$STATIC_RESULT" != "success" || \
                 "$TEST_RESULT" != "success" || \
                 "$BOOTSTRAP_RESULT" != "success" || \
                 "$BUILD_RESULT" != "success" || \
