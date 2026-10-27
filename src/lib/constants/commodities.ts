@@ -1206,6 +1206,76 @@ export function applyRetailPenaltyFactor(
   return commodityInputMod;
 }
 
+type CommodityBalanceMap = Map<CommodityType, { supply: number; demand: number }>;
+
+interface BlendedMarginModifiers {
+  inputMod: number;
+  surplusMod: number;
+}
+
+/**
+ * A stabilised state book is a pure function of the raw state book. One turn
+ * reads one raw book per state and hands that same map to every sector in it,
+ * so caching the 27-commodity stabilised copy by map identity keeps it out of
+ * the per-sector path. Entries die with the turn's lookups, which are rebuilt
+ * every turn; a caller must not mutate a book map after passing it in.
+ */
+const stabilizedStateBooks = new WeakMap<object, CommodityBalanceMap>();
+
+/**
+ * A blended result is a pure function of the sector type, the three books, the
+ * blend weights and the two flow sequences. Hundreds of sectors share all of
+ * that (same state, strategy, tech and tariff posture), so the answer is
+ * computed once and shared instead of rebuilt per sector. Same immutability
+ * contract as the stabilised books above.
+ */
+const blendedResultCache = new WeakMap<
+  object,
+  WeakMap<object, WeakMap<object, Map<string, BlendedMarginModifiers>>>
+>();
+
+/** The exact flow sequence a leg loop reads, so equal rate objects share one answer. */
+function commodityFlowKey(
+  flows: Partial<Record<CommodityType, number>> | readonly CommodityFlow[]
+): string {
+  let key = "";
+  if (Array.isArray(flows)) {
+    for (const flow of flows) key += `${flow.commodity}:${flow.rate};`;
+    return key;
+  }
+  // `for in` over the record keeps the signature allocation-free on the hot
+  // path; own properties enumerated in the same order as Object.entries, which
+  // is what normalizeFlows reads.
+  for (const commodity in flows) {
+    if (!Object.hasOwn(flows, commodity)) continue;
+    const rate = flows[commodity as CommodityType];
+    if (typeof rate === "number" && rate > 0) key += `${commodity}:${rate};`;
+  }
+  return key;
+}
+
+/** The state book with its stabiliser added to both sides, built once per book. */
+function stabilizedStateBook(stateBalances: CommodityBalanceMap): CommodityBalanceMap {
+  const cached = stabilizedStateBooks.get(stateBalances);
+  if (cached) return cached;
+  // Extractable resources use a larger stabilizer because they are globally
+  // traded: a state without local iron/oil/gas can import it, so pure
+  // zero-supply local penalties over-penalise sectors in resource-poor states.
+  const stabilized = new Map<CommodityType, { supply: number; demand: number }>();
+  for (const c of COMMODITY_TYPES) {
+    const s = stateBalances.get(c) ?? { supply: 0, demand: 0 };
+    const stab = (EXTRACTABLE_RESOURCES as readonly string[]).includes(c)
+      ? EXTRACTABLE_RESOURCE_STATE_STABILIZER
+      : STATE_COMMODITY_SUPPLY_DEMAND;
+    stabilized.set(c, {
+      supply: s.supply + stab,
+      demand: s.demand + stab,
+    });
+  }
+  stabilizedStateBooks.set(stateBalances, stabilized);
+  return stabilized;
+}
+
 /**
  * Compute blended commodity margin modifiers using the output-blend approach.
  * Computes modifiers at global, national, and state level independently, then blends
@@ -1235,38 +1305,46 @@ export function computeBlendedMarginModifiers(
    */
   supplyOverride?: Partial<Record<CommodityType, number>> | readonly CommodityFlow[],
   demandOverride?: Partial<Record<CommodityType, number>> | readonly CommodityFlow[]
-): { inputMod: number; surplusMod: number } {
-  // Add state stabilizer to state balances for margin calculation.
-  // Extractable resources use a larger stabilizer because they are globally
-  // traded — a state without local iron/oil/gas can import it, so pure
-  // zero-supply local penalties over-penalise sectors in resource-poor states.
-  const stabilizedState = new Map<CommodityType, { supply: number; demand: number }>();
-  for (const c of COMMODITY_TYPES) {
-    const s = stateBalances.get(c) ?? { supply: 0, demand: 0 };
-    const stab = (EXTRACTABLE_RESOURCES as readonly string[]).includes(c)
-      ? EXTRACTABLE_RESOURCE_STATE_STABILIZER
-      : STATE_COMMODITY_SUPPLY_DEMAND;
-    stabilizedState.set(c, {
-      supply: s.supply + stab,
-      demand: s.demand + stab,
-    });
+): BlendedMarginModifiers {
+  // The default flows depend only on the sector type, which is already in the
+  // key, so a missing override needs no signature of its own.
+  const cacheKey =
+    `${sectorType}|${globalWeight}|${nationalWeight}|${localWeight}` +
+    `|d${demandOverride == null ? "" : `o${commodityFlowKey(demandOverride)}`}` +
+    `|s${supplyOverride == null ? "" : `o${commodityFlowKey(supplyOverride)}`}`;
+
+  let byState = blendedResultCache.get(stateBalances);
+  if (!byState) {
+    byState = new WeakMap();
+    blendedResultCache.set(stateBalances, byState);
   }
+  let byNational = byState.get(nationalBalances);
+  if (!byNational) {
+    byNational = new WeakMap();
+    byState.set(nationalBalances, byNational);
+  }
+  let byGlobal = byNational.get(globalBalances);
+  if (!byGlobal) {
+    byGlobal = new Map();
+    byNational.set(globalBalances, byGlobal);
+  }
+  const cached = byGlobal.get(cacheKey);
+  if (cached) return cached;
+
+  // Normalise once, not once per level: the three levels read the same flows.
+  const demandFlows =
+    demandOverride != null ? normalizeFlows(demandOverride) : (SECTOR_DEMAND[sectorType] ?? []);
+  const supplyFlows =
+    supplyOverride != null ? normalizeFlows(supplyOverride) : (SECTOR_SUPPLY[sectorType] ?? []);
+  const stabilizedState = stabilizedStateBook(stateBalances);
 
   // Compute modifiers at each level
-  const globalInput = computeCommodityMarginModifier(sectorType, globalBalances, demandOverride);
-  const nationalInput = computeCommodityMarginModifier(
-    sectorType,
-    nationalBalances,
-    demandOverride
-  );
-  const stateInput = computeCommodityMarginModifier(sectorType, stabilizedState, demandOverride);
-  const globalSurplus = computeCommoditySurplusBonus(sectorType, globalBalances, supplyOverride);
-  const nationalSurplus = computeCommoditySurplusBonus(
-    sectorType,
-    nationalBalances,
-    supplyOverride
-  );
-  const stateSurplus = computeCommoditySurplusBonus(sectorType, stabilizedState, supplyOverride);
+  const globalInput = computeCommodityMarginModifier(sectorType, globalBalances, demandFlows);
+  const nationalInput = computeCommodityMarginModifier(sectorType, nationalBalances, demandFlows);
+  const stateInput = computeCommodityMarginModifier(sectorType, stabilizedState, demandFlows);
+  const globalSurplus = computeCommoditySurplusBonus(sectorType, globalBalances, supplyFlows);
+  const nationalSurplus = computeCommoditySurplusBonus(sectorType, nationalBalances, supplyFlows);
+  const stateSurplus = computeCommoditySurplusBonus(sectorType, stabilizedState, supplyFlows);
 
   // Blend outputs using caller-supplied weights (default 50/25/25).
   const rawInput =
@@ -1288,15 +1366,18 @@ export function computeBlendedMarginModifiers(
   // inputMod + surplusMod is below -COMMODITY_COMBINED_FLOOR so stacked
   // scarcity plus glut cannot exceed the floor that each leg's own cap misses.
   const combined = inputMod + surplusMod;
-  if (combined < -COMMODITY_COMBINED_FLOOR) {
-    const scale = COMMODITY_COMBINED_FLOOR / Math.abs(combined);
-    return {
-      inputMod: Math.round(inputMod * scale * 100) / 100,
-      surplusMod: Math.round(surplusMod * scale * 100) / 100,
-    };
-  }
-
-  return { inputMod, surplusMod };
+  const result: BlendedMarginModifiers =
+    combined < -COMMODITY_COMBINED_FLOOR
+      ? {
+          inputMod:
+            Math.round(inputMod * (COMMODITY_COMBINED_FLOOR / Math.abs(combined)) * 100) / 100,
+          surplusMod:
+            Math.round(surplusMod * (COMMODITY_COMBINED_FLOOR / Math.abs(combined)) * 100) / 100,
+        }
+      : { inputMod, surplusMod };
+  const shared = Object.freeze(result);
+  byGlobal.set(cacheKey, shared);
+  return shared;
 }
 
 export const COMMODITY_COLORS: Record<CommodityType, string> = {
