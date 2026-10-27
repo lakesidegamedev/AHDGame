@@ -162,6 +162,7 @@ import {
 import { CHRONIC_LOW_FILL_THRESHOLD } from "@/lib/turn/npp/strategyExpectedRevenue";
 import { chooseNppStrategyRetool } from "@/lib/turn/npp/strategyRetooling";
 import type { ObjectId } from "mongodb";
+import type { CommodityType } from "@/lib/constants/commoditiesCore";
 
 export function makeNppCorpDecision(
   ctx: NppCorpDecisionContext,

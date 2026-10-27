@@ -92,6 +92,8 @@ const NPP_ARCHETYPES = [
   "traditionalist",
 ] as const;
 
+const STRATEGY_IDS = ["expand", "defend", "consolidate", "retool", "harvest"] as const;
+
 /** Live worlds are expand-heavy: the loop defaults to expand on first sight. */
 function strategyIdFor(rng: () => number): (typeof STRATEGY_IDS)[number] {
   const roll = rng();
