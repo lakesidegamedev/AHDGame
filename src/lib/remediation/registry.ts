@@ -26,6 +26,7 @@ import { defect as tinkyStaleVoteExcess } from "./defects/AHD-tinky-stale-vote-e
 import { defect as usMarineLotProgress } from "./defects/AHD-1171-us-marine-lot-progress";
 import { defect as defenceSupplierWindfall } from "./defects/AHD-defence-supplier-windfall";
 import { defect as vfBankRestitution } from "./defects/AHD-1267-vf-bank-restitution";
+import { defect as injectedBankRestoration } from "./defects/AHD-1694-injected-bank-restoration";
 import { defect as mergedStateExtraction } from "./defects/AHD-1271-merged-state-extraction";
 import { defect as poolCountryAttribution } from "./defects/AHD-1271-pool-country-attribution";
 import { defect as natCorpSplitSectorType } from "./defects/AHD-1271-natcorp-split-sector-type";
@@ -62,6 +63,11 @@ export const DEFECTS: Defect[] = [
   // with the shell. Restitutes Hunt Oil's owner residual and the household
   // book stranded out of the money supply.
   vfBankRestitution,
+  // Incident #1694: central bank liquidity injections booked interest-bearing
+  // debt on banks that never asked for it; the interest failed or revoked
+  // them. Refunds the interest and reopens the closed banks. Applied to prod
+  // 2026-10-27 (run_2026-10-27044343_c9ba214a).
+  injectedBankRestoration,
   // Ticket #1271: extraction is the one SOE sector gated on a per-state
   // `country:state` capacity key, so a country merge strands every state it
   // absorbs. Reunification left the eleven western Laender with no extraction
