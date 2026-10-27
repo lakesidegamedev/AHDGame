@@ -21,6 +21,7 @@ import { getExchangeForCountry } from "@/lib/constants/exchangeRegistry";
 import type { MoneyPeriod } from "@/lib/constants/moneyTimescale";
 import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporationsClient";
 import { CorporationMasthead } from "@/components/corporation/CorporationMasthead";
+import { useCorporationPageData } from "./useCorporationPageData";
 import { HostileTakeoverCard } from "@/components/corporation/HostileTakeoverCard";
 import { SubsidiaryManagementCard } from "@/components/corporation/SubsidiaryManagementCard";
 import { PrivatizationVotePanel } from "@/components/corporation/PrivatizationVotePanel";
@@ -234,6 +235,11 @@ export default function CorporationDetailPage() {
     corpTabIdFor(ALL_CORP_TABS, groupResolved.superTab, groupResolved.subTab) ?? "overview";
   const commoditiesTabDiscovery = useFeatureSeen(CORP_PAGE_FEATURE_KEYS.commoditiesTab);
   const { isNew: commoditiesTabIsNew, markSeen: markCommoditiesTabSeen } = commoditiesTabDiscovery;
+
+  // Started here, with the first paint, rather than in the components that render
+  // the answers: those only mount after the corporation payload lands, which put
+  // both behind a second round trip on the highest-traffic page in the game.
+  const { nationalizationStatus, openVotes } = useCorporationPageData(id, activeTab === "overview");
 
   const corpIsPrivate = !!corporation?.isPrivate;
 
@@ -1039,6 +1045,7 @@ export default function CorporationDetailPage() {
 
           <NationalizationStatusCard
             corpId={id}
+            status={nationalizationStatus}
             hasExposure={
               isCeo ||
               corporation.shareholders?.some(
@@ -1318,6 +1325,7 @@ export default function CorporationDetailPage() {
                         financialFogOfWar={financialFogOfWar}
                         isCeo={isCeo}
                         myCharacterId={myCharacterId}
+                        openVotes={openVotes}
                         onTrade={canTrade ? openTrade : undefined}
                       />
                       {corporation.mediaEditorialEnabled === true &&

@@ -22,7 +22,8 @@
  *
  * Client-safe: no db imports.
  */
-import { COUNTRY_CONFIGS, type CountryId } from "./countries";
+import { type CountryId } from "./countriesCore";
+import { isCountryId } from "@/lib/country/countryIds";
 
 export type AlignmentCountryKey =
   | "AD"
@@ -2065,5 +2066,5 @@ export function statusAt(key: AlignmentCountryKey, year: number): AlignmentEntit
 
 /** True when the key names a country the game actually implements. */
 export function isLiveCountryKey(key: AlignmentCountryKey): key is CountryId & AlignmentCountryKey {
-  return key in COUNTRY_CONFIGS;
+  return isCountryId(key);
 }

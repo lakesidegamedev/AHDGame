@@ -113,6 +113,15 @@ describe("OverviewTab", () => {
     );
   });
 
+  it("renders the votes the page already fetched, without asking for them again", () => {
+    renderOverview({
+      openVotes: [{ _id: "v1", type: "dissolution", deadlineAtTurn: 40 }],
+    });
+    expect(screen.getByText("Dissolution")).toBeTruthy();
+    const urls = vi.mocked(globalThis.fetch).mock.calls.map(([input]) => String(input as unknown));
+    expect(urls.some((url) => url.includes("/votes?status=open"))).toBe(false);
+  });
+
   it("lists sectors largest first and expands past the first ten", () => {
     renderOverview();
     const rows = () =>

@@ -69,6 +69,10 @@ import { getGameStatePreset } from "@/lib/db/collections/gameState";
 import { hasRequiredPrimeMinisterSeat } from "@/lib/uk/pmSeatEligibility";
 import { isSingleplayer } from "@/lib/singleplayer";
 import {
+  classifyFormationSeats,
+  minoritySeatThreshold,
+} from "@/lib/government/rules/appointmentEligibility";
+import {
   loadRuntimeCountryOffices,
   type RuntimeCountryOffices,
 } from "@/lib/countries/runtimeOffices";
@@ -1574,10 +1578,6 @@ export async function processParliamentaryNPPAutoAye(
 // Appointment Eligibility Check
 // ---------------------------------------------------------------------------
 
-/** Minimum fraction of lower-chamber seats required for a minority government.
- *  Tuned so UK Commons (650) requires ≥100 seats; JP House of Reps (465) requires ≥72. */
-const MINORITY_SEAT_FRACTION = 0.1538;
-
 export type AppointmentEligibility =
   | {
       eligible: true;
@@ -1595,6 +1595,10 @@ export type AppointmentEligibility =
  * party/coalition must meet the seat threshold for majority, coalition,
  * or minority government formation. At least one player-character MP
  * must exist in the qualifying parties.
+ *
+ * A qualifying coalition takes precedence over the chair's own party, so a
+ * party chair who also chairs a coalition may nominate any partner MP. The
+ * party-only bid remains the fallback when the coalition does not qualify.
  *
  * Seat counts are always computed live from electedOfficials to prevent
  * stale govFormation.seatsByParty from incorrectly blocking party chairs
@@ -1615,59 +1619,16 @@ export async function checkAppointmentEligibility(
   const runtimeConfig = { governmentType: runtime.governmentType };
   const { lowerOfficeType } = await loadRuntimeCountryOffices(db, countryId);
   const liveLowerSeats = await getLiveLowerChamberSeats(db, countryId);
-  const minorityThreshold = Math.ceil(liveLowerSeats * MINORITY_SEAT_FRACTION);
+  const minorityThreshold = minoritySeatThreshold(liveLowerSeats);
 
   // Always compute live to avoid stale stored seatsByParty when a player
   // switches parties mid-term and their seat moves to a new party.
   const seatsByParty = await tallySeatsByParty(db, countryId);
 
-  // --- Check as party chair (or acting vice-chair when chair seat vacant) ---
-  // Per the 2026-05-22 VC-acting-chair rule: the vice-chair inherits chair
-  // authority — including PM-proposal eligibility — when the chair slot is
-  // null. Match either the seated chair OR a VC whose chair seat is vacant.
-  const chairParty = await db.collection<PoliticalParty>("politicalParties").findOne({
-    countryId,
-    $or: [{ chairId: characterId }, { chairId: null, viceChairId: characterId }],
-  });
-
-  if (chairParty) {
-    const partySeats = seatsByParty[String(chairParty.sequentialId)] ?? 0;
-
-    // One-party state guard: only the ruling party may form government.
-    if (!canFormGovernment(runtimeConfig, chairParty)) {
-      return { eligible: false };
-    }
-
-    // Minority bids are allowed even when another party/coalition holds a majority —
-    // the chamber gets to vote the proposal down rather than the proposal being
-    // suppressed at the eligibility gate.
-    let formationType: "majority" | "minority" | null = null;
-    if (partySeats >= majorityThreshold) {
-      formationType = "majority";
-    } else if (partySeats >= minorityThreshold) {
-      formationType = "minority";
-    }
-
-    if (formationType) {
-      const pcMpCount = await db.collection<ElectedOfficial>("electedOfficials").countDocuments({
-        officeType: lowerOfficeType,
-        countryId,
-        party: String(chairParty.sequentialId),
-        isNPP: { $ne: true },
-      });
-      if (pcMpCount > 0) {
-        return {
-          eligible: true,
-          formationType,
-          coalitionId: null,
-          coalitionPartyIds: null,
-          qualifyingPartyIds: [chairParty.sequentialId],
-        };
-      }
-    }
-  }
-
-  // --- Check as coalition chair ---
+  // --- Check as coalition chair first ---
+  // A chair of both a party and a qualifying coalition nominates for the whole
+  // coalition, so partner-party MPs are nominable; otherwise fall through to
+  // the party-only bid below.
   const chairCoalition = await db
     .collection<Coalition>("coalitions")
     .findOne({ countryId, chairCharacterId: characterId });
@@ -1683,24 +1644,15 @@ export async function checkAppointmentEligibility(
             .collection<PoliticalParty>("politicalParties")
             .findOne({ countryId, sequentialId: leadPartySeqId })
         : null;
-    if (!canFormGovernment(runtimeConfig, leadParty)) {
-      return { eligible: false };
-    }
     const memberPartyIds = chairCoalition.members.map((m) => m.partySequentialId);
     const coalitionSeats = memberPartyIds.reduce(
       (sum, pid) => sum + (seatsByParty[String(pid)] ?? 0),
       0
     );
     const coalitionPartySeqIds = memberPartyIds.map(String);
+    const strength = classifyFormationSeats(coalitionSeats, majorityThreshold, minorityThreshold);
 
-    let formationType: "coalition" | "minority" | null = null;
-    if (coalitionSeats >= majorityThreshold) {
-      formationType = "coalition";
-    } else if (coalitionSeats >= minorityThreshold) {
-      formationType = "minority";
-    }
-
-    if (formationType) {
+    if (canFormGovernment(runtimeConfig, leadParty) && strength) {
       const pcMpCount = await db.collection<ElectedOfficial>("electedOfficials").countDocuments({
         officeType: lowerOfficeType,
         countryId,
@@ -1710,12 +1662,46 @@ export async function checkAppointmentEligibility(
       if (pcMpCount > 0) {
         return {
           eligible: true,
-          formationType,
+          formationType: strength === "majority" ? "coalition" : "minority",
           coalitionId: chairCoalition.sequentialId,
           coalitionPartyIds: coalitionPartySeqIds,
           qualifyingPartyIds: memberPartyIds,
         };
       }
+    }
+  }
+
+  // --- Check as party chair (or acting vice-chair when chair seat vacant) ---
+  // Per the 2026-05-22 VC-acting-chair rule: the vice-chair inherits chair
+  // authority — including PM-proposal eligibility — when the chair slot is
+  // null. Match either the seated chair OR a VC whose chair seat is vacant.
+  const chairParty = await db.collection<PoliticalParty>("politicalParties").findOne({
+    countryId,
+    $or: [{ chairId: characterId }, { chairId: null, viceChairId: characterId }],
+  });
+
+  // One-party state guard: only the ruling party may form government.
+  if (!chairParty || !canFormGovernment(runtimeConfig, chairParty)) {
+    return { eligible: false };
+  }
+
+  const partySeats = seatsByParty[String(chairParty.sequentialId)] ?? 0;
+  const formationType = classifyFormationSeats(partySeats, majorityThreshold, minorityThreshold);
+  if (formationType) {
+    const pcMpCount = await db.collection<ElectedOfficial>("electedOfficials").countDocuments({
+      officeType: lowerOfficeType,
+      countryId,
+      party: String(chairParty.sequentialId),
+      isNPP: { $ne: true },
+    });
+    if (pcMpCount > 0) {
+      return {
+        eligible: true,
+        formationType,
+        coalitionId: null,
+        coalitionPartyIds: null,
+        qualifyingPartyIds: [chairParty.sequentialId],
+      };
     }
   }
 

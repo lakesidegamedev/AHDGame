@@ -3,6 +3,7 @@
 import { useGameEvents } from "@/hooks/useGameEvents";
 
 import { useState, useEffect, use, Suspense, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { captureClientException } from "@/lib/observability/sentryClientLazy";
 import { HeroImage } from "@/components/HeroImage";
@@ -11,9 +12,7 @@ import { Skeleton } from "@/components/ui";
 import { RateChart } from "@/components/forex/RateChart";
 import { OrderBook } from "@/components/forex/OrderBook";
 import { CurrencyWallet } from "@/components/forex/CurrencyWallet";
-import { CurrencyTradeModal } from "@/components/forex/CurrencyTradeModal";
 import { TransactionHistory } from "@/components/forex/TransactionHistory";
-import { CurrencyHolders } from "@/components/forex/CurrencyHolders";
 import type {
   ExchangeRateDisplay,
   WalletBalances,
@@ -42,6 +41,23 @@ const CURRENCY_HERO_IMAGES: Record<string, string> = {
 };
 const FALLBACK_HERO_IMAGE =
   "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/NY_stock_exchange_traders_floor_LC-U9-10548-6.jpg/960px-NY_stock_exchange_traders_floor_LC-U9-10548-6.jpg";
+
+// The trade modal only exists after a click and drags the spread-fee rules and
+// the central-bank helper barrel in; the holders tab is one of three views.
+const CurrencyTradeModal = dynamic(() =>
+  import("@/components/forex/CurrencyTradeModal").then((m) => ({ default: m.CurrencyTradeModal }))
+);
+const CurrencyHolders = dynamic(
+  () => import("@/components/forex/CurrencyHolders").then((m) => ({ default: m.CurrencyHolders })),
+  {
+    loading: () => (
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-48 rounded-lg" />
+        <Skeleton className="h-64 w-full rounded-xl" />
+      </div>
+    ),
+  }
+);
 
 export default function CurrencyDetailPage({
   params,

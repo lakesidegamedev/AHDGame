@@ -399,8 +399,9 @@ export function processSectors(
         corp,
         lookups.exchangeRatesByCurrency
       );
+      const sectorIdStr = sector._id.toString();
       const legacyResult =
-        internalSupplyResults?.get(sector._id.toString()) ??
+        internalSupplyResults?.get(sectorIdStr) ??
         processSector(
           sectorTurnEnv,
           corp,
@@ -409,11 +410,11 @@ export function processSectors(
           sectorCurrencyCode,
           sectorFxRate
         );
-      const fundedReceipt = funded?.receiptsBySectorId.get(sector._id.toString());
+      const fundedReceipt = funded?.receiptsBySectorId.get(sectorIdStr);
       const r = fundedReceipt ? fundedSectorResult(legacyResult, fundedReceipt) : legacyResult;
       if (fundedReceipt) {
-        fundedResults.set(sector._id.toString(), r);
-        fundedDaily.set(sector._id.toString(), (anchorPerTurn: number) =>
+        fundedResults.set(sectorIdStr, r);
+        fundedDaily.set(sectorIdStr, (anchorPerTurn: number) =>
           writeCorpEconomicLocal(anchorPerTurn * TURNS_PER_DAY, sectorCurrencyCode, sectorFxRate)
         );
       }

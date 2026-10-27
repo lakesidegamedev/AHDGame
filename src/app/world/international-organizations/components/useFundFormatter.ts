@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { type CountryId } from "@/lib/constants/countriesCore";
-import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
+import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencyCodes";
 import { formatFundAmount } from "./fundCurrency";
 
 /**
@@ -32,8 +32,7 @@ export function useFundFormatter(fund: {
   const { formatAmount } = useCurrency();
   const countryId = fund.currencyCountryId ?? fund.fundCurrencyCountryId;
   const code =
-    fund.currencyCode ??
-    (countryId ? (COUNTRY_CLIENT_CONFIGS[countryId]?.currencyCode ?? "USD") : "USD");
+    fund.currencyCode ?? (countryId ? (COUNTRY_CURRENCY_MAP[countryId] ?? "USD") : "USD");
   const rate = fund.usdToFundRate;
   return useCallback(
     (localAmount: number) =>

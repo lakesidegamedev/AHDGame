@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { type CountryId } from "@/lib/constants/countriesCore";
-import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
+import { isCountryId } from "@/lib/country/countryIds";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
 import { entityName as compiledEntityName } from "@/lib/constants/entityDisplay";
 import type { OrgMemberId } from "@/lib/db/types/internationalOrganization";
@@ -22,10 +21,7 @@ import type { OrgMemberId } from "@/lib/db/types/internationalOrganization";
 export function useEntityName(): (id: OrgMemberId) => string {
   const countryName = useCountryDisplayName();
   return useCallback(
-    (id: OrgMemberId) =>
-      Object.hasOwn(COUNTRY_CLIENT_CONFIGS, id)
-        ? countryName(id as CountryId)
-        : compiledEntityName(id),
+    (id: OrgMemberId) => (isCountryId(id) ? countryName(id) : compiledEntityName(id)),
     [countryName]
   );
 }

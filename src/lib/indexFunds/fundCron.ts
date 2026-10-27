@@ -23,10 +23,12 @@ import { loadFloatAuditContext, type FloatAuditContext } from "./fundFloatTradeP
 export { executeFundShareBuy, type FundShareBuyBatch } from "./fundFloatBuyExecution";
 import {
   processQueuedRedemptions,
+  prepareQueuedRedemptionPass,
   QUEUED_REDEMPTION_CLAIMS_PER_PASS,
 } from "./processQueuedRedemptions";
 export {
   processQueuedRedemptions,
+  prepareQueuedRedemptionPass,
   QUEUED_REDEMPTION_CLAIMS_PER_PASS,
 } from "./processQueuedRedemptions";
 import {
@@ -732,6 +734,19 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
   const redemptionFailedFundIds = new Set<string>();
   let claimsLeft = claimsPerPass;
   let queuedFundsLeft = claimOrder.length;
+  // Queue rows, holder documents, rates and the audit context for every fund
+  // this pass will serve: one read each, instead of one set per fund.
+  const redemptionPassContext =
+    claimOrder.length > 0
+      ? await prepareQueuedRedemptionPass(
+          db,
+          claimOrder.flatMap((fundId) => {
+            const fund = fundsById.get(fundId);
+            return fund ? [fund] : [];
+          }),
+          forexEnabled
+        )
+      : undefined;
   for (const fundId of claimOrder) {
     const fund = fundsById.get(fundId)!;
     const allotted = queuedRedemptionClaimShare(claimsLeft, queuedFundsLeft);
@@ -744,7 +759,8 @@ async function runFundCron(db: Db, options?: IndexFundCronOptions): Promise<Fund
         forexEnabled,
         currentTurn,
         true,
-        share
+        share,
+        redemptionPassContext
       );
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

@@ -188,6 +188,54 @@ export function fundedNpcFlowDelta(
   return Math.max(desired, -Math.max(0, funds.householdPool));
 }
 
+/** One turn of an NPC household tranche, as cash and book movement. */
+export interface NpcBulkInstalment {
+  /** Principal the household pool repaid this turn. */
+  principal: number;
+  /** Interest the household pool paid this turn. */
+  interest: number;
+  /** Principal written off this turn. Defaults destroy loan asset, not cash. */
+  writtenOff: number;
+  /** Outstanding after the repayment and the write-off. */
+  outstanding: number;
+  /** Cash that left the household pool. */
+  collected: number;
+}
+
+/**
+ * One turn of servicing on a household book tranche.
+ *
+ * The household pool is the only source of repayment, so both the interest
+ * and the principal are capped by what it holds. Kept as plain data because a
+ * dead bank's tranches are decided against one running pool per currency,
+ * whichever shell drives the turn.
+ */
+export function npcBulkInstalment(input: {
+  outstanding: number;
+  ratePercent: number;
+  defaultRatePercent: number;
+  currency: CurrencyCode;
+  householdPool: number;
+}): NpcBulkInstalment {
+  const current = Math.max(0, input.outstanding);
+  const pool = Math.max(0, input.householdPool);
+  const principalDelta = fundedNpcFlowDelta(current, 0, {
+    cashReserves: 0,
+    requiredReserves: 0,
+    householdPool: pool,
+  });
+  const principal = Math.min(current, Math.max(0, -principalDelta));
+  const afterPrincipal = Math.max(0, current - principal);
+  const interestDue = perTurnInterest(afterPrincipal, input.ratePercent, input.currency);
+  const interest = Math.min(interestDue, Math.max(0, pool - principal));
+  const writtenOff = Math.min(
+    afterPrincipal,
+    (afterPrincipal * (input.defaultRatePercent / 100)) / TURNS_PER_YEAR
+  );
+  const outstanding = Math.max(0, afterPrincipal - writtenOff);
+  return { principal, interest, writtenOff, outstanding, collected: principal + interest };
+}
+
 export interface LoanInstalment {
   interestDue: number;
   principalDue: number;

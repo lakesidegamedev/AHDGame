@@ -66,6 +66,7 @@ import { nationKeywords } from "@/lib/marketing/marketedWorld";
 import { getMarketedWorldSafe } from "@/lib/marketing/marketedWorldServer";
 import { getEraConfig } from "@/components/landing/eraThemes";
 import { verifyAuth } from "@/lib/auth";
+import { AUTH_COOKIE_NAME } from "@/lib/authCookieName";
 import { getCachedMaintenanceStatus, isMaintenanceBypassPath } from "@/lib/maintenanceStatus";
 import { pickClientNamespaces, SHELL_CLIENT_NAMESPACES } from "@/i18n/clientCatalog";
 import { resolveNavbarPageCountry } from "@/lib/navigation/resolveNavbarPageCountry";
@@ -237,6 +238,13 @@ export default async function RootLayout({
   const isIosStoreApp = isIosStoreAppUserAgent(userAgent);
   const host = requestHeaders.get("host");
   const pathname = requestHeaders.get("x-pathname") ?? "/";
+  // Only a cookie's presence is checked, not its validity: this is the hint that
+  // lets the status bar start its per-user request with the first paint instead
+  // of one `/api/client-nav` round trip later. An expired token costs one
+  // request that can only 401, which the shared status request then treats as a
+  // sign-out. A singleplayer build has no session cookie and no account, and
+  // keeps its local character without this hint.
+  const hasSessionCookie = Boolean(cookieStore.get(AUTH_COOKIE_NAME)?.value);
   const displayMode = cookieStore.get("ahd-display-mode")?.value as
     "focused" | "classic" | undefined;
   const interfaceMode =
@@ -408,7 +416,7 @@ export default async function RootLayout({
               nameOverrides: countryNameOverrides,
             }}
           >
-            <AppInterfaceProvider initialMode={interfaceMode}>
+            <AppInterfaceProvider initialMode={interfaceMode} initialHasSession={hasSessionCookie}>
               <CurrencyProvider baselineRates={currencyBaselineRates}>
                 <ThemeProvider>
                   <BrowserPreferencesProvider>

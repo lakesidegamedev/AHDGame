@@ -6,15 +6,20 @@ import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmoun
 import { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useCurrency } from "@/contexts/CurrencyContext";
-import { BATCHABLE_ACTION_TYPES, getBatchAffordability, simulateActionBatch } from "@/lib/actions";
-import type { ActionType, Character, State } from "@/lib/db/types";
+import {
+  BATCHABLE_ACTION_TYPES,
+  getBatchAffordability,
+  simulateActionBatch,
+  type ActionStateEconomics,
+} from "@/lib/actions";
+import type { ActionType, Character } from "@/lib/db/types";
 
 type BatchCount = 5 | 10;
 
 export interface ActionExecuteRowProps {
   actionType: string;
   character: Character;
-  homeState: State | null;
+  homeState: ActionStateEconomics | null;
   blocked: boolean;
   executingKey: string | null;
   onExecute: (type: string, count?: 1 | 5 | 10) => void;

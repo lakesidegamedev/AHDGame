@@ -1,7 +1,7 @@
-import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import type { ReactNode } from "react";
 import { nonShellClientMessages } from "@/i18n/clientCatalog";
+import { RouteIntlProvider } from "@/i18n/RouteIntlProvider";
 
 /**
  * Per-navigation message provider.
@@ -11,18 +11,16 @@ import { nonShellClientMessages } from "@/i18n/clientCatalog";
  * is re-created on navigation, so it carries the rest of the catalog.
  *
  * The root layout sends the shell namespaces (navbar, tutorial coach); this adds
- * every other namespace. Per-route trimming (`templateNamespacesForPath`) is
- * switched off: players on the web app saw raw message keys such as
- * `corporations.sectorInvestment.buildTotal` in the build dialog, because the
- * trimmed catalog for their request lacked strings the page renders. Staff were
- * never trimmed, so it did not show for them. Re-enable only with a check that
- * covers every client component a route can mount.
+ * every other namespace, merged onto the shell by `RouteIntlProvider`. Per-route
+ * trimming (`templateNamespacesForPath`) is switched off: players on the web app
+ * saw raw message keys such as `corporations.sectorInvestment.buildTotal` in the
+ * build dialog, because the trimmed catalog for their request lacked strings the
+ * page renders. Staff were never trimmed, so it did not show for them. Re-enable
+ * only with a check that covers every client component a route can mount.
  */
 export default async function RootTemplate({ children }: { children: ReactNode }) {
   const messages = await getMessages();
   return (
-    <NextIntlClientProvider messages={nonShellClientMessages(messages)}>
-      {children}
-    </NextIntlClientProvider>
+    <RouteIntlProvider messages={nonShellClientMessages(messages)}>{children}</RouteIntlProvider>
   );
 }

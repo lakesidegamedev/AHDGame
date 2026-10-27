@@ -32,6 +32,7 @@ import { NEUTRAL_STAT } from "@/lib/stats/statsConstants";
 // keeps working; client components import corporationsClient directly.
 export * from "./corporationsClient";
 import {
+  GROWTH_COST_MULTIPLIER,
   OPERATING_SECTOR_TYPES,
   TURNS_PER_DAY,
   type OperatingSectorType,
@@ -326,9 +327,6 @@ export function calculateWorkers(
   const skillMultiplier = 1 - ((clamped - 50) / 50) * WORKFORCE_SKILL_WORKER_MAX_ADJUSTMENT;
   return Math.max(1, Math.round(baseWorkers * skillMultiplier));
 }
-
-/** Growth cost multiplier — growthCost = revenue × growthRate × this */
-export const GROWTH_COST_MULTIPLIER = 3.0;
 
 // ─── Market Dominance Modifiers ──────────────────────────────────────────────
 // Sectors that exceed DOMINANCE_MARKET_SHARE_THRESHOLD of their (state, sectorType)
@@ -723,12 +721,6 @@ export function calculateDailyGrowthCost(
     acumenGrowthCostMultiplier(acumen)
   );
 }
-
-/** Maximum growth rate a player can set (% per game year) */
-export const MAX_GROWTH_RATE = 15.0;
-
-/** Minimum growth rate — negative means deliberate downsizing (% per game year) */
-export const MIN_GROWTH_RATE = -2;
 
 /**
  * Per-turn convergence step when ticking `currentGrowthRate` toward

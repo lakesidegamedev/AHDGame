@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { regionUrl } from "@/lib/urls";
-import { resolveRegionOfficeBannerImage } from "@/lib/constants/regionBanner";
 import { HeroImage } from "@/components/HeroImage";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { GUBERNATORIAL_ACTION_CAP } from "@/lib/constants/governorOffice";
@@ -58,7 +57,11 @@ interface Props {
   countryId: CountryId;
   stateId: string;
   stateName: string;
-  stateBannerImage: string | null;
+  /**
+   * Resolved on the server: the banner depends on the country registry and every
+   * country's region image map, which is not worth shipping for one <img src>.
+   */
+  bannerSrc: string | null;
   regionalTitle: string;
   /** Plural for the regional executive's orders ("Executive Orders", "Orders in Council"). */
   ordersLabel: string;
@@ -133,11 +136,7 @@ export function GovernorOfficeClient(props: Props) {
     ? `${props.regionalTitle}'s Office`
     : `${props.stateName} ${props.regionalTitle}'s Office`;
 
-  const bannerSrc = resolveRegionOfficeBannerImage(
-    props.countryId,
-    props.stateId,
-    props.stateBannerImage
-  );
+  const bannerSrc = props.bannerSrc;
 
   return (
     <div className="min-h-screen bg-background">

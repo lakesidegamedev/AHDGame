@@ -44,6 +44,11 @@ export type LoanServiceBatchRow = {
   transition: BankingTransition;
   /** Borrower and currency, the key the caller's running balance lives under. */
   borrowerKey: string;
+  /**
+   * False for a household-pool tranche: its cash comes from the central bank,
+   * not from a borrower, so no borrower ledger row belongs to it.
+   */
+  ledger?: boolean;
 };
 
 export type LoanServiceBatchTotals = {
@@ -111,10 +116,24 @@ function isMeasuredRecoveryProjection(projection: TransitionProjection): boolean
 export function batchedLoanServiceMove(
   rows: readonly LoanServiceBatchRow[],
   creditTarget: MoneyTarget,
-  books: LoanServiceBatchBooks
+  books: LoanServiceBatchBooks,
+  /**
+   * Debits the rows do not carry because they are not a borrower's: the
+   * household pool a tranche repays from. Summed once per pool per currency,
+   * with the pool's balance as the guard, before the move is offered.
+   */
+  pooledDebits: readonly TransitionLeg[] = []
 ): { legs: TransitionLeg[]; projections: TransitionProjection[] } {
   const totalPayment = rows.reduce((sum, row) => sum + Math.max(0, row.decision.payment), 0);
   const debitByTarget = new Map<string, TransitionLeg>();
+  // The pooled debits go in first so a (theoretical) row leg on the same target
+  // folds into their guarded amount rather than the other way round.
+  for (const leg of pooledDebits) {
+    const key = legTargetKey(leg);
+    const existing = debitByTarget.get(key);
+    if (existing) existing.amount += leg.amount;
+    else debitByTarget.set(key, { ...leg });
+  }
   for (const row of rows) {
     for (const leg of row.transition.legs) {
       if (leg.kind !== "debit") continue;
@@ -221,7 +240,7 @@ export function recordLoanServiceBatch(args: {
     totals.writtenOff += row.decision.writtenOff;
     totals.totalLoansDelta += row.decision.totalLoansDelta;
     totals.bankCredit += Math.max(0, row.decision.payment);
-    if (row.decision.payment > 0) {
+    if (row.decision.payment > 0 && row.ledger !== false) {
       txEntries.push(
         loanRepaymentTxEntry({
           loan: row.loan,

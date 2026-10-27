@@ -1215,6 +1215,7 @@ export async function processCorporationTurn(
       }
     }
     await applyPoliticalMediaOrderEffects(db, effectOrderIds);
+    mark("politicalMediaOrders");
   }
 
   if (mediaProductSlatesEnabled && lookups.mediaProductProjectsBySectorId) {
@@ -1284,10 +1285,8 @@ export async function processCorporationTurn(
     });
   }
 
-  // Contracts and surveys read the post-bulkWrite snapshot so this turn's
-  // mothball / production-policy / cash writes are visible. Matching before
-  // the write would lock volume against a plant this pass just idled, and
-  // a survey debit would lose to the reinvestment `$set liquidCapital`.
+  // Contracts read the post-bulkWrite snapshot, so this turn's mothball and
+  // production-policy writes are visible to matching.
   await processNppSupplyAgreements(db, turn ?? 0, now, market.plantsEnabled);
   mark("nppSupplyAgreements");
 

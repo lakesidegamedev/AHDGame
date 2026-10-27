@@ -262,6 +262,23 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
       for (const sector of sectors) {
         // A cold plant cannot reserve or sell stale output from its prior turn.
         if (market.plantsEnabled && sector.mothballed === true) continue;
+        // One planned-economy and embargo resolution per sector. The offer, the
+        // contract ceiling and the produced leg all price the same chain, and
+        // each of them was re-deriving it on its own.
+        const sectorDocCountryId = (sector as { countryId?: string }).countryId;
+        const plannedEconomy = isPlannedEconomy(
+          sectorDocCountryId,
+          currentYear,
+          commandEconomyEnabled
+        );
+        const sectorEmbargoSupplyFactor =
+          embargoSupplyFactorFor(sector) *
+          plannedEconomyMediaSupplyFactor(
+            sector.sectorType,
+            plannedEconomy,
+            sector.mediaDiscriminator
+          );
+        const militaryRetainedFraction = 1 - freshMilitaryDiversion(sector, turn ?? 0);
         const baseRates = getEffectiveStrategyRatesForOperatingModel(
           sector.sectorType,
           sector.strategyId ?? "standard",
@@ -374,18 +391,8 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
           ? (scaleMeasuredProducedUnits({
               producedUnits: 1,
               isNatcorp,
-              embargoSupplyFactor:
-                embargoSupplyFactorFor(sector) *
-                plannedEconomyMediaSupplyFactor(
-                  sector.sectorType,
-                  isPlannedEconomy(
-                    (sector as { countryId?: string }).countryId,
-                    currentYear,
-                    commandEconomyEnabled
-                  ),
-                  sector.mediaDiscriminator
-                ),
-              militaryRetainedFraction: 1 - freshMilitaryDiversion(sector, turn ?? 0),
+              embargoSupplyFactor: sectorEmbargoSupplyFactor,
+              militaryRetainedFraction,
             }) ?? 0)
           : 0;
         const scaledProductOutput = exactProductOutput
@@ -395,7 +402,7 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
         // countryId is backfilled onto every sector in buildLookups (from
         // stateCountryMap, "US" fallback), so the cast is total in practice.
         if (clearingGroupBySector) {
-          clearingGroupBySector.set(sectorId, (sector as { countryId?: string }).countryId ?? "US");
+          clearingGroupBySector.set(sectorId, sectorDocCountryId ?? "US");
         }
         const hostCode = resolveSectorHostCurrencyCode(sector, corp);
         const hostRate = fxRateForSectorHostFromMap(sector, corp, lookups.exchangeRatesByCurrency);
@@ -459,17 +466,7 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
           const achievableScaled = plantsSupplyScaledUnits({
             producedUnits: sector.contractAchievableUnits,
             isNatcorp,
-            embargoSupplyFactor:
-              embargoSupplyFactorFor(sector) *
-              plannedEconomyMediaSupplyFactor(
-                sector.sectorType,
-                isPlannedEconomy(
-                  (sector as { countryId?: string }).countryId,
-                  currentYear,
-                  commandEconomyEnabled
-                ),
-                sector.mediaDiscriminator
-              ),
+            embargoSupplyFactor: sectorEmbargoSupplyFactor,
           });
           const byKey = achievableByCorpCommodity.get(corpId) ?? new Map<string, number | null>();
           let sectorContributed = false;
@@ -494,17 +491,6 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
           if (sectorContributed) achievableByCorpCommodity.set(corpId, byKey);
         }
         if (supplyAgreementsEnabled && market.plantsEnabled && sector.mothballed !== true) {
-          const embargoSupplyFactor =
-            embargoSupplyFactorFor(sector) *
-            plannedEconomyMediaSupplyFactor(
-              sector.sectorType,
-              isPlannedEconomy(
-                (sector as { countryId?: string }).countryId,
-                currentYear,
-                commandEconomyEnabled
-              ),
-              sector.mediaDiscriminator
-            );
           const exactOutputUnits = scaledProductOutput?.outputUnitsByCommodity;
           const producedByKey = producedByCorpCommodity.get(corpId) ?? new Map<string, number>();
           if (exactOutputUnits) {
@@ -523,7 +509,7 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
               isNatcorp,
               // Mirrors the ledger (computeRawSupplyDemand): embargo haircut plus
               // the planned-economy media derate. Offer and ledger must agree.
-              embargoSupplyFactor,
+              embargoSupplyFactor: sectorEmbargoSupplyFactor,
             });
             if (scaled !== null && scaled > 0) {
               for (const commodity of Object.keys(rates.supply ?? {}) as CommodityType[]) {
@@ -663,25 +649,15 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
             ? (() => {
                 const scaledPlants = scaleMeasuredProducedUnits({
                   producedUnits: sector.producedUnits,
-                  isNatcorp: !!lookups.corpById.get(corpId)?.countryOwnerId,
-                  embargoSupplyFactor:
-                    embargoSupplyFactorFor(sector) *
-                    plannedEconomyMediaSupplyFactor(
-                      sector.sectorType,
-                      isPlannedEconomy(
-                        (sector as { countryId?: string }).countryId,
-                        currentYear,
-                        commandEconomyEnabled
-                      ),
-                      sector.mediaDiscriminator
-                    ),
+                  isNatcorp,
+                  embargoSupplyFactor: sectorEmbargoSupplyFactor,
                   // Arsenal-retention leg (issue #2054): the world supply
                   // ledger multiplies this same share out of supply, so an
                   // offer built without it sits in a larger basis and trips
                   // the clearing invariant while depressing fills. Absent (no
                   // fresh diversion) retains everything: non-contracted
                   // sectors are byte-identical to before.
-                  militaryRetainedFraction: 1 - freshMilitaryDiversion(sector, turn ?? 0),
+                  militaryRetainedFraction,
                 });
                 return sector.sectorType === "extraction"
                   ? { contractFillUnits: scaledPlants }
@@ -856,18 +832,7 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
         )
       : undefined;
     market.groupSupplyCommittedInputsBySector = groupSupply?.committedOutputBySector
-      ? new Map(
-          [...groupSupply.buyersByCommodity]
-            .flatMap(([commodity, buyers]) =>
-              buyers.map((b) => [b.sectorId, commodity, b.contractedUnits] as const)
-            )
-            .reduce((rows, [id, commodity, units]) => {
-              const inputs = rows.get(id) ?? new Map<string, number>();
-              inputs.set(commodity, (inputs.get(commodity) ?? 0) + units);
-              rows.set(id, inputs);
-              return rows;
-            }, new Map<string, Map<string, number>>())
-        )
+      ? committedInputsBySector(groupSupply.buyersByCommodity)
       : undefined;
     market.groupSupplyCommittedOutputsBySector = groupSupply?.committedOutputBySector;
     market.groupSupplyForecastByRoot = groupSupply?.forecastByRoot;
@@ -1203,4 +1168,27 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
     buyerDemandByCorpCommodity,
     politicalMediaSettlementPlans,
   };
+}
+
+/**
+ * Per-sector committed group inputs, from the coordination buyers the group
+ * pass already built. One pass, no intermediate arrays: this map covers every
+ * sector in the world, and the flatMap/reduce form it replaced allocated a row
+ * array, a tuple array and a reduce accumulator for the same content.
+ */
+function committedInputsBySector(
+  buyersByCommodity: NonNullable<ReturnType<typeof buildGroupSupplyContext>>["buyersByCommodity"]
+): Map<string, Map<string, number>> {
+  const out = new Map<string, Map<string, number>>();
+  for (const [commodity, buyers] of buyersByCommodity) {
+    for (const buyer of buyers) {
+      let inputs = out.get(buyer.sectorId);
+      if (!inputs) {
+        inputs = new Map<string, number>();
+        out.set(buyer.sectorId, inputs);
+      }
+      inputs.set(commodity, (inputs.get(commodity) ?? 0) + buyer.contractedUnits);
+    }
+  }
+  return out;
 }

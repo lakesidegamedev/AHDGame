@@ -1,4 +1,4 @@
-import { MARKETIZATION_SCHEDULE } from "@/lib/constants/commandEconomy";
+import { MARKETIZATION_SCHEDULE } from "@/lib/constants/marketizationSchedule";
 import { FOREX_ACTIVE_CURRENCIES, type CurrencyCode } from "@/lib/constants/currencies";
 import type { CountryId } from "@/lib/constants/countries";
 

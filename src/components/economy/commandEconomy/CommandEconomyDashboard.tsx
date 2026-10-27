@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 import { Badge, Button, Tooltip } from "@/components/ui";
 import { formatCompactNumber } from "@/lib/utils/formatters";
@@ -7,11 +8,17 @@ import { CE_TERMS } from "./glossary";
 import type { CommandEconomyDashboard as Dashboard } from "@/lib/economy/commandEconomyDashboard";
 import { GosbankChairPanel } from "./GosbankChairPanel";
 import { GosplanPlannerPanel } from "./GosplanPlannerPanel";
-import { SoeDirectorPanel } from "./SoeDirectorPanel";
 
 interface Props {
   countryId: string;
 }
+
+// Per-SOE director controls render only for the planner or head of government,
+// and the panel drags the command-economy rules, the SOE model and the
+// corporation catalog in with it. Mount it on demand.
+const SoeDirectorPanel = dynamic(() =>
+  import("./SoeDirectorPanel").then((m) => ({ default: m.SoeDirectorPanel }))
+);
 
 /** 0..1 bar; green at/above 1.0 plan, warning below. */
 function FulfillmentBar({ value }: { value: number }) {

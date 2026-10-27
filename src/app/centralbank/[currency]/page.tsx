@@ -9,6 +9,8 @@ import {
   getCurrencyMemberCountries,
 } from "@/lib/centralBank/currencyRouting";
 import CentralBankClient from "./CentralBankClient";
+import { getBankIdentity } from "@/lib/constants/institutionIdentity";
+import { getBankId } from "@/lib/centralBank/helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +58,14 @@ export default async function CurrencyCentralBankPage({ params }: PageProps) {
       countryId={resolved.anchorCountryId}
       apiBasePath={resolved.apiBasePath}
       members={members}
+      chrome={{
+        countryName: resolved.config.name,
+        executiveLabel:
+          resolved.config.officeTypes.find((o) => o.isExecutive)?.label ?? "executive",
+        centralBankHeroImage: resolved.config.centralBank.heroImage,
+        centralBankHeroAlt: resolved.config.centralBank.heroAlt,
+        identity: getBankIdentity(getBankId(resolved.anchorCountryId)),
+      }}
     />
   );
 }

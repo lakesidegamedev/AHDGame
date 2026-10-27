@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { CountryCommodityData } from "@/lib/commodity-map";
-import { COUNTRIES_WITH_REGION_MAPS } from "@/lib/commodity-map";
+import type { CountryCommodityData } from "@/lib/commodity-map/commodityAggregation";
+import { COUNTRIES_WITH_REGION_MAPS } from "@/lib/commodity-map/commodityRegionMappings";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import { CountryFlag } from "@/components/CountryFlag";

@@ -9,7 +9,6 @@ import {
   listPendingRedemptions,
   FUND_REDEMPTION_QUEUE_COLLECTION,
 } from "./fundQueries";
-import { loadCharacterFxRate } from "@/lib/currency/characterFunds";
 import { loadTxThresholds } from "@/lib/financialTxLog/emit";
 import { sellFundHoldingsForRedemptionCash } from "./fundRedemptionLiquidity";
 import { sellFundBondHoldingsForCash } from "@/lib/bonds/sellFundBondUnits";
@@ -22,6 +21,7 @@ import {
   type PayoutBatchMember,
 } from "./queuedPayoutBatch";
 import {
+  holderCreditTarget,
   loadQueuedPayoutAuditContext,
   recoverQueuedPayouts,
   settleQueuedPayout,
@@ -44,64 +44,68 @@ export interface QueuedRedemptionClaimBudget {
   claimsLeft: number;
 }
 
-export async function processQueuedRedemptions(
-  db: Db,
-  fund: IndexFund,
-  forexEnabled: boolean,
-  currentTurn: number,
-  recoveryAlreadyRun = false,
-  budget: QueuedRedemptionClaimBudget = { claimsLeft: QUEUED_REDEMPTION_CLAIMS_PER_PASS }
-): Promise<number> {
-  const recovery = recoveryAlreadyRun
-    ? { changed: false, recovered: 0 }
-    : await recoverQueuedPayouts(db, fund._id, currentTurn);
-  if (recovery.changed) {
-    fund = (await getFundById(db, fund._id)) ?? fund;
-  }
-  const pending = await listPendingRedemptions(db, fund._id);
-  if (pending.length === 0) return recovery.recovered;
-  if (budget.claimsLeft <= 0) return recovery.recovered;
-  // Least recently touched first, so the entries a budgeted pass skipped are
-  // served before the ones it just paid. Every claim, payout and restore stamps
-  // updatedAt. The pro-rata share below still measures against the whole queue.
-  const ordered = [...pending].sort(
-    (a, b) =>
-      new Date(a.updatedAt ?? a.createdAt).getTime() -
-        new Date(b.updatedAt ?? b.createdAt).getTime() ||
-      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-  );
+/**
+ * What one redemption pass loads once for every fund it serves: the pending
+ * queue rows, the holder documents they credit, the fund-to-native rates and
+ * the audit context. Each of those used to be read inside the per-fund call,
+ * so a pass over N waiting funds paid N times for data that cannot change
+ * between them.
+ */
+export interface QueuedRedemptionPassContext {
+  pendingByFundId: Map<string, IndexFundRedemptionQueueEntry[]>;
+  /** Holder documents keyed `<collection>:<_id>`, as the payout paths expect. */
+  holders: Map<string, Document>;
+  nppCurrencyById: Map<string, CurrencyCode>;
+  fxRateByCurrency: Map<CurrencyCode, { rate: number; ok: boolean }>;
+  audit: Awaited<ReturnType<typeof loadQueuedPayoutAuditContext>>;
+}
 
-  // #992 tranche 6: one batched NPP lookup for the pass so each NPP
-  // redemption below can be denominated in the NPP home currency (the
-  // npp:<id>:<homeCurrency> snapshot key) without a per-entry read.
+/**
+ * Queue rows of every fund the pass will serve, in one read, plus their context.
+ * A caller that already holds the rows (a single fund paying on its own) passes
+ * them in rather than reading the queue twice.
+ */
+export async function prepareQueuedRedemptionPass(
+  db: Db,
+  funds: IndexFund[],
+  forexEnabled: boolean,
+  loadedPending?: IndexFundRedemptionQueueEntry[]
+): Promise<QueuedRedemptionPassContext> {
+  const fundIds = funds.map((fund) => fund._id);
+  const pending =
+    loadedPending ??
+    (fundIds.length === 0
+      ? []
+      : await db
+          .collection<IndexFundRedemptionQueueEntry>(FUND_REDEMPTION_QUEUE_COLLECTION)
+          .find({ fundId: { $in: fundIds }, status: { $in: ["queued", "partial"] } })
+          .sort({ createdAt: 1 })
+          .toArray());
+  const pendingByFundId = new Map<string, IndexFundRedemptionQueueEntry[]>();
+  for (const entry of pending) {
+    const key = String(entry.fundId);
+    const list = pendingByFundId.get(key) ?? [];
+    list.push(entry);
+    pendingByFundId.set(key, list);
+  }
+
   const holders = new Map<string, Document>();
   const nppCurrencyById = new Map<string, CurrencyCode>();
-  /** Holder document key for a queue entry, matching the batched reads above. */
-  const holderKeyOf = (
-    entry: Pick<IndexFundRedemptionQueueEntry, "characterId" | "imperialCharacterId" | "nppId">
-  ) =>
-    entry.characterId
-      ? `characters:${entry.characterId}`
-      : entry.imperialCharacterId
-        ? `imperialCharacters:${entry.imperialCharacterId}`
-        : `npps:${entry.nppId}`;
-  const holderOf = (
-    entry: Pick<IndexFundRedemptionQueueEntry, "characterId" | "imperialCharacterId" | "nppId">
-  ) => holders.get(holderKeyOf(entry));
-  const queuedNppObjectIds = pending.flatMap((e) => (e.nppId ? [e.nppId] : []));
-  if (queuedNppObjectIds.length > 0) {
+  const nppIds = pending.flatMap((entry) => (entry.nppId ? [entry.nppId] : []));
+  if (nppIds.length > 0) {
     const nppDocs = await db
       .collection<{ _id: ObjectId; countryId?: string }>("npps")
-      .find({ _id: { $in: queuedNppObjectIds } })
+      .find({ _id: { $in: nppIds } })
       .project({ countryId: 1, name: 1 })
       .toArray();
     for (const doc of nppDocs) {
-      const cur = COUNTRY_CURRENCY_MAP[doc.countryId as keyof typeof COUNTRY_CURRENCY_MAP] ?? "USD";
-      nppCurrencyById.set(doc._id.toString(), cur);
+      nppCurrencyById.set(
+        doc._id.toString(),
+        COUNTRY_CURRENCY_MAP[doc.countryId as keyof typeof COUNTRY_CURRENCY_MAP] ?? "USD"
+      );
       holders.set(`npps:${doc._id}`, doc);
     }
   }
-
   for (const [collection, field] of [
     ["characters", "characterId"],
     ["imperialCharacters", "imperialCharacterId"],
@@ -116,13 +120,98 @@ export async function processQueuedRedemptions(
     for (const row of rows) holders.set(`${collection}:${row._id}`, row);
   }
 
+  // The wallet credit is in the fund's native currency, so the pass needs one
+  // rate per fund currency rather than one per fund.
+  const currencies = [...new Set(funds.map((fund) => fund.anchorCurrencyCode))] as CurrencyCode[];
+  const fxRateByCurrency = new Map<CurrencyCode, { rate: number; ok: boolean }>();
+  if (forexEnabled && currencies.length > 0) {
+    const rows = await db
+      .collection<{ currencyCode: CurrencyCode; rate: number }>("exchangeRates")
+      .find({ currencyCode: { $in: currencies } }, { projection: { rate: 1 } })
+      .toArray();
+    const byCurrency = new Map(rows.map((row) => [row.currencyCode, row.rate]));
+    for (const currency of currencies) {
+      const rate = byCurrency.get(currency);
+      fxRateByCurrency.set(
+        currency,
+        typeof rate === "number" && Number.isFinite(rate) && rate > 0
+          ? { rate, ok: true }
+          : { rate: 1, ok: false }
+      );
+    }
+  }
+
+  return {
+    pendingByFundId,
+    holders,
+    nppCurrencyById,
+    fxRateByCurrency,
+    audit: await loadQueuedPayoutAuditContext(db),
+  };
+}
+
+export async function processQueuedRedemptions(
+  db: Db,
+  fund: IndexFund,
+  forexEnabled: boolean,
+  currentTurn: number,
+  recoveryAlreadyRun = false,
+  budget: QueuedRedemptionClaimBudget = { claimsLeft: QUEUED_REDEMPTION_CLAIMS_PER_PASS },
+  passContext?: QueuedRedemptionPassContext
+): Promise<number> {
+  const recovery = recoveryAlreadyRun
+    ? { changed: false, recovered: 0 }
+    : await recoverQueuedPayouts(db, fund._id, currentTurn);
+  if (recovery.changed) {
+    fund = (await getFundById(db, fund._id)) ?? fund;
+  }
+  const pending = passContext
+    ? (passContext.pendingByFundId.get(String(fund._id)) ?? [])
+    : await listPendingRedemptions(db, fund._id);
+  if (pending.length === 0) return recovery.recovered;
+  if (budget.claimsLeft <= 0) return recovery.recovered;
+  // A caller driving the whole pass has already loaded everything the payout
+  // paths need; a fund paying on its own loads the same context for itself.
+  const context =
+    passContext ?? (await prepareQueuedRedemptionPass(db, [fund], forexEnabled, pending));
+  // Least recently touched first, so the entries a budgeted pass skipped are
+  // served before the ones it just paid. Every claim, payout and restore stamps
+  // updatedAt. The pro-rata share below still measures against the whole queue.
+  const ordered = [...pending].sort(
+    (a, b) =>
+      new Date(a.updatedAt ?? a.createdAt).getTime() -
+        new Date(b.updatedAt ?? b.createdAt).getTime() ||
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
+
+  // #992 tranche 6: one batched holder lookup for the pass so each NPP
+  // redemption below can be denominated in the NPP home currency (the
+  // npp:<id>:<homeCurrency> snapshot key) without a per-entry read.
+  const holders = context.holders;
+  const nppCurrencyById = context.nppCurrencyById;
+  /** Holder document key for a queue entry, matching the batched reads above. */
+  const holderKeyOf = (
+    entry: Pick<IndexFundRedemptionQueueEntry, "characterId" | "imperialCharacterId" | "nppId">
+  ) =>
+    entry.characterId
+      ? `characters:${entry.characterId}`
+      : entry.imperialCharacterId
+        ? `imperialCharacters:${entry.imperialCharacterId}`
+        : `npps:${entry.nppId}`;
+  const holderOf = (
+    entry: Pick<IndexFundRedemptionQueueEntry, "characterId" | "imperialCharacterId" | "nppId">
+  ) => holders.get(holderKeyOf(entry));
+
   // Wallet credits are in the fund's native currency; the ₳ → native multiplier
   // is stamped on each queue entry at request time (entry.redeemFxRate, ticket
   // #857 grandfather) - 1 for pre-fix legacy units, the fund rate for post-fix
   // units. Fund `cashAnchor` and NPP investment cash stay in ₳. We still gate on
   // rate availability so a momentary outage defers rather than risks a bad payout.
   if (forexEnabled) {
-    const fxResult = await loadCharacterFxRate(db, fund.anchorCurrencyCode);
+    const fxResult = context.fxRateByCurrency.get(fund.anchorCurrencyCode) ?? {
+      rate: 1,
+      ok: false,
+    };
     if (!fxResult.ok) {
       // Rate unavailable - defer payouts to a later cycle.
       console.warn(
@@ -132,7 +221,7 @@ export async function processQueuedRedemptions(
     }
   }
 
-  const audit = await loadQueuedPayoutAuditContext(db);
+  const audit = context.audit;
   let paid = recovery.recovered;
   let fundState = fund;
   let availableCash = fund.cashAnchor;
@@ -302,13 +391,25 @@ export async function processQueuedRedemptions(
     }
 
     const paidAmount = quote.paidAmountAnchor;
+    // Native-currency equivalent for personal wallet credits (₳ × blended rate).
+    // Absent redeemFxRate = pre-fix queue row → credit rate-free (× 1), matching
+    // what the holder was owed under the old symmetric-scale code (no windfall).
+    const redeemFxRate = entry.redeemFxRate ?? 1;
+    const paidNative = forexEnabled ? paidAmount * redeemFxRate : paidAmount;
+    // A holder is paid in its own currency: NPP cash is already ₳, a personal
+    // wallet is native. Resolved once here so the batched and single paths
+    // credit the same balance.
+    const credit = entry.characterId || entry.imperialCharacterId ? paidNative : paidAmount;
+    const creditTarget = holderCreditTarget(fundState, entry, credit, forexEnabled);
     if (isBatchablePayout(entry)) {
       const holder = holderOf(entry);
-      if (holder) {
+      if (holder && creditTarget) {
         batch.push({
           entry,
           claimId,
           paidAmount,
+          credit,
+          creditTarget,
           units: quote.redeemableUnits,
           remainingUnits: quote.queuedUnits,
           nav: redemptionNav,
@@ -321,12 +422,6 @@ export async function processQueuedRedemptions(
       }
     }
     await flushBatch();
-    // Native-currency equivalent for personal wallet credits (₳ × blended rate).
-    // Absent redeemFxRate = pre-fix queue row → credit rate-free (× 1), matching
-    // what the holder was owed under the old symmetric-scale code (no windfall).
-    const redeemFxRate = entry.redeemFxRate ?? 1;
-    const paidNative = forexEnabled ? paidAmount * redeemFxRate : paidAmount;
-
     const settled = await settleQueuedPayout(db, {
       fund: fundState,
       entry,

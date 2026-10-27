@@ -7,7 +7,6 @@ import { euroSettlementRates } from "@/lib/currency/euro/rules";
 import { purchaseSpreadRate } from "@/lib/currency/rules/purchaseConversion";
 import { loadConversionQuoteContext } from "@/lib/currency/euro/quotes";
 import { roundedAggregateCredit } from "@/lib/bonds/rules/roundedAggregateCredit";
-import { readForcedRolloverFaceLocal } from "@/lib/bonds/forcedSovereignRollover";
 import {
   isUnfundableOverdueMaturity,
   loadSovereignMaturityWave,
@@ -40,11 +39,11 @@ import {
   getBondCountryId,
   isCorporateBond,
   issueScheduledSovereignBondSeries,
-  freezeFundedSovereignBondMaturityQuote,
-  settleFundedSovereignBondMaturity,
   settleSovereignBondMaturity,
   sovereignMaturityCentralBankId,
 } from "@/lib/bonds/sovereign";
+import { settleSovereignBondMaturityBond } from "@/lib/bonds/sovereignMaturityBond";
+import { settleSovereignMaturityWaves } from "@/lib/bonds/sovereignMaturityBatch";
 import {
   addBankMaturityClaims,
   settleBankSovereignClaims,
@@ -99,7 +98,6 @@ import { payNppBondReturns, type NppBondReturns } from "./nppBondCash";
 import { treasuryAnchorValuation } from "@/lib/budget/rules/treasuryAccrual";
 import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
 import { roundSavingsAmount } from "@/lib/currency/savingsInterest";
-import { resumeSettlement } from "@/lib/banking/settlementJournal";
 import { KeyedQueue, interleaveByKey, runInLanes } from "@/lib/turn/settlementLanes";
 import type { BondTurnResult, SovereignMaturityPlan } from "./bondTurnTypes";
 import { SETTLEMENT_HISTORY_EXCLUDED } from "@/lib/banking/settlementHistory";
@@ -1117,10 +1115,11 @@ export async function processBondTurn(
   }
 
   // ── Phase 5: Settle matured bonds ─────────────────────────────────────────
-  // Sovereign maturities settle first, in bounded lanes. Each one is a chain of
-  // dependent journal round trips (freeze, fund, pay), and running them bond by
-  // bond made a ladder maturity turn take ~20 s. The loop below emits their
-  // ledger rows in the original bond order.
+  // Sovereign maturities settle first. A country's whole wave of maturing bonds
+  // moves as one funding debit and a run of batched payouts; the chains the wave
+  // cannot express (pool novation, rollover, bank lots, half-applied receipts,
+  // a short Treasury) keep the per-bond path in bounded lanes. The loop below
+  // emits their ledger rows in the original bond order.
   const dueSovereignBonds = maturedBonds.filter(
     (bond) =>
       config?.treasuryCashLedgerEnabled === true &&
@@ -1337,7 +1336,14 @@ export async function processBondTurn(
       );
     }
 
-    return { treasuryValuation, bankUnits, nonBankRepaymentLocal, holderLegs, maturityEntries };
+    return {
+      treasuryValuation,
+      currencyCode: bondCcy,
+      bankUnits,
+      nonBankRepaymentLocal,
+      holderLegs,
+      maturityEntries,
+    };
   };
 
   const { maturityPlans, waveLegs } = planSovereignMaturityWave(
@@ -1356,8 +1362,7 @@ export async function processBondTurn(
     const countryId = bond.countryId;
     const bondCcy = resolveBondCurrency(bond);
     const budgetId = getNationalBudgetId(countryId);
-    const { treasuryValuation, bankUnits, nonBankRepaymentLocal, holderLegs, maturityEntries } =
-      plan;
+    const { holderLegs, bankUnits } = plan;
     // Every document this maturity writes. Bonds of one country share its
     // Treasury, and a holder can sit on several countries' bonds; the queue
     // runs those in bond order while unrelated countries settle at once.
@@ -1370,118 +1375,37 @@ export async function processBondTurn(
     // and the insurance funds, so any bond that may touch them takes one
     // shared key.
     if (bankUnits > 0 || budgetsWithBankClaims.has(budgetId)) keys.push("bankSovereignClaims");
-    return lock.run(keys, async () => {
-      // Lock the bond-owned due quote before creating or paying bank claims.
-      // A short Treasury can leave those claims pending across turns, so the
-      // holder snapshot must already be immutable during that interval.
-      await freezeFundedSovereignBondMaturityQuote(db, {
+    return lock.run(keys, () =>
+      settleSovereignBondMaturityBond({
+        db,
         bond,
-        dueTurn: bond.maturityTurn,
-        currencyCode: bondCcy,
-        treasuryLocalPerAnchor: treasuryValuation.anchorRate,
-        nonBankRepaymentLocal,
-        holderLegs,
+        plan,
+        turn,
         now,
-      });
-
-      const newClaims = await addBankMaturityClaims(db, {
+        countryId,
         budgetId,
-        countryId: countryId,
-        currencyCode: bondCcy,
-        turn,
-        bond,
-        anchorRate: treasuryValuation.anchorRate,
-        treasuryCashLedgerEnabled: true,
-      });
-      const bondIdHex = bond._id.toHexString();
-      if (newClaims.length > 0 || bankUnits > 0 || budgetsWithBankClaims.has(budgetId)) {
-        const budgetWithClaims = await db.collection<FederalBudget>("federalBudget").findOne(
-          { _id: budgetId },
-          {
-            projection: {
-              _id: 1,
-              countryId: 1,
-              bankSovereignClaims: 1,
-              treasuryCashLocal: 1,
-              treasuryBalance: 1,
-            },
-          }
-        );
-        const book = budgetWithClaims?.bankSovereignClaims ?? [];
-        const dueClaims = book.filter(
-          (claim) => claim.kind === "maturity" && claim.bondId === bondIdHex
-        );
-        if (dueClaims.length > 0) {
-          const paid = await settleBankSovereignClaims(db, budgetWithClaims!, turn);
-          const paidIds = new Set(paid?.paidClaimIds ?? []);
-          // A claim is only pulled once its payout landed, so the paid ids are
-          // the same answer the old per-bond re-read of the whole book gave.
-          if (!dueClaims.every((claim) => paidIds.has(claim.id))) return null;
-          if (book.every((claim) => paidIds.has(claim.id))) budgetsWithBankClaims.delete(budgetId);
-        }
-      }
-      // Claims returned by this attempt or removed by an earlier completed
-      // receipt both represent bank lots already paid from funded Treasury cash.
-      void newClaims;
-
-      let fundedSettlement = await settleFundedSovereignBondMaturity(db, {
-        bond,
-        turn,
-        dueTurn: bond.maturityTurn,
-        currencyCode: bondCcy,
-        treasuryLocalPerAnchor: treasuryValuation.anchorRate,
-        nonBankRepaymentLocal,
-        holderLegs,
+        bondCcy,
+        budgetsWithBankClaims,
         liveTargets,
-        now,
-      });
-      if (
-        fundedSettlement?.status === "partial" ||
-        (fundedSettlement?.status === "replayed" && fundedSettlement.error)
-      )
-        fundedSettlement = await resumeSettlement(db, fundedSettlement.key);
-      if (
-        !fundedSettlement ||
-        (fundedSettlement.status !== "applied" &&
-          !(fundedSettlement.status === "replayed" && !fundedSettlement.error))
-      )
-        return null;
-
-      // A forced rollover moved the pool's face to a replacement bond, so that
-      // face was never paid out of Treasury cash. The settlement already knows
-      // that face; only a resumed receipt has to read it back.
-      const forcedRolloverFaceLocal =
-        fundedSettlement.forcedRolloverFaceLocal ?? (await readForcedRolloverFaceLocal(db, bond));
-      const paidLocal = nonBankRepaymentLocal - forcedRolloverFaceLocal;
-
-      return [
-        ...maturityEntries,
-        {
-          type: "gov_bond_maturity_payment",
-          turn,
-          createdAt: now,
-          subjectType: "government",
-          countryId: countryId,
-          amount: -paidLocal,
-          currencyCode: bondCcy,
-          anchorAmount: -paidLocal / treasuryValuation.anchorRate,
-          meta: {
-            bondId: bond._id.toHexString(),
-            units: paidLocal / BOND_UNIT_FACE_VALUE,
-            couponRate: bond.couponRate,
-            treasuryCashMovement: true,
-            ...treasuryValuation,
-          },
-        },
-      ];
-    });
+      })
+    );
   };
-  const settledSovereign = new Map<string, PartialTxEntry[] | null>();
+  // One Treasury's maturities settle as one funding move and a run of batched
+  // payouts. Whatever a wave cannot express returns to the per-bond path below,
+  // in bond order, exactly as it ran before.
+  const waveSettlement = await settleSovereignMaturityWaves(db, {
+    turn,
+    now,
+    dueSovereignBonds,
+    maturityPlans,
+    wave: maturityWave,
+    liveTargets,
+    lock,
+    lanes: SOVEREIGN_MATURITY_LANES,
+  });
+  const settledSovereign = waveSettlement.settled;
   await runInLanes(
-    interleaveByKey(
-      dueSovereignBonds.filter((bond) => maturityPlans.has(bond._id.toHexString())),
-      (bond) => bond.countryId ?? ""
-    ),
+    interleaveByKey(waveSettlement.perBond, (bond) => bond.countryId ?? ""),
     SOVEREIGN_MATURITY_LANES,
     async (bond) => {
       settledSovereign.set(

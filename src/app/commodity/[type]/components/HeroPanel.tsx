@@ -1,14 +1,14 @@
 "use client";
 
 import { HeroImage } from "@/components/HeroImage";
-import { COMMODITY_HERO_SLUGS, COMMODITY_HERO_ALTS } from "@/lib/constants/commodities";
+import { COMMODITY_HERO_SLUGS, COMMODITY_HERO_ALTS } from "@/lib/constants/commoditiesCore";
 import type { CommodityType } from "@/lib/constants/commoditiesCore";
 import { formatCurrencyPrecise } from "@/lib/utils/formatters";
 import BackButton from "@/components/BackButton";
 import { formatUnits } from "../lib/helpers";
 import type { CommodityDetail } from "../types";
 import { type CountryId } from "@/lib/constants/countriesCore";
-import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
+import { COUNTRY_DISPLAY_LABELS } from "@/lib/constants/countryDisplayLabels";
 import { useRegisteredCountries } from "@/contexts/RegisteredCountriesContext";
 import { isStateRegister } from "@/lib/constants/exchangeRegistry";
 import type { CurrencyCode } from "@/lib/constants/currencies";
@@ -47,10 +47,10 @@ export default function HeroPanel({
   const exchangeTabs = useMemo<{ countryId: CountryId; label: string }[]>(
     () =>
       registered
-        .filter((id) => !!COUNTRY_CLIENT_CONFIGS[id]?.exchangeName && !isStateRegister(id))
+        .filter((id) => !!COUNTRY_DISPLAY_LABELS[id]?.exchangeName && !isStateRegister(id))
         .map((id) => ({
           countryId: id,
-          label: (COUNTRY_CLIENT_CONFIGS[id]?.exchangeName ?? id).toUpperCase(),
+          label: (COUNTRY_DISPLAY_LABELS[id]?.exchangeName ?? id).toUpperCase(),
         })),
     [registered]
   );
@@ -177,7 +177,7 @@ export default function HeroPanel({
                 {marketScope.regionCount}
               </span>
               <span className="text-xs text-muted">
-                {COUNTRY_CLIENT_CONFIGS[activeCountry].regionLabelPlural}
+                {COUNTRY_DISPLAY_LABELS[activeCountry].regionLabelPlural}
               </span>
             </>
           ) : (

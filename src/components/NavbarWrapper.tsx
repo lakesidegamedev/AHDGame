@@ -9,7 +9,8 @@ import type { CountryId } from "@/lib/constants/countriesCore";
 import { useToast } from "@/contexts/ToastContext";
 import { useCharacterStats } from "@/contexts/CharacterStatsContext";
 import { ACTION_CAP, ACTION_HOARDING_THRESHOLD } from "@/lib/actions/recommendationsConstants";
-import { useAuthMe } from "@/contexts/AuthDataContext";
+import { useAuthMe, useHasSession } from "@/contexts/AuthDataContext";
+import { useStatusBarLayout } from "./statusbar/useStatusBarLayout";
 import { useInterface } from "@/contexts/InterfaceContext";
 import { buildClientStatusUrl, fetchClientStatusJson } from "@/lib/statusBar/clientStatusRequest";
 import { Navbar } from "./Navbar";
@@ -288,7 +289,14 @@ export function NavbarWrapper({
     !!navData?.hasCharacter &&
     interfaceMode === "modern";
   const demographicsToastShown = useRef(false);
-  const statusLoadedRef = useRef(false);
+  /** The bar layout the status payload was fetched for; null until it is fetched. */
+  const statusLayoutFetchedRef = useRef<string | null>(null);
+  const statusOwnerRef = useRef<string | null>(null);
+  // The status request's URL carries the bar layout. Both consumers (this and
+  // the status bar) take it from the same hook, so they ask for the same URL and
+  // the shared request module collapses them into one.
+  const { layout: statusLayout, layoutSynced: statusLayoutSynced } = useStatusBarLayout();
+  const hasSession = useHasSession();
   const [state, dispatch] = useReducer(navbarWrapperReducer, initialState);
   const [navigationVariant, setNavigationVariant] = useState<"a" | "b">("a");
 
@@ -471,30 +479,48 @@ export function NavbarWrapper({
 
   useEffect(() => {
     if (!singleplayer) return;
-    const refresh = () => void fetchStatusData(navData?.user?.statusBarLayout);
+    const refresh = () => void fetchStatusData(statusLayout);
     window.addEventListener("ahd:turn-complete", refresh);
     return () => window.removeEventListener("ahd:turn-complete", refresh);
-  }, [singleplayer, fetchStatusData, navData?.user?.statusBarLayout]);
+  }, [singleplayer, fetchStatusData, statusLayout]);
 
+  // A different account owns different stats. Ignore the first resolution of the
+  // bootstrap (no owner yet) so loading the page does not look like a switch and
+  // refetch the payload the mount below already asked for.
   useEffect(() => {
-    statusLoadedRef.current = false;
-  }, [navData?.user?.id, navData?.user?.character?.id]);
+    const owner = navData?.user?.id ?? null;
+    if (owner === null) return;
+    if (statusOwnerRef.current === null) {
+      statusOwnerRef.current = owner;
+      return;
+    }
+    if (statusOwnerRef.current === owner) return;
+    statusOwnerRef.current = owner;
+    statusLayoutFetchedRef.current = null;
+  }, [navData?.user?.id]);
 
   useEffect(() => {
     if (useLightweightNav || isExcludedPath) return;
-    if (authBootstrapLoading || !navData) return;
-    // Character stats are per user; a signed-out visitor would only get a 401.
-    // Singleplayer has no account user and always has its local character.
-    if (!navData.user && !singleplayer) return;
-    if (statusLoadedRef.current) return;
-    statusLoadedRef.current = true;
-    void fetchStatusData(navData.user?.statusBarLayout);
+    // Character stats are per user; a visitor with no session cookie would only
+    // get a 401. The cookie hint answers that at mount rather than after the auth
+    // bootstrap, so the payload lands one round trip earlier. Singleplayer has no
+    // account user and always has its local character.
+    if (!hasSession && !singleplayer) return;
+    // One render, not one round trip: the device layout has to be known before
+    // the URL is built, and it is read after mount.
+    if (!statusLayoutSynced) return;
+    // One fetch per layout: a layout the account preference changes still needs
+    // its own (narrower or wider) payload.
+    if (statusLayoutFetchedRef.current === statusLayout) return;
+    statusLayoutFetchedRef.current = statusLayout;
+    void fetchStatusData(statusLayout);
   }, [
-    authBootstrapLoading,
     fetchStatusData,
+    hasSession,
     isExcludedPath,
-    navData,
     singleplayer,
+    statusLayout,
+    statusLayoutSynced,
     useLightweightNav,
   ]);
 
