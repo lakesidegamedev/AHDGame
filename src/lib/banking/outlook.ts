@@ -348,6 +348,7 @@ export async function buildBankOutlook(db: Db, ctx: OutlookContext): Promise<Ban
 
   const projected = computeConfidence({
     cashReserves: cashWalk,
+    liquidSecurities: Math.max(0, charter.sovereignTreasuryMarkValue ?? 0),
     cashBackedDeposits: cashBackedBase,
     totalLoans: projLoans,
     reserveRatioRequired: reserveRatio,
