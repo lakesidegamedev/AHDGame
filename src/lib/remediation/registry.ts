@@ -33,6 +33,7 @@ import { defect as mergedPartyOrg } from "./defects/AHD-1372-merged-party-org";
 import { defect as freightOverbillingRestitution } from "./defects/AHD-1448-freight-overbilling-restitution";
 import { defect as dissolutionNppSuccessors } from "./defects/AHD-dissolution-npp-successors";
 import { defect as sovereignMaturityStrandedPayout } from "./defects/AHD-sovereign-maturity-stranded-payout";
+import { defect as sovereignMaturityUnfundedRollover } from "./defects/AHD-sovereign-maturity-unfunded-rollover";
 import type { Defect } from "./types";
 
 export const DEFECTS: Defect[] = [
@@ -87,6 +88,10 @@ export const DEFECTS: Defect[] = [
   // central bank by country id or a deleted holder stayed partial forever.
   // #4754 resolves legs to live targets; this re-points any that still strand.
   sovereignMaturityStrandedPayout,
+  // Matured sovereign bonds a short Treasury neither repaid nor refinanced.
+  // The fixed bond turn sells a refunding issue and pays every holder; this
+  // reports the overdue backlog and stamps the approved figures.
+  sovereignMaturityUnfundedRollover,
 ];
 
 export function getDefect(id: string): Defect | undefined {
