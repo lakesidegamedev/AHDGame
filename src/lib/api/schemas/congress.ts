@@ -329,6 +329,7 @@ export const proposeBillSchema = z
       )
       .max(MAX_PROVISIONS, `At most ${MAX_PROVISIONS} provisions`),
     confirmElectionRisk: z.boolean().optional(),
+    proposeViaPartyNpp: z.boolean().optional(),
   })
   // Custom (flavor/roleplay) bills carry no provisions; every other category
   // still requires at least one.
