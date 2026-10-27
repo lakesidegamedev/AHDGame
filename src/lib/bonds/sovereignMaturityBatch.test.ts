@@ -421,7 +421,7 @@ async function runMaturityPhase(
   world: World,
   mode: "perBond" | "wave",
   turn = TURN
-): Promise<{ settled: Map<string, PartialTxEntry[] | null>; trips: number }> {
+): Promise<{ settled: Map<string, PartialTxEntry[] | null>; trips: number; summary: string }> {
   const counter = countRoundTrips(world.memory);
   const dueBonds = await world.db
     .collection<Bond>("bonds")
@@ -535,7 +535,9 @@ function economicState(world: World): Record<string, unknown> {
     })),
     bonds: docs("bonds")
       .map(bondFields)
-      .sort((a: { _id: string }, b: { _id: string }) => String(a._id).localeCompare(String(b._id))),
+      .sort((a: { _id: unknown }, b: { _id: unknown }) =>
+        String(a._id).localeCompare(String(b._id))
+      ),
     characters: docs("characters").map((doc: Record<string, unknown>) => ({
       _id: doc._id,
       cashOnHand: doc.cashOnHand,
