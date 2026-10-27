@@ -16,6 +16,8 @@
     },
     "guidedLegislation": {
       "customBill": "Custom Bill",
+      "proposeViaPartyNpp": "Propose through party legislator",
+      "noEligiblePartyNpp": "No eligible party legislator is available. They must hold a seat in this region and have no bill in progress.",
       "activeBillProposalBlocked": "You already have a bill in progress. You can prepare this draft, but must wait for that bill to resolve before proposing another.",
       "startingHelp": "Start from a policy domain, a metric you want to affect, or a flavour-only custom bill.",
       "noEffects": "Custom bills contain flavour text only. They have no provisions and make no budget or metric changes.",

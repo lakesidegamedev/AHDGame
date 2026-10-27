@@ -1,4 +1,6 @@
 import { Suspense } from "react";
+import { RESET_V2_READY } from "@/lib/resetVersions/availability";
+import { resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
 import { notFound } from "next/navigation";
 import { type Metadata } from "next";
 import { getDb } from "@/lib/mongodb";
@@ -529,6 +531,9 @@ export default async function GovernorOfficePage({ params }: Props) {
   return (
     <Suspense fallback={<div className="min-h-screen bg-background" />}>
       <GovernorOfficeClient
+        legislationVersion={
+          resetSystemVersionsForCountry(gameStateDoc, RESET_V2_READY, countryId).legislation
+        }
         countryId={countryId}
         stateId={stateId}
         stateName={state.name}

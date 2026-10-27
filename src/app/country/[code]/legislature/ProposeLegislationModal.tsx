@@ -1304,6 +1304,9 @@ export function ProposeLegislationModal(
         chambers={props.chambers}
         initialChamber={props.defaultChamber ?? props.chambers[0]?.value ?? ""}
         adminOverride={props.adminOverride}
+        offerSubsidies={true}
+        canSubmit={props.adminOverride === true || !props.hasActiveBill}
+        hasActiveBill={props.hasActiveBill}
         domesticOnlyLabel={props.domesticOnlyLabel}
         onClose={props.onClose}
         onSuccess={props.onSuccess}

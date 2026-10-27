@@ -562,6 +562,14 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
           executiveLabel={regionalExecutiveLabel}
           executive={serializedGovernor}
           officeHref={officeCanManage || userData?.isAdmin ? `${regionUrl}/office` : null}
+          legislature={
+            countryConfig.subNationalChamber
+              ? {
+                  href: regionUrl + "/legislature",
+                  label: countryConfig.subNationalChamber.name,
+                }
+              : null
+          }
           motto={STATE_MOTTOS[state._id] ?? null}
           comprising={
             countryId === "IE" ? (IE_REGION_CONSTITUENT_COUNCILS[state._id] ?? null) : null
