@@ -5,7 +5,7 @@ import Link from "next/link";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { NoticeStrip } from "./ledger/NoticeStrip";
 
-interface Status {
+export interface NationalizationStatus {
   hasStatus: boolean;
   canBid?: boolean;
   hasExposure?: boolean;
@@ -42,20 +42,32 @@ interface Status {
 /**
  * Nationalization context for owners and holders, with a bid link only when
  * the status response confirms that the viewer can place a funded bid.
+ *
+ * `status` is passed by the corporation page, which starts the request with its
+ * first paint so the card does not wait for the page's own payload to arrive
+ * before it can ask. Omitted (and `null` counts: it means "no status yet"), the
+ * card fetches for itself.
  */
 export function NationalizationStatusCard({
   corpId,
   hasExposure = false,
+  status: seededStatus,
 }: {
   corpId: string;
   hasExposure?: boolean;
+  status?: NationalizationStatus | null;
 }) {
-  const [loaded, setLoaded] = useState<{ corpId: string; status: Status } | null>(null);
-  const status = loaded?.corpId === corpId ? loaded.status : null;
+  const [loaded, setLoaded] = useState<{
+    corpId: string;
+    status: NationalizationStatus;
+  } | null>(null);
+  const status =
+    seededStatus !== undefined ? seededStatus : loaded?.corpId === corpId ? loaded.status : null;
 
   useEffect(() => {
+    if (seededStatus !== undefined) return;
     let cancelled = false;
-    fetchJson<Status>(`/api/corporations/${corpId}/nationalization-status`, {
+    fetchJson<NationalizationStatus>(`/api/corporations/${corpId}/nationalization-status`, {
       feature: "nationalization-status",
     })
       .then((s) => {
@@ -65,7 +77,7 @@ export function NationalizationStatusCard({
     return () => {
       cancelled = true;
     };
-  }, [corpId]);
+  }, [corpId, seededStatus]);
 
   if (!status?.hasStatus) return null;
   const t = status.pendingTaking;
