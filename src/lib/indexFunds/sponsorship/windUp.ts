@@ -25,7 +25,7 @@ import { emitTx } from "@/lib/financialTxLog/emit";
 import { sellFundHoldingsForRedemptionCash } from "@/lib/indexFunds/fundRedemptionLiquidity";
 import { sellFundBondHoldingsForCash } from "@/lib/bonds/sellFundBondUnits";
 import { payCorporateWindUpHolders } from "./corporateHolderPayout";
-import { payFundHolderCash } from "./holderPayout";
+import { payFundHoldersCash, type FundHolderCashPayout } from "./holderPayout";
 import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 import { recordAudit } from "@/lib/audit/recordAudit";
 import { recomputeNav } from "@/lib/indexFunds/fundNav";
@@ -316,6 +316,10 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
   );
   let holdersPaid = corporatePayout.holdersPaid;
   let distributedAnchor = corporatePayout.distributedAnchor;
+  // Every remaining holder is paid from one bulk write per holder collection and
+  // one receipt write, in position order. The book used to cost one exchange-rate
+  // read, one credit and one receipt per holder.
+  const holderPayouts: FundHolderCashPayout[] = [];
   for (const position of positions) {
     if (position.holderKind === "corporation") continue;
     const payoutAnchor =
@@ -323,13 +327,14 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
         ? position.units * finalNav
         : Math.floor(position.units * finalNav);
     if (payoutAnchor <= 0) continue;
-    const paid = await payFundHolderCash(db, fund, position, payoutAnchor, currentTurn, now);
-    if (!paid) {
-      if (position.holderKind !== "fund_reserve") throw new Error("Fund holder payout failed");
-      continue;
-    }
-    distributedAnchor += payoutAnchor;
-    holdersPaid += 1;
+    holderPayouts.push({ position, payoutAnchor });
+  }
+  if (holderPayouts.length > 0) {
+    const payouts = await payFundHoldersCash(db, fund, holderPayouts, currentTurn, now);
+    if (payouts.unpaid.some((position) => position.holderKind !== "fund_reserve"))
+      throw new Error("Fund holder payout failed");
+    distributedAnchor += payouts.distributedAnchor;
+    holdersPaid += payouts.paid.filter((position) => position.holderKind !== "fund_reserve").length;
   }
 
   await db
