@@ -4,11 +4,11 @@ import { accountId } from "@/lib/ledger/accounts";
 import type { LedgerEntry } from "@/lib/ledger/types";
 /** Freeze a complete turn before moving cash, then publish replayable absolute receipts. */
 import { ObjectId, type Db } from "mongodb";
-import type { CorporateSector } from "@/lib/db/types/corporation";
+import type { Corporation, CorporateSector } from "@/lib/db/types/corporation";
 import { settleTransition } from "@/lib/banking/settlementJournal";
 import { encodeReceipt, decodeReceipt, stageReceiptChunks } from "./receiptStorage";
 import { verifyOpeningProducerPayables, publishProducerPayables } from "./payablesSettlement";
-import { producerPayableReceiptKeys } from "./payablesRules";
+import { producerPayableReceiptKeys, type ProducerPayable } from "./payablesRules";
 import { advanceProducerCapacity, type ProducerCapacityState } from "./capacityRules";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
 import { advanceProducerEconomy } from "./production";
@@ -49,6 +49,11 @@ interface ProducerTurnRecord {
   digest: string;
   payload: string;
   status: "frozen" | "settled";
+  /**
+   * Turn warnings observed while settling (ownership drift). Stored beside the
+   * receipt so a retry after the turn is marked settled returns the same list.
+   */
+  settlementWarnings?: string[];
 }
 
 async function readFrozen(db: Db, record: ProducerTurnRecord): Promise<FrozenProducerTurn> {
@@ -209,9 +214,21 @@ function inventoryImages(frozen: FrozenProducerTurn, closing: boolean) {
   );
 }
 
-async function verifyPhysicalTargets(db: Db, frozen: FrozenProducerTurn): Promise<void> {
+interface PhysicalVerification {
+  /** Deterministic turn warnings for sectors whose owner drifted after the plan froze. */
+  turnWarnings: string[];
+  /** Frozen corporation account -> the corporation account that receives its cash. */
+  cashRedirect: Map<string, string>;
+}
+
+async function verifyPhysicalTargets(
+  db: Db,
+  frozen: FrozenProducerTurn
+): Promise<PhysicalVerification> {
   const turn = frozen.request.turn;
-  // One projected read verifies all sector ownership before any cash lands.
+  // Projected reads verify all sectors and the corporations that own them now
+  // before any cash lands. The ownership read follows the sector read because
+  // a mid-turn transfer can name a corporation the plan never saw.
   const sectors = db.collection<CorporateSector>("corporateSectors");
   const existing = await sectors
     .find(
@@ -235,26 +252,50 @@ async function verifyPhysicalTargets(db: Db, frozen: FrozenProducerTurn): Promis
     )
     .toArray();
   const byId = new Map(existing.map((sector) => [sector._id.toHexString(), sector]));
+  const corporationIds = [
+    ...new Set([
+      ...frozen.targets.map((target) => target.corporationId),
+      ...existing.map((sector) => sector.corporationId.toHexString()),
+    ]),
+  ];
+  const corporations = await db
+    .collection<Corporation>("corporations")
+    .find(
+      { _id: { $in: corporationIds.map((id) => new ObjectId(id)) } },
+      { projection: { _id: 1 } }
+    )
+    .toArray();
+  const existingCorporations = new Set(corporations.map((corp) => corp._id.toHexString()));
   const capacities = new Map(frozen.capacities.map((row) => [row.producerId, row.closing]));
   const openingInventories = inventoryImages(frozen, false);
   const closingInventories = inventoryImages(frozen, true);
+  const turnWarnings: string[] = [];
+  const ownersByFrozenOwner = new Map<string, Set<string>>();
   for (const target of frozen.targets) {
     const sector = byId.get(target.sectorId);
     const prior = sector?.producerSettlement;
-    if (
-      !sector ||
-      sector.corporationId.toHexString() !== target.corporationId ||
-      (prior && (prior.worldEpoch !== frozen.worldEpoch || prior.turn > turn))
-    )
+    if (!sector || (prior && (prior.worldEpoch !== frozen.worldEpoch || prior.turn > turn)))
       throw new Error(
-        `Producer ownership or receipt generation changed: sector ${target.sectorId} ${
+        `Producer receipt generation changed: sector ${target.sectorId} ${
           !sector
             ? "is missing"
-            : sector.corporationId.toHexString() !== target.corporationId
-              ? `is owned by ${sector.corporationId.toHexString()}, planned for ${target.corporationId}`
-              : `carries receipt ${prior?.worldEpoch}:${prior?.turn} at turn ${turn}`
+            : `carries receipt ${prior?.worldEpoch}:${prior?.turn} at turn ${turn}`
         }`
       );
+    const currentOwner = sector.corporationId.toHexString();
+    const owners = ownersByFrozenOwner.get(target.corporationId) ?? new Set<string>();
+    owners.add(currentOwner);
+    ownersByFrozenOwner.set(target.corporationId, owners);
+    if (currentOwner !== target.corporationId) {
+      // Ownership drift is not a settlement error. The plan froze this turn's
+      // cash with the corporation that owned the sector then, and the physical
+      // receipt belongs to the sector document, which is keyed by id. The new
+      // owner takes over from the next turn, so spin-offs, sales and takeovers
+      // never block the turn.
+      turnWarnings.push(
+        `producer settlement booked sector ${target.sectorId} for frozen owner ${target.corporationId}, now owned by ${currentOwner}`
+      );
+    }
     const state = prior?.turn === turn ? capacities.get(target.producerId)!.state : target.capacity;
     if (
       sector.producerCapacity?.worldEpoch !== frozen.worldEpoch ||
@@ -276,6 +317,86 @@ async function verifyPhysicalTargets(db: Db, frozen: FrozenProducerTurn): Promis
     )
       throw new Error("Producer physical plant type changed");
   }
+  const cashRedirect = new Map<string, string>();
+  for (const [frozenOwner, currentOwners] of ownersByFrozenOwner) {
+    if (existingCorporations.has(frozenOwner)) continue;
+    // The frozen owner is gone, so its credit has no account to land in. The
+    // producer market has no treasury or write-off fallback for a dissolved
+    // owner, so book the turn's cash to the corporation that holds the sectors
+    // now. That only works when every one of its sectors moved to one
+    // corporation that is already settling this turn; otherwise the cash has
+    // nowhere to go and the turn must still stop.
+    if (currentOwners.size !== 1)
+      throw new Error(`Dissolved producer owner ${frozenOwner} has no single cash target`);
+    const currentOwner = [...currentOwners][0];
+    const frozenBinding = frozen.bindings.find(
+      (binding) => binding.kind === "corporation" && binding.corporationId === frozenOwner
+    );
+    const currentBinding = frozen.bindings.find(
+      (binding) => binding.kind === "corporation" && binding.corporationId === currentOwner
+    );
+    if (!currentBinding || !existingCorporations.has(currentOwner))
+      throw new Error(`Dissolved producer owner ${frozenOwner} has nowhere to book its cash`);
+    if (frozenBinding) cashRedirect.set(frozenBinding.accountId, currentBinding.accountId);
+  }
+  return { turnWarnings, cashRedirect };
+}
+
+/**
+ * Retarget the frozen owner's account balance change at the account that now
+ * owns its sectors. Opening balances are untouched, so the corporation write
+ * guard still sees the current owner's stored cash; only the closing change
+ * moves. Payables follow the same debtor so no claim is dropped.
+ */
+function redirectFrozenOwnerCash(
+  frozen: FrozenProducerTurn,
+  cashRedirect: ReadonlyMap<string, string>
+): FrozenProducerTurn {
+  if (cashRedirect.size === 0) return frozen;
+  const opening = new Map(frozen.request.accounts.map((account) => [account.id, account.cash]));
+  const closing = new Map(frozen.result.accounts.map((account) => [account.id, account.cash]));
+  const changes = new Map<string, number>();
+  for (const [from, to] of cashRedirect) {
+    const change = closing.get(from)! - opening.get(from)!;
+    changes.set(to, (changes.get(to) ?? 0) + change);
+  }
+  const accounts = (
+    rows: readonly { id: string; cash: number }[],
+    applyChange: boolean
+  ): { id: string; cash: number }[] =>
+    rows
+      .filter((row) => !cashRedirect.has(row.id))
+      .map((row) =>
+        applyChange ? { ...row, cash: row.cash + (changes.get(row.id) ?? 0) } : { ...row }
+      );
+  const claims = (rows: readonly ProducerPayable[]): ProducerPayable[] =>
+    rows.map((claim) =>
+      cashRedirect.has(claim.debtorAccountId)
+        ? { ...claim, debtorAccountId: cashRedirect.get(claim.debtorAccountId)! }
+        : claim
+    );
+  return {
+    ...frozen,
+    bindings: frozen.bindings.filter((binding) => !cashRedirect.has(binding.accountId)),
+    request: {
+      ...frozen.request,
+      accounts: accounts(frozen.request.accounts, false),
+      payables: claims(frozen.request.payables ?? []),
+    },
+    result: {
+      ...frozen.result,
+      accounts: accounts(frozen.result.accounts, true),
+      payables: claims(frozen.result.payables),
+      payablePayments: frozen.result.payablePayments.map((payment) =>
+        cashRedirect.has(payment.debtorAccountId)
+          ? {
+              ...payment,
+              debtorAccountId: cashRedirect.get(payment.debtorAccountId)!,
+            }
+          : payment
+      ),
+    },
+  };
 }
 
 export async function assertProducerTurnFence(
@@ -333,7 +454,14 @@ export interface SettlementClose {
   meta?: Record<string, unknown>;
 }
 
-export type SettledEconomyResult = EconomyResult & { close?: SettlementClose };
+export type SettledEconomyResult = EconomyResult & {
+  close?: SettlementClose;
+  /**
+   * Deterministic warnings for sectors that settled with their frozen owner,
+   * for the corporation host to forward to the turn warning channel.
+   */
+  turnWarnings?: string[];
+};
 
 /**
  * Apply closing transfers to the settled account balances before the receipt
@@ -443,8 +571,9 @@ export async function settleProducerTurn(
       payload: encoded.payload,
     };
     // Validate native balances and restricted cash targets before claiming any receipt.
-    cashWithLedger(payload, candidate.digest);
-    await verifyPhysicalTargets(db, payload);
+    const verification = await verifyPhysicalTargets(db, payload);
+    cashWithLedger(redirectFrozenOwnerCash(payload, verification.cashRedirect), candidate.digest);
+    candidate.settlementWarnings = verification.turnWarnings;
     await stageReceiptChunks(db, encoded.chunks);
     try {
       await turns.insertOne(candidate);
@@ -464,14 +593,16 @@ export async function settleProducerTurn(
     (record.status !== "frozen" && record.status !== "settled")
   )
     throw new Error("Invalid frozen producer turn");
-  if (record.status === "settled") return frozen.result;
+  if (record.status === "settled")
+    return { ...frozen.result, turnWarnings: record.settlementWarnings ?? [] };
   validateTargets(frozen);
-  await verifyPhysicalTargets(db, frozen);
+  const verification = await verifyPhysicalTargets(db, frozen);
+  const prepared = redirectFrozenOwnerCash(frozen, verification.cashRedirect);
   const sectors = db.collection<CorporateSector>("corporateSectors");
   const capacities = new Map(frozen.capacities.map((row) => [row.producerId, row.closing]));
   const openingInventories = inventoryImages(frozen, false);
   const closingInventories = inventoryImages(frozen, true);
-  const cash = cashWithLedger(frozen, record.digest);
+  const cash = cashWithLedger(prepared, record.digest);
   await assertProducerTurnFence(db, frozen.worldEpoch, turn);
   const settled = await settleTransition(db, cash);
   if (settled.status !== "applied" && settled.status !== "replayed")
@@ -479,9 +610,9 @@ export async function settleProducerTurn(
   await publishProducerPayables(db, {
     worldEpoch: frozen.worldEpoch,
     turn,
-    bindings: frozen.bindings,
-    openingPayables: frozen.request.payables ?? [],
-    closingPayables: frozen.result.payables,
+    bindings: prepared.bindings,
+    openingPayables: prepared.request.payables ?? [],
+    closingPayables: prepared.result.payables,
   });
   const results = new Map(frozen.result.producers.map((p) => [p.id, p]));
   // Only turn-owned absolute receipt fields are published here. Replaying a
@@ -493,8 +624,9 @@ export async function settleProducerTurn(
       targets.map((target) => ({
         updateOne: {
           filter: {
+            // Keyed by sector id only: a sector sold or spun off mid-turn keeps
+            // its physical receipt. Cash still settled with the frozen owner.
             _id: new ObjectId(target.sectorId),
-            corporationId: new ObjectId(target.corporationId),
             $or: [
               {
                 "producerSettlement.worldEpoch": frozen.worldEpoch,
@@ -540,9 +672,9 @@ export async function settleProducerTurn(
   }
   await turns.updateOne(
     { _id: key, digest: record.digest, status: "frozen" },
-    { $set: { status: "settled" } }
+    { $set: { status: "settled", settlementWarnings: verification.turnWarnings } }
   );
-  return frozen.result;
+  return { ...frozen.result, turnWarnings: verification.turnWarnings };
 }
 
 /** Recover before preparing a new turn from sectors that may already have advanced. */
