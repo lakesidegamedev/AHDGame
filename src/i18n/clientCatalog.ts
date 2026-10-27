@@ -238,8 +238,9 @@ export function clientNamespacesForPath(
  *
  * Staff keep the full catalog: admin and moderator tooling can render on any
  * page, and a missing admin string is a worse outcome than the bytes it saves.
- * Callers that cannot establish the viewer should pass `null` and get `false`,
- * because failing closed here means shipping the catalog exactly as before.
+ * A `null` or `undefined` viewer (signed out, or a session that could not be
+ * read) is treated as a player and gets the trimmed catalog; only a known staff
+ * viewer or an unlisted route keeps the full one.
  */
 export function shouldTrimClientCatalog(
   pathname: string | null | undefined,

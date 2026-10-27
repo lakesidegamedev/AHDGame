@@ -32,7 +32,8 @@ export default async function RootTemplate({ children }: { children: ReactNode }
   try {
     viewer = await verifyAuth();
   } catch {
-    // Fail safe: an unreadable session gets the full catalog, not a thinner one.
+    // An unreadable session is treated as signed out, which gets the route's
+    // trimmed catalog; the shell namespaces still come from the root layout.
     viewer = null;
   }
 

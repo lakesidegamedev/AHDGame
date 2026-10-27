@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
-import { NextIntlClientProvider, useTranslations } from "next-intl";
+import { NextIntlClientProvider, useLocale, useTranslations } from "next-intl";
 import { RouteIntlProvider } from "./RouteIntlProvider";
 
 afterEach(cleanup);
@@ -31,4 +31,25 @@ it("keeps the root layout's shell namespaces inside the route catalog", () => {
     </NextIntlClientProvider>
   );
   expect(screen.getByText("Independence Desire / Profile")).toBeTruthy();
+});
+
+// The template used to read the locale from the request; it now inherits the
+// root provider's, so a German viewer must stay German inside the page.
+it("inherits the root provider's locale and lets the route catalog win a clash", () => {
+  function Probe() {
+    const t = useTranslations("profile");
+    return (
+      <p>
+        {useLocale()} / {t("title")}
+      </p>
+    );
+  }
+  render(
+    <NextIntlClientProvider locale="de" messages={{ profile: { title: "Shell" } }}>
+      <RouteIntlProvider messages={{ profile: { title: "Profil" } }}>
+        <Probe />
+      </RouteIntlProvider>
+    </NextIntlClientProvider>
+  );
+  expect(screen.getByText("de / Profil")).toBeTruthy();
 });
