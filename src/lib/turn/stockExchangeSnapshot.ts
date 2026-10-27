@@ -80,6 +80,14 @@ import {
 
 const EXCHANGE_NAMES: Record<string, string> = getExchangeNamesMap();
 
+/** One corporationHistory row reduced to a 1h/24h/48h comparison slot. */
+interface RawHistorySlot {
+  turn: number;
+  sharePrice: number;
+  totalShares: number;
+  createdAt?: Date;
+}
+
 /**
  * Generate stock exchange snapshots for all exchanges.
  * Should be called once per turn after corporation turn processing.
@@ -205,24 +213,93 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
       const turn1Ago = Math.max(1, currentTurn - 1);
       const turn24Ago = Math.max(1, currentTurn - 24);
       const turn48Ago = Math.max(1, currentTurn - 48);
-      const historyAtOrEarliest = (targetTurn: number) => ({
-        $let: {
-          vars: {
-            atOrBefore: {
-              $filter: {
-                input: "$history",
-                as: "point",
-                cond: { $lte: ["$$point.turn", targetTurn] },
+
+      // One branch per comparison target, each answering "the corporation's
+      // newest row at or before this turn". A $match bounded by turn, then a
+      // sort on the group key and a $first-only $group, is a DISTINCT_SCAN on
+      // { corporationId: 1, turn: -1 }: one index entry per corporation instead
+      // of the whole 48-turn window per corporation (#2693 read ~96k rows here
+      // to pick three points).
+      const atOrBeforeBranch = (slot: string, targetTurn: number) => [
+        { $match: { corporationId: { $in: corpIds }, turn: { $lte: targetTurn } } },
+        { $sort: { corporationId: 1, turn: -1 } },
+        {
+          $group: {
+            _id: "$corporationId",
+            turn: { $first: "$turn" },
+            sharePrice: { $first: "$sharePrice" },
+            totalShares: { $first: "$totalShares" },
+            createdAt: { $first: "$createdAt" },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            corporationId: "$_id",
+            slot: { $literal: slot },
+            turn: 1,
+            sharePrice: 1,
+            totalShares: 1,
+            createdAt: 1,
+          },
+        },
+      ];
+      // Each corporation's oldest row, the fallback when no row is at or before
+      // a target. The window bound is exact rather than approximate: a
+      // corporation that needs the fallback for any target has no row at or
+      // before turn48Ago, so every row it owns is inside the window and its
+      // oldest row in the window is its oldest row.
+      const earliestBranch = () => [
+        { $match: { corporationId: { $in: corpIds }, turn: { $gte: turn48Ago } } },
+        // Exact reverse of { corporationId: 1, turn: -1 } so the index is walked
+        // backwards as a DISTINCT_SCAN. { corporationId: 1, turn: 1 } matches
+        // neither direction and sorts the whole window in memory.
+        { $sort: { corporationId: -1, turn: 1 } },
+        {
+          $group: {
+            _id: "$corporationId",
+            turn: { $first: "$turn" },
+            sharePrice: { $first: "$sharePrice" },
+            totalShares: { $first: "$totalShares" },
+            createdAt: { $first: "$createdAt" },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            corporationId: "$_id",
+            slot: { $literal: "earliest" },
+            turn: 1,
+            sharePrice: 1,
+            totalShares: 1,
+            createdAt: 1,
+          },
+        },
+      ];
+      // The slots land in one array per corporation, keyed by slot, so a slot
+      // with no qualifying row is simply absent.
+      const slotToPoint = (slot: string) => ({
+        $arrayElemAt: [
+          {
+            $map: {
+              input: {
+                $filter: {
+                  input: "$slots",
+                  as: "s",
+                  cond: { $eq: ["$$s.slot", slot] },
+                },
+              },
+              as: "s",
+              in: {
+                turn: "$$s.turn",
+                sharePrice: "$$s.sharePrice",
+                totalShares: "$$s.totalShares",
+                createdAt: "$$s.createdAt",
               },
             },
           },
-          // The history array is sorted newest-first. If a corporation was
-          // listed after the requested window, retain the prior earliest-row
-          // fallback rather than returning no comparison price.
-          in: {
-            $ifNull: [{ $arrayElemAt: ["$$atOrBefore", 0] }, { $arrayElemAt: ["$history", -1] }],
-          },
-        },
+          0,
+        ],
       });
 
       const [allSectors, historyRows] = await Promise.all([
@@ -258,69 +335,36 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
           .collection<CorporationHistory>("corporationHistory")
           .aggregate<{
             _id: ObjectId;
-            h1: { turn: number; sharePrice: number; totalShares: number; createdAt?: Date };
-            h24: { turn: number; sharePrice: number; totalShares: number; createdAt?: Date };
-            h48: { turn: number; sharePrice: number; totalShares: number; createdAt?: Date };
+            h1?: RawHistorySlot;
+            h24?: RawHistorySlot;
+            h48?: RawHistorySlot;
+            earliest?: RawHistorySlot;
           }>([
-            // Bounded read (#2693). Every target turn is at or after turn48Ago,
-            // so the answer only needs the rows inside that window plus each
-            // corporation's newest row before it. The earliest-row fallback
-            // applies only when no row is at or before the target, in which case
-            // no older rows exist and the window holds the whole history. This
-            // replaces pushing every corporation's entire history, which grew
-            // with world age.
+            ...atOrBeforeBranch("h1", turn1Ago),
             {
-              $match: {
-                corporationId: { $in: corpIds },
-                turn: { $gte: turn48Ago },
-              },
-            },
-            {
-              $project: {
-                _id: 0,
-                corporationId: 1,
-                turn: 1,
-                sharePrice: 1,
-                totalShares: 1,
-                createdAt: 1,
+              $unionWith: {
+                coll: "corporationHistory",
+                pipeline: atOrBeforeBranch("h24", turn24Ago),
               },
             },
             {
               $unionWith: {
                 coll: "corporationHistory",
-                pipeline: [
-                  { $match: { corporationId: { $in: corpIds }, turn: { $lt: turn48Ago } } },
-                  // Group key first: the {corporationId, turn} index answers
-                  // this as a DISTINCT_SCAN, one entry per corporation.
-                  { $sort: { corporationId: 1, turn: -1 } },
-                  {
-                    $group: {
-                      _id: "$corporationId",
-                      turn: { $first: "$turn" },
-                      sharePrice: { $first: "$sharePrice" },
-                      totalShares: { $first: "$totalShares" },
-                      createdAt: { $first: "$createdAt" },
-                    },
-                  },
-                  {
-                    $project: {
-                      _id: 0,
-                      corporationId: "$_id",
-                      turn: 1,
-                      sharePrice: 1,
-                      totalShares: 1,
-                      createdAt: 1,
-                    },
-                  },
-                ],
+                pipeline: atOrBeforeBranch("h48", turn48Ago),
               },
             },
-            { $sort: { corporationId: 1, turn: -1 } },
+            {
+              $unionWith: {
+                coll: "corporationHistory",
+                pipeline: earliestBranch(),
+              },
+            },
             {
               $group: {
                 _id: "$corporationId",
-                history: {
+                slots: {
                   $push: {
+                    slot: "$slot",
                     turn: "$turn",
                     sharePrice: "$sharePrice",
                     totalShares: "$totalShares",
@@ -331,9 +375,11 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
             },
             {
               $project: {
-                h1: historyAtOrEarliest(turn1Ago),
-                h24: historyAtOrEarliest(turn24Ago),
-                h48: historyAtOrEarliest(turn48Ago),
+                _id: 1,
+                h1: slotToPoint("h1"),
+                h24: slotToPoint("h24"),
+                h48: slotToPoint("h48"),
+                earliest: slotToPoint("earliest"),
               },
             },
           ])
@@ -358,12 +404,28 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
         timestamp?: number;
         totalShares?: number;
       }
-      interface RawPriceHistoryPoint {
-        turn: number;
-        sharePrice: number;
-        createdAt?: Date;
-        totalShares: number;
+      const slotsByCorpId = new Map<
+        string,
+        {
+          h1?: RawHistorySlot;
+          h24?: RawHistorySlot;
+          h48?: RawHistorySlot;
+          earliest?: RawHistorySlot;
+        }
+      >();
+      for (const entry of historyRows) {
+        slotsByCorpId.set(entry._id.toString(), entry);
       }
+
+      const toPriceHistoryPoint = (point: RawHistorySlot | undefined): PriceHistoryPoint | null => {
+        if (!point || !Number.isFinite(point.sharePrice) || point.sharePrice <= 0) return null;
+        return {
+          turn: point.turn,
+          price: point.sharePrice,
+          timestamp: point.createdAt ? new Date(point.createdAt).getTime() : undefined,
+          totalShares: point.totalShares,
+        };
+      };
 
       const priceHistoryByCorpId = new Map<
         string,
@@ -373,24 +435,20 @@ export async function generateStockExchangeSnapshots(currentTurn: number, db?: D
           h48: PriceHistoryPoint | null;
         }
       >();
-      for (const entry of historyRows) {
-        const corpId = entry._id.toString();
-        const toPriceHistoryPoint = (
-          point: RawPriceHistoryPoint | undefined
-        ): PriceHistoryPoint | null => {
-          if (!point || !Number.isFinite(point.sharePrice) || point.sharePrice <= 0) return null;
-          return {
-            turn: point.turn,
-            price: point.sharePrice,
-            timestamp: point.createdAt ? new Date(point.createdAt).getTime() : undefined,
-            totalShares: point.totalShares,
-          };
-        };
-
-        priceHistoryByCorpId.set(corpId, {
-          h1: toPriceHistoryPoint(entry.h1),
-          h24: toPriceHistoryPoint(entry.h24),
-          h48: toPriceHistoryPoint(entry.h48),
+      for (const corp of corporations) {
+        const corpKey = corp._id.toString();
+        const slots = slotsByCorpId.get(corpKey);
+        if (!slots) continue;
+        // A corporation with no row at or before a target has no row at or
+        // before turn48Ago either, so every such slot falls back to the
+        // corporation's earliest row. That is what the old in-pipeline history
+        // array produced with $arrayElemAt("$history", -1): in that case the
+        // array held only rows after the target, newest-first, so its last
+        // element was the oldest row.
+        priceHistoryByCorpId.set(corpKey, {
+          h1: toPriceHistoryPoint(slots.h1 ?? slots.earliest),
+          h24: toPriceHistoryPoint(slots.h24 ?? slots.earliest),
+          h48: toPriceHistoryPoint(slots.h48 ?? slots.earliest),
         });
       }
 
