@@ -13,6 +13,7 @@ const PRIVATE_REDACTED_CORP_FIELDS = [
   "marketingBudget",
   "marketingStrength",
   "marketingStrengthGrowth",
+  "marketingDecayRate",
   "logisticsBudget",
   "logisticsStrength",
   "logisticsStrengthNetChange",

@@ -197,6 +197,8 @@ export interface CorporationDetail {
   marketingStrength: number;
   /** Absent for outside viewers of a private corporation (redacted). */
   marketingStrengthGrowth?: number;
+  /** Share of marketing strength lost per turn (0 before decay is on). Redacted like growth. */
+  marketingDecayRate?: number;
   /**
    * Brand loyalty (Package A) player-facing 5-label scale. Present for everyone
    * when the feature is on for this corp; absent ⇒ hide the indicator. The RAW
