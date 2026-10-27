@@ -3,6 +3,9 @@ import type { Db } from "mongodb";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
 import { applyFundedSwitch, fundedSwitchGameConfigUpdate } from "./fundedSwitch";
 
+/** String-keyed singleton and fixture documents. */
+type Doc = { _id: string; [key: string]: unknown };
+
 const EPOCH = "world-epoch";
 const OPENING = { worldEpoch: EPOCH, turn: 50, digest: "a".repeat(64) };
 
@@ -11,8 +14,8 @@ async function worldDb(
   config: Record<string, unknown> = {}
 ): Promise<Db> {
   const db = createInMemoryDb() as unknown as Db;
-  await db.collection("gameState").insertOne({ _id: "current", isActive: false, ...state });
-  await db.collection("gameConfig").insertOne({ _id: "default", ...config });
+  await db.collection<Doc>("gameState").insertOne({ _id: "current", isActive: false, ...state });
+  await db.collection<Doc>("gameConfig").insertOne({ _id: "default", ...config });
   return db;
 }
 
@@ -52,7 +55,7 @@ describe("applyFundedSwitch", () => {
       { producerTransitionPackageEnabled: true, producerMarketLiveFromTurn: 12 }
     );
     await db
-      .collection("corporateSectors")
+      .collection<Doc>("corporateSectors")
       .insertMany([
         { _id: "sector-a", cutoverTransition: { mismatched: true } },
         { _id: "sector-b", cutoverStruggling: { reason: "losing" } },
@@ -68,9 +71,9 @@ describe("applyFundedSwitch", () => {
       producerMarketLiveFromTurn: 51,
       transitionStampsCleared: 2,
     });
-    const config = await db.collection("gameConfig").findOne({ _id: "default" });
-    expect(config).toMatchObject(fundedSwitchGameConfigUpdate(50).$set);
-    const sectors = await db.collection("corporateSectors").find({}).sort({ _id: 1 }).toArray();
+    const config = await db.collection<Doc>("gameConfig").findOne({ _id: "default" });
+    expect(config).toMatchObject(fundedSwitchGameConfigUpdate(50).$set as Record<string, unknown>);
+    const sectors = await db.collection<Doc>("corporateSectors").find({}).sort({ _id: 1 }).toArray();
     expect(sectors.map((sector) => sector._id)).toEqual(["sector-a", "sector-b", "sector-c"]);
     for (const sector of sectors) {
       expect(sector).not.toHaveProperty("cutoverTransition");
@@ -98,7 +101,7 @@ describe("applyFundedSwitch", () => {
       { worldEpochId: EPOCH, currentTurn: 50, producerOpening: OPENING },
       fundedSwitchGameConfigUpdate(50).$set as Record<string, unknown>
     );
-    await db.collection("corporateSectors").insertOne({
+    await db.collection<Doc>("corporateSectors").insertOne({
       _id: "sector-a",
       cutoverStruggling: { reason: "zeroSales" },
     });
@@ -107,7 +110,7 @@ describe("applyFundedSwitch", () => {
 
     expect(result.status).toBe("applied");
     expect(result.transitionStampsCleared).toBe(1);
-    const sector = await db.collection("corporateSectors").findOne({ _id: "sector-a" });
+    const sector = await db.collection<Doc>("corporateSectors").findOne({ _id: "sector-a" });
     expect(sector).not.toHaveProperty("cutoverStruggling");
   });
 
@@ -120,7 +123,7 @@ describe("applyFundedSwitch", () => {
     await expect(applyFundedSwitch(db, { expectedWorldEpoch: EPOCH })).rejects.toThrow(
       /no opening is recorded/
     );
-    const config = await db.collection("gameConfig").findOne({ _id: "default" });
+    const config = await db.collection<Doc>("gameConfig").findOne({ _id: "default" });
     expect(config).toMatchObject({ producerTransitionPackageEnabled: true });
   });
 

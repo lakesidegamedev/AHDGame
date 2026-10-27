@@ -95,7 +95,7 @@ export async function applyFundedSwitch(
   const set = (update.$set ?? {}) as unknown as Record<string, unknown>;
   const liveFromTurn = set.producerMarketLiveFromTurn as number;
   const config = await db
-    .collection<Document>("gameConfig")
+    .collection<{ _id: string } & Document>("gameConfig")
     .findOne(
       { _id: "default" },
       { projection: Object.fromEntries(Object.keys(set).map((key) => [key, 1])) }

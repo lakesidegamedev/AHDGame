@@ -190,7 +190,7 @@ async function applyAll(db: Db) {
     const untilTurn = current.currentTurn + 1 + pauseTurns;
     // Written as a raw field: its GameConfig typing lands with the pause branch.
     const written = await db
-      .collection("gameConfig")
+      .collection<{ _id: string } & Document>("gameConfig")
       .updateOne({ _id: "default" }, { $set: { economyPauseUntilTurn: untilTurn } });
     if (written.matchedCount !== 1)
       throw new Error("step 5/5 gameConfig is missing; the economy pause horizon was not written");
@@ -199,7 +199,7 @@ async function applyAll(db: Db) {
 
   const finalState = await readState(db);
   const config = await db
-    .collection<Document>("gameConfig")
+    .collection<{ _id: string } & Document>("gameConfig")
     .findOne(
       { _id: "default" },
       { projection: { producerMarketLiveFromTurn: 1, economyPauseUntilTurn: 1 } }
