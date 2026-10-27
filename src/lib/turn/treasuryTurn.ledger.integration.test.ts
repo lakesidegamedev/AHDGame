@@ -332,13 +332,16 @@ describe("treasury accrual stock-flow ownership", () => {
     expect(db.collection("ledgerEntries").docs).toHaveLength(1);
   });
 
+  // The accrual claim is one guarded write per budget. The witness for it is
+  // published once for the whole cohort after the lanes, so the injection
+  // point is that bulk write.
   it.each([
-    { collection: "federalBudget", afterWrite: true },
-    { collection: "ledgerEntries", afterWrite: false },
-    { collection: "ledgerEntries", afterWrite: true },
+    { collection: "federalBudget", op: "updateOne" as const, afterWrite: true },
+    { collection: "ledgerEntries", op: "bulkWrite" as const, afterWrite: false },
+    { collection: "ledgerEntries", op: "bulkWrite" as const, afterWrite: true },
   ])("recovers $collection afterWrite=$afterWrite without charging again", async (fault) => {
     const db = world();
-    const crash = withInjectedCrash(db, { ...fault, op: "updateOne", onCall: 1 });
+    const crash = withInjectedCrash(db, { ...fault, onCall: 1 });
     vi.mocked(getDb).mockResolvedValue(crash.db);
     await expect(processTreasuryTurn(10)).rejects.toThrow("crash");
     await processTreasuryTurn(10);
@@ -350,7 +353,7 @@ describe("treasury accrual stock-flow ownership", () => {
     const db = world();
     const crash = withInjectedCrash(db, {
       collection: "ledgerEntries",
-      op: "updateOne",
+      op: "bulkWrite",
       onCall: 1,
     });
     vi.mocked(getDb).mockResolvedValue(crash.db);

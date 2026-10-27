@@ -115,6 +115,18 @@ export async function seedBankingIndexes(db: Db, log: (msg: string) => void) {
     log
   );
 
+  // The Treasury phase groups the open queue once per turn: oldest due turn,
+  // smallest claim, and which countries still owe one. Leading with
+  // `settledTurn` lets that grouping walk only the open entries, covered by
+  // the index instead of fetching every open claim document.
+  await ensureIndex(
+    db,
+    SOVEREIGN_COUPON_CLAIMS_COLLECTION,
+    { settledTurn: 1, budgetId: 1, "claim.dueTurn": 1, "claim.amountLocal": 1 },
+    { name: "sovereignCouponClaims_open_queue", background: true },
+    log
+  );
+
   // The cash bound is what decides which claims a Treasury pass can act on.
   // Without it in the index, the bound is a filter applied after fetching every
   // open claim the budget owns, which on a long unpaid backlog is the whole

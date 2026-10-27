@@ -169,6 +169,22 @@ describe("central bank facilities", () => {
     expect(decision.transition.legs.map((l) => l.kind)).toEqual(["mint", "credit"]);
   });
 
+  it("repays the interest-bearing margin first and keeps the injected part within the line (#1694)", () => {
+    const universal = snapshot({
+      charter: retail({
+        type: "universal",
+        cashReserves: 1_000_000,
+        cbMarginDebt: 500_000,
+        cbLiquidityAdvanceDebt: 300_000,
+      }),
+    });
+    const decision = balanced(decide({ type: "repay_cb_margin", amount: 400_000 }, universal));
+    expect(decision.transition.projections[0].update).toEqual({
+      $inc: { "bankCharter.cbMarginDebt": -400_000 },
+      $min: { "bankCharter.cbLiquidityAdvanceDebt": 100_000 },
+    });
+  });
+
   it("denies every facility when banking is off, with the switch as the reason", () => {
     const off = snapshot({ policy: resolveBankingPolicy(null) });
     for (const command of [

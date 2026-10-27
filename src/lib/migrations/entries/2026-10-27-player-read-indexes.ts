@@ -94,6 +94,17 @@ const INDEXES: IndexPlan[] = [
     keys: { "shareholders.characterId": 1 },
     options: { name: "corporations_shareholder_character" },
   },
+  // The Treasury phase groups a country's open coupon queue once per turn:
+  // its oldest due turn, its smallest claim and which countries still owe one.
+  // The budget-prefixed indexes cannot bound `settledTurn` from the left, so
+  // that grouping fetched every open claim document on every pass. With this
+  // order the same grouping is a covered walk of the open range. The banking
+  // seed creates the same index.
+  {
+    collection: "sovereignCouponClaims",
+    keys: { settledTurn: 1, budgetId: 1, "claim.dueTurn": 1, "claim.amountLocal": 1 },
+    options: { name: "sovereignCouponClaims_open_queue" },
+  },
   // The money journal prune runs every minute and looks for old applied or
   // rejected moves of the prunable kinds. With only the turn index it fetched
   // every old move (tens of thousands of large documents) to find one batch.

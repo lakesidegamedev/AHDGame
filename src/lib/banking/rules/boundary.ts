@@ -40,6 +40,7 @@ export type BankCharterSnapshot = Pick<
   | "discountWindowDebt"
   | "discountWindowArrears"
   | "cbMarginDebt"
+  | "cbLiquidityAdvanceDebt"
   | "cbMarginArrears"
   | "interbankDebt"
   | "propBookMarkValue"
