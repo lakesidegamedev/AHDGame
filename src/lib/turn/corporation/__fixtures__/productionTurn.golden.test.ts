@@ -11,19 +11,37 @@
  * carry state it hands to the next turn are captured too, so a cheaper
  * isolation or document copy cannot change what the shadow computes.
  *
+ * It also feeds the two substeps that precede the sector pass: the clearing
+ * pre-pass (fills, own-group reservations, receipts, advertising value,
+ * contract targets) and the lookup builder (every per-sector and per-state
+ * table the turn reads). Both are hashed here so a cheaper clear or lookup
+ * build must hand back exactly the same numbers.
+ *
  * Regenerate only for an intended behaviour change:
  *   UPDATE_TURN_GOLDEN=1 npx vitest run src/lib/turn/corporation/__fixtures__/productionTurn.golden.test.ts
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Db } from "mongodb";
 import { createInMemoryDb } from "@/lib/test-utils/inMemoryDb";
+import type { CommodityType } from "@/lib/constants/commodities";
 import type { CorporationLookups } from "../types";
 import { processSectors } from "../sectorCalculations";
 import { runProducerMarketShadowPhase } from "../producerMarketShadowPhase";
+import { buildCorporationLookups } from "../buildLookups";
+import { runClearingPrePass } from "../clearingPrePass";
 import { buildProductionTurnWorld } from "./productionTurnWorld";
-import { captureProducerShadow, captureTurn } from "./productionTurnCapture";
+import {
+  captureClearing,
+  captureLookups,
+  captureProducerShadow,
+  captureTurn,
+} from "./productionTurnCapture";
+
+// The lookup builder resolves the extraction output-scale flag through `getDb`;
+// the fixture world supplies the documents instead.
+vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 
 const GOLDEN = join(__dirname, "productionTurn.golden.json");
 const SHADOW_EPOCH = "golden-world";
@@ -96,18 +114,163 @@ async function runShadow() {
   });
 }
 
+/**
+ * Run the clearing pre-pass over the same world. The flags match a live plants
+ * world: clearing on, own-group sourcing on (the fixture gives corporations an
+ * internal supply policy), brand loyalty on. State books are live because the
+ * fixture carries per-state balances, so state-scoped commodities clear in one
+ * book per state exactly as they do in production.
+ */
+function runClearing() {
+  const world = buildProductionTurnWorld({ corporations: 60, sectorsPerCorp: 7, seed: 7 });
+  const lookups = {
+    ...world.lookups,
+    eraUnitScale: 1,
+    eraYear: 1991,
+  } as unknown as CorporationLookups;
+  const market = { ...world.market };
+  const result = runClearingPrePass({
+    lookups,
+    market,
+    turn: world.turn,
+    currentYear: 1991,
+    commandEconomyEnabled: false,
+    freightSettlementActive: false,
+    supplyAgreementsEnabled: false,
+    settleableAgreements: undefined,
+    contractedByCorpCommodity: new Map(),
+    contractSettlementByCorp: new Map(),
+    producedByCorpCommodity: new Map(),
+    achievableByCorpCommodity: new Map(),
+    stateLocalClearingBlockedByLegacyAgreement: false,
+    brandLoyaltyEnabled: true,
+    brandLoyaltySliceEnabled: true,
+    qualityPremiumPricingEnabled: false,
+    treasuryCashLedgerEnabled: false,
+    fundedProducerTurn: false,
+  });
+  return captureClearing(market, result);
+}
+
+/**
+ * Build the lookups from the same world's documents. The in-memory database
+ * returns them as the driver would, so the builder's own grouping, market
+ * share and margin tables are what the golden pins.
+ */
+async function runLookups() {
+  const world = buildProductionTurnWorld({ corporations: 60, sectorsPerCorp: 7, seed: 7 });
+  const memory = createInMemoryDb();
+  memory.seed("corporations", world.corporations as unknown as Record<string, unknown>[]);
+  memory.seed("corporateSectors", world.sectors as unknown as Record<string, unknown>[]);
+  memory.seed(
+    "states",
+    STATES.map((stateId) => ({ _id: stateId, countryId: "US", gdp: 900_000 }))
+  );
+  memory.seed("gameState", [
+    {
+      _id: "current",
+      preset: "2019-default",
+      currentTurn: world.turn,
+      currentYear: 1991,
+      startingYear: 1991,
+      worldEpochId: "golden-world",
+    },
+  ]);
+  memory.seed("exchangeRates", [{ currencyCode: "USD", rate: 1 }]);
+  memory.seed("federalBudget", [
+    {
+      _id: "federal",
+      countryId: "US",
+      gdp: 30_000_000_000_000,
+      surplus: -900_000,
+      debtToGdpRatio: 0.9,
+      taxRates: { domesticCorporateTax: 21, foreignCorporateTax: 21 },
+      economicFactors: { inflationRate: 2.1 },
+    },
+  ]);
+  memory.seed(
+    "stateBudgets",
+    STATES.map((stateId) => ({
+      _id: stateId,
+      taxRates: { domesticCorporateTax: 5, foreignCorporateTax: 5 },
+    }))
+  );
+  memory.seed("centralBanks", [
+    {
+      _id: "US",
+      countryId: "US",
+      primeRate: 3.5,
+      primeRateSmoothed: 3.4,
+      memberCountries: ["US"],
+    },
+  ]);
+  memory.seed(
+    "commodityPrices",
+    (["steel", "oil", "freight", "advertising"] as CommodityType[]).map((commodity, i) => ({
+      _id: commodity,
+      commodity,
+      turn: world.turn - 1,
+      basePrice: 100 + i,
+      globalPrice: 104 + i,
+      globalSupply: 1_000_000 + i * 10_000,
+      globalDemand: 980_000 + i * 10_000,
+      stateSupply: Object.fromEntries(STATES.map((state, j) => [state, 100_000 + i + j])),
+      stateDemand: Object.fromEntries(STATES.map((state, j) => [state, 98_000 + i + j])),
+      statePrices: Object.fromEntries(STATES.map((state) => [state, 102 + i])),
+      stateInputAvailability: Object.fromEntries(STATES.map((state) => [state, 0.95])),
+      nationalSupply: { US: 1_000_000 + i * 10_000 },
+      nationalDemand: { US: 980_000 + i * 10_000 },
+      reachablePrices: { US: 103 + i },
+    }))
+  );
+  const { getDb } = await import("@/lib/mongodb");
+  vi.mocked(getDb).mockResolvedValue(memory as unknown as Db);
+  const lookups = await buildCorporationLookups(memory as unknown as Db, {
+    plantsEnabled: true,
+    explicitPlantCostsEnabled: true,
+    productionTurn: world.turn,
+  });
+  return captureLookups(lookups);
+}
+
+type Golden = {
+  shadow?: unknown;
+  clearing?: unknown;
+  lookups?: unknown;
+};
+
+/** The turn capture's own fields; the golden also carries the other substeps. */
+const TURN_KEYS = [
+  "sectors",
+  "sectorOps",
+  "corpOps",
+  "totalRevenueGenerated",
+  "totalIncomeGenerated",
+  "sectorsProcessed",
+  "sha256",
+] as const;
+
+function readGolden(): Golden {
+  return JSON.parse(readFileSync(GOLDEN, "utf8")) as Golden;
+}
+
+function goldenTurn(golden: Golden): Record<string, unknown> {
+  const rows = golden as Record<string, unknown>;
+  return Object.fromEntries(TURN_KEYS.map((key) => [key, rows[key]]));
+}
+
+function writeGolden(patch: Record<string, unknown>) {
+  writeFileSync(GOLDEN, JSON.stringify({ ...readGolden(), ...patch }, null, 2) + "\n");
+}
+
 describe("corporation turn golden capture", () => {
   it("reproduces the recorded writes exactly", () => {
     const { capture } = runTurn();
     if (process.env.UPDATE_TURN_GOLDEN === "1") {
-      writeFileSync(GOLDEN, JSON.stringify(capture, null, 2) + "\n");
+      writeGolden(capture);
       return;
     }
-    const golden = JSON.parse(readFileSync(GOLDEN, "utf8")) as typeof capture & {
-      shadow?: unknown;
-    };
-    const { shadow: _shadow, ...turn } = golden;
-    expect(capture).toEqual(turn);
+    expect(capture).toEqual(goldenTurn(readGolden()));
   });
 
   it("processes every sector and books non-zero money", () => {
@@ -121,14 +284,28 @@ describe("corporation turn golden capture", () => {
   it("reproduces the recorded producer-market shadow exactly", async () => {
     const capture = await runShadow();
     if (process.env.UPDATE_TURN_GOLDEN === "1") {
-      const golden = JSON.parse(readFileSync(GOLDEN, "utf8")) as Record<string, unknown> & {
-        shadow?: unknown;
-      };
-      writeFileSync(GOLDEN, JSON.stringify({ ...golden, shadow: capture }, null, 2) + "\n");
+      writeGolden({ shadow: capture });
       return;
     }
-    const golden = JSON.parse(readFileSync(GOLDEN, "utf8")) as { shadow: typeof capture };
-    expect(capture).toEqual(golden.shadow);
+    expect(capture).toEqual(readGolden().shadow);
+  });
+
+  it("reproduces the recorded clearing pre-pass exactly", () => {
+    const capture = runClearing();
+    if (process.env.UPDATE_TURN_GOLDEN === "1") {
+      writeGolden({ clearing: capture });
+      return;
+    }
+    expect(capture).toEqual(readGolden().clearing);
+  });
+
+  it("reproduces the recorded lookups exactly", async () => {
+    const capture = await runLookups();
+    if (process.env.UPDATE_TURN_GOLDEN === "1") {
+      writeGolden({ lookups: capture });
+      return;
+    }
+    expect(capture).toEqual(readGolden().lookups);
   });
 
   it("settles the shadow market against the live world", async () => {

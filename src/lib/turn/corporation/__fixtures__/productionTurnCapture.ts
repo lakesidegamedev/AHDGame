@@ -10,7 +10,9 @@
  */
 import { createHash } from "node:crypto";
 import { ObjectId } from "mongodb";
-import type { SectorCalculationsResult } from "../types";
+import type { ClearingPrePassResult } from "../clearingPrePass";
+import type { CorporationLookups, SectorCalculationsResult } from "../types";
+import type { MarketContext } from "@/lib/market/marketContext";
 
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 
@@ -136,6 +138,95 @@ interface TurnCapture {
   totalIncomeGenerated: number;
   sectorsProcessed: number;
   sha256: string;
+}
+
+export interface ClearingCapture {
+  sectorsWithClearing: number;
+  internalSupplyTrades: number;
+  internalSupplyReceipts: number;
+  internalInputAvailability: number;
+  discountCostSectors: number;
+  advertisingSellers: number;
+  contractTargets: number;
+  brandLoyaltyUpdates: number;
+  invariantBreaches: number;
+  sha256: string;
+}
+
+/**
+ * The clearing pre-pass's whole persistent surface: per-sector fills and
+ * postures, own-group reservations, receipts, availability, discount legs,
+ * delivered advertising value, contract production targets and the loyalty
+ * rollup. `runClearingPrePass` mutates the market context in place, so this
+ * capture is the equivalence gate for its CPU work: the same world must clear
+ * to the same numbers after the rewrite.
+ */
+export function captureClearing(
+  market: MarketContext,
+  result: ClearingPrePassResult
+): ClearingCapture {
+  const document = canonical({
+    clearingBySectorId: market.clearingBySectorId,
+    internalSupplyReceiptsBySectorId: market.internalSupplyReceiptsBySectorId,
+    internalSupplyCommittedInputsBySectorId: market.internalSupplyCommittedInputsBySectorId,
+    internalSupplyTrades: market.internalSupplyTrades,
+    internalInputAvailabilityBySectorId: market.internalInputAvailabilityBySectorId,
+    internalSupplyDiscountCostBySectorId: market.internalSupplyDiscountCostBySectorId,
+    contractProductionTargetBySectorId: market.contractProductionTargetBySectorId,
+    advertisingSellerDeliveredValueAnchorByCorpId:
+      market.advertisingSellerDeliveredValueAnchorByCorpId,
+    deliveryLimitedBySectorId: market.deliveryLimitedBySectorId,
+    deliveryLimitedClassBySectorId: market.deliveryLimitedClassBySectorId,
+    groupSupplyCommittedInputsBySector: market.groupSupplyCommittedInputsBySector,
+    groupSupplyCommittedOutputsBySector: market.groupSupplyCommittedOutputsBySector,
+    groupSupplyAvailabilityBySector: market.groupSupplyAvailabilityBySector,
+    groupSupplyInputsBySector: market.groupSupplyInputsBySector,
+    groupSupplyReceipts: market.groupSupplyReceipts,
+    groupSupplyForecastByRoot: market.groupSupplyForecastByRoot,
+    brandLoyaltyUpdates: result.brandLoyaltyUpdates,
+    clearingInvariantBreaches: result.clearingInvariantBreaches,
+    buyerDemandByCorpCommodity: result.buyerDemandByCorpCommodity,
+    contractedByCorpCommodity: result.contractedByCorpCommodity,
+    politicalMediaSettlementPlans: result.politicalMediaSettlementPlans,
+  });
+  return {
+    sectorsWithClearing: market.clearingBySectorId?.size ?? 0,
+    internalSupplyTrades: market.internalSupplyTrades?.length ?? 0,
+    internalSupplyReceipts: market.internalSupplyReceiptsBySectorId?.size ?? 0,
+    internalInputAvailability: market.internalInputAvailabilityBySectorId?.size ?? 0,
+    discountCostSectors: market.internalSupplyDiscountCostBySectorId?.size ?? 0,
+    advertisingSellers: market.advertisingSellerDeliveredValueAnchorByCorpId?.size ?? 0,
+    contractTargets: market.contractProductionTargetBySectorId?.size ?? 0,
+    brandLoyaltyUpdates: result.brandLoyaltyUpdates.length,
+    invariantBreaches: result.clearingInvariantBreaches.length,
+    sha256: createHash("sha256").update(JSON.stringify(document)).digest("hex"),
+  };
+}
+
+export interface LookupCapture {
+  corporations: number;
+  sectors: number;
+  sectorPresenceKeys: number;
+  marketShareBySectorId: number;
+  nationalDominanceShareBySectorId: number;
+  sha256: string;
+}
+
+/**
+ * The lookup builder's whole output, hashed. `buildCorporationLookups` is where
+ * the turn reads every per-sector and per-state table it later uses, so a
+ * cheaper build must hand back exactly the same maps.
+ */
+export function captureLookups(lookups: CorporationLookups): LookupCapture {
+  const document = canonical(lookups);
+  return {
+    corporations: lookups.corporations.length,
+    sectors: [...lookups.sectorsByCorp.values()].reduce((n, rows) => n + rows.length, 0),
+    sectorPresenceKeys: lookups.sectorPresenceKeys.size,
+    marketShareBySectorId: lookups.marketShareBySectorId.size,
+    nationalDominanceShareBySectorId: lookups.nationalDominanceShareBySectorId?.size ?? 0,
+    sha256: createHash("sha256").update(JSON.stringify(document)).digest("hex"),
+  };
 }
 
 /**

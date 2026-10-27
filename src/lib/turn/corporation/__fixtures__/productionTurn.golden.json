@@ -17,5 +17,25 @@
     "carriedPlants": 420,
     "payables": 0,
     "sha256": "37933a01fe1326108dc898ac654b7e2af8583298c7e1505a2d56e125032c32d7"
+  },
+  "clearing": {
+    "sectorsWithClearing": 420,
+    "internalSupplyTrades": 138,
+    "internalSupplyReceipts": 420,
+    "internalInputAvailability": 383,
+    "discountCostSectors": 42,
+    "advertisingSellers": 0,
+    "contractTargets": 0,
+    "brandLoyaltyUpdates": 60,
+    "invariantBreaches": 0,
+    "sha256": "0774b32a30b7fa71b1423fc863acf082cbdb4ff7c1bb6f8d24f337cf419b51b8"
+  },
+  "lookups": {
+    "corporations": 60,
+    "sectors": 420,
+    "sectorPresenceKeys": 0,
+    "marketShareBySectorId": 420,
+    "nationalDominanceShareBySectorId": 420,
+    "sha256": "1172f0de5ff0ec2887589e3c35d5b43e93a5b5802fecda68b8970f77b9d8e156"
   }
 }
