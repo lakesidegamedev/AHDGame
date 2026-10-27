@@ -3,9 +3,9 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ComposableMap, Geographies, Geography, ZoomableGroup } from "react-simple-maps";
-import { getCountryMapConfig } from "@/lib/commodity-map";
-import { commodityColor, priceColor } from "@/lib/commodity-map";
-import { getStateDisplayName } from "@/lib/commodity-map";
+import { getCountryMapConfig } from "@/lib/commodity-map/commodityRegionMappings";
+import { commodityColor, priceColor } from "@/lib/commodity-map/commodityRegionMappings";
+import { getStateDisplayName } from "@/lib/commodity-map/commodityRegionMappings";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import {
@@ -13,7 +13,7 @@ import {
   formatCommodityPrice,
   getCommodityDisplayCurrency,
 } from "@/lib/commodity-map/commodityPriceDisplay";
-import { capacityColor } from "@/lib/commodity-map";
+import { capacityColor } from "@/lib/commodity-map/commodityRegionMappings";
 import type { MapMode } from "./CommodityMapModeToggle";
 import { formatUnits } from "../lib/helpers";
 

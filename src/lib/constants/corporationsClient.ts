@@ -197,3 +197,12 @@ export function corporationTypeOfLane(lane: OperatingSectorType): CorporationTyp
  * Maximum dividend rate (%). CEOs cannot set above this; turn processing clamps existing values.
  */
 export const MAX_DIVIDEND_RATE = 25;
+
+/** Maximum growth rate a player can set (% per game year) */
+export const MAX_GROWTH_RATE = 15.0;
+
+/** Minimum growth rate; negative means deliberate downsizing (% per game year) */
+export const MIN_GROWTH_RATE = -2;
+
+/** Growth cost multiplier: growthCost = revenue x growthRate x this */
+export const GROWTH_COST_MULTIPLIER = 3.0;

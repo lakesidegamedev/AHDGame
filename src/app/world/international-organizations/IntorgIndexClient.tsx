@@ -1,15 +1,30 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui";
 import { useWorldView } from "./useWorldView";
+
+// The map is a browser-only visual and the create form only matters once the
+// viewer opens it; both drag the org constants and the region manifest in.
+// Reserving their height up front keeps the directory below from jumping as
+// they land.
+const OrgWorldMap = dynamic(
+  () => import("./components/OrgWorldMap").then((m) => ({ default: m.OrgWorldMap })),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-[360px] w-full rounded-xl" />,
+  }
+);
+const CreateOrgForm = dynamic(
+  () => import("./components/CreateOrgForm").then((m) => ({ default: m.CreateOrgForm })),
+  { loading: () => <Skeleton className="h-12 w-full rounded-xl" /> }
+);
 import { orgHref } from "./orgRouting";
 import { OrgDirectory } from "./components/OrgDirectory";
 import { YourDelegations } from "./components/YourDelegations";
-import { CreateOrgForm } from "./components/CreateOrgForm";
 import { GlobalResolutionsFeed } from "./components/GlobalResolutionsFeed";
-import { OrgWorldMap } from "./components/OrgWorldMap";
 
 /**
  * International Organizations index: the page header, your delegations, a create

@@ -2,7 +2,7 @@
 
 import { CountryFlag } from "@/components/CountryFlag";
 import type { CountryId } from "@/lib/constants/countriesCore";
-import { getStateDisplayName } from "@/lib/commodity-map";
+import { getStateDisplayName } from "@/lib/commodity-map/commodityRegionMappings";
 import { formatUnits } from "../lib/helpers";
 import { postImportBalance } from "@/lib/trade/postImportGap";
 

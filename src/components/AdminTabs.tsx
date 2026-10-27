@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+import { CardSkeleton, Skeleton } from "@/components/ui";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
   DEFAULT_SUBS,
@@ -16,22 +18,82 @@ import { AdminStatusBar } from "@/components/admin/nav/AdminStatusBar";
 import { AdminAlertsStrip } from "@/components/admin/nav/AdminAlertsStrip";
 import { AdminCommandPalette } from "@/components/admin/nav/AdminCommandPalette";
 import { useAdminBadgeCounts } from "@/components/admin/nav/useAdminBadgeCounts";
-import { AdminDashboardTab } from "@/components/admin/tabs/AdminDashboardTab";
-import { AdminTrafficTab } from "@/components/admin/tabs/AdminTrafficTab";
-import { AdminPoliticsTab } from "@/components/admin/tabs/AdminPoliticsTab";
 import type { PoliticsSubTab } from "@/components/admin/tabs/AdminPoliticsTab";
-import { AdminWorldTab } from "@/components/admin/tabs/AdminWorldTab";
 import type { WorldSubTab } from "@/components/admin/tabs/AdminWorldTab";
-import { AdminContentTab } from "@/components/admin/tabs/AdminContentTab";
 import type { ContentSubTab } from "@/components/admin/tabs/AdminContentTab";
-import { AdminPlayersTab } from "@/components/admin/tabs/AdminPlayersTab";
 import type { PlayersSubTab } from "@/components/admin/tabs/AdminPlayersTab";
-import { AdminSupportTab } from "@/components/admin/tabs/AdminSupportTab";
 import type { SupportSubTab } from "@/components/admin/tabs/AdminSupportTab";
-import { AdminSystemTab } from "@/components/admin/tabs/AdminSystemTab";
 import type { SystemSubTab } from "@/components/admin/tabs/AdminSystemTab";
-import { AdminEconomyTab } from "@/components/admin/tabs/AdminEconomyTab";
 import type { EconomySubTab } from "@/components/admin/tabs/AdminEconomyTab";
+
+// One panel is open at a time, and the dashboard is the only one a fresh visit
+// opens. Every other tab carries a heavy tree of its own (the system tab the
+// seed and heal forms, politics the election tooling), so each mounts on demand.
+// The fallback reserves a card block, matching the densest admin panel.
+const AdminTabFallback = () => (
+  <CardSkeleton className="min-h-[320px] space-y-4">
+    <Skeleton className="h-6 w-48" />
+    <Skeleton className="h-4 w-full" />
+    <Skeleton className="h-4 w-2/3" />
+  </CardSkeleton>
+);
+
+const AdminDashboardTab = dynamic(
+  () =>
+    import("@/components/admin/tabs/AdminDashboardTab").then((m) => ({
+      default: m.AdminDashboardTab,
+    })),
+  { loading: AdminTabFallback }
+);
+const AdminTrafficTab = dynamic(
+  () =>
+    import("@/components/admin/tabs/AdminTrafficTab").then((m) => ({ default: m.AdminTrafficTab })),
+  { loading: AdminTabFallback }
+);
+const AdminPoliticsTab = dynamic(
+  () =>
+    import("@/components/admin/tabs/AdminPoliticsTab").then((m) => ({
+      default: m.AdminPoliticsTab,
+    })),
+  { loading: AdminTabFallback }
+);
+const AdminWorldTab = dynamic(
+  () => import("@/components/admin/tabs/AdminWorldTab").then((m) => ({ default: m.AdminWorldTab })),
+  { loading: AdminTabFallback }
+);
+const AdminContentTab = dynamic(
+  () =>
+    import("@/components/admin/tabs/AdminContentTab").then((m) => ({
+      default: m.AdminContentTab,
+    })),
+  { loading: AdminTabFallback }
+);
+const AdminPlayersTab = dynamic(
+  () =>
+    import("@/components/admin/tabs/AdminPlayersTab").then((m) => ({
+      default: m.AdminPlayersTab,
+    })),
+  { loading: AdminTabFallback }
+);
+const AdminSupportTab = dynamic(
+  () =>
+    import("@/components/admin/tabs/AdminSupportTab").then((m) => ({
+      default: m.AdminSupportTab,
+    })),
+  { loading: AdminTabFallback }
+);
+const AdminSystemTab = dynamic(
+  () =>
+    import("@/components/admin/tabs/AdminSystemTab").then((m) => ({ default: m.AdminSystemTab })),
+  { loading: AdminTabFallback }
+);
+const AdminEconomyTab = dynamic(
+  () =>
+    import("@/components/admin/tabs/AdminEconomyTab").then((m) => ({
+      default: m.AdminEconomyTab,
+    })),
+  { loading: AdminTabFallback }
+);
 
 /** Valid sub ids per tab, derived from the shared nav config. */
 const VALID_SUBS: Record<MainTabId, readonly string[]> = MAIN_TAB_IDS.reduce(

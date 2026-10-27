@@ -1,6 +1,10 @@
 "use client";
 
-import { getLegendStops, getPriceLegendStops, getReachableLegendStops } from "@/lib/commodity-map";
+import {
+  getLegendStops,
+  getPriceLegendStops,
+  getReachableLegendStops,
+} from "@/lib/commodity-map/commodityRegionMappings";
 import type { MapMode } from "./CommodityMapModeToggle";
 
 interface CommodityMapLegendProps {

@@ -894,6 +894,14 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
         viewerIsLeader={viewerIsLeader}
         viewerIsAdmin={viewerIsAdmin}
         overview={overview}
+        chrome={{
+          governmentType: config.governmentType,
+          executiveTermLimit: getExecutiveTermLimit(countryId),
+          hasDevolution: config.id === "UK",
+          ordersLabel: getExecutiveOrderNamePlural(countryId),
+          legislatureName: config.legislature.name,
+          legislaturePath: config.legislature.path,
+        }}
         isOnePartyState={isOnePartyState}
       />
     </UKGovernmentLayout>
