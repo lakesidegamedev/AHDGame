@@ -157,6 +157,7 @@ function LegacyProposeLegislationModal({
   defaultChamber,
   domesticOnlyLabel = "Domestic corporations only",
   hasActiveBill = false,
+  proposeViaPartyNpp = false,
   onClose,
   onSuccess,
 }: {
@@ -170,6 +171,7 @@ function LegacyProposeLegislationModal({
   domesticOnlyLabel?: string;
   /** Player already has a bill in voting — modal stays browsable, submit blocked. */
   hasActiveBill?: boolean;
+  proposeViaPartyNpp?: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }) {
@@ -504,6 +506,7 @@ function LegacyProposeLegislationModal({
           title: title.trim(),
           summary: summary.trim(),
           chamber: billChamber,
+          ...(proposeViaPartyNpp ? { proposeViaPartyNpp: true } : {}),
           category: cat,
           provisions: provisionsPayload,
         },
@@ -1304,6 +1307,10 @@ export function ProposeLegislationModal(
         chambers={props.chambers}
         initialChamber={props.defaultChamber ?? props.chambers[0]?.value ?? ""}
         adminOverride={props.adminOverride}
+        offerSubsidies={true}
+        proposeViaPartyNpp={props.proposeViaPartyNpp}
+        canSubmit={props.adminOverride === true || !props.hasActiveBill}
+        hasActiveBill={props.hasActiveBill}
         domesticOnlyLabel={props.domesticOnlyLabel}
         onClose={props.onClose}
         onSuccess={props.onSuccess}

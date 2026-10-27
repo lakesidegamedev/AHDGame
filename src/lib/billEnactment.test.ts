@@ -88,6 +88,37 @@ describe("onBillEnacted", () => {
     ...overrides,
   });
 
+  it.each([true, false])(
+    "refunds the requesting chair or legacy sponsor (explicit payer=%s)",
+    async (explicitPayer) => {
+      const chairId = new ObjectId(),
+        legacySponsorId = new ObjectId();
+      const expectedId = explicitPayer ? chairId : legacySponsorId;
+      db.collection("characters").findOne.mockResolvedValue({
+        actions: 1,
+        nationalInfluence: 2,
+        stats: { energy: 100 },
+      });
+      const bill = {
+        ...createBill({ stateId: "SCO", countryId: "UK" }),
+        provisions: [{ type: "end_subsidy" as const, scopeType: "economy_wide" as const }],
+        legislationTypeId: undefined,
+        sponsorId: legacySponsorId,
+        ...(explicitPayer ? { proposalPayerId: chairId } : {}),
+        proposalActionCost: 10,
+        proposalNpiCost: 5,
+      };
+      await onBillEnacted(db as unknown as Db, bill as Parameters<typeof onBillEnacted>[1], 100);
+      expect(db.collection("characters").updateOne).toHaveBeenCalledWith(
+        { _id: expectedId },
+        expect.objectContaining({
+          $inc: { nationalInfluence: 5 },
+          $set: expect.objectContaining({ actions: 11 }),
+        })
+      );
+    }
+  );
+
   const createLegislationType = (
     id: string,
     policyDomain: string = "economy",

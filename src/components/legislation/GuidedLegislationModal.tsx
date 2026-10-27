@@ -225,10 +225,12 @@ export interface GuidedLegislationModalProps {
    * law and tax provisions (a Cabinet bill).
    */
   offerSubsidies?: boolean;
+  /** Request a seated party NPP to introduce this regional bill for its chair. */
+  proposeViaPartyNpp?: boolean;
   /** Wording of the subsidy "home companies only" toggle. */
   domesticOnlyLabel?: string;
   /**
-   * Governor queue mode: the bill is handed to one of these party NPPs, who
+   * Governor queue mode: the bill is handed to the first eligible party NPP, who
    * introduces it next turn. Flavor-only custom bills are not offered.
    */
   queue?: { eligibleNpps: readonly { _id: string; name: string }[] };
@@ -247,6 +249,7 @@ export function GuidedLegislationModal({
   canSubmit = true,
   hasActiveBill = false,
   offerSubsidies = true,
+  proposeViaPartyNpp = false,
   domesticOnlyLabel = scope === "regional"
     ? "Companies headquartered in this region only"
     : "Domestic companies only",
@@ -272,7 +275,7 @@ export function GuidedLegislationModal({
   const [subsidyScope, setSubsidyScope] = useState<SubsidyScope>("economy_wide");
   const [subsidySector, setSubsidySector] = useState<OperatingSectorType | "">("");
   const [subsidyDomesticOnly, setSubsidyDomesticOnly] = useState(false);
-  const [targetNppId, setTargetNppId] = useState("");
+  const targetNppId = queue?.eligibleNpps[0]?._id ?? "";
   const [draft, setDraft] = useState<DraftProvision[]>([]);
   const [title, setTitle] = useState("");
   const [messageBodies, setMessageBodies] = useState({ policy: "", custom: "" });
@@ -547,7 +550,7 @@ export function GuidedLegislationModal({
 
   async function submit() {
     if (queue && !targetNppId) {
-      showToast("Choose the NPP who will introduce this bill.", "error");
+      showToast(t("noEligiblePartyNpp"), "error");
       return;
     }
     if (!canSubmit) {
@@ -602,6 +605,7 @@ export function GuidedLegislationModal({
           category: isCustomBill ? "custom" : categoryForDraft(draft, scope),
           provisions,
           ...(queue ? { targetNppId } : {}),
+          ...(proposeViaPartyNpp ? { proposeViaPartyNpp: true } : {}),
           ...(adminOverride ? { adminOverride: true } : {}),
         },
       });
@@ -1311,23 +1315,6 @@ export function GuidedLegislationModal({
                         className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground"
                       />
                     </label>
-                    {queue ? (
-                      <label className="text-xs text-muted">
-                        Introducing NPP
-                        <select
-                          value={targetNppId}
-                          onChange={(event) => setTargetNppId(event.target.value)}
-                          className="mt-1 w-full rounded-lg border border-card-border bg-background px-3 py-2 text-sm text-foreground"
-                        >
-                          <option value="">Select an NPP</option>
-                          {queue.eligibleNpps.map((candidate) => (
-                            <option key={candidate._id} value={candidate._id}>
-                              {candidate.name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    ) : null}
                     {chambers.length > 0 ? (
                       <label className="text-xs text-muted">
                         Originating chamber

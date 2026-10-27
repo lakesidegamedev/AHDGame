@@ -3,6 +3,7 @@
 import { InlineError } from "@/components/ui/InlineError";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { ladderBounds } from "@/lib/legislature/policyLadder";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import {
@@ -19,8 +20,6 @@ import { SubsidySectorSelect } from "@/components/bills/SubsidySectorSelect";
 import { TaxRateSliderControl } from "@/components/legislation/TaxRateSliderControl";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { type CountryId } from "@/lib/constants/countriesCore";
-import { useWorldFlags } from "@/hooks/useWorldFlags";
-import { LegislationSystemGate } from "@/components/legislation/LegislationSystemGate";
 import { GuidedLegislationModal } from "@/components/legislation/GuidedLegislationModal";
 
 export interface EligibleNpp {
@@ -29,6 +28,8 @@ export interface EligibleNpp {
 }
 
 interface Props {
+  /** Effective country version resolved by the office page from the current world. */
+  legislationVersion: "v1" | "v2";
   open: boolean;
   countryId: string;
   stateId: string;
@@ -38,6 +39,7 @@ interface Props {
 }
 
 function NoEligibleNppsDialog({ onClose }: { onClose: () => void }) {
+  const t = useTranslations("layout.guidedLegislation");
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
@@ -46,10 +48,7 @@ function NoEligibleNppsDialog({ onClose }: { onClose: () => void }) {
     >
       <div className="w-full max-w-md rounded-2xl border border-card-border bg-card p-6 shadow-modal">
         <h2 className="text-lg font-semibold mb-2">No eligible NPPs</h2>
-        <p className="text-sm text-muted mb-4">
-          No state-legislature NPPs from your party hold seats in this state. Recruit or elect one
-          before you can queue legislation.
-        </p>
+        <p className="text-sm text-muted mb-4">{t("noEligiblePartyNpp")}</p>
         <div className="flex justify-end">
           <button
             onClick={onClose}
@@ -585,14 +584,8 @@ export function QueueBillModal(props: Props) {
 }
 
 function OpenQueueBillModal(props: Props) {
-  const flags = useWorldFlags();
-  if (!flags.loaded || flags.failed) {
-    return <LegislationSystemGate failed={flags.failed} onClose={props.onClose} />;
-  }
   const countryId = props.countryId.toUpperCase() as CountryId;
-  const useV2 =
-    flags.resetSystemVersions.legislation === "v2" && flags.resetV2Countries.includes(countryId);
-  if (!useV2) return <LegacyQueueBillModal {...props} />;
+  if (props.legislationVersion !== "v2") return <LegacyQueueBillModal {...props} />;
   if (props.eligibleNpps.length === 0) {
     return <NoEligibleNppsDialog onClose={props.onClose} />;
   }
@@ -600,6 +593,7 @@ function OpenQueueBillModal(props: Props) {
     <GuidedLegislationModal
       countryId={countryId}
       endpoint={`/api/country/${countryId.toLowerCase()}/region/${props.stateId.toLowerCase()}/office/legislation/queue`}
+      offerSubsidies={true}
       scope="regional"
       regionId={props.stateId.toUpperCase()}
       chambers={[]}
