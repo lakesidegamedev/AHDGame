@@ -128,7 +128,7 @@ async function settle() {
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-async function time(label: string, iterations: number, run: () => void | Promise<void>) {
+async function time(label: string, iterations: number, run: () => unknown) {
   await run();
   await settle();
   observedGcMs = 0;
@@ -222,7 +222,9 @@ async function databaseWorld(
   lookups: CorporationLookups,
   config: GameConfig | null
 ): Promise<PrePassWorld> {
-  const gameState = (await db.collection("gameState").findOne({ _id: "current" })) as {
+  const gameState = (await db
+    .collection<{ _id: string }>("gameState")
+    .findOne({ _id: "current" })) as {
     currentTurn?: number;
     currentYear?: number;
   } | null;
@@ -247,7 +249,7 @@ async function databaseWorld(
       lookups,
       currentTurn: turn,
       plantsEnabled: market.plantsEnabled,
-      currentYear: gameState?.currentYear,
+      currentYear: gameState?.currentYear ?? 0,
       commandEconomyEnabled: config?.commandEconomyEnabled === true,
     });
     market.freightBillingChargeBySectorId = billing.chargeBySectorId;
@@ -261,7 +263,7 @@ async function databaseWorld(
     lookups,
     market,
     turn,
-    currentYear: gameState?.currentYear,
+    currentYear: gameState?.currentYear ?? 0,
     commandEconomyEnabled: config?.commandEconomyEnabled === true,
     freightSettlementActive,
     supplyAgreementsEnabled,
@@ -341,7 +343,7 @@ async function main() {
   await time("clearingPrePass", 3, () => runClearingPrePass(prePassInput(world)));
   await time("freightBilling", 3, () => buildFreightBillingBySector(freightArgs));
 
-  const profiled: { label: string; run: () => void | Promise<void> }[] = [];
+  const profiled: { label: string; run: () => unknown }[] = [];
   if (lookupRun) profiled.push({ label: "buildLookups", run: lookupRun });
   profiled.push(
     { label: "clearingPrePass", run: () => runClearingPrePass(prePassInput(world)) },

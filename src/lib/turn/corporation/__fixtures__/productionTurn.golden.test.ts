@@ -267,7 +267,7 @@ describe("corporation turn golden capture", () => {
   it("reproduces the recorded writes exactly", () => {
     const { capture } = runTurn();
     if (process.env.UPDATE_TURN_GOLDEN === "1") {
-      writeGolden(capture);
+      writeGolden(capture as unknown as Record<string, unknown>);
       return;
     }
     expect(capture).toEqual(goldenTurn(readGolden()));
