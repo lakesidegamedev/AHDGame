@@ -142,7 +142,7 @@ export async function proposePmAppointment(
     const nomineePartyId = parseInt(nomineePartyStr, 10);
     if (!eligibility.qualifyingPartyIds.includes(nomineePartyId)) {
       throw forbidden(
-        eligibility.formationType === "coalition"
+        eligibility.coalitionId != null
           ? "Nominee must be a member of one of the coalition parties"
           : "Nominee must be a member of your party"
       );
