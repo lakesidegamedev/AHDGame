@@ -56,7 +56,7 @@ jobs:
         shell: bash
         env:
           REUSE_QUALIFICATION: ${{ steps.reuse.outputs.reuse }}
-          CAN_REUSE: ${{ (github.event_name == 'pull_request' && github.head_ref == 'staging' && github.base_ref == 'main' && github.event.pull_request.head.repo.id == github.event.repository.id && github.event.pull_request.base.repo.id == github.event.repository.id) || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+          CAN_REUSE: ${{ (github.event_name == 'pull_request' && ((github.head_ref == 'staging' && github.base_ref == 'main') || (github.head_ref == 'development' && github.base_ref == 'staging')) && github.event.pull_request.head.repo.id == github.event.repository.id && github.event.pull_request.base.repo.id == github.event.repository.id) || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
           EMPTY_BACK_MERGE: ${{ github.event_name == 'pull_request' && github.head_ref == 'main' && (github.base_ref == 'development' || github.base_ref == 'staging') && github.event.pull_request.head.repo.id == github.event.repository.id && github.event.pull_request.base.repo.id == github.event.repository.id }}
           PROMOTION: ${{ steps.reuse.outputs.promotion }}
         run: |
@@ -418,7 +418,7 @@ jobs:
   # workflow/run/job provenance and the trusted workflow and helper blobs.
   reuse-staging-qualification:
     needs: changes
-    if: needs.changes.outputs.reuse == 'true' && ((github.event_name == 'pull_request' && github.head_ref == 'staging' && github.base_ref == 'main' && github.event.pull_request.head.repo.id == github.event.repository.id && github.event.pull_request.base.repo.id == github.event.repository.id) || (github.event_name == 'push' && github.ref == 'refs/heads/main'))
+    if: needs.changes.outputs.reuse == 'true' && ((github.event_name == 'pull_request' && ((github.head_ref == 'staging' && github.base_ref == 'main') || (github.head_ref == 'development' && github.base_ref == 'staging')) && github.event.pull_request.head.repo.id == github.event.repository.id && github.event.pull_request.base.repo.id == github.event.repository.id) || (github.event_name == 'push' && github.ref == 'refs/heads/main'))
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
@@ -455,7 +455,7 @@ jobs:
           CHANGES_RESULT: ${{ needs.changes.result }}
           FULL_SUITE: ${{ needs.changes.outputs.full_suite }}
           REUSE_QUALIFICATION: ${{ needs.changes.outputs.reuse }}
-          CAN_REUSE: ${{ (github.event_name == 'pull_request' && github.head_ref == 'staging' && github.base_ref == 'main' && github.event.pull_request.head.repo.id == github.event.repository.id && github.event.pull_request.base.repo.id == github.event.repository.id) || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+          CAN_REUSE: ${{ (github.event_name == 'pull_request' && ((github.head_ref == 'staging' && github.base_ref == 'main') || (github.head_ref == 'development' && github.base_ref == 'staging')) && github.event.pull_request.head.repo.id == github.event.repository.id && github.event.pull_request.base.repo.id == github.event.repository.id) || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
           REUSE_RESULT: ${{ needs['reuse-staging-qualification'].result }}
           CONTENT_RESULT: ${{ needs.content-checks.result }}
           STATIC_RESULT: ${{ needs.static.result }}
@@ -501,8 +501,10 @@ jobs:
           fi
       # No checkout or application code runs here. This native successful step
       # binds full qualification to the exact checked tree without another runner.
+      # Also written when this run reused an exact-tree qualification, so the
+      # next promotion hop (staging -> main) can reuse it in turn.
       - name: qualified-${{ github.head_ref || github.ref_name }}-${{ github.base_ref || github.ref_name }}-tree-${{ needs.changes.outputs.tree }}
-        if: needs.changes.outputs.full_suite == 'true'
+        if: needs.changes.outputs.full_suite == 'true' || (needs.changes.outputs.reuse == 'true' && needs['reuse-staging-qualification'].result == 'success')
         env:
           TREE: ${{ needs.changes.outputs.tree }}
         run: '[[ "$TREE" =~ ^[a-f0-9]{40}$ ]]'

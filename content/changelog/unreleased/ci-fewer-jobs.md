@@ -14,6 +14,9 @@ areas: [backend]
 - Lint, format and typecheck run as one `static` job on one runner with one
   dependency install.
 - The unit test suite runs in 5 shards instead of 10.
+- A development to staging promotion reuses the full CI run that already
+  passed on development's tip when the promoted code is identical, instead of
+  running the whole suite again. Staging to main already did this.
 - CodeQL scans run after a change lands on development or main, and weekly,
   instead of on every pull request push. It was never a required check.
 
