@@ -119,14 +119,16 @@ import { placePendingShareIssuances } from "@/lib/equities/primaryMarket";
 import { creditEquityPoolsBatch } from "@/lib/equities/marketPool";
 import { partitionedBulkWrite } from "./partitionedBulkWrite";
 import {
-  applyPoliticalMediaOrderEffects,
   loadPoliticalMediaOrdersForClearing,
   savePoliticalMediaSettlementPlans,
-  settleLoadedPoliticalMediaOrder,
   type PoliticalMediaOrderForClearing,
 } from "@/lib/politicalMedia/journal";
+import { settlePoliticalMediaOrdersTurn } from "./politicalMediaSettlement";
 import { applyMediaEditorialEffects } from "@/lib/mediaEditorial/applyEffects";
-import { addSettledPoliticalAttention } from "@/lib/mediaOperatingModels/reach";
+import {
+  addSettledPoliticalAttention,
+  type SettledPoliticalAttentionOrder,
+} from "@/lib/mediaOperatingModels/reach";
 import { applyOperatingCashThenDevelopmentCash } from "./manufacturingDevelopmentCashSettlement";
 import { loadVentureBoostBySectorId, processProductVentures } from "@/lib/products/venture/turn";
 import { ventureDomainsEnabled } from "@/lib/products/venture/access";
@@ -139,7 +141,6 @@ import {
 } from "@/lib/products/mediaProductPersistence";
 import {
   attributeMediaProductSales,
-  paidPoliticalMediaSellerReceipts,
   reconcileMediaProductDelivery,
   type PaidPoliticalMediaSellerAmount,
 } from "@/lib/products/rules/mediaProductSales";
@@ -1158,65 +1159,29 @@ export async function processCorporationTurn(
     mark("advertisingSettlement");
   }
 
-  const settledPoliticalMediaOrders = [];
   const currentTurnNumber = turn ?? gameState?.currentTurn ?? 0;
-  const plannedPoliticalUnitsBySectorId = new Map<string, number>();
-  if (mediaProductSlatesEnabled) {
-    for (const order of politicalMediaOrders) {
-      const plan = order.settlementPlan ?? plannedPoliticalMediaOrders.get(order.orderId);
-      if (plan?.plannedTurn !== currentTurnNumber) continue;
-      for (const seller of plan.sellers) {
-        plannedPoliticalUnitsBySectorId.set(
-          seller.sectorId,
-          (plannedPoliticalUnitsBySectorId.get(seller.sectorId) ?? 0) + seller.units
-        );
-      }
-    }
-  }
-  const paidPoliticalSellerBySectorId = new Map<string, PaidPoliticalMediaSellerAmount>();
-  if (politicalMediaMarketEnabled) {
-    const effectOrderIds = politicalMediaOrders.map((order) => order.orderId);
-    for (const order of politicalMediaOrders) {
-      // New plans were already durably saved before sector P&L writes. The
-      // loaded order is an opening snapshot, so do not issue the same plan
-      // read/CAS a second time after bulk writes.
-      if (!order.settlementPlan && !plannedPoliticalMediaOrders.has(order.orderId)) continue;
-      const plan = order.settlementPlan ?? plannedPoliticalMediaOrders.get(order.orderId);
-      const loadedOrder = { ...order, settlementPlan: plan };
-      const results = await settleLoadedPoliticalMediaOrder(db, loadedOrder, turn ?? 0);
-      if (mediaProductSlatesEnabled && plan?.plannedTurn === currentTurnNumber) {
-        for (const seller of paidPoliticalMediaSellerReceipts({
-          orderId: order.orderId,
-          sellers: plan.sellers,
-          results,
-          orderAlreadySettled: order.status === "settled",
-        })) {
-          const prior = paidPoliticalSellerBySectorId.get(seller.sectorId) ?? {
-            units: 0,
-            amountAnchor: 0,
-          };
-          paidPoliticalSellerBySectorId.set(seller.sectorId, {
-            units: prior.units + seller.units,
-            amountAnchor: prior.amountAnchor + seller.amountAnchor,
-          });
-        }
-      }
-      const settled =
-        order.status === "settled" ||
-        (results.length > 0 &&
-          results.every((result) => result.status === "applied" || result.status === "replayed"));
-      if (settled && plan?.plannedTurn === (turn ?? gameState?.currentTurn ?? 0)) {
-        settledPoliticalMediaOrders.push({
-          orderId: order.orderId,
-          status: "settled" as const,
-          identity: order.identity,
-          settlementPlan: plan,
-        });
-      }
-    }
-    await applyPoliticalMediaOrderEffects(db, effectOrderIds);
-    mark("politicalMediaOrders");
-  }
+  // One journaled move per order, one bulk receipt write for the cohort, and
+  // every settled order's effect applied in bulk. See the module for the move
+  // shape and the refusal path.
+  const {
+    plannedUnitsBySectorId: plannedPoliticalUnitsBySectorId,
+    paidSellerBySectorId: paidPoliticalSellerBySectorId,
+    settledOrders: settledPoliticalMediaOrders,
+  } = politicalMediaMarketEnabled
+    ? await settlePoliticalMediaOrdersTurn({
+        db,
+        orders: politicalMediaOrders,
+        turn: turn ?? 0,
+        currentTurnNumber,
+        plannedByOrderId: plannedPoliticalMediaOrders,
+        mediaProductSlatesEnabled,
+      })
+    : {
+        plannedUnitsBySectorId: new Map<string, number>(),
+        paidSellerBySectorId: new Map<string, PaidPoliticalMediaSellerAmount>(),
+        settledOrders: [] as SettledPoliticalAttentionOrder[],
+      };
+  if (politicalMediaMarketEnabled) mark("politicalMediaOrders");
 
   if (mediaProductSlatesEnabled && lookups.mediaProductProjectsBySectorId) {
     const basePrices = eraScaledBasePrices(lookups.eraUnitScale);

@@ -4,12 +4,13 @@
  * refund uses that original order record and a stable movement key.
  */
 
-import { ObjectId, type Db, type Document } from "mongodb";
+import { ObjectId, type AnyBulkWriteOperation, type Db, type Document } from "mongodb";
 import {
   applyMoneyMove,
   MONEY_MOVE_COLLECTION,
   resumeMoneyMove,
   type MoneyMove,
+  type MoneyMoveLeg,
   type MoneyMoveResult,
 } from "@/lib/banking/moneyMove";
 import { AD_BONUS_CAP, adExposure, type TargetedAd } from "@/lib/campaignTargeting/rules";
@@ -184,12 +185,21 @@ interface PoliticalMediaOrderRecord {
   effectApplied?: boolean;
 }
 
+/** Which order one settlement record settles, for a return of undelivered cash. */
+interface PoliticalMediaSettlementRecord {
+  orderId: string;
+  plannedTurn: number;
+}
+
 interface PoliticalMediaMoveRecord {
   _id: string;
   kind: string;
   status: string;
+  error?: string;
+  legs?: { applied?: boolean; refusal?: string }[];
   politicalMediaOrder?: PoliticalMediaOrderRecord;
   politicalMediaOrderIdentity?: unknown;
+  politicalMediaSettlement?: PoliticalMediaSettlementRecord;
 }
 
 export interface PoliticalMediaOrderForClearing {
@@ -281,21 +291,50 @@ function validateSettlementPlan(
     );
 }
 
-async function finishOrResumeMove(
-  db: Db,
-  key: string,
-  result: MoneyMoveResult
-): Promise<MoneyMoveResult> {
-  if (result.status === "applied" || result.status === "rejected") return result;
-  if (result.status === "partial") return resumeMoneyMove(db, key);
+/** A move's disposition plus the legs that durably landed. */
+interface AppliedMove {
+  status: MoneyMoveResult["status"];
+  applied: Set<number>;
+  error?: string;
+}
+
+/**
+ * Finish one settlement move from its own journal.
+ *
+ * A move this call just claimed cannot be read back from its result alone: a
+ * `replayed` answer carries no legs, and the owner of a key may have stopped
+ * half way. Only a replay pays for the extra read, and only a record still in
+ * flight is resumed, so a completed order settles without touching its journal.
+ */
+async function settleMove(db: Db, move: MoneyMove): Promise<AppliedMove> {
+  let result = await applyMoneyMove(db, move);
+  if (result.status === "partial") result = await resumeMoneyMove(db, move.key);
+  if (result.status !== "replayed") {
+    return { status: result.status, applied: new Set(result.applied), error: result.error };
+  }
   const record = await db
     .collection<PoliticalMediaMoveRecord>(MONEY_MOVE_COLLECTION)
-    .findOne({ _id: key }, { projection: { status: 1 } });
-  if (!record) return { status: "rejected", applied: [], error: `no money move ${key}` };
-  if (record.status === "applied") return { status: "applied", applied: [] };
-  if (record.status === "rejected")
-    return { status: "rejected", applied: [], error: `money move ${key} was rejected` };
-  return resumeMoneyMove(db, key);
+    .findOne(
+      { _id: move.key },
+      { projection: { status: 1, error: 1, "legs.applied": 1, "legs.refusal": 1 } }
+    );
+  if (!record)
+    return { status: "rejected", applied: new Set(), error: `no money move ${move.key}` };
+  if (record.status === "partial") {
+    result = await resumeMoneyMove(db, move.key);
+    return { status: result.status, applied: new Set(result.applied), error: result.error };
+  }
+  const legs = record.legs ?? [];
+  if (record.status !== "applied")
+    return {
+      status: "rejected",
+      applied: new Set(),
+      error: record.error ?? `money move ${move.key} was ${record.status ?? "rejected"}`,
+    };
+  return {
+    status: "applied",
+    applied: new Set(legs.flatMap((leg, index) => (leg.applied ? [index] : []))),
+  };
 }
 
 export function politicalMediaOrderKey(orderId: string): string {
@@ -599,31 +638,274 @@ export async function settlePoliticalMediaOrder(
   return settleLoadedPoliticalMediaOrder(db, { ...saved, orderId }, turn);
 }
 
-/**
- * Settle an order the turn already loaded for clearing, without re-reading its
- * 4 KB record. Every money move keeps its own idempotency read; only the order
- * header read is skipped, and a replay still returns early on `settled`.
- */
-export async function settleLoadedPoliticalMediaOrder(
-  db: Db,
-  order: Pick<PoliticalMediaOrderForClearing, "orderId" | "status" | "identity" | "settlementPlan">,
-  turn: number
-): Promise<MoneyMoveResult[]> {
-  const { orderId } = order;
-  const key = politicalMediaOrderKey(orderId);
-  const orders = db.collection<PoliticalMediaMoveRecord>(MONEY_MOVE_COLLECTION);
-  const saved = order;
-  if (!saved.settlementPlan)
-    throw new Error(`Political media order ${orderId} has no funded settlement plan.`);
-  if (saved.status === "settled") return [];
-  const plan = saved.settlementPlan;
-  const results: MoneyMoveResult[] = [];
+/** One order's settlement outcome, as the turn loop consumes it. */
+export interface PoliticalMediaSettlementOutcome {
+  /** One result per seller allocation in plan order; a paid allocation is applied. */
+  results: MoneyMoveResult[];
+  /** True when the order's escrow was spent and the order counts as settled. */
+  settled: boolean;
+}
 
+/** Stable key for one order's whole settlement, instead of a move per seller. */
+function politicalMediaSettlementKey(orderId: string, plannedTurn: number): string {
+  return `political-media-settlement:${orderId}:${plannedTurn}`;
+}
+
+/**
+ * How far the payer refund may sit from the plan's unfilled anchor before it is
+ * worth a leg. Funding credited the exact requested anchor, so the escrow is
+ * spent whole and a residue below this stays in escrow instead of being paid out
+ * as dust.
+ */
+const SETTLEMENT_DUST_ANCHOR = 1e-9;
+
+interface BuiltSettlementMove {
+  move: MoneyMove;
+  /** Leg index carrying each plan seller's credit, in plan order, or -1 if it has no target. */
+  sellerLegIndex: number[];
+  /** True when a credit target was gone, so the move stops before it and the order stays open. */
+  truncated: boolean;
+}
+
+/**
+ * Collections a settlement can credit, in the closed set a plan can name: the
+ * paying corporation, the no-outlet budget and the payer's own account.
+ */
+type PoliticalMediaCreditCollection = "corporations" | "federalBudget" | "characters" | "campaigns";
+
+const POLITICAL_MEDIA_CREDIT_COLLECTIONS: readonly PoliticalMediaCreditCollection[] = [
+  "corporations",
+  "federalBudget",
+  "characters",
+  "campaigns",
+];
+
+/** A credit target, as the preflight remembers which ones were not there. */
+function creditTargetKey(collection: string, id: unknown): string {
+  return `${collection}\u0000${String(id)}`;
+}
+
+/** One `$in` read of the ids a collection does hold. Bounded by the whole cohort. */
+async function existingTargetIds(
+  db: Db,
+  collection: PoliticalMediaCreditCollection,
+  ids: readonly unknown[]
+): Promise<Set<string>> {
+  const rows = await db
+    .collection<PoliticalMediaTargetDocument>(collection)
+    .find({ _id: { $in: [...ids] } } as never, { projection: { _id: 1 } })
+    .toArray();
+  return new Set(rows.map((row) => creditTargetKey(collection, row._id)));
+}
+
+/**
+ * How many of these targets still hold this move's delivery receipt.
+ *
+ * A receipt that is still stamped means the leg may have landed even though the
+ * journal does not say so yet, so the answer decides between finishing the move
+ * and leaving it to reconciliation. One count per credited collection.
+ */
+async function countInFlightReceipts(
+  db: Db,
+  collection: PoliticalMediaCreditCollection,
+  ids: readonly unknown[],
+  key: string
+): Promise<number> {
+  return db
+    .collection<PoliticalMediaTargetDocument>(collection)
+    .countDocuments({ _id: { $in: [...ids] }, "pendingMoneyMoveReceipt.key": key } as never);
+}
+
+/**
+ * Read the documents this pass is about to credit, once for the whole cohort.
+ *
+ * A plan can name a seller whose corporation is gone, or a payer whose account
+ * was closed. The per-seller settlement found that out by refusing the credit
+ * after the escrow had already been debited for it, and the order then needed a
+ * second pass to finish around the hole. Knowing it before the move is claimed
+ * keeps the anchor of an undeliverable allocation in its escrow from the start,
+ * which is exactly where the retried per-seller path left it, and it costs one
+ * read per credited collection for the whole turn instead of one refusal per
+ * order.
+ */
+async function loadMissingSettlementTargets(
+  db: Db,
+  orders: readonly Pick<PoliticalMediaOrderForClearing, "orderId" | "identity" | "settlementPlan">[]
+): Promise<Set<string>> {
+  const idsByCollection = new Map<PoliticalMediaCreditCollection, Set<unknown>>();
+  const wanted = (collection: PoliticalMediaCreditCollection, id: unknown) => {
+    const ids = idsByCollection.get(collection) ?? new Set<unknown>();
+    ids.add(id);
+    idsByCollection.set(collection, ids);
+  };
+  for (const order of orders) {
+    const plan = order.settlementPlan;
+    if (!plan) continue;
+    for (const seller of plan.sellers)
+      wanted(
+        "corporations",
+        persistedId(seller.corporationId, ObjectId.isValid(seller.corporationId))
+      );
+    const fallback = plan.fallbackSpend;
+    if (fallback && fallback.amountAnchor > 0) wanted("federalBudget", fallback.budgetId);
+    const payer = order.identity.payer;
+    wanted(payer.collection, persistedId(payer.documentId, payer.documentIdIsObjectId));
+  }
+  const missing = new Set<string>();
+  for (const [collection, ids] of idsByCollection) {
+    const found = await existingTargetIds(db, collection, [...ids]);
+    for (const id of ids) {
+      const key = creditTargetKey(collection, id);
+      if (!found.has(key)) missing.add(key);
+    }
+  }
+  return missing;
+}
+
+/**
+ * One journaled move for a whole order: the escrow leaves once, and each payee
+ * is credited once.
+ *
+ * The per-allocation settlement spent one move per seller receipt, each with its
+ * own debit from the same escrow document, so an order that paid N sellers
+ * landed N receipts at thirteen round trips each. This move pays the same plan
+ * through one receipt: a single debit guarded by the same escrow balance, one
+ * credit per payee, the no-outlet fallback and the payer refund. Every leg nets
+ * to zero and every balance guard is the one the per-seller path used.
+ *
+ * Credits are declared in the order the per-seller path paid them: the plan's
+ * sellers, then the no-outlet fallback, then the unfilled refund. A credit whose
+ * target document is gone stops the list there, so the move spends exactly what
+ * the per-seller path would have spent before the same refusal, and an order
+ * that stopped short keeps its settling status instead of closing over a hole.
+ */
+function settlementMove(
+  order: Pick<PoliticalMediaOrderForClearing, "orderId" | "identity" | "settlementPlan"> & {
+    settlementPlan: PoliticalMediaSettlementPlan;
+  },
+  turn: number,
+  missing: ReadonlySet<string>
+): BuiltSettlementMove {
+  const { orderId, identity } = order;
+  const plan = order.settlementPlan;
+  const orderKey = politicalMediaOrderKey(orderId);
+  const payer = identity.payer;
+  const payerId = persistedId(payer.documentId, payer.documentIdIsObjectId);
+  const fallback = plan.fallbackSpend;
+  const fallbackAnchor = fallback && fallback.amountAnchor > 0 ? fallback.amountAnchor : 0;
+  const sellerAnchor = plan.sellers.reduce((sum, seller) => sum + seller.amountAnchor, 0);
+  const residual = identity.requestedAnchor - sellerAnchor - fallbackAnchor;
+  const refundAnchor = residual > SETTLEMENT_DUST_ANCHOR ? residual : 0;
+
+  const intents: { target: string; leg: MoneyMoveLeg }[] = [];
+  const sellerIntent: number[] = [];
+  // One credit per payee: two allocations paid to one corporation in one
+  // currency are one transfer carrying both allocations' receipts.
+  const payeeIntent = new Map<string, number>();
   for (const seller of plan.sellers) {
-    const receiptIdentity = {
-      orderId,
+    const sellerId = persistedId(seller.corporationId, ObjectId.isValid(seller.corporationId));
+    const payeeKey = `${seller.corporationId}\u0000${seller.sellerCurrencyCode}\u0000${seller.sellerLocalPerAnchor}`;
+    const existing = payeeIntent.get(payeeKey);
+    if (existing !== undefined) {
+      const leg = intents[existing].leg;
+      leg.amount += seller.sellerLocalAmount;
+      leg.set = {
+        ...leg.set,
+        [`politicalMediaReceipts.${orderId}.${seller.allocationId}`]: settlementReceipt({
+          orderId,
+          identity,
+          seller,
+        }),
+      };
+      sellerIntent.push(existing);
+      continue;
+    }
+    const index = intents.length;
+    payeeIntent.set(payeeKey, index);
+    intents.push({
+      target: creditTargetKey("corporations", sellerId),
+      leg: {
+        kind: "credit",
+        amount: seller.sellerLocalAmount,
+        valuation: {
+          currencyCode: seller.sellerCurrencyCode,
+          localPerAnchor: seller.sellerLocalPerAnchor,
+        },
+        collection: "corporations",
+        filter: { _id: sellerId },
+        path: "liquidCapital",
+        set: {
+          [`politicalMediaReceipts.${orderId}.${seller.allocationId}`]: settlementReceipt({
+            orderId,
+            identity,
+            seller,
+          }),
+        },
+        note: `political advertising receipt for order ${orderId}`,
+      },
+    });
+    sellerIntent.push(index);
+  }
+  if (fallback && fallbackAnchor > 0) {
+    const rawCurrencyGuard = fallback.currencyCodePresent
+      ? [{ currencyCode: { $exists: true } }, { currencyCode: fallback.rawCurrencyCode }]
+      : [{ currencyCode: { $exists: false } }];
+    intents.push({
+      target: creditTargetKey("federalBudget", fallback.budgetId),
+      leg: {
+        kind: "credit",
+        amount: fallback.amountLocal,
+        valuation: {
+          currencyCode: fallback.currencyCode,
+          localPerAnchor: fallback.localPerAnchor,
+        },
+        collection: "federalBudget",
+        filter: {
+          _id: fallback.budgetId,
+          countryId: fallback.countryId,
+          $and: rawCurrencyGuard,
+        },
+        path: fallback.balancePath,
+        note: `credit local no-outlet broadcaster fund for political advertising order ${orderId}`,
+      },
+    });
+  }
+  if (refundAnchor > 0) {
+    intents.push({
+      target: creditTargetKey(payer.collection, payerId),
+      leg: {
+        kind: "credit",
+        amount: refundAnchor * payer.localPerAnchor,
+        valuation: {
+          currencyCode: payer.currencyCode,
+          localPerAnchor: payer.localPerAnchor,
+        },
+        collection: payer.collection,
+        filter: { _id: payerId },
+        path: payer.path,
+        note: `refund unfilled political advertising order ${orderId}`,
+      },
+    });
+  }
+  const cut = intents.findIndex((intent) => missing.has(intent.target));
+  const kept = cut >= 0 ? intents.slice(0, cut) : intents;
+  const credits = kept.map((intent) => intent.leg);
+  const sellerLegIndex = sellerIntent.map((index) => (kept[index] ? index + 1 : -1));
+  const debitAmount = credits.reduce(
+    (sum, leg) => sum + leg.amount / (leg.valuation?.localPerAnchor ?? 1),
+    0
+  );
+
+  const quoteIdentity = {
+    orderId,
+    plannedTurn: plan.plannedTurn,
+    targetStateId: identity.targetStateId,
+    deliveredAnchor: plan.deliveredAnchor,
+    unfilledAnchor: plan.unfilledAnchor,
+    deliveredUnits: plan.deliveredUnits,
+    refundAnchor,
+    sellers: plan.sellers.map((seller) => ({
       allocationId: seller.allocationId,
-      targetStateId: saved.identity.targetStateId,
       sectorId: seller.sectorId,
       corporationId: seller.corporationId,
       units: seller.units,
@@ -631,176 +913,240 @@ export async function settleLoadedPoliticalMediaOrder(
       sellerLocalAmount: seller.sellerLocalAmount,
       sellerCurrencyCode: seller.sellerCurrencyCode,
       sellerLocalPerAnchor: seller.sellerLocalPerAnchor,
-    };
-    const payoutKey = `political-media-seller:${orderId}:${seller.allocationId}`;
-    const payoutAttempt = await applyMoneyMove(db, {
-      key: payoutKey,
-      kind: "political-media-seller-receipt",
+    })),
+    fallbackSpend: plan.fallbackSpend ?? null,
+    unpayableCredits: intents.slice(kept.length).map((intent) => intent.target),
+  };
+  // Every credit was undeliverable, so there is nothing to move and no receipt to
+  // claim: the order simply stays open with its escrow untouched.
+  const legs: MoneyMoveLeg[] =
+    debitAmount > 0
+      ? [
+          {
+            kind: "debit",
+            amount: debitAmount,
+            valuation: {
+              currencyCode: POLITICAL_MEDIA_ESCROW_CURRENCY,
+              localPerAnchor: POLITICAL_MEDIA_ESCROW_RATE,
+            },
+            collection: MONEY_MOVE_COLLECTION,
+            filter: { _id: orderKey, kind: POLITICAL_MEDIA_ORDER_KIND, status: "applied" },
+            path: "politicalMediaOrder.escrowBalanceAnchor",
+            note: `spend escrow for political advertising order ${orderId}`,
+          },
+          ...credits,
+        ]
+      : [];
+  return {
+    truncated: cut >= 0,
+    move: {
+      key: politicalMediaSettlementKey(orderId, plan.plannedTurn),
+      kind: "political-media-settlement",
       turn,
-      quoteIdentity: receiptIdentity,
-      record: { politicalMediaOrderIdentity: receiptIdentity },
-      legs: [
-        {
-          kind: "debit",
-          amount: seller.amountAnchor,
-          valuation: {
-            currencyCode: POLITICAL_MEDIA_ESCROW_CURRENCY,
-            localPerAnchor: POLITICAL_MEDIA_ESCROW_RATE,
-          },
-          collection: MONEY_MOVE_COLLECTION,
-          filter: { _id: key, kind: POLITICAL_MEDIA_ORDER_KIND, status: "applied" },
-          path: "politicalMediaOrder.escrowBalanceAnchor",
-          note: `pay seller ${seller.corporationId} for political advertising order ${orderId}`,
-        },
-        {
-          kind: "credit",
-          amount: seller.sellerLocalAmount,
-          valuation: {
-            currencyCode: seller.sellerCurrencyCode,
-            localPerAnchor: seller.sellerLocalPerAnchor,
-          },
-          collection: "corporations",
-          filter: {
-            _id: persistedId(seller.corporationId, ObjectId.isValid(seller.corporationId)),
-          },
-          path: "liquidCapital",
-          set: {
-            [`politicalMediaReceipts.${orderId}.${seller.allocationId}`]: receiptIdentity,
-          },
-          note: `political advertising receipt for order ${orderId}`,
-        },
-      ],
-    });
-    const payout = await finishOrResumeMove(db, payoutKey, payoutAttempt);
-    results.push(payout);
-    if (payout.status !== "applied" && payout.status !== "replayed") return results;
-  }
-
-  const fallback = plan.fallbackSpend;
-  if (fallback && fallback.amountAnchor > 0) {
-    const fallbackKey = `political-media-no-outlet:${orderId}`;
-    const rawCurrencyGuard = fallback.currencyCodePresent
-      ? [{ currencyCode: { $exists: true } }, { currencyCode: fallback.rawCurrencyCode }]
-      : [{ currencyCode: { $exists: false } }];
-    const fallbackIdentity = {
-      orderId,
-      countryId: fallback.countryId,
-      targetStateId: saved.identity.targetStateId,
-      amountAnchor: fallback.amountAnchor,
-      budgetId: fallback.budgetId,
-      currencyCode: fallback.currencyCode,
-      currencyCodePresent: fallback.currencyCodePresent,
-      rawCurrencyCode: fallback.rawCurrencyCode ?? null,
-      localPerAnchor: fallback.localPerAnchor,
-      amountLocal: fallback.amountLocal,
-      balancePath: fallback.balancePath,
-    };
-    const fallbackAttempt = await applyMoneyMove(db, {
-      key: fallbackKey,
-      kind: "political-media-no-outlet-fallback",
-      turn: plan.plannedTurn,
-      quoteIdentity: fallbackIdentity,
-      record: { politicalMediaOrderIdentity: fallbackIdentity },
-      legs: [
-        {
-          kind: "debit",
-          amount: fallback.amountAnchor,
-          valuation: {
-            currencyCode: POLITICAL_MEDIA_ESCROW_CURRENCY,
-            localPerAnchor: POLITICAL_MEDIA_ESCROW_RATE,
-          },
-          collection: MONEY_MOVE_COLLECTION,
-          filter: { _id: key, kind: POLITICAL_MEDIA_ORDER_KIND, status: "applied" },
-          path: "politicalMediaOrder.escrowBalanceAnchor",
-          note: `spend funded local fallback for political advertising order ${orderId}`,
-        },
-        {
-          kind: "credit",
-          amount: fallback.amountLocal,
-          valuation: {
-            currencyCode: fallback.currencyCode,
-            localPerAnchor: fallback.localPerAnchor,
-          },
-          collection: "federalBudget",
-          filter: {
-            _id: fallback.budgetId,
-            countryId: fallback.countryId,
-            $and: rawCurrencyGuard,
-          },
-          path: fallback.balancePath,
-          note: `credit local no-outlet broadcaster fund for political advertising order ${orderId}`,
-        },
-      ],
-    });
-    const fallbackReceipt = await finishOrResumeMove(db, fallbackKey, fallbackAttempt);
-    results.push(fallbackReceipt);
-    if (fallbackReceipt.status !== "applied" && fallbackReceipt.status !== "replayed")
-      return results;
-  }
-
-  const payer = saved.identity.payer;
-  if (plan.unfilledAnchor > 0) {
-    const refundLocal = plan.unfilledAnchor * payer.localPerAnchor;
-    const refundKey = `political-media-refund:${orderId}`;
-    const refundAttempt = await applyMoneyMove(db, {
-      key: refundKey,
-      kind: "political-media-refund",
-      turn,
-      quoteIdentity: {
-        orderId,
-        targetStateId: saved.identity.targetStateId,
-        refundAnchor: plan.unfilledAnchor,
-        refundLocal,
-        payerCurrencyCode: payer.currencyCode,
-        payerLocalPerAnchor: payer.localPerAnchor,
-      },
+      quoteIdentity,
       record: {
-        politicalMediaOrderIdentity: {
-          orderId,
-          targetStateId: saved.identity.targetStateId,
-          refundAnchor: plan.unfilledAnchor,
-          refundLocal,
-          payerCurrencyCode: payer.currencyCode,
-          payerLocalPerAnchor: payer.localPerAnchor,
-        },
+        politicalMediaOrderIdentity: quoteIdentity,
+        politicalMediaSettlement: { orderId, plannedTurn: plan.plannedTurn },
       },
-      legs: [
-        {
-          kind: "debit",
-          amount: plan.unfilledAnchor,
-          valuation: {
-            currencyCode: POLITICAL_MEDIA_ESCROW_CURRENCY,
-            localPerAnchor: POLITICAL_MEDIA_ESCROW_RATE,
-          },
-          collection: MONEY_MOVE_COLLECTION,
-          filter: { _id: key, kind: POLITICAL_MEDIA_ORDER_KIND, status: "applied" },
-          path: "politicalMediaOrder.escrowBalanceAnchor",
-          note: `release unfilled escrow for political advertising order ${orderId}`,
-        },
-        {
-          kind: "credit",
-          amount: refundLocal,
-          valuation: {
-            currencyCode: payer.currencyCode,
-            localPerAnchor: payer.localPerAnchor,
-          },
-          collection: payer.collection,
-          filter: { _id: persistedId(payer.documentId, payer.documentIdIsObjectId) },
-          path: payer.path,
-          note: `refund unfilled political advertising order ${orderId}`,
-        },
-      ],
-    });
-    const refund = await finishOrResumeMove(db, refundKey, refundAttempt);
-    results.push(refund);
-    if (refund.status !== "applied" && refund.status !== "replayed") return results;
-  }
+      legs,
+    },
+    sellerLegIndex,
+  };
+}
 
-  await orders.updateOne(
-    { _id: key, kind: POLITICAL_MEDIA_ORDER_KIND, status: "applied" },
-    { $set: { "politicalMediaOrder.status": "settled" } }
+/** The receipt one seller allocation leaves on the corporation it is paid to. */
+function settlementReceipt(args: {
+  orderId: string;
+  identity: PoliticalMediaOrderIdentity;
+  seller: PoliticalMediaSellerReceiptPlan;
+}): Record<string, unknown> {
+  return {
+    orderId: args.orderId,
+    allocationId: args.seller.allocationId,
+    targetStateId: args.identity.targetStateId,
+    sectorId: args.seller.sectorId,
+    corporationId: args.seller.corporationId,
+    units: args.seller.units,
+    amountAnchor: args.seller.amountAnchor,
+    sellerLocalAmount: args.seller.sellerLocalAmount,
+    sellerCurrencyCode: args.seller.sellerCurrencyCode,
+    sellerLocalPerAnchor: args.seller.sellerLocalPerAnchor,
+  };
+}
+
+/**
+ * Give back the anchor of every credit leg that did not land.
+ *
+ * The preflight keeps a target that no longer exists out of the move, so a
+ * credit still undelivered here is one its own document refused: a contended
+ * generation, or a currency guard on the no-outlet fund. Its escrow was debited
+ * for it, so the amount goes back through its own keyed receipt and the order
+ * settles with that allocation unpaid. The anchor stays visible in escrow rather
+ * than being retried against a guard that just rejected it, which is where the
+ * per-seller path converged after the same refusal. A credit whose delivery
+ * receipt is still stamped may have landed, so only reconciliation may decide
+ * that one and the order stays open for another pass.
+ */
+async function returnUndeliveredCredits(
+  db: Db,
+  orderKey: string,
+  move: MoneyMove,
+  applied: ReadonlySet<number>,
+  turn: number
+): Promise<boolean> {
+  const undelivered = move.legs.flatMap((leg, index) =>
+    leg.kind === "credit" && !applied.has(index) ? [leg] : []
   );
-  return results;
+  if (undelivered.length === 0) return true;
+  const byCollection = new Map<PoliticalMediaCreditCollection, unknown[]>();
+  for (const leg of undelivered) {
+    const collection = leg.collection as PoliticalMediaCreditCollection | undefined;
+    if (
+      !collection ||
+      !POLITICAL_MEDIA_CREDIT_COLLECTIONS.includes(collection) ||
+      leg.filter?._id === undefined
+    )
+      return false;
+    const ids = byCollection.get(collection) ?? [];
+    ids.push(leg.filter._id);
+    byCollection.set(collection, ids);
+  }
+  for (const [collection, ids] of byCollection) {
+    if ((await countInFlightReceipts(db, collection, ids, move.key)) > 0) return false;
+  }
+  const amount = undelivered.reduce(
+    (sum, leg) => sum + leg.amount / (leg.valuation?.localPerAnchor ?? 1),
+    0
+  );
+  if (!(amount > 0)) return true;
+  const returned = await settleMove(db, {
+    key: `${move.key}:return`,
+    kind: "political-media-settlement-return",
+    turn,
+    quoteIdentity: { settlement: move.key, amountAnchor: amount },
+    record: {
+      politicalMediaSettlement: move.record?.politicalMediaSettlement,
+      politicalMediaSettlementReturn: { settlement: move.key, amountAnchor: amount },
+    },
+    legs: [
+      {
+        kind: "credit",
+        amount,
+        valuation: {
+          currencyCode: POLITICAL_MEDIA_ESCROW_CURRENCY,
+          localPerAnchor: POLITICAL_MEDIA_ESCROW_RATE,
+        },
+        collection: MONEY_MOVE_COLLECTION,
+        filter: { _id: orderKey, kind: POLITICAL_MEDIA_ORDER_KIND, status: "applied" },
+        path: "politicalMediaOrder.escrowBalanceAnchor",
+        note: "return undelivered political advertising cash to escrow",
+      },
+      {
+        kind: "mint",
+        amount,
+        valuation: {
+          currencyCode: POLITICAL_MEDIA_ESCROW_CURRENCY,
+          localPerAnchor: POLITICAL_MEDIA_ESCROW_RATE,
+        },
+        note: "contra for the undelivered part of this settlement",
+      },
+    ],
+  });
+  // A return that could not land leaves the order open, so the next pass finishes
+  // it rather than closing the order over cash that is still in the journal.
+  return returned.status === "applied";
+}
+
+/**
+ * Settle the orders the turn already loaded for clearing.
+ *
+ * One journaled move per order, one settlement mark per cohort: the orders are
+ * loaded once, each pays its plan through a single receipt, and every order that
+ * finished is closed by one bulk write instead of one update each.
+ */
+export async function settleLoadedPoliticalMediaOrders(
+  db: Db,
+  orders: readonly Pick<
+    PoliticalMediaOrderForClearing,
+    "orderId" | "status" | "identity" | "settlementPlan"
+  >[],
+  turn: number
+): Promise<Map<string, PoliticalMediaSettlementOutcome>> {
+  const outcomes = new Map<string, PoliticalMediaSettlementOutcome>();
+  const settledKeys: string[] = [];
+  const missing = await loadMissingSettlementTargets(db, orders);
+  for (const order of orders) {
+    const outcome = await settleLoadedOrder(db, order, turn, missing);
+    outcomes.set(order.orderId, outcome);
+    if (outcome.settled && order.status !== "settled")
+      settledKeys.push(politicalMediaOrderKey(order.orderId));
+  }
+  if (settledKeys.length > 0) {
+    await db.collection<PoliticalMediaMoveRecord>(MONEY_MOVE_COLLECTION).bulkWrite(
+      settledKeys.map((key) => ({
+        updateOne: {
+          filter: { _id: key, kind: POLITICAL_MEDIA_ORDER_KIND, status: "applied" },
+          update: { $set: { "politicalMediaOrder.status": "settled" } },
+        },
+      })),
+      { ordered: false }
+    );
+  }
+  return outcomes;
+}
+
+async function settleLoadedOrder(
+  db: Db,
+  order: Pick<PoliticalMediaOrderForClearing, "orderId" | "status" | "identity" | "settlementPlan">,
+  turn: number,
+  missing: ReadonlySet<string>
+): Promise<PoliticalMediaSettlementOutcome> {
+  const { orderId } = order;
+  const plan = order.settlementPlan;
+  if (!plan) throw new Error(`Political media order ${orderId} has no funded settlement plan.`);
+  if (order.status === "settled") return { results: [], settled: true };
+  const built = settlementMove({ ...order, settlementPlan: plan }, turn, missing);
+  if (built.move.legs.length === 0)
+    return {
+      results: plan.sellers.map(() => ({ status: "rejected" as const, applied: [] })),
+      settled: false,
+    };
+  const paid = await settleMove(db, built.move);
+  const applied = new Set(paid.applied);
+  // Every leg landed: the escrow spent what it owed and the order is settled.
+  // An order whose plan reached a credit it cannot deliver stays open, exactly
+  // where the per-seller path stopped when the same receipt was refused.
+  let settled = !built.truncated && applied.size === built.move.legs.length;
+  if (!settled && !built.truncated && applied.has(0)) {
+    // The escrow left in full, so the anchor of each credit that did not land
+    // goes back into it and the order settles with that allocation unpaid.
+    settled = await returnUndeliveredCredits(
+      db,
+      politicalMediaOrderKey(orderId),
+      built.move,
+      applied,
+      turn
+    );
+  }
+  // The escrow debit itself did not land, so no cash moved and the plan stays
+  // owed; the order keeps its settling status and is retried next turn.
+  const results: MoneyMoveResult[] = plan.sellers.map((_, index) => {
+    const leg = built.sellerLegIndex[index];
+    return applied.has(leg)
+      ? { status: "applied", applied: [leg] }
+      : { status: "rejected", applied: [] };
+  });
+  return { results, settled };
+}
+
+/** Settle one order the turn loaded for clearing, for callers that have just one. */
+export async function settleLoadedPoliticalMediaOrder(
+  db: Db,
+  order: Pick<PoliticalMediaOrderForClearing, "orderId" | "status" | "identity" | "settlementPlan">,
+  turn: number
+): Promise<MoneyMoveResult[]> {
+  const outcomes = await settleLoadedPoliticalMediaOrders(db, [order], turn);
+  return outcomes.get(order.orderId)?.results ?? [];
 }
 
 /** Apply a fully paid order's game effect once, after its seller receipts land. */
@@ -816,13 +1162,41 @@ export async function applyPoliticalMediaOrderEffect(db: Db, orderId: string): P
   return applyPoliticalMediaOrderEffectToOrder(db, orderId, record.politicalMediaOrder);
 }
 
+/** The documents a political media effect can land on. */
+type PoliticalMediaTargetCollection = Extract<
+  PoliticalMediaOrderEffect,
+  { kind: "favorability" }
+>["targetCollection"];
+
+/**
+ * Raise every listed document's favour by its own amount, one round trip.
+ *
+ * Each write carries the order's receipt path in the same update, so a replayed
+ * pass recognises a document that already took the effect. Bounded by the number
+ * of orders in the cohort, across the at most three target collections.
+ */
+async function applyFavourabilityBulk(
+  db: Db,
+  collection: PoliticalMediaTargetCollection,
+  writes: AnyBulkWriteOperation<PoliticalMediaTargetDocument>[]
+): Promise<number> {
+  const result = await db
+    .collection<PoliticalMediaTargetDocument>(collection)
+    .bulkWrite(writes, { ordered: false });
+  return result.matchedCount;
+}
+
 /**
  * Apply the effects of many orders with one read for the whole set.
  *
  * The per-order entry point re-read the full 97 KB money-move record for each
  * order, and the turn then called it for every order it had loaded. One `$in`
- * read of the affected orders replaces that, and each order's effect still runs
- * through the same guarded target update, so a replay is unchanged.
+ * read of the affected orders replaces that. An effect that lands on its own
+ * document shares one target write and one receipt write with the whole cohort,
+ * since a favourability gain and a receipt path on a document no other order
+ * touches cannot collide. Two orders on one document, and a targeted-ad array
+ * that needs its own revision compare-and-set, keep the per-order path, which
+ * knows how to retry them.
  */
 export async function applyPoliticalMediaOrderEffects(
   db: Db,
@@ -830,19 +1204,131 @@ export async function applyPoliticalMediaOrderEffects(
 ): Promise<number> {
   if (orderIds.length === 0) return 0;
   const orders = db.collection<PoliticalMediaMoveRecord>(MONEY_MOVE_COLLECTION);
-  const keys = orderIds.map(politicalMediaOrderKey);
   const records = await orders
     .find(
-      { _id: { $in: keys }, kind: POLITICAL_MEDIA_ORDER_KIND, status: "applied" },
+      {
+        _id: { $in: orderIds.map(politicalMediaOrderKey) },
+        kind: POLITICAL_MEDIA_ORDER_KIND,
+        status: "applied",
+      },
       { projection: { politicalMediaOrder: 1 } }
     )
     .toArray();
   const byKey = new Map(records.map((record) => [record._id, record.politicalMediaOrder]));
   let applied = 0;
+  const receiptKeys: string[] = [];
+  const ordersPerDocument = new Map<string, number>();
+  const favourites: {
+    orderId: string;
+    effect: Extract<PoliticalMediaOrderEffect, { kind: "favorability" }>;
+    order: PoliticalMediaOrderRecord;
+  }[] = [];
+  const deferred: { orderId: string; order: PoliticalMediaOrderRecord }[] = [];
   for (const orderId of orderIds) {
     const order = byKey.get(politicalMediaOrderKey(orderId));
     if (!order) continue;
+    if (order.status !== "settled" || !order.settlementPlan) continue;
+    if (order.effectApplied) {
+      applied += 1;
+      continue;
+    }
+    const rawEffect = order.identity.details.effect;
+    const effect =
+      rawEffect === undefined
+        ? { kind: "none" as const }
+        : parsePoliticalMediaOrderEffect(rawEffect);
+    if (effect?.kind === "none") {
+      receiptKeys.push(politicalMediaOrderKey(orderId));
+      applied += 1;
+      continue;
+    }
+    if (!effect) continue;
+    if (effect.kind === "favorability" && Number.isFinite(effect.amount) && effect.amount > 0) {
+      const documentKey = `${effect.targetCollection}\u0000${effect.targetDocumentId}`;
+      ordersPerDocument.set(documentKey, (ordersPerDocument.get(documentKey) ?? 0) + 1);
+      favourites.push({ orderId, effect, order });
+      continue;
+    }
+    deferred.push({ orderId, order });
+  }
+  const shared = new Set(
+    favourites
+      .filter(
+        (entry) =>
+          (ordersPerDocument.get(
+            `${entry.effect.targetCollection}\u0000${entry.effect.targetDocumentId}`
+          ) ?? 0) > 1
+      )
+      .map((entry) => entry.orderId)
+  );
+  const byCollection = new Map<PoliticalMediaTargetCollection, typeof favourites>();
+  for (const entry of favourites) {
+    if (shared.has(entry.orderId)) {
+      deferred.push({ orderId: entry.orderId, order: entry.order });
+      continue;
+    }
+    const entries = byCollection.get(entry.effect.targetCollection) ?? [];
+    entries.push(entry);
+    byCollection.set(entry.effect.targetCollection, entries);
+  }
+  for (const [collection, entries] of byCollection) {
+    const writes: AnyBulkWriteOperation<PoliticalMediaTargetDocument>[] = entries.map((entry) => {
+      const fillRatio = politicalMediaFillRatio(
+        entry.order.settlementPlan!.deliveredAnchor,
+        entry.order.identity.requestedAnchor
+      );
+      const amount = entry.effect.amount * fillRatio;
+      const receiptPath = `politicalMediaAppliedOrders.${entry.orderId}`;
+      return {
+        updateOne: {
+          filter: {
+            _id: persistedId(
+              entry.effect.targetDocumentId,
+              entry.effect.targetDocumentIdIsObjectId
+            ),
+            [receiptPath]: { $exists: false },
+          },
+          update: [
+            {
+              $set: {
+                favorability: {
+                  $min: [100, { $max: [0, { $add: [{ $ifNull: ["$favorability", 0] }, amount] }] }],
+                },
+                [receiptPath]: true,
+              },
+            },
+          ],
+        },
+      };
+    });
+    const matched = await applyFavourabilityBulk(db, collection, writes);
+    if (matched === writes.length) {
+      for (const entry of entries) receiptKeys.push(politicalMediaOrderKey(entry.orderId));
+      applied += entries.length;
+      continue;
+    }
+    // A document that did not take its receipt may be gone, or may already have
+    // applied an earlier pass. The per-order path tells the two apart and writes
+    // the receipt for whichever it finds.
+    for (const entry of entries)
+      if (await applyPoliticalMediaOrderEffectToOrder(db, entry.orderId, entry.order)) applied += 1;
+  }
+  for (const { orderId, order } of deferred)
     if (await applyPoliticalMediaOrderEffectToOrder(db, orderId, order)) applied += 1;
+  if (receiptKeys.length > 0) {
+    await orders.bulkWrite(
+      receiptKeys.map((key) => ({
+        updateOne: {
+          filter: {
+            _id: key,
+            kind: POLITICAL_MEDIA_ORDER_KIND,
+            "politicalMediaOrder.status": "settled",
+          },
+          update: { $set: { "politicalMediaOrder.effectApplied": true } },
+        },
+      })),
+      { ordered: false }
+    );
   }
   return applied;
 }
