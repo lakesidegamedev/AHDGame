@@ -13,7 +13,9 @@ import type { ParliamentaryGovernment } from "@/lib/db/types/parliamentaryGovern
 import type { StatePartyOrg } from "@/lib/db/types/statePartyOrg";
 import type { CeoNiTier } from "@/lib/actions/positionNiBonus";
 import { loadOrganizationHeads } from "@/lib/internationalOrganizations/orgHeadAgenda";
-import { resolveOppositionLeaderForCountry } from "@/lib/parliament/oppositionLeader";
+import { resolveOppositionLeaderFromState } from "@/lib/parliament/oppositionLeader";
+import { getLowerChamberOfficeType } from "@/lib/legislature/chamberOfficeType";
+import type { PoliticalParty } from "@/lib/db/types/party";
 
 /** CEOs of the largest listed corporations in a country earn the major tier. */
 export const MAJOR_CEO_RANK = 10;
@@ -40,16 +42,33 @@ export interface OppositionRoles {
  * Leaders of the Opposition and their shadow cabinets. A shadow cabinet only
  * counts while its party is the one the Leader of the Opposition leads, so a
  * stale bench left on a party that has since entered government earns nothing.
+ *
+ * Every input the per-country resolver needs is loaded once for all countries
+ * here: the resolver's document lookups are otherwise four round trips per
+ * country, run one country at a time, on the turn's biggest write phase. The
+ * resolution itself stays in `resolveOppositionLeader` so this cannot diverge
+ * from the plaque the executive hub renders.
  */
 export async function loadOppositionRoles(db: Db): Promise<OppositionRoles> {
   const [formations, governments] = await Promise.all([
     db
       .collection<GovernmentFormation>("governmentFormations")
-      .find({}, { projection: { _id: 1, countryId: 1 } })
+      .find(
+        {},
+        {
+          projection: {
+            _id: 1,
+            countryId: 1,
+            governingPartyId: 1,
+            coalitionPartyIds: 1,
+            coalitionId: 1,
+          },
+        }
+      )
       .toArray(),
     db
       .collection<ParliamentaryGovernment>("parliamentaryGovernments")
-      .find({}, { projection: { _id: 1 } })
+      .find({}, { projection: { _id: 1, governingPartyId: 1, coalitionPartyIds: 1 } })
       .toArray(),
   ]);
   const countries = new Set<CountryId>([
@@ -58,8 +77,59 @@ export async function loadOppositionRoles(db: Db): Promise<OppositionRoles> {
   ]);
   const leaderIds = new Set<string>();
   const shadowCabinetIds = new Set<string>();
+  if (countries.size === 0) return { leaderIds, shadowCabinetIds };
+
+  const countryIds = [...countries];
+  const lowerOfficeByCountry = new Map<string, string>();
+  for (const countryId of countryIds) {
+    lowerOfficeByCountry.set(countryId, getLowerChamberOfficeType(countryId));
+  }
+  const lowerOfficeTypes = [...new Set(lowerOfficeByCountry.values())];
+  const [officials, partyDocs] = await Promise.all([
+    db
+      .collection<ElectedOfficial>("electedOfficials")
+      .find(
+        { countryId: { $in: countryIds }, officeType: { $in: lowerOfficeTypes } },
+        { projection: { countryId: 1, officeType: 1, party: 1, seatsHeld: 1 } }
+      )
+      .toArray(),
+    db
+      .collection<PoliticalParty>("politicalParties")
+      .find({ countryId: { $in: countryIds } })
+      .toArray(),
+  ]);
+  const seatTallyByCountry = new Map<string, Record<string, number>>();
+  for (const official of officials) {
+    const officialCountry = official.countryId;
+    if (!officialCountry || !official.party) continue;
+    // Only the country's own lower chamber counts, exactly as the single-country
+    // resolver filters it.
+    if (official.officeType !== lowerOfficeByCountry.get(officialCountry)) continue;
+    const seats = seatTallyByCountry.get(officialCountry) ?? {};
+    seats[official.party] = (seats[official.party] ?? 0) + (official.seatsHeld ?? 1);
+    seatTallyByCountry.set(officialCountry, seats);
+  }
+  const partiesByCountry = new Map<string, Map<string, PoliticalParty>>();
+  for (const party of partyDocs) {
+    const bySeq = partiesByCountry.get(party.countryId) ?? new Map<string, PoliticalParty>();
+    bySeq.set(String(party.sequentialId), party);
+    partiesByCountry.set(party.countryId, bySeq);
+  }
+  const formationByCountry = new Map<string, GovernmentFormation>();
+  for (const formation of formations) formationByCountry.set(String(formation._id), formation);
+  const parlGovByCountry = new Map<string, ParliamentaryGovernment>();
+  for (const government of governments) parlGovByCountry.set(String(government._id), government);
+
   for (const countryId of countries) {
-    const opposition = await resolveOppositionLeaderForCountry(db, countryId);
+    const key = countryId as string;
+    const opposition = await resolveOppositionLeaderFromState(
+      db,
+      countryId,
+      seatTallyByCountry.get(key) ?? {},
+      partiesByCountry.get(key) ?? new Map(),
+      formationByCountry.get(key) ?? null,
+      parlGovByCountry.get(key) ?? null
+    );
     if (!opposition) continue;
     leaderIds.add(opposition.chairId.toString());
     for (const appointment of Object.values(opposition.partyDoc?.shadowCabinet ?? {})) {

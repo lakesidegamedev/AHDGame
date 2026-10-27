@@ -169,6 +169,25 @@ describe("recomputeSharePricesAfterBondTurn", () => {
     expect(histOps[0].updateOne.update.$set.liquidCapital).toBe(corp.liquidCapital);
   });
 
+  it("reads this turn's snapshot without the shareholder register", async () => {
+    // corporationHistory rows carry every shareholder and the SOE backing
+    // breakdown; the pricing pass reads four numbers from them.
+    const cursor = makeCursor([histDoc]);
+    db.collectionMocks.corporationHistory.find.mockReturnValue(cursor);
+
+    const { recomputeSharePricesAfterBondTurn } = await import("./recomputeSharePrices");
+    await recomputeSharePricesAfterBondTurn(turn, db as unknown as Db);
+
+    const projected = cursor.project.mock.calls[0][0] as Record<string, number>;
+    expect(projected.corporationId).toBe(1);
+    expect(projected.sharePrice).toBe(1);
+    expect(projected.sectorNPV).toBe(1);
+    expect(projected.perTurnBondCouponIncome).toBe(1);
+    expect(projected.perTurnBondDragOnNetIncome).toBe(1);
+    expect(projected).not.toHaveProperty("shareholders");
+    expect(projected).not.toHaveProperty("soeBacking");
+  });
+
   it("reprices a corp with an unrecognized countryId instead of crashing the whole phase", async () => {
     // Incident 2026-07-22: a corp kept the pre-rename "BY" Belarus code after
     // 348fcf61b renamed it to "BLR" without a data migration. getCountryConfig

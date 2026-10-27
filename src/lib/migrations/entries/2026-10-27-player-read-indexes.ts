@@ -102,6 +102,15 @@ const INDEXES: IndexPlan[] = [
     keys: { kind: 1, status: 1, turn: 1 },
     options: { name: "bankMoneyMoves_kind_status_turn" },
   },
+  // Primary snapshots recorded so far this turn, read once per turn and once
+  // per half-hour tick to keep a re-run turn idempotent. The existing
+  // { electionId, recordedAt } index cannot bound `turn`, so it fetched every
+  // snapshot the race has ever recorded and filtered in memory.
+  {
+    collection: "primarySnapshots",
+    keys: { electionId: 1, turn: 1 },
+    options: { name: "primarySnapshots_election_turn" },
+  },
 ];
 
 export const migration: Migration = {

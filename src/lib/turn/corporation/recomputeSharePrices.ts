@@ -117,7 +117,29 @@ export async function recomputeSharePricesAfterBondTurn(
   // the plants trailing-growth estimator (sectorNPV history); still one query,
   // no per-corp reads.
   const [histRows, prevHistRows] = await Promise.all([
-    database.collection<CorporationHistory>("corporationHistory").find({ turn }).toArray(),
+    database
+      .collection<CorporationHistory>("corporationHistory")
+      .find({ turn })
+      // Snapshot rows carry the full shareholder register and the SOE backing
+      // breakdown; this pass prices off four numbers from each. Projected, the
+      // read is a few hundred bytes per corp instead of the whole snapshot.
+      .project<
+        Pick<
+          CorporationHistory,
+          | "corporationId"
+          | "sharePrice"
+          | "sectorNPV"
+          | "perTurnBondCouponIncome"
+          | "perTurnBondDragOnNetIncome"
+        >
+      >({
+        corporationId: 1,
+        sharePrice: 1,
+        sectorNPV: 1,
+        perTurnBondCouponIncome: 1,
+        perTurnBondDragOnNetIncome: 1,
+      })
+      .toArray(),
     database
       .collection<CorporationHistory>("corporationHistory")
       .find({ turn: { $gte: turn - TRAILING_GROWTH_WINDOW_TURNS, $lt: turn } })
