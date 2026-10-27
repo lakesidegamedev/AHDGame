@@ -659,7 +659,15 @@ export function isolatedShadowEnv(env: ProducerPhysicalEnv): ProducerPhysicalEnv
 /** A new map holding a copy of each state's accumulator, never the live one. */
 function copyStateAccumulators<T extends { weighted: number; workers: number }>(
   source: ReadonlyMap<string, T>
-): Map<string, T> {
+): Map<string, T>;
+function copyStateAccumulators<T extends { weighted: number; workers: number }>(
+  source: ReadonlyMap<string, T> | undefined
+): Map<string, T> | undefined;
+function copyStateAccumulators<T extends { weighted: number; workers: number }>(
+  source: ReadonlyMap<string, T> | undefined
+): Map<string, T> | undefined {
+  // structuredClone(undefined) was undefined; an absent collector stays absent.
+  if (!source) return undefined;
   const copy = new Map<string, T>();
   for (const [stateId, accumulator] of source) copy.set(stateId, { ...accumulator });
   return copy;
@@ -741,7 +749,10 @@ export function shadowOpeningSector(
         inputStock: carried.inputStock,
         outputStock: carried.outputStock,
       },
-      producerSettlement: { ...carried.receipt, turn: turn - 1 },
+      producerSettlement: {
+        ...carried.receipt,
+        turn: turn - 1,
+      } as CorporateSector["producerSettlement"],
     });
   if (sector.producerCapacity && sector.producerInventory) return sector;
   const outputStock = Object.entries(sector.inventoryUnits ?? {})

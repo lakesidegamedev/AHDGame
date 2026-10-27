@@ -1248,7 +1248,7 @@ function commodityFlowKey(
   // is what normalizeFlows reads.
   for (const commodity in flows) {
     if (!Object.hasOwn(flows, commodity)) continue;
-    const rate = flows[commodity as CommodityType];
+    const rate = (flows as Partial<Record<CommodityType, number>>)[commodity as CommodityType];
     if (typeof rate === "number" && rate > 0) key += `${commodity}:${rate};`;
   }
   return key;

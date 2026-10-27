@@ -89,7 +89,7 @@ function sector(): CorporateSector {
 
 function carried(): ShadowPlantCarry {
   return {
-    inputStock: [{ commodity: "advertising", book: "world", units: 2 }],
+    inputStock: [{ commodity: "advertising", units: 2, value: 2 }],
     outputStock: [{ commodity: "financial_services", book: "world", units: 7 }],
     receipt: {
       activeUnits: 12,
