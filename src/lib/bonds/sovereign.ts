@@ -1401,14 +1401,13 @@ export async function settleFundedSovereignBondMaturity(
       // lacks by selling a refunding issue to the market, never by defaulting.
       if (!budget.countryId || getNationalBudgetId(budget.countryId as CountryId) !== budgetId)
         return null;
-      const liveBond = await db
-        .collection<Bond>("bonds")
-        .findOne({ _id: bond._id }, { projection: { totalIssued: 1 } });
       const refunded = await refundSovereignMaturityShortfall(db, {
         sourceBond: bond,
         claimId,
-        retiringFaceLocal: liveBond?.totalIssued ?? bond.totalIssued,
-        alreadyRefundedLocal: quote.refundedFaceLocal ?? 0,
+        // Bounded by the cash this claim owes its non-bank holders, so the
+        // total ever raised for them cannot exceed what they are paid.
+        scopeOwedLocal: cashAmountLocal,
+        scopeRefundedLocal: quote.refundedHolderFaceLocal ?? 0,
         shortfallLocal: cashAmountLocal - cashOnHand,
         countryId: budget.countryId,
         budgetId,

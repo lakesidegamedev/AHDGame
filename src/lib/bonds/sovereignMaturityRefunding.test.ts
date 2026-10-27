@@ -5,6 +5,7 @@ import type { Bond } from "@/lib/db/types/bond";
 import { settleFundedSovereignBondMaturity } from "./sovereign";
 import { settleSovereignBondMaturityBond } from "./sovereignMaturityBond";
 import { planSovereignMaturityRefunding } from "./rules/sovereignMaturityRefunding";
+import { settleBankSovereignClaims } from "@/lib/banking/bankSovereignClaims";
 
 vi.mock("@/lib/db/runRequiredTransaction", () => ({
   runRequiredTransaction: async (body: (session: unknown) => Promise<unknown>) => body({} as never),
@@ -220,17 +221,18 @@ describe("unfunded sovereign maturity refinances instead of stalling", () => {
 });
 
 describe("bank holder of an unfunded maturity", () => {
-  function bankWorld(status: "active" | "failed") {
-    const memory = world({ treasuryCash: 100 });
+  function bankWorld(status: "active" | "failed" | "resolved", poolCash?: number) {
+    const memory = world({ treasuryCash: 100, poolCash });
     memory.seed("corporations", [
       {
         _id: bankId,
         bankCharter: {
-          status,
+          status: status === "active" ? "active" : "failed",
           currency: "USD",
           charteredTurn: 4,
           cashReserves: 0,
-          ...(status === "failed" ? { failedTurn: 20, resolutionClaimedTurn: 20 } : {}),
+          ...(status === "active" ? {} : { failedTurn: 20, resolutionClaimedTurn: 20 }),
+          ...(status === "resolved" ? { depositorsResolvedTurn: 20 } : {}),
         },
       },
     ]);
@@ -326,4 +328,81 @@ describe("bank holder of an unfunded maturity", () => {
       expect((bank.bankCharter as { cashReserves: number }).cashReserves).toBe(7_000);
     }
   );
+  const bondOf = (memory: InMemoryDb, bond: Bond) =>
+    memory.collection("bonds").docs.find((row) => String(row._id) === bond._id.toHexString())!;
+  const claimOf = (memory: InMemoryDb, bond: Bond) =>
+    bondOf(memory, bond).sovereignMaturityClaim as Record<string, number>;
+  const cashReserves = (memory: InMemoryDb) =>
+    (memory.collection("corporations").docs[0]!.bankCharter as { cashReserves: number })
+      .cashReserves;
+  const treasuryCash = (memory: InMemoryDb) =>
+    Number(memory.collection("federalBudget").docs[0]!.treasuryCashLocal);
+  const refundingIssues = (memory: InMemoryDb) =>
+    memory.collection("bonds").docs.filter((row) => row.refundsSovereignMaturityClaimId);
+
+  it("pays the bank in the same pass after an earlier sweep spent the turn's funding key", async () => {
+    // Turn 29: the market is dry, so the claim freezes and stays unpaid.
+    const { memory, bond, settle } = bankWorld("failed", 0);
+    expect(await settle(29)).toBeNull();
+    memory.collection("bondMarketPools").docs[0]!.cashLocal = 1_000_000;
+
+    // Turn 30: the per-turn claim sweep runs first and burns funding:30 on a refusal.
+    const book = memory.collection("federalBudget").docs[0]!.bankSovereignClaims as never;
+    await settleBankSovereignClaims(
+      memory as unknown as Db,
+      { _id: "federal", countryId: "US", bankSovereignClaims: book },
+      30
+    );
+    const claimId = `bank-sovereign-maturity:${bond._id.toHexString()}:${bankId.toHexString()}:4`;
+    expect(
+      memory.collection("bankMoneyMoves").docs.find((row) => row._id === `${claimId}:funding:30`)
+        ?.status
+    ).toBe("rejected");
+
+    // The bond phase then refinances and must still pay the bank this turn.
+    expect(await settle(30)).not.toBeNull();
+    expect(cashReserves(memory)).toBe(7_000);
+    expect(memory.collection("characters").docs[0]?.cashOnHand).toBe(3_000);
+    expect(bondOf(memory, bond).matured).toBe(true);
+    // Refunding proceeds never pooled in Treasury cash for other outflows.
+    expect(treasuryCash(memory)).toBeLessThan(1_000);
+    expect(claimOf(memory, bond).refundedBankFaceLocal).toBe(7_000);
+  });
+
+  it("borrows only the gap when earlier refunding cash leaked from the Treasury", async () => {
+    const { memory, bond, settle } = bankWorld("active", 0);
+    await settle(29);
+    memory.collection("bondMarketPools").docs[0]!.cashLocal = 1_000_000;
+    // State the old code left: 7_000 raised into Treasury cash, 600 spent elsewhere.
+    claimOf(memory, bond).refundedFaceLocal = 7_000;
+    memory.collection("federalBudget").docs[0]!.treasuryCashLocal = 6_500;
+
+    expect(await settle(31)).not.toBeNull();
+    expect(cashReserves(memory)).toBe(7_000);
+    expect(claimOf(memory, bond).refundedBankFaceLocal).toBe(1_000);
+    expect(memory.collection("characters").docs[0]?.cashOnHand).toBe(3_000);
+  });
+
+  it("stops borrowing for the bank once refunding reached the bank lots' face", async () => {
+    const { memory, bond, settle } = bankWorld("active", 0);
+    await settle(29);
+    memory.collection("bondMarketPools").docs[0]!.cashLocal = 1_000_000;
+    claimOf(memory, bond).refundedBankFaceLocal = 7_000;
+
+    expect(await settle(30)).toBeNull();
+    expect(refundingIssues(memory)).toHaveLength(0);
+    expect(cashReserves(memory)).toBe(0);
+    expect(bondOf(memory, bond)).toMatchObject({ matured: false, defaulted: false });
+  });
+
+  it("routes a resolved estate's principal to deposit insurance, not the owner", async () => {
+    const { memory, bond, settle } = bankWorld("resolved");
+    expect(await settle(30)).not.toBeNull();
+    expect(cashReserves(memory)).toBe(0);
+    expect(memory.collection("depositInsuranceFunds").docs[0]).toMatchObject({
+      _id: "USD",
+      balance: 7_000,
+    });
+    expect(bondOf(memory, bond).matured).toBe(true);
+  });
 });

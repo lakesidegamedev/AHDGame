@@ -177,6 +177,10 @@ export interface Bond {
      * replaces maturing debt and never adds net principal.
      */
     refundedFaceLocal?: number;
+    /** Share of `refundedFaceLocal` raised for bank claims; capped at the bank lots' face. */
+    refundedBankFaceLocal?: number;
+    /** Share raised for the other holders; capped at the claim's cash amount. */
+    refundedHolderFaceLocal?: number;
     sourceHolders: BondHolder[];
     sourcePublicFloat: number;
     sourceCentralBankHoldings?: number;

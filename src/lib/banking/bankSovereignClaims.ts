@@ -315,9 +315,9 @@ function escrowPath(claim: BankSovereignClaim): string {
 function fundingTransition(
   claim: BankSovereignClaim,
   budgetId: string,
-  attemptTurn: number
+  attemptTurn: number,
+  key = `${claim.id}:funding:${attemptTurn}`
 ): BankingTransition {
-  const key = `${claim.id}:funding:${attemptTurn}`;
   const cashLedger = claim.treasuryCashLedgerEnabled === true;
   const projections: BankingTransition["projections"] = [];
   if (cashLedger) {
@@ -658,6 +658,50 @@ function bankPayoutTransition(claim: BankSovereignClaim, attemptTurn: number): B
   };
 }
 
+/** Write the zero escrow slot a claim's funding credit lands in, once. */
+export async function ensureClaimEscrowSlot(db: Db, claim: BankSovereignClaim): Promise<void> {
+  await db.collection<CorporationCharterState>("corporations").updateOne(
+    {
+      _id: new ObjectId(claim.bankId),
+      [`bankSovereignEscrows.${claim.id}`]: { $exists: false },
+    },
+    {
+      $set: {
+        [`bankSovereignEscrows.${claim.id}`]: {
+          bankId: claim.bankId,
+          charteredTurn: claim.charteredTurn,
+          currencyCode: claim.currencyCode,
+          amountLocal: 0,
+          claimKind: claim.kind,
+        },
+      },
+    }
+  );
+}
+
+/**
+ * Key for funding a matured bond's bank claim inside the bond's own maturity
+ * pass. Distinct from the claim book sweep's `funding:<turn>` key, which an
+ * earlier sweep in the same turn may already have spent on a refusal.
+ */
+export function maturityPassFundingKey(claim: BankSovereignClaim, turn: number): string {
+  return `${claim.id}:funding:${turn}:maturity`;
+}
+
+/**
+ * The journal legs and projections that move one claim's principal from
+ * Treasury cash into its bank escrow, under the maturity-pass key. Exactly the
+ * sweep's funding transition, so the escrow, the signed position and the
+ * ledger witnesses are the same whichever path funds the claim.
+ */
+export function maturityPassEscrowFunding(
+  claim: BankSovereignClaim,
+  budgetId: string,
+  turn: number
+): BankingTransition {
+  return fundingTransition(claim, budgetId, turn, maturityPassFundingKey(claim, turn));
+}
+
 async function fundClaimEscrow(
   db: Db,
   claim: BankSovereignClaim,
@@ -669,24 +713,7 @@ async function fundClaimEscrow(
   // The caller already read this claim's escrow slot off the bank book, so the
   // placeholder only needs writing when the slot is missing. It used to be an
   // unmatched guarded write on every claim of every turn.
-  if (!escrowExists)
-    await corps.updateOne(
-      {
-        _id: new ObjectId(claim.bankId),
-        [`bankSovereignEscrows.${claim.id}`]: { $exists: false },
-      },
-      {
-        $set: {
-          [`bankSovereignEscrows.${claim.id}`]: {
-            bankId: claim.bankId,
-            charteredTurn: claim.charteredTurn,
-            currencyCode: claim.currencyCode,
-            amountLocal: 0,
-            claimKind: claim.kind,
-          },
-        },
-      }
-    );
+  if (!escrowExists) await ensureClaimEscrowSlot(db, claim);
   // One probe for every open attempt. Each is resumed to a terminal state, and
   // any that stays partial refuses the claim below, so a second read of the
   // same predicate ("is a funding attempt still open?") only cost a round trip.
