@@ -19,6 +19,9 @@ import { SubsidySectorSelect } from "@/components/bills/SubsidySectorSelect";
 import { TaxRateSliderControl } from "@/components/legislation/TaxRateSliderControl";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { type CountryId } from "@/lib/constants/countriesCore";
+import { useWorldFlags } from "@/hooks/useWorldFlags";
+import { LegislationSystemGate } from "@/components/legislation/LegislationSystemGate";
+import { GuidedLegislationModal } from "@/components/legislation/GuidedLegislationModal";
 
 export interface EligibleNpp {
   _id: string;
@@ -34,12 +37,38 @@ interface Props {
   onSuccess: () => void;
 }
 
+function NoEligibleNppsDialog({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="w-full max-w-md rounded-2xl border border-card-border bg-card p-6 shadow-modal">
+        <h2 className="text-lg font-semibold mb-2">No eligible NPPs</h2>
+        <p className="text-sm text-muted mb-4">
+          No state-legislature NPPs from your party hold seats in this state. Recruit or elect one
+          before you can queue legislation.
+        </p>
+        <div className="flex justify-end">
+          <button
+            onClick={onClose}
+            className="rounded-lg px-3 py-1.5 text-sm text-muted hover:bg-background/60"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /**
- * Queue-a-bill modal — mirrors the category → legislation-type → policy-option
- * cascade used by ProposeStateBillModal so governors compose bills with the
- * same shape as a direct sponsor. v1 is single-provision.
+ * Legacy (v1 legislation) queue-a-bill modal: mirrors the category →
+ * legislation-type → policy-option cascade of the legacy
+ * ProposeStateBillModal. v1 is single-provision.
  */
-export function QueueBillModal({
+function LegacyQueueBillModal({
   open,
   countryId,
   stateId,
@@ -147,29 +176,7 @@ export function QueueBillModal({
   if (!open) return null;
 
   if (eligibleNpps.length === 0) {
-    return (
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-        role="dialog"
-        aria-modal="true"
-      >
-        <div className="w-full max-w-md rounded-2xl border border-card-border bg-card p-6 shadow-modal">
-          <h2 className="text-lg font-semibold mb-2">No eligible NPPs</h2>
-          <p className="text-sm text-muted mb-4">
-            No state-legislature NPPs from your party hold seats in this state. Recruit or elect one
-            before you can queue legislation.
-          </p>
-          <div className="flex justify-end">
-            <button
-              onClick={onClose}
-              className="rounded-lg px-3 py-1.5 text-sm text-muted hover:bg-background/60"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+    return <NoEligibleNppsDialog onClose={onClose} />;
   }
 
   const selectedType = legislationTypes.find((t) => t._id === legId);
@@ -564,5 +571,42 @@ export function QueueBillModal({
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Queue a state bill for a party NPP to introduce next turn. In a reviewed
+ * legislation v2 world this is the same guided builder a direct regional
+ * proposal uses, so a governor drafts from the same law, tax and subsidy
+ * options as the legislators who will vote on it.
+ */
+export function QueueBillModal(props: Props) {
+  return props.open ? <OpenQueueBillModal {...props} /> : null;
+}
+
+function OpenQueueBillModal(props: Props) {
+  const flags = useWorldFlags();
+  if (!flags.loaded || flags.failed) {
+    return <LegislationSystemGate failed={flags.failed} onClose={props.onClose} />;
+  }
+  const countryId = props.countryId.toUpperCase() as CountryId;
+  const useV2 =
+    flags.resetSystemVersions.legislation === "v2" && flags.resetV2Countries.includes(countryId);
+  if (!useV2) return <LegacyQueueBillModal {...props} />;
+  if (props.eligibleNpps.length === 0) {
+    return <NoEligibleNppsDialog onClose={props.onClose} />;
+  }
+  return (
+    <GuidedLegislationModal
+      countryId={countryId}
+      endpoint={`/api/country/${countryId.toLowerCase()}/region/${props.stateId.toLowerCase()}/office/legislation/queue`}
+      scope="regional"
+      regionId={props.stateId.toUpperCase()}
+      chambers={[]}
+      initialChamber="regional"
+      queue={{ eligibleNpps: props.eligibleNpps }}
+      onClose={props.onClose}
+      onSuccess={props.onSuccess}
+    />
   );
 }
