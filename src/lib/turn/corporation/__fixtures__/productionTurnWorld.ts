@@ -396,8 +396,12 @@ export function buildProductionTurnWorld(options: ProductionTurnWorldOptions): P
     corporations,
     sectorsByCorp,
     corpById,
+    // The fixture marks player-run corporations with a "player" CEO type that
+    // the stored type does not name; the golden was recorded with this map.
     ceoBusinessAcumenByCorpId: new Map(
-      corporations.filter((c) => c.ceoType === "player").map((c) => [c._id.toString(), 30])
+      corporations
+        .filter((c) => (c.ceoType as string) === "player")
+        .map((c) => [c._id.toString(), 30])
     ),
     bondsByCorpId: new Map(),
     bondsHeldByCorpId: new Map(),

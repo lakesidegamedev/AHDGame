@@ -247,7 +247,7 @@ function micro() {
     mothballed: false,
     effectiveMargin: 22,
     plantsMixPrice: 12.5,
-    plantsCapacity: sector.capacityUnits ?? 1000,
+    plantsCapacity: sector.operatingCapacityUnits ?? 1000,
     producedUnits: sector.producedUnits ?? 900,
     plantsRampLambda: 1,
     disasterOutputFactor: 1,

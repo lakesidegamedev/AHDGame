@@ -113,9 +113,9 @@ export function captureTurn(
   };
   const sha256 = createHash("sha256").update(JSON.stringify(document)).digest("hex");
   return {
-    sectors: document.sectorOps.length,
-    sectorOps: document.sectorOps.length,
-    corpOps: document.corpOps.length,
+    sectors: (document.sectorOps as unknown[]).length,
+    sectorOps: (document.sectorOps as unknown[]).length,
+    corpOps: (document.corpOps as unknown[]).length,
     totalRevenueGenerated: result.totalRevenueGenerated,
     totalIncomeGenerated: result.totalIncomeGenerated,
     sectorsProcessed: result.sectorsProcessed,
