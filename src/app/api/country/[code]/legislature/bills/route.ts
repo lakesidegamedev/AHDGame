@@ -109,17 +109,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
             officeType: { $in: allowedOriginOfficeTypes },
             countryId,
           });
-    const usingSovereignOverride = character ? mayRuleByDecree(character, countryId) : false;
-
-    if (!(auth.user.isAdmin === true && !official) && !usingSovereignOverride) {
-      const freezeCheck = await checkLegislationFreeze(countryId);
-      if (!freezeCheck.ok) return freezeCheck.response;
-    }
-
     const parsed = await parseJsonBody(request, proposeBillSchema);
     if (!parsed.success) {
       return errorResponse(parsed.status, parsed.error);
     }
+    const usingSovereignOverride =
+      !parsed.data.proposeViaPartyNpp && character ? mayRuleByDecree(character, countryId) : false;
+
+    if (
+      (parsed.data.proposeViaPartyNpp || !(auth.user.isAdmin === true && !official)) &&
+      !usingSovereignOverride
+    ) {
+      const freezeCheck = await checkLegislationFreeze(countryId);
+      if (!freezeCheck.ok) return freezeCheck.response;
+    }
+
     if (!allowedOriginKeys.includes(parsed.data.chamber)) {
       return errorResponse(400, `Invalid chamber for ${countryId} legislature.`);
     }

@@ -1,3 +1,4 @@
+import { checkLegislationFreeze } from "@/lib/api/parliamentaryFreeze";
 /**
  * GET  /api/congress/bills?chamber=house|senate|joint&status=...&page=1
  * POST /api/congress/bills  — propose a new bill (immediately opens voting)
@@ -286,6 +287,10 @@ export async function POST(request: Request) {
       );
     }
 
+    if (parsed.data.proposeViaPartyNpp) {
+      const freeze = await checkLegislationFreeze("US");
+      if (!freeze.ok) return freeze.response;
+    }
     const db = await getDb();
     const result = await proposeNationalBill(db, "US", auth.user, parsed.data);
     logRequest("POST", path, result.status, Date.now() - start);

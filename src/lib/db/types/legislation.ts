@@ -485,7 +485,7 @@ export interface Bill {
   sponsorParty?: string;
   /** True when the bill was created via admin override rather than by a seated sponsor. */
   adminProposed?: boolean;
-  /** True when the bill was autonomously introduced by an NPP (SP2 nppBillSponsorship phase). */
+  /** True when an NPP introduces this bill, autonomously or at the national chair's request. */
   nppSponsored?: boolean;
   coSponsors?: { characterId: ObjectId; characterName: string }[];
   status: BillStatus;
@@ -615,6 +615,8 @@ export interface Bill {
   proposalNpiCost?: number;
   /** Action points spent to propose — refunded if bill passes */
   proposalActionCost?: number;
+  /** National chair who paid for this NPP-sponsored bill; absent on legacy bills. */
+  proposalPayerId?: ObjectId;
   internationalAction?: BillInternationalAction;
   /** Optional founding constituent authority, separately bound to its recorded draft. */
   bulgarianConstitutionalMandate?: {
