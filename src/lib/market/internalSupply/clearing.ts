@@ -15,6 +15,14 @@ import {
 import { FREIGHT_CLASS_BY_COMMODITY } from "@/lib/logistics/freightClass";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
 
+export interface InternalSupplyContextBuyer {
+  sectorId: string;
+  corporationId: string;
+  demand: ReadonlyMap<string, number>;
+  committed?: ReadonlyMap<CommodityType, number>;
+  availability?: ReadonlyMap<CommodityType, number>;
+}
+
 export interface InternalSupplyClearing {
   deliveryStateBySector?: ReadonlyMap<string, string>;
   ownRouteDeliveredByKey?: ReadonlyMap<string, number>;
@@ -24,13 +32,14 @@ export interface InternalSupplyClearing {
    */
   reserveCommodities?: ReadonlySet<CommodityType>;
   policies: ReadonlyMap<string, { root: string; policy: InternalSupplyPolicy }>;
-  buyers: readonly {
-    sectorId: string;
-    corporationId: string;
-    demand: ReadonlyMap<string, number>;
-    committed?: ReadonlyMap<CommodityType, number>;
-    availability?: ReadonlyMap<CommodityType, number>;
-  }[];
+  buyers: readonly InternalSupplyContextBuyer[];
+  /**
+   * Optional grouping of `buyers` by clearing book, set by the caller once per
+   * commodity that is being cleared. A state-scoped commodity clears one book
+   * per state, and without this the bridge filters the whole buyer list again
+   * for every one of them. Absent means the bridge filters by `bookForSector`.
+   */
+  buyersByBook?: Map<string, InternalSupplyContextBuyer[]>;
   availabilityOut: Map<string, Map<CommodityType, number>>;
   discountCostOut: Map<string, number>;
   tradesOut: Array<InternalSupplyTrade & { commodity: CommodityType }>;
@@ -72,17 +81,22 @@ export function reserveInternalSupply(args: {
 }): Map<string, number> | undefined {
   if (args.context.reserveCommodities && !args.context.reserveCommodities.has(args.commodity))
     return undefined;
-  const buyers: InternalSupplyBuyer[] = args.context.buyers
-    .filter((b) => args.bookForSector(b.sectorId) === args.book)
-    .map((b) => ({
-      sectorId: b.sectorId,
-      corporationId: b.corporationId,
-      demand: b.demand.get(args.commodity) ?? 0,
-      committed: b.committed?.get(args.commodity) ?? 0,
-      availability:
-        b.availability?.get(args.commodity) ??
-        (args.demand > 0 ? Math.min(1, args.supply / args.demand) : 1),
-    }));
+  // One book's buyers, from the grouping the caller built once per commodity
+  // when it has one. The fallback keeps a context without the grouping on the
+  // original filter, so an older caller clears exactly as before.
+  const groupedBuyers = args.context.buyersByBook;
+  const bookBuyers = groupedBuyers
+    ? (groupedBuyers.get(args.book) ?? [])
+    : args.context.buyers.filter((b) => args.bookForSector(b.sectorId) === args.book);
+  const buyers: InternalSupplyBuyer[] = bookBuyers.map((b) => ({
+    sectorId: b.sectorId,
+    corporationId: b.corporationId,
+    demand: b.demand.get(args.commodity) ?? 0,
+    committed: b.committed?.get(args.commodity) ?? 0,
+    availability:
+      b.availability?.get(args.commodity) ??
+      (args.demand > 0 ? Math.min(1, args.supply / args.demand) : 1),
+  }));
   const { trades } = allocateInternalSupply({
     sellers: args.sellers.map((s) => ({
       sectorId: s.id,
