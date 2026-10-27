@@ -1,5 +1,4 @@
 import { headers } from "next/headers";
-import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import type { ReactNode } from "react";
 import { verifyAuth } from "@/lib/auth";
@@ -8,6 +7,7 @@ import {
   pickClientNamespaces,
   templateNamespacesForPath,
 } from "@/i18n/clientCatalog";
+import { RouteIntlProvider } from "@/i18n/RouteIntlProvider";
 
 /**
  * Per-navigation message provider.
@@ -19,8 +19,9 @@ import {
  * /profile gets the profile copy, and the server dictionary is never stale.
  *
  * The root layout sends the shell namespaces (navbar, tutorial coach); this adds
- * the rest of what the route can translate. Unlisted routes get everything that
- * is not shell, which is the pre-1.19 behaviour.
+ * the rest of what the route can translate, merged onto the shell by
+ * `RouteIntlProvider`. Unlisted routes get everything that is not shell, which
+ * is the pre-1.19 behaviour.
  */
 export default async function RootTemplate({ children }: { children: ReactNode }) {
   const requestHeaders = await headers();
@@ -40,5 +41,5 @@ export default async function RootTemplate({ children }: { children: ReactNode }
     ? pickClientNamespaces(messages, namespaces)
     : nonShellClientMessages(messages);
 
-  return <NextIntlClientProvider messages={clientMessages}>{children}</NextIntlClientProvider>;
+  return <RouteIntlProvider messages={clientMessages}>{children}</RouteIntlProvider>;
 }
