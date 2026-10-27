@@ -194,14 +194,16 @@ describe("loans owed to a bank that no longer exists", () => {
       { _id: bank, name: "Failed", countryId: "US", bankCharter: charter("failed") },
       { _id: borrower, name: "Borrower", countryId: "US", liquidCapital: 70 },
     ]);
-    // The collateralised sibling is what keeps both loans on the per-loan path,
-    // which is the path that carries the prefetched running balance.
+    // An untagged construction loan cannot name a lease for the dead bank's
+    // epoch, so its whole borrower group keeps the per-loan path, which is the
+    // path that carries the prefetched running balance.
     db.seed("bankLoans", [
       loan(bank, { borrowerType: "corporation", borrowerId: borrower, charteredTurn: 1 }),
       loan(bank, {
         borrowerType: "corporation",
         borrowerId: borrower,
-        charteredTurn: 1,
+        charteredTurn: undefined,
+        originatedTurn: 2,
         constructionCollateral: {
           sectorId: new ObjectId(),
           claimId: "claim",
