@@ -22,3 +22,7 @@ what you earn. A private bank pays its premium over the central bank rate, and
 the central bank rate still accrues on top, so the figure shown is the two
 together. A bank whose posted rate sits below the central bank rate now shows
 the central bank rate you still earn, instead of its lower posted rate.
+
+The savings APY and per-turn interest estimate in your portfolio wallet now use
+the rate of the bank that holds each balance, instead of always showing the
+central bank rate.

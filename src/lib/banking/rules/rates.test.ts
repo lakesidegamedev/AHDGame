@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  holdsPlayerSavings,
   playerDepositRatePercent,
   privateHolderSavingsApyPercent,
   startingBankOffsets,
@@ -57,5 +58,21 @@ describe("privateHolderSavingsApyPercent", () => {
 
   it("pays only the posted rate once player balances are cash-backed", () => {
     expect(privateHolderSavingsApyPercent(4, true, 4, 0, 2.25)).toBe(4);
+  });
+});
+
+describe("holdsPlayerSavings", () => {
+  const charter = { status: "active", currency: "USD", type: "retail" } as const;
+
+  it("accepts an active deposit-taking charter in the same currency", () => {
+    expect(holdsPlayerSavings(charter, "USD")).toBe(true);
+    expect(holdsPlayerSavings({ ...charter, type: "universal" }, "USD")).toBe(true);
+  });
+
+  it("rejects investment, inactive, foreign-currency and missing charters", () => {
+    expect(holdsPlayerSavings({ ...charter, type: "investment" }, "USD")).toBe(false);
+    expect(holdsPlayerSavings({ ...charter, status: "revoked" }, "USD")).toBe(false);
+    expect(holdsPlayerSavings(charter, "GBP")).toBe(false);
+    expect(holdsPlayerSavings(null, "USD")).toBe(false);
   });
 });

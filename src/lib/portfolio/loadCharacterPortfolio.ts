@@ -21,7 +21,7 @@ import {
   getHomeCurrency,
 } from "@/lib/currency/characterFunds";
 import { computeLocDebtInternal } from "@/lib/lineOfCredit/netWorth";
-import { loadSavingsApyByCurrency } from "@/lib/api/savings/savingsApy";
+import { loadSavingsApyForCharacter } from "@/lib/api/savings/savingsApy";
 import {
   estimateSavingsAccrualFromApy,
   turnsUntilSavingsCredit,
@@ -358,7 +358,7 @@ export async function loadCharacterPortfolio(
   const baselineValue = earliestSnapshot?.totalValue ?? combinedTotal;
   const totalCapitalGains = combinedTotal - baselineValue;
 
-  const apyByCurrency = await loadSavingsApyByCurrency(db);
+  const apyByCurrency = await loadSavingsApyForCharacter(db, character);
 
   const interestEarnedByCurrency: Partial<Record<CurrencyCode, number>> =
     forexEnabled && character.currencyBalances?.interestEarned

@@ -31,6 +31,7 @@ import { loadBankingPolicy } from "@/lib/banking/policy";
 import { savingsReadsAuthoritative } from "@/lib/banking/rules/policy";
 import {
   effectiveBankRatesFromPrime,
+  holdsPlayerSavings,
   privateHolderSavingsApyPercent,
 } from "@/lib/banking/rules/rates";
 
@@ -110,10 +111,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cod
         ? Promise.resolve(null)
         : db.collection<Corporation>("corporations").findOne({ _id: holderId }),
     ]);
-    const validPrivateHolder =
-      holderBank?.bankCharter?.status === "active" &&
-      holderBank.bankCharter.currency === nationalCurrency &&
-      (holderBank.bankCharter.type === "retail" || holderBank.bankCharter.type === "universal");
+    const validPrivateHolder = holdsPlayerSavings(holderBank?.bankCharter, nationalCurrency);
     let apyPercent = centralBankApyPercent;
     let accrualApyPercent = centralBankApyPercent;
     let savingsHolderType: "central-bank" | "private-bank" | "unknown" = holderIsCentralBank
