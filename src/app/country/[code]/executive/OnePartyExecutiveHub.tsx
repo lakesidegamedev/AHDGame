@@ -42,6 +42,8 @@ import {
   getJointSittingOfficeTypes,
 } from "@/lib/legislature/chamberOfficeType";
 import { classifyConfidenceBand, MAX_CONFIDENCE } from "@/lib/onePartyState/rulingPartyConfidence";
+import { getExecutiveOrderNamePlural } from "@/lib/constants/countryClientConfig";
+import { getExecutiveTermLimit } from "@/lib/elections/executiveTermLimits";
 import {
   getConfidenceConsequenceLevel,
   CONFIDENCE_CONSEQUENCE_DESCRIPTIONS,
@@ -894,6 +896,14 @@ export async function OnePartyExecutiveHub({ countryId }: { countryId: CountryId
         viewerIsLeader={viewerIsLeader}
         viewerIsAdmin={viewerIsAdmin}
         overview={overview}
+        chrome={{
+          governmentType: config.governmentType,
+          executiveTermLimit: getExecutiveTermLimit(countryId),
+          hasDevolution: config.id === "UK",
+          ordersLabel: getExecutiveOrderNamePlural(countryId),
+          legislatureName: config.legislature.name,
+          legislaturePath: config.legislature.path,
+        }}
         isOnePartyState={isOnePartyState}
       />
     </UKGovernmentLayout>

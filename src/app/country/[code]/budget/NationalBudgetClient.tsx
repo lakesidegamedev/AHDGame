@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import { useGameEvents } from "@/hooks/useGameEvents";
 import { useParams } from "next/navigation";
@@ -19,13 +20,9 @@ import { MinisterCallouts } from "@/components/budget/treasury/MinisterCallouts"
 import { FiscalMechanicsNote } from "@/components/budget/treasury/FiscalMechanicsNote";
 import { DefenseFundingNote } from "@/components/budget/treasury/DefenseFundingNote";
 import { BudgetAuthoringPanel } from "@/components/uk/budget/BudgetAuthoringPanel";
-import { PlannedEconomyPanel } from "@/components/economy/PlannedEconomyPanel";
 import { Button, Skeleton, CardSkeleton, StatGridSkeleton, ListRowSkeleton } from "@/components/ui";
 import { type CountryId } from "@/lib/constants/countriesCore";
-import {
-  COUNTRY_CLIENT_CONFIGS,
-  getCountryClientConfig,
-} from "@/lib/constants/countryClientConfig";
+import { COUNTRY_DISPLAY_LABELS } from "@/lib/constants/countryDisplayLabels";
 import { concentrationStatus } from "@/lib/nationalization/concentrationStatus";
 import { getTreasuryIdentity } from "@/lib/constants/treasuryIdentity";
 import { budgetUsdEquivalent } from "@/lib/currency/budgetUsdEquivalent";
@@ -45,15 +42,22 @@ import {
   type BudgetData,
 } from "./BudgetPanels";
 
+// Planned-economy metrics render only for command economies and sit below the
+// fold, so the panel (and its commodity and SOE tables) loads with its section,
+// the same way the economy outlook page already mounts it.
+const PlannedEconomyPanel = dynamic(
+  () => import("@/components/economy/PlannedEconomyPanel").then((m) => m.PlannedEconomyPanel),
+  { ssr: false }
+);
+
 export function NationalBudgetClient() {
   const { code } = useParams<{ code: string }>();
   const { preset, loaded: worldFlagsLoaded } = useWorldFlags();
   const countryParam = code?.toUpperCase() as CountryId | undefined;
   const countryId: CountryId =
-    countryParam && countryParam in COUNTRY_CLIENT_CONFIGS
+    countryParam && countryParam in COUNTRY_DISPLAY_LABELS
       ? (countryParam as CountryId)
-      : COUNTRY_CLIENT_CONFIGS.US.id;
-  const config = getCountryClientConfig(countryId);
+      : ("US" as CountryId);
 
   const [data, setData] = useState<BudgetData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -89,7 +93,7 @@ export function NationalBudgetClient() {
   }, [countryId, selectedFY, reloadNonce]);
 
   const budgetCountryKey = (
-    countryId in COUNTRY_LABELS ? countryId : COUNTRY_CLIENT_CONFIGS.US.id
+    countryId in COUNTRY_LABELS ? countryId : ("US" as CountryId)
   ) as keyof typeof COUNTRY_LABELS;
   const labels = COUNTRY_LABELS[budgetCountryKey];
   const moneyPrefix = getCurrencyPrefix(countryId, data?.budget.currencyCode);
@@ -396,7 +400,7 @@ export function NationalBudgetClient() {
         <TreasuryMasthead
           countryId={countryId}
           identity={treasuryIdentity}
-          executiveLabel={config.executiveLabel}
+          executiveLabel={COUNTRY_DISPLAY_LABELS[countryId].executiveLabel}
           fiscalYear={budget.fiscalYear}
           fyMin={fyMin}
           fyMax={fyMax}
@@ -455,7 +459,7 @@ export function NationalBudgetClient() {
           />
         ) : null}
 
-        {isLive && countryId === COUNTRY_CLIENT_CONFIGS.UK.id ? (
+        {isLive && countryId === ("UK" as CountryId) ? (
           <BudgetAuthoringPanel countryCode="uk" />
         ) : null}
 

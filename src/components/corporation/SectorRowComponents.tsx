@@ -5,7 +5,7 @@ import {
   MAX_GROWTH_RATE,
   MIN_GROWTH_RATE,
   GROWTH_RATE_TURNS_PER_YEAR,
-} from "@/lib/constants/corporations";
+} from "@/lib/constants/corporationsClient";
 import { STATE_FLAGS } from "@/lib/constants";
 import { InfoTooltip } from "@/components/InfoTooltip";
 import { Slider } from "@/components/ui";

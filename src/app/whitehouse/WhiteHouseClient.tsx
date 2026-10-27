@@ -3,12 +3,10 @@
 import { InlineError } from "@/components/ui/InlineError";
 import { apiErrorText } from "@/lib/errors/catalog";
 import { useState, useEffect, useCallback, useRef } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { PartyChip } from "@/app/congress/components/CongressShared";
-import { WhiteHouseOrdersTab } from "./WhiteHouseOrdersTab";
-import { WhiteHouseAddressTab } from "./WhiteHouseAddressTab";
-import { WhiteHouseEndorsementsTab } from "./WhiteHouseEndorsementsTab";
 import ImpeachmentPanel from "./ImpeachmentPanel";
 import { useToast } from "@/contexts/ToastContext";
 import { Skeleton, CardSkeleton, TabRowSkeleton, ListRowSkeleton } from "@/components/ui";
@@ -17,13 +15,11 @@ import {
   MastheadChip,
   MastheadStat,
 } from "@/components/national/InstitutionMasthead";
-import { getExecutiveIdentity } from "@/lib/constants/institutionIdentity";
-import { ForeignAffairsTab } from "@/app/country/[code]/executive/components/ForeignAffairsTab";
+import type { InstitutionIdentity } from "@/lib/constants/institutionIdentity";
 import { useConflictsEnabled } from "@/contexts/AuthDataContext";
 import { getExecutiveSurface } from "@/lib/constants/executiveSurface";
 import { getExecutiveSeal } from "@/lib/constants/executiveSeals";
-import { type CountryId } from "@/lib/constants/countriesCore";
-import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
+import { type CountryId, type GovernmentType } from "@/lib/constants/countriesCore";
 import { AdministrationTable } from "@/app/country/[code]/executive/cabinet/AdministrationTable";
 import { usePresidentialCabinet } from "@/app/country/[code]/executive/cabinet/usePresidentialCabinet";
 import { ExecutiveActivitySection } from "@/app/country/[code]/executive/components/ExecutiveActivitySection";
@@ -51,12 +47,68 @@ export {
   deskDeadlineLabel,
 } from "./WhiteHouseParts";
 
+// Overview is the tab the page opens on. Every other body is one click away and
+// pulls its own heavy tree: the orders tab drags the policy effect catalog, the
+// demographic weights and the bill provision comparison in with it. Same card
+// skeleton the party hub panels use, so the tab body keeps its height while the
+// chunk lands.
+const PanelFallback = () => (
+  <CardSkeleton className="min-h-[240px] space-y-4">
+    <Skeleton className="h-5 w-36" />
+    <Skeleton className="h-4 w-full" />
+    <Skeleton className="h-4 w-3/4" />
+    <Skeleton className="h-4 w-1/2" />
+  </CardSkeleton>
+);
+
+const WhiteHouseOrdersTab = dynamic(
+  () => import("./WhiteHouseOrdersTab").then((m) => ({ default: m.WhiteHouseOrdersTab })),
+  { loading: PanelFallback }
+);
+const WhiteHouseAddressTab = dynamic(
+  () => import("./WhiteHouseAddressTab").then((m) => ({ default: m.WhiteHouseAddressTab })),
+  { loading: PanelFallback }
+);
+const WhiteHouseEndorsementsTab = dynamic(
+  () =>
+    import("./WhiteHouseEndorsementsTab").then((m) => ({ default: m.WhiteHouseEndorsementsTab })),
+  { loading: PanelFallback }
+);
+const ForeignAffairsTab = dynamic(
+  () =>
+    import("@/app/country/[code]/executive/components/ForeignAffairsTab").then((m) => ({
+      default: m.ForeignAffairsTab,
+    })),
+  { loading: PanelFallback }
+);
+
 /**
  * Presidential executive surface. Defaults to the US White House; any other
  * presidential country renders the same shell with its own identity, hero,
  * and country-scoped data (the /api/whitehouse routes take ?country=).
  */
-export default function WhiteHouseClient({ countryId = "US" }: { countryId?: CountryId }) {
+/** Country copy the shell renders, resolved by the server page that already has it. */
+export interface ExecutiveChrome {
+  countryName: string;
+  governmentType: GovernmentType;
+  /** Masthead identity for this country's executive, resolved by the server page. */
+  executiveIdentity: InstitutionIdentity;
+  /** Static term cap for the head of state, or null where it has none. */
+  executiveTermLimit: number | null;
+  /** True for the United States, whose links and rows differ from the rest. */
+  isUs: boolean;
+  legislatureName: string;
+  legislaturePath: string;
+  upperChamberShort: string;
+}
+
+export default function WhiteHouseClient({
+  countryId = "US",
+  chrome,
+}: {
+  countryId?: CountryId;
+  chrome: ExecutiveChrome;
+}) {
   const { showToast } = useToast();
   const [data, setData] = useState<WhiteHouseResponse | null>(null);
   /**
@@ -410,9 +462,8 @@ export default function WhiteHouseClient({ countryId = "US" }: { countryId?: Cou
     data.isAdmin && !data.presidentOfficialId && !data.vicePresidentOfficialId;
 
   const surface = getExecutiveSurface(countryId);
-  const config = COUNTRY_CLIENT_CONFIGS[countryId];
-  const legislaturePath = config.legislature.path;
-  const upperChamberShort = config.legislature.upperChamber?.shortName ?? "Senate";
+  const legislaturePath = chrome.legislaturePath;
+  const upperChamberShort = chrome.upperChamberShort;
   const administrationChip = data.president
     ? `${data.president.characterName.split(" ").slice(-1)[0]} Administration`
     : null;
@@ -436,7 +487,7 @@ export default function WhiteHouseClient({ countryId = "US" }: { countryId?: Cou
         {/* Masthead — S photo hero fused with the B identity band */}
         <InstitutionMasthead
           countryId={countryId}
-          identity={getExecutiveIdentity(countryId)}
+          identity={chrome.executiveIdentity}
           sealImage={getExecutiveSeal(countryId)}
           heroImage={{ src: surface.heroImage, alt: surface.heroAlt }}
           chips={
@@ -488,7 +539,7 @@ export default function WhiteHouseClient({ countryId = "US" }: { countryId?: Cou
                   "—"
                 )
               }
-              accentSoft={getExecutiveIdentity(countryId).accentSoft}
+              accentSoft={chrome.executiveIdentity.accentSoft}
             />
           }
         />
@@ -584,7 +635,7 @@ export default function WhiteHouseClient({ countryId = "US" }: { countryId?: Cou
               </h2>
               <div className="grid gap-6 sm:grid-cols-2">
                 <ExecutiveCard
-                  title={`President of ${config.name}`}
+                  title={`President of ${chrome.countryName}`}
                   data={data.president}
                   officialId={data.presidentOfficialId}
                   onAppoint={() => setAppointModal("president")}
@@ -626,6 +677,8 @@ export default function WhiteHouseClient({ countryId = "US" }: { countryId?: Cou
                 controls. */}
             <ExecutiveActivitySection
               countryId={countryId}
+              governmentType={chrome.governmentType}
+              executiveTermLimit={chrome.executiveTermLimit}
               cabinetSource="presidential"
               showRoster={false}
               clock={
@@ -638,11 +691,8 @@ export default function WhiteHouseClient({ countryId = "US" }: { countryId?: Cou
                   : undefined
               }
               ledgerFooter={{
-                href:
-                  countryId === COUNTRY_CLIENT_CONFIGS.US.id
-                    ? "/congress?tab=bills"
-                    : legislaturePath,
-                label: `${config.legislature.name} page`,
+                href: chrome.isUs ? "/congress?tab=bills" : legislaturePath,
+                label: `${chrome.legislatureName} page`,
               }}
             >
               <AdministrationTable
@@ -652,10 +702,9 @@ export default function WhiteHouseClient({ countryId = "US" }: { countryId?: Cou
                   {
                     key: "president",
                     office: data.president?.isActing ? "Acting President" : "President",
-                    note:
-                      countryId === COUNTRY_CLIENT_CONFIGS.US.id
-                        ? "Elected by the Electoral College"
-                        : "Directly elected head of state",
+                    note: chrome.isUs
+                      ? "Elected by the Electoral College"
+                      : "Directly elected head of state",
                     holder: data.president
                       ? {
                           name: data.president.characterName,
@@ -715,7 +764,7 @@ export default function WhiteHouseClient({ countryId = "US" }: { countryId?: Cou
                         )}
                         {/* The 25th-Amendment VP nomination is a US mechanic; other
                             presidential countries fill the VP on the elected ticket. */}
-                        {countryId === COUNTRY_CLIENT_CONFIGS.US.id &&
+                        {chrome.isUs &&
                           data.isPresident &&
                           !data.vicePresident &&
                           !data.vpNomination && (
@@ -747,7 +796,7 @@ export default function WhiteHouseClient({ countryId = "US" }: { countryId?: Cou
                   <>
                     {/* SCOTUS is a US-only mechanic (#3581) — other presidential
                         countries have no judiciary subsystem modeled yet. */}
-                    {countryId === COUNTRY_CLIENT_CONFIGS.US.id && (
+                    {chrome.isUs && (
                       <Link
                         href={scotusUrl(countryId)}
                         className="rounded-md border border-card-border px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:text-foreground"
@@ -841,7 +890,7 @@ export default function WhiteHouseClient({ countryId = "US" }: { countryId?: Cou
                             <td className="max-w-[420px] px-4 py-2.5">
                               <Link
                                 href={
-                                  countryId === COUNTRY_CLIENT_CONFIGS.US.id
+                                  chrome.isUs
                                     ? `/congress/bills/${b.id}`
                                     : `${legislaturePath}/bills/${b.id}`
                                 }

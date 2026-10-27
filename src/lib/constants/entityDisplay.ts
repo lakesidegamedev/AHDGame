@@ -1,6 +1,6 @@
 import { ROSTER_BY_KEY, type AlignmentCountryKey } from "@/lib/constants/alignmentRoster";
 import { type CountryId } from "@/lib/constants/countriesCore";
-import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
+import { COUNTRY_DISPLAY_LABELS } from "@/lib/constants/countryDisplayLabels";
 import type { OrgMemberId } from "@/lib/db/types/internationalOrganization";
 
 /**
@@ -25,7 +25,7 @@ function isoAlpha2ToFlag(code: string): string {
 
 export function entityName(id: OrgMemberId): string {
   return (
-    COUNTRY_CLIENT_CONFIGS[id as CountryId]?.name ??
+    COUNTRY_DISPLAY_LABELS[id as CountryId]?.name ??
     ROSTER_BY_KEY[id as AlignmentCountryKey]?.name ??
     id
   );
@@ -38,7 +38,7 @@ export function entityName(id: OrgMemberId): string {
  * ids (NVN, SVN, …) still fall back to the white flag.
  */
 export function entityFlag(id: OrgMemberId): string {
-  const authored = COUNTRY_CLIENT_CONFIGS[id as CountryId]?.flagEmoji;
+  const authored = COUNTRY_DISPLAY_LABELS[id as CountryId]?.flagEmoji;
   if (authored) return authored;
   if (/^[A-Z]{2}$/.test(id)) return isoAlpha2ToFlag(id);
   return "🏳️";

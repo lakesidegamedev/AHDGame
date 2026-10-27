@@ -10,7 +10,7 @@ import type { InfluenceTarget, OrgInfluenceView } from "@/lib/alignment/queries/
 import { formatShare, roundToShareGrid } from "@/lib/alignment/normalize";
 import { MIN_PLAY_POINTS } from "@/lib/alignment/influence";
 import { PER_NATION_TURN_CAP } from "@/lib/constants/alignmentEras";
-import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
+import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
 import { parseMoneyAmountInput } from "@/lib/utils/parseMoneyAmountInput";
 import { useFundFormatter } from "../useFundFormatter";
 import { formatFundAmount } from "../fundCurrency";
@@ -225,7 +225,7 @@ function CommitPlayForm({
   // costs stated above this form read in the viewer's preferred currency, so
   // quoting the balance or the preview in anything else would leave a player
   // typing a number that means something different from the one they just read.
-  const fundCode = COUNTRY_CLIENT_CONFIGS[view.fundCurrencyCountryId]?.currencyCode ?? "USD";
+  const fundCode = COUNTRY_CURRENCY_MAP[view.fundCurrencyCountryId] ?? "USD";
   const inFundCurrency = (n: number) => formatFundAmount(n, fundCode);
 
   // The field takes the K/M/B shorthand the panel itself prints, via the same

@@ -6,20 +6,27 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui";
 import { type CountryId } from "@/lib/constants/countriesCore";
-import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { CommodityDetail } from "./types";
 import type { MapMode } from "./components/CommodityMapModeToggle";
 import HeroPanel from "./components/HeroPanel";
 import DemandDriverBanner from "./components/DemandDriverBanner";
 import FreightMarketExplainer from "./components/FreightMarketExplainer";
-import FreightNetworkPanel from "./components/FreightNetworkPanel";
 import SupplyDemandBar from "./components/SupplyDemandBar";
 import FlowLedgerStrip from "./components/FlowLedgerStrip";
 import CommodityChart from "./components/charts/CommodityChart";
 import TopProducersConsumers from "./components/TopProducersConsumers";
-import { getStateDisplayName, groupStatesByCountry } from "@/lib/commodity-map";
+import {
+  getStateDisplayName,
+  groupStatesByCountry,
+} from "@/lib/commodity-map/commodityRegionMappings";
 import { buildCommodityMarketScope } from "./lib/marketScope";
+import { countryUrl } from "@/lib/urls";
+
+const FreightNetworkPanel = dynamic(() => import("./components/FreightNetworkPanel"), {
+  ssr: false,
+  loading: () => <Skeleton className="h-[320px] w-full rounded-xl" />,
+});
 
 const CommodityWorldMapView = dynamic(() => import("./components/CommodityWorldMapView"), {
   ssr: false,
@@ -301,8 +308,7 @@ export default function CommodityDetailClient({ initialData }: CommodityDetailCl
                 onModeChange={setMapMode}
                 onDrillDown={(countryId) => handleSelectCountry(countryId)}
                 onViewCountryPage={(countryId) => {
-                  const config = COUNTRY_CLIENT_CONFIGS[countryId];
-                  if (config) router.push(config.overviewPath);
+                  router.push(countryUrl(countryId));
                 }}
               />
             )}
