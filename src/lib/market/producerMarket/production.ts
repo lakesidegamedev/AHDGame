@@ -29,8 +29,7 @@ import { householdPurchaseOrders } from "./householdRules";
 import { makeDoOutput } from "./makeDoRules";
 import { feasibleProduction } from "./productionFeasibilityRules";
 import { spilloverOrders } from "./spilloverRules";
-
-const laneKeyOf = (commodity: string, book: string) => JSON.stringify([commodity, book]);
+import { laneKeyOf } from "./laneKey";
 
 export interface PurchasedStock {
   commodity: string;
@@ -170,7 +169,7 @@ function indexQuoteVolumes(
 ): QuoteVolumes {
   const books: QuoteVolumes = new Map();
   for (const row of rows) {
-    const key = JSON.stringify([row.commodity, row.book]);
+    const key = laneKeyOf(row.commodity, row.book);
     const book = books.get(key) ?? { levels: new Map(), owners: new Map() };
     book.levels.set(row.unitPrice, (book.levels.get(row.unitPrice) ?? 0) + row.units);
     const owned = book.owners.get(row.ownerId) ?? new Map<number, number>();
@@ -187,7 +186,7 @@ function quoteVolumesExcept(
   bookId: string,
   ownerId: string
 ) {
-  const book = books.get(JSON.stringify([commodity, bookId]));
+  const book = books.get(laneKeyOf(commodity, bookId));
   if (!book) return [];
   const owned = book.owners.get(ownerId);
   return [...book.levels].map(([unitPrice, total]) => ({

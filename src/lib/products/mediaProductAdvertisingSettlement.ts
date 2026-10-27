@@ -3,6 +3,11 @@
  * `settleProductAdvertisingObligations` debits each funded order into the
  * clearing pool, publishes its receipt, then pays every owed seller in one
  * netted clearing transition (see productAdvertisingClearing.ts).
+ *
+ * The order's per-seller table (one allocation per advertising seller) is
+ * written once per pass to its own keyed document, never into the settle loop's
+ * journal record: that record is read back for every projection it applies, and
+ * the table is far larger than those projections.
  */
 import { ObjectId, type Db } from "mongodb";
 import type { Corporation, MediaProductAdvertisingObligationV1 } from "@/lib/db/types";
@@ -26,9 +31,12 @@ import {
   clearProductAdvertisingPayables,
   clearingPoolId,
   denominationConditions,
+  dropProductAdvertisingAllocations,
   ensureClearingPool,
+  recordProductAdvertisingAllocations,
   type ProductAdvertisingFamily,
   type ProductAdvertisingPayable,
+  type ProductAdvertisingPayableAllocation,
 } from "@/lib/products/productAdvertisingClearing";
 
 export type { ProductAdvertisingFamily } from "@/lib/products/productAdvertisingClearing";
@@ -196,6 +204,11 @@ function orderEvent(
  * Stage 1 of a funded order: the buyer debit lands in the clearing pool, the
  * order's frozen per-seller payables are recorded as owed, and the receipt is
  * published. Sellers are paid by the per-turn clearing transition.
+ *
+ * The payable records only the totals. The frozen per-seller table is written
+ * once, before this move claims its key, under the same order key (see
+ * `recordProductAdvertisingAllocations`), so the journal record this transition
+ * freezes stays small.
  */
 export function productAdvertisingTransition(
   corporationId: ObjectId,
@@ -220,13 +233,6 @@ export function productAdvertisingTransition(
     poolCurrencyCode: obligation.buyerCurrencyCode,
     poolLocalPerAnchor: obligation.buyerLocalPerAnchor,
     poolAmountLocal: obligation.buyerAmountLocal,
-    sellerAllocations: obligation.sellerAllocations.map((seller) => ({
-      corporationId: seller.corporationId,
-      amountLocal: seller.amountLocal,
-      currencyCode: seller.currencyCode,
-      localPerAnchor: seller.localPerAnchor,
-      denomination: seller.denomination!,
-    })),
   };
   return {
     key,
@@ -387,6 +393,86 @@ export async function settleProductAdvertisingObligations(
       ? (await journal.findOne({ _id: key }, { projection: { _id: 1 } })) !== null
       : priorKeys.has(key);
 
+  /** The frozen per-seller table of one order, keyed by its stage-1 move. */
+  const allocationTable = (
+    corporationId: ObjectId,
+    obligation: ProductAdvertisingObligation
+  ): { payableId: string; sellerAllocations: ProductAdvertisingPayableAllocation[] } => ({
+    payableId: productAdvertisingSettlementKey(corporationId.toHexString(), obligation, family),
+    sellerAllocations: obligation.sellerAllocations.map((seller) => ({
+      corporationId: seller.corporationId,
+      amountLocal: seller.amountLocal,
+      currencyCode: seller.currencyCode,
+      localPerAnchor: seller.localPerAnchor,
+      denomination: seller.denomination!,
+    })),
+  });
+
+  /** Drop an order the funded path will not settle, and the table quoted for it. */
+  const discardOrder = async (
+    corporationId: ObjectId,
+    obligation: ProductAdvertisingObligation
+  ): Promise<void> => {
+    await Promise.all([
+      db.collection<Corporation>("corporations").updateOne(
+        { _id: corporationId },
+        {
+          $pull: {
+            [obligationsField]: {
+              projectId: obligation.projectId,
+              turn: obligation.turn,
+            },
+          } as Record<string, unknown>,
+        }
+      ),
+      dropProductAdvertisingAllocations(db, [
+        productAdvertisingSettlementKey(corporationId.toHexString(), obligation, family),
+      ]),
+    ]);
+  };
+
+  /**
+   * The order each row will settle this pass, if any.
+   *
+   * A row whose first due order already owns a journal record resumes it
+   * instead, and its table was written when that record was created, so such a
+   * row pre-writes nothing. This mirrors the settle loop's own selection rule,
+   * one order per row, and nothing it skips can be reached before the order it
+   * names.
+   */
+  const preselected = new Map<string, string>();
+  const preselectedTables: {
+    payableId: string;
+    sellerAllocations: ProductAdvertisingPayableAllocation[];
+  }[] = [];
+  for (const entry of parsed) {
+    if (entry.receipt) continue;
+    let chosen = -1;
+    let resumes = false;
+    for (let i = 0; i < entry.due.length; i += 1) {
+      // A prior record resumes, and whether its row then reaches a new order
+      // depends on that resume's outcome. Those rows write their own table.
+      if (priorKeys.has(entry.keys[i])) {
+        resumes = true;
+        break;
+      }
+      const obligation = entry.due[i];
+      if (
+        obligation.buyerDenomination &&
+        obligation.sellerAllocations.every((seller) => seller.denomination)
+      ) {
+        chosen = i;
+        break;
+      }
+    }
+    if (resumes || chosen < 0) continue;
+    preselected.set(entry.row._id.toHexString(), entry.keys[chosen]);
+    preselectedTables.push(allocationTable(entry.row._id, entry.due[chosen]));
+  }
+  // One write for the whole pass: every order's seller table lands before any
+  // move claims its key, so a payable that exists always has one.
+  await recordProductAdvertisingAllocations(db, family, currentTurn, preselectedTables);
+
   // Each row settles only its own buyer's orders, in order, and returns the
   // corporations it touched; they are merged in row order afterwards so the
   // result is the same list the sequential loop produced.
@@ -399,6 +485,7 @@ export async function settleProductAdvertisingObligations(
     // A receipt is a one-slot handoff to product progression. Do not settle a
     // second order until the consumer acknowledges and removes that receipt.
     if (receipt) return rowTouched;
+    const preselectedKey = preselected.get(row._id.toHexString());
     for (const obligation of due) {
       const key = productAdvertisingSettlementKey(row._id.toHexString(), obligation, family);
       const prior = await hasPrior(key);
@@ -407,17 +494,7 @@ export async function settleProductAdvertisingObligations(
         (!obligation.buyerDenomination ||
           obligation.sellerAllocations.some((seller) => !seller.denomination))
       ) {
-        await db.collection<Corporation>("corporations").updateOne(
-          { _id: row._id },
-          {
-            $pull: {
-              [obligationsField]: {
-                projectId: obligation.projectId,
-                turn: obligation.turn,
-              },
-            } as Record<string, unknown>,
-          }
-        );
+        await discardOrder(row._id, obligation);
         continue;
       }
       if (!prior) {
@@ -426,6 +503,12 @@ export async function settleProductAdvertisingObligations(
           await ensureClearingPool(db, family, obligation.buyerCurrencyCode);
           pools.add(poolId);
         }
+        // The pass pre-wrote the row's preselected order. Anything reached
+        // after a resumed order (a refusal it pulled) writes its own table.
+        if (key !== preselectedKey)
+          await recordProductAdvertisingAllocations(db, family, currentTurn, [
+            allocationTable(row._id, obligation),
+          ]);
       }
       // An existing key resumes from its own journal record, whatever its
       // shape: pre-clearing records still pay their sellers directly.
@@ -448,17 +531,7 @@ export async function settleProductAdvertisingObligations(
         // most one receipt per handoff, leaving later orders and journals intact.
         break;
       } else if (result.status === "rejected" && result.appliedLegs.length === 0) {
-        await db.collection<Corporation>("corporations").updateOne(
-          { _id: row._id },
-          {
-            $pull: {
-              [obligationsField]: {
-                projectId: obligation.projectId,
-                turn: obligation.turn,
-              },
-            } as Record<string, unknown>,
-          }
-        );
+        await discardOrder(row._id, obligation);
       } else {
         // Partial cash movement or a durable order in progress blocks later
         // obligations so their receipts cannot overtake this original order.

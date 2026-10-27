@@ -1,4 +1,8 @@
 import { outputPlacementRatios, revenuePlacementRatios } from "@/lib/market/rules/outputPlacement";
+import {
+  commodityMixWeights,
+  mixWeightFor as mixWeightFrom,
+} from "@/lib/market/rules/commodityMixWeights";
 import { placementRevenuePhaseProgress } from "@/lib/market/placementRevenuePhase";
 import { buildGroupSupplyContext } from "./groupSupplyContext";
 import { buildInternalSupplyContext, finishInternalSupplyContext } from "./internalSupply";
@@ -166,6 +170,10 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
     fundedProducerTurn = false,
   } = input;
   let { contractedByCorpCommodity } = input;
+  // The era price table depends only on the world's unit scale. Every offer leg
+  // in this pass (and every per-commodity mix weight) reads it, so it is built
+  // once per phase instead of once per sector or per commodity.
+  const eraBasePrices = eraScaledBasePrices(lookups.eraUnitScale);
   const internalSupplyEnabled =
     !market.groupSupplyEnabled &&
     market.plantsEnabled &&
@@ -248,6 +256,9 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
     };
     for (const [corpId, sectors] of lookups.sectorsByCorp) {
       const corp = lookups.corpById.get(corpId);
+      // Owner identity is one fact per corporation, read by every offer leg
+      // below; the era price table is one table per world.
+      const isNatcorp = !!corp?.countryOwnerId;
       for (const sector of sectors) {
         // A cold plant cannot reserve or sell stale output from its prior turn.
         if (market.plantsEnabled && sector.mothballed === true) continue;
@@ -288,6 +299,14 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
             lookups.stateResourceCapacityByState.get(sector.stateId)
           ),
         };
+        // The output mix's weights are one table per sector, and the era price
+        // table is one per world. Rebuilding either inside the commodity loops
+        // below made every offer leg recompute the whole mix.
+        let mixWeights: Map<CommodityType, number> | undefined;
+        const mixWeightForCommodity = (commodity: CommodityType): number => {
+          mixWeights ??= commodityMixWeights(rates.supply ?? {}, eraBasePrices);
+          return mixWeightFrom(mixWeights, commodity);
+        };
         const productProject = lookups.productLinesV2Enabled
           ? lookups.manufacturingProductByCorpId?.get(corpId)
           : undefined;
@@ -324,12 +343,10 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
                   currentCapacityUnits: currentCapacity,
                   snapshotCapacityUnits: capacitySnapshot,
                 });
-                const basePrices = eraScaledBasePrices(lookups.eraUnitScale);
                 const outputAnchor = Object.keys(rates.supply ?? {}).reduce((sum, rawCommodity) => {
                   const commodity = rawCommodity as CommodityType;
-                  const units =
-                    measuredUnits * commodityMixWeight(rates.supply ?? {}, basePrices, commodity);
-                  return sum + units * (basePrices[commodity] ?? 0);
+                  const units = measuredUnits * mixWeightForCommodity(commodity);
+                  return sum + units * (eraBasePrices[commodity] ?? 0);
                 }, 0);
                 return buildManufacturedSectorOutput({
                   outputAnchor,
@@ -337,7 +354,7 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
                   allocationShare: productAllocation.share,
                   stage: productProject.stage,
                   outputCommodity: productKind.outputCommodity,
-                  basePrices,
+                  basePrices: eraBasePrices,
                   currentSectorQualityByCommodity: Object.fromEntries(
                     [
                       ...new Set([...Object.keys(rates.supply ?? {}), productKind.outputCommodity]),
@@ -356,7 +373,7 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
         const productOfferScale = exactProductOutput
           ? (scaleMeasuredProducedUnits({
               producedUnits: 1,
-              isNatcorp: !!lookups.corpById.get(corpId)?.countryOwnerId,
+              isNatcorp,
               embargoSupplyFactor:
                 embargoSupplyFactorFor(sector) *
                 plannedEconomyMediaSupplyFactor(
@@ -441,7 +458,7 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
         if (supplyAgreementsEnabled && market.plantsEnabled) {
           const achievableScaled = plantsSupplyScaledUnits({
             producedUnits: sector.contractAchievableUnits,
-            isNatcorp: !!lookups.corpById.get(corpId)?.countryOwnerId,
+            isNatcorp,
             embargoSupplyFactor:
               embargoSupplyFactorFor(sector) *
               plannedEconomyMediaSupplyFactor(
@@ -454,15 +471,12 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
                 sector.mediaDiscriminator
               ),
           });
-          const supplyRates = rates.supply ?? {};
-          for (const commodity of Object.keys(supplyRates) as CommodityType[]) {
-            const weight = commodityMixWeight(
-              supplyRates,
-              eraScaledBasePrices(lookups.eraUnitScale),
-              commodity
-            );
+          const byKey = achievableByCorpCommodity.get(corpId) ?? new Map<string, number | null>();
+          let sectorContributed = false;
+          for (const commodity of Object.keys(rates.supply ?? {}) as CommodityType[]) {
+            const weight = mixWeightForCommodity(commodity);
             if (!(weight > 0)) continue;
-            const byKey = achievableByCorpCommodity.get(corpId) ?? new Map<string, number | null>();
+            sectorContributed = true;
             for (const key of contractScopeKeysFor(commodity, sector.stateId)) {
               const accumulated = byKey.get(key);
               if (achievableScaled === null || accumulated === null) {
@@ -474,11 +488,12 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
                 byKey.set(key, (accumulated ?? 0) + achievableScaled * weight);
               }
             }
-            achievableByCorpCommodity.set(corpId, byKey);
           }
+          // Only a sector with a producing leg publishes the corp's book, so a
+          // corp with no positive-weight output keeps the entry it had.
+          if (sectorContributed) achievableByCorpCommodity.set(corpId, byKey);
         }
         if (supplyAgreementsEnabled && market.plantsEnabled && sector.mothballed !== true) {
-          const isNatcorp = !!lookups.corpById.get(corpId)?.countryOwnerId;
           const embargoSupplyFactor =
             embargoSupplyFactorFor(sector) *
             plannedEconomyMediaSupplyFactor(
@@ -491,17 +506,16 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
               sector.mediaDiscriminator
             );
           const exactOutputUnits = scaledProductOutput?.outputUnitsByCommodity;
+          const producedByKey = producedByCorpCommodity.get(corpId) ?? new Map<string, number>();
           if (exactOutputUnits) {
             for (const [commodity, rawUnits] of Object.entries(exactOutputUnits) as Array<
               [CommodityType, number]
             >) {
               const units = Math.max(0, rawUnits ?? 0);
               if (!(units > 0)) continue;
-              const byKey = producedByCorpCommodity.get(corpId) ?? new Map<string, number>();
               for (const key of contractScopeKeysFor(commodity, sector.stateId)) {
-                byKey.set(key, (byKey.get(key) ?? 0) + units);
+                producedByKey.set(key, (producedByKey.get(key) ?? 0) + units);
               }
-              producedByCorpCommodity.set(corpId, byKey);
             }
           } else {
             const scaled = plantsSupplyScaledUnits({
@@ -512,24 +526,18 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
               embargoSupplyFactor,
             });
             if (scaled !== null && scaled > 0) {
-              const supplyRates = rates.supply ?? {};
-              for (const commodity of Object.keys(supplyRates) as CommodityType[]) {
-                const units =
-                  scaled *
-                  commodityMixWeight(
-                    supplyRates,
-                    eraScaledBasePrices(lookups.eraUnitScale),
-                    commodity
-                  );
+              for (const commodity of Object.keys(rates.supply ?? {}) as CommodityType[]) {
+                const units = scaled * mixWeightForCommodity(commodity);
                 if (!(units > 0)) continue;
-                const byKey = producedByCorpCommodity.get(corpId) ?? new Map<string, number>();
                 for (const key of contractScopeKeysFor(commodity, sector.stateId)) {
-                  byKey.set(key, (byKey.get(key) ?? 0) + units);
+                  producedByKey.set(key, (producedByKey.get(key) ?? 0) + units);
                 }
-                producedByCorpCommodity.set(corpId, byKey);
               }
             }
           }
+          // Only a sector that contributed an entry publishes the corp's book;
+          // a corp with none keeps the map as it found it.
+          if (producedByKey.size > 0) producedByCorpCommodity.set(corpId, producedByKey);
         }
         const clearingInput: SectorClearingInput = {
           sectorId,
@@ -761,7 +769,7 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
               mothballed: sector.mothballed,
             }))
           ),
-          basePrices: eraScaledBasePrices(lookups.eraUnitScale),
+          basePrices: eraBasePrices,
         });
       }
     }
@@ -916,7 +924,7 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
           },
       // The era table: clearing compares sector offers (era-based units under
       // plants) against the ledger's balances, which run on the same basis.
-      basePrices: eraScaledBasePrices(lookups.eraUnitScale),
+      basePrices: eraBasePrices,
       loyaltySliceEnabled: brandLoyaltySliceEnabled,
       contractedByCorpCommodity: supplyAgreementsEnabled ? contractedByCorpCommodity : undefined,
       sectorCorpId,
@@ -946,7 +954,6 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
     // this commodity, then value each seller's actually delivered units at its
     // reachable price. processSectors routes that delivered value through one
     // equal-and-opposite transfer.
-    const clearingBasePrices = eraScaledBasePrices(lookups.eraUnitScale);
     const deliveredUnitsBySector = new Map<string, number>();
     const advertisingSellerDeliveredValueAnchorByCorpId = advertisingDeliveredValueByCorp({
       inputs: clearingInputs.map((input) => ({
@@ -956,7 +963,7 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
         producedUnits: input.producedUnits,
         outputQuality: input.outputQuality,
       })),
-      clearingBasePrices,
+      clearingBasePrices: eraBasePrices,
       plantsEnabled: market.plantsEnabled,
       clearingGroupBySector,
       clearingBySectorId: market.clearingBySectorId,
@@ -992,7 +999,7 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
           : rawAdvertisingOffer({
               input,
               plantsEnabled: market.plantsEnabled,
-              clearingBasePrices,
+              clearingBasePrices: eraBasePrices,
             });
         if (!(raw > 0)) continue;
         const real =
@@ -1043,7 +1050,7 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
           corporationId,
           countryId: row.group || sector.countryId || "US",
           stateId: clearingStateBySector.get(sectorId),
-          basePrice: clearingBasePrices.advertising,
+          basePrice: eraBasePrices.advertising,
           priceRatio,
           sellerCurrencyCode: currencyCode,
           sellerLocalPerAnchor: localPerAnchor,

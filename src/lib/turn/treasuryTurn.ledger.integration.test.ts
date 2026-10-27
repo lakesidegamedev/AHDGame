@@ -168,8 +168,8 @@ describe("treasury accrual stock-flow ownership", () => {
   it("does not read an unfunded coupon backlog to build payee locks", async () => {
     // The production shape: a Treasury with no cash against a long backlog. The
     // payee locks used to come from every open claim document; now the server
-    // groups the settleable ones down to distinct keys, so every claim read is
-    // scoped to one budget and its cash bound.
+    // groups the settleable ones down to distinct keys, scoped by budget and its
+    // cash bound, and the prefetch groups the queue once for every budget.
     const { db } = fundedCouponWorld(11, 0);
     await processTreasuryTurn(8);
     expect(
@@ -182,8 +182,24 @@ describe("treasury accrual stock-flow ownership", () => {
 
     await processTreasuryTurn(10);
 
-    expect(aggregate).toHaveBeenCalledTimes(1);
-    expect(find.mock.calls.length).toBeGreaterThan(0);
+    // One grouping builds the settleable payee locks and the phase prefetch adds
+    // the oldest-open and pool-currency groupings. Each is grouped by budget id
+    // and scoped to the budgets it serves, never a whole-collection scan.
+    expect(aggregate).toHaveBeenCalledTimes(3);
+    for (const [pipeline] of aggregate.mock.calls) {
+      const [match] = pipeline as Array<{ $match?: Record<string, unknown> }>;
+      const filter = match.$match ?? {};
+      const branches = Array.isArray(filter.$or)
+        ? (filter.$or as Array<Record<string, unknown>>)
+        : [];
+      expect(
+        filter.budgetId !== undefined ||
+          (branches.length > 0 && branches.every((row) => row.budgetId !== undefined))
+      ).toBe(true);
+    }
+    // A budget with no cash against the backlog settles nothing, so the phase
+    // skips its claim load; the only claim read left is the frozen-claim
+    // install probe, scoped to this turn's ids.
     for (const [filter] of find.mock.calls) {
       const scoped = filter as Record<string, unknown>;
       expect(scoped.budgetId ?? scoped._id).toBeDefined();

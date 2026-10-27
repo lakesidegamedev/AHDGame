@@ -10,7 +10,8 @@ import type { Db, ObjectId } from "mongodb";
 import type { CommodityType } from "@/lib/constants/commodities";
 import type { Corporation } from "@/lib/db/types/corporation";
 import type { CorporationExit } from "@/lib/db/types/corporationExit";
-import { notifySupplyAgreementEvent } from "@/lib/corporations/supplyExchange/notifications";
+import { supplyAgreementNotification } from "@/lib/corporations/supplyExchange/notifications";
+import { createNotifications } from "@/lib/notifications";
 import { clampAgreementPremium, type SupplyAgreement } from "@/lib/db/types/supplyAgreement";
 import {
   isStateScopedCommodity,
@@ -65,23 +66,24 @@ async function notifyExpiredAgreements(
       .find({ _id: { $in: corpIds } }, { projection: { userId: 1 } })
       .toArray();
     const byId = new Map(corps.map((c) => [c._id.toString(), c]));
-    await Promise.all(
-      expired.flatMap((a) =>
-        [a.supplierCorpId, a.buyerCorpId].flatMap((id) => {
-          const recipient = byId.get(id.toString());
-          return recipient
-            ? [
-                notifySupplyAgreementEvent({
-                  recipient,
-                  agreementId: a._id!,
-                  commodity: a.commodity,
-                  event: "expired",
-                }),
-              ]
-            : [];
-        })
-      )
+    // One insertMany for the whole expiry pass. A 48-turn contract book retires
+    // a large batch of agreements together, and one insert per recipient was
+    // the bulk of this phase's write time.
+    const inputs = expired.flatMap((a) =>
+      [a.supplierCorpId, a.buyerCorpId].flatMap((id) => {
+        const recipient = byId.get(id.toString());
+        const input = recipient
+          ? supplyAgreementNotification({
+              recipient,
+              agreementId: a._id!,
+              commodity: a.commodity,
+              event: "expired",
+            })
+          : null;
+        return input ? [input] : [];
+      })
     );
+    await createNotifications(inputs);
   } catch (err) {
     console.error("[loadSettleableSupplyAgreements] expiry notifications failed:", err);
   }
