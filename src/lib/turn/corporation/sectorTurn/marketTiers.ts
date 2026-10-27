@@ -127,15 +127,20 @@ export function computeMarketTiers(input: MarketTiersInput): MarketTiersResult {
   // country-wide, so overwriting a state-local delivery figure with it could
   // throttle a plant whose own state market fully covers its input.
   const localAvailability = stateInputAvailabilityByState.get(stateId);
-  let mergedAvailability: Map<CommodityType, number> | undefined;
+  // The merge only needs a copy when a second source has to be folded in.
+  // Copying the state map per sector was one full map allocation per sector
+  // for the common case of a plain local read.
+  let mergedAvailability: ReadonlyMap<CommodityType, number> | undefined = localAvailability;
+  // The private copy, once one is needed; null means `mergedAvailability` is
+  // still the shared state lookup and must not be written.
+  let ownedAvailability: Map<CommodityType, number> | null = null;
   if (priorityAvailability) {
-    mergedAvailability = new Map(localAvailability ?? []);
+    ownedAvailability = new Map<CommodityType, number>(localAvailability ?? []);
     for (const [commodity, value] of priorityAvailability) {
-      const local = mergedAvailability.get(commodity);
-      mergedAvailability.set(commodity, typeof local === "number" ? Math.max(local, value) : value);
+      const local = ownedAvailability.get(commodity);
+      ownedAvailability.set(commodity, typeof local === "number" ? Math.max(local, value) : value);
     }
-  } else if (localAvailability) {
-    mergedAvailability = new Map(localAvailability);
+    mergedAvailability = ownedAvailability;
   }
   // State-scoped inputs (freight and local services) have no freight class, so
   // freight settlement writes no state-local availability for them and they
@@ -150,9 +155,12 @@ export function computeMarketTiers(input: MarketTiersInput): MarketTiersResult {
       const stateBalance = stateBalances.get(commodity);
       if (!stateBalance) continue;
       const stateAvail = inputAvailability(stateBalance);
-      mergedAvailability ??= new Map();
-      const existing = mergedAvailability.get(commodity);
-      mergedAvailability.set(
+      if (!ownedAvailability) {
+        ownedAvailability = new Map<CommodityType, number>(mergedAvailability ?? []);
+        mergedAvailability = ownedAvailability;
+      }
+      const existing = ownedAvailability.get(commodity);
+      ownedAvailability.set(
         commodity,
         typeof existing === "number" ? Math.max(existing, stateAvail) : stateAvail
       );
@@ -222,7 +230,17 @@ export function computeMarketTiers(input: MarketTiersInput): MarketTiersResult {
   // stock not yet converted, so non-retool sectors are byte-identical).
   const capitalStockOnImpliedBasis =
     market.capitalEnabled && market.plantsEnabled && sector.retoolRescaleApplied === true
-      ? newCapitalStock * retoolOperatingCapacityRatio({ ...sector, currentTurn })
+      ? newCapitalStock *
+        retoolOperatingCapacityRatio({
+          sectorType: sector.sectorType,
+          industryModel: sector.industryModel,
+          mediaDiscriminator: sector.mediaDiscriminator,
+          strategyId: sector.strategyId,
+          transitionFromStrategyId: sector.transitionFromStrategyId,
+          transitionStartTurn: sector.transitionStartTurn,
+          retoolRescaleApplied: sector.retoolRescaleApplied,
+          currentTurn,
+        })
       : newCapitalStock;
   const capitalFactor = market.capitalEnabled
     ? capitalUtilizationFactor(capitalStockOnImpliedBasis, impliedUnits)

@@ -856,18 +856,7 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
         )
       : undefined;
     market.groupSupplyCommittedInputsBySector = groupSupply?.committedOutputBySector
-      ? new Map(
-          [...groupSupply.buyersByCommodity]
-            .flatMap(([commodity, buyers]) =>
-              buyers.map((b) => [b.sectorId, commodity, b.contractedUnits] as const)
-            )
-            .reduce((rows, [id, commodity, units]) => {
-              const inputs = rows.get(id) ?? new Map<string, number>();
-              inputs.set(commodity, (inputs.get(commodity) ?? 0) + units);
-              rows.set(id, inputs);
-              return rows;
-            }, new Map<string, Map<string, number>>())
-        )
+      ? committedInputsBySector(groupSupply.buyersByCommodity)
       : undefined;
     market.groupSupplyCommittedOutputsBySector = groupSupply?.committedOutputBySector;
     market.groupSupplyForecastByRoot = groupSupply?.forecastByRoot;
@@ -1203,4 +1192,27 @@ export function runClearingPrePass(input: ClearingPrePassInput): ClearingPrePass
     buyerDemandByCorpCommodity,
     politicalMediaSettlementPlans,
   };
+}
+
+/**
+ * Per-sector committed group inputs, from the coordination buyers the group
+ * pass already built. One pass, no intermediate arrays: this map covers every
+ * sector in the world, and the flatMap/reduce form it replaced allocated a row
+ * array, a tuple array and a reduce accumulator for the same content.
+ */
+function committedInputsBySector(
+  buyersByCommodity: NonNullable<ReturnType<typeof buildGroupSupplyContext>>["buyersByCommodity"]
+): Map<string, Map<string, number>> {
+  const out = new Map<string, Map<string, number>>();
+  for (const [commodity, buyers] of buyersByCommodity) {
+    for (const buyer of buyers) {
+      let inputs = out.get(buyer.sectorId);
+      if (!inputs) {
+        inputs = new Map<string, number>();
+        out.set(buyer.sectorId, inputs);
+      }
+      inputs.set(commodity, (inputs.get(commodity) ?? 0) + buyer.contractedUnits);
+    }
+  }
+  return out;
 }
