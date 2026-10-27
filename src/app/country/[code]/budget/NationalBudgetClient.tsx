@@ -56,7 +56,7 @@ export function NationalBudgetClient() {
   const countryId: CountryId =
     countryParam && countryParam in COUNTRY_DISPLAY_LABELS
       ? (countryParam as CountryId)
-      : COUNTRY_DISPLAY_LABELS.US.id;
+      : ("US" as CountryId);
 
   const [data, setData] = useState<BudgetData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -92,7 +92,7 @@ export function NationalBudgetClient() {
   }, [countryId, selectedFY, reloadNonce]);
 
   const budgetCountryKey = (
-    countryId in COUNTRY_LABELS ? countryId : COUNTRY_DISPLAY_LABELS.US.id
+    countryId in COUNTRY_LABELS ? countryId : ("US" as CountryId)
   ) as keyof typeof COUNTRY_LABELS;
   const labels = COUNTRY_LABELS[budgetCountryKey];
   const moneyPrefix = getCurrencyPrefix(countryId, data?.budget.currencyCode);
@@ -460,7 +460,7 @@ export function NationalBudgetClient() {
           />
         ) : null}
 
-        {isLive && countryId === COUNTRY_DISPLAY_LABELS.UK.id ? (
+        {isLive && countryId === ("UK" as CountryId) ? (
           <BudgetAuthoringPanel countryCode="uk" />
         ) : null}
 
