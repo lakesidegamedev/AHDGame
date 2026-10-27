@@ -47,8 +47,12 @@ vi.mock("@/lib/indexFunds/subscriptions", () => ({
 // in production; the shim below keeps this suite's per-holder assertions valid.
 vi.mock("./holderPayout", async () => {
   const payFundHolderCash = vi.fn(
-    async (_db: unknown, _fund: unknown, position: { holderKind: string }) =>
-      position.holderKind !== "fund_reserve"
+    async (
+      _db: unknown,
+      _fund: unknown,
+      position: { holderKind: string },
+      _payoutAnchor?: number
+    ) => position.holderKind !== "fund_reserve"
   );
   return {
     payFundHolderCash,
