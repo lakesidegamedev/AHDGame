@@ -15,8 +15,8 @@ areas: [backend]
 
 - A corporation's trade tape, holders, recent trades and portfolio value
   chart read only that corporation's records.
-- Your own trade history, the market volume charts, supply agreements and
-  bond lists read only the records they show.
+- Your own trade history and shareholdings, the market volume charts, supply
+  agreements and bond lists read only the records they show.
 - The cleanup of old payment records, which runs every minute, reads only
   the records it can delete. It was one of the heaviest loads on the game
   database and slowed pages and turns for everyone.
