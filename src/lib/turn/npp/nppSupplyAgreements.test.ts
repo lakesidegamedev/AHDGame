@@ -956,7 +956,9 @@ describe("processNppSupplyAgreements shell", () => {
     expect(op.replaceOne.upsert).toBe(true);
     expect(op.replaceOne.replacement.aiListed).toBe(true);
     expect(op.replaceOne.replacement.publishedByUserId).toBeUndefined();
-    expect(f.calls.listingDelete[0]).toMatchObject({ _id: { $in: ["gone:ai:sell:coal"] } });
+    expect(f.calls.listingBulk).toContainEqual({
+      deleteOne: { filter: { _id: "gone:ai:sell:coal", aiListed: true } },
+    });
   });
 });
 

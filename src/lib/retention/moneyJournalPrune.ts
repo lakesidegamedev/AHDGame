@@ -29,6 +29,7 @@ const PRUNABLE_MONEY_MOVE_KINDS: readonly string[] = Object.freeze([
   "manufacturing.product.advertising.clearing",
   "corporate_operating_gross_receipt",
   "corporate_operating_loss",
+  "corporate_operating_loss_batch",
   "corporate_operating_net_batch",
   "corporate_operating_net_receipt",
   "corporate_tax_withholding",
