@@ -5,7 +5,10 @@ import {
   treasuryAnchorValuation,
 } from "@/lib/budget/rules/treasuryAccrual";
 import { substepMarker } from "@/lib/observability/phaseSubsteps";
-import { publishTreasuryAccrualReceipt } from "@/lib/budget/treasuryAccrualReceipt";
+import {
+  publishTreasuryAccrualReceipts,
+  type TreasuryAccrualPublication,
+} from "@/lib/budget/treasuryAccrualReceipt";
 import { resolveCountryCurrencyCode } from "@/lib/currency/govBudgetFields";
 import { expireFinancialCrisisAusterity } from "@/lib/crises/financialCrisisBudgetPolicy";
 import { advanceTaxRatePhaseIn } from "@/lib/budget/taxRatePhaseIn";
@@ -33,7 +36,6 @@ import { enforcementTreasuryCostPerTurn } from "@/lib/unions/enforcementCosts";
 import { settleBankSovereignClaims } from "@/lib/banking/bankSovereignClaims";
 import { bankCouponClaim, bankCouponPlanForCountry } from "@/lib/banking/rules/sovereignClaims";
 import {
-  budgetIdsWithOpenSovereignCouponClaims,
   claimIdOfMove,
   loadSovereignCouponPriorPayouts,
   loadSovereignCouponSettlementPrefetch,
@@ -43,6 +45,13 @@ import {
   unfinishedSovereignCouponBatchClaimIds,
 } from "@/lib/banking/fundedSovereignCoupons";
 import { KeyedQueue, interleaveByKey, runInLanes } from "@/lib/turn/settlementLanes";
+import {
+  flushSovereignCouponBatchClose,
+  loadSovereignCouponPass,
+  pruneSovereignCouponClaims,
+  type SovereignCouponPassBudget,
+} from "@/lib/banking/sovereignCouponPass";
+import type { CouponBatchCloseOp } from "@/lib/banking/fundedSovereignCoupons";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
 import {
   fxRateForCorpFromMap,
@@ -177,16 +186,10 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
     .find({}, { projection: treasuryBudgetProjection(treasuryCashLedgerEnabled) })
     .toArray();
   // Dissolved countries keep their budget doc but must not be simulated against
-  // it; see `getRegisteredCountryIdSet`.
-  const [liveCountries, budgetsOwingCoupons] = await Promise.all([
-    getRegisteredCountryIdSet(db),
-    budgetIdsWithOpenSovereignCouponClaims(db),
-  ]);
-  const owesCoupons = (b: FederalBudget) =>
-    (b.sovereignCouponClaims?.length ?? 0) > 0 || budgetsOwingCoupons.has(String(b._id));
-  const budgets = allBudgets.filter(
-    (b) => liveCountries.has(String(b.countryId ?? b._id)) || owesCoupons(b)
-  );
+  // it; see `getRegisteredCountryIdSet`. Which of them still owe a stored claim
+  // is answered by the coupon prefetch below, in the same grouping that already
+  // reads the queue, instead of a separate distinct over the whole collection.
+  const liveCountries = await getRegisteredCountryIdSet(db);
   // Read once for every flag posture: the coupon book prices debt service on
   // the stock (issue #2089) even when bank/treasury cash ledgers are off.
   // Holder arrays are only needed by the funded coupon paths.
@@ -266,10 +269,6 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
       return { anchorRate: null, anchorRateSource: "unpriced", anchorRatePreset: preset };
     }
   }
-  // Shadow qualification validates the entire cohort before any cash accrues.
-  // A missing rate cannot partially advance an earlier, valid treasury.
-  if (ledgerShadow) for (const budget of budgets) valuationFor(budget);
-
   steps.mark("load");
   let countriesProcessed = 0;
   // Countries settle in bounded lanes. Each holds its budget, its bond pool,
@@ -286,6 +285,32 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
       ? unfinishedSovereignCouponBatchClaimIds(db)
       : Promise.resolve<string[]>([]),
   ]);
+  // A partially applied per-claim receipt is resumed whatever the claim is
+  // worth now, so its payees keep their locks even outside the cash bound.
+  const receiptClaimIds = [
+    ...(priorPayouts ?? [])
+      .filter((move) => move.status === "partial")
+      .map((move) => claimIdOfMove(move._id)),
+    ...unfinishedBatchClaimIds,
+  ];
+  // One read per collection for every budget's coupon facts, before the lanes
+  // start. A budget with no cash to settle from then costs no probe of its own.
+  // The queue grouping it already runs also names the budgets that still owe a
+  // claim, which keeps a dissolved country in the cohort for its arrears.
+  const couponPrefetch = treasuryCashLedgerEnabled
+    ? await loadSovereignCouponSettlementPrefetch(db, {
+        budgets: allBudgets,
+        turn: _turn,
+        receiptClaimIds,
+      })
+    : undefined;
+  const budgetsOwingCoupons: ReadonlySet<string> =
+    couponPrefetch?.budgetsWithOpenClaims ?? new Set<string>();
+  const owesCoupons = (b: FederalBudget) =>
+    (b.sovereignCouponClaims?.length ?? 0) > 0 || budgetsOwingCoupons.has(String(b._id));
+  const budgets = allBudgets.filter(
+    (b) => liveCountries.has(String(b.countryId ?? b._id)) || owesCoupons(b)
+  );
   // Payee locks only have to cover claims this pass can move money for. The
   // settle step bounds its claim load by `treasuryCashLocal`, read after this
   // phase's accrual, which writes `treasuryBalance` and leaves the cash ledger
@@ -297,7 +322,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
   // holders, whose keys are always held.
   const couponCashBounds = new Map<string, number>();
   if (treasuryCashLedgerEnabled) {
-    for (const b of budgets) {
+    for (const b of allBudgets) {
       if (!budgetsOwingCoupons.has(String(b._id))) continue;
       const cash = b.treasuryCashLocal;
       couponCashBounds.set(
@@ -306,26 +331,13 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
       );
     }
   }
-  // A partially applied per-claim receipt is resumed whatever the claim is
-  // worth now, so its payees keep their locks even outside the cash bound.
-  const receiptClaimIds = [
-    ...(priorPayouts ?? [])
-      .filter((move) => move.status === "partial")
-      .map((move) => claimIdOfMove(move._id)),
-    ...unfinishedBatchClaimIds,
-  ];
-  const settleableClaimKeys = treasuryCashLedgerEnabled
-    ? await settleableSovereignCouponHolderKeys(db, couponCashBounds, receiptClaimIds)
-    : new Map<string, Set<string>>();
-  // One read per collection for every budget's coupon facts, before the lanes
-  // start. A budget with no cash to settle from then costs no probe of its own.
-  const couponPrefetch = treasuryCashLedgerEnabled
-    ? await loadSovereignCouponSettlementPrefetch(db, {
-        budgets,
-        turn: _turn,
-        receiptClaimIds,
-      })
-    : undefined;
+  // Shadow qualification validates the entire cohort before any cash accrues.
+  // A missing rate cannot partially advance an earlier, valid treasury.
+  if (ledgerShadow) for (const budget of budgets) valuationFor(budget);
+  const settleableClaimKeys =
+    treasuryCashLedgerEnabled && couponCashBounds.size > 0
+      ? await settleableSovereignCouponHolderKeys(db, couponCashBounds, receiptClaimIds)
+      : new Map<string, Set<string>>();
   const bondHolderKeysByCountry = new Map<string, Set<string>>();
   for (const bond of sovereignBonds) {
     const country = String(bond.countryId);
@@ -356,6 +368,42 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
     if (b.bankSovereignClaims?.length) keys.push(BANK_CLAIMS_KEY);
     return keys;
   };
+  // One preparation for the whole cohort. The queue read, the frozen-claim
+  // install and the payee readiness are keyed by budget id, so they answer for
+  // every country in one pass instead of one probe per country; the lanes are
+  // then left with the money moves only they can order. A budget whose native
+  // quote is missing stays on the per-budget path, so the error is still raised
+  // where it always was.
+  const passableBudgets: SovereignCouponPassBudget[] = [];
+  for (const budget of budgets) {
+    if (!treasuryCashLedgerEnabled || !couponPrefetch) break;
+    if (!liveCountries.has(String(budget.countryId ?? budget._id))) continue;
+    // A legacy array claim keeps the per-budget path: the migration decides
+    // inside the lane which of them a journal receipt already owns.
+    if ((budget.sovereignCouponClaims?.length ?? 0) > 0) continue;
+    const anchorRate = valuationFor(budget).anchorRate;
+    if (!Number.isFinite(anchorRate) || (anchorRate ?? 0) <= 0) continue;
+    passableBudgets.push({
+      budget,
+      anchorRate: anchorRate!,
+      bonds: sovereignBonds.filter((bond) => String(bond.countryId) === String(budget.countryId)),
+    });
+  }
+  const couponPass =
+    treasuryCashLedgerEnabled && couponPrefetch
+      ? await loadSovereignCouponPass(db, {
+          turn: _turn,
+          forexEnabled,
+          corporateQuotes: corporationQuotes,
+          priorPayouts,
+          prefetch: couponPrefetch,
+          cashBounds: couponCashBounds,
+          budgets: passableBudgets,
+        })
+      : undefined;
+  const pruneCouponBudgets: string[] = [];
+  const couponBatchClose: CouponBatchCloseOp[] = [];
+  const accrualPublications: TreasuryAccrualPublication[] = [];
   const lock = new KeyedQueue();
   const settleBudget = async (initial: FederalBudget): Promise<void> => {
     let b = initial;
@@ -376,8 +424,9 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
       return;
     }
     for (let attempt = 0; attempt < 4; attempt++) {
+      const preparedCoupons = attempt === 0 ? couponPass?.get(String(b._id)) : undefined;
       if (b.treasuryAccrual) {
-        await publishTreasuryAccrualReceipt(db, b, b.treasuryAccrual);
+        accrualPublications.push({ budget: b, receipt: b.treasuryAccrual });
         if (b.treasuryAccrual.turn >= _turn) {
           if (b.bankSovereignClaims?.length) {
             await settleBankSovereignClaims(db, b, _turn);
@@ -388,7 +437,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
               throw new Error(
                 `Cannot fund sovereign coupon claims for ${b.countryId}: missing native FX quote`
               );
-            await settleFundedSovereignCoupons(db, b, {
+            const coupons = await settleFundedSovereignCoupons(db, b, {
               turn: _turn,
               bonds: sovereignBonds.filter(
                 (bond) => String(bond.countryId) === String(b.countryId)
@@ -399,7 +448,10 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
               priorPayouts,
               lockedCashBoundLocal: couponCashBounds.get(String(b._id)),
               prefetch: couponPrefetch,
+              prepared: preparedCoupons,
             });
+            if (coupons.batchClose) couponBatchClose.push(...coupons.batchClose);
+            if (preparedCoupons && coupons.completed) pruneCouponBudgets.push(String(b._id));
           }
           return;
         }
@@ -559,7 +611,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
         }
       );
       if (applied.matchedCount === 1) {
-        await publishTreasuryAccrualReceipt(db, b, receipt);
+        accrualPublications.push({ budget: b, receipt });
         if (bankSovereignClaims.length > 0) {
           await settleBankSovereignClaims(
             db,
@@ -573,7 +625,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
             throw new Error(
               `Cannot fund sovereign coupon claims for ${b.countryId}: missing native FX quote`
             );
-          await settleFundedSovereignCoupons(
+          const coupons = await settleFundedSovereignCoupons(
             db,
             {
               _id: b._id,
@@ -592,8 +644,11 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
               priorPayouts,
               lockedCashBoundLocal: couponCashBounds.get(String(b._id)),
               prefetch: couponPrefetch,
+              prepared: preparedCoupons,
             }
           );
+          if (coupons.batchClose) couponBatchClose.push(...coupons.batchClose);
+          if (preparedCoupons && coupons.completed) pruneCouponBudgets.push(String(b._id));
         }
         countriesProcessed += 1;
         return;
@@ -614,6 +669,11 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
     TREASURY_LANES,
     (b) => lock.run(budgetLockKeys(b), () => settleBudget(b))
   );
+  // The per-lane writes that are independent of each other land once for the
+  // whole cohort: every accrual witness, then every pruned history.
+  await publishTreasuryAccrualReceipts(db, accrualPublications);
+  await flushSovereignCouponBatchClose(db, couponBatchClose);
+  await pruneSovereignCouponClaims(db, pruneCouponBudgets, _turn);
   steps.mark("budgets");
   return { countriesProcessed };
 }
