@@ -13,6 +13,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { NavbarWrapper } from "@/components/NavbarWrapper";
 import { BugReportFab } from "@/components/BugReportFab";
+import { AskDrawer } from "@/components/askDrawer/AskDrawer";
 import { StatusBar } from "@/components/StatusBar";
 import {
   DeferredSeasonRecapGate,
@@ -433,6 +434,8 @@ export default async function RootLayout({
                             />
                           )}
                           {!isWikiSubdomain && <BugReportFab displayMode={displayMode} />}
+                          {/* Experimental opt-in (Settings). Singleplayer has no Ask service. */}
+                          {!isWikiSubdomain && !singleplayer && <AskDrawer />}
                           {!isWikiSubdomain && <MassCrashAlertBanner />}
                           {!isWikiSubdomain && <MaintenancePartialBanner />}
                           {/* Admin-controlled survey strip. Not auth-gated: it must reach

@@ -131,6 +131,10 @@
         "label": "API Keys",
         "summary": "API access & automation"
       },
+      "experimental": {
+        "label": "Experimental Features",
+        "summary": "Try features before they ship"
+      },
       "danger": {
         "label": "Danger Zone",
         "summary": "Delete account"
@@ -379,6 +383,17 @@
       "unlinkFailed": "Failed to unlink.",
       "unlinked": "{provider} unlinked successfully.",
       "avatarAlt": "{provider} avatar"
+    },
+    "experimental": {
+      "intro": "Try features that are still being built. They may change, break or go away. Turning this off removes them straight away.",
+      "toggleLabel": "Turn on experimental features",
+      "toggleHint": "Off by default. Only changes things for you.",
+      "saveError": "Could not save. Try again.",
+      "askTitle": "Ask drawer",
+      "askBody": "A tab on the edge of most pages opens Ask in a side panel. It is signed in with your game account, shares your history and daily limits with the Ask site, and can read the page you are on when you ask.",
+      "sideLabel": "Dock the drawer on the",
+      "sideLeft": "Left",
+      "sideRight": "Right"
     },
     "apiKeys": {
       "intro": "API keys allow external applications to interact with your account.",

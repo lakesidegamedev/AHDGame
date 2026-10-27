@@ -215,6 +215,8 @@ export async function GET() {
             statusBarLayout: 1,
             corpOverviewMode: 1,
             enableExperimentalUI: 1,
+            experimentalFeatures: 1,
+            askDrawerSide: 1,
             patreonTier: 1,
             patreonExpiresAt: 1,
             patreonProfileBorder: 1,
@@ -726,6 +728,8 @@ export async function GET() {
           corpOverviewMode: user.corpOverviewMode ?? null,
           // New interface is the default; only an explicit opt-out (false) is classic.
           enableExperimentalUI: user.enableExperimentalUI !== false,
+          experimentalFeatures: user.experimentalFeatures === true,
+          askDrawerSide: user.askDrawerSide === "left" ? "left" : "right",
           patreonTier: user.patreonTier ?? null,
           isPatronActive: isPatreonActive(user.patreonTier ?? null, user.patreonExpiresAt ?? null),
           sandboxTesterAccess: sandboxTesterAccessEnabled && !!user.sandboxAccessGrantedAt,

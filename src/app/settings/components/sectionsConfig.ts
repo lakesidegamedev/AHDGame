@@ -102,6 +102,7 @@ export const ACCOUNT_SECTIONS: SectionDef[] = [
   section("account-profile", "account", "accountProfile"),
   section("identity", "account", "identity"),
   section("appearance", "account", "appearance"),
+  section("experimental", "account", "experimental"),
   section("patreon", "account", "patreon"),
   section("supporter-perks", "account", "supporterPerks"),
   section("referrals", "account", "referrals"),
