@@ -140,7 +140,10 @@ const TradeEmbargoPanel = dynamic(
   () => import("./components/TradeEmbargoPanel").then((m) => ({ default: m.TradeEmbargoPanel })),
   { loading: PanelFallback }
 );
-const PeacePanel = dynamic(() => import("./components/PeacePanel"), { loading: PanelFallback });
+const PeacePanel = dynamic(
+  () => import("./components/PeacePanel").then((m) => ({ default: m.PeacePanel })),
+  { loading: PanelFallback }
+);
 
 export default function CabinetOfficePage() {
   const translateActions = useTranslations("worldOrganizations.cabinetActions");

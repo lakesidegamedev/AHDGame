@@ -4,7 +4,7 @@ import { CountryFlag } from "@/components/CountryFlag";
 import { useCountryDisplayName } from "@/contexts/RegisteredCountriesContext";
 import type { CountryId } from "@/lib/constants/countriesCore";
 import type { CurrencyCode } from "@/lib/constants/currencies";
-import type { CountryCommodityData } from "@/lib/commodity-map/commodityRegionMappings";
+import type { CountryCommodityData } from "@/lib/commodity-map/commodityAggregation";
 import {
   formatCommodityPrice,
   getCommodityDisplayCurrency,

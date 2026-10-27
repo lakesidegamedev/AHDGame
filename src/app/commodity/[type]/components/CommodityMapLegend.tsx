@@ -4,7 +4,7 @@ import {
   getLegendStops,
   getPriceLegendStops,
   getReachableLegendStops,
-} from "@/lib/commodity-map/commodityRegionMappings";
+} from "@/lib/commodity-map/commodityMapColorScale";
 import type { MapMode } from "./CommodityMapModeToggle";
 
 interface CommodityMapLegendProps {
