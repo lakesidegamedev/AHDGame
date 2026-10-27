@@ -1,3 +1,8 @@
+/**
+ * Regional bills use seated human or chair-directed party NPP sponsors.
+ * proposeStateBill validates provisions and charges the requesting player.
+ */
+import { resolvePartyNppProposalAccess } from "../queries/partyNppProposalAccess";
 import { northernIrelandAssemblyAllows } from "@/lib/countries/uk/northernIreland/service";
 import type { Db } from "mongodb";
 import {
@@ -27,6 +32,7 @@ export interface ProposeStateBillInput {
   effectDirection?: number;
   provisions?: unknown[];
   adminOverride?: boolean;
+  proposeViaPartyNpp?: boolean;
 }
 
 export async function proposeStateBill(
@@ -56,12 +62,36 @@ export async function proposeStateBill(
     effectDirection,
     provisions,
     adminOverride,
+    proposeViaPartyNpp,
   } = input;
 
   const character = user.character;
   if (!character) {
     return { status: 400, body: { error: "No character found" } };
   }
+
+  if (proposeViaPartyNpp && adminOverride) {
+    return { status: 400, body: { error: "Party NPP proposals cannot use admin override." } };
+  }
+  const partyAccess = proposeViaPartyNpp
+    ? await resolvePartyNppProposalAccess(db, countryId, stateId, character)
+    : null;
+  if (partyAccess && !partyAccess.authorized) {
+    return {
+      status: 403,
+      body: {
+        error:
+          "Only your party's national chair or this region's state chair may direct a party legislator.",
+      },
+    };
+  }
+  if (partyAccess && !partyAccess.npp) {
+    return {
+      status: 409,
+      body: { error: "No eligible party legislator is available in this region." },
+    };
+  }
+  const partyNpp = partyAccess?.npp;
 
   // One-party-state guard: banned parties cannot propose bills.
   // Reads runtime governmentType so post-Stage-4 conversion immediately
@@ -82,7 +112,7 @@ export async function proposeStateBill(
 
   if (!adminOverride || !user.isAdmin) {
     const existingActiveBill = await db.collection<StateBill>("stateBills").findOne({
-      sponsorId: character._id,
+      $or: [{ sponsorId: character._id }, { proposalPayerId: character._id }],
       stateId,
       status: { $nin: STATE_TERMINAL_STATUSES },
     });
@@ -101,7 +131,7 @@ export async function proposeStateBill(
     if (!user.isAdmin) {
       return { status: 403, body: { error: "Admin access required" } };
     }
-  } else {
+  } else if (!partyNpp) {
     const subNationalOffice = getSubNationalLegislatureKey(countryId);
     const official = await db.collection<ElectedOfficial>("electedOfficials").findOne({
       officeType: subNationalOffice,
@@ -207,8 +237,16 @@ export async function proposeStateBill(
     title: title.trim(),
     summary: summary.trim(),
     ...(category ? { category } : {}),
-    sponsorId: character._id,
-    sponsorName: character.name,
+    sponsorId: partyNpp ? null : character._id,
+    sponsorName: partyNpp?.name ?? character.name,
+    ...(partyNpp
+      ? {
+          sponsorNppId: partyNpp._id,
+          nppId: partyNpp._id,
+          isNPP: true,
+          proposalPayerId: character._id,
+        }
+      : {}),
     sponsorParty: character.party,
     ...(adminOverride && user.isAdmin ? { adminProposed: true } : {}),
     status: "active",
@@ -244,6 +282,15 @@ export async function proposeStateBill(
           $set: { updatedAt: new Date() },
         }
       );
+    }
+    if (partyNpp && (error as { code?: number }).code === 11000) {
+      return {
+        status: 409,
+        body: {
+          error:
+            "This party legislator already has a bill in progress. Please refresh and try again.",
+        },
+      };
     }
     throw error;
   }

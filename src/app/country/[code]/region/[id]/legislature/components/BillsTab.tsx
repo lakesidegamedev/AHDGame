@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import type { BillChamber } from "@/lib/db/types/legislation";
 import { mapStateBillToBillDisplay } from "@/lib/legislature/mapStateBillToBillDisplay";
@@ -28,6 +29,8 @@ const ProposeStateBillModal = dynamic(
 export function BillsTab({
   bills,
   canPropose,
+  legislationVersion,
+  canProposeViaPartyNpp = false,
   canVote,
   stateId,
   countryId,
@@ -39,6 +42,8 @@ export function BillsTab({
 }: {
   bills: StateBillDisplay[];
   canPropose: boolean;
+  legislationVersion: "v1" | "v2";
+  canProposeViaPartyNpp?: boolean;
   canVote: boolean;
   stateId: string;
   countryId: string;
@@ -48,11 +53,13 @@ export function BillsTab({
   adminOverride?: boolean;
   billChamber: BillChamber;
 }) {
+  const t = useTranslations("layout.guidedLegislation");
   void _totalSeats;
   const regionalAssentTitle = getRegionalBillAssentTitleForState(countryId as CountryId, stateId);
   const clock = useGameClock();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [showPropose, setShowPropose] = useState(false);
+  const [partyProposal, setPartyProposal] = useState(false);
   const [voteFilter, setVoteFilter] = useState<BillVoteFilter>("all");
 
   const statusFiltered = useMemo(() => {
@@ -103,9 +110,11 @@ export function BillsTab({
     <>
       {showPropose && (
         <ProposeStateBillModal
+          legislationVersion={legislationVersion}
+          proposeViaPartyNpp={partyProposal}
           stateId={stateId}
           countryId={countryId}
-          adminOverride={adminOverride && !canPropose}
+          adminOverride={adminOverride && !canPropose && !partyProposal}
           blockedProvisions={blockedProvisions}
           onClose={() => setShowPropose(false)}
           onSuccess={() => {
@@ -119,7 +128,10 @@ export function BillsTab({
         <div className="flex w-full min-w-0 flex-wrap items-center gap-3">
           {(canPropose || adminOverride) && (
             <button
-              onClick={() => setShowPropose(true)}
+              onClick={() => {
+                setPartyProposal(false);
+                setShowPropose(true);
+              }}
               className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                 adminOverride && !canPropose
                   ? "bg-error text-white hover:bg-error/90"
@@ -135,6 +147,17 @@ export function BillsTab({
                 />
               </svg>
               {adminOverride && !canPropose ? "Propose (Admin override)" : "Propose"}
+            </button>
+          )}
+          {canProposeViaPartyNpp && (
+            <button
+              onClick={() => {
+                setPartyProposal(true);
+                setShowPropose(true);
+              }}
+              className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary/90"
+            >
+              {t("proposeViaPartyNpp")}
             </button>
           )}
           <div className="flex min-w-0 max-w-full flex-1 rounded-lg border border-card-border text-sm overflow-x-auto">

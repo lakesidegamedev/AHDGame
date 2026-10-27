@@ -74,6 +74,8 @@ export function StateLegislatureClient({
   isLoggedIn: _isLoggedIn,
   characterId,
   isAdmin = false,
+  legislationVersion,
+  canProposeViaPartyNpp = false,
 }: {
   stateId: string;
   countryId: string;
@@ -82,6 +84,8 @@ export function StateLegislatureClient({
   isLoggedIn: boolean;
   characterId?: string;
   isAdmin?: boolean;
+  legislationVersion: "v1" | "v2";
+  canProposeViaPartyNpp?: boolean;
 }) {
   const [activeTab, setActiveTab] = useState<TabId>("bills");
   const [data, setData] = useState<LegislatureData | null>(null);
@@ -279,6 +283,8 @@ export function StateLegislatureClient({
           </CardSkeleton>
         ) : (
           <BillsTab
+            legislationVersion={legislationVersion}
+            canProposeViaPartyNpp={canProposeViaPartyNpp}
             bills={bills}
             canPropose={canPropose}
             canVote={canPropose}
