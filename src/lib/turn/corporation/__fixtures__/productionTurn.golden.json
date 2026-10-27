@@ -5,5 +5,17 @@
   "totalRevenueGenerated": 6460696.071294791,
   "totalIncomeGenerated": 874276.0799549461,
   "sectorsProcessed": 420,
-  "sha256": "4c18f295ef18d6953224fe70f5bccef6f4dfdce543f8e7df47d856517b799aa5"
+  "sha256": "4c18f295ef18d6953224fe70f5bccef6f4dfdce543f8e7df47d856517b799aa5",
+  "shadow": {
+    "plants": 420,
+    "skipped": 0,
+    "prices": 16,
+    "nextPrices": 27,
+    "householdSpend": 1361802.763905983,
+    "publicSpend": 43750,
+    "accounts": 70,
+    "carriedPlants": 420,
+    "payables": 0,
+    "sha256": "37933a01fe1326108dc898ac654b7e2af8583298c7e1505a2d56e125032c32d7"
+  }
 }

@@ -53,6 +53,7 @@ import {
   primaryDocumentId,
 } from "@/lib/bonds/sovereignPrimarySettlement";
 import { oid, type BankingTransition } from "@/lib/banking/rules/boundary";
+import { interestBearingCbMarginDebt } from "@/lib/banking/rules/facilityInterest";
 
 export const BANK_TREASURY_TRADES_COLLECTION = "bankTreasuryTrades";
 
@@ -223,7 +224,8 @@ async function bankCashFloor(
     playerDeposits: charter.playerDeposits ?? 0,
     playerDepositsAreLiabilities,
     discountWindowDebt: charter.discountWindowDebt ?? 0,
-    cbMarginDebt: charter.cbMarginDebt ?? 0,
+    // Interest floor counts only the interest-bearing margin line (#1694).
+    cbMarginDebt: interestBearingCbMarginDebt(charter),
     interbankLoans: interbankLoans.map((loan) => ({
       outstanding: loan.outstanding ?? 0,
       ratePercent: loan.ratePercent,
