@@ -1194,8 +1194,9 @@ export interface CorporateSector {
    * Plants-tier telemetry: the deliberate market-demand run-rate multiplier
    * applied to this sector's production last turn. 1 means no demand cap;
    * lower values mean the plant was held below its physical plan because
-   * recent sales did not support a full run. Display-only, never read back
-   * into the economy.
+   * recent sales did not support a full run. The legacy clearing pass writes
+   * it, or the funded settlement on a funded turn; AI placement and
+   * mothballing read it as physical market saturation.
    */
   demandThrottleFactor?: number | null;
   /**
