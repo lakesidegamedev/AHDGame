@@ -33,6 +33,7 @@ import {
   discountWindowStigma,
 } from "@/lib/banking/rules/discountWindow";
 import { cbMarginRatePercent } from "@/lib/banking/rules/decide";
+import { interestBearingCbMarginDebt } from "@/lib/banking/rules/facilityInterest";
 import { computeConfidence } from "@/lib/banking/rules/confidence";
 import {
   MIN_CAPITAL_RATIO,
@@ -321,7 +322,7 @@ export async function buildBankOutlook(db: Db, ctx: OutlookContext): Promise<Ban
     discountWindowRatePercent(prime)
   );
   const marginInterest = perTurnInterestOn(
-    Math.max(0, charter.cbMarginDebt ?? 0),
+    interestBearingCbMarginDebt(charter),
     cbMarginRatePercent(prime)
   );
   const paid = npcInterest + playerInterest + ibPaid + windowInterest + marginInterest;
