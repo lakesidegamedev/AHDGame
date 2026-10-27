@@ -106,12 +106,22 @@ async function handleGET() {
       db
         .collection<CentralBank>("centralBanks")
         .find({})
-        .project({
+        .project<
+          Pick<
+            CentralBank,
+            | "_id"
+            | "countryId"
+            | "primeRate"
+            | "intorgId"
+            | "bankReserveRequirement"
+            | "inflationHistory"
+          > & { name?: string }
+        >({
           _id: 1,
           countryId: 1,
           name: 1,
           primeRate: 1,
-          currentInflation: 1,
+          inflationHistory: { $slice: -1 },
           intorgId: 1,
           bankReserveRequirement: 1,
         })
@@ -154,9 +164,11 @@ async function handleGET() {
       if (!configRow) continue;
       const prime =
         typeof bank?.primeRate === "number" && Number.isFinite(bank.primeRate) ? bank.primeRate : 0;
+      // Same inflation source as the savings desk and the turn that pays it.
+      const latestInflation = bank?.inflationHistory?.at(-1)?.rate;
       const inflation =
-        typeof bank?.currentInflation === "number" && Number.isFinite(bank.currentInflation)
-          ? bank.currentInflation
+        typeof latestInflation === "number" && Number.isFinite(latestInflation)
+          ? latestInflation
           : 0;
       centralBanks.push({
         currency,

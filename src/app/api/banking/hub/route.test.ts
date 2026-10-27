@@ -107,6 +107,28 @@ describe("GET /api/banking/hub private-bank table", () => {
     expect(byName.D.lendableHeadroom).toBe(0.1);
   });
 
+  it("quotes central-bank savings at half the real prime, as the turn pays it", async () => {
+    state.centralBanks = [
+      {
+        _id: "US",
+        countryId: "US",
+        name: "Fed",
+        primeRate: 20.75,
+        inflationHistory: [
+          { turn: 3, rate: 5 },
+          { turn: 4, rate: 19.8 },
+        ],
+      },
+      { _id: "UK", countryId: "UK", name: "BoE", primeRate: 3 },
+    ];
+    const body = await (await GET()).json();
+    const byCurrency = Object.fromEntries(
+      body.centralBanks.map((b: Record<string, unknown>) => [b.currency, b])
+    );
+    expect(byCurrency.USD.savingsApyPercent).toBeCloseTo((20.75 - 19.8) / 2, 6);
+    expect(byCurrency.GBP.savingsApyPercent).toBeCloseTo(1.5, 6);
+  });
+
   it("skips the era lookup when every charter's bank sets its own requirement", async () => {
     state.corporations = [charteredCorp("A", "USD")];
     await GET();
