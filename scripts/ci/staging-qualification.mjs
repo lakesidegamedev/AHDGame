@@ -263,6 +263,153 @@ export async function findStagingQualification({
   }
 }
 
+/**
+ * Reuse development's own full push qualification for a development -> staging
+ * promotion whose tested tree is exactly development's tip tree (2026-10-27).
+ *
+ * Development's push run is the full suite on that tree, and its `verify`
+ * receipt step names the tree. The promotion pull request reuses it only when
+ * the PR is same-repository development -> staging, unchanged since checkout,
+ * its merge tree equals the development commit's tree, the proof code matches
+ * the trusted default branch, staging requires no gate this cannot vouch for,
+ * and the push run is the newest, successful, native, recent CI run for that
+ * exact commit. The security workflows still run on the promotion itself.
+ */
+export async function findDevelopmentQualification({
+  api,
+  repository,
+  eventName,
+  event,
+  checkout,
+  now = Date.now(),
+}) {
+  const promotion =
+    eventName === "pull_request" &&
+    event?.pull_request?.head?.ref === "development" &&
+    event.pull_request.base?.ref === "staging";
+  const fallback = (reason) => ({ reuse: false, promotion, reason });
+  if (!promotion) return fallback("not a development promotion");
+  try {
+    if (
+      ![checkout.commit, checkout.tree, checkout.workflowBlob, checkout.scriptBlob].every((x) =>
+        SHA.test(x || "")
+      )
+    )
+      return fallback("checkout identity unavailable");
+    const repo = await api("");
+    if (repo.full_name !== repository || event.repository?.full_name !== repository)
+      return fallback("repository identity differs");
+    const sameRepo = (side) => side?.repo?.id === repo.id && side.repo.full_name === repository;
+    const pr = await api(`pulls/${Number(event.number)}`);
+    if (
+      pr?.head?.ref !== "development" ||
+      pr.base?.ref !== "staging" ||
+      !sameRepo(pr.head) ||
+      !sameRepo(pr.base) ||
+      pr.state !== "open" ||
+      pr.head.sha !== event.pull_request.head.sha ||
+      pr.base.sha !== event.pull_request.base.sha ||
+      pr.merge_commit_sha !== checkout.commit
+    )
+      return fallback("promotion changed since checkout");
+    const commitTree = async (sha) => {
+      if (!SHA.test(sha || "")) throw new Error("commit unavailable");
+      const commit = await api(`commits/${sha}`);
+      if (commit?.sha !== sha || !SHA.test(commit.commit?.tree?.sha || ""))
+        throw new Error("tree unavailable");
+      return commit.commit.tree.sha;
+    };
+    if (
+      (await commitTree(checkout.commit)) !== checkout.tree ||
+      (await commitTree(pr.head.sha)) !== checkout.tree
+    )
+      return fallback("promotion changes the tested tree");
+
+    const trusted = await api(`commits/${encodeURIComponent(repo.default_branch)}`);
+    if (!SHA.test(trusted?.sha || "")) return fallback("trusted branch unavailable");
+    const workflow = await api("actions/workflows/ci.yml");
+    if (
+      !Number.isSafeInteger(workflow?.id) ||
+      workflow.path !== WORKFLOW ||
+      workflow.state !== "active"
+    )
+      return fallback("workflow identity unavailable");
+    for (const [file, blob] of [
+      [WORKFLOW, checkout.workflowBlob],
+      [SCRIPT, checkout.scriptBlob],
+    ]) {
+      if ((await api(`contents/${file}?ref=${trusted.sha}`))?.sha !== blob)
+        return fallback("proof code differs from trusted branch");
+    }
+
+    const rules = await api("rules/branches/staging");
+    if (!Array.isArray(rules)) return fallback("required branch gates unavailable");
+    const supported = new Set(["verify", ...SECURITY.map((gate) => gate.context)]);
+    const required = rules
+      .filter((rule) => rule.type === "required_status_checks")
+      .flatMap((rule) => rule.parameters?.required_status_checks || []);
+    if (required.some((gate) => !supported.has(gate.context)))
+      return fallback("additional required gates need full checks");
+
+    const listed = await api(
+      `actions/workflows/ci.yml/runs?event=push&branch=development&head_sha=${pr.head.sha}&per_page=20`
+    );
+    // A later failed or restarted attempt must not be masked by an older pass.
+    const run = listed?.workflow_runs?.[0];
+    const age = now - Date.parse(run?.updated_at);
+    if (
+      !success(run) ||
+      run.workflow_id !== workflow.id ||
+      run.path !== workflow.path ||
+      run.event !== "push" ||
+      run.head_branch !== "development" ||
+      run.head_sha !== pr.head.sha ||
+      run.repository?.id !== repo.id ||
+      run.head_repository?.id !== repo.id ||
+      !Number.isFinite(age) ||
+      age < 0 ||
+      age > MAX_AGE_MS ||
+      !Number.isSafeInteger(run.id) ||
+      !Number.isSafeInteger(run.run_attempt) ||
+      run.run_attempt < 1
+    )
+      return fallback("no recent successful development push run for this commit");
+    const jobs = await api(`actions/runs/${run.id}/attempts/${run.run_attempt}/jobs?per_page=100`);
+    if (!Array.isArray(jobs?.jobs) || jobs.total_count !== jobs.jobs.length)
+      return fallback("development run jobs unavailable");
+    const receipt = jobs.jobs.find((j) => j.name === "verify" && success(j));
+    const name = `qualified-development-development-tree-${checkout.tree}`;
+    if (!receipt?.steps?.some((step) => step.name === name && success(step)))
+      return fallback("development run has no full-qualification receipt for this tree");
+    const prefix = `https://api.github.com/repos/${repository}/check-runs/`;
+    if (!receipt.check_run_url?.startsWith(prefix)) return fallback("receipt is not native");
+    const checkId = receipt.check_run_url.slice(prefix.length);
+    if (!/^\d+$/.test(checkId)) return fallback("receipt is not native");
+    const check = await api(`check-runs/${checkId}`);
+    if (
+      !success(check) ||
+      check.id !== Number(checkId) ||
+      check.name !== "verify" ||
+      check.head_sha !== run.head_sha ||
+      check.app?.id !== 15368 ||
+      check.app.slug !== "github-actions" ||
+      check.check_suite?.id !== run.check_suite_id ||
+      check.details_url !==
+        `https://github.com/${repository}/actions/runs/${run.id}/job/${receipt.id}`
+    )
+      return fallback("receipt is not native");
+    return {
+      reuse: true,
+      promotion: true,
+      tree: checkout.tree,
+      qualificationRun: run.id,
+      reason: "identical tree passed full development push qualification",
+    };
+  } catch {
+    return fallback("qualification evidence unavailable");
+  }
+}
+
 async function main() {
   const git = (...args) => execFileSync("git", ["rev-parse", ...args], { encoding: "utf8" }).trim();
   const checkout = {
@@ -293,13 +440,12 @@ async function main() {
     if (!response.ok) throw new Error("GitHub evidence unavailable");
     return response.json();
   };
-  const result = await findStagingQualification({
-    api,
-    repository,
-    eventName: process.env.GITHUB_EVENT_NAME,
-    event,
-    checkout,
-  });
+  const args = { api, repository, eventName: process.env.GITHUB_EVENT_NAME, event, checkout };
+  let result = await findStagingQualification(args);
+  if (!result.reuse) {
+    const development = await findDevelopmentQualification(args);
+    if (development.promotion) result = development;
+  }
   fs.appendFileSync(
     process.env.GITHUB_OUTPUT,
     `reuse=${result.reuse}\npromotion=${result.promotion}\ntree=${checkout.tree}\nqualification_run=${result.qualificationRun || ""}\n`
