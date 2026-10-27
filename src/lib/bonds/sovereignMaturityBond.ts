@@ -14,9 +14,11 @@ import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { PartialTxEntry } from "@/lib/turn/bondTurnLedger";
 import {
   addBankMaturityClaims,
+  ensureClaimEscrowSlot,
+  maturityPassEscrowFunding,
   settleBankSovereignClaims,
 } from "@/lib/banking/bankSovereignClaims";
-import { resumeSettlement } from "@/lib/banking/settlementJournal";
+import { resumeSettlement, settleTransition } from "@/lib/banking/settlementJournal";
 import { readForcedRolloverFaceLocal } from "@/lib/bonds/forcedSovereignRollover";
 import {
   freezeFundedSovereignBondMaturityQuote,
@@ -95,7 +97,7 @@ export async function settleSovereignBondMaturityBond(
       (claim) => claim.kind === "maturity" && claim.bondId === bondIdHex
     );
     if (dueClaims.length > 0) {
-      const refinanced = await refundBankMaturityShortfall(db, {
+      const refinanced = await fundBankMaturityClaims(db, {
         bond,
         dueClaims,
         budget: budgetWithClaims!,
@@ -176,13 +178,20 @@ type ClaimBudget = Pick<
 
 /**
  * Bank lots on a matured bond are paid through the claim book, which funds
- * each claim's escrow from Treasury cash. When that cash cannot cover this
- * bond's unfunded bank claims, the Treasury refinances the gap with a
- * refunding issue before the book is swept, so the bank (or its open failure
- * estate) is paid principal on time. Returns the re-read budget when cash
- * landed, so the sweep's own pre-check sees it; otherwise null.
+ * each claim's escrow from Treasury cash and then releases it to the bank.
+ * This bond's own maturity pass funds its unpaid bank claims first, so the
+ * sweep only has to release them:
+ *
+ * - The sweep's `funding:<turn>` key may already be spent on a refusal by an
+ *   earlier sweep this turn, so the pass funds under its own key.
+ * - When Treasury cash is short, the pass sells a refunding issue whose
+ *   receipt also carries the escrow funding legs. The proceeds go straight
+ *   into the claim escrow; they never sit in Treasury cash where other
+ *   outflows could spend them before the claim is funded.
+ *
+ * Returns the re-read budget when anything moved, so the sweep sees it.
  */
-async function refundBankMaturityShortfall(
+async function fundBankMaturityClaims(
   db: Db,
   input: {
     bond: Bond;
@@ -199,54 +208,87 @@ async function refundBankMaturityShortfall(
   const claimId = `sovereign-maturity:${bond._id.toHexString()}:${bond.maturityTurn}`;
   const stored = await db
     .collection<Bond>("bonds")
-    .findOne(
-      { _id: bond._id },
-      { projection: { totalIssued: 1, sovereignMaturityClaim: 1, matured: 1 } }
-    );
+    .findOne({ _id: bond._id }, { projection: { sovereignMaturityClaim: 1, matured: 1 } });
   const quote = stored?.sovereignMaturityClaim;
   if (!stored || stored.matured || quote?.id !== claimId) return null;
   const alreadyPaid = new Set(quote.paidBankClaimIds ?? []);
-  const unpaid = dueClaims.filter((claim) => !alreadyPaid.has(claim.id));
-  if (unpaid.length === 0) return null;
+  const candidates = dueClaims.filter(
+    (claim) =>
+      !alreadyPaid.has(claim.id) &&
+      claim.treasuryCashLedgerEnabled === true &&
+      ObjectId.isValid(claim.bankId)
+  );
+  if (candidates.length === 0) return null;
   const banks = await db
-    .collection<{ _id: ObjectId; bankSovereignEscrows?: Record<string, { amountLocal?: number }> }>(
-      "corporations"
-    )
+    .collection<{
+      _id: ObjectId;
+      bankSovereignEscrows?: Record<string, { amountLocal?: number }>;
+    }>("corporations")
     .find(
+      { _id: { $in: [...new Set(candidates.map((c) => c.bankId))].map((h) => new ObjectId(h)) } },
       {
-        _id: {
-          $in: [...new Set(unpaid.map((claim) => claim.bankId))]
-            .filter((hex) => ObjectId.isValid(hex))
-            .map((hex) => new ObjectId(hex)),
-        },
-      },
-      { projection: Object.fromEntries(unpaid.map((c) => [`bankSovereignEscrows.${c.id}`, 1])) }
+        projection: Object.fromEntries(candidates.map((c) => [`bankSovereignEscrows.${c.id}`, 1])),
+      }
     )
     .toArray();
   const escrowed = (claim: BankSovereignClaim) =>
     banks.find((row) => String(row._id) === claim.bankId)?.bankSovereignEscrows?.[claim.id]
       ?.amountLocal ?? 0;
-  const needLocal = unpaid.reduce(
-    (sum, claim) => sum + Math.max(0, claim.amountLocal - escrowed(claim)),
-    0
+  // A missing bank routes its claim to insurance in the sweep; leave it there.
+  const unfunded = candidates.filter(
+    (claim) =>
+      banks.some((row) => String(row._id) === claim.bankId) && escrowed(claim) < claim.amountLocal
   );
-  const cash = budget.treasuryCashLocal ?? 0;
-  if (needLocal <= cash) return null;
-  const refunded = await refundSovereignMaturityShortfall(db, {
-    sourceBond: bond,
-    claimId,
-    retiringFaceLocal: stored.totalIssued,
-    alreadyRefundedLocal: quote.refundedFaceLocal ?? 0,
-    shortfallLocal: needLocal - cash,
-    countryId,
-    budgetId,
-    currencyCode: bondCcy,
-    couponRate: await marketSovereignRolloverCoupon(db, countryId as CountryId),
-    scope: "bank",
-    turn,
-    now,
+  if (unfunded.length === 0) return null;
+  // A funding attempt a crash left half-applied is finished first; the sweep
+  // resumes it under the same prefix, and opening another would double fund.
+  const open = await db.collection<{ _id: string }>("bankMoneyMoves").countDocuments({
+    $or: unfunded.map((claim) => ({ _id: { $regex: `^${escapeRegex(claim.id)}:funding:` } })),
+    status: "partial",
   });
-  if (refunded.status === "refused") return null;
+  if (open > 0) return null;
+  for (const claim of unfunded) await ensureClaimEscrowSlot(db, claim);
+
+  const needLocal = unfunded.reduce((sum, claim) => sum + claim.amountLocal, 0);
+  const cash = budget.treasuryCashLocal ?? 0;
+  if (cash >= needLocal) {
+    for (const claim of unfunded) {
+      const transition = maturityPassEscrowFunding(claim, budgetId, turn);
+      const settled = await settleTransition(db, transition);
+      if (settled.status === "partial" || (settled.status === "replayed" && settled.error))
+        await resumeSettlement(db, transition.key);
+    }
+  } else {
+    const funding = unfunded.map((claim) => maturityPassEscrowFunding(claim, budgetId, turn));
+    // The bank lots' face is what the bank side of this claim can ever owe.
+    const bankFaceLocal = (quote.sourceHolders ?? []).reduce(
+      (sum, holder) =>
+        sum +
+        (holder.bankId && Number.isSafeInteger(holder.charteredTurn)
+          ? Math.max(0, holder.units) * BOND_UNIT_FACE_VALUE
+          : 0),
+      0
+    );
+    const refunded = await refundSovereignMaturityShortfall(db, {
+      sourceBond: bond,
+      claimId,
+      scopeOwedLocal: bankFaceLocal,
+      scopeRefundedLocal: quote.refundedBankFaceLocal ?? 0,
+      shortfallLocal: needLocal - cash,
+      countryId,
+      budgetId,
+      currencyCode: bondCcy,
+      couponRate: await marketSovereignRolloverCoupon(db, countryId as CountryId),
+      scope: "bank",
+      followOn: {
+        legs: funding.flatMap((transition) => transition.legs),
+        projections: funding.flatMap((transition) => transition.projections),
+      },
+      turn,
+      now,
+    });
+    if (refunded.status === "refused") return null;
+  }
   return db.collection<FederalBudget>("federalBudget").findOne(
     { _id: budgetId },
     {
@@ -259,4 +301,8 @@ async function refundBankMaturityShortfall(
       },
     }
   );
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&");
 }
