@@ -378,7 +378,7 @@ async function finishOrResumeMove(
   if (result.status === "applied" || result.status === "rejected") return result;
   if (result.status === "partial") return resumeMoneyMove(db, key);
   const record = await db
-    .collection(MONEY_MOVE_COLLECTION)
+    .collection<{ _id: string; status?: string }>(MONEY_MOVE_COLLECTION)
     .findOne({ _id: key }, { projection: { status: 1 } });
   if (!record) return { status: "rejected", applied: [], error: `no money move ${key}` };
   if (record.status === "applied") return { status: "applied", applied: [] };
@@ -394,7 +394,7 @@ async function settlePerAllocationReference(
 ): Promise<MoneyMoveResult[]> {
   const { orderId } = order;
   const key = politicalMediaOrderKey(orderId);
-  const orders = db.collection(MONEY_MOVE_COLLECTION);
+  const orders = db.collection<{ _id: string; status?: string }>(MONEY_MOVE_COLLECTION);
   const saved = order;
   if (!saved.settlementPlan) throw new Error("no funded settlement plan");
   if (saved.status === "settled") return [];
@@ -671,7 +671,7 @@ describe("political media settlement, one move per buyer", () => {
     expect(escrowOf(settledState(reference), "order-delta")).toBe(10);
 
     const withoutRefusedOrder = (state: unknown) => {
-      const copy = settledState(state) as { escrow: { orderId: string }[] };
+      const copy = settledState(state as InMemoryDb) as { escrow: { orderId: string }[] };
       return {
         ...copy,
         escrow: copy.escrow.filter((row) => !row.orderId.endsWith("order-delta")),
