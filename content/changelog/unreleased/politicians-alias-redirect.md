@@ -1,0 +1,1 @@
+- The short `/politicians` address now redirects straight to the country's politicians page, so it no longer shows a blank page before the app has loaded.
