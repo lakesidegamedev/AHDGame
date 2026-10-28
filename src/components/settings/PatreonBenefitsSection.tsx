@@ -12,6 +12,12 @@ import type {
 } from "@/lib/db/types/patreon";
 import { ProfileBorder } from "@/components/patreon/ProfileBorder";
 import { LocalTime } from "@/components/time/LocalTime";
+import { fetchJson } from "@/lib/observability/fetchJson";
+import {
+  FALLBACK_TIER_PRICES,
+  formatMonthlyPrice,
+  type PaidPatreonTier,
+} from "@/lib/patreon/tierPriceFormat";
 
 type PatreonAdPreference = "ad-free" | "player-only" | "all-ads";
 
@@ -143,6 +149,14 @@ export function PatreonBenefitsSection() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState("");
+  // Today's Patreon prices; the fallback list covers the moment before they load.
+  const [prices, setPrices] = useState<Record<PaidPatreonTier, string>>(() => ({
+    supporter: formatMonthlyPrice(FALLBACK_TIER_PRICES.supporter.amountCents),
+    "supporter-plus": formatMonthlyPrice(FALLBACK_TIER_PRICES["supporter-plus"].amountCents),
+    "supporter-plus-plus": formatMonthlyPrice(
+      FALLBACK_TIER_PRICES["supporter-plus-plus"].amountCents
+    ),
+  }));
   const accessLevel = getAccessLevel(state);
   const tintColor = state?.patreonHighlightColor ?? PATREON_HIGHLIGHT_COLORS.default;
   const isStripe = state?.supporterProvider === "stripe";
@@ -184,6 +198,23 @@ export function PatreonBenefitsSection() {
         });
       })
       .catch(() => setState(null));
+  }, []);
+
+  useEffect(() => {
+    // On failure the fallback prices stay up; fetchJson reports the error.
+    fetchJson<{ tiers?: Array<{ key: PaidPatreonTier; priceLabel: string }> }>(
+      "/api/patreon/tiers",
+      { feature: "patreon-tier-prices" }
+    )
+      .then((data) => {
+        if (!data?.tiers?.length) return;
+        setPrices((current) => {
+          const next = { ...current };
+          for (const tier of data.tiers ?? []) next[tier.key] = tier.priceLabel;
+          return next;
+        });
+      })
+      .catch(() => undefined);
   }, []);
 
   const groups = useMemo(
@@ -257,7 +288,7 @@ export function PatreonBenefitsSection() {
           <div className="grid gap-4 xl:grid-cols-2">
             <TierPreviewCard
               name="Supporter"
-              price="$4.99 / month"
+              price={prices.supporter}
               description="Support the game development and server costs, with ad-free browsing, free banner ads, and core supporter cosmetics."
               benefits={[
                 "Ad-free content",
@@ -270,7 +301,7 @@ export function PatreonBenefitsSection() {
             />
             <TierPreviewCard
               name="Supporter+"
-              price="$9.99 / month"
+              price={prices["supporter-plus"]}
               highlighted
               description="Support the game development and unlock the full cosmetic set, permanent supporter achievement, and premium patron perks."
               benefits={[

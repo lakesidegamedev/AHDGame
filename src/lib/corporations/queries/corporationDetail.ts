@@ -309,6 +309,7 @@ export async function loadCorporationDetailView(args: {
       // Size cost on the whole control group, in margin points, as applied last turn.
       managementOverheadPp: Math.round((corporation.managementOverheadPp ?? 0) * 100) / 100,
       marketingStrengthGrowth: Math.round(income.marketingStrengthGrowth * 1000) / 1000,
+      marketingDecayRate: income.marketingDecayRate,
       logisticsBudget: income.logisticsBudget,
       logisticsStrength: income.currentLogisticsStrength,
       logisticsStrengthNetChange: Math.round(income.logisticsStrengthNetChange * 1000) / 1000,

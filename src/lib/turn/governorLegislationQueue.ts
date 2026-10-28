@@ -182,6 +182,7 @@ export async function processGovernorLegislationQueue(
         characterId: q.governorCharacterId,
         name: q.governorName,
       },
+      proposalPayerId: q.governorCharacterId,
       status: "active",
       votesFor: sponsorVoteWeight,
       votesAgainst: 0,

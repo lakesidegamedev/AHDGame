@@ -107,7 +107,12 @@ export function producerCashTransition(input: {
               _id: oid(binding.corporationId),
               "producerPayables.worldEpoch": input.worldEpoch,
               liquidCurrencyCode: binding.currency,
-              liquidCapital: binding.openingCashLocal,
+              // A player can spend or receive company cash between the opening
+              // read and this write (a spin-off, a purchase). The leg moves the
+              // turn's change, so it only needs the balance to cover a debit;
+              // pinning the opening balance would refuse the frozen turn on
+              // every retry and stop the world.
+              ...(change < 0 ? { liquidCapital: { $gte: amount } } : {}),
             }
           : {
               _id: binding.economyAccountId,

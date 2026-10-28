@@ -114,6 +114,8 @@ export const TURN_ANCHORED_GAME_CONFIG_KEPT: Readonly<Record<string, string>> = 
   centralBankPricingPhaseIn:
     "rewritten to {} from the reference config by the core seed; the engine restamps it on the first economy turn",
   marketSystemModeUpdatedTurn: "cleared by STALE_MARKET_MODE_STAMP_UNSET with the tier provenance",
+  economyPauseUntilTurn:
+    "scheduled economy-only pause window: the economy-only reset keeps the world clock and schedules it on the rebuilt economy, so the core config update must not clear it; a full world reset clears it explicitly in resetGameWorld, since the new world restarts its turn counter",
 });
 
 /**

@@ -41,6 +41,17 @@ describe("National chair sponsorship access", () => {
     expect((await access()).sponsor?.chamber).toBe("house");
     expect((await access(() => 0.999)).sponsor?.chamber).toBe("senate");
   });
+  it("recognizes a seated legacy US NPP official without an explicit countryId", async () => {
+    await memory.collection("electedOfficials").updateMany({}, { $unset: { countryId: "" } });
+    const result = await access();
+    expect(result.authorized).toBe(true);
+    expect(result.sponsor?.npp._id).toEqual(house);
+    expect(result.sponsor?.chamber).toBe("house");
+  });
+  it("does not recognize foreign seats even when the seated NPP belongs to the US party", async () => {
+    await memory.collection("electedOfficials").updateMany({}, { $set: { countryId: "BR" } });
+    expect((await access()).sponsor).toBeNull();
+  });
   it.each(NATIONAL_NPP_IN_FLIGHT)(
     "blocks another NPP bill across chambers while a bill is %s",
     async (status) => {

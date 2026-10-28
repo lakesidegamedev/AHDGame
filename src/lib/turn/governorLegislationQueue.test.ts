@@ -71,6 +71,9 @@ describe("processGovernorLegislationQueue — NPP-office officer authority", () 
     expect(result.fired).toBe(1);
     expect(result.cancelled).toBe(0);
     expect(db.collection("stateBills").insertOne).toHaveBeenCalledTimes(1);
+    expect(db.collection("stateBills").insertOne).toHaveBeenCalledWith(
+      expect.objectContaining({ proposalPayerId: QUEUER })
+    );
     expect(mockCancelQueue).not.toHaveBeenCalled();
     // Authorization was resolved via the shared office-access helper.
     expect(mockCanManageOffice).toHaveBeenCalledWith(expect.anything(), "US", "TX", QUEUER);

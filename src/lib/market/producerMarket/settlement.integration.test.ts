@@ -17,6 +17,8 @@ import { prepareProducerSector } from "@/lib/turn/corporation/producerSectorPlan
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 const corporationId = "aaaaaaaaaaaaaaaaaaaaaaaa";
 const sectorId = "bbbbbbbbbbbbbbbbbbbbbbbb";
+const newOwnerId = "dddddddddddddddddddddddd";
+const thirdOwnerId = "eeeeeeeeeeeeeeeeeeeeeeee";
 const openingDailyUnits = (10 * TURNS_PER_DAY) / (1 - CAPITAL_DEPRECIATION_PER_TURN);
 
 function fixture() {
@@ -159,6 +161,42 @@ function fixture() {
     ],
   };
   return { memory, input, db: memory as unknown as Db };
+}
+
+/** Add a corporation that settles this turn, so redirected cash has an account. */
+function addSecondCorporation(
+  memory: ReturnType<typeof createInMemoryDb>,
+  input: Parameters<typeof settleProducerTurn>[1],
+  id: string
+) {
+  memory.seed("corporations", [
+    {
+      _id: new ObjectId(id),
+      liquidCapital: 0,
+      producerPayables: { worldEpoch: "example", turn: 0, claims: [] },
+      liquidCurrencyCode: "USD",
+      countryId: "US",
+      userId: new ObjectId("ffffffffffffffffffffffff"),
+    },
+  ]);
+  input.production.accounts = [...input.production.accounts, { id, cash: 0 }];
+  input.bindings = [
+    ...input.bindings,
+    {
+      kind: "corporation",
+      accountId: id,
+      corporationId: id,
+      currency: "USD",
+      localPerAnchor: 2,
+      openingCashLocal: 0,
+    },
+  ];
+}
+
+function corporationById(memory: ReturnType<typeof createInMemoryDb>, id: string) {
+  return memory
+    .collection("corporations")
+    .docs.find((corp) => (corp._id as ObjectId).toHexString() === id);
 }
 
 describe("frozen producer turn settlement", () => {
@@ -565,5 +603,94 @@ describe("frozen producer turn settlement", () => {
     await expect(settleProducerTurn(db, input)).rejects.toThrow("turn fence");
     expect(memory.collection("producerEconomyTurns").docs).toHaveLength(0);
     expect(memory.collection("corporations").docs[0].liquidCapital).toBe(1000);
+  });
+
+  it("settles with the frozen owner after a mid-turn transfer and records a warning", async () => {
+    const { memory, input, db } = fixture();
+    addSecondCorporation(memory, input, newOwnerId);
+    memory.collection("corporateSectors").docs[0].corporationId = new ObjectId(newOwnerId);
+    const result = await settleProducerTurn(db, input);
+    // Cash, including revenue, wages and costs, stays with the owner the plan froze.
+    expect(corporationById(memory, corporationId)).toMatchObject({ liquidCapital: 1030 });
+    expect(corporationById(memory, newOwnerId)).toMatchObject({ liquidCapital: 0 });
+    // The physical receipt belongs to the sector itself, whatever owns it now.
+    expect(memory.collection("corporateSectors").docs[0]).toMatchObject({
+      corporationId: new ObjectId(newOwnerId),
+      producerSettlement: { worldEpoch: "example", turn: 1, revenue: 30 },
+      producerCapacity: { worldEpoch: "example", turn: 1 },
+    });
+    expect(result.turnWarnings).toHaveLength(1);
+    expect(result.turnWarnings![0]).toContain(sectorId);
+    expect(result.turnWarnings![0]).toContain(corporationId);
+    expect(result.turnWarnings![0]).toContain(newOwnerId);
+  });
+
+  it("replays a settled turn with drifted ownership exactly once", async () => {
+    const { memory, input, db } = fixture();
+    addSecondCorporation(memory, input, newOwnerId);
+    memory.collection("corporateSectors").docs[0].corporationId = new ObjectId(newOwnerId);
+    const result = await settleProducerTurn(db, input);
+    expect(await settleProducerTurn(db, input)).toEqual(result);
+    expect(corporationById(memory, corporationId)).toMatchObject({ liquidCapital: 1030 });
+    expect(corporationById(memory, newOwnerId)).toMatchObject({ liquidCapital: 0 });
+    expect(memory.collection("ledgerEntries").docs).toHaveLength(1);
+  });
+
+  it("still refuses when the sector is gone", async () => {
+    const { memory, input, db } = fixture();
+    memory.collection("corporateSectors").docs.splice(0);
+    await expect(settleProducerTurn(db, input)).rejects.toThrow("is missing");
+    expect(memory.collection("producerEconomyTurns").docs).toHaveLength(0);
+    expect(memory.collection("corporations").docs[0].liquidCapital).toBe(1000);
+  });
+
+  it("books a dissolved frozen owner's cash to the sector's current owner", async () => {
+    const { memory, input, db } = fixture();
+    addSecondCorporation(memory, input, newOwnerId);
+    const faulty = withInjectedCrash(memory, {
+      collection: "producerEconomyTurns",
+      op: "insertOne",
+      onCall: 1,
+      afterWrite: true,
+    });
+    await expect(settleProducerTurn(faulty.db, input)).rejects.toThrow("crash");
+    expect(corporationById(memory, corporationId)).toMatchObject({ liquidCapital: 1000 });
+    // The frozen owner disappears after the plan froze and the sector moved on.
+    memory.collection("corporations").docs.splice(
+      memory
+        .collection("corporations")
+        .docs.findIndex((corp) => (corp._id as ObjectId).toHexString() === corporationId),
+      1
+    );
+    memory.collection("corporateSectors").docs[0].corporationId = new ObjectId(newOwnerId);
+    const result = await settleProducerTurn(db, input);
+    expect(corporationById(memory, corporationId)).toBeUndefined();
+    expect(corporationById(memory, newOwnerId)).toMatchObject({ liquidCapital: 30 });
+    expect(memory.collection("corporateSectors").docs[0]).toMatchObject({
+      producerSettlement: { worldEpoch: "example", turn: 1, revenue: 30 },
+    });
+    expect(result.turnWarnings).toHaveLength(1);
+    expect(result.turnWarnings![0]).toContain(corporationId);
+    expect(result.turnWarnings![0]).toContain(newOwnerId);
+  });
+
+  it("refuses a dissolved frozen owner whose cash has nowhere to go", async () => {
+    const { memory, input, db } = fixture();
+    const faulty = withInjectedCrash(memory, {
+      collection: "producerEconomyTurns",
+      op: "insertOne",
+      onCall: 1,
+      afterWrite: true,
+    });
+    await expect(settleProducerTurn(faulty.db, input)).rejects.toThrow("crash");
+    memory.collection("corporations").docs.splice(
+      memory
+        .collection("corporations")
+        .docs.findIndex((corp) => (corp._id as ObjectId).toHexString() === corporationId),
+      1
+    );
+    memory.collection("corporateSectors").docs[0].corporationId = new ObjectId(thirdOwnerId);
+    await expect(settleProducerTurn(db, input)).rejects.toThrow("nowhere to book its cash");
+    expect(memory.collection("ledgerEntries").docs).toHaveLength(0);
   });
 });

@@ -187,18 +187,22 @@ afterEach(() => {
 
 describe("GuidedLegislationModal", () => {
   it.each([
-    ["regional", "economy"],
-    ["national", "trade"],
+    ["regional", "economy", "Economy, Work, Trade and Financial Affairs"],
+    ["national", "economy", "Economy, Work, Trade and Financial Affairs"],
+    ["regional", "economy", "Economy, work, trade, and fiscal affairs"],
+    ["national", "economy", "Economy, work, trade, and fiscal affairs"],
   ] as const)(
     "submits the economic domain using a valid %s category",
-    async (scope, expectedCategory) => {
-      const domain = "Economy, Work, Trade and Financial Affairs";
+    async (scope, expectedCategory, domain) => {
       stubCatalog({
         ...catalog,
         families: [{ ...catalog.families[0], domain, title: "Household Relief and Work Credits" }],
       });
       mocks.postBill.mockResolvedValue({ response: { ok: true }, data: {}, cancelled: false });
-      renderModal(vi.fn(), scope === "regional" ? "UK" : "US", vi.fn(), { scope });
+      renderModal(vi.fn(), scope === "regional" ? "UK" : "US", vi.fn(), {
+        scope,
+        proposeViaPartyNpp: true,
+      });
       await addProvision(domain, "Household Relief and Work Credits", "Community clinic expansion");
       fireEvent.change(screen.getByLabelText("Bill title"), {
         target: { value: "Household Support Act" },
@@ -210,6 +214,7 @@ describe("GuidedLegislationModal", () => {
       await waitFor(() => expect(mocks.postBill).toHaveBeenCalledOnce());
       const request = mocks.postBill.mock.calls[0][0];
       expect(request.body.category).toBe(expectedCategory);
+      expect(request.body.proposeViaPartyNpp).toBe(true);
       expect(request.body.provisions[0]).toEqual({
         type: "reset_law",
         familyId: "L19",

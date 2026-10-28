@@ -27,6 +27,7 @@ import {
   RD_INNOVATION_SCORE_THRESHOLD,
   SPRAWL_SECTOR_THRESHOLD,
 } from "@/lib/constants/corporations";
+import { marketingStrengthEquilibrium } from "@/lib/corporations/strengthProjection";
 import { CURRENCY_SYMBOLS, type CurrencyCode } from "@/lib/constants/currencies";
 import type { CorporationDetail, Financials } from "../CorporationPageTypes";
 import {
@@ -153,6 +154,11 @@ export default function CeoBudgetPanel({
   const anchor = (local: number) => money.toAnchor(local);
   const currentMs = corporation.marketingStrength ?? 0;
   const msGain = calcMarketingGrowth(anchor(daily.marketing), currentMs);
+  // Ticket 1695: since marketing decay went live the gross gain alone read as a
+  // rise while strength was falling. Show the net change, as for logistics.
+  const msDecayRate = corporation.marketingDecayRate ?? 0;
+  const msNet = msGain - currentMs * msDecayRate;
+  const msEquilibrium = marketingStrengthEquilibrium(anchor(daily.marketing), msDecayRate);
   const currentLs = corporation.logisticsStrength ?? 0;
   const lsNet = calcLogisticsGrowth(anchor(daily.logistics)) - currentLs * LOGISTICS_DECAY_RATE;
   // #1669: a group leader pays its formalized subsidiaries part of the strength
@@ -322,8 +328,10 @@ export default function CeoBudgetPanel({
           pct={pctOfRevenue(daily.marketing)}
           note={
             daily.marketing > 0
-              ? `+${msGain.toFixed(3)} gross growth before decay/turn (now ${Math.round(currentMs)}, diminishing above ${MARKETING_DIMINISHING_THRESHOLD})`
-              : `Strength ${Math.round(currentMs)}, no spend`
+              ? `${msNet >= 0 ? "+" : ""}${msNet.toFixed(2)}/turn (now ${Math.round(currentMs)}${msEquilibrium !== null ? `, settles near ${Math.round(msEquilibrium)}` : `, diminishing above ${MARKETING_DIMINISHING_THRESHOLD}`})`
+              : msDecayRate > 0 && currentMs > 0
+                ? `Decaying ${(currentMs * msDecayRate).toFixed(2)}/turn, no spend`
+                : `Strength ${Math.round(currentMs)}, no spend`
           }
         />
         <StatementLine

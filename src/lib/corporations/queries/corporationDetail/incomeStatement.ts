@@ -108,6 +108,7 @@ export interface IncomeStatementResult {
   currentLogisticsStrength: number;
   currentRdScore: number;
   marketingStrengthGrowth: number;
+  marketingDecayRate: number;
   logisticsStrengthNetChange: number;
   rdScoreNetChange: number;
   totalShares: number;
@@ -462,20 +463,24 @@ export async function computeIncomeStatement(
   const currentLogisticsStrength = corporation.logisticsStrength ?? 0;
   const currentRdScore = corporation.rdScore ?? 0;
   const strengthUpkeepStage = await loadStrengthUpkeepStage(db);
-  const { marketingStrengthGrowth, logisticsStrengthNetChange, rdScoreNetChange } =
-    calculateCorpStrengthProjection(
-      {
-        marketingBudget: corporation.marketingBudget,
-        marketingStrength: corporation.marketingStrength ?? 0,
-        logisticsBudget,
-        logisticsStrength: currentLogisticsStrength,
-        rdBudget: corporation.rdBudget ?? 0,
-        rdScore: currentRdScore,
-        liquidCurrencyCode: corpCurrency,
-        strengthUpkeepStage,
-      },
-      corpFxRate
-    );
+  const {
+    marketingStrengthGrowth,
+    marketingDecayRate,
+    logisticsStrengthNetChange,
+    rdScoreNetChange,
+  } = calculateCorpStrengthProjection(
+    {
+      marketingBudget: corporation.marketingBudget,
+      marketingStrength: corporation.marketingStrength ?? 0,
+      logisticsBudget,
+      logisticsStrength: currentLogisticsStrength,
+      rdBudget: corporation.rdBudget ?? 0,
+      rdScore: currentRdScore,
+      liquidCurrencyCode: corpCurrency,
+      strengthUpkeepStage,
+    },
+    corpFxRate
+  );
 
   const totalShares = corporation.totalShares ?? 10_000_000;
   const marketCapitalization = getRoundedPublicMarketCap(corporation, totalShares);
@@ -618,6 +623,7 @@ export async function computeIncomeStatement(
     currentLogisticsStrength,
     currentRdScore,
     marketingStrengthGrowth,
+    marketingDecayRate,
     logisticsStrengthNetChange,
     rdScoreNetChange,
     totalShares,

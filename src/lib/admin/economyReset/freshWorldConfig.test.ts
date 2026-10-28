@@ -79,5 +79,7 @@ describe("fresh plants world configuration", () => {
     });
     const set = new Set(Object.keys(update.$set ?? {}));
     for (const name of removed) expect(set.has(name), name).toBe(false);
+    // A scheduled economy pause belongs to the rebuilt world, so a reset keeps it.
+    expect(removed).not.toContain("economyPauseUntilTurn");
   });
 });

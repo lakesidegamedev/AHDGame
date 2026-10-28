@@ -17,6 +17,8 @@ interface RunMeterProps {
   idleCauses: PlantIdleCause[];
   /** Drives the facility noun in the segment help text. */
   sectorType: OperatingSectorType;
+  /** Outputs that sell only in this state; explains a demand limit beside a wider shortage. */
+  localMarketOutputs?: string[];
   /** Dim the whole meter (mothballed plants). */
   dimmed?: boolean;
 }
@@ -46,12 +48,14 @@ export default function RunMeter({
   soldUnits,
   idleCauses,
   sectorType,
+  localMarketOutputs = [],
   dimmed = false,
 }: RunMeterProps) {
   const sites = facilityPlural(sectorType);
   const causeMeta = idleCauseMeta(
     sectorType,
-    idleCauses.find((cause) => cause.cause === "bank")?.capacityShare
+    idleCauses.find((cause) => cause.cause === "bank")?.capacityShare,
+    localMarketOutputs
   );
   const capacity = capacityUnits > 0 ? capacityUnits : 0;
   const sold = Math.max(0, Math.min(producedUnits, soldUnits));

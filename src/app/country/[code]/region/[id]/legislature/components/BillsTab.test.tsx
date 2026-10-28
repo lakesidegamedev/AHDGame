@@ -65,4 +65,16 @@ describe("Party chair regional proposal action", () => {
     show({ canProposeViaPartyNpp: false });
     expect(screen.queryByRole("button", { name: "Propose through party legislator" })).toBeNull();
   });
+  it("keeps an authorized chair's action visible when no sponsor is available", () => {
+    show({ partyNppUnavailable: true });
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Propose through party legislator",
+        }) as HTMLButtonElement
+      ).disabled
+    ).toBe(true);
+    expect(screen.getByText(/No party NPP is available/)).toBeTruthy();
+    expect(mocks.modal).not.toHaveBeenCalled();
+  });
 });
