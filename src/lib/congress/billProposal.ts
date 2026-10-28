@@ -194,14 +194,16 @@ export async function validateBillProvisions(
       typeof rawP === "object" && rawP !== null && "type" in rawP
         ? (rawP as { type: unknown }).type
         : undefined;
-    // Subsidies sit outside the reviewed law catalog: they act on corporate
-    // margins, not on a law family, so a v2 world keeps proposing them as-is.
+    // Corporate subsidies and national embargoes sit outside reviewed law
+    // families. Keep their existing typed validation in v2 worlds.
     if (
       resetLegislationV2 &&
       rawType !== undefined &&
       rawType !== "reset_law" &&
       rawType !== "subsidy" &&
-      rawType !== "end_subsidy"
+      rawType !== "end_subsidy" &&
+      rawType !== "embargo" &&
+      rawType !== "end_embargo"
     ) {
       return {
         ok: false,
