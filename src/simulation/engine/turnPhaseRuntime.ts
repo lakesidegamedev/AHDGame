@@ -635,6 +635,7 @@ export function createTurnPhaseRuntime(input: {
     markPhaseSkipped,
     drainTimedOutPhases: waitForDrainingPhases,
     requirePhaseResult,
+    isPhaseEligible: (phase: string) => !shouldRunPhase || shouldRunPhase(phase),
     resumeResultOutcome: (phase: string) => resumeOutcomes.get(phase) ?? null,
   };
 }

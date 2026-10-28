@@ -577,7 +577,15 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
           ),
           runtime.runPhase("commodityPrices", () => processCommodityPriceTurn(newTurn)),
         ]);
-        if (captureV2SovereignCash) {
+        if (captureV2SovereignCash && runtime.isPhaseEligible?.("bondTurn") === false) {
+          // A phase predicate (sim profile, timed economy pause) kept bondTurn
+          // from running, so there are no sovereign flows to settle this turn.
+          await runtime.markPhaseSkipped(
+            "resetTreasuryCash",
+            "conditional",
+            "skipped: bondTurn is outside the phase eligibility predicate"
+          );
+        } else if (captureV2SovereignCash) {
           // On a crash resume this is the result bondTurn stored with its
           // completed status, never a rerun and never an assumed zero (#3429).
           const bondFlows = runtime.requirePhaseResult(
