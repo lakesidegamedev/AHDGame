@@ -21,6 +21,9 @@ import {
 import { AskUsageBars, AskUsageLine } from "@/components/askDrawer/AskUsageBars";
 import { AskUpgradeCard } from "@/components/askDrawer/AskUpgradeCard";
 import { ASK_SITE_URL } from "@/lib/askDrawer/askService";
+import { isValidElement, type ReactNode } from "react";
+import { AskChart, AskDiagram, AskMap, richKind } from "@/components/askDrawer/AskRichBlock";
+import { KeirSprite, type KeirMood } from "@/components/askDrawer/KeirSprite";
 
 // The Ask drawer, laid out like the Ask site: the question as a heading, the
 // answer as plain prose with quiet actions beside an "Answer" label, sources
@@ -61,6 +64,13 @@ interface Turn {
   error: string | null;
   upgrade: AskUpgradeOffer | null;
   feedback: "up" | "down" | null;
+  /** The research steps Ask narrated while it worked, and how long it took. */
+  trail: string[];
+  elapsedMs: number | null;
+  extras: Pick<
+    AskAnswerPayload,
+    "vizBlocked" | "vizLimit" | "reportUrl" | "liveSources" | "conflicts" | "liveHint"
+  >;
 }
 
 function newTurn(question: string): Turn {
@@ -78,7 +88,49 @@ function newTurn(question: string): Turn {
     error: null,
     upgrade: null,
     feedback: null,
+    trail: [],
+    elapsedMs: null,
+    extras: {},
   };
+}
+
+/** A fenced block Ask draws (chart, map, diagram) rather than prints. */
+function RichBlock({
+  lang,
+  code,
+  streaming,
+  question,
+  fullAskUrl,
+}: {
+  lang: string;
+  code: string;
+  streaming: boolean;
+  question: string;
+  fullAskUrl: string;
+}) {
+  const kind = richKind(lang, code);
+  if (streaming && kind !== "diagram") {
+    return (
+      <div
+        className="my-3 flex h-24 items-center justify-center rounded-xl border border-card-border/70 bg-card-elevated/40 text-[12px] text-muted"
+        role="status"
+      >
+        <span className="animate-pulse">{kind === "map" ? "Drawing map…" : "Drawing chart…"}</span>
+      </div>
+    );
+  }
+  if (kind === "chart") {
+    return (
+      <AskChart
+        source={code}
+        format={lang === "ask-chart" ? "ask-chart" : "mermaid"}
+        question={question}
+        fullAskUrl={fullAskUrl}
+      />
+    );
+  }
+  if (kind === "map") return <AskMap source={code} fullAskUrl={fullAskUrl} />;
+  return <AskDiagram fullAskUrl={fullAskUrl} />;
 }
 
 function absoluteAskUrl(url: string | undefined): string | null {
@@ -153,12 +205,16 @@ const QUIET_BUTTON =
 
 function TurnView({
   turn,
+  fullAskUrl,
   onFollowup,
   onFeedback,
+  onLiveHint,
 }: {
   turn: Turn;
+  fullAskUrl: string;
   onFollowup: (question: string) => void;
   onFeedback: (turn: Turn, rating: "up" | "down") => void;
+  onLiveHint: (question: string) => void;
 }) {
   const [copied, setCopied] = useState(false);
   const copy = () => {
@@ -236,6 +292,28 @@ function TurnView({
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
+              code: ({ className, children }) => {
+                const lang = /language-([\w.+#-]+)/.exec(className || "")?.[1]?.toLowerCase();
+                const code = String(children ?? "").replace(/\n$/, "");
+                if (lang && richKind(lang, code)) {
+                  return (
+                    <RichBlock
+                      lang={lang}
+                      code={code}
+                      streaming={turn.streaming}
+                      question={turn.question}
+                      fullAskUrl={fullAskUrl}
+                    />
+                  );
+                }
+                return <code className={className}>{children}</code>;
+              },
+              // A drawn block replaces its <pre> wrapper entirely.
+              pre: ({ children }) => {
+                const only = Array.isArray(children) ? null : (children as ReactNode);
+                if (isValidElement(only) && only.type === RichBlock) return <>{only}</>;
+                return <pre>{children}</pre>;
+              },
               a: ({ href, children }) => {
                 const url = absoluteAskUrl(href);
                 return url ? (
@@ -257,6 +335,74 @@ function TurnView({
       )}
       {turn.error && <p className="text-[15px] text-foreground">{turn.error}</p>}
       {turn.upgrade && <AskUpgradeCard offer={turn.upgrade} />}
+
+      {!turn.streaming && turn.extras.vizBlocked && (
+        <p className="text-[13px] text-muted">
+          {turn.extras.vizLimit
+            ? `You have used all ${turn.extras.vizLimit} charts and maps for today, so this one is answered in prose. Your allowance resets at midnight UTC.`
+            : "This one is answered in prose."}
+        </p>
+      )}
+      {!turn.streaming && turn.extras.reportUrl && absoluteAskUrl(turn.extras.reportUrl) && (
+        <a
+          href={absoluteAskUrl(turn.extras.reportUrl) ?? undefined}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block text-[13px] text-primary underline"
+        >
+          Open this report as its own shareable page
+        </a>
+      )}
+      {!turn.streaming &&
+        (turn.extras.conflicts ?? []).map((c, i) => (
+          <div
+            key={i}
+            className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-[13px] text-foreground"
+          >
+            <b className="font-semibold">Documentation may be out of date.</b> The {c.source}
+            {c.page ? ` page "${c.page}"` : ""} says {c.claim}, but the game code does: {c.actual}.
+            This has been flagged for review.
+          </div>
+        ))}
+      {!turn.streaming && turn.extras.liveHint && (
+        <button
+          type="button"
+          onClick={() => onLiveHint(turn.question)}
+          title={turn.extras.liveHint.note}
+          className="inline-flex items-center gap-1.5 rounded-md border border-card-border px-2.5 py-1 text-[12px] text-foreground hover:border-foreground/30"
+        >
+          <Icon d={ICONS.bolt} className="h-3.5 w-3.5" />
+          {turn.extras.liveHint.label || "Answer with live game data"}
+        </button>
+      )}
+      {!turn.streaming && (turn.trail.length > 0 || (turn.extras.liveSources ?? []).length > 0) && (
+        <details className="group text-[13px]">
+          <summary className="flex cursor-pointer list-none items-center gap-1 text-muted hover:text-foreground">
+            <Icon d={ICONS.chev} className="h-3 w-3 transition-transform group-open:rotate-90" />
+            {turn.trail.length > 0
+              ? `Researched ${turn.trail.length} step${turn.trail.length === 1 ? "" : "s"}${turn.elapsedMs ? ` in ${(turn.elapsedMs / 1000).toFixed(1)}s` : ""}`
+              : "Research"}
+            {(turn.extras.liveSources ?? []).length > 0 && (
+              <span className="text-muted/70">
+                {" "}
+                · {(turn.extras.liveSources ?? []).length} live read
+                {(turn.extras.liveSources ?? []).length === 1 ? "" : "s"}
+              </span>
+            )}
+          </summary>
+          <ul className="mt-2 space-y-1 pl-4 text-muted">
+            {turn.trail.map((step, i) => (
+              <li key={`s${i}`}>{step}</li>
+            ))}
+            {(turn.extras.liveSources ?? []).map((s, i) => (
+              <li key={`l${i}`} className="flex items-center gap-1 text-foreground">
+                <Icon d={ICONS.bolt} className="h-3 w-3" />
+                {s.label}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
 
       {!turn.streaming && turn.citations.length > 0 && (
         <details className="group text-[13px]">
@@ -343,6 +489,9 @@ export function AskDrawerPanel({
   const [convs, setConvs] = useState<AskConversationSummary[]>([]);
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState(false);
+  // A one-off reaction (wave on open, idea or alert when an answer lands).
+  const [flash, setFlash] = useState<KeirMood | null>("wave");
+  const [typing, setTyping] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const reqIdRef = useRef<string | null>(null);
   const bodyRef = useRef<HTMLDivElement | null>(null);
@@ -438,13 +587,23 @@ export function AskDrawerPanel({
         usedMcp: !!d.usedMcp,
         error: d.stopped ? "Stopped. This did not use a question." : (d.error ?? null),
         upgrade: d.quota ? (d.upgrade ?? null) : null,
+        extras: {
+          vizBlocked: d.vizBlocked,
+          vizLimit: d.vizLimit,
+          reportUrl: d.reportUrl,
+          liveSources: d.liveSources,
+          conflicts: d.conflicts,
+          liveHint: d.liveHint,
+        },
       }));
+      // Keir reacts to how it went, then settles.
+      setFlash(d.error && !d.stopped ? "alert" : d.stopped ? null : "idea");
     },
     [updateTurn]
   );
 
   const submit = useCallback(
-    async (text?: string) => {
+    async (text?: string, forceLive = false) => {
       const q = (text ?? question).trim();
       if (busy || q.length < 5) return;
       const turn = newTurn(q);
@@ -458,6 +617,7 @@ export function AskDrawerPanel({
       reqIdRef.current = reqId;
       const context = sharePage ? capturePageContext() : null;
       if (context) setPage(context);
+      const startedAt = Date.now();
       try {
         const result = await askQuestion(
           {
@@ -465,7 +625,8 @@ export function AskDrawerPanel({
             clientReqId: reqId,
             convId: convId ?? undefined,
             mode,
-            useMcp: live,
+            useMcp: live || forceLive,
+            visualizations: true,
             game: "ahd",
             tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
             ...(context ? { pageContext: context } : {}),
@@ -473,12 +634,18 @@ export function AskDrawerPanel({
           controller.signal,
           (event) => {
             if (event.event === "meta" && event.data.convId) setConvId(event.data.convId);
-            else if (event.event === "status" && event.data.label)
-              updateTurn(turn.key, { status: event.data.label });
-            else if (event.event === "delta")
+            else if (event.event === "status" && event.data.label) {
+              const label = event.data.label;
+              updateTurn(turn.key, (t) => ({
+                status: label,
+                trail:
+                  t.trail.length < 90 && t.trail.at(-1) !== label ? [...t.trail, label] : t.trail,
+              }));
+            } else if (event.event === "delta")
               updateTurn(turn.key, (t) => ({ answer: t.answer + event.data }));
           }
         );
+        updateTurn(turn.key, { elapsedMs: Date.now() - startedAt });
         applyFinal(
           turn.key,
           result.payload ?? { error: "Ask did not finish that answer. It did not use a question." }
@@ -586,6 +753,19 @@ export function AskDrawerPanel({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  useEffect(() => {
+    if (!flash) return;
+    const t = window.setTimeout(() => setFlash(null), 2500);
+    return () => window.clearTimeout(t);
+  }, [flash]);
+
+  const lastTurn = turns.at(-1);
+  const keirMood: KeirMood = busy
+    ? lastTurn?.answer
+      ? "talking"
+      : "thinking"
+    : (flash ?? (typing && question.trim() ? "listening" : "idle"));
+
   const outOfQuestions = usage !== null && usage.remaining <= 0;
   const liveAvailable = (usage?.mcpRemaining ?? 1) > 0;
   const fullAskUrl = convId ? `${ASK_SITE_URL}/?c=${encodeURIComponent(convId)}` : ASK_SITE_URL;
@@ -595,9 +775,15 @@ export function AskDrawerPanel({
   return (
     <div className="flex h-full flex-col">
       <header className="flex items-center gap-0.5 border-b border-card-border/70 px-3 py-2">
-        <div className="mr-auto flex items-baseline gap-2">
-          <span className="text-[15px] font-semibold tracking-tight text-foreground">Ask</span>
-          <span className="text-[11px] text-muted">Experimental</span>
+        <div className="mr-auto flex items-center gap-2">
+          {/* The empty drawer shows Keir large below; one Keir at a time. */}
+          {(turns.length > 0 || view === "history") && <KeirSprite mood={keirMood} />}
+          <div className="flex flex-col leading-tight">
+            <span className="text-[15px] font-semibold tracking-tight text-foreground">
+              Ask Keir
+            </span>
+            <span className="text-[11px] text-muted">Experimental</span>
+          </div>
         </div>
         <button
           type="button"
@@ -708,8 +894,9 @@ export function AskDrawerPanel({
             </div>
           </div>
         ) : turns.length === 0 ? (
-          <div className="pt-6">
-            <h2 className="text-xl font-semibold tracking-tight text-foreground">
+          <div className="pt-4">
+            <KeirSprite mood={keirMood} scale={2} />
+            <h2 className="mt-3 text-xl font-semibold tracking-tight text-foreground">
               Ask about this page
             </h2>
             <p className="mt-1.5 text-[14px] leading-relaxed text-muted">
@@ -736,8 +923,10 @@ export function AskDrawerPanel({
               <TurnView
                 key={t.key}
                 turn={t}
+                fullAskUrl={fullAskUrl}
                 onFollowup={(f) => void submit(f)}
                 onFeedback={feedback}
+                onLiveHint={(q) => void submit(q, true)}
               />
             ))}
           </div>
@@ -755,6 +944,8 @@ export function AskDrawerPanel({
           <div className="flex items-end gap-2 px-3 pt-2.5">
             <textarea
               ref={inputRef}
+              onFocus={() => setTyping(true)}
+              onBlur={() => setTyping(false)}
               value={question}
               onChange={(e) => setQuestion(e.target.value.slice(0, MAX_QUESTION))}
               onKeyDown={(e) => {

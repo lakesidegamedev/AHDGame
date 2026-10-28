@@ -57,6 +57,17 @@ export interface AskAnswerPayload {
   upgrade?: AskUpgradeOffer | null;
   stopped?: boolean;
   signedOut?: boolean;
+  /** A chart was asked for but the daily chart allowance is spent (or the plan lacks it). */
+  vizBlocked?: boolean;
+  vizLimit?: number | null;
+  /** A report request: the answer is also a standalone page. */
+  reportUrl?: string | null;
+  /** Live game state the answer read, named plainly. */
+  liveSources?: Array<{ label: string }>;
+  /** Docs that disagree with the code; flagged for review. */
+  conflicts?: Array<{ source?: string; page?: string; claim?: string; actual?: string }>;
+  /** Offer to re-run a code-only answer against live game state. */
+  liveHint?: { label?: string; note?: string } | null;
 }
 
 export interface AskMe {

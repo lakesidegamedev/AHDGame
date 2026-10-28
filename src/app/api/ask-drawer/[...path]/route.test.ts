@@ -115,4 +115,28 @@ describe("/api/ask-drawer/[...path]", () => {
     expect(response.status).toBe(401);
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("sends chart and map renders to Ask's renderers, with room for chart data", async () => {
+    fetchMock.mockResolvedValue(
+      new Response("<svg/>", { status: 200, headers: { "content-type": "image/svg+xml" } })
+    );
+    const big = JSON.stringify({ source: "x".repeat(60000) });
+    const chart = await POST(
+      new NextRequest("http://localhost/api/ask-drawer/chart/render", {
+        method: "POST",
+        body: big,
+      }),
+      ctx(["chart", "render"])
+    );
+    expect(chart.status).toBe(200);
+    expect(fetchMock.mock.calls[0][0]).toBe("http://ask.internal:9749/api/chart/render");
+    await POST(
+      new NextRequest("http://localhost/api/ask-drawer/map/render", { method: "POST", body: "{}" }),
+      ctx(["map", "render"])
+    );
+    expect(fetchMock.mock.calls[1][0]).toBe("http://ask.internal:9749/api/map/render");
+    expect(fetchMock.mock.calls[1][1].headers).toMatchObject({
+      Authorization: "Bearer drawer-secret",
+    });
+  });
 });
