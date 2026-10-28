@@ -7,6 +7,7 @@ import { useOptionalAuthMe, useRefetchNav } from "@/contexts/AuthDataContext";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { isChromeHiddenPath, isLightweightLayoutPath } from "@/lib/constants/layoutPaths";
 import type { AskDrawerSide } from "@/components/askDrawer/AskDrawerPanel";
+import { KeirSprite } from "@/components/askDrawer/KeirSprite";
 
 // Experimental: the Ask drawer, docked to the left or right edge of most pages
 // for players who opted in to experimental features in Settings. The panel and
@@ -97,26 +98,13 @@ export function AskDrawer() {
             setMounted(true);
             setOpen(true);
           }}
-          aria-label="Open Ask"
-          title="Ask about this page"
+          aria-label="Open Ask Keir"
+          title="Ask Keir about this page"
           data-feedback-ignore="true"
-          className={`fixed top-1/2 z-[44] flex -translate-y-1/2 items-center gap-1.5 border border-primary/30 bg-card/95 px-1.5 py-3 text-xs font-semibold text-primary shadow-modal backdrop-blur-md transition-colors hover:bg-primary/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary [writing-mode:vertical-rl] ${left ? "left-0 rotate-180 rounded-l-lg border-l-0" : "right-0 rounded-l-lg border-r-0"}`}
+          className={`fixed top-1/2 z-[44] flex -translate-y-1/2 flex-col items-center gap-1 border border-primary/30 bg-card/95 px-1 pb-2.5 pt-1.5 text-xs font-semibold text-primary shadow-modal backdrop-blur-md transition-colors hover:bg-primary/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${left ? "left-0 rounded-r-lg border-l-0" : "right-0 rounded-l-lg border-r-0"}`}
         >
-          <svg
-            className="h-4 w-4 rotate-90"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            aria-hidden
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M8 10h8M8 14h5m-9 6l2.5-3H18a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v14z"
-            />
-          </svg>
-          Ask
+          <KeirSprite mood="idle" />
+          <span className="[writing-mode:vertical-rl]">Ask</span>
         </button>
       )}
       {open && (
