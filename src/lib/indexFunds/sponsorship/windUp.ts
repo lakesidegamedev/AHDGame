@@ -25,6 +25,7 @@ import { emitTx } from "@/lib/financialTxLog/emit";
 import { sellFundHoldingsForRedemptionCash } from "@/lib/indexFunds/fundRedemptionLiquidity";
 import { sellFundBondHoldingsForCash } from "@/lib/bonds/sellFundBondUnits";
 import { payCorporateWindUpHolders } from "./corporateHolderPayout";
+import { escheatUnclaimedFundCash } from "./unclaimedResidual";
 import { payFundHoldersCash, type FundHolderCashPayout } from "./holderPayout";
 import { withSessionDb, afterCommit } from "@/lib/db/sessionDb";
 import { recordAudit } from "@/lib/audit/recordAudit";
@@ -343,11 +344,12 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
 
   const remainingAnchor = Math.max(0, fund.cashAnchor - distributedAnchor);
 
+  let returnedToSponsorAnchor = 0;
+  let escheatedToReserveAnchor = 0;
   if (fund.sponsorCorporationId && remainingAnchor > 0) {
     const sponsor = await db
       .collection<Corporation>("corporations")
       .findOne({ _id: fund.sponsorCorporationId });
-    if (!sponsor) throw new Error("Fund sponsor payout failed");
     if (sponsor) {
       const fxRate = await getCorpFxRate(db, sponsor);
       if (!Number.isFinite(fxRate) || fxRate <= 0)
@@ -377,7 +379,21 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
           },
         });
         if (witness === "failed") throw new Error("Fund residual witness failed");
+        returnedToSponsorAnchor = remainingAnchor;
       }
+    } else {
+      // The sponsor corporation was deleted or exited while the fund was still
+      // winding down. Its residual has no owner, so escheat it to the fund
+      // country's central bank reserve instead of freezing every retry.
+      const escheated = await escheatUnclaimedFundCash(
+        db,
+        fund,
+        remainingAnchor,
+        currentTurn,
+        now,
+        "sponsor_missing"
+      );
+      if (escheated) escheatedToReserveAnchor = remainingAnchor;
     }
   }
 
@@ -386,9 +402,14 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
     fundId: fund._id,
     kind: "seed_capital_return",
     turn: currentTurn,
-    ...(fund.sponsorCorporationId ? { corporationId: fund.sponsorCorporationId } : {}),
+    ...(returnedToSponsorAnchor > 0 && fund.sponsorCorporationId
+      ? { corporationId: fund.sponsorCorporationId }
+      : {}),
     amountAnchor: remainingAnchor,
-    note: `Wind-up complete: ${holdersPaid} holder(s) paid, ₳${Math.round(remainingAnchor).toLocaleString()} returned to sponsor`,
+    note:
+      escheatedToReserveAnchor > 0
+        ? `Wind-up complete: ${holdersPaid} holder(s) paid, ₳${Math.round(escheatedToReserveAnchor).toLocaleString()} escheated to the central bank reserve (sponsor no longer exists)`
+        : `Wind-up complete: ${holdersPaid} holder(s) paid, ₳${Math.round(remainingAnchor).toLocaleString()} returned to sponsor`,
     createdAt: now,
   } as IndexFundTransaction);
 
@@ -420,7 +441,8 @@ async function settleWindUp(db: Db, fund: IndexFund, currentTurn: number): Promi
         finalNav,
         holdersPaid,
         distributedAnchor,
-        returnedToSponsorAnchor: remainingAnchor,
+        returnedToSponsorAnchor,
+        escheatedToReserveAnchor,
         seedCapitalAnchor: fund.seedCapitalAnchor ?? 0,
       },
     });
