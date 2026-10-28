@@ -13,6 +13,9 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/contexts/ToastContext", () => ({
   useToast: () => ({ showToast: mocks.showToast }),
 }));
+vi.mock("@/lib/hooks/useEnabledCountryIds", () => ({
+  useEnabledCountryIds: () => ["US", "UK", "JP"],
+}));
 
 vi.mock("@/components/bills/BillAutoFailWarning", () => ({
   postBillProposalWithElectionConfirmation: mocks.postBill,
@@ -140,6 +143,7 @@ function renderModal(
     hasActiveBill?: boolean;
     scope?: "national" | "regional";
     proposeViaPartyNpp?: boolean;
+    offerTrade?: boolean;
   } = {}
 ) {
   render(
@@ -160,6 +164,7 @@ function renderModal(
         initialChamber="house"
         canSubmit={options.canSubmit}
         proposeViaPartyNpp={options.proposeViaPartyNpp}
+        offerTrade={options.offerTrade}
         hasActiveBill={options.hasActiveBill}
         onClose={onClose}
         onSuccess={onSuccess}
@@ -186,6 +191,84 @@ afterEach(() => {
 });
 
 describe("GuidedLegislationModal", () => {
+  it.each(["embargo", "end_embargo"] as const)("submits a national Trade %s", async (action) => {
+    stubCatalog();
+    mocks.postBill.mockResolvedValue({ response: { ok: true }, data: {}, cancelled: false });
+    renderModal();
+    fireEvent.change(await screen.findByLabelText("Policy domain"), { target: { value: "Trade" } });
+    expect(screen.queryByRole("option", { name: /US/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Add to draft bill" }));
+    expect(mocks.showToast).toHaveBeenCalledWith(
+      expect.stringContaining("target country"),
+      "error"
+    );
+    fireEvent.change(screen.getByLabelText("Action"), { target: { value: action } });
+    fireEvent.change(screen.getByLabelText("Target country"), { target: { value: "JP" } });
+    fireEvent.change(screen.getByLabelText("Direction"), { target: { value: "export" } });
+    if (action === "embargo") {
+      fireEvent.change(screen.getByLabelText("Restriction"), { target: { value: "cap" } });
+      fireEvent.click(screen.getByRole("button", { name: "Add to draft bill" }));
+      expect(mocks.showToast).toHaveBeenCalledWith(
+        expect.stringContaining("non-negative cap"),
+        "error"
+      );
+      fireEvent.change(screen.getByLabelText("Cap (units)"), { target: { value: "1000" } });
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Add to draft bill" }));
+    fireEvent.change(screen.getByLabelText("Bill title"), {
+      target: { value: "Trade Restriction Act" },
+    });
+    fireEvent.change(screen.getByLabelText("Summary"), {
+      target: { value: "Change trade restrictions." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Propose bill" }));
+    await waitFor(() => expect(mocks.postBill).toHaveBeenCalledOnce());
+    expect(mocks.postBill.mock.calls[0][0].body).toMatchObject({
+      category: "trade",
+      provisions: [
+        {
+          type: action,
+          targetCountry: "JP",
+          commodity: "all",
+          direction: "export",
+          ...(action === "embargo" ? { mode: "cap", cap: 1000 } : {}),
+        },
+      ],
+    });
+    if (action === "end_embargo")
+      expect(mocks.postBill.mock.calls[0][0].body.provisions[0]).not.toHaveProperty("mode");
+    fireEvent.click(screen.getByRole("button", { name: "Add another provision" }));
+    expect(
+      screen.getByLabelText("Target country").getAttribute("value") ??
+        (screen.getByLabelText("Target country") as HTMLSelectElement).value
+    ).toBe("JP");
+  });
+
+  it.each([{ scope: "regional" as const }, { scope: "national" as const, offerTrade: false }])(
+    "hides Trade for unsupported endpoints (%j)",
+    async (options) => {
+      stubCatalog();
+      renderModal(vi.fn(), "UK", vi.fn(), options);
+      await screen.findByLabelText("Policy domain");
+      await waitFor(() => expect(screen.getByRole("option", { name: "Subsidies" })).toBeTruthy());
+      expect(screen.queryByRole("option", { name: "Trade" })).toBeNull();
+    }
+  );
+
+  it("rejects mixing embargoes into a policy draft", async () => {
+    stubCatalog();
+    renderModal();
+    await addProvision("Health and care", "Primary care access", "Community clinic expansion");
+    fireEvent.click(screen.getByRole("button", { name: "Add another provision" }));
+    fireEvent.change(await screen.findByLabelText("Policy domain"), { target: { value: "Trade" } });
+    fireEvent.change(screen.getByLabelText("Target country"), { target: { value: "JP" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add to draft bill" }));
+    expect(mocks.showToast).toHaveBeenCalledWith(
+      "Embargoes require a separate national Trade bill.",
+      "error"
+    );
+    expect(mocks.postBill).not.toHaveBeenCalled();
+  });
   it.each([
     ["regional", "economy", "Economy, Work, Trade and Financial Affairs"],
     ["national", "economy", "Economy, Work, Trade and Financial Affairs"],
