@@ -73,7 +73,11 @@ describe("applyFundedSwitch", () => {
     });
     const config = await db.collection<Doc>("gameConfig").findOne({ _id: "default" });
     expect(config).toMatchObject(fundedSwitchGameConfigUpdate(50).$set as Record<string, unknown>);
-    const sectors = await db.collection<Doc>("corporateSectors").find({}).sort({ _id: 1 }).toArray();
+    const sectors = await db
+      .collection<Doc>("corporateSectors")
+      .find({})
+      .sort({ _id: 1 })
+      .toArray();
     expect(sectors.map((sector) => sector._id)).toEqual(["sector-a", "sector-b", "sector-c"]);
     for (const sector of sectors) {
       expect(sector).not.toHaveProperty("cutoverTransition");
