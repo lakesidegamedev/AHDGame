@@ -49,7 +49,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!authorized) {
       return errorResponse(
         403,
-        "Only the Secretary of the Treasury (or equivalent), or the head of government if that seat is vacant, may set the draw cap."
+        "Only the Secretary of the Treasury (or equivalent) may set the draw cap."
       );
     }
 
