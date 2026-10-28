@@ -5,7 +5,8 @@ summary: >-
   The Ask Keir drawer is out of experimental features and on for every
   signed-in player, with a phone layout, an instant reply before research,
   suggested questions for the page you are on, and the option to have Keir
-  file a suggestion or open a support ticket for you.
+  file a suggestion or open a support ticket for you. Ask now runs on energy
+  instead of a question count, and the allowance is much larger.
 tags: [ask]
 badges: [minor]
 areas: [frontend]
@@ -30,4 +31,14 @@ areas: [frontend]
   offers union questions.
 - Ask Keir can draft a suggestion or a support ticket from the conversation
   when you ask it to. You can edit the draft, then send or cancel it. Filing
-  is free and never uses a question. Tickets need a linked Discord account.
+  is free and never uses energy. Tickets need a linked Discord account.
+- Ask Keir now runs on energy instead of a count of questions. A quick answer
+  uses a little, a long one with live data or a chart uses more. Every plan
+  gets roughly four times as much as the old daily limit, with a weekly cap on
+  top. The drawer shows one Energy bar with the percent left and about how many
+  questions that is, a thin line for the week, and under each answer how much
+  of today's energy it used. Stopped answers, suggested questions and filed
+  suggestions or tickets are free.
+- Live game data is no longer a separate allowance or a switch. Keir reads the
+  running game whenever your question needs it, so the "Code + live data"
+  toggle is gone.

@@ -7,6 +7,7 @@ const api = vi.hoisted(() => ({
   emit: null as null | ((event: AskStreamEvent) => void),
   finish: null as null | ((payload: AskAnswerPayload) => void),
   suggest: vi.fn(),
+  askQuestion: null as null | ReturnType<typeof vi.fn>,
 }));
 
 vi.mock("./askDrawerApi", async (importOriginal) => {
@@ -15,13 +16,13 @@ vi.mock("./askDrawerApi", async (importOriginal) => {
     ...actual,
     askJson: vi.fn(() => Promise.resolve({ usage: null })),
     suggestQuestions: api.suggest,
-    askQuestion: vi.fn(
+    askQuestion: (api.askQuestion = vi.fn(
       (_body: unknown, _signal: AbortSignal, onEvent: (event: AskStreamEvent) => void) =>
         new Promise((resolve) => {
           api.emit = onEvent;
           api.finish = (payload) => resolve({ ok: true, status: 200, payload });
         })
-    ),
+    )),
   };
 });
 
@@ -109,6 +110,31 @@ describe("AskDrawerPanel", () => {
     });
     expect(screen.getByRole("region", { name: "Suggestion draft" })).toBeTruthy();
     expect((screen.getByLabelText("Title") as HTMLInputElement).value).toBe("Union support map");
+  });
+
+  it("always reads live data, with no toggle, and shows what the answer cost", async () => {
+    renderPanel();
+    expect(screen.queryByText("Code + live data")).toBeNull();
+    expect(screen.queryByText("Code only")).toBeNull();
+    await ask("Why did my approval drop?");
+    expect(api.askQuestion?.mock.calls[0][0]).toMatchObject({ useMcp: true });
+    await act(async () => {
+      api.finish?.({
+        answer: "Your party lost a vote.",
+        usedMcp: true,
+        charge: { cost: 0.6, percentOfDaily: 3, reasons: ["live data", "chart"] },
+      });
+    });
+    expect(screen.getByText("Used 3% of today's energy (live data, chart)")).toBeTruthy();
+  });
+
+  it("says a stopped answer used no energy", async () => {
+    renderPanel();
+    await ask("Why did my approval drop?");
+    await act(async () => {
+      api.finish?.({ stopped: true });
+    });
+    expect(screen.getByText("Stopped. This did not use any energy.")).toBeTruthy();
   });
 
   it("offers page-aware starter questions once they arrive", async () => {

@@ -1,14 +1,93 @@
 // Client calls for the Ask drawer. Everything goes through the game's own
 // /api/ask-drawer proxy, which signs the player in to Ask server-side.
 
+export interface AskEnergyWindow {
+  used: number;
+  limit: number;
+  remaining: number;
+  percentLeft?: number;
+  resetAt: number;
+}
+
+/** Old fields stay for older Ask servers; with `energy` present they are in energy units. */
 export interface AskUsage {
   used: number;
   limit: number;
   remaining: number;
-  mcpUsed: number;
-  mcpLimit: number;
-  mcpRemaining: number;
+  mcpUsed?: number;
+  mcpLimit?: number;
+  mcpRemaining?: number;
   resetAt: number;
+  energy?: {
+    daily: AskEnergyWindow;
+    weekly?: AskEnergyWindow | null;
+    typicalLeft?: number;
+    unit?: "energy";
+  };
+}
+
+/** What one finished answer cost. 1.0 energy is a typical answer. */
+export interface AskCharge {
+  cost: number;
+  percentOfDaily?: number;
+  reasons?: string[];
+}
+
+export interface AskEnergyView {
+  daily: { percentLeft: number; resetAt: number; limit: number };
+  weekly: { percentLeft: number; resetAt: number } | null;
+  /** About how many typical answers are left today, counting the weekly cap. */
+  typicalLeft: number;
+}
+
+function percentLeft(window: Pick<AskEnergyWindow, "remaining" | "limit" | "percentLeft">) {
+  if (typeof window.percentLeft === "number" && Number.isFinite(window.percentLeft)) {
+    return Math.max(0, Math.min(100, Math.round(window.percentLeft)));
+  }
+  if (!(window.limit > 0)) return 0;
+  return Math.max(0, Math.min(100, Math.round((window.remaining / window.limit) * 100)));
+}
+
+/** One view of the allowance, from the energy payload or the old daily fields. */
+export function askEnergy(usage: AskUsage): AskEnergyView {
+  const daily = usage.energy?.daily ?? {
+    used: usage.used,
+    limit: usage.limit,
+    remaining: usage.remaining,
+    resetAt: usage.resetAt,
+  };
+  const weekly = usage.energy?.weekly ?? null;
+  const typicalLeft =
+    typeof usage.energy?.typicalLeft === "number"
+      ? usage.energy.typicalLeft
+      : Math.min(daily.remaining, weekly ? weekly.remaining : Infinity);
+  return {
+    daily: { percentLeft: percentLeft(daily), resetAt: daily.resetAt, limit: daily.limit },
+    weekly: weekly ? { percentLeft: percentLeft(weekly), resetAt: weekly.resetAt } : null,
+    typicalLeft: Math.max(0, Math.floor(typicalLeft)),
+  };
+}
+
+/** True when either today's or this week's energy is spent. */
+export function energySpent(usage: AskUsage): boolean {
+  const daily = usage.energy?.daily.remaining ?? usage.remaining;
+  const weekly = usage.energy?.weekly?.remaining ?? Infinity;
+  return daily <= 0 || weekly <= 0;
+}
+
+/** "Used 3% of today's energy (live data, chart)", or null for a free answer. */
+export function chargeLine(charge: AskCharge | null | undefined, dailyLimit?: number) {
+  if (!charge || !(charge.cost > 0)) return null;
+  const pct =
+    typeof charge.percentOfDaily === "number"
+      ? charge.percentOfDaily
+      : dailyLimit && dailyLimit > 0
+        ? (charge.cost / dailyLimit) * 100
+        : null;
+  if (pct === null || !Number.isFinite(pct)) return null;
+  const amount = pct < 1 ? "under 1%" : `${Math.round(pct)}%`;
+  const reasons = (charge.reasons ?? []).filter((r) => typeof r === "string" && r.trim());
+  return `Used ${amount} of today's energy${reasons.length ? ` (${reasons.join(", ")})` : ""}`;
 }
 
 export interface AskUpgradeTier {
@@ -16,8 +95,12 @@ export interface AskUpgradeTier {
   label: string;
   name: string;
   price: string;
+  /** Daily energy on this tier (older servers called it questions). */
   questions: number;
-  liveQuestions: number;
+  liveQuestions?: number;
+  energy?: { daily: number; weekly?: number };
+  /** Energy as a multiple of the free Player tier. */
+  multiple?: number;
 }
 
 export interface AskUpgradeOffer {
@@ -77,22 +160,21 @@ export interface AskAnswerPayload {
   usedMcp?: boolean;
   cached?: boolean;
   usage?: AskUsage;
+  /** What this answer cost, settled when it finished. */
+  charge?: AskCharge | null;
   error?: string;
   quota?: boolean;
   upgrade?: AskUpgradeOffer | null;
   stopped?: boolean;
   signedOut?: boolean;
-  /** A chart was asked for but the daily chart allowance is spent (or the plan lacks it). */
+  /** A chart was asked for but the plan cannot draw it. */
   vizBlocked?: boolean;
-  vizLimit?: number | null;
   /** A report request: the answer is also a standalone page. */
   reportUrl?: string | null;
   /** Live game state the answer read, named plainly. */
   liveSources?: Array<{ label: string }>;
   /** Docs that disagree with the code; flagged for review. */
   conflicts?: Array<{ source?: string; page?: string; claim?: string; actual?: string }>;
-  /** Offer to re-run a code-only answer against live game state. */
-  liveHint?: { label?: string; note?: string } | null;
 }
 
 export interface AskMe {

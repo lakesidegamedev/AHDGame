@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanSuggestions, parseSse } from "./askDrawerApi";
+import { askEnergy, chargeLine, cleanSuggestions, energySpent, parseSse } from "./askDrawerApi";
 
 describe("parseSse", () => {
   it("returns complete events and keeps the unfinished tail", () => {
@@ -55,5 +55,67 @@ describe("cleanSuggestions", () => {
   it("is empty for anything that is not a list", () => {
     expect(cleanSuggestions(undefined)).toEqual([]);
     expect(cleanSuggestions("nope")).toEqual([]);
+  });
+});
+
+describe("askEnergy", () => {
+  it("reads the energy payload and caps the estimate by the week", () => {
+    expect(
+      askEnergy({
+        used: 4,
+        limit: 20,
+        remaining: 16,
+        resetAt: 1,
+        energy: {
+          daily: { used: 4, limit: 20, remaining: 16, percentLeft: 80, resetAt: 1 },
+          weekly: { used: 97.5, limit: 100, remaining: 2.5, resetAt: 2 },
+        },
+      })
+    ).toEqual({
+      daily: { percentLeft: 80, resetAt: 1, limit: 20 },
+      weekly: { percentLeft: 3, resetAt: 2 },
+      typicalLeft: 2,
+    });
+  });
+
+  it("falls back to the old daily fields", () => {
+    expect(askEnergy({ used: 3, limit: 5, remaining: 2, resetAt: 9 })).toEqual({
+      daily: { percentLeft: 40, resetAt: 9, limit: 5 },
+      weekly: null,
+      typicalLeft: 2,
+    });
+  });
+});
+
+describe("energySpent", () => {
+  it("is spent when either today or this week is empty", () => {
+    const daily = { used: 1, limit: 20, remaining: 19, resetAt: 0 };
+    expect(energySpent({ ...daily, energy: { daily } })).toBe(false);
+    expect(
+      energySpent({
+        ...daily,
+        energy: { daily, weekly: { used: 100, limit: 100, remaining: 0, resetAt: 0 } },
+      })
+    ).toBe(true);
+    expect(energySpent({ used: 5, limit: 5, remaining: 0, resetAt: 0 })).toBe(true);
+  });
+});
+
+describe("chargeLine", () => {
+  it("names the share of today's energy and why", () => {
+    expect(chargeLine({ cost: 0.6, percentOfDaily: 3, reasons: ["live data", "chart"] })).toBe(
+      "Used 3% of today's energy (live data, chart)"
+    );
+    expect(chargeLine({ cost: 0.25, percentOfDaily: 0.2 })).toBe("Used under 1% of today's energy");
+  });
+
+  it("works the share out from the daily limit when the server leaves it out", () => {
+    expect(chargeLine({ cost: 2 }, 40)).toBe("Used 5% of today's energy");
+  });
+
+  it("says nothing for a free answer", () => {
+    expect(chargeLine({ cost: 0, percentOfDaily: 0 })).toBeNull();
+    expect(chargeLine(null)).toBeNull();
+    expect(chargeLine({ cost: 1 })).toBeNull();
   });
 });

@@ -10,7 +10,7 @@ import {
 
 // A suggestion or ticket Keir drafted from the conversation. Nothing is filed
 // until the player reads it, edits it if they like, and presses Send. Filing
-// is free: it never uses a question.
+// is free: it never uses energy.
 
 const TITLE_MAX = 200;
 const DESCRIPTION_MAX = 5000;
