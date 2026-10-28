@@ -2,6 +2,7 @@ import { deriveGranularElectorateUnits } from "./granularElectorate";
 import { getTurnoutTargetsForCountry } from "./turnoutTargets";
 import type { StateDemographicTurnout } from "@/lib/db/types/stateDemographicTurnout";
 import type { EraYearContext } from "./granularElectorate";
+import type { LegislativePriorities } from "./legislativePriorities/rules";
 
 /**
  * Per-bucket view of a region's electorate, for the demographics tab.
@@ -26,6 +27,8 @@ export interface BucketRow {
   socialLean: number;
   /** Turnout rate for this bucket, 0-100. */
   turnout: number;
+  /** Display-only requests, attached by the region page rather than the vote path. */
+  legislativePriorities?: LegislativePriorities | null;
 }
 
 export interface BucketProfileSection {

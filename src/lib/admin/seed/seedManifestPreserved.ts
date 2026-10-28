@@ -153,6 +153,12 @@ export const PRESERVED: CollectionEntry[] = [
     notes:
       "Admin-authored era/position overrides (written by the position editor, consumed by the seed pipeline). Persists across resets as authored config.",
   },
+  {
+    name: "electoratePriorityOverrides",
+    category: "preserved",
+    notes:
+      "Admin-authored legislative priorities per country/region/group. Preserve across resets like demographicConfigOverrides; Restore defaults explicitly deletes one override. Primary-key-only policy: deterministic country:region:dimension:group _id, single-key writes and bounded $in reads for one region's bucket roster; MongoDB automatically recreates the _id index on first write. No secondary indexes or migration are required for this additive collection.",
+  },
 
   // ── 2026-07 backfill: moderation / audit surfaces that must survive reset ──
   {

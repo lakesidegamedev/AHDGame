@@ -27,6 +27,7 @@ import { regionUrl as buildRegionUrl, regionApprovalUrl, countryUrl } from "@/li
 import { StatePageTabs } from "@/components/StatePageTabs";
 import { RegionHeader } from "@/components/state/RegionHeader";
 import { getBucketProfileForRegion } from "@/lib/demographics/bucketProfile";
+import { loadProfileLegislativePriorities } from "@/lib/demographics/legislativePriorities/overrides";
 import { STATE_FLAGS, getStateDescriptor, STATE_MOTTOS } from "@/lib/constants";
 import { IE_REGION_CONSTITUENT_COUNCILS } from "@/lib/constants/ireland";
 import { resolveRegionBannerImage } from "@/lib/constants/regionBanner";
@@ -169,7 +170,12 @@ async function renderUKRegion(regionCode: string) {
 
   const ukActivePreset = ukGameState?.preset ?? DEFAULT_SEED_PRESET;
   const censusData = getRegionCensusData("UK", stateId, ukActivePreset);
-  const ukBucketProfile = getBucketProfileForRegion("UK", stateId, ukActivePreset);
+  const ukBucketProfile = await loadProfileLegislativePriorities(
+    db,
+    getBucketProfileForRegion("UK", stateId, ukActivePreset),
+    "UK",
+    stateId
+  );
 
   const serializedMps = officials.map((o) => ({
     _id: o._id.toString(),
@@ -384,7 +390,12 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
   // same granular units the vote engine uses, so the tab cannot disagree with
   // the result. Null for a region with no Layer-1 substrate — the tab keeps its
   // archetype fallback there.
-  const bucketProfile = getBucketProfileForRegion(countryId, stateId, activePreset);
+  const bucketProfile = await loadProfileLegislativePriorities(
+    db,
+    getBucketProfileForRegion(countryId, stateId, activePreset),
+    countryId,
+    stateId
+  );
 
   const governmentApproval = approvalData?.approval ?? null;
   const approvalBaseScore = approvalData?.baseApproval ?? null;
