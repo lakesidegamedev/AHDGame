@@ -1,3 +1,4 @@
+import { getIncompatibleOfficeHolders } from "@/lib/cabinet/officeCompatibility";
 import { initialMinisterialActionFields } from "@/lib/cabinet/ministerialActionPool";
 import { getCabinetEligibleOfficeTypes } from "@/lib/legislature/chamberOfficeType";
 import { NextResponse } from "next/server";
@@ -244,6 +245,12 @@ export async function appointCabinetMemberHandler(request: Request, countryId: C
     const targetChar = await db.collection<Character>("characters").findOne({ _id: characterId });
     if (!targetChar) {
       throw notFound("Character");
+    }
+
+    if (
+      (await getIncompatibleOfficeHolders(db, "cabinet", [characterId])).has(characterId.toString())
+    ) {
+      throw forbidden("Leave the central bank role before joining cabinet");
     }
 
     if (!targetChar.userId) {
@@ -791,6 +798,11 @@ export async function reshuffleCabinetHandler(request: Request, countryId: Count
       lowerOfficial: ElectedOfficial | null;
     }
     const validated: ValidatedAppointment[] = [];
+    const bankHolders = await getIncompatibleOfficeHolders(
+      db,
+      "cabinet",
+      parsed.data.appointments.map((a) => new ObjectId(a.characterId))
+    );
 
     const runtime = await getCountryState(db, countryId);
     const isOps = runtime.governmentType === "onePartyState";
@@ -824,6 +836,9 @@ export async function reshuffleCabinetHandler(request: Request, countryId: Count
       const targetChar = await db.collection<Character>("characters").findOne({ _id: characterId });
       if (!targetChar) {
         throw notFound("Character");
+      }
+      if (bankHolders.has(characterIdStr)) {
+        throw forbidden("Leave the central bank role before joining cabinet");
       }
       if (!targetChar.userId) {
         throw forbidden("Can only appoint player characters to cabinet");
