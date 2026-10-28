@@ -260,6 +260,16 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // The country-agnostic /politicians address is another redirect-only family.
+  // Answering it here means a logged-out or crawler request gets the 307 at
+  // once, instead of an empty render whose only content is a client-side hop
+  // (the page rendered blank for anything that does not run the redirect).
+  if (pathname === "/politicians") {
+    const requested = request.nextUrl.searchParams.get("country")?.trim().toLowerCase();
+    const country = requested && /^[a-z]{2,3}$/.test(requested) ? requested : "us";
+    return NextResponse.redirect(new URL(`/country/${country}/politicians`, request.url));
+  }
+
   // Internal API routes get the read-gate, not the page maintenance/redirect
   // path. Returning here keeps maintenance HTML redirects from being served to
   // API clients (which expect JSON) once `/api/` is in the matcher. Runs

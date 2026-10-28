@@ -377,3 +377,25 @@ describe("proxy() acquisition cookie", () => {
     expect(res.cookies.get("__ahd_src")).toBeUndefined();
   });
 });
+
+describe("proxy() — /politicians redirect shim", () => {
+  it("307-redirects /politicians to the US politicians page by default", async () => {
+    const res = await proxy(makeRequest("https://ahousedividedgame.com/politicians"));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe(
+      "https://ahousedividedgame.com/country/us/politicians"
+    );
+  });
+
+  it("honours ?country= and falls back to US when it is malformed", async () => {
+    const uk = await proxy(makeRequest("https://ahousedividedgame.com/politicians?country=UK"));
+    expect(uk.headers.get("location")).toBe("https://ahousedividedgame.com/country/uk/politicians");
+
+    const bad = await proxy(
+      makeRequest("https://ahousedividedgame.com/politicians?country=..%2Fevil")
+    );
+    expect(bad.headers.get("location")).toBe(
+      "https://ahousedividedgame.com/country/us/politicians"
+    );
+  });
+});
