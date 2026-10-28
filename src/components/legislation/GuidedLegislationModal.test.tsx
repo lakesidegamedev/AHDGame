@@ -218,6 +218,7 @@ describe("GuidedLegislationModal", () => {
     fireEvent.change(screen.getByLabelText("Bill title"), {
       target: { value: "Trade Restriction Act" },
     });
+    expect(screen.getByText(/Costs 10 action points and 0 national influence/)).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Summary"), {
       target: { value: "Change trade restrictions." },
     });

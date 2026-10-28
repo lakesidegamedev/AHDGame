@@ -691,8 +691,10 @@ export function GuidedLegislationModal({
             <p className="mt-1 text-xs text-muted">
               {isCustomBill ? t("noEffects") : `Build up to ${MAX_PROVISIONS} reviewed provisions.`}{" "}
               Costs {BILL_PROPOSE_ACTION_COST} action points and{" "}
-              {getProvisionCostTotal(isCustomBill ? 0 : draft.length)} national influence at the
-              current draft size.
+              {getProvisionCostTotal(
+                isCustomBill ? 0 : draft.filter((p) => p.kind !== "embargo").length
+              )}{" "}
+              national influence at the current draft size.
               {queue
                 ? " The chosen NPP introduces the bill next turn. The cost is refunded if the bill is cancelled."
                 : null}
