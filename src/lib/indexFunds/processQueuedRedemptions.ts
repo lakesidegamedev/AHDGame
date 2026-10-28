@@ -125,9 +125,11 @@ export async function prepareQueuedRedemptionPass(
   const currencies = [...new Set(funds.map((fund) => fund.anchorCurrencyCode))] as CurrencyCode[];
   const fxRateByCurrency = new Map<CurrencyCode, { rate: number; ok: boolean }>();
   if (forexEnabled && currencies.length > 0) {
+    // Keep currencyCode in the projection: the map below is keyed on it, and an
+    // inclusion projection silently drops every field it does not name.
     const rows = await db
       .collection<{ currencyCode: CurrencyCode; rate: number }>("exchangeRates")
-      .find({ currencyCode: { $in: currencies } }, { projection: { rate: 1 } })
+      .find({ currencyCode: { $in: currencies } }, { projection: { currencyCode: 1, rate: 1 } })
       .toArray();
     const byCurrency = new Map(rows.map((row) => [row.currencyCode, row.rate]));
     for (const currency of currencies) {
