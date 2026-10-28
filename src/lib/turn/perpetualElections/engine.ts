@@ -12,6 +12,7 @@ import type {
   State,
 } from "@/lib/db/types";
 import { archiveCampaignsForCandidates } from "@/lib/campaigns/archiveWithdrawnCampaigns";
+import { BG_FOUNDING_COUNTS_COLLECTION } from "@/lib/countries/bg/foundingCount1990";
 import { CURRENT_PRESIDENTIAL_RULESET_VERSION } from "@/lib/elections/presidentialRuleset";
 import { US_STATE_FILTER } from "@/lib/utils/electionLabels";
 import { MS_PER_TURN, STARTING_YEAR } from "@/lib/constants/turnTime";
@@ -974,11 +975,28 @@ export async function ensurePerpetualElections(now: Date, currentTurn?: number):
 export async function cleanupStaleElectionCandidates(now: Date): Promise<void> {
   const db = await getDb();
 
+  // A Bulgarian founding race stays `completed` until its count is seated, and a
+  // pending count reopens a runoff that needs the first-round candidacies still
+  // active. Sweeping them first leaves every runoff without candidates, so the
+  // count never settles and the founding phase never ends.
+  const unseatedBgFounding = await db
+    .collection<{ electionIds?: string[]; runoffElectionIds?: string[] }>(
+      BG_FOUNDING_COUNTS_COLLECTION
+    )
+    .find({ seatedAtTurn: null }, { projection: { electionIds: 1, runoffElectionIds: 1 } })
+    .toArray();
+  const heldBgIds = new Set(
+    unseatedBgFounding.flatMap((row) => [
+      ...(row.electionIds ?? []),
+      ...(row.runoffElectionIds ?? []),
+    ])
+  );
+
   const completedElectionIds = await db
     .collection<Election>("elections")
     .find({ status: "completed" }, { projection: { _id: 1 } })
     .toArray()
-    .then((docs) => docs.map((d) => d._id));
+    .then((docs) => docs.map((d) => d._id).filter((id) => !heldBgIds.has(id.toHexString())));
 
   if (completedElectionIds.length === 0) return;
 
