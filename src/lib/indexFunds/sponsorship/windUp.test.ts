@@ -23,6 +23,14 @@ vi.mock("@/lib/indexFunds/fundRedemptionLiquidity", () => ({
     salesExecuted: 0,
   }),
 }));
+vi.mock("@/lib/indexFunds/fundHoldingWriteOff", () => ({
+  writeOffDeadConstituentHoldings: vi.fn().mockResolvedValue({
+    writtenOffCount: 0,
+    writtenOffValueAnchor: 0,
+    unsellableCount: 0,
+    unsellableValueAnchor: 0,
+  }),
+}));
 vi.mock("@/lib/bonds/sellFundBondUnits", () => ({
   sellFundBondHoldingsForCash: vi
     .fn()
@@ -82,6 +90,7 @@ vi.mock("./holderPayout", async () => {
 
 import { creditCorpLiquidCapital } from "@/lib/financialTxLog/atomicCashGuard";
 import { sellFundHoldingsForRedemptionCash } from "@/lib/indexFunds/fundRedemptionLiquidity";
+import { writeOffDeadConstituentHoldings } from "@/lib/indexFunds/fundHoldingWriteOff";
 import { sellFundBondHoldingsForCash } from "@/lib/bonds/sellFundBondUnits";
 import { payFundHolderCash } from "./holderPayout";
 import { processQueuedRedemptions } from "@/lib/indexFunds/processQueuedRedemptions";
@@ -275,6 +284,23 @@ describe("advanceWindDowns", () => {
     expect(r.fundsCompleted).toBe(0);
     expect(vi.mocked(sellFundHoldingsForRedemptionCash)).toHaveBeenCalled();
     expect(vi.mocked(payFundHolderCash)).not.toHaveBeenCalled();
+  });
+
+  it("writes off a holding whose corporation is gone so the wind-up can finish", async () => {
+    const deadCorp = new ObjectId();
+    const fund = makeFund({
+      status: "winding_down",
+      holdings: [{ corporationId: deadCorp, shares: 10, lastValueAnchor: 50_000 }],
+    });
+    const { db } = makeDb({ windingDown: [fund], positions: [] });
+    const r = await advanceWindDowns(db, 200);
+    expect(vi.mocked(writeOffDeadConstituentHoldings)).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({ _id: fund._id }),
+      fund.holdings
+    );
+    expect(payFundHolderCash).not.toHaveBeenCalled();
+    expect(r.fundsCompleted).toBe(0);
   });
 
   it("sells bonds before completing and pays out the fresh cash balance", async () => {

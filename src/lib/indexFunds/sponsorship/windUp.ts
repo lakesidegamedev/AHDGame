@@ -23,6 +23,7 @@ import {
 import { creditCorpLiquidCapital } from "@/lib/financialTxLog/atomicCashGuard";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { sellFundHoldingsForRedemptionCash } from "@/lib/indexFunds/fundRedemptionLiquidity";
+import { writeOffDeadConstituentHoldings } from "@/lib/indexFunds/fundHoldingWriteOff";
 import { sellFundBondHoldingsForCash } from "@/lib/bonds/sellFundBondUnits";
 import { payCorporateWindUpHolders } from "./corporateHolderPayout";
 import { payFundHoldersCash, type FundHolderCashPayout } from "./holderPayout";
@@ -136,6 +137,14 @@ export async function advanceWindDowns(
             note: "Wind-up liquidation",
           });
         }
+        // A holding in a corporation that no longer exists can never be sold:
+        // the sale path skips it, so without this the fund retries the same
+        // dead position every pass and never reaches completion, with no error
+        // to show for it. A dead corporation's shares are worth zero, so write
+        // the position off (as the constituent rebalance already does) and let
+        // a later pass finish the fund.
+        const afterSale = (await getFundById(db, fund._id)) ?? fund;
+        await writeOffDeadConstituentHoldings(db, afterSale, afterSale.holdings ?? []);
         continue;
       }
 
