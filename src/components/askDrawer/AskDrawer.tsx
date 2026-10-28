@@ -162,6 +162,9 @@ export function AskDrawer() {
             <span className="[writing-mode:vertical-rl]">Ask</span>
           </button>
           {/* Phones: a small round Keir in the corner, below the bug report button. */}
+          {/* Sits above the fixed bottom StatusBar, whose real height (safe area
+              included) is published as --status-bar-height. Pinned to the
+              viewport edge it covered the money chips on phones. */}
           <button
             type="button"
             onClick={openDrawer}
@@ -169,7 +172,7 @@ export function AskDrawer() {
             title="Ask Keir about this page"
             data-feedback-ignore="true"
             data-ask-fab
-            className="fixed bottom-[calc(0.5rem+env(safe-area-inset-bottom))] right-4 z-[44] flex h-11 w-11 items-center justify-center rounded-full border border-primary/30 bg-card/95 shadow-modal backdrop-blur-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:hidden"
+            className="fixed bottom-[calc(max(var(--status-bar-height,0px),env(safe-area-inset-bottom))+0.5rem)] right-4 z-[44] flex h-11 w-11 items-center justify-center rounded-full border border-primary/30 bg-card/95 shadow-modal backdrop-blur-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:hidden"
           >
             <KeirSprite mood="idle" />
           </button>
