@@ -1,5 +1,14 @@
 import { yearOfTurn } from "@/lib/utils/gameDate";
 
+/** Announce the start, not subsequent visits to the same running vacancy snap. */
+export function shouldAnnounceVacancySnap(
+  hasLiveSnap: boolean,
+  previousSnapTurn: number | null | undefined,
+  currentTurn: number
+): boolean {
+  return !hasLiveSnap && (previousSnapTurn ?? -1) < currentTurn;
+}
+
 export interface SnapElectionCalendar {
   startingYear: number;
   preIterationActive?: boolean;
