@@ -120,7 +120,12 @@ export const PRESERVED: CollectionEntry[] = [
   { name: "taskLessons", category: "preserved" },
   { name: "roadmapCategories", category: "preserved" },
   { name: "roadmapItems", category: "preserved" },
-  { name: "wikiPages", category: "preserved" },
+  {
+    name: "wikiPages",
+    category: "preserved",
+    notes:
+      "Authored articles and embedded edit history outlive worlds. Bootstrap wiki seeds must only insert missing pages.",
+  },
   { name: "wikiTemplates", category: "preserved" },
   { name: "changelogSentHistory", category: "preserved" },
   { name: "remediations", category: "preserved", notes: "Incident-script registry." },

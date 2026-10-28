@@ -977,7 +977,8 @@ function getOfficeHistory(
  */
 export function closeOutgoingTenures(
   entries: OfficeTenureEntry[],
-  ctx: IterationContext
+  ctx: IterationContext,
+  closedAt: Date = new Date(ctx.anchor.lastTurnProcessed)
 ): OfficeTenureEntry[] {
   const outgoing = iterationKey(ctx.current);
   const finalTurn = ctx.anchor.currentTurn;
@@ -990,6 +991,7 @@ export function closeOutgoingTenures(
         ...entry,
         endWeekYear: open ? finalWeekYear : entry.endWeekYear,
         endTurn: open ? finalTurn : entry.endTurn,
+        endDate: open ? closedAt : entry.endDate,
         isCurrent: false,
         profileHref: null,
       };
@@ -1021,7 +1023,7 @@ export async function archiveOutgoingOfficeHistory(
     written += await writeArchivedOfficeHistory(
       db,
       definition.slug,
-      closeOutgoingTenures(history, ctx),
+      closeOutgoingTenures(history, ctx, archivedAt),
       archivedAt
     );
   }
