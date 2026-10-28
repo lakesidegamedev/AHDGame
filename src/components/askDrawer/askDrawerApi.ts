@@ -41,8 +41,33 @@ export interface AskConversationSummary {
   created?: number;
 }
 
+export type AskActionKind = "suggestion" | "ticket";
+
+/** A suggestion or ticket Keir drafted. Nothing is filed until the player sends it. */
+export interface AskProposedAction {
+  id: string;
+  kind: AskActionKind;
+  title: string;
+  description: string;
+  category?: string;
+  gameSystem?: string;
+  expiresAt?: number | string;
+}
+
+export interface AskActionReceipt {
+  kind: AskActionKind;
+  number: number;
+  url?: string;
+}
+
 export interface AskAnswerPayload {
   convId?: string;
+  /** Keir's instant one-line reply, shown before any research. */
+  ack?: string;
+  /** A drafted action waiting for the player to send or cancel it. */
+  proposedAction?: AskProposedAction | null;
+  /** Keir offers (never acts) to file something the player raised. */
+  offer?: { kind: AskActionKind; label: string } | null;
   answer?: string;
   answerId?: number;
   id?: number;
@@ -93,7 +118,8 @@ export async function askJson<T>(path: string, body?: unknown): Promise<T> {
 
 export type AskStreamEvent =
   | { event: "meta"; data: { convId?: string; status?: string } }
-  | { event: "status"; data: { label?: string } }
+  | { event: "ack"; data: { text?: string } }
+  | { event: "status"; data: { label?: string; phase?: string } }
   | { event: "delta"; data: string }
   | { event: "done"; data: AskAnswerPayload }
   | { event: "error"; data: { error?: string } };
@@ -158,4 +184,74 @@ export async function askQuestion(
     }
   }
   return { ok: !!final && !final.error, status: response.status, payload: final };
+}
+
+export interface AskSuggestedQuestions {
+  questions?: string[];
+  source?: "page" | "followup" | "default";
+}
+
+/** Questions to offer for what is on screen. Free: never counts against the allowance. */
+export function suggestQuestions(
+  body: { pageContext?: unknown; convId?: string; lastAnswer?: string },
+  signal?: AbortSignal
+): Promise<AskSuggestedQuestions> {
+  return fetch(`${BASE}/suggest-questions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    credentials: "same-origin",
+    signal,
+  }).then((response) =>
+    response.ok ? (response.json() as Promise<AskSuggestedQuestions>) : { questions: [] }
+  );
+}
+
+/** Up to five usable suggestions, trimmed and de-duplicated. */
+export function cleanSuggestions(questions: unknown): string[] {
+  if (!Array.isArray(questions)) return [];
+  const out: string[] = [];
+  for (const q of questions) {
+    if (typeof q !== "string") continue;
+    const text = q.trim();
+    if (text.length < 5 || text.length > 120 || out.includes(text)) continue;
+    out.push(text);
+    if (out.length === 5) break;
+  }
+  return out;
+}
+
+export type AskActionResult =
+  | { ok: true; receipt: AskActionReceipt }
+  | { ok: false; error: string; needsDiscordLink?: boolean };
+
+/** Send a drafted action, with the player's edits. A repeat send returns the first receipt. */
+export async function confirmAction(body: {
+  actionId: string;
+  title: string;
+  description: string;
+}): Promise<AskActionResult> {
+  try {
+    const response = await fetch(`${BASE}/action/confirm`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      credentials: "same-origin",
+    });
+    const data = (await response.json().catch(() => ({}))) as {
+      receipt?: AskActionReceipt;
+      error?: string;
+      needsDiscordLink?: boolean;
+    };
+    if (data.receipt && (response.ok || response.status === 409)) {
+      return { ok: true, receipt: data.receipt };
+    }
+    return {
+      ok: false,
+      error: data.error || "That did not go through. Try again in a moment.",
+      needsDiscordLink: data.needsDiscordLink === true,
+    };
+  } catch {
+    return { ok: false, error: "Ask is not responding. Try again in a moment." };
+  }
 }

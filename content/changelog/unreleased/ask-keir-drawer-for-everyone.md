@@ -1,0 +1,32 @@
+---
+date: 2026-10-28
+title: Ask Keir drawer for every player, on phones too
+summary: >-
+  The Ask Keir drawer is out of experimental features and on for every
+  signed-in player, with a phone layout, an instant reply before research,
+  suggested questions for the page you are on, and the option to have Keir
+  file a suggestion or open a support ticket for you.
+tags: [ask]
+badges: [minor]
+areas: [frontend]
+---
+
+## What changed
+
+- The Ask Keir drawer is on for every signed-in player. You no longer need to
+  turn on experimental features, and it is no longer labelled experimental.
+  The setting for which side it docks to is now under Appearance.
+- On a phone the drawer opens as a full-screen sheet from a round Keir button
+  in the bottom corner. The question box stays above the keyboard, the page
+  behind it stops scrolling, and a swipe down on the header closes it.
+- Keir replies straight away with what he is going to look into, then shows
+  each research step as it happens, then the answer.
+- Keir has more expressions: he nods when he starts, reads while he searches,
+  works through live data, points while drawing a chart, sips tea on a long
+  wait, gives a "!" as the answer starts, and nods off if the drawer sits
+  unused for a while.
+- The starter questions now come from the page you are on, so a union page
+  offers union questions.
+- Ask Keir can draft a suggestion or a support ticket from the conversation
+  when you ask it to. You can edit the draft, then send or cancel it. Filing
+  is free and never uses a question. Tickets need a linked Discord account.
