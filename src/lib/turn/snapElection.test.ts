@@ -65,6 +65,11 @@ function setupMocks(opts: {
     ...db.collection("governmentFormations"),
     findOne: vi.fn().mockResolvedValue(opts.govDoc),
     updateOne: vi.fn().mockResolvedValue({ matchedCount: 1, modifiedCount: 1 }),
+    findOneAndUpdate: vi.fn().mockImplementation((_filter, update) => {
+      const previous = { ...opts.govDoc };
+      Object.assign(opts.govDoc, update.$set);
+      return Promise.resolve(previous);
+    }),
   } as MockDb["collectionMocks"][string];
 
   // elections — find (to-cancel, returns ids), updateMany (cancel by _id),
@@ -160,6 +165,86 @@ beforeEach(async () => {
 });
 
 describe("triggerSnapElection", () => {
+  it.each(["pm-trigger", "admin", "regime-change"] as const)(
+    "preserves %s announcements",
+    async (reason) => {
+      db.collectionMocks.elections.findOne.mockResolvedValue({ _id: new ObjectId() });
+      const { sendCountryGameEvent } = await import("@/lib/discordWebhooks");
+      await triggerSnapElection(db as unknown as Db, "JP", new Date("2026-10-27"), {
+        reason,
+        bypassLimits: true,
+      });
+      expect(sendCountryGameEvent).toHaveBeenCalledTimes(1);
+    }
+  );
+  it.each(["UK", "JP", "DE"] as const)(
+    "announces %s vacancy snap start once across hourly visits, then announces a new start",
+    async (countryId) => {
+      setupMocks({
+        currentTurn: 100,
+        govDoc: {
+          _id: countryId,
+          countryId,
+          status: "pending",
+          pmCharacterId: null,
+          lastSnapElectionTurn: null,
+        },
+        regions: [{ _id: "test" }],
+      });
+      let hasLiveSnap = false;
+      db.collectionMocks.elections.findOne.mockImplementation(async () =>
+        hasLiveSnap ? { _id: new ObjectId() } : null
+      );
+      db.collectionMocks.elections.insertMany.mockImplementation(async () => {
+        hasLiveSnap = true;
+        return { insertedIds: {} };
+      });
+      const { sendCountryGameEvent } = await import("@/lib/discordWebhooks");
+      await triggerSnapElection(db as unknown as Db, countryId, new Date("2026-10-27"), {
+        reason: "auto-snap",
+        bypassLimits: true,
+      });
+      db.collectionMocks.gameState.findOne.mockResolvedValue({ _id: "current", currentTurn: 101 });
+      await triggerSnapElection(db as unknown as Db, countryId, new Date("2026-10-28"), {
+        reason: "auto-snap",
+        bypassLimits: true,
+      });
+      expect(sendCountryGameEvent).toHaveBeenCalledTimes(1);
+
+      // Completion removes the live snap. A later vacancy can announce its own start.
+      hasLiveSnap = false;
+      db.collectionMocks.gameState.findOne.mockResolvedValue({ _id: "current", currentTurn: 300 });
+      await triggerSnapElection(db as unknown as Db, countryId, new Date("2026-11-01"), {
+        reason: "auto-snap",
+        bypassLimits: true,
+      });
+      expect(sendCountryGameEvent).toHaveBeenCalledTimes(2);
+    }
+  );
+
+  it("announces only once when concurrent vacancy starts both read no live election", async () => {
+    db.collectionMocks.elections.findOne.mockResolvedValue(null);
+    const { sendCountryGameEvent } = await import("@/lib/discordWebhooks");
+    await Promise.all(
+      [1, 2].map(() =>
+        triggerSnapElection(db as unknown as Db, "JP", new Date("2026-10-27"), {
+          reason: "auto-snap",
+          bypassLimits: true,
+        })
+      )
+    );
+    expect(sendCountryGameEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not resend an announcement for a snap already running before a restart", async () => {
+    db.collectionMocks.elections.findOne.mockResolvedValue({ _id: new ObjectId() });
+    const { sendCountryGameEvent } = await import("@/lib/discordWebhooks");
+    await triggerSnapElection(db as unknown as Db, "JP", new Date("2026-10-27"), {
+      reason: "auto-snap",
+      bypassLimits: true,
+    });
+    expect(sendCountryGameEvent).not.toHaveBeenCalled();
+  });
   it("spawns snap_shugiin elections and increments counters for JP", async () => {
     const result = await triggerSnapElection(db as unknown as Db, "JP", new Date(), {
       reason: "pm-trigger",
