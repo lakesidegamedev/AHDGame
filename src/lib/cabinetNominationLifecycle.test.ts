@@ -94,6 +94,45 @@ describe("processCabinetNominationLifecycle — holder seating", () => {
     );
   });
 
+  it("rejects a nominee who joined the Fed Board while the cabinet vote was pending", async () => {
+    const id = new ObjectId();
+    const nom = {
+      _id: new ObjectId(),
+      countryId: "US",
+      positionId: "secretary_of_state",
+      nomineeCharacterId: id,
+      votes: {},
+      proposedByPresidentId: new ObjectId(),
+    };
+    db.collectionMocks.cabinetNominations.find.mockReturnValue({
+      toArray: async () => [nom],
+    } as never);
+    db.collection("centralBanks");
+    db.collectionMocks.centralBanks.find.mockReturnValue({
+      toArray: async () => [
+        {
+          countryId: "US",
+          chairCharacterId: null,
+          fomcBoard: [{ occupantType: "player", characterId: id }],
+        },
+      ],
+    } as never);
+    const { computeCabinetNominationTally } =
+      await import("@/lib/congress/governmentVoteBreakdown");
+    vi.mocked(computeCabinetNominationTally).mockResolvedValue({
+      votesFor: 60,
+      votesAgainst: 40,
+      votesAbstain: 0,
+    } as never);
+    const { processCabinetNominationLifecycle } = await import("./cabinetNominationLifecycle");
+    await processCabinetNominationLifecycle(new Date(0));
+    expect(db.collectionMocks.cabinetMembers.insertOne).not.toHaveBeenCalled();
+    expect(db.collectionMocks.cabinetNominations.updateOne).toHaveBeenCalledWith(
+      { _id: nom._id },
+      expect.objectContaining({ $set: expect.objectContaining({ status: "rejected" }) })
+    );
+  });
+
   it("resets the position's setting cooldowns when a nominee is confirmed", async () => {
     const nomination = {
       _id: new ObjectId(),
@@ -488,4 +527,62 @@ describe("processCabinetNominationLifecycle — holder seating", () => {
     expect(db.collectionMocks.actingAppointmentCharges.deleteOne).not.toHaveBeenCalled();
     expect(db.collectionMocks.actingAppointmentCharges.deleteMany).not.toHaveBeenCalled();
   });
+});
+
+describe("Fed confirmation cabinet conflict", () => {
+  it.each([
+    { countryId: "US", makeChair: false, isChair: false },
+    { countryId: "US", makeChair: true, isChair: false },
+    { countryId: "UK", makeChair: false, isChair: true },
+    { countryId: "JP", makeChair: true, isChair: false },
+  ])(
+    "rejects a cabinet member at confirmation: $countryId makeChair=$makeChair isChair=$isChair",
+    async ({ countryId, makeChair, isChair }) => {
+      vi.clearAllMocks();
+      const db = createMockDb();
+      const id = new ObjectId();
+      const nom = {
+        _id: new ObjectId(),
+        bankId: countryId,
+        countryId,
+        seatId: "seat-1",
+        nomineeCharacterId: id,
+        makeChair,
+        occupantType: "player",
+        proposedByPresidentId: new ObjectId(),
+        votes: {},
+      };
+      const { getDb } = await import("@/lib/mongodb");
+      vi.mocked(getDb).mockResolvedValue(db as never);
+      const { getGameState } = await import("@/lib/gameState");
+      vi.mocked(getGameState).mockResolvedValue({ currentTurn: 100 } as never);
+      db.collection("fomcNominations");
+      db.collectionMocks.fomcNominations.find.mockImplementation(
+        (query: Record<string, unknown>) =>
+          ({
+            toArray: async () => ("$lte" in (query.votingEndsOnTurn as object) ? [nom] : []),
+          }) as never
+      );
+      db.collection("cabinetMembers");
+      db.collectionMocks.cabinetMembers.find.mockReturnValue({
+        toArray: async () => [{ characterId: id }],
+      } as never);
+      db.collection("centralBanks");
+      db.collectionMocks.centralBanks.findOne.mockResolvedValue({
+        countryId,
+        fomcBoard: [{ seatId: "seat-1", isChair }],
+      });
+      const { computeCabinetNominationTally } =
+        await import("@/lib/congress/governmentVoteBreakdown");
+      vi.mocked(computeCabinetNominationTally).mockResolvedValue({
+        votesFor: 60,
+        votesAgainst: 40,
+        votesAbstain: 0,
+      } as never);
+      const { processFomcNominationLifecycle } = await import("./fomcNominationLifecycle");
+      const result = await processFomcNominationLifecycle(new Date(0));
+      expect(result).toEqual({ nominationsProcessed: 1, confirmed: 0, rejected: 1 });
+      expect(db.collectionMocks.centralBanks.updateOne).not.toHaveBeenCalled();
+    }
+  );
 });

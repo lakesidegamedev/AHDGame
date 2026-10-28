@@ -466,6 +466,7 @@ export function JPCabinetProposeBillModal(
         chambers={[]}
         initialChamber="cabinet"
         offerSubsidies={false}
+        offerTrade={false}
         adminOverride={props.adminOverride}
         canSubmit={props.canSubmit}
         hasActiveBill={props.hasActiveBill}

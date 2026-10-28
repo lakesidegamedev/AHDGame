@@ -17,6 +17,64 @@ beforeEach(() => {
 });
 
 describe("validateBillProvisions: reset version isolation", () => {
+  it.each(["US", "UK", "JP"] as const)(
+    "accepts national v2 embargoes and repeal in %s",
+    async (country) => {
+      db.collectionMocks.gameState.findOne.mockResolvedValue({
+        _id: "current",
+        resetWorldId: "world-1",
+        legislationSystemVersion: "v2",
+        metricsSystemVersion: "v2",
+        resetVersionSeeds: {
+          metrics: {
+            worldId: "world-1",
+            revision: 3,
+            sourceTurn: 1,
+            completedAt: "2026-10-04T00:00:00.000Z",
+            verificationHash: "metrics",
+          },
+          legislation: {
+            worldId: "world-1",
+            revision: 6,
+            sourceTurn: 1,
+            completedAt: "2026-10-04T00:00:00.000Z",
+            verificationHash: "legislation",
+          },
+        },
+      });
+      const targetCountry = country === "JP" ? "US" : "JP";
+      const provisions = [
+        {
+          type: "embargo",
+          targetCountry,
+          commodity: "energy",
+          direction: "export",
+          mode: "cap",
+          cap: 1000,
+        },
+        { type: "end_embargo", targetCountry, commodity: "energy", direction: "import" },
+      ];
+      const result = await validateBillProvisions(
+        db as unknown as Db,
+        provisions,
+        "trade",
+        country
+      );
+      expect(result.ok).toBe(true);
+      if (result.ok) expect(result.embargoProvisions).toEqual(provisions);
+      expect(
+        await validateBillProvisions(db as unknown as Db, provisions, "economy", country)
+      ).toMatchObject({ ok: false, status: 400 });
+      expect(
+        await validateBillProvisions(
+          db as unknown as Db,
+          [{ ...provisions[0], targetCountry: country }],
+          "trade",
+          country
+        )
+      ).toMatchObject({ ok: false, status: 400 });
+    }
+  );
   it("rejects legacy provisions when legislation v2 is active", async () => {
     db.collectionMocks.gameState.findOne.mockResolvedValue({
       _id: "current",
