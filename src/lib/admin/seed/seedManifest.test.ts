@@ -126,6 +126,7 @@ describe("runtime lifecycle category determines reset selection", () => {
     "wikiTemplates",
     "wikiReports",
     "manualOfficeHistory",
+    "officeHistoryArchive",
     "politicianOverrides",
     "eventDefinitions",
     // Accounts, sessions, bans

@@ -79,6 +79,7 @@ Nigeria is one of Africa's largest economies, heavily shaped by **petroleum**. O
 ];
 
 export async function seedNGWiki(db: Db) {
+  // A world reset must not replace an existing article or its edit metadata.
   const coll = db.collection<WikiPage>("wikiPages");
   const now = new Date();
 
@@ -86,7 +87,8 @@ export async function seedNGWiki(db: Db) {
     await coll.updateOne(
       { slug: page.slug },
       {
-        $set: {
+        $setOnInsert: {
+          _id: new ObjectId(),
           ...page,
           status: "published",
           featured: false,
@@ -94,9 +96,6 @@ export async function seedNGWiki(db: Db) {
           viewCount: 0,
           createdAt: now,
           updatedAt: now,
-        },
-        $setOnInsert: {
-          _id: new ObjectId(),
         },
       },
       { upsert: true }

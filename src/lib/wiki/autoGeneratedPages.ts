@@ -1,4 +1,4 @@
-import type { Db, ObjectId } from "mongodb";
+import { ObjectId, type Db } from "mongodb";
 import { unstable_cache } from "next/cache";
 import { getDb } from "@/lib/mongodb";
 import { COUNTRY_CONFIGS, getExecutiveOfficeKey, type CountryId } from "@/lib/constants/countries";
@@ -11,6 +11,16 @@ import { getAllPartySlugs } from "@/lib/wiki/partyData";
 import { getEnabledCountryIds, getEnabledCountryIdsFromDb } from "@/lib/countryAccess";
 import type { GameIteration, GameState } from "@/lib/db/types/gameState";
 import { getGameState } from "@/lib/gameState";
+import {
+  ELECTION_RESULT_SNAPSHOT_VERSION,
+  type ElectionResultSnapshot,
+} from "@/lib/db/types/electionResultSnapshot";
+import {
+  frozenExecutiveIdentity,
+  sameTenureHolder,
+  unrecordedHistoricalParty,
+  recordedExecutiveIdentity,
+} from "./rules/executiveIdentity";
 import {
   realDateToTurn,
   type GameDateAnchor,
@@ -561,13 +571,14 @@ async function loadPartyLabels(db: Db, countryId: CountryId): Promise<Map<string
   );
 }
 
-function applyPartyLabels(
+export function applyPartyLabels(
   entries: OfficeTenureEntry[],
   partyLabels: Map<string, string>
 ): OfficeTenureEntry[] {
   return entries.map((entry) => ({
     ...entry,
-    partyLabel: entry.party ? (partyLabels.get(entry.party) ?? entry.party) : undefined,
+    partyLabel:
+      entry.partyLabel ?? (entry.party ? (partyLabels.get(entry.party) ?? entry.party) : undefined),
   }));
 }
 
@@ -678,7 +689,7 @@ export function buildTenureGroups(
   });
 }
 
-async function getExecutiveHistory(
+export async function getExecutiveHistory(
   db: Db,
   definition: GeneratedOfficeDefinition,
   ctx: IterationContext
@@ -700,6 +711,34 @@ async function getExecutiveHistory(
     .sort({ timestamp: 1 })
     .toArray();
 
+  const electionIds = [
+    ...new Set(
+      events
+        .map((event) => event.details?.electionId)
+        .filter((id): id is string => typeof id === "string" && ObjectId.isValid(id))
+    ),
+  ];
+  // Election-night names and parties are immutable; today's profile/party may
+  // have a different name, affiliation or abbreviation. One batch per office.
+  const snapshots = electionIds.length
+    ? await db
+        .collection<ElectionResultSnapshot>("electionResultSnapshots")
+        .find(
+          {
+            electionId: { $in: electionIds.map((id) => new ObjectId(id)) },
+            countryId: definition.countryId,
+            schemaVersion: ELECTION_RESULT_SNAPSHOT_VERSION,
+          },
+          {
+            projection: { electionId: 1, countryId: 1, electionType: 1, candidates: 1, summary: 1 },
+          }
+        )
+        .toArray()
+    : [];
+  const snapshotByElection = new Map(
+    snapshots.map((snapshot) => [snapshot.electionId.toString(), snapshot])
+  );
+
   const history = events.map((event, index): OfficeTenureEntry => {
     const next = events[index + 1];
     const characterId = event.characterId?.toString();
@@ -707,9 +746,16 @@ async function getExecutiveHistory(
     const { iteration, startingYear } = resolveEntryIteration(event, ctx);
     const sameIterationNext =
       next && iterationKey(resolveEntryIteration(next, ctx).iteration) === iterationKey(iteration);
+    const frozen =
+      frozenExecutiveIdentity(
+        definition.countryId,
+        definition.officeType!,
+        snapshotByElection.get(String(event.details?.electionId ?? ""))
+      ) ?? recordedExecutiveIdentity(event.details);
     const entry: OfficeTenureEntry = {
-      name: event.characterName ?? "Unknown",
-      party: event.party,
+      name: frozen?.name ?? event.characterName ?? "Unknown",
+      party: frozen?.party ?? event.party,
+      partyLabel: frozen?.partyLabel ?? unrecordedHistoricalParty(event.party),
       startDate: event.timestamp,
       endDate: next?.timestamp,
       startTurn: event.turn,
@@ -736,7 +782,8 @@ async function getExecutiveHistory(
   if (history.length === 0 && current) return [current];
   if (current && history.length > 0) {
     const latest = history[history.length - 1];
-    if (latest.name !== current.name) {
+    if (!sameTenureHolder(latest, current)) {
+      latest.isCurrent = false;
       history.push(current);
     }
   }
@@ -977,7 +1024,8 @@ function getOfficeHistory(
  */
 export function closeOutgoingTenures(
   entries: OfficeTenureEntry[],
-  ctx: IterationContext
+  ctx: IterationContext,
+  closedAt: Date = new Date(ctx.anchor.lastTurnProcessed)
 ): OfficeTenureEntry[] {
   const outgoing = iterationKey(ctx.current);
   const finalTurn = ctx.anchor.currentTurn;
@@ -990,6 +1038,7 @@ export function closeOutgoingTenures(
         ...entry,
         endWeekYear: open ? finalWeekYear : entry.endWeekYear,
         endTurn: open ? finalTurn : entry.endTurn,
+        endDate: open ? closedAt : entry.endDate,
         isCurrent: false,
         profileHref: null,
       };
@@ -1021,7 +1070,7 @@ export async function archiveOutgoingOfficeHistory(
     written += await writeArchivedOfficeHistory(
       db,
       definition.slug,
-      closeOutgoingTenures(history, ctx),
+      closeOutgoingTenures(history, ctx, archivedAt),
       archivedAt
     );
   }
