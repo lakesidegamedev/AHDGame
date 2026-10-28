@@ -137,6 +137,30 @@ function getResetSealGameStateFields(): string[] {
 }
 
 describe("resetGameWorld", () => {
+  it.each([true, false])(
+    "preserves wiki articles and office archives when deleteProfiles=%s",
+    async (deleteProfiles) => {
+      const names = [
+        "wikiPages",
+        "wikiTemplates",
+        "wikiReports",
+        "manualOfficeHistory",
+        "officeHistoryArchive",
+      ];
+      for (const name of names) db.collection(name);
+      await resetGameWorld(db as never, {
+        deleteProfiles,
+        preset: "1991-default",
+        seedHistorical: false,
+      });
+      for (const name of names) {
+        expect(db.collectionMocks[name].drop).not.toHaveBeenCalled();
+        expect(db.collectionMocks[name].deleteMany).not.toHaveBeenCalled();
+        expect(db.collectionMocks[name].replaceOne).not.toHaveBeenCalled();
+      }
+    }
+  );
+
   it("assigns distinct population receipt identity even when the calendar repeats", async () => {
     const epochs: string[] = [];
     for (let attempt = 0; attempt < 2; attempt++) {

@@ -22,6 +22,14 @@ import {
   type OperatingSectorType,
 } from "@/lib/constants/corporationsClient";
 import { SubsidySectorSelect } from "@/components/bills/SubsidySectorSelect";
+import { EmbargoProvisionEditor } from "@/components/bills/EmbargoProvisionEditor";
+import {
+  toPayload as embargoToPayload,
+  validateRows as validateEmbargoRows,
+  type EmbargoProvisionInput,
+} from "@/components/bills/embargoProvisionTypes";
+import { useEnabledCountryIds } from "@/lib/hooks/useEnabledCountryIds";
+import { formatEmbargoProvisionLabel } from "@/lib/legislature/embargoProvisionLabel";
 
 interface CatalogOption {
   option: { choice: LawChoice; annualAllocation: number };
@@ -84,6 +92,7 @@ interface LegacyTaxType {
 }
 
 type DraftProvision =
+  | { kind: "embargo"; row: EmbargoProvisionInput }
   | {
       kind: "law";
       family: CatalogFamily;
@@ -108,6 +117,7 @@ type SubsidyScope = "economy_wide" | "sector";
 
 const TAXES_DOMAIN = "Taxes";
 const SUBSIDIES_DOMAIN = "Subsidies";
+const TRADE_DOMAIN = "Trade";
 
 const SUBSIDY_ACTIONS: { action: SubsidyAction; title: string; description: string }[] = [
   {
@@ -203,11 +213,13 @@ function categoryForDraft(
 ): BillCategory {
   const categories = new Set(
     draft.map((provision) =>
-      provision.kind === "tax"
-        ? "tax"
-        : provision.kind === "subsidy"
-          ? "industry"
-          : categoryForDomain(provision.family.domain, scope)
+      provision.kind === "embargo"
+        ? "trade"
+        : provision.kind === "tax"
+          ? "tax"
+          : provision.kind === "subsidy"
+            ? "industry"
+            : categoryForDomain(provision.family.domain, scope)
     )
   );
   return categories.size === 1 ? ([...categories][0] as BillCategory) : "custom";
@@ -228,6 +240,8 @@ export interface GuidedLegislationModalProps {
    * law and tax provisions (a Cabinet bill).
    */
   offerSubsidies?: boolean;
+  /** Disable for national endpoints that accept only reviewed laws and taxes. */
+  offerTrade?: boolean;
   /** Request a seated party NPP to introduce this regional bill for its chair. */
   proposeViaPartyNpp?: boolean;
   /** Wording of the subsidy "home companies only" toggle. */
@@ -252,6 +266,7 @@ export function GuidedLegislationModal({
   canSubmit = true,
   hasActiveBill = false,
   offerSubsidies = true,
+  offerTrade = true,
   proposeViaPartyNpp = false,
   domesticOnlyLabel = scope === "regional"
     ? "Companies headquartered in this region only"
@@ -261,6 +276,11 @@ export function GuidedLegislationModal({
   onSuccess,
 }: GuidedLegislationModalProps) {
   const { showToast } = useToast();
+  const enabledCountryIds = useEnabledCountryIds();
+  const canOfferTrade = scope === "national" && offerTrade && !queue;
+  const [embargoRows, setEmbargoRows] = useState<EmbargoProvisionInput[]>([
+    { action: "embargo", targetCountry: "", commodity: "all", direction: "both", mode: "block" },
+  ]);
   const t = useTranslations("layout.guidedLegislation");
   const [catalog, setCatalog] = useState<CatalogResponse | null>(null);
   const [legacyTaxes, setLegacyTaxes] = useState<LegacyTaxType[]>([]);
@@ -370,8 +390,9 @@ export function GuidedLegislationModal({
       ...values,
       ...(availableTaxes.length > 0 ? [TAXES_DOMAIN] : []),
       ...(offerSubsidies ? [SUBSIDIES_DOMAIN] : []),
+      ...(canOfferTrade ? [TRADE_DOMAIN] : []),
     ];
-  }, [availableTaxes.length, catalog, offerSubsidies]);
+  }, [availableTaxes.length, catalog, offerSubsidies, canOfferTrade]);
   const metrics = useMemo(() => {
     const usedIds = new Set(catalog?.families.flatMap((family) => family.primaryMetricIds) ?? []);
     const returned = new Map(
@@ -474,6 +495,13 @@ export function GuidedLegislationModal({
   }
 
   function beginAnother() {
+    if (draft.some((p) => p.kind === "embargo")) {
+      setEmbargoRows(draft.flatMap((p) => (p.kind === "embargo" ? [{ ...p.row }] : [])));
+      setPath("domain");
+      setDomain(TRADE_DOMAIN);
+      setStep("family");
+      return;
+    }
     setStep("starting");
     setPath("domain");
     setDomain("");
@@ -552,6 +580,14 @@ export function GuidedLegislationModal({
   }
 
   async function submit() {
+    if (
+      !isCustomBill &&
+      draft.some((p) => p.kind === "embargo") &&
+      (!canOfferTrade || draft.some((p) => p.kind !== "embargo"))
+    ) {
+      showToast("Embargoes require a separate national Trade bill.", "error");
+      return;
+    }
     if (queue && !targetNppId) {
       showToast(t("noEligiblePartyNpp"), "error");
       return;
@@ -574,6 +610,7 @@ export function GuidedLegislationModal({
     setSubmitting(true);
     try {
       const provisions = (isCustomBill ? [] : draft).map((provision) => {
+        if (provision.kind === "embargo") return embargoToPayload(provision.row);
         if (provision.kind === "law") {
           return {
             type: "reset_law",
@@ -654,8 +691,10 @@ export function GuidedLegislationModal({
             <p className="mt-1 text-xs text-muted">
               {isCustomBill ? t("noEffects") : `Build up to ${MAX_PROVISIONS} reviewed provisions.`}{" "}
               Costs {BILL_PROPOSE_ACTION_COST} action points and{" "}
-              {getProvisionCostTotal(isCustomBill ? 0 : draft.length)} national influence at the
-              current draft size.
+              {getProvisionCostTotal(
+                isCustomBill ? 0 : draft.filter((p) => p.kind !== "embargo").length
+              )}{" "}
+              national influence at the current draft size.
               {queue
                 ? " The chosen NPP introduces the bill next turn. The cost is refunded if the bill is cancelled."
                 : null}
@@ -817,7 +856,51 @@ export function GuidedLegislationModal({
               {step === "family" ? (
                 <section className="space-y-4">
                   <h3 className="font-semibold">Choose a law family</h3>
-                  {path === "domain" && domain === SUBSIDIES_DOMAIN ? (
+                  {path === "domain" && domain === TRADE_DOMAIN && canOfferTrade ? (
+                    <div className="space-y-4">
+                      <EmbargoProvisionEditor
+                        value={embargoRows}
+                        onChange={setEmbargoRows}
+                        countryId={countryId}
+                        enabledCountryIds={enabledCountryIds}
+                      />
+                      <button
+                        type="button"
+                        className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white"
+                        onClick={() => {
+                          const error = validateEmbargoRows(embargoRows);
+                          if (error) {
+                            showToast(error, "error");
+                            return;
+                          }
+                          if (
+                            embargoRows.length > MAX_PROVISIONS ||
+                            embargoRows.some(
+                              (r) =>
+                                r.targetCountry === countryId ||
+                                !enabledCountryIds.includes(r.targetCountry as CountryId)
+                            )
+                          ) {
+                            showToast(
+                              "Choose an enabled foreign country for each embargo.",
+                              "error"
+                            );
+                            return;
+                          }
+                          if (draft.some((p) => p.kind !== "embargo")) {
+                            showToast("Embargoes require a separate national Trade bill.", "error");
+                            return;
+                          }
+                          setDraft(
+                            embargoRows.map((row) => ({ kind: "embargo", row: { ...row } }))
+                          );
+                          setStep("overview");
+                        }}
+                      >
+                        Add to draft bill
+                      </button>
+                    </div>
+                  ) : path === "domain" && domain === SUBSIDIES_DOMAIN ? (
                     <div className="grid gap-3 sm:grid-cols-2">
                       {SUBSIDY_ACTIONS.map((candidate) => (
                         <button
@@ -1265,11 +1348,13 @@ export function GuidedLegislationModal({
                   <div className="space-y-2">
                     {draft.map((provision) => {
                       const key =
-                        provision.kind === "law"
-                          ? provision.family.familyId
-                          : provision.kind === "subsidy"
-                            ? subsidyTargetKey(provision)
-                            : provision.tax.existingLegislationTypeId;
+                        provision.kind === "embargo"
+                          ? `embargo:${provision.row.action}:${provision.row.targetCountry}:${provision.row.commodity}:${provision.row.direction}`
+                          : provision.kind === "law"
+                            ? provision.family.familyId
+                            : provision.kind === "subsidy"
+                              ? subsidyTargetKey(provision)
+                              : provision.tax.existingLegislationTypeId;
                       return (
                         <div
                           key={key}
@@ -1277,20 +1362,26 @@ export function GuidedLegislationModal({
                         >
                           <div>
                             <p className="font-medium">
-                              {provision.kind === "law"
-                                ? provision.option.title
-                                : provision.kind === "subsidy"
-                                  ? `${provision.action === "subsidy" ? "Grant subsidy" : "End subsidy"}: ${subsidyTargetLabel(provision)}`
-                                  : `${provision.tax.title}: ${provision.rate}%`}
+                              {provision.kind === "embargo"
+                                ? formatEmbargoProvisionLabel(embargoToPayload(provision.row))
+                                    .summary
+                                : provision.kind === "law"
+                                  ? provision.option.title
+                                  : provision.kind === "subsidy"
+                                    ? `${provision.action === "subsidy" ? "Grant subsidy" : "End subsidy"}: ${subsidyTargetLabel(provision)}`
+                                    : `${provision.tax.title}: ${provision.rate}%`}
                             </p>
                             <p className="mt-1 text-xs text-muted">
-                              {provision.kind === "law"
-                                ? `${agencyName(provision.family)} · ${money(provision.option.option.annualAllocation)} · ${provision.family.primaryMetricIds.map(metricName).join(", ")}`
-                                : provision.kind === "subsidy"
-                                  ? provision.action === "subsidy"
-                                    ? `+7.5% profit margin${provision.domesticOnly ? ` · ${domesticOnlyLabel}` : ""}`
-                                    : "Ends the matching active subsidy"
-                                  : `Current ${provision.currentRate}%`}
+                              {provision.kind === "embargo"
+                                ? formatEmbargoProvisionLabel(embargoToPayload(provision.row))
+                                    .description
+                                : provision.kind === "law"
+                                  ? `${agencyName(provision.family)} · ${money(provision.option.option.annualAllocation)} · ${provision.family.primaryMetricIds.map(metricName).join(", ")}`
+                                  : provision.kind === "subsidy"
+                                    ? provision.action === "subsidy"
+                                      ? `+7.5% profit margin${provision.domesticOnly ? ` · ${domesticOnlyLabel}` : ""}`
+                                      : "Ends the matching active subsidy"
+                                    : `Current ${provision.currentRate}%`}
                             </p>
                           </div>
                           <button

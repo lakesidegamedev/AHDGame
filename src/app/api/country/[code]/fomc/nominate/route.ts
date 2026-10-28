@@ -4,6 +4,9 @@
  * nomination is Senate-confirmed by `processFomcNominationLifecycle`; on
  * confirmation the nominee is installed into the seat on `centralBanks.fomcBoard`.
  */
+import { getIncompatibleOfficeHolders } from "@/lib/cabinet/officeCompatibility";
+
+import { requiresCabinetIndependence } from "@/lib/cabinet/rules/officeCompatibility";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { z } from "zod";
@@ -97,6 +100,24 @@ export async function POST(request: Request, context: RouteContext) {
         .collection<Character>("characters")
         .findOne({ _id: nomineeCharacterId });
       if (!char) return NextResponse.json(notFound("Nominee not found").toJson(), { status: 404 });
+      if (
+        requiresCabinetIndependence(
+          bank.countryId ?? countryId,
+          body.makeChair === true ||
+            bank.fomcBoard.find((s) => s.seatId === body.seatId)?.isChair === true
+        )
+      ) {
+        if (
+          (await getIncompatibleOfficeHolders(db, "bank", [nomineeCharacterId])).has(
+            nomineeCharacterId.toString()
+          )
+        ) {
+          return errorResponse(
+            400,
+            "Leave the incompatible cabinet or central bank role before nomination"
+          );
+        }
+      }
       occupantType = "player";
       nomineeName = char.name;
       nomineeParty = char.party;

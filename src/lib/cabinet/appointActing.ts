@@ -1,3 +1,4 @@
+import { getIncompatibleOfficeHolders } from "@/lib/cabinet/officeCompatibility";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
@@ -103,6 +104,18 @@ export async function appointActingCabinetMember(
     if (!appointee) {
       return errorResponse(404, "Character not found");
     }
+
+    if (
+      (await getIncompatibleOfficeHolders(db, "cabinet", [appointeeOid])).has(
+        appointeeOid.toString()
+      )
+    ) {
+      return errorResponse(
+        400,
+        "Leave the incompatible cabinet or central bank role before nomination"
+      );
+    }
+
     if (!appointee.userId) {
       return errorResponse(400, "Only player characters can receive acting appointments");
     }

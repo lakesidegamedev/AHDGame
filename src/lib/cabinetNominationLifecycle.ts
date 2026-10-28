@@ -5,6 +5,8 @@
  *  A. NPP senator votes on active nominations (party-line preference)
  *  B. Close expired votes and resolve confirmed/rejected
  */
+import { getIncompatibleOfficeHolders } from "@/lib/cabinet/officeCompatibility";
+
 import { initialMinisterialActionFields } from "@/lib/cabinet/ministerialActionPool";
 import { getDb } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
@@ -386,6 +388,13 @@ export async function processCabinetNominationLifecycle(
       .map((member) => [`${member.countryId}:${member.characterId!.toString()}`, member])
   );
 
+  const bankHolders = await getIncompatibleOfficeHolders(
+    db,
+    "cabinet",
+    expired
+      .filter((n) => n.positionId !== "vicePresident")
+      .flatMap((n) => (n.nomineeCharacterId ? [n.nomineeCharacterId] : []))
+  );
   const notificationInputs: NotificationInput[] = [];
 
   for (const nom of expired) {
@@ -418,6 +427,12 @@ export async function processCabinetNominationLifecycle(
       passed = didPass(reTally.votesFor, reTally.votesAgainst);
     }
 
+    if (
+      !isVpNomination &&
+      nom.nomineeCharacterId &&
+      bankHolders.has(nom.nomineeCharacterId.toString())
+    )
+      passed = false;
     if (passed) {
       // VP nominations seat the character as VP; all other positions create a CabinetMember.
       if (nom.positionId === "vicePresident") {

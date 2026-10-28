@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ObjectId } from "mongodb";
-import type { Character } from "@/lib/db/types";
 import {
   weightedRandomPick,
   isNominationWindowOpen,
@@ -1384,4 +1383,42 @@ describe("processCentralBankChairSelection — NPP autonomy fallback", () => {
     expect($set.chairCharacterId).toBeNull();
     expect($set.vacancyAwaitingAutomaticSelection).toBe(true);
   });
+});
+
+describe("chair acceptance cabinet conflict", () => {
+  it.each(["US", "UK", "JP"] as const)(
+    "rechecks cabinet membership when a %s nominee accepts",
+    async (countryId) => {
+      const { createMockDb } = await import("@/lib/test-utils/mockDb");
+      const { acceptCentralBankChairSelection } = await import("./centralBankChairSelection");
+      const db = createMockDb();
+      const id = new ObjectId();
+      db.collection("centralBanks");
+      db.collectionMocks.centralBanks.findOne.mockResolvedValue({
+        _id: countryId,
+        chairSelectionPending: { characterId: id },
+      });
+      db.collection("characters");
+      db.collectionMocks.characters.findOne.mockResolvedValue({
+        _id: id,
+        userId: new ObjectId(),
+        countryId,
+      });
+      db.collection("cabinetMembers");
+      db.collectionMocks.cabinetMembers.find.mockReturnValue({
+        toArray: async () => [{ characterId: id }],
+      } as never);
+      const result = await acceptCentralBankChairSelection(
+        db as never,
+        countryId,
+        id,
+        new Date(0),
+        100
+      );
+      expect(result.ok).toBe(false);
+      expect(result.error).toMatch(/leave cabinet/i);
+      expect(db.collectionMocks.centralBanks.updateOne).not.toHaveBeenCalled();
+      expect(db.collectionMocks.characters.updateOne).not.toHaveBeenCalled();
+    }
+  );
 });
