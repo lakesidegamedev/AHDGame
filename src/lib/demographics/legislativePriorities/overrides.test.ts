@@ -6,7 +6,11 @@ import { PRIMARY_KEY_INDEX_POLICIES } from "../../../../scripts/architecture/col
 import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
 import { getBucketProfileForRegion } from "../bucketProfile";
 import { withLegislativePriorities } from "./profile";
-import { getPriorityEditorData, loadProfileLegislativePriorities } from "./overrides";
+import {
+  getPriorityEditorData,
+  loadPriorityDefaults,
+  loadProfileLegislativePriorities,
+} from "./overrides";
 
 vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 
@@ -14,6 +18,118 @@ describe("saved electorate priorities on region pages", () => {
   let db: MockDb;
   beforeEach(() => {
     db = createMockDb();
+  });
+
+  it("preserves an existing Admin override byte-for-byte when the year-2000 defaults change", async () => {
+    const legacy = withLegislativePriorities(
+      getBucketProfileForRegion("US", "CA", "1999-default"),
+      "US",
+      "CA"
+    )!;
+    const saved = legacy
+      .find((s) => s.dim === "age")!
+      .buckets.find((b) => b.id === "age:young")!.legislativePriorities!;
+    const snapshot = structuredClone(saved);
+    const target = { countryId: "US", regionId: "CA", bucketId: "age:young" } as const;
+    const world = {
+      preset: "1999-default",
+      currentYear: 2000,
+      startingYear: 1999,
+      eraSystemEnabled: true,
+    };
+    db.collection("gameState").findOne.mockResolvedValue(world);
+    db.collection("electoratePriorityOverrides").findOne.mockResolvedValue({
+      _id: "US:CA:age:young",
+      priorities: saved,
+    });
+    db.collection("electoratePriorityOverrides").find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([{ _id: "US:CA:age:young", priorities: saved }]),
+    });
+    db.collection("legislationTypes").find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue(legislationTypes.filter((l) => l.countryScope === "us")),
+    });
+    const profile = getBucketProfileForRegion("US", "CA", world.preset, null, {
+      year: 2000,
+      startingYear: 1999,
+    })!;
+    const result = await loadProfileLegislativePriorities(
+      db as unknown as Db,
+      profile,
+      "US",
+      "CA",
+      2000
+    );
+    expect(
+      result!.find((s) => s.dim === "age")!.buckets.find((b) => b.id === "age:young")!
+        .legislativePriorities
+    ).toEqual(saved);
+    const editor = await getPriorityEditorData(db as unknown as Db, target);
+    expect(editor.priorities).toEqual(saved);
+    expect(editor.defaults).not.toEqual(saved);
+    expect(editor.defaults).toEqual(
+      withLegislativePriorities(profile, "US", "CA", 2000)!
+        .find((s) => s.dim === "age")!
+        .buckets.find((b) => b.id === "age:young")!.legislativePriorities
+    );
+    expect(saved).toEqual(snapshot);
+    expect(db.collection("electoratePriorityOverrides").replaceOne).not.toHaveBeenCalled();
+    expect(db.collection("electoratePriorityOverrides").deleteOne).not.toHaveBeenCalled();
+  });
+
+  it("restoration and editor defaults track the live clock and honour the era flag", async () => {
+    const target = { countryId: "UK", regionId: "SCO", bucketId: "age:young" } as const;
+    const gameState = db.collection("gameState");
+    gameState.findOne.mockResolvedValue({
+      preset: "1953-default",
+      currentYear: 2000,
+      startingYear: 1953,
+      eraSystemEnabled: true,
+    });
+    expect((await loadPriorityDefaults(db as unknown as Db, target)).primary.policyOptionId).toBe(
+      "uk_tuition_fees_opt_0"
+    );
+    gameState.findOne.mockResolvedValue({
+      preset: "1953-default",
+      currentYear: 2000,
+      startingYear: 1953,
+      eraSystemEnabled: false,
+    });
+    expect(
+      (await loadPriorityDefaults(db as unknown as Db, target)).primary.policyOptionId
+    ).not.toBe("uk_tuition_fees_opt_0");
+  });
+
+  it("uses durable checkpoint position and turnout overlays for editor/restoration defaults", async () => {
+    const target = { countryId: "US", regionId: "CA", bucketId: "age:young" } as const;
+    const positions = { age: { young: { economicLean: 10, socialLean: 5 } } };
+    const turnout = { age: { young: 20 } };
+    db.collection("gameState").findOne.mockResolvedValue({
+      preset: "1953-default",
+      currentYear: 2000,
+      startingYear: 1953,
+      eraSystemEnabled: true,
+    });
+    db.collection("demographicDefaults").findOne.mockResolvedValue({
+      layer1PositionOverrides: positions,
+      layer1TurnoutOverrides: turnout,
+    });
+    const profile = getBucketProfileForRegion(
+      "US",
+      "CA",
+      "1953-default",
+      null,
+      { year: 2000, startingYear: 1953 },
+      positions,
+      turnout
+    );
+    const expected = withLegislativePriorities(profile, "US", "CA", 2000)!
+      .find((s) => s.dim === "age")!
+      .buckets.find((b) => b.id === "age:young")!.legislativePriorities;
+    expect(await loadPriorityDefaults(db as unknown as Db, target)).toEqual(expected);
+    expect(db.collection("demographicDefaults").findOne).toHaveBeenCalledWith(
+      { _id: "CA" },
+      { projection: { layer1PositionOverrides: 1, layer1TurnoutOverrides: 1 } }
+    );
   });
 
   it("applies persisted requests to the matching bucket without changing other groups or source data", async () => {

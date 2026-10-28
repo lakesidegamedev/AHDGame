@@ -1,6 +1,7 @@
 import { deriveGranularElectorateUnits } from "./granularElectorate";
 import { getTurnoutTargetsForCountry } from "./turnoutTargets";
 import type { StateDemographicTurnout } from "@/lib/db/types/stateDemographicTurnout";
+import type { Layer1PositionOverlay, Layer1TurnoutOverlay } from "@/lib/db/types/demographics";
 import type { EraYearContext } from "./granularElectorate";
 import type { LegislativePriorities } from "./legislativePriorities/rules";
 
@@ -46,15 +47,17 @@ export function getBucketProfileForRegion(
   stateId: string,
   preset: string | undefined,
   turnoutDoc?: StateDemographicTurnout | null,
-  yearCtx?: EraYearContext
+  yearCtx?: EraYearContext,
+  positionOverlay?: Layer1PositionOverlay | null,
+  turnoutOverlay?: Layer1TurnoutOverlay | null
 ): BucketProfileSection[] | null {
   const derived = deriveGranularElectorateUnits(
     countryId,
     stateId,
     preset,
     turnoutDoc,
-    null,
-    null,
+    positionOverlay,
+    turnoutOverlay,
     yearCtx
   );
   if (!derived || derived.units.length === 0) return null;

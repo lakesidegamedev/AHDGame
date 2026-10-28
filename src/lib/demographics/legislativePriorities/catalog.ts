@@ -29,6 +29,11 @@ export type PriorityTopic =
   | "rural"
   | "disaster"
   | "research"
+  | "jobs"
+  | "prescriptions"
+  | "crime"
+  | "reproductive"
+  | "firearms"
   | "devolution";
 
 interface PriorityCountry {

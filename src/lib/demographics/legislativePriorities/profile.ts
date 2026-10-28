@@ -5,7 +5,7 @@
  */
 import { legislationTypes } from "@/lib/seeds/reference/legislationTypes";
 import type { BucketProfileSection } from "../bucketProfile";
-import { resolveLegislativePriorities, type PriorityLaw } from "./rules";
+import { resolveLegislativePriorities, type PriorityContext, type PriorityLaw } from "./rules";
 
 // Only serializable names and references cross the page's client boundary.
 // Keep the consolidated seed catalog out of the client and turn import graphs.
@@ -24,22 +24,28 @@ const priorityLaws: ReadonlyMap<string, PriorityLaw> = new Map(
 export function getDefaultLegislativePriorities(
   countryId: string,
   regionId: string,
-  bucketId: string
+  bucketId: string,
+  context?: PriorityContext
 ) {
-  return resolveLegislativePriorities(countryId, regionId, bucketId, priorityLaws);
+  return resolveLegislativePriorities(countryId, regionId, bucketId, priorityLaws, context);
 }
 
 export function withLegislativePriorities(
   profile: BucketProfileSection[] | null,
   countryId: string,
-  regionId: string
+  regionId: string,
+  year?: number | null
 ): BucketProfileSection[] | null {
   return (
     profile?.map((section) => ({
       ...section,
       buckets: section.buckets.map((bucket) => ({
         ...bucket,
-        legislativePriorities: getDefaultLegislativePriorities(countryId, regionId, bucket.id),
+        legislativePriorities: getDefaultLegislativePriorities(countryId, regionId, bucket.id, {
+          year,
+          economicLean: bucket.economicLean,
+          socialLean: bucket.socialLean,
+        }),
       })),
     })) ?? null
   );
