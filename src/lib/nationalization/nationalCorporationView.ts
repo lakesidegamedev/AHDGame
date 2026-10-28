@@ -180,9 +180,9 @@ export interface NationalCorporationViewModel {
   isPrimary: boolean;
   assignedSectorTypes: OperatingSectorType[];
   ceoVacant: boolean;
-  /** Treasury OR head-of-government — controls the official-view toggle. */
+  /** Treasury minister or head of government — controls the official-view toggle. */
   viewerIsOfficial: boolean;
-  /** Finance-minister-equivalent / HoG fallback — privatize, CEO, mandate, split/merge. */
+  /** Seated finance-minister-equivalent — privatize, CEO, mandate, split/merge. */
   viewerHasTreasuryAuthority: boolean;
   /** Sitting head of government — nationalize + strategic-sector designation. */
   viewerIsHeadOfGovernment: boolean;

@@ -82,6 +82,7 @@ export function SubsidiaryManagementCard({
       <GroupChart
         corporation={corporation}
         onSpinOff={showSpinOffAction ? () => setShowSpinOff(true) : undefined}
+        spinOffCooldownTurns={corporation.spinOffCooldownTurnsRemaining ?? 0}
       />
       {overheadPp > 0 && (
         <div className="max-w-md">
