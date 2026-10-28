@@ -20,7 +20,26 @@ export const ASK_DRAWER_ROUTES = new Set([
   "conversation/rename",
   "conversation/pin",
   "answer/feedback",
+  "chart/render",
+  "map/render",
 ]);
+
+/**
+ * Chart and map rendering are Ask's public renderers, not player routes: they
+ * sit outside /api/game-ask and the machine secret only lifts their per-IP
+ * limit, which every drawer request would otherwise share.
+ */
+const RENDER_ROUTES = new Set(["chart/render", "map/render"]);
+
+/** Ask path for a drawer route. */
+export function askUpstreamPath(route: string): string {
+  return RENDER_ROUTES.has(route) ? `/api/${route}` : `/api/game-ask/${route}`;
+}
+
+/** Charts carry their data; the rest are questions and ids. */
+export function askDrawerBodyLimit(route: string): number {
+  return RENDER_ROUTES.has(route) ? 128 * 1024 : 32 * 1024;
+}
 
 export interface AskServiceConfig {
   baseUrl: string;

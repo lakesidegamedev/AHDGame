@@ -34,9 +34,10 @@ Characters pay income tax on what they personally earn: corporate salary, divide
 - **Which rate applies:** your earnings over the last 12 turns are converted to a yearly figure and compared with your home state's median income. Below 75% of the median you pay the Low Income rate, below twice the median the Medium Income rate, and above that the High Income rate.
 - **National and state tax:** the national rate for your group goes to the national treasury and your home state's rate for the same group goes to the state budget. The total can never exceed the income itself.
 - **When it is charged:** tax is assessed each turn you receive taxable income, from the money that income paid into.
-- **If you cannot pay:** an assessment your balance cannot cover stays on your account as unpaid tax and is collected on a later turn. It counts against your wealth until it is paid.
+- **If you cannot pay in full:** available cash can pay part of an assessment. Only the remaining debt counts against your wealth, and later turns can collect further installments.
+- **Share sales:** tax on realized profit is withheld before proceeds reach your wallet. Your cost basis is recovered tax-free. Short Term Holdings profits use income-tax rates; Long Term Holdings profits use capital-gains rates, at your tax tier when the sale fills. Withheld tax is not charged to your wallet again. The sale modal estimates gross proceeds, tax withheld and net cash, and warns about existing arrears that turn processing may collect separately.
 
-Your portfolio shows a personal tax statement with gross income, tax, net income and any unpaid assessments.
+Your portfolio tax statement shows assessed tax, amounts paid or withheld, remaining debt and the last collection turn. An old assessment paid recently stays visible in the recent statement.
 
 ## Spending categories
 

@@ -28,14 +28,14 @@ describe("AskDrawer", () => {
   it("shows the tab on the chosen side for opted-in players", () => {
     auth.user = { experimentalFeatures: true, askDrawerSide: "left" };
     render(<AskDrawer />);
-    const tab = screen.getByRole("button", { name: "Open Ask" });
+    const tab = screen.getByRole("button", { name: "Open Ask Keir" });
     expect(tab.className).toContain("left-0");
   });
 
   it("defaults to the right edge", () => {
     auth.user = { experimentalFeatures: true };
     render(<AskDrawer />);
-    expect(screen.getByRole("button", { name: "Open Ask" }).className).toContain("right-0");
+    expect(screen.getByRole("button", { name: "Open Ask Keir" }).className).toContain("right-0");
   });
 
   it("opens below the top nav and runs to the bottom of the viewport", () => {
@@ -48,7 +48,7 @@ describe("AskDrawer", () => {
     document.body.appendChild(nav);
     try {
       render(<AskDrawer />);
-      fireEvent.click(screen.getByRole("button", { name: "Open Ask" }));
+      fireEvent.click(screen.getByRole("button", { name: "Open Ask Keir" }));
       const aside = document.querySelector("aside[aria-label='Ask']") as HTMLElement;
       expect(aside.style.top).toBe("61px");
       expect(aside.style.bottom).toBe("0px");

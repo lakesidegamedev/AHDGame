@@ -1,5 +1,10 @@
+import {
+  loadStockWithholdingContexts,
+  withholdStockReceipt,
+  netStockProceeds,
+} from "@/lib/budget/stockSaleWithholding";
 import type { Db } from "mongodb";
-import { positionHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
+import { anchorHoldingPosition, positionHoldingTerms } from "@/lib/corporations/rules/holdingTerms";
 import { pendingStockTaxReceipt } from "@/lib/corporations/rules/stockTaxReceipt";
 import { heldStakeValueAnchor, transferOwnedSharesToNatCorp } from "./heldEquityTransfer";
 import { ObjectId } from "mongodb";
@@ -23,6 +28,7 @@ import {
   loadFxRatesByCurrency,
   resolveSectorHostCurrencyCode,
   fxRateForSectorHostFromMap,
+  fxRateForCorpFromMap,
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
 import type { CorporationType } from "@/lib/constants/corporations";
@@ -1366,6 +1372,20 @@ export async function payShareholders(
   const charRows = allocation.characterRows.filter((r) => !r.isImperial && r.payout > 0);
   const imperialRows = allocation.characterRows.filter((r) => r.isImperial && r.payout > 0);
 
+  const withholdingContexts = await loadStockWithholdingContexts(
+    db,
+    [
+      ...charRows.map((r) => ({
+        id: new ObjectId(r.characterId),
+        collection: "characters" as const,
+      })),
+      ...imperialRows.map((r) => ({
+        id: new ObjectId(r.characterId),
+        collection: "imperialCharacters" as const,
+      })),
+    ],
+    ledger?.turn ?? 0
+  );
   if (charRows.length > 0) {
     const ids = charRows.map((r) => new ObjectId(r.characterId));
     const docs = await db
@@ -1378,7 +1398,7 @@ export async function payShareholders(
         const currency = currencyById.get(r.characterId) ?? "USD";
         const amt = forexEnabled ? anchorToLocal(r.payout, currency) : r.payout;
         const holder = holdingsByOwner.get("character:" + r.characterId);
-        const stockTax =
+        const grossStockTax =
           ledger?.stockTaxActive && holder
             ? pendingStockTaxReceipt({
                 id:
@@ -1390,13 +1410,23 @@ export async function payShareholders(
                   ":character:" +
                   r.characterId,
                 currencyCode: currency,
-                holdingTerms: positionHoldingTerms(holder, ledger.turn, 0),
+                holdingTerms: positionHoldingTerms(
+                  anchorHoldingPosition(holder, fxRateForCorpFromMap(target, fxByCurrency)),
+                  ledger.turn,
+                  0
+                ),
                 proceedsAnchor: r.payout,
                 proceedsCredited: amt,
                 saleTurn: ledger.turn,
                 assessmentTurn: ledger.turn + 1,
               })
             : undefined;
+        const stockTax = grossStockTax
+          ? withholdStockReceipt(
+              grossStockTax,
+              withholdingContexts.get("characters:" + r.characterId)
+            )
+          : undefined;
         if (ledger)
           ledgerEntries.push(
             buyoutPayoutLeg(ledger, target, "character", new ObjectId(r.characterId), amt, currency)
@@ -1405,7 +1435,11 @@ export async function payShareholders(
           updateOne: {
             filter: { _id: new ObjectId(r.characterId) },
             update: {
-              $inc: buildPersonalBalanceInc(amt, currency, forexEnabled),
+              $inc: buildPersonalBalanceInc(
+                netStockProceeds(amt, stockTax),
+                currency,
+                forexEnabled
+              ),
               $set: { updatedAt: now },
               ...(stockTax ? { $push: { pendingStockTaxReceipts: stockTax } } : {}),
             },
@@ -1427,7 +1461,7 @@ export async function payShareholders(
         const currency = currencyById.get(r.characterId) ?? "USD";
         const amt = forexEnabled ? anchorToLocal(r.payout, currency) : r.payout;
         const holder = holdingsByOwner.get("imperial:" + r.characterId);
-        const stockTax =
+        const grossStockTax =
           ledger?.stockTaxActive && holder
             ? pendingStockTaxReceipt({
                 id:
@@ -1439,13 +1473,23 @@ export async function payShareholders(
                   ":imperial:" +
                   r.characterId,
                 currencyCode: currency,
-                holdingTerms: positionHoldingTerms(holder, ledger.turn, 0),
+                holdingTerms: positionHoldingTerms(
+                  anchorHoldingPosition(holder, fxRateForCorpFromMap(target, fxByCurrency)),
+                  ledger.turn,
+                  0
+                ),
                 proceedsAnchor: r.payout,
                 proceedsCredited: amt,
                 saleTurn: ledger.turn,
                 assessmentTurn: ledger.turn + 1,
               })
             : undefined;
+        const stockTax = grossStockTax
+          ? withholdStockReceipt(
+              grossStockTax,
+              withholdingContexts.get("imperialCharacters:" + r.characterId)
+            )
+          : undefined;
         if (ledger)
           ledgerEntries.push(
             buyoutPayoutLeg(
@@ -1464,7 +1508,11 @@ export async function payShareholders(
           updateOne: {
             filter: { _id: new ObjectId(r.characterId) },
             update: {
-              $inc: buildPersonalBalanceInc(amt, currency, forexEnabled),
+              $inc: buildPersonalBalanceInc(
+                netStockProceeds(amt, stockTax),
+                currency,
+                forexEnabled
+              ),
               $set: { updatedAt: now },
               ...(stockTax ? { $push: { pendingStockTaxReceipts: stockTax } } : {}),
             },

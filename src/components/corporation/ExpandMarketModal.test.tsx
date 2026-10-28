@@ -10,6 +10,7 @@ import {
   within,
 } from "@testing-library/react";
 import type { ComponentProps, ReactElement } from "react";
+import { Profiler } from "react";
 import { NextIntlClientProvider } from "next-intl";
 import messages from "../../../messages/en/corporations.json";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -339,7 +340,9 @@ describe("ExpandMarketModal plants market finder", () => {
     expect(screen.getByText("Not available now")).toBeTruthy();
     expect(screen.getByText("Retail paused")).toBeTruthy();
 
-    fireEvent.click(screen.getAllByRole("button", { name: /New York/ })[0]);
+    const newYorkRow = screen.getAllByRole("button", { name: /New York/ })[0];
+    fireEvent.click(newYorkRow);
+    expect(newYorkRow.getAttribute("aria-pressed")).toBe("true");
     fireEvent.click(screen.getByRole("button", { name: "Review farm" }));
     await screen.findByText("Review New York");
     const buildButton = screen.getByRole("button", { name: "Build it" }) as HTMLButtonElement;
@@ -348,6 +351,70 @@ describe("ExpandMarketModal plants market finder", () => {
     fireEvent.click(buildButton);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  it.each([
+    ["NY", "New York"],
+    ["missing", "California"],
+  ])(
+    "selects deep-linked state %s once and resets for a new sector type",
+    async (stateId, name) => {
+      const renderedSelections: string[] = [];
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            ...marketResponse,
+            suggestions: [
+              marketResponse.suggestions[0],
+              { ...marketResponse.suggestions[0], stateId: "NY", stateName: "New York" },
+            ],
+          }),
+        })
+        .mockImplementation(suggestionReply);
+      vi.stubGlobal("fetch", fetchMock);
+
+      render(
+        <Profiler
+          id="market-selection"
+          onRender={() => {
+            const selected = screen.queryByRole("button", { pressed: true });
+            if (selected) renderedSelections.push(selected.textContent ?? "");
+          }}
+        >
+          <ExpandMarketModal
+            corpId="corp-1"
+            primaryType="agriculture"
+            liquidCapital={25_400}
+            plantsMode
+            initialStateId={stateId}
+            onClose={() => undefined}
+          />
+        </Profiler>
+      );
+
+      await screen.findAllByText("New York");
+      // The linked market must already be selected when the fetched rows first
+      // appear, before any passive effect could reset a player's next click.
+      expect(renderedSelections[0]).toContain(name);
+      expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining(`&state=${stateId}`));
+      expect(
+        screen.getAllByRole("button", { name: new RegExp(name) })[0].getAttribute("aria-pressed")
+      ).toBe("true");
+      fireEvent.click(screen.getByRole("button", { name: "Review farm" }));
+      expect(await screen.findByText(`Review ${name}`)).toBeTruthy();
+
+      fireEvent.click(screen.getByRole("button", { name: "Back to markets" }));
+      fireEvent.change(screen.getByLabelText("Sector type"), { target: { value: "retail" } });
+      await waitFor(() => expect(screen.queryByText("New York")).toBeNull());
+      expect(
+        screen.getAllByRole("button", { name: /California/ })[0].getAttribute("aria-pressed")
+      ).toBe("true");
+      fireEvent.click(screen.getByRole("button", { name: "Review store" }));
+      expect(await screen.findByText("Review California")).toBeTruthy();
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    }
+  );
 
   it("names a leftover pool as unclaimed legacy revenue, apart from room to build", async () => {
     vi.stubGlobal(

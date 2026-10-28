@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { stockSaleDeductions } from "@/lib/budget/rules/stockWithholding";
 import {
   positionHoldingTerms,
   takeReservedHoldingShares,
@@ -444,6 +445,7 @@ export async function settleListingOffer(
       success: true,
       sharesTransferred: sharesToAccept,
       proceeds,
+      ...stockSaleDeductions(proceeds, sellerAmount, moneyPlan.sellerProceeds?.stockTaxReceipt),
       refundedToOffer: refund,
       listingSharesRemaining,
     },

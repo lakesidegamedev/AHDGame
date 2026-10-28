@@ -297,7 +297,7 @@ export default function PrivateSalePanel({
         onToast(apiErrorText(data, "Failed to accept offer"), "error");
       } else {
         onToast(
-          `Accepted ${data.sharesTransferred.toLocaleString("en-US")} shares. ${fmtFull(data.proceeds)} received.`,
+          `Accepted ${data.sharesTransferred.toLocaleString("en-US")} shares. Gross ${fmtFull(data.proceeds)}; tax withheld ${fmtFull(data.withheldTax ?? 0)}; cash received ${fmtFull(data.netProceeds ?? data.proceeds)}.`,
           "success"
         );
         await loadListings();

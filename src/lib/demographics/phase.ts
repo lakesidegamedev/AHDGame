@@ -376,7 +376,9 @@ export async function runDemographicFlows(
       ? await loadResetPolicyPressure(db, {
           worldId: gameState.resetWorldId,
           boards: [...v2HealthByRegion.values()],
-          turn: turn - 1,
+          // Fiscal settlement precedes demographics. Health observations stay
+          // lagged, but law delivery must use this turn's payment receipts.
+          turn,
         })
       : new Map<string, Record<string, number>>();
 
