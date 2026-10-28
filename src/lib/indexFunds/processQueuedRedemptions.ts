@@ -127,7 +127,9 @@ export async function prepareQueuedRedemptionPass(
   if (forexEnabled && currencies.length > 0) {
     const rows = await db
       .collection<{ currencyCode: CurrencyCode; rate: number }>("exchangeRates")
-      .find({ currencyCode: { $in: currencies } }, { projection: { rate: 1 } })
+      // `currencyCode` must be projected: the map below is keyed on it, and
+      // Mongo drops unprojected fields, which made every currency look rate-less.
+      .find({ currencyCode: { $in: currencies } }, { projection: { currencyCode: 1, rate: 1 } })
       .toArray();
     const byCurrency = new Map(rows.map((row) => [row.currencyCode, row.rate]));
     for (const currency of currencies) {
