@@ -1037,7 +1037,7 @@ export function AskDrawerPanel({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search threads"
-              className="mb-3 w-full rounded-lg border border-card-border bg-background px-3 py-1.5 text-[13px] text-foreground placeholder:text-muted focus:border-primary focus:outline-none"
+              className="mb-3 w-full rounded-lg border border-card-border bg-background px-3 py-1.5 text-base text-foreground placeholder:text-muted focus:border-primary sm:text-[13px] focus:outline-none"
             />
             <div className="flex-1">
               {convs.length === 0 && (
@@ -1160,7 +1160,8 @@ export function AskDrawerPanel({
               rows={2}
               placeholder={turns.length ? "Ask a follow-up" : "Ask about any part of the game"}
               aria-label="Your question"
-              className="min-h-[44px] flex-1 resize-none bg-transparent text-[14px] text-foreground placeholder:text-muted focus:outline-none"
+              // 16px on phones: iOS zooms into any focused field smaller than that.
+              className="min-h-[44px] flex-1 resize-none bg-transparent text-base text-foreground sm:text-[14px] placeholder:text-muted focus:outline-none"
             />
             {busy ? (
               <button
@@ -1223,7 +1224,7 @@ export function AskDrawerPanel({
               onChange={(e) => setMode(e.target.value as ModeId)}
               aria-label="Answer mode"
               title={MODES.find((m) => m.id === mode)?.hint}
-              className="ml-auto rounded-md border border-card-border bg-background px-1.5 py-0.5 text-[11px] text-foreground focus:outline-none"
+              className="ml-auto rounded-md border border-card-border bg-background px-1.5 py-0.5 text-base text-foreground focus:outline-none sm:text-[11px]"
             >
               {MODES.map((m) => (
                 <option key={m.id} value={m.id}>

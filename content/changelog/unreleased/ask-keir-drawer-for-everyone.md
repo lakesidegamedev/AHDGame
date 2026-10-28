@@ -18,7 +18,8 @@ areas: [frontend]
   The setting for which side it docks to is now under Appearance.
 - On a phone the drawer opens as a full-screen sheet from a round Keir button
   in the bottom corner. The question box stays above the keyboard, the page
-  behind it stops scrolling, and a swipe down on the header closes it.
+  behind it stops scrolling, and a swipe down on the header closes it. Typing a
+  question no longer zooms the page in.
 - Keir replies straight away with what he is going to look into, then shows
   each research step as it happens, then the answer.
 - Keir has more expressions: he nods when he starts, reads while he searches,

@@ -130,7 +130,7 @@ export function AskActionCard({
   }
 
   const field =
-    "w-full rounded-lg border border-card-border bg-background px-2.5 py-1.5 text-[13px] text-foreground focus:border-primary focus:outline-none disabled:opacity-60";
+    "w-full rounded-lg border border-card-border bg-background px-2.5 py-1.5 text-base text-foreground focus:border-primary focus:outline-none disabled:opacity-60 sm:text-[13px]";
   return (
     <section
       aria-label={isSuggestion ? "Suggestion draft" : "Ticket draft"}
