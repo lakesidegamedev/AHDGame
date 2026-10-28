@@ -388,12 +388,15 @@
       "intro": "Try features that are still being built. They may change, break or go away. Turning this off removes them straight away.",
       "toggleLabel": "Turn on experimental features",
       "toggleHint": "Off by default. Only changes things for you.",
-      "saveError": "Could not save. Try again.",
-      "askTitle": "Ask drawer",
-      "askBody": "A tab on the edge of most pages opens Ask in a side panel. It is signed in with your game account, shares your history and daily limits with the Ask site, and can read the page you are on when you ask.",
+      "saveError": "Could not save. Try again."
+    },
+    "askDrawer": {
+      "title": "Ask Keir drawer",
+      "body": "Ask Keir sits on the edge of most pages. Open it to ask about the game or the page you are on. It is signed in with your game account and shares your history and daily limits with the Ask Keir site. On a phone it opens from the round Keir button in the corner.",
       "sideLabel": "Dock the drawer on the",
       "sideLeft": "Left",
-      "sideRight": "Right"
+      "sideRight": "Right",
+      "saveError": "Could not save. Try again."
     },
     "apiKeys": {
       "intro": "API keys allow external applications to interact with your account.",

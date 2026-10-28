@@ -22,6 +22,9 @@ export const ASK_DRAWER_ROUTES = new Set([
   "answer/feedback",
   "chart/render",
   "map/render",
+  "suggest-questions",
+  "action/confirm",
+  "action/cancel",
 ]);
 
 /**

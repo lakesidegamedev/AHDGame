@@ -7,42 +7,62 @@ import { useEffect, useRef, useState } from "react";
 // state is at x = i * cell, y = row * cell on a 40px grid, scaled by whole
 // numbers so the pixels stay crisp. Decoration only: aria-hidden.
 
-export type KeirMood =
-  | "idle"
-  | "blink"
-  | "wave"
-  | "listening"
-  | "thinking"
-  | "talking"
-  | "idea"
-  | "alert"
-  | "glasses_peek"
-  | "glasses_glint"
-  | "humming"
-  | "tea_sip";
-
-const SHEET = "/ask/keir-M.png";
-const CELL = 40;
-const SHEET_W = 400;
-const SHEET_H = 1800;
-
-export const KEIR_STATES: Record<
-  KeirMood,
-  { row: number; frames: number; fps: number; loop: boolean }
-> = {
+// Every state on the sheet: row, frame count, playback speed, and whether it
+// loops (the rest play once and settle back to idle).
+export const KEIR_STATES = {
   idle: { row: 0, frames: 8, fps: 8, loop: true },
   blink: { row: 1, frames: 3, fps: 12, loop: false },
   talking: { row: 2, frames: 6, fps: 10, loop: true },
   listening: { row: 3, frames: 6, fps: 6, loop: true },
   thinking: { row: 4, frames: 6, fps: 6, loop: true },
   idea: { row: 5, frames: 4, fps: 6, loop: false },
-  alert: { row: 8, frames: 4, fps: 6, loop: true },
+  working: { row: 6, frames: 6, fps: 8, loop: true },
+  reading: { row: 7, frames: 6, fps: 6, loop: true },
+  alert: { row: 8, frames: 4, fps: 7, loop: true },
+  error: { row: 9, frames: 4, fps: 6, loop: false },
+  celebrate: { row: 10, frames: 6, fps: 8, loop: false },
+  sleeping: { row: 11, frames: 8, fps: 3, loop: true },
+  waking: { row: 12, frames: 4, fps: 6, loop: false },
+  happy: { row: 13, frames: 4, fps: 6, loop: false },
+  laughing: { row: 14, frames: 6, fps: 8, loop: false },
+  surprised: { row: 15, frames: 4, fps: 6, loop: false },
+  sceptical: { row: 16, frames: 4, fps: 6, loop: false },
+  concerned: { row: 17, frames: 4, fps: 6, loop: false },
+  sad: { row: 18, frames: 4, fps: 6, loop: false },
+  stern: { row: 19, frames: 4, fps: 6, loop: false },
+  confused: { row: 20, frames: 6, fps: 6, loop: false },
+  thumbs_up: { row: 21, frames: 6, fps: 8, loop: false },
   glasses_peek: { row: 22, frames: 6, fps: 6, loop: false },
   glasses_glint: { row: 23, frames: 6, fps: 12, loop: false },
+  wink: { row: 24, frames: 4, fps: 8, loop: false },
+  eye_roll: { row: 25, frames: 6, fps: 8, loop: false },
   tea_sip: { row: 26, frames: 10, fps: 6, loop: false },
+  nervous: { row: 27, frames: 4, fps: 6, loop: false },
+  shrug: { row: 28, frames: 4, fps: 6, loop: false },
+  brow_wiggle: { row: 29, frames: 6, fps: 8, loop: false },
+  facepalm: { row: 30, frames: 6, fps: 6, loop: false },
+  red_box: { row: 31, frames: 6, fps: 6, loop: false },
   humming: { row: 32, frames: 8, fps: 6, loop: true },
+  dizzy: { row: 33, frames: 4, fps: 6, loop: false },
   wave: { row: 34, frames: 6, fps: 8, loop: false },
-};
+  point: { row: 35, frames: 6, fps: 6, loop: true },
+  phone: { row: 36, frames: 6, fps: 6, loop: false },
+  nod: { row: 37, frames: 4, fps: 6, loop: false },
+  shake_no: { row: 38, frames: 6, fps: 8, loop: false },
+  yawn: { row: 39, frames: 6, fps: 5, loop: false },
+  blush: { row: 40, frames: 4, fps: 6, loop: false },
+  fuming: { row: 41, frames: 6, fps: 8, loop: false },
+  gloom: { row: 42, frames: 6, fps: 6, loop: false },
+  look_left: { row: 43, frames: 2, fps: 2, loop: false },
+  look_right: { row: 44, frames: 2, fps: 2, loop: false },
+} satisfies Record<string, { row: number; frames: number; fps: number; loop: boolean }>;
+
+export type KeirMood = keyof typeof KEIR_STATES;
+
+const SHEET = "/ask/keir-M.png";
+const CELL = 40;
+const SHEET_W = 400;
+const SHEET_H = 1800;
 
 const VARIETY: KeirMood[] = ["glasses_peek", "glasses_glint", "tea_sip", "humming"];
 
