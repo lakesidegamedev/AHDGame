@@ -144,6 +144,15 @@ export const experimentalUiSchema = z.object({
   enableExperimentalUI: z.boolean(),
 });
 
+export const experimentalFeaturesSchema = z
+  .object({
+    experimentalFeatures: z.boolean().optional(),
+    askDrawerSide: z.enum(["left", "right"]).optional(),
+  })
+  .refine((v) => v.experimentalFeatures !== undefined || v.askDrawerSide !== undefined, {
+    message: "Nothing to update",
+  });
+
 export const autoRunForReelectionSchema = z.object({
   autoRunForReelection: z.boolean(),
 });

@@ -49,4 +49,14 @@ describe("idle cause meter colors", () => {
     expect(fills.size).toBe(entries.length);
     for (const fill of fills) expect(fill).toMatch(/^bg-/);
   });
+
+  it("says local-market outputs cannot sell into a shortage elsewhere (ticket 1700)", () => {
+    expect(idleCauseMeta("manufacturing").demand.help).not.toMatch(/only in this state/);
+    expect(idleCauseMeta("construction", undefined, ["Construction Services"]).demand.help).toMatch(
+      /Construction Services sells only in this state, so a shortage elsewhere does not raise demand here\.$/
+    );
+    expect(
+      idleCauseMeta("construction", undefined, ["Freight", "Construction Services"]).demand.help
+    ).toMatch(/Freight and Construction Services sell only in this state/);
+  });
 });

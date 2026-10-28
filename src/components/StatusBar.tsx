@@ -483,6 +483,15 @@ export function StatusBar({
             </div>
           )}
 
+          {/* Timed economy-only pause (gameConfig.economyPauseUntilTurn): the
+              political world keeps turning, prices and corporations hold. Only
+              rendered while the window is open. */}
+          {gameState?.economyPause?.paused && gameState.economyPause.resumesAtTurn !== null && (
+            <span className="shrink-0 text-xs text-yellow-500">
+              Economy paused, resumes turn {gameState.economyPause.resumesAtTurn}
+            </span>
+          )}
+
           {/* Corp/elections/minimal: compact online count inline */}
           {inlineOnlineCount && onlineStatus && (
             <>

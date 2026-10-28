@@ -12,6 +12,10 @@
  * - the corporation's cash credit excludes the producer profit the settlement
  *   already paid.
  *
+ * It also publishes the funded demand throttle (`fundedDemandThrottle`): the
+ * legacy clearing pass is its other writer and a funded turn never prices that
+ * market, so AI saturation would otherwise read a stale value.
+ *
  * Pure: plain data in, plain data out.
  */
 
@@ -29,6 +33,9 @@ export const SETTLEMENT_OWNED_SECTOR_FIELDS: readonly string[] = [
   "producerQuotes",
   // Legacy finished-goods inventory; the funded world keeps stock in producerInventory.
   "inventoryUnits",
+  // Written from the funded receipt: the legacy throttle reads a market the
+  // funded turn never priced, and would overwrite the funded reading.
+  "demandThrottleFactor",
 ];
 
 export interface FundedReceipt {
@@ -178,6 +185,25 @@ export function fundedSectorOpsAll(
  */
 export function fundedCashIncome(legacyIncome: number, settledProducerProfit: number): number {
   return finite(legacyIncome) - finite(settledProducerProfit);
+}
+
+/**
+ * Funded demand throttle: the share of its per-turn operating capacity that the
+ * plant actually sold, clamped to [0, 1], 1 when it could produce nothing. The
+ * legacy clearing pass is the only other writer of `demandThrottleFactor`, and a
+ * funded turn never prices its market, so the funded settlement publishes its
+ * own reading; AI placement and mothballing read it as saturation.
+ *
+ * Clamped, since a multi-leg plant's sold units and the capacity basis are both
+ * per-turn unit totals and can round past each other.
+ */
+export function fundedDemandThrottle(
+  soldUnits: number | null | undefined,
+  capacityUnits: number | null | undefined
+): number {
+  const capacity = finite(capacityUnits ?? 0);
+  if (!(capacity > 0)) return 1;
+  return Math.max(0, Math.min(1, finite(soldUnits ?? 0) / capacity));
 }
 
 function rootOf(field: string): string {

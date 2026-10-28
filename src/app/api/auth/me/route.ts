@@ -327,6 +327,8 @@ export const GET = withNoStore(async () => {
           theme: user?.theme ?? undefined,
           statusBarLayout: user?.statusBarLayout ?? undefined,
           corpOverviewMode: user?.corpOverviewMode ?? undefined,
+          experimentalFeatures: user?.experimentalFeatures === true,
+          askDrawerSide: user?.askDrawerSide === "left" ? "left" : "right",
           hasCharacter: !!character || !!imperialCharacter,
           isImperial: !!imperialCharacter && isImperialMode,
           forexEnabled,

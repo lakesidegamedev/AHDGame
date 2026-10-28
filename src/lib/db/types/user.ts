@@ -171,6 +171,10 @@ export interface User {
    * classic interface. Absent/`true` selects the modern interface.
    */
   enableExperimentalUI?: boolean;
+  /** Opt-in to experimental features (Settings). Off unless explicitly true. */
+  experimentalFeatures?: boolean;
+  /** Which edge of the screen the experimental Ask drawer docks to. */
+  askDrawerSide?: "left" | "right";
   actionsViewMode?: "cards" | "compact";
   /** Corporation Overview layout: a short at-a-glance view or the full table view. */
   corpOverviewMode?: "simple" | "pro";

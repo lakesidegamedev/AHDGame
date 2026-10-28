@@ -187,6 +187,9 @@ function categoryForDomain(domain: string, scope: "national" | "regional"): Bill
     return "infrastructure";
   }
   if (normalized.includes("agriculture") || normalized.includes("food")) return "agriculture";
+  // The reviewed economy domain also mentions trade. Its law provisions are
+  // economic policies, whereas legacy trade bills require tariffs or embargoes.
+  if (normalized.includes("economy")) return "economy";
   if (normalized.includes("trade")) return scope === "regional" ? "economy" : "trade";
   if (normalized.includes("technology") || normalized.includes("research")) return "technology";
   if (normalized.includes("justice") || normalized.includes("policing")) return "public safety";

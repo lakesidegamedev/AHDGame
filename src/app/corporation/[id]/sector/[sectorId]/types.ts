@@ -633,6 +633,12 @@ export interface PlantsData {
   idleUnits: number | null;
   fillRate: number | null;
   idleCauses: PlantIdleCause[];
+  /**
+   * Labels of this sector's outputs that sell only in the state where they are
+   * made (construction, freight, healthcare, real estate). A shortage
+   * elsewhere cannot lift demand for these (ticket 1700).
+   */
+  localMarketOutputs?: string[];
   mothballed: boolean;
   buildQueue: PlantBuildOrderView[];
   constructionInProgressAnchor: number;

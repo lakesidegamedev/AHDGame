@@ -542,6 +542,16 @@ export interface GameConfig {
   freightSettlementRampStartTurn?: number;
   freightSettlementRampTurns?: number;
   /**
+   * Timed economy-only pause, for the stretch right after an economy reset.
+   * Economy phases are skipped on every turn number strictly below it (see
+   * `getEconomyPausePredicate` in src/lib/turn/economyPause.ts): politics,
+   * elections, campaigns, parties and legislation keep running while prices,
+   * corporations, banking and the ledger hold. The window ends by itself, since
+   * the turn numbered `economyPauseUntilTurn` runs the economy normally. Absent
+   * or null means no pause.
+   */
+  economyPauseUntilTurn?: number | null;
+  /**
    * SIM-ONLY turn-phase profile (headless worldsim; never set in prod).
    * "elections-only" makes processTurn() skip the economy/finance/ledger
    * phases (see ELECTIONS_SKIP_PHASES in src/simulation/phases/simTurnProfiles.ts)

@@ -111,6 +111,9 @@ import {
 } from "@/lib/constants/techTree";
 import { COMMODITY_BASE_PRICES, computeBlendedMarginModifiers } from "@/lib/constants/commodities";
 import type { CommodityType, ExtractableResource } from "@/lib/constants/commodities";
+import { COMMODITY_LABELS } from "@/lib/constants/commoditiesCore";
+import { isStateScopedCommodity } from "@/lib/market/rules/commodityMarketScope";
+import { sectorOutputCommodities } from "@/lib/corporations/commodityDominanceContext";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { projectStrategyRevenuePerTurn } from "@/lib/corporations/strategyRevenuePreview";
 import type { SectorBuildOrder } from "@/lib/db/types";
@@ -1734,6 +1737,9 @@ export function buildSectorPlantsSection(args: {
     idleUnits,
     fillRate,
     idleCauses,
+    localMarketOutputs: sectorOutputCommodities(sector, currentTurn)
+      .filter(isStateScopedCommodity)
+      .map((commodity) => COMMODITY_LABELS[commodity]),
     mothballed,
     activeCapacityPercent: activeFraction * 100,
     ...(upkeepUnitDailyAnchor != null

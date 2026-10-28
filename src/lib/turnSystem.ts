@@ -70,6 +70,7 @@ import { recoverDemographicFlowsBeforeContext } from "@/lib/demographics/recover
 import { getTurnPhaseRegistry } from "@/simulation/phases/turnPhaseRegistry";
 import { runWithLedgerTurn } from "@/lib/ledger/ledgerTurn";
 import { getSimTurnPhasePredicate } from "@/simulation/phases/simTurnProfiles";
+import { getEconomyPausePredicate } from "@/lib/turn/economyPause";
 import {
   combinePhasePredicates,
   getSingleplayerPhasePredicate,
@@ -646,6 +647,10 @@ async function processTurnImpl(
       // SIM-ONLY: sandbox worldsim can set gameConfig.simTurnPhaseMode to skip
       // the economy phases. Undefined in prod (config?.simTurnPhaseMode absent) →
       // full turn, unchanged.
+      // A live world can schedule the same econ/political boundary for a timed
+      // window with gameConfig.economyPauseUntilTurn (economyPause.ts): economy
+      // phases are skipped strictly below that turn and the turn itself resumes
+      // them. Absent or finished → undefined, no filtering.
       // Singleplayer skips the anti-abuse scans: one account with cheat
       // commands available by design has no one to defraud, and the scans were
       // ~18% of every document a turn deserializes. Composed with the sim
@@ -654,6 +659,7 @@ async function processTurnImpl(
       // turn; their rolling windows make that lossless.
       shouldRunPhase: combinePhasePredicates(
         getSimTurnPhasePredicate(config?.simTurnPhaseMode),
+        getEconomyPausePredicate(nextTurnNumber, config?.economyPauseUntilTurn),
         getSingleplayerPhasePredicate(localSingleplayer),
         getAnomalyScanCadencePredicate(gameState.currentTurn)
       ),

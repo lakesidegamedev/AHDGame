@@ -31,6 +31,7 @@ export function BillsTab({
   canPropose,
   legislationVersion,
   canProposeViaPartyNpp = false,
+  partyNppUnavailable = false,
   canVote,
   stateId,
   countryId,
@@ -44,6 +45,7 @@ export function BillsTab({
   canPropose: boolean;
   legislationVersion: "v1" | "v2";
   canProposeViaPartyNpp?: boolean;
+  partyNppUnavailable?: boolean;
   canVote: boolean;
   stateId: string;
   countryId: string;
@@ -150,15 +152,21 @@ export function BillsTab({
             </button>
           )}
           {canProposeViaPartyNpp && (
-            <button
-              onClick={() => {
-                setPartyProposal(true);
-                setShowPropose(true);
-              }}
-              className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary/90"
-            >
-              {t("proposeViaPartyNpp")}
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                disabled={partyNppUnavailable}
+                onClick={() => {
+                  setPartyProposal(true);
+                  setShowPropose(true);
+                }}
+                className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50"
+              >
+                {t("proposeViaPartyNpp")}
+              </button>
+              {partyNppUnavailable && (
+                <p className="text-sm text-muted">{t("regionalPartyBillUnavailable")}</p>
+              )}
+            </div>
           )}
           <div className="flex min-w-0 max-w-full flex-1 rounded-lg border border-card-border text-sm overflow-x-auto">
             {[

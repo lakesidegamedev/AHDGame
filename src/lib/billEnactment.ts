@@ -118,6 +118,7 @@ type EnactableBill = Pick<
   category?: string;
   sponsorId?: ObjectId | null;
   proposalPayerId?: ObjectId;
+  proposedByGovernor?: StateBill["proposedByGovernor"];
   /** NPI spent at proposal time — refunded on passage */
   proposalNpiCost?: number;
   /** Action points spent at proposal time — refunded on passage */
@@ -764,7 +765,8 @@ export async function onBillEnacted(
   // Record policy reactions for all provisions
 
   // Refund proposal costs to the sponsor (capped at action cap; NPI has no hard cap)
-  const proposalPayerId = bill.proposalPayerId ?? bill.sponsorId;
+  const proposalPayerId =
+    bill.proposalPayerId ?? bill.proposedByGovernor?.characterId ?? bill.sponsorId;
   if (proposalPayerId && (bill.proposalNpiCost || bill.proposalActionCost)) {
     const sponsor = await db
       .collection<Character>("characters")

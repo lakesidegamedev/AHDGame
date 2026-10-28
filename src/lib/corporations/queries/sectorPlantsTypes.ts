@@ -80,6 +80,8 @@ export interface SectorPlantsSection {
   fillRate: number | null;
   /** Named reasons behind `idleUnits`. Sums to `idleUnits`. */
   idleCauses: PlantIdleCause[];
+  /** State-scoped output labels: these sell only in this state (ticket 1700). */
+  localMarketOutputs: string[];
   mothballed: boolean;
   /** Outstanding build orders, oldest first. */
   buildQueue: PlantBuildOrderView[];

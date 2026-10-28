@@ -46,6 +46,13 @@ export type ConfidenceInput = {
   /** The bank's ring-fenced cash (`bankCharter.cashReserves`). */
   cashReserves: number;
   /**
+   * Marked sovereign treasuries the bank holds. Counted with cash as liquid
+   * cover: the auto-sweep parks spare vault cash in them, and a bank can sell
+   * them the same turn. Ignoring them read a bond-heavy bank as illiquid and
+   * started runs on solvent banks (incident 1694, Greenbaum Group).
+   */
+  liquidSecurities?: number;
+  /**
    * Memo of cash the shareholders put in. Not used in the score (the cash it
    * refers to is already inside `cashReserves`); kept because the callers all
    * have it and dropping the field would read as the score having changed.
@@ -103,13 +110,17 @@ export type ConfidenceCovers = {
  */
 export function confidenceCovers(input: {
   cashReserves: number;
+  /** Marked sovereign treasuries, counted with cash (see ConfidenceInput). */
+  liquidSecurities?: number;
   cashBackedDeposits: number;
   totalLoans: number;
   reserveRatioRequired: number;
   arrearsOutstanding?: number;
   defaultsLastTurn?: number;
 }): ConfidenceCovers {
-  const cash = Math.max(0, finiteOrZero(input.cashReserves));
+  const cash =
+    Math.max(0, finiteOrZero(input.cashReserves)) +
+    Math.max(0, finiteOrZero(input.liquidSecurities));
   const deposits = Math.max(0, finiteOrZero(input.cashBackedDeposits));
   const loans = Math.max(0, finiteOrZero(input.totalLoans));
   const ratio = Math.max(0, finiteOrZero(input.reserveRatioRequired));
@@ -153,6 +164,7 @@ export function computeConfidence(input: ConfidenceInput): ConfidenceResult {
 
   const cover = confidenceCovers({
     cashReserves,
+    liquidSecurities: input.liquidSecurities,
     cashBackedDeposits: cashBacked,
     totalLoans,
     reserveRatioRequired,
