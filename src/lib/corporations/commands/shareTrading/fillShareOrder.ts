@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import {
   availableHoldingShares,
   chooseHoldingTerm,
+  anchorHoldingPosition,
   positionHoldingTerms,
   takeHoldingShares,
   takeReservedHoldingShares,
@@ -289,7 +290,11 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
           ? row.imperialCharacterId?.equals(fillerId)
           : row.characterId?.equals(fillerId)
       );
-      const terms = positionHoldingTerms(holder ?? { shares: 0 }, currentTurn, total / shares);
+      const terms = positionHoldingTerms(
+        anchorHoldingPosition(holder ?? { shares: 0 }, targetFxRate),
+        currentTurn,
+        total / shares
+      );
       let term;
       try {
         term = chooseHoldingTerm(terms, parsed.data.holdingTerm);
@@ -311,7 +316,11 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
             currentTurn,
             total / shares
           )
-        : positionHoldingTerms(holder ?? { shares: 0 }, currentTurn, total / shares);
+        : positionHoldingTerms(
+            anchorHoldingPosition(holder ?? { shares: 0 }, targetFxRate),
+            currentTurn,
+            total / shares
+          );
       const selected = takeReservedHoldingShares(reserved, shares, currentTurn);
       sellerHoldingTerms = selected.taken;
       if (order.sharesDebitedAtCreation) remainingReservedTerms = selected.remaining;

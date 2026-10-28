@@ -1,4 +1,5 @@
 import { playerTaxWalletDebit } from "./rules/incomeTaxTiers";
+import { planTaxCollection, type TaxCollectionSlice } from "./rules/taxCollection";
 /**
  * Income-tax collection batches guarded wallet debits and treasury credits.
  * One active batch freezes each payer's outcome before any treasury is credited;
@@ -19,13 +20,14 @@ interface Payer {
   debits: Record<string, number>;
   assessmentIds: string[];
 }
+type CollectionAssessment = Assessment & { collection?: TaxCollectionSlice };
 interface Batch {
   _id: string;
   key: string;
   turn: number;
   stage: "claimed" | "debited" | "credited" | "complete";
   payers: Payer[];
-  assessments: Assessment[];
+  assessments: CollectionAssessment[];
   paidIds: string[];
   scanAfter?: string;
   fundedTreasury: boolean;
@@ -35,6 +37,8 @@ interface Batch {
 }
 const idFor = (key: string) =>
   new ObjectId(createHash("sha256").update(key).digest("hex").slice(0, 24));
+const paymentKey = (assessment: CollectionAssessment, turn: number) =>
+  assessment._id + (assessment.collection ? ":collection:" + turn : "");
 const receiptGuard = (turn: number) => ({
   $or: [
     { incomeTaxBatchReceipt: { $exists: false } },
@@ -143,12 +147,15 @@ async function deliver(db: Db, original: Batch): Promise<void> {
       )
     )
       throw new Error("Income-tax wallet receipt unavailable");
-    const paidIds = batch.payers
-      .filter(
-        (payer) =>
-          byId.get(payer.ownerCollection + ":" + payer.characterId.toHexString())?.paid === true
-      )
-      .flatMap((payer) => payer.assessmentIds);
+    const paidIds = [
+      ...batch.assessments.filter((a) => a.withheldAtSource).map((a) => a._id),
+      ...batch.payers
+        .filter(
+          (payer) =>
+            byId.get(payer.ownerCollection + ":" + payer.characterId.toHexString())?.paid === true
+        )
+        .flatMap((payer) => payer.assessmentIds),
+    ];
     await batches.updateOne(
       { ...identity, stage: "claimed" },
       { $set: { paidIds, stage: "debited" } }
@@ -156,15 +163,41 @@ async function deliver(db: Db, original: Batch): Promise<void> {
     batch = (await batches.findOne(identity))!;
   }
   const paid = new Set(batch.paidIds);
-  const assessments = batch.assessments.filter((assessment) => paid.has(assessment._id));
+  const assessments = batch.assessments
+    .filter((assessment) => paid.has(assessment._id))
+    .map((assessment) => ({
+      ...assessment,
+      federal: assessment.collection?.federal ?? assessment.federal,
+      regional: assessment.collection?.regional ?? assessment.regional,
+    }));
   if (batch.stage === "debited") {
     if (batch.paidIds.length)
-      await db
-        .collection<Assessment>("playerIncomeTaxAssessments")
-        .updateMany(
-          { _id: { $in: batch.paidIds }, status: "unpaid" },
-          { $set: { status: "collected", collectedTurn: batch.turn } }
-        );
+      await db.collection<Assessment>("playerIncomeTaxAssessments").bulkWrite(
+        assessments.map((assessment) => ({
+          updateOne: {
+            filter: {
+              _id: assessment._id,
+              status: "unpaid",
+              // A stale delivery must not roll cumulative installments back
+              // after another attempt completed this batch and a later turn paid more.
+              $or: [{ collectedTurn: { $exists: false } }, { collectedTurn: { $lte: batch.turn } }],
+            },
+            update: {
+              $set: {
+                status: assessment.collection?.fullyPaid === false ? "unpaid" : "collected",
+                collectedTurn: assessment.withheldAtSource ? assessment.turn : batch.turn,
+                ...(assessment.collection
+                  ? {
+                      collectedFederal: assessment.collection.previousFederal + assessment.federal,
+                      collectedRegional:
+                        assessment.collection.previousRegional + assessment.regional,
+                    }
+                  : {}),
+              },
+            },
+          },
+        }))
+      );
     const national = new Map<string, { amount: number; countryId: Assessment["countryId"] }>(),
       regional = new Map<string, { amount: number; countryId: Assessment["countryId"] }>();
     for (const assessment of assessments) {
@@ -235,7 +268,7 @@ async function deliver(db: Db, original: Batch): Promise<void> {
   }
   if (batch.stage === "credited") {
     const transactions = assessments.map((assessment) => ({
-      _id: idFor(assessment._id + ":tax"),
+      _id: idFor(paymentKey(assessment, batch.turn) + ":tax"),
       type:
         assessment.taxKind === "capitalGains" ? "player_capital_gains_tax" : "player_income_tax",
       turn: batch.turn,
@@ -259,13 +292,15 @@ async function deliver(db: Db, original: Batch): Promise<void> {
         regionalTax: assessment.regional,
         netIncome: assessment.net,
         taxKind: assessment.taxKind ?? "income",
+        partialPayment: assessment.collection?.fullyPaid === false,
+        withheldAtSource: assessment.withheldAtSource === true,
       },
     }));
     const governmentReceipts = assessments.flatMap((assessment) => [
       ...(assessment.federal
         ? [
             {
-              _id: idFor(assessment._id + ":national-receipt"),
+              _id: idFor(paymentKey(assessment, batch.turn) + ":national-receipt"),
               type: "gov_tax_revenue",
               turn: batch.turn,
               createdAt: batch.createdAt,
@@ -292,7 +327,7 @@ async function deliver(db: Db, original: Batch): Promise<void> {
       ...(assessment.regional
         ? [
             {
-              _id: idFor(assessment._id + ":regional-receipt"),
+              _id: idFor(paymentKey(assessment, batch.turn) + ":regional-receipt"),
               type: "gov_tax_revenue",
               turn: batch.turn,
               createdAt: batch.createdAt,
@@ -361,7 +396,7 @@ async function deliver(db: Db, original: Batch): Promise<void> {
             role: "contra",
           });
         const entry = {
-          _id: idFor(assessment._id + ":ledger"),
+          _id: idFor(paymentKey(assessment, batch.turn) + ":ledger"),
           turn: batch.turn,
           createdAt: batch.createdAt,
           txType:
@@ -377,7 +412,7 @@ async function deliver(db: Db, original: Batch): Promise<void> {
           entry,
           {
             ...entry,
-            _id: idFor(assessment._id + ":cash-ledger"),
+            _id: idFor(paymentKey(assessment, batch.turn) + ":cash-ledger"),
             legs: [
               {
                 account:
@@ -410,9 +445,14 @@ async function deliver(db: Db, original: Batch): Promise<void> {
       );
     }
     if (batch.paidIds.length)
-      await db
-        .collection<Assessment>("playerIncomeTaxAssessments")
-        .updateMany({ _id: { $in: batch.paidIds } }, { $set: { status: "paid" } });
+      await db.collection<Assessment>("playerIncomeTaxAssessments").updateMany(
+        {
+          _id: {
+            $in: assessments.filter((a) => a.collection?.fullyPaid !== false).map((a) => a._id),
+          },
+        },
+        { $set: { status: "paid" } }
+      );
     await batches.updateOne({ ...identity, stage: "credited" }, { $set: { stage: "complete" } });
   }
 }
@@ -488,7 +528,8 @@ export async function settlePlayerIncomeTaxAssessments(
     ),
   ]);
   const available = new Map<string, number>();
-  const assessments = candidates.filter((assessment) => {
+  const assessments: CollectionAssessment[] = candidates.flatMap((assessment) => {
+    if (assessment.withheldAtSource) return [assessment];
     const actorKey = assessment.ownerCollection + ":" + assessment.characterId.toHexString();
     const key = actorKey + ":" + assessment.sourcePath;
     const wallet = wallets.get(actorKey);
@@ -498,17 +539,20 @@ export async function settlePlayerIncomeTaxAssessments(
         ? wallet?.cashOnHand
         : wallet?.currencyBalances?.personal?.[assessment.currency]) ??
       0;
-    const owed = playerTaxWalletDebit(
-      assessment.federal + assessment.regional,
+    if (!Number.isFinite(balance) || balance <= 0) return [];
+    const { slice, walletDebit } = planTaxCollection(
+      assessment,
+      Math.max(0, balance),
       assessment.sourceFx,
       assessment.walletFx
     );
-    if (!Number.isFinite(balance) || balance < owed) return false;
-    available.set(key, balance - owed);
-    return true;
+    if (slice.federal + slice.regional <= 0) return [];
+    available.set(key, Math.max(0, balance - walletDebit));
+    return [{ ...assessment, collection: slice }];
   });
   const payerMap = new Map<string, Payer>();
   for (const assessment of assessments) {
+    if (assessment.withheldAtSource) continue;
     const id = assessment.ownerCollection + ":" + assessment.characterId.toHexString();
     const payer = payerMap.get(id) ?? {
       characterId: assessment.characterId,
@@ -519,7 +563,8 @@ export async function settlePlayerIncomeTaxAssessments(
     payer.debits[assessment.sourcePath] =
       (payer.debits[assessment.sourcePath] ?? 0) +
       playerTaxWalletDebit(
-        assessment.federal + assessment.regional,
+        (assessment.collection?.federal ?? assessment.federal) +
+          (assessment.collection?.regional ?? assessment.regional),
         assessment.sourceFx,
         assessment.walletFx
       );

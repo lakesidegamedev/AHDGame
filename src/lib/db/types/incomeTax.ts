@@ -4,6 +4,8 @@ import type { IncomeTier } from "@/lib/budget/rules/incomeTaxTiers";
 
 /** One immutable assessed liability. Collection and payment status can advance. */
 export interface PlayerIncomeTaxAssessment {
+  /** Already reserved by the atomic sale credit; treasury delivery must not debit again. */
+  withheldAtSource?: boolean;
   /** Absent on legacy income-tax receipts. Both levies share guarded settlement. */
   taxKind?: "income" | "capitalGains";
   _id: string;
@@ -28,6 +30,9 @@ export interface PlayerIncomeTaxAssessment {
   gross: number;
   federal: number;
   regional: number;
+  /** Cumulative collections in the original assessment currency. Missing means zero. */
+  collectedFederal?: number;
+  collectedRegional?: number;
   net: number;
   status: "unpaid" | "collected" | "paid";
   collectedTurn?: number;
