@@ -419,7 +419,7 @@ export function TradeEmbargoPanel({ countryId, canAct, actionsRemaining }: Props
             </span>
           ) : (
             <span className="text-xs text-muted">
-              Only the trade minister (or head of government) may impose embargoes.
+              Only the trade minister may impose embargoes.
             </span>
           )}
           {feedback && (

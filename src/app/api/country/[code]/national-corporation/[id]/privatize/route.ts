@@ -1,5 +1,5 @@
 // POST /api/country/[code]/national-corporation/[id]/privatize
-// Treasury-gated (finance minister, fallback head of government) privatization:
+// Treasury-gated (finance minister) privatization:
 // carve a new private corp out of this National Corporation and float it (IPO).
 // Auth: requireAuthWithCharacter + assertTreasuryAuthority. Spec §13.
 // Errors: 400, 401, 403, 404, 429
@@ -69,12 +69,12 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    // Authority: seated finance minister, or head of government if vacant.
+    // Authority: the seated finance minister only.
     const authorized = await assertTreasuryAuthority(db, countryId, auth.user.character._id);
     if (!authorized) {
       return errorResponse(
         403,
-        "Only the Secretary of the Treasury (or equivalent), or the head of government if that seat is vacant, may privatize a National Corporation asset."
+        "Only the Secretary of the Treasury (or equivalent) may privatize a National Corporation asset."
       );
     }
 

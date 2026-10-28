@@ -37,7 +37,7 @@ Officials toggle between a **Public** view and a **State Official** view; the of
 Authority is deliberately split between three seats so no single player runs the whole machine:
 
 - **Head of government**: designates strategic sectors and authorizes takings (the Nationalize surface).
-- **Finance minister** (Secretary of the Treasury, Chancellor, Minister of Finance, and equivalents): the ministry that *owns policy*: appoint or remove the CEO, set public-service mandates, split off or merge back sector types, set the CEO's treasury-draw cap, and privatize. If the finance portfolio is vacant, the head of government can act as a fallback so no country is ever locked out.
+- **Finance minister** (Secretary of the Treasury, Chancellor, Minister of Finance, and equivalents): the ministry that *owns policy*: appoint or remove the CEO, set public-service mandates, split off or merge back sector types, set the CEO's treasury-draw cap, and privatize. If the finance portfolio is vacant, those actions stay unavailable until a finance minister is appointed.
 - **CEO**: runs day-to-day operations within the policy and budget the ministry sets. A CEO is *appointed* by the ministry, not elected by shareholders (a National Corporation has none), and the finance minister may appoint themselves. A National Corporation CEO may not also be CEO of any other company.
 
 The clean line: **the ministry sets policy; the CEO runs operations.** A CEO cannot set mandates, take or sell assets, or raise their own budget cap.
