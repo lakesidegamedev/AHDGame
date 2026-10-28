@@ -12,7 +12,6 @@ import type {
   State,
 } from "@/lib/db/types";
 import { archiveCampaignsForCandidates } from "@/lib/campaigns/archiveWithdrawnCampaigns";
-import { BG_FOUNDING_COUNTS_COLLECTION } from "@/lib/countries/bg/foundingCount1990";
 import { CURRENT_PRESIDENTIAL_RULESET_VERSION } from "@/lib/elections/presidentialRuleset";
 import { US_STATE_FILTER } from "@/lib/utils/electionLabels";
 import { MS_PER_TURN, STARTING_YEAR } from "@/lib/constants/turnTime";
@@ -979,9 +978,11 @@ export async function cleanupStaleElectionCandidates(now: Date): Promise<void> {
   // pending count reopens a runoff that needs the first-round candidacies still
   // active. Sweeping them first leaves every runoff without candidates, so the
   // count never settles and the founding phase never ends.
+  // Collection name mirrors BG_FOUNDING_COUNTS_COLLECTION; importing it would pull
+  // the Bulgarian count code into this module's client-reachable import graph.
   const unseatedBgFounding = await db
     .collection<{ electionIds?: string[]; runoffElectionIds?: string[] }>(
-      BG_FOUNDING_COUNTS_COLLECTION
+      "bgFoundingAssemblyCounts"
     )
     .find({ seatedAtTurn: null }, { projection: { electionIds: 1, runoffElectionIds: 1 } })
     .toArray();
