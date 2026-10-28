@@ -20,3 +20,5 @@ areas: [fullstack]
 - Background, Age, Education, and Income groups have region-specific priorities drawn from their country's existing laws and policy levels.
 - Priorities are informational at this stage and do not affect elections, approval, or turnout.
 - Admins can use the red Admin tab to edit each group's primary and secondary laws and desired levels for the current region, or restore authored defaults. Saved edits survive world resets.
+- Turn-of-century priorities now use country-specific interests, regional institutions and bounded policy levels informed by each group's economic and social leans. Employment and training replace anachronistic wage targets, Scotland has distinct tuition requests, and older US voters can prioritize prescription costs.
+- Region profiles follow the live era clock. Small UK demographic groups retain their representation; Japan retains eligible citizen groups without treating foreign-national resident categories as voters. Existing Admin priority overrides remain in place.

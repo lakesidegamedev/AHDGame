@@ -186,6 +186,7 @@ import {
   demographicsV2CalibrationForCountry,
   type DemographicsV2Calibration,
 } from "./v2/calibration";
+import { eligibleRegionalDimensions, retainRegionalRepresentation } from "./rules/regionalCoverage";
 
 /**
  * Live-clock context for Layer-1 derivation. `year` null means "the era system
@@ -615,10 +616,18 @@ function deriveCellsForState(
       turnoutOverlay?.[name]
     ),
   }));
+  const retainRepresentation = retainRegionalRepresentation(countryId, year ?? Number(era));
   let cells = deriveGranularCellsGeneric({
-    dims,
+    dims: retainRepresentation
+      ? eligibleRegionalDimensions(countryId, dims, substrate.turnoutRates.ethnicity)
+      : dims,
     priors: COUNTRY_PRIORS[countryId] ?? {},
-    opts: { pruneFloor: ELECTORATE_PRUNE_FLOOR },
+    opts: {
+      // Keep positive turn-of-century UK/JP cells, excluding zero census cells.
+      // At most 720 UK / 1200 JP intersections in the current models;
+      // coalescing still bounds the engine units. No database work is added.
+      pruneFloor: retainRepresentation ? Number.MIN_VALUE : ELECTORATE_PRUNE_FLOOR,
+    },
   });
   if (liveAgeMarginals) {
     cells = reweightSharesToMarginal(cells, "age", liveAgeMarginals);

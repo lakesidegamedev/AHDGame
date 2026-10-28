@@ -17,9 +17,9 @@ import {
 import {
   getPriorityEditorData,
   loadPriorityLaws,
+  loadPriorityDefaults,
   priorityOverrideId,
 } from "@/lib/demographics/legislativePriorities/overrides";
-import { getDefaultLegislativePriorities } from "@/lib/demographics/legislativePriorities/profile";
 
 // Auth: requireAdmin for every method, including the law-option picker.
 export const GET = withAdminRoute(async (_auth, request: Request) => {
@@ -77,7 +77,11 @@ export const DELETE = withAdminRoute(async (auth, request: Request) => {
   const target = parsed.data;
   if (!isPriorityTarget(target.countryId, target.regionId, target.bucketId))
     return errorResponse(400, "Unknown electorate group or region.");
-  const collection = await getElectoratePriorityOverridesCollection(await getDb());
+  const db = await getDb();
+  const [collection, defaults] = await Promise.all([
+    getElectoratePriorityOverridesCollection(db),
+    loadPriorityDefaults(db, target),
+  ]);
   const id = priorityOverrideId(target);
   await collection.deleteOne({ _id: id });
   await createAdminLog({
@@ -88,7 +92,7 @@ export const DELETE = withAdminRoute(async (auth, request: Request) => {
     details: `Restored default legislative priorities for ${id}`,
   });
   return NextResponse.json({
-    priorities: getDefaultLegislativePriorities(target.countryId, target.regionId, target.bucketId),
+    priorities: defaults,
     isOverride: false,
   });
 });

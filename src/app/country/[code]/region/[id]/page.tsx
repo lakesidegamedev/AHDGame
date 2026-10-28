@@ -4,6 +4,7 @@ import { RegionPageSkeleton, RegionTabsSkeleton } from "./RegionPageSkeleton";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/mongodb";
 import type { State, PoliticalParty, GameState, GameConfig } from "@/lib/db/types";
+import type { StateDemographics } from "@/lib/db/types/demographics";
 import {
   canonicalRegionId,
   COUNTRY_CONFIGS,
@@ -28,6 +29,7 @@ import { StatePageTabs } from "@/components/StatePageTabs";
 import { RegionHeader } from "@/components/state/RegionHeader";
 import { getBucketProfileForRegion } from "@/lib/demographics/bucketProfile";
 import { loadProfileLegislativePriorities } from "@/lib/demographics/legislativePriorities/overrides";
+import { priorityWorldContext } from "@/lib/demographics/legislativePriorities/rules";
 import { STATE_FLAGS, getStateDescriptor, STATE_MOTTOS } from "@/lib/constants";
 import { IE_REGION_CONSTITUENT_COUNCILS } from "@/lib/constants/ireland";
 import { resolveRegionBannerImage } from "@/lib/constants/regionBanner";
@@ -107,6 +109,7 @@ async function renderUKRegion(regionCode: string) {
     turnoutData,
     overview,
     ukGameState,
+    ukDemographicDefaults,
   ] = await Promise.all([
     getRegionState(stateId, "UK"),
     getAuthUserWithCharacter(),
@@ -121,7 +124,16 @@ async function renderUKRegion(regionCode: string) {
     // Independent of every other query — batch it instead of a trailing RTT (O2).
     db
       .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1 } }),
+      .findOne(
+        { _id: "current" },
+        { projection: { preset: 1, currentYear: 1, startingYear: 1, eraSystemEnabled: 1 } }
+      ),
+    db
+      .collection<StateDemographics>("demographicDefaults")
+      .findOne(
+        { _id: stateId },
+        { projection: { layer1PositionOverrides: 1, layer1TurnoutOverrides: 1 } }
+      ),
   ]);
 
   const { demographics, categories } = demographicsData;
@@ -169,12 +181,22 @@ async function renderUKRegion(regionCode: string) {
   const currentParty = await getCurrentPartyNav(userData?.character);
 
   const ukActivePreset = ukGameState?.preset ?? DEFAULT_SEED_PRESET;
+  const ukPriorityContext = priorityWorldContext(ukGameState);
   const censusData = getRegionCensusData("UK", stateId, ukActivePreset);
   const ukBucketProfile = await loadProfileLegislativePriorities(
     db,
-    getBucketProfileForRegion("UK", stateId, ukActivePreset),
+    getBucketProfileForRegion(
+      "UK",
+      stateId,
+      ukActivePreset,
+      null,
+      ukPriorityContext.yearContext,
+      ukDemographicDefaults?.layer1PositionOverrides,
+      ukDemographicDefaults?.layer1TurnoutOverrides
+    ),
     "UK",
-    stateId
+    stateId,
+    ukPriorityContext.priorityYear
   );
 
   const serializedMps = officials.map((o) => ({
@@ -315,6 +337,7 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
     regLedger,
     gameStateDoc,
     gameConfig,
+    demographicDefaults,
   ] = await Promise.all([
     getUserData(),
     getRegionOfficials(stateId, countryId),
@@ -329,13 +352,23 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
     getStateRegLedger(db, { countryId, stateId }),
     db
       .collection<GameState>("gameState")
-      .findOne({ _id: "current" }, { projection: { preset: 1 } }),
+      .findOne(
+        { _id: "current" },
+        { projection: { preset: 1, currentYear: 1, startingYear: 1, eraSystemEnabled: 1 } }
+      ),
     db
       .collection<GameConfig>("gameConfig")
       .findOne({ _id: "default" }, { projection: { regionalConditionsOverviewEnabled: 1 } }),
+    db
+      .collection<StateDemographics>("demographicDefaults")
+      .findOne(
+        { _id: stateId },
+        { projection: { layer1PositionOverrides: 1, layer1TurnoutOverrides: 1 } }
+      ),
   ]);
 
   const activePreset = gameStateDoc?.preset ?? DEFAULT_SEED_PRESET;
+  const priorityContext = priorityWorldContext(gameStateDoc);
 
   // The remaining reads below all depend only on data this batch already
   // returned, so they resolve together instead of as three separate round
@@ -392,9 +425,18 @@ async function renderGenericRegion(countryId: CountryId, regionCode: string) {
   // archetype fallback there.
   const bucketProfile = await loadProfileLegislativePriorities(
     db,
-    getBucketProfileForRegion(countryId, stateId, activePreset),
+    getBucketProfileForRegion(
+      countryId,
+      stateId,
+      activePreset,
+      null,
+      priorityContext.yearContext,
+      demographicDefaults?.layer1PositionOverrides,
+      demographicDefaults?.layer1TurnoutOverrides
+    ),
     countryId,
-    stateId
+    stateId,
+    priorityContext.priorityYear
   );
 
   const governmentApproval = approvalData?.approval ?? null;

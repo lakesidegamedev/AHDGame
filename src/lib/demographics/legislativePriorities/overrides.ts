@@ -5,6 +5,10 @@
  */
 import type { Db } from "mongodb";
 import type { LegislationType } from "@/lib/db/types/legislation";
+import type { GameState } from "@/lib/db/types/gameState";
+import type { StateDemographics } from "@/lib/db/types/demographics";
+import { DEFAULT_SEED_PRESET } from "@/lib/constants/seedPreset";
+import { getBucketProfileForRegion } from "../bucketProfile";
 import { getElectoratePriorityOverridesCollection } from "@/lib/db/collections/electoratePriorityOverrides";
 import type { BucketProfileSection } from "../bucketProfile";
 import { getDefaultLegislativePriorities, withLegislativePriorities } from "./profile";
@@ -12,6 +16,7 @@ import {
   isPriorityTarget,
   parsePrioritySelection,
   resolvePrioritySelection,
+  priorityWorldContext,
   type PriorityLaw,
 } from "./rules";
 import type { PriorityTarget } from "./schema";
@@ -55,15 +60,11 @@ export async function loadPriorityLaws(
 
 export async function getPriorityEditorData(db: Db, target: PriorityTarget) {
   const collection = await getElectoratePriorityOverridesCollection(db);
-  const [override, laws] = await Promise.all([
+  const [override, laws, defaults] = await Promise.all([
     collection.findOne({ _id: priorityOverrideId(target) }),
     loadPriorityLaws(db, target.countryId),
+    loadPriorityDefaults(db, target),
   ]);
-  const defaults = getDefaultLegislativePriorities(
-    target.countryId,
-    target.regionId,
-    target.bucketId
-  )!;
   const saved = override
     ? resolvePrioritySelection(
         target.countryId,
@@ -80,14 +81,49 @@ export async function getPriorityEditorData(db: Db, target: PriorityTarget) {
   };
 }
 
+/** Editor/restoration defaults use exactly the region page's year and bucket leans. */
+export async function loadPriorityDefaults(db: Db, target: PriorityTarget) {
+  const [world, defaults] = await Promise.all([
+    db
+      .collection<GameState>("gameState")
+      .findOne(
+        { _id: "current" },
+        { projection: { preset: 1, currentYear: 1, startingYear: 1, eraSystemEnabled: 1 } }
+      ),
+    db
+      .collection<StateDemographics>("demographicDefaults")
+      .findOne(
+        { _id: target.regionId },
+        { projection: { layer1PositionOverrides: 1, layer1TurnoutOverrides: 1 } }
+      ),
+  ]);
+  const context = priorityWorldContext(world);
+  const profile = getBucketProfileForRegion(
+    target.countryId,
+    target.regionId,
+    world?.preset ?? DEFAULT_SEED_PRESET,
+    null,
+    context.yearContext,
+    defaults?.layer1PositionOverrides,
+    defaults?.layer1TurnoutOverrides
+  );
+  const bucket = profile?.flatMap((s) => s.buckets).find((b) => b.id === target.bucketId);
+  return getDefaultLegislativePriorities(target.countryId, target.regionId, target.bucketId, {
+    year: context.priorityYear,
+    economicLean: bucket?.economicLean,
+    socialLean: bucket?.socialLean,
+  })!;
+}
+
 /** One bounded primary-key read per region; a second catalog read only when overrides exist. */
 export async function loadProfileLegislativePriorities(
   db: Db,
   profile: BucketProfileSection[] | null,
   countryId: string,
-  regionId: string
+  regionId: string,
+  year?: number | null
 ): Promise<BucketProfileSection[] | null> {
-  const enriched = withLegislativePriorities(profile, countryId, regionId);
+  const enriched = withLegislativePriorities(profile, countryId, regionId, year);
   if (!enriched) return null;
   const ids = enriched.flatMap((section) =>
     section.buckets
