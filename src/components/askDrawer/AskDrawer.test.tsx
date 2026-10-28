@@ -58,6 +58,7 @@ describe("AskDrawer", () => {
     const fab = document.querySelector("[data-ask-fab]") as HTMLElement;
     expect(fab.className).toContain("sm:hidden");
     expect(fab.className).toContain("h-11");
+    expect(fab.className).toContain("var(--status-bar-height,0px)");
     expect(edgeTab().className).toContain("hidden");
     expect(edgeTab().className).toContain("sm:flex");
   });
