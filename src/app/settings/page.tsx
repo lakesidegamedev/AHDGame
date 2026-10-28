@@ -52,6 +52,7 @@ import { ReferralsSection } from "./components/ReferralsSection";
 import { SupporterPerksSection } from "./components/SupporterPerksSection";
 import { ApiKeysSection } from "./components/ApiKeysSection";
 import { ExperimentalFeaturesSection } from "./components/ExperimentalFeaturesSection";
+import { AskDrawerSection } from "./components/AskDrawerSection";
 
 import {
   type CharacterData,
@@ -571,11 +572,14 @@ export function SettingsPageContent() {
         return <IdentitySection character={oauthData} onCharacterUpdate={onOauthUpdate} />;
       case "appearance":
         return (
-          <AppearanceSection
-            interfaceMode={interfaceMode}
-            interfaceModeSaving={interfaceModeSaving}
-            onInterfaceModeChange={handleInterfaceModeChange}
-          />
+          <div className="space-y-6">
+            <AppearanceSection
+              interfaceMode={interfaceMode}
+              interfaceModeSaving={interfaceModeSaving}
+              onInterfaceModeChange={handleInterfaceModeChange}
+            />
+            <AskDrawerSection />
+          </div>
         );
       case "experimental":
         return <ExperimentalFeaturesSection />;

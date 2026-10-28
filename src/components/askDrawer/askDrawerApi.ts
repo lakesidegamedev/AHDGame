@@ -1,14 +1,93 @@
 // Client calls for the Ask drawer. Everything goes through the game's own
 // /api/ask-drawer proxy, which signs the player in to Ask server-side.
 
+export interface AskEnergyWindow {
+  used: number;
+  limit: number;
+  remaining: number;
+  percentLeft?: number;
+  resetAt: number;
+}
+
+/** Old fields stay for older Ask servers; with `energy` present they are in energy units. */
 export interface AskUsage {
   used: number;
   limit: number;
   remaining: number;
-  mcpUsed: number;
-  mcpLimit: number;
-  mcpRemaining: number;
+  mcpUsed?: number;
+  mcpLimit?: number;
+  mcpRemaining?: number;
   resetAt: number;
+  energy?: {
+    daily: AskEnergyWindow;
+    weekly?: AskEnergyWindow | null;
+    typicalLeft?: number;
+    unit?: "energy";
+  };
+}
+
+/** What one finished answer cost. 1.0 energy is a typical answer. */
+export interface AskCharge {
+  cost: number;
+  percentOfDaily?: number;
+  reasons?: string[];
+}
+
+export interface AskEnergyView {
+  daily: { percentLeft: number; resetAt: number; limit: number };
+  weekly: { percentLeft: number; resetAt: number } | null;
+  /** About how many typical answers are left today, counting the weekly cap. */
+  typicalLeft: number;
+}
+
+function percentLeft(window: Pick<AskEnergyWindow, "remaining" | "limit" | "percentLeft">) {
+  if (typeof window.percentLeft === "number" && Number.isFinite(window.percentLeft)) {
+    return Math.max(0, Math.min(100, Math.round(window.percentLeft)));
+  }
+  if (!(window.limit > 0)) return 0;
+  return Math.max(0, Math.min(100, Math.round((window.remaining / window.limit) * 100)));
+}
+
+/** One view of the allowance, from the energy payload or the old daily fields. */
+export function askEnergy(usage: AskUsage): AskEnergyView {
+  const daily = usage.energy?.daily ?? {
+    used: usage.used,
+    limit: usage.limit,
+    remaining: usage.remaining,
+    resetAt: usage.resetAt,
+  };
+  const weekly = usage.energy?.weekly ?? null;
+  const typicalLeft =
+    typeof usage.energy?.typicalLeft === "number"
+      ? usage.energy.typicalLeft
+      : Math.min(daily.remaining, weekly ? weekly.remaining : Infinity);
+  return {
+    daily: { percentLeft: percentLeft(daily), resetAt: daily.resetAt, limit: daily.limit },
+    weekly: weekly ? { percentLeft: percentLeft(weekly), resetAt: weekly.resetAt } : null,
+    typicalLeft: Math.max(0, Math.floor(typicalLeft)),
+  };
+}
+
+/** True when either today's or this week's energy is spent. */
+export function energySpent(usage: AskUsage): boolean {
+  const daily = usage.energy?.daily.remaining ?? usage.remaining;
+  const weekly = usage.energy?.weekly?.remaining ?? Infinity;
+  return daily <= 0 || weekly <= 0;
+}
+
+/** "Used 3% of today's energy (live data, chart)", or null for a free answer. */
+export function chargeLine(charge: AskCharge | null | undefined, dailyLimit?: number) {
+  if (!charge || !(charge.cost > 0)) return null;
+  const pct =
+    typeof charge.percentOfDaily === "number"
+      ? charge.percentOfDaily
+      : dailyLimit && dailyLimit > 0
+        ? (charge.cost / dailyLimit) * 100
+        : null;
+  if (pct === null || !Number.isFinite(pct)) return null;
+  const amount = pct < 1 ? "under 1%" : `${Math.round(pct)}%`;
+  const reasons = (charge.reasons ?? []).filter((r) => typeof r === "string" && r.trim());
+  return `Used ${amount} of today's energy${reasons.length ? ` (${reasons.join(", ")})` : ""}`;
 }
 
 export interface AskUpgradeTier {
@@ -16,8 +95,12 @@ export interface AskUpgradeTier {
   label: string;
   name: string;
   price: string;
+  /** Daily energy on this tier (older servers called it questions). */
   questions: number;
-  liveQuestions: number;
+  liveQuestions?: number;
+  energy?: { daily: number; weekly?: number };
+  /** Energy as a multiple of the free Player tier. */
+  multiple?: number;
 }
 
 export interface AskUpgradeOffer {
@@ -41,8 +124,33 @@ export interface AskConversationSummary {
   created?: number;
 }
 
+export type AskActionKind = "suggestion" | "ticket";
+
+/** A suggestion or ticket Keir drafted. Nothing is filed until the player sends it. */
+export interface AskProposedAction {
+  id: string;
+  kind: AskActionKind;
+  title: string;
+  description: string;
+  category?: string;
+  gameSystem?: string;
+  expiresAt?: number | string;
+}
+
+export interface AskActionReceipt {
+  kind: AskActionKind;
+  number: number;
+  url?: string;
+}
+
 export interface AskAnswerPayload {
   convId?: string;
+  /** Keir's instant one-line reply, shown before any research. */
+  ack?: string;
+  /** A drafted action waiting for the player to send or cancel it. */
+  proposedAction?: AskProposedAction | null;
+  /** Keir offers (never acts) to file something the player raised. */
+  offer?: { kind: AskActionKind; label: string } | null;
   answer?: string;
   answerId?: number;
   id?: number;
@@ -52,22 +160,21 @@ export interface AskAnswerPayload {
   usedMcp?: boolean;
   cached?: boolean;
   usage?: AskUsage;
+  /** What this answer cost, settled when it finished. */
+  charge?: AskCharge | null;
   error?: string;
   quota?: boolean;
   upgrade?: AskUpgradeOffer | null;
   stopped?: boolean;
   signedOut?: boolean;
-  /** A chart was asked for but the daily chart allowance is spent (or the plan lacks it). */
+  /** A chart was asked for but the plan cannot draw it. */
   vizBlocked?: boolean;
-  vizLimit?: number | null;
   /** A report request: the answer is also a standalone page. */
   reportUrl?: string | null;
   /** Live game state the answer read, named plainly. */
   liveSources?: Array<{ label: string }>;
   /** Docs that disagree with the code; flagged for review. */
   conflicts?: Array<{ source?: string; page?: string; claim?: string; actual?: string }>;
-  /** Offer to re-run a code-only answer against live game state. */
-  liveHint?: { label?: string; note?: string } | null;
 }
 
 export interface AskMe {
@@ -93,7 +200,8 @@ export async function askJson<T>(path: string, body?: unknown): Promise<T> {
 
 export type AskStreamEvent =
   | { event: "meta"; data: { convId?: string; status?: string } }
-  | { event: "status"; data: { label?: string } }
+  | { event: "ack"; data: { text?: string } }
+  | { event: "status"; data: { label?: string; phase?: string } }
   | { event: "delta"; data: string }
   | { event: "done"; data: AskAnswerPayload }
   | { event: "error"; data: { error?: string } };
@@ -158,4 +266,74 @@ export async function askQuestion(
     }
   }
   return { ok: !!final && !final.error, status: response.status, payload: final };
+}
+
+export interface AskSuggestedQuestions {
+  questions?: string[];
+  source?: "page" | "followup" | "default";
+}
+
+/** Questions to offer for what is on screen. Free: never counts against the allowance. */
+export function suggestQuestions(
+  body: { pageContext?: unknown; convId?: string; lastAnswer?: string },
+  signal?: AbortSignal
+): Promise<AskSuggestedQuestions> {
+  return fetch(`${BASE}/suggest-questions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    credentials: "same-origin",
+    signal,
+  }).then((response) =>
+    response.ok ? (response.json() as Promise<AskSuggestedQuestions>) : { questions: [] }
+  );
+}
+
+/** Up to five usable suggestions, trimmed and de-duplicated. */
+export function cleanSuggestions(questions: unknown): string[] {
+  if (!Array.isArray(questions)) return [];
+  const out: string[] = [];
+  for (const q of questions) {
+    if (typeof q !== "string") continue;
+    const text = q.trim();
+    if (text.length < 5 || text.length > 120 || out.includes(text)) continue;
+    out.push(text);
+    if (out.length === 5) break;
+  }
+  return out;
+}
+
+export type AskActionResult =
+  | { ok: true; receipt: AskActionReceipt }
+  | { ok: false; error: string; needsDiscordLink?: boolean };
+
+/** Send a drafted action, with the player's edits. A repeat send returns the first receipt. */
+export async function confirmAction(body: {
+  actionId: string;
+  title: string;
+  description: string;
+}): Promise<AskActionResult> {
+  try {
+    const response = await fetch(`${BASE}/action/confirm`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      credentials: "same-origin",
+    });
+    const data = (await response.json().catch(() => ({}))) as {
+      receipt?: AskActionReceipt;
+      error?: string;
+      needsDiscordLink?: boolean;
+    };
+    if (data.receipt && (response.ok || response.status === 409)) {
+      return { ok: true, receipt: data.receipt };
+    }
+    return {
+      ok: false,
+      error: data.error || "That did not go through. Try again in a moment.",
+      needsDiscordLink: data.needsDiscordLink === true,
+    };
+  } catch {
+    return { ok: false, error: "Ask is not responding. Try again in a moment." };
+  }
 }

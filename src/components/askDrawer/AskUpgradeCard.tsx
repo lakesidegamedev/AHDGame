@@ -1,23 +1,26 @@
 "use client";
 
-import type { AskUpgradeOffer } from "@/components/askDrawer/askDrawerApi";
+import type { AskUpgradeOffer, AskUpgradeTier } from "@/components/askDrawer/askDrawerApi";
 
-/** Shown when the player runs out: the Patreon tiers above theirs at today's price. */
+/** "4x Player energy, about 80 questions a day", in energy terms. */
+export function tierEnergyLine(tier: AskUpgradeTier): string {
+  const daily = tier.energy?.daily ?? tier.questions;
+  const about = `about ${daily} ${daily === 1 ? "question" : "questions"} a day`;
+  return tier.multiple && tier.multiple > 1 ? `${tier.multiple}x Player energy, ${about}` : about;
+}
+
+/** Shown when the player runs out: the Patreon tiers above theirs at today's price, in energy. */
 export function AskUpgradeCard({ offer }: { offer: AskUpgradeOffer }) {
   if (!offer.tiers.length) return null;
   return (
     <div className="mt-2 rounded-xl border border-primary/25 bg-primary/5 p-3">
-      <div className="mb-2 text-sm font-semibold text-foreground">
-        Want more questions each day?
-      </div>
+      <div className="mb-2 text-sm font-semibold text-foreground">Want more energy each day?</div>
       <div className="divide-y divide-card-border/60">
         {offer.tiers.map((tier) => (
           <div key={tier.key} className="flex items-center justify-between gap-3 py-1.5">
             <div className="min-w-0">
               <div className="text-sm text-foreground">{tier.name}</div>
-              <div className="text-[11px] text-muted">
-                {tier.questions} questions, {tier.liveQuestions} live-data questions a day
-              </div>
+              <div className="text-[11px] text-muted">{tierEnergyLine(tier)}</div>
             </div>
             <div className="shrink-0 text-sm font-semibold text-foreground">{tier.price}</div>
           </div>
