@@ -176,20 +176,6 @@ export default function ExpandMarketModal({
   // Prefer the deep-linked state once on the next suggestions load.
   const pendingStateRef = useRef<string | undefined>(initialStateId);
 
-  // A fresh suggestion set re-points the detail card to the deep-linked state
-  // when present, otherwise the top row. The fetch path clears confirmation
-  // before publishing the new list so this effect cannot undo a fast review click.
-  useEffect(() => {
-    const want = pendingStateRef.current;
-    if (want && suggestions.length > 0) {
-      const idx = suggestions.findIndex((s) => s.stateId === want);
-      setActiveIndex(idx >= 0 ? idx : 0);
-      pendingStateRef.current = undefined;
-      return;
-    }
-    setActiveIndex(0);
-  }, [suggestions]);
-
   async function handleFetchSuggestions(
     type: OperatingSectorType,
     mode: SuggestionMode,
@@ -212,7 +198,14 @@ export default function ExpandMarketModal({
         setSuggestionError(apiErrorText(data, "Failed to load suggestions"));
         return;
       }
-      setSuggestions(data.suggestions ?? []);
+      const nextSuggestions: Suggestion[] = data.suggestions ?? [];
+      const want = pendingStateRef.current;
+      const initialIndex = want ? nextSuggestions.findIndex((s) => s.stateId === want) : 0;
+      // Publish the list and its initial selection together. A later effect can
+      // overwrite a player's selection if they click as soon as the rows appear.
+      setActiveIndex(Math.max(0, initialIndex));
+      if (want && nextSuggestions.length > 0) pendingStateRef.current = undefined;
+      setSuggestions(nextSuggestions);
       setCountrySharedDemand(data.countrySharedDemand === true);
       setCountryDemandEstimates(
         Object.fromEntries(
