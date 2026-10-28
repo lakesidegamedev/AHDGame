@@ -4,13 +4,20 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
+  askEnergy,
   askJson,
   askQuestion,
+  chargeLine,
+  cleanSuggestions,
+  energySpent,
+  suggestQuestions,
+  type AskActionReceipt,
   type AskAnswerPayload,
   type AskCitation,
   type AskConversationSummary,
   type AskMe,
   type AskUpgradeOffer,
+  type AskProposedAction,
   type AskUsage,
 } from "@/components/askDrawer/askDrawerApi";
 import {
@@ -23,7 +30,17 @@ import { AskUpgradeCard } from "@/components/askDrawer/AskUpgradeCard";
 import { ASK_SITE_URL } from "@/lib/askDrawer/askService";
 import { isValidElement, type ReactNode } from "react";
 import { AskChart, AskDiagram, AskMap, richKind } from "@/components/askDrawer/AskRichBlock";
-import { KeirSprite, type KeirMood } from "@/components/askDrawer/KeirSprite";
+import { KEIR_STATES, KeirSprite, type KeirMood } from "@/components/askDrawer/KeirSprite";
+import { AskActionCard } from "@/components/askDrawer/AskActionCard";
+import {
+  ALERT_MS,
+  IDLE_SLEEP_MS,
+  LONG_WAIT_MS,
+  finishMood,
+  keirMood as pickKeirMood,
+  moodForStatus,
+  type KeirRest,
+} from "@/components/askDrawer/keirMood";
 
 // The Ask drawer, laid out like the Ask site: the question as a heading, the
 // answer as plain prose with quiet actions beside an "Answer" label, sources
@@ -47,12 +64,13 @@ const STARTERS = [
 ];
 
 const MAX_QUESTION = 500;
-const LIVE_KEY = "ahd-ask-drawer-live";
 const SHARE_KEY = "ahd-ask-drawer-share-page";
 
 interface Turn {
   key: string;
   question: string;
+  /** Keir's instant reply ("I'll look into ... for you."), shown before research. */
+  ack: string | null;
   answer: string;
   status: string | null;
   streaming: boolean;
@@ -67,16 +85,18 @@ interface Turn {
   /** The research steps Ask narrated while it worked, and how long it took. */
   trail: string[];
   elapsedMs: number | null;
-  extras: Pick<
-    AskAnswerPayload,
-    "vizBlocked" | "vizLimit" | "reportUrl" | "liveSources" | "conflicts" | "liveHint"
-  >;
+  proposedAction: AskProposedAction | null;
+  offer: AskAnswerPayload["offer"];
+  /** "Used 3% of today's energy (live data, chart)" once the answer is settled. */
+  chargeNote: string | null;
+  extras: Pick<AskAnswerPayload, "vizBlocked" | "reportUrl" | "liveSources" | "conflicts">;
 }
 
 function newTurn(question: string): Turn {
   return {
     key: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     question,
+    ack: null,
     answer: "",
     status: "Reading the question",
     streaming: true,
@@ -90,6 +110,9 @@ function newTurn(question: string): Turn {
     feedback: null,
     trail: [],
     elapsedMs: null,
+    proposedAction: null,
+    offer: null,
+    chargeNote: null,
     extras: {},
   };
 }
@@ -164,6 +187,32 @@ function clientReqId(): string {
   return Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
 }
 
+/** Keir, with a small "!" bubble while the first words of an answer arrive. */
+function KeirWithAlert({
+  mood,
+  alerting,
+  scale,
+}: {
+  mood: KeirMood;
+  alerting: boolean;
+  scale?: number;
+}) {
+  return (
+    <span className="relative inline-flex">
+      <KeirSprite mood={mood} scale={scale} />
+      {alerting && (
+        <span
+          aria-hidden
+          data-keir-alert
+          className="absolute -right-2 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-400 text-[11px] font-bold leading-none text-black shadow"
+        >
+          !
+        </span>
+      )}
+    </span>
+  );
+}
+
 function Icon({ d, className = "h-4 w-4" }: { d: string; className?: string }) {
   return (
     <svg
@@ -208,13 +257,13 @@ function TurnView({
   fullAskUrl,
   onFollowup,
   onFeedback,
-  onLiveHint,
+  onFiled,
 }: {
   turn: Turn;
   fullAskUrl: string;
   onFollowup: (question: string) => void;
   onFeedback: (turn: Turn, rating: "up" | "down") => void;
-  onLiveHint: (question: string) => void;
+  onFiled: (receipt: AskActionReceipt) => void;
 }) {
   const [copied, setCopied] = useState(false);
   const copy = () => {
@@ -278,13 +327,26 @@ function TurnView({
         )}
       </div>
 
+      {turn.ack && <p className="text-[15px] leading-relaxed text-foreground">{turn.ack}</p>}
       {turn.streaming && !turn.answer && (
         <div
-          className="flex items-center gap-2 rounded-lg border border-card-border/70 bg-card-elevated/40 px-3 py-2 text-[13px] text-muted"
+          className="space-y-1 rounded-lg border border-card-border/70 bg-card-elevated/40 px-3 py-2 text-[13px] text-muted"
           role="status"
+          aria-live="polite"
         >
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
-          {turn.status || "Working"}
+          {/* The research steps as they happen; the latest one is still running. */}
+          {turn.trail.slice(-5, -1).map((step, i) => (
+            <div key={`${i}-${step}`} className="flex items-center gap-2 text-muted/80">
+              <span className="text-[11px] text-emerald-400" aria-hidden>
+                ✓
+              </span>
+              <span className="truncate">{step}</span>
+            </div>
+          ))}
+          <div className="flex items-center gap-2">
+            <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-primary" />
+            <span className="truncate">{turn.status || turn.trail.at(-1) || "Working"}</span>
+          </div>
         </div>
       )}
       {turn.answer && (
@@ -335,13 +397,28 @@ function TurnView({
       )}
       {turn.error && <p className="text-[15px] text-foreground">{turn.error}</p>}
       {turn.upgrade && <AskUpgradeCard offer={turn.upgrade} />}
+      {!turn.streaming && turn.proposedAction && (
+        <AskActionCard action={turn.proposedAction} onFiled={onFiled} />
+      )}
+      {!turn.streaming &&
+        !turn.proposedAction &&
+        turn.offer?.label &&
+        !turn.followups.includes(turn.offer.label) && (
+          <button
+            type="button"
+            onClick={() => onFollowup(turn.offer?.label ?? "")}
+            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-md border border-card-border px-2.5 text-[12px] text-foreground hover:border-foreground/30 sm:min-h-0 sm:py-1"
+          >
+            <Icon d={ICONS.flag} className="h-3.5 w-3.5" />
+            {turn.offer.label}
+          </button>
+        )}
 
+      {!turn.streaming && turn.chargeNote && (
+        <p className="text-[11px] text-muted">{turn.chargeNote}</p>
+      )}
       {!turn.streaming && turn.extras.vizBlocked && (
-        <p className="text-[13px] text-muted">
-          {turn.extras.vizLimit
-            ? `You have used all ${turn.extras.vizLimit} charts and maps for today, so this one is answered in prose. Your allowance resets at midnight UTC.`
-            : "This one is answered in prose."}
-        </p>
+        <p className="text-[13px] text-muted">This one is answered in prose.</p>
       )}
       {!turn.streaming && turn.extras.reportUrl && absoluteAskUrl(turn.extras.reportUrl) && (
         <a
@@ -364,17 +441,6 @@ function TurnView({
             This has been flagged for review.
           </div>
         ))}
-      {!turn.streaming && turn.extras.liveHint && (
-        <button
-          type="button"
-          onClick={() => onLiveHint(turn.question)}
-          title={turn.extras.liveHint.note}
-          className="inline-flex items-center gap-1.5 rounded-md border border-card-border px-2.5 py-1 text-[12px] text-foreground hover:border-foreground/30"
-        >
-          <Icon d={ICONS.bolt} className="h-3.5 w-3.5" />
-          {turn.extras.liveHint.label || "Answer with live game data"}
-        </button>
-      )}
       {!turn.streaming && (turn.trail.length > 0 || (turn.extras.liveSources ?? []).length > 0) && (
         <details className="group text-[13px]">
           <summary className="flex cursor-pointer list-none items-center gap-1 text-muted hover:text-foreground">
@@ -478,7 +544,6 @@ export function AskDrawerPanel({
   const [convId, setConvId] = useState<string | null>(null);
   const [question, setQuestion] = useState("");
   const [mode, setMode] = useState<ModeId>("auto");
-  const [live, setLive] = useState(true);
   const [sharePage, setSharePage] = useState(true);
   const [page, setPage] = useState<AskPageContext | null>(null);
   const [usage, setUsage] = useState<AskUsage | null>(null);
@@ -489,9 +554,21 @@ export function AskDrawerPanel({
   const [convs, setConvs] = useState<AskConversationSummary[]>([]);
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState(false);
-  // A one-off reaction (wave on open, idea or alert when an answer lands).
+  // A one-off reaction (wave on open, nod on the ack, thumbs up when an answer lands).
   const [flash, setFlash] = useState<KeirMood | null>("wave");
   const [typing, setTyping] = useState(false);
+  // What Keir does while research runs: the step's state, then a rotation if it goes quiet.
+  const [stepMood, setStepMood] = useState<KeirMood>("thinking");
+  const [quietPeriods, setQuietPeriods] = useState(0);
+  // The "!" when the first words of an answer arrive, before Keir starts talking.
+  const [alerting, setAlerting] = useState(false);
+  const [rest, setRest] = useState<KeirRest>(null);
+  const [suggested, setSuggested] = useState<string[] | null>(null);
+  const alertedRef = useRef<string | null>(null);
+  const alertTimerRef = useRef(0);
+  const restTimerRef = useRef(0);
+  const lastActivityRef = useRef(0);
+  const swipeRef = useRef<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const reqIdRef = useRef<string | null>(null);
   const bodyRef = useRef<HTMLDivElement | null>(null);
@@ -499,10 +576,10 @@ export function AskDrawerPanel({
 
   /* eslint-disable react-hooks/set-state-in-effect -- reading browser-only preferences and the page */
   useEffect(() => {
-    setLive(readFlag(LIVE_KEY, true));
     setSharePage(readFlag(SHARE_KEY, true));
     setPage(capturePageContext());
     inputRef.current?.focus();
+    lastActivityRef.current = Date.now();
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -585,25 +662,29 @@ export function AskDrawerPanel({
         followups: d.followups ?? [],
         answerId: Number(d.answerId || d.id || 0) || null,
         usedMcp: !!d.usedMcp,
-        error: d.stopped ? "Stopped. This did not use a question." : (d.error ?? null),
+        error: d.stopped ? "Stopped. This did not use any energy." : (d.error ?? null),
         upgrade: d.quota ? (d.upgrade ?? null) : null,
         extras: {
           vizBlocked: d.vizBlocked,
-          vizLimit: d.vizLimit,
           reportUrl: d.reportUrl,
           liveSources: d.liveSources,
           conflicts: d.conflicts,
-          liveHint: d.liveHint,
         },
+        chargeNote: chargeLine(d.charge, d.usage ? askEnergy(d.usage).daily.limit : undefined),
       }));
+      if (d.ack) updateTurn(key, (t) => ({ ack: t.ack ?? d.ack ?? null }));
+      updateTurn(key, {
+        proposedAction: d.proposedAction?.id ? d.proposedAction : null,
+        offer: d.offer ?? null,
+      });
       // Keir reacts to how it went, then settles.
-      setFlash(d.error && !d.stopped ? "alert" : d.stopped ? null : "idea");
+      setFlash(finishMood(d));
     },
     [updateTurn]
   );
 
   const submit = useCallback(
-    async (text?: string, forceLive = false) => {
+    async (text?: string) => {
       const q = (text ?? question).trim();
       if (busy || q.length < 5) return;
       const turn = newTurn(q);
@@ -618,6 +699,10 @@ export function AskDrawerPanel({
       const context = sharePage ? capturePageContext() : null;
       if (context) setPage(context);
       const startedAt = Date.now();
+      setStepMood("thinking");
+      setQuietPeriods(0);
+      setRest(null);
+      lastActivityRef.current = startedAt;
       try {
         const result = await askQuestion(
           {
@@ -625,7 +710,8 @@ export function AskDrawerPanel({
             clientReqId: reqId,
             convId: convId ?? undefined,
             mode,
-            useMcp: live || forceLive,
+            // Ask reads live game data whenever the question needs it.
+            useMcp: true,
             visualizations: true,
             game: "ahd",
             tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -634,21 +720,36 @@ export function AskDrawerPanel({
           controller.signal,
           (event) => {
             if (event.event === "meta" && event.data.convId) setConvId(event.data.convId);
-            else if (event.event === "status" && event.data.label) {
+            else if (event.event === "ack" && event.data.text) {
+              const ack = event.data.text;
+              updateTurn(turn.key, { ack });
+              setFlash("nod");
+            } else if (event.event === "status" && event.data.label) {
               const label = event.data.label;
+              // The first real step ends the ack nod.
+              setFlash(null);
+              setStepMood(moodForStatus(label, event.data.phase));
+              setQuietPeriods(0);
               updateTurn(turn.key, (t) => ({
                 status: label,
                 trail:
                   t.trail.length < 90 && t.trail.at(-1) !== label ? [...t.trail, label] : t.trail,
               }));
-            } else if (event.event === "delta")
+            } else if (event.event === "delta") {
+              if (alertedRef.current !== turn.key) {
+                alertedRef.current = turn.key;
+                setAlerting(true);
+                window.clearTimeout(alertTimerRef.current);
+                alertTimerRef.current = window.setTimeout(() => setAlerting(false), ALERT_MS);
+              }
               updateTurn(turn.key, (t) => ({ answer: t.answer + event.data }));
+            }
           }
         );
         updateTurn(turn.key, { elapsedMs: Date.now() - startedAt });
         applyFinal(
           turn.key,
-          result.payload ?? { error: "Ask did not finish that answer. It did not use a question." }
+          result.payload ?? { error: "Ask did not finish that answer. It did not use any energy." }
         );
       } catch (error) {
         applyFinal(
@@ -660,10 +761,13 @@ export function AskDrawerPanel({
       } finally {
         abortRef.current = null;
         reqIdRef.current = null;
+        window.clearTimeout(alertTimerRef.current);
+        setAlerting(false);
         setBusy(false);
+        lastActivityRef.current = Date.now();
       }
     },
-    [applyFinal, busy, convId, live, mode, question, sharePage, updateTurn]
+    [applyFinal, busy, convId, mode, question, sharePage, updateTurn]
   );
 
   const stop = useCallback(() => {
@@ -755,35 +859,115 @@ export function AskDrawerPanel({
 
   useEffect(() => {
     if (!flash) return;
-    const t = window.setTimeout(() => setFlash(null), 2500);
+    // A one-shot reaction holds just long enough to play once.
+    const state = KEIR_STATES[flash];
+    const ms = state.loop ? 2500 : Math.max(700, (state.frames / state.fps) * 1000 + 150);
+    const t = window.setTimeout(() => setFlash(null), ms);
     return () => window.clearTimeout(t);
   }, [flash]);
 
   const lastTurn = turns.at(-1);
-  const keirMood: KeirMood = busy
-    ? lastTurn?.answer
-      ? "talking"
-      : "thinking"
-    : (flash ?? (typing && question.trim() ? "listening" : "idle"));
+  const answering = busy && !!lastTurn?.answer;
+  const trailLength = lastTurn?.trail.length ?? 0;
 
-  const outOfQuestions = usage !== null && usage.remaining <= 0;
-  const liveAvailable = (usage?.mcpRemaining ?? 1) > 0;
+  // A research step that runs long gets a rotation of waiting states.
+  useEffect(() => {
+    if (!busy || answering) return;
+    const t = window.setInterval(() => setQuietPeriods((n) => n + 1), LONG_WAIT_MS);
+    return () => window.clearInterval(t);
+  }, [busy, answering, trailLength]);
+
+  // Left alone with the drawer open, Keir yawns and dozes off.
+  useEffect(() => {
+    if (busy || rest) return;
+    const t = window.setInterval(() => {
+      if (Date.now() - lastActivityRef.current < IDLE_SLEEP_MS) return;
+      setRest("yawn");
+      window.clearTimeout(restTimerRef.current);
+      restTimerRef.current = window.setTimeout(() => setRest("sleeping"), 1400);
+    }, 5000);
+    return () => window.clearInterval(t);
+  }, [busy, rest]);
+
+  useEffect(
+    () => () => {
+      window.clearTimeout(alertTimerRef.current);
+      window.clearTimeout(restTimerRef.current);
+    },
+    []
+  );
+
+  const noteActivity = useCallback(() => {
+    lastActivityRef.current = Date.now();
+    if (rest !== "yawn" && rest !== "sleeping") return;
+    window.clearTimeout(restTimerRef.current);
+    setRest("waking");
+    restTimerRef.current = window.setTimeout(() => setRest(null), 700);
+  }, [rest]);
+
+  const filed = useCallback(() => setFlash("celebrate"), []);
+
+  // Questions to offer for what is on screen, fetched when the drawer opens and
+  // when the player moves to another page. The static starters show meanwhile.
+  const empty = turns.length === 0;
+  const pageRef = useRef(page);
+  useEffect(() => {
+    pageRef.current = page;
+  }, [page]);
+  const pageKey = sharePage && page ? `${page.path}|${page.heading}` : "private";
+  useEffect(() => {
+    if (!empty) return;
+    const controller = new AbortController();
+    const t = window.setTimeout(() => {
+      const context = sharePage ? pageRef.current : null;
+      suggestQuestions(context ? { pageContext: context } : {}, controller.signal)
+        .then((d) => setSuggested(cleanSuggestions(d.questions)))
+        .catch(() => undefined);
+    }, 400);
+    return () => {
+      window.clearTimeout(t);
+      controller.abort();
+    };
+  }, [empty, pageKey, sharePage]);
+
+  const keirMood = pickKeirMood({
+    busy,
+    answering,
+    alerting,
+    flash,
+    stepMood,
+    quietPeriods,
+    typing: typing && !!question.trim(),
+    rest,
+  });
+  const starters = suggested && suggested.length >= 3 ? suggested : STARTERS;
+
+  const outOfEnergy = usage !== null && energySpent(usage);
   const fullAskUrl = convId ? `${ASK_SITE_URL}/?c=${encodeURIComponent(convId)}` : ASK_SITE_URL;
   const headerButton =
-    "inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-card-elevated hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary";
+    "inline-flex h-11 w-11 sm:h-8 sm:w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-card-elevated hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary";
 
   return (
-    <div className="flex h-full flex-col">
-      <header className="flex items-center gap-0.5 border-b border-card-border/70 px-3 py-2">
+    <div className="flex h-full flex-col" onPointerDown={noteActivity} onKeyDown={noteActivity}>
+      <header
+        className="flex items-center gap-0.5 border-b border-card-border/70 px-3 py-2"
+        // On a phone the drawer is a sheet: a downward swipe on its header closes it.
+        onTouchStart={(e) => {
+          swipeRef.current = e.touches[0]?.clientY ?? null;
+        }}
+        onTouchEnd={(e) => {
+          const start = swipeRef.current;
+          swipeRef.current = null;
+          const end = e.changedTouches[0]?.clientY;
+          if (start !== null && end !== undefined && end - start > 80) onClose();
+        }}
+      >
         <div className="mr-auto flex items-center gap-2">
           {/* The empty drawer shows Keir large below; one Keir at a time. */}
-          {(turns.length > 0 || view === "history") && <KeirSprite mood={keirMood} />}
-          <div className="flex flex-col leading-tight">
-            <span className="text-[15px] font-semibold tracking-tight text-foreground">
-              Ask Keir
-            </span>
-            <span className="text-[11px] text-muted">Experimental</span>
-          </div>
+          {(turns.length > 0 || view === "history") && (
+            <KeirWithAlert mood={keirMood} alerting={alerting} />
+          )}
+          <span className="text-[15px] font-semibold tracking-tight text-foreground">Ask Keir</span>
         </div>
         <button
           type="button"
@@ -838,7 +1022,7 @@ export function AskDrawerPanel({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search threads"
-              className="mb-3 w-full rounded-lg border border-card-border bg-background px-3 py-1.5 text-[13px] text-foreground placeholder:text-muted focus:border-primary focus:outline-none"
+              className="mb-3 w-full rounded-lg border border-card-border bg-background px-3 py-1.5 text-base text-foreground placeholder:text-muted focus:border-primary sm:text-[13px] focus:outline-none"
             />
             <div className="flex-1">
               {convs.length === 0 && (
@@ -895,7 +1079,7 @@ export function AskDrawerPanel({
           </div>
         ) : turns.length === 0 ? (
           <div className="pt-4">
-            <KeirSprite mood={keirMood} scale={2} />
+            <KeirWithAlert mood={keirMood} alerting={alerting} scale={2} />
             <h2 className="mt-3 text-xl font-semibold tracking-tight text-foreground">
               Ask about this page
             </h2>
@@ -903,19 +1087,19 @@ export function AskDrawerPanel({
               Answers from the game&apos;s live code, rules and data, with sources.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
-              {STARTERS.map((s) => (
+              {starters.map((s) => (
                 <button
                   key={s}
                   type="button"
                   onClick={() => void submit(s)}
-                  disabled={busy || outOfQuestions || !!unavailable}
+                  disabled={busy || outOfEnergy || !!unavailable}
                   className="rounded-md border border-card-border bg-card-elevated/40 px-3 py-1.5 text-left text-[13px] text-muted transition-colors hover:border-foreground/30 hover:text-foreground disabled:opacity-50"
                 >
                   {s}
                 </button>
               ))}
             </div>
-            {outOfQuestions && upgrade && <AskUpgradeCard offer={upgrade} />}
+            {outOfEnergy && upgrade && <AskUpgradeCard offer={upgrade} />}
           </div>
         ) : (
           <div className="space-y-8">
@@ -926,7 +1110,7 @@ export function AskDrawerPanel({
                 fullAskUrl={fullAskUrl}
                 onFollowup={(f) => void submit(f)}
                 onFeedback={feedback}
-                onLiveHint={(q) => void submit(q, true)}
+                onFiled={filed}
               />
             ))}
           </div>
@@ -947,7 +1131,10 @@ export function AskDrawerPanel({
               onFocus={() => setTyping(true)}
               onBlur={() => setTyping(false)}
               value={question}
-              onChange={(e) => setQuestion(e.target.value.slice(0, MAX_QUESTION))}
+              onChange={(e) => {
+                setQuestion(e.target.value.slice(0, MAX_QUESTION));
+                noteActivity();
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -957,13 +1144,14 @@ export function AskDrawerPanel({
               rows={2}
               placeholder={turns.length ? "Ask a follow-up" : "Ask about any part of the game"}
               aria-label="Your question"
-              className="min-h-[44px] flex-1 resize-none bg-transparent text-[14px] text-foreground placeholder:text-muted focus:outline-none"
+              // 16px on phones: iOS zooms into any focused field smaller than that.
+              className="min-h-[44px] flex-1 resize-none bg-transparent text-base text-foreground sm:text-[14px] placeholder:text-muted focus:outline-none"
             />
             {busy ? (
               <button
                 type="button"
                 onClick={stop}
-                className="mb-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-foreground text-background"
+                className="mb-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-foreground text-background sm:h-8 sm:w-8"
                 aria-label="Stop"
                 title="Stop"
               >
@@ -973,7 +1161,7 @@ export function AskDrawerPanel({
               <button
                 type="submit"
                 disabled={question.trim().length < 5 || !!unavailable}
-                className="mb-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-white transition-opacity disabled:bg-card-elevated disabled:text-muted"
+                className="mb-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary text-white transition-opacity disabled:bg-card-elevated disabled:text-muted sm:h-8 sm:w-8"
                 aria-label="Ask"
                 title="Ask"
               >
@@ -1001,26 +1189,12 @@ export function AskDrawerPanel({
                 {page ? pageLabel(page) : "This page"}
               </span>
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                setLive(!live);
-                writeFlag(LIVE_KEY, !live);
-              }}
-              disabled={!liveAvailable}
-              aria-pressed={live && liveAvailable}
-              title="Read the running game, not just the rules and code"
-              className={`inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] disabled:opacity-50 ${live && liveAvailable ? "text-foreground" : "text-muted"}`}
-            >
-              <Icon d={ICONS.bolt} className="h-3 w-3" />
-              {live && liveAvailable ? "Code + live data" : "Code only"}
-            </button>
             <select
               value={mode}
               onChange={(e) => setMode(e.target.value as ModeId)}
               aria-label="Answer mode"
               title={MODES.find((m) => m.id === mode)?.hint}
-              className="ml-auto rounded-md border border-card-border bg-background px-1.5 py-0.5 text-[11px] text-foreground focus:outline-none"
+              className="ml-auto rounded-md border border-card-border bg-background px-1.5 py-0.5 text-base text-foreground focus:outline-none sm:text-[11px]"
             >
               {MODES.map((m) => (
                 <option key={m.id} value={m.id}>

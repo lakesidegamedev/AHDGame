@@ -139,4 +139,33 @@ describe("/api/ask-drawer/[...path]", () => {
       Authorization: "Bearer drawer-secret",
     });
   });
+
+  it("forwards page suggestions and drafted actions as the signed-in player", async () => {
+    fetchMock.mockImplementation(
+      async () =>
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        })
+    );
+    for (const path of [["suggest-questions"], ["action", "confirm"], ["action", "cancel"]]) {
+      const route = path.join("/");
+      const response = await POST(
+        new NextRequest(`http://localhost/api/ask-drawer/${route}`, {
+          method: "POST",
+          body: JSON.stringify({ actionId: "abcdefghijklmnop" }),
+        }),
+        ctx(path)
+      );
+      expect(response.status).toBe(200);
+    }
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      "http://ask.internal:9749/api/game-ask/suggest-questions",
+      "http://ask.internal:9749/api/game-ask/action/confirm",
+      "http://ask.internal:9749/api/game-ask/action/cancel",
+    ]);
+    for (const [, init] of fetchMock.mock.calls) {
+      expect(init.headers).toMatchObject({ "X-Ask-User-Id": USER_ID });
+    }
+  });
 });

@@ -9,9 +9,10 @@ import { isChromeHiddenPath, isLightweightLayoutPath } from "@/lib/constants/lay
 import type { AskDrawerSide } from "@/components/askDrawer/AskDrawerPanel";
 import { KeirSprite } from "@/components/askDrawer/KeirSprite";
 
-// Experimental: the Ask drawer, docked to the left or right edge of most pages
-// for players who opted in to experimental features in Settings. The panel and
-// its markdown renderer load on first open, so the tab costs almost nothing.
+// The Ask Keir drawer, docked to the left or right edge of most pages for every
+// signed-in player. On a phone it opens as a full-screen sheet below the nav
+// from a small floating Keir button. The panel and its markdown renderer load
+// on first open, so the tab costs almost nothing.
 
 /**
  * Where the top nav ends, so the drawer opens below it and the nav stays on
@@ -44,6 +45,56 @@ function useNavBottom(active: boolean): number {
     };
   }, [active]);
   return bottom;
+}
+
+/** Phones get the sheet layout; matches Tailwind's sm breakpoint. */
+const MOBILE_QUERY = "(max-width: 639px)";
+
+function isMobileViewport(): boolean {
+  return typeof window.matchMedia === "function" && window.matchMedia(MOBILE_QUERY).matches;
+}
+
+/**
+ * How much of the layout viewport the on-screen keyboard covers, so the
+ * composer can sit above it. Zero on desktop and when no keyboard is up.
+ */
+export function keyboardInset(
+  layoutHeight: number,
+  viewport: { height: number; offsetTop: number } | null | undefined
+): number {
+  if (!viewport) return 0;
+  return Math.max(0, Math.round(layoutHeight - viewport.height - viewport.offsetTop));
+}
+
+function useKeyboardInset(active: boolean): number {
+  const [inset, setInset] = useState(0);
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!active || !viewport) return;
+    const measure = () => setInset(keyboardInset(window.innerHeight, viewport));
+    measure();
+    viewport.addEventListener("resize", measure);
+    viewport.addEventListener("scroll", measure);
+    return () => {
+      viewport.removeEventListener("resize", measure);
+      viewport.removeEventListener("scroll", measure);
+      setInset(0);
+    };
+  }, [active]);
+  return inset;
+}
+
+/** The page behind a full-screen sheet should not scroll under the player's finger. */
+function useMobileScrollLock(active: boolean) {
+  useEffect(() => {
+    if (!active || !isMobileViewport()) return;
+    const body = document.body;
+    const previous = body.style.overflow;
+    body.style.overflow = "hidden";
+    return () => {
+      body.style.overflow = previous;
+    };
+  }, [active]);
 }
 
 const AskDrawerPanel = dynamic(
@@ -84,28 +135,45 @@ export function AskDrawer() {
   const close = useCallback(() => setOpen(false), []);
   // Measured each time the drawer opens, when the real nav is in place.
   const navBottom = useNavBottom(open);
+  const keyboard = useKeyboardInset(open);
+  useMobileScrollLock(open);
 
-  if (!user || user.experimentalFeatures !== true) return null;
+  if (!user) return null;
   if (isChromeHiddenPath(pathname) || isLightweightLayoutPath(pathname)) return null;
 
   const left = side === "left";
+  const openDrawer = () => {
+    setMounted(true);
+    setOpen(true);
+  };
   return (
     <>
       {!open && (
-        <button
-          type="button"
-          onClick={() => {
-            setMounted(true);
-            setOpen(true);
-          }}
-          aria-label="Open Ask Keir"
-          title="Ask Keir about this page"
-          data-feedback-ignore="true"
-          className={`fixed top-1/2 z-[44] flex -translate-y-1/2 flex-col items-center gap-1 border border-primary/30 bg-card/95 px-1 pb-2.5 pt-1.5 text-xs font-semibold text-primary shadow-modal backdrop-blur-md transition-colors hover:bg-primary/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${left ? "left-0 rounded-r-lg border-l-0" : "right-0 rounded-l-lg border-r-0"}`}
-        >
-          <KeirSprite mood="idle" />
-          <span className="[writing-mode:vertical-rl]">Ask</span>
-        </button>
+        <>
+          <button
+            type="button"
+            onClick={openDrawer}
+            aria-label="Open Ask Keir"
+            title="Ask Keir about this page"
+            data-feedback-ignore="true"
+            className={`fixed top-1/2 z-[44] hidden -translate-y-1/2 flex-col items-center gap-1 border border-primary/30 bg-card/95 px-1 pb-2.5 pt-1.5 text-xs font-semibold text-primary shadow-modal backdrop-blur-md transition-colors hover:bg-primary/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:flex ${left ? "left-0 rounded-r-lg border-l-0" : "right-0 rounded-l-lg border-r-0"}`}
+          >
+            <KeirSprite mood="idle" />
+            <span className="[writing-mode:vertical-rl]">Ask</span>
+          </button>
+          {/* Phones: a small round Keir in the corner, below the bug report button. */}
+          <button
+            type="button"
+            onClick={openDrawer}
+            aria-label="Open Ask Keir"
+            title="Ask Keir about this page"
+            data-feedback-ignore="true"
+            data-ask-fab
+            className="fixed bottom-[calc(0.5rem+env(safe-area-inset-bottom))] right-4 z-[44] flex h-11 w-11 items-center justify-center rounded-full border border-primary/30 bg-card/95 shadow-modal backdrop-blur-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:hidden"
+          >
+            <KeirSprite mood="idle" />
+          </button>
+        </>
       )}
       {open && (
         <div
@@ -121,8 +189,8 @@ export function AskDrawer() {
         aria-hidden={!open}
         inert={!open}
         data-feedback-ignore="true"
-        style={{ top: navBottom, bottom: 0 }}
-        className={`fixed z-[45] w-full max-w-[420px] border-card-border/80 bg-card shadow-modal transition-transform duration-300 ease-out ${left ? "left-0 border-r" : "right-0 border-l"} ${open ? "translate-x-0" : left ? "-translate-x-full" : "translate-x-full"}`}
+        style={{ top: navBottom, bottom: keyboard }}
+        className={`fixed z-[45] w-full border-card-border/80 bg-card pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] shadow-modal transition-transform duration-300 ease-out sm:max-w-[420px] sm:pl-0 sm:pr-0 ${left ? "left-0 sm:border-r" : "right-0 sm:border-l"} ${open ? "translate-x-0" : left ? "-translate-x-full" : "translate-x-full"}`}
       >
         {mounted && <AskDrawerPanel side={side} onClose={close} onSwapSide={swapSide} />}
       </aside>

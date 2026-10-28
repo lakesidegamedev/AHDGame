@@ -358,12 +358,15 @@
       "intro": "Teste Funktionen, die noch in Arbeit sind. Sie können sich ändern, ausfallen oder wieder verschwinden. Wenn du dies ausschaltest, sind sie sofort weg.",
       "toggleLabel": "Experimentelle Funktionen einschalten",
       "toggleHint": "Standardmäßig aus. Ändert nur etwas für dich.",
-      "saveError": "Speichern fehlgeschlagen. Versuche es erneut.",
-      "askTitle": "Ask-Seitenleiste",
-      "askBody": "Ein Reiter am Rand der meisten Seiten öffnet Ask in einer Seitenleiste. Sie ist mit deinem Spielkonto angemeldet, teilt Verlauf und Tageslimits mit der Ask-Seite und kann beim Fragen die aktuelle Seite lesen.",
+      "saveError": "Speichern fehlgeschlagen. Versuche es erneut."
+    },
+    "askDrawer": {
+      "title": "Ask-Keir-Seitenleiste",
+      "body": "Ask Keir sitzt am Rand der meisten Seiten. Öffne die Leiste, um Fragen zum Spiel oder zur aktuellen Seite zu stellen. Sie ist mit deinem Spielkonto angemeldet und teilt Verlauf und Tageslimits mit der Ask-Keir-Seite. Auf dem Handy öffnet sie sich über den runden Keir-Knopf in der Ecke.",
       "sideLabel": "Seitenleiste andocken",
       "sideLeft": "Links",
-      "sideRight": "Rechts"
+      "sideRight": "Rechts",
+      "saveError": "Speichern fehlgeschlagen. Versuche es erneut."
     },
     "apiKeys": {
       "intro": "Mit API-Schlüsseln können externe Anwendungen mit deinem Konto interagieren.",
