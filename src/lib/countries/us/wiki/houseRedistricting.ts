@@ -58,6 +58,8 @@ The three tiers as the code sets them:
 
 Deviation is measured in net squares (right minus left) against the state average. If the state's natural balance makes even the fairest possible map exceed the fairness ceiling, the ceiling is relaxed to the best achievable gap, so a state can always be drawn to its own lean but never beyond it.
 
+![Gates a House map must pass before it saves: census year, governor, trifecta, legislature authority, compactness, packed districts and efficiency gap.](/wiki-images/diagrams/us-house-redistricting-gates.svg)
+
 ## Drawing rules
 
 Proposed maps must satisfy all active caps:

@@ -9,6 +9,8 @@ In the US Senate, any seated senator can filibuster a bill that is on the floor.
 3. When the vote closes, the bill passes only if For is at least 60 percent of For plus Against plus Abstain, rounded up to a whole vote.
 4. If the Senate has abolished the filibuster, the bill is judged by simple majority again.
 
+![Decision tree of the conditions a senator must meet to invoke a filibuster, ending in the cost, the added delay and the three-fifths bar.](/wiki-images/diagrams/cloture-and-filibuster-filibuster-checks.svg)
+
 ### Key numbers
 
 | Item | Value |

@@ -29,6 +29,8 @@ Each turn the game scores the chair, and each time the chair acts the game check
 
 Position bonuses do not stack: your national influence is the highest tier you hold, while the +3 actions stack with any other office.
 
+![Map of the chair's five levers (prime rate, reserve requirement, QE and QT, FX band, independence) with what each moves first and what it reaches next.](/wiki-images/diagrams/central-banks-lever-map.svg)
+
 ### Scrutiny
 
 Scrutiny (0 to 100) is the chair's public record. Each turn:

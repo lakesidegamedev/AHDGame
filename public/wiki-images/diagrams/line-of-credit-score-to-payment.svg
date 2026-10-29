@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="520" viewBox="0 0 780 520" role="img" font-family="system-ui, sans-serif">
+<title>Line of credit chain</title>
+<desc>Income, net worth and company rating set a score, which sets the spread and rate; income and net worth also cap the limit; each turn an automatic payment either reduces the balance or freezes the line.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#71717a"/></marker></defs>
+<rect x="0.5" y="0.5" width="779" height="519" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<rect x="20" y="30" width="220" height="80" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="130.0" y="57.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Your finances</text>
+<text x="130.0" y="74.5" text-anchor="middle" font-size="13" fill="#18181b">income, net worth, company</text>
+<text x="130.0" y="91.5" text-anchor="middle" font-size="13" fill="#18181b">rating</text>
+<path d="M240,70 L290,70" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<rect x="290" y="30" width="190" height="80" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="385.0" y="66.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Credit score</text>
+<text x="385.0" y="83.0" text-anchor="middle" font-size="13" fill="#18181b">0 to 100</text>
+<path d="M480,70 L530,70" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<rect x="530" y="30" width="230" height="80" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="645.0" y="57.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Annual rate</text>
+<text x="645.0" y="74.5" text-anchor="middle" font-size="13" fill="#18181b">prime plus a spread that</text>
+<text x="645.0" y="91.5" text-anchor="middle" font-size="13" fill="#18181b">falls as the score rises</text>
+<path d="M130,110 L130,175" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<text x="138" y="148" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">also set the caps</text>
+<rect x="20" y="175" width="300" height="90" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="170.0" y="207.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Limit</text>
+<text x="170.0" y="224.5" text-anchor="middle" font-size="13" fill="#18181b">the lower of: a payment of at most 70%</text>
+<text x="170.0" y="241.5" text-anchor="middle" font-size="13" fill="#18181b">of average income, and 1x net worth</text>
+<path d="M320,220 L440,220" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<rect x="440" y="175" width="320" height="90" rx="6" fill="#eff6ff" stroke="#2563eb" stroke-width="1.25"/>
+<text x="600.0" y="216.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">You draw</text>
+<text x="600.0" y="233.0" text-anchor="middle" font-size="13" fill="#18181b">up to the limit, at the annual rate</text>
+<path d="M645,110 L645,175" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<path d="M600,265 L600,330" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<rect x="440" y="330" width="320" height="60" rx="6" fill="#eff6ff" stroke="#2563eb" stroke-width="1.25"/>
+<text x="600.0" y="347.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Each turn</text>
+<text x="600.0" y="364.5" text-anchor="middle" font-size="13" fill="#18181b">interest is added, then the automatic</text>
+<text x="600.0" y="381.5" text-anchor="middle" font-size="13" fill="#18181b">payment is taken</text>
+<path d="M440,360 L330,360" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<text x="385" y="352" text-anchor="middle" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">paid in full</text>
+<rect x="80" y="330" width="250" height="60" rx="6" fill="#eff6ff" stroke="#2563eb" stroke-width="1.25"/>
+<text x="205.0" y="356.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Balance falls</text>
+<text x="205.0" y="373.0" text-anchor="middle" font-size="13" fill="#18181b">the line stays open</text>
+<path d="M600,390 L600,440" fill="none" stroke="#dc2626" stroke-width="1.6" marker-end="url(#mw)"/>
+<text x="608" y="420" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">cannot pay in full</text>
+<rect x="440" y="440" width="320" height="64" rx="6" fill="#fef2f2" stroke="#dc2626" stroke-width="1.25"/>
+<text x="600.0" y="459.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Line freezes</text>
+<text x="600.0" y="476.5" text-anchor="middle" font-size="13" fill="#18181b">no new draws; salary, dividends and</text>
+<text x="600.0" y="493.5" text-anchor="middle" font-size="13" fill="#18181b">coupons go to the loan</text>
+<path d="M440,472 L330,472" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<text x="385" y="464" text-anchor="middle" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">payment met</text>
+<rect x="80" y="440" width="250" height="64" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="205.0" y="468.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Freeze clears</text>
+<text x="205.0" y="485.0" text-anchor="middle" font-size="13" fill="#18181b">the line is usable again</text>
+</svg>

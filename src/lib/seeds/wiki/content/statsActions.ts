@@ -159,6 +159,8 @@ Party chairs and vice chairs spend the party action pool on influence operations
 
 Bills, NPP behavior, elections and everything else run afterward.
 
+![Actions arrive first, then Campaign Funds, then Political Influence, Infamy, Favorability and National Political Influence decay or drain.](/wiki-images/diagrams/stats-actions-turn-order.svg)
+
 ## Connections
 
 **Driven by**

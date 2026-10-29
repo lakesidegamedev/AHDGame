@@ -32,6 +32,8 @@ Where a region has no labour force data, the game falls back to a simple Okun's 
 
 Inflation moves toward a target built from several pressures. In multiplayer it advances halfway at half past each hour, and the hourly turn applies the rest of the step.
 
+![Eight pressures push inflation, which in turn affects corporate margins and central bank chair scrutiny.](/wiki-images/diagrams/national-metrics-inflation-inputs.svg)
+
 | Pressure | Effect |
 | --- | --- |
 | Central bank prime rate | Below the country's neutral rate pushes inflation up. Above it pulls inflation down, about 1.5 times as hard per point. Rate changes feed in gradually over 12 turns |

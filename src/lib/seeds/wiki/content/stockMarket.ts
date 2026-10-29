@@ -170,6 +170,8 @@ Profits do **not** consolidate. Each corporation is taxed on its own sectors, an
 
 A parent and its **formalized** subsidiaries form a **group**. De facto control is not enough: the group is the set of relationships the parent has actually declared.
 
+![Over half the voting power makes a de facto subsidiary, formalizing it forms a group, and 75 percent of shares allows a hostile takeover.](/wiki-images/diagrams/stock-market-control-and-groups.svg)
+
 **Group balance sheet.** The corporation page shows the consolidated position of the whole group, combined cash, combined revenue, every member, every industry and country it operates in. It is a view, not a merger: members keep their own balance sheets, share prices and shareholders. Group size is visible to everyone, not just the parent's CEO. A structure should be a way to organise a business, not a way to disappear.
 
 **Group loss relief.** Within a single country, a group's losses are surrendered against its profits, and the group is taxed on the net. A parent earning ₳1,000,000 alongside a subsidiary losing ₳250,000 is taxed as though it earned ₳750,000; the tax on the sheltered ₳250,000 is refunded from the treasury that collected it, split across the members that actually paid.

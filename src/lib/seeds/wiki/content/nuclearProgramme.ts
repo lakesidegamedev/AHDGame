@@ -32,6 +32,8 @@ Entry runs through the defence cabinet seat. If you do not hold the defence port
 
 Device nodes are the physics. Each is adopted only by **conducting a nuclear test**, and a test is a world event: everyone sees it, tension rises, and your deterrence posture shocks upward. There is no such thing as quietly acquiring the hydrogen bomb.
 
+![Dependency graph of the device tiers Fission, Boosted Fission, Thermonuclear and MIRV and the delivery legs Bombers, IRBM, ICBM and SLBM, behind the Nuclear Delivery doctrine.](/wiki-images/diagrams/nuclear-programme-dependencies.svg)
+
 | Device | First available | Test cost | Production cap | Tension spike |
 |---|---|---|---|---|
 | Fission Device | 1945 | 12,000 | 2 warheads/turn | 9 |

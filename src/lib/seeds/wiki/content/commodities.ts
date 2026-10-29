@@ -10,6 +10,8 @@ Every sector supplies and demands specific commodities, in proportion to its rev
 commodity-price-by-pressure
 \`\`\`
 
+![Price loop: sold supply and demand feed global, national and state pools, which are blended 50/25/25 into a price that drifts 6% a turn, sets margins and revenue realization, and feeds back into output.](/wiki-images/diagrams/commodities-price-loop.svg)
+
 ### Key numbers
 
 | Rule | Value |

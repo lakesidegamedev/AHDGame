@@ -97,6 +97,8 @@ The PM has no fixed term and serves until losing a confidence vote, resigning, o
 
 The PM can **dissolve the Shūgiin** and call a snap election: a mechanic Japan shares with the UK and Germany, but not the US.
 
+![Snap election cycle from the limits on dissolving the Shugiin to the vacated PM seat, 48 hour snap elections, a confidence vote, and an automatic snap if no PM is seated in time.](/wiki-images/diagrams/jp-overview-snap-cycle.svg)
+
 Rules:
 - **Who:** Sitting PM only
 - **Limit:** 2 snap elections per PM appointment (resets when a new PM takes office)
@@ -128,6 +130,8 @@ This gives the ruling coalition a direct legislative fast-track not available in
 ## Bicameral bill lifecycle
 
 Japan has a more complex bill lifecycle than the UK due to its elected Sangiin:
+
+![The three bill routes through the Diet: Shugiin origin, Sangiin origin where a Shugiin rejection fails the bill, and Cabinet origin with a 24 hour cabinet vote, with the Shugiin two-thirds override.](/wiki-images/diagrams/jp-overview-bill-paths.svg)
 
 | Path | Route |
 | --- | --- |

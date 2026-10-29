@@ -81,6 +81,8 @@ You want an endorsement from an NPP whose positions are +2 economic and -1 socia
 
 ## Connections
 
+![Map of NPPs with the pages that drive them on the left and the pages they affect on the right.](/wiki-images/diagrams/npps-overview-connections.svg)
+
 **Driven by**
 
 - [Party Membership](/wiki/party-membership): each active member raises the party's NPP capacity.

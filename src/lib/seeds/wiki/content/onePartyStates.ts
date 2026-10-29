@@ -6,6 +6,8 @@ Twelve countries run as one-party states: China (CN), the Soviet Union (RU), Eas
 
 Each party carries a **regime status** that decides what it can do.
 
+![Matrix of what Ruling, Approved and Banned parties can do, with the election vote multiplier of each.](/wiki-images/diagrams/one-party-states-regime-tiers.svg)
+
 | Tier | Who | What it can do |
 | --- | --- | --- |
 | **Ruling** | The single party in government (CN: CCP; RU: CPSU; DD: SED) | Everything: forms government, fields executive candidates, proposes and votes on bills, forms coalitions, takes donations, holds cabinet seats |
@@ -35,6 +37,8 @@ Both get a small natural recovery each turn, slow enough that reforms stay meani
 ### The four-stage escalation chain
 
 The chain moves forward only. The regime must sit past a threshold for a number of turns before the next stage begins, so one bad turn never collapses a regime. Each stage offers the leader a decision. If the leader does nothing for 48 turns, the stage's default plays out.
+
+![Escalation chain from Stable to Forced Collapse with each stage trigger, the reform and convention off-ramps, and conversion.](/wiki-images/diagrams/one-party-states-escalation-chain.svg)
 
 | Stage | Name | Trigger |
 | --- | --- | --- |

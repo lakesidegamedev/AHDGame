@@ -13,6 +13,8 @@ An extraction contract reserves a named corporation's share of a state's resourc
 | Bid | Signing fee, at or above the published minimum |
 | Finder's rights contract after a successful corporate survey | 96 turns, no royalty |
 
+![Lifecycle of an extraction contract from tender and sealed bids through award, signing fee and royalties to the capacity returning to the open pool, with cancellation before an award.](/wiki-images/diagrams/extraction-contracts-lifecycle.svg)
+
 ## Find the country's contract board
 
 Open **Government Contracts** from the World menu or a Cabinet Office's Government Contracts tab. Every country has its own board, with **Active Bidding**, **Bidding Closed**, **Awarded** and **Canceled** tabs. Filter by Resource Extraction to see concessions.

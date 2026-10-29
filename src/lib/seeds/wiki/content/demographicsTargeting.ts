@@ -33,6 +33,8 @@ For each cell each turn, the pool is split between candidates in proportion to a
 
 The party strength modifier then scales the whole turn pool: for state races (1 + (state approval / 100 - 0.5) x 0.2) times office strength, and for presidential state results the approval swing is x0.5 instead of x0.2.
 
+![A cell's pool is split between candidates in proportion to the product of reach, appeal, approval, party organization and infamy.](/wiki-images/diagrams/demographics-targeting-vote-pipeline.svg)
+
 ### Appeal falls off with distance
 
 Appeal is 25 x ((50 - 5 x econ gap - 5 x social gap) / 50) to the power 1.5, plus 0.5, with a direction bonus on top. Total distance means the econ gap plus the social gap:

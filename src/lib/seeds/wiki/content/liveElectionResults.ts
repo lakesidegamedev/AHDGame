@@ -43,6 +43,8 @@ A region is **called** when all of these hold:
 
 A lead below 5 points during the final hour shows as a lead, not a call. Once the election ends, every region that is not tied is called for its leader at any margin.
 
+![Decision list for calling a region: tied or no votes means no call, an ended election is called, a final-hour reveal needs a 5 point lead, otherwise only the lead shows.](/wiki-images/diagrams/live-election-results-region-call.svg)
+
 ### National projection
 
 For multi-seat national chambers the page also shows a top-line call:

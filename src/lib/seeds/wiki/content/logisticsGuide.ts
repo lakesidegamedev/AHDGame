@@ -69,6 +69,8 @@ The cheapest eligible source fills first, up to three limits:
 2. the seller's spare supply;
 3. the buyer's price tolerance.
 
+![Local, cross-state and import sources are ranked by landed price, and the cheapest one inside the tolerance ceiling fills first.](/wiki-images/diagrams/logistics-guide-landed-price.svg)
+
 Freight capacity is the fourth influence, and it now acts through price rather than as a limit of its own. Bulk and special cargo draw from the same state freight fleet. Haul above that fleet's nominal capacity keeps running at a surcharge, which pushes the landed price toward the tolerance ceiling. A state with no freight supply at all still hauls nothing.
 
 The tolerance ceiling is the local price plus ${pct(BUYER_TOLERANCE_SLACK)}. A technically reachable projected shipment can still be rejected when freight and tariffs make it too expensive. The sourcing report records that amount as unmet, while aggregate commodity clearing remains the source of truth for the commodity market itself.

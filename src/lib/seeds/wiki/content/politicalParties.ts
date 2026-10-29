@@ -18,6 +18,8 @@ A party also has a footprint in every state or region. Each **state party** trac
 
 Any founder can reject the charter. That opens a founder-replacement window, and the replacement must also live in or next to the drafter's home state.
 
+![Party charter flow: drafter and two co-founders sign, a rejection opens a replacement window, and an expired window ends the charter.](/wiki-images/diagrams/political-parties-charter-flow.svg)
+
 ### Key numbers
 
 | Item | Value |
@@ -64,6 +66,8 @@ Platform example: a charter that sets +24 economic and -36 social starts the par
 | CN, RU, DD and the Eastern bloc | One-party states | Ruling, approved and banned party tiers; see [One-Party States](/wiki/one-party-states) |
 
 ## Connections
+
+![Hub diagram with Political Parties in the centre, pages that drive it on the left and pages it affects on the right.](/wiki-images/diagrams/political-parties-connections.svg)
 
 **Driven by**
 

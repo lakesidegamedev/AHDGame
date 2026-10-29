@@ -17,6 +17,8 @@ Approval is built in layers. Each turn the game does this for every country:
 approval-metric-contribution
 \`\`\`
 
+![Pipeline from state metrics through state score, conditions and smoothing to a national figure, national modifiers, the stored rating and elections.](/wiki-images/diagrams/government-approval-pipeline.svg)
+
 The one formula worth knowing:
 
 **State score = 50 + (weighted average metric contribution x 2.5)**

@@ -8,6 +8,8 @@ Snaps can start two ways: a sitting PM calls one voluntarily, or the 96-turn vac
 
 For the regular cycles see [United Kingdom](/wiki/uk-overview), [Japan](/wiki/jp-overview) and [Germany](/wiki/de-overview). For the confidence rules see [No-Confidence Votes](/wiki/no-confidence-votes) and [Government Formation](/wiki/government-formation).
 
+![A PM call or the vacancy clock triggers a snap, which cancels lower-chamber elections and vacates the PM seat, runs a 48-turn election, and sets the next regular election.](/wiki-images/diagrams/snap-elections-timeline.svg)
+
 ### Key numbers
 
 | Rule | Value |

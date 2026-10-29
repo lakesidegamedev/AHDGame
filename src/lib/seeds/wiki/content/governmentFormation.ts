@@ -11,6 +11,8 @@ Each country's government is either **formed** (a PM is seated and legislation p
 3. **Nominations.** A qualifying chair files a PM appointment vote. Each vote runs 24 hours, and several can run at once. All lower-chamber members vote Aye, Nay or abstain.
 4. **Seating.** The first appointment vote to finish with more Aye than Nay seats its nominee and cancels the others. Government becomes formed, the freeze lifts the next turn, and the vacancy clock clears. The new PM then appoints ministers directly (see [Cabinet](/wiki/cabinet)).
 
+![Government formation from the election result through the confidence motion or appointment votes to a seated PM or a snap election after 96 turns.](/wiki-images/diagrams/government-formation-flow.svg)
+
 ### Key numbers
 
 | Item | Value |

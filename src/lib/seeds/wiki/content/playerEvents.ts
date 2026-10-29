@@ -14,6 +14,8 @@ Each turn the game runs one pass over player characters.
 6. It picks one from that list by weight. An event with weight 20 is twice as likely as one with weight 10.
 7. You are offered the event and notified. A dice roll from 1 to 100 is fixed at that moment.
 
+![The checks each turn that decide whether a character is offered a random event, with a branch for shared broadcast moments that skip the spacing cooldown.](/wiki-images/diagrams/player-events-offer-pipeline.svg)
+
 When you choose, the roll is nudged by your stat and then checked against three outcome tiers.
 
 ### Key numbers

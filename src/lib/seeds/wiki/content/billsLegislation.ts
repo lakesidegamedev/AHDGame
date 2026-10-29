@@ -10,6 +10,8 @@ A bill is how a sitting legislator changes the law. You draft it, pay a cost, th
 4. **Executive action.** In presidential systems the president has 10 hours to sign or veto. No action means the bill is signed automatically. A veto goes to an override vote that needs two-thirds of all seats, not two-thirds of votes cast, so vacancies and abstentions do not lower the bar. Parliamentary executives have no ordinary veto: the bill becomes law once the chamber and cabinet stages finish.
 5. **Enactment.** Each provision applies its policy effects every turn from then on (see [Policy Effects](/wiki/policy-effects)), and your proposal costs are refunded.
 
+![Flow of a bill from filing through two chamber votes to presidential sign or veto and override, or the parliamentary cabinet stage, ending in enactment.](/wiki-images/diagrams/bills-legislation-bill-lifecycle.svg)
+
 \`\`\`guide-screenshot
 legislature
 \`\`\`

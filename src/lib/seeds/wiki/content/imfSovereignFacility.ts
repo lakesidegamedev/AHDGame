@@ -14,6 +14,8 @@ It is the country-level cousin of the [corporate IMF restructuring](/wiki/imf). 
 
 Why a cap? A country in crisis is short of money. Letting the IMF take a fixed share of revenue keeps the country running, at the price of a longer loan.
 
+![Flow of the sovereign IMF facility: crisis, bailout, loan sizing, board window, capped payments with unpaid interest capitalizing, and closure at zero, with a separate recovery clock.](/wiki-images/diagrams/imf-sovereign-facility-loan-flow.svg)
+
 | Key number | Value |
 | --- | --- |
 | Interest rate | 6% per year, fixed (0.125% per turn) |

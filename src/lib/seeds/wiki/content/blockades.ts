@@ -41,6 +41,8 @@ Each turn the game works out a **closure** figure from 0 to 1 for every country 
 blockade-closure-curve
 \`\`\`
 
+![Flow from hostile hulls on blockade stations to lane pressure, approach closure against port defence, country closure from the worst approach, then trade affinity and commodity prices.](/wiki-images/diagrams/blockades-closure-measurement.svg)
+
 ## What it does to the target
 
 Blockade closure feeds the trade engine directly:

@@ -71,6 +71,8 @@ cn-leader-confidence-bands
 
 If the scores fall far enough for long enough, the regime moves through four stages. A single bad turn never moves it: each stage needs a stretch of turns in its zone.
 
+![Escalation chain from Stable to Forced Collapse with each stage trigger, the reform and convention off-ramps, and conversion.](/wiki-images/diagrams/one-party-states-escalation-chain.svg)
+
 | Stage | What happens | Trigger |
 | --- | --- | --- |
 | 1. Public discontent | Early warning, no immediate danger | Popular legitimacy at or below 60 for 12 turns |
@@ -124,6 +126,8 @@ CN has a unique **two-source regional-budget model**: local tax retention plus c
 | Resource extraction ratio | 0.03 | Mining/oil/gas/water/salt as a fraction of regional GDP |
 | Business tax consumption ratio | 0.50 | Consumption base for the standing Business Tax (营业税) |
 | Business tax rate | 24% | Standing Business Tax rate (1991-era local tax) |
+
+![How a Chinese province is funded: regional GDP becomes corporate profit and enterprise income tax with 40% kept locally, plus a central transfer per head of population.](/wiki-images/diagrams/cn-overview-provincial-money-flow.svg)
 
 The **Business Tax (营业税)** was the dominant 1991-era Chinese local tax, replaced by VAT modernization over time. The **Enterprise Income Tax (EIT)** is the modern primary regional revenue stream, with 40% retained locally.
 

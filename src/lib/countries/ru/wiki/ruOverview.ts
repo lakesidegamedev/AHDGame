@@ -91,6 +91,8 @@ The 1953 preset reapportions the Union chamber to 526 seats on 1953 populations;
 
 The Premier appoints ministers **directly from Supreme Soviet deputies** to a 16-seat Council of Ministers. Every seat carries a three-option **tier setting** (the middle option is the neutral default), a package of national metrics, and **two ministerial orders**: time-limited national modifiers that cost one ministerial action and run 24 turns (one game half-year, 24 real hours). Most line ministries also get a regional target and an emergency action aimed at a single republic.
 
+![The Council of Ministers loop: the Premier appoints 16 ministers whose tier settings and 24-turn orders move national metrics, which feed the marketization dial that decides the economic engine.](/wiki-images/diagrams/ru-overview-council-loop.svg)
+
 **Worked example.** The Chairman of Gosplan moves Plan Emphasis from the neutral middle option to consumer goods (Group B). That shifts the national metrics the seat controls toward consumer output and away from heavy industry. The Chairman then spends one ministerial action on Shock Work Campaign. The order runs for 24 turns and then expires on its own, after which another action is needed to repeat it.
 
 The portfolios that define the Soviet council:

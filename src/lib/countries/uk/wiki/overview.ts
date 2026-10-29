@@ -78,6 +78,8 @@ There is no direct vote for Prime Minister. Instead:
 4. If the confidence vote fails, the next-largest party's leader is nominated, and the process repeats.
 5. **Minority government**: any party or coalition chair holding at least 100 Commons seats can call a confidence vote and propose a PM, even when a rival bloc has 326+. The Commons votes the bid up or down.
 
+![Loop for forming a UK government: seats by party, largest party nominated, confidence vote, next party on failure, a minority bid route, and a no-confidence vote that clears the cabinet.](/wiki-images/diagrams/uk-overview-pm-formation.svg)
+
 **Worked example.** Labour wins 340 of 650 seats. Its leader is nominated and 326 or more Ayes are needed, so Labour passes with room to spare. If it won only 300 seats, it would need 26 more votes from MPs outside its party. If those do not come, the next-largest party gets its turn.
 
 The PM serves until a new Commons election, resignation, or removal by no-confidence vote. There is no fixed term.

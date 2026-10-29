@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="430" viewBox="0 0 800 430" role="img" font-family="system-ui, sans-serif">
+<title>German Chancellor formation</title>
+<desc>Bundestag election with an entry gate, seats shared out, nomination and confidence vote; passing confirms the Chancellor, failing starts a 96-turn clock that ends in an automatic snap election.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#52525b"/></marker></defs>
+<rect x="0.5" y="0.5" width="799" height="429" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<rect x="20" y="20" width="200" height="44" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="120.0" y="45.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Bundestag election</text>
+<rect x="270" y="20" width="230" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="385.0" y="37.0" font-size="13" text-anchor="middle" fill="#18181b">Entry gate: 5% of the vote or</text>
+<text x="385.0" y="54.0" font-size="13" text-anchor="middle" fill="#18181b">3 direct mandates</text>
+<rect x="550" y="20" width="230" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="665.0" y="45.5" font-size="13" text-anchor="middle" fill="#18181b">Seats by Sainte-Lague</text>
+<path d="M220 42 L270 42" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<path d="M500 42 L550 42" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="550" y="120" width="230" height="70" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="665.0" y="142.0" font-size="12" text-anchor="middle" fill="#18181b">Largest party or coalition</text>
+<text x="665.0" y="158.0" font-size="12" text-anchor="middle" fill="#18181b">nominates a Chancellor (a</text>
+<text x="665.0" y="174.0" font-size="12" text-anchor="middle" fill="#18181b">minority bid is also allowed)</text>
+<path d="M665 64 L665 120" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="550" y="235" width="230" height="60" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="665.0" y="252.0" font-size="12" text-anchor="middle" fill="#18181b">Confidence vote: majority of the</text>
+<text x="665.0" y="268.0" font-size="12" text-anchor="middle" fill="#18181b">chamber, 316 of 630 (244 of 487</text>
+<text x="665.0" y="284.0" font-size="12" text-anchor="middle" fill="#18181b">in 1953)</text>
+<path d="M665 190 L665 235" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="290" y="245" width="200" height="40" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="390.0" y="268.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Chancellor confirmed</text>
+<path d="M550 265 L490 265" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="520" y="257" font-size="12" text-anchor="middle" fill="#52525b">passes</text>
+<rect x="550" y="340" width="230" height="56" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="665.0" y="363.0" font-size="12" text-anchor="middle" fill="#18181b">Government pending: a 96-turn</text>
+<text x="665.0" y="379.0" font-size="12" text-anchor="middle" fill="#18181b">vacancy clock runs</text>
+<path d="M665 295 L665 340" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<text x="673" y="322" font-size="12" text-anchor="start" fill="#52525b">fails</text>
+<rect x="290" y="348" width="200" height="40" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="390.0" y="371.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Automatic snap election</text>
+<path d="M550 368 L490 368" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<text x="520" y="356" font-size="12" text-anchor="middle" fill="#52525b">clock</text>
+<text x="520" y="370" font-size="12" text-anchor="middle" fill="#52525b">ends</text>
+<path d="M290 368 L120 368 L120 64" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<text x="130" y="300" font-size="12" text-anchor="start" fill="#52525b">new Bundestag</text>
+<text x="130" y="314" font-size="12" text-anchor="start" fill="#52525b">election</text>
+</svg>

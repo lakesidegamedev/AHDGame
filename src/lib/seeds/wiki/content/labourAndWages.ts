@@ -85,6 +85,8 @@ Your slider moves a state's **wage index**, the worker-weighted average of all p
 
 One corporation moves the state index only in proportion to its share of the state's workers, so a lone slider has a small effect. A country-wide shift, such as a minimum-wage rise, moves it a lot.
 
+![How a wage level moves the state wage index and the economy, and how wages lagging worker expectations push unionization and strike risk up.](/wiki-images/diagrams/labour-and-wages-wage-feedback.svg)
+
 ## What you can do
 
 - **Set the wage level** on a sector's detail panel, between 0.8 and 1.5. The change applies to next turn's labour cost.

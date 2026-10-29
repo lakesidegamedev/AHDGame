@@ -59,6 +59,8 @@ When unionization is high **and** real wages lag a slow-moving **worker expectat
   - **Wait it out**: strike expires after 4 turns; unionization bumps up ("radicalization").
   - **Union-busting**: CEO action to break the strike (see below).
 
+![A strike starts when unionization is high and wages lag, runs four turns, ends by concession, wait-out or union-busting, then a twelve turn cooldown follows.](/wiki-images/diagrams/unions-strike-lifecycle.svg)
+
 ## Union law
 
 Countries can enact **union-law** legislation on a right-to-work to collective-bargaining axis. The active option biases unionization drift targets and strike trigger thresholds (easier or harder to walk out). Union law gives governments a political lever independent of corporate wage sliders. In some countries unions are banned outright, and unionization there decays 3 points a turn.

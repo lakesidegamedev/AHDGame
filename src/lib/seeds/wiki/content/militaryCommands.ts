@@ -49,6 +49,8 @@ Theater Commander  (one per conflict)
   declares and withdraws offensives at that front
 \`\`\`
 
+![Three tiers of authority from the defence seat holder to the Commanding General to the Theater Commander, with the hand-off where the defence seat holder loses offensive rights at that front.](/wiki-images/diagrams/military-commands-authority.svg)
+
 ## Building a Command
 
 Defence office → **Commands** tab → *Create command*. A confirmed or acting defence seat holder may build and reorganise commands and commission or dismiss the generals that fill them.

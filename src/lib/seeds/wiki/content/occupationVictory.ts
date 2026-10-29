@@ -130,6 +130,8 @@ Once the minimum has elapsed and a side holds a pole:
 4. When the term is applied or the window lapses, the conflict is marked **resolved**, the winner and end turn are recorded, and **truces are recorded between every cross-side pair**: 240 turns, about ten real days.
 5. **The fog stays down for 480 turns, then lifts entirely.** Until then the conflict page reads as it did during the war: territory, casualties and verdicts for everyone, your own side's rosters for a belligerent's seats. Once the window lapses the page becomes an open archive: both sides' rosters, every engagement, what each formation lost. The war is listed under Historical Conflicts on the conflicts hub from the turn it ends.
 
+![Timeline from a front reaching a pole through a 24 turn minimum, terms pending, resolution, a 240 turn truce and the fog lifting 480 turns after resolution.](/wiki-images/diagrams/occupation-and-victory-timeline.svg)
+
 Two exceptions skip the terms window once the pole becomes eligible and resolve outright: a war against an **insurgency** (no government to impose on), and a war whose losing **founder already left** on a separate peace (nobody is left holding the claim).
 
 Standing down works by removing the **posting**, not by clearing unit locations. Since a unit's position is a cache of its general's posting, clearing the location alone would simply be re-derived back to a dead front on the next reconcile. Removing the posting is what actually brings the army home.

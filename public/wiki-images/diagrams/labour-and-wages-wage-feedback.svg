@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="330" viewBox="0 0 760 330" role="img" font-family="system-ui, sans-serif">
+<title>Wage feedback loop</title>
+<desc>A corporation wage level moves the state wage index, which moves median income, unemployment and migration. Wages that lag worker expectations push unionization up, which adds a labour premium and strike risk.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#52525b"/></marker></defs>
+<rect x="0.5" y="0.5" width="759" height="329" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<rect x="20" y="40" width="150" height="64" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="95.0" y="60.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Wage level</text>
+<text x="95.0" y="76.5" font-size="12" text-anchor="middle" fill="#3f3f46">CEO slider, per</text>
+<text x="95.0" y="92.5" font-size="12" text-anchor="middle" fill="#3f3f46">corporation</text>
+<path d="M172 72 L228 72" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="230" y="40" width="150" height="64" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="305.0" y="60.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">State wage index</text>
+<text x="305.0" y="76.5" font-size="12" text-anchor="middle" fill="#3f3f46">worker-weighted</text>
+<text x="305.0" y="92.5" font-size="12" text-anchor="middle" fill="#3f3f46">average of pay</text>
+<rect x="470" y="14" width="270" height="36" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="605.0" y="36.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Median income</text>
+<path d="M382 72 L430 72 L430 32 L468 32" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="470" y="58" width="270" height="36" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="605.0" y="80.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Unemployment</text>
+<path d="M382 72 L430 72 L430 76 L468 76" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="470" y="102" width="270" height="36" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="605.0" y="124.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Migration</text>
+<path d="M382 72 L430 72 L430 120 L468 120" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="605" y="150" font-size="12" text-anchor="middle" fill="#52525b">The economy reacts to changes in the index.</text>
+<rect x="20" y="200" width="200" height="64" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="120.0" y="220.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Real wages lag</text>
+<text x="120.0" y="236.6" font-size="12" text-anchor="middle" fill="#3f3f46">what workers expect</text>
+<text x="120.0" y="252.6" font-size="12" text-anchor="middle" fill="#3f3f46">(after a pay cut)</text>
+<path d="M95 106 L95 198" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="104" y="156" font-size="12" text-anchor="start" fill="#52525b">pay cut</text>
+<rect x="270" y="200" width="200" height="64" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="370.0" y="228.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Unionization rises</text>
+<text x="370.0" y="244.6" font-size="12" text-anchor="middle" fill="#3f3f46">adds a labour premium</text>
+<path d="M222 232 L268 232" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<rect x="520" y="200" width="220" height="64" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="630.0" y="228.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Strike risk</text>
+<text x="630.0" y="244.6" font-size="12" text-anchor="middle" fill="#3f3f46">revenue and margin hit</text>
+<path d="M472 232 L518 232" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<text x="380" y="300" font-size="12" text-anchor="middle" fill="#52525b">A wage concession during a strike raises the wage level again.</text>
+</svg>

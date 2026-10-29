@@ -115,6 +115,8 @@ booked as the currency's central-bank forex revenue**, and **50% added to that
 currency's central bank reserve pool**. That currency-specific pool is separate
 from the central bank's general reserves.
 
+![The three trading tiers with their spreads and fills, and how the spread fee splits into destroyed, forex revenue and reserve pool shares.](/wiki-images/diagrams/currency-exchange-tiers-and-spread.svg)
+
 ## Multi-currency wallet
 
 Your character has two money pools:

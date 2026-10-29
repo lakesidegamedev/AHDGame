@@ -24,6 +24,8 @@ The **US Federal Reserve** sets its prime rate by committee, not by one person. 
 5. The motion is decided as soon as it has a majority, or can no longer reach one. Otherwise it closes when every seated player has voted, or at the deadline. A meeting never resolves on the turn it opened.
 6. If it passes, the rate moves and the change counts toward the 16.
 
+![Flow of an FOMC meeting from the due date and automatic motion through NPP and player votes to a majority decision that moves the rate or fails.](/wiki-images/diagrams/fomc-meeting-flow.svg)
+
 **Vacant seats.** The engine does not staff the board. When a term runs out the seat falls vacant and stays that way until the President nominates and the Senate confirms a successor. Vacant seats do not count toward a majority, so five seated governors need three votes. A governor without a ballot abstains, which makes the board lean toward holding when members do not show up.
 
 If **no governors are seated**, meetings pause and the chair sets the rate directly with the normal Prime Rate controls, under the usual wait and size limits. An autonomous (NPP) chair does the same through its Taylor-rule setter. Meetings resume once a governor is confirmed.

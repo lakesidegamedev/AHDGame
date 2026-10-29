@@ -6,6 +6,8 @@ The world shares one number: a tension gauge from 0 to 100 that sits at the top 
 
 Tension has two parts. **Events** push it up in one-off spikes: a nuclear test, an escalation, a crisis. **Standing pressure** sets a floor underneath it, built from the world's arsenals, crises, escalation and shooting wars. Each turn the gauge closes 8% of the gap between itself and that floor. So spikes fade, but tension never falls below the floor.
 
+![Flow from one-off events and standing pressure through spikes and the floor into tension from 0 to 100, which sets three dials and triggers domestic world events.](/wiki-images/diagrams/cold-war-tension-how-it-works.svg)
+
 ### Key numbers
 
 | What | Value |

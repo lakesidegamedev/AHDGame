@@ -6,6 +6,8 @@ The stock market has an automatic safeguard. If the whole market collapses for n
 
 Every turn the game adds up the market value of every corporation and compares it to a **reference value** taken on the first turn the newer market model was running. It also tracks what the companies are worth on their fundamentals, meaning their expected earnings discounted by interest rates.
 
+![Ladder of market models where a trip steps Plants back to Capital and Clearing or Capital back to Ledger, after which the safeguard switches itself off.](/wiki-images/diagrams/market-safeguards-model-ladder.svg)
+
 1. **Grace period.** For the first 5 turns after the reference is set, the safeguard does nothing. The new model needs a few turns of data before a drop means anything.
 2. **Fair-value check.** After that it asks how far the market has fallen compared with what fundamentals justify. A fall that fundamentals explain, such as a central bank raising rates, is excused.
 3. **Trip.** If the market is 25% or more below what fundamentals justify, the safeguard trips and steps the market model back one level.

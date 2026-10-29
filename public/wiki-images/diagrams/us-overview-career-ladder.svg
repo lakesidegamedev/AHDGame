@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="390" viewBox="0 0 800 390" role="img" font-family="system-ui, sans-serif">
+<title>US career ladder</title>
+<desc>Ascending ladder of US offices with the extra actions per turn each gives: State Senator +1, Governor +2 or Representative +1, Senator +2, President +4.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#52525b"/></marker></defs>
+<rect x="0.5" y="0.5" width="799" height="389" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<rect x="20" y="290" width="120" height="50" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="80.0" y="310.0" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">State Senator</text>
+<text x="80.0" y="327.0" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">+1 action</text>
+<rect x="230" y="200" width="120" height="50" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="290.0" y="220.0" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Governor</text>
+<text x="290.0" y="237.0" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">+2 actions</text>
+<rect x="230" y="300" width="120" height="50" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="290.0" y="320.0" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Representative</text>
+<text x="290.0" y="337.0" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">+1 action</text>
+<rect x="440" y="120" width="120" height="50" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="500.0" y="140.0" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">U.S. Senator</text>
+<text x="500.0" y="157.0" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">+2 actions</text>
+<rect x="650" y="30" width="120" height="50" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="710.0" y="50.0" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">President</text>
+<text x="710.0" y="67.0" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">+4 actions</text>
+<path d="M140 315 L185 315 L185 225 L230 225" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="180" y="268" font-size="12" text-anchor="end" fill="#52525b">win a</text>
+<text x="180" y="282" font-size="12" text-anchor="end" fill="#52525b">governor race</text>
+<path d="M185 315 L185 325 L230 325" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="145" y="362" font-size="12" text-anchor="start" fill="#52525b">win a House seat</text>
+<path d="M350 225 L405 225 L405 145 L440 145" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<path d="M350 325 L405 325 L405 225" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="398" y="172" font-size="12" text-anchor="end" fill="#52525b">win a</text>
+<text x="398" y="186" font-size="12" text-anchor="end" fill="#52525b">Senate race</text>
+<path d="M560 145 L605 145 L605 55 L650 55" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="598" y="78" font-size="12" text-anchor="end" fill="#52525b">win the</text>
+<text x="598" y="92" font-size="12" text-anchor="end" fill="#52525b">electoral</text>
+<text x="598" y="106" font-size="12" text-anchor="end" fill="#52525b">college</text>
+</svg>

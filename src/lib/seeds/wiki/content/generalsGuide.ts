@@ -166,6 +166,8 @@ The defence seat holder can dismiss a general. A change of defence secretary alo
 - All their **conflict postings** are dropped.
 - Every **unit assigned to them** falls back to General Staff and returns to reserve.
 
+![Cascade from a dismissed general leaving Command rosters, Commands losing their lead, postings dropped, units returning to reserve and a Theater Commander front vacated.](/wiki-images/diagrams/generals-dismissal-cascade.svg)
+
 **Nobody is promoted to fill the gap.** Dismissing a Theater Commander vacates that front: authority falls back to the defence seat holder, so it is never orphaned, but the Secretary has quietly taken the job back and needs to appoint a successor.
 
 **The record survives.** Level, XP and every trained trait are retained. A dismissed general shows as **"Former"** on the corps roster, and re-appointing them restores everything intact. Dismissal is a change of employment, not an execution.

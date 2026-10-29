@@ -133,6 +133,8 @@ Your portfolio tax statement shows tax assessed, amounts paid or withheld, remai
 
 ## Connections
 
+![Budget loop: tax bases and spending set the balance, deficits drive bond issuance, debt to GDP and credit rating, which feed back into interest, public trust, margins, GDP and tax bases.](/wiki-images/diagrams/national-budget-fiscal-loop.svg)
+
 **Driven by**
 
 - [National Metrics](/wiki/national-metrics): GDP, wage and trade growth expand the tax bases every turn.

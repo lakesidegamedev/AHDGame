@@ -14,6 +14,8 @@ They affect each other but are not the same. A proxy campaign can exist before i
 
 A campaign moves through five stages. Between your decisions, the stage slowly pushes its damage tracks up or down every turn.
 
+![The five campaign stages in order with the consequence tracks each one raises or lowers every turn, and how campaigns connect to national doctrine, the nuclear programme, global tension and defence procurement.](/wiki-images/diagrams/global-response-crises-stage-flow.svg)
+
 | Stage | What it means | Change per turn |
 | --- | --- | --- |
 | Posture | Governments assess the situation and set an opening position. | None |

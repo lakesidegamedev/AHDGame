@@ -110,6 +110,8 @@ Sovereign bond coupons are ledgered as government coupon payments. This is not
 the same as the Monetize sovereign-crisis resolution. Monetize is a separate
 executive action and is blocked once inflation reaches 8%.
 
+![Every twelve turns a quarter of the deficit plus a rollover is issued into the public float; each turn coupons are paid and matured bonds repaid, and the budget is updated.](/wiki-images/diagrams/sovereign-bonds-issuance-flow.svg)
+
 ## Market price dynamics
 
 Sovereign bond prices update each turn based on the present value of remaining cash flows:

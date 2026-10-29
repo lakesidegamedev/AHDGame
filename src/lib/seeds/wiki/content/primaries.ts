@@ -15,6 +15,8 @@ This page covers declaring, scoring, computer-run candidates (NPPs) and tactics.
 
 Why ballots accumulate: a sustained lead should beat a last-turn surge, and a late entrant faces a fair field.
 
+![Primary timeline from spawn through the declaration window and the closing stretch where ballots count to the deadline, where the cumulative count decides.](/wiki-images/diagrams/primaries-timeline.svg)
+
 ### Key numbers
 
 | Item | Value |

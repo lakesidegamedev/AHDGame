@@ -42,6 +42,8 @@ The split is *relative*. If every seller has the same loyalty, everyone gets an 
 | Trusted | 70 to 89 |
 | Iconic | 90 to 100 |
 
+![Demand clears first through supply agreements, then the loyal slice, then cheapest-first, with the three conditions for earning loyalty beside the loyal slice.](/wiki-images/diagrams/brand-loyalty-clearing-order.svg)
+
 ### Worked example
 
 Two corporations sell steel in one market. Corp A is steady at loyalty 60 (Respected). Corp B has been erratic and sits at 20 (Emerging). Total loyalty is 80, so the 40% pool splits 60/80 and 20/80.

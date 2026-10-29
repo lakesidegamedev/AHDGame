@@ -118,6 +118,8 @@ A bond defaults when the corporation's liquid capital goes negative after a coup
 - **Defaulted bonds can still be traded** on the open market at distressed prices (fixed at 0.1)
 - CEOs **cannot** buy their own corporation's bonds at all (prevents self-dealing)
 
+![How a missed coupon or maturity payment leads through escrow and a solvency check to default, then refinance, restructure or dissolution.](/wiki-images/diagrams/corporate-bonds-default-flow.svg)
+
 ### Refinancing defaulted debt
 
 A CEO can **refinance** defaulted bonds by issuing a new bond for the full defaulted principal and migrating holders to it. This bypasses the normal issuance cooldown but still enforces the 2x equity leverage cap. A corporation can refinance defaulted debt at most **2 times** in its lifetime. If the limit is reached, dissolution is the only remaining option.

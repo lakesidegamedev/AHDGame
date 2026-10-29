@@ -18,6 +18,8 @@ state-ps-reserve
 
 Spending PS in one state makes the next spend there dearer by 1 PS, up to 8, and the extra falls by 3 each turn. Other states are unaffected.
 
+![Resource flow from member taxes into the treasury, the treasury into Political Strength, Build Org and budgets for GOTV, suppression and registration, and NPP Action Points into NPP management.](/wiki-images/diagrams/party-actions-resource-flow.svg)
+
 ### Major and Minor parties
 
 Every party is **Major** or **Minor**, shown as a badge on its page. The tier sets the PS cap.
