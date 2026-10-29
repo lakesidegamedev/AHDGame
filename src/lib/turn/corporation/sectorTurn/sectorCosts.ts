@@ -171,13 +171,6 @@ export interface PhysicalCostsInput {
   capitalEnabled: boolean;
   prevCapitalBookAnchor: number | undefined;
   /**
-   * Phased stock-market boost multiplier on the going-concern NPV
-   * (`sectorNpvBoostMultiplier(currentTurn)`). Defaults to 1 = legacy.
-   * Applies to the earnings-derived NPV only, never to the paid-basis book
-   * anchor, which must keep settling exits at cash actually spent.
-   */
-  npvBoostMultiplier?: number;
-  /**
    * Canonical freight billing, net of the sector's own haul income (credit
    * less charge, ₳/turn). It rides the corp's costs and revenue rails outside
    * the physical P&L, so the going-concern value must take it here or NPV and
@@ -240,7 +233,6 @@ export function decomposePhysicalCosts(input: PhysicalCostsInput): PhysicalCosts
     otherOpexAnchorMarginBasis,
     capitalEnabled,
     prevCapitalBookAnchor,
-    npvBoostMultiplier = 1,
     freightNetHourly = 0,
   } = input;
 
@@ -416,16 +408,9 @@ export function decomposePhysicalCosts(input: PhysicalCostsInput): PhysicalCosts
     ? physicalPnl.profit
     : hourlyRevenue - maintenance - plantsUpkeepCost - hourlyGrowthCost - regulatoryBurden;
   // NPV on a yearly basis: 1 game year = TURNS_PER_YEAR turns (48h).
-  // The stock-market boost scales the capitalized value, never the cash
-  // profit above: profit is money, NPV is what the market pays for it.
   const yearlyProfit =
     (hourlyProfit + (Number.isFinite(freightNetHourly) ? freightNetHourly : 0)) * TURNS_PER_YEAR;
-  const unboostedSectorNPV =
-    yearlyProfit > 0 ? Math.round(yearlyProfit / NPV_ANNUAL_DISCOUNT_RATE) : 0;
-  const sectorNPV =
-    unboostedSectorNPV > 0 && npvBoostMultiplier !== 1
-      ? Math.round(unboostedSectorNPV * npvBoostMultiplier)
-      : unboostedSectorNPV;
+  const sectorNPV = yearlyProfit > 0 ? Math.round(yearlyProfit / NPV_ANNUAL_DISCOUNT_RATE) : 0;
   // Capital book anchor: under capital mode, a sector that owns productive
   // capacity is valued at its depreciated peak going-concern value, not just
   // this turn's (transiently depressed) NPV — so building real capacity isn't

@@ -34,9 +34,6 @@ import {
   TURNS_PER_DAY,
   MIN_SHARE_PRICE,
   softCapEffectiveMargin,
-  STOCK_BOOST_FINANCIAL_REVENUE_EXTRA,
-  STOCK_BOOST_REVENUE_TARGET,
-  STOCK_BOOST_SECTOR_NPV_TARGET,
 } from "@/lib/constants/corporations";
 // Effective margin is soft-capped on the high side, so profitMargin:100 (used
 // below as a "zero maintenance" shortcut) now realizes at ~95.2%, not 100%.
@@ -3860,17 +3857,13 @@ describe("affordability brake vs the soft budget constraint", () => {
   });
 });
 
-// ── Stock-market boost phasing ─────────────────────────────────────────────
-// Same corp and sector processed at turn 1 (pre-window, legacy) and at a turn
-// past both boost windows: revenue lifts by the revenue target and NPV by
-// revenue × NPV targets, proving the turn path actually applies the ramp.
-
-describe("stock-market boost phasing", () => {
-  const PAST_BOOST_TURNS = 10_000;
-
-  function runAtTurn(turn: number) {
-    const corp = makeCorp();
-    const sector = makeSector(corp._id);
+// A world's clock is not an economic input: the same corp earns and is valued
+// the same at turn 1 and turn 10,000. A turn-keyed revenue or NPV ramp written
+// for one world would otherwise fire on every later world that reaches it.
+describe("turn-independent revenue and valuation", () => {
+  function runAtTurn(turn: number, type: "manufacturing" | "financial" = "manufacturing") {
+    const corp = makeCorp({ type });
+    const sector = makeSector(corp._id, { sectorType: type });
     const result = processSectors(baseLookups([corp], [sector]), turn, new Date());
     return {
       revenue: result.totalRevenueGenerated,
@@ -3878,31 +3871,12 @@ describe("stock-market boost phasing", () => {
     };
   }
 
-  it("holds turn-1 revenue and NPV at legacy values and lifts both past the windows", () => {
-    const legacy = runAtTurn(1);
-    const boosted = runAtTurn(PAST_BOOST_TURNS);
-
-    expect(legacy.revenue).toBeGreaterThan(0);
-    expect(legacy.sectorNPV).toBeGreaterThan(0);
-    expect(boosted.revenue / legacy.revenue).toBeCloseTo(STOCK_BOOST_REVENUE_TARGET, 2);
-    expect(boosted.sectorNPV / legacy.sectorNPV).toBeCloseTo(
-      STOCK_BOOST_REVENUE_TARGET * STOCK_BOOST_SECTOR_NPV_TARGET,
-      2
-    );
-  });
-
-  it("compounds the extra revenue lift on financial sectors", () => {
-    const runFinancialAtTurn = (turn: number) => {
-      const corp = makeCorp({ type: "financial" });
-      const sector = makeSector(corp._id, { sectorType: "financial" });
-      return processSectors(baseLookups([corp], [sector]), turn, new Date()).totalRevenueGenerated;
-    };
-    const legacy = runFinancialAtTurn(1);
-    const boosted = runFinancialAtTurn(PAST_BOOST_TURNS);
-    expect(boosted / legacy).toBeCloseTo(
-      STOCK_BOOST_REVENUE_TARGET * STOCK_BOOST_FINANCIAL_REVENUE_EXTRA,
-      2
-    );
+  it.each(["manufacturing", "financial"] as const)("%s earns the same at any turn", (type) => {
+    const early = runAtTurn(1, type);
+    const late = runAtTurn(10_000, type);
+    expect(early.revenue).toBeGreaterThan(0);
+    expect(late.revenue).toBeCloseTo(early.revenue, 6);
+    expect(late.sectorNPV).toBeCloseTo(early.sectorNPV, 6);
   });
 });
 

@@ -38,14 +38,11 @@ import {
   MAX_DIVIDEND_RATE,
   CEO_SALARY_MAX_REVENUE_MULTIPLE,
   CORP_OVERHEAD_MAX_REVENUE_MULTIPLE,
+  getSectorRiskPremium,
 } from "@/lib/constants/corporations";
 import { marketingStrengthAfterTurn } from "@/lib/corporations/strengthUpkeep";
 import { managementOverheadPpForCorp } from "./managementOverhead";
 import { valuationCashAnchor } from "@/lib/corporations/honestBalanceSheets";
-import {
-  bankNpvBoostMultiplier,
-  sectorRiskPremiumAtTurn,
-} from "@/lib/corporations/rules/marketBoost";
 import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import {
   anchorToCorpCapital,
@@ -1697,13 +1694,8 @@ export function processSectors(
     const corpPrimeRate =
       (lookups.primeRateByCountry.get(corp.countryId) ??
         getCountryConfig(corp.countryId).centralBank.defaultPrimeRate) / 100;
-    const riskPremium = sectorRiskPremiumAtTurn(
-      getOperatingSectorType(
-        corp.type,
-        corp.industryModel,
-        corp.mediaDiscriminator
-      ) as Corporation["type"],
-      currentTurn
+    const riskPremium = getSectorRiskPremium(
+      getOperatingSectorType(corp.type, corp.industryModel, corp.mediaDiscriminator)
     );
     const growthNumer = corpGrowthNumerByCorpId.get(id) ?? 0;
     const growthDenom = corpGrowthDenomByCorpId.get(id) ?? 0;
@@ -1716,8 +1708,7 @@ export function processSectors(
       : 0;
     const bankNpvAnchor = activeBankCharter
       ? bankNpvFromPerTurnIncome(
-          bankIncomeIncludingUnbookedSovereignAssets(activeBankCharter) / bankFxRate,
-          bankNpvBoostMultiplier(currentTurn)
+          bankIncomeIncludingUnbookedSovereignAssets(activeBankCharter) / bankFxRate
         )
       : 0;
     return {
