@@ -85,7 +85,7 @@ All costs below are for a new character at a state with average GDP per person. 
 | Build Donor Network | 4 to 20 by level | ₳3,000 + ₳1,500 x level, GDP scaled | +1 donor level |
 | Quick Poll | 2 | ₳25,000 | topline plus best and worst 5 groups |
 | Full Demographic Poll | 6 | ₳75,000 | complete breakdown |
-| Personal Campaign Donation | 2 | converts Cash on Hand | 50% lands in Campaign Funds |
+| Personal Campaign Donation | 2 | converts Cash on Hand | 50% lands in Campaign Funds, 50% is lost |
 | Post news | 0 | none | free article, 12-hour cooldown |
 | Sponsored news post | 5 | ₳100,000 of personal cash | paid placement, 30-minute cooldown |
 | Rest | 0 | none | resets per-turn cooldowns |
@@ -94,7 +94,7 @@ Campaign and ad funds are multiplied by a GDP factor: your state's GDP per perso
 
 **Fundraise yield** is the one formula worth knowing: (₳50,000 + ₳2,000 x donor level) x (1 + state PI / 100) x your Fundraising stat multiplier. A level 2 character at PI 10 with a neutral stat earns ₳59,400. A level 50 character at PI 50 earns ₳225,000.
 
-**Moving Cash on Hand into Campaign Funds.** Use Personal Campaign Donation. It costs 2 actions, lands 50% of what you convert, and adds Infamy: about 4 for ₳100,000, 15 for ₳1,000,000 and 55 for ₳10,000,000.
+**Moving Cash on Hand into Campaign Funds.** Use Personal Campaign Donation. It costs 2 actions, takes all the cash you choose, lands 50% in Campaign Funds (the other 50% is lost), and adds Infamy: about 4 for ₳100,000, 15 for ₳1,000,000 and 55 for ₳10,000,000.
 
 ### Interpersonal actions
 

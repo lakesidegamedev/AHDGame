@@ -43,7 +43,7 @@ Each resolution also posts civil-unrest news events (3 for Repudiate, 2 for Mone
 
 Monetize prints the financing gap (bonds maturing within 12 turns plus the yearly deficit). Inflation rises by the printed amount divided by GDP, times 5, and the currency falls by 40% of that fraction. A gap of 9 billion on a GDP of 300 billion is 3% of GDP, so inflation jumps 15 points and the currency drops 6%.
 
-Each resolution also records a GDP penalty (Repudiate 12% over 3 turns, Restructure 6% over 2, IMF bailout 2%). It shows on the country's recovery panel. The long-term damage comes mostly from the effects below.
+Repudiate and Restructure also record a GDP penalty (Repudiate 12% over 3 turns, Restructure 6% over 2). The IMF bailout and Monetize have none. The penalty shows on the country's recovery panel. The long-term damage comes mostly from the effects below.
 
 ## What a default does to you
 
