@@ -6,6 +6,13 @@ import type { IterationStampFields } from "./gameState";
 export type CabinetNominationStatus =
   "proposed" | "active" | "confirmed" | "rejected" | "withdrawn";
 
+/**
+ * Why a nomination failed. A nominee who won the vote can still lose the seat
+ * to a conflict of office, and that has to be distinguishable from a defeat at
+ * the ballot so the player and the record can say which happened.
+ */
+export type CabinetNominationRejectionReason = "senate_vote" | "incompatible_bank_office";
+
 export interface CabinetMember extends IterationStampFields {
   _id: ObjectId;
   countryId: CountryId;
@@ -80,6 +87,8 @@ export interface CabinetNomination extends IterationStampFields {
   votingEndsOnTurn?: number;
   confirmedAt?: Date;
   rejectedAt?: Date;
+  /** Set on rejection; absent on legacy and non-rejected docs. */
+  rejectionReason?: CabinetNominationRejectionReason;
   proposedAt: Date;
   createdAt: Date;
   updatedAt: Date;
