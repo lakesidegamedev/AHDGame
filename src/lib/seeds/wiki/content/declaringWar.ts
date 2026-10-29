@@ -24,7 +24,7 @@ Both surfaces post to the same place and behave identically.
 
 ## The cost of filing
 
-Filing a declaration costs **10 action points**, exactly like any other bill. If the legislature **passes** it, the points are **refunded**. If the chambers throw it out, you have spent them.
+Filing a declaration costs **10 action points**, exactly like any other bill (\`shared/constants/legislation.ts\`). If the legislature **passes** it, the points are **refunded**. If the chambers throw it out, you have spent them.
 
 That refund shapes the strategy: a declaration you are confident of is nearly free, while a speculative one you expect to lose is a real cost. Do not file to "test the water."
 
@@ -34,7 +34,7 @@ A declaration of war must carry a **two-thirds supermajority of votes cast** in 
 
 **There is no exemption for anyone.** Ordinary nationalisation and privatisation bills give one-party states a simple-majority carve-out, on the reasoning that a single-party legislature rubber-stamps economic policy anyway. That carve-out is deliberately **not** extended to war. A one-party state's rubber-stamp legislature must still deliver two-thirds.
 
-The bill sits open for **24 turns** (one real day). A declaration is not a rush job, and the delay is a real strategic window in which your target can see the debate happening and prepare.
+The bill sits open for **24 turns** (one real day, \`src/app/api/country/[code]/executive/declare-war/route.ts\`). A declaration is not a rush job, and the delay is a real strategic window in which your target can see the debate happening and prepare.
 
 Because it is an ordinary bill in every other respect, it appears on the legislature floor, it can be whipped, it can be argued against, and it can be killed. Opposition to a war is a legitimate and effective play.
 
@@ -55,7 +55,7 @@ Every declaration names what the war is *for*. The goal is recorded on the confl
 
 The declaration is refused, before it costs you anything, if any of these fail:
 
-1. **The target exists and is open to players.** Sub-national entities like Scotland and Wales, and countries an admin has not switched on, cannot be declared on, since there would be nobody able to play the other side.
+1. **The target exists and is open to players.** Sub-national entities like Scotland and Wales, and countries not open to players in your world, cannot be declared on, since there would be nobody able to play the other side.
 2. **It is not yourself.**
 3. **The war goal is one of the selectable three.**
 4. **You are not already at war with them.** This includes the indirect case: if you and your target are already facing each other on opposite sides of a war *someone else* started, you are at war and cannot open a second one.

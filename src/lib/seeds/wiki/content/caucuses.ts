@@ -31,7 +31,7 @@ The most important diagnostic is the **at-risk member list**. The snapshot ident
 | Constant | Value | Description |
 | --- | --- | --- |
 | Recent window | 12 turns | The rolling window over which churn is measured |
-| Warning buffer | 10 | Buffer applied before flagging a member as at-risk |
+| Warning buffer | 10 | How far above the minimum relationship a member can be and still be listed as at risk (up to relationship 30) |
 | Minimum relationship | 20 | Minimum relationship with the chair required for an NPP to remain in the caucus |
 
 ## Health labels
@@ -58,11 +58,11 @@ For each at-risk NPP, the snapshot records:
 
 | Label | Meaning |
 | --- | --- |
-| **\`Critical\`** | The NPP is at or past the exit threshold: departure is imminent |
-| **\`Elevated\`** | The NPP is close to the exit threshold and trending poorly |
-| **\`Watch\`** | The NPP is worth monitoring but not yet in danger |
+| **\`Critical\`** | Relationship with the chair is below 20, the exit threshold: departure is imminent |
+| **\`Elevated\`** | Relationship is below 25: close to the exit threshold |
+| **\`Watch\`** | Relationship is 25 up to 30: worth monitoring but not yet in danger |
 
-The **warning buffer of 10** is applied when computing these labels: it provides a margin so that a member is not flagged as \`Critical\` the instant their relationship dips below the threshold, giving the chair time to intervene.
+The **warning buffer of 10** only widens who is listed as at risk: members with a relationship below 30 (the threshold of 20 plus the buffer) appear in the list, and the labels above are set by the relationship value alone (\`src/lib/caucus/caucusHealth.ts\`).
 
 ## Whip defiance snapshot
 

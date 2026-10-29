@@ -24,6 +24,7 @@ Each factor shows a **vote delta**: how many votes that factor added (positive) 
 | **Spoiler effect** | Votes gained or lost through first-past-the-post spoiler transfers between candidates. |
 | **National mood** | The economy-as-referendum shift: the national environment rewarding or punishing the field. |
 | **Campaign** | Ground game: state presence, canvassing, the running mate, governors, and campaign strength. |
+| **Tactical voting** | Votes that move between candidates in the closing period as voters back the option with a realistic chance of winning locally. |
 | **Other** | A small residual that absorbs rounding so the waterfall reconstructs to the exact vote total. |
 
 ## What you can see, and what only you can see

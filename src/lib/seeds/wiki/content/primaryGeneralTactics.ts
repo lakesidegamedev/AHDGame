@@ -45,7 +45,7 @@ Primary canvassing can be tighter (your base groups). General canvassing should 
 
 Primary is the cheap phase for campaign-page upgrades. Every ₳1 spent here is ₳1; in general it's ₳0.67 of value per dollar (1.5x cost).
 
-**Rule:** Aim to have your key upgrades (Fundraising 3+, Media 2, Ground Game 2, Opposition Research 1-2) **purchased before the primary ends**.
+**Rule:** Upgrades are branch trees, not flat levels (see [Campaign Strategy](/wiki/campaign-strategy)). Unlock the starter for the levers you need (Fundraising, Ground Game, Media, Opposition Research) and buy into your chosen branches **before the primary ends**.
 
 ### Opposition Research target
 
@@ -79,9 +79,9 @@ The implication: **presidential primaries reward party influence and Favorabilit
 - National race with Electoral College resolution.
 - Independent penalty 0.3x vote share (70% reduction).
 - Presidential Travel costs 3 to 10 actions by state electoral votes and boosts Favorability +1%/turn while in-state. Deploy to swing states in the final month.
-- FPTP spoiler does **not** apply in the presidential model: third parties don't drain votes from their ideologically-nearest major.
+- A half-rate (2%) FPTP spoiler applies in the presidential model, scaled by party organization: third parties drain a small share of votes from their ideologically-nearest major.
 - Party-weighted positions (party + 3x candidate) / 4 mean your personal position matters more than your party (75% candidate, 25% party).
-- Party org uses a steep curve (0.05x-1.0x). Low-org states are brutal.
+- Party org counts as a normalized share of the state's total organization, raised to the 0.2 power. Returns diminish, so a dominant party's edge is softened but a party with no org still gets almost nothing.
 - State lean is much more important: the state lean times party position dynamic weights red-aligned candidates in red states and blue-aligned in blue.
 
 ## Pivoting checklist (primary win to general)
@@ -100,7 +100,7 @@ The moment your primary resolves:
 
 | Office | Strategic key |
 | --- | --- |
-| US House | Multi-seat + delegation-aware threshold: 20% in states with 1-4 seats, scaling to 10% at 9+ seats. Party organization matters for total party seat count, not individual candidacy much. Spread party ads across many districts. |
+| US House | Multi-seat race with a 20% minimum vote threshold. Party organization matters for total party seat count, not individual candidacy much. Spread party ads across many districts. |
 | US Senate | Single-seat statewide. Broad demographic appeal matters. Attack the opponent's soft groups. |
 | US Governor | Office strength 1.0 means state government approval is the biggest multiplier. If approval is high in your state, you benefit more than the Senator candidate does. |
 | US President | Electoral College + state lean + party-weighted positions + swing-state travel. Very different game from state races. |

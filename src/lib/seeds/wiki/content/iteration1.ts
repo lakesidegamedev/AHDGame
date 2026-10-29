@@ -59,7 +59,7 @@ America spent its first quarter-century under Democratic dominance, fought and l
 | 1972 | **Sean Oppenheimer** | Democratic | 50.6% | 286 | Deprince, Farmer-Labor |
 | 1976 | **Ariane Yeong** | Republican | 39.7% | 481 | Sean Oppenheimer, Democratic |
 
-Hochburger won the founding election and a second term by large margins. Johnson followed with the closest thing this world has seen to an electoral coronation: **530 electoral votes** in 1960. The system then fragmented. Todoroki won two four-way contests with pluralities, Oppenheimer survived a 1972 race separated by only 1.6 percentage points, and **Ariane Yeong** turned 39.7% of the popular vote into 481 electoral votes in 1976. The table records seven elections, not seven direct mandates: **Egg** became the sixth president by constitutional succession after Yeong's removal, and Speaker **Richard Nixon** became the seventh after Egg resigned.
+Hochburger won the founding election and a second term by large margins. Johnson followed with the closest thing this world has seen to an electoral coronation: **530 electoral votes** in 1960. The system then fragmented. Todoroki won two four-way contests with pluralities, Oppenheimer survived a 1972 race separated by only 1.6 percentage points, and **Ariane Yeong** turned 39.7% of the popular vote into 481 electoral votes in 1976. The table records seven elections, not seven direct mandates: the vice president became the sixth president by constitutional succession after Yeong's removal, and Speaker **Richard Nixon** became the seventh after the caretaker president resigned.
 
 The party membership ledger makes that victory stranger. The Democrats remain the largest organization with **512 members**, followed by Farmer-Labor with **447**. Yeong's Republican Party has only **62**, behind the Constitutional Union Party's 89. Iteration 1 produced a Republican presidency before it produced a Republican mass party.
 
@@ -101,11 +101,11 @@ Yeong governed through a cabinet drawn from four parties. Former President **Ren
 
 The administration looked less like a party government than a peace conference among the country's political survivors. It also linked government directly to the corporate economy: Todoroki runs one of the world's most valuable public companies, McCarthy runs Dubois Mining, and Agriculture Secretary **Winston LS Churchill** controls the iteration's largest private firm and its largest personal fortune.
 
-Speaker **Richard Nixon** filed articles of impeachment at turn 1,282. The House advanced them 213 to 97, with 90 abstentions. At turn **1,294**, the Senate convicted Yeong by **85 to 0**, with eight abstentions, and removed her from office. Vice President **Egg** succeeded her immediately. Nixon then filed against Egg on the same turn, but that second case was dismissed in the House at turn 1,300. Egg resigned shortly afterward. Following a brief vacancy at turn **1,302**, Speaker Nixon was appointed President under the line of succession.
+Speaker **Richard Nixon** filed articles of impeachment at turn 1,282. The House advanced them 213 to 97, with 90 abstentions. At turn **1,294**, the Senate convicted Yeong by **85 to 0**, with eight abstentions, and removed her from office. The vice president succeeded her immediately. Nixon then filed against the new president on the same turn, but that second case was dismissed in the House at turn 1,300. The caretaker president resigned shortly afterward. Following a brief vacancy at turn **1,302**, Speaker Nixon was appointed President under the line of succession.
 
 The political-business overlap became concrete during Yeong's final hours. The national Wire recorded Defense Secretary **Ren Todoroki** awarding his own Todoroki Systems 15 defense lots worth about **3.77 billion**. The award sits on the public order book, turning the administration's network into a matter of public record.
 
-**Egg's presidency lasted only from turn 1,294 into turn 1,302.** It was a caretaker interlude dominated by his own failed impeachment and resignation, with no enacted law or veto attached to it. **Richard Nixon**, who had already been Speaker, Treasury Secretary, and the author of both impeachment drives, then took office by appointment rather than election. National government approval stood at **52.5%** at turn 1,302. Nixon's first address put the economy and education at the center of the new administration, but at this snapshot his presidential record had only just begun.
+**The caretaker presidency lasted only from turn 1,294 into turn 1,302.** It was a caretaker interlude dominated by his own failed impeachment and resignation, with no enacted law or veto attached to it. **Richard Nixon**, who had already been Speaker, Treasury Secretary, and the author of both impeachment drives, then took office by appointment rather than election. National government approval stood at **52.5%** at turn 1,302. Nixon's first address put the economy and education at the center of the new administration, but at this snapshot his presidential record had only just begun.
 
 ### The latest national returns
 
@@ -351,7 +351,7 @@ The market story and currency story therefore still point in opposite directions
 | 9 | **Sean Oppenheimer** | US | Former President | 2,690 |
 | 10 | **camoufly** | US | Senator | 2,657 |
 
-The list captures the political structure better than any office chart. The first four places belong to the leaders or former leaders of all four playable nations. Neither former President Ariane Yeong nor her successor Egg is in the top ten; the White House changed hands faster than the influence hierarchy did.
+The list captures the political structure better than any office chart. The first four places belong to the leaders or former leaders of all four playable nations. Neither former President Ariane Yeong nor her successor is in the top ten; the White House changed hands faster than the influence hierarchy did.
 
 ### Wealth
 

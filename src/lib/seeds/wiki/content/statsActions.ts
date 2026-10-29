@@ -1,13 +1,17 @@
 export const statsActionsContent = `# Stats & Actions
 
-The complete reference for every stat a character carries and every action they can spend. For big-picture framing see [Core Systems](/wiki/core-systems); this page is the canonical look-up.
+The reference for the core stats a character carries and every action they can spend, plus the seven character stats below. For big-picture framing see [Core Systems](/wiki/core-systems); this page is the canonical look-up.
+
+## Character stats
+
+Every character has seven stats, each from 1 to 10: Charisma, Debate, Energy, Fundraising, Business Acumen, Statecraft and Intellect. You spend a 28-point budget on them at character creation (minimum 1 each), and use and idle decay then move them over time. Each stat gives a gentle multiplier of about plus or minus 20% around a neutral value of 5.5 (\`src/lib/stats/statsConstants.ts\`). Energy sets your action cap and hoard threshold, and Fundraising scales the Fundraise yield.
 
 ## Core stats
 
 ### Political Influence (PI)
 
 - **Scale:** 0 to 100, per state
-- **Start:** 0
+- **Start:** 10 (\`src/app/api/auth/character/route.ts\`)
 - **Grows by:** Campaign action (+1 base per action, diminishing above 50, floored at +0.1)
 - **Decays by:** 0.75% of current value per turn (floor 0). Members of the party holding the national executive (the president's party, or the head of government's party in parliamentary systems) decay faster, scaled by that government's approval: x2.0 at 0% approval, x1.5 at 50%, x1.0 at 100%
 - **Drives:** Vote reach in state races, primary scores in state races
@@ -80,9 +84,9 @@ Fund generation per turn:
 
 ### Cash on Hand
 
-- **Start:** ₳0
+- **Start:** set by wealth background at character creation: ₳1,000,000 (low), ₳2,500,000 (middle) or ₳5,000,000 (high), scaled down in earlier eras (\`src/lib/constants/characterWealth.ts\`)
 - **Grows by:** Passive income (corp dividends, bond coupons, share sales); 50% of any Personal Campaign Donation you make
-- **Spent on:** Wire transfers only (Portfolio → Wire)
+- **Spent on:** Wire transfers (Portfolio → Wire), share and bond purchases, property, sponsored news posts
 - **Cross-country transfers blocked**
 
 ### Donor Base Level
@@ -103,8 +107,8 @@ Fund generation per turn:
 - **Stacking bonuses:** Central Bank Chair +3 · Supreme Court justice +2 · chamber leadership (highest single role): presiding officers +3, majority and minority leaders and the Leader of the Opposition +2, President pro tempore, CPPCC chair, whips and shadow cabinet +1
 - **Office pool top-up:** once per turn per pool, spend 10 actions to buy 1 office action (ministerial, vice president, justice, gubernatorial), up to the pool's cap
 - **Party bonus:** variable per turn, distributed from party pool by your Party Influence × platform alignment
-- **Cap:** 200
-- **Hoarding penalty:** −4/turn above 100
+- **Cap:** 200 at Energy 1, rising to 250 at Energy 10
+- **Hoarding penalty:** -4/turn above the hoard threshold (100 at Energy 1, rising to 125 at Energy 10)
 - **Starting grant:** 25 one-time
 
 ### Party Influence
@@ -122,7 +126,7 @@ Visible on your profile's Party Standing section and in the party-members table.
 | Action | Actions | Funds | Effect |
 | --- | --- | --- | --- |
 | Campaign | 1 to 5 (tiered by PI) | Scaled by state GDP | +1 Political Influence |
-| Fundraise | 3 | Earns ₳50k + ₳2k × donor level | Requires donor base > 0 |
+| Fundraise | 3 | Earns (₳50k + ₳2k × donor level) × (1 + state PI/100) × your Fundraising stat modifier | Requires donor base > 0 |
 | Run Advertisements | 5 to 9 (tiered by favorability) | Scaled by state GDP | +1 to 3 Favorability (diminishing above 70) |
 | Build Donor Network | 4 to 20 (tiered by level) | Scaled by state GDP | +1 Donor Base Level |
 | Quick Poll | 2 | −₳25,000 | Topline appeal + best/worst 5 groups |
@@ -134,7 +138,7 @@ Visible on your profile's Party Standing section and in the party-members table.
 
 ### Out-of-state cost multipliers
 
-Apply to interpersonal actions (Support, Attack, Barnstorm) when targeting a politician outside your home state:
+Apply to the action cost of Support and Attack (not Barnstorm) when targeting a politician outside your home state:
 
 - Home state: 1.0×
 - Neighbouring state: 1.25×
@@ -146,12 +150,13 @@ Target another player character or NPP from their profile page. Cross-country ac
 
 | Action | Actions | Funds | Effect on target | Effect on you |
 | --- | --- | --- | --- | --- |
-| Support | 6 | None | +1% Favorability (±12 net swing cap per target per turn) | None |
-| Attack | 6 | None | −1% Favorability (fails if roll < Infamy × 10; ±12 net swing cap per target per turn) | +2% Infamy (always) |
-| Barnstorm | 5 | −₳100,000 | +1% PI (+2% if your home state matches target's) | None |
+| Support | Priced (see below) | Priced (see below) | +1% Favorability (±12 net swing cap per target per turn) | None |
+| Attack | Priced (see below) | Priced (see below) | -1% Favorability (fails if roll < Infamy × 10; ±12 net swing cap per target per turn) | +2% Infamy (always) |
+| Barnstorm | Priced (see below) | Priced (see below) | +1% PI (+2% if your home state matches target's) | None |
 
+- Support, Attack and Barnstorm are not flat. Support costs the equivalent run of Run Advertisements needed for the same gain, times 1.25. Attack uses that Advertise equivalent times 1.5. Barnstorm uses the equivalent Campaign cost times 1.25, with funds scaled by the target state's GDP (\`src/lib/influence/rules.ts\`, \`src/lib/influence/simpleInfluence.ts\`). The in-game quote shows the exact cost before you click.
 - Out-of-state cost multipliers apply to Support and Attack.
-- Barnstorm ignores out-of-state multipliers (flat 5 actions).
+- Barnstorm ignores out-of-state multipliers.
 - Failed attacks still cost you 2 Infamy.
 - You can't Support or Attack yourself.
 
@@ -193,7 +198,7 @@ Party Chairs and Vice Chairs draw from the **party action pool** to run influenc
 
 At the top of each hour, in this order:
 
-1. Hoarding penalty applies if > 100 actions.
+1. Hoarding penalty applies if you hold more actions than your hoard threshold (100 to 125, set by Energy).
 2. Base 4 actions refresh.
 3. Office, leadership, justice and central bank bonus actions refresh.
 4. Party bonus actions distribute from pool.

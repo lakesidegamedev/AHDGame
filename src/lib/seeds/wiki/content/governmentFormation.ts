@@ -101,7 +101,6 @@ If no PM is seated by the deadline, the game auto-triggers a snap election, bypa
 
 The clock clears when:
 - A PM appointment vote passes
-- An admin directly appoints a PM
 
 ## Post-formation cabinet
 

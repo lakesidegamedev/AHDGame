@@ -11,7 +11,7 @@ A US state's voter pool is described by four dimensions. Every voter sits in one
 | Dimension | Buckets |
 | --- | --- |
 | Race | White, Black, Hispanic, Asian, Other |
-| Age | Young (18-29), Mid (30-44), Mature (45-64), Senior (65+) |
+| Age | Young (18-29), Middle-Aged (30-49), Mature (50-64), Senior (65+) |
 | Education | No college, College, Graduate |
 | Wealth | Low, Middle, High |
 
@@ -26,12 +26,12 @@ Every turn, for every candidate, the vote math computes **per-cell contributions
 | Factor | Range | What it measures |
 | --- | --- | --- |
 | **Reach** | 0-1.0 | A square-root curve on influence, clamped to 1.0 at 100 PI/NPI |
-| **Appeal** | 0-50 | A power-curve position score (exponent 1.5, not squared) on econ/social distance, plus a small directional bonus for tribally-aligned candidates, plus a normalized-influence term worth up to 12.5 |
-| **Approval** | 0-1 | Favorability divided by 100 |
+| **Appeal** | about 0.5-35.5 | A power-curve position score (exponent 1.5, not squared) on econ/social distance (up to 25, plus a 0.5 floor), plus a directional bonus of up to 5 per axis for tribally-aligned candidates. Influence does not enter appeal; it feeds reach only |
+| **Approval** | 0-1 | (Favorability / 100) raised to the power 0.8, so 0 stays 0 and 100 stays 1 but the middle is lifted (\`src/lib/utils/demographicAppeal.ts\`) |
 | **Party Org** | 0-1.0 | Each party's organization as a normalized share of the state's total organization (0 for parties with no presence there; independents use a neutral fallback) |
 | **Infamy** | 0.95-1.0 | 1 minus 0.05 times infamy divided by 100 (1.0 for NPPs) |
 
-For each cell the turn pool contribution is split among candidates proportional to **appeal x reach x approval x party org x infamy multiplier**. Then the party strength modifier, (1 plus state government approval) times office strength, scales the entire turn pool.
+For each cell the turn pool contribution is split among candidates proportional to **appeal x reach x approval x party org x infamy multiplier**. Then the party strength modifier scales the entire turn pool: for state races it is (1 + (state approval/100 - 0.5) × 0.2) times office strength, and for presidential state results the approval swing is ×0.5 instead of ×0.2 (\`src/lib/electionEngine/tallyManagement.ts\`, \`src/lib/presidentialElectionEngine.ts\`).
 
 ### Appeal is a softened power curve
 
@@ -45,7 +45,7 @@ Every bucket has a **baseline turnout** rate (e.g. Seniors 65+ vote at ~70%, You
 
 - **Player canvassing** action (see [Canvassing](/wiki/canvassing)): cheap, home-state only, per-bucket, doubles in final 4 turns.
 - **Party GOTV** passive spend: automatic based on party treasury allocation.
-- **Organic drift**: modifiers decay 2% per turn toward zero.
+- **Organic drift**: on current races modifiers halve every 6 turns toward zero (\`src/lib/campaignTargeting/rules.ts\`); older races still on the legacy path decay 2% per turn.
 - **Cap**: plus or minus 20 percentage points from baseline.
 
 A modifier applies to the bucket you targeted and reaches every cell that carries it. Boosting "Young (18-29)" raises turnout in every young cell, whatever its race, education or wealth.
@@ -67,18 +67,18 @@ State lean affects:
 ### Know the field
 
 - Commission a **Full Demographic Poll** at the start of every general election you plan to win. ₳75k, 6 actions. Breaks down your vote share segment by segment.
-- Identify three categories: **locks** (Appeal > 35, Favorability > 65), **contested** (Appeal 20-35, Favorability 50-65), **lost** (Appeal < 20, Favorability < 50).
+- Identify three categories: **locks** (Appeal > 25, Favorability > 65), **contested** (Appeal 15-25, Favorability 50-65), **lost** (Appeal < 15, Favorability < 50).
 - Spend on contested; maintain on locks; ignore lost unless they're huge.
 
 ### Play to strengths
 
 - Higher appeal + higher turnout = more votes per action.
 - A 1-point Favorability bump on a 15%-of-state segment is worth more than a 5-point bump on a 2%-of-state segment.
-- Canvassing a bucket where you have Appeal 45 converts turnout directly to votes; canvassing one at Appeal 5 is near-worthless.
+- Canvassing a bucket where you have Appeal 30 converts turnout directly to votes; canvassing one at Appeal 5 is near-worthless.
 
 ### Shore up weaknesses
 
-- Segments where you're at Appeal 20-30 are recoverable with ads. Target ads there, lift Favorability 5-10 pts, gain 2-4 effective appeal.
+- Segments where you're at Appeal 15-25 are recoverable with ads. Target ads there, lift Favorability 5-10 pts, gain 2-4 effective appeal.
 - Segments where you're at Appeal 5 are not recoverable mid-cycle. Skip them.
 
 ### Use polls, not vibes

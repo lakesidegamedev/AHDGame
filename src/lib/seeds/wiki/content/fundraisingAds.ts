@@ -48,10 +48,10 @@ A Level 5 donor base in Pennsylvania (medium tier) yields ₳1,000/turn passivel
 ## Fundraise action
 
 - **Cost:** 3 actions, free (no money up front)
-- **Returns:** \`(₳50,000 + ₳2,000 × donor base level) × (1 + stateInfluence/100)\`
+- **Returns:** \`(₳50,000 + ₳2,000 × donor base level) × (1 + stateInfluence/100)\`, multiplied by your Fundraising stat modifier and scaled to the era's price level
 - **Requires:** Donor base level ≥ 1 (every character starts at 1)
 
-At level 1 with 0% state influence: +₳52,000 per fundraise. At level 5 with 50% influence: +₳90,000. At level 10 with 100% influence: +₳140,000.
+With a neutral Fundraising stat, at level 1 with 0% state influence: +₳52,000 per fundraise. At level 5 with 50% influence: +₳90,000. At level 10 with 100% influence: +₳140,000.
 
 The state influence multiplier ranges from **1.0× at 0%** to **2.0× at 100%**, so high-PI characters raise dramatically more per action.
 
@@ -76,13 +76,13 @@ Practical yields:
 
 | Current Favorability | Expected delta per ad |
 | --- | --- |
-| 50 | +2 to +3 |
-| 60 | +2 |
-| 70 | +1 to +2 |
-| 75 | +1 |
-| 80+ | +1 (floored, never rounds to 0) |
+| 50 to 70 | +3 |
+| 75 | +2 |
+| 80 | +2 |
+| 85 | +1 |
+| 90+ | +1 (floored, never rounds to 0) |
 
-Above 75 Favorability, each ad delivers less and less, but the gain is floored at +1: an ad is never fully wasted, just poor value.
+The gain is \`floor((3 - 0.1 × (Favorability - 70)) × charisma multiplier)\`, with the penalty applying only above 70 (\`src/lib/actions/rules.ts\`). The table shows a neutral Charisma; a higher Charisma raises each figure and a lower one cuts it. Above 80 Favorability each ad delivers less and less, but the gain is floored at +1: an ad is never fully wasted, just poor value.
 
 ### Out-of-state cost multipliers
 

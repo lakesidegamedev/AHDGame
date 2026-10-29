@@ -4,7 +4,7 @@ Non-Player Politicians (NPPs) are AI-controlled politicians that fill the politi
 
 ## What NPPs are
 
-NPPs are politician records in the \`npps\` collection. They have:
+NPPs are politician records with:
 - A procedurally generated **name**
 - A **home state** (or region in the UK, Land in DE, prefecture in JP)
 - A **party affiliation**
@@ -25,7 +25,7 @@ NPPs fill every office that players don't hold. In a legislature with 435 House 
 
 ## How many exist
 
-Admins can spawn NPPs in bulk (1 to 500 at a time) for any party, with weighting toward states that match the party's lean or existing NPP presence. The total NPP count scales with the game's needs: the simulation is designed to fill every seat in every country.
+The total NPP count scales with the game's needs: the simulation is designed to fill every seat in every country.
 
 ## Party NPP capacity
 

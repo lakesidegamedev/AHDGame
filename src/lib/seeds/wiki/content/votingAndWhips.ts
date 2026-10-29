@@ -52,7 +52,7 @@ Party whips can issue a directive telling members how to vote on a specific bill
 **Hard whips** trigger an immediate hidden roll when issued:
 
 - The NPP has a base compliance chance of 55%, plus a loyalty bonus and a mode bonus (hard = +15, soft = +6), plus a small bonus from the whipping character's Statecraft, minus a stubbornness penalty.
-- Final chance is clamped between 40% and 95%.
+- Final chance is clamped between 40% and 95%. These figures come from \`src/lib/partyWhips/whipSuccess.ts\`.
 - If the roll succeeds, the NPP votes exactly as directed.
 - If the roll fails, the vote falls back to the deterministic **cross-pressure verdict** (ideology + district + donors).
 

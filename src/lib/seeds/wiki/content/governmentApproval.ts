@@ -36,7 +36,7 @@ For each metric, the game knows whether higher values are good (e.g., GDP growth
 For every metric where both the state value and national average are available:
 
 \`\`\`
-pctDiff = (stateValue - nationalAverage) / nationalAverage
+pctDiff = (stateValue - nationalAverage) / abs(nationalAverage)
 signedDiff = higherIsBetter ? pctDiff : -pctDiff
 contribution = clamp(signedDiff * 15, -2, +2)
 \`\`\`
@@ -46,9 +46,11 @@ Each metric can contribute at most +/-2 points to the score. The scale factor of
 ### State approval formula
 
 \`\`\`
-baseScore = 50 + (sum of all contributions / number of metrics evaluated) * 2.5
+baseScore = 50 + (weighted sum of contributions / total weight) * 2.5
 stateApproval = clamp(baseScore, 0, 100)
 \`\`\`
+
+Each metric's weight depends on how strongly it ties to the population's economic and social axes (axis affinity), so the score is a weighted average, not a plain mean. When no population groups are available every metric weighs 1, which gives the plain mean (\`src/lib/utils/governmentApproval.ts\`).
 
 If a state has no metrics data, it defaults to 50%.
 
@@ -145,7 +147,7 @@ Active crises can apply **direct approval effects** each turn, adding or subtrac
 
 ## Snap elections
 
-The wiki previously claimed that low UK government approval triggers snap elections. **This is incorrect.** Snap elections in parliamentary countries (UK, JP, DE) are triggered by:
+Low government approval does not trigger snap elections. Snap elections in parliamentary countries (UK, JP, DE) are triggered by:
 
 1. **PM initiative:** A sitting Prime Minister (or Chancellor in DE) voluntarily dissolves the lower chamber.
 2. **PM vacancy deadline:** If no PM is appointed within 96 turns of the government entering "pending" status, the system auto-triggers a snap election.

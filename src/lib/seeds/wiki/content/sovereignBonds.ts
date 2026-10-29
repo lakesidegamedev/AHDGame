@@ -19,7 +19,7 @@ When a country runs a budget deficit, it needs to borrow money to cover the gap.
 | China | CNY | 48 turns (1 game year) |
 | Nigeria | NGN | 48 turns (1 game year) |
 
-All configured countries with a national budget issue sovereign bonds automatically. Every issuer has the same 48-turn (1 game year) maturity.
+All configured countries with a national budget issue sovereign bonds automatically. Regular issuance for every issuer has the same 48-turn (1 game year) maturity. Longer paper of 96 and 240 turns also exists, created when a country's existing debt is reconciled into instruments; it carries a term premium of +0.25 and +0.75 percentage points over the 48-turn coupon (\`src/lib/bonds/sovereign.ts\`).
 
 Each sovereign bond is denominated in the issuing country's currency. A US Treasury bond pays coupons in USD; a UK gilt pays in GBP; a Japanese government bond pays in JPY.
 

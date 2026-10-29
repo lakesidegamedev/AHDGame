@@ -17,7 +17,7 @@ Relationship deltas are recorded immediately. Every action is written to a ledge
 
 | Action | Action Cost | Fund Cost | Min Relationship | Effect |
 | --- | --- | --- | --- | --- |
-| Request Endorsement | 6 | ₳0 | none | Request a public endorsement; willingness depends on relationship + policy fit |
+| Request Endorsement | 6 | ₳0 | none | Request a public endorsement for your current race; willingness depends on relationship + policy fit |
 | Private Meeting | 3 | ₳0 | -50 | +5 relationship |
 | Boost Favorability | 5 | ₳10K | none | +3 favorability, +2 relationship |
 | Reduce Favorability | 5 | ₳10K | -100 | -3 favorability, -2 relationship |
@@ -28,7 +28,7 @@ Relationship deltas are recorded immediately. Every action is written to a ledge
 
 ### Request Endorsement
 
-The most expensive action at 6 character actions, but costs no funds. You ask the NPP for a **public endorsement**. Whether they agree depends on two factors:
+The most expensive action at 6 character actions, but costs no funds. You ask the NPP for a **public endorsement in your current race**, so you need an active candidacy; without one the request is rejected. The endorsement applies to that campaign only. Whether they agree depends on two factors:
 
 1. **Relationship**: how warmly they view you
 2. **Policy fit**: how closely their policy positions align with yours
@@ -57,7 +57,7 @@ Boosting an ally's influence makes them a more powerful friend; reducing a rival
 
 ## Determinism
 
-All Political Capital actions are **fully deterministic**. There is no success chance, no randomness, and no hidden roll. If you have the required actions, funds, and minimum relationship, the effect is guaranteed. This makes Political Capital a planning tool: you can calculate exactly how many turns and how much money it will take to move an NPP from their current state to a target state.
+All Political Capital actions are **fully deterministic**. There is no success chance, no randomness, and no hidden roll. If you have the required actions, funds, and minimum relationship, the effect is guaranteed. Two limits can still reject an action before you are charged: a boost or reduction is refused when the NPP's favorability or influence is already at its cap (100) or floor (0), and the target cannot be a retired NPP. This makes Political Capital a planning tool: you can calculate exactly how many turns and how much money it will take to move an NPP from their current state to a target state.
 
 ## Ledger and audit
 

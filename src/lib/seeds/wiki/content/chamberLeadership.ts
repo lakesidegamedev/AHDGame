@@ -12,7 +12,7 @@ All four countries' presiding-officer elections follow the same lifecycle:
 
 The incumbent is automatically re-nominated at the start of each new ballot, provided they still hold a seat in the chamber and still qualify under the role's eligibility rule. A party that loses its majority status can knock its own incumbent off the ballot this way.
 
-Ballot length varies by country: the US Speaker runs on a 12-hour window; the German, Nigerian, and Chinese presiding-officer elections run 24 hours.
+The US Speaker, German, Nigerian, and Chinese presiding-officer ballots all run 24 hours.
 
 ## Who can run: two eligibility rules
 
@@ -41,7 +41,7 @@ A member holding several leadership roles takes the highest single action bonus,
 
 ## United States: Speaker of the House
 
-The Speaker presides over the House, controls the legislative agenda, and sits second in the presidential line of succession. Any seated House member may declare candidacy and vote, regardless of party, though in practice the majority party's bloc size usually decides the outcome. The ballot runs 12 hours.
+The Speaker presides over the House, controls the legislative agenda, and sits second in the presidential line of succession. Any seated House member may declare candidacy and vote, regardless of party, though in practice the majority party's bloc size usually decides the outcome. The ballot runs 24 hours.
 
 See [Congress Leadership](/wiki/congress-leadership) for the Speaker's role alongside Majority/Minority Leader and committee chairs.
 

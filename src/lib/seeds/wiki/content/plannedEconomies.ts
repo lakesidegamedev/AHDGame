@@ -4,13 +4,13 @@ Most countries in A House Divided are market economies: floating currencies, a c
 
 **This is not a bug.** If a Soviet-era ruble never drifts, national commodity prices ignore supply and demand, or a state firm stays alive while insolvent, you are looking at planned-economy rules. See [Commodities](/wiki/commodities) and [Currency Exchange](/wiki/currency-exchange) for the market path; this page is the planned path.
 
-Fresh worlds enable the regime. Countries that start on the command end of the dial (USSR/Russia, China in its early eras, Eastern-bloc satellites) come up as planned economies with their state industries split into separate enterprises you can run. Admins can disable the command-economy layer for a particular world.
+The regime is on for 1953 and 1979 style starts, where command economies exist, and off in modern-era worlds. Countries that start on the command end of the dial (USSR/Russia, China in its early eras, Eastern-bloc satellites) come up as planned economies with their state industries split into separate enterprises you can run.
 
 ## How a country becomes a command economy
 
 Two gates must both be true:
 
-1. The world-level command-economy feature is enabled. Fresh-world seed data enables it by default; an admin can change the world setting.
+1. The world-level command-economy feature is enabled. It is set from the starting era: on for 1953 and 1979 command regimes (\`src/lib/seeds/reference/featureFlagDefaults.ts\`).
 2. The country's **marketization level** is below the market ceiling. The era only sets the *starting* value. From there the level moves on its own each turn based on what happens in the economy (see The Marketization Dial Is Earned below).
 
 | Band | Dial | What you get |
@@ -135,8 +135,6 @@ Dual-track means plan and market run in parallel: a share of pricing and shortag
 
 **What you cannot do:**
 
-- Turn the regime on or off (admin only).
-- Set the world-wide second-economy tolerance (admin only).
 - Rewrite the era starting level; only the *starting* value is era-authored, and everything after that is earned.
 
 Open a country's live control room at **Country > Command Economy**, for example the [Soviet command-economy dashboard](/country/ru/command-economy).

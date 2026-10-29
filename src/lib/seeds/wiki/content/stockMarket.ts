@@ -15,7 +15,7 @@ Corporations are listed on country-specific stock exchanges. Players can buy and
 | China | SSE | /market?tab=stocks&exchange=CN |
 | Nigeria | NGX | /market?tab=stocks&exchange=NG |
 
-21 exchanges are configured in total (every country with an \`exchangeName\` set). The Market page provides the exchange selector and redirects older stock-market page URLs to the matching exchange view.
+21 exchanges are configured in total (every country that has an exchange). The Market page provides the exchange selector and redirects older stock-market page URLs to the matching exchange view.
 
 The Market page displays market cap, share price, total revenue, net income, CEO, sector type, and headquarters location. Price history is shown as **OHLC candlestick charts** (open, high, low, close per period).
 
@@ -26,23 +26,24 @@ In multiplayer, share prices are recomputed every 15 minutes from three fundamen
 **Tangible Book Per Share** (weight 1.0):
 \`\`\`
 tangibleBook = liquidCapital + sectorNPV + constructionInProgress
-             + techAssetValue + 0.75 * bondHoldings - issuedBondDebt
+             + techAssetValue + 0.75 * bondHoldings
+             + 0.75 * charteredBankEquity - issuedBondDebt
 tangibleBookPerShare = tangibleBook / totalShares
 \`\`\`
 
 Where sectorNPV is each sector's future profit converted to today's value,
 construction in progress and technology contribute asset value, and held bonds
-are recognized at a 0.75 haircut. IMF receivables held by the corporation are
+are recognized at a 0.75 haircut, and the book equity of any chartered bank the corporation owns counts at 0.75 as well. IMF receivables held by the corporation are
 also included by the live share-price calculation.
 
-**Earnings Power Per Share** (weight 0.4):
+**Earnings Power Per Share** (weight 0.5):
 \`\`\`
 earningsPowerPerShare = normalizedAnnualEarnings / costOfCapital / totalShares
 \`\`\`
 
 \`normalizedAnnualEarnings\` is a 3-turn rolling average of annualised after-tax income, with equity-method additions from any cross-corporation stock holdings already applied.
 
-**Growth Premium Per Share** (weight 0.1):
+**Growth Premium Per Share** (weight 0.15):
 \`\`\`
 gCapped = min(sectorGrowthRate, costOfCapital - buffer)
 growthPremiumPerShare = (normalizedAnnualEarnings * gCapped) / (costOfCapital - gCapped) / totalShares
@@ -53,8 +54,8 @@ This is a standard formula for valuing future growth (the Gordon Growth Model). 
 **Final price:**
 \`\`\`
 sharePrice = 1.0 * tangibleBookPerShare
-           + 0.4 * earningsPowerPerShare
-           + 0.1 * growthPremiumPerShare
+           + 0.5 * earningsPowerPerShare
+           + 0.15 * growthPremiumPerShare
 \`\`\`
 
 The formula produces a **fundamental value** each turn, then several additional modifiers can move the price away from that pure fundamental:
@@ -62,7 +63,7 @@ The formula produces a **fundamental value** each turn, then several additional 
 - **Bond-holdings haircut:** bonds counted in tangible book are marked at 0.75x their market price, so leveraged bond positions don't inflate the valuation.
 - **Insider-concentration discount:** a public corp whose character CEO personally holds more than 65% of shares takes a quadratic penalty reaching -30% at 100% CEO ownership.
 - **Index-inclusion premium:** shares held by index funds get a small price premium reflecting passive-flow demand.
-- **IMF bailout multiplier:** while a corporation is under its own IMF corporate restructuring (a per-corporation admin bailout flag, unrelated to any country's sovereign IMF facility), its share price trades at a 0.85x discount.
+- **IMF bailout multiplier:** while a corporation is under its own IMF corporate restructuring (unrelated to any country's sovereign IMF facility), its share price trades at a 0.85x discount.
 - **±35% per-turn rate limiter:** the final price can't move more than 35% from the prior turn's price in a single turn (skipped once the price has fallen to $1.00 or below, so recovering penny corps aren't pinned at the floor).
 
 **Constants:**
@@ -70,8 +71,8 @@ The formula produces a **fundamental value** each turn, then several additional 
 | --- | --- |
 | Minimum share price | 0.01 |
 | Tangible book weight | 1.0 |
-| Earnings power weight | 0.4 |
-| Growth premium weight | 0.1 |
+| Earnings power weight | 0.5 |
+| Growth premium weight | 0.15 |
 | Bond-holdings haircut | 0.75x |
 | Insider-concentration max penalty | -30% (at 100% CEO ownership, threshold 65%) |
 | IMF bailout multiplier | 0.85 (applies when active) |

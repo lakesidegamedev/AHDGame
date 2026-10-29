@@ -1,6 +1,6 @@
 export const embargoAndTradeExposureContent = `# Embargoes & Trade Exposure
 
-An embargo is a country restricting trade with another, and it can be imposed two ways: a cabinet minister acting fast on a limited leash, or legislation putting something durable on the books. What it actually does to corporations operating across that border depends on which trade model is active in your world.
+An embargo is a country restricting trade with another, and it can be imposed two ways: a cabinet minister acting fast on a limited leash, or legislation putting something durable on the books. What it actually does to corporations operating across that border depends on how much of their business crosses it.
 
 ## Imposing an embargo
 
@@ -17,15 +17,7 @@ That cooldown exists so a minister cannot endlessly re-impose the same embargo t
 
 ## What an embargo does to a corporation
 
-This depends on which embargo model your world is running.
-
-### Total block (legacy model)
-
-Under the older model, a full block embargo (commodity "all", mode "block") mothballs every sector a target-nation corporation runs inside the embargoing country. Revenue and cost both go to zero for that sector, the whole operation goes dark, including sales the sector was making to buyers inside the host country itself. That last part is the flaw this model has: an embargo is supposed to restrict what crosses the border, not shut down a subsidiary's ordinary local business.
-
-### Trade-exposure model
-
-Under the newer model, an embargo only strips the sector's cross-border leg. The sector keeps operating on whatever domestic demand it was already serving in the host country; only the exported share of its output is lost.
+An embargo only strips a sector's cross-border leg. The sector keeps operating on whatever domestic demand it was already serving in the host country; only the exported share of its output is lost.
 
 The mechanics:
 

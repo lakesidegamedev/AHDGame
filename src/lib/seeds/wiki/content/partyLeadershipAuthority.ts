@@ -18,7 +18,7 @@ If both chair and vice chair seats are empty, no one has acting authority until 
 
 ## Leadership tenure gate
 
-You cannot walk into a party and run for its leadership the same turn you join. A character must have been a member of the party for **24 turns** before they are eligible to run for, or vote in, that party's leadership elections. The clock resets whenever you join, switch parties, or your party absorbs into another through a merge.
+You cannot walk into a party and run for its leadership the same turn you join. A character must have been a member of the party for **24 turns** before they are eligible to run for, or vote in, that party's leadership elections. The clock resets whenever you join or switch parties. A party merger preserves your original membership tenure.
 
 A second, separate 24-turn clock applies specifically to **state** party leadership: after relocating to a new state, you must wait 24 turns before standing for (or being appointed into) that state party's leadership. This exists to stop players from relocation-hopping straight into a fresh state party's leadership seat. It runs independently of the general relocation cooldown, so even if that cooldown changes, local leadership residency stays fixed at 24 turns.
 

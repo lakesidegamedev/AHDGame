@@ -1,10 +1,10 @@
 export const crisisInteractionContent = `# Crisis Interaction
 
-The **Crisis Interaction** system is an optional gameplay layer that adds template-based crisis creation, decision trees, collective contributions, and ambient interaction cards. The system is gated behind a feature flag. When disabled, only the legacy manual crisis creator is available.
+The **Crisis Interaction** system is a gameplay layer that adds template-based crisis creation, decision trees, collective contributions, and ambient interaction cards. It is on by default in new worlds, along with auto-disasters. If a world switches it off, only the legacy manual crisis creator is available.
 
 ## Feature flags
 
-Two independent settings control the crisis system. Admins turn each one on or off separately:
+Two independent settings control the crisis system. Both default to on for new worlds (\`src/lib/seeds/reference/featureFlagDefaults.ts\`) and can be turned on or off separately:
 
 | Setting | What it does | When off | When on |
 | --- | --- | --- | --- |

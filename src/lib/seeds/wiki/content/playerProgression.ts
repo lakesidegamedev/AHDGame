@@ -4,7 +4,7 @@ This is the office ladder as a click path, not a story. You hold one office at a
 
 ## Phase 0: you just spawned
 
-Dashboard shows Independent, no office, 25 actions, ₳250k Campaign Funds, Favorability 50, PI 10.
+Dashboard shows Independent, no office, 25 actions, ₳250k Campaign Funds, personal Cash on Hand from your wealth background (₳1M, ₳2.5M or ₳5M), Favorability 50, PI 10.
 
 Do this: [Create a Character](/wiki/create-a-character) leftover clicks, then [Getting Started](/wiki/getting-started).
 
