@@ -484,10 +484,17 @@ function TurnView({
 }) {
   const [note, setNote] = useState<string | null>(null);
   const [reporting, setReporting] = useState(false);
-  const [stepsOpen, setStepsOpen] = useState(false);
-  const [sourcesOpen, setSourcesOpen] = useState(false);
-  const [followupsOpen, setFollowupsOpen] = useState(false);
-  const [rateDismissed, setRateDismissed] = useState(false);
+  // What this answer has open or dismissed, in one state so the file stays
+  // under the architecture audit's useState limit.
+  const [shown, setShown] = useState({
+    steps: false,
+    sources: false,
+    followups: false,
+    rateDismissed: false,
+  });
+  const { steps: stepsOpen, sources: sourcesOpen, followups: followupsOpen, rateDismissed } = shown;
+  const toggle = (key: "steps" | "sources" | "followups") =>
+    setShown((v) => ({ ...v, [key]: !v[key] }));
   const noteTimer = useRef(0);
   useEffect(() => () => window.clearTimeout(noteTimer.current), []);
   const flashNote = (text: string) => {
@@ -547,7 +554,7 @@ function TurnView({
             {steps > 0 && (
               <button
                 type="button"
-                onClick={() => setStepsOpen((v) => !v)}
+                onClick={() => toggle("steps")}
                 aria-expanded={stepsOpen}
                 className="shrink-0 text-[12px] text-muted hover:text-foreground"
               >
@@ -567,7 +574,7 @@ function TurnView({
         <div>
           <button
             type="button"
-            onClick={() => setStepsOpen((v) => !v)}
+            onClick={() => toggle("steps")}
             aria-expanded={stepsOpen}
             className="inline-flex items-center gap-2 rounded-full border border-card-border bg-card px-3 py-1.5 text-[13px] text-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
@@ -736,7 +743,7 @@ function TurnView({
           {hasSourcesPanel && (
             <button
               type="button"
-              onClick={() => setSourcesOpen((v) => !v)}
+              onClick={() => toggle("sources")}
               aria-expanded={sourcesOpen}
               className={`${ROUND_BUTTON} ml-1.5`}
             >
@@ -794,7 +801,7 @@ function TurnView({
           </button>
           <button
             type="button"
-            onClick={() => setRateDismissed(true)}
+            onClick={() => setShown((v) => ({ ...v, rateDismissed: true }))}
             className={QUIET_BUTTON}
             aria-label="Dismiss"
             title="Dismiss"
@@ -871,7 +878,7 @@ function TurnView({
         <div>
           <button
             type="button"
-            onClick={() => setFollowupsOpen((v) => !v)}
+            onClick={() => toggle("followups")}
             aria-expanded={followupsOpen}
             className="inline-flex items-center gap-1 text-[13px] text-muted hover:text-foreground"
           >
