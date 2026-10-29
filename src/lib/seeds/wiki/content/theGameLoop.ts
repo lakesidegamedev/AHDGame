@@ -86,6 +86,8 @@ campaign
 4. **Resolution:** the winner takes office, and a new cycle of that office starts immediately.
 5. **In office:** legislature and cabinet tools unlock, and you still face re-election.
 
+![The election cycle from build to primary, general, resolution and in office, with the last four turns of the general marked.](/wiki-images/diagrams/the-game-loop-election-cycle.svg)
+
 Safe to ignore in week one: tiny Favorability drift, Infamy under 20, uncontested NPP primaries and most news posts. Not safe to ignore: missed primary declarations, last-turn generals, cabinet votes if you are a Senator, confidence votes and drifting far from your party.
 
 ## Your first week

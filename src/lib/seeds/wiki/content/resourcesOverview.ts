@@ -122,6 +122,8 @@ State resource capacity is divided between two pools:
 
 Contracts cannot take the total offered and active share above **75%**, so at least one quarter remains open access.
 
+![State capacity splits into a contracted pool and an open-access pool, which set sector output, commodity supply, price and margins, while prospecting and R&D expand capacity.](/wiki-images/diagrams/resources-overview-capacity-pools.svg)
+
 ## Which states have which resources
 
 Major resource concentrations vary with the countries and start date of the world. The live Resources map is the authoritative view for every state. Some representative concentrations are:

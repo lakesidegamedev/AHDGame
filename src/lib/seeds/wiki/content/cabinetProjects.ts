@@ -14,6 +14,8 @@ Buildings belong to the seat, not to you personally, and each sits in one region
 
 Upkeep is modeled pressure on the national budget balance metric, not an actual withdrawal from the federal budget. The total upkeep of what you built is compared with your **discretionary envelope**. Under the envelope gives a small positive tilt to the budget balance each turn; over it, a negative tilt that grows with the overshoot (at most 0.05 per turn at full scale).
 
+![Total upkeep compared with the discretionary envelope: under it tilts budget balance positive, over it tilts negative.](/wiki-images/diagrams/cabinet-projects-upkeep-envelope.svg)
+
 ### Key numbers
 
 | Item | Value |

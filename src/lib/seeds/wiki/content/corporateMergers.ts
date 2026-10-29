@@ -11,6 +11,8 @@ This is separate from a [hostile takeover](/wiki/corporations#privatization-buyo
 3. **Review.** If the combined firm would hold too large a share of a national industry, the deal stops here and goes to the reviewing minister (see below). Otherwise it continues.
 4. **Close.** You pay the price, the target's shareholders are cashed out, and the target's assets move to you.
 
+![Flow of an acquisition offer from the offer and the target's answer through merger review (cleared, sell-down order or blocked) to closing.](/wiki-images/diagrams/corporate-mergers-offer-flow.svg)
+
 **Reference valuation.** Next to your price the game shows an independent fair-value estimate. It is built from the target's share price times its shares, its cash, and the replacement cost of its plants. You do not have to pay it. It lets both sides see whether an offer is generous or a lowball.
 
 ## Key numbers

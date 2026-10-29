@@ -46,6 +46,8 @@ Most players start at the state level. The typical ladder:
 3. **U.S. Senator**: Longer terms, more actions per turn (+2), and confirms federal appointments.
 4. **President**: Top of the ladder. +4 actions per turn. Serves as both head of state and head of government. No coalition required.
 
+![Career ladder from State Senator through Governor or Representative and Senator to President, with the extra actions per turn at each rung.](/wiki-images/diagrams/us-overview-career-ladder.svg)
+
 **Worked example.** A State Senator (+1 action per turn) who wins a governorship moves to +2 actions per turn, and a later Presidency is +4. The President's 4-year term is 192 turns (8 real days), a House term is 96 turns (4 real days), and a State Senator or Governor term is 192 turns. Plan the jump so that you are not stuck waiting: a House seat comes up every 4 real days, a Senate seat for your class every 12.
 
 **Which office should I start from?** State Senator. It is the cheapest race and builds the favorability and Political Influence you need for everything above it. See [Player Progression](/wiki/player-progression).

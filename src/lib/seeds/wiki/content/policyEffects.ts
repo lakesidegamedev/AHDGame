@@ -12,6 +12,8 @@ Each turn (one real hour) the game recalculates every active law and applies thr
 
 The metric is then kept inside its allowed range.
 
+![Per-turn pipeline from active laws to a weighted target, pull toward the target, direct push, drift to baseline and clamp.](/wiki-images/diagrams/policy-effects-turn-pipeline.svg)
+
 ### Key numbers
 
 | Item | Value |

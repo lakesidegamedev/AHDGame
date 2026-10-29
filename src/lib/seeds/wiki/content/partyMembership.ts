@@ -30,6 +30,8 @@ Every join starts a **24 hour** delay before you can join another party. The del
 | Party leadership posts, party elections, committee seat, endorsements | Cleared or withdrawn when you leave or switch |
 | Leadership tenure clock | Restarts at your join (24 turns before you can run for or vote in leadership) |
 
+![Timeline of joining party A, leaving to be independent and joining party B after the 24 hour delay, and how races move when you switch.](/wiki-images/diagrams/party-membership-switch-timeline.svg)
+
 ### Taxes
 
 Every member pays two taxes out of their hourly income: a **state tax** to the state party treasury and a **national tax** to the national party treasury. Each rate is set by that level's leaders from 0% to 33%. Both are taken from your total income, not one after the other. Independents pay nothing.

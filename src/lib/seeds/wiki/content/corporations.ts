@@ -8,6 +8,8 @@ Each turn, your plants produce goods, the goods compete for buyers at your prici
 
 You grow by building plants, **splitting** unowned market (taking a slice of the state's unowned pool) or **attacking** a rival's sector. Marketing Strength decides contested fights.
 
+![The ten stages each corporation passes through every turn, from production and clearing to tax, salary and dividends, strength accrual, share orders and the vote sweep.](/wiki-images/diagrams/corporations-turn-flow.svg)
+
 ### Key numbers
 
 | Rule | Value |

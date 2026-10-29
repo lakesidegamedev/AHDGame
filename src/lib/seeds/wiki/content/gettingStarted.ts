@@ -57,6 +57,9 @@ elections
 
 8. **Spend the rest of your actions on the race, not on everything else.** A reasonable first-week split is in the next section. Do not buy a corporation, a bond, or a central-bank position in week one unless you already understand the system.
 
+![The first ten minutes as a flow: read the dashboard, campaign, join a party, build donors and fundraise, find a race, poll, declare and open View Campaign, with the no-open-race and missed-window branches.](/wiki-images/diagrams/getting-started-first-ten-minutes.svg)
+
+
 ## Your first 25 actions
 
 There is no single correct build, but this allocation covers the first-days goals and leaves room to react. It spends exactly 25 actions.

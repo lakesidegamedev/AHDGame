@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="322" viewBox="0 0 760 322" role="img" font-family="system-ui, sans-serif">
+<title>Strike lifecycle</title>
+<desc>A strike starts when unionization is high and wages lag expectations, runs four turns, ends by concession, wait-out or union-busting, then a twelve turn cooldown follows.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#52525b"/></marker></defs>
+<rect x="0.5" y="0.5" width="759" height="321" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<rect x="20" y="20" width="330" height="56" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="185.0" y="36.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Trigger</text>
+<text x="185.0" y="52.5" font-size="12" text-anchor="middle" fill="#3f3f46">unionization above 55 and real wages at least</text>
+<text x="185.0" y="68.5" font-size="12" text-anchor="middle" fill="#3f3f46">0.12 below worker expectations</text>
+<path d="M352 48 L408 48" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="410" y="20" width="330" height="56" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="575.0" y="44.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Strike runs, up to 4 turns</text>
+<text x="575.0" y="60.5" font-size="12" text-anchor="middle" fill="#3f3f46">sector revenue -25%, margin -8 points</text>
+<path d="M575 76 L575 108 L130 108 L130 138" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<path d="M575 76 L575 108 L380 108 L380 138" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<path d="M575 76 L575 108 L630 108 L630 138" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="20" y="140" width="220" height="86" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="130.0" y="163.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Concession</text>
+<text x="130.0" y="179.6" font-size="12" text-anchor="middle" fill="#3f3f46">CEO raises wage level</text>
+<text x="130.0" y="195.6" font-size="12" text-anchor="middle" fill="#3f3f46">until the gap closes to</text>
+<text x="130.0" y="211.6" font-size="12" text-anchor="middle" fill="#3f3f46">0.04 or less; ends early</text>
+<rect x="270" y="140" width="220" height="86" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="380.0" y="163.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Union-busting</text>
+<text x="380.0" y="179.6" font-size="12" text-anchor="middle" fill="#3f3f46">CEO action: success</text>
+<text x="380.0" y="195.6" font-size="12" text-anchor="middle" fill="#3f3f46">-20 unionization,</text>
+<text x="380.0" y="211.6" font-size="12" text-anchor="middle" fill="#3f3f46">failure +15</text>
+<rect x="520" y="140" width="220" height="86" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="630.0" y="163.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Wait it out</text>
+<text x="630.0" y="179.6" font-size="12" text-anchor="middle" fill="#3f3f46">expires after 4 turns;</text>
+<text x="630.0" y="195.6" font-size="12" text-anchor="middle" fill="#3f3f46">unionization rises 10</text>
+<text x="630.0" y="211.6" font-size="12" text-anchor="middle" fill="#3f3f46">points (radicalization)</text>
+<path d="M130 226 L130 246 L380 246 L380 262" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<path d="M630 226 L630 246 L380 246 L380 262" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<path d="M380 226 L380 262" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="240" y="264" width="280" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="380.0" y="282.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Cooldown: 12 turns</text>
+<text x="380.0" y="298.6" font-size="12" text-anchor="middle" fill="#3f3f46">then a strike can trigger again</text>
+</svg>

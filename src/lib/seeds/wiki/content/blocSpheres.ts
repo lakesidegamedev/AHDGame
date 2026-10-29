@@ -6,6 +6,8 @@ Every nation is pulled toward the great-power blocs of its era. That pull is cal
 
 Alignment is the cause, sphere membership is the effect.
 
+![Cause chain from influence plays, aid, drift and organization pull into alignment shares, then lead, sustained shares, bloc membership and sphere, with bloc stress weakening later plays.](/wiki-images/diagrams/bloc-spheres-cause-chain.svg)
+
 1. **Shares.** Every nation carries a share from 0 to 100 toward each pole in the current era, plus an uncommitted remainder. All shares and the remainder always add up to 100. The gap between a nation's top pole and its next-highest is its **lead**.
 2. **Movement.** Shares move a little each turn by passive drift, and move more when a bloc pays for an influence play or sends aid.
 3. **Thresholds.** A nation that holds a share past a threshold for long enough can join or leave a bloc.

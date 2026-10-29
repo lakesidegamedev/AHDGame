@@ -119,6 +119,8 @@ There **is a weak era gravity**: a small restoring pull toward the historical sc
 - **Stable orthodoxy**: fund the right sectors, hit the targets, keep the black market contained, and the dial holds. The country stays command for as long as you run it well.
 - **Gosbank tightrope**: print to grow output, but watch overhang and shortage climb with it. Growth and empty shelves are two sides of the same lever.
 
+![The reform spiral, the stable orthodoxy loop, and repression with its legitimacy cost.](/wiki-images/diagrams/planned-economies-feedback-loops.svg)
+
 ## Repression: holding the line
 
 Reform is not the only answer to a swelling black market. A hardline government can crack down instead. The Gosbank Chair or head of government can set an **internal repression** level that forces the second economy down, hides the grey market, and slows the drift toward the market.

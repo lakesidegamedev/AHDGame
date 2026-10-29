@@ -57,6 +57,8 @@ Because single-list elections carry no real electoral signal, governance partici
 
 The National Front is the bloc-party version of one-party rule (see [One-Party States](/wiki/one-party-states)): five seeded parties, one list, one permitted outcome.
 
+![The two ways the German Question can end: an East win merges East Germany into a one-party Germany with no election, while a collapse leads to a parliamentary republic.](/wiki-images/diagrams/german-question-outcomes.svg)
+
 - **SED** is the **ruling** party (economic position -4): the only party that can form government, field executive candidates, or move a no-confidence vote (which one-party states skip anyway).
 - **CDU (Ost), LDPD, NDPD and DBD** are **approved** bloc parties. They hold seats, field Volkskammer candidates, propose and vote on bills, accept donations and sit in cabinet, but they **cannot form government** or contest the executive.
 - **Vote multipliers**: ruling votes weigh 3.0, approved 0.375, independents and banned parties 0. Player-created parties are automatically **banned** at charter ratification.

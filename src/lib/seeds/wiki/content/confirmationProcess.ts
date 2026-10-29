@@ -12,6 +12,8 @@ In the US, the Senate must confirm presidential nominations before a nominee can
    - More Reject than Confirm: the nomination fails and the seat stays vacant. The President can nominate again at once.
    - A tie fails. Confirmation needs a strict majority, and there is no Vice President tie-break on these votes.
 
+![A nomination goes to a 24 hour Senate vote; more Confirm than Reject confirms, a tie or more Reject fails, and the President can withdraw.](/wiki-images/diagrams/confirmation-process-vote-flow.svg)
+
 ### What needs confirmation
 
 - All Cabinet seats (see [Cabinet](/wiki/cabinet)), except the White House Chief of Staff, whom the President appoints alone with no Senate vote.

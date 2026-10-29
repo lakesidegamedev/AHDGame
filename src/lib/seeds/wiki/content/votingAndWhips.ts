@@ -9,6 +9,8 @@ Every legislator, player or non-player politician (NPP), can vote on every bill 
 3. Party leaders can issue a whip on the bill. A hard whip rolls once for each NPP; a soft whip only adds pressure to the NPP's own decision.
 4. The chamber tallies For and Against. Abstentions are neutral. For must exceed Against for a simple-majority bill. There is no minimum turnout: a bill can pass on one For vote if nobody votes Against.
 
+![Four clamped forces sum into For, Against or Abstain for an NPP bloc, and a successful hard whip roll writes the vote directly.](/wiki-images/diagrams/voting-and-whips-four-forces.svg)
+
 ### Key numbers
 
 | Item | Value |

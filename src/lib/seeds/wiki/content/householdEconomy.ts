@@ -12,6 +12,8 @@ Each turn every state generates demand for a basket that includes food, energy, 
 
 Wealth changes the **mix** of the basket, not its size (Engel's law). Richer states spend a smaller share on staples and a larger share on vehicles, electronics, housing, finance and software.
 
+![Population sets the household budget, three state signals adjust it, then wealth changes the basket mix, elasticity and a supply cap lead to commodity demand.](/wiki-images/diagrams/household-economy-demand-flow.svg)
+
 ### Key numbers
 
 | Rule | Value |

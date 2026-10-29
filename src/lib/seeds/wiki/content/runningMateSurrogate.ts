@@ -30,6 +30,8 @@ Once the running mate is in a state, they can canvass there for the ticket, exac
 
 The VP's own action cost for travel depends on the state's electoral votes: 3 actions for 5 or fewer, 5 for up to 10, 7 for up to 20, 10 above that.
 
+![A shared daily pool of two surrogate actions pays for state visits and canvasses, each with extra costs, and refills at midnight Eastern.](/wiki-images/diagrams/running-mate-surrogate-pool.svg)
+
 ### Worked example
 
 On a given day the running mate has 2 pool actions and enough personal actions. They travel to a state with 16 electoral votes (7 of their own actions, 1 from the pool) and then canvass one group there (1 own action, 1 from the pool, ₳100). The pool is now empty and stays empty until midnight Eastern. The ticket is gaining 1.0% favorability a turn in that state and the canvassed group's turnout is up. The nominee is free to spend the day in a different state.

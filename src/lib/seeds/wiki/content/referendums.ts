@@ -13,6 +13,8 @@ Scotland and Wales can leave the United Kingdom, and Northern Ireland can leave 
 
 Minimum time from a granted request to a transfer is therefore 48 turns of campaign plus the consent bills, up to a further 24 turns. At 48 turns per game year that is between 1 and 1.5 years after the Prime Minister says yes. Government formation and Royal Assent can add to it.
 
+![Flow of a referendum from rising desire and a request through the Prime Minister's decision, campaign and vote to a consent window and transfer, with decline and fail branches.](/wiki-images/diagrams/referendums-request-flow.svg)
+
 ### Key numbers
 
 | Item | Value |

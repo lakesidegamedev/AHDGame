@@ -9,6 +9,8 @@ A Vote of No Confidence (VONC) is the parliamentary way to remove a sitting Prim
 3. **NPP benches vote by party line** unless whipped: government and coalition NPPs vote Nay, opposition NPPs vote Aye, NPPs with no party do not vote. A party whip overrides the default. This runs during the vote and again before resolution.
 4. **Resolution.** If Aye reaches the threshold the executive is removed. Otherwise the government stays.
 
+![Timeline of a no-confidence motion: a 24 hour vote, then either removal with a 96 turn clock or the PM staying with a 48 turn filing cooldown.](/wiki-images/diagrams/no-confidence-votes-timeline.svg)
+
 ### Key numbers
 
 | Item | Value |

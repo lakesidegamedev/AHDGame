@@ -62,6 +62,8 @@ Tips: fund holders are paid dividends in cash, so a fund suits you if you want i
 
 A fund has no opinion of its own, so a rule decides where its votes go.
 
+![Decision tree for how a fund votes: a holder with at least half the units directs it, otherwise it follows the majority cast by others, otherwise it abstains.](/wiki-images/diagrams/index-funds-fund-vote-rule.svg)
+
 - **Directed.** A unit holder with at least half the fund's units controls it. The fund votes the way that holder instructs on each shareholder vote. You give the instruction on the vote itself and can change or withdraw it while the vote is open. Buying units is therefore a route to corporate influence, not only exposure.
 - **Undirected.** With nobody in control, the fund votes with the majority actually cast by everyone else. A passive fund follows the owners rather than overruling them.
 - **Abstaining.** With no controller and no majority to follow, including a tie, the fund sits the vote out and its shares are removed from the count. Without this, a company dominated by funds could end up unable to decide anything.
@@ -77,6 +79,8 @@ Being in an index means a large, automatic buyer starts absorbing your shares, s
 | Free float | At least 15% of shares in public hands |
 | Size | At least 5% of the median market value of the index's other candidates |
 | Solvency | Not insolvent |
+
+![Lifecycle of an index constituent: listed after clearing float, size and solvency, dropped after three misses in a row, or kept by a petition waiver from the index committee.](/wiki-images/diagrams/index-funds-listing-lifecycle.svg)
 
 **Size is relative.** A fixed money amount would mean nothing in a modern world and would be impossible in 1953, when the whole economy is smaller. Measuring against the median candidate means the same thing in every era: not a rounding error next to your peers. It is measured against the corporations competing for that index, so a small country's fund judges you against that country's market.
 

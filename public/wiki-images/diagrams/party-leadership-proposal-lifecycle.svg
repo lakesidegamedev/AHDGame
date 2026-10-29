@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="390" viewBox="0 0 760 390" role="img" font-family="system-ui, sans-serif">
+<title>How a party proposal is decided</title>
+<desc>A proposal stays open up to 24 turns; it passes when yes votes reach 60 percent of filled voting seats, is rejected early when yes can no longer get there, and fails at expiry if it has not passed. Merges need both committees.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#71717a"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/></marker></defs>
+<rect x="0.5" y="0.5" width="759" height="389" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<g fill="#18181b">
+<rect x="24" y="110" width="120" height="60" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="84.0" y="136.1" font-size="13" text-anchor="middle" font-weight="700">Proposal</text>
+<text x="84.0" y="153.1" font-size="13" text-anchor="middle">submitted</text>
+<rect x="184" y="96" width="200" height="88" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="284.0" y="120.2" font-size="12" text-anchor="middle" font-weight="700">Voting open</text>
+<text x="284.0" y="136.2" font-size="12" text-anchor="middle">up to 24 turns</text>
+<text x="284.0" y="152.2" font-size="12" text-anchor="middle">Voters: committee members,</text>
+<text x="284.0" y="168.2" font-size="12" text-anchor="middle">chair, vice chair, treasurer</text>
+<polyline points="144,140 184,140" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="444" y="30" width="292" height="64" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="590.0" y="50.2" font-size="12" text-anchor="middle" font-weight="700">Passes at once</text>
+<text x="590.0" y="66.2" font-size="12" text-anchor="middle">yes votes reach 60% of filled</text>
+<text x="590.0" y="82.2" font-size="12" text-anchor="middle">voting seats (rounded up)</text>
+<rect x="444" y="118" width="292" height="64" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="590.0" y="138.2" font-size="12" text-anchor="middle" font-weight="700">Rejected early</text>
+<text x="590.0" y="154.2" font-size="12" text-anchor="middle">enough no votes that yes can no</text>
+<text x="590.0" y="170.2" font-size="12" text-anchor="middle">longer reach 60%</text>
+<rect x="444" y="206" width="292" height="64" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="590.0" y="226.2" font-size="12" text-anchor="middle" font-weight="700">Fails at the end</text>
+<text x="590.0" y="242.2" font-size="12" text-anchor="middle">if the 24 turns run out, voters who did</text>
+<text x="590.0" y="258.2" font-size="12" text-anchor="middle">not vote count as no</text>
+<polyline points="384,128 414,128 414,62 444,62" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<polyline points="384,150 444,150" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<polyline points="384,152 414,152 414,238 444,238" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<rect x="184" y="260" width="200" height="88" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-dasharray="4 3"/>
+<text x="284.0" y="284.2" font-size="12" text-anchor="middle" font-weight="700">Merge proposals</text>
+<text x="284.0" y="300.2" font-size="12" text-anchor="middle">Need a yes from both</text>
+<text x="284.0" y="316.2" font-size="12" text-anchor="middle">committees, each under</text>
+<text x="284.0" y="332.2" font-size="12" text-anchor="middle">the 60% rule</text>
+<polyline points="284,184 284,260" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<text x="292" y="226" font-size="12" text-anchor="start" fill="#52525b">merge</text>
+</g>
+</svg>

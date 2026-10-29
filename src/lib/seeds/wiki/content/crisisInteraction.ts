@@ -10,6 +10,8 @@ A crisis is a shock to a country or region: a wildfire, a bank failure, a strike
 4. A funding step asks for money from your treasury. The game checks the balance first. If you are short, the option is blocked and shows how much is required against how much you have.
 5. When the window closes, any unanswered question resolves on its default. Decisions already made stay made.
 
+![Flow from a crisis starting to its decision cards, where an option leads to another node, a funding step with a treasury check, or the end, and an unanswered window resolves on its default.](/wiki-images/diagrams/crisis-interaction-decision-flow.svg)
+
 ### Key numbers
 
 | Item | Value |

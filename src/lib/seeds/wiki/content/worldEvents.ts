@@ -6,6 +6,8 @@ World events are scheduled, country-level happenings: a state visit, an oil shoc
 
 Each turn the scheduler goes through every active country.
 
+![Per-turn scheduler checking each country for a pending offer, then picking the first due event, offering at most one to the head of government, and reporting the outcome in the news.](/wiki-images/diagrams/world-events-scheduler-flow.svg)
+
 1. If the country already has a pending world event, it is skipped.
 2. It looks for the first scheduled event that is due, allowed for that country, inside its year window and inside its tension window.
 3. At most **one** new world event is offered per country per turn.

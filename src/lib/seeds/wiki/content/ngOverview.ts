@@ -76,6 +76,8 @@ Each of the six zones runs one election for its House seats and one for its Sena
 
 The President is elected by **nationwide popular vote with a spread requirement**. To win outright, the candidate with the most national votes must also win **at least 25% of the vote in at least 4 of the 6 zones**. If nobody meets both tests, the top two candidates go to a run-off.
 
+![Decision tree for Nigerian presidential elections: the national vote leader wins outright with 25% in at least 4 of 6 zones, otherwise the top two go to a run-off.](/wiki-images/diagrams/ng-overview-spread-rule.svg)
+
 **Worked example.** A candidate leads nationally with 38%. Their share is 41%, 33% and 27% in three zones and below 25% in the other three. They cleared 3 zones, not 4, so there is a run-off against the runner-up. A different candidate with 31% nationally who clears 25% in 4 zones would win outright, because the spread test counts zones, not a majority.
 
 A 2-term limit per character applies. A character who has served two full terms cannot run again. A second-term run locks the VP running mate: the incumbent VP cannot be swapped.

@@ -33,6 +33,8 @@ A sector's input pillar uses the average quality of the commodities it consumes,
 
 Note this is a market-wide average per commodity, not the quality of one supplier. A [supply agreement](/wiki/supply-agreements) with a good supplier does not by itself raise your input quality, although the supplier's output counts toward the commodity average.
 
+![Raw extraction has no quality score; manufacturers and consumer goods sectors take the average commodity quality into their inputs pillar.](/wiki-images/diagrams/output-quality-supply-chain.svg)
+
 ### Raw extraction has no quality
 
 Mines and wells produce ore and crude that are interchangeable, so extraction-only sectors carry no quality score and are left out of the corporation average. Their edge is reliable delivery, which is what [brand loyalty](/wiki/brand-loyalty) measures.

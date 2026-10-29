@@ -6,6 +6,8 @@ A **private bank** is a financial corporation's licensed banking arm. It takes d
 
 A corporation that owns a financial sector can charter one bank. The bank attracts household deposits by offering a better rate than the central bank's savings rate, lends part of those deposits to named borrowers and a bulk NPC loan book, and must keep a share of deposits in reserve. A run on the bank, a capital shortfall or too many bad loans can end it. Insurance and the central bank stand behind depositors.
 
+![A bank balance sheet with reserves, loans, deposits and capital, the run line, and the discount window, insurance fund and Treasury behind it.](/wiki-images/diagrams/private-banking-balance-sheet.svg)
+
 ### Key numbers
 
 | Rule | Value |

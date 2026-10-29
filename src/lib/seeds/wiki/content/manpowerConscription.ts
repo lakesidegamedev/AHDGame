@@ -6,6 +6,8 @@ Every nation holds a single pool of available men. Raising a unit draws its full
 
 Manage this from the defence seat's office → **Military** tab → **Operations**.
 
+![Chain from reserve law level to stance, ceiling and regeneration and the manpower pool, which hard blocks recruiting and feeds replacement mode and its experience dilution.](/wiki-images/diagrams/manpower-conscription-chain.svg)
+
 ## Key numbers
 
 | What | Value |

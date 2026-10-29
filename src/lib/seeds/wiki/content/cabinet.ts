@@ -9,6 +9,8 @@ The Cabinet is the council of principal officers who lead the executive departme
 3. **Taking office.** A confirmed nominee is installed as the Cabinet member and the seat shows as filled.
 4. **Direct appointment.** The White House Chief of Staff is the exception: the President appoints them alone, with no Senate vote, and can fire them at any time.
 
+![A vacant cabinet seat is filled by nomination and a 24 hour Senate vote, by an acting secretary, or by direct appointment.](/wiki-images/diagrams/cabinet-seat-lifecycle.svg)
+
 ### Key numbers
 
 | Item | Value |

@@ -12,6 +12,8 @@ private corp ──(nationalize: absorb)──▶  National Corporation  ──(
 
 A taking has four parts: a **trigger** that makes the target eligible, an **authority** that orders it, a **compensation tier** that sets the payout, and **consequences** for confidence and politics.
 
+![Lifecycle of a nationalization: trigger, executive or legislative authority, compensation tier, absorption into the National Corporation and a privatization lockout, with investor confidence falling on each taking.](/wiki-images/diagrams/nationalization-lifecycle.svg)
+
 ### Who can be taken, and how
 
 Unowned and computer-run (NPC) assets can be taken at any time. A **player-owned** corporation is protected. It can only be taken by one of two routes.

@@ -6,6 +6,8 @@ Recruiting units and paying for equipment are two different systems. This page i
 
 The defence seat publishes a tender for equipment. Eligible domestic corporations bid inside a price band. After bidding closes the government picks a winner and the order starts. The winning plant builds lots of materiel and delivers them to the national arsenal a few at a time, paid from the defence appropriation. New units then draw their equipment from the arsenal, and the grade of that equipment sets the starting tech tier of the unit. The rest of this page is the guardrails.
 
+![Tender lifecycle from publishing and sealed bids to award, production lines and deliveries, then completion or termination for cause or for convenience.](/wiki-images/diagrams/defence-procurement-tender-lifecycle.svg)
+
 ### Key numbers
 
 | What | Value |

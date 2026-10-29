@@ -34,6 +34,8 @@ After the third failure in a row the country goes into crisis. The clocks then r
 
 Why a forced outcome? A crisis cannot be left open: bondholders, banks and companies all need to know where the losses land.
 
+![Timeline from the yearly auction through three failed auctions, the executive window and chamber votes to the resolution, then the lockout, scar and recovery periods.](/wiki-images/diagrams/sovereign-default-crisis-timeline.svg)
+
 ## The four resolutions
 
 | Resolution | Bonds | Leader pays | Market lockout |

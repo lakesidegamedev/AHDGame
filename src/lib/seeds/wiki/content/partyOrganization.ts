@@ -32,6 +32,8 @@ If the treasury cannot cover the full price but covers at least **a quarter** of
 
 State chair, state vice chair, state campaigner, national chair, national vice chair and national campaigners can click Build Org. Treasurers cannot. The party must also have **presence** in the state: at least one member, elected official or active NPP homed there. No presence, no click, even for a national officer.
 
+![Flow of one Build Org click through the presence check, who may click and whether the treasury covers a quarter of the price, then paying PS and money from one tier, adding one unit and recomputing shares.](/wiki-images/diagrams/party-organization-build-org-click.svg)
+
 ### Decay
 
 A party that has not built in a state for **96 turns** starts losing units: **1% of its units per turn**, about 21% a day. Units halve in roughly 69 turns once decay starts. Any successful click resets the 96 turn clock for that state. The Unaffiliated stake never decays.

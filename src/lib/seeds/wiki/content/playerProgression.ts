@@ -76,6 +76,8 @@ legislature
 
 A typical US climb is State Senate, House, Senate, Governor, President. In parliamentary countries you win a seat, then party leadership, then PM or Chancellor after the chamber result and a confidence vote. Executive offices can have term limits: see [Executive Term Limits](/wiki/executive-term-limits).
 
+![The typical US office ladder with the action and fund bonus at each rung, and the parliamentary route to Prime Minister or Chancellor.](/wiki-images/diagrams/player-progression-office-ladder.svg)
+
 **How to become President.** There is no minimum NPI, but presidential races reward it directly, so build it before you file. NPI settles at 100 times your per-turn gain. As a House member with PI 40, your gain is 0.3 from PI plus 1.0 for the seat, so NPI heads toward 130. Starting from 0 it reaches 100 in about 146 turns, roughly 6 real days. At 100, your general-election reach from NPI is maxed. Keeping it takes ongoing position: NPI decays 1% per turn.
 
 \`\`\`wiki-chart

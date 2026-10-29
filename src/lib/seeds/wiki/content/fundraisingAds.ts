@@ -39,6 +39,8 @@ Every turn your Campaign Funds grow by three things:
 
 UK, German and Japanese offices pay an equivalent tier, with prime ministers and the chancellor at the top tier.
 
+![Base, donor and office income flow into Campaign Funds, which are spent on ads, polls, canvassing, presence and party tax, with Cash on Hand converting at 50 percent.](/wiki-images/diagrams/fundraising-ads-money-flow.svg)
+
 ### Key numbers
 
 | Item | Value |

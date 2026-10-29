@@ -13,6 +13,8 @@ Every election has two phases.
 
 When the general resolves, winners take office and the next cycle spawns. For a guided tour of the screens, read the [Elections player guide](/wiki/elections-player-guide).
 
+![Election lifecycle from spawn through declaration, primary, general and resolution to the next cycle spawning.](/wiki-images/diagrams/election-mechanics-lifecycle.svg)
+
 ### Key numbers
 
 | Item | Value |

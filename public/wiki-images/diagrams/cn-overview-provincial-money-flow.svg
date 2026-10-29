@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="380" viewBox="0 0 800 380" role="img" font-family="system-ui, sans-serif">
+<title>Chinese provincial money flow</title>
+<desc>Regional GDP becomes corporate profit and enterprise income tax, of which 40% stays local; a central transfer per head also reaches the provincial budget.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#52525b"/></marker></defs>
+<rect x="0.5" y="0.5" width="799" height="379" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<rect x="20" y="40" width="130" height="56" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="85.0" y="71.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Regional GDP</text>
+<rect x="230" y="40" width="130" height="56" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="295.0" y="63.0" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Corporate</text>
+<text x="295.0" y="80.0" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">profit</text>
+<rect x="440" y="40" width="130" height="56" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="505.0" y="55.0" font-size="12" text-anchor="middle" fill="#18181b">Enterprise</text>
+<text x="505.0" y="71.0" font-size="12" text-anchor="middle" fill="#18181b">income tax</text>
+<text x="505.0" y="87.0" font-size="12" text-anchor="middle" fill="#18181b">collected</text>
+<rect x="650" y="40" width="130" height="56" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="715.0" y="63.0" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Share kept</text>
+<text x="715.0" y="80.0" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">locally</text>
+<path d="M150 68 L230 68" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="190" y="60" font-size="12" text-anchor="middle" fill="#52525b">times 0.06</text>
+<path d="M360 68 L440 68" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="400" y="60" font-size="11" text-anchor="middle" fill="#52525b">times</text>
+<text x="400" y="74" font-size="11" text-anchor="middle" fill="#52525b">tax rate</text>
+<path d="M570 68 L650 68" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="610" y="60" font-size="11" text-anchor="middle" fill="#52525b">40% stays</text>
+<rect x="230" y="180" width="130" height="56" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="295.0" y="203.0" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Provincial</text>
+<text x="295.0" y="220.0" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">population</text>
+<rect x="440" y="180" width="130" height="56" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="505.0" y="203.0" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Central</text>
+<text x="505.0" y="220.0" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">transfer</text>
+<path d="M360 208 L440 208" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="400" y="200" font-size="11" text-anchor="middle" fill="#52525b">times</text>
+<text x="400" y="214" font-size="11" text-anchor="middle" fill="#52525b">per head</text>
+<rect x="650" y="280" width="130" height="56" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="715.0" y="303.0" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Provincial</text>
+<text x="715.0" y="320.0" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">budget</text>
+<path d="M715 96 L715 280" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<path d="M505 236 L505 308 L650 308" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="20" y="368" font-size="12" text-anchor="start" fill="#52525b">The remainder of the enterprise income tax is not kept by the province.</text>
+</svg>

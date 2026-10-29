@@ -39,6 +39,8 @@ The cooldown stops a minister re-imposing the same embargo the moment it lapses.
 
 The strong corporate effect applies to a **total embargo**: all commodities, blocked, both directions. Under it, a corporation from the target country that operates in the embargoing country keeps running on domestic demand and loses only the share of its output that was sold abroad.
 
+![Steps a total embargo applies to a corporation sector: export exposure, scaled revenue and maintenance, a dropped export premium, and unchanged fixed overhead.](/wiki-images/diagrams/embargo-and-trade-exposure-total-embargo-effects.svg)
+
 1. Each sector has an **export exposure**: the share of its output that cleared abroad the previous turn, weighted by supply.
 2. Revenue is multiplied by 1 minus the exposure. A pure exporter collapses toward zero. A sector mostly serving local demand barely notices.
 3. Maintenance costs scale down with the lower revenue, so the domestic remainder runs at its normal margin.

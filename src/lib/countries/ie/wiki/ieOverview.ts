@@ -35,6 +35,8 @@ The Oireachtas consists of two chambers:
 
 The **coalition threshold is 81 seats** (a bare majority of the 160-seat Dáil: 160 / 2 + 1). A party or coalition holding 81+ seats can form a government and propose a Taoiseach through a confidence vote among all TDs.
 
+![Taoiseach formation from the Dail election through a majority nomination or a minority bid to a confidence vote among all TDs.](/wiki-images/diagrams/ie-overview-taoiseach-formation.svg)
+
 **Minority government**: any party or coalition chair holding at least **25 Dáil seats** (15.38% of the chamber, rounded up) can propose a Taoiseach and call a confidence vote, even without 81. The Dáil votes the bid up or down.
 
 **Worked example.** After an election Fine Gael holds 60 seats, Fianna Fáil 45, Labour 12 and the Greens 8. Fine Gael plus Labour plus the Greens is 80, one short of 81. Fine Gael plus Fianna Fáil is 105, which passes with 24 to spare. A Taoiseach is confirmed once 81 TDs vote yes, so every missing seat has to be found among independents or other parties.
