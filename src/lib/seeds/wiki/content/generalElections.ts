@@ -1,150 +1,154 @@
 export const generalElectionsContent = `# General Elections
 
-The general phase is the real contest. Primary nominees from every party compete for the seat (or seats). **Votes accumulate over the entire general window**, not in a single tally, and the final 4 turns are weighted heaviest. Sustained, well-timed campaigning wins.
+The general phase is the real contest. Primary nominees from every party compete for the seat or seats, and **votes accumulate over the whole general window**, not in a single tally. The final 4 turns are weighted heaviest, so sustained and well-timed campaigning wins. This page covers what happens between the end of the primary and the result.
 
-For the overall election structure see [Election Mechanics](/wiki/election-mechanics). For primary-phase rules see [Primaries](/wiki/primaries). This page focuses on what happens between the end of the primary and resolution.
+For the overall structure see [Election Mechanics](/wiki/election-mechanics), and for the primary phase see [Primaries](/wiki/primaries).
 
-## The vote pool
+## How it works
 
-Each election has a total vote pool derived from the state's **demographics**: the census is combined into voter segments, each with a size (share of total), a turnout rate, and policy leans on the economic and social axes. Only the **registered** share of the electorate casts general ballots, the pool is conserved across every turn of the count, and a race can never certify more ballots than it has voters.
+### The vote pool
 
-Per-turn allocation of the pool:
+Each election has a total vote pool built from the state's demographics: voter groups with a size, a turnout rate and positions on the economic and social axes (see [Demographics](/wiki/demographics)). Only the **registered** share of the electorate casts general ballots. The pool is conserved across every turn of the count, and a race can never certify more ballots than it has voters.
+
+The pool is released over the general window in three bands:
 
 | Turn phase | Share of pool | Per-turn weight |
 | --- | --- | --- |
 | Early turns | 50% | Spread evenly across the early band |
-| Ramp (8 turns before election day) | 20% | Spread evenly across the ramp band |
-| Election day (final 4 turns) | 30% | \`0.3 × pool / 4\` |
+| Ramp (8 turns before the final band) | 20% | Spread evenly across the ramp |
+| Election day (final 4 turns) | 30% | 0.3 x pool / 4 per turn |
 
-The final 4 turns are a sharp closing spike: they carry 30% of the pool on their own, well above their share of the turn count, and each one is heavier than any ramp or early turn.
+The window is 48 turns for a US House, Senate, Governor, State Senate or presidential general. That gives 36 early turns at 1.39% of the pool each, 8 ramp turns at 2.5% each and 4 final turns at 7.5% each. A final turn is worth 5.4 times an early turn.
 
-**Implication:** your stats at the moment of each turn's vote snapshot matter. A dip in Favorability or a stale Political Influence on the last day can cost you the race even if you dominated the first three-quarters.
+**What the spike is worth.** A 10-point swing in your share held only during the final 4 turns moves your final share by 3.0 points (30% of the pool). The same swing held during the early band moves it by 5.0 points. A late dip in favorability or a stale influence on the last day can cost you a race you dominated for three quarters of it.
 
-## The total appeal pipeline
+### How a turn's votes are built
 
-General elections run on the **swing-flow model** by default, not the flat group-level split used in primaries and polls. Swing-flow starts from the same per-group appeal pipeline below, then layers presidential/gubernatorial **coattails**, a **median-voter** policy-distance reference, **persuasion drivers** (candidate support, policy distance, money, incumbency), and, for presidential races, the **National Mood** economic channel that also carries party-tenure fatigue, see [Reference: Formulas](/wiki/reference-formulas) for the driver math. The base pipeline:
+The general uses the swing-flow model: the same per-group pipeline as [Election Mechanics](/wiki/election-mechanics) (reach, appeal, approval, party organization, infamy), plus registration resistance, a support mood factor and coattails. In presidential races it also adds the National Mood economic channel. The headline rules:
 
-Each turn, for each candidate, for each demographic group:
+- Only reach, not influence, feeds the vote. Influence enters the vote through reach.
+- Approval is (favorability / 100) to the power 0.8, so 0% favorability means 0 votes.
+- Party organization is your party's share of the state's total, to the power 0.2. It applies in the general only. Primaries use a neutral 1x.
+- Registration makes a party's own voters harder to peel away (1.0x to 1.3x), and short-term support moves your swing between 0.6x and 1.4x.
+- Player characters lose up to 5% of their weight at infamy 100.
+- NPPs (computer-run candidates) get an 0.8x weight in a general where at least one player is in the race.
+- UK regional elections also weight each party by the square root of its current registration share. A party at 25 registration gets 0.5x, and a party at 100 gets 1.0x. A party can grow from zero without being erased.
+- The whole turn pool is scaled by state government approval and office strength: Governor 1.0, President 1.0, House 0.9, State Senate 0.85, Senate 0.8.
 
-1. **Reach**: a sqrt curve on influence, capped at 1.0 once influence reaches 100. State races use Political Influence (already clamped to 100), presidential generals use National Political Influence (also saturates at 1.0, no celebrity bonus above 100).
-2. **Appeal**: a power-curve position score (exponent 1.5, how close the candidate's positions are to the group's), plus a small floor, plus a directional bonus for candidates seen as tribally "us," Influence stays out of appeal in every race and only feeds reach. Per-group calculation using the group's lean. Position alone maxes at ~25.5 and the direction bonus adds up to 10 (5 per axis).
-3. **Approval scalar**: \`(favorability / 100) ^ 0.8\`. 0% approval = 0 votes. The exponent softens the curve compared to a straight percentage, so mid-favorability candidates lose less than a linear scalar would suggest.
-4. **Party Org as normalized state share**: each party's organization score divided by the state's total organization. Range \`[0, 1]\`. A party with 60 Org in a state where the total is 100 gets a 0.6 multiplier on its weight; a party not present in the state gets 0 (no votes from that party's candidates).
-5. **Reg resistance**: \`1 + 0.3 × (Reg / 100)\`. Range \`1.0×-1.3×\`. Higher own-Reg makes the party harder to peel away through persuasion. Independents and parties without a registration entry get neutral 1.0×.
-6. **UK current-Reg baseline**: UK regional elections also multiply party weight by the square root of current Reg share. A party at 25 Reg receives \`0.5×\`; a party at 100 Reg receives \`1×\`. The minimum is the square root of 0.5%, so a party can grow from zero without being erased. The calculation uses live Reg for every party, including parties created after the world began. If an old UK region has no Reg data at all, this factor is neutral for the whole field. Other countries do not use this extra baseline.
-7. **Support mood**: \`0.6 + 0.8 × (support / 100)\`. Range \`0.6×-1.4×\` with neutral 1.0× at support=50. Captures short-term candidate mood / momentum (debate performance, scandals, endorsements). New candidates without a stored support value default to 1.0×.
-8. **Infamy scalar**: \`1 − 0.05 × (infamy/100)\`. Player characters lose up to 5% of their per-group weight at infamy=100. NPPs don't have infamy and aren't affected.
-9. **Party strength modifier**: applied to the full turn pool, scaled by state government approval and office strength (Gov 1.0, House 0.9, Senate 0.8, State Senate 0.85).
-10. **Group-level allocation**: each group contributes to the turn pool proportional to its size and turnout. Within each group, candidates split by their relative combined score across appeal, reach, approval, org share, both Reg factors where applicable, support mood, and the infamy scalar.
-11. **Votes summed** across groups. That's the candidate's turn vote total.
+### Key numbers
 
-The org-share, reg-resistance, and support-mood factors are general-election-only. Primary elections are intra-party, so Org is applied as a uniform neutral \`1×\` (every candidate of a single party shares the same Org, which would cancel out of the within-party split anyway).
+| Item | Value |
+| --- | --- |
+| General window | 48 turns |
+| Early / ramp / final share of pool | 50% / 20% / 30% |
+| Final band | last 4 turns, 7.5% of pool each |
+| Registration resistance | 1.0x to 1.3x |
+| Support mood | 0.6x to 1.4x |
+| Infamy penalty | up to 5% |
+| NPP weight in a player race | 0.8x |
+| FPTP spoiler | 4% of a third party's group votes (2% in presidential races) |
+| Canvassing in the last 4 turns | 2x |
+| Out-of-state action cost | 1.25x neighbour, 1.5x other |
+| Full Demographic Poll | 6 actions, ₳75,000 base |
+| Vice President | +2 actions per turn, +₳25,000 per turn |
 
-## FPTP spoiler effect
+### Third parties: spoilers and ranked choice
 
-In FPTP states (the default), third-party candidates bleed votes from their ideologically nearest major party:
+In first-past-the-post states (the default), a third-party candidate draws 4% of their group votes from the ideologically nearest major-party candidate, measured on the econ and social grid. Major parties are regional: Democrat and Republican in the US, Labour and Conservative in England, SNP and Labour in Scotland, CDU and SPD in Germany, LDP and CDP in Japan. A strong Green costs the Democrat votes and a strong Libertarian costs the Republican, so major-party candidates should treat viable third parties as a threat in close races. In presidential races the rate is 2% and adjusted for who has more organization in the state.
 
-- \`4% x third-party's group-level votes\` moves from the nearest major-party candidate to the third party.
-- "Nearest" = Manhattan distance on economic/social axes.
-- Major parties are region-scoped: Democrat/Republican in the US, Labour/Conservative in England, SNP/Labour in Scotland, CDU/SPD in Germany, LDP/CDP in Japan.
+If a state has passed legislation to switch to **ranked choice voting**, there is no spoiler adjustment. Third parties compete on level footing. That is the payoff for third-party legislative action.
 
-**Consequences:**
+### Multi-seat races
 
-- A strong Green candidate costs the Democrat votes; a strong Libertarian costs the Republican votes.
-- Third parties rarely win under FPTP: they spoil the nearest major party into losing.
-- Major-party candidates should treat viable third parties as existential threats in close races.
+US House, State Senate, UK Commons regions, Bundestag constituencies and Shugiin seats use proportional allocation by the largest remainder method. The minimum share to win a seat is 20% for the US House and 10% for State Senate and UK Commons regions, which have larger delegations. In a 2-seat House race the winner takes both unless the runner-up reaches the threshold. The seat estimate updates every turn.
 
-## RCV states
+If you run in a 4-seat region and your party projects to 42% of the vote, expect about 2 seats. A UK Commons party below 10% gets no seat unless no party clears the gate.
 
-If a state has passed legislation switching to **Ranked Choice Voting**, the FPTP spoiler adjustment doesn't apply. Third parties compete on level footing. This is the strategic payoff for third-party legislative action.
+### Resolution
 
-## Multi-seat races
+When the window closes: the final snapshot is captured, winners are declared (highest total in a single-seat race, largest remainder with the threshold in a multi-seat race), winners take office (their office bonuses start next turn), and a news post goes out. Losers' campaign records stay for history.
 
-US House, US State Senate, UK Commons regions, DE Bundestag constituencies, and JP Shūgiin use proportional allocation:
+Presidential races resolve by Electoral College. State totals convert to electoral votes (Maine and Nebraska split by congressional district). A majority of the college the election apportioned wins: 270 of 538 on the modern roster, 266 of 531 in the 1950s. With no majority, including an exact tie, the race goes to a [contingent election](/wiki/contingent-election) in the House and Senate. After resolution, every candidate's Campaign Presence falls to 25% of its level (see [Political Operations](/wiki/political-operations)).
 
-- **Largest-remainder method** converts vote shares to seat shares.
-- **Minimum threshold:** **10%** of pooled party votes for UK Commons, US State Senate, and Regional Council races, which run in larger districts where more parties split the vote; 20% for the US House.
-- **2-seat special case (House):** winner takes both unless the runner-up reaches the threshold.
-- **Seats estimate** updates each turn as votes accumulate.
+### Running mates (presidential)
 
-If you're running for a 4-seat region and your party projects to 42% of the vote, you expect about 2 seats. In a UK Commons region, a party below 10% receives no seats unless no party clears the gate.
+After the primary each presidential nominee selects a running mate. The pick must be a valid character, cannot be the current President, and cannot be the nominee. If the ticket wins, the Vice President takes office alongside the President and gets +2 actions per turn and a ₳25,000 per turn fund bonus. You can change your running mate any time before the election resolves, or clear it entirely. A player running mate can also campaign for the ticket as a surrogate. See [Running Mate Surrogate Campaigning](/wiki/running-mate-surrogate).
 
-## Candidate strategy by phase
+### Worked example
 
-### Opening (turns 1 to ~25% of general)
+In a two-way state general, your share of the votes cast is 52% through the 36 early turns and 50% through the 8 ramp turns, but an opponent's closing push holds you to 44% in the final 4 turns. Your final share is 0.5 x 52% + 0.2 x 50% + 0.3 x 44% = 26.0 + 10.0 + 13.2 = 49.2%. You led for 44 of 48 turns and still lost. The same race with the final band at 50% would have been 51.0%, a win. You need a strong closing week as well as a strong start.
 
-Establish a base:
+Why did I lose the general after winning the primary? The primary electorate is your party's registered voters, scored on alignment with them. The general electorate is everyone, scored on alignment with each voter group, and your opponents spent the primary building their own groups. See [Primary vs General Tactics](/wiki/primary-general-tactics).
 
-- Campaign **heavily in-state** to push Political Influence above 60 and hold it.
-- Ads to lift Favorability to 65-70. Above 70 diminishing returns bite.
-- Set up campaign upgrades (Ground Game, Media Spending, Opposition Research); see [Campaign Strategy](/wiki/campaign-strategy) and [Campaign Manager](/wiki/campaign-manager).
+## What you can do
 
-### Middle (middle 50%)
+**Opening (first quarter of the general):**
 
-Consolidate:
+- Campaign heavily in-state to push political influence above 60 and hold it.
+- Run ads to lift favorability to 65-70. Above 70 returns diminish quickly.
+- Set up campaign upgrades. See [Campaign Strategy](/wiki/campaign-strategy) and [Campaign Manager](/wiki/campaign-manager).
 
-- Maintain PI at 60+ through steady Campaign actions.
-- Sustain Favorability via periodic ads.
-- Commission a Full Demographic Poll (₳75k, 6 actions) to identify weak groups.
-- Target weak groups with ads and canvassing.
-- Watch opponent damage: if your Favorability drops 5+ points in a span, they're running Opposition Research or attacking. Counter with more ads or your own attacks.
+**Middle:**
 
-### Final sprint (last 4 turns)
+- Hold influence above 60 with steady Campaign actions.
+- Run periodic ads. Commission a Full Demographic Poll and target the weakest groups with ads and [canvassing](/wiki/canvassing). See [Polling](/wiki/polling).
+- Watch for opponent damage: if your favorability drops 5 or more points in a short span, they are running research or attacking.
 
-Peak everything:
+**Final sprint (last 4 turns):**
 
-- **Last-minute Campaign actions** to peak Political Influence on the final snapshot.
-- **Last-minute ads** to peak Favorability immediately before each weighted turn.
-- **Canvassing becomes 2× effective** in the final 4 turns (campaign season multiplier applies to the demographic-turnout canvassing action).
-- **Media Spending and Opposition Research upgrade effects double** in the final 4 turns (passive campaign bonuses).
-- **Log in hourly** if the race is close. A 2% Favorability dip at turn 45 of a 48-turn general window can cost you the seat.
+- Burst Campaign actions so influence peaks on the final snapshots, and burst ads for favorability.
+- Canvass aligned groups. Canvassing is worth double in the last 4 turns.
+- Log in hourly if it is close. A 2% favorability dip at turn 45 of 48 can cost the seat.
 
-## What not to do
+**Do not:**
 
-- **Don't burn money on ads at Favorability 80+.** Returns are severely diminished.
-- **Don't sit on PI and hope decay is slow.** It's not. You'll lose about 14% over 20 turns (more if your party holds the national executive), about the length of a closing sprint.
-- **Don't attack everyone.** Infamy accumulates, your own Favorability drains, and attacks cost 2 Infamy each **even on success**. Attack sparingly against high-Favorability opponents only.
-- **Don't forget out-of-state costs.** If you're running in State A and also campaigning to help an ally in State B, State B costs 1.25× (neighbour) or 1.5× (non-neighbour) actions-per-effect.
-- **Don't withdraw to "save resources" unless you're pivoting.** Withdrawn candidacies cannot be re-entered; your PI and Favorability carry into the next cycle either way.
+- Burn money on ads above favorability 80. The gain per ad is only +1.
+- Sit on influence and hope decay is slow. At 0.75% per turn you lose about 14% over 20 turns, more if your party holds the national executive.
+- Attack everyone. Attacks cost infamy and drain your own favorability.
+- Forget out-of-state costs: helping an ally in another state costs 1.25x (neighbour) or 1.5x (other).
+- Withdraw to save resources unless you are pivoting. Withdrawn candidacies cannot be re-entered.
 
-## Resolution
+## Connections
 
-When the general window closes:
+**Driven by**
 
-1. The final-turn vote snapshot is captured.
-2. Winners are declared.
-3. Single-seat races: highest vote total wins.
-4. Multi-seat races: largest-remainder allocation with the race-specific threshold applied, including 10% for UK Commons and 20% for US House.
-5. Winners take office. Office action and fund bonuses kick in next turn.
-6. Losers' campaign documents persist for historical records but the candidacy is marked resolved.
-7. News post fires with results.
+- [Primaries](/wiki/primaries): the winner of each party's primary becomes the nominee.
+- [Nominating Convention](/wiki/nominating-convention): the convention names the presidential nominee.
+- [Election Mechanics](/wiki/election-mechanics): defines the vote model each turn uses.
+- [Demographics](/wiki/demographics): the voter groups and turnout set the pool.
+- [Political Operations](/wiki/political-operations): Campaign Presence raises a presidential candidate's vote weight.
+- [Campaign Manager](/wiki/campaign-manager): upgrades and field offices add votes and turnout.
+- [Campaign Strategy](/wiki/campaign-strategy): your phase plan decides when you spend.
+- [Canvassing](/wiki/canvassing): turnout changes how many ballots each group casts.
+- [US House Redistricting](/wiki/us-house-redistricting): district maps decide which House seats are close.
+- [Running Mate Surrogate Campaigning](/wiki/running-mate-surrogate): a surrogate's visits and canvassing add favorability and turnout.
+- [Government Approval](/wiki/government-approval): Approval scales the vote pool in every race.
+- [One-Party States](/wiki/one-party-states): Vote multipliers by party tier weight each party's result.
+- [Snap Elections](/wiki/snap-elections): A snap replaces the regular election and runs on the same vote math.
+- [executive-term-limits](/wiki/executive-term-limits): A capped character cannot file for the office or appear on the ballot.
+- [party-organization](/wiki/party-organization): Party Organization: a party's Org share in the state is part of its candidates' vote weight.
+- [party-ideology](/wiki/party-ideology): Party Ideology: voter groups reward candidates whose positions are close to their centre.
+- [npp-elections](/wiki/npp-elections): NPP Elections: NPP candidates carry 80% vote weight when a player is in the general election.
 
-For presidential races, Electoral College resolution runs instead:
+**Affects**
 
-- Per-state vote totals sum to Electoral Votes per state (ME and NE split by congressional district).
-- A majority of the college the election apportioned wins outright (270 of 538 on the modern roster, 266 of 531 in the 1950s).
-- No majority, including an exact tie: the race goes to a [contingent election](/wiki/contingent-election) in the House and Senate.
+- [Political Operations](/wiki/political-operations): resolving a presidential general cuts every stored presence level to 25%.
+- [Running Mate Surrogate Campaigning](/wiki/running-mate-surrogate): the running mate is chosen and acts only in the general.
+- [Vote Factor Ledger](/wiki/vote-factor-ledger): the ledger explains each candidate's general vote total.
+- [Contingent Election](/wiki/contingent-election): with no electoral majority the House and Senate decide.
+- [Congress Leadership](/wiki/congress-leadership): A resolved House or Senate election opens a new set of leadership ballots.
+- [chamber-leadership](/wiki/chamber-leadership): A resolved general election finalises the seats and opens the presiding-officer ballot.
+- [Cabinet](/wiki/cabinet): A new President or a change of party ends or resets cabinet terms.
+- [live-election-results](/wiki/live-election-results): The general phase length and final-turns vote weighting set what election night reveals.
+- [executive-term-limits](/wiki/executive-term-limits): Winning a presidential election adds a term to your count.
 
-## Running mates (presidential)
+## Status
 
-After the primary, each presidential nominee selects a running mate (VP):
+Live in every world and country with elections. Windows and thresholds above are for the US. The UK, Germany and Japan use their own cycle lengths and seat rules; see the country hubs. The Electoral College applies to the US presidency only.
 
-- Must be a valid character; cannot be the current President, cannot be the nominee themselves.
-- If confirmed, the VP takes office alongside the President on win.
-- **VP has +2 actions/turn and ₳25k/turn fund bonus.**
+Last checked: 2026-10-29, version 1.18.0
 
-You can change your running mate any time before the election resolves, and clear it entirely if you want to run without one.
+## Technical detail
 
-Beyond the standing bonus, the running mate's own player can campaign for the ticket as a surrogate: state visits that add favorability and canvassing that drives turnout, from a shared 2-per-day pool. See [Running Mate Surrogate Campaigning](/wiki/running-mate-surrogate).
-
-## Related
-
-- [Election Mechanics](/wiki/election-mechanics): Overall framework.
-- [Primaries](/wiki/primaries): What got you here.
-- [Campaign Strategy](/wiki/campaign-strategy): Upgrades, fundraising, fog of war.
-- [Primary vs General Tactics](/wiki/primary-general-tactics): Pivoting from primary playbook to general.
-- [Canvassing](/wiki/canvassing): Turnout boosting per demographic.
-- [Fundraising & Ads](/wiki/fundraising-ads): Money flow during a general.
-- [Demographics & Targeting](/wiki/demographics-targeting): Group composition and appeal.
-- [Reference: Formulas](/wiki/reference-formulas): Full math with derivations.
+Every constant and formula is on the [Elections design page](https://docs.lakesidegames.net/design/elections.html). See also [Reference: Formulas](/wiki/reference-formulas) and [Fundraising and Ads](/wiki/fundraising-ads).
 `;

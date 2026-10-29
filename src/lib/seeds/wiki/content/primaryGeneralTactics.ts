@@ -23,7 +23,7 @@ Some things are **locked** the moment you enter a primary. Understand this befor
 
 - **Your policy positions** (econ and social on the −5 to +5 grid). They can only drift via bill voting while in office.
 - **Your home state.** Relocating during a candidacy auto-withdraws.
-- **Your party.** Switching mid-cycle auto-withdraws from the current race.
+- **Your party.** You run under the party you declared with. Declaring again under another party withdraws your old candidacy and carries your campaign across to the new one.
 - **Whether NPPs in your primary get the 50% penalty.** That's fixed by the rules.
 
 ## What you **can** pivot
@@ -82,7 +82,13 @@ The implication: **presidential primaries reward party influence and Favorabilit
 - A half-rate (2%) FPTP spoiler applies in the presidential model, scaled by party organization: third parties drain a small share of votes from their ideologically-nearest major.
 - Party-weighted positions (party + 3x candidate) / 4 mean your personal position matters more than your party (75% candidate, 25% party).
 - Party org counts as a normalized share of the state's total organization, raised to the 0.2 power. Returns diminish, so a dominant party's edge is softened but a party with no org still gets almost nothing.
-- State lean is much more important: the state lean times party position dynamic weights red-aligned candidates in red states and blue-aligned in blue.
+- State lean matters through the voter groups in each state: a red-leaning state has red-leaning groups, so a blue-aligned candidate starts behind there. Check the Full Poll before committing travel.
+
+## Worked example: a pivot
+
+A House candidate wins the primary on the base of one group. Group A (the base) is 20% of the state at 60% turnout, so it is worth 12.0 vote units. Group B (a swing group) is 25% at 55% turnout, worth 13.75 units. The Full Poll after the primary shows 58% of Group A and 41% of Group B, which projects (0.58 x 12.0 + 0.41 x 13.75) / 25.75 = 49%. The pivot spends 10 ads and canvasses on Group B and lifts it to 46%, so the projection becomes (0.58 x 12.0 + 0.46 x 13.75) / 25.75 = 51.6%.
+
+The numbers are illustrative, but the lesson is real: the swing group is larger than the base, so five points there is worth more than five points with the group you already own.
 
 ## Pivoting checklist (primary win to general)
 
@@ -115,7 +121,7 @@ The moment your primary resolves:
 
 - **Shifting ad messaging too early in the general.** Your party base is still voting; don't abandon them day 1.
 - **Attacking primary rivals after the fact.** They're out of the race; Infamy gain is wasted.
-- **Ignoring Opposition Research entirely.** A well-placed Level 2 Opposition Research in the general is worth 2-4 Favorability drain on the frontrunner over 4 weeks, often race-deciding.
+- **Ignoring Opposition Research entirely.** The starter node drains the frontrunner's favorability by 0.5% a turn and doubles in the last 4 turns, which adds up over a 48-turn general and is often race-deciding.
 - **Upgrading campaign tiers during general at 1.5x cost.** Upgrade during primary.
 - **Over-travelling in presidential.** Travel is +1% Favorability/turn, but each move costs 3 to 10 actions by state electoral votes. Don't travel constantly. Pick strategic states and stay.
 - **Not planning the closing sprint.** Reserve ~30% of your general-phase fund budget for the final 4 turns.
@@ -126,7 +132,10 @@ The moment your primary resolves:
 - [Primaries](/wiki/primaries): primary-phase rules.
 - [General Elections](/wiki/general-elections): general-phase rules.
 - [Campaign Strategy](/wiki/campaign-strategy): deep tactics with upgrade tables.
-- [Campaign Manager](/wiki/campaign-manager): /campaign/[id] page.
+- [Campaign Manager](/wiki/campaign-manager): the campaign page.
 - [Demographics & Targeting](/wiki/demographics-targeting): base vs swing groups.
 - [NPP Elections](/wiki/npp-elections): handling NPP competition.
+- [Primary vs General Tactics design page](https://docs.lakesidegames.net/design/primary-general-tactics.html): the exact rules behind this guide.
+
+Last checked: 2026-10-29, version 1.18.0
 `;

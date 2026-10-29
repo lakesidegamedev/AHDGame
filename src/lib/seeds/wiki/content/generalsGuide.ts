@@ -6,6 +6,29 @@ Every character has two profile tabs: **Political**, the career you already know
 
 This matters more than it sounds. **Generals are the only thing that makes your army better than the sum of its units.** An unled army fights; a well-trained general's army fights considerably harder.
 
+## How it works
+
+A general starts at Brigadier with 4 skill points. They earn experience (XP) from battles, rank up at fixed XP thresholds, and spend skill points on traits that make their units fight better. Their player decides which traits; the defence seat holder decides who is a general at all.
+
+### Key numbers
+
+| What | Value |
+| --- | --- |
+| Starting rank and points | Brigadier, 0 XP, 4 skill points |
+| Rank XP thresholds | 0, 100, 250, 460, 740 |
+| Battle XP bonus | 45 for a win, 20 for a loss, plus a share for each unit led |
+| Theater Commander XP | Half what a general leading one average formation would earn |
+| Points per promotion | 4, paid four times (16 total) |
+| Tenure points | 1 per 24 turns, lifetime cap 20 |
+| Post-Field-Marshal points | 1 per 200 XP past 740, lifetime cap 15 |
+| Maximum lifetime points | 55, against 115 trait nodes |
+| Cost of every trait node | 1 point |
+| Command fit | 50 + 8 per rank + 2 per trained trait, kept between 40 and 98 |
+
+### A career, with numbers
+
+A general commissioned on turn 0 holds 4 points. By turn 240 tenure has added 10 more. Their first win is 45 XP plus unit shares, perhaps 70 in all. Two such wins reach 140 XP, which crosses 100 and promotes them to Major General for 4 more points. By the time they pass 740 XP as a Field Marshal they have gained 16 points from promotions. Reaching 740 + 200 = 940 XP buys the first post-Field-Marshal point. Their lifetime ceiling is 4 + 16 + 20 + 15 = 55 points.
+
 ## Getting commissioned
 
 **You cannot commission yourself.** The **defence seat holder** appoints generals, from their office → **Commands** tab → *General Corps*. An acting secretary can commission and dismiss generals under the same rules as a confirmed holder.
@@ -120,29 +143,19 @@ This shapes long campaigns: banking points early lets you take newly unlocked ca
 
 ### Conflicts and doctrine boosts
 
-Some nodes are marked **"Conflicts with …"**: *Shock Commander* against *Methodical Commander*, for instance, since a general cannot credibly be both the maximum-aggression and the maximum-caution commander.
+Some nodes are marked "Conflicts with ...", for instance Shock Commander against Methodical Commander. This is advisory and not enforced. With 55 points against 115 nodes, training two traits that pull against each other is its own punishment.
 
-This is currently **advisory, not enforced**. Nothing stops you training both ends of a contradiction; the tree simply tells you that you are doing it. Treat it as roleplay and design guidance rather than a hard rule, and remember that with 55 points against 115 nodes, spending them on two traits that pull against each other is its own punishment.
-
-Some nodes are **boosted** by your nation's adopted doctrine. A trait whose matching national doctrine has been adopted is marked with a star in the tree, and the profile has a **Doctrine Fit** view listing which of your trained traits are currently amplified and which are not. Training with your nation's doctrine in mind is materially better than training against it.
+Some nodes are boosted by your nation's adopted doctrine. These are starred in the tree, and a **Doctrine Fit** view on your profile lists which trained traits are amplified. Boosted traits are strictly better than unboosted ones for the same point, so check what your defence secretary has adopted before you spend. See [National Doctrine](/wiki/national-doctrine).
 
 ## Specialisation is derived, never chosen
 
-You do not pick a class at commissioning. **Your discipline is a label for what you actually learned**, recomputed every time it is displayed:
+You do not pick a class. Your discipline is a label recomputed from the traits you have trained: **Armor Officer**, **Shock & Maneuver**, **Defensive Tactician**, **Logistician** or **Fleet Commander**. A general with no traits shows "No specialisation". Enough logistics nodes turn an Armor Officer into a Logistician.
 
-| Discipline | |
-| --- | --- |
-| **Armor Officer** | **Shock & Maneuver** |
-| **Defensive Tactician** | **Logistician** |
-| **Fleet Commander** | |
-
-A general who has trained nothing shows **"No specialisation"**, not a discipline they never earned. As they train, their label drifts: enough logistics nodes and an Armor Officer genuinely becomes a Logistician. Nothing is stored, so the label can never go stale.
-
-Alongside it, **command fit** (40 to 98) rates how suitable they are to lead a Command, derived from their rank plus how many nodes they have trained.
+**Command fit** rates how suited a general is to lead a Command. It is 50, plus 8 for each rank, plus 2 for each trained trait, kept between 40 and 98.
 
 ## Dismissal
 
-The defence seat holder can dismiss a general. When they do, the whole chain unwinds at once:
+The defence seat holder can dismiss a general. A change of defence secretary alone does not end anyone's commission. Only a dismissal, or the general moving to another country, does. When it happens the whole chain unwinds at once:
 
 - They leave **every Command roster** they were on.
 - Any Command they **led** loses its lead.
@@ -180,6 +193,38 @@ If you are a Commanding General, a **"Manage your command →"** link appears on
 **A Field Marshal is not finished.** The post-FM track pays 15 more points, but only through combat. A maxed general still has a reason to campaign.
 
 **Don't sever a general from their units carelessly.** Units follow generals. Un-posting a general pulls their entire force back to reserve: sometimes exactly what you want, sometimes an accidental retreat.
+
+## Connections
+
+**Driven by**
+
+- [National Doctrine](/wiki/national-doctrine): an adopted doctrine amplifies the matching trait nodes.
+- [Commands & Command Structure](/wiki/military-commands): Commands decide where a general is posted and who holds the lead.
+- [Fighting a Battle](/wiki/fighting-a-battle): battle wins and losses are the main source of XP.
+
+**Affects**
+
+- [Units, Recruitment & Procurement](/wiki/military-units): units are assigned to a general and follow them.
+- [Conflicts & the Military System](/wiki/conflicts-overview): generals carry units to fronts and lead them.
+- [Commands & Command Structure](/wiki/military-commands): command fit and rank decide who can lead a Command.
+- [Fighting a Battle](/wiki/fighting-a-battle): trained traits change how well a general's units fight.
+
+## Status
+
+Generals work in every world and era. The trait tree is gated by the live game year, so later-decade nodes show as Future until their decade arrives. A general needs a country with a defence seat, so Scotland and Wales have none.
+
+Last checked: 2026-10-29, version 1.18.0
+
+## Technical detail
+
+Rank thresholds, point sources and the tree structure are on the design page [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), under the military layer.
+
+## Common questions
+
+- *How do I become a general?* The defence seat holder commissions you. You cannot do it yourself.
+- *How do I assign units to a conflict?* Units go to a general, and a Commanding General posts that general. See [Commands & Command Structure](/wiki/military-commands).
+- *How do I earn skill points?* Commission, promotions, tenure and the post-Field-Marshal track, in the table above.
+- *What happens to my general if I move country?* The same unwinding as dismissal, and you keep your rank, XP and traits.
 
 ## Next
 

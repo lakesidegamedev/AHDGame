@@ -47,7 +47,7 @@ export const WIKI_GLOSSARY = {
   },
   FPTP: {
     definition:
-      "First Past the Post. Winner-take-all in single-seat races: the candidate with the most votes wins. Used in the US, Nigeria and Japan's regions; the UK and Japan allocate regional seats proportionally on top. Third parties can spoil races.",
+      "First Past the Post. Winner-take-all in single-seat races: the candidate with the most votes wins. Used for single-seat offices such as US Senate and governor races and Japan's regions; the UK and Japan allocate regional seats proportionally on top, and Nigeria shares House and Senate seats out zone by zone. Third parties can spoil races.",
     aliases: ["first past the post", "first-past-the-post"],
   },
   RCV: {

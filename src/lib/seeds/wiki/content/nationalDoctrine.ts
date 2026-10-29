@@ -6,6 +6,26 @@ Mechanically it is a national tech tree, adopted once and shared by everything: 
 
 Adopt doctrine from the defence seat's office → **Doctrine** tab.
 
+## How it works
+
+You hold a small budget of doctrine points and spend them on nodes in a tree of 128. Each node is permanent and its effects apply to your whole military. Nodes unlock by game decade, so the tree opens up as the calendar advances.
+
+### Key numbers
+
+| What | Value |
+| --- | --- |
+| Starting doctrine points | 12 (plus 12 doctrines already adopted free) |
+| Income | 1 point at the start of each game year (48 turns) |
+| Tree size | 128 nodes in 8 categories |
+| Node cost | 1 to 5 points: 20 nodes cost 1, 27 cost 2, 39 cost 3, 32 cost 4, 10 cost 5 |
+| Cost of the whole tree | 369 points |
+| Refund or respec | None |
+| Who adopts | The defence seat holder |
+
+### A worked 12-point build
+
+In a 1953 world the current era is Nuclear Age, so nodes up to the 1950s are open. A defence secretary who wants the nuclear programme spends 2 points on Strategic Bombing Campaigns (1940s) and 4 on Nuclear Delivery (1950s), which is 6 points before anything else. That is the entry gate for [The Nuclear Programme](/wiki/nuclear-programme). They add Armored Battle Groups (2 points) and three Defensive Warfare nodes: Trench Systems (1), Elastic Defense Theory (1) and Anti-Tank Networks (2). That is exactly 12 points. The chain mattered: Nuclear Delivery alone is 4 points, but the only way to reach it is to buy its 2-point predecessor first.
+
 ## The budget is brutally small
 
 Read this before anything else on the page.
@@ -22,13 +42,15 @@ So a nation still adopts only a small number of additional doctrines on top of w
 
 ## What you start with
 
-Every nation begins with twelve doctrines already adopted, free: the baseline every modern military shares:
+Every nation begins with twelve doctrines already adopted, free, on top of the 12 points. These are the baseline every modern military shares:
 
-- **Maneuver Warfare**, the full early chain
-- **Firepower Warfare**, the opening nodes
-- **Defensive Warfare** and **Infantry-Centric Warfare**, the foundations
-- **Joint Operations**
-- **Industrial Mobilization** and **Strategic Logistics**
+- **Maneuver Warfare**: General Staff Planning, Infiltration Tactics, Motorized Maneuver Theory, Armored Spearhead and Combined-Arms Warfare, the full early chain.
+- **Firepower Warfare**: Heavy Gun Batteries and Creeping Barrage.
+- **Defensive Warfare**: Field Fortifications.
+- **Infantry-Centric Warfare**: Mass Infantry Formations.
+- **Joint Command**: Joint Operations.
+- **Industrial Mobilization**: Mass Production.
+- **Strategic Logistics**: Global Supply Chains.
 
 You are not starting from nothing. You are starting from a competent conventional army and deciding what to specialise it in.
 
@@ -51,13 +73,9 @@ Node costs rise with sophistication: 20 nodes cost 1 point, 27 cost 2, 39 cost 3
 
 ## Era gating
 
-Every node carries a **decade**, from the 1900s to the 2040s, and 15 named eras run alongside them:
+Every node carries a decade, from the 1900s to the 2040s, and 15 named eras run alongside them, from Industrial War Foundations to Fully Integrated Multi-Domain. Your current era is the decade of the live game year. A 1953 world sits in the Nuclear Age, a 1979 world in Counterinsurgency & Missiles, a 1991 world in Post-Cold War Expeditionary, and a 2019 world in Drone, Cyber & Hybrid. Anything from a later decade shows as **Future** and cannot be adopted, however many points you hold.
 
-Industrial War Foundations · Great War · Interwar Experimentation · Mechanization & Rearmament · Total War · Nuclear Age & Jet Warfare · Counterinsurgency & Missiles · Precision & Professionalization · Air-Land Battle & Networks · Post-Cold War Expeditionary · Counterterror & Network-Centric · Drone, Cyber & Hybrid · Transparent Battlefield · Autonomous & AI · Fully Integrated Multi-Domain
-
-Your current era is derived from the **live game year**: the decade bucket you are actually in. A 1953 world sits in the Nuclear Age. Anything from a later decade shows as **Future** and cannot be adopted, however many points you hold.
-
-This means a long-running world genuinely progresses. Doctrines that were unreachable in 1953 open up as the calendar advances into the 1960s, 70s and beyond. **Banking points against a decade you know is coming is a legitimate strategy**: and one of the few ways to spend a scarce budget well.
+A long-running world progresses. Doctrines unreachable in 1953 open up as the calendar passes into the 1960s and beyond. **Banking points against a decade you know is coming is a legitimate strategy**, and one of the few ways to spend a scarce budget well.
 
 ## Prerequisites
 
@@ -115,19 +133,49 @@ Because doctrine is permanent and the budget tiny, **this is one of the most con
 
 The server re-validates every adoption independently: points, prerequisites, and era are all checked again server-side, so a crafted request cannot buy a doctrine you have not earned.
 
+## What you can do
+
+The defence seat holder opens the **Doctrine** tab of the defence office, picks a node that shows **Available**, and adopts it. The **Active Effects** panel shows everything in force.
+
 ## Practical guidance
 
-**Do not spend early just because you can.** There is no pressure to. Unspent points keep their value; badly spent ones never come back.
+**Do not spend early just because you can.** Unspent points keep their value; badly spent ones never come back.
 
-**Pick an identity, then buy toward it.** "We are a maritime power" or "we are a continental armoured force" should be decidable from your adopted list. A scattered set of twelve points produces a nation good at nothing.
+**Pick an identity, then buy toward it.** "We are a maritime power" or "we are a continental armoured force" should be decidable from your adopted list.
 
-**Count the whole chain first.** A capstone with three unowned predecessors is not a 4-point purchase; it is a 4-plus-everything-before-it purchase, which may be your entire budget.
+**Count the whole chain first.** A capstone with three unowned predecessors is not a 4-point purchase. It is a 4-plus-everything-before-it purchase.
 
-**Coordinate with the corps.** Tell your generals what the nation has adopted so they train into it. Boosted traits are free capability; unboosted ones are half-wasted points on both sides.
+**Coordinate with the corps.** Tell your generals what the nation has adopted so they train into it.
 
-**Watch the calendar in long games.** Decades unlock. If a doctrine you want opens in eleven game months, holding two points is often better than spending them now.
+**Watch the calendar in long games.** If a doctrine you want opens in eleven game months, holding two points is often better than spending them now.
 
-**Remember it is national and permanent.** A successor minister inherits your choices and cannot undo them. Doctrine outlives cabinets.
+**Doctrine outlives cabinets.** A successor inherits your choices and cannot undo them.
+
+**Common questions.** *How many doctrine points do I get?* 12 to start, then 1 per game year. *Can I undo a doctrine?* No. *Which should I take first?* The chain you need for your plan, counted in full. *Does doctrine affect my generals?* Yes, it boosts matching trait nodes.
+
+## Connections
+
+**Driven by**
+
+- [The Game Loop](/wiki/the-game-loop): the game calendar sets your era, unlocks nodes by decade and pays the yearly point.
+
+**Affects**
+
+- [Generals & the Officer Corps](/wiki/generals): adopted doctrine boosts matching trait nodes.
+- [Units, Recruitment & Procurement](/wiki/military-units): doctrine nodes adjust upkeep and readiness across your forces.
+- [Fighting a Battle](/wiki/fighting-a-battle): doctrine changes how well your forces fight, on every front.
+- [The Nuclear Programme](/wiki/nuclear-programme): the Nuclear Delivery node is the entry gate.
+- [Global Response Crises](/wiki/global-response-crises): the Nuclear Delivery doctrine unlocks the nuclear tree that feeds the tension floor
+
+## Status
+
+Doctrine works the same in every world and country that has a defence seat. What you can adopt depends on the game year, because nodes unlock by decade.
+
+Last checked: 2026-10-29, version 1.18.0
+
+## Technical detail
+
+The exact node data and rules are on the design page [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), under Doctrine.
 
 ## Next
 

@@ -1,151 +1,91 @@
 export const lineOfCreditContent = `# Line of Credit
 
-The Line of Credit (LOC) lets a player borrow against their credit score directly from the central bank. It is a revolving facility: draw when you need cash, repay when you can, and the interest accrues every turn on the outstanding balance. If you miss an automatic payment, the system garnishes your income at the source until the obligation is cleared.
+A line of credit lets you borrow cash straight from a central bank, based on your income, your wealth and your credit score. It is revolving: draw when you need cash, repay when you can. Interest builds up every turn and a small payment is taken automatically. If you cannot make that payment, the line freezes and your income is redirected to the loan until it catches up. Use it to bridge a short gap without selling assets at a bad price, and keep enough cash on hand to avoid the freeze.
 
-## Feature flag
+## How it works
 
-\`\`\`
-isLineOfCreditEnabled() → boolean
-\`\`
+Your **credit score** runs from 0 to 100 and sets your **spread**, the extra interest you pay over the prime rate. Your **limit** is the most you can owe at once.
 
-The flag **defaults to enabled**. Only an explicit \`false\` disables the facility: absence of the flag means it is on.
-
-## Credit composite (0 to 100)
-
-Borrowing power is governed by a composite credit score from 0 to 100. The score blends two sub-scores depending on whether a corporate snapshot is available:
-
-\`\`\`
-with corporation snapshot:
-  composite = 0.75 × corpScore + 0.25 × incomeScore
-
-without corporation snapshot:
-  composite = 0.50 × incomeScore + 0.50 × netWorthScore
-\`\`
-
-| Blend | Weighting |
+| What | Value |
 | --- | --- |
-| With corp snapshot | 75% corporate + 25% income |
-| Without corp snapshot | 50% income + 50% net worth |
+| Credit score | 0 to 100 |
+| Your spread | +5.0 points over prime at score 0, down to -1.0 at score 100 |
+| Central bank adjustment | +2.0 points on every line, phased in over 8 turns |
+| Interest-only mode | +2.0 points, and 24 turns before you can switch again |
+| Income cap on your limit | Your payment may be at most 70% of your average income per turn |
+| Equity cap on your limit | 1x your net worth |
+| Income measured over | The last 48 turns, after income tax |
+| Automatic payment | 0.40625% of what you owe, every turn |
+| Interest | Principal plus unpaid interest, times the annual rate, divided by 48, every turn |
+| Whole currency pool | The system lends at most 70% of that currency's savings deposits and bank reserves |
 
-### Income score
-
-Annualises per-turn income and maps it through a saturating exponential (a curve that grows fast at first then levels off) so that very high income asymptotically approaches 100:
-
-\`\`\`
-annualIncome   = perTurnIncome × 48   // turns per year
-incomeScore    = 100 × (1 − exp(−k_income × annualIncome))
-// saturates near 100 at ~2.5M annual income
-\`\`
-
-### Net worth score
-
-Same saturating shape, keyed to internal net-worth units:
+Your annual rate is the prime rate plus your spread plus the central bank adjustment. The spread comes from your score:
 
 \`\`\`
-netWorthScore = 100 × (1 − exp(−k_nw × netWorth))
-// saturates near 100 at ~4M internal units
-\`\`
-
-### Leverage penalty and prime-environment adjustment
-
-The blended base score above isn't the final composite. Two more adjustments apply in sequence before the spread is computed:
-
+spread = 5 - (score / 100) x 6
 \`\`\`
-afterLeverage = base − min(30, debtToAssetsRatio × 38)          // high existing LOC debt worsens your score
-final         = afterLeverage − rawStress × (1 − 0.65 × shield) // tighter policy worsens it further
-// rawStress = min(22, max(0, primeRate − 2.5) × 5)
-// shield    = netWorthScore / 100
-\`\`
 
-**Leverage penalty:** the more of your assets are already tied up in LOC debt, the worse your composite gets, capped at a 30-point hit.
+### What goes into the score
 
-**Prime-environment adjustment:** when the central bank's prime rate runs above a 2.5% baseline, borrowers take an additional stress penalty (capped at 22 points) that scales with how far above baseline the rate sits. Wealthier borrowers are partially shielded: a high net-worth score cushions up to 65% of that stress.
+- **Income score.** Your average income per turn, times 48, run through a curve that climbs quickly then levels off. Income of 2,500,000 a year scores about 63, and 7,500,000 about 95. Income here means recurring pay: CEO salary, dividends, bond coupons and interest, after income tax.
+- **Net worth score.** The same kind of curve on your wealth in ₳ (the game's internal reference currency, used to compare currencies). 4,000,000 scores about 63.
+- **Blend.** Without a company: half income, half net worth. If you are a CEO with a company credit rating: 75% company rating and 25% income.
+- **Leverage penalty.** The more of your assets are already borrowed, the lower your score, up to a 30 point hit.
+- **High-rate penalty.** When the prime rate is above 2.5%, you lose 5 points for each point above it, up to 22 points. Wealth cushions this: a net worth score of 100 shields you from 65% of it.
 
-## Spread (interest rate)
+### Paying and what a missed payment does
 
-The composite score maps to an interest-rate **spread** in percentage points versus the prime rate. A perfect 100 earns a 1pp discount; a zero score costs +5pp over prime.
+Each turn the interest is added to what you owe, then the automatic payment is taken: first from your cash in that currency, then from your savings, then from your other currencies converted at market rates. Campaign funds are never touched. A payment goes to unpaid interest first, then principal. The payment is 0.40625% of the total owed, equal to 1.625% a month, since a game month is 4 turns.
 
-\`\`\`
-creditSpread = 5 − (composite / 100) × 6
-effectiveRate = primeRate + creditSpread + centralBankPricingAdjustment
-// composite 0   → +5.0pp over prime
-// composite 50  → +2.0pp over prime
-// composite 100 → −1.0pp (below prime)
-\`\`
+If the payment cannot be covered in full, your line **freezes** and no new draws are allowed. While it is frozen, your CEO salary, dividends and bond coupons are redirected to the loan before they reach your wallet: unpaid interest first, then principal. That income is converted into the loan's currency if needed. The freeze lifts when a turn's payment is met in full, or when your income for the turn covers the scheduled payment. A single missed payment can drain your income for a long time if you do not fix the cash shortage.
 
-| Composite | Spread vs prime | Effective rate at prime 3% |
-| --- | --- | --- |
-| 0 | +5.0pp | 8.0% |
-| 25 | +3.5pp | 6.5% |
-| 50 | +2.0pp | 5.0% |
-| 75 | +0.5pp | 3.5% |
-| 100 | −1.0pp | 2.0% |
+**Interest-only mode** pays only the interest each turn and leaves what you owe unchanged. It costs 2.0 extra points, applies to one currency at a time, and locks for 24 turns after you switch.
 
-The central bank can apply a shared pricing adjustment to every LOC. The current phase-in increases that adjustment from 0 to 2.0 percentage points over 8 turns. It is added after the borrower's credit spread, so the interface shows both numbers separately. Interest-only mode adds its separate 2.0 percentage-point surcharge on top.
+**Worked example.** A player has no company, earns 1,000,000 a year, and has 2,000,000 of net worth. The prime rate is 3%.
 
-## Borrowing limits and payment mode
+1. Income score is 33 and net worth score is 39. Blend: 36.2.
+2. The high-rate penalty is 0.5 x 5 = 2.5 points, cushioned by wealth to 1.9. Score: 34.3.
+3. Spread is 5 - 0.343 x 6 = 2.94 points. Annual rate is 3 + 2.94 + 2.0 = 7.94%.
+4. Income cap: a payment of at most 70% of 20,833 a turn allows about 3.59 million of debt. Equity cap: 2 million. The lower one wins, so the limit is 2,000,000 (assuming 1 unit of your currency equals 1 ₳).
+5. You borrow 500,000. Each turn: interest 500,000 x 7.94% / 48 = 827.31. The automatic payment is 500,827.31 x 0.40625% = 2,034.61: 827.31 interest and 1,207.30 principal.
+6. One turn you only have 1,000 in cash and nothing else to draw on. 1,000 is paid (827.31 interest and 172.69 principal), you are 1,034.61 short, and the line freezes. Your next salary is redirected to the loan, up to what you owe.
 
-The credit limit is also constrained by affordability and wealth:
+## What you can do
 
-- Total debt service may use at most 70% of income under the DTI limit.
-- Outstanding LOC principal may not exceed 1x net worth.
-- Interest-only mode adds 2.0 percentage points to the rate.
-- Switching the interest-only setting starts a 24-turn cooldown before it can
-  be changed again.
+- **Open a line.** Central Bank page for the currency you want to borrow, then the Line of credit tab, then Open account. Each currency has its own line, and you can borrow another country's currency.
+- **Borrow.** Enter an amount under Borrow to wallet. The cash lands in your wallet and the loan is recorded as new money.
+- **Repay.** Enter any amount under Repay at any time, to clear debt early or to unfreeze.
+- **Switch to interest-only.** Use the payment mode picker. Mind the 24-turn lock.
+- **Read your limit.** The tab shows both caps and your limit is the lower one. With no income history yet, only the equity cap applies, and it grows as income builds up over 48 turns.
 
-## Funding sources
+Why is my rate higher than prime? You pay your spread and the central bank adjustment on top of it. Why was my income taken? Your line is frozen. How do I unfreeze it? Repay, or let a full payment go through, or earn enough in a turn to cover it.
 
-The central bank funds LOC draws from one of three configured sources:
+Tips: improve your score before you draw, since a higher score saves interest for the life of the loan. Keep cash for the automatic payment. Assets bought with borrowed money do not raise your limit, since the equity cap counts net worth after debt.
 
-| Source | Mix |
-| --- | --- |
-| \`deposits\` | 100% from bank deposits |
-| \`reserves\` | 100% from bank reserves |
-| \`both\` | 50% deposits + 50% reserves |
+## Connections
 
-The choice affects which balance sheet line is depleted when you draw, but from the player's perspective the rate and mechanics are identical.
+**Driven by**
 
-## Repayment and garnishment
+- [Central Banks](/wiki/central-banks): the prime rate is the base of your rate and the high-rate penalty.
+- [Savings & Interest](/wiki/savings-interest): the savings pool, plus bank reserves, caps the whole currency's lending.
+- [Corporations](/wiki/corporations): a CEO's company rating, salary and dividends feed the score and limit.
+- [Corporate Bonds](/wiki/corporate-bonds) and [Sovereign Bonds](/wiki/sovereign-bonds): coupon income counts toward the income you can borrow against.
+- [Private Banking](/wiki/private-banking): Private loans sit beside central bank credit lines for characters.
 
-Each turn the system attempts an **automatic payment** covering interest plus a principal amortization slice. If the payment succeeds, the balance shrinks normally.
+**Affects**
 
-If the automatic payment fails (insufficient liquid cash), \`drawFrozen\` is set to \`true\` and **garnishment** kicks in. Garnishment intercepts the player's income at the source:
+- [Central Banks](/wiki/central-banks): draws create money and repayments retire it, and interest goes to bank reserves.
+- [Savings & Interest](/wiki/savings-interest): the automatic payment withdraws from your savings when cash is short.
+- [Corporations](/wiki/corporations): a frozen line redirects CEO salary and dividends.
+- [Corporate Bonds](/wiki/corporate-bonds) and [Sovereign Bonds](/wiki/sovereign-bonds): a frozen line redirects coupon income.
 
-\`\`\`
-garnishOrder = [arrears (missed interest) → principal → (cross-currency if needed)]
-sources intercepted: CEO salary, dividends, bond coupons
-\`\`
+## Status
 
-| Garnishment rule | Detail |
-| --- | --- |
-| Trigger | \`drawFrozen = true\` (missed auto-payment) |
-| Sources | CEO salary, dividend income, bond coupon income |
-| Order | Arrears first, then principal |
-| Currency | Cross-currency: garnished income converts to the LOC's currency as needed |
+Live in standard worlds, for each country whose currency is tradable (18 currencies, with the euro from 1999). Countries without a tradable currency, such as the planned economies, have no line of credit. If a central bank page has no Line of credit tab, that world or currency does not offer it.
 
-Garnishment continues every turn until the frozen state is cleared, meaning a single missed payment can cascade into a long income drain if the underlying cash shortage is not addressed.
+Last checked: 2026-10-29, version 1.18.0
 
-## Ledger
+## Technical detail
 
-Every LOC transaction is recorded in a per-account ledger with split interest and principal portions:
-
-\`\`\`
-ledgerEntry = {
-  turn,
-  amount,
-  interestPortion,
-  principalPortion,
-  runningBalance,
-}
-\`\`
-
-This ledger is the source of truth for arrears tracking, garnishment order, and balance history. Review it when debugging why a garnishment is larger or smaller than expected: the interest/principal split explains how much of each payment is actually reducing debt versus servicing it.
-
-## Practical use
-
-- **Bridge financing:** Draw on the LOC to cover a short-term cash gap (e.g. before a dividend lands) rather than selling assets at a bad price.
-- **Credit building:** A high composite lowers your spread dramatically. Improving your income and net worth before drawing saves real money over the life of the loan.
-- **Avoid the freeze:** The garnishment regime is punitive. Keep enough liquidity to cover the auto-payment, or the system will claw back income at source across currencies.
-
-See also: [Central Banks](/wiki/central-banks), [Corporate Bonds](/wiki/corporate-bonds), [Sovereign Bonds](/wiki/sovereign-bonds), [Savings & Interest](/wiki/savings-interest)
+Every constant, the exact order of payment and the garnishment rules are on the [monetary system design page](https://docs.lakesidegames.net/design/monetary-system-as-shipped.html).
 `;

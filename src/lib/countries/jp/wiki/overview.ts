@@ -9,9 +9,9 @@ Japan is a **parliamentary constitutional monarchy** with a **bicameral elected 
 | Office | How Filled | Term | Seats |
 | --- | --- | --- | --- |
 | Prime Minister | Confidence vote of Shūgiin members | No fixed term | 1 |
-| Member of the House of Representatives (Shūgiin) | FPTP regional election | 4 years | 465 |
-| Member of the House of Councillors (Sangiin) | FPTP regional election (staggered) | 6 years | 248 |
-|| Governor | FPTP regional election | 4 years | 1 per region (8) |
+| Member of the House of Representatives (Shūgiin) | Regional multi-seat election (Hare largest remainder) | 4 years | 465 (466 in 1953, 512 in 1991) |
+| Member of the House of Councillors (Sangiin) | Regional multi-seat election (Hare largest remainder), staggered | 6 years | 248 (252 in 1991) |
+| Governor | Regional election | 4 years | 1 per region (8) |
 | Emperor | Imperial character (ceremonial) | Lifetime | 1 |
 | Governor of the Bank of Japan | Appointed action | 5 years | 1 |
 
@@ -23,7 +23,7 @@ The Diet is Japan's bicameral national legislature. Unlike the UK where the uppe
 
 ### Shūgiin (House of Representatives)
 
-- **465 seats** elected from 8 regional constituencies by FPTP
+- **465 seats** elected from 8 regions, with each region's seats shared out by vote share
 - **4-year terms**, but can be dissolved by the PM for a snap election
 - Invests confidence in the Cabinet: the PM must command a Shūgiin majority
 - Originates all bills; has override power over the Sangiin
@@ -31,7 +31,7 @@ The Diet is Japan's bicameral national legislature. Unlike the UK where the uppe
 
 ### Sangiin (House of Councillors)
 
-- **248 seats** elected from 8 regional constituencies by FPTP
+- **248 seats** elected from 8 regions, shared out by vote share the same way
 - **6-year staggered terms**: half contested every 3 years (2 classes)
 - **Cannot be dissolved**: provides legislative continuity even during snap elections
 - Revises legislation; can reject Shūgiin bills but the Shūgiin can override with a 2/3 supermajority
@@ -60,9 +60,11 @@ Your character's home region determines where you run for office. Kanto (which i
 
 ## How Japanese elections work
 
-Both chambers use **FPTP** from regional constituencies. Each region elects multiple Shūgiin or Sangiin members, and the game allocates seats proportionally within the region based on vote share: but the spoiler effect still applies through major-party modelling.
+Both chambers use the same rule. Each region elects several members at once, and its seats are shared out by vote share (the Hare largest remainder method). A party must win at least **10% of the pooled votes in the region** to take any seats there. The spoiler effect still applies through major-party modelling.
 
-*(Note: The game engine treats Japan as FPTP-configured, but seat allocation within each region is proportional to vote share among the advancing candidates.)*
+**Worked example.** A region elects 14 members and 98,000 votes are cast, so one seat costs a quota of 7,000 votes. Party A has 49,000 votes, B has 31,000 and C has 18,000. A gets 7 seats, B gets 4 and C gets 2, which is 13 of 14. The last seat goes to the largest leftover: A has 0, B has 3,000 and C has 4,000, so C takes it. Final result: A 7, B 4, C 3. A party under 10% of the pooled vote gets nothing, however many leftover votes it holds.
+
+**How long an election takes.** A regular Shūgiin election window is 192 turns (8 real days: 144 for the primary and 48 for the general), and a Sangiin window is 144 turns (6 real days: 72 + 72).
 
 **Major parties by region:**
 - Most regions: LDP and CDP are the two major parties
@@ -70,7 +72,7 @@ Both chambers use **FPTP** from regional constituencies. Each region elects mult
 
 **Primaries advance the top 3 candidates** per party per region, the same as the UK rule (not the US's top-1 rule).
 
-**Sangiin stagger:** Only one class of Sangiin seats is up for election at a time. Plan your Sangiin run for the correct class in your home region.
+**Sangiin stagger:** Only one class of Sangiin seats is up for election at a time, and every region splits its seats across both classes. So your home region always has Sangiin seats up in every Sangiin election: Kanto's 80 seats are 40 per class. A class comes up every 144 turns (6 real days). Check the election page for which class is next before you declare.
 
 ---
 
@@ -81,7 +83,7 @@ The PM is appointed through a confidence vote in the **Shūgiin only** (the Sang
 1. After Shūgiin elections resolve, the largest party or coalition with 233+ seats attempts government formation.
 2. A confidence vote among all 465 Shūgiin members is held.
 3. If it passes (majority), the nominee becomes PM and appoints all cabinet members directly.
-4. **Minority government**: any party or coalition chair holding at least 72 Shūgiin seats can propose a PM and call a confidence vote, even when a rival bloc has 233+. The Shūgiin votes the bid up or down.
+4. **Minority government**: any party or coalition chair holding at least 72 Shūgiin seats (15.38% of the chamber, rounded up) can propose a PM and call a confidence vote, even when a rival bloc has 233+. The Shūgiin votes the bid up or down.
 
 The PM has no fixed term and serves until losing a confidence vote, resigning, or calling a snap election.
 
@@ -94,9 +96,11 @@ The PM can **dissolve the Shūgiin** and call a snap election: a mechanic Japan 
 Rules:
 - **Who:** Sitting PM only
 - **Limit:** 2 snap elections per PM appointment (resets when a new PM takes office)
-- **Cooldown:** 336 turns (approximately 2 real-time weeks) between snap elections
+- **Cooldown:** 336 turns (2 real weeks) between snap elections, counted from the PM's previous snap
+- **Blocked while** a no-confidence vote is open
 - **Scope:** Shūgiin only: the Sangiin cannot be dissolved
 - **Duration:** 48 hours (24h primary + 24h general): much shorter than a regular cycle
+- **Cost:** the PM seat is vacated and the cabinet cleared, so a new PM must be confirmed; if none is seated within 96 turns, a snap is triggered automatically
 
 When a snap election is called, all active Shūgiin elections are cancelled and fresh snap elections spawn across all 8 regions simultaneously. The government resets to pending until a new PM is confirmed through the confidence vote process.
 
@@ -108,7 +112,7 @@ Japan is the only country with the **Cabinet Bills** mechanic. The PM and any ca
 
 How it works:
 1. A PM or cabinet member proposes a cabinet bill.
-2. A 24-hour cabinet vote is held: the PM and all player-held cabinet positions vote (simple majority, minimum 2 players).
+2. A 24-hour cabinet vote is held: the PM and all player-held cabinet positions vote, and a simple majority of the votes cast carries it. For example, with the PM and three player ministers voting, 3 yes and 1 no sends the bill to the Shūgiin.
 3. If the cabinet votes to advance the bill, it moves from cabinet review into the active Shūgiin pipeline.
 4. The bill then proceeds through the normal bicameral process: Shūgiin → Sangiin → enacted.
 5. Limit: 1 cabinet bill in review at a time.
@@ -158,7 +162,7 @@ These metrics are affected by legislation and cabinet policy actions. Bills targ
 
 **Dual elected chambers.** Both Shūgiin and Sangiin seats are player-contestable. A Sangiin seat provides 6-year tenure that survives snap elections: useful for stability.
 
-**Shūgiin supremacy.** The Shūgiin can override a Sangiin rejection with a 2/3 supermajority. The Sangiin cannot override the Shūgiin on any bill.
+**Shūgiin supremacy.** The Shūgiin can override a Sangiin rejection with a 2/3 supermajority. The Sangiin cannot override the Shūgiin on any bill. This is on purpose: the Sangiin is a revising chamber that cannot be dissolved, so the confidence chamber gets the last word and a stalled Sangiin cannot freeze the government.
 
 **No PM veto or royal assent delay.** Bills pass immediately on bicameral approval.
 
@@ -174,7 +178,7 @@ These metrics are affected by legislation and cabinet policy actions. Bills targ
 | --- | --- | --- |
 | Entry | Shūgiin member | +1 action/turn; introduces legislation in the primary chamber |
 | Parallel | Sangiin member | +1 action/turn; 6-year terms survive snap elections |
-|| Mid-game | Governor | +2 actions/turn; controls regional executive; 4-year term |
+| Mid-game | Governor | +2 actions/turn; controls regional executive; 4-year term |
 | Top | Prime Minister | +4 actions/turn; snap election power; cabinet bill fast-track |
 
 ---
@@ -186,9 +190,9 @@ These metrics are affected by legislation and cabinet policy actions. Bills targ
 | Currency | JPY |
 | Central Bank | Bank of Japan (BoJ) |
 | Chair title | Governor of the Bank of Japan |
-|| Default prime rate | 1.0% |
+| Default prime rate | 1.0% |
 | Stock exchange | Nikkei |
-| Finance Minister cabinet ID | finance_minister |
+| Finance Minister | Minister of Finance |
 
 The Yen is stored in JPY millions in-game; the USD exchange rate is approximately 0.00943 (2020 baseline). The BoJ has historically operated near-zero rates: the lowest default prime rate of any country in the game.
 
@@ -199,9 +203,15 @@ The Yen is stored in JPY millions in-game; the USD exchange rate is approximatel
 - [Cabinet Guide](/wiki/cabinet-guide): every cabinet post, its metrics, and its actions
 - [Election Mechanics](/wiki/election-mechanics): Primary and general election rules
 - [Snap Elections](/wiki/snap-elections): Dissolving the Shūgiin
+- [No-Confidence Votes](/wiki/no-confidence-votes): how a PM is removed
+- [Bills and Legislation](/wiki/bills-legislation): the shared bill pipeline
 - [Core Systems](/wiki/core-systems): Turn structure, action economy
 - [Player Progression](/wiki/player-progression): Career ladder details
 - [Campaign Strategy](/wiki/campaign-strategy): Fundraising, ads, canvassing
+
+---
+
+**Status:** Japan is playable in every era. Seat counts change by era: 466 Shūgiin seats in the 1953 preset, 512 Shūgiin and 252 Sangiin in the 1991 preset, 465 and 248 in modern presets. Cabinet Bills are a Japan-only mechanic. Last checked: 2026-10-29, version 1.18.0.
 
 ---
 

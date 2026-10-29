@@ -1,118 +1,110 @@
 export const primariesContent = `# Primaries
 
-Primaries are intra-party competitions: you beat other members of your own party for the nomination slot. Down-ballot primaries are decided by **real primary ballots**, accumulated over the closing stretch of the primary and split each turn by your **primary score** standing; presidential primaries hand out pledged delegates. They close at the primary deadline. Miss the window, wait a full cycle.
+A primary is a contest inside your own party for its nomination. Win it and you face the other parties' nominees in the general election. Down-ballot primaries (House, Senate, Governor and the like) are decided by real primary ballots counted over the closing stretch of the primary. Presidential primaries hand out pledged delegates state by state. Miss the declaration window and you wait a full cycle, so it pays to know the rules before you file.
 
-This page covers declaration mechanics, scoring, NPP dynamics, and tactics. For the overall election structure see [Election Mechanics](/wiki/election-mechanics).
+This page covers declaring, scoring, computer-run candidates (NPPs) and tactics. For the overall election structure see [Election Mechanics](/wiki/election-mechanics).
 
-## Declaration window
+## How it works
 
-- The primary phase opens when a new election cycle spawns.
-- The window closes at the primary deadline. For a US House race that's 48 hours after spawn; for a Senate race it's 240 hours. General elections last 48 turns for both chambers.
-- **You can only declare during this window.** After the primary deadline passes, the primary resolves and no new candidacies are accepted.
-- Party membership is required **at the moment of declaration.** Joining a party between spawn and the primary window closing is fine.
-- **One race at a time.** Active candidacy blocks a new declaration. Withdraw first, then re-enter.
+1. **A cycle spawns** and the primary phase opens.
+2. **You declare** during the window. It closes at the primary deadline: 48 hours after spawn for a US House race, 240 hours for a Senate race. After that no new candidacies are accepted.
+3. **Standings are scored every turn** with your primary score (below).
+4. **Ballots start counting in the closing stretch**, a window as long as the race's own general election (48 turns for House and Senate). A Senate seat that sits in its primary for 240 hours does not cast ballots until the last 48. Each turn of that window, each party's registered voters release a slice of ballots, paced by the same closing-surge curve the general uses, and the slice is split between that party's candidates in proportion to their score that turn. Independents and unregistered voters cast no primary ballot.
+5. **At the deadline the cumulative count decides.** The party's top vote-getter advances and the others are marked withdrawn. Where a party has no registered voters on file, the highest score wins instead.
+6. **The winner moves into the general.** Losers get a notification, and a general-phase tally is set up for the election.
 
-If you're switching parties, a prior candidacy in a different party is **auto-withdrawn** when you declare under the new party, so no manual cleanup is needed.
+Why ballots accumulate: a sustained lead should beat a last-turn surge, and a late entrant faces a fair field.
 
-## How a down-ballot primary is counted
+### Key numbers
 
-Standings are scored every turn of the primary, but ballots only start counting over its **closing stretch**, a window as long as the race's own general window (so a Senate seat that sits in its primary for five years does not start casting ballots five years out, and a late entrant faces a fair field). Each turn of that window, each party's **registered voters** release a slice of ballots, paced by the same closing-surge curve the general uses, and the slice is split between that party's candidates in proportion to their primary-score standing. Independents and the unregistered cast no primary ballot. When the deadline passes, **the cumulative count decides**: the party's top vote-getter advances. A sustained lead therefore beats a last-turn surge, exactly as accumulating ballots should. The race page and region Elections tab show these cumulative shares as the primary standings.
+| Item | Value |
+| --- | --- |
+| Primary deadline, US House | 48 hours after spawn |
+| Primary deadline, US Senate | 240 hours after spawn |
+| Ballot window | As long as the race's general election (48 turns) |
+| State score: alignment with the state | 25 points |
+| State score: alignment with the party | 15 points |
+| State score: favorability | 35 points |
+| State score: political influence | 25 points |
+| Infamy penalty | Up to 5% of the score, at infamy 100 |
+| NPP score when a player is in the primary | Halved (0.5x) |
+| Quick Poll | 2 actions plus ₳25,000 |
+| Presidential score: party alignment / party influence / national reach / favorability | 40 / 20 / 15 / 25 |
+| Democratic delegate viability threshold | 15% |
 
-## The standard primary score (state races)
+### The state primary score
 
-The score is your standing within the party, and it sets your share of each turn's ballots. Scores go 0 to 100. Four components, with an infamy penalty applied at the end:
+Your score is your standing within the party, from 0 to 100. It sets your share of each turn's ballots.
 
-| Bucket | Max | How it's scored |
+| Part | Max | How it is scored |
 | --- | --- | --- |
-| Alignment (state) | 25 | Points lost scale with how far your positions sit from the state's economic and social lean |
-| Alignment (party) | 15 | Points lost scale with how far your positions sit from your party's official platform |
-| Favorability | 35 | A straight percentage of your Favorability score |
-| Political Influence | 25 | A square-root curve of your Political Influence, capped once it reaches 100 |
+| Alignment with the state | 25 | You lose 1.25 points for each point of econ and social distance from the state's lean |
+| Alignment with the party | 15 | You lose 0.75 points for each point of distance from your party's platform |
+| Favorability | 35 | Favorability x 0.35. Favorability 50 is worth 17.5 points; 80 is worth 28 |
+| Political influence | 25 | A square-root curve that caps at 100. Influence 100 scores 25, 85 about 23, 50 about 17.7, 20 about 11.2 |
 
-The raw score is then reduced by an infamy penalty: at most a 5% cut, scaling linearly up to that cap as infamy rises from 0 to 100.
+The result is then cut by up to 5% for infamy. State match is the larger alignment factor, so a candidate who fits the state beats a perfect partisan who is out of step with it. If a state has no stored lean, scoring falls back to a single 40-point party check.
 
-### Reading the formula
+**Worked example.** Three candidates in a House primary score 71, 64 and 50. Their share of each turn's ballots is 71 / 185 = 38.4%, 34.6% and 27.0%. Suppose the middle candidate works hard and jumps to 80 for the last 4 turns. The first 44 turns carry 70% of the ballots and the last 4 carry 30%. Cumulative result: 37.5%, 36.2% and 26.4%. The leader still wins, because a late surge only moves 30% of the pool. If the challenger had jumped to 90 instead, the race would have flipped by a hair. Long leads win primaries.
 
-- **Alignment splits state vs. party.** Of the 40 alignment points, 25 measure how close you are to the state's cached economic and social lean, and 15 measure closeness to your party platform. State match is the bigger factor: a candidate who fits the state's politics gets a real edge over a perfect partisan match who's out of step with the state. If a state has no cached lean, scoring falls back to a single 40-point party alignment.
-- **Favorability.** Linear. 50 Favorability is worth 17.5 pts; 80 Favorability is worth 28 pts.
-- **Influence.** A square-root curve, capped once PI reaches 100. PI of 100 scores 25; PI of 85 scores about 23; PI of 50 scores about 17.7; PI of 20 scores about 11.2.
-- **Infamy.** A clean candidate (infamy 0) keeps their full score. A maxed-out infamous candidate (infamy 100) loses 5% of their score.
+### The presidential primary
 
-**Highest cumulative ballot count per party advances to the general.** Other candidates in that party's primary are marked withdrawn. Where a party has no registered voters on file at all, the highest score advances instead.
+Presidential primaries are national and are won with **pledged delegates**, not ballots. Six waves of states vote (Iowa, New Hampshire, Nevada and South Carolina, Super Tuesday, mid-March, then everyone else). Each state's delegate pool is the 2020 table rescaled to the era's electoral votes: 3,889 Democratic delegates (1,945 needed) and 2,490 Republican delegates (1,246 needed) for the modern roster. Democratic states split delegates proportionally with a 15% viability threshold. Republican states use winner take all or proportional allocation, as their state chair sets it. If nobody holds a majority after the waves, a [convention](/wiki/nominating-convention) settles it.
 
-## The presidential primary score
+The national ranking used when there is no delegate data weights party alignment 40, party influence 20, national reach 15 and favorability 25. Party chairs get no special multiplier in presidential primaries. A chair only comes out ahead as far as holding the post builds party influence faster. That is the usual reason a chair loses a presidential primary: alignment and favorability are worth 65 points together against 20 for party influence.
 
-Presidential primaries reward national reach and party infrastructure more than state-level campaigning:
+Build Campaign Presence state by state to raise your vote weight (up to +25% in the primary). See [Political Operations](/wiki/political-operations).
 
-| Bucket | Max | How it's scored |
-| --- | --- | --- |
-| Alignment (party only) | 40 | Points lost scale with how far your positions sit from your party's official platform |
-| Party Influence | 20 | Normalized on the candidate's own accumulated party influence (uncapped above the reference scale) |
-| National Reach | 15 | A diminishing-returns curve on your national political influence |
-| Favorability | 25 | A straight percentage of your Favorability score |
+### NPP primary candidates
 
-The raw score gets the same infamy penalty as the state-level formula. Presidential primaries are national, so there's no state-position alignment component: only the party platform applies.
+NPPs (non-player politicians) enter primaries automatically, and entry is deterministic:
 
-Presidential contenders live or die on national reach, party influence, and favorability. A candidate with low national reach but high state PI can win state races but loses presidential primaries.
+1. **Incumbent defense.** A sitting NPP officeholder always enters if the party has no player candidate.
+2. **Slate fill.** Each party tries to field at least one NPP in every open race, empty primaries first.
+3. **One generic NPP.** After that, at most one more NPP per party may enter if no player is present.
 
-## NPP primary candidates
+When a player is in the same party's primary, the NPP's score is halved. A 60-point NPP scores 30 against you, and a player scoring 75 (alignment 35, favorability 25, influence 15) beats a raw 80 NPP who scores an effective 40. NPPs have no infamy penalty. Once entered they stay until the primary resolves, except that in a primary with no player in it a clearly trailing NPP may withdraw late and a challenger may be drawn from the party's strongest NPPs. Primaries with a player in them are never affected.
 
-NPPs (Non-Player Politicians) autonomously enter primaries. Entry is deterministic, not random:
+## What you can do
 
-- **50% primary-score penalty** when a player is in the same party's primary. A raw 60-point NPP effectively scores 30 against you.
-- **Entry is deterministic, not probabilistic.** NPPs follow a strict priority order:
-  1. **Incumbent defense.** If the sitting officeholder is an NPP and their party has no player candidate, the incumbent NPP always enters to defend the seat.
-  2. **Slate fill.** Each party aims to field at least one NPP candidate in every open race. NPPs are assigned to empty primaries first.
-  3. **One generic NPP per party.** After slate fill, at most one additional generic NPP may enter any party's primary if no player is present. This prevents races from becoming overcrowded with autonomous candidates.
-- NPPs do **not** drop out based on appeal, with one exception: a clearly trailing NPP can withdraw late in an NPP-only primary (see below). Otherwise, once entered, they remain until primary resolution or manual withdrawal.
+- **Declare** during the window, from the race page (Nation > Elections). You need party membership at the moment you declare. You can join a party after spawn and before the deadline. Only one active candidacy at a time.
+- **Switch parties** by declaring under the new party. Your old candidacy is withdrawn automatically and your campaign moves across.
+- **Poll first.** A Quick Poll shows your topline appeal and your five best and worst groups. See [Polling](/wiki/polling).
+- **Campaign** from the Campaign Manager page to raise influence and favorability. See [Campaign Manager](/wiki/campaign-manager).
+- **Withdraw** if you must. It is final: you cannot re-enter that election, and withdrawing mid-primary is almost always a mistake. If you are losing, just lose. Your influence, favorability and donor base persist into the next cycle.
 
-An NPP-only primary can change shape late: a challenger can be drawn from the party's strongest NPPs, and a candidate who is clearly behind withdraws rather than splitting the vote (no endorsement). Primaries with a player in them are never affected.
+Tips:
 
-### How NPPs shape your primary
+- **Alignment first.** Every point you sit from your party's platform costs 0.75 points of score, and every point from the state's lean costs 1.25. The party page shows the official positions.
+- **Do not attack fellow party members.** The winner should face the general at full strength.
+- **Start early.** Influence decays only 0.75% of its value per turn, so campaigning early compounds, and ballots reward a lead held through the whole window.
+- **Value favorability.** It is 35 of the 100 points. Favorability 80 against 50 is an 11 point swing.
+- **Check the field.** An NPP-only seat is a good target, and a crowded race where you are fourth in alignment is not.
 
-- **NPPs are beaten by alignment and favorability.** The 50% penalty means a player sitting at alignment 35 + favorability 25 + influence 15 (= 75) beats a raw-80 NPP scoring an effective 40.
+## Connections
 
-## Tactics during primary
+**Driven by**
 
-1. **Run a Quick Poll before declaring.** 2 actions + ₳25k. Shows your topline appeal and the 5 best/worst groups. Use it to decide whether this is your race.
-2. **Alignment first.** If your policy positions are more than about 6 points away from your party's official position, reconsider. Check the party page: the official positions are visible there.
-3. **Don't attack fellow party members.** If someone else wins the primary, you want them at full strength going into the general.
-4. **Pump Political Influence early.** Campaign 6-10 actions/day in-state. PI compounds over the primary window because decay is much slower than Campaign's +1% per action, and because ballots accumulate, a lead you hold through the closing window is worth more than one you grab on the last turn.
-5. **Don't sleep on Favorability.** 35 points of the score live here. Going into primary with Favorability 80 is worth 28 pts vs. 17 at Favorability 50, an 11-point swing.
+- [Election Mechanics](/wiki/election-mechanics): sets the phases, windows and closing-surge pacing.
+- [Political Operations](/wiki/political-operations): Campaign Presence adds up to 25% vote weight in presidential primaries.
+- [Campaign Manager](/wiki/campaign-manager): campaign actions raise the influence and favorability that make up your score.
+- [Polling](/wiki/polling): a Quick Poll tells you whether to enter and where you stand.
+- [Political Parties](/wiki/political-parties): the party platform sets the alignment half of your score.
+- [party-ideology](/wiki/party-ideology): Party Ideology: alignment with the party and the state is worth up to 40 primary points.
+- [npp-elections](/wiki/npp-elections): NPP Elections: NPP candidates fill primary fields and score at half when a player is in the same primary.
 
-## Withdrawal during primary
+**Affects**
 
-Allowed but typically a mistake:
+- [Nominating Convention](/wiki/nominating-convention): presidential delegates won here feed the convention.
+- [General Elections](/wiki/general-elections): the winner becomes the party's nominee in the general.
 
-- Withdrawal marks your candidacy withdrawn, and you cannot re-enter.
-- The only legitimate reason to withdraw mid-primary is pivoting to a different office you prefer, before that election's primary window closes.
-- If you're losing the primary but want to keep your option open, don't withdraw, just lose. Your PI, Favorability, and donor base persist for the next cycle.
+## Status
 
-## After primary resolution
+Live in every world and country with party primaries. Presidential delegate waves apply to the US presidency; races that opened under the older rules (the 1960 race and unstamped races) run all six waves compressed into the final 6 turns, and 1964 onward stretch them across the primary.
 
-When the primary deadline passes:
+Last checked: 2026-10-29, version 1.18.0
 
-1. The turn processor resolves all primaries that have closed.
-2. Each party's cumulative ballots are read; the top vote-getter advances (highest score where no ballots were cast).
-3. Losers receive a notification and are marked withdrawn.
-4. The winner's candidacy moves into the general election phase.
-5. A general-phase vote tally is initialized for the election.
+## Technical detail
 
-## Common primary mistakes
-
-- **Declaring without a poll.** You walk in blind. Always commission a Quick Poll first.
-- **Entering a crowded primary where you're 4th in alignment.** You'll lose; save your actions for a next-cycle race where you're first or second.
-- **Attacking primary rivals.** Favorability drain. Net negative.
-- **Skipping Party Influence investment pre-primary.** The party bonus actions you miss out on could have funded another 2-3 Campaign actions per day.
-- **Underestimating NPP density in unsexy races.** State Senate primaries in rural states can have 5+ NPPs all scoring 50. A halfway-competent player wins, but you need the 50% penalty working, so don't be surprised if a player-less seat gets fully NPP'd.
-
-## Related
-
-- [Election Mechanics](/wiki/election-mechanics): Full election structure.
-- [Presidential Nominating Convention](/wiki/nominating-convention): How pledged delegates settle the presidential nomination.
-- [General Elections](/wiki/general-elections): What happens after you win the primary.
-- [Primary vs General Tactics](/wiki/primary-general-tactics): Pivoting once the general starts.
-- [NPP Elections](/wiki/npp-elections): Strategies for competing against autonomous candidates.
-- [Political Parties](/wiki/political-parties): Party platform positions, how to see them.
-- [Polling](/wiki/polling): Quick and Full poll details.
+The exact scoring weights and ballot pacing are on the [Elections design page](https://docs.lakesidegames.net/design/elections.html). See also [NPP Elections](/wiki/npp-elections), [Primary vs General Tactics](/wiki/primary-general-tactics).
 `;

@@ -1,6 +1,33 @@
 export const privateBankingContent = `# Private Banking
 
-Finance corporations can charter a private bank when the world flag is on. A bank takes deposits, lends against a reserve requirement, posts rates inside a corridor set by the central bank, and can fail. This guide covers charters, rates, deposits, loans, runs, insurance, and proprietary trading.
+A **private bank** is a financial corporation's licensed banking arm. It takes deposits, lends against a reserve requirement, sets its rates inside a corridor set by the central bank, and can fail if depositors lose confidence. Banking gives finance corporations a second way to earn, and gives other players a place to borrow and save beyond the central bank.
+
+## How it works
+
+A corporation that owns a financial sector can charter one bank. The bank attracts household deposits by offering a better rate than the central bank's savings rate, lends part of those deposits to named borrowers and a bulk NPC loan book, and must keep a share of deposits in reserve. A run on the bank, a capital shortfall or too many bad loans can end it. Insurance and the central bank stand behind depositors.
+
+### Key numbers
+
+| Rule | Value |
+| --- | --- |
+| Charters per corporation | 1, posting about 5 times the corporation founding cost (a third of that for investment charters) |
+| Branch share of financial capacity | 10% to 90%, default 50% |
+| Deposit ceiling | The smaller of branch capacity and 12 times book equity |
+| Reserve requirement | Set by the central bank (modern default 10%, historical default 20%, range 5% to 95%) |
+| Named loan principal | Capped by bank cash, deposit headroom, and 35% of demonstrated per-turn income |
+| Bank run line | 0.5 times required reserves |
+| Confidence bands | Green from 0.7, amber from 0.4, red below |
+| Minimum capital ratio | 8%, recapitalise within 12 turns or lose the charter |
+| Stress ratio | 6% after a 15% loss on the book |
+| Prop book cap | 3 times desk equity; any one forex currency at most 50% |
+| Discount window | Prime + 3 points, up to 25% of the deposit base |
+| Charter type switch lock | 24 turns |
+
+### Worked example
+
+A retail bank holds ₳50,000,000 of household deposits. The reserve ratio is 10%, so required reserves are ₳5,000,000 and the run line is 0.5 x 5,000,000 = **₳2,500,000**. Its book equity is ₳4,000,000, so the equity half of the deposit ceiling is 12 x 4,000,000 = **₳48,000,000**. It already holds ₳50,000,000, so it cannot take new inflows until it posts more capital, however many branches it builds.
+
+If its confidence band turns red and cash falls below ₳2,500,000, it fails. If it is red with ₳3,000,000 in cash, it survives that turn, but that is one turn of notice. Borrowing from the discount window would add cash but lower its confidence.
 
 Open **World > Banking** to choose a currency and compare chartered banks. Bank owners manage the charter from their corporation page. The country's central-bank page is the public source for prime rate, reserve policy, insurance, and the rate corridor that private banks must obey.
 
@@ -20,7 +47,7 @@ Charter types:
 
 Most nations start with a **banking separation** law that allows retail or investment, but not universal. To switch the country to universal charters, propose an economy bill on the **Banking Separation Act** law type and choose the **Universal Banking Charter Act** option. There is no standalone universal-charter bill: the switch lives inside the separation law. Command economies do not offer private bank charters.
 
-The central bank chair (or an admin) can revoke a charter. A revoke is not a delete: it runs the same wind-up every other ending runs. Household deposits go back into circulation out of the bank's own cash, player savings pointers return to the central bank with their balances untouched, and only what is genuinely left over, capped at book equity, is paid up to the owner.
+The central bank chair can revoke a charter. A revoke is not a delete: it runs the same wind-up every other ending runs. Household deposits go back into circulation out of the bank's own cash, player savings pointers return to the central bank with their balances untouched, and only what is genuinely left over, capped at book equity, is paid up to the owner.
 
 You can also change charter type yourself from the bank console, without re-chartering or posting capital twice. Moving to a charter that cannot take deposits returns the whole deposit book, and any switch locks the type for 24 turns.
 
@@ -52,7 +79,7 @@ This distinction drives almost every number in the console, so it is worth readi
 
 ### The deposit ceiling has two halves
 
-    deposit ceiling = min(branch capacity ceiling, book equity x 12)
+The deposit ceiling is the smaller of the branch capacity ceiling and 12 times book equity.
 
 The branch half is financial-sector capacity allocated to branches. The equity half is the leverage limit: a bank may anchor at most twelve times its book equity in household deposits, so a bank with no capital cannot anchor a deposit base it does not stand behind. The console names which half is binding. If equity binds, building more branches will not move the ceiling; posting capital will.
 
@@ -81,14 +108,13 @@ Each solvency pass scores the bank on reserves, capital, and loan losses. The sc
 | Amber | Stress; players see the warning one turn before NPC flight intensifies |
 | Red | Failure path |
 
-NPC deposits flee in proportion to low confidence. A failed bank can raise panic at peer banks in the same currency when contagion is enabled. Contagion and prop trading each have independent kill switches under the master private banking flag.
+NPC deposits flee in proportion to low confidence. A failed bank can raise panic at peer banks in the same currency.
 
 ### The run line
 
 Failure needs two things at once: a red band, and cash below the **run line**.
 
-    run line = 0.5 x required reserves
-    required reserves = household deposits x reserve ratio
+The run line is 0.5 times required reserves, and required reserves are household deposits times the reserve ratio.
 
 The console shows both numbers and your distance to the line. A red band with cash above the line does not fail the bank; cash under the line with a green or amber band does not either. That is one turn of notice, on purpose.
 
@@ -98,7 +124,7 @@ Chartered banks pay a per turn premium on insured deposits, risk weighted by how
 
 ## Prop trading
 
-Investment and universal charters (when the prop trading kill switch is on) run a proprietary book in equities, bonds, index units, and forex. Positions are marked each solvency turn. Funding comes from:
+Investment and universal charters run a proprietary book in equities, bonds, index units, and forex. Positions are marked each solvency turn. Funding comes from:
 
 - The **interbank** market: retail banks may lend part of their non reserved deposits to investment banks at a negotiated rate.
 - A **central bank margin** line against posted collateral at prime plus a spread.
@@ -109,7 +135,7 @@ the forex sub-book. Borrowed money is never capital: drawing on the margin line
 or the discount window raises cash and debt together and leaves the capital
 ratio unchanged.
 
-Forced liquidation feeds the confidence score. Flag off freezes prop and interbank actions without unwinding existing books.
+Forced liquidation feeds the confidence score.
 
 ## Capital requirements and supervision
 
@@ -156,13 +182,46 @@ Interest is serviced each banking turn on the same terms as the margin line: pai
 
 Drawing creates money at the central bank; repaying destroys it. Both legs are ledgered.
 
-## Related
+## What you can do
 
-- [Central Banks](/wiki/central-banks): prime rate, reserves, and money supply.
-- [Savings & Interest](/wiki/savings-interest): central bank savings APY and accrual.
-- [Line of Credit](/wiki/line-of-credit): character borrowing from the central bank.
-- [Stock Market](/wiki/stock-market): equities the prop book can hold.
-- [Index Funds](/wiki/index-funds): fund units and blacklist constituents.
-- [Corporations](/wiki/corporations): founding and running financial sectors.
-- [Running a Corporation under the Plants System](/wiki/plants-corp-guide): capacity, cash flow, and debt discipline.
+- **Charter a bank** from your corporation page once you own a financial sector. Choose retail, investment or universal. Universal needs a law change in your country.
+- **Set rates** inside the corridor, and split capacity between branches and commodity output.
+- **Keep reserves above the run line** and the capital ratio above 8%. Recapitalise when the console tells you.
+- **Borrow or save** as a player: open World > Banking to compare banks. Moving savings to a private bank earns its rate but carries the bank's counterparty risk, not a loss of principal.
+- **Lend to named borrowers** through the bank console, within the principal cap.
+- **Use the discount window** only as a bridge: it costs confidence.
+
+### Common questions
+
+- **Do I lose my savings if the bank fails?** No. Player savings are a pointer to your own account, so you lose the yield and the counterparty, not the principal.
+- **Why was my corporation refused a loan despite a big bond programme?** Bank loans are capped by the bank's vault and the borrower's income, not by bond headroom.
+- **Why can't I take more deposits?** The equity half of the ceiling may bind. Post capital rather than building branches.
+
+## Connections
+
+**Driven by**
+
+- [Central Banks](/wiki/central-banks): the prime rate, reserve requirement, rate corridor and insurance rules bound what banks can do.
+- [Corporations](/wiki/corporations): a financial sector and its cash charter and capitalise the bank.
+- [Stock Market](/wiki/stock-market): equity prices mark the prop book.
+- [Currency Exchange](/wiki/currency-exchange): forex rates mark the prop book's currency positions.
+- [Interbank Lending](/wiki/interbank-lending): Interbank loans fund trading banks, and a failed lender's loans are written off.
+
+**Affects**
+
+- [Corporations](/wiki/corporations): bank loans credit a company's liquid capital.
+- [Central Banks](/wiki/central-banks): deposits, discount window draws and insurance move money at the central bank.
+- [Savings & Interest](/wiki/savings-interest): private banks compete with the central bank savings rate.
+- [Line of Credit](/wiki/line-of-credit): private loans sit beside central bank credit lines for characters.
+- [Interbank Lending](/wiki/interbank-lending): Charter type, deposits and the reserve requirement set who can lend on the interbank market and how much.
+
+## Status
+
+Private banking is live in worlds with private banking enabled, which includes current modern worlds. Historical worlds apply deposit and lending rate caps and often allow only retail or investment charters, not universal. Command economies do not offer private bank charters.
+
+Last checked: 2026-10-29, version 1.18.0
+
+## Technical detail
+
+This system has no separate design page yet. The numbers above are the full set; the central bank rules are on [Central Banks](/wiki/central-banks).
 `;

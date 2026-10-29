@@ -1,98 +1,78 @@
 export const chamberLeadershipContent = `# Chamber Leadership
 
-Every legislature in the game elects a presiding officer: the member who chairs the chamber's sessions. The rules for who can run and who can vote are not the same everywhere. This page walks through the presiding-officer elections in the US, Germany, Nigeria, and China, and how they differ from party-gated leadership like Majority Leader.
+Every legislature elects a presiding officer, the member who chairs the chamber's sessions. The office pays extra actions and raises your national influence tier. Who can run and vote is not the same everywhere, so this page compares the US, Germany, Nigeria and China.
 
-## The shared shape
+## How it works
 
-All four countries' presiding-officer elections follow the same lifecycle:
+All the presiding-officer ballots follow the same three steps.
 
-1. **Open** - a fixed-duration ballot opens once the chamber's seats are finalized after a general election.
-2. **Vote** - eligible members declare candidacy and cast votes. Plurality wins; there is no majority requirement.
-3. **Resolve** - when the ballot closes, the candidate with the most votes wins. Everyone else is marked as failed. An empty candidate list closes the election with the seat left vacant.
+1. **Open.** A 24 hour ballot opens once the chamber's seats are finalised after a general election. The sitting officer is nominated automatically if they still hold a seat and still qualify under the office's rule.
+2. **Vote.** Eligible members declare candidacy and vote. Plurality wins, with no majority needed.
+3. **Resolve.** When the ballot closes the top vote-getter wins and the others are marked failed. If there are no candidates, the seat stays vacant until the next election opens. If candidates tie, the one who declared first wins.
 
-The incumbent is automatically re-nominated at the start of each new ballot, provided they still hold a seat in the chamber and still qualify under the role's eligibility rule. A party that loses its majority status can knock its own incumbent off the ballot this way.
+### Who can run: two rules
 
-The US Speaker, German, Nigerian, and Chinese presiding-officer ballots all run 24 hours.
+| Rule | Meaning | Offices |
+| --- | --- | --- |
+| **Any seated member** | Every party with at least one seat may run and vote. | US Speaker, German Bundestagspräsident, Nigerian Speaker and Senate President, China's NPCSC Chairman |
+| **Largest single party only** | Only the chamber's biggest party may run and vote. | China's CPPCC Chairman |
 
-## Who can run: two eligibility rules
+Majority and Minority Leader are stricter and are covered on [Congress Leadership](/wiki/congress-leadership). Under "any seated member" bloc and party do not matter, though in practice the biggest party's numbers usually decide the result.
 
-Two different eligibility rules cover the presiding officer roles in this page:
+### Key numbers
 
-- **Any seated member** - every party holding at least one seat in the chamber may declare a candidate and vote. This is the rule for the US Speaker, the German Bundestagspräsident, both Nigerian chamber officers, and China's NPCSC Chairman.
-- **Largest single party only** - only the chamber's single biggest party may declare or vote. This is the rule for China's CPPCC Chairman.
-
-This is a different (and looser) rule than [Majority/Minority Leader](/wiki/congress-leadership), which is explicitly party-gated: Majority Leader requires your party to hold the most seats, Minority Leader is open only to parties outside the majority bloc. Presiding officer elections under "any seated member" don't care about bloc or party at all, any member of any chamber party can run and vote.
-
-## What leadership pays
-
-Chamber leadership adds actions on top of the holder's seat, and it sets the holder's national influence tier.
-
-| Role | Extra actions per turn | National influence tier |
-| --- | ---: | ---: |
-| Speaker of the House, Bundestagspräsident, NPCSC Chairman, Nigerian Speaker and Senate President | +3 | +2.0 |
-| President pro tempore | +1 | +2.0 |
-| House and Senate Majority Leaders | +2 | +2.0 |
-| House and Senate Minority Leaders | +2 | +1.5 |
-| Leader of the Opposition | +2 | none from the role |
-| CPPCC Chairman | +1 | +1.5 |
-| Whips, shadow cabinet members | +1 | none from the role |
-
-A member holding several leadership roles takes the highest single action bonus, not the sum. The national influence tier competes with your other offices: you get your single highest tier. See [Elections Player Guide](/wiki/elections-player-guide) for the full tier table.
-
-## United States: Speaker of the House
-
-The Speaker presides over the House, controls the legislative agenda, and sits second in the presidential line of succession. Any seated House member may declare candidacy and vote, regardless of party, though in practice the majority party's bloc size usually decides the outcome. The ballot runs 24 hours.
-
-See [Congress Leadership](/wiki/congress-leadership) for the Speaker's role alongside Majority/Minority Leader and committee chairs.
-
-## Germany: Bundestagspräsident
-
-The Bundestagspräsident election opens automatically once the Bundestag's seats (487 in the 1953 preset, 630 modern) are filled through Germany's Additional-Member System (direct mandates plus list seats). Any seated member of the Bundestag may declare candidacy and vote, regardless of party. The ballot runs 24 hours and resolves the same way as the US Speaker race: top vote-getter wins.
-
-## Nigeria: National Assembly presiding officers
-
-Nigeria elects two presiding officers independently, one per chamber:
-
-| Role | Chamber |
+| Item | Value |
 | --- | --- |
-| **Speaker** | House of Representatives |
-| **Senate President** | Senate |
+| Ballot length | 24 hours in every country listed |
+| Winning rule | Plurality; ties go to the earlier declaration |
+| Bundestag seats | 487 in the 1953 preset, 630 in modern presets |
+| Extra actions per turn | Speaker, Bundestagspräsident, NPCSC Chairman, Nigerian Speaker and Senate President +3; CPPCC Chairman +1 |
+| National influence tier | +2.0 for the +3 offices; +1.5 for the CPPCC Chairman |
 
-Each runs its own 24-hour ballot, drawing votes only from members of that chamber. A House member cannot vote in the Senate President race and vice versa. Any seated member of the relevant chamber may declare candidacy and vote, regardless of party.
+A member who holds several leadership roles takes the highest single action bonus, not the sum. The influence tier competes with your other offices: you get your single highest tier. See [Elections Player Guide](/wiki/elections-player-guide) for the full tier table.
 
-## China: CPPCC and NPCSC Chairmen
+### Worked example
 
-China runs two separate chair elections, both drawn from seated National People's Congress (NPC) delegates, but with different eligibility:
+The modern Bundestag has 630 seats and three candidates: A gets 250 votes, B gets 210, C gets 40, with the rest not voting. A wins with a plurality, even though 250 is fewer than the 316 of a majority. A gets +3 actions per turn and the +2.0 influence tier. If the vote were A 220 and B 220, whichever of the two declared first would win.
 
-| Role | Eligibility | Why |
-| --- | --- | --- |
-| **NPCSC Chairman** (Standing Committee) | Any seated NPC delegate | Open ballot among delegates, same shape as the other countries' presiding officers |
-| **CPPCC Chairman** | Largest single party only | The CPPCC is an advisory body that is appointed in the real system rather than elected; the game models this by restricting the race to whichever party holds the most NPC seats, the same eligibility rule used for the US Majority Leader |
+## What you can do
 
-Both run 24-hour ballots and resolve on plurality, same as the DE and NG races.
+- **Declare candidacy** during the ballot and **vote**. The Leadership tab for your country's chamber shows the open ballot, eligibility and deadline.
+- **Keep your seat.** An incumbent who loses their chamber seat (a House seat for the US Speaker, an NPC delegate seat for either Chinese chair) drops off the ballot even mid-term.
+- **Watch the party rule.** A party that loses its majority status can knock its own incumbent off the ballot when the rule is party-gated.
 
-## Soviet Union: the Chairman of the Presidium is not one of these
+### Country notes
 
-The Chairman of the Presidium is elected by a joint sitting of both Supreme Soviet chambers, so it looks like a presiding-officer race and is often mistaken for one. It is not. It is the **ceremonial head of state**, and it is closer to a figurehead presidency than to a Speaker or a Majority Leader:
+**United States, Speaker of the House.** Presides over the House and sits second in the presidential line of succession. Any seated House member may declare and vote. The Speaker can be removed mid-term by a motion to vacate (see [Congress Leadership](/wiki/congress-leadership)).
 
-| | Presiding officers above | Chairman of the Presidium |
-| --- | --- | --- |
-| Actions per turn | +3 on top of the seat (CPPCC Chairman +1) | **+0** |
-| Party strength weight | Contributes | **0** |
-| Controls the agenda | Chairs its chamber | No |
+**Germany, Bundestagspräsident.** Opens automatically once the Bundestag is filled through direct mandates and list seats. Any seated member may declare and vote.
 
-The office carries no action bonus and no party-strength weight at all: it is a capstone, not a power base. Real Soviet legislative power sits with the **Premier** (head of government, +4 actions) and the **General Secretary** of the CPSU.
+**Nigeria.** Two officers are elected separately: the Speaker of the House of Representatives and the Senate President. Each ballot draws votes only from that chamber's members, so a House member cannot vote in the Senate President race.
 
-The Supreme Soviet also has no Majority or Minority Leader, because the CPSU is the only seeded party and there is no second bloc for those roles to describe. See [Soviet Union](/wiki/ru-overview) for the full structure, including the convocation reset that clears the Presidium chair after the last election of each cycle.
+**China.** Two chairs, both drawn from seated National People's Congress delegates. The NPCSC Chairman is open to any seated delegate. The CPPCC Chairman is restricted to the largest single party, the same rule as the US Majority Leader.
 
-## Vacancies
+**Soviet Union.** The Chairman of the Presidium is elected by a joint sitting and looks like a presiding officer, but it is the ceremonial head of state and carries no action bonus or party-strength weight. It is not one of these ballots. See [Soviet Union](/wiki/ru-overview). The Supreme Soviet has no Majority or Minority Leader because the Communist Party is its only party.
 
-If a ballot closes with no candidates, the seat is left vacant rather than defaulting to anyone. A new election opens on the same cycle as the next chamber reconciliation. Losing a seat in the relevant chamber (a House seat for the US Speaker, an NPC delegate seat for either Chinese chair) drops an incumbent from re-nomination even mid-term.
+## Connections
 
-## Related pages
+**Driven by**
 
-- [Congress Leadership](/wiki/congress-leadership) - Majority/Minority Leader, Whip, and committee chairs, all party- or bloc-gated
-- [Party Leadership & Authority](/wiki/party-leadership-authority) - acting chairs, tenure gates, and other party-side leadership rules
-- [Government Formation](/wiki/government-formation) - how parliamentary governments (UK, JP, DE) form after elections
-- [Voting & Whips](/wiki/voting-and-whips) - how whip directives interact with chamber votes
+- [General Elections](/wiki/general-elections): a resolved general election finalises the seats and opens the presiding-officer ballot.
+- [Congress Leadership](/wiki/congress-leadership): the shared ballot framework and the eligibility rules come from the same system.
+- [Coalitions](/wiki/coalitions): Coalitions: the majority bloc decides which parties can run for the minority posts.
+
+**Affects**
+
+- [Voting & Whips](/wiki/voting-and-whips): presiding officers who hold a leadership role may issue whips.
+- [Elections Player Guide](/wiki/elections-player-guide): the office sets your national influence tier.
+
+## Status
+
+Live in the United States, Germany, Nigeria and China in every era. Bundestag size depends on the era (487 seats in the 1953 preset, 630 modern). Other countries elect presiding officers through their own offices; see the country pages. The Soviet Union has a separate Presidium chair, not covered here.
+
+Last checked: 2026-10-29, version 1.18.0
+
+## Technical detail
+
+Exact rules and code layout: [Chamber leadership by country design doc](https://docs.lakesidegames.net/design/chamber-leadership-by-country.html).
 `;

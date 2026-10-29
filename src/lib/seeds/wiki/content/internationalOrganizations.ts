@@ -13,129 +13,139 @@ const builtInTableRows = builtInOrgs
 
 export const internationalOrganizationsContent = `# International Organizations
 
-International Organizations are multilateral bodies that countries can join, lead, and use to coordinate foreign policy, pass bloc-level legislation, and establish free trade agreements. The system ships with ${builtInCount} built-in organizations (${builtInListProse}) and also allows players to create custom organizations.
+International organizations are blocs of countries that vote together. Through them a country can sign free trade agreements, impose sanctions, send aid, issue joint statements, raise a military alert, and, for blocs, call members into war. They matter because they reach beyond one country's laws, and because members share trade bonuses and obligations. The game ships with ${builtInCount} built-in organizations (${builtInListProse}), and players can found their own.
 
-## Built-in organizations
+## How it works
+
+Every organization has members, a leader, a charter, a category and a treasury. Which actions it can take depends on its category. Members vote on each action in a ballot that stays open for **24 turns**.
+
+### Built-in organizations
 
 | Organization | Description |
 | --- | --- |
 ${builtInTableRows}
 
-These ${builtInCount} are defined in the catalogue; era founding and dissolution years decide which exist in a given world. Players can also create custom organizations.
+These ${builtInCount} are in the catalogue. Founding and dissolution years decide which exist in a given world, and each world seats its own founding members.
 
-## Organization structure
+### What each category can do
 
-Every organization, built-in or custom, has the following components:
+| Category | Resolutions it can table |
+| --- | --- |
+| Political | Agency funding, joint statements, aid packages |
+| Economic | Directives, free trade agreements, sanctions, aid packages |
+| Security | Alert posture, joint statements |
+| Development | Aid packages, free trade agreements |
+| Bloc | Alert posture, joint statements, aid, sanctions, war declarations, conflict entry |
 
-### Founding members
+Every category can also set member dues. NATO and the Warsaw Pact are Security alliances in general, and Blocs in worlds that begin in the Cold War.
 
-Each org is created with a list of founding member countries that defines the initial membership. Additional countries can join later through the membership proposal process (see below).
+### Who must say yes
 
-### Leadership office
+The threshold is counted against everyone entitled to vote, not against who turned up. Abstaining or never voting counts as a no.
 
-Each org has a **leadership office** with:
+| Ballot | Needs | Who votes |
+| --- | --- | --- |
+| Admitting a member | Every voter | Player-run members |
+| Declaring war, or entering a conflict at the bloc's call | Every voter | Player-run members |
+| Free trade agreement | Every named party | Only the countries named in the agreement |
+| Everything else (sanctions, directives, aid, dues, posture, statements, agency funding, leadership) | More than half | All voting members |
 
-- A **title** (e.g., Secretary-General, Secretary General, President of the Council)
-- A **term** of **96 turns** (approximately 2 game years) by default. The one exception is the Non-Aligned Movement, whose chair serves **144 turns** (approximately 3 game years)
+The UN adds a veto: its founding members (US, UK, Germany and Japan) can each block a majority ballot by voting no. Client states are bound by what their bloc decides but do not vote. Countries nobody plays vote on their own, and a failed resolution is written to the country's history.
 
-Leadership elections are held when the term expires, and the office confers authority over the org's agenda and legislation.
+### Key numbers
 
-The head of an org (the holder of its leadership office) gets two personal benefits:
+| Rule | Value |
+| --- | --- |
+| Voting window | 24 turns |
+| Leadership term | 96 turns (2 game years); the Non-Aligned Movement chair serves 144 turns |
+| Diplomatic actions per country | 4 per turn; proposing costs 1, voting is free |
+| Org head: influence | +1.0 national influence per turn |
+| Org head: agenda actions | +2 per turn, banked up to 4 |
+| Sanctions | Last 48 turns |
+| Dues | Voted by members, from 0% to 1% of GDP a year; the starting rate is 0.006% |
+| Joint statement | Subject's approval +2 (endorse) or -3 (condemn) for 24 turns |
+| Aid package growth boost | 0.05 x log10(amount) points of GDP growth, up to 0.5 |
+| Alert posture: Reduced | Readiness -3, civil liberties +1.5 |
+| Alert posture: Heightened | Readiness +3, civil liberties -1.5 |
+| Alert posture: Article 5 | Readiness +6, civil liberties -3, GDP growth -0.4 |
+| Tribute (1953 worlds): NATO | 0.5% of GDP a year from non-voting client members |
+| Tribute (1953 worlds): Warsaw Pact | 0.75% of GDP a year from non-voting client members |
 
-- **+1.0 national influence per turn** while leading an organisation, whether elected or as a permanent leader (the head of government of the Commonwealth's, Warsaw Pact's or COMECON's leading country). This is added on top of your domestic position tier, not compared against it.
-- **A personal agenda pool:** +2 agenda actions per turn, banked up to 4. Agenda actions pay for resolutions you table inside the org you lead (free trade agreements, sanctions, directives, joint statements, aid packages, dues, posture and agency funding). They are spent before your country's diplomatic budget, so a head who is not their country's foreign minister can still table these. Joining, leaving, nominations and war resolutions stay on the country's diplomatic budget.
+### Leadership
 
-### Charter
+Each organization has a leadership office, elected when the term ends by a majority of the voting members. The Commonwealth, the Warsaw Pact and COMECON have a permanent leader instead: the head of government of the UK (Commonwealth) or Russia (the other two).
 
-Each org has a **charter**: a text document describing its purpose, rules, and governance principles. The charter is set at creation and can be amended through org legislation.
+The head gets two personal benefits:
 
-## Membership proposals
+- **+1.0 national influence per turn**, added on top of your domestic position tier.
+- **A personal agenda pool** of +2 agenda actions per turn, banked up to 4. They pay for resolutions you table inside the organization you lead. They are spent before your country's diplomatic budget, so a head who is not their country's foreign minister can still table them. Joining, leaving, nominations and war resolutions stay on the country's budget.
 
-New countries join an org through a **membership proposal**, which is voted on by existing members for **24 turns**. Admission is unanimous: every member entitled to vote must cast a "yes" within the window. If the proposal falls short or expires, the country is not admitted.
+### Joining and leaving
 
-## Leadership elections
+Joining takes two yeses: the organization's members must admit you in a membership ballot, and your own legislature must pass the Join bill. If either fails, the other is cancelled. Joining a Cold War bloc removes you from its rival. Leaving goes through a withdrawal bill in your legislature.
 
-When a leadership term (96 turns, or 144 for the Non-Aligned Movement chair) expires, the org holds a **leadership election**. A candidate is seated by a majority of the members entitled to vote. Eligible candidates compete for the leadership office, and the winner serves the next full term. Holding leadership of a major org like the EU or NATO is a significant source of political influence on the international stage.
+### Mutual defence
 
-## Organization legislation
+An organization can bind its members to defend each other in two ways:
 
-International organizations can pass legislation that binds their members. Key legislation types include:
+- **Article 5.** Any Security or Bloc organization whose members vote the Article 5 alert posture.
+- **A standing charter.** NATO and the Warsaw Pact in worlds that begin in the Cold War, at every posture.
 
-- **Withdrawal bills**: a member-state's exit from the organization
-- **FTA legislation**: establishing a free trade agreement between members (see [International Trade](/wiki/trade-system))
+Political, Economic and Development organizations never bind their members.
 
-Org legislation is voted on by members, typically over the same 24-turn voting window used for membership proposals.
+When a binding organization's member is declared on, every other member with a government enters on the defender's side. It is defensive only, so no chain of alliances forms. An ally stays out if it has a truce with the attacker, already fights the attacker, shares a bloc with the attacker, or already fought in this war and left it. Posture changes are checked every turn: raising the posture to Article 5 while a member is already under attack pulls the allies in on the next turn, and lowering it stops new entries without removing anyone already in. Full rules, and how a Bloc originates a new war, are on [Declaring War](/wiki/declaring-war).
 
-Only members a player can act for hold a ballot. Client states are bound by whatever their bloc decides, but they do not vote on it.
+### Custom organizations
 
-Two thresholds apply, and both are measured against the members entitled to vote rather than against turnout. Abstaining, or never voting at all, withholds consent exactly as a "no" does.
+The foreign minister of a country can found a new organization with a name, short name, id, description, charter, leadership title and category, at no fee. A Bloc also creates a new alignment pole in the founder's chosen colour, which the founder starts committed to. Bloc members can spend the pooled fund on influence, use aid to hold members, and risk defections when a member's alignment slips. Custom organizations vote, lead and legislate exactly like built-in ones.
 
-- **Unanimous**: declaring a new war, entering a conflict at the bloc's call, free trade agreements, and admitting a new member. Any one member can refuse simply by declining to consent.
-- **Majority**: everything else, including sanctions, directives, aid packages, dues, posture, agency funding and joint statements. More than half the voting members must vote "yes".
+### Worked example
 
-A resolution that fails, and a leadership candidate who is not elected, are written to the country history rather than vanishing from the pending list. A joint statement about a country lifts or lowers that country's national approval for as long as it stands (see [Government Approval](/wiki/government-approval)).
+Five countries sit in an Economic organization: A, B, C, D, E. A and B want an FTA.
 
-## Mutual defence
+- The ballot is open 24 turns. Only A and B vote, because only they are named. Both must say yes. C, D and E have no say and are not affected.
+- A sanctions resolution against F needs more than half of the 5: at least 3 yeses. If 2 vote yes, 1 votes no and 2 stay silent, it fails, because silence counts as no.
+- In the UN, a joint statement that gets 11 yeses out of 15 still fails if the US votes no.
 
-An organization binds its members to defend each other in one of two ways:
+## What you can do
 
-- **Article 5.** Any Security or Bloc organization whose members vote the Article 5 alert posture is a mutual-defence pact for as long as that posture stands. This includes organizations players found.
-- **A standing charter.** In worlds that begin in the Cold War, NATO and the Warsaw Pact are Blocs whose charters bind their members at every posture, with no vote needed.
+- **Open the page.** World, then International Organizations, then pick an organization to see members, leader, charter, active resolutions with live tallies, and history.
+- **Table a resolution** as your country's foreign minister. It costs 1 diplomatic action, or 1 agenda action if you head that organization.
+- **Vote** as foreign minister. Voting is free, on any open ballot your country is entitled to.
+- **Apply to join or propose to leave** as foreign minister. Your legislature must also pass the bill.
+- **Nominate a leadership candidate** as foreign minister when the term ends.
+- **Found a custom organization** as foreign minister.
 
-Political, Economic and Development organizations never bind their members, whatever their posture.
+Tips:
 
-When a binding organization's member is declared on, every other member with a government enters the war on the defender's side. The alliance is named on the war's belligerent roll, and the heads of government and defence ministers of the countries pulled in are told. Entry works like any other defensive entry: part of each ally's ready reserve moves to the front, and war weariness and approval count from the turn it joined.
+- Count the roll before you table something, and remember the foreign minister has to cast the vote. An abstaining member blocks a unanimous ballot as surely as a no.
+- An FTA needs only its two parties, so you do not need the whole organization to agree.
+- Lead an organization to get the influence and agenda actions even when you hold no other international office.
 
-The rule is checked every turn, not only at the moment of the declaration. If an alliance raises its posture to Article 5 while a member is already under attack, or a country joins an alliance at Article 5 while a fellow member is at war, the allies enter that war on the next turn. Lowering the posture stops new entries but does not take anyone out of a war already joined.
+## Connections
 
-It is defensive only. An ally pulled in has declared on nobody, so no other alliance fires and no chain can form. An ally stays out when it:
+**Driven by**
 
-- has an active truce with the attacker, or is already fighting the attacker in another war;
-- shares a bloc with the attacker, or belongs to any binding alliance the attacker also belongs to;
-- already fought in this war and left it.
+- [Government Approval](/wiki/government-approval): a joint statement about a country shifts its approval for 24 turns.
+- [Declaring War](/wiki/declaring-war): a war against a member can trigger the alliance, and a Bloc can call a war.
+- [Cabinet](/wiki/cabinet): the foreign minister tables and founds, and the trade minister sets embargoes.
+- [Bloc Alignment & Spheres of Influence](/wiki/bloc-spheres): a share of 60 or more allows joining, 40 or less flags a member as heading out
 
-When the attacker is itself a member of the alliance, the alliance takes no side and nobody is pulled in. A member dragged in can negotiate its own exit; it is not held in the war until the member it came to defend settles.
+**Affects**
 
-Admission does not apply the pact retroactively to a war the applicant is already fighting. When an applicant is already defending a live war, the membership ballot shows a warning and a member can table a unanimous defensive-entry resolution. If it passes, eligible alliance members enter the defender's side immediately without votes in their national legislatures. A declaration still before an aggressor's legislature also appears as a warning. If the applicant becomes a member before that declaration is enacted, the normal automatic charter applies when the war begins. Calling the bloc onto the attacking side remains an offensive coalition choice and requires national ratification after the organization vote.
+- [International Trade](/wiki/trade-system): shared membership multiplies trade affinity by 1.25, and an FTA by 1.6.
+- [Tariffs](/wiki/tariffs): an FTA sets the tariff between its parties to zero.
+- [Declaring War](/wiki/declaring-war): Article 5 and standing charters pull members into wars.
+- [Government Approval](/wiki/government-approval): statements and aid change a member's approval and growth.
+- [Bloc Spheres](/wiki/bloc-spheres): joining a Bloc commits a country to that alignment pole.
 
-A Bloc can also originate a new war. Only player nations vote on the organization resolution, and every player nation must consent. When it passes, NPP-governed members join automatically. Each eligible player nation receives its own declaration of war, with all of its voting chambers open at the same time. That declaration still needs a two-thirds supermajority in every required chamber. A country whose legislature refuses stays out, while NPP members and every country that ratifies continue into the war.
+## Status
 
-In worlds that begin at the 1953 preset the two armed blocs also levy a fixed **tribute** on their non-voting client members instead of voted dues. See [Declaring War](/wiki/declaring-war).
+Live in every world. Which organizations exist depends on the era: the EU is founded in 1993, the Warsaw Pact runs from 1952 to 1991, COMECON from 1949 to 1991, and the Non-Aligned Movement from 1961. NATO and the Warsaw Pact act as Blocs only in worlds that begin in the Cold War, and tribute from non-voting clients applies only in worlds that begin in 1953.
 
-Autonomous governments cast opinion-based votes here too, table trade agreements, aid, sanctions and statements, and can call their alliance to war, so a bloc's ballots fill in whether or not players hold the seats.
+Last checked: 2026-10-29, version 1.18.0
 
-## Custom organizations
+## Technical detail
 
-Players can **create their own international organizations** with arbitrary parameters:
-
-- **A player-chosen name**: the org is identified by a unique short name
-- **A player-created marker**: shows the org as player-created (as opposed to built-in)
-- A category, leadership office, charter, and optional emblem
-
-A custom organization may use the **Bloc** category. Founding a Bloc creates a new independent alignment pole named for the organization, with a color chosen by its founder. The founder begins committed to that pole. Bloc members can spend the pooled organization fund on Influence, use aid to reinforce member alignment, draw autonomous countries toward membership, and risk defections when a member remains below the alignment threshold. Custom Blocs also receive the same posture, statement, aid, sanctions, war-declaration, and conflict-entry resolution powers as other Bloc organizations.
-
-Custom orgs function identically to built-in ones for membership, leadership, and legislation purposes. The primary difference is provenance: they did not exist at game start. Categories other than Bloc do not create alignment poles.
-
-## Organization pages
-
-Each organization has a dedicated page at the route:
-
-\`\`\`
-/international/[orgId]
-\`\`\`
-
-This page displays the org's membership, current leadership, active legislation, charter, and proposal history. Both built-in and custom orgs are accessible this way.
-
-## Strategic notes
-
-- **Joining an org grants bloc benefits.** Countries that share an org membership receive a trade affinity bonus (see [International Trade](/wiki/trade-system)).
-- **Leading an org amplifies your voice.** The leadership office gives you agenda-setting power and political influence.
-- **FTAs are the most impactful org legislation.** A free trade agreement between two members eliminates bilateral tariffs and boosts trade affinity, a major economic lever.
-- **Custom orgs are flexible.** You can create a bloc tailored to your diplomatic strategy, inviting only aligned countries.
-
-## Related systems
-
-- **[International Trade](/wiki/trade-system)**: how org membership and FTAs affect trade affinity
-- **[Tariffs](/wiki/tariffs)**: how FTAs override bilateral tariffs
-- **[Foreign Policy](/wiki/government-approval)**: international standing and its domestic effects
+Bloc alignment and the custom Bloc pole are on the [Bloc Alignment and Spheres design page](https://docs.lakesidegames.net/design/bloc-alignment-and-spheres.html). Ballot and ratification rules are described on this page and on the Declaring War page.
 `;

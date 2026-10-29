@@ -1,134 +1,113 @@
 export const sovereignDefaultContent = `# Sovereign Default
 
-A sovereign default crisis is the endgame of fiscal mismanagement. When a country's debt burden overwhelms demand for its bonds, auctions begin to fail. After three consecutive failed auctions, the country enters a crisis with a fixed window for the executive and legislature to choose a resolution. Each path carries a GDP penalty and a long "scar" that suppresses the bond market for years afterward.
+A sovereign default is what happens when investors stop buying a country's bonds. After three failed yearly bond auctions in a row, the country enters a debt crisis. Its leader must pick one of four ways out, the legislature must approve it, and everyone who holds that country's bonds or does business there feels the result: bondholders take losses, companies lose profit margin, and the leader loses standing.
 
-There is no feature flag: sovereign default is always active.
+If you hold sovereign bonds, run a company in a heavily indebted country, or sit in a legislature, this page tells you what to watch for and what each way out costs you.
 
-## Trigger: failed auctions
+## How it works
 
-Sovereign bond auctions are evaluated once per fiscal year (turn 40). Demand is measured as a **demand ratio**:
+Once a year, when the country's budget year closes, its government bonds are tested against investor demand. The game scores demand as a **demand ratio**: 1.0 means investors bought everything on offer, 0.5 means they bought half of what was needed. If the last primary bond auction was only partly filled, the demand ratio cannot be higher than that fill rate.
 
-| Demand ratio | Status |
-| --- | --- |
-| ≥ 1.0 | Subscribed (healthy) |
-| 0.7 to 1.0 | Undersubscribed (warning) |
-| < 0.7 | Failed |
-
-A default crisis is triggered by **3 consecutive failed auctions**: three straight years of demand ratio below 0.7.
-
-## Demand penalty curve
-
-The demand ratio starts from a base appetite and sums seven threshold-gated components, then adds a capped entity-holdings bonus:
-
-\`\`\`
-BASE_DEMAND = 1.2
-
-debtToGdpPenalty  = debtGDP > 0.6 ? −(debtGDP − 0.6) × 0.3 : 0
-debtToGdpCliff    = debtGDP > 2.0 ? −(debtGDP − 2.0) × 0.4 : 0   // stacks on top of the graduated penalty
-inflationPenalty  = inflation > 0.05 ? −(inflation − 0.05) × 2.0 : 0
-fxPenalty         = fxDepreciation10t > 0 ? −fxDepreciation10t × 1.5 : 0
-defaultScar       = turnsSinceDefault < 100 ? −(100 − turnsSinceDefault) × 0.01 : 0
-trustModifier     = (trust − 0.5) × 0.4
-couponPremium     = (sovereignCoupon − globalBenchmark) × 5.0
-
-demand = BASE_DEMAND + sum(debtToGdpPenalty, debtToGdpCliff, inflationPenalty,
-                            fxPenalty, defaultScar, trustModifier, couponPremium)
-       + min(entityHoldings ÷ requiredIssuance × 0.5, 0.4)   // capped Model B holdings bonus
-demand = max(demand, 0)
-\`\`
-
-Both the debt-to-GDP penalty and the inflation penalty are threshold-gated: they only kick in once debt exceeds 60% of GDP or inflation exceeds 5%. Below those lines, neither component subtracts anything. The 2.0× debt-to-GDP cliff stacks on top of the graduated penalty once leverage crosses that line. A country can also buy back demand by offering a coupon above the global benchmark rate, or lose it to a lingering default scar or low investor trust.
-
-## Warning window
-
-The system gives a **3-turn warning** before the crisis formally fires. During this window the country dashboard and the world crises page show a countdown, giving the executive a chance to act pre-emptively (cut spending, raise rates, negotiate).
-
-## Crisis windows
-
-Once the crisis triggers, two clocks start:
-
-| Decision | Window |
-| --- | --- |
-| Executive proposes a resolution | 12 turns |
-| Each legislative chamber votes | 24 turns per chamber |
-
-If the executive decision window expires without action, the game
-automatically chooses Repudiate. A crisis does not sit unresolved forever.
-
-## Resolution paths
-
-The executive selects one of four resolutions:
-
-| Path | GDP penalty | Description |
+| Demand ratio | Result | What it means |
 | --- | --- | --- |
-| **Repudiate** | −12% GDP | Refuse to pay; bondholders take the full hit |
-| **Restructure** | −6% GDP | Haircut + maturity extension for bondholders |
-| **IMF Bailout** | −2% GDP | Accept an IMF facility (see [IMF & Bailouts](/wiki/imf)) |
-| **Monetize** | no flat GDP hit; damage runs through inflation instead | Print money to cover the debt; blocked once current inflation exceeds 8% |
+| 1.0 or more | Subscribed | Healthy. The failure count resets to 0. |
+| 0.7 up to 1.0 | Undersubscribed | Warning. The failure count resets to 0, but the country is flagged. |
+| Under 0.7 | Failed | The failure count goes up by 1. |
 
-Repudiate is the most destructive to the economy and to investor confidence but leaves the country debt-free. Restructure splits the pain between the state and bondholders. The IMF bailout has the smallest flat GDP hit among those three paths but comes with ongoing income capture and a temporary sector-margin penalty. Monetize avoids a flat GDP penalty but is gated off once inflation is already high, and triggers its own inflation shock plus, in parliamentary countries, an automatic no-confidence vote.
+Demand starts at a base of 1.2 and is pushed down by high debt, high inflation, a falling currency, a recent default and low trust. A coupon (the interest rate the country pays) above the 4% global benchmark pushes it back up, and so do bonds already held by banks and funds, up to a cap. The exact formula is on the technical page.
 
-## Default scar
+**Worked example.** Country A has debt at 120% of GDP, inflation of 8%, a stable currency, trust of 0.4 and a 5% coupon. Base 1.2, minus 0.18 for debt above 60% of GDP, minus 0.06 for inflation above 5%, minus 0.04 for low trust, plus 0.05 for the coupon premium gives a demand ratio of 0.97. That is undersubscribed: a warning, not a failure.
 
-Regardless of path, a default leaves a **scar** lasting 100 turns:
+Country B has debt at 240% of GDP, inflation of 12%, a currency that fell 20% over 10 turns, trust of 0.3 and the same coupon. The sum is 0.03. That is a failed auction, and two more in a row start the crisis.
 
-\`\`\`
-scarPenalty = −(100 − turnsSinceDefault) × 0.01
-\`\`
+### The crisis
 
-This contribution starts at −1.0 on the auction-demand ratio and decays linearly
-to zero over 100 turns. It does not directly reduce GDP or other national
-economic metrics.
+After the third failure in a row the country goes into crisis. The clocks then run in turns:
 
-## Cascade depth
+1. The head of government has **12 turns** to pick a resolution. If they do nothing, the game picks Repudiate for them.
+2. In most countries the lower chamber of the legislature then has **24 turns** to vote on it, and the upper chamber gets another **24 turns**. Each chamber passes it with a simple majority. A tie, or no votes, counts as a rejection.
+3. If either chamber rejects it, the country is Repudiated automatically. If the proposal passes, it takes effect.
 
-Bond-holder insolvency **cascades up to 3 levels deep**. If a major bondholder (a bank, fund, or corporation) is wiped out by a sovereign haircut, its own creditors are stressed; if they fail, the next ring is tested, and so on for three levels. This is how a single sovereign default can trigger a systemic financial crisis.
+Why a forced outcome? A crisis cannot be left open: bondholders, banks and companies all need to know where the losses land.
 
-## Market lockout and recovery floor
+## The four resolutions
 
-After resolution, how long the country is shut out of new sovereign auctions depends on the path:
+| Resolution | Bonds | Leader pays | Market lockout |
+| --- | --- | --- | --- |
+| **Repudiate** | All sovereign bonds marked in default. They trade at 5% of face value. | Favorability -20, infamy +15, a no-confidence vote in parliamentary countries | 48 turns |
+| **Restructure** | 40% haircut and 60 extra turns on maturity. Bonds trade at 60% of face value. | Favorability -8, infamy +5 | 16 turns |
+| **IMF bailout** | Bonds untouched. Debt is covered by an [IMF loan](/wiki/imf-sovereign-facility). | Favorability -10, infamy +5 | None |
+| **Monetize** | Bonds untouched. The central bank prints the money. | Favorability -15, infamy +10, a no-confidence vote in parliamentary countries | None |
 
-| Path | Bond market lockout |
+Each resolution also posts civil-unrest news events (3 for Repudiate, 2 for Monetize, 1 each for Restructure and the bailout). The lockout is how long the country cannot sell new bonds. Monetize cannot be chosen once inflation is above 8%, and if inflation climbs past 8% while the legislature is still voting, the country falls back to Repudiate.
+
+Monetize prints the financing gap (bonds maturing within 12 turns plus the yearly deficit). Inflation rises by the printed amount divided by GDP, times 5, and the currency falls by 40% of that fraction. A gap of 9 billion on a GDP of 300 billion is 3% of GDP, so inflation jumps 15 points and the currency drops 6%.
+
+Each resolution also records a GDP penalty (Repudiate 12% over 3 turns, Restructure 6% over 2, IMF bailout 2%). It shows on the country's recovery panel. The long-term damage comes mostly from the effects below.
+
+## What a default does to you
+
+**If you hold the country's bonds.** Repudiate is the worst case. Your bonds trade at 5% of face value, so you lose about 95%. Restructure costs you 40% of face value and your money is tied up 60 turns longer. Under an IMF bailout or Monetize your bonds are not marked down. Monetize hurts you through inflation instead.
+
+**If you own a company there.** Companies headquartered in the defaulting country take a profit margin penalty for 48 turns at full strength, then it fades over 24 more turns. At full strength it is -18 points of margin for Repudiate, -9 for Restructure and -4.5 for an IMF bailout, multiplied by the sector. Financial firms take 1.5 times, manufacturing, retail, real estate, construction and chemicals 1.3 times, technology, health, media, logistics and defense 1.0 times, and energy, extraction and agriculture only 0.7 times. Foreign companies feel a smaller version, scaled by the defaulting country's share of world GDP and halved.
+
+**If you run a bank or fund.** Losses can cascade. If a sovereign write-down wipes out a major bondholder, its own creditors are tested, and so on for up to 3 levels.
+
+**If you are the leader.** The favorability and infamy costs above are charged to the character who proposed the resolution.
+
+## The scar and recovery
+
+Every resolution leaves a **scar**. It lowers the country's bond demand ratio by 1.0 right after the default, and the penalty shrinks by 0.01 each turn, reaching zero after 100 turns. It makes new auctions harder but does not directly reduce GDP.
+
+The country is in **recovery** for at least 48 turns. It ends only after the country has also run 5 disciplined fiscal turns in a row. A clean exit earns a small reward: 0.5 points off the country's bond interest rate for 100 turns.
+
+| Key number | Value |
 | --- | --- |
-| Repudiate | 48 turns |
-| Restructure | 16 turns |
-| IMF Bailout | none |
-| Monetize | none |
-
-Separately, every resolution puts the country into recovery, which lasts at least **48 turns** (the recovery floor) and ends only once the country has also held a streak of 5 disciplined fiscal turns. While locked out the country cannot roll debt, forcing it to run primary surpluses or rely on the IMF facility.
-
-## Summary of constants
-
-| Constant | Value |
-| --- | --- |
-| Base demand | 1.2 |
-| Debt-to-GDP penalty threshold | 60% of GDP |
-| Normal rate (debt/GDP, above threshold) | 0.3 |
-| Cliff rate (debt/GDP > 2.0) | 0.4 |
-| Debt-to-GDP cliff threshold | 2.0 |
-| Inflation penalty threshold | 5% |
-| Inflation rate (above threshold) | 2.0 |
-| FX depreciation rate | 1.5 |
-| Entity-holdings (Model B) bonus cap | 0.4 |
-| Failed-auction threshold | demand < 0.7 |
-| Undersubscribed threshold | demand < 1.0 |
-| Consecutive failures to trigger | 3 |
-| Warning window | 3 turns |
+| Failed auctions to trigger a crisis | 3 in a row |
+| Failed auction | Demand ratio under 0.7 |
 | Executive decision window | 12 turns |
-| Legislative vote window | 24 turns per chamber |
-| Repudiate GDP penalty | −12% |
-| Restructure GDP penalty | −6% |
-| IMF bailout GDP penalty | −2% |
-| Monetize inflation gate | blocked above 8% inflation |
-| Default scar duration | 100 turns |
-| Scar per-turn penalty | −1% |
-| Cascade depth | 3 levels |
-| Recovery floor (minimum recovery length) | 48 turns |
-| Bond market lockout | Repudiate 48 turns, Restructure 16 turns |
+| Vote window | 24 turns per chamber |
+| Monetize blocked | Inflation above 8% |
+| Repudiate lockout, margin penalty | 48 turns, -18 points |
+| Restructure lockout, margin penalty | 16 turns, -9 points |
+| Scar length | 100 turns |
+| Minimum recovery | 48 turns plus 5 disciplined turns |
+| Bailout margin penalty | -4.5 points |
 
-## Public data
+## What you can do
 
-Bots and dashboards can read sovereign data through the [public API documentation](https://docs.lakesidegames.net/api/public-v1.html).
+- **Head of government.** Submit a resolution from the Sovereign debt crisis panel on your country page. Act inside the 12 turns, because silence means Repudiate. Restructure and the IMF bailout are the gentlest on companies and leaders. Monetize only works while inflation is 8% or lower.
+- **Legislators.** Vote on the proposal in your chamber. Remember that a rejection or a tie means Repudiate, the harshest result.
+- **Bondholders.** Watch the Sovereign Debt Watch panel on the world crises page. It scores countries and shows their failed-auction streak. Once a country is in crisis the damage is set by the resolution, so the time to cut exposure is while the streak is still short.
+- **Company owners.** If your country is at risk, expect a 72-turn margin hit and plan your cash for it.
+- **Anyone.** Keep debt under 60% of GDP, inflation under 5%, and offer a coupon above the benchmark to keep demand healthy.
 
-See also: [Sovereign Bonds](/wiki/sovereign-bonds), [IMF & Bailouts](/wiki/imf), [Central Banks](/wiki/central-banks), [National Budget](/wiki/national-budget)
+## Connections
+
+**Driven by**
+
+- [Sovereign Bonds](/wiki/sovereign-bonds): the yearly auctions and the bonds being held set the demand ratio.
+- [National Budget](/wiki/national-budget): deficits and debt as a share of GDP push demand down.
+- [Central Banks](/wiki/central-banks): inflation and the currency's fall feed straight into demand.
+- [Bills and Legislation](/wiki/bills-legislation): chamber votes decide whether a resolution passes.
+- [IMF Sovereign Facility](/wiki/imf-sovereign-facility): taking the bailout sets the recovery clock and avoids the lockout.
+
+**Affects**
+
+- [IMF Sovereign Facility](/wiki/imf-sovereign-facility): the bailout path creates the loan.
+- [Sovereign Bonds](/wiki/sovereign-bonds): defaults, haircuts and the lockout change what bonds are worth and when new ones can be sold.
+- [Corporations](/wiki/corporations): companies in the country take a margin penalty, and bondholding firms can fail.
+- [National Budget](/wiki/national-budget): debt is written down, credit rating drops, and the market is closed for a while.
+
+## Status
+
+Sovereign default applies to every country where players are enabled, in every world and era. Countries still marked Coming Soon cannot default. Fully autonomous worlds can default a non-player country, but only if its debt is at 200% of GDP or more.
+
+Last checked: 2026-10-29, version 1.18.0
+
+## Technical detail
+
+The full demand formula, every constant and the turn order are on the [Sovereign Bonds design page](https://docs.lakesidegames.net/design/sovereign-bonds.html).
+
+See also: [Glossary](/wiki/glossary), [Corporate Bonds](/wiki/corporate-bonds), [Corporate IMF Restructuring](/wiki/imf)
 `;

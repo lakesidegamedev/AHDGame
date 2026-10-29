@@ -1,101 +1,91 @@
 export const confirmationProcessContent = `# Confirmation Process
 
-The US Senate must confirm presidential nominations for Cabinet positions before the nominee can take office. This page explains how the confirmation vote works, what can block it, and how timing affects strategy.
+In the US, the Senate must confirm presidential nominations before a nominee can take office. The vote runs for 24 hours and a strict majority of Confirm over Reject wins. NPP senators vote along party lines, so the real fight is over player senators and whips.
 
-## What requires Senate confirmation
+## How it works
 
-- All Cabinet positions (see [Cabinet](/wiki/cabinet)), except the White House Chief of Staff, whom the President appoints alone with no Senate vote
-- Supreme Court justices (see [Supreme Court](/wiki/scotus))
-- Federal Reserve chair and governors, voted on from the FOMC committee page (see [FOMC / Rate-Setting Board](/wiki/fomc))
+1. **Nomination.** The President nominates a character for a specific seat. This creates a pending nomination. Only one can be pending per seat, so the President must wait for it to resolve or withdraw it.
+2. **Senate vote opens** for 24 hours. Every sitting Senator (player or NPP) can vote Confirm, Reject or Abstain. Abstentions are neutral.
+3. **NPP senators vote automatically** by party (see below).
+4. **The window closes** and the votes are tallied.
+   - More Confirm than Reject: the nominee takes office and the seat is filled.
+   - More Reject than Confirm: the nomination fails and the seat stays vacant. The President can nominate again at once.
+   - A tie fails. Confirmation needs a strict majority, and there is no Vice President tie-break on these votes.
 
-A President can bridge a cabinet vacancy with a 24-turn **acting** appointment, once per office per term, with full departmental authority until expiry. A confirmed nominee replaces them the moment the Senate votes. A nominee the Senate has rejected cannot be installed as acting for the same office.
+### What needs confirmation
 
-Parliamentary countries (UK, JP, DE) do not use Senate confirmation. Cabinet members there are appointed directly by the Prime Minister (UK, JP) or Chancellor (DE). See [Government Formation](/wiki/government-formation).
+- All Cabinet seats (see [Cabinet](/wiki/cabinet)), except the White House Chief of Staff, whom the President appoints alone with no Senate vote.
+- Supreme Court justices, who use the same NPP party-line behavior (see [Supreme Court](/wiki/scotus)).
+- Federal Reserve chair and governors, voted on from the FOMC committee page (see [FOMC / Rate-Setting Board](/wiki/fomc)).
+- A Vice President nomination to fill a vacancy needs both the Senate and the House: each chamber must pass it with a strict majority.
 
-## How confirmation works
+Parliamentary countries (UK, Japan, Germany) have no Senate confirmation. The Prime Minister or Chancellor appoints cabinet members directly. See [Government Formation](/wiki/government-formation).
 
-### Step 1: Presidential nomination
+### Key numbers
 
-The President nominates a character for a specific cabinet position. This creates a pending cabinet nomination record and opens the confirmation process.
+| Item | Value |
+| --- | --- |
+| Vote window | 24 hours |
+| Pass rule | Confirm votes strictly greater than Reject votes; a tie fails |
+| Pending nominations per seat | 1 |
+| NPP senator, same party as the nominee | Always Confirm |
+| NPP senator, opposite major party to the nominee | Always Reject |
+| NPP senator from the President's party (otherwise) | 70% Confirm, 30% Abstain |
+| Any other NPP senator | 55% Confirm, 45% Reject |
+| NPP with no party | Abstain |
 
-### Step 2: Senate vote opens
+Seat counts weigh the vote: an NPP bloc holding several seats casts its full seat count.
 
-Once a nomination is submitted, a confirmation vote opens in the Senate. All sitting Senators (players and NPPs) are eligible to vote.
+### How NPP senators vote
 
-**Vote options:** Confirm or Reject. Abstentions count as neutral.
+NPP senators ignore favorability, loyalty and policy alignment on confirmations. Only party matters. The two major blocs never cross the aisle against each other's nominee, while independents and minor parties vote partly at random, so an independent or minor-party nominee can pick up a few extra votes.
 
-**Threshold:** Simple majority. Confirm votes must exceed Reject votes.
+### Worked example
 
-**Duration:** The vote follows the standard bill voting window mechanics. Senators have 24 hours to cast their votes.
+A 100 seat Senate: 52 Republican NPP or player seats, 46 Democratic, 2 independent. A Republican President nominates a Republican. If every Republican seat votes Confirm and every Democratic seat votes Reject, the vote is 52 to 46 with the 2 independents split at random (55% Confirm each). The nominee passes. If one Republican player senator crosses over, it is 51 to 47 and still passes. If three do, it is 49 to 49 plus independents, and a pure tie fails, so the last two seats decide it.
 
-**One pending nomination per position.** Only one nomination can be pending for a given cabinet position at any time. The President must wait for the current vote to resolve (or withdraw the nomination) before submitting a new one.
+## What you can do
 
-### Step 3: NPP senator votes
+- **As President:** nominate, withdraw a nomination before the vote closes (this returns the seat to vacant without a formal rejection), or bridge a vacancy with a 24-turn acting appointment. A confirmed nominee replaces the acting secretary the moment the Senate votes. A nominee the Senate has rejected cannot be installed as acting for the same seat.
+- **As a senator:** vote Confirm, Reject or Abstain. Whip your party's NPP bloc by issuing a directive before the vote opens, the same way you do on a bill (see [Voting & Whips](/wiki/voting-and-whips)).
+- **As a nominee:** the party label matters most to NPPs. Win goodwill from player senators, who decide for themselves.
 
-NPP Senators vote on party lines only (\`src/lib/cabinetNominationLifecycle.ts\`):
+Pending nominations appear on the executive dashboard for the President, and open votes appear on the Senate floor tracker alongside bills.
 
-- **Same party as the nominee:** votes for.
-- **Opposite major party to the nominee:** votes against.
-- **Everyone else:** an NPP from the President's party votes for 70% of the time and abstains otherwise. Any other NPP votes for 55% of the time and against otherwise.
-- An NPP with no party abstains.
+### Why can't I nominate someone?
 
-Favorability, loyalty and policy alignment do not enter NPP votes.
+You are not the President, the seat already has a nomination pending, the seat does not exist in the current year, or the nominee holds an office that cannot be combined with it.
 
-### Step 4: Resolution
+### Strategy
 
-When the voting window closes, the turn processor tallies votes.
+- **President:** in divided government, pick a confirmable candidate and time a controversial nomination for after new senators are seated. Offering a seat to a player in the other party can buy legislative support.
+- **Senate:** blocking a nominee forces the President to negotiate. Target the seats that matter, such as State and Treasury.
+- **Leaving a seat vacant** avoids a confirmation fight but leaves no department head and costs approval.
 
-- **Majority confirms:** The character takes office as the Cabinet member, and the position is marked filled.
-- **Majority rejects:** The nomination fails. The position remains vacant. The President can submit a new nomination for the same position immediately.
-- **If the vote ends in a tie:** The nomination fails. Confirmation requires a strict majority of Confirm votes over Reject; there is no Vice President tie-break here, unlike on Senate bills.
+A failed nomination has no cooldown.
 
-## What can block a confirmation
+## Connections
 
-### Senate opposition
+**Driven by**
 
-The most direct block: if the opposition party controls the Senate and votes as a bloc, they can reject any nominee. This is the normal mechanism of divided government.
+- [Voting & Whips](/wiki/voting-and-whips): a party whip on the nomination moves NPP and player senator votes.
+- [Cabinet](/wiki/cabinet): each cabinet seat's nomination is what opens a confirmation vote.
+- [Congress Leadership](/wiki/congress-leadership): the party that controls the Senate decides most outcomes.
 
-NPPs from a major party never cross the aisle against a nominee of the other major party, but NPPs outside the two major blocs vote partly at random, so independent and minor-party nominees can pick up a few extra votes.
+**Affects**
 
-### Withdrawn nomination
+- [Cabinet](/wiki/cabinet): a confirmed nominee fills the seat and replaces any acting secretary.
+- [Supreme Court](/wiki/scotus): justices are confirmed through the same Senate process.
+- [central-banks](/wiki/central-banks): The Senate confirms Federal Reserve board seats.
+- [fomc](/wiki/fomc): The Senate decides who sits on the FOMC board.
 
-The President can withdraw a nomination at any time before the vote closes. This returns the position to vacant without a formal rejection.
+## Status
 
-### No Senate vote scheduled
+Live in the United States in every era. Other countries do not use Senate confirmation. Vice President nominations also need the House.
 
-If the President hasn't nominated anyone, there's nothing to confirm. Strategic use of this: the opposition can't reject a nominee who hasn't been named. Leaving a position vacant has costs (no department head) and benefits (no confirmation battle).
+Last checked: 2026-10-29, version 1.18.0
 
-## Strategic considerations
+## Technical detail
 
-### For the President (nominating)
-
-- **Pick a confirmable candidate.** If you're in divided government, nominating an ideologically extreme character will fail. Player Senators still weigh the nominee freely, so a more centrist nominee can pull opposition player votes.
-- **Time nominations with Senate dynamics.** If you're about to gain Senate seats (after an election), delay a controversial nomination until the new senators are seated.
-- **Use nominations as leverage.** Offering a coveted Cabinet seat to a player from an opposing party (in exchange for legislative support) is a legitimate bargain.
-
-### For the Senate (confirming or rejecting)
-
-- **Confirmation votes are leverage.** Blocking a Cabinet nominee forces the President to negotiate. Use it.
-- **Target strategically.** Not all Cabinet positions carry equal weight. Secretary of State and Treasury matter more to most players than more specialized roles.
-- **NPP management.** Whipping your party's NPP bloc on a confirmation vote works the same as on a bill. Issue a party directive before the vote opens.
-
-### For Nominees
-
-- **Your party label matters most to NPPs.** NPP senators vote by party, so a nominee from the President's party or an independent fares better with them than a nominee from the opposition.
-- **Build relationships with player Senators.** Player Senators decide for themselves, so cross-party goodwill still helps.
-
-## Failed nominations
-
-A failed nomination has no cooldown: the President can renominate the same character or someone new immediately. However, a publicly failed confirmation is politically costly. The nominee's favorability may take a hit, and the President's leverage on future nominations is weakened.
-
-## Tracking nominations
-
-Pending nominations appear on the executive dashboard visible to the President. The Senate floor tracker shows open confirmation votes alongside regular bills. All players can see which positions are filled or vacant from the Cabinet page.
-
-## Related pages
-
-- [Cabinet](/wiki/cabinet): The Cabinet positions and what each does
-- [Congress Leadership](/wiki/congress-leadership): Senate Majority Leader's role in scheduling confirmation votes
-- [Voting & Whips](/wiki/voting-and-whips): Whipping NPP senators on confirmation votes
-- [Government Formation](/wiki/government-formation): Parliamentary equivalent (no Senate confirmation)
+The exact rules for the nomination vote are on the [Cabinet design page](https://docs.lakesidegames.net/design/cabinet.html).
 `;

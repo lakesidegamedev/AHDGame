@@ -1,88 +1,92 @@
 export const politicalCapitalContent = `# Political Capital
 
-Political Capital is the direct, player-to-NPP interaction system that lets you spend character actions and campaign funds to shift an individual non-player politician's relationship, favorability, and political influence. There is no feature flag: it is always available, and every action is **deterministic** (no randomness, no dice rolls).
+Political Capital is how you work on one non-player politician ([NPP](/wiki/npps-overview)) at a time. You spend character actions and campaign funds to improve your relationship with them, raise or lower their public favorability, or raise or lower their political influence. Relationship is the number that unlocks the useful things: NPP endorsements, caucus members and a better chance of persuading them on votes.
+
+Every action is deterministic. There is no dice roll: if you meet the requirements, the effect happens exactly as listed.
 
 ## How it works
 
-Each Political Capital action has four fixed attributes:
+Each NPP has a **relationship** with you, from -100 to 100, starting at 0. You change it with the actions below. Separately, each NPP has a **favorability** (0 to 100, how the public sees them) and a **political influence** (0 to 100, how much reach they have). Those two are the numbers an NPP carries into an election as a candidate, so boosting an ally or cutting down a rival changes how strong they are on a ballot.
 
-- **Action Cost**: the number of character actions it consumes
-- **Fund Cost**: campaign funds spent (in ₳)
-- **Min Relationship**: minimum current relationship required to attempt the action
-- **Effect**: a human-readable summary of what the action does
+Relationship does not stay put. Every turn it moves 0.1 closer to zero, so a +5 private meeting is worth about 50 turns of upkeep. Letting a relationship go cold is how caucus members walk out (see [Caucuses](/wiki/caucuses)).
 
-Relationship deltas are recorded immediately. Every action is written to a ledger entry that captures the relationship before and after, the actions spent, and the funds spent, so the full history of an NPP relationship is auditable.
+### Actions
 
-## Actions
-
-| Action | Action Cost | Fund Cost | Min Relationship | Effect |
+| Action | Actions | Funds | Needs relationship of at least | Effect |
 | --- | --- | --- | --- | --- |
-| Request Endorsement | 6 | ₳0 | none | Request a public endorsement for your current race; willingness depends on relationship + policy fit |
-| Private Meeting | 3 | ₳0 | -50 | +5 relationship |
-| Boost Favorability | 5 | ₳10K | none | +3 favorability, +2 relationship |
-| Reduce Favorability | 5 | ₳10K | -100 | -3 favorability, -2 relationship |
-| Boost Influence | 6 | ₳20K | none | +2 political influence, +2 relationship |
-| Reduce Influence | 6 | ₳20K | -100 | -2 political influence, -2 relationship |
+| Request Endorsement | 6 | 0 | 40 to 50 (see below) | Public endorsement in one of your current races |
+| Private Meeting | 3 | 0 | -50 | +5 relationship |
+| Boost Favorability | 5 | 10,000 | none | +3 favorability, +2 relationship |
+| Reduce Favorability | 5 | 10,000 | none | -3 favorability, -2 relationship |
+| Boost Influence | 6 | 20,000 | none | +2 influence, +2 relationship |
+| Reduce Influence | 6 | 20,000 | none | -2 influence, -2 relationship |
 
-## Action details
+Funds are campaign funds in your home currency. Gains from the Boost actions and the private meeting are scaled by your [Charisma](/wiki/rpg-stats): at Charisma 1 they are 18% smaller, at 10 they are 18% larger, then rounded. A private meeting gives +4 at Charisma 1, +5 at 5 or 6, and +6 at 10. Reductions are never scaled. Relationship stays between -100 and 100.
 
-### Request Endorsement
+### Endorsements
 
-The most expensive action at 6 character actions, but costs no funds. You ask the NPP for a **public endorsement in your current race**, so you need an active candidacy; without one the request is rejected. The endorsement applies to that campaign only. Whether they agree depends on two factors:
+An endorsement is for one race you are running in right now, so you need an active candidacy and the NPP must be from your country. The NPP agrees only if your relationship is high enough:
 
-1. **Relationship**: how warmly they view you
-2. **Policy fit**: how closely their policy positions align with yours
+\`\`\`
+required relationship = 40 + (economic gap + social gap), with the gap total capped at 10
+\`\`\`
 
-A high-relationship NPP with strong policy alignment is likely to endorse; a hostile one with divergent policy views will refuse. Endorsements are publicly visible and can sway other NPPs and voters.
+The gaps are the distances between your policy positions and theirs on the economic and social axes. A perfect match needs 40. The worst match needs 50. The panel shows "Likely to accept" or "Likely to decline" for each of your candidacies, and a request that would be declined is refused before you pay anything.
 
-### Private Meeting
+### Limits
 
-A cheap, reliable relationship builder. Costs only 3 actions and no funds, but requires a minimum relationship of **-50**: you cannot meet privately with an NPP who is openly hostile. Grants **+5 relationship**, making it the most efficient action per character action spent for improving standing.
+Nothing is charged when an action is refused. It is refused if:
 
-### Boost / Reduce Favorability
+- the NPP is retired;
+- you lack the actions or funds;
+- the relationship is below the minimum for the action;
+- a Boost would push favorability or influence past 100, or a Reduce would push it below 0.
 
-Favorability is a distinct axis from relationship: it reflects how favorably the NPP views your policy direction rather than personal warmth. Both actions cost 5 actions and ₳10K:
+There is no per-turn or per-NPP cap on how many times you can act. Your action balance and funds are the limit.
 
-- **Boost:** +3 favorability, +2 relationship
-- **Reduce:** -3 favorability, -2 relationship (requires min relationship of -100, effectively always available)
+### Worked example
 
-### Boost / Reduce Influence
+You are running for Senate. An NPP governor sits at relationship 10. Her economic position is 3 away from yours and her social position is 2 away, so the required relationship is 40 + 5 = 45. You need 35 more.
 
-Political influence is how much sway the NPP carries in their party and legislature. Changing it is the most expensive action type at 6 actions and ₳20K:
+- At Charisma 5, each private meeting gives +5. Seven meetings cost 21 actions and 0 funds, taking you to 45. The endorsement costs 6 more: 27 actions total.
+- At Charisma 10, each meeting gives +6. Six meetings (18 actions) reach 46, and the endorsement makes 24 actions total.
+- The funded route is far worse. Boost Favorability gives only +2 relationship for 5 actions and 10,000, so reaching 45 that way would cost about 90 actions and 180,000 in funds.
 
-- **Boost:** +2 political influence, +2 relationship
-- **Reduce:** -2 political influence, -2 relationship
+Do the meetings and the request close together. Drift costs only 0.1 per turn, but over weeks it adds up.
 
-Boosting an ally's influence makes them a more powerful friend; reducing a rival's influence weakens their ability to oppose you.
+## What you can do
 
-## Determinism
+Open an NPP's profile page. The Political Capital panel shows the relationship with a label (Ally above 60, Friendly above 20, Cordial above -20, Cool above -50, otherwise Hostile), your current actions and funds, and a button per action. Choose which of your candidacies you want endorsed before you request one.
 
-All Political Capital actions are **fully deterministic**. There is no success chance, no randomness, and no hidden roll. If you have the required actions, funds, and minimum relationship, the effect is guaranteed. Two limits can still reject an action before you are charged: a boost or reduction is refused when the NPP's favorability or influence is already at its cap (100) or floor (0), and the target cannot be a retired NPP. This makes Political Capital a planning tool: you can calculate exactly how many turns and how much money it will take to move an NPP from their current state to a target state.
+Tips:
 
-## Ledger and audit
+- **Private meetings are the best deal.** 3 actions for +5, no funds. Use them to build toward any threshold.
+- **Weaken a rival's influence, not just their favorability.** Influence is the harder number to rebuild for them.
+- **Keep caucus NPPs above 30.** Caucus members leave when their relationship with the chair falls below 20, and the health card flags them from 30.
+- **Persuasion benefits too.** When you spend influence attempts on an NPP, each relationship point adds 0.15 points to your success chance, so relationship 40 adds 6.
 
-Every action writes a ledger entry:
+## Connections
 
-| Field | Description |
-| --- | --- |
-| Relationship Before | Relationship value before the action |
-| Relationship After | Relationship value after the action |
-| Actions Spent | Character actions consumed |
-| Funds Spent | Campaign funds spent (₳) |
+**Driven by**
 
-The ledger is per-NPP, so you can reconstruct the full history of interactions with any given politician. This is useful for diagnosing why an NPP's relationship is at its current value and for auditing whether an action was applied correctly.
+- [NPP Behavior](/wiki/npp-behavior): NPPs lose 0.1 relationship toward zero every turn, so the work has to be repeated.
+- [RPG Stats](/wiki/rpg-stats): your Charisma scales the gains from private meetings and Boost actions.
+- [Election Mechanics](/wiki/election-mechanics): you need an active candidacy before an NPP can endorse you.
 
-## Strategic notes
+**Affects**
 
-- **Private meetings are the best relationship-per-action value** (+5 relationship for 3 actions), but only work on NPPs above -50 relationship.
-- **Favorability and influence are separate axes.** An NPP can have high relationship but low favorability (they like you personally but disagree with your policies) or high influence but low relationship (they are powerful but hostile).
-- **Reducing a rival's influence** is often more impactful than boosting an ally's, because a weakened rival can no longer effectively oppose your legislation.
-- **Endorsements cascade.** A well-timed endorsement from a high-influence NPP can shift other NPPs' willingness to support you.
+- [Caucuses](/wiki/caucuses): relationship with the chair decides whether an NPP can be recruited (60) and whether it stays (20).
+- [NPP Elections](/wiki/npp-elections): favorability and influence changes alter how strong an NPP is as a candidate.
+- [Election Mechanics](/wiki/election-mechanics): a secured endorsement is attached to your candidacy.
+- [NPPs Overview](/wiki/npps-overview): NPPs Overview: your actions and funds pay for the influence actions on an NPP profile.
 
-## Related systems
+## Status
 
-- **[NPPs Overview](/wiki/npps-overview)**: What non-player politicians are and how they behave
-- **[NPP Behavior](/wiki/npp-behavior)**: How NPP relationship and favorability evolve over time
-- **[Party Organization](/wiki/party-organization)**: How NPPs organize within parties
-- **[Campaign Finance](/wiki/national-budget)**: Where campaign funds come from
+Live in every world and era, for every NPP in your own country. Retired NPPs cannot be targeted.
+
+Last checked: 2026-10-29, version 1.18.0
+
+## Technical detail
+
+The exact action table and the endorsement threshold are on the [NPP system design page](https://docs.lakesidegames.net/design/npp-system.html).
 `;

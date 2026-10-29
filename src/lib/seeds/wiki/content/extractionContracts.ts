@@ -1,10 +1,21 @@
 export const extractionContractsContent = `# Extraction Contracts
 
-An extraction contract reserves a named corporation's share of a state's resource capacity in exchange for a signing fee and an ongoing royalty. Governments award new player contracts through competitive bidding.
+An extraction contract reserves a named corporation's share of a state's resource capacity in exchange for a signing fee and an ongoing royalty. Governments award new contracts through competitive bidding. A contract guarantees you output when a state's deposits are crowded, so it is worth bidding for when open-access sharing would squeeze you.
+
+## Key numbers
+
+| Rule | Value |
+| --- | --- |
+| Most capacity that can be reserved in one state and resource | 75% (at least a quarter stays open access) |
+| Royalty rate | 0% to 2% |
+| Contract term | 24 to 480 turns |
+| Missed royalty payments before default | 3 in a row |
+| Bid | Signing fee, at or above the published minimum |
+| Finder's rights contract after a successful corporate survey | 96 turns, no royalty |
 
 ## Find the country's contract board
 
-Open **Government Contracts** from the World menu or a Cabinet Office's Government Contracts tab. Every country has its own board, with **Active Bidding**, **Bidding Closed**, **Awarded** and **Canceled** tabs. Filter by Resource Extraction to see concessions. Each page shows ten results.
+Open **Government Contracts** from the World menu or a Cabinet Office's Government Contracts tab. Every country has its own board, with **Active Bidding**, **Bidding Closed**, **Awarded** and **Canceled** tabs. Filter by Resource Extraction to see concessions.
 
 ## What the government publishes
 
@@ -24,7 +35,7 @@ Authority belongs to the office. A successor can manage an outstanding tender, a
 
 ## Company access and active concessions
 
-An extraction corporation’s **Contracts** tab links to matching tenders even before it holds a contract. Active agreements show their capacity share, royalty, expiry and award record. Revoked, expired and defaulted agreements stay in history. Existing agreements remain visible if new issuance is paused.
+An extraction corporation’s **Contracts** tab links to matching tenders even before it holds a contract. Active agreements show their capacity share, royalty, expiry and award record. Revoked, expired and defaulted agreements stay in history.
 
 A region’s **Resources** tab shows daily capacity, daily output, contracted shares and remaining contract headroom. Open tenders reserve headroom without allocating production until award activation. National officials can revoke nationally issued concessions there; regional officials can revoke concessions issued by their region. The server checks the current office holder on every action.
 
@@ -58,7 +69,49 @@ Before an award, the government can cancel a tender with a public reason. An una
 
 After award, the issuing authority uses the existing contract revocation controls. The tender remains in Awarded as a record of the bidding decision, even if the resulting contract later expires, defaults or is revoked.
 
-New direct offers to a chosen corporation are replaced by bidding. Existing active contracts retain their terms. Unanswered direct offers are withdrawn during the changeover. Admin grants remain an administrative setup and correction tool; they are not a player alternative to bidding.
+New direct offers to a chosen corporation are replaced by bidding. Existing active contracts keep their terms. Unanswered direct offers were withdrawn when bidding replaced them.
 
-See [Resources](/wiki/resources-overview), [Corporations](/wiki/corporations) and [Defence Procurement](/wiki/defence-procurement).
+## Worked example
+
+A state can yield 100,000 barrels of oil per turn. The government publishes a tender for a 40% share, 1% royalty, 96-turn term and a minimum signing fee of ₳1,000,000. Corporation A bids ₳1,500,000 and Corporation B bids ₳1,200,000. The bids become public when bidding closes. The official picks A with a public reason and A pays ₳1,500,000.
+
+A now has 40,000 barrels per turn guaranteed. If A wants 55,000, it is still capped at 40,000 and does not touch the open pool. The other 60,000 barrels are open access: if B and a third company ask for 50,000 and 30,000, together 80,000 against a 60,000 pool, every company is scaled to 75%, giving B 37,500 and the other 22,500. Without the contract, A would compete for the whole 100,000 pool against 80,000 of other demand, so the guarantee matters most when open demand is heavy.
+
+## Is a contract worth it?
+
+- It pays off when the state's open pool is crowded, or when you want certainty for a long term.
+- It costs the signing fee up front plus the royalty every turn. A contract does not guarantee buyers or sales.
+- Pick a fee you can afford: if you cannot fund it after winning, the government can select another bid.
+- If you do not bid, you still share the open-access pool in proportion to your extraction demand.
+
+## Common questions
+
+- **Can only extraction companies get contracts?** Yes. Only extraction corporations with operations in the tender's state can bid.
+- **Who awards them?** Depends on the country's Resource Extraction Authority Act: federal licensing (the national executive or finance minister, which is the default), concurrent licensing, or state licensing.
+- **What if I cannot pay the fee?** The award fails for you and the government can pick another bidder. Nothing is charged for simply bidding.
+- **What happens on default or expiry?** After 3 missed royalty payments in a row, or when the term ends, your guaranteed share returns to the open pool.
+
+## Connections
+
+**Driven by**
+
+- [Resources](/wiki/resources-overview): state capacity and the 75% cap decide what can be tendered.
+- [Corporations](/wiki/corporations): an extraction corporation with operations in the state can bid.
+
+**Affects**
+
+- [Resources](/wiki/resources-overview): a contract guarantees a corporation a share of state capacity and removes it from the open pool.
+- [Commodities](/wiki/commodities): the supply that comes from contracted extraction feeds commodity prices.
+
+See also [Defence Procurement](/wiki/defence-procurement).
+
+## Status
+
+Contracts are awarded by bidding in worlds that run the extraction economy and the Government Contracts board. Existing contracts keep their terms.
+
+Last checked: 2026-10-29, version 1.18.0
+
+## Technical detail
+
+Exact rules are on the [resources design page](https://docs.lakesidegames.net/design/resources.html).
 `;

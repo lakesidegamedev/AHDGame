@@ -32,7 +32,7 @@ This is the part players skip and then lose wars over.
 
 - **Manpower pool**: say 2.1 million against a ceiling of 3.4 million. The US sits on **Selective Service** (reserve law level 2).
 - **Ministerial actions**: up to 4, regaining 1 every 6 turns.
-- **Treasury**: healthy.
+- **Defence appropriation**: enough to cover each order. Units are paid from it, and an order it cannot cover is refused.
 
 He recruits. Four ministerial actions means **four formations a day, maximum**, so this takes real time:
 
@@ -94,7 +94,7 @@ Then he assigns units. Each unit card gets an **Assign to …**: Ruiz gets the M
 
 He watches capacity. Pacific Command covers two regions, so its capacity is modest; he stops assigning before the panel shows an over-capacity penalty and puts the surplus under a second general in the same Command.
 
-> **Mistake avoided:** he does not leave a Command with no commander. That is a flat 10 effectiveness point penalty for nothing.
+> **Mistake avoided:** he does not leave a Command with no commander. That costs 10 effectiveness points for nothing.
 
 At this point **not one unit has moved.** Every one of them is in reserve, because no general is posted to a conflict: there are no conflicts. The world is at peace.
 
@@ -371,7 +371,7 @@ And China, which lost the shooting and won the war, kept its army.
 | 1,000 | Recruited early | 4 actions/day + 6-turn builds means armies take real weeks |
 | 1,010 | Spent 12 doctrine points on one identity | Points arrive one a year, and adoption is permanent |
 | 1,015 | Commissioned generals 5 days early | Tenure points more than doubled their starting capability |
-| 1,020 | Left no Command commanderless | Avoided a flat 10% penalty |
+| 1,020 | Left no Command commanderless | Avoided a 10 point effectiveness penalty |
 | 1,150 | Filed with the votes counted | Two-thirds is real, and refusal costs 10 AP and 120 turns |
 | 1,180 | Named a TC deliberately | It locked the Secretary of Defense out of the front |
 | 1,182 | Did **not** attack at 44% | Attacking is harder than defending; both sides can be under 50% |
@@ -388,6 +388,17 @@ And China, which lost the shooting and won the war, kept its army.
 3. **Rebuilding veterans with conscripts.** Speed you do not need, for experience you cannot get back.
 4. **Pushing through a supply warning.** Consolidating is not losing momentum; it is keeping an army.
 5. **Fighting to a pole out of pride.** Control 24 to control 0 is another twenty-plus battles. Sometimes the cheque and the truce are the win.
+
+## Where each rule is explained
+
+- Recruiting and postures: [Units, Recruitment & Procurement](/wiki/military-units)
+- Doctrine points and chains: [National Doctrine](/wiki/national-doctrine)
+- Tenure points and traits: [Generals & the Officer Corps](/wiki/generals)
+- Commands and capacity: [Commands & Command Structure](/wiki/military-commands)
+- The vote, cooldown and truce: [Declaring War](/wiki/declaring-war)
+- Replacement modes: [Manpower & Conscription](/wiki/manpower-conscription)
+
+Last checked: 2026-10-29, version 1.18.0
 
 ## Next
 

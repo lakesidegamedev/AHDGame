@@ -1,146 +1,138 @@
 export const coreSystemsContent = `# Core Systems
 
-Time, money, and actions are the three resources that bind every decision in A House Divided. This page is the reference for how they flow.
+Time, actions and money bind every decision in A House Divided. A turn happens every real hour, each turn gives you actions to spend, and two separate pools of money pay for politics and for everything else. Understand these three and the rest of the game is detail.
 
-## Time: turns, days, and years
+## How it works
 
-- **1 turn = 1 game week; in normal multiplayer mode, 1 real hour.**
-- **24 turns = 1 real day = 24 game weeks.**
-- **48 turns = 2 real days ≈ 1 game year** (the game uses a compressed 48-week year that cleanly maps electoral cycles onto real-world time).
+### Time: turns, days and years
 
-The turn processor fires once per hour, on the hour. Every turn advances the world: actions refresh, elections tick toward resolution, bills age, NPPs act, markets settle, and metrics update. There are no overnight breaks. Iteration resets are separate, announced world changes; they are not part of the hourly clock.
+One **turn** is one real hour in normal multiplayer. In game time it is one week, and the game uses a compressed 48-week year so election cycles fit real-world time.
 
-Quarter-hour stock updates run between main turns. At half past the hour, election returns, growth, inflation and exchange rates can also advance. These updates do not grant actions, spend another campaign budget, run production or move race deadlines. They skip an inactive world or a processing turn; the half-hour macro update also skips fast mode.
-
-## Term cycles
-
-Term lengths below are stated in **real time** (hours/days you wait between elections), followed by the game-time equivalent. Only US values are listed here; non-US terms are covered in each country hub.
-
-| Office | Term (real) | Term (game years) |
+| Unit | Real time | Game time |
 | --- | --- | --- |
-| US House | 4 real days | 2 game years |
-| US Senate | 12 real days | 6 game years (3 staggered classes) |
-| US Governor | varies by state | typically 4 game years |
-| US President | 8 real days | 4 game years |
+| 1 turn | 1 hour | 1 week |
+| 24 turns | 1 day | 24 weeks |
+| 48 turns | 2 days | 1 year |
 
-**Staggering matters.** Senate Class 1, 2, and 3 elections fire at different times so one-third of the Senate is up for election every ~4 real days. This keeps Senate activity continuous.
+The turn runs once an hour, on the hour, with no overnight break. Each turn refreshes actions, pays out funds, moves elections toward resolution, ages bills, lets non-player politicians (NPPs) act, settles markets and updates metrics. World resets are separate, announced events and are not part of the hourly clock.
 
-For UK MP and Prime Minister timing see [United Kingdom](/wiki/uk-overview). For the German Bundestag and Chancellor see [Germany](/wiki/de-overview). For the Japanese Diet see [Japan](/wiki/jp-overview).
+Between main turns, markets can update at quarter-hour marks, and election returns and macro indicators can move at half past the hour. These small updates never give you actions, spend a campaign budget, run production or move a race deadline. A world that is inactive or mid-processing skips them.
 
-## The action economy
+### Term lengths
 
-Actions are your activity budget. Everything you do (campaigning, voting, wiring money to an ally) costs actions.
+Terms are measured in turns, so real days equal turns divided by 24 at normal speed.
 
-### Earning actions
+| Office | Cycle in turns | Real days | Game years |
+| --- | ---: | ---: | ---: |
+| US House | 96 | 4 | 2 |
+| US Senate | 288 | 12 | 6 (three staggered classes) |
+| US President | 192 | 8 | 4 |
+| US Governor, State Senate | 192 | 8 | 4 |
+| UK House of Commons | 240 | 10 | 5 |
+| German Bundestag | 192 | 8 | 4 |
+| Japanese House of Councillors | 288 | 12 | 6 |
+| Irish Dáil | 192 | 8 | 4 |
 
-Each turn you receive:
+Staggering keeps Senate activity continuous: one class of Senate seats is up for election every 4 real days. Other countries are on their hub pages: [United States](/wiki/us-overview), [United Kingdom](/wiki/uk-overview), [Germany](/wiki/de-overview), [Japan](/wiki/jp-overview) and [Ireland](/wiki/ie-overview).
 
-- **4 base actions**: everyone gets this.
-- **Office bonus**: stacked on top of base. Each country's office table sets the value; typical ones:
-  - House / State Senate / Bundestag member / Sangiin member / MP: **+1**
-  - Senate / Vice President / state governor analogue: **+2**
-  - Governor: **+2**
-  - Executive President, or a Prime Minister or Premier who runs the government: **+4** (French Prime Minister **+3**)
-  - Ceremonial head of state (for example the Presidents of Italy, Austria and China): **+0**
-- **Role bonuses**: stack on top of your office:
-  - Central Bank Chair: **+3**
-  - Supreme Court justice: **+2**
-  - Chamber leadership, highest single role only: presiding officers (Speaker of the House, Bundestagspräsident, NPCSC Chairman, Nigerian Speaker and Senate President) **+3**; Majority and Minority Leaders and the Leader of the Opposition **+2**; President pro tempore, CPPCC Chairman, whips and shadow cabinet members **+1**
-- **Party bonus**: a variable share of your party's action pool, allocated by Party Influence × platform-alignment closeness.
-- **Starting grant**: a one-time 25 actions at character creation.
+**Why terms are short:** a real four-year cycle would mean a month between decisions. Compressing time keeps the game moving while keeping the order of events the same.
 
-Office action pools (ministerial, vice president, justice, gubernatorial) are separate from these actions and refill through the day: ministerial actions return one every 6 turns up to a cap of 4, and vice president and Supreme Court actions one every 12 turns up to 2. Once per turn per pool you can spend 10 actions to buy 1 office action, up to that pool's cap.
+### Actions
 
-Actions accumulate up to a cap that depends on your Energy stat: **200 at Energy 1, rising to 250 at Energy 10**. Above the hoard threshold (**100 at Energy 1, rising to 125 at Energy 10**) you pay a **-4 hoarding penalty per turn** applied before the refresh (\`src/lib/stats/statsConstants.ts\`, \`src/lib/turn/actionRefresh.ts\`). For characters with only the base 4 actions, this creates a soft cap just above the threshold; office holders with higher refresh still grow toward the hard cap, just slowed by 4 per turn.
+Actions are your activity budget. Campaigning, ads, polls, wires to allies and many other moves cost them. Each turn you receive:
 
-### Spending actions
+- **4 base actions**, for everyone.
+- **An office bonus** on top. Typical values: House, State Senate, Bundestag, Sangiin, MP **+1**; Senate, Vice President, Governor **+2**; an executive President or a Prime Minister or Premier who runs the government **+4** (French Prime Minister **+3**); a ceremonial head of state **+0**. A cabinet minister gets **+1** on top of their seat. Each country hub has its own office table.
+- **A role bonus** that stacks: Central Bank Chair **+3**, Supreme Court justice **+2**, and the highest chamber role you hold (presiding officers **+3**; majority and minority leaders and the Leader of the Opposition **+2**; president pro tempore, whips and shadow cabinet **+1**).
+- **A party share**, a variable slice of your party's action pool based on your Party Influence and how close your positions are to the platform.
+- **A one-time 25 actions** when you create the character.
 
-Action costs for core activities (full list on [Stats & Actions](/wiki/stats-actions)):
+**The cap and the hoarding penalty.** Your Energy stat sets two limits. The cap is 200 actions at Energy 1, rising to 250 at Energy 10. The hoard threshold is 100 at Energy 1, rising to 125 at Energy 10. Each turn you start above the threshold you lose 4 actions before the refresh. A character on only the base 4 gains 4 and loses 4, so a stockpile stops growing just above the threshold. This is why you may see your actions stop climbing or "lose 4 a turn". It exists so nobody banks months of actions and spends them in one burst to swamp an election.
 
-| Action | AP Cost | Fund Cost | Effect |
-| --- | --- | --- | --- |
-| Campaign | 1-5 (tiered by PI) | Scaled by state GDP | +1 Political Influence |
-| Fundraise | 3 | none | Earns (₳50k + ₳2k × donor level) × (1 + state PI/100) × your Fundraising stat modifier |
-| Quick Poll | 2 | ₳25k | topline + best/worst 5 groups |
-| Run Advertisements | 5-9 (tiered by favorability) | Scaled by state GDP | +1-3 Favorability (diminishing above 70%) |
-| Full Demographic Poll | 6 | ₳75k | complete breakdown |
-| Build Donor Network | 4-20 (tiered by level) | Scaled by state GDP | donor level +1 |
-| Support | Priced from Run Advertisements (see below) | Priced from Run Advertisements | +1% target Favorability (±12 net swing cap per target per turn) |
-| Attack | Priced from Run Advertisements (see below) | Priced from Run Advertisements | -1% target Favorability; +2% own Infamy (±12 net swing cap per target per turn) |
-| Barnstorm | Priced from Campaign (see below) | Priced from Campaign, scaled by target state GDP | +1-2% target Political Influence |
-| Presidential Travel | 3 to 10 | none | Sets travel state during the US general; +1%/turn Favorability while there |
+**Office pools.** Ministerial, Vice President, justice and gubernatorial actions are separate pools, not part of your main balance. Ministerial actions return 1 every 6 turns up to 4. Vice President and Supreme Court actions return 1 every 12 turns up to 2. A governor holds up to 3. Once per turn per pool, you can pay **10 main actions to buy 1 office action**, up to that pool's cap.
 
-**Support, Attack and Barnstorm are priced from your own self-actions.** Support costs the equivalent run of Run Advertisements needed to give the target the same gain, times 1.25. Attack uses the same Advertise equivalent times 1.5. Barnstorm uses the equivalent Campaign cost times 1.25. The action cost is rounded down and the fund cost to the nearest unit (\`src/lib/influence/rules.ts\`, \`src/lib/influence/simpleInfluence.ts\`).
+### Money: two pools
 
-**Out-of-state multipliers** (1.0× home / 1.25× neighbour / 1.5× non-neighbour) apply to the action cost of Support and Attack only. Barnstorm has no distance multiplier, and neither do Campaign or Advertise.
+- **Campaign Funds** are your political war chest. They pay for ads, polls, donor building, influence operations on NPPs, party taxes and personal campaign donations.
+- **Cash on Hand** is personal money. It pays for wires from the Portfolio page, shares, bonds, property and sponsored news posts (5 actions plus ₳100,000).
 
-## Money: two pools
+The two are separate and do not convert automatically. A third pool, a corporation's treasury, belongs to the company, not to you.
 
-Two money pools, separate and non-convertible:
+**Campaign Funds arrive every turn.** The amount is a base rate for your home state's size, scaled by its GDP per person (0.9 to 1.5), plus a donor bonus and a flat office bonus. Your state and national party then take their tax, up to 33% each.
 
-- **Campaign Funds**: Political war chest. Used for ads, polls, donor base, NPP influence, party taxes, and personal campaign donations.
-- **Cash on Hand**: Personal liquid cash. Used for wire transfers from the Portfolio page, share and bond purchases, property, and sponsored news posts (5 actions plus ₳100k personal cash).
+| Home state population | Base per turn | Donor bonus per level per turn |
+| --- | ---: | ---: |
+| Under 2 million | ₳5,000 | ₳100 |
+| 2 to 8 million | ₳10,000 | ₳200 |
+| 8 to 20 million | ₳20,000 | ₳400 |
+| Over 20 million | ₳40,000 | ₳800 |
 
-Fund generation per turn (Campaign Funds):
+The donor bonus is multiplied by 1 plus your state Political Influence divided by 100. Flat office bonuses: House ₳5k, State Senate ₳3k, Senate ₳15k, Vice President ₳25k, Governor ₳15k, President ₳50k, and UK and German equivalents of ₳5k for MPs and members of the Bundestag and ₳50k for the Prime Minister and Chancellor.
 
-- **Base rate**: a small fixed amount per turn.
-- **Donor bonus**: scaled by donor level and state population tier (small state +₳100/level, medium +₳200/level, large +₳400/level, mega +₳800/level).
-- **Office bonus**: House +₳5k, State Senate +₳3k, Senate +₳15k, VP +₳25k, Governor +₳15k, President +₳50k.
+Cash on Hand grows from dividends, bond coupons and share sales, and from 50% of any Personal Campaign Donation you make (the other 50% goes to Campaign Funds).
 
-Cash on Hand comes from passive income streams (corporation dividends, bond coupons, share sales) and a 50% slice of any Personal Campaign Donation you make (the other 50% moves to Campaign Funds).
+| Number | Value |
+| --- | --- |
+| Base actions per turn | 4 |
+| Starting actions | 25 |
+| Action cap | 200 (Energy 1) to 250 (Energy 10) |
+| Hoard threshold, penalty | 100 (Energy 1) to 125 (Energy 10), 4 actions per turn |
+| Office pool top-up | 10 main actions for 1 office action, once per turn per pool |
+| Starting Campaign Funds | ₳250,000 |
+| Starting Cash on Hand | ₳1,000,000, ₳2,500,000 or ₳5,000,000 by wealth background, lower in earlier eras |
 
-## The turn processing order (engineer's note)
+### What happens each turn
 
-Each hour the processor runs roughly a dozen top-level adapters that together call over 100 phase steps, organized into 14 groups. Most phases within a group run in parallel; some groups (notably election resolution) are strictly sequential. You don't need to know the order to play well, but if you're wondering why your campaign action from 03:59 shows up "on the next turn," this is why.
+\`\`\`flowchart-turn
+\`\`\`
 
-| Group | What happens | Ordering |
-| --- | --- | --- |
-| 1. Resources | Action refresh, fund generation, corporation production | Parallel |
-| 1a. Finance | Bond coupons, NPP funds, commodity prices, portfolios | Sequential after corps |
-| 2. Demographics | Turnout decay, GOTV, party org maintenance | Sequential |
-| 3. Party elections | State/national/committee party races, cleanup | Parallel then cleanup |
-| 4. NPP behavior | NPPs enter elections, vote on bills, back leadership | Sequential (shared context) |
-| 5. Bills & cabinets | Bill lifecycle, cabinet nominations | Parallel |
-| 6. Campaigns | Campaign-manager turn, NPP actions every 4 turns | Sequential |
-| 7. Election resolution | Primary → accumulation → timer → snapshot (primary ballots) → general → leadership vacate | **Strict order** |
-| 8. Parliamentary government | PM formation, confidence motions | After elections |
-| 9. Election coverage & diplomacy | Spawn next cycles, leadership elections, stale cleanup, international organizations, alignment, settlement crises | Parallel |
-| 10. Fiscal year | October processing (turn 40 of 48) | Conditional |
-| 11. Effects & metrics | Policy effects, demographics, approval decay, unowned sector growth, naval/air operations, ministerial orders (battles resolve here) | Parallel |
-| 12. National aggregation | Census, national metrics, inflation, command economy, forex, central bank and FOMC | After state effects |
-| 13. History | Metric/approval/interest-rate snapshots | Parallel |
-| 14. Persistence | Increment turn, save log, emit SSE | **Critical, not retryable** |
+The list above is a simplified view of the election-facing steps. Actions and funds refresh first, then party elections, non-player politicians, bills, campaigns and election resolution, then policy effects, national numbers and history. Each step finishes before the next reads its results, which is why a Campaign you spend at 03:59 shows its effect on the next turn. The full order is on [Reference: Turn Order](/wiki/reference-turn-order).
 
-## Cabinet system (US and parliamentary executives)
+### Worked example: one day for a base character
 
-Presidents and Prime Ministers appoint cabinets. In the US:
+You are a character with no office in a large state (20,000 base per turn), donor level 3, Political Influence 20, home state at average GDP per person. Over 24 turns you get 96 actions (4 per turn) and about ₳21,440 per turn before party tax (20,000 base plus 400 x 3 x 1.2 donor bonus), or ₳514,560 over the day. If you start at 25 actions and never spend, you reach 101 after 19 turns and then stay flat: from there you lose 4 and gain 4 each turn. Spending at least a few actions a day keeps you under the threshold and growing.
 
-- President nominates any character to the principal officer roles (Secretary of State, Treasury, Defense, Attorney General, Interior, Agriculture, Commerce, Labor, HHS, HUD, Transportation, Energy, Education, Veterans Affairs, Homeland Security, Director of Central Intelligence). The White House Chief of Staff is appointed by the President alone, with no Senate vote.
-- Senators vote For / Against / Abstain in a 24-hour window; simple majority confirms.
-- Confirmed members appear on the cabinet page and gain whatever role-specific benefits exist.
-- President can fire any confirmed member, and can bridge a vacancy with one 24-turn acting appointment per office per term (see [Cabinet](/wiki/cabinet)).
+## What you can do
 
-In parliamentary systems (UK / DE / JP) the executive composition follows the country's real-world conventions. See the country hubs.
+- **Spend actions** from the Dashboard or the Actions page. The in-game quote shows the exact action and fund cost before you click. The full list of costs is on [Stats & Actions](/wiki/stats-actions).
+- **Check your next election** on the Elections page. The race page shows when the primary and general end.
+- **Top up an office pool** from that office's page by paying 10 main actions.
+- **Plan around the hour**: log in once or twice a day, and hourly only for the closing turns of a close race (see [The Game Loop](/wiki/the-game-loop)).
 
-## Campaign manager system
+Tips: spend before you hit the hoard threshold, keep Campaign Funds and Cash on Hand separate in your head, and note that perpetual elections mean no seat ever stays vacant: when a cycle resolves, the next one starts immediately and NPPs fill empty seats if you do not contest.
 
-Every player candidacy has a dedicated **Campaign page** at \`/campaign/[id]\`:
+## Cabinets and campaign pages
 
-- **Owner view**: Full management: budget, operations, manager assignment.
-- **Party view**: Intelligence snapshot: strategy, polling, spending.
-- **Public view**: Basic summary only.
+**Cabinets.** Presidents and Prime Ministers appoint cabinets. In the US the President nominates any character to the principal posts (Secretary of State, Treasury, Defense, Attorney General and the others). Senators vote For, Against or Abstain over a 24-hour window, and a simple majority confirms. The White House Chief of Staff needs no Senate vote. A President can fire any confirmed member and can bridge one vacancy with a 24-turn acting appointment per office per term. See [Cabinet](/wiki/cabinet). Parliamentary countries follow their own conventions, on the country hubs.
 
-The campaign manager page is where you spend a separate campaign budget on Fundraising, Ground Game, Media Spending, and Opposition Research: each is a branch tree, not a flat level ladder, so how you invest within a tree matters as much as how much. It's also where you track activity logs and view NPP endorsements. Details: [Campaign Manager](/wiki/campaign-manager) and [Campaign Strategy](/wiki/campaign-strategy).
+**Campaign page.** Every candidacy has a Campaign page. The owner sees budget, operations and manager assignment, the party sees an intelligence snapshot, and the public sees a basic summary. It is where you spend a separate budget on Fundraising, Ground Game, Media Spending and Opposition Research, each a branch tree rather than a flat ladder. See [Campaign Manager](/wiki/campaign-manager) and [Campaign Strategy](/wiki/campaign-strategy).
 
-## Perpetual elections
+## Connections
 
-No seat sits vacant. When a House/Senate/Governor/Bundestag/Sangiin cycle resolves, the next cycle spawns **immediately**. Empty seats are filled by NPPs during their election window: they'll beat you if you don't contest.
+**Driven by**
 
-## Related
+- [Stats & Actions](/wiki/stats-actions): your Energy stat sets the action cap and hoard threshold, and your Fundraising stat scales fundraising.
+- [Player Progression](/wiki/player-progression): the office you hold sets your action and fund bonuses.
+- [Political Parties](/wiki/political-parties): your party share of actions and the party tax on your funds.
+- [Relocation](/wiki/relocation): moving changes your home state, which sets your fund rate.
 
-- [The Game Loop](/wiki/the-game-loop): A player's hour-by-hour rhythm.
-- [Stats & Actions](/wiki/stats-actions): Full reference with formulas.
-- [Election Mechanics](/wiki/election-mechanics): How primaries and generals resolve.
-- [NPPs Overview](/wiki/npps-overview): How autonomous politicians fit into the game.
-- [Cabinet](/wiki/cabinet): Presidential nominations and Senate confirmation.
+**Affects**
+
+- [The Game Loop](/wiki/the-game-loop): the hourly turn sets how often you need to log in.
+- [Election Mechanics](/wiki/election-mechanics): turns count the ballots and term lengths set the cycle.
+- [Stats & Actions](/wiki/stats-actions): the action and fund flow is what the stats modify.
+- [Cabinet](/wiki/cabinet): the cabinet bonus adds actions to ministers.
+- [Campaign Manager](/wiki/campaign-manager): campaign budgets draw on your funds.
+- [Crisis Interaction](/wiki/crisis-interaction): the turn clock decides cadence, expiry and when windows close
+- [Player Random Events](/wiki/player-events): the turn clock sets event cooldowns and deadlines
+
+## Status
+
+These rules apply in every world and era. Office tables, term lengths and which offices exist differ by country, and some countries are open only in some eras. Speeds can differ in single-player worlds.
+
+Last checked: 2026-10-29, version 1.18.0
+
+## Technical detail
+
+Every constant with its source and the full phase order are on the [Core Systems design page](https://docs.lakesidegames.net/design/core-systems.html).
 `;
