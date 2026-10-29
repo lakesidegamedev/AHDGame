@@ -213,7 +213,7 @@ The exchange page shows aggregate stats for all listed corporations:
 - Average share price movement
 - Top movers (largest price % change)
 
-National GDP growth is influenced by corporate sector growth rates, so a healthy stock market generally reflects a growing economy, and vice versa. Share prices react to changing cash, bonds, rates, trading and sentiment every 15 minutes via the fundamental formula, while earnings and sector production still update on the hourly turn. A rescued company's price is cut by 0.85 and its shares are diluted under [Corporate IMF Restructuring](/wiki/imf).
+National GDP growth is driven by corporate sectors (their growth rates before the plants stage, what they actually sell and produce after it), so a healthy stock market generally reflects a growing economy, and vice versa. Share prices react to changing cash, bonds, rates, trading and sentiment every 15 minutes via the fundamental formula, while earnings and sector production still update on the hourly turn. A rescued company's price is cut by 0.85 and its shares are diluted under [Corporate IMF Restructuring](/wiki/imf).
 
 Applies on every country exchange: United States (NYSE), United Kingdom (FTSE), Germany (DAX), Japan (Nikkei), Ireland (ISEQ), Brazil (B3), China (SSE) and Nigeria (NGX). In multiplayer worlds prices update every 15 minutes. Command economies have no private listed companies, so no exchange. Last checked 2026-10-29, version 1.18.0. Exact rules: [Stock Market design page](https://docs.lakesidegames.net/design/stock-market.html)
 `;

@@ -166,13 +166,13 @@ Sequential (each depends on previous):
 
 1. **Metric engine and demographic flows**: state metrics move; population migrates.
 2. **Census and era crossing**: a decennial census reapportions House seats and redraws district maps; scheduled era content resolves against the calendar year the world shows.
-3. **GDP growth and national metrics**: Country-level aggregates recomputed from state-level data (GDP-weighted for economic metrics, population-weighted otherwise).
+3. **GDP growth and national metrics**: Country-level aggregates recomputed from state-level data: GDP growth weighted by state GDP, unemployment by labour force, most other rates by population.
 4. **Trade growth mirror**: Trade growth mirrored from the federal budget system to the central bank system (Forex prerequisite).
 5. **Inflation recalculation**: Per-turn inflation recalculated using updated national metrics.
 6. **Command economy**: plan fulfilment, directed credit, shortage and the marketization dial for planned economies.
 7. **Forex turn**: Exchange rates updated (when Forex is enabled). Reads inflation differentials and trade volumes; fills limit orders.
 8. **Central bank chair turn, FOMC meetings and nominations**: Chair scrutiny and bonuses updated; the Fed's rate meetings open and resolve at their deadline; pending Fed nominations resolve on the Senate's votes.
-9. **Central bank chair selection**: Open chair vacancies outside the US filled if conditions are met.
+9. **Central bank chair selection**: A chair who has taken executive office is removed first. Then every bank whose chair term has ended, whose seat was vacated, or that never had a chair draws from its nominees; a pick unanswered for 24 turns lapses and is redrawn.
 10. **Referendum lifecycle and independence desire**: UK devolved referendums advance.
 
 ### Group 13: history

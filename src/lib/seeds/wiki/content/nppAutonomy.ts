@@ -11,7 +11,7 @@ Levels are cumulative: v2 includes v0 and v1, and v6 includes everything below i
 | Level | What NPPs gain | What you may notice |
 | --- | --- | --- |
 | **off** | Reactive cross-pressure voting and elections only | NPPs only react; nothing is proposed by them |
-| **v0** | Autonomous party organization votes; fills stalled executive seats in countries nobody plays (central bank chair, stalled prime minister) | Empty top jobs get filled |
+| **v0** | Autonomous party organization votes; seats a caretaker central bank chair in any country except the US when no player is nominated; fills a stalled prime minister in countries nobody plays | Empty top jobs get filled |
 | **v1** | Autonomous bill sponsorship and voting, executive formation, ministerial governance and governing agendas | NPP-led cabinets act coherently instead of sponsoring one-off bills |
 | **v2** | **Comingle tier**: caretaker ministers, caretaker CEOs for vacant corporations, NPP corporate attacks | NPPs staff vacant ministries and companies even where players play |
 | **v3** | Savings, union bargaining and campaign finance run like player accounts; NPPs challenge for presidential primaries in countries nobody plays | NPPs have money and compete harder |

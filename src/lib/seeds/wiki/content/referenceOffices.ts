@@ -84,12 +84,12 @@ State Senators vote on state-level legislation and fill the state legislature. C
 
 | Field | Value |
 |---|---|
-| Won by | Presidential nomination, confirmed by the Senate |
+| Won by | Presidential nomination to the chair seat, confirmed by the Senate, or the chair draw when the seat is vacant |
 | Term | 4 years (192 turns) |
 | Action bonus | +3/turn |
 | Party strength weight | 0 (non-political) |
 
-The Fed Chair proposes US rate moves to the seven-seat FOMC, which affect bond yields, corporate borrowing costs, and the USD exchange rate. This is the highest action-bonus non-executive office. When a chair or governor seat's term ends it falls vacant and waits for a presidential nomination and a Senate vote; the engine never seats a machine candidate. See [FOMC / Rate-Setting Board](/wiki/fomc).
+The Fed Chair proposes US rate moves to the seven-seat FOMC, which affect bond yields, corporate borrowing costs, and the USD exchange rate. This is the highest action-bonus non-executive office. A new world opens with seven technocrat governors. When a chair or governor seat's term ends it falls vacant and waits for a presidential nomination and a Senate vote, or, for the chair seat, the chair draw; the engine never restocks a seat or seats a caretaker chair. See [FOMC / Rate-Setting Board](/wiki/fomc).
 
 ### US Cabinet positions
 
@@ -313,8 +313,8 @@ A member of a Japanese regional council.
 
 | Field | Value |
 |---|---|
-| Won by | Central bank chair selection (PM appointment) |
-| Term | 5 years |
+| Won by | Central bank chair selection (PM nomination pool) |
+| Term | 4 years (192 turns) |
 | Action bonus | +3/turn |
 | Party strength weight | 0 |
 

@@ -79,7 +79,7 @@ The coalition threshold is **1,491 seats** (a bare majority of 2,980: 2980 / 2 +
 | NPC Delegate | Regional election | 5 years | 2,980 (1,226 in 1953) |
 | Provincial Delegate (People's Congress) | Sub-national election | 5 years | 4,000 total |
 | Governor (provincial executive) | FPTP provincial election | 5 years | 1 per province |
-| Governor of the PBoC | Appointed action | 5 years | 1 |
+| Governor of the PBoC | Appointed action | 4 years | 1 |
 
 The **President** is a **ceremonial head of state**: not elected and not appointed through the Premier flow. The office is auto-populated as whoever currently holds the **CCP chair**, and updates automatically whenever the chair changes. The President carries **+0 actions per turn** and **0 party strength weight**, so the office has no mechanical weight beyond its ceremonial label.
 

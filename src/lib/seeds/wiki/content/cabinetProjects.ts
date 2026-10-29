@@ -81,8 +81,8 @@ Projects take several turns to build and then give fixed standing effects.
 | Bridge | 4 | 80 | 25 | Road condition up |
 | Railway | 9 | 190 | 55 | Transport efficiency up, investment gap down |
 | Broadband | 5 | 90 | 30 | Broadband access up |
-| Freight | 7 | 150 | 50 | Road condition up, GDP growth up |
-| Airport | 7 | 200 | 70 | Public transit up, GDP growth up |
+| Freight | 7 | 150 | 50 | Road condition up (its listed GDP growth lift currently has no effect) |
+| Airport | 7 | 200 | 70 | Public transit up (its listed GDP growth lift currently has no effect) |
 
 While a project is under construction you set its funding level. A highway takes 12 turns at Slowed funding and spends 72 per turn, 6 turns at Standard and spends 120, and about 4 turns at Crashed and spends 192. Once operational it is permanent and pays only upkeep. Unlike plants, infrastructure effects are flat bonuses that do not fade as the region improves.
 
