@@ -29,7 +29,7 @@ Each embargo picks:
 | Active ministerial embargoes per member | 2 |
 | Cooldown on the same target after a ministerial embargo | 168 turns, 3.5 game years, counted from when it was enacted |
 
-The cooldown stops a minister re-imposing the same embargo the moment it lapses. Lifting an embargo early does not reset it, so if you need the pressure to last past the cooldown, use legislation. The game also blocks a second embargo that would cover the same country pair and commodity while the first is active, and a country cannot embargo itself. Embargoed flows are blocked or capped in the clearing of the [Trade System](/wiki/trade-system). A [blockade](/wiki/blockades) stacks with an embargo: an embargo blocks a lane outright and a blockade scales what affinity is left.
+The cooldown stops a minister re-imposing the same embargo the moment it lapses. Lifting an embargo early does not reset it, so if you need the pressure to last past the cooldown, use legislation. The game also blocks a second embargo that would cover the same country pair, commodity and direction while the first is active, and a country cannot embargo itself. Embargoed flows are blocked or capped in the clearing of the [Trade System](/wiki/trade-system). A [blockade](/wiki/blockades) stacks with an embargo: an embargo blocks a lane outright and a blockade scales what affinity is left.
 
 ## What a total embargo does to a corporation
 
@@ -37,7 +37,7 @@ The strong corporate effect applies to a **total embargo**: all commodities, blo
 
 ![Steps a total embargo applies to a corporation sector: export exposure, scaled revenue and maintenance, a dropped export premium, and unchanged fixed overhead.](/wiki-images/diagrams/embargo-and-trade-exposure-total-embargo-effects.svg)
 
-1. Each sector has an **export exposure**: the share of its output that cleared abroad the previous turn, weighted by supply, from the [Trade System](/wiki/trade-system).
+1. Each sector has an **export exposure**: for each commodity it makes, the share of its country's surplus that cleared abroad the previous turn, averaged over the sector's output mix, from the [Trade System](/wiki/trade-system).
 2. Revenue is multiplied by 1 minus the exposure. A pure exporter collapses toward zero. A sector mostly serving local demand barely notices.
 3. Maintenance costs scale down with the lower revenue, so the domestic remainder runs at its normal margin.
 4. The export-premium margin bonus is dropped, because the sales that earned it are gone. That bonus is worth up to 6 margin points.

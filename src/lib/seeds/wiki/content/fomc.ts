@@ -31,12 +31,12 @@ If **no governors are seated**, meetings pause and the chair sets the rate direc
 2. The chair's motion is set automatically from the chair's own reading of inflation and growth (from [National Metrics](/wiki/national-metrics)): hike, cut or hold, with a signed rate change. If the 16-change cap is reached or the 6-turn wait is still running, the motion is a hold.
 3. NPP seats vote at once, from the same rule an autonomous chair uses, tilted hawk (leans to hike) or dove (leans to cut).
 4. Player governors vote within 24 hours. No ballot counts as an abstain.
-5. The motion is decided as soon as it has a majority, or can no longer reach one. Otherwise it closes when every seated player has voted, or at the deadline. A meeting never resolves on the turn it opened.
+5. The motion is decided as soon as it has a majority, or can no longer reach one. Otherwise it closes when every seated player has voted, or at the deadline. A decision reached on the turn the meeting opens takes effect the next turn; a decision reached on a later turn takes effect at once.
 6. If it passes, the rate moves and the change counts toward the 16.
 
 ![Flow of an FOMC meeting from the due date and automatic motion through NPP and player votes to a majority decision that moves the rate or fails.](/wiki-images/diagrams/fomc-meeting-flow.svg)
 
-Picture a board with five seats filled (three NPP governors and two players, one of them the chair) and two seats vacant. A majority of five is 3. The chair's automatic motion is a 0.50 hike. The NPP seats vote when the meeting opens: hike, hike, hold. One player then votes hike, which makes 3 votes. The motion is decided at once, and it takes effect on the next turn, because a meeting never resolves on the turn it opened. If the NPPs had voted hold, hold, hold, the motion could reach at most 2 votes with both players behind it, so it would fail early.
+Picture a board with five seats filled (three NPP governors and two players, one of them the chair) and two seats vacant. A majority of five is 3. The chair's automatic motion is a 0.50 hike. The NPP seats vote when the meeting opens: hike, hike, hold. One player then votes hike, which makes 3 votes. The motion is decided at once. If that vote came on the opening turn it takes effect the next turn; on any later turn it takes effect immediately. If the NPPs had voted hold, hold, hold, the motion could reach at most 2 votes with both players behind it, so it would fail early.
 
 ## Your vote and your motion
 
