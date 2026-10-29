@@ -138,3 +138,25 @@ export function KeirSprite({ mood, scale = 1 }: { mood: KeirMood; scale?: number
     />
   );
 }
+
+/**
+ * Keir's head and shoulders in a circle, for small places (the phone button,
+ * the drawer header) where the full bust at 40px reads as a smudge. The sprite
+ * is scaled up and centred on his face; the circle crops the rest.
+ */
+export function KeirAvatar({ mood, size = 36 }: { mood: KeirMood; size?: number }) {
+  const scale = (size * 1.15) / CELL;
+  const px = CELL * scale;
+  return (
+    <span
+      aria-hidden
+      data-keir-avatar
+      className="relative inline-block shrink-0 overflow-hidden rounded-full bg-card-elevated"
+      style={{ width: size, height: size }}
+    >
+      <span className="absolute" style={{ left: size / 2 - px * 0.5, top: size / 2 - px * 0.46 }}>
+        <KeirSprite mood={mood} scale={scale} />
+      </span>
+    </span>
+  );
+}

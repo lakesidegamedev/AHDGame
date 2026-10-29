@@ -26,7 +26,8 @@ vi.mock("./askDrawerApi", async (importOriginal) => {
   };
 });
 
-import { AskDrawerPanel } from "./AskDrawerPanel";
+import { askJson } from "./askDrawerApi";
+import { AskDrawerPanel, groupThreads, threadGroup } from "./AskDrawerPanel";
 
 function renderPanel() {
   return render(
@@ -157,5 +158,65 @@ describe("AskDrawerPanel", () => {
     expect(screen.getByText("How do I build union support in my state?")).toBeTruthy();
     expect(screen.queryByText("Explain what I'm looking at")).toBeNull();
     vi.useRealTimers();
+  });
+
+  it("reports an answer with a reason, as on the Ask site", async () => {
+    renderPanel();
+    await ask("Why did my approval drop?");
+    await act(async () => {
+      api.finish?.({ answer: "Your party lost a vote.", answerId: 42, convId: "c1" });
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Report a problem with this answer" }));
+    const send = screen.getByRole("button", { name: "Send report" }) as HTMLButtonElement;
+    expect(send.disabled).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "Missing sources" }));
+    fireEvent.change(screen.getByLabelText("Report detail"), { target: { value: "No link" } });
+    await act(async () => {
+      fireEvent.click(send);
+    });
+    expect(vi.mocked(askJson)).toHaveBeenCalledWith("answer/feedback", {
+      answerId: 42,
+      rating: "down",
+      reason: "Missing sources: No link",
+    });
+    expect(screen.getByText("Reported. Thank you.")).toBeTruthy();
+  });
+
+  it("shares a finished thread", async () => {
+    renderPanel();
+    await ask("Why did my approval drop?");
+    await act(async () => {
+      api.finish?.({ answer: "Your party lost a vote.", answerId: 42, convId: "c1" });
+    });
+    vi.mocked(askJson).mockResolvedValueOnce({ url: "https://ask.lakesidegames.net/s/abc" });
+    const writeText = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Share this thread" }));
+    });
+    expect(vi.mocked(askJson)).toHaveBeenCalledWith("conversation/share", { id: "c1" });
+    expect(writeText).toHaveBeenCalledWith("https://ask.lakesidegames.net/s/abc");
+    expect(screen.getByText("Link copied")).toBeTruthy();
+  });
+});
+
+describe("thread groups", () => {
+  const now = new Date(2026, 9, 29, 12);
+  const day = 86_400_000;
+
+  it("sorts threads into the Ask site's sections", () => {
+    expect(threadGroup(now.getTime() - 1000, now)).toBe("Today");
+    expect(threadGroup(now.getTime() - day, now)).toBe("Yesterday");
+    expect(threadGroup(now.getTime() - 3 * day, now)).toBe("Previous 7 days");
+    expect(threadGroup(now.getTime() - 30 * day, now)).toBe("Older");
+  });
+
+  it("puts pinned threads first and lists search results as matches", () => {
+    const convs = [
+      { id: "a", pinned: true, updated: now.getTime() - 30 * day },
+      { id: "b", updated: now.getTime() },
+    ];
+    expect(groupThreads(convs, false, now).map((g) => g.label)).toEqual(["Pinned", "Today"]);
+    expect(groupThreads(convs, true, now).map((g) => g.label)).toEqual(["Matches"]);
   });
 });
