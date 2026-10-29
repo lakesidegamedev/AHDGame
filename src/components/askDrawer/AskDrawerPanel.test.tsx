@@ -74,8 +74,12 @@ describe("AskDrawerPanel", () => {
     act(() =>
       api.emit?.({ event: "status", data: { label: "Reading the union code", phase: "read" } })
     );
-    expect(screen.getByText("Searching the wiki")).toBeTruthy();
+    // The latest step is the status line; the full list sits behind "Show".
     expect(screen.getByText("Reading the union code")).toBeTruthy();
+    expect(screen.queryByText("Searching the wiki")).toBeNull();
+    expect(document.querySelector("[data-ask-deck]")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Show" }));
+    expect(screen.getByText("Searching the wiki")).toBeTruthy();
     expect(document.querySelector("[data-keir-mood]")?.getAttribute("data-keir-mood")).toBe(
       "reading"
     );
@@ -90,8 +94,9 @@ describe("AskDrawerPanel", () => {
       api.finish?.({ answer: "Join a union and organise.", followups: [] });
     });
     expect(screen.getByText("Join a union and organise.")).toBeTruthy();
-    // The ack stays as Keir's first line above the answer.
-    expect(screen.getByText("I'll look into how to build union support for you.")).toBeTruthy();
+    // The ack only lasts until the answer starts.
+    expect(screen.queryByText("I'll look into how to build union support for you.")).toBeNull();
+    expect(screen.getByRole("button", { name: /Researched 2 steps/ })).toBeTruthy();
     expect(document.querySelector("[data-keir-alert]")).toBeNull();
   });
 
@@ -126,6 +131,9 @@ describe("AskDrawerPanel", () => {
         charge: { cost: 0.6, percentOfDaily: 3, reasons: ["live data", "chart"] },
       });
     });
+    expect(screen.queryByText("Used 3% of today's energy (live data, chart)")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /^Sources/ }));
+    expect(screen.getByText("About this answer")).toBeTruthy();
     expect(screen.getByText("Used 3% of today's energy (live data, chart)")).toBeTruthy();
   });
 
@@ -197,6 +205,117 @@ describe("AskDrawerPanel", () => {
     expect(vi.mocked(askJson)).toHaveBeenCalledWith("conversation/share", { id: "c1" });
     expect(writeText).toHaveBeenCalledWith("https://ask.lakesidegames.net/s/abc");
     expect(screen.getByText("Link copied")).toBeTruthy();
+  });
+});
+
+describe("AskDrawerPanel chat layout", () => {
+  beforeEach(() => {
+    vi.useRealTimers();
+    api.suggest.mockReset();
+    api.suggest.mockResolvedValue({ questions: [] });
+    vi.mocked(askJson).mockClear();
+  });
+
+  it("shows the question as a bubble with no Answer label", async () => {
+    renderPanel();
+    await ask("Why did my approval drop?");
+    await act(async () => {
+      api.finish?.({ answer: "Your party lost a vote." });
+    });
+    expect(screen.getByText("Why did my approval drop?").tagName).toBe("P");
+    expect(screen.queryByText("Answer")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Why did my approval drop?" })).toBeNull();
+  });
+
+  it("folds follow-ups away and opens at most three chips", async () => {
+    renderPanel();
+    await ask("Why did my approval drop?");
+    await act(async () => {
+      api.finish?.({
+        answer: "Your party lost a vote.",
+        followups: [
+          "First follow-up?",
+          "Second follow-up?",
+          "Third follow-up?",
+          "Fourth follow-up?",
+        ],
+      });
+    });
+    expect(screen.queryByText("First follow-up?")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Follow-up questions" }));
+    expect(screen.getByText("First follow-up?")).toBeTruthy();
+    expect(screen.getByText("Third follow-up?")).toBeTruthy();
+    expect(screen.queryByText("Fourth follow-up?")).toBeNull();
+  });
+
+  it("keeps sources in one panel behind a pill", async () => {
+    renderPanel();
+    await ask("Why did my approval drop?");
+    await act(async () => {
+      api.finish?.({
+        answer: "Your party lost a vote.",
+        citations: [
+          { label: "Approval wiki page", url: "https://ask.lakesidegames.net/x", kind: "wiki" },
+        ],
+        liveSources: [{ label: "Party approval" }],
+      });
+    });
+    expect(screen.queryByText("Approval wiki page")).toBeNull();
+    const pill = screen.getByRole("button", { name: /^Sources/ });
+    expect(pill.textContent).toContain("2");
+    fireEvent.click(pill);
+    expect(screen.getByText("Approval wiki page")).toBeTruthy();
+    expect(screen.getByText("Live game data read")).toBeTruthy();
+    expect(screen.getByText("Party approval")).toBeTruthy();
+    fireEvent.click(pill);
+    expect(screen.queryByText("Approval wiki page")).toBeNull();
+  });
+
+  it("expands the research steps from the Researched pill", async () => {
+    renderPanel();
+    await ask("Why did my approval drop?");
+    act(() =>
+      api.emit?.({ event: "status", data: { label: "Reading approval code", phase: "read" } })
+    );
+    await act(async () => {
+      api.finish?.({ answer: "Your party lost a vote." });
+    });
+    expect(screen.queryByText("Reading approval code")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /Researched 1 step/ }));
+    expect(screen.getByText("Reading approval code")).toBeTruthy();
+  });
+
+  it("shows a quiet rate line that opens the report form on thumbs down", async () => {
+    renderPanel();
+    await ask("Why did my approval drop?");
+    await act(async () => {
+      api.finish?.({
+        answer: "Your party lost a vote.",
+        answerId: 42,
+        convId: "c1",
+        ratePrompt: { text: "Did this answer your question?", lowConfidence: true },
+      });
+    });
+    expect(screen.getByText("Did this answer your question?")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "No, this did not help" }));
+    expect(screen.getByRole("button", { name: "Send report" })).toBeTruthy();
+    expect(screen.queryByText("Did this answer your question?")).toBeNull();
+  });
+
+  it("lets the rate line be dismissed", async () => {
+    renderPanel();
+    await ask("Why did my approval drop?");
+    await act(async () => {
+      api.finish?.({
+        answer: "Your party lost a vote.",
+        answerId: 42,
+        ratePrompt: { text: "Did this help?" },
+      });
+    });
+    const line = screen.getByText("Did this help?");
+    expect(line).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    expect(screen.queryByText("Did this help?")).toBeNull();
   });
 });
 
