@@ -6,7 +6,7 @@ summary: >-
   wealth background they begin it with.
 tags: [economy, characters]
 badges: [minor]
-areas: [characters]
+areas: [fullstack]
 ---
 
 A one-time window asks each player to pick Low, Medium or High Income. Your
