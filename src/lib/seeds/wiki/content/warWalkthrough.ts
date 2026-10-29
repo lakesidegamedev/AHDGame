@@ -1,6 +1,6 @@
 export const warWalkthroughContent = `# A War, Start to Finish
 
-Every other page in this category explains one system. This one runs a whole war through all of them, in order, with turn numbers.
+One war, seven hundred turns, and a peace that the winning general never saw coming. This page runs a whole war through every military system in order, with turn numbers; [Conflicts & the Military System](/wiki/conflicts-overview) is the map of the same ground and the [War College](/wiki/paths/war-college) path gives the guided reading order.
 
 It is a **hypothetical**. The characters are invented and the numbers are illustrative: the point is the sequence and the decisions, not the exact figures you will see.
 
@@ -30,7 +30,7 @@ It is a **hypothetical**. The characters are invented and the numbers are illust
 
 This is the part players skip and then lose wars over.
 
-**Turn 1,000.** Brennan opens the defence office → **Military** tab. The US roster is its seeded order of battle. Brennan checks three things:
+**Turn 1,000.** Brennan opens the defence office → **Military** tab (recruiting and postures are covered in [Units, Recruitment & Procurement](/wiki/military-units)). The US roster is its seeded order of battle. Brennan checks three things:
 
 - **Manpower pool**: say 2.1 million against a ceiling of 3.4 million. The US sits on **Selective Service** (reserve law level 2).
 - **Ministerial actions**: up to 4, regaining 1 every 6 turns.
@@ -50,7 +50,7 @@ Each unit is unavailable for **6 turns** after ordering. Brennan is not building
 
 ## Hale and Brennan spend the doctrine points
 
-**Turn 1,010.** Brennan opens the **Doctrine** tab. The US has the standard twelve starting doctrines and **12 points**. It will earn one more at the start of each game year and nothing else, so the budget for the whole decade is a handful.
+**Turn 1,010.** Brennan opens the **Doctrine** tab (see [National Doctrine](/wiki/national-doctrine) for points and chains). The US has the standard twelve starting doctrines and **12 points**. It will earn one more at the start of each game year and nothing else, so the budget for the whole decade is a handful.
 
 He decides the United States is a **power-projection** nation and spends deliberately:
 
@@ -70,7 +70,7 @@ He decides the United States is a **power-projection** nation and spends deliber
 
 ## The officer corps
 
-**Turn 1,015.** Brennan commissions four characters as generals, including **Aldridge** and **Ruiz**. Each arrives at Brigadier, 0 XP, **4 starting points**, nothing trained.
+**Turn 1,015.** Brennan commissions four characters as generals (tenure points and traits are in [Generals & the Officer Corps](/wiki/generals)), including **Aldridge** and **Ruiz**. Each arrives at Brigadier, 0 XP, **4 starting points**, nothing trained.
 
 Crucially, **Brennan cannot spend those points.** He posts a message telling the corps what doctrine the nation adopted, and each player trains their own general.
 
@@ -82,7 +82,7 @@ Between turn 1,015 and 1,150 (about five and a half real days) each general also
 
 ## Commands
 
-**Turn 1,020.** Brennan builds three Commands on the **Commands** tab:
+**Turn 1,020.** Brennan builds three Commands on the **Commands** tab (capacity and authority are explained in [Commands & Command Structure](/wiki/military-commands)):
 
 | Command | Type | Regions | CG |
 | --- | --- | --- | --- |
@@ -106,7 +106,7 @@ At this point **not one unit has moved.** Every one of them is in reserve, becau
 
 ## Filing
 
-**Turn 1,150.** President Hale opens the executive shell → **Foreign Affairs** tab.
+**Turn 1,150.** President Hale opens the executive shell → **Foreign Affairs** tab. The vote, cooldown and truce are all in [Declaring War](/wiki/declaring-war).
 
 - Target: **China**
 - War goal: **Punitive**: extract concessions, then withdraw
@@ -191,7 +191,7 @@ The 58% Ruiz acted on is now stale.
 
 ## The first battle
 
-**Turn 1,197.** Battles resolve after force effects and before reinforcement: **fight, count losses, rebuild**.
+**Turn 1,197.** The loop below is [Fighting a Battle](/wiki/fighting-a-battle) in action. Battles resolve after force effects and before reinforcement: **fight, count losses, rebuild**.
 
 The report:
 
@@ -223,7 +223,7 @@ The 4th at 31% **fights like a formation a third its size.** Strength scaling is
 
 ## Brennan's replacement decision
 
-Back in Washington, Brennan opens **Military → Operations** and faces the choice this whole system is built around:
+Back in Washington, Brennan opens **Military → Operations** and faces the choice this whole system is built around (see [Manpower & Conscription](/wiki/manpower-conscription)):
 
 | Mode | Fills per turn | Cost |
 | --- | --- | --- |
@@ -300,7 +300,7 @@ Tang reads it correctly: **the price of peace is about to go up sharply.** Right
 
 Here is where the constitutional split matters. **Tang cannot do this.** Peace is negotiated by the head of government or the **foreign** seat holder: never the defence minister who has been running the war.
 
-China's foreign minister opens their office → **Overview** → Peace panel and offers:
+China's foreign minister opens their office → **Overview** → Peace panel and offers (the exit is covered in [Peace, Indemnities & Truces](/wiki/peace-and-truces)):
 
 | | |
 | --- | --- |
@@ -391,21 +391,5 @@ And China, which lost the shooting and won the war, kept its army.
 4. **Pushing through a supply warning.** Consolidating is not losing momentum; it is keeping an army.
 5. **Fighting to a pole out of pride.** Control 24 to control 0 is another twenty-plus battles. Sometimes the cheque and the truce are the win.
 
-## Where each rule is explained
-
-- Recruiting and postures: [Units, Recruitment & Procurement](/wiki/military-units)
-- Doctrine points and chains: [National Doctrine](/wiki/national-doctrine)
-- Tenure points and traits: [Generals & the Officer Corps](/wiki/generals)
-- Commands and capacity: [Commands & Command Structure](/wiki/military-commands)
-- The vote, cooldown and truce: [Declaring War](/wiki/declaring-war)
-- Replacement modes: [Manpower & Conscription](/wiki/manpower-conscription)
-
-Last checked: 2026-10-29, version 1.18.0
-
-## Next
-
-- [War College](/wiki/paths/war-college): the guided reading order for this whole category.
-- [Conflicts & the Military System](/wiki/conflicts-overview): the map of everything above.
-- [Fighting a Battle](/wiki/fighting-a-battle): the operational loop in detail.
-- [Peace, Indemnities & Truces](/wiki/peace-and-truces): the exit, in detail.
+Hypothetical walkthrough; the systems it touches apply in every world, and the invented characters and figures are illustrative. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html)
 `;

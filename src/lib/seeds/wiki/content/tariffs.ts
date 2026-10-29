@@ -1,14 +1,10 @@
 export const tariffsContent = `# Tariffs
 
-A tariff is a trade barrier a legislature passes by bill. It cuts the profit margin of foreign corporations operating in the country that imposed it, slightly hurts domestic firms through higher input costs, and tilts how sectors are priced and how they fight for market share. If you run a corporation abroad, a tariff is the line item that turns your margin negative. If you legislate, it is your main tool against foreign competition.
-
-## How it works
+Your steel sector is profitable in Germany until Germany passes a 25% economy-wide tariff, and suddenly it is 12.5 percentage points thinner. A tariff is a trade barrier a legislature passes by bill. It cuts the profit margin of foreign corporations operating in the country that imposed it, slightly hurts domestic firms through higher input costs, and tilts how sectors are priced and how they fight for market share. If you run a corporation abroad, it is the line item that turns your margin negative. If you legislate, it is your main tool against foreign competition.
 
 A tariff applies to a sector only when the sector operates **in the country that imposed it**. A US tariff on Chinese corporations does not touch Chinese sectors operating in Germany.
 
 ![An enacted tariff becomes an effective rate that feeds six effects: foreign margin penalty, domestic malus, commodity blend tilt, market capture, inflation pressure and a sentiment pulse.](/wiki-images/diagrams/tariffs-effect-fan-out.svg)
-
-### Key numbers
 
 | Rule | Value |
 | --- | --- |
@@ -22,19 +18,9 @@ A tariff applies to a sector only when the sector operates **in the country that
 | Market capture at a 100% tariff | Domestic attacker x1.5, foreign attacker x0.5 |
 | Inflation baseline | 3% tariff pressure |
 
-### Worked example: a 25% economy-wide tariff
+## Writing a tariff
 
-Germany passes a 25% economy-wide tariff.
-
-- A foreign steel sector operating in Germany loses 12.5 percentage points of margin (25 / 2).
-- A German steel sector pays no tariff but loses 2.5 points of margin from costlier inputs (25 / 10).
-- If Germany also has one +7.5 point [subsidy](/wiki/subsidies), the German sector nets +5 points, while the foreign sector is still at -12.5 points, a 17.5 point gap between them.
-- The commodity margin blend moves a quarter of the way: global weight 43.75%, national 31.25%, local 25%.
-- In a market share fight (a sector split attack), a domestic attacker gets x1.125 and a foreign attacker x0.875.
-
-The halving of the foreign penalty keeps a high tariff from wiping out foreign operations instantly, while still making them clearly costlier.
-
-## Scope types
+Tariffs come from a bill in [Bills & Legislation](/wiki/bills-legislation): a bill with a tariff provision creates, changes or removes one. Draft it from the bill drafting screen and choose the scope, target and rate. A narrow tariff leaves the rest of the economy alone, since only economy-wide and sector tariffs carry a domestic malus.
 
 | Scope | Target | Example |
 | --- | --- | --- |
@@ -43,9 +29,7 @@ The halving of the foreign penalty keeps a high tariff from wiping out foreign o
 | Origin country | Corporations headquartered in one country | "40% on German corporations" |
 | Corporation | One named corporation | Targeted sanction on one entity |
 
-Re-enacting the same scope and target at a new rate replaces the old record.
-
-### Stacking
+Re-enacting the same scope and target at a new rate replaces the old record. To remove a tariff, pass a new bill for the same scope and target with a rate of 0. The old record stays in history but no longer applies.
 
 Tariffs that match a sector add together, up to 100%:
 
@@ -56,6 +40,18 @@ Tariffs that match a sector add together, up to 100%:
 | 20% economy-wide + 10% origin-country | 30% |
 
 Domestic malus uses only economy-wide and sector tariffs. Origin-country and corporation tariffs target foreign firms only.
+
+## What it does to a sector's margin
+
+Say Germany passes a 25% economy-wide tariff.
+
+- A foreign steel sector operating in Germany loses 12.5 percentage points of margin (25 / 2).
+- A German steel sector pays no tariff but loses 2.5 points of margin from costlier inputs (25 / 10).
+- If Germany also has one +7.5 point [subsidy](/wiki/subsidies), the German sector nets +5 points, while the foreign sector is still at -12.5 points, a 17.5 point gap between them.
+- The commodity margin blend moves a quarter of the way: global weight 43.75%, national 31.25%, local 25%.
+- In a market share fight (a sector split attack), a domestic attacker gets x1.125 and a foreign attacker x0.875.
+
+The halving of the foreign penalty keeps a high tariff from wiping out foreign operations instantly, while still making them clearly costlier.
 
 | Effective rate | Foreign margin penalty | Domestic malus | Domestic attacker | Foreign attacker |
 | --- | --- | --- | --- | --- |
@@ -74,12 +70,9 @@ tariff-margin-effects
 tariff-blend-and-capture
 \`\`\`
 
-## What you can do
+If your margins are negative after a tariff, a foreign sector loses half the effective rate in margin points: a 40% effective rate is -20 points. Open the Congress view to see active tariffs, including stacked ones, then check each foreign sector's margin. If a tariff is eating your margin, change sectors, or push for a free trade agreement. A domestic-only [subsidy](/wiki/subsidies) plus a tariff makes a two-sided policy: help for home firms, a penalty for foreign ones, and the margins add together.
 
-- **Legislators:** draft a bill with a tariff provision from the bill drafting screen. Choose the scope, target and rate. Tip: a narrow tariff leaves the rest of the economy alone, since only economy-wide and sector tariffs carry a domestic malus.
-- **Legislators:** to remove a tariff, pass a new bill for the same scope and target with a rate of 0. The old record stays in history but no longer applies.
-- **Corporation owners:** open the Congress view to see active tariffs, then check each foreign sector's margin. If a tariff is eating your margin, change sectors, or push for a free trade agreement.
-- **Tip:** a domestic-only [subsidy](/wiki/subsidies) plus a tariff makes a two-sided policy: help for home firms, a penalty for foreign ones.
+How a tariff reshapes [Corporations](/wiki/corporations) comes down to the profit margin of foreign and domestic sectors and the outcome of market share fights. It also moves margin blend weight from the global price to the national price in [Commodities](/wiki/commodities).
 
 ## Free trade agreements
 
@@ -91,45 +84,13 @@ Free trade agreements (FTAs), passed in an international organization both count
 
 Non-partner foreign firms get no relief.
 
-## Inflation and market sentiment
+## Inflation, budget and sentiment
 
-Tariffs feed **cost-push inflation** (prices rise because things cost more to make). Each turn the game boils the active tariffs into one pressure number from 0 to 100. Economy-wide tariffs count in full, and narrower ones in proportion to the domestic sector revenue they touch. Pressure above a 3% baseline adds to inflation; pressure below is mildly deflationary.
+Tariffs feed **cost-push inflation** (prices rise because things cost more to make). Each turn the game boils the active tariffs into one pressure number from 0 to 100. Economy-wide tariffs count in full, and narrower ones in proportion to the domestic sector revenue they touch. Pressure above a 3% baseline adds to inflation; pressure below is mildly deflationary. That cost pressure shows up in [National Metrics](/wiki/national-metrics).
 
 When a **sector** tariff is enacted the market also reacts: corporations headquartered in the country get a +7% sentiment boost, and foreign corporations there a -7% penalty. Sentiment pulses decay at 0.82 per 15-minute market interval, and the total is capped at plus or minus 25%. Economy-wide, origin-country and corporation tariffs do not fire pulses.
 
-Economy-wide tariff rates also feed the federal budget's tariff revenue projection (import value x tariff rate). Narrower tariffs affect margins and inflation only.
+Economy-wide tariff rates also feed the [National Budget](/wiki/national-budget) tariff revenue projection (import value x tariff rate). Narrower tariffs affect margins and inflation only. In trade, tariffs add to landed cost and can price a route out; see [Logistics: Freight, Sourcing, and Supply Chains](/wiki/logistics-guide).
 
-## Common questions
-
-- **Why are my margins negative after a tariff?** A foreign sector loses half the effective rate in margin points. A 40% effective rate is -20 points. Check the Congress view for stacked tariffs.
-- **Does an FTA turn tariffs off?** Yes, between partner countries.
-- **Do domestic companies pay tariffs?** No, but they take a smaller malus from broad tariffs (up to -10 points at 100%).
-- **How do I remove a tariff?** Pass a bill for the same scope with a 0% rate.
-- **How do tariffs affect inflation?** Through cost-push pressure above a 3% baseline.
-
-## Connections
-
-**Driven by**
-
-- [Bills & Legislation](/wiki/bills-legislation): a bill with a tariff provision creates, changes or removes a tariff.
-
-**Affects**
-
-- [Subsidies](/wiki/subsidies): used alongside tariffs in industrial policy; the margins add together.
-- [Corporations](/wiki/corporations): changes the profit margin of foreign and domestic sectors and the outcome of market share fights.
-- [Commodities](/wiki/commodities): moves margin blend weight from the global price to the national price.
-- Inflation: adds cost-push pressure above the baseline.
-- [Logistics: Freight, Sourcing, and Supply Chains](/wiki/logistics-guide): Tariffs add to landed cost and can price a route out.
-- [National Budget](/wiki/national-budget): Tariff rates and import value set tariff revenue.
-- [National Metrics](/wiki/national-metrics): Tariffs above their baseline add cost pressure to inflation.
-
-## Status
-
-Tariffs work in any country where legislators can pass an industry bill with a tariff provision. FTAs apply only between countries in the same international organization that has passed one.
-
-Last checked: 2026-10-29, version 1.18.0
-
-## Technical detail
-
-Exact constants and edge cases are on the [tariffs design page](https://docs.lakesidegames.net/design/tariffs.html).
+Tariffs work in any country where legislators can pass an industry bill with a tariff provision. FTAs apply only between countries in the same international organization that has passed one. Last checked 2026-10-29, version 1.18.0. Exact rules: [Tariffs (design)](https://docs.lakesidegames.net/design/tariffs.html)
 `;

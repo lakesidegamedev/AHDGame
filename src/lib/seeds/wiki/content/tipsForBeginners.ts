@@ -1,6 +1,6 @@
 export const tipsForBeginnersContent = `# Tips for Beginners
 
-Short rules, each with the reason behind it. If you have not made a character yet, start with [Create a Character](/wiki/create-a-character) and [Getting Started](/wiki/getting-started).
+Your first few days go better if you avoid a handful of avoidable mistakes: hoarding actions, filing without polling, running as an independent. Here are fifteen short rules, each with the reason behind it. If you have not made a character yet, start with [Create a Character](/wiki/create-a-character) and [Getting Started](/wiki/getting-started).
 
 ## How actions work (read this first)
 
@@ -18,7 +18,7 @@ Open **Parties**, pick a party whose platform is close to your sliders, and clic
 
 On the race page, run a **Quick Poll**. It costs 2 actions and a base of ₳25,000 (your exact quote is shown, and Intellect and the era change it). If you are far behind, pick another seat. Reason: a poll is much cheaper than a lost primary, and it uses the same vote math as the real count. See [Polling](/wiki/polling).
 
-Primaries count ballots over their closing window, so a lead you hold beats one you grab at the end. **Elections** is where you look.
+[Primaries](/wiki/primaries) count ballots over their closing window, so a lead you hold beats one you grab at the end. **Elections** is where you look.
 
 \`\`\`guide-screenshot
 elections
@@ -76,7 +76,7 @@ legislature
 
 Notifications and the turn summary list resolved elections and bills. If a candidacy vanished, look there first.
 
-## Worked example: your first day
+## What a first day of actions looks like
 
 A new character has 25 actions, ₳250,000 of campaign funds, favorability 50, PI 10 and donor level 1. The costs below are base figures before your state's GDP scaling; the game shows your exact quote.
 
@@ -101,14 +101,5 @@ Notice that funds run out before actions do. A Campaign click costs ₳20,000 ti
 
 ## Where to get help
 
-Open the in-game wiki ([FAQ](/wiki/faq) and [Glossary](/wiki/glossary)), ask in the community Discord, or file a ticket from the game's support page.
-
-## Related
-
-- [Getting Started](/wiki/getting-started)
-- [The Game Loop](/wiki/the-game-loop)
-- [Stats and Actions](/wiki/stats-actions)
-- [Primaries](/wiki/primaries)
-- [Advanced Strategy](/wiki/advanced-strategy)
-- [FAQ](/wiki/faq)
+Open the in-game wiki ([FAQ](/wiki/faq) and [Glossary](/wiki/glossary)), ask in the community Discord, or file a ticket from the game's support page. When you are ready to plan beyond your first office, read [Advanced Strategy](/wiki/advanced-strategy). [Getting Started](/wiki/getting-started) is the walkthrough these tips sit beside.
 `;

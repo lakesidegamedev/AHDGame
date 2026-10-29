@@ -1,8 +1,8 @@
 export const powerPlayerGuideContent = `# Power Player Guide
 
-Becoming a dominant force in A House Divided requires coordinating political, economic, and organizational power simultaneously. This guide covers the specific systems (party leadership, stacking offices, coordinating with other players, running a corporation) and how they interact when all running at once.
+Holding a seat is the easy half. Dominating means a party chair, a bank governorship or a Supreme Court seat beside it, a corporation paying for the next campaign, and other players moving in step with you. This guide covers how those pieces fit together once they are all running.
 
-## Phase 1: building a foundation (turns 1-20)
+## Before you try to dominate (turns 1-20)
 
 Before you can dominate, you need baseline stats:
 
@@ -13,7 +13,7 @@ Before you can dominate, you need baseline stats:
 
 Do not declare for office until PI reaches 35+ and favorability is at least 55. An early loss tanks favorability and costs you actions with nothing to show.
 
-## Controlling party leadership
+## Winning and using the party chair
 
 Party leadership is the multiplier on everything else. The party chair controls:
 
@@ -30,7 +30,7 @@ To win a party leadership election:
 
 Once chair, use GOTV strategically: concentrate budget on states where your candidates are running, not spread evenly. A concentrated 20% turnout bump in three swing states beats 3% everywhere.
 
-## Stacking offices
+## Appointed posts that stack with your seat
 
 Office stacking means holding an elected office alongside an appointed one. You hold **one elected office at a time**: winning a new seat vacates the old one, so a Senator who wins a governorship stops being a Senator. What stacks are the appointed posts that sit beside an elected seat: the central-bank chair, a Supreme Court seat (which does not occupy your current office), party leadership, and a general's commission.
 
@@ -38,7 +38,7 @@ A strong US combination is **Senator + Federal Reserve Chair**: 4 (base) + 2 (Se
 
 In parliamentary countries the equivalent is the lower-chamber seat paired with the central-bank chair: **MP + Bank of England Governor** (UK), **Shūgiin member + Bank of Japan Governor** (JP), or **Member of Bundestag + ECB President** (DE).
 
-## Running a corporation alongside a political career
+## A corporation that funds the campaign
 
 Corporations generate passive income without requiring per-turn actions after setup. The action cost comes at setup: acquiring sectors, upgrading them, and managing corporate strategy.
 
@@ -51,7 +51,7 @@ Corporations generate passive income without requiring per-turn actions after se
 
 This is a long-term play: corporations take 10 to 20 turns to generate significant revenue. Start early, run it passively, and reinvest into higher-margin sectors as your political power grows.
 
-## Influencing NPP behavior
+## Steering the NPPs
 
 NPPs (Non-Player Politicians) fill empty seats and vote autonomously. At scale, they control the legislative outcomes of entire chambers. There are three levers for influencing them:
 
@@ -61,7 +61,7 @@ NPPs (Non-Player Politicians) fill empty seats and vote autonomously. At scale, 
 
 **3. NPP Endorsements**: In primaries, NPPs with aligned ideology are willing to endorse you. Collect endorsements from NPP-heavy chambers for presidential primaries (player endorsements only count for presidential races).
 
-## Coordinating with other players
+## Moving in step with other players
 
 In a world with continuous turns, coordination is time-sensitive. The most effective coordination patterns:
 
@@ -73,7 +73,7 @@ In a world with continuous turns, coordination is time-sensitive. The most effec
 
 **The "hold the line" role**: In close party competitions, sometimes the right play is to hold your existing seat while another player pushes for a promotion. A sitting Senator maintaining their seat is often more valuable to the team than two players competing for the same Senate race.
 
-## Measuring dominance
+## How you know it is working
 
 There is no win screen, but you can track dominance through:
 
@@ -85,18 +85,14 @@ There is no win screen, but you can track dominance through:
 
 The real measure of a power player is whether the game world responds to your actions: legislation passing, elections going your way, national metrics shifting toward your policy goals.
 
-## Common power player mistakes
+## Where power players slip
 
 - **Overextending into too many elections at once.** Spreading thin across 3 simultaneous primaries means none gets enough action investment. Pick your races.
 - **Neglecting party org.** It's invisible but compounds over time. A neglected state party's org share erodes, its registration drifts to organised rivals, and every member's general-election weight in that state goes with it.
 - **Defying the whip on low-stakes votes.** Save whip-breaking for legislation you actually care about. It costs no infamy, but constant defiance costs you leadership trust, and every vote you cast drifts your own positions.
 - **Ignoring small offices.** State Senator seats generate actions and block NPP accumulation of state legislative power. Don't cede the sub-national tier.
 
-## Related
+## See also
 
-- [Advanced Strategy](/wiki/advanced-strategy): Strategic frameworks and career arc planning.
-- [Multi-Country Play](/wiki/multi-country-play): Cross-border economic coordination.
-- [Reference: Offices](/wiki/reference-offices): All office action bonuses.
-- [Endgame Goals](/wiki/endgame-goals): What to aim for long-term.
-- [Reading the Game](/wiki/reading-the-game): Using available data to make decisions.
+[Advanced Strategy](/wiki/advanced-strategy) for career arcs, [Multi-Country Play](/wiki/multi-country-play) for cross-border economic coordination, [Reference: Offices](/wiki/reference-offices) for every office action bonus, [Endgame Goals](/wiki/endgame-goals) for what to aim at long-term, and [Reading the Game](/wiki/reading-the-game) for using the data to decide.
 `;

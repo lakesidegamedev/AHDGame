@@ -1,12 +1,32 @@
 export const ieOverviewContent = `# Ireland
 
-Ireland is a **parliamentary republic**: a small open economy on the Atlantic edge of Europe. The **Taoiseach** leads the government through a majority in the 160-seat Dáil Éireann. The live allocator uses Hare-quota proportional representation with largest remainders; ranked STV transfers are not yet simulated.
+Ireland comes down to one number: **81**, a bare majority of the 160-seat Dáil Éireann. A **parliamentary republic** and a small open economy on the Atlantic edge of Europe, it has no single-party majority tradition, so whoever wants to be Taoiseach has to assemble 81 votes out of a fragmented chamber. The live allocator uses Hare-quota proportional representation with largest remainders; ranked STV transfers are not yet simulated.
 
----
+## Finding 81 votes
 
-## Government structure
+The **coalition threshold is 81 seats** (160 / 2 + 1). A party or coalition holding 81+ seats can form a government and propose a Taoiseach through a confidence vote among all TDs.
 
-| Office | How Filled | Term | Seats |
+![Taoiseach formation from the Dail election through a majority nomination or a minority bid to a confidence vote among all TDs.](/wiki-images/diagrams/ie-overview-taoiseach-formation.svg)
+
+**Minority government**: any party or coalition chair holding at least **25 Dáil seats** (15.38% of the chamber, rounded up) can propose a Taoiseach and call a confidence vote, even without 81. The Dáil votes the bid up or down.
+
+After an election, picture Fine Gael on 60 seats, Fianna Fáil on 45, Labour on 12 and the Greens on 8. Fine Gael plus Labour plus the Greens is 80, one short of 81. Fine Gael plus Fianna Fáil is 105, which passes with 24 to spare. A Taoiseach is confirmed once 81 TDs vote yes, so every missing seat has to be found among independents or other parties.
+
+**Coalition government is the norm.** The two major parties are **Fine Gael** and **Fianna Fáil**, but neither typically governs alone. Coalitions (Fine Gael + Labour, Fianna Fáil + Greens, and so on) typically include one of the major parties plus smaller partners (Labour, Greens, independents). The 81-seat threshold is the only hard number that matters for confidence.
+
+If the government loses Dáil confidence, the Taoiseach falls and formation restarts (see [No-Confidence Votes](/wiki/no-confidence-votes)). The Taoiseach can also dissolve the Dáil and call an early election, mechanically similar to UK, JP and DE snap elections (see [Snap Elections](/wiki/snap-elections)). The [Cabinet Guide](/wiki/cabinet-guide) lists every post the winning coalition fills.
+
+## How Dáil seats are won
+
+Dáil elections currently use a generic **Hare-quota largest-remainder** allocator, the same proportional allocator used by several multi-seat chambers. It approximates proportional multi-seat results, but it does not model ranked ballots, surplus transfers, or eliminations. Wiki references to STV describe the real institution, not the live resolver; a future true-STV implementation would need ranked ballots and transfer rounds that the current resolver does not perform.
+
+- **A party needs at least 10% of the pooled vote in a region** to win any seats there. Parties under the line get none.
+- **Primaries advance the top 3 candidates** per party per region (same as the UK / JP / DE rule, not the US top-1 rule).
+- **All Dáil seats are contested** in each cycle: no staggered classes. The Dáil term is 5 years (240 turns, 10 real days), and an election window is 48 turns (48 real hours: 24 for the primary, 24 for the general).
+
+See [Election Mechanics](/wiki/election-mechanics) for the shared primary and general rules, and [Multi-Country Play](/wiki/multi-country-play) for proportional versus FPTP systems and cross-border investments.
+
+| Office | How filled | Term | Seats |
 | --- | --- | --- | --- |
 | Taoiseach (head of government) | Confidence vote of Dáil members | No fixed term | 1 |
 | Tánaiste (deputy head of government) | Appointed by Taoiseach | No fixed term | 1 |
@@ -16,87 +36,28 @@ Ireland is a **parliamentary republic**: a small open economy on the Atlantic ed
 | Local Councillor | Multi-seat local election | 5 years | 200 total |
 | Governor of the Central Bank of Ireland | Appointed action | 4 years | 1 |
 
-The **Taoiseach** is Ireland's head of government: equivalent to a Prime Minister. The **Uachtarán na hÉireann** (President of Ireland) is a ceremonial, non-executive head of state with a 7-year term, max 2 terms per character. The **Tánaiste** is the deputy head of government, filled through cabinet appointment.
+## Why the Seanad doesn't matter for bills
 
-The **Oireachtas** is the bicameral national legislature. However, the **Seanad Éireann** is partly elected, partly appointed, and does not participate in the player legislative loop, so the legislature is mechanically treated as **unicameral** (only Dáil bills advance to enactment). The Dáil is the sole legislative chamber where player-contestable bills originate.
+The **Oireachtas** is bicameral in name. The **Dáil Éireann** has 160 TDs, allocated proportionally across multi-seat constituencies, and it is the source of the Taoiseach's authority. The **Seanad Éireann** has 60 senators (43 elected from vocational panels, 11 nominated by the Taoiseach, and 6 from universities). It is partly elected and partly appointed, and it is **not part of the player legislative loop**.
 
----
+So the legislature is mechanically **unicameral**: bills do not require Seanad passage to enact, and the Seanad cannot block or amend them in gameplay. This is on purpose: the Seanad is mostly appointed or chosen by vocational panels, so it would add a chamber with no real contest for players.
 
-## Oireachtas
+## The President and the local tier
 
-The Oireachtas consists of two chambers:
-
-- **Dáil Éireann**: 160 TDs (Teachtaí Dála) allocated proportionally across multi-seat constituencies using a **Hare quota and largest remainders**. This is the primary legislative chamber and the source of the Taoiseach's authority. **All 160 seats are contested** each election cycle.
-- **Seanad Éireann**: 60 senators (43 elected from vocational panels, 11 nominated by the Taoiseach, and 6 from universities). The Seanad is partly elected and partly appointed, and is **not part of the player legislative loop**. Bills do not require Seanad passage to enact: the Dáil is the sole legislative body.
-
----
-
-## Coalition threshold
-
-The **coalition threshold is 81 seats** (a bare majority of the 160-seat Dáil: 160 / 2 + 1). A party or coalition holding 81+ seats can form a government and propose a Taoiseach through a confidence vote among all TDs.
-
-![Taoiseach formation from the Dail election through a majority nomination or a minority bid to a confidence vote among all TDs.](/wiki-images/diagrams/ie-overview-taoiseach-formation.svg)
-
-**Minority government**: any party or coalition chair holding at least **25 Dáil seats** (15.38% of the chamber, rounded up) can propose a Taoiseach and call a confidence vote, even without 81. The Dáil votes the bid up or down.
-
-**Worked example.** After an election Fine Gael holds 60 seats, Fianna Fáil 45, Labour 12 and the Greens 8. Fine Gael plus Labour plus the Greens is 80, one short of 81. Fine Gael plus Fianna Fáil is 105, which passes with 24 to spare. A Taoiseach is confirmed once 81 TDs vote yes, so every missing seat has to be found among independents or other parties.
-
-Ireland has no single-party majority tradition: **coalition government is the norm**. The two major parties are **Fine Gael** and **Fianna Fáil**, but neither typically governs alone. Coalitions typically include one of the major parties plus smaller partners (Labour, Greens, independents).
-
----
-
-## How Irish elections work
-
-Dáil elections currently use a generic **Hare-quota largest-remainder** allocator. This approximates proportional multi-seat results, but it does not model ranked ballots, surplus transfers, or eliminations. Wiki references to STV describe the real institution, not the live resolver.
-
-- **A party needs at least 10% of the pooled vote in a region** to win any seats there. Parties under the line get none.
-- **Primaries advance the top 3 candidates** per party per region (same as the UK / JP / DE rule, not the US top-1 rule).
-- **All Dáil seats are contested** in each cycle: no staggered classes. The Dáil term is 5 years (240 turns, 10 real days), and an election window is 48 turns (48 real hours: 24 for the primary, 24 for the general).
-- **Snap elections are allowed**: the Taoiseach can dissolve the Dáil and call an early election (mechanically similar to UK / JP / DE snap elections).
-- **No confidence votes**: if the government loses Dáil confidence, the Taoiseach falls and government formation restarts.
-
----
-
-## Local government
-
-Ireland has a **Local Council** sub-national tier: 200 elected councillors representing NUTS-III planning regions (the EU's standard statistical regions, used here as Ireland's regions). A councillor earns +1 action per turn and is the cheapest entry rung. Councillors exercise delegated local-government functions and vote on regional legislation. Bills passed at the local level have regional policy effects.
-
-Each region has a regional executive: the **Cathaoirleach**, using the same office as a Governor in other countries. The display label diverges per-region: Lord Mayor of Dublin (DUB), Lord Mayor of Cork (COR), Mayor of Limerick (LIM), Mayor of Galway (GAL), and Cathaoirleach elsewhere.
-
----
-
-## Presidential office (Uachtarán)
-
-The **Uachtarán na hÉireann** is a directly elected ceremonial head of state: distinct from the Taoiseach, who is the head of government. Key features:
-
-Open the live office at [Áras an Uachtaráin](/country/ie/executive/aras).
+The **Uachtarán na hÉireann** is a directly elected ceremonial head of state, distinct from the Taoiseach. Open the live office at [Áras an Uachtaráin](/country/ie/executive/aras).
 
 - **7-year term**: the longest of any directly elected office in the game.
 - **2-term lifetime limit per character**: a character cannot be elected to a third term, even after a break.
 - **+3 actions per turn** while in office.
 - **Party strength weight 0.5**: the party-strength weight is how much an office counts toward your party's standing. The ceremonial presidency counts less than the Taoiseach (1.0) or a TD (0.85).
 
-The President does not introduce legislation and has no veto. The office is a strategic prestige / action-bonus target rather than a legislative lever.
+The President does not introduce legislation and has no veto. The office is a strategic prestige and action-bonus target rather than a legislative lever. The **Tánaiste** is the deputy head of government, filled through cabinet appointment.
 
----
+**Local government.** Ireland has a **Local Council** tier: 200 elected councillors representing NUTS-III planning regions (the EU's standard statistical regions, used here as Ireland's regions). A councillor earns +1 action per turn and is the cheapest entry rung. Councillors exercise delegated local-government functions and vote on regional legislation, and bills passed at the local level have regional policy effects.
 
-## Key Irish mechanics
+Each region has a regional executive, the **Cathaoirleach**, using the same office as a Governor in other countries. The display label diverges per region: Lord Mayor of Dublin (DUB), Lord Mayor of Cork (COR), Mayor of Limerick (LIM), Mayor of Galway (GAL), and Cathaoirleach elsewhere.
 
-**Proportional lower-chamber allocator.** Ireland's Dáil uses the same generic Hare-quota proportional allocator used by several multi-seat chambers. A future true-STV implementation would need ranked ballots and transfer rounds that the current resolver does not perform.
-
-**Unicameral legislative loop.** Although the Oireachtas is bicameral in name, only the Dáil participates in the player legislative loop. The Seanad is advisory-only: it cannot block or amend bills in gameplay. This is on purpose: the Seanad is mostly appointed or chosen by vocational panels, so it would add a chamber with no real contest for players.
-
-**Coalition government by default.** Ireland's two major parties rarely win an outright Dáil majority. Coalitions (Fine Gael + Labour, Fianna Fáil + Greens, etc.) are the standard form of government. The 81-seat threshold is the only hard number that matters for confidence.
-
-**Currency depends on era state.** Ireland starts with the Irish pound in pre-euro presets and can display the euro after Eurozone adoption. Its configured central-bank office is the **Governor of the Central Bank of Ireland**, not an independently contested ECB presidency.
-
-**Social axis baseline −1.5.** The social axis is the scale on which the game places a country's voters from socially liberal (−5) to socially conservative (+5). Ireland starts at −1.5, slightly liberal, and drifts toward the social stance of the national laws enacted over time.
-
-**Party creation routes through a charter.** Founding a new party requires drafting a [Party Charter](/wiki/political-parties) co-signed by 3 human founders. IE-specific gates don't apply. Ireland requires 2 regions (no locked home state) × 1 NPP per region = 2 NPPs spawned on creation.
-
----
-
-## Career path for Irish players
+## Career: from council to Taoiseach
 
 | Stage | Target | Why |
 | --- | --- | --- |
@@ -105,11 +66,15 @@ The President does not introduce legislation and has no veto. The office is a st
 | Parallel | Uachtarán | +3 actions/turn; 7-year term; 2-term cap; ceremonial head of state |
 | Top | Taoiseach | +4 actions/turn; heads government; requires Dáil majority |
 
-The Local Council is Ireland's lowest elected tier, and a Dáil seat is the first rung of national play. A councillor can run for the Dáil from the same region.
+The Local Council is Ireland's lowest elected tier, and a Dáil seat is the first rung of national play. A councillor can run for the Dáil from the same region. See [Player Progression](/wiki/player-progression) for the general ladder.
 
----
+Founding a new party requires drafting a [Party Charter](/wiki/political-parties) co-signed by 3 human founders. IE-specific gates don't apply. Ireland requires 2 regions (no locked home state) × 1 NPP per region = 2 NPPs spawned on creation.
 
-## Currency and economy
+The **social axis** is the scale on which the game places a country's voters from socially liberal (−5) to socially conservative (+5). Ireland starts at −1.5, slightly liberal, and drifts toward the social stance of the national laws enacted over time.
+
+## Money, and three starting years
+
+Ireland starts with the Irish pound in pre-euro presets and can display the euro after Eurozone adoption. Its configured central-bank office is the **Governor of the Central Bank of Ireland**, not an independently contested ECB presidency. The ECB side of this is covered in [International Organizations](/wiki/international-organizations).
 
 | Item | Detail |
 | --- | --- |
@@ -119,8 +84,6 @@ The Local Council is Ireland's lowest elected tier, and a Dáil seat is the firs
 | Default prime rate | 3.0% (shared across Eurozone) |
 | Stock exchange | ISEQ |
 | Finance Minister | Minister for Finance |
-
-### Economic model
 
 Ireland has **three seeded start years**: 1953, 1991, and 2019 (the default), each with its own authored national baseline and regional tilts:
 
@@ -132,25 +95,9 @@ Ireland has **three seeded start years**: 1953, 1991, and 2019 (the default), ea
 
 A 2019-start Ireland begins as a **tech innovation** economy: the same modern model as the US. A 1991-start Ireland begins as agrarian and modernizes over time through play. A 1953-start Ireland begins earlier still, in the protectionist, high-emigration economy that preceded both.
 
----
+## Northern Ireland reunification
 
-## Key Ireland links
-
-- [Cabinet Guide](/wiki/cabinet-guide): every cabinet post, its metrics, and its actions
-- [Election Mechanics](/wiki/election-mechanics): Primary and general election rules
-- [Multi-Country Play](/wiki/multi-country-play): proportional vs FPTP systems, cross-border investments
-- [Core Systems](/wiki/core-systems): Turn structure, action economy
-- [Player Progression](/wiki/player-progression): Career ladder details
-- [International Organizations](/wiki/international-organizations): EU / ECB shared institutions
-- [Referendums](/wiki/referendums): the Northern Ireland reunification path. If Ireland is already open to players when a reunification vote passes, the Dáil must also pass an admission bill
-- [No-Confidence Votes](/wiki/no-confidence-votes): how a Taoiseach falls
-- [Snap Elections](/wiki/snap-elections): how the Taoiseach dissolves the Dáil
-
----
-
-**Status:** Ireland is playable in every era. It opens to players when the world starts in a year that includes it, or when a Northern Ireland reunification vote brings the region in. Last checked: 2026-10-29, version 1.18.0.
-
----
+The reunification path runs through [Referendums](/wiki/referendums). If Ireland is already open to players when a reunification vote passes, the Dáil must also pass an admission bill.
 
 ## Living history
 
@@ -159,4 +106,8 @@ The timeline below is written by the turn processor whenever a head-of-governmen
 \`\`\`country-history
 IE
 \`\`\`
+
+See also: [Core Systems](/wiki/core-systems) for turn structure and the action economy.
+
+Playable in every era. It opens to players when the world starts in a year that includes it, or when a Northern Ireland reunification vote brings the region in. Last checked 2026-10-29, version 1.18.0.
 `;

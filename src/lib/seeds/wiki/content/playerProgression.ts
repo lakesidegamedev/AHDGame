@@ -1,10 +1,10 @@
 export const playerProgressionContent = `# Player Progression
 
-Progression is the office ladder as a click path: spawn, build, join a party, win a first primary, win a general, then climb. Each office adds actions and funds every turn and adds to your National Influence (NPI), which is what presidential races reward. This page tells you what to click at each stage and what each rung pays.
+Nothing is handed to you in this game: every seat is won at the ballot box, and every seat you win pays you back in actions, funds and National Influence (NPI), the number presidential races reward. This page is the climb as a click path: spawn, build, join a party, win a first primary, win a general, then go up. It says what to click at each stage and what each rung pays.
 
-## How it works
+## What each rung pays
 
-Your character always has one **current office** (or none). You earn the next office by winning an election for it. Each rung pays a flat bonus to actions and funds every turn, so climbing makes the next climb cheaper. Offices are not a hard ladder: nothing stops you from filing for a higher office early, but low offices cost less to win and teach you the system.
+Your character always has one **current office** (or none). You earn the next office by winning an election for it, and that depends on the [elections](/wiki/election-mechanics) themselves. Each rung pays a flat bonus to actions and funds every turn, so climbing makes the next climb cheaper. Offices are not a hard ladder: nothing stops you from filing for a higher office early, but low offices cost less to win and teach you the system.
 
 **Why a ladder at all:** a higher office needs more Political Influence, Favorability and funds to win. The cheapest way to have those is to hold a lower office that pays for them.
 
@@ -18,23 +18,23 @@ Your character always has one **current office** (or none). You earn the next of
 | Supreme Court justice | +2, stacks | none | +1.5 |
 | Chamber leadership (Speaker +3, leaders +2, whips +1) | stacks on your seat | none | up to +2.0 |
 
-Non-US offices grant the local equivalent, and ceremonial heads of state get +0 actions. Country hubs have the exact table. Base actions are 4 per turn on top of everything here.
+Non-US offices grant the local equivalent, and ceremonial heads of state get +0 actions. Country hubs have the exact table. Base actions are 4 per turn on top of everything here. The office you hold sets your action and fund bonuses each turn ([Core Systems](/wiki/core-systems)), and offices add to the NPI position bonus in [Stats & Actions](/wiki/stats-actions), whose PI, Favorability and donor level also decide whether you can win. NPI from offices feeds presidential races ([Elections Player Guide](/wiki/elections-player-guide)).
 
-## What you can do
+## The climb, stage by stage
 
-### Phase 0: you just spawned
+### Just spawned
 
-Your dashboard shows Independent, no office, 25 actions, ₳250,000 Campaign Funds, personal Cash on Hand from your wealth background (₳1,000,000, ₳2,500,000 or ₳5,000,000), Favorability 50 and Political Influence 10. Finish [Create a Character](/wiki/create-a-character), then follow [Getting Started](/wiki/getting-started).
+Your dashboard shows Independent, no office, 25 actions, ₳250,000 Campaign Funds, personal Cash on Hand from your wealth background (₳1,000,000, ₳2,500,000 or ₳5,000,000), Favorability 50 and Political Influence 10. Your country and starting kit from [Create a Character](/wiki/create-a-character) decide the ladder and the first rung, and the first-week plan in [Getting Started](/wiki/getting-started) puts you on it.
 
-### Phase 1: build (no office yet)
+### Building before you file
 
-An Independent enters the independent primary instead of a named party's primary. You can already Campaign, Fundraise, buy ads, run polls, Support, Attack, Barnstorm, influence NPPs and publish news. A good target before you file: PI 40 to 60, Favorability 60 to 70 and donor level 3. This is advice, not a rule.
+An Independent enters the independent primary instead of a named party's primary. You can already Campaign, Fundraise, buy ads, run polls, Support, Attack, Barnstorm, influence NPPs and publish news. A good target before you file: PI 40 to 60, Favorability 60 to 70 and donor level 3. This is advice, not a rule. The [First Campaign Walkthrough](/wiki/first-campaign-walkthrough) is a worked example of winning that first rung.
 
-### Phase 2: join a party
+### Joining a party
 
-Open **Parties**, open a party close to your sliders, and join. You get primary access, Party Influence, a share of the party action pool and later leadership races. Leaving resets Party Influence to 0 and drops party-only roles. After you join or switch, there is a 24-hour wait before you can join another party.
+Open **Parties**, open a party close to your sliders, and join. [Political Parties](/wiki/political-parties) decide primary access and leadership races. You get primary access, Party Influence, a share of the party action pool and later leadership races. Leaving resets Party Influence to 0 and drops party-only roles. After you join or switch, there is a 24-hour wait before you can join another party.
 
-### Phase 3: first primary
+### Your first primary
 
 1. Open **Elections** and filter to your home state or region and a low office (State Senate, House, MP, MdB). State and regional races can only be entered from your home state, which is why [relocating](/wiki/relocation) comes first if you want a different one.
 2. Open the race and confirm the primary window is open.
@@ -47,7 +47,7 @@ You can only hold one active candidacy at a time. Your standing sets how your pa
 elections
 \`\`\`
 
-### Phase 4: first general
+### Your first general
 
 The race page now shows a live tally. The final 4 turns carry 30% of the vote pool (see [The Game Loop](/wiki/the-game-loop)).
 
@@ -60,9 +60,9 @@ The race page now shows a live tally. The final 4 turns carry 30% of the vote po
 campaign
 \`\`\`
 
-### Phase 5: you won
+### Winning, and losing
 
-Your profile shows the office and new menus open: legislature, bills, maybe cabinet. A legislator can vote and propose bills. Proposing costs 10 actions plus National Influence for each influence-counting provision: 5 for the first, 10 for the second and 15 for the third (30 for all three). An executive handles nominations and signing or vetoing.
+Your profile shows the office and new menus open: legislature, bills, maybe cabinet. A legislator can vote and propose bills. Proposing costs 10 actions plus National Influence for each influence-counting provision: 5 for the first, 10 for the second and 15 for the third (30 for all three). An executive handles nominations and signing or vetoing, and appoints a [cabinet](/wiki/cabinet).
 
 **If you lose a general:** your PI, Favorability and donor level stay. Your funds are probably spent, and Fundraise rebuilds them. You start the next cycle well ahead of week 1.
 
@@ -72,7 +72,7 @@ Your profile shows the office and new menus open: legislature, bills, maybe cabi
 legislature
 \`\`\`
 
-### Phase 6: go up
+### Going up
 
 A typical US climb is State Senate, House, Senate, Governor, President. In parliamentary countries you win a seat, then party leadership, then PM or Chancellor after the chamber result and a confidence vote. Executive offices can have term limits: see [Executive Term Limits](/wiki/executive-term-limits).
 
@@ -84,13 +84,13 @@ A typical US climb is State Senate, House, Senate, Governor, President. In parli
 national-influence-climb
 \`\`\`
 
-### Worked example: a two-cycle career
+### A two-cycle career
 
 You start as an Independent with PI 10 and join a party on day 1. Over week 1 you push PI to about 30 and run a poll. You win a State Senate primary and general, which pays +1 action and ₳3,000 per turn and a state-legislator NPI bonus of +0.5. At PI 30 your PI term is +0.1, so NPI heads toward 60.
 
 In cycle 2 you run for the House with PI near 40: your seat now pays +1 action and ₳5,000 per turn and NPI heads toward 130. After a loss in cycle 2 you would keep PI, Favorability and donor level, lose the State Senate bonus once you leave that seat, and be positioned to run again.
 
-### If you are not in office
+### Without an office
 
 You can run the whole campaign loop and a corporation. You cannot write or vote on bills. Corporations are under **Corporations** in the nav.
 
@@ -110,32 +110,5 @@ corporation
 legislature
 \`\`\`
 
-## Connections
-
-**Driven by**
-
-- [Election Mechanics](/wiki/election-mechanics): winning a primary and general is how you get each office.
-- [Political Parties](/wiki/political-parties): primary access and leadership races depend on party membership.
-- [Stats & Actions](/wiki/stats-actions): PI, Favorability and donor level decide whether you can win.
-- [Relocation](/wiki/relocation): state and regional races are only open from your home state.
-- [Create a Character](/wiki/create-a-character): your country and starting kit decide the ladder and the first rung.
-- [Getting Started](/wiki/getting-started): the first-week plan puts you on the first rung.
-- [First Campaign Walkthrough](/wiki/first-campaign-walkthrough): a worked example of winning that first rung.
-
-**Affects**
-
-- [Core Systems](/wiki/core-systems): the office you hold sets your action and fund bonuses each turn.
-- [Stats & Actions](/wiki/stats-actions): offices add to the National Influence position bonus.
-- [Elections Player Guide](/wiki/elections-player-guide): NPI from offices feeds presidential races.
-- [Cabinet](/wiki/cabinet): executive offices appoint cabinets.
-
-## Status
-
-The ladder exists in every country, with local office names and bonus tables. Some offices exist only in some eras or countries, and a few countries are open to players only in some worlds. Presidential and parliamentary ladders differ, as described above.
-
-Last checked: 2026-10-29, version 1.18.0
-
-## Technical detail
-
-Exact bonuses and rules are on the [Player Progression design page](https://docs.lakesidegames.net/design/player-progression.html).
+The ladder exists in every country, with local office names and bonus tables; some offices exist only in some eras or countries, and a few countries are open to players only in some worlds. Last checked 2026-10-29, version 1.18.0. Exact rules: [Player Progression (design)](https://docs.lakesidegames.net/design/player-progression.html)
 `;

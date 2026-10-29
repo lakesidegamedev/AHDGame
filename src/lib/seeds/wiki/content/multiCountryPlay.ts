@@ -1,8 +1,8 @@
 export const multiCountryPlayContent = `# Multi-Country Play
 
-A House Divided runs a roster of playable countries that depends on the world's era: the United States, United Kingdom, Germany, Japan, China, Ireland, Brazil and Nigeria, plus the Soviet Union, East Germany and the Eastern bloc in the Cold War presets. Each has its own political system, legislature, election rules, and currency, and a country can be switched on for players during a world's life. The rest of the world is simulated: autonomous governments there legislate, trade, and conduct foreign policy on their own. This page covers how character scoping works, how to manage context across countries, and how economic systems cross borders.
+Your character belongs to one country, but your money does not have to. The world runs a roster of playable countries that depends on the era: the United States, United Kingdom, Germany, Japan, China, Ireland, Brazil and Nigeria, plus the Soviet Union, East Germany and the Eastern bloc in the Cold War presets. Each has its own political system, legislature, election rules, and currency, and a country can be switched on for players during a world's life. The rest of the world is simulated: autonomous governments there legislate, trade, and conduct foreign policy on their own. This page covers what being locked to a country means, how the systems differ, and where your economic holdings cross borders.
 
-## Character country scoping
+## One character, one country
 
 Every character is locked to a single country when you create them. This determines:
 
@@ -16,7 +16,7 @@ Every character is locked to a single country when you create them. This determi
 
 However, economic investments (corporations, bonds, forex positions) cross country lines freely.
 
-## Country political systems at a glance
+## How each country is governed
 
 | Country | System | Legislature | Executive | Election method |
 |---|---|---|---|---|
@@ -34,7 +34,7 @@ Parliamentary systems (UK, DE, JP, IE) form governments through legislative conf
 
 China was the first one-party state modelled and the pattern is generic: see [One-Party States](/wiki/one-party-states) for how regime tiers, ruling-party confidence, liberalization reforms, and regime collapse work across all twelve.
 
-## Playing in parliamentary countries
+## Reaching the top in a parliamentary country
 
 In the UK, Germany, Japan, and Ireland, the path to executive power is:
 
@@ -43,21 +43,21 @@ In the UK, Germany, Japan, and Ireland, the path to executive power is:
 3. If your party reaches a majority (UK: 326, DE: 316, JP: 233, IE: 81 seats) or can form a confidence coalition, the party leader is appointed PM / Chancellor / Taoiseach.
 4. Compete for party leadership through internal elections.
 
-**Snap elections** (UK, JP, DE, IE): The government can dissolve the lower chamber and call early elections. In UK, snap elections can be triggered by the PM; in JP, by the PM dissolving the Shūgiin; in DE, by the Chancellor dissolving the Bundestag; in IE, by the Taoiseach dissolving the Dáil. The Sangiin (JP upper house) and Bundesrat (DE upper house) cannot be dissolved. Snap elections compress the campaign cycle drastically: see [Snap Elections](/wiki/snap-elections).
+**Snap elections** (UK, JP, DE, IE): The government can dissolve the lower chamber and call early elections. In UK, snap elections can be triggered by the PM; in JP, by the PM dissolving the Shūgiin; in DE, by the Chancellor dissolving the Bundestag; in IE, by the Taoiseach dissolving the Dáil. The Sangiin (JP upper house) and Bundesrat (DE upper house) cannot be dissolved. Snap elections compress the campaign cycle drastically; the dissolution rules are in [Snap Elections](/wiki/snap-elections).
 
 **Germany's AMS system** means seat allocation is proportional to party vote share nationally, not just by constituency wins. Third parties are far more viable in Germany than in FPTP countries.
 
 **Ireland's multi-seat constituencies** use Hare-quota largest-remainder allocation in the live resolver. This makes coalition government the norm rather than the exception. Ireland also separately elects a ceremonial **Uachtarán na hÉireann** (President of Ireland) on a 7-year, two-term-limited nationwide ballot.
 
-## Playing in China
+## China and the one-party states
 
 China is a one-party state with three party tiers: the ruling Chinese Communist Party (CCP), approved opposition parties (CDL, CNDCA), and banned parties (player-created NPPs land here by default). The Premier is elected by NPC delegates rather than by a direct national vote.
 
 Critically, the regime is **not immortal**: sustained mismanagement, repression, or unpopular policy degrades two coupled scalars (popular legitimacy + party confidence) that escalate through a four-stage chain ending in regime collapse and forced conversion to a multi-party parliamentary system. The Premier has access to liberalization reforms and can announce a voluntary constitutional convention as an off-ramp. See [One-Party States](/wiki/one-party-states) for the full mechanics.
 
-## Cross-border economic investments
+## Money that crosses borders
 
-### Corporations
+### Corporations across countries
 
 Corporations are created within a country's economy but their sector revenue can flow into any country's currency if the sector operates internationally. Corporate income is paid in the country's home currency. Players can own multiple corporations across countries if they have characters there.
 
@@ -79,7 +79,7 @@ A character invested in both US and JP politics might also hold JPY positions, b
 
 Some bills are scoped as international, meaning they affect metrics in all countries simultaneously. Passing an international trade bill in the US Congress, for example, can shift economic metrics globally. Watch the legislation feed across countries to spot these.
 
-## Coordinating across countries as a team
+## Working with players in other countries
 
 Since individual characters are country-locked, multi-country play typically means players coordinating across the same party's different national branches (where they exist) or through separate informal coordination:
 
@@ -87,7 +87,7 @@ Since individual characters are country-locked, multi-country play typically mea
 - **Economic coordination:** A player in each country can synchronize legislation to benefit shared corporations (e.g., both countries passing favorable tech sector policies).
 - **Forex coordination:** If one player controls the Bank of England and another controls the Federal Reserve, they can coordinate interest rate decisions to influence EUR/GBP exchange rates.
 
-## Country entry and navigation
+## Finding each country in the game
 
 Each country has its own navigation hub:
 
@@ -104,10 +104,7 @@ Each country has its own navigation hub:
 
 Each hub includes the legislature, executive, map, parties, and legislation pages for that country.
 
-## Related
+## See also
 
-- [Reference: Offices](/wiki/reference-offices): complete office tables for all countries.
-- [Snap Elections](/wiki/snap-elections): UK, JP, and DE parliamentary dissolution rules.
-- [Advanced Strategy](/wiki/advanced-strategy): career arc planning.
-- [Endgame Goals](/wiki/endgame-goals): long-term objectives across countries.
+[Reference: Offices](/wiki/reference-offices) has the office tables for every country, [Advanced Strategy](/wiki/advanced-strategy) covers career arcs, and [Endgame Goals](/wiki/endgame-goals) covers long-term objectives across countries.
 `;

@@ -193,7 +193,7 @@ It depends on the race.
 7. Recheck after the next turn instead of spending several turns blind.
 8. Save resources for the final four turns when the race is close.
 
-## Related
+## Where to go next
 
 - [Election Mechanics](/wiki/election-mechanics): how the phases and vote math work.
 - [Primaries](/wiki/primaries): declaration, scoring, and nomination tactics.
@@ -209,5 +209,5 @@ It depends on the race.
 - [Demographics & Targeting](/wiki/demographics-targeting): appeal by voter group.
 - [Campaign Strategy](/wiki/campaign-strategy): advanced spending and timing.
 
-Last checked: 2026-10-29, version 1.18.0
+Applies in every era and country with elections. Last checked 2026-10-29, version 1.18.0
 `;

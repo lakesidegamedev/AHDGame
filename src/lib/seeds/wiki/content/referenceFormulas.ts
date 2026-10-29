@@ -1,12 +1,12 @@
 export const referenceFormulasContent = `# Reference: Formulas
 
-The math behind primaries, canvassing and general-election votes, in one place. Read the plain-language line under each heading first; the formula is there for when you want to check a number. Terms like [Political Influence](/wiki/glossary) and [Manhattan distance](/wiki/glossary) are defined in the glossary.
+When your primary score comes out at 70.5 and you want to know where each point came from, this is the page. It holds the math behind primaries, canvassing and general-election votes, with a worked example for each so you can check your own numbers. Read the plain-language line under each heading first; the formula is there for when you want to check a number. Terms like [Political Influence](/wiki/glossary) and [Manhattan distance](/wiki/glossary) are defined in the glossary.
 
 All numbers were checked against the game on 2026-10-29. Values that need a table are given in full; nothing here is rounded unless it says so.
 
 ---
 
-## Primary score
+## How your primary score is built
 
 The primary score is a candidate's **standing** in a primary. It does not pick the winner on its own. Each turn of the primary's closing window it sets your share of the ballots cast by your party's registered voters, and the running ballot count picks the nominee. Only where a party has no registered voters on file does the raw score decide directly. See [Primaries](/wiki/primaries).
 
@@ -37,7 +37,7 @@ Used for US House, US Senate, US Governor, US State Senate, UK Commons, UK Regio
 
 **NPP penalty.** When at least one player is in a party's primary, every [NPP](/wiki/glossary) in that primary has its whole score multiplied by 0.5. An NPP at 70 competes as 35. NPPs take no infamy penalty.
 
-#### Worked example
+#### Scoring a candidate with favorability 60
 
 A candidate has favorability 60, Political Influence 50 and infamy 20. The state's lean is 3 points away and the party's platform is 5 points away.
 
@@ -72,7 +72,7 @@ Example: distance 4 from the party, party influence 75, NPI 40, favorability 60.
 
 ---
 
-## Influence curves
+## Why early influence is worth more
 
 Political Influence (PI) and National Political Influence (NPI) are not used raw. They pass through curves that reward early gains more than late ones.
 
@@ -99,7 +99,7 @@ In general-election votes, reach never drops below 0.1 (the square root of 1/100
 
 ---
 
-## Canvassing
+## What one canvass does
 
 Canvassing raises turnout among one group of voters. It costs **100 funds and 1 action** per canvass, and you can send up to 50 in one batch. Everyone canvasses in their home state except presidential candidates, who canvass where they are travelling (general election) or in their primary campaign state (primary). See [Canvassing](/wiki/canvassing).
 
@@ -141,7 +141,7 @@ with a 2% per-turn decay. The alignment multiplier hits its 0.1 floor at distanc
 
 ---
 
-## Campaign ops and the closing sprint
+## The last four turns of a race
 
 Fundraising, Ground Game, Media Spending and Opposition Research are branch trees on your campaign page. The costs and effects of each branch are in [Campaign Strategy](/wiki/campaign-strategy) and [Campaign Manager](/wiki/campaign-manager). Unaffordable branches downgrade automatically instead of collapsing the whole tree.
 
@@ -149,7 +149,7 @@ In the last 4 turns of a race, two passive effects double each turn: the favorab
 
 ---
 
-## General-election votes
+## How general-election votes are counted
 
 ### How the vote pool is spread over time
 
@@ -198,7 +198,7 @@ Senate seats and returning House nominees count that person's own unbroken run. 
 
 **Example.** A senator in a third consecutive term is two terms beyond the first. Influence 80 and favorability 70 count as 75.2 and 65.8 (94% of each).
 
-### Office strength
+### Office strength and the vote pool
 
 Each office has a strength weight that scales the vote pool. US values:
 
@@ -213,7 +213,7 @@ Other countries set their own weights; see [Reference: Offices](/wiki/reference-
 
 ---
 
-## Party organization
+## What party organization is worth
 
 Party org (0 to 100 per state) feeds the general-election weight as \`(your org / all org in the state)^0.2\`. The 0.2 exponent flattens big gaps:
 
@@ -227,22 +227,9 @@ So tripling your org advantage buys about a quarter more weight, not three times
 
 ---
 
-## Related
+## See also
 
-- [Reference: Turn Order](/wiki/reference-turn-order): when each of these runs in the hourly turn.
-- [Election Mechanics](/wiki/election-mechanics): the full election structure these formulas sit inside.
-- [Primaries](/wiki/primaries): declaration rules and how NPPs behave.
-- [Canvassing](/wiki/canvassing): how to use the turnout boost in play.
-- [Campaign Strategy](/wiki/campaign-strategy): upgrade tables and action allocation.
-- [Glossary](/wiki/glossary): definitions of the terms used above.
+[Reference: Turn Order](/wiki/reference-turn-order) shows when each of these runs in the hourly turn. [Election Mechanics](/wiki/election-mechanics) gives the full election structure these formulas sit inside, [Primaries](/wiki/primaries) the declaration rules and how NPPs behave, [Canvassing](/wiki/canvassing) how to use the turnout boost in play, and [Campaign Strategy](/wiki/campaign-strategy) the upgrade tables and action allocation. Terms are defined in the [Glossary](/wiki/glossary).
 
-## Status
-
-These formulas apply in every world and era. The canvassing rules differ only by race: races created under campaign rules version 1 use the first canvassing model, and older races in progress keep the earlier one.
-
-Last checked: 2026-10-29, version 1.18.0
-
-## Technical detail
-
-Every constant with its source, plus the full list of extra vote factors, is in the [formula deep-dive](https://docs.lakesidegames.net/design/formula-deep-dive.html).
+These formulas apply in every world and era. The canvassing rules differ only by race: races created under campaign rules version 1 use the first canvassing model, and older races in progress keep the earlier one. Last checked 2026-10-29, version 1.18.0. Exact rules: [formula deep-dive](https://docs.lakesidegames.net/design/formula-deep-dive.html), which also lists every extra vote factor.
 `;

@@ -1,6 +1,6 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
 import { ObjectId, type Db } from "mongodb";
-import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
+import { bulkOps, createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { didPass } from "./billLifecycleHelpers";
 
 /**
@@ -84,14 +84,10 @@ describe("processCabinetNominationLifecycle — holder seating", () => {
     const { processCabinetNominationLifecycle } = await import("./cabinetNominationLifecycle");
     await processCabinetNominationLifecycle(new Date(0));
 
-    expect(db.collectionMocks.cabinetNominations.updateOne).toHaveBeenCalledWith(
-      { _id: due._id },
-      expect.objectContaining({ $set: expect.objectContaining({ status: "rejected" }) })
-    );
-    expect(db.collectionMocks.cabinetNominations.updateOne).not.toHaveBeenCalledWith(
-      { _id: future._id },
-      expect.anything()
-    );
+    const rejectedOps = bulkOps(db.collectionMocks.cabinetNominations.bulkWrite);
+    expect(rejectedOps).toHaveLength(1);
+    expect(rejectedOps[0]![0]).toEqual({ _id: due._id });
+    expect(rejectedOps[0]![1].$set).toEqual(expect.objectContaining({ status: "rejected" }));
   });
 
   it("rejects a nominee who joined the Fed Board while the cabinet vote was pending", async () => {
@@ -127,10 +123,10 @@ describe("processCabinetNominationLifecycle — holder seating", () => {
     const { processCabinetNominationLifecycle } = await import("./cabinetNominationLifecycle");
     await processCabinetNominationLifecycle(new Date(0));
     expect(db.collectionMocks.cabinetMembers.insertOne).not.toHaveBeenCalled();
-    expect(db.collectionMocks.cabinetNominations.updateOne).toHaveBeenCalledWith(
-      { _id: nom._id },
-      expect.objectContaining({ $set: expect.objectContaining({ status: "rejected" }) })
-    );
+    const rejectedOps = bulkOps(db.collectionMocks.cabinetNominations.bulkWrite);
+    expect(rejectedOps).toHaveLength(1);
+    expect(rejectedOps[0]![0]).toEqual({ _id: nom._id });
+    expect(rejectedOps[0]![1].$set).toEqual(expect.objectContaining({ status: "rejected" }));
   });
 
   it("resets the position's setting cooldowns when a nominee is confirmed", async () => {
@@ -585,4 +581,132 @@ describe("Fed confirmation cabinet conflict", () => {
       expect(db.collectionMocks.centralBanks.updateOne).not.toHaveBeenCalled();
     }
   );
+});
+
+describe("processCabinetNominationLifecycle — rejection notices", () => {
+  let db: MockDb;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    db = createMockDb();
+    const { getDb } = await import("@/lib/mongodb");
+    vi.mocked(getDb).mockResolvedValue(db as unknown as Db);
+    const { getGameState } = await import("@/lib/gameState");
+    vi.mocked(getGameState).mockResolvedValue({ currentTurn: 505 } as never);
+    db.collection("cabinetNominations");
+    db.collection("cabinetMembers");
+    db.collection("characters");
+    db.collection("centralBanks");
+    db.collection("electedOfficials");
+  });
+
+  async function runWith(nom: Record<string, unknown>, banks: unknown[], tally: unknown) {
+    db.collectionMocks.cabinetNominations.find.mockImplementation(
+      () => ({ toArray: async () => [nom] }) as never
+    );
+    db.collectionMocks.centralBanks.find.mockImplementation(
+      () => ({ toArray: async () => banks }) as never
+    );
+    const { computeCabinetNominationTally } =
+      await import("@/lib/congress/governmentVoteBreakdown");
+    vi.mocked(computeCabinetNominationTally).mockResolvedValue(tally as never);
+    const { processCabinetNominationLifecycle } = await import("./cabinetNominationLifecycle");
+    await processCabinetNominationLifecycle(new Date(0));
+  }
+
+  function findMockFor(nomineeId: ObjectId, presidentId: ObjectId) {
+    const nomineeUser = new ObjectId();
+    const presidentUser = new ObjectId();
+    db.collectionMocks.characters.findOne.mockImplementation(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (query: any) => {
+        const id = String(query?._id);
+        if (id === nomineeId.toString())
+          return Promise.resolve({ _id: nomineeId, userId: nomineeUser });
+        if (id === presidentId.toString())
+          return Promise.resolve({ _id: presidentId, userId: presidentUser });
+        return Promise.resolve(null);
+      }
+    );
+    return { nomineeUser, presidentUser };
+  }
+
+  it("notifies the nominee of a Senate-winning nomination lost to a bank-office conflict", async () => {
+    // A 57-17 confirmation can be voided by the dual-office guard; the nominee
+    // used to hear nothing and the record kept no reason.
+    const nomineeId = new ObjectId();
+    const presidentId = new ObjectId();
+    const { nomineeUser, presidentUser } = findMockFor(nomineeId, presidentId);
+    const nom = {
+      _id: new ObjectId(),
+      countryId: "US",
+      positionId: "secretary_of_defense",
+      nomineeCharacterId: nomineeId,
+      nomineeCharacterName: "Nominee",
+      nomineeParty: "democrat",
+      proposedByPresidentId: presidentId,
+      votes: {},
+    };
+
+    await runWith(nom, [{ countryId: "US", chairCharacterId: nomineeId, fomcBoard: [] }], {
+      votesFor: 57,
+      votesAgainst: 17,
+      votesAbstain: 8,
+    });
+
+    const rejectedOps = bulkOps(db.collectionMocks.cabinetNominations.bulkWrite);
+    expect(rejectedOps).toHaveLength(1);
+    expect(rejectedOps[0]![0]).toEqual({ _id: nom._id });
+    expect(rejectedOps[0]![1].$set).toEqual(
+      expect.objectContaining({
+        status: "rejected",
+        rejectionReason: "incompatible_bank_office",
+      })
+    );
+
+    const { createNotifications } = await import("@/lib/notifications");
+    const sent = vi.mocked(createNotifications).mock.calls[0][0] as unknown as Array<{
+      userId: unknown;
+      title: string;
+      message: string;
+    }>;
+    const toNominee = sent.find((n) => String(n.userId) === nomineeUser.toString());
+    expect(toNominee?.title).toBe("Cabinet Nomination Rejected");
+    expect(toNominee?.message).toContain("central bank");
+    const toPresident = sent.find((n) => String(n.userId) === presidentUser.toString());
+    expect(toPresident?.message).toContain("Senate vote passed");
+  });
+
+  it("records a plain ballot defeat as a vote rejection and still tells the nominee", async () => {
+    const nomineeId = new ObjectId();
+    const presidentId = new ObjectId();
+    const { nomineeUser } = findMockFor(nomineeId, presidentId);
+    const nom = {
+      _id: new ObjectId(),
+      countryId: "US",
+      positionId: "secretary_of_state",
+      nomineeCharacterId: nomineeId,
+      nomineeCharacterName: "Nominee",
+      nomineeParty: "democrat",
+      proposedByPresidentId: presidentId,
+      votes: {},
+    };
+
+    await runWith(nom, [], { votesFor: 20, votesAgainst: 70, votesAbstain: 10 });
+
+    const rejectedOps = bulkOps(db.collectionMocks.cabinetNominations.bulkWrite);
+    expect(rejectedOps).toHaveLength(1);
+    expect(rejectedOps[0]![0]).toEqual({ _id: nom._id });
+    expect(rejectedOps[0]![1].$set).toEqual(
+      expect.objectContaining({ status: "rejected", rejectionReason: "senate_vote" })
+    );
+
+    const { createNotifications } = await import("@/lib/notifications");
+    const sent = vi.mocked(createNotifications).mock.calls[0][0] as unknown as Array<{
+      userId: unknown;
+      message: string;
+    }>;
+    const toNominee = sent.find((n) => String(n.userId) === nomineeUser.toString());
+    expect(toNominee?.message).toBe("You were not confirmed for Secretary of State.");
+  });
 });

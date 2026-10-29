@@ -1,8 +1,8 @@
 export const coalitionsContent = `# Coalitions
 
-A coalition is an alliance of parties inside one country. In the US it decides which parties count as the opposition when chamber leaders are chosen. Everywhere else it is a way to show unity and agree shared priorities. Coalitions are run by party chairs, not by individual players.
+Allying with another party can lock you out of the minority leadership posts. In the US, a coalition adds its parties' seats into one bloc, and the largest bloc counts as the majority when chamber leaders are chosen. Everywhere else a coalition is a way to show unity and agree shared priorities. Coalitions are run by party chairs, not by individual players: you belong to a [party](/wiki/political-parties), and your party's chair speaks and votes for it.
 
-## How it works
+## What a coalition is
 
 Each coalition has:
 
@@ -11,13 +11,19 @@ Each coalition has:
 - a **chair party**, and a **chair**: that party's national chair
 - a list of **member parties**, each with its join date
 
-A party can be in **only one** coalition at a time, and a coalition only holds parties from its own country. You belong to a party, not to the coalition. Your party's chair speaks and votes for it.
+A party can be in **only one** coalition at a time, and a coalition only holds parties from its own country. The national chair creates, joins and leaves for the party ([Party Leadership](/wiki/party-leadership)), and an acting vice chair can do the same when the chair seat is empty ([Party Leadership & Authority](/wiki/party-leadership-authority)). In a one-party state only the ruling party can form or join one ([One-Party States](/wiki/one-party-states)). The steps for creating, joining and leaving are in [Coalition Formation](/wiki/coalition-formation), and invites, join requests and votes reach chairs as [notifications](/wiki/notifications).
 
-### Blocs and chamber leaders
+The coalition chair is the national chair of the chair party. If that party leaves, the longest-standing member party takes over.
 
-For chamber leadership the game adds up the seats of every party in a coalition to form a **bloc**. A party outside any coalition is its own bloc. The largest bloc in a chamber is the **majority bloc**; the second largest is the **minority bloc**.
+To see coalitions, go to \`/parties\`, switch from the Parties tab to the Coalitions tab and pick a country. A coalition page has Overview (averaged positions, leaders, any disband vote), Parties, and a Chair's Office for the chair.
 
-Bloc size does not give a bloc everything. Each leadership role has its own rule:
+![Coalition page with members, ideology and the list of member parties and their chairs](/wiki-images/screens/coalitions-coalition-page.webp)
+
+## Blocs and who may lead the chamber
+
+A coalition lets smaller parties pool seats into one bigger bloc. For [chamber leadership](/wiki/chamber-leadership) the game adds up the seats of every party in a coalition to form a **bloc**. A party outside any coalition is its own bloc. The largest bloc in a chamber is the **majority bloc**; the second largest is the **minority bloc**. That bloc, not its biggest party, is what counts as the majority when the minority posts are assigned.
+
+Bloc size does not give a bloc everything. Each leadership role has its own rule, and eligibility for Majority and Minority Leader and Whip follows them ([Congress Leadership](/wiki/congress-leadership)):
 
 | Role | Who can run and vote |
 | --- | --- |
@@ -30,13 +36,19 @@ So a coalition does not hand its members the Majority Leader seat. It does remov
 
 ![US House example where parties B and C form a 210 seat bloc, showing which parties may run for Majority Leader, Minority Leader and Speaker.](/wiki-images/diagrams/coalitions-bloc-example.svg)
 
-### Why it exists
+The US House has 435 seats: Party A 180, Party B 150, Party C 60, Party D 45. Before any coalition, A is the largest bloc and B, C, D are not in its bloc. B and C form a coalition: its bloc is 150 + 60 = **210 seats**, now larger than A's 180. The majority bloc is now B+C, so:
 
-A coalition lets smaller parties pool seats into one bigger bloc. That bloc, not its biggest party, is what counts as the majority when the minority posts are assigned. Coalitions also let parties agree up to three **shared priorities** (a bill, a policy theme or a leadership goal). Each member party's chair votes support, oppose or abstain, and a priority goes active when more than half of the member parties support it. The coalition page shows a cohesion label (Strong, Mixed, Fractured or Unaligned) from those votes. Priorities are a signal; they do not force members to vote any way.
+- Majority Leader and Whip: still the largest single party, which is **A** (180), not B (150).
+- Minority Leader and Whip: any party outside B+C, which means **A or D**.
+- Speaker: open to A, B, C and D.
 
-Outside the US, coalitions are signalling only. UK, German, Japanese and Irish governments are built by their own government formation step, which does not consult these alliances; see [Government Formation](/wiki/government-formation).
+The coalition changed who counts as the minority, not who holds the Majority Leader seat. Check the bloc maths before you ally: the largest bloc can lock the smaller party out of minority posts. If a party leaves mid-term, the bloc is recounted from current members. A leader whose party no longer qualifies loses the post; for example a Pro Tempore who leaves the largest party is removed.
 
-### Key numbers
+## Shared priorities
+
+Coalitions also let parties agree up to three **shared priorities** (a bill, a policy theme or a leadership goal). Each member party's chair votes support, oppose or abstain, and a priority goes active when more than half of the member parties support it. The coalition page shows a cohesion label (Strong, Mixed, Fractured or Unaligned) from those votes. Priorities are a signal; they do not force members to vote any way.
+
+Outside the US, coalitions are signalling only. UK, German, Japanese and Irish governments are built by their own government formation step, which does not consult these alliances, though coalition chairs can nominate a PM and bring partner seats to the vote; see [Government Formation](/wiki/government-formation). Coalitions still show alignment and shared priorities in the UK and Germany.
 
 | Item | Value |
 | --- | --- |
@@ -48,55 +60,5 @@ Outside the US, coalitions are signalling only. UK, German, Japanese and Irish g
 | Disband vote length | 24 turns (24 hours at the standard pace) |
 | Yes votes needed to disband | More than half of all member parties |
 
-### Worked example
-
-The US House has 435 seats: Party A 180, Party B 150, Party C 60, Party D 45. Before any coalition, A is the largest bloc and B, C, D are not in its bloc. B and C form a coalition: its bloc is 150 + 60 = **210 seats**, now larger than A's 180. The majority bloc is now B+C, so:
-
-- Majority Leader and Whip: still the largest single party, which is **A** (180), not B (150).
-- Minority Leader and Whip: any party outside B+C, which means **A or D**.
-- Speaker: open to A, B, C and D.
-
-The coalition changed who counts as the minority, not who holds the Majority Leader seat.
-
-## What you can do
-
-- **See coalitions.** On \`/parties\`, switch from the Parties tab to the Coalitions tab and pick a country. A coalition page has Overview (averaged positions, leaders, any disband vote), Parties, and a Chair's Office for the chair.
-- **Create, join or leave.** See [Coalition Formation](/wiki/coalition-formation). Your party's national chair does this, or the vice chair if the chair seat is empty.
-- **Agree priorities** with the other chairs from the coalition page.
-- **Check the bloc maths** before you ally: the largest bloc can lock the smaller party out of minority posts.
-
-![Coalition page with members, ideology and the list of member parties and their chairs](/wiki-images/screens/coalitions-coalition-page.webp)
-
-**Common questions.**
-- *Who is the coalition chair?* The national chair of the chair party. If that party leaves, the longest-standing member party takes over.
-- *Do coalitions matter in the UK or Germany?* Not for forming governments. They still show alignment and shared priorities.
-- *What happens if a party leaves mid-term?* The bloc is recounted from current members. A leader whose party no longer qualifies loses the post; for example a Pro Tempore who leaves the largest party is removed.
-
-## Connections
-
-**Driven by**
-
-- [Political Parties](/wiki/political-parties): only parties join coalitions.
-- [Party Leadership](/wiki/party-leadership): the national chair creates, joins and leaves coalitions for the party.
-- [Party Leadership & Authority](/wiki/party-leadership-authority): an acting vice chair can act for the party in its coalition.
-- [Coalition Formation](/wiki/coalition-formation): who is in the coalition changes the bloc totals.
-- [One-Party States](/wiki/one-party-states): Only the ruling party can form or join a coalition in a one-party state.
-
-**Affects**
-
-- [Chamber Leadership](/wiki/chamber-leadership): the majority bloc decides who may run for the minority posts.
-- [Congress Leadership](/wiki/congress-leadership): Majority and Minority Leader and Whip eligibility follows the bloc rules.
-- [Coalition Formation](/wiki/coalition-formation): the one coalition per party rule and chair powers shape each step.
-- [Notification Center](/wiki/notifications): invites, join requests and votes arrive as notifications
-- [Government Formation](/wiki/government-formation): Coalition chairs can nominate a PM and bring partner seats to the vote.
-
-## Status
-
-Bloc effects apply to US House and Senate leadership. In every other country coalitions are signalling only. They work the same way in every era and world that has parties.
-
-Last checked: 2026-10-29, version 1.18.0
-
-## Technical detail
-
-The exact rules are on the [Coalitions design page](https://docs.lakesidegames.net/design/coalitions.html).
+Bloc effects apply to US House and Senate leadership; in every other country coalitions are signalling only. Same in every era and world that has parties. Last checked 2026-10-29, version 1.18.0. Exact rules: [Coalitions design page](https://docs.lakesidegames.net/design/coalitions.html)
 `;
