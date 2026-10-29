@@ -25,6 +25,7 @@ import { voteFactorLedgerContent } from "../content/voteFactorLedger";
 export const electionsPages: readonly WikiSeedPage[] = [
   {
     slug: "political-operations",
+    designDocUrl: "design/elections.html",
     title: "Political Operations and Campaign Presence",
     description:
       "The US presidential operations hub: per-candidate state presence, campaign-funded build costs, vote bonuses, and cross-cycle carryover.",
@@ -38,6 +39,7 @@ export const electionsPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "referendums",
+    designDocUrl: "design/uk-devolution-policy.html",
     title: "Independence and Reunification Referendums",
     description:
       "How UK devolved regions request, campaign, vote, and complete independence or Northern Ireland reunification referendums.",
@@ -78,6 +80,7 @@ export const electionsPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "primaries",
+    designDocUrl: "design/elections.html",
     title: "Primaries",
     description:
       "Declaration windows, how down-ballot primaries count ballots over their closing window, the state vs presidential standing formulas, NPP primary dynamics, and tactics for winning your party's nomination.",
@@ -90,6 +93,7 @@ export const electionsPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "nominating-convention",
+    designDocUrl: "design/elections.html",
     title: "Presidential Nominating Convention",
     description:
       "How pledged delegates settle a presidential nomination: the delegate-majority threshold, first-ballot wins, and the multi-ballot contested convention with affinity-weighted delegate releases.",
@@ -102,6 +106,7 @@ export const electionsPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "running-mate-surrogate",
+    designDocUrl: "design/elections.html",
     title: "Running Mate Surrogate Campaigning",
     description:
       "The running mate's own player can campaign for the ticket: state visits and ticket canvassing, the shared 2-per-day surrogate pool, favorability and turnout effects, and action costs.",
@@ -114,6 +119,7 @@ export const electionsPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "vote-factor-ledger",
+    designDocUrl: "design/elections.html",
     title: "Vote Factor Ledger",
     description:
       "The presidential general vote decomposition: the baseline-plus-factors waterfall, every factor and what it means, vote delta vs display multiplier, and what is public vs owner-only.",
@@ -126,6 +132,7 @@ export const electionsPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "general-elections",
+    designDocUrl: "design/elections.html",
     title: "General Elections",
     description:
       "Vote accumulation across the general phase, the Total Appeal Pipeline, the final-4-turn 30% weighting, FPTP spoilers, and closing-sprint tactics.",
@@ -138,6 +145,7 @@ export const electionsPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "polling",
+    designDocUrl: "design/elections.html",
     title: "Polling",
     description:
       "Quick poll vs Full Demographic poll: what they cost, what they return, and how to use poll data to plan ads and canvassing.",
@@ -150,6 +158,7 @@ export const electionsPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "fundraising-ads",
+    designDocUrl: "design/fundraising-ads.html",
     title: "Fundraising & Ads",
     description:
       "Fund generation, Build Donor Network ROI by state tier, ad diminishing returns, out-of-state cost multipliers, and the fundraising priority hierarchy.",
@@ -175,6 +184,7 @@ export const electionsPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "demographics-targeting",
+    designDocUrl: "design/demographics-targeting.html",
     title: "Demographics & Targeting",
     description:
       "The 12 voter archetypes, the reach × appeal × approval × party-org formula, state political lean, and how to allocate ads and canvassing across groups.",
@@ -200,6 +210,7 @@ export const electionsPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "us-house-redistricting",
+    designDocUrl: "design/elections.html",
     title: "US House Redistricting & Gerrymandering",
     description:
       "Congressional district maps, the census-year redraw window, the governor plus trifecta gate, gerrymandering within compactness and fairness caps, the approval penalty for unfair maps, and per-district House elections.",
@@ -241,6 +252,7 @@ export const electionsPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "primary-general-tactics",
+    designDocUrl: "design/primary-general-tactics.html",
     title: "Primary vs General Tactics",
     description:
       "What to change and what not to change when your primary ends: ad targeting, canvassing, campaign upgrades, Opposition Research, presidential specifics.",
@@ -266,6 +278,7 @@ export const electionsPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "live-election-results",
+    designDocUrl: "design/live-election-results.html",
     title: "Live Election Results",
     description:
       "Election-night results page: the final-hour drip, deterministic reveal order, 5-point call margin, and how national seat/EV projections roll up.",
@@ -278,6 +291,7 @@ export const electionsPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "contingent-election",
+    designDocUrl: "design/contingent-election.html",
     title: "Contingent Election",
     description:
       "The US 12th Amendment fallback when no Electoral College majority forms: House elects President by state delegation, Senate elects VP, era-derived thresholds, deadlock rules.",
@@ -290,6 +304,7 @@ export const electionsPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "executive-term-limits",
+    designDocUrl: "design/executive-term-limits.html",
     title: "Executive Term Limits",
     description:
       "Per-country term caps on the top executive office: which countries have one, how terms served are counted, and what running-mate restrictions apply.",

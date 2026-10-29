@@ -8,18 +8,18 @@ If you just want the formulas and constants, the [Commodities reference](/wiki/c
 
 Older versions of the game paid your corporation a revenue number based mostly on market share and margins. The market system makes that revenue **earned**: prices react to scarcity, your goods have to find real buyers, and the capacity you build is a durable asset that shows up in your valuation.
 
-It is organized in **tiers**. Fresh worlds start at **plants**, with the entire ladder active. Admins can select an earlier tier for a staged rollout or a legacy-world migration. Each tier adds one more layer of realism and usually one more panel on your sector's detail page.
+It is organized in **tiers**. Current worlds run at **plants**, with the entire ladder active. Older worlds may sit on an earlier tier. Each tier adds one more layer of realism and usually one more panel on your sector's detail page.
 
 | Tier | What it does | What you see |
 | --- | --- | --- |
 | **Off** | Legacy behaviour: revenue from share and margins. | Nothing new. |
 | **Realization** | Scarce goods pay a top-line premium; gluts bleed revenue. | Higher/lower sector revenue as prices move. |
 | **Ledger** | Book-keeping groundwork for the tiers below (no new player action). | Mostly behind the scenes. |
-| **Clearing** | Your output must actually sell: cheapest sellers clear first. | A **&ldquo;% sold last turn&rdquo;** badge and **pricing posture** buttons. |
+| **Clearing** | Your output must actually sell: cheapest sellers clear first. | A **&ldquo;% sold last turn&rdquo;** badge and **pricing posture** controls. |
 | **Capital** | Your growth budget builds owned **capacity**; output is gated by it. | A **Capital panel** with a per-unit economics breakdown. |
 | **Plants** | Your sectors **are** their plants. Revenue is derived from what those plants make and sell, and the nameplate stops growing on its own. | Build orders and a capacity figure that only moves when you build. |
 
-You do not select the tier yourself. Your job is to understand each layer so you can price and invest well under the world configuration shown in the game.
+You do not choose the tier. Your job is to understand each layer so you can price and invest well under the tier your world runs.
 
 ## Prices come from supply and demand
 
@@ -48,13 +48,13 @@ It's **bounded and damped** on purpose: realization alone moves your revenue at 
 
 Once **clearing** is on, revenue is no longer handed to you: your output competes for real buyers. Each turn, demand fills the **cheapest sellers first**. Your realized revenue scales with the fraction of your output that actually sold (your **&ldquo;% sold last turn&rdquo;**).
 
-This makes your **pricing posture** a real decision:
+This makes your **pricing posture** a real decision. Posture steps from -20% to +20% around the market reference (-20, -10, -5, 0, +5, +10, +20), or Auto. You set it per sector in the CEO operations table. In plain terms:
 
 | Posture | What it does | Good when |
 | --- | --- | --- |
-| **Undercut** | Price below the market to clear ahead of rivals. | You want to sell out; there's a glut. |
-| **At-market** | Price at the going rate. | You're unsure; balanced conditions. |
-| **Premium** | Skim for margin, accept the risk of unsold stock. | Genuine shortage: everyone sells out anyway. |
+| **Undercut** (negative steps) | Price below the market to clear ahead of rivals. | You want to sell out; there's a glut. |
+| **At-market** (0) | Price at the going rate. | You're unsure; balanced conditions. |
+| **Premium** (positive steps) | Skim for margin, accept the risk of unsold stock. | Genuine shortage: everyone sells out anyway. |
 
 In a shortage, everyone sells out and premium pricing pays. In a glut, the undercutters clear and the skimmers are left holding unsold output, which drags down their revenue, valuation, and share price.
 
@@ -63,7 +63,7 @@ In a shortage, everyone sells out and premium pricing pays. In a glut, the under
 
 There's also a physical limit: **input throughput can gate output**. If you can't get enough of the inputs your sector consumes, you physically can't produce (and therefore can't sell) at full tilt, no matter how you price.
 
-![The sector-page Pricing panel showing the % sold badge and the undercut / at-market / premium posture buttons](/images/wiki/market/pricing-panel.png)
+![The pricing posture control and the % sold badge](/images/wiki/market/pricing-panel.png)
 
 *(screenshot from the live Pricing panel)*
 
@@ -120,6 +120,30 @@ This is deliberate. You get time to adapt your pricing posture and investment le
 4. **Plan your builds ahead.** Capacity arrives on a delay, so the plant you order now is the output you get later. Decide where you want to be several turns out rather than reacting to this turn's prices.
 5. **Read the sector panels.** The Pricing panel, the throughput/Commodities panel, and the Capital panel each tell you why your revenue is what it is. They're your dashboard.
 6. **Think in assets, not just this turn.** A dip in profit isn't a collapse if you own real capacity, and rivals who stop investing are quietly getting weaker.
+
+## Loyalty, contracts and the clearing order
+
+Demand is filled in this order each turn: **contracted** volume from [Supply Agreements](/wiki/supply-agreements) first, then the **loyal slice**, a 40% share of each market reserved for sellers with strong [Brand Loyalty](/wiki/brand-loyalty), then **cheapest-first** for the rest. A steady, reliable seller keeps part of its sales even when a rival undercuts.
+
+## Connections
+
+**Driven by**
+
+- [Commodities](/wiki/commodities): prices set realization and tell you where demand is.
+- [Corporations](/wiki/corporations): your plants, capacity, budgets and posture choices.
+- [Brand Loyalty](/wiki/brand-loyalty): the loyal slice is filled before cheapest-first clearing.
+- [Supply Agreements](/wiki/supply-agreements): contracted volume is filled first.
+- [Market Safeguards](/wiki/market-safeguards): a step back moves the world to an earlier market model
+
+**Affects**
+
+- [Commodities](/wiki/commodities): clearing decides how much of supply actually sells.
+- [Brand Loyalty](/wiki/brand-loyalty): your posture and fill rate are the loyalty inputs.
+- [Stock Market](/wiki/stock-market): owned capacity and earnings set your share price.
+- [Corporations](/wiki/corporations): revenue and valuation follow what sells.
+- [Running a Corporation under the Plants System](/wiki/plants-corp-guide): the clearing and realization rules decide what plants earn.
+
+**Status:** current worlds run the full plants tier; older worlds may run an earlier one. Last checked: 2026-10-29, version 1.18.0.
 
 ## Related systems
 

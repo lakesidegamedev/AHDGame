@@ -1,82 +1,56 @@
 export const stockMarketContent = `# Stock Market
 
-Corporations are listed on country-specific stock exchanges. Players can buy and sell shares, receive dividend income, and speculate on corporate performance. Each country has its own exchange showing corporations headquartered there.
+Corporations are listed on country exchanges, where players buy and sell shares, collect dividends and bet on how companies will perform. A share price comes from what the company owns, what it earns and how fast it is growing, so the stock market is where a corporation's real performance becomes your wealth. It also decides who controls a company: voting weight follows shares.
 
-## Exchanges
+## How it works
 
-| Country | Exchange | URL |
-| --- | --- | --- |
-| United States | NYSE | /market?tab=stocks&exchange=US |
-| United Kingdom | FTSE | /market?tab=stocks&exchange=UK |
-| Germany | DAX | /market?tab=stocks&exchange=DE |
-| Japan | Nikkei | /market?tab=stocks&exchange=JP |
-| Ireland | ISEQ | /market?tab=stocks&exchange=IE |
-| Brazil | B3 | /market?tab=stocks&exchange=BR |
-| China | SSE | /market?tab=stocks&exchange=CN |
-| Nigeria | NGX | /market?tab=stocks&exchange=NG |
+Each country has its own exchange, listing corporations headquartered there. The Market page has an exchange selector and shows market cap, share price, revenue, net income, CEO, sector and headquarters, with price history as candlestick charts (open, high, low and close for each period).
 
-21 exchanges are configured in total (every country that has an exchange). The Market page provides the exchange selector and redirects older stock-market page URLs to the matching exchange view.
+Prices are recomputed every 15 minutes from three parts of a company's value, added together:
 
-The Market page displays market cap, share price, total revenue, net income, CEO, sector type, and headquarters location. Price history is shown as **OHLC candlestick charts** (open, high, low, close per period).
+> share price = 1.0 x tangible book + 0.5 x earnings power + 0.15 x growth premium (each per share)
 
-## Share price formula
-
-In multiplayer, share prices are recomputed every 15 minutes from three fundamental components. Earnings update on the hourly turn:
-
-**Tangible Book Per Share** (weight 1.0):
-\`\`\`
-tangibleBook = liquidCapital + sectorNPV + constructionInProgress
-             + techAssetValue + 0.75 * bondHoldings
-             + 0.75 * charteredBankEquity - issuedBondDebt
-tangibleBookPerShare = tangibleBook / totalShares
-\`\`\`
-
-Where sectorNPV is each sector's future profit converted to today's value,
-construction in progress and technology contribute asset value, and held bonds
-are recognized at a 0.75 haircut, and the book equity of any chartered bank the corporation owns counts at 0.75 as well. IMF receivables held by the corporation are
-also included by the live share-price calculation.
-
-**Earnings Power Per Share** (weight 0.5):
-\`\`\`
-earningsPowerPerShare = normalizedAnnualEarnings / costOfCapital / totalShares
-\`\`\`
-
-\`normalizedAnnualEarnings\` is a 3-turn rolling average of annualised after-tax income, with equity-method additions from any cross-corporation stock holdings already applied.
-
-**Growth Premium Per Share** (weight 0.15):
-\`\`\`
-gCapped = min(sectorGrowthRate, costOfCapital - buffer)
-growthPremiumPerShare = (normalizedAnnualEarnings * gCapped) / (costOfCapital - gCapped) / totalShares
-\`\`\`
-
-This is a standard formula for valuing future growth (the Gordon Growth Model). The growth rate is capped just below the cost of capital so the denominator stays positive.
-
-**Final price:**
-\`\`\`
-sharePrice = 1.0 * tangibleBookPerShare
-           + 0.5 * earningsPowerPerShare
-           + 0.15 * growthPremiumPerShare
-\`\`\`
-
-The formula produces a **fundamental value** each turn, then several additional modifiers can move the price away from that pure fundamental:
-
-- **Bond-holdings haircut:** bonds counted in tangible book are marked at 0.75x their market price, so leveraged bond positions don't inflate the valuation.
-- **Insider-concentration discount:** a public corp whose character CEO personally holds more than 65% of shares takes a quadratic penalty reaching -30% at 100% CEO ownership.
-- **Index-inclusion premium:** shares held by index funds get a small price premium reflecting passive-flow demand.
-- **IMF bailout multiplier:** while a corporation is under its own IMF corporate restructuring (unrelated to any country's sovereign IMF facility), its share price trades at a 0.85x discount.
-- **±35% per-turn rate limiter:** the final price can't move more than 35% from the prior turn's price in a single turn (skipped once the price has fallen to $1.00 or below, so recovering penny corps aren't pinned at the floor).
-
-**Constants:**
-| Constant | Value |
+| Part | What it measures |
 | --- | --- |
+| Tangible book (weight 1.0) | Cash, the present value of its sectors, construction in progress and tech assets, plus bonds it holds (counted at 75%) and 75% of the book equity of any bank it owns, minus bonds it has issued |
+| Earnings power (weight 0.5) | A 3-turn average of yearly after-tax earnings, divided by the cost of capital (the prime rate plus a sector risk premium) |
+| Growth premium (weight 0.15) | The value of future growth at the sector growth rate, capped just below the cost of capital |
+
+The result is then adjusted: a rate limiter stops moves above 35% per turn, an insider discount applies when the CEO holds too much, and other adjustments are listed below.
+
+### Key numbers
+
+| Rule | Value |
+| --- | --- |
+| Update frequency | Every 15 minutes (earnings on the hourly turn) |
+| Weights: book / earnings / growth | 1.0 / 0.5 / 0.15 |
+| Bond holdings haircut | 0.75 |
 | Minimum share price | 0.01 |
-| Tangible book weight | 1.0 |
-| Earnings power weight | 0.5 |
-| Growth premium weight | 0.15 |
-| Bond-holdings haircut | 0.75x |
-| Insider-concentration max penalty | -30% (at 100% CEO ownership, threshold 65%) |
-| IMF bailout multiplier | 0.85 (applies when active) |
-| Per-turn rate limiter | ±35% |
+| Per-turn move limit | 35% (not applied at or below 1.00) |
+| Insider discount | Up to -30%, starts when the character CEO holds more than 65% of shares |
+| Corporate IMF restructuring | Price multiplied by 0.85 |
+| Dividend rate | 0% to 25% of after-tax income |
+| Public share issue | Up to 50% of shares; self-issue up to 20% at a 15% premium |
+| Split limits | Forward up to 100x; reverse down to 1,000,000 shares; 48-turn cooldown |
+| Post-split smoothing | 70% previous price, 30% fundamental, for 3 turns |
+| Sell pacing | Pool absorbs at most 5% of company value per turn; sales under ₳25,000,000 never paced |
+| Issue pacing | At most 10% of shares or ₳50,000,000 per turn, whichever is larger |
+| Thin float | Public float under 5% trades at the fundamental price |
+| Hostile takeover | At 75% ownership; minority paid 125% of market price |
+
+### Worked example
+
+A company has 10,000,000 shares, ₳2,000,000 of cash, sectors worth ₳6,000,000 in present value and ₳1,000,000 of bonds issued. Tangible book is 2,000,000 + 6,000,000 - 1,000,000 = ₳7,000,000, or **0.70 per share**.
+
+Its yearly earnings are ₳1,200,000 and the cost of capital is 10%. Earnings power is 1,200,000 / 0.10 / 10,000,000 = **1.20 per share**. Sector growth is 4%, so the growth premium is 1,200,000 x 0.04 / (0.10 - 0.04) / 10,000,000 = **0.08 per share**.
+
+The price is 0.70 + 0.5 x 1.20 + 0.15 x 0.08 = **1.312**. If the central bank raises rates so the cost of capital goes to 12%, earnings power falls to 1.00, the growth premium to 0.06, and the price to about 1.209, a drop of 8%. The same company in a boom can never rise more than 35% in a turn.
+
+### Why it works this way
+
+Tangible book carries the biggest weight so a company that reinvests into capacity is worth at least what that capacity is worth, even while current profit is low. Earnings and growth sit on top. Adjustments exist so no single holder or one-turn spike can distort a price.
+
+Other adjustments to the price: bonds are counted at 0.75 so leveraged bond positions do not inflate value, and shares held by index funds get a small premium reflecting passive demand.
 
 ## Buying and selling shares
 
@@ -86,7 +60,7 @@ From a corporation page, navigate to the Shares tab, or use the **Trade** shortc
 
 Market orders use the quoted bid or ask. The equity pool's base half-spread is 1% on each side of its midpoint, before its cash-balance adjustment. Execution depends on available shares, cash and the applicable market path; liquidity is not unlimited. Review the trade quote before confirming.
 
-Very large sales are paced. The market buys at most **5% of a company's value** each turn from all sellers together, so sales under ₳25,000,000 per company per turn are never limited, while a bigger sell order fills a slice each turn at the market price. Prices are unchanged: a very large block simply settles over more turns.
+Very large sales are paced. The market buys at most **5% of a company's value** each turn from all sellers together. Sales under ₳25,000,000 per company per turn are never limited; a bigger sell order fills a slice each turn at the market price and settles over more turns.
 
 ### Limit orders
 
@@ -122,7 +96,7 @@ The CEO can change the total share count via a split or reverse split. All share
 
 - **Forward split:** Up to 100x current total shares
 - **Reverse split:** Down to a minimum of 1,000,000 total shares
-- **Cooldown:** 48 turns between changes
+- **Cooldown:** 48 turns between changes (also applies to share consolidation)
 - **Open orders:** Any open share orders on the corporation are auto-cancelled and refunded when a split occurs
 
 ### Post-split price smoothing
@@ -255,7 +229,7 @@ National GDP growth is influenced by corporate sector growth rates, so a healthy
 
 ## Currency
 
-Each exchange displays values in that country's currency. If you hold shares in a UK corporation, dividends are paid in GBP. When the forex system is enabled, dividends are automatically converted to your home currency at the market-maker rate (1% spread). There is no per-holding preference: this conversion is automatic for all dividend income.
+Each exchange displays values in that country's currency. If you hold shares in a UK corporation, dividends are paid in GBP. Dividends are automatically converted to your home currency at the market-maker rate (1% spread). There is no per-holding preference: this conversion is automatic for all dividend income.
 
 ## Strategic considerations
 
@@ -271,5 +245,49 @@ Each exchange displays values in that country's currency. If you hold shares in 
 
 **Concentration risk:** Corporations with very low public floats (below 5%) fall back to fundamental pricing for trades, which can create a liquidity gap between the market quote and execution price.
 
-See also: [Corporations](/wiki/corporations), [Corporate Bonds](/wiki/corporate-bonds), [Currency Exchange](/wiki/currency-exchange), [National Metrics](/wiki/national-metrics)
+## What you can do
+
+- **Buy and sell** from the Shares tab on a corporation page, or the Trade shortcut in the exchange list. Review the quote before you confirm.
+- **Place limit orders** with an optional expiry. Buy funds and sell shares are held until filled or cancelled.
+- **As CEO,** set the dividend rate, issue shares, split or reverse split, and (see [Corporations](/wiki/corporations)) go public or privatise.
+- **Vote** in a shareholder CEO election when the seat is vacant: votes are weighted by shares.
+- **Build a stake** above 50% of voting power to control a company, 75% to squeeze out minorities.
+
+### Common questions
+
+- **Why did my price move?** Check cash, debt, earnings and rates. Rate changes shift the cost of capital for every company.
+- **Why can't I sell everything at once?** Large sells are paced so the market is not crashed in one turn.
+- **Why is my trade price different from the quote?** Companies with under 5% public float trade at the fundamental price.
+
+## Connections
+
+**Driven by**
+
+- [Corporations](/wiki/corporations): cash, plants, earnings and growth set tangible book, earnings power and the growth premium.
+- [Corporate Bonds](/wiki/corporate-bonds): bond debt lowers book value, held bonds add to it, and a default hurts the price.
+- [Central Banks](/wiki/central-banks): the prime rate is the base of the cost of capital.
+- [Currency Exchange](/wiki/currency-exchange): dividends and foreign holdings convert at market rates.
+- [Market System: A Player's Guide](/wiki/market-system-guide): owned capacity and earnings set the book value and earnings behind the price.
+- [Market Safeguards](/wiki/market-safeguards): a trip changes how share prices are computed for every company
+- [Index Funds](/wiki/index-funds): Index inclusion brings steady fund buying of a company's shares, and removal brings selling.
+- [Corporate IMF Restructuring](/wiki/imf): a rescued company's share price is cut by 0.85 and its shares are diluted.
+
+**Affects**
+
+- [Corporations](/wiki/corporations): share counts decide CEO elections, takeovers and control of subsidiaries.
+- [Index Funds](/wiki/index-funds): listed shares make up the funds that passive investors hold.
+- [Private Banking](/wiki/private-banking): share prices mark the prop desk book of investment banks.
+- [Market Safeguards](/wiki/market-safeguards): aggregate share prices and market value are what it measures
+- [Corporate Mergers & Acquisitions](/wiki/corporate-mergers): The target's share price feeds the reference valuation of an offer.
+- [Subsidiary Corporations](/wiki/subsidiary-corporations): Buying or selling shares can lift you above 50% control or drop you below it.
+
+## Status
+
+Every country with an exchange runs this market, including the United States (NYSE), United Kingdom (FTSE), Germany (DAX), Japan (Nikkei), Ireland (ISEQ), Brazil (B3), China (SSE) and Nigeria (NGX). In multiplayer worlds prices update every 15 minutes. Command economies have no private listed companies, so no exchange.
+
+Last checked: 2026-10-29, version 1.18.0
+
+## Technical detail
+
+The exact rules are on the [Stock Market design page](https://docs.lakesidegames.net/design/stock-market.html).
 `;

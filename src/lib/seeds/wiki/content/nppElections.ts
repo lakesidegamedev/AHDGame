@@ -1,100 +1,97 @@
 export const nppElectionsContent = `# NPP Elections
 
-NPPs enter primaries and generals autonomously each turn. Understanding exactly how they decide to enter, how they perform, and when they drop out gives you control over the races you care about.
+NPPs enter primaries and general elections on their own every turn. They are the opponents you face when no other player is in the race. You cannot choose which NPP runs, but party chairs can ask specific NPPs to run, and a player in the race makes every NPP candidate weaker.
 
-## When NPPs enter
+## How it works
 
-NPP election entry runs each turn as part of the NPP behavior phase. Entry only happens while a primary is active and still accepting candidates. NPPs cannot enter a primary after it closes.
+### Who can enter a race
 
-### Eligibility requirements
+Each turn, during the NPP phase, an NPP enters a primary only while it is **open and accepting candidates**. To enter, an NPP must:
 
-An NPP must satisfy all of these to enter a race:
-- Not retired
-- Not on cooldown for that specific election (from a previous dropout)
-- Not already an active candidate in any other race
-- Home state (or region/Land/prefecture) must match the election's state
-- Country must match the election's country
-- No same-party candidate already in that primary
+- not be retired
+- not be on cooldown for that race (see below)
+- not already be a candidate in another race
+- have its home state (or region, Land or prefecture) match the race
+- be in the same country as the race
+- be in a party that does not already have a candidate in that primary
 
-**Presidential races are barred by default**, but the bar lifts in **autonomy-active, non-player-enabled countries**. If NPP autonomy is active for a country and no player controls it, NPPs can enter that country's presidential primary; the standard eligibility checks above still apply. In every other country, NPPs stay locked out of presidential primaries regardless of ambition or eligibility.
+**Presidential races are closed to NPPs** in any country that players can play in. In a country nobody plays, where NPP autonomy is on, NPPs can enter the presidential primary. Leadership races for the US Speaker and floor leaders are for players only.
 
-## Two-phase entry: incumbents first
+### Two phases: incumbents first
 
-Every turn, the entry process runs in two phases:
+1. **Incumbents.** An NPP that holds the seat being contested re-enters to defend it before anyone else. It ignores that seat's cooldown.
+2. **Everyone else.** Open slots are filled from NPPs of each party homed in the state, **one generic NPP per party per primary**, so an NPP never splits its own party's vote. An NPP takes the most junior office it is eligible for first. The order is: state senate, regional councils, other lower assemblies, Sangiin, House, Commons, Senate, Shugiin, delegates to national assemblies, and finally governor.
 
-**Phase 1: Incumbents.** NPPs currently holding the seat being contested get first priority to enter and defend it. An NPP who is the sitting governor of Texas will be matched to the Texas governor primary before any non-incumbent NPP from their party is considered.
+### Slate: asking an NPP to run
 
-**Phase 2: Non-incumbents.** After incumbents are placed, remaining open slots are filled by matching available NPPs by party and home state. Higher-priority races are filled first:
+A party's national or state chair or vice chair can put a same-party NPP on the **Slate** for a race. The NPP accepts if its loyalty is at least 40 and its stubbornness is at most 70 (state and regional leaders get 5 points of leeway on each). An accepted NPP can join a primary even if a same-party candidate is already in it. The Slate board shows "Likely to Accept" or "Likely to Decline" before the turn and the result after. See [Party Actions](/wiki/party-actions).
 
-| Priority (1 = highest) | Race Type |
+### How an NPP is weakened by a player
+
+| When | Effect |
 | --- | --- |
-| 1 | stateSenate |
-| 2 | regionalCouncil (UK) |
-| 3 | peoplesCongress (CN) |
-| 4 | sangiin (JP) |
-| 5 | house |
-| 6 | commons (UK) |
-| 7 | senate |
-| 8 | shugiin (JP) |
-| 9 | npcDelegate (CN) |
-| 10 | governor |
-| n/a | president (barred except in autonomy-active, non-player countries) |
+| A **player** is in the same party primary | NPP primary scores are multiplied by **0.5** |
+| A **player** is in the general election | NPP candidates get **80%** of the vote weight they would otherwise get |
+| No player in the race | No penalty |
 
-Each primary gets **exactly one NPP per party**: NPPs never split the party vote in a primary.
+A primary score of 60 for an NPP becomes 30. In a general election, if a player and an NPP would each have drawn 50 units of support from a group, the NPP counts as 40, and the player takes about **55.6%** of that group against **44.4%**.
 
-## The primary score penalty
+### Dropping out
 
-When a player character is in the same primary, NPP candidates receive a **50% score penalty**.
+NPPs do not leave a race just because their appeal is low. An NPP leaves a primary if a chair slates it into a different race in the same state, or if the primary is NPP-only and the world uses autonomy level 6 (see below). An NPP that withdraws stays out of that race until the primary ends.
 
-If the normal primary score formula would give an NPP 60 points, they land at 30 after the penalty. This makes any competent player candidate a heavy favorite over any NPP in a contested primary.
+### NPP influence
 
-The penalty applies only when **at least one player character** is an active candidate in the same primary. NPP-only primaries (no player candidates) run without the penalty.
+NPPs start at a **Political Influence of 10** and never go below 10. New player characters also start at 10, the same floor, so a new player does not begin behind every rival. A player's influence can still fall below 10 if neglected.
 
-## The general election penalty
+### Autonomy level 6
 
-In generals, NPPs also face a vote-weight reduction when a player is in the race: NPP candidates accumulate 80% of the votes they would otherwise receive in any general election that includes at least one player candidate. This gives player candidates a structural edge in head-to-head matchups.
+In worlds on autonomy **V6**, parties run their strongest NPPs for the biggest races, ambitious incumbents step up to open senior seats at home, NPP candidates hold rallies (at most one every four turns, at a player's cost and effect), and in an NPP-only primary a candidate far behind the party's best withdraws instead of splitting the vote. Primaries with a player in them are never touched. The live world runs V6; see [NPP Autonomy](/wiki/npp-autonomy).
 
-## Dropout mechanics
+### Key numbers
 
-NPPs do not automatically drop out of primaries based on an appeal threshold. There is no low-appeal dropout rule.
+| Item | Value |
+| --- | --- |
+| NPP primary score with a player in the race | x 0.5 |
+| NPP general election vote weight with a player in the race | x 0.8 |
+| Political Influence floor | 10 |
+| Slate acceptance | Loyalty at least 40 and stubbornness at most 70 |
+| NPPs per party per primary (generic fill) | 1 |
+| V6 rally frequency | One every 4 turns |
 
-In worlds on autonomy V6, an NPP-only primary does consolidate late: a candidate who is clearly behind the party's strongest NPP withdraws rather than splitting the vote. It does not endorse anyone, and primaries with a player in them are never affected. See NPP engine 6 below.
+## What you can do
 
-## The political influence floor
+- **Enter early.** If you are in a primary, NPPs there score at half.
+- **Ask for a candidate.** As a party chair or vice chair, slate the NPP you want in a race.
+- **Beat them in a primary.** Stay close to your party and state positions (see [Party Ideology](/wiki/party-ideology)). NPPs cannot run ads, canvass or raise funds; you can. See [Primaries](/wiki/primaries).
+- **Beat them in a general election.** Build Org, which NPPs cannot spend on, and target the voter groups an NPP does not appeal to. See [General Elections](/wiki/general-elections).
 
-NPPs start with a **minimum Political Influence of 10%**. If a value is missing, it defaults to 10. This means even the weakest NPP always has a baseline of influence in their home state. It's by design: NPPs should be a real presence, not paper candidates.
+**Common questions.**
+- *Why is my NPP not running?* It is retired, on cooldown, running elsewhere, homed in a different state, blocked by a same-party candidate, or the primary has closed.
+- *Can NPPs run for President?* Only in a country nobody plays, with NPP autonomy on.
+- *Can I stop an NPP running?* No. Enter the race to make it a weaker candidate, or ask a party chair to slate it into a different race.
 
-As of 1.16, newly created player characters also start at 10 Political Influence, the same floor as the NPPs they compete with, so a new player no longer begins below every rival. Player influence can still decay below 10 if it is neglected. Existing characters are unchanged.
+## Connections
 
-## NPP engine 6 (autonomy V6)
+**Driven by**
 
-In worlds set to autonomy **V6**, computer-run politicians follow a newer engine. New singleplayer and simulation worlds start on V6, and the live multiplayer world runs V6. Other existing worlds keep their chosen level. The engine-6 election behaviours are:
+- [NPPs Overview](/wiki/npps-overview): ambition, home state and party decide which race an NPP enters.
+- [Party Actions](/wiki/party-actions): Slate assignments move NPPs into races.
+- [NPP Autonomy](/wiki/npp-autonomy): the world's level adds challengers, career moves and primary consolidation.
+- [primaries](/wiki/primaries): NPP entry, score handicaps and late withdrawals in primaries follow the primary rules.
 
-- Parties run their strongest NPPs for their most senior races, and where a party is weak across a region it puts its best people in the local races it can still win.
-- Ambitious incumbents with real standing step up to an open, more senior office in their home region instead of holding the same seat forever.
-- NPP candidates hold rallies in their own race at the same cost and with the same effect as a player rally, at most once every four turns.
-- In a country without players, a presidential primary can draw a challenger from the party's strongest NPPs.
-- Late in an NPP-only primary, a candidate who is clearly behind withdraws rather than splitting the vote. It does not endorse anyone, and primaries with a player in them are never touched.
+**Affects**
 
-## Beating NPPs
+- [Primaries](/wiki/primaries): NPP candidates fill the field and take a score penalty beside players.
+- [General Elections](/wiki/general-elections): NPP candidates have 80% vote weight against players.
 
-### In primaries
+## Status
 
-1. **Enter early**: your presence halves their entry chance and triggers the x0.5 primary penalty
-2. **Stay ideologically close to the party**: NPPs are calibrated near the party median; match or beat their alignment score
-3. **Build favorability**: NPPs can't run ads or canvass; you can
-4. **One race at a time**: NPPs can only hold one candidacy; if they're in your race, they're blocked from higher-priority races
+Live in every world and country with elections. Presidential entry is limited to countries nobody plays, where NPP autonomy is on. Autonomy level 6 behaviours apply only to worlds set to that level.
 
-### In generals
+Last checked: 2026-10-29, version 1.18.0
 
-1. **Leverage party org**: you can actively build org; NPPs benefit from it passively but can't invest
-2. **Use targeted campaigning**: NPPs have fixed positions; find the demographics they don't appeal to and campaign there
-3. **Adjust your positions**: if you know an NPP's positions, you can shift to better match demographics they miss
+## Technical detail
 
-## Related
-
-- [NPPs Overview](/wiki/npps-overview): what NPPs are, the influence system.
-- [NPP Behavior](/wiki/npp-behavior): how NPPs vote, whip compliance, personality traits.
-- [Primaries](/wiki/primaries): primary mechanics including declaration rules and the NPP penalty in detail.
-- [General Elections](/wiki/general-elections): vote accumulation and the NPP general-phase penalty.
+The exact rules are on the [NPP system design page](https://docs.lakesidegames.net/design/npp-system.html).
 `;

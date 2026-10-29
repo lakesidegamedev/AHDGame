@@ -4,6 +4,29 @@ A war exists. Now you have to actually fight it.
 
 This page is the operational loop: get forces to the front, look at the odds, declare an offensive, survive the turn, read what happened. Everything here happens either in the **war room** (\`/world/conflicts/combat\`) or on the **conflict record** (\`/world/conflicts/<number>\`). Both work, and both use the same underlying authority.
 
+## How it works
+
+You get units to a front through a general, read two odds figures in the war room, and declare an offensive. The defender gets one turn to react. Then the battle resolves, writes a report, and moves the territory meter. The battle model itself is deliberately not published, so you cannot solve fights instead of fighting them. Everything you can act on is below.
+
+### Key numbers
+
+| What | Value |
+| --- | --- |
+| Defender's window | 1 turn: declared on turn N, resolves on N+1 |
+| Offensives pending per nation per front | 1 |
+| Build time before a unit can fight | 6 turns; Carrier Strike Group 10 |
+| Readiness recovery | Up to 8 points per turn toward the posture's baseline |
+| Verdict ladder | Decisive Victory, Victory, Pyrrhic Victory, Costly Defeat, Rout |
+| Fog on enemy forces | Lifts 480 turns after the war resolves |
+| Standing order to join allied offensives | Off by default |
+| Supply readout | SUPPLIED, STRAINED, SHORTAGE, CUT OFF |
+
+### A worked turn
+
+You hold a front with two generals and the war room shows **You attack 44%** and **They attack 41%**, with the enemy band at "Evenly matched". Both figures are under 50% because attacking is harder than defending, and each row is the chance of whoever moves. You decide not to attack.
+
+On turn 700 the enemy declares an offensive anyway. You are not told. You notice their threat reading climbing and a new army on the front, so you post a third general with 6 more formations. The battle resolves on turn 701 against your reinforced line. The report shows a Pyrrhic Victory for the attacker, with losses on both sides and a small change to the control meter. Your units stay at the front under their general and begin rebuilding that turn.
+
 ## Step 1: Get forces to the front
 
 There is no "deploy" button. Deployment is two separate acts by two different people.
@@ -21,7 +44,7 @@ Two consequences worth internalising:
 - **A unit with no general can never fight.** General Staff means reserve, permanently, until somebody assigns it.
 - **Un-posting a general is a full withdrawal.** It is the only way to pull forces out, and it pulls *all* of them.
 
-⚠️ **Newly built units cannot fight.** A unit is excluded from battle entirely until its build time elapses: 6 turns for most types, 10 for a Carrier Strike Group. It will not appear in a forecast and will not fight if you declare. Check before you commit.
+⚠️ **Newly built units cannot fight.** A unit is excluded from battle entirely until its build time elapses: 6 turns for most types, 10 for a Carrier Strike Group (see [Units, Recruitment & Procurement](/wiki/military-units)). It will not appear in a forecast and will not fight if you declare. Check before you commit.
 
 **Postures floor up.** A unit on Garrison automatically rises to Standard when it reaches a conflict. Garrison is a homeland-only posture.
 
@@ -175,7 +198,7 @@ The resolution model is deliberately not published in detail: knowing the exact 
 
 **Force quality**
 
-- **Strength.** A unit at 40% headcount fights like a much smaller unit. This is linear and it is the biggest single lever.
+- **Strength.** A unit at 40% headcount fights like a much smaller unit. It is the biggest single lever.
 - **Veterancy.** Elite formations are substantially better than green ones. Veterancy is a five-grade table, not a compounding multiplier.
 - **Technology tier.** Real but modest, smaller than veterancy, and it costs upkeep forever.
 - **Equipment.** A small, steady bonus.
@@ -210,7 +233,9 @@ The resolution model is deliberately not published in detail: knowing the exact 
 
 **Watch supply.** SHORTAGE or CUT OFF is a warning that your position is degrading, not just flavour. A front pushed too far outruns its logistics.
 
-**Know what feeds supply.** Supply is what the front can haul against what your formations there draw. Hauling comes from the ground's infrastructure, your logistics doctrine and generals, a Logistics command covering the region (worth more the larger the force it covers), depth formations feeding the line, and fighting on your own soil. Drawing comes from every formation you have posted there: ground and marine formations in the line draw in full, formations held in depth draw less, and air, naval and rocket formations draw a quarter. Air superiority and sea control do not feed your own supply; they only let you cut the enemy's. If the readout says CUT OFF while you own the sky, you have too much posted at one front.
+**Know what feeds supply.** Supply is what the front can haul against what your formations there draw. Hauling comes from the ground's infrastructure, your logistics doctrine and generals, a Logistics command covering the region (worth more the larger the force it covers), depth formations feeding the line, and fighting on your own soil.
+
+Drawing comes from every formation you have posted there. Ground and marine formations in the line draw in full, formations held in depth draw less, and air, naval and rocket formations draw a quarter. Air superiority and sea control do not feed your own supply; they only let you cut the enemy's. If the readout says CUT OFF while you own the sky, you have too much posted at one front.
 
 **Rotate veterans out before they are gutted.** Losses on an elite formation are far more expensive than on a green one, because rebuilding dilutes experience in proportion to how many replacements arrive. Top up early.
 
@@ -219,6 +244,43 @@ The resolution model is deliberately not published in detail: knowing the exact 
 **Withdrawal is a real option.** Un-posting a general before an attack lands costs you ground but saves the army. An army that exists can retake ground; one that has been destroyed cannot.
 
 **Name a Theater Commander with trained traits.** The front-wide bonus comes from their *tree*, not their rank.
+
+## What you can do
+
+- **Defence seat holder or Theater Commander:** declare, withdraw and read offensives. War room, or the conflict record.
+- **Commanding General:** post and un-post generals.
+- **Anyone with a seat at the front:** read the readouts and the report.
+
+Common questions: *Why does it say I only have a 44% chance and so does the enemy?* Each row is the chance of the side moving, and attacking is harder. *Why are my new units not fighting?* They are still being built, or have no general posted. *Why was I not told they attacked?* Incoming offensives are hidden by design. *Can allies join my offensive?* Yes, by declaring against the same side at the same front, or by a standing order.
+
+## Connections
+
+**Driven by**
+
+- [Declaring War](/wiki/declaring-war): a passed declaration creates the conflict and the opening forces.
+- [Commands & Command Structure](/wiki/military-commands): the Commanding General posts generals and the Theater Commander declares offensives.
+- [Generals & the Officer Corps](/wiki/generals): trained traits change how well a general's units fight.
+- [Units, Recruitment & Procurement](/wiki/military-units): strength, veterancy, tech tier, posture and readiness are battle inputs.
+- [National Doctrine](/wiki/national-doctrine): adopted doctrine applies to every unit on every front.
+- [Manpower & Conscription](/wiki/manpower-conscription): the pool decides how fast losses are rebuilt.
+- [Naval Vessel Classes & Standing Orders](/wiki/naval-vessel-classes): fleets contribute to a coastal front.
+
+**Affects**
+
+- [Occupation, Territory & Victory](/wiki/occupation-and-victory): a battle's margin moves the control meter.
+- [Generals & the Officer Corps](/wiki/generals): wins and losses pay XP.
+- [Manpower & Conscription](/wiki/manpower-conscription): casualties and rebuilds draw on the pool.
+- [Units, Recruitment & Procurement](/wiki/military-units): battles lower strength, readiness and veterancy.
+
+## Status
+
+Battles work in every world and era. Which units you can field depends on the year, and a country with no defence seat cannot declare offensives.
+
+Last checked: 2026-10-29, version 1.18.0
+
+## Technical detail
+
+The exact rules are on the design page [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), under Battles and territory. Battle resolution maths is intentionally left out of the wiki.
 
 ## Next
 

@@ -4,6 +4,33 @@ export const navalVesselClassesContent = `# Naval Vessel Classes & Standing Orde
 
 Your navy is made of five hull types. Each formation sits in one sea region (its **station**) and holds one **posture** (a standing order) until you change it. The carrier is the only hull that can fly missions and the only one whose weapons reach inland. Destroyers and frigates screen the fleet and shoot down aircraft. Submarines hide and squeeze sea lanes. Amphibious groups carry marines. Costs and upkeep are on [Units, Recruitment & Procurement](/wiki/military-units); this page covers what each hull does once it is at sea.
 
+## How it works
+
+You buy hulls as ordinary units (see [Units, Recruitment & Procurement](/wiki/military-units)). Each formation then sits in one sea region and follows one posture. Every turn, the postures of all fleets in a region decide who wins sea control, how much trade a blockade closes and who gets hurt in a surface action. Fleets need port berths and supply, and they wear down.
+
+### Key numbers
+
+| What | Value |
+| --- | --- |
+| Hull types | 5 |
+| Berth cost | Carrier 3, Amphibious Group 2, everything else 1 |
+| Berths available | Home 100%, ally 75%, neutral 40%, hostile coast 20% |
+| Carrier build time | 10 turns (6 for other hulls) |
+| Posture readiness cost per turn | Blockade 14, Sea Control 12, Sea Denial 10, Transit 10, Escort 8, Port recovers 30 |
+| Readiness regained per turn | 6, on top of the posture's cost |
+| Sea control | 0 to 100 per region; rises 12 a turn, falls 15 |
+| Landing marines needs | Sea control of at least 65 in the adjacent water |
+| Detection levels | 0 to 3 |
+| Repair per turn | 12 in port, 5 on station, scaled by supply |
+| Free repair ceiling | 100 at home, 90 in an allied port, 80 elsewhere |
+| Withdrawal thresholds | Condition under 35 or readiness under 25 |
+
+### A worked example
+
+A carrier group and two destroyers enter a region where an enemy squadron holds sea control of 70. Your ships are 80% of the weight in the region, so your sea control moves towards 80 at 12 a turn: 12, 24, 36, 48, 60, then 72 on turn 6. That passes the 65 needed to land marines, so your amphibious group can land on turn 6. The enemy's figure moves towards its 20% share and falls 15 a turn: 55, 40, 25, then 20.
+
+Holding Sea Control costs each ship 12 readiness a turn and it regains 6, a net loss of 6. From 90 readiness the fleet drops below the withdrawal point of 25 after 11 turns, and then returns to port on default orders.
+
 ## The five hulls
 
 | Hull | Personnel | Berth cost | Anti-air share | Flies missions | Role |
@@ -16,7 +43,7 @@ Your navy is made of five hull types. Each formation sits in one sea region (its
 
 Combat weight ranks carrier, submarine, amphibious group, destroyer, frigate, in that order. A formation is worth what the rest of the military system says it is worth, after readiness, equipment, veterancy, damage and supply.
 
-**Berth cost** is the footprint a hull asks of the port it operates from. An ally's port gives you three quarters of its berths, a neutral's less than half, a hostile coast a fifth. Formations over capacity lose supply. The defence seat can build port works (three turns, one project at a time) to add capacity.
+**Berth cost** is the footprint a hull asks of the port it operates from. An ally's port gives you three quarters of its berths, a neutral's less than half, a hostile coast a fifth. Formations over capacity lose supply.
 
 ## Postures (standing orders)
 
@@ -53,9 +80,36 @@ Hulls mend between fights, never during one: 12 condition a turn in port, 5 on s
 
 The defence seat holder commands the whole force from **Naval and air command** under the country page, reached from the Commands tab of the defence cabinet office.
 
+## What you can do
+
+The defence seat holder commands the whole force from **Naval and air command** under the country page, reached from the Commands tab of the defence cabinet office. For each formation you pick a posture, and for a carrier an air mission. To set a fleet to blockade, put it on the Blockade posture in a region on the target's approaches.
+
+Common questions: *Why will my amphibious group not land?* Your sea control in the adjacent water is under 65. *What does sea control do?* It decides who can land marines and shapes surface actions. *Why does my fleet keep returning to port?* It is in peacetime, or its condition is below 35 or its readiness below 25, and you gave it no order.
+
+## Connections
+
+**Driven by**
+
+- [Units, Recruitment & Procurement](/wiki/military-units): the hulls are bought, equipped and kept up there.
+
+**Affects**
+
+- [Blockades](/wiki/blockades): fleets on Blockade or Sea Denial create the lane pressure that closes trade.
+- [Fighting a Battle](/wiki/fighting-a-battle): a carrier on station and sea control cut or protect a land front's supply.
+
+## Status
+
+The naval layer works in every world and era in which a country has a navy. Which hulls exist depends on the year and the country's branches. Scotland and Wales have no defence seat and so no fleet orders.
+
+Last checked: 2026-10-29, version 1.18.0
+
+## Technical detail
+
+The exact naval rules have no design page of their own yet. The unit catalogue and pricing are on [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html).
+
 ## Related pages
 
 - [Blockades](/wiki/blockades): turning lane pressure into closed trade
 - [Fighting a Battle](/wiki/fighting-a-battle): how sea and air support reach a land front
-- [Military Commands](/wiki/military-commands): the command structure
+- [Commands & Command Structure](/wiki/military-commands): the command structure
 `;

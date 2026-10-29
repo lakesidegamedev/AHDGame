@@ -29,7 +29,9 @@ Six numbers matter in your first session. The rest can wait.
 | **National Influence (NPI)** | Your national reputation. It starts at 0. | Presidential primaries, national races, and national party work. It decays 1% per turn, then grows from your state PI and your highest office or party role. |
 | **Cash on Hand** | Personal money, separate from Campaign Funds. It starts at the grant for your wealth background: 1,000,000, 2,500,000 or 5,000,000 anchor units for low, middle or high, scaled to the world's era, plus a bonus if you were referred. | Shares, bonds, property, and player-to-player wires. Do not spend it thinking it is campaign money. |
 
-Campaign Funds and Cash on Hand are different pools. You can move money between them later through the Portfolio, but nothing on the campaign screen spends your personal cash automatically.
+Campaign Funds and Cash on Hand are different pools, and nothing on the campaign screen spends your personal cash automatically. To move cash into campaign funds, use **Personal Campaign Donation**: it costs 2 actions, lands 50% of what you convert, and adds Infamy (about 4 for ₳100,000 and 15 for ₳1,000,000). New characters also get a 28-point spread across seven stats at creation, which scale action costs and caps. See [Stats & Actions](/wiki/stats-actions).
+
+Funds also arrive on their own every turn. The base amount depends on your home state's size (₳5,000 to ₳40,000 per turn), and your donor level adds to it. Most days, funds rather than actions are what limit you.
 
 ## First ten minutes, in order
 
@@ -37,11 +39,11 @@ Campaign Funds and Cash on Hand are different pools. You can move money between 
 
 2. **Campaign at home three times.** Open **Campaign** from the dashboard or the Actions page. Each use costs 1 action, spends campaign funds scaled to your state, and adds PI. This is the only routine action that raises PI directly. Three campaigns clears the first-days goal and gets you off the starting floor.
 
-3. **Join a party.** Open **Parties** and compare platforms. Independents can run through the independent primary, but a party gives you its primary, organization, action pool, and leadership ladder. If the party requires approval, start as an Independent and apply; do not wait to begin campaigning.
+3. **Join a party.** Open **Parties** and compare platforms. Independents can run through the independent primary, but a party gives you its primary, organization, action pool, and leadership ladder. If the party requires approval, start as an Independent and apply; do not wait to begin campaigning. A party also has to reach your home region before you can join it. After you join, there is a 24-hour wait before you can switch.
 
 4. **Build one donor network and fundraise once.** **Build Donor Network** costs 4 actions at the starting donor level and raises your fundraising ceiling. **Fundraise** costs 3 actions and refills Campaign Funds. Together they are the engine that keeps the rest of your first week funded.
 
-5. **Find a race.** Open **Elections**. Filter to your country and home state or region. Look for a State Senate or House seat, or the local equivalent, that is still in its primary. Check the closing countdown before you do anything else.
+5. **Find a race.** Open **Elections**. Filter to your country and home state or region. Look for a State Senate or House seat, or the local equivalent, that is still in its primary. Check the closing countdown before you do anything else. If no local race is open, or the primary window has already closed, you do not need to wait idle: keep building PI, donor level and party standing, and enter the next race when it opens. A primary window you miss waits a full cycle.
 
 \`\`\`guide-screenshot
 elections
@@ -51,7 +53,7 @@ elections
 
 6. **Run a Quick Poll before you declare.** A Quick Poll costs 2 actions and about 25,000 campaign funds. It shows your topline and your five best and five worst demographic groups. If you are far behind, pick a different seat. A poll is much cheaper than a lost primary.
 
-7. **Declare during the primary window.** You can hold one active candidacy at a time. Missing the window means waiting a full cycle. After you declare, open **View Campaign** from the race page. That is where you spend funds, run ads, and canvass.
+7. **Declare during the primary window.** You can hold one active candidacy at a time. Missing the window means waiting a full cycle. You can withdraw from the race page, which costs no actions or funds, but the campaign spend you put into it is gone and the race goes to your rivals. After you declare, open **View Campaign** from the race page. That is where you spend funds, run ads, and canvass.
 
 8. **Spend the rest of your actions on the race, not on everything else.** A reasonable first-week split is in the next section. Do not buy a corporation, a bond, or a central-bank position in week one unless you already understand the system.
 
@@ -59,16 +61,22 @@ elections
 
 There is no single correct build, but this allocation covers the first-days goals and leaves room to react. It spends exactly 25 actions.
 
-| Move | Actions | Why |
-| --- | ---: | --- |
-| Campaign at home, three times | 3 | First-days goal, and the only routine PI gain. |
-| Build Donor Network, once | 4 | Raises the ceiling on every later Fundraise. The cost rises with donor level. |
-| Fundraise, once | 3 | Refills Campaign Funds after the early campaign spend. |
-| Quick Poll, once | 2 | Confirms your first race is winnable before you declare. |
-| Run Advertisements, once | 7 | At starting Favorability. The action cost rises with Favorability, not falls. |
-| Hold the remaining actions | 6 | Declare, canvass, or respond to a race that opens. |
+| Move | Actions | Campaign Funds | Why |
+| --- | ---: | ---: | --- |
+| Campaign at home, three times | 3 | -₳60,000 | First-days goal, and the only routine PI gain. |
+| Build Donor Network, once | 4 | -₳5,000 | Raises the ceiling on every later Fundraise. The cost rises with donor level. |
+| Fundraise, once | 3 | +₳61,000 | Refills Campaign Funds after the early campaign spend. |
+| Quick Poll, once | 2 | -₳25,000 | Confirms your first race is winnable before you declare. |
+| Run Advertisements, once | 7 | -₳140,000 | At starting Favorability. The action cost rises with Favorability, not falls. |
+| Hold the remaining actions | 6 | none | Declare, canvass, or respond to a race that opens. |
+
+That leaves about ₳81,000 of your ₳250,000, assuming a state with average GDP per person and a neutral Fundraising stat. Richer states cost up to 2 times as much and poorer ones as little as 0.85 times. Do the Fundraise before the ad, because the ad alone costs more than half your starting funds.
 
 Costs scale with your stats and state, so the funds numbers in the game will differ from the table. The action costs can move too: Campaign costs 1 action below 20 PI and rises to 2 at 20, 3 at 40, 4 at 60, and 5 at 80. Build Donor Network starts at 4 and rises with donor level, and Run Advertisements costs 5 below 30 Favorability, 6 at 30 to 49, 7 at 50 to 69, 8 at 70 to 84, and 9 at 85 or above. The table uses a new character's starting values.
+
+## Starter checklist and first-days panel
+
+Your profile shows a starter checklist where the world has it switched on. It follows the plan you picked in the tutorial: scouting your state, joining a party, a first vote, investing, a Campaign action, filing for a race, founding a company, backing a union and reading the wire. Finishing every required step pays a one-time bonus of campaign funds worth 20% of the starting amount (₳50,000 with the default start). Separately, the first-days panel runs for your first 72 hours and lists the three goals in step 1.
 
 ## What happens next
 
@@ -91,28 +99,16 @@ Costs scale with your stats and state, so the funds numbers in the game will dif
 
 Open **Contests** next to Help. Weekly rounds compare players on fourteen measures, grouped into business, politics, government, and referrals. The top three with a positive score split each cash prize 50 / 30 / 20, except government approval, which is winner takes all. New corporations and characters join at the start of the next round.
 
-| Category | Contest | What it measures |
-| --- | --- | --- |
-| Business | Small business growth | Percent market-cap growth for player corporations in the smaller half of the field. |
-| Business | Big business growth | Percent market-cap growth for player corporations in the larger half of the field. |
-| Business | Comeback of the week | Market-cap growth for corporations that lost at least 10% the week before. |
-| Business | Personal wealth growth | Percent growth in net worth: cash, savings, shares, bonds, and funds. |
-| Politics | National Influence | Most NPI gained during the round. |
-| Politics | Rookie of the week | Most NPI gained by a character created in the two weeks before the round opened. |
-| Politics | Backbencher of the week | Most NPI gained by a character who opened the round in the lower half of the field. |
-| Politics | Public image | Most Favorability gained by a player character. |
-| Politics | Kingmaker | Most races won by candidates you endorsed, excluding yourself. |
-| Government | Legislator of the week | Most bills you sponsored that became law. |
-| Government | Government approval | Most approval points gained by a government led by a player. |
-| Government | Statehouse approval | Most approval points gained in a state led by a player governor. |
-| Government | Party growth | Most members gained by a party chaired by a player. |
-| Referrals | Weekly referrals | Most new players brought in this week. |
+- **Business:** small business growth, big business growth, comeback of the week (corporations that lost at least 10% the week before), and personal wealth growth (net worth: cash, savings, shares, bonds and funds).
+- **Politics:** most NPI gained, rookie of the week (characters created in the last two weeks), backbencher of the week (started the round in the lower half), public image (most Favorability gained), and kingmaker (most races won by candidates you endorsed).
+- **Government:** legislator of the week (bills you sponsored that became law), government approval, statehouse approval and party growth, each for a player who leads the government, state or party.
+- **Referrals:** most new players brought in this week.
 
 A separate season-long **iteration referrals** race counts new players who create a character during the current iteration. The top three iteration referrers can earn Supporter for the next iteration. Paying subscriptions are separate.
 
 The fine print matters: growth excludes capital you inject during the round, an approval entry requires the same player head of government throughout the round, and party growth requires the same chair. Weekly and iteration rankings exclude banned referees, self-referrals, and strongly linked accounts.
 
-The Discord bot also offers casino games, paid in your character's home currency: blackjack, slots, roulette, crash, craps, high-low, races, lottery, and poker. Limits depend on the shared bank and the game. Review the quoted stake and payout before playing. A house game returns the stake if its bank cannot cover a win.
+The Discord bot also offers casino games paid in your character's home currency. Review the quoted stake and payout before playing.
 
 ## Money, in the order you need it
 
@@ -142,11 +138,33 @@ The classic ten hubs are below. Worlds built on the 1991 preset add more countri
 ## Go deeper when you need it
 
 - [Create a Character](/wiki/create-a-character): every onboarding click.
-- [The Game Loop](/wiki/the-game-loop): how often to log in.
+- [The Game Loop](/wiki/the-game-loop): how often to log in, and what skipping a day costs.
 - [Stats & Actions](/wiki/stats-actions): costs and formulas.
 - [Player Progression](/wiki/player-progression): the office ladder.
 - [Elections Player Guide](/wiki/elections-player-guide): primaries, generals, and endorsements.
 - [Tips for Beginners](/wiki/tips-for-beginners): common mistakes.
 - [Mail](/wiki/mail): player-to-player inbox.
 - [News](/wiki/news): the public feed.
+
+## Connections
+
+**Driven by**
+
+- [Create a Character](/wiki/create-a-character): your country, home, sliders and kit set the starting numbers.
+- [The Game Loop](/wiki/the-game-loop): how often you log in and what skipping a day costs.
+
+**Affects**
+
+- [First Campaign Walkthrough](/wiki/first-campaign-walkthrough): the detailed version of your first week.
+- [Player Progression](/wiki/player-progression): the office ladder you start climbing.
+
+## Status
+
+This guide applies in every world. Which countries you can pick and which races are open depend on the world's era and what has been opened so far. The country picker in game is the authority.
+
+Last checked: 2026-10-29, version 1.18.0
+
+## Technical detail
+
+The first-hours flow, checklist and costs are on the [Getting Started design page](https://docs.lakesidegames.net/design/getting-started.html).
 `;

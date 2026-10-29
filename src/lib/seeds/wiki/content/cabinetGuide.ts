@@ -16,7 +16,7 @@ Every cabinet seat in A House Divided is a real executive office with its own da
 
 ## How cabinets are filled
 
-- **Presidential systems (US, NG):** the President nominates and the legislature confirms. See [Cabinet](/wiki/cabinet) and the confirmation process.
+- **Presidential systems (US, NG):** the President nominates and the legislature confirms. See [Cabinet](/wiki/cabinet) and the [Confirmation Process](/wiki/confirmation-process).
 - **Parliamentary systems (UK, DE, JP, IE):** the head of government appoints ministers directly after [Government Formation](/wiki/government-formation), with no confirmation vote. The whole cabinet resets when the government changes. China is a one-party state, not a parliamentary cabinet. Scotland and Wales are latent countries; they are not live player cabinets.
 
 ## What ministers can do
@@ -33,6 +33,10 @@ Each seat combines some of the following levers, all detailed per post in the re
 
 Active mechanics spend **ministerial actions** (cabinet actions in presidential systems). You regain 1 action every ${MINISTERIAL_ACTION_ACCRUAL_TURNS} turns, up to ${MINISTERIAL_ACTION_CAP}, and once per turn you can spend ${OFFICE_POOL_TOP_UP_AP_COST} AP to buy 1 more.
 
+**Example, your first 12 turns in a seat:** you start with ${MINISTERIAL_ACTION_CAP} actions. You spend 2 on emergencies on day one, leaving 2. After ${MINISTERIAL_ACTION_ACCRUAL_TURNS * 2} turns you have ${MINISTERIAL_ACTION_CAP} again. Tier settings and fund changes cost nothing, so use them freely and save actions for emergencies and builds.
+
+Seats with no associated laws, such as the White House Chief of Staff, have no allocations tab because they have no department budget.
+
 ## Per-country reference
 
 Everything below is read directly from the game's configuration, so numbers and descriptions are always current.
@@ -45,4 +49,7 @@ Everything below is read directly from the game's configuration, so numbers and 
 - [Cabinet](/wiki/cabinet): nominations, confirmation, vacancies, and strategy.
 - [Cabinet Projects & Buildings](/wiki/cabinet-projects): estates, power plants, and infrastructure in depth.
 - [Government Formation](/wiki/government-formation): how parliamentary cabinets are appointed.
+- [Confirmation Process](/wiki/confirmation-process): how the Senate votes on US nominees.
+
+Last checked: 2026-10-29, version 1.18.0
 `;

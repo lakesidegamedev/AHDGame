@@ -126,7 +126,7 @@ NPI is both a score and a spendable political resource.
 - Presidential general elections use it for national reach.
 - Some party and leadership systems rank or weight candidates with it.
 - Proposing legislation can spend it.
-- Moving to another country resets it; moving within the same country preserves it.
+- Moving to another country resets it to 0. Moving within the same country keeps your NPI but resets your local political influence, which drops your per-turn gain to -0.5 until you rebuild it.
 
 For ordinary policy, subsidy, and union-law bills, the provision ladder is:
 
@@ -162,6 +162,24 @@ Party organization helps turn alignment into votes. Registration makes the party
 
 Money funds campaign actions and upgrades. It is a means, not a direct victory score. Spend it on the weakest link the race page exposes.
 
+## Why you can win the primary and lose the general
+
+A primary and a general score different things in different electorates.
+
+- **Who votes.** The primary electorate is your party's registered voters. The general electorate is everyone registered in the state, including voters who dislike your party.
+- **What is scored.** A state primary rewards alignment with the state and the party (40 points), favorability (35) and influence (25). The general multiplies appeal to each voter group by reach, approval and your party's organization, and your rivals have spent the primary building their own coalitions.
+- **When it counts.** Primary ballots count over the closing stretch of the primary. General votes count over the whole general, with the last 4 turns carrying 30%.
+
+So a candidate who matches the party base but sits far from the state's swing groups can win the nomination and still lose. Run a Full Poll as soon as the primary ends and read [Primary vs General Tactics](/wiki/primary-general-tactics).
+
+## Which stat should I raise first?
+
+It depends on the race.
+
+- **State primary:** favorability is worth the most (35 points). Then political influence (25, square-root curve) and alignment.
+- **Presidential primary:** alignment (40), favorability (25), party influence (20) and national reach (15). Party chairs get no special multiplier in presidential primaries, so a chair loses when favorability and alignment are weaker than a rival's.
+- **General:** favorability scales every vote you win, then reach (influence), then party organization.
+
 ## A turn-by-turn routine
 
 1. Open the race page after each turn.
@@ -175,11 +193,19 @@ Money funds campaign actions and upgrades. It is a means, not a direct victory s
 
 ## Related
 
-- [Election Mechanics](/wiki/election-mechanics): full formulas and office rules.
+- [Election Mechanics](/wiki/election-mechanics): how the phases and vote math work.
 - [Primaries](/wiki/primaries): declaration, scoring, and nomination tactics.
 - [General Elections](/wiki/general-elections): vote accumulation and closing turns.
+- [Political Operations](/wiki/political-operations): Campaign Presence in presidential races.
+- [Nominating Convention](/wiki/nominating-convention): how a presidential nomination without a majority is settled.
+- [Running Mate Surrogate Campaigning](/wiki/running-mate-surrogate): what a running mate can do in the general.
+- [Vote Factor Ledger](/wiki/vote-factor-ledger): why each presidential candidate has the votes they have.
+- [Live Election Results](/wiki/live-election-results): the results page and replay.
 - [Campaign Manager](/wiki/campaign-manager): every campaign control.
+- [Glossary](/wiki/glossary): terms such as NPP and NPI.
 - [Polling](/wiki/polling): quick and demographic polls.
 - [Demographics & Targeting](/wiki/demographics-targeting): appeal by voter group.
 - [Campaign Strategy](/wiki/campaign-strategy): advanced spending and timing.
+
+Last checked: 2026-10-29, version 1.18.0
 `;

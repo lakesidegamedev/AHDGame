@@ -16,7 +16,7 @@ The United Kingdom is a **constitutional monarchy and parliamentary democracy** 
 
 **Parliament** consists of two chambers:
 
-- **House of Commons**: 650 elected MPs from single-member constituencies across four nations. This is the primary legislative chamber and the source of the PM's authority.
+- **House of Commons**: 650 elected MPs, chosen in 12 regional multi-seat races across four nations (625 in the 1953 preset). This is the primary legislative chamber and the source of the PM's authority.
 - **House of Lords**: 784 appointed and hereditary peers. Revises and scrutinises legislation but cannot block it indefinitely. Lords are not elected and cannot be filled by players.
 
 ---
@@ -48,9 +48,13 @@ The 1953 preset uses its own 625-seat Commons map. Your character's home region 
 
 UK Commons elections use **regional multi-seat allocation**. Each region's seats are allocated by the Hare largest-remainder method, in every era.
 
-A party needs at least **10% of pooled regional votes** to qualify for seats.
+A party needs at least **10% of the pooled votes in a region** to qualify for seats there. Parties under that line get none, so a small party's votes in a region can count for nothing.
 
-**Primaries advance the top 3 candidates** (not 1 as in the US). Three candidates from each party advance to the general election per nation.
+**Worked example.** A region elects 10 MPs and 100,000 votes are cast, so one seat costs a quota of 10,000 votes. Party A has 46,000 votes, B has 34,000 and C has 20,000, all above the 10% line. A gets 4 seats outright, B gets 3 and C gets 2. That is 9 of 10. The last seat goes to the largest leftover: A has 6,000, B has 4,000 and C has 0, so A takes it. Final result: A 5, B 3, C 2.
+
+**Primaries advance the top 3 candidates** per party (not 1 as in the US), so up to three candidates from each party reach the general election.
+
+**How long a race takes.** A Commons election window is 48 turns, which is 48 real hours: 24 for the primary and 24 for the general election. The maximum gap between Commons elections is five years (240 turns, 10 real days).
 
 **No fixed election date.** Commons elections have a maximum five-year term but can be called earlier by the government (snap elections) or triggered by a successful no-confidence vote.
 
@@ -66,6 +70,8 @@ There is no direct vote for Prime Minister. Instead:
 4. If the confidence vote fails, the next-largest party's leader is nominated, and the process repeats.
 5. **Minority government**: any party or coalition chair holding at least 100 Commons seats can call a confidence vote and propose a PM, even when a rival bloc has 326+. The Commons votes the bid up or down.
 
+**Worked example.** Labour wins 340 of 650 seats. Its leader is nominated and 326 or more Ayes are needed, so Labour passes with room to spare. If it won only 300 seats, it would need 26 more votes from MPs outside its party. If those do not come, the next-largest party gets its turn.
+
 The PM serves until a new Commons election, resignation, or removal by no-confidence vote. There is no fixed term.
 
 ---
@@ -74,9 +80,9 @@ The PM serves until a new Commons election, resignation, or removal by no-confid
 
 These are the two mechanics that have no US equivalent:
 
-**Snap elections**: The governing party can trigger an early Commons election before the five-year maximum. This resets all four nations' elections simultaneously. Used strategically when the government believes its poll position is strong.
+**Snap elections**: A sitting Prime Minister can call an early Commons election before the five-year maximum. It resets all regions at once and runs as a 48-hour sprint. A PM can call at most 2 snaps per appointment, with a 336-turn (2 real weeks) cooldown after the first, and cannot call one while a no-confidence vote is open. Calling a snap vacates the PM seat and clears the cabinet, so the winner is chosen through government formation afterward. If no PM is seated within 96 turns, a snap is triggered automatically.
 
-**No-confidence votes**: Any MP can table a motion of no confidence against the sitting PM. If it passes (majority of MPs vote yes), the PM is removed immediately, the cabinet is cleared, and government formation restarts. This means a PM who loses their Commons majority can be ousted mid-term.
+**No-confidence votes**: Any sitting MP, in government or opposition, can table a motion of no confidence against the sitting PM. It needs a majority of the **whole** Commons (326 of 650), so abstentions and absent members count against the motion. The vote lasts 24 hours, and only one motion can run at a time, with at least 48 turns between filings. If it passes, the PM is removed immediately, the cabinet is cleared, and government formation restarts. If it fails, the PM stays. See [No-Confidence Votes](/wiki/no-confidence-votes).
 
 The [Snap Elections](/wiki/snap-elections) guide covers the mechanics and costs in detail.
 
@@ -110,7 +116,7 @@ The UK has an [imperial character](/wiki/imperial-characters): the Monarch. This
 
 **Government approval** is computed from the country's own metrics and the national effects layered on them (a war, a national address, international statements, the state of the cabinet), not from the PM's favorability. See [Government Approval](/wiki/government-approval).
 
-**The Chancellor's Budget changes the law.** The annual Budget bundles real tax rates and statutory programme levels (the NHS included) into one Commons confidence vote. It shares a single fiscal ledger with ordinary legislation, so a later Act or a later Budget controls each setting; the Treasury page shows a forecast of revenue, spending, balance and the tax phase-in before the package is tabled. If no Chancellor is appointed, the Prime Minister may act until the vacancy is filled.
+**The Chancellor's Budget changes the law.** The annual Budget bundles real tax rates and statutory programme levels (the NHS included) into one Commons confidence vote. It shares a single fiscal ledger with ordinary legislation, so a later Act or a later Budget controls each setting. The Treasury page shows a forecast of revenue, spending, balance and the tax phase-in before the package is tabled. If no Chancellor is appointed, the Prime Minister may act until the vacancy is filled.
 
 **The Bank of England answers to the Treasury before 1997.** A world that opens before the 1997 independence grant starts with the Treasury setting Bank Rate and no rate committee; Parliament can legislate the transfer either way. There is no FOMC-style committee here in any era: the Governor sets the rate alone once the bank is independent.
 
@@ -131,13 +137,18 @@ The UK has an [imperial character](/wiki/imperial-characters): the Monarch. This
 
 ## Key UK links
 
-- [UK overview](/wiki/uk-overview): Commons elections, government formation, confidence votes
+- [No-Confidence Votes](/wiki/no-confidence-votes): how a motion is tabled and counted
+- [Government Approval](/wiki/government-approval): what drives the government's standing
 - [Snap Elections](/wiki/snap-elections): How and when snap elections are triggered
 - [Cabinet Guide](/wiki/cabinet-guide): every cabinet post, its metrics, and its actions
 - [Referendums](/wiki/referendums): independence and Northern Ireland reunification campaigns
 - [Election Mechanics](/wiki/election-mechanics): Shared primary/general concepts
 - [Core Systems](/wiki/core-systems): Turn structure, action economy
 - [Player Progression](/wiki/player-progression): Career ladder details
+
+---
+
+**Status:** the United Kingdom is playable in every era. The 1953 preset uses a 625-seat Commons, and a world that opens before 1997 starts with the Treasury setting Bank Rate. Last checked: 2026-10-29, version 1.18.0.
 
 ---
 

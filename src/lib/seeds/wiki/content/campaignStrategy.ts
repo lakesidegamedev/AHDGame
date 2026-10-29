@@ -1,156 +1,123 @@
 export const campaignStrategyContent = `# Campaign Strategy
 
-A practical guide to allocating actions and money across the three phases of every race: build, contest, close. For the vote math that ultimately decides elections see [Election Mechanics](/wiki/election-mechanics); this page is about **what to do in what order**.
+A practical guide to spending actions and money across the three phases of every race: build, contest, close. Most players lose races by misallocating across phases, either over-campaigning early and running dry for the close, or fundraising endlessly and under-contesting. This page is about **what to do in what order**. For the vote math that decides elections see [Election Mechanics](/wiki/election-mechanics).
 
-## The three phases
+## How it works
 
-Every election cycle, for every office, runs through three strategic phases from your character's perspective:
+### The three phases
 
-1. **Build (pre-primary):** Accumulate Political Influence, Favorability, donor base, party alignment. No election is open yet.
-2. **Contest (primary + early general):** You're a declared candidate. Sustain base stats while running the specific race.
-3. **Close (final 4 turns of general):** Everything compounds. The campaign season multiplier kicks in. Weighted snapshots fall.
+1. **Build (before the primary):** accumulate political influence, favorability, donor base and party alignment. No election is open yet.
+2. **Contest (primary and early general):** you are a declared candidate. Sustain your base stats while running the race.
+3. **Close (final 4 turns of the general):** the campaign season multiplier turns on and the heaviest vote snapshots fall.
 
-Most players lose races by misallocating across phases: over-campaigning in the build phase and running out of gas in the close, or over-fundraising and under-contesting. This page is about getting that right.
+Every action should move you closer to winning your next election. Early game builds the foundation, mid game positions you, and late game is turnout and closing pressure.
 
-## Core principle
-
-Every action should move you closer to **winning your next election.** Early game: stats foundation. Mid game: positioning. Late game: turnout and closing pressure.
-
-## Action allocation by situation
+### Action allocation by situation
 
 | Situation | Priority order |
 | --- | --- |
-| New character, no office | Campaign > Build Donor Network (to level 2) > Fundraise > Quick Poll > Ads |
-| Mid-build, no election yet | Fundraise > Campaign > Build Donor Network > Barnstorm for allies |
-| Primary declared | Campaign heavily > targeted ads > build alignment NPPs are likely to endorse |
-| General, opening | Campaign + ads in weak demographics > Full Poll |
-| General, middle | Maintain PI + Favorability > Opposition Research on leading opponent |
-| Final 4 turns | Closing-sprint campaign + canvassing + ads |
-| Incumbent between cycles | Maintain PI + fundraise for war chest + build party influence |
+| New character, no office | Campaign, Build Donor Network (to level 2), Fundraise, Quick Poll, Ads |
+| Mid-build, no election yet | Fundraise, Campaign, Build Donor Network, Barnstorm for allies |
+| Primary declared | Campaign heavily, targeted ads, stay close to your party's platform |
+| General, opening | Campaign and ads in weak demographics, then a Full Poll |
+| General, middle | Maintain influence and favorability, Opposition Research on the leading opponent |
+| Final 4 turns | Closing-sprint campaigning, canvassing and ads |
+| Incumbent between cycles | Maintain influence, fundraise for a war chest, build party influence |
 
-## The campaign page (Strategic Ops trees and budget)
+### The campaign page: Strategic Ops trees
 
-Once you're a candidate, your **campaign page** (\`/campaign/[id]\`) gives you a **separate budget** spent on **Strategic Ops trees**. This is distinct from your personal Campaign Funds.
+Once you are a candidate, your campaign page has a **separate budget** spent on **Strategic Ops trees**. It is not your personal Campaign Funds. Each of four trees has a starter node you unlock first, then up to three branches, each with three tiers. Branch effects stack with the starter and with other branches in the same tree, so two campaigns can have very different effects from the same tree.
 
-### Strategic Ops trees, not flat levels
+| Tree | Starter (funds, actions) | Starter effect | Branches |
+| --- | --- | --- | --- |
+| Fundraising | ₳50,000, 10 | +₳35,000 passive income per turn | Grassroots (more income each turn), Bundlers (one-time cash), Direct Mail (multiplies all income) |
+| Media Spending | ₳60,000, 12 | +0.5% favorability per turn, ₳6,000 maintenance | Broadcast and Television (more favorability), Rapid Response (blunts attacks on you) |
+| Ground Game | ₳55,000, 10 | +3% in swing areas, ₳5,500 maintenance | Swing Canvassing (bigger swing bonus), Get-Out-The-Vote (smaller bonus everywhere), Volunteer Corps (cuts upkeep) |
+| Opposition Research | ₳40,000, 8 | -0.5% favorability per turn to one target | Dossier (more drain), Scandal Leak (one-time hit), Counter-Intel (amplifies the drain) |
 
-Fundraising, Ground Game, Media Spending, and Opposition Research are each a small **branch tree**, not a flat 1-10 level ladder. You unlock a **starter** node (funds + actions), then invest further into up to three branches per tree (labelled a/b/c on the campaign page, e.g. Media Spending's Broadcast and Television branches, Opposition Research's Dossier, Scandal Leak, and Counter-Intel). Each branch has its own magnitude that stacks with the starter and with the other branches in the same tree, so two campaigns at "the same tree" can have very different effects depending on which branches they invested in.
+Upgrades bought in the general phase cost 1.5x the funds and actions, so buy what you can in the primary.
 
-Approximate per-tree effects once started:
-
-| Tree | Starter effect | Branches add |
-| --- | --- | --- |
-| **Fundraising** | Passive income per turn (base ~₳35k) | Grassroots, Bundlers, Direct Mail: more passive income |
-| **Media Spending** | Base passive Favorability gain per turn | Broadcast, Television: more Favorability per turn; Rapid Response: reacts to attacks |
-| **Ground Game** | Base swing-area turnout bonus | Swing Canvassing: bigger swing-area bonus; Get-Out-The-Vote: turnout bonus everywhere, not just swing areas; Volunteer Corps |
-| **Opposition Research** | Base drain on one target (~-0.5%/turn) | Dossier: more drain; Scandal Leak; Counter-Intel: amplifies the drain |
-
-**Maintenance** is deducted from campaign funds each turn. If projected funds can't cover next turn's maintenance, branches **auto-downgrade** rather than the whole tree collapsing at once. No refund.
-
-### Opposition Research
-
-Lets you drain an opponent's Favorability passively. Retargeting has a cooldown.
-
-In the final 4 turns the effect **doubles** (2× campaign-season multiplier). A well-invested Opposition Research tree in the closing sprint can be worth several points of Favorability drain over the final stretch, often race-deciding.
+**Maintenance** comes out of campaign funds every turn. If projected funds cannot cover next turn's maintenance, branches downgrade one at a time instead of the whole tree collapsing, and there is no refund. Opposition Research can be retargeted, with a 6-turn cooldown.
 
 ### Campaign actions
 
-Your campaign generates its own per-turn action pool:
+Your campaign earns its own action pool each turn: at least 4 actions, plus endorsements (NPP, player, governor and executive). The pool is 4 + floor(sqrt(endorsements) x 3), so 4 endorsements give 10 actions, 9 give 13 and 16 give 16. A campaign banks at most 48 turns of its own income. These actions pay for upgrades and for presidential Campaign Presence (see [Political Operations](/wiki/political-operations)), not for regular character actions.
 
-- **Base:** Every campaign earns at least 4 actions/turn (the player base action rate from game config, floored at 4).
-- **Endorsements:** NPP, player, governor, and executive endorsements add actions via \`baseline + floor(sqrt(endorsements) × 3)\`. At the 4-action baseline, 9 endorsements ≈ 13 actions/turn.
+### Campaign season multiplier
 
-Campaign actions are spent **only** on upgrades, not on regular character actions.
+In the final 4 turns before an election closes, these effects automatically double: Media Spending favorability, Opposition Research drain and canvassing. Nothing to activate. Hold heavy spending for this window, because a burst of ads, canvassing and research is worth about twice the same spend earlier.
 
-## Party organization
+### Fog of war
 
-Party organization in a state feeds a **normalized share** of that state's total party organization: your party's org divided by every party's org in the state. A party with no presence in a state gets 0 (no votes there); a dominant party gets a multiplier close to 1.0.
+Opponents do not see your exact upgrade levels. The public sees estimates that can be off by 3 levels either way (level 5 looks like 2 to 8). Your party sees within 1 level (4 to 6). The fog refreshes every turn, so do not rely on opponent numbers.
 
-Investing in your state party's organization pays off for **every candidate in your party** who runs in that state. See [Party Organization](/wiki/party-organization) for the chair-side tools.
+### Key numbers
 
-## Fog of war
+| Item | Value |
+| --- | --- |
+| Campaign action pool | 4 + floor(sqrt(endorsements) x 3) per turn |
+| Pool bank limit | 48 turns of income |
+| General-phase upgrade cost | 1.5x |
+| Branch tiers | 3 per branch, 3 branches per tree |
+| Final-stretch multiplier | 2x on media, research and canvassing, last 4 turns |
+| Fog of war | public plus or minus 3 levels, party plus or minus 1 |
+| Research retarget cooldown | 6 turns |
 
-Opponents don't see your exact upgrade levels: they see fogged estimates.
+### Worked example: first week of a campaign
 
-- **Public** (anyone): variance ±3 levels. If you're at level 5, they see 2 to 8.
-- **Party members:** variance ±1 level. If you're at level 5, they see 4 to 6.
+A campaign with 9 endorsements earns 13 actions a turn. Turn 1: unlock the Fundraising starter (10 actions, ₳50,000). It pays +₳35,000 a turn and so pays itself back in under 2 turns. Turn 2: unlock Media Spending (12 actions, ₳60,000) for +0.5% favorability a turn at ₳6,000 maintenance. Over 40 turns that is +20 points of favorability for ₳240,000 of upkeep, and in the final 4 turns it doubles to +1.0 a turn. If funds ever drop below the next turn's ₳6,000, Media downgrades with no refund, so keep a buffer.
 
-Fog updates every turn during campaign processing. Don't rely on opponent display numbers: they're noisy.
+### Phase tactics
 
-## Campaign season multiplier (final 4 turns)
+**Build phase:** build donor base early (see [Fundraising and Ads](/wiki/fundraising-ads)), hit favorability 65 with 3 to 5 ads, push influence to 40 or more with daily Campaign actions, and join a party and build party influence.
 
-The single most important time mechanic. In the final 4 turns before an election closes, these effects **automatically double**:
+**Primary phase:** campaign hard in-state. Influence feeds the primary score on a square-root curve (25 x sqrt(influence / 100)), so one more influence point is worth about 0.25 points near influence 25, about 0.18 near 50 and about 0.125 near 100. Keep favorability at 70 or more, since each point is worth 0.35 score points. Stay close to your party's platform. Do not attack primary rivals.
 
-- Media Spending favorability boost
-- Opposition Research drain
-- Canvassing boost
-- (Presidential) Travel favorability gain
+**Early general:** buy upgrades before the 1.5x cost applies if you can, run a Full Poll, and aim ads and canvassing at weak groups.
 
-No player action required: the multiplier activates based on the election timer.
+**Final sprint:** burst Campaign actions for influence, ads for favorability, canvass aligned groups, and let Opposition Research drain at double rate. Log in hourly. Every turn matters.
 
-**Strategic implication:** Hold heavy spending for the final 4 turns. A burst of ads, canvassing, and Opposition Research at this point is worth roughly 2× the equivalent spend earlier.
+### Budget red flags
 
-## Budget management
+On the campaign page Budget tab watch for maintenance above income (a downgrade fires next turn), negative funds (you cannot upgrade until income recovers), and income declining (usually a late fundraising upgrade, party tax or an opponent's research).
 
-At the campaign page → Budget tab:
+## What you can do
 
-- Income vs spending over time
-- Category breakdown (what your money went to)
-- Per-turn net income
+- **Pick the next upgrade** by phase. Fundraising first for a poor campaign, Media and Ground Game when you can afford the upkeep, Opposition Research against a close leader.
+- **Spend the campaign pool** on upgrades and presidential state presence.
+- **Hold your burst** for the final 4 turns.
+- **Read the Budget tab** each day.
 
-Red flags:
+Do not:
 
-- **Maintenance > income.** Next turn auto-downgrade fires.
-- **Funds negative.** You've overspent. You're alive but can't upgrade until income digs you out.
-- **Income declining.** Usually means you upgraded fundraising late, got taxed by party, or the opposition ramped Opposition Research.
+- Over-buy ads above favorability 70, where each point over 70 reduces an ad's gain by 0.1.
+- Canvass misaligned groups: on current races a badly misaligned audience gets only 4% of base.
+- Keep Ground Game or Media tiers you cannot maintain.
+- Attack everything that moves. Attacks add infamy and fail more often as infamy rises.
 
-## Phase-specific tactics
+## Connections
 
-### Build phase
+**Driven by**
 
-- Build Donor Base early: base cost is $3K + $1.5K per current level (scaled by state GDP per capita), cheap at low levels and escalating toward ~$4.4M for the full 0→75 climb, for permanent compounding income.
-- Hit Favorability 65 via 3 to 5 ads.
-- Push Political Influence to 40+ through daily Campaign actions.
-- Join a party; invest ~2 weeks real-time to push Party Influence up.
-- Watch opponent candidacy declarations. If an NPP declares in the next primary, prepare accordingly.
+- [Polling](/wiki/polling): poll results decide which groups and phases get your spend.
+- [Demographics & Targeting](/wiki/demographics-targeting): group sizes and appeal decide where to aim ads and canvassing.
+- [the-game-loop](/wiki/the-game-loop): when to spend and when to save for the closing turns
 
-### Primary phase
+**Affects**
 
-- Campaign aggressively in-state: PI feeds the primary score on a square-root curve (\`25 × sqrt(PI/100)\`, \`src/lib/primaryScore.ts\`), so +1 PI is worth about 0.25 points near PI 25, about 0.18 near PI 50 and about 0.125 near PI 100.
-- Keep Favorability 70+: each point is worth 0.35 primary score points.
-- NPPs endorse autonomously based on alignment, so staying close to your party's platform makes you a more attractive endorsement target.
-- Don't attack primary rivals.
+- [Fundraising and Ads](/wiki/fundraising-ads): the fundraising tree sets your campaign page's income.
+- [Campaign Manager](/wiki/campaign-manager): the manager page is where you buy and monitor upgrades.
+- [General Elections](/wiki/general-elections): your closing-sprint plan decides the heaviest 4 turns of votes.
+- [Primary vs General Tactics](/wiki/primary-general-tactics): the phase playbook builds on this allocation.
+- [first-campaign-walkthrough](/wiki/first-campaign-walkthrough): the plan the walkthrough follows
 
-### Early general
+## Status
 
-- Front-load upgrades (no 1.5× multiplier on primary-phase upgrades).
-- Full Demographic Poll to diagnose weak groups.
-- Target ads and canvassing to weak groups.
+Live in every world and country with candidate campaigns. Which offices have a campaign page is listed under [Campaign Manager](/wiki/campaign-manager).
 
-### Final sprint (last 4 turns)
+Last checked: 2026-10-29, version 1.18.0
 
-- Burst campaign actions to peak PI.
-- Burst ads to peak Favorability.
-- Canvass aligned demographics (2× multiplier).
-- Opposition Research drains 2× on target.
-- Log in hourly. Every turn matters.
+## Technical detail
 
-## What not to do
-
-- **Don't over-buy ads.** Diminishing returns kick in above Favorability 70 (each point over 70 reduces the ad gain by 0.1). At high favorability an ad can cost ₳180k+ for a single point: terrible value.
-- **Don't canvass misaligned demographics.** A badly misaligned audience gets only a small fraction of the base effect: the fit multiplier is floored at 0.2 and then squared, so about 4% on current races (10% on older races), per \`src/lib/campaignTargeting/rules.ts\`.
-- **Don't maintain high Ground Game / Media Spending tiers when you can't afford maintenance.** Auto-downgrade costs you the investment with no refund.
-- **Don't upgrade in general if you can upgrade in primary.** 1.5× multiplier applies to general-phase upgrades.
-- **Don't attack everything that moves.** Infamy drain compounds, attack failure chance grows with your Infamy.
-
-## Related
-
-- [Election Mechanics](/wiki/election-mechanics): Vote math.
-- [Primaries](/wiki/primaries) · [General Elections](/wiki/general-elections): Phase-specific rules.
-- [Fundraising & Ads](/wiki/fundraising-ads): Money flow mechanics.
-- [Canvassing](/wiki/canvassing): Turnout boosting.
-- [Demographics & Targeting](/wiki/demographics-targeting): Appeal math and group composition.
-- [Campaign Manager](/wiki/campaign-manager): UI walkthrough of /campaign/[id].
-- [Primary vs General Tactics](/wiki/primary-general-tactics): Pivoting between phases.
-- [Party Organization](/wiki/party-organization): Growing your party's org.
+The exact upgrade costs and effects are on the [Campaign Strategy design page](https://docs.lakesidegames.net/design/campaign-strategy.html). See also [Party Organization](/wiki/party-organization).
 `;

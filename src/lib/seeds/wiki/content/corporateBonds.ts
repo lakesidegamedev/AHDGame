@@ -1,6 +1,21 @@
 export const corporateBondsContent = `# Corporate Bonds
 
-Corporations can issue bonds to raise liquid capital. Bonds are fixed-income debt instruments: the issuing corporation receives cash immediately, then pays periodic coupon interest to bondholders until the bond matures, at which point the full face value is returned.
+A **corporate bond** is a loan a corporation takes from the public. The company gets the cash now, pays interest (a **coupon**) every turn, and repays the full face value in one lump sum on the maturity date. Players can buy bonds for steady income, and CEOs can use them to fund expansion without selling shares. If the corporation cannot pay, the bond **defaults** and the company's rating and options suffer.
+
+## How it works
+
+The CEO issues bonds from the corporation page. Each bond unit has a face value of ₳1,000 and enters the public float, where any player or corporation can buy it. The coupon is set by the prime rate, the corporation's credit rating and the term. The corporation pays coupons from its liquid capital every turn and must hold enough cash to repay the whole principal at maturity.
+
+### Worked example
+
+A BBB-rated corporation issues **₳10,000,000** of 7-year (336 turn) bonds, which is 10,000 units. The prime rate is 3.0%, the credit spread is 3.0 points, the corporate premium is 1.0 and the 7-year term premium is 1.75, so the coupon is **8.75%**.
+
+- Annual coupon: ₳10,000,000 x 8.75% = ₳875,000.
+- Per turn (48 turns a year): ₳875,000 / 48 = about **₳18,229**.
+- Over 7 years the corporation pays about ₳6,125,000 in interest.
+- On turn 336 it must also repay **₳10,000,000 in one payment**. If liquid capital is short on that turn, the bond defaults.
+
+A buyer who pays par for 100 units (₳100,000) earns about ₳1,823 a turn in coupons and gets the ₳100,000 back at maturity.
 
 ## Issuing a bond
 
@@ -10,7 +25,7 @@ Only the CEO can issue bonds. Access the bond panel from the corporation page.
 | --- | --- |
 | Minimum issuance | ₳100,000 |
 | Maximum total debt | 2x equity, and never more than what the corporation could realise by selling up (its plants at book, its cash, and the bonds it holds). The second cap is usually the binding one for a built-out corporation, and it is the same test the insolvency check applies, so a corporation inside its quoted ceiling cannot be judged insolvent. The Bonds tab says which limit is binding. Refinancing defaulted debt is exempt, since it adds no debt. |
-| Maximum per issue | 25% of annual revenue, with a floor of ₳500,000,000 (\`src/lib/constants/bonds.ts\`) |
+| Maximum per issue | 25% of annual revenue, with a floor of ₳500,000,000 |
 | Unit face value | ₳1,000 per bond unit |
 | Maturity options | 96 turns (2 years), 240 turns (5 years), 336 turns (7 years) |
 | Coupon rate | prime rate + credit spread + 1.0pp + term premium (see below) |
@@ -60,11 +75,7 @@ The bond issuance form shows the exact rate for each duration before you commit.
 
 ## Per-turn coupon payments
 
-Each turn, the bond pays a fraction of its annual coupon to all current bondholders:
-
-\`\`\`
-perTurnPayment = (faceValue x couponRate / 100) / turnsPerYear
-\`\`\`
+Each turn the bond pays all current bondholders a share of its annual coupon. The payment is the face value times the coupon rate, divided by 48 turns a year.
 
 For a ₳100,000 bond at 8% coupon rate with 48 turns per year:
 - Annual coupon: ₳8,000
@@ -74,20 +85,7 @@ Payments are made from corporate liquid capital. If the corporation's liquid cap
 
 ## Bond market price
 
-Bond market prices fluctuate based on the current effective rate and time to maturity. The price is computed as a fraction of face value (1.0 = par):
-
-\`\`\`
-r = currentRate / 100          // effective annual rate as decimal
-c = couponRate / 100           // coupon as decimal
-n = yearsRemaining
-
-discountFactor = (1 + r) ^ -n
-annuityFactor = (1 - discountFactor) / r
-
-price = c x annuityFactor + discountFactor
-\`\`\`
-
-This is the present value of remaining coupon payments plus the present value of the face value returned at maturity. The result is clamped between 0.05 and 2.0.
+Bond market prices fluctuate based on the current effective rate and time to maturity. The price is a fraction of face value (1.0 = par). It is the present value of the remaining coupons plus the present value of the face value returned at maturity, discounted at the current effective rate. The result is clamped between 0.05 and 2.0.
 
 **Key relationships:**
 - When rates **rise**, existing bond prices **fall** (your fixed coupon is worth less relative to new issuances)
@@ -100,8 +98,8 @@ This is the present value of remaining coupon payments plus the present value of
 Any player or corporation can buy bond units from the public float:
 
 - **Players:** Payment from personal cash. Coupon payments received as personal income each turn.
-- **Corporations:** Payment from liquid capital. Coupon payments received as corporate income. Add \`?corporationId=\` to buy for your corporation.
-- **NPP caretaker CEOs:** When the corp is profitable and cash sits above one day of revenue, they buy high-coupon home-currency paper from the public float (a quarter of the surplus per turn). They will not buy the corp's own issue, and a loss-making corp keeps the cash as runway.
+- **Corporations:** Payment from liquid capital. Coupon payments received as corporate income. Choose your corporation as the buyer to buy from its treasury.
+- **NPP caretaker CEOs:** When the corp is profitable and cash sits above one day of revenue, they spend surplus cash on high-coupon home-currency paper from the public float. They will not buy the corp's own issue, and a loss-making corp keeps the cash as runway.
 
 CEOs can also **buy back** their own bonds from the public float to reduce outstanding debt:
 - Non-defaulted bonds: buyback at current **market price**
@@ -158,5 +156,46 @@ The portfolio view shows issuer names, units held, and current market values.
 
 **Watch the prime rate:** The [Central Bank Chair](/wiki/central-banks) sets the prime rate each turn they act. Rate changes ripple directly into all bond market prices.
 
-See also: [Corporations](/wiki/corporations), [Sovereign Bonds](/wiki/sovereign-bonds), [Central Banks](/wiki/central-banks), [Stock Market](/wiki/stock-market)
+## What you can do
+
+- **Issue a bond** (CEO only) from the Bonds tab. The form shows the rate for each of the three terms before you commit.
+- **Check the principal due.** A notice on every tab of the corporation page names the next principal falling due and turns into a warning within 24 turns.
+- **Buy bonds** from the public float with your own cash or your corporation's, for steady coupons.
+- **Buy back your own bonds** to cut debt. Non-defaulted bonds cost the market price; defaulted ones cost face value.
+- **Refinance after a default** to roll holders into a new bond for the full defaulted principal.
+
+### Common questions
+
+- **Why do I owe a large lump sum at maturity?** Bonds repay the whole face value on the maturity turn, not gradually. Plan cash for it.
+- **I defaulted and a new bond appeared. Why?** If you do not resolve a default, the game tries to refinance for you: it issues a replacement bond for the defaulted principal and rolls holders into it. If that is not possible it sells the fewest sectors needed to repay holders.
+- **Why did I lose my bonds?** If the issuer defaults, its bonds trade at 0.1 of face value and holders get no payment that turn. If the company is dissolved, bondholders are paid first from remaining assets.
+
+## Connections
+
+**Driven by**
+
+- [Central Banks](/wiki/central-banks): the prime rate sets the base of every coupon and moves bond prices.
+- [Corporations](/wiki/corporations): debt, profit, liquidity and equity set your credit rating and borrowing limit.
+- [Currency Exchange](/wiki/currency-exchange): bonds are issued and paid in the corporation's home currency.
+- [Subsidiary Corporations](/wiki/subsidiary-corporations): A subsidiary keeps its own bonds, which lets a bonded company be bought as a subsidiary.
+- [Corporate IMF Restructuring](/wiki/imf): existing bonds are removed and new ones cannot be issued during a rescue.
+- [Line of Credit](/wiki/line-of-credit): A frozen line of credit redirects coupon income to the loan.
+
+**Affects**
+
+- [Corporations](/wiki/corporations): bond cash funds growth, and coupons and principal drain liquid capital.
+- [Stock Market](/wiki/stock-market): debt and bond holdings enter the share price calculation, and defaults hurt it.
+- [Index Funds](/wiki/index-funds): Bond prices and defaults move the value of a fund's reserve.
+- [Corporate IMF Restructuring](/wiki/imf): a bond default and outstanding bond principal make a corporation a rescue candidate.
+- [Line of Credit](/wiki/line-of-credit): Coupon income counts toward the income a player can borrow against.
+
+## Status
+
+Corporate bonds are live in every world with private corporations. A corporation under an IMF restructuring cannot issue new bonds until it ends. Government-owned corporations cannot refinance defaulted bonds or pay them off with cash. Interest rates follow each country's central bank and the era's money.
+
+Last checked: 2026-10-29, version 1.18.0
+
+## Technical detail
+
+The exact default and restructure rules are on the [Corporate Bond Defaults design page](https://docs.lakesidegames.net/design/corporate-bond-defaults.html).
 `;

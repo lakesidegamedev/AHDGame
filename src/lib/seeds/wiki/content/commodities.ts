@@ -1,6 +1,37 @@
 export const commoditiesContent = `# Commodities
 
-The commodity market tracks **27** raw materials and services that flow between corporate sectors. Commodity prices shift each turn based on supply and demand from all active corporations. These prices directly affect corporate profit margins, sometimes dramatically.
+The **commodity market** tracks 27 raw materials, goods and services that flow between corporate sectors. Each commodity has a price that moves every turn with supply and demand. Those prices decide whether your corporation makes or loses money: a shortage helps whoever sells the scarce item and hurts whoever buys it. If you run a corporation, reading this market is the core skill.
+
+## How it works
+
+Every sector supplies and demands specific commodities, in proportion to its revenue. All the supply and demand in the world is added up, and the ratio of demand to supply (**D/S**) pushes the price: above 1 is a shortage and the price rises, below 1 is oversupply and the price falls. A state's price blends world, country and state conditions. Your margin then moves with the D/S ratio of each commodity you buy or sell, and your revenue moves with the price your output realises.
+
+### Key numbers
+
+| Rule | Value |
+| --- | --- |
+| Commodities | 27 (copper is merged into Rare Earth Minerals) |
+| Price curve | price = base x (1 + 0.7 x ln(D/S)) in a shortage; base / (1 + 0.7 x ln(S/D)) in oversupply |
+| Soft knee (where the curve flattens) | 3 times for most goods, 8 times for oil, coal, iron, timber, natural gas and rare earth |
+| Global stabilizer | 50,000 units added to both supply and demand |
+| State price blend | 50% global, 25% national, 25% state |
+| Price drift toward target | 6% per turn (about 95% closed after 48 turns) |
+| Margin effect per commodity | 40 x rate x ln(D/S) points, soft-capped at ±50 |
+| Aggregate margin caps | Input costs at most -30 points, surplus at most +30, combined negative floored at -15 |
+| Price realization factor | square root of (price / base), between 0.7 and 2.0 |
+| Strategy switch | 25% of daily sector revenue, 12-turn transition at -5 margin points, 24-turn cooldown |
+| Retail input penalty | Retail takes only 25% of negative input penalties |
+
+### Worked example: a margin stack
+
+Steel demand is twice supply (D/S 2.0) and electricity demand is 1.5 times supply. A manufacturer in its home state buys steel at a rate of 0.2 and electricity at a rate of 0.1 (illustrative rates). Its modifiers are:
+
+- Sector type match: +5 points.
+- Home state: +5 points.
+- Steel input: -40 x 0.2 x ln(2) = **-5.5 points**.
+- Electricity input: -40 x 0.1 x ln(1.5) = **-1.6 points**.
+
+Net: +2.9 points against its base margin. A steel producer facing the same market gets +40 x rate x ln(2), about +27.7 points per unit of rate, so it gains from the same shortage that squeezes the manufacturer.
 
 ## The 27 commodities
 
@@ -69,7 +100,7 @@ if effectiveRatio >= 1 (shortage):   price = basePrice * (1 + 0.7 * ln(effective
 if effectiveRatio < 1 (oversupply): price = basePrice / (1 + 0.7 * ln(1 / effectiveRatio))
 \`\`\`
 
-Raw D/S remains visible on market and admin screens. Prices and margins use the effective ratio, so anything beyond the soft-knee can keep worsening, but each extra unit of shortage or oversupply has steeply diminishing impact.
+Raw D/S remains visible on the market screens. Prices and margins use the effective ratio, so anything beyond the soft-knee can keep worsening, but each extra unit of shortage or oversupply has steeply diminishing impact.
 
 **Global stabilizer:** A 50,000-unit floor is added to both global supply and global demand to prevent extreme price swings when real activity is near zero (e.g. early game).
 
@@ -99,21 +130,9 @@ Beyond sector-level supply and demand, several macroeconomic forces inject addit
 
 Retail sectors supply **Consumer Goods**. Demand comes independently from the household consumption ledger, based on population, income, employment, consumer confidence, basket share, and bounded price elasticity. Adding Retail supply does not add Retail demand, so overbuilding lowers seller fill while a genuine shortage rewards new capacity.
 
-### Price administration
-
-Administrators can set **hard pegs** and **one-turn nudges** on commodity prices. Precedence for state prices:
-
-1. State hard peg
-2. State one-turn nudge
-3. Global hard peg
-4. Global one-turn nudge
-5. Normal drift toward equilibrium
-
-Pegs persist until removed; nudges apply for one turn and are consumed. This lets admins temporarily intervene in commodity markets without permanently overriding the supply/demand model.
-
 ## Price realization
 
-Beyond margin modifiers, commodity prices now **scale sector revenue** directly through **price realization** (when the market system tier is enabled):
+Beyond margin modifiers, commodity prices now **scale sector revenue** directly through **price realization**:
 
 \`\`\`
 factor = clamp((price / basePrice) ^ 0.5, 0.7, 2.0)
@@ -131,13 +150,13 @@ Key properties:
 
 - **Output-weighted**: sectors that sell many commodities blend realization across their supply profile.
 - **Lagged prices**: realization uses prior-turn prices, breaking feedback loops that would oscillate wildly.
-- **Bounded shock**: per-turn revenue moves at most -30% / +100% from realization alone (\`src/lib/market/priceRealization.ts\`).
+- **Bounded shock**: per-turn revenue moves at most -30% / +100% from realization alone.
 
 Shortages finally reward producers with higher **top-line revenue**, not just margin percentage points, and gluts bleed revenue even when margins look tolerable. This is the main reason to chase scarce commodities under the current market system.
 
 ## Market tiers: clearing & capital
 
-The market system has a tier ladder. Fresh worlds start at **plants**, the deepest tier, while admins can dial a world back for staged rollout or legacy migration. The active tier controls which extra panels appear on each sector's detail page. For a plain-language walkthrough of the whole ladder, see the [Market System guide](/wiki/market-system-guide).
+The market system has a tier ladder. Current worlds run the deepest tier, **plants**. The tier controls which extra panels appear on each sector's detail page. For a plain-language walkthrough of the whole ladder, see the [Market System guide](/wiki/market-system-guide).
 
 ### Clearing: your goods have to actually sell
 
@@ -188,8 +207,7 @@ Reference values for a single commodity at rate 1.0:
 
 Each commodity's contribution is soft-capped at **±50pp** before summing. The
 input and surplus legs are capped at **−30pp** and **+30pp**, and their combined
-negative channel is floored at **−15pp** by scaling both legs. These clamps
-always apply, including when an admin peg creates an extreme price.
+negative channel is floored at **−15pp** by scaling both legs. These clamps always apply.
 
 **Sign convention:**
 - **Buyers** (sectors that consume a commodity): shortage *raises costs* (negative modifier), oversupply *lowers costs* (positive modifier)
@@ -269,7 +287,7 @@ Read the page from top to bottom. Do not start with the price chart.
 3. **Read the balance.** Supply, demand, and the balance tell you whether the market is short or long right now. A positive balance is a surplus; a negative balance is a shortage.
 4. **Read the raw D/S ratio.** This is the number the price and margin curves use. Below 1 is oversupply, above 1 is shortage.
 5. **Read the pooled ledger.** Cleared, unmet, and surplus volume tell you whether the imbalance actually traded or merely sat there. Unmet demand with a high price is a real shortage. Surplus with a high price is a stale price or a storage problem.
-6. **Read the price history last.** A one-turn spike is noise. A persistent trend is a build signal. Price history is retained for **5 game years** (240 turns) and pruned automatically.
+6. **Read the price history last.** A one-turn spike is noise. A persistent trend is a build signal.
 
 | Field | What it means | What to do with it |
 | --- | --- | --- |
@@ -300,7 +318,7 @@ Storable commodities accumulate stock when production exceeds sales and draw dow
 | Iron, coal, oil, rare earth | 0.1% | Cheapest to hold. |
 | Software | 0% | Licences, not crates. |
 
-Stock above a very large cover threshold can spoil faster in worlds that enable the legacy-overhang cap. The point for a player is simple: a commodity that stores well can be held through a glut; a service cannot.
+The point for a player is simple: a commodity that stores well can be held through a glut; a service cannot.
 
 ## Worked example: a steel shortage
 
@@ -331,13 +349,58 @@ A shortage is a signal, not an instruction. Run these six checks before you comm
 
 **Tariffs and the national tier:** Tariffs don't change *prices*, but they shift how strongly each tier matters for **margin** calculations. The local (state) leg stays at 25%; tariff pressure moves weight from the global leg to the national leg. So a country with a 50% effective tariff sees 37.5% global / 37.5% national / 25% local instead of the no-tariff 50/25/25 split. A heavy-tariff country becomes much more sensitive to its own internal supply chain. See [Tariffs](/wiki/tariffs) for the full table and the foreign/domestic margin penalties tariffs apply on top of this.
 
-## Related systems
+## What you can do
 
-- [Corporations](/wiki/corporations): sector types, operating strategies, and profit margin mechanics
-- [Corporate R&D & Tech Trees](/wiki/corporate-r-and-d): tech-tree unlocks and innovation breakthroughs
-- [Tariffs](/wiki/tariffs): how tariffs shift commodity blend weights and apply margin penalties
-- [National Budget](/wiki/national-budget): government spending that drives healthcare and real estate demand
-- [National Metrics](/wiki/national-metrics): GDP growth that scales retail demand
-- [Logistics: Freight, Sourcing, and Supply Chains](/wiki/logistics-guide): freight demand, landed prices, and the Logistics map
-- [Planned / Command Economies](/wiki/planned-economies) - Administered national prices, shortage, and overhang when command economy is enabled
+- **Read the page top to bottom** before building. Use the checklist above: is the shortage real, is it new, can you supply it, and who else is building?
+- **Choose a strategy that supplies the scarce commodity** or avoids the expensive input (switching costs 25% of daily revenue). See [Corporations](/wiki/corporations).
+- **Set your pricing posture** to undercut or skim. See [Market System: A Player's Guide](/wiki/market-system-guide).
+- **Integrate vertically** to insulate yourself: own both the producer and the consumer of a commodity.
+- **Lock in supply or demand** with a [Supply Agreement](/wiki/supply-agreements).
+- **Hold storable goods through a glut,** but not services, which are lost every turn.
+
+### Common questions
+
+- **Are commodity markets country specific?** Prices blend world (50%), country (25%) and state (25%) conditions, so the same commodity can be short in one state and long in another. Tariffs shift weight from world to country.
+- **Why is my profit negative in a shortage of my product?** Check the shortage is in what you *sell*. If it is in something you *buy*, it squeezes you. Also check that your goods are selling (the sold percentage) and that freight can carry them out of the state.
+- **Why did my realized revenue differ from nameplate?** Price realization scales revenue by the square root of price over base, between 0.7 and 2.0.
+- **What are the markets doing now?** Open any commodity page and read the price against base, the raw D/S ratio and the pooled ledger.
+
+## Connections
+
+**Driven by**
+
+- [Corporations](/wiki/corporations): every sector's supply, demand, strategy and production policy feed the totals.
+- [Market System: A Player's Guide](/wiki/market-system-guide): clearing and pricing posture decide how much of supply actually sells.
+- [Household Demand & Price Level](/wiki/household-economy): household demand sets consumer goods demand.
+- [Supply Agreements](/wiki/supply-agreements): contracted volume leaves the open market first.
+- [Brand Loyalty](/wiki/brand-loyalty): the loyal slice is reserved before cheapest-first clearing.
+- [Output Quality](/wiki/output-quality): your output feeds the average quality that downstream sectors consume.
+- [Logistics: Freight, Sourcing, and Supply Chains](/wiki/logistics-guide): haul becomes freight demand and sets landed prices.
+- [Planned / Command Economies](/wiki/planned-economies): planned economies administer national prices.
+- [Tariffs](/wiki/tariffs): tariffs shift the blend of world and country conditions.
+- [National Budget](/wiki/national-budget): government spending drives healthcare and real estate demand.
+- [Extraction Contracts](/wiki/extraction-contracts): Contracted extraction supplies the commodity market.
+- [Resources](/wiki/resources-overview): Extraction output is the supply side of the six extractable resource prices.
+
+**Affects**
+
+- [Corporations](/wiki/corporations): prices and D/S ratios set your margins and realized revenue.
+- [Supply Agreements](/wiki/supply-agreements): the market price sets the contract price band.
+- [Brand Loyalty](/wiki/brand-loyalty): rival prices decide whether you are contested.
+- [Output Quality](/wiki/output-quality): input quality is the average quality of what you consume.
+- [Household Demand & Price Level](/wiki/household-economy): commodity prices feed the consumer price level.
+- [Logistics: Freight, Sourcing, and Supply Chains](/wiki/logistics-guide): the Freight price sets shipping costs.
+- [Market System: A Player's Guide](/wiki/market-system-guide): prices drive realization and clearing.
+- [Running a Corporation under the Plants System](/wiki/plants-corp-guide): prices and the supply balance tell you whether buyers have room to build.
+- [National Metrics](/wiki/national-metrics): Commodity prices push inflation up or down.
+
+## Status
+
+The commodity market runs in every world with private corporations. Which tier of the market system is active (clearing, capital, plants) changes the panels you see, and current worlds run the deepest tier. Planned economies administer national prices instead of tracking supply and demand. The per-commodity pages, which list suppliers and buyers, are generated from the same constants as the game.
+
+Last checked: 2026-10-29, version 1.18.0
+
+## Technical detail
+
+The exact price rules are on the [Commodities design page](https://docs.lakesidegames.net/design/commodities.html) and the [Commodity pricing design page](https://docs.lakesidegames.net/design/commodity-pricing-v2.html).
 `;

@@ -53,11 +53,12 @@ The USSR runs the shared one-party-state regime system (see [One-Party States](/
 - **The CPSU is the only seeded party.** No approved satellite parties exist, which makes the USSR stricter than China or East Germany.
 - **Vote multipliers**: ruling-party votes weigh 3.0, approved parties 0.375, independents and banned parties 0. Player-created parties are **automatically banned** at charter ratification.
 - **No-confidence votes are skipped entirely.** One-party states have no legislative confidence mechanism, and coalition loss cannot collapse the government.
-- **Internal party confidence** replaces the confidence vote. The ruling leader starts at 75 confidence, gains +5 on renewal (capped at 95), and drifts each turn with policy alignment, popular mood and economic signals. Degrading confidence walks the regime through the four-stage escalation chain.
+- **Internal party confidence** replaces the confidence vote. The ruling leader starts at 75 confidence out of 100, gains +5 on renewal (capped at 95), and drifts each turn with policy alignment, popular mood and economic signals. If the Premier's confidence or the public's mood falls far enough for long enough, the regime walks through a four-stage escalation chain (discontent, unrest, internal challenge, collapse) with the same triggers as China. See the stage table on [China](/wiki/cn-overview) and [One-Party States](/wiki/one-party-states).
+- **Can I play outside the CPSU?** Hardly. Independents and banned parties carry a vote weight of 0, and a party you create yourself starts banned, so the realistic route to office is the CPSU.
 - **Faction split**: at Stage 3 an auto-split spawns the **"Reformist Faction of the CPSU"** as a spinoff party, the only organic path to a second party.
 - **Regime conversion is one-way.** The collapse target is a parliamentary republic (the convention allowlist adds presidential). A negotiated convention reserves 20 percent of post-conversion seats for the former ruling party; the forced Stage-4 path reserves 5 percent (3 if the leader resisted) and delays the first election 12 turns instead of the default 24.
 
-Party role labels are localized: chair reads **"General Secretary"**, vice chair **"Second Secretary"**, committee **"Politburo"**. The social axis baseline is **+3.5**, tied with China for the most authoritarian start in the game.
+Party role labels are localized: chair reads **"General Secretary"**, vice chair **"Second Secretary"**, committee **"Politburo"**. The social axis runs from socially liberal (−5) to socially conservative (+5). The Soviet Union starts at **+3.5**, tied with China.
 
 ---
 
@@ -88,7 +89,9 @@ The 1953 preset reapportions the Union chamber to 526 seats on 1953 populations;
 
 ## Council of Ministers
 
-The Premier appoints ministers **directly from Supreme Soviet deputies** to a 16-seat Council of Ministers. Every seat carries a three-option **tier setting** (the middle option is the neutral default), a package of national metrics, and **two ministerial orders**: time-limited national modifiers that cost one ministerial action and run 24 turns (one game half-year). Most line ministries also get a regional target and an emergency action aimed at a single republic.
+The Premier appoints ministers **directly from Supreme Soviet deputies** to a 16-seat Council of Ministers. Every seat carries a three-option **tier setting** (the middle option is the neutral default), a package of national metrics, and **two ministerial orders**: time-limited national modifiers that cost one ministerial action and run 24 turns (one game half-year, 24 real hours). Most line ministries also get a regional target and an emergency action aimed at a single republic.
+
+**Worked example.** The Chairman of Gosplan moves Plan Emphasis from the neutral middle option to consumer goods (Group B). That shifts the national metrics the seat controls toward consumer output and away from heavy industry. The Chairman then spends one ministerial action on Shock Work Campaign. The order runs for 24 turns and then expires on its own, after which another action is needed to repeat it.
 
 The portfolios that define the Soviet council:
 
@@ -109,12 +112,12 @@ The Foreign and Internal Trade seats are deliberately distinct levers: Foreign T
 
 ## Command economy
 
-When an admin enables command economy, the USSR comes up **fully command**: its marketization level is scheduled at **10** through 1991 in both presets, far below the dual-track band. See [Planned Economies](/wiki/planned-economies) for the full model.
+In worlds that use the command economy (every new world), the USSR comes up **fully command**: its marketization level is scheduled at **10** through 1991 in both presets. Marketization is a dial from 0 (fully command) to 100 (fully market). Below 30 the economy is fully command, 30 to 69 is dual-track (plan and market side by side), and 70 and above is a normal market economy. See [Planned Economies](/wiki/planned-economies) for the full model.
 
 - **No stock exchange.** State enterprises are recorded against the **GOSPLAN state register**, and founding private corporations is disallowed.
 - **One state-owned enterprise per sector.** Every industry on the sector board has a plan enterprise with plant capacity (heavy industry, energy, extraction, agriculture, consumer goods, defense, chemicals, transport, and the rest).
 - **The three seats are wired to real offices.** The Gosplan planner panel is operated by the Chairman of Gosplan cabinet seat and the state-credit panel by the Gosbank liaison; SOE directors are appointed per enterprise.
-- **The dial is earned.** Black-market pressure, chronic plan under-fulfilment and a reformist policy stance push marketization up; a disciplined orthodox plan holds it down indefinitely. The CPSU's economic position of -4 feeds the policy driver toward orthodoxy.
+- **The dial is earned.** What does it do? It decides which economic engine runs. Black-market pressure, chronic plan under-fulfilment and a reformist policy stance push it up; a disciplined orthodox plan holds it down indefinitely. The CPSU's economic position of -4 feeds the policy driver toward orthodoxy.
 - **Fixed ruble.** The SUR is non-convertible while the country is command: forex routes refuse open-market trades, the monobank stays passive, and shortage shows up as empty shelves and a black-market premium rather than price spikes.
 
 ---
@@ -124,7 +127,7 @@ When an admin enables command economy, the USSR comes up **fully command**: its 
 The **Warsaw Pact** is the socialist bloc's collective-defense alliance, seeded from 1952 and dissolved on schedule in 1991. Founding members are the USSR, East Germany, Poland, Hungary, Romania, Bulgaria and Czechoslovakia; the 1953 preset adds Albania, which is gone by 1979.
 
 - **Moscow holds permanent leadership.** The pact's chair, the **Supreme Commander of the Unified Command**, is permanently assigned to the USSR. No other member can ever hold it.
-- **Tribute.** In worlds that began at the 1953 preset, the two armed blocs (NATO and the Warsaw Pact only) levy a fixed tribute on non-voting client members instead of voted dues.
+- **Tribute.** In worlds that began at the 1953 preset, the two armed blocs levy a fixed yearly tribute on non-voting client members instead of voted dues: 0.75% of GDP for the Warsaw Pact and 0.5% for NATO.
 - **Alignment.** Between 1945 and 1990 the world runs on a WEST vs EAST alignment axis; the Warsaw Pact is the EAST bloc's accession channel, opposite NATO.
 - **Conflicts are player-made.** The world starts with **no pre-seeded wars**. Every conflict on the board was started by a player declaration or a world event, and declare-war bills need a two-thirds majority even in a one-party state (the only bill class that keeps its supermajority here). See [Conflicts Overview](/wiki/conflicts-overview).
 
@@ -171,6 +174,11 @@ The 1979 budget models the Brezhnev-era pattern: slowing growth, suppressed infl
 - [International Organizations](/wiki/international-organizations): the Warsaw Pact, Comecon and alignment
 - [Conflicts Overview](/wiki/conflicts-overview): declaring war, fronts and occupation
 - [Core Systems](/wiki/core-systems): turn structure, action economy
+- [China](/wiki/cn-overview): the regime escalation stages in numbers
+
+---
+
+**Status:** the Soviet Union runs as described on this page in the 1953 and 1979 presets. The 1991 preset opens the same slot in its final year as a transitional Soviet Union: a 2,250-seat Congress of People's Deputies, a Chairman of the Cabinet of Ministers and a presidency, with no ruling party, so the one-party rules above do not apply there. The command economy, regime escalation and tribute rules apply in the 1953 and 1979 worlds. Last checked: 2026-10-29, version 1.18.0.
 
 ---
 

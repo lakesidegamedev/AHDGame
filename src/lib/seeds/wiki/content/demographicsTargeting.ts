@@ -1,12 +1,12 @@
 export const demographicsTargetingContent = `# Demographics & Targeting
 
-Every state has a unique demographic profile that determines who votes, how many of them show up, and how they weight the economic and social policy axes. Understanding this is how you turn "my Favorability is 70" into "my Favorability with no-college voters in Pennsylvania is 58, and that's what's losing me the race."
+Every state has its own demographic profile. It decides who votes, how many of them show up, and where they sit on the economic and social axes. Targeting is how you turn "my favorability is 70" into "my favorability with no-college voters in Pennsylvania is 58, and that is what is losing me the race". This page is about choosing which groups to spend on.
 
-This page covers the census buckets, how they combine to produce state vote totals, and how to target them. For vote-accumulation math see [Election Mechanics](/wiki/election-mechanics); for canvassing mechanics see [Canvassing](/wiki/canvassing).
+For vote-accumulation math see [Election Mechanics](/wiki/election-mechanics), for turnout see [Canvassing](/wiki/canvassing), and for how the census is built see [Demographics](/wiki/demographics).
 
-## The census buckets
+## How it works
 
-A US state's voter pool is described by four dimensions. Every voter sits in one bucket of each:
+A US state's voters are described by four dimensions, and every voter sits in one bucket of each:
 
 | Dimension | Buckets |
 | --- | --- |
@@ -15,106 +15,117 @@ A US state's voter pool is described by four dimensions. Every voter sits in one
 | Education | No college, College, Graduate |
 | Wealth | Low, Middle, High |
 
-The engine combines them into **cells** (for example "Black, mid, college, middle income"), estimating each cell's size from the state's own shares. A cell's lean is the average of its buckets' positions and its turnout is blended from their participation rates. Cells are what the vote engine counts.
+The engine combines them into **cells** (for example "Black, middle-aged, college, middle income"). A cell's size is estimated from the state's own shares, its lean is the average of its buckets' positions, and its turnout is blended from their participation rates. Cells are what the vote engine counts.
 
-**Leans are state-derived.** Each state carries its own position overrides on top of the era's base table, so white voters in a deep-red state sit meaningfully further right than white voters in a blue coastal state, and graduate-educated voters are furthest left where the surrounding electorate is. Practical consequence: **never assume a national table, poll the state.** The Full Demographic Poll shows the leans your opponents are actually being scored against.
+Leans are **state-derived**. Each state carries its own position overrides on top of the era's base table, so white voters in a deep-red state sit further right than white voters in a blue coastal state. Never assume a national table: poll the state.
 
-## Reach x appeal x approval x party org x infamy
+### What decides a candidate's share of a cell
 
-Every turn, for every candidate, the vote math computes **per-cell contributions** using five multiplicative factors:
+For each cell each turn, the pool is split between candidates in proportion to appeal x reach x approval x party organization x infamy.
 
 | Factor | Range | What it measures |
 | --- | --- | --- |
-| **Reach** | 0-1.0 | A square-root curve on influence, clamped to 1.0 at 100 PI/NPI |
-| **Appeal** | about 0.5-35.5 | A power-curve position score (exponent 1.5, not squared) on econ/social distance (up to 25, plus a 0.5 floor), plus a directional bonus of up to 5 per axis for tribally-aligned candidates. Influence does not enter appeal; it feeds reach only |
-| **Approval** | 0-1 | (Favorability / 100) raised to the power 0.8, so 0 stays 0 and 100 stays 1 but the middle is lifted (\`src/lib/utils/demographicAppeal.ts\`) |
-| **Party Org** | 0-1.0 | Each party's organization as a normalized share of the state's total organization (0 for parties with no presence there; independents use a neutral fallback) |
-| **Infamy** | 0.95-1.0 | 1 minus 0.05 times infamy divided by 100 (1.0 for NPPs) |
+| Reach | 0.1 to 1.0 | Square root of political influence, 1.0 at influence 100. Never below 0.1 |
+| Appeal | about 0.5 to 35.5 | How close your positions are to the cell's, plus a direction bonus of up to 5 per axis. Influence does not enter appeal |
+| Approval | 0 to 1 | (Favorability / 100) to the power 0.8 |
+| Party organization | 0 to 1.0 | Your party's share of the state's organization, to the power 0.2 |
+| Infamy | 0.95 to 1.0 | 1 - 0.05 x infamy / 100 (1.0 for NPPs) |
 
-For each cell the turn pool contribution is split among candidates proportional to **appeal x reach x approval x party org x infamy multiplier**. Then the party strength modifier scales the entire turn pool: for state races it is (1 + (state approval/100 - 0.5) × 0.2) times office strength, and for presidential state results the approval swing is ×0.5 instead of ×0.2 (\`src/lib/electionEngine/tallyManagement.ts\`, \`src/lib/presidentialElectionEngine.ts\`).
+The party strength modifier then scales the whole turn pool: for state races (1 + (state approval / 100 - 0.5) x 0.2) times office strength, and for presidential state results the approval swing is x0.5 instead of x0.2.
 
-### Appeal is a softened power curve
+### Appeal falls off with distance
 
-The key insight: Appeal responds to policy distance through a **power curve with exponent 1.5**, not a square. A 1-point distance loses you less than a 4-point distance, but the curve is deliberately softer than squaring so that campaigning, favorability, and org still move outcomes instead of ideology alone dominating every race.
+Appeal is 25 x ((50 - 5 x econ gap - 5 x social gap) / 50) to the power 1.5, plus 0.5, with a direction bonus on top. Total distance means the econ gap plus the social gap:
 
-A centrist candidate (0, 0) has moderate distance from every group, so appeal sits in the middle across the board. A far-left candidate (-5, -5) is nearly on top of the most progressive cells (appeal near max) and far from the most conservative ones (appeal near the floor). Specialists beat generalists within their core base; generalists beat specialists across the full field.
+| Total distance | 0 | 1 | 2 | 3 | 4 | 6 | 8 | 10 or more |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Appeal (before direction bonus) | 25.5 | 21.8 | 18.4 | 15.1 | 12.1 | 6.8 | 2.7 | 0.5 |
 
-## Turnout system
+The curve is deliberately softer than squaring so that campaigning, favorability and organization still move outcomes, and ideology alone does not dominate every race. A centrist (0, 0) is a moderate distance from every cell. A far-left candidate (-5, -5) is nearly on top of the most progressive cells and far from the most conservative. Specialists beat generalists inside their base. Generalists beat specialists across the whole field.
 
-Every bucket has a **baseline turnout** rate (e.g. Seniors 65+ vote at ~70%, Young 18-29 at ~38%). This rate can be modified up or down:
+### Worked example: ads against canvassing
 
-- **Player canvassing** action (see [Canvassing](/wiki/canvassing)): cheap, home-state only, per-bucket, doubles in final 4 turns.
-- **Party GOTV** passive spend: automatic based on party treasury allocation.
-- **Organic drift**: on current races modifiers halve every 6 turns toward zero (\`src/lib/campaignTargeting/rules.ts\`); older races still on the legacy path decay 2% per turn.
-- **Cap**: plus or minus 20 percentage points from baseline.
+A cell is worth its size times its turnout. A group that is 22% of the electorate at 40% turnout is worth 8.8. A group that is 15% at 70% is worth 10.5, so the smaller group is the bigger prize. Raising favorability from 50 to 60 with a group lifts your approval factor from 0.574 to 0.665, which is 16% more of your weight there. A single ad gain of +3 (50 to 53) is about +4.8%. By comparison, canvassing a group where you already have approval 80 and turnout is only 38% adds up to 2 points of turnout per action. If you already own a group, canvass it. If you are 50-50 with it, advertise to it.
 
-A modifier applies to the bucket you targeted and reaches every cell that carries it. Boosting "Young (18-29)" raises turnout in every young cell, whatever its race, education or wealth.
+### Turnout
 
-## State political lean
+Each group has a baseline turnout rate. It can be moved by:
 
-Every state has a **turnout-weighted average of all cell leans**:
+- **Canvassing** (see [Canvassing](/wiki/canvassing)): 1 action and ₳100, per group, doubled in the final 4 turns.
+- **Decay:** on current races modifiers halve every 6 turns toward zero. Older races still on the legacy rules decay 2% per turn.
+- **Cap:** plus or minus 20 percentage points.
 
-Labels use the shared -5..+5 position ruler, rounded to the nearest step: 0 = Centrist, plus/minus 1 = Center-Left / Center-Right, plus/minus 2 = Lean Left / Lean Right, plus/minus 3 = Left / Right, and so on. Post-calibration state leans typically span about -2.5 to +2.5.
+A modifier applies to the bucket you target and reaches every cell that carries it. Boosting Young raises turnout in every young cell, whatever its race, education or wealth.
 
-State lean affects:
+### State political lean
 
-- **Presidential vote allocation**: lean-aligned candidates receive boosted appeal in presidential races via the per-state lean modifier.
-- **Primary party availability**: some parties only field candidates in leaning states.
-- **Starting demographic profile**: states have different census shares.
+A state's lean is the turnout-weighted average of all its cells. Labels use the shared -5 to +5 ruler: 0 Centrist, plus or minus 1 Center-Left or Center-Right, plus or minus 2 Lean, plus or minus 3 Left or Right. Lean helps lean-aligned candidates in presidential races through the per-state lean modifier, and it decides which parties field candidates in some states.
 
-## Targeting strategy
+### Key numbers
 
-### Know the field
+| Item | Value |
+| --- | --- |
+| Full Demographic Poll | 6 actions, ₳75,000 base |
+| Quick Poll | 2 actions, ₳25,000 base |
+| Targeted ads | 1 action, ₳100 each, up to 25 points of bonus |
+| Canvass | 1 action, ₳100, up to +20 turnout |
+| Position scale | -5 to +5 on each axis |
+| Approval exponent | 0.8 |
+| Party organization exponent | 0.2 |
 
-- Commission a **Full Demographic Poll** at the start of every general election you plan to win. ₳75k, 6 actions. Breaks down your vote share segment by segment.
-- Identify three categories: **locks** (Appeal > 25, Favorability > 65), **contested** (Appeal 15-25, Favorability 50-65), **lost** (Appeal < 15, Favorability < 50).
-- Spend on contested; maintain on locks; ignore lost unless they're huge.
+## What you can do
 
-### Play to strengths
+1. **Poll first.** Run a Full Demographic Poll at the start of every general you plan to win. It shows your vote share, appeal and approval group by group.
+2. **Sort the groups.** Locks are groups where you lead by a wide margin. Contested groups are within about 10 points. Lost groups are far behind and not worth chasing.
+3. **Spend on the contested groups, maintain the locks, ignore the lost ones** unless they are huge.
+4. **Match the tool to the group:** ads (about ₳100,000, 5 or more actions, lift favorability) where you are close to 50% approval. Canvassing where you already lead but turnout is low.
+5. **Re-poll** after a canvassing burst or an opponent's ad spike.
 
-- Higher appeal + higher turnout = more votes per action.
-- A 1-point Favorability bump on a 15%-of-state segment is worth more than a 5-point bump on a 2%-of-state segment.
-- Canvassing a bucket where you have Appeal 30 converts turnout directly to votes; canvassing one at Appeal 5 is near-worthless.
+Tips:
 
-### Shore up weaknesses
+- A 1-point favorability bump on a 15% group is worth more than a 5-point bump on a 2% group.
+- Canvassing a group where your appeal is high turns turnout directly into votes. Canvassing one at appeal 5 is near-worthless.
+- Groups at appeal 12 to 20 are recoverable with ads. At appeal 5 and under, skip them mid-cycle.
 
-- Segments where you're at Appeal 15-25 are recoverable with ads. Target ads there, lift Favorability 5-10 pts, gain 2-4 effective appeal.
-- Segments where you're at Appeal 5 are not recoverable mid-cycle. Skip them.
+Which group first? The one where size x turnout is largest and your gap to the leader is smallest. Why is my appeal low with a group? Because the group sits more than 4 points away from you in total distance on the two axes. That is a positions problem, and only a policy change fixes it.
 
-### Use polls, not vibes
+### Other countries
 
-- A Quick Poll shows your best-5 and worst-5 segments. A Full Poll shows the whole electorate.
-- Re-poll when strategy changes (e.g., after a canvassing burst or an opponent's ad spike).
-- Track trend data across polls: are you gaining or losing ground in each segment?
+The four-dimension model is US-specific. Other countries use their own census dimensions with their own buckets:
 
-## Canvassing vs ads: what does what
+| Country family | Dimensions |
+| --- | --- |
+| Most non-US models | ethnicity, age, education, income, urbanization |
+| UK | Education runs from no qualifications to degree-plus |
+| Germany | Education runs from no degree to Hochschulabschluss |
+| Japan, Brazil | Own education ladders (Japan five levels, Brazil three) |
 
-| Tool | Moves | Best for |
-| --- | --- | --- |
-| Ads (₳100k, 5 actions) | Favorability (0-100) | Lifting approval with groups where you're at 50-70 |
-| Canvassing (₳100, 1 action) | Turnout modifier (±20) | Boosting participation of groups that already favour you |
+The math is the same. Each country's leans are calibrated per era against real election results. See the country hubs.
 
-They attack different variables in the same vote formula. If your poll says you **own** young voters (Favorability 80, appeal 40) but their turnout is only 38%, canvassing the Young bucket adds 5-10 points of turnout. If your poll says you're 50/50 with no-college voters, ads lift Favorability directly.
+## Connections
 
-## State-specific profiles
+**Driven by**
 
-No two states have identical census shares. A rural state might be 70% no-college and heavily mature/senior; an urban coastal state might be a third graduate-educated. Check the Full Poll output to see the actual composition: relying on intuition from other states will mislead you.
+- [Demographics](/wiki/demographics): the census cells, their size, turnout and leanings are the raw material.
+- [Polling](/wiki/polling): a poll gives you the group-by-group numbers to target.
+- [Canvassing](/wiki/canvassing): turnout modifiers change which groups carry the most weight.
+- [granular-polling](/wiki/granular-polling): shows which segments to aim ads and visits at
+- [party-actions](/wiki/party-actions): Party Actions: GOTV and suppression budgets change turnout of the voter groups they target.
 
-## Multi-country notes
+**Affects**
 
-The four-dimension model above is **US-specific**. Other countries use their own census dimensions, and the buckets inside them differ too:
+- [Canvassing](/wiki/canvassing): tells you which group to canvass.
+- [Fundraising and Ads](/wiki/fundraising-ads): tells you which group to aim ads at.
+- [Campaign Strategy](/wiki/campaign-strategy): targeting decides where limited actions and funds go.
+- [party-ideology](/wiki/party-ideology): Party Ideology: each voter group's own centre on the grid decides what a position earns.
 
-- Most non-US models use **ethnicity, age, education, income and urbanization**.
-- Education buckets are country-real: the UK runs no qualifications through degree-plus, Germany runs no-degree through Hochschulabschluss, Brazil has three levels where Japan has five.
+## Status
 
-The math is identical; the dimension list and bucket names differ. Every country's derived leans are calibrated per era against real historical election results. See each country hub.
+Live in every world and country with elections. The four-dimension buckets above are US; other countries use their own groups.
 
-## Related
+Last checked: 2026-10-29, version 1.18.0
 
-- [Demographics](/wiki/demographics): full system, census composition, turnout mechanics.
-- [Canvassing](/wiki/canvassing): turnout-boosting action mechanics.
-- [Polling](/wiki/polling): quick vs full poll outputs.
-- [Election Mechanics](/wiki/election-mechanics): full vote math.
-- [Fundraising & Ads](/wiki/fundraising-ads): how to move Favorability.
-- [Reference: Formulas](/wiki/reference-formulas): every formula with derivations.
+## Technical detail
+
+The exact rules are on the [Demographics targeting design page](https://docs.lakesidegames.net/design/demographics-targeting.html).
 `;

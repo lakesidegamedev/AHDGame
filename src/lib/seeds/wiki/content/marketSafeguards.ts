@@ -1,24 +1,80 @@
 export const marketSafeguardsContent = `# Market Safeguards
 
-The stock market has an automated safeguard watching over it. This page covers what it watches and what you notice if it steps in.
+The stock market has an automatic safeguard. If the whole market collapses for no reason the underlying companies justify, the game steps the corporate economy back to an earlier, simpler model so a broken market gets caught without anyone watching in real time. It works like a circuit breaker on a real exchange, and it matters to you because it can suddenly change how share prices and company revenue behave.
 
-## What it does
+## How it works
 
-Every turn, the safeguard compares the combined market value of every corporation to a reference value taken when the live market was switched on. If the market falls too sharply with no basis in company fundamentals, the safeguard moves share pricing to a simpler, safer mode so a broken market gets caught without anyone watching in real time. It is a floor under the market, like a real exchange's circuit breaker.
+Every turn the game adds up the market value of every corporation and compares it to a **reference value** taken on the first turn the newer market model was running. It also tracks what the companies are worth on their fundamentals, meaning their expected earnings discounted by interest rates.
 
-## What counts as too sharp
+1. **Grace period.** For the first 5 turns after the reference is set, the safeguard does nothing. The new model needs a few turns of data before a drop means anything.
+2. **Fair-value check.** After that it asks how far the market has fallen compared with what fundamentals justify. A fall that fundamentals explain, such as a central bank raising rates, is excused.
+3. **Trip.** If the market is 25% or more below what fundamentals justify, the safeguard trips and steps the market model back one level.
+4. **Stand down.** After a trip the safeguard switches itself off. It does not keep stepping down, and bringing back the newer model is a deliberate decision by the game's operators.
 
-A market can fall for good reasons, such as a central bank tightening rates, which lowers what future earnings are worth. The safeguard excuses falls that fundamentals justify and only acts on drops that outrun them. A market-wide sentiment swing on its own does not trip it. It also gives the market a grace period of several turns after any change before it starts judging.
+Fundamentals can only make the safeguard more forgiving. They excuse a fall that a lower valuation justifies, but they never lower the bar. A fall that fundamentals do not explain counts in full, including a large market-wide swing in sentiment.
 
-## What you see as a player
+### Key numbers
 
-There is no separate panel. If the safeguard fires, the way share prices are computed changes going forward (see [Core Systems](/wiki/core-systems) and [Corporations](/wiki/corporations)). Nothing about your holdings, orders or corporate ownership is reversed. It does not keep stepping down on its own, and restoring live pricing is a deliberate decision by the game's operators.
+| Item | Value |
+| --- | --- |
+| Drop that trips it | 25% below the fair-value reference |
+| Grace period | 5 turns |
+| Fundamentals trusted when | They cover at least 80% of total market value |
+| Below that coverage | The raw fall from the launch value is used instead |
+| Trip result from the Plants model | Back to the Capital model |
+| Trip result from Clearing or Capital | Back to the Ledger model, which tracks flows without changing balance |
+| After a trip | The safeguard switches itself off |
 
-## What this means for you
+### What changes for you
 
-- A sudden change in how volatile or responsive share prices feel, without any news event behind it, can be this safeguard doing its job rather than a bug.
-- The safeguard does not stop the market falling hard for real reasons. Rate hikes, a genuine earnings collapse and other fundamentals-driven moves go through.
-- If it fires, it affects every corporation at once, not just your portfolio.
+Nothing about your holdings, orders or company ownership is reversed. What changes is how prices and revenue are computed from then on:
 
-See also: [Corporations](/wiki/corporations), [Central Banks](/wiki/central-banks), [Corporate Bonds](/wiki/corporate-bonds).
+- From **Plants** back to **Capital**: sectors again earn revenue from invested capacity instead of from the plants they own. See [Plants Corp Guide](/wiki/plants-corp-guide).
+- From **Clearing** or **Capital** back to **Ledger**: prices and output no longer pass through market clearing or capacity limits. See [Market System Guide](/wiki/market-system-guide).
+
+It applies to every corporation at once, not just your portfolio.
+
+### Worked example
+
+The reference market value is 1,000 and fundamentals at that moment were also 1,000. Six turns later:
+
+- The market falls to 700 and fundamentals have fallen to 800 because rates rose. Fair value is 800, so the drop is 1 minus 700 / 800 = 12.5%. That is under 25%, so nothing happens, even though the raw fall is 30%.
+- The market falls to 700 and fundamentals are still 1,000. Fair value stays 1,000, the drop is 30%, and the safeguard trips.
+- The market falls to 590 and fundamentals are 800. The drop is 1 minus 590 / 800 = 26.3%, so it trips even though rates explain part of the fall.
+
+## What you can do
+
+- **Nothing directly.** There is no switch or panel for players.
+- **Read the signs.** A sudden change in how volatile or responsive share prices feel with no news event behind it can be this safeguard acting.
+- **Expect rate moves to be excused.** A fall that matches lower company values after a rate rise is not counted against the market. Watch [Central Banks](/wiki/central-banks).
+- **Keep your plans flexible.** A step back changes company economics. If your corporation relies on Plants-model revenue, expect a different margin picture afterward.
+
+Tips:
+
+- A hard fall for real reasons, such as a rate hike or a genuine earnings collapse, goes through unchallenged.
+- If prices went flat or oddly stable, the step back is a plausible reason. The market is not broken for you alone.
+
+## Connections
+
+**Driven by**
+
+- [Stock Market](/wiki/stock-market): aggregate share prices and market value are what it measures.
+- [Central Banks](/wiki/central-banks): rate rises lower company values, and the safeguard excuses that fall.
+- [Corporations](/wiki/corporations): company earnings set the fundamentals it compares against.
+
+**Affects**
+
+- [Stock Market](/wiki/stock-market): a trip changes how share prices are computed for every company.
+- [Corporations](/wiki/corporations): a trip changes how sector revenue is computed.
+- [Market System Guide](/wiki/market-system-guide): a step back moves the world to an earlier market model.
+
+## Status
+
+Watches worlds that run the Clearing, Capital or Plants market models. In a world on an earlier model there is nothing to watch. Applies to all corporations in the world at once.
+
+Last checked: 2026-10-29, version 1.18.0
+
+## Technical detail
+
+There is no separate technical page for the safeguard yet. The numbers above are the exact rules. For how share prices are computed, see [Stock Market](https://docs.lakesidegames.net/design/stock-market.html).
 `;
