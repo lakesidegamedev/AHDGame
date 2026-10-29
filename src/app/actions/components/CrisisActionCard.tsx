@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { X } from "lucide-react";
 import { useToast } from "@/contexts/ToastContext";
 import type { Crisis, CrisisInteraction, CrisisDecisionNode } from "@/lib/db/types/crisis";
 // The one severity calculation, shared with the crises list and detail pages.
@@ -14,6 +15,7 @@ import type { Crisis, CrisisInteraction, CrisisDecisionNode } from "@/lib/db/typ
 import { crisisSeverity } from "@/lib/crises/severity";
 import { formatCrisisEffectValue } from "@/lib/crises/effectLabels";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { EventItem, type EventTone } from "./EventsPanel";
 
 interface ActiveCrisisData {
   crisis: Crisis;
@@ -37,21 +39,28 @@ function formatTimeRemaining(minutes: number): string {
   return `${mins}m`;
 }
 
-const SEVERITY_STYLES: Record<string, { border: string; bg: string; badge: string }> = {
+// `border` tints the tile by severity; the rail and icon carry the stronger color.
+const SEVERITY_STYLES: Record<
+  string,
+  { border: string; tone: EventTone; badge: string; label: string }
+> = {
   high: {
     border: "border-rose-500/40",
-    bg: "bg-rose-500/5",
-    badge: "border-rose-500/30 bg-rose-500/10 text-rose-500",
+    tone: "rose",
+    badge: "bg-rose-500/10 text-rose-400",
+    label: "High severity",
   },
   medium: {
     border: "border-amber-500/40",
-    bg: "bg-amber-500/5",
-    badge: "border-amber-500/30 bg-amber-500/10 text-amber-500",
+    tone: "amber",
+    badge: "bg-amber-500/10 text-amber-400",
+    label: "Medium severity",
   },
   low: {
     border: "border-zinc-400/30",
-    bg: "bg-zinc-400/5",
-    badge: "border-zinc-400/30 bg-zinc-400/10 text-zinc-400",
+    tone: "zinc",
+    badge: "bg-zinc-400/10 text-zinc-400",
+    label: "Low severity",
   },
 };
 
@@ -179,19 +188,13 @@ export default function CrisisActionCard() {
 
   const visibleCrises = crises.filter((c) => !dismissedIds.has(c.crisis._id.toString()));
 
-  if (loading) {
-    return (
-      <div className="rounded-xl border border-card-border bg-card p-5 animate-pulse">
-        <div className="h-4 w-32 bg-muted rounded mb-3" />
-        <div className="h-3 w-full bg-muted rounded" />
-      </div>
-    );
-  }
+  // No skeleton: the Events panel stays hidden until a source has something to show.
+  if (loading) return null;
 
   if (visibleCrises.length === 0) return null;
 
   return (
-    <div className="space-y-4">
+    <>
       {visibleCrises.map((data) => {
         const {
           crisis,
@@ -206,55 +209,49 @@ export default function CrisisActionCard() {
         const styles = SEVERITY_STYLES[severity];
 
         return (
-          <div
+          <EventItem
             key={crisis._id.toString()}
-            className={`rounded-xl border ${styles.border} ${styles.bg} p-5`}
-          >
-            {/* Header */}
-            <div className="flex items-start justify-between gap-3 mb-3">
-              <div>
-                <h3 className="font-semibold text-foreground">{crisis.name}</h3>
-                <p className="text-xs text-muted mt-0.5">{crisis.description}</p>
-              </div>
-              <div className="flex flex-col items-end gap-1 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => handleDismiss(crisis._id.toString())}
-                  className="shrink-0 text-xs text-muted hover:text-foreground transition-colors px-2 py-1 rounded-md border border-transparent hover:border-card-border hover:bg-card"
-                  title="Dismiss from actions"
-                  aria-label="Dismiss crisis from Actions"
+            kind="crisis"
+            status={canInteract && currentNode ? "decision" : "active"}
+            tone={styles.tone}
+            className={styles.border}
+            title={crisis.name}
+            tags={
+              <>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-body-xs font-medium ${styles.badge}`}
                 >
-                  Dismiss
-                </button>
-                <span className={`text-xs px-2 py-0.5 rounded-full border ${styles.badge}`}>
                   {crisis.scope === "global"
                     ? "Global"
                     : crisis.scope === "country"
                       ? "National"
                       : "Regional"}
                 </span>
-                {/* The countdown belongs to the decision, not to the crisis. On an
-                    ambient card there is no prompt to run out, so a bare
-                    "Expired" chip beside a crisis that is still very much
-                    running would read as the crisis itself having lapsed. */}
-                {canInteract && timeRemainingMinutes !== null && (
-                  <span className="text-xs text-muted tabular-nums">
-                    {formatTimeRemaining(timeRemainingMinutes)}
-                  </span>
-                )}
-              </div>
-            </div>
+                <span className="text-body-xs text-muted">{styles.label}</span>
+              </>
+            }
+            aside={
+              <button
+                type="button"
+                onClick={() => handleDismiss(crisis._id.toString())}
+                className="flex h-7 w-7 items-center justify-center rounded-md text-muted transition-colors hover:bg-card-elevated hover:text-foreground"
+                title="Dismiss from actions"
+                aria-label="Dismiss crisis from Actions"
+              >
+                <X className="h-4 w-4" aria-hidden />
+              </button>
+            }
+          >
+            <p className="text-body-sm text-muted">{crisis.description}</p>
 
             {/* Effects */}
             {crisis.effects.length > 0 && (
-              <div className="flex flex-wrap gap-1 mb-3">
+              <div className="flex flex-wrap gap-1.5">
                 {crisis.effects.slice(0, 3).map((effect, i) => (
                   <span
                     key={i}
-                    className={`inline-flex items-center gap-0.5 text-xs px-2 py-0.5 rounded-full border ${
-                      effect.value < 0
-                        ? "border-error/30 bg-error/5 text-error"
-                        : "border-success/30 bg-success/5 text-success"
+                    className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-body-sm font-medium ${
+                      effect.value < 0 ? "bg-error/10 text-error" : "bg-success/10 text-success"
                     }`}
                   >
                     {effect.effectType === "tick" && (
@@ -277,18 +274,34 @@ export default function CrisisActionCard() {
                   </span>
                 ))}
                 {crisis.effects.length > 3 && (
-                  <span className="inline-flex items-center text-xs px-2 py-0.5 rounded-full border border-card-border text-muted">
+                  <Link
+                    href={`/world/crises/${crisis._id.toString()}`}
+                    className="inline-flex items-center rounded-md bg-card-elevated px-2 py-0.5 text-body-sm text-muted transition-colors hover:text-foreground"
+                  >
                     +{crisis.effects.length - 3} more
-                  </span>
+                  </Link>
                 )}
               </div>
             )}
 
             {/* Interaction Section — only when this character can act */}
             {canInteract && currentNode && (
-              <div className="mt-3 pt-3 border-t border-card-border">
-                <h4 className="text-sm font-medium text-foreground mb-2">{currentNode.title}</h4>
-                <p className="text-xs text-muted mb-3">{currentNode.description}</p>
+              <div className="rounded-lg border border-card-border bg-card p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <h4 className="text-body font-semibold text-foreground">{currentNode.title}</h4>
+                  {/* The countdown belongs to the decision, not to the crisis. On an
+                      ambient card there is no prompt to run out, so a bare
+                      "Expired" chip beside a crisis that is still very much
+                      running would read as the crisis itself having lapsed. */}
+                  {timeRemainingMinutes !== null && (
+                    <span className="shrink-0 text-body-sm font-semibold text-warning tabular-nums">
+                      {timeRemainingMinutes > 0
+                        ? `${formatTimeRemaining(timeRemainingMinutes)} left`
+                        : formatTimeRemaining(timeRemainingMinutes)}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-0.5 mb-3 text-body-sm text-muted">{currentNode.description}</p>
 
                 {/* Collective Progress */}
                 {currentNode.type === "collective" && interaction && (
@@ -348,10 +361,11 @@ export default function CrisisActionCard() {
 
                         return (
                           <button
+                            type="button"
                             key={option.optionId}
                             onClick={() => handleInteract(crisis._id.toString(), option.optionId)}
                             disabled={isDisabled}
-                            className={`rounded-lg border border-card-border bg-card p-3 text-left transition-colors hover:bg-card-elevated disabled:opacity-50 disabled:cursor-not-allowed ${
+                            className={`rounded-lg border border-card-border bg-background/40 p-3 text-left transition-colors hover:border-primary/50 hover:bg-card-elevated disabled:opacity-50 disabled:cursor-not-allowed ${
                               isSubmitting ? "animate-pulse" : ""
                             }`}
                           >
@@ -397,11 +411,11 @@ export default function CrisisActionCard() {
             )}
 
             {error?.crisisId === crisis._id.toString() && (
-              <p className="text-body-sm text-error mt-2">{error.message}</p>
+              <p className="text-body-sm text-error">{error.message}</p>
             )}
-          </div>
+          </EventItem>
         );
       })}
-    </div>
+    </>
   );
 }

@@ -29,10 +29,11 @@ import { formatCurrencyFaceAmount } from "@/lib/currency/formatCurrencyFaceAmoun
 import ActionCard from "./components/ActionCard";
 import ActionCardCompact from "./components/ActionCardCompact";
 import ActionsHero from "./components/ActionsHero";
+import { EventsPanel } from "./components/EventsPanel";
 
 // Conditional banners: each renders nothing unless the player has a pending
 // event, a live debate, an active crisis or an unendorsed home presidential
-// race. They are code-split so the action grid's first load does not carry
+// race. The first three render as items inside `EventsPanel`. They are code-split so the action grid's first load does not carry
 // them or the metric catalogue behind the crisis card. Each still
 // server-renders when it has something to show, so nothing reserves space and
 // then moves.
@@ -740,14 +741,13 @@ export default function ActionsPage() {
           portfolioData={portfolioData}
         />
 
-        {/* Pending random event — renders nothing when there is none */}
-        <PlayerEventCard />
-
-        {/* Active election debate — renders nothing when there is none */}
-        <DebateCard />
-
-        {/* Active crises — renders nothing when there are none */}
-        <CrisisActionCard />
+        {/* Random events, debates and crises share one panel. It hides itself
+            until one of them has something to show. */}
+        <EventsPanel>
+          <PlayerEventCard />
+          <DebateCard />
+          <CrisisActionCard />
+        </EventsPanel>
 
         {/* Presidential endorsement nudge: renders nothing when the player has
             no live presidential race at home or has already endorsed someone */}

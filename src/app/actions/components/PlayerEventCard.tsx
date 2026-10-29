@@ -2,10 +2,11 @@
 
 import { InlineError } from "@/components/ui/InlineError";
 import { apiErrorText } from "@/lib/errors/catalog";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import type { EventEffect } from "@/lib/db/types/events";
 import { fetchJson } from "@/lib/observability/fetchJson";
+import { Countdown, EventItem, EventOutcomeRow } from "./EventsPanel";
 
 interface StatAdjustment {
   stat: string;
@@ -107,7 +108,6 @@ export default function PlayerEventCard() {
   const [error, setError] = useState<string | null>(null);
   const [expandedOptionId, setExpandedOptionId] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
-  const cardRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -137,7 +137,9 @@ export default function PlayerEventCard() {
   // native anchor jump misses it — scroll manually once it exists.
   useEffect(() => {
     if (event && typeof window !== "undefined" && window.location.hash === "#event-card") {
-      cardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      document
+        .getElementById("event-card")
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [event]);
 
@@ -180,25 +182,21 @@ export default function PlayerEventCard() {
       .map(describeEffect)
       .filter((s): s is string => s !== null);
     return (
-      <div
+      <EventOutcomeRow
         id="event-card"
-        ref={cardRef}
-        className="relative overflow-hidden rounded-xl border border-card-border bg-card px-5 py-4"
-      >
-        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          <p className="text-body font-semibold text-foreground">{lastResolved.title}</p>
-          <span className="text-body-sm text-muted">
-            {formatTimeAgo(lastResolved.resolvedAt, now)}
-          </span>
-        </div>
-        <p className="mt-0.5 text-body-sm text-muted">Latest event: {lastResolved.tierLabel}</p>
-        <p className="mt-1 text-body-sm text-muted">
-          {lastResolved.reason === "timeout"
-            ? `Time ran out, so "${lastResolved.optionLabel}" was applied automatically.`
-            : `You chose "${lastResolved.optionLabel}".`}
-          {resolvedEffects.length > 0 && <> {resolvedEffects.join(" · ")}</>}
-        </p>
-      </div>
+        kind="event"
+        title={lastResolved.title}
+        outcome={lastResolved.tierLabel}
+        when={formatTimeAgo(lastResolved.resolvedAt, now)}
+        detail={
+          <>
+            {lastResolved.reason === "timeout"
+              ? `Time ran out, so "${lastResolved.optionLabel}" was applied automatically.`
+              : `You chose "${lastResolved.optionLabel}".`}
+            {resolvedEffects.length > 0 && <> {resolvedEffects.join(" · ")}</>}
+          </>
+        }
+      />
     );
   }
 
@@ -211,146 +209,141 @@ export default function PlayerEventCard() {
     : [];
 
   return (
-    <div
+    <EventItem
       id="event-card"
-      ref={cardRef}
-      className="relative overflow-hidden rounded-xl border border-card-border bg-card"
+      kind="event"
+      status={result ? "recent" : "decision"}
+      tone="violet"
+      title={
+        <>
+          <span className="sr-only">Event: </span>
+          {event.title}
+        </>
+      }
+      aside={result ? null : <Countdown label="Respond within" value={formatCountdown(msLeft)} />}
     >
       {event.image && (
-        <div className="relative h-40 w-full bg-card sm:h-48">
+        <div className="relative -mx-1 h-36 overflow-hidden rounded-lg sm:h-44">
           <Image src={event.image} alt={event.title} fill className="object-cover" unoptimized />
         </div>
       )}
-      <div className="border-b border-card-border px-5 py-4">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          <h2 className="text-heading-sm font-semibold text-foreground">
-            <span className="sr-only">Event: </span>
-            {event.title}
-          </h2>
-          {!result && (
-            <span className="text-body-sm font-semibold tabular-nums text-warning">
-              Respond within {formatCountdown(msLeft)}
-            </span>
+      <div>
+        <p className="text-body font-semibold text-foreground">{event.headline}</p>
+        <p className="mt-1 text-body text-muted">{event.body}</p>
+      </div>
+
+      {result ? (
+        <div className="rounded-lg border border-violet-500/30 bg-violet-500/5 p-3">
+          <div className="text-body-xs font-semibold tracking-wider text-violet-400 uppercase">
+            Outcome: {result.tierLabel}
+          </div>
+          <p className="mt-1 text-body text-foreground">
+            You chose &ldquo;
+            {event.options.find((o) => o.id === result.optionId)?.label ?? result.optionId}
+            &rdquo;.
+          </p>
+          {effectSummary.length > 0 && (
+            <p className="mt-1 text-body-sm text-muted">{effectSummary.join(" · ")}</p>
+          )}
+          {result.statAdjustment && result.statAdjustment.delta !== 0 && (
+            <p
+              className={[
+                "mt-1.5 text-body-sm font-medium",
+                result.statAdjustment.delta > 0 ? "text-success" : "text-error",
+              ].join(" ")}
+            >
+              {"Your "}
+              {result.statAdjustment.label}
+              {result.statAdjustment.delta > 0 ? " boosted" : " hurt"}
+              {" the roll ("}
+              {result.statAdjustment.delta > 0 ? "+" : "−"}
+              {Math.abs(result.statAdjustment.delta)}
+              {")"}
+            </p>
           )}
         </div>
-      </div>
-
-      <div className="space-y-4 px-5 py-4">
-        <div>
-          <p className="text-body font-semibold text-foreground">{event.headline}</p>
-          <p className="mt-1 text-body text-muted">{event.body}</p>
-        </div>
-
-        {result ? (
-          <div className="border-t border-card-border pt-3">
-            <div className="text-body-sm font-semibold text-foreground">
-              Outcome: {result.tierLabel}
-            </div>
-            <p className="mt-1 text-body text-foreground">
-              You chose &ldquo;
-              {event.options.find((o) => o.id === result.optionId)?.label ?? result.optionId}
-              &rdquo;.
-            </p>
-            {effectSummary.length > 0 && (
-              <p className="mt-1 text-body-sm text-muted">{effectSummary.join(" · ")}</p>
-            )}
-            {result.statAdjustment && result.statAdjustment.delta !== 0 && (
-              <p
-                className={[
-                  "mt-1.5 text-body-sm font-medium",
-                  result.statAdjustment.delta > 0 ? "text-success" : "text-error",
-                ].join(" ")}
-              >
-                {"Your "}
-                {result.statAdjustment.label}
-                {result.statAdjustment.delta > 0 ? " boosted" : " hurt"}
-                {" the roll ("}
-                {result.statAdjustment.delta > 0 ? "+" : "−"}
-                {Math.abs(result.statAdjustment.delta)}
-                {")"}
-              </p>
-            )}
-          </div>
-        ) : (
-          <>
-            <p className="mb-2 text-body-sm font-medium text-warning">
-              Clicking an option confirms that decision immediately. It is applied and can&apos;t be
-              undone. Use the arrow (▾) to preview an option before committing.
-            </p>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {event.options.map((option) => {
-                const expanded = expandedOptionId === option.id;
-                const adj = option.statAdjustment;
-                return (
-                  <div key={option.id} className="rounded-lg border border-card-border">
-                    <div className="flex items-center justify-between gap-2 px-3 py-2.5">
-                      <div className="min-w-0 flex-1">
-                        <button
-                          onClick={() => resolve(option.id)}
-                          disabled={resolving}
-                          title="Click to confirm this choice"
-                          className="w-full text-left text-body font-semibold text-foreground transition-colors hover:underline disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          {option.label}
-                          {option.isDefault && (
-                            <span className="ml-2 text-body-sm font-normal text-muted">
-                              Default
-                            </span>
-                          )}
-                        </button>
-                        {adj && adj.delta !== 0 && (
-                          <span
-                            className={[
-                              "mt-0.5 inline-flex items-center gap-1 text-body-sm font-medium",
-                              adj.delta > 0 ? "text-success" : "text-error",
-                            ].join(" ")}
-                          >
-                            Roll {adj.delta > 0 ? "+" : "−"}
-                            {Math.abs(adj.delta)} ({adj.label})
-                          </span>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => setExpandedOptionId(expanded ? null : option.id)}
-                        className="shrink-0 text-muted transition-colors hover:text-foreground"
-                        aria-label={expanded ? "Hide details" : "Show details"}
-                      >
-                        <svg
-                          className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`}
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 9l-7 7-7-7"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                    {expanded && (
-                      <p className="border-t border-card-border px-3 py-2 text-body-sm text-muted">
-                        {option.description}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
-
-        <InlineError error={error} className="text-sm font-medium text-error" />
-        {!result && (
-          <p className="text-body-sm text-muted">
-            No action points required. If you don&apos;t respond in time, &ldquo;
-            {event.options.find((o) => o.id === event.defaultOptionId)?.label ?? "the default"}
-            &rdquo; is applied automatically.
+      ) : (
+        <>
+          <p className="text-body-sm text-warning">
+            Clicking an option confirms that decision immediately. It is applied and can&apos;t be
+            undone. Use the arrow (▾) to preview an option before committing.
           </p>
-        )}
-      </div>
-    </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {event.options.map((option) => {
+              const expanded = expandedOptionId === option.id;
+              const adj = option.statAdjustment;
+              return (
+                <div
+                  key={option.id}
+                  className="rounded-lg border border-card-border bg-card transition-colors hover:border-violet-500/50"
+                >
+                  <div className="flex items-center justify-between gap-2 px-3 py-2.5">
+                    <div className="min-w-0 flex-1">
+                      <button
+                        type="button"
+                        onClick={() => resolve(option.id)}
+                        disabled={resolving}
+                        title="Click to confirm this choice"
+                        className="w-full text-left text-body font-semibold text-foreground transition-colors hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {option.label}
+                        {option.isDefault && (
+                          <span className="ml-2 text-body-sm font-normal text-muted">Default</span>
+                        )}
+                      </button>
+                      {adj && adj.delta !== 0 && (
+                        <span
+                          className={[
+                            "mt-0.5 inline-flex items-center gap-1 text-body-sm font-medium",
+                            adj.delta > 0 ? "text-success" : "text-error",
+                          ].join(" ")}
+                        >
+                          Roll {adj.delta > 0 ? "+" : "−"}
+                          {Math.abs(adj.delta)} ({adj.label})
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedOptionId(expanded ? null : option.id)}
+                      className="shrink-0 text-muted transition-colors hover:text-foreground"
+                      aria-label={expanded ? "Hide details" : "Show details"}
+                    >
+                      <svg
+                        className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                  {expanded && (
+                    <p className="border-t border-card-border px-3 py-2 text-body-sm text-muted">
+                      {option.description}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      <InlineError error={error} className="text-sm font-medium text-error" />
+      {!result && (
+        <p className="text-body-sm text-muted">
+          No action points required. If you don&apos;t respond in time, &ldquo;
+          {event.options.find((o) => o.id === event.defaultOptionId)?.label ?? "the default"}
+          &rdquo; is applied automatically.
+        </p>
+      )}
+    </EventItem>
   );
 }
