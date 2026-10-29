@@ -51,7 +51,7 @@ Hulls mend between fights, never during one: 12 condition a turn in port, 5 on s
 
 ## Where to find it in game
 
-The defence seat holder (or an admin) commands the whole force from **Naval and air command** under the country page, reached from the Commands tab of the defence cabinet office. Conflicts must be enabled for the page to exist.
+The defence seat holder commands the whole force from **Naval and air command** under the country page, reached from the Commands tab of the defence cabinet office.
 
 ## Related pages
 

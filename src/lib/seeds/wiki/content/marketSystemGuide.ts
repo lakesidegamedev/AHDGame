@@ -23,14 +23,14 @@ You do not select the tier yourself. Your job is to understand each layer so you
 
 ## Prices come from supply and demand
 
-Every commodity has a price that moves each turn based on how much of it corporations produce (supply) versus how much they consume (demand). Scarcity pushes prices up; a glut pushes them down. The full mechanic (the 28 commodities, the curves, the three-tier blend) lives in [Commodities](/wiki/commodities). Copper is merged into rare earth; it is not a separate commodity. The market system is what turns those prices into your revenue.
+Every commodity has a price that moves each turn based on how much of it corporations produce (supply) versus how much they consume (demand). Scarcity pushes prices up; a glut pushes them down. The full mechanic (the 27 commodities, the curves, the three-tier blend) lives in [Commodities](/wiki/commodities). Copper is merged into rare earth; it is not a separate commodity. The market system is what turns those prices into your revenue.
 
 ## Price realization: scarcity pays, gluts hurt
 
 The first economic tier is **price realization**. Instead of only nudging your margin percentage, commodity prices now **scale your top-line revenue**:
 
 \`\`\`
-factor = clamp((price / basePrice) ^ 0.5, 0.7, 1.5)
+factor = clamp((price / basePrice) ^ 0.5, 0.7, 2.0)
 realizedRevenue = baseRevenue × factor
 \`\`\`
 
@@ -38,11 +38,11 @@ realizedRevenue = baseRevenue × factor
 | --- | --- |
 | Balanced (price = base) | 1.0× |
 | Mild shortage (2× price) | ~1.41× |
-| Big shortage | up to 1.5× (capped) |
+| Big shortage (4× price or more) | up to 2.0× (capped) |
 | Oversupply (0.5× price) | ~0.71× |
 | Deep glut | down to 0.7× (floored) |
 
-It's **bounded and damped** on purpose: realization alone moves your revenue at most **-30% / +50%** in a turn, and it uses last turn's prices so it can't oscillate wildly. The takeaway: **producing something scarce is now genuinely rewarding**, and dumping into a glut genuinely hurts. See [Price Realization](/wiki/commodities#price-realization) for the details.
+It's **bounded and damped** on purpose: realization alone moves your revenue at most **-30% / +100%** in a turn, and it uses last turn's prices so it can't oscillate wildly. The takeaway: **producing something scarce is now genuinely rewarding**, and dumping into a glut genuinely hurts. See [Price Realization](/wiki/commodities#price-realization) for the details.
 
 ## Clearing: your goods have to actually sell
 
@@ -123,7 +123,7 @@ This is deliberate. You get time to adapt your pricing posture and investment le
 
 ## Related systems
 
-- [Commodities](/wiki/commodities): the 28-commodity market, prices, and the [market-tiers reference](/wiki/commodities#market-tiers-clearing-and-capital)
+- [Commodities](/wiki/commodities): the 27-commodity market, prices, and the [market-tiers reference](/wiki/commodities#market-tiers-clearing-and-capital)
 - [Stock Market](/wiki/stock-market): how owned assets and earnings power set your share price
 - [Corporations](/wiki/corporations): founding and running sectors, strategies, and margins
 - [Corporate R&D & Tech Trees](/wiki/corporate-r-and-d): unlocks that shift your cost and output curves

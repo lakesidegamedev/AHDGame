@@ -4,7 +4,7 @@ Wars in A House Divided are not a side game. They run on the same turn clock, th
 
 This page is the map. Read it first; every other page in this category is a zoom-in on one box of the diagram below.
 
-> **The Conflicts system is an admin-toggled subsystem.** If your world has it switched off you will see no Conflicts entry in the World menu and no Commands or Doctrine tabs in the defence office. Everything on these pages assumes it is on.
+> **The Conflicts system is live in every world.** Everything on these pages assumes it is on.
 
 ## The chain of command
 
@@ -125,7 +125,7 @@ Above all the boards on [/world/conflicts](/world/conflicts) sits the world's sh
 
 ## Where to go next
 
-**Prefer a guided route?** The [**War College**](/wiki/paths/war-college) learning path walks these pages in order (this overview, then units, generals, battle, and the full worked campaign) in about 51 minutes.
+**Prefer a guided route?** The [**War College**](/wiki/paths/war-college) learning path walks these pages in order (this overview, then units, generals, battle, and the full worked campaign) in about 93 minutes.
 
 Otherwise, pick your entry point:
 

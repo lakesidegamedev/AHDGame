@@ -11,7 +11,7 @@ You can change your character's **home state** (US), **region** (UK: England / S
 Every relocation, even within the same country:
 
 - **Political Influence** → 0 (in all states; you start fresh in your new home).
-- **Donor Base** → 0 (level 1, no accumulated donors).
+- **Donor Base** → 0 (donor base level set to 0, no accumulated donors).
 - **Group Favorability** (any state-specific demographic favorability tracks) → cleared.
 - **State / regional party leadership** in the region you left (chair, vice chair, treasurer) → vacated; party replaces you via the next election.
 - **Any active candidacy** (general election, primary, state-party leadership, national-party leadership, committee) → withdrawn.

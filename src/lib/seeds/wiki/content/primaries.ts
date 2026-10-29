@@ -64,9 +64,9 @@ NPPs (Non-Player Politicians) autonomously enter primaries. Entry is determinist
   1. **Incumbent defense.** If the sitting officeholder is an NPP and their party has no player candidate, the incumbent NPP always enters to defend the seat.
   2. **Slate fill.** Each party aims to field at least one NPP candidate in every open race. NPPs are assigned to empty primaries first.
   3. **One generic NPP per party.** After slate fill, at most one additional generic NPP may enter any party's primary if no player is present. This prevents races from becoming overcrowded with autonomous candidates.
-- NPPs do **not** drop out based on appeal. Once entered, they remain until primary resolution or manual withdrawal.
+- NPPs do **not** drop out based on appeal, with one exception: a clearly trailing NPP can withdraw late in an NPP-only primary (see below). Otherwise, once entered, they remain until primary resolution or manual withdrawal.
 
-In worlds on autonomy V6, an NPP-only primary changes shape late: a challenger can be drawn from the party's strongest NPPs, and a candidate who is clearly behind withdraws rather than splitting the vote (no endorsement). Primaries with a player in them are never affected. New singleplayer and simulation worlds start on V6, and the live multiplayer world runs V6.
+An NPP-only primary can change shape late: a challenger can be drawn from the party's strongest NPPs, and a candidate who is clearly behind withdraws rather than splitting the vote (no endorsement). Primaries with a player in them are never affected.
 
 ### How NPPs shape your primary
 

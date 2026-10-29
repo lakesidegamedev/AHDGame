@@ -9,7 +9,7 @@ Each state's electorate is described by its **census**. In the US that is four d
 | Dimension | Buckets |
 | --- | --- |
 | Race | White, Black, Hispanic, Asian, Other |
-| Age | Young (18-29), Mid (30-44), Mature (45-64), Senior (65+) |
+| Age | Young (18-29), Mid (30-49), Mature (50-64), Senior (65+) |
 | Education | No college, College, Graduate |
 | Wealth | Low, Middle, High |
 
@@ -38,9 +38,9 @@ How much of the turned-out voters a candidate can actually contact and persuade.
 ### 2. Appeal
 \`\`\`
 positionScore = 25 × (positionRaw / 50)^1.5 + floor(0.5)
-appeal = positionScore + directionalBonus + normalizeNPI(politicalInfluence) × 12.5
+appeal = positionScore + directionalBonus
 \`\`\`
-Where \`positionRaw\` is derived from the absolute economic and social distance between the candidate's policy positions and the cell's leans, and \`directionalBonus\` adds a small amount per axis when the candidate's lean matches the cell's lean direction (tribal-voter effect). Maximum appeal is 50. Candidates who match a cell's positions score high; candidates far from their positions score low. The exponent (1.5, not squared) keeps position from swamping every other lever in the formula.
+Where \`positionRaw\` is derived from the absolute economic and social distance between the candidate's policy positions and the cell's leans, and \`directionalBonus\` adds a small amount per axis when the candidate's lean matches the cell's lean direction (tribal-voter effect). Political influence does not enter appeal; it only drives reach. Maximum appeal is about 35.5 (25.5 from position plus 10 from the directional bonus; \`src/lib/utils/demographicAppeal.ts\`). Candidates who match a cell's positions score high; candidates far from their positions score low. The exponent (1.5, not squared) keeps position from swamping every other lever in the formula.
 
 ### 3. Approval scalar
 \`\`\`
@@ -98,15 +98,15 @@ $5,000 of spend buys one full turnout point before alignment and diminishing ret
 
 Diminishing returns: at a +10% existing modifier, a 1% boost becomes only 0.5% effective.
 
-All modifiers decay **2% per turn** toward 0, requiring sustained spending to maintain boosts.
+All modifiers decay toward 0 with a 6-turn half-life (about 10.9% per turn), requiring sustained spending to maintain boosts.
 
 ### Player canvassing
 
 The canvassing action targets a specific census bucket in your active campaign state (home state by default; presidential candidates use their travel/primary campaign state):
 
 - **Cost:** 100 funds + 1 action point
-- **Base boost:** 0.05 percentage points
-- **Alignment multiplier:** Perfect policy alignment = 1.0×, distance 10 = 0.1× minimum
+- **Base boost:** 2 percentage points, times the group fit squared
+- **Alignment multiplier:** Perfect policy alignment = 1.0×; the fit has a floor of 0.2, so the boost never falls below 4% of base (see [Canvassing](/wiki/canvassing))
 - **Campaign season bonus:** 2× effective during the 4 turns before an election
 - **Effect:** Immediate (not queued)
 

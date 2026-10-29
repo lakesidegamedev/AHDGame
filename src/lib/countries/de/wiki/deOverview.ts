@@ -43,7 +43,7 @@ Under AMS:
 - Seat allocation across the Bundestag is proportional to each party's vote share.
 - The chamber's size follows the era: **487 seats** in the 1953 preset (the 2nd Bundestag), **630** in the modern one, where the 2023 reform fixed the size with no overhang mandates.
 
-A party needs at least **5% of the national vote** to enter the Bundestag (the Sperrklausel threshold). Parties that fall below this threshold receive no seats, even if they win significant support in individual states.
+A party needs at least **5% of the national vote** or **3 direct mandates** to enter the Bundestag (the Sperrklausel threshold). Parties that meet neither condition receive no seats, even if they win significant support in individual states.
 
 **Snap elections.** As in the UK and Japan, the sitting Chancellor may dissolve the Bundestag and call a snap election. Snap windows are compressed (24h primary + 24h general) and run per Land. A pending PM vacancy that exceeds the 96-turn deadline also auto-triggers a snap. See [Snap Elections](/wiki/snap-elections) for the full mechanics.
 
@@ -82,7 +82,7 @@ In-game, coalition mechanics determine which party controls the Chancellor's off
 
 ## Key German mechanics
 
-**Constructive no-confidence.** Unlike the UK, removing the Chancellor requires simultaneously installing a replacement. A pure vote of no confidence that doesn't name a successor fails, even with a majority against the sitting Chancellor.
+**No-confidence.** The game uses the same standard no-confidence mechanic as the UK and Japan, not the real-world constructive vote: a passed vote sends the government into a pending state and arms the vacancy clock described under Chancellor selection.
 
 **No fixed Chancellor term.** The Chancellor serves as long as they hold the Bundestag's confidence. A majority government can last the full four-year legislative period without a confidence vote challenge.
 

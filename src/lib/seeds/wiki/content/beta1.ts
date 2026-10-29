@@ -233,7 +233,7 @@ Beta 1's most ambitious mid-iteration addition was the **economy-preview** track
 
 These countries are **not enabled for player politicking** in Beta 1: there are no Bundestags to canvas, no Dáil races to win, no Brazilian governors to bribe. What they *do* contribute is liquidity: their currencies trade in forex, their corporate registrations show up in the global stock and bond markets, and their commodity baselines feed into the trade-flow model. The data plumbing is the dry-run for Alpha 2 / Beta 2 country expansion.
 
-(A few player characters do hold notional German cabinet seats: **Nicola Sturgeon** is recorded as Federal Chancellor, **Ariane Yeong** as Foreign Minister and President of the European Council, but the German parliament and *Ministerpräsident* roster is otherwise entirely NPP-populated, consistent with the country's economy-preview status.)
+(A few characters do hold notional German cabinet seats, including the Federal Chancellor and the Foreign Minister, but the German parliament and *Ministerpräsident* roster is otherwise entirely NPP-populated, consistent with the country's economy-preview status.)
 
 ### International organizations and elected leadership
 
@@ -324,39 +324,39 @@ The political consequence is the iteration's most-cited corporate-political fact
 
 ### Most influential
 
-| # | Character | Country | Office | National influence |
+| # | Role | Country | Office | National influence |
 | --- | --- | --- | --- | --- |
-| 1 | **KIMI ANTONELLI** | US | President | 924 |
-| 2 | **Jeiden Peter-san** | JP | Prime Minister | 794 |
-| 3 | **Kevin Piastri** | UK | Prime Minister | 750 |
-| 4 | **Charles Leclerc** | US | Senate (MI), Sec. Defense | 725 |
-| 5 | **Nicola Sturgeon** | DE | Chancellor | 714 |
-| 6 | **Senator** | UK | Defence Secretary | 656 |
-| 7 | **Alice Conquest** | UK | Commons (Orkney & Shetland) | 641 |
-| 8 | **Zohran Mamdani** | US | Senate (NY) | 637 |
-| 9 | **Big Jesus De Sanchez** | US | Speaker of the House | 629 |
-| 10 | **Clare Reilly** | UK | Commons (Sheffield Central) | 624 |
+| 1 | President of the United States | US | President | 924 |
+| 2 | Prime Minister of Japan | JP | Prime Minister | 794 |
+| 3 | Prime Minister of the UK | UK | Prime Minister | 750 |
+| 4 | Secretary of Defense | US | Senate (MI), Sec. Defense | 725 |
+| 5 | Chancellor of Germany | DE | Chancellor | 714 |
+| 6 | Defence Secretary | UK | Defence Secretary | 656 |
+| 7 | MP for Orkney & Shetland | UK | Commons (Orkney & Shetland) | 641 |
+| 8 | Senator for New York | US | Senate (NY) | 637 |
+| 9 | Speaker of the House | US | Speaker of the House | 629 |
+| 10 | MP for Sheffield Central | UK | Commons (Sheffield Central) | 624 |
 
 ### Wealth Leaderboard: top 10 by net worth
 
 Net worth is the in-game *Wealth Leaderboard* convention: stocks + bonds + portfolio + cash, summed and rendered in USD-equivalent. It is dominated almost entirely by **corporate CEOs** whose wealth tracks their stake in the public company they run. Eight of the Beta-1 top ten are corporate executives, and their combined net worth tops a quarter-trillion dollars.
 
-| # | Character | Country / State | Net worth | Source |
+| # | Role | Country / State | Net worth | Source |
 | --- | --- | --- | --- | --- |
-| 1 | **Ben Harrison** | US / Minnesota | **$75.6B** | CEO, General Electric (also Sec. of Agriculture) |
-| 2 | **KIMI ANTONELLI** | US / California | $34.6B | CEO, AURORA Group (also President) |
-| 3 | **Ryuji Nakamura** | US / New York | $23.1B | CEO, US Resource Collective |
-| 4 | **Mark O'Rubio** | US / Pennsylvania | $16.0B | CEO, American Israel Public Affairs Committee |
-| 5 | **John Hiven** | US / Texas | $5.47B | CEO, The Hive |
-| 6 | **Zohran Mamdani** | US / New York | $5.26B | CEO, US Plastics and Chemicals (also Senator + Sec. of Health) |
-| 7 | **Bob the Builder** | US / Pennsylvania | $4.97B | (US Senator, PA) |
-| 8 | **Clark H Turned** | UK / Scotland | $4.45B | CEO, SuperSpark Agencies (also MP, Commons-SCO) |
-| 9 | **Drake Voss** | US / Kentucky | $1.99B | CEO, VOSS CORP |
-| 10 | **Sheev Palpatine** | UK / West Midlands | $1.67B | CEO, Unlimited Power (also MP + Bank of England Governor) |
+| 1 | Secretary of Agriculture | US / Minnesota | **$75.6B** | CEO, General Electric (also Sec. of Agriculture) |
+| 2 | President of the United States | US / California | $34.6B | CEO, AURORA Group (also President) |
+| 3 | Corporate executive | US / New York | $23.1B | CEO, US Resource Collective |
+| 4 | Corporate executive | US / Pennsylvania | $16.0B | CEO, American Israel Public Affairs Committee |
+| 5 | Corporate executive | US / Texas | $5.47B | CEO, The Hive |
+| 6 | Senator and Secretary of Health | US / New York | $5.26B | CEO, US Plastics and Chemicals (also Senator + Sec. of Health) |
+| 7 | US Senator | US / Pennsylvania | $4.97B | (US Senator, PA) |
+| 8 | MP for a Scottish seat | UK / Scotland | $4.45B | CEO, SuperSpark Agencies (also MP, Commons-SCO) |
+| 9 | Corporate executive | US / Kentucky | $1.99B | CEO, VOSS CORP |
+| 10 | MP and Bank of England Governor | UK / West Midlands | $1.67B | CEO, Unlimited Power (also MP + Bank of England Governor) |
 
 The conspicuous Beta-1 fact: **eight of ten** are American (a function of NYSE listings being denominated in dollars and the iteration's largest corporations being US-listed); the other two are UK CEOs whose FTSE-listed companies are large enough to clear the ₳-anchor cutoff. **Zero** Japanese characters appear in the dollar-denominated top 10, despite the Nikkei hosting the iteration's largest corporation by yen.
 
-A separate "wealthiest by campaign treasury" measure exists: the **funds** field, stored in anchor units (₳1 ≈ $1.02 / £0.55 / ¥98 at T621 rates) and used to bankroll elections. **Rgold** (UK, First Secretary of State) tops that leaderboard at ₳144.9M, followed by **KIMBLE HOOKSTRATEN** (US, ₳93.6M) and **Kathy Hochul** (US Senator, ₳78.1M). These are different scoreboards: the campaign-funds list ranks who can spend on a *race*; the net-worth list ranks who *owns* the economy.
+A separate "wealthiest by campaign treasury" measure exists: the **funds** field, stored in anchor units (₳1 ≈ $1.02 / £0.55 / ¥98 at T621 rates) and used to bankroll elections. The UK First Secretary of State tops that leaderboard at ₳144.9M, followed by a US figure (₳93.6M) and a US Senator (₳78.1M). These are different scoreboards: the campaign-funds list ranks who can spend on a *race*; the net-worth list ranks who *owns* the economy.
 
 ### Most infamous
 

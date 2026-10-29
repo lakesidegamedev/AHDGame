@@ -12,7 +12,7 @@ One character per account. A few clicks are expensive to undo. Do them in this o
 
 ### 1. Country
 
-Pick the country you actually want to play. It scopes elections, parties, legislature, and who you can wire. Relocation later wipes party, national influence, and national office.
+Pick the country you actually want to play. It scopes elections, parties, legislature, and who you can wire. Relocation later resets national influence, and also your party if the move leaves that party's reach (72-turn cooldown between moves).
 
 | Country | Home pick | First office most people target |
 | --- | --- | --- |
@@ -54,7 +54,11 @@ These feed primaries (distance to your party), bill voting, and demographic appe
 
 Do not slam both to -5 or +5 unless that party is actually extreme. Moderate parties punish extremes in the primary.
 
-### 5. Confirm and take the kit
+### 5. Wealth background and stats
+
+Pick a wealth background: Low, Medium or High Income. It sets your personal Cash on Hand (see the kit below) and your starting income tier. Where the world uses the stats system, you also spread **28 points across seven stats**, each from 1 to 10.
+
+### 6. Confirm and take the kit
 
 On submit you receive:
 
@@ -62,7 +66,7 @@ On submit you receive:
 | --- | --- |
 | Actions | 25 (one-time) |
 | Campaign Funds | ₳250,000 |
-| Cash on Hand | ₳0 |
+| Cash on Hand | ₳1,000,000 (Low Income), ₳2,500,000 (Medium) or ₳5,000,000 (High), scaled down in earlier eras |
 | Political Influence | 10 |
 | NPI | 0 |
 | Favorability | 50 |
@@ -71,7 +75,7 @@ On submit you receive:
 | Party | Independent |
 | Office | none |
 
-You land on your profile. A setup banner asks you to read Getting Started, join a party, and take a first action. For your first three days, a first-days panel lists three goals: campaign at home three times, join a party that takes members from your region, and enter a local race that is still taking candidates. Your name appears in the home-state player list.
+Characters who joined through a referral also get +10% Political Influence and Favorability, +10 actions and +₳500,000 Cash on Hand (era scaled). You land on your profile. A setup banner asks you to read Getting Started, join a party, and take a first action. For your first three days, a first-days panel lists three goals: campaign at home three times, join a party that takes members from your region, and enter a local race that is still taking candidates. Your name appears in the home-state player list.
 
 ## What to click immediately after
 

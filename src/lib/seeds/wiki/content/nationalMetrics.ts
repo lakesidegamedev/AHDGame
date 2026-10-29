@@ -34,7 +34,7 @@ In multiplayer, inflation advances halfway at half past each hour, with the hour
 - Exchange rates (weaker currency makes imports more expensive)
 - Savings flow (deposits dampen, withdrawals stimulate)
 
-The target rate is **2.0%**. Deviations trigger Chair infamy accumulation and affect all corporate margins.
+Each country has its own inflation target, set per country and era (most developed markets use 2.0%; see [Central Banks](/wiki/central-banks)). Deviations trigger Chair infamy accumulation and affect all corporate margins.
 
 ## State-level metrics
 
@@ -124,7 +124,7 @@ Each turn, after state-level updates complete:
 
 **As a CEO:** Grow your corporation's sectors to drive state GDP growth. High-growth sectors in a state improve the employment situation over time.
 
-**As a Central Bank Chair:** Adjust the prime rate to manage inflation and indirectly support or constrain GDP growth. The Chair's effectiveness is measured against the 2.0% inflation and 2.0% GDP growth targets.
+**As a Central Bank Chair:** Adjust the prime rate to manage inflation and indirectly support or constrain GDP growth. The Chair's effectiveness is measured against the country's inflation target and the 2.0% GDP growth target.
 
 **As Governor/President:** Your approval rating is partly driven by economic conditions in your country or state. Strong GDP growth and low unemployment improve your standing; high inflation and unemployment hurt it.
 

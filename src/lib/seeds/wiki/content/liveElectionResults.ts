@@ -4,7 +4,7 @@ Some worlds turn on **election night**: a results page that drips out calls and 
 
 ## Is it on
 
-Election night is feature-flagged per world and defaults off. If your world has it enabled, national races (House, Commons, Bundestag, Dáil, and the other multi-seat national chambers) get a dedicated results view with live calls. Single-seat local races still show results, just without the national seat board.
+Election night is on by default in new worlds, but a world can have it turned off. If yours has it on, national races (House, Commons, Bundestag, Dáil, and the other multi-seat national chambers) get a dedicated results view with live calls. Single-seat local races still show results, just without the national seat board.
 
 The turn engine is always the real authority on who won. The results page is a projection built from the same numbers; it never changes the outcome, it only decides when and how you get to see it.
 
@@ -22,9 +22,9 @@ A region is **called** when three things are all true:
 
 - it isn't tied
 - it has actually received votes
-- it has been revealed by the drip (or the election has fully ended), **and** the leader is ahead by at least **5 percentage points**
+- either the election has fully ended, or it has been revealed by the drip **and** the leader is ahead by at least **5 percentage points**
 
-Below that 5-point margin, the page shows a lead, not a call. Tied regions are never called, no matter how late it gets.
+While the election is still running, a margin below 5 points shows a lead, not a call. Once the election has ended, every region that is not tied is called for its leader at any margin. Tied regions are never called, no matter how late it gets.
 
 For President, called and leading regions roll up into electoral vote totals: \`calledEv\` from regions that have been called, \`leadingEv\` from regions still showing an uncalled lead. For multi-seat national chambers, the same idea rolls up into projected seats per party.
 
@@ -41,7 +41,7 @@ This projection reads live off however many regions have declared so far, so it 
 
 ## What you're watching, mechanically
 
-The results page polls every 30 seconds while an election is active. Nothing you do on the results page itself changes the outcome: canvassing, ads, and fundraising still work the way they always have, right up until the general phase's [final 4 turns](/wiki/general-elections), which carry 30% of the entire vote pool. Election night is just the moment that math becomes visible in public, one region at a time, instead of all at once.
+The results page refreshes every 10 seconds while election night is on or the result is being resolved, and every 30 seconds while it waits for the night to open. Nothing you do on the results page itself changes the outcome: canvassing, ads, and fundraising still work the way they always have, right up until the general phase's [final 4 turns](/wiki/general-elections), which carry 30% of the entire vote pool. Election night is just the moment that math becomes visible in public, one region at a time, instead of all at once.
 
 If your race ends up close enough to fall short of a majority, see [Contingent Election](/wiki/contingent-election) for what happens next in a US presidential race with no Electoral College majority.
 

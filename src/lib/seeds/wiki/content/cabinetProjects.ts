@@ -86,7 +86,7 @@ So the game is not "build maximum everything": it is picking the assets whose re
 - **Put buildings where the problem is.** A school helps only the region it sits in. Check regional metrics first and site your assets in the weakest regions.
 - **Condition lags funding.** After changing funding it takes several turns for condition (and thus effect strength) to settle. Enhanced funding is a long-term commitment, not a burst.
 - **Ministerial actions are scarce** (max 4, slowly regenerating): Opens, Expands, plant builds, and project starts all compete with your ministerial orders for the same actions.
-- **Crash-build only what matters.** Crashed funding nearly doubles build speed but almost doubles the per-turn construction cost pressure on your envelope.
+- **Crash-build only what matters.** Crashed funding builds 1.8x faster but costs 1.6x the per-turn construction spend on your envelope (\`src/lib/constants/cabinetInfra.ts\`).
 - **Location is forever.** You cannot relocate an estate, plant, or project: close/decommission and rebuild instead.
 
 ## Related pages

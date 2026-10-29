@@ -75,7 +75,7 @@ When a **sector-scoped subsidy** is enacted, the market reacts with a sentiment 
 - **Subsidy created:** +8% to +15% sentiment multiplier for the targeted sector type (default +10%)
 - **Subsidy ended:** -8% to -15% sentiment multiplier for the targeted sector type
 
-Sentiment pulses decay at rate **0.85 per turn** and are subject to the global sentiment cap of ±25%. Economy-wide subsidies do not emit sentiment pulses: their effects are too diffuse to register as a market-wide event.
+Sentiment pulses decay at rate **0.85 per 15-minute market interval** (a pulse loses about half its strength in roughly an hour) and are subject to the global sentiment cap of ±25%. Economy-wide subsidies do not emit sentiment pulses: their effects are too diffuse to register as a market-wide event.
 
 ## Ending a subsidy
 

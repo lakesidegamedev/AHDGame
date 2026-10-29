@@ -78,7 +78,7 @@ Press **Declare offensive**, pick the enemy nation.
 Every check must pass:
 
 1. **The conflict must be live**: not resolved, and not already won outright. A war whose front has run to the end of the track takes no more offensives while the victor names terms.
-2. **You must have authority here**: the Theater Commander if one is designated, otherwise the defence seat holder. Admins always.
+2. **You must have authority here**: the Theater Commander if one is designated, otherwise the defence seat holder.
 3. **Your nation must have a side** in this conflict. You can be on it by roster, or by your bloc backing one of the sides.
 4. **Your target must be an actual belligerent**: by roster only. You cannot drag a bystander in, even a bloc rival. *(Note the asymmetry: your own side may resolve through your bloc, your target's may not.)*
 5. **Your target must not be on your own side.**

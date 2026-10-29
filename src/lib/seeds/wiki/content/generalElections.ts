@@ -27,10 +27,10 @@ General elections run on the **swing-flow model** by default, not the flat group
 Each turn, for each candidate, for each demographic group:
 
 1. **Reach**: a sqrt curve on influence, capped at 1.0 once influence reaches 100. State races use Political Influence (already clamped to 100), presidential generals use National Political Influence (also saturates at 1.0, no celebrity bonus above 100).
-2. **Appeal**: a power-curve position score (exponent 1.5, how close the candidate's positions are to the group's), plus a small floor, plus a directional bonus for candidates seen as tribally "us," plus, for presidential races only, an influence term (state races keep influence out of appeal, reach-only). Per-group calculation using the group's lean. Position alone maxes at ~25.5, direction bonus up to 10 (5 per axis), influence term up to 12.5 at influence=100 (presidential only).
+2. **Appeal**: a power-curve position score (exponent 1.5, how close the candidate's positions are to the group's), plus a small floor, plus a directional bonus for candidates seen as tribally "us," Influence stays out of appeal in every race and only feeds reach. Per-group calculation using the group's lean. Position alone maxes at ~25.5 and the direction bonus adds up to 10 (5 per axis).
 3. **Approval scalar**: \`(favorability / 100) ^ 0.8\`. 0% approval = 0 votes. The exponent softens the curve compared to a straight percentage, so mid-favorability candidates lose less than a linear scalar would suggest.
-4. **Party Org as normalized state share**: each party's organization score divided by the state's total organization. Range \`[0, 1]\`. A party with 60 Org in a state where the total is 100 gets a 0.6 multiplier on its weight; a party not present in the state gets 0 (no votes from that party's candidates). When the state has no Org data at all (test fixtures, unbootstrapped seeds) every candidate falls back to a neutral \`1×\` so the game doesn't zero the whole field.
-5. **Reg resistance**: \`1 + 0.3 × (Reg / 100)\`. Range \`1.0×-1.3×\`. Higher own-Reg makes the party harder to peel away through persuasion. Independents and parties without a registration entry get neutral 1.0×. Reg data is bootstrap-deferred to a later phase, so most rows currently degrade to neutral.
+4. **Party Org as normalized state share**: each party's organization score divided by the state's total organization. Range \`[0, 1]\`. A party with 60 Org in a state where the total is 100 gets a 0.6 multiplier on its weight; a party not present in the state gets 0 (no votes from that party's candidates).
+5. **Reg resistance**: \`1 + 0.3 × (Reg / 100)\`. Range \`1.0×-1.3×\`. Higher own-Reg makes the party harder to peel away through persuasion. Independents and parties without a registration entry get neutral 1.0×.
 6. **UK current-Reg baseline**: UK regional elections also multiply party weight by the square root of current Reg share. A party at 25 Reg receives \`0.5×\`; a party at 100 Reg receives \`1×\`. The minimum is the square root of 0.5%, so a party can grow from zero without being erased. The calculation uses live Reg for every party, including parties created after the world began. If an old UK region has no Reg data at all, this factor is neutral for the whole field. Other countries do not use this extra baseline.
 7. **Support mood**: \`0.6 + 0.8 × (support / 100)\`. Range \`0.6×-1.4×\` with neutral 1.0× at support=50. Captures short-term candidate mood / momentum (debate performance, scandals, endorsements). New candidates without a stored support value default to 1.0×.
 8. **Infamy scalar**: \`1 − 0.05 × (infamy/100)\`. Player characters lose up to 5% of their per-group weight at infamy=100. NPPs don't have infamy and aren't affected.
@@ -97,12 +97,12 @@ Peak everything:
 - **Last-minute ads** to peak Favorability immediately before each weighted turn.
 - **Canvassing becomes 2× effective** in the final 4 turns (campaign season multiplier applies to the demographic-turnout canvassing action).
 - **Media Spending and Opposition Research upgrade effects double** in the final 4 turns (passive campaign bonuses).
-- **Log in hourly** if the race is close. A 2% Favorability dip at turn 141 of 144 can cost you the seat.
+- **Log in hourly** if the race is close. A 2% Favorability dip at turn 45 of a 48-turn general window can cost you the seat.
 
 ## What not to do
 
 - **Don't burn money on ads at Favorability 80+.** Returns are severely diminished.
-- **Don't sit on PI and hope decay is slow.** It's not. You'll lose 15% over 20 turns, about the length of a closing sprint.
+- **Don't sit on PI and hope decay is slow.** It's not. You'll lose about 14% over 20 turns (more if your party holds the national executive), about the length of a closing sprint.
 - **Don't attack everyone.** Infamy accumulates, your own Favorability drains, and attacks cost 2 Infamy each **even on success**. Attack sparingly against high-Favorability opponents only.
 - **Don't forget out-of-state costs.** If you're running in State A and also campaigning to help an ally in State B, State B costs 1.25× (neighbour) or 1.5× (non-neighbour) actions-per-effect.
 - **Don't withdraw to "save resources" unless you're pivoting.** Withdrawn candidacies cannot be re-entered; your PI and Favorability carry into the next cycle either way.

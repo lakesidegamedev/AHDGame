@@ -12,7 +12,7 @@ Every character is locked to a single country when you create them. This determi
 - Which regional bills you can propose and vote on
 - Which country's currency your government income is paid in
 
-**You can relocate your character to a different country.** Relocation resets your national influence and party affiliation (you rejoin as independent in the new country), so it is a real reset, not a free swap. If you want to keep a presence in two countries at once, a second character is still the simpler option, but switching your existing character is possible.
+**You can relocate your character to a different country.** Relocation resets your national influence, and it resets your party and party influence only if the move takes you outside that party's reach. There is a 72-turn cooldown between moves, so it is a real reset, not a free swap. If you want to keep a presence in two countries at once, a second character is still the simpler option, but switching your existing character is possible.
 
 However, economic investments (corporations, bonds, forex positions) cross country lines freely.
 

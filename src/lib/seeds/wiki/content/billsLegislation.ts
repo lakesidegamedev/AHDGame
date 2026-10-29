@@ -13,13 +13,12 @@ The general rule: any sitting member of a chamber that can originate the bill ma
 | State or regional | Any sitting member of that state's legislature. State bills use the same composer, but the state governor signs or auto-signs them. |
 | Restricted systems | China, Russia, and East Germany require the delegate's party to be legal. A banned party's delegates cannot propose. |
 | Unplayed countries | The autonomous government sponsors and moves national bills through the full lifecycle, so the country is not frozen. |
-| Admins | Admins can propose from any country and are exempt from proposal costs. |
 
 ## Bill structure
 
 Every bill requires:
 
-- **A category**: agriculture, defense, economy, education, environment, foreign policy, healthcare, immigration, industry, infrastructure, public safety, social, tax, technology, or trade. The category controls which legislation types can appear as provisions.
+- **A category**: agriculture, custom, defense, economy, education, environment, foreign policy, healthcare, immigration, industry, infrastructure, public safety, social, state ownership, tax, technology, or trade. The category controls which legislation types can appear as provisions. State ownership bills carry the nationalize, privatize and designate strategic sector provisions. Custom bills are flavor and roleplay bills that carry no ordinary policy provisions.
 - **One to three provisions**: each provision is a legislation type (e.g., "Minimum Wage", "Income Tax") paired with a policy option that defines its ideological direction. Bills are capped at three provisions total.
 
 ### Provision types
@@ -175,13 +174,13 @@ A bill is not automatically affordable just because it passed.
 
 If you are sponsoring an expensive programme, check the budget before you spend the NPI. A bill that cannot be funded is a wasted legislative cycle.
 
-### Archetype approval for legislators
+### Approval changes for legislators
 
-Legislators who voted **For** the enacted bill receive demographic archetype approval changes based on how far the policy shifted on each axis:
+Legislators who voted **For** the enacted bill see approval changes among population groups (the census groups, such as education or income brackets), based on how far the policy shifted:
 
-- \`impact = shift × affinity × 0.15 × positionMultiplier\`, clamped to ±10 per bill
+- \`impact = shift × affinity × 0.15 × positionMultiplier\`, clamped to ±10 per bill, where the affinity is how strongly that group leans left or right on the policy area (\`src/lib/archetypeAffinities.ts\`).
 - The \`positionMultiplier\` is higher for extreme options (1.5 at the far ends) and lower for centrist ones (0.5 at the center), so bold shifts create stronger reactions.
-- A bill moving education policy two steps rightward gives evangelicals (affinity +35) roughly +10 approval and public-sector archetypes (affinity −40) roughly −10 approval.
+- A bill moving education policy two steps rightward raises approval among groups that lean right on education and lowers it among groups that lean left, by up to 10 points either way.
 
 ## Bicameral strategy
 

@@ -1,6 +1,6 @@
 export const referenceFormulasContent = `# Reference: Formulas
 
-Complete formula reference for A House Divided. All values are sourced directly from game code. Formulas marked with (*) use diminishing-return normalization curves: see the NPI normalization section below.
+Complete formula reference for A House Divided. Values are taken from game code; source files are named where a section depends on one. Formulas marked with (*) use diminishing-return normalization curves: see the NPI normalization section below.
 
 ---
 
@@ -63,28 +63,38 @@ Same infamy penalty applies on the final score. Key differences from the state f
 
 Cost: **₳100 + 1 action**. Home state / region only.
 
+Races created under campaign rules version 1 (\`src/lib/campaignTargeting/rules.ts\`) use:
+
 \`\`\`
-baseBoost        = 0.05 (percentage points)
+distanceSquared  = ((charEcon − demoEcon)² + (charSocial − demoSocial)²) / 2
+fit              = 0.2 + 0.8 × exp(−distanceSquared / 18)
+closingMult      = isClosingSprint ? 2 : 1
+boost            = 2 × fit² × closingMult   // percentage points
+resistance       = max(0, sign(boost) × currentModifier) / 20
+newModifier      = clamp(currentModifier + boost × (1 − resistance), −20, +20)
+\`\`\`
+
+- Closing sprint = the final 4 turns of the election
+- Cap: ±20 percentage points turnout modifier
+- Resistance is directional: pushing further in the direction a bucket is already pushed is harder, while a positive action can recover a suppressed bucket
+- Decay: the modifier halves every 6 turns toward zero (half-life 6)
+
+Older races (before campaign rules version 1) still use the legacy formula, kept in \`src/lib/turn/demographicTurnoutCalculations.ts\`:
+
+\`\`\`
 distance         = |charEcon − demoEcon| + |charSocial − demoSocial|
 alignmentMult    = max(0.1, 1.0 − distance × 0.15)
-seasonMult       = isCampaignSeason ? 2.0 : 1.0
-rawBoost         = baseBoost × alignmentMult × seasonMult
-adjustedBoost    = rawBoost × (1 − |currentModifier| / 20)   // diminishing returns
-newModifier      = clamp(currentModifier + adjustedBoost, −20, +20)
+rawBoost         = 0.05 × alignmentMult × (isCampaignSeason ? 2.0 : 1.0)
 \`\`\`
 
-- Campaign season = election active with \`endTime\` within 4 hours (4 turns)
-- Cap: ±20 percentage points turnout modifier
-- Decay: 2% of current value per turn toward zero
-
-**Alignment multiplier table:**
+with a 2% per turn decay. Legacy alignment multiplier table:
 
 | Manhattan distance | Alignment multiplier |
 |---|---|
 | 0 | 1.0 × |
 | 3 | 0.55 × |
 | 5 | 0.25 × |
-| 6.6+ | 0.1 × (floor) |
+| 6+ | 0.1 × (floor, reached at distance 6.0) |
 
 ---
 
@@ -187,12 +197,16 @@ An empty state Org map gives every party a neutral 1× fallback. In a populated 
 
 ## Turnout modifier decay
 
-Each turn: \`newModifier = currentModifier × 0.98\`
+Each turn on current races: \`newModifier = currentModifier × 2^(−1/6)\` (half-life of 6 turns, \`src/lib/campaignTargeting/rules.ts\`). Legacy races use \`currentModifier × 0.98\`.
 
-Effect accumulates over turns:
-
-| Turns since canvassing | Modifier remaining |
+| Turns since canvassing | Modifier remaining (current races) |
 |---|---|
+| 0 | 100% |
+| 4 | ~63% |
+| 10 | ~31% |
+| 20 | ~10% |
+
+---|---|
 | 0 | 100% |
 | 4 | ~92% |
 | 10 | ~82% |
