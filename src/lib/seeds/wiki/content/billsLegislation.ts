@@ -58,6 +58,10 @@ The NPI ladder makes omnibus bills expensive, the one-bill rule stops one sponso
 - **Sign or veto** if you are the president. **Override** a veto if you hold a seat.
 - **Co-sponsor** another member's bill, or remove your co-sponsorship.
 
+![Guided legislative proposal dialog on the Congress page with the by domain, by metric and custom bill choices](/wiki-images/screens/bills-legislation-bill-composer.webp)
+
+![Bill page with a floor vote semicircle and the legislative timeline](/wiki-images/screens/bills-legislation-bill-page.webp)
+
 Tips: count the chamber before you file; propose in the chamber where you are strongest; keep provisions few.
 
 ### Proposal rules

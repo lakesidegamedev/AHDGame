@@ -101,6 +101,8 @@ metric-decay-recovery
 - **Central bank chairs:** the prime rate is your main lever on inflation, with a 12-turn delay (see [Central Banks](/wiki/central-banks)).
 - **Governors and presidents:** metrics feed your approval rating (see [Government Approval](/wiki/government-approval)).
 
+![Country Metrics page showing the average score, political direction and democratic health](/wiki-images/screens/national-metrics-country-metrics.webp)
+
 **Common questions.** *Why is inflation rising when I cut rates?* Rates below the neutral rate push inflation up, and the full effect of a change takes 12 turns to arrive. *Why did unemployment not fall once growth picked up?* Hiring lags: background jobs close half the gap in about 24 turns, and only growth above trend (a positive output gap) lowers the target. *What is a healthy range?* Growth near the region's own trend, unemployment near its structural rate, and inflation near the country's target.
 
 ## Connections

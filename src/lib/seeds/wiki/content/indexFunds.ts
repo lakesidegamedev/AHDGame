@@ -56,6 +56,8 @@ index-fund-reinvest-vs-direct
 - **Steer a company.** Own at least half of a fund's units and you direct how its shares vote (see below).
 - **Sponsor a fund or petition for a listing,** if you run a corporation (see below).
 
+![Index fund page showing NAV per unit, assets under management, holders, backing ratio and the Buy fund units button](/wiki-images/screens/index-funds-fund-page.webp)
+
 Tips: fund holders are paid dividends in cash, so a fund suits you if you want income as well as growth.
 
 ## How a fund votes its shares

@@ -7,9 +7,9 @@ This page covers declaring, scoring, computer-run candidates (NPPs) and tactics.
 ## How it works
 
 1. **A cycle spawns** and the primary phase opens.
-2. **You declare** during the window. It closes at the primary deadline: 48 hours after spawn for a US House race, 240 hours for a Senate race. After that no new candidacies are accepted.
+2. **You declare** during the window. It closes at the primary deadline: 72 turns after spawn for a regular US House race, 264 turns for a Senate race. After that no new candidacies are accepted.
 3. **Standings are scored every turn** with your primary score (below).
-4. **Ballots start counting in the closing stretch**, a window as long as the race's own general election (48 turns for House and Senate). A Senate seat that sits in its primary for 240 hours does not cast ballots until the last 48. Each turn of that window, each party's registered voters release a slice of ballots, paced by the same closing-surge curve the general uses, and the slice is split between that party's candidates in proportion to their score that turn. Independents and unregistered voters cast no primary ballot.
+4. **Ballots start counting in the closing stretch**, a window as long as the race's own general election (24 turns for standard elections). A Senate seat that sits in its primary for 264 turns does not cast ballots until the last 24. Each turn of that window, each party's registered voters release a slice of ballots, paced by the same closing-surge curve the general uses, and the slice is split between that party's candidates in proportion to their score that turn. Independents and unregistered voters cast no primary ballot.
 5. **At the deadline the cumulative count decides.** The party's top vote-getter advances and the others are marked withdrawn. Where a party has no registered voters on file, the highest score wins instead.
 6. **The winner moves into the general.** Losers get a notification, and a general-phase tally is set up for the election.
 
@@ -21,9 +21,9 @@ Why ballots accumulate: a sustained lead should beat a last-turn surge, and a la
 
 | Item | Value |
 | --- | --- |
-| Primary deadline, US House | 48 hours after spawn |
-| Primary deadline, US Senate | 240 hours after spawn |
-| Ballot window | As long as the race's general election (48 turns) |
+| Primary length, regular US House | 72 turns |
+| Primary length, regular US Senate | 264 turns |
+| Ballot window | As long as the race's general election (24 turns) |
 | State score: alignment with the state | 25 points |
 | State score: alignment with the party | 15 points |
 | State score: favorability | 35 points |

@@ -129,6 +129,8 @@ Your portfolio tax statement shows tax assessed, amounts paid or withheld, remai
   - Bring the rating up: reduce the deficit and let GDP grow. Watch the 60%, 100% and 150% lines, where the costs jump.
 - **Plan your own tax.** Check your tier before a big sale. A Long Term Holdings sale uses capital gains rates, a Short Term one uses income rates.
 
+![Federal Budget page showing revenue, spending, surplus, debt to GDP and credit rating](/wiki-images/screens/national-budget-country-budget.webp)
+
 **Common questions.** *Why did my sale pay less than expected?* Tax on the profit was withheld before the cash arrived. *Why is my wealth lower after I earned income?* Any tax you could not pay yet counts as debt against your wealth. *Does the credit rating change anything for me?* It changes the trust the public has in the government, corporate margins in the country and what new bonds cost.
 
 ## Connections

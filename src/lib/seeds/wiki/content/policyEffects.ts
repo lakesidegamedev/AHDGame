@@ -65,6 +65,8 @@ policy-adaptation-decay
 - **Replace a law.** Enacting a bill on the same legislation type in the same place overwrites the old record, and the metric starts moving toward the new target. Two opposing bills on the same type do not cancel: the last one enacted wins. Subsidies, embargoes and union bans have explicit repeal provisions (see [Bills & Legislation](/wiki/bills-legislation)).
 - **Be patient.** Expect the first visible move within a day or two of real time, and most of the effect within about ten days for a strong law.
 
+![National Policy page listing statutes grouped by domain with their enacted dates](/wiki-images/screens/policy-effects-national-policy.webp)
+
 Tips: pass the law early if you want to see it before the next election; remember a state law is stronger on its own state than a national law is on any one region.
 
 ### Two policy scales

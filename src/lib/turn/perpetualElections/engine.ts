@@ -58,7 +58,7 @@ export async function ngElectionsLive(db: Db): Promise<boolean> {
 // etc.) that import DEFAULT_DURATIONS from this module keep working.
 
 export function getGeneralWindow(electionType: string): number {
-  return DEFAULT_DURATIONS[electionType]?.generalDurationHours ?? 48;
+  return DEFAULT_DURATIONS[electionType]?.generalDurationHours ?? 24;
 }
 
 /**

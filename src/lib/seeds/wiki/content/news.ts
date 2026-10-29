@@ -6,6 +6,8 @@ The news feed is the public in-game paper. Players write articles and place paid
 
 Open **News** in the nav. There are two tabs: free **articles** and **sponsored posts**. System posts appear when the engine has something the whole country or world should see. They are different from your private [Notification Center](/wiki/notifications) and from [Mail](/wiki/mail).
 
+![News and events feed with the News and Sponsored tabs and the Post news button](/wiki-images/screens/news-feed.webp)
+
 | Number | Value |
 | --- | --- |
 | Free article cost | 0 actions, no funds |
