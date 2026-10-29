@@ -114,12 +114,16 @@ const FRESH_PLANTS_INTERVENTIONS_OFF = Object.freeze({
  * revenue by funded turn 23 with an 18% losing share and median prices 2.4x
  * base, where 6%/10x crashed mid-run and 3%/5x crashed by turn 8). A seeded
  * world starts far short of real demand: short plants build in a quarter of
- * the time, and prices move at most 2% a turn up to 3x.
+ * the time, and prices move at most 2% a turn up to 2x (owner 2026-10-29: arm
+ * D's 3x ceiling let the first sellers into short markets earn up to three
+ * times base for as long as the shortage lasted). Building responds to unmet
+ * quantity, not price, so the lower ceiling trims that windfall without
+ * slowing the supply response; 2x base still clears the NPP entry margin screen.
  */
 const FRESH_PLANTS_SETTINGS = Object.freeze({
   producerShortageBuildFactor: 0.25,
   producerPriceMaxMove: 0.02,
-  producerPriceMaxMultiplier: 3,
+  producerPriceMaxMultiplier: 2,
 } as const satisfies Partial<GameConfig>);
 
 /**
