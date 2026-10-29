@@ -72,7 +72,7 @@ If the fund has 2,000 outstanding subscriber units, each unit is worth ¥80. A p
 - **Liquidity:** Redeem at any time at NAV. Unlike individual bonds, there is no maturity lock-up.
 - **Management fee:** System funds charge nothing beyond the pass-through split (75/25). A **sponsored** fund charges an annual expense ratio, shown on its card. Check it before you subscribe.
 - **Visibility:** A fund is not a black hole on your net worth. Fund cash counts in the national money supply, and your fund units are valued at the quoted NAV in your portfolio snapshot alongside shares and bonds. Moving cash into a fund changes what you hold, not what you are worth.
-- **Tax:** Fund dividends and redemption proceeds are not taxed at the individual level, exactly as direct share dividends and share sales are not. Capital-gains tax is levied on the economy as a whole through the national budget, not on your trades. Holding an index fund is therefore never worse for tax than holding the same shares directly.
+- **Tax:** Fund dividends count as taxable income for the individual income tax, the same as direct share dividends (see [National Budget](/wiki/national-budget)). Redemption proceeds are not on the taxable income list (\`src/lib/budget/rules/incomeTaxTiers.ts\`).
 
 ## How a fund votes its shares
 

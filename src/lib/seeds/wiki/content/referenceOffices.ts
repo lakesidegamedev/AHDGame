@@ -158,6 +158,17 @@ The primary legislature. Three candidates advance from UK primaries (vs 1 in the
 
 Regional Councillors represent UK nations and regions in devolved assemblies. Regional legislation is signed by the First Minister of each nation.
 
+### First Minister (Scotland and Wales)
+
+| Field | Value |
+|---|---|
+| Won by | Leader of the governing party in the devolved parliament |
+| Action bonus | +4/turn |
+| Party strength weight | 1.0 |
+| Sub-national | No |
+
+The head of government of a devolved nation. Source: \`src/lib/countries/sco/institutionsFacts.ts\` and \`src/lib/countries/wal/institutionsFacts.ts\`.
+
 ### Governor of the Bank of England
 
 | Field | Value |
@@ -209,6 +220,18 @@ The German lower house. AMS means seats are allocated proportional to party vote
 | Sub-national | Yes |
 
 The chief executive of a German state (Land). Equivalent to a US Governor. Signs state legislation and controls state executive functions.
+
+### Member of the Landtag
+
+| Field | Value |
+|---|---|
+| Won by | Landtag election |
+| Term | 5 years |
+| Action bonus | +1/turn |
+| Party strength weight | 0.85 |
+| Sub-national | Yes |
+
+A member of a German state parliament.
 
 ### President of the ECB
 
@@ -273,6 +296,18 @@ Staggered 6-year terms, 124 seats contested per cycle (2 classes). The Sangiin *
 | Sub-national | Yes |
 
 Japan's regional chief executives. Signs regional legislation; controls regional budget allocations.
+
+### Regional Councillor (Japan)
+
+| Field | Value |
+|---|---|
+| Won by | Regional council election |
+| Term | 4 years |
+| Action bonus | +1/turn |
+| Party strength weight | 0.85 |
+| Sub-national | Yes |
+
+A member of a Japanese regional council.
 
 ### Governor of the Bank of Japan
 

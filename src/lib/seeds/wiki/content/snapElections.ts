@@ -1,6 +1,6 @@
 export const snapElectionsContent = `# Snap Elections
 
-Parliamentary countries (UK, JP, DE, and IE) can dissolve their lower chamber **before** its regular term ends. This creates an early general election, a **snap**. The US has no snap mechanic: it does not have a no-confidence mechanism.
+Parliamentary countries (UK, JP, DE, IE and others listed below) can dissolve their lower chamber **before** its regular term ends. This creates an early general election, a **snap**. The US has no snap mechanic: it does not have a no-confidence mechanism.
 
 Snaps can happen two ways: a sitting Prime Minister (or Chancellor in DE) calls one voluntarily, or the system auto-triggers one when a PM vacancy extends beyond 96 turns. A third kind of dissolution is not a snap at all and reaches any system: a **conversion** (a collapsed regime, a ratified constitutional convention, or a regime-change peace term) dissolves the legislature and holds the election it promises, without spending the head of government's own snap allowance and without moving the rest of the electoral calendar; where the next scheduled election would now fall too close to run a nomination period, it waits for the following cycle instead.
 
@@ -14,6 +14,15 @@ For the regular cycles see [United Kingdom](/wiki/uk-overview), [Japan](/wiki/jp
 | 🇯🇵 JP | Yes | Shūgiin | Snap Shūgiin election |
 | 🇩🇪 DE | Yes | Bundestag | Snap Bundestag election |
 | 🇮🇪 IE | Yes | Dáil | Snap Dáil election |
+| 🇦🇹 AT | Yes | Nationalrat | Snap Nationalrat election |
+| 🇬🇷 GR | Yes | Hellenic Parliament | Snap Hellenic Parliament election |
+| 🇮🇹 IT | Yes | Chamber of Deputies | Snap Chamber of Deputies election |
+| 🇪🇸 ES | Yes | Congress of Deputies | Snap Congress of Deputies election |
+| 🇫🇮 FI | Yes | Eduskunta | Snap Eduskunta election |
+| 🇫🇷 FR | Yes | National Assembly | Snap National Assembly election |
+| 🇹🇷 TR | Yes | National Assembly | Snap National Assembly election |
+| Scotland | Yes | Scottish Parliament | Snap Scottish Parliament election |
+| Wales | Yes | Senedd Cymru | Snap Senedd election |
 | 🇺🇸 US | No | N/A | N/A |
 
 Upper chambers (UK Lords, JP Sangiin, DE Bundesrat) are explicitly excluded. Lords isn't elected at all, the Sangiin has its own fixed cycle independent of snaps, and the Bundesrat is appointed by Land governments.

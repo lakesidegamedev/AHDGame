@@ -4,15 +4,15 @@ Polls are paid actions that simulate what would happen if the election resolved 
 
 ## Quick poll
 
-- **Cost:** 2 actions + ₳25,000
+- **Cost:** 2 actions + a base of ₳25,000, adjusted by your Intellect (about 20% either way) and the era price level. The poll dialog shows your exact quote
 - **Scope:** Your current or about-to-declare race
 - **Returns:** Topline vote share + your 5 strongest demographic groups + your 5 weakest
 
-Quick Poll is the "should I run?" tool. Before declaring any candidacy, spend 2 actions and ₳25k to see whether you've got a realistic path. The topline is presented as a percentage-of-votes projection against the current field.
+Quick Poll is the "should I run?" tool. Before declaring any candidacy, spend 2 actions and roughly ₳25k to see whether you've got a realistic path. The topline is presented as a percentage-of-votes projection against the current field.
 
 ## Full demographic poll
 
-- **Cost:** 6 actions + ₳75,000
+- **Cost:** 6 actions + a base of ₳75,000, adjusted the same way. The poll dialog shows your exact quote
 - **Scope:** Same race as Quick, deeper output
 - **Returns:** Complete per-group breakdown across every demographic category
 
@@ -44,7 +44,7 @@ Polls run the **exact same** group-level competitive allocation the turn process
 
 For **presidential races**:
 
-Player polls are **home-state projections only**. The actual presidential vote model is different: it runs per electoral unit with party-weighted positions, steep party-org curves, state-lean adjustments, swing-state ground-game bonuses, and does **not** apply the FPTP spoiler step. Your poll shows what your home state would do; it does **not** forecast the Electoral College.
+Player polls are **home-state projections only**. The actual presidential vote model is different: it runs per electoral unit with party-weighted positions, steep party-org curves, state-lean adjustments, swing-state ground-game bonuses, and applies a 2% organisation-aware FPTP spoiler. Your poll shows what your home state would do; it does **not** forecast the Electoral College.
 
 ## FPTP spoiler in polls
 

@@ -6,13 +6,13 @@ The world shares one number: a tension gauge from 0 to 100 that sits at the top 
 
 | Band | Reading | What it feels like |
 |---|---|---|
-| DETENTE | low | Genuine thaw. Summits, treaties, trade across the divide. |
-| CALM | below the midpoint | The ordinary cold war. Watchful, armed, stable. |
-| ELEVATED | around the midpoint | Incidents accumulate. Diplomats work late. |
-| CRISIS | high | The world holds its breath. Miscalculation gets expensive. |
-| BRINK | highest | The final band. Nobody plans past it. |
+| DETENTE | below 15 | Genuine thaw. Summits, treaties, trade across the divide. |
+| CALM | 15 to 34 | The ordinary cold war. Watchful, armed, stable. |
+| ELEVATED | 35 to 59 | Incidents accumulate. Diplomats work late. |
+| CRISIS | 60 to 79 | The world holds its breath. Miscalculation gets expensive. |
+| BRINK | 80 and above | The final band. Nobody plans past it. |
 
-The exact thresholds between bands are visible on the gauge itself; the band label is what most of the world's machinery reacts to.
+The band label is what most of the world's machinery reacts to.
 
 ## What raises it
 

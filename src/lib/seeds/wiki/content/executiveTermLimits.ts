@@ -26,6 +26,8 @@ Your terms-served count for a given country is the higher of two numbers:
 
 Taking the higher of the two means a character with an older career history but no counter yet still gets counted accurately, and a counter that's already ticked up never gets undercut by an incomplete history scan. You can't get a fresh two terms by having your history quietly under-report.
 
+Terms flagged as founding terms in a character's history do not count toward the cap (\`src/lib/elections/executiveTermLimits.ts\`).
+
 The count is tracked **per country**. If your character has some other route into a foreign executive office, terms served there don't count against your term limit at home, and vice versa.
 
 An acting president seated during a contingent-election deadlock does not count toward term limits. Serving in that role does not use up one of your capped terms, and it is recorded as an appointment rather than an elected term.

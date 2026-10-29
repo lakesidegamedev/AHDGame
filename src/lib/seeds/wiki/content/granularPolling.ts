@@ -1,10 +1,10 @@
 export const granularPollingContent = `# Granular Polling
 
-A standard poll gives you overall appeal against the twelve broad voter archetypes. Granular polling is a deeper read on the same electorate: exit-poll style marginals and cross-tab segments built from Layer-1 census demographics instead of the archetype buckets. It shows up as an extra panel on your poll results when it is turned on for your world.
+A standard poll gives you overall appeal against the twelve broad voter archetypes. Granular polling is a deeper read on the same electorate: exit-poll style marginals and cross-tab segments built from Layer-1 census demographics instead of the archetype buckets. It shows up as an extra panel on your poll results.
 
 ## Whether it's available
 
-Granular polling is an admin-controlled world setting. If it is off, your poll results look exactly like the standard poll: overall appeal, top and bottom groups, category breakdowns. If it's on, you get an additional "Granular electorate" panel underneath. There is no separate action or extra cost, it rides on the same poll action you already take, small or large.
+Granular polling is on by default in new worlds. Worlds that predate it may not show it; there your poll results look exactly like the standard poll: overall appeal, top and bottom groups, category breakdowns. Where it is on, you get an additional "Granular electorate" panel underneath. There is no separate action or extra cost, it rides on the same poll action you already take, small or large.
 
 ## What the panel shows
 
@@ -27,7 +27,7 @@ Smaller segments have a wider margin of error, the same reason a national poll c
 
 - Use granular polling to find where your appeal is weak within a state, not just whether it's weak overall. A flat overall appeal number can hide a state where you are dominating one demographic and getting wiped out in another.
 - Small, narrow segments (especially after stacking two or more filters) carry the widest error. Do not over-commit a campaign strategy to a single small cross-tab reading.
-- If your world doesn't show the granular panel, the feature is simply off for that world; there is nothing broken on your end and no separate unlock to chase.
+- If your world doesn't show the granular panel, the feature is not enabled in that world; there is nothing broken on your end and no separate unlock to chase.
 
 See also: [Campaign Manager](/wiki/campaign-manager), [Canvassing](/wiki/canvassing).
 `;

@@ -11,7 +11,7 @@ A country enters crisis after three consecutive bond auctions fail to attract en
 | Repudiate | −12% | No |
 | Restructure | −6% | No (one-time haircut) |
 | **Bailout (this facility)** | **−2%** | **Yes: income capture, 240-turn term** |
-| Monetize | No flat GDP hit | Inflation shock; unavailable at 8% inflation or above |
+| Monetize | No flat GDP hit | Inflation shock; unavailable above 8% inflation |
 
 Bailout has a smaller flat GDP hit than repudiate or restructure. Monetize has no flat GDP hit, but substitutes an inflation shock and can be unavailable when inflation is already high. The bailout's continuing cost is a slice of the country's revenue for a long time afterward.
 

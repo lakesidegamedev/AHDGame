@@ -6,7 +6,7 @@ You have a character. This page is the shortest path from "just signed up" to "I
 
 - The game runs in your browser. There is no download.
 - One turn runs every real hour. You do not have to be online for it. Log in once or twice a day, spend your actions, and leave.
-- If you have no character yet, the game sends you to **Create Character**. Every onboarding choice is explained in [Create a Character](/wiki/create-a-character).
+- If you have no character yet, the game sends you to **Create Character**. Every onboarding choice, including your wealth background, is explained in [Create a Character](/wiki/create-a-character).
 - Choose a country whose politics you already understand if you are learning. The country picker is the authoritative list for your world; the historical hubs at the bottom of this page are reading material, not a promise that every country is open.
 - Your first week is about influence, a party, and one race. Corporations, bonds, and central banks can wait.
 
@@ -27,7 +27,7 @@ Six numbers matter in your first session. The rest can wait.
 | **Favorability** | How voters feel about you right now. It starts at 50. | Election appeal and how forgiving voters are when you flip positions. |
 | **Political Influence (PI)** | Your standing in your home state. New characters start at 10, the same floor as NPPs. | Primary and general-election strength. It decays 0.75% per turn, so Campaign is a maintenance action. |
 | **National Influence (NPI)** | Your national reputation. It starts at 0. | Presidential primaries, national races, and national party work. It decays 1% per turn, then grows from your state PI and your highest office or party role. |
-| **Cash on Hand** | Personal money, separate from Campaign Funds. It starts at 0. | Shares, bonds, property, and player-to-player wires. Do not spend it thinking it is campaign money. |
+| **Cash on Hand** | Personal money, separate from Campaign Funds. It starts at the grant for your wealth background: 1,000,000, 2,500,000 or 5,000,000 anchor units for low, middle or high, scaled to the world's era, plus a bonus if you were referred. | Shares, bonds, property, and player-to-player wires. Do not spend it thinking it is campaign money. |
 
 Campaign Funds and Cash on Hand are different pools. You can move money between them later through the Portfolio, but nothing on the campaign screen spends your personal cash automatically.
 
@@ -39,7 +39,7 @@ Campaign Funds and Cash on Hand are different pools. You can move money between 
 
 3. **Join a party.** Open **Parties** and compare platforms. Independents can run through the independent primary, but a party gives you its primary, organization, action pool, and leadership ladder. If the party requires approval, start as an Independent and apply; do not wait to begin campaigning.
 
-4. **Build one donor network and fundraise once.** **Build Donor Network** costs 6 actions and raises your fundraising ceiling. **Fundraise** costs 3 actions and refills Campaign Funds. Together they are the engine that keeps the rest of your first week funded.
+4. **Build one donor network and fundraise once.** **Build Donor Network** costs 4 actions at the starting donor level and raises your fundraising ceiling. **Fundraise** costs 3 actions and refills Campaign Funds. Together they are the engine that keeps the rest of your first week funded.
 
 5. **Find a race.** Open **Elections**. Filter to your country and home state or region. Look for a State Senate or House seat, or the local equivalent, that is still in its primary. Check the closing countdown before you do anything else.
 

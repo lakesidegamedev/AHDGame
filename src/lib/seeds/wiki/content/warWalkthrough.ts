@@ -54,12 +54,15 @@ He decides the United States is a **power-projection** nation and spends deliber
 
 | Adopted | Cost | Running total |
 | --- | --- | --- |
-| Blue-Water Navy (next node) | 3 | 3 |
-| Strategic Logistics (next node) | 3 | 6 |
-| Expeditionary Warfare | 3 | 9 |
-| Joint Task Force | 3 | 12 |
+| Dreadnought Line (Blue-Water Navy) | 1 | 1 |
+| Fast Battleship Groups | 2 | 3 |
+| Surface Task Forces | 2 | 5 |
+| Amphibious Invasion Doctrine | 2 | 7 |
+| Island-Hopping | 2 | 9 |
+| Carrier Experiments | 1 | 10 |
+| Carrier Task Forces | 2 | 12 |
 
-**Twelve points, gone, permanently.** Brennan cannot undo this and neither can his successor; the one point a year that arrives from now on is all there is to work with. Every US general from now on should be training toward expeditionary logistics and joint operations, because those are the traits the nation now boosts.
+**Twelve points, gone, permanently.** Brennan cannot undo this and neither can his successor; the one point a year that arrives from now on is all there is to work with. Every US general from now on should be training toward naval and amphibious operations, because those are the traits the nation now boosts.
 
 > **Mistake avoided:** he does not buy one node from each category. A scattered twelve points produces a nation good at nothing.
 
@@ -69,7 +72,7 @@ He decides the United States is a **power-projection** nation and spends deliber
 
 Crucially, **Brennan cannot spend those points.** He posts a message telling the corps what doctrine the nation adopted, and each player trains their own general.
 
-Ruiz's player reads the doctrine list and goes down **Expeditionary Operator**, which the nation's newly adopted Expeditionary Warfare doctrine boosts. Aldridge's player takes **Staff Organizer** and **Supply-Conscious Commander**.
+Ruiz's player reads the doctrine list and goes down **Expeditionary Operator**, which fits the nation's newly adopted amphibious and naval doctrine. Aldridge's player takes **Staff Organizer** and **Supply-Conscious Commander**.
 
 Between turn 1,015 and 1,150 (about five and a half real days) each general also accrues **five tenure points** (one per 24 turns). By the time war comes they have **9 points spent or banked**, not 4.
 
@@ -91,7 +94,7 @@ Then he assigns units. Each unit card gets an **Assign to …**: Ruiz gets the M
 
 He watches capacity. Pacific Command covers two regions, so its capacity is modest; he stops assigning before the panel shows an over-capacity penalty and puts the surplus under a second general in the same Command.
 
-> **Mistake avoided:** he does not leave a Command with no commander. That is a flat 10% effectiveness penalty for nothing.
+> **Mistake avoided:** he does not leave a Command with no commander. That is a flat 10 effectiveness point penalty for nothing.
 
 At this point **not one unit has moved.** Every one of them is in reserve, because no general is posted to a conflict: there are no conflicts. The world is at peace.
 
@@ -132,7 +135,7 @@ The moment it enacts:
 
 **Opening forces deploy automatically.** A matched slice of both sides' unassigned reserve moves to the front: both sides commit the same share, measured against whichever reserve pool is smaller, smallest formations first. Nobody is handed an army they did not build.
 
-Hale's declaration cooldown now runs until **turn 1,294**.
+Hale's declaration cooldown now runs until **turn 1,270**: it counts from the turn the bill was proposed (1,150), not from when it passed.
 
 ---
 
@@ -336,7 +339,7 @@ Ashford, whose army is fresh but who never raised the **Territorial and Reserve 
 
 **Turn 1,690.** Britain, unable to sustain the front alone, offers its own **white peace**: the term that takes nothing and names no winner. It could have offered to pay an indemnity and been refused, or been asked for a harsher term and made to pay it.
 
-Britain was the last country on side A. **The side empties, so the war ends outright**, with China recorded as the winner of the war even though the last settlement in it was a white peace. Every remaining cross-side pair is truced.
+Britain was the last country on side A. **The side empties, so the war ends outright**, and because the last settlement was a white peace, the war is recorded as a stalemate with no winner. Every remaining cross-side pair is truced.
 
 ---
 

@@ -45,8 +45,8 @@ Extraction corporations with active R&D budgets can permanently increase a state
 
 Prospecting is a deliberate, paid alternative to waiting on R&D breakthroughs. Any extraction corporation with a sector in a state, or that state's own government (national or state level), can commission a geological survey targeting one resource in one state. NPP miners do this too when the deposit is short and they can afford the survey.
 
-A survey has a 12-turn base duration multiplied by the era duration scale. In
-the 1953 preset that is 18 turns. The corporation launching a survey pays a
+A survey has a 6-turn base duration multiplied by the era duration scale. In
+the 1953 preset that is 9 turns. Earlier eras also scale success chance and yield: in 1953 success odds are multiplied by 0.6 and the payout by 1.6 (\`src/lib/constants/prospecting.ts\`). The corporation launching a survey pays a
 starting cost of ₳500,000, which climbs the more that state and resource have
 already been successfully surveyed (up to 4x the base cost). Government-funded
 surveys draw from the national treasury or the state budget instead of a
@@ -56,10 +56,10 @@ Success odds and payout differ by who is funding the survey:
 
 | Initiator | Success chance | Capacity gain on success |
 | --- | --- | --- |
-| Corporation | 25% to 80%, scaling with the corporation's R&D score | 3% to 16% of current capacity, scaling with R&D score |
+| Corporation | 40% to 80%, scaling with the corporation's R&D score | 3% to 16% of current capacity, scaling with R&D score |
 | Government (national or state) | Flat 50% | 4.5% to 12% of current capacity |
 
-Every survey is capped at adding no more than 20% of the resource's current capacity in a single roll, even at maximum R&D score. A corporation can run up to three active surveys at once; each government can also run up to three active surveys at once across the country.
+Every survey is capped at adding no more than 20% of the resource's current capacity in a single roll, even at maximum R&D score. A corporation can run up to six active surveys at once; each government can also run up to six active surveys at once across the country.
 
 A failed survey costs the money already paid and produces nothing. A successful survey immediately increases the state's capacity for that resource, available starting the next turn's commodity price calculation.
 
@@ -95,7 +95,7 @@ State resource capacity is divided between two pools:
 
 **Open-access capacity** is the remainder: available to all extraction sectors in that state on a first-come, proportional basis. If total demand from uncontracted sectors exceeds the open pool, every uncontracted sector's output is squeezed proportionally.
 
-Player-issued offers cannot take the total offered and active share above **75%**, so at least one quarter remains open access. Admin grants are an override: they can push allocation past 100%, at which point the open-access pool collapses to zero and uncontracted sectors produce nothing for that resource.
+Player-issued offers cannot take the total offered and active share above **75%**, so at least one quarter remains open access.
 
 ## Which states have which resources
 

@@ -4,7 +4,7 @@ Short rules. Each one is a click, not a lecture.
 
 ## 1. Spend actions; do not hoard them
 
-Dashboard shows actions. They roll to 200, but above 100 you pay -4/turn. Click Campaign, donor, poll, or ads every session.
+Dashboard shows actions. At baseline they roll to 200, but above 100 you pay -4/turn. Higher Energy raises both: up to a 250 cap and a 125 hoard threshold at max Energy. Click Campaign, donor, poll, or ads every session.
 
 ## 2. Join a party before you declare
 
@@ -60,7 +60,7 @@ campaign
 
 ## 13. Country is sticky
 
-Picked at creation. Relocation wipes party, NPI, and national posts. See [Relocation](/wiki/relocation).
+Picked at creation. Relocation resets your regional influence and state-bound posts. National influence resets if you change country, and your party only resets if the move takes you outside the party's reach. There is a 72-turn cooldown between moves. See [Relocation](/wiki/relocation).
 
 ## 14. Do not clone existing law
 

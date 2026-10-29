@@ -65,7 +65,7 @@ NPPs (Non-Player Politicians) fill empty seats and vote autonomously. At scale, 
 
 In a world with continuous turns, coordination is time-sensitive. The most effective coordination patterns:
 
-**Legislative coordination**: Player A proposes a bill, Player B endorses it, Player C coordinates whip votes in the other chamber. Bills die from lack of action more than active opposition; coordinated action gets bills through in 2 to 4 turns rather than stalling indefinitely.
+**Legislative coordination**: Player A proposes a bill, Player B endorses it, Player C coordinates whip votes in the other chamber. Bills die from lack of action more than active opposition; coordinated action gets bills through in a few days (each chamber vote runs 24 hours) rather than stalling indefinitely.
 
 **Electoral coordination**: Two players in the same party can split their campaign efforts: one focuses NE states, one focuses SW, so neither cannibalizes the other's ad spend or primary slots.
 

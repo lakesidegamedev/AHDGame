@@ -116,7 +116,7 @@ Pegs persist until removed; nudges apply for one turn and are consumed. This let
 Beyond margin modifiers, commodity prices now **scale sector revenue** directly through **price realization** (when the market system tier is enabled):
 
 \`\`\`
-factor = clamp((price / basePrice) ^ 0.5, 0.7, 1.5)
+factor = clamp((price / basePrice) ^ 0.5, 0.7, 2.0)
 sectorRealization = supply-rate-weighted mean of factors across outputs
 realizedRevenue = baseRevenue × sectorRealization
 \`\`\`
@@ -124,14 +124,14 @@ realizedRevenue = baseRevenue × sectorRealization
 | Market condition | Realization factor |
 | --- | --- |
 | Balanced (price = base) | 1.0× |
-| Mild shortage (2× price) | ~1.41× (capped at 1.5×) |
+| Mild shortage (2× price) | ~1.41× (the cap is 2.0×) |
 | Oversupply (0.5× price) | ~0.71× (floored at 0.7×) |
 
 Key properties:
 
 - **Output-weighted**: sectors that sell many commodities blend realization across their supply profile.
 - **Lagged prices**: realization uses prior-turn prices, breaking feedback loops that would oscillate wildly.
-- **Bounded shock**: per-turn revenue moves at most −30% / +50% from realization alone.
+- **Bounded shock**: per-turn revenue moves at most -30% / +100% from realization alone (\`src/lib/market/priceRealization.ts\`).
 
 Shortages finally reward producers with higher **top-line revenue**, not just margin percentage points, and gluts bleed revenue even when margins look tolerable. This is the main reason to chase scarce commodities under the current market system.
 
@@ -308,7 +308,7 @@ Suppose steel demand is twice supply, so the raw D/S ratio is 2.0.
 
 - A **buyer** that consumes steel at rate 1.0 sees an input-cost modifier of roughly **-27.7 margin points**.
 - A **seller** that produces steel sees an output bonus of roughly **+27.7 margin points**.
-- If the seller's realized price is also above base, price realization adds revenue on top. A 2x price gives a realization factor of about **1.41x**, capped at 1.5x.
+- If the seller's realized price is also above base, price realization adds revenue on top. A 2x price gives a realization factor of about **1.41x**, capped at 2.0x.
 
 That is why vertical integration works: the same shortage that hurts a steel-consuming manufacturer helps a steel-producing extraction sector. It is also why a shortage is not automatically a build signal. If supply is already rising and the price is near the top of its run, you may be buying capacity at the peak.
 

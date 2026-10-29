@@ -34,7 +34,7 @@ A Command has:
 | --- | --- |
 | **Name** | Yours to choose. |
 | **Type** | Homeland Defense, Regional, or Logistics. |
-| **Regions** | Which strategic regions it is responsible for. Up to **3** for Homeland Defense and Regional commands; uncapped for Logistics. |
+| **Regions** | Which strategic regions it is responsible for. Up to **3** for every command type, Logistics included. |
 | **Posture** | One of twelve standing postures. |
 | **Supply priority** | Normal, High, or Emergency. |
 | **Commanders** | Which of your commissioned generals belong to it. |
@@ -91,10 +91,10 @@ Every Command has a **force capacity** and an **effectiveness rating**.
 
 **Effectiveness** starts from the Command's base rating and is reduced by:
 
-- **No commander: a flat 10% penalty.** A Command with nobody leading it is materially worse than one with even a weak general.
+- **No commander: minus 10 effectiveness points.** A Command with nobody leading it is materially worse than one with even a weak general.
 - **Over capacity**: a growing penalty the further past capacity you stack units. Overloading a Command is not free.
 
-The panel gives you an itemised breakdown (base rating, then each penalty with its cost) so you can see exactly where a low rating comes from. Effectiveness never falls below a floor, and the interface colours it green above 82 and amber above 70.
+The panel gives you an itemised breakdown (base rating, then each penalty with its cost) so you can see exactly where a low rating comes from. Effectiveness never falls below a floor of 20, and the interface colours it green above 82 and amber above 70.
 
 The practical reading: **more Commands with reasonable loads beat one giant Command holding everything.** Capacity is per-Command, so splitting your army across a sensible structure avoids the over-capacity penalty entirely.
 
@@ -128,7 +128,7 @@ A TC gets two things:
 
 That second point is the one that catches people out.
 
-> ⚠️ **Designating a Theater Commander locks the Secretary of Defense out of that conflict.** Until a TC exists, the defence seat holder may declare and withdraw offensives there. The moment one is named, only the TC can: the Secretary has delegated the front and cannot act over their head. Admins retain an override; nobody else does.
+> ⚠️ **Designating a Theater Commander locks the Secretary of Defense out of that conflict.** Until a TC exists, the defence seat holder may declare and withdraw offensives there. The moment one is named, only the TC can: the Secretary has delegated the front and cannot act over their head.
 
 If a TC is dismissed, the front is **vacated** rather than orphaned: nobody is auto-promoted, and authority falls back to the defence seat holder. The Secretary has quietly taken the job back and should appoint a successor.
 
@@ -175,7 +175,7 @@ At that point the Secretary of Defense is doing what a defence minister should (
 
 ## Practical guidance
 
-**Always give a Command a commander.** The flat 10% penalty for an empty Command is the cheapest mistake on this page to avoid.
+**Always give a Command a commander.** The 10-point effectiveness penalty for an empty Command is the cheapest mistake on this page to avoid.
 
 **Do not overload one Command.** Over-capacity penalties scale. Two Commands at capacity beat one at double.
 

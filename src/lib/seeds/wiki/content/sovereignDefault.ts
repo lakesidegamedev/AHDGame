@@ -41,7 +41,7 @@ Both the debt-to-GDP penalty and the inflation penalty are threshold-gated: they
 
 ## Warning window
 
-The system gives a **3-turn warning** before the crisis formally fires. During this window the country dashboard and \`/world/crises\` show a countdown, giving the executive a chance to act pre-emptively (cut spending, raise rates, negotiate).
+The system gives a **3-turn warning** before the crisis formally fires. During this window the country dashboard and the world crises page show a countdown, giving the executive a chance to act pre-emptively (cut spending, raise rates, negotiate).
 
 ## Crisis windows
 
@@ -84,15 +84,18 @@ economic metrics.
 
 Bond-holder insolvency **cascades up to 3 levels deep**. If a major bondholder (a bank, fund, or corporation) is wiped out by a sovereign haircut, its own creditors are stressed; if they fail, the next ring is tested, and so on for three levels. This is how a single sovereign default can trigger a systemic financial crisis.
 
-## Recovery floor
+## Market lockout and recovery floor
 
-After resolution, the country's bond market stays **closed for 48 turns** before new sovereign auctions can resume:
+After resolution, how long the country is shut out of new sovereign auctions depends on the path:
 
-\`\`\`
-recoveryFloor = 48 turns (bond market closed)
-\`\`
+| Path | Bond market lockout |
+| --- | --- |
+| Repudiate | 48 turns |
+| Restructure | 16 turns |
+| IMF Bailout | none |
+| Monetize | none |
 
-During this floor the country cannot roll debt, forcing it to run primary surpluses or rely on the IMF facility.
+Separately, every resolution puts the country into recovery, which lasts at least **48 turns** (the recovery floor) and ends only once the country has also held a streak of 5 disciplined fiscal turns. While locked out the country cannot roll debt, forcing it to run primary surpluses or rely on the IMF facility.
 
 ## Summary of constants
 
@@ -120,15 +123,12 @@ During this floor the country cannot roll debt, forcing it to run primary surplu
 | Default scar duration | 100 turns |
 | Scar per-turn penalty | −1% |
 | Cascade depth | 3 levels |
-| Recovery floor | 48 turns |
+| Recovery floor (minimum recovery length) | 48 turns |
+| Bond market lockout | Repudiate 48 turns, Restructure 16 turns |
 
-## Public API
+## Public data
 
-\`GET /api/public/v1/sovereigns\` provides a world-wide sovereign watch feed for bots and dashboards. Each country row includes its credit rating, crisis state, debt-to-GDP ratio, auction-failure streak, demand ratio and band, demand components, and Debt Sustainability Assessment score. Values use the same calculations as the in-game sovereign watch surface.
-
-\`GET /api/public/v1/country/[code]/economy/history\` adds the historical view for one country: per-turn interest rates, inflation, and GDP growth plus annual GDP, revenue, spending, surplus, debt principal, debt-to-GDP, and credit-rating snapshots.
-
-Any public or private scoped API key can read both routes. See the [public API documentation](https://docs.lakesidegames.net/api/public-v1.html) for the complete response shapes and turn-range filters.
+Bots and dashboards can read sovereign data through the [public API documentation](https://docs.lakesidegames.net/api/public-v1.html).
 
 See also: [Sovereign Bonds](/wiki/sovereign-bonds), [IMF & Bailouts](/wiki/imf), [Central Banks](/wiki/central-banks), [National Budget](/wiki/national-budget)
 `;

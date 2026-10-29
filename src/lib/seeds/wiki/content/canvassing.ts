@@ -20,7 +20,7 @@ You pick two things:
 | Category | Groups |
 | --- | --- |
 | Race | White, Black, Hispanic, Asian, Other |
-| Age | Young (18-34), Middle-Aged (35-49), Mature (50-64), Senior (65+) |
+| Age | Young (18-29), Middle-Aged (30-49), Mature (50-64), Senior (65+) |
 | Education | No College, College Educated, Graduate Degree |
 | Wealth | Low Income, Middle Income, High Income |
 | Ideology | Evangelicals, Environmentalists, Libertarians, Progressives, Patriots, Gun Owners |
@@ -32,11 +32,11 @@ Canvassing targets one bucket in one category. The modifier reaches every voter 
 Each canvassing action produces a **turnout modifier boost** in the range −20 to +20 percentage points (clamped). The raw boost is computed and then damped by diminishing returns:
 
 \`\`\`
-baseBoost        = 0.05 (percentage points)
-distance         = |charEcon − demoEcon| + |charSocial − demoSocial|
-alignmentMult    = max(0.1, 1.0 − distance × 0.15)
+baseBoost        = 2.0 (percentage points)
+distanceSq       = ((charEcon − demoEcon)² + (charSocial − demoSocial)²) / 2
+fit              = 0.2 + 0.8 × exp(−distanceSq / 18)      // floor 0.2
 seasonMult       = isCampaignSeason ? 2.0 : 1.0
-rawBoost         = baseBoost × alignmentMult × seasonMult
+rawBoost         = baseBoost × fit² × seasonMult
 adjustedBoost    = rawBoost × (1 − |currentModifier| / 20)   // diminishing returns
 newModifier      = clamp(currentModifier + adjustedBoost, −20, 20)
 \`\`\`
@@ -45,13 +45,17 @@ newModifier      = clamp(currentModifier + adjustedBoost, −20, 20)
 
 Canvassing a group that aligns with your policy positions is vastly more effective than canvassing a misaligned one:
 
-| Distance | Alignment multiplier |
-| --- | --- |
-| 0 (perfect match) | 1.0× |
-| 3 | 0.55× |
-| 6+ | 0.1× (floor) |
+The fit is applied squared. With distance meaning the straight-line gap between your position and the group's lean on the economic and social axes:
 
-At maximum misalignment you get 10% of the base boost, effectively money and actions thrown away.
+| Distance | Fit | Boost multiplier (fit squared) |
+| --- | --- | --- |
+| 0 (perfect match) | 1.0 | 1.0× |
+| 3 | 0.82 | 0.68× |
+| 6 | 0.49 | 0.24× |
+| 10 | 0.25 | 0.06× |
+| Far (floor) | 0.2 | 0.04× |
+
+At maximum misalignment you get 4% of the base boost, effectively money and actions thrown away. Source: \`src/lib/campaignTargeting/rules.ts\`. Races that started before these campaign rules still use the older formula (base 0.05, linear alignment falloff, 2% decay).
 
 ### Campaign season multiplier
 
@@ -75,9 +79,9 @@ So canvassing a group from 0 to +10 takes fewer actions than canvassing from +10
 
 ## Turnout modifier decay
 
-Every turn, all turnout modifiers decay **2% of their current value toward zero**. A +10 modifier becomes ~+9.8 the next turn; after 4 turns of no reinforcement it's ~+9.2.
+Every turn, all turnout modifiers decay toward zero with a **6-turn half-life** (about 10.9% of the current value per turn). A +10 modifier becomes ~+8.9 the next turn and ~+6.3 after 4 turns of no reinforcement.
 
-**Decay planning:** If your election resolves 4 turns from now and you want a +15 modifier on election day, starting from scratch you need to land a total of ~15.3 effective boost (accounting for 2% × 4 = ~8% total decay). Sustained canvassing over 2-3 turns lands that.
+**Decay planning:** If your election resolves 4 turns from now and you want a +15 modifier on election day, starting from scratch a modifier you build now loses about 37% of its value over those 4 turns, so landing +15 on election day would need about +24 today, above the +20 cap. Land the boosts late instead: canvassing in the final 1-2 turns keeps decay losses small.
 
 ## Interaction with party GOTV
 
@@ -88,7 +92,7 @@ Party GOTV spending and player canvassing write to the **same** underlying turno
 
 Turn order within a single turn:
 
-1. All modifiers decay by 2% of current.
+1. All modifiers decay (6-turn half-life).
 2. Party GOTV (passive, budget-driven) applies.
 3. Canvassing (player action, written at request time) applies immediately on submission, not in turn processing.
 
@@ -114,8 +118,8 @@ If your party chair is already running GOTV on your aligned demographics, the mo
 
 ## Common mistakes
 
-- **Canvassing groups you don't align with.** At 6+ Manhattan distance you get 10% of base effect. Wasted action.
-- **Starting too early.** Modifiers decay. A canvass 10 turns out has depreciated significantly by election day. Time it for 2-5 turns out.
+- **Canvassing groups you don't align with.** At a distance of 6 or more you get under a quarter of the base effect. Wasted action.
+- **Starting too early.** Modifiers halve every 6 turns. A canvass 10 turns out has lost about two thirds of its value by election day. Time it for the last 1-3 turns.
 - **Ignoring diminishing returns.** If a modifier is at +18, additional canvassing returns ~10% of the base. Go somewhere fresher.
 - **Out-of-state attempts.** Always blocked. Don't try.
 

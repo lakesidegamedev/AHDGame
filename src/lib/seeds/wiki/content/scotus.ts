@@ -33,7 +33,7 @@ Curated historical cases resolve against the sitting Court on the calendar year 
 | Write an Opinion | +0.5 national influence |
 | Public Address | +2 favorability |
 
-Once per turn you can spend 10 actions to buy 1 justice action, up to the pool's cap.
+Justice actions regain 1 every 12 turns, up to a pool cap of 2 (\`src/lib/constants/justiceActions.ts\`). Once per turn you can spend 10 actions to buy 1 justice action, up to that cap.
 
 A confirmed justice's appointment is recorded in their career history. Two achievements recognise the Court: one for being confirmed to the Supreme Court, and one for dying in office as a sitting justice.
 

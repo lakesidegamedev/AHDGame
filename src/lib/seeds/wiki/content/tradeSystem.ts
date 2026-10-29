@@ -4,7 +4,7 @@ The International Trade system is an inter-country trade clearing engine that co
 
 ## Core concept: trade affinity
 
-Every country pair has a **trade affinity** value that represents how much trade flows between them. Affinity starts at a **base of 1** and is then multiplied (or reduced) by several modifiers:
+Every country pair has a **trade affinity** value that represents how much trade flows between them. Affinity starts at a **base of 1** for most pairs, and is then multiplied (or reduced) by several modifiers. Twelve pairs with close real-world ties start higher: Brazil-US 1.4, China-US 1.5, Japan-US 1.3, UK-US 1.4, Germany-Ireland 1.5, Germany-UK 1.4, Ireland-UK 1.6, China-Japan 1.4, China-Nigeria 1.3, Nigeria-UK 1.3, and, in Cold War eras, US-Yugoslavia 1.35 and UK-Yugoslavia 1.25 (\`src/lib/trade/constants.ts\`). Every example below uses the default base of 1; for an override pair, multiply by its base instead.
 
 1. **FTA affinity bonus**: if the pair is covered by an active free trade agreement
 2. **Bloc affinity bonus**: if both countries share membership in the same international organization
@@ -71,17 +71,6 @@ In the Cold War eras the Soviet bloc trades behind a wall. Trade between a curta
 
 Countries nobody plays run their own trade policy. An autonomous government can table trade agreements, apply targeted tariff bills against a rival, and impose bounded ministerial embargoes, with cooldowns per country pair and a limit set by how much it actually depends on that partner's trade. Expect a hostile relationship to show up on your tariff and embargo screens even when no player is behind it.
 
-## IPF convergence
-
-The trade clearing engine uses **iterative proportional fitting (IPF)**, a method that repeatedly adjusts trade numbers in small steps until every country's imports and exports line up, to balance trade flows across all country pairs. The engine runs **40 iterations**, which converges margins to below **0.5%**, meaning the result is effectively exact for gameplay purposes.
-
-\`\`\`
-IPF iterations: 40
-Convergence threshold: < 0.5% margin
-\`\`\`
-
-This ensures that the affinity values produce a self-consistent trade matrix where every country's imports and exports balance correctly.
-
 ## Ministerial embargoes
 
 Embargoes are the most aggressive trade tool available. They are issued by a cabinet minister and have strict limits:
@@ -107,7 +96,7 @@ Because the maximum embargo lasts 96 turns, a full-duration embargo leaves at le
 The full affinity calculation for a country pair:
 
 \`\`\`
-let affinity = 1;                          // base affinity
+let affinity = 1;                          // base affinity (the pair's override, if it has one)
 
 if (pair covered by active FTA) {
   affinity *= 1.6;                          // FTA bonus
@@ -144,17 +133,6 @@ Note the FTA override: even though a 20% tariff is on the books, the FTA collaps
 - **Bloc membership is cheap affinity.** Simply being in the same org as a trading partner gives a 25% boost with no legislation required.
 - **Tariffs and FTAs interact.** An FTA makes tariffs irrelevant for covered partners: they pay zero. Use FTAs to shield partners from your own tariff policy.
 - **Embargoes are blunt and temporary.** They zero trade but expire after 96 turns and trigger a 168-turn cooldown. Use them for targeted pressure, not permanent isolation.
-- **IPF convergence is exact at 40 iterations.** You can trust that the trade matrix is self-consistent: there are no "approximate" affinity values in the final result.
-
-## Public API
-
-Trade restrictions are available to bots and dashboards through the public v1 API:
-
-- \`GET /api/public/v1/trade/tariffs\` lists active tariff layers and supports imposing-country, target-country, scope, and limit filters.
-- \`GET /api/public/v1/trade/embargoes\` combines active ministerial, legislative, and organization sanctions. Add \`includePending=true\` to include embargo bills still moving through a legislature.
-- \`GET /api/public/v1/trade/flows\` returns bounded world trade history. Filter by country, commodity, and turn range to chart exports, imports, net balances, and cleared volume.
-
-The restriction routes include their public bill or organization-resolution provenance. They do not expose the character IDs used internally to enact a restriction. Trade-flow history omits raw bilateral matrices and internal reachable market books. See the [public API documentation](https://docs.lakesidegames.net/api/public-v1.html) for parameters and response fields.
 
 ## Related systems
 
