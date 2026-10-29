@@ -275,6 +275,7 @@ describe("GET /api/client-nav", () => {
         tintColor: null,
         // Fixture character has no statsAllocated → grandfather flag is true.
         needsStatAllocation: true,
+        needsWealthTierRepick: false,
       });
     }
   );
