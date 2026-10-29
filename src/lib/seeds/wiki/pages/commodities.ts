@@ -119,16 +119,12 @@ function buildCommodityMarkdown(commodity: CommodityType): string {
     ? `\n\nBecause ${label} is an **extractable resource**, per-state output is capped by [state resource capacity](/wiki/resources-overview). The live distribution below shows each country's current capacity alongside supply and demand.`
     : "";
 
-  const relatedLinks = [
-    `- [Commodities overview](/wiki/commodities): the full pricing rules this page summarises. Supply and demand here set the price there.`,
+  const seeAlso = [
     `- [Full market page](/commodity/${commodity}): live prices and history for ${label}.`,
-    `- [Tariffs](/wiki/tariffs): tariffs move weight in the margin blend from the global price to the national price.`,
+    `- [Commodities overview](/wiki/commodities): the full pricing rules this page summarises.`,
   ];
   if (isExtractable) {
-    relatedLinks.push(
-      `- [Resources overview](/wiki/resources-overview): state resource capacity caps how much ${label} can be produced.`
-    );
-    relatedLinks.push(
+    seeAlso.push(
       `- [Extraction contracts](/wiki/extraction-contracts): contracts decide who gets to extract and sell it.`
     );
   }
@@ -142,7 +138,9 @@ function buildCommodityMarkdown(commodity: CommodityType): string {
 
   return `**${label}** (*${unit}*, base price **$${basePrice.toLocaleString()}**) is ${summary}
 
-## Market behaviour
+Whether you run a supplier, buy it as an input, or just watch the margins of the sectors that depend on it, the price you see here is the one that counts. It is set by how much is actually sold against how much is wanted.
+
+## What sets the price
 
 Supply for ${label} comes from real plant capacity: owned sectors produce up to what their capacity can make, sell into the clearing market, and only sold units count toward the D/S ratio and the price below. A sector that has not finished building, or that is mothballed, contributes nothing here even if its nameplate revenue implies it should. See [Running a Corporation under the Plants System](/wiki/plants-corp-guide) for how capacity is built and sold.
 
@@ -150,21 +148,23 @@ Supply for ${label} comes from real plant capacity: owned sectors produce up to 
 
 Prices blend ${blendDescription}, drifting toward equilibrium at 6% per turn (95% closed in one game year). Raw D/S remains visible for diagnosis; price math uses the raw ratio up to ${getPriceSoftKnee(commodity)}x and margin math up to ${COMMODITY_PRESSURE_SOFT_KNEE}x, then a softened effective pressure tail beyond that.${macroNote}
 
+[Tariffs](/wiki/tariffs) move weight in the margin blend from the global price to the national price.
+
 The price shown here does two jobs. It sets sector profit margins, computed separately at three tiers (global, national, local/state), then blended at **50/25/25** by default, with tariff pressure shifting weight from the global leg to the national leg (local stays fixed at 25%). It also scales sector revenue directly through **price realization**: a producer's realized revenue moves with the lagged price of what it sells (shortage rewards sellers with more top-line revenue, not just margin points; a glut bleeds revenue even at a tolerable margin). See [Commodities](/wiki/commodities) for the full pricing mechanics, price realization, and margin formula.${extractionNote}
 
-${suppliersSection}
+## Reading a price move
 
-${consumersSection}
-
-## How to read a price move
-
-A price rises when demand outruns supply (D/S above 1) and falls when supply outruns demand. Example: if demand is 150 units and supply is 100, D/S is 1.5, so the price drifts above its base of $${basePrice.toLocaleString()}. Each turn it closes 6% of the gap to where that pressure says it should be, so a one-off shock mostly fades within a game year. To cool a high price, build or subsidise more of the suppliers listed above. To profit from it, own a supplier.
+A price rises when demand outruns supply (D/S above 1) and falls when supply outruns demand. Say demand is 150 units and supply is 100: D/S is 1.5, so the price drifts above its base of $${basePrice.toLocaleString()}. Each turn it closes 6% of the gap to where that pressure says it should be, so a one-off shock mostly fades within a game year. To cool a high price, build or subsidise more of the suppliers listed below. To profit from it, own a supplier.
 
 \`\`\`wiki-chart
 commodity-price-gap-closure
 \`\`\`
 
-## Live distribution
+${suppliersSection}
+
+${consumersSection}
+
+## Who is exporting and importing
 
 Per-country totals below are pulled live from the current turn's market snapshot. Countries with positive net are exporters on balance; negative nets are importers.
 
@@ -172,15 +172,11 @@ Per-country totals below are pulled live from the current turn's market snapshot
 ${commodity}
 \`\`\`
 
-## Where it applies
+## See also
 
-${label} prices are part of the standard economy. Which countries can supply it depends on the sectors they have built${isExtractable ? " and their state resource capacity" : ""}.
+${seeAlso.join("\n")}
 
-Last checked: 2026-10-29, version 1.18.0
-
-## Related
-
-${relatedLinks.join("\n")}
+${label} prices are part of the standard economy. Which countries can supply it depends on the sectors they have built${isExtractable ? " and their state resource capacity" : ""}. Last checked 2026-10-29, version 1.18.0.
 `;
 }
 

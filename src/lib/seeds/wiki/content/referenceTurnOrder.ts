@@ -1,13 +1,13 @@
 export const referenceTurnOrderContent = `# Reference: turn order
 
-The game runs on an hourly cron. Every real-world hour is one game turn, which is one game week. Turn processing runs through roughly a dozen top-level adapters that together call over 100 phase steps, each hour. This page lists the major groups of phases, what runs in each, and why the ordering matters.
+Your Campaign click lands instantly, but votes, bills and money all settle on the hour. When the hour ticks, the game works through roughly a dozen top-level adapters that together call over 100 phase steps, in a fixed order. If you have ever wondered why a vote total moved after a bill passed, or why a final-turn canvass still counted, the answer is in this order. This page lists the groups of phases, what runs in each, and why the ordering matters.
 
 **1 turn = 1 game week = 1 real hour**
 **48 turns = 1 game year**
 
 ---
 
-## Turn sequence overview
+## The order at a glance
 
 | Group | Phases | Key constraint |
 |---|---|---|
@@ -32,7 +32,7 @@ Country-specific election phases (UK by-elections, JP Sangiin half-elections, DE
 
 ---
 
-## Group details
+## What happens in each group
 
 ### Group 1: resources
 
@@ -105,7 +105,7 @@ All parallel:
 
 ### Group 7: election resolution (strictly sequential)
 
-This is the most critical group. The phases must run in this exact order. Reordering produces incorrect election results:
+This group decides who wins, so its order is fixed. The phases must run in this exact order. Reordering produces incorrect election results:
 
 1. **Candidate party sweep**: Candidates whose party no longer matches their candidacy are auto-withdrawn (party switches).
 2. **Primary resolution**: Primaries that have reached their end time are resolved. Down-ballot races read the cumulative primary ballots and the top count per party advances (the score path only where a party cast no ballots); presidential races read pledged delegates and, on the reworked ruleset, run the convention. Others are marked withdrawn.
@@ -196,7 +196,7 @@ This group is **not wrapped in the error-isolation pattern**. A failure here is 
 
 ---
 
-## The error isolation pattern
+## What happens when a phase breaks
 
 Every phase (except Group 14 persistence) runs inside an error-isolation wrapper. If a phase throws, the error is:
 
@@ -208,7 +208,7 @@ The turn does **not** halt. Subsequent phases continue processing. This means a 
 
 ---
 
-## Fast mode
+## Fast mode and the clock
 
 Fast mode is a pull-ahead setting for the game clock: each processed turn advances the clock by exactly one game hour, never backward, instead of tracking real time (\`src/lib/time/computeGameNow.ts\`). It does not change the turn interval to 30 minutes.
 
@@ -218,10 +218,7 @@ Every phase has a hard four-minute ceiling; a phase that runs past it fails and 
 
 ---
 
-## Related
+## See also
 
-- [Reference: Formulas](/wiki/reference-formulas): All game math in one place.
-- [Election Mechanics](/wiki/election-mechanics): Election phase structure.
-- [Snap Elections](/wiki/snap-elections): Parliamentary dissolution triggers.
-- [The Game Loop](/wiki/the-game-loop): Player-facing explanation of the turn cycle.
+[The Game Loop](/wiki/the-game-loop) explains the turn cycle from the player's side, [Reference: Formulas](/wiki/reference-formulas) holds the math these phases run, [Election Mechanics](/wiki/election-mechanics) covers the election structure, and [Snap Elections](/wiki/snap-elections) covers parliamentary dissolution triggers.
 `;

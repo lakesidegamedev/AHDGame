@@ -1,8 +1,8 @@
 export const endgameGoalsContent = `# Endgame Goals
 
-A House Divided has no defined endpoint. There is no win screen, no reset, no campaign to complete. The simulation runs perpetually. But that does not mean there is nothing to aim for. This page outlines the long-term goals that give established players a direction, and how to measure whether you're achieving them.
+Once you hold a seat and the actions stop feeling scarce, the question becomes what you are playing for. A House Divided has no defined endpoint: no win screen, no reset, no campaign to complete, and the simulation runs perpetually. This page outlines the long-term goals that give established players a direction, and how to measure whether you're achieving them.
 
-## The nature of long-term goals
+## Positions to hold, not points to reach
 
 Goals in this game are better thought of as **positions to hold** rather than points to reach. Becoming president is meaningful not as an endpoint but because of the ongoing power it provides: cabinet control, legislative influence, approval ratings, foreign policy. The goal shifts from "become president" to "govern effectively as president while building toward the next objective."
 
@@ -93,7 +93,7 @@ A Senator who has held their seat for 5 game years is a significant political fi
 
 ---
 
-## How to measure success
+## Checking whether you are compounding
 
 Since there is no score, tracking progress requires checking:
 
@@ -111,10 +111,7 @@ The game is designed so that success compounds: a higher office gives more actio
 
 ---
 
-## Related
+## Planning the route
 
-- [Advanced Strategy](/wiki/advanced-strategy): career arc planning and lever coordination.
-- [Power Player Guide](/wiki/power-player-guide): coordinating all systems at once.
-- [Multi-Country Play](/wiki/multi-country-play): cross-border ambitions.
-- [Reading the Game](/wiki/reading-the-game): using available data to make decisions.
+[Advanced Strategy](/wiki/advanced-strategy) covers career arcs and lever coordination, the [Power Player Guide](/wiki/power-player-guide) covers running all systems at once, [Multi-Country Play](/wiki/multi-country-play) covers cross-border ambitions, and [Reading the Game](/wiki/reading-the-game) covers using the available data to decide.
 `;

@@ -1,10 +1,8 @@
 export const primaryGeneralTacticsContent = `# Primary vs General Tactics
 
-Primaries and generals require fundamentally different playbooks. A player who wins the primary by hitting all the party-base notes will often lose the general if they don't pivot. This page is about **how** and **when** to pivot, and what you should absolutely not change.
+The moment your primary resolves, the game you were playing stops. You won by pleasing your own party's voters, and now everyone in the state votes. A player who wins the primary by hitting all the party-base notes will often lose the general if they do not pivot. This page is about **how** and **when** to pivot, and what you should absolutely not change. For phase rules see [Primaries](/wiki/primaries) and [General Elections](/wiki/general-elections). For tactical depth see [Campaign Strategy](/wiki/campaign-strategy).
 
-For phase rules see [Primaries](/wiki/primaries) and [General Elections](/wiki/general-elections). For tactical depth see [Campaign Strategy](/wiki/campaign-strategy).
-
-## The fundamental difference
+## Two electorates, two scorecards
 
 | Dimension | Primary | General |
 | --- | --- | --- |
@@ -26,7 +24,7 @@ Some things are **locked** the moment you enter a primary. Understand this befor
 - **Your party.** You run under the party you declared with. Declaring again under another party withdraws your old candidacy and carries your campaign across to the new one.
 - **Whether NPPs in your primary get the 50% penalty.** That's fixed by the rules.
 
-## What you **can** pivot
+## What you can pivot
 
 ### Ad targeting
 
@@ -84,23 +82,23 @@ The implication: **presidential primaries reward party influence and Favorabilit
 - Party org counts as a normalized share of the state's total organization, raised to the 0.2 power. Returns diminish, so a dominant party's edge is softened but a party with no org still gets almost nothing.
 - State lean matters through the voter groups in each state: a red-leaning state has red-leaning groups, so a blue-aligned candidate starts behind there. Check the Full Poll before committing travel.
 
-## Worked example: a pivot
+## A pivot in numbers
 
 A House candidate wins the primary on the base of one group. Group A (the base) is 20% of the state at 60% turnout, so it is worth 12.0 vote units. Group B (a swing group) is 25% at 55% turnout, worth 13.75 units. The Full Poll after the primary shows 58% of Group A and 41% of Group B, which projects (0.58 x 12.0 + 0.41 x 13.75) / 25.75 = 49%. The pivot spends 10 ads and canvasses on Group B and lifts it to 46%, so the projection becomes (0.58 x 12.0 + 0.46 x 13.75) / 25.75 = 51.6%.
 
 The numbers are illustrative, but the lesson is real: the swing group is larger than the base, so five points there is worth more than five points with the group you already own.
 
-## Pivoting checklist (primary win to general)
+## The morning after the primary
 
 The moment your primary resolves:
 
 - [ ] Update ad targeting: broaden from base to swing groups.
 - [ ] Start (or upgrade) Opposition Research on the frontrunner opponent.
-- [ ] Commission Full Demographic Poll: general voters are not the same as primary voters.
-- [ ] Check campaign upgrade levels: are they sufficient? Last cheap opportunity to upgrade was the primary phase; you're now in 1.5x-cost territory.
+- [ ] Commission Full Demographic Poll (base against swing groups, see [Demographics & Targeting](/wiki/demographics-targeting)): general voters are not the same as primary voters.
+- [ ] Check campaign upgrade levels in the [Campaign Manager](/wiki/campaign-manager): are they sufficient? Last cheap opportunity to upgrade was the primary phase; you're now in 1.5x-cost territory.
 - [ ] Review fog-adjusted opponent upgrades to estimate their spending.
 - [ ] Plan closing-sprint burst budget: reserve actions and funds for the final 4 turns.
-- [ ] Request NPP endorsements from any NPP whose policy positions align and who is not in an opposing party.
+- [ ] Request NPP endorsements from any NPP whose policy positions align and who is not in an opposing party (see [NPP Elections](/wiki/npp-elections) for handling NPP competition).
 
 ## Office-specific notes
 
@@ -117,7 +115,7 @@ The moment your primary resolves:
 | JP Sangiin / Shūgiin | Parallel system: prefectural FPTP seats + PR list. Candidates pick one or the other; list seats come from party performance. |
 | JP Prime Minister | Via Shūgiin leader selection. Similar parliamentary dynamic. |
 
-## Common pivoting mistakes
+## Mistakes people make after winning
 
 - **Shifting ad messaging too early in the general.** Your party base is still voting; don't abandon them day 1.
 - **Attacking primary rivals after the fact.** They're out of the race; Infamy gain is wasted.
@@ -126,16 +124,5 @@ The moment your primary resolves:
 - **Over-travelling in presidential.** Travel is +1% Favorability/turn, but each move costs 3 to 10 actions by state electoral votes. Don't travel constantly. Pick strategic states and stay.
 - **Not planning the closing sprint.** Reserve ~30% of your general-phase fund budget for the final 4 turns.
 
-## Related
-
-- [Election Mechanics](/wiki/election-mechanics): core framework.
-- [Primaries](/wiki/primaries): primary-phase rules.
-- [General Elections](/wiki/general-elections): general-phase rules.
-- [Campaign Strategy](/wiki/campaign-strategy): deep tactics with upgrade tables.
-- [Campaign Manager](/wiki/campaign-manager): the campaign page.
-- [Demographics & Targeting](/wiki/demographics-targeting): base vs swing groups.
-- [NPP Elections](/wiki/npp-elections): handling NPP competition.
-- [Primary vs General Tactics design page](https://docs.lakesidegames.net/design/primary-general-tactics.html): the exact rules behind this guide.
-
-Last checked: 2026-10-29, version 1.18.0
+Applies wherever a primary precedes a general. Last checked 2026-10-29, version 1.18.0. Exact rules: [Primary vs General Tactics (design)](https://docs.lakesidegames.net/design/primary-general-tactics.html). See also [Election Mechanics](/wiki/election-mechanics) for the core framework.
 `;

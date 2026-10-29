@@ -1,6 +1,6 @@
 export const glossaryContent = `# Glossary
 
-Alphabetical definitions of terms used throughout A House Divided and its wiki.
+Met a word in the game or the wiki that you do not recognise? Look it up here. Terms are in alphabetical order, with a link to the full page where there is one.
 
 ---
 
@@ -144,10 +144,7 @@ Alphabetical definitions of terms used throughout A House Divided and its wiki.
 
 ---
 
-## Related
+## If a definition is not enough
 
-- [Reference: Formulas](/wiki/reference-formulas): All formula details.
-- [Reference: Turn Order](/wiki/reference-turn-order): Full turn processing sequence.
-- [Reference: Offices](/wiki/reference-offices): All offices and their stats.
-- [FAQ](/wiki/faq): Answers to common questions.
+[Reference: Formulas](/wiki/reference-formulas) has the math, [Reference: Turn Order](/wiki/reference-turn-order) the turn processing sequence, [Reference: Offices](/wiki/reference-offices) every office and its stats, and the [FAQ](/wiki/faq) answers common questions.
 `;

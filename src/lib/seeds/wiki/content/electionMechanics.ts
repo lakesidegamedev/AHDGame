@@ -1,8 +1,8 @@
 export const electionMechanicsContent = `# Election Mechanics
 
-Elections in A House Divided run perpetually. Every office has continuous cycles: a cycle resolves, the next one spawns immediately, and seats never sit vacant. This page is the player overview of how an election works: the phases, the timing, what makes votes, and the special rules. It explains what to plan around. The exact formulas and constants are on the [Elections design page](https://docs.lakesidegames.net/design/elections.html).
+No office in A House Divided ever sits empty for long. Every seat runs on a continuous cycle: one election resolves and the next spawns at once. If you want a seat, the question is never whether an election is coming, but which phase you can still enter and what wins it. This page covers the phases, the timing, what makes votes, and the special rules, so you can plan around them. For a tour of the screens, read the [Elections player guide](/wiki/elections-player-guide).
 
-## How it works
+## Two phases, one seat
 
 Every election has two phases.
 
@@ -11,11 +11,11 @@ Every election has two phases.
    - **Presidential** primaries run staggered state voting that hands out pledged delegates. The delegate leader is nominated, at a [convention](/wiki/nominating-convention) if nobody holds a majority.
 2. **General phase.** Nominees from different parties compete. Votes accumulate turn by turn, and the final 4 turns carry 30% of the pool. Only registered voters cast general ballots, and a race can never certify more ballots than it has voters. See [General Elections](/wiki/general-elections).
 
-When the general resolves, winners take office and the next cycle spawns. For a guided tour of the screens, read the [Elections player guide](/wiki/elections-player-guide).
+When the general resolves, winners take office and the next cycle spawns.
 
 ![Election lifecycle from spawn through declaration, primary, general and resolution to the next cycle spawning.](/wiki-images/diagrams/election-mechanics-lifecycle.svg)
 
-### Key numbers
+### The numbers to plan around
 
 | Item | Value |
 | --- | --- |
@@ -80,7 +80,7 @@ general-election-vote-pool
 
 Influence is not part of appeal. It enters only through reach.
 
-**Worked example.** One group has 10,000 votes this turn, with two candidates and no direction bonus. Candidate A is 2 econ and 1 social points from the group (appeal 15.1), has influence 49 (reach 0.70), effective favorability 80 (approval 0.84) and 60% of the state's party organization (0.90). Weight: 15.1 x 0.70 x 0.84 x 0.90 = 8.0. Candidate B is 3 and 2 points away (appeal 9.3), has reach 0.80, effective favorability 75 (0.79) and 40% of the organization (0.83): 9.3 x 0.80 x 0.79 x 0.83 = 4.9.
+**A single group, turn by turn.** One group has 10,000 votes this turn, with two candidates and no direction bonus. Candidate A is 2 econ and 1 social points from the group (appeal 15.1), has influence 49 (reach 0.70), effective favorability 80 (approval 0.84) and 60% of the state's party organization (0.90). Weight: 15.1 x 0.70 x 0.84 x 0.90 = 8.0. Candidate B is 3 and 2 points away (appeal 9.3), has reach 0.80, effective favorability 75 (0.79) and 40% of the organization (0.83): 9.3 x 0.80 x 0.79 x 0.83 = 4.9.
 
 A takes 8.0 / 12.9 = 62% of the group, or about 6,180 of 10,000 votes. In a final-band turn, with a 100,000 vote pool, each turn releases 7,500 votes against 1,389 in the early band (50% over 36 turns), so the same advantage is worth 5.4 times as much.
 
@@ -129,7 +129,7 @@ House, State Senate and other multi-seat contests allocate seats by the largest 
 
 **Suspend and endorse.** In a presidential general, a nominee can suspend their campaign and endorse another nominee, from the Campaign Manager page. You stay on the ballot and keep the votes already earned, but you gain no more and forfeit passive bonuses. A share of your campaign strength moves to your endorsed nominee (about a quarter if well aligned, much less if not), and up to 25% of your personal state organization is added to theirs, scaled by how well aligned you are. It cannot be undone.
 
-## What you can do
+## Entering and leaving a race
 
 - **Declare** for one office in your home state or region (President is national). Your home country must match the election's country.
 - **Pick a party.** Independents run in the independent party primary under the same rules.
@@ -144,44 +144,13 @@ Common questions:
 - **Why did I win the primary and lose the general?** The primary is a vote among one party's registered voters, scored on alignment with them. The general is everyone, scored on alignment with each voter group, and party organization counts, which is neutral in a primary. See [Primary vs General Tactics](/wiki/primary-general-tactics).
 - **Can I influence National Mood?** Yes, through the economy and bills that fix it, before election day.
 
-## Connections
+## What feeds the vote, and what it feeds
 
-**Driven by**
+The size and positions of voter groups, from [Demographics](/wiki/demographics), set how each turn's pool splits. [Government Approval](/wiki/government-approval) scales the pool for the governing party, and [National Metrics](/wiki/national-metrics) (unemployment, poverty, inflation and income) set National Mood. Your own side of it comes from [Political Operations](/wiki/political-operations), where Campaign Presence raises vote weight in presidential races, from the actions and strength you build in the [Campaign Manager](/wiki/campaign-manager), and from the money in [Fundraising and Ads](/wiki/fundraising-ads) that pays for them. [Stats & Actions](/wiki/stats-actions) explains where PI, NPI and Favorability, which feed vote reach, appeal and primary scores, come from.
 
-- [Demographics](/wiki/demographics): voter-group size and positions set how the vote pool splits.
-- [Government Approval](/wiki/government-approval): approval scales the pool for the governing party.
-- [National Metrics](/wiki/national-metrics): unemployment, poverty, inflation and income set National Mood.
-- [Political Operations](/wiki/political-operations): Campaign Presence raises vote weight in presidential races.
-- [Campaign Manager](/wiki/campaign-manager): the actions and strength you build there feed your vote weight.
-- [Fundraising and Ads](/wiki/fundraising-ads): money pays for the actions that move votes.
-- [Referendums](/wiki/referendums): a passing independence vote stands up new elections.
-- [US House Redistricting](/wiki/us-house-redistricting): district maps decide which House seats are close.
-- [Relocation](/wiki/relocation): a move withdraws open candidacies and vacates seats, which spawn new races
-- [Core Systems](/wiki/core-systems): turns count the ballots and term lengths set the cycle
-- [Stats & Actions](/wiki/stats-actions): PI, NPI and Favorability feed vote reach, appeal and primary scores
-- [Snap Elections](/wiki/snap-elections): A snap resets the next regular election date.
-- [contingent-election](/wiki/contingent-election): The House or Senate result replaces the Electoral College winner.
+The calendar around the vote matters too. [Core Systems](/wiki/core-systems) is where turns count the ballots and term lengths set the cycle, and [the game loop](/wiki/the-game-loop) shows when the primary and general windows and the vote-weight curve make timing decisive. A move through [Relocation](/wiki/relocation) withdraws open candidacies and vacates seats, which spawn new races. A [snap election](/wiki/snap-elections) resets the next regular election date and runs on the same rules. A passing independence vote in [Referendums](/wiki/referendums) stands up new elections, and [US House Redistricting](/wiki/us-house-redistricting) draws the district maps that decide which House seats are close.
 
-**Affects**
+Going the other way, this page sets the phases and scoring that [Primaries](/wiki/primaries) follow and the vote accumulation each of [General Elections](/wiki/general-elections) uses. [Polling](/wiki/polling) reuses the same vote model for state races, and the [Vote Factor Ledger](/wiki/vote-factor-ledger) breaks that model into its factors. Winners take office and shift party strength in [Political Parties](/wiki/political-parties), and [Player Progression](/wiki/player-progression) is built on winning a primary and general to get each office. Election night's vote totals appear in [live election results](/wiki/live-election-results). A presidential race with no electoral majority starts the [contingent election](/wiki/contingent-election), whose House or Senate result replaces the Electoral College winner.
 
-- [Primaries](/wiki/primaries): sets the phases and scoring each primary follows.
-- [General Elections](/wiki/general-elections): sets the vote accumulation each general uses.
-- [Polling](/wiki/polling): polls reuse the same vote model for state races.
-- [Political Parties](/wiki/political-parties): winners take office and shift party strength.
-- [Snap Elections](/wiki/snap-elections): the same rules govern early parliamentary elections.
-- [Vote Factor Ledger](/wiki/vote-factor-ledger): the ledger breaks the vote model into its factors.
-- [the-game-loop](/wiki/the-game-loop): primary and general windows and the vote-weight curve decide when timing matters
-- [Player Progression](/wiki/player-progression): winning a primary and general is how you get each office
-- [live-election-results](/wiki/live-election-results): The vote totals that election night reveals.
-- [contingent-election](/wiki/contingent-election): A presidential race with no electoral majority starts the contingent election.
-
-## Status
-
-Live in every world that has elections, for every playable country. Cycle lengths and some details differ by country (see each country hub). Presidential details apply to the US, and district-by-district House races only where redistricting is in play. US presidential races from 1964 onward use the reworked rules (stretched primary calendar, conventions, affinity-based suspend transfers, tactical voting); older races such as 1960 use the original rules.
-
-Last checked: 2026-10-29, version 1.18.0
-
-## Technical detail
-
-Every constant and formula is on the [Elections design page](https://docs.lakesidegames.net/design/elections.html). See also [Reference: Formulas](/wiki/reference-formulas).
+Live in every world that has elections, for every playable country. Cycle lengths and some details differ by country (see each country hub). Presidential details apply to the US, and district-by-district House races only where redistricting is in play. US presidential races from 1964 onward use the reworked rules (stretched primary calendar, conventions, affinity-based suspend transfers, tactical voting); older races such as 1960 use the original rules. Last checked 2026-10-29, version 1.18.0. Exact rules: [Elections (design)](https://docs.lakesidegames.net/design/elections.html). See also [Reference: Formulas](/wiki/reference-formulas).
 `;

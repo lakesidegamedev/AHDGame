@@ -1,8 +1,8 @@
 export const cabinetProjectsContent = `# Cabinet Projects & Buildings
 
-If you hold a cabinet seat you can build things: schools, hospitals, embassies, power plants, highways. Each building is a lasting asset that gives its region a small nudge to its metrics every turn, and its running cost is weighed against your ministry's budget. Build where the problem is and stay near your budget envelope.
+If you hold a cabinet seat you can build things: schools, hospitals, embassies, power plants, highways. Each building is a lasting asset that gives its region a small nudge to its metrics every turn, and its running cost is weighed against your ministry's budget. Build where the problem is and stay near your budget envelope. You need a confirmed or acting seat, and the actions it gives, to build (see [Cabinet](/wiki/cabinet)).
 
-## How it works
+## What you can build
 
 Buildings belong to the seat, not to you personally, and each sits in one region for good. There are three kinds, depending on which seat you hold.
 
@@ -12,11 +12,13 @@ Buildings belong to the seat, not to you personally, and each sits in one region
 | **Energy plants** | The energy seat (US: Secretary of Energy; UK: Environment Secretary) | Coal, gas, nuclear, hydro, wind, solar |
 | **Infrastructure projects** | The transport seat | Highways, transit, bridges, railways, broadband, freight, airports |
 
-Upkeep is modeled pressure on the national budget balance metric, not an actual withdrawal from the federal budget. The total upkeep of what you built is compared with your **discretionary envelope**. Under the envelope gives a small positive tilt to the budget balance each turn; over it, a negative tilt that grows with the overshoot (at most 0.05 per turn at full scale).
+## Upkeep and the discretionary envelope
+
+Upkeep is modeled pressure on the national budget balance metric, not an actual withdrawal from the federal budget. The department appropriation sets the size of the envelope (see [National Budget](/wiki/national-budget)). The total upkeep of what you built is compared with your **discretionary envelope**. Under the envelope gives a small positive tilt to the budget balance each turn; over it, a negative tilt that grows with the overshoot (at most 0.05 per turn at full scale).
 
 ![Total upkeep compared with the discretionary envelope: under it tilts budget balance positive, over it tilts negative.](/wiki-images/diagrams/cabinet-projects-upkeep-envelope.svg)
 
-### Key numbers
+Numbers you plan around:
 
 | Item | Value |
 | --- | --- |
@@ -30,9 +32,9 @@ Upkeep is modeled pressure on the national budget balance metric, not an actual 
 | Plant tiers (capacity multiplier) | Standard 1.0, Expanded 1.5, Major 2.0, Mega 2.5 |
 | Project funding (speed, cost) | Slowed 0.5x / 0.6x; Standard 1.0x / 1.0x; Crashed 1.8x / 1.6x |
 
-Upkeep numbers are in millions per turn.
+Upkeep numbers are in millions per turn. Each building also nudges its region's metrics every turn (see [National Metrics](/wiki/national-metrics)).
 
-## Estates
+## Opening an estate
 
 An **estate** is a facility tied to your portfolio. Every estate has four things:
 
@@ -47,11 +49,11 @@ estate-condition-drift
 
 Each estate's effect is small and scales with tier, funding and condition. All cabinet effects on one metric are capped per turn, so stacking has diminishing returns.
 
-### Worked example: a school
+### What a school costs
 
 A Public School has base upkeep of 60 and nudges high school graduation by 0.02 and test performance by 0.015 per turn in its region. At Basic tier and Standard funding it costs 60 per turn. A Flagship school at Enhanced funding costs 60 x 2.5 x 1.5 = 225 per turn but delivers a stronger effect once its condition has climbed to 90. Condition moves slowly, so after switching from Standard to Enhanced it takes several turns before the extra output shows. With an envelope of 3,500 to 5,000, ten Basic schools (600 per turn) are comfortably under it.
 
-## Energy plants
+## Building a power plant
 
 Your plants in a region form that region's generation mix, which nudges three regional metrics toward what the mix implies: renewable share, carbon emissions, and power grid reliability. The nudge is small when the metric is already near its target and saturates at 0.08 per turn when it is far.
 
@@ -68,7 +70,7 @@ Reliability scores 70% on how much of your capacity is firm (always-on) and 30% 
 
 A plant can be upgraded through four tiers, each raising capacity and upkeep by the tier multiplier, and can be decommissioned. For example, an Expanded coal plant has 800 x 1.5 = 1,200 MW and costs 96 per turn. A big nuclear build in a coal region shows visible movement for many turns and then settles.
 
-## Infrastructure projects
+## Starting an infrastructure project
 
 Projects take several turns to build and then give fixed standing effects.
 
@@ -84,7 +86,7 @@ Projects take several turns to build and then give fixed standing effects.
 
 While a project is under construction you set its funding level. A highway takes 12 turns at Slowed funding and spends 72 per turn, 6 turns at Standard and spends 120, and about 4 turns at Crashed and spends 192. Once operational it is permanent and pays only upkeep. Unlike plants, infrastructure effects are flat bonuses that do not fade as the region improves.
 
-## What you can do
+## Before you commit
 
 - Open or expand an estate, and change its funding for free.
 - Build or upgrade a plant, or decommission it.
@@ -98,30 +100,10 @@ Tips:
 - Actions are scarce (max 4), and builds compete with ministerial orders for the same actions.
 - Location is forever. To move something, close or decommission it and rebuild.
 
-### Common questions
-
 - **Why did my school stop helping?** Its condition probably fell because funding is Reduced, or another law is pulling the same metric the other way.
 - **What happens when I leave office?** The assets are stored against the seat, not against you, and stay in place for whoever holds it next.
 
-## Connections
-
-**Driven by**
-
-- [Cabinet](/wiki/cabinet): you need a confirmed or acting seat, and the actions it gives, to build.
-- [National Budget](/wiki/national-budget): the department appropriation sets the size of the discretionary envelope.
-
-**Affects**
-
-- [National Metrics](/wiki/national-metrics): each building nudges its region's metrics every turn.
-- [National Budget](/wiki/national-budget): total upkeep above or below the envelope tilts the budget balance metric.
-
-## Status
-
 Live for every country whose cabinet has an authored portfolio. Estates are available in the US, UK, Germany, China, Japan, Ireland and the command-economy states (Soviet Union and East Germany). Energy plants and infrastructure projects depend on which seat the country maps to energy and transport. Which seats exist in a given year depends on the era.
 
-Last checked: 2026-10-29, version 1.18.0
-
-## Technical detail
-
-The exact rules are on the [Cabinet design page](https://docs.lakesidegames.net/design/cabinet.html).
+Last checked 2026-10-29, version 1.18.0. Exact rules: [Cabinet design page](https://docs.lakesidegames.net/design/cabinet.html)
 `;

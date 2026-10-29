@@ -1,14 +1,14 @@
 export const occupationVictoryContent = `# Occupation, territory & victory
 
-Winning a battle is not winning a war. A war is won by **taking ground and holding it**, one engagement at a time, over dozens of turns.
+You can win every battle and still not win the war. A war is won by **taking ground and holding it**, one engagement at a time, over dozens of turns, and the ground is a single number that moves a little after each fight (see [Fighting a Battle](/wiki/fighting-a-battle)).
 
-This page covers the territorial layer: the control meter, why it starts where it does, what it does to your supply, and what happens when it reaches the end.
+This page covers that number: why it starts where it does, what it does to your supply, and what happens when it reaches the end.
 
-## How it works
+## One meter, 0 to 100
 
 Every war has one territory meter, running 0 to 100, that measures how much of the host country side B holds. A war opens at the host's own end of the meter. Each battle with a winner pushes the meter towards the winner's end. The farther the front moves from where it started, the worse its supply gets, so each step is harder than the last. If the meter sits at an end for long enough, the war goes to terms. This page covers that arc.
 
-### Key numbers
+### The numbers
 
 | What | Value |
 | --- | --- |
@@ -23,11 +23,11 @@ Every war has one territory meter, running 0 to 100, that measures how much of t
 | Supply floor | Never zero |
 | Home-soil supply bonus | 25% more hauled for the side fighting on its own soil |
 
-### A worked campaign
+### Eight decisive wins in
 
 Side A (the attacker) declares on country C, hosted on side B. The meter opens at 100 because C holds all of its own soil. Each decisive A win takes about one twentieth of the track, so after 8 decisive wins and no reversals the meter reads about 60. A narrow win takes a smaller slice, and a B victory on the next turn puts back a slice of the same size. At about 25 the front has travelled three-quarters of the way and the status changes to Winding Down. If the meter reaches 0 and the war is at least 24 turns old, it goes to terms pending. The 24-turn minimum is rarely the limit, because the grind takes many times that.
 
-## The control meter
+## Reading the control number
 
 Every conflict has exactly one territorial number: **control**, running 0 to 100.
 
@@ -42,7 +42,7 @@ Both sides always see it. **Territory is public in every fog tier**: the world k
 
 ## Where a war starts
 
-This is the detail that trips people up, and it is the difference between reading the meter correctly and reading it backwards.
+Getting this wrong means reading the meter backwards. The host country and starting pole are set when the war opens (see [Declaring War](/wiki/declaring-war)).
 
 **A conflict opens at the host's own pole.**
 
@@ -93,13 +93,13 @@ The war room shows your supply as **SUPPLIED · STRAINED · SHORTAGE · CUT OFF*
 
 Displacement is one input to that readout, not the whole of it. The readout is what the front can haul against what you have posted there, so a huge force at one front reads short even at the starting line. **The side fighting on its own soil hauls 25 percent more**: the nation that was declared on, and its allies at that front, have depots, rail and interior lines behind them. An invader has to bring all of that with it.
 
-This produces the natural rhythm of a real campaign: **advance, overextend, stall, consolidate, advance again.**
+How the front is moving also affects approval at home; see [Government Approval](/wiki/government-approval). This produces the natural rhythm of a real campaign: **advance, overextend, stall, consolidate, advance again.**
 
-## Winding down
+## Winding Down
 
 When the front has travelled roughly three-quarters of the way from its starting line toward a pole, the conflict's status changes from **Active** to **Winding Down**.
 
-It is a public signal that a war is approaching its conclusion, visible to everyone, including neutrals deciding whether to intervene and to the losing side deciding whether to sue for peace.
+It is a public signal that a war is approaching its conclusion, visible to everyone (status, fog tiers and the historical record all follow from the meter; see [Conflicts & the Military System](/wiki/conflicts-overview)), including neutrals deciding whether to intervene and to the losing side deciding whether to sue for peace.
 
 **It can reverse.** A front that swings back out of the enemy heartland returns to Active. Winding Down is a description of the current position, not a countdown.
 
@@ -142,13 +142,13 @@ The war goal recorded at declaration is what peace terms negotiate *against*. Re
 
 **Conquest is not currently selectable** precisely because nothing transfers territory between countries yet: a war fought for conquest could not be won on its own terms. Occupation is a wartime position, not a permanent annexation.
 
-## The other way wars end
+## Wars that end without a pole
 
 Territory is not the only exit. A war also ends when **one side's roster empties**: every country on it has made a separate peace and left. The last country to leave hands victory to the other side.
 
 That is often the realistic outcome. Twenty unanswered decisive wins is a very long campaign; buying your way out is frequently cheaper than fighting to a pole. See [Peace, Indemnities & Truces](/wiki/peace-and-truces).
 
-## Practical guidance
+## Playing the meter
 
 **Read the meter from the right end.** Control is *side B's* share. If you are side A, your progress is the number going **down**.
 
@@ -166,40 +166,17 @@ That is often the realistic outcome. Twenty unanswered decisive wins is a very l
 
 **Never leave a front undefended.** An unopposed offensive advances at full rate. Refusing to fight does not stop the map from moving.
 
-## What you can do
+## Who does what
 
 - **Fight and hold ground** by winning battles; see [Fighting a Battle](/wiki/fighting-a-battle).
 - **Read the meter** on the conflict record and the war room. If you are side A, your progress is the number going down.
 - **Name or accept terms** once the war is decided; see [Peace, Indemnities & Truces](/wiki/peace-and-truces).
 
-Common questions: *Which way does the meter go if I am side A?* Down. *Why did the war not end when I reached 100%?* The pole must be reached by the front moving there, the war must be at least 24 turns old, and a defender who simply starts at their own pole has not won anything. *Did I win if I take everything?* Yes, at a pole, and then the victor names a settlement. *Why can I not annex territory?* Nothing transfers territory between countries yet, so occupation is a wartime position and not a permanent change.
+**Questions that come up.** *Which way does the meter go if I am side A?* Down. *Why did the war not end when I reached 100%?* The pole must be reached by the front moving there, the war must be at least 24 turns old, and a defender who simply starts at their own pole has not won anything. *Did I win if I take everything?* Yes, at a pole, and then the victor names a settlement. *Why can I not annex territory?* Nothing transfers territory between countries yet, so occupation is a wartime position and not a permanent change.
 
-## Connections
+## See also
 
-**Driven by**
-
-- [Fighting a Battle](/wiki/fighting-a-battle): each battle's result moves the meter.
-- [Declaring War](/wiki/declaring-war): the host country and starting pole are set when the war opens.
-
-**Affects**
-
-- [Peace, Indemnities & Truces](/wiki/peace-and-truces): reaching a pole opens the victor's window to name terms, and a war ends with a 240-turn truce.
-- [Conflicts & the Military System](/wiki/conflicts-overview): status, fog tiers and the historical record follow from the meter.
-- [Government Approval](/wiki/government-approval): how the front is moving affects approval at home.
-
-## Status
-
-Territory works the same in every world and era. A war against an insurgency, or one whose losing founder has already left on a separate peace, skips the terms window and resolves outright. Wars hosted in a country on neither side open at 50.
-
-Last checked: 2026-10-29, version 1.18.0
-
-## Technical detail
-
-The exact rules are on the design page [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), under Battles and territory. The step sizes and supply constants are intentionally not published in the wiki.
-
-## Next
-
-- [Peace, Indemnities & Truces](/wiki/peace-and-truces): the other way out.
-- [Fighting a Battle](/wiki/fighting-a-battle): how to move the line.
 - [A War, Start to Finish](/wiki/a-war-start-to-finish): the whole arc.
+
+Works the same in every world and era. A war against an insurgency, or one whose losing founder has already left on a separate peace, skips the terms window; wars hosted in a country on neither side open at 50. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), under Battles and territory. Step sizes and supply constants are intentionally not published in the wiki.
 `;

@@ -1,8 +1,10 @@
 export const faqContent = `# Frequently Asked Questions
 
+The questions players ask most, grouped by what they were doing when they got stuck. If your question is about a word rather than a rule, the [Glossary](/wiki/glossary) is faster, and new players should start with [Tips for Beginners](/wiki/tips-for-beginners).
+
 ---
 
-## Elections & candidacy
+## Why I can't run, or why I lost
 
 **Why can't I run for Senate?**
 
@@ -68,7 +70,7 @@ When at least one player is in a party's primary, all NPP candidates in that sam
 
 ---
 
-## Game time & turns
+## When things happen
 
 **What is a game turn? What is a game year?**
 
@@ -86,7 +88,7 @@ Turns fire at the top of every real hour (e.g., 14:00, 15:00, 16:00). You can se
 
 ---
 
-## Legislation
+## Getting a bill through
 
 **How do I propose a bill?**
 
@@ -106,7 +108,7 @@ In presidential systems, the executive can veto a bill after the required chambe
 
 ---
 
-## Parties & organizations
+## Parties, org and whips
 
 **How do I start a new political party?**
 
@@ -126,7 +128,7 @@ Whip directives are instructions the party leadership sends to NPP legislators o
 
 ---
 
-## Economy & finance
+## Money: corporations, bonds and currencies
 
 **What do corporations do?**
 
@@ -146,7 +148,7 @@ When Forex is enabled, you can trade every active country's currency. A full mod
 
 ---
 
-## Characters
+## Moving, infamy and influence
 
 **Can I change my home state or UK constituency?**
 
@@ -166,10 +168,7 @@ NPI is your national-level reputation, distinct from state-level Political Influ
 
 ---
 
-## Related
+## Still stuck
 
-- [Tips for Beginners](/wiki/tips-for-beginners): Practical new player advice.
-- [Glossary](/wiki/glossary): Definitions of all game terms.
-- [Getting Started](/wiki/getting-started): First steps guide.
-- [Reference: Formulas](/wiki/reference-formulas): Complete formula reference.
+[Getting Started](/wiki/getting-started) covers first steps, and [Reference: Formulas](/wiki/reference-formulas) has the complete formulas behind the numbers quoted above.
 `;
