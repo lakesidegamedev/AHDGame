@@ -99,7 +99,11 @@ export async function POST(request: Request, { params }: RouteParams) {
   const crossCountry = crossCountryActionGuard(authUser.character, countryId);
   if (crossCountry) return crossCountry;
 
-  const rateLimit = checkRateLimit(authUser.userId, 20, 60_000);
+  const rateLimit = checkRateLimit(
+    `api/country/[code]/region/[id]/party/[partyId]/build-org:${authUser.userId}`,
+    60,
+    60_000
+  );
   if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
   const bodyResult = await parseOptionalPsPool(request);

@@ -55,7 +55,11 @@ export async function GET(request: Request, { params }: RouteParams) {
     if (!authResult.ok) return authResult.response;
     const { user } = authResult;
 
-    const rateLimit = checkRateLimit(user.userId, 60, 60000);
+    const rateLimit = checkRateLimit(
+      `api/country/[code]/parties/[id]/treasury/payout-allowance:${user.userId}`,
+      60,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const raw = new URL(request.url).searchParams.get("characterId");

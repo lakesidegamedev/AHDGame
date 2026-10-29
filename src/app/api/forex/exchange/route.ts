@@ -156,7 +156,7 @@ export async function POST(request: Request) {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
 
-    const rateCheck = checkRateLimit(auth.user.userId, 30, 60_000);
+    const rateCheck = checkRateLimit(`api/forex/exchange:${auth.user.userId}`, 30, 60_000);
     if (!rateCheck.ok) return rateLimitResponse(rateCheck.retryAfter);
 
     const parsed = await parseJsonBody(request, marketOrderSchema);

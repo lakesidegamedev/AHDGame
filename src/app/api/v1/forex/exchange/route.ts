@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       throw forbidden("Currency exchange is not yet enabled");
     }
 
-    const rateCheck = checkRateLimit(apiAuth.ownerUserId, 30, 60_000);
+    const rateCheck = checkRateLimit(`api/v1/forex/exchange:${apiAuth.ownerUserId}`, 30, 60_000);
     if (!rateCheck.ok) return rateLimitResponse(rateCheck.retryAfter);
 
     const parsed = await parseJsonBody(request, marketOrderSchema);

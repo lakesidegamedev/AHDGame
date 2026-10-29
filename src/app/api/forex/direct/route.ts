@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     const auth = await requireAuthWithCharacter();
     if (!auth.ok) return auth.response;
 
-    const rateCheck = checkRateLimit(auth.user.userId, 20, 60_000);
+    const rateCheck = checkRateLimit(`api/forex/direct:${auth.user.userId}`, 20, 60_000);
     if (!rateCheck.ok) return rateLimitResponse(rateCheck.retryAfter);
 
     const parsed = await parseJsonBody(request, directTradeSchema);
