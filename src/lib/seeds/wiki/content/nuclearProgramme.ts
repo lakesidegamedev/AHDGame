@@ -106,6 +106,8 @@ Funding harder moves faster and burns brighter: it builds suspicion with the Sov
 - **East Germany's defence seat holder:** set the covert funding level.
 - **Everyone else:** watch the tension gauge and the news feed.
 
+![Defence office Nuclear tab showing warheads in stockpile, deterrence credibility, the production rate control and the device ladder](/wiki-images/screens/nuclear-programme-nuclear-panel.webp)
+
 ## Connections
 
 **Driven by**

@@ -245,6 +245,8 @@ Equipment is bought separately from units. The defence seat publishes tenders, c
 
 All of it is in the defence office, **Military** tab, held by the defence seat holder (or an acting holder):
 
+![Defence office Military tab with the Recruit unit panel listing unit types, build cost, personnel and the authorize button](/wiki-images/screens/military-units-recruit-panel.webp)
+
 - Recruit units (1 action, manpower, appropriation money).
 - Upgrade a unit's tech tier (1 action, 25% to 50% of its build price).
 - Set a unit's posture, or the national force tier (free).

@@ -130,6 +130,8 @@ Two details:
 
 The Operations tab shows you:
 
+![Defence office Operations panel showing the replacement manpower pool, per turn gain, ceiling and reinforcement mode](/wiki-images/screens/manpower-conscription-operations-panel.webp)
+
 - **Pool**: men available now
 - **Per turn**: your current regeneration
 - **Ceiling**: the cap

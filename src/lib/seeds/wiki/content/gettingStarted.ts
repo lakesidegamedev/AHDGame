@@ -20,6 +20,8 @@ home
 
 Six numbers matter in your first session. The rest can wait.
 
+![Profile of a new character showing actions, state influence, national influence and favorability](/wiki-images/screens/getting-started-new-character-profile.webp)
+
 | Number | What it is | What it buys |
 | --- | --- | --- |
 | **Actions** | Your spendable points. New characters start with 25, and you gain 4 each turn. | Campaigning, fundraising, ads, polls, declaring, and most other moves. |

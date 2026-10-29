@@ -31,6 +31,8 @@ Use it to decide whether to run. It returns:
 - **Best 5 groups:** where your share is highest.
 - **Worst 5 groups:** where your share is lowest. Those are your targets for ads and canvassing.
 
+![Poll results panel with overall appeal, estimated voters, reachable voters and the estimated vote share](/wiki-images/screens/polling-quick-poll-results.webp)
+
 ### Full Demographic Poll
 
 Use it to decide what to fix. It returns, for every group in the electorate, a row with size, turnout, your appeal, your reach, your approval and the allocated vote count, with the same numbers for each opponent, plus a gap analysis of the largest differences. It also shows turnout modifiers on each group, so you can see who has been canvassed in this state.
