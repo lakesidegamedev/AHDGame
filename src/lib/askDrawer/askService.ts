@@ -19,6 +19,7 @@ export const ASK_DRAWER_ROUTES = new Set([
   "conversation/delete",
   "conversation/rename",
   "conversation/pin",
+  "conversation/share",
   "answer/feedback",
   "chart/render",
   "map/render",
