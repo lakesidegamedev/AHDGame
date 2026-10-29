@@ -44,6 +44,8 @@ A push shows the newest alert's own title and text, and opens the page it is abo
 - **Snooze one item.** In the open item, press **Snooze** to hide that item for 12 hours. It returns on its own.
 - **Archive.** Archiving a notification takes it out of your active views without deleting it. Archiving a mail thread deletes your copy of the received messages, so only archive mail you are done with.
 
+![Notification settings with per-type switches grouped by category and a direct-message alerts switch](/wiki-images/screens/notifications-settings-panel.webp)
+
 ### Why the inbox is split this way
 
 Measured on live play, routine reports were over 90% of all alerts and almost none were opened. So the game pushes only what needs a decision, keeps everything else in the inbox, and lets you mute whole types rather than clearing items one at a time.

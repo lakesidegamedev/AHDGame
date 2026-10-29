@@ -65,6 +65,8 @@ The coalition changed who counts as the minority, not who holds the Majority Lea
 - **Agree priorities** with the other chairs from the coalition page.
 - **Check the bloc maths** before you ally: the largest bloc can lock the smaller party out of minority posts.
 
+![Coalition page with members, ideology and the list of member parties and their chairs](/wiki-images/screens/coalitions-coalition-page.webp)
+
 **Common questions.**
 - *Who is the coalition chair?* The national chair of the chair party. If that party leaves, the longest-standing member party takes over.
 - *Do coalitions matter in the UK or Germany?* Not for forming governments. They still show alignment and shared priorities.

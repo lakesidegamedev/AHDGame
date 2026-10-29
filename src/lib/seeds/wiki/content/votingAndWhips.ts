@@ -57,6 +57,8 @@ Votes are a sum of forces, not a dice roll, so you can read a chamber in advance
 - **Pick hard or soft.** A hard whip writes the vote immediately when the roll succeeds. A soft whip leaves the NPP deciding with extra pressure.
 - **Read the defiance watch** to see which members currently vote against your whip. It shows only live defiance and clears when the member comes back into line.
 
+![Bill vote panel with For, Against and Abstain buttons, the vote by party table and the whip count](/wiki-images/screens/voting-and-whips-vote-panel.webp)
+
 **Your vote moves your own positions.** An Aye pulls you toward the bill's average position on each axis by up to 0.25, never past it. A Nay pushes you 0.25 away. The buttons show the exact move first. Flipping votes does not stack, and switching to Abstain reverts the shift. A vote written onto you by a party whip never moves you and is not counted as your own. Bills with no ideology, such as a war declaration or a tariff-only bill, move nobody.
 
 **Whips and players.** A whip never takes away a player's choice. A hard whip can write a vote for you, but you can change it. There is no automatic penalty for defying your party's whip: no infamy, no stat loss. The cost is political, through the trust of your leadership and your standing in your party.

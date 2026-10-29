@@ -14,6 +14,8 @@ If you already have a character, you cannot open creation until you retire it (s
 
 Pick the country you actually want to play. It scopes your elections, parties, legislature and who you can wire money to. You cannot campaign across countries, and a later country change resets your National Influence and your party (see [Relocation](/wiki/relocation)).
 
+![Create character screen with the list of open countries in the Country step](/wiki-images/screens/create-a-character-country-picker.webp)
+
 | Country | Home you pick | First office most people target |
 | --- | --- | --- |
 | United States | State | State Senate, then House |
