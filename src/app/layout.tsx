@@ -18,6 +18,7 @@ import { StatusBar } from "@/components/StatusBar";
 import {
   DeferredSeasonRecapGate,
   DeferredStatAllocationGate,
+  DeferredWealthTierRepickGate,
   DeferredTutorialCoachMount,
   DeferredTurnProgressToast,
 } from "@/components/DeferredShellOverlays";
@@ -443,6 +444,7 @@ export default async function RootLayout({
                           {!isWikiSubdomain && <PollBannerNotice />}
                           <AuthConnectivityGate />
                           <DeferredStatAllocationGate />
+                          <DeferredWealthTierRepickGate />
                           <DeferredSeasonRecapGate />
                           {/* overflow-x-CLIP, not -hidden: hidden makes this element the
                             scroll container for every `position: sticky` descendant

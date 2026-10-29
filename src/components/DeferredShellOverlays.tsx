@@ -12,6 +12,10 @@ const StatAllocationGate = dynamic(
   () => import("@/components/stats/StatAllocationGate").then((m) => m.StatAllocationGate),
   { ssr: false }
 );
+const WealthTierRepickGate = dynamic(
+  () => import("@/components/character/WealthTierRepickGate").then((m) => m.WealthTierRepickGate),
+  { ssr: false }
+);
 const SeasonRecapGate = dynamic(
   () => import("@/components/recap/SeasonRecapGate").then((m) => m.SeasonRecapGate),
   { ssr: false }
@@ -27,6 +31,10 @@ const TutorialCoachMount = dynamic(
 
 export function DeferredStatAllocationGate() {
   return <StatAllocationGate />;
+}
+
+export function DeferredWealthTierRepickGate() {
+  return <WealthTierRepickGate />;
 }
 
 export function DeferredSeasonRecapGate() {
