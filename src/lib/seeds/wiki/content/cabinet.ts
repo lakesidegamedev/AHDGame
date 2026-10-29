@@ -59,6 +59,8 @@ In the UK, Japan, Germany and Ireland the Prime Minister, Chancellor or Taoiseac
 - **As a Cabinet member:** issue ministerial orders (1 action each) that change metrics nationally or in target regions, set standing tier policies for free, designate a target region, and build assets. See [Cabinet Projects & Buildings](/wiki/cabinet-projects).
 - **As a senator:** vote on nominees.
 
+![Cabinet page showing the seat count, pending votes and the principal officers table](/wiki-images/screens/cabinet-overview.webp)
+
 ### Acting secretaries
 
 A President can seat an acting secretary in a vacant seat from the cabinet page, without a Senate vote, so a department does not go dark while confirmation is pending.

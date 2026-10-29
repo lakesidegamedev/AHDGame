@@ -14,6 +14,8 @@ For a finished presidential race with recorded weekly history, choose **Replay t
 
 ### 1. Country election board
 
+![Elections board with the office, state and stage filters and the election night summary](/wiki-images/screens/elections-player-guide-elections-board.webp)
+
 Open **Nation > Elections**. Use the filters for country, office, stage, and state or region. The board is for finding a race and checking its phase. It is not the place to judge your detailed position.
 
 Before entering, confirm:

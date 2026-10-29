@@ -130,6 +130,8 @@ Low approval does not trigger a snap election and does not remove anyone from of
 - **As opposition**, track the metrics. Rising inflation or unemployment will pull approval down within a few turns, and the election multiplier makes that matter at the ballot box.
 - **If approval is under 40**, expect recovery to take time. State ratings move at most 2 points a turn, so a 10 point gap needs at least 5 turns even if every metric turns around at once. National modifiers such as the cabinet penalty are the fast fixes.
 
+![Country Approval page showing national approval, the state average and the regional conditions list](/wiki-images/screens/government-approval-country-approval.webp)
+
 **Common questions.** *Why did approval drop this turn?* Check the modifier lines first. A war line, an empty seat or a new Recession condition shows up there. *Why is approval moving so slowly?* The 2 point smoothing. *Does low approval trigger a snap election?* No.
 
 ## Connections
