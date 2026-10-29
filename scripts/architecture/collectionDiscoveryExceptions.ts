@@ -525,7 +525,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/remediation/inspect.ts",
     owner: "runCount",
     argument: "collection",
-    scopeHash: "5996ddef7bcf0e137ba10f9e42a8c6d005795a01011feb4a7af2ab1c475776cd",
+    scopeHash: "4c410412d92f0813f74070cc0e5d085a793b9b76befdbf4b64eac4d9fb99e26d",
     count: 1,
     reason:
       "Authenticated operator remediation specs select the collection for a reviewed repair operation.",
@@ -534,7 +534,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/remediation/inspect.ts",
     owner: "runDistinct",
     argument: "collection",
-    scopeHash: "f1253c6c7c9807cf19331470700d30c734139b94ac7b74470280430c6347ece0",
+    scopeHash: "1975b6fa3d201ca052120bf831b1a476d1b4831684530cc39869f0c5de8075f0",
     count: 1,
     reason:
       "Authenticated operator remediation specs select the collection for a reviewed repair operation.",
@@ -543,7 +543,7 @@ export const LEGACY_DYNAMIC_COLLECTION_SITES: readonly LegacyDynamicCollectionSi
     file: "src/lib/remediation/inspect.ts",
     owner: "runQuery",
     argument: "spec.collection",
-    scopeHash: "9517da487e28339afe70f3db7fd9011994588e18f377cdef3e77d8d01822377c",
+    scopeHash: "dd3665c1163907cc6c3a0df3ca50c724b6525eeb743505c432b936d68e28f795",
     count: 2,
     reason:
       "Authenticated operator remediation specs select the collection for a reviewed repair operation.",

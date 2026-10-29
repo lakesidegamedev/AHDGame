@@ -67,4 +67,41 @@ describe("loadSettleableSupplyAgreements", () => {
       })
     );
   });
+
+  it("sends one summary per corporation when several of its agreements end together", async () => {
+    vi.resetModules();
+    const createNotifications = vi.fn();
+    vi.doMock("@/lib/notifications", () => ({ createNotifications, createNotification: vi.fn() }));
+    const { loadSettleableSupplyAgreements: load } =
+      await import("./loadSettleableSupplyAgreements");
+    const db = createMockDb();
+    const player = { _id: new ObjectId(), userId: new ObjectId() };
+    const npp = { _id: new ObjectId(), userId: new ObjectId("000000000000000000000000") };
+    const row = (commodity: string) => ({
+      _id: new ObjectId(),
+      supplierCorpId: npp._id,
+      buyerCorpId: player._id,
+      commodity,
+      status: "active",
+    });
+    db.collection("supplyAgreements").find.mockReturnValueOnce({
+      toArray: vi.fn().mockResolvedValue([row("steel"), row("steel"), row("energy")]),
+    });
+    db.collection("corporations").find.mockReturnValue({
+      toArray: vi.fn().mockResolvedValue([player, npp]),
+    });
+    await load({ db: db as unknown as Db, turn: 68, now: new Date() });
+    const inputs = createNotifications.mock.calls[0][0] as Array<{
+      userId: ObjectId;
+      title: string;
+      message: string;
+      metadata: Record<string, unknown>;
+    }>;
+    const mine = inputs.filter((input) => input.userId.equals(player.userId));
+    expect(mine).toHaveLength(1);
+    expect(mine[0]!.title).toBe("3 supply agreements ended");
+    expect(mine[0]!.message).toContain("Steel & Metals (2), Electricity");
+    expect(mine[0]!.message).not.toMatch(/\bsteel\b|\benergy\b/);
+    expect(mine[0]!.metadata).toEqual(expect.objectContaining({ count: 3, event: "expired" }));
+  });
 });

@@ -233,7 +233,7 @@ export function resolveSourceLink(
   }
 
   // ── Crisis ────────────────────────────────────────────────────────────────
-  if (type === "crisis") {
+  if (type === "crisis" || type === "crisis_resolved") {
     const crisisId = asString(m.crisisId);
     if (crisisId) {
       return { label: "View crisis", href: `/world/crises/${crisisId}` };

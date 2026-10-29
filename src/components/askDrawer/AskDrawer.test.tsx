@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 
 const auth = { user: null as null | Record<string, unknown> };
@@ -11,7 +11,7 @@ vi.mock("@/contexts/AuthDataContext", () => ({
 vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
 vi.mock("next/dynamic", () => ({ default: () => () => null }));
 
-import { AskDrawer, keyboardInset } from "./AskDrawer";
+import { AskDrawer, keyboardInset, visibleArea } from "./AskDrawer";
 
 describe("AskDrawer", () => {
   beforeEach(() => {
@@ -57,7 +57,8 @@ describe("AskDrawer", () => {
     render(<AskDrawer />);
     const fab = document.querySelector("[data-ask-fab]") as HTMLElement;
     expect(fab.className).toContain("sm:hidden");
-    expect(fab.className).toContain("h-11");
+    expect(fab.className).toContain("h-14");
+    expect(fab.querySelector("[data-keir-avatar]")).toBeTruthy();
     expect(fab.className).toContain("var(--status-bar-height,0px)");
     expect(edgeTab().className).toContain("hidden");
     expect(edgeTab().className).toContain("sm:flex");
@@ -90,6 +91,44 @@ describe("AskDrawer", () => {
     } finally {
       nav.remove();
     }
+  });
+});
+
+describe("phone sheet", () => {
+  const original = window.matchMedia;
+  beforeEach(() => {
+    auth.user = {};
+    pathname = "/corporation/1";
+    window.matchMedia = ((query: string) => ({
+      matches: query.includes("max-width"),
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    })) as unknown as typeof window.matchMedia;
+  });
+  afterEach(() => {
+    window.matchMedia = original;
+  });
+
+  it("covers the whole screen, nav included, and slides up from the bottom", () => {
+    render(<AskDrawer />);
+    const aside = document.querySelector("aside[aria-label='Ask']") as HTMLElement;
+    expect(aside.dataset.askSheet).toBe("phone");
+    expect(aside.className).toContain("translate-y-full");
+    expect(aside.className).toContain("z-[60]");
+    fireEvent.click(document.querySelector("[data-ask-fab]") as HTMLElement);
+    expect(aside.className).toContain("translate-y-0");
+    expect(aside.style.top).toBe("0px");
+  });
+});
+
+describe("visibleArea", () => {
+  it("follows the visual viewport when the keyboard pans the page", () => {
+    expect(visibleArea(800, { height: 450, offsetTop: 120 })).toEqual({ top: 120, height: 450 });
+  });
+
+  it("is the full layout viewport without a visual viewport", () => {
+    expect(visibleArea(800, null)).toEqual({ top: 0, height: 800 });
   });
 });
 
