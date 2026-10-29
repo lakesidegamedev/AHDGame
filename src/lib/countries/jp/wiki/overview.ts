@@ -64,7 +64,7 @@ Both chambers use the same rule. Each region elects several members at once, and
 
 **Worked example.** A region elects 14 members and 98,000 votes are cast, so one seat costs a quota of 7,000 votes. Party A has 49,000 votes, B has 31,000 and C has 18,000. A gets 7 seats, B gets 4 and C gets 2, which is 13 of 14. The last seat goes to the largest leftover: A has 0, B has 3,000 and C has 4,000, so C takes it. Final result: A 7, B 4, C 3. A party under 10% of the pooled vote gets nothing, however many leftover votes it holds.
 
-**How long an election takes.** A regular Shūgiin election window is 192 turns (8 real days: 144 for the primary and 48 for the general), and a Sangiin window is 144 turns (6 real days: 72 + 72).
+**How long an election takes.** A regular Shūgiin election window is 192 turns (8 real days: 168 for the primary and 24 for the general), and a Sangiin window is 144 turns (6 real days: 120 primary + 24 general).
 
 **Major parties by region:**
 - Most regions: LDP and CDP are the two major parties

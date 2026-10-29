@@ -9,13 +9,7 @@
  * 48 turns = 1 game year. One turn fires every real-world hour, so
  * `durationHours` doubles as "how many real hours until the election ends."
  *
- * ⚠ Historical quirk: the stored `primaryDurationHours` field on election docs
- * has been used inconsistently across the code base. Current spawn sites
- * ({@link ./turn/perpetualElections.ts}) write `dur - generalDurationHours`
- * (= primary length), matching what this constant records. The PATCH handler
- * in `/api/admin/country/[code]/elections/route.ts` has a comment that
- * contradicts this — do not follow that comment. The canonical meaning is
- * PRIMARY length.
+ * Stored election primaryDurationHours also records the PRIMARY length.
  */
 export const DEFAULT_DURATIONS: Record<
   string,
