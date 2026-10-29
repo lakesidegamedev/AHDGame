@@ -118,12 +118,12 @@ Tips:
 
 ## Connections
 
-**Driven by:**
+**Driven by**
 
 - [Bills & Legislation](/wiki/bills-legislation): state laws set who draws the map, and the compactness and fairness tiers.
 - [Demographics](/wiki/demographics): state voter texture feeds each district's starting lean.
 
-**Affects:**
+**Affects**
 
 - [Election Mechanics](/wiki/election-mechanics): in a redistricted state each House seat is resolved district by district.
 - [General Elections](/wiki/general-elections): district leans set which seats are close in the closing sprint.
