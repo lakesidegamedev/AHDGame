@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { apiErrorText } from "@/lib/errors/catalog";
+import { Countdown, EventItem, EventOutcomeRow } from "./EventsPanel";
 
 interface StrategyOption {
   id: string;
@@ -63,7 +64,6 @@ export default function DebateCard() {
   const [error, setError] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<DebateOutcome | null>(null);
   const [now, setNow] = useState(() => Date.now());
-  const cardRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -118,14 +118,16 @@ export default function DebateCard() {
   // Resolved-this-session summary.
   if (outcome) {
     return (
-      <div ref={cardRef} className="rounded-xl border border-card-border bg-card p-5">
-        <h3 className="text-body-lg font-semibold text-foreground">Debate concluded</h3>
-        <p className="mt-1 text-body text-muted">
-          {outcome.result === "draw"
-            ? "The debate ended in a draw, with no change to favorability."
-            : `Result decided by a ${outcome.favorabilitySwing}-point favorability swing.`}
-        </p>
-      </div>
+      <EventOutcomeRow
+        kind="debate"
+        title="Debate concluded"
+        outcome={outcome.result === "draw" ? "Draw" : `${outcome.favorabilitySwing}-point swing`}
+        detail={
+          outcome.result === "draw"
+            ? "No change to favorability."
+            : `Result decided by a ${outcome.favorabilitySwing}-point favorability swing.`
+        }
+      />
     );
   }
 
@@ -133,26 +135,25 @@ export default function DebateCard() {
   if (!debate && !lastResolved) return null;
 
   if (!debate && lastResolved) {
-    const tone =
-      lastResolved.result === "won"
-        ? "text-success"
-        : lastResolved.result === "lost"
-          ? "text-error"
-          : "text-muted";
     return (
-      <div ref={cardRef} className="rounded-xl border border-card-border bg-card p-5">
-        <h3 className="text-body-lg font-semibold text-foreground">Recent debate</h3>
-        <p className="mt-1 text-body text-muted">
-          vs. {lastResolved.opponentName}:{" "}
-          <span className={`font-semibold ${tone}`}>
-            {lastResolved.result === "won"
-              ? `Won (+${lastResolved.favorabilitySwing} favorability)`
-              : lastResolved.result === "lost"
-                ? `Lost (−${lastResolved.favorabilitySwing} favorability)`
-                : "Draw"}
-          </span>
-        </p>
-      </div>
+      <EventOutcomeRow
+        kind="debate"
+        title={`vs. ${lastResolved.opponentName}`}
+        outcomeTone={
+          lastResolved.result === "won"
+            ? "good"
+            : lastResolved.result === "lost"
+              ? "bad"
+              : "neutral"
+        }
+        outcome={
+          lastResolved.result === "won"
+            ? `Won (+${lastResolved.favorabilitySwing} favorability)`
+            : lastResolved.result === "lost"
+              ? `Lost (−${lastResolved.favorabilitySwing} favorability)`
+              : "Draw"
+        }
+      />
     );
   }
 
@@ -163,24 +164,25 @@ export default function DebateCard() {
   const hasSubmitted = !debate.canSubmit && submitted.length > 0;
 
   return (
-    <div ref={cardRef} className="overflow-hidden rounded-xl border border-card-border bg-card">
-      <div className="relative px-5 pt-5 pb-1">
-        <div className="flex items-baseline justify-between gap-3">
-          <h3 className="text-body-lg font-semibold text-foreground">
-            Debate challenge: {debate.opponentName}
-          </h3>
-          <span className="shrink-0 text-body-sm font-medium tabular-nums text-foreground">
-            {formatCountdown(msLeft)}
-          </span>
-        </div>
-        <p className="mt-1 text-body-sm text-muted">
-          {hasSubmitted
-            ? "You've locked in your strategy. This debate resolves at the deadline."
-            : "Pick your debate strategy. Each leans on a different stat with its own risk and reward: a bold attack swings hard, and staying above the fray plays it safe."}
-        </p>
-      </div>
+    <EventItem
+      kind="debate"
+      status={debate.canSubmit ? "decision" : "active"}
+      tone="sky"
+      title={`vs. ${debate.opponentName}`}
+      aside={
+        <Countdown
+          label={hasSubmitted ? "Resolves in" : "Respond within"}
+          value={formatCountdown(msLeft)}
+        />
+      }
+    >
+      <p className="text-body-sm text-muted">
+        {hasSubmitted
+          ? "You've locked in your strategy. This debate resolves at the deadline."
+          : "Pick your debate strategy. Each leans on a different stat with its own risk and reward: a bold attack swings hard, and staying above the fray plays it safe."}
+      </p>
 
-      <div className="space-y-2 p-5 pt-3">
+      <div className="grid gap-2 sm:grid-cols-2">
         {debate.strategyOptions.map((opt) => {
           const isOn = selected.includes(opt.id);
           const isSubmittedChoice = hasSubmitted && submitted.includes(opt.id);
@@ -189,10 +191,10 @@ export default function DebateCard() {
           const stateClass = isSubmittedChoice
             ? "border-success/60 bg-success/10"
             : hasSubmitted
-              ? "border-card-border opacity-50"
+              ? "border-card-border bg-card opacity-50"
               : isOn
                 ? "border-primary/60 bg-primary/10"
-                : "border-card-border hover:bg-card-elevated";
+                : "border-card-border bg-card hover:bg-card-elevated";
           return (
             <button
               key={opt.id}
@@ -217,32 +219,32 @@ export default function DebateCard() {
             </button>
           );
         })}
-
-        {error && (
-          <p className="rounded-lg border border-error/30 px-3 py-2 text-body-sm text-error">
-            {error}
-          </p>
-        )}
-
-        {debate.canSubmit ? (
-          <button
-            type="button"
-            onClick={submit}
-            disabled={selected.length === 0 || submitting}
-            className="mt-1 w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {submitting
-              ? "Submitting…"
-              : selected.length === 0
-                ? "Select a strategy"
-                : "Commit strategy"}
-          </button>
-        ) : hasSubmitted ? null : (
-          <p className="mt-1 text-body-sm text-muted">
-            Waiting on the other candidate. This debate resolves at the deadline.
-          </p>
-        )}
       </div>
-    </div>
+
+      {error && (
+        <p className="rounded-lg border border-error/30 px-3 py-2 text-body-sm text-error">
+          {error}
+        </p>
+      )}
+
+      {debate.canSubmit ? (
+        <button
+          type="button"
+          onClick={submit}
+          disabled={selected.length === 0 || submitting}
+          className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {submitting
+            ? "Submitting…"
+            : selected.length === 0
+              ? "Select a strategy"
+              : "Commit strategy"}
+        </button>
+      ) : hasSubmitted ? null : (
+        <p className="text-body-sm text-muted">
+          Waiting on the other candidate. This debate resolves at the deadline.
+        </p>
+      )}
+    </EventItem>
   );
 }
