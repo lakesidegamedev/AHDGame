@@ -1,16 +1,16 @@
 export const fightingABattleContent = `# Fighting a Battle
 
-A war exists. Now you have to actually fight it.
+A war exists (see [Declaring War](/wiki/declaring-war), which also supplies the opening forces). Now you have to actually fight it, and the enemy gets a full turn to answer every move you make.
 
 This page is the operational loop: get forces to the front, look at the odds, declare an offensive, survive the turn, read what happened. Everything here happens either in the **war room** (\`/world/conflicts/combat\`) or on the **conflict record** (\`/world/conflicts/<number>\`). Both work, and both use the same underlying authority.
 
-## How it works
+## The loop in one paragraph
 
 You get units to a front through a general, read two odds figures in the war room, and declare an offensive. The defender gets one turn to react. Then the battle resolves, writes a report, and moves the territory meter. The battle model itself is deliberately not published, so you cannot solve fights instead of fighting them. Everything you can act on is below.
 
 ![Offensive loop from assigning units and posting a general to reading the war room, declaring, a one turn defender window, resolution and report, with coalition merge and unopposed branches.](/wiki-images/diagrams/fighting-a-battle-loop.svg)
 
-### Key numbers
+### The numbers
 
 | What | Value |
 | --- | --- |
@@ -23,20 +23,20 @@ You get units to a front through a general, read two odds figures in the war roo
 | Standing order to join allied offensives | Off by default |
 | Supply readout | SUPPLIED, STRAINED, SHORTAGE, CUT OFF |
 
-### A worked turn
+### A turn at 44% against 41%
 
 You hold a front with two generals and the war room shows **You attack 44%** and **They attack 41%**, with the enemy band at "Evenly matched". Both figures are under 50% because attacking is harder than defending, and each row is the chance of whoever moves. You decide not to attack.
 
 On turn 700 the enemy declares an offensive anyway. You are not told. You notice their threat reading climbing and a new army on the front, so you post a third general with 6 more formations. The battle resolves on turn 701 against your reinforced line. The report shows a Pyrrhic Victory for the attacker, with losses on both sides and a small change to the control meter. Your units stay at the front under their general and begin rebuilding that turn.
 
-## Step 1: Get forces to the front
+## Getting forces to the front
 
 There is no "deploy" button. Deployment is two separate acts by two different people.
 
 **The Secretary of Defense assigns units to a general.**
 Office → **Military** → roster. Each unit card has an *Assign to …* dropdown listing your commissioned generals. A unit reads either **"Assigned · <name>"** or **"General Staff · unassigned"**.
 
-**The Commanding General posts that general to the conflict.**
+**The Commanding General posts that general to the conflict** (see [Commands & Command Structure](/wiki/military-commands), where the Theater Commander is also named).
 \`/country/<code>/general/commands\`. Pick the conflict from the dropdown beside each of the Command's generals.
 
 The moment the posting saves, **every unit assigned to that general is at that front**. Un-post the general and the whole force returns to reserve.
@@ -50,7 +50,7 @@ Two consequences worth internalising:
 
 **Postures floor up.** A unit on Garrison automatically rises to Standard when it reaches a conflict. Garrison is a homeland-only posture.
 
-## Step 2: Read the war room
+## Reading the war room
 
 The war room shows you, for your chosen target:
 
@@ -96,7 +96,7 @@ The projection you see is computed by **the same code that resolves the battle**
 
 What the projection cannot know is what changes before the tick. Your opponent has a full turn to reinforce, and the odds you acted on can be stale by the time the battle happens.
 
-## Step 3: Declare the offensive
+## Declaring the offensive
 
 Press **Declare offensive**, pick the enemy nation.
 
@@ -123,7 +123,7 @@ The conflict page now offers a **standing order** per front: *join allied offens
 - An ally that joins this way appears in the war log under its own flag with its own casualties. Withdrawing your forces from the front is the way to stop supporting an offensive.
 - The war room's odds already count allies who will join, whether by their own declaration or by standing order, and its "They attack" row counts every nation with troops on your side.
 
-## Step 4: The defender's window
+## The defender's window
 
 **An offensive declared this turn resolves on the next one.** That gap is the whole tactical game.
 
@@ -139,7 +139,7 @@ But there is a catch:
 
 Defending well is an act of reading the board, not of reacting to an alert. Watch region threat and the conflict record.
 
-## Step 5: Resolution
+## When the turn ticks
 
 On the tick, battles resolve in a fixed position in the turn: after force effects, before general tenure and reinforcement. So the order is **fight → count losses → rebuild**.
 
@@ -180,13 +180,13 @@ A declaration can resolve into nothing:
 
 A fizzled declaration produces a "no contact" report and costs you the turn.
 
-## Step 6: Read the report
+## Reading the report
 
 Every engagement writes a permanent battle report. Verdicts, best to worst from the attacker's view:
 
 **Decisive Victory → Victory → Pyrrhic Victory → Costly Defeat → Rout**
 
-The report carries the verdict, both sides' losses, who fought on each side, whether either side withdrew, and the territorial position **before and after**, so you can see exactly what the win bought.
+The report carries the verdict, both sides' losses, who fought on each side, whether either side withdrew, and the territorial position **before and after**, so you can see exactly what the win bought. A battle's margin moves the control meter; see [Occupation, Territory & Victory](/wiki/occupation-and-victory).
 
 What you see depends on your tier:
 
@@ -200,20 +200,20 @@ The resolution model is deliberately not published in detail: knowing the exact 
 
 **Force quality**
 
-- **Strength.** A unit at 40% headcount fights like a much smaller unit. It is the biggest single lever.
+- **Strength.** Strength, veterancy, tech tier, posture and readiness are all battle inputs from your roster (see [Units, Recruitment & Procurement](/wiki/military-units)), and battles lower strength, readiness and veterancy in return. A unit at 40% headcount fights like a much smaller unit. It is the biggest single lever.
 - **Veterancy.** Elite formations are substantially better than green ones. Veterancy is a five-grade table, not a compounding multiplier.
 - **Technology tier.** Real but modest, smaller than veterancy, and it costs upkeep forever.
 - **Equipment.** A small, steady bonus.
 - **Readiness.** A tired army fights worse, and a battle costs a worn formation far more readiness than a fresh one. Readiness climbs back toward its posture baseline at eight points a turn, so pressing every turn keeps a force exhausted while a few turns of rest bring it back. The pace you fight at is a real choice.
 - **Frontage.** A front has finite width. Only so much force can be in contact at once; the rest sits in depth, where it neither fights nor bleeds this turn. Frontline and flank units take their places in the line first, then support, then anything held back. Terrain widens or narrows the line: open plain and desert hold the most, mountains and jungle the least.
-- **Naval reach.** A carrier's air wing genuinely strikes inland and keeps most of its effect on a coastal front. Escorts, submarines and amphibious groups contribute very little to a division fighting inland of them. Whether a front touches the sea is worked out from the host country.
+- **Naval reach.** Fleets from [Naval Vessel Classes & Standing Orders](/wiki/naval-vessel-classes) contribute to a coastal front. A carrier's air wing genuinely strikes inland and keeps most of its effect on a coastal front. Escorts, submarines and amphibious groups contribute very little to a division fighting inland of them. Whether a front touches the sea is worked out from the host country.
 - **Posture.** Higher postures fight better and cost more.
 
 **Command**
 
-- **Generals' trained traits.** This is what makes generals matter: *trained traits*, not rank. A Field Marshal who has never spent a point is the identity modifier. A Major General with a deep, doctrine-boosted path is not.
+- **Generals' trained traits** (see [Generals & the Officer Corps](/wiki/generals); wins and losses pay them XP in return). This is what makes generals matter: *trained traits*, not rank. A Field Marshal who has never spent a point is the identity modifier. A Major General with a deep, doctrine-boosted path is not.
 - **The Theater Commander's bonus**, applied front-wide at a fraction of what their traits give the units they personally lead.
-- **National doctrine**, applying to everything you field.
+- **National doctrine**, applying to everything you field (see [National Doctrine](/wiki/national-doctrine)).
 
 **Position**
 
@@ -225,7 +225,7 @@ The resolution model is deliberately not published in detail: knowing the exact 
 
 - Each country carries a scale factor reflecting the weight of its military establishment.
 
-## Practical guidance
+## Habits that win fronts
 
 **Concentrate.** One front with a real army beats three fronts with fragments. Capacity, supply and the odds all reward concentration.
 
@@ -239,7 +239,7 @@ The resolution model is deliberately not published in detail: knowing the exact 
 
 Drawing comes from every formation you have posted there. Ground and marine formations in the line draw in full, formations held in depth draw less, and air, naval and rocket formations draw a quarter. Air superiority and sea control do not feed your own supply; they only let you cut the enemy's. If the readout says CUT OFF while you own the sky, you have too much posted at one front.
 
-**Rotate veterans out before they are gutted.** Losses on an elite formation are far more expensive than on a green one, because rebuilding dilutes experience in proportion to how many replacements arrive. Top up early.
+**Rotate veterans out before they are gutted.** Losses on an elite formation are far more expensive than on a green one, because rebuilding dilutes experience in proportion to how many replacements arrive. Casualties and rebuilds draw on the pool in [Manpower & Conscription](/wiki/manpower-conscription), which decides how fast losses are replaced. Top up early.
 
 **Set roles deliberately.** Putting your best formations on Rear Area protects them and wastes them. Putting fragile specialists on Frontline gets them killed.
 
@@ -247,46 +247,18 @@ Drawing comes from every formation you have posted there. Ground and marine form
 
 **Name a Theater Commander with trained traits.** The front-wide bonus comes from their *tree*, not their rank.
 
-## What you can do
+## Who can do what
 
 - **Defence seat holder or Theater Commander:** declare, withdraw and read offensives. War room, or the conflict record.
 - **Commanding General:** post and un-post generals.
 - **Anyone with a seat at the front:** read the readouts and the report.
 
-Common questions: *Why does it say I only have a 44% chance and so does the enemy?* Each row is the chance of the side moving, and attacking is harder. *Why are my new units not fighting?* They are still being built, or have no general posted. *Why was I not told they attacked?* Incoming offensives are hidden by design. *Can allies join my offensive?* Yes, by declaring against the same side at the same front, or by a standing order.
+**Questions that come up.** *Why does it say I only have a 44% chance and so does the enemy?* Each row is the chance of the side moving, and attacking is harder. *Why are my new units not fighting?* They are still being built, or have no general posted. *Why was I not told they attacked?* Incoming offensives are hidden by design. *Can allies join my offensive?* Yes, by declaring against the same side at the same front, or by a standing order.
 
-## Connections
+## See also
 
-**Driven by**
-
-- [Declaring War](/wiki/declaring-war): a passed declaration creates the conflict and the opening forces.
-- [Commands & Command Structure](/wiki/military-commands): the Commanding General posts generals and the Theater Commander declares offensives.
-- [Generals & the Officer Corps](/wiki/generals): trained traits change how well a general's units fight.
-- [Units, Recruitment & Procurement](/wiki/military-units): strength, veterancy, tech tier, posture and readiness are battle inputs.
-- [National Doctrine](/wiki/national-doctrine): adopted doctrine applies to every unit on every front.
-- [Manpower & Conscription](/wiki/manpower-conscription): the pool decides how fast losses are rebuilt.
-- [Naval Vessel Classes & Standing Orders](/wiki/naval-vessel-classes): fleets contribute to a coastal front.
-
-**Affects**
-
-- [Occupation, Territory & Victory](/wiki/occupation-and-victory): a battle's margin moves the control meter.
-- [Generals & the Officer Corps](/wiki/generals): wins and losses pay XP.
-- [Manpower & Conscription](/wiki/manpower-conscription): casualties and rebuilds draw on the pool.
-- [Units, Recruitment & Procurement](/wiki/military-units): battles lower strength, readiness and veterancy.
-
-## Status
-
-Battles work in every world and era. Which units you can field depends on the year, and a country with no defence seat cannot declare offensives.
-
-Last checked: 2026-10-29, version 1.18.0
-
-## Technical detail
-
-The exact rules are on the design page [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), under Battles and territory. Battle resolution maths is intentionally left out of the wiki.
-
-## Next
-
-- [Occupation, Territory & Victory](/wiki/occupation-and-victory): what winning battles actually buys.
 - [Peace, Indemnities & Truces](/wiki/peace-and-truces): how it ends.
 - [A War, Start to Finish](/wiki/a-war-start-to-finish): all of this in sequence.
+
+Works in every world and era; which units you can field depends on the year, and a country with no defence seat cannot declare offensives. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), under Battles and territory. Battle resolution maths is intentionally left out of the wiki.
 `;

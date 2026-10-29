@@ -2,11 +2,11 @@ export const nuclearProgrammeContent = `# The Nuclear Programme
 
 The bomb is the defence seat's biggest project: a small technology tree that turns defence appropriations into a warhead stockpile and, eventually, into a deterrent the whole world has to reckon with. This page covers how you get in, how you climb, what it costs, and what it does to the world when you do.
 
-## How it works
+## Tests, legs and warheads
 
 The defence seat holder adopts device nodes (the physics) by conducting public nuclear tests, adopts delivery nodes (the missiles and bombers) quietly, and sets a production rate for warheads. Warheads are paid for from the defence appropriation each turn. Tests raise the world's [Cold War Tension](/wiki/cold-war-tension), and the stockpile raises the floor tension settles at. A stockpile with delivery legs gives you a deterrence score, which is how credible your threat is.
 
-### Key numbers
+### The numbers
 
 | What | Value |
 | --- | --- |
@@ -82,7 +82,7 @@ Time your tests. A thermonuclear shot in the middle of an active crisis is pouri
 
 ### What a stockpile does in a war
 
-Warheads are not a unit in a battle report. Their effect is on the world's temperature. The total warhead count across all programmes sets part of the floor tension relaxes towards, and a war between two nuclear-armed countries is treated as a crisis-grade shock from its first turn. Having a programme therefore changes how the world reacts to your wars, not how a battle resolves.
+Warheads are not a unit in a battle report. Their effect is on the world's temperature. The total warhead count across all programmes sets part of the floor tension relaxes towards, and a war between two nuclear-armed countries is treated as a crisis-grade shock from its first turn. Having a programme therefore changes how the world reacts to your wars, not how a battle resolves. A war between nuclear-armed countries raises tension at once; see [Conflicts & the Military System](/wiki/conflicts-overview). Warheads raise the shared tension floor and tests spike the reading, which is what feeds [Global Response Crises](/wiki/global-response-crises).
 
 ## Covert programmes
 
@@ -100,7 +100,7 @@ covert-nuclear-funding-levels
 
 Funding harder moves faster and burns brighter: it builds suspicion with the Soviets, and suspicion is what the discovery roll feeds on. A turn the budget cannot fund makes no progress and lets suspicion cool. Discovery is a Soviet crackdown, not game over: the programme loses its current stage and one completed stage, and the world learns something. The exact odds are not published. Finishing the last stage banks a device. The breakout test that announces it is a separate, deliberate and public act, and it is the biggest tension spike in the system.
 
-## What you can do
+## Who does what
 
 - **Defence seat holder of a capable country:** adopt Nuclear Delivery in National Doctrine, then open the nuclear panel in the Military office, test devices, adopt delivery legs and set the production rate.
 - **East Germany's defence seat holder:** set the covert funding level.
@@ -108,28 +108,5 @@ Funding harder moves faster and burns brighter: it builds suspicion with the Sov
 
 ![Defence office Nuclear tab showing warheads in stockpile, deterrence credibility, the production rate control and the device ladder](/wiki-images/screens/nuclear-programme-nuclear-panel.webp)
 
-## Connections
-
-**Driven by**
-
-- [National Doctrine](/wiki/national-doctrine): the Nuclear Delivery node is the entry gate.
-- [Defence Procurement](/wiki/defence-procurement): contracts reserve the appropriation that warhead production draws on.
-
-**Affects**
-
-- [Cold War Tension](/wiki/cold-war-tension): tests spike it and the stockpile raises its floor.
-- [Conflicts & the Military System](/wiki/conflicts-overview): wars between nuclear-armed countries raise tension at once.
-- [Global Response Crises](/wiki/global-response-crises): warheads raise the shared tension floor and tests spike the reading
-
-## Status
-
-The conventional programme is open to the United States, the Soviet Union and the United Kingdom in every world that runs the Cold War layer. Device and delivery nodes unlock by calendar year, so a 1953 world offers Fission, Boosted Fission and Thermonuclear but not MIRV or the ICBM and SLBM legs. The covert programme is East Germany only.
-
-Last checked: 2026-10-29, version 1.18.0
-
-## Technical detail
-
-The exact node data is on the design page [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html). Tension rules are on the same page.
-
-See also: [Cold War Tension](/wiki/cold-war-tension), [National Doctrine](/wiki/national-doctrine), [Defence Procurement](/wiki/defence-procurement), [Conflicts & the Military System](/wiki/conflicts-overview).
+Open to the United States, the Soviet Union and the United Kingdom in every world that runs the Cold War layer; the covert programme is East Germany only. Device and delivery nodes unlock by calendar year, so a 1953 world offers Fission, Boosted Fission and Thermonuclear but not MIRV or the ICBM and SLBM legs. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), which also holds the tension rules
 `;

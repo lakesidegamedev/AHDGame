@@ -2,13 +2,13 @@ export const militaryCommandsContent = `# Commands & Command Structure
 
 A **Command** is the organisational layer between your cabinet and your battlefield. It is where the Secretary of Defense stops being the person who moves every division personally and starts being the person who appoints the people who do.
 
-This is the most administrative page in this category, and the one that decides whether your war is run by one overworked minister or by a functioning general staff.
+Get this wrong and your war is run by one overworked minister; get it right and a functioning general staff runs it. Commands carry the chain of authority behind [Conflicts & the Military System](/wiki/conflicts-overview).
 
-## How it works
+## Who holds which job
 
 The defence seat holder builds Commands and commissions the generals who fill them. Each Command has a Commanding General who posts generals to wars. Each war can have one Theater Commander who runs its offensives. Authority moves down the chain: once a layer is given a job, the layer above cannot do it.
 
-### Key numbers
+### The numbers
 
 | What | Value |
 | --- | --- |
@@ -25,7 +25,7 @@ The defence seat holder builds Commands and commissions the generals who fill th
 | Theater Commander XP | Half of one average formation's award |
 | Command postures | 12 |
 
-### A worked Command
+### An overloaded Regional Command
 
 A Regional Command with three regions has capacity 18 + 3 × 2 = 24 and starts at effectiveness 70. The Secretary assigns it 2 Armored Divisions (load 8 each) and 3 Infantry Divisions (load 4 each), a load of 28. That is 4 over capacity, so the penalty is 4 × 1.6 = 6.4 and effectiveness drops to 64. If its commanding general is dismissed it falls another 10, to 54. Moving one Infantry Division to a second Command brings the load to 24, and effectiveness returns to 70.
 
@@ -120,7 +120,7 @@ command-effectiveness-overload
 
 **Capacity** is set when the Command is created and grows with the number of regions it covers. Each unit assigned to the Command consumes capacity in proportion to its weight: a Carrier Strike Group eats far more of a Command's capacity than a Frigate Squadron.
 
-**Effectiveness** starts from the Command's base rating and is reduced by:
+The units assigned to a Command's generals (see [Units, Recruitment & Procurement](/wiki/military-units)) fill its capacity. **Effectiveness** starts from the Command's base rating and is reduced by:
 
 - **No commander: minus 10 effectiveness points.** A Command with nobody leading it is materially worse than one with even a weak general.
 - **Over capacity**: a growing penalty the further past capacity you stack units. Overloading a Command is not free.
@@ -131,7 +131,7 @@ The practical reading: **more Commands with reasonable loads beat one giant Comm
 
 ## Commanding Generals
 
-Every Command has one **Commanding General**, chosen from its own commanders. If you do not pick one at creation, the first commander you selected takes the role by default.
+Every Command has one **Commanding General**, chosen from its own commanders (generals fill the rosters, and a general's rank and traits set command fit; see [Generals & the Officer Corps](/wiki/generals)). If you do not pick one at creation, the first commander you selected takes the role by default.
 
 The CG gets their own page at \`/country/<code>/general/commands\`, reachable by a **"Manage your command →"** link on their profile's Military tab. The link only appears for actual CGs.
 
@@ -143,13 +143,13 @@ On that page the CG can:
 
 What they **cannot** do is pick which units a general has. **That is derived**: a general's force is exactly the set of units the Secretary of Defense assigned to them, and the CG's page shows it read-only.
 
-This is a deliberate split of powers. The Secretary of Defense decides *what forces exist and who holds them*. The Commanding General decides *where those forces go*.
+A general who changes country gives up their commands (see [Relocation](/wiki/relocation)). This is a deliberate split of powers. The Secretary of Defense decides *what forces exist and who holds them*. The Commanding General decides *where those forces go*.
 
 Note that a CG edits only their own Command's postings. Every Command in the country writes into one shared assignment list, and the server merges each CG's submission back into it, so two CGs working simultaneously cannot wipe each other's postings.
 
 ## Theater Commanders
 
-One general per conflict may be designated **Theater Commander**. Only one: the server refuses a second.
+The Theater Commander declares offensives (see [Fighting a Battle](/wiki/fighting-a-battle)), and a Logistics Command feeds the front's supply. One general per conflict may be designated **Theater Commander**. Only one: the server refuses a second.
 
 A TC gets two things:
 
@@ -204,7 +204,7 @@ A working structure looks roughly like this:
 
 At that point the Secretary of Defense is doing what a defence minister should (raising forces and setting doctrine) while officers fight the war.
 
-## Practical guidance
+## Cheap mistakes to avoid
 
 **Always give a Command a commander.** The 10-point effectiveness penalty for an empty Command is the cheapest mistake on this page to avoid.
 
@@ -218,41 +218,17 @@ At that point the Secretary of Defense is doing what a defence minister should (
 
 **Watch threat before you commit.** A region climbing from Low to Rising is telling you a conflict near you is heating up, usually before it becomes your problem.
 
-## What you can do
+## Who does what
 
 - **Defence seat holder:** build and change Commands, commission generals, assign units to generals. Defence office, **Commands** tab.
 - **Commanding General:** post your Command's generals to wars and name Theater Commanders, from your command page, linked from your profile's Military tab.
 - **Theater Commander:** declare and withdraw offensives at your front.
 
-**Common questions.** *Who assigns generals to conflicts?* The Commanding General of the Command the general belongs to. *Why is my Secretary of Defense locked out of declaring an offensive?* A Theater Commander has been named there. Dismissing the Theater Commander returns the job to the Secretary. *What happens when the Commanding General quits?* They stay in the role until dismissed or they move abroad, when the Command loses its lead. Unit posture and Command posture are different settings on different objects, as described above.
+**Questions that come up.** *Who assigns generals to conflicts?* The Commanding General of the Command the general belongs to. *Why is my Secretary of Defense locked out of declaring an offensive?* A Theater Commander has been named there. Dismissing the Theater Commander returns the job to the Secretary. *What happens when the Commanding General quits?* They stay in the role until dismissed or they move abroad, when the Command loses its lead. Unit posture and Command posture are different settings on different objects, as described above.
 
-## Connections
+## See also
 
-**Driven by**
-
-- [Generals & the Officer Corps](/wiki/generals): generals fill the Command rosters, and a general's rank and traits set command fit.
-- [Units, Recruitment & Procurement](/wiki/military-units): the units assigned to a Command's generals fill its capacity.
-- [Relocation](/wiki/relocation): a general who changes country gives up their commands
-
-**Affects**
-
-- [Fighting a Battle](/wiki/fighting-a-battle): the Theater Commander declares offensives, and a Logistics Command feeds the front's supply.
-- [Conflicts & the Military System](/wiki/conflicts-overview): Commands carry the chain of authority that runs a war.
-- [Generals & the Officer Corps](/wiki/generals): a Theater Commander earns XP from battles at their front.
-
-## Status
-
-Commands work in every world and era, for every country with a defence seat. The 12 postures and 3 types are available to every Command. Scotland and Wales have no defence seat and so no Commands.
-
-Last checked: 2026-10-29, version 1.18.0
-
-## Technical detail
-
-The exact constants are on the design page [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), under Commands and Theater command.
-
-## Next
-
-- [Fighting a Battle](/wiki/fighting-a-battle): what the Theater Commander actually does.
-- [Generals & the Officer Corps](/wiki/generals): who fills these roles.
 - [National Doctrine](/wiki/national-doctrine): what makes them better at it.
+
+Works in every world and era for every country with a defence seat; Scotland and Wales have none and so no Commands. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), under Commands and Theater command
 `;

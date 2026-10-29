@@ -1,8 +1,8 @@
 export const corporationsContent = `# Corporations
 
-A **corporation** is a business a player runs as CEO. It owns **sectors** (the plants it builds in each state), sells what they make on the commodity markets, pays tax, employs workers and pays dividends to its shareholders. It is the main way players earn money and economic influence, and it ties into most other systems: prices, labour, taxes, the stock market and politics.
+The first real decision you make as CEO is which industry to commit to, because margin, tax and who you end up fighting all follow from it. A **corporation** is a business a player runs as CEO. It owns **sectors** (the plants it builds in each state), sells what they make on the commodity markets, pays tax, employs workers and pays dividends to its shareholders. It is the main way players earn money and economic influence, and it ties into most other systems: prices, labour, taxes, the stock market and politics. In a command economy the state owns production instead; see [Planned / Command Economies](/wiki/planned-economies).
 
-## How it works
+## Each turn, from plants to dividends
 
 Each turn, your plants produce goods, the goods compete for buyers at your pricing posture, and what sells becomes revenue. Margin modifiers (type match, location, state conditions, size) turn revenue into profit. Profit pays tax, then your CEO salary, then dividends. What is left builds your treasury, and your treasury and plants set your share price.
 
@@ -10,7 +10,7 @@ You grow by building plants, **splitting** unowned market (taking a slice of the
 
 ![The ten stages each corporation passes through every turn, from production and clearing to tax, salary and dividends, strength accrual, share orders and the vote sweep.](/wiki-images/diagrams/corporations-turn-flow.svg)
 
-### Key numbers
+The numbers that matter most, in one place:
 
 | Rule | Value |
 | --- | --- |
@@ -29,13 +29,20 @@ You grow by building plants, **splitting** unowned market (taking a slice of the
 | Shareholder votes | 24 turns, can end early |
 | Merger review referral | 75% / 60% / 50% / 40% combined share, by the country's competition law |
 
-### Worked example: founding, IPO and a raid
+### Stage by stage
 
-You found a manufacturing corporation with a ₳1,000,000 fee and ₳1,000,000 of capital. You hold 10,000,000 shares at ₳0.10. You go public with a 25% float: the game issues 10,000,000 x 25 / 75 = 3,333,333 new shares, raising about ₳333,333 for the treasury, and you keep 75% of the company.
+Every turn, the game processes each corporation through these phases:
 
-Later you attack a rival. The rival holds **80%** of a state's sector, with 2,000 units of capacity, and you hold **10%**. Dominance ease at 80% share is 1 + 2.5 x ((80 - 50) / 50)^2 = **1.9**. You are below 10% share against a defender above 50%, so the underdog bonus is the full **1.75**. The contested amount is 2,000 x 10% x 1.9 x 1.75 = **665 units**. With 60 Marketing Strength against the defender's 40, you capture 665 x 60 / (60 + 40) = **399 units**. The defender loses all 399, but you receive only 60% of that, **239 units**; the rest is destroyed.
-
-The sections below cover each part of the system in detail.
+1. **Production.** Inputs gate throughput and capacity gates output, so what you can physically make is settled first (see [Running a Corporation under the Plants System](/wiki/plants-corp-guide))
+2. **Clearing.** Your output is posted at your pricing posture and competes for real buyers, cheapest first (see [Market System: A Player's Guide](/wiki/market-system-guide)). What doesn't sell doesn't earn
+3. **Revenue and margin.** Realized revenue is set from what actually sold, then the effective margin applies every modifier below
+4. **Capital.** Capacity depreciates, and any build orders that have come due are delivered
+5. **Reputation.** [Brand loyalty](/wiki/brand-loyalty) and [output quality](/wiki/output-quality) update from this turn's pricing and delivery
+6. Corporate tax bases updated in federal and state budgets, then national budget revenue refreshed for state-owned corps
+7. CEO salary paid from liquid capital, then dividends distributed to shareholders
+8. Marketing, logistics and R&D strengths accrue from their budgets; split escalation decays by 1
+9. Pending share orders filled, share prices recomputed, market cap and per-corp history snapshotted
+10. Open shareholder votes auto-resolved and closing reminders sent
 
 ## Founding a corporation
 
@@ -67,7 +74,7 @@ Your chosen type is the corporation's **primary type**. Sectors matching your pr
 
 A secondary type also **doubles the logistical sprawl penalty**. Changing your primary or secondary type costs a **-10pp margin penalty for 24 turns** and starts a **48-turn cooldown** before another change.
 
-The CEO receives 10,000,000 shares at ₳0.10 initial price. Your corporation's HQ is set to your current home state.
+The CEO receives 10,000,000 shares at ₳0.10 initial price. Your corporation's HQ is set to your current home state. A CEO must live in the headquarters state, so a plain move removes the CEO seat unless the corporation moves too, which moves the headquarters and costs 7% of market cap (14% across countries). See [Relocation](/wiki/relocation).
 
 ### Legal structure
 
@@ -104,6 +111,8 @@ When you found a corporation, you choose between two structures:
 - **Public IPO**: additional shares are issued to the public float at the same per-share price as your founding commitment. The cash raised flows into your corporation's treasury. You keep your founder shares (10,000,000) but your ownership share drops because total shares went up.
 
 Float % is capped at 49% so a founder always emerges from an IPO with majority control. After founding, a private corporation can also IPO later via the **Go Public** action in the CEO panel (96-turn cooldown since founding or last privatization).
+
+You found a manufacturing corporation with a ₳1,000,000 fee and ₳1,000,000 of capital. You hold 10,000,000 shares at ₳0.10. You go public with a 25% float: the game issues 10,000,000 x 25 / 75 = 3,333,333 new shares, raising about ₳333,333 for the treasury, and you keep 75% of the company.
 
 ### Dual-class supershares
 
@@ -150,17 +159,17 @@ The turn processor sweeps open corporation votes every turn, so passed or failed
 
 When a corporation abandons a sector, dissolves (by the CEO, a shareholder vote, bond default, or insolvency), or liquidates sectors in a bond restructure, its plants do not simply shut. An NPP operator in the same industry takes over about three quarters of each plant's built capacity: one already running that industry in the same region if there is one, otherwise one elsewhere in the same country, otherwise a new NPP corporation. The rest of the capacity closes, and that share of the market reopens to anyone who builds into it.
 
-Unfinished construction is not handed over. It is refunded and cancelled exactly as before. Payouts to the leaving corporation and its shareholders are unchanged. Extraction concessions and defence contracts move with the plants that hold them.
+Unfinished construction is not handed over. It is refunded and cancelled exactly as before. Payouts to the leaving corporation and its shareholders are unchanged. Extraction concessions and defence contracts move with the plants that hold them. Losing or selling a sector also cuts your [brand loyalty](/wiki/brand-loyalty).
 
 ### Subsidiaries and control groups
 
 You can control more corporations than the one you run directly. A corporation counts as your **subsidiary** when you control more than **50% of its voting power** and you formalize the relationship. The subsidiary keeps its own CEO, cash, and shares. The parent can inject capital (up to 25% of parent liquid capital per injection, with a 24-turn cooldown), set a dividend floor, appoint its CEO, and spin off sectors into a new wholly owned company.
 
-Spin-offs cost a base fee plus a per-sector fee and have a **168-turn cooldown**. A group cannot chain subsidiaries, a formalized subsidiary cannot issue equity, and a subsidiary must have a different sitting human CEO from the parent. See [Subsidiary Corporations](/wiki/subsidiary-corporations).
+Spin-offs cost a base fee plus a per-sector fee and have a **168-turn cooldown**. A group cannot chain subsidiaries, a formalized subsidiary cannot issue equity, and a subsidiary must have a different sitting human CEO from the parent. See [Subsidiary Corporations](/wiki/subsidiary-corporations). Share ownership and voting power decide who controls whom, and a merge deletes the target and moves its sectors and cash to the buyer (see [Corporate Mergers & Acquisitions](/wiki/corporate-mergers)); a group shares tax relief and strength.
 
 A **control group** is wider than the formal subsidiary list: it is every corporation you control with more than 50% of the votes, whether or not the relationship is formalized. Size costs, merger concentration, and the monopoly trigger read the whole control group, so splitting a business into shells does not hide its size.
 
-## Expanding into markets
+## Putting plants in a market
 
 Corporations grow by acquiring **sectors** in state economies. A sector is not an abstract slice of a market: it **is the plants you own** in that state. The capacity is the real asset, and the revenue figure you see is derived from what that capacity actually produces and sells.
 
@@ -215,13 +224,17 @@ Two multipliers exist specifically so entrenched monopolies stay breakable:
 dominance-and-underdog-attack
 \`\`\`
 
+Say you later attack a rival. The rival holds **80%** of a state's sector, with 2,000 units of capacity, and you hold **10%**. Dominance ease at 80% share is 1 + 2.5 x ((80 - 50) / 50)^2 = **1.9**. You are below 10% share against a defender above 50%, so the underdog bonus is the full **1.75**. The contested amount is 2,000 x 10% x 1.9 x 1.75 = **665 units**. With 60 Marketing Strength against the defender's 40, you capture 665 x 60 / (60 + 40) = **399 units**. The defender loses all 399, but you receive only 60% of that, **239 units**; the rest is destroyed.
+
 **Attacks destroy plant.** The defender loses every unit taken, but the attacker receives only **60%** of them: the other 40% is wrecked in the taking. Raiding is value-destructive in aggregate, and the cash cost is floored at build price + 15%, so you can never raid your way to cheap capacity. What you are buying is a rival's position, not a bargain.
 
 Non-player corporations raid too. An aggressive NPP-run corporation picks whichever target gives it the best expected capture, waits out a 24-turn cooldown between strikes, and holds a small MS reserve back. A corporation sitting on low Marketing Strength reads to that logic as a soft target.
 
 Computer-run (NPP) CEOs also run the operator loop a player would: wages (quality hangs off that), same-country [supply agreements](/wiki/supply-agreements), extraction [prospecting](/wiki/resources-overview) against short deposits, and parking idle treasury in high-coupon [bonds](/wiki/corporate-bonds) instead of letting cash sit.
 
-## Reading the numbers: time and money
+## Reading a sector's numbers
+
+### Two clocks
 
 Two different clocks run in this game. Mixing them up is the most common source of confusion about sector economics.
 
@@ -231,7 +244,7 @@ Two different clocks run in this game. Mixing them up is the most common source 
 
 So an "annual" money figure is **2x** the daily figure, not 365x. That is correct, not a bug.
 
-## Reading the numbers: nameplate to net profit
+### From nameplate to net profit
 
 A sector shows more than one revenue figure. They mean different things, and only the last one drives your profit.
 
@@ -250,36 +263,21 @@ Realization can go **up** as well as down. If your output clears at a price prem
 
 Commodity prices reach your bottom line by two separate routes. They move your **effective margin** through the commodity modifier, and they move your **realized revenue** through price realization. That is why changing a commodity price does not move your margin alone.
 
-## Growth: what it costs
+### What growth costs
 
 A growth rate is a percentage per game year. Its cost is charged every financial day.
 
 Because a game year is two financial days, you pay the daily growth cost twice for each game year of growth. The total price of the revenue you add is the growth cost multiplier (currently 3x). Set growth to 0% to stop the charge entirely.
 
-## Unowned sector growth
+### Unowned headroom
 
 In worlds that have not reached the plants stage, the unowned pool grows at half the average owned-sector growth rate, with a 1% fallback. Once plants are in play, unowned headroom grows with the state's GDP growth instead.
 
 This means unowned market share regenerates over time. A sector you partially captured will refill, so sustained expansion requires repeated splits or very high marketing strength to outpace regrowth.
 
-## Per-turn processing
+## What moves your margin
 
-Every turn, the game processes each corporation through several phases:
-
-1. **Production.** Inputs gate throughput and capacity gates output, so what you can physically make is settled first
-2. **Clearing.** Your output is posted at your pricing posture and competes for real buyers, cheapest first. What doesn't sell doesn't earn
-3. **Revenue and margin.** Realized revenue is set from what actually sold, then the effective margin applies every modifier below
-4. **Capital.** Capacity depreciates, and any build orders that have come due are delivered
-5. **Reputation.** Brand loyalty and output quality update from this turn's pricing and delivery
-6. Corporate tax bases updated in federal and state budgets, then national budget revenue refreshed for state-owned corps
-7. CEO salary paid from liquid capital, then dividends distributed to shareholders
-8. Marketing, logistics and R&D strengths accrue from their budgets; split escalation decays by 1
-9. Pending share orders filled, share prices recomputed, market cap and per-corp history snapshotted
-10. Open shareholder votes auto-resolved and closing reminders sent
-
-## Profit margin modifiers
-
-Many factors adjust your sector profit margins. These are additive:
+If a margin is negative, open the sector's margin breakdown and check, in order: commodity input costs, sector type match, size costs, and state conditions such as power grid or corruption. Many factors adjust your sector profit margins. These are additive:
 
 | Modifier | Max Effect | Notes |
 | --- | --- | --- |
@@ -328,7 +326,20 @@ The three margin charges are capped at **7.5 points combined**, scaled down prop
 
 The other ceiling is legal. Competition law can refer a merger, order a divestiture, or break up a dominant group. A Subsidiary Limits Act caps how many companies one group may run, and a Foreign Investment Act can screen or cap foreign-controlled ownership. The thresholds are in [Bills & Legislation](/wiki/bills-legislation#the-three-economic-laws).
 
-## CEO tools
+
+### The wider game
+
+State GDP growth is driven by the revenue-weighted average of all corporate sector growth rates in that state, and the rest of the game feeds back into your sectors in return.
+
+**Prices and trade.** [Commodities](/wiki/commodities) markets affect margins: steel shortages hurt manufacturing, oversupply in energy compresses energy sector margins. [Household demand](/wiki/household-economy) is the end market for consumer sectors, and [freight limits and shipping bills](/wiki/logistics-guide) change sector revenue and margin; if profit collapsed after you added a plant, check the sector's Freight tag and its sold percentage first. Seeded sector markets and specialties (see [Game Starting State](/wiki/game-starting-state)) are what corporations compete for. [Tariffs](/wiki/tariffs) change foreign and domestic sector margins and market share fights, and [Embargoes & Trade Exposure](/wiki/embargo-and-trade-exposure) cut sector revenue, maintenance and margin for exposed foreign operations. A trip of [Market Safeguards](/wiki/market-safeguards) changes how sector revenue is computed, and company earnings set the fundamentals it compares against. Capacity squeezes set what extraction sectors can earn (see [Resources](/wiki/resources-overview)); an extraction corporation with operations in a state can bid for an [extraction contract](/wiki/extraction-contracts), and R&D breakthroughs and surveys raise state resource capacity. A defence contract pays the supplier its margin, and domestic defence plants bid for and fill defence orders (see [Defence Procurement](/wiki/defence-procurement)).
+
+**Money and the state.** [Central Banks](/wiki/central-banks) set the inflation and prime rate that move sector margins and growth costs, and state conditions and inflation shift profit margins through [National Metrics](/wiki/national-metrics), where sector output and staffing drive GDP growth and unemployment in return. Debt-to-GDP drags margins, while deficits and [subsidies](/wiki/subsidies) lift them (see [National Budget](/wiki/national-budget)); sector revenue sets what a subsidy costs the government, and corporate profits and sales are the base for corporate and sales tax, so profitable corps help state finances. High national debt cuts every corporation's margin there and deficits add a stimulus ([Sovereign Bonds](/wiki/sovereign-bonds)). Companies headquartered in a defaulting country take a margin penalty for up to 72 turns ([Sovereign Default](/wiki/sovereign-default)), and companies in a bailed-out country take a -4.5 point margin penalty for 48 turns, fading over 24 ([IMF Sovereign Facility](/wiki/imf-sovereign-facility)). Disasters cut profit margins for sectors in the affected region ([Crisis Interaction](/wiki/crisis-interaction)), and responses to [World Events](/wiki/world-events) shift sector demand, which changes sector revenue for 4 to 24 turns. Legislation ([Bills & Legislation](/wiki/bills-legislation)) creates subsidies (+7.5% margin), tariffs and tax rate changes that directly affect margins, and senators and Representatives can advance bills that benefit their sector.
+
+**People and cash.** The wage level you set feeds national wages and unemployment (see [Labour & Wages](/wiki/labour-and-wages)) and, with union-busting choices, changes unionization ([Unions](/wiki/unions)); union strength and strikes change labour cost and output. Pension contributions and top-ups are a recurring cash cost for the employer ([Pensions](/wiki/pensions)). A CEO's company rating, salary and dividends feed the line of credit score and limit, and a frozen line redirects CEO salary and dividends to the loan ([Line of Credit](/wiki/line-of-credit)). Running a corporation makes you eligible for CEO events ([Player Random Events](/wiki/player-events)).
+
+**Ownership.** The IMF facility and crisis systems can affect corporate borrowing costs and credit ratings; under [Corporate IMF Restructuring](/wiki/imf), company income sets how much of each rescue payment can be collected. [Nationalization & National Corporations](/wiki/nationalization) lets distress, market share and sector decide who can be taken. Corporation share prices and dividends drive the funds that hold them, and a fund's votes can decide shareholder votes while its sponsor earns fee revenue ([Index Funds](/wiki/index-funds)).
+
+## The CEO's desk
 
 ### National influence
 
@@ -396,7 +407,13 @@ Logistics sectors (depots) never pay the sprawl penalty on their own margin. The
 
 **R&D budget:** Daily R&D spend builds an **R&D Score** (log-scaled, 3% decay) used for tech unlocks and periodic innovation breakthroughs every 6 turns. R&D counts against the 150% overhead cap.
 
+Your Average Quality is built from your research, wages, inputs and operations (see [Output Quality](/wiki/output-quality)).
+
 **Wage level:** When the labour system is enabled, each sector exposes a **wage slider** (default 1.0) that moves explicit labour cost without changing baseline outcomes at default. Minimum-wage legislation can floor low-pay sectors. See [Labour & Wages](/wiki/labour-and-wages).
+
+### Supply agreements
+
+You sign and settle contracts from your corporation page. See [Supply Agreements](/wiki/supply-agreements).
 
 ### Production policy
 
@@ -419,6 +436,8 @@ Your corporation's Overview has an **Autopilot** switch. You stay CEO and can st
 Autopilot reinvests slowly. Each turn it commits at most 15% of the cash above the corporation's reserve to new capacity, adds at most 5% to any one plant, and keeps only one growth order in flight per plant. It builds only where the plant made a profit last turn, sells nearly everything it makes, the market has room for more, the corporation's earnings are positive, and the extra output should repay the build within 30 turns of coming online. Turning it on asks you to confirm, and the Overview shows what it may spend, with a button to turn it off.
 
 By default it never borrows, picks research, retools, sells or closes plants, or buys rivals. **What the NPP may do** lets you pick an attitude (Growth, Cost cutter, Advise only) or set each action yourself, including allowing it to sell or close plants, which removes them with no sale proceeds. When one of those is worth doing, it lists it on the Overview, and urgent items also arrive in your inbox. A corporation on autopilot is not penalised for an inactive CEO, but its CEO's national influence is capped at the standard rate rather than the higher top-listed-company rate. Appointing an NPP caretaker switches autopilot off.
+
+![Corporation overview with the Autopilot switch, Simple and Pro toggle and key statistics](/wiki-images/screens/corporations-autopilot-overview.webp)
 
 ### Simple and Pro views
 
@@ -473,7 +492,7 @@ For extraction sectors specifically, the **Diversified** strategy spreads output
 
 ## Corporate taxes
 
-Two tax rates apply to each sector: a **domestic rate** and a **foreign rate**. A corporation headquartered in the US pays the US domestic rate on US sectors and the foreign rate of any other country where it operates. Both rates are set by legislation in each country. State-level corporate taxes also stack on top.
+Foreign income and HQ relocations convert at the spot rate (see [Currency Exchange](/wiki/currency-exchange)). Two tax rates apply to each sector: a **domestic rate** and a **foreign rate**. A corporation headquartered in the US pays the US domestic rate on US sectors and the foreign rate of any other country where it operates. Both rates are set by legislation in each country. State-level corporate taxes also stack on top.
 
 ### Pass-through companies
 
@@ -491,19 +510,13 @@ This change phases in over 24 turns from its start, so the tax rises step by ste
 
 A corporation's share price is anchored to tangible book, so the balance sheet is not cosmetic. Construction in progress counts as an asset, and any construction loan that paid for it counts as debt. Overdrawn cash counts as a negative, not as zero. A company that borrows to build can therefore look cheaper on earnings than a cash-rich rival while still being worth the capacity it owns.
 
-That is deliberate. A company that reinvests earnings into capacity is worth at least what that capacity is worth, even while current profit is temporarily lower. The share price is meant to reflect the assets the company owns, not just this turn's earnings. See [Private Banking](/wiki/private-banking) for construction and corporate lending.
+That is deliberate. A company that reinvests earnings into capacity is worth at least what that capacity is worth, even while current profit is temporarily lower. The share price is meant to reflect the assets the company owns, not just this turn's earnings. See [Private Banking](/wiki/private-banking) for construction and corporate lending: a financial sector can charter a bank, and bank loans credit a company's liquid capital.
 
-## Economic effects on corporations
+Bond cash funds growth, while coupons and principal drain liquid capital; your finances set your credit rating and what you can borrow (see [Corporate Bonds](/wiki/corporate-bonds)).
 
-Your corporation's sectors respond to state and national conditions:
+## Shares, dividends and share price
 
-- **State GDP growth** is driven by the revenue-weighted average of all corporate sector growth rates in that state.
-- **Commodity markets** affect margins: steel shortages hurt manufacturing, oversupply in energy compresses energy sector margins.
-- **Bills and policies** can create subsidies (+7.5% margin) or trigger tariffs (foreign corps pay margin penalties in target countries).
-
-## Shares and dividends
-
-The CEO sets a **dividend rate** (0 to 25% of after-tax income). Dividends are paid each turn to all shareholders proportional to their share count. Players buy and sell shares on country stock exchanges.
+The CEO sets a **dividend rate** (0 to 25% of after-tax income). Dividends are paid each turn to all shareholders proportional to their share count. A higher dividend pays shareholders now but leaves less cash behind your share price. Players buy and sell shares on country stock exchanges.
 
 Very large sell orders and new share issues are paced over several turns so they cannot crash a price in one hour. See [Stock Market](/wiki/stock-market) for how orders fill.
 
@@ -520,7 +533,7 @@ An IMF bailout active on the corporation applies a price multiplier.
 
 ## National corporations
 
-Some corporations are government-owned (e.g., the UK NHS). These cannot be purchased or attacked. Their revenue flows through the national budget rather than to a CEO.
+Some corporations are government-owned (e.g., the UK NHS). These cannot be purchased or attacked. Their revenue flows through the national budget rather than to a CEO. State-owned sectors compete in the same markets as private ones (see [National Corporations](/wiki/national-corporations)).
 
 ## Merger review
 
@@ -552,18 +565,9 @@ When two corporations become one, the state may have a say. This applies to an a
 
 **Subsidiary limits.** A Subsidiary Limits Act caps how many companies one group may run in the country: twelve, eight, five, or three depending on the level. A group over the limit when the law tightens has 48 turns to sell or spin off the excess, after which the excess is auctioned.
 
-## Interaction with politics
+## Is the company in good shape?
 
-Corporations connect to politics in several ways:
-
-- Legislation creates subsidies, tariffs, and tax rate changes that directly affect margins
-- Senators and Representatives can advance bills that benefit their sector
-- The national budget receives corporate tax revenue: profitable corps help state finances
-- The IMF facility and crisis systems can affect corporate borrowing costs and credit ratings
-
-## A healthy corporation, at a glance
-
-There is no single winning build, but a company in good shape usually clears these tests. Use them as diagnostics, not targets to game.
+There is no single winning build, but a company in good shape usually clears these tests. Use them as diagnostics, not targets to game. Share price comes from tangible book, earnings power and a growth premium (see [Stock Market](/wiki/stock-market)).
 
 | Test | Healthy sign | What to do if it fails |
 | --- | --- | --- |
@@ -575,105 +579,5 @@ There is no single winning build, but a company in good shape usually clears the
 | Size | Below the local dominance threshold, or earning enough to pay for it | Above 50% local share, the margin penalty and regulatory burden start to bite. |
 | Strength | Marketing, logistics, and R&D funded above decay | A budget that does not cover decay is a shrinking budget. |
 
-## What you can do
-
-- **Found a corporation** from your character page, pick a sector line and decide private or public. Choose the type you will actually build in: off-type sectors lose 15 margin points.
-- **Set your budgets and salary** on the CEO Budget tab. Keep the total under the 150% overhead cap and cover decay, or your strengths shrink.
-- **Build, split or attack** to grow. A split buys unowned market at no less than build cost; an attack takes a rival's capacity but destroys 40% of it.
-- **Choose a pricing posture and production policy** on each sector's panel, and a strategy to match scarce commodities (see [Commodities](/wiki/commodities)).
-- **Turn on Autopilot** if you cannot play every turn. It sets budgets, grows profitable plants and trims losing ones, but it will not borrow or sell unless you allow it.
-- **Set the dividend** between 0% and 25% of after-tax income. A higher dividend pays shareholders now but leaves less cash behind your share price.
-
-![Corporation overview with the Autopilot switch, Simple and Pro toggle and key statistics](/wiki-images/screens/corporations-autopilot-overview.webp)
-
-### Common questions
-
-- **Why is my margin negative?** Open the sector's margin breakdown and check, in order: commodity input costs, sector type match, size costs, and state conditions such as power grid or corruption.
-- **Why did profit collapse after I added a plant?** Check the sector's Freight tag and its sold percentage: if output could not reach buyers, see [Logistics: Freight, Sourcing, and Supply Chains](/wiki/logistics-guide).
-- **How does share price work?** From tangible book, earnings power and a growth premium. See [Stock Market](/wiki/stock-market).
-- **How do subsidiaries and control groups work?** See [Subsidiary Corporations](/wiki/subsidiary-corporations).
-
-For a hands-on walkthrough of plants, build queues and break-even, read [Running a Corporation under the Plants System](/wiki/plants-corp-guide) and [Market System: A Player's Guide](/wiki/market-system-guide).
-
-## Connections
-
-**Driven by**
-
-- [Commodities](/wiki/commodities): input and output prices move your margin and your realized revenue.
-- [Market System: A Player's Guide](/wiki/market-system-guide): clearing and pricing posture decide how much of your output sells.
-- [Labour & Wages](/wiki/labour-and-wages): the sector wage level sets labour cost.
-- [Unions](/wiki/unions): union strength and strikes change labour cost and output.
-- [Corporate R&D & Tech Trees](/wiki/corporate-r-and-d): research unlocks strategies and cuts costs.
-- [Brand Loyalty](/wiki/brand-loyalty): a strong brand holds sales when rivals undercut.
-- [Output Quality](/wiki/output-quality): your Average Quality is built from your research, wages, inputs and operations.
-- [Planned / Command Economies](/wiki/planned-economies): in command economies private corporations cannot be founded.
-- [Corporate Bonds](/wiki/corporate-bonds): bond cash funds growth, while coupons and principal drain liquid capital.
-- [Sovereign Bonds](/wiki/sovereign-bonds): high national debt cuts every corporation's margin there, and deficits add a stimulus.
-- [Stock Market](/wiki/stock-market): share ownership decides CEO elections, takeovers and control.
-- [Household Demand & Price Level](/wiki/household-economy): household demand is the end market for consumer sectors.
-- [Running a Corporation under the Plants System](/wiki/plants-corp-guide): capacity, fill and build decisions set revenue and margin.
-- [Logistics: Freight, Sourcing, and Supply Chains](/wiki/logistics-guide): freight limits and shipping bills change sector revenue and margin.
-- [Private Banking](/wiki/private-banking): bank loans credit a company's liquid capital.
-- [Currency Exchange](/wiki/currency-exchange): HQ relocations and foreign income convert at the spot rate.
-- [Crisis Interaction](/wiki/crisis-interaction): disasters cut profit margins for sectors in the affected region
-- [Market Safeguards](/wiki/market-safeguards): a trip changes how sector revenue is computed
-- [Embargoes & Trade Exposure](/wiki/embargo-and-trade-exposure): sector revenue, maintenance and margin drop for exposed foreign operations
-- [World Events](/wiki/world-events): responses shift sector demand, which changes sector revenue for 4 to 24 turns
-- [Index Funds](/wiki/index-funds): A fund's votes can decide shareholder votes, and a sponsor earns fee revenue.
-- [Corporate Mergers & Acquisitions](/wiki/corporate-mergers): A merge deletes the target and moves its sectors and cash to the buyer.
-- [Subsidiary Corporations](/wiki/subsidiary-corporations): The group shares tax relief and strength, and a subsidiary cannot issue shares.
-- [Sovereign Default](/wiki/sovereign-default): companies headquartered in a defaulting country take a margin penalty for up to 72 turns.
-- [IMF Sovereign Facility](/wiki/imf-sovereign-facility): companies in a bailed-out country take a -4.5 point margin penalty for 48 turns, fading over 24.
-- [National Corporations](/wiki/national-corporations): state-owned sectors compete in the same markets as private ones.
-- [Central Banks](/wiki/central-banks): Inflation and the prime rate move sector margins and growth costs.
-- [Line of Credit](/wiki/line-of-credit): A frozen line of credit redirects CEO salary and dividends to the loan.
-- [National Budget](/wiki/national-budget): Debt-to-GDP drags margins, deficits and subsidies lift them.
-- [National Metrics](/wiki/national-metrics): State conditions and inflation shift profit margins.
-- [Pensions](/wiki/pensions): Contributions and top-ups are a recurring cash cost for the employer.
-- [Relocation](/wiki/relocation): a CEO who relocates loses the CEO seat, or moves the headquarters and pays 7% of market cap (14% across countries)
-- [Game Starting State](/wiki/game-starting-state): seeded sector markets and specialties are what corporations compete for
-- [Bills & Legislation](/wiki/bills-legislation): Competition, Subsidiary Limits and Foreign Investment Acts change what corporate groups may own.
-- [Defence Procurement](/wiki/defence-procurement): A defence contract pays the supplier its margin.
-- [Resources](/wiki/resources-overview): Capacity squeezes set what extraction sectors can earn.
-- [Subsidies](/wiki/subsidies): The margin bonus raises sector profit.
-- [Tariffs](/wiki/tariffs): Tariffs change foreign and domestic sector margins and market share fights.
-
-**Affects**
-
-- [Stock Market](/wiki/stock-market): your balance sheet and earnings set your share price.
-- [Corporate Bonds](/wiki/corporate-bonds): your finances set your credit rating and what you can borrow.
-- [Supply Agreements](/wiki/supply-agreements): you sign and settle contracts from your corporation page.
-- [Brand Loyalty](/wiki/brand-loyalty): losing or selling a sector cuts your loyalty.
-- [Private Banking](/wiki/private-banking): a financial sector can charter a bank, and bank loans credit other companies.
-- [Labour & Wages](/wiki/labour-and-wages): the wage level you set feeds national wages and unemployment.
-- [Corporate R&D & Tech Trees](/wiki/corporate-r-and-d): your budget and primary type decide what you can research.
-- [Unions](/wiki/unions): your wage level and union-busting choices change unionization.
-- [Commodities](/wiki/commodities): every sector adds supply and demand to the commodity totals.
-- [Market System: A Player's Guide](/wiki/market-system-guide): your plants and posture decide how much of your output sells.
-- [Player Random Events](/wiki/player-events): running a corporation makes you eligible for CEO events
-- [Market Safeguards](/wiki/market-safeguards): company earnings set the fundamentals it compares against
-- [Index Funds](/wiki/index-funds): Corporation share prices and dividends drive the funds that hold them.
-- [Corporate Mergers & Acquisitions](/wiki/corporate-mergers): Ownership, cash, sectors and share prices set an acquisition price and combined market share.
-- [Subsidiary Corporations](/wiki/subsidiary-corporations): Share ownership and voting power decide who controls whom.
-- [Corporate IMF Restructuring](/wiki/imf): company income sets how much of each rescue payment can be collected.
-- [Nationalization & National Corporations](/wiki/nationalization): distress, market share and sector decide who can be taken.
-- [Line of Credit](/wiki/line-of-credit): A CEO's company rating, salary and dividends feed the line of credit score and limit.
-- [National Budget](/wiki/national-budget): Corporate profits and sales are the base for corporate and sales tax.
-- [National Metrics](/wiki/national-metrics): Sector output and staffing drive GDP growth and unemployment.
-- [Pensions](/wiki/pensions): The employer's cash pays pension contributions and top-ups.
-- [Relocation](/wiki/relocation): a CEO must live in the headquarters state, so a plain move removes the CEO seat unless the corporation moves too
-- [Defence Procurement](/wiki/defence-procurement): Domestic defence plants bid for and fill defence orders.
-- [Extraction Contracts](/wiki/extraction-contracts): An extraction corporation with operations in the state can bid for a contract.
-- [Resources](/wiki/resources-overview): R&D breakthroughs and surveys raise state resource capacity.
-- [Subsidies](/wiki/subsidies): Sector revenue sets what a subsidy costs the government.
-
-## Status
-
-Corporations run in every world with a private economy. In command economies such as the USSR and the Eastern Bloc, private corporations cannot be founded and production is state-owned. Founding fees and sector costs are scaled to the era's money. Dominance charges, merger review, foreign investment and subsidiary limits depend on each country's competition and investment laws, so check the country before planning a large acquisition. Marketing decay and the plants-stage rules apply in current worlds.
-
-Last checked: 2026-10-29, version 1.18.0
-
-## Technical detail
-
-The exact rules, constants and formulas are on the [Corporations design page](https://docs.lakesidegames.net/design/corporations.html).
+Applies in every world with a private economy. In command economies such as the USSR and the Eastern Bloc, private corporations cannot be founded and production is state-owned. Founding fees and sector costs are scaled to the era's money. Dominance charges, merger review, foreign investment and subsidiary limits depend on each country's competition and investment laws, so check the country before planning a large acquisition. Marketing decay and the plants-stage rules apply in current worlds. Last checked 2026-10-29, version 1.18.0. Exact rules: [Corporations design page](https://docs.lakesidegames.net/design/corporations.html)
 `;

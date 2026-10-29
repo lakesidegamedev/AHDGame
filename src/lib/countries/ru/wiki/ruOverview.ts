@@ -9,44 +9,57 @@ const ruScenarios = getPlayerStartScenarios("RU")
 
 export const ruOverviewContent = `# Soviet Union
 
-The Soviet Union is a **one-party socialist state** playable in the **1953 and 1979 presets**. The **Communist Party of the Soviet Union (CPSU)** is the only seeded party: unlike China's united-front model there are no satellite parties at all. The **Premier** (Chairman of the Council of Ministers) is the head of government; the **Chairman of the Presidium** is a ceremonial head of state elected by a joint sitting of the legislature. The **Supreme Soviet** is genuinely bicameral, and the economy is a centrally planned command economy run through **Gosplan** and **Gosbank**.
+The Soviet Union is played through its ministries. The Premier appoints a 16-seat Council of Ministers, each seat sets a tier and fires 24-turn orders, and together they steer a command economy run through **Gosplan** and **Gosbank**. It is a **one-party socialist state** playable in the **1953 and 1979 presets**. The **Communist Party of the Soviet Union (CPSU)** is the only seeded party: unlike China's united-front model there are no satellite parties at all. The **Supreme Soviet** is genuinely bicameral.
 
----
+## The Council of Ministers
 
-## Government structure
+The Premier is the head of government (Chairman of the Council of Ministers) and appoints ministers **directly from Supreme Soviet deputies**. Every seat carries a three-option **tier setting** (the middle option is the neutral default), a package of national metrics, and **two ministerial orders**: time-limited national modifiers that cost one ministerial action and run 24 turns (one game half-year, 24 real hours). Most line ministries also get a regional target and an emergency action aimed at a single republic.
 
-| Office | How Filled | Term | Seats |
-| --- | --- | --- | --- |
-| Premier (head of government) | Nominated by a party chair, confirmed by Soviet of the Union deputies | 4 years | 1 |
-| Chairman of the Presidium (ceremonial head of state) | Elected by a joint sitting of both chambers | No fixed term | 1 |
-| Supreme Soviet Deputy | Multi-seat regional election | 4 years | 559 (526 in 1953) |
-| Nationalities Deputy | Multi-seat republic-weighted election | 4 years | 515 |
-| Republic Deputy | Multi-seat sub-national election | 4 years | 5,000 total |
-| Republic First Secretary | Regional executive election | 4 years | 1 per region |
-| Chairman of Gosbank | Appointed action | 5 years | 1 |
+![The Council of Ministers loop: the Premier appoints 16 ministers whose tier settings and 24-turn orders move national metrics, which feed the marketization dial that decides the economic engine.](/wiki-images/diagrams/ru-overview-council-loop.svg)
 
-The Premier carries **+4 actions per turn**; a Supreme Soviet or Nationalities Deputy +1; a Republic First Secretary +2; the Chairman of Gosbank +3. The Chairman of the Presidium carries +0 actions and zero party-strength weight: the office is a ceremonial capstone, not a power base.
+Say the Chairman of Gosplan moves Plan Emphasis from the neutral middle option to consumer goods (Group B). That shifts the national metrics the seat controls toward consumer output and away from heavy industry. The Chairman then spends one ministerial action on Shock Work Campaign. The order runs for 24 turns and then expires on its own, after which another action is needed to repeat it.
 
----
+The portfolios that define the Soviet council:
 
-## The Supreme Soviet
+| Seat | Tier setting | Orders |
+| --- | --- | --- |
+| Chairman of Gosplan (planning) | Plan Emphasis: producer goods (Group A) vs consumer goods (Group B) | Mid-Plan Revision, Shock Work Campaign |
+| Council Liaison to Gosbank (state bank) | Credit Plan: tight credit vs loose credit | Currency Reform Tranche, Enterprise Credit Release |
+| Minister of Foreign Trade (the trade monopoly) | Trade Monopoly Posture: autarky vs export drive | Hard Currency Drive, Technology Import Programme |
+| Minister of Internal Trade (distribution) | Goods Distribution Priority: producer vs consumer priority | Consumer Goods Release, Retail Network Expansion |
+| Minister of Agriculture (collective farming) | Procurement Quotas: light vs heavy | Land Reclamation Drive, Procurement Price Rise |
+| Minister of Machine Building and Heavy Industry | Combine Output Setting: modernization vs over-fulfilment | Combine Output Drive, Machine Tool Retooling |
+| Minister of Internal Affairs (internal security) | Internal Security Posture: thaw vs crackdown | Public Order Sweep, Internal Passport Audit |
+| Minister of Culture | Cultural Line: liberal vs orthodox | Mass Literacy Campaign, Union Cultural Festival |
 
-Unlike China's mechanically unicameral NPC, the Supreme Soviet is **bill-active bicameral**: a bill must clear **both chambers** to become law.
+The Foreign and Internal Trade seats are deliberately distinct levers: Foreign Trade tiers act on growth through the state import-export monopoly, Internal Trade tiers act on consumer costs and employment through domestic distribution. The remaining seats (First Deputy Chairman, Foreign Affairs, Defence, Finance, Railways, Health, Higher Education) follow the same tier-plus-orders pattern. See the [Cabinet Guide](/wiki/cabinet-guide) for every seat.
 
-- **Soviet of the Union**: **559 deputies** (526 in the 1953 preset), apportioned to the 14 macro-regions by population. Four-year terms, all seats contested each cycle. (The historical chamber seated 750; the seats of Ukraine, Byelorussia and the Baltic republics left with those countries, which the game models separately.)
-- **Soviet of Nationalities**: **515 deputies**, seated by republic rather than by population: 25 seats per union republic, 11 per autonomous republic, with a floor of 20 per region so every region has contestable seats.
+## The plan and the marketization dial
 
-Both chambers elect **on the same day** on a shared four-year cycle (anchored to 1954 in the 1953 preset and 1984 in the 1979 preset). Republic Supreme Soviets, the sub-national tier, run their own four-year cycle (1955 / 1980). There are **no snap elections**.
+In worlds that use the command economy (every new world), the USSR comes up **fully command**: its marketization level is scheduled at **10** through 1991 in both presets. Marketization is a dial from 0 (fully command) to 100 (fully market). Below 30 the economy is fully command, 30 to 69 is dual-track (plan and market side by side), and 70 and above is a normal market economy. See [Planned Economies](/wiki/planned-economies) for the full model.
 
-The coalition threshold is a bare majority of the Soviet of the Union: **376 seats** (355 in 1953). Since the CPSU is the sole party, the threshold is a formality. The seeded government starts **formed**, with the CPSU holding a majority mandate from turn one.
+\`\`\`wiki-chart
+marketization-schedule-by-country
+\`\`\`
 
-When the last Supreme Soviet election of a cycle resolves, a **convocation reset** fires: the Premier's chair reopens for reappointment and the Chairman of the Presidium is cleared so the new chambers elect the head of state afresh.
+- **The dial is earned.** What does it do? It decides which economic engine runs. Black-market pressure, chronic plan under-fulfilment and a reformist policy stance push it up; a disciplined orthodox plan holds it down indefinitely. The CPSU's economic position of -4 feeds the policy driver toward orthodoxy.
+- **The three seats are wired to real offices.** The Gosplan planner panel is operated by the Chairman of Gosplan cabinet seat and the state-credit panel by the Gosbank liaison; SOE directors are appointed per enterprise.
+- **No stock exchange.** State enterprises are recorded against the **GOSPLAN state register**, and founding private corporations is disallowed.
+- **One state-owned enterprise per sector.** Every industry on the sector board has a plan enterprise with plant capacity (heavy industry, energy, extraction, agriculture, consumer goods, defense, chemicals, transport, and the rest).
+- **Fixed ruble.** The SUR is non-convertible while the country is command: forex routes refuse open-market trades, the monobank stays passive, and shortage shows up as empty shelves and a black-market premium rather than price spikes.
 
-Historical composition follows the single-list convention of the era: the CPSU takes about **75 percent** of each chamber and the remaining quarter seats as non-party deputies.
+| Item | Detail |
+| --- | --- |
+| Currency | SUR (Soviet ruble, administered rate) |
+| Central Bank | State Bank of the USSR (Gosbank) |
+| Chair title | Chairman of Gosbank |
+| Default prime rate | 3.0% |
+| State register | GOSPLAN (no bourse) |
+| Finance Minister | Minister of Finance |
 
----
+The 1979 budget models the Brezhnev-era pattern: slowing growth, suppressed inflation held near 1 percent by administered prices, and "financing the national economy" as the largest spending line. The 1953 budget is calibrated on the turnover tax as the dominant revenue source and infrastructure at roughly 30 percent of spending.
 
-## One-party rule
+## Holding the Premiership
 
 The USSR runs the shared one-party-state regime system (see [One-Party States](/wiki/one-party-states)):
 
@@ -60,7 +73,30 @@ The USSR runs the shared one-party-state regime system (see [One-Party States](/
 
 Party role labels are localized: chair reads **"General Secretary"**, vice chair **"Second Secretary"**, committee **"Politburo"**. The social axis runs from socially liberal (−5) to socially conservative (+5). The Soviet Union starts at **+3.5**, tied with China.
 
----
+## The Supreme Soviet
+
+Unlike China's mechanically unicameral NPC, the Supreme Soviet is **bill-active bicameral**: a bill must clear **both chambers** to become law.
+
+- **Soviet of the Union**: **559 deputies** (526 in the 1953 preset), apportioned to the 14 macro-regions by population. Four-year terms, all seats contested each cycle. (The historical chamber seated 750; the seats of Ukraine, Byelorussia and the Baltic republics left with those countries, which the game models separately.)
+- **Soviet of Nationalities**: **515 deputies**, seated by republic rather than by population: 25 seats per union republic, 11 per autonomous republic, with a floor of 20 per region so every region has contestable seats.
+
+Both chambers elect **on the same day** on a shared four-year cycle (anchored to 1954 in the 1953 preset and 1984 in the 1979 preset). Republic Supreme Soviets, the sub-national tier, run their own four-year cycle (1955 / 1980). There are **no snap elections**.
+
+The coalition threshold is a bare majority of the Soviet of the Union: **376 seats** (355 in 1953). Since the CPSU is the sole party, the threshold is a formality. The seeded government starts **formed**, with the CPSU holding a majority mandate from turn one. Historical composition follows the single-list convention of the era: the CPSU takes about **75 percent** of each chamber and the remaining quarter seats as non-party deputies.
+
+When the last Supreme Soviet election of a cycle resolves, a **convocation reset** fires: the Premier's chair reopens for reappointment and the Chairman of the Presidium is cleared so the new chambers elect the head of state afresh.
+
+| Office | How filled | Term | Seats |
+| --- | --- | --- | --- |
+| Premier (head of government) | Nominated by a party chair, confirmed by Soviet of the Union deputies | 4 years | 1 |
+| Chairman of the Presidium (ceremonial head of state) | Elected by a joint sitting of both chambers | No fixed term | 1 |
+| Supreme Soviet Deputy | Multi-seat regional election | 4 years | 559 (526 in 1953) |
+| Nationalities Deputy | Multi-seat republic-weighted election | 4 years | 515 |
+| Republic Deputy | Multi-seat sub-national election | 4 years | 5,000 total |
+| Republic First Secretary | Regional executive election | 4 years | 1 per region |
+| Chairman of Gosbank | Appointed action | 5 years | 1 |
+
+The Premier carries **+4 actions per turn**; a Supreme Soviet or Nationalities Deputy +1; a Republic First Secretary +2; the Chairman of Gosbank +3. The Chairman of the Presidium carries +0 actions and zero party-strength weight: the office is a ceremonial capstone, not a power base.
 
 ## The 14 macro-regions
 
@@ -85,61 +121,7 @@ The union is modelled as **14 macro-regions** ("Republics" in the UI): ten cover
 
 The 1953 preset reapportions the Union chamber to 526 seats on 1953 populations; the Nationalities table is population-independent and identical in both eras. Ukraine, Byelorussia and the Baltic republics are their own countries, and their deputies sit in their own legislatures, not the Supreme Soviet.
 
----
-
-## Council of Ministers
-
-The Premier appoints ministers **directly from Supreme Soviet deputies** to a 16-seat Council of Ministers. Every seat carries a three-option **tier setting** (the middle option is the neutral default), a package of national metrics, and **two ministerial orders**: time-limited national modifiers that cost one ministerial action and run 24 turns (one game half-year, 24 real hours). Most line ministries also get a regional target and an emergency action aimed at a single republic.
-
-![The Council of Ministers loop: the Premier appoints 16 ministers whose tier settings and 24-turn orders move national metrics, which feed the marketization dial that decides the economic engine.](/wiki-images/diagrams/ru-overview-council-loop.svg)
-
-**Worked example.** The Chairman of Gosplan moves Plan Emphasis from the neutral middle option to consumer goods (Group B). That shifts the national metrics the seat controls toward consumer output and away from heavy industry. The Chairman then spends one ministerial action on Shock Work Campaign. The order runs for 24 turns and then expires on its own, after which another action is needed to repeat it.
-
-The portfolios that define the Soviet council:
-
-| Seat | Tier setting | Orders |
-| --- | --- | --- |
-| Chairman of Gosplan (planning) | Plan Emphasis: producer goods (Group A) vs consumer goods (Group B) | Mid-Plan Revision, Shock Work Campaign |
-| Council Liaison to Gosbank (state bank) | Credit Plan: tight credit vs loose credit | Currency Reform Tranche, Enterprise Credit Release |
-| Minister of Foreign Trade (the trade monopoly) | Trade Monopoly Posture: autarky vs export drive | Hard Currency Drive, Technology Import Programme |
-| Minister of Internal Trade (distribution) | Goods Distribution Priority: producer vs consumer priority | Consumer Goods Release, Retail Network Expansion |
-| Minister of Agriculture (collective farming) | Procurement Quotas: light vs heavy | Land Reclamation Drive, Procurement Price Rise |
-| Minister of Machine Building and Heavy Industry | Combine Output Setting: modernization vs over-fulfilment | Combine Output Drive, Machine Tool Retooling |
-| Minister of Internal Affairs (internal security) | Internal Security Posture: thaw vs crackdown | Public Order Sweep, Internal Passport Audit |
-| Minister of Culture | Cultural Line: liberal vs orthodox | Mass Literacy Campaign, Union Cultural Festival |
-
-The Foreign and Internal Trade seats are deliberately distinct levers: Foreign Trade tiers act on growth through the state import-export monopoly, Internal Trade tiers act on consumer costs and employment through domestic distribution. The remaining seats (First Deputy Chairman, Foreign Affairs, Defence, Finance, Railways, Health, Higher Education) follow the same tier-plus-orders pattern. See the [Cabinet Guide](/wiki/cabinet-guide) for every seat.
-
----
-
-## Command economy
-
-In worlds that use the command economy (every new world), the USSR comes up **fully command**: its marketization level is scheduled at **10** through 1991 in both presets. Marketization is a dial from 0 (fully command) to 100 (fully market). Below 30 the economy is fully command, 30 to 69 is dual-track (plan and market side by side), and 70 and above is a normal market economy. See [Planned Economies](/wiki/planned-economies) for the full model.
-
-\`\`\`wiki-chart
-marketization-schedule-by-country
-\`\`\`
-
-- **No stock exchange.** State enterprises are recorded against the **GOSPLAN state register**, and founding private corporations is disallowed.
-- **One state-owned enterprise per sector.** Every industry on the sector board has a plan enterprise with plant capacity (heavy industry, energy, extraction, agriculture, consumer goods, defense, chemicals, transport, and the rest).
-- **The three seats are wired to real offices.** The Gosplan planner panel is operated by the Chairman of Gosplan cabinet seat and the state-credit panel by the Gosbank liaison; SOE directors are appointed per enterprise.
-- **The dial is earned.** What does it do? It decides which economic engine runs. Black-market pressure, chronic plan under-fulfilment and a reformist policy stance push it up; a disciplined orthodox plan holds it down indefinitely. The CPSU's economic position of -4 feeds the policy driver toward orthodoxy.
-- **Fixed ruble.** The SUR is non-convertible while the country is command: forex routes refuse open-market trades, the monobank stays passive, and shortage shows up as empty shelves and a black-market premium rather than price spikes.
-
----
-
-## The Warsaw Pact and the Cold War
-
-The **Warsaw Pact** is the socialist bloc's collective-defense alliance, seeded from 1952 and dissolved on schedule in 1991. Founding members are the USSR, East Germany, Poland, Hungary, Romania, Bulgaria and Czechoslovakia; the 1953 preset adds Albania, which is gone by 1979.
-
-- **Moscow holds permanent leadership.** The pact's chair, the **Supreme Commander of the Unified Command**, is permanently assigned to the USSR. No other member can ever hold it.
-- **Tribute.** In worlds that began at the 1953 preset, the two armed blocs levy a fixed yearly tribute on non-voting client members instead of voted dues: 0.75% of GDP for the Warsaw Pact and 0.5% for NATO.
-- **Alignment.** Between 1945 and 1990 the world runs on a WEST vs EAST alignment axis; the Warsaw Pact is the EAST bloc's accession channel, opposite NATO.
-- **Conflicts are player-made.** The world starts with **no pre-seeded wars**. Every conflict on the board was started by a player declaration or a world event, and declare-war bills need a two-thirds majority even in a one-party state (the only bill class that keeps its supermajority here). See [Conflicts Overview](/wiki/conflicts-overview).
-
----
-
-## Career path for Soviet players
+## Career: from a republic seat to Premier
 
 | Stage | Target | Why |
 | --- | --- | --- |
@@ -149,44 +131,18 @@ The **Warsaw Pact** is the socialist bloc's collective-defense alliance, seeded 
 | Mid-game | Council of Ministers seat | Tier setting, two orders, and (Gosplan/Gosbank) the command-economy panels |
 | Top | Premier | +4 actions/turn; appoints the Council; held through internal party confidence |
 
----
-
 ## Starting scenarios
 
 ${ruScenarios}
 
----
+## The Warsaw Pact and the Cold War
 
-## Currency and economy
+The **Warsaw Pact** is the socialist bloc's collective-defense alliance, seeded from 1952 and dissolved on schedule in 1991. Founding members are the USSR, East Germany, Poland, Hungary, Romania, Bulgaria and Czechoslovakia; the 1953 preset adds Albania, which is gone by 1979. Alignment and the pact are covered in [International Organizations](/wiki/international-organizations).
 
-| Item | Detail |
-| --- | --- |
-| Currency | SUR (Soviet ruble, administered rate) |
-| Central Bank | State Bank of the USSR (Gosbank) |
-| Chair title | Chairman of Gosbank |
-| Default prime rate | 3.0% |
-| State register | GOSPLAN (no bourse) |
-| Finance Minister | Minister of Finance |
-
-The 1979 budget models the Brezhnev-era pattern: slowing growth, suppressed inflation held near 1 percent by administered prices, and "financing the national economy" as the largest spending line. The 1953 budget is calibrated on the turnover tax as the dominant revenue source and infrastructure at roughly 30 percent of spending.
-
----
-
-## Key Soviet links
-
-- [One-Party States](/wiki/one-party-states): regime tiers, escalation, reforms and conversion
-- [Planned Economies](/wiki/planned-economies): the full command-economy model
-- [Cabinet Guide](/wiki/cabinet-guide): every cabinet post, its metrics, and its actions
-- [International Organizations](/wiki/international-organizations): the Warsaw Pact, Comecon and alignment
-- [Conflicts Overview](/wiki/conflicts-overview): declaring war, fronts and occupation
-- [Core Systems](/wiki/core-systems): turn structure, action economy
-- [China](/wiki/cn-overview): the regime escalation stages in numbers
-
----
-
-**Status:** the Soviet Union runs as described on this page in the 1953 and 1979 presets. The 1991 preset opens the same slot in its final year as a transitional Soviet Union: a 2,250-seat Congress of People's Deputies, a Chairman of the Cabinet of Ministers and a presidency, with no ruling party, so the one-party rules above do not apply there. The command economy, regime escalation and tribute rules apply in the 1953 and 1979 worlds. Last checked: 2026-10-29, version 1.18.0.
-
----
+- **Moscow holds permanent leadership.** The pact's chair, the **Supreme Commander of the Unified Command**, is permanently assigned to the USSR. No other member can ever hold it.
+- **Tribute.** In worlds that began at the 1953 preset, the two armed blocs levy a fixed yearly tribute on non-voting client members instead of voted dues: 0.75% of GDP for the Warsaw Pact and 0.5% for NATO.
+- **Alignment.** Between 1945 and 1990 the world runs on a WEST vs EAST alignment axis; the Warsaw Pact is the EAST bloc's accession channel, opposite NATO.
+- **Conflicts are player-made.** The world starts with **no pre-seeded wars**. Every conflict on the board was started by a player declaration or a world event, and declare-war bills need a two-thirds majority even in a one-party state (the only bill class that keeps its supermajority here). See [Conflicts Overview](/wiki/conflicts-overview).
 
 ## Living history
 
@@ -195,4 +151,8 @@ The timeline below is written by the turn processor whenever a Premier transitio
 \`\`\`country-history
 RU
 \`\`\`
+
+See also: [Core Systems](/wiki/core-systems) for turn structure and the action economy.
+
+Runs as described in the 1953 and 1979 presets. The 1991 preset opens the same slot in its final year as a transitional Soviet Union: a 2,250-seat Congress of People's Deputies, a Chairman of the Cabinet of Ministers and a presidency, with no ruling party, so the one-party rules above do not apply there. The command economy, regime escalation and tribute rules apply in the 1953 and 1979 worlds. Last checked 2026-10-29, version 1.18.0.
 `;

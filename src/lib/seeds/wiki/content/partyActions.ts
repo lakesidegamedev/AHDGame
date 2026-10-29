@@ -1,14 +1,12 @@
 export const partyActionsContent = `# Party actions
 
-A party has its own money and its own power, separate from yours. Its leaders use them to grow organization, boost turnout, manage NPPs and decide who runs. This page covers the three party resources, the Major and Minor tiers that cap them, and every action leaders can take.
+A party that never spends its Political Strength wastes its income: once the reserve hits the cap, anything extra is lost. A party has its own money and its own power, separate from yours, and its leaders ([Party Leadership](/wiki/party-leadership)) choose how to use them: growing organization, boosting turnout, steering NPPs, deciding who runs.
 
-## How it works
-
-### The three resources
+## Money and power
 
 **Treasury.** Money from member taxes (see [Party Membership](/wiki/party-membership)). A national treasurer sets the national rate and a state treasurer the state rate, each from 0% to 33% of members' income. Treasury pays for Build Org clicks, budgets and NPP work.
 
-**Political Strength (PS).** The reserve spent on party actions, mainly [Build Org](/wiki/party-organization). It comes from two streams: a flat trickle of **20 PS per turn** for a national party and **5 PS per turn** for a state party, and an optional treasury investment the chair sets, which buys up to **20 PS per turn** (in the US, ₳12,500 per PS nationally and ₳6,250 per PS for a state). Stock stops at the **cap**; extra is lost.
+**Political Strength (PS).** The reserve spent on party actions, mainly [Build Org](/wiki/party-organization), where PS and money pay for each click. It comes from two streams: a flat trickle of **20 PS per turn** for a national party and **5 PS per turn** for a state party, and an optional treasury investment the chair sets, which buys up to **20 PS per turn** (in the US, ₳12,500 per PS nationally and ₳6,250 per PS for a state). Stock stops at the **cap**; extra is lost.
 
 \`\`\`wiki-chart
 state-ps-reserve
@@ -16,20 +14,20 @@ state-ps-reserve
 
 **NPP Action Points.** A separate pool for managing NPPs, spent only on NPP work.
 
-Spending PS in one state makes the next spend there dearer by 1 PS, up to 8, and the extra falls by 3 each turn. Other states are unaffected.
+Spending PS in one state makes the next spend there dearer by 1 PS, up to 8, and the extra falls by 3 each turn. Other states are unaffected, so space out Build Org clicks in one state to keep the ladder low.
 
 ![Resource flow from member taxes into the treasury, the treasury into Political Strength, Build Org and budgets for GOTV, suppression and registration, and NPP Action Points into NPP management.](/wiki-images/diagrams/party-actions-resource-flow.svg)
 
-### Major and Minor parties
+A state party in the US holds 30 PS, which is the cap, and 5 PS arrives each turn. The state chair clicks Build Org four times in one turn: 1, 2, 3, 4 PS, so **10 PS** and about **₳28,100** (₳2,813, 5,625, 8,438, 11,250 in an average-size state). The reserve falls to 20. The ladder is at 4, and next turn it drops to 1. The chair now holds 25 PS, still below the cap. A party that never spends sits at 30 and wastes its income.
 
-Every party is **Major** or **Minor**, shown as a badge on its page. The tier sets the PS cap.
+## Major and Minor
+
+Every party is **Major** or **Minor**, shown as a badge on its page. The tier sets the PS cap, and it is part of the party record in [Political Parties](/wiki/political-parties).
 
 - New custom parties are Minor. Their national PS cap is **100, plus 10 for each region where they hold at least 20% Org**, and never above the Major cap.
-- A Minor party that reaches **20% Org in a third of a country's regions** becomes Major (a quarter in the UK, which means 3 of 12). In the US that is 17 of 50 states.
+- A Minor party that reaches **20% Org in a third of a country's regions** becomes Major (a quarter in the UK, which means 3 of 12). In the US that is 17 of 50 states. Org share earns the regions and also makes GOTV spending more efficient.
 - A Major party that falls **below 10% Org in two thirds of regions** gets a warning and a countdown. If it has not recovered after **240 turns** it drops to Minor.
 - The historic governing parties start Major. In one-party states the ruling party is always Major.
-
-### Key numbers
 
 | Item | Value |
 | --- | --- |
@@ -56,7 +54,9 @@ Budgets are set once as a percentage of the party's income and then run every tu
 - If the treasury goes negative, all budgets pause until it recovers.
 - The old Org-building budget is gone. Build Org is now a click that costs PS and money.
 
-## NPP actions
+GOTV and suppression change the turnout of the voter groups described in [Demographics & Targeting](/wiki/demographics-targeting).
+
+## Steering NPPs
 
 | Action | Who | Cost | Effect |
 | --- | --- | --- | --- |
@@ -67,53 +67,13 @@ Budgets are set once as a percentage of the party's income and then run every tu
 | Slate | National or state chair and vice chair | No cost | Assigns a same-party NPP or player to a race |
 | Whip | See [Party Leadership](/wiki/party-leadership) | Free | Directs NPPs on bills and leadership votes |
 
-**Slate: getting NPPs to run.** Assign a same-party NPP to a race on the Slate board. The NPP accepts if its loyalty is at least 40 and its stubbornness is at most 70. State and regional leaders get 5 points of leeway on each. The board shows "Likely to Accept" or "Likely to Decline" before the turn, then "Accepted" or "Declined" after. NPP entry is covered in [NPP Elections](/wiki/npp-elections).
+Recruitment and management spend resources to add and steer NPPs; see [NPPs Overview](/wiki/npps-overview).
 
-**State legislature NPPs.** NPPs do vote on state and regional bills, and state chairs and vice chairs can whip them. See [NPP Behavior](/wiki/npp-behavior).
+**Slate: getting NPPs to run.** Assign a same-party NPP to a race on the Slate board ([Party Slate](/wiki/party-slate)). The NPP accepts if its loyalty is at least 40 and its stubbornness is at most 70, which is why the loyalty and cooperation actions change whether a slated NPP is likely to accept. State and regional leaders get 5 points of leeway on each. The board shows "Likely to Accept" or "Likely to Decline" before the turn, then "Accepted" or "Declined" after. NPP entry is covered in [NPP Elections](/wiki/npp-elections).
 
-### Worked example
+**State legislature NPPs.** NPPs do vote on state and regional bills, and state chairs and vice chairs can whip them. Whips add pressure at no cost; see [NPP Behavior](/wiki/npp-behavior).
 
-A state party in the US holds 30 PS, which is the cap, and 5 PS arrives each turn. The state chair clicks Build Org four times in one turn: 1, 2, 3, 4 PS, so **10 PS** and about **₳28,100** (₳2,813, 5,625, 8,438, 11,250 in an average-size state). The reserve falls to 20. The ladder is at 4, and next turn it drops to 1. The chair now holds 25 PS, still below the cap. A party that never spends sits at 30 and wastes its income.
+Check the demotion countdown if you are Major and slipping below 10% in many regions.
 
-## What you can do
-
-- **Spend PS on Build Org** from the state party page.
-- **Set tax and budgets** from the treasury controls.
-- **Invest treasury in PS.** The chair sets a budget that buys extra PS each turn.
-- **Run NPP management and slates** from the party page.
-- **Watch your tier badge.** Aim for 20% Org in enough regions.
-
-**Tips.**
-- Spend PS before you hit the cap; the cap wastes income.
-- Space out Build Org clicks in one state to keep the ladder low.
-- Check the demotion countdown if you are Major and slipping below 10% in many regions.
-
-## Connections
-
-**Driven by**
-
-- [Party Membership](/wiki/party-membership): member taxes fill the treasury that funds everything here.
-- [Party Leadership](/wiki/party-leadership): officers choose how resources are spent.
-- [Party Organization](/wiki/party-organization): Org share earns regions toward Major tier and makes GOTV more efficient.
-- [Party Leadership & Authority](/wiki/party-leadership-authority): the shield halves Suppression against unmanned built-in parties.
-- [Political Parties](/wiki/political-parties): a party's tier and treasury are part of the party record.
-
-**Affects**
-
-- [Party Organization](/wiki/party-organization): PS and money pay for each Build Org click.
-- [NPPs Overview](/wiki/npps-overview): recruitment and management spend resources to add and steer NPPs.
-- [NPP Elections](/wiki/npp-elections): Slate assignments move NPPs into races.
-- [Party Slate](/wiki/party-slate): loyalty and cooperation actions change whether a slated NPP is likely to accept.
-- [NPP Behavior](/wiki/npp-behavior): whips add pressure to NPP votes at no cost.
-- [Demographics & Targeting](/wiki/demographics-targeting): GOTV and suppression change voter groups' turnout.
-
-## Status
-
-Live in every world and country with parties. Tiers apply everywhere; in one-party states the ruling party is always Major. Prices shown in ₳ are for the US and scale to each country's currency.
-
-Last checked: 2026-10-29, version 1.18.0
-
-## Technical detail
-
-The exact rules are on the [Party Influence design page](https://docs.lakesidegames.net/design/party-influence.html) and the [Party Building design page](https://docs.lakesidegames.net/design/party-building.html).
+Live in every world and country with parties. Prices shown in ₳ are for the US and scale to each country's currency. Last checked 2026-10-29, version 1.18.0. Exact rules: [Party Influence design page](https://docs.lakesidegames.net/design/party-influence.html) and [Party Building design page](https://docs.lakesidegames.net/design/party-building.html)
 `;

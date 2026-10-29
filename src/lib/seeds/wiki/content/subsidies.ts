@@ -1,12 +1,8 @@
 export const subsidiesContent = `# Subsidies
 
-A subsidy is a standing government support program that raises the profit margin of qualifying corporation sectors. A legislature passes one by bill to back a particular industry, and it costs the government budget money every turn. It matters to you either way: as a legislator you pick winners, and as a corporation owner you want your sectors to qualify.
-
-## How it works
+Your steel sector runs a thin margin, and a bill in Congress would add 7.5 percentage points to it. A subsidy is a standing government support program that raises the profit margin of qualifying corporation sectors. A legislature passes one by bill to back a particular industry, and it costs the government budget money every turn. As a legislator you pick winners; as a corporation owner you want your sectors to qualify.
 
 Each active subsidy gives a **+7.5 percentage point profit margin bonus** to every qualifying corporation sector. Subsidies are not a one-time payment: they persist as active policy until another bill ends them, providing a continuous margin boost every turn.
-
-### Key numbers
 
 | Rule | Value |
 | --- | --- |
@@ -17,9 +13,9 @@ Each active subsidy gives a **+7.5 percentage point profit margin bonus** to eve
 | Sentiment pulse decay | 0.85 per 15-minute market interval (about half gone in an hour) |
 | Sentiment cap | plus or minus 25% |
 
-### Enacting a subsidy
+## Writing the bill
 
-Subsidies are created through the [legislation system](/wiki/bills-legislation). A bill containing a \`subsidy\` provision, when passed and enacted, creates or updates a subsidy record.
+Subsidies are created through the [legislation system](/wiki/bills-legislation). A bill is the only way to start or end a subsidy. A bill containing a \`subsidy\` provision, when passed and enacted, creates or updates a subsidy record. Draft one from the bill drafting screen, choosing scope, target sector, optional strategy and domestic only. Use sector scope for targeted industrial policy, since economy-wide subsidies cost the most.
 
 The key parameters in a subsidy provision:
 
@@ -33,7 +29,9 @@ The key parameters in a subsidy provision:
 
 Re-enacting the same combination of parameters (scope, scope type, target sector, target strategy) updates the existing subsidy rather than creating a duplicate.
 
-### Qualification rules
+To end one, pass a bill with an end-subsidy provision (\`end_subsidy\`). It marks the matching subsidy as \`active: false\`. The record is preserved for historical audit purposes but no longer applies to margin calculations, and termination takes effect the turn the enacting bill is processed.
+
+## Does my sector qualify?
 
 A corporation sector qualifies for a subsidy if it passes all four filters:
 
@@ -57,7 +55,21 @@ A corporation sector qualifies for a subsidy if it passes all four filters:
 
 ![A sector passes the territory, sector type, strategy and domestic-only filters to qualify, and the government pays a per-turn cost into the sector subsidies budget line.](/wiki-images/diagrams/subsidies-qualification-funnel.svg)
 
-### Stacking rules
+Active subsidies are visible in the national Congress view and in the legislation history for the enacting bill. Each subsidy's scope, target, and domestic-only flag are displayed, along with the bill that created it. Check it for subsidies your sectors qualify for, then pick the strategy and location that match them.
+
+![Congress Subsidies tab listing active subsidies with scope, domestic-only flag and margin](/wiki-images/screens/subsidies-active-list.webp)
+
+### Home teams and foreign firms
+
+The \`domesticOnly\` flag is the primary tool for targeting subsidies at home-country corporations.
+
+**\`domesticOnly: false\`** (default): Any corporation operating in the territory qualifies, including foreign-headquartered corporations. This boosts all extraction or manufacturing in a territory regardless of where the profits ultimately flow.
+
+**\`domesticOnly: true\`**: Only corporations headquartered in the territory (or the specific state) qualify. This is the standard approach for industrial policy aimed at protecting or growing national champions.
+
+Combined with [Tariffs](/wiki/tariffs) (which penalize foreign corporations), a legislature can create a two-sided policy: domestic corporations get subsidies while foreign competitors face margin penalties, and the margins add together.
+
+## Stacking
 
 Multiple subsidies can apply to the same sector, and their bonuses stack additively:
 
@@ -70,8 +82,6 @@ Multiple subsidies can apply to the same sector, and their bonuses stack additiv
 
 **Important:** Multiple subsidies of the same exact scope and type do not stack: re-enacting the same provision overwrites the existing record rather than creating a second one. But a federal economy-wide subsidy and a federal sector-specific subsidy for the same sector **do** stack (they are different records). A federal subsidy and a state subsidy also stack freely, since they are different scope levels.
 
-#### Stacking example
-
 A pharmaceutical company with healthcare sectors in Germany qualifies for:
 - A Germany-wide economy-wide subsidy: +7.5pp
 - A Germany healthcare sector subsidy: +7.5pp
@@ -79,7 +89,17 @@ A pharmaceutical company with healthcare sectors in Germany qualifies for:
 
 Total margin bonus: **+22.5pp**, a substantial boost that can make the difference between a marginal and highly profitable operation.
 
-### Market sentiment
+## What it costs the government
+
+Subsidies are not free. Every turn, the system calculates the total cost of all active subsidies and writes it into the relevant budget:
+
+- **Cost basis:** Under plants, sum realized revenue for qualifying sectors, multiply by 48 (turns per year), then by \`0.105\`. That is 10.5% of the sector's annual realized revenue.
+- **Currency normalization:** Sector revenues are converted to the anchor currency via each corporation's FX rate before summing, so cross-currency corporations weight consistently.
+- **Budget impact:** The annualized total is written to \`spending.byCategory.sectorSubsidies\` under the federal budget for national subsidies, or the relevant state budget for state subsidies.
+
+A large economy-wide subsidy covering many high-revenue sectors can create a significant budget line item. For example, a sector with realized revenue of ₳1,000,000 per turn costs ₳1,000,000 x 48 x 0.105 = ₳5,040,000 a year, and it gains 7.5 percentage points of margin, worth ₳75,000 per turn, or ₳3,600,000 a year. The government pays 1.4 times what the sector gains. The cost updates every turn, so subsidy creation and termination are immediately reflected in the fiscal picture.
+
+## How the market reacts
 
 When a **sector-scoped subsidy** is enacted, the market reacts with a sentiment pulse:
 
@@ -88,33 +108,7 @@ When a **sector-scoped subsidy** is enacted, the market reacts with a sentiment 
 
 Sentiment pulses decay at rate **0.85 per 15-minute market interval** (a pulse loses about half its strength in roughly an hour) and are subject to the global sentiment cap of ±25%. Only sector-scoped subsidies fire a pulse.
 
-### Ending a subsidy
-
-An \`end_subsidy\` provision in a new bill marks the matching subsidy as \`active: false\`. The record is preserved for historical audit purposes but no longer applies to margin calculations.
-
-Subsidy termination takes effect the turn the enacting bill is processed.
-
-### Fiscal cost
-
-Subsidies are not free for the government. Every turn, the system calculates the total cost of all active subsidies and writes it into the relevant budget:
-
-- **Cost basis:** Under plants, sum realized revenue for qualifying sectors, multiply by 48 (turns per year), then by \`0.105\`.
-- **Currency normalization:** Sector revenues are converted to the anchor currency via each corporation's FX rate before summing, so cross-currency corporations weight consistently.
-- **Budget impact:** The annualized total is written to \`spending.byCategory.sectorSubsidies\` under the federal budget for national subsidies, or the relevant state budget for state subsidies.
-
-A large economy-wide subsidy covering many high-revenue sectors can create a significant budget line item. For example, a sector with realized revenue of ₳1,000,000 per turn costs ₳1,000,000 x 48 x 0.105 = ₳5,040,000 a year, and it gains 7.5 percentage points of margin, worth ₳75,000 per turn, or ₳3,600,000 a year. The government pays 1.4 times what the sector gains. The cost updates every turn, so subsidy creation and termination are immediately reflected in the fiscal picture.
-
-### Domestic vs. foreign targeting
-
-The \`domesticOnly\` flag is the primary tool for targeting subsidies at home-country corporations:
-
-**\`domesticOnly: false\`** (default): Any corporation operating in the territory qualifies, including foreign-headquartered corporations. This boosts all extraction or manufacturing in a territory regardless of where the profits ultimately flow.
-
-**\`domesticOnly: true\`**: Only corporations headquartered in the territory (or the specific state) qualify. This is the standard approach for industrial policy aimed at protecting or growing national champions.
-
-Combined with tariffs (which penalize foreign corporations), a legislature can create a two-sided policy: domestic corporations get subsidies while foreign competitors face margin penalties.
-
-### Integration with turn processing
+## Where the bonus lands each turn
 
 Subsidy margin modifiers are calculated during sector processing each turn:
 
@@ -123,49 +117,7 @@ Subsidy margin modifiers are calculated during sector processing each turn:
 3. Qualifying subsidies are summed: each adds +7.5pp to the total margin modifier.
 4. The modifier is added to the sector's profit margin.
 
-The calculation runs as part of the corporation turn phase: see [Corporations](/wiki/corporations) for the broader context of how margins affect revenue and sector health.
+The calculation runs as part of the corporation turn phase: see [Corporations](/wiki/corporations) for the broader context of how margins affect revenue and sector health, and how the sector's revenue sets what the subsidy costs. Extraction-sector subsidies make resource-rich states more productive; see [Resources](/wiki/resources-overview).
 
-### Viewing active subsidies
-
-Active subsidies are visible in the national Congress view and in the legislation history for the enacting bill. Each subsidy's scope, target, and domestic-only flag are displayed, along with the bill that created it.
-
-## What you can do
-
-- **Legislators:** draft a bill with a subsidy provision from the bill drafting screen, choosing scope, target sector, optional strategy and domestic only. Tip: use sector scope for targeted industrial policy, since economy-wide subsidies cost the most.
-- **Legislators:** end one with a bill containing an end-subsidy provision.
-- **Corporation owners:** check the Congress view for subsidies your sectors qualify for, then pick the strategy and location that match them.
-- **Tip:** pair a domestic-only subsidy with [Tariffs](/wiki/tariffs) for two-sided industrial policy.
-
-![Congress Subsidies tab listing active subsidies with scope, domestic-only flag and margin](/wiki-images/screens/subsidies-active-list.webp)
-
-## Common questions
-
-- **What subsidies exist and does my sector get one?** Whatever Congress has enacted. Your sector qualifies if it passes the territory, sector type, strategy and domestic-only filters.
-- **Do subsidies stack?** Yes, different subsidies add +7.5pp each. Re-enacting the same combination replaces the old record.
-- **What does a subsidy cost the government?** 10.5% of the sector's annual realized revenue (per-turn revenue x 48 x 0.105).
-- **How do I end one?** Pass a bill with an end-subsidy provision. It takes effect the turn the bill is processed.
-
-## Connections
-
-**Driven by**
-
-- [Bills & Legislation](/wiki/bills-legislation): a bill is the only way to start or end a subsidy.
-- [Corporations](/wiki/corporations): the sector's revenue sets what the subsidy costs.
-- [Tariffs](/wiki/tariffs): Used alongside tariffs in industrial policy; the margins add together.
-
-**Affects**
-
-- [Corporations](/wiki/corporations): the margin bonus raises sector profit.
-- [Resources](/wiki/resources-overview): extraction-sector subsidies make resource-rich states more productive.
-- [Tariffs](/wiki/tariffs): paired with subsidies to favour domestic firms.
-
-## Status
-
-Subsidies work in any country where legislators can pass an industry bill with a subsidy provision, at national or state level. Domestic-only subsidies favour firms headquartered in the territory.
-
-Last checked: 2026-10-29, version 1.18.0
-
-## Technical detail
-
-Exact constants and edge cases are on the [subsidies design page](https://docs.lakesidegames.net/design/subsidies.html).
+Subsidies work in any country where legislators can pass an industry bill with a subsidy provision, at national or state level. Domestic-only subsidies favour firms headquartered in the territory. Last checked 2026-10-29, version 1.18.0. Exact rules: [Subsidies (design)](https://docs.lakesidegames.net/design/subsidies.html)
 `;

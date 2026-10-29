@@ -1,14 +1,14 @@
 export const militaryUnitsContent = `# Units, Recruitment & Procurement
 
-Your army is a list of **formations**. Each one is a real object with a headcount, a technology level, a veterancy grade, a posture, and (once you have generals) a commander. This page covers how you get them, what they cost, and how you improve them.
+Your army is a list of **formations**. Each one is a real object with a headcount, a technology level, a veterancy grade, a posture, and (once you have generals) a commander. These are the units a war has to fight with (see [Conflicts & the Military System](/wiki/conflicts-overview)), and the reserve you hold decides how many open a new war (see [Declaring War](/wiki/declaring-war)). This page covers how you get them, what they cost, and how you improve them.
 
 Everything here is done by the **defence seat holder** from their cabinet office → **Military** tab. An **acting** secretary seated without confirmation has the same departmental powers as a confirmed holder, including military operations, generals, doctrine, the nuclear programme and defence contracts. The acting appointment expires after 24 turns.
 
-## How it works
+## What raising a unit takes
 
 Raising a unit takes four things, all at once: a ministerial action, enough manpower in the national pool, enough money in the defence appropriation, and a branch and unit type that exist in the current year. The unit then needs 6 turns to become operational, arrives in reserve, and costs upkeep every turn from the same appropriation until you disband it. The rest of this page covers each part.
 
-### Key numbers
+### The numbers
 
 | What | Value |
 | --- | --- |
@@ -25,7 +25,7 @@ Raising a unit takes four things, all at once: a ministerial action, enough manp
 | Readiness a posture settles at | Garrison 60, Standard 72, Forward-Deployed 84, High Alert 92 |
 | Readiness recovery | Up to 8 points per turn |
 
-### A worked purchase
+### Buying an Infantry Division
 
 A country with a cost multiplier of 1.0 and a price-anchor GDP of 500,000 (in its own currency units) buys an Infantry Division. The price is 500,000 × (1,600 / 387,000) × 1.0 = 2,067. The division also draws 12,000 men from the manpower pool and uses 1 ministerial action. The order is refused if any one of the three is short. Six turns later it is operational. A country with a multiplier of 2.6 and a price-anchor GDP of 2,000,000 pays 2,000,000 × (1,600 / 387,000) × 2.6 = 21,499 for the same division.
 
@@ -52,6 +52,8 @@ Some consequences worth knowing before you plan a build:
 - **The US Air Force** exists from 1947; the **Space Force** from 2019.
 - **The PLA Rocket Force** dates from 1966 (as the Second Artillery Corps).
 - **Soviet Strategic Rocket Forces** from 1959; Space Forces from 1992.
+
+Naval hulls are bought here and then ordered at sea; see [Naval Vessel Classes & Standing Orders](/wiki/naval-vessel-classes).
 
 Unit *types* are gated the same way. **Drone Commands** require 1995. **Every space archetype** requires 2019. You cannot invent a Predator in a Cold War game.
 
@@ -132,7 +134,7 @@ Recruiting costs one ministerial action. Your cabinet seat holds up to 4 and reg
 ministerial-action-bank
 \`\`\`
 
-That is the real throttle on how fast an army grows. You can raise at most four formations a day, however large your treasury or manpower pool. Upgrading also costs one, so recruiting and modernising compete for the same pool. Setting a posture, assigning a unit to a general and disbanding are free.
+That is the real throttle on how fast an army grows. You can raise at most four formations a day, however large your treasury or manpower pool. Upgrading also costs one, so recruiting and modernising compete for the same pool. Setting a posture, assigning a unit to a general (see [Generals & the Officer Corps](/wiki/generals)) and disbanding are free.
 
 ### 2. Manpower
 
@@ -144,7 +146,7 @@ The catalogue cost in the tables is not a currency amount. A unit is priced as a
 
 Half of any GDP growth since the game began feeds into prices, so a growing economy slowly outruns its unit prices rather than cancelling against them.
 
-The price is paid from the **defence appropriation**, the pot fed by your enacted defence budget line. It is a hard limit. If the unit costs more than the appropriation holds, the order is refused: "Defence appropriation is short, 2,067 required, 1,500 available". New orders cannot be put on credit. Money already promised to a supplier under a defence contract is not available either.
+The price is paid from the **defence appropriation**, the pot fed by your enacted defence budget line. Contracts for equipment draw on the same pot, so unit purchase and upkeep compete with what [Defence Procurement](/wiki/defence-procurement) reserves. It is a hard limit. If the unit costs more than the appropriation holds, the order is refused: "Defence appropriation is short, 2,067 required, 1,500 available". New orders cannot be put on credit. Money already promised to a supplier under a defence contract is not available either.
 
 The cost multiplier:
 
@@ -191,7 +193,7 @@ Two rules:
 1. A unit at a conflict cannot be on Garrison. It floors up to Standard automatically.
 2. Posture only forces up. A unit returning to reserve keeps its posture and does not drop back to Garrison.
 
-A force sitting heavily on Forward-Deployed or High Alert also tilts public trust and social cohesion at home. A permanent war footing has a political price. The **national force tier** (reduced, standard, elevated), set on the defence office Overview, scales readiness and upkeep across the whole army at once.
+A force sitting heavily on Forward-Deployed or High Alert also tilts public trust and social cohesion at home. A permanent war footing has a political price. The **national force tier** (reduced, standard, elevated), set on the defence office Overview, scales readiness and upkeep across the whole army at once. Doctrine nodes in [National Doctrine](/wiki/national-doctrine) adjust upkeep and readiness of your forces too.
 
 ## Technology tiers
 
@@ -210,11 +212,11 @@ Upkeep is derived on read, so a modernisation pass raises your whole running cos
 
 ## Veterancy and strength
 
-Veterancy has five grades: **Green, Regular, Seasoned, Veteran, Elite**. Grades are earned through fighting. Veterans are meaningfully better than green troops at the same headcount, so preserving an experienced formation is one of the most valuable things you can do. Rebuilding a veteran formation with conscripts dilutes it; see [Manpower & Conscription](/wiki/manpower-conscription).
+Veterancy has five grades: **Green, Regular, Seasoned, Veteran, Elite**. Grades are earned through fighting, and every battle lowers strength, readiness and veterancy as well as raising it (see [Fighting a Battle](/wiki/fighting-a-battle)). Veterans are meaningfully better than green troops at the same headcount, so preserving an experienced formation is one of the most valuable things you can do. Rebuilding a veteran formation with conscripts dilutes it; see [Manpower & Conscription](/wiki/manpower-conscription).
 
 Strength is current personnel divided by establishment, shown on the unit card. A unit ground down in battle fights at reduced effect in proportion to its losses. A division at 40% strength fights like a much smaller formation.
 
-There is no destroyed state and no automatic disbanding. A mauled formation stays on the roster, keeps its general and position, and rebuilds in place through reinforcement.
+How strong a unit is, along with its veterancy, tech and posture, all feed the next battle. There is no destroyed state and no automatic disbanding. A mauled formation stays on the roster, keeps its general and position, and rebuilds in place through reinforcement.
 
 ## Upkeep and the defence appropriation
 
@@ -241,7 +243,7 @@ Equipment is bought separately from units. The defence seat publishes tenders, c
 5. **Modernise selectively.** Upgrade the formations you intend to keep and fight with.
 6. **Leave postures low in peacetime.** High Alert on a peacetime army burns money and erodes cohesion for nothing.
 
-## What you can do
+## Running it from the Military tab
 
 All of it is in the defence office, **Military** tab, held by the defence seat holder (or an acting holder):
 
@@ -250,43 +252,16 @@ All of it is in the defence office, **Military** tab, held by the defence seat h
 - Recruit units (1 action, manpower, appropriation money).
 - Upgrade a unit's tech tier (1 action, 25% to 50% of its build price).
 - Set a unit's posture, or the national force tier (free).
-- Assign a unit, or a whole branch at once, to a general (free).
+- Assign a unit, or a whole branch at once, to a general (free). The force load a general's command carries sets that command's capacity penalties; see [Commands & Command Structure](/wiki/military-commands).
 - Disband a unit (free, personnel return to the pool).
 
-**Common questions.** *Why does it say not enough manpower?* The pool holds fewer men than the unit's establishment. *How many units can I buy per day?* Four, from the action pool, unless you also buy extra actions at 10 action points each, once per turn. *Why does my unit show General Staff and not fight?* A new unit has no general and sits in reserve. Assign it to a general, and post that general to a conflict. *Is upgrading worth it?* Only for formations you will keep; see the upkeep curve above. *What does posture do?* It trades upkeep for field power and sets the readiness the unit settles at.
+**Questions that come up.** *Why does it say not enough manpower?* The pool holds fewer men than the unit's establishment. *How many units can I buy per day?* Four, from the action pool, unless you also buy extra actions at 10 action points each, once per turn. *Why does my unit show General Staff and not fight?* A new unit has no general and sits in reserve. Assign it to a general, and post that general to a conflict. *Is upgrading worth it?* Only for formations you will keep; see the upkeep curve above. *What does posture do?* It trades upkeep for field power and sets the readiness the unit settles at.
 
-## Connections
+## See also
 
-**Driven by**
-
-- [Manpower & Conscription](/wiki/manpower-conscription): the pool is the hard limit on how many men a new unit can draw.
-- [Defence Procurement](/wiki/defence-procurement): contracts stock the arsenal that equips new units.
-- [National Doctrine](/wiki/national-doctrine): doctrine nodes adjust upkeep and readiness of your forces.
-- [Generals & the Officer Corps](/wiki/generals): units are assigned to a general and follow them.
-- [Fighting a Battle](/wiki/fighting-a-battle): battles lower strength, readiness and veterancy.
-
-**Affects**
-
-- [Conflicts & the Military System](/wiki/conflicts-overview): the units you own are what a war has to fight with.
-- [Commands & Command Structure](/wiki/military-commands): the force load a command carries sets its capacity penalties.
-- [Fighting a Battle](/wiki/fighting-a-battle): strength, veterancy, tech and posture all feed the battle.
-- [Declaring War](/wiki/declaring-war): your uncommitted reserve supplies the opening forces of a new war.
-- [Naval Vessel Classes & Standing Orders](/wiki/naval-vessel-classes): the naval hulls are bought here and then ordered at sea.
-- [Defence Procurement](/wiki/defence-procurement): unit purchase and upkeep draw on the same appropriation that contracts reserve.
-
-## Status
-
-Recruiting and upgrading work in every world and era, but the catalogue narrows by year: Drone Commands need 1995 or later, space units need 2019 or later, and each branch exists only in the years it did. The Soviet Union and East Germany draw state arsenal output instead of contract output.
-
-Last checked: 2026-10-29, version 1.18.0
-
-## Technical detail
-
-The exact constants, pricing and budget rules are on the design page [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html).
-
-## Next
-
-- [Manpower & Conscription](/wiki/manpower-conscription): where the men come from.
+- [Manpower & Conscription](/wiki/manpower-conscription): where the men come from, and the hard limit on how many a new unit can draw.
 - [Generals & the Officer Corps](/wiki/generals): how to get a commander for these units.
 - [Fighting a Battle](/wiki/fighting-a-battle): how to actually use them.
+
+Applies in every world and era, but the catalogue narrows by year: Drone Commands need 1995 or later, space units 2019 or later, and the Soviet Union and East Germany draw state arsenal output instead of contract output. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html)
 `;

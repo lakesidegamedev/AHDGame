@@ -1,10 +1,10 @@
 export const firstCampaignWalkthroughContent = `# First Campaign Walkthrough
 
-A worked example with real numbers: a new US character running for the Pennsylvania State Senate. Other countries use the same clicks with different office names. If you have not created a character yet, stop and do [Create a Character](/wiki/create-a-character).
+You have 25 actions, ₳250,000 and about six days before a Pennsylvania State Senate primary. This is that campaign played out day by day, with real numbers, from the first click to the last four turns. Other countries use the same clicks with different office names. The kit below is what you get from [Create a Character](/wiki/create-a-character), so do that first if you have not. It follows the plan in [Campaign Strategy](/wiki/campaign-strategy) and expands the overview in [Getting Started](/wiki/getting-started).
 
 The numbers below assume a state with average GDP per person (costs multiplied by 1.0), a large state (Pennsylvania has more than 8 million people), and neutral stats. Your own costs will differ a little, and the in-game quote shows the exact figure before you click.
 
-## Setup (Day 1, before you spend)
+## Before you spend anything
 
 - Home: Pennsylvania. Sliders: Economic -2, Social -1.
 - Open **Parties** and join the Democrats (close to those sliders). To run as an Independent instead, skip this and see the variant at the end.
@@ -15,9 +15,9 @@ The numbers below assume a state with average GDP per person (costs multiplied b
 dashboard
 \`\`\`
 
-## How much it really costs
+## What actually limits you
 
-Actions are not your limit after the first day: you get 4 more every hour, which is 96 a day. **Funds are the limit.** Passive income in a large state is about ₳20,440 per turn at donor level 1 and PI 10 (₳20,000 base plus the donor bonus), roughly ₳490,000 a day before party tax. Campaign costs ₳20,000 per use below PI 20 and ₳48,000 per use from PI 20 to 39. Plan your spending around that, not around actions.
+Actions are not your limit after the first day: you get 4 more every hour, which is 96 a day. **Funds are the limit.** Passive income in a large state is about ₳20,440 per turn at donor level 1 and PI 10 (₳20,000 base plus the donor bonus), roughly ₳490,000 a day before party tax. Campaign costs ₳20,000 per use below PI 20 and ₳48,000 per use from PI 20 to 39. Plan your spending around that, not around actions. The income and ad rules behind this ledger are in [Fundraising & Ads](/wiki/fundraising-ads).
 
 ![The four campaign weeks with their targets, and the day one ledger of actions and funds.](/wiki-images/diagrams/first-campaign-walkthrough-four-weeks.svg)
 
@@ -58,7 +58,7 @@ Stop week 1 when PI is about 30, Favorability is 60 or higher, donor level is 3 
 
 **If the poll shows you behind:** do not file blind. A rival 10 points ahead means either a different seat, or a plan: request NPP endorsements, run a Full Demographic Poll (6 actions, ₳75,000) to find which groups to canvass, and spend on those groups. A poll is much cheaper than a lost primary.
 
-## Week 2: primary
+## Week 2: the primary
 
 When the primary window opens:
 
@@ -74,9 +74,9 @@ campaign
 5. Do not Attack fellow Democrats.
 6. Optional: one Full Demographic Poll if you have ₳75,000 and 6 actions.
 
-Your score is alignment plus favorability plus PI. It sets your standing; over the closing window of the primary the party's registered voters cast ballots split by that standing, and the top count advances. Hold the lead; do not just grab it on the last turn.
+Your score is alignment plus favorability plus PI (see [Election Mechanics](/wiki/election-mechanics)). It sets your standing; over the closing window of the primary the party's registered voters cast ballots split by that standing, and the top count advances. Hold the lead; do not just grab it on the last turn.
 
-## Week 3: general, opening
+## Week 3: you are the nominee
 
 You are the nominee. The race page shows turns until resolution. The final 4 turns carry 30% of the vote.
 
@@ -89,21 +89,21 @@ Daily:
 
 If you are clearly ahead by mid-general, stop spraying money. Save for the last 4 turns.
 
-## Week 4: last 4 turns
+## Week 4: the last four turns
 
-1. Log in hourly if you can. Each turn counts ballots weighted at 7.5% of the pool.
+1. Log in hourly if you can (the routine is in [The Game Loop](/wiki/the-game-loop)). Each turn counts ballots weighted at 7.5% of the pool.
 2. Peak Favorability and PI going into those turns (ads plus Campaign).
 3. Do not withdraw. Withdrawing costs nothing in actions, but the campaign spend you put in is gone and the race goes to your rivals.
 
-## Resolution: what the UI does
+## Election night
 
-The race page posts totals. The winner's profile shows the office. You gain the State Senate action and fund bonus (+1 action and ₳3,000 per turn) and appear on the officials list. A new cycle of that office spawns at once. Open the **legislature** to vote.
+The race page posts totals. The winner's profile shows the office. You gain the State Senate action and fund bonus (+1 action and ₳3,000 per turn) and appear on the officials list. A new cycle of that office spawns at once. Open the **legislature** to vote. Winning here puts you on the first rung of [Player Progression](/wiki/player-progression).
 
 \`\`\`guide-screenshot
 legislature
 \`\`\`
 
-### If you lost
+### If you lose
 
 PI, Favorability and donor level stay. Your funds are probably spent, and hourly income plus Fundraise rebuild them. The next cycle of that seat starts right away, so check **Elections**. You begin it well ahead of week 1.
 
@@ -120,7 +120,7 @@ An Independent enters the independent primary rather than a party's. You get no 
 - [ ] Campaign page used daily, not only the race board.
 - [ ] Last-4-turns plan written down (hourly login).
 
-## Common misses
+## Where first campaigns go wrong
 
 - Declaring blind (no poll).
 - Dumping all your funds early, then decaying into the final turns.
@@ -128,27 +128,5 @@ An Independent enters the independent primary rather than a party's. You get no 
 - Attacking your own primary.
 - Ignoring NPP endorsements.
 
-## Connections
-
-**Driven by**
-
-- [Campaign Strategy](/wiki/campaign-strategy): the plan this walkthrough follows.
-- [Fundraising & Ads](/wiki/fundraising-ads): the income and ad rules behind the ledger.
-- [The Game Loop](/wiki/the-game-loop): the daily routine and last-4-turns timing.
-- [Create a Character](/wiki/create-a-character): the starting kit this plan spends.
-- [Getting Started](/wiki/getting-started): the overview this plan expands.
-
-**Affects**
-
-- [Player Progression](/wiki/player-progression): winning here puts you on the first rung.
-
-## Status
-
-This walkthrough works in any world where you can create a character in a country with elections, with office names and timings that vary. The Pennsylvania State Senate is the US example.
-
-Last checked: 2026-10-29, version 1.18.0
-
-## Technical detail
-
-The strategy behind the walkthrough and its formulas are on the [Campaign Strategy design page](https://docs.lakesidegames.net/design/campaign-strategy.html). Related reading: [Election Mechanics](/wiki/election-mechanics).
+Works in any world where you can create a character in a country with elections, with office names and timings that vary; the Pennsylvania State Senate is the US example. Last checked 2026-10-29, version 1.18.0. Exact rules: [Campaign Strategy (design)](https://docs.lakesidegames.net/design/campaign-strategy.html)
 `;
