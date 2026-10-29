@@ -300,6 +300,7 @@ export async function GET() {
         avatarUrl: 1,
         profileHeaderImageUrl: 1,
         statsAllocated: 1,
+        wealthTierRepickPending: 1,
         unionLeaderOf: 1,
       },
     });
@@ -749,6 +750,8 @@ export async function GET() {
                 // Grandfather flag: drives the blocking stat-allocation modal.
                 // Gated behind the RPG-stats feature flag.
                 needsStatAllocation: rpgStatsEnabled && !character.statsAllocated,
+                // One-time wealth background re-pick after an economy reset.
+                needsWealthTierRepick: character.wealthTierRepickPending === true,
               }
             : null,
         },
