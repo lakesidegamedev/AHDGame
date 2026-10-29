@@ -175,6 +175,8 @@ export interface AskAnswerPayload {
   liveSources?: Array<{ label: string }>;
   /** Docs that disagree with the code; flagged for review. */
   conflicts?: Array<{ source?: string; page?: string; claim?: string; actual?: string }>;
+  /** A quiet "did this help?" line for a freshly finished answer. */
+  ratePrompt?: { text: string; lowConfidence?: boolean } | null;
 }
 
 export interface AskMe {

@@ -1,6 +1,25 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Calculator,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  FileText,
+  Flag,
+  History,
+  Map as MapIcon,
+  Search,
+  Share2,
+  Store,
+  ThumbsDown,
+  ThumbsUp,
+  TrendingUp,
+  Users,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -47,9 +66,9 @@ import {
   type KeirRest,
 } from "@/components/askDrawer/keirMood";
 
-// The Ask drawer, laid out like the Ask site: the question as a heading, the
-// answer as plain prose with quiet actions beside an "Answer" label, sources
-// folded away, and one composer box. Signed in with the player's game account
+// The Ask drawer, laid out like the Ask site's chat view: the question as a
+// bubble, a research deck while Ask works, the answer as plain prose with quiet
+// actions and a Sources pill beneath, and one composer box. Signed in with the player's game account
 // and able to read the page they are on.
 
 export type AskDrawerSide = "left" | "right";
@@ -95,6 +114,8 @@ interface Turn {
   /** "Used 3% of today's energy (live data, chart)" once the answer is settled. */
   chargeNote: string | null;
   extras: Pick<AskAnswerPayload, "vizBlocked" | "reportUrl" | "liveSources" | "conflicts">;
+  /** A quiet "did this help?" line, only for answers that just finished. */
+  ratePrompt: { text: string; lowConfidence: boolean } | null;
 }
 
 function newTurn(question: string): Turn {
@@ -119,6 +140,7 @@ function newTurn(question: string): Turn {
     offer: null,
     chargeNote: null,
     extras: {},
+    ratePrompt: null,
   };
 }
 
@@ -370,6 +392,76 @@ function ReportForm({
   );
 }
 
+type StepKind = "live" | "search" | "file" | "history" | "market" | "map" | "calc" | "community";
+
+const STEP_STYLE: Record<StepKind, { icon: LucideIcon; tint: string }> = {
+  live: { icon: TrendingUp, tint: "bg-emerald-500/20 text-emerald-500" },
+  search: { icon: Search, tint: "bg-blue-500/20 text-blue-500" },
+  file: { icon: FileText, tint: "bg-slate-500/20 text-slate-500" },
+  history: { icon: History, tint: "bg-violet-500/20 text-violet-500" },
+  market: { icon: Store, tint: "bg-amber-500/20 text-amber-500" },
+  map: { icon: MapIcon, tint: "bg-teal-500/20 text-teal-500" },
+  calc: { icon: Calculator, tint: "bg-rose-500/20 text-rose-500" },
+  community: { icon: Users, tint: "bg-pink-500/20 text-pink-500" },
+};
+
+/** Which kind of tool a narrated research step is, judged from its wording. */
+export function stepKind(text: string): StepKind {
+  const t = text.toLowerCase();
+  if (/communit|discord|player|forum/.test(t)) return "community";
+  if (/map|region|state map|geograph/.test(t)) return "map";
+  if (/calculat|formula|math|simulat|project/.test(t)) return "calc";
+  if (/market|price|commodit|trade|stock/.test(t)) return "market";
+  if (/histor|past|earlier|change|trend/.test(t)) return "history";
+  if (/live|current|pulling|game data|reading the game/.test(t)) return "live";
+  if (/search|look|find/.test(t)) return "search";
+  return "file";
+}
+
+function StepIcon({ text, className = "h-4 w-4" }: { text: string; className?: string }) {
+  const Glyph = STEP_STYLE[stepKind(text)].icon;
+  return <Glyph className={className} aria-hidden />;
+}
+
+/** The last three research steps as a small fanned deck; the newest sits on top. */
+function ResearchDeck({ steps, working }: { steps: string[]; working: boolean }) {
+  const shown = steps.slice(-3);
+  return (
+    <span className="relative inline-block h-9 w-10 shrink-0" aria-hidden data-ask-deck>
+      {shown.map((step, i) => {
+        const pos = shown.length - 1 - i;
+        const style = STEP_STYLE[stepKind(step)];
+        return (
+          <span
+            key={`${steps.length - pos}-${step}`}
+            data-pos={pos}
+            title={step}
+            className={`ask-deck-card ${style.tint} ${pos === 0 && working ? "ask-deck-running" : ""}`}
+          >
+            <StepIcon text={step} className="h-4 w-4" />
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
+function StepList({ turn }: { turn: Turn }) {
+  return (
+    <ul className="space-y-1 text-[13px] text-muted" data-ask-steps>
+      {turn.trail.map((step, i) => (
+        <li key={`s${i}`} className="flex items-center gap-2">
+          <StepIcon text={step} className="h-3.5 w-3.5 shrink-0" />
+          <span>{step}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+const ROUND_BUTTON =
+  "inline-flex items-center gap-1 rounded-full border border-card-border px-2.5 py-1 text-[12px] text-muted transition-colors hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary";
+
 function TurnView({
   turn,
   fullAskUrl,
@@ -392,6 +484,10 @@ function TurnView({
 }) {
   const [note, setNote] = useState<string | null>(null);
   const [reporting, setReporting] = useState(false);
+  const [stepsOpen, setStepsOpen] = useState(false);
+  const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [followupsOpen, setFollowupsOpen] = useState(false);
+  const [rateDismissed, setRateDismissed] = useState(false);
   const noteTimer = useRef(0);
   useEffect(() => () => window.clearTimeout(noteTimer.current), []);
   const flashNote = (text: string) => {
@@ -409,111 +505,101 @@ function TurnView({
     void onShare().then((message) => message && flashNote(message));
   };
 
+  const liveSources = turn.extras.liveSources ?? [];
+  const sourceCount = turn.citations.length + liveSources.length;
+  const hasSourcesPanel = sourceCount > 0 || !!turn.chargeNote || turn.areas.length > 0;
+  const working = turn.streaming && !turn.answer;
+  const settled = !turn.streaming;
+  const steps = turn.trail.length;
+  const showRate =
+    settled &&
+    !!turn.ratePrompt?.text &&
+    !!turn.answerId &&
+    turn.feedback === null &&
+    !rateDismissed &&
+    !reporting;
+
   return (
     <article className="space-y-3">
-      <h3 className="text-lg font-semibold leading-snug tracking-tight text-foreground">
-        {turn.question}
-      </h3>
-      <div className="flex items-center gap-2 border-b border-card-border/70 pb-2">
-        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
-          Answer
-        </span>
-        {turn.usedMcp && !turn.streaming && (
-          <span className="inline-flex items-center gap-0.5 text-[11px] text-muted">
-            <Icon d={ICONS.bolt} className="h-3 w-3" />
-            live data
-          </span>
-        )}
-        {!turn.streaming && turn.answer && (
-          <div className="ml-auto flex items-center">
-            {note && (
-              <span className="mr-1 text-[11px] text-emerald-400" role="status">
-                {note}
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={copy}
-              className={QUIET_BUTTON}
-              aria-label="Copy answer"
-              title="Copy"
-            >
-              <Icon d={ICONS.copy} className="h-3.5 w-3.5" />
-            </button>
-            {canShare && (
-              <button
-                type="button"
-                onClick={share}
-                className={QUIET_BUTTON}
-                aria-label="Share this thread"
-                title="Share"
-              >
-                <Icon d={ICONS.share} className="h-3.5 w-3.5" />
-              </button>
-            )}
-            {turn.answerId && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => onFeedback(turn, "up")}
-                  disabled={turn.feedback !== null}
-                  className={`${QUIET_BUTTON} ${turn.feedback === "up" ? "text-emerald-400" : ""}`}
-                  aria-label="Helpful"
-                  title="Helpful"
-                >
-                  <Icon d={ICONS.up} className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setReporting(true)}
-                  disabled={turn.feedback !== null}
-                  className={`${QUIET_BUTTON} ${turn.feedback === "down" ? "text-amber-400" : ""}`}
-                  aria-label="Report a problem with this answer"
-                  title="Report"
-                >
-                  <Icon d={ICONS.flag} className="h-3.5 w-3.5" />
-                </button>
-              </>
-            )}
-          </div>
-        )}
+      <div className="flex justify-end">
+        <p className="max-w-[80%] whitespace-pre-wrap break-words rounded-2xl bg-card-elevated px-3.5 py-2 text-[15px] leading-snug text-foreground">
+          {turn.question}
+        </p>
       </div>
 
-      {reporting && turn.feedback === null && (
-        <ReportForm
-          onCancel={() => setReporting(false)}
-          onSend={(reason) => {
-            setReporting(false);
-            onFeedback(turn, "down", reason);
-            flashNote("Reported. Thank you.");
-          }}
-        />
-      )}
-      {turn.ack && <p className="text-[15px] leading-relaxed text-foreground">{turn.ack}</p>}
-      {turn.streaming && !turn.answer && (
-        <div className="flex items-start gap-3">
-          {keir}
-          <div
-            className="min-w-0 flex-1 space-y-1 rounded-lg border border-card-border/70 bg-card-elevated/40 px-3 py-2 text-[13px] text-muted"
-            role="status"
-            aria-live="polite"
-          >
-            {/* The research steps as they happen; the latest one is still running. */}
-            {turn.trail.slice(-5, -1).map((step, i) => (
-              <div key={`${i}-${step}`} className="flex items-center gap-2 text-muted/80">
-                <span className="text-[11px] text-emerald-400" aria-hidden>
-                  ✓
-                </span>
-                <span className="truncate">{step}</span>
-              </div>
-            ))}
-            <div className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-primary" />
-              <span className="truncate">{turn.status || turn.trail.at(-1) || "Working"}</span>
+      {turn.ack && !turn.answer && <p className="text-[13px] text-muted">{turn.ack}</p>}
+
+      {working && (
+        <div>
+          <div className="flex items-center gap-3">
+            {keir}
+            <ResearchDeck steps={turn.trail} working />
+            <div className="min-w-0 flex-1" role="status" aria-live="polite">
+              <p className="ask-shimmer truncate text-[14px] text-foreground">
+                {turn.status || turn.trail.at(-1) || "Working"}
+              </p>
+              {steps > 0 && (
+                <p className="text-[12px] text-muted">
+                  {steps} step{steps === 1 ? "" : "s"}
+                </p>
+              )}
             </div>
+            {steps > 0 && (
+              <button
+                type="button"
+                onClick={() => setStepsOpen((v) => !v)}
+                aria-expanded={stepsOpen}
+                className="shrink-0 text-[12px] text-muted hover:text-foreground"
+              >
+                {stepsOpen ? "Hide" : "Show"}
+              </button>
+            )}
           </div>
+          {stepsOpen && steps > 0 && (
+            <div className="mt-2 pl-1">
+              <StepList turn={turn} />
+            </div>
+          )}
         </div>
       )}
+
+      {settled && steps > 0 && (
+        <div>
+          <button
+            type="button"
+            onClick={() => setStepsOpen((v) => !v)}
+            aria-expanded={stepsOpen}
+            className="inline-flex items-center gap-2 rounded-full border border-card-border bg-card px-3 py-1.5 text-[13px] text-muted hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <span className="flex -space-x-1.5" aria-hidden>
+              {Array.from(new Set(turn.trail.map(stepKind)))
+                .slice(0, 2)
+                .map((kind) => {
+                  const Glyph = STEP_STYLE[kind].icon;
+                  return (
+                    <span
+                      key={kind}
+                      className={`flex h-5 w-5 items-center justify-center rounded-full ${STEP_STYLE[kind].tint}`}
+                    >
+                      <Glyph className="h-3 w-3" />
+                    </span>
+                  );
+                })}
+            </span>
+            {`Researched ${steps} step${steps === 1 ? "" : "s"}${turn.elapsedMs ? ` in ${Math.max(1, Math.round(turn.elapsedMs / 1000))}s` : ""}`}
+            <ChevronRight
+              className={`h-3.5 w-3.5 transition-transform ${stepsOpen ? "rotate-90" : ""}`}
+              aria-hidden
+            />
+          </button>
+          {stepsOpen && (
+            <div className="mt-2 pl-1">
+              <StepList turn={turn} />
+            </div>
+          )}
+        </div>
+      )}
+
       {turn.answer && (
         <div className={`${MARKDOWN_CLASS} ${turn.streaming ? STREAM_CARET : ""}`}>
           <ReactMarkdown
@@ -559,10 +645,10 @@ function TurnView({
       )}
       {turn.error && <p className="text-[15px] text-foreground">{turn.error}</p>}
       {turn.upgrade && <AskUpgradeCard offer={turn.upgrade} />}
-      {!turn.streaming && turn.proposedAction && (
+      {settled && turn.proposedAction && (
         <AskActionCard action={turn.proposedAction} onFiled={onFiled} />
       )}
-      {!turn.streaming &&
+      {settled &&
         !turn.proposedAction &&
         turn.offer?.label &&
         !turn.followups.includes(turn.offer.label) && (
@@ -576,13 +662,10 @@ function TurnView({
           </button>
         )}
 
-      {!turn.streaming && turn.chargeNote && (
-        <p className="text-[11px] text-muted">{turn.chargeNote}</p>
-      )}
-      {!turn.streaming && turn.extras.vizBlocked && (
+      {settled && turn.extras.vizBlocked && (
         <p className="text-[13px] text-muted">This one is answered in prose.</p>
       )}
-      {!turn.streaming && turn.extras.reportUrl && absoluteAskUrl(turn.extras.reportUrl) && (
+      {settled && turn.extras.reportUrl && absoluteAskUrl(turn.extras.reportUrl) && (
         <a
           href={absoluteAskUrl(turn.extras.reportUrl) ?? undefined}
           target="_blank"
@@ -592,7 +675,7 @@ function TurnView({
           Open this report as its own shareable page
         </a>
       )}
-      {!turn.streaming &&
+      {settled &&
         (turn.extras.conflicts ?? []).map((c, i) => (
           <div
             key={i}
@@ -603,89 +686,215 @@ function TurnView({
             This has been flagged for review.
           </div>
         ))}
-      {!turn.streaming && (turn.trail.length > 0 || (turn.extras.liveSources ?? []).length > 0) && (
-        <details className="group text-[13px]">
-          <summary className="flex cursor-pointer list-none items-center gap-1 text-muted hover:text-foreground">
-            <Icon d={ICONS.chev} className="h-3 w-3 transition-transform group-open:rotate-90" />
-            {turn.trail.length > 0
-              ? `Researched ${turn.trail.length} step${turn.trail.length === 1 ? "" : "s"}${turn.elapsedMs ? ` in ${(turn.elapsedMs / 1000).toFixed(1)}s` : ""}`
-              : "Research"}
-            {(turn.extras.liveSources ?? []).length > 0 && (
-              <span className="text-muted/70">
-                {" "}
-                · {(turn.extras.liveSources ?? []).length} live read
-                {(turn.extras.liveSources ?? []).length === 1 ? "" : "s"}
-              </span>
-            )}
-          </summary>
-          <ul className="mt-2 space-y-1 pl-4 text-muted">
-            {turn.trail.map((step, i) => (
-              <li key={`s${i}`}>{step}</li>
-            ))}
-            {(turn.extras.liveSources ?? []).map((s, i) => (
-              <li key={`l${i}`} className="flex items-center gap-1 text-foreground">
-                <Icon d={ICONS.bolt} className="h-3 w-3" />
-                {s.label}
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
 
-      {!turn.streaming && turn.citations.length > 0 && (
-        <details className="group text-[13px]">
-          <summary className="flex cursor-pointer list-none items-center gap-1 text-muted hover:text-foreground">
-            <Icon d={ICONS.chev} className="h-3 w-3 transition-transform group-open:rotate-90" />
-            Sources used ({turn.citations.length})
-            {turn.areas.length > 0 && (
-              <span className="truncate text-muted/70"> · {turn.areas.join(", ")}</span>
-            )}
-          </summary>
-          <ul className="mt-2 space-y-1 pl-4">
-            {turn.citations.map((c, i) => {
-              const url = absoluteAskUrl(c.url);
-              return (
-                <li key={i} className="flex items-baseline gap-2">
-                  {c.kind && (
-                    <span className="w-9 shrink-0 text-[10px] uppercase tracking-wide text-muted">
-                      {c.kind}
-                    </span>
-                  )}
-                  {url ? (
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="truncate text-foreground hover:underline"
-                    >
-                      {c.label}
-                    </a>
-                  ) : (
-                    <span className="truncate text-foreground">{c.label}</span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </details>
-      )}
-
-      {!turn.streaming && turn.followups.length > 0 && (
-        <div>
-          <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
-            Ask next
-          </div>
-          {turn.followups.map((f) => (
+      {settled && turn.answer && (
+        <div className="flex flex-wrap items-center gap-0.5">
+          <button
+            type="button"
+            onClick={copy}
+            className={QUIET_BUTTON}
+            aria-label="Copy answer"
+            title="Copy"
+          >
+            <Copy className="h-3.5 w-3.5" aria-hidden />
+          </button>
+          {turn.answerId && (
+            <>
+              <button
+                type="button"
+                onClick={() => onFeedback(turn, "up")}
+                disabled={turn.feedback !== null}
+                className={`${QUIET_BUTTON} ${turn.feedback === "up" ? "text-emerald-400" : ""}`}
+                aria-label="Helpful"
+                title="Helpful"
+              >
+                <ThumbsUp className="h-3.5 w-3.5" aria-hidden />
+              </button>
+              <button
+                type="button"
+                onClick={() => setReporting(true)}
+                disabled={turn.feedback !== null}
+                className={`${QUIET_BUTTON} ${turn.feedback === "down" ? "text-amber-400" : ""}`}
+                aria-label="Report a problem with this answer"
+                title="Report"
+              >
+                <Flag className="h-3.5 w-3.5" aria-hidden />
+              </button>
+            </>
+          )}
+          {canShare && (
             <button
-              key={f}
               type="button"
-              onClick={() => onFollowup(f)}
-              className="flex w-full items-start gap-1.5 rounded-md px-1 py-1 text-left text-[13px] text-muted hover:bg-card-elevated/60 hover:text-foreground"
+              onClick={share}
+              className={QUIET_BUTTON}
+              aria-label="Share this thread"
+              title="Share"
             >
-              <Icon d={ICONS.chev} className="mt-1 h-3 w-3 shrink-0" />
-              {f}
+              <Share2 className="h-3.5 w-3.5" aria-hidden />
             </button>
-          ))}
+          )}
+          {hasSourcesPanel && (
+            <button
+              type="button"
+              onClick={() => setSourcesOpen((v) => !v)}
+              aria-expanded={sourcesOpen}
+              className={`${ROUND_BUTTON} ml-1.5`}
+            >
+              Sources
+              {sourceCount > 0 && <span className="text-muted/70">{sourceCount}</span>}
+            </button>
+          )}
+          {note && (
+            <span className="ml-2 text-[11px] text-emerald-400" role="status">
+              {note}
+            </span>
+          )}
+        </div>
+      )}
+
+      {reporting && turn.feedback === null && (
+        <ReportForm
+          onCancel={() => setReporting(false)}
+          onSend={(reason) => {
+            setReporting(false);
+            onFeedback(turn, "down", reason);
+            flashNote("Reported. Thank you.");
+          }}
+        />
+      )}
+
+      {showRate && turn.ratePrompt && (
+        <div
+          className="flex items-center gap-1 text-[12px] text-muted"
+          role="group"
+          aria-label="Rate this answer"
+          data-ask-rate
+        >
+          {turn.ratePrompt.lowConfidence && (
+            <span className="mr-1 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" aria-hidden />
+          )}
+          <span className="mr-1">{turn.ratePrompt.text}</span>
+          <button
+            type="button"
+            onClick={() => onFeedback(turn, "up")}
+            className={QUIET_BUTTON}
+            aria-label="Yes, this helped"
+            title="Yes"
+          >
+            <ThumbsUp className="h-3.5 w-3.5" aria-hidden />
+          </button>
+          <button
+            type="button"
+            onClick={() => setReporting(true)}
+            className={QUIET_BUTTON}
+            aria-label="No, this did not help"
+            title="No"
+          >
+            <ThumbsDown className="h-3.5 w-3.5" aria-hidden />
+          </button>
+          <button
+            type="button"
+            onClick={() => setRateDismissed(true)}
+            className={QUIET_BUTTON}
+            aria-label="Dismiss"
+            title="Dismiss"
+          >
+            <X className="h-3.5 w-3.5" aria-hidden />
+          </button>
+        </div>
+      )}
+
+      {settled && hasSourcesPanel && sourcesOpen && (
+        <div
+          className="space-y-3 rounded-xl border border-card-border bg-card px-3.5 py-3 text-[13px]"
+          data-ask-sources
+        >
+          {turn.citations.length > 0 && (
+            <section>
+              <h4 className="mb-1.5 font-semibold text-foreground">
+                Sources <span className="font-normal text-muted">{turn.citations.length}</span>
+              </h4>
+              <ul className="space-y-1">
+                {turn.citations.map((c, i) => {
+                  const url = absoluteAskUrl(c.url);
+                  return (
+                    <li key={i} className="flex items-baseline gap-2">
+                      {c.kind && (
+                        <span className="w-10 shrink-0 text-[10px] uppercase tracking-wide text-muted">
+                          {c.kind}
+                        </span>
+                      )}
+                      {url ? (
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="truncate text-foreground underline decoration-card-border underline-offset-2 hover:decoration-foreground"
+                        >
+                          {c.label}
+                        </a>
+                      ) : (
+                        <span className="truncate text-foreground">{c.label}</span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          )}
+          {liveSources.length > 0 && (
+            <section>
+              <h4 className="mb-1.5 font-semibold text-foreground">Live game data read</h4>
+              <ul className="space-y-1">
+                {liveSources.map((s, i) => (
+                  <li key={i} className="flex items-center gap-1.5 text-foreground">
+                    <TrendingUp className="h-3 w-3 shrink-0 text-muted" aria-hidden />
+                    {s.label}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {(turn.chargeNote || turn.areas.length > 0) && (
+            <section>
+              <h4 className="mb-1.5 font-semibold text-foreground">About this answer</h4>
+              {turn.chargeNote && <p className="text-muted">{turn.chargeNote}</p>}
+              {turn.areas.length > 0 && (
+                <p className="text-muted">Areas: {turn.areas.join(", ")}</p>
+              )}
+            </section>
+          )}
+        </div>
+      )}
+
+      {settled && turn.followups.length > 0 && (
+        <div>
+          <button
+            type="button"
+            onClick={() => setFollowupsOpen((v) => !v)}
+            aria-expanded={followupsOpen}
+            className="inline-flex items-center gap-1 text-[13px] text-muted hover:text-foreground"
+          >
+            Follow-up questions
+            <ChevronDown
+              className={`h-3.5 w-3.5 transition-transform ${followupsOpen ? "rotate-180" : ""}`}
+              aria-hidden
+            />
+          </button>
+          {followupsOpen && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {turn.followups.slice(0, 3).map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => onFollowup(f)}
+                  className="rounded-full border border-card-border px-3 py-1.5 text-left text-[13px] text-muted transition-colors hover:border-foreground/30 hover:text-foreground"
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </article>
@@ -839,6 +1048,9 @@ export function AskDrawerPanel({
           liveSources: d.liveSources,
           conflicts: d.conflicts,
         },
+        ratePrompt: d.ratePrompt?.text
+          ? { text: d.ratePrompt.text, lowConfidence: !!d.ratePrompt.lowConfidence }
+          : null,
         chargeNote: chargeLine(d.charge, d.usage ? askEnergy(d.usage).daily.limit : undefined),
       }));
       if (d.ack) updateTurn(key, (t) => ({ ack: t.ack ?? d.ack ?? null }));
@@ -1458,7 +1670,7 @@ export function AskDrawerPanel({
               <button
                 type="button"
                 onClick={stop}
-                className="mb-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-foreground text-background sm:h-8 sm:w-8"
+                className="mb-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-foreground text-background sm:h-8 sm:w-8"
                 aria-label="Stop"
                 title="Stop"
               >
@@ -1468,7 +1680,7 @@ export function AskDrawerPanel({
               <button
                 type="submit"
                 disabled={question.trim().length < 5 || !!unavailable}
-                className="mb-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary text-white transition-opacity disabled:bg-card-elevated disabled:text-muted sm:h-8 sm:w-8"
+                className="mb-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-white transition-opacity disabled:bg-card-elevated disabled:text-muted sm:h-8 sm:w-8"
                 aria-label="Ask"
                 title="Ask"
               >
