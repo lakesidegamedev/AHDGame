@@ -43,6 +43,8 @@ export default function RegisterPageClient({ heroImageUrl }: { heroImageUrl?: st
   const [testMode, setTestMode] = useState(false);
   // Which signup routes this deployment can actually complete. Null until the
   // server answers, so the buttons are never disabled on a slow network.
+  const [discordLinkRequired, setDiscordLinkRequired] = useState(false);
+  const [linkDiscordAfterSignup, setLinkDiscordAfterSignup] = useState(false);
   const [discordSignup, setDiscordSignup] = useState<SocialAvailability | null>(null);
   const [googleSignup, setGoogleSignup] = useState<SocialAvailability | null>(null);
   const [appleSignup, setAppleSignup] = useState<SocialAvailability | null>(null);
@@ -97,6 +99,7 @@ export default function RegisterPageClient({ heroImageUrl }: { heroImageUrl?: st
           const data = await res.json();
           setTestMode(data.testMode ?? false);
           setDiscordSignup(data.discord ?? null);
+          setDiscordLinkRequired(data.discordLinkRequired === true);
           setGoogleSignup(data.google ?? null);
           setAppleSignup(data.apple ?? null);
         }
@@ -225,7 +228,11 @@ export default function RegisterPageClient({ heroImageUrl }: { heroImageUrl?: st
       // navigation so the AuthDataProvider remounts with the freshly set
       // session cookie — soft navigation leaves it stuck in the logged-out
       // state captured on the register page mount.
-      window.location.assign("/create-character");
+      window.location.assign(
+        discordLinkRequired || linkDiscordAfterSignup
+          ? "/api/auth/discord?returnUrl=%2Fcreate-character"
+          : "/create-character"
+      );
       return;
     } catch (err) {
       setError(err instanceof Error ? err.message : t("errors.generic"));
@@ -372,6 +379,9 @@ export default function RegisterPageClient({ heroImageUrl }: { heroImageUrl?: st
             }}
             testMode={testMode}
             discord={discordSignup}
+            discordLinkRequired={discordLinkRequired}
+            linkDiscordAfterSignup={linkDiscordAfterSignup}
+            onLinkDiscordChange={setLinkDiscordAfterSignup}
             google={googleSignup}
             apple={appleSignup}
             showAdminKey={showAdminKey}

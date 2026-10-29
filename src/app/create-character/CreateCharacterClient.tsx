@@ -1,11 +1,13 @@
 "use client";
 
+import { fetchJson } from "@/lib/observability/fetchJson";
+
 import Link from "next/link";
 import { getStoredConsent } from "@/components/CookieConsent";
 import Image from "next/image";
 import { useState, useEffect, useRef, useCallback, useMemo, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Input, Skeleton } from "@/components/ui";
+import { Input, Skeleton, Modal } from "@/components/ui";
 import { partiesApiUrl } from "@/lib/urls";
 import { JP_REGIONS } from "@/lib/constants/japan";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";
@@ -128,6 +130,40 @@ export default function CreateCharacterClient() {
 
   // Discord linked state from auth/me
   const [discordLinked, setDiscordLinked] = useState(false);
+  const [discordRequired, setDiscordRequired] = useState(false);
+  const [showDiscordPrompt, setShowDiscordPrompt] = useState(false);
+  const [discordPromptDismissed, setDiscordPromptDismissed] = useState(false);
+  const onDiscordLinked = useCallback(() => {
+    setDiscordLinked(true);
+    setShowDiscordPrompt(false);
+  }, []);
+  useEffect(() => {
+    let mounted = true;
+    const refreshRequirement = () => {
+      fetchJson<{ discordLinkRequired?: boolean }>("/api/auth/signup-methods", {
+        cache: "no-store",
+        feature: "discord-character-gate",
+      })
+        .then((data) => {
+          if (mounted && data) {
+            setDiscordRequired(data.discordLinkRequired === true);
+            if (data.discordLinkRequired !== true) setShowDiscordPrompt(false);
+          }
+        })
+        .catch(() => {
+          if (mounted)
+            setError(
+              "We could not check Discord linking requirements. Please retry or link Discord before creating your character."
+            );
+        });
+    };
+    refreshRequirement();
+    window.addEventListener("focus", refreshRequirement);
+    return () => {
+      mounted = false;
+      window.removeEventListener("focus", refreshRequirement);
+    };
+  }, []);
   const [discordData, setDiscordData] = useState<{
     discordId?: string;
     discordUsername?: string;
@@ -496,6 +532,12 @@ export default function CreateCharacterClient() {
       writeCreateCharacterDraft(userId, { country, formData, stats, compassTouched, partyTouched });
     }
 
+    if (discordRequired && !discordLinked) {
+      setShowDiscordPrompt(true);
+      setIsLoading(false);
+      return;
+    }
+
     if (!formData.characterName || formData.characterName.length < 2) {
       setError("Please enter a character name");
       setIsLoading(false);
@@ -561,6 +603,11 @@ export default function CreateCharacterClient() {
 
       const characterData = await characterRes.json().catch(() => ({}));
       if (!characterRes.ok) {
+        if (characterData.code === "DISCORD_LINK_REQUIRED") {
+          setDiscordLinked(false);
+          setDiscordRequired(true);
+          setShowDiscordPrompt(true);
+        }
         const message: string = characterData.error || "Failed to create character";
         sendIntakeBeacon("create_character_submit_failed", {
           surface: "create_character",
@@ -1049,10 +1096,42 @@ export default function CreateCharacterClient() {
   const discordPanel = (
     <DiscordLinkSection
       initialLinked={discordLinked}
+      required={discordRequired}
+      onLinked={onDiscordLinked}
+      onBeforeLink={() => {
+        if (userId)
+          writeCreateCharacterDraft(userId, {
+            country,
+            formData,
+            stats,
+            compassTouched,
+            partyTouched,
+          });
+      }}
       discordId={discordData.discordId}
       discordUsername={discordData.discordUsername}
       discordAvatar={discordData.discordAvatar}
     />
+  );
+
+  const discordGateModal = (
+    <Modal
+      open={
+        !discordLinked &&
+        (showDiscordPrompt || (authChecked && discordRequired && !discordPromptDismissed))
+      }
+      onClose={() => {
+        setShowDiscordPrompt(false);
+        setDiscordPromptDismissed(true);
+      }}
+      title="Link Discord to create your character"
+    >
+      <p className="mb-4 text-body-sm text-muted">
+        Your account is ready. Link Discord to this account before creating a new character. Your
+        character draft is saved, and existing characters remain playable.
+      </p>
+      {discordPanel}
+    </Modal>
   );
 
   const fileAside = (
@@ -1248,6 +1327,7 @@ export default function CreateCharacterClient() {
         </div>
       </header>
 
+      {discordGateModal}
       <form onSubmit={handleSubmit}>
         {chatMode ? (
           <ConversationShell
