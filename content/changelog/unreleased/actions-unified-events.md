@@ -6,7 +6,7 @@ summary: >-
   Actions page, with anything waiting on your decision listed first.
 tags: [ui, actions]
 badges: [patch]
-areas: [actions]
+areas: [frontend]
 ---
 
 The separate crisis, debate and random event boxes are replaced by one Events
