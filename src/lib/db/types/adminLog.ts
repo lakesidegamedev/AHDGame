@@ -3,6 +3,7 @@ import type { ObjectId } from "mongodb";
 export type AdminLogCategory = "account" | "election" | "system";
 
 export type AdminLogAction =
+  | "discord_character_gate_changed"
   | "freight_settlement_activated"
   | "freight_settlement_shadowed"
   | "sandbox_access_granted"

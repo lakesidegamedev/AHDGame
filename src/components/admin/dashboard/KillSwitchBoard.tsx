@@ -43,6 +43,16 @@ type SwitchDef = PatchSwitchDef | TurnSwitchDef;
 
 const SWITCHES: SwitchDef[] = [
   {
+    key: "discord-character",
+    kind: "patch",
+    url: "/api/admin/discord-character-gate",
+    label: "Discord for new characters",
+    desc: "Require a linked Discord account before creating a new character, including after resets. Existing characters remain playable. Default off.",
+    confirmWhen: true,
+    confirmText:
+      "Require Discord for all future character creation? Existing characters remain playable.",
+  },
+  {
     key: "registration",
     kind: "patch",
     url: "/api/admin/registration",
