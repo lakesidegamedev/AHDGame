@@ -178,6 +178,8 @@ export const NON_GAMEPLAY_GAME_CONFIG_FIELDS: Readonly<Record<string, string>> =
   testMode: "ops registration gate",
   adminRegistrationEnabled: "security: admin registration side channel",
   registrationEnabled: "ops kill switch for new registrations",
+  discordLinkRequiredForCharacter:
+    "ops character-creation gate; absent defaults off and an operator-enabled requirement survives world resets",
   ipCollisionCheckEnabled: "security tooling",
   ipDetectionEnabled: "security tooling (third-party IP lookups)",
   auditLog: "security forensics tooling",

@@ -927,6 +927,8 @@ export interface GameConfig {
    * manual IP bans apply.
    */
   ipCollisionCheckEnabled?: boolean;
+  /** Ops gate for future character creation. Absent means off; existing characters stay playable. Preserved across world resets. */
+  discordLinkRequiredForCharacter?: boolean;
   /** Username of the admin who last flipped the collision check. */
   ipCollisionCheckEnabledBy?: string;
   /** When the collision check was last enabled (ISO 8601). */

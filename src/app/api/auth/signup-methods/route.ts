@@ -18,6 +18,7 @@ import { computeIntakeStatus, type IntakeStatus } from "@/lib/auth/intakeStatus"
  */
 export interface SignupMethods {
   testMode: boolean;
+  discordLinkRequired: boolean;
   /** Email + password. Requires the test secret while `testMode` is on. */
   email: { available: true; requiresTestSecret: boolean };
   discord: { available: boolean; reason: "not_configured" | "test_mode" | null };
@@ -40,6 +41,7 @@ export async function GET() {
       {
         projection: {
           testMode: 1,
+          discordLinkRequiredForCharacter: 1,
           maintenanceMode: 1,
           registrationEnabled: 1,
           maintenanceExpectedEnd: 1,
@@ -60,6 +62,7 @@ export async function GET() {
 
     const body: SignupMethods = {
       testMode,
+      discordLinkRequired: config?.discordLinkRequiredForCharacter === true,
       email: { available: true, requiresTestSecret: testMode },
       // Test mode blocks new OAuth registrations in every callback route, and
       // unlike email signup there is no secret-bearing path through them.
