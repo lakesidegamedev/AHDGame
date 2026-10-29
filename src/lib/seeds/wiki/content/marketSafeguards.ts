@@ -49,5 +49,5 @@ Nothing about your holdings, orders or company ownership is reversed. What chang
 
 If prices went flat or oddly stable, the step back is a plausible reason; the market is not broken for you alone. If your corporation relies on Plants-model revenue, expect a different margin picture afterward, so keep plans flexible.
 
-Watches worlds that run the Clearing, Capital or Plants market models; in a world on an earlier model there is nothing to watch. Last checked 2026-10-29, version 1.18.0. There is no separate technical page yet and the numbers above are the exact rules; for how share prices are computed, see [Stock Market (design)](https://docs.lakesidegames.net/design/stock-market.html)
+Watches worlds that run the Clearing, Capital or Plants market models while the operators keep it armed. It is armed by default, but a rebuilt economy starts with it off. In a world on an earlier model there is nothing to watch. Last checked 2026-10-29, version 1.18.0. There is no separate technical page yet and the numbers above are the exact rules; for how share prices are computed, see [Stock Market (design)](https://docs.lakesidegames.net/design/stock-market.html)
 `;
