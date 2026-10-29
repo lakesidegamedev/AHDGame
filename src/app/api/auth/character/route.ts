@@ -1,3 +1,4 @@
+import { requiresDiscordForNewCharacter } from "@/lib/auth/rules/discordCharacterGate";
 import { NEW_CHARACTER_STARTING_INFLUENCE } from "@shared/constants/formulas";
 import {
   campaignAnchorToLocal,
@@ -217,6 +218,16 @@ export async function POST(request: Request) {
       return errorResponse(
         503,
         "Character creation is disabled during maintenance. Please try again later."
+      );
+    }
+
+    if (
+      requiresDiscordForNewCharacter(gameConfig.discordLinkRequiredForCharacter, userDoc?.discordId)
+    ) {
+      return errorResponse(
+        403,
+        "Link your Discord account before creating a new character. Your existing characters remain playable.",
+        { code: "DISCORD_LINK_REQUIRED" }
       );
     }
 
