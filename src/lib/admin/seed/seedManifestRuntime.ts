@@ -124,7 +124,7 @@ export const RUNTIME: CollectionEntry[] = [
     name: "resetLawEnactmentReceipts",
     category: "runtime",
     notes:
-      "Exactly-once receipts for v2 law fiscal transitions. The turn reconciliation phase uses them to retry a failed enactment hook safely. Wiped on reset.",
+      "Exactly-once receipts for v2 law fiscal transitions. The turn reconciliation phase uses them to retry a failed enactment hook safely. Operator legacy-law recovery receipts also retain world-bound before-images for rollback and exactly-once catch-up. Wiped on reset.",
   },
   {
     name: "resetCabinetActionStates",

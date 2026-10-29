@@ -1,0 +1,34 @@
+{
+  "question": "Recover enacted legacy governor services without duplicate spending, invented payments or overwriting newer choices",
+  "basis": "Synthetic US/UK/JP fixtures plus separately retained private fixed-state replay",
+  "countries": ["US", "UK", "JP"],
+  "syntheticQualification": {
+    "focusedTests": 39,
+    "replicaSetCommitAndRollbackTests": 3,
+    "properties": [
+      "allocation conservation including integer split remainders",
+      "latest policy and executive-order protection",
+      "funded money never increases during transfer",
+      "stale validity windows remain stale",
+      "original bills retained and program attribution preserved",
+      "repeat-run receipt prevents duplicate recovery",
+      "forced final-write failure rolls back programs, policies, budgets and coordinator lock",
+      "taxes and subsidies remain untouched"
+    ]
+  },
+  "proxyCatchUp": {
+    "maxConditionPointsPerMetric": 2,
+    "maxVerifiedTurns": 48,
+    "excluded": "Observed and definition-v2 owners, fail-closed owners, unverified periods and metric history"
+  },
+  "fixedStateReplay": {
+    "horizon": 48,
+    "limits": [
+      "Economic and demographic inputs held constant",
+      "Fallback proxies only; not a whole-economy forecast",
+      "Funding renewal is a conditional scenario, not a past-payment claim",
+      "Private live-state results and player records are not committed"
+    ]
+  },
+  "persistence": "Existing world-bound resetLawEnactmentReceipts retain before-images and are wiped on reset"
+}
