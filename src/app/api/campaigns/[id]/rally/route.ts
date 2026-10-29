@@ -29,7 +29,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
 
     // Tighter rate limit than upgrades — rallies are throttled to 1/turn
     // via lastRallyTurn, but request-level rate-limit prevents abuse.
-    const rateLimit = checkRateLimit(auth.user.userId, 10, 60000);
+    const rateLimit = checkRateLimit(`api/campaigns/[id]/rally:${auth.user.userId}`, 60, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
     const user = auth.user;
 

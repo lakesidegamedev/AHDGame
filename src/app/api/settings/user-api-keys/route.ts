@@ -47,7 +47,11 @@ export async function POST(request: Request) {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = await durableRateLimit(auth.user.userId, 10, 60000);
+    const rateLimit = await durableRateLimit(
+      `api/settings/user-api-keys:${auth.user.userId}`,
+      10,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const parsed = await parseJsonBody(request, createUserApiKeySchema);
@@ -95,7 +99,7 @@ export async function DELETE(request: Request) {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 10, 60000);
+    const rateLimit = checkRateLimit(`api/settings/user-api-keys:${auth.user.userId}`, 10, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const parsed = await parseJsonBody(request, revokeUserApiKeySchema);

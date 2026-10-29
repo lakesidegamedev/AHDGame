@@ -40,8 +40,9 @@ describe("party influence rate-limit isolation", () => {
     }
   );
 
-  it("retains one twenty-request budget across both influence surfaces", async () => {
-    for (let i = 0; i < 20; i++) {
+  it("retains one shared budget across both influence surfaces", async () => {
+    const { NPP_MANAGEMENT_LIMITS } = await import("./rateLimit");
+    for (let i = 0; i < NPP_MANAGEMENT_LIMITS.maxRequests; i++) {
       expect((await influence(i % 2 === 0)).status).not.toBe(429);
     }
     const response = await influence(true);

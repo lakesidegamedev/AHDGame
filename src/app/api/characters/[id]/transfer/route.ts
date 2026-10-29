@@ -36,7 +36,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!auth.ok) return auth.response;
     const user = auth.user;
 
-    const rateLimit = checkRateLimit(user.userId, 20, 60000);
+    const rateLimit = checkRateLimit(`api/characters/[id]/transfer:${user.userId}`, 20, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const parsed = await parseJsonBody(request, characterTransferSchema);

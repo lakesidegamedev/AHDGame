@@ -101,7 +101,11 @@ export async function fillShareOrder(request: Request, { params }: RouteParams) 
 
     const { shares, fillAsCorporation } = parsed.data;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `lib/corporations/commands/shareTrading/fillShareOrder:${auth.user.userId}`,
+      20,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
     const db = await getDb();
     const corpGuard = await requireCorporationActionsEnabled(db);

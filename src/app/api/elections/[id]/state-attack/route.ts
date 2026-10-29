@@ -6,7 +6,7 @@ import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { HEX_OBJECT_ID_REGEX } from "@/lib/utils/objectIdHex";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import { ELECTION_LIMITS, checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { CAMPAIGN_ACTION_LIMITS, checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { resolveElectionRouteParam } from "@/lib/elections/electionParamResolution";
 import { isPrimaryEnded } from "@/lib/elections/phases";
 import { getGameTime } from "@/lib/time/gameTime";
@@ -85,8 +85,8 @@ export async function POST(request: Request, { params }: RouteParams) {
     // This one IS an action, so it shares the action budget, unlike the GET.
     const limit = checkRateLimit(
       `election:${auth.user.userId}`,
-      ELECTION_LIMITS.maxRequests,
-      ELECTION_LIMITS.windowMs
+      CAMPAIGN_ACTION_LIMITS.maxRequests,
+      CAMPAIGN_ACTION_LIMITS.windowMs
     );
     if (!limit.ok) return rateLimitResponse(limit.retryAfter);
 

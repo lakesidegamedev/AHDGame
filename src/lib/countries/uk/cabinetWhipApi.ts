@@ -121,7 +121,7 @@ export async function withdrawWhipHandler(request: Request, countryId: CountryId
     if (!auth.ok) return auth.response;
 
     const rateLimit = checkRateLimit(
-      auth.user.userId,
+      `lib/countries/uk/cabinetWhipApi:${auth.user.userId}`,
       CONGRESS_LIMITS.maxRequests,
       CONGRESS_LIMITS.windowMs
     );
@@ -198,7 +198,7 @@ export async function restoreWhipHandler(request: Request, countryId: CountryId)
     if (!auth.ok) return auth.response;
 
     const rateLimit = checkRateLimit(
-      auth.user.userId,
+      `lib/countries/uk/cabinetWhipApi:${auth.user.userId}`,
       CONGRESS_LIMITS.maxRequests,
       CONGRESS_LIMITS.windowMs
     );

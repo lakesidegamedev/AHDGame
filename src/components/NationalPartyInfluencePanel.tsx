@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { partyApiUrl } from "@/lib/urls";
+import { INFLUENCE_QUEUE_BATCH_SIZE } from "@/lib/parties/influenceQueueLimits";
 import { useToast } from "@/contexts/ToastContext";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { COUNTRY_CLIENT_CONFIGS } from "@/lib/constants/countryClientConfig";
@@ -343,6 +344,57 @@ export function NationalPartyInfluencePanel({
     }
   };
 
+  // Bulk roster runs go through the batch endpoint: one request per 20 NPPs
+  // and one refresh at the end, instead of a request and two refreshes per NPP.
+  const handleStatBulk = async (nppIds: string[], type: ActionOption["type"]) => {
+    const results: QueueResult[] = [];
+    let failure = "";
+    try {
+      for (let i = 0; i < nppIds.length; i += INFLUENCE_QUEUE_BATCH_SIZE) {
+        const chunk = nppIds.slice(i, i + INFLUENCE_QUEUE_BATCH_SIZE);
+        const res = await fetch(`${partyApiUrl(country, partyId)}/influence`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            queue: chunk.map((nppId) => ({
+              nppId,
+              influenceType: type,
+              fundAmount: 0,
+              context: {},
+            })),
+          }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          failure = apiErrorText(json, "Failed to execute influence");
+          break;
+        }
+        const chunkResults = (json.results as QueueResult[] | undefined) ?? [];
+        results.push(...chunkResults);
+        // The server stops a batch at the first hard error (for example, out of
+        // action points); later batches would fail the same way.
+        const stopped = chunkResults.find((r) => r.outcome === "error");
+        if (stopped) {
+          failure = stopped.message;
+          break;
+        }
+      }
+    } catch {
+      failure = "Network error";
+    }
+    const succeeded = results.filter((r) => r.success).length;
+    if (results.length > 0) {
+      showToast(
+        `${succeeded} of ${nppIds.length} NPP actions succeeded`,
+        succeeded === nppIds.length ? "success" : "info"
+      );
+      await fetchData({ background: true });
+      await onPartyRefresh?.();
+    }
+    if (failure) setError(failure);
+    return { ok: !failure };
+  };
+
   if (!loading && !data && !error) return null;
   if (loading) return <InfluencePanelLoading />;
   if (error && !data) return <InfluencePanelError message={error} />;
@@ -454,6 +506,7 @@ export function NationalPartyInfluencePanel({
             actions={rosterActions}
             currency={currencyCode}
             onExecute={handleStatExecute}
+            onExecuteBulk={handleStatBulk}
           />
 
           <details className="mt-4 rounded-lg border border-card-border">

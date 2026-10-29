@@ -6,6 +6,7 @@ vi.mock("@/lib/mongodb", () => ({ getDb: vi.fn() }));
 vi.mock("@/lib/api/requireAuth", () => ({ requireAuthWithCharacter: vi.fn() }));
 vi.mock("@/lib/api/rateLimit", () => ({
   ELECTION_LIMITS: { maxRequests: 30, windowMs: 60000 },
+  CAMPAIGN_ACTION_LIMITS: { maxRequests: 60, windowMs: 60000 },
   checkRateLimit: vi.fn().mockReturnValue({ ok: true }),
   rateLimitResponse: vi.fn(),
 }));

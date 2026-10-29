@@ -100,7 +100,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (!auth.ok) return auth.response;
     const authUser = auth.user;
 
-    const rateLimit = checkRateLimit(authUser.userId, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `api/country/[code]/parties/[id]/bulk-org:${authUser.userId}`,
+      20,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     // Party sequentialId is unique per country, so a foreign character's party

@@ -52,7 +52,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
     const auth = await getAuthUserWithCharacter();
     if (!auth) return errorResponse(401, "Authentication required");
 
-    const rateLimit = checkRateLimit(auth.userId, 10, 60000);
+    const rateLimit = checkRateLimit(
+      `api/investment-funds/[slug]/subscribe:${auth.userId}`,
+      10,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const characterId = auth.character?._id;

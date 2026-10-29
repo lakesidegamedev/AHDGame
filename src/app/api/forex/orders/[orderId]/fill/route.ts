@@ -51,7 +51,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     const barrier = await newCharacterTransferBarrierResponse(auth.user.character);
     if (barrier) return barrier;
 
-    const rateCheck = checkRateLimit(auth.user.userId, 30, 60_000);
+    const rateCheck = checkRateLimit(
+      `api/forex/orders/[orderId]/fill:${auth.user.userId}`,
+      30,
+      60_000
+    );
     if (!rateCheck.ok) return rateLimitResponse(rateCheck.retryAfter);
 
     const { orderId } = await params;
