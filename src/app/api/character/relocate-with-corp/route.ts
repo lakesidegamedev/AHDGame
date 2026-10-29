@@ -93,7 +93,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const rateLimit = checkRateLimit(auth.userId, 10, 60000);
+    const rateLimit = checkRateLimit(`api/character/relocate-with-corp:${auth.userId}`, 10, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const parsed = await parseJsonBody(request, bodySchema);

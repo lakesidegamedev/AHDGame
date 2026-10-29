@@ -150,7 +150,11 @@ export async function convertSectorIndustry(request: Request, { params }: RouteP
   try {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
-    const rateLimit = checkRateLimit(auth.user.userId, 10, 60000);
+    const rateLimit = checkRateLimit(
+      `lib/corporations/commands/sectorOperations/convertSectorIndustry:${auth.user.userId}`,
+      10,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { id, sectorId } = await params;

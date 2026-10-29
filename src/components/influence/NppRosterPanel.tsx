@@ -30,6 +30,11 @@ export interface NppRosterPanelProps {
   currency?: CurrencyCode;
   /** Execute one influence action against one NPP. */
   onExecute: (nppId: string, type: ActionOption["type"]) => Promise<{ ok: boolean }>;
+  /**
+   * Execute one action against many NPPs in as few requests as possible. When
+   * omitted, bulk runs fall back to one onExecute call per NPP.
+   */
+  onExecuteBulk?: (nppIds: string[], type: ActionOption["type"]) => Promise<{ ok: boolean }>;
 }
 
 const STAT_DEFS: { key: keyof RosterNpp["stats"]; abbr: string; invert?: boolean }[] = [
@@ -97,6 +102,7 @@ export function NppRosterPanel({
   actions,
   currency = "USD",
   onExecute,
+  onExecuteBulk,
 }: NppRosterPanelProps) {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<RosterFilter>("all");
@@ -185,10 +191,14 @@ export function NppRosterPanel({
   const runBulk = async (action: ActionOption) => {
     setBusy(true);
     try {
-      for (const id of sel) {
+      const ids = [...sel].filter((id) => {
         const npp = npps.find((n) => n.id === id);
-        if (npp && getStatCapOverride(action.type, npp.stats)) continue; // skip maxed
-        await onExecute(id, action.type);
+        return !(npp && getStatCapOverride(action.type, npp.stats)); // skip maxed
+      });
+      if (onExecuteBulk) {
+        if (ids.length > 0) await onExecuteBulk(ids, action.type);
+      } else {
+        for (const id of ids) await onExecute(id, action.type);
       }
       // Keep the selection so the player can run another action on the same set
       // without re-selecting (the panel refreshes in the background).

@@ -274,7 +274,7 @@ export async function POST(request: Request) {
     const auth = await requireAuth();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 10, 60000);
+    const rateLimit = checkRateLimit(`api/corporations:${auth.user.userId}`, 10, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const parsed = await parseJsonBody(request, foundCorporationSchema);

@@ -84,7 +84,11 @@ export async function relocateHeadquarters(request: Request, { params }: RoutePa
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 10, 60000);
+    const rateLimit = checkRateLimit(
+      `lib/corporations/commands/capitalOperations/relocateHeadquarters:${auth.user.userId}`,
+      10,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { id } = await params;

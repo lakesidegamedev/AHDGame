@@ -200,7 +200,7 @@ export async function appointCabinetMemberHandler(request: Request, countryId: C
     if (!auth.ok) return auth.response;
 
     const rateLimit = checkRateLimit(
-      auth.user.userId,
+      `lib/countries/uk/cabinetApi:${auth.user.userId}`,
       CONGRESS_LIMITS.maxRequests,
       CONGRESS_LIMITS.windowMs
     );
@@ -508,7 +508,7 @@ export async function fireCabinetMemberHandler(request: Request, countryId: Coun
     if (!auth.ok) return auth.response;
 
     const rateLimit = checkRateLimit(
-      auth.user.userId,
+      `lib/countries/uk/cabinetApi:${auth.user.userId}`,
       CONGRESS_LIMITS.maxRequests,
       CONGRESS_LIMITS.windowMs
     );
@@ -628,7 +628,7 @@ export async function resignCabinetMemberHandler(request: Request, countryId: Co
     if (!auth.ok) return auth.response;
 
     const rateLimit = checkRateLimit(
-      auth.user.userId,
+      `lib/countries/uk/cabinetApi:${auth.user.userId}`,
       CONGRESS_LIMITS.maxRequests,
       CONGRESS_LIMITS.windowMs
     );
@@ -749,7 +749,7 @@ export async function reshuffleCabinetHandler(request: Request, countryId: Count
     if (!auth.ok) return auth.response;
 
     const rateLimit = checkRateLimit(
-      auth.user.userId,
+      `lib/countries/uk/cabinetApi:${auth.user.userId}`,
       CONGRESS_LIMITS.maxRequests,
       CONGRESS_LIMITS.windowMs
     );

@@ -12,6 +12,14 @@ describe("bounded operation labels", () => {
     ["/api/country/US/region/CA/party/12/leadership", "party_leadership_regional"],
     ["/api/country/US/region/CA/party/12/primary-allocation", "party_primary_allocation_regional"],
     ["/api/country/US/region/CA/party/12/build-org", "party_build_org_regional"],
+    ["/api/country/US/region/CA/party/12/gotv", "party_gotv_regional"],
+    ["/api/country/US/parties/12/recruitment/recruit", "party_recruitment_recruit_national"],
+    ["/api/elections/abc/state-attack", "election_state_attack"],
+    ["/api/elections/abc/running-mate/travel", "election_running_mate_travel"],
+    ["/api/campaigns/abc/rally-tour", "campaign_rally_tour"],
+    ["/api/canvassing", "campaign_canvassing"],
+    ["/api/npps/abc/direct-action", "npp_direct_action"],
+    ["/api/corporations/abc/sectors/def/abandon", "sector_abandon"],
   ])("labels only the fixed operation for %s", (path, operation) => {
     expect(
       playerActionOperationProperties(path, "POST", {

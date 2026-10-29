@@ -23,7 +23,11 @@ export async function PUT(request: Request, { params }: RouteParams) {
   try {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
-    const limited = checkRateLimit(auth.user.userId, 5, 60_000);
+    const limited = checkRateLimit(
+      `api/corporations/[id]/editorial-stance:${auth.user.userId}`,
+      5,
+      60_000
+    );
     if (!limited.ok) return rateLimitResponse(limited.retryAfter);
 
     const parsed = await parseJsonBody(request, stanceSchema);

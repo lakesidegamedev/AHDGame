@@ -53,7 +53,7 @@ export async function POST(request: Request) {
     const user = auth.user;
 
     stageStartedAt = Date.now();
-    const rateLimit = checkRateLimit(user.userId, 30, 60000);
+    const rateLimit = checkRateLimit(`api/actions/execute:${user.userId}`, 60, 60000);
     timings.authMs += Date.now() - stageStartedAt;
     if (!rateLimit.ok) return finish(rateLimitResponse(rateLimit.retryAfter));
 

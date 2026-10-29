@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
 
-    const rate = checkRateLimit(auth.user.userId, 20, 60_000);
+    const rate = checkRateLimit(`api/prospecting/corporation:${auth.user.userId}`, 20, 60_000);
     if (!rate.ok) return rateLimitResponse(rate.retryAfter);
 
     if (!(await isProspectingEnabled())) {

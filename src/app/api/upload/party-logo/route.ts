@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     // account with more than one character is checked as the one it plays.
     const character = authUser.character;
 
-    const rateLimit = checkRateLimit(authUser.userId, 10, 60000);
+    const rateLimit = checkRateLimit(`api/upload/party-logo:${authUser.userId}`, 10, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const parsed = await parseFormData(request);

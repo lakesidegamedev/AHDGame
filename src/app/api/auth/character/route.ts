@@ -96,7 +96,7 @@ export async function POST(request: Request) {
     if (!auth.ok) return auth.response;
     const userId = auth.user.userId;
 
-    const rateLimit = checkRateLimit(userId, 30, 60000);
+    const rateLimit = checkRateLimit(`api/auth/character:${userId}`, 30, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const parsed = await parseJsonBody(request, createCharacterSchema);

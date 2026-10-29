@@ -57,7 +57,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     if (!auth.ok) return auth.response;
     const user = auth.user;
 
-    const rateLimit = checkRateLimit(user.userId, 30, 60000);
+    const rateLimit = checkRateLimit(`api/characters/[id]/subscribe:${user.userId}`, 30, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { id } = await params;
@@ -138,7 +138,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     if (!auth.ok) return auth.response;
     const user = auth.user;
 
-    const rateLimit = checkRateLimit(user.userId, 30, 60000);
+    const rateLimit = checkRateLimit(`api/characters/[id]/subscribe:${user.userId}`, 30, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { id } = await params;

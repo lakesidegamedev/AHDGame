@@ -398,7 +398,11 @@ export async function buyPublicShares(request: Request, { params }: RouteParams)
     const basicAuth = await requireBasicAuth();
     if (!basicAuth.ok) return basicAuth.response;
 
-    const rateLimit = checkRateLimit(basicAuth.user.userId, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `lib/corporations/commands/shareTrading/buyPublicShares:${basicAuth.user.userId}`,
+      20,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const [db, forexEnabled] = await Promise.all([getDb(), isForexEnabled()]);

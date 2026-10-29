@@ -31,7 +31,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 5, 60_000);
+    const rateLimit = checkRateLimit(
+      `api/corporations/[id]/go-public:${auth.user.userId}`,
+      5,
+      60_000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { id } = await params;
