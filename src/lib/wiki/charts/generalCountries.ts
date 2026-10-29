@@ -260,7 +260,7 @@ const DD_PARTIES: { id: string; name: string }[] = [
 
 const ddVolkskammerChart: WikiChartBuilder = (): WikiChartSpec => {
   const total = (seats: HistoricalSeat[], party: string): number =>
-    sum(seats.filter((s) => s.party === party).map((s) => s.seatsHeld));
+    sum(seats.filter((s) => s.party === party).map((s) => s.seatsHeld ?? 0));
   return {
     title: "Volkskammer seats by party, 1953 and 1979",
     kind: "bar",

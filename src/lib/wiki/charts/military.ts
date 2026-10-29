@@ -24,6 +24,7 @@ import {
   TENURE_POINT_CAP,
   TENURE_POINT_TURNS,
   levelGeneral,
+  type General,
 } from "@/lib/military/generals";
 import { STARTING_POINTS } from "@/lib/military/generalsTree";
 import { DOCTRINE_CATS, DEFAULT_POINTS } from "@/lib/military/doctrineTree";
@@ -193,7 +194,8 @@ const generalSkillPoints: WikiChartBuilder = () => {
   const xpPerTurn = 4;
   const turns = range(0, 1000, 10);
   const rows = turns.map((t) => {
-    const g = levelGeneral({ level: 1, xp: 0, pts: 0 }, t * xpPerTurn);
+    const start: General = { level: 1, xp: 0, pts: 0 };
+    const g = levelGeneral(start, t * xpPerTurn);
     const promotions = (g.level - 1) * POINTS_PER_PROMOTION;
     const postFm = g.postFieldMarshalPoints ?? 0;
     const tenure = Math.min(TENURE_POINT_CAP, Math.floor(t / TENURE_POINT_TURNS));

@@ -61,7 +61,7 @@ describe("general wiki charts", () => {
     expect(jp.series[1].points.map((p) => p[1])).toEqual(Object.values(JP_SANGIIN_SEATS));
     const dd = build("dd-volkskammer-seats-by-party");
     const sed1953 = DD_VOLKSKAMMER_1953.filter((s) => s.party === "dd_sed").reduce(
-      (a, s) => a + s.seatsHeld,
+      (a, s) => a + (s.seatsHeld ?? 0),
       0
     );
     expect(dd.series[0].points[0][1]).toBe(sed1953);
