@@ -1,9 +1,13 @@
 import type { Notification, NotificationPreferences } from "@/lib/db/types/notifications";
 import { categoryOf, type InboxCategory } from "@/lib/inbox/categories";
+import { deliveryOf } from "@/lib/inbox/delivery";
 import { notificationLabel } from "@/lib/inbox/presentation";
 import { resolveSourceLink } from "@/lib/inbox/sourceLink";
 
-/** Push follows inbox mutes and snoozes. Routine turn income stays in the inbox. */
+/**
+ * Push follows inbox mutes and snoozes, and only carries the types the
+ * delivery map marks `push`. Routine reports stay in the inbox.
+ */
 export function shouldPush(
   notification: Pick<Notification, "type" | "read" | "archivedAt" | "snoozedUntil">,
   preferences: NotificationPreferences,
@@ -13,7 +17,7 @@ export function shouldPush(
     !notification.read &&
     !notification.archivedAt &&
     !(notification.snoozedUntil && notification.snoozedUntil > now) &&
-    !["welcome", "turn_advance", "resource_income", "new_post"].includes(notification.type) &&
+    deliveryOf(notification.type) === "push" &&
     !preferences.mutedTypes?.includes(notification.type) &&
     !preferences.snoozedTypes?.some((s) => s.type === notification.type && new Date(s.until) > now)
   );

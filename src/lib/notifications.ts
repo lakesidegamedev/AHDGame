@@ -10,12 +10,36 @@ export interface NotificationInput {
   metadata?: Record<string, unknown>;
 }
 
+/**
+ * NPP-run corporations carry this placeholder owner. No player signs in as
+ * it, so anything written to it is a wasted turn-time insert (the contract
+ * book alone sent it tens of thousands of alerts a week).
+ */
+const SYSTEM_USER_ID = "000000000000000000000000";
+
+function hasRecipient(input: NotificationInput): boolean {
+  return Boolean(input.userId) && input.userId.toString() !== SYSTEM_USER_ID;
+}
+
+/**
+ * Alerts are player copy, which never uses em or en dashes. Producers are
+ * spread across the codebase, so the rule is applied once where every alert
+ * is stored: a spaced dash becomes a colon in titles and a comma in messages,
+ * and a dash between numbers becomes a hyphen.
+ */
+export function plainDashes(text: string, kind: "title" | "message"): string {
+  return text
+    .replace(/(\d)\s*[\u2013\u2014]\s*(\d)/g, "$1-$2")
+    .replace(/\s+[\u2013\u2014]\s+/g, kind === "title" ? ": " : ", ")
+    .replace(/[\u2013\u2014]/g, kind === "title" ? ": " : ", ");
+}
+
 function toDoc(input: NotificationInput): Omit<Notification, "_id"> {
   return {
     userId: input.userId,
     type: input.type,
-    title: input.title,
-    message: input.message,
+    title: plainDashes(input.title, "title"),
+    message: plainDashes(input.message, "message"),
     read: false,
     metadata: input.metadata,
     createdAt: new Date(),
@@ -23,6 +47,7 @@ function toDoc(input: NotificationInput): Omit<Notification, "_id"> {
 }
 
 export async function createNotification(opts: NotificationInput): Promise<void> {
+  if (!hasRecipient(opts)) return;
   try {
     const db = await getDb();
     await db.collection<Omit<Notification, "_id">>("notifications").insertOne(toDoc(opts));
@@ -41,10 +66,13 @@ export async function createNotification(opts: NotificationInput): Promise<void>
  * does not crash a turn over a notification side effect.
  */
 export async function createNotifications(inputs: NotificationInput[]): Promise<void> {
-  if (inputs.length === 0) return;
+  const deliverable = inputs.filter(hasRecipient);
+  if (deliverable.length === 0) return;
   try {
     const db = await getDb();
-    await db.collection<Omit<Notification, "_id">>("notifications").insertMany(inputs.map(toDoc));
+    await db
+      .collection<Omit<Notification, "_id">>("notifications")
+      .insertMany(deliverable.map(toDoc));
   } catch (err) {
     console.error("[createNotifications] Failed:", err);
   }

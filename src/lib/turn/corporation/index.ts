@@ -1,4 +1,5 @@
 import { configureGroupSupply, groupForecastWriteOps } from "./groupSupplyTurn";
+import { getStateDisplayName } from "@/lib/commodity-map/commodityRegionMappings";
 import { migrateEntertainmentRemoval } from "./migrateEntertainmentRemoval";
 import { settleFundDividendAccruals } from "./settleFundDividendAccruals";
 import { runProducerMarketShadowPhase, shadowFitsPhaseBudget } from "./producerMarketShadowPhase";
@@ -1306,7 +1307,7 @@ export async function processCorporationTurn(
           type: "extraction_capacity_bound" as const,
           title: `Extraction capacity limit: ${resourceLabel}`,
           message:
-            `Your extraction operations in ${ev.stateId} are constrained to ` +
+            `Your extraction operations in ${getStateDisplayName(corp.countryId, ev.stateId)} are constrained to ` +
             `${Math.round(ev.utilization * 100)}% of potential output by ${resourceLabel} ` +
             `capacity. Realized resource revenue is being throttled, acquire capacity, ` +
             `adopt a focused extraction strategy, or expand into states with headroom.`,
