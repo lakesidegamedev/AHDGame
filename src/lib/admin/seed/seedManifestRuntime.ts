@@ -368,7 +368,12 @@ export const RUNTIME: CollectionEntry[] = [
   { name: "committeeProposals", category: "runtime" },
   { name: "ministerialOrders", category: "runtime" },
   { name: "governmentApprovals", category: "runtime" },
-  { name: "governmentFormations", category: "runtime" },
+  {
+    name: "governmentFormations",
+    category: "runtime",
+    notes:
+      "World-local government state, confidence history and confidenceSnapStartTurn replay guard. Cleared on world reset so a new world's snap elections start without an old reset marker.",
+  },
   { name: "governmentAccountability", category: "runtime" },
   { name: "parliamentaryGovernments", category: "runtime" },
   { name: "ukCabinetCooldowns", category: "runtime" },
