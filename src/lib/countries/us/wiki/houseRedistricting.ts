@@ -20,6 +20,10 @@ Redistricting decides how your voters are grouped into House seats. Whoever cont
 | Campaign Here cost | 2 political strength (base) |
 | Campaign Here boost | +2.5 per action (+1.25 for an allied party), cap 7.5, decays 0.5 per turn |
 
+\`\`\`wiki-chart
+redistricting-tier-limits
+\`\`\`
+
 ## When redistricting happens
 
 - **The census** fires in the first week of every year ending in 0. It reapportions the 435 House seats between states and rebuilds the district maps of every state whose seat count changed. States under an independent commission are also rebuilt neutrally at every census.
@@ -53,6 +57,8 @@ The three tiers as the code sets them:
 | Loose | 12 | up to half of districts | 35% |
 
 Deviation is measured in net squares (right minus left) against the state average. If the state's natural balance makes even the fairest possible map exceed the fairness ceiling, the ceiling is relaxed to the best achievable gap, so a state can always be drawn to its own lean but never beyond it.
+
+![Gates a House map must pass before it saves: census year, governor, trifecta, legislature authority, compactness, packed districts and efficiency gap.](/wiki-images/diagrams/us-house-redistricting-gates.svg)
 
 ## Drawing rules
 

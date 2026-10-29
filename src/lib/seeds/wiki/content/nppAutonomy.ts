@@ -19,6 +19,8 @@ Levels are cumulative: v2 includes v0 and v1, and v6 includes everything below i
 | **v5** | A government keeps up to five standing goals, grades them, and lets the results steer its next agenda; NPPs age, retire and are replaced | Governments stay on a consistent course |
 | **v6** | Engine 6: the same activities and resources as v5, with better decisions and lower running cost | Smarter candidate placement, vote counting before sponsoring, government whips, opposition that picks its battles |
 
+![Cumulative ladder from off to v6 showing what each level adds, with player countries acting only from v2 upward.](/wiki-images/diagrams/npp-autonomy-ladder.svg)
+
 ### Player and non-player countries
 
 - **Countries nobody plays:** the world's level applies as-is, from v0 to v6.

@@ -101,6 +101,7 @@ export async function buildNationalElectionNight(
         countryId: election.countryId,
         electionType,
         cycle: election.cycle,
+        status: { $in: ["active", "upcoming", "completed", "resolved"] },
         ...(chamberClass ? { chamberClass } : {}),
       },
       { projection: { state: 1, totalSeats: 1, status: 1, allocationMethod: 1 } }

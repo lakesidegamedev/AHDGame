@@ -55,6 +55,8 @@ A corporation sector qualifies for a subsidy if it passes all four filters:
   - State subsidy: corporation's headquarters state must match.
 - If \`domesticOnly: false\`, foreign corporations operating in the territory also qualify.
 
+![A sector passes the territory, sector type, strategy and domestic-only filters to qualify, and the government pays a per-turn cost into the sector subsidies budget line.](/wiki-images/diagrams/subsidies-qualification-funnel.svg)
+
 ### Stacking rules
 
 Multiple subsidies can apply to the same sector, and their bonuses stack additively:

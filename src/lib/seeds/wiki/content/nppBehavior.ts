@@ -16,12 +16,18 @@ An NPP votes on every open **federal** bill and every open **state or regional**
 
 The verdict uses a strict cutoff: a total **above +5** is For, **below -5** is Against, and anything from -5 to +5 inclusive is **Abstain**. There is no dice roll in a turn's vote. The only roll is when a **hard whip** is issued (see below).
 
+![Ideology, whip, party line, district and donors added into one total, with For above plus 5, Abstain from minus 5 to plus 5 and Against below minus 5.](/wiki-images/diagrams/npp-behavior-force-sum.svg)
+
 ### Compliance
 
 Whips and the party line reach an NPP only through its **compliance**, a number from 0 to 1:
 
 \`\`\`
 compliance = 0.7 x loyalty/100 + 0.3 x (1 - stubbornness/100)
+\`\`\`
+
+\`\`\`wiki-chart
+npp-compliance-by-loyalty
 \`\`\`
 
 | Loyalty | Stubbornness | Compliance | Party hard whip (60) lands as |
@@ -100,6 +106,7 @@ NPP B has loyalty 50, stubbornness 50 (compliance 0.50) and donor level 3, and o
 **Affects**
 
 - [Bills & Legislation](/wiki/bills-legislation): the NPP tally decides whether most bills pass.
+- [Party Slate](/wiki/party-slate): an NPP's loyalty and stubbornness decide whether it accepts a Slate assignment.
 
 ## Status
 

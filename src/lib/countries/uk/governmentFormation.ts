@@ -28,6 +28,7 @@ import type { GovernmentApproval } from "@/lib/db/types/governmentApproval";
 import { loadUkBrokenPromiseMeter } from "@/lib/countries/uk/manifesto/deliveryMeter";
 import { tickNhsFromBudget } from "@/lib/uk/nhs/nhsStore";
 import { triggerSnapElection } from "@/lib/turn/snapElection";
+import { canDissolveOnConfidence } from "@/lib/turn/rules/snapElection";
 import { getGameState } from "@/lib/gameState";
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { calculateFiscalYear } from "@/lib/budget/fiscalYear";
@@ -117,7 +118,19 @@ export async function tickUkGovernmentGauges(db: Db, now: Date): Promise<void> {
       now,
       turn: nhsGameState?.currentTurn,
     });
-    if (gauge.dissolutionEnabled) {
+    const government = gauge.dissolutionEnabled
+      ? await getGovernmentFormationsCollection(db).findOne(
+          { _id: "UK" },
+          { projection: { status: 1, pmCharacterId: 1, pmNppId: 1 } }
+        )
+      : null;
+    if (
+      gauge.dissolutionEnabled &&
+      canDissolveOnConfidence(
+        government?.status,
+        !!(government?.pmCharacterId || government?.pmNppId)
+      )
+    ) {
       try {
         await triggerSnapElection(db, "UK", now, {
           reason: "auto-snap",

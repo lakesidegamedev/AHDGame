@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420" role="img" font-family="system-ui, sans-serif">
+<title>Bloc example for the US House</title>
+<desc>Parties A 180, B 150, C 60 and D 45 in a 435 seat House. B and C form a 210 seat coalition bloc, which makes B plus C the majority bloc. Cards show which parties may run for Majority Leader, Minority Leader and Speaker.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#71717a"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker></defs>
+<rect x="0.5" y="0.5" width="719" height="419" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<text x="18" y="28" font-size="15" fill="#18181b" text-anchor="start" font-weight="700">US House example: B and C form a coalition</text>
+<rect x="34" y="84" width="270" height="40" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="169.0" y="107.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">A 180</text>
+<rect x="304" y="84" width="225" height="40" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="416.5" y="107.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">B 150</text>
+<rect x="529" y="84" width="90" height="40" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="574.0" y="107.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">C 60</text>
+<rect x="619" y="84" width="68" height="40" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="653.0" y="107.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">D 45</text>
+<line x1="304.0" y1="76" x2="619.0" y2="76" stroke="#2563eb" stroke-width="2"/>
+<text x="461.5" y="70" font-size="13" fill="#2563eb" text-anchor="middle" font-weight="700">Coalition B+C: 210 seats, the largest bloc</text>
+<rect x="34" y="146" width="208" height="136" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="138.0" y="209.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Majority Leader and Whip</text>
+<text x="138.0" y="226.0" font-size="13" fill="#18181b" text-anchor="middle">Largest single party only</text>
+<rect x="50" y="240" width="36" height="30" rx="5" fill="#eff6ff" stroke="#2563eb"/>
+<text x="68" y="260" font-size="14" fill="#18181b" text-anchor="middle" font-weight="700">A</text>
+<rect x="94" y="240" width="36" height="30" rx="5" fill="#ffffff" stroke="#d4d4d8"/>
+<text x="112" y="260" font-size="14" fill="#a1a1aa" text-anchor="middle">B</text>
+<rect x="138" y="240" width="36" height="30" rx="5" fill="#ffffff" stroke="#d4d4d8"/>
+<text x="156" y="260" font-size="14" fill="#a1a1aa" text-anchor="middle">C</text>
+<rect x="182" y="240" width="36" height="30" rx="5" fill="#ffffff" stroke="#d4d4d8"/>
+<text x="200" y="260" font-size="14" fill="#a1a1aa" text-anchor="middle">D</text>
+<rect x="256" y="146" width="208" height="136" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="360.0" y="209.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Minority Leader and Whip</text>
+<text x="360.0" y="226.0" font-size="13" fill="#18181b" text-anchor="middle">Any party outside B+C</text>
+<rect x="272" y="240" width="36" height="30" rx="5" fill="#eff6ff" stroke="#2563eb"/>
+<text x="290" y="260" font-size="14" fill="#18181b" text-anchor="middle" font-weight="700">A</text>
+<rect x="316" y="240" width="36" height="30" rx="5" fill="#ffffff" stroke="#d4d4d8"/>
+<text x="334" y="260" font-size="14" fill="#a1a1aa" text-anchor="middle">B</text>
+<rect x="360" y="240" width="36" height="30" rx="5" fill="#ffffff" stroke="#d4d4d8"/>
+<text x="378" y="260" font-size="14" fill="#a1a1aa" text-anchor="middle">C</text>
+<rect x="404" y="240" width="36" height="30" rx="5" fill="#eff6ff" stroke="#2563eb"/>
+<text x="422" y="260" font-size="14" fill="#18181b" text-anchor="middle" font-weight="700">D</text>
+<rect x="478" y="146" width="208" height="136" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="582.0" y="209.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Speaker</text>
+<text x="582.0" y="226.0" font-size="13" fill="#18181b" text-anchor="middle">Any party with a seat</text>
+<rect x="494" y="240" width="36" height="30" rx="5" fill="#eff6ff" stroke="#2563eb"/>
+<text x="512" y="260" font-size="14" fill="#18181b" text-anchor="middle" font-weight="700">A</text>
+<rect x="538" y="240" width="36" height="30" rx="5" fill="#eff6ff" stroke="#2563eb"/>
+<text x="556" y="260" font-size="14" fill="#18181b" text-anchor="middle" font-weight="700">B</text>
+<rect x="582" y="240" width="36" height="30" rx="5" fill="#eff6ff" stroke="#2563eb"/>
+<text x="600" y="260" font-size="14" fill="#18181b" text-anchor="middle" font-weight="700">C</text>
+<rect x="626" y="240" width="36" height="30" rx="5" fill="#eff6ff" stroke="#2563eb"/>
+<text x="644" y="260" font-size="14" fill="#18181b" text-anchor="middle" font-weight="700">D</text>
+<text x="34" y="320" font-size="13" fill="#18181b" text-anchor="start">The coalition changes who counts as the minority, not who holds the Majority Leader seat.</text>
+<text x="34" y="344" font-size="13" fill="#52525b" text-anchor="start">The Majority Leader is still the largest single party, A with 180, not B with 150.</text>
+</svg>

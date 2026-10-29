@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="302" viewBox="0 0 800 302" role="img" font-family="system-ui, sans-serif">
+<title>Four-week first campaign timeline</title>
+<desc>Week one builds PI, Favorability and donor level, week two is the primary, week three the general, and week four the last four turns, with the day-one ledger of actions and funds.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#52525b"/></marker></defs>
+<rect x="0.5" y="0.5" width="799" height="301" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<rect x="20" y="16" width="175" height="46" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="107.5" y="35.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Week 1: build</text>
+<text x="107.5" y="51.5" font-size="12" text-anchor="middle" fill="#3f3f46">do not file yet</text>
+<rect x="20" y="70" width="175" height="100" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="107.5" y="92.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Targets</text>
+<text x="107.5" y="108.5" font-size="12" text-anchor="middle" fill="#3f3f46">PI about 30</text>
+<text x="107.5" y="124.5" font-size="12" text-anchor="middle" fill="#3f3f46">Favorability 60 or higher</text>
+<text x="107.5" y="140.6" font-size="12" text-anchor="middle" fill="#3f3f46">donor level 3</text>
+<text x="107.5" y="156.6" font-size="12" text-anchor="middle" fill="#3f3f46">read the poll</text>
+<path d="M197 39 L213 39" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="215" y="16" width="175" height="46" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="302.5" y="35.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Week 2: primary</text>
+<text x="302.5" y="51.5" font-size="12" text-anchor="middle" fill="#3f3f46">declare, View Campaign</text>
+<rect x="215" y="70" width="175" height="100" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="302.5" y="92.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Targets</text>
+<text x="302.5" y="108.5" font-size="12" text-anchor="middle" fill="#3f3f46">climb toward PI 40</text>
+<text x="302.5" y="124.5" font-size="12" text-anchor="middle" fill="#3f3f46">request endorsements</text>
+<text x="302.5" y="140.6" font-size="12" text-anchor="middle" fill="#3f3f46">do not Attack your</text>
+<text x="302.5" y="156.6" font-size="12" text-anchor="middle" fill="#3f3f46">own party</text>
+<path d="M392 39 L408 39" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="410" y="16" width="175" height="46" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="497.5" y="35.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Week 3: general</text>
+<text x="497.5" y="51.5" font-size="12" text-anchor="middle" fill="#3f3f46">you are the nominee</text>
+<rect x="410" y="70" width="175" height="100" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="497.5" y="92.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Targets</text>
+<text x="497.5" y="108.5" font-size="12" text-anchor="middle" fill="#3f3f46">hold PI</text>
+<text x="497.5" y="124.5" font-size="12" text-anchor="middle" fill="#3f3f46">Favorability 65 to 70</text>
+<text x="497.5" y="140.6" font-size="12" text-anchor="middle" fill="#3f3f46">ads every other day</text>
+<text x="497.5" y="156.6" font-size="12" text-anchor="middle" fill="#3f3f46">general endorsements</text>
+<path d="M587 39 L603 39" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="605" y="16" width="175" height="46" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="692.5" y="35.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Week 4: last 4 turns</text>
+<text x="692.5" y="51.5" font-size="12" text-anchor="middle" fill="#3f3f46">7.5% of the pool each</text>
+<rect x="605" y="70" width="175" height="100" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="692.5" y="100.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Targets</text>
+<text x="692.5" y="116.5" font-size="12" text-anchor="middle" fill="#3f3f46">peak PI and Favorability</text>
+<text x="692.5" y="132.6" font-size="12" text-anchor="middle" fill="#3f3f46">log in hourly</text>
+<text x="692.5" y="148.6" font-size="12" text-anchor="middle" fill="#3f3f46">do not withdraw</text>
+<text x="20" y="200" font-size="14" text-anchor="start" fill="#18181b" font-weight="700">Day one ledger: 25 actions, all spent</text>
+<rect x="20" y="212" width="138" height="66" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="89.0" y="233.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Start</text>
+<text x="89.0" y="249.6" font-size="12" text-anchor="middle" fill="#3f3f46">25 actions</text>
+<text x="89.0" y="265.6" font-size="12" text-anchor="middle" fill="#3f3f46">₳250,000</text>
+<path d="M160 245 L174 245" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="176" y="212" width="138" height="66" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="245.0" y="233.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Donor network</text>
+<text x="245.0" y="249.6" font-size="12" text-anchor="middle" fill="#3f3f46">4 actions</text>
+<text x="245.0" y="265.6" font-size="12" text-anchor="middle" fill="#3f3f46">₳245,000 left</text>
+<path d="M316 245 L330 245" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="332" y="212" width="138" height="66" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="401.0" y="233.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Fundraise x2</text>
+<text x="401.0" y="249.6" font-size="12" text-anchor="middle" fill="#3f3f46">6 actions</text>
+<text x="401.0" y="265.6" font-size="12" text-anchor="middle" fill="#3f3f46">₳363,800 left</text>
+<path d="M472 245 L486 245" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="488" y="212" width="138" height="66" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="557.0" y="233.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Campaign x8</text>
+<text x="557.0" y="249.6" font-size="12" text-anchor="middle" fill="#3f3f46">8 actions</text>
+<text x="557.0" y="265.6" font-size="12" text-anchor="middle" fill="#3f3f46">₳203,800 left</text>
+<path d="M628 245 L642 245" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="644" y="212" width="138" height="66" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="713.0" y="233.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Run ads x1</text>
+<text x="713.0" y="249.6" font-size="12" text-anchor="middle" fill="#3f3f46">7 actions</text>
+<text x="713.0" y="265.6" font-size="12" text-anchor="middle" fill="#3f3f46">₳63,800 left</text>
+</svg>

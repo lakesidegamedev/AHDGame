@@ -14,6 +14,8 @@ They affect each other but are not the same. A proxy campaign can exist before i
 
 A campaign moves through five stages. Between your decisions, the stage slowly pushes its damage tracks up or down every turn.
 
+![The five campaign stages in order with the consequence tracks each one raises or lowers every turn, and how campaigns connect to national doctrine, the nuclear programme, global tension and defence procurement.](/wiki-images/diagrams/global-response-crises-stage-flow.svg)
+
 | Stage | What it means | Change per turn |
 | --- | --- | --- |
 | Posture | Governments assess the situation and set an opening position. | None |
@@ -55,6 +57,10 @@ Discrete events (escalation, nuclear tests, crisis outcomes) move the reading im
 - A baseline of 12.
 - Vietnam escalation, active campaigns and the world warhead stockpile, as in the table above.
 - Every active shooting war, weighted by intensity. A war with nuclear-armed countries on opposite sides holds the floor at Crisis on its own for as long as it burns. A long war that stays below hot intensity sheds part of that shock after twelve turns, but never below a substantial residual.
+
+\`\`\`wiki-chart
+tension-floor-by-arsenal
+\`\`\`
 
 The page shows each driver, the floor, and whether the reading is rising or easing toward it. Declaring a war also spikes the reading immediately: most for a war between nuclear powers, less for any other interstate war, least for the rest. Tension then sets the displayed DEFCON posture, strategic procurement pressure and the detente goodwill penalty.
 

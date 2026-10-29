@@ -6,6 +6,8 @@ The world shares one number: a tension gauge from 0 to 100 that sits at the top 
 
 Tension has two parts. **Events** push it up in one-off spikes: a nuclear test, an escalation, a crisis. **Standing pressure** sets a floor underneath it, built from the world's arsenals, crises, escalation and shooting wars. Each turn the gauge closes 8% of the gap between itself and that floor. So spikes fade, but tension never falls below the floor.
 
+![Flow from one-off events and standing pressure through spikes and the floor into tension from 0 to 100, which sets three dials and triggers domestic world events.](/wiki-images/diagrams/cold-war-tension-how-it-works.svg)
+
 ### Key numbers
 
 | What | Value |
@@ -34,6 +36,10 @@ The band label is what most of the world's machinery reacts to.
 ### A worked example
 
 A world has 100 warheads, 2 active crises and an escalation level of 2. Its floor is 12 + 8 (escalation level 2, at 4 a rung) + 6 (two crises, at 3 each) + 12 (the square root of 100 is 10, times 1.2) = 38, which is ELEVATED. A thermonuclear test adds 12 and puts the gauge at 50. Each turn it closes 8% of the gap to 38: after one turn it is 49.0, after ten turns about 43.2, and after thirty about 39. If an extra war with intensity 50 breaks out, that adds 6 to the floor, and the gauge stays about 44.
+
+\`\`\`wiki-chart
+tension-after-thermonuclear-test
+\`\`\`
 
 ## What raises it
 

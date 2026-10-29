@@ -1,6 +1,6 @@
 export const imfSovereignFacilityContent = `# IMF Sovereign Facility
 
-The IMF sovereign facility is the bailout route out of a [sovereign default crisis](/wiki/sovereign-default). The IMF lends the country enough to cover its bonds coming due and its deficit, and the country pays it back out of a slice of its yearly revenue. It has the smallest flat GDP penalty of the four resolutions and no bond market lockout, but you carry the loan for up to 240 turns.
+The IMF sovereign facility is the bailout route out of a [sovereign default crisis](/wiki/sovereign-default). The IMF lends the country enough to cover its bonds coming due and its deficit, and the country pays it back out of a slice of its yearly revenue. It has no flat GDP penalty and no bond market lockout, but you carry the loan for up to 240 turns and companies take a temporary margin penalty.
 
 It is the country-level cousin of the [corporate IMF restructuring](/wiki/imf). Same lender and same style of loan, but the borrower is the national budget, not one company.
 
@@ -14,6 +14,8 @@ It is the country-level cousin of the [corporate IMF restructuring](/wiki/imf). 
 
 Why a cap? A country in crisis is short of money. Letting the IMF take a fixed share of revenue keeps the country running, at the price of a longer loan.
 
+![Flow of the sovereign IMF facility: crisis, bailout, loan sizing, board window, capped payments with unpaid interest capitalizing, and closure at zero, with a separate recovery clock.](/wiki-images/diagrams/imf-sovereign-facility-loan-flow.svg)
+
 | Key number | Value |
 | --- | --- |
 | Interest rate | 6% per year, fixed (0.125% per turn) |
@@ -23,7 +25,7 @@ Why a cap? A country in crisis is short of money. Letting the IMF take a fixed s
 | Board rate change | up to 2 points either way |
 | Board capture change | up to 10 points either way |
 | Board statement trust effect | 0.02 |
-| Direct GDP penalty | 2% |
+| Direct GDP penalty | none |
 | Company margin penalty | -4.5 points, 48 turns at full strength, 24 turns fading |
 | Bond market lockout | none |
 | Recovery | at least 48 turns plus 5 disciplined turns |
@@ -33,6 +35,10 @@ There are 48 turns in a game year.
 ### Worked example
 
 A country has 80 billion of bonds maturing within 12 turns and a yearly deficit of 20 billion. The loan is **100 billion**. Interest is 125 million per turn (100 billion times 0.125%). The level payment over 240 turns is about 482.5 million per turn, and over the whole term the country pays back about 115.8 billion.
+
+\`\`\`wiki-chart
+imf-facility-capitalization
+\`\`\`
 
 **Case 1: a big economy.** Yearly revenue is 400 billion, so 8.33 billion per turn. At 20% capture the cap is 1.67 billion. That is far above the 482.5 million payment, so the cap never bites and the loan runs off on schedule.
 

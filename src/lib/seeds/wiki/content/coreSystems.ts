@@ -49,6 +49,10 @@ Actions are your activity budget. Campaigning, ads, polls, wires to allies and m
 
 **The cap and the hoarding penalty.** Your Energy stat sets two limits. The cap is 200 actions at Energy 1, rising to 250 at Energy 10. The hoard threshold is 100 at Energy 1, rising to 125 at Energy 10. Each turn you start above the threshold you lose 4 actions before the refresh. A character on only the base 4 gains 4 and loses 4, so a stockpile stops growing just above the threshold. This is why you may see your actions stop climbing or "lose 4 a turn". It exists so nobody banks months of actions and spends them in one burst to swamp an election.
 
+\`\`\`wiki-chart
+action-stockpile-hoarding
+\`\`\`
+
 **Office pools.** Ministerial, Vice President, justice and gubernatorial actions are separate pools, not part of your main balance. Ministerial actions return 1 every 6 turns up to 4. Vice President and Supreme Court actions return 1 every 12 turns up to 2. A governor holds up to 3. Once per turn per pool, you can pay **10 main actions to buy 1 office action**, up to that pool's cap.
 
 ### Money: two pools
@@ -69,7 +73,7 @@ The two are separate and do not convert automatically. A third pool, a corporati
 
 The donor bonus is multiplied by 1 plus your state Political Influence divided by 100. Flat office bonuses: House ₳5k, State Senate ₳3k, Senate ₳15k, Vice President ₳25k, Governor ₳15k, President ₳50k, and UK and German equivalents of ₳5k for MPs and members of the Bundestag and ₳50k for the Prime Minister and Chancellor.
 
-Cash on Hand grows from dividends, bond coupons and share sales, and from 50% of any Personal Campaign Donation you make (the other 50% goes to Campaign Funds).
+Cash on Hand grows from dividends, bond coupons and share sales. A Personal Campaign Donation drains it: all the cash you donate leaves Cash on Hand, but only half of it reaches Campaign Funds and the other half is lost.
 
 | Number | Value |
 | --- | --- |
@@ -113,7 +117,7 @@ Tips: spend before you hit the hoard threshold, keep Campaign Funds and Cash on 
 
 - [Stats & Actions](/wiki/stats-actions): your Energy stat sets the action cap and hoard threshold, and your Fundraising stat scales fundraising.
 - [Player Progression](/wiki/player-progression): the office you hold sets your action and fund bonuses.
-- [Political Parties](/wiki/political-parties): your party share of actions and the party tax on your funds.
+- [Political Parties](/wiki/political-parties): your party share of actions and the party tax on your per-turn funds.
 - [Relocation](/wiki/relocation): moving changes your home state, which sets your fund rate.
 
 **Affects**

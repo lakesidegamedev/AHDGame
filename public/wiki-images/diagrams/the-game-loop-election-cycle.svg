@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="262" viewBox="0 0 760 262" role="img" font-family="system-ui, sans-serif">
+<title>Election cycle loop</title>
+<desc>Build, primary, general with the last four turns marked, resolution, then in office, after which the next cycle starts.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#52525b"/></marker></defs>
+<rect x="0.5" y="0.5" width="759" height="261" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<rect x="12" y="20" width="128" height="70" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="76.0" y="43.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">1 Build</text>
+<text x="76.0" y="59.5" font-size="12" text-anchor="middle" fill="#3f3f46">no race open</text>
+<text x="76.0" y="75.5" font-size="12" text-anchor="middle" fill="#3f3f46">for your office</text>
+<path d="M142 55 L162 55" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="164" y="20" width="128" height="70" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="228.0" y="43.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">2 Primary</text>
+<text x="228.0" y="59.5" font-size="12" text-anchor="middle" fill="#3f3f46">declare, standing</text>
+<text x="228.0" y="75.5" font-size="12" text-anchor="middle" fill="#3f3f46">sets the split</text>
+<path d="M294 55 L314 55" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="316" y="20" width="128" height="70" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="380.0" y="43.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">3 General</text>
+<text x="380.0" y="59.5" font-size="12" text-anchor="middle" fill="#3f3f46">live tally on</text>
+<text x="380.0" y="75.5" font-size="12" text-anchor="middle" fill="#3f3f46">the race page</text>
+<path d="M446 55 L466 55" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="468" y="20" width="128" height="70" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="532.0" y="43.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">4 Resolution</text>
+<text x="532.0" y="59.5" font-size="12" text-anchor="middle" fill="#3f3f46">winner takes</text>
+<text x="532.0" y="75.5" font-size="12" text-anchor="middle" fill="#3f3f46">office</text>
+<path d="M598 55 L618 55" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="620" y="20" width="128" height="70" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="684.0" y="43.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">5 In office</text>
+<text x="684.0" y="59.5" font-size="12" text-anchor="middle" fill="#3f3f46">tools unlock;</text>
+<text x="684.0" y="75.5" font-size="12" text-anchor="middle" fill="#3f3f46">re-election ahead</text>
+<rect x="304" y="122" width="152" height="66" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="380.0" y="143.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Last 4 turns</text>
+<text x="380.0" y="159.6" font-size="12" text-anchor="middle" fill="#3f3f46">carry 30% of the</text>
+<text x="380.0" y="175.6" font-size="12" text-anchor="middle" fill="#3f3f46">general vote pool</text>
+<path d="M380 92 L380 120" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<path d="M684 92 L684 214 L76 214 L76 92" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="400" y="208" font-size="12" text-anchor="middle" fill="#52525b">the next cycle of the office starts immediately</text>
+</svg>

@@ -22,6 +22,8 @@ Each turn, during the NPP phase, an NPP enters a primary only while it is **open
 1. **Incumbents.** An NPP that holds the seat being contested re-enters to defend it before anyone else. It ignores that seat's cooldown.
 2. **Everyone else.** Open slots are filled from NPPs of each party homed in the state, **one generic NPP per party per primary**, so an NPP never splits its own party's vote. An NPP takes the most junior office it is eligible for first. The order is: state senate, regional councils, other lower assemblies, Sangiin, House, Commons, Senate, Shugiin, delegates to national assemblies, and finally governor.
 
+![Each turn NPPs pass eligibility checks, incumbents defend first, accepted slate filings join, then generic fill adds one NPP per party per primary.](/wiki-images/diagrams/npp-elections-entry-flow.svg)
+
 ### Slate: asking an NPP to run
 
 A party's national or state chair or vice chair can put a same-party NPP on the **Slate** for a race. The NPP accepts if its loyalty is at least 40 and its stubbornness is at most 70 (state and regional leaders get 5 points of leeway on each). An accepted NPP can join a primary even if a same-party candidate is already in it. The Slate board shows "Likely to Accept" or "Likely to Decline" before the turn and the result after. See [Party Actions](/wiki/party-actions).
@@ -77,6 +79,7 @@ In worlds on autonomy **V6**, parties run their strongest NPPs for the biggest r
 
 - [NPPs Overview](/wiki/npps-overview): ambition, home state and party decide which race an NPP enters.
 - [Party Actions](/wiki/party-actions): Slate assignments move NPPs into races.
+- [Party Slate](/wiki/party-slate): the board where chairs assign NPPs to races, with a 3 candidate limit per party.
 - [NPP Autonomy](/wiki/npp-autonomy): the world's level adds challengers, career moves and primary consolidation.
 - [primaries](/wiki/primaries): NPP entry, score handicaps and late withdrawals in primaries follow the primary rules.
 

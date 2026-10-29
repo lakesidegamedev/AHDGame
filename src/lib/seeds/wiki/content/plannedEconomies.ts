@@ -38,6 +38,10 @@ Two gates must both be true:
 | Dual-track | 30 to under 70 | Plan and market run together; national prices and shortage pressure scale with how much is still planned |
 | Market | 70+ | Standard floating FX, chair policy, supply-and-demand commodity pricing |
 
+\`\`\`wiki-chart
+marketization-schedule-by-country
+\`\`\`
+
 Soviet Russia and early China start fully command; Eastern-bloc countries start command; China starts further along the dial in later eras. Where each ends up is now up to how the country is governed.
 
 ## State-owned enterprises (SOEs)
@@ -114,6 +118,8 @@ There **is a weak era gravity**: a small restoring pull toward the historical sc
 - **Reform spiral**: underfund the SOEs, they miss plan, shortages grow, the black market swells, marketization rises, market rules creep in, and eventually the command economy unwinds. A mismanaged state collapses early.
 - **Stable orthodoxy**: fund the right sectors, hit the targets, keep the black market contained, and the dial holds. The country stays command for as long as you run it well.
 - **Gosbank tightrope**: print to grow output, but watch overhang and shortage climb with it. Growth and empty shelves are two sides of the same lever.
+
+![The reform spiral, the stable orthodoxy loop, and repression with its legitimacy cost.](/wiki-images/diagrams/planned-economies-feedback-loops.svg)
 
 ## Repression: holding the line
 

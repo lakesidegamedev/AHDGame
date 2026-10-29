@@ -40,13 +40,13 @@ const QUALITY_SUBSCORE_FLOOR = 0.1;
  * a p90 R&D corp saturates ~1.0, so tech meaningfully differentiates without
  * crushing the median. (Tech-tree corps push rdScore higher; the ref still holds.)
  */
-const QUALITY_TECH_REF = 25;
+export const QUALITY_TECH_REF = 25;
 /**
  * Logistics-&-Operations strength that reads as par operations. Live dist is
  * very skewed (p50≈2.9, p90≈89); 15 puts the median ~0.44 and rewards the
  * heavy operators without flooring everyone else.
  */
-const QUALITY_OPS_REF = 15;
+export const QUALITY_OPS_REF = 15;
 /** How strongly wageLevel above/below 1.0 moves the wage sub-score. */
 const QUALITY_WAGE_SLOPE = 0.6;
 /** Neutral input quality (0–100) used when a sector has no measurable inputs. */

@@ -46,6 +46,8 @@ The **national committee** is up to **6** members elected by party members (each
 
 The voters are the committee members plus the chair, vice chair and treasurer. Empty seats are not counted. The proposal passes the moment yes votes reach **60%** of those voters, rounded up. It fails early as soon as too many have voted no for the rest to reach that number. If the 24 turns end first, every voter who did not vote counts as a **no**, so a proposal that nobody votes on always fails.
 
+![Party proposal lifecycle: open up to 24 turns, passes at 60 percent of filled voting seats, rejected early or at expiry, with merges needing both committees.](/wiki-images/diagrams/party-leadership-proposal-lifecycle.svg)
+
 **Worked example.** A party has 6 committee members, a chair, a vice chair and a treasurer, all different people: 9 voters. Yes needs 60% of 9, which is 5.4, rounded up to **6**. The chair proposes a rename. Five vote yes, one votes no, three do not vote. At turn 24 the nonvoters count as no, 5 is below 6, and the proposal fails. With 6 yes it would have passed immediately. If 4 voters vote no, it fails at once, since only 5 yes votes remain possible.
 
 ### Proposal types
@@ -71,6 +73,8 @@ A merge needs a yes from **both** committees, each under the 60% rule. It is onl
 | National treasury | All of it goes to the target |
 | State organization | Half of each state's Org units are added to the target's Org in that state |
 | Your party | Marked defunct. It stays visible with a "dissolved" notice but nobody can join it |
+
+![Flow from the proposing party to the target party showing players with halved influence, NPPs under the region limit, the whole national treasury and half of each state's Org units moving over, and the proposing party marked defunct.](/wiki-images/diagrams/party-leadership-merge-outcome.svg)
 
 ## What you can do
 
@@ -98,6 +102,7 @@ A merge needs a yes from **both** committees, each under the 60% rule. It is onl
 
 - [Party Membership](/wiki/party-membership): officers set the tax rate and accept or decline requests in approval-only parties.
 - [Party Actions](/wiki/party-actions): officers choose how Political Strength, treasury money and budgets are spent.
+- [Party Slate](/wiki/party-slate): national and state chairs and vice chairs are the ones who can assign candidates to races.
 - [Party Organization](/wiki/party-organization): only officers can click Build Org.
 - [Party Ideology](/wiki/party-ideology): a passed position shift moves the party one step on one axis.
 - [Coalitions](/wiki/coalitions): the national chair creates, joins and leaves coalitions for the party.

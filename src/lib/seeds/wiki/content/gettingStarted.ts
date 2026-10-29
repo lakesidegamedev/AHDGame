@@ -29,7 +29,7 @@ Six numbers matter in your first session. The rest can wait.
 | **National Influence (NPI)** | Your national reputation. It starts at 0. | Presidential primaries, national races, and national party work. It decays 1% per turn, then grows from your state PI and your highest office or party role. |
 | **Cash on Hand** | Personal money, separate from Campaign Funds. It starts at the grant for your wealth background: 1,000,000, 2,500,000 or 5,000,000 anchor units for low, middle or high, scaled to the world's era, plus a bonus if you were referred. | Shares, bonds, property, and player-to-player wires. Do not spend it thinking it is campaign money. |
 
-Campaign Funds and Cash on Hand are different pools, and nothing on the campaign screen spends your personal cash automatically. To move cash into campaign funds, use **Personal Campaign Donation**: it costs 2 actions, lands 50% of what you convert, and adds Infamy (about 4 for ₳100,000 and 15 for ₳1,000,000). New characters also get a 28-point spread across seven stats at creation, which scale action costs and caps. See [Stats & Actions](/wiki/stats-actions).
+Campaign Funds and Cash on Hand are different pools, and nothing on the campaign screen spends your personal cash automatically. To move cash into campaign funds, use **Personal Campaign Donation**: it costs 2 actions, takes the cash you choose, lands 50% of it in campaign funds (the other 50% is lost), and adds Infamy (about 4 for ₳100,000 and 15 for ₳1,000,000). New characters also get a 28-point spread across seven stats at creation, which scale action costs and caps. See [Stats & Actions](/wiki/stats-actions).
 
 Funds also arrive on their own every turn. The base amount depends on your home state's size (₳5,000 to ₳40,000 per turn), and your donor level adds to it. Most days, funds rather than actions are what limit you.
 
@@ -57,9 +57,16 @@ elections
 
 8. **Spend the rest of your actions on the race, not on everything else.** A reasonable first-week split is in the next section. Do not buy a corporation, a bond, or a central-bank position in week one unless you already understand the system.
 
+![The first ten minutes as a flow: read the dashboard, campaign, join a party, build donors and fundraise, find a race, poll, declare and open View Campaign, with the no-open-race and missed-window branches.](/wiki-images/diagrams/getting-started-first-ten-minutes.svg)
+
+
 ## Your first 25 actions
 
 There is no single correct build, but this allocation covers the first-days goals and leaves room to react. It spends exactly 25 actions.
+
+\`\`\`wiki-chart
+campaign-advertise-action-cost
+\`\`\`
 
 | Move | Actions | Campaign Funds | Why |
 | --- | ---: | ---: | --- |

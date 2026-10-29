@@ -13,6 +13,8 @@ Every election has two phases.
 
 When the general resolves, winners take office and the next cycle spawns. For a guided tour of the screens, read the [Elections player guide](/wiki/elections-player-guide).
 
+![Election lifecycle from spawn through declaration, primary, general and resolution to the next cycle spawning.](/wiki-images/diagrams/election-mechanics-lifecycle.svg)
+
 ### Key numbers
 
 | Item | Value |
@@ -71,6 +73,10 @@ Each turn, a pool of votes is split between groups of voters (see [Demographics]
 - **Party organization:** your party's share of the state's organization, raised to the 0.2 power. A 3 to 1 organization lead is only worth about 1.25 to 1 in votes. A candidate with no organization still gets a small floor from personal pull.
 - **Infamy:** up to 5% off for player characters with high infamy.
 - **Voter mood and loyalty:** registration makes a party's own voters 1.0x to 1.3x harder to persuade away, and short-term support moves your swing between 0.6x and 1.4x.
+
+\`\`\`wiki-chart
+general-election-vote-pool
+\`\`\`
 
 Influence is not part of appeal. It enters only through reach.
 

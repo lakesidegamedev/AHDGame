@@ -9,6 +9,8 @@ The US Supreme Court has 9 seats and exists only in the United States. A justice
 3. **Docket.** Curated historical cases resolve against the sitting Court, on the calendar year the world shows rather than the raw turn counter. A majority on the case's tagged axis can diverge from the historical outcome, and a divergence can enact policy through the same pipeline as a bill. An evenly split bench (4-4, or no seated majority) reaches no decision: the case affirms the existing outcome. Surprise cases can also fire. They are non-historical and resolve the turn they appear, using the sitting majority.
 4. **Tenure.** After the first appointment, a sitting justice can leave mid-term, whether player or NPP. The President and the occupant are notified when a seat opens. The Court does not keep a confirmed player forever.
 
+![A Supreme Court seat cycles from vacant to nominated, Senate vote, seated, and back to vacant on departure.](/wiki-images/diagrams/scotus-seat-lifecycle.svg)
+
 ### Key numbers
 
 | Item | Value |
@@ -26,6 +28,10 @@ The US Supreme Court has 9 seats and exists only in the United States. A justice
 ### The court-concentration penalty
 
 Each seated justice is scored by their average lean on the economic and social axes: below -1 is liberal, above +1 is conservative, in between is a swing justice. Swing justices still count in the total, so neither bloc can claim them. If a justice's lean is unknown, their appointing party is used instead. The penalty to the country's democratic health score is 0 until one bloc passes two-thirds of the bench, then grows to a cap of 12 points for a bench of one bloc. A Court with fewer than 5 seated justices is too empty to score. Vacant seats do not count.
+
+\`\`\`wiki-chart
+court-concentration-penalty
+\`\`\`
 
 ### Worked example
 

@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="470" viewBox="0 0 760 470" role="img" font-family="system-ui, sans-serif">
+<title>Coalition lifecycle</title>
+<desc>A coalition is created by a national chair, gains member parties by invite or request, loses them by leaving or kicks, can pass the chair to another member, and can be disbanded by a 24 turn vote needing more than half of all member parties.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#71717a"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker></defs>
+<rect x="0.5" y="0.5" width="759" height="469" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<text x="18" y="28" font-size="15" fill="#18181b" text-anchor="start" font-weight="700">Coalition lifecycle</text>
+<rect x="40" y="30" width="300" height="60" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="190.0" y="46.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Invite</text>
+<text x="190.0" y="63.5" font-size="13" fill="#18181b" text-anchor="middle">Coalition chair invites a party,</text>
+<text x="190.0" y="80.5" font-size="13" fill="#18181b" text-anchor="middle">its chair accepts or declines</text>
+<rect x="400" y="30" width="320" height="60" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="560.0" y="46.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Request</text>
+<text x="560.0" y="63.5" font-size="13" fill="#18181b" text-anchor="middle">A party's chair asks to join,</text>
+<text x="560.0" y="80.5" font-size="13" fill="#18181b" text-anchor="middle">coalition chair accepts or declines</text>
+<rect x="260" y="150" width="240" height="76" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="380.0" y="174.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Coalition with member parties</text>
+<text x="380.0" y="191.5" font-size="13" fill="#18181b" text-anchor="middle">Each party is in only one</text>
+<text x="380.0" y="208.5" font-size="13" fill="#18181b" text-anchor="middle">coalition</text>
+<rect x="20" y="156" width="150" height="64" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="95.0" y="174.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Create</text>
+<text x="95.0" y="191.5" font-size="13" fill="#18181b" text-anchor="middle">Party becomes chair</text>
+<text x="95.0" y="208.5" font-size="13" fill="#18181b" text-anchor="middle">party</text>
+<path d="M170 188 L260 188" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<path d="M190 90 L190 120 L330 120 L330 150" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="197" y="103" width="56.4" height="15" fill="#ffffff"/>
+<text x="200" y="114" font-size="12" fill="#52525b" text-anchor="start">accepted</text>
+<path d="M560 90 L560 120 L430 120 L430 150" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="506.6" y="103" width="56.4" height="15" fill="#ffffff"/>
+<text x="560" y="114" font-size="12" fill="#52525b" text-anchor="end">accepted</text>
+<rect x="560" y="140" width="180" height="96" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="650.0" y="157.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Party out</text>
+<text x="650.0" y="174.5" font-size="13" fill="#18181b" text-anchor="middle">Party chair leaves, or</text>
+<text x="650.0" y="191.5" font-size="13" fill="#18181b" text-anchor="middle">coalition chair kicks.</text>
+<text x="650.0" y="208.5" font-size="13" fill="#18181b" text-anchor="middle">Longest member becomes</text>
+<text x="650.0" y="225.5" font-size="13" fill="#18181b" text-anchor="middle">chair party if it left</text>
+<path d="M500 188 L560 188" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<rect x="20" y="256" width="200" height="60" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="120.0" y="272.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Chair transfer</text>
+<text x="120.0" y="289.5" font-size="13" fill="#18181b" text-anchor="middle">Moves to another member</text>
+<text x="120.0" y="306.5" font-size="13" fill="#18181b" text-anchor="middle">party</text>
+<path d="M120 256 L120 236 L260 200" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<rect x="260" y="276" width="240" height="60" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="380.0" y="292.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Disband vote</text>
+<text x="380.0" y="309.5" font-size="13" fill="#18181b" text-anchor="middle">Started by the coalition chair,</text>
+<text x="380.0" y="326.5" font-size="13" fill="#18181b" text-anchor="middle">one at a time</text>
+<path d="M380 226 L380 276" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="385" y="245" width="87.9" height="15" fill="#ffffff"/>
+<text x="388" y="256" font-size="12" fill="#52525b" text-anchor="start">24 turn clock</text>
+<rect x="200" y="380" width="250" height="72" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="325.0" y="394.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Counted when the 24 turns end</text>
+<text x="325.0" y="411.0" font-size="13" fill="#18181b" text-anchor="middle">More than half of all member</text>
+<text x="325.0" y="428.0" font-size="13" fill="#18181b" text-anchor="middle">parties vote yes. Non-voters</text>
+<text x="325.0" y="445.0" font-size="13" fill="#18181b" text-anchor="middle">count as no</text>
+<path d="M380 336 L380 380" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="490" y="380" width="250" height="72" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="615.0" y="402.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Result</text>
+<text x="615.0" y="419.5" font-size="13" fill="#18181b" text-anchor="middle">Fewer yes votes: nothing changes.</text>
+<text x="615.0" y="436.5" font-size="13" fill="#18181b" text-anchor="middle">More than half: coalition deleted</text>
+<path d="M450 416 L490 416" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+</svg>

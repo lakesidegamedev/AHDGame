@@ -4,6 +4,8 @@ This page is the how-to for [coalitions](/wiki/coalitions): creating one, bringi
 
 ## How it works
 
+![Lifecycle of a coalition from creation through invites and requests, leaving or kicking, chair transfer and a 24 turn disband vote that needs more than half of all member parties.](/wiki-images/diagrams/coalition-formation-lifecycle.svg)
+
 ### Create
 
 Only a national party chair can create a coalition. You choose a name (3 to 60 characters, unique in your country), an abbreviation (2 to 10 characters) and a colour. Your party becomes the first member and the **chair party**, and you become the coalition chair. A party already in a coalition cannot create another.

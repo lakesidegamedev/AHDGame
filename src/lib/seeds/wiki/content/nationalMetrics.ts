@@ -18,6 +18,10 @@ The game also tracks each region's **output trend** (what its own recent growth 
 
 Unemployment is counted from jobs. Each region has a labour force. Corporations post openings for the workers their sectors need, and a background economy employs the rest. Unemployment is the share of the labour force without a job.
 
+\`\`\`wiki-chart
+unemployment-output-gap
+\`\`\`
+
 - **The output gap sets the target.** A region has a structural rate, the unemployment that exists even in a normal year (4.5% unless local conditions change it). Each point of output gap moves the target by 0.4 points, down when the economy runs hot and up when it is slack. Funded matching, transport and childcare programmes lower the structural rate.
 - **Hiring takes time.** At average workforce skill, half of a corporation's open positions fill in 2 turns. The background economy closes half the gap to its target in about 24 turns. A more skilled workforce fills jobs faster.
 - **Floor.** Unemployment never reads below 1%.
@@ -27,6 +31,8 @@ Where a region has no labour force data, the game falls back to a simple Okun's 
 ### Inflation
 
 Inflation moves toward a target built from several pressures. In multiplayer it advances halfway at half past each hour, and the hourly turn applies the rest of the step.
+
+![Eight pressures push inflation, which in turn affects corporate margins and central bank chair scrutiny.](/wiki-images/diagrams/national-metrics-inflation-inputs.svg)
 
 | Pressure | Effect |
 | --- | --- |
@@ -80,6 +86,10 @@ Conditions in a state change the profit margin of corporations operating there, 
 ## Worked examples
 
 **A road programme.** A state's road condition is 60, so roads add nothing to margins. A funded programme lifts it to 80. Manufacturing, retail, agriculture, vehicle and construction corporations there gain (80 - 60) / 40 x 3 = **+1.5 margin points**. If the programme is cancelled, the 20-point gain fades by 0.25% of the remaining gap each turn: about 17.7 points left after 48 turns (one game year), about 10 after 277 turns, and about 2 after 920 turns. Decay is slow on purpose, so sustained policy is what holds a metric away from its baseline.
+
+\`\`\`wiki-chart
+metric-decay-recovery
+\`\`\`
 
 **A hot economy.** A region with a 4.5% structural rate has an output gap of +2 points. Its unemployment target is 4.5 - 0.4 x 2 = **3.7%**. Unemployment does not jump there. It slides toward 3.7% over a few dozen turns as corporations fill positions and the background economy hires.
 

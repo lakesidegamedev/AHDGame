@@ -42,6 +42,8 @@ The split is *relative*. If every seller has the same loyalty, everyone gets an 
 | Trusted | 70 to 89 |
 | Iconic | 90 to 100 |
 
+![Demand clears first through supply agreements, then the loyal slice, then cheapest-first, with the three conditions for earning loyalty beside the loyal slice.](/wiki-images/diagrams/brand-loyalty-clearing-order.svg)
+
 ### Worked example
 
 Two corporations sell steel in one market. Corp A is steady at loyalty 60 (Respected). Corp B has been erratic and sits at 20 (Emerging). Total loyalty is 80, so the 40% pool splits 60/80 and 20/80.
@@ -55,6 +57,10 @@ Now Corp A raises its posture from a norm of +5% to +15%, a 10 point jump. That 
 ### How long does a tier take?
 
 At 1 point per turn, a new corporation needs about 20 steady, contested, delivering turns to leave Unknown, 45 to reach Respected, 70 for Trusted and 90 for Iconic. A single gouge undoes ten of those turns. New corporations start at 0, and cannot earn a slice until they pass 5.
+
+\`\`\`wiki-chart
+brand-loyalty-tiers-over-time
+\`\`\`
 
 ## What you can do
 

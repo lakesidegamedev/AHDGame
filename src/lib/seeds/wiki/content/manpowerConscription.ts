@@ -6,6 +6,8 @@ Every nation holds a single pool of available men. Raising a unit draws its full
 
 Manage this from the defence seat's office → **Military** tab → **Operations**.
 
+![Chain from reserve law level to stance, ceiling and regeneration and the manpower pool, which hard blocks recruiting and feeds replacement mode and its experience dilution.](/wiki-images/diagrams/manpower-conscription-chain.svg)
+
 ## Key numbers
 
 | What | Value |
@@ -30,6 +32,10 @@ Your pool has two numbers that matter:
 
 - **Ceiling**: the most manpower you can ever bank. Derived from your **total population** and your conscription stance: **2% of population**, multiplied by the stance.
 - **Regeneration**: what arrives each turn. **0.05% of population**, multiplied by the stance.
+
+\`\`\`wiki-chart
+manpower-pool-refill-by-stance
+\`\`\`
 
 Both scale off population, so a large country genuinely fields more men. Both scale off the stance, so a country that mobilises its society hard gets more of them.
 
@@ -91,6 +97,10 @@ Conscript rebuilds **two and a half times faster** and is available only if your
 ## XP dilution: the real cost of conscripts
 
 This is the mechanic that makes veteran formations precious.
+
+\`\`\`wiki-chart
+conscript-xp-dilution
+\`\`\`
 
 When replacements join a unit, **their inexperience is blended into the unit's own experience by headcount**. Not averaged with the old value as a formality: genuinely diluted in proportion to how much of the unit is now new bodies.
 

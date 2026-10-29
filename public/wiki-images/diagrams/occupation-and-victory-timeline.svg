@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="330" viewBox="0 0 800 330" role="img" font-family="system-ui, sans-serif">
+<title>Victory timeline</title>
+<desc>From a front reaching a pole to the fog lifting: at least 24 turns of war, then terms pending for up to 24 turns, resolution, a 240 turn truce and fog lifting 480 turns after resolution. Not to scale.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#71717a"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker></defs>
+<rect x="0.5" y="0.5" width="799" height="329" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<text x="18" y="28" font-size="15" fill="#18181b" text-anchor="start" font-weight="700">From pole to open record (not to scale)</text>
+<line x1="40" y1="170" x2="770" y2="170" stroke="#a1a1aa" stroke-width="2"/>
+<circle cx="70" cy="170" r="7" fill="#eff6ff" stroke="#2563eb" stroke-width="2.5"/>
+<circle cx="235" cy="170" r="7" fill="#eff6ff" stroke="#2563eb" stroke-width="2.5"/>
+<circle cx="400" cy="170" r="7" fill="#eff6ff" stroke="#2563eb" stroke-width="2.5"/>
+<circle cx="565" cy="170" r="7" fill="#eff6ff" stroke="#2563eb" stroke-width="2.5"/>
+<circle cx="730" cy="170" r="7" fill="#eff6ff" stroke="#2563eb" stroke-width="2.5"/>
+<rect x="98.1" y="160" width="108.8" height="20" fill="#ffffff"/>
+<text x="152.5" y="174" font-size="12" fill="#2563eb" text-anchor="middle">24 turns minimum</text>
+<rect x="269.4" y="160" width="96.2" height="20" fill="#ffffff"/>
+<text x="317.5" y="174" font-size="12" fill="#2563eb" text-anchor="middle">up to 24 turns</text>
+<rect x="450.15" y="160" width="64.69999999999999" height="20" fill="#ffffff"/>
+<text x="482.5" y="174" font-size="12" fill="#2563eb" text-anchor="middle">240 turns</text>
+<rect x="599.4" y="160" width="96.2" height="20" fill="#ffffff"/>
+<text x="647.5" y="174" font-size="12" fill="#2563eb" text-anchor="middle">240 more turns</text>
+<text x="24" y="110" font-size="13" fill="#18181b" text-anchor="start" font-weight="700">Control reaches a pole</text>
+<text x="24" y="128" font-size="13" fill="#18181b" text-anchor="start">The side must still hold it</text>
+<line x1="70" y1="150" x2="70" y2="162" stroke="#d4d4d8" stroke-width="1"/>
+<text x="235" y="210" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Terms pending</text>
+<text x="235" y="228" font-size="13" fill="#18181b" text-anchor="middle">Fighting stops, armies stand down</text>
+<text x="235" y="245" font-size="13" fill="#18181b" text-anchor="middle">Victor names one term</text>
+<line x1="235" y1="178" x2="235" y2="196" stroke="#d4d4d8" stroke-width="1"/>
+<text x="400" y="110" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Resolved</text>
+<text x="400" y="128" font-size="13" fill="#18181b" text-anchor="middle">Term applied or window lapses</text>
+<text x="400" y="145" font-size="13" fill="#18181b" text-anchor="middle">Truce begins</text>
+<line x1="400" y1="150" x2="400" y2="162" stroke="#d4d4d8" stroke-width="1"/>
+<text x="565" y="210" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Truce ends</text>
+<text x="565" y="228" font-size="13" fill="#18181b" text-anchor="middle">Re-declaring is possible</text>
+<line x1="565" y1="178" x2="565" y2="196" stroke="#d4d4d8" stroke-width="1"/>
+<text x="776" y="110" font-size="13" fill="#18181b" text-anchor="end" font-weight="700">Fog lifts</text>
+<text x="776" y="128" font-size="13" fill="#18181b" text-anchor="end">Full record opens</text>
+<text x="776" y="145" font-size="13" fill="#18181b" text-anchor="end">480 turns after resolution</text>
+<line x1="730" y1="150" x2="730" y2="162" stroke="#d4d4d8" stroke-width="1"/>
+<text x="24" y="300" font-size="12" fill="#52525b" text-anchor="start">A war against an insurgency, or one whose losing founder already left, skips the terms window.</text>
+</svg>

@@ -6,6 +6,8 @@ World events are scheduled, country-level happenings: a state visit, an oil shoc
 
 Each turn the scheduler goes through every active country.
 
+![Per-turn scheduler checking each country for a pending offer, then picking the first due event, offering at most one to the head of government, and reporting the outcome in the news.](/wiki-images/diagrams/world-events-scheduler-flow.svg)
+
 1. If the country already has a pending world event, it is skipped.
 2. It looks for the first scheduled event that is due, allowed for that country, inside its year window and inside its tension window.
 3. At most **one** new world event is offered per country per turn.
@@ -53,6 +55,10 @@ If the head of government does not answer, the safe default resolves for them. E
 ### High-tension events
 
 These four are wartime society crises, and they are real crises with a decision card, not wire-only cards. They appear while the world's [tension gauge](/wiki/cold-war-tension) is high enough, one at a time every 3 to 6 turns, so they arrive as a staggered sequence and not all at once. Each lasts 12 turns and starts with a drag on one sector: retail down 4 for panic buying, financial down 8 for a bank run, retail down 18 for civil defense fever, media down 4 for protests.
+
+\`\`\`wiki-chart
+high-tension-world-events
+\`\`\`
 
 | Crisis | Option | Approval | Other effects |
 | --- | --- | --- | --- |

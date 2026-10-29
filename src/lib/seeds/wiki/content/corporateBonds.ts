@@ -87,6 +87,10 @@ Payments are made from corporate liquid capital. If the corporation's liquid cap
 
 Bond market prices fluctuate based on the current effective rate and time to maturity. The price is a fraction of face value (1.0 = par). It is the present value of the remaining coupons plus the present value of the face value returned at maturity, discounted at the current effective rate. The result is clamped between 0.05 and 2.0.
 
+\`\`\`wiki-chart
+corporate-bond-price-by-market-rate
+\`\`\`
+
 **Key relationships:**
 - When rates **rise**, existing bond prices **fall** (your fixed coupon is worth less relative to new issuances)
 - When rates **fall**, existing bond prices **rise**
@@ -113,6 +117,8 @@ A bond defaults when the corporation's liquid capital goes negative after a coup
 - The corporation's credit rating takes a **96-turn penalty**, locking it at CCC
 - **Defaulted bonds can still be traded** on the open market at distressed prices (fixed at 0.1)
 - CEOs **cannot** buy their own corporation's bonds at all (prevents self-dealing)
+
+![How a missed coupon or maturity payment leads through escrow and a solvency check to default, then refinance, restructure or dissolution.](/wiki-images/diagrams/corporate-bonds-default-flow.svg)
 
 ### Refinancing defaulted debt
 

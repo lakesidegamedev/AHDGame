@@ -15,6 +15,8 @@ This page covers declaring, scoring, computer-run candidates (NPPs) and tactics.
 
 Why ballots accumulate: a sustained lead should beat a last-turn surge, and a late entrant faces a fair field.
 
+![Primary timeline from spawn through the declaration window and the closing stretch where ballots count to the deadline, where the cumulative count decides.](/wiki-images/diagrams/primaries-timeline.svg)
+
 ### Key numbers
 
 | Item | Value |
@@ -35,6 +37,10 @@ Why ballots accumulate: a sustained lead should beat a last-turn surge, and a la
 ### The state primary score
 
 Your score is your standing within the party, from 0 to 100. It sets your share of each turn's ballots.
+
+\`\`\`wiki-chart
+state-primary-score-curves
+\`\`\`
 
 | Part | Max | How it is scored |
 | --- | --- | --- |
@@ -92,6 +98,7 @@ Tips:
 - [Political Parties](/wiki/political-parties): the party platform sets the alignment half of your score.
 - [party-ideology](/wiki/party-ideology): Party Ideology: alignment with the party and the state is worth up to 40 primary points.
 - [npp-elections](/wiki/npp-elections): NPP Elections: NPP candidates fill primary fields and score at half when a player is in the same primary.
+- [Party Slate](/wiki/party-slate): a slated NPP can join a primary and make it contested.
 
 **Affects**
 

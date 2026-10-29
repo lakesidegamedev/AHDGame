@@ -41,6 +41,10 @@ When the country runs a deficit it borrows by issuing sovereign bonds every 12 t
 
 The debt-to-GDP ratio sets a rating from AAA to CCC. The rating sets the budget's borrowing rate and a yearly hit to public trust.
 
+\`\`\`wiki-chart
+credit-rating-borrowing-ladder
+\`\`\`
+
 | Debt-to-GDP | Rating | Borrowing rate | Public trust hit at fiscal close |
 | --- | --- | --- | --- |
 | up to 60% | AAA | 2.0% | 0 |
@@ -56,6 +60,14 @@ The rating always reads the current ratio. A country's starting position in a sc
 ### What debt and deficits do to corporations
 
 Every corporation in a country feels the national finances through its profit margin, measured in percentage points.
+
+\`\`\`wiki-chart
+debt-to-gdp-corporate-margin-effect
+\`\`\`
+
+\`\`\`wiki-chart
+deficit-corporate-margin-effect
+\`\`\`
 
 | Debt-to-GDP | Margin effect |
 | --- | --- |
@@ -120,6 +132,8 @@ Your portfolio tax statement shows tax assessed, amounts paid or withheld, remai
 **Common questions.** *Why did my sale pay less than expected?* Tax on the profit was withheld before the cash arrived. *Why is my wealth lower after I earned income?* Any tax you could not pay yet counts as debt against your wealth. *Does the credit rating change anything for me?* It changes the trust the public has in the government, corporate margins in the country and what new bonds cost.
 
 ## Connections
+
+![Budget loop: tax bases and spending set the balance, deficits drive bond issuance, debt to GDP and credit rating, which feed back into interest, public trust, margins, GDP and tax bases.](/wiki-images/diagrams/national-budget-fiscal-loop.svg)
 
 **Driven by**
 

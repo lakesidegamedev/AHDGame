@@ -15,6 +15,8 @@ A rescue changes the corporation in one step:
 
 Each turn after that the corporation pays the IMF. The payment is the smaller of the scheduled loan payment and a fixed share of the corporation's income for the turn. If that share does not cover the interest, the unpaid interest is added to the loan, so the loan grows and the schedule stretches.
 
+![Steps of a corporate IMF rescue: bonds replaced by a loan, IMF shares issued, payouts stopped, share price cut, then a capped payment each turn.](/wiki-images/diagrams/imf-rescue-activation.svg)
+
 Why these rules? The IMF takes equity and halts payouts so that the money the company earns goes to repaying the rescue first, not to owners or executives who were in charge when it failed. The 0.85 multiplier keeps the share price from pretending the stigma does not exist.
 
 | Key number | Value |

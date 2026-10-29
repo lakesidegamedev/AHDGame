@@ -6,6 +6,8 @@ A tariff is a trade barrier a legislature passes by bill. It cuts the profit mar
 
 A tariff applies to a sector only when the sector operates **in the country that imposed it**. A US tariff on Chinese corporations does not touch Chinese sectors operating in Germany.
 
+![An enacted tariff becomes an effective rate that feeds six effects: foreign margin penalty, domestic malus, commodity blend tilt, market capture, inflation pressure and a sentiment pulse.](/wiki-images/diagrams/tariffs-effect-fan-out.svg)
+
 ### Key numbers
 
 | Rule | Value |
@@ -63,6 +65,14 @@ Domestic malus uses only economy-wide and sector tariffs. Origin-country and cor
 | 100% | -50 | -10 | x1.5 | x0.5 |
 
 (Margin figures are percentage points.)
+
+\`\`\`wiki-chart
+tariff-margin-effects
+\`\`\`
+
+\`\`\`wiki-chart
+tariff-blend-and-capture
+\`\`\`
 
 ## What you can do
 

@@ -13,6 +13,12 @@ Approval is built in layers. Each turn the game does this for every country:
 5. **Average the states by population.** This gives the national figure.
 6. **Apply national modifiers.** Cabinet gaps, war, public expectations and a few other effects are added to the national figure. These land at once and are not smoothed.
 
+\`\`\`wiki-chart
+approval-metric-contribution
+\`\`\`
+
+![Pipeline from state metrics through state score, conditions and smoothing to a national figure, national modifiers, the stored rating and elections.](/wiki-images/diagrams/government-approval-pipeline.svg)
+
 The one formula worth knowing:
 
 **State score = 50 + (weighted average metric contribution x 2.5)**
@@ -54,6 +60,14 @@ The other 76 cover economy, health, safety, environment, government, society, in
 ### National modifiers
 
 These are listed beside the rating on the Approval page, so the number always has a reason attached.
+
+\`\`\`wiki-chart
+cabinet-approval-drag
+\`\`\`
+
+\`\`\`wiki-chart
+war-exhaustion-curve
+\`\`\`
 
 | Modifier | What it is |
 | --- | --- |
@@ -97,6 +111,10 @@ Each state's approval scales the vote pool in every election there:
 
 - **Presidential elections:** the vote pool is multiplied by 1 + (approval - 0.5) x 0.5, up to 25% either way. At 70% approval that is 1.10. At 30% it is 0.90.
 - **Legislative and other elections:** the multiplier is 1 + (approval - 0.5) x 0.2, up to 10% either way. At 70% approval that is 1.04. At 30% it is 0.96.
+
+\`\`\`wiki-chart
+approval-vote-pool-multiplier
+\`\`\`
 
 Low approval does not trigger a snap election and does not remove anyone from office. Snap elections in parliamentary countries (UK, Japan, Germany) come from only two things: the Prime Minister (or Chancellor in Germany) choosing to dissolve the lower chamber, or no Prime Minister being appointed within 96 turns of the government entering pending status. See [Snap Elections](/wiki/snap-elections).
 

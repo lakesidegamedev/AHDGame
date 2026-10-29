@@ -67,10 +67,7 @@ import type {
   Seat,
 } from "@/lib/db/types";
 import { officialsCountryScope } from "@/lib/db/electedOfficialScope";
-import {
-  snapElectionResolutionYear,
-  shouldAnnounceVacancySnap,
-} from "@/lib/turn/rules/snapElection";
+import { snapElectionResolutionYear, shouldStartVacancySnap } from "@/lib/turn/rules/snapElection";
 import { japanShugiinRulesForRegion } from "@/lib/countries/jp/rules/shugiinElectoralLaw";
 
 export const SNAP_ELECTION_LIMIT = 2;
@@ -256,8 +253,8 @@ export async function triggerSnapElection(
     throw new SnapElectionError(`No election regions configured for ${countryId}`);
   }
 
-  // Only delivery is gated. Existing races survive restarts and identify a
-  // vacancy snap already in progress, independently of the current hour.
+  // An automatic retry must not dissolve the chamber or spawn races again.
+  // Live races identify the same vacancy across turns and process restarts.
   const liveVacancySnap =
     opts.reason === "auto-snap"
       ? await db
@@ -267,6 +264,34 @@ export async function triggerSnapElection(
             { projection: { _id: 1 } }
           )
       : null;
+
+  if (opts.reason === "auto-snap") {
+    const unchanged = (): TriggerSnapResult => ({
+      electionsSpawned: 0,
+      snapElectionsUsed: snapUsed,
+      snapElectionsRemaining: Math.max(0, SNAP_ELECTION_LIMIT - snapUsed),
+      snapElectionType,
+      currentTurn,
+    });
+    if (!shouldStartVacancySnap(!!liveVacancySnap, gov.lastSnapElectionTurn, currentTurn)) {
+      return unchanged();
+    }
+    // Claim the existing stamp BEFORE any dissolution side effect. Two callers
+    // that saw no live races cannot both create a batch. A failed pre-spawn
+    // attempt can retry on a later turn without a permanent lock.
+    const claimed = await govCol.findOneAndUpdate(
+      {
+        _id: countryId,
+        status: gov.status,
+        pmCharacterId: gov.pmCharacterId ?? null,
+        pmNppId: gov.pmNppId ?? null,
+        lastSnapElectionTurn: gov.lastSnapElectionTurn ?? null,
+      },
+      { $set: { lastSnapElectionTurn: currentTurn, updatedAt: now } },
+      { returnDocument: "before", projection: { _id: 1 } }
+    );
+    if (!claimed) return unchanged();
+  }
 
   // 1. Cancel active/upcoming regular lower-chamber elections for this country.
   //    Capture the affected election ids first so we can withdraw the candidate
@@ -436,20 +461,7 @@ export async function triggerSnapElection(
       updatedAt: now,
     },
   };
-  let announceSnap = true;
-  if (opts.reason === "auto-snap") {
-    // Reuse the existing stamp write as an atomic claim. Concurrent attempts
-    // see the preceding stamp, so only one can announce this turn's start.
-    const previous = await govCol.findOneAndUpdate({ _id: countryId }, snapTrackingUpdate, {
-      returnDocument: "before",
-      projection: { lastSnapElectionTurn: 1 },
-    });
-    announceSnap =
-      previous !== null &&
-      shouldAnnounceVacancySnap(!!liveVacancySnap, previous.lastSnapElectionTurn, currentTurn);
-  } else {
-    await govCol.updateOne({ _id: countryId }, snapTrackingUpdate);
-  }
+  await govCol.updateOne({ _id: countryId }, snapTrackingUpdate);
 
   // 6. Vacate the sitting PM and unform the government. Must run BEFORE the
   //    reset below so the reset takes the no-sitting-PM branch and only
@@ -460,22 +472,21 @@ export async function triggerSnapElection(
   await resetParliamentaryGovernmentAfterElection(db, countryId, now);
 
   const chamberName = config.legislature.lowerChamber.name;
-  if (announceSnap)
-    sendCountryGameEvent(countryId, {
-      // An imposed dissolution is not the executive's doing, and a headline
-      // crediting them for it would misdescribe what happened to the country.
-      title: imposed
-        ? `${chamberName} Dissolved Under a Peace Settlement`
-        : `${config.executiveTitle} Dissolves ${chamberName}`,
-      description: imposed
-        ? `The terms of a peace settlement dissolve the ${chamberName} and call fresh elections. All active legislation has been cancelled.`
-        : opts.reason === "auto-snap"
-          ? `**No ${config.executiveTitle}** was appointed within the ${chamberName} vacancy window. The ${chamberName} is automatically dissolved and a snap election called.`
-          : `**${opts.actorName ?? config.executiveTitle}** has dissolved the ${chamberName} and called a snap election. All active legislation has been cancelled.`,
-      color: DISCORD_COLORS.govCollapsed,
-      footer: { text: "A House Divided" },
-      timestamp: now.toISOString(),
-    }).catch(() => {});
+  sendCountryGameEvent(countryId, {
+    // An imposed dissolution is not the executive's doing, and a headline
+    // crediting them for it would misdescribe what happened to the country.
+    title: imposed
+      ? `${chamberName} Dissolved Under a Peace Settlement`
+      : `${config.executiveTitle} Dissolves ${chamberName}`,
+    description: imposed
+      ? `The terms of a peace settlement dissolve the ${chamberName} and call fresh elections. All active legislation has been cancelled.`
+      : opts.reason === "auto-snap"
+        ? `**No ${config.executiveTitle}** was appointed within the ${chamberName} vacancy window. The ${chamberName} is automatically dissolved and a snap election called.`
+        : `**${opts.actorName ?? config.executiveTitle}** has dissolved the ${chamberName} and called a snap election. All active legislation has been cancelled.`,
+    color: DISCORD_COLORS.govCollapsed,
+    footer: { text: "A House Divided" },
+    timestamp: now.toISOString(),
+  }).catch(() => {});
 
   const usedAfter = imposed ? snapUsed : snapUsed + 1;
   return {
