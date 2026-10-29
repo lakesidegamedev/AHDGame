@@ -56,7 +56,7 @@ const STAT_LABEL: Record<string, string> = {
  * has an active debate (or a recently resolved one to summarize). Lets the
  * player commit to a single risk/reward strategy before the deadline.
  */
-export default function DebateCard() {
+export default function DebateCard({ imageUrl }: { imageUrl?: string | null } = {}) {
   const [debate, setDebate] = useState<ActiveDebate | null>(null);
   const [lastResolved, setLastResolved] = useState<LastResolvedDebate | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
@@ -168,6 +168,7 @@ export default function DebateCard() {
       kind="debate"
       status={debate.canSubmit ? "decision" : "active"}
       tone="sky"
+      image={imageUrl}
       title={`vs. ${debate.opponentName}`}
       aside={
         <Countdown

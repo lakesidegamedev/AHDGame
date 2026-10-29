@@ -3,7 +3,6 @@
 import { InlineError } from "@/components/ui/InlineError";
 import { apiErrorText } from "@/lib/errors/catalog";
 import React, { useCallback, useEffect, useState } from "react";
-import Image from "next/image";
 import type { EventEffect } from "@/lib/db/types/events";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { Countdown, EventItem, EventOutcomeRow } from "./EventsPanel";
@@ -214,6 +213,7 @@ export default function PlayerEventCard() {
       kind="event"
       status={result ? "recent" : "decision"}
       tone="violet"
+      image={event.image}
       title={
         <>
           <span className="sr-only">Event: </span>
@@ -222,11 +222,6 @@ export default function PlayerEventCard() {
       }
       aside={result ? null : <Countdown label="Respond within" value={formatCountdown(msLeft)} />}
     >
-      {event.image && (
-        <div className="relative -mx-1 h-36 overflow-hidden rounded-lg sm:h-44">
-          <Image src={event.image} alt={event.title} fill className="object-cover" unoptimized />
-        </div>
-      )}
       <div>
         <p className="text-body font-semibold text-foreground">{event.headline}</p>
         <p className="mt-1 text-body text-muted">{event.body}</p>

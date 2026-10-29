@@ -1,7 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { AlertTriangle, Clock, Mic, Newspaper, Radio } from "lucide-react";
+import Image from "next/image";
+import { Activity, Clock, MessagesSquare, Newspaper, Siren, type LucideIcon } from "lucide-react";
 
 /**
  * One panel on the Actions page for everything that is happening TO the
@@ -21,7 +22,7 @@ export function EventsPanel({ children }: { children: ReactNode }) {
     >
       <header className="flex items-center gap-2.5 border-b border-card-border px-4 py-3 sm:px-5">
         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <Radio className="h-4 w-4" aria-hidden />
+          <Activity className="h-4 w-4" aria-hidden />
         </span>
         <div className="min-w-0">
           <h2 id="actions-events-heading" className="text-body-lg font-semibold text-foreground">
@@ -39,10 +40,17 @@ export type EventKind = "crisis" | "debate" | "event";
 /** decision: waiting on the player. active: ongoing, nothing to choose. recent: settled. */
 export type EventStatus = "decision" | "active" | "recent";
 
-const KIND_META: Record<EventKind, { label: string; Icon: typeof Mic }> = {
-  crisis: { label: "Crisis", Icon: AlertTriangle },
-  debate: { label: "Debate", Icon: Mic },
+const KIND_META: Record<EventKind, { label: string; Icon: LucideIcon }> = {
+  crisis: { label: "Crisis", Icon: Siren },
+  debate: { label: "Debate", Icon: MessagesSquare },
   event: { label: "Event", Icon: Newspaper },
+};
+
+/** Default tone per kind, for rows that have no severity of their own. */
+const KIND_TONE: Record<EventKind, "rose" | "sky" | "violet"> = {
+  crisis: "rose",
+  debate: "sky",
+  event: "violet",
 };
 
 const ORDER: Record<EventStatus, string> = {
@@ -51,17 +59,13 @@ const ORDER: Record<EventStatus, string> = {
   recent: "order-3",
 };
 
-/** Accent colors per tone: rail, icon tile and kind label. */
+/** Accent colors per tone: icon tile and kind label. */
 export const EVENT_TONES = {
-  rose: { rail: "bg-rose-500", tile: "bg-rose-500/10 text-rose-400", text: "text-rose-400" },
-  amber: { rail: "bg-amber-500", tile: "bg-amber-500/10 text-amber-400", text: "text-amber-400" },
-  zinc: { rail: "bg-zinc-400", tile: "bg-zinc-400/10 text-zinc-400", text: "text-zinc-400" },
-  sky: { rail: "bg-sky-500", tile: "bg-sky-500/10 text-sky-400", text: "text-sky-400" },
-  violet: {
-    rail: "bg-violet-500",
-    tile: "bg-violet-500/10 text-violet-400",
-    text: "text-violet-400",
-  },
+  rose: { tile: "bg-rose-500/15 text-rose-300 ring-rose-400/30", text: "text-rose-300" },
+  amber: { tile: "bg-amber-500/15 text-amber-300 ring-amber-400/30", text: "text-amber-300" },
+  zinc: { tile: "bg-zinc-400/15 text-zinc-300 ring-zinc-400/30", text: "text-zinc-300" },
+  sky: { tile: "bg-sky-500/15 text-sky-300 ring-sky-400/30", text: "text-sky-300" },
+  violet: { tile: "bg-violet-500/15 text-violet-300 ring-violet-400/30", text: "text-violet-300" },
 } as const;
 export type EventTone = keyof typeof EVENT_TONES;
 
@@ -72,8 +76,10 @@ interface EventItemProps {
   title: ReactNode;
   /** Small chips beside the kind label (scope, severity). */
   tags?: ReactNode;
-  /** Top-right slot: countdown, dismiss, time ago. */
+  /** Top-right slot: countdown, dismiss. */
   aside?: ReactNode;
+  /** Art for the header band. Kept short and dimmed so it sets the scene, not the size. */
+  image?: string | null;
   /** Extra classes for the tile border (crisis severity). */
   className?: string;
   id?: string;
@@ -88,6 +94,7 @@ export function EventItem({
   title,
   tags,
   aside,
+  image,
   className = "border-card-border",
   id,
   children,
@@ -100,14 +107,34 @@ export function EventItem({
       data-event-item={kind}
       className={`relative overflow-hidden rounded-lg border bg-background/40 ${ORDER[status]} ${className}`}
     >
-      <span className={`absolute inset-y-0 left-0 w-1 ${t.rail}`} aria-hidden />
-      <div className="py-3.5 pr-4 pl-5">
-        <div className="flex items-start justify-between gap-3">
+      <div className="relative">
+        {image && (
+          <>
+            <Image
+              src={image}
+              alt=""
+              fill
+              unoptimized
+              className="object-cover object-center opacity-60"
+            />
+            <div
+              className="absolute inset-0 bg-gradient-to-r from-background via-background/85 to-background/30"
+              aria-hidden
+            />
+            <div
+              className="absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-background/60 to-transparent"
+              aria-hidden
+            />
+          </>
+        )}
+        <div
+          className={`relative flex items-start justify-between gap-3 px-4 ${image ? "py-4" : "pt-3.5"}`}
+        >
           <div className="flex min-w-0 items-start gap-3">
             <span
-              className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${t.tile}`}
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1 backdrop-blur-sm ${t.tile}`}
             >
-              <Icon className="h-4 w-4" aria-hidden />
+              <Icon className="h-5 w-5" aria-hidden />
             </span>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -128,8 +155,8 @@ export function EventItem({
           </div>
           {aside && <div className="flex shrink-0 flex-col items-end gap-1">{aside}</div>}
         </div>
-        {children && <div className="mt-3 space-y-3">{children}</div>}
       </div>
+      {children && <div className="space-y-3 px-4 pt-3 pb-4">{children}</div>}
     </article>
   );
 }
@@ -165,8 +192,10 @@ export function EventOutcomeRow({
       data-event-item={kind}
       className={`flex items-start gap-3 rounded-lg border border-card-border/60 px-3 py-2.5 ${ORDER.recent}`}
     >
-      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-card-elevated text-muted">
-        <Icon className="h-3.5 w-3.5" aria-hidden />
+      <span
+        className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ring-1 ${EVENT_TONES[KIND_TONE[kind]].tile}`}
+      >
+        <Icon className="h-4 w-4" aria-hidden />
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
