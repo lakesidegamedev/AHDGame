@@ -30,7 +30,12 @@ import { AskUpgradeCard } from "@/components/askDrawer/AskUpgradeCard";
 import { ASK_SITE_URL } from "@/lib/askDrawer/askService";
 import { isValidElement, type ReactNode } from "react";
 import { AskChart, AskDiagram, AskMap, richKind } from "@/components/askDrawer/AskRichBlock";
-import { KEIR_STATES, KeirSprite, type KeirMood } from "@/components/askDrawer/KeirSprite";
+import {
+  KEIR_STATES,
+  KeirAvatar,
+  KeirSprite,
+  type KeirMood,
+} from "@/components/askDrawer/KeirSprite";
 import { AskActionCard } from "@/components/askDrawer/AskActionCard";
 import {
   ALERT_MS,
@@ -192,14 +197,19 @@ function KeirWithAlert({
   mood,
   alerting,
   scale,
+  avatar = false,
+  size = 38,
 }: {
   mood: KeirMood;
   alerting: boolean;
   scale?: number;
+  size?: number;
+  /** A round head-and-shoulders crop, for the header. */
+  avatar?: boolean;
 }) {
   return (
     <span className="relative inline-flex">
-      <KeirSprite mood={mood} scale={scale} />
+      {avatar ? <KeirAvatar mood={mood} size={size} /> : <KeirSprite mood={mood} scale={scale} />}
       {alerting && (
         <span
           aria-hidden
@@ -244,33 +254,159 @@ const ICONS = {
   bolt: "M13 2L4 14h7l-1 8 9-12h-7l1-8z",
   page: "M7 3h7l5 5v13H7zM14 3v5h5",
   chev: "M9 6l6 6-6 6",
+  share: "M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M16 6l-4-4-4 4M12 2v13",
+  pencil: "M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4",
+  check: "M5 12l5 5 9-10",
 };
+
+const REPORT_REASONS = [
+  "Wrong or outdated",
+  "Didn't answer the question",
+  "Missing sources",
+  "Confusing",
+  "Other",
+];
+
+/** Thread list sections, the same ones the Ask site uses. */
+export function threadGroup(ts: number | undefined, now = new Date()): string {
+  if (!ts) return "Older";
+  const d = new Date(ts);
+  if (d.toDateString() === now.toDateString()) return "Today";
+  if (new Date(now.getTime() - 86_400_000).toDateString() === d.toDateString()) return "Yesterday";
+  const days = (now.getTime() - d.getTime()) / 86_400_000;
+  return days < 7 ? "Previous 7 days" : "Older";
+}
+
+export function groupThreads(
+  convs: AskConversationSummary[],
+  searching: boolean,
+  now = new Date()
+): Array<{ label: string; items: AskConversationSummary[] }> {
+  const groups: Array<{ label: string; items: AskConversationSummary[] }> = [];
+  for (const c of convs) {
+    const label = searching
+      ? "Matches"
+      : c.pinned
+        ? "Pinned"
+        : threadGroup(c.updated ?? c.created, now);
+    const group = groups.find((g) => g.label === label);
+    if (group) group.items.push(c);
+    else groups.push({ label, items: [c] });
+  }
+  return groups;
+}
 
 const MARKDOWN_CLASS =
   "text-[15px] leading-relaxed text-foreground [&_a]:text-primary [&_a]:underline [&_code]:rounded [&_code]:bg-card-elevated [&_code]:px-1 [&_code]:text-[13px] [&_h1]:mb-1 [&_h1]:mt-4 [&_h1]:font-semibold [&_h2]:mb-1 [&_h2]:mt-4 [&_h2]:font-semibold [&_h3]:mb-1 [&_h3]:mt-3 [&_h3]:font-semibold [&_li]:mb-1 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p:last-child]:mb-0 [&_p]:mb-3 [&_pre]:mb-3 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-card-elevated [&_pre]:p-3 [&_table]:mb-3 [&_table]:w-full [&_table]:text-[13px] [&_td]:border-t [&_td]:border-card-border/60 [&_td]:px-2 [&_td]:py-1 [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:font-semibold [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5";
 
+/** Hover-revealed on desktop; always shown on touch screens, which cannot hover. */
+const TOUCH_VISIBLE =
+  "[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus:opacity-100";
+
+/** The typing caret, drawn at the end of the last paragraph or list item rather than on a line of its own. */
+const STREAM_CARET =
+  "[&>:is(p,ul,ol):last-child_:is(p,li):last-child]:after:ml-0.5 [&>p:last-child]:after:ml-0.5 [&>:is(p,ul,ol):last-child_:is(p,li):last-child]:after:inline-block [&>p:last-child]:after:inline-block [&>:is(p,ul,ol):last-child_:is(p,li):last-child]:after:h-4 [&>p:last-child]:after:h-4 [&>:is(p,ul,ol):last-child_:is(p,li):last-child]:after:w-[3px] [&>p:last-child]:after:w-[3px] [&>:is(p,ul,ol):last-child_:is(p,li):last-child]:after:animate-pulse [&>p:last-child]:after:animate-pulse [&>:is(p,ul,ol):last-child_:is(p,li):last-child]:after:bg-foreground/60 [&>p:last-child]:after:bg-foreground/60 [&>:is(p,ul,ol):last-child_:is(p,li):last-child]:after:align-middle [&>p:last-child]:after:align-middle [&>:is(p,ul,ol):last-child_:is(p,li):last-child]:after:content-[''] [&>p:last-child]:after:content-['']";
+
 const QUIET_BUTTON =
-  "inline-flex h-7 w-7 items-center justify-center rounded-md text-muted transition-colors hover:bg-card-elevated hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-40";
+  "inline-flex h-9 w-9 sm:h-7 sm:w-7 items-center justify-center rounded-md text-muted transition-colors hover:bg-card-elevated hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-40";
+
+/** Report an answer: a reason chip plus optional detail, as on the Ask site. */
+function ReportForm({
+  onSend,
+  onCancel,
+}: {
+  onSend: (reason: string) => void;
+  onCancel: () => void;
+}) {
+  const [tag, setTag] = useState<string | null>(null);
+  const [detail, setDetail] = useState("");
+  return (
+    <div
+      className="space-y-2 rounded-lg border border-card-border bg-card-elevated/40 p-3"
+      data-ask-report
+    >
+      <p className="text-[13px] text-foreground">
+        What went wrong? Staff review every report, with this question and answer.
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {REPORT_REASONS.map((r) => (
+          <button
+            key={r}
+            type="button"
+            aria-pressed={tag === r}
+            onClick={() => setTag(tag === r ? null : r)}
+            className={`rounded-full border px-2.5 py-1 text-[12px] transition-colors ${tag === r ? "border-transparent bg-primary text-white" : "border-card-border text-muted hover:text-foreground"}`}
+          >
+            {r}
+          </button>
+        ))}
+      </div>
+      <textarea
+        value={detail}
+        onChange={(e) => setDetail(e.target.value.slice(0, 500))}
+        rows={2}
+        placeholder="Add detail (optional)"
+        aria-label="Report detail"
+        className="w-full resize-none rounded-md border border-card-border bg-background px-2 py-1.5 text-base text-foreground placeholder:text-muted focus:border-primary focus:outline-none sm:text-[13px]"
+      />
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          disabled={!tag && !detail.trim()}
+          onClick={() => onSend([tag ?? "", detail.trim()].filter(Boolean).join(": "))}
+          className="rounded-md bg-primary px-3 py-1.5 text-[12px] font-semibold text-white disabled:bg-card-elevated disabled:text-muted"
+        >
+          Send report
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-md px-2 py-1.5 text-[12px] text-muted hover:text-foreground"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function TurnView({
   turn,
   fullAskUrl,
+  canShare,
   onFollowup,
   onFeedback,
+  onShare,
   onFiled,
+  keir,
 }: {
   turn: Turn;
   fullAskUrl: string;
+  canShare: boolean;
   onFollowup: (question: string) => void;
-  onFeedback: (turn: Turn, rating: "up" | "down") => void;
+  onFeedback: (turn: Turn, rating: "up" | "down", reason?: string) => void;
+  onShare: () => Promise<string | null>;
   onFiled: (receipt: AskActionReceipt) => void;
+  /** Keir, shown beside the research steps while this answer is being worked on. */
+  keir?: ReactNode;
 }) {
-  const [copied, setCopied] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  const [reporting, setReporting] = useState(false);
+  const noteTimer = useRef(0);
+  useEffect(() => () => window.clearTimeout(noteTimer.current), []);
+  const flashNote = (text: string) => {
+    setNote(text);
+    window.clearTimeout(noteTimer.current);
+    noteTimer.current = window.setTimeout(() => setNote(null), 1800);
+  };
   const copy = () => {
-    void navigator.clipboard?.writeText(turn.answer).then(() => {
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1500);
-    });
+    void navigator.clipboard
+      ?.writeText(turn.answer)
+      .then(() => flashNote("Copied"))
+      .catch(() => flashNote("Could not copy"));
+  };
+  const share = () => {
+    void onShare().then((message) => message && flashNote(message));
   };
 
   return (
@@ -290,15 +426,31 @@ function TurnView({
         )}
         {!turn.streaming && turn.answer && (
           <div className="ml-auto flex items-center">
+            {note && (
+              <span className="mr-1 text-[11px] text-emerald-400" role="status">
+                {note}
+              </span>
+            )}
             <button
               type="button"
               onClick={copy}
               className={QUIET_BUTTON}
-              aria-label={copied ? "Copied" : "Copy answer"}
-              title={copied ? "Copied" : "Copy"}
+              aria-label="Copy answer"
+              title="Copy"
             >
               <Icon d={ICONS.copy} className="h-3.5 w-3.5" />
             </button>
+            {canShare && (
+              <button
+                type="button"
+                onClick={share}
+                className={QUIET_BUTTON}
+                aria-label="Share this thread"
+                title="Share"
+              >
+                <Icon d={ICONS.share} className="h-3.5 w-3.5" />
+              </button>
+            )}
             {turn.answerId && (
               <>
                 <button
@@ -313,7 +465,7 @@ function TurnView({
                 </button>
                 <button
                   type="button"
-                  onClick={() => onFeedback(turn, "down")}
+                  onClick={() => setReporting(true)}
                   disabled={turn.feedback !== null}
                   className={`${QUIET_BUTTON} ${turn.feedback === "down" ? "text-amber-400" : ""}`}
                   aria-label="Report a problem with this answer"
@@ -327,30 +479,43 @@ function TurnView({
         )}
       </div>
 
+      {reporting && turn.feedback === null && (
+        <ReportForm
+          onCancel={() => setReporting(false)}
+          onSend={(reason) => {
+            setReporting(false);
+            onFeedback(turn, "down", reason);
+            flashNote("Reported. Thank you.");
+          }}
+        />
+      )}
       {turn.ack && <p className="text-[15px] leading-relaxed text-foreground">{turn.ack}</p>}
       {turn.streaming && !turn.answer && (
-        <div
-          className="space-y-1 rounded-lg border border-card-border/70 bg-card-elevated/40 px-3 py-2 text-[13px] text-muted"
-          role="status"
-          aria-live="polite"
-        >
-          {/* The research steps as they happen; the latest one is still running. */}
-          {turn.trail.slice(-5, -1).map((step, i) => (
-            <div key={`${i}-${step}`} className="flex items-center gap-2 text-muted/80">
-              <span className="text-[11px] text-emerald-400" aria-hidden>
-                ✓
-              </span>
-              <span className="truncate">{step}</span>
+        <div className="flex items-start gap-3">
+          {keir}
+          <div
+            className="min-w-0 flex-1 space-y-1 rounded-lg border border-card-border/70 bg-card-elevated/40 px-3 py-2 text-[13px] text-muted"
+            role="status"
+            aria-live="polite"
+          >
+            {/* The research steps as they happen; the latest one is still running. */}
+            {turn.trail.slice(-5, -1).map((step, i) => (
+              <div key={`${i}-${step}`} className="flex items-center gap-2 text-muted/80">
+                <span className="text-[11px] text-emerald-400" aria-hidden>
+                  ✓
+                </span>
+                <span className="truncate">{step}</span>
+              </div>
+            ))}
+            <div className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-primary" />
+              <span className="truncate">{turn.status || turn.trail.at(-1) || "Working"}</span>
             </div>
-          ))}
-          <div className="flex items-center gap-2">
-            <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-primary" />
-            <span className="truncate">{turn.status || turn.trail.at(-1) || "Working"}</span>
           </div>
         </div>
       )}
       {turn.answer && (
-        <div className={MARKDOWN_CLASS}>
+        <div className={`${MARKDOWN_CLASS} ${turn.streaming ? STREAM_CARET : ""}`}>
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
@@ -390,9 +555,6 @@ function TurnView({
           >
             {turn.answer}
           </ReactMarkdown>
-          {turn.streaming && (
-            <span className="ml-0.5 inline-block h-4 w-[3px] animate-pulse bg-foreground/60 align-middle" />
-          )}
         </div>
       )}
       {turn.error && <p className="text-[15px] text-foreground">{turn.error}</p>}
@@ -553,6 +715,9 @@ export function AskDrawerPanel({
   const [unavailable, setUnavailable] = useState<string | null>(null);
   const [convs, setConvs] = useState<AskConversationSummary[]>([]);
   const [search, setSearch] = useState("");
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const [renameText, setRenameText] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // A one-off reaction (wave on open, nod on the ack, thumbs up when an answer lands).
   const [flash, setFlash] = useState<KeirMood | null>("wave");
@@ -633,9 +798,13 @@ export function AskDrawerPanel({
     };
   }, []);
 
+  // Follow the answer as it streams only while the player is at the bottom.
+  // Snapping down on every word fought anyone scrolling up to read, and on
+  // phones the jumps shook the whole sheet.
+  const stickRef = useRef(true);
   useEffect(() => {
     const el = bodyRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (el && stickRef.current) el.scrollTop = el.scrollHeight;
   }, [turns]);
 
   const updateTurn = useCallback(
@@ -690,6 +859,10 @@ export function AskDrawerPanel({
       const turn = newTurn(q);
       setTurns((all) => [...all, turn]);
       setQuestion("");
+      stickRef.current = true;
+      // On a phone, put the keyboard away so the answer gets the screen. Left
+      // up, Safari pans the page under it and pushes the header off the top.
+      if (window.matchMedia?.("(pointer: coarse)").matches) inputRef.current?.blur();
       setView("thread");
       setBusy(true);
       const controller = new AbortController();
@@ -797,6 +970,8 @@ export function AskDrawerPanel({
           citations?: AskCitation[];
           areas?: string[];
           id?: number;
+          used_mcp?: number | boolean;
+          feedback_rating?: string | null;
         }>;
       }>(`conversation?id=${encodeURIComponent(id)}`)
         .then((d) =>
@@ -809,6 +984,11 @@ export function AskDrawerPanel({
               citations: t.citations ?? [],
               areas: t.areas ?? [],
               answerId: t.id ?? null,
+              usedMcp: !!t.used_mcp,
+              feedback:
+                t.feedback_rating === "up" || t.feedback_rating === "down"
+                  ? t.feedback_rating
+                  : null,
             }))
           )
         )
@@ -818,14 +998,53 @@ export function AskDrawerPanel({
   );
 
   const feedback = useCallback(
-    (turn: Turn, rating: "up" | "down") => {
+    (turn: Turn, rating: "up" | "down", reason = "") => {
       if (!turn.answerId) return;
       updateTurn(turn.key, { feedback: rating });
-      askJson("answer/feedback", { answerId: turn.answerId, rating, reason: "" }).catch(() =>
+      askJson("answer/feedback", { answerId: turn.answerId, rating, reason }).catch(() =>
         updateTurn(turn.key, { feedback: null })
       );
     },
     [updateTurn]
+  );
+
+  /** Make a public read-only link to this thread, as the Ask site's Share does. */
+  const shareThread = useCallback(async (): Promise<string | null> => {
+    if (!convId) return null;
+    try {
+      const d = await askJson<{ url?: string | null }>("conversation/share", { id: convId });
+      const url = absoluteAskUrl(d.url ?? undefined);
+      if (!url) return "Could not make a link";
+      if (
+        typeof navigator.share === "function" &&
+        window.matchMedia?.("(pointer: coarse)").matches
+      ) {
+        await navigator.share({ title: "Ask Keir", url }).catch(() => undefined);
+        return null;
+      }
+      await navigator.clipboard?.writeText(url);
+      return "Link copied";
+    } catch {
+      return "Could not make a link";
+    }
+  }, [convId]);
+
+  const startRename = useCallback((c: AskConversationSummary) => {
+    setConfirmDelete(null);
+    setRenaming(c.id);
+    setRenameText(c.title || "");
+  }, []);
+
+  const finishRename = useCallback(
+    (save: boolean) => {
+      const id = renaming;
+      const title = renameText.trim().slice(0, 120);
+      setRenaming(null);
+      if (!save || !id || !title) return;
+      setConvs((all) => all.map((c) => (c.id === id ? { ...c, title } : c)));
+      askJson("conversation/rename", { id, title }).catch(() => loadConvs(search.trim()));
+    },
+    [loadConvs, renameText, renaming, search]
   );
 
   const togglePin = useCallback(
@@ -839,6 +1058,12 @@ export function AskDrawerPanel({
 
   const remove = useCallback(
     (c: AskConversationSummary) => {
+      // On touch screens the delete button is always showing, so it takes two taps.
+      if (confirmDelete !== c.id) {
+        setConfirmDelete(c.id);
+        return;
+      }
+      setConfirmDelete(null);
       askJson("conversation/delete", { id: c.id })
         .then(() => {
           if (c.id === convId) newThread();
@@ -846,7 +1071,7 @@ export function AskDrawerPanel({
         })
         .catch(() => undefined);
     },
-    [convId, loadConvs, newThread, search]
+    [confirmDelete, convId, loadConvs, newThread, search]
   );
 
   useEffect(() => {
@@ -945,12 +1170,12 @@ export function AskDrawerPanel({
   const outOfEnergy = usage !== null && energySpent(usage);
   const fullAskUrl = convId ? `${ASK_SITE_URL}/?c=${encodeURIComponent(convId)}` : ASK_SITE_URL;
   const headerButton =
-    "inline-flex h-11 w-11 sm:h-8 sm:w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-card-elevated hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary";
+    "inline-flex h-10 w-10 shrink-0 sm:h-8 sm:w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-card-elevated hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary";
 
   return (
     <div className="flex h-full flex-col" onPointerDown={noteActivity} onKeyDown={noteActivity}>
       <header
-        className="flex items-center gap-0.5 border-b border-card-border/70 px-3 py-2"
+        className="flex min-h-[56px] items-center gap-0.5 border-b border-card-border/70 px-3 py-2 sm:min-h-0"
         // On a phone the drawer is a sheet: a downward swipe on its header closes it.
         onTouchStart={(e) => {
           swipeRef.current = e.touches[0]?.clientY ?? null;
@@ -962,12 +1187,21 @@ export function AskDrawerPanel({
           if (start !== null && end !== undefined && end - start > 80) onClose();
         }}
       >
-        <div className="mr-auto flex items-center gap-2">
+        <div className="mr-auto flex min-w-0 items-center gap-2.5">
           {/* The empty drawer shows Keir large below; one Keir at a time. */}
           {(turns.length > 0 || view === "history") && (
-            <KeirWithAlert mood={keirMood} alerting={alerting} />
+            <KeirWithAlert mood={keirMood} alerting={alerting} avatar />
           )}
-          <span className="text-[15px] font-semibold tracking-tight text-foreground">Ask Keir</span>
+          <div className="min-w-0">
+            <div className="truncate text-[15px] font-semibold leading-tight tracking-tight text-foreground">
+              Ask Keir
+            </div>
+            {view === "thread" && turns.length > 0 && (
+              <div className="truncate text-[11px] leading-tight text-muted" aria-live="polite">
+                {busy ? (lastTurn?.answer ? "Answering" : "Researching") : (planLabel ?? "Ready")}
+              </div>
+            )}
+          </div>
         </div>
         <button
           type="button"
@@ -1009,7 +1243,14 @@ export function AskDrawerPanel({
         </button>
       </header>
 
-      <div ref={bodyRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+      <div
+        ref={bodyRef}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+        }}
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4"
+      >
         {unavailable && (
           <div className="mb-4 rounded-lg border border-card-border bg-card-elevated/50 px-3 py-2 text-[13px] text-foreground">
             {unavailable}
@@ -1030,39 +1271,98 @@ export function AskDrawerPanel({
                   {search ? "No threads match." : "No threads yet. Your questions show up here."}
                 </p>
               )}
-              {convs.map((c) => (
-                <div
-                  key={c.id}
-                  className={`group flex items-center gap-0.5 rounded-md pl-2 hover:bg-card-elevated/60 ${c.id === convId ? "bg-card-elevated/60" : ""}`}
-                >
-                  <button
-                    type="button"
-                    onClick={() => openConversation(c.id)}
-                    className="min-w-0 flex-1 truncate py-1.5 text-left text-[13px] text-foreground"
-                    title={c.title || "Untitled"}
-                  >
-                    {c.title || "Untitled"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => togglePin(c)}
-                    className={`${QUIET_BUTTON} ${c.pinned ? "text-foreground" : "opacity-0 focus:opacity-100 group-hover:opacity-100"}`}
-                    aria-label={c.pinned ? "Unpin thread" : "Pin thread"}
-                    aria-pressed={!!c.pinned}
-                    title={c.pinned ? "Unpin" : "Pin"}
-                  >
-                    <Icon d={ICONS.pin} className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => remove(c)}
-                    className={`${QUIET_BUTTON} opacity-0 focus:opacity-100 group-hover:opacity-100`}
-                    aria-label="Delete thread"
-                    title="Delete"
-                  >
-                    <Icon d={ICONS.trash} className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+              {groupThreads(convs, !!search.trim()).map((group) => (
+                <section key={group.label} className="mb-3">
+                  <h4 className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
+                    {group.label}
+                  </h4>
+                  {group.items.map((c) => (
+                    <div
+                      key={c.id}
+                      className={`group flex items-center gap-0.5 rounded-md pl-2 hover:bg-card-elevated/60 ${c.id === convId ? "bg-card-elevated/60" : ""}`}
+                    >
+                      {renaming === c.id ? (
+                        <input
+                          autoFocus
+                          value={renameText}
+                          maxLength={120}
+                          aria-label="Thread name"
+                          onChange={(e) => setRenameText(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") finishRename(true);
+                            if (e.key === "Escape") {
+                              e.stopPropagation();
+                              finishRename(false);
+                            }
+                          }}
+                          onBlur={() => finishRename(true)}
+                          className="my-1 min-w-0 flex-1 rounded-md border border-primary bg-background px-2 py-1 text-base text-foreground focus:outline-none sm:text-[13px]"
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => openConversation(c.id)}
+                          className="min-w-0 flex-1 py-2 text-left sm:py-1.5"
+                          title={c.title || "Untitled"}
+                        >
+                          <span className="block truncate text-[14px] text-foreground sm:text-[13px]">
+                            {c.title || "Untitled"}
+                          </span>
+                          {search.trim() && c.snippet && (
+                            <span className="block truncate text-[12px] text-muted">
+                              {c.snippet}
+                            </span>
+                          )}
+                        </button>
+                      )}
+                      {renaming !== c.id && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => startRename(c)}
+                            className={`${QUIET_BUTTON} ${TOUCH_VISIBLE}`}
+                            aria-label="Rename thread"
+                            title="Rename"
+                          >
+                            <Icon d={ICONS.pencil} className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => togglePin(c)}
+                            className={`${QUIET_BUTTON} ${c.pinned ? "text-foreground" : TOUCH_VISIBLE}`}
+                            aria-label={c.pinned ? "Unpin thread" : "Pin thread"}
+                            aria-pressed={!!c.pinned}
+                            title={c.pinned ? "Unpin" : "Pin"}
+                          >
+                            <Icon d={ICONS.pin} className="h-3.5 w-3.5" />
+                          </button>
+                          {confirmDelete === c.id ? (
+                            <button
+                              type="button"
+                              onClick={() => remove(c)}
+                              onBlur={() => setConfirmDelete(null)}
+                              autoFocus
+                              className="rounded-md bg-red-600 px-2 py-1 text-[11px] font-semibold text-white"
+                              aria-label="Confirm delete thread"
+                            >
+                              Delete
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => remove(c)}
+                              className={`${QUIET_BUTTON} ${TOUCH_VISIBLE}`}
+                              aria-label="Delete thread"
+                              title="Delete"
+                            >
+                              <Icon d={ICONS.trash} className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </section>
               ))}
             </div>
             <div className="mt-4 space-y-3 border-t border-card-border/70 pt-3">
@@ -1108,9 +1408,16 @@ export function AskDrawerPanel({
                 key={t.key}
                 turn={t}
                 fullAskUrl={fullAskUrl}
+                canShare={!!convId && !t.streaming}
                 onFollowup={(f) => void submit(f)}
                 onFeedback={feedback}
+                onShare={shareThread}
                 onFiled={filed}
+                keir={
+                  t === lastTurn && busy ? (
+                    <KeirWithAlert mood={keirMood} alerting={alerting} avatar size={48} />
+                  ) : undefined
+                }
               />
             ))}
           </div>

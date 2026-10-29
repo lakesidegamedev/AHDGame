@@ -58,4 +58,22 @@ describe("notification controls", () => {
     await waitFor(() => expect(screen.getByRole("status").textContent).toBe("Saved"));
     expect(control.getAttribute("aria-checked")).toBe("false");
   });
+  it("groups alerts like the inbox and marks the ones that reach the phone", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue({ ok: true, json: async () => ({ mutedTypes: [], snoozedTypes: [] }) })
+    );
+    mount();
+    expect(await screen.findByRole("heading", { name: "Elections" })).toBeTruthy();
+    const vote = screen.getByRole("switch", {
+      name: messages.settings.notifications.types.bill_vote_open,
+    });
+    expect(vote.closest(".border-b")?.textContent).toContain("Phone and desktop");
+    const rd = screen.getByRole("switch", {
+      name: messages.settings.notifications.types.rd_breakthrough,
+    });
+    expect(rd.closest(".border-b")?.textContent).not.toContain("Phone and desktop");
+  });
 });

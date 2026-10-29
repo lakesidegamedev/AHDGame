@@ -7,11 +7,11 @@ import { useOptionalAuthMe, useRefetchNav } from "@/contexts/AuthDataContext";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { isChromeHiddenPath, isLightweightLayoutPath } from "@/lib/constants/layoutPaths";
 import type { AskDrawerSide } from "@/components/askDrawer/AskDrawerPanel";
-import { KeirSprite } from "@/components/askDrawer/KeirSprite";
+import { KeirAvatar, KeirSprite } from "@/components/askDrawer/KeirSprite";
 
 // The Ask Keir drawer, docked to the left or right edge of most pages for every
-// signed-in player. On a phone it opens as a full-screen sheet below the nav
-// from a small floating Keir button. The panel and its markdown renderer load
+// signed-in player. On a phone it opens as a full-screen sheet over the whole
+// page, nav included, from a floating Keir button. The panel and its markdown renderer load
 // on first open, so the tab costs almost nothing.
 
 /**
@@ -52,6 +52,51 @@ const MOBILE_QUERY = "(max-width: 639px)";
 
 function isMobileViewport(): boolean {
   return typeof window.matchMedia === "function" && window.matchMedia(MOBILE_QUERY).matches;
+}
+
+function useIsPhone(): boolean {
+  const [phone, setPhone] = useState(false);
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const query = window.matchMedia(MOBILE_QUERY);
+    const update = () => setPhone(query.matches);
+    update();
+    query.addEventListener?.("change", update);
+    return () => query.removeEventListener?.("change", update);
+  }, []);
+  return phone;
+}
+
+/**
+ * The part of the screen the player can actually see. When the iOS keyboard
+ * opens, Safari pans the page up under it, which pushed a sheet pinned to the
+ * layout viewport (header and all) off the top of the screen. Pinning the
+ * sheet to the visual viewport keeps its header and composer in view.
+ */
+export function visibleArea(
+  layoutHeight: number,
+  viewport: { height: number; offsetTop: number } | null | undefined
+): { top: number; height: number } {
+  if (!viewport) return { top: 0, height: layoutHeight };
+  return { top: Math.max(0, Math.round(viewport.offsetTop)), height: Math.round(viewport.height) };
+}
+
+function useVisibleArea(active: boolean): { top: number; height: number } | null {
+  const [area, setArea] = useState<{ top: number; height: number } | null>(null);
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!active || !viewport) return;
+    const measure = () => setArea(visibleArea(window.innerHeight, viewport));
+    measure();
+    viewport.addEventListener("resize", measure);
+    viewport.addEventListener("scroll", measure);
+    return () => {
+      viewport.removeEventListener("resize", measure);
+      viewport.removeEventListener("scroll", measure);
+      setArea(null);
+    };
+  }, [active]);
+  return area;
 }
 
 /**
@@ -134,14 +179,24 @@ export function AskDrawer() {
 
   const close = useCallback(() => setOpen(false), []);
   // Measured each time the drawer opens, when the real nav is in place.
-  const navBottom = useNavBottom(open);
-  const keyboard = useKeyboardInset(open);
+  const phone = useIsPhone();
+  const navBottom = useNavBottom(open && !phone);
+  const keyboard = useKeyboardInset(open && !phone);
+  const area = useVisibleArea(open && phone);
   useMobileScrollLock(open);
 
   if (!user) return null;
   if (isChromeHiddenPath(pathname) || isLightweightLayoutPath(pathname)) return null;
 
   const left = side === "left";
+  // Phones: the sheet covers the screen, nav included, and slides up from the
+  // bottom. Wider screens: docked under the nav on the chosen edge.
+  const sheetStyle = phone
+    ? area
+      ? { top: area.top, height: area.height }
+      : { top: 0, bottom: 0 }
+    : { top: navBottom, bottom: keyboard };
+  const hidden = phone ? "translate-y-full" : left ? "-translate-x-full" : "translate-x-full";
   const openDrawer = () => {
     setMounted(true);
     setOpen(true);
@@ -161,7 +216,7 @@ export function AskDrawer() {
             <KeirSprite mood="idle" />
             <span className="[writing-mode:vertical-rl]">Ask</span>
           </button>
-          {/* Phones: a small round Keir in the corner, below the bug report button. */}
+          {/* Phones: a round Keir in the corner, below the bug report button. */}
           {/* Sits above the fixed bottom StatusBar, whose real height (safe area
               included) is published as --status-bar-height. Pinned to the
               viewport edge it covered the money chips on phones. */}
@@ -172,28 +227,20 @@ export function AskDrawer() {
             title="Ask Keir about this page"
             data-feedback-ignore="true"
             data-ask-fab
-            className="fixed bottom-[calc(max(var(--status-bar-height,0px),env(safe-area-inset-bottom))+0.5rem)] right-4 z-[44] flex h-11 w-11 items-center justify-center rounded-full border border-primary/30 bg-card/95 shadow-modal backdrop-blur-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:hidden"
+            className="fixed bottom-[calc(max(var(--status-bar-height,0px),env(safe-area-inset-bottom))+0.75rem)] right-4 z-[44] flex h-14 w-14 items-center justify-center rounded-full border-2 border-primary/50 bg-card shadow-modal focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:hidden"
           >
-            <KeirSprite mood="idle" />
+            <KeirAvatar mood="idle" size={52} />
           </button>
         </>
-      )}
-      {open && (
-        <div
-          className="fixed inset-x-0 bottom-0 z-[44] bg-black/30 sm:hidden"
-          style={{ top: navBottom }}
-          onClick={close}
-          aria-hidden
-          data-feedback-ignore="true"
-        />
       )}
       <aside
         aria-label="Ask"
         aria-hidden={!open}
         inert={!open}
         data-feedback-ignore="true"
-        style={{ top: navBottom, bottom: keyboard }}
-        className={`fixed z-[45] w-full border-card-border/80 bg-card pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] shadow-modal transition-transform duration-300 ease-out sm:max-w-[420px] sm:pl-0 sm:pr-0 ${left ? "left-0 sm:border-r" : "right-0 sm:border-l"} ${open ? "translate-x-0" : left ? "-translate-x-full" : "translate-x-full"}`}
+        data-ask-sheet={phone ? "phone" : "dock"}
+        style={sheetStyle}
+        className={`fixed w-full border-card-border/80 bg-card pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pt-[env(safe-area-inset-top)] shadow-modal transition-transform duration-300 ease-out sm:max-w-[420px] sm:pl-0 sm:pr-0 sm:pt-0 ${phone ? "z-[60]" : "z-[45]"} ${left ? "left-0 sm:border-r" : "right-0 sm:border-l"} ${open ? "translate-x-0 translate-y-0" : hidden}`}
       >
         {mounted && <AskDrawerPanel side={side} onClose={close} onSwapSide={swapSide} />}
       </aside>
