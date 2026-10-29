@@ -1,151 +1,139 @@
 export const nationalCorporationsContent = `# National Corporations
 
-A **National Corporation** is the state's own enterprise: the single container into which a government folds everything it takes into public hands, and the vehicle it uses to deliver public services, prop up strategic industry, and feed profit back to the treasury. Where a private corporation answers to shareholders, a National Corporation answers to the state: it cannot go bankrupt, it pays no dividends to investors, and its profits are remitted to the national budget.
+A **National Corporation** is the state's own company. It holds everything the government has taken into public hands and runs it to deliver public services, back strategic industry and send profit to the national budget. It has no shareholders and cannot go bankrupt: if it loses money, the treasury covers the loss.
 
-This page covers the National Corporation as a *thing you run*: its structure, who controls it, what it does for the country, and how to operate it well. For the rules on **how a government takes a corporation in the first place** (eligibility, triggers, compensation tiers, notice windows), see the companion page on [Nationalization](/wiki/nationalization).
+This page covers running one. For how a government takes a company in the first place, and for selling assets back, see [Nationalization](/wiki/nationalization).
 
-\`\`\`
-private corp ──(nationalize: absorb)──▶  National Corporation  ──(privatize: spin out)──▶  new private corp
-\`\`\`
+## How it works
 
-## Structure: primary and split-offs
+Every country has **one primary** National Corporation. It holds every sector type that has not been carved out. A **split-off** is an extra National Corporation that owns exactly one sector type, such as a state rail or energy company. When the state takes an asset, it goes to the National Corporation that owns that sector type, or to the primary if none does.
 
-Every country has **one primary National Corporation** plus **zero or more split-offs**. The primary is the catch-all: it holds every sector type that hasn't been carved out on its own, and it is the entity the state's sovereign bonds are issued against. A **split-off** is a secondary National Corporation that owns exactly one sector type (for example, a dedicated state rail or energy company carved out of the primary).
+Three seats share control, so no one player runs everything:
 
-When the state nationalizes an asset, each seized sector is **routed to the National Corporation that owns its sector type**: a split-off if one claims that type, otherwise the primary. A whole-company taking that spans several sector types fans its sectors out to the right corporations automatically.
+- **Head of government.** Marks strategic sectors and orders takings.
+- **Finance minister** (Treasury Secretary, Chancellor, Minister of Finance and similar). Sets policy: appoints or removes the CEO, sets public mandates, splits and merges sector types, sets the CEO's draw cap, and privatizes. If this seat is empty, those actions are unavailable until it is filled.
+- **CEO.** Runs day-to-day operations. The finance minister appoints the CEO (they may appoint themselves). The CEO must live in the country and cannot be CEO of any other company.
 
-The primary is labelled **Primary** in the page masthead; a split-off shows its sector type (e.g. "energy split-off").
+The ministry sets policy and the CEO runs operations. A CEO cannot set mandates, take or sell assets, or raise their own budget cap.
 
-## The National Corporation page
+### Money flow
 
-Each National Corporation has its own page, organized into tabs. Which tabs you see depends on who you are:
+Each turn, the corporation's operating profit is split in two. The CEO chooses how much to keep, from **0% to 75%** (the default is 0%, so everything is sent on). At least **25%** always goes to the national budget. When there is a loss, the treasury covers it and the corporation's cash returns to zero. A loss-making state company is therefore a real, ongoing drain on the budget.
 
-| Tab | Who sees it | Purpose |
-| --- | --- | --- |
-| **Overview** | Everyone | Headline stats: revenue, treasury remittance, sectors, regions, jobs, investor confidence, efficiency. |
-| **Public Mandates** | Everyone (officials can edit) | Which state metrics each holding improves, and its public-service posture. |
-| **Holdings** | Everyone | Every sector the corp owns, by region: revenue, margin, market share, and how it was acquired. |
-| **Register** | Everyone | The country's full state-ownership history, investor-confidence meter, and the governing bloc's political standing. |
-| **Operations** | The seated **CEO** only | The four operating levers and the profit-retention setting. |
-| **Nationalize** | The **head of government** | Take new assets and designate strategic sectors. |
-| **Privatization** | The **finance minister** | Carve a holding back out and float it. |
+The CEO can also pull cash from the budget into the company, up to a per-turn cap that the finance minister sets. The default cap is 10 million in local currency. A cap of 0 freezes draws completely.
 
-Officials toggle between a **Public** view and a **State Official** view; the official session warns that actions execute against the live economy.
+### Worked example: one turn
 
-## Who controls a National Corporation
+A National Corporation earns 100 in operating profit, and the CEO has set retention to 40%.
 
-Authority is deliberately split between three seats so no single player runs the whole machine:
+- 40 stays in the corporation as working cash, and 60 goes to the national budget.
+- Next turn the sector loses 20. The treasury pays 20, and the corporation's cash is set back to zero. The budget is 20 worse off.
+- The CEO wants to fund a capacity expansion costing 30 and the draw cap is 25. They can draw at most 25 from the budget this turn and pay the other 5 from retained cash.
 
-- **Head of government**: designates strategic sectors and authorizes takings (the Nationalize surface).
-- **Finance minister** (Secretary of the Treasury, Chancellor, Minister of Finance, and equivalents): the ministry that *owns policy*: appoint or remove the CEO, set public-service mandates, split off or merge back sector types, set the CEO's treasury-draw cap, and privatize. If the finance portfolio is vacant, those actions stay unavailable until a finance minister is appointed.
-- **CEO**: runs day-to-day operations within the policy and budget the ministry sets. A CEO is *appointed* by the ministry, not elected by shareholders (a National Corporation has none), and the finance minister may appoint themselves. A National Corporation CEO may not also be CEO of any other company.
+### Efficiency: governance matters
 
-The clean line: **the ministry sets policy; the CEO runs operations.** A CEO cannot set mandates, take or sell assets, or raise their own budget cap.
+A clean state company runs like a private one. Its margin drag comes from four things, each in percentage points:
 
-## What National Corporations are for: public mandates
+| Source | Effect |
+| --- | --- |
+| Corruption | up to -10 (at corruption 100) |
+| Government transparency | up to +7 back (at transparency 100) |
+| Price-controlled mandate | -6 |
+| Employment-guaranteed mandate | -4 |
+| Oversized state sector | -3 times (multiplier - 1), only above SOCI 35 |
 
-The reason to own an enterprise rather than tax a private one is the **public-service mandate**. Each turn, an SOE's sectors push the state metric they're matched to, slowly but durably, because policy effects decay only gradually. The more of a region's sector the state owns, the larger the nudge.
+The total is held between 0 and -25, so there is never a bonus. A state with corruption 40 and transparency 50 loses 4 and regains 3.5, a drag of 0.5. Add a price-controlled mandate and it is 6.5. A corrupt state (corruption 80, transparency 30) with both mandates and SOCI 80 is at -19.5.
+
+## What you can do
+
+### Public mandates
+
+The point of owning a company, rather than taxing a private one, is the **mandate**. Each turn a state sector nudges the national metric it is matched to, slowly and durably.
 
 | Sector type | What it improves |
 | --- | --- |
 | Healthcare | Physician capacity |
 | Energy | Power-grid reliability |
-| Logistics / automobiles / construction | Road condition |
-| Telecommunications / technology | Broadband access |
+| Logistics, vehicles, construction | Road condition |
+| Telecommunications, technology | Broadband access |
 | Agriculture | Food security |
-| Manufacturing / chemicals | Manufacturing competitiveness |
+| Manufacturing, chemicals | Manufacturing competitiveness |
 | Defense | Public trust (Germany: Bundeswehr readiness) |
 | Financial | Small-business formation, and lower income inequality |
 | Retail | Lower cost of living |
 | Real estate | Housing affordability |
 
-Two **postures** let the ministry trade profit for public value, set corp-wide or overridden per sector:
+At full state ownership of a sector in a region the nudge is **0.03 points per turn**, about 1.4 points a year before the metric's natural slow decay. It scales down with the state's share. No single sector can push a metric more than 8 points above its current level.
 
-- **Price-controlled**: forces low consumer prices and high output. It *strengthens* the public-service contribution but costs extra operating margin. The forgone profit shows up as a "mandate subsidy" the treasury effectively pays.
-- **Employment-guaranteed**: the SOE acts as employer of last resort and keeps a worker floor, easing unemployment, at a smaller margin cost.
+Two postures trade profit for public value, set for the whole company or per sector:
 
-## Running the enterprise: the CEO's four levers
+- **Price-controlled.** The nudge is 1.5 times stronger (0.045 per turn) at a cost of 6 margin points.
+- **Employment-guaranteed.** Unemployment falls by the same 0.03 per turn at a cost of 4 margin points.
 
-From the **Operations** tab, the seated CEO grows the corporation using four state-appropriate levers (no marketing, no market bond issuance, since those aren't state-appropriate):
+### The CEO's levers (Operations tab)
 
-1. **Capacity investment**: fund a sector's growth so its output (and revenue, remittance, jobs, and citizens served) expands over turns.
-2. **Modernization (R&D)**: build the corp's innovation momentum toward a breakthrough.
-3. **Production**: set a per-sector output target (roughly −25% to +25%); the active level trends toward it about one point per turn. Higher production raises revenue, which grows the workforce organically.
-4. **Treasury capital draw**: pull cash from the national budget into the corp to finance the above, up to the ministry's cap.
+| Lever | What it does |
+| --- | --- |
+| Capacity investment | Grow a sector's output, revenue, remittance and jobs. |
+| Modernization (R&D) | Build innovation momentum. Full funding is 3% of sector revenue per turn. The momentum lapses to 0 in 48 turns without funding and climbs to full in 8 turns. |
+| Production target | Set an output target per sector. The sector drifts toward it. |
+| Treasury draw | Pull budget cash into the corporation, up to the cap. |
 
-All spending is funded from the corp's own working capital (or a treasury draw); the engine consumes it as a genuine expense. Money is always conserved: nothing is minted.
+There is no marketing and no market bond issuance, since neither fits a state company.
 
-## Financing: a two-actor model
+### Restructuring
 
-The financing system has built-in tension between the CEO and the minister:
+The finance ministry can **split off** a sector type into a new named National Corporation, or **merge** one back into the primary. No money changes hands. Only one National Corporation may own a given sector type in a country. Splitting gives a strategic industry its own CEO, mandate and books.
 
-- **Profit retention (CEO-set).** Each turn the corp's operating profit splits between what stays in the corp (a reinvestment war-chest) and what is **remitted to the national budget**. The CEO sets retention between **0% and 75%**: at least **25% always remits** to the budget, a floor neither actor can breach. The default is to remit everything.
-- **Treasury-draw cap (minister-set).** The minister sets a **per-turn ceiling** on how much the CEO may pull from the budget. Setting it to **0 freezes draws entirely**: the lever the ministry uses to rein in a CEO for fiscal or political reasons.
+### First-turn checklist
 
-So the CEO can self-fund by retaining profit *or* lean on the treasury up to the cap, but can never raise that cap, and can never starve the budget below the remittance floor.
+**New finance minister:**
 
-### Treasury backing: SOEs can't go bankrupt
+1. Appoint a CEO, or yourself.
+2. Set the draw cap. Zero if you do not trust the CEO yet.
+3. Check each sector's mandate. Decide where price control or guaranteed employment is worth the margin.
+4. Look at the Register tab for SOCI and investor confidence before ordering more takings.
 
-If a National Corporation runs an operating loss, the treasury automatically covers the shortfall and the corp's cash is restored to zero: it never defaults. This is what makes mandates like price control viable: the state knowingly funds a money-losing public service. The flip side is that a loss-making SOE is a real, ongoing **drain on the national budget**.
+**New CEO:**
 
-## Efficiency: governance matters
+1. Open Operations and see which sectors are growing and which are idle.
+2. Set retention. At 0 everything goes to the budget. Raise it (up to 75%) if you plan to invest from your own cash instead of drawing on the budget.
+3. Fund capacity in your best-margin sectors first.
+4. Set R&D only if you can sustain 3% of revenue.
 
-There is no flat "state-run penalty." Instead, an SOE's operating margin carries a **dynamic efficiency drag** that depends on how well the country is governed:
+## The cost of empire
 
-- A well-run, transparent, low-corruption state runs its enterprises close to private efficiency (a single-digit drag).
-- A corrupt one, or one leaning hard on price controls, bleeds far more margin (toward roughly −25 percentage points).
+Two gauges on the **Register** tab show how far the state has gone:
 
-Good governance, low corruption, and a light mandate touch keep an SOE profitable; corruption and heavy price controls push it toward losses. The Holdings drill-down breaks the penalty down so you can see exactly where the drag comes from.
+- **SOCI (State Ownership Concentration Index), 0 to 100.** The share of the economy the state owns, weighted by revenue. At **35 or less** it does nothing. Above 35, every new taking costs more political capital, hits confidence harder and takes longer to absorb, up to 3.5 times at 100. A sprawling state sector also runs less efficiently.
+- **Investor confidence, 0 to 100,** which heals toward 70 by 5% of the gap each turn.
 
-## The cost of empire: concentration and confidence
+To reduce SOCI, sell assets back to the market with privatization (finance minister, Privatization tab) or let the private sector grow. Selling raises investor confidence by 5. Details are on [Nationalization](/wiki/nationalization).
 
-Nationalization is meant to be a real but *costly* tool, and the cost escalates the more of the economy the state already owns. Two linked gauges, both on the **Register** tab, drive this:
+## Connections
 
-- **State Ownership Concentration Index (SOCI), 0 to 100**: the share of the country's corporate economy that the state owns, revenue-weighted. Below a danger zone (around a third of the economy) it does almost nothing; past it, every new taking costs more political capital, scars investor confidence harder, and takes longer to digest. A sprawling state sector also runs *somewhat* less efficiently (an "overreach" drag), though a well-run economy can still be profitable long-term; the cost is front-loaded, not permanent.
-- **Investor confidence, 0 to 100 (baseline 70)**: a national mood that *heals back toward baseline each turn* (about 5% of the gap). Fairly-paid, popular takings (rescuing a failing firm, breaking a monopoly) barely move it; expropriating healthy private firms, especially cheaply, takes a real bite, amplified by how much the state already owns.
+**Driven by**
 
-Low confidence isn't cosmetic. It feeds three live systems shown as tiles on the Register tab:
+- [Nationalization](/wiki/nationalization): every taking adds sectors and, with them, SOCI and political cost.
+- [National Metrics](/wiki/national-metrics): corruption and transparency set how efficient state companies are.
+- [Cabinet](/wiki/cabinet): the head of government and finance minister hold the powers.
 
-1. **Private-corp margins**: an expropriation-risk drag on surviving private firms (SOEs are exempt).
-2. **Sovereign borrowing**: a risk premium on the government's own bond rate.
-3. **New-corp founding**: a surcharge on the cost to incorporate (up to **+25%** at rock-bottom confidence), dampening private growth.
+**Affects**
 
-A statist governing bloc pays less of this political cost; a market-liberal one pays more. The Register tab reads your bloc's stance and labels how expensive nationalizing versus privatizing currently is.
+- [Nationalization](/wiki/nationalization): privatizing lowers SOCI and restores confidence, making room for more takings.
+- [National Budget](/wiki/national-budget): profit remits in, losses and draws flow out.
+- [National Metrics](/wiki/national-metrics): public mandates push the matched metrics up each turn.
+- [Corporations](/wiki/corporations): state-owned sectors compete in the same markets as private ones.
 
-## Restructuring: split-offs and merge-backs
+## Status
 
-The finance ministry can reorganize the state's holdings without any money changing hands (a National Corporation has no shareholders to compensate):
+Live in every world and era with players enabled. The Privatization tab is not available in command-economy eras. Overview, Public Mandates, Holdings and Register are visible to everyone. Operations is for the seated CEO only, Nationalize for the head of government and Privatization for the finance minister.
 
-- **Split off a sector type** into a new, named secondary National Corporation. Every holding of that type moves into it. You can even pre-create an empty one to claim routing for a type before you own any of it. Only one National Corporation may own a given sector type per country.
-- **Merge a split-off back** into the primary (or another National Corporation). Its sectors move over and the now-empty shell is dissolved.
+Last checked: 2026-10-29, version 1.18.0
 
-Splitting lets you give a strategic industry its own CEO, mandate posture, and books; merging consolidates when that's no longer worth the overhead.
+## Technical detail
 
-## Privatization: the relief valve
+The exact constants live in the open source repository under src/lib/nationalization/constants.ts. No design page covers National Corporations yet.
 
-Selling assets back to the market is the genuine way down from a high SOCI: it lowers concentration, **raises investor confidence (+5)**, and is politically rewarded for market-leaning governments. The finance minister carves a **brand-new, named corporation** out of a National Corporation's holding and floats it:
-
-- **Carve size is market-capped.** A spin-out may not end up controlling more than **30% of its regional market**: so a small holding can be sold in full, but breaking up a dominant state position requires several separate spin-outs (an anti-monopoly guard).
-- **Method: IPO or auction.** An IPO releases shares to the public float at a floor price, with proceeds crediting the treasury; an auction runs a bid window (48 turns) and hands the winner the company. An auction that closes below reserve simply folds the carve-out back into the National Corporation.
-- **Golden share.** The state may retain up to **40%** of a spun-out corporation: a minority stake with a veto over relocation and dissolution, whose dividends flow to the treasury.
-- **Cooldowns.** A freshly privatized corp can't be re-nationalized, and a freshly absorbed sector can't be privatized, for **168 turns** each, preventing seize-sell-seize churn in either direction.
-
-## Acquiring assets (in brief)
-
-Unowned and NPC assets can be nationalized freely. A **player-owned** company is protected and can only be taken when a trigger unlocks it: financial distress (an abandoned or insolvent firm), operating in a designated strategic sector, holding a near-total (75%+) market monopoly, or a legislative supermajority (two-thirds) vote. Most takings post a **notice window** (48 turns) so the target can respond. Fair compensation is the target's tangible book value (replacement cost), scaled by the tier the authority uses. The full rules live on the [Nationalization](/wiki/nationalization) page.
-
-## Strategy notes
-
-- **Own things that pay you back in metrics, not just cash.** A price-controlled utility or a guaranteed-employment heavy industry may run thin or at a loss, but the durable lift to grid reliability, food security, or unemployment can be worth more than the profit you gave up.
-- **Watch the concentration gauge.** The first nationalization is cheap; the twentieth, with a third of the economy state-owned, is a real fiscal and political liability. Keep an eye on SOCI before the next taking.
-- **Privatize to reset.** If confidence is suppressed and SOCI is high, selling a few mature holdings restores room to maneuver, and a market government gets paid politically for doing it.
-- **Mind governance.** Fighting corruption and improving transparency quietly raises every SOE's margin at once. A clean state runs a profitable public sector; a corrupt one runs a money pit.
-- **Use the two-actor budget deliberately.** A minister who trusts a CEO raises the draw cap and lets them retain profit to invest; a minister who doesn't can freeze the cap to 0 and force full remittance.
-
-## See also
-
-- [Nationalization](/wiki/nationalization): the taking lifecycle: eligibility, triggers, compensation, and counterplay.
-- [Corporations](/wiki/corporations): how private corporations, sectors, and margins work.
-- [National Budget](/wiki/national-budget): where remittance, compensation, and loss-backing land.
-- [National Metrics](/wiki/national-metrics): the state metrics public mandates improve.
+See also: [Glossary](/wiki/glossary), [Sovereign Bonds](/wiki/sovereign-bonds)
 `;

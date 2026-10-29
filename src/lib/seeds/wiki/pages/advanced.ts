@@ -299,6 +299,7 @@ export const advancedPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "bloc-spheres",
+    designDocUrl: "design/bloc-alignment-and-spheres.html",
     title: "Bloc Alignment & Spheres of Influence",
     description:
       "Cold War pole shares and lead, the 60/40 join and leave thresholds with their deadband, passive drift and membership pull, and bloc stress from contested, leaving and newly-digested members.",
@@ -348,6 +349,7 @@ export const advancedPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "granular-polling",
+    designDocUrl: "design/granular-electorate-as-shipped.html",
     title: "Granular Polling",
     description:
       "Reading the granular electorate panel on your poll results: Layer-1 demographic cross-tab segments, dimension tabs, stacked filters, and why smaller segments carry a wider margin of error.",

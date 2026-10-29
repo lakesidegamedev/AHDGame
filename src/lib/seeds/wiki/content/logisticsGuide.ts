@@ -17,7 +17,7 @@ export const logisticsGuideContent = `# Logistics: Freight, Sourcing, and Supply
 
 Logistics connects the commodity market to the map. The game projects how a state with unmet input demand would source locally, across state lines, or from abroad after shipping and tariffs. Logistics sectors provide the freight capacity measured by that projection. Heavy haul becomes real Freight commodity demand, so tight capacity raises freight sold volume and price. Electricity and natural gas are the exception: they travel by wire and pipe, spend no freight capacity, and pay distance in transmission loss instead.
 
-The distinction matters: freight settlement runs in either **shadow** or **active** mode, and fresh worlds default to active. In shadow mode the haul calculation drives the Freight market, sourcing report, and Logistics map, but it does not cap a sector's sales and moves no money. In **active** settlement it does two things together: it caps a state's sales at what the freight network could actually deliver, and it **bills the shipping**. Buyers in a destination state are charged for their inbound hauls in proportion to the imported inputs they consume, and the same money is credited to the freight-supplying sectors in the origin state, so the charge and the haul revenue stay matched: a transfer between corporations, not a sink. An admin can phase active settlement in over a window of turns; while the ramp runs, both the delivery cap and the shipping bill scale up together and the phase-in fraction is shown on the markets view and the sector Freight tag.
+In current worlds freight settlement is active. It does two things together: it caps a state's sales at what the freight network could actually deliver, and it **bills the shipping**. Buyers in a destination state are charged for their inbound hauls in proportion to the imported inputs they consume, and the same money is credited to the freight-supplying sectors in the origin state, so the charge and the haul revenue stay matched: a transfer between corporations, not a sink. In a world that is still phasing this in, the delivery cap and the shipping bill scale up together, and the phase-in fraction is shown on the markets view and the sector Freight tag.
 
 ## The short version
 
@@ -59,7 +59,7 @@ The map and commodity page answer different questions. The commodity page tells 
 
 ## How sourcing chooses a route
 
-For the haul projection, each state with unmet demand ranks eligible sellers by **landed price**:
+For each haul, each state with unmet demand ranks eligible sellers by **landed price**:
 
 \`landed price = seller ask + shipping + tariff\`
 
@@ -110,9 +110,9 @@ A short haul into a congested state usually still clears, because the surcharge 
 
 Because haul can now run past nominal capacity, a state's load can exceed its capacity. That is congestion, and the units above capacity are the ones paying the surcharge. Sustained congestion in a state is a standing signal for a logistics CEO: the haul is real Freight demand, and the last units of it are moving at a premium.
 
-## When active settlement limits delivery
+## When freight limits delivery
 
-When an admin enables **active** freight settlement, a sector's clearing offer is capped by what the freight network could actually place. Output that no route could carry to a buyer is not counted as a sale, and the sector reports the share of its offered output that was produced and could not be delivered. When that share is meaningful, the sector row carries a **Freight** tag and the sector page states how many units had no freight to carry them. In the **shadow** configuration, these route limits are measured without reducing sales.
+A sector's clearing offer is capped by what the freight network could actually place. Output that no route could carry to a buyer is not counted as a sale, and the sector reports the share of its offered output that was produced and could not be delivered. When that share is meaningful, the sector row carries a **Freight** tag and the sector page states how many units had no freight to carry them.
 
 That splits one bad number into two different instructions:
 
@@ -133,7 +133,7 @@ The second case is a route problem, so check the Logistics map for the origin st
 
 ### After opening a sector
 
-- If active settlement is enabled, watch **selling %** on the sector page together with the **Freight** tag beside it. Low selling with no Freight tag means the market does not need the output. Low selling with a Freight tag means the output could not get out of the state.
+- Watch **selling %** on the sector page together with the **Freight** tag beside it. Low selling with no Freight tag means the market does not need the output. Low selling with a Freight tag means the output could not get out of the state.
 - Watch the Logistics map after each market turn. New industrial capacity can create new haul demand.
 - Compare your freight price with the cost of inputs used by physical industries. A freight shortage can raise costs across manufacturing, agriculture, chemicals, extraction, and construction.
 - Use a focused logistics strategy only when its output and input mix match the shortage you are trying to serve.
@@ -161,7 +161,24 @@ Spending on corporate logistics strength does not create TEU. Opening and operat
 
 **Reading projected routes as settled commodity transfers.** The route calculation measures haul and creates Freight demand. Aggregate commodity clearing still determines commodity supply, demand, and margin effects.
 
-**Expecting a per-route shipping invoice in shadow mode.** Under shadow settlement logistics corporations earn only through freight commodity sales: haul raises freight demand and therefore sold volume and price. Under active settlement a real shipping charge is apportioned onto buyer sectors and credited to origin-state freight sectors each turn, but it lands as a per-turn billing line, not as a player-to-player invoice per route.
+**Expecting a per-route shipping invoice.** A real shipping charge is apportioned onto buyer sectors and credited to origin-state freight sectors each turn, but it lands as a per-turn billing line, not as a player-to-player invoice per route.
+
+## Connections
+
+**Driven by**
+
+- [Commodities](/wiki/commodities): unmet input demand creates haul, and the Freight price sets shipping cost.
+- [Tariffs](/wiki/tariffs): tariffs add to landed cost and can price a route out.
+- [Corporate R&D & Tech Trees](/wiki/corporate-r-and-d): logistics strength nodes cut your freight bill.
+- [Supply Agreements](/wiki/supply-agreements): freight contracts reserve haulage in one state.
+
+**Affects**
+
+- [Commodities](/wiki/commodities): haul is real demand for the Freight commodity.
+- [Output Quality](/wiki/output-quality): Logistics & Operations strength is the operations pillar of quality.
+- [Corporations](/wiki/corporations): delivery-limited output and freight bills change sector revenue and margin.
+
+**Status:** freight settlement is active in current worlds. Eras and countries without a modelled freight network have no Logistics map. Last checked: 2026-10-29, version 1.18.0.
 
 ## Related
 

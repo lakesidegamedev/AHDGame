@@ -1,75 +1,81 @@
 export const savingsInterestContent = `# Savings & Interest
 
-Idle cash in a savings account earns interest every turn. There is no feature flag: savings interest is always on. The rate is tied to the central bank's prime rate, accrues continuously, and credits to your balance on a quarterly schedule.
+Idle cash in a savings account earns interest every turn. The yield is tied to your central bank's prime rate and to inflation, and the interest is added to your balance once a quarter. Savings is the safe, always-withdrawable place to park money, so it is worth knowing what it pays and when a bond or a bank deposit beats it.
 
-## The rate
+## How it works
 
-The annual percentage yield (APY) paid on savings is half the **real** rate: the prime rate minus local inflation, not the prime rate on its own.
+The savings yield (APY, the annual percentage yield) is **half the real rate**. The real rate is the prime rate minus local inflation, never less than 0.5 points:
 
 \`\`\`
 realRate = max(0.5, primeRate - inflation)
 APY      = realRate / 2 + centralBankDepositBonus
 \`\`\`
 
-So a 4.42% prime rate does **not** pay 2.21% APY unless inflation is zero. With 2% inflation the real rate is 2.42% and the APY is 1.21%.
+Using the real rate closes a carry trade, where money chases the highest nominal rate. A currency with a high prime rate usually has high inflation too, so its real rate lands near everyone else's and parking money there earns no free real return. The 0.5 point floor is the same in every currency, so it favours none of them, and it guarantees at least 0.25% APY (plus the bonus below).
+
+| What | Value |
+| --- | --- |
+| Yield | Half of (prime rate minus inflation), with that difference floored at 0.5 points |
+| Central bank deposit bonus | +0.25 points on central-bank-held savings, phased in over 8 turns |
+| Accrual | Every turn: balance x APY / 48 |
+| Credit to your balance | Every 12 turns (a game quarter) |
+| Turns in a game year | 48 |
+| Share cap | Interest accrues on at most 25% of the currency's whole savings pool per account |
+| Prime rate at or below 0% | No interest |
+
+Yields at a central bank with the full bonus:
 
 | Prime rate | Inflation | Real rate | Savings APY |
 | --- | --- | --- | --- |
-| 4.0% | 0.0% | 4.0% | 2.0% |
-| 4.0% | 2.0% | 2.0% | 1.0% |
-| 8.0% | 6.0% | 2.0% | 1.0% |
-| 14.0% | 13.8% | 0.5% (floor) | 0.25% |
+| 4.0% | 0.0% | 4.0% | 2.25% |
+| 4.0% | 2.0% | 2.0% | 1.25% |
+| 8.0% | 6.0% | 2.0% | 1.25% |
+| 14.0% | 13.8% | 0.5% (floor) | 0.50% |
 
-Using the real rate is what closes the carry trade. A currency with a high nominal prime rate normally also has high inflation, so its real spread, and therefore its savings APY, lands near everyone else's. Parking money in a high-nominal-rate currency earns no free real return.
+**Worked example.** You hold 1,000,000 in savings. Prime is 4.0% and inflation is 2.0%, so the real rate is 2.0%, half is 1.0%, and the bonus makes 1.25%. Each turn you accrue 1,000,000 x 0.0125 / 48 = 260.42. After 12 turns the pot is credited: 12 x 260.42 = 3,125.04. That credit joins your balance, so the next quarter earns on 1,003,125.04. Interest compounds quarterly.
 
-The real rate never falls below a 0.5 percentage point floor, so every currency pays at least 0.25% APY. The floor is the same everywhere, so it gives no currency an edge.
+**The share cap.** If the whole currency has 10,000,000 in savings and you hold 4,000,000, only 2,500,000 (25%) earns interest. The cap stops one huge account from farming almost the entire pool. Ordinary balances under a quarter of the pool never notice it. The pool total used is last turn's.
 
-During a central-bank pricing phase-in, central-bank-held deposits receive a temporary bonus in addition to this formula. The current rollout adds up to 0.25 percentage points over 8 turns. Private-bank deposit rates are set by their own charters and do not receive this central-bank bonus.
+Amounts round to whole units for yen and to two decimals for other currencies.
 
-When the [Central Bank Chair](/wiki/central-banks) raises rates, your savings yield rises with them, but only to the extent the rise beats inflation.
+Accrued interest that is not yet credited is tracked and shown as "Accrued (uncredited)". If you close or move an account mid-quarter, the pending amount is settled at that point.
 
-## Per-turn accrual
+## What you can do
 
-Interest accrues **every turn** but is only **credited quarterly** (every 12 turns, a quarter of the 48-turn game year). The per-turn accrual is:
+- **Deposit and withdraw.** Open the Savings tab on your country's Central Bank page and move cash between your wallet and savings. You can withdraw at any time, with no lock-up.
+- **Check the numbers.** The tab shows your balance, lifetime interest, accrued but uncredited interest, an estimate for this turn, and the total savings in the currency.
+- **Compare with a bank.** A balance held at a private bank earns that bank's own rate, which the savings screen quotes. Player savings at a private bank are a label on your account, not cash the bank holds, so the bank failing does not take your principal. See [Private Banking](/wiki/private-banking).
+- **Compare with bonds.** Sovereign bond coupons are the prime rate plus a term premium, so a bond usually pays more than savings, but its price moves and it cannot be withdrawn at par on demand. See [Sovereign Bonds](/wiki/sovereign-bonds).
 
-\`\`\`
-perTurnAccrual = balance × (APY / 100) / 48
-\`\`\`
+Why is my interest so low? Almost always because inflation is close to the prime rate, which leaves the floor of 0.25% plus the bonus. A central bank chair who raises rates faster than inflation lifts your yield.
 
-With 48 turns per year and a real rate of 4% (APY 2%):
+Interest counts as taxable personal income when it is credited.
 
-\`\`\`
-perTurnAccrual = balance × 0.02 / 48 = balance × 0.0004167
-\`\`\`
+Tips: keep an eye on the real rate, not the headline prime rate. Do not park an outsized share of a small currency's pool in one account, because the cap makes the excess earn nothing.
 
-A ¥1,000,000 balance accrues roughly ¥41.67 per turn, credited as a ¥500 lump every 12 turns.
+## Connections
 
-## Rounding
+**Driven by**
 
-Accruals are rounded to the currency's native precision:
+- [Central Banks](/wiki/central-banks): the prime rate and its deposit bonus set the yield.
+- [National Metrics](/wiki/national-metrics): local inflation is subtracted from the prime rate.
+- [Private Banking](/wiki/private-banking): a bank can hold your balance and pay its own rate.
+- [Line of Credit](/wiki/line-of-credit): the automatic loan payment withdraws from savings when your cash is short.
 
-| Currency family | Rounding |
-| --- | --- |
-| JPY (and other 0-decimal currencies) | Whole units |
-| All other currencies | 2 decimal places |
+**Affects**
 
-This keeps credited interest matching the ledger's expected precision: no fractional yen, no floating-point drift on dollar/euro balances.
+- [Line of Credit](/wiki/line-of-credit): savings deposits and bank reserves fund lines of credit, and the system lends at most 70% of them.
+- [Central Banks](/wiki/central-banks): central bank savings interest creates new money.
+- [Currency Exchange](/wiki/currency-exchange): the real rate on savings stops currencies from paying a free carry.
+- [National Metrics](/wiki/national-metrics): savings flow dampens or stimulates inflation.
 
-## Crediting schedule
+## Status
 
-| Event | Cadence |
-| --- | --- |
-| Accrual computed | Every turn |
-| Interest credited to balance | Every 12 turns (quarterly) |
+Live in every world, for each country whose currency is tradable: 18 currencies in all, with the euro only from 1999. Countries whose currency is not tradable, such as the planned economies, have no savings tab.
 
-Accrued-but-uncredited interest is tracked internally; if you close or move the account mid-quarter, the pending accrual is settled at that point so nothing is lost.
+Last checked: 2026-10-29, version 1.18.0
 
-## Practical notes
+## Technical detail
 
-- **Rate-following:** Because APY = real rate / 2, savings is sensitive to both policy rates and inflation. In a high-rate environment it is a genuine yield instrument; in a low-rate environment it barely beats stuffing cash under a mattress.
-- **No lock-up:** Unlike bonds, savings can be withdrawn at any time. The cost of that liquidity is the half-real-rate haircut versus buying sovereign bonds directly.
-- **Compound effect:** Credited interest becomes part of the balance for the next quarter's accrual, so savings compounds quarterly, not just per-turn.
-- **Whale cap:** Only the lesser of your balance and **25%** of the whole currency's national savings pool earns interest. This closes a carry-trade loophole where a single huge account could farm interest on nearly 100% of a currency's savings; ordinary balances well under a quarter of the pool are unaffected.
-
-See also: [Central Banks](/wiki/central-banks), [Sovereign Bonds](/wiki/sovereign-bonds), [Line of Credit](/wiki/line-of-credit), [Currency Exchange](/wiki/currency-exchange)
+The constants and the exact accrual order are on the [monetary system design page](https://docs.lakesidegames.net/design/monetary-system-as-shipped.html).
 `;

@@ -1,126 +1,114 @@
 export const cabinetContent = `# Cabinet
 
-The US Cabinet is a council of principal officers who lead the major executive departments. Each position is nominated by the President, confirmed by the Senate, and carries specific executive responsibilities. This page covers what each cabinet position is, how nominations work, and what cabinet members do in the game.
+The Cabinet is the council of principal officers who lead the executive departments. In the US each seat is nominated by the President and confirmed by the Senate. A seat gives its holder ministerial orders, standing policy settings, buildings to construct and a national influence tier. An empty cabinet costs the government approval.
 
-## Cabinet positions
+## How it works
 
-Positions are ordered as the game lists them: the succession secretaries (after the Vice President), then the cabinet-rank White House seats added from 1946. The live roster is **year-gated**: later departments (HUD, Transportation, Energy, Veterans Affairs, Homeland Security) unlock by year, and Education is carved out of HEW only when the Department of Education Act passes. The table is the full cabinet roster; not every seat exists in every era.
+1. **Nomination.** Only the character holding the **President** office can nominate. The President picks a player or NPP and submits the nomination from the executive dashboard. One nomination per seat can be pending at a time, and the President can withdraw it before the vote closes.
+2. **Senate confirmation.** The Senate votes for 24 hours. See [Confirmation Process](/wiki/confirmation-process).
+3. **Taking office.** A confirmed nominee is installed as the Cabinet member and the seat shows as filled.
+4. **Direct appointment.** The White House Chief of Staff is the exception: the President appoints them alone, with no Senate vote, and can fire them at any time.
 
-| # | Position | Department focus |
-| --- | --- | --- |
-| 1 | Secretary of State | Foreign policy and diplomacy |
-| 2 | Secretary of the Treasury | Federal finances, tax collection, economic policy |
-| 3 | Secretary of Defense | Armed forces and military operations |
-| 4 | Attorney General | Law enforcement, Department of Justice |
-| 5 | Secretary of the Interior | Federal lands, natural resources, Native American affairs |
-| 6 | Secretary of Agriculture | Farming, forestry, food safety, SNAP |
-| 7 | Secretary of Commerce | Economic growth, trade, patents, NOAA |
-| 8 | Secretary of Labor | Workers' rights, OSHA, unemployment |
-| 9 | Secretary of Health, Education, and Welfare | Public health, education, and welfare (HEW). Becomes HHS only after the Department of Education Act splits Education off |
-| 10 | Secretary of Housing and Urban Development | Affordable housing, fair housing enforcement |
-| 11 | Secretary of Transportation | Highways, FAA, railroads, mass transit |
-| 12 | Secretary of Energy | Energy policy, nuclear security, national labs |
-| 13 | Secretary of Education | Federal education funding, student loans |
-| 14 | Secretary of Veterans Affairs | Veterans healthcare, benefits, GI Bill |
-| 15 | Secretary of Homeland Security | Border security, FEMA, cybersecurity |
-| 16 | Director of Central Intelligence | National intelligence service: foreign collection, counter-intelligence (from 1946) |
-| 17 | White House Chief of Staff | White House operations and press strategy (from 1946; appointed by the President alone, no Senate vote, not in the line of succession) |
+### Key numbers
 
-## How nominations work
+| Item | Value |
+| --- | --- |
+| Senate vote window | 24 hours |
+| Cabinet actions (ministerial actions) | Cap 4, regain 1 every 6 turns |
+| Buy one extra action | 10 action points, once per turn, never above the cap |
+| Ministerial order | Costs 1 action; lasts 24 turns by default |
+| Acting secretary | 24 turns, once per seat per presidency |
+| National influence tier | Confirmed member 1.5; acting secretary 0.75 (highest tier only, no stacking) |
+| Approval cost | Acting secretary -0.5 each; empty cabinet up to -7.5 |
 
-The nomination process has three stages:
+### Worked example
 
-### 1. Presidential nomination
+You are confirmed as Secretary of Energy with the full bank of 4 actions. On turn 0 you issue two ministerial orders: the bank drops to 2. Six turns later you have 3, twelve turns later you are back at 4. If you buy an extra action on turn 3 for 10 AP, the bank goes to 3 for that moment, and you can do that once per turn. Each order then runs for 24 turns, so two orders issued on turn 0 stay in force until turn 24 even after the bank refills.
 
-Only the character currently holding the **President** office can nominate candidates for cabinet positions. The President selects a character (player or NPP) and submits the nomination from the executive dashboard. The White House Chief of Staff is the one exception: the President appoints them alone, with no Senate vote, and can fire them at any time.
+### Roster and eras
 
-- A nomination creates a pending **cabinet nomination** record for the position.
-- Only one nomination per position can be pending at a time.
-- The President can withdraw a nomination before the Senate vote closes.
+The US roster depends on the year. Seats unlock as follows (a world that starts later already has them):
 
-### 2. Senate confirmation
+| Seat | Available from |
+| --- | --- |
+| State, Treasury, Defense, Attorney General, Interior, Agriculture, Commerce, Labor | Always |
+| Director of Central Intelligence, White House Chief of Staff | 1946 |
+| Health, Education and Welfare (Health and Human Services after the Education split) | 1953 |
+| Housing and Urban Development | 1965 |
+| Transportation | 1967 |
+| Energy | 1977 |
+| Veterans Affairs | 1989 |
+| Homeland Security | 2002 |
+| Education | Only after the Department of Education Act passes |
 
-Once nominated, the candidate enters the Senate confirmation process. See [Confirmation Process](/wiki/confirmation-process) for the full mechanics of the confirmation vote.
+The Chief of Staff is not in the line of succession.
 
-### 3. Taking office
+### Parliamentary countries
 
-When the Senate confirms a nomination, the character is installed as the cabinet member. Their current office is updated, and the position appears as filled on the executive dashboard.
+In the UK, Japan, Germany and Ireland the Prime Minister, Chancellor or Taoiseach appoints ministers directly after [government formation](/wiki/government-formation), with no confirmation vote. The whole cabinet resets when the government changes. Japan also lets cabinet members propose bills through a cabinet review step before the Diet. UK and German ministers use the ordinary chamber route. Every country's seats and powers are in the [Cabinet Guide](/wiki/cabinet-guide).
 
-## Parliamentary equivalent (UK / JP / DE / IE)
+## What you can do
 
-In parliamentary countries (UK, JP, DE, IE), the Cabinet is formed differently. The Prime Minister, Chancellor, or Taoiseach appoints cabinet members directly after government formation, because those countries lack the US-style Senate confirmation step. Instead, cabinet composition is tracked through the government formation record.
+- **As President:** nominate, withdraw a nomination, fire a secretary, or seat an acting secretary.
+- **As a Cabinet member:** issue ministerial orders (1 action each) that change metrics nationally or in target regions, set standing tier policies for free, designate a target region, and build assets. See [Cabinet Projects & Buildings](/wiki/cabinet-projects).
+- **As a senator:** vote on nominees.
 
-Japan additionally has a **Cabinet Bills** mechanic: cabinet members can propose bills via a cabinet review step before they enter the Diet. The UK and Germany do not model this; their cabinet members propose bills through the standard chamber flow like any other member.
+### Acting secretaries
 
-## What cabinet members do
+A President can seat an acting secretary in a vacant seat from the cabinet page, without a Senate vote, so a department does not go dark while confirmation is pending.
 
-Cabinet members have both structural roles and active executive mechanics:
+- One acting appointment per seat per presidency. When it lapses the seat falls vacant and cannot be filled this way again.
+- It lasts 24 turns. The cabinet page shows an Acting badge with the turns left.
+- It needs a vacant seat. It cannot remove a confirmed secretary, install a nominee the Senate rejected, or fill a department that does not exist in the era.
+- Confirmation wins: when the Senate confirms someone, they replace the acting secretary at once. An acting appointment does not cancel a pending nomination.
+- An acting secretary has the same departmental powers as a confirmed one. Normal costs and cooldowns still apply.
 
-**Structural:**
-- Occupy a named executive office, contributing to their character's profile and political career arc
-- Receive notifications relevant to their department (e.g., budget-related events for Treasury)
-- Appear in the executive branch listing visible to all players
+### Vacancies
 
-**Active mechanics (live):**
-- **Ministerial orders**: Each cabinet position can issue department-specific orders that apply metric modifiers nationally or to target regions. Orders cost **1 cabinet action** and last a fixed number of turns.
-- **Tier settings**: Positions with tiered policy levers can set a national policy tier that applies passive metric modifiers every turn without consuming actions.
-- **Regional targets**: Positions can designate a target region for focused policy effects, with optional non-target penalties to create zero-sum trade-offs.
-- **Projects & buildings**: Most seats can build persistent assets: portfolio facilities like schools, hospitals, and embassies (estates), power plants (the energy seat), or multi-turn infrastructure projects (the transport seat). Each asset nudges its region's metrics every turn, and total upkeep is weighed against your ministry's budget envelope. See [Cabinet Projects & Buildings](/wiki/cabinet-projects) for the full guide. Offices with no associated laws, such as the White House Chief of Staff, carry an intentionally zero legislative budget and show no Allocations tab or department budget panel.
+A seat becomes vacant when the Secretary resigns or is fired, when a new President takes office, or when the White House changes party. The turn never fills seats for you: the President must nominate or seat an acting secretary. An empty cabinet loses approval in proportion to the share of seats left empty, up to -7.5 (see [Government Approval](/wiki/government-approval)).
 
-**Action economy:**
-- Cabinet members receive **cabinet actions** (or ministerial actions in parliamentary systems), capped at **4**.
-- You regain 1 action every 6 turns, banked up to the cap of 4.
-- Once per turn you can spend 10 AP to buy 1 extra action, up to the cap.
-- Orders and other active mechanics consume 1 action each.
+### Why can't I nominate someone?
 
-**Future / partially implemented:**
-- Department-specific influence actions are planned.
+- You are not the President.
+- The seat already has a pending nomination.
+- The seat does not exist yet in the current year.
+- The nominee holds an office that cannot be combined with this seat.
 
-**National influence:** a confirmed cabinet member earns the +1.5 national influence tier each turn; an acting secretary earns +0.75. Position tiers do not stack, so you get your highest one. See [Elections Player Guide](/wiki/elections-player-guide).
+### Tips
 
-## Cabinet vacancies
+- Fill the Secretary of State, Defense and Treasury seats first.
+- If the opposition holds the Senate, nominate someone they can accept or use an acting appointment as a bridge.
+- Nominees: build relationships with senators before you are named.
 
-A cabinet position becomes vacant when:
+## Connections
 
-- The Secretary resigns or is removed by the President
-- The President is vacated (upon a new President taking office, all cabinet positions reset)
-- An election cycle changes the White House party (standard practice: all secretaries submit resignation letters)
+**Driven by**
 
-When vacant, the position is open for a new presidential nomination. The turn processor never auto-fills cabinet positions; the President must actively nominate, or bridge the gap with an acting appointment.
+- [Confirmation Process](/wiki/confirmation-process): the Senate vote decides whether a nominee takes office.
+- [Government Formation](/wiki/government-formation): in parliamentary countries the new head of government appoints the cabinet.
+- [Impeachment](/wiki/impeachment): a removed President is replaced and cabinet terms change with them.
+- [General Elections](/wiki/general-elections): a new President or a change of party ends or resets cabinet terms.
+- [Core Systems](/wiki/core-systems): the cabinet action bonus adds actions to ministers
+- [Player Progression](/wiki/player-progression): executive offices appoint cabinets
 
-## Acting secretaries
+**Affects**
 
-A President can seat an **acting secretary** in a vacant cabinet seat directly from the cabinet page, without a Senate vote. The appointment exists to stop a department going dark while confirmation is pending, with full departmental authority during its limited term:
+- [Confirmation Process](/wiki/confirmation-process): each US nomination opens a 24 hour Senate vote.
+- [Cabinet Projects & Buildings](/wiki/cabinet-projects): a seat is what lets you build schools, plants and projects.
+- [Government Approval](/wiki/government-approval): empty seats and acting secretaries cost approval.
+- [National Metrics](/wiki/national-metrics): ministerial orders and tier settings move metrics.
+- [Elections Player Guide](/wiki/elections-player-guide): holding a seat sets your national influence tier.
+- [Embargoes & Trade Exposure](/wiki/embargo-and-trade-exposure): the trade minister's office holds the embargo panel and spends cabinet actions
+- [Nationalization & National Corporations](/wiki/nationalization): the head of government and finance minister hold the taking and privatization powers.
+- [National Corporations](/wiki/national-corporations): the head of government and finance minister hold the powers over state companies.
 
-- **One acting appointment per office per term.** When it lapses the seat falls vacant again and the charge is not given back, so that office can only be filled by Senate confirmation for the rest of the term.
-- **It lasts 24 turns.** The cabinet page shows an Acting badge with the turns remaining.
-- **It needs a vacant seat.** An acting appointment cannot remove a sitting confirmed secretary, cannot install a nominee the Senate has already rejected, and cannot fill a department that does not exist in the current era.
-- **Confirmation always wins.** An acting appointment does not cancel a pending nomination, and when the Senate confirms someone they replace the acting secretary at once.
-- **Full departmental authority.** An acting secretary has the same departmental powers as a confirmed secretary, including policy, personnel, doctrine, nuclear programmes, defence contracts, debt operations and departmental assets. Normal action costs, cooldowns and other eligibility rules still apply.
-- **It costs approval.** Each acting secretary on the books costs half a point of national approval, shown as its own line on the rating. An empty cabinet costs far more. See [Government Approval](/wiki/government-approval).
+## Status
 
-## Strategic considerations
+Live in every world with a cabinet. The US uses nomination and Senate confirmation, and the US roster depends on the year. The UK, Japan, Germany and Ireland appoint directly. Several other countries, including China, the Soviet Union and the East German state, have their own cabinets; see the [Cabinet Guide](/wiki/cabinet-guide) for each country.
 
-### For the President
+Last checked: 2026-10-29, version 1.18.0
 
-- **Fill critical positions first.** Secretary of State and Secretary of Defense affect foreign policy events. Treasury and HHS matter for economic and healthcare metric events.
-- **Nominate allies.** Cabinet members are among the most visible appointed officials. Placing political allies in these roles strengthens your faction and denies the seats to rivals.
-- **Watch for Senate blocking.** If the opposing party holds the Senate, confirmation votes become the battlefield. See [Confirmation Process](/wiki/confirmation-process).
+## Technical detail
 
-### For senators
-
-- **Cabinet confirmation votes** are a major source of legislative leverage. Blocking a cabinet nominee is one of the most effective tools of opposition politics.
-- **Vote trading**: agreeing to confirm a nominee in exchange for Presidential support on a bill is a classic bargain.
-
-### For cabinet nominees
-
-- **Confirmation is not guaranteed.** Your favorability, policy positions, and political connections all matter. Build Senate relationships before the President nominates you.
-
-## Related pages
-
-- [Cabinet Guide](/wiki/cabinet-guide): every country's cabinet posts, the metrics each influences, and every action each can take
-- [Confirmation Process](/wiki/confirmation-process): How the Senate confirmation vote works
-- [Bills & Legislation](/wiki/bills-legislation): Cabinet bills in Japan (parliamentary systems may include this; UK and DE do not)
-- [Congress Leadership](/wiki/congress-leadership): The Senate Majority Leader's role in scheduling confirmation votes
-- [Government Formation](/wiki/government-formation): How the parliamentary Cabinet (UK/JP/DE/IE) is appointed without a Senate confirmation step
+Exact rules and the full position list: [Cabinet design doc](https://docs.lakesidegames.net/design/cabinet.html).
 `;

@@ -1,87 +1,105 @@
 export const createACharacterContent = `# Create a Character
 
-One character per account. A few clicks are expensive to undo. Do them in this order.
+One character per account. A few of the choices are expensive to undo, so make them in this order and read the notes before you confirm. This page covers every screen of creation and what you start with.
 
-## Open creation
+## How it works
 
-1. Log in with an account that has no living character.
-2. You are sent to **Create Character** (\`/create-character\`).
-3. If you already have a character, you cannot open this flow until you retire or delete it.
+1. Log in with an account that has no living character. You are sent to **Create Character** automatically.
+2. Some worlds require a linked Discord account before you can create a character. The page tells you if yours does.
+3. Work through the steps below, then confirm. You land on your profile with your starting kit.
 
-## Click path
+If you already have a character, you cannot open creation until you retire it (see the end of this page).
 
 ### 1. Country
 
-Pick the country you actually want to play. It scopes elections, parties, legislature, and who you can wire. Relocation later resets national influence, and also your party if the move leaves that party's reach (72-turn cooldown between moves).
+Pick the country you actually want to play. It scopes your elections, parties, legislature and who you can wire money to. You cannot campaign across countries, and a later country change resets your National Influence and your party (see [Relocation](/wiki/relocation)).
 
-| Country | Home pick | First office most people target |
+| Country | Home you pick | First office most people target |
 | --- | --- | --- |
-| United States | State (50) | State Senate, then House |
-| United Kingdom | ENG / SCO / WAL / NIR | MP (Commons) |
-| Germany | Land (11 in the 1953 preset, 16 modern) | Bundestag MdB |
-| Japan | Region (8) | Shūgiin or Sangiin |
-| China | Macro-region (7) | NPC delegate (one-party; disclaimer on pick) |
-| Ireland | Region (8) | TD (Dáil) |
-| Brazil | State (5 macro-regions) | Federal Deputy |
-| Nigeria | Zone (6) | Assembly Member |
-| Soviet Union | Republic (14) | Supreme Soviet or Nationalities Deputy |
-| East Germany | Land (6) | Volkskammer Deputy |
+| United States | State | State Senate, then House |
+| United Kingdom | England, Scotland, Wales or Northern Ireland | MP (Commons) |
+| Germany | Land | Bundestag (MdB) |
+| Japan | Region | Shūgiin or Sangiin |
+| China | Macro-region | NPC delegate (one-party, with a disclaimer on pick) |
+| Ireland | Region | TD (Dáil) |
+| Brazil | State or macro-region | Federal Deputy |
+| Nigeria | Zone | Assembly Member |
+| Soviet Union | Republic | Supreme Soviet or Nationalities Deputy |
+| East Germany | Land | Volkskammer Deputy |
 
-Which of these are open depends on the world's era preset and the admin roster: the Soviet Union and East Germany exist only in the Cold War presets, and a country can be switched on for players later in a world's life. The country hubs on [Getting Started](/wiki/getting-started) cover each one.
+**Why the list is shorter than this table:** only countries open to players in your world appear in the picker. At the start of a world, the United States, United Kingdom and Japan are open in the 1991 to 2023 presets, the United States, United Kingdom, Soviet Union and East Germany are open in the 1953 and 1979 presets, and the United States, United Kingdom, Germany, Japan and China are open in the 2027 preset. Other countries run as economies or as non-player politicians until they are opened later in a world's life.
 
-Confirm. You cannot campaign across countries.
+If you cannot pick the Soviet Union, you are in a world set after 1990, where it no longer exists. The country hubs from [Getting Started](/wiki/getting-started) cover each one.
 
 ### 2. Name and avatar
 
-Type a readable name. Optional avatar; skip it if you want the default tile. You can change the image later in Settings. There is no separate last-name field.
+Type a readable name. There is no separate last-name field. An avatar is optional, and you can change the image later in Settings.
 
-### 3. Home state / region
+### 3. Home state or region
 
-This is where you canvass cheapest and where most local races live. National races (President, PM) are the exception.
-
-US: any of 50 states. UK: England, Scotland, Wales, or Northern Ireland. DE: one Land. JP: one of 8 regions. CN: one of 7. IE: one of 8. BR: one of 5 macro-regional states. NG: one of 6 zones. RU: one of 14 republics. DD: one of 6 Länder.
-
-You can [relocate](/wiki/relocation) later. You lose state Political Influence when you do. Pick once, carefully.
+Home is where you canvass cheapest and where most local races live. Races for state or regional seats can only be entered from your home. National races such as President and Prime Minister are the exception. You can [relocate](/wiki/relocation) later, but you lose your state Political Influence and donor network when you do, so pick once, carefully.
 
 ### 4. Policy positions
 
-Two sliders, each -5 to +5:
+Two sliders, each from -5 to +5:
 
-- **Economic:** -5 left / +5 right
-- **Social:** -5 progressive / +5 conservative
+- **Economic:** -5 is left, +5 is right.
+- **Social:** -5 is progressive, +5 is conservative.
 
-These feed primaries (distance to your party), bill voting, and demographic appeal. Each bill you vote on can move you at most 0.25 per axis: an Aye pulls you toward the bill's average position (never past it), a Nay pushes you away, and changing your vote later is measured from where you stood before that bill, so flipping Aye and Nay cannot stack. The vote buttons show you the exact move before you click.
+These feed primaries (your distance from the party), bill voting and how demographic groups see you. They are not locked: each bill you vote on can move you at most 0.25 per axis. An Aye pulls you toward the bill's average position, never past it. A Nay pushes you away. Changing your vote later is measured from where you stood before that bill, so flipping Aye and Nay cannot stack. The vote buttons show the exact move before you click.
 
-Do not slam both to -5 or +5 unless that party is actually extreme. Moderate parties punish extremes in the primary.
+**Do your sliders lock you out of parties?** No. You can join any party that is open to your region, and approval-gated parties need an application. The sliders only change how well you score once you are in.
+
+**Worked example.** You set Economic -2 and Social -1 and join a party whose platform is -3 and -2. Your gap is 1 on each axis, so 2 in total. Party alignment in a primary is worth up to 15 points and drops by 0.75 per point of gap, so you score 13.5 of 15. A character at +2 and +2 in the same party has a gap of 5 plus 4, which is 9, and scores 8.25. That 5-point difference is real but not decisive, because favorability and influence are worth more. The formulas are on [Reference: Formulas](/wiki/reference-formulas).
+
+Do not slam both sliders to an extreme unless that party really is extreme, since moderate parties punish extremes in the primary.
 
 ### 5. Wealth background and stats
 
-Pick a wealth background: Low, Medium or High Income. It sets your personal Cash on Hand (see the kit below) and your starting income tier. Where the world uses the stats system, you also spread **28 points across seven stats**, each from 1 to 10.
+Pick a wealth background: **Low Income**, **Medium Income** or **High Income**. It sets your personal Cash on Hand and your starting income tier. Where the world uses the stats system, you also spend **28 points across seven stats** (Charisma, Debate, Energy, Fundraising, Business Acumen, Statecraft and Intellect), each from 1 to 10 with a minimum of 1, which leaves 21 points to place. See [RPG Stats](/wiki/rpg-stats) for what each one does.
 
-### 6. Confirm and take the kit
+### 6. Confirm and take your kit
 
-On submit you receive:
-
-| Resource | Starting value |
+| Starting kit | Value |
 | --- | --- |
 | Actions | 25 (one-time) |
-| Campaign Funds | ₳250,000 |
-| Cash on Hand | ₳1,000,000 (Low Income), ₳2,500,000 (Medium) or ₳5,000,000 (High), scaled down in earlier eras |
+| Campaign Funds | ₳250,000 (local-currency equivalent) |
+| Cash on Hand | ₳1,000,000 (Low), ₳2,500,000 (Medium) or ₳5,000,000 (High), scaled down in earlier eras |
 | Political Influence | 10 |
-| NPI | 0 |
+| National Influence | 0 |
 | Favorability | 50 |
 | Infamy | 0 |
-| Donor Base | 1 |
-| Party | Independent |
+| Donor Base level | 1 |
+| Party | Independent, unless you chose an open party at creation |
 | Office | none |
 
-Characters who joined through a referral also get +10% Political Influence and Favorability, +10 actions and +₳500,000 Cash on Hand (era scaled). You land on your profile. A setup banner asks you to read Getting Started, join a party, and take a first action. For your first three days, a first-days panel lists three goals: campaign at home three times, join a party that takes members from your region, and enter a local race that is still taking candidates. Your name appears in the home-state player list.
+Characters who joined through a referral also get +10% Political Influence and Favorability, +10 actions and ₳500,000 more Cash on Hand (era scaled). Where the starter checklist is on, a welcome mail from the Game Guide also arrives in [Mail](/wiki/mail). For your first three days, a first-days panel on your profile lists three goals: campaign at home three times, join a party that takes members from your region, and enter a local race still taking candidates. Your name appears in your home state's player list.
 
-## What to click immediately after
+| Key number | Value |
+| --- | --- |
+| Characters per account | 1 |
+| Stat points to spend | 28, across 7 stats, 1 to 10 each |
+| Policy slider range | -5 to +5 on each axis |
+| Max move from one bill vote | 0.25 per axis |
+| First-days panel | 72 hours |
 
-1. Open **Parties**. Join one close to your sliders.
-2. Open **Dashboard**. Spend Campaign actions.
+## What you can do
+
+**Right after you confirm:**
+
+1. Open **Parties** and join one close to your sliders.
+2. Open **Dashboard** and spend Campaign actions.
 3. Continue on [Getting Started](/wiki/getting-started).
+
+**Start over with a different character.** Open **Settings**, find **Retire character**, and type your character's name exactly to confirm. The character moves into your retired characters archive, where its record is kept, and you are sent back to Create Character. Retiring clears the character from the game, so do it only when you mean it. There is no separate delete step.
+
+**Change your mind later:** policy positions move only by voting on bills. Name and avatar changes are in Settings. Home and country change through [Relocation](/wiki/relocation).
+
+Tips:
+
+- Join a party the day you create. Skipping it for two days leaves bonus actions and primaries on the table.
+- A tiny home state for "easy wins" means lower donor income and fewer races.
+- Fundraise needs a donor base above 0. You start at level 1, so you can use it right away, but it pays more once your donor level and Political Influence are higher.
 
 ## Your first week
 
@@ -91,16 +109,27 @@ Characters who joined through a referral also get +10% Political Influence and F
 - [ ] Starting actions not dumped into Fundraise before Donor Level 2.
 - [ ] First race identified on **Elections** (poll before declare).
 
-## Common misses
+## Connections
 
-- Skipping the party for two days: you leave bonus actions and primaries on the table.
-- Tiny home state for "easy wins": lower donor income and fewer stakes.
-- Fundraise as the first action: it pays once the donor base is higher.
+**Driven by**
 
-## Related
+- [Game Starting State](/wiki/game-starting-state): the world's era decides which countries and parties you can pick.
 
-- [Getting Started](/wiki/getting-started)
-- [Relocation](/wiki/relocation)
-- [Parties](/wiki/political-parties)
-- [First Campaign Walkthrough](/wiki/first-campaign-walkthrough)
+**Affects**
+
+- [Getting Started](/wiki/getting-started): your country and kit set your first week.
+- [Stats & Actions](/wiki/stats-actions): your seven stats and starting meters come from this step.
+- [Relocation](/wiki/relocation): your first home is the one you can later move away from.
+- [Player Progression](/wiki/player-progression): your country decides the office ladder you climb.
+- [First Campaign Walkthrough](/wiki/first-campaign-walkthrough): its starting kit is what that plan spends.
+
+## Status
+
+Character creation is open in every world unless it is closed for maintenance. Which countries you can pick depends on the world's era and what has been opened so far. Some worlds require a linked Discord account first.
+
+Last checked: 2026-10-29, version 1.18.0
+
+## Technical detail
+
+Creation has no separate design page. The starting meters and costs are on the [Stats & Actions design page](https://docs.lakesidegames.net/design/stats-actions.html), and the first-hours flow is on the [Getting Started design page](https://docs.lakesidegames.net/design/getting-started.html).
 `;

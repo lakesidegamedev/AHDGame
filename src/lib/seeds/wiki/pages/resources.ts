@@ -7,6 +7,7 @@ import { tariffsContent } from "../content/tariffs";
 export const resourcesPages: readonly WikiSeedPage[] = [
   {
     slug: "resources-overview",
+    designDocUrl: "design/resources.html",
     title: "Resources",
     description:
       "State deposits of oil, coal, iron, natural gas, timber, and rare earth: how capacity works and why it affects corporate output and commodity prices.",
@@ -20,6 +21,7 @@ export const resourcesPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "extraction-contracts",
+    designDocUrl: "design/resources.html",
     title: "Extraction Contracts",
     description:
       "How legislators grant and revoke exclusive resource capacity shares to corporations, and what over-allocation means for commodity supply.",

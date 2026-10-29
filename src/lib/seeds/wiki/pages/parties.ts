@@ -30,6 +30,7 @@ export const partiesPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "party-membership",
+    designDocUrl: "design/parties.html",
     title: "Party Membership",
     description:
       "How to join a party, switch parties, what membership unlocks (primaries, whip directives, action pools), and how taxes work.",
@@ -42,6 +43,7 @@ export const partiesPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "party-leadership",
+    designDocUrl: "design/parties.html",
     title: "Party Leadership",
     description:
       "Chair, vice chair, and treasurer roles at the national and state level: elections, whip authority, and the chairId vs chairCharacterId distinction.",
@@ -54,6 +56,7 @@ export const partiesPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "party-leadership-authority",
+    designDocUrl: "design/party-leadership-authority.html",
     title: "Party Leadership & Authority",
     description:
       "Acting-chair vice-chair inheritance, the 24-turn leadership tenure gate, the unmanned-default capture shield, and where the UK regional parties start strong.",
@@ -66,6 +69,7 @@ export const partiesPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "party-organization",
+    designDocUrl: "design/party-building.html",
     title: "Party Organization",
     description:
       "The org score system: how the cap is calculated from election results, how org builds through budget spending, and how org multiplies vote output.",
@@ -79,6 +83,7 @@ export const partiesPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "party-ideology",
+    designDocUrl: "design/parties.html",
     title: "Party Ideology",
     description:
       "The economic and social two-axis grid: how party positions affect primary scoring, NPP alignment, and voter appeal in generals.",
@@ -91,6 +96,7 @@ export const partiesPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "party-actions",
+    designDocUrl: "design/party-influence.html",
     title: "Party Actions",
     description:
       "Budget-based actions (GOTV, suppression, org building), NPP influence spending, and whip directives: who can use them and how.",
@@ -116,6 +122,7 @@ export const partiesPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "coalition-formation",
+    designDocUrl: "design/coalitions.html",
     title: "Coalition Formation",
     description:
       "How to create a coalition, invite or join parties, manage chair succession, and run disband votes.",
@@ -141,6 +148,7 @@ export const partiesPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "npp-behavior",
+    designDocUrl: "design/npp-system.html",
     title: "NPP Behavior",
     description:
       "How NPPs vote on bills, elect Speakers and leaders, respond to whip directives, and how personality traits shape their decisions.",
@@ -153,6 +161,7 @@ export const partiesPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "npp-elections",
+    designDocUrl: "design/npp-system.html",
     title: "NPP Elections",
     description:
       "How NPPs enter primaries and generals, the 50% primary score penalty when players compete, dropout mechanics, and how to beat NPPs.",
@@ -165,6 +174,7 @@ export const partiesPages: readonly WikiSeedPage[] = [
   },
   {
     slug: "npp-autonomy",
+    designDocUrl: "design/npp-system.html",
     title: "NPP Autonomy",
     description:
       "Graduated smarter-NPP levels (v0-v3): bill sponsorship, executive formation, ministerial governance, and comingle tiers for player countries.",

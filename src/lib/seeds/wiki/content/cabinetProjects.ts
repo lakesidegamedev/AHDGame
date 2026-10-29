@@ -1,98 +1,121 @@
 export const cabinetProjectsContent = `# Cabinet Projects & Buildings
 
-If you hold a cabinet seat, you may see options to build things: schools, hospitals, embassies, power plants, highways. This page explains what those are, what they actually do, and how to use them well. It applies to every country whose cabinet has an authored portfolio: examples below use UK seat names.
+If you hold a cabinet seat you can build things: schools, hospitals, embassies, power plants, highways. Each building is a lasting asset that gives its region a small nudge to its metrics every turn, and its running cost is weighed against your ministry's budget. Build where the problem is and stay near your budget envelope.
 
-## The short version
+## How it works
 
-Cabinet buildings are **persistent assets** your seat owns. Each one sits in a specific region and gives that region a small, ongoing nudge to its metrics every turn (for example, a public school slowly raises education metrics in the region it sits in). Separately, the total upkeep of everything you have built is compared against your ministry's discretionary budget: build modestly and you help the national budget balance metric; overbuild and you drag it down.
+Buildings belong to the seat, not to you personally, and each sits in one region for good. There are three kinds, depending on which seat you hold.
 
-They never spend real money out of the federal budget. Upkeep is *modeled pressure* on the budget balance metric, not an actual withdrawal.
-
-There are three flavors, depending on which seat you hold:
-
-| System | Who gets it (UK example) | Assets |
+| System | Who gets it | Assets |
 | --- | --- | --- |
-| **Estates** | Most portfolio seats (Education, Health, Home, Justice, Foreign...) | Schools, hospitals, courts, embassies, jobs centres... |
-| **Energy plants** | The energy-mapped seat (UK: Environment Secretary) | Coal, gas, nuclear, hydro, wind, solar plants |
-| **Infrastructure projects** | The transport seat (UK: Transport Secretary) | Highways, transit, bridges, railways, broadband, freight, airports |
+| **Estates** | Most portfolio seats in the US, UK, Germany, China, Japan, Ireland and the command-economy states | Schools, hospitals, courts, embassies and more (three archetypes or more per portfolio) |
+| **Energy plants** | The energy seat (US: Secretary of Energy; UK: Environment Secretary) | Coal, gas, nuclear, hydro, wind, solar |
+| **Infrastructure projects** | The transport seat | Highways, transit, bridges, railways, broadband, freight, airports |
 
-## Estates (most cabinet seats)
+Upkeep is modeled pressure on the national budget balance metric, not an actual withdrawal from the federal budget. The total upkeep of what you built is compared with your **discretionary envelope**. Under the envelope gives a small positive tilt to the budget balance each turn; over it, a negative tilt that grows with the overshoot (at most 0.05 per turn at full scale).
 
-An **estate** is a facility or program tied to your portfolio: e.g. the Education Secretary can open public schools, the Health Secretary hospitals, the Foreign Secretary embassies abroad. Each portfolio has three archetypes to choose from.
+### Key numbers
 
-Every estate has four things you control or watch:
+| Item | Value |
+| --- | --- |
+| Ministerial actions | Cap 4, regain 1 every 6 turns |
+| Open, Expand, build a plant, upgrade a plant, start a project | 1 ministerial action each |
+| Close, Fund, change project funding, cancel | Free |
+| Estate tiers (upkeep multiplier) | Basic 1.0, Established 1.5, Expanded 2.0, Flagship 2.5 |
+| Estate funding (upkeep, output, settled condition) | Reduced 0.6 / 0.7 / 55; Standard 1.0 / 1.0 / 75; Enhanced 1.5 / 1.25 / 90 |
+| Estate envelope | 4% of the department appropriation, held between 3,500 and 5,000 (millions per turn) |
+| Transport envelope | 1.2% of the transport appropriation, held between 3,000 and 5,000 |
+| Plant tiers (capacity multiplier) | Standard 1.0, Expanded 1.5, Major 2.0, Mega 2.5 |
+| Project funding (speed, cost) | Slowed 0.5x / 0.6x; Standard 1.0x / 1.0x; Crashed 1.8x / 1.6x |
 
-- **Location**: chosen when you open it, then fixed forever. Domestic estates sit in one region and affect *that region's* metrics. Foreign-portfolio estates sit in another country and boost your own country's national soft-power metrics (they do not affect the host).
-- **Tier** (Basic → Established → Expanded → Flagship): the **Expand** lever. Higher tier = stronger effects and higher upkeep (1x / 1.5x / 2x / 2.5x).
-- **Funding** (Reduced / Standard / Enhanced): the **Fund** lever, free to change. Higher funding costs more upkeep but raises output and the condition your estate settles at.
-- **Condition** (0-100): drifts a few points per turn toward your funding level's baseline (Reduced ~55, Standard ~75, Enhanced ~90). Effects scale with condition, so a neglected estate does proportionally less. Upkeep does NOT scale with condition: a run-down hospital still costs money.
+Upkeep numbers are in millions per turn.
 
-**Actions:** Open and Expand each cost 1 ministerial action. Close and Fund are free. Actions are capped at 4 and you regain 1 every 6 turns.
+## Estates
 
-**Effect size:** each estate's per-turn effect is small (roughly the same scale as ministerial orders), scaled by tier x funding x condition. All cabinet effects on the same metric are capped per turn, so stacking has diminishing returns.
+An **estate** is a facility tied to your portfolio. Every estate has four things:
 
-## Energy plants (energy seat)
+- **Location**: chosen when you open it, then fixed. Domestic estates sit in one region and affect that region. Foreign-portfolio estates, such as embassies, sit in another country and raise your own country's soft-power metrics, not the host's.
+- **Tier**: the **Expand** lever. Higher tiers give stronger effects and higher upkeep.
+- **Funding**: the **Fund** lever, free to change. Higher funding raises upkeep and output and the condition the estate settles at.
+- **Condition** (0 to 100): drifts toward the baseline of your funding level (55, 75 or 90). Effects scale with condition, so a neglected estate does proportionally less. Upkeep does **not** scale with condition: a run-down hospital still costs money.
 
-The energy-mapped seat (UK: Environment Secretary, US: Secretary of Energy) builds **power plants**. Your plants in a region collectively form that region's generation mix, which nudges three regional metrics toward what the mix implies:
+Each estate's effect is small and scales with tier, funding and condition. All cabinet effects on one metric are capped per turn, so stacking has diminishing returns.
 
-- **Renewable energy share**: driven by how much of your capacity is hydro/wind/solar.
-- **Carbon emissions**: coal is worst (1.0 carbon per MW), gas half that, nuclear/renewables zero.
-- **Power grid reliability**: rewards *firm* (always-on) capacity like coal/gas/nuclear/hydro and a *diverse* mix (up to 4 distinct sources counts).
+### Worked example: a school
 
-These are "nudges toward a target": the further the region's metric is from what your mix implies, the harder it pulls, easing off as it converges. So a big nuclear build-out in a coal region shows visible movement for many turns, then settles.
+A Public School has base upkeep of 60 and nudges high school graduation by 0.02 and test performance by 0.015 per turn in its region. At Basic tier and Standard funding it costs 60 per turn. A Flagship school at Enhanced funding costs 60 x 2.5 x 1.5 = 225 per turn but delivers a stronger effect once its condition has climbed to 90. Condition moves slowly, so after switching from Standard to Enhanced it takes several turns before the extra output shows. With an envelope of 3,500 to 5,000, ten Basic schools (600 per turn) are comfortably under it.
 
-Plants are built in a region (fixed), can be **upgraded** through 4 tiers (each tier raises capacity and upkeep), and **decommissioned**. Build and upgrade cost 1 ministerial action.
+## Energy plants
 
-**The trade-off table:**
+Your plants in a region form that region's generation mix, which nudges three regional metrics toward what the mix implies: renewable share, carbon emissions, and power grid reliability. The nudge is small when the metric is already near its target and saturates at 0.08 per turn when it is far.
 
-| Source | Renewable | Carbon | Firm? | Upkeep |
+Reliability scores 70% on how much of your capacity is firm (always-on) and 30% on diversity, with four or more distinct sources earning full credit.
+
+| Source | Default capacity (MW) | Upkeep per MW | Upkeep at default | Carbon per MW | Firm |
+| --- | --- | --- | --- | --- | --- |
+| Coal | 800 | 0.08 | 64 | 1.0 | 1.0 |
+| Gas | 600 | 0.05 | 30 | 0.5 | 1.0 |
+| Nuclear | 1,200 | 0.12 | 144 | 0 | 1.0 |
+| Hydro | 500 | 0.03 | 15 | 0 | 0.9 |
+| Wind | 300 | 0.04 | 12 | 0 | 0.3 |
+| Solar | 250 | 0.03 | 7.5 | 0 | 0.25 |
+
+A plant can be upgraded through four tiers, each raising capacity and upkeep by the tier multiplier, and can be decommissioned. For example, an Expanded coal plant has 800 x 1.5 = 1,200 MW and costs 96 per turn. A big nuclear build in a coal region shows visible movement for many turns and then settles.
+
+## Infrastructure projects
+
+Projects take several turns to build and then give fixed standing effects.
+
+| Project | Build time (turns) | Construction spend per turn | Upkeep per turn | What it does |
 | --- | --- | --- | --- | --- |
-| Coal | No | Worst | Yes | Mid |
-| Gas | No | Medium | Yes | Low-mid |
-| Nuclear | No | None | Yes | Highest |
-| Hydro | Yes | None | Mostly | Lowest |
-| Wind | Yes | None | No | Low |
-| Solar | Yes | None | No | Lowest |
+| Highway | 6 | 120 | 40 | Road condition up, investment gap down |
+| Transit | 8 | 180 | 60 | Public transit up, investment gap down |
+| Bridge | 4 | 80 | 25 | Road condition up |
+| Railway | 9 | 190 | 55 | Transport efficiency up, investment gap down |
+| Broadband | 5 | 90 | 30 | Broadband access up |
+| Freight | 7 | 150 | 50 | Road condition up, GDP growth up |
+| Airport | 7 | 200 | 70 | Public transit up, GDP growth up |
 
-## Infrastructure projects (transport seat)
+While a project is under construction you set its funding level. A highway takes 12 turns at Slowed funding and spends 72 per turn, 6 turns at Standard and spends 120, and about 4 turns at Crashed and spends 192. Once operational it is permanent and pays only upkeep. Unlike plants, infrastructure effects are flat bonuses that do not fade as the region improves.
 
-The transport seat (UK: Transport Secretary) starts **construction projects** that take several turns to build, then produce fixed ongoing effects once operational:
+## What you can do
 
-| Project | Build time | What it does when finished |
-| --- | --- | --- |
-| Highway | 6 turns | Road condition up, infrastructure investment gap down |
-| Transit | 8 turns | Public transit up, investment gap down |
-| Bridge | 4 turns | Road condition up |
-| Railway | 9 turns | Transport efficiency up, investment gap down |
-| Broadband | 5 turns | Broadband access up |
-| Freight | 7 turns | Road condition up, GDP growth up |
-| Airport | 7 turns | Public transit up, GDP growth up |
+- Open or expand an estate, and change its funding for free.
+- Build or upgrade a plant, or decommission it.
+- Start an infrastructure project, change its funding, or cancel it.
+- Read your total upkeep against your envelope on the seat's build panel before you commit.
 
-While building, you can set the **funding level**: Slowed (half speed, cheaper per turn), Standard, or Crashed (1.8x speed, much more expensive per turn). Once operational a project is permanent and pays only its (smaller) upkeep. Starting a project costs 1 ministerial action; changing funding or cancelling is free.
+Tips:
 
-Unlike energy plants, infrastructure effects are flat standing bonuses: they do not fade as the region improves.
+- Put buildings where the problem is. A school only helps the region it sits in.
+- Condition lags funding, so Enhanced funding is a long-term commitment.
+- Actions are scarce (max 4), and builds compete with ministerial orders for the same actions.
+- Location is forever. To move something, close or decommission it and rebuild.
 
-## The budget envelope: why you should not build everything
+### Common questions
 
-Each of these systems compares your total running costs against a **discretionary envelope**: a slice of the national budget your ministry is allowed to lean on (for transport, it is derived from the actual transportation appropriation, so a generous national budget genuinely lets you build more).
+- **Why did my school stop helping?** Its condition probably fell because funding is Reduced, or another law is pulling the same metric the other way.
+- **What happens when I leave office?** The assets are stored against the seat, not against you, and stay in place for whoever holds it next.
 
-- Spend **under** the envelope: small positive tilt to the national **budget balance** metric each turn.
-- Spend **over** it: the tilt goes negative, and it worsens the further over you are.
+## Connections
 
-So the game is not "build maximum everything": it is picking the assets whose regional effects you actually want, in the regions that need them, while staying near your envelope.
+**Driven by**
 
-## Practical tips
+- [Cabinet](/wiki/cabinet): you need a confirmed or acting seat, and the actions it gives, to build.
+- [National Budget](/wiki/national-budget): the department appropriation sets the size of the discretionary envelope.
 
-- **Put buildings where the problem is.** A school helps only the region it sits in. Check regional metrics first and site your assets in the weakest regions.
-- **Condition lags funding.** After changing funding it takes several turns for condition (and thus effect strength) to settle. Enhanced funding is a long-term commitment, not a burst.
-- **Ministerial actions are scarce** (max 4, slowly regenerating): Opens, Expands, plant builds, and project starts all compete with your ministerial orders for the same actions.
-- **Crash-build only what matters.** Crashed funding builds 1.8x faster but costs 1.6x the per-turn construction spend on your envelope (\`src/lib/constants/cabinetInfra.ts\`).
-- **Location is forever.** You cannot relocate an estate, plant, or project: close/decommission and rebuild instead.
+**Affects**
 
-## Related pages
+- [National Metrics](/wiki/national-metrics): each building nudges its region's metrics every turn.
+- [National Budget](/wiki/national-budget): total upkeep above or below the envelope tilts the budget balance metric.
 
-- [Cabinet](/wiki/cabinet): appointments, ministerial orders, tier settings, and the action economy
-- [National Metrics](/wiki/national-metrics): the metrics these assets move
-- [National Budget](/wiki/national-budget): where the discretionary envelopes come from
-- [Government Formation](/wiki/government-formation): how parliamentary cabinets (UK/JP/DE) are appointed
+## Status
+
+Live for every country whose cabinet has an authored portfolio. Estates are available in the US, UK, Germany, China, Japan, Ireland and the command-economy states (Soviet Union and East Germany). Energy plants and infrastructure projects depend on which seat the country maps to energy and transport. Which seats exist in a given year depends on the era.
+
+Last checked: 2026-10-29, version 1.18.0
+
+## Technical detail
+
+The exact rules are on the [Cabinet design page](https://docs.lakesidegames.net/design/cabinet.html).
 `;

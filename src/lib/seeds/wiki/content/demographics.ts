@@ -1,132 +1,111 @@
 export const demographicsContent = `# Demographics
 
-The demographics system models voter populations in each state. It is the foundation of election mechanics: every vote in every election flows through demographic groups and their alignment with candidates. Demographics are a **voter and election mechanic**, not a corporation mechanic.
+The demographics system models the voters in each state. Every vote in every election flows through voter groups and how well a candidate fits them, so this is the foundation under [Election Mechanics](/wiki/election-mechanics). Demographics are a voter and election mechanic, not a corporation mechanic. Knowing who your electorate is tells you which policies win a state and which groups are worth chasing.
 
-## The census: who the electorate is
+For tactics (which group to spend on) see [Demographics & Targeting](/wiki/demographics-targeting).
 
-Each state's electorate is described by its **census**. In the US that is four dimensions:
+## How it works
+
+### The census: who the electorate is
+
+Each state's electorate is described by its census. In the US that is four dimensions:
 
 | Dimension | Buckets |
 | --- | --- |
 | Race | White, Black, Hispanic, Asian, Other |
-| Age | Young (18-29), Mid (30-49), Mature (50-64), Senior (65+) |
+| Age | Young (18-29), Middle-Aged (30-49), Mature (50-64), Senior (65+) |
 | Education | No college, College, Graduate |
 | Wealth | Low, Middle, High |
 
-Every state carries its own real shares in each dimension: a rural state has more no-college voters, a coastal metro more graduates. Other countries use their own dimensions and their own buckets (most use ethnicity, age, education, income and urbanization), because a bucket list that fits the US does not fit the UK or Japan.
+Every state has its own real shares in each dimension: a rural state has more no-college voters, a coastal metro more graduates. Other countries use their own dimensions and buckets, mostly ethnicity, age, education, income and urbanization, because a bucket list that fits the US does not fit the UK or Japan.
 
-Each bucket has an economic and a social position on the −5 to +5 scale, and a baseline turnout rate. Positions come from an era position table plus per-state overrides, so **white voters in Texas genuinely sit to the right of white voters in Massachusetts**: regional political texture comes out of the census rather than one national table.
+Each bucket has an economic and a social position on the -5 to +5 scale, and a baseline turnout rate. Positions come from an era position table plus per-state overrides, so white voters in Texas sit to the right of white voters in Massachusetts. Regional texture comes out of the census, not one national table.
 
-## Cells: how the census becomes voters
+### Cells: how the census becomes voters
 
-The dimensions are combined into **cells**: a cell is one combination across all of them, for example "white, mature, no college, middle income". The engine estimates how many voters sit in each cell by raking the state's own dimension shares together with association priors (no-college voters are more likely to be low income, graduate degrees predict high income, and so on), then prunes the cells too small to matter.
+The dimensions are combined into **cells**, one combination across all of them, such as "white, mature, no college, middle income". The engine estimates how many voters sit in each cell by combining the state's own dimension shares with typical overlaps (no-college voters are more likely to be low income, graduate degrees predict high income) and drops cells too small to matter.
 
-A cell's lean is the average of its buckets' positions, and its turnout is blended from its buckets' participation rates. Cells are what the vote engine counts. Everything you see on a region page, in a poll, or in a turnout action is either a cell or an aggregate of cells.
+A cell's lean is the average of its buckets' positions, and its turnout is blended from its buckets' participation rates. Cells are what the vote engine counts. Everything you see on a region page, in a poll, or in a turnout action is a cell or a sum of cells.
 
-**Eras.** Every playable era (1953-2023) has its own census bundles and position tables: a 1979 world has a 1979 electorate, not a reweighted 2019 one. Derived leans are calibrated against real historical election results per era and country, and an automated calibration suite keeps them honest.
+Every playable era has its own census bundles and position tables: a 1979 world has a 1979 electorate, not a reweighted 2019 one. Leans are calibrated against real historical election results per era and country.
 
-## How demographics drive elections
+**Worked example (illustrative).** In a state of 10,000,000 voters, the cell "white, mature, no college, middle income" is estimated at 6% of the electorate (600,000 people). Its buckets' turnout blends to 60%, so 360,000 of them vote. If its lean is +1.2 economic and +2.0 social, a candidate at (+1, +2) fits it almost perfectly, and a candidate at (-3, -2) is a total distance of 8.2 away and gets close to the floor of appeal there.
 
-During elections, candidates compete for votes from each cell through a multi-factor formula:
+### How demographics drive elections
 
-### 1. Reach
-\`\`\`
-reach = sqrt(min(100, politicalInfluence) / 100)
-\`\`\`
-How much of the turned-out voters a candidate can actually contact and persuade. The square-root curve gives diminishing returns: PI=25 gives 0.5 reach, PI=50 gives 0.707, and it caps at 1.0 once PI reaches 100.
+Each turn, the vote pool is split between cells by size and turnout. Inside a cell, candidates share the cell's votes in proportion to appeal x reach x approval x party organization x infamy (and, in generals, registration and mood). The factors and their ranges are laid out in [Demographics & Targeting](/wiki/demographics-targeting), and the full vote model is in [Election Mechanics](/wiki/election-mechanics).
 
-### 2. Appeal
-\`\`\`
-positionScore = 25 × (positionRaw / 50)^1.5 + floor(0.5)
-appeal = positionScore + directionalBonus
-\`\`\`
-Where \`positionRaw\` is derived from the absolute economic and social distance between the candidate's policy positions and the cell's leans, and \`directionalBonus\` adds a small amount per axis when the candidate's lean matches the cell's lean direction (tribal-voter effect). Political influence does not enter appeal; it only drives reach. Maximum appeal is about 35.5 (25.5 from position plus 10 from the directional bonus; \`src/lib/utils/demographicAppeal.ts\`). Candidates who match a cell's positions score high; candidates far from their positions score low. The exponent (1.5, not squared) keeps position from swamping every other lever in the formula.
+### Key numbers
 
-### 3. Approval scalar
-\`\`\`
-approvalScalar = (favorability / 100) ^ 0.8
-\`\`\`
-Voters won't support candidates they don't approve of, regardless of policy alignment. The exponent below 1.0 means the scalar falls off less steeply than favorability itself at low approval, and 0% approval still means 0 votes.
+| Item | Value |
+| --- | --- |
+| Position scale | -5 to +5 on both axes |
+| Turnout modifier range | -20 to +20 percentage points |
+| Modifier half-life (current races) | 6 turns (about 10.9% per turn) |
+| Canvass | 1 action, ₳100, base 2.0 points x fit squared |
+| Canvass fit floor | 0.2 (so 4% of base at worst) |
+| Final 4 turns | canvass worth 2x |
+| Party GOTV budget | 0 to 25% of hourly revenue |
+| GOTV purchasing power | ₳5,000 of spend buys one full turnout point before alignment and diminishing returns |
+| Maximum appeal | about 35.5 (25.5 from position, up to 10 from direction) |
 
-### 4. Party organization (general elections)
-In general elections, each party gets a multiplier equal to its **normalized share** of the state's total Org:
+### State political lean
 
-\`\`\`
-orgShare = party.organization / Σ(every party's organization in this state)
-orgMultiplier = orgShare ^ 0.2
-\`\`\`
+A state's lean is its cells' economic and social leans, weighted by population share times turnout, averaged and clamped to -5..+5. Labels use the shared ruler rounded to the nearest step: 0 Centrist, plus or minus 1 Center-Left or Center-Right, plus or minus 2 Lean Left or Lean Right, plus or minus 3 Left or Right. After calibration, state leans typically span about -2.5 to +2.5. The label is for display on the state page and the map. Elections use raw position differences, not the label.
 
-The share is raised to the 0.2 power, a diminishing-returns curve: a party with 60 Org in a state where the total is 100 gets roughly a 0.9× multiplier, not 0.6×, softening a dominant party's structural Org edge. A party with no presence in the state still gets 0 (no votes). Two more general-election factors layer on top:
+### Turnout
 
-- **Reg resistance** (1.0×-1.3×): own-Reg makes voters harder to peel away through persuasion
-- **Support mood** (0.6×-1.4×): short-term candidate momentum from debates / endorsements / scandals; neutral 1.0× at Support=50
+Turnout modifiers sit on top of baseline turnout. They apply to a census bucket and reach every cell that carries it. There are two ways to move them:
 
-In **primary** elections (intra-party), Org is applied as a uniform neutral \`1×\` instead: within-party normalization would cancel out since all primary candidates share the same Org.
+- **Party GOTV spending.** A party budget targets one bucket and spends automatically each turn. A continuous alignment multiplier scales the boost by how close the party's position is to the bucket's lean, from 1.0 at perfect alignment down to a 0.1 floor. National spend splits evenly across states, while state spend applies in full to one state.
+- **Player canvassing.** You canvass one bucket in your active campaign state. See [Canvassing](/wiki/canvassing).
 
-### 5. Vote allocation
+Diminishing returns apply to both: at a +10 modifier, a 1-point boost counts as 0.5. All modifiers decay with a 6-turn half-life, so a boost needs sustained spending.
 
-Within each cell, candidates split the cell's votes proportional to their relative \`appeal × reach × approvalScalar × orgMultiplier × regResistance × supportMood × infamyMult\` in general elections. Primaries drop the three general-only factors (orgMultiplier / regResistance / supportMood): Org is a neutral \`1×\` intra-party. Either way, the cell votes as a bloc, and each candidate gets a fraction of the cell's total turned-out voters.
+### Policy and demographics
 
-Total votes are summed across all cells. This cell-level split is the base pipeline; live general-election vote accumulation runs it through the **swing-flow model**, which additionally applies coattails, a median-voter policy reference, persuasion drivers, and, in presidential races, the National Mood economic channel. See [Election Mechanics](/wiki/election-mechanics).
+Candidates declare economic and social positions on the -5 to +5 scale. These are compared directly to each cell's leans in that state. A candidate at (-4, -4) appeals to young, graduate, urban voters and serves older no-college voters in conservative states poorly. A centrist (0, 0) has moderate appeal everywhere and strong appeal nowhere. Because leans are state-derived, the same platform lands differently from state to state, so poll locally.
 
-## State political lean
+Why the system works this way: it makes geography matter without hard-coding a map, and it gives specialists a path to win by mobilizing their base while giving centrists a path by picking up the middle.
 
-Each state has an overall political lean calculated from its demographics:
+## What you can do
 
-1. For each cell: multiply population share × turnout to get voter weight
-2. Compute turnout-weighted average economic lean and social lean
-3. Average the two leans and clamp to −5..+5
+- **Look at a state's makeup** on its region page (the census shares and the turnout by bucket). The Full Demographic Poll breaks the electorate into cells and shows which are for, weakly for or against you.
+- **Choose policy positions** that fit the states you want to win.
+- **Canvass** a bucket to raise its turnout.
+- **Party chairs** can set GOTV budgets that raise a bucket's turnout automatically.
 
-Labels use the shared −5..+5 position ruler, rounded to the nearest step: 0 = Centrist, ±1 = Center-Left / Center-Right, ±2 = Lean Left / Lean Right, ±3 = Left / Right, and so on. Post-calibration state leans typically span about −2.5 to +2.5.
+Tip: relying on intuition from another state misleads, because the same group can lean differently in two states.
 
-This display label appears on the state page and the political map. It is for display only: elections use raw position differences, not the display lean.
+## Connections
 
-## Turnout manipulation
+**Driven by**
 
-Candidates and parties can increase (or decrease) how many voters actually vote. Turnout modifiers sit on top of baseline turnout and range from **−20% to +20%**. They are applied to a census bucket, and reach every cell that carries that bucket.
+- [Canvassing](/wiki/canvassing): turnout actions change the turnout of the buckets.
+- [Political Parties](/wiki/political-parties): party GOTV budgets change turnout automatically.
+- [policy-effects](/wiki/policy-effects): Active laws slowly shift group make-up and leanings.
 
-### Party GOTV spending
+**Affects**
 
-Party budgets target a single chosen demographic bucket and spend automatically each turn: \`gotvBudgetPercent\` (0-25% of hourly revenue, with a legacy flat \`gotvBudgetPerTurn\` amount as a fallback). There is no binary "within 2 points" eligibility gate; instead a continuous alignment multiplier scales the boost by how close the party's position is to the target bucket's lean, from 1.0× at perfect alignment down to a 0.1× floor.
+- [Election Mechanics](/wiki/election-mechanics): cells set how the vote pool is split.
+- [Demographics & Targeting](/wiki/demographics-targeting): the groups and their sizes are what you target.
+- [Polling](/wiki/polling): polls report results cell by cell.
+- [Canvassing](/wiki/canvassing): group size and turnout set what a turnout boost is worth.
+- [US House Redistricting](/wiki/us-house-redistricting): state voter texture feeds district leans.
+- [Referendums](/wiki/referendums): a region's demographic groups are the cohorts in a referendum campaign.
+- [General Elections](/wiki/general-elections): the vote pool is derived from the state's demographics.
+- [granular-polling](/wiki/granular-polling): census totals and era tables set each cell's size and turnout
+- [Government Approval](/wiki/government-approval): A state's voter groups decide which metrics count for more in its approval score.
 
-Boost formula per turn:
-\`\`\`
-boost = (spend / 5000) × alignmentMultiplier × diminishingReturns(currentModifier)
-\`\`\`
+## Status
 
-$5,000 of spend buys one full turnout point before alignment and diminishing returns are applied. National spend divides evenly across all states; state-scoped spend applies in full to one state.
+Live in every world and country with elections. The four dimensions above are for the US. Other countries use their own groups, and every playable era has its own data.
 
-Diminishing returns: at a +10% existing modifier, a 1% boost becomes only 0.5% effective.
+Last checked: 2026-10-29, version 1.18.0
 
-All modifiers decay toward 0 with a 6-turn half-life (about 10.9% per turn), requiring sustained spending to maintain boosts.
+## Technical detail
 
-### Player canvassing
+The exact rules are on the [Demographics design page](https://docs.lakesidegames.net/design/demographics.html).
 
-The canvassing action targets a specific census bucket in your active campaign state (home state by default; presidential candidates use their travel/primary campaign state):
-
-- **Cost:** 100 funds + 1 action point
-- **Base boost:** 2 percentage points, times the group fit squared
-- **Alignment multiplier:** Perfect policy alignment = 1.0×; the fit has a floor of 0.2, so the boost never falls below 4% of base (see [Canvassing](/wiki/canvassing))
-- **Campaign season bonus:** 2× effective during the 4 turns before an election
-- **Effect:** Immediate (not queued)
-
-You are most effective canvassing groups that already align with your positions. Mismatched canvassing wastes actions.
-
-## Demographic alignment and character policy
-
-Candidates declare economic and social policy positions on a −5 to +5 scale. These are compared directly to each cell's leans **in that state** when computing appeal. The closer a candidate's positions are to a cell's leans, the higher their appeal with those voters.
-
-This means:
-- A candidate at (−4, −4) naturally appeals to young, graduate-educated, urban voters
-- The same candidate poorly serves older no-college voters in conservative states
-- A centrist candidate (0, 0) has moderate appeal everywhere but strong appeal nowhere
-- Because leans are state-derived, the *same* platform lands differently state to state: poll locally rather than assuming a national table
-
-Winning elections requires either mobilizing your natural coalition (GOTV + canvassing) or moderating your positions to pick up the middle-income and mid-age groups that sit closest to the centre.
-
-## Polling
-
-Players can use poll actions to check demographic standings before an election. A full demographic poll breaks the state's electorate down into its cells and shows which segments are strongly for, weakly for, or opposed to your candidacy.
-
-See also: [Election Mechanics](/wiki/election-mechanics), [Government Approval](/wiki/government-approval), [Campaign Strategy](/wiki/campaign-strategy)
+See also: [Government Approval](/wiki/government-approval), [Campaign Strategy](/wiki/campaign-strategy).
 `;

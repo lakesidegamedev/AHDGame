@@ -1,160 +1,140 @@
 export const fundraisingAdsContent = `# Fundraising & Ads
 
-Money is the oxygen of a campaign. This page covers how you earn it, how you spend it efficiently, and where it's wasted. For upgrade-tier math (Ground Game, Opposition Research, Media Spending) see [Campaign Strategy](/wiki/campaign-strategy).
+Money is the oxygen of a campaign. This page covers how you earn campaign money, what it buys, and where it is wasted. Ads turn money into favorability, and favorability scales every vote you win, so knowing the real return on an ad action matters more than any other spending decision.
 
-## Your two money pools
+## How it works
 
-Non-interchangeable:
+You have two money pools. They are not interchangeable.
 
-- **Campaign Funds:** what you spend on ads, polls, donor base, NPP influence, party taxes, personal campaign donations. Starts at ₳250,000. All the actions in this page drain this pool.
-- **Cash on Hand:** personal liquid cash. Only spent on wire transfers (Portfolio page) or converted into Campaign Funds at 50% via the Personal Campaign Donation action. Starts at ₳0.
+- **Campaign Funds:** what you spend on ads, polls, donor base, canvassing, Campaign Presence and party taxes. New characters start with ₳250,000. Every action on this page draws on this pool.
+- **Cash on Hand:** your personal liquid cash. It is spent on wire transfers (Portfolio page) or converted into Campaign Funds at 50% with a Personal Campaign Donation. It starts at ₳0.
 
-If you see "−₳100,000" next to an action, it's Campaign Funds unless the action explicitly says "personal cash."
+If an action shows "-₳100,000", it is Campaign Funds unless the action says "personal cash".
 
-## Fund generation per turn
+### Where campaign funds come from
 
-Every turn your Campaign Funds grow by a sum of three components:
+Every turn your Campaign Funds grow by three things:
 
 | Component | Amount |
 | --- | --- |
-|| Base rate | ₳5,000 to ₳40,000/turn by state population tier |
-|| Donor bonus | \`donorLevel × per-tier-rate\` (by home state population) |
-|| Office bonus | Tier-based fixed amount while in office |
+| Base rate | ₳5,000 to ₳40,000 per turn, by your home state's population tier |
+| Donor bonus | Donor base level x the per-level rate for your tier |
+| Office bonus | A fixed amount while you hold office |
 
-### Donor base income by state population tier
-
-| Tier | Threshold | Per level per turn |
+| Tier | Home state population | Donor income per level per turn |
 | --- | --- | --- |
-| Small | < 2M | +₳100 |
-| Medium | 2 to 8M | +₳200 |
-| Large | 8 to 20M | +₳400 |
-| Mega | > 20M | +₳800 |
+| Small | under 2 million | ₳100 |
+| Medium | 2 to 8 million | ₳200 |
+| Large | 8 to 20 million | ₳400 |
+| Mega | over 20 million | ₳800 |
 
-A Level 5 donor base in Pennsylvania (medium tier) yields ₳1,000/turn passively; the same level 5 in California (mega tier) yields ₳4,000/turn.
-
-### Office fund bonuses
-
-| Office | Per turn |
+| Office | Bonus per turn |
 | --- | --- |
-| US House | +₳5,000 |
-| US State Senate | +₳3,000 |
-| US Senate | +₳15,000 |
-| US Vice President | +₳25,000 |
-| US Governor | +₳15,000 |
-| US President | +₳50,000 |
-| UK MP / DE MdB / JP Sangiin/Shūgiin | equivalent tier |
-| UK / DE / JP Prime Minister / Chancellor | equivalent top tier |
+| US House | ₳5,000 |
+| US State Senate | ₳3,000 |
+| US Senate | ₳15,000 |
+| US Governor | ₳15,000 |
+| US Vice President | ₳25,000 |
+| US President | ₳50,000 |
 
-## Fundraise action
+UK, German and Japanese offices pay an equivalent tier, with prime ministers and the chancellor at the top tier.
 
-- **Cost:** 3 actions, free (no money up front)
-- **Returns:** \`(₳50,000 + ₳2,000 × donor base level) × (1 + stateInfluence/100)\`, multiplied by your Fundraising stat modifier and scaled to the era's price level
-- **Requires:** Donor base level ≥ 1 (every character starts at 1)
+### Key numbers
 
-With a neutral Fundraising stat, at level 1 with 0% state influence: +₳52,000 per fundraise. At level 5 with 50% influence: +₳90,000. At level 10 with 100% influence: +₳140,000.
-
-The state influence multiplier ranges from **1.0× at 0%** to **2.0× at 100%**, so high-PI characters raise dramatically more per action.
-
-Fundraise is most efficient when your donor base is high. A level 3 donor base fundraise (₳56k return, 3 actions) is ~18.7k per action; a level 1 fundraise is ~17.3k per action.
-
-## Build Donor Network
-
-- **Cost:** 4 to 20 actions (tiered by current level) and \`₳3,000 + ₳1,500 × current level\` scaled by state GDP per capita (0.85 to 2.0×). At national-average GDP, level 1→2 costs ~₳4.5k.
-- **Effect:** Donor base level +1
-- **Recovery window:** ROI depends on state tier
-
-In a medium-tier state (+₳200/turn per level), level 1→2 at ~₳4.5k generates +₳200/turn extra passive income. Breakeven: ~23 turns (~1 real day). The level also improves fundraise yield by ₳2k permanently, so breakeven on that part is ~2 fundraises.
-
-In a mega-tier state (+₳800/turn per level), the math shortens further: ~6 turns to break even on passive income alone.
-
-## Ads (Run Advertisements)
-
-- **Cost:** 5 to 9 actions (tiered by favorability), fund cost scaled by state GDP (~₳100k at national average)
-- **Effect:** +1 to +3 Favorability, with **diminishing returns above 70**.
-
-Practical yields:
-
-| Current Favorability | Expected delta per ad |
+| Item | Value |
 | --- | --- |
-| 50 to 70 | +3 |
-| 75 | +2 |
-| 80 | +2 |
-| 85 | +1 |
-| 90+ | +1 (floored, never rounds to 0) |
+| Fundraise | 3 actions, no money up front |
+| Fundraise return | (₳50,000 + ₳2,000 x donor level) x (1 + state influence / 100), times your Fundraising stat modifier |
+| Build Donor Network | 4 to 20 actions plus ₳3,000 + ₳1,500 x current level, scaled by state GDP per capita (0.85x to 2.0x) |
+| Run Advertisements | 5 to 9 actions by favorability tier, about ₳100,000 at national-average GDP |
+| Ad gain | +3 favorability up to 70, +2 from 71 to 80, +1 above 80 (neutral Charisma) |
+| Targeted ad | 1 action and ₳100, +1 nominal bonus, cap 25, halves every 24 turns |
+| Campaign action | 1 to 5 actions by influence tier, +1 political influence |
+| Influence decay | 0.75% of current value per turn |
+| Party tax | 0% to 33%, set by the party |
+| Personal Campaign Donation | 2 actions, 50% of the amount reaches Campaign Funds |
+| Out-of-state multiplier (Support, Attack, Barnstorm) | 1.0x home, 1.25x neighbour, 1.5x other |
 
-The gain is \`floor((3 - 0.1 × (Favorability - 70)) × charisma multiplier)\`, with the penalty applying only above 70 (\`src/lib/actions/rules.ts\`). The table shows a neutral Charisma; a higher Charisma raises each figure and a lower one cuts it. Above 80 Favorability each ad delivers less and less, but the gain is floored at +1: an ad is never fully wasted, just poor value.
+### Worked example: a fundraise
 
-### Out-of-state cost multipliers
+A donor base level 5 character with 50% influence in a state: (₳50,000 + ₳2,000 x 5) x 1.5 = ₳90,000 for 3 actions. If their party tax is 20%, ₳72,000 arrives and ₳18,000 goes to the party treasury. With a neutral Fundraising stat, a level 1 character with 0% influence raises ₳52,000, and a level 10 character at 100% influence raises ₳140,000. The influence multiplier runs from 1.0x at 0% to 2.0x at 100%.
 
-Interpersonal actions (Support, Attack, Barnstorm) cost more when targeting a politician outside your home state:
+### Ads and favorability
 
-- Home state: 1.0×
-- Neighbouring state: 1.25×
-- Non-neighbour: 1.5×
+The favorability gain of one ad is floor((3 - 0.1 x (favorability - 70)) x Charisma multiplier), with the penalty only above 70, and never less than +1. A neutral Charisma gives:
 
-Campaign and Advertise action costs are scaled by state GDP per capita, not by adjacency.
+| Current favorability | Gain per ad |
+| --- | --- |
+| Up to 70 | +3 |
+| 71 to 80 | +2 |
+| 81 and above | +1 |
 
-### Ad targeting
+Higher Charisma raises each figure and lower Charisma cuts it. Above 80 an ad is never wasted, but it is poor value: stop at your target (60 minimum, 70 optimal for most races). When you run an ad you choose a demographic group, or broad for untargeted. Targeted ads give slightly more on that group. Aim at the two or three weakest groups after a Full Poll (see [Demographics and Targeting](/wiki/demographics-targeting)).
 
-When you run an ad, you choose a demographic group (or "broad" for untargeted). Targeted ads give slightly higher effective Favorability gain on that group than untargeted. In competitive generals with a known Full Poll, target the 2 to 3 weakest groups and leave the others alone.
+### Targeted ads
 
-## Campaign action
+You can also buy ads aimed at one voter group in one state. Each targeted ad takes **1 action and ₳100** and adds 1 point of nominal bonus for that group, up to a cap of 25 points, with up to 50 ads per purchase. The bonus halves every 24 turns, and what it is worth to you depends on how well your positions fit that group, in the same way as canvassing (see [Canvassing](/wiki/canvassing)). To reach the cap you need 25 ads, about ₳2,500 and 25 actions, and then top it up as it fades. For example, after buying 25 ads (bonus 25), 24 turns later the bonus is 12.5, so about 12 more ads restore it.
 
-- **Cost:** 1 to 5 actions (tiered by PI), fund cost scaled by state GDP
-- **Effect:** +1 Political Influence
+### Influence and the Campaign action
 
-The workhorse. Every character runs dozens of Campaign actions per week.
+A Campaign action costs 1 to 5 actions by influence tier and adds +1 political influence. Influence decays by 0.75% of its value each turn, and if your party holds the national executive that rate is multiplied by 2 minus approval over 100 (2.0x at 0% approval, 1.5x at 50%, 1.0x at 100%). At influence 80, decay is 0.6 a turn, so about one Campaign action a turn just holds your ground. Near 100 you can stop with little loss.
 
-- Political Influence decays at 0.75% of current value per turn. If your party holds the national executive, that rate is multiplied by 2 - approval/100 (x2.0 at 0% approval, x1.5 at 50%, x1.0 at 100%). A single Campaign action per turn is more than enough to offset decay at low PI; at PI=80 you need +1 per turn to grow, which means ~1 Campaign action per turn just to maintain.
-- At PI=100 (max), you can stop Campaigning without much loss because decay of 0.75 (up to 1.5 if your party governs with low approval) rolls you back to ~99 and you barely notice.
+### Donor network payback
 
-## Party tax
+Raising your donor base from level 1 to 2 costs about ₳4,500 at national-average GDP. In a medium state that earns ₳200 more per turn, so it pays back in about 23 turns, roughly one real day. In a mega state (₳800 per level) it takes about 6 turns. A level also adds ₳2,000 to every fundraise.
 
-When you're in a party, a percentage of your fundraising and per-turn fund generation goes to the party treasury:
+### The campaign page budget
 
-- Set by party leadership (Chair and Treasurer).
-- Ranges 0% to 33%.
-- Applied to **gross** income: \`fundraise earnings × (1 − taxRate)\` arrives in your Campaign Funds.
-- National parties and regional parties can have different rates: your contribution goes to the relevant treasury.
+Once you are a candidate your campaign page has its own budget, separate from your personal Campaign Funds: passive income by fundraising level (₳20,000 at level 0 up to ₳5,000,000 at level 10 for a presidential race, scaled for other races), upgrade costs and maintenance. If the campaign cannot cover next turn's maintenance, levels downgrade automatically. See [Campaign Strategy](/wiki/campaign-strategy) and [Campaign Manager](/wiki/campaign-manager).
 
-A 20% party tax on a ₳100k fundraise yields ₳80k to you, ₳20k to the party treasury. High-tax parties run more coordinated NPP operations but cost members more; low-tax parties let members retain more but spend less party-wide.
+### Party tax
 
-## Campaign page budget (upgrades and maintenance)
+A party can tax your fundraising and per-turn fund income from 0% to 33%, set by the Chair and Treasurer. It applies to gross income: fundraise earnings x (1 - tax rate) reach you. National and regional parties can use different rates.
 
-Once you're a candidate, your **campaign page** gets its own budget pool with passive income, upgrades (Ground Game, Media Spending, Opposition Research), and maintenance costs. These are distinct from your personal Campaign Funds.
+## What you can do
 
-- Passive income by fundraising level: ₳20k to ₳5M/turn, 10 levels, upgrade-gated.
-- Maintenance on Ground Game / Media Spending tiers deducts each turn.
-- If the campaign can't cover next turn's maintenance, levels auto-downgrade (Media first, Ground Game second).
-- Insolvent campaigns survive with passive income rebuilding funds, but pay downgraded effects.
+- **Fundraise** whenever you have 3 spare actions. It needs donor base level 1 or more (every character starts at 1).
+- **Build Donor Network** early. It pays back quickly and permanently lifts your fundraise return.
+- **Run Advertisements** to raise favorability toward your target.
+- **Campaign** to hold your influence.
+- **Donate** with a Personal Campaign Donation: 2 actions plus the cash you choose. It triggers an infamy tick that grows with the size of the donation.
 
-Full breakdown: [Campaign Strategy](/wiki/campaign-strategy) → Strategic Upgrades.
+Tips:
 
-## Personal Campaign Donation
+1. Spend your starting actions on the first Build Donor Network, to level 2.
+2. Fundraise regularly at level 2 and above.
+3. Run ads only when favorability is below your target. Do not ad-spam above 75.
+4. Upgrade the campaign page's fundraising level once you are a candidate.
+5. Factor a high party tax (25% or more) into every fundraise.
 
-- **Cost:** 2 actions + amount of Cash on Hand you choose
-- **Effect:** 50% of amount arrives in Campaign Funds; 50% stays as Cash on Hand for the recipient if they differ
-- **Infamy:** Scales with size of donation
+Common question, "Why am I always out of funds?": the sinks are ads (about ₳100,000 each), polls and Campaign Presence, against an income of only base + donor + office per turn. Fundraising and a higher donor level are the fix.
 
-Used mostly for wealthy characters with significant Cash on Hand wanting to convert to Campaign Funds, or to fund another player's campaign. It triggers an Infamy tick: small donations add little, large ones (5-figure+) can accumulate.
+## Connections
 
-## Fundraising priority hierarchy
+**Driven by**
 
-For a new player:
+- [Stats & Actions](/wiki/stats-actions): action costs and the Fundraising and Charisma modifiers set every figure above.
+- [Political Parties](/wiki/political-parties): party tax comes out of your fundraising and income.
+- [Campaign Strategy](/wiki/campaign-strategy): the fundraising upgrade levels set your campaign page's passive income.
+- [Polling](/wiki/polling): the worst-groups list shows where ads pay.
+- [Demographics & Targeting](/wiki/demographics-targeting): group sizes and appeal show which group to aim ads at.
 
-1. **Spend starting actions on first Build Donor Network** to Level 2. Immediate ROI on passive income and fundraise yield.
-2. **Fundraise regularly** at Level 2+ to refill Campaign Funds.
-3. **Ads only when Favorability is below your target** (60 minimum, 70 optimal for most races). Don't ad-spam above 75.
-4. **Build Donor Network** when you can afford it: each level compounds permanently.
-5. **Upgrade your Campaign page fundraising level** once you're a candidate.
-6. **Party Tax consideration:** if your party is high-tax (25%+), factor it into fundraise math. A ₳100k fundraise at 25% tax gives you ₳75k net.
+**Affects**
 
-## Related
+- [Campaign Manager](/wiki/campaign-manager): campaign funds pay for upgrades and maintenance.
+- [Political Operations](/wiki/political-operations): the campaign treasury pays each Campaign Presence level.
+- [Canvassing](/wiki/canvassing): each canvass costs ₳100 in campaign funds.
+- [Polling](/wiki/polling): polls are paid from campaign funds.
+- [Election Mechanics](/wiki/election-mechanics): favorability from ads scales every vote you win.
+- [first-campaign-walkthrough](/wiki/first-campaign-walkthrough): the income and ad rules behind the day-one ledger
 
-- [Stats & Actions](/wiki/stats-actions): Full action cost reference.
-- [Campaign Strategy](/wiki/campaign-strategy): Campaign page upgrades with maintenance math.
-- [Campaign Manager](/wiki/campaign-manager): The /campaign/[id] page.
-- [Demographics & Targeting](/wiki/demographics-targeting): Where to aim ads.
-- [Political Parties](/wiki/political-parties): Party tax, treasury operations.
-- [Canvassing](/wiki/canvassing): Turnout-boosting alternative to ads.
+## Status
+
+Live in every world and country with campaigns. Office bonus tiers differ by country, and money amounts are shown in your home currency.
+
+Last checked: 2026-10-29, version 1.18.0
+
+## Technical detail
+
+The exact formulas and constants are on the [Fundraising and Ads design page](https://docs.lakesidegames.net/design/fundraising-ads.html).
 `;
