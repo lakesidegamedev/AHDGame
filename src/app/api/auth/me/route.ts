@@ -373,6 +373,7 @@ export const GET = withNoStore(async () => {
                   rpgStatsEnabled &&
                   !character.statsAllocated &&
                   !character.statAllocationDismissed,
+                needsWealthTierRepick: character.wealthTierRepickPending === true,
                 displayCurrencyPreference:
                   character.displayCurrencyPreference ?? (forexEnabled ? "local" : "internal"),
               }
