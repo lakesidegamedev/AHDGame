@@ -10,11 +10,12 @@ import type { Db, Filter } from "mongodb";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
 import type { GameState } from "@/lib/db/types/gameState";
 import type { Election, ElectedOfficial, StatePolicy } from "@/lib/db/types";
-import { DEFAULT_DURATIONS } from "@/lib/constants/electionDurations";
+
 import {
   applyUKDevolutionPolicy,
   initialUKDevolutionState,
   UK_EXECUTIVE_REGIONS,
+  UK_EXECUTIVE_FOUNDING_TURNS,
   type UKDevolutionState,
   type UKExecutiveRegion,
 } from "./rules";
@@ -81,12 +82,7 @@ export async function reconcileUKDevolution(
           enactedTurn: policy.enactedTurn,
         }
       : null;
-  const next = applyUKDevolutionPolicy(
-    state,
-    enacted,
-    latestCycles,
-    24 + DEFAULT_DURATIONS.governor.generalDurationHours
-  );
+  const next = applyUKDevolutionPolicy(state, enacted, latestCycles, UK_EXECUTIVE_FOUNDING_TURNS);
   if (stored && next === state) return state;
 
   const inactive = UK_EXECUTIVE_REGIONS.filter((region) => !next.regions[region].active);

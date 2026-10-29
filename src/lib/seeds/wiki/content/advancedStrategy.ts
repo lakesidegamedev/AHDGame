@@ -18,7 +18,7 @@ Every race has an opportunity cost. Actions spent on one campaign cannot raise y
 
 ### How long does the climb take?
 
-A House race runs 96 turns from opening to result: a 48-turn primary window and a 48-turn general. A Senate race runs 288 turns: a 240-turn primary window and a 48-turn general. Senate seats come in three staggered classes, so one class comes up about every 96 turns.
+A House race runs 96 turns from opening to result: a 72-turn primary window and a 24-turn general. A Senate race runs 288 turns: a 264-turn primary window and a 24-turn general. Senate seats come in three staggered classes, so one class comes up about every 96 turns.
 
 In practice, you can declare for the Senate while you still hold a House seat, as long as that Senate primary is open. You hold one elected office at a time, so winning the Senate seat vacates the House seat. Count on one to two House terms before you stand in a Senate race that fits your state's class. See [Reference: Offices](/wiki/reference-offices) for term lengths.
 
@@ -101,7 +101,7 @@ Funds are the hidden limit. Campaign costs ₳20,000 times its action cost befor
 
 ## Timing the general election
 
-The general election pays out votes unevenly. The pool is split by turn: the early turns share 50%, the 8 turns before the last four share 20%, and the final 4 turns share 30%. In a 48-turn general, an early turn is worth about 1.4% of all votes, a ramp turn 2.5% and a final turn 7.5%.
+The general election pays out votes unevenly. The pool is split by turn: the early turns share 50%, the 8 turns before the last four share 20%, and the final 4 turns share 30%. In a 24-turn general, an early turn is worth about 4.17% of all votes, a ramp turn 2.5% and a final turn 7.5%.
 
 So a lead with 3 turns left is not safe: one final turn is worth five times an early one. Canvassing also doubles in strength once a race is in its closing turns. Save bursts of canvassing and ads for that window. See [Canvassing](/wiki/canvassing) and [Reference: Formulas](/wiki/reference-formulas).
 

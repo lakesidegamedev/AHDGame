@@ -170,6 +170,8 @@ The portfolio view shows issuer names, units held, and current market values.
 - **Buy back your own bonds** to cut debt. Non-defaulted bonds cost the market price; defaulted ones cost face value.
 - **Refinance after a default** to roll holders into a new bond for the full defaulted principal.
 
+![Bonds tab issue form showing the rate by maturity, the issuance cap and the debt headroom](/wiki-images/screens/corporate-bonds-issue-form.webp)
+
 ### Common questions
 
 - **Why do I owe a large lump sum at maturity?** Bonds repay the whole face value on the maturity turn, not gradually. Plan cash for it.

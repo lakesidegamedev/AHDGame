@@ -58,7 +58,7 @@ An Attack adds 2 Infamy (a failed one costs 2 as well), and large personal donat
 
 ## 12. Watch declaration timers
 
-Open **Elections**, choose the race, and note the primary close time. A House primary window is 48 turns and a Senate one is 240. Miss it and you wait a full cycle (2 to 6 game years by office). You also cannot re-enter a race you withdrew from.
+Open **Elections**, choose the race, and note the primary close time. A regular House primary window is 72 turns and a Senate one is 264. Miss it and you wait a full cycle (2 to 6 game years by office). You also cannot re-enter a race you withdrew from.
 
 ## 13. You can move, but it resets things
 

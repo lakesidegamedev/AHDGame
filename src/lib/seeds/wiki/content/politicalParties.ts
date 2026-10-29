@@ -45,6 +45,8 @@ Platform example: a charter that sets +24 economic and -36 social starts the par
 - **Found a party.** Draft a charter from the parties page and invite two co-founders.
 - **Merge or rename a party.** Committee proposals handle this; see [Party Leadership](/wiki/party-leadership).
 
+![Parties page with the party list, membership share balance of power and the Create party button](/wiki-images/screens/political-parties-parties-page.webp)
+
 **Choosing a party as a new player.** Match your character's two positions to the party's, because ideology is a large part of your [primary score](/wiki/party-ideology). Then check that the party is present in or next to your home state, and whether it has an active chair. Joining a built-in party with no chair makes you its chair. A large party gives you more NPP allies; a small one gives you more say in how it is run.
 
 **Tips.**

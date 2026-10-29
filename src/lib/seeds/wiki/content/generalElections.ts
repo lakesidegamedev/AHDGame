@@ -22,7 +22,7 @@ The pool is released over the general window in three bands:
 | Ramp (8 turns before the final band) | 20% | Spread evenly across the ramp |
 | Election day (final 4 turns) | 30% | 0.3 x pool / 4 per turn |
 
-The window is 48 turns for a US House, Senate, Governor, State Senate or presidential general. That gives 36 early turns at 1.39% of the pool each, 8 ramp turns at 2.5% each and 4 final turns at 7.5% each. A final turn is worth 5.4 times an early turn.
+The window is 24 turns for every general election. That gives 12 early turns at 4.17% of the pool each, 8 ramp turns at 2.5% each and 4 final turns at 7.5% each. A final turn is worth 1.8 times an early turn.
 
 **What the spike is worth.** A 10-point swing in your share held only during the final 4 turns moves your final share by 3.0 points (30% of the pool). The same swing held during the early band moves it by 5.0 points. A late dip in favorability or a stale influence on the last day can cost you a race you dominated for three quarters of it.
 
@@ -47,7 +47,7 @@ favorability-vote-scalar
 
 | Item | Value |
 | --- | --- |
-| General window | 48 turns |
+| General window | 24 turns |
 | Early / ramp / final share of pool | 50% / 20% / 30% |
 | Final band | last 4 turns, 7.5% of pool each |
 | Registration resistance | 1.0x to 1.3x |
@@ -84,7 +84,7 @@ After the primary each presidential nominee selects a running mate. The pick mus
 
 ### Worked example
 
-In a two-way state general, your share of the votes cast is 52% through the 36 early turns and 50% through the 8 ramp turns, but an opponent's closing push holds you to 44% in the final 4 turns. Your final share is 0.5 x 52% + 0.2 x 50% + 0.3 x 44% = 26.0 + 10.0 + 13.2 = 49.2%. You led for 44 of 48 turns and still lost. The same race with the final band at 50% would have been 51.0%, a win. You need a strong closing week as well as a strong start.
+In a two-way state general, your share of the votes cast is 52% through the 12 early turns and 50% through the 8 ramp turns, but an opponent's closing push holds you to 44% in the final 4 turns. Your final share is 0.5 x 52% + 0.2 x 50% + 0.3 x 44% = 26.0 + 10.0 + 13.2 = 49.2%. You led for 20 of 24 turns and still lost. The same race with the final band at 50% would have been 51.0%, a win. You need a strong closing week as well as a strong start.
 
 Why did I lose the general after winning the primary? The primary electorate is your party's registered voters, scored on alignment with them. The general electorate is everyone, scored on alignment with each voter group, and your opponents spent the primary building their own groups. See [Primary vs General Tactics](/wiki/primary-general-tactics).
 

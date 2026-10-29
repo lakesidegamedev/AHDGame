@@ -72,6 +72,10 @@ A chair change at term end or by resignation keeps 75% of the score. A dismissal
 
 **Become Chair.** Outside the US, when a term ends a new chair is drawn from characters nominated by the country's executives. Lobbying shifts the odds: weight is 1 + lobbying / 500,000, so spending 500,000 doubles your weight. The chosen player has **24 turns to accept**. If you decline, or let the clock run out, the draw repeats without you for that cycle. If no one is available, the seat is left vacant or an autonomous caretaker is seated. The caretaker sets the rate by rule, weighing measured slack (the output gap and unemployment), until a player takes over. Is it worth it? You gain +3 actions and the influence, and you risk losing 1.5 actions per turn once scrutiny passes 25, so the net is +1.5.
 
+![Central Bank Money supply tab with M1 and M2, the monetary stock and bond holdings](/wiki-images/screens/central-banks-money-supply.webp)
+
+![Central Bank FX intervention tab with the currency regime and the spread fee strength control](/wiki-images/screens/central-banks-fx-intervention.webp)
+
 **Set the prime rate.** Overview tab on the Central Bank page. Check the real rate (prime minus inflation) against the neutral rate shown there, and check slack: high unemployment makes a cut less inflationary. Then move within the limits.
 
 \`\`\`guide-screenshot

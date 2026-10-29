@@ -55,6 +55,8 @@ Accrued interest that is not yet credited is tracked and shown as "Accrued (uncr
 - **Compare with a bank.** A balance held at a private bank earns that bank's own rate, which the savings screen quotes. Player savings at a private bank are a label on your account, not cash the bank holds, so the bank failing does not take your principal. See [Private Banking](/wiki/private-banking).
 - **Compare with bonds.** Sovereign bond coupons are the prime rate plus a term premium, so a bond usually pays more than savings, but its price moves and it cannot be withdrawn at par on demand. See [Sovereign Bonds](/wiki/sovereign-bonds).
 
+![Savings tab showing APY, accrued interest, next credit turn and the open savings account button](/wiki-images/screens/savings-interest-savings-tab.webp)
+
 Why is my interest so low? Almost always because inflation is close to the prime rate, which leaves the floor of 0.25% plus the bonus. A central bank chair who raises rates faster than inflation lifts your yield.
 
 Interest counts as taxable personal income when it is credited.
