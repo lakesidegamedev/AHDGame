@@ -60,6 +60,10 @@ A manufacturing sector earns ₳1,000,000 of revenue a day in a modern world. At
 - Wage level **1.2**: labour costs ₳190,800, ₳31,800 more. Margin falls by 3.2 points.
 - Wage level **0.8**: labour costs ₳127,200, ₳31,800 less, and margin rises 3.2 points. But real wages then fall behind what workers expect, which pushes unionization up (see [Unions](/wiki/unions)).
 
+\`\`\`wiki-chart
+wage-level-margin-change
+\`\`\`
+
 Now the country has a minimum wage with a Kaitz ratio of 0.7. The floor is 0.7 x 1.1 = 0.77 on the pay scale. Retail (0.6) must lift pay by 0.77 / 0.6, so its labour costs rise **28%**. Agriculture (0.55) rises **40%**. Manufacturing at 0.95 is untouched.
 
 ### What wages do beyond cost

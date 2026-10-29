@@ -82,6 +82,10 @@ The measure is deliberately "one average formation," not the front's total. Othe
 
 Points are the currency you spend on traits. **Every trait node costs exactly 1 point**, so points and nodes are the same thing and the whole budget is legible.
 
+\`\`\`wiki-chart
+general-skill-point-sources
+\`\`\`
+
 There are four sources:
 
 | Source | Points | How |

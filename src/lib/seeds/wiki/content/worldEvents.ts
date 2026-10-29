@@ -54,6 +54,10 @@ If the head of government does not answer, the safe default resolves for them. E
 
 These four are wartime society crises, and they are real crises with a decision card, not wire-only cards. They appear while the world's [tension gauge](/wiki/cold-war-tension) is high enough, one at a time every 3 to 6 turns, so they arrive as a staggered sequence and not all at once. Each lasts 12 turns and starts with a drag on one sector: retail down 4 for panic buying, financial down 8 for a bank run, retail down 18 for civil defense fever, media down 4 for protests.
 
+\`\`\`wiki-chart
+high-tension-world-events
+\`\`\`
+
 | Crisis | Option | Approval | Other effects |
 | --- | --- | --- | --- |
 | War Scare Protests | Let them march | -2 | None |

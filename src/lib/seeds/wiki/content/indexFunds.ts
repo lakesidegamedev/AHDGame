@@ -44,6 +44,10 @@ A fund holds ₳12,000,000 of assets and has 120,000 units, so NAV is 100.
 - The other ₳15,000 (25%) goes to unit holders, which is 0.125 per unit. You receive 50 x 0.125 = ₳6.25 in cash, which is taxable income.
 - If this were a sponsored fund with a 1.00% fee, the sponsor would take 12,000,000 x 1% / 48 = ₳2,500 from the fund each turn (48 turns make a game year). On your ₳5,000 that is a cost of about ₳50 a year.
 
+\`\`\`wiki-chart
+index-fund-reinvest-vs-direct
+\`\`\`
+
 ## What you can do
 
 - **Look at a fund.** Open the Stock Market for a country and choose a fund. Its page shows NAV, what it holds, its financials and, for sponsored funds, the fee.
@@ -100,6 +104,10 @@ A **sponsored fund** is one a player's corporation charters and runs as a busine
 - **How the sponsor earns.** A yearly fee of 0.10% to 2.00% of assets, taken from fund cash a slice each turn and paid to the corporation as revenue. The sponsor holds no special stake in the fund's returns beyond its seed units, so the way to profit is to attract holders and keep them.
 - **When the fee stops.** Automatically, if the fund's backing falls below 90%, or if the fund is winding up. The fee is never taken by forcing a sale. If the fund has no spare cash, the sponsor is not paid that turn.
 - **Winding up.** The sponsor's CEO can close a fund, but not instantly. The fund stops buying and stops charging, then sells its holdings, bonds included, over the following turns. Once everything is cash, every unit holder is paid out at the final value, which is what the portfolio actually sold for rather than the last quoted NAV. Only then does the sponsor get back whatever remains of its seed capital. Seed capital is last in line, so a fund that lost money costs its sponsor before it costs holders.
+
+\`\`\`wiki-chart
+index-fund-expense-ratio-drag
+\`\`\`
 
 If you hold units in a fund that is winding up, you do not need to do anything: you are paid out automatically. You can also withdraw earlier at the quoted NAV.
 

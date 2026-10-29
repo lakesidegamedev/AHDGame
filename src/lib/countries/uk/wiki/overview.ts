@@ -25,6 +25,10 @@ The United Kingdom is a **constitutional monarchy and parliamentary democracy** 
 
 The UK has four nations, but the Commons resolver runs one multi-seat race in each of 12 regions. England is split into nine regions; Scotland, Wales, and Northern Ireland each form one region.
 
+\`\`\`wiki-chart
+uk-seats-by-region
+\`\`\`
+
 | Region | Code | Modern Commons Seats | Regional Council Seats |
 | --- | --- | --- | --- |
 | London | LON | 75 | 32 |
@@ -49,6 +53,10 @@ The 1953 preset uses its own 625-seat Commons map. Your character's home region 
 UK Commons elections use **regional multi-seat allocation**. Each region's seats are allocated by the Hare largest-remainder method, in every era.
 
 A party needs at least **10% of the pooled votes in a region** to qualify for seats there. Parties under that line get none, so a small party's votes in a region can count for nothing.
+
+\`\`\`wiki-chart
+uk-regional-seat-allocation
+\`\`\`
 
 **Worked example.** A region elects 10 MPs and 100,000 votes are cast, so one seat costs a quota of 10,000 votes. Party A has 46,000 votes, B has 34,000 and C has 20,000, all above the 10% line. A gets 4 seats outright, B gets 3 and C gets 2. That is 9 of 10. The last seat goes to the largest leftover: A has 6,000, B has 4,000 and C has 0, so A takes it. Final result: A 5, B 3, C 2.
 

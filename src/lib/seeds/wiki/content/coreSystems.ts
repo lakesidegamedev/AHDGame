@@ -49,6 +49,10 @@ Actions are your activity budget. Campaigning, ads, polls, wires to allies and m
 
 **The cap and the hoarding penalty.** Your Energy stat sets two limits. The cap is 200 actions at Energy 1, rising to 250 at Energy 10. The hoard threshold is 100 at Energy 1, rising to 125 at Energy 10. Each turn you start above the threshold you lose 4 actions before the refresh. A character on only the base 4 gains 4 and loses 4, so a stockpile stops growing just above the threshold. This is why you may see your actions stop climbing or "lose 4 a turn". It exists so nobody banks months of actions and spends them in one burst to swamp an election.
 
+\`\`\`wiki-chart
+action-stockpile-hoarding
+\`\`\`
+
 **Office pools.** Ministerial, Vice President, justice and gubernatorial actions are separate pools, not part of your main balance. Ministerial actions return 1 every 6 turns up to 4. Vice President and Supreme Court actions return 1 every 12 turns up to 2. A governor holds up to 3. Once per turn per pool, you can pay **10 main actions to buy 1 office action**, up to that pool's cap.
 
 ### Money: two pools

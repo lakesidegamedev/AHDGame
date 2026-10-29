@@ -41,6 +41,10 @@ When the country runs a deficit it borrows by issuing sovereign bonds every 12 t
 
 The debt-to-GDP ratio sets a rating from AAA to CCC. The rating sets the budget's borrowing rate and a yearly hit to public trust.
 
+\`\`\`wiki-chart
+credit-rating-borrowing-ladder
+\`\`\`
+
 | Debt-to-GDP | Rating | Borrowing rate | Public trust hit at fiscal close |
 | --- | --- | --- | --- |
 | up to 60% | AAA | 2.0% | 0 |
@@ -56,6 +60,14 @@ The rating always reads the current ratio. A country's starting position in a sc
 ### What debt and deficits do to corporations
 
 Every corporation in a country feels the national finances through its profit margin, measured in percentage points.
+
+\`\`\`wiki-chart
+debt-to-gdp-corporate-margin-effect
+\`\`\`
+
+\`\`\`wiki-chart
+deficit-corporate-margin-effect
+\`\`\`
 
 | Debt-to-GDP | Margin effect |
 | --- | --- |

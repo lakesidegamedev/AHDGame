@@ -33,6 +33,10 @@ Minimum time from a granted request to a transfer is therefore 48 turns of campa
 
 Desire changes every turn by the sum of these drivers. A turn is one hour of real time and there are 48 turns in a game year.
 
+\`\`\`wiki-chart
+independence-desire-drift
+\`\`\`
+
 | Driver | Effect per turn |
 | --- | --- |
 | First Minister's policy: pro-independence (or reunification) | +0.05 |

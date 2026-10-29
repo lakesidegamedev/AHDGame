@@ -55,6 +55,14 @@ Every country has an **investor confidence** score from 0 to 100. It heals towar
 - Above 35, the multiplier rises along a curve to 3.5 at SOCI 100. At SOCI 50 it is about 1.13.
 - A statist government pays as little as half the political cost, and a market-liberal one as much as 1.5 times.
 
+\`\`\`wiki-chart
+nationalization-cost-multiplier
+\`\`\`
+
+\`\`\`wiki-chart
+nationalization-confidence-recovery
+\`\`\`
+
 Low confidence is not cosmetic. Below 70 it feeds three live systems, in proportion to the gap:
 
 | At confidence 0 | Effect |

@@ -112,6 +112,10 @@ Each region carries terrain, infrastructure, port and airbase capacity, strategi
 
 Every Command has a **force capacity** and an **effectiveness rating**.
 
+\`\`\`wiki-chart
+command-effectiveness-overload
+\`\`\`
+
 **Capacity** is set when the Command is created and grows with the number of regions it covers. Each unit assigned to the Command consumes capacity in proportion to its weight: a Carrier Strike Group eats far more of a Command's capacity than a Frigate Squadron.
 
 **Effectiveness** starts from the Command's base rating and is reduced by:

@@ -158,6 +158,10 @@ ${consumersSection}
 
 A price rises when demand outruns supply (D/S above 1) and falls when supply outruns demand. Example: if demand is 150 units and supply is 100, D/S is 1.5, so the price drifts above its base of $${basePrice.toLocaleString()}. Each turn it closes 6% of the gap to where that pressure says it should be, so a one-off shock mostly fades within a game year. To cool a high price, build or subsidise more of the suppliers listed above. To profit from it, own a supplier.
 
+\`\`\`wiki-chart
+commodity-price-gap-closure
+\`\`\`
+
 ## Live distribution
 
 Per-country totals below are pulled live from the current turn's market snapshot. Countries with positive net are exporters on balance; negative nets are importers.

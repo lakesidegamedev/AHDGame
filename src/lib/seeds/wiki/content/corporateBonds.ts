@@ -87,6 +87,10 @@ Payments are made from corporate liquid capital. If the corporation's liquid cap
 
 Bond market prices fluctuate based on the current effective rate and time to maturity. The price is a fraction of face value (1.0 = par). It is the present value of the remaining coupons plus the present value of the face value returned at maturity, discounted at the current effective rate. The result is clamped between 0.05 and 2.0.
 
+\`\`\`wiki-chart
+corporate-bond-price-by-market-rate
+\`\`\`
+
 **Key relationships:**
 - When rates **rise**, existing bond prices **fall** (your fixed coupon is worth less relative to new issuances)
 - When rates **fall**, existing bond prices **rise**

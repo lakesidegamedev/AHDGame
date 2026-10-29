@@ -42,6 +42,10 @@ The reference market value is 1,000 and fundamentals at that moment were also 1,
 - The market falls to 700 and fundamentals are still 1,000. Fair value stays 1,000, the drop is 30%, and the safeguard trips.
 - The market falls to 590 and fundamentals are 800. The drop is 1 minus 590 / 800 = 26.3%, so it trips even though rates explain part of the fall.
 
+\`\`\`wiki-chart
+market-guard-trip-line
+\`\`\`
+
 ## What you can do
 
 - **Nothing directly.** There is no switch or panel for players.

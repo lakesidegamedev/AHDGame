@@ -72,6 +72,10 @@ Weaker members are pulled **up** toward the group's strongest Marketing Strength
 
 Example: the leader has Marketing Strength 80 and a member has 20. The member's ceiling is 60% of 80 = 48, so the gap is 28 and it gains 1.40 in the first turn, then about 1.33 in the next. It approaches 48 gradually and never exceeds it.
 
+\`\`\`wiki-chart
+group-synergy-convergence
+\`\`\`
+
 ## The Subsidiary Group page
 
 Open the Subsidiary Group page from the link under My Corporation or from the group summary on a corporation page. It lets you compare members' daily revenue, cash and operating footprint, and the totals include trading between members. Each member still holds its own cash. The parent CEO can set a group name and logo and save objectives for subsidiaries. Player CEOs can accept or decline suggestions, and computer-run subsidiaries follow them from the next turn within their normal safeguards.

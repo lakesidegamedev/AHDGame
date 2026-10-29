@@ -29,6 +29,10 @@ Why PI starts at 10 and not 0: new characters begin at the same 10 that non-play
 
 PI is your standing in your home state and the most important early number. It drives vote reach and primary scores in state races. Because decay is a percentage, a low-PI character loses little per turn, but you must keep campaigning to stay competitive.
 
+\`\`\`wiki-chart
+political-influence-over-time
+\`\`\`
+
 Members of the party holding the national executive (the president's party, or the head of government's party in a parliamentary system) lose PI faster, scaled by that government's approval: twice as fast at 0% approval, 1.5 times at 50%, and normal at 100%.
 
 If you are asking "why did my PI drop": it decays every turn, and if your party runs the government it decays faster. Campaign to hold it.
@@ -36,6 +40,10 @@ If you are asking "why did my PI drop": it decays every turn, and if your party 
 ### National Influence (NPI)
 
 NPI is your national reputation. It drives presidential races only: both reach and appeal. It decays 1% per turn, then gains a state PI term plus a position bonus.
+
+\`\`\`wiki-chart
+national-influence-gain-from-pi
+\`\`\`
 
 | Home-state PI | NPI gained per turn from PI |
 | ---: | ---: |
@@ -66,6 +74,10 @@ Two axes, economic and social, each from -5 to +5, set at creation. Voting on bi
 ### Donor Base level
 
 Donor level raises both your income and your Fundraise yield. Build Donor Network costs actions that rise with level (4 at level 0 to 9, 13 at level 50, 20 at level 75) and funds of ₳3,000 plus ₳1,500 per current level, scaled by state GDP per person (0.85 to 2.0 times). At average GDP, level 1 to 2 costs about ₳4,500 and level 74 to 75 costs about ₳114,000. Income per level per turn depends on the state's population: ₳100 (under 2 million), ₳200 (2 to 8 million), ₳400 (8 to 20 million) or ₳800 (over 20 million). If a move or event resets you to level 0, Fundraise is locked until you build one level.
+
+\`\`\`wiki-chart
+donor-base-costs
+\`\`\`
 
 ### Party Influence
 

@@ -34,6 +34,10 @@ A National Corporation earns 100 in operating profit, and the CEO has set retent
 
 A clean state company runs like a private one. Its margin drag comes from four things, each in percentage points:
 
+\`\`\`wiki-chart
+soe-corruption-margin-drag
+\`\`\`
+
 | Source | Effect |
 | --- | --- |
 | Corruption | up to -10 (at corruption 100) |

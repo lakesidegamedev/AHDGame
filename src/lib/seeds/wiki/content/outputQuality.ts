@@ -13,6 +13,10 @@ Each manufacturing or service sector gets a quality score every turn from four *
 | Wages | 0.2 | 0.5 + 0.6 x (wage level - 1) | wage level 1.83 (above the 1.5 maximum, so wages alone never max out) |
 | Operations | 0.2 | square root of (Logistics & Operations strength / 15) | strength 15 |
 
+\`\`\`wiki-chart
+output-quality-pillars
+\`\`\`
+
 Pillars **substitute, they do not gate**. Poor inputs pull quality down, but strong tech, wages or operations pull it back up. No pillar can drop a sub-score below 0.1, so one terrible pillar never zeroes the product. Tech has the largest weight, so research is the strongest single driver.
 
 ### Worked example

@@ -29,6 +29,10 @@ legislature
 | Filibuster (US Senate) | 25 AP and 5 NPI, about 12 hours added |
 | Time to comply with a tightened subsidiary or foreign-investment limit | 48 turns |
 
+\`\`\`wiki-chart
+bill-provision-cost
+\`\`\`
+
 Tariff provisions cost action points only, no NPI.
 
 ### Worked example

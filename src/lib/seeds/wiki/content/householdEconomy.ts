@@ -32,6 +32,10 @@ The cap exists so a tiny new market cannot be assigned impossible demand that no
 
 Each country also carries a household price index that starts at 1.0. Every turn it grows by 75% of the annual inflation rate, spread over 48 turns. In practice, after one game year at 8% inflation the index is 1 + 0.75 x 8% = **1.06**; after two years it is about 1.124. The index is a record of the price level, not an input into inflation.
 
+\`\`\`wiki-chart
+household-price-index-by-inflation
+\`\`\`
+
 ### Worked example
 
 Median income in a state rises from 50,000 to 55,000 over two game years while inflation runs at 8%. The household price index reaches about 1.124. In launch-price terms, income is 55,000 / 1.124 = **48,900**, which is lower than the 50,000 you started with. Your nominal income rose 10% but your real purchasing power fell about 2%. The economy panel shows this purchasing power figure.

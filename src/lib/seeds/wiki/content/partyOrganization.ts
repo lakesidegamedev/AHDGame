@@ -16,6 +16,10 @@ Each successful Build Org click adds exactly **one unit** to your party. Because
 
 Every click costs **Political Strength** (PS) and **money**, both from the same level of the party.
 
+\`\`\`wiki-chart
+build-org-click-cost
+\`\`\`
+
 - A state officer spends the state party's PS and the state treasury.
 - A national officer spends the national pool and the national treasury. National clicks cost **twice** the money of state clicks.
 - A fresh click costs 1 PS. Each click in the same state raises the next one by 1 PS, up to **8** (the *pressure ladder*). The ladder falls by 3 each turn. Another state is not affected.
@@ -31,6 +35,10 @@ State chair, state vice chair, state campaigner, national chair, national vice c
 ### Decay
 
 A party that has not built in a state for **96 turns** starts losing units: **1% of its units per turn**, about 21% a day. Units halve in roughly 69 turns once decay starts. Any successful click resets the 96 turn clock for that state. The Unaffiliated stake never decays.
+
+\`\`\`wiki-chart
+party-org-idle-decay
+\`\`\`
 
 ### Key numbers
 

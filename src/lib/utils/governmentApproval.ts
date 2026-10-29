@@ -9,6 +9,7 @@
  * National approval: population-weighted average of all state approvals
  */
 
+import { metricApprovalContribution } from "@/lib/utils/approvalContributionRules";
 import { regionalModifierBreakdown } from "@/lib/country/rules/regionalModifierBreakdown";
 import type { AnyBulkWriteOperation, Db } from "mongodb";
 import { findMergedRegionMetricsMany } from "@/lib/macroMetrics/merge";
@@ -29,6 +30,7 @@ import { resolveGameYear } from "@/lib/era/era";
 import type { GameState } from "@/lib/db/types/gameState";
 import { getHeadOfGovernmentReference } from "@/lib/api/headOfGovernmentReference";
 import {
+  ACTING_APPOINTMENT_PENALTY,
   PUBLIC_EXPECTATIONS_FULL_EFFECT,
   advanceHeadTenure,
   emptyCabinetSeatsModifier,
@@ -62,8 +64,6 @@ import {
   isPoliticalApprovalCountry,
   loadPoliticalApprovalBases,
 } from "@/lib/politicalLegislation/politicalApprovalProvider";
-
-const ACTING_APPOINTMENT_PENALTY = 0.5;
 
 /**
  * The cabinet's own drag on national approval, as modifiers.
@@ -227,9 +227,6 @@ export function getApprovalExcludedMetrics(preset: string, year?: number | null)
   return APPROVAL_EXCLUDED_METRICS;
 }
 
-/** Contribution per metric: max ±2. Scale factor for pct deviation. */
-const CONTRIBUTION_SCALE = 15;
-const MAX_CONTRIBUTION = 2;
 /** Default approval when metrics are missing (used for elections and display). */
 export const BASE_APPROVAL = 50;
 
@@ -412,10 +409,7 @@ export function computeStateApprovalBase(
       const denom = Math.abs(avg) < 1e-6 ? 1 : Math.abs(avg);
       const pctDiff = (value - avg) / denom;
       const signedDiff = higherBetter ? pctDiff : -pctDiff;
-      const contribution = Math.max(
-        -MAX_CONTRIBUTION,
-        Math.min(MAX_CONTRIBUTION, signedDiff * CONTRIBUTION_SCALE)
-      );
+      const contribution = metricApprovalContribution(signedDiff);
       const weight = groups
         ? effectiveMetricWeight(axisAffinityFor(metricId), groups, APPROVAL_AXIS_WEIGHT_K)
         : 1;
@@ -462,10 +456,7 @@ export function computeApprovalBaseFromAverages(
       const denom = Math.abs(avg) < 1e-6 ? 1 : Math.abs(avg);
       const pctDiff = (value - avg) / denom;
       const signedDiff = higherBetter ? pctDiff : -pctDiff;
-      sum += Math.max(
-        -MAX_CONTRIBUTION,
-        Math.min(MAX_CONTRIBUTION, signedDiff * CONTRIBUTION_SCALE)
-      );
+      sum += metricApprovalContribution(signedDiff);
       count++;
     }
   }

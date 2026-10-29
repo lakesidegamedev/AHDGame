@@ -34,6 +34,10 @@ There are 48 turns in a game year.
 
 A country has 80 billion of bonds maturing within 12 turns and a yearly deficit of 20 billion. The loan is **100 billion**. Interest is 125 million per turn (100 billion times 0.125%). The level payment over 240 turns is about 482.5 million per turn, and over the whole term the country pays back about 115.8 billion.
 
+\`\`\`wiki-chart
+imf-facility-capitalization
+\`\`\`
+
 **Case 1: a big economy.** Yearly revenue is 400 billion, so 8.33 billion per turn. At 20% capture the cap is 1.67 billion. That is far above the 482.5 million payment, so the cap never bites and the loan runs off on schedule.
 
 **Case 2: a small economy.** Yearly revenue is only 20 billion, so 417 million per turn. At 20% capture the cap is 83.3 million, less than the 125 million of interest. Each turn 41.7 million of interest is added to the loan, so it starts at 100 billion and grows. An IMF board member who raises capture by 10 points to 30% lifts the cap to 125 million, exactly the interest. The loan then stops growing but does not shrink. This country needs more revenue.

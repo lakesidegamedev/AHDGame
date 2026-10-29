@@ -64,6 +64,14 @@ Domestic malus uses only economy-wide and sector tariffs. Origin-country and cor
 
 (Margin figures are percentage points.)
 
+\`\`\`wiki-chart
+tariff-margin-effects
+\`\`\`
+
+\`\`\`wiki-chart
+tariff-blend-and-capture
+\`\`\`
+
 ## What you can do
 
 - **Legislators:** draft a bill with a tariff provision from the bill drafting screen. Choose the scope, target and rate. Tip: a narrow tariff leaves the rest of the economy alone, since only economy-wide and sector tariffs carry a domestic malus.

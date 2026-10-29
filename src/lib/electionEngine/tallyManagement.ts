@@ -2,6 +2,10 @@
  * Election vote tally accumulation and initialization.
  */
 
+import {
+  LEGISLATIVE_APPROVAL_VOTE_SLOPE,
+  approvalVoteMultiplier,
+} from "@/lib/electionEngine/approvalVoteMultiplier";
 import { isHu1991AssemblyCampaign } from "@/lib/countries/hu/rules/assemblyCampaign1991";
 import { russianDumaVoteTotals } from "@/lib/countries/ru/rules/assemblyVoteIncrement";
 import { russianCouncilVoteTotals } from "@/lib/countries/ru/rules/councilVoteTotals";
@@ -414,7 +418,8 @@ export async function accumulateVoteTurn(
     electionCountryId,
     officeKeyForElectionType(election.electionType as string, electionCountryId)
   );
-  const strengthMultiplier = (1 + (approvalDecimal - 0.5) * 0.2) * officeStrength;
+  const strengthMultiplier =
+    approvalVoteMultiplier(approvalDecimal, LEGISLATIVE_APPROVAL_VOTE_SLOPE) * officeStrength;
   const effectiveTurnPool = turnPool * strengthMultiplier;
 
   // ── Granular-cell electorate substrate ─────────────────────────────────────

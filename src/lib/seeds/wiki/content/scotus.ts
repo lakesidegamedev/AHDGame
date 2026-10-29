@@ -27,6 +27,10 @@ The US Supreme Court has 9 seats and exists only in the United States. A justice
 
 Each seated justice is scored by their average lean on the economic and social axes: below -1 is liberal, above +1 is conservative, in between is a swing justice. Swing justices still count in the total, so neither bloc can claim them. If a justice's lean is unknown, their appointing party is used instead. The penalty to the country's democratic health score is 0 until one bloc passes two-thirds of the bench, then grows to a cap of 12 points for a bench of one bloc. A Court with fewer than 5 seated justices is too empty to score. Vacant seats do not count.
 
+\`\`\`wiki-chart
+court-concentration-penalty
+\`\`\`
+
 ### Worked example
 
 The bench has 9 seated justices and a conservative bloc of 7. That is 7/9 = 77.8% of the bench. The penalty is ((0.778 - 0.667) / 0.333) x 12 = 4.0 points. The President nominates an eighth conservative to fill the last liberal seat: the bloc is 8/9 = 88.9%, and the penalty rises to 8.0. A 6-3 bench costs nothing because 6/9 is exactly two-thirds, not over it.

@@ -54,6 +54,10 @@ Extraction corporations with active R&D budgets can permanently increase a state
 
 Prospecting is a deliberate, paid alternative to waiting on R&D breakthroughs. Any extraction corporation with a sector in a state, or that state's own government (national or state level), can commission a geological survey targeting one resource in one state. NPP miners do this too when the deposit is short and they can afford the survey.
 
+\`\`\`wiki-chart
+prospecting-success-and-gain
+\`\`\`
+
 Finder's rights: when a corporation's survey succeeds, it also receives a royalty-free extraction contract for 96 turns covering what it found, within the contract headroom.
 
 A survey has a 6-turn base duration multiplied by the era duration scale. In
@@ -82,6 +86,10 @@ In plants worlds, state deposits are finite. A resource's derived reserve is
 its per-turn capacity multiplied by 1,920 turns, equal to 40 game years of
 continuous extraction at the full ceiling. Only units actually extracted count
 against the reserve, so a partly used field lasts longer.
+
+\`\`\`wiki-chart
+deposit-depletion-ceiling
+\`\`\`
 
 The normal per-turn capacity remains unchanged until the deposit's remaining
 units fall below that ceiling. Its final turns then taper rather than shutting

@@ -37,6 +37,10 @@ Brazil's legislature has two chambers:
 | Sul | 73 | 9 |
 | **Total** | **513** | **81** |
 
+\`\`\`wiki-chart
+br-seats-by-region
+\`\`\`
+
 ---
 
 ## Coalition threshold
@@ -126,6 +130,10 @@ Brazil has no sub-national legislature. The first rung is a Federal Deputy seat,
 ### Economic model
 
 Brazil has **four seeded start years**: 1953, 1979, 1991, and 2019 (the default). Each start authors its own national baseline and per-region tilts for the full set of Brazil's tracked economic, education, healthcare, infrastructure, and social metrics, so the starting economy looks materially different depending on which era you launch into:
+
+\`\`\`wiki-chart
+br-monetary-targets-by-era
+\`\`\`
 
 | Era | Character |
 | --- | --- |

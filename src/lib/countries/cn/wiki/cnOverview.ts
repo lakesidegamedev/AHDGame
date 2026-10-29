@@ -63,6 +63,10 @@ China was the first country modelled with a **ruling-party confidence model**, w
 | 20 to 34 | Crisis risk |
 | Below 20 | Critical: leadership challenge or forced transition |
 
+\`\`\`wiki-chart
+cn-leader-confidence-bands
+\`\`\`
+
 ### The four escalation stages
 
 If the scores fall far enough for long enough, the regime moves through four stages. A single bad turn never moves it: each stage needs a stretch of turns in its zone.

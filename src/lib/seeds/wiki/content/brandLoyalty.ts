@@ -56,6 +56,10 @@ Now Corp A raises its posture from a norm of +5% to +15%, a 10 point jump. That 
 
 At 1 point per turn, a new corporation needs about 20 steady, contested, delivering turns to leave Unknown, 45 to reach Respected, 70 for Trusted and 90 for Iconic. A single gouge undoes ten of those turns. New corporations start at 0, and cannot earn a slice until they pass 5.
 
+\`\`\`wiki-chart
+brand-loyalty-tiers-over-time
+\`\`\`
+
 ## What you can do
 
 - **Pick a lane and hold it.** A steady discounter earns "value brand" loyalty and a steady premium seller earns "prestige" loyalty. Both count.

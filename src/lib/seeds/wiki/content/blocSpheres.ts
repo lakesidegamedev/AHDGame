@@ -33,6 +33,10 @@ The poles depend on the year. From 1945 to 1990 there are two, West (NATO channe
 | Stress labels | Settled below 0.25, Strained below 0.6, Overextended at 0.6 or more |
 | Diplomatic actions per country per turn | 4 (used by membership proposals) |
 
+\`\`\`wiki-chart
+alignment-membership-thresholds
+\`\`\`
+
 ### Why membership alone cannot lock a nation
 
 Passive membership pull stops at 67. Getting a nation past that and toward the locked line of 85 needs deliberate plays. This is on purpose: a bloc has to keep paying for the nations it wants, not just collect members. A locked nation cannot be moved by drift at all, and a play against one is refused before any money is spent.

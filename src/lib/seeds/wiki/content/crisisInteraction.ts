@@ -27,6 +27,10 @@ A crisis is a shock to a country or region: a wildfire, a bank failure, a strike
 
 A wildfire crisis has a regional governor decision, then a national suppression fund with a target of 10,000,000.
 
+\`\`\`wiki-chart
+collective-fund-duration-cut
+\`\`\`
+
 - The governor picks **Mandatory Evacuation**: GDP falls 1.0% once. **Defend in Place** costs 0.5% GDP and 3 points of government approval, but protects the economy more.
 - Two heads of government contribute 5,000,000 and 2,000,000. The fund reaches 7,000,000, which is 70% of the target.
 - The duration cut is 50% times 70% = 35% of the remaining duration. On a crisis with 20 turns left that is 7 turns saved, rounded down.

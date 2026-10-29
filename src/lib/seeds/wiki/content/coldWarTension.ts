@@ -35,6 +35,10 @@ The band label is what most of the world's machinery reacts to.
 
 A world has 100 warheads, 2 active crises and an escalation level of 2. Its floor is 12 + 8 (escalation level 2, at 4 a rung) + 6 (two crises, at 3 each) + 12 (the square root of 100 is 10, times 1.2) = 38, which is ELEVATED. A thermonuclear test adds 12 and puts the gauge at 50. Each turn it closes 8% of the gap to 38: after one turn it is 49.0, after ten turns about 43.2, and after thirty about 39. If an extra war with intensity 50 breaks out, that adds 6 to the floor, and the gauge stays about 44.
 
+\`\`\`wiki-chart
+tension-after-thermonuclear-test
+\`\`\`
+
 ## What raises it
 
 - **Nuclear tests.** Every device test spikes tension, and bigger devices spike it harder. See [The Nuclear Programme](/wiki/nuclear-programme).

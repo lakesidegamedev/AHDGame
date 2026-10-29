@@ -6,6 +6,10 @@ The **commodity market** tracks 27 raw materials, goods and services that flow b
 
 Every sector supplies and demands specific commodities, in proportion to its revenue. All the supply and demand in the world is added up, and the ratio of demand to supply (**D/S**) pushes the price: above 1 is a shortage and the price rises, below 1 is oversupply and the price falls. A state's price blends world, country and state conditions. Your margin then moves with the D/S ratio of each commodity you buy or sell, and your revenue moves with the price your output realises.
 
+\`\`\`wiki-chart
+commodity-price-by-pressure
+\`\`\`
+
 ### Key numbers
 
 | Rule | Value |
@@ -192,6 +196,10 @@ Commodities affect corporate sector profit margins through a **logarithmic curve
 - **Sellers (output bonus):** \`modifier = +40 * rate * ln(effective D/S)\`
 
 Equivalently, buyers can think of it as \`40 * rate * ln(1 / effective D/S)\`.
+
+\`\`\`wiki-chart
+commodity-margin-points
+\`\`\`
 
 Reference values for a single commodity at rate 1.0:
 

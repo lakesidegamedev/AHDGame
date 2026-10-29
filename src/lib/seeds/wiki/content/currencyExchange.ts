@@ -45,6 +45,10 @@ A higher prime rate lowers the rate number, which means a stronger currency. Hig
 
 The UK central bank raises its prime rate from 3.0% to 5.0%. The prime gap is 2 points, so the GBP target falls by 2 x 0.02 = 4%: from 0.75 to 0.72 per anchor unit, a stronger pound. The rate drifts 5% of the gap per turn, so the first turn moves it from 0.75 to 0.7485, and it takes roughly a game year to cover 90% of the way.
 
+\`\`\`wiki-chart
+currency-rate-path-after-prime-rise
+\`\`\`
+
 You convert 100,000 USD to GBP through the market maker. At 0.75 that is 75,000 GBP, less a 1% fee of 750 GBP, so you receive **74,250 GBP**. Of the 750 fee, 187.50 is destroyed, 187.50 becomes forex revenue for the pound's central bank and 375 goes into the pound's reserve pool. Very large conversions pay an extra size fee.
 
 ## Active currencies

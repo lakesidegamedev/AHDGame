@@ -8,6 +8,10 @@ If you hold sovereign bonds, run a company in a heavily indebted country, or sit
 
 Once a year, when the country's budget year closes, its government bonds are tested against investor demand. The game scores demand as a **demand ratio**: 1.0 means investors bought everything on offer, 0.5 means they bought half of what was needed. If the last primary bond auction was only partly filled, the demand ratio cannot be higher than that fill rate.
 
+\`\`\`wiki-chart
+sovereign-default-demand-curve
+\`\`\`
+
 | Demand ratio | Result | What it means |
 | --- | --- | --- |
 | 1.0 or more | Subscribed | Healthy. The failure count resets to 0. |
@@ -58,6 +62,10 @@ Repudiate and Restructure also record a GDP penalty (Repudiate 12% over 3 turns,
 ## The scar and recovery
 
 Every resolution leaves a **scar**. It lowers the country's bond demand ratio by 1.0 right after the default, and the penalty shrinks by 0.01 each turn, reaching zero after 100 turns. It makes new auctions harder but does not directly reduce GDP.
+
+\`\`\`wiki-chart
+sovereign-default-scar-decay
+\`\`\`
 
 The country is in **recovery** for at least 48 turns. It ends only after the country has also run 5 disciplined fiscal turns in a row. A clean exit earns a small reward: 0.5 points off the country's bond interest rate for 100 turns.
 

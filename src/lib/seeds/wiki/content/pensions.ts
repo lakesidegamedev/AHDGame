@@ -50,6 +50,10 @@ What a scheme holds is its cash plus the market value of any fund units it owns,
 
 An employer has a covered wage bill of 1,000,000 a turn and bargains a 6% rate. Each turn it pays 60,000 and the workers' claim grows by 80,000, so the scheme falls behind by 20,000 a turn. This ignores benefits and investment returns.
 
+\`\`\`wiki-chart
+pension-funding-by-rate
+\`\`\`
+
 | Turn | Employer pays | Top-up | Scheme holds | Scheme owes | Funding ratio |
 | --- | --- | --- | --- | --- | --- |
 | 1 | 60,000 | 0 | 60,000 | 80,000 | 75.0% |

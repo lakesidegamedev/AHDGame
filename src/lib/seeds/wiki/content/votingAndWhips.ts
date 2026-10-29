@@ -23,6 +23,10 @@ Every legislator, player or non-player politician (NPP), can vote on every bill 
 | Whip pressure on NPP decision | Party hard 60, party soft 30, caucus 40, caucus core-position bonus 20, then scaled by the NPP's compliance |
 | Party-line lean (same party as sponsor, no whip) | 20, scaled by compliance |
 
+\`\`\`wiki-chart
+whip-success-by-loyalty
+\`\`\`
+
 ### The four forces
 
 | Force | What it measures |

@@ -43,6 +43,10 @@ The Diet is Japan's bicameral national legislature. Unlike the UK where the uppe
 
 Japan's gameplay is organized around 8 regions, each containing multiple prefectures:
 
+\`\`\`wiki-chart
+jp-seats-by-region
+\`\`\`
+
 | Region | Code | Population | Shūgiin | Sangiin |
 | --- | --- | --- | --- | --- |
 | Hokkaido | HOK | 5.2M | 12 | 7 |
