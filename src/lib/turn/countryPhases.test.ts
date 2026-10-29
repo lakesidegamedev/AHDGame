@@ -39,29 +39,89 @@ function isLiveStatusFilter(filter: Record<string, unknown>): boolean {
 }
 
 function setupElectionQuery(
-  resolvedThisTurn: { countryId: string; electionType: string; cycle?: number }[],
-  stillLive: { countryId: string; electionType: string; cycle?: number }[] = []
+  resolvedThisTurn: {
+    countryId: string;
+    electionType: string;
+    cycle?: number;
+    startTurn?: number;
+  }[],
+  stillLive: { countryId: string; electionType: string; cycle?: number; startTurn?: number }[] = []
 ) {
   db.collectionMocks["elections"] = {
     ...db.collection("elections"),
-    findOne: vi.fn().mockImplementation(async (filter: Record<string, unknown>) => {
-      const types =
-        (filter.electionType as { $in?: string[] } | undefined)?.$in ??
-        (typeof filter.electionType === "string" ? [filter.electionType] : []);
+    find: vi.fn().mockImplementation((filter: Record<string, unknown>) => {
+      const types = (filter.electionType as { $in?: string[] } | undefined)?.$in ?? [];
+      const countries = (filter.countryId as { $in?: string[] } | undefined)?.$in ?? [];
       const pool = isLiveStatusFilter(filter) ? stillLive : resolvedThisTurn;
-      return (
-        pool.find((e) => {
-          if (e.countryId !== filter.countryId) return false;
-          if (types.length > 0 && !types.includes(e.electionType)) return false;
-          if (typeof filter.cycle === "number" && e.cycle !== filter.cycle) return false;
-          return true;
-        }) ?? null
+      const rows = pool.filter(
+        (e) => countries.includes(e.countryId) && types.includes(e.electionType)
       );
+      return {
+        toArray: vi
+          .fn()
+          .mockResolvedValue(
+            rows.map((e) => ({ ...e, startTurn: e.startTurn ?? (e.cycle ?? 1) * 10 }))
+          ),
+        sort: vi.fn().mockReturnThis(),
+      };
     }),
   } as MockDb["collectionMocks"][string];
 }
 
 describe("runPostElectionGovernmentPhases — dissolution slate-clearing", () => {
+  it.each(["UK", "JP", "DE"] as const)(
+    "collects one %s reset only after its entire snap slate ends",
+    async (countryId) => {
+      const { getCountryConfig } = await import("@/lib/constants/countries");
+      const electionType = "snap_" + getCountryConfig(countryId).legislature.lowerChamber.key;
+      setupElectionQuery(
+        [{ countryId, electionType, cycle: 3 }],
+        [{ countryId, electionType, cycle: 3 }]
+      );
+      expect(
+        (await runPostElectionGovernmentPhases(db as unknown as Db, new Date(), 1, 100))
+          .completedSnaps
+      ).toEqual([]);
+      setupElectionQuery(
+        [{ countryId, electionType, cycle: 3 }],
+        [{ countryId, electionType, cycle: 4 }]
+      );
+      expect(
+        (await runPostElectionGovernmentPhases(db as unknown as Db, new Date(), 1, 100))
+          .completedSnaps
+      ).toEqual([{ countryId, startTurn: 30, turn: 100 }]);
+    }
+  );
+  it("waits for all snap regions even when their cycle numbers differ", async () => {
+    setupElectionQuery(
+      [{ countryId: "UK", electionType: "snap_commons", cycle: 5, startTurn: 100 }],
+      [{ countryId: "UK", electionType: "snap_commons", cycle: 2, startTurn: 100 }]
+    );
+    expect(
+      (await runPostElectionGovernmentPhases(db as unknown as Db, new Date(), 1, 148))
+        .completedSnaps
+    ).toEqual([]);
+    setupElectionQuery(
+      [{ countryId: "UK", electionType: "snap_commons", cycle: 2, startTurn: 100 }],
+      [{ countryId: "UK", electionType: "snap_commons", cycle: 2, startTurn: 200 }]
+    );
+    expect(
+      (await runPostElectionGovernmentPhases(db as unknown as Db, new Date(), 1, 148))
+        .completedSnaps
+    ).toEqual([{ countryId: "UK", startTurn: 100, turn: 148 }]);
+  });
+  it("does not reset regular, upper-chamber or presidential elections", async () => {
+    setupElectionQuery([
+      { countryId: "UK", electionType: "commons", cycle: 3 },
+      { countryId: "JP", electionType: "sangiin", cycle: 3 },
+      { countryId: "US", electionType: "snap_house", cycle: 3 },
+    ]);
+    expect(
+      (await runPostElectionGovernmentPhases(db as unknown as Db, new Date(), 1, 100))
+        .completedSnaps
+    ).toEqual([]);
+  });
+
   it("fires dissolution helpers for US house resolution", async () => {
     setupElectionQuery([{ countryId: "US", electionType: "house" }]);
     db.collectionMocks["bills"] = {
@@ -135,7 +195,7 @@ describe("runPostElectionGovernmentPhases — dissolution slate-clearing", () =>
   it("short-circuits when generalResolved is 0", async () => {
     db.collectionMocks["elections"] = {
       ...db.collection("elections"),
-      findOne: vi.fn(),
+      find: vi.fn(),
     } as MockDb["collectionMocks"][string];
     db.collectionMocks["bills"] = {
       ...db.collection("bills"),
@@ -144,7 +204,7 @@ describe("runPostElectionGovernmentPhases — dissolution slate-clearing", () =>
 
     await runPostElectionGovernmentPhases(db as unknown as Db, new Date(), 0);
 
-    expect(db.collectionMocks["elections"].findOne).not.toHaveBeenCalled();
+    expect(db.collectionMocks["elections"].find).not.toHaveBeenCalled();
     expect(db.collectionMocks["bills"].updateMany).not.toHaveBeenCalled();
   });
 });
@@ -152,13 +212,7 @@ describe("runPostElectionGovernmentPhases — dissolution slate-clearing", () =>
 describe("runPostElectionGovernmentPhases — S#17 confidence motion flow", () => {
   it("opens confidence motion + updates seat counts for parliamentary countries on regular election", async () => {
     const pmId = new ObjectId();
-    db.collectionMocks["elections"] = {
-      ...db.collection("elections"),
-      findOne: vi.fn().mockImplementation(async (filter: Record<string, unknown>) => {
-        if (filter.countryId !== "UK" || isLiveStatusFilter(filter)) return null;
-        return { countryId: "UK", electionType: "commons", cycle: 1 };
-      }),
-    } as MockDb["collectionMocks"][string];
+    setupElectionQuery([{ countryId: "UK", electionType: "commons", cycle: 1 }]);
     db.collectionMocks["bills"] = {
       ...db.collection("bills"),
       updateMany: vi.fn().mockResolvedValue({ modifiedCount: 0 }),
@@ -211,13 +265,7 @@ describe("runPostElectionGovernmentPhases — S#17 confidence motion flow", () =
   it("does NOT call resetParliamentaryGovernmentAfterElection on the regular election path", async () => {
     const { resetParliamentaryGovernmentAfterElection } = await import("./parliamentaryGovernment");
 
-    db.collectionMocks["elections"] = {
-      ...db.collection("elections"),
-      findOne: vi.fn().mockImplementation(async (filter: Record<string, unknown>) => {
-        if (filter.countryId !== "UK" || isLiveStatusFilter(filter)) return null;
-        return { countryId: "UK", electionType: "commons", cycle: 1 };
-      }),
-    } as MockDb["collectionMocks"][string];
+    setupElectionQuery([{ countryId: "UK", electionType: "commons", cycle: 1 }]);
     db.collectionMocks["bills"] = {
       ...db.collection("bills"),
       updateMany: vi.fn().mockResolvedValue({ modifiedCount: 0 }),
