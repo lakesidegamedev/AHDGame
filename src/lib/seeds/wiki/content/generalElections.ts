@@ -48,7 +48,7 @@ The general uses the swing-flow model: the same per-group pipeline as [Election 
 | NPP weight in a player race | 0.8x |
 | FPTP spoiler | 4% of a third party's group votes (2% in presidential races) |
 | Canvassing in the last 4 turns | 2x |
-| Out-of-state action cost | 1.25x neighbour, 1.5x other |
+| Out-of-state action cost (Support and Attack) | 1.25x neighbour, 1.5x other |
 | Full Demographic Poll | 6 actions, ₳75,000 base |
 | Vice President | +2 actions per turn, +₳25,000 per turn |
 
@@ -105,7 +105,7 @@ Why did I lose the general after winning the primary? The primary electorate is 
 - Burn money on ads above favorability 80. The gain per ad is only +1.
 - Sit on influence and hope decay is slow. At 0.75% per turn you lose about 14% over 20 turns, more if your party holds the national executive.
 - Attack everyone. Attacks cost infamy and drain your own favorability.
-- Forget out-of-state costs: helping an ally in another state costs 1.25x (neighbour) or 1.5x (other).
+- Forget out-of-state costs: Support and Attack on a player in another state cost 1.25x (neighbour) or 1.5x (other) more actions. Barnstorm has no distance cost.
 - Withdraw to save resources unless you are pivoting. Withdrawn candidacies cannot be re-entered.
 
 ## Connections

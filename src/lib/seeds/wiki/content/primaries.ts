@@ -92,6 +92,7 @@ Tips:
 - [Political Parties](/wiki/political-parties): the party platform sets the alignment half of your score.
 - [party-ideology](/wiki/party-ideology): Party Ideology: alignment with the party and the state is worth up to 40 primary points.
 - [npp-elections](/wiki/npp-elections): NPP Elections: NPP candidates fill primary fields and score at half when a player is in the same primary.
+- [Party Slate](/wiki/party-slate): a slated NPP can join a primary and make it contested.
 
 **Affects**
 

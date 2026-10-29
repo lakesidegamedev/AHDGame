@@ -98,6 +98,7 @@ A merge needs a yes from **both** committees, each under the 60% rule. It is onl
 
 - [Party Membership](/wiki/party-membership): officers set the tax rate and accept or decline requests in approval-only parties.
 - [Party Actions](/wiki/party-actions): officers choose how Political Strength, treasury money and budgets are spent.
+- [Party Slate](/wiki/party-slate): national and state chairs and vice chairs are the ones who can assign candidates to races.
 - [Party Organization](/wiki/party-organization): only officers can click Build Org.
 - [Party Ideology](/wiki/party-ideology): a passed position shift moves the party one step on one axis.
 - [Coalitions](/wiki/coalitions): the national chair creates, joins and leaves coalitions for the party.

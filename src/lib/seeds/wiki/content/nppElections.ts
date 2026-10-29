@@ -77,6 +77,7 @@ In worlds on autonomy **V6**, parties run their strongest NPPs for the biggest r
 
 - [NPPs Overview](/wiki/npps-overview): ambition, home state and party decide which race an NPP enters.
 - [Party Actions](/wiki/party-actions): Slate assignments move NPPs into races.
+- [Party Slate](/wiki/party-slate): the board where chairs assign NPPs to races, with a 3 candidate limit per party.
 - [NPP Autonomy](/wiki/npp-autonomy): the world's level adds challengers, career moves and primary consolidation.
 - [primaries](/wiki/primaries): NPP entry, score handicaps and late withdrawals in primaries follow the primary rules.
 

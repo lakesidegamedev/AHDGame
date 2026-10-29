@@ -1,6 +1,6 @@
 export const imfSovereignFacilityContent = `# IMF Sovereign Facility
 
-The IMF sovereign facility is the bailout route out of a [sovereign default crisis](/wiki/sovereign-default). The IMF lends the country enough to cover its bonds coming due and its deficit, and the country pays it back out of a slice of its yearly revenue. It has the smallest flat GDP penalty of the four resolutions and no bond market lockout, but you carry the loan for up to 240 turns.
+The IMF sovereign facility is the bailout route out of a [sovereign default crisis](/wiki/sovereign-default). The IMF lends the country enough to cover its bonds coming due and its deficit, and the country pays it back out of a slice of its yearly revenue. It has no flat GDP penalty and no bond market lockout, but you carry the loan for up to 240 turns and companies take a temporary margin penalty.
 
 It is the country-level cousin of the [corporate IMF restructuring](/wiki/imf). Same lender and same style of loan, but the borrower is the national budget, not one company.
 
@@ -23,7 +23,7 @@ Why a cap? A country in crisis is short of money. Letting the IMF take a fixed s
 | Board rate change | up to 2 points either way |
 | Board capture change | up to 10 points either way |
 | Board statement trust effect | 0.02 |
-| Direct GDP penalty | 2% |
+| Direct GDP penalty | none |
 | Company margin penalty | -4.5 points, 48 turns at full strength, 24 turns fading |
 | Bond market lockout | none |
 | Recovery | at least 48 turns plus 5 disciplined turns |

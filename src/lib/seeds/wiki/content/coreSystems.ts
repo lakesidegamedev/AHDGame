@@ -69,7 +69,7 @@ The two are separate and do not convert automatically. A third pool, a corporati
 
 The donor bonus is multiplied by 1 plus your state Political Influence divided by 100. Flat office bonuses: House ₳5k, State Senate ₳3k, Senate ₳15k, Vice President ₳25k, Governor ₳15k, President ₳50k, and UK and German equivalents of ₳5k for MPs and members of the Bundestag and ₳50k for the Prime Minister and Chancellor.
 
-Cash on Hand grows from dividends, bond coupons and share sales, and from 50% of any Personal Campaign Donation you make (the other 50% goes to Campaign Funds).
+Cash on Hand grows from dividends, bond coupons and share sales. A Personal Campaign Donation drains it: all the cash you donate leaves Cash on Hand, but only half of it reaches Campaign Funds and the other half is lost.
 
 | Number | Value |
 | --- | --- |
@@ -113,7 +113,7 @@ Tips: spend before you hit the hoard threshold, keep Campaign Funds and Cash on 
 
 - [Stats & Actions](/wiki/stats-actions): your Energy stat sets the action cap and hoard threshold, and your Fundraising stat scales fundraising.
 - [Player Progression](/wiki/player-progression): the office you hold sets your action and fund bonuses.
-- [Political Parties](/wiki/political-parties): your party share of actions and the party tax on your funds.
+- [Political Parties](/wiki/political-parties): your party share of actions and the party tax on your per-turn funds.
 - [Relocation](/wiki/relocation): moving changes your home state, which sets your fund rate.
 
 **Affects**

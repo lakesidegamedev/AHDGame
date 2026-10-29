@@ -100,6 +100,7 @@ NPP B has loyalty 50, stubbornness 50 (compliance 0.50) and donor level 3, and o
 **Affects**
 
 - [Bills & Legislation](/wiki/bills-legislation): the NPP tally decides whether most bills pass.
+- [Party Slate](/wiki/party-slate): an NPP's loyalty and stubbornness decide whether it accepts a Slate assignment.
 
 ## Status
 

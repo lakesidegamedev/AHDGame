@@ -71,6 +71,7 @@ Platform example: a charter that sets +24 economic and -36 social starts the par
 - [NPPs Overview](/wiki/npps-overview): NPPs fill seats and offices in each party and keep it from being empty.
 - [Election Mechanics](/wiki/election-mechanics): winners take office and shift party strength.
 - [Relocation](/wiki/relocation): a move can end membership, reset Party Influence and vacate regional posts
+- [Party Slate](/wiki/party-slate): chairs use the board to field candidates in each race.
 - [One-Party States](/wiki/one-party-states): Regime tier limits what a party can do.
 
 **Affects**
@@ -84,7 +85,7 @@ Platform example: a charter that sets +24 economic and -36 social starts the par
 - [primaries](/wiki/primaries): the party platform sets the alignment half of every primary score.
 - [Demographics](/wiki/demographics): party GOTV budgets raise turnout of a chosen census bucket each turn.
 - [Campaign Manager](/wiki/campaign-manager): party chairs and the treasurer can donate from the party treasury to candidates' campaigns.
-- [fundraising-ads](/wiki/fundraising-ads): party tax comes out of your fundraising and income.
+- [fundraising-ads](/wiki/fundraising-ads): party tax comes out of your per-turn income, not Fundraise actions.
 - [Relocation](/wiki/relocation): your party's reach decides whether you keep membership after a move
 - [Core Systems](/wiki/core-systems): your party share of actions and the party tax on funds
 - [Stats & Actions](/wiki/stats-actions): party share of actions and governing-party PI decay

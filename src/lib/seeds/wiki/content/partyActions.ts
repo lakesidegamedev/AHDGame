@@ -97,6 +97,7 @@ A state party in the US holds 30 PS, which is the cap, and 5 PS arrives each tur
 - [Party Organization](/wiki/party-organization): PS and money pay for each Build Org click.
 - [NPPs Overview](/wiki/npps-overview): recruitment and management spend resources to add and steer NPPs.
 - [NPP Elections](/wiki/npp-elections): Slate assignments move NPPs into races.
+- [Party Slate](/wiki/party-slate): loyalty and cooperation actions change whether a slated NPP is likely to accept.
 - [NPP Behavior](/wiki/npp-behavior): whips add pressure to NPP votes at no cost.
 - [Demographics & Targeting](/wiki/demographics-targeting): GOTV and suppression change voter groups' turnout.
 
