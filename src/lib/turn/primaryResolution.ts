@@ -631,15 +631,20 @@ export async function resolvePrimariesIfNeeded(
         const char = charMapNotify.get(c.characterId.toString());
         if (!char) continue;
         const isLoser = loserIdSet.has(c._id.toString());
+        // Candidates store the party's sequential id; the copy needs its name
+        // ("the 12 primary" was the id leaking through).
+        const partyName = partyMap.get(`${election.countryId ?? "US"}:${c.party}`)?.name ?? "party";
+        const where = election.state === "US" ? "National" : election.state;
+        const inWhere = election.state === "US" ? "" : ` in ${election.state}`;
         notificationInputs.push({
           userId: char.userId,
           type: isLoser ? "primary_loss" : "primary_win",
           title: isLoser
-            ? `Primary Lost — ${typeLabel} (${election.state === "US" ? "National" : election.state})`
-            : `Primary Won — ${typeLabel} (${election.state === "US" ? "National" : election.state})`,
+            ? `Primary lost: ${typeLabel} (${where})`
+            : `Primary won: ${typeLabel} (${where})`,
           message: isLoser
-            ? `You were eliminated in the ${c.party} primary for ${typeLabel}${election.state === "US" ? "" : ` in ${election.state}`}.`
-            : `Congratulations! You won the ${c.party} primary for ${typeLabel}${election.state === "US" ? "" : ` in ${election.state}`} and advance to the general election.`,
+            ? `You were eliminated in the ${partyName} primary for ${typeLabel}${inWhere}.`
+            : `You won the ${partyName} primary for ${typeLabel}${inWhere} and advance to the general election.`,
           metadata: {
             electionId: electionId.toString(),
             state: election.state,

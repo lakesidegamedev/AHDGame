@@ -21,6 +21,7 @@ export const CATEGORY_OF: Record<NotificationType, InboxCategory> = {
   ask_watch: "system",
   // crisis
   crisis: "crisis",
+  crisis_resolved: "crisis",
   player_attack: "crisis",
   corp_sector_sold: "treasury",
   corp_sector_attacked: "crisis",
