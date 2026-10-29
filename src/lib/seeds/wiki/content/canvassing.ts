@@ -65,6 +65,8 @@ Timing: a modifier built 10 turns before the election keeps only about a third o
 
 - **Pick a category and a group** on the campaign page, then canvass. The 21 groups are:
 
+![Voter canvassing form with demographic category, specific group, quantity and the cost line](/wiki-images/screens/canvassing-canvass-dialog.webp)
+
 | Category | Groups |
 | --- | --- |
 | Race | White, Black, Hispanic, Asian, Other |

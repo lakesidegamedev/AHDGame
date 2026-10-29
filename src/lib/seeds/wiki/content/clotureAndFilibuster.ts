@@ -44,6 +44,8 @@ The bar is based on votes cast rather than on seats so that a quiet chamber does
 - **Defeat one** by building 60 percent among votes cast, or by winning over would-be abstainers.
 - **Abolish it** by passing the Senate Filibuster Rules Act (see below).
 
+![Senate bill page with the Invoke filibuster button and the seating chart for the floor vote](/wiki-images/screens/cloture-and-filibuster-senate-bill.webp)
+
 Tips: ask supporters to vote, not to stay away, if a filibuster is likely, and ask opponents to abstain or vote Against depending on how close the count is.
 
 ### Who and when
