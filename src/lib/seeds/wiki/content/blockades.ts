@@ -37,6 +37,10 @@ Each turn the game works out a **closure** figure from 0 to 1 for every country 
 3. Closure on that approach rises with pressure over pressure plus defence. It snaps to total closure only when pressure reaches nine times the port defence.
 4. The country's closure is the **worst single approach**, not the sum. Closing one of three routes into a country does not close the country; a blockade bites when it shuts the way in that matters.
 
+\`\`\`wiki-chart
+blockade-closure-curve
+\`\`\`
+
 ## What it does to the target
 
 Blockade closure feeds the trade engine directly:

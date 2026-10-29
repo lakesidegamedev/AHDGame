@@ -27,6 +27,10 @@ A corporation that owns a financial sector can charter one bank. The bank attrac
 
 A retail bank holds ₳50,000,000 of household deposits. The reserve ratio is 10%, so required reserves are ₳5,000,000 and the run line is 0.5 x 5,000,000 = **₳2,500,000**. Its book equity is ₳4,000,000, so the equity half of the deposit ceiling is 12 x 4,000,000 = **₳48,000,000**. It already holds ₳50,000,000, so it cannot take new inflows until it posts more capital, however many branches it builds.
 
+\`\`\`wiki-chart
+bank-deposit-ceiling-vs-equity
+\`\`\`
+
 If its confidence band turns red and cash falls below ₳2,500,000, it fails. If it is red with ₳3,000,000 in cash, it survives that turn, but that is one turn of notice. Borrowing from the discount window would add cash but lower its confidence.
 
 Open **World > Banking** to choose a currency and compare chartered banks. Bank owners manage the charter from their corporation page. The country's central-bank page is the public source for prime rate, reserve policy, insurance, and the rate corridor that private banks must obey.

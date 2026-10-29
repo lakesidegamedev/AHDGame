@@ -6,6 +6,14 @@ Idle cash in a savings account earns interest every turn. The yield is tied to y
 
 The savings yield (APY, the annual percentage yield) is **half the real rate**. The real rate is the prime rate minus local inflation, never less than 0.5 points:
 
+\`\`\`wiki-chart
+savings-apy-by-inflation
+\`\`\`
+
+\`\`\`wiki-chart
+savings-balance-quarterly-credit
+\`\`\`
+
 \`\`\`
 realRate = max(0.5, primeRate - inflation)
 APY      = realRate / 2 + centralBankDepositBonus

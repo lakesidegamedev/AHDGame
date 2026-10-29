@@ -70,6 +70,10 @@ Wherever two hostile fleets share a region and at least one is on Blockade, Sea 
 
 Each country holds a **sea control** figure from 0 to 100 per region. It moves toward your share of the weight present, rising 12 points a turn and falling 15, so leaving a lane costs more than returning earns. Uncontested presence builds it on its own.
 
+\`\`\`wiki-chart
+sea-control-build-and-decay
+\`\`\`
+
 **Detection** runs from 0 to 3 per region. Anti-ship strikes need level 2 or better on the target, so a fleet can be known to exist and still not be attackable. It decays one band per turn once you leave.
 
 ## Repair and losses

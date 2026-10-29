@@ -35,6 +35,10 @@ Parties get a limited number of NPPs of their own, based on **active members** (
 | 20 | 75 |
 | 30 | 95 |
 
+\`\`\`wiki-chart
+npp-capacity-by-members
+\`\`\`
+
 The party controls show the current count and capacity. The ceiling is 300 in a 50-state country and 72 in the 12-region UK.
 
 ### Rules that never change

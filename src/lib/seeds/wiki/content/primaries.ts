@@ -36,6 +36,10 @@ Why ballots accumulate: a sustained lead should beat a last-turn surge, and a la
 
 Your score is your standing within the party, from 0 to 100. It sets your share of each turn's ballots.
 
+\`\`\`wiki-chart
+state-primary-score-curves
+\`\`\`
+
 | Part | Max | How it is scored |
 | --- | --- | --- |
 | Alignment with the state | 25 | You lose 1.25 points for each point of econ and social distance from the state's lean |

@@ -14,6 +14,10 @@ Each corporate sector has a **unionization** score from 0 to 100. Every turn it 
 | Pro-labour union law (country legislation) | Up |
 | Player-run union recruitment in that sector | Up |
 
+\`\`\`wiki-chart
+union-labour-premium
+\`\`\`
+
 ### Key numbers
 
 | Rule | Value |

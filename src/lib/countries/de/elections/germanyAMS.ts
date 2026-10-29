@@ -32,7 +32,10 @@ import type {
   Character,
   GameState,
 } from "@/lib/db/types";
-import { allocateViaSainteLague } from "@/lib/turn/election/sainteLagueAllocation";
+import {
+  allocateViaSainteLague,
+  BUNDESTAG_VOTE_THRESHOLD,
+} from "@/lib/turn/election/sainteLagueAllocation";
 import {
   crossoverRatesForPreset,
   deriveZweitstimmen,
@@ -43,7 +46,7 @@ import { getLiveLowerChamberSeats } from "@/lib/legislature/lowerChamberSeats";
 import { captureElectionWon } from "@/lib/analytics/electionAnalytics";
 import { reconcileBundestagHolderOffices } from "./bundestagHolderOffices";
 
-const VOTE_THRESHOLD = 0.05;
+const VOTE_THRESHOLD = BUNDESTAG_VOTE_THRESHOLD;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types

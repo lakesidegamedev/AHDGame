@@ -67,7 +67,7 @@ export interface EmploymentResult {
 const EMPLOYMENT_RECOVERY_HALF_LIFE_YEARS = 0.5;
 /** Turns for half of a company's open positions to be filled at average skill. */
 const CORPORATE_VACANCY_HALF_LIFE_TURNS = 2;
-const OUTPUT_GAP_UNEMPLOYMENT_COEFFICIENT = 0.4;
+export const OUTPUT_GAP_UNEMPLOYMENT_COEFFICIENT = 0.4;
 const EMPLOYMENT_UNEMPLOYMENT_BOUNDS = [1, 100] as const;
 
 const finite = (v: number | undefined, fallback: number): number =>

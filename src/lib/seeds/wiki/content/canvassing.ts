@@ -47,6 +47,14 @@ At the floor you keep 4% of the base boost, so canvassing a group far from you t
 
 The more turnout a group already has, the less each canvass adds. The scaling factor is 1.0 at modifier 0, 0.75 at +5, 0.5 at +10, 0.25 at +15 and 0 at +20. A modifier of +10 becomes +8.9 a turn later and about +6.3 after 4 turns without reinforcement.
 
+\`\`\`wiki-chart
+canvassing-headroom
+\`\`\`
+
+\`\`\`wiki-chart
+canvassing-decay
+\`\`\`
+
 ### Worked example
 
 You are 1 point away from a group on each axis, so each canvass gives 1.83 points. The first canvass takes the modifier from 0 to 1.83. The second adds 1.83 x (1 - 1.83/20) = 1.66 for a total of 3.49. A perfectly aligned candidate needs 7 canvasses to reach +10 and 15 to reach about +16. In the final 4 turns the base is 4 points, so 4 canvasses reach +11.8 and 5 reach +13.5.

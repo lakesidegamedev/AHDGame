@@ -78,6 +78,10 @@ A typical US climb is State Senate, House, Senate, Governor, President. In parli
 
 **How to become President.** There is no minimum NPI, but presidential races reward it directly, so build it before you file. NPI settles at 100 times your per-turn gain. As a House member with PI 40, your gain is 0.3 from PI plus 1.0 for the seat, so NPI heads toward 130. Starting from 0 it reaches 100 in about 146 turns, roughly 6 real days. At 100, your general-election reach from NPI is maxed. Keeping it takes ongoing position: NPI decays 1% per turn.
 
+\`\`\`wiki-chart
+national-influence-climb
+\`\`\`
+
 ### Worked example: a two-cycle career
 
 You start as an Independent with PI 10 and join a party on day 1. Over week 1 you push PI to about 30 and run a poll. You win a State Senate primary and general, which pays +1 action and ₳3,000 per turn and a state-legislator NPI bonus of +0.5. At PI 30 your PI term is +0.1, so NPI heads toward 60.

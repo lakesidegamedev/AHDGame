@@ -31,6 +31,10 @@ Nigeria's legislature has two chambers:
 - **House of Representatives**: 360 Representatives, elected zone by zone and allocated across the six geopolitical zones by population. 4-year terms (192 turns, 8 real days). **All seats are contested** each cycle. The House is the primary legislative body and the source of the coalition threshold.
 - **Senate**: 109 senators, elected zone by zone. 4-year terms. **All seats are contested** each cycle. The Senate reviews legislation from the House and can amend or reject bills.
 
+\`\`\`wiki-chart
+ng-seats-by-zone
+\`\`\`
+
 | Zone | House | Senate | State House of Assembly |
 | --- | --- | --- | --- |
 | North West | 95 | 21 | 259 |

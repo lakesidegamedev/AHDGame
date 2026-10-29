@@ -46,6 +46,10 @@ Its yearly earnings are ₳1,200,000 and the cost of capital is 10%. Earnings po
 
 The price is 0.70 + 0.5 x 1.20 + 0.15 x 0.08 = **1.312**. If the central bank raises rates so the cost of capital goes to 12%, earnings power falls to 1.00, the growth premium to 0.06, and the price to about 1.209, a drop of 8%. The same company in a boom can never rise more than 35% in a turn.
 
+\`\`\`wiki-chart
+share-price-by-cost-of-capital
+\`\`\`
+
 ### Why it works this way
 
 Tangible book carries the biggest weight so a company that reinvests into capacity is worth at least what that capacity is worth, even while current profit is low. Earnings and growth sit on top. Adjustments exist so no single holder or one-turn spike can distort a price.

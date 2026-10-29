@@ -116,6 +116,10 @@ Sovereign bond prices update each turn based on the present value of remaining c
 
 The price is the present value of the remaining coupons plus the present value of the par repayment, discounted at the current prime rate.
 
+\`\`\`wiki-chart
+sovereign-bond-price-by-prime-rate
+\`\`\`
+
 - **Rising prime rates → falling prices** (existing bonds become less attractive)
 - **Falling prime rates → rising prices** (existing bonds offer above-market coupons)
 - **Near maturity:** Price converges toward par regardless of rates
@@ -148,6 +152,10 @@ The country's debt-to-GDP ratio determines its credit rating, which affects the 
 | <= 150% | BB | 7.0% | -0.3% | -5 |
 | <= 250% | B | 10.0% | -0.5% | -10 |
 | > 250% | CCC | 14.0% | -0.7% | -15 |
+
+\`\`\`wiki-chart
+sovereign-bond-rating-tiers
+\`\`\`
 
 Public-trust penalties apply at fiscal year close. The table's GDP value is implemented as per-turn corporate margin drag, not as a direct write to the country's displayed GDP-growth metric. Risk scoring uses the country's current smoothed debt-to-GDP ratio; the historical sovereign-risk anchor is retained for seed and migration provenance, but does not rescale live risk.
 

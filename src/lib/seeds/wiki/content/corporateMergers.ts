@@ -79,6 +79,10 @@ Suppose the combined firm would hold 68% of an industry in the target's country,
 
 **What they can decide.** Clear it, block it, or clear it on condition that you sell down the overlapping industry. If nobody rules within 6 turns, the published bands decide, with no hidden roll.
 
+\`\`\`wiki-chart
+merger-review-timeout-outcomes
+\`\`\`
+
 **Blocked is final.** A blocked pairing cannot be retried. A cleared one does not need a second referral, so a hostile takeover that was referred and then cleared can simply be run again.
 
 **A conditional clearance.** You have 12 turns to sell down until your controlled group (you plus every corporation you control more than 50% of) holds less than the trip level in that industry. Moving the business into a subsidiary changes nothing, because the group's share is the same. The order only ends when the group's share really falls.

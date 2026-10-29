@@ -4,6 +4,7 @@
  * without a circular import.
  */
 import { ObjectId } from "mongodb";
+import { clotureVotesRequired } from "./clotureRules";
 import { createNotifications } from "@/lib/notifications";
 import { didPass } from "@/lib/billLifecycleHelpers";
 import type { Bill, BillStatus, Character, ElectedOfficial } from "@/lib/db/types";
@@ -50,7 +51,7 @@ export async function didPassWithFilibusterCheck(
 
   const votesCast = votesFor + votesAgainst + votesAbstain;
   if (votesCast === 0) return false;
-  const clotureThreshold = Math.ceil((3 / 5) * votesCast);
+  const clotureThreshold = clotureVotesRequired(votesCast);
   return votesFor >= clotureThreshold;
 }
 

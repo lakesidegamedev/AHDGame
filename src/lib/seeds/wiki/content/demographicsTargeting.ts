@@ -41,6 +41,10 @@ Appeal is 25 x ((50 - 5 x econ gap - 5 x social gap) / 50) to the power 1.5, plu
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Appeal (before direction bonus) | 25.5 | 21.8 | 18.4 | 15.1 | 12.1 | 6.8 | 2.7 | 0.5 |
 
+\`\`\`wiki-chart
+appeal-policy-distance
+\`\`\`
+
 The curve is deliberately softer than squaring so that campaigning, favorability and organization still move outcomes, and ideology alone does not dominate every race. A centrist (0, 0) is a moderate distance from every cell. A far-left candidate (-5, -5) is nearly on top of the most progressive cells and far from the most conservative. Specialists beat generalists inside their base. Generalists beat specialists across the whole field.
 
 ### Worked example: ads against canvassing

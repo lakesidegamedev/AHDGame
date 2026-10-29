@@ -10,6 +10,10 @@ For the overall structure see [Election Mechanics](/wiki/election-mechanics), an
 
 Each election has a total vote pool built from the state's demographics: voter groups with a size, a turnout rate and positions on the economic and social axes (see [Demographics](/wiki/demographics)). Only the **registered** share of the electorate casts general ballots. The pool is conserved across every turn of the count, and a race can never certify more ballots than it has voters.
 
+\`\`\`wiki-chart
+general-election-vote-pool
+\`\`\`
+
 The pool is released over the general window in three bands:
 
 | Turn phase | Share of pool | Per-turn weight |
@@ -34,6 +38,10 @@ The general uses the swing-flow model: the same per-group pipeline as [Election 
 - NPPs (computer-run candidates) get an 0.8x weight in a general where at least one player is in the race.
 - UK regional elections also weight each party by the square root of its current registration share. A party at 25 registration gets 0.5x, and a party at 100 gets 1.0x. A party can grow from zero without being erased.
 - The whole turn pool is scaled by state government approval and office strength: Governor 1.0, President 1.0, House 0.9, State Senate 0.85, Senate 0.8.
+
+\`\`\`wiki-chart
+favorability-vote-scalar
+\`\`\`
 
 ### Key numbers
 

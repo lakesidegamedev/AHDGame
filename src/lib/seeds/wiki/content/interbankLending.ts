@@ -16,6 +16,10 @@ If you run a chartered bank (see [Private Banking](/wiki/private-banking)), you 
 | Central bank margin line rate | Prime rate plus 1.5 points |
 | Margin line limit | 50% of your trading book's market value, counting unpaid interest |
 
+\`\`\`wiki-chart
+interbank-arrears-write-off
+\`\`\`
+
 **Lendable headroom** is your deposits less what you must hold in reserve, less your loans: deposits x (1 - reserve requirement) - loans. You also need the cash itself in your reserves.
 
 **Lending.** You set the amount and the rate. Cash moves from your reserves to the borrower's, and a loan record tracks principal, balance and rate. It is separate from your ordinary loan book and does not count in your loan total. The borrower pays interest every turn. They can repay any amount up to the balance whenever they like, and the loan is **interest only**: principal comes back only when the borrower repays it, and the lender cannot call it in.

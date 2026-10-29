@@ -6,6 +6,10 @@ A line of credit lets you borrow cash straight from a central bank, based on you
 
 Your **credit score** runs from 0 to 100 and sets your **spread**, the extra interest you pay over the prime rate. Your **limit** is the most you can owe at once.
 
+\`\`\`wiki-chart
+line-of-credit-rate-by-score
+\`\`\`
+
 | What | Value |
 | --- | --- |
 | Credit score | 0 to 100 |
@@ -32,6 +36,14 @@ spread = 5 - (score / 100) x 6
 - **Blend.** Without a company: half income, half net worth. If you are a CEO with a company credit rating: 75% company rating and 25% income.
 - **Leverage penalty.** The more of your assets are already borrowed, the lower your score, up to a 30 point hit.
 - **High-rate penalty.** When the prime rate is above 2.5%, you lose 5 points for each point above it, up to 22 points. Wealth cushions this: a net worth score of 100 shields you from 65% of it.
+
+\`\`\`wiki-chart
+line-of-credit-score-curves
+\`\`\`
+
+\`\`\`wiki-chart
+line-of-credit-prime-penalty
+\`\`\`
 
 ### Paying and what a missed payment does
 

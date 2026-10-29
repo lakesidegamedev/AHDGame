@@ -61,6 +61,10 @@ elections
 
 There is no single correct build, but this allocation covers the first-days goals and leaves room to react. It spends exactly 25 actions.
 
+\`\`\`wiki-chart
+campaign-advertise-action-cost
+\`\`\`
+
 | Move | Actions | Campaign Funds | Why |
 | --- | ---: | ---: | --- |
 | Campaign at home, three times | 3 | -₳60,000 | First-days goal, and the only routine PI gain. |

@@ -69,11 +69,19 @@ The favorability gain of one ad is floor((3 - 0.1 x (favorability - 70)) x Chari
 | 71 to 80 | +2 |
 | 81 and above | +1 |
 
+\`\`\`wiki-chart
+ad-favorability-gain
+\`\`\`
+
 Higher Charisma raises each figure and lower Charisma cuts it. Above 80 an ad is never wasted, but it is poor value: stop at your target (60 minimum, 70 optimal for most races). When you run an ad you choose a demographic group, or broad for untargeted. Targeted ads give slightly more on that group. Aim at the two or three weakest groups after a Full Poll (see [Demographics and Targeting](/wiki/demographics-targeting)).
 
 ### Targeted ads
 
 You can also buy ads aimed at one voter group in one state. Each targeted ad takes **1 action and ₳100** and adds 1 point of nominal bonus for that group, up to a cap of 25 points, with up to 50 ads per purchase. The bonus halves every 24 turns, and what it is worth to you depends on how well your positions fit that group, in the same way as canvassing (see [Canvassing](/wiki/canvassing)). To reach the cap you need 25 ads, about ₳2,500 and 25 actions, and then top it up as it fades. For example, after buying 25 ads (bonus 25), 24 turns later the bonus is 12.5, so about 12 more ads restore it.
+
+\`\`\`wiki-chart
+targeted-ad-decay
+\`\`\`
 
 ### Influence and the Campaign action
 

@@ -20,6 +20,10 @@ Relocation changes your character's home: a **state** (US), a **region** (UK nat
 | Moving a corporation with you, same country | 7% of its market cap |
 | Moving a corporation with you, other country | 14% of its market cap (twice the base rate) |
 
+\`\`\`wiki-chart
+relocation-cooldown
+\`\`\`
+
 ### What always resets, even within your country
 
 - **Political Influence** goes to 0 in every state, and **Donor Base** level goes to 0, so **Fundraise is locked until you build a donor network again**. Group favorability for demographics is cleared too.

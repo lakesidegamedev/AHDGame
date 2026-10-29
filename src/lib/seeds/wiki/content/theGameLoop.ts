@@ -6,6 +6,10 @@ You do not need to live in the tab. The game runs an hourly turn whether you are
 
 Every hour the game runs one **turn**. It refreshes actions, pays Campaign Funds, decays or grows your meters, counts election ballots and moves bills, NPPs and markets forward. You can act any time between turns, and what you spend is processed on the next turn.
 
+\`\`\`wiki-chart
+general-election-vote-pool
+\`\`\`
+
 | Number | Value |
 | --- | --- |
 | Turn length | 1 real hour, on the hour |

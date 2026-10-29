@@ -39,6 +39,10 @@ The German Question can end the division. If the East wins the question (by a se
 
 Germany's Bundestag uses the **Additional Member System (AMS)**, also called Mixed-Member Proportional (MMP). This is fundamentally different from US FPTP or UK multi-seat allocation.
 
+\`\`\`wiki-chart
+de-vote-threshold-seats
+\`\`\`
+
 Under AMS:
 - Each state elects constituency winners (direct mandates), and parties fill the rest of their seats from their lists.
 - Seat allocation across the Bundestag is proportional to each party's vote share.

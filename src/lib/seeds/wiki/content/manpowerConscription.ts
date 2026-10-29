@@ -31,6 +31,10 @@ Your pool has two numbers that matter:
 - **Ceiling**: the most manpower you can ever bank. Derived from your **total population** and your conscription stance: **2% of population**, multiplied by the stance.
 - **Regeneration**: what arrives each turn. **0.05% of population**, multiplied by the stance.
 
+\`\`\`wiki-chart
+manpower-pool-refill-by-stance
+\`\`\`
+
 Both scale off population, so a large country genuinely fields more men. Both scale off the stance, so a country that mobilises its society hard gets more of them.
 
 A fresh world does not start you at the ceiling. Each nation opens with **25% of its ceiling**, enough to field a real starting army, but not enough to skip the buildup. (A country starting at one turn's regeneration was the old behaviour, and it left East Germany unable to afford a single 12,000-man division.)
@@ -91,6 +95,10 @@ Conscript rebuilds **two and a half times faster** and is available only if your
 ## XP dilution: the real cost of conscripts
 
 This is the mechanic that makes veteran formations precious.
+
+\`\`\`wiki-chart
+conscript-xp-dilution
+\`\`\`
 
 When replacements join a unit, **their inexperience is blended into the unit's own experience by headcount**. Not averaged with the old value as a formality: genuinely diluted in proportion to how much of the unit is now new bodies.
 

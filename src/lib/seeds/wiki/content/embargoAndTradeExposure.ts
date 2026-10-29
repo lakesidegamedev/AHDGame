@@ -62,6 +62,10 @@ A sector earns revenue of 100 per turn at a 20% margin, which includes a 4-point
 
 A sector with 10% exposure would keep 90 of revenue and lose far less.
 
+\`\`\`wiki-chart
+embargo-revenue-kept
+\`\`\`
+
 ## What you can do
 
 - **Impose an embargo.** If you are your country's trade minister, open your cabinet office page and use the **Trade embargoes** panel. Pick the target, commodity, direction, block or cap, and a duration up to 96 turns.

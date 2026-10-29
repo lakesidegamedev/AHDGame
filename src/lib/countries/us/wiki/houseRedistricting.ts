@@ -20,6 +20,10 @@ Redistricting decides how your voters are grouped into House seats. Whoever cont
 | Campaign Here cost | 2 political strength (base) |
 | Campaign Here boost | +2.5 per action (+1.25 for an allied party), cap 7.5, decays 0.5 per turn |
 
+\`\`\`wiki-chart
+redistricting-tier-limits
+\`\`\`
+
 ## When redistricting happens
 
 - **The census** fires in the first week of every year ending in 0. It reapportions the 435 House seats between states and rebuilds the district maps of every state whose seat count changed. States under an independent commission are also rebuilt neutrally at every census.

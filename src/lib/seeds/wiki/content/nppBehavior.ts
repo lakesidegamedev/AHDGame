@@ -24,6 +24,10 @@ Whips and the party line reach an NPP only through its **compliance**, a number 
 compliance = 0.7 x loyalty/100 + 0.3 x (1 - stubbornness/100)
 \`\`\`
 
+\`\`\`wiki-chart
+npp-compliance-by-loyalty
+\`\`\`
+
 | Loyalty | Stubbornness | Compliance | Party hard whip (60) lands as |
 | --- | --- | --- | --- |
 | 100 | 0 | 1.00 | 60 |

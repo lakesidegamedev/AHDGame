@@ -10,6 +10,10 @@ import type { GameConfig } from "@/lib/db/types/gameConfig";
 import { createAdminLog } from "@/lib/adminLog";
 import { isMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
 import type { MarketSystemMode } from "@/lib/market/modes";
+import {
+  DEFAULT_GUARD_DROP_PCT,
+  DEFAULT_GUARD_GRACE_TURNS,
+} from "@/lib/market/launchGuardConstants";
 
 /**
  * Launch guard — automated kill switch for the clearing/capital flip.
@@ -23,10 +27,7 @@ import type { MarketSystemMode } from "@/lib/market/modes";
  * armed while the mode is at or above `clearing`.
  */
 
-export const DEFAULT_GUARD_DROP_PCT = 0.25;
-/** Grace window (turns) after the flip before the guard can trip — the ramp
- *  needs a few turns of signal before a drop is meaningful. */
-const DEFAULT_GUARD_GRACE_TURNS = 5;
+export { DEFAULT_GUARD_DROP_PCT };
 /** Minimum share of aggregate mcap that must carry a fundamental valuation
  *  before we trust the fundamentals-relative comparison. Below this we fall
  *  back to the raw drawdown so partial data can never silently disarm us. */

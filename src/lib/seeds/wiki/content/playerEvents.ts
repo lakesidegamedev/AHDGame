@@ -72,6 +72,10 @@ You are a character with Intellect 7.5 and the game offers **Tax Audit**, a "Eve
 - **Stonewall the auditors** uses no stat. On the same roll 33 it hits the low tier, "Criminal referral": 400,000 less wealth, 8 favorability lost and 6 infamy gained.
 - **Ignore the notice** is the default. If you let the deadline pass, the default option resolves on your roll.
 
+\`\`\`wiki-chart
+event-roll-stat-adjustment
+\`\`\`
+
 The roll is fixed when the event is offered, so a good stat shifts you toward a better tier but never guarantees one.
 
 ## What you can do

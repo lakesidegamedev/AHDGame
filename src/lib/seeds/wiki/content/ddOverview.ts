@@ -31,6 +31,10 @@ The General Secretary carries **+4 actions per turn**, a Volkskammer Deputy +1, 
 
 The **Volkskammer** (People's Chamber) is mechanically **unicameral**: 500 deputies elected on the single National Front list, all seats contested each cycle, no snap elections. The **Staatsrat** (Council of State), a 25-seat collective head-of-state body, is not elected and sits outside the player legislative loop.
 
+\`\`\`wiki-chart
+dd-volkskammer-seats-by-party
+\`\`\`
+
 Elections ride a **192-turn cycle** (4 game years at 48 turns per year), anchored to 1954 in the 1953 preset and 1981 in the 1979 preset, matching the GDR's early electoral cadence. Land First Secretary races ride the same anchor. The coalition threshold is **251 seats** (500 / 2 + 1), a formality given the seeded majority. A race takes 48 turns (48 real hours: 24 for the primary and 24 for the general election) at the end of each 192-turn cycle.
 
 The seeded composition mirrors the National Front's fixed allocation:

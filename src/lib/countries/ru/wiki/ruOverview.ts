@@ -114,6 +114,10 @@ The Foreign and Internal Trade seats are deliberately distinct levers: Foreign T
 
 In worlds that use the command economy (every new world), the USSR comes up **fully command**: its marketization level is scheduled at **10** through 1991 in both presets. Marketization is a dial from 0 (fully command) to 100 (fully market). Below 30 the economy is fully command, 30 to 69 is dual-track (plan and market side by side), and 70 and above is a normal market economy. See [Planned Economies](/wiki/planned-economies) for the full model.
 
+\`\`\`wiki-chart
+marketization-schedule-by-country
+\`\`\`
+
 - **No stock exchange.** State enterprises are recorded against the **GOSPLAN state register**, and founding private corporations is disallowed.
 - **One state-owned enterprise per sector.** Every industry on the sector board has a plan enterprise with plant capacity (heavy industry, energy, extraction, agriculture, consumer goods, defense, chemicals, transport, and the rest).
 - **The three seats are wired to real offices.** The Gosplan planner panel is operated by the Chairman of Gosplan cabinet seat and the state-credit panel by the Gosbank liaison; SOE directors are appointed per enterprise.

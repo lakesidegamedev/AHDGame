@@ -72,6 +72,10 @@ Each turn, a pool of votes is split between groups of voters (see [Demographics]
 - **Infamy:** up to 5% off for player characters with high infamy.
 - **Voter mood and loyalty:** registration makes a party's own voters 1.0x to 1.3x harder to persuade away, and short-term support moves your swing between 0.6x and 1.4x.
 
+\`\`\`wiki-chart
+general-election-vote-pool
+\`\`\`
+
 Influence is not part of appeal. It enters only through reach.
 
 **Worked example.** One group has 10,000 votes this turn, with two candidates and no direction bonus. Candidate A is 2 econ and 1 social points from the group (appeal 15.1), has influence 49 (reach 0.70), effective favorability 80 (approval 0.84) and 60% of the state's party organization (0.90). Weight: 15.1 x 0.70 x 0.84 x 0.90 = 8.0. Candidate B is 3 and 2 points away (appeal 9.3), has reach 0.80, effective favorability 75 (0.79) and 40% of the organization (0.83): 9.3 x 0.80 x 0.79 x 0.83 = 4.9.

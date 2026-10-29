@@ -25,6 +25,10 @@ The Cabinet is the council of principal officers who lead the executive departme
 
 You are confirmed as Secretary of Energy with the full bank of 4 actions. On turn 0 you issue two ministerial orders: the bank drops to 2. Six turns later you have 3, twelve turns later you are back at 4. If you buy an extra action on turn 3 for 10 AP, the bank goes to 3 for that moment, and you can do that once per turn. Each order then runs for 24 turns, so two orders issued on turn 0 stay in force until turn 24 even after the bank refills.
 
+\`\`\`wiki-chart
+ministerial-action-bank
+\`\`\`
+
 ### Roster and eras
 
 The US roster depends on the year. Seats unlock as follows (a world that starts later already has them):

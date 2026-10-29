@@ -85,6 +85,10 @@ Conquest cannot be selected. Nothing in the game transfers territory between cou
 
 A country may file a declaration only once every 120 turns. The clock runs from your last **filing**, not your last passage. A declaration your chambers threw out still spent your cooldown. If a rejected declaration could be re-filed at once, the vote would mean nothing, because an executive could keep tabling it until attendance favoured them.
 
+\`\`\`wiki-chart
+war-declaration-timers
+\`\`\`
+
 Joining an existing war through your own declaration also uses your cooldown, because it still goes through a full bill. Being pulled in by a treaty uses none.
 
 ## The 240-turn truce

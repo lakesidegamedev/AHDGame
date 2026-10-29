@@ -39,6 +39,10 @@ An **estate** is a facility tied to your portfolio. Every estate has four things
 - **Funding**: the **Fund** lever, free to change. Higher funding raises upkeep and output and the condition the estate settles at.
 - **Condition** (0 to 100): drifts toward the baseline of your funding level (55, 75 or 90). Effects scale with condition, so a neglected estate does proportionally less. Upkeep does **not** scale with condition: a run-down hospital still costs money.
 
+\`\`\`wiki-chart
+estate-condition-drift
+\`\`\`
+
 Each estate's effect is small and scales with tier, funding and condition. All cabinet effects on one metric are capped per turn, so stacking has diminishing returns.
 
 ### Worked example: a school

@@ -38,6 +38,10 @@ Two gates must both be true:
 | Dual-track | 30 to under 70 | Plan and market run together; national prices and shortage pressure scale with how much is still planned |
 | Market | 70+ | Standard floating FX, chair policy, supply-and-demand commodity pricing |
 
+\`\`\`wiki-chart
+marketization-schedule-by-country
+\`\`\`
+
 Soviet Russia and early China start fully command; Eastern-bloc countries start command; China starts further along the dial in later eras. Where each ends up is now up to how the country is governed.
 
 ## State-owned enterprises (SOEs)

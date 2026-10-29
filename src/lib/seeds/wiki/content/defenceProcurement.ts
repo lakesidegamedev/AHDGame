@@ -90,6 +90,10 @@ The break fee is always less than what delivering the rest of the order would ha
 
 The window cap limits how much a country can OBLIGATE across a quarter. It does not, by itself, limit how fast an already-obligated contract PAYS OUT. A large committed contract could otherwise be delivered in one or two turns, moving an entire quarter's defence appropriation into one corporation's cash balance in a single tick.
 
+\`\`\`wiki-chart
+defence-turn-spend-cap
+\`\`\`
+
 To stop that, deliveries are also throttled per turn:
 
 - Each turn, a country can pay suppliers at most three times its normal per-turn procurement income (its annual defence line's procurement share, divided evenly across the year).

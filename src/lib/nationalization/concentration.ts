@@ -16,11 +16,9 @@ import {
   resolveCorpLiquidCurrencyCode,
 } from "@/lib/currency/corporationCapital";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
-import { SOCI_DANGER_ZONE, CONCENTRATION_MULTIPLIER_MAX } from "./constants";
+import { clampConcentration, sociMultiplier } from "./concentrationClamp";
 
-import { clampConcentration } from "./concentrationClamp";
-
-export { clampConcentration };
+export { clampConcentration, sociMultiplier };
 
 /** SOCI from two ₳-anchor revenue sums. 0 when there is no corporate revenue. */
 export function computeStateOwnershipConcentration(input: {
@@ -30,19 +28,6 @@ export function computeStateOwnershipConcentration(input: {
   const total = input.totalRevenueAnchor;
   if (!(total > 0)) return 0;
   return clampConcentration((100 * input.stateRevenueAnchor) / total);
-}
-
-/**
- * Escalation multiplier (≥ 1.0). Exactly 1.0 at/below the danger zone, then a
- * convex (quadratic) ramp to CONCENTRATION_MULTIPLIER_MAX at SOCI 100 — early
- * takings barely escalate, empire-building bites hard.
- */
-export function sociMultiplier(soci: number): number {
-  const s = clampConcentration(soci);
-  if (s <= SOCI_DANGER_ZONE) return 1;
-  const span = 100 - SOCI_DANGER_ZONE;
-  const t = (s - SOCI_DANGER_ZONE) / span; // 0..1 past the knee
-  return 1 + (CONCENTRATION_MULTIPLIER_MAX - 1) * t * t;
 }
 
 /** Read a country's stored SOCI, clamped; absent ⇒ 0. */
