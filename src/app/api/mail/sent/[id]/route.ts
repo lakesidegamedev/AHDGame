@@ -13,7 +13,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     const auth = await requireAuthWithCharacter();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 30, 60000);
+    const rateLimit = checkRateLimit(`api/mail/sent/[id]:${auth.user.userId}`, 30, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const db = await getDb();

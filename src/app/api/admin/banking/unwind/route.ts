@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     const auth = await requireAdmin();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.admin.userId, 10, 60_000);
+    const rateLimit = checkRateLimit(`api/admin/banking/unwind:${auth.admin.userId}`, 10, 60_000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const parsed = await parseJsonBody(request, unwindSchema);

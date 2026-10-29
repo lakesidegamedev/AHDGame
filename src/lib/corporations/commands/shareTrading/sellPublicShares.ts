@@ -112,7 +112,11 @@ export async function sellPublicShares(request: Request, { params }: RouteParams
     const basicAuth = await requireBasicAuth();
     if (!basicAuth.ok) return basicAuth.response;
 
-    const rateLimit = checkRateLimit(basicAuth.user.userId, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `lib/corporations/commands/shareTrading/sellPublicShares:${basicAuth.user.userId}`,
+      20,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { id } = await params;

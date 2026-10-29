@@ -95,7 +95,9 @@ describe("GET /api/elections/[id]/state-operations", () => {
     // is an action the player takes. Browsing must not starve acting.
     const { checkRateLimit } = await import("@/lib/api/rateLimit");
     await callRoute(ELECTION_OID.toString());
-    expect(vi.mocked(checkRateLimit).mock.calls[0][0]).toBe(USER_ID);
+    expect(vi.mocked(checkRateLimit).mock.calls[0][0]).toBe(
+      `api/elections/[id]/state-operations:${USER_ID}`
+    );
   });
 
   it("requires a character", async () => {

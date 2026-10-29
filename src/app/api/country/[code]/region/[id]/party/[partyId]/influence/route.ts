@@ -22,7 +22,7 @@ import {
   INFLUENCE_ACTIONS,
 } from "@/lib/influence";
 import { COUNTRY_CONFIGS, type CountryId } from "@/lib/constants/countries";
-import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { NPP_MANAGEMENT_LIMITS, checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 
 interface RouteParams {
   params: Promise<{ code: string; id: string; partyId: string }>;
@@ -151,7 +151,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     const crossCountry = crossCountryActionGuard(authResult.user.character, countryId);
     if (crossCountry) return crossCountry;
 
-    const rateLimit = checkRateLimit(`party-influence:${authResult.user.userId}`, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `party-influence:${authResult.user.userId}`,
+      NPP_MANAGEMENT_LIMITS.maxRequests,
+      NPP_MANAGEMENT_LIMITS.windowMs
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const parsed = await parseJsonBody(request, partyInfluenceSchema);

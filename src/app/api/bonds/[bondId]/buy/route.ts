@@ -55,7 +55,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 20, 60000);
+    const rateLimit = checkRateLimit(`api/bonds/[bondId]/buy:${auth.user.userId}`, 20, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
     const user = auth.user;
 

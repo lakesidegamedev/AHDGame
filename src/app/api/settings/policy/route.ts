@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     if (!auth.ok) return auth.response;
     const user = auth.user;
 
-    const rateLimit = checkRateLimit(user.userId, 30, 60000);
+    const rateLimit = checkRateLimit(`api/settings/policy:${user.userId}`, 30, 60000);
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const parsed = await parseJsonBody(request, policyShiftSchema);

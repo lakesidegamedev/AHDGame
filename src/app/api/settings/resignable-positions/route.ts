@@ -13,7 +13,11 @@ async function handleGET() {
     const authResult = await requireAuthWithCharacter();
     if (!authResult.ok) return authResult.response;
 
-    const rateLimit = checkRateLimit(authResult.user.userId, 30, 60000);
+    const rateLimit = checkRateLimit(
+      `api/settings/resignable-positions:${authResult.user.userId}`,
+      30,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const db = await getDb();
