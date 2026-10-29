@@ -4,12 +4,12 @@ In the United States no single person can move the interest rate. A seven-seat b
 
 ## Who sits on the board
 
-The engine does not staff the board. When a term runs out the seat falls vacant and stays that way until the President nominates and the Senate confirms a successor. A new world may start with gaps.
+A new world opens with all seven seats held by technocrat NPP governors, alternating hawk and dove, on staggered terms that run out one after another over the first 192 turns. After that the engine never restocks a seat: when a term runs out the seat falls vacant and stays that way until the President nominates and the Senate confirms a successor.
 
 | What | Value |
 | --- | --- |
 | Seats | 7, chair included (seat 1 is the chair seat) |
-| Term | 192 turns (4 game years), staggered so seats do not all open together |
+| Term | 192 turns (4 game years) from confirmation. The opening technocrat terms are staggered so seats do not all open together |
 | Meeting | Every 8 turns (6 per game year) |
 | Player voting window | 24 hours, which is the same as the 24-turn deadline |
 | To pass | A strict majority of seated governors |
@@ -17,7 +17,9 @@ The engine does not staff the board. When a term runs out the seat falls vacant 
 | Wait between rate changes | 6 turns |
 | Move size | Same limits as any chair: up to 0.75 up, 1.75 down, 3 up when inflation is 5 points over target |
 
-To get a seat as a player you need a nomination from the President and a Senate majority. There is no lobbying pool and no draw. As President, you fill a vacant seat or the chair seat; the nomination appears in the Senate confirmations panel with the nominee, the seat, whether they are a player or NPP, the running tally and the closing time. Sitting Senators vote For, Against or Abstain. See [Confirmation Process](/wiki/confirmation-process).
+To get a governor seat as a player you need a nomination from the President and a Senate majority. There is no lobbying pool and no draw for governor seats. As President, you nominate a player or an NPP to any seat, optionally making them chair, and assign hawk or dove. A seat can have one nomination before the Senate at a time, and a cabinet member cannot be nominated. The nomination appears in the Senate confirmations panel with the nominee, the seat, whether they are a player or NPP, the running tally and the closing time. Sitting Senators vote For, Against or Abstain; NPP senators vote along party lines, and the vote closes after 24 turns. A confirmed nominee takes the seat, replacing anyone sitting there, with a fresh 192-turn term. A rejected one leaves the seat as it was, and the President is told they can nominate again. See [Confirmation Process](/wiki/confirmation-process).
+
+The chair seat has a second route. When it falls vacant, the chair draw on [Central Banks](/wiki/central-banks) runs over the President's chair nominations, with lobbying, and a player who accepts takes seat 1. With no one nominated the chair stays vacant; the Fed never gets an autonomous caretaker chair.
 
 Vacant seats do not count toward a majority, so five seated governors need three votes. A governor without a ballot abstains, which makes the board lean toward holding when members do not show up.
 

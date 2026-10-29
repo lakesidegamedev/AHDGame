@@ -94,7 +94,7 @@ When the last Supreme Soviet election of a cycle resolves, a **convocation reset
 | Nationalities Deputy | Multi-seat republic-weighted election | 4 years | 515 |
 | Republic Deputy | Multi-seat sub-national election | 4 years | 5,000 total |
 | Republic First Secretary | Regional executive election | 4 years | 1 per region |
-| Chairman of Gosbank | Appointed action | 5 years | 1 |
+| Chairman of Gosbank | Appointed action | 4 years | 1 |
 
 The Premier carries **+4 actions per turn**; a Supreme Soviet or Nationalities Deputy +1; a Republic First Secretary +2; the Chairman of Gosbank +3. The Chairman of the Presidium carries +0 actions and zero party-strength weight: the office is a ceremonial capstone, not a power base.
 

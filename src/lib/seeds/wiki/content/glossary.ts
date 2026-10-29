@@ -54,7 +54,7 @@ Met a word in the game or the wiki that you do not recognise? Look it up here. T
 
 **Favorability**: A 0 to 100 stat representing public approval of your character. Used in primary scoring (worth up to 35 pts state, 25 pts presidential), general vote appeal (as an approval scalar), and national/PM approval ratings.
 
-**FOMC**: The US Federal Reserve's 7-seat rate-setting committee. The chair proposes hike, cut, or hold; a strict majority of seated governors must agree. Vacant seats do not count, while seated governors without a ballot abstain. Seats are filled by presidential nomination and Senate confirmation. Other central banks keep a single governor. See [FOMC / Rate-Setting Board](/wiki/fomc).
+**FOMC**: The US Federal Reserve's 7-seat rate-setting committee. The chair proposes hike, cut, or hold; a strict majority of seated governors must agree. Vacant seats do not count, while seated governors without a ballot abstain. A new world opens with seven technocrat governors; seats that fall vacant are filled by presidential nomination and Senate confirmation, and a vacant chair seat can also be filled by the chair draw. Other central banks keep a single governor. See [FOMC / Rate-Setting Board](/wiki/fomc).
 
 **FPTP (First Past the Post)**: In single-seat races, the candidate with the most votes wins. In the game's multi-seat FPTP families, the flag also enables a third-party spoiler transfer before the configured seat allocator distributes seats.
 
