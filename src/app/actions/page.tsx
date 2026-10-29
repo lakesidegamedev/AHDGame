@@ -407,6 +407,10 @@ export default function ActionsPage() {
     return map;
   }, [era, countryId]);
   const heroImage = useMemo(() => getActionImage("hero", { era, countryId }), [era, countryId]);
+  const debateImage = useMemo(
+    () => getActionImage("debatePrep", { era, countryId }),
+    [era, countryId]
+  );
 
   const influence = character?.politicalInfluence ?? 0;
   const infamy = character?.infamy ?? 0;
@@ -745,7 +749,7 @@ export default function ActionsPage() {
             until one of them has something to show. */}
         <EventsPanel>
           <PlayerEventCard />
-          <DebateCard />
+          <DebateCard imageUrl={debateImage} />
           <CrisisActionCard />
         </EventsPanel>
 

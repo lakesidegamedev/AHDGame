@@ -216,6 +216,7 @@ export default function CrisisActionCard() {
             tone={styles.tone}
             className={styles.border}
             title={crisis.name}
+            image={crisis.heroImage}
             tags={
               <>
                 <span
@@ -234,7 +235,7 @@ export default function CrisisActionCard() {
               <button
                 type="button"
                 onClick={() => handleDismiss(crisis._id.toString())}
-                className="flex h-7 w-7 items-center justify-center rounded-md text-muted transition-colors hover:bg-card-elevated hover:text-foreground"
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-background/70 text-muted backdrop-blur-sm transition-colors hover:bg-card-elevated hover:text-foreground"
                 title="Dismiss from actions"
                 aria-label="Dismiss crisis from Actions"
               >
