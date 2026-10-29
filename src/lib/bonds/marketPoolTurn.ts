@@ -3,11 +3,14 @@
  *
  * 1. Re-size each pool's target to a share of its currency's latest broad
  *    money, so the pool scales with the economy it sits in.
- * 2. Let savings flow in toward the target when the pool is short, and sweep
- *    cash back out to depositors when it has hoarded far past the target.
- *    Inflow is the institutional deposit base growing; it is new money to the
- *    pool and is tracked as excluded settlement inventory outside observed M2
- *    (v3 boundary, issue #2021). The sweep is the same money leaving.
+ * 2. Sweep cash back out to depositors when the pool has hoarded far past
+ *    the target. There is no inflow toward the target: it used to credit 2%
+ *    of the shortfall every turn with no payer, and that new money funded
+ *    about a quarter of all sovereign underwriting. A pool now holds only what
+ *    it took in (purchases, coupons, maturities, QE), the same finite book as
+ *    the equity pools. A sovereign issue the pool cannot afford stays unsold
+ *    and places later, or an autonomous central bank monetizes part of it on
+ *    its own counted balance sheet (`primaryMarket.ts`).
  * 3. Refresh the pool's appetite for each sovereign issuer in its currency
  *    from the sovereign-default demand model, so quotes on a CCC sovereign at
  *    four times GDP are thinner than on an AAA one.
@@ -21,7 +24,7 @@ import type { BondMarketPool } from "@/lib/db/types";
 import { BOND_MARKET_POOLS_COLLECTION } from "@/lib/db/types/bondMarketPool";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import type { CountryId } from "@/lib/constants/countries";
-import { BOND_POOL_M2_SHARE, creditBondPool, debitBondPoolGated } from "@/lib/bonds/marketPool";
+import { BOND_POOL_M2_SHARE, debitBondPoolGated } from "@/lib/bonds/marketPool";
 import { loadCountrySovereignSnapshots } from "@/lib/sovereignDefault/snapshotLoader";
 import { computeMarketDemand } from "@/lib/sovereignDefault/marketDemand";
 import {
@@ -31,8 +34,6 @@ import {
 } from "./marketPoolLedger";
 import { SOVEREIGN_ISSUANCE_INTERVAL_TURNS } from "@/lib/bonds/sovereign";
 
-/** Share of the shortfall against target that flows in per turn. */
-export const BOND_POOL_INFLOW_RATE = 0.02;
 /** Cash above this multiple of target triggers a sweep... */
 export const BOND_POOL_SWEEP_TRIGGER_MULTIPLE = 2;
 /** ...down to this multiple. */
@@ -40,29 +41,19 @@ export const BOND_POOL_SWEEP_TO_MULTIPLE = 1.5;
 
 export interface BondMarketPoolTurnResult {
   poolsProcessed: number;
-  inflowLocalByCurrency: Record<string, number>;
   sweptLocalByCurrency: Record<string, number>;
   appetitesRefreshed: number;
 }
 
+/** Per-turn cash move for a bond market pool: sweep only, never an inflow. */
 export function planPoolCashMoves(input: { cashLocal: number; targetCashLocal: number }): {
-  inflow: number;
   sweep: number;
 } {
   const target =
     Number.isFinite(input.targetCashLocal) && input.targetCashLocal > 0 ? input.targetCashLocal : 0;
   const cash = Number.isFinite(input.cashLocal) && input.cashLocal > 0 ? input.cashLocal : 0;
-  if (target <= 0) return { inflow: 0, sweep: 0 };
-  if (cash < target) {
-    return { inflow: Math.round((target - cash) * BOND_POOL_INFLOW_RATE * 100) / 100, sweep: 0 };
-  }
-  if (cash > target * BOND_POOL_SWEEP_TRIGGER_MULTIPLE) {
-    return {
-      inflow: 0,
-      sweep: Math.round((cash - target * BOND_POOL_SWEEP_TO_MULTIPLE) * 100) / 100,
-    };
-  }
-  return { inflow: 0, sweep: 0 };
+  if (target <= 0 || cash <= target * BOND_POOL_SWEEP_TRIGGER_MULTIPLE) return { sweep: 0 };
+  return { sweep: Math.round((cash - target * BOND_POOL_SWEEP_TO_MULTIPLE) * 100) / 100 };
 }
 
 export function countriesForCurrency(currency: CurrencyCode): CountryId[] {
@@ -174,7 +165,6 @@ export async function processBondMarketPoolTurn(
     .toArray();
   const result: BondMarketPoolTurnResult = {
     poolsProcessed: 0,
-    inflowLocalByCurrency: {},
     sweptLocalByCurrency: {},
     appetitesRefreshed: 0,
   };
@@ -220,10 +210,7 @@ export async function processBondMarketPoolTurn(
       const targetCashLocal = Math.round(Math.max(liquidityTarget, rolloverLocal) * 100) / 100;
 
       const moves = planPoolCashMoves({ cashLocal: pool.cashLocal, targetCashLocal });
-      if (moves.inflow > 0) {
-        await creditBondPool(db, currency, moves.inflow, "inflowIn", now, { ledgerContext: batch });
-        result.inflowLocalByCurrency[currency] = moves.inflow;
-      } else if (moves.sweep > 0) {
+      if (moves.sweep > 0) {
         const debit = await debitBondPoolGated(db, currency, moves.sweep, "sweepOut", now, {
           ledgerContext: batch,
         });
