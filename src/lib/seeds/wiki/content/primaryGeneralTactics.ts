@@ -121,7 +121,7 @@ The moment your primary resolves:
 
 - **Shifting ad messaging too early in the general.** Your party base is still voting; don't abandon them day 1.
 - **Attacking primary rivals after the fact.** They're out of the race; Infamy gain is wasted.
-- **Ignoring Opposition Research entirely.** The starter node drains the frontrunner's favorability by 0.5% a turn and doubles in the last 4 turns, which adds up over a 48-turn general and is often race-deciding.
+- **Ignoring Opposition Research entirely.** The starter node drains the frontrunner's favorability by 0.5% a turn and doubles in the last 4 turns, which adds up over a 24-turn general and is often race-deciding.
 - **Upgrading campaign tiers during general at 1.5x cost.** Upgrade during primary.
 - **Over-travelling in presidential.** Travel is +1% Favorability/turn, but each move costs 3 to 10 actions by state electoral votes. Don't travel constantly. Pick strategic states and stay.
 - **Not planning the closing sprint.** Reserve ~30% of your general-phase fund budget for the final 4 turns.

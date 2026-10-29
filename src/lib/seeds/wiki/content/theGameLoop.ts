@@ -27,7 +27,7 @@ Every hour the game runs one **turn**. It refreshes actions, pays Campaign Funds
 
 Refresh the Dashboard after the hour to see the new numbers. Market prices can update at quarter-hour marks, and election returns and macro indicators can move at half past the hour. Those extra updates never give another action refresh. Click the turn timer to check turn health if processing looks late. The timer counts down to the next turn, so you never need to work out time zones.
 
-**Why the last four turns matter so much.** A general election accumulates ballots turn by turn, and the closing turns are weighted. In a 48-turn general window (the US House, for example), the first 36 turns share 50%, which is about 1.4% per turn. The 8 ramp turns carry 2.5% each. The final 4 turns carry 7.5% each. One closing turn is worth about 5.4 early turns, so a lead you hold into the end beats a lead you build and let slip.
+**Why the last four turns matter so much.** A general election accumulates ballots turn by turn, and the closing turns are weighted. In a 24-turn general window (the US House, for example), the first 12 turns share 50%, which is about 4.17% per turn. The 8 ramp turns carry 2.5% each. The final 4 turns carry 7.5% each. One closing turn is worth about 1.8 early turns, so a lead you hold into the end beats a lead you build and let slip.
 
 ### What skipping costs
 
