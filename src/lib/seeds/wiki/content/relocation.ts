@@ -11,6 +11,8 @@ Relocation changes your character's home: a **state** (US), a **region** (UK nat
 
 **Why it works this way:** your Political Influence and donor network are earned in one place. Letting them follow you for free would make it painless to hop to the weakest race every cycle.
 
+![What a move always resets, what resets only on a country change, what is kept, and the corporation branch for CEOs.](/wiki-images/diagrams/relocation-what-resets.svg)
+
 | Rule | Value |
 | --- | --- |
 | Cooldown between moves | 72 turns (3 real days), shared by every kind of move |
@@ -19,6 +21,10 @@ Relocation changes your character's home: a **state** (US), a **region** (UK nat
 | National Influence after a move | Kept in your country, 0 if you change country |
 | Moving a corporation with you, same country | 7% of its market cap |
 | Moving a corporation with you, other country | 14% of its market cap (twice the base rate) |
+
+\`\`\`wiki-chart
+relocation-cooldown
+\`\`\`
 
 ### What always resets, even within your country
 

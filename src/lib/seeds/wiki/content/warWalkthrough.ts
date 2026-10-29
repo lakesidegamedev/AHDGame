@@ -20,6 +20,8 @@ It is a **hypothetical**. The characters are invented and the numbers are illust
 | **Minister Tang** | Minister of Defense | CN |
 | **Prime Minister Ashford** | Head of government | UK |
 
+![Five acts from turn 1,000 to 1,700 with the main decisions in each and the page that explains them.](/wiki-images/diagrams/a-war-start-to-finish-five-acts.svg)
+
 ---
 
 # Act I: peacetime (turns 1,000 to 1,150)

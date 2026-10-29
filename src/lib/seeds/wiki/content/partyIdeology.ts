@@ -23,6 +23,10 @@ party part  = max(0, 15 - (econ gap + social gap to the party) x 0.75)
 alignment   = state part + party part
 \`\`\`
 
+\`\`\`wiki-chart
+primary-alignment-points
+\`\`\`
+
 The *state's lean* is the state's own economic and social centre. If a state has no recorded lean, alignment falls back to a party-only score of \`max(0, 40 - (econ gap + social gap) x 2)\`. In a presidential primary alignment is also worth 40, measured against the party only, with the same 2 per point of gap.
 
 Every version reaches **zero at a combined gap of 20 points** (for example 10 economic plus 10 social). Everything else in the primary score is favorability (up to 35, or 25 for a presidential primary) and political influence, so a candidate who is far from the party starts well behind.

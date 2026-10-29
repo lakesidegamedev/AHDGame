@@ -28,6 +28,8 @@ Bloc size does not give a bloc everything. Each leadership role has its own rule
 
 So a coalition does not hand its members the Majority Leader seat. It does remove them from contention for Minority Leader and Whip, because they are in the majority bloc. A coalition whip can also direct its members in a contingent House presidential election.
 
+![US House example where parties B and C form a 210 seat bloc, showing which parties may run for Majority Leader, Minority Leader and Speaker.](/wiki-images/diagrams/coalitions-bloc-example.svg)
+
 ### Why it exists
 
 A coalition lets smaller parties pool seats into one bigger bloc. That bloc, not its biggest party, is what counts as the majority when the minority posts are assigned. Coalitions also let parties agree up to three **shared priorities** (a bill, a policy theme or a leadership goal). Each member party's chair votes support, oppose or abstain, and a priority goes active when more than half of the member parties support it. The coalition page shows a cohesion label (Strong, Mixed, Fractured or Unaligned) from those votes. Priorities are a signal; they do not force members to vote any way.

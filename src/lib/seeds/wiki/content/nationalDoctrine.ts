@@ -69,7 +69,15 @@ You are not starting from nothing. You are starting from a competent conventiona
 | **Irregular & Security** | Guerrilla · Counterinsurgency · Special Operations · Internal Security |
 | **Command & Intelligence** | Joint Command · Reconnaissance & Intelligence · Communications · Mission Command |
 
+\`\`\`wiki-chart
+doctrine-node-cost-counts
+\`\`\`
+
 Node costs rise with sophistication: 20 nodes cost 1 point, 27 cost 2, 39 cost 3, 32 cost 4, and 10 cost 5. Early foundational doctrines are cheap; late capstones are not. With a 12-point budget, **one 5-point capstone is over 40% of your national doctrine**.
+
+\`\`\`wiki-chart
+doctrine-point-budget
+\`\`\`
 
 ## Era gating
 

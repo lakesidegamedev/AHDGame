@@ -6,6 +6,8 @@ Every nation is pulled toward the great-power blocs of its era. That pull is cal
 
 Alignment is the cause, sphere membership is the effect.
 
+![Cause chain from influence plays, aid, drift and organization pull into alignment shares, then lead, sustained shares, bloc membership and sphere, with bloc stress weakening later plays.](/wiki-images/diagrams/bloc-spheres-cause-chain.svg)
+
 1. **Shares.** Every nation carries a share from 0 to 100 toward each pole in the current era, plus an uncommitted remainder. All shares and the remainder always add up to 100. The gap between a nation's top pole and its next-highest is its **lead**.
 2. **Movement.** Shares move a little each turn by passive drift, and move more when a bloc pays for an influence play or sends aid.
 3. **Thresholds.** A nation that holds a share past a threshold for long enough can join or leave a bloc.
@@ -32,6 +34,10 @@ The poles depend on the year. From 1945 to 1990 there are two, West (NATO channe
 | Bloc stress cut | Plays work at 1 minus 0.4 times stress, so never below 60% |
 | Stress labels | Settled below 0.25, Strained below 0.6, Overextended at 0.6 or more |
 | Diplomatic actions per country per turn | 4 (used by membership proposals) |
+
+\`\`\`wiki-chart
+alignment-membership-thresholds
+\`\`\`
 
 ### Why membership alone cannot lock a nation
 

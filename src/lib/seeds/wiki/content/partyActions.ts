@@ -10,9 +10,15 @@ A party has its own money and its own power, separate from yours. Its leaders us
 
 **Political Strength (PS).** The reserve spent on party actions, mainly [Build Org](/wiki/party-organization). It comes from two streams: a flat trickle of **20 PS per turn** for a national party and **5 PS per turn** for a state party, and an optional treasury investment the chair sets, which buys up to **20 PS per turn** (in the US, ₳12,500 per PS nationally and ₳6,250 per PS for a state). Stock stops at the **cap**; extra is lost.
 
+\`\`\`wiki-chart
+state-ps-reserve
+\`\`\`
+
 **NPP Action Points.** A separate pool for managing NPPs, spent only on NPP work.
 
 Spending PS in one state makes the next spend there dearer by 1 PS, up to 8, and the extra falls by 3 each turn. Other states are unaffected.
+
+![Resource flow from member taxes into the treasury, the treasury into Political Strength, Build Org and budgets for GOTV, suppression and registration, and NPP Action Points into NPP management.](/wiki-images/diagrams/party-actions-resource-flow.svg)
 
 ### Major and Minor parties
 
@@ -97,6 +103,7 @@ A state party in the US holds 30 PS, which is the cap, and 5 PS arrives each tur
 - [Party Organization](/wiki/party-organization): PS and money pay for each Build Org click.
 - [NPPs Overview](/wiki/npps-overview): recruitment and management spend resources to add and steer NPPs.
 - [NPP Elections](/wiki/npp-elections): Slate assignments move NPPs into races.
+- [Party Slate](/wiki/party-slate): loyalty and cooperation actions change whether a slated NPP is likely to accept.
 - [NPP Behavior](/wiki/npp-behavior): whips add pressure to NPP votes at no cost.
 - [Demographics & Targeting](/wiki/demographics-targeting): GOTV and suppression change voter groups' turnout.
 

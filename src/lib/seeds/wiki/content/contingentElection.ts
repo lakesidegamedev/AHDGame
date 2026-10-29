@@ -6,6 +6,8 @@ If no presidential ticket wins a majority of the Electoral College, the House el
 
 A majority is more than half of the electors the era's census actually apportioned: 270 of 538 today, 266 of 531 in the 1950s. See [Election Mechanics](/wiki/election-mechanics) for how the normal count works. This only applies to the US presidential race.
 
+![Flow of a contingent election: the House picks the President and the Senate the Vice President, with a House deadlock seating the VP as acting president while ballots continue.](/wiki-images/diagrams/contingent-election-flow.svg)
+
 ### Key numbers
 
 | Rule | Value |

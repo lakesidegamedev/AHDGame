@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="356" viewBox="0 0 720 356" role="img" font-family="system-ui, sans-serif">
+<title>Who can run and vote for each leadership office</title>
+<desc>Three eligibility rules: any seated member for Speaker, the single largest party for Majority Leader and Pro Tempore, parties outside the majority bloc for Minority Leader, with a 435 seat example.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#71717a"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/></marker></defs>
+<rect x="0.5" y="0.5" width="719" height="355" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<g fill="#18181b">
+<rect x="240" y="20" width="240" height="40" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="360.0" y="44.5" font-size="13" text-anchor="middle">Who may declare and vote?</text>
+<rect x="20" y="100" width="210" height="40" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="125.0" y="124.5" font-size="13" text-anchor="middle">Speaker of the House</text>
+<polyline points="360,60 360,80 125,80 125,100" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="20" y="170" width="210" height="66" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="125.0" y="199.2" font-size="12" text-anchor="middle">Any seated member</text>
+<text x="125.0" y="215.2" font-size="12" text-anchor="middle">of any party</text>
+<polyline points="125,140 125,170" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="20" y="266" width="210" height="44" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="125.0" y="284.2" font-size="12" text-anchor="middle">Party A and Party B</text>
+<text x="125.0" y="300.2" font-size="12" text-anchor="middle">all 435 members</text>
+<polyline points="125,236 125,266" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="255" y="100" width="210" height="40" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="360.0" y="124.5" font-size="13" text-anchor="middle">Majority Leader</text>
+<polyline points="360,60 360,80 360,80 360,100" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="255" y="170" width="210" height="66" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="360.0" y="191.2" font-size="12" text-anchor="middle">Members of the chamber's</text>
+<text x="360.0" y="207.2" font-size="12" text-anchor="middle">single largest party</text>
+<text x="360.0" y="223.2" font-size="12" text-anchor="middle">(also Senate Pro Tempore)</text>
+<polyline points="360,140 360,170" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="255" y="266" width="210" height="44" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="360.0" y="284.2" font-size="12" text-anchor="middle">Party A only</text>
+<text x="360.0" y="300.2" font-size="12" text-anchor="middle">230 members</text>
+<polyline points="360,236 360,266" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="490" y="100" width="210" height="40" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="595.0" y="124.5" font-size="13" text-anchor="middle">Minority Leader</text>
+<polyline points="360,60 360,80 595,80 595,100" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="490" y="170" width="210" height="66" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="595.0" y="199.2" font-size="12" text-anchor="middle">Members of parties outside</text>
+<text x="595.0" y="215.2" font-size="12" text-anchor="middle">the majority bloc</text>
+<polyline points="595,140 595,170" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="490" y="266" width="210" height="44" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="595.0" y="284.2" font-size="12" text-anchor="middle">Party B only</text>
+<text x="595.0" y="300.2" font-size="12" text-anchor="middle">205 members</text>
+<polyline points="595,236 595,266" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="360" y="338" font-size="12" text-anchor="middle" fill="#52525b">Example: 435 seat House, Party A holds 230 seats, Party B holds 205</text>
+</g>
+</svg>

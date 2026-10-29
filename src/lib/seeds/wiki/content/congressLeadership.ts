@@ -24,6 +24,8 @@ U.S. congressional leadership races are player-only. NPPs do not run for, or vot
 
 The **majority bloc** is the largest coalition or single party in the chamber; the minority bloc is the second largest. Presiding-officer rules in other countries are on [Chamber Leadership](/wiki/chamber-leadership).
 
+![Eligibility tree for Speaker, Majority Leader and Minority Leader with a 435 seat example.](/wiki-images/diagrams/congress-leadership-eligibility.svg)
+
 ### Key numbers
 
 | Item | Value |

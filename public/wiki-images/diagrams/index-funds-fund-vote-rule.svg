@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400" role="img" font-family="system-ui, sans-serif">
+<title>How a fund votes its shares</title>
+<desc>Decision tree: a holder with at least half the units directs the vote; otherwise the fund follows the majority cast by others; otherwise it abstains.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#71717a"/></marker></defs>
+<rect x="0.5" y="0.5" width="719" height="399" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<rect x="40" y="24" width="300" height="50" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="190.0" y="45.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">A shareholder vote opens</text>
+<text x="190.0" y="62.0" text-anchor="middle" font-size="13" fill="#18181b">on a company the fund holds shares in</text>
+<path d="M190,74 L190,104" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<rect x="40" y="104" width="300" height="62" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="190.0" y="131.0" text-anchor="middle" font-size="13" fill="#18181b">Does one unit holder control at least</text>
+<text x="190.0" y="148.0" text-anchor="middle" font-size="13" fill="#18181b">half of the fund's units?</text>
+<path d="M340,135 L420,135" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<text x="380" y="128" text-anchor="middle" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">yes</text>
+<rect x="420" y="104" width="260" height="62" rx="6" fill="#eff6ff" stroke="#2563eb" stroke-width="1.25"/>
+<text x="550.0" y="122.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Directed</text>
+<text x="550.0" y="139.5" text-anchor="middle" font-size="13" fill="#18181b">The fund votes as that holder</text>
+<text x="550.0" y="156.5" text-anchor="middle" font-size="13" fill="#18181b">instructs</text>
+<path d="M190,166 L190,206" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<text x="198" y="190" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">no</text>
+<rect x="40" y="206" width="300" height="62" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="190.0" y="233.0" text-anchor="middle" font-size="13" fill="#18181b">Is there a clear majority among the</text>
+<text x="190.0" y="250.0" text-anchor="middle" font-size="13" fill="#18181b">votes cast by everyone else?</text>
+<path d="M340,237 L420,237" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<text x="380" y="230" text-anchor="middle" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">yes</text>
+<rect x="420" y="206" width="260" height="62" rx="6" fill="#eff6ff" stroke="#2563eb" stroke-width="1.25"/>
+<text x="550.0" y="233.0" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Undirected</text>
+<text x="550.0" y="250.0" text-anchor="middle" font-size="13" fill="#18181b">The fund votes with that majority</text>
+<path d="M190,268 L190,308" fill="none" stroke="#2563eb" stroke-width="1.6" marker-end="url(#ma)"/>
+<text x="198" y="292" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">no, or a tie</text>
+<rect x="40" y="308" width="300" height="62" rx="6" fill="#f4f4f5" stroke="#d4d4d8" stroke-width="1.25"/>
+<text x="190.0" y="326.5" text-anchor="middle" font-size="13" font-weight="700" fill="#18181b">Abstain</text>
+<text x="190.0" y="343.5" text-anchor="middle" font-size="13" fill="#18181b">The fund's shares are removed from the</text>
+<text x="190.0" y="360.5" text-anchor="middle" font-size="13" fill="#18181b">count</text>
+<text x="420" y="330" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">Control is checked when the vote resolves.</text>
+<text x="420" y="346" text-anchor="start" font-size="12" fill="#52525b" stroke="#ffffff" stroke-width="3.5" paint-order="stroke">Selling below half cancels the instruction.</text>
+</svg>

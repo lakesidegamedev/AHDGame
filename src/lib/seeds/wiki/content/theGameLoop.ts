@@ -6,6 +6,10 @@ You do not need to live in the tab. The game runs an hourly turn whether you are
 
 Every hour the game runs one **turn**. It refreshes actions, pays Campaign Funds, decays or grows your meters, counts election ballots and moves bills, NPPs and markets forward. You can act any time between turns, and what you spend is processed on the next turn.
 
+\`\`\`wiki-chart
+general-election-vote-pool
+\`\`\`
+
 | Number | Value |
 | --- | --- |
 | Turn length | 1 real hour, on the hour |
@@ -81,6 +85,8 @@ campaign
 
 4. **Resolution:** the winner takes office, and a new cycle of that office starts immediately.
 5. **In office:** legislature and cabinet tools unlock, and you still face re-election.
+
+![The election cycle from build to primary, general, resolution and in office, with the last four turns of the general marked.](/wiki-images/diagrams/the-game-loop-election-cycle.svg)
 
 Safe to ignore in week one: tiny Favorability drift, Infamy under 20, uncontested NPP primaries and most news posts. Not safe to ignore: missed primary declarations, last-turn generals, cabinet votes if you are a Senator, confidence votes and drifting far from your party.
 

@@ -8,6 +8,8 @@ Each turn, your plants produce goods, the goods compete for buyers at your prici
 
 You grow by building plants, **splitting** unowned market (taking a slice of the state's unowned pool) or **attacking** a rival's sector. Marketing Strength decides contested fights.
 
+![The ten stages each corporation passes through every turn, from production and clearing to tax, salary and dividends, strength accrual, share orders and the vote sweep.](/wiki-images/diagrams/corporations-turn-flow.svg)
+
 ### Key numbers
 
 | Rule | Value |
@@ -209,6 +211,10 @@ Two multipliers exist specifically so entrenched monopolies stay breakable:
 | **Dominance ease** | 1.0× at or below 50% market share, ramping to **3.5×** at 100%. The tighter a defender's grip on a state's sector, the softer it is to hit. |
 | **Underdog bonus** | Up to **1.75×** for an attacker below 10% share striking a defender above 50%. It tapers away and is gone by 25% attacker share. |
 
+\`\`\`wiki-chart
+dominance-and-underdog-attack
+\`\`\`
+
 **Attacks destroy plant.** The defender loses every unit taken, but the attacker receives only **60%** of them: the other 40% is wrecked in the taking. Raiding is value-destructive in aggregate, and the cash cost is floored at build price + 15%, so you can never raid your way to cheap capacity. What you are buying is a rival's position, not a bargain.
 
 Non-player corporations raid too. An aggressive NPP-run corporation picks whichever target gives it the best expected capture, waits out a 24-turn cooldown between strikes, and holds a small MS reserve back. A corporation sitting on low Marketing Strength reads to that logic as a soft target.
@@ -366,6 +372,10 @@ Starting MS is 10, and it has three uses:
 
 **Marketing Strength decays every turn.** Where marketing decay applies, which includes current worlds, it loses **1.5% per turn**, on top of what you spend on splits and attacks. Logistics strength bleeds 5% a turn and R&D score 3%. A budget that only replaces what you spend is not enough; it has to cover decay too. Group synergy, when enabled, is a **transfer** from the group leader rather than free strength, so a group shares strength instead of minting it.
 
+\`\`\`wiki-chart
+marketing-strength-over-time
+\`\`\`
+
 Marketing spend buys you nothing if nobody is attacking you and you have no intention of splitting or attacking, and it still counts against the 150% overhead cap.
 
 **Marketing Strength is not brand loyalty.** Loyalty is a separate reputation earned through consistent pricing and delivery, and no amount of marketing spend contributes to it. See [Brand Loyalty](/wiki/brand-loyalty).
@@ -373,6 +383,10 @@ Marketing spend buys you nothing if nobody is attacking you and you have no inte
 ### Logistical sprawl
 
 Corporations with more than **15 sectors** incur a -0.5% margin penalty per 2 sectors over the threshold. With a secondary type set, that doubles to -1.0% per 2 sectors. Logistics & Operations (your distribution reach and operational process quality) spending raises the threshold (up to 30 sectors at max Logistics & Operations Strength of 200) and halves the penalty slope.
+
+\`\`\`wiki-chart
+logistical-sprawl-penalty
+\`\`\`
 
 Logistics sectors (depots) never pay the sprawl penalty on their own margin. They still count toward the sector total, so adding depots raises the penalty on every other sector you own.
 

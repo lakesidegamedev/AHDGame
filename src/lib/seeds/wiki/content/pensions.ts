@@ -18,6 +18,8 @@ For every active agreement carrying a pension rate, three things happen each tur
 2. **Top-up.** If the scheme's **funding ratio** (everything it holds divided by everything it owes) is below 90%, the employer is asked for an extra payment. It is only 5% of the gap to the 90% mark per turn, so a bad quarter cannot bankrupt an employer over a slow-moving number. Closing a deficit this way is slow by design. A top-up the employer cannot afford is skipped as well.
 3. **Accrual.** The workers' claim against the scheme (its **liabilities**) grows by covered wage bill x 8%, whatever happened in steps 1 and 2.
 
+![Each turn a pension scheme runs contribution, top-up, accrual, benefits and optional investment in that order.](/wiki-images/diagrams/pensions-turn-order.svg)
+
 The accrual rate sits below the 15% ceiling on purpose. A scheme bargained at the ceiling builds a real surplus. A scheme with a 0% contribution rate still racks up a liability nobody is funding, which is the honest picture of promising a pension and paying nothing toward it. Contributions and accrual run only while the agreement is active.
 
 ### Key numbers
@@ -49,6 +51,10 @@ What a scheme holds is its cash plus the market value of any fund units it owns,
 ### Worked example
 
 An employer has a covered wage bill of 1,000,000 a turn and bargains a 6% rate. Each turn it pays 60,000 and the workers' claim grows by 80,000, so the scheme falls behind by 20,000 a turn. This ignores benefits and investment returns.
+
+\`\`\`wiki-chart
+pension-funding-by-rate
+\`\`\`
 
 | Turn | Employer pays | Top-up | Scheme holds | Scheme owes | Funding ratio |
 | --- | --- | --- | --- | --- | --- |

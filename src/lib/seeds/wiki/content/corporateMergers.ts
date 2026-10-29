@@ -11,6 +11,8 @@ This is separate from a [hostile takeover](/wiki/corporations#privatization-buyo
 3. **Review.** If the combined firm would hold too large a share of a national industry, the deal stops here and goes to the reviewing minister (see below). Otherwise it continues.
 4. **Close.** You pay the price, the target's shareholders are cashed out, and the target's assets move to you.
 
+![Flow of an acquisition offer from the offer and the target's answer through merger review (cleared, sell-down order or blocked) to closing.](/wiki-images/diagrams/corporate-mergers-offer-flow.svg)
+
 **Reference valuation.** Next to your price the game shows an independent fair-value estimate. It is built from the target's share price times its shares, its cash, and the replacement cost of its plants. You do not have to pay it. It lets both sides see whether an offer is generous or a lowball.
 
 ## Key numbers
@@ -78,6 +80,10 @@ Suppose the combined firm would hold 68% of an industry in the target's country,
 **Who decides.** The cabinet seat that country gives the job. The seat's name depends on the country and era: for example the Attorney General in the United States, the Business Secretary in Britain (the Board of Trade in 1953), and trade, commerce, economy or internal trade ministers elsewhere. Whoever holds the seat now decides, and if it changes hands mid-review the new holder takes over the queue. The same seat rules on index listing petitions (see [Index Funds](/wiki/index-funds)).
 
 **What they can decide.** Clear it, block it, or clear it on condition that you sell down the overlapping industry. If nobody rules within 6 turns, the published bands decide, with no hidden roll.
+
+\`\`\`wiki-chart
+merger-review-timeout-outcomes
+\`\`\`
 
 **Blocked is final.** A blocked pairing cannot be retried. A cleared one does not need a second referral, so a hostile takeover that was referred and then cleared can simply be run again.
 

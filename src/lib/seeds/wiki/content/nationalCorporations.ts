@@ -16,9 +16,13 @@ Three seats share control, so no one player runs everything:
 
 The ministry sets policy and the CEO runs operations. A CEO cannot set mandates, take or sell assets, or raise their own budget cap.
 
+![Map of who controls a National Corporation: the head of government, the finance minister and the CEO.](/wiki-images/diagrams/national-corporations-authority-map.svg)
+
 ### Money flow
 
 Each turn, the corporation's operating profit is split in two. The CEO chooses how much to keep, from **0% to 75%** (the default is 0%, so everything is sent on). At least **25%** always goes to the national budget. When there is a loss, the treasury covers it and the corporation's cash returns to zero. A loss-making state company is therefore a real, ongoing drain on the budget.
+
+![Cash flow of a National Corporation: profit split between retained cash and remittance to the budget, capped CEO draws from the budget, and treasury cover for losses.](/wiki-images/diagrams/national-corporations-money-flow.svg)
 
 The CEO can also pull cash from the budget into the company, up to a per-turn cap that the finance minister sets. The default cap is 10 million in local currency. A cap of 0 freezes draws completely.
 
@@ -33,6 +37,10 @@ A National Corporation earns 100 in operating profit, and the CEO has set retent
 ### Efficiency: governance matters
 
 A clean state company runs like a private one. Its margin drag comes from four things, each in percentage points:
+
+\`\`\`wiki-chart
+soe-corruption-margin-drag
+\`\`\`
 
 | Source | Effect |
 | --- | --- |

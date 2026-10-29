@@ -39,6 +39,8 @@ Upgrades bought in the general phase cost 1.5x the funds and actions, so buy wha
 
 **Maintenance** comes out of campaign funds every turn. If projected funds cannot cover next turn's maintenance, branches downgrade one at a time instead of the whole tree collapsing, and there is no refund. Opposition Research can be retargeted, with a 6-turn cooldown.
 
+![The four Strategic Ops trees, each with a starter node and three branches of three tiers.](/wiki-images/diagrams/campaign-strategy-ops-trees.svg)
+
 ### Campaign actions
 
 Your campaign earns its own action pool each turn: at least 4 actions, plus endorsements (NPP, player, governor and executive). The pool is 4 + floor(sqrt(endorsements) x 3), so 4 endorsements give 10 actions, 9 give 13 and 16 give 16. A campaign banks at most 48 turns of its own income. These actions pay for upgrades and for presidential Campaign Presence (see [Political Operations](/wiki/political-operations)), not for regular character actions.

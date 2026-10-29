@@ -12,6 +12,8 @@ An agreement covers one commodity between two corporations. Each turn, when the 
 
 So a contract is a *priority claim*, not magic supply. It moves the buyer to the front of the queue; it cannot create goods that were never made.
 
+![Supply agreement lifecycle from offer and counter-offers to active, cancel notice and cancelled or expired.](/wiki-images/diagrams/supply-agreements-lifecycle.svg)
+
 ### Clearing order
 
 Each turn, demand is satisfied in this order:

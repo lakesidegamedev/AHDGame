@@ -10,6 +10,10 @@ For the overall structure see [Election Mechanics](/wiki/election-mechanics), an
 
 Each election has a total vote pool built from the state's demographics: voter groups with a size, a turnout rate and positions on the economic and social axes (see [Demographics](/wiki/demographics)). Only the **registered** share of the electorate casts general ballots. The pool is conserved across every turn of the count, and a race can never certify more ballots than it has voters.
 
+\`\`\`wiki-chart
+general-election-vote-pool
+\`\`\`
+
 The pool is released over the general window in three bands:
 
 | Turn phase | Share of pool | Per-turn weight |
@@ -35,6 +39,10 @@ The general uses the swing-flow model: the same per-group pipeline as [Election 
 - UK regional elections also weight each party by the square root of its current registration share. A party at 25 registration gets 0.5x, and a party at 100 gets 1.0x. A party can grow from zero without being erased.
 - The whole turn pool is scaled by state government approval and office strength: Governor 1.0, President 1.0, House 0.9, State Senate 0.85, Senate 0.8.
 
+\`\`\`wiki-chart
+favorability-vote-scalar
+\`\`\`
+
 ### Key numbers
 
 | Item | Value |
@@ -48,7 +56,7 @@ The general uses the swing-flow model: the same per-group pipeline as [Election 
 | NPP weight in a player race | 0.8x |
 | FPTP spoiler | 4% of a third party's group votes (2% in presidential races) |
 | Canvassing in the last 4 turns | 2x |
-| Out-of-state action cost | 1.25x neighbour, 1.5x other |
+| Out-of-state action cost (Support and Attack) | 1.25x neighbour, 1.5x other |
 | Full Demographic Poll | 6 actions, ₳75,000 base |
 | Vice President | +2 actions per turn, +₳25,000 per turn |
 
@@ -105,7 +113,7 @@ Why did I lose the general after winning the primary? The primary electorate is 
 - Burn money on ads above favorability 80. The gain per ad is only +1.
 - Sit on influence and hope decay is slow. At 0.75% per turn you lose about 14% over 20 turns, more if your party holds the national executive.
 - Attack everyone. Attacks cost infamy and drain your own favorability.
-- Forget out-of-state costs: helping an ally in another state costs 1.25x (neighbour) or 1.5x (other).
+- Forget out-of-state costs: Support and Attack on a player in another state cost 1.25x (neighbour) or 1.5x (other) more actions. Barnstorm has no distance cost.
 - Withdraw to save resources unless you are pivoting. Withdrawn candidacies cannot be re-entered.
 
 ## Connections

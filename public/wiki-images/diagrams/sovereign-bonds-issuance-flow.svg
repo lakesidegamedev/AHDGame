@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="740" height="316" viewBox="0 0 740 316" role="img" font-family="system-ui, sans-serif">
+<title>Sovereign bond issuance and settlement</title>
+<desc>Every twelve turns a quarter of the annual deficit plus a rollover of maturing bonds is issued into the public float. Each turn coupons are paid from the treasury and matured bonds are repaid, and the budget is updated.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#52525b"/></marker></defs>
+<rect x="0.5" y="0.5" width="739" height="315" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<text x="20" y="24" font-size="14" text-anchor="start" fill="#18181b" font-weight="700">Every 12 turns</text>
+<rect x="20" y="36" width="220" height="56" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="130.0" y="52.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Deficit part</text>
+<text x="130.0" y="68.5" font-size="12" text-anchor="middle" fill="#3f3f46">annual deficit / 4,</text>
+<text x="130.0" y="84.5" font-size="12" text-anchor="middle" fill="#3f3f46">whole 1,000 units</text>
+<rect x="20" y="108" width="220" height="56" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="130.0" y="132.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Rollover part</text>
+<text x="130.0" y="148.6" font-size="12" text-anchor="middle" fill="#3f3f46">bonds about to mature</text>
+<rect x="300" y="72" width="200" height="56" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="400.0" y="96.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">New bonds issued</text>
+<text x="400.0" y="112.5" font-size="12" text-anchor="middle" fill="#3f3f46">start in the public float</text>
+<path d="M242 64 L270 64 L270 100 L298 100" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<path d="M242 136 L270 136 L270 100" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="560" y="72" width="170" height="56" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="645.0" y="96.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Holders buy</text>
+<text x="645.0" y="112.5" font-size="12" text-anchor="middle" fill="#3f3f46">treasury gets cash</text>
+<path d="M502 100 L558 100" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="20" y="208" font-size="14" text-anchor="start" fill="#18181b" font-weight="700">Every turn</text>
+<rect x="20" y="220" width="220" height="60" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="130.0" y="238.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Coupons</text>
+<text x="130.0" y="254.6" font-size="12" text-anchor="middle" fill="#3f3f46">paid to holders from</text>
+<text x="130.0" y="270.6" font-size="12" text-anchor="middle" fill="#3f3f46">the national treasury</text>
+<rect x="270" y="220" width="220" height="60" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="380.0" y="238.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Maturity</text>
+<text x="380.0" y="254.6" font-size="12" text-anchor="middle" fill="#3f3f46">face value repaid,</text>
+<text x="380.0" y="270.6" font-size="12" text-anchor="middle" fill="#3f3f46">national debt falls</text>
+<rect x="520" y="220" width="210" height="60" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="625.0" y="238.6" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Budget update</text>
+<text x="625.0" y="254.6" font-size="12" text-anchor="middle" fill="#3f3f46">interest cost shifts</text>
+<text x="625.0" y="270.6" font-size="12" text-anchor="middle" fill="#3f3f46">the balance</text>
+<path d="M400 130 L400 176 L130 176 L130 218" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#ma)"/>
+<path d="M400 176 L380 176 L380 218" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#ma)"/>
+<path d="M130 282 L130 300 L625 300 L625 282" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<path d="M380 282 L380 300" fill="none" stroke="#52525b" stroke-width="1.5"/>
+</svg>

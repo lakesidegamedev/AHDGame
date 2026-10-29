@@ -24,6 +24,8 @@ That last rule is the one that surprises people. There is no "send this division
 
 A unit with no general sits in **reserve**, the homeland garrison. Reserve is always a valid place to be; every other location is a live conflict.
 
+![Chain from unit to general to command to conflict with who acts on each link, plus the four steps of each war turn.](/wiki-images/diagrams/conflicts-overview-chain-of-command.svg)
+
 ## What a conflict is
 
 A **conflict** is a first-class battleground created during play. The world starts with **none**. There are no pre-seeded wars waiting on the map at a 1953 or 1979 reset: every conflict on the board was started by a player declaration or a world event.
@@ -89,6 +91,8 @@ Era gating narrows this further. West Germany has **no armed forces at all in 19
 ## What you can see: the three fog tiers
 
 A conflict shows you different things depending on who you are. This is enforced on the server: the information you are not entitled to never reaches your browser at all.
+
+![Matrix of what the Public, Command and Archive tiers can see: territory and casualties for all, own order of battle and enemy band from command level, enemy order of battle only in the archive.](/wiki-images/diagrams/conflicts-overview-fog-tiers.svg)
 
 | Tier | Who gets it | What you see |
 | --- | --- | --- |

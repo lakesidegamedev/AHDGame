@@ -6,6 +6,7 @@ import { partyLeadershipAuthorityContent } from "../content/partyLeadershipAutho
 import { partyOrganizationContent } from "../content/partyOrganization";
 import { partyIdeologyContent } from "../content/partyIdeology";
 import { partyActionsContent } from "../content/partyActions";
+import { partySlateContent } from "../content/partySlate";
 import { coalitionsContent } from "../content/coalitions";
 import { coalitionFormationContent } from "../content/coalitionFormation";
 import { nppsOverviewContent } from "../content/nppsOverview";
@@ -106,6 +107,19 @@ export const partiesPages: readonly WikiSeedPage[] = [
     difficulty: "intermediate",
     contentType: "guide",
     estimatedReadTime: 6,
+  },
+  {
+    slug: "party-slate",
+    designDocUrl: "design/party-slate.html",
+    title: "Party Slate",
+    description:
+      "The Slate board where party chairs assign players and NPPs to races: who can assign, the 3 candidate slots per race, and when an NPP accepts.",
+    content: partySlateContent,
+    category: "parties",
+    extraTags: ["slate", "chair", "npp", "candidates"],
+    difficulty: "intermediate",
+    contentType: "mechanics",
+    estimatedReadTime: 5,
   },
   {
     slug: "coalitions",

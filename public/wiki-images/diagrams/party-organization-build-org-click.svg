@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="570" viewBox="0 0 720 570" role="img" font-family="system-ui, sans-serif">
+<title>Build Org click flow</title>
+<desc>The checks and charges a Build Org click goes through: presence in the state, who may click, whether the treasury covers enough of the price, then PS and money charged from one tier, one unit added and shares recomputed.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#71717a"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker></defs>
+<rect x="0.5" y="0.5" width="719" height="569" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<text x="18" y="28" font-size="15" fill="#18181b" text-anchor="start" font-weight="700">What happens on one Build Org click</text>
+<rect x="40" y="44" width="320" height="40" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="200.0" y="67.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">You click Build Org</text>
+<rect x="40" y="124" width="320" height="62" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="200.0" y="150.0" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Party present in the state?</text>
+<text x="200.0" y="167.0" font-size="13" fill="#18181b" text-anchor="middle">Member, official or active NPP homed in it</text>
+<rect x="40" y="208" width="320" height="62" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="200.0" y="225.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Allowed to click?</text>
+<text x="200.0" y="242.5" font-size="13" fill="#18181b" text-anchor="middle">Chairs, vice chairs, campaigners. Not</text>
+<text x="200.0" y="259.5" font-size="13" fill="#18181b" text-anchor="middle">treasurers</text>
+<rect x="40" y="292" width="320" height="62" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="200.0" y="309.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Can the tier pay?</text>
+<text x="200.0" y="326.5" font-size="13" fill="#18181b" text-anchor="middle">Treasury of that tier covers a quarter or</text>
+<text x="200.0" y="343.5" font-size="13" fill="#18181b" text-anchor="middle">more of the price</text>
+<rect x="40" y="376" width="320" height="70" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="200.0" y="397.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">Pay Political Strength and money</text>
+<text x="200.0" y="414.5" font-size="13" fill="#18181b" text-anchor="middle">Both come from the same tier, state or</text>
+<text x="200.0" y="431.5" font-size="13" fill="#18181b" text-anchor="middle">national</text>
+<rect x="40" y="470" width="320" height="62" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="200.0" y="487.5" font-size="13" fill="#18181b" text-anchor="middle" font-weight="700">One unit added to your party</text>
+<text x="200.0" y="504.5" font-size="13" fill="#18181b" text-anchor="middle">Shares recomputed against the 100 unit</text>
+<text x="200.0" y="521.5" font-size="13" fill="#18181b" text-anchor="middle">Unaffiliated stake</text>
+<path d="M195 84 L195 124" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<path d="M195 186 L195 208" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="200" y="191" width="24.9" height="15" fill="#ffffff"/>
+<text x="203" y="202" font-size="12" fill="#52525b" text-anchor="start">yes</text>
+<path d="M195 270 L195 292" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="200" y="275" width="24.9" height="15" fill="#ffffff"/>
+<text x="203" y="286" font-size="12" fill="#52525b" text-anchor="start">yes</text>
+<path d="M195 354 L195 376" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="200" y="359" width="24.9" height="15" fill="#ffffff"/>
+<text x="203" y="370" font-size="12" fill="#52525b" text-anchor="start">yes</text>
+<path d="M195 446 L195 470" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="430" y="128" width="260" height="54" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="560.0" y="150.0" font-size="13" fill="#18181b" text-anchor="middle">Refused. No click, even for a</text>
+<text x="560.0" y="167.0" font-size="13" fill="#18181b" text-anchor="middle">national officer</text>
+<path d="M350 155.0 L430 155.0" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<rect x="380.7" y="139.0" width="18.6" height="15" fill="#ffffff"/>
+<text x="390" y="150.0" font-size="12" fill="#52525b" text-anchor="middle">no</text>
+<rect x="430" y="212" width="260" height="54" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="560.0" y="242.5" font-size="13" fill="#18181b" text-anchor="middle">Refused. Costs nothing</text>
+<path d="M350 239.0 L430 239.0" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<rect x="380.7" y="223.0" width="18.6" height="15" fill="#ffffff"/>
+<text x="390" y="234.0" font-size="12" fill="#52525b" text-anchor="middle">no</text>
+<rect x="430" y="296" width="260" height="54" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="560.0" y="318.0" font-size="13" fill="#18181b" text-anchor="middle">Refused. No PS spent, price ladder</text>
+<text x="560.0" y="335.0" font-size="13" fill="#18181b" text-anchor="middle">does not rise</text>
+<path d="M350 323.0 L430 323.0" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<rect x="380.7" y="307.0" width="18.6" height="15" fill="#ffffff"/>
+<text x="390" y="318.0" font-size="12" fill="#52525b" text-anchor="middle">no</text>
+<text x="430" y="402" font-size="12" fill="#52525b" text-anchor="start">If short of the full price but at</text>
+<text x="430" y="418" font-size="12" fill="#52525b" text-anchor="start">least a quarter, it takes what is</text>
+<text x="430" y="434" font-size="12" fill="#52525b" text-anchor="start">there and still adds the unit.</text>
+</svg>

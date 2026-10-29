@@ -12,6 +12,8 @@ Each turn (one real hour) the game recalculates every active law and applies thr
 
 The metric is then kept inside its allowed range.
 
+![Per-turn pipeline from active laws to a weighted target, pull toward the target, direct push, drift to baseline and clamp.](/wiki-images/diagrams/policy-effects-turn-pipeline.svg)
+
 ### Key numbers
 
 | Item | Value |
@@ -31,6 +33,10 @@ The one formula that matters: \`new value = current + (target - current) x 1/139
 
 A national law with a weight of 1.0 on a metric and the strongest option on the ladder moves the target by 12 x 0.21 = **2.52 points**. Starting at the baseline, the metric gets there like this:
 
+\`\`\`wiki-chart
+policy-effect-over-time
+\`\`\`
+
 | Turns since enactment | Real time | Share of the gap closed | Metric has moved |
 | --- | --- | --- | --- |
 | 48 | 2 days | 29% | 0.74 |
@@ -46,6 +52,10 @@ Slow movement keeps one bill from rewriting the country overnight, and it gives 
 ### Adaptation
 
 Some effects fade as the economy adjusts. A target with an adaptation half-life keeps only \`0.5^(turns / half-life)\` of its effect. With a half-life of 24 turns, 25% remains after 48 turns; with 48, 50% remains; with 96, about 71% remains. For example, a defense cut may hit output hard at first and less as the economy adapts.
+
+\`\`\`wiki-chart
+policy-adaptation-decay
+\`\`\`
 
 ## What you can do
 

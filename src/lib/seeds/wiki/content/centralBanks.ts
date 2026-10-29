@@ -29,6 +29,8 @@ Each turn the game scores the chair, and each time the chair acts the game check
 
 Position bonuses do not stack: your national influence is the highest tier you hold, while the +3 actions stack with any other office.
 
+![Map of the chair's five levers (prime rate, reserve requirement, QE and QT, FX band, independence) with what each moves first and what it reaches next.](/wiki-images/diagrams/central-banks-lever-map.svg)
+
 ### Scrutiny
 
 Scrutiny (0 to 100) is the chair's public record. Each turn:
@@ -47,6 +49,10 @@ Scrutiny is not only a score. A discredited bank is believed less, which costs t
 - New sovereign bond coupons carry up to 1.5 extra points at 100 scrutiny, in a straight line (1.5 x scrutiny / 100).
 - An FX defence buys 70% to 100% of its normal market effect, and the reserve cost is the same either way.
 - Domestic banks capture 80% to 100% of the household deposits they would otherwise win.
+
+\`\`\`wiki-chart
+central-bank-scrutiny-multipliers
+\`\`\`
 
 Policy still works at any scrutiny. A discredited bank can still cause a recession with a big enough hike. It just costs more to be believed.
 
@@ -102,6 +108,14 @@ The prime rate feeds several systems at once:
 - **Savings and credit.** Savings pay half the real rate and lines of credit are priced off prime. See [Savings & Interest](/wiki/savings-interest) and [Line of Credit](/wiki/line-of-credit). The margin line banks use for trading books costs prime plus 1.5 points. See [Interbank Lending](/wiki/interbank-lending).
 - **Exchange rate.** Higher rates strengthen the currency, inflation weakens it, growth strengthens it. A rate shock closes about 5% of the gap per turn, roughly 91% after 48 turns, on top of noise and trade pressure, with a final clamp of 50% below to 50% above the base rate.
 - **Inflation and margins.** High rates cool borrowing and spending. Inflation changes every sector's profit margin:
+
+\`\`\`wiki-chart
+inflation-corporate-margin-effect
+\`\`\`
+
+\`\`\`wiki-chart
+rate-shock-pass-through
+\`\`\`
 
 | Inflation | Margin effect |
 | --- | --- |

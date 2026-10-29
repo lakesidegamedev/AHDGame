@@ -20,6 +20,8 @@ Every tie along the way is broken the same fixed way: more delegates, then more 
 
 Delegates are always handed out as whole numbers and always add up to exactly what was released. Because one candidate leaves every inconclusive ballot, the convention always ends.
 
+![Flowchart of convention ballots: a leader with a delegate majority is nominated, otherwise the last-placed candidate drops and their delegates are released before the next ballot.](/wiki-images/diagrams/nominating-convention-ballots.svg)
+
 ### How released delegates move
 
 A dropped candidate's delegates do not split evenly. Each survivor gets a share weighted by:

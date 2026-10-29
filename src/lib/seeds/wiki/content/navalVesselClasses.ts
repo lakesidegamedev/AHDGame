@@ -64,11 +64,17 @@ A carrier given an air mission (patrol, strike, close air support and so on) is 
 
 Formations you have not ordered follow a fixed priority list: return to port if condition is below 35 percent or readiness below 25; return to port in peacetime; Sea Control if a hostile fleet shares the region; Sea Denial for submarines; Blockade if the station is on an enemy's trade approaches; otherwise Transit. It is a rule list, not an AI, so you can out-think it.
 
+![Decision list for a formation's default order: return to port when worn or in peacetime, then Sea Control, Sea Denial, Blockade, or Transit.](/wiki-images/diagrams/naval-vessel-classes-default-orders.svg)
+
 ## Surface actions, sea control, detection
 
 Wherever two hostile fleets share a region and at least one is on Blockade, Sea Control or Sea Denial, they fight that turn. The result is deterministic: the heavier side wins and the margin decides the damage. A wrecked formation is not deleted; it keeps its general and rebuilds through the normal reinforcement path.
 
 Each country holds a **sea control** figure from 0 to 100 per region. It moves toward your share of the weight present, rising 12 points a turn and falling 15, so leaving a lane costs more than returning earns. Uncontested presence builds it on its own.
+
+\`\`\`wiki-chart
+sea-control-build-and-decay
+\`\`\`
 
 **Detection** runs from 0 to 3 per region. Anti-ship strikes need level 2 or better on the target, so a fleet can be known to exist and still not be attackable. It decays one band per turn once you leave.
 

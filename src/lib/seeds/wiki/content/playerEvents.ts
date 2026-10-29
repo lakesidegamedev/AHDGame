@@ -14,6 +14,8 @@ Each turn the game runs one pass over player characters.
 6. It picks one from that list by weight. An event with weight 20 is twice as likely as one with weight 10.
 7. You are offered the event and notified. A dice roll from 1 to 100 is fixed at that moment.
 
+![The checks each turn that decide whether a character is offered a random event, with a branch for shared broadcast moments that skip the spacing cooldown.](/wiki-images/diagrams/player-events-offer-pipeline.svg)
+
 When you choose, the roll is nudged by your stat and then checked against three outcome tiers.
 
 ### Key numbers
@@ -71,6 +73,10 @@ You are a character with Intellect 7.5 and the game offers **Tax Audit**, a "Eve
 - With Intellect 5.5 the same roll stays 33: the low tier, "Back taxes owed": 150,000 less wealth and 2 favorability lost.
 - **Stonewall the auditors** uses no stat. On the same roll 33 it hits the low tier, "Criminal referral": 400,000 less wealth, 8 favorability lost and 6 infamy gained.
 - **Ignore the notice** is the default. If you let the deadline pass, the default option resolves on your roll.
+
+\`\`\`wiki-chart
+event-roll-stat-adjustment
+\`\`\`
 
 The roll is fixed when the event is offered, so a good stat shifts you toward a better tier but never guarantees one.
 

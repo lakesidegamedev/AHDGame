@@ -44,6 +44,10 @@ A fund holds ₳12,000,000 of assets and has 120,000 units, so NAV is 100.
 - The other ₳15,000 (25%) goes to unit holders, which is 0.125 per unit. You receive 50 x 0.125 = ₳6.25 in cash, which is taxable income.
 - If this were a sponsored fund with a 1.00% fee, the sponsor would take 12,000,000 x 1% / 48 = ₳2,500 from the fund each turn (48 turns make a game year). On your ₳5,000 that is a cost of about ₳50 a year.
 
+\`\`\`wiki-chart
+index-fund-reinvest-vs-direct
+\`\`\`
+
 ## What you can do
 
 - **Look at a fund.** Open the Stock Market for a country and choose a fund. Its page shows NAV, what it holds, its financials and, for sponsored funds, the fee.
@@ -57,6 +61,8 @@ Tips: fund holders are paid dividends in cash, so a fund suits you if you want i
 ## How a fund votes its shares
 
 A fund has no opinion of its own, so a rule decides where its votes go.
+
+![Decision tree for how a fund votes: a holder with at least half the units directs it, otherwise it follows the majority cast by others, otherwise it abstains.](/wiki-images/diagrams/index-funds-fund-vote-rule.svg)
 
 - **Directed.** A unit holder with at least half the fund's units controls it. The fund votes the way that holder instructs on each shareholder vote. You give the instruction on the vote itself and can change or withdraw it while the vote is open. Buying units is therefore a route to corporate influence, not only exposure.
 - **Undirected.** With nobody in control, the fund votes with the majority actually cast by everyone else. A passive fund follows the owners rather than overruling them.
@@ -73,6 +79,8 @@ Being in an index means a large, automatic buyer starts absorbing your shares, s
 | Free float | At least 15% of shares in public hands |
 | Size | At least 5% of the median market value of the index's other candidates |
 | Solvency | Not insolvent |
+
+![Lifecycle of an index constituent: listed after clearing float, size and solvency, dropped after three misses in a row, or kept by a petition waiver from the index committee.](/wiki-images/diagrams/index-funds-listing-lifecycle.svg)
 
 **Size is relative.** A fixed money amount would mean nothing in a modern world and would be impossible in 1953, when the whole economy is smaller. Measuring against the median candidate means the same thing in every era: not a rounding error next to your peers. It is measured against the corporations competing for that index, so a small country's fund judges you against that country's market.
 
@@ -100,6 +108,10 @@ A **sponsored fund** is one a player's corporation charters and runs as a busine
 - **How the sponsor earns.** A yearly fee of 0.10% to 2.00% of assets, taken from fund cash a slice each turn and paid to the corporation as revenue. The sponsor holds no special stake in the fund's returns beyond its seed units, so the way to profit is to attract holders and keep them.
 - **When the fee stops.** Automatically, if the fund's backing falls below 90%, or if the fund is winding up. The fee is never taken by forcing a sale. If the fund has no spare cash, the sponsor is not paid that turn.
 - **Winding up.** The sponsor's CEO can close a fund, but not instantly. The fund stops buying and stops charging, then sells its holdings, bonds included, over the following turns. Once everything is cash, every unit holder is paid out at the final value, which is what the portfolio actually sold for rather than the last quoted NAV. Only then does the sponsor get back whatever remains of its seed capital. Seed capital is last in line, so a fund that lost money costs its sponsor before it costs holders.
+
+\`\`\`wiki-chart
+index-fund-expense-ratio-drag
+\`\`\`
 
 If you hold units in a fund that is winding up, you do not need to do anything: you are paid out automatically. You can also withdraw earlier at the quoted NAV.
 

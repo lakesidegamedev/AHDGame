@@ -27,6 +27,10 @@ The page shows each region's leader and a reporting percentage that creeps up as
 
 Every election has a **final hour**: the stretch between the second-to-last turn and the final turn. Each region gets a **reveal moment** at a fixed point inside that hour, somewhere between 6% and 94% of the way through. Before it, the region's reporting rises toward 98%. At the reveal it jumps to 100% and can be called.
 
+\`\`\`wiki-chart
+live-results-reporting-curve
+\`\`\`
+
 Reveal order is fixed per election. If you refresh, or your rival watches the same race, everyone sees the same regions report in the same order. Nothing is random live. If the election clock is paused, the drip freezes too.
 
 ### When a region is called
@@ -38,6 +42,8 @@ A region is **called** when all of these hold:
 - either the election has ended, or it has revealed **and** the leader is ahead by at least 5 percentage points
 
 A lead below 5 points during the final hour shows as a lead, not a call. Once the election ends, every region that is not tied is called for its leader at any margin.
+
+![Decision list for calling a region: tied or no votes means no call, an ended election is called, a final-hour reveal needs a 5 point lead, otherwise only the lead shows.](/wiki-images/diagrams/live-election-results-region-call.svg)
 
 ### National projection
 

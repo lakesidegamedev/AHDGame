@@ -12,6 +12,8 @@ Each turn every state generates demand for a basket that includes food, energy, 
 
 Wealth changes the **mix** of the basket, not its size (Engel's law). Richer states spend a smaller share on staples and a larger share on vehicles, electronics, housing, finance and software.
 
+![Population sets the household budget, three state signals adjust it, then wealth changes the basket mix, elasticity and a supply cap lead to commodity demand.](/wiki-images/diagrams/household-economy-demand-flow.svg)
+
 ### Key numbers
 
 | Rule | Value |
@@ -31,6 +33,10 @@ The cap exists so a tiny new market cannot be assigned impossible demand that no
 ### Household price index
 
 Each country also carries a household price index that starts at 1.0. Every turn it grows by 75% of the annual inflation rate, spread over 48 turns. In practice, after one game year at 8% inflation the index is 1 + 0.75 x 8% = **1.06**; after two years it is about 1.124. The index is a record of the price level, not an input into inflation.
+
+\`\`\`wiki-chart
+household-price-index-by-inflation
+\`\`\`
 
 ### Worked example
 

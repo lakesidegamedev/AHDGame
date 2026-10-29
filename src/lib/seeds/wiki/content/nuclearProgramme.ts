@@ -32,6 +32,8 @@ Entry runs through the defence cabinet seat. If you do not hold the defence port
 
 Device nodes are the physics. Each is adopted only by **conducting a nuclear test**, and a test is a world event: everyone sees it, tension rises, and your deterrence posture shocks upward. There is no such thing as quietly acquiring the hydrogen bomb.
 
+![Dependency graph of the device tiers Fission, Boosted Fission, Thermonuclear and MIRV and the delivery legs Bombers, IRBM, ICBM and SLBM, behind the Nuclear Delivery doctrine.](/wiki-images/diagrams/nuclear-programme-dependencies.svg)
+
 | Device | First available | Test cost | Production cap | Tension spike |
 |---|---|---|---|---|
 | Fission Device | 1945 | 12,000 | 2 warheads/turn | 9 |
@@ -57,6 +59,10 @@ A stockpile with no delivery leg deters nobody. Your deterrence score, from 0 to
 ## Building warheads
 
 Once you have a device tier, you set a **production rate**: warheads ordered per turn, held to your tier's cap. Each warhead is paid for out of the defence appropriation at a unit cost that falls as your device tier matures: 800 at the fission tier, 650 at boosted, 500 at thermonuclear and 350 at MIRV. If the money is short, the complex builds what the budget allows and no more. There is no overdraft for new warheads.
+
+\`\`\`wiki-chart
+nuclear-warhead-production-by-tier
+\`\`\`
 
 The build draws on the part of the appropriation that is not already promised to a supplier under a [defence contract](/wiki/defence-procurement). A finance minister who starves defence, or a defence minister who commits the quarter to contracts, is also capping the arsenal. The same appropriation pays for unit purchases and upkeep; see [Units, Recruitment & Procurement](/wiki/military-units).
 
@@ -87,6 +93,10 @@ East Germany cannot join the public ladder, but it can build a bomb in secret. A
 | Trickle | 1 | 90 | 300 |
 | Steady | 2 | 260 | 150 |
 | Crash | 4 | 780 | 75 |
+
+\`\`\`wiki-chart
+covert-nuclear-funding-levels
+\`\`\`
 
 Funding harder moves faster and burns brighter: it builds suspicion with the Soviets, and suspicion is what the discovery roll feeds on. A turn the budget cannot fund makes no progress and lets suspicion cool. Discovery is a Soviet crackdown, not game over: the programme loses its current stage and one completed stage, and the world learns something. The exact odds are not published. Finishing the last stage banks a device. The breakout test that announces it is a separate, deliberate and public act, and it is the biggest tension spike in the system.
 

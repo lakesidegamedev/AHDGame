@@ -14,6 +14,8 @@ Buildings belong to the seat, not to you personally, and each sits in one region
 
 Upkeep is modeled pressure on the national budget balance metric, not an actual withdrawal from the federal budget. The total upkeep of what you built is compared with your **discretionary envelope**. Under the envelope gives a small positive tilt to the budget balance each turn; over it, a negative tilt that grows with the overshoot (at most 0.05 per turn at full scale).
 
+![Total upkeep compared with the discretionary envelope: under it tilts budget balance positive, over it tilts negative.](/wiki-images/diagrams/cabinet-projects-upkeep-envelope.svg)
+
 ### Key numbers
 
 | Item | Value |
@@ -38,6 +40,10 @@ An **estate** is a facility tied to your portfolio. Every estate has four things
 - **Tier**: the **Expand** lever. Higher tiers give stronger effects and higher upkeep.
 - **Funding**: the **Fund** lever, free to change. Higher funding raises upkeep and output and the condition the estate settles at.
 - **Condition** (0 to 100): drifts toward the baseline of your funding level (55, 75 or 90). Effects scale with condition, so a neglected estate does proportionally less. Upkeep does **not** scale with condition: a run-down hospital still costs money.
+
+\`\`\`wiki-chart
+estate-condition-drift
+\`\`\`
 
 Each estate's effect is small and scales with tier, funding and condition. All cabinet effects on one metric are capped per turn, so stacking has diminishing returns.
 
