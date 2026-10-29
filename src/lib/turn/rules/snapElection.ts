@@ -1,12 +1,20 @@
 import { yearOfTurn } from "@/lib/utils/gameDate";
 
-/** Announce the start, not subsequent visits to the same running vacancy snap. */
-export function shouldAnnounceVacancySnap(
+/** Start once, including its announcement, for the same running vacancy snap. */
+export function shouldStartVacancySnap(
   hasLiveSnap: boolean,
   previousSnapTurn: number | null | undefined,
   currentTurn: number
 ): boolean {
   return !hasLiveSnap && (previousSnapTurn ?? -1) < currentTurn;
+}
+
+/** A confidence collapse can dissolve a sitting government, never a vacancy. */
+export function canDissolveOnConfidence(
+  status: string | null | undefined,
+  hasPrimeMinister: boolean
+): boolean {
+  return status === "formed" && hasPrimeMinister;
 }
 
 export interface SnapElectionCalendar {

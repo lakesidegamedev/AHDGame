@@ -53,6 +53,7 @@ function stubDb(opts: {
       return Promise.resolve(doc ? { _id: id, countryId: id, ...doc } : null);
     }),
     updateOne: vi.fn().mockResolvedValue({ matchedCount: 1, modifiedCount: 1 }),
+    findOneAndUpdate: vi.fn().mockImplementation(async (filter) => ({ _id: filter._id })),
   } as MockDb["collectionMocks"][string];
 
   // states.find({ countryId }) — return region docs
@@ -105,6 +106,17 @@ beforeEach(async () => {
 });
 
 describe("processPMVacancyDeadlines", () => {
+  it("does not report a new snap while an existing race is active", async () => {
+    stubDb({
+      currentTurn: 200,
+      govByCountry: { UK: { status: "pending", pmVacancyDeadlineTurn: 200 } },
+      regionsByCountry: { UK: ["ENG"] },
+    });
+    db.collectionMocks.elections.findOne.mockResolvedValue({ _id: new ObjectId() });
+    const result = await processPMVacancyDeadlines(new Date(), 200, db as unknown as Db);
+    expect(result.autoSnapsFired).toEqual([]);
+    expect(db.collectionMocks.elections.insertMany).not.toHaveBeenCalled();
+  });
   it("does NOT fire auto-snap when currentTurn < deadline", async () => {
     stubDb({
       currentTurn: 150,

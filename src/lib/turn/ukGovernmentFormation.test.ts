@@ -245,6 +245,7 @@ describe("updateGovernmentSeats per-turn gauges (ticket #858)", () => {
       _id: "UK",
       countryId: "UK",
       status: "formed",
+      pmCharacterId: "test-seated-prime-minister",
       formationType: "majority",
       governingPartyId: "1",
       coalitionId: null,
