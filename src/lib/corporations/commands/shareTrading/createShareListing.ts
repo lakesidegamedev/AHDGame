@@ -80,7 +80,11 @@ export async function createShareListing(request: Request, { params }: RoutePara
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 10, 60000);
+    const rateLimit = checkRateLimit(
+      `lib/corporations/commands/shareTrading/createShareListing:${auth.user.userId}`,
+      10,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const { id } = await params;

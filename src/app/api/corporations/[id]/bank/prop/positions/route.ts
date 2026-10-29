@@ -32,7 +32,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     const auth = await requireAuth();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 20, 60_000);
+    const rateLimit = checkRateLimit(
+      `api/corporations/[id]/bank/prop/positions:${auth.user.userId}`,
+      20,
+      60_000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     if (!(await isBankPropTradingEnabled())) {
@@ -84,7 +88,11 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     const auth = await requireAuth();
     if (!auth.ok) return auth.response;
 
-    const rateLimit = checkRateLimit(auth.user.userId, 20, 60_000);
+    const rateLimit = checkRateLimit(
+      `api/corporations/[id]/bank/prop/positions:${auth.user.userId}`,
+      20,
+      60_000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     if (!(await isBankPropTradingEnabled())) {

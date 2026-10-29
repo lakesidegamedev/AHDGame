@@ -34,7 +34,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
     const { user } = authResult;
 
-    const rateLimit = checkRateLimit(user.userId, 30, 60000);
+    const rateLimit = checkRateLimit(
+      `api/country/[code]/parties/[id]/committee/proposals/[proposalId]/vote:${user.userId}`,
+      30,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const db = await getDb();

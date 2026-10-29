@@ -56,7 +56,11 @@ export async function POST(
     if (!authResult.ok) return authResult.response;
     const auth = authResult.user;
 
-    const rateLimit = checkRateLimit(authResult.user.userId, 20, 60000);
+    const rateLimit = checkRateLimit(
+      `api/country/[code]/parties/[id]/recruitment/recruit:${authResult.user.userId}`,
+      60,
+      60000
+    );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
     const parsed = await parseJsonBody(request, recruitNPPSchema);
