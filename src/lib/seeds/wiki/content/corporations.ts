@@ -584,6 +584,8 @@ There is no single winning build, but a company in good shape usually clears the
 - **Turn on Autopilot** if you cannot play every turn. It sets budgets, grows profitable plants and trims losing ones, but it will not borrow or sell unless you allow it.
 - **Set the dividend** between 0% and 25% of after-tax income. A higher dividend pays shareholders now but leaves less cash behind your share price.
 
+![Corporation overview with the Autopilot switch, Simple and Pro toggle and key statistics](/wiki-images/screens/corporations-autopilot-overview.webp)
+
 ### Common questions
 
 - **Why is my margin negative?** Open the sector's margin breakdown and check, in order: commodity input costs, sector type match, size costs, and state conditions such as power grid or corruption.

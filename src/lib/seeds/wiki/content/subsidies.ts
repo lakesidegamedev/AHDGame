@@ -136,6 +136,8 @@ Active subsidies are visible in the national Congress view and in the legislatio
 - **Corporation owners:** check the Congress view for subsidies your sectors qualify for, then pick the strategy and location that match them.
 - **Tip:** pair a domestic-only subsidy with [Tariffs](/wiki/tariffs) for two-sided industrial policy.
 
+![Congress Subsidies tab listing active subsidies with scope, domestic-only flag and margin](/wiki-images/screens/subsidies-active-list.webp)
+
 ## Common questions
 
 - **What subsidies exist and does my sector get one?** Whatever Congress has enacted. Your sector qualifies if it passes the territory, sector type, strategy and domestic-only filters.

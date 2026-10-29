@@ -118,6 +118,8 @@ Because the per-turn cap is three times the steady rate and a window is twelve t
 - **Defence seat holder:** publish, award and cancel tenders at the Cabinet Office **Government Contracts** tab. Delivery and termination controls are in **Military**, **Arsenal**.
 - **Corporation CEO:** nominate a plant, bid, revise or withdraw before closing, and assign production lines.
 
+![Government Contracts board with the Active Bidding, Bidding Closed, Awarded and Canceled tabs and open defence tenders](/wiki-images/screens/defence-procurement-contract-board.webp)
+
 Common questions: *Why is my tender refused as below the price floor?* Your maximum price per lot is below the lowest floor for that component and grade; the refusal shows the minimum. *Why are deliveries spread over several turns?* The per-turn spend cap. *Can I cancel a contract for free?* Only for cause. *Does my own corporation winning the award cost me?* Yes, in disclosure and favorability.
 
 ## Connections

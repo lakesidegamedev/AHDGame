@@ -72,6 +72,8 @@ If the payment cannot be covered in full, your line **freezes** and no new draws
 - **Switch to interest-only.** Use the payment mode picker. Mind the 24-turn lock.
 - **Read your limit.** The tab shows both caps and your limit is the lower one. With no income history yet, only the equity cap applies, and it grows as income builds up over 48 turns.
 
+![Line of credit tab showing the rate breakdown, credit limit, arrears and the Borrow and Repay panels](/wiki-images/screens/line-of-credit-credit-tab.webp)
+
 Why is my rate higher than prime? You pay your spread and the central bank adjustment on top of it. Why was my income taken? Your line is frozen. How do I unfreeze it? Repay, or let a full payment go through, or earn enough in a turn to cover it.
 
 Tips: improve your score before you draw, since a higher score saves interest for the life of the loan. Keep cash for the automatic payment. Assets bought with borrowed money do not raise your limit, since the equity cap counts net worth after debt.
