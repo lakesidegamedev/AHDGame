@@ -2,6 +2,33 @@ export const defenceProcurementContent = `# Defence Procurement
 
 Recruiting units and paying for equipment are two different systems. This page is about the second one: how the defence appropriation turns into materiel, who suppliers can be, and the guardrails that stop the budget turning into free cash for whoever holds the defence chair. See [Units, Recruitment & Procurement](/wiki/military-units) for unit costs and upkeep.
 
+## How it works
+
+The defence seat publishes a tender for equipment. Eligible domestic corporations bid inside a price band. After bidding closes the government picks a winner and the order starts. The winning plant builds lots of materiel and delivers them to the national arsenal a few at a time, paid from the defence appropriation. New units then draw their equipment from the arsenal, and the grade of that equipment sets the starting tech tier of the unit. The rest of this page is the guardrails.
+
+### Key numbers
+
+| What | Value |
+| --- | --- |
+| Contracting window | 12 turns (a quarter of a game year) |
+| New obligations per window | About 45% of the annual defence line, prorated to the window |
+| Share one private supplier may take | One third of the window |
+| Share a state-owned supplier may take | The whole window |
+| Payout per turn | At most 3 times the steady procurement income |
+| Production lines per plant | 4, shared across its orders |
+| Equipment grades | 0 to 3, priced at 0.7, 0.85, 1.0 and 1.25 times the base lot price |
+| Lowest margin over cost | 12% |
+| Self-dealing stake that triggers disclosure | 5% of shares, or owning the company |
+| Self-dealing political penalty | 1.5 to 8 favorability points |
+| Missed delivery turns for a free termination | 3 in a row |
+| Break fee for ending a working order | The supplier's margin on the lots not built |
+
+### A worked tender
+
+Suppose a country's annual defence line is 100,000 (in its own budget units). Its window allows about 100,000 × 0.45 × 12 / 48 = 11,250 of new orders, and one private supplier may take a third of that, 3,750. The minister tenders 100 lots, with a maximum of 100 a lot, so 10,000 is reserved. A private supplier can only be awarded 37 lots, so the tender is split or a state-owned plant is used.
+
+Say the winning supplier gets 37 lots at 100. The steady income is 100,000 × 0.45 / 48 = 937.5 a turn, so a private supplier can be paid at most 937.5 a turn, or 9 lots. The 37 lots therefore take at least 5 turns, even if the plant could build them faster. If the minister ends the order for convenience when 10 lots are delivered, and the cost to build is 85 a lot, the break fee is the margin of 15 on each of the 27 undelivered lots, which is 405. The fee comes out of the appropriation at once.
+
 ## Who awards contracts
 
 The defence seat holder publishes equipment tenders against the national defence appropriation. An **acting** secretary uses the same authority as a confirmed holder. The Cabinet Office's **Government Contracts** tab opens the country board; the Arsenal tab retains stock, deliveries and signed orders.
@@ -79,6 +106,39 @@ Because the per-turn cap is three times the steady rate and a window is twelve t
 - If you supply defence contracts, an order that gets torn up mid-build pays you the margin you were promised on the rest of it. You will be notified, and the reason is on your order book.
 - Deliveries on a large contract will spread across several turns even after the contract is signed. That is the spend cap working as designed, not a bug.
 - State industry in a command economy can absorb a whole window's tranche where private suppliers cannot; this is intentional, not an oversight.
+
+## What you can do
+
+- **Defence seat holder:** publish, award and cancel tenders at the Cabinet Office **Government Contracts** tab. Delivery and termination controls are in **Military**, **Arsenal**.
+- **Corporation CEO:** nominate a plant, bid, revise or withdraw before closing, and assign production lines.
+
+Common questions: *Why is my tender refused as below the price floor?* Your maximum price per lot is below the lowest floor for that component and grade; the refusal shows the minimum. *Why are deliveries spread over several turns?* The per-turn spend cap. *Can I cancel a contract for free?* Only for cause. *Does my own corporation winning the award cost me?* Yes, in disclosure and favorability.
+
+## Connections
+
+**Driven by**
+
+- [Units, Recruitment & Procurement](/wiki/military-units): the appropriation and the arsenal are shared with unit purchase and upkeep.
+- [Peace, Indemnities & Truces](/wiki/peace-and-truces): a demilitarisation settlement bars new contracts for its length.
+- [Cold War Tension](/wiki/cold-war-tension): the tension band changes procurement demand.
+- [Corporations](/wiki/corporations): only domestic defence plants can be awarded orders.
+- [Global Response Crises](/wiki/global-response-crises): tension raises strategic procurement demand
+
+**Affects**
+
+- [Units, Recruitment & Procurement](/wiki/military-units): delivered lots stock the arsenal that equips new units and refits old ones.
+- [Corporations](/wiki/corporations): a contract pays the supplier its margin.
+- [The Nuclear Programme](/wiki/nuclear-programme): warhead production is paid from the same defence budget.
+
+## Status
+
+Defence contracts run in every world where the buying country has a defence seat and a usable budget and GDP. Contracts are domestic only, with the buyer and supplier in the same country and currency. The Soviet Union and East Germany also receive passive state arms output.
+
+Last checked: 2026-10-29, version 1.18.0
+
+## Technical detail
+
+Every constant, its source file and the full formulas are on the design page [Defence Procurement](https://docs.lakesidegames.net/design/defence-procurement.html).
 
 See also: [Units, Recruitment & Procurement](/wiki/military-units), [Corporations](/wiki/corporations), [Conflicts & the Military System](/wiki/conflicts-overview).
 `;

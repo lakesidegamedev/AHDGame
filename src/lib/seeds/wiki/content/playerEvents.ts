@@ -1,127 +1,114 @@
-export const playerEventsContent = `# Player random events
+export const playerEventsContent = `# Player Random Events
 
-The Player Random Events (PREE) system is a gameplay layer, on by default in new worlds, that offers event-driven choices to players each turn. When it is off for a world, no new events are offered, but events already in progress still expire and resolve normally.
+Player random events are short personal choices the game offers your character from time to time: a tax audit, a lottery win, a staffer scandal, a donor with dirty money. You pick an option, the dice roll decides how well it goes, and the result can change your wealth, reputation or standing. They add risk and texture between elections and corporate decisions, and they reward characters who built the right stats.
 
-## Feature flag
+## How it works
 
-PREE can be on or off for a whole world. When it's off, no new events are offered, but any events already pending continue to exist until they expire or are resolved. When it's on, the per-turn driver offers one event to every eligible character.
+Each turn the game runs one pass over player characters.
 
-## Per-turn driver
+1. Any event past its deadline is resolved for you on its default option, and you are notified.
+2. If you are in an election debate this turn, you are skipped. Debates take priority over normal events.
+3. If you already have a pending event, you are skipped. You never hold more than one.
+4. If you are still on your spacing cooldown, you are skipped.
+5. The game keeps the events that fit you: your role, your country, the in-game year, and the per-kind cooldown.
+6. It picks one from that list by weight. An event with weight 20 is twice as likely as one with weight 10.
+7. You are offered the event and notified. A dice roll from 1 to 100 is fixed at that moment.
 
-Each turn, the system runs through the full event-offer cycle:
+When you choose, the roll is nudged by your stat and then checked against three outcome tiers.
 
-1. Resolve any pending event that has passed its deadline, notifying the owning player.
-2. Check whether PREE is turned on. If not, the turn stops here.
-3. If debate stats are enabled, process election debates first: roll debate challenges and resolve any overdue debates before offering normal events. A character locked into a debate this turn is excluded from the normal event offer, since debates take priority.
-4. Load all approved event templates.
-5. Go through every player character in batches. For each one:
-   - Skip if they already have a pending event.
-   - Skip if they're on cooldown, either from a recent event of the same kind or from any event at all.
-   - Narrow down the eligible templates based on who the character is.
-   - Roll a weighted pick among the eligible templates.
-   - Offer the event and notify the player.
+### Key numbers
 
-The system tracks how many events were swept, offered, and skipped each turn.
-
-## Eligibility checks
-
-Not every character receives every event. Each character is classified at offer time:
-
-| Trait | What it means |
+| Item | Value |
 | --- | --- |
-| Politician | The character holds office or is running in an active election |
-| CEO | The character runs a corporation |
-| In an election | The character has an active candidacy |
+| Pending events per character | 1 |
+| Spacing cooldown after an event resolves | 10 to 20 turns, set per character |
+| Time to answer | 48 turns or 24 real hours, whichever comes first |
+| Options per event | Usually 2 to 4, one is the default |
+| Outcome tiers (typical) | Low roll 1 to 39, middle 40 to 79, high 80 to 100 |
+| Stat adjustment | Plus or minus 4 roll points for each point your stat is above or below 5.5, rounded |
+| Roll limits after adjustment | 1 to 100 |
+| Broadcast events | At most one per turn, each at most once per world |
 
-### Eligibility tags
+### Who gets which event
 
-Each event declares who it's for:
+| Tag | Who it reaches |
+| --- | --- |
+| Everyone | Any character |
+| Politician | Anyone who holds office or is in an active election |
+| CEO | Anyone running a corporation |
+| In an election | Anyone with an active candidacy |
+| Concentrated CEO | A CEO who owns more than 65% of their company (very concentrated: more than 80%) |
 
-- "Everyone" events go to any character.
-- "Politician" events only go to officeholders and active candidates.
-- "CEO" events only go to characters running a corporation.
-- "In an election" events only go to characters with an active candidacy.
-
-So a CEO-only event only ever reaches someone running a corporation, and a politician-only event only ever reaches officeholders and candidates.
-
-## Cooldowns
-
-Each character has a cooldown clock that governs when they're next eligible for an event offer:
-
-| Cooldown | Scope | Effect |
-| --- | --- | --- |
-| Global | Per character | Blocks all event offers until it expires |
-| Per kind | Per character, per event type | Blocks offers of that specific event type until it expires |
-
-Cooldowns are checked before eligibility. A character on global cooldown gets no offers no matter how many eligible events exist.
-
-## Event definitions and handlers
-
-Each event type has two parts: the display copy and eligibility rules, which admins approve before an event can be offered, and the outcome logic that decides what actually happens once a player picks an option. A test suite checks that every event's copy and its outcome logic stay in sync.
+Some events also exclude certain roles, such as a sitting president being called for jury duty, and some are limited to certain countries.
 
 ### Era gating
 
-Every event can optionally declare an earliest and/or latest in-game year it's allowed to fire. This keeps anachronistic events out of early eras (no "your campaign went viral" in 1953) and powers two content families:
+An event can have an earliest and latest in-game year. That keeps anachronisms out (no "your campaign went viral" in 1953). Decade events only fire in their own decade, 1950s through 1990s. Country events carry era flavor, such as coronation street parties in 1953 UK or Trabant deliveries in the DDR.
 
-- Decade events, which only fire within their own decade (1950s through 1990s), in any preset, as the world plays through the years.
-- Era-flavored country events (US/UK/RU/DD era packs), like coronation street parties only in 1953 UK, or Trabant deliveries in the DDR.
+### Broadcast events
 
-Admin manual triggers bypass the year gate on purpose, as a testing escape hatch. Only the automatic per-turn offer and the world-events scheduler enforce it.
+Some events are shared historic moments delivered to every eligible character at once, in the year they happened:
 
-### Broadcast events (shared historic moments)
-
-Some events are shared historic moments delivered to every eligible character at once, either across the whole game or within a single country, tied to a specific year window: the moon landing, the Kennedy assassination, the fall of the Berlin Wall, the Chernobyl disaster, and the turn of the millennium.
-
-- Each broadcast fires at most once per world, and at most one broadcast fires per turn.
-- Broadcast events never enter the normal random pool; they're delivered on their own schedule.
-- A broadcast bypasses the normal spacing cooldown and takes priority over any pending event: the pending event auto-resolves on its default option (the same as if it had timed out) so the historic moment always lands.
-
-### Example event kinds
-
-| Kind | Who gets it | Description |
+| Moment | Year | Who |
 | --- | --- | --- |
-| Lottery win | Everyone | A windfall event: lottery annuity paid out over time |
-| Staffer scandal | Politicians | A staffer's scandal damages the politician's reputation |
-| Campaign viral | Politicians | A campaign moment goes viral, boosting favorability |
-| Corrupt donor | Politicians | A donor offers tainted money, accept or refuse |
-| CEO whistleblower | CEOs | A whistleblower threatens a corporation |
-| Tax audit | CEOs | A tax audit targets a corporation |
-| Old friend venture | Everyone | An old friend pitches a business venture |
-| Memoir offer | Politicians | A publisher offers a memoir deal |
+| Moon landing | 1969 | Every country |
+| Kennedy assassination | 1963 | United States |
+| Chernobyl | 1986 | Russia and the DDR |
+| Fall of the Berlin Wall | 1989 | Every country |
+| Millennium night | 1999 | Every country |
 
-Each event presents the player with a choice (typically 2 to 4 options) and resolves with an outcome drawn at random, weighted by the option chosen.
+A broadcast ignores your spacing cooldown. If you have a pending event, it is resolved on its default option so the moment can land. A broadcast fires once per world, so if your world never plays through that year, or a character is created after it, you never see it. That is the answer to "why did I never get the moon landing?"
 
-## Active event tracking
+### Why do events exist
 
-A character can have at most one pending event at a time. The system checks for an existing pending event before offering a new one; if there's already one waiting, the character is skipped.
+They put a cost on neglect and a reward on preparation. Nothing here is permanent: favorability and wealth swings are meaningful but not game-ending, and the stat nudge gives your character build a real effect.
 
-This prevents event spam: a character who hasn't resolved their current event won't receive another until they do. If the event expires before the player responds, it auto-resolves (typically with a default or negative outcome) and the character becomes eligible again on the next cooldown cycle.
+### Worked example
 
-## Integration with RPG stats
+You are a character with Intellect 7.5 and the game offers **Tax Audit**, a "Everyone" event. The roll fixed at offer is 33.
 
-The random events system works alongside the [RPG Stats](/wiki/rpg-stats) system. When both are enabled:
+- **Cooperate fully** uses Intellect. Adjustment: (7.5 minus 5.5) times 4 = +8, so the effective roll is 41. That is the middle tier, "Minor discrepancies": 50,000 less personal wealth.
+- With Intellect 5.5 the same roll stays 33: the low tier, "Back taxes owed": 150,000 less wealth and 2 favorability lost.
+- **Stonewall the auditors** uses no stat. On the same roll 33 it hits the low tier, "Criminal referral": 400,000 less wealth, 8 favorability lost and 6 infamy gained.
+- **Ignore the notice** is the default. If you let the deadline pass, the default option resolves on your roll.
 
-1. The system checks whether RPG stats are turned on at the start of the turn.
-2. If so, it processes election debates before offering normal events.
-3. A character locked into a debate this turn is excluded from the standard event offer, since debates take priority.
-4. If RPG stats are off, the debate step is skipped and all eligible characters receive normal event offers.
+The roll is fixed when the event is offered, so a good stat shifts you toward a better tier but never guarantees one.
 
-This means debates and random events share the same "one event per character per turn" slot.
+## What you can do
 
-## Strategic implications
+- **Answer the offer.** Each offer arrives as a notification in your Notification Center. Pick an option before the deadline.
+- **Build the right stat.** Options show their primary stat. Raising it improves your roll. See [RPG Stats & Debates](/wiki/rpg-stats).
+- **Read the outcome.** Every resolution posts a notification with the tier you landed in. Notable outcomes can also reach the wire.
+- **Browse the templates.** The [Random Events browser](/wiki/random-events) lists the approved events and who is eligible.
 
-| Setting | Impact |
-| --- | --- |
-| Off | No random events; characters only experience crises and election cycles. Predictable, less dynamic. |
-| On | Characters face periodic choices with real consequences: windfalls, scandals, opportunities. Adds texture and unpredictability to the game loop. |
+Tips:
 
-This is a game-admin setting, not a per-player choice. Once it's on, it applies to every player character in the game.
+- If an option costs money you cannot afford, the default is not automatically the safe choice. In Tax Audit the default is "Ignore the notice", which carries a 120,000 wealth loss on a middle roll.
+- Politicians and CEOs get extra events on top of the everyone events. Holding office or running a company widens your pool.
+- If you do not respond in time you take the default, and the spacing cooldown starts as if you had answered.
 
-## Related systems
+## Connections
 
-- **[Random Events browser](/wiki/random-events)**: browse approved player-event templates and their eligibility.
-- **[RPG Stats & Debates](/wiki/rpg-stats)**: debates take priority over normal random events when both are on.
-- **[Crisis Interaction](/wiki/crisis-interaction)**: a separate setting, independent of this system.
-- **[World Events](/wiki/world-events)**: scheduled and broadcast historical events that affect the wider simulation.
-- **[Core Systems](/wiki/core-systems)**: turn structure, action economy.
+**Driven by**
+
+- [RPG Stats & Debates](/wiki/rpg-stats): your stats nudge the roll, and a debate this turn blocks a normal offer.
+- [Corporations](/wiki/corporations): running a corporation makes you eligible for CEO events.
+- [Elections](/wiki/elections-player-guide): holding office or standing for election makes you eligible for politician and campaign events.
+- [Core Systems](/wiki/core-systems): the turn clock sets cooldowns and deadlines.
+
+**Affects**
+
+- [Notification Center](/wiki/notifications): offers and outcomes arrive as notifications.
+- [Government Approval](/wiki/government-approval): favorability changes feed your public standing.
+- [World Events](/wiki/world-events): shares the same offer and cooldown machinery at country level.
+
+## Status
+
+Runs in current worlds for player characters. Content depends on the in-game year, your country, your role, and whether the world plays through a broadcast year.
+
+Last checked: 2026-10-29, version 1.18.0
+
+## Technical detail
+
+A dedicated technical page for this system has not been written yet. The numbers above are the exact rules. For the turn clock they run on, see [Core Systems](https://docs.lakesidegames.net/design/core-systems.html).
 `;

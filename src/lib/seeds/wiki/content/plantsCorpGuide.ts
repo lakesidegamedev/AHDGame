@@ -141,7 +141,7 @@ What you should know about orders:
 - **Delivery is gradual.** Capacity arrives in equal slices every turn across the build window, and the build queue shows units delivered so far, the slice arriving per turn, and the finish turn. Revenue from the new capacity starts as soon as slices land, not at the end.
 - **Cancelling costs you.** Cancelling an unfinished order refunds ${pct(CAPACITY_BUILD_CANCEL_REFUND)} of the paid cost of capacity still under construction. Delivered capacity remains yours.
 - **Plan against cash return.** The build dialog shows 48-, 96- and 192-turn scenarios using observed sales and costs, construction ramp, corporation overhead, tax, freight and a replacement reserve. Unwanted output still costs money to produce. Remaining paid plant value is shown separately from cash. These are scenarios, not promises of future demand.
-- **New expansion gets a discount.** Ordinary expansion receives a 20% reduction on strategy-priced construction. Heavy builds whose original schedules were 72 turns or longer now take half as long (\`src/lib/corporations/investment/rules.ts\`). Founder prices and durations, and existing paid build schedules, are unchanged.
+- **New expansion gets a discount.** Ordinary expansion receives a 20% reduction on strategy-priced construction. Heavy builds whose original schedules were 72 turns or longer now take half as long (the table below shows the base times). Founder prices and durations, and existing paid build schedules, are unchanged.
 - **Price varies by place and situation.** The same plant costs more in an expensive state and less in a cheap one, more when your central bank's prime rate is high, less with a business savvy CEO and with cost reducing technology. The dialog itemizes every multiplier so you can see why an order costs what it does.
 
 ## Managing costs: idle plants and mothballing
@@ -178,7 +178,7 @@ Under the plants system dominance is a barrier to expansion, not a tax on operat
 
 The corporation Overview has an **Autopilot** switch. You stay CEO and can still act by hand. Each turn it sets the marketing, logistics and R&D budgets and the dividend, grows plants that are selling, and opens new plants when there is spare cash. It can reduce active capacity at a demand-limited plant that is losing money, then restore it when buyers return or production constraints clear. The plant and its paid capacity remain yours. Budgets and dividends reset each turn. Autopilot may also adjust active capacity at eligible plants, so a hand-set level there may change next turn.
 
-It never borrows, picks research, retools, sells or closes plants, or buys rivals. Anything in those categories that it judges worth doing goes on the Overview as an advisory, with urgent ones also sent to your inbox. A corporation on autopilot is not penalised for an inactive CEO, but its CEO's national influence is capped at the standard rate.
+By default it never borrows, picks research, retools, sells or closes plants, or buys rivals. You can allow some of these under the Autopilot card's "What the NPP may do" setting. Anything in those categories that it judges worth doing goes on the Overview as an advisory, with urgent ones also sent to your inbox. A corporation on autopilot is not penalised for an inactive CEO, but its CEO's national influence is capped at the standard rate.
 
 The Overview tab also has a **Simple / Pro** switch in its top right corner, and the same choice sits in Settings under Appearance. It is saved to your account. **Pro** is the full detailed view and the default. **Simple** leads with what needs your attention, the core figures at a glance and your five biggest sectors by revenue.
 
@@ -201,6 +201,20 @@ If it was just founded, its starter plant is still under construction and revenu
 
 **A sector I can see shows $0 revenue for another player. Are they bankrupt?**
 No. Live figures are owner only. Rivals see market share and the market pie; the money is hidden, not zero.
+
+## Connections
+
+**Driven by**
+
+- [Commodities](/wiki/commodities): prices and the supply and demand balance tell you whether buyers have room.
+- [Market System: A Player's Guide](/wiki/market-system-guide): clearing and realization decide what sells.
+
+**Affects**
+
+- [Supply Agreements](/wiki/supply-agreements): your plant capacity sets how much you can promise a buyer.
+- [Corporations](/wiki/corporations): plants, capacity and fill set revenue, margin and valuation.
+
+**Status:** the plants system is how every current world works. Older worlds may run an earlier stage. Last checked: 2026-10-29, version 1.18.0.
 
 ## Related
 

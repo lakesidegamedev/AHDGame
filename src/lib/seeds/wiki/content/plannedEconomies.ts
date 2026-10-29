@@ -1,16 +1,35 @@
 export const plannedEconomiesContent = `# Planned / Command Economies
 
-Most countries in A House Divided are market economies: floating currencies, a central-bank chair setting rates, and commodity prices that clear on supply and demand. **Planned (command) economies are a different model, and now a played one.** In a command country you run the state industries, allocate the national plan, and direct state credit. Whether the country stays communist or reforms toward the market is decided by how well the plan is run, not by a script.
+Most countries in A House Divided are market economies: floating currencies, a central-bank chair setting rates, and commodity prices that clear on supply and demand. **Planned (command) economies are a different model, and a played one.** In a command country you run the state industries, allocate the national plan, and direct state credit. Whether the country stays communist or reforms toward the market is decided by how well the plan is run, not by a script.
 
 **This is not a bug.** If a Soviet-era ruble never drifts, national commodity prices ignore supply and demand, or a state firm stays alive while insolvent, you are looking at planned-economy rules. See [Commodities](/wiki/commodities) and [Currency Exchange](/wiki/currency-exchange) for the market path; this page is the planned path.
 
-The regime is on for 1953 and 1979 style starts, where command economies exist, and off in modern-era worlds. Countries that start on the command end of the dial (USSR/Russia, China in its early eras, Eastern-bloc satellites) come up as planned economies with their state industries split into separate enterprises you can run.
+## How it works
+
+Command economies exist in 1953 and 1979 style starts and not in modern-era worlds. Countries that start on the command end of the dial (USSR/Russia, China in its early eras, Eastern-bloc satellites) come up as planned economies, with their state industries split into separate enterprises you can run. A **marketization dial** from 0 to 100 measures how far a country has moved toward the market, and it moves each turn on what happens in the economy.
+
+### Key numbers
+
+| Rule | Value |
+| --- | --- |
+| Fully command band | Marketization below 30 |
+| Dual-track band | 30 to under 70 |
+| Market band | 70 and above (100 is fully market) |
+| Wage fund brake | Planned share pulls nominal wage growth toward real-goods growth plus 2 points; it never raises wage growth |
+| Era gravity | A weak pull toward the historical schedule, capped below what the free drivers can sustain |
+| Private corporations | Cannot be founded in a fully command country |
+
+### Worked example
+
+A heavy-industry SOE has a plan target of 1,000 units and a capacity of 1,200 units, and produces 900. **Plan fulfillment** is 900 / 1,000 = **90%**. **Efficiency** (capacity utilisation) is 900 / 1,200 = **75%**. The missing 100 units of plan adds to its cumulative losses, and idle capacity still costs upkeep.
+
+If the Gosbank Chair funds it, new capacity of 300 units would lower efficiency to 900 / 1,500 = 60% until output catches up. If it chronically misses plan, shortages grow, the black market swells, and marketization drifts upward toward the dual-track band at 30.
 
 ## How a country becomes a command economy
 
 Two gates must both be true:
 
-1. The world-level command-economy feature is enabled. It is set from the starting era: on for 1953 and 1979 command regimes (\`src/lib/seeds/reference/featureFlagDefaults.ts\`).
+1. The world starts in an era with command regimes (1953 and 1979 starts).
 2. The country's **marketization level** is below the market ceiling. The era only sets the *starting* value. From there the level moves on its own each turn based on what happens in the economy (see The Marketization Dial Is Earned below).
 
 | Band | Dial | What you get |
@@ -139,5 +158,27 @@ Dual-track means plan and market run in parallel: a share of pricing and shortag
 
 Open a country's live control room at **Country > Command Economy**, for example the [Soviet command-economy dashboard](/country/ru/command-economy).
 
-See also: [Commodities](/wiki/commodities), [Currency Exchange](/wiki/currency-exchange), [Central Banks](/wiki/central-banks), [National Metrics](/wiki/national-metrics), [Market System: A Player's Guide](/wiki/market-system-guide).
+## Connections
+
+**Driven by**
+
+- [National Metrics](/wiki/national-metrics): shortage, overhang and the black market feed the marketization dial.
+- [Elections: A Granular Player Guide](/wiki/elections-player-guide): the ruling party's economic position feeds the policy driver.
+
+**Affects**
+
+- [Commodities](/wiki/commodities): national prices are administered by the plan instead of clearing on supply and demand.
+- [Currency Exchange](/wiki/currency-exchange): a fully command country's official rate is fixed.
+- [Central Banks](/wiki/central-banks): a fully command country runs a passive monobank.
+- [Corporations](/wiki/corporations): private corporations cannot be founded in a fully command country.
+
+## Status
+
+Planned economies exist only in worlds that start in an era with command regimes (1953 and 1979 starts) and only for countries on the command end of the dial, such as the USSR, early China and the Eastern bloc. Modern-era worlds are fully market. A country leaves the command bands when its marketization level passes 70, after which floating FX, chair policy, supply-and-demand pricing and normal insolvency rules return.
+
+Last checked: 2026-10-29, version 1.18.0
+
+## Technical detail
+
+This system has no separate design page yet. The bands above are the full set; market-side rules are on [Commodities](/wiki/commodities) and [Currency Exchange](/wiki/currency-exchange).
 `;

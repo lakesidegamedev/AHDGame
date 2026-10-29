@@ -1,61 +1,125 @@
 export const labourAndWagesContent = `# Labour & Wages
 
-The labour system makes worker pay an explicit sector cost. CEOs set a **wage level** per sector; national **minimum-wage** legislation can floor low-pay jobs; and wage choices feed back into unemployment, migration, and median income. At baseline settings the economy matches pre-labour outcomes; only deviations from the default move the needle.
+**Labour** is an explicit cost in every corporate sector, and you control part of it with a **wage level** slider. Pay more and costs rise, but workers stay content, your products can be better and your R&D works harder. Pay less and margins improve now, but unionization, strikes and worse macro conditions follow later. National **minimum-wage** law and the wider economy push back on whatever you choose.
 
-## Wage level
+At the default setting the economy matches what it was before wages existed, so only deviations move the numbers.
 
-Every corporate sector has a **wage level** slider (default **1.0**). The CEO adjusts it from the sector detail panel when wages are enabled.
+## How it works
 
-- **1.0**: baseline pay; total sector maintenance (including labour) matches the pre-labour economy.
-- **Above 1.0**: higher wages raise labour costs and can pull workers in; real wages rise relative to local cost of living.
-- **Below 1.0**: cheaper labour improves margins but can weaken worker satisfaction and macro outcomes over time.
+Each sector's labour cost is carved out of its existing running costs, never added on top:
 
-Labour is carved out of existing sector maintenance rather than stacked on top, so flipping the system on at default settings does not instantly reshuffle profits.
+> labour cost = labour share x daily revenue x wage level x union premium x minimum-wage floor
 
-## How labour cost is computed
+- **Labour share** is how much of revenue goes to pay in that sector type. It is higher in a technology firm than in an energy firm (table below).
+- **Wage level** is your slider. 1.0 is baseline.
+- **Union premium** is the surcharge from [Unions](/wiki/unions), up to 15%.
+- **Minimum-wage floor** lifts the cost only in sectors paying less than the floor.
 
-Each sector decomposes labour into **workers × wage-per-worker**:
+Each sector is also modelled as workers times pay per worker. High-skill sectors (technology, financial) employ fewer people at higher pay. Low-skill ones (retail, agriculture) employ many at lower pay. That split is what lets a minimum wage bite low-paid sectors specifically.
 
-- High-skill sectors (technology, financial) employ fewer workers at a higher implied wage per worker.
-- Low-skill sectors (retail, agriculture) employ many workers at lower per-worker pay.
+### Key numbers
 
-The wage slider scales the wage-per-worker term. **Minimum-wage** legislation floors that term using a **Kaitz ratio** (minimum wage ÷ median wage) per country. Weak protection raises unionization pressure later; strong protection lifts pay in low-wage sectors.
+| Rule | Value |
+| --- | --- |
+| Wage level range | 0.8 to 1.5, default 1.0 |
+| Era labour multiplier | x1.0 from 2007, x1.1 from 1991, x1.25 from 1953, x1.35 before |
+| Minimum wage ceiling | Kaitz ratio up to 1.0 (a floor at the median wage) |
+| Median sector pay level | 1.1 |
+| Union premium | Up to 15% of labour cost, scaled with unionization |
+| Wage-driven unemployment change | 1.5 points per 1.0 change in the state wage index, at most 1.5 points a turn |
+| Automation-driven unemployment change | 2.5 points per 1.0 change in the automation index, at most 1.5 points a turn |
 
-## Minimum wage
+### Labour share and pay level by sector
 
-Countries enact minimum-wage policy through legislation. The active option sets a Kaitz ratio that floors wage-per-worker in sectors that would otherwise pay below the floor.
+| Sector | Labour share of revenue (modern era) | Pay level |
+| --- | ---: | ---: |
+| Technology | 35.0% | 1.8 |
+| Financial | 32.5% | 1.7 |
+| Healthcare | 27.7% | 1.3 |
+| Media | 28.0% | 1.1 |
+| Entertainment (media line) | 28.0% | 0.85 |
+| Construction | 26.4% | 0.9 |
+| Defense | 24.0% | 1.3 |
+| Telecommunications | 20.0% | 1.2 |
+| Retail | 19.1% | 0.6 |
+| Real estate | 19.1% | 0.9 |
+| Logistics | 18.0% | 0.8 |
+| Agriculture | 16.0% | 0.55 |
+| Manufacturing | 15.9% | 0.95 |
+| Chemical industries | 15.0% | 1.2 |
+| Vehicle manufacturing | 14.1% | 1.0 |
+| Extraction | 12.0% | 1.1 |
+| Energy | 10.0% | 1.2 |
 
-Minimum-wage changes also feed the national wage index and unemployment channels alongside CEO wage choices.
+Labour share sets your cost. Pay level only decides which sectors a minimum wage affects and what the sector page shows as implied pay per worker.
 
-## Macro feedback (wages to economy)
+### Worked example
 
-Wage dynamics connect to national metrics:
+A manufacturing sector earns ₳1,000,000 of revenue a day in a modern world. At wage level 1.0 its labour cost is 15.9% x 1,000,000 = **₳159,000**.
+
+- Wage level **1.2**: labour costs ₳190,800, ₳31,800 more. Margin falls by 3.2 points.
+- Wage level **0.8**: labour costs ₳127,200, ₳31,800 less, and margin rises 3.2 points. But real wages then fall behind what workers expect, which pushes unionization up (see [Unions](/wiki/unions)).
+
+Now the country passes a minimum wage with a Kaitz ratio of 0.7. The floor is 0.7 x 1.1 = 0.77 on the pay scale. Retail (0.6) must lift pay by 0.77 / 0.6, so its labour costs rise **28%**. Agriculture (0.55) rises **40%**. Manufacturing at 0.95 is untouched.
+
+### What wages do beyond cost
+
+- **Quality:** the wage level feeds the wages pillar of [Output Quality](/wiki/output-quality), 20% of the blend. Going from 1.0 to 1.5 lifts that pillar from 0.5 to 0.8.
+- **R&D:** wages above baseline lift R&D efficiency by up to 15%, wages below lower it (see [Corporate R&D & Tech Trees](/wiki/corporate-r-and-d)).
+- **Unionization:** pay that lags worker expectations pushes unionization up, which adds a premium and risks strikes.
+- **Automation:** tech nodes that automate can cut labour cost by up to 50%, but they also add to unemployment.
+
+### Macro feedback (wages to the economy)
+
+Your slider moves a state's **wage index**, the worker-weighted average of all pay multipliers in the state. The economy responds to *changes* in that index as a one-time nudge, not to its level:
 
 | Channel | Effect |
 | --- | --- |
-| **Median income** | Tracks the labour wage index: higher economy-wide wages lift median income over time. |
-| **Unemployment** | High wages relative to productivity can add wage-push unemployment; automation and sector mix also matter. |
-| **Migration** | Real wage gaps between regions/countries influence migration pull on population metrics. |
+| **Median income** | A rise in the wage index nudges median income growth up. |
+| **Unemployment** | A 0.10 rise adds 0.15 points of unemployment (capped at 1.5 points a turn). A drop lowers it. |
+| **Migration** | A region with above-baseline wages attracts more migrants, and below-baseline regions lose some. |
 
-These links are lagged and damped; they reward sustained wage strategy, not one-turn slider spikes.
+One corporation moves the state index only in proportion to its share of the state's workers, so a lone slider has a small effect. A country-wide shift, such as a minimum-wage rise, moves it a lot.
 
-## CEO tools
+## What you can do
 
-From a sector's detail view (when wages are enabled):
+- **Set the wage level** on a sector's detail panel, between 0.8 and 1.5. The change applies to next turn's labour cost.
+- **Read the implied wage versus the state median** on the same panel to see whether you pay above or below the local economy.
+- **Vote on minimum wage and union law.** Countries set minimum wages through legislation (see [Bills & Legislation](/wiki/bills-legislation)).
+- **Think in lanes, not spikes.** A cheap-labour strategy gives margin now and unionization later. A high-wage strategy costs margin but buys quality, R&D and calm.
 
-- Set **wage level**: immediate input to next turn's labour cost and real-wage index.
-- Read **implied wage vs. state median**: contextualizes whether you are paying above or below the local economy.
+### Common questions
 
-Wage spending flows through the same profit pipeline as other sector costs and affects corporate margins directly.
+- **What does the slider do to my profit?** Profit changes by labour share x (level - 1) x revenue, so a 0.1 move is worth 1.5 points of revenue in manufacturing and 3.5 in technology.
+- **Does paying more raise quality?** Yes, through the wages pillar, but it is worth about 10% of your quality score at the maximum.
+- **Why did unions appear after I cut wages?** Real wages below what workers expect push unionization up.
+- **How does minimum wage affect me?** Only if your sector pays below the floor. It raises your labour cost by the ratio of the floor to your sector's pay level.
+
+## Connections
+
+**Driven by**
+
+- [Corporations](/wiki/corporations): the wage level you set and your sector mix decide your labour cost.
+- [Unions](/wiki/unions): unionization adds a standing premium of up to 15%.
+- [Corporate R&D & Tech Trees](/wiki/corporate-r-and-d): automation nodes cut labour cost.
+- [Bills & Legislation](/wiki/bills-legislation): minimum-wage law sets the floor.
+
+**Affects**
+
+- [Corporations](/wiki/corporations): labour cost is a direct part of sector margin.
+- [Output Quality](/wiki/output-quality): the wage level is the wages pillar.
+- [Corporate R&D & Tech Trees](/wiki/corporate-r-and-d): wages above baseline lift R&D efficiency.
+- [Unions](/wiki/unions): pay below expectations pushes unionization and strikes.
+- [National Metrics](/wiki/national-metrics): changes in the state wage index nudge median income, unemployment and migration.
+- [Pensions](/wiki/pensions): The covered wage bill sets both the contribution and the accrual.
 
 ## Status
 
-All four labour layers (wages, macro feedback, unions and the full union toolset) are live in current worlds.
+Wages, macro feedback, unions and union law are all live in current worlds. Labour shares are higher in older eras (see the era multiplier). Command economies have no private sectors, so only state-owned enterprise pay applies there.
 
-## Related
+Last checked: 2026-10-29, version 1.18.0
 
-- [Corporations](/wiki/corporations): sector costs, margins, and CEO tools
-- [Unions](/wiki/unions): unionization, strikes, and player-run unions
-- [National Metrics](/wiki/national-metrics): unemployment, median income, migration
-- [Bills & Legislation](/wiki/bills-legislation): minimum-wage and union-law provisions
+## Technical detail
+
+The exact rules are on the [Labour design page](https://docs.lakesidegames.net/design/labour.html).
 `;

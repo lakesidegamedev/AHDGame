@@ -1,122 +1,103 @@
 export const policyEffectsContent = `# Policy Effects
 
-Every signed bill changes the law, and the law changes the country. This page explains how enacted policies affect national and state metrics each turn, how multiple policies stack, and what the long-run equilibrium looks like.
+Every signed bill changes the law, and the law slowly pulls the country's numbers. A policy does not move a metric instantly: it moves the metric's target, and the metric closes the gap a little every turn. A strong law starts working at once but takes days of real time to show most of its effect.
 
-## Two levels of policy
+## How it works
 
-The game tracks policy at two separate levels:
+Each turn (one real hour) the game recalculates every active law and applies three layers in order.
+
+1. **Pull toward a target.** Each legislation type lists the metrics it affects and a weight for each. The active options set a target for the metric. The metric closes about 0.72% of the remaining gap every turn.
+2. **A small direct push.** Some policy options also add a flat change to a metric each turn. Extreme options push about 0.06 per turn before the federal share is taken; moderate ones push less; the center option pushes nothing.
+3. **Drift back to normal.** A metric that no policy is pushing slowly returns to its historical baseline at 0.25% of the distance per turn, so the world does not freeze at whatever the last extreme law left behind.
+
+The metric is then kept inside its allowed range.
+
+### Key numbers
+
+| Item | Value |
+| --- | --- |
+| Gap closed per turn | 0.72% (time constant 139 turns) |
+| Half-life of the gap | About 96 turns, 2 game years, 4 real days |
+| Turn length | 1 real hour; 48 turns = 1 game year = 2 real days |
+| Largest target shift from one law on one metric (weight 1) | 12 points for a state law; 2.52 points for a national law |
+| Natural drift back to baseline | 0.25% of the distance per turn |
+| Direct push (extreme option) | About 0.06 per turn, times the federal share |
+| Federal share of the direct push | US 1/50, UK 1/12, Japan 1/8, Germany 1/16 per region |
+| Population shift from a max-strength law | Up to 0.1% of a group per turn |
+
+The one formula that matters: \`new value = current + (target - current) x 1/139\`.
+
+### Worked example
+
+A national law with a weight of 1.0 on a metric and the strongest option on the ladder moves the target by 12 x 0.21 = **2.52 points**. Starting at the baseline, the metric gets there like this:
+
+| Turns since enactment | Real time | Share of the gap closed | Metric has moved |
+| --- | --- | --- | --- |
+| 48 | 2 days | 29% | 0.74 |
+| 96 | 4 days | 50% | 1.26 |
+| 480 | 20 days | 97% | 2.44 |
+
+A state law with the same weight and option moves its own target by 12 points, so after 48 turns that state has moved 3.5 points. National laws are scaled down so that a strong national law moves a country-wide metric by the same amount whether the country has 12 regions or 50.
+
+### Why it works this way
+
+Slow movement keeps one bill from rewriting the country overnight, and it gives opponents time to answer. The drift back to baseline means a policy has to be maintained to keep its effect, and a law that is repealed fades out rather than snapping back.
+
+### Adaptation
+
+Some effects fade as the economy adjusts. A target with an adaptation half-life keeps only \`0.5^(turns / half-life)\` of its effect. With a half-life of 24 turns, 25% remains after 48 turns; with 48, 50% remains; with 96, about 71% remains. For example, a defense cut may hit output hard at first and less as the economy adapts.
+
+## What you can do
+
+- **Check before you vote.** The bill composer shows the options on the two axes (economic left to right, social progressive to conservative).
+- **Read the current picture.** The **National Policy** page lists all federal policies by domain with the current option. The **State Laws & Policy** tab on a state page shows the state's own laws. Your character profile shows your personal positions, which are separate from enacted law.
+- **Stack different laws.** Laws on different legislation types that target the same metric add together.
+- **Replace a law.** Enacting a bill on the same legislation type in the same place overwrites the old record, and the metric starts moving toward the new target. Two opposing bills on the same type do not cancel: the last one enacted wins. Subsidies, embargoes and union bans have explicit repeal provisions (see [Bills & Legislation](/wiki/bills-legislation)).
+- **Be patient.** Expect the first visible move within a day or two of real time, and most of the effect within about ten days for a strong law.
+
+Tips: pass the law early if you want to see it before the next election; remember a state law is stronger on its own state than a national law is on any one region.
+
+### Two policy scales
 
 | Level | Scale | What it drives |
 | --- | --- | --- |
-| Character positions | −5 to +5 | Electoral appeal to demographic groups |
-| Enacted law | −3 to +3 | Per-turn metric effects on states and nation |
+| Character positions | -5 to +5 | Electoral appeal to demographic groups |
+| Enacted law | Graded ladder of options, centre to extreme | Per-turn metric effects on states and nation |
 
-Your personal policy positions (set at character creation or via the Policy Shift action) determine how well your ideology matches demographic groups in elections. Enacted legislation (bills that have been signed into law) determines what actually changes in the world.
+Voting on a bill can also nudge your own positions (see [Voting & Whips](/wiki/voting-and-whips)).
 
-## How enacted policy changes metrics
+### Slower effects on people
 
-Every turn, the game recalculates the effects of every active piece of legislation. For each one, it applies three layers in sequence:
+Active laws also shift the make-up of demographic groups: up to 0.1% of a group's population per turn at full strength, and group leanings by up to 0.035 per turn, with a cap of 1.5 total from the seeded baseline. This builds over game years.
 
-### 1. Exponential decay toward target
+## Why a metric did not move
 
-Each legislation type has a set of weighted effect targets: the metric values that policy "wants" the world to reach. Metrics don't jump to the target instantly; they close the remaining gap at a fixed rate of about **0.72% per turn** (a decay time constant of 139 turns, giving a roughly 96-turn / 2-in-game-year half-life):
+- The bill was not enacted yet, or it was signed but the first turns have barely closed the gap.
+- The legislation type has no weight on that metric.
+- Another law on a different type pulls it the other way.
+- The metric is a computed budget figure. Those follow the budget, not policy (see [National Budget](/wiki/national-budget)).
+- The metric does not exist yet in the current era.
 
-\`\`\`
-newValue = current + (target - current) x (1 / 139)
-\`\`\`
+## Connections
 
-A metric that is 10 points away from its target closes about 0.072 points per turn initially, then slows as it converges. This asymptotic approach means extreme legislation has immediate visible impact but takes many turns to fully manifest.
+**Driven by**
 
-### 2. Direct tick rates
+- [Bills & Legislation](/wiki/bills-legislation): an enacted bill is what starts a policy moving a metric.
+- [National Metrics](/wiki/national-metrics): the starting values and baselines the policy pulls against.
 
-Policy options also carry flat additive per-turn changes, applied on top of the decay toward target:
+**Affects**
 
-- **Extreme policies:** approximately ±0.06 per turn
-- **Moderate policies:** approximately ±0.02-0.04 per turn
-- **Center policy:** 0 (no tick effect)
+- [National Metrics](/wiki/national-metrics): policy moves metrics like crime, health, education and income each turn.
+- [Demographics](/wiki/demographics): active laws slowly shift group make-up and leanings.
+- [Government Approval](/wiki/government-approval): changing conditions feed how people judge the government.
 
-The tick-rate design targets approximately a 10-game-year full reversal from one extreme to the other. With 48 turns per game year, an extreme policy would take roughly 480 turns to shift a metric from floor to ceiling, without opposition.
+## Status
 
-### 3. Natural metric decay
+Live in every world. The federal share depends on the country: the US, UK, Japan and Germany each split a national law across their own regions. Which metrics exist depends on the era, so a law cannot move a metric that does not exist yet.
 
-When no active policy is pushing a metric, it drifts back toward its historical baseline at **0.25% per turn**. A metric fully deviated from baseline takes approximately 20 game years (~960 turns) to return with no opposing policy. This prevents the world from permanently freezing at whatever extreme legislation last pushed it to.
+Last checked: 2026-10-29, version 1.18.0
 
-## Federal vs. state scope
+## Technical detail
 
-Federal (national) bills affect every state, but each state receives only a fraction of the total effect:
-
-| Country | Division factor | Per-region effect |
-| --- | --- | --- |
-| US | ÷ 50 | 1/50th of the full national effect |
-| UK | ÷ 12 | 1/12th of the full national effect |
-
-This means the sum of all state-level effects from a federal bill equals the intended national total. It prevents a single federal bill from dominating any one state's metrics while still mattering at the national level.
-
-State-level legislation (US state laws, UK regional council acts) applies its full effect only to that state or region.
-
-## Time-based decay (half-life)
-
-Some legislation types model economic adaptation. A policy that disrupts the economy delivers its largest metric hit early, then fades as the economy adjusts:
-
-| Half-life (turns) | Effect remaining after 1 game year (48 turns) |
-| --- | --- |
-| 24 turns | ~25% of original |
-| 48 turns | ~50% of original |
-| 96 turns | ~75% of original |
-
-For example, a sudden defense-spending cut might hit GDP hard initially, but the private sector adapts. This is modelled by giving the defense legislation type a shorter adaptation half-life.
-
-## Stacking multiple policies
-
-The engine sums contributions from all active policies targeting the same metric:
-
-\`\`\`
-target = baseline + sum of contributions from each active policy
-\`\`\`
-
-Two bills pulling in opposite directions partially cancel each other. A healthcare spending increase and a healthcare spending cut enacted simultaneously would produce a net contribution somewhere between the two extremes, depending on their respective weights and current policy option values.
-
-There is no artificial cap on how many policies can target the same metric, but the metric itself is clamped to a valid range.
-
-## Demographic shifts
-
-Active policies also slowly shift the composition of demographic groups within each state. This is a slower, longer-run effect:
-
-- **Max shift rate:** 0.1% of the demographic group's population per turn
-- **Extreme policy (±3):** Full 0.1%/turn shift rate
-- **Moderate policy (±1):** ~0.033%/turn
-
-Federal policies also apply at the divided rate (÷50 or ÷12) before computing demographic shifts. These shifts accumulate over game years, gradually making states more or less friendly to certain ideological profiles.
-
-## Viewing current policy
-
-- **National Policy page**: lists all federal policies grouped by domain, showing the current policy option name and economic/social positions.
-- **State page, State Laws & Policy tab**: shows state-level base policy for a single state. Each row shows the policy area, current base option name, and positions.
-- **Character profile**: shows your personal policy positions on the −5 to +5 scale, separate from enacted law.
-
-## Strategic implications
-
-### Pushing a metric in one direction
-
-If you want to move, for example, the uninsured rate down:
-
-1. Pass a strong federal healthcare spending bill (extreme-left option on the relevant legislation type).
-2. Each turn, the metric ticks down by ~0.06 and approaches a lower target via exponential decay.
-3. Opposing legislation (from opponents) partially cancels your effect. Net direction depends on the sum of all active policies.
-
-### Long-run vs. short-run effects
-
-- **Short run:** The exponential decay component creates visible movement in the first dozen turns after a bill passes.
-- **Long run:** Tick rates compound over many turns. Extreme legislation held in place for 5+ game years produces structural changes that take decades of in-game time to reverse.
-- **Adaptation half-life:** For legislation types with adaptation decay, the short-run spike fades but the steady-state component remains until the law is repealed.
-
-### Repealing bad policy
-
-Ordinary policy has no repeal button. To reverse it, pass a bill selecting the opposite option on the same legislation type. Subsidies, embargoes and union bans do have explicit repeal provisions (see [Bills & Legislation](/wiki/bills-legislation)). The new bill overwrites the old enacted-law record, and the metric begins tracking toward the new target.
-
-## Related pages
-
-- [Bills & Legislation](/wiki/bills-legislation): how to propose and pass bills
-- [Voting & Whips](/wiki/voting-and-whips): influencing how the chamber votes
-- [Congress Leadership](/wiki/congress-leadership): who controls the legislative agenda
+The exact rules are on the [Policy system design page](https://docs.lakesidegames.net/design/policy-system.html).
 `;

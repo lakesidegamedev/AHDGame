@@ -1,101 +1,99 @@
 export const pollingContent = `# Polling
 
-Polls are paid actions that simulate what would happen if the election resolved right now. They're the single most useful intelligence tool in the game, since they run the **same vote math** the turn processor uses, so what they predict is literally what you'd get. Two tiers: Quick and Full.
+Polls are paid actions that simulate what would happen if the election resolved right now. They are the most useful intelligence tool in the game: for state races they run the **same vote math** the turn processor uses, so what they predict is what you would get at that moment. There are two tiers, Quick and Full. Polling tells you whether to enter a race and which voter groups to work on.
 
-## Quick poll
+## How it works
 
-- **Cost:** 2 actions + a base of ₳25,000, adjusted by your Intellect (about 20% either way) and the era price level. The poll dialog shows your exact quote
-- **Scope:** Your current or about-to-declare race
-- **Returns:** Topline vote share + your 5 strongest demographic groups + your 5 weakest
+You pick a poll for a race you are in or about to declare in. The game runs the group-by-group vote model on the current field and shows you the result. Nothing changes in the race: a poll only reads it.
 
-Quick Poll is the "should I run?" tool. Before declaring any candidacy, spend 2 actions and roughly ₳25k to see whether you've got a realistic path. The topline is presented as a percentage-of-votes projection against the current field.
+For **state races** (House, Senate, Governor, State Senate, Commons, Bundestag constituencies, Sangiin, Shugiin) a poll uses the same group-level allocation as real vote accumulation, including the first-past-the-post spoiler rule (a third party draws 4% of its group votes from the nearest major party). The poll shows your raw allocation, the spoiler adjustment, and the final share. It is the case that will run when the election resolves, not a worst case.
 
-## Full demographic poll
+For **presidential races** your poll is a **home-state projection only**. The actual presidential vote runs per electoral unit with party-weighted positions, state lean, ground game and a 2% organization-aware spoiler. A poll shows what your home state would do. It does not forecast the Electoral College.
 
-- **Cost:** 6 actions + a base of ₳75,000, adjusted the same way. The poll dialog shows your exact quote
-- **Scope:** Same race as Quick, deeper output
-- **Returns:** Complete per-group breakdown across every demographic category
+### Key numbers
 
-Full Poll is the "what do I need to fix?" tool. It tells you:
+| Item | Quick Poll | Full Demographic Poll |
+| --- | --- | --- |
+| Actions | 2 | 6 |
+| Base fund cost | ₳25,000 | ₳75,000 |
+| Intellect effect on fund cost | about 20% cheaper to 20% dearer | same |
+| Era price level | Scales the fund cost | same |
+| Cooldown | None | None |
+| Returns | Topline share plus 5 best and 5 worst groups | Every group, with a gap analysis |
 
-- Your vote share with every segment of the state's electorate.
-- Your Favorability per group.
-- Turnout modifiers on each group (who's been canvassed / GOTV'd in this state).
-- Where your appeal times reach times approval math is lowest: the gaps.
+The poll dialog shows your exact quote before you pay. The fund cost drops with higher Intellect and follows the era's price level.
 
-Use it mid-general to plan the closing sprint: which demographics to ad-target, which to canvass, which to accept as lost and move on from.
+### Quick Poll
 
-## When to use each
+Use it to decide whether to run. It returns:
 
-| Situation | Which poll |
+- Each candidate's projected vote share, and yours as both a percentage and a raw vote count.
+- **Best 5 groups:** where your share is highest.
+- **Worst 5 groups:** where your share is lowest. Those are your targets for ads and canvassing.
+
+### Full Demographic Poll
+
+Use it to decide what to fix. It returns, for every group in the electorate, a row with size, turnout, your appeal, your reach, your approval and the allocated vote count, with the same numbers for each opponent, plus a gap analysis of the largest differences. It also shows turnout modifiers on each group, so you can see who has been canvassed in this state.
+
+**Worked example.** A candidate runs a Quick Poll before a House primary and sees 15% against an NPP at 65%. The poll cost 2 actions and about ₳25,000. They decide not to enter and use the actions elsewhere. A different candidate in a competitive general runs a Full Poll and sees their worst three groups are Young voters, Low Income voters and Black voters, each 8 to 12 points behind. They then target ads at the Young group and canvass the other two in the final 4 turns.
+
+### When to use each
+
+| Situation | Poll |
 | --- | --- |
 | Considering declaring | Quick |
 | Declared but unsure of strategy | Full |
 | Mid-general, leading comfortably | Quick (spot-check) |
 | Mid-general, competitive or behind | Full (diagnostic) |
 | Primary season, picking a race | Quick |
-| Final 4 turns of a general | Neither: act on your plan, don't re-plan |
+| Final 4 turns of a general | Neither: act on your plan |
 
-## What polls actually compute
+### Limits
 
-For **state races** (House, Senate, Gov, State Senate, Commons, Bundestag constituency, Sangiin, Shūgiin):
+- You can poll as many times per turn as you can afford, but the election must be active (primary started and not yet resolved).
+- Polling the same race three times in a row wastes resources because your stats have barely moved. One poll every 6 to 12 turns is usually enough.
+- A poll is a snapshot of the vote model on the data at the moment you run it. It is as current as your stats and the last turn's turnout, and it does not predict what opponents will do next.
 
-Polls run the **exact same** group-level competitive allocation the turn processor uses, with the **same** FPTP spoiler rule for FPTP states. Per-segment opponent effective favorability is used when available (the "what if my opponent's ad campaign is working on graduate-educated suburban voters" case). Results reflect real vote math.
+## What you can do
 
-For **presidential races**:
+- **Run a Quick Poll** before any declaration, from the race page.
+- **Run a Full Poll** at the start of a general and again mid-general if competitive.
+- **Scout opponents.** When a competitor declares, a Full Poll shows their appeal breakdown too.
+- **Act on the results:** target the worst groups with ads ([Fundraising and Ads](/wiki/fundraising-ads)) or turnout ([Canvassing](/wiki/canvassing)).
 
-Player polls are **home-state projections only**. The actual presidential vote model is different: it runs per electoral unit with party-weighted positions, steep party-org curves, state-lean adjustments, swing-state ground-game bonuses, and applies a 2% organisation-aware FPTP spoiler. Your poll shows what your home state would do; it does **not** forecast the Electoral College.
+Tips:
 
-## FPTP spoiler in polls
+- Do not skip the Quick Poll before declaring.
+- The worst-5 list is the most actionable output of any poll.
+- Do not treat a presidential poll as a 270 forecast.
+- Ten turns from the end, a Quick Poll is enough: if you are up 5 or more, coast. If tied or behind, prepare a burst for the final 4 turns.
 
-In FPTP states, polls show the spoiler effect's actual numbers. If you're a Democratic candidate in a race with a viable Green opponent, your poll shows:
+## Connections
 
-- Your raw group-level allocation.
-- The FPTP adjustment taking 4% of the Green's group votes and redistributing: either subtracting from you (if you're the closest major party) or leaving you alone (if you're the Republican instead).
-- The final effective vote share.
+**Driven by**
 
-This is the same math the turn processor will run when the election actually resolves. It's not a "worst case," it's the case.
+- [Election Mechanics](/wiki/election-mechanics): polls replay the vote math defined there.
+- [Demographics](/wiki/demographics): the electorate's groups and their leanings are what the poll breaks down.
+- [Stats & Actions](/wiki/stats-actions): action costs and your Intellect set the price.
+- [Fundraising and Ads](/wiki/fundraising-ads): campaign funds pay for each poll.
 
-## Polling cooldowns and limits
+**Affects**
 
-- **No hard cooldown** on polls: you can poll multiple times per turn if you can afford the actions and funds.
-- **Diminishing strategic value.** Polling the same race 3 times in a row wastes resources because your stats haven't moved much.
-- **Election must be active.** You cannot poll an election that hasn't started the primary phase or that has resolved.
+- [Primaries](/wiki/primaries): a Quick Poll tells you whether to declare.
+- [Canvassing](/wiki/canvassing): the worst-groups list and turnout modifiers say where canvassing pays.
+- [Fundraising and Ads](/wiki/fundraising-ads): the worst-groups list says where ads pay.
+- [Campaign Strategy](/wiki/campaign-strategy): poll results drive the closing sprint plan.
+- [Demographics & Targeting](/wiki/demographics-targeting): a poll gives the group-by-group numbers you target.
+- [granular-polling](/wiki/granular-polling): the poll action produces the granular panel
+- [Snap Elections](/wiki/snap-elections): Polling is what makes a PM want to call a snap.
 
-## Reading a poll output
+## Status
 
-**Quick Poll topline:**
-- Shows projected vote percentage for each candidate in the field.
-- Your own projection is shown as both a percentage and a raw vote count.
-- "Best 5 groups": demographics where your relative share is highest.
-- "Worst 5 groups": demographics where your relative share is lowest. These are your ad-targeting and canvassing priorities.
+Live in every world and country with elections. Presidential polls are home-state projections everywhere.
 
-**Full Poll output:**
-- Per-segment rows with size, turnout, your appeal, your reach, your approval, and the final allocated vote count.
-- A separate column showing the same numbers for each opponent.
-- A "gap analysis" section identifying the largest deltas.
+Last checked: 2026-10-29, version 1.18.0
 
-## Tactical uses
+## Technical detail
 
-1. **Declaring intelligence.** Quick Poll before any primary declaration. If the topline shows you at 15% and an NPP at 65%, re-evaluate.
-2. **Mid-primary health check.** One Full Poll 24-48 hours before the primary deadline to confirm you're winning the primary score. If you're close, a burst of Campaign actions in the final hours often seals it.
-3. **Early-general diagnostic.** Full Poll at the start of the general. Identify the weakest 3 demographics. Invest ads/canvassing there for the middle of the general.
-4. **Closing sprint positioning.** Quick Poll about 10 turns out from election end. If you're up 5+ points, coast; if you're tied or behind, the final 4 turns matter disproportionately, so prepare a burst.
-5. **Opposition scouting.** When a competitor declares in your primary or general, a Full Poll shows their appeal breakdown too. Use it to understand where they'll pull votes from.
-
-## Common polling mistakes
-
-- **Skipping Quick Poll before declaring.** You walk in blind. Almost always the wrong call.
-- **Over-polling.** Three Quick Polls a day is expensive and the stats haven't moved. One poll per 6-12 turns is usually enough.
-- **Treating presidential polls as Electoral College forecasts.** They're not: they're home-state projections. Use them to understand your home state's lean, not to project 270.
-- **Ignoring the "worst 5 groups" list.** This is the most actionable output of any poll. Each of those 5 groups is a candidate for targeted ads or canvassing.
-
-## Related
-
-- [Stats & Actions](/wiki/stats-actions): Poll action costs and stat effects.
-- [Election Mechanics](/wiki/election-mechanics): The vote math polls replicate.
-- [Demographics & Targeting](/wiki/demographics-targeting): Group composition and appeal math.
-- [Canvassing](/wiki/canvassing): Acting on poll findings to boost turnout.
-- [Fundraising & Ads](/wiki/fundraising-ads): Acting on poll findings to boost favorability.
-- [Campaign Strategy](/wiki/campaign-strategy): Upgrades and long-game planning.
+The vote model the poll runs is on the [Elections design page](https://docs.lakesidegames.net/design/elections.html).
 `;

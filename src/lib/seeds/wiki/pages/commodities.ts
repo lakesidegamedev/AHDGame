@@ -50,7 +50,7 @@ const COMMODITY_SUMMARIES: Record<CommodityType, string> = {
   vehicles:
     "finished vehicles and heavy machinery: supplied by automobiles and defense, demanded by logistics, energy, agriculture, and retail.",
   retail:
-    "the consumer-goods basket: end-user demand for retail is scaled by GDP growth and is the primary driver of the commodity market.",
+    "the consumer-goods basket: end-user demand for retail is scaled by GDP growth (half national, half state).",
   freight:
     "container-equivalent transportation capacity: produced by logistics, demanded by anyone moving physical goods.",
   consulting_services:
@@ -120,12 +120,17 @@ function buildCommodityMarkdown(commodity: CommodityType): string {
     : "";
 
   const relatedLinks = [
-    `- [Commodities overview](/wiki/commodities)`,
-    `- [Full market page](/commodity/${commodity})`,
+    `- [Commodities overview](/wiki/commodities): the full pricing rules this page summarises. Supply and demand here set the price there.`,
+    `- [Full market page](/commodity/${commodity}): live prices and history for ${label}.`,
+    `- [Tariffs](/wiki/tariffs): tariffs move weight in the margin blend from the global price to the national price.`,
   ];
   if (isExtractable) {
-    relatedLinks.push(`- [Resources overview](/wiki/resources-overview)`);
-    relatedLinks.push(`- [Extraction contracts](/wiki/extraction-contracts)`);
+    relatedLinks.push(
+      `- [Resources overview](/wiki/resources-overview): state resource capacity caps how much ${label} can be produced.`
+    );
+    relatedLinks.push(
+      `- [Extraction contracts](/wiki/extraction-contracts): contracts decide who gets to extract and sell it.`
+    );
   }
 
   const blendDescription = isMacro
@@ -149,6 +154,10 @@ ${suppliersSection}
 
 ${consumersSection}
 
+## How to read a price move
+
+A price rises when demand outruns supply (D/S above 1) and falls when supply outruns demand. Example: if demand is 150 units and supply is 100, D/S is 1.5, so the price drifts above its base of $${basePrice.toLocaleString()}. Each turn it closes 6% of the gap to where that pressure says it should be, so a one-off shock mostly fades within a game year. To cool a high price, build or subsidise more of the suppliers listed above. To profit from it, own a supplier.
+
 ## Live distribution
 
 Per-country totals below are pulled live from the current turn's market snapshot. Countries with positive net are exporters on balance; negative nets are importers.
@@ -156,6 +165,12 @@ Per-country totals below are pulled live from the current turn's market snapshot
 \`\`\`commodity-distribution
 ${commodity}
 \`\`\`
+
+## Where it applies
+
+${label} prices are part of the standard economy. Which countries can supply it depends on the sectors they have built${isExtractable ? " and their state resource capacity" : ""}.
+
+Last checked: 2026-10-29, version 1.18.0
 
 ## Related
 

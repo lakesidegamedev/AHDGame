@@ -1,68 +1,108 @@
 export const subsidiaryCorporationsContent = `# Subsidiary Corporations
 
-A corporation you control the votes of, but that another player actually runs day to day, can be formalized as your **subsidiary**. That gets you real management powers over it: you can fund it directly, force a minimum dividend, appoint its CEO, and spin off pieces of your own business into new subsidiary corporations. In exchange, the subsidiary's equity is frozen and its finances are read alongside yours for tax purposes.
+A corporation you control the votes of, but that another player runs day to day, can be formalized as your **subsidiary**. That gives you management powers over it: you can fund it directly, force a minimum dividend, appoint its CEO, and spin pieces of your own business into new subsidiaries. In return the subsidiary cannot issue shares, and your group's tax and strength figures are read together.
 
-There is no stored "parent" field anywhere in the data. Whether a corporation is your subsidiary right now is **derived live** from two facts: do you currently control more than **50% of its voting power**, and did someone formally declare the relationship. If either fact goes away, so does the relationship.
+Being a subsidiary is derived live, not stored as a permanent flag. A corporation is your subsidiary only while you control more than 50% of its voting power and the relationship has been formally declared. If either stops being true, so does the relationship.
 
-## Becoming a parent
+## How it works
 
-To formalize a subsidiary, you (as CEO of the parent) need:
+There are three routes to a subsidiary:
 
-- **More than 50% voting control** of the target, counting dual-class supershares, not just raw share count. Shares you have reserved in an open sell order or listing still count toward your control, so listing a block for sale doesn't accidentally drop your powers before the trade fills.
-- The target must not already be a formalized subsidiary of anyone, and must not be state-owned.
-- Your own corporation must not be national/state-owned or itself already a subsidiary. **No chains**: a subsidiary can never be a parent.
-- **No ownership cycles**: you can't formalize a subsidiary that, through some other holding, already controls you.
-- **A different human must run it.** The subsidiary's sitting CEO can't be you, the parent's own CEO, or the sitting CEO of any of your other subsidiaries. An NPP caretaker counts as a different operator, so you can formalize or reseat even if the previous human is still attached for reclaim. If they later try to reclaim while already running another of your subsidiaries, that reclaim is refused.
+1. **Formalize one you already control.** You hold more than 50% of the voting power and declare it.
+2. **Buy one as a subsidiary.** Make an acquisition offer on the Deals tab and choose **Keep as subsidiary** (see [Corporate Mergers & Acquisitions](/wiki/corporate-mergers)). The shareholders are paid and you become the only shareholder, while the target keeps its sectors, cash, bonds, bank charter and management.
+3. **Spin off a piece of your own business** into a new corporation that you own 100%.
 
-Once formalized, the relationship isn't permanent by default: if your voting control ever drops back to 50% or below (dilution, selling down), the game automatically clears the formalization the next turn. Nobody has to do anything for it to end that way.
+**To formalize you need:**
 
-You can release a subsidiary yourself too, but not immediately: there's a **24-turn minimum age** between formalizing and releasing, so you can't flip the relationship on and off in the same session.
+- **More than 50% voting power**, counting dual-class supershares and not only raw share count. Shares you have listed in an open sell order still count, so listing a block does not drop your powers before the trade fills.
+- A target that is not already a subsidiary and is not state-owned.
+- A parent that is not state-owned and not itself a subsidiary. **No chains:** a subsidiary can never be a parent.
+- **No ownership cycles.** You cannot formalize a corporation that, through another holding, already controls you.
+- **A different human running it.** The subsidiary's sitting CEO cannot be you, the parent's CEO, or the sitting CEO of any of your other subsidiaries. A computer-run caretaker counts as a different operator.
 
-## Buying a corporation as a subsidiary
+**It ends automatically.** If your voting control falls to 50% or below (you sell down or are diluted), the game clears the formalization on the next turn and the dividend floor goes with it. You can also release a subsidiary yourself, but only once it has been formalized for 24 turns, so the relationship cannot be flipped on and off in one session.
 
-Instead of formalizing a corporation you already control, you can buy one and keep it running as a subsidiary. When you make an acquisition offer from the Deals tab, choose **Keep as subsidiary** instead of Merge. The offer pays the target's shareholders the agreed price and makes your corporation the target's only shareholder, while its sectors, cash, bonds, bank charter and management stay as they are. The same offer is refused when it would chain subsidiaries, create circular ownership, or put one player in charge of both parent and subsidiary. An AI-run target accepts automatically at or above its asking price; a player-run one accepts from their own Deals tab. An AI-run subsidiary no longer divests or retools its sectors on its own, so a company you bought is not dismantled behind your back.
+## Key numbers
 
-## What being a parent lets you do
+| Item | Value |
+| --- | --- |
+| Voting power needed | more than 50% |
+| Minimum time formalized before you may release | 24 turns |
+| Capital injection cap | 25% of the parent's liquid capital per injection |
+| Wait between injections to the same subsidiary | 24 turns |
+| Dividend floor range | 0% to 25% |
+| Spin-off cost | ₳500,000 plus ₳100,000 per sector moved |
+| Wait between spin-offs by the same parent | 168 turns |
+| Strength lift: share of the gap closed each turn | 5% |
+| Strength ceiling for a member | 60% of the group leader's |
+| Strength ceiling for a recent spin-off | 85% of the leader's, for 96 turns |
+| Cross-border pricing audit starts above | ₳5,000,000 shifted |
+| Audit surcharge | 40% on the reassessed tax |
+| Group supply discount | 0% to 35% |
 
-**Capital injection.** Send cash straight into the subsidiary's treasury from your own, converted through currency exchange if needed. Capped at **25% of your liquid capital per injection**, with a **24-turn cooldown** per subsidiary. This is the main tool for propping up a struggling subsidiary or funding its growth without going through the stock market.
+A game year is 48 turns, so 24 turns is half a year and 168 turns is three and a half years.
 
-**Dividend floor.** Set a minimum dividend rate the subsidiary must pay out, which its own CEO cannot undercut (though they can still pay more if they choose). If you stop controlling it, the floor stops applying automatically, it isn't a lever you keep after losing control.
+## What you can do
 
-**CEO appointment.** Reseat the subsidiary's CEO, either with an NPP caretaker (the previous human stays attached so they can reclaim later, but a computer runs it day to day) or with a different human character. When the subsidiary's CEO seat is vacant, the parent can appoint an eligible NPP to fill it. The one-person rule applies to sitting human CEOs, not to a caretaker stash. Reclaim is blocked if that human already runs another of your subsidiaries.
+All parent actions need you to be the parent's CEO.
 
-**Spinning off a piece of your own business.** Rather than formalizing an existing corporation, you can carve one of your own sector types out into a brand-new, wholly-owned subsidiary. All the sectors of that type move to the new corp with their plant capacity intact; nothing is lost in the move. Costs a base fee plus a per-sector fee, paid to your country's treasury, and is on a **168-turn (roughly 7 real-day) cooldown** per parent. The new corp starts private, 100% owned by you, and is immediately a formalized subsidiary from the moment it's created.
+- **Inject capital.** Send cash straight into the subsidiary's treasury, converted by exchange rate if needed. One injection is capped at 25% of your liquid capital, with a 24-turn wait per subsidiary. Use it to prop up a struggling subsidiary or fund growth without the stock market. Example: with ₳8,000,000 of liquid capital, you can inject up to ₳2,000,000 now, and again after 24 turns.
+- **Set a dividend floor.** Choose a minimum dividend rate from 0% to 25% that the subsidiary must pay, which its own CEO cannot undercut (they can pay more). The dividends go to its shareholders, including you. Lose control and the floor stops at once.
+- **Appoint the CEO.** Reseat the CEO with a computer-run caretaker (the previous human stays attached and can reclaim later) or with a different human. If the seat is vacant you can appoint an eligible computer-run official. A reclaim is refused if that human already runs another of your subsidiaries.
+- **Spin off a piece of your business.** Carve one sector type out of your own corporation into a new corporation that starts private and 100% owned by you. All sectors of that type move with their plant capacity intact. It is a formalized subsidiary from the moment it exists.
+- **Release.** After 24 turns you can let a subsidiary go.
 
-## What you can't do to a formalized subsidiary
+**Which route?** Formalize when you already hold the votes and want the powers and tax relief. Buy as a subsidiary when you want a whole company to keep running as it is. Spin off when you want to separate part of your own business without losing it.
 
-**No equity issuance.** A formalized subsidiary cannot go public, issue new shares to the float, or self-issue, for any reason, while the relationship holds. Diluting the cap table risks dropping your control below 50% and letting the subsidiary's CEO escape your oversight, so the game blocks the whole category outright. If you genuinely want it to raise equity, release it first.
+## What you cannot do
+
+**No share issuance.** A formalized subsidiary cannot go public, issue new shares or sell new stock for any reason. New shares would dilute your stake and could drop you below 50%. Fund it with a capital injection instead, or release it first if it genuinely needs to raise equity.
 
 ## Tax relief within a group
 
-Corporations connected by formalized subsidiary edges form a **group**. Each corporation is still taxed individually every turn, but afterward, if the group has both a profit-making member and a loss-making one in the **same country**, the loss shelters the profit and part of the tax already paid is rebated back. A loss in one country never shelters profit in another. Cross-border intra-group transfer pricing is a separate live audit system: exposure above ₳5 million can trigger an assessment with a 40% surcharge, while same-country intra-group pricing is intentionally ignored.
+Corporations linked by formalized subsidiary ties form a **group**. Each is taxed on its own every turn. Then, if the group has a profitable member and a loss-making member in the **same country**, the loss shelters the profit and part of the tax already paid is rebated.
 
-The rebate is capped at what was actually paid in tax, so it can never turn into the treasury handing money to a group that paid nothing, and it's allocated back to whichever members actually paid tax, in proportion to how much they paid.
+Example: member A earns ₳1,000,000 and pays ₳250,000 tax (25%). Member B, in the same country, loses ₳400,000. The loss shelters ₳400,000 of profit at 25%, so the group is rebated ₳100,000, paid back to A. A loss in another country shelters nothing.
 
-## Marketing and logistics synergies
+The rebate never exceeds the tax actually paid, and it goes back to the members that paid, in proportion to what they paid. Cross-border pricing between group members is a separate audit: if more than ₳5,000,000 of profit appears to be shifted on one agreement, the tax authority can reassess it with a 40% surcharge. Same-country pricing is ignored, because it moves no tax between treasuries.
 
-Weaker members of a group get pulled **up** toward the group's strongest Marketing Strength and Logistics Strength over time, never dragged down, so acquiring a struggling subsidiary never punishes an otherwise-strong parent. An ordinary member can be lifted to at most 60% of the group leader's strength; a corporation spun off from a current group member gets a more generous 85% ceiling for a limited window after the spin-off, reflecting inherited brand and process knowledge. The lift closes 5% of the remaining gap each turn, so it's a gradual convergence, not an instant boost.
+## Marketing and logistics strength
 
-## Subsidiary Group hub
+Weaker members are pulled **up** toward the group's strongest Marketing Strength and Logistics Strength, never down, so buying a weak company does not punish a strong parent. A normal member can reach at most 60% of the leader's strength. A recent spin-off from a current group member gets a higher ceiling of 85% for 96 turns, since it inherits the brand. Each turn the member closes 5% of the remaining gap.
 
-Open the Subsidiary Group page from the link below My Corporation or from the group summary on a corporation page. Select members to compare their daily revenue, cash and operating footprint. Authorized CEOs can also inspect completed-turn results, valued using the exchange rate recorded in each snapshot. Combined figures include internal transactions; members still hold their own cash independently.
+Example: the leader has Marketing Strength 80 and a member has 20. The member's ceiling is 60% of 80 = 48, so the gap is 28 and it gains 1.40 in the first turn, then about 1.33 in the next. It approaches 48 gradually and never exceeds it.
 
-The parent CEO can set a group name and logo and save subsidiary objectives. Player CEOs can acknowledge or decline their own suggestions. When formalized subsidiaries are enabled, NPPs apply directions from the next turn using their existing strategy and cash safeguards. Strategic directions do not depend on activating the separate Group Chain supply engine. Player suggestions remain voluntary. Capital investment permission applies to new plant orders and expansion.
+## The Subsidiary Group page
 
-When the separate Group Chain is off, the supply section uses the same active corporation supply controls as CEO Office: open market, own operations first or wholly owned group priority. These retain the existing full-ownership inheritance and 0% to 20% discount rules. The page shows actual last-turn receipts, without treating inactive Group Chain opt-in preferences or estimates as active routing.
+Open the Subsidiary Group page from the link under My Corporation or from the group summary on a corporation page. It lets you compare members' daily revenue, cash and operating footprint, and the totals include trading between members. Each member still holds its own cash. The parent CEO can set a group name and logo and save objectives for subsidiaries. Player CEOs can accept or decline suggestions, and computer-run subsidiaries follow them from the next turn within their normal safeguards.
 
-When Group Chain coordination is enabled, the supply section saves Commercial independence or Group members first as the group's preference. Under Group members first, player CEOs can choose to receive group supplies. This is receiving-only and never commits their corporation's own output. Participation changes become effective next turn and remain bound to the same CEO and group. Under Commercial independence, Group receiving controls are hidden and the corporation's CEO Office setting is disabled with an explanation; the saved preference is retained.
+**Group supply.** Where your world supports it, the page also lets the group buy inputs from its own members before the open market. The parent can set a **group supply discount** of 0% to 35% (the default is 0%), which moves operating profit from the supplier to the buyer without changing the sale value at the market price. Player CEOs choose whether to receive group supplies, and this never commits their own output. Supplies stay within one country.
 
-Automatic supply coordination is disabled by default and requires world qualification before activation. Enabled plants economies reserve only NPP output at the applicable market benchmark, after existing contracts. The parent CEO can choose an automatic Group Chain discount from 0% to 35%, matching the supply agreement price band. The default is zero. Discounts apply only to reserved inputs actually consumed, with a matching supplier operating charge and buyer credit. Gross sales remain at benchmark value; discounts redistribute operating profit before tax. Full benchmark cash is protected until consumption. Negotiated agreements retain their own prices and acceptance rules, and can be managed on the Group page by each corporation's own player CEO. Output, buyer needs, available funds and protected NPP reserves cap allocations. Allocations stay within the same country; with freight settlement they also require co-located plants and verified local delivery capacity. Unused output returns to normal market sales and per-turn allocations carry no shortfall damages.
+Your corporation page also shows a read-only **group balance sheet**: total liquid capital, total sector revenue, sector count, and how many industries and countries the group spans.
 
-After a Group Chain-enabled world completes a turn, authorized CEOs can compare fixed-output estimates for both policies. Changing receiving participation recalculates group and per-corporation direct revenue and operating-profit differences. Existing contracts, production changes, taxes and longer-term price responses are excluded. Group totals include internal trading and are not consolidated net accounts. Missing or stale inputs show estimates as unavailable.
+## Connections
 
-## Group balance sheet
+**Driven by**
 
-Your corporation page shows a read-only consolidated view of your group: total liquid capital, total sector revenue, sector count, and how many distinct industries and countries the group spans. This is a display aggregation only; each member still holds its own cash and shares independently.
+- [Corporate Mergers & Acquisitions](/wiki/corporate-mergers): the Keep as subsidiary outcome creates a subsidiary.
+- [Corporations](/wiki/corporations): share ownership and voting power decide who controls whom.
+- [Stock Market](/wiki/stock-market): buying or selling shares can lift you above 50% or drop you below it.
 
-See also: [Corporations](/wiki/corporations), [Corporate Mergers & Acquisitions](/wiki/corporate-mergers), [Corporate Bonds](/wiki/corporate-bonds), [Stock Market](/wiki/stock-market)
+**Affects**
+
+- [Corporate Mergers & Acquisitions](/wiki/corporate-mergers): a formalized group counts as one controlled group when merger review measures market share and sell-down orders.
+- [Corporations](/wiki/corporations): the group shares tax relief and strength, and the subsidiary cannot issue shares.
+- [Corporate Bonds](/wiki/corporate-bonds): a subsidiary keeps its own bonds, which is what lets you buy a bonded company this way.
+
+## Status
+
+Subsidiaries are available in worlds where the feature is open. If the Keep as subsidiary choice and the Subsidiary Group page do not appear for you, your world does not have it. Group supply and its discount are offered only where the Group page shows them. In some worlds the strength lift is paid for by the group's strongest member rather than created from nothing.
+
+Last checked: 2026-10-29, version 1.18.0
+
+## Technical detail
+
+The exact rules, formulas and constants are on the [Subsidiary Corporations design page](https://docs.lakesidegames.net/design/subsidiary-corporations.html).
+
+See also: [Glossary](/wiki/glossary)
 `;

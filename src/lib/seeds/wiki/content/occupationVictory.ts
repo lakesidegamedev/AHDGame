@@ -4,6 +4,29 @@ Winning a battle is not winning a war. A war is won by **taking ground and holdi
 
 This page covers the territorial layer: the control meter, why it starts where it does, what it does to your supply, and what happens when it reaches the end.
 
+## How it works
+
+Every war has one territory meter, running 0 to 100, that measures how much of the host country side B holds. A war opens at the host's own end of the meter. Each battle with a winner pushes the meter towards the winner's end. The farther the front moves from where it started, the worse its supply gets, so each step is harder than the last. If the meter sits at an end for long enough, the war goes to terms. This page covers that arc.
+
+### Key numbers
+
+| What | Value |
+| --- | --- |
+| Meter range | 0 to 100 (side B's share of the host) |
+| Opening position | The host's own end (0 or 100), or 50 for a proxy war |
+| Decisive wins needed for a full sweep | About twenty, none answered |
+| Winding Down starts | Three-quarters of the way from the starting line to an end |
+| Minimum war age before a pole can win it | 24 turns |
+| Victor's window to name terms | 24 turns |
+| Truce after the war | 240 turns, every pair on opposite sides |
+| Fog on forces after the war | Lifts after 480 turns |
+| Supply floor | Never zero |
+| Home-soil supply bonus | 25% more hauled for the side fighting on its own soil |
+
+### A worked campaign
+
+Side A (the attacker) declares on country C, hosted on side B. The meter opens at 100 because C holds all of its own soil. Each decisive A win takes about one twentieth of the track, so after 8 decisive wins and no reversals the meter reads about 60. A narrow win takes a smaller slice, and a B victory on the next turn puts back a slice of the same size. At about 25 the front has travelled three-quarters of the way and the status changes to Winding Down. If the meter reaches 0 and the war is at least 24 turns old, it goes to terms pending. The 24-turn minimum is rarely the limit, because the grind takes many times that.
+
 ## The control meter
 
 Every conflict has exactly one territorial number: **control**, running 0 to 100.
@@ -32,6 +55,8 @@ This is the detail that trips people up, and it is the difference between readin
 So **an interstate invasion opens with the defender holding 100% of their own territory**, which is exactly right: you have not invaded yet. If you declare war on China, the war is hosted in China, and China starts holding all of China.
 
 A conflict also records the **starting line** it opened at. Almost everything below is measured from *that* point, not from the middle of the track.
+
+**A new war starts slowly.** The two sides do not field their armies at the same pace, since a defensive pact answers at once but a coalition of attackers needs bills and mobilisation. So the front moves at a fraction of its normal pace on the first turn of a war and speeds up to full pace over the opening couple of days. A war cannot be run to a pole before the other side has had time to field an army.
 
 ## Moving the line
 
@@ -138,6 +163,37 @@ That is often the realistic outcome. Twenty unanswered decisive wins is a very l
 **Winding Down is a negotiating signal.** When your enemy's war goes visibly into its last quarter, that is the moment their peace offer gets cheap, or yours gets expensive.
 
 **Never leave a front undefended.** An unopposed offensive advances at full rate. Refusing to fight does not stop the map from moving.
+
+## What you can do
+
+- **Fight and hold ground** by winning battles; see [Fighting a Battle](/wiki/fighting-a-battle).
+- **Read the meter** on the conflict record and the war room. If you are side A, your progress is the number going down.
+- **Name or accept terms** once the war is decided; see [Peace, Indemnities & Truces](/wiki/peace-and-truces).
+
+Common questions: *Which way does the meter go if I am side A?* Down. *Why did the war not end when I reached 100%?* The pole must be reached by the front moving there, the war must be at least 24 turns old, and a defender who simply starts at their own pole has not won anything. *Did I win if I take everything?* Yes, at a pole, and then the victor names a settlement. *Why can I not annex territory?* Nothing transfers territory between countries yet, so occupation is a wartime position and not a permanent change.
+
+## Connections
+
+**Driven by**
+
+- [Fighting a Battle](/wiki/fighting-a-battle): each battle's result moves the meter.
+- [Declaring War](/wiki/declaring-war): the host country and starting pole are set when the war opens.
+
+**Affects**
+
+- [Peace, Indemnities & Truces](/wiki/peace-and-truces): reaching a pole opens the victor's window to name terms, and a war ends with a 240-turn truce.
+- [Conflicts & the Military System](/wiki/conflicts-overview): status, fog tiers and the historical record follow from the meter.
+- [Government Approval](/wiki/government-approval): how the front is moving affects approval at home.
+
+## Status
+
+Territory works the same in every world and era. A war against an insurgency, or one whose losing founder has already left on a separate peace, skips the terms window and resolves outright. Wars hosted in a country on neither side open at 50.
+
+Last checked: 2026-10-29, version 1.18.0
+
+## Technical detail
+
+The exact rules are on the design page [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), under Battles and territory. The step sizes and supply constants are intentionally not published in the wiki.
 
 ## Next
 

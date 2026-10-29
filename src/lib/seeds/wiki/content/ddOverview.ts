@@ -19,7 +19,7 @@ East Germany (the German Democratic Republic) is a **one-party socialist state**
 | --- | --- | --- | --- |
 | General Secretary (head of government) | Internal party confidence | 5 years | 1 |
 | Chairman of the Council of State (ceremonial head of state) | Auto-populated as SED chair | No fixed term | 1 |
-| Volkskammer Deputy | Single-list regional election | 192 turns (4 game years) | 500 |
+| Volkskammer Deputy | Single-list regional election | 192 turns (4 game years, 8 real days) | 500 |
 | Land First Secretary (regional executive) | Regional election | 4 years | 1 per region |
 | President of the Staatsbank | Appointed action | 6 years | 1 |
 
@@ -31,7 +31,7 @@ The General Secretary carries **+4 actions per turn**, a Volkskammer Deputy +1, 
 
 The **Volkskammer** (People's Chamber) is mechanically **unicameral**: 500 deputies elected on the single National Front list, all seats contested each cycle, no snap elections. The **Staatsrat** (Council of State), a 25-seat collective head-of-state body, is not elected and sits outside the player legislative loop.
 
-Elections ride a **192-turn cycle** (4 game years at 48 turns per year), anchored to 1954 in the 1953 preset and 1981 in the 1979 preset, matching the GDR's early electoral cadence. Land First Secretary races ride the same anchor. The coalition threshold is **251 seats** (500 / 2 + 1), a formality given the seeded majority.
+Elections ride a **192-turn cycle** (4 game years at 48 turns per year), anchored to 1954 in the 1953 preset and 1981 in the 1979 preset, matching the GDR's early electoral cadence. Land First Secretary races ride the same anchor. The coalition threshold is **251 seats** (500 / 2 + 1), a formality given the seeded majority. A race takes 48 turns (48 real hours: 24 for the primary and 24 for the general election) at the end of each 192-turn cycle.
 
 The seeded composition mirrors the National Front's fixed allocation:
 
@@ -45,6 +45,8 @@ The seeded composition mirrors the National Front's fixed allocation:
 
 Because single-list elections carry no real electoral signal, governance participation for one-party states is capped at a ceiling of 55, and the FPTP spoiler step is skipped entirely.
 
+**Worked example.** In the 1953 preset, Sachsen holds 151 Volkskammer seats: SED 88, CDU (Ost) 15, LDPD 15, NDPD 16 and DBD 17. These splits are fixed by the National Front allocation, not by how many votes each party wins. What you compete for is which of your party's candidates fills its seats: up to 7 candidates per party advance from each region's primary, and the party's block is filled from them.
+
 ---
 
 ## The National Front
@@ -55,8 +57,16 @@ The National Front is the bloc-party version of one-party rule (see [One-Party S
 - **CDU (Ost), LDPD, NDPD and DBD** are **approved** bloc parties. They hold seats, field Volkskammer candidates, propose and vote on bills, accept donations and sit in cabinet, but they **cannot form government** or contest the executive.
 - **Vote multipliers**: ruling votes weigh 3.0, approved 0.375, independents and banned parties 0. Player-created parties are automatically **banned** at charter ratification.
 - **No internal confidence gauge.** Unlike the USSR and China, East Germany does not run the ruling-party leader-confidence model, and no faction split spawns a spinoff party. The regime's popular legitimacy still drifts each turn on the shared one-party mood profile.
-- **Collapse points west.** The collapse target is a parliamentary republic: the democratisation path. Conversion is one-way.
-- **Winning points west too.** If the German Question resolves in the East's favour, East Germany is absorbed into a single Germany with its parties, its chamber and its government carried across intact: Volkskammer deputies seat in the Bundestag, Land assemblies become Landtage, Land First Secretaries become Minister-Presidents, East Berlin folds into Berlin, and the unified state is one-party with the SED and bloc parties governing and the western parties barred. No election is called. A war declared by or against either Germany freezes the question and decides it outright; a white peace in such a war hands the question back to the diplomatic track. See [Germany](/wiki/de-overview).
+- **Collapse points west.** The collapse target is a parliamentary republic: the democratisation path. Conversion is one-way. The escalation stages that lead there are laid out in the table on [China](/wiki/cn-overview), apart from the confidence model, which East Germany does not run.
+- **What can a bloc party actually change?** The SED holds 292 of 500 seats in 1953 (290 in 1979), 41 or 39 above the 251 majority, so the bloc parties together (208 or 210 seats) cannot pass an ordinary bill against it. Their leverage is on thresholds the SED cannot clear alone. A declaration of war needs two-thirds of the votes cast, with abstentions excluded. If all 500 deputies vote and the bloc parties vote against, the SED's 292 falls short of the 334 it needs, so it must win at least 42 bloc votes. Bloc parties also sit in cabinet and can propose bills.
+- **Winning points west too.** If the German Question resolves in the East's favour, East Germany is absorbed into a single Germany. The East arrives intact, in these steps:
+  1. Volkskammer deputies take seats in the Bundestag, with the numbers rescaled onto the delegation the Bundestag already holds for the five eastern states.
+  2. Land assemblies become Landtage, and Land First Secretaries become Minister-Presidents.
+  3. East Berlin folds into Berlin.
+  4. The unified state is one-party: the SED and bloc parties govern and the western parties are barred.
+  5. No election is called, because the chamber carried across is the point of the settlement.
+
+  A war declared by or against either Germany freezes the question and decides it outright. A white peace in such a war hands the question back to the diplomatic track. Your seat carries across, though the rescaling can change how many seats each party holds. See [Germany](/wiki/de-overview).
 
 ---
 
@@ -79,7 +89,7 @@ Sachsen is the industrial heart and the largest delegation in both eras. The his
 
 ## Council of Ministers
 
-The GDR's Council of Ministers mirrors the Soviet council **one for one**: the same 16 portfolios, tier settings and levers, under GDR-authentic names. The General Secretary appoints ministers directly from Volkskammer deputies. Every seat carries a three-option tier setting and **two ministerial orders** (24-turn national modifiers costing one ministerial action).
+The GDR's Council of Ministers mirrors the Soviet council **one for one**: the same 16 portfolios, tier settings and levers, under GDR-authentic names. The General Secretary appoints ministers directly from Volkskammer deputies. Every seat carries a three-option tier setting and **two ministerial orders** (24-turn national modifiers costing one ministerial action, which is one game half-year and 24 real hours).
 
 The distinctive seats:
 
@@ -101,7 +111,7 @@ Era gating is real: the **Minister of National Defence seat only exists from 195
 
 ## Command economy
 
-East Germany comes up **fully command** when the command-economy regime is on: its marketization level is scheduled at **10** through 1990 in both presets. See [Planned Economies](/wiki/planned-economies).
+In worlds that use the command economy (every new world), East Germany comes up **fully command**. Marketization is a dial from 0 (fully command) to 100 (fully market), and East Germany's is scheduled at **10** through 1990 in both presets. See [Planned Economies](/wiki/planned-economies).
 
 - **No stock exchange.** State enterprises are recorded against the **VVB** (Vereinigung Volkseigener Betriebe) register, and founding private corporations is disallowed.
 - **One state-owned enterprise per sector.** Every industry has a VEB-style enterprise with plant capacity (manufacturing, chemicals, energy, extraction, automobiles, agriculture, and the rest of the sector board). All are headquartered administratively in East Berlin.
@@ -114,7 +124,7 @@ East Germany comes up **fully command** when the command-economy regime is on: i
 
 East Germany is a **founding member of the Warsaw Pact** in both eras. The pact's permanent chair, the Supreme Commander of the Unified Command, is held by the USSR: no other member can ever hold it. Between 1945 and 1990 the pact is the EAST bloc's accession channel on the Cold-War alignment axis, opposite NATO.
 
-**A 1953 world seeds East Germany with zero military branches.** The Nationale Volksarmee stands up in 1956: Land Forces (LaSK), People's Navy (VM) and Air Force / Air Defence (LSK/LV) all carry a 1956 establishment year and dissolve with the state in 1990. This is correct, not a bug. The world starts with no pre-seeded wars; every conflict is player-declared. See [Conflicts Overview](/wiki/conflicts-overview).
+**A 1953 world seeds East Germany with zero military branches.** This is historical: the GDR had no national army until 1956, and the paramilitary police units before then sit under the Interior portfolio. The Nationale Volksarmee stands up in 1956: Land Forces (LaSK), People's Navy (VM) and Air Force / Air Defence (LSK/LV) all carry a 1956 establishment year and dissolve with the state in 1990. This is correct, not a bug. The world starts with no pre-seeded wars; every conflict is player-declared. See [Conflicts Overview](/wiki/conflicts-overview).
 
 ---
 
@@ -157,7 +167,12 @@ ${ddScenarios}
 - [Cabinet Guide](/wiki/cabinet-guide): every cabinet post, its metrics, and its actions
 - [International Organizations](/wiki/international-organizations): the Warsaw Pact and alignment
 - [Conflicts Overview](/wiki/conflicts-overview): declaring war, fronts and occupation
+- [Germany](/wiki/de-overview): the western state and the reunification path
 - [Core Systems](/wiki/core-systems): turn structure, action economy
+
+---
+
+**Status:** East Germany is playable in the 1953 and 1979 presets only. In later presets Germany is already unified and East Germany does not exist. Command economy, one-party rules and the German Question apply in both presets. Last checked: 2026-10-29, version 1.18.0.
 
 ---
 

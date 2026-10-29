@@ -1,143 +1,137 @@
 export const tradeSystemContent = `# International Trade
 
-The International Trade system is an inter-country trade clearing engine that computes **trade affinity** between every pair of countries each turn. Affinity determines how much trade flows between countries and is modified by free trade agreements, shared organization blocs, tariffs, and ministerial embargoes.
+Every turn, countries with a surplus of a commodity sell to countries with a shortage. **Trade affinity** decides who sells to whom: the higher the affinity between two countries, the bigger the share of each other's surplus they take. Free trade agreements, shared organizations, tariffs and embargoes all work by moving that number up or down. It matters because trade eases shortages and gluts at home and pays export-heavy corporations a margin bonus.
 
-## Core concept: trade affinity
+## How it works
 
-Every country pair has a **trade affinity** value that represents how much trade flows between them. Affinity starts at a **base of 1** for most pairs, and is then multiplied (or reduced) by several modifiers. Twelve pairs with close real-world ties start higher: Brazil-US 1.4, China-US 1.5, Japan-US 1.3, UK-US 1.4, Germany-Ireland 1.5, Germany-UK 1.4, Ireland-UK 1.6, China-Japan 1.4, China-Nigeria 1.3, Nigeria-UK 1.3, and, in Cold War eras, US-Yugoslavia 1.35 and UK-Yugoslavia 1.25 (\`src/lib/trade/constants.ts\`). Every example below uses the default base of 1; for an override pair, multiply by its base instead.
+For one commodity, the game lists the countries that make more than they use (exporters) and those that make less (importers). It then matches them, limited by how much surplus exists and how much each importer can pay. Where two sides could match several partners, affinity tilts the split toward the higher-affinity pairs. A pair with affinity 0 does not trade that commodity at all.
 
-1. **FTA affinity bonus**: if the pair is covered by an active free trade agreement
-2. **Bloc affinity bonus**: if both countries share membership in the same international organization
-3. **Tariff drag**: a reduction based on the effective tariff rate between the pair
-4. **Ministerial embargo**: a hard zero if one country has embargoed the other
+Affinity is worked out per commodity and per direction, in this order:
 
-The final affinity is the product of all applicable modifiers.
-
-## Modifiers
-
-### FTA affinity bonus
-
-When two countries are covered by an **active free trade agreement** (passed through an [international organization](/wiki/international-organizations)), their trade affinity is multiplied by **1.6×**.
+1. **Base.** 1.0 for most pairs, higher for neighbours with close ties (table below).
+2. **Free trade agreement.** Multiply by 1.6 if an active FTA covers the pair.
+3. **Shared organization.** Multiply by 1.25 if both countries belong to the same [international organization](/wiki/international-organizations).
+4. **Tariff drag.** Multiply by the drag from the importer's tariff on that flow.
+5. **Blocks.** An embargo, the iron curtain, or a full [blockade](/wiki/blockades) sets it to 0. A partial blockade scales it down.
 
 \`\`\`
-affinity *= 1.6  // FTA active between the pair
+drag = 1 / (1 + 3 x tariff rate)
 \`\`\`
 
-This is the single largest trade modifier in the system and makes FTAs the most impactful diplomatic tool for boosting bilateral trade.
+### Key numbers
 
-### Bloc affinity bonus
+| Rule | Value |
+| --- | --- |
+| Default base affinity | 1.0 |
+| FTA bonus | x1.6 |
+| Shared organization bonus | x1.25 (stacks with the FTA: x2.0) |
+| Tariff drag formula | 1 / (1 + 3 x rate) |
+| Embargo cost | 1 cabinet action |
+| Longest ministerial embargo | 96 turns (2 game years) |
+| Active ministerial embargoes per minister | 2 |
+| Cooldown on the same target | 168 turns (3.5 game years), counted from enactment |
+| Export margin bonus | up to 6 points |
 
-When two countries **share membership in the same international organization**, their trade affinity is multiplied by **1.25×**.
+### Pairs with a higher base
 
-\`\`\`
-affinity *= 1.25  // both countries in the same org bloc
-\`\`\`
-
-This bonus stacks with the FTA bonus. Two countries that are both in the EU *and* have an active FTA receive a combined **1.6 × 1.25 = 2.0×** affinity multiplier.
+| Pair | Base |
+| --- | --- |
+| Ireland and UK | 1.6 |
+| China and US | 1.5 |
+| Germany and Ireland | 1.5 |
+| Brazil and US | 1.4 |
+| UK and US | 1.4 |
+| Germany and UK | 1.4 |
+| China and Japan | 1.4 |
+| US and Yugoslavia (Cold War worlds) | 1.35 |
+| Japan and US | 1.3 |
+| China and Nigeria | 1.3 |
+| Nigeria and UK | 1.3 |
+| UK and Yugoslavia (Cold War worlds) | 1.25 |
 
 ### Tariff drag
 
-Tariffs reduce trade affinity. The drag formula is:
+The tariff that counts is the importer's total on that flow: its economy-wide tariff, plus any sector tariff for that commodity, plus any tariff aimed at the exporter's country, added together and capped at 100%. Tariffs aimed at one corporation do not count here. An active FTA between the two countries sets the tariff to zero.
 
-\`\`\`
-drag = 1 / (1 + 3 × tariffRate)
-affinity *= drag
-\`\`\`
-
-At common tariff rates:
-
-| Tariff Rate | Drag Multiplier | Affinity Change |
+| Tariff | Drag | Affinity change |
 | --- | --- | --- |
-| 0% | 1.000 | 0% (no drag) |
+| 0% | 1.000 | none |
 | 5% | 0.870 | -13.0% |
 | 10% | 0.769 | -23.1% |
 | 20% | 0.625 | -37.5% |
 | 50% | 0.400 | -60.0% |
 | 100% | 0.250 | -75.0% |
 
-At a **20% tariff**, drag is approximately **0.625**, meaning trade affinity is reduced by **37.5%**. High tariffs make bilateral trade dramatically less efficient.
+See [Tariffs](/wiki/tariffs) for how tariff layers are enacted and what they do to corporations.
 
-> **Note:** Tariff drag is computed from the effective tariff rate, which is the sum of all applicable tariff layers (economy-wide, sector, origin-country, corporation-specific). See [Tariffs](/wiki/tariffs) for how the effective rate is calculated. Active FTAs can override the effective rate to zero for covered partners, eliminating drag entirely.
+### Embargoes
 
-### Ministerial embargo
+An embargo is a deliberate break in trade. It can cover one commodity or all of them, exports, imports or both, and it can block the flow entirely or cap it at a fixed amount. Three things create one:
 
-A **ministerial embargo** is a hard block on trade between two countries. When active, trade affinity between the embargoing country and the target is set to **zero**: no trade flows regardless of other modifiers.
+- **A trade minister** spends 1 cabinet action. The limits are in the table above. Only the seated trade minister of that country can do it.
+- **Legislation** for a restriction that has to last longer than 96 turns without renewal.
+- **An organization's sanctions resolution**, which lasts 48 turns.
+
+The 168 turn cooldown starts when the embargo is enacted, not when it ends, and lifting early does not reset it. A full-length embargo therefore leaves 72 turns before the same minister's country can embargo that target again. Countries nobody plays can also impose and lift temporary embargoes. What an embargo does to a company is covered in [Embargoes and Trade Exposure](/wiki/embargo-and-trade-exposure).
 
 ### The iron curtain
 
-In the Cold War eras the Soviet bloc trades behind a wall. Trade between a curtained country and the open world is **zero in both directions**; trade within the curtain (the Comecon market) and within the open world is unaffected. No FTA, bloc bonus or tariff setting reaches across it. The curtain is decided per era by history rather than by any minister: **Yugoslavia** broke with Moscow before the 1953 world opens and trades with the West, so it sits outside the curtain (and is cut off from the bloc's internal market) while keeping its planned economy at home.
+In Cold War worlds with command economies, planned-economy countries trade only with each other. Trade between a curtained country and the open world is zero in both directions, and no FTA, shared organization or tariff setting reaches across it. A country leaves the curtain as its economy marketizes (see [Planned Economies](/wiki/planned-economies)). Yugoslavia is outside the curtain from the start: it broke with Moscow before the 1953 world opens and trades with the West, while keeping a planned economy at home and losing access to the Comecon market.
 
-### Autonomous governments
+### What affinity does for you
 
-Countries nobody plays run their own trade policy. An autonomous government can table trade agreements, apply targeted tariff bills against a rival, and impose bounded ministerial embargoes, with cooldowns per country pair and a limit set by how much it actually depends on that partner's trade. Expect a hostile relationship to show up on your tariff and embargo screens even when no player is behind it.
+- **Prices.** Goods that cross a border count against the exporter's surplus and the importer's shortage before prices are set, so trade softens price swings in both countries.
+- **Export margin bonus.** A sector earns bonus margin for output that actually sells abroad. The bonus is each commodity's output rate times the share of the country's surplus that cleared abroad, times 6, capped at 6 points. A sector making a commodity at rate 0.5 where 80% of the surplus exports earns 0.5 x 0.8 x 6 = 2.4 points.
+- **Embargo exposure.** The same export share is how much of a sector's revenue an embargo takes away.
 
-## Ministerial embargoes
+### Worked example
 
-Embargoes are the most aggressive trade tool available. They are issued by a cabinet minister and have strict limits:
+Germany sells machinery to Ireland. Their base is 1.5, both are in the same organization, and Ireland has a 20% economy-wide tariff.
 
-| Parameter | Value |
-| --- | --- |
-| Cost | 1 cabinet action |
-| Max duration | 96 turns (~2 game years) |
-| Max active per member | 2 |
-| Cooldown per source→target pair | 168 turns |
+- No FTA: 1.5 x 1.25 x 0.625 = 1.17.
+- With an FTA: the tariff drops to 0, so 1.5 x 1.6 x 1.25 = 3.00.
 
-### Rules
+The FTA more than doubles their affinity (about 2.6 times). If Ireland's trade minister then embargoes Germany on all commodities, the pair goes to 0 until the embargo ends.
 
-- **Cost:** Each embargo consumes **1 cabinet action** to enact.
-- **Duration:** An embargo lasts at most **96 turns** (approximately 2 game years), after which it expires automatically.
-- **Concurrent limit:** A single member can have at most **2 active embargoes** at any time.
-- **Cooldown:** The **168-turn** source-to-target cooldown starts when the embargo is enacted, not when it expires.
+## What you can do
 
-Because the maximum embargo lasts 96 turns, a full-duration embargo leaves at least 72 turns before that source can target the same country again.
+- **See trade flows and restrictions.** The World screen has a Trade page with a Restrictions view listing active embargoes.
+- **Impose an embargo** as a trade minister, from the minister's office page. Choose the target, commodity, direction, block or cap, and duration.
+- **Set tariffs** through [tariff legislation](/wiki/tariffs).
+- **Pass an FTA** inside an Economic or Development [international organization](/wiki/international-organizations). Only the countries named in the agreement vote, and all of them must say yes.
 
-## Affinity calculation summary
+Tips:
 
-The full affinity calculation for a country pair:
+- An FTA is the biggest single lever, because it adds 1.6 and removes tariff drag together.
+- Shared membership gives a 25% lift with no legislation.
+- Use embargoes for short, targeted pressure. They expire and then lock you out of re-imposing for 72 turns at least.
+- A corporation that sells almost entirely into one country is the one an embargo against that country hurts most.
 
-\`\`\`
-let affinity = 1;                          // base affinity (the pair's override, if it has one)
+## Connections
 
-if (pair covered by active FTA) {
-  affinity *= 1.6;                          // FTA bonus
-}
+**Driven by**
 
-if (both countries share an org bloc) {
-  affinity *= 1.25;                         // bloc bonus
-}
+- [International Organizations](/wiki/international-organizations): shared membership gives the 1.25 bonus, and FTAs and sanctions are passed there.
+- [Tariffs](/wiki/tariffs): the importer's tariff rate sets the drag.
+- [Blockades](/wiki/blockades): a blockade on either country's coast closes or scales down the flow.
+- [Planned Economies](/wiki/planned-economies): command-economy countries sit behind the curtain.
+- [Cabinet](/wiki/cabinet): the trade minister is the only one who can impose a ministerial embargo.
+- [Embargoes & Trade Exposure](/wiki/embargo-and-trade-exposure): embargoed flows are blocked or capped in the trade clearing
 
-const drag = 1 / (1 + 3 × effectiveTariffRate);
-affinity *= drag;                           // tariff drag
+**Affects**
 
-if (active embargo between the pair) {
-  affinity = 0;                             // embargo zeroes trade
-}
-\`\`\`
+- [Embargoes and Trade Exposure](/wiki/embargo-and-trade-exposure): the export share decides how much revenue an embargo removes.
+- [Commodities](/wiki/commodities): cleared trade eases shortages and gluts before prices are set.
+- [Corporations](/wiki/corporations): exported output earns the margin bonus, up to 6 points.
+- [International Organizations](/wiki/international-organizations): FTAs you pass there feed back into affinity.
 
-## Example scenarios
+## Status
 
-| Scenario | FTA | Bloc | Tariff | Embargo | Final Affinity |
-| --- | --- | --- | --- | --- | --- |
-| Neutral, no tariff | No | No | 0% | No | 1.00 |
-| Same bloc, no tariff | No | Yes | 0% | No | 1.25 |
-| FTA, same bloc | Yes | Yes | 0% | No | 2.00 |
-| 20% tariff, no FTA | No | No | 20% | No | 0.625 |
-| FTA + 20% tariff on books | Yes | No | 20% (overridden to 0%) | No | 1.60 |
-| Embargo active | n/a | n/a | n/a | Yes | 0.00 |
+Live in every world. The iron curtain, Yugoslavia's exemption and the Cold War pairs apply only in worlds that begin in the Cold War eras.
 
-Note the FTA override: even though a 20% tariff is on the books, the FTA collapses the effective tariff to zero for covered partners, so the drag multiplier becomes 1.0 and the full 1.6× FTA bonus applies.
+Last checked: 2026-10-29, version 1.18.0
 
-## Strategic notes
+## Technical detail
 
-- **FTAs are the strongest trade lever.** A 1.6× multiplier dwarfs all other modifiers. Prioritize passing FTAs through [international organizations](/wiki/international-organizations) with your key trading partners.
-- **Bloc membership is cheap affinity.** Simply being in the same org as a trading partner gives a 25% boost with no legislation required.
-- **Tariffs and FTAs interact.** An FTA makes tariffs irrelevant for covered partners: they pay zero. Use FTAs to shield partners from your own tariff policy.
-- **Embargoes are blunt and temporary.** They zero trade but expire after 96 turns and trigger a 168-turn cooldown. Use them for targeted pressure, not permanent isolation.
-
-## Related systems
-
-- **[International Organizations](/wiki/international-organizations)**: where FTAs and bloc memberships are established
-- **[Tariffs](/wiki/tariffs)**: how tariff rates are set and how they stack
-- **[National Budget](/wiki/national-budget)**: how tariff revenue feeds into government finances
-- **[Corporations](/wiki/corporations)**: how trade affinity affects corporate sector margins
+There is no separate design page for the affinity calculation yet. The tariff layers it reads are on the [Tariffs design page](https://docs.lakesidegames.net/design/tariffs.html).
 `;

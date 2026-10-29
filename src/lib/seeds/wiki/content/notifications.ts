@@ -1,53 +1,99 @@
 export const notificationsContent = `# Notification Center
 
-Everything the game needs to tell you, elections, votes, wires, coalition activity, corporate events, moves against your character, lands in one inbox rather than a scatter of banners. This page is about reading and managing it, not about any one event type.
+Everything the game needs to tell you lands in one inbox instead of a scatter of banners: election results, bill votes, wires, coalition activity, corporate events, crises, and moves against your character. It also holds direct mail from other players. This page is about reading and managing it. It does not cover any one event type.
 
-## Where it lives
+## How it works
 
-The inbox sits at \`/notifications\`. It reads like a mail client: a list of items on one side, the open item on the other.
+The inbox is at \`/notifications\`. It reads like a mail client, with a list of items on one side and the open item on the other. Items come in two kinds:
 
-Items come in two shapes:
+- **Notifications.** System events: your bill passed committee, you were named Commanding General, your corporation's credit rating changed, an opponent attacked your character.
+- **Mail.** Direct messages from other players and NPPs. See [Mail](/wiki/mail).
 
-- **Notifications.** System-generated events: your bill passed committee, you were named Commanding General, your corporation's credit rating changed, an opponent attacked your character.
-- **Mail.** Direct messages from other players and NPPs.
+### Views
 
-## On the app
+The inbox opens on **Needs action**. The four views are:
 
-If you use the mobile or desktop app and have allowed notifications, alerts can also arrive as native push. A push shows the newest alert's own title and content and opens the page it is about. Push respects the same mute and snooze preferences as the inbox.
+| View | What it shows |
+| --- | --- |
+| Needs action | Unread items waiting on you: a vote to cast, an offer or invite to answer, a random event, an election to enter, a crisis decision. Every unread mail also counts here. |
+| All | Notifications and mail together. |
+| Notifications | System events only. |
+| Mail | Player and NPP messages only. |
 
-## Segments
+Busy views show a working set of 24 items, with unread items that need action first, then other unread items, then recent history. Nothing is discarded: "Show older" reveals the rest.
 
-The inbox splits into views rather than one long undifferentiated feed:
+### Key numbers
 
-- **All.** Everything, mail and notifications together.
-- **Notifs.** System-generated events only.
-- **Mail.** Player-to-player and NPP messages only.
-- **Action needed.** A filtered view surfacing items that are still waiting on something from you, so it does not get buried under read-and-done items like "your bill passed."
+| Item | Value |
+| --- | --- |
+| Default view | Needs action |
+| Working set size | 24 items |
+| Snooze length (single item) | 12 hours |
+| Alert categories in Settings | 7: Crises and attacks, Legislation, Elections, Party, Your positions, Money and companies, Account and community |
 
-Within a view, unread items are tracked per item, and you can mark items read as you go rather than only in bulk.
+### Push alerts
 
-## What generates a notification
+If you use the mobile or desktop app and have allowed notifications on your device, some alerts also arrive as native push. Push is reserved for things you must act on or want to hear at once: a vote to cast, an offer to answer, an election result, an attack on your company. Routine reports such as research results, bond schedules, rating moves and crises in your home state wait in the inbox.
 
-Notifications come from every major system in the game, not just one. A non-exhaustive sample of what triggers one: election results (won or lost, primary or general), leadership and committee elections and appointments, bill status changes through committee and floor votes and signing, being named to a military Command, incoming wires, coalition invites and votes, corporate events (a CEO vote offer, a hostile-takeover opportunity, a bond coming due, nationalization risk), crisis alerts, and direct attacks or support from another player's character. If a system changes something that affects you, it is a candidate for a notification rather than something you'd only discover by checking that system's own page.
+A push shows the newest alert's own title and text, and opens the page it is about. It follows the same mutes and snoozes as the inbox, and does not fire for items you have already read or archived. In Settings, alert types that can push are tagged "Phone and desktop".
 
-## Archiving
+### Mute, snooze, archive
 
-Any item can be archived out of your active list without deleting it. Archived items simply stop showing up in the segment views; nothing here permanently loses your history, it is a matter of keeping the working inbox from filling up with events you have already dealt with.
+- **Mute a type.** In **Settings > Notifications**, switch an alert type off. Muted alerts are hidden from the inbox, from your badge counts and from push. They stay saved and come back, old ones included, when you switch the type back on.
+- **Mute direct-message alerts.** A separate switch hides unread-message badges. The messages are still delivered and still in your inbox.
+- **Snooze one item.** In the open item, press **Snooze** to hide that item for 12 hours. It returns on its own.
+- **Archive.** Archiving a notification takes it out of your active views without deleting it. Archiving a mail thread deletes your copy of the received messages, so only archive mail you are done with.
 
-## Muting and snoozing by type
+### Why the inbox is split this way
 
-You are not stuck seeing every category forever. Per notification type (not per individual item), you can:
+Measured on live play, routine reports were over 90% of all alerts and almost none were opened. So the game pushes only what needs a decision, keeps everything else in the inbox, and lets you mute whole types rather than clearing items one at a time.
 
-- **Mute** a type entirely. Muted types stop generating anything you see in the inbox until you unmute them.
-- **Snooze** a type for a fixed 12-hour window. This is the right tool for "I don't want to see this right now but I do care about it long-term", the type comes back automatically once the window expires, no need to remember to turn it back on.
+### Worked example
 
-These preferences are per-account and apply going forward; they do not retroactively hide anything already in your inbox.
+You are a legislator in a busy week. Eighteen unread notifications have arrived: 2 bill votes, 1 coalition invite and 15 routine bill status changes, plus 3 unread mail.
 
-## What this means for you
+- **Needs action** shows 6 items: the 2 votes, the invite and the 3 mails. The 15 status changes are not there.
+- You mute the routine bill status alert types in Settings (bill passed chamber, failed, enrolled). The 15 routine items disappear from All and Notifications. The votes and invite stay, since those are different alert types.
+- You press Snooze on the coalition invite while you think. It leaves your views for 12 hours, then returns. If you answer it first, it is done.
+- A day later you turn the bill status type back on. All 15 items are visible again.
 
-- If a whole category of event is noise for how you play (say, every routine bill status change), muting that type keeps your inbox meaningful without losing anything else.
-- Use "Action needed" as your default working view during a busy turn rather than scrolling all of "All".
-- A snooze is temporary by design. If you actually want a type gone long-term, mute it instead of re-snoozing it every twelve hours.
+## What you can do
 
-See also: [Reading the Game](/wiki/reading-the-game), [Coalitions](/wiki/coalitions), [Mail](/wiki/mail).
+- **Work from Needs action** during a busy turn instead of scrolling All.
+- **Mute noisy types** in **Settings > Notifications**. Use the search box to find a type by name.
+- **Snooze** an item you cannot deal with yet, so it does not nag you.
+- **Mark all read** once you have caught up. It marks every unread item in the current view.
+- **Open the source.** Each item links to the page it is about.
+
+Tips:
+
+- If a type "stopped arriving", check whether you muted it. Muted types are hidden, not deleted.
+- Muting a type that needs action, such as bill votes, also takes it out of Needs action. You can still miss the deadline, so mute with care.
+- Snoozing is for one item. If you want a type gone for good, mute it instead of snoozing every item.
+- If Needs action is empty, nothing unread is waiting on you. That is the good case.
+
+## Connections
+
+**Driven by**
+
+- [Player Random Events](/wiki/player-events): each offer and outcome arrives as a notification.
+- [Mail](/wiki/mail): direct messages appear as the Mail view.
+- [Crisis Interaction](/wiki/crisis-interaction): crisis alerts and decisions appear here.
+- [Coalitions](/wiki/coalitions): invites, join requests and votes arrive here.
+- [News](/wiki/news): subscribers are notified when an author posts
+
+**Affects**
+
+- [Reading the Game](/wiki/reading-the-game): what you see and act on each turn starts from this inbox.
+- [Mail](/wiki/mail): hosts the inbox and the archive, mute and snooze controls
+
+## Status
+
+Available to every player in every world. Native push needs the mobile or desktop app with device notifications allowed.
+
+Last checked: 2026-10-29, version 1.18.0
+
+## Technical detail
+
+This is a reading and settings guide, so there is no separate rules page. The alert types, categories and delivery rules are listed in **Settings > Notifications**.
 `;
