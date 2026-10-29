@@ -1,6 +1,6 @@
 export const manpowerConscriptionContent = `# Manpower & Conscription
 
-Money buys equipment. **Manpower buys soldiers**, and it is usually the constraint that actually stops you.
+You can have the money for a division and still be refused, because the treasury does not hold the men. Money buys equipment. **Manpower buys soldiers**, and it is usually the constraint that actually stops you.
 
 Every nation holds a single pool of available men. Raising a unit draws its full establishment out of that pool. Every turn, the pool regenerates a little and your under-strength formations quietly refill from it. How fast all of that happens is decided by **legislation**.
 
@@ -8,7 +8,7 @@ Manage this from the defence seat's office → **Military** tab → **Operations
 
 ![Chain from reserve law level to stance, ceiling and regeneration and the manpower pool, which hard blocks recruiting and feeds replacement mode and its experience dilution.](/wiki-images/diagrams/manpower-conscription-chain.svg)
 
-## Key numbers
+## The numbers that cap your army
 
 | What | Value |
 | --- | --- |
@@ -20,7 +20,7 @@ Manage this from the defence seat's office → **Military** tab → **Operations
 | Conscript refill | Up to 25% of establishment per turn, replacements arrive with zero experience |
 | Reserve law start level | Level 2 (Selective Service, ×1.0) in the four countries that have one |
 
-### A worked example
+### A country of 100 million, filling up and rebuilding
 
 A country of 100 million people on Selective Service (×1.0) has a ceiling of 2,000,000 men and gains 50,000 a turn. It opens with 500,000. Filling the remaining 75% of the ceiling takes 30 turns, whatever the stance, because ceiling and regeneration scale together. On Universal Conscription (×2.0) the same country has a ceiling of 4,000,000 and gains 100,000 a turn. On an All-Volunteer Force (×0.6) it has 1,200,000 and gains 30,000.
 
@@ -43,7 +43,7 @@ A fresh world does not start you at the ceiling. Each nation opens with **25% of
 
 **Manpower is a hard block.** If you try to raise an Armored Division with 9,000 men in the pool, the order is refused with both numbers shown. You cannot borrow men, run a manpower deficit, or pay cash instead. Money has the same hard edge: a unit also has to fit inside the defence appropriation. See [Units, Recruitment & Procurement](/wiki/military-units).
 
-Disbanding a unit returns its **surviving** personnel (not its establishment) to the pool.
+Recruiting draws a unit's full establishment from the pool, and disbanding a unit returns its **surviving** personnel (not its establishment) to it.
 
 **The ceiling follows your population.** It is recomputed every turn from the people living in your country. If a war or a shock shrinks the population, the ceiling falls, and a pool that is above the new ceiling is cut down to it on the next turn. The national force tier (reduced, standard or elevated) does not change manpower. It only changes upkeep and readiness.
 
@@ -76,7 +76,7 @@ You do not pick your stance from a dropdown. **It is the enacted level of your c
 
 Raising the law to level 3 gets you ×1.4 and level 4 gets you ×2.0. Dropping to level 1 or 0 costs you conscription entirely.
 
-So changing your manpower capacity means **passing a bill**. If you want to fight a long war, the reserve law is something to raise *before* you declare, not after you are already bleeding.
+So changing your manpower capacity means **passing a bill** (see [Bills & Legislation](/wiki/bills-legislation)). If you want to fight a long war, the reserve law is something to raise *before* you declare, not after you are already bleeding.
 
 The bill-proposal modal shows the consequence directly on each level: you will see \` · manpower ×2\` or \` · manpower ×0.6, no conscription\` beside the option, so you can see what a level does to replacements before you file it.
 
@@ -96,7 +96,7 @@ Conscript rebuilds **two and a half times faster** and is available only if your
 
 ## XP dilution: the real cost of conscripts
 
-This is the mechanic that makes veteran formations precious.
+This is the mechanic that makes veteran formations precious. The demand on the pool comes from the casualties in [Fighting a Battle](/wiki/fighting-a-battle), and the replacement quality you pick decides how much veterancy a rebuilt formation keeps there.
 
 \`\`\`wiki-chart
 conscript-xp-dilution
@@ -140,7 +140,7 @@ The Operations tab shows you:
 
 The regeneration and ceiling shown are computed with the **same formulas the turn engine uses**, so the panel cannot disagree with what actually happens.
 
-## Practical guidance
+## Planning around the pool
 
 **Manpower, not money, decides your army's size.** Work out your ceiling before you plan a force. A country that cannot bank 200,000 men cannot field a 200,000-man army no matter how rich it is.
 
@@ -148,45 +148,23 @@ The regeneration and ceiling shown are computed with the **same formulas the tur
 
 **Small elite formations are manpower-efficient.** A Special Forces Group costs 1,400 men. An Infantry Division costs 12,000. If your pool is the binding constraint, the ratio matters enormously.
 
-**Peacetime is for banking.** With no war on, regeneration accumulates toward the ceiling and gives you a mobilisation base. A nation that fights continuously never builds one.
+**Peacetime is for banking.** With no war on, regeneration accumulates toward the ceiling and gives you a mobilisation base. A nation that fights continuously never builds one, which is part of why long wars grind (see [Occupation, Territory & Victory](/wiki/occupation-and-victory)).
 
 **Switch to Trained once the emergency passes.** Conscript mode is for plugging a hole fast. Leaving it on permanently converts your whole army to green troops over time.
 
 **Watch the ceiling, not just the pool.** At the ceiling, regeneration is wasted: every turn you sit full is manpower you never receive. That is the moment to raise units.
 
-## What you can do
+## Your three levers
 
 - **Pass a reserve-law bill** (US, UK, Russia, East Germany only) to move up or down the ladder. A war does not wait for a bill, so do it before you declare. Raising the law takes a bill, so at least its vote window.
 - **Choose a replacement mode** on the Operations panel: Off, Trained or Conscript.
 - **Bank manpower in peacetime.** Regeneration accumulates toward the ceiling.
 
-**Common questions.** *Why does it say not enough manpower?* Your pool is smaller than the unit's establishment. *What is the difference between Trained and Conscript?* Trained refills 10% a turn with experienced men and keeps veterancy; Conscript refills 25% a turn with raw men and dilutes it. *Why did my veteran division get worse?* It was rebuilt with conscripts. *How do I raise the reserve law?* Only the four countries above have one, and it is raised by legislation.
+**Questions that come up.** *Why does it say not enough manpower?* Your pool is smaller than the unit's establishment. *What is the difference between Trained and Conscript?* Trained refills 10% a turn with experienced men and keeps veterancy; Conscript refills 25% a turn with raw men and dilutes it. *Why did my veteran division get worse?* It was rebuilt with conscripts. *How do I raise the reserve law?* Only the four countries above have one, and it is raised by legislation.
 
-## Connections
-
-**Driven by**
-
-- [Bills & Legislation](/wiki/bills-legislation): the reserve-forces law level sets the stance, and so the pool size.
-- [Fighting a Battle](/wiki/fighting-a-battle): casualties create the demand the pool has to meet.
-
-**Affects**
-
-- [Units, Recruitment & Procurement](/wiki/military-units): recruiting draws a unit's full establishment from the pool, and disbanding returns survivors.
-- [Fighting a Battle](/wiki/fighting-a-battle): replacement quality decides how much veterancy a rebuilt formation keeps.
-
-## Status
-
-Every world has a manpower pool for every country. Only the United States, the United Kingdom, Russia and East Germany have a reserve law to legislate; every other country is fixed on Limited Service, which allows no conscription.
-
-Last checked: 2026-10-29, version 1.18.0
-
-## Technical detail
-
-The exact rules are on the design page [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), under Manpower and conscription.
-
-## Next
+## See also
 
 - [Units, Recruitment & Procurement](/wiki/military-units): what to spend the manpower on.
-- [Occupation, Territory & Victory](/wiki/occupation-and-victory): why long wars grind.
-- [Fighting a Battle](/wiki/fighting-a-battle): where the casualties come from.
+
+Every world has a manpower pool for every country. Only the United States, the United Kingdom, Russia and East Germany have a reserve law to legislate; every other country is fixed on Limited Service. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), under Manpower and conscription
 `;

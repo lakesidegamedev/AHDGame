@@ -9,33 +9,16 @@ const ddScenarios = getPlayerStartScenarios("DD")
 
 export const ddOverviewContent = `# East Germany
 
-East Germany (the German Democratic Republic) is a **one-party socialist state** playable in the **1953 and 1979 presets**. The ruling **SED** (Sozialistische Einheitspartei Deutschlands) governs through the **National Front**, a single electoral list it shares with four allied bloc parties. The **General Secretary** is the head of government; the **Chairman of the Council of State** is a ceremonial head of state auto-synced to the SED chair. The **Volkskammer** is the unicameral legislature and the economy is centrally planned.
+In East Germany the election is not where you win: the seat split is fixed by the National Front, and what you compete for is who in your party fills its seats. East Germany (the German Democratic Republic) is a **one-party socialist state** playable in the **1953 and 1979 presets**. The ruling **SED** (Sozialistische Einheitspartei Deutschlands) governs through the **National Front**, a single electoral list it shares with four allied bloc parties, and the economy is centrally planned.
 
----
+## The National Front list
 
-## Government structure
+The National Front is the bloc-party version of one-party rule (see [One-Party States](/wiki/one-party-states)): five seeded parties, one list, one permitted outcome.
 
-| Office | How Filled | Term | Seats |
-| --- | --- | --- | --- |
-| General Secretary (head of government) | Internal party confidence | 5 years | 1 |
-| Chairman of the Council of State (ceremonial head of state) | Auto-populated as SED chair | No fixed term | 1 |
-| Volkskammer Deputy | Single-list regional election | 192 turns (4 game years, 8 real days) | 500 |
-| Land First Secretary (regional executive) | Regional election | 4 years | 1 per region |
-| President of the Staatsbank | Appointed action | 6 years | 1 |
-
-The General Secretary carries **+4 actions per turn**, a Volkskammer Deputy +1, a Land First Secretary +2, the Staatsbank President +3. The Chairman of the Council of State carries +0 actions and zero party-strength weight, and updates automatically whenever the SED chair changes (the China pattern). In the 1953 preset the head-of-government seat reads **"First Secretary"**, the SED leader's title until 1976.
-
----
-
-## The Volkskammer
-
-The **Volkskammer** (People's Chamber) is mechanically **unicameral**: 500 deputies elected on the single National Front list, all seats contested each cycle, no snap elections. The **Staatsrat** (Council of State), a 25-seat collective head-of-state body, is not elected and sits outside the player legislative loop.
-
-\`\`\`wiki-chart
-dd-volkskammer-seats-by-party
-\`\`\`
-
-Elections ride a **192-turn cycle** (4 game years at 48 turns per year), anchored to 1954 in the 1953 preset and 1981 in the 1979 preset, matching the GDR's early electoral cadence. Land First Secretary races ride the same anchor. The coalition threshold is **251 seats** (500 / 2 + 1), a formality given the seeded majority. A race takes 48 turns (48 real hours: 24 for the primary and 24 for the general election) at the end of each 192-turn cycle.
+- **SED** is the **ruling** party (economic position -4): the only party that can form government, field executive candidates, or move a no-confidence vote (which one-party states skip anyway).
+- **CDU (Ost), LDPD, NDPD and DBD** are **approved** bloc parties. They hold seats, field Volkskammer candidates, propose and vote on bills, accept donations and sit in cabinet, but they **cannot form government** or contest the executive.
+- **Vote multipliers**: ruling votes weigh 3.0, approved 0.375, independents and banned parties 0. Player-created parties are automatically **banned** at charter ratification.
+- **No internal confidence gauge.** Unlike the USSR and China, East Germany does not run the ruling-party leader-confidence model, and no faction split spawns a spinoff party. The regime's popular legitimacy still drifts each turn on the shared one-party mood profile.
 
 The seeded composition mirrors the National Front's fixed allocation:
 
@@ -49,34 +32,33 @@ The seeded composition mirrors the National Front's fixed allocation:
 
 Because single-list elections carry no real electoral signal, governance participation for one-party states is capped at a ceiling of 55, and the FPTP spoiler step is skipped entirely.
 
-**Worked example.** In the 1953 preset, Sachsen holds 151 Volkskammer seats: SED 88, CDU (Ost) 15, LDPD 15, NDPD 16 and DBD 17. These splits are fixed by the National Front allocation, not by how many votes each party wins. What you compete for is which of your party's candidates fills its seats: up to 7 candidates per party advance from each region's primary, and the party's block is filled from them.
+In the 1953 preset, Sachsen holds 151 Volkskammer seats: SED 88, CDU (Ost) 15, LDPD 15, NDPD 16 and DBD 17. These splits are fixed by the National Front allocation, not by how many votes each party wins. What you compete for is which of your party's candidates fills its seats: up to 7 candidates per party advance from each region's primary, and the party's block is filled from them.
 
----
+### What a bloc party can actually change
 
-## The National Front
+**What can a bloc party actually change?** The SED holds 292 of 500 seats in 1953 (290 in 1979), 41 or 39 above the 251 majority, so the bloc parties together (208 or 210 seats) cannot pass an ordinary bill against it. Their leverage is on thresholds the SED cannot clear alone. A declaration of war needs two-thirds of the votes cast, with abstentions excluded. If all 500 deputies vote and the bloc parties vote against, the SED's 292 falls short of the 334 it needs, so it must win at least 42 bloc votes. Bloc parties also sit in cabinet and can propose bills.
 
-The National Front is the bloc-party version of one-party rule (see [One-Party States](/wiki/one-party-states)): five seeded parties, one list, one permitted outcome.
+## The Volkskammer and its calendar
 
-![The two ways the German Question can end: an East win merges East Germany into a one-party Germany with no election, while a collapse leads to a parliamentary republic.](/wiki-images/diagrams/german-question-outcomes.svg)
+The **Volkskammer** (People's Chamber) is mechanically **unicameral**: 500 deputies elected on the single National Front list, all seats contested each cycle, no snap elections. The **Staatsrat** (Council of State), a 25-seat collective head-of-state body, is not elected and sits outside the player legislative loop.
 
-- **SED** is the **ruling** party (economic position -4): the only party that can form government, field executive candidates, or move a no-confidence vote (which one-party states skip anyway).
-- **CDU (Ost), LDPD, NDPD and DBD** are **approved** bloc parties. They hold seats, field Volkskammer candidates, propose and vote on bills, accept donations and sit in cabinet, but they **cannot form government** or contest the executive.
-- **Vote multipliers**: ruling votes weigh 3.0, approved 0.375, independents and banned parties 0. Player-created parties are automatically **banned** at charter ratification.
-- **No internal confidence gauge.** Unlike the USSR and China, East Germany does not run the ruling-party leader-confidence model, and no faction split spawns a spinoff party. The regime's popular legitimacy still drifts each turn on the shared one-party mood profile.
-- **Collapse points west.** The collapse target is a parliamentary republic: the democratisation path. Conversion is one-way. The escalation stages that lead there are laid out in the table on [China](/wiki/cn-overview), apart from the confidence model, which East Germany does not run.
-- **What can a bloc party actually change?** The SED holds 292 of 500 seats in 1953 (290 in 1979), 41 or 39 above the 251 majority, so the bloc parties together (208 or 210 seats) cannot pass an ordinary bill against it. Their leverage is on thresholds the SED cannot clear alone. A declaration of war needs two-thirds of the votes cast, with abstentions excluded. If all 500 deputies vote and the bloc parties vote against, the SED's 292 falls short of the 334 it needs, so it must win at least 42 bloc votes. Bloc parties also sit in cabinet and can propose bills.
-- **Winning points west too.** If the German Question resolves in the East's favour, East Germany is absorbed into a single Germany. The East arrives intact, in these steps:
-  1. Volkskammer deputies take seats in the Bundestag, with the numbers rescaled onto the delegation the Bundestag already holds for the five eastern states.
-  2. Land assemblies become Landtage, and Land First Secretaries become Minister-Presidents.
-  3. East Berlin folds into Berlin.
-  4. The unified state is one-party: the SED and bloc parties govern and the western parties are barred.
-  5. No election is called, because the chamber carried across is the point of the settlement.
+\`\`\`wiki-chart
+dd-volkskammer-seats-by-party
+\`\`\`
 
-  A war declared by or against either Germany freezes the question and decides it outright. A white peace in such a war hands the question back to the diplomatic track. Your seat carries across, though the rescaling can change how many seats each party holds. See [Germany](/wiki/de-overview).
+Elections ride a **192-turn cycle** (4 game years at 48 turns per year), anchored to 1954 in the 1953 preset and 1981 in the 1979 preset, matching the GDR's early electoral cadence. Land First Secretary races ride the same anchor. The coalition threshold is **251 seats** (500 / 2 + 1), a formality given the seeded majority. A race takes 48 turns (48 real hours: 24 for the primary and 24 for the general election) at the end of each 192-turn cycle.
 
----
+| Office | How filled | Term | Seats |
+| --- | --- | --- | --- |
+| General Secretary (head of government) | Internal party confidence | 5 years | 1 |
+| Chairman of the Council of State (ceremonial head of state) | Auto-populated as SED chair | No fixed term | 1 |
+| Volkskammer Deputy | Single-list regional election | 192 turns (4 game years, 8 real days) | 500 |
+| Land First Secretary (regional executive) | Regional election | 4 years | 1 per region |
+| President of the Staatsbank | Appointed action | 6 years | 1 |
 
-## The six regions
+The General Secretary carries **+4 actions per turn**, a Volkskammer Deputy +1, a Land First Secretary +2, the Staatsbank President +3. The Chairman of the Council of State carries +0 actions and zero party-strength weight, and updates automatically whenever the SED chair changes (the China pattern). In the 1953 preset the head-of-government seat reads **"First Secretary"**, the SED leader's title until 1976. The **General Secretary** is the head of government.
+
+## Six regions
 
 East Germany is modelled as **6 regions**, each with a Land legislature and a directly elected **Land First Secretary** who signs regional bills. Volkskammer seats are apportioned by region:
 
@@ -91,9 +73,7 @@ East Germany is modelled as **6 regions**, each with a Land legislature and a di
 
 Sachsen is the industrial heart and the largest delegation in both eras. The historical seat bundle seats the national chamber only: no Landtag composition is pre-seeded.
 
----
-
-## Council of Ministers
+## The Council of Ministers
 
 The GDR's Council of Ministers mirrors the Soviet council **one for one**: the same 16 portfolios, tier settings and levers, under GDR-authentic names. The General Secretary appoints ministers directly from Volkskammer deputies. Every seat carries a three-option tier setting and **two ministerial orders** (24-turn national modifiers costing one ministerial action, which is one game half-year and 24 real hours).
 
@@ -113,9 +93,7 @@ The distinctive seats:
 
 Era gating is real: the **Minister of National Defence seat only exists from 1956**, when the NVA stands up (before that the KVP sits under the Interior portfolio), and the Staatsbank liaison reads "Deutsche Notenbank" before the 1968 rename. See the [Cabinet Guide](/wiki/cabinet-guide).
 
----
-
-## Command economy
+## A planned economy with a fixed Mark
 
 In worlds that use the command economy (every new world), East Germany comes up **fully command**. Marketization is a dial from 0 (fully command) to 100 (fully market), and East Germany's is scheduled at **10** through 1990 in both presets. See [Planned Economies](/wiki/planned-economies).
 
@@ -123,37 +101,6 @@ In worlds that use the command economy (every new world), East Germany comes up 
 - **One state-owned enterprise per sector.** Every industry has a VEB-style enterprise with plant capacity (manufacturing, chemicals, energy, extraction, automobiles, agriculture, and the rest of the sector board). All are headquartered administratively in East Berlin.
 - **Planning runs through the cabinet.** East Germany's planning levers live on the ordinary State Planning Commission and Staatsbank liaison cabinet seats; the dedicated planner and state-credit consoles are wired for the USSR and China only.
 - **Fixed Mark.** The DDM is administered and non-convertible while the country is command. The 1953 preset pins it at 4.2 to the dollar; open inflation stays near half a percent because prices are set by the plan, and the 1979 budget carries the GDR's hidden hard-currency debt to the West.
-
----
-
-## Military and the Warsaw Pact
-
-East Germany is a **founding member of the Warsaw Pact** in both eras. The pact's permanent chair, the Supreme Commander of the Unified Command, is held by the USSR: no other member can ever hold it. Between 1945 and 1990 the pact is the EAST bloc's accession channel on the Cold-War alignment axis, opposite NATO.
-
-**A 1953 world seeds East Germany with zero military branches.** This is historical: the GDR had no national army until 1956, and the paramilitary police units before then sit under the Interior portfolio. The Nationale Volksarmee stands up in 1956: Land Forces (LaSK), People's Navy (VM) and Air Force / Air Defence (LSK/LV) all carry a 1956 establishment year and dissolve with the state in 1990. This is correct, not a bug. The world starts with no pre-seeded wars; every conflict is player-declared. See [Conflicts Overview](/wiki/conflicts-overview).
-
----
-
-## Career path for East German players
-
-| Stage | Target | Why |
-| --- | --- | --- |
-| Entry | Volkskammer Deputy | +1 action/turn; the pool ministers are appointed from |
-| Mid-game | Land First Secretary | +2 actions/turn; regional executive; signs Land bills |
-| Mid-game | Council of Ministers seat | Tier setting and two orders on a real portfolio |
-| Top | General Secretary | +4 actions/turn; appoints the Council; head of government |
-
-Bloc-party players cap out below the executive: an approved party can take any seat up to cabinet, but the top office belongs to the ruling party until the regime liberalizes or converts.
-
----
-
-## Starting scenarios
-
-${ddScenarios}
-
----
-
-## Currency and economy
 
 | Item | Detail |
 | --- | --- |
@@ -164,23 +111,42 @@ ${ddScenarios}
 | State register | VVB (no bourse) |
 | Finance Minister | Minister of Finance |
 
----
+## The German Question
 
-## Key East Germany links
+![The two ways the German Question can end: an East win merges East Germany into a one-party Germany with no election, while a collapse leads to a parliamentary republic.](/wiki-images/diagrams/german-question-outcomes.svg)
 
-- [One-Party States](/wiki/one-party-states): regime tiers, escalation, reforms and conversion
-- [Planned Economies](/wiki/planned-economies): the full command-economy model
-- [Cabinet Guide](/wiki/cabinet-guide): every cabinet post, its metrics, and its actions
-- [International Organizations](/wiki/international-organizations): the Warsaw Pact and alignment
-- [Conflicts Overview](/wiki/conflicts-overview): declaring war, fronts and occupation
-- [Germany](/wiki/de-overview): the western state and the reunification path
-- [Core Systems](/wiki/core-systems): turn structure, action economy
+**Collapse points west.** The collapse target is a parliamentary republic: the democratisation path. Conversion is one-way. The escalation stages that lead there are laid out in the table on [China](/wiki/cn-overview), apart from the confidence model, which East Germany does not run.
 
----
+**Winning points west too.** If the German Question resolves in the East's favour, East Germany is absorbed into a single Germany. The East arrives intact, in these steps:
 
-**Status:** East Germany is playable in the 1953 and 1979 presets only. In later presets Germany is already unified and East Germany does not exist. Command economy, one-party rules and the German Question apply in both presets. Last checked: 2026-10-29, version 1.18.0.
+1. Volkskammer deputies take seats in the Bundestag, with the numbers rescaled onto the delegation the Bundestag already holds for the five eastern states.
+2. Land assemblies become Landtage, and Land First Secretaries become Minister-Presidents.
+3. East Berlin folds into Berlin.
+4. The unified state is one-party: the SED and bloc parties govern and the western parties are barred.
+5. No election is called, because the chamber carried across is the point of the settlement.
 
----
+A war declared by or against either Germany freezes the question and decides it outright. A white peace in such a war hands the question back to the diplomatic track. Your seat carries across, though the rescaling can change how many seats each party holds. See [Germany](/wiki/de-overview).
+
+## The army that starts in 1956
+
+East Germany is a **founding member of the Warsaw Pact** in both eras. The pact's permanent chair, the Supreme Commander of the Unified Command, is held by the USSR: no other member can ever hold it. Between 1945 and 1990 the pact is the EAST bloc's accession channel on the Cold-War alignment axis, opposite NATO. See [International Organizations](/wiki/international-organizations).
+
+**A 1953 world seeds East Germany with zero military branches.** This is historical: the GDR had no national army until 1956, and the paramilitary police units before then sit under the Interior portfolio. The Nationale Volksarmee stands up in 1956: Land Forces (LaSK), People's Navy (VM) and Air Force / Air Defence (LSK/LV) all carry a 1956 establishment year and dissolve with the state in 1990. This is correct, not a bug. The world starts with no pre-seeded wars; every conflict is player-declared. See [Conflicts Overview](/wiki/conflicts-overview).
+
+## Career: deputy to General Secretary
+
+| Stage | Target | Why |
+| --- | --- | --- |
+| Entry | Volkskammer Deputy | +1 action/turn; the pool ministers are appointed from |
+| Mid-game | Land First Secretary | +2 actions/turn; regional executive; signs Land bills |
+| Mid-game | Council of Ministers seat | Tier setting and two orders on a real portfolio |
+| Top | General Secretary | +4 actions/turn; appoints the Council; head of government |
+
+Bloc-party players cap out below the executive: an approved party can take any seat up to cabinet, but the top office belongs to the ruling party until the regime liberalizes or converts.
+
+## Starting scenarios
+
+${ddScenarios}
 
 ## Living history
 
@@ -189,4 +155,8 @@ The timeline below is written by the turn processor whenever a head-of-governmen
 \`\`\`country-history
 DD
 \`\`\`
+
+See also: [Core Systems](/wiki/core-systems) for turn structure and the action economy.
+
+Playable in the 1953 and 1979 presets only. In later presets Germany is already unified and East Germany does not exist. Command economy, one-party rules and the German Question apply in both presets. Last checked 2026-10-29, version 1.18.0.
 `;

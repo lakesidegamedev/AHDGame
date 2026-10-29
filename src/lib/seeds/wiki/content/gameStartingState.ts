@@ -1,8 +1,8 @@
 export const gameStartingStateContent = `# Game Starting State
 
-Every world in A House Divided begins from a fixed opening board: default parties, generated non-player politicians (NPPs), starting treasuries, national numbers, sovereign debt, regional sector specialties and an unowned market in every sector. Which opening you join decides which countries you can play, who sits in the legislatures and what the economy looks like. This page shows that board so you can pick a country and a start region on purpose.
+Before you pick a country, it helps to know what board you are stepping onto. Every world begins from a fixed opening: default parties, generated non-player politicians (NPPs), starting treasuries, national numbers, sovereign debt, regional sector specialties and an unowned market in every sector. The opening you join decides which countries you can play, who sits in the legislatures and what the economy looks like.
 
-## How it works
+## Which start date opens which countries
 
 When a world is created, the game seeds one **era preset**. The preset sets the date, the historical seat counts, the party rosters that existed then, and which countries are open to players, which run as economies only and which are run by NPPs. Coverage is layered: a country open to players has a full political roster, while an economy-only country can have regions, budgets, currencies and trade without every player screen.
 
@@ -15,34 +15,34 @@ When a world is created, the game seeds one **era preset**. The preset sets the 
 | 2023 | United States, United Kingdom, Japan | US 118th Congress, a divided government. Other countries use their 2019 data. |
 | 2027 | United States, United Kingdom, Germany, Japan, China | A projection with the latest completed elections. |
 
-This is the roster at the start of a world. More countries can be opened to players later in a world's life, and the country picker in game is the authority. See [Create a Character](/wiki/create-a-character) for how the pick works.
+This is the roster at the start of a world. More countries can be opened to players later in a world's life, and the country picker in game is the authority. The era decides which countries and parties you can pick in [Create a Character](/wiki/create-a-character).
 
 **Why it works this way:** a country is only opened to players when its political data is authored well enough to play. Other countries still run as economies, so trade, currencies and prices behave sensibly around you.
 
-### Ideology scale
+## Ideology scale
 
-Economic and social positions each run from -5 to +5. Economic: -5 is far left and +5 is far right. Social: -5 is progressive and +5 is traditional or conservative.
+Economic and social positions each run from -5 to +5. Economic: -5 is far left and +5 is far right. Social: -5 is progressive and +5 is traditional or conservative. Starting platforms and NPP positions are set on this scale ([Party Ideology](/wiki/party-ideology)).
 
-### What every opening seeds
+## What every opening seeds
 
-- **Protected default parties**, with their platforms and starting treasuries.
-- **Generated NPPs** with positions drawn from their party range and blended with their home region's lean, plus randomised favorability, loyalty and stubbornness.
+- **Protected default parties**, with their platforms and starting treasuries ([Political Parties](/wiki/political-parties)).
+- **Generated NPPs** ([NPP Behavior](/wiki/npp-behavior) starts from these seeds) with positions drawn from their party range and blended with their home region's lean, plus randomised favorability, loyalty and stubbornness.
 - **National budgets, debt, credit ratings, tax bases and currencies**, using that era's values where they are authored.
 - **Regional demographics and metrics** for that era.
 - **An unowned market in all 17 sector types** in every region, and separate per-region capacity ceilings for extractable resources.
 
-The 1991 preset also anchors election cycles to the real 1992 to 1994 calendar, and leaves out parties that did not exist yet (for example AfD, Die Linke and Reform UK).
+Parliamentary governments are assembled from the starting seats ([Coalition Formation](/wiki/coalition-formation)). The 1991 preset also anchors election cycles to the real 1992 to 1994 calendar, and leaves out parties that did not exist yet (for example AfD, Die Linke and Reform UK).
 
-## What you can do
+## Reading the board for your country
 
-**Choose an era and a country.** Pick a country from the picker. A Cold War world is the only place to play the Soviet Union or East Germany.
-
-**Read the opening board** for your country.
+Pick a country from the picker. A Cold War world is the only place to play the Soviet Union or East Germany. Then read the opening board for it.
 
 \`\`\`starting-state-dashboard
 \`\`\`
 
-**Choose a start region for business.** Regional sector specialties add a starting margin bonus on top of the market: **+5 percentage points** for a region's primary specialty and **+2.5 percentage points** for its secondary. The dashboard's Specialties section lists them by region.
+## Choosing a start region for business
+
+The seeded sector markets and specialties are what [corporations](/wiki/corporations) compete for. Regional sector specialties add a starting margin bonus on top of the market: **+5 percentage points** for a region's primary specialty and **+2.5 percentage points** for its secondary. The dashboard's Specialties section lists them by region.
 
 \`\`\`sector-seed-map
 \`\`\`
@@ -57,35 +57,13 @@ Examples of the shape of the seeded markets:
 
 Seeded market sizes follow real GDP composition rather than an equal split, so a large technology market in California is large in absolute terms.
 
-**Worked example.** You found an extraction corporation in West Virginia, where extraction is the primary specialty. A sector there earns the region's +5 percentage points. If extraction is also your corporation's own primary type, the type match adds another +5, for +10 percentage points on top of the base margin before other modifiers. The same sector in a region with no extraction specialty gets only the +5 from your type. Check the dashboard before you commit capital.
+You found an extraction corporation in West Virginia, where extraction is the primary specialty. A sector there earns the region's +5 percentage points. If extraction is also your corporation's own primary type, the type match adds another +5, for +10 percentage points on top of the base margin before other modifiers. The same sector in a region with no extraction specialty gets only the +5 from your type. Check the dashboard before you commit capital.
 
-Tips:
+## Default parties and empty legislatures
 
 - **Default parties cannot be deleted.** They exist in every world and survive any treasury or membership. Player-founded parties can be dissolved if they lose all members.
 - **Starting treasuries do not regenerate on their own.** Parties grow funds through player-paid dues, tax rates set by leadership, and events. A low-treasury party can still compete if players fund it.
 - **Where a legislature starts empty,** the first elections fill it.
 
-## Connections
-
-**Driven by**
-
-- [Political Parties](/wiki/political-parties): default parties and their treasuries come from the opening seed.
-- [Party Ideology](/wiki/party-ideology): starting platforms and NPP positions are set on the ideology scale.
-
-**Affects**
-
-- [Create a Character](/wiki/create-a-character): the era decides which countries and parties you can pick.
-- [NPP Behavior](/wiki/npp-behavior): generated NPPs start from these seeds.
-- [Coalition Formation](/wiki/coalition-formation): parliamentary governments are assembled from the starting seats.
-- [Corporations](/wiki/corporations): the seeded sector markets and specialties are what corporations compete for.
-
-## Status
-
-The opening board depends on the world's era preset and on which countries are open to players there. Always check the country picker for the current world.
-
-Last checked: 2026-10-29, version 1.18.0
-
-## Technical detail
-
-The seed formulas, sector weights and per-preset rosters are on the [World and era systems design page](https://docs.lakesidegames.net/design/world-and-era-systems-as-shipped.html).
+The opening board depends on the world's era preset and on which countries are open to players there, so check the country picker for the current world. Last checked 2026-10-29, version 1.18.0. Exact rules: [World and era systems (design)](https://docs.lakesidegames.net/design/world-and-era-systems-as-shipped.html)
 `;

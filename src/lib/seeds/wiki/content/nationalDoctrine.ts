@@ -1,16 +1,16 @@
 export const nationalDoctrineContent = `# National Doctrine
 
-Doctrine is your country's **way of fighting**: the accumulated institutional choices that make one army an armoured breakthrough force and another a defensive attritional one.
+Your country gets twelve points to decide what kind of army it is, and it can never take one back. Doctrine is your **way of fighting**: the institutional choices that make one army an armoured breakthrough force and another a defensive attritional one.
 
 Mechanically it is a national tech tree, adopted once and shared by everything: every unit, every general, every front. Unlike a general's traits, which belong to one character, **doctrine belongs to the nation** and applies to all of it at once.
 
 Adopt doctrine from the defence seat's office → **Doctrine** tab.
 
-## How it works
+## Twelve points, 128 nodes
 
 You hold a small budget of doctrine points and spend them on nodes in a tree of 128. Each node is permanent and its effects apply to your whole military. Nodes unlock by game decade, so the tree opens up as the calendar advances.
 
-### Key numbers
+### The numbers
 
 | What | Value |
 | --- | --- |
@@ -22,13 +22,11 @@ You hold a small budget of doctrine points and spend them on nodes in a tree of 
 | Refund or respec | None |
 | Who adopts | The defence seat holder |
 
-### A worked 12-point build
+### Spending the first twelve points in 1953
 
-In a 1953 world the current era is Nuclear Age, so nodes up to the 1950s are open. A defence secretary who wants the nuclear programme spends 2 points on Strategic Bombing Campaigns (1940s) and 4 on Nuclear Delivery (1950s), which is 6 points before anything else. That is the entry gate for [The Nuclear Programme](/wiki/nuclear-programme). They add Armored Battle Groups (2 points) and three Defensive Warfare nodes: Trench Systems (1), Elastic Defense Theory (1) and Anti-Tank Networks (2). That is exactly 12 points. The chain mattered: Nuclear Delivery alone is 4 points, but the only way to reach it is to buy its 2-point predecessor first.
+In a 1953 world the current era is Nuclear Age, so nodes up to the 1950s are open. A defence secretary who wants the nuclear programme spends 2 points on Strategic Bombing Campaigns (1940s) and 4 on Nuclear Delivery (1950s), which is 6 points before anything else. That is the entry gate for [The Nuclear Programme](/wiki/nuclear-programme). They add Armored Battle Groups (2 points) and three Defensive Warfare nodes: Trench Systems (1), Elastic Defense Theory (1) and Anti-Tank Networks (2). That is exactly 12 points. The chain mattered: Nuclear Delivery alone is 4 points, but the only way to reach it is to buy its 2-point predecessor first. That node is the entry gate for the nuclear tree that feeds the tension floor, covered in [Global Response Crises](/wiki/global-response-crises).
 
-## The budget is brutally small
-
-Read this before anything else on the page.
+## No refunds, no respec
 
 - Your nation starts with **12 doctrine points**.
 - The tree has **128 nodes**, costing **1 to 5 points each**.
@@ -81,7 +79,7 @@ doctrine-point-budget
 
 ## Era gating
 
-Every node carries a decade, from the 1900s to the 2040s, and 15 named eras run alongside them, from Industrial War Foundations to Fully Integrated Multi-Domain. Your current era is the decade of the live game year. A 1953 world sits in the Nuclear Age, a 1979 world in Counterinsurgency & Missiles, a 1991 world in Post-Cold War Expeditionary, and a 2019 world in Drone, Cyber & Hybrid. Anything from a later decade shows as **Future** and cannot be adopted, however many points you hold.
+Every node carries a decade, from the 1900s to the 2040s, and 15 named eras run alongside them, from Industrial War Foundations to Fully Integrated Multi-Domain. Your current era is the decade of the live game year, so the game calendar (see [The Game Loop](/wiki/the-game-loop)) sets your era, unlocks nodes by decade and pays the yearly point. A 1953 world sits in the Nuclear Age, a 1979 world in Counterinsurgency & Missiles, a 1991 world in Post-Cold War Expeditionary, and a 2019 world in Drone, Cyber & Hybrid. Anything from a later decade shows as **Future** and cannot be adopted, however many points you hold.
 
 A long-running world progresses. Doctrines unreachable in 1953 open up as the calendar passes into the 1960s and beyond. **Banking points against a decade you know is coming is a legitimate strategy**, and one of the few ways to spend a scarce budget well.
 
@@ -111,7 +109,7 @@ Some doctrines display a **"Conflicts with …"** line, for example Guerrilla Do
 
 ## What doctrine does
 
-Adopted doctrine feeds into how your forces perform. It is genuinely national: it applies to every unit you field and every front you fight on, permanently, from the moment it is adopted.
+Adopted doctrine feeds into how your forces perform, on every front (see [Fighting a Battle](/wiki/fighting-a-battle)), and nodes also adjust upkeep and readiness across your forces (see [Units, Recruitment & Procurement](/wiki/military-units)). It is genuinely national: it applies to every unit you field and every front you fight on, permanently, from the moment it is adopted.
 
 Broadly, different branches of the tree push on different things:
 
@@ -127,7 +125,7 @@ Each node states its own effect in plain terms on the panel. The **Active Effect
 
 This is the connection most players miss.
 
-Many **general trait nodes** are tied to a matching **national doctrine**. When your nation has adopted that doctrine, the trait is **boosted**: it appears starred in the general's trait tree, and it is meaningfully better than the same trait in a nation without the doctrine.
+Many **general trait nodes** (see [Generals & the Officer Corps](/wiki/generals)) are tied to a matching **national doctrine**. When your nation has adopted that doctrine, the trait is **boosted**: it appears starred in the general's trait tree, and it is meaningfully better than the same trait in a nation without the doctrine.
 
 Every general's profile has a **Doctrine Fit** view listing which of their trained traits your nation currently amplifies, and which are running unsupported.
 
@@ -141,11 +139,11 @@ Because doctrine is permanent and the budget tiny, **this is one of the most con
 
 The server re-validates every adoption independently: points, prerequisites, and era are all checked again server-side, so a crafted request cannot buy a doctrine you have not earned.
 
-## What you can do
+## Adopting a node
 
 The defence seat holder opens the **Doctrine** tab of the defence office, picks a node that shows **Available**, and adopts it. The **Active Effects** panel shows everything in force.
 
-## Practical guidance
+## Spending it well
 
 **Do not spend early just because you can.** Unspent points keep their value; badly spent ones never come back.
 
@@ -159,35 +157,11 @@ The defence seat holder opens the **Doctrine** tab of the defence office, picks 
 
 **Doctrine outlives cabinets.** A successor inherits your choices and cannot undo them.
 
-**Common questions.** *How many doctrine points do I get?* 12 to start, then 1 per game year. *Can I undo a doctrine?* No. *Which should I take first?* The chain you need for your plan, counted in full. *Does doctrine affect my generals?* Yes, it boosts matching trait nodes.
+**Questions that come up.** *How many doctrine points do I get?* 12 to start, then 1 per game year. *Can I undo a doctrine?* No. *Which should I take first?* The chain you need for your plan, counted in full. *Does doctrine affect my generals?* Yes, it boosts matching trait nodes.
 
-## Connections
+## See also
 
-**Driven by**
-
-- [The Game Loop](/wiki/the-game-loop): the game calendar sets your era, unlocks nodes by decade and pays the yearly point.
-
-**Affects**
-
-- [Generals & the Officer Corps](/wiki/generals): adopted doctrine boosts matching trait nodes.
-- [Units, Recruitment & Procurement](/wiki/military-units): doctrine nodes adjust upkeep and readiness across your forces.
-- [Fighting a Battle](/wiki/fighting-a-battle): doctrine changes how well your forces fight, on every front.
-- [The Nuclear Programme](/wiki/nuclear-programme): the Nuclear Delivery node is the entry gate.
-- [Global Response Crises](/wiki/global-response-crises): the Nuclear Delivery doctrine unlocks the nuclear tree that feeds the tension floor
-
-## Status
-
-Doctrine works the same in every world and country that has a defence seat. What you can adopt depends on the game year, because nodes unlock by decade.
-
-Last checked: 2026-10-29, version 1.18.0
-
-## Technical detail
-
-The exact node data and rules are on the design page [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), under Doctrine.
-
-## Next
-
-- [Generals & the Officer Corps](/wiki/generals): the traits doctrine boosts.
 - [Commands & Command Structure](/wiki/military-commands): where doctrine shows up in the org chart.
-- [Fighting a Battle](/wiki/fighting-a-battle): where it finally matters.
+
+Works the same in every world and country that has a defence seat; what you can adopt depends on the game year. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), under Doctrine
 `;

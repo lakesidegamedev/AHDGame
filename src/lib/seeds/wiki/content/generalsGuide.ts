@@ -4,13 +4,13 @@ A general is not an NPC. **A general is a player character** (one of your own, o
 
 Every character has two profile tabs: **Political**, the career you already know, and **Military**, which holds their general. The Military tab is empty until somebody commissions them. After that, it is a full progression system running in parallel with their political life: rank, experience, skill points, and a trait tree of 115 nodes.
 
-This matters more than it sounds. **Generals are the only thing that makes your army better than the sum of its units.** An unled army fights; a well-trained general's army fights considerably harder.
+This matters more than it sounds. **Generals are the only thing that makes your army better than the sum of its units.** An unled army fights; a well-trained general's army fights considerably harder. Generals carry units to fronts and lead them, which is how they fit into [Conflicts & the Military System](/wiki/conflicts-overview).
 
-## How it works
+## A general's life in outline
 
 A general starts at Brigadier with 4 skill points. They earn experience (XP) from battles, rank up at fixed XP thresholds, and spend skill points on traits that make their units fight better. Their player decides which traits; the defence seat holder decides who is a general at all.
 
-### Key numbers
+### The numbers
 
 | What | Value |
 | --- | --- |
@@ -25,7 +25,7 @@ A general starts at Brigadier with 4 skill points. They earn experience (XP) fro
 | Cost of every trait node | 1 point |
 | Command fit | 50 + 8 per rank + 2 per trained trait, kept between 40 and 98 |
 
-### A career, with numbers
+### One general, start to finish
 
 A general commissioned on turn 0 holds 4 points. By turn 240 tenure has added 10 more. Their first win is 45 XP plus unit shares, perhaps 70 in all. Two such wins reach 140 XP, which crosses 100 and promotes them to Major General for 4 more points. By the time they pass 740 XP as a Field Marshal they have gained 16 points from promotions. Reaching 740 + 200 = 940 XP buys the first post-Field-Marshal point. Their lifetime ceiling is 4 + 16 + 20 + 15 = 55 points.
 
@@ -41,7 +41,7 @@ They pick a character from their country and commission them. That character's M
 - **No traits trained**
 - **No specialisation**
 
-From that moment, **only the owning player can train them.** The Secretary of Defense decides *who* is a general; the player decides *what kind* of general they become. Nobody can spend somebody else's points.
+From that moment, **only the owning player can train them.** Units are then assigned to the general and follow them; see [Units, Recruitment & Procurement](/wiki/military-units). The Secretary of Defense decides *who* is a general; the player decides *what kind* of general they become. Nobody can spend somebody else's points.
 
 ## Rank and experience
 
@@ -61,7 +61,7 @@ The corps roster and your own profile both show this as \`Lt. General · 84/210 
 
 ### Earning XP
 
-XP comes from **fighting**. A general earns:
+XP comes from **fighting**, and battle wins and losses are the main source (see [Fighting a Battle](/wiki/fighting-a-battle)). A general earns:
 
 - A **flat participation bonus** for every battle: **45 XP** for a win, **20 XP** for a loss.
 - Plus a **per-unit share** for each formation they personally led in the engagement, scaled by how that formation did.
@@ -130,7 +130,7 @@ The cap exists on purpose. Uncapped, a late-game commander eventually holds ever
 | **Joint Warfare** | Air-Land Integrator · Naval-Land Integrator · Marine/Expeditionary · Intelligence-Led |
 | **Political & Staff Role** | Political Survivor · Staff Organizer · Trainer · Public Hero |
 
-Each **path is a strict chain**: you must train a node before you can train the one after it. There is no skipping to a capstone.
+Trained traits change how well a general's units fight. Each **path is a strict chain**: you must train a node before you can train the one after it. There is no skipping to a capstone.
 
 Each node shows one of four statuses:
 
@@ -155,9 +155,9 @@ Some nodes are boosted by your nation's adopted doctrine. These are starred in t
 
 You do not pick a class. Your discipline is a label recomputed from the traits you have trained: **Armor Officer**, **Shock & Maneuver**, **Defensive Tactician**, **Logistician** or **Fleet Commander**. A general with no traits shows "No specialisation". Enough logistics nodes turn an Armor Officer into a Logistician.
 
-**Command fit** rates how suited a general is to lead a Command. It is 50, plus 8 for each rank, plus 2 for each trained trait, kept between 40 and 98.
+**Command fit** rates how suited a general is to lead a Command, and it and rank decide who can lead one in [Commands & Command Structure](/wiki/military-commands). It is 50, plus 8 for each rank, plus 2 for each trained trait, kept between 40 and 98.
 
-## Dismissal
+## When a general is dismissed or leaves
 
 The defence seat holder can dismiss a general. A change of defence secretary alone does not end anyone's commission. Only a dismissal, or the general moving to another country, does. When it happens the whole chain unwinds at once:
 
@@ -176,6 +176,8 @@ The defence seat holder can dismiss a general. A change of defence secretary alo
 
 ## Where to click
 
+The Commands page below is the org chart your generals sit in; see [Commands & Command Structure](/wiki/military-commands).
+
 | Task | Where |
 | --- | --- |
 | Commission or dismiss a general | Defence office → **Commands** → General Corps |
@@ -186,7 +188,7 @@ The defence seat holder can dismiss a general. A change of defence secretary alo
 
 If you are a Commanding General, a **"Manage your command →"** link appears on your own profile's Military tab. It only shows for actual CGs, so it never dead-ends.
 
-## Practical guidance
+## Building a general worth having
 
 **Commission early and broadly.** Tenure points accrue from the day of commissioning and cap at 20. A general commissioned in peacetime arrives at the war already developed; one commissioned the week war breaks out starts from four points.
 
@@ -200,41 +202,7 @@ If you are a Commanding General, a **"Manage your command →"** link appears on
 
 **Don't sever a general from their units carelessly.** Units follow generals. Un-posting a general pulls their entire force back to reserve: sometimes exactly what you want, sometimes an accidental retreat.
 
-## Connections
+See also: [National Doctrine](/wiki/national-doctrine) for what boosts their traits.
 
-**Driven by**
-
-- [National Doctrine](/wiki/national-doctrine): an adopted doctrine amplifies the matching trait nodes.
-- [Commands & Command Structure](/wiki/military-commands): Commands decide where a general is posted and who holds the lead.
-- [Fighting a Battle](/wiki/fighting-a-battle): battle wins and losses are the main source of XP.
-
-**Affects**
-
-- [Units, Recruitment & Procurement](/wiki/military-units): units are assigned to a general and follow them.
-- [Conflicts & the Military System](/wiki/conflicts-overview): generals carry units to fronts and lead them.
-- [Commands & Command Structure](/wiki/military-commands): command fit and rank decide who can lead a Command.
-- [Fighting a Battle](/wiki/fighting-a-battle): trained traits change how well a general's units fight.
-
-## Status
-
-Generals work in every world and era. The trait tree is gated by the live game year, so later-decade nodes show as Future until their decade arrives. A general needs a country with a defence seat, so Scotland and Wales have none.
-
-Last checked: 2026-10-29, version 1.18.0
-
-## Technical detail
-
-Rank thresholds, point sources and the tree structure are on the design page [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), under the military layer.
-
-## Common questions
-
-- *How do I become a general?* The defence seat holder commissions you. You cannot do it yourself.
-- *How do I assign units to a conflict?* Units go to a general, and a Commanding General posts that general. See [Commands & Command Structure](/wiki/military-commands).
-- *How do I earn skill points?* Commission, promotions, tenure and the post-Field-Marshal track, in the table above.
-- *What happens to my general if I move country?* The same unwinding as dismissal, and you keep your rank, XP and traits.
-
-## Next
-
-- [Commands & Command Structure](/wiki/military-commands): the org chart your generals sit in.
-- [National Doctrine](/wiki/national-doctrine): what boosts their traits.
-- [Fighting a Battle](/wiki/fighting-a-battle): how to put them to work.
+Works in every world and era; later-decade nodes show as Future until their decade arrives, and Scotland and Wales have no defence seat to commission from. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html), under the military layer
 `;

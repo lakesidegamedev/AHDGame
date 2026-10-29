@@ -1,10 +1,10 @@
 export const voteFactorLedgerContent = `# Vote Factor Ledger
 
-The factor ledger answers "why does each candidate have the votes they have" in a presidential general. It breaks every candidate's national vote total into the pieces that built it, so you can see whether a lead came from policy fit, name recognition, turnout, the national mood or ground game. It tells you which lever is worth pulling next.
+The factor ledger answers "why does each candidate have the votes they have" in a presidential general. It breaks every candidate's national vote total into the pieces that built it, so you can see whether a lead came from policy fit, name recognition, turnout, the national mood or ground game. It tells you which lever is worth pulling next. The vote model in [Election Mechanics](/wiki/election-mechanics) defines every factor, and the [General Elections](/wiki/general-elections) vote accumulation each turn produces the totals the ledger explains.
 
 It reads numbers the vote engine already computed and never re-runs the vote math, so the ledger always adds back up to the real result.
 
-## How it works
+## Reading the waterfall
 
 The ledger is a waterfall. It starts from a structural baseline and adds a signed contribution for each factor:
 
@@ -12,7 +12,7 @@ baseline + sum of every factor's vote delta = final votes
 
 Each factor shows a **vote delta**, the number of votes that factor added (positive) or removed (negative). A few structural factors also show a **multiplier** for quick reading, for example 1.20 on Policy fit means the factor lifted the baseline by 20%. The multiplier is for display only. The vote delta is the real number.
 
-### The factors
+### The ten factors
 
 The waterfall runs in this order. The last column says what you can do about each one.
 
@@ -29,7 +29,7 @@ The waterfall runs in this order. The last column says what you can do about eac
 | Tactical voting | Votes that move in the closing period from candidates with no realistic chance in a state to one who has | Being viable locally before the final turns |
 | Other | A small residual that absorbs rounding so the waterfall adds up exactly | Nothing |
 
-### Worked example
+### Reading one candidate's ledger
 
 An illustrative candidate (numbers are made up to show the shape):
 
@@ -51,36 +51,14 @@ Read it as: this candidate's ground game and policy fit are doing the heavy lift
 
 A negative Spoiler effect means a nearby third-party candidate is drawing votes from you. A negative National mood means voters are punishing the party you represent for the economy.
 
-## What you can do
+## Using it
 
-- **Open the Live Election Results page** for a presidential general and choose the ledger for a candidate. See [Live Election Results](/wiki/live-election-results).
+- **Open the Live Election Results page** for a presidential general and choose the ledger for a candidate. See [Live Election Results](/wiki/live-election-results), which shows the same totals the ledger explains on election night.
 - **Compare your ledger with a rival's.** The national waterfall is public for every candidate, so you can see how a rival's total was built.
 - **Use the owner-only views** on your own campaign: where your support comes from by voter group (which census groups back you), and per-state ledgers for your closest states. These are hidden from other candidates. Per-state ledgers cover the tightest races, where the factor mix decides the state.
-- **Turn it into a plan** with the [Campaign Manager](/wiki/campaign-manager) briefing.
+- **Turn it into a plan** with the [Campaign Manager](/wiki/campaign-manager) briefing, which turns these factors into next steps.
 
 Why you can lose a state you led: the ledger is built from all the factors, and in the closing turns tactical voting, turnout and a rival's ground game can overturn a lead built on policy fit alone.
 
-## Connections
-
-**Driven by**
-
-- [General Elections](/wiki/general-elections): the vote accumulation each turn produces the totals the ledger explains.
-- [Election Mechanics](/wiki/election-mechanics): the vote model defines every factor.
-- [Political Operations](/wiki/political-operations): Campaign Presence appears in the Campaign factor.
-- [Canvassing](/wiki/canvassing): turnout work appears in the Turnout factor.
-- [live-election-results](/wiki/live-election-results): Election night shows the same totals the ledger explains.
-
-**Affects**
-
-- [Campaign Manager](/wiki/campaign-manager): its briefing turns these factors into a plan.
-
-## Status
-
-Live for US presidential general elections.
-
-Last checked: 2026-10-29, version 1.18.0
-
-## Technical detail
-
-The exact rules are on the [Elections design page](https://docs.lakesidegames.net/design/elections.html).
+Live for US presidential general elections. Last checked 2026-10-29, version 1.18.0. Exact rules: [Elections (design)](https://docs.lakesidegames.net/design/elections.html)
 `;

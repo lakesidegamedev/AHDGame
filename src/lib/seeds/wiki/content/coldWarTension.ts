@@ -2,13 +2,13 @@ export const coldWarTensionContent = `# Cold War Tension
 
 The world shares one number: a tension gauge from 0 to 100 that sits at the top of the [Conflicts page](/world/conflicts). It is not your country's reading, or your rival's. It is the temperature of the whole standoff, and the readiness level, arms demand and diplomatic goodwill shown on the page all move with it.
 
-## How it works
+## A floor and the spikes above it
 
 Tension has two parts. **Events** push it up in one-off spikes: a nuclear test, an escalation, a crisis. **Standing pressure** sets a floor underneath it, built from the world's arsenals, crises, escalation and shooting wars. Each turn the gauge closes 8% of the gap between itself and that floor. So spikes fade, but tension never falls below the floor.
 
 ![Flow from one-off events and standing pressure through spikes and the floor into tension from 0 to 100, which sets three dials and triggers domestic world events.](/wiki-images/diagrams/cold-war-tension-how-it-works.svg)
 
-### Key numbers
+### The numbers
 
 | What | Value |
 | --- | --- |
@@ -33,7 +33,7 @@ Tension has two parts. **Events** push it up in one-off spikes: a nuclear test, 
 
 The band label is what most of the world's machinery reacts to.
 
-### A worked example
+### A floor of 38 and a thermonuclear test
 
 A world has 100 warheads, 2 active crises and an escalation level of 2. Its floor is 12 + 8 (escalation level 2, at 4 a rung) + 6 (two crises, at 3 each) + 12 (the square root of 100 is 10, times 1.2) = 38, which is ELEVATED. A thermonuclear test adds 12 and puts the gauge at 50. Each turn it closes 8% of the gap to 38: after one turn it is 49.0, after ten turns about 43.2, and after thirty about 39. If an extra war with intensity 50 breaks out, that adds 6 to the floor, and the gauge stays about 44.
 
@@ -45,7 +45,7 @@ tension-after-thermonuclear-test
 
 - **Nuclear tests.** Every device test spikes tension, and bigger devices spike it harder. See [The Nuclear Programme](/wiki/nuclear-programme).
 - **Escalation.** Climbing the rungs of an active proxy war raises the standing pressure, not just a one-off spike.
-- **Crises.** Each active world crisis keeps the temperature up while it burns.
+- **Crises.** Each active world crisis keeps the temperature up while it burns. Campaign outcomes and escalation in [Global Response Crises](/wiki/global-response-crises) move the reading and the floor, and the shared reading sets which pressures and options apply there.
 - **The world's arsenals.** The total warhead count across all programmes sets part of the floor. An armed world is a tense world even on a quiet week.
 - **Shooting wars.** Every active war contributes according to its intensity. See [Conflicts & the Military System](/wiki/conflicts-overview) and [Declaring War](/wiki/declaring-war). A fresh war between nuclear-armed countries creates a crisis-grade shock. If a war stays limited for many turns, part of that initial panic slowly fades. Heating the war back up restores the full pressure at once, and an active conflict always leaves a substantial floor.
 
@@ -65,41 +65,16 @@ Tension is a cause, not a scoreboard. The Conflicts page header turns the readin
 | Dial | How it is set |
 | --- | --- |
 | Readiness level (DEFCON) | 5 below 45, 4 from 45, 3 from 65, 2 from 85. Tension alone never reaches 1. |
-| Arms demand multiplier | 1 plus 0.005 for every point above 12, so 1.25 at tension 62. |
+| Arms demand multiplier | 1 plus 0.005 for every point above 12, so 1.25 at tension 62. This is what changes demand in [Defence Procurement](/wiki/defence-procurement). |
 | Detente goodwill penalty | 0.75 for every point above 35, so 20 at tension 62. |
 
 Thaw is a resource, and a high penalty burns the goodwill that cooperative diplomacy needs.
 
-High tension also brings **domestic world events**. Civil Defense Fever can start from tension 50. Panic Buying and War Scare Protests can start from 60. A Run on the Banks can start from 65. Governments can stagger them with spending, rationing, mobilization or emergency powers, but cannot suppress them completely. Strong measures shift demand away from consumer industries and toward manufacturing, construction and defence, while damaging civil liberties and Democratic Health.
+High tension also brings **domestic world events** (the gauge gates the four wartime society crises in [World Events](/wiki/world-events)): Civil Defense Fever can start from tension 50. Panic Buying and War Scare Protests can start from 60. A Run on the Banks can start from 65. Governments can stagger them with spending, rationing, mobilization or emergency powers, but cannot suppress them completely. Strong measures shift demand away from consumer industries and toward manufacturing, construction and defence, while damaging civil liberties and Democratic Health.
 
-## What you can do
+## Your hand on the gauge
 
 You do not control the gauge. You contribute to it. A well-timed test, a rung of escalation, a crisis left to burn: each is a decision about the world's temperature, and the whole world pays the bill together. The powers that read the gauge best are the ones that choose when to be provocative, not the ones that are provocative by accident.
 
-## Connections
-
-**Driven by**
-
-- [The Nuclear Programme](/wiki/nuclear-programme): each test spikes the gauge and the stockpile raises the floor.
-- [Conflicts & the Military System](/wiki/conflicts-overview): every shooting war on the board raises the floor.
-- [Declaring War](/wiki/declaring-war): a new war, especially between nuclear-armed countries, is a shock to the gauge.
-- [Global Response Crises](/wiki/global-response-crises): campaign outcomes and escalation move the reading and the floor
-
-**Affects**
-
-- [Defence Procurement](/wiki/defence-procurement): the arms demand multiplier rises with tension.
-- [Global Response Crises](/wiki/global-response-crises): the shared reading sets which pressures and options apply
-- [World Events](/wiki/world-events): the gauge gates the four wartime society crises at 50, 60 and 65
-
-## Status
-
-The gauge runs in every world with the Cold War layer, which is the default. It reads the same whatever the era, but the arsenals that feed it exist only where a nuclear programme has been opened by the United States, the Soviet Union, the United Kingdom or East Germany.
-
-Last checked: 2026-10-29, version 1.18.0
-
-## Technical detail
-
-The exact floor, relaxation and dial rules are on the design page [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html).
-
-See also: [The Nuclear Programme](/wiki/nuclear-programme), [Conflicts & the Military System](/wiki/conflicts-overview), [Declaring War](/wiki/declaring-war).
+The gauge runs in every world with the Cold War layer, which is the default. It reads the same whatever the era, but the arsenals that feed it exist only where a nuclear programme has been opened by the United States, the Soviet Union, the United Kingdom or East Germany. Last checked 2026-10-29, version 1.18.0. Exact rules: [The Cold War and conflict system (as shipped)](https://docs.lakesidegames.net/design/conflict-system-as-shipped.html)
 `;

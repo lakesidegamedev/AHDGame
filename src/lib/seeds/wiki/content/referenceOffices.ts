@@ -1,6 +1,6 @@
 export const referenceOfficesContent = `# Reference: Offices
 
-Reference for the offices of the four longest-established playable countries (US, UK, DE, JP). Each entry shows how the office is won, term length, action bonus, and what it does for your character. Central bank chair roles are included: they are not elected through standard elections. For Ireland, Brazil, Nigeria, China, the Soviet Union and East Germany, the office tables live on each country hub (see [Getting Started](/wiki/getting-started)); the [Cabinet Guide](/wiki/cabinet-guide) reads every country's cabinet seats live from configuration.
+Before you chase a seat, check what it pays in actions and how long it lasts. This page lists the offices of the four longest-established playable countries (US, UK, DE, JP): how each is won, its term length, its action bonus, and what it does for your character. Central bank chair roles are included: they are not elected through standard elections. For Ireland, Brazil, Nigeria, China, the Soviet Union and East Germany, the office tables live on each country hub (see [Getting Started](/wiki/getting-started)); the [Cabinet Guide](/wiki/cabinet-guide) reads every country's cabinet seats live from configuration.
 
 ---
 
@@ -322,11 +322,7 @@ Sets Japanese interest rates (BoJ default prime rate: 1.0%, the lowest in the ga
 
 ---
 
-## Related
+## Where to go next
 
-- [Multi-Country Play](/wiki/multi-country-play): Playing across multiple country contexts.
-- [Advanced Strategy](/wiki/advanced-strategy): Career arc planning by office.
-- [Reference: Formulas](/wiki/reference-formulas): Primary score formulas and action math.
-- [Election Mechanics](/wiki/election-mechanics): Full election phase structure.
-- [Snap Elections](/wiki/snap-elections): UK, JP, and DE parliamentary dissolution.
+[Advanced Strategy](/wiki/advanced-strategy) turns these tables into career arcs, and [Multi-Country Play](/wiki/multi-country-play) covers the other countries. The vote math is in [Reference: Formulas](/wiki/reference-formulas) and [Election Mechanics](/wiki/election-mechanics). Parliamentary dissolution for the UK, JP and DE is in [Snap Elections](/wiki/snap-elections).
 `;

@@ -1,8 +1,8 @@
 export const unionsContent = `# Unions
 
-**Unions** are the organised side of [Labour & Wages](/wiki/labour-and-wages). Each sector carries a unionization score; the higher it is, the more labour costs, and the more likely workers are to strike. Players can also found and run unions, organise workplaces and bargain with employers. If you run a corporation, unions are a standing cost and a risk. If you want to shape wages and politics, they are a lever.
+You held wages at level 1.0 while local living costs rose, and one morning the sector is on strike. **Unions** are the organised side of [Labour & Wages](/wiki/labour-and-wages). Each sector carries a unionization score; the higher it is, the more labour costs, and the more likely workers are to strike. Players can also found and run unions, organise workplaces and bargain with employers. If you run a corporation, unions are a standing cost and a risk. If you want to shape wages and politics, they are a lever.
 
-## How it works
+## What pushes unionization
 
 Each corporate sector has a **unionization** score from 0 to 100. Every turn it moves up to 1.5 points toward a target, starting from a baseline of 20. Several things push the target:
 
@@ -14,11 +14,11 @@ Each corporate sector has a **unionization** score from 0 to 100. Every turn it 
 | Pro-labour union law (country legislation) | Up |
 | Player-run union recruitment in that sector | Up |
 
+High unemployment lowers union pressure; the figure lives in [National Metrics](/wiki/national-metrics). The standing cost shows up in labour cost as a premium:
+
 \`\`\`wiki-chart
 union-labour-premium
 \`\`\`
-
-### Key numbers
 
 | Rule | Value |
 | --- | --- |
@@ -38,38 +38,33 @@ union-labour-premium
 | Bargaining deadline | 8 turns, then a dispute that lapses after 16; 8-turn cooling off |
 | Pension contribution | Up to 15% of covered wage bill; deficit below 90% funded |
 
-The two thresholds for a strike (trigger at 0.12, concession at 0.04) are deliberately far apart so wages cannot be flipped up and down to game it.
+## When a strike starts
 
-### Worked example
-
-A manufacturing sector has unionization 60 and labour costs of ₳100,000 a day. Its standing premium is 60 / 100 x 15 = 9 points, so labour costs ₳109,000. The CEO has held wages at level 1.0 while local living costs rose, so real wages sit 0.15 below worker expectations. That is above 0.12 and unionization is above 55, so a strike starts.
-
-For 4 turns the sector's revenue falls 25% (a ₳1,000,000 sector drops to ₳750,000) and its margin takes an 8 point hit. The CEO can raise the wage level until the gap falls under 0.04 and the strike ends, wait it out (and see unionization jump 10 points to 70), or try union-busting for ₳500,000. Busting has a chance of cutting unionization by 20 but a chance of adding 15 instead.
-
-A cooldown of 12 turns then stops another strike straight away.
-
-## Strikes
-
-When unionization is high **and** real wages lag a slow-moving **worker expectation index** by enough, a sector can enter a **strike** (bounded-duration event):
-
-- **Revenue throttle**: active strikes cut sector revenue by 25%.
-- **Margin penalty**: an additional 8 point profit-margin hit while the strike runs.
-- **Resolution paths:**
-  - **Concession**: CEO raises wage level until the expectation gap closes; strike ends, cooldown begins.
-  - **Wait it out**: strike expires after 4 turns; unionization bumps up ("radicalization").
-  - **Union-busting**: CEO action to break the strike (see below).
+When unionization is high **and** real wages lag a slow-moving **worker expectation index** by enough, a sector can enter a **strike**, a bounded-duration event. The two thresholds (trigger at 0.12, concession at 0.04) are deliberately far apart so wages cannot be flipped up and down to game it.
 
 ![A strike starts when unionization is high and wages lag, runs four turns, ends by concession, wait-out or union-busting, then a twelve turn cooldown follows.](/wiki-images/diagrams/unions-strike-lifecycle.svg)
 
+A manufacturing sector has unionization 60 and labour costs of ₳100,000 a day. Its standing premium is 60 / 100 x 15 = 9 points, so labour costs ₳109,000. The CEO has held wages at level 1.0 while local living costs rose, so real wages sit 0.15 below worker expectations. That is above 0.12 and unionization is above 55, so a strike starts.
+
+For 4 turns the sector's revenue falls 25% (a ₳1,000,000 sector drops to ₳750,000) and its margin takes an 8 point hit. The CEO has three ways out:
+
+- **Concession**: raise the wage level until the gap falls under 0.04. The strike ends and the cooldown begins.
+- **Wait it out**: the strike expires after 4 turns, and unionization jumps 10 points to 70 ("radicalization").
+- **Union-busting**: try it for ₳500,000. It has a chance of cutting unionization by 20 but a chance of adding 15 instead.
+
+A cooldown of 12 turns then stops another strike straight away. So as a CEO, watch the unionization and expectation gap on each sector, keep wages near what local costs justify, and raise the wage level before the gap passes 0.12.
+
+### Union-busting
+
+CEOs can attempt union-busting on a striking or highly unionized sector. It costs half the sector's daily revenue (at least 1,000). Success cuts unionization by 20 points; a failed attempt backfires and adds 15. There is a 12-turn cooldown. It is a high-risk management tool, not a free reset, and it can cost goodwill with workers. How your choices shape unionization is also visible on your [corporation](/wiki/corporations) pages: strikes cut revenue and margin, and settlements bind the employer.
+
 ## Union law
 
-Countries can enact **union-law** legislation on a right-to-work to collective-bargaining axis. The active option biases unionization drift targets and strike trigger thresholds (easier or harder to walk out). Union law gives governments a political lever independent of corporate wage sliders. In some countries unions are banned outright, and unionization there decays 3 points a turn.
+Countries can enact **union-law** legislation on a right-to-work to collective-bargaining axis. The active option biases unionization drift targets and strike trigger thresholds (easier or harder to walk out). Union law gives governments a political lever independent of corporate wage sliders, and legislators pass it through [Bills & Legislation](/wiki/bills-legislation). In some countries unions are banned outright, and unionization there decays 3 points a turn. A union ban with a crackdown costs 2 points of [Government Approval](/wiki/government-approval).
 
-## Player-run unions
+## Running a union
 
-Players can found and operate **unions** covering a country + sector type. Owned unions contribute **membership pressure** to unionization drift in matching sectors: organizing becomes a gameplay loop parallel to running a corporation.
-
-Unions have their own pages, listed on the Unions page.
+Players can found and operate **unions** covering a country + sector type. Owned unions contribute **membership pressure** to unionization drift in matching sectors: organizing becomes a gameplay loop parallel to running a corporation. Unions have their own pages, listed on the Unions page. The standing premium raises labour cost, and settlements set wage floors, which feeds back into Labour & Wages.
 
 Three mechanics give the membership a direct role: rank-and-file organizing, weighted leadership votes, and ratification ballots on every settlement.
 
@@ -88,11 +83,11 @@ The banked figure is your voice in everything below.
 
 The union president can organize a specific workplace from the union's Sectors tab (or from that sector's own page). A drive costs **1 action point** and a treasury spend, and raises that shop's unionization by **5 points times the union's approval, divided by 100** (a union at 55 approval adds 2.75 points). A well-liked union organizes faster. If another union already holds the shop, the same button is a raid.
 
-### Weighted leadership votes
+### Who gets the presidency
 
 Organizers contest the presidency the same way shareholders contest a CEO seat: continuously, weighted by **banked organizing strength**, not one per head. Someone who ran fifty drives outvotes someone who ran one. Once the union reaches the strength threshold, the race stays open whether or not a president already sits, including against an NPP holder. The plurality leader is offered the seat and must accept; a tie keeps the sitting player president. Leadership follows organizing effort: the way to control a union is to build it.
 
-### Ratification ballots
+### Ratifying a settlement
 
 A settlement no longer takes effect on the president's signature. When the president moves to accept an employer's offer, the offer goes to a **ratification vote** of the members instead. Every organizer holding banked strength when the vote opens gets a ballot, weighted by that strength; the weights are frozen at open, so organizing during the vote buys you nothing until the next one. If nobody holds any strength, there is no electorate to ask and the president settles directly, as before.
 
@@ -102,13 +97,9 @@ The vote runs for **3 turns**, and the campaign clocks keep running underneath i
 
 **Rejected**: the employer's offer stays on the table and nothing else changes. The bargaining deadline still runs the campaign into dispute and the dispute still lapses, so a membership that rejects everything ends the campaign by the existing exits rather than freezing it. The president cannot simply re-table the identical offer to the same electorate; the way back to a vote is to move the package with a counteroffer.
 
-## Union-busting
-
-CEOs can attempt **union-busting** on a striking or highly unionized sector. It costs half the sector's daily revenue (at least 1,000). Success cuts unionization by 20 points; a failed attempt backfires and adds 15. There is a 12-turn cooldown. It is a high-risk management tool, not a free reset, and it can cost goodwill with workers.
-
 ## Pension schemes
 
-The state pension is a budget line: the social-insurance law sets what the country pays out of tax, and every worker gets it. A union pension scheme is different: a fund holding real assets, won as a term of a collective agreement.
+The state pension is a budget line: the social-insurance law sets what the country pays out of tax, and every worker gets it. A union pension scheme is different: a fund holding real assets, won as a term of a collective agreement. It adds to retirement income for covered workers (see [Pensions](/wiki/pensions)), and its funding ratio is the argument both sides use at the next bargaining round.
 
 **How one starts.** A union bargains a pension contribution as a term of a collective agreement, alongside the wage floor and the labour peace. The contribution is a percentage of the wage bill of the workplaces the agreement covers, up to 15%. Settle an agreement carrying a contribution and the scheme exists from that turn.
 
@@ -130,37 +121,5 @@ The state pension is a budget line: the social-insurance law sets what the count
 
 **With index funds switched off.** Schemes simply hold cash. Contributions, claims, benefits, cuts and top-ups all work exactly as described above.
 
-## What you can do
-
-- **As a CEO:** watch the unionization and expectation gap on each sector. Keep wages near what local costs justify, and raise the wage level before the gap passes 0.12. Treat union-busting as a gamble.
-- **As an organiser:** run organize drives (5 action points each) to build banked strength, which is your vote in leadership and ratification ballots. Presidents can organise single shops for 1 action point plus treasury.
-- **As a union president:** bargain with employers and take settlements to a ratification vote. Pension contributions are a term you can win.
-- **As a legislator:** union law is a political lever. See [Bills & Legislation](/wiki/bills-legislation).
-
-## Connections
-
-**Driven by**
-
-- [Labour & Wages](/wiki/labour-and-wages): real wages against expectations and minimum-wage protection push unionization.
-- [Corporations](/wiki/corporations): CEO wage levels and union-busting choices change unionization.
-- [Bills & Legislation](/wiki/bills-legislation): union law shifts drift targets and strike thresholds.
-- [National Metrics](/wiki/national-metrics): high unemployment lowers union pressure.
-- [Pensions](/wiki/pensions): The scheme's funding ratio is the argument both sides use at the next bargaining round.
-
-**Affects**
-
-- [Labour & Wages](/wiki/labour-and-wages): the standing premium raises labour cost, and settlements set wage floors.
-- [Corporations](/wiki/corporations): strikes cut revenue and margin, and settlements bind the employer.
-- [Pensions](/wiki/pensions): union pension schemes add to retirement income for covered workers.
-- [Government Approval](/wiki/government-approval): A union ban with a crackdown costs 2 approval points.
-
-## Status
-
-Unions run in every world that has private sectors and allows unions. Countries that ban unions have none, and command economies have no private sectors to organise. Right-to-work or collective-bargaining law varies by country and era.
-
-Last checked: 2026-10-29, version 1.18.0
-
-## Technical detail
-
-The exact rules are on the [Labour design page](https://docs.lakesidegames.net/design/labour.html).
+Applies in every world that has private sectors and allows unions; countries that ban unions have none, and command economies have no private sectors to organise. Right-to-work or collective-bargaining law varies by country and era. Last checked 2026-10-29, version 1.18.0. Exact rules: [Labour design page](https://docs.lakesidegames.net/design/labour.html)
 `;

@@ -1,6 +1,6 @@
 export const strategyGuidesIndexContent = `# Strategy Guides
 
-The wiki explains how each system works. The **strategy guides** are the long-form, worked walkthroughs that show you how to *play* them well. Links that start with \`/guides\` open a long-form guide page. Links that start with \`/wiki\` stay inside the wiki. This page is the categorized index so you can find both from inside the wiki.
+Wiki pages tell you how a system works. A strategy guide tells you what to do with it: long worked walkthroughs for running a company, investing, winning an election or building tools. Links that start with \`/guides\` open a long-form guide page, and links that start with \`/wiki\` stay inside the wiki. Pick the shelf that matches what you want to do.
 
 New to the game? Start with [Getting Started](/wiki/getting-started) and the [First Campaign Walkthrough](/wiki/first-campaign-walkthrough), then come back here.
 
@@ -43,7 +43,7 @@ New to the game? Start with [Getting Started](/wiki/getting-started) and the [Fi
 
 ---
 
-Prefer system reference over walkthroughs? Start at [Getting Started](/wiki/getting-started) and browse the wiki by category. For the core rules behind every guide, see [Core Systems](/wiki/core-systems) and [Stats & Actions](/wiki/stats-actions).
+Prefer reference over walkthroughs? Browse the wiki by category from [Getting Started](/wiki/getting-started). The core rules behind every guide are in [Core Systems](/wiki/core-systems) and [Stats & Actions](/wiki/stats-actions).
 
-Last checked: 2026-10-29, version 1.18.0
+Applies in every world. Last checked 2026-10-29, version 1.18.0.
 `;

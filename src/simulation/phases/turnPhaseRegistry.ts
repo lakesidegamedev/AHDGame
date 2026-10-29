@@ -1419,7 +1419,7 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
           const { processRuLegislatureTransition } =
             await import("@/lib/countries/ru/ruLegislatureTransition");
           await processRuLegislatureTransition(db, context.gameState, newTurn, gameNow);
-          return runPostElectionGovernmentPhases(db, gameNow, generalResolved ?? 0);
+          return runPostElectionGovernmentPhases(db, gameNow, generalResolved ?? 0, newTurn);
         });
         const govFormedMap = govResult?.governmentFormed ?? {};
 
@@ -1455,7 +1455,12 @@ export function getTurnPhaseRegistry(): TurnPhaseAdapter[] {
           runParliamentaryGovernmentPhases(gameNow, newTurn)
         );
         await runtime.runPhase("parliamentaryGovernmentConfidence", () =>
-          runParliamentaryGovernmentConfidencePhase(db, gameNow, newTurn)
+          runParliamentaryGovernmentConfidencePhase(
+            db,
+            gameNow,
+            newTurn,
+            govResult?.completedSnaps ?? []
+          )
         );
         await runtime.runPhase("parliamentaryVacancyWatcher", () =>
           runParliamentaryVacancyWatcher(gameNow, newTurn)

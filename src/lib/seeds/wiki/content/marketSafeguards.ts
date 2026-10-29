@@ -1,21 +1,19 @@
 export const marketSafeguardsContent = `# Market Safeguards
 
-The stock market has an automatic safeguard. If the whole market collapses for no reason the underlying companies justify, the game steps the corporate economy back to an earlier, simpler model so a broken market gets caught without anyone watching in real time. It works like a circuit breaker on a real exchange, and it matters to you because it can suddenly change how share prices and company revenue behave.
+One morning share prices go oddly flat, or oddly jumpy, with no news behind it. That can be the market safeguard at work. If the whole [stock market](/wiki/stock-market) collapses for no reason the underlying companies justify, the game steps the corporate economy back to an earlier, simpler model, so a broken market gets caught without anyone watching in real time. It works like a circuit breaker on a real exchange, and it matters to you because it can suddenly change how share prices and company revenue behave. There is no switch or panel for players.
 
-## How it works
+## What it watches
 
-Every turn the game adds up the market value of every corporation and compares it to a **reference value** taken on the first turn the newer market model was running. It also tracks what the companies are worth on their fundamentals, meaning their expected earnings discounted by interest rates.
-
-![Ladder of market models where a trip steps Plants back to Capital and Clearing or Capital back to Ledger, after which the safeguard switches itself off.](/wiki-images/diagrams/market-safeguards-model-ladder.svg)
+Every turn the game adds up the market value of every corporation and compares it to a **reference value** taken on the first turn the newer market model was running. It also tracks what the companies are worth on their fundamentals, meaning their expected earnings ([Corporations](/wiki/corporations)) discounted by interest rates.
 
 1. **Grace period.** For the first 5 turns after the reference is set, the safeguard does nothing. The new model needs a few turns of data before a drop means anything.
-2. **Fair-value check.** After that it asks how far the market has fallen compared with what fundamentals justify. A fall that fundamentals explain, such as a central bank raising rates, is excused.
+2. **Fair-value check.** After that it asks how far the market has fallen compared with what fundamentals justify. A fall that fundamentals explain, such as a central bank raising rates ([Central Banks](/wiki/central-banks)), is excused.
 3. **Trip.** If the market is 25% or more below what fundamentals justify, the safeguard trips and steps the market model back one level.
 4. **Stand down.** After a trip the safeguard switches itself off. It does not keep stepping down, and bringing back the newer model is a deliberate decision by the game's operators.
 
-Fundamentals can only make the safeguard more forgiving. They excuse a fall that a lower valuation justifies, but they never lower the bar. A fall that fundamentals do not explain counts in full, including a large market-wide swing in sentiment.
+![Ladder of market models where a trip steps Plants back to Capital and Clearing or Capital back to Ledger, after which the safeguard switches itself off.](/wiki-images/diagrams/market-safeguards-model-ladder.svg)
 
-### Key numbers
+Fundamentals can only make the safeguard more forgiving. They excuse a fall that a lower valuation justifies, but they never lower the bar. A fall that fundamentals do not explain counts in full, including a large market-wide swing in sentiment. A hard fall for real reasons, such as a rate hike or a genuine earnings collapse, goes through unchallenged.
 
 | Item | Value |
 | --- | --- |
@@ -23,20 +21,8 @@ Fundamentals can only make the safeguard more forgiving. They excuse a fall that
 | Grace period | 5 turns |
 | Fundamentals trusted when | They cover at least 80% of total market value |
 | Below that coverage | The raw fall from the launch value is used instead |
-| Trip result from the Plants model | Back to the Capital model |
-| Trip result from Clearing or Capital | Back to the Ledger model, which tracks flows without changing balance |
-| After a trip | The safeguard switches itself off |
 
-### What changes for you
-
-Nothing about your holdings, orders or company ownership is reversed. What changes is how prices and revenue are computed from then on:
-
-- From **Plants** back to **Capital**: sectors again earn revenue from invested capacity instead of from the plants they own. See [Plants Corp Guide](/wiki/plants-corp-guide).
-- From **Clearing** or **Capital** back to **Ledger**: prices and output no longer pass through market clearing or capacity limits. See [Market System Guide](/wiki/market-system-guide).
-
-It applies to every corporation at once, not just your portfolio.
-
-### Worked example
+## Three bad days
 
 The reference market value is 1,000 and fundamentals at that moment were also 1,000. Six turns later:
 
@@ -48,39 +34,20 @@ The reference market value is 1,000 and fundamentals at that moment were also 1,
 market-guard-trip-line
 \`\`\`
 
-## What you can do
+## After a trip
 
-- **Nothing directly.** There is no switch or panel for players.
-- **Read the signs.** A sudden change in how volatile or responsive share prices feel with no news event behind it can be this safeguard acting.
-- **Expect rate moves to be excused.** A fall that matches lower company values after a rate rise is not counted against the market. Watch [Central Banks](/wiki/central-banks).
-- **Keep your plans flexible.** A step back changes company economics. If your corporation relies on Plants-model revenue, expect a different margin picture afterward.
+Nothing about your holdings, orders or company ownership is reversed. What changes is how prices and revenue are computed from then on, for every corporation at once, not just your portfolio. It also moves the world to an earlier market model, described in the [Market System Guide](/wiki/market-system-guide).
 
-Tips:
+| Item | Value |
+| --- | --- |
+| Trip result from the Plants model | Back to the Capital model |
+| Trip result from Clearing or Capital | Back to the Ledger model, which tracks flows without changing balance |
+| After a trip | The safeguard switches itself off |
 
-- A hard fall for real reasons, such as a rate hike or a genuine earnings collapse, goes through unchallenged.
-- If prices went flat or oddly stable, the step back is a plausible reason. The market is not broken for you alone.
+- From **Plants** back to **Capital**: sectors again earn revenue from invested capacity instead of from the plants they own. See [Plants Corp Guide](/wiki/plants-corp-guide).
+- From **Clearing** or **Capital** back to **Ledger**: prices and output no longer pass through market clearing or capacity limits.
 
-## Connections
+If prices went flat or oddly stable, the step back is a plausible reason; the market is not broken for you alone. If your corporation relies on Plants-model revenue, expect a different margin picture afterward, so keep plans flexible.
 
-**Driven by**
-
-- [Stock Market](/wiki/stock-market): aggregate share prices and market value are what it measures.
-- [Central Banks](/wiki/central-banks): rate rises lower company values, and the safeguard excuses that fall.
-- [Corporations](/wiki/corporations): company earnings set the fundamentals it compares against.
-
-**Affects**
-
-- [Stock Market](/wiki/stock-market): a trip changes how share prices are computed for every company.
-- [Corporations](/wiki/corporations): a trip changes how sector revenue is computed.
-- [Market System Guide](/wiki/market-system-guide): a step back moves the world to an earlier market model.
-
-## Status
-
-Watches worlds that run the Clearing, Capital or Plants market models. In a world on an earlier model there is nothing to watch. Applies to all corporations in the world at once.
-
-Last checked: 2026-10-29, version 1.18.0
-
-## Technical detail
-
-There is no separate technical page for the safeguard yet. The numbers above are the exact rules. For how share prices are computed, see [Stock Market](https://docs.lakesidegames.net/design/stock-market.html).
+Watches worlds that run the Clearing, Capital or Plants market models; in a world on an earlier model there is nothing to watch. Last checked 2026-10-29, version 1.18.0. There is no separate technical page yet and the numbers above are the exact rules; for how share prices are computed, see [Stock Market (design)](https://docs.lakesidegames.net/design/stock-market.html)
 `;

@@ -1,18 +1,14 @@
 export const indexFundsContent = `# Index Funds
 
-An index fund holds a fixed basket of shares and bonds so you do not have to pick them yourself. You buy **units** in the fund, its price per unit moves with the basket, and part of the dividends the basket earns is paid out to you. A fund that holds a big slice of a corporation also holds real votes in it, so funds matter for corporate control as well as for investing.
-
-## How it works
-
-1. **Price.** A fund's price per unit is its **net asset value (NAV)**: everything the fund owns (cash, shares, bonds and cash set aside for open buy orders) divided by the units outstanding. A brand new fund starts at 100 per unit. NAV updates once per turn, so there is no price to chase between turns.
-2. **Subscribing.** Your cash is turned into units at the current NAV. **Redeeming** (withdrawing) turns units back into cash at the current NAV. There is no lock-up and no maturity date. If the fund is short of cash it sells holdings to pay you, and you keep your share of the fund until you are paid.
-3. **No active management.** The fund follows its basket. It keeps at most 75% of its backing in shares and at least 25% in a reserve of bonds and cash.
-4. **Dividends.** When the shares in the basket pay dividends, 75% stays in the fund and raises NAV. The other 25% is paid straight to unit holders as cash. You get steady income and compounding in one product.
-5. **Tax.** Fund dividends count as taxable income, the same as dividends from shares you own directly (see [National Budget](/wiki/national-budget)). Fund units count toward your net worth at the quoted NAV, so moving cash into a fund changes what you hold, not what you are worth.
+You want exposure to a whole market without picking shares one at a time, or you want a big enough stake in a fund to decide how it votes at a company. Either way you buy **units** in an index fund: a fixed basket of shares and bonds whose price per unit moves with the basket, with part of the dividends paid out to you. A fund that holds a big slice of a corporation also holds real votes in it, so funds matter for corporate control as well as for investing.
 
 Most funds are run by the game: one broad fund per country, one per industry, and one global fund. A player's corporation can also run a **sponsored fund** that charges a fee (see below).
 
-## Key numbers
+## What a unit is worth
+
+A fund's price per unit is its **net asset value (NAV)**: everything the fund owns (cash, shares, bonds and cash set aside for open buy orders) divided by the units outstanding. A brand new fund starts at 100 per unit. NAV updates once per turn, so there is no price to chase between turns. Share prices and dividends from the [Stock Market](/wiki/stock-market) set the fund's NAV and income, and bond prices and defaults move the value of its reserve (see [Corporate Bonds](/wiki/corporate-bonds)). Policy rates move the price of the sovereign bonds in the reserve ([Central Banks](/wiki/central-banks)).
+
+There is no active management. The fund follows its basket. It keeps at most 75% of its backing in shares and at least 25% in a reserve of bonds and cash.
 
 | Item | Value |
 | --- | --- |
@@ -35,34 +31,29 @@ Most funds are run by the game: one broad fund per country, one per industry, an
 
 The ₳ amounts are set in the game's base currency and shown to you in your local currency at the current exchange rate.
 
-## Worked example
+## Buying in and getting paid
 
-A fund holds ₳12,000,000 of assets and has 120,000 units, so NAV is 100.
+Open the Stock Market for a country and choose a fund. Its page shows NAV, what it holds, its financials and, for sponsored funds, the fee. Use the Subscribe and Withdraw buttons on the fund page. You need enough cash to subscribe, and enough units to withdraw.
 
-- You subscribe ₳5,000 and receive 50 units.
-- The fund's shares pay ₳60,000 in dividends. ₳45,000 (75%) stays in the fund, so NAV rises to 12,045,000 / 120,000 = 100.375. Your 50 units are now worth ₳5,018.75.
-- The other ₳15,000 (25%) goes to unit holders, which is 0.125 per unit. You receive 50 x 0.125 = ₳6.25 in cash, which is taxable income.
-- If this were a sponsored fund with a 1.00% fee, the sponsor would take 12,000,000 x 1% / 48 = ₳2,500 from the fund each turn (48 turns make a game year). On your ₳5,000 that is a cost of about ₳50 a year.
+![Index fund page showing NAV per unit, assets under management, holders, backing ratio and the Buy fund units button](/wiki-images/screens/index-funds-fund-page.webp)
+
+Subscribing turns your cash into units at the current NAV. **Redeeming** (withdrawing) turns units back into cash at the current NAV. There is no lock-up and no maturity date. If the fund is short of cash it sells holdings to pay you, and you keep your share of the fund until you are paid.
+
+When the shares in the basket pay dividends, 75% stays in the fund and raises NAV. The other 25% is paid straight to unit holders as cash. You get steady income and compounding in one product, so a fund suits you if you want income as well as growth. Those dividends count as taxable income, the same as dividends from shares you own directly (see [National Budget](/wiki/national-budget)). Fund units count toward your net worth at the quoted NAV, so moving cash into a fund changes what you hold, not what you are worth.
+
+Say a fund holds ₳12,000,000 of assets and has 120,000 units, so NAV is 100. You subscribe ₳5,000 and receive 50 units. The fund's shares pay ₳60,000 in dividends. ₳45,000 (75%) stays in the fund, so NAV rises to 12,045,000 / 120,000 = 100.375, and your 50 units are now worth ₳5,018.75. The other ₳15,000 (25%) goes to unit holders, which is 0.125 per unit. You receive 50 x 0.125 = ₳6.25 in cash, which is taxable income.
+
+If this were a sponsored fund with a 1.00% fee, the sponsor would take 12,000,000 x 1% / 48 = ₳2,500 from the fund each turn (48 turns make a game year). On your ₳5,000 that is a cost of about ₳50 a year. Compare the fee on sponsored funds before you pick one, because it comes out of your return every turn.
 
 \`\`\`wiki-chart
 index-fund-reinvest-vs-direct
 \`\`\`
 
-## What you can do
+A country fund tracks that country's market, an industry fund tracks one industry, and the global fund spreads across everything. Pension schemes also buy broad fund units, adding demand and a long-term holder, and the market value of fund units a scheme holds raises or lowers its funding ratio (see [Pensions](/wiki/pensions)).
 
-- **Look at a fund.** Open the Stock Market for a country and choose a fund. Its page shows NAV, what it holds, its financials and, for sponsored funds, the fee.
-- **Subscribe or withdraw.** Use the Subscribe and Withdraw buttons on the fund page. You need enough cash to subscribe, and enough units to withdraw.
-- **Pick the right fund.** A country fund tracks that country's market, an industry fund tracks one industry, and the global fund spreads across everything. Compare the fee on sponsored funds first, because it comes out of your return every turn.
-- **Steer a company.** Own at least half of a fund's units and you direct how its shares vote (see below).
-- **Sponsor a fund or petition for a listing,** if you run a corporation (see below).
+## Voting the fund's shares
 
-![Index fund page showing NAV per unit, assets under management, holders, backing ratio and the Buy fund units button](/wiki-images/screens/index-funds-fund-page.webp)
-
-Tips: fund holders are paid dividends in cash, so a fund suits you if you want income as well as growth.
-
-## How a fund votes its shares
-
-A fund has no opinion of its own, so a rule decides where its votes go.
+A fund has no opinion of its own, so a rule decides where its votes go. A fund's votes can decide shareholder votes in [Corporations](/wiki/corporations).
 
 ![Decision tree for how a fund votes: a holder with at least half the units directs it, otherwise it follows the majority cast by others, otherwise it abstains.](/wiki-images/diagrams/index-funds-fund-vote-rule.svg)
 
@@ -72,9 +63,9 @@ A fund has no opinion of its own, so a rule decides where its votes go.
 
 Control is checked when the vote resolves, not when you give the instruction. If you sell below half the units before the vote closes, your instruction lapses. It does not pass to whoever bought the units.
 
-## Listing standards
+## Getting into the index
 
-Being in an index means a large, automatic buyer starts absorbing your shares, so it has to be earned. A corporation qualifies when it clears all three bars:
+Being in an index means a large, automatic buyer starts absorbing your shares, so it has to be earned. Inclusion brings steady buying of a company's shares on the [Stock Market](/wiki/stock-market), and removal brings selling. A corporation qualifies when it clears all three bars:
 
 | Standard | Requirement |
 | --- | --- |
@@ -90,20 +81,20 @@ Being in an index means a large, automatic buyer starts absorbing your shares, s
 
 **Missing data never excludes anyone.** A corporation with no recorded public float is treated as unknown, not as zero.
 
-## The index committee
+### Petitioning the index committee
 
-A corporation that misses the free float or size bar can petition its country's index committee to be admitted anyway. The committee is the same cabinet seat that rules on merger review (see [Corporate Mergers & Acquisitions](/wiki/corporate-mergers)), so the officeholder who decides whether two firms may merge also decides who belongs in the national index. A country whose era has no such seat has no committee and no waivers.
+A corporation that misses the free float or size bar can petition its country's index committee to be admitted anyway. The committee is the same cabinet seat that rules on merger review (see [Corporate Mergers & Acquisitions](/wiki/corporate-mergers)), so the officeholder who decides whether two firms may merge also decides who belongs in the national index. A country whose era has no such seat has no committee and no waivers; listing petitions only exist where the seat does.
 
 - **Solvency cannot be waived.** No one can wave an insolvent corporation into an index, because fund holders would pay for the favour.
 - **Cost.** Petitioning is lobbying and costs corporate cash. The money is paid on filing and never returned, whatever the answer. If a player holds the seat, the money goes to them personally and the record is public. If the seat is vacant or held by a computer-run official, the money goes to the treasury.
 - **Who decides.** A player in the seat rules directly. Otherwise a fixed rule decides after 12 turns. It grants the petition only if the contribution is at least 2% of the corporation's market value (never less than ₳250,000) and the shortfall is not too large: you must reach at least half of the float or size required.
 - **A waiver is a licence.** It lasts 48 turns. A corporation that never fixes the underlying problem must ask again, in front of whoever holds the seat by then.
 
-Example: a corporation worth ₳80,000,000 has a free float of 9% against the 15% bar, so it reaches 60% of what is required. A contribution of at least 2% x 80,000,000 = ₳1,600,000 can win a waiver by default. At a float of 6% it reaches only 40%, and no payment can win it automatically.
+Suppose a corporation worth ₳80,000,000 has a free float of 9% against the 15% bar, so it reaches 60% of what is required. A contribution of at least 2% x 80,000,000 = ₳1,600,000 can win a waiver by default. At a float of 6% it reaches only 40%, and no payment can win it automatically.
 
-## Sponsored funds
+## Running a sponsored fund
 
-A **sponsored fund** is one a player's corporation charters and runs as a business. Only a corporation with a financial sector can sponsor one.
+A **sponsored fund** is one a player's corporation charters and runs as a business. Only a corporation with a financial sector can sponsor one. A sponsor earns fee revenue, which counts in [Corporations](/wiki/corporations).
 
 - **Start-up cost.** A ₳2,500,000 charter fee, paid to the sponsor's national treasury and never refunded, plus at least ₳10,000,000 of seed capital paid into the fund.
 - **Choices.** A name and ticker, a mandate and a fee. The mandate is a scope (one country, or global) and a kind (broad, or a single industry). The sponsor cannot hand-pick the holdings, because a fund whose sponsor picks the basket is not an index fund.
@@ -117,32 +108,5 @@ index-fund-expense-ratio-drag
 
 If you hold units in a fund that is winding up, you do not need to do anything: you are paid out automatically. You can also withdraw earlier at the quoted NAV.
 
-## Connections
-
-**Driven by**
-
-- [Stock Market](/wiki/stock-market): share prices and dividends set the fund's NAV and income.
-- [Corporate Bonds](/wiki/corporate-bonds): bond prices and defaults move the value of the fund's reserve.
-- [Central Banks](/wiki/central-banks): policy rates move the price of the sovereign bonds in the reserve.
-- [Corporate Mergers & Acquisitions](/wiki/corporate-mergers): the same cabinet seat that reviews mergers rules on index listing petitions.
-- [Pensions](/wiki/pensions): pension schemes buy broad fund units, adding demand and a long-term holder.
-
-**Affects**
-
-- [Stock Market](/wiki/stock-market): index inclusion brings steady buying of a company's shares, and removal brings selling.
-- [National Budget](/wiki/national-budget): fund dividends are taxable income for holders.
-- [Corporations](/wiki/corporations): a fund's votes can decide shareholder votes, and a sponsor earns fee revenue.
-- [Pensions](/wiki/pensions): the market value of fund units a scheme holds raises or lowers its funding ratio.
-
-## Status
-
-In a world where fund trading has not opened yet, you can browse funds but the Subscribe and Withdraw buttons are unavailable, and the fund page says so. Listing petitions only exist in countries and eras that have the merger review seat. Sponsoring needs a corporation with a financial sector.
-
-Last checked: 2026-10-29, version 1.18.0
-
-## Technical detail
-
-The exact rules for the stock side of funds are on the [Stock Market design page](https://docs.lakesidegames.net/design/stock-market.html).
-
-See also: [Glossary](/wiki/glossary)
+In a world where fund trading has not opened yet, you can browse funds but the Subscribe and Withdraw buttons are unavailable, and the fund page says so. Last checked 2026-10-29, version 1.18.0. Exact rules: [Stock Market (design)](https://docs.lakesidegames.net/design/stock-market.html). See also: [Glossary](/wiki/glossary)
 `;

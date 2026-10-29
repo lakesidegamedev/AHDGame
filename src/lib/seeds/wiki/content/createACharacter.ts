@@ -1,8 +1,6 @@
 export const createACharacterContent = `# Create a Character
 
-One character per account. A few of the choices are expensive to undo, so make them in this order and read the notes before you confirm. This page covers every screen of creation and what you start with.
-
-## How it works
+You get one character per account, and country and home are the two choices that hurt to undo. This page walks the creation screens in the order you meet them, then lists what you start with.
 
 1. Log in with an account that has no living character. You are sent to **Create Character** automatically.
 2. Some worlds require a linked Discord account before you can create a character. The page tells you if yours does.
@@ -10,9 +8,9 @@ One character per account. A few of the choices are expensive to undo, so make t
 
 If you already have a character, you cannot open creation until you retire it (see the end of this page).
 
-### 1. Country
+## Pick a country
 
-Pick the country you actually want to play. It scopes your elections, parties, legislature and who you can wire money to. You cannot campaign across countries, and a later country change resets your National Influence and your party (see [Relocation](/wiki/relocation)).
+Pick the country you actually want to play. It scopes your elections, parties, legislature and who you can wire money to, and it decides the office ladder you will climb in [Player Progression](/wiki/player-progression). You cannot campaign across countries, and a later country change resets your National Influence and your party (see [Relocation](/wiki/relocation)).
 
 ![Create character screen with the list of open countries in the Country step](/wiki-images/screens/create-a-character-country-picker.webp)
 
@@ -29,19 +27,19 @@ Pick the country you actually want to play. It scopes your elections, parties, l
 | Soviet Union | Republic | Supreme Soviet or Nationalities Deputy |
 | East Germany | Land | Volkskammer Deputy |
 
-**Why the list is shorter than this table:** only countries open to players in your world appear in the picker. At the start of a world, the United States, United Kingdom and Japan are open in the 1991 to 2023 presets, the United States, United Kingdom, Soviet Union and East Germany are open in the 1953 and 1979 presets, and the United States, United Kingdom, Germany, Japan and China are open in the 2027 preset. Other countries run as economies or as non-player politicians until they are opened later in a world's life.
+**Why the list is shorter than this table:** only countries open to players in your world appear in the picker, and [Game Starting State](/wiki/game-starting-state) explains how the world's era decides which countries and parties you can pick. At the start of a world, the United States, United Kingdom and Japan are open in the 1991 to 2023 presets, the United States, United Kingdom, Soviet Union and East Germany are open in the 1953 and 1979 presets, and the United States, United Kingdom, Germany, Japan and China are open in the 2027 preset. Other countries run as economies or as non-player politicians until they are opened later in a world's life.
 
 If you cannot pick the Soviet Union, you are in a world set after 1990, where it no longer exists. The country hubs from [Getting Started](/wiki/getting-started) cover each one.
 
-### 2. Name and avatar
+## Name and avatar
 
 Type a readable name. There is no separate last-name field. An avatar is optional, and you can change the image later in Settings.
 
-### 3. Home state or region
+## Home state or region
 
 Home is where you canvass cheapest and where most local races live. Races for state or regional seats can only be entered from your home. National races such as President and Prime Minister are the exception. You can [relocate](/wiki/relocation) later, but you lose your state Political Influence and donor network when you do, so pick once, carefully.
 
-### 4. Policy positions
+## Policy positions
 
 Two sliders, each from -5 to +5:
 
@@ -56,11 +54,11 @@ These feed primaries (your distance from the party), bill voting and how demogra
 
 Do not slam both sliders to an extreme unless that party really is extreme, since moderate parties punish extremes in the primary.
 
-### 5. Wealth background and stats
+## Wealth background and stats
 
-Pick a wealth background: **Low Income**, **Medium Income** or **High Income**. It sets your personal Cash on Hand and your starting income tier. Where the world uses the stats system, you also spend **28 points across seven stats** (Charisma, Debate, Energy, Fundraising, Business Acumen, Statecraft and Intellect), each from 1 to 10 with a minimum of 1, which leaves 21 points to place. See [RPG Stats](/wiki/rpg-stats) for what each one does.
+Pick a wealth background: **Low Income**, **Medium Income** or **High Income**. It sets your personal Cash on Hand and your starting income tier. Where the world uses the stats system, you also spend **28 points across seven stats** (Charisma, Debate, Energy, Fundraising, Business Acumen, Statecraft and Intellect), each from 1 to 10 with a minimum of 1, which leaves 21 points to place. See [RPG Stats](/wiki/rpg-stats) for what each one does. The seven stats and your starting meters carry on into [Stats & Actions](/wiki/stats-actions).
 
-### 6. Confirm and take your kit
+## What you start with
 
 | Starting kit | Value |
 | --- | --- |
@@ -75,6 +73,8 @@ Pick a wealth background: **Low Income**, **Medium Income** or **High Income**. 
 | Party | Independent, unless you chose an open party at creation |
 | Office | none |
 
+The numbers above are what the [First Campaign Walkthrough](/wiki/first-campaign-walkthrough) spends in your first week, and what [Getting Started](/wiki/getting-started) reads you through.
+
 Characters who joined through a referral also get +10% Political Influence and Favorability, +10 actions and ₳500,000 more Cash on Hand (era scaled). Where the starter checklist is on, a welcome mail from the Game Guide also arrives in [Mail](/wiki/mail). For your first three days, a first-days panel on your profile lists three goals: campaign at home three times, join a party that takes members from your region, and enter a local race still taking candidates. Your name appears in your home state's player list.
 
 | Key number | Value |
@@ -85,13 +85,13 @@ Characters who joined through a referral also get +10% Political Influence and F
 | Max move from one bill vote | 0.25 per axis |
 | First-days panel | 72 hours |
 
-## What you can do
+## After you confirm
 
 **Right after you confirm:**
 
 1. Open **Parties** and join one close to your sliders.
 2. Open **Dashboard** and spend Campaign actions.
-3. Continue on [Getting Started](/wiki/getting-started).
+3. Continue on [Getting Started](/wiki/getting-started), which turns your country and kit into a first week.
 
 **Start over with a different character.** Open **Settings**, find **Retire character**, and type your character's name exactly to confirm. The character moves into your retired characters archive, where its record is kept, and you are sent back to Create Character. Retiring clears the character from the game, so do it only when you mean it. There is no separate delete step.
 
@@ -111,27 +111,5 @@ Tips:
 - [ ] Starting actions not dumped into Fundraise before Donor Level 2.
 - [ ] First race identified on **Elections** (poll before declare).
 
-## Connections
-
-**Driven by**
-
-- [Game Starting State](/wiki/game-starting-state): the world's era decides which countries and parties you can pick.
-
-**Affects**
-
-- [Getting Started](/wiki/getting-started): your country and kit set your first week.
-- [Stats & Actions](/wiki/stats-actions): your seven stats and starting meters come from this step.
-- [Relocation](/wiki/relocation): your first home is the one you can later move away from.
-- [Player Progression](/wiki/player-progression): your country decides the office ladder you climb.
-- [First Campaign Walkthrough](/wiki/first-campaign-walkthrough): its starting kit is what that plan spends.
-
-## Status
-
-Character creation is open in every world unless it is closed for maintenance. Which countries you can pick depends on the world's era and what has been opened so far. Some worlds require a linked Discord account first.
-
-Last checked: 2026-10-29, version 1.18.0
-
-## Technical detail
-
-Creation has no separate design page. The starting meters and costs are on the [Stats & Actions design page](https://docs.lakesidegames.net/design/stats-actions.html), and the first-hours flow is on the [Getting Started design page](https://docs.lakesidegames.net/design/getting-started.html).
+Open in every world unless closed for maintenance; which countries you can pick depends on the world's era, and some worlds require a linked Discord account first. Last checked 2026-10-29, version 1.18.0. Exact rules: [Stats & Actions (design)](https://docs.lakesidegames.net/design/stats-actions.html) and [Getting Started (design)](https://docs.lakesidegames.net/design/getting-started.html)
 `;

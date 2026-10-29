@@ -1,8 +1,8 @@
 export const readingTheGameContent = `# Reading the Game
 
-A House Divided is a living simulation. Every turn, elections resolve, bills advance, NPPs act, metrics shift. To make good decisions, you need to know how to interpret the data the game is constantly generating. This page is a guide to reading current game state effectively.
+The game never stops generating numbers: elections resolve, bills advance, NPPs act and metrics shift every hour. Most of them are noise for any one decision. This page shows which screens to open before you commit actions, and what to read off each of them.
 
-## Start with the dashboard
+## The dashboard: what to check first
 
 The main dashboard (for US players: \`/dashboard\`) is your primary situational awareness screen. It shows:
 
@@ -16,7 +16,7 @@ The dashboard refreshes automatically after each turn completes.
 
 ---
 
-## Checking national metrics
+## National metrics and approval
 
 National metrics are the economic and social health indicators for each country. Find them on the country overview page (e.g., \`/country/us\`).
 
@@ -36,7 +36,7 @@ The **national approval rating** on the country page is computed from the countr
 
 ---
 
-## Following active elections
+## Watching the races
 
 The elections page (\`/country/us/legislature\` for Congress elections; country-specific paths for others) lists all active elections with:
 
@@ -56,7 +56,7 @@ In the **general phase:** Vote totals accumulate each turn. The candidate list s
 
 ---
 
-## Understanding the turn log
+## What the last turn left behind
 
 Each turn, the game generates a log of everything that happened. You won't see the raw log as a player, but its effects surface as:
 
@@ -70,7 +70,7 @@ Each turn, the game generates a log of everything that happened. You won't see t
 
 ---
 
-## Monitoring party standings
+## Party standings and majority thresholds
 
 Party standings matter for both elections and legislation. Monitor via the parties page:
 
@@ -84,7 +84,7 @@ For US presidential politics, track **party org in swing states** specifically: 
 
 ---
 
-## Checking NPP ideologies
+## Sizing up the NPPs
 
 NPPs vote on bills, enter elections, and fill legislative seats. Knowing the ideology distribution of NPPs in your target chamber helps predict:
 
@@ -96,7 +96,7 @@ NPP profiles are visible on the legislators page for each chamber. Look at their
 
 ---
 
-## Using poll data to make decisions
+## Polls: which one to buy
 
 Polling is the most direct diagnostic tool for electoral decision-making:
 
@@ -114,7 +114,7 @@ Poll projections use the same math as actual vote accumulation: they're accurate
 
 ---
 
-## Reading party org and its impact
+## Party org, the invisible lever
 
 Party org is often invisible until something breaks. Check it:
 
@@ -126,7 +126,7 @@ If org is low, the party chair can invest in org improvement. As a party member,
 
 ---
 
-## Reading the economic picture
+## The economic screens
 
 If you're involved in the economy (corporations, bonds, forex), check:
 
@@ -140,11 +140,7 @@ If you're involved in the economy (corporations, bonds, forex), check:
 
 ---
 
-## Related
+## Going deeper
 
-- [Advanced Strategy](/wiki/advanced-strategy): Using game data to inform strategic decisions.
-- [Polling](/wiki/polling): Quick Poll vs Full Poll details.
-- [Reference: Turn Order](/wiki/reference-turn-order): What happens each turn.
-- [Reference: Formulas](/wiki/reference-formulas): All the math behind what you're reading.
-- [Endgame Goals](/wiki/endgame-goals): What to aim for once you understand the game.
+[Polling](/wiki/polling) compares the Quick Poll with the Full Poll in detail. [Reference: Turn Order](/wiki/reference-turn-order) shows what happens each turn and [Reference: Formulas](/wiki/reference-formulas) holds the math behind what you are reading. [Advanced Strategy](/wiki/advanced-strategy) turns the data into decisions, and [Endgame Goals](/wiki/endgame-goals) says what to aim for once you understand the game.
 `;
