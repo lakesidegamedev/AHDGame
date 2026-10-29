@@ -459,13 +459,14 @@ describe("frozen producer turn settlement", () => {
       binding.accountId === "corp" ? { ...binding, openingCashLocal: 0 } : binding
     );
     const first = await settleProducerTurn(db, input);
-    expect(first.producers[0]).toMatchObject({ profit: -15, closingArrears: 15 });
+    // No cash: nothing is staffed, so only the fixed site bill becomes a debt.
+    expect(first.producers[0]).toMatchObject({ profit: -5, closingArrears: 5 });
     const stored = (await db
       .collection<Corporation>("corporations")
       .findOne({ _id: new ObjectId(corporationId) }))!.producerPayables!;
     expect(
       stored.claims.reduce((sum: number, claim: { amount: number }) => sum + claim.amount, 0)
-    ).toBe(15);
+    ).toBe(5);
     memory.collection("corporations").docs[0].liquidCapital = 30;
     const household = memory
       .collection("producerEconomyAccounts")
@@ -506,12 +507,11 @@ describe("frozen producer turn settlement", () => {
       },
     }));
     const second = await settleProducerTurn(db, input);
-    expect(second.producers[0]).toMatchObject({
-      profit: -15,
-      cashFlow: -15,
-      arrearsPaid: 15,
-      closingArrears: 15,
-    });
+    // The carried site bill is paid first; what is left staffs part of the
+    // run, which sells, so the plant recovers instead of only servicing debt.
+    expect(second.producers[0]).toMatchObject({ arrearsPaid: 5, closingArrears: 0 });
+    expect(second.producers[0].profit).toBeGreaterThan(0);
+    expect(second.producers[0].cashFlow).toBeCloseTo(0, 1);
     expect(memory.collection("corporations").docs[0].producerPayables).toMatchObject({ turn: 2 });
   });
 
