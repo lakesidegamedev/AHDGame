@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { AlertTriangle, Mic, Newspaper, Radio } from "lucide-react";
+import { AlertTriangle, Clock, Mic, Newspaper, Radio } from "lucide-react";
 
 /**
  * One panel on the Actions page for everything that is happening TO the
@@ -187,12 +187,16 @@ export function EventOutcomeRow({
   );
 }
 
-/** Labelled countdown for the top-right slot of an `EventItem`. */
+/** Compact countdown chip for the top-right slot of an `EventItem`. */
 export function Countdown({ label, value }: { label: string; value: string }) {
   return (
-    <div className="text-right">
-      <div className="text-body-xs tracking-wider text-muted uppercase">{label}</div>
-      <div className="text-body font-semibold text-foreground tabular-nums">{value}</div>
-    </div>
+    <span
+      title={`${label} ${value}`}
+      className="inline-flex items-center gap-1 rounded-full bg-card-elevated px-2 py-0.5 text-body-sm font-semibold text-foreground tabular-nums"
+    >
+      <Clock className="h-3.5 w-3.5 text-warning" aria-hidden />
+      <span className="sr-only">{label} </span>
+      {value}
+    </span>
   );
 }
