@@ -5,7 +5,15 @@ import { fetchJson } from "@/lib/observability/fetchJson";
 import Link from "next/link";
 import { getStoredConsent } from "@/components/CookieConsent";
 import Image from "next/image";
-import { useState, useEffect, useRef, useCallback, useMemo, type ReactNode } from "react";
+import {
+  useState,
+  useReducer,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+  type ReactNode,
+} from "react";
 import { useRouter } from "next/navigation";
 import { Input, Skeleton, Modal } from "@/components/ui";
 import { partiesApiUrl } from "@/lib/urls";
@@ -54,6 +62,8 @@ import {
   readCreateCharacterDraft,
   writeCreateCharacterDraft,
 } from "./createCharacterDraft";
+
+import { discordGateReducer, initialDiscordGateState } from "./discordGateState";
 
 const JP_REGION_ID_SET = new Set(JP_REGIONS.map((r) => r.id));
 
@@ -128,14 +138,12 @@ export default function CreateCharacterClient() {
   );
   const [statePlayerCounts, setStatePlayerCounts] = useState<Record<string, number>>({});
 
-  // Discord linked state from auth/me
-  const [discordLinked, setDiscordLinked] = useState(false);
-  const [discordRequired, setDiscordRequired] = useState(false);
-  const [showDiscordPrompt, setShowDiscordPrompt] = useState(false);
-  const [discordPromptDismissed, setDiscordPromptDismissed] = useState(false);
+  const [
+    { discordLinked, discordRequired, showDiscordPrompt, discordPromptDismissed },
+    dispatchDiscord,
+  ] = useReducer(discordGateReducer, initialDiscordGateState);
   const onDiscordLinked = useCallback(() => {
-    setDiscordLinked(true);
-    setShowDiscordPrompt(false);
+    dispatchDiscord({ type: "linked" });
   }, []);
   useEffect(() => {
     let mounted = true;
@@ -146,8 +154,7 @@ export default function CreateCharacterClient() {
       })
         .then((data) => {
           if (mounted && data) {
-            setDiscordRequired(data.discordLinkRequired === true);
-            if (data.discordLinkRequired !== true) setShowDiscordPrompt(false);
+            dispatchDiscord({ type: "requirement", required: data.discordLinkRequired === true });
           }
         })
         .catch(() => {
@@ -335,7 +342,7 @@ export default function CreateCharacterClient() {
         setRpgStatsEnabled(data.user.rpgStatsEnabled === true);
         // Capture Discord linking state
         if (data.user.discordId) {
-          setDiscordLinked(true);
+          dispatchDiscord({ type: "linked" });
           setDiscordData({
             discordId: data.user.discordId,
             discordUsername: data.user.discordUsername,
@@ -533,7 +540,7 @@ export default function CreateCharacterClient() {
     }
 
     if (discordRequired && !discordLinked) {
-      setShowDiscordPrompt(true);
+      dispatchDiscord({ type: "show" });
       setIsLoading(false);
       return;
     }
@@ -604,9 +611,7 @@ export default function CreateCharacterClient() {
       const characterData = await characterRes.json().catch(() => ({}));
       if (!characterRes.ok) {
         if (characterData.code === "DISCORD_LINK_REQUIRED") {
-          setDiscordLinked(false);
-          setDiscordRequired(true);
-          setShowDiscordPrompt(true);
+          dispatchDiscord({ type: "server-required" });
         }
         const message: string = characterData.error || "Failed to create character";
         sendIntakeBeacon("create_character_submit_failed", {
@@ -1121,8 +1126,7 @@ export default function CreateCharacterClient() {
         (showDiscordPrompt || (authChecked && discordRequired && !discordPromptDismissed))
       }
       onClose={() => {
-        setShowDiscordPrompt(false);
-        setDiscordPromptDismissed(true);
+        dispatchDiscord({ type: "dismiss" });
       }}
       title="Link Discord to create your character"
     >
