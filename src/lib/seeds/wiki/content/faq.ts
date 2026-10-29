@@ -82,7 +82,7 @@ The year counter increments (e.g., year 1 to year 2) and turn counting restarts 
 
 **When does the next turn fire?**
 
-Turns fire at the top of every real hour (e.g., 14:00, 15:00, 16:00). You can see the countdown timer on the game dashboard. In fast mode, turns fire at :00 and :30.
+Turns fire at the top of every real hour (e.g., 14:00, 15:00, 16:00). You can see the countdown timer on the game dashboard. In fast mode, each processed turn still advances the game clock by exactly one game hour.
 
 ---
 
@@ -150,7 +150,7 @@ When Forex is enabled, you can trade every active country's currency. A full mod
 
 **Can I change my home state or UK constituency?**
 
-Yes. Open the state or UK constituency you want to move to, then choose **Relocate here** in its header. Relocating costs actions and funds, and there is a cooldown period. Your home state or constituency updates for canvassing and future elections. Relocation can also move you to a different country. That resets your national influence and makes you independent in the new country, so treat it as a fresh start there, not a free jump.
+Yes. Open the state or UK constituency you want to move to, then choose **Relocate here** in its header. Relocating costs actions and funds, and there is a cooldown of 72 turns (3 real days) between moves. Your home state or constituency updates for canvassing and future elections. Relocation can also move you to a different country. That resets your national influence, so treat it as a fresh start there, not a free jump. Your party membership is only dropped if the move takes you outside the party's reach.
 
 ---
 

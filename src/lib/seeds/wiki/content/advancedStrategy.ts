@@ -64,7 +64,7 @@ Legislation influences state-level metrics (healthcare, economy, education, envi
 **The pre-election bill play:**
 1. Identify which demographic group is the weakest link for your campaign.
 2. Identify a bill that would positively affect that group's key metric.
-3. Introduce it ~10 turns before your election ends: enough time for the floor votes, signature, and effect propagation.
+3. Introduce it well before your election ends (about 10 turns is a rule of thumb, not a game rule): enough time for the floor votes, signature, and effect propagation.
 4. Coordinate with your party's whip to lock votes.
 
 Voting also moves your own positions, a step per bill toward what you back and away from what you oppose, so a long run of votes against your party's line drifts you off its platform and erodes your primary alignment. Maintain whip compliance on low-stakes votes to preserve that alignment for the bills you care about.

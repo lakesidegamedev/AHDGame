@@ -51,7 +51,7 @@ Each turn you receive:
 
 Office action pools (ministerial, vice president, justice, gubernatorial) are separate from these actions and refill through the day: ministerial actions return one every 6 turns up to a cap of 4, and vice president and Supreme Court actions one every 12 turns up to 2. Once per turn per pool you can spend 10 actions to buy 1 office action, up to that pool's cap.
 
-Actions accumulate up to a **cap of 200**. Above 100 you pay a **−4 hoarding penalty per turn** applied before the refresh. For characters with only the base 4 actions, this creates a soft cap around **100-104**; office holders with higher refresh still grow toward the hard cap, just slowed by 4 per turn.
+Actions accumulate up to a cap that depends on your Energy stat: **200 at Energy 1, rising to 250 at Energy 10**. Above the hoard threshold (**100 at Energy 1, rising to 125 at Energy 10**) you pay a **-4 hoarding penalty per turn** applied before the refresh (\`src/lib/stats/statsConstants.ts\`, \`src/lib/turn/actionRefresh.ts\`). For characters with only the base 4 actions, this creates a soft cap just above the threshold; office holders with higher refresh still grow toward the hard cap, just slowed by 4 per turn.
 
 ### Spending actions
 
@@ -60,24 +60,26 @@ Action costs for core activities (full list on [Stats & Actions](/wiki/stats-act
 | Action | AP Cost | Fund Cost | Effect |
 | --- | --- | --- | --- |
 | Campaign | 1-5 (tiered by PI) | Scaled by state GDP | +1 Political Influence |
-| Fundraise | 3 | none | Earns ₳50k + ₳2k × donor level |
+| Fundraise | 3 | none | Earns (₳50k + ₳2k × donor level) × (1 + state PI/100) × your Fundraising stat modifier |
 | Quick Poll | 2 | ₳25k | topline + best/worst 5 groups |
 | Run Advertisements | 5-9 (tiered by favorability) | Scaled by state GDP | +1-3 Favorability (diminishing above 70%) |
 | Full Demographic Poll | 6 | ₳75k | complete breakdown |
 | Build Donor Network | 4-20 (tiered by level) | Scaled by state GDP | donor level +1 |
-| Support | 6 | none | +1% target Favorability (±12 net swing cap per target per turn) |
-| Attack | 6 | none | −1% target Favorability; +2% own Infamy (±12 net swing cap per target per turn) |
-| Barnstorm | 5 | ₳100k | +1-2% target Political Influence |
+| Support | Priced from Run Advertisements (see below) | Priced from Run Advertisements | +1% target Favorability (±12 net swing cap per target per turn) |
+| Attack | Priced from Run Advertisements (see below) | Priced from Run Advertisements | -1% target Favorability; +2% own Infamy (±12 net swing cap per target per turn) |
+| Barnstorm | Priced from Campaign (see below) | Priced from Campaign, scaled by target state GDP | +1-2% target Political Influence |
 | Presidential Travel | 3 to 10 | none | Sets travel state during the US general; +1%/turn Favorability while there |
 
-**Out-of-state multipliers** (1.0× home / 1.25× neighbour / 1.5× non-neighbour) apply to interpersonal actions (Support, Attack, Barnstorm), not to Campaign or Advertise.
+**Support, Attack and Barnstorm are priced from your own self-actions.** Support costs the equivalent run of Run Advertisements needed to give the target the same gain, times 1.25. Attack uses the same Advertise equivalent times 1.5. Barnstorm uses the equivalent Campaign cost times 1.25. The action cost is rounded down and the fund cost to the nearest unit (\`src/lib/influence/rules.ts\`, \`src/lib/influence/simpleInfluence.ts\`).
+
+**Out-of-state multipliers** (1.0× home / 1.25× neighbour / 1.5× non-neighbour) apply to the action cost of Support and Attack only. Barnstorm has no distance multiplier, and neither do Campaign or Advertise.
 
 ## Money: two pools
 
 Two money pools, separate and non-convertible:
 
 - **Campaign Funds**: Political war chest. Used for ads, polls, donor base, NPP influence, party taxes, and personal campaign donations.
-- **Cash on Hand**: Personal liquid cash. Only used for wire transfers from the Portfolio page.
+- **Cash on Hand**: Personal liquid cash. Used for wire transfers from the Portfolio page, share and bond purchases, property, and sponsored news posts (5 actions plus ₳100k personal cash).
 
 Fund generation per turn (Campaign Funds):
 

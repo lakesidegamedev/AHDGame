@@ -374,16 +374,16 @@ Net worth is stock, bonds, portfolio, and cash, rendered here in USD-equivalent.
 
 | # | Character | Country | Local | USD-equiv. | Source |
 | --- | --- | --- | --- | --- | --- |
-| 1 | **Kenta Kon** | JP | ¥1,616.1B | $21.79B | Toyota (private) · BOJ Governor · Foreign Minister |
-| 2 | **Rgold** | JP | ¥1,480.5B | $19.96B | Rgold Automobiles (private) · **Prime Minister** |
-| 3 | **Melania Trump** | US | $18.49B | $18.49B | The Trump Organization |
-| 4 | **Shigeru Miyamoto** | JP | ¥818.8B | $11.04B | Nintendo · Economy Minister |
-| 5 | **Cletus Red** | US | $10.84B | $10.84B | Defense Industrial Complexes |
-| 6 | **Boris Pistorius** | US | $9.12B | $9.12B | Mecklenburg Industries |
-| 7 | **Ashton Gilbert** | UK | £4.36B | $6.86B | TESCO · **Prime Minister** · NATO Sec-Gen |
-| 8 | **Jamie Dimon** | US | $6.76B | $6.76B | JP Morgan Chase · **Federal Reserve Chair** |
-| 9 | **Benjamin Whitley** | NG | ₦7,514.1B | $6.09B | Minister of Defence |
-| 10 | **Moshe Greenbaum** | US | $5.57B | $5.57B | Greenbaum Group · Sec. Commerce |
+| 1 | Character A | JP | ¥1,616.1B | $21.79B | Toyota (private) · BOJ Governor · Foreign Minister |
+| 2 | Character B | JP | ¥1,480.5B | $19.96B | Rgold Automobiles (private) · **Prime Minister** |
+| 3 | Character C | US | $18.49B | $18.49B | The Trump Organization |
+| 4 | Character D | JP | ¥818.8B | $11.04B | Nintendo · Economy Minister |
+| 5 | Character E | US | $10.84B | $10.84B | Defense Industrial Complexes |
+| 6 | Character F | US | $9.12B | $9.12B | Mecklenburg Industries |
+| 7 | Character G | UK | £4.36B | $6.86B | TESCO · **Prime Minister** · NATO Sec-Gen |
+| 8 | Character H | US | $6.76B | $6.76B | JP Morgan Chase · **Federal Reserve Chair** |
+| 9 | Character I | NG | ₦7,514.1B | $6.09B | Minister of Defence |
+| 10 | Character J | US | $5.57B | $5.57B | Greenbaum Group · Sec. Commerce |
 
 Four of the top ten are sitting heads of government or central bank governors: the Prime Ministers of Japan and the United Kingdom, and the Governors of the Bank of Japan and the Federal Reserve. The politician-as-CEO pattern that [[Beta 1]] documented has not merely persisted into Beta 2. It has captured monetary policy.
 
@@ -435,16 +435,16 @@ Systems live in this iteration that [[Beta 1]] never had:
 
 | # | Character | Country | Influence |
 | --- | --- | --- | --- |
-| 1 | **Victoria Jones** | US | 99 |
-| 2 | **Roman Herzog** | DE | 96 |
-| 3 | **Ivanka Trump** | US | 95 |
-| 4 | **Elizabeth Vereker** | US | 94 |
-| 5 | **Bill Steinman** | US | 93 |
-| 6 | **Klara Becker** | DE | 92 |
-| 7 | **Dekks Doe** | US | 92 |
-| 8 | **Liam Allen** | IE | 92 |
-| 9 | **Theresa May** | UK | 92 |
-| 10 | **Alexander Sterling** | US | 91 |
+| 1 | Character A | US | 99 |
+| 2 | Character B | DE | 96 |
+| 3 | Character C | US | 95 |
+| 4 | Character D | US | 94 |
+| 5 | Character E | US | 93 |
+| 6 | Character F | DE | 92 |
+| 7 | Character G | US | 92 |
+| 8 | Character H | IE | 92 |
+| 9 | Character I | UK | 92 |
+| 10 | Character J | US | 91 |
 
 Note who is *not* here: the President of the United States ranks third, and no head of government from the UK, Japan, or China appears at all. Beta 2's influence economy rewards legislators and ministers over executives.
 

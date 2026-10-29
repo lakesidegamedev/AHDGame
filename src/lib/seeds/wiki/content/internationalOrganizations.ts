@@ -36,7 +36,7 @@ Each org is created with a list of founding member countries that defines the in
 Each org has a **leadership office** with:
 
 - A **title** (e.g., Secretary-General, Secretary General, President of the Council)
-- A **termTurns** of **96 turns** (approximately 2 game years)
+- A **term** of **96 turns** (approximately 2 game years) by default. The one exception is the Non-Aligned Movement, whose chair serves **144 turns** (approximately 3 game years)
 
 Leadership elections are held when the term expires, and the office confers authority over the org's agenda and legislation.
 
@@ -55,7 +55,7 @@ New countries join an org through a **membership proposal**, which is voted on b
 
 ## Leadership elections
 
-When a leadership term (96 turns) expires, the org holds a **leadership election**. A candidate is seated by a majority of the members entitled to vote. Eligible candidates compete for the leadership office, and the winner serves the next full term. Holding leadership of a major org like the EU or NATO is a significant source of political influence on the international stage.
+When a leadership term (96 turns, or 144 for the Non-Aligned Movement chair) expires, the org holds a **leadership election**. A candidate is seated by a majority of the members entitled to vote. Eligible candidates compete for the leadership office, and the winner serves the next full term. Holding leadership of a major org like the EU or NATO is a significant source of political influence on the international stage.
 
 ## Organization legislation
 
@@ -109,7 +109,7 @@ Autonomous governments cast opinion-based votes here too, table trade agreements
 Players can **create their own international organizations** with arbitrary parameters:
 
 - **A player-chosen name**: the org is identified by a unique short name
-- **A player-created flag**: marks the org as player-created (as opposed to built-in)
+- **A player-created marker**: shows the org as player-created (as opposed to built-in)
 - A category, leadership office, charter, and optional emblem
 
 A custom organization may use the **Bloc** category. Founding a Bloc creates a new independent alignment pole named for the organization, with a color chosen by its founder. The founder begins committed to that pole. Bloc members can spend the pooled organization fund on Influence, use aid to reinforce member alignment, draw autonomous countries toward membership, and risk defections when a member remains below the alignment threshold. Custom Blocs also receive the same posture, statement, aid, sanctions, war-declaration, and conflict-entry resolution powers as other Bloc organizations.
@@ -132,15 +132,6 @@ This page displays the org's membership, current leadership, active legislation,
 - **Leading an org amplifies your voice.** The leadership office gives you agenda-setting power and political influence.
 - **FTAs are the most impactful org legislation.** A free trade agreement between two members eliminates bilateral tariffs and boosts trade affinity, a major economic lever.
 - **Custom orgs are flexible.** You can create a bloc tailored to your diplomatic strategy, inviting only aligned countries.
-
-## Public API
-
-Bots and public dashboards can read the live organization layer with any scoped API key:
-
-- \`GET /api/public/v1/organizations\` lists every active built-in and custom organization with membership, leadership, and activity counts.
-- \`GET /api/public/v1/organizations/[id]\` adds the charter, membership proposals, resolutions, country-level vote records, leadership elections, and pending withdrawals.
-
-The detail route reports how each country voted, but deliberately omits the internal character IDs attached to proposals and ballots. The complete request and response reference lives in the [public API documentation](https://docs.lakesidegames.net/api/public-v1.html).
 
 ## Related systems
 

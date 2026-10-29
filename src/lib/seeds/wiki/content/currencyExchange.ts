@@ -103,9 +103,9 @@ Rates are capped at ±50% from their base rate. A currency cannot hyperinflate o
 **Tier 3 (Direct Trades):** Send a specific currency offer to a named character. They can accept or decline, no counter-offers. Expires after 24 turns by default.
 
 Spread fees are split three ways: **25% destroyed** (deflationary sink), **25%
-booked as the currency's central-bank forex revenue**, and **50% credited to
-\`spreadFeeReserveBalances.<currency>\`**. That currency-specific pool is not
-the general \`reserveBalance\`.
+booked as the currency's central-bank forex revenue**, and **50% added to that
+currency's central bank reserve pool**. That currency-specific pool is separate
+from the central bank's general reserves.
 
 ## Multi-currency wallet
 

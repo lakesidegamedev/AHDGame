@@ -25,11 +25,11 @@ The wage slider scales the wage-per-worker term. **Minimum-wage** legislation fl
 
 Countries enact minimum-wage policy through legislation. The active option sets a Kaitz ratio that floors wage-per-worker in sectors that would otherwise pay below the floor.
 
-When macro labour effects are enabled, minimum-wage changes also feed the national wage index and unemployment channels alongside CEO wage choices.
+Minimum-wage changes also feed the national wage index and unemployment channels alongside CEO wage choices.
 
 ## Macro feedback (wages to economy)
 
-When the labour system runs at **macro** tier or above, wage dynamics connect to national metrics:
+Wage dynamics connect to national metrics:
 
 | Channel | Effect |
 | --- | --- |
@@ -48,23 +48,14 @@ From a sector's detail view (when wages are enabled):
 
 Wage spending flows through the same profit pipeline as other sector costs and affects corporate margins directly.
 
-## Phased rollout
+## Status
 
-Labour ships in tiers:
-
-| Tier | What unlocks |
-| --- | --- |
-| **wages** | Explicit labour cost, wage slider, minimum-wage floor |
-| **macro** | Wage index → median income, unemployment, migration |
-| **unions** | Sector unionization drift, standing premium, strikes: see [Unions](/wiki/unions) |
-| **full** | Union-law bias, union-busting, player-run unions |
-
-Fresh worlds start at **full**, so all four layers are active. Admins can dial a particular world down to an earlier tier for rollout or testing.
+All four labour layers (wages, macro feedback, unions and the full union toolset) are live in current worlds.
 
 ## Related
 
 - [Corporations](/wiki/corporations): sector costs, margins, and CEO tools
-- [Unions](/wiki/unions): unionization, strikes, and player-run unions (phased)
+- [Unions](/wiki/unions): unionization, strikes, and player-run unions
 - [National Metrics](/wiki/national-metrics): unemployment, median income, migration
 - [Bills & Legislation](/wiki/bills-legislation): minimum-wage and union-law provisions
 `;

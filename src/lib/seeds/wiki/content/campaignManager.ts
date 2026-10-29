@@ -94,7 +94,7 @@ Player endorsements only count toward the action bonus in **presidential** races
 
 ### Campaign Managers
 
-The candidate (or an admin) appoints managers from the **Campaign Managers** panel on the campaign page: search for a character by name, add them, remove them, up to **three**. A manager must be in your country and cannot be a candidate managing their own campaign. A manager's owning player has:
+The candidate appoints managers from the **Campaign Managers** panel on the campaign page: search for a character by name, add them, remove them, up to **three**. A manager must be in your country and cannot be a candidate managing their own campaign. A manager's owning player has:
 
 - Read access to the full campaign page (same as the candidate).
 - Ability to trigger upgrades, allocate campaign actions, and change opposition research targets.
@@ -157,7 +157,7 @@ If \`projected_funds (= funds + income) < maintenance\`:
 4. **Passive effects** still fire this turn using pre-downgrade levels (one last gasp).
 5. **Maintenance** is deducted using post-downgrade levels.
 6. **No refund.** Money paid for the level is gone.
-7. An \`activityHistory\` entry logs the downgrade with \`reason: "insolvency"\`.
+7. The Activity tab logs the downgrade with the reason (insolvency).
 
 Existing negative funds are **not healed**: the campaign keeps the debt, but stops bleeding.
 
@@ -168,7 +168,7 @@ Opponent-visible upgrade levels are fuzzed each turn:
 - **Public:** Random offset in ±3. If you're at level 5, public sees anywhere from 2 to 8.
 - **Party members:** Random offset in ±1. If you're at level 5, party sees 4, 5, or 6.
 
-Update frequency: every turn during Group 6 (campaign processing).
+Update frequency: every turn.
 
 Your own display is always accurate.
 
@@ -185,7 +185,7 @@ Actions only the candidate (or an appointed manager) can perform:
 
 Anyone can donate:
 
-- **Player-to-candidate donations.** Personal Cash on Hand converted to campaign funds at 100% (to the campaign, not to a character's Campaign Funds). All donations are logged publicly.
+- **Player-to-candidate donations.** You donate from your own Campaign Funds, and the campaign receives the same amount (100%, with currency conversion only if the currencies differ). The campaign's donation record keeps the most recent 100 donations.
 - **Party-chair donations.** National or regional chair can disburse from the party treasury to any candidate in their party.
 - **Party-treasurer donations.** Treasurer has equivalent authority to chair for party-fund disbursements.
 

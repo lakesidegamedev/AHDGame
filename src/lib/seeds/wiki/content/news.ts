@@ -15,7 +15,7 @@ From [Stats & Actions](/wiki/stats-actions):
 | Post news (player feed) | 0 AP | Free article; 12-hour cooldown per author |
 | Sponsored news post | 5 AP and ₳100,000 personal cash | Paid placement; 30-minute cooldown |
 
-Subject and body are yours. Sponsored posts are a paid bump, not a different permission. There is no editorial gate: other players will see what you publish.
+Subject and body are yours. Sponsored posts are a paid bump, not a different permission. There is no editorial review, but a prohibited-language filter rejects posts that contain slurs. Anything else you publish, other players will see.
 
 ## System posts
 

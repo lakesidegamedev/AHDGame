@@ -4,40 +4,15 @@ Achievements are persistent, account-bound milestones that recognize meaningful 
 
 ## Account-bound, not character-bound
 
-Achievements are keyed by **\`userId\`**, meaning they persist across all your characters and sessions. An achievement earned by one character is visible on your account forever.
-
-Each achievement record may also include an optional **\`characterId\`** field that records which specific character earned it. This lets you trace which of your characters accomplished what, while keeping the achievement itself at the account level.
-
-## Structure
-
-Every achievement has:
-
-| Field | Description |
-| --- | --- |
-| \`slug\` | Unique identifier for the achievement |
-| **Rarity tier** | How rare the achievement is (e.g., common, rare, legendary) |
-| \`characterId\` | (Optional) The character who earned it |
-| Definition | Cached achievement metadata (title, description, icon) |
-
-Achievement **definitions are cached**. The system loads them once and reuses the cached copy, so looking up achievement metadata is cheap and does not hit the database repeatedly.
+Achievements belong to your account, so they persist across all your characters and sessions. An achievement earned by one character stays visible on your account forever, and the achievement records which of your characters earned it.
 
 ## Triggers
 
-Achievements are earned when **triggers fire from game events**. The game emits events as things happen (elections won, bills passed, economic milestones reached, etc.), and the achievement system checks whether any unearned achievement's trigger matches the event. If it does, the achievement is awarded.
-
-## Non-throwing API
-
-The achievement system is designed to be **non-disruptive**. The API **returns \`false\` on failure** rather than throwing an exception. This means:
-
-- A failed achievement check never crashes a game action.
-- Achievement failures are silent. You will not see error logs from the achievement system.
-- The worst case is simply that an achievement is not awarded; gameplay continues normally.
-
-This makes achievements a safe, low-risk system to extend or modify. A broken trigger cannot take down the game.
+Achievements are earned when **game events fire**: elections won, bills passed, economic milestones reached, and so on. When an event matches an unearned achievement, it is awarded automatically. An achievement is never awarded twice.
 
 ## Rarity tiers
 
-Achievements are categorized by rarity tiers. Higher-tier achievements are harder to earn and more prestigious. The exact tiers and their names are defined in the achievement definitions cache.
+Achievements are categorized by rarity tiers. Higher-tier achievements are harder to earn and more prestigious.
 
 ## Viewing achievements
 
@@ -74,8 +49,8 @@ A confirmed Supreme Court justice receives a career-history entry and the **Equa
 ## Strategic notes
 
 - **Achievements are flavor, not power.** Earning them does not grant mechanical bonuses. They are a record of accomplishment, not a progression system.
-- **Some achievements are character-specific.** The optional \`characterId\` field means some achievements can only be earned by a specific kind of character (e.g., winning a presidential election).
-- **They persist across resets.** Because they are keyed by \`userId\`, achievements survive character retirement and new character creation.
+- **Some achievements are character-specific.** Some can only be earned by a specific kind of character (e.g., winning a presidential election).
+- **They persist across resets.** Because they belong to your account, achievements survive character retirement and new character creation.
 
 ## Related systems
 

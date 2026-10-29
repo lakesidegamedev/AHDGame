@@ -1,10 +1,10 @@
 export const playerEventsContent = `# Player random events
 
-The Player Random Events (PREE) system is an optional gameplay layer that offers event-driven choices to players each turn. The system is gated behind a single admin setting: when it's off, no new events are offered, but events already in progress still expire and resolve normally.
+The Player Random Events (PREE) system is a gameplay layer, on by default in new worlds, that offers event-driven choices to players each turn. When it is off for a world, no new events are offered, but events already in progress still expire and resolve normally.
 
 ## Feature flag
 
-Admins can turn PREE on or off for the whole game at any time. When it's off, no new events are offered, but any events already pending continue to exist until they expire or are resolved. When it's on, the per-turn driver offers one event to every eligible character.
+PREE can be on or off for a whole world. When it's off, no new events are offered, but any events already pending continue to exist until they expire or are resolved. When it's on, the per-turn driver offers one event to every eligible character.
 
 ## Per-turn driver
 

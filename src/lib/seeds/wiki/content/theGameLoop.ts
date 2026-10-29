@@ -4,7 +4,7 @@ You do not need to live in the tab. This page is when to click, and what happens
 
 ## How often to log in
 
-**Default: once or twice a day.** Actions carry to a cap of 200. Above 100 you pay a -4 hoarding penalty per turn, so do not sit on a huge stack.
+**Default: once or twice a day.** Actions carry to a cap of 200 (up to 250 with maximum Energy). Above 100 (up to 125 with maximum Energy) you pay a -4 hoarding penalty per turn, so do not sit on a huge stack.
 
 A 10-minute daily pass:
 
@@ -31,7 +31,7 @@ Refresh the Dashboard after the hour if you want the new numbers. Market prices 
 
 ## When to log in hourly
 
-- Last ~4 turns of a close general (those turns carry ~25% of the vote pool).
+- Last ~4 turns of a close general (those turns carry ~30% of the vote pool).
 - Senate cabinet confirmation with a 24-hour window.
 - Live confidence vote in your parliament.
 - A bill about to close that you still need to whip or switch.

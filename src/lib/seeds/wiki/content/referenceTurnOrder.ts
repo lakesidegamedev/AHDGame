@@ -65,7 +65,7 @@ Runs after corporations so bond coupon flows can read updated liquid capital:
 
 Sequential (each step depends on the previous):
 
-1. **Turnout decay**: All turnout modifiers decay 2% of their current value toward zero.
+1. **Turnout decay**: All turnout modifiers decay toward zero with a 6-turn half-life (about 11% of the current value per turn; \`src/lib/campaignTargeting/rules.ts\`).
 2. **Party GOTV**: Party GOTV budget distributed to states, boosting turnout modifiers for aligned demographics.
 3. **Party org maintenance**: Org bucket shares are refreshed, and organization can decay for parties that become inactive in a state or region.
 
@@ -210,7 +210,7 @@ The turn does **not** halt. Subsequent phases continue processing. This means a 
 
 ## Fast mode
 
-Fast mode runs turns every 30 minutes instead of every hour (i.e., 1 turn = 30 real minutes instead of 60). All timing calculations (election durations, bill deadlines) remain in hours, so everything simply completes in half the real-world time.
+Fast mode is a pull-ahead setting for the game clock: each processed turn advances the clock by exactly one game hour, never backward, instead of tracking real time (\`src/lib/time/computeGameNow.ts\`). It does not change the turn interval to 30 minutes.
 
 ## Stuck turns
 

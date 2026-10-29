@@ -112,7 +112,7 @@ If you want to move, for example, the uninsured rate down:
 
 ### Repealing bad policy
 
-There is no explicit repeal mechanic. To reverse a policy, pass a bill selecting the opposite option on the same legislation type. The new bill overwrites the old enacted-law record, and the metric begins tracking toward the new target.
+Ordinary policy has no repeal button. To reverse it, pass a bill selecting the opposite option on the same legislation type. Subsidies, embargoes and union bans do have explicit repeal provisions (see [Bills & Legislation](/wiki/bills-legislation)). The new bill overwrites the old enacted-law record, and the metric begins tracking toward the new target.
 
 ## Related pages
 

@@ -465,9 +465,9 @@ Very large sales and new issues are paced. The market buys at most 5% of a compa
 **Share price formula:**
 The share price is computed from three fundamental components:
 
-- **Tangible book per share** (weight 1.0): \`(liquidCapital + sectorNPV + bondHoldings - issuedBondDebt) / totalShares\`
-- **Earnings power per share** (weight 0.4): \`normalizedAnnualEarnings / costOfCapital / totalShares\`
-- **Growth premium per share** (weight 0.1): Gordon Growth Model (a formula for valuing a company based on how fast its dividends grow) terminal value using the revenue-weighted sector growth rate, capped just below the cost of capital
+- **Tangible book per share** (weight 1.0): \`(liquidCapital + 0.75 × bankEquity + sectorNPV + constructionInProgress + bondHoldings - issuedBondDebt) / totalShares\`
+- **Earnings power per share** (weight 0.5): \`normalizedAnnualEarnings / costOfCapital / totalShares\`
+- **Growth premium per share** (weight 0.15): Gordon Growth Model (a formula for valuing a company based on how fast its dividends grow) terminal value using the revenue-weighted sector growth rate, capped just below the cost of capital
 
 The three components sum to a fundamental value, which becomes the share price except during a post-split smoothing window (2 turns after a stock split or reverse split, where the formula biases 70% toward the previous price to avoid instant reversion).
 

@@ -132,7 +132,7 @@ Selling assets back to the market is the genuine way down from a high SOCI: it l
 
 ## Acquiring assets (in brief)
 
-Unowned and NPC assets can be nationalized freely. A **player-owned** company is protected and can only be taken when a trigger unlocks it: financial distress (an abandoned or insolvent firm), operating in a designated strategic sector, holding a near-total (75%+) market monopoly, or a legislative supermajority (two-thirds) vote. Most takings post a **notice window** (48 turns) so the target can respond. Compensation is paid at a steep premium over a company's going-concern value, scaled by the tier the authority uses. The full rules live on the [Nationalization](/wiki/nationalization) page.
+Unowned and NPC assets can be nationalized freely. A **player-owned** company is protected and can only be taken when a trigger unlocks it: financial distress (an abandoned or insolvent firm), operating in a designated strategic sector, holding a near-total (75%+) market monopoly, or a legislative supermajority (two-thirds) vote. Most takings post a **notice window** (48 turns) so the target can respond. Fair compensation is the target's tangible book value (replacement cost), scaled by the tier the authority uses. The full rules live on the [Nationalization](/wiki/nationalization) page.
 
 ## Strategy notes
 

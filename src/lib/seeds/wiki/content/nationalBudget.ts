@@ -94,7 +94,7 @@ When the country runs a deficit, it issues sovereign bonds each quarter to cover
 
 ## The fiscal year
 
-The game runs on a **48-turn year** (1 turn = 1 game week). The fiscal year processing occurs at **turn 40** (October) and captures an annual budget snapshot:
+The game runs on a **48-turn year** (48 turns per game year). The fiscal year processing occurs at **turn 40** (October) and captures an annual budget snapshot:
 
 - Revenue, spending, tax rates, and debt are frozen into a historical record
 - The snapshot is used for year-over-year comparisons in the budget panel

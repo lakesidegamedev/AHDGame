@@ -30,7 +30,7 @@ You may complete exactly one specialization per decade. Choosing one locks the o
 Each node has a dual cost:
 
 - **R&D Score**: spent from the corporation's accumulated score (see below).
-- **Cash**: a fraction of daily gross revenue (varies by node; heavier nodes cost more).
+- **Cash**: priced by what the node is worth to your corporation. For nodes that save money or add profit on your running plants, the price is the estimated per-turn value times one game year, so every corporation waits about the same time for a node to pay for itself. Nodes with no running value (build discounts, shields, strength grants, production methods) cost 5% of daily gross revenue. A minimum cash price, scaled to the era, applies to every node so tiny corporations cannot unlock nodes for R&D score alone (\`src/lib/constants/techTree/costs.ts\`).
 
 Additional gates:
 
@@ -44,10 +44,10 @@ Unlocks are atomic: insufficient R&D or cash rejects the purchase, and lane comm
 
 Tech nodes grant persistent bonuses, including:
 
-- Profit **margin** bumps
+- **Plant output** increases (more output from your plants, capped at 12% in total)
 - **Marketing** or **logistics** strength grants
 - **Growth cost** reductions
-- Input-cost, wage, output, and realized-price changes
+- Input-cost, wage, and output changes
 - Protection from tariff and dominance penalties
 - **Strategy unlocks**: gates advanced operating strategies behind research
 
@@ -58,8 +58,9 @@ Effects stack with normal sector modifiers and apply for the life of the corpora
 Set a daily **R&D budget** from the CEO Budget tab. Each turn:
 
 \`\`\`
-baseGain = 1.0 (if any R&D budget is set)
-scaledGain = 0.65 × ln(1 + budget / 100,000)
+baseGain = 1.2 (if any R&D budget is set)
+scaledGain = 0.78 × ln(1 + budget / 100,000)
+diminishing = 100 / (100 + score + max(0, score − 100))
 decay = 3% of current score
 newScore = max(0, (1 − 0.03) × oldScore + (baseGain + scaledGain) × diminishing(oldScore))
 \`\`\`
@@ -69,6 +70,8 @@ newScore = max(0, (1 − 0.03) × oldScore + (baseGain + scaledGain) × diminish
 | Starting score | 0 |
 | Decay per turn | 3% of current score |
 | Diminishing returns above | Score 100 |
+
+Worker morale also nudges R&D efficiency: paying wages above baseline lifts it by up to 15%, and paying below baseline lowers it by up to 15% (\`src/lib/constants/corporations.ts\`).
 
 R&D spending counts toward the **150% overhead cap** alongside marketing, logistics, and CEO salary.
 
@@ -94,7 +97,7 @@ Tech trees and breakthroughs complement each other: trees give targeted permanen
 ## What the common effects do under the plants system
 
 - **Capacity build cost** (growth cost reduction): discounts what you pay to build capacity, and shortens construction by 60% of the same percentage. A 20% discount means 12% faster builds. The total discount is capped at 50%.
-- **Output sale price** (price realization): raises revenue per unit sold. On cost-plus sectors it adds to your markup, because your posted price is recorded cost plus markup and the upgrade sits on top of it. Capped at 6% in total.
+- **Plant output**: raises every output rate of the sector's plants, which lifts both revenue and the supply you put on the market. This effect also replaces the old profit-margin and sale-price bonuses. Capped at 12% in total (\`src/lib/constants/techTree/effects.ts\`).
 - **Market-dominance toll** (dominance shield): once you hold a dominant share, new capacity costs extra. The shield removes that percentage of the extra, permanently. It does nothing while you are below the dominance threshold. Capped at 60%.
 - **Logistics strength**: eases the sprawl penalty above the sector threshold, and cuts your freight bill and the landed-price surcharge on inputs bought from other states, by up to 40% at a strength of 200.
 
@@ -102,8 +105,7 @@ Tech trees and breakthroughs complement each other: trees give targeted permanen
 
 - **Lane and specialization choices matter**: Corporate lane bonuses help every sector; Sector lane unlocks methods and margins specific to your industry; the final specialization decides whether that decade favors scale, premium output, or resilience.
 - **Decade timing**: a 2019-start world only researches the final tiers; a 1979-start world walks the full tree over decades.
-- **Cash + score planning**: nodes near the top of a decade cost more R&D and a larger cash slice of daily revenue; fund R&D before a unlock push.
-- **NPP corporations**: autonomous CEOs (NPP autonomy v1+) can unlock affordable nodes when the feature is enabled.
+- **Cash + score planning**: nodes near the top of a decade cost more R&D and more cash; fund R&D before a unlock push.
 
 ## Related
 

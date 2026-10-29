@@ -41,7 +41,7 @@ tiny new market cannot receive impossible demand that no build-out could satisfy
 Each country also carries a household price index, starting at 1.0. Every turn
 it compounds 75% of the country's annual inflation rate on a per-turn basis:
 
-\`nextIndex = priorIndex * (1 + 0.75 * annualInflation / 100 / 48)\`
+\`nextIndex = priorIndex * (1 + 0.75 * annualInflation / 100) ^ (1 / 48)\`
 
 This is a price-level record, not a feedback input into inflation. The economy
 panel uses it to convert nominal median income into launch-price purchasing

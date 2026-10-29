@@ -230,7 +230,7 @@ The contractor assigns up to four production lines from each plant across its or
 
 Both the minister's and contractor's order books show lots ordered, built, carried, delivered, paid, and still committed. A stalled order names the reason. Awards to a corporation the minister owns or materially holds are marked on the contract, reported on the public wire, and reduce the minister's standing.
 
-An admin may pause **new** defence procurement in an emergency. Existing active contracts continue to deliver and may still be terminated under their signed rules.
+New defence procurement can be suspended in an emergency. Existing active contracts continue to deliver and may still be terminated under their signed rules.
 
 **Planned economies also receive state arms industry output.** Independently of tenders, the Soviet Union and East Germany receive a fixed trickle of lots every turn, delivered straight to the store and pointed at whichever branch is furthest from a full load. It is enough to keep an army equipped and fit out a new formation in a few turns, and it banks a modest war reserve in peacetime, but it will not keep up with a war fought at full pace. The Soviet arsenal out-produces the East German one several times over.
 

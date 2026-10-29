@@ -11,7 +11,7 @@ The party treasury accumulates from member taxes each turn. Tax rates are set se
 - **National tax rate**: set by the national treasurer; applies to all members across all states
 - **State tax rate**: set by the state treasurer; applies to members in that state on top of the national rate
 
-Treasury funds are spent on budget allocations (GOTV, suppression, org building), on NPP influence actions, and on growing Political Strength.
+Treasury funds are spent on budget allocations (GOTV, suppression), on NPP influence actions, and on growing Political Strength.
 
 ### Political Strength
 
@@ -32,7 +32,7 @@ State chairs and vice chairs spend the state party's PS on state-scope actions; 
 Every party is either a **Major** or a **Minor** party, shown as a badge on its page.
 
 - **Minor parties** (all new and custom parties start here) have a reduced national PS cap that *grows with their footprint*: the cap rises for every region where the party holds **20%+ Organization**, and falls again if a region drops below 10%.
-- A Minor party that reaches **20%+ Organization in a third of a country's regions** graduates to **Major** and unlocks the full national PS cap.
+- A Minor party that reaches **20%+ Organization in a third of a country's regions** (a quarter in the UK, 3 of 12) graduates to **Major** and unlocks the full national PS cap.
 - A **Major** party that collapses below **10% Organization across two-thirds of regions** is shown an at-risk warning with a countdown. If it doesn't recover to the graduation level in time, it is demoted back to Minor (and its cap shrinks to match its footprint). Major parties have a **240-turn grace period** before demotion takes effect.
 
 The historic governing parties begin as Major; small and regional parties begin as Minor and must build organization to rise. (In one-party states, the ruling party is always Major.)
@@ -63,9 +63,9 @@ Allocate a percentage of state party income to **opposing turnout reduction**. S
 
 ### Org building
 
-Allocate a percentage of state party income to **organization score growth**. At the constant rate of ₳75,000 per +1 org per turn, this converts revenue into organization. The org building percent represents how much of your total state party revenue goes toward org growth.
+Organization is no longer funded by a budget percentage. Each **Build Org** click spends Political Strength and adds one organization unit (see [Party Organization](/wiki/party-organization)).
 
-**Who can set it:** State chair, vice chair, treasurer, national chair. National chairs can set this even in states where the party has no presence yet (to expand the party footprint). State officers require party presence in that state.
+**Who can click it:** State chair, vice chair, national chair and the other officers listed on that page. National chairs can build org in states where the party has no presence yet (to expand the party footprint). State officers require party presence in that state.
 
 ## NPP influence actions
 
@@ -91,12 +91,12 @@ Limits: each NPP can be whipped **twice per target per chamber** (allows one ret
 
 ## National party actions
 
-The national party chair can recruit NPPs through the admin-facing recruitment tool. This costs party treasury and creates new NPP politicians aligned with the party, boosting representation in states where the party is thin.
+The national party chair can recruit NPPs through the party recruitment tool. This costs party treasury and creates new NPP politicians aligned with the party, boosting representation in states where the party is thin.
 
 ## Related
 
 - [Party Leadership](/wiki/party-leadership): who holds the authority to use party actions.
-- [Party Organization](/wiki/party-organization): how org building budget translates to org score.
+- [Party Organization](/wiki/party-organization): how Build Org clicks translate to org score.
 - [NPP Behavior](/wiki/npp-behavior): NPP compliance with whip directives.
 - [NPPs Overview](/wiki/npps-overview): what NPPs do and why influencing them matters.
 `;

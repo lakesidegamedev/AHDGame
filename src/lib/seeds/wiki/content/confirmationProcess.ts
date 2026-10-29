@@ -32,11 +32,14 @@ Once a nomination is submitted, a confirmation vote opens in the Senate. All sit
 
 ### Step 3: NPP senator votes
 
-NPP Senators auto-vote on confirmations using logic similar to bill voting:
+NPP Senators vote on party lines only (\`src/lib/cabinetNominationLifecycle.ts\`):
 
-- **Party alignment.** NPPs from the President's party lean toward confirming; opposition NPPs lean toward rejecting.
-- **Personal favorability.** NPPs with high favorability toward the nominee are more likely to confirm regardless of party.
-- **Loyalty trait.** High-loyalty NPPs follow party guidance more strictly; low-loyalty NPPs may cross party lines.
+- **Same party as the nominee:** votes for.
+- **Opposite major party to the nominee:** votes against.
+- **Everyone else:** an NPP from the President's party votes for 70% of the time and abstains otherwise. Any other NPP votes for 55% of the time and against otherwise.
+- An NPP with no party abstains.
+
+Favorability, loyalty and policy alignment do not enter NPP votes.
 
 ### Step 4: Resolution
 
@@ -52,7 +55,7 @@ When the voting window closes, the turn processor tallies votes.
 
 The most direct block: if the opposition party controls the Senate and votes as a bloc, they can reject any nominee. This is the normal mechanism of divided government.
 
-NPP vote reliability is not 100%: some NPPs will cross party lines based on the nominee's favorability. A highly popular nominee may pull a few opposition NPP votes.
+NPPs from a major party never cross the aisle against a nominee of the other major party, but NPPs outside the two major blocs vote partly at random, so independent and minor-party nominees can pick up a few extra votes.
 
 ### Withdrawn nomination
 
@@ -66,7 +69,7 @@ If the President hasn't nominated anyone, there's nothing to confirm. Strategic 
 
 ### For the President (nominating)
 
-- **Pick a confirmable candidate.** If you're in divided government, nominating an ideologically extreme character will fail. Consider a more centrist nominee who can pull opposition NPP votes.
+- **Pick a confirmable candidate.** If you're in divided government, nominating an ideologically extreme character will fail. Player Senators still weigh the nominee freely, so a more centrist nominee can pull opposition player votes.
 - **Time nominations with Senate dynamics.** If you're about to gain Senate seats (after an election), delay a controversial nomination until the new senators are seated.
 - **Use nominations as leverage.** Offering a coveted Cabinet seat to a player from an opposing party (in exchange for legislative support) is a legitimate bargain.
 
@@ -78,8 +81,8 @@ If the President hasn't nominated anyone, there's nothing to confirm. Strategic 
 
 ### For Nominees
 
-- **Favorability matters.** High personal favorability can pull opposition NPP votes. Build relationships across party lines before you expect to be nominated.
-- **Policy alignment.** NPP votes on confirmation are influenced by how well your personal policy positions align with theirs. A nominee far from the median Senator will face harder confirmation.
+- **Your party label matters most to NPPs.** NPP senators vote by party, so a nominee from the President's party or an independent fares better with them than a nominee from the opposition.
+- **Build relationships with player Senators.** Player Senators decide for themselves, so cross-party goodwill still helps.
 
 ## Failed nominations
 

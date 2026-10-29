@@ -16,7 +16,7 @@ A country under a **demilitarisation** settlement (see [Peace, Indemnities & Tru
 
 ## Planned economies
 
-The Soviet Union and East Germany receive **state arms industry** output independently of tenders: a fixed number of lots each turn, delivered straight to the arsenal and aimed at the branch furthest from a full load. Eligible state-owned and true NPP defence suppliers also submit an initial suggested-price bid when a tender opens. They use the same country, currency and component eligibility checks as player suppliers; they do not receive a direct-award shortcut. Player corporations with NPP caretaker CEOs still make their own bidding decisions. See [Units, Recruitment & Procurement](/wiki/military-units).
+The Soviet Union and East Germany receive **state arms industry** output independently of tenders: a fixed number of lots each turn, delivered straight to the arsenal and aimed at the branch furthest from a full load. Eligible state-run suppliers and AI-run defence companies also submit an initial suggested-price bid when a tender opens. They use the same country, currency and component eligibility checks as player suppliers; they do not receive a direct-award shortcut. Player corporations run by a caretaker CEO still make their own bidding decisions. See [Units, Recruitment & Procurement](/wiki/military-units).
 
 ## Contracting windows
 

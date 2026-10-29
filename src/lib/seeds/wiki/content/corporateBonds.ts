@@ -8,9 +8,10 @@ Only the CEO can issue bonds. Access the bond panel from the corporation page.
 
 | Parameter | Details |
 | --- | --- |
-| Minimum issuance | anchor currency 100,000 |
+| Minimum issuance | ₳100,000 |
 | Maximum total debt | 2x equity, and never more than what the corporation could realise by selling up (its plants at book, its cash, and the bonds it holds). The second cap is usually the binding one for a built-out corporation, and it is the same test the insolvency check applies, so a corporation inside its quoted ceiling cannot be judged insolvent. The Bonds tab says which limit is binding. Refinancing defaulted debt is exempt, since it adds no debt. |
-| Unit face value | anchor currency 1,000 per bond unit |
+| Maximum per issue | 25% of annual revenue, with a floor of ₳500,000,000 (\`src/lib/constants/bonds.ts\`) |
+| Unit face value | ₳1,000 per bond unit |
 | Maturity options | 96 turns (2 years), 240 turns (5 years), 336 turns (7 years) |
 | Coupon rate | prime rate + credit spread + 1.0pp + term premium (see below) |
 | Issuance cooldown | 24 turns between issuances for publicly-listed corporations; 12 turns for private corporations |
@@ -65,9 +66,9 @@ Each turn, the bond pays a fraction of its annual coupon to all current bondhold
 perTurnPayment = (faceValue x couponRate / 100) / turnsPerYear
 \`\`\`
 
-For a anchor currency 100,000 bond at 8% coupon rate with 48 turns per year:
-- Annual coupon: anchor currency 8,000
-- Per-turn payment: anchor currency 8,000 / 48 ≈ anchor currency 166.67
+For a ₳100,000 bond at 8% coupon rate with 48 turns per year:
+- Annual coupon: ₳8,000
+- Per-turn payment: ₳8,000 / 48 ≈ ₳166.67
 
 Payments are made from corporate liquid capital. If the corporation's liquid capital falls below zero after coupon payments, the bond **defaults**.
 
@@ -104,7 +105,7 @@ Any player or corporation can buy bond units from the public float:
 
 CEOs can also **buy back** their own bonds from the public float to reduce outstanding debt:
 - Non-defaulted bonds: buyback at current **market price**
-- Defaulted bonds: buyback at **face value** (anchor currency 1,000/unit), which prevents buying distressed debt at a discount and immediately retiring it for a profit
+- Defaulted bonds: buyback at **face value** (₳1,000/unit), which prevents buying distressed debt at a discount and immediately retiring it for a profit
 
 ## Default
 

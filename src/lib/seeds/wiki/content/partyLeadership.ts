@@ -89,6 +89,8 @@ National leadership (chair, vice chair, treasurer) can vote even if they are not
 | Election duration | Sets a custom duration for future national elections |
 | Merge | Dissolves the party by merging it into a target party |
 
+After a proposal passes, that type is locked for **96 turns** (rename, merge, election method and election duration each tracked separately). A position shift locks the affected axis for **336 turns**; the economic and social axes are tracked independently.
+
 ### Rename
 
 Proposes a new party name and abbreviation. If the proposal passes, the party name and abbreviation update immediately.

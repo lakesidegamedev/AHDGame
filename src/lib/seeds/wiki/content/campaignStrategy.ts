@@ -116,7 +116,7 @@ Red flags:
 
 ### Primary phase
 
-- Campaign aggressively in-state: every +1 PI converts to ~0.25 primary score points.
+- Campaign aggressively in-state: PI feeds the primary score on a square-root curve (\`25 × sqrt(PI/100)\`, \`src/lib/primaryScore.ts\`), so +1 PI is worth about 0.25 points near PI 25, about 0.18 near PI 50 and about 0.125 near PI 100.
 - Keep Favorability 70+: each point is worth 0.35 primary score points.
 - NPPs endorse autonomously based on alignment, so staying close to your party's platform makes you a more attractive endorsement target.
 - Don't attack primary rivals.
@@ -138,7 +138,7 @@ Red flags:
 ## What not to do
 
 - **Don't over-buy ads.** Diminishing returns kick in above Favorability 70 (each point over 70 reduces the ad gain by 0.1). At high favorability an ad can cost ₳180k+ for a single point: terrible value.
-- **Don't canvass misaligned demographics.** At 6+ Manhattan distance you get 10% of base effect.
+- **Don't canvass misaligned demographics.** A badly misaligned audience gets only a small fraction of the base effect: the fit multiplier is floored at 0.2 and then squared, so about 4% on current races (10% on older races), per \`src/lib/campaignTargeting/rules.ts\`.
 - **Don't maintain high Ground Game / Media Spending tiers when you can't afford maintenance.** Auto-downgrade costs you the investment with no refund.
 - **Don't upgrade in general if you can upgrade in primary.** 1.5× multiplier applies to general-phase upgrades.
 - **Don't attack everything that moves.** Infamy drain compounds, attack failure chance grows with your Infamy.

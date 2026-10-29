@@ -13,7 +13,7 @@ Requirements:
 
 ## Switching parties
 
-You can switch parties from your character's party settings. Switching is not instantaneous: there is a **cooldown period** on **joining** a party. The cooldown is stamped when you join, not when you leave.
+You can switch parties from your character's party settings. Switching is not instantaneous: there is a **24-hour cooldown** on **joining** a party (waived once in the free party-move window that opens after a world reset; \`src/lib/parties/antiAbuseGuards.ts\`). The cooldown is stamped when you join, not when you leave.
 
 Leaving a party to become an independent does **not** trigger the cooldown. You can leave freely at any time. The cooldown only applies when you subsequently join a new party.
 
