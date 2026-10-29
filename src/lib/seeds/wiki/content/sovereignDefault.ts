@@ -8,6 +8,10 @@ If you hold sovereign bonds, run a company in a heavily indebted country, or sit
 
 Once a year, when the country's budget year closes, its government bonds are tested against investor demand. The game scores demand as a **demand ratio**: 1.0 means investors bought everything on offer, 0.5 means they bought half of what was needed. If the last primary bond auction was only partly filled, the demand ratio cannot be higher than that fill rate.
 
+\`\`\`wiki-chart
+sovereign-default-demand-curve
+\`\`\`
+
 | Demand ratio | Result | What it means |
 | --- | --- | --- |
 | 1.0 or more | Subscribed | Healthy. The failure count resets to 0. |
@@ -30,6 +34,8 @@ After the third failure in a row the country goes into crisis. The clocks then r
 
 Why a forced outcome? A crisis cannot be left open: bondholders, banks and companies all need to know where the losses land.
 
+![Timeline from the yearly auction through three failed auctions, the executive window and chamber votes to the resolution, then the lockout, scar and recovery periods.](/wiki-images/diagrams/sovereign-default-crisis-timeline.svg)
+
 ## The four resolutions
 
 | Resolution | Bonds | Leader pays | Market lockout |
@@ -43,7 +49,7 @@ Each resolution also posts civil-unrest news events (3 for Repudiate, 2 for Mone
 
 Monetize prints the financing gap (bonds maturing within 12 turns plus the yearly deficit). Inflation rises by the printed amount divided by GDP, times 5, and the currency falls by 40% of that fraction. A gap of 9 billion on a GDP of 300 billion is 3% of GDP, so inflation jumps 15 points and the currency drops 6%.
 
-Each resolution also records a GDP penalty (Repudiate 12% over 3 turns, Restructure 6% over 2, IMF bailout 2%). It shows on the country's recovery panel. The long-term damage comes mostly from the effects below.
+Repudiate and Restructure also record a GDP penalty (Repudiate 12% over 3 turns, Restructure 6% over 2). The IMF bailout and Monetize have none. The penalty shows on the country's recovery panel. The long-term damage comes mostly from the effects below.
 
 ## What a default does to you
 
@@ -58,6 +64,10 @@ Each resolution also records a GDP penalty (Repudiate 12% over 3 turns, Restruct
 ## The scar and recovery
 
 Every resolution leaves a **scar**. It lowers the country's bond demand ratio by 1.0 right after the default, and the penalty shrinks by 0.01 each turn, reaching zero after 100 turns. It makes new auctions harder but does not directly reduce GDP.
+
+\`\`\`wiki-chart
+sovereign-default-scar-decay
+\`\`\`
 
 The country is in **recovery** for at least 48 turns. It ends only after the country has also run 5 disciplined fiscal turns in a row. A clean exit earns a small reward: 0.5 points off the country's bond interest rate for 100 turns.
 

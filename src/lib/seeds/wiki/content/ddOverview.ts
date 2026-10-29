@@ -31,6 +31,10 @@ The General Secretary carries **+4 actions per turn**, a Volkskammer Deputy +1, 
 
 The **Volkskammer** (People's Chamber) is mechanically **unicameral**: 500 deputies elected on the single National Front list, all seats contested each cycle, no snap elections. The **Staatsrat** (Council of State), a 25-seat collective head-of-state body, is not elected and sits outside the player legislative loop.
 
+\`\`\`wiki-chart
+dd-volkskammer-seats-by-party
+\`\`\`
+
 Elections ride a **192-turn cycle** (4 game years at 48 turns per year), anchored to 1954 in the 1953 preset and 1981 in the 1979 preset, matching the GDR's early electoral cadence. Land First Secretary races ride the same anchor. The coalition threshold is **251 seats** (500 / 2 + 1), a formality given the seeded majority. A race takes 48 turns (48 real hours: 24 for the primary and 24 for the general election) at the end of each 192-turn cycle.
 
 The seeded composition mirrors the National Front's fixed allocation:
@@ -52,6 +56,8 @@ Because single-list elections carry no real electoral signal, governance partici
 ## The National Front
 
 The National Front is the bloc-party version of one-party rule (see [One-Party States](/wiki/one-party-states)): five seeded parties, one list, one permitted outcome.
+
+![The two ways the German Question can end: an East win merges East Germany into a one-party Germany with no election, while a collapse leads to a parliamentary republic.](/wiki-images/diagrams/german-question-outcomes.svg)
 
 - **SED** is the **ruling** party (economic position -4): the only party that can form government, field executive candidates, or move a no-confidence vote (which one-party states skip anyway).
 - **CDU (Ost), LDPD, NDPD and DBD** are **approved** bloc parties. They hold seats, field Volkskammer candidates, propose and vote on bills, accept donations and sit in cabinet, but they **cannot form government** or contest the executive.

@@ -33,6 +33,8 @@ For each cell each turn, the pool is split between candidates in proportion to a
 
 The party strength modifier then scales the whole turn pool: for state races (1 + (state approval / 100 - 0.5) x 0.2) times office strength, and for presidential state results the approval swing is x0.5 instead of x0.2.
 
+![A cell's pool is split between candidates in proportion to the product of reach, appeal, approval, party organization and infamy.](/wiki-images/diagrams/demographics-targeting-vote-pipeline.svg)
+
 ### Appeal falls off with distance
 
 Appeal is 25 x ((50 - 5 x econ gap - 5 x social gap) / 50) to the power 1.5, plus 0.5, with a direction bonus on top. Total distance means the econ gap plus the social gap:
@@ -40,6 +42,10 @@ Appeal is 25 x ((50 - 5 x econ gap - 5 x social gap) / 50) to the power 1.5, plu
 | Total distance | 0 | 1 | 2 | 3 | 4 | 6 | 8 | 10 or more |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Appeal (before direction bonus) | 25.5 | 21.8 | 18.4 | 15.1 | 12.1 | 6.8 | 2.7 | 0.5 |
+
+\`\`\`wiki-chart
+appeal-policy-distance
+\`\`\`
 
 The curve is deliberately softer than squaring so that campaigning, favorability and organization still move outcomes, and ideology alone does not dominate every race. A centrist (0, 0) is a moderate distance from every cell. A far-left candidate (-5, -5) is nearly on top of the most progressive cells and far from the most conservative. Specialists beat generalists inside their base. Generalists beat specialists across the whole field.
 

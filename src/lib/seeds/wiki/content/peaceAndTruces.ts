@@ -8,6 +8,8 @@ Peace in A House Divided is a bilateral deal between **two countries**, not betw
 
 One country offers another a settlement for one war. The other can accept, reject, or let the 72-turn window lapse. If accepted, one term applies, the leaver stands down, and a 240-turn truce starts between the two. The war carries on for everyone else.
 
+![Lifecycle of a peace offer from choosing terms through a 72 turn window, accept, reject or withdraw, revalidation and applying payment, stand down, roster removal and a 240 turn truce.](/wiki-images/diagrams/peace-and-truces-offer-lifecycle.svg)
+
 ### Key numbers
 
 | What | Value |

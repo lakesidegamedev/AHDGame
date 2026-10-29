@@ -89,6 +89,10 @@ Set a daily **R&D budget** from the CEO Budget tab. Each turn: new score = 97% o
 | Decay per turn | 3% of current score |
 | Diminishing returns above | Score 100 |
 
+\`\`\`wiki-chart
+rd-score-by-budget
+\`\`\`
+
 Worker morale also nudges R&D efficiency: paying wages above baseline lifts it by up to 15%, and paying below baseline lowers it by up to 15%.
 
 R&D spending counts toward the **150% overhead cap** alongside marketing, logistics, and CEO salary.

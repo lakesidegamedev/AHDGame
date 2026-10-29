@@ -82,6 +82,10 @@ The measure is deliberately "one average formation," not the front's total. Othe
 
 Points are the currency you spend on traits. **Every trait node costs exactly 1 point**, so points and nodes are the same thing and the whole budget is legible.
 
+\`\`\`wiki-chart
+general-skill-point-sources
+\`\`\`
+
 There are four sources:
 
 | Source | Points | How |
@@ -161,6 +165,8 @@ The defence seat holder can dismiss a general. A change of defence secretary alo
 - Any Command they **led** loses its lead.
 - All their **conflict postings** are dropped.
 - Every **unit assigned to them** falls back to General Staff and returns to reserve.
+
+![Cascade from a dismissed general leaving Command rosters, Commands losing their lead, postings dropped, units returning to reserve and a Theater Commander front vacated.](/wiki-images/diagrams/generals-dismissal-cascade.svg)
 
 **Nobody is promoted to fill the gap.** Dismissing a Theater Commander vacates that front: authority falls back to the defence seat holder, so it is never orphaned, but the Secretary has quietly taken the job back and needs to appoint a successor.
 

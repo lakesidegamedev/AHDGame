@@ -53,6 +53,12 @@ const CabinetGuide = dynamic(
   { loading: WidgetFallback }
 );
 
+/** Charts pull in the game constants they plot, so the widget loads on demand. */
+const WikiChart = dynamic(
+  () => import("@/components/wiki/widgets/WikiChart").then((m) => ({ default: m.WikiChart })),
+  { loading: WidgetFallback }
+);
+
 const WIKI_COMPONENT_REGISTRY: Record<string, ComponentType<WikiWidgetProps>> = {
   "flowchart-turn": TurnProcessingFlowchart,
   "favorability-decay": FavorabilityDecayDiagram,
@@ -67,6 +73,7 @@ const WIKI_COMPONENT_REGISTRY: Record<string, ComponentType<WikiWidgetProps>> = 
   "starting-state-dashboard": StartingStateDashboard,
   "cabinet-guide": CabinetGuide,
   "guide-screenshot": WikiGuideScreenshot,
+  "wiki-chart": WikiChart,
 };
 
 export function getWikiComponent(lang: string): ComponentType<WikiWidgetProps> | null {

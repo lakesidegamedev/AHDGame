@@ -8,6 +8,8 @@ This page is the operational loop: get forces to the front, look at the odds, de
 
 You get units to a front through a general, read two odds figures in the war room, and declare an offensive. The defender gets one turn to react. Then the battle resolves, writes a report, and moves the territory meter. The battle model itself is deliberately not published, so you cannot solve fights instead of fighting them. Everything you can act on is below.
 
+![Offensive loop from assigning units and posting a general to reading the war room, declaring, a one turn defender window, resolution and report, with coalition merge and unopposed branches.](/wiki-images/diagrams/fighting-a-battle-loop.svg)
+
 ### Key numbers
 
 | What | Value |

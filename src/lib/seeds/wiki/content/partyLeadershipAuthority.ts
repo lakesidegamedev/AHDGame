@@ -16,6 +16,8 @@ You cannot join a party and run its leadership the same turn. A member must have
 
 A second 24 turn clock covers **state** party leadership. After you relocate to a new state you must wait 24 turns before standing for, or being appointed to, that state party's leadership. This stops players hopping states to grab a fresh party's seats. It is separate from the relocation cooldown, so it stays at 24 turns even if that cooldown changes.
 
+![Timeline showing a member who joins at turn 500 able to run nationally from turn 524, and who relocates at turn 600 able to lead the state party from turn 624.](/wiki-images/diagrams/party-leadership-authority-tenure-timeline.svg)
+
 Exceptions: an older character with no recorded join date is treated as eligible. A charter founder is exempt in the party they founded, though not in anyone else's. The accelerated founding elections at the start of a new world skip both rules so new characters can fill the first seats.
 
 ### Unmanned default party shield

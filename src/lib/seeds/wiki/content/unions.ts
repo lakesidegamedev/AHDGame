@@ -14,6 +14,10 @@ Each corporate sector has a **unionization** score from 0 to 100. Every turn it 
 | Pro-labour union law (country legislation) | Up |
 | Player-run union recruitment in that sector | Up |
 
+\`\`\`wiki-chart
+union-labour-premium
+\`\`\`
+
 ### Key numbers
 
 | Rule | Value |
@@ -54,6 +58,8 @@ When unionization is high **and** real wages lag a slow-moving **worker expectat
   - **Concession**: CEO raises wage level until the expectation gap closes; strike ends, cooldown begins.
   - **Wait it out**: strike expires after 4 turns; unionization bumps up ("radicalization").
   - **Union-busting**: CEO action to break the strike (see below).
+
+![A strike starts when unionization is high and wages lag, runs four turns, ends by concession, wait-out or union-busting, then a twelve turn cooldown follows.](/wiki-images/diagrams/unions-strike-lifecycle.svg)
 
 ## Union law
 

@@ -19,6 +19,8 @@ dashboard
 
 Actions are not your limit after the first day: you get 4 more every hour, which is 96 a day. **Funds are the limit.** Passive income in a large state is about ₳20,440 per turn at donor level 1 and PI 10 (₳20,000 base plus the donor bonus), roughly ₳490,000 a day before party tax. Campaign costs ₳20,000 per use below PI 20 and ₳48,000 per use from PI 20 to 39. Plan your spending around that, not around actions.
 
+![The four campaign weeks with their targets, and the day one ledger of actions and funds.](/wiki-images/diagrams/first-campaign-walkthrough-four-weeks.svg)
+
 | Cost | Value |
 | --- | --- |
 | Campaign, PI under 20 | 1 action, ₳20,000, +1 PI |

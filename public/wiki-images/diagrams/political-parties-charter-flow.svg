@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="740" height="330" viewBox="0 0 740 330" role="img" font-family="system-ui, sans-serif">
+<title>Party charter flow</title>
+<desc>A drafter signs automatically and invites two co-founders; when all three have signed the party is created. A rejection opens a replacement window; if a window ends first the charter expires.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#71717a"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/></marker></defs>
+<rect x="0.5" y="0.5" width="739" height="329" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<g fill="#18181b">
+<rect x="24" y="50" width="180" height="76" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="114.0" y="76.2" font-size="12" text-anchor="middle" font-weight="700">Drafter writes</text>
+<text x="114.0" y="92.2" font-size="12" text-anchor="middle">charter: name,</text>
+<text x="114.0" y="108.2" font-size="12" text-anchor="middle">abbreviation, platform</text>
+<rect x="264" y="50" width="220" height="76" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="374.0" y="68.2" font-size="12" text-anchor="middle" font-weight="700">Signing window</text>
+<text x="374.0" y="84.2" font-size="12" text-anchor="middle">Drafter signs automatically;</text>
+<text x="374.0" y="100.2" font-size="12" text-anchor="middle">two co-founders from the home</text>
+<text x="374.0" y="116.2" font-size="12" text-anchor="middle">or a neighbouring state sign</text>
+<rect x="544" y="50" width="170" height="76" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="629.0" y="92.5" font-size="13" text-anchor="middle">Party created</text>
+<polyline points="204,88 264,88" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="234" y="80" font-size="12" text-anchor="middle" fill="#52525b">invites</text>
+<polyline points="484,88 544,88" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<text x="514" y="80" font-size="12" text-anchor="middle" fill="#52525b">all sign</text>
+<rect x="264" y="180" width="220" height="64" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="374.0" y="200.2" font-size="12" text-anchor="middle" font-weight="700">Replacement window</text>
+<text x="374.0" y="216.2" font-size="12" text-anchor="middle">same length as the</text>
+<text x="374.0" y="232.2" font-size="12" text-anchor="middle">first one</text>
+<polyline points="320,126 320,180" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<text x="328" y="156" font-size="12" text-anchor="start" fill="#52525b">a founder rejects</text>
+<polyline points="440,180 440,126" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<rect x="544" y="180" width="170" height="64" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="629.0" y="208.2" font-size="12" text-anchor="middle" font-weight="700">Charter expires</text>
+<text x="629.0" y="224.2" font-size="12" text-anchor="middle">no party is created</text>
+<polyline points="484,212 544,212" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<text x="514" y="204" font-size="12" text-anchor="middle" fill="#52525b">window ends</text>
+<text x="24" y="296" font-size="12" text-anchor="start" fill="#52525b">If a window ends with fewer than three signatures, the charter expires.</text>
+<text x="24" y="314" font-size="12" text-anchor="start" fill="#52525b">The window is the same length each time it opens.</text>
+</g>
+</svg>

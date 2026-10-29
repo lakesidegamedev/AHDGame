@@ -22,6 +22,8 @@ There are three routes to a subsidiary:
 
 **It ends automatically.** If your voting control falls to 50% or below (you sell down or are diluted), the game clears the formalization on the next turn and the dividend floor goes with it. You can also release a subsidiary yourself, but only once it has been formalized for 24 turns, so the relationship cannot be flipped on and off in one session.
 
+![Checklist to formalize a subsidiary, the powers and limits it brings, and the automatic clearing when voting control falls to 50% or below.](/wiki-images/diagrams/subsidiary-corporations-formalization.svg)
+
 ## Key numbers
 
 | Item | Value |
@@ -62,6 +64,8 @@ All parent actions need you to be the parent's CEO.
 
 Corporations linked by formalized subsidiary ties form a **group**. Each is taxed on its own every turn. Then, if the group has a profitable member and a loss-making member in the **same country**, the loss shelters the profit and part of the tax already paid is rebated.
 
+![How group tax relief works: a same-country loss shelters a profit member and a capped rebate is paid back, while a loss in another country shelters nothing.](/wiki-images/diagrams/subsidiary-corporations-tax-relief.svg)
+
 Example: member A earns ₳1,000,000 and pays ₳250,000 tax (25%). Member B, in the same country, loses ₳400,000. The loss shelters ₳400,000 of profit at 25%, so the group is rebated ₳100,000, paid back to A. A loss in another country shelters nothing.
 
 The rebate never exceeds the tax actually paid, and it goes back to the members that paid, in proportion to what they paid. Cross-border pricing between group members is a separate audit: if more than ₳5,000,000 of profit appears to be shifted on one agreement, the tax authority can reassess it with a 40% surcharge. Same-country pricing is ignored, because it moves no tax between treasuries.
@@ -71,6 +75,10 @@ The rebate never exceeds the tax actually paid, and it goes back to the members 
 Weaker members are pulled **up** toward the group's strongest Marketing Strength and Logistics Strength, never down, so buying a weak company does not punish a strong parent. A normal member can reach at most 60% of the leader's strength. A recent spin-off from a current group member gets a higher ceiling of 85% for 96 turns, since it inherits the brand. Each turn the member closes 5% of the remaining gap.
 
 Example: the leader has Marketing Strength 80 and a member has 20. The member's ceiling is 60% of 80 = 48, so the gap is 28 and it gains 1.40 in the first turn, then about 1.33 in the next. It approaches 48 gradually and never exceeds it.
+
+\`\`\`wiki-chart
+group-synergy-convergence
+\`\`\`
 
 ## The Subsidiary Group page
 

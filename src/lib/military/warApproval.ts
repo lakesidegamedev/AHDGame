@@ -1,4 +1,5 @@
 import { clamp } from "@/lib/numeric/rules";
+import { WAR_EXHAUSTION_FLOOR, warExhaustion } from "./rules/warExhaustionCurve";
 import type { Db } from "mongodb";
 import { navalApprovalEffect, navalApprovalLabel } from "@/lib/navair/navalApproval";
 import type { NavairUnit } from "@/lib/navair/types";
@@ -51,11 +52,7 @@ function round1(value: number): number {
  * Continuous rather than stepped, so the block never moves faster than about
  * 0.02 per turn — which is what lets the block be applied undamped.
  */
-export const WAR_EXHAUSTION_FLOOR = -25;
-
-export function warExhaustion(turnsSinceEntry: number): number {
-  return round1(clamp(1 - turnsSinceEntry / TURNS_PER_YEAR, WAR_EXHAUSTION_FLOOR, 1));
-}
+export { WAR_EXHAUSTION_FLOOR, warExhaustion };
 
 /**
  * Exhaustion moves one point per in-game year, in BOTH directions.

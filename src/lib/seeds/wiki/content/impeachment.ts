@@ -17,6 +17,8 @@ NPP blocs vote too. The target's own party defends them, opposition blocs from t
 
 The case starts at the conviction stage. A sitting member of that state's legislature files, and the legislature needs two-thirds of all its seats within 6 turns.
 
+![Impeachment paths: lower chamber then upper chamber vote for a President, and a single two-thirds vote for a governor.](/wiki-images/diagrams/impeachment-process.svg)
+
 ### Key numbers
 
 | Item | Value |

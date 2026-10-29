@@ -12,6 +12,8 @@ private corp ──(nationalize: absorb)──▶  National Corporation  ──(
 
 A taking has four parts: a **trigger** that makes the target eligible, an **authority** that orders it, a **compensation tier** that sets the payout, and **consequences** for confidence and politics.
 
+![Lifecycle of a nationalization: trigger, executive or legislative authority, compensation tier, absorption into the National Corporation and a privatization lockout, with investor confidence falling on each taking.](/wiki-images/diagrams/nationalization-lifecycle.svg)
+
 ### Who can be taken, and how
 
 Unowned and computer-run (NPC) assets can be taken at any time. A **player-owned** corporation is protected. It can only be taken by one of two routes.
@@ -54,6 +56,14 @@ Every country has an **investor confidence** score from 0 to 100. It heals towar
 - Up to **35**, takings cost the base amount.
 - Above 35, the multiplier rises along a curve to 3.5 at SOCI 100. At SOCI 50 it is about 1.13.
 - A statist government pays as little as half the political cost, and a market-liberal one as much as 1.5 times.
+
+\`\`\`wiki-chart
+nationalization-cost-multiplier
+\`\`\`
+
+\`\`\`wiki-chart
+nationalization-confidence-recovery
+\`\`\`
 
 Low confidence is not cosmetic. Below 70 it feeds three live systems, in proportion to the gap:
 

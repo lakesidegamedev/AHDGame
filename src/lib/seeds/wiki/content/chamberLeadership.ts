@@ -10,6 +10,8 @@ All the presiding-officer ballots follow the same three steps.
 2. **Vote.** Eligible members declare candidacy and vote. Plurality wins, with no majority needed.
 3. **Resolve.** When the ballot closes the top vote-getter wins and the others are marked failed. If there are no candidates, the seat stays vacant until the next election opens. If candidates tie, the one who declared first wins.
 
+![A presiding officer ballot opens, votes and resolves, with eligibility depending on the office and the possible results.](/wiki-images/diagrams/chamber-leadership-ballot.svg)
+
 ### Who can run: two rules
 
 | Rule | Meaning | Offices |

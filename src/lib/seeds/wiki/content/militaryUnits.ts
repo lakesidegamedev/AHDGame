@@ -120,9 +120,17 @@ Read those tables in pairs. A **Special Forces Group** is a formidable unit for 
 
 A unit costs four separate things, and you must have all of them.
 
+\`\`\`wiki-chart
+infantry-division-price-by-country
+\`\`\`
+
 ### 1. A ministerial action
 
 Recruiting costs one ministerial action. Your cabinet seat holds up to 4 and regains 1 every 6 turns. Once per turn you can also spend 10 action points to buy 1 extra action, up to the cap.
+
+\`\`\`wiki-chart
+ministerial-action-bank
+\`\`\`
 
 That is the real throttle on how fast an army grows. You can raise at most four formations a day, however large your treasury or manpower pool. Upgrading also costs one, so recruiting and modernising compete for the same pool. Setting a posture, assigning a unit to a general and disbanding are free.
 
@@ -188,6 +196,10 @@ A force sitting heavily on Forward-Deployed or High Alert also tilts public trus
 ## Technology tiers
 
 Every unit sits at one of four tech tiers: **Legacy, Standard, Modernized, Cutting-Edge**. Upgrading raises the tier by one step.
+
+\`\`\`wiki-chart
+military-tech-tier-power-vs-upkeep
+\`\`\`
 
 - **You pay up front.** The price is a share of the unit's build price, by the tier you step into: 25% to reach Standard, 35% to reach Modernized, 50% to reach Cutting-Edge. All three steps together come to 1.1 times a fresh build, so modernising from the bottom costs more than replacing the unit. Each step also costs one ministerial action.
 - **You pay for it every turn.** Upkeep goes from 0.85 at Legacy to 1.45 at Cutting-Edge, a rise of 71%, while the power gain is far smaller.

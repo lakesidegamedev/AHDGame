@@ -1,6 +1,6 @@
 export const labourAndWagesContent = `# Labour & Wages
 
-**Labour** is an explicit cost in every corporate sector, and you control part of it with a **wage level** slider. Pay more and costs rise, but workers stay content, your products can be better and your R&D works harder. Pay less and margins improve now, but unionization, strikes and worse macro conditions follow later. National **minimum-wage** law and the wider economy push back on whatever you choose.
+**Labour** is an explicit cost in every corporate sector, and you control part of it with a **wage level** slider. Pay more and costs rise, but workers stay content, your products can be better and your R&D works harder. Pay less and margins improve now, but unionization, strikes and worse macro conditions follow later. The country's **minimum wage** floor and the wider economy push back on whatever you choose.
 
 At the default setting the economy matches what it was before wages existed, so only deviations move the numbers.
 
@@ -60,7 +60,11 @@ A manufacturing sector earns ₳1,000,000 of revenue a day in a modern world. At
 - Wage level **1.2**: labour costs ₳190,800, ₳31,800 more. Margin falls by 3.2 points.
 - Wage level **0.8**: labour costs ₳127,200, ₳31,800 less, and margin rises 3.2 points. But real wages then fall behind what workers expect, which pushes unionization up (see [Unions](/wiki/unions)).
 
-Now the country passes a minimum wage with a Kaitz ratio of 0.7. The floor is 0.7 x 1.1 = 0.77 on the pay scale. Retail (0.6) must lift pay by 0.77 / 0.6, so its labour costs rise **28%**. Agriculture (0.55) rises **40%**. Manufacturing at 0.95 is untouched.
+\`\`\`wiki-chart
+wage-level-margin-change
+\`\`\`
+
+Now the country has a minimum wage with a Kaitz ratio of 0.7. The floor is 0.7 x 1.1 = 0.77 on the pay scale. Retail (0.6) must lift pay by 0.77 / 0.6, so its labour costs rise **28%**. Agriculture (0.55) rises **40%**. Manufacturing at 0.95 is untouched.
 
 ### What wages do beyond cost
 
@@ -81,11 +85,13 @@ Your slider moves a state's **wage index**, the worker-weighted average of all p
 
 One corporation moves the state index only in proportion to its share of the state's workers, so a lone slider has a small effect. A country-wide shift, such as a minimum-wage rise, moves it a lot.
 
+![How a wage level moves the state wage index and the economy, and how wages lagging worker expectations push unionization and strike risk up.](/wiki-images/diagrams/labour-and-wages-wage-feedback.svg)
+
 ## What you can do
 
 - **Set the wage level** on a sector's detail panel, between 0.8 and 1.5. The change applies to next turn's labour cost.
 - **Read the implied wage versus the state median** on the same panel to see whether you pay above or below the local economy.
-- **Vote on minimum wage and union law.** Countries set minimum wages through legislation (see [Bills & Legislation](/wiki/bills-legislation)).
+- **Vote on union law.** Union-law bills are passed by legislators (see [Bills & Legislation](/wiki/bills-legislation)). The minimum-wage floor that sets labour cost is not a bill players can pass today: the game team sets it for each country, so watch the sector panel to see whether your sector is being lifted.
 - **Think in lanes, not spikes.** A cheap-labour strategy gives margin now and unionization later. A high-wage strategy costs margin but buys quality, R&D and calm.
 
 ### Common questions
@@ -102,7 +108,7 @@ One corporation moves the state index only in proportion to its share of the sta
 - [Corporations](/wiki/corporations): the wage level you set and your sector mix decide your labour cost.
 - [Unions](/wiki/unions): unionization adds a standing premium of up to 15%.
 - [Corporate R&D & Tech Trees](/wiki/corporate-r-and-d): automation nodes cut labour cost.
-- [Bills & Legislation](/wiki/bills-legislation): minimum-wage law sets the floor.
+- [Bills & Legislation](/wiki/bills-legislation): union-law bills shape how strongly unions form. The minimum-wage floor is set by the game team, not by a bill.
 
 **Affects**
 

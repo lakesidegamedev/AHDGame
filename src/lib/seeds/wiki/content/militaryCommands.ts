@@ -49,6 +49,8 @@ Theater Commander  (one per conflict)
   declares and withdraws offensives at that front
 \`\`\`
 
+![Three tiers of authority from the defence seat holder to the Commanding General to the Theater Commander, with the hand-off where the defence seat holder loses offensive rights at that front.](/wiki-images/diagrams/military-commands-authority.svg)
+
 ## Building a Command
 
 Defence office → **Commands** tab → *Create command*. A confirmed or acting defence seat holder may build and reorganise commands and commission or dismiss the generals that fill them.
@@ -111,6 +113,10 @@ Each region carries terrain, infrastructure, port and airbase capacity, strategi
 ## Capacity and effectiveness
 
 Every Command has a **force capacity** and an **effectiveness rating**.
+
+\`\`\`wiki-chart
+command-effectiveness-overload
+\`\`\`
 
 **Capacity** is set when the Command is created and grows with the number of regions it covers. Each unit assigned to the Command consumes capacity in proportion to its weight: a Carrier Strike Group eats far more of a Command's capacity than a Frigate Squadron.
 

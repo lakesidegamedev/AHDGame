@@ -7,7 +7,7 @@ Money is the oxygen of a campaign. This page covers how you earn campaign money,
 You have two money pools. They are not interchangeable.
 
 - **Campaign Funds:** what you spend on ads, polls, donor base, canvassing, Campaign Presence and party taxes. New characters start with ₳250,000. Every action on this page draws on this pool.
-- **Cash on Hand:** your personal liquid cash. It is spent on wire transfers (Portfolio page) or converted into Campaign Funds at 50% with a Personal Campaign Donation. It starts at ₳0.
+- **Cash on Hand:** your personal liquid cash. It is spent on wire transfers (Portfolio page) or donated into Campaign Funds with a Personal Campaign Donation, which keeps only 50% of it. It starts at ₳0.
 
 If an action shows "-₳100,000", it is Campaign Funds unless the action says "personal cash".
 
@@ -39,6 +39,8 @@ Every turn your Campaign Funds grow by three things:
 
 UK, German and Japanese offices pay an equivalent tier, with prime ministers and the chancellor at the top tier.
 
+![Base, donor and office income flow into Campaign Funds, which are spent on ads, polls, canvassing, presence and party tax, with Cash on Hand converting at 50 percent.](/wiki-images/diagrams/fundraising-ads-money-flow.svg)
+
 ### Key numbers
 
 | Item | Value |
@@ -52,12 +54,12 @@ UK, German and Japanese offices pay an equivalent tier, with prime ministers and
 | Campaign action | 1 to 5 actions by influence tier, +1 political influence |
 | Influence decay | 0.75% of current value per turn |
 | Party tax | 0% to 33%, set by the party |
-| Personal Campaign Donation | 2 actions, 50% of the amount reaches Campaign Funds |
-| Out-of-state multiplier (Support, Attack, Barnstorm) | 1.0x home, 1.25x neighbour, 1.5x other |
+| Personal Campaign Donation | 2 actions, 50% of the cash reaches Campaign Funds and the other 50% is lost |
+| Out-of-state action cost (Support and Attack only) | 1.0x home, 1.25x neighbour, 1.5x other. Funds cost does not change. Barnstorm has no distance cost |
 
 ### Worked example: a fundraise
 
-A donor base level 5 character with 50% influence in a state: (₳50,000 + ₳2,000 x 5) x 1.5 = ₳90,000 for 3 actions. If their party tax is 20%, ₳72,000 arrives and ₳18,000 goes to the party treasury. With a neutral Fundraising stat, a level 1 character with 0% influence raises ₳52,000, and a level 10 character at 100% influence raises ₳140,000. The influence multiplier runs from 1.0x at 0% to 2.0x at 100%.
+A donor base level 5 character with 50% influence in a state: (₳50,000 + ₳2,000 x 5) x 1.5 = ₳90,000 for 3 actions. Fundraise is not taxed by the party, so all ₳90,000 reaches Campaign Funds. With a neutral Fundraising stat, a level 1 character with 0% influence raises ₳52,000, and a level 10 character at 100% influence raises ₳140,000. The influence multiplier runs from 1.0x at 0% to 2.0x at 100%.
 
 ### Ads and favorability
 
@@ -69,11 +71,19 @@ The favorability gain of one ad is floor((3 - 0.1 x (favorability - 70)) x Chari
 | 71 to 80 | +2 |
 | 81 and above | +1 |
 
+\`\`\`wiki-chart
+ad-favorability-gain
+\`\`\`
+
 Higher Charisma raises each figure and lower Charisma cuts it. Above 80 an ad is never wasted, but it is poor value: stop at your target (60 minimum, 70 optimal for most races). When you run an ad you choose a demographic group, or broad for untargeted. Targeted ads give slightly more on that group. Aim at the two or three weakest groups after a Full Poll (see [Demographics and Targeting](/wiki/demographics-targeting)).
 
 ### Targeted ads
 
 You can also buy ads aimed at one voter group in one state. Each targeted ad takes **1 action and ₳100** and adds 1 point of nominal bonus for that group, up to a cap of 25 points, with up to 50 ads per purchase. The bonus halves every 24 turns, and what it is worth to you depends on how well your positions fit that group, in the same way as canvassing (see [Canvassing](/wiki/canvassing)). To reach the cap you need 25 ads, about ₳2,500 and 25 actions, and then top it up as it fades. For example, after buying 25 ads (bonus 25), 24 turns later the bonus is 12.5, so about 12 more ads restore it.
+
+\`\`\`wiki-chart
+targeted-ad-decay
+\`\`\`
 
 ### Influence and the Campaign action
 
@@ -89,7 +99,7 @@ Once you are a candidate your campaign page has its own budget, separate from yo
 
 ### Party tax
 
-A party can tax your fundraising and per-turn fund income from 0% to 33%, set by the Chair and Treasurer. It applies to gross income: fundraise earnings x (1 - tax rate) reach you. National and regional parties can use different rates.
+A party can tax your per-turn fund income from 0% to 33%, set by the Chair and Treasurer. It applies to gross income: per-turn earnings x (1 - tax rate) reach you. National and regional parties can use different rates. The Fundraise action is not taxed: you keep all of it.
 
 ## What you can do
 
@@ -97,7 +107,7 @@ A party can tax your fundraising and per-turn fund income from 0% to 33%, set by
 - **Build Donor Network** early. It pays back quickly and permanently lifts your fundraise return.
 - **Run Advertisements** to raise favorability toward your target.
 - **Campaign** to hold your influence.
-- **Donate** with a Personal Campaign Donation: 2 actions plus the cash you choose. It triggers an infamy tick that grows with the size of the donation.
+- **Donate** with a Personal Campaign Donation: 2 actions plus the cash you choose. Only half the cash reaches Campaign Funds and the other half is lost. It also triggers an infamy tick that grows with the size of the donation.
 
 Tips:
 
@@ -105,7 +115,7 @@ Tips:
 2. Fundraise regularly at level 2 and above.
 3. Run ads only when favorability is below your target. Do not ad-spam above 75.
 4. Upgrade the campaign page's fundraising level once you are a candidate.
-5. Factor a high party tax (25% or more) into every fundraise.
+5. Factor a high party tax (25% or more) into your per-turn income. Fundraise is untaxed, so it is the better source in a high-tax party.
 
 Common question, "Why am I always out of funds?": the sinks are ads (about ₳100,000 each), polls and Campaign Presence, against an income of only base + donor + office per turn. Fundraising and a higher donor level are the fix.
 
@@ -114,7 +124,7 @@ Common question, "Why am I always out of funds?": the sinks are ads (about ₳10
 **Driven by**
 
 - [Stats & Actions](/wiki/stats-actions): action costs and the Fundraising and Charisma modifiers set every figure above.
-- [Political Parties](/wiki/political-parties): party tax comes out of your fundraising and income.
+- [Political Parties](/wiki/political-parties): party tax comes out of your per-turn income, not Fundraise actions.
 - [Campaign Strategy](/wiki/campaign-strategy): the fundraising upgrade levels set your campaign page's passive income.
 - [Polling](/wiki/polling): the worst-groups list shows where ads pay.
 - [Demographics & Targeting](/wiki/demographics-targeting): group sizes and appeal show which group to aim ads at.

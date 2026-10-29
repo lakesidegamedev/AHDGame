@@ -40,6 +40,8 @@ A US character wins the presidency in cycle 3 and again in cycle 4. The counter 
 
 Another character wins the presidency once, then as vice president in a later administration succeeds a president who leaves office. The counter goes to 2. That character cannot run for President in the next election.
 
+A third character is made acting president after a House deadlock. Their running counter stays at 0, but their career history now shows an appointment as president, and the history scan counts it, so their total is 1. They win one election later: the total becomes 2 and they are capped. In practice the acting term costs them one of their two terms.
+
 ## What you can do
 
 - **Check your count before you commit.** The executive page for the country and the White House page show the term cap for the office; your career history on your character shows each term you have served.

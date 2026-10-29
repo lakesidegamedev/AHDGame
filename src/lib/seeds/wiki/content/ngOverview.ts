@@ -31,6 +31,10 @@ Nigeria's legislature has two chambers:
 - **House of Representatives**: 360 Representatives, elected zone by zone and allocated across the six geopolitical zones by population. 4-year terms (192 turns, 8 real days). **All seats are contested** each cycle. The House is the primary legislative body and the source of the coalition threshold.
 - **Senate**: 109 senators, elected zone by zone. 4-year terms. **All seats are contested** each cycle. The Senate reviews legislation from the House and can amend or reject bills.
 
+\`\`\`wiki-chart
+ng-seats-by-zone
+\`\`\`
+
 | Zone | House | Senate | State House of Assembly |
 | --- | --- | --- | --- |
 | North West | 95 | 21 | 259 |
@@ -71,6 +75,8 @@ Each of the six zones runs one election for its House seats and one for its Sena
 ## Presidential elections
 
 The President is elected by **nationwide popular vote with a spread requirement**. To win outright, the candidate with the most national votes must also win **at least 25% of the vote in at least 4 of the 6 zones**. If nobody meets both tests, the top two candidates go to a run-off.
+
+![Decision tree for Nigerian presidential elections: the national vote leader wins outright with 25% in at least 4 of 6 zones, otherwise the top two go to a run-off.](/wiki-images/diagrams/ng-overview-spread-rule.svg)
 
 **Worked example.** A candidate leads nationally with 38%. Their share is 41%, 33% and 27% in three zones and below 25% in the other three. They cleared 3 zones, not 4, so there is a run-off against the runner-up. A different candidate with 31% nationally who clears 25% in 4 zones would win outright, because the spread test counts zones, not a majority.
 

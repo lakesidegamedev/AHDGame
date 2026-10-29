@@ -9,6 +9,8 @@ You do not click a button and start a war. You **file a bill**, and your legisla
 3. **Vote.** The bill sits before the legislature for 24 turns. It needs two-thirds of the votes cast (For plus Against, abstentions excluded) in every chamber that votes on it.
 4. **Outcome.** If it passes, the war starts at once and your 10 action points come back. If it fails, the points are gone and your cooldown keeps running.
 
+![Flow from filing the bill and server checks to a 24 turn vote needing two thirds, then passing to start or join a war or failing and losing the action points.](/wiki-images/diagrams/declaring-war-flow.svg)
+
 ### Key numbers
 
 | What | Value |
@@ -84,6 +86,10 @@ Conquest cannot be selected. Nothing in the game transfers territory between cou
 ## The 120-turn cooldown
 
 A country may file a declaration only once every 120 turns. The clock runs from your last **filing**, not your last passage. A declaration your chambers threw out still spent your cooldown. If a rejected declaration could be re-filed at once, the vote would mean nothing, because an executive could keep tabling it until attendance favoured them.
+
+\`\`\`wiki-chart
+war-declaration-timers
+\`\`\`
 
 Joining an existing war through your own declaration also uses your cooldown, because it still goes through a full bill. Being pulled in by a treaty uses none.
 

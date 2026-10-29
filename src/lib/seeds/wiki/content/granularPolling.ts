@@ -41,6 +41,10 @@ Baseline turnouts are the modern US starting values. In an earlier era, the turn
 
 This poll does not interview anyone. The segments are projections from census demographics and the vote math, so the number labelled uncertainty is an **illustration**, not a sample-based margin of error. The panel shows it so you do not over-trust small segments. Smaller segments get a wider band because less of the electorate backs them.
 
+\`\`\`wiki-chart
+granular-poll-uncertainty
+\`\`\`
+
 ### Worked example
 
 You are polling a state and the panel shows the segment of young, college-educated voters.

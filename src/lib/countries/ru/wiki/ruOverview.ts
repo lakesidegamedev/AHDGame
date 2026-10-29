@@ -91,6 +91,8 @@ The 1953 preset reapportions the Union chamber to 526 seats on 1953 populations;
 
 The Premier appoints ministers **directly from Supreme Soviet deputies** to a 16-seat Council of Ministers. Every seat carries a three-option **tier setting** (the middle option is the neutral default), a package of national metrics, and **two ministerial orders**: time-limited national modifiers that cost one ministerial action and run 24 turns (one game half-year, 24 real hours). Most line ministries also get a regional target and an emergency action aimed at a single republic.
 
+![The Council of Ministers loop: the Premier appoints 16 ministers whose tier settings and 24-turn orders move national metrics, which feed the marketization dial that decides the economic engine.](/wiki-images/diagrams/ru-overview-council-loop.svg)
+
 **Worked example.** The Chairman of Gosplan moves Plan Emphasis from the neutral middle option to consumer goods (Group B). That shifts the national metrics the seat controls toward consumer output and away from heavy industry. The Chairman then spends one ministerial action on Shock Work Campaign. The order runs for 24 turns and then expires on its own, after which another action is needed to repeat it.
 
 The portfolios that define the Soviet council:
@@ -113,6 +115,10 @@ The Foreign and Internal Trade seats are deliberately distinct levers: Foreign T
 ## Command economy
 
 In worlds that use the command economy (every new world), the USSR comes up **fully command**: its marketization level is scheduled at **10** through 1991 in both presets. Marketization is a dial from 0 (fully command) to 100 (fully market). Below 30 the economy is fully command, 30 to 69 is dual-track (plan and market side by side), and 70 and above is a normal market economy. See [Planned Economies](/wiki/planned-economies) for the full model.
+
+\`\`\`wiki-chart
+marketization-schedule-by-country
+\`\`\`
 
 - **No stock exchange.** State enterprises are recorded against the **GOSPLAN state register**, and founding private corporations is disallowed.
 - **One state-owned enterprise per sector.** Every industry on the sector board has a plan enterprise with plant capacity (heavy industry, energy, extraction, agriculture, consumer goods, defense, chemicals, transport, and the rest).

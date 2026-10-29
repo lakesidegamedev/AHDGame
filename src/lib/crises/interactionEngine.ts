@@ -6,6 +6,7 @@
 import { prepareRefugeeReceptionOrder } from "@/lib/livingConflict/refugeeReception";
 import { applyLivingConflictFallback } from "@/lib/livingConflict/fallbackTrajectory";
 import { canCharacterInteract, canRespondToCrisis } from "./rules/authorization";
+import { collectiveDurationReduction } from "./rules/collectiveReduction";
 export { canCharacterInteract } from "./rules/authorization";
 import { ObjectId, type Db } from "mongodb";
 import type {
@@ -931,11 +932,12 @@ export function calculateCollectiveReduction(
   interaction: CrisisInteraction,
   baseDuration: number
 ): number {
-  if (!interaction.collectiveTarget || interaction.collectiveTarget <= 0) return 0;
-
-  const ratio = Math.min(1, interaction.collectiveCurrent / interaction.collectiveTarget);
   // Full funding = 50% duration reduction
-  return Math.floor(baseDuration * ratio * 0.5);
+  return collectiveDurationReduction(
+    interaction.collectiveCurrent,
+    interaction.collectiveTarget,
+    baseDuration
+  );
 }
 
 /**

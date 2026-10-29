@@ -29,6 +29,10 @@ Why PI starts at 10 and not 0: new characters begin at the same 10 that non-play
 
 PI is your standing in your home state and the most important early number. It drives vote reach and primary scores in state races. Because decay is a percentage, a low-PI character loses little per turn, but you must keep campaigning to stay competitive.
 
+\`\`\`wiki-chart
+political-influence-over-time
+\`\`\`
+
 Members of the party holding the national executive (the president's party, or the head of government's party in a parliamentary system) lose PI faster, scaled by that government's approval: twice as fast at 0% approval, 1.5 times at 50%, and normal at 100%.
 
 If you are asking "why did my PI drop": it decays every turn, and if your party runs the government it decays faster. Campaign to hold it.
@@ -36,6 +40,10 @@ If you are asking "why did my PI drop": it decays every turn, and if your party 
 ### National Influence (NPI)
 
 NPI is your national reputation. It drives presidential races only: both reach and appeal. It decays 1% per turn, then gains a state PI term plus a position bonus.
+
+\`\`\`wiki-chart
+national-influence-gain-from-pi
+\`\`\`
 
 | Home-state PI | NPI gained per turn from PI |
 | ---: | ---: |
@@ -67,6 +75,10 @@ Two axes, economic and social, each from -5 to +5, set at creation. Voting on bi
 
 Donor level raises both your income and your Fundraise yield. Build Donor Network costs actions that rise with level (4 at level 0 to 9, 13 at level 50, 20 at level 75) and funds of ₳3,000 plus ₳1,500 per current level, scaled by state GDP per person (0.85 to 2.0 times). At average GDP, level 1 to 2 costs about ₳4,500 and level 74 to 75 costs about ₳114,000. Income per level per turn depends on the state's population: ₳100 (under 2 million), ₳200 (2 to 8 million), ₳400 (8 to 20 million) or ₳800 (over 20 million). If a move or event resets you to level 0, Fundraise is locked until you build one level.
 
+\`\`\`wiki-chart
+donor-base-costs
+\`\`\`
+
 ### Party Influence
 
 Party Influence runs from 0 to 100 and applies only to party members. It accrues passively while you are active, grows with the operations your party invests in, and decays with inactivity. Leaving and rejoining resets it to 0. It sets your share of the party's bonus action pool each turn, amplified by how close your positions are to the party platform. You can see it in your profile's Party Standing section.
@@ -85,7 +97,7 @@ All costs below are for a new character at a state with average GDP per person. 
 | Build Donor Network | 4 to 20 by level | ₳3,000 + ₳1,500 x level, GDP scaled | +1 donor level |
 | Quick Poll | 2 | ₳25,000 | topline plus best and worst 5 groups |
 | Full Demographic Poll | 6 | ₳75,000 | complete breakdown |
-| Personal Campaign Donation | 2 | converts Cash on Hand | 50% lands in Campaign Funds |
+| Personal Campaign Donation | 2 | converts Cash on Hand | 50% lands in Campaign Funds, 50% is lost |
 | Post news | 0 | none | free article, 12-hour cooldown |
 | Sponsored news post | 5 | ₳100,000 of personal cash | paid placement, 30-minute cooldown |
 | Rest | 0 | none | resets per-turn cooldowns |
@@ -94,7 +106,7 @@ Campaign and ad funds are multiplied by a GDP factor: your state's GDP per perso
 
 **Fundraise yield** is the one formula worth knowing: (₳50,000 + ₳2,000 x donor level) x (1 + state PI / 100) x your Fundraising stat multiplier. A level 2 character at PI 10 with a neutral stat earns ₳59,400. A level 50 character at PI 50 earns ₳225,000.
 
-**Moving Cash on Hand into Campaign Funds.** Use Personal Campaign Donation. It costs 2 actions, lands 50% of what you convert, and adds Infamy: about 4 for ₳100,000, 15 for ₳1,000,000 and 55 for ₳10,000,000.
+**Moving Cash on Hand into Campaign Funds.** Use Personal Campaign Donation. It costs 2 actions, takes all the cash you choose, lands 50% in Campaign Funds (the other 50% is lost), and adds Infamy: about 4 for ₳100,000, 15 for ₳1,000,000 and 55 for ₳10,000,000.
 
 ### Interpersonal actions
 
@@ -146,6 +158,8 @@ Party chairs and vice chairs spend the party action pool on influence operations
 9. NPI decays 1%, then gains the PI term and your position bonus.
 
 Bills, NPP behavior, elections and everything else run afterward.
+
+![Actions arrive first, then Campaign Funds, then Political Influence, Infamy, Favorability and National Political Influence decay or drain.](/wiki-images/diagrams/stats-actions-turn-order.svg)
 
 ## Connections
 

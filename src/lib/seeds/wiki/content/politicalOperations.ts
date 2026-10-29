@@ -41,6 +41,10 @@ The price compounds while the benefit flattens. That is deliberate: without it, 
 | 10 | ₳3,723,436 | ₳13,647,540 | +18.8% | +11.3% |
 | 15 | ₳16,696,013 | about ₳63.7 million | +21.9% | +13.1% |
 
+\`\`\`wiki-chart
+campaign-presence-cost-and-bonus
+\`\`\`
+
 Going from level 5 to level 10 in one state costs about ₳11.2 million and adds 6.3 points of primary vote weight. The same money split across four fresh states at level 3 or 4 each adds more in total, as long as those states are ones that can still swing.
 
 ### Carryover after a presidential general election

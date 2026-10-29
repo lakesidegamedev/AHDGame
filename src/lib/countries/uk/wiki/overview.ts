@@ -25,6 +25,10 @@ The United Kingdom is a **constitutional monarchy and parliamentary democracy** 
 
 The UK has four nations, but the Commons resolver runs one multi-seat race in each of 12 regions. England is split into nine regions; Scotland, Wales, and Northern Ireland each form one region.
 
+\`\`\`wiki-chart
+uk-seats-by-region
+\`\`\`
+
 | Region | Code | Modern Commons Seats | Regional Council Seats |
 | --- | --- | --- | --- |
 | London | LON | 75 | 32 |
@@ -50,6 +54,10 @@ UK Commons elections use **regional multi-seat allocation**. Each region's seats
 
 A party needs at least **10% of the pooled votes in a region** to qualify for seats there. Parties under that line get none, so a small party's votes in a region can count for nothing.
 
+\`\`\`wiki-chart
+uk-regional-seat-allocation
+\`\`\`
+
 **Worked example.** A region elects 10 MPs and 100,000 votes are cast, so one seat costs a quota of 10,000 votes. Party A has 46,000 votes, B has 34,000 and C has 20,000, all above the 10% line. A gets 4 seats outright, B gets 3 and C gets 2. That is 9 of 10. The last seat goes to the largest leftover: A has 6,000, B has 4,000 and C has 0, so A takes it. Final result: A 5, B 3, C 2.
 
 **Primaries advance the top 3 candidates** per party (not 1 as in the US), so up to three candidates from each party reach the general election.
@@ -69,6 +77,8 @@ There is no direct vote for Prime Minister. Instead:
 3. A **confidence vote** is held among all 650 elected MPs. The nominee needs more than 50% (326 votes) to be confirmed as PM.
 4. If the confidence vote fails, the next-largest party's leader is nominated, and the process repeats.
 5. **Minority government**: any party or coalition chair holding at least 100 Commons seats can call a confidence vote and propose a PM, even when a rival bloc has 326+. The Commons votes the bid up or down.
+
+![Loop for forming a UK government: seats by party, largest party nominated, confidence vote, next party on failure, a minority bid route, and a no-confidence vote that clears the cabinet.](/wiki-images/diagrams/uk-overview-pm-formation.svg)
 
 **Worked example.** Labour wins 340 of 650 seats. Its leader is nominated and 326 or more Ayes are needed, so Labour passes with room to spare. If it won only 300 seats, it would need 26 more votes from MPs outside its party. If those do not come, the next-largest party gets its turn.
 

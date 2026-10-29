@@ -35,7 +35,7 @@ import {
  */
 export const EXTREME_DISTRESS_DEBT_TO_GDP = 2.5;
 
-const DEBT_THRESHOLDS = [
+export const DEBT_THRESHOLDS = [
   {
     maxRatio: 0.6,
     rating: "AAA" as CreditRating,

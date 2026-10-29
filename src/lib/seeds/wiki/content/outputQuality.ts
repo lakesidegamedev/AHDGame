@@ -13,6 +13,10 @@ Each manufacturing or service sector gets a quality score every turn from four *
 | Wages | 0.2 | 0.5 + 0.6 x (wage level - 1) | wage level 1.83 (above the 1.5 maximum, so wages alone never max out) |
 | Operations | 0.2 | square root of (Logistics & Operations strength / 15) | strength 15 |
 
+\`\`\`wiki-chart
+output-quality-pillars
+\`\`\`
+
 Pillars **substitute, they do not gate**. Poor inputs pull quality down, but strong tech, wages or operations pull it back up. No pillar can drop a sub-score below 0.1, so one terrible pillar never zeroes the product. Tech has the largest weight, so research is the strongest single driver.
 
 ### Worked example
@@ -28,6 +32,8 @@ B is behind on research but closes most of the gap with pay and better inputs. I
 A sector's input pillar uses the average quality of the commodities it consumes, as made by all producers of that commodity in the world last turn. Last turn's output feeds this turn's input, so a change in your tech or wages shows up in your own score straight away, and reaches the sectors that buy from you one turn later.
 
 Note this is a market-wide average per commodity, not the quality of one supplier. A [supply agreement](/wiki/supply-agreements) with a good supplier does not by itself raise your input quality, although the supplier's output counts toward the commodity average.
+
+![Raw extraction has no quality score; manufacturers and consumer goods sectors take the average commodity quality into their inputs pillar.](/wiki-images/diagrams/output-quality-supply-chain.svg)
 
 ### Raw extraction has no quality
 

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="250" viewBox="0 0 760 250" role="img" font-family="system-ui, sans-serif">
+<title>Confirmation vote flow</title>
+<desc>A nomination triggers a 24 hour Senate vote; more Confirm than Reject confirms, a tie or more Reject fails, and the President can withdraw before it closes.</desc>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/></marker><marker id="mn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#71717a"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#dc2626"/></marker></defs>
+<rect x="0.5" y="0.5" width="759" height="249" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
+<g fill="#18181b">
+<rect x="24" y="60" width="120" height="60" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="84.0" y="86.0" font-size="13" text-anchor="middle" font-weight="700">President</text>
+<text x="84.0" y="103.0" font-size="13" text-anchor="middle">nominates</text>
+<rect x="184" y="52" width="210" height="76" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="289.0" y="70.2" font-size="12" text-anchor="middle" font-weight="700">Senate vote opens</text>
+<text x="289.0" y="86.2" font-size="12" text-anchor="middle">24 hours. Players vote;</text>
+<text x="289.0" y="102.2" font-size="12" text-anchor="middle">NPP senators vote by</text>
+<text x="289.0" y="118.2" font-size="12" text-anchor="middle">party line</text>
+<rect x="434" y="60" width="110" height="60" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="489.0" y="86.2" font-size="12" text-anchor="middle" font-weight="700">Window closes</text>
+<text x="489.0" y="102.2" font-size="12" text-anchor="middle">tally votes</text>
+<rect x="584" y="28" width="152" height="66" rx="6" fill="#eff6ff" stroke="#2563eb"/>
+<text x="660.0" y="49.2" font-size="12" text-anchor="middle" font-weight="700">Confirmed</text>
+<text x="660.0" y="65.2" font-size="12" text-anchor="middle">more Confirm</text>
+<text x="660.0" y="81.2" font-size="12" text-anchor="middle">than Reject</text>
+<rect x="584" y="100" width="152" height="64" rx="6" fill="#fef2f2" stroke="#dc2626"/>
+<text x="660.0" y="120.2" font-size="12" text-anchor="middle" font-weight="700">Fails</text>
+<text x="660.0" y="136.2" font-size="12" text-anchor="middle">tie, or more Reject;</text>
+<text x="660.0" y="152.2" font-size="12" text-anchor="middle">seat stays vacant</text>
+<polyline points="144,90 184,90" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<polyline points="394,90 434,90" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<polyline points="544,82 564,82 564,61 584,61" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
+<polyline points="544,98 564,98 564,132 584,132" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
+<rect x="184" y="176" width="210" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
+<text x="289.0" y="202.2" font-size="12" text-anchor="middle">Nomination withdrawn</text>
+<polyline points="289,128 289,176" fill="none" stroke="#71717a" stroke-width="1.5" marker-end="url(#mn)"/>
+<text x="297" y="156" font-size="12" text-anchor="start" fill="#52525b">President withdraws before it closes</text>
+</g>
+</svg>

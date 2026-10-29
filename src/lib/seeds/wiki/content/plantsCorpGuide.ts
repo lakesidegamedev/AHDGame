@@ -83,6 +83,8 @@ Open any sector you own and the **Market and money** panel leads with three numb
 2. **Per unit made.** What a unit coming off the line earned, counting unsold units as earning nothing, against what it cost to make, counting materials, wages, upkeep on idle capacity and overheads. If earns is below costs, every unit you produce loses money at today's fills.
 3. **Break even.** How the cash already sunk into construction relates to what the sector clears. A turn count means profit at today's rate pays that spend back in that many turns. "Profitable now" means there is nothing left to pay back. "Not at current fills" means the sector does not clear a profit at today's sales, so more capacity will not fix it, more sales will.
 
+![What the Selling, Per unit made and Break even tiles mean at each reading.](/wiki-images/diagrams/plants-corp-guide-sector-tiles.svg)
+
 Below the headline the panel shows the full chain with nothing skipped: units offered, sold and unsold, then revenue minus every physical cost line down to profit. The lines always add up exactly to the profit the turn booked.
 
 Everyone else sees much less. Rivals viewing your sector get market share and the market pie, and nothing else:
