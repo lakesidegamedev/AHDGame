@@ -92,6 +92,18 @@ You can run the whole campaign loop and a corporation. You cannot write or vote 
 corporation
 \`\`\`
 
+## Your first week
+
+- [ ] Party joined.
+- [ ] PI climbing with Campaign; Favorability 60+.
+- [ ] First low-office primary identified and polled.
+- [ ] You are not filing Senate/President as your opener.
+- [ ] You know which screen is Dashboard vs Elections vs Campaign vs legislature.
+
+\`\`\`guide-screenshot
+legislature
+\`\`\`
+
 ## Connections
 
 **Driven by**

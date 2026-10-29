@@ -84,6 +84,14 @@ campaign
 
 Safe to ignore in week one: tiny Favorability drift, Infamy under 20, uncontested NPP primaries and most news posts. Not safe to ignore: missed primary declarations, last-turn generals, cabinet votes if you are a Senator, confidence votes and drifting far from your party.
 
+## Your first week
+
+- [ ] Daily Dashboard pass (notifications, Campaign, one ad or fundraise).
+- [ ] Elections page checked so a primary window cannot close unseen.
+- [ ] Favorability held at 60+; PI climbing, not rotting.
+- [ ] You know whether you are in Build, Primary, or General.
+- [ ] Last-4-turns alarm set if a general is live.
+
 ## Connections
 
 **Driven by**

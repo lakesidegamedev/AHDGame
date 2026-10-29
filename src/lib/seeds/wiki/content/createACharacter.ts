@@ -101,6 +101,14 @@ Tips:
 - A tiny home state for "easy wins" means lower donor income and fewer races.
 - Fundraise needs a donor base above 0. You start at level 1, so you can use it right away, but it pays more once your donor level and Political Influence are higher.
 
+## Your first week
+
+- [ ] Country and home region chosen on purpose, not at random.
+- [ ] Policy sliders within a few points of the party you joined.
+- [ ] Party joined the same day you created.
+- [ ] Starting actions not dumped into Fundraise before Donor Level 2.
+- [ ] First race identified on **Elections** (poll before declare).
+
 ## Connections
 
 **Driven by**
