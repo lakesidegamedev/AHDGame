@@ -73,6 +73,12 @@ export interface ProductionPlan {
   labourCost: number;
   /** Explicit site, cold-capacity and regulatory costs, independent of product prices. */
   otherOperatingCost: number;
+  /**
+   * The part of otherOperatingCost owed with no run at all (cold upkeep on
+   * idle capacity). When present, the site bill follows the run actually made
+   * down to this floor; absent, the site bill is not trued up.
+   */
+  idleOperatingCost?: number;
   labourRecipientAccountId: string;
   operatingRecipientAccountId: string;
   inputStock: readonly PurchasedStock[];
@@ -137,6 +143,14 @@ export interface ProducerOperatingResult {
   plannedUnits: number;
   /** The plan's run share before input and cash cuts, read back by next turn's run rule. */
   plannedRunShare?: number;
+  /**
+   * Share of the funded run that was actually made, when short inputs cut it:
+   * wages and the running part of the site bill were billed on this share.
+   * Absent when the plant made its whole funded run.
+   */
+  billedRunShare?: number;
+  /** Cold upkeep inside otherOperatingPaid plus arrears; not a cost of running. */
+  idleOperatingCost?: number;
   producedUnits: number;
   offeredUnits: number;
   soldUnits: number;
@@ -835,6 +849,61 @@ export function advanceProducerEconomy(input: {
     }
     if (!changed) break;
   }
+  // Bills follow output (owner decision 2026-10-30). Wages and site running
+  // costs were sized and paid for the funded run, before short inputs cut it.
+  // The plant pays for the share it made; idle capacity keeps its cold upkeep.
+  // The unused share goes back to the company before the final clearing, so no
+  // household spends wages that were never earned. Cash cuts and productivity
+  // are in the funded run already and are billed as before.
+  const billedRunShare = new Map<string, number>();
+  for (const [i, p] of plans.entries()) {
+    const maximum = physicalMaximum.get(p.id)!;
+    const share = maximum > 0 ? Math.min(1, Math.max(0, plannedById.get(p.id)! / maximum)) : 1;
+    if (!(share < 1 - 1e-12)) continue;
+    billedRunShare.set(p.id, share);
+    const paid = payments.get(p.id)!;
+    const refund = (recipient: string, amount: number) => {
+      const taken = Math.min(cash.get(recipient)!, Math.max(0, amount));
+      cash.set(recipient, cash.get(recipient)! - taken);
+      cash.set(p.accountId, cash.get(p.accountId)! + taken);
+      return taken;
+    };
+    const labourArrears = Math.max(0, p.labourCost - paid.labour);
+    const labour = paid.labour - refund(p.labourRecipientAccountId, paid.labour * (1 - share));
+    const idle =
+      p.idleOperatingCost != null
+        ? Math.min(p.otherOperatingCost, Math.max(0, finite(p.idleOperatingCost, "idle upkeep")))
+        : null;
+    const operatingRatio =
+      idle != null && p.otherOperatingCost > 0
+        ? (idle + (p.otherOperatingCost - idle) * share) / p.otherOperatingCost
+        : 1;
+    const operatingArrears = Math.max(0, p.otherOperatingCost - paid.operating);
+    const operating =
+      paid.operating - refund(p.operatingRecipientAccountId, paid.operating * (1 - operatingRatio));
+    const arrearsCut = labourArrears * (1 - share) + operatingArrears * (1 - operatingRatio);
+    pendingDueByAccount.set(
+      p.accountId,
+      Math.max(0, (pendingDueByAccount.get(p.accountId) ?? 0) - arrearsCut)
+    );
+    payments.set(p.id, {
+      labour,
+      operating,
+      arrears: paid.arrears - arrearsCut,
+    });
+    plans[i] = {
+      ...p,
+      labourCost: labour + labourArrears * share,
+      otherOperatingCost: operating + operatingArrears * operatingRatio,
+    };
+  }
+  if (billedRunShare.size > 0 && householdIds.size > 0)
+    consumerOrders = [
+      ...(input.externalOrders ?? []),
+      ...(input.households ?? []).flatMap((household) =>
+        householdPurchaseOrders({ ...household, cash: cash.get(household.accountId)! })
+      ),
+    ];
   // Clear once more at the settled plan so every sale is backed by what is
   // actually produced (the last pass may have lowered plans after clearing).
   market = trial(input.trackCountryBooks === true);
@@ -1069,6 +1138,10 @@ export function advanceProducerEconomy(input: {
       activeUnits: p.capacityUnits * p.activeFraction,
       plannedUnits: proposedById.get(p.id)!,
       ...(p.plannedRunShare != null ? { plannedRunShare: p.plannedRunShare } : {}),
+      ...(billedRunShare.has(p.id) ? { billedRunShare: billedRunShare.get(p.id)! } : {}),
+      ...(p.idleOperatingCost != null
+        ? { idleOperatingCost: Math.min(p.otherOperatingCost, Math.max(0, p.idleOperatingCost)) }
+        : {}),
       producedUnits: produced,
       offeredUnits,
       soldUnits,

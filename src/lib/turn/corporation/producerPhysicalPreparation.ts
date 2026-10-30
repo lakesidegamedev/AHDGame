@@ -535,20 +535,24 @@ export function prepareProducerPhysicalSector(input: {
         )
       : 1);
   plan.labourCost = payroll.sectorLaborCost;
-  plan.otherOperatingCost = standingProducerSiteBill({
-    nominalHourlyCapacityValue: nominalDaily / TURNS_PER_DAY,
-    activeFraction: runningFraction,
-    financialPenaltyPercent: Math.max(0, -disaster.marginPenalty),
-    coldUpkeepWaived:
-      env.transitionFirstFundedTurn != null &&
-      transitionReliefEligible(sector) &&
-      inTransitionWindow(currentTurn, env.transitionFirstFundedTurn),
-    coldShareOverride: lowUse
-      ? sector.mothballed === true
-        ? 0
-        : LOW_USE_COLD_UPKEEP_FRACTION
-      : undefined,
-  });
+  const siteBill = (activeFraction: number) =>
+    standingProducerSiteBill({
+      nominalHourlyCapacityValue: nominalDaily / TURNS_PER_DAY,
+      activeFraction,
+      financialPenaltyPercent: Math.max(0, -disaster.marginPenalty),
+      coldUpkeepWaived:
+        env.transitionFirstFundedTurn != null &&
+        transitionReliefEligible(sector) &&
+        inTransitionWindow(currentTurn, env.transitionFirstFundedTurn),
+      coldShareOverride: lowUse
+        ? sector.mothballed === true
+          ? 0
+          : LOW_USE_COLD_UPKEEP_FRACTION
+        : undefined,
+    });
+  plan.otherOperatingCost = siteBill(runningFraction);
+  // Cold upkeep alone: the floor the site bill keeps when short inputs cut the run.
+  plan.idleOperatingCost = siteBill(0);
   return {
     prepared,
     walletScopes: scopes,

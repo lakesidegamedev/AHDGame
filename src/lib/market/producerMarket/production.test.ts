@@ -2,6 +2,7 @@ import { producerPayableId } from "./payablesRules";
 import { producerTrades } from "./rules";
 import { describe, expect, it } from "vitest";
 import { advanceProducerEconomy, type ProductionPlan } from "./production";
+import { demandPlanRunShare, OUTPUT_CUT_STEP } from "./outputResponseRules";
 
 const plant = (changes: Partial<ProductionPlan> = {}): ProductionPlan => ({
   id: "plant",
@@ -530,7 +531,10 @@ describe("receipt-backed production", () => {
       plannedUnits: 50,
       purchases: 0,
       inputsConsumed: 40,
-      cashFlow: -30,
+      // Half the run was made, so half the wages; no idle floor given, site unchanged.
+      labourPaid: 10,
+      billedRunShare: 0.5,
+      cashFlow: -20,
     });
   });
 
@@ -559,12 +563,117 @@ describe("receipt-backed production", () => {
       producedUnits: 0,
       revenue: 0,
       purchases: 0,
-      labourPaid: 20,
+      // Nothing made, no wages owed; without an idle floor the site bill is unchanged.
+      labourPaid: 0,
       otherOperatingPaid: 10,
-      profit: -30,
-      cashFlow: -30,
+      profit: -10,
+      cashFlow: -10,
     });
     expect(result.accounts.reduce((n, a) => n + a.cash, 0)).toBe(2000);
+  });
+
+  it("bills wages and site running costs on the run actually made, keeping cold upkeep", () => {
+    const result = advanceProducerEconomy({
+      turn: 1,
+      accounts,
+      producers: [plant({ otherOperatingCost: 10, idleOperatingCost: 2 })],
+      externalOffers: [
+        {
+          id: "power",
+          accountId: "supplier",
+          commodity: "energy",
+          book: "world",
+          units: 50,
+          unitPrice: 1,
+        },
+      ],
+    });
+    const r = result.producers[0];
+    expect(r.producedUnits).toBeCloseTo(25);
+    expect(r.billedRunShare).toBeCloseTo(0.25);
+    // Wages: a quarter of 20. Site: cold floor 2 plus a quarter of the running 8.
+    expect(r.labourPaid).toBeCloseTo(5);
+    expect(r.otherOperatingPaid).toBeCloseTo(4);
+    expect(r.idleOperatingCost).toBeCloseTo(2);
+    expect(r.labourArrears).toBeCloseTo(0);
+    expect(r.profit).toBeCloseTo(r.revenue - 50 - 5 - 4);
+    const cashOf = (id: string) => result.accounts.find((a) => a.id === id)!.cash;
+    // Households keep only the wages earned (minus what they spent), services the trued bill.
+    expect(cashOf("services")).toBeCloseTo(4);
+    expect(cashOf("corp")).toBeCloseTo(1000 - 50 - 5 - 4 + r.revenue);
+    expect(result.accounts.reduce((n, a) => n + a.cash, 0)).toBeCloseTo(2000, 9);
+  });
+
+  it("a sold-out plant starved of inputs holds its plan next turn; one under materials brakes", () => {
+    const settle = (price: number) =>
+      advanceProducerEconomy({
+        turn: 1,
+        accounts,
+        producers: [
+          plant({
+            idleOperatingCost: 2,
+            plannedRunShare: 1,
+            outputs: [
+              {
+                commodity: "financial_services",
+                unitsPerOutput: 1,
+                book: "world",
+                policy: { kind: "manual", unitPrice: price },
+                referenceUnitPrice: price,
+                storable: false,
+              },
+            ],
+          }),
+        ],
+        externalOffers: [
+          {
+            id: "power",
+            accountId: "supplier",
+            commodity: "energy",
+            book: "world",
+            units: 50,
+            unitPrice: 1,
+          },
+        ],
+        externalOrders: [
+          {
+            id: "buyer",
+            accountId: "households",
+            commodity: "financial_services",
+            book: "world",
+            units: 100,
+            maximumUnitPrice: 5,
+          },
+        ],
+      }).producers[0];
+    // Sells all 25 it could make at 3: revenue 75 against materials 50, wages 5, site 4.
+    // Billed for the planned run (wages 20, site 10) the same run read as a loss.
+    const held = settle(3);
+    expect(held.soldUnits).toBeCloseTo(25);
+    expect(demandPlanRunShare(held)).toBeCloseTo(1, 12);
+    // Selling at 1.5 does not cover 2 of materials per unit: the brake still cuts.
+    const braked = settle(1.5);
+    expect(braked.soldUnits).toBeCloseTo(25);
+    expect(demandPlanRunShare(braked)).toBeCloseTo(0.25 * (1 - OUTPUT_CUT_STEP), 12);
+  });
+
+  it("does not credit households with wages for output the plant never made", () => {
+    const result = advanceProducerEconomy({
+      turn: 1,
+      accounts,
+      producers: [plant({ idleOperatingCost: 2 })],
+    });
+    const cashOf = (id: string) => result.accounts.find((a) => a.id === id)!.cash;
+    expect(result.producers[0]).toMatchObject({
+      producedUnits: 0,
+      billedRunShare: 0,
+      labourPaid: 0,
+      otherOperatingPaid: 2,
+      profit: -2,
+    });
+    expect(cashOf("households")).toBe(1000);
+    expect(cashOf("services")).toBe(2);
+    expect(cashOf("corp")).toBe(998);
   });
 
   it("buys only available inputs and produces only the supported recipe quantity", () => {
@@ -587,8 +696,10 @@ describe("receipt-backed production", () => {
       producedUnits: 25,
       purchases: 50,
       inputsConsumed: 50,
-      profit: -80,
-      cashFlow: -80,
+      // A quarter of the run was made: wages 5 of 20, site 10 (no idle floor given).
+      labourPaid: 5,
+      profit: -65,
+      cashFlow: -65,
     });
     expect(result.producers[0].outputStock[0].units).toBe(0);
     expect([...producerTrades(result.tradeReceipt)][0]).toMatchObject({ units: 50, amount: 50 });

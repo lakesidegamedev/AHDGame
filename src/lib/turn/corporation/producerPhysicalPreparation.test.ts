@@ -1,4 +1,5 @@
 import { getSectorLaborShare } from "@/lib/labour/laborCost";
+import { COLD_CAPACITY_UPKEEP_FRACTION } from "@/lib/corporations/investment/rules";
 import { describe, expect, it } from "vitest";
 import { ObjectId } from "mongodb";
 import type { CorporateSector } from "@/lib/db/types";
@@ -116,6 +117,11 @@ describe("physical producer preparation", () => {
       );
     expect(plan.labourCost).toBeCloseTo(outputValue * getSectorLaborShare("financial", 1991), 8);
     expect(plan.otherOperatingCost).toBeCloseTo(outputValue * 0.04, 8);
+    // Cold upkeep alone: the floor the site bill keeps when short inputs cut the run.
+    expect(plan.idleOperatingCost).toBeCloseTo(
+      outputValue * 0.04 * COLD_CAPACITY_UPKEEP_FRACTION,
+      8
+    );
     env.lookups.priceRatioByCommodity.set("financial_services", 2);
     const changed = prepareProducerPhysicalSector(input).prepared.plan;
     expect(changed.capacityUnits).toBe(plan.capacityUnits);

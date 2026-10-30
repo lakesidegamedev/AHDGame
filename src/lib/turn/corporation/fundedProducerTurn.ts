@@ -702,8 +702,19 @@ export async function runFundedProducerTurn(
   // Sectors whose plant delivered to its own company's sites (captiveDeliveryStage).
   const captiveOn = (input.env.captiveDeliveryStage ?? 0) >= 1;
   const offtakeBySectorId = new Map<string, number>();
+  // A plant whose run short inputs cut was billed wages on the share it made;
+  // its reported crew is that share of the planned crew.
+  const headcountBySectorId = new Map(demand.headcountBySectorId);
   for (const sector of settled.closingSectors) {
     const r = sector.producerSettlement;
+    const billed =
+      r && r.worldEpoch === worldEpoch && r.turn === turn ? r.billedRunShare : undefined;
+    const planned = headcountBySectorId.get(sector._id.toHexString());
+    if (billed != null && planned)
+      headcountBySectorId.set(sector._id.toHexString(), {
+        desiredWorkers: Math.round(planned.desiredWorkers * billed),
+        workers: Math.round(planned.workers * billed),
+      });
     if (captiveOn && r && r.worldEpoch === worldEpoch && r.turn === turn)
       offtakeBySectorId.set(
         sector._id.toHexString(),
@@ -1046,7 +1057,7 @@ export async function runFundedProducerTurn(
   return {
     receiptsBySectorId,
     settledProfitByCorp,
-    headcountBySectorId: demand.headcountBySectorId,
+    headcountBySectorId,
   };
 }
 
