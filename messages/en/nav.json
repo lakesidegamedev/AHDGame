@@ -297,7 +297,7 @@
       "loadError": "Could not load devolution data.",
       "retry": "Try again",
       "missing": "No Desire data is available for this region.",
-      "policyHelp": "Westminster has half the direct policy and approval influence of the First Minister. Approval strengthens or weakens each government’s chosen stance. Pro-Devolution is neutral on separation.",
+      "policyHelp": "Westminster has half the direct policy and maximum approval influence of the First Minister. Regional approval strengthens or weakens the First Minister’s stance. Westminster approval below 50% raises independence or reunification desire; above 50% lowers it, regardless of Westminster’s stance. Pro-Devolution has no direct policy effect on separation.",
       "actions": "National office AP: {value}",
       "cost": "Changing a stance costs {cost} national office AP. Each region has its own {turns}-turn cooldown. An incoming government can make its first change in each region immediately.",
       "cooldown": "Available again in {turns} turns.",
