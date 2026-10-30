@@ -1,3 +1,4 @@
+import { statePopulationUpdate } from "./rules/statePopulationUpdate";
 import type { Db } from "mongodb";
 import { logWarning } from "@/lib/utils/errorLog";
 import type { State } from "@/lib/db/types";
@@ -55,7 +56,8 @@ export async function seedStates(
   const bundle = selectStatesBundleForPreset(preset);
   const ops = bundle.map((state) => {
     const { _id, ...stateData } = state;
-    return { updateOne: { filter: { _id }, update: { $set: stateData }, upsert: true } };
+    const update = statePopulationUpdate(stateData, reset);
+    return { updateOne: { filter: { _id }, update, upsert: true } };
   });
   if (ops.length > 0) await db.collection<State>("states").bulkWrite(ops, { ordered: false });
   log(`Seeded ${bundle.length} states (${preset})`);

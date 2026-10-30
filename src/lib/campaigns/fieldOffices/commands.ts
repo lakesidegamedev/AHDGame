@@ -1,3 +1,4 @@
+import { loadCountyPopulationMap } from "@/lib/counties/queries";
 import { ObjectId, type Db } from "mongodb";
 import type { AuthUserWithCharacter } from "@/lib/auth";
 import { ApiError, badRequest, notFound } from "@/lib/api/errors";
@@ -246,7 +247,13 @@ async function resolvePlacement(
     loadLiveStateLean(db, args.countryId),
     getGameStatePresetOrDefault(db),
   ]);
-  const map = await loadFieldOfficeRegionMap(args.rules.scope, args.regionId, live, preset);
+  const map = await loadFieldOfficeRegionMap(
+    args.rules.scope,
+    args.regionId,
+    live,
+    preset,
+    await loadCountyPopulationMap(db, args.regionId)
+  );
   const sub = map?.subdivisions.find((s) => s.id === args.subdivisionId);
   if (!map || !sub) throw badRequest("That county is not in this state");
   const orientation = await loadCampaignOrientation(db, args.campaign, args.countryId);
