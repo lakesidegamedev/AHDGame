@@ -102,6 +102,7 @@ export async function POST(request: Request, { params }: RouteParams) {
             issuerNetLocal: result.issuerNetLocal,
           }
         : {}),
+      ...(result.placementNotice ? { placementNotice: result.placementNotice } : {}),
     });
   } catch (error) {
     return handleRouteError(error);

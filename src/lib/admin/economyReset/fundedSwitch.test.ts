@@ -36,6 +36,7 @@ describe("funded switch gameConfig update", () => {
         producerCaptiveDeliveryStage: 1,
         producerFundedRestartStage: 1,
         fundedHeadcountStage: 1,
+        equityCashoutLimitsStage: 1,
         producerTransitionPackageEnabled: false,
       },
     });

@@ -52,6 +52,9 @@ function buildLocDrawLimitMessage(
   const netWorthBinding =
     snapshot.dtiLimitInternal <= 0 || snapshot.netWorthLimitInternal <= snapshot.dtiLimitInternal;
 
+  if (netWorthBinding && snapshot.collateralNote) {
+    return `Exceeds your credit limit - total borrowing cannot exceed your current net worth. ${snapshot.collateralNote}`;
+  }
   return netWorthBinding
     ? "Exceeds your credit limit - total borrowing cannot exceed your current net worth."
     : "Exceeds your credit limit - borrowing is capped by your average recurring income over the last 48 turns.";

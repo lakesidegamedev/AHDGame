@@ -9,8 +9,10 @@ import { emitTx } from "@/lib/financialTxLog/emit";
 import {
   planEquityPrimaryPlacement,
   prepareEquityPrimaryPlacement,
+  recordCappedPrimaryPlacement,
   refundPreparedEquityPlacement,
 } from "@/lib/equities/primaryMarket";
+import { primaryPlacementNotice } from "@/lib/equities/cashoutLimits";
 import { equityPoolCurrency } from "@/lib/equities/marketPool";
 import {
   settlePrimaryUnderwritingFill,
@@ -61,6 +63,8 @@ export type GoPublicResult =
       grossPlacedLocal?: number;
       underwritingFeeLocal?: number;
       issuerNetLocal?: number;
+      /** Plain explanation when the equity cashout limits changed the placement. */
+      placementNotice?: string;
     };
 
 /**
@@ -137,7 +141,9 @@ export async function goPublic(input: GoPublicInput): Promise<GoPublicResult> {
   }
   const now = new Date();
   const plannedUnderwrittenPlacement = underwriting
-    ? await planEquityPrimaryPlacement(db, corporation, ipo.newShares, corporation.sharePrice)
+    ? await planEquityPrimaryPlacement(db, corporation, ipo.newShares, corporation.sharePrice, {
+        turn: currentTurn,
+      })
     : null;
   const placement = plannedUnderwrittenPlacement
     ? {
@@ -149,13 +155,16 @@ export async function goPublic(input: GoPublicInput): Promise<GoPublicResult> {
         corporation,
         ipo.newShares,
         corporation.sharePrice,
-        now
+        now,
+        { turn: currentTurn }
       );
   const underwritten = !!underwriting && placement.poolActive && placement.placedShares > 0;
   if (underwriting && !underwritten) {
     return {
       ok: false,
-      error: "The selected underwriter cannot fund an IPO fill from this market pool right now",
+      error:
+        primaryPlacementNotice(placement.cashoutLimits, 0, ipo.newShares) ??
+        "The selected underwriter cannot fund an IPO fill from this market pool right now",
       status: 409,
     };
   }
@@ -367,6 +376,8 @@ export async function goPublic(input: GoPublicInput): Promise<GoPublicResult> {
     return { ok: false, error: "Corporation state changed; retry", status: 409 };
   }
 
+  await recordCappedPrimaryPlacement(db, corporation._id, placement);
+
   if (!underwritten && placement.poolActive && placement.paidLocal > 0) {
     void emitTx(db, {
       type: "ipo_proceeds",
@@ -434,6 +445,11 @@ export async function goPublic(input: GoPublicInput): Promise<GoPublicResult> {
     },
   });
 
+  const placementNotice = primaryPlacementNotice(
+    placement.cashoutLimits,
+    placement.placedShares,
+    placement.requestedShares
+  );
   return {
     ok: true,
     newShares: ipo.newShares,
@@ -449,5 +465,6 @@ export async function goPublic(input: GoPublicInput): Promise<GoPublicResult> {
           issuerNetLocal,
         }
       : {}),
+    ...(placementNotice ? { placementNotice } : {}),
   };
 }

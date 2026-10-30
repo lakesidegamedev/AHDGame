@@ -33,6 +33,7 @@ export function fundedSwitchGameConfigUpdate(currentTurn: number): UpdateFilter<
       producerCaptiveDeliveryStage: 1,
       producerFundedRestartStage: 1,
       fundedHeadcountStage: 1,
+      equityCashoutLimitsStage: 1,
       producerTransitionPackageEnabled: false,
     },
   };

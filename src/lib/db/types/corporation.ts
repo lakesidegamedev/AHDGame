@@ -847,6 +847,12 @@ export interface Corporation {
    * dilution is applied when the share count changes.
    */
   shareIssuanceProceeds?: number;
+  /**
+   * What the system equity pool paid for this company's new shares, per turn,
+   * over the last 48 turns. Written only while
+   * gameConfig.equityCashoutLimitsStage is on; bounds cumulative placements.
+   */
+  primaryPoolPlacements?: { turn: number; paidLocal: number }[];
   /** When the CEO last sent a shareholder address (12-hour cooldown). */
   lastShareholderAddressAt?: Date;
   /** Guards the CEO quick-dissolve route against duplicate payout submits. */
