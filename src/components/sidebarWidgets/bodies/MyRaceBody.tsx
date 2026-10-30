@@ -41,7 +41,7 @@ export function MyRaceBody({
             label={t("you")}
             pct={data.myPct}
             mark={majorityMark}
-            fillClass="bg-primary"
+            fillClass="bg-secondary"
             strong
           />
           {data.leader && !data.leader.isMe && (
@@ -49,7 +49,7 @@ export function MyRaceBody({
               label={data.leader.name || t("leader")}
               pct={data.leader.pct}
               mark={majorityMark}
-              fillClass="bg-fg-2/60"
+              fillClass="bg-foreground/40"
             />
           )}
           <div className="flex justify-between gap-2 pt-0.5">

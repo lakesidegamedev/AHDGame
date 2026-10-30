@@ -180,7 +180,7 @@ interface MeterProps {
 }
 
 /** A thin 0 to 100 bar for shares and ratings. */
-export function Meter({ value, label, mark, fillClass = "bg-primary" }: MeterProps) {
+export function Meter({ value, label, mark, fillClass = "bg-secondary" }: MeterProps) {
   const width = Math.max(0, Math.min(100, value));
   return (
     <span
