@@ -76,6 +76,7 @@ export function useWidgetSetup(): WidgetSetup {
     const list: WidgetOption[] = [];
     if (WIDGETS.myCompany.available(audience))
       list.push({ key: "myCompany", label: t("names.myCompany") });
+    list.push({ key: "watchlist", label: t("names.watchlist") });
     list.push({ key: "stockTicker:global", label: t("tickerScopes.global") });
     if (homeExchange)
       list.push({

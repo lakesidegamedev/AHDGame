@@ -4,7 +4,7 @@
  * can sit in the side tray and in a desktop menu panel.
  */
 
-export const WIDGET_IDS = ["myCompany", "stockTicker", "staffQueues"] as const;
+export const WIDGET_IDS = ["myCompany", "stockTicker", "staffQueues", "watchlist"] as const;
 export type WidgetId = (typeof WIDGET_IDS)[number];
 
 /** Desktop menus that can hold one widget in their side column. */
@@ -31,6 +31,7 @@ export const WIDGETS: Record<WidgetId, WidgetDefinition> = {
   myCompany: { id: "myCompany", available: (a) => a.hasCorporation, params: [] },
   stockTicker: { id: "stockTicker", available: () => true, params: ["global", TICKER_HOME_SCOPE] },
   staffQueues: { id: "staffQueues", available: (a) => a.isStaff, params: [] },
+  watchlist: { id: "watchlist", available: () => true, params: [] },
 };
 
 export const MAX_TRAY_WIDGETS = 8;

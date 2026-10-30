@@ -18,11 +18,14 @@ import type {
   StaffQueuesWidgetData,
   StockTickerWidgetData,
 } from "@/lib/sidebarWidgets/widgetData";
+import type { WatchlistWidgetData } from "@/lib/sidebarWidgets/data/watchlist";
+import { WatchlistBody } from "./bodies/WatchlistBody";
 
 export const WIDGET_ICONS: Record<WidgetId, PixelNavIconName> = {
   myCompany: "briefcase",
   stockTicker: "chart",
   staffQueues: "gear",
+  watchlist: "star",
 };
 
 function money(amount: number, code: CurrencyCode | null): string {
@@ -303,6 +306,19 @@ export function SidebarWidget({
           {pending ??
             (queues ? (
               <StaffBody data={queues} onNavigate={onNavigate} />
+            ) : (
+              <Empty>{t("unavailable")}</Empty>
+            ))}
+        </Frame>
+      );
+    }
+    case "watchlist": {
+      const watchlist = data as WatchlistWidgetData | null;
+      return (
+        <Frame {...common} title={t("watchlist.title")}>
+          {pending ??
+            (watchlist ? (
+              <WatchlistBody data={watchlist} compact={compact} onNavigate={onNavigate} />
             ) : (
               <Empty>{t("unavailable")}</Empty>
             ))}

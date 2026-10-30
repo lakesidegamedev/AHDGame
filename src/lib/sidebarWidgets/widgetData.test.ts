@@ -72,6 +72,13 @@ describe("loadSidebarWidgetData", () => {
     expect(data["stockTicker:nowhere"]).toBeNull();
   });
 
+  it("loads the viewer's watchlist", async () => {
+    const findOne = vi.fn().mockResolvedValue({ widgetWatchlist: [] });
+    const data = await loadSidebarWidgetData(fakeDb({ users: { findOne } }), ["watchlist"], viewer);
+    expect(data.watchlist).toEqual({ rows: [] });
+    expect(findOne.mock.calls[0][0]).toEqual({ _id: new ObjectId(viewer.userId) });
+  });
+
   it("isolates a failing widget", async () => {
     const db = fakeDb({
       users: { findOne: vi.fn().mockRejectedValue(new Error("down")) },

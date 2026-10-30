@@ -19,6 +19,7 @@ import {
 import { postImportBalance } from "@/lib/trade/postImportGap";
 import type { CommodityMarketScope } from "../lib/marketScope";
 import { useMemo } from "react";
+import { WatchButton } from "@/components/sidebarWidgets/WatchButton";
 
 interface HeroPanelProps {
   data: CommodityDetail;
@@ -144,6 +145,9 @@ export default function HeroPanel({
               <h1 className="text-xl font-bold tracking-tight text-white drop-shadow-md sm:text-3xl">
                 {data.label}
               </h1>
+            </div>
+            <div className="ml-auto">
+              <WatchButton kind="commodity" id={data.commodity} tone="image" />
             </div>
           </div>
         </div>

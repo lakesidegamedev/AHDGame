@@ -9,6 +9,7 @@ import { EXCHANGE_API_KEYS } from "@/lib/constants/exchangeRegistry";
 import { getAltClustersCollection } from "@/lib/db/collections";
 import { PLAYER_CONTENT_REPORTS } from "@/lib/safety/playerSafety";
 import { parseWidgetKey, TICKER_HOME_SCOPE } from "./widgetCatalog";
+import { loadWatchlist } from "./data/watchlist";
 
 export interface MyCompanyWidgetData {
   sequentialId: number | null;
@@ -194,6 +195,8 @@ export async function loadSidebarWidgetData(
             ];
           case "staffQueues":
             return [key, await loadStaffQueues(db, viewer)];
+          case "watchlist":
+            return [key, await loadWatchlist(db, viewer.userId)];
         }
       } catch {
         return [key, null];

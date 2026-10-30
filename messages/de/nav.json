@@ -298,7 +298,8 @@
       "names": {
         "myCompany": "Mein Unternehmen",
         "stockTicker": "Börsenticker",
-        "staffQueues": "Prüfwarteschlangen"
+        "staffQueues": "Prüfwarteschlangen",
+        "watchlist": "Beobachtungsliste"
       },
       "tickerScopes": {
         "global": "Weltmarkt",
@@ -329,6 +330,17 @@
         "wikiReview": "Wiki-Änderungen zu prüfen",
         "altClusters": "Offene Alt-Cluster",
         "playerReports": "Spielermeldungen"
+      },
+      "watchlist": {
+        "title": "Beobachtungsliste",
+        "empty": "Markiere ein Unternehmen oder einen Rohstoff auf seiner Seite mit einem Stern, um ihm hier zu folgen.",
+        "watch": "Beobachten",
+        "unwatch": "Beobachtet",
+        "remove": "{name} nicht mehr beobachten",
+        "missing": "Existiert nicht mehr",
+        "private": "Privat",
+        "full": "Deine Beobachtungsliste ist voll ({max} Einträge). Entferne zuerst einen.",
+        "saveError": "Deine Beobachtungsliste konnte nicht gespeichert werden. Versuche es erneut."
       }
     },
     "desktop": {
