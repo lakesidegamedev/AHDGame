@@ -85,6 +85,8 @@ export interface ProductionPlan {
   recentSoldUnits?: number;
   /** Units delivered per output last turn, keyed `${commodity}|${book}`; overrides the plant total. */
   recentSoldByOutput?: Readonly<Record<string, number>>;
+  /** Run share the demand plan chose, before input and cash cuts; echoed on the receipt. */
+  plannedRunShare?: number;
 }
 
 /**
@@ -133,6 +135,8 @@ export interface ProducerOperatingResult {
   activeUnits: number;
   /** Physical proposal before funded order matching constrains actual production. */
   plannedUnits: number;
+  /** The plan's run share before input and cash cuts, read back by next turn's run rule. */
+  plannedRunShare?: number;
   producedUnits: number;
   offeredUnits: number;
   soldUnits: number;
@@ -1064,6 +1068,7 @@ export function advanceProducerEconomy(input: {
       capacityUnits: p.capacityUnits,
       activeUnits: p.capacityUnits * p.activeFraction,
       plannedUnits: proposedById.get(p.id)!,
+      ...(p.plannedRunShare != null ? { plannedRunShare: p.plannedRunShare } : {}),
       producedUnits: produced,
       offeredUnits,
       soldUnits,

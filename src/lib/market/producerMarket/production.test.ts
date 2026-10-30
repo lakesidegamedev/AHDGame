@@ -683,6 +683,13 @@ describe("receipt-backed production", () => {
     expect(result.producers[0].outputStock[0].units).toBe(0);
   });
 
+  it("echoes the planned run share on the receipt so a later turn can grow from it", () => {
+    const run = (p: ProductionPlan) =>
+      advanceProducerEconomy({ turn: 1, accounts, producers: [p] }).producers[0];
+    expect(run(plant({ plannedRunShare: 0.75 })).plannedRunShare).toBe(0.75);
+    expect(run(plant())).not.toHaveProperty("plannedRunShare");
+  });
+
   it("does not pay wages or buy inputs from bank deposits or anticipated revenue", () => {
     const result = advanceProducerEconomy({
       turn: 1,

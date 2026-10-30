@@ -1,15 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
   demandPlanRunShare,
+  liveLineReceipt,
   LOW_USE_RUN_FLOOR,
   nextRunShare,
   OUTPUT_CUT_STEP,
   OUTPUT_GROW_STEP,
   OUTPUT_RUN_FLOOR,
   pacedRunShare,
+  type PriorReceipt,
+  type ReceiptLine,
 } from "./outputResponseRules";
 
-const receipt = (over: Partial<Parameters<typeof nextRunShare>[0] & object> = {}) => ({
+const receipt = (over: Partial<PriorReceipt & { products: ReceiptLine[] }> = {}) => ({
   activeUnits: 100,
   producedUnits: 50,
   offeredUnits: 50,
@@ -160,5 +163,118 @@ describe("paced run share", () => {
     expect(pacedRunShare(0.01, receipt(), 0)).toBe(0.01);
     expect(pacedRunShare(0.01, null, 0.15)).toBe(0.01);
     expect(pacedRunShare(0.01, receipt({ activeUnits: 0 }), 0.15)).toBe(0.01);
+  });
+});
+
+describe("run signals read the lines the plant makes", () => {
+  // A retooled mine: iron sells out, leftover oil from the old recipe barely sells.
+  const retooled = () =>
+    receipt({
+      activeUnits: 100,
+      producedUnits: 1,
+      offeredUnits: 3,
+      soldUnits: 1.2,
+      revenue: 104,
+      inputsConsumed: 10,
+      products: [
+        { commodity: "iron", offeredUnits: 1, soldUnits: 1, revenue: 100 },
+        { commodity: "oil", offeredUnits: 2, soldUnits: 0.2, revenue: 4 },
+      ],
+    });
+
+  it("drops leftover lines from offered, sold and revenue", () => {
+    const live = liveLineReceipt(retooled(), new Set(["iron"]));
+    expect(live).toMatchObject({ offeredUnits: 1, soldUnits: 1, revenue: 100 });
+    expect(live.products?.map((p) => p.commodity)).toEqual(["iron"]);
+  });
+
+  it("a sold-out current line grows despite unsold leftover stock", () => {
+    const whole = demandPlanRunShare(retooled(), LOW_USE_RUN_FLOOR);
+    const live = demandPlanRunShare(
+      liveLineReceipt(retooled(), new Set(["iron"])),
+      LOW_USE_RUN_FLOOR
+    );
+    // Whole plant: 40% sell-through, plan 1.32 - 1.8 held -> the probe floor.
+    expect(whole).toBe(LOW_USE_RUN_FLOOR);
+    expect(live).toBeCloseTo(0.01 * (1 + OUTPUT_GROW_STEP), 12);
+    expect(
+      nextRunShare(liveLineReceipt(retooled(), new Set(["iron"])), LOW_USE_RUN_FLOOR)
+    ).toBeCloseTo(0.01 * (1 + OUTPUT_GROW_STEP), 12);
+  });
+
+  it("leaves a receipt alone when every line is current, none is, or rows are missing", () => {
+    const r = retooled();
+    expect(liveLineReceipt(r, new Set(["iron", "oil"]))).toBe(r);
+    expect(liveLineReceipt(r, new Set(["steel"]))).toBe(r);
+    const bare = receipt();
+    expect(liveLineReceipt(bare, new Set(["iron"]))).toBe(bare);
+  });
+});
+
+describe("a sold-out line short of inputs holds its plan", () => {
+  // Planned a full run, inputs filled a fifth of it, everything made sold at a profit.
+  const starved = (over: Parameters<typeof receipt>[0] = {}) =>
+    receipt({
+      activeUnits: 100,
+      producedUnits: 20,
+      offeredUnits: 20,
+      soldUnits: 20,
+      revenue: 400,
+      inputsConsumed: 100,
+      labourPaid: 100,
+      plannedRunShare: 0.5,
+      ...over,
+    });
+
+  it("grows from the planned run, not the cut output", () => {
+    expect(demandPlanRunShare(starved())).toBeCloseTo(0.5 * (1 + OUTPUT_GROW_STEP), 12);
+    expect(demandPlanRunShare(starved(), OUTPUT_RUN_FLOOR, 2)).toBe(1);
+  });
+
+  it("a cold start cut by inputs does not ratchet down turn after turn", () => {
+    let run = 1;
+    for (let turn = 0; turn < 5; turn++) {
+      // Inputs fill a fifth of whatever is planned.
+      run = demandPlanRunShare(
+        starved({
+          producedUnits: 100 * run * 0.2,
+          offeredUnits: 100 * run * 0.2,
+          soldUnits: 100 * run * 0.2,
+          revenue: 2000 * run * 0.2,
+          inputsConsumed: 500 * run * 0.2,
+          labourPaid: 0,
+          plannedRunShare: run,
+        })
+      );
+      expect(run).toBe(1);
+    }
+  });
+
+  it("uses what it made when that is above the plan", () => {
+    expect(demandPlanRunShare(starved({ plannedRunShare: 0.1 }))).toBeCloseTo(
+      0.2 * (1 + OUTPUT_GROW_STEP),
+      12
+    );
+  });
+
+  it("a starved run that did not cover its crew and site bill grows only from what it made", () => {
+    // Revenue 400 covers materials (100) but not materials plus a 500 crew bill.
+    expect(demandPlanRunShare(starved({ labourPaid: 500 }))).toBeCloseTo(
+      0.2 * (1 + OUTPUT_GROW_STEP),
+      12
+    );
+  });
+
+  it("a line selling under its materials still cuts from what it made", () => {
+    expect(demandPlanRunShare(starved({ revenue: 50 }))).toBeCloseTo(
+      0.2 * (1 - OUTPUT_CUT_STEP),
+      12
+    );
+  });
+
+  it("ignores the plan when the line did not sell out", () => {
+    const partial = starved({ offeredUnits: 40, soldUnits: 20 });
+    const without = starved({ offeredUnits: 40, soldUnits: 20, plannedRunShare: undefined });
+    expect(demandPlanRunShare(partial)).toBe(demandPlanRunShare(without));
   });
 });

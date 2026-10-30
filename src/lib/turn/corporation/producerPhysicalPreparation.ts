@@ -40,11 +40,13 @@ import { getSectorTypeMatchModifier } from "@/lib/corporations/specialization/ru
 import { organisationalOutputFactor } from "@/lib/market/producerMarket/efficiencyRules";
 import {
   demandPlanRunShare,
+  liveLineReceipt,
   pacedRunShare,
   LOW_USE_RUN_FLOOR,
   nextRunShare,
   OUTPUT_RUN_FLOOR,
   type PriorReceipt,
+  type ReceiptLine,
 } from "@/lib/market/producerMarket/outputResponseRules";
 import {
   idleRetireActive,
@@ -398,10 +400,15 @@ export function prepareProducerPhysicalSector(input: {
   const lowUse = (env.lowUseCostStage ?? 0) >= 1;
   const runFloor = lowUse ? LOW_USE_RUN_FLOOR : OUTPUT_RUN_FLOOR;
   const settledLast = priorReceipt && priorReceipt.turn === currentTurn - 1 ? priorReceipt : null;
+  // Leftover stock of lines the recipe no longer makes is still sold, but does not steer the run.
+  const liveLast = settledLast
+    ? liveLineReceipt(
+        settledLast as PriorReceipt & { products?: (ReceiptLine & CaptiveProduct)[] },
+        new Set(plan.outputs.filter((o) => o.unitsPerOutput > 0).map((o) => o.commodity))
+      )
+    : null;
   const lastReceipt =
-    settledLast && (env.captiveDeliveryStage ?? 0) >= 1
-      ? withCaptiveDeliveries(settledLast as PriorReceipt & { products?: CaptiveProduct[] })
-      : settledLast;
+    liveLast && (env.captiveDeliveryStage ?? 0) >= 1 ? withCaptiveDeliveries(liveLast) : liveLast;
   const unpacedRunShare =
     (env.demandPlanStage ?? 0) >= 1
       ? demandPlanRunShare(
@@ -420,6 +427,7 @@ export function prepareProducerPhysicalSector(input: {
       : nextRunShare(lastReceipt, runFloor);
   // A plan that reads a glut sheds at most runPaceDrop of its run a turn; the workforce persists.
   const runShare = pacedRunShare(unpacedRunShare, lastReceipt, env.runPaceDrop ?? 0, runFloor);
+  if ((env.demandPlanStage ?? 0) >= 1) plan.plannedRunShare = runShare;
   // Wages and site running costs follow the line the plant runs: idle lines
   // employ no one (their workers count as unemployed) and idle capacity pays
   // cold upkeep only.
