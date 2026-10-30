@@ -2,6 +2,7 @@ import { getMessages } from "next-intl/server";
 import type { ReactNode } from "react";
 import { nonShellClientMessages } from "@/i18n/clientCatalog";
 import { RouteIntlProvider } from "@/i18n/RouteIntlProvider";
+import { ExperimentalPageReveal } from "@/components/ExperimentalPageReveal";
 
 /**
  * Per-navigation message provider.
@@ -21,6 +22,10 @@ import { RouteIntlProvider } from "@/i18n/RouteIntlProvider";
 export default async function RootTemplate({ children }: { children: ReactNode }) {
   const messages = await getMessages();
   return (
-    <RouteIntlProvider messages={nonShellClientMessages(messages)}>{children}</RouteIntlProvider>
+    <RouteIntlProvider messages={nonShellClientMessages(messages)}>
+      {/* A template is re-created on every navigation, so the opt-in ASCII
+          decode plays once per page rather than once per visit. */}
+      <ExperimentalPageReveal>{children}</ExperimentalPageReveal>
+    </RouteIntlProvider>
   );
 }
