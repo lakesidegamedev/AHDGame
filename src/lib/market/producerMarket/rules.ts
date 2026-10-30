@@ -731,14 +731,20 @@ export function quoteProducer(input: {
     return estimate(nonNegative(input.policy.unitPrice, "manual price"));
   const markup = input.policy.kind === "costPlus" ? input.policy.markup : input.policy.targetMarkup;
   if (!Number.isFinite(markup) || markup < -1) throw new Error("Invalid target markup");
-  const target = (breakEven ?? reference) * (1 + markup);
-  if (input.policy.kind === "costPlus") return estimate(target);
-  const candidates = new Set([reference, target]);
+  if (input.policy.kind === "costPlus") return estimate((breakEven ?? reference) * (1 + markup));
+  // An automatic seller prices off the market, never above the market reference
+  // plus its markup. The estimate below treats every bid in the book as one this
+  // seller can reach, so in a short world book the highest far-away ceiling looked
+  // like the best ask; the plant posted it and sold nothing (ticket 1728). A plant
+  // whose costs are above the market sells at the market and takes the loss.
+  const ceiling = reference * (1 + markup);
+  const candidates = new Set([reference, ceiling]);
   for (const seller of input.competitors)
     candidates.add(nonNegative(seller.unitPrice, "competitor price"));
   for (const order of input.demand)
     candidates.add(nonNegative(order.maximumUnitPrice, "demand limit"));
   return [...candidates]
+    .filter((price) => price <= ceiling)
     .map(estimate)
     .sort((a, b) => b.expectedProfit - a.expectedProfit || a.unitPrice - b.unitPrice)[0];
 }

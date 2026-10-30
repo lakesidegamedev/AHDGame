@@ -1227,6 +1227,36 @@ export function computeSectorMarginSection(args: {
 // ─── Plants tier (marketSystemMode >= "plants") ──────────────────────────────
 
 /**
+ * Idle weights from a funded settlement receipt, or null when the sector has
+ * none for the last turn (legacy worlds keep the throttle reading).
+ *
+ * A funded plant loses run for distinct reasons, and the page has to name the
+ * one the player can act on (ticket 1728): the demand plan held its run below
+ * capacity (demand, or ramping back up once it sells out), short inputs or
+ * short cash cut what it made below that plan, and unsold output is demand.
+ */
+function fundedIdleWeights(
+  receipt: CorporateSector["producerSettlement"] | null | undefined,
+  currentTurn: number
+): { cause: PlantIdleCause["cause"]; w: number }[] | null {
+  if (!receipt || !(receipt.turn >= currentTurn - 1)) return null;
+  const active = receipt.activeUnits;
+  if (!(Number.isFinite(active) && active > 0)) return null;
+  const share = (x: number) => Math.max(0, Math.min(1, Number.isFinite(x) ? x : 0));
+  const offered = receipt.offeredUnits;
+  const sellThrough = offered > 0 ? share(receipt.soldUnits / offered) : 1;
+  const runShare = share(receipt.plannedRunShare ?? 1);
+  const made = share(receipt.producedUnits / active);
+  const weights: { cause: PlantIdleCause["cause"]; w: number }[] = [];
+  if (runShare < 1)
+    weights.push({ cause: sellThrough >= SOLD_OUT_FILL ? "ramping" : "demand", w: 1 - runShare });
+  const shortfall = Math.max(0, runShare - made);
+  if (shortfall > 0)
+    weights.push({ cause: (receipt.operatingArrears ?? 0) > 0 ? "cash" : "inputs", w: shortfall });
+  return weights;
+}
+
+/**
  * Build the plants-tier section. Pure: every DB-derived input is passed in, so
  * this is directly testable and adds no read to the sector-detail query beyond
  * the prime rate the caller already has to resolve.
@@ -1428,14 +1458,19 @@ export function buildSectorPlantsSection(args: {
     }
     const idleShare = (idleUnits - coldUnits - bankUnits) / capacityUnits;
     const weights: { cause: PlantIdleCause["cause"]; w: number }[] = [];
-    const throughput = num(sector.throughputFactor);
-    if (throughput != null && throughput < 1) {
-      weights.push({ cause: "inputs", w: 1 - Math.max(0, throughput) });
-    }
-    const demandThrottle = num(sector.demandThrottleFactor);
-    if (demandThrottle != null && demandThrottle < 1) {
-      const cause = fillRate != null && fillRate >= SOLD_OUT_FILL ? "ramping" : "demand";
-      weights.push({ cause, w: 1 - Math.max(0, demandThrottle) });
+    const funded = fundedIdleWeights(sector.producerSettlement, currentTurn);
+    if (funded) {
+      weights.push(...funded);
+    } else {
+      const throughput = num(sector.throughputFactor);
+      if (throughput != null && throughput < 1) {
+        weights.push({ cause: "inputs", w: 1 - Math.max(0, throughput) });
+      }
+      const demandThrottle = num(sector.demandThrottleFactor);
+      if (demandThrottle != null && demandThrottle < 1) {
+        const cause = fillRate != null && fillRate >= SOLD_OUT_FILL ? "ramping" : "demand";
+        weights.push({ cause, w: 1 - Math.max(0, demandThrottle) });
+      }
     }
     if (sector.strikeStartedAtTurn != null) {
       weights.push({ cause: "strike", w: 1 - STRIKE_REVENUE_THROTTLE });

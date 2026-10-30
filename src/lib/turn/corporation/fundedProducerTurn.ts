@@ -740,7 +740,7 @@ export async function runFundedProducerTurn(
       });
       throttleBySectorId.set(
         sector._id.toHexString(),
-        fundedDemandThrottle(r.soldUnits, r.capacityUnits)
+        fundedDemandThrottle(r.soldUnits, r.offeredUnits)
       );
     }
   }
