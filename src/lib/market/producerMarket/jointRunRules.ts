@@ -17,8 +17,15 @@
  * unit of output, at last turn's realised prices, covers the plant's running
  * cost per unit (inputs, wages and site bills, the same cost the loss test
  * reads). Profit falls with the run past that point, so it is the joint
- * product optimum on last turn's prices. The run never falls below the summed
- * plan, so the rule only ever keeps a plant running that the summed signal
+ * product optimum on last turn's prices.
+ *
+ * Stage 2 (producerJointRunStage >= 2) reads the margin, not the average: the
+ * cold upkeep on idle capacity is owed whether the plant runs or not, so it is
+ * left out of the running cost the gate compares against, and each line's own
+ * plan holds its sold-out run on the same test (as the one-product plan already
+ * does). Inputs, wages and the site bill that follow the run still count, so
+ * the extra run pays for itself at last turn's prices. The run never falls
+ * below the summed plan, so the rule only ever keeps a plant running that the summed signal
  * would cut: one-product plants and plants whose every line is glutted plan
  * exactly as before, and pacing applies to the result unchanged.
  *
@@ -68,7 +75,9 @@ function positive(x: number | null | undefined): number {
 export function lineSlices(
   receipt: JointReceipt | null | undefined,
   /** Count deliveries to the plant's own sites as sales (producerCaptiveDeliveryStage). */
-  countCaptive: boolean
+  countCaptive: boolean,
+  /** Give each line its unit share of the idle upkeep, so its plan reads the margin (stage 2). */
+  carryIdleUpkeep = false
 ): LineSlice[] | null {
   const products = receipt?.products;
   if (!receipt || !products || products.length < 2) return null;
@@ -121,6 +130,9 @@ export function lineSlices(
         otherOperatingPaid: num(receipt.otherOperatingPaid) * share,
         otherOperatingArrears: num(receipt.otherOperatingArrears) * share,
         plannedRunShare: receipt.plannedRunShare,
+        ...(carryIdleUpkeep && receipt.idleOperatingCost != null
+          ? { idleOperatingCost: num(receipt.idleOperatingCost) * share }
+          : {}),
         products: rows,
       },
     });
@@ -130,23 +142,27 @@ export function lineSlices(
 
 /**
  * The plant's run: the highest line plan whose lines pay the running cost of
- * the whole bundle, never below the summed plan `plantRun`.
+ * the whole bundle, never below the summed plan `plantRun`. With `marginal`
+ * (stage 2) the cost leaves out the idle upkeep the plant owes at any run.
  */
 export function jointRunShare(
   plantRun: number,
   receipt: JointReceipt | null | undefined,
   slices: readonly LineSlice[] | null,
-  lineRun: (line: LineSlice) => number
+  lineRun: (line: LineSlice) => number,
+  marginal = false
 ): number {
   if (!receipt || !slices || slices.length < 2) return plantRun;
   const produced = positive(receipt.producedUnits);
   if (!(produced > 0)) return plantRun;
+  const siteBill = num(receipt.otherOperatingPaid) + num(receipt.otherOperatingArrears);
+  const idleUpkeep = marginal ? Math.min(siteBill, positive(receipt.idleOperatingCost)) : 0;
   const costPerUnit =
     (num(receipt.inputsConsumed) +
       num(receipt.labourPaid) +
       num(receipt.labourArrears) +
-      num(receipt.otherOperatingPaid) +
-      num(receipt.otherOperatingArrears)) /
+      siteBill -
+      idleUpkeep) /
     produced;
   const plans = slices.map((s) => ({ run: Math.min(1, lineRun(s)), slice: s }));
   const candidates = plans

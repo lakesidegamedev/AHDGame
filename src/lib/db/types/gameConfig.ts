@@ -263,7 +263,9 @@ export interface GameConfig {
    * on its own and runs the plant at the highest product plan whose sold lines
    * pay the plant's running cost per unit, never below the summed plan, so a
    * glut in a cheap product no longer cuts a sold-out dear one. One-product
-   * plants are unchanged. 0 or absent = off.
+   * plants are unchanged. >= 2 weighs that run against its marginal cost:
+   * the idle upkeep a plant owes at any run is left out of the test. 0 or
+   * absent = off.
    */
   producerJointRunStage?: number;
   /**
