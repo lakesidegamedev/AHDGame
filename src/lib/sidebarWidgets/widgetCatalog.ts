@@ -4,20 +4,46 @@
  * can sit in the side tray and in a desktop menu panel.
  */
 
-export const WIDGET_IDS = ["myCompany", "stockTicker", "staffQueues", "watchlist"] as const;
+export const WIDGET_IDS = [
+  "keirPet",
+  "dueSoon",
+  "myCompany",
+  "stockTicker",
+  "staffQueues",
+  "watchlist",
+  "myRace",
+  "chamberFloor",
+  "officeDashboard",
+  "sinceAway",
+  "sectorHeatmap",
+  "netWorth",
+  "commodityBoard",
+] as const;
 export type WidgetId = (typeof WIDGET_IDS)[number];
 
 /** Desktop menus that can hold one widget in their side column. */
 export const WIDGET_MENUS = ["state", "nation", "world", "help", "staff"] as const;
 export type WidgetMenu = (typeof WIDGET_MENUS)[number];
 
-/** Ticker scopes: the world, the player's home exchange, or a named exchange. */
+/**
+ * Exchange scopes for the ticker and sector heatmap: the world, the player's
+ * home exchange, or a named exchange.
+ */
 export const TICKER_HOME_SCOPE = "home";
 
 export interface WidgetAudience {
   hasCorporation: boolean;
   isStaff: boolean;
+  /** Standing in an open race. */
+  isCandidate?: boolean;
+  /** Holds a voting seat in the national legislature. */
+  isLegislator?: boolean;
+  /** Regional executive, cabinet member, or head of state or government. */
+  holdsOffice?: boolean;
 }
+
+/** Role widgets whose availability the server confirms by returning data. */
+export const SERVER_CHECKED_WIDGETS = ["chamberFloor", "officeDashboard"] as const;
 
 export interface WidgetDefinition {
   id: WidgetId;
@@ -28,11 +54,27 @@ export interface WidgetDefinition {
 }
 
 export const WIDGETS: Record<WidgetId, WidgetDefinition> = {
+  keirPet: { id: "keirPet", available: () => true, params: [] },
+  dueSoon: { id: "dueSoon", available: () => true, params: [] },
   myCompany: { id: "myCompany", available: (a) => a.hasCorporation, params: [] },
   stockTicker: { id: "stockTicker", available: () => true, params: ["global", TICKER_HOME_SCOPE] },
+  sectorHeatmap: {
+    id: "sectorHeatmap",
+    available: () => true,
+    params: ["global", TICKER_HOME_SCOPE],
+  },
+  netWorth: { id: "netWorth", available: () => true, params: [] },
+  commodityBoard: { id: "commodityBoard", available: () => true, params: [] },
   staffQueues: { id: "staffQueues", available: (a) => a.isStaff, params: [] },
   watchlist: { id: "watchlist", available: () => true, params: [] },
+  myRace: { id: "myRace", available: (a) => a.isCandidate === true, params: [] },
+  chamberFloor: { id: "chamberFloor", available: (a) => a.isLegislator === true, params: [] },
+  officeDashboard: { id: "officeDashboard", available: (a) => a.holdsOffice === true, params: [] },
+  sinceAway: { id: "sinceAway", available: () => true, params: [] },
 };
+
+/** Widgets whose parameter is an exchange scope, resolved from "home" on the client. */
+export const EXCHANGE_SCOPED_WIDGETS: readonly WidgetId[] = ["stockTicker", "sectorHeatmap"];
 
 export const MAX_TRAY_WIDGETS = 8;
 export const WIDGET_KEY_PATTERN = /^[A-Za-z]+(?::[a-z0-9-]{1,24})?$/;
@@ -78,8 +120,13 @@ export function widgetLayout(value: unknown): WidgetLayout | null {
 /** Starting layout for a player who has not customised, by what they can use. */
 export function defaultWidgetLayout(audience: WidgetAudience): WidgetLayout {
   const tray = [
+    "keirPet",
+    "dueSoon",
+    ...(audience.holdsOffice ? ["officeDashboard"] : []),
+    ...(audience.isCandidate ? ["myRace"] : []),
     ...(audience.hasCorporation ? ["myCompany"] : []),
     `stockTicker:${TICKER_HOME_SCOPE}`,
+    ...(audience.hasCorporation ? [] : ["commodityBoard"]),
     ...(audience.isStaff ? ["staffQueues"] : []),
   ];
   return {
