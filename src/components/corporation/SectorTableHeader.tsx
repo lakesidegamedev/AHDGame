@@ -7,19 +7,18 @@ import {
   type MoneyPeriod,
 } from "@/lib/constants/moneyTimescale";
 import { GROWTH_HORIZON_SENTENCE } from "./SectorRowComponents";
-import { CAPACITY_UNIT_LABEL } from "./plantsPresentation";
 import type { SectorSortKey, SortDir } from "./sectorSortUtils";
 
 export const SECTOR_TABLE_GRID =
   "grid-cols-[minmax(220px,1.8fr)_minmax(120px,1fr)_minmax(72px,0.6fr)_150px_64px_88px_64px_88px_64px_44px]";
 
 /**
- * Plants-tier grid: capacity, sites and fill replace the growth columns (the
+ * Plants-tier grid: plants and sold replace the growth columns (the
  * slider does not build capacity under plants), and the net margin gets its
  * own column instead of a second line under profit.
  */
 export const PLANTS_SECTOR_TABLE_GRID =
-  "grid-cols-[minmax(220px,1.8fr)_minmax(120px,1fr)_minmax(72px,0.6fr)_80px_120px_72px_88px_88px_88px_64px_44px]";
+  "grid-cols-[minmax(220px,1.8fr)_minmax(120px,1fr)_minmax(72px,0.6fr)_120px_72px_88px_88px_88px_64px_44px]";
 
 /** The grid template for the given world. */
 export function sectorTableGrid(plantsMode: boolean): string {
@@ -75,14 +74,9 @@ function columnsFor(plantsMode: boolean, timeScale: MoneyPeriod): Column[] {
     return [
       ...head,
       {
-        label: "Capacity",
-        help: `What these plants can make in one financial day, in ${CAPACITY_UNIT_LABEL}. Plants are counted in the next column. This is what you buy when you build. Capacity already paid for and under construction shows under the figure. Always per day: the period toggle rescales money only.`,
-        sortKey: "capacity",
-        align: "right",
-      },
-      {
         label: "Plants",
-        help: "Plants you own, and plants paid for and still being built. A plant is a fixed block of capacity for its sector type, so capacity divided by plant size is the plant count. Smooth builds add a slice every turn until the finish turn.",
+        help: "Plants you own, and plants paid for and still being built. Builds arrive a little each turn until the finish turn. Hover a figure for the output it stands for.",
+        sortKey: "capacity",
         align: "right",
       },
       {

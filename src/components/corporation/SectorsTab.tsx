@@ -580,11 +580,8 @@ export default function SectorsTab({
                     <span></span>
                     <span
                       className={`${cellNum} text-right text-foreground`}
-                      title={CAPACITY_UNIT_LABEL}
+                      title={`${formatUnits(totalCapacity)} ${CAPACITY_UNIT_LABEL}`}
                     >
-                      {formatUnits(totalCapacity)}
-                    </span>
-                    <span className={`${cellNum} text-right text-muted`}>
                       {totalSites.toLocaleString("en-US")} plants
                     </span>
                     <span className="flex flex-col items-end">

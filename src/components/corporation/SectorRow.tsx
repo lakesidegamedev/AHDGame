@@ -577,20 +577,12 @@ export function SectorRow({
           <div className="min-w-0">{strategySelect()}</div>
           <div className="min-w-0">{statusBadge}</div>
 
-          <div className="text-right">
-            <span
-              className={`${cellNum} text-foreground`}
-              title={`Capacity in ${CAPACITY_UNIT_LABEL}`}
-            >
-              {formatUnits(sector.capacityUnits)}
-            </span>
-            <span className="block text-[11px] text-muted">{CAPACITY_UNIT_LABEL}</span>
-          </div>
-
+          {/* Players build and own plants, so plants are the column. Raw
+              capacity units are an engine measure and only appear on hover. */}
           <div className="flex min-w-0 flex-col items-end text-right">
             <span
               className={`${cellNum} text-foreground`}
-              title={`${plantCount.toLocaleString("en-US")} ${plantNoun} built`}
+              title={`${plantCount.toLocaleString("en-US")} ${plantNoun} built (${formatUnits(sector.capacityUnits)} ${CAPACITY_UNIT_LABEL})`}
             >
               {plantCount.toLocaleString("en-US")} {plantNoun}
             </span>
@@ -760,12 +752,11 @@ export function SectorRow({
           {plantsMode ? (
             <>
               <div>
-                <dt className="text-[11px] text-muted">Capacity</dt>
-                <dd className={`${cellNum} text-foreground`}>
-                  {formatUnits(sector.capacityUnits)}
-                </dd>
-                <dd className="text-[11px] text-muted">{CAPACITY_UNIT_LABEL}</dd>
-                <dd className="text-[11px] text-foreground">
+                <dt className="text-[11px] text-muted">Plants</dt>
+                <dd
+                  className={`${cellNum} text-foreground`}
+                  title={`${formatUnits(sector.capacityUnits)} ${CAPACITY_UNIT_LABEL}`}
+                >
                   {plantCount.toLocaleString("en-US")} {plantNoun}
                 </dd>
                 <BuildQueueBadge
