@@ -1,8 +1,9 @@
-export const DESKTOP_NAVIGATION_LAYOUTS = ["cards", "browser", "directory", "standard"] as const;
+export const DESKTOP_NAVIGATION_LAYOUTS = ["cards", "standard"] as const;
 
 export type DesktopNavigationLayout = (typeof DESKTOP_NAVIGATION_LAYOUTS)[number];
 
 export function desktopNavigationLayout(value: unknown): DesktopNavigationLayout {
+  // The retired section browser and compact directory read as grouped cards.
   return DESKTOP_NAVIGATION_LAYOUTS.find((layout) => layout === value) ?? "cards";
 }
 

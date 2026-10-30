@@ -75,7 +75,7 @@ describe("PATCH /api/settings/experimental-features", () => {
     expect(update[1].$set).toMatchObject({ navCustomization });
   });
 
-  it.each(["cards", "browser", "directory", "standard"])(
+  it.each(["cards", "standard"])(
     "persists desktop layout %s without changing opt-in",
     async (desktopNavigationLayout) => {
       const response = await patch({ desktopNavigationLayout });
@@ -105,7 +105,7 @@ describe("PATCH /api/settings/experimental-features", () => {
       ok: false,
       response: new NextResponse(null, { status: 401 }),
     });
-    expect((await patch({ desktopNavigationLayout: "browser" })).status).toBe(401);
+    expect((await patch({ desktopNavigationLayout: "standard" })).status).toBe(401);
     expect(db.collectionMocks.users.updateOne).not.toHaveBeenCalled();
   });
 
@@ -114,6 +114,8 @@ describe("PATCH /api/settings/experimental-features", () => {
     { askDrawerSide: "top" },
     { experimentalFeatures: "yes" },
     { desktopNavigationLayout: "mobile" },
+    { desktopNavigationLayout: "browser" },
+    { desktopNavigationLayout: "directory" },
     { desktopNavigationLayout: true },
     { mobileNavigationLayout: "cards" },
     { askDrawerHidden: "no" },

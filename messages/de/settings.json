@@ -365,16 +365,8 @@
         "classicHint": "Diese Layouts gelten für die moderne Oberfläche. Deine klassische Oberfläche bleibt gleich.",
         "options": {
           "cards": {
-            "title": "A · Gruppierte Karten (Standard)",
+            "title": "Gruppierte Karten (Standard)",
             "hint": "Alle Bereiche auf einen Blick, mit deinen Verknüpfungen daneben."
-          },
-          "browser": {
-            "title": "B · Bereichsauswahl",
-            "hint": "Wähle einen Bereich und erkunde seine Zielkarten."
-          },
-          "directory": {
-            "title": "C · Kompaktes Verzeichnis",
-            "hint": "Eine dichtere Liste mit weniger Beschreibungstext."
           },
           "standard": {
             "title": "Bisherige Menüs",

@@ -368,14 +368,8 @@
       "pinsFull": "Pin limit reached",
       "shortcuts": "Your shortcuts",
       "openOverview": "Open overview",
-      "sections": "Sections",
       "keyboardHint": "Tab to explore · Esc to close",
       "changeLayout": "Change layout",
-      "layouts": {
-        "cards": "Grouped cards",
-        "browser": "Section browser",
-        "directory": "Compact directory"
-      },
       "groups": {
         "markets": "Markets & finance",
         "industry": "Industry & news",
