@@ -18,8 +18,8 @@ areas: [backend]
   rates.
 - NPP executives lose their track records from companies the reset deletes.
   Those records set the pay NPP CEOs ask for and who gets picked as CEO.
-- Union pension schemes are cleared with the unions they belong to. Kept, they
-  pointed at unions that no longer existed and cut benefits every turn.
+- Emptied union pension schemes are removed with the unions they belonged to.
+  Kept, they pointed at unions that no longer existed and cut benefits every turn.
 - Mines start the rebuilt world with full reserves instead of the old
   economy's cumulative extraction.
 - Central banks no longer record household savings for accounts the reset
