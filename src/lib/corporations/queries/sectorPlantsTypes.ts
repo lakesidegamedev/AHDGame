@@ -16,6 +16,7 @@ export interface PlantIdleCause {
     | "inputs"
     | "demand"
     | "ramping"
+    | "cash"
     | "strike"
     | "disaster"
     | "policy"

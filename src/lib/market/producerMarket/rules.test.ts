@@ -605,11 +605,11 @@ describe("quote policies", () => {
       const candidates = [
         ...new Set([
           10,
-          6.6,
+          11,
           ...demand.map((d) => d.maximumUnitPrice),
           ...competitors.map((c) => c.unitPrice),
         ]),
-      ];
+      ].filter((price) => price <= 11);
       const oracle = candidates
         .map((price) => {
           const wanted = demand
@@ -635,6 +635,19 @@ describe("quote policies", () => {
       expect(quote.expectedSoldUnits).toBeCloseTo(oracle.expectedSoldUnits, 10);
       expect(quote.expectedProfit).toBeCloseTo(oracle.expectedProfit, 10);
     }
+  });
+
+  it("never asks above the market reference plus markup, however high a far bid is", () => {
+    // Ticket 1728: a short world book held one buyer bidding twice the market, and
+    // the automatic ask jumped to that ceiling and sold nothing.
+    const quote = quoteProducer({
+      ...basis,
+      demand: [{ units: 1000, maximumUnitPrice: 40 }],
+      competitors: [],
+      variableUnitCost: 30,
+      policy: { kind: "automatic", targetMarkup: 0.2 },
+    });
+    expect(quote.unitPrice).toBeCloseTo(12);
   });
 
   it("does not report break-even when nothing can be produced", () => {

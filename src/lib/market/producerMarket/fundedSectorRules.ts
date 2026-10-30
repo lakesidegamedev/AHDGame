@@ -230,22 +230,25 @@ export function fundedCashIncome(legacyIncome: number, settledProducerProfit: nu
 }
 
 /**
- * Funded demand throttle: the share of its per-turn operating capacity that the
- * plant actually sold, clamped to [0, 1], 1 when it could produce nothing. The
- * legacy clearing pass is the only other writer of `demandThrottleFactor`, and a
- * funded turn never prices its market, so the funded settlement publishes its
- * own reading; AI placement and mothballing read it as saturation.
+ * Funded demand throttle: the share of what the plant put up for sale (this
+ * turn's output plus carried stock) that found a buyer, clamped to [0, 1], 1
+ * when it offered nothing. The legacy clearing pass is the only other writer of
+ * `demandThrottleFactor`, and a funded turn never prices its market, so the
+ * funded settlement publishes its own reading; AI placement, mothballing, the
+ * retool hint and the sector page read it as a demand signal.
  *
- * Clamped, since a multi-leg plant's sold units and the capacity basis are both
- * per-turn unit totals and can round past each other.
+ * Sell-through, not sold over capacity: a plant short of inputs or cash that
+ * sells every unit it makes has no demand problem, and read against capacity
+ * it showed as "Demand limited" (ticket 1728). The same reading NPP decisions
+ * take from the receipt (`fundedSellThrough`).
  */
 export function fundedDemandThrottle(
   soldUnits: number | null | undefined,
-  capacityUnits: number | null | undefined
+  offeredUnits: number | null | undefined
 ): number {
-  const capacity = finite(capacityUnits ?? 0);
-  if (!(capacity > 0)) return 1;
-  return Math.max(0, Math.min(1, finite(soldUnits ?? 0) / capacity));
+  const offered = finite(offeredUnits ?? 0);
+  if (!(offered > 0)) return 1;
+  return Math.max(0, Math.min(1, finite(soldUnits ?? 0) / offered));
 }
 
 function rootOf(field: string): string {

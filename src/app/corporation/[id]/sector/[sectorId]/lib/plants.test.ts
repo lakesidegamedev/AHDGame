@@ -44,7 +44,7 @@ describe("idle cause meter colors", () => {
   it("gives every idle cause a unique swatch so no two legend dots collide", () => {
     const entries = Object.entries(IDLE_CAUSE_FILL);
 
-    expect(entries).toHaveLength(11);
+    expect(entries).toHaveLength(12);
     const fills = new Set(entries.map(([, fill]) => fill));
     expect(fills.size).toBe(entries.length);
     for (const fill of fills) expect(fill).toMatch(/^bg-/);
