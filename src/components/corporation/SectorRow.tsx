@@ -29,11 +29,13 @@ import {
   DeliveryLimitedPill,
   FillChip,
   MothballedPill,
+  UsedText,
   formatUnits,
   sectorBuildUrl,
   sectorSplitUrl,
 } from "./plantsPresentation";
 import { facilityPlural, facilitySingular } from "@/lib/constants/facilityVocabulary";
+import { plantSizeUnits } from "@/lib/constants/facilityQuantum";
 import { facilitiesFromUnits } from "@/lib/constants/facilityQuantum";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { GROWTH_RATE_TURNS_PER_YEAR } from "@/lib/constants/corporationsClient";
@@ -190,8 +192,18 @@ export function SectorRow({
   // payloads served during deployment of the ledger migration.
   const plantCount = plantsMode
     ? (sector.plantCount ??
-      facilitiesFromUnits(operatingSectorType as OperatingSectorType, sector.capacityUnits ?? 0))
+      facilitiesFromUnits(
+        operatingSectorType as OperatingSectorType,
+        sector.capacityUnits ?? 0,
+        sector.industryModel,
+        sector.mediaDiscriminator
+      ))
     : 0;
+  const unitsPerPlant = plantSizeUnits(
+    operatingSectorType as OperatingSectorType,
+    sector.industryModel,
+    sector.mediaDiscriminator
+  );
   const plantNoun =
     plantCount === 1 ? facilitySingular(sector.sectorType) : facilityPlural(sector.sectorType);
   // Fill-adjusted margin (query layer): profit over the FULL cost bill, not
@@ -565,25 +577,27 @@ export function SectorRow({
           <div className="min-w-0">{strategySelect()}</div>
           <div className="min-w-0">{statusBadge}</div>
 
-          <div className="text-right">
+          {/* Players build and own plants, so plants are the column. Raw
+              capacity units are an engine measure and only appear on hover. */}
+          <div className="flex min-w-0 flex-col items-end text-right">
             <span
               className={`${cellNum} text-foreground`}
-              title={`Capacity in ${CAPACITY_UNIT_LABEL}`}
+              title={`${plantCount.toLocaleString("en-US")} ${plantNoun} built (${formatUnits(sector.capacityUnits)} ${CAPACITY_UNIT_LABEL})`}
             >
-              {formatUnits(sector.capacityUnits)}
+              {plantCount.toLocaleString("en-US")} {plantNoun}
             </span>
-            {buildQueue && <BuildQueueBadge queue={buildQueue} className="flex justify-end" />}
-          </div>
-
-          <div
-            className={`${cellNum} text-right text-muted`}
-            title={`${plantCount.toLocaleString("en-US")} ${plantNoun}`}
-          >
-            {plantCount.toLocaleString("en-US")}
+            <BuildQueueBadge
+              queue={buildQueue}
+              plantUnits={unitsPerPlant}
+              plantSingular={facilitySingular(sector.sectorType)}
+              plantPlural={facilityPlural(sector.sectorType)}
+              className="items-end"
+            />
           </div>
 
           <div className="flex min-w-0 flex-col items-end">
             <FillChip fill={sector.fillRate} band={sector.fillRateBand} />
+            <UsedText produced={sector.producedUnits} capacity={sector.capacityUnits} />
             <DeliveryLimitedPill
               fraction={deliveryLimited}
               freightClass={sector.deliveryLimitedFreightClass}
@@ -738,19 +752,32 @@ export function SectorRow({
           {plantsMode ? (
             <>
               <div>
-                <dt className="text-[11px] text-muted">Capacity</dt>
-                <dd className={`${cellNum} text-foreground`}>
-                  {formatUnits(sector.capacityUnits)}
-                </dd>
-                <dd className="text-[11px] text-muted">
+                <dt className="text-[11px] text-muted">Plants</dt>
+                <dd
+                  className={`${cellNum} text-foreground`}
+                  title={`${formatUnits(sector.capacityUnits)} ${CAPACITY_UNIT_LABEL}`}
+                >
                   {plantCount.toLocaleString("en-US")} {plantNoun}
                 </dd>
-                <BuildQueueBadge queue={buildQueue} />
+                <BuildQueueBadge
+                  queue={buildQueue}
+                  plantUnits={unitsPerPlant}
+                  plantSingular={facilitySingular(sector.sectorType)}
+                  plantPlural={facilityPlural(sector.sectorType)}
+                />
               </div>
               <div>
-                <dt className="text-[11px] text-muted">Fill</dt>
+                <dt
+                  className="text-[11px] text-muted"
+                  title="Share of the output offered that sold"
+                >
+                  Sold
+                </dt>
                 <dd>
                   <FillChip fill={sector.fillRate} band={sector.fillRateBand} />
+                </dd>
+                <dd>
+                  <UsedText produced={sector.producedUnits} capacity={sector.capacityUnits} />
                 </dd>
                 <DeliveryLimitedPill
                   fraction={deliveryLimited}
