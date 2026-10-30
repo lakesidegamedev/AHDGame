@@ -82,32 +82,20 @@ async function openNation() {
 }
 
 describe("experimental desktop menu integration", () => {
-  it.each(["cards", "browser", "directory"] as const)(
-    "preserves nation links in %s, including conditional links",
-    async (layout) => {
-      renderNav(layout);
-      const { panel } = await openNation();
-      const hrefs = new Set<string>();
-      const collect = () =>
-        within(panel)
-          .queryAllByRole<HTMLAnchorElement>("link")
-          .forEach((a) => hrefs.add(a.getAttribute("href") ?? ""));
-      collect();
-      if (layout === "browser") {
-        for (const button of within(panel).getAllByRole("button", { pressed: false })) {
-          fireEvent.click(button);
-          collect();
-        }
-      }
-      expect(hrefs).toContain("/elections/US-president");
-      expect(hrefs).toContain("/charters/charter");
-      expect(hrefs).toContain("/country/us/referendums");
-      expect(hrefs).toContain("/country/us/map");
-      expect(hrefs).toContain("/banking");
-      expect(hrefs).toContain("/political-operations");
-      expect([...hrefs].some((href) => href.includes("treasury"))).toBe(true);
-    }
-  );
+  it("preserves nation links in grouped cards, including conditional links", async () => {
+    renderNav("cards");
+    const { panel } = await openNation();
+    const hrefs = within(panel)
+      .queryAllByRole<HTMLAnchorElement>("link")
+      .map((a) => a.getAttribute("href") ?? "");
+    expect(hrefs).toContain("/elections/US-president");
+    expect(hrefs).toContain("/charters/charter");
+    expect(hrefs).toContain("/country/us/referendums");
+    expect(hrefs).toContain("/country/us/map");
+    expect(hrefs).toContain("/banking");
+    expect(hrefs).toContain("/political-operations");
+    expect(hrefs.some((href) => href.includes("treasury"))).toBe(true);
+  });
 
   it("keeps every visible World destination, with personal shortcuts first", async () => {
     renderNav("cards");

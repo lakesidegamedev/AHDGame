@@ -452,8 +452,8 @@ describe("SectorsTab margins drawer", () => {
     );
     openDrawer();
     const drawer = screen.getByRole("region", { name: "Margins, Akron Works" });
-    expect(within(drawer).getByRole("heading", { name: "Capacity → net profit" })).toBeTruthy();
-    for (const line of ["Capacity", "Produced", "Sold", "Operating profit", "Net profit"]) {
+    expect(within(drawer).getByRole("heading", { name: "Plants → net profit" })).toBeTruthy();
+    for (const line of ["Plants", "Produced", "Sold", "Operating profit", "Net profit"]) {
       expect(within(drawer).getAllByText(line).length).toBeGreaterThan(0);
     }
     expect(within(drawer).getByText("Effective margin build")).toBeTruthy();
@@ -500,7 +500,68 @@ describe("SectorsTab margins drawer", () => {
     expect(screen.getAllByRole("slider").length).toBeGreaterThan(0);
     openDrawer();
     const drawer = screen.getByRole("region", { name: "Margins, Old Mill" });
-    expect(within(drawer).queryByRole("heading", { name: "Capacity → net profit" })).toBeNull();
+    expect(within(drawer).queryByRole("heading", { name: "Plants → net profit" })).toBeNull();
     expect(within(drawer).getByText("Effective margin build")).toBeTruthy();
+  });
+});
+
+describe("SectorsTab plants columns", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("leads with plants, keeps units in the tooltip, and labels running and sold", () => {
+    render(
+      <SectorsTab
+        {...baseProps}
+        isCeo
+        sectors={[
+          sector({
+            _id: "w1",
+            sectorType: "manufacturing",
+            displayName: "Akron Works",
+            plantCount: 14,
+            capacityUnits: 899,
+            producedUnits: 494,
+            soldUnits: 222,
+            fillRate: 0.45,
+            fillRateBand: "low",
+          }),
+        ]}
+      />
+    );
+    const count = screen.getAllByText("14 plants")[0];
+    expect(count.getAttribute("title")).toMatch(/about 899 units of output a day/);
+    expect(screen.queryByText(/^899$/)).toBeNull();
+    expect(screen.queryByText(/% used/)).toBeNull();
+    expect(screen.getAllByText("Running").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("55%").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("45%").length).toBeGreaterThan(0);
+  });
+
+  it("reads a sector with no plants as not running yet", () => {
+    render(
+      <SectorsTab
+        {...baseProps}
+        isCeo
+        sectors={[
+          sector({
+            _id: "z1",
+            sectorType: "logistics",
+            displayName: "Hartford Depot",
+            plantCount: 0,
+            capacityUnits: 0,
+            producedUnits: 0,
+            soldUnits: 0,
+            fillRate: null,
+            fillRateBand: null,
+            workers: 0,
+          }),
+        ]}
+      />
+    );
+    expect(screen.getAllByText("No depots yet").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Not running yet").length).toBeGreaterThan(0);
+    expect(screen.queryByText("0 / 0 plants")).toBeNull();
   });
 });

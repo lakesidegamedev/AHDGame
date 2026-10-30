@@ -34,3 +34,36 @@ export async function canActOnCorporationAsParent(
   if (!parent.userId) return false;
   return parent.userId.equals(callerUserId);
 }
+
+/** True when no player sits in the corporation's CEO chair, so an AI manager runs it. */
+export function isAiRunCorporation(sub: Pick<Corporation, "ceoType" | "ceoVacant">): boolean {
+  return sub.ceoVacant === true || sub.ceoType === "npp";
+}
+
+/**
+ * True iff `callerUserId` may steer an AI-run subsidiary's operations (sector
+ * retooling, logo) as the controlling parent's CEO. Same control rule as
+ * `canActOnCorporationAsParent`; a subsidiary with a sitting player CEO keeps
+ * those decisions with its own CEO.
+ */
+export async function canDirectSubsidiaryAsParent(
+  db: Db,
+  callerUserId: ObjectId,
+  sub: Corporation
+): Promise<boolean> {
+  if (!isAiRunCorporation(sub)) return false;
+  return canActOnCorporationAsParent(db, callerUserId, sub);
+}
+
+/**
+ * The controlling parent corporation's id when `callerUserId` may direct `sub`
+ * as its parent CEO, else null. Used to stamp who directed a change.
+ */
+export async function directingParentCorporationId(
+  db: Db,
+  callerUserId: ObjectId,
+  sub: Corporation
+): Promise<ObjectId | null> {
+  if (!(await canDirectSubsidiaryAsParent(db, callerUserId, sub))) return null;
+  return (await resolveControllingCorporateParent(db, sub))?.corporationId ?? null;
+}

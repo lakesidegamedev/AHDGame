@@ -1,4 +1,6 @@
 import type { DesktopNavigationLayout } from "@/lib/navigation/desktopNavigationLayout";
+import type { MobileNavigationLayout } from "@/lib/navigation/mobileNavigationLayout";
+import type { WidgetLayout } from "@/lib/sidebarWidgets/widgetCatalog";
 import type { NavCustomization } from "@/lib/navigation/navCustomization";
 import type { ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
@@ -177,6 +179,12 @@ export interface User {
   experimentalFeatures?: boolean;
   /** Account presentation preference, preserved across world resets. Defaults to cards. */
   desktopNavigationLayout?: DesktopNavigationLayout;
+  /** Account presentation preference, preserved across world resets. Defaults to dock. */
+  mobileNavigationLayout?: MobileNavigationLayout;
+  /** Experimental sidebar and menu widgets. Absent means the role-based defaults. */
+  widgetLayout?: WidgetLayout;
+  /** Whether the experimental side tray was last left open. */
+  widgetTrayOpen?: boolean;
   /** Which edge of the screen the experimental Ask drawer docks to. */
   askDrawerSide?: "left" | "right";
   /** Hides the Ask Keir drawer and its edge tab. Off unless explicitly true. */

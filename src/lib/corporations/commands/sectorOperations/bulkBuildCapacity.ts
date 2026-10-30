@@ -23,6 +23,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { countryIdSchema } from "@/lib/api/schemas/country";
 import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporations";
 import { MAX_BUILD_UNITS_PER_ORDER } from "@/lib/constants/capacityEconomy";
+import { plantSizeForSector, sectorPlantCount } from "@/lib/constants/facilityQuantum";
 import { getMarketSystemMode, isMarketSystemMode, marketAtLeast } from "@/lib/market/featureFlag";
 import { resolveCorpLiquidCurrencyCode } from "@/lib/currency/corporationCapital";
 import type { Corporation, CorporateSector } from "@/lib/db/types";
@@ -75,6 +76,10 @@ export type BulkBuildRowResult = {
   sectorType: string;
   capacityUnits: number;
   units: number;
+  /** Capacity units in one plant of this sector, so the dialog can count plants. */
+  plantUnits: number;
+  /** Plants the sector owns now, counted as the sector page counts them. */
+  plantCount: number;
   costLocal: number;
   /** Fewer workers than the sector wants: new jobs may stay vacant. */
   understaffed: boolean;
@@ -176,23 +181,22 @@ export async function bulkBuildCapacity(request: Request, { params }: RouteParam
     const currency = resolveCorpLiquidCurrencyCode(corporation) ?? "USD";
     const rows: BulkBuildRowResult[] = ordered.map(({ meta, sector }) => {
       const capacityUnits = sector.operatingCapacityUnits ?? sector.capitalStock ?? 0;
+      const sizing = {
+        sectorType: meta.sectorType,
+        industryModel: sector.industryModel,
+        mediaDiscriminator: sector.mediaDiscriminator,
+        strategyId: sector.strategyId,
+        capacityUnits,
+      };
       return {
         sectorId: meta.sectorId,
         stateId: meta.stateId,
         countryId: meta.countryId,
         sectorType: meta.sectorType,
         capacityUnits: Math.round(capacityUnits),
-        units: bulkBuildUnits(
-          body.rule,
-          {
-            sectorType: meta.sectorType,
-            industryModel: sector.industryModel,
-            mediaDiscriminator: sector.mediaDiscriminator,
-            strategyId: sector.strategyId,
-            capacityUnits,
-          },
-          MAX_BUILD_UNITS_PER_ORDER
-        ),
+        units: bulkBuildUnits(body.rule, sizing, MAX_BUILD_UNITS_PER_ORDER),
+        plantUnits: plantSizeForSector(sizing),
+        plantCount: sectorPlantCount({ ...sizing, plantCount: sector.plantCount }),
         costLocal: 0,
         understaffed: (sector.labourStaffingFactor ?? 1) < 1,
         status: "ready",

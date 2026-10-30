@@ -400,6 +400,8 @@ export interface CorporationDetail {
   canFormalizeAsSubsidiary?: boolean;
   /** Viewer is CEO of the corp controlling this formalized subsidiary (may appoint CEO, inject capital, set floor, release). */
   canManageAsParent?: boolean;
+  /** Viewer is the controlling parent's CEO of this AI-run subsidiary: may retool and set the logo. */
+  canDirectAsParent?: boolean;
   /** Viewer is CEO of this (parent-eligible) corp and may spin off a sector into a new subsidiary. */
   canSpinOff?: boolean;
   /**

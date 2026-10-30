@@ -1,4 +1,10 @@
 import { DESKTOP_NAVIGATION_LAYOUTS } from "@/lib/navigation/desktopNavigationLayout";
+import { MOBILE_NAVIGATION_LAYOUTS } from "@/lib/navigation/mobileNavigationLayout";
+import {
+  MAX_TRAY_WIDGETS,
+  WIDGET_KEY_PATTERN,
+  WIDGET_MENUS,
+} from "@/lib/sidebarWidgets/widgetCatalog";
 import { MAX_NAV_PINS } from "@/lib/navigation/navCustomization";
 import { z } from "zod";
 import { containsBlockedName } from "@/lib/moderation";
@@ -152,6 +158,23 @@ export const experimentalFeaturesSchema = z
   .object({
     experimentalFeatures: z.boolean().optional(),
     desktopNavigationLayout: z.enum(DESKTOP_NAVIGATION_LAYOUTS).optional(),
+    mobileNavigationLayout: z.enum(MOBILE_NAVIGATION_LAYOUTS).optional(),
+    widgetLayout: z
+      .object({
+        tray: z.array(z.string().regex(WIDGET_KEY_PATTERN).max(40)).max(MAX_TRAY_WIDGETS),
+        nav: z
+          .object(
+            Object.fromEntries(
+              WIDGET_MENUS.map((menu) => [
+                menu,
+                z.string().regex(WIDGET_KEY_PATTERN).max(40).optional(),
+              ])
+            )
+          )
+          .strict(),
+      })
+      .optional(),
+    widgetTrayOpen: z.boolean().optional(),
     askDrawerSide: z.enum(["left", "right"]).optional(),
     askDrawerHidden: z.boolean().optional(),
     navCustomization: z
@@ -172,7 +195,10 @@ export const experimentalFeaturesSchema = z
       v.askDrawerSide !== undefined ||
       v.askDrawerHidden !== undefined ||
       v.navCustomization !== undefined ||
-      v.desktopNavigationLayout !== undefined,
+      v.desktopNavigationLayout !== undefined ||
+      v.mobileNavigationLayout !== undefined ||
+      v.widgetLayout !== undefined ||
+      v.widgetTrayOpen !== undefined,
     {
       message: "Nothing to update",
     }

@@ -81,6 +81,8 @@ export function rankDesktopLinks(items: DesktopNavLink[]): DesktopNavLink[] {
 }
 
 export function pixelIconForLink(id: string): PixelNavIconName {
+  // Staff links are keyed by their message id.
+  if (id.startsWith("menus.staff.")) return /docs/i.test(id) ? "book" : "gear";
   if (/orporation|subsidiary|sectors|[Oo]ffice/.test(id)) return "briefcase";
   if (/[Ee]lection|presidential/.test(id)) return "vote";
   if (/[Pp]arty|parties|charters/.test(id)) return "flag";

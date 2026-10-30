@@ -212,6 +212,18 @@ export interface GameConfig {
    */
   producerStockCover?: number;
   /**
+   * Funded producer market: a private company short of cash may owe wages and
+   * site bills until its payables reach this many turns of its full wage and
+   * site bill (producerCreditRules). Absent = the rule's default (2); 0 = no
+   * credit, companies run on cash only.
+   */
+  producerCreditRunTurns?: number;
+  /**
+   * Funded producer market: credit stops once a company's payables have gone
+   * this many turns without shrinking. Absent = the rule's default (4).
+   */
+  producerCreditStuckTurns?: number;
+  /**
    * Funded producer market: >= 1 floors each buyer's reference price for a
    * reachable good at the last funded clearing price (capped at 3x), so a country
    * whose lagged price signal is stale can still compete in a short market.
@@ -251,7 +263,9 @@ export interface GameConfig {
    * on its own and runs the plant at the highest product plan whose sold lines
    * pay the plant's running cost per unit, never below the summed plan, so a
    * glut in a cheap product no longer cuts a sold-out dear one. One-product
-   * plants are unchanged. 0 or absent = off.
+   * plants are unchanged. >= 2 weighs that run against its marginal cost:
+   * the idle upkeep a plant owes at any run is left out of the test. 0 or
+   * absent = off.
    */
   producerJointRunStage?: number;
   /**

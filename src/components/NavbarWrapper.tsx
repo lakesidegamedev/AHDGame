@@ -30,6 +30,7 @@ const FeedbackModal = dynamic(
 import { isChromeHiddenPath, isLightweightLayoutPath } from "@/lib/constants/layoutPaths";
 import { getPostHogClient } from "@/lib/analytics/posthogClient";
 import { experimentalDesktopLayout } from "@/lib/navigation/desktopNavigationLayout";
+import { experimentalMobileLayout } from "@/lib/navigation/mobileNavigationLayout";
 import { navigationVariantForAssignment } from "@/lib/analytics/navigationVariant";
 import { CONSENT_EVENT, CONSENT_RESET_EVENT, getStoredConsent } from "@/components/CookieConsent";
 
@@ -656,6 +657,10 @@ export function NavbarWrapper({
               desktopLayout={experimentalDesktopLayout(
                 navData?.user?.experimentalFeatures,
                 navData?.user?.desktopNavigationLayout
+              )}
+              mobileLayout={experimentalMobileLayout(
+                navData?.user?.experimentalFeatures,
+                navData?.user?.mobileNavigationLayout
               )}
               navCustomization={navData?.user?.navCustomization}
               clientShell={clientShell}

@@ -75,7 +75,7 @@ describe("PATCH /api/settings/experimental-features", () => {
     expect(update[1].$set).toMatchObject({ navCustomization });
   });
 
-  it.each(["cards", "browser", "directory", "standard"])(
+  it.each(["cards", "standard"])(
     "persists desktop layout %s without changing opt-in",
     async (desktopNavigationLayout) => {
       const response = await patch({ desktopNavigationLayout });
@@ -88,12 +88,43 @@ describe("PATCH /api/settings/experimental-features", () => {
     }
   );
 
+  it.each(["dock", "standard"])(
+    "persists phone layout %s without touching the desktop layout",
+    async (mobileNavigationLayout) => {
+      const response = await patch({ mobileNavigationLayout });
+      expect(response.status).toBe(200);
+      const update = vi.mocked(db.collectionMocks.users.updateOne).mock.calls[0];
+      expect(update[1].$set).toMatchObject({ mobileNavigationLayout });
+      expect(update[1].$set).not.toHaveProperty("desktopNavigationLayout");
+      expect(update[1].$set).not.toHaveProperty("experimentalFeatures");
+    }
+  );
+
+  it("saves a cleaned widget layout and the tray's open state", async () => {
+    const response = await patch({
+      widgetLayout: {
+        tray: ["myCompany", "myCompany", "stockTicker:nyse"],
+        nav: { world: "stockTicker:global" },
+      },
+      widgetTrayOpen: true,
+    });
+    expect(response.status).toBe(200);
+    const update = vi.mocked(db.collectionMocks.users.updateOne).mock.calls[0];
+    expect(update[1].$set).toMatchObject({
+      widgetLayout: {
+        tray: ["myCompany", "stockTicker:nyse"],
+        nav: { world: "stockTicker:global" },
+      },
+      widgetTrayOpen: true,
+    });
+  });
+
   it("does not write preferences without authentication", async () => {
     vi.mocked(requireBasicAuth).mockResolvedValue({
       ok: false,
       response: new NextResponse(null, { status: 401 }),
     });
-    expect((await patch({ desktopNavigationLayout: "browser" })).status).toBe(401);
+    expect((await patch({ desktopNavigationLayout: "standard" })).status).toBe(401);
     expect(db.collectionMocks.users.updateOne).not.toHaveBeenCalled();
   });
 
@@ -102,11 +133,18 @@ describe("PATCH /api/settings/experimental-features", () => {
     { askDrawerSide: "top" },
     { experimentalFeatures: "yes" },
     { desktopNavigationLayout: "mobile" },
+    { desktopNavigationLayout: "browser" },
+    { desktopNavigationLayout: "directory" },
     { desktopNavigationLayout: true },
+    { mobileNavigationLayout: "cards" },
     { askDrawerHidden: "no" },
     { navCustomization: { pinned: ["a:1", "a:2", "a:3", "a:4", "a:5", "a:6"], order: {} } },
     { navCustomization: { pinned: ["has space"], order: {} } },
     { navCustomization: { pinned: [] } },
+    { widgetLayout: { tray: ["has space"], nav: {} } },
+    { widgetLayout: { tray: [], nav: { sidebar: "myCompany" } } },
+    { widgetLayout: { tray: Array.from({ length: 9 }, () => "myCompany"), nav: {} } },
+    { widgetTrayOpen: "yes" },
   ])("rejects %j", async (body) => {
     const response = await patch(body);
     expect(response.status).toBe(400);

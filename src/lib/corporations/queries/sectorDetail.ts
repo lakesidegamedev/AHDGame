@@ -19,7 +19,12 @@ import { getAuthUser } from "@/lib/auth";
 import { getCharacterByUserId } from "@/lib/db/characterLookup";
 import { getControllingCorporateParent } from "@/lib/corporations/corporateOwnership";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
+import {
+  corporationPathIdFromDoc,
+  resolveCorporation,
+  requireCeo,
+} from "@/lib/api/corporations/resolveQuery";
+import { canDirectSubsidiaryAsParent } from "@/lib/corporations/subsidiaries/authorization";
 import { loadCommandEconomyBlockedCountries } from "@/lib/economy/queries/commandEconomyMarketGate";
 import { isPrivateEnterpriseBlocked } from "@/lib/economy/queries/privateEnterpriseGate";
 import { buildPoliticalBaseModifiers } from "@/lib/politicalLegislation/marginAdapter";
@@ -246,18 +251,36 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
     // The CEO of the controlling parent is an insider of its subsidiary, same
     // rule GET /api/corporations/[id] applies (ticket 1423).
     let isParentCeo = false;
+    let parentDirection: {
+      parentName: string;
+      parentPathId: string;
+      protectedUntilTurn: number | null;
+    } | null = null;
     const controllingParent = user && !isCeo ? getControllingCorporateParent(corporation) : null;
     if (user && controllingParent) {
       const parentCorp = await db
         .collection<Corporation>("corporations")
         .findOne(
           { _id: controllingParent.corporationId },
-          { projection: { userId: 1, ceoVacant: 1 } }
+          { projection: { userId: 1, ceoVacant: 1, name: 1, sequentialId: 1 } }
         );
       isParentCeo =
         !!parentCorp &&
         parentCorp.ceoVacant !== true &&
         parentCorp.userId?.toString() === user.userId;
+      // The parent CEO may retool an AI-run managed subsidiary's sectors; the
+      // strategy command re-checks the same rule.
+      if (
+        parentCorp &&
+        isParentCeo &&
+        (await canDirectSubsidiaryAsParent(db, new ObjectId(user.userId), corporation))
+      ) {
+        parentDirection = {
+          parentName: parentCorp.name,
+          parentPathId: corporationPathIdFromDoc(parentCorp),
+          protectedUntilTurn: sector.parentDirectedStrategy?.untilTurn ?? null,
+        };
+      }
     }
     const shouldRedact =
       !isParentCeo &&
@@ -1753,6 +1776,7 @@ export async function getCorporationSectorDetail(request: Request, { params }: R
         unownedPercent,
       },
       isCeo,
+      parentDirection,
       labourEnabled: labourWagesEnabled,
       // Gates the union-busting UI panel; that mechanic requires "full" tier,
       // one above the wage-slider's "wages" tier.

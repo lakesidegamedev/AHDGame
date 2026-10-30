@@ -32,14 +32,17 @@ describe("experimental desktop layout choice", () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response("{}"));
     vi.stubGlobal("fetch", fetchMock);
     render(<ExperimentalFeaturesSection />);
+    // Two desktop layouts and two phone layouts.
     expect(screen.getAllByRole("radio")).toHaveLength(4);
-    fireEvent.click(screen.getByRole("radio", { name: /options.browser.title/ }));
+    fireEvent.click(
+      screen.getByRole("radio", { name: /desktopNavigation.options.standard.title/ })
+    );
     await waitFor(() => expect(mocks.refetch).toHaveBeenCalledOnce());
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/settings/experimental-features",
       expect.objectContaining({
         method: "PATCH",
-        body: JSON.stringify({ desktopNavigationLayout: "browser" }),
+        body: JSON.stringify({ desktopNavigationLayout: "standard" }),
       })
     );
   });
@@ -47,11 +50,33 @@ describe("experimental desktop layout choice", () => {
   it("restores the prior choice after a failed save", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 500 })));
     render(<ExperimentalFeaturesSection />);
-    fireEvent.click(screen.getByRole("radio", { name: /options.directory.title/ }));
+    fireEvent.click(
+      screen.getByRole("radio", { name: /desktopNavigation.options.standard.title/ })
+    );
     await waitFor(() => expect(mocks.showToast).toHaveBeenCalledOnce());
     expect(
       screen.getByRole<HTMLInputElement>("radio", { name: /options.cards.title/ }).checked
     ).toBe(true);
     expect(mocks.refetch).not.toHaveBeenCalled();
+  });
+
+  it("saves the phone layout separately from the desktop layout", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("{}"));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<ExperimentalFeaturesSection />);
+    expect(
+      screen.getByRole<HTMLInputElement>("radio", { name: /mobileNavigation.options.dock.title/ })
+        .checked
+    ).toBe(true);
+    fireEvent.click(screen.getByRole("radio", { name: /mobileNavigation.options.standard.title/ }));
+    await waitFor(() => expect(mocks.refetch).toHaveBeenCalledOnce());
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/settings/experimental-features",
+      expect.objectContaining({ body: JSON.stringify({ mobileNavigationLayout: "standard" }) })
+    );
+    expect(
+      screen.getByRole<HTMLInputElement>("radio", { name: /desktopNavigation.options.cards.title/ })
+        .checked
+    ).toBe(true);
   });
 });

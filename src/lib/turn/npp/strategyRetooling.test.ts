@@ -155,3 +155,32 @@ describe("NPP strategy choice respects the plant's operating lane", () => {
     expect(item).toEqual(before);
   });
 });
+
+describe("NPP strategy choice respects a parent-directed strategy", () => {
+  const parentDirected = (untilTurn: number) =>
+    sector({
+      sectorType: "manufacturing",
+      industryModel: "vehicles",
+      mediaDiscriminator: null,
+      strategyId: "heavy_metals",
+      parentDirectedStrategy: {
+        byCorporationId: new ObjectId("000000000000000000000200"),
+        byUserId: new ObjectId("000000000000000000000201"),
+        strategyId: "heavy_metals",
+        atTurn: untilTurn - 48,
+        untilTurn,
+      },
+    });
+
+  it("leaves the parent's choice alone inside the protection window", () => {
+    // Turn 100 is past the sector cooldown but inside the parent window.
+    expect(decide(parentDirected(101))).toBeNull();
+  });
+
+  it("resumes normal management once the window ends", () => {
+    expect(decide(parentDirected(100))?.updates).toMatchObject({
+      strategyId: "standard",
+      transitionFromStrategyId: "heavy_metals",
+    });
+  });
+});

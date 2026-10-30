@@ -4,6 +4,7 @@
  * efficiency), investor confidence, assumed bonds, the acquisition ledger. Money
  * is in the corp's local (country) currency; the page never shows ₳.
  */
+import { plantSizeForSector, sectorPlantCount } from "@/lib/constants/facilityQuantum";
 import { corporationTypeOfLane } from "@/lib/constants/corporations";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import type { Db, ObjectId } from "mongodb";
@@ -164,6 +165,10 @@ export interface NatViewSector {
   /* ── Plants tier. Null outside plants; units are output units per DAY. ── */
   /** Nameplate productive capacity. */
   capacityUnits: number | null;
+  /** Plants owned, counted as the sector page counts them. Null outside plants. */
+  plantCount: number | null;
+  /** Capacity units in one plant, for counting builds in plants. */
+  plantUnits: number;
   producedUnits: number | null;
   soldUnits: number | null;
   /** Exact fill rate. The minister and the CEO both run this corp, so no banding. */
@@ -427,6 +432,13 @@ export async function buildNationalCorporationView(
       productionPolicyLevel: s.productionPolicyLevel ?? 0,
       capacityUnits:
         plantsMode && Number.isFinite(s.capitalStock) ? (s.capitalStock as number) : null,
+      plantCount: plantsMode
+        ? sectorPlantCount({
+            ...s,
+            capacityUnits: Number.isFinite(s.capitalStock) ? (s.capitalStock as number) : 0,
+          })
+        : null,
+      plantUnits: plantSizeForSector(s),
       producedUnits:
         plantsMode && Number.isFinite(s.producedUnits) ? (s.producedUnits as number) : null,
       soldUnits: plantsMode && Number.isFinite(s.soldUnits) ? (s.soldUnits as number) : null,

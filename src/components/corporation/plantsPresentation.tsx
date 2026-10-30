@@ -23,7 +23,19 @@ import { FILL_BAND_TEXT, fillBandSentence, fillBandShort, formatFillPercent } fr
 export { FILL_BAND_TEXT, fillBandSentence, fillBandShort, formatFillPercent } from "./fillBand";
 import type { BuildQueueSummary } from "@/lib/corporations/sectorBuildQueue";
 import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
-import { capitalizeFacility, facilityPlural } from "@/lib/constants/facilityVocabulary";
+import {
+  capitalizeFacility,
+  facilityPlural,
+  facilitySingular,
+} from "@/lib/constants/facilityVocabulary";
+import {
+  plantSizeForSector,
+  sectorPlantCount,
+  type PlantReadingSector,
+  type PlantSizingSector,
+} from "@/lib/constants/facilityQuantum";
+
+export { sectorPlantCount, type PlantReadingSector } from "@/lib/constants/facilityQuantum";
 import {
   FREIGHT_CLASS_LABELS,
   freightClassAction,
@@ -283,24 +295,144 @@ export function capacityUsedFraction(
   return Math.max(0, Math.min(1, producedUnits / capacityUnits));
 }
 
-export function UsedText({
+/** "14 plants", "1 farm", or "No stores yet" for a sector with none. */
+export function plantCountLabel(count: number, sectorType: string | null | undefined): string {
+  if (count <= 0) return `No ${facilityPlural(sectorType)} yet`;
+  const noun = count === 1 ? facilitySingular(sectorType) : facilityPlural(sectorType);
+  return `${count.toLocaleString("en-US")} ${noun}`;
+}
+
+/** Tooltip for a plant count: the plants, then what they can make in units. */
+export function plantCountTitle(sector: PlantReadingSector): string {
+  const count = sectorPlantCount(sector);
+  if (count <= 0) {
+    return `No ${facilityPlural(sector.sectorType)} built yet. Anything under construction is shown below.`;
+  }
+  const size = plantSizeForSector(sector);
+  return `${plantCountLabel(count, sector.sectorType)}. At full run they make about ${formatUnits(sector.capacityUnits)} units of output a day, about ${formatUnits(size)} each.`;
+}
+
+/**
+ * The plant count a table cell leads with. Raw capacity units are an engine
+ * measure, so they live in the tooltip only.
+ */
+export function PlantCount({
+  sector,
+  className = "",
+}: {
+  sector: PlantReadingSector;
+  className?: string;
+}) {
+  const count = sectorPlantCount(sector);
+  return (
+    <span
+      className={`tabular-nums ${count <= 0 ? "text-muted" : ""} ${className}`.trim()}
+      title={plantCountTitle(sector)}
+    >
+      {plantCountLabel(count, sector.sectorType)}
+    </span>
+  );
+}
+
+/**
+ * Plants' worth of capacity, for "room to build" figures: how many new plants
+ * of this sector's size the unmet demand would keep busy. Floored, because a
+ * build is whole plants; a sliver under one plant reads as under one.
+ */
+export function plantsOfRoom(units: number | null | undefined, sector: PlantSizingSector): number {
+  if (units == null || !Number.isFinite(units) || units <= 0) return 0;
+  return Math.floor(units / Math.max(1, plantSizeForSector(sector)));
+}
+
+/** "about 3 plants", "about 1 store", "under 1 store", "none right now". */
+export function roomInPlantsLabel(
+  units: number | null | undefined,
+  sector: PlantSizingSector
+): string {
+  if (units == null || !Number.isFinite(units) || units <= 0) return "none right now";
+  const plants = plantsOfRoom(units, sector);
+  if (plants < 1) return `under 1 ${facilitySingular(sector.sectorType)}`;
+  const noun =
+    plants === 1 ? facilitySingular(sector.sectorType) : facilityPlural(sector.sectorType);
+  return `about ${plants.toLocaleString("en-US")} ${noun}`;
+}
+
+/** Column heading and its tooltip for the one running and sold reading. */
+export const RUNNING_SOLD_HEADING = "Running / sold";
+export const RUNNING_SOLD_HEADING_TITLE =
+  "Running: how much of what these plants could make they actually made last turn. Sold: how much of what they made found buyers.";
+
+/**
+ * The one reading of how a sector's plants did last turn, used by every table:
+ * "Running 55%" (made over what the plants could make) and "Sold 45%" (sold
+ * over made). Each figure carries its own label, because two bare percentages
+ * side by side read as one number over another.
+ *
+ * `fill` is null and `band` set for a viewer without the exact rate (rivals):
+ * the sold line then shows the band word, as the fill chip does.
+ */
+export function RunningSoldReading({
   produced,
   capacity,
+  fill,
+  band,
+  plantCount,
   className = "",
 }: {
   produced: number | null | undefined;
   capacity: number | null | undefined;
+  fill: number | null | undefined;
+  band: FillRateBand | null | undefined;
+  /** Zero reads as "not running yet" instead of two empty figures. */
+  plantCount?: number | null;
   className?: string;
 }) {
+  if (plantCount === 0) {
+    return (
+      <span
+        className={`text-[11px] text-muted ${className}`.trim()}
+        title="No plants are built yet, so nothing was made or sold."
+      >
+        Not running yet
+      </span>
+    );
+  }
   const used = capacityUsedFraction(produced, capacity);
-  if (used == null) return null;
-  const pct = Math.round(used * 100);
+  const exactFill = fill != null && Number.isFinite(fill);
   return (
-    <span
-      className={`text-[11px] tabular-nums ${pct < 50 ? "text-warning" : "text-muted"} ${className}`.trim()}
-      title="Share of this sector's capacity that was actually used to make output last turn. Low use means demand, staffing or inputs are holding the plants back."
-    >
-      {pct}% used
+    <span className={`inline-flex flex-col text-[11px] leading-tight ${className}`.trim()}>
+      {used != null && (
+        <span
+          className="tabular-nums"
+          title="Share of what these plants could make that they actually made last turn. Low running means buyers, staff or inputs are holding them back."
+        >
+          <span className="text-muted">Running </span>
+          <span
+            className={`font-mono font-medium ${used < 0.5 ? "text-warning" : "text-foreground"}`}
+          >
+            {Math.round(used * 100)}%
+          </span>
+        </span>
+      )}
+      <span
+        className="tabular-nums"
+        title={
+          band == null
+            ? "Nothing was made last turn, so nothing could be sold."
+            : exactFill
+              ? `${fillBandSentence(band)}. Share of what these plants made last turn that found buyers.`
+              : `${fillBandSentence(band)}. You do not have access to this corporation's exact sales.`
+        }
+      >
+        <span className="text-muted">Sold </span>
+        {band == null ? (
+          <span className="text-muted">n/a</span>
+        ) : (
+          <span className={`font-mono font-medium ${FILL_BAND_TEXT[band]}`}>
+            {exactFill ? formatFillPercent(fill) : fillBandShort(band)}
+          </span>
+        )}
+      </span>
     </span>
   );
 }

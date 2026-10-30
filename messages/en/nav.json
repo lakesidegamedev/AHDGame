@@ -349,6 +349,77 @@
       "done": "Done",
       "saveError": "Could not save your navigation. Try again."
     },
+    "dock": {
+      "label": "Phone navigation",
+      "company": "Company",
+      "market": "Market",
+      "more": "More",
+      "everything": "Everything",
+      "you": "You",
+      "portfolio": "Portfolio",
+      "whatsNew": "What's new",
+      "switchCountry": "View another country",
+      "close": "Close"
+    },
+    "widgets": {
+      "open": "Open",
+      "unavailable": "Not available right now.",
+      "tray": {
+        "label": "Side tray",
+        "widgets": "Widgets",
+        "keir": "Ask Keir",
+        "edit": "Edit",
+        "done": "Done",
+        "close": "Close tray",
+        "openTray": "Open widgets",
+        "swapSide": "Move to the other side",
+        "empty": "No widgets yet. Add some to keep key numbers in view.",
+        "add": "Add a widget",
+        "inTray": "In the tray",
+        "menus": "In desktop menus",
+        "menusHint": "Show one widget beside a menu's links when it opens.",
+        "menuNone": "None",
+        "moveUp": "Move up",
+        "moveDown": "Move down",
+        "remove": "Remove",
+        "saveError": "Could not save your widgets. Try again."
+      },
+      "names": {
+        "myCompany": "My company",
+        "stockTicker": "Stock ticker",
+        "staffQueues": "Staff review queues"
+      },
+      "tickerScopes": {
+        "global": "Global market",
+        "home": "Home exchange"
+      },
+      "menus": {
+        "state": "State menu",
+        "nation": "Nation menu",
+        "world": "World menu",
+        "help": "Help menu",
+        "staff": "Staff menu"
+      },
+      "myCompany": {
+        "title": "My company",
+        "cash": "Cash",
+        "sharePrice": "Share price",
+        "revenue": "Revenue last turn",
+        "income": "Income last turn",
+        "cashTrend": "Cash, recent turns",
+        "empty": "You do not run a company right now."
+      },
+      "stockTicker": {
+        "title": "Stock ticker",
+        "empty": "No listed companies yet."
+      },
+      "staffQueues": {
+        "title": "Review queues",
+        "wikiReview": "Wiki edits to review",
+        "altClusters": "Open alt clusters",
+        "playerReports": "Player reports"
+      }
+    },
     "desktop": {
       "editNavigation": "Edit navigation",
       "pin": "Pin to top bar",
@@ -356,14 +427,8 @@
       "pinsFull": "Pin limit reached",
       "shortcuts": "Your shortcuts",
       "openOverview": "Open overview",
-      "sections": "Sections",
       "keyboardHint": "Tab to explore · Esc to close",
       "changeLayout": "Change layout",
-      "layouts": {
-        "cards": "Grouped cards",
-        "browser": "Section browser",
-        "directory": "Compact directory"
-      },
       "groups": {
         "markets": "Markets & finance",
         "industry": "Industry & news",
