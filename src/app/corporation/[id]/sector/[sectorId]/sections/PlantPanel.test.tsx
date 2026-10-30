@@ -38,6 +38,49 @@ const plants = {
 
 function noop() {}
 
+describe("PlantPanel facility sizing", () => {
+  it("sizes a vehicle production sector at one unit per plant, not the generic manufacturing size", () => {
+    const vehiclePlants = {
+      ...plants,
+      capacityUnits: 250,
+      plantCount: undefined,
+      buildQueue: [
+        {
+          orderIndex: 0,
+          startTurn: 100,
+          onlineTurn: 140,
+          turnsRemaining: 40,
+          smooth: true,
+          unitsOrdered: 40,
+          unitsDelivered: 0,
+          costPaidAnchor: 1_000_000,
+          progress: 0,
+        },
+      ],
+    } as unknown as PlantsData;
+
+    render(
+      <PlantPanel
+        plants={vehiclePlants}
+        sectorType="manufacturing"
+        industryModel="vehicles"
+        averageWageLevel={1}
+        isCeo={false}
+        busy={false}
+        message=""
+        onOpenBuild={noop}
+        onCancelOrder={noop}
+        onMothball={noop}
+        onReactivate={noop}
+      />
+    );
+
+    // 40 units ordered is 40 assembly plants, not floor(40 / 25) = 1.
+    expect(screen.getByText("0 of 40 plants built")).toBeTruthy();
+    expect(screen.queryByText(/0 of 1 plant built/)).toBeNull();
+  });
+});
+
 describe("PlantPanel workforce", () => {
   it("shows the sector's one-hop freight estimate at installed capacity", () => {
     render(
