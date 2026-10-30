@@ -31,6 +31,7 @@ export function fundedSwitchGameConfigUpdate(currentTurn: number): UpdateFilter<
       producerFundedBookStage: 1,
       producerShortageGrowthStage: 1,
       producerCaptiveDeliveryStage: 1,
+      producerJointRunStage: 1,
       producerFundedRestartStage: 1,
       fundedHeadcountStage: 1,
       producerTransitionPackageEnabled: false,

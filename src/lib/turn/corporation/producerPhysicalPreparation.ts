@@ -4,6 +4,7 @@ import {
   type CaptiveProduct,
 } from "@/lib/market/producerMarket/captiveDeliveryRules";
 import { plantPressure, shortageGrowth } from "@/lib/market/producerMarket/shortageGrowthRules";
+import { jointRunShare, lineSlices } from "@/lib/market/producerMarket/jointRunRules";
 import {
   inTransitionWindow,
   TRANSITION_WINDOW_TURNS,
@@ -116,6 +117,8 @@ export type ProducerPhysicalEnv = Pick<
   shortageGrowthStage?: number;
   /** gameConfig.producerCaptiveDeliveryStage: >= 1 counts internal deliveries as sales for planning. */
   captiveDeliveryStage?: number;
+  /** gameConfig.producerJointRunStage: >= 1 runs a multi-product plant at its best paying line plan. */
+  jointRunStage?: number;
   /** gameConfig.producerFundedRestartStage: >= 1 publishes shortage per recipe for AI restarts. */
   fundedRestartStage?: number;
   /** Funded build speedup factor for short plants (gameConfig.producerShortageBuildFactor). */
@@ -409,22 +412,32 @@ export function prepareProducerPhysicalSector(input: {
     : null;
   const lastReceipt =
     liveLast && (env.captiveDeliveryStage ?? 0) >= 1 ? withCaptiveDeliveries(liveLast) : liveLast;
-  const unpacedRunShare =
+  const planRun = (receipt: typeof lastReceipt) =>
     (env.demandPlanStage ?? 0) >= 1
       ? demandPlanRunShare(
-          lastReceipt,
+          receipt,
           runFloor,
           (env.shortageGrowthStage ?? 0) >= 1
             ? shortageGrowth(
                 plantPressure(
-                  (lastReceipt as { products?: Parameters<typeof plantPressure>[0] } | null)
-                    ?.products,
+                  (receipt as { products?: Parameters<typeof plantPressure>[0] } | null)?.products,
                   env.pressureByBook
                 )
               )
             : undefined
         )
-      : nextRunShare(lastReceipt, runFloor);
+      : nextRunShare(receipt, runFloor);
+  const summedRunShare = planRun(lastReceipt);
+  // A multi-product plant runs at the highest line plan that pays, not at the plan its summed lines read.
+  const unpacedRunShare =
+    (env.jointRunStage ?? 0) >= 1
+      ? jointRunShare(
+          summedRunShare,
+          lastReceipt,
+          lineSlices(lastReceipt, (env.captiveDeliveryStage ?? 0) >= 1),
+          (line) => planRun(line.receipt as typeof lastReceipt)
+        )
+      : summedRunShare;
   // A plan that reads a glut sheds at most runPaceDrop of its run a turn; the workforce persists.
   const runShare = pacedRunShare(unpacedRunShare, lastReceipt, env.runPaceDrop ?? 0, runFloor);
   if ((env.demandPlanStage ?? 0) >= 1) plan.plannedRunShare = runShare;
