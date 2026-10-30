@@ -10,6 +10,29 @@ import type { DesktopNavigationLayout } from "@/lib/navigation/desktopNavigation
 import { PixelNavIcon } from "./PixelNavIcon";
 import { pixelIconForLink, type DesktopNavLink, type DesktopNavMenu } from "./desktopNavModel";
 
+/** Space kept between the panel and the viewport edge. */
+const EDGE_GAP = 16;
+const GROUP_COLUMN = 250;
+const SIDE_COLUMN = 220;
+
+/** Wide enough for its card columns (at most three) and the side column, no wider. */
+export function panelWidth(groupCount: number): number {
+  return Math.max(520, Math.min(3, Math.max(1, groupCount)) * GROUP_COLUMN + SIDE_COLUMN + 32);
+}
+
+/** Centred under the tab that opened it, nudged inward to stay on screen. */
+export function anchoredLeft(
+  tab: { left: number; width: number },
+  width: number,
+  viewportWidth: number
+): number {
+  const centred = tab.left + tab.width / 2 - width / 2;
+  return Math.min(
+    Math.max(EDGE_GAP, centred),
+    Math.max(EDGE_GAP, viewportWidth - width - EDGE_GAP)
+  );
+}
+
 interface Props {
   menu: DesktopNavMenu;
   menuId: string;
@@ -38,7 +61,6 @@ export function DesktopMegaMenu({
 }: Props) {
   const t = useTranslations("nav.desktop");
   const pathname = usePathname();
-  const [section, setSection] = useState(menu.groups[0]?.id);
   const [position, setPosition] = useState<{
     top: number;
     left: number;
@@ -46,7 +68,6 @@ export function DesktopMegaMenu({
     height: number;
   } | null>(null);
   const focused = useRef(false);
-  const selectedGroup = menu.groups.find((group) => group.id === section) ?? menu.groups[0];
 
   useLayoutEffect(() => {
     let frame = 0;
@@ -57,13 +78,12 @@ export function DesktopMegaMenu({
         return;
       }
       const rect = anchor.getBoundingClientRect();
-      const desiredWidth = menu.groups.length === 1 ? 760 : layout === "directory" ? 1000 : 1080;
-      const width = Math.min(desiredWidth, window.innerWidth - 32);
+      const width = Math.min(panelWidth(menu.groups.length), window.innerWidth - 2 * EDGE_GAP);
       const top = Math.max(8, rect.bottom + 8);
       setPosition({
         top,
         width,
-        left: (window.innerWidth - width) / 2,
+        left: anchoredLeft(rect, width, window.innerWidth),
         height: Math.max(80, window.innerHeight - top - 16),
       });
     };
@@ -75,7 +95,7 @@ export function DesktopMegaMenu({
       window.removeEventListener("resize", update);
       window.removeEventListener("scroll", update, true);
     };
-  }, [anchorRef, layout, menu.groups.length]);
+  }, [anchorRef, menu.groups.length]);
 
   useLayoutEffect(() => {
     if (!position || focused.current || !window.matchMedia("(min-width: 1024px)").matches) return;
@@ -201,15 +221,7 @@ export function DesktopMegaMenu({
   const shortcuts = menu.shortcuts.length > 0 && (
     <div>
       <p className="mb-2 text-xs font-medium text-muted">{t("shortcuts")}</p>
-      <div
-        className={
-          layout === "directory"
-            ? "flex flex-wrap gap-1 [&>a]:w-auto [&>a]:border-card-border [&>a]:bg-card"
-            : "space-y-0.5"
-        }
-      >
-        {menu.shortcuts.map((item) => row(item, true))}
-      </div>
+      <div className="space-y-0.5">{menu.shortcuts.map((item) => row(item, true))}</div>
     </div>
   );
   const overview = (
@@ -245,7 +257,7 @@ export function DesktopMegaMenu({
       {menu.groups.map((group) => (
         <section key={group.id} className="min-w-0">
           <h3 className="mb-2 px-2.5 text-xs font-medium text-muted">{group.label}</h3>
-          {group.items.map((item) => row(item, layout === "directory"))}
+          {group.items.map((item) => row(item))}
         </section>
       ))}
     </div>
@@ -288,52 +300,11 @@ export function DesktopMegaMenu({
     >
       <div className="flex items-center justify-between gap-4 border-b border-card-border px-5 py-3">
         <span className="text-sm font-medium text-foreground">{menu.title}</span>
-        <span className="text-xs text-muted">{t(`layouts.${layout}`)}</span>
       </div>
-      {layout === "cards" && (
-        <div className="grid grid-cols-[minmax(0,1fr)_220px]">
-          {groups}
-          {rail}
-        </div>
-      )}
-      {layout === "browser" && (
-        <div className="grid grid-cols-[160px_minmax(0,1fr)_220px]">
-          <div
-            className="space-y-1 border-r border-card-border bg-background/40 p-3"
-            role="group"
-            aria-label={t("sections")}
-          >
-            {menu.groups.map((group) => (
-              <button
-                key={group.id}
-                type="button"
-                aria-pressed={selectedGroup?.id === group.id}
-                onClick={() => setSection(group.id)}
-                className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-[13px] ${selectedGroup?.id === group.id ? "bg-card font-medium text-foreground" : "text-muted hover:bg-card hover:text-foreground"}`}
-              >
-                {group.label}
-                <span aria-hidden="true">›</span>
-              </button>
-            ))}
-          </div>
-          <section className="min-w-0 p-5" aria-live="polite">
-            <h3 className="mb-4 text-base font-semibold text-foreground">{selectedGroup?.label}</h3>
-            <div className="grid grid-cols-2 gap-2">
-              {selectedGroup?.items.map((item) => row(item))}
-            </div>
-          </section>
-          {rail}
-        </div>
-      )}
-      {layout === "directory" && (
-        <div className="grid grid-cols-[190px_minmax(0,1fr)]">
-          <aside className="border-r border-card-border bg-background/40 p-4">{overview}</aside>
-          <div className="min-w-0">
-            {groups}
-            {shortcuts && <div className="border-t border-card-border px-5 py-3">{shortcuts}</div>}
-          </div>
-        </div>
-      )}
+      <div className="grid grid-cols-[minmax(0,1fr)_220px]">
+        {groups}
+        {rail}
+      </div>
       <div className="flex items-center justify-between gap-4 border-t border-card-border px-5 py-2 text-xs text-muted">
         <span>{t("keyboardHint")}</span>
         {onCustomize ? (

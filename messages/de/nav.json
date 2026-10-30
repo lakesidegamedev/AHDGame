@@ -279,14 +279,8 @@
       "pinsFull": "Maximum erreicht",
       "shortcuts": "Deine Verknüpfungen",
       "openOverview": "Übersicht öffnen",
-      "sections": "Bereiche",
       "keyboardHint": "Tab zum Navigieren · Esc zum Schließen",
       "changeLayout": "Layout ändern",
-      "layouts": {
-        "cards": "Gruppierte Karten",
-        "browser": "Bereichsauswahl",
-        "directory": "Kompaktes Verzeichnis"
-      },
       "groups": {
         "markets": "Märkte & Finanzen",
         "industry": "Industrie & Nachrichten",
