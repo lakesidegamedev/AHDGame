@@ -55,6 +55,24 @@ describe("isProcurementBlocked", () => {
     return db as unknown as Db;
   }
 
+  it.each(["US", "UK", "JP"] as const)(
+    "blocks government-contract acceptance in %s when disabled",
+    async (countryId) => {
+      const db = createMockDb();
+      db.collection("gameState");
+      db.collectionMocks.gameState.findOne.mockResolvedValue({ defenceProcurementPaused: false });
+      db.collection("gameConfig");
+      db.collectionMocks.gameConfig.findOne.mockResolvedValue({
+        governmentContractsEnabled: false,
+      });
+      expect(await isProcurementBlocked(db as unknown as Db, countryId, 100)).toMatchObject({
+        blocked: true,
+        until: null,
+        reason: expect.stringContaining("Government contracts are temporarily disabled"),
+      });
+    }
+  );
+
   it("passes when nothing bars the country", async () => {
     expect(await isProcurementBlocked(dbWith({}), "TR", 100)).toEqual({ blocked: false });
   });

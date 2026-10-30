@@ -801,6 +801,7 @@
       "ownHaulCost": "{commodity}: {origin} to {destination}, {units} units; freight ₳{cost} per unit (anchor currency)."
     },
     "governmentContracts": {
+      "featureDisabled": "Government contracts are temporarily disabled. New tenders, bids and awards are paused. Existing signed contracts continue, and you can still cancel tenders or withdraw bids.",
       "extractionSummary": "{state}: {resource}, {share, number}% of total state resource capacity",
       "capacityQuantity": "Current nominal allocation: {allocated, number} {resource} units/day out of {total, number} units/day total state capacity.",
       "capacityBasis": "The percentage applies to the state's total capacity for this resource, not the amount currently mined. It is a daily production ceiling, not a purchase order or guaranteed output. Your operations can produce less, and depletion can reduce the available ceiling.",
