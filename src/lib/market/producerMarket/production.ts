@@ -1006,18 +1006,9 @@ export function advanceProducerEconomy(input: {
             )
           : 0;
       const kept = carried - writtenDown;
-      // The written-down stock is a real loss at its cost basis (profit and dividends see it).
-      if (writtenDown > 0 && openingRows.length > 0) {
-        const openingUnits = openingRows.reduce((sum, st) => sum + st.units, 0);
-        const basis = cappedStockUnitCost(
-          openingUnits > 0
-            ? openingRows.reduce((sum, st) => sum + st.units * (st.quoteUnitCost ?? 0), 0) /
-                openingUnits
-            : 0,
-          output.referenceUnitPrice
-        );
-        inventoryWriteOff += writtenDown * basis;
-      }
+      // The written-down units leave stock without a second charge: their
+      // production cost was expensed in `consumed`, labour and site bills on the
+      // turn they were made, and finished stock is not capitalized.
       products.push({
         commodity: output.commodity,
         book: output.book,

@@ -461,6 +461,40 @@ describe("receipt-backed production", () => {
     });
   });
 
+  it("writes down over-cover finished stock without expensing its production again", () => {
+    const result = advanceProducerEconomy({
+      turn: 1,
+      accounts,
+      stockCoverTurns: 2,
+      producers: [
+        plant({
+          capacityUnits: 0,
+          labourCost: 0,
+          otherOperatingCost: 0,
+          inputs: [],
+          recentSoldUnits: 1,
+          outputs: [
+            {
+              commodity: "steel",
+              book: "world",
+              unitsPerOutput: 1,
+              policy: { kind: "manual", unitPrice: 3 },
+              referenceUnitPrice: 3,
+              storable: true,
+            },
+          ],
+          outputStock: [{ commodity: "steel", book: "world", units: 100, quoteUnitCost: 2 }],
+        }),
+      ],
+      externalOrders: [],
+    });
+    const producer = result.producers[0];
+    const kept = producer.outputStock.reduce((n, s) => n + s.units, 0);
+    expect(kept).toBeLessThan(100);
+    expect(producer.inventoryWriteOff).toBe(0);
+    expect(producer.profit).toBe(0);
+  });
+
   it("reports paid unit prices separately from internal site deliveries", () => {
     const energy = {
       commodity: "energy",

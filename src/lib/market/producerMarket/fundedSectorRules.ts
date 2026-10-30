@@ -56,16 +56,31 @@ export interface LegacySectorResultLike {
   effectiveMargin: number;
   costs: number;
   hourlyGrowthCost: number;
+  /** Legacy pass compliance cost, on the legacy pass's revenue. Not charged on a funded turn. */
   regulatoryBurden?: number;
   /** Points of revenue for size costs the margin stack carried (overhead, SOE sprawl, running dominance). */
   fundedSizeCostPp?: number;
+  /** Compliance rate (share of revenue) charged on the funded revenue. */
+  fundedRegulatoryBurdenRate?: number;
+  /** Growth cost at full realization; the funded turn realizes it against funded revenue. */
+  nameplateHourlyGrowthCost?: number;
+  nameplateHourlyRevenue?: number;
+  growthInvestmentAnchor?: number;
+  /** Dominance margin penalty (pp, negative) the funded turn applied. */
+  fundedDominancePenaltyPp?: number;
+  /** Compliance cost inside `costs` on a funded turn (set by `fundedSectorResult`). */
+  fundedComplianceCost?: number;
 }
 
 /**
  * Revenue and margin from the receipt. Costs are the receipt's operating costs
- * plus the legacy growth spend, the regulatory compliance cost set by
- * government policy, and the size costs (overhead, state sprawl, running
- * dominance) as points of revenue; the funded market charges none of these itself.
+ * plus the growth spend, the regulatory compliance cost and the size costs
+ * (overhead, state sprawl, running dominance) as points of revenue; the funded
+ * market charges none of these itself.
+ *
+ * Every leg is measured on the revenue the plant sold. The legacy pass priced
+ * compliance and growth on its own revenue, which on a funded turn is a
+ * different, often much larger, number.
  */
 export function fundedSectorResult<T extends LegacySectorResultLike>(
   legacy: T,
@@ -73,17 +88,35 @@ export function fundedSectorResult<T extends LegacySectorResultLike>(
 ): T {
   const revenue = Math.max(0, finite(r.revenue));
   const producerCosts = Math.max(0, revenue - finite(r.profit));
+  const growthCost = fundedGrowthCost(legacy, revenue);
+  const compliance = revenue * Math.max(0, finite(legacy.fundedRegulatoryBurdenRate ?? 0));
   const costs =
     producerCosts +
-    Math.max(0, finite(legacy.hourlyGrowthCost)) +
-    Math.max(0, finite(legacy.regulatoryBurden ?? 0)) +
+    growthCost +
+    compliance +
     (revenue * Math.max(0, finite(legacy.fundedSizeCostPp ?? 0))) / 100;
   return {
     ...legacy,
     hourlyRevenue: revenue,
+    hourlyGrowthCost: growthCost,
+    ...(legacy.growthInvestmentAnchor !== undefined
+      ? { growthInvestmentAnchor: legacy.growthInvestmentAnchor > 0 ? growthCost : 0 }
+      : {}),
+    regulatoryBurden: compliance,
+    fundedComplianceCost: compliance,
     costs,
     effectiveMargin: revenue > 0 ? ((revenue - costs) / revenue) * 100 : 0,
   };
+}
+
+/** Growth cost realized against the funded revenue instead of the legacy pass's. */
+function fundedGrowthCost(legacy: LegacySectorResultLike, revenue: number): number {
+  const legacyCost = Math.max(0, finite(legacy.hourlyGrowthCost));
+  const full = legacy.nameplateHourlyGrowthCost;
+  if (full === undefined) return legacyCost;
+  const nameplate = finite(legacy.nameplateHourlyRevenue ?? 0);
+  const realization = nameplate > 0 ? Math.max(0, Math.min(1, revenue / nameplate)) : 1;
+  return Math.max(0, finite(full)) * realization;
 }
 
 type Op = { updateOne: { filter: Record<string, unknown>; update: Record<string, unknown> } };
@@ -144,10 +177,18 @@ export function fundedSectorOpsAll(
         producedUnits: Math.round(receipt.producedUnits * turnsPerDay * 100) / 100,
         soldUnits: Math.round(receipt.soldUnits * turnsPerDay * 100) / 100,
         effectiveProfitMargin: Math.round(result.effectiveMargin * 100) / 100,
+        // The legacy pass recorded its own (ramp-faded) penalty; show what this turn charged.
+        ...(result.fundedDominancePenaltyPp !== undefined
+          ? {
+              dominanceMarginPenaltyPp: Math.round(result.fundedDominancePenaltyPp * 100) / 100,
+            }
+          : {}),
         plantsPnl: {
           revenue: daily(result.hourlyRevenue),
           profit: daily(result.hourlyRevenue - result.costs),
           totalCost: daily(result.costs),
+          // Dominance compliance, part of totalCost, shown on its own line.
+          compliance: daily(result.fundedComplianceCost ?? 0),
           source: "funded" as const,
           // Shown to the owner beside profit; decisions keep reading profit.
           stockAddedAtCost: daily(receipt.unsoldProductionCost ?? 0),

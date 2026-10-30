@@ -47,6 +47,17 @@ export interface SectorTurnEnv {
 export interface SectorTurnResult {
   /** Size costs the margin stack carried, in points of revenue, for the funded path to charge. */
   fundedSizeCostPp?: number;
+  /**
+   * Dominance regulatory rate (share of revenue) a funded turn charges on the
+   * revenue the plant sold. The plants fade is complete on that path.
+   */
+  fundedRegulatoryBurdenRate?: number;
+  /** Dominance margin penalty (pp) a funded turn applies; recorded instead of the legacy one. */
+  fundedDominancePenaltyPp?: number;
+  /** Hourly growth cost at full realization, rescaled onto funded revenue. */
+  nameplateHourlyGrowthCost?: number;
+  /** Hourly nameplate revenue the growth cost is realized against. */
+  nameplateHourlyRevenue?: number;
   /** Exact current-turn input consumption, daily era units, for internal discount settlement. */
   internalSupplyInputUnits?: ReadonlyMap<
     import("@/lib/constants/commodities").CommodityType,

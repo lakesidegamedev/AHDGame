@@ -1688,6 +1688,8 @@ export interface CorporateSector {
     inventoryRevenue: number;
     /** Inventory carrying cost inside `totalCost`. */
     inventoryCarry: number;
+    /** "funded" when a funded producer receipt wrote the row (only the summary lines are set). */
+    source?: "funded";
     /** Funded market: inputs in output that went to stock unsold this turn, at cost (reported beside profit). */
     stockAddedAtCost?: number;
     /** Funded market: transition floor support received this turn (reported beside profit). */
