@@ -47,6 +47,7 @@ import {
   ECONOMY_RESET_FUND_MIGRATIONS,
   ECONOMY_RESET_INDEX_MIGRATIONS,
   reseedCountryOwnedCorporations,
+  loadDissolvedFederations,
 } from "./reseed";
 import {
   ECONOMY_RESET_PHASES,
@@ -426,12 +427,28 @@ async function phaseUnset(db: Db, plan: EconomyResetPlan): Promise<void> {
 async function phaseReseedPrices(db: Db, plan: EconomyResetPlan, log: Log): Promise<void> {
   const { seedCommodityPrices } = await import("@/lib/admin/seed/seedCommodityPrices");
   await seedCommodityPrices(db, true, log, plan.preset);
+  // A federation that dissolved may have moved to a new currency; the seed
+  // table only knows the preset's opening one, so the live code is kept.
+  const dissolved = await loadDissolvedFederations(db, plan.preset);
+  const liveCodes = await db
+    .collection<{ _id: string; currencyCode: string }>("exchangeRates")
+    .find({ _id: { $in: dissolved } }, { projection: { currencyCode: 1 } })
+    .toArray();
   await db.collection("exchangeRates").deleteMany({});
   await db
     .collection("centralBanks")
     .updateMany({}, { $set: { ...CENTRAL_BANK_HISTORY_RESET, updatedAt: new Date() } });
   const { seedForex } = await import("@/lib/admin/seed/seedForex");
   await seedForex(db, log, plan.preset);
+  if (liveCodes.length > 0)
+    await db.collection<{ _id: string; currencyCode: string }>("exchangeRates").bulkWrite(
+      liveCodes.map((row) => ({
+        updateOne: {
+          filter: { _id: row._id },
+          update: { $set: { currencyCode: row.currencyCode } },
+        },
+      }))
+    );
   // seedForex writes a turn-0 money supply row; the cleared economy was
   // measured at the current turn by the moneySupply phase, so only that stays.
   await db.collection("moneySupplySnapshots").deleteMany({ turn: { $lt: plan.currentTurn } });

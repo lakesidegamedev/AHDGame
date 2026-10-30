@@ -13,7 +13,13 @@ export type CountryCorporationMode =
   /** generateCountryOwnedSeedData filtered to the country. */
   | "generator"
   /** The 2019 Russian sovereign issuer only, renamed (seedModernBudgets2019). */
-  | "modernRuIssuer";
+  | "modernRuIssuer"
+  /**
+   * A federation whose dissolution settlement has applied: its sovereign
+   * issuer only, with no production. The command conglomerate it owned before
+   * the breakup is never rebuilt.
+   */
+  | "successorIssuer";
 
 export interface CountryCorporationSeed {
   countryId: string;
@@ -34,8 +40,14 @@ export function countryCorporationSeeds(input: {
   /** Countries with an authored national budget for the preset. */
   nationalBudgetCountries: readonly string[];
   easternBlocEra: boolean;
+  /**
+   * Source entities of applied federation settlements in the live world. The
+   * reset rebuilds what the world is now, not what the preset started with.
+   */
+  dissolvedFederations?: readonly string[];
 }): CountryCorporationSeed[] {
   const budgets = new Set(input.nationalBudgetCountries);
+  const dissolved = new Set(input.dissolvedFederations ?? []);
   const seeds: CountryCorporationSeed[] = [];
   for (const countryId of ALWAYS_SEEDED)
     seeds.push({ countryId, mode: "generator", commandAware: false });
@@ -52,5 +64,11 @@ export function countryCorporationSeeds(input: {
   if (input.easternBlocEra)
     for (const countryId of EASTERN_BLOC)
       if (budgets.has(countryId)) seeds.push({ countryId, mode: "generator", commandAware: true });
-  return seeds.sort((a, b) => a.countryId.localeCompare(b.countryId));
+  // A dissolved federation keeps only its issuer identity, never command assets.
+  const resolved = seeds.map((seed) =>
+    dissolved.has(seed.countryId)
+      ? { countryId: seed.countryId, mode: "successorIssuer" as const, commandAware: false }
+      : seed
+  );
+  return resolved.sort((a, b) => a.countryId.localeCompare(b.countryId));
 }
