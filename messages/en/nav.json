@@ -308,6 +308,67 @@
       "saved": "Westminster’s stance has been updated.",
       "viewOffice": "View First Minister’s office",
       "readOnly": "Only the sitting Prime Minister can change Westminster’s stance."
+    },
+    "desktop": {
+      "shortcuts": "Your shortcuts",
+      "openOverview": "Open overview",
+      "sections": "Sections",
+      "keyboardHint": "Tab to explore · Esc to close",
+      "changeLayout": "Change layout",
+      "layouts": {
+        "cards": "Grouped cards",
+        "browser": "Section browser",
+        "directory": "Compact directory"
+      },
+      "groups": {
+        "markets": "Markets & finance",
+        "industry": "Industry & news",
+        "diplomacy": "World affairs",
+        "support": "Support"
+      },
+      "descriptions": {
+        "overview": "The people, institutions, and events shaping this place.",
+        "myCorporation": "Your company headquarters",
+        "subsidiaryGroup": "Companies in your group",
+        "myParty": "Your party headquarters",
+        "stateParty": "Your party in this region",
+        "activeElection": "Your active campaign",
+        "presidentialElection": "Follow the presidential race",
+        "map": "Explore states and regions",
+        "myUnion": "Your labour organisation",
+        "cabinetOffice": "Your cabinet responsibilities",
+        "justiceOffice": "Your judicial responsibilities",
+        "governorOffice": "Your regional responsibilities",
+        "stockMarket": "Shares and market activity",
+        "legislature": "Chambers, legislation, and votes",
+        "parties": "Parties and their platforms",
+        "elections": "Races, candidates, and results",
+        "centralBank": "Public and private banks",
+        "banking": "Public and private banks",
+        "executive": "The executive and cabinet",
+        "politicians": "The political directory",
+        "economy": "Output, jobs, and growth",
+        "unions": "Organised labour",
+        "nations": "Explore nations and the world map",
+        "sectors": "Industry and production",
+        "budget": "Revenue and public spending",
+        "news": "News from your country",
+        "forex": "Currencies across the world",
+        "trade": "Goods across borders",
+        "governmentContracts": "Public procurement opportunities",
+        "imf": "International monetary cooperation",
+        "policy": "The rules of the country",
+        "politicalMetrics": "Opinion and political conditions",
+        "metrics": "National indicators",
+        "scotus": "Cases and the constitution",
+        "internationalOrgs": "Diplomacy and cooperation",
+        "crises": "International flashpoints",
+        "conflicts": "Ongoing military conflicts",
+        "politicalOperations": "Your political organisation",
+        "guides": "Rules, mechanics, and getting started",
+        "support": "Get help with a problem",
+        "feedback": "Describe an issue with a screenshot"
+      }
     }
   }
 }

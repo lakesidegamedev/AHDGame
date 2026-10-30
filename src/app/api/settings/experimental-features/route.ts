@@ -8,8 +8,8 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { experimentalFeaturesSchema } from "@/lib/api/schemas/settings";
 import type { User } from "@/lib/db/types";
 
-// PATCH /api/settings/experimental-features — Opts the authenticated user in or out of
-// experimental features, and picks the side the Ask drawer docks to
+// PATCH /api/settings/experimental-features: Opts the authenticated user in or out of
+// experimental features, and saves desktop navigation and drawer presentation preferences
 // Auth: requireBasicAuth
 // Errors: 400, 401, 429
 export async function PATCH(request: Request) {
@@ -29,7 +29,7 @@ export async function PATCH(request: Request) {
     if (!parsed.success) {
       return errorResponse(parsed.status, parsed.error);
     }
-    const { experimentalFeatures, askDrawerSide } = parsed.data;
+    const { experimentalFeatures, askDrawerSide, desktopNavigationLayout } = parsed.data;
 
     const db = await getDb();
     await db.collection<User>("users").updateOne(
@@ -38,6 +38,7 @@ export async function PATCH(request: Request) {
         $set: {
           ...(experimentalFeatures !== undefined ? { experimentalFeatures } : {}),
           ...(askDrawerSide !== undefined ? { askDrawerSide } : {}),
+          ...(desktopNavigationLayout !== undefined ? { desktopNavigationLayout } : {}),
           updatedAt: new Date(),
         },
       }
