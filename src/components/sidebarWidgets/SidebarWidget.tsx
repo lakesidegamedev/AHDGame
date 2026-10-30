@@ -13,7 +13,7 @@ import {
   formatSharePrice,
 } from "@/lib/utils/formattersCore";
 import { parseWidgetKey, type WidgetId } from "@/lib/sidebarWidgets/widgetCatalog";
-import type { KeirPetWidgetData } from "@/lib/sidebarWidgets/keirPet";
+import type { KeirPetWidgetData } from "@/lib/sidebarWidgets/keirPetShared";
 import { KeirPetBody } from "./KeirPetBody";
 import type {
   MyCompanyWidgetData,

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextIntlClientProvider } from "next-intl";
 import en from "../../../messages/en/nav.json";
 import { KeirPetBody, timeOfDay } from "./KeirPetBody";
-import type { KeirPetWidgetData } from "@/lib/sidebarWidgets/keirPet";
+import type { KeirPetWidgetData } from "@/lib/sidebarWidgets/keirPetShared";
 
 vi.mock("next/link", () => ({
   default: ({ children, ...props }: React.ComponentProps<"a">) => <a {...props}>{children}</a>,

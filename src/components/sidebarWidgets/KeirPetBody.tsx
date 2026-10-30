@@ -4,8 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { KeirSprite, type KeirMood } from "@/components/askDrawer/KeirSprite";
-import type { AdviceTone, KeirPetWidgetData } from "@/lib/sidebarWidgets/keirPet";
-import { BOND_LEVELS } from "@/lib/sidebarWidgets/keirPet";
+import {
+  BOND_LEVELS,
+  type AdviceTone,
+  type KeirPetWidgetData,
+} from "@/lib/sidebarWidgets/keirPetShared";
 import { refreshSidebarWidgets } from "./useSidebarWidgetData";
 
 /** Keir dozes off when the page has been left alone this long. */

@@ -2,6 +2,14 @@ import { ObjectId, type Db } from "mongodb";
 import type { User } from "@/lib/db/types/user";
 import type { ActionRecommendation } from "@/lib/actions/recommendations";
 import { ACTION_HOARDING_THRESHOLD } from "@/lib/actions/recommendationsConstants";
+import {
+  BOND_LEVELS,
+  type AdviceTone,
+  type KeirAdvice,
+  type KeirPetWidgetData,
+} from "./keirPetShared";
+
+export { BOND_LEVELS, type AdviceTone, type KeirAdvice, type KeirPetWidgetData };
 
 /** Keir writes a fresh tip at most this often. */
 export const ADVICE_TTL_MS = 12 * 60 * 60_000;
@@ -11,43 +19,6 @@ export const PAT_COOLDOWN_MS = 10 * 60_000;
 const BOND_FOR_TEA = 3;
 const BOND_FOR_PAT = 1;
 const BOND_FOR_DAILY_VISIT = 2;
-/** Bond needed for each heart, 1 to 5. */
-export const BOND_LEVELS = [10, 30, 60, 100, 150];
-
-/** Keir's reaction to a tip, played when the widget opens. */
-export type AdviceTone = "warn" | "nudge" | "idea" | "chat";
-
-export interface KeirAdvice {
-  id: string;
-  title: string;
-  why: string;
-  link: string | null;
-  tone: AdviceTone;
-  generatedAt: string;
-}
-
-/** Stored on the account as `users.keirPet`. */
-export interface KeirPetState {
-  bond: number;
-  streak: number;
-  /** UTC day (YYYY-MM-DD) of the last visit, for the streak. */
-  lastVisitDay?: string;
-  teaAt?: Date;
-  patAt?: Date;
-  advice?: KeirAdvice;
-}
-
-export interface KeirPetWidgetData {
-  advice: KeirAdvice;
-  bond: number;
-  hearts: number;
-  /** Bond needed for the next heart; null at five hearts. */
-  nextHeartAt: number | null;
-  streak: number;
-  teaReadyAt: string | null;
-  patReadyAt: string | null;
-}
-
 /** Evergreen tips, used when nothing about the player stands out. Kept strictly true. */
 const EVERGREEN: Array<Omit<KeirAdvice, "generatedAt">> = [
   {
