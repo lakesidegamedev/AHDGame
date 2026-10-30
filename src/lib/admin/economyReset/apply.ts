@@ -409,6 +409,11 @@ async function phaseUnset(db: Db, plan: EconomyResetPlan): Promise<void> {
     .collection("states")
     .updateMany({}, { $unset: Object.fromEntries(STATE_SECTOR_UNSET_FIELDS.map((f) => [f, ""])) });
   await reseedOutputTrends(db);
+  // Pension schemes are on the owner keep-list, but each belongs to a union and
+  // the unions are wiped. The holders phase has already converted every
+  // scheme's fund units to cash, so an empty scheme left pointing at a deleted
+  // union only keeps cutting benefits and piling up unpaid claims every turn.
+  await db.collection("pensionSchemes").deleteMany({ assetsAnchor: { $lte: 0 } });
   // Cumulative extraction by the old economy's mines. Kept, it shortens every
   // reserve's life for plants that never extracted from it.
   await db

@@ -99,10 +99,6 @@ export const ECONOMY_RESET_WIPE_COLLECTIONS = Object.freeze([
   // representing no shops at all. The reseedUnions phase rebuilds the vacant
   // world roster and re-hands it the rebuilt sectors.
   "unions",
-  // Each scheme belongs to a union, and the unions are wiped: a kept scheme
-  // points at a deleted union and keeps cutting benefits every turn. The
-  // census has already converted its fund units to cash in the holders phase.
-  "pensionSchemes",
   "unionOrganizers",
   "unionLeaderVotes",
   "unionEndorsements",
@@ -371,6 +367,7 @@ export const ECONOMY_RESET_KEEP_COLLECTIONS: readonly string[] = Object.freeze([
   "partyStrengthPressure",
   "peaceOffers",
   "pendingTreasuryTransactions",
+  "pensionSchemes",
   "playerEndorsementLocks",
   "playerEndorsements",
   "playerIncomeTaxBatches",
