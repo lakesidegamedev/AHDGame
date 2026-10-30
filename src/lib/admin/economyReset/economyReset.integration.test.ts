@@ -24,7 +24,7 @@ let freshSectors = 0;
 let freshUnions = 0;
 let sovereignFaceBefore = 0;
 let heldBondId: ObjectId;
-let labourRegionId: unknown;
+let labourRegionId: string;
 let basePriceBefore = 0;
 let plan: EconomyResetPlan;
 let digest: string;
@@ -253,9 +253,9 @@ beforeAll(async () => {
   // The old economy's employment ledger: a corporate job share measured
   // against plants the reset removes.
   const region = (await db.collection("macroMetrics").findOne({}))!;
-  labourRegionId = region._id;
+  labourRegionId = String(region._id);
   await db.collection("macroMetrics").updateOne(
-    { _id: labourRegionId },
+    { _id: labourRegionId as never },
     {
       $set: {
         labourEmployment: {
