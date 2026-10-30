@@ -403,6 +403,18 @@ async function phaseUnset(db: Db, plan: EconomyResetPlan): Promise<void> {
   await db
     .collection("characters")
     .updateMany({ unionLeaderOf: { $ne: null } }, { $set: { unionLeaderOf: null } });
+  // Each region's employment ledger fixes its corporate job share the first
+  // time corporate demand is measured and never revisits it. Kept across a
+  // reset, the old economy's share (up to 99% of a state's workforce) stays
+  // reserved for jobs the rebuilt plants do not offer, and those workers sit
+  // unemployed indefinitely. Marking demand unknown makes the next metric pass
+  // re-baseline the share from the rebuilt plants' real demand.
+  await db
+    .collection("macroMetrics")
+    .updateMany(
+      { "labourEmployment.corporateDemandKnown": true },
+      { $set: { "labourEmployment.corporateDemandKnown": false } }
+    );
 }
 
 /**

@@ -24,6 +24,7 @@ let freshSectors = 0;
 let freshUnions = 0;
 let sovereignFaceBefore = 0;
 let heldBondId: ObjectId;
+let labourRegionId: string;
 let basePriceBefore = 0;
 let plan: EconomyResetPlan;
 let digest: string;
@@ -249,6 +250,34 @@ beforeAll(async () => {
     ],
   });
 
+  // The old economy's employment ledger: a corporate job share measured
+  // against plants the reset removes.
+  const region = (await db.collection("macroMetrics").findOne({}))!;
+  labourRegionId = String(region._id);
+  await db.collection("macroMetrics").updateOne(
+    { _id: labourRegionId as never },
+    {
+      $set: {
+        labourEmployment: {
+          version: 1,
+          lastTurn: 0,
+          laborForce: 1000,
+          corporateEmployed: 400,
+          backgroundEmployed: 550,
+          backgroundDemand: 550,
+          referenceCorporateShare: 0.4,
+          corporateDemand: 400,
+          corporateDemandKnown: true,
+          structuralRate: 5,
+          vacancies: 0,
+          vacancyToUnemployment: 0,
+          hires: 0,
+          separations: 0,
+        },
+      },
+    }
+  );
+
   for (const name of [
     "federalBudget",
     "enactedLaws",
@@ -316,11 +345,27 @@ describe("economy-only reset end to end", () => {
   });
 
   it("leaves politics, budgets and macro state untouched", async () => {
-    for (const name of ["enactedLaws", "politicalParties", "macroMetrics", "stateBudgets"])
+    for (const name of ["enactedLaws", "politicalParties", "stateBudgets"])
       expect(await all(name), name).toEqual(before[name]);
+    // Macro state is kept apart from the employment re-baseline flag below.
+    const demandKnownCleared = (rows: Document[]) =>
+      rows.map((row) =>
+        row.labourEmployment
+          ? { ...row, labourEmployment: { ...row.labourEmployment, corporateDemandKnown: false } }
+          : row
+      );
+    expect(await all("macroMetrics")).toEqual(demandKnownCleared(before.macroMetrics));
     const strip = (rows: Document[]) =>
       rows.map(({ economyResetDigest: _d, updatedAt: _u, ...rest }) => rest);
     expect(strip(await all("federalBudget"))).toEqual(strip(before.federalBudget));
+  });
+
+  it("re-baselines each region's corporate job share against the rebuilt plants", async () => {
+    const region = (await db.collection("macroMetrics").findOne({ _id: labourRegionId as never }))!;
+    // Unknown demand makes the next metric pass take the share from the
+    // rebuilt plants instead of reserving the old economy's 40% of workers.
+    expect(region.labourEmployment.corporateDemandKnown).toBe(false);
+    expect(region.labourEmployment.backgroundEmployed).toBe(550);
   });
 
   it("starts the rebuilt plants from fresh-world configuration with no legacy steering", async () => {
