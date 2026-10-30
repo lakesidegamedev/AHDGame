@@ -2,7 +2,11 @@ import { ObjectId } from "mongodb";
 import { describe, expect, it } from "vitest";
 import { MONEY_ACCOUNTING_VERSION } from "@/lib/moneySupply/calculate";
 import type { Bond } from "@/lib/db/types";
-import { computeEconomicVitalSigns, summarizeLedgerTurnover } from "./economicVitalSigns";
+import {
+  computeEconomicVitalSigns,
+  nationalInflationByCountry,
+  summarizeLedgerTurnover,
+} from "./economicVitalSigns";
 import type { VitalSignsHistoryRow } from "./economicVitalSigns";
 import type { LedgerReconciliation } from "@/lib/ledger/types";
 
@@ -1688,5 +1692,21 @@ describe("ring-fenced bank and escrow money", () => {
     expect(snapshot.securities.activeTradedListingShare.value).toBeNull();
     expect(snapshot.securities.twoSidedListingShare.value).toBeNull();
     expect(snapshot.securities.organicTwoSidedListingShare.value).toBeNull();
+  });
+});
+
+describe("nationalInflationByCountry", () => {
+  it("keys budgets by country the way the health snapshot does, defaulting a missing rate to zero", () => {
+    expect(
+      nationalInflationByCountry([
+        { _id: "federal", economicFactors: { inflationRate: 3.2 } },
+        { _id: "UK", economicFactors: { inflationRate: 5 } },
+        { _id: "PL" },
+      ])
+    ).toEqual({
+      economy: {
+        byCountry: { US: { inflation: 3.2 }, UK: { inflation: 5 }, PL: { inflation: 0 } },
+      },
+    });
   });
 });
