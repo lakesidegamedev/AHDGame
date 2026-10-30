@@ -8,7 +8,7 @@ A presidential nominee is only as good as the Senate count. NPP senators from th
 2. **Senate vote opens** for 24 hours. Every sitting Senator (player or NPP) can vote Confirm, Reject or Abstain. Abstentions are neutral.
 3. **NPP senators vote automatically** by party (see below).
 4. **The window closes** and the votes are tallied.
-   - More Confirm than Reject: the nominee takes office, replaces any acting secretary and the seat is filled.
+   - More Confirm than Reject: the nominee takes office, replaces any acting secretary and the seat is filled. If the nominee holds a central bank or FOMC office, they are instead offered a choice between the seat and that office before being seated.
    - More Reject than Confirm: the nomination fails and the seat stays as it was (vacant, or still held by an acting secretary). The President can nominate again at once. A failed nomination has no cooldown.
    - A tie fails. Confirmation needs a strict majority, and there is no Vice President tie-break on these votes.
 

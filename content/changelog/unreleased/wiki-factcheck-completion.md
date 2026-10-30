@@ -22,3 +22,5 @@ areas: [frontend]
   and the conserved vote pool.
 - Commodity pages now describe the operating recipes and final buyers that
   actually supply and demand each commodity.
+- Cabinet guides explain the office choice offered to nominees who already
+  hold a central bank or FOMC seat.

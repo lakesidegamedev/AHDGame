@@ -6,7 +6,7 @@ A cabinet seat is the difference between voting on policy and running a departme
 
 1. **Nomination.** Only the character holding the **President** office can nominate. The President picks a player or NPP and submits the nomination from the executive dashboard. One nomination per seat can be pending at a time: nominating someone else for the seat withdraws the earlier nomination. The President can also withdraw it before the vote closes.
 2. **Senate confirmation.** The Senate votes for 24 hours, and the Senate vote decides whether a nominee takes office. See [Confirmation Process](/wiki/confirmation-process).
-3. **Taking office.** A confirmed nominee is installed as the Cabinet member and the seat shows as filled.
+3. **Taking office.** A confirmed nominee is installed as the Cabinet member and the seat shows as filled. A nominee who holds a central bank or FOMC office is first offered a choice between the seat and that office.
 4. **Direct appointment.** The White House Chief of Staff is the exception: the President appoints them alone, with no Senate vote, and can fire them at any time.
 
 ![A vacant cabinet seat is filled by nomination and a 24 hour Senate vote, by an acting secretary, or by direct appointment.](/wiki-images/diagrams/cabinet-seat-lifecycle.svg)
