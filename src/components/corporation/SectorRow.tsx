@@ -35,8 +35,7 @@ import {
   sectorSplitUrl,
 } from "./plantsPresentation";
 import { facilityPlural, facilitySingular } from "@/lib/constants/facilityVocabulary";
-import { plantSizeUnits } from "@/lib/constants/facilityQuantum";
-import { facilitiesFromUnits } from "@/lib/constants/facilityQuantum";
+import { plantSizeForSector, plantsFromUnitsForSector } from "@/lib/constants/facilityQuantum";
 import { getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import { GROWTH_RATE_TURNS_PER_YEAR } from "@/lib/constants/corporationsClient";
 import { SectorMarginDrilldown } from "./SectorMarginDrilldown";
@@ -191,19 +190,9 @@ export function SectorRow({
   // deleting a plant, so only fall back to the old capacity-derived count for
   // payloads served during deployment of the ledger migration.
   const plantCount = plantsMode
-    ? (sector.plantCount ??
-      facilitiesFromUnits(
-        operatingSectorType as OperatingSectorType,
-        sector.capacityUnits ?? 0,
-        sector.industryModel,
-        sector.mediaDiscriminator
-      ))
+    ? (sector.plantCount ?? plantsFromUnitsForSector(sector, sector.capacityUnits ?? 0))
     : 0;
-  const unitsPerPlant = plantSizeUnits(
-    operatingSectorType as OperatingSectorType,
-    sector.industryModel,
-    sector.mediaDiscriminator
-  );
+  const unitsPerPlant = plantSizeForSector(sector);
   const plantNoun =
     plantCount === 1 ? facilitySingular(sector.sectorType) : facilityPlural(sector.sectorType);
   // Fill-adjusted margin (query layer): profit over the FULL cost bill, not

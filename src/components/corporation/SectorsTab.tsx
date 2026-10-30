@@ -38,7 +38,7 @@ import {
   capitalizeFacility,
   facilityPlural,
 } from "@/lib/constants/facilityVocabulary";
-import { facilitiesFromUnits } from "@/lib/constants/facilityQuantum";
+import { plantsFromUnitsForSector } from "@/lib/constants/facilityQuantum";
 import { SectorTypeDossier } from "./SectorTypeDossier";
 import { SectorStrategyPanel } from "./SectorStrategyPanel";
 import type { SectorTypeMetricContext } from "./sectorTypeMetrics";
@@ -549,14 +549,7 @@ export default function SectorsTab({
                 );
                 const totalSites = sortedSectors.reduce(
                   (sum, s) =>
-                    sum +
-                    (s.plantCount ??
-                      facilitiesFromUnits(
-                        s.sectorType as OperatingSectorType,
-                        s.capacityUnits ?? 0,
-                        s.industryModel,
-                        s.mediaDiscriminator
-                      )),
+                    sum + (s.plantCount ?? plantsFromUnitsForSector(s, s.capacityUnits ?? 0)),
                   0
                 );
                 const totalProduced = sortedSectors.reduce(
