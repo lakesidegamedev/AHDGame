@@ -1,3 +1,4 @@
+import { rejectWhileTurnProcessing } from "./turnGuard";
 import {
   rejectConstructionFinance,
   requestConstructionFinance,
@@ -212,6 +213,8 @@ export async function buildCapacity(request: Request, { params }: RouteParams) {
   try {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
+    const turnBusy = await rejectWhileTurnProcessing();
+    if (turnBusy) return turnBusy;
 
     // Own bucket at the money-moving siblings' rate (buyListedSector 10/min,
     // abandonSector 10/min) rather than the shared 20/min read-ish default: a

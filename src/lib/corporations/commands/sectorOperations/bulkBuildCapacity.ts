@@ -1,3 +1,4 @@
+import { rejectWhileTurnProcessing } from "./turnGuard";
 /**
  * Build capacity across many sectors in one request (suggestion 391).
  *
@@ -92,6 +93,8 @@ export async function bulkBuildCapacity(request: Request, { params }: RouteParam
   try {
     const auth = await requireBasicAuth();
     if (!auth.ok) return auth.response;
+    const turnBusy = await rejectWhileTurnProcessing();
+    if (turnBusy) return turnBusy;
 
     const parsed = await parseJsonBody(request, bulkBuildCapacitySchema);
     if (!parsed.success) return errorResponse(parsed.status, parsed.error);
