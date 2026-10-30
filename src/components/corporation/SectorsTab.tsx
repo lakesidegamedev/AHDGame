@@ -31,7 +31,7 @@ import {
   type SectorSortKey,
   type SortDir,
 } from "./sectorSortUtils";
-import { CAPACITY_UNIT_LABEL, FillChip, formatUnits } from "./plantsPresentation";
+import { CAPACITY_UNIT_LABEL, FillChip, UsedText, formatUnits } from "./plantsPresentation";
 import { computeFillRate, fillRateBand } from "@/lib/corporations/financialFogOfWar";
 import {
   buildOnePhrase,
@@ -553,7 +553,9 @@ export default function SectorsTab({
                     (s.plantCount ??
                       facilitiesFromUnits(
                         s.sectorType as OperatingSectorType,
-                        s.capacityUnits ?? 0
+                        s.capacityUnits ?? 0,
+                        s.industryModel,
+                        s.mediaDiscriminator
                       )),
                   0
                 );
@@ -583,13 +585,14 @@ export default function SectorsTab({
                       {formatUnits(totalCapacity)}
                     </span>
                     <span className={`${cellNum} text-right text-muted`}>
-                      {totalSites.toLocaleString("en-US")}
+                      {totalSites.toLocaleString("en-US")} plants
                     </span>
-                    <span className="flex justify-end">
+                    <span className="flex flex-col items-end">
                       <FillChip
                         fill={hasExactFill ? corpFill : null}
                         band={fillRateBand(corpFill)}
                       />
+                      <UsedText produced={totalProduced} capacity={totalCapacity} />
                     </span>
                     <span className={`${cellNum} text-right text-foreground`}>
                       {financialsRedacted ? "n/a" : fmtMoney(totalRev * scaleFactor)}

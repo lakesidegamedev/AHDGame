@@ -164,15 +164,87 @@ export function buildQueueBadgeLabel(queue: BuildQueueSummary): string {
   );
 }
 
+/** Plants (or fractions of a plant) for a count of capacity units. */
+function formatPlantCount(plants: number): string {
+  if (plants >= 10) return Math.round(plants).toLocaleString("en-US");
+  const rounded = Math.round(plants * 10) / 10;
+  return rounded.toLocaleString("en-US", { maximumFractionDigits: 1 });
+}
+
+/**
+ * Build progress in plants: how many are on order, how many already arrived,
+ * and (for smooth orders) how many land each turn. `plantUnits` is the
+ * sector's fixed plant size in capacity units.
+ */
+export function buildProgressInPlants(queue: BuildQueueSummary, plantUnits: number) {
+  const size = Math.max(1, plantUnits);
+  const ordered = queue.unitsOrdered / size;
+  const remaining = queue.unitsRemaining / size;
+  return {
+    ordered,
+    remaining,
+    delivered: Math.max(0, ordered - remaining),
+    perTurn: queue.unitsPerTurn > 0 ? queue.unitsPerTurn / size : null,
+  };
+}
+
+export function buildProgressLabel(
+  queue: BuildQueueSummary,
+  plantUnits: number,
+  singular: string,
+  plural: string
+): string {
+  const p = buildProgressInPlants(queue, plantUnits);
+  const noun = p.ordered === 1 ? singular : plural;
+  const done =
+    queue.lastOnlineTurn != null ? ` Last one is done on turn ${queue.lastOnlineTurn}.` : "";
+  const rate =
+    p.perTurn != null
+      ? ` About ${formatPlantCount(p.perTurn)} ${p.perTurn === 1 ? singular : plural} arrive each turn.`
+      : "";
+  return `${formatPlantCount(p.delivered)} of ${formatPlantCount(p.ordered)} ${noun} built so far, ${formatPlantCount(p.remaining)} still under construction.${rate}${done} Capacity is added a slice at a time, so the capacity figure rises each turn until then.`;
+}
+
 export function BuildQueueBadge({
   queue,
   className = "",
+  plantUnits,
+  plantSingular = "plant",
+  plantPlural = "plants",
 }: {
   queue: BuildQueueSummary | null | undefined;
   className?: string;
+  /** Capacity units in one plant. When given, the badge counts plants, not units. */
+  plantUnits?: number;
+  plantSingular?: string;
+  plantPlural?: string;
 }) {
   if (!queue || queue.unitsOrdered <= 0) return null;
   const turns = queue.turnsRemaining;
+  if (plantUnits != null) {
+    const p = buildProgressInPlants(queue, plantUnits);
+    const label = buildProgressLabel(queue, plantUnits, plantSingular, plantPlural);
+    return (
+      <span
+        className={`flex flex-col text-[11px] font-medium tabular-nums text-primary ${className}`.trim()}
+        aria-label={label}
+        title={label}
+      >
+        <span>
+          +{formatPlantCount(p.remaining)} building
+          {queue.lastOnlineTurn != null && (
+            <span className="font-normal opacity-80"> · done turn {queue.lastOnlineTurn}</span>
+          )}
+        </span>
+        {p.perTurn != null && (
+          <span className="font-normal opacity-80">
+            {formatPlantCount(p.delivered)} of {formatPlantCount(p.ordered)} in · about{" "}
+            {formatPlantCount(p.perTurn)} a turn
+          </span>
+        )}
+      </span>
+    );
+  }
   return (
     <span
       className={`inline-flex items-center gap-1 text-[11px] font-medium tabular-nums text-primary ${className}`.trim()}
@@ -191,6 +263,44 @@ export function BuildQueueBadge({
           {"T"}
         </span>
       )}
+    </span>
+  );
+}
+
+/**
+ * Share of capacity actually used last turn (produced over capacity). Fill only
+ * says how much of the OUTPUT sold, so a plant making a sliver of its capacity
+ * can still read 100% fill. Returns null when it cannot be known.
+ */
+export function capacityUsedFraction(
+  producedUnits: number | null | undefined,
+  capacityUnits: number | null | undefined
+): number | null {
+  if (producedUnits == null || capacityUnits == null) return null;
+  if (!Number.isFinite(producedUnits) || !Number.isFinite(capacityUnits) || capacityUnits <= 0) {
+    return null;
+  }
+  return Math.max(0, Math.min(1, producedUnits / capacityUnits));
+}
+
+export function UsedText({
+  produced,
+  capacity,
+  className = "",
+}: {
+  produced: number | null | undefined;
+  capacity: number | null | undefined;
+  className?: string;
+}) {
+  const used = capacityUsedFraction(produced, capacity);
+  if (used == null) return null;
+  const pct = Math.round(used * 100);
+  return (
+    <span
+      className={`text-[11px] tabular-nums ${pct < 50 ? "text-warning" : "text-muted"} ${className}`.trim()}
+      title="Share of this sector's capacity that was actually used to make output last turn. Low use means demand, staffing or inputs are holding the plants back."
+    >
+      {pct}% used
     </span>
   );
 }

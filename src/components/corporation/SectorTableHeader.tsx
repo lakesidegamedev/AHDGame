@@ -19,7 +19,7 @@ export const SECTOR_TABLE_GRID =
  * own column instead of a second line under profit.
  */
 export const PLANTS_SECTOR_TABLE_GRID =
-  "grid-cols-[minmax(220px,1.8fr)_minmax(120px,1fr)_minmax(72px,0.6fr)_80px_56px_64px_88px_88px_88px_64px_44px]";
+  "grid-cols-[minmax(220px,1.8fr)_minmax(120px,1fr)_minmax(72px,0.6fr)_80px_120px_72px_88px_88px_88px_64px_44px]";
 
 /** The grid template for the given world. */
 export function sectorTableGrid(plantsMode: boolean): string {
@@ -76,18 +76,18 @@ function columnsFor(plantsMode: boolean, timeScale: MoneyPeriod): Column[] {
       ...head,
       {
         label: "Capacity",
-        help: `What these plants can make in one financial day, in ${CAPACITY_UNIT_LABEL}. This is what you buy when you build. Capacity already paid for and under construction shows under the figure. Always per day: the period toggle rescales money only.`,
+        help: `What these plants can make in one financial day, in ${CAPACITY_UNIT_LABEL}. Plants are counted in the next column. This is what you buy when you build. Capacity already paid for and under construction shows under the figure. Always per day: the period toggle rescales money only.`,
         sortKey: "capacity",
         align: "right",
       },
       {
-        label: "Sites",
-        help: "Number of facilities the capacity is spread across.",
+        label: "Plants",
+        help: "Plants you own, and plants paid for and still being built. A plant is a fixed block of capacity for its sector type, so capacity divided by plant size is the plant count. Smooth builds add a slice every turn until the finish turn.",
         align: "right",
       },
       {
-        label: "Fill",
-        help: "Share of what these plants produced that actually sold. Low fill means paying to run capacity that earns nothing. For corporations you do not run, this is a broad band instead of the exact figure.",
+        label: "Sold",
+        help: "Share of the output offered that sold. This is sell-through, not use of capacity: a sector can sell 100% of a trickle. The small figure underneath, Used, is output made over capacity. Low sold means unsold output; low used means plants idling below capacity. For corporations you do not run, sold is a broad band instead of the exact figure.",
         sortKey: "fill",
         align: "right",
       },
