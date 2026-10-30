@@ -87,6 +87,37 @@ export interface ProductionPlan {
   recentSoldByOutput?: Readonly<Record<string, number>>;
 }
 
+/**
+ * What each company needs in cash to run its plants at full physical output
+ * this turn: fixed site and regulatory bills, plus wages and the inputs its
+ * stock does not cover, priced at the bid ceiling. The settlement scales a
+ * company's run by the share of this its free cash covers; the state operating
+ * advance sizes itself from the same figure so the two cannot drift.
+ */
+export function producerRunBudget(plans: readonly ProductionPlan[]): {
+  fixedBills: Map<string, number>;
+  variableNeed: Map<string, number>;
+} {
+  const fixedBills = new Map<string, number>();
+  const variableNeed = new Map<string, number>();
+  for (const p of plans) {
+    const full = p.capacityUnits * p.activeFraction * p.outputMultiplier;
+    let spend = p.labourCost;
+    for (const recipe of p.inputs) {
+      const stock = p.inputStock
+        .filter((s) => s.commodity === recipe.commodity)
+        .reduce((n, s) => n + s.units, 0);
+      spend += Math.max(0, full * recipe.unitsPerOutput - stock) * recipe.maximumUnitPrice;
+    }
+    fixedBills.set(p.accountId, (fixedBills.get(p.accountId) ?? 0) + p.otherOperatingCost);
+    variableNeed.set(
+      p.accountId,
+      (variableNeed.get(p.accountId) ?? 0) + finite(spend, "run budget")
+    );
+  }
+  return { fixedBills, variableNeed };
+}
+
 export interface ProducerInputReservation {
   id: string;
   producerId: string;
@@ -374,23 +405,7 @@ export function advanceProducerEconomy(input: {
   // the bid ceiling), so a company short of cash runs smaller instead of paying
   // every wage with nothing left for materials, and owes no wages for a run
   // that never happened.
-  const fixedBills = new Map<string, number>();
-  const variableNeed = new Map<string, number>();
-  for (const p of plans) {
-    const full = p.capacityUnits * p.activeFraction * p.outputMultiplier;
-    let spend = p.labourCost;
-    for (const recipe of p.inputs) {
-      const stock = p.inputStock
-        .filter((s) => s.commodity === recipe.commodity)
-        .reduce((n, s) => n + s.units, 0);
-      spend += Math.max(0, full * recipe.unitsPerOutput - stock) * recipe.maximumUnitPrice;
-    }
-    fixedBills.set(p.accountId, (fixedBills.get(p.accountId) ?? 0) + p.otherOperatingCost);
-    variableNeed.set(
-      p.accountId,
-      (variableNeed.get(p.accountId) ?? 0) + finite(spend, "run budget")
-    );
-  }
+  const { fixedBills, variableNeed } = producerRunBudget(plans);
   const runShare = new Map(
     [...bills.keys()].map((id) => {
       const need = variableNeed.get(id) ?? 0;
