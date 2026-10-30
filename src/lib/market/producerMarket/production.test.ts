@@ -259,8 +259,9 @@ describe("receipt-backed production", () => {
       ),
       producers: [plant({ inputs: [] })],
     });
-    expect(first.producers[0]).toMatchObject({ profit: -30, cashFlow: 0, closingArrears: 30 });
-    expect(first.payables.reduce((sum, claim) => sum + claim.amount, 0)).toBe(30);
+    // No cash: the plant staffs nothing, so only the fixed site bill is owed.
+    expect(first.producers[0]).toMatchObject({ profit: -10, cashFlow: 0, closingArrears: 10 });
+    expect(first.payables.reduce((sum, claim) => sum + claim.amount, 0)).toBe(10);
     const transfer = (rows: typeof first.accounts, amount: number) =>
       rows.map((account) => ({
         ...account,
@@ -276,10 +277,10 @@ describe("receipt-backed production", () => {
     });
     expect(second.producers[0]).toMatchObject({
       producedUnits: 0,
-      profit: -30,
+      profit: -10,
       cashFlow: -15,
-      arrearsPaid: 15,
-      closingArrears: 45,
+      arrearsPaid: 10,
+      closingArrears: 5,
     });
     const third = advanceProducerEconomy({
       turn: 3,
@@ -289,12 +290,12 @@ describe("receipt-backed production", () => {
     });
     expect(third.producers[0]).toMatchObject({
       profit: -30,
-      cashFlow: -75,
-      arrearsPaid: 45,
+      cashFlow: -35,
+      arrearsPaid: 5,
       closingArrears: 0,
     });
     expect(third.payables).toEqual([]);
-    expect(third.accounts.find((account) => account.id === "corp")!.cash).toBe(5);
+    expect(third.accounts.find((account) => account.id === "corp")!.cash).toBe(45);
   });
 
   it("reserves received cash for an unpaid creditor before allowing discretionary purchases", () => {
@@ -692,11 +693,11 @@ describe("receipt-backed production", () => {
       producedUnits: 0,
       labourPaid: 0,
       otherOperatingPaid: 0,
-      operatingArrears: 30,
-      labourArrears: 20,
+      operatingArrears: 10,
+      labourArrears: 0,
       otherOperatingArrears: 10,
       inventoryWriteOff: 100,
-      profit: -130,
+      profit: -110,
       cashFlow: 0,
     });
     expect(result.producers[0].inputStock[0].units).toBe(0);
@@ -708,8 +709,10 @@ describe("receipt-backed production", () => {
       accounts: accounts.map((a) => (a.id === "corp" ? { ...a, cash: 30 } : a)),
       producers: [plant({ id: "b", inputs: [] }), plant({ id: "a", inputs: [] })],
     });
-    expect(result.producers.map((p) => p.producedUnits)).toEqual([50, 50]);
-    expect(result.producers.map((p) => p.operatingArrears)).toEqual([15, 15]);
+    // 30 cash pays both site bills (20) and staffs a quarter of the wages (40),
+    // so each site runs a quarter and nothing is owed.
+    expect(result.producers.map((p) => p.producedUnits)).toEqual([25, 25]);
+    expect(result.producers.map((p) => p.operatingArrears)).toEqual([0, 0]);
     expect(result.accounts.find((a) => a.id === "corp")!.cash).toBe(0);
   });
 
