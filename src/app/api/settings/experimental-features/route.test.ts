@@ -56,6 +56,25 @@ describe("PATCH /api/settings/experimental-features", () => {
     expect(update[1].$set).not.toHaveProperty("experimentalFeatures");
   });
 
+  it("hides the Ask Keir drawer", async () => {
+    const response = await patch({ askDrawerHidden: true });
+    expect(response.status).toBe(200);
+    const update = vi.mocked(db.collectionMocks.users.updateOne).mock.calls[0];
+    expect(update[1].$set).toMatchObject({ askDrawerHidden: true });
+    expect(update[1].$set).not.toHaveProperty("askDrawerSide");
+  });
+
+  it("saves navigation pins and group order", async () => {
+    const navCustomization = {
+      pinned: ["world:stockMarket", "help:about"],
+      order: { "world:markets": ["forex", "stockMarket"] },
+    };
+    const response = await patch({ navCustomization });
+    expect(response.status).toBe(200);
+    const update = vi.mocked(db.collectionMocks.users.updateOne).mock.calls[0];
+    expect(update[1].$set).toMatchObject({ navCustomization });
+  });
+
   it.each(["cards", "browser", "directory", "standard"])(
     "persists desktop layout %s without changing opt-in",
     async (desktopNavigationLayout) => {
@@ -84,6 +103,10 @@ describe("PATCH /api/settings/experimental-features", () => {
     { experimentalFeatures: "yes" },
     { desktopNavigationLayout: "mobile" },
     { desktopNavigationLayout: true },
+    { askDrawerHidden: "no" },
+    { navCustomization: { pinned: ["a:1", "a:2", "a:3", "a:4", "a:5", "a:6"], order: {} } },
+    { navCustomization: { pinned: ["has space"], order: {} } },
+    { navCustomization: { pinned: [] } },
   ])("rejects %j", async (body) => {
     const response = await patch(body);
     expect(response.status).toBe(400);

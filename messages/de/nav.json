@@ -220,7 +220,51 @@
         "admin": "Admin"
       }
     },
+    "settingsMenu": {
+      "themes": {
+        "default": "Standard",
+        "oled": "OLED",
+        "cloakroom": "Cloakroom",
+        "broadsheet": "Broadsheet",
+        "coldwar": "Kalter Krieg",
+        "command-1953": "1953 Command",
+        "usa": "USA",
+        "light": "Hell",
+        "pastel": "Pastell",
+        "dark-pastel": "Dunkles Pastell",
+        "retro": "Retro",
+        "solarized": "Solarized"
+      },
+      "label": "Schnelleinstellungen",
+      "editNavigation": "Navigation bearbeiten",
+      "askKeir": "Ask Keir",
+      "theme": "Design",
+      "saveError": "Speichern fehlgeschlagen. Bitte erneut versuchen."
+    },
+    "customize": {
+      "title": "Navigation bearbeiten",
+      "hint": "Ziehen oder Pfeile nutzen, um ein Menü neu zu ordnen. Mit dem Stern heftest du ein Ziel an die obere Leiste.",
+      "pinnedTitle": "An die obere Leiste geheftet",
+      "pinnedEmpty": "Noch nichts angeheftet. Markiere unten ein Ziel mit dem Stern.",
+      "pinnedWideHint": "zwei auf kleineren Bildschirmen, alle auf breiten",
+      "menus": "Menüs",
+      "shortcuts": "Deine Verknüpfungen",
+      "pin": "An obere Leiste heften",
+      "unpin": "Lösen",
+      "pinsFull": "Du kannst bis zu {max} anheften",
+      "moveUp": "Nach oben",
+      "moveDown": "Nach unten",
+      "moveLeft": "Nach links",
+      "moveRight": "Nach rechts",
+      "reset": "Auf Standard zurücksetzen",
+      "done": "Fertig",
+      "saveError": "Navigation konnte nicht gespeichert werden. Bitte erneut versuchen."
+    },
     "desktop": {
+      "editNavigation": "Navigation bearbeiten",
+      "pin": "An obere Leiste heften",
+      "unpin": "Lösen",
+      "pinsFull": "Maximum erreicht",
       "shortcuts": "Deine Verknüpfungen",
       "openOverview": "Übersicht öffnen",
       "sections": "Bereiche",

@@ -67,10 +67,24 @@ import {
   navTabClassName,
 } from "@/components/navbar/experimentalNavPrimitives";
 import { ExperimentalUserMenu } from "@/components/navbar/ExperimentalUserMenu";
+import { NavSettingsMenu, NavSettingsIcon } from "@/components/navbar/NavSettingsMenu";
+import { PixelNavIcon } from "@/components/navbar/PixelNavIcon";
+import { useToast } from "@/contexts/ToastContext";
+import { useRefetchNav } from "@/contexts/AuthDataContext";
+import {
+  applySavedOrder,
+  MAX_NAV_PINS,
+  navCustomization as parseNavCustomization,
+  navGroupKey,
+  navPinKey,
+  togglePin,
+  type NavCustomization,
+} from "@/lib/navigation/navCustomization";
 import { ExperimentalMobileMenu } from "@/components/navbar/ExperimentalMobileMenu";
 import dynamic from "next/dynamic";
 
 import {
+  pixelIconForLink,
   rankDesktopLinks,
   type DesktopNavLink,
   type DesktopNavMenu,
@@ -88,6 +102,15 @@ import type {
   OpenKey,
 } from "@/components/navbar/experimentalNavTypes";
 
+const NavCustomizeDialog = dynamic(
+  () =>
+    import("@/components/navbar/NavCustomizeDialog").then((module) => module.NavCustomizeDialog),
+  { ssr: false }
+);
+
+type DesktopMenuKey = "nation" | "world" | "state" | "help" | "staff";
+const CUSTOMIZABLE_MENUS: DesktopMenuKey[] = ["state", "nation", "world", "help", "staff"];
+
 const DesktopMegaMenu = dynamic(
   () => import("@/components/navbar/DesktopMegaMenu").then((module) => module.DesktopMegaMenu),
   { ssr: false }
@@ -96,6 +119,8 @@ const DesktopMegaMenu = dynamic(
 export interface ExperimentalNavbarProps {
   navigationVariant?: "a" | "b";
   desktopLayout?: DesktopNavigationLayout | null;
+  /** Saved pins and group order; used by the grouped-cards layout only. */
+  navCustomization?: unknown;
   clientShell?: boolean;
   /** Type the site name in on load, in mono (1991 worlds). */
   typedWordmark?: boolean;
@@ -129,6 +154,7 @@ export interface ExperimentalNavbarProps {
 export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
   navigationVariant = "a",
   desktopLayout = null,
+  navCustomization: savedCustomization,
   clientShell = false,
   typedWordmark = false,
   user,
@@ -182,6 +208,60 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const dropdownAnchorRef = useRef<HTMLDivElement>(null);
   const dropdownPanelRef = useRef<HTMLDivElement>(null);
+
+  // Grouped cards is the layout that carries the customisable bar: wide
+  // container, gear menu, pinned destinations and per-group order.
+  const customizableNav = desktopLayout === "cards";
+  const { showToast } = useToast();
+  const refetchNav = useRefetchNav();
+  const savedCustomizationJson = JSON.stringify(parseNavCustomization(savedCustomization));
+  const [custom, setCustom] = useState<NavCustomization>(() =>
+    parseNavCustomization(savedCustomization)
+  );
+  const [customizeOpen, setCustomizeOpen] = useState(false);
+  const lastSavedRef = useRef(savedCustomizationJson);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (saveTimerRef.current) return;
+    lastSavedRef.current = savedCustomizationJson;
+    setCustom(JSON.parse(savedCustomizationJson) as NavCustomization);
+  }, [savedCustomizationJson]);
+
+  useEffect(
+    () => () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    },
+    []
+  );
+
+  // Applies at once; the account save is batched so a run of reorders is one request.
+  const updateCustom = useCallback(
+    (next: NavCustomization) => {
+      setCustom(next);
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(() => {
+        saveTimerRef.current = null;
+        const body = JSON.stringify(next);
+        if (body === lastSavedRef.current) return;
+        fetch("/api/settings/experimental-features", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ navCustomization: next }),
+        })
+          .then((response) => {
+            if (!response.ok) throw new Error(String(response.status));
+            lastSavedRef.current = body;
+            refetchNav();
+          })
+          .catch(() => {
+            setCustom(JSON.parse(lastSavedRef.current) as NavCustomization);
+            showToast(t("customize.saveError"), "error");
+          });
+      }, 600);
+    },
+    [refetchNav, showToast, t]
+  );
 
   const nationMenuOpen = open === "nation" || open === "country";
   const activeCharters = useActiveCharters(nationMenuOpen || mobileMenuOpen);
@@ -766,12 +846,12 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
     description: t.has(`desktop.descriptions.${id}`) ? t(`desktop.descriptions.${id}`) : undefined,
     ...extra,
   });
-  let desktopMenu: DesktopNavMenu | null = null;
-  if (useDesktopMegaMenu && open === "nation" && showProfile) {
+  const desktopMenus: Partial<Record<DesktopMenuKey, DesktopNavMenu>> = {};
+  if (useDesktopMegaMenu && (open === "nation" || customizableNav) && showProfile) {
     const map = nationalDetailSections
       .flatMap((section) => section.items)
       .find((item) => item.id === "map");
-    desktopMenu = {
+    desktopMenus.nation = {
       title: countryName(pageCountry as CountryId),
       overview: desktopLink(
         "overview",
@@ -839,7 +919,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
       ]),
     };
   }
-  if (useDesktopMegaMenu && open === "world") {
+  if (useDesktopMegaMenu && (open === "world" || customizableNav)) {
     const markets = new Set(["stockMarket", "banking", "forex", "trade", "imf"]);
     const industry = new Set(["sectors", "governmentContracts", "unions", "news"]);
     const desktopWorldItems = visibleWorldNavItems({
@@ -857,7 +937,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
     const personal = new Set(
       desktopWorldItems.filter((item) => item.section === "corporate").map((item) => item.id)
     );
-    desktopMenu = {
+    desktopMenus.world = {
       title: t("common.world"),
       overview: desktopLink("nations", t("menus.world.nations"), "/world"),
       groups: [
@@ -884,9 +964,9 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
       shortcuts: rankDesktopLinks(links.filter((item) => personal.has(item.id))),
     };
   }
-  if (useDesktopMegaMenu && open === "state" && homeState) {
+  if (useDesktopMegaMenu && (open === "state" || customizableNav) && homeState) {
     const region = regionUrl(homeState.countryId, homeState.id);
-    desktopMenu = {
+    desktopMenus.state = {
       title: homeState.name,
       overview: desktopLink("overview", homeState.name, region),
       groups: [
@@ -952,8 +1032,8 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
       ]),
     };
   }
-  if (useDesktopMegaMenu && open === "help") {
-    desktopMenu = {
+  if (useDesktopMegaMenu && (open === "help" || customizableNav)) {
+    desktopMenus.help = {
       title: t("common.help"),
       overview: desktopLink(
         "guides",
@@ -1010,17 +1090,57 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
       shortcuts: [],
     };
   }
-  if (useDesktopMegaMenu && open === "staff" && staffSubItems.length > 0) {
+  if (useDesktopMegaMenu && (open === "staff" || customizableNav) && staffSubItems.length > 0) {
     const items = staffSubItems.map((item) =>
       desktopLink(item.labelKey, t(item.labelKey), item.href, { external: item.external })
     );
-    desktopMenu = {
+    desktopMenus.staff = {
       title: t("common.staff"),
       overview: items[0]!,
       groups: [{ id: "staff", label: t("common.staff"), items }],
       shortcuts: [],
     };
   }
+  // Saved group order applies to the grouped-cards layout only.
+  const orderedMenu = (key: DesktopMenuKey, menu: DesktopNavMenu): DesktopNavMenu =>
+    customizableNav
+      ? {
+          ...menu,
+          groups: menu.groups.map((group) => ({
+            ...group,
+            items: applySavedOrder(group.items, custom.order[navGroupKey(key, group.id)]),
+          })),
+        }
+      : menu;
+  const openMenuKey = CUSTOMIZABLE_MENUS.find((key) => key === open);
+  const openMenu = openMenuKey ? desktopMenus[openMenuKey] : undefined;
+  const desktopMenu = openMenuKey && openMenu ? orderedMenu(openMenuKey, openMenu) : null;
+
+  const customizableMenus = customizableNav
+    ? CUSTOMIZABLE_MENUS.flatMap((key) => {
+        const menu = desktopMenus[key];
+        // Only menus that have a tab in the bar, so a pin never outlives its menu.
+        const hasTab =
+          key === "help" ||
+          (key === "staff"
+            ? !!(user?.isAdmin || user?.isModerator)
+            : navItems.some((item) => item.key === key));
+        return menu && hasTab ? [{ id: key, menu }] : [];
+      })
+    : [];
+  const pinLookup = new Map<string, DesktopNavLink>();
+  for (const { id, menu } of customizableMenus) {
+    for (const item of [...menu.groups.flatMap((group) => group.items), ...menu.shortcuts]) {
+      const key = navPinKey(id, item.id);
+      if (item.href && !item.disabled && !pinLookup.has(key)) pinLookup.set(key, item);
+    }
+  }
+  const pinnedLinks = custom.pinned.flatMap((key) => {
+    const item = pinLookup.get(key);
+    return item ? [{ key, item }] : [];
+  });
+  const pinsFull = custom.pinned.length >= MAX_NAV_PINS;
+
   const megaPanel =
     desktopMenu && desktopLayout && desktopLayout !== "standard" ? (
       <DesktopMegaMenu
@@ -1031,6 +1151,19 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
         anchorRef={dropdownAnchorRef}
         panelRef={dropdownPanelRef}
         onClose={closeAll}
+        {...(customizableNav && openMenuKey
+          ? {
+              pinnedIds: new Set(
+                custom.pinned
+                  .filter((key) => key.startsWith(`${openMenuKey}:`))
+                  .map((key) => key.slice(openMenuKey.length + 1))
+              ),
+              pinsFull,
+              onTogglePin: (itemId: string) =>
+                updateCustom(togglePin(custom, navPinKey(openMenuKey, itemId))),
+              onCustomize: () => setCustomizeOpen(true),
+            }
+          : {})}
       />
     ) : null;
 
@@ -1054,7 +1187,9 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
               where a shorter nation would fit, so it broke for some players and
               not others. Below lg the drawer below handles it, and does so
               already. */}
-          <div className="mx-auto hidden min-h-[60px] max-w-7xl items-center justify-between gap-3 overflow-visible px-5 lg:flex">
+          <div
+            className={`mx-auto hidden min-h-[60px] items-center justify-between gap-3 overflow-visible lg:flex ${customizableNav ? "max-w-none px-5 2xl:px-8" : "max-w-7xl px-5"}`}
+          >
             {/* Brand */}
             <Link
               href="/profile"
@@ -1136,6 +1271,44 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
                     >
                       {tabIcon}
                       <NavItemLabel>{item.label}</NavItemLabel>
+                    </Link>
+                  );
+                })}
+
+                {pinnedLinks.map(({ key, item }, index) => {
+                  const active = !!item.href && !item.external && isNavActive(pathname, item.href);
+                  // Room for two pins on narrower desktops, all of them on wide screens.
+                  const visibility = index < 2 ? "hidden xl:inline-flex" : "hidden 2xl:inline-flex";
+                  const content = (
+                    <>
+                      <PixelNavIcon
+                        name={item.icon ?? pixelIconForLink(item.id)}
+                        className="mr-1.5 h-4 w-4 shrink-0"
+                      />
+                      <span className="max-w-[11rem] truncate">{item.label}</span>
+                    </>
+                  );
+                  const className = `${navTabClassName(active)} ${visibility}`;
+                  return item.external ? (
+                    <a
+                      key={key}
+                      href={item.href}
+                      target={item.href!.startsWith("mailto:") ? undefined : "_blank"}
+                      rel="noopener noreferrer"
+                      data-nav-pin={key}
+                      className={className}
+                    >
+                      {content}
+                    </a>
+                  ) : (
+                    <Link
+                      key={key}
+                      href={item.href!}
+                      aria-current={active ? "page" : undefined}
+                      data-nav-pin={key}
+                      className={className}
+                    >
+                      {content}
                     </Link>
                   );
                 })}
@@ -1316,6 +1489,33 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
                       <path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                     </svg>
                   </Link>
+                )}
+
+                {/* Gear: settings, navigation editor, Ask Keir, theme, sign out */}
+                {user && customizableNav && (
+                  <div className="relative" ref={open === "gear" ? dropdownAnchorRef : undefined}>
+                    <button
+                      type="button"
+                      onClick={() => toggle("gear")}
+                      aria-expanded={open === "gear"}
+                      aria-haspopup="menu"
+                      aria-label={t("settingsMenu.label")}
+                      title={t("settingsMenu.label")}
+                      className={`flex h-9 w-9 items-center justify-center rounded-lg border border-card-border bg-card transition-colors hover:border-muted/50 ${open === "gear" ? "text-foreground ring-2 ring-primary/40" : "text-muted hover:text-foreground"}`}
+                    >
+                      <NavSettingsIcon />
+                    </button>
+                    {open === "gear" && (
+                      <NavSettingsMenu
+                        anchorRef={dropdownAnchorRef}
+                        panelRef={dropdownPanelRef}
+                        singleplayer={!!user.singleplayer}
+                        closeAll={closeAll}
+                        onEditNavigation={() => setCustomizeOpen(true)}
+                        onSignOut={handleSignOut}
+                      />
+                    )}
+                  </div>
                 )}
 
                 {/* User / avatar dropdown */}
@@ -1590,6 +1790,15 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
           </div>,
           document.body
         )}
+      {customizeOpen && customizableNav && (
+        <NavCustomizeDialog
+          menus={customizableMenus}
+          pinLookup={pinLookup}
+          custom={custom}
+          onChange={updateCustom}
+          onClose={() => setCustomizeOpen(false)}
+        />
+      )}
     </>
   );
 });
