@@ -260,14 +260,7 @@ export function computePlantsCapacity(input: PlantsCapacityInput): PlantsCapacit
         currentGrowthRate: 0,
       }) * recessionFactorOf(input.recessionCapacityFactor)
     : 0;
-  const plantLedger = plantsEnabled
-    ? seedPlantLedger(
-        sector.sectorType,
-        plantsOwnedCapacity,
-        sector.industryModel,
-        sector.mediaDiscriminator
-      )
-    : null;
+  const plantLedger = plantsEnabled ? seedPlantLedger(sector, plantsOwnedCapacity) : null;
   // ─── P5: the PAID BASIS of that capacity ──────────────────────────────────
   //
   //   book_next = (book_prev + cash of the orders that just landed) × (the same

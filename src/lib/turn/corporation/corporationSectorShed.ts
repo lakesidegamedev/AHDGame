@@ -192,12 +192,7 @@ export async function shedSectorsForCorps(
         const nextBook = priorBook != null ? priorBook * remainingFraction : null;
 
         s.capitalStock = stock - shedUnits;
-        const plantLedger = seedPlantLedger(
-          s.sectorType,
-          s.capitalStock,
-          s.industryModel,
-          s.mediaDiscriminator
-        );
+        const plantLedger = seedPlantLedger(s, s.capitalStock);
         s.workers = workers - shedWorkers;
         if (nextBook != null) s.capacityBookAnchor = nextBook;
         s.updatedAt = now;

@@ -8,25 +8,31 @@ import {
 
 describe("seedPlantLedger", () => {
   it("matches the existing whole-facility presentation without changing stock", () => {
-    expect(seedPlantLedger("energy", 999)).toEqual({
+    expect(seedPlantLedger({ sectorType: "energy" }, 999)).toEqual({
       plantCount: 3,
       plantUnitRemainder: 249,
     });
-    expect(seedPlantLedger("energy", 12)).toEqual({
+    expect(seedPlantLedger({ sectorType: "energy" }, 12)).toEqual({
       plantCount: 1,
       plantUnitRemainder: 0,
     });
-    expect(seedPlantLedger("energy", 0)).toEqual({
+    expect(seedPlantLedger({ sectorType: "energy" }, 0)).toEqual({
       plantCount: 0,
       plantUnitRemainder: 0,
     });
   });
 
   it("keeps the legacy one-unit vehicle facility quantum on a manufacturing model", () => {
-    const ledger = seedPlantLedger("manufacturing", 3.7, "vehicles");
+    const ledger = seedPlantLedger({ sectorType: "manufacturing", industryModel: "vehicles" }, 3.7);
     expect(ledger.plantCount).toBe(3);
     expect(ledger.plantUnitRemainder).toBeCloseTo(0.7);
-    expect(plantCapacityDeltaPipeline("manufacturing", 1, {}, "vehicles")[1]?.$set).toMatchObject({
+    expect(
+      plantCapacityDeltaPipeline(
+        { sectorType: "manufacturing", industryModel: "vehicles" },
+        1,
+        {}
+      )[1]?.$set
+    ).toMatchObject({
       plantCount: {
         $cond: [
           { $lte: ["$capitalStock", 0] },
@@ -44,10 +50,28 @@ describe("seedPlantLedger", () => {
   });
 });
 
+describe("vehicle recipe on a plain manufacturing sector", () => {
+  const sector = { sectorType: "manufacturing", strategyId: "vehicle_assembly" };
+
+  it("seeds the ledger on the vehicle plant size", () => {
+    const ledger = seedPlantLedger(sector, 41.7);
+    expect(ledger.plantCount).toBe(41);
+    expect(ledger.plantUnitRemainder).toBeCloseTo(0.7);
+    expect(ledger).toEqual(
+      seedPlantLedger({ sectorType: "manufacturing", industryModel: "vehicles" }, 41.7)
+    );
+  });
+
+  it("derives the atomic pipeline count on the same size", () => {
+    const set = plantCapacityDeltaPipeline(sector, 1)[1]?.$set as Record<string, unknown>;
+    expect(JSON.stringify(set.plantCount)).toContain('"$divide":["$capitalStock",1]');
+  });
+});
+
 describe("advancePlantLedger", () => {
   it("combines fractional deliveries into whole plants", () => {
     const first = advancePlantLedger({
-      sectorType: "energy",
+      sector: { sectorType: "energy" },
       plantCount: 10,
       plantUnitRemainder: 200,
       currentCapitalStock: 0,
@@ -56,7 +80,7 @@ describe("advancePlantLedger", () => {
     expect(first).toEqual({ plantCount: 11, plantUnitRemainder: 50 });
 
     const second = advancePlantLedger({
-      sectorType: "energy",
+      sector: { sectorType: "energy" },
       ...first,
       currentCapitalStock: 0,
       deliveredUnits: 450,
@@ -67,7 +91,7 @@ describe("advancePlantLedger", () => {
   it("self-seeds rows that missed the migration", () => {
     expect(
       advancePlantLedger({
-        sectorType: "retail",
+        sector: { sectorType: "retail" },
         plantCount: undefined,
         plantUnitRemainder: undefined,
         currentCapitalStock: 800,
@@ -88,7 +112,9 @@ describe("splitWholePlantCount", () => {
 
 describe("plantCapacityDeltaPipeline", () => {
   it("derives count and remainder from the post-delta stock in a later atomic stage", () => {
-    const pipeline = plantCapacityDeltaPipeline("energy", 120, { updatedAt: "now" });
+    const pipeline = plantCapacityDeltaPipeline({ sectorType: "energy" }, 120, {
+      updatedAt: "now",
+    });
     expect(pipeline).toHaveLength(2);
     expect(pipeline[0]).toEqual({
       $set: {

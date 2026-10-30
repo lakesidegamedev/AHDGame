@@ -1372,12 +1372,7 @@ export function buildSectorPlantsSection(args: {
   const plantCount =
     Number.isInteger(sector.plantCount) && (sector.plantCount ?? 0) >= 0
       ? (sector.plantCount as number)
-      : seedPlantLedger(
-          sector.sectorType,
-          sector.capitalStock,
-          sector.industryModel,
-          sector.mediaDiscriminator
-        ).plantCount;
+      : seedPlantLedger(sector, sector.capitalStock).plantCount;
   const producedUnits = num(sector.producedUnits);
   const soldUnits = num(sector.soldUnits);
   const mothballed = sector.mothballed === true;
@@ -1730,6 +1725,7 @@ export function buildSectorPlantsSection(args: {
 
   return {
     plantCount,
+    strategyId: sector.strategyId ?? null,
     capacityUnits,
     producedUnits,
     soldUnits,

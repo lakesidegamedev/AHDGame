@@ -28,7 +28,10 @@ export interface ProducerSectorTarget {
   capacity: ProducerCapacityState;
   operatingRecipeRatio: number;
   recessionCapacityFactor: number;
-  plantType: Pick<CorporateSector, "sectorType" | "industryModel" | "mediaDiscriminator">;
+  plantType: Pick<
+    CorporateSector,
+    "sectorType" | "industryModel" | "mediaDiscriminator" | "strategyId"
+  >;
 }
 
 interface FrozenProducerTurn {
@@ -189,12 +192,7 @@ function physicalWrite(
 ) {
   return {
     ...physicalImage(closing.state),
-    ...seedPlantLedger(
-      target.plantType.sectorType,
-      closing.state.ownedDailyUnits,
-      target.plantType.industryModel,
-      target.plantType.mediaDiscriminator
-    ),
+    ...seedPlantLedger(target.plantType, closing.state.ownedDailyUnits),
     constructionInProgressAnchor: closing.constructionInProgressAnchor,
   };
 }

@@ -5,8 +5,7 @@
  * prices each one through the single-sector build path, and uses these helpers
  * to pick the sectors, size each order and decide which orders the cash covers.
  */
-import { plantSizeUnits } from "@/lib/constants/facilityQuantum";
-import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
+import { plantSizeForSector, type PlantSizingSector } from "@/lib/constants/facilityQuantum";
 
 /** Most sectors one bulk request may price or build. Each one is a full single-sector build. */
 export const BULK_BUILD_MAX_SECTORS = 50;
@@ -69,10 +68,10 @@ export function selectBulkBuildSectors<T extends BulkBuildCandidate>(
  */
 export function bulkBuildUnits(
   rule: BulkBuildRule,
-  sector: { sectorType: string; capacityUnits: number },
+  sector: PlantSizingSector & { capacityUnits: number },
   maxUnitsPerOrder: number
 ): number {
-  const perFacility = Math.max(1, plantSizeUnits(sector.sectorType as OperatingSectorType));
+  const perFacility = Math.max(1, plantSizeForSector(sector));
   let facilities: number;
   if (rule.kind === "facilities") {
     facilities = Math.max(1, Math.floor(rule.count));

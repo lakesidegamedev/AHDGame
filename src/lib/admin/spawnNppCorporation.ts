@@ -578,7 +578,15 @@ async function grantNppSectorFromUnownedPool(
     ...(plantsEnabled
       ? {
           capitalStock: startingCapacityUnits,
-          ...seedPlantLedger(type, startingCapacityUnits, industryModel, mediaDiscriminator),
+          ...seedPlantLedger(
+            {
+              sectorType: type,
+              industryModel,
+              mediaDiscriminator,
+              strategyId: input.initialStrategyId,
+            },
+            startingCapacityUnits
+          ),
           // Born under plants — never needs the flip-turn migration.
           plantsStartTurn: input.foundedAtTurn ?? 0,
         }

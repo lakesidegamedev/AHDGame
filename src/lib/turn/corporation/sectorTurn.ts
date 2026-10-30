@@ -726,12 +726,7 @@ export function processSector(
   const persistedCapacityBookAnchor = capacityBookAnchor * retainedCapacityShare;
   const persistedPlantLedger =
     idleRetirement.retireFraction > 0
-      ? seedPlantLedger(
-          sector.sectorType,
-          persistedOwnedCapacity,
-          sector.industryModel,
-          sector.mediaDiscriminator
-        )
+      ? seedPlantLedger(sector, persistedOwnedCapacity)
       : plantLedger;
   // Phased stock-market boost, phase A: lift realized operating revenue AFTER
   // every market-microstructure leg (governor, clearing, embargo) has run, so
