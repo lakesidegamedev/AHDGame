@@ -657,6 +657,7 @@ export function NavbarWrapper({
                 navData?.user?.experimentalFeatures,
                 navData?.user?.desktopNavigationLayout
               )}
+              navCustomization={navData?.user?.navCustomization}
               clientShell={clientShell}
               typedWordmark={typedWordmark}
               user={

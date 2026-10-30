@@ -384,6 +384,7 @@
       }
     },
     "askDrawer": {
+      "showLabel": "Ask Keir anzeigen",
       "title": "Ask-Keir-Seitenleiste",
       "body": "Ask Keir sitzt am Rand der meisten Seiten. Öffne die Leiste, um Fragen zum Spiel oder zur aktuellen Seite zu stellen. Sie ist mit deinem Spielkonto angemeldet und teilt Verlauf und Tageslimits mit der Ask-Keir-Seite. Auf dem Handy öffnet sie sich über den runden Keir-Knopf in der Ecke.",
       "sideLabel": "Seitenleiste andocken",

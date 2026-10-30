@@ -1,4 +1,5 @@
 import type { DesktopNavigationLayout } from "@/lib/navigation/desktopNavigationLayout";
+import type { NavCustomization } from "@/lib/navigation/navCustomization";
 import type { ObjectId } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import type { NotificationPreferences } from "./notifications";
@@ -178,6 +179,10 @@ export interface User {
   desktopNavigationLayout?: DesktopNavigationLayout;
   /** Which edge of the screen the experimental Ask drawer docks to. */
   askDrawerSide?: "left" | "right";
+  /** Hides the Ask Keir drawer and its edge tab. Off unless explicitly true. */
+  askDrawerHidden?: boolean;
+  /** Pins and per-group order for the grouped-cards desktop navigation. */
+  navCustomization?: NavCustomization;
   actionsViewMode?: "cards" | "compact";
   /** Corporation Overview layout: a short at-a-glance view or the full table view. */
   corpOverviewMode?: "simple" | "pro";
