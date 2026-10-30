@@ -194,3 +194,173 @@ export function fiscalScaleLogLine(
     );
   return `[fiscalScale] t${turn} stage=${stage} n=${states.length} ${parts.join(" ")}`;
 }
+
+// Stage 3: debt service split.
+
+/** Holders paid in the same real money players hold: always at full face. */
+const PLAYER_COUPON_HOLDER_KINDS: ReadonlySet<string> = new Set([
+  "character",
+  "imperial",
+  "corporation",
+]);
+
+interface ScalableCouponHolder {
+  kind: string;
+  amountLocal: number;
+  amountAnchor: number;
+}
+
+interface ScalableCouponClaim<H extends ScalableCouponHolder> {
+  amountLocal: number;
+  dueTurn: number;
+  holders: H[];
+}
+
+export function couponClaimHasPlayerHolder(claim: {
+  holders: ReadonlyArray<{ kind: string }>;
+}): boolean {
+  return claim.holders.some((holder) => PLAYER_COUPON_HOLDER_KINDS.has(holder.kind));
+}
+
+function usableScale(scale: number | null | undefined): scale is number {
+  return typeof scale === "number" && Number.isFinite(scale) && scale > 0;
+}
+
+/**
+ * A coupon or principal claim as it settles under the debt service split:
+ * synthetic holders (bond pool float, index funds, NPPs) at book times the
+ * scale, player holders at full face. Without a usable scale the claim settles
+ * at book, as it does today.
+ */
+export function claimAtFiscalScale<
+  H extends ScalableCouponHolder,
+  C extends ScalableCouponClaim<H>,
+>(claim: C, scale: number | null | undefined): C {
+  if (!usableScale(scale)) return claim;
+  const s = Math.min(FISCAL_SCALE_CEILING, scale);
+  if (s >= FISCAL_SCALE_CEILING) return claim;
+  const holders = claim.holders.map((holder) =>
+    PLAYER_COUPON_HOLDER_KINDS.has(holder.kind)
+      ? holder
+      : { ...holder, amountLocal: holder.amountLocal * s, amountAnchor: holder.amountAnchor * s }
+  );
+  return {
+    ...claim,
+    holders,
+    amountLocal: holders.reduce((sum, holder) => sum + holder.amountLocal, 0),
+  };
+}
+
+/** Settlement order under the split: claims owed to players first, then oldest first. */
+export function fiscalScaleCouponOrder<C extends ScalableCouponClaim<ScalableCouponHolder>>(
+  claims: readonly C[]
+): C[] {
+  return [...claims].sort(
+    (a, b) =>
+      Number(couponClaimHasPlayerHolder(b)) - Number(couponClaimHasPlayerHolder(a)) ||
+      a.dueTurn - b.dueTurn
+  );
+}
+
+/**
+ * Book amount bound for loading claims a Treasury holding `cashLocal` could
+ * settle under the split. Scaled claims cost at most book, so the bound is a
+ * superset; the payout loop and the guarded debit stay the authority.
+ */
+export function fiscalScaleClaimLoadBound(
+  cashLocal: number,
+  scale: number | null | undefined
+): number {
+  if (!Number.isFinite(cashLocal) || cashLocal <= 0) return 0;
+  if (!usableScale(scale)) return cashLocal;
+  return cashLocal / Math.min(FISCAL_SCALE_CEILING, scale);
+}
+
+// Stage 2: tax and spend in real money.
+
+/**
+ * Largest share of a country's household cash the Treasury collects in one
+ * turn. Book revenue times the scale is the target; this keeps one turn of tax
+ * from emptying the wallets that buy the economy's output.
+ */
+export const FISCAL_TAX_MAX_HOUSEHOLD_SHARE = 0.2;
+
+/** Book revenue a turn, less the corporate tax the corporate phase already collects in real money. */
+export function bookNonCorporateRevenuePerTurn(
+  revenue:
+    | {
+        total?: number;
+        domesticCorporateTax?: number;
+        foreignCorporateTax?: number;
+      }
+    | null
+    | undefined
+): number {
+  const total = revenue?.total ?? 0;
+  const corporate = (revenue?.domesticCorporateTax ?? 0) + (revenue?.foreignCorporateTax ?? 0);
+  const annual = total - Math.max(0, Number.isFinite(corporate) ? corporate : 0);
+  return Number.isFinite(annual) && annual > 0 ? annual / TURNS_PER_YEAR : 0;
+}
+
+/** Book primary spending a turn: total spending less debt interest. */
+export function bookPrimarySpendingPerTurn(
+  spending:
+    | {
+        total?: number;
+        debtInterest?: number;
+      }
+    | null
+    | undefined
+): number {
+  const annual = (spending?.total ?? 0) - (spending?.debtInterest ?? 0);
+  return Number.isFinite(annual) && annual > 0 ? annual / TURNS_PER_YEAR : 0;
+}
+
+export interface FiscalTaxPayer {
+  id: string;
+  cash: number;
+}
+
+/**
+ * Real tax due this turn from a country's household wallets, shared by cash
+ * held. Book non-corporate revenue times the scale, capped at
+ * FISCAL_TAX_MAX_HOUSEHOLD_SHARE of the cash they hold. Each wallet pays at
+ * most its own cash. Without a usable scale nothing is due.
+ */
+export function fiscalTaxCollection(input: {
+  bookRevenuePerTurn: number;
+  scale: number | null | undefined;
+  payers: readonly FiscalTaxPayer[];
+}): { dueLocal: number; collectedLocal: number; byPayer: { id: string; amount: number }[] } {
+  const dueLocal = scaledAmount(input.bookRevenuePerTurn, input.scale);
+  const payers = [...input.payers]
+    .filter((p) => Number.isFinite(p.cash) && p.cash > 0)
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  const held = payers.reduce((sum, p) => sum + p.cash, 0);
+  const collect = Math.min(dueLocal, held * FISCAL_TAX_MAX_HOUSEHOLD_SHARE);
+  if (!(collect > 0) || !(held > 0)) return { dueLocal, collectedLocal: 0, byPayer: [] };
+  const byPayer = payers
+    .map((p) => ({ id: p.id, amount: Math.min(p.cash, (collect * p.cash) / held) }))
+    .filter((row) => row.amount > 0);
+  return {
+    dueLocal,
+    collectedLocal: byPayer.reduce((sum, row) => sum + row.amount, 0),
+    byPayer,
+  };
+}
+
+/**
+ * Public purchases the Treasury pays for this turn: the funding the public
+ * buyer's purchase lines ask for, at most book primary spending times the
+ * scale, and at most the cash the Treasury holds.
+ */
+export function treasuryPublicFunding(input: {
+  requestedLocal: number;
+  bookPrimarySpendingPerTurn: number;
+  scale: number | null | undefined;
+  treasuryCashLocal: number;
+}): number {
+  const requested = Number.isFinite(input.requestedLocal) ? Math.max(0, input.requestedLocal) : 0;
+  const cash = Number.isFinite(input.treasuryCashLocal) ? Math.max(0, input.treasuryCashLocal) : 0;
+  return Math.min(requested, scaledAmount(input.bookPrimarySpendingPerTurn, input.scale), cash);
+}

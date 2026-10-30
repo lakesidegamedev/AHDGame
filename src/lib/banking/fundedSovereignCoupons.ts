@@ -24,6 +24,8 @@ import {
  * and put the document on course for the 16 MB limit. The claim, its id and its
  * frozen quotes are unchanged; only where it is kept moved.
  */
+import { claimAtFiscalScale, fiscalScaleCouponOrder } from "@/lib/budget/rules/fiscalScale";
+
 export const SOVEREIGN_COUPON_CLAIMS_COLLECTION = "sovereignCouponClaims";
 
 export interface SovereignCouponClaimRecord {
@@ -899,6 +901,13 @@ export async function settleFundedSovereignCoupons(
      * the settlement moves money only and none of the queue reads happen here.
      */
     prepared?: PreparedSovereignCouponSettlement;
+    /**
+     * This country's fiscal scale when the debt service split is on (fiscal
+     * scale stage 3). Claims without a journaled attempt settle synthetic
+     * holders at book times the scale and player holders at face, player
+     * claims first. Omitted, every claim settles at book, oldest first.
+     */
+    fiscalScale?: number;
   }
 ): Promise<{ completed: boolean; batchClose?: CouponBatchCloseOp[] }> {
   const budgetId = String(budget._id);
@@ -1117,7 +1126,23 @@ export async function settleFundedSovereignCoupons(
   // so a replayed turn never falls back to one journal receipt per claim.
   const batchOpen = !batches.some((batch) => batch._id === couponBatchKey(budgetId, input.turn));
   const grouped: FundedSovereignCouponClaim[] = [];
-  for (const claim of claims) {
+  // Under the debt service split a claim is priced at the scale when it is
+  // first attempted; a journaled attempt resumes with the legs it recorded.
+  const hasAttempt = (claim: FundedSovereignCouponClaim) =>
+    priorMoves.some(
+      (move) =>
+        move._id.startsWith(`${claim.id}:attempt:`) &&
+        (move.status === "partial" || move.status === "applied")
+    );
+  const payable =
+    input.fiscalScale === undefined
+      ? claims
+      : fiscalScaleCouponOrder(
+          claims.map((claim) =>
+            hasAttempt(claim) ? claim : claimAtFiscalScale(claim, input.fiscalScale)
+          )
+        );
+  for (const claim of payable) {
     if (batched.has(claim.id)) continue;
     const attempt = Math.max(input.turn, claim.dueTurn);
     const prior =

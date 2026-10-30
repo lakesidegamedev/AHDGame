@@ -60,8 +60,12 @@ import {
 import type { SovereignCouponCorporationQuote } from "@/lib/banking/rules/sovereignCoupons";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
-import { measureFiscalScales } from "@/lib/budget/fiscalScaleTurn";
-import { FISCAL_SCALE_STAGE, normalizeFiscalScaleStage } from "@/lib/budget/rules/fiscalScale";
+import { collectFiscalTaxes, measureFiscalScales } from "@/lib/budget/fiscalScaleTurn";
+import {
+  FISCAL_SCALE_STAGE,
+  fiscalScaleClaimLoadBound,
+  normalizeFiscalScaleStage,
+} from "@/lib/budget/rules/fiscalScale";
 
 /** Concurrent country settlements; a shared payee or pool still orders them. */
 const TREASURY_LANES = 8;
@@ -109,6 +113,9 @@ function treasuryBudgetProjection(
     financialCrisisAusterityBaseSpending: 1,
     ...(treasuryCashLedgerEnabled ? { sovereignCouponFrozenThrough: 1 } : {}),
     ...(fiscalScaleStage >= FISCAL_SCALE_STAGE.MEASURE ? { fiscalScale: 1 } : {}),
+    ...(fiscalScaleStage >= FISCAL_SCALE_STAGE.TAX_AND_SPEND
+      ? { "revenue.domesticCorporateTax": 1, "revenue.foreignCorporateTax": 1 }
+      : {}),
   };
 }
 
@@ -144,6 +151,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
           metricsSystemVersion: 1,
           cabinetSystemVersion: 1,
           resetVersionSeeds: 1,
+          worldEpochId: 1,
         },
       }
     ),
@@ -280,14 +288,32 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
   steps.mark("load");
   // Stage 1 of the fiscal scale: measure and store each live country's scale
   // before any money moves. Measuring moves no money.
+  const fiscalScaleByBudget = new Map<string, number>();
   if (fiscalScaleStage >= FISCAL_SCALE_STAGE.MEASURE) {
-    await measureFiscalScales(db, {
+    const measured = await measureFiscalScales(db, {
       turn: _turn,
       stage: fiscalScaleStage,
       budgets: allBudgets.filter((b) => liveCountries.has(String(b.countryId ?? b._id))),
       rateByCurrency,
     });
+    for (const [budgetId, state] of measured.states) fiscalScaleByBudget.set(budgetId, state.scale);
     steps.mark("fiscalScale");
+  }
+  // Stage 2: real taxes from household wallets into Treasury cash, before the
+  // coupon pass reads the cash it can settle from.
+  if (fiscalScaleStage >= FISCAL_SCALE_STAGE.TAX_AND_SPEND && treasuryCashLedgerEnabled) {
+    const collected = await collectFiscalTaxes(db, {
+      turn: _turn,
+      worldEpoch: gameStateDoc?.worldEpochId ?? undefined,
+      budgets: allBudgets.filter((b) => liveCountries.has(String(b.countryId ?? b._id))),
+      scaleByBudget: fiscalScaleByBudget,
+      rateByCurrency,
+    });
+    for (const b of allBudgets) {
+      const amount = collected.get(String(b._id));
+      if (amount) b.treasuryCashLocal = (b.treasuryCashLocal ?? 0) + amount;
+    }
+    steps.mark("fiscalTaxes");
   }
   let countriesProcessed = 0;
   // Countries settle in bounded lanes. Each holds its budget, its bond pool,
@@ -316,13 +342,31 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
   // start. A budget with no cash to settle from then costs no probe of its own.
   // The queue grouping it already runs also names the budgets that still owe a
   // claim, which keeps a dissolved country in the cohort for its arrears.
-  const couponPrefetch = treasuryCashLedgerEnabled
+  // Stage 3 (debt service split): synthetic holders settle at book times the
+  // scale, so a Treasury can cover claims whose book amount exceeds its cash.
+  const debtSplitScale = (budgetId: string): number | undefined =>
+    fiscalScaleStage >= FISCAL_SCALE_STAGE.DEBT_SERVICE_SPLIT
+      ? fiscalScaleByBudget.get(budgetId)
+      : undefined;
+  const loadedCouponPrefetch = treasuryCashLedgerEnabled
     ? await loadSovereignCouponSettlementPrefetch(db, {
         budgets: allBudgets,
         turn: _turn,
         receiptClaimIds,
       })
     : undefined;
+  const couponPrefetch =
+    loadedCouponPrefetch && fiscalScaleStage >= FISCAL_SCALE_STAGE.DEBT_SERVICE_SPLIT
+      ? {
+          ...loadedCouponPrefetch,
+          cashLocalByBudget: new Map(
+            [...loadedCouponPrefetch.cashLocalByBudget].map(([budgetId, cash]) => [
+              budgetId,
+              fiscalScaleClaimLoadBound(cash, debtSplitScale(budgetId)),
+            ])
+          ),
+        }
+      : loadedCouponPrefetch;
   const budgetsOwingCoupons: ReadonlySet<string> =
     couponPrefetch?.budgetsWithOpenClaims ?? new Set<string>();
   const owesCoupons = (b: FederalBudget) =>
@@ -346,7 +390,10 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
       const cash = b.treasuryCashLocal;
       couponCashBounds.set(
         String(b._id),
-        typeof cash === "number" && Number.isFinite(cash) ? Math.max(0, cash) : 0
+        fiscalScaleClaimLoadBound(
+          typeof cash === "number" && Number.isFinite(cash) ? Math.max(0, cash) : 0,
+          debtSplitScale(String(b._id))
+        )
       );
     }
   }
@@ -468,6 +515,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
               lockedCashBoundLocal: couponCashBounds.get(String(b._id)),
               prefetch: couponPrefetch,
               prepared: preparedCoupons,
+              fiscalScale: debtSplitScale(String(b._id)),
             });
             if (coupons.batchClose) couponBatchClose.push(...coupons.batchClose);
             if (preparedCoupons && coupons.completed) pruneCouponBudgets.push(String(b._id));
@@ -664,6 +712,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
               lockedCashBoundLocal: couponCashBounds.get(String(b._id)),
               prefetch: couponPrefetch,
               prepared: preparedCoupons,
+              fiscalScale: debtSplitScale(String(b._id)),
             }
           );
           if (coupons.batchClose) couponBatchClose.push(...coupons.batchClose);

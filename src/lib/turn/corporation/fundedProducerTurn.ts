@@ -18,6 +18,12 @@ import { markStrugglingTransitionSectors } from "./transitionStruggling";
 import { createHash } from "node:crypto";
 import { ObjectId, type AnyBulkWriteOperation, type Db } from "mongodb";
 import type { LedgerEntry } from "@/lib/ledger/types";
+import type { FederalBudget } from "@/lib/db/types/budget";
+import {
+  FISCAL_SCALE_STAGE,
+  bookPrimarySpendingPerTurn,
+  treasuryPublicFunding,
+} from "@/lib/budget/rules/fiscalScale";
 import type { CorporateSector, Corporation } from "@/lib/db/types/corporation";
 import { applyMoneyMove, resumeMoneyMove } from "@/lib/banking/moneyMove";
 import { TURNS_PER_DAY } from "@/lib/constants/turnTime";
@@ -37,6 +43,8 @@ import {
   investmentReturnMoves,
   batchProducerMoves,
   publicFundingMoves,
+  treasuryPublicFundingMoves,
+  treasuryPublicReturnMoves,
   publicReturnMoves,
   type CloseParty,
   type CloseTransfer,
@@ -269,12 +277,18 @@ export async function runFundedProducerTurn(
   const scopeById = new Map(walletScopes.map((s) => [producerWalletId(worldEpoch, s), s]));
   await createProducerWallets(db, worldEpoch, walletScopes);
 
-  const apply = async (moves: ReturnType<typeof publicFundingMoves>) => {
+  const apply = async (
+    moves: ReturnType<typeof publicFundingMoves>,
+    options: { tolerateRejected?: boolean } = {}
+  ) => {
     const entries: LedgerEntry[] = [];
     for (const move of moves) {
       let result = await applyMoneyMove(db, move);
       // An existing key may be a move a crash left half done: finish it.
       if (result.status === "replayed") result = await resumeMoneyMove(db, move.key);
+      // A Treasury-funded move whose guarded debit found less cash than read
+      // moved nothing; the public buyer goes without this turn.
+      if (result.status === "rejected" && options.tolerateRejected) continue;
       if (result.status !== "applied" && result.status !== "replayed")
         throw new Error(`Producer money move ${move.key} ${result.status}`);
       // Witness the move in the ledger, like the settlement witnesses its own
@@ -304,27 +318,52 @@ export async function runFundedProducerTurn(
         });
   };
 
-  await apply(
-    batchProducerMoves(
-      worldEpoch,
-      turn,
-      publicFundingMoves(
+  const publicFundingRows = demand.funding.map((f) => {
+    const currency = countryCurrency.get(f.countryId)!;
+    const rate = rateOf(currency);
+    return {
+      countryId: f.countryId,
+      walletId: publicWallet(f.countryId),
+      amountLocal: f.fundingLocal * rate,
+      currencyCode: currency,
+      localPerAnchor: rate,
+    };
+  });
+  // Fiscal scale stage 2: the Treasury pays for public purchases from its real
+  // cash, at most book primary spending times the country's scale, instead of
+  // the outlay being minted. Unspent funding returns to it at close.
+  const treasuryFunded =
+    (input.env.fiscalScaleStage ?? 0) >= FISCAL_SCALE_STAGE.TAX_AND_SPEND
+      ? await loadTreasuryFundingBudgets(db)
+      : null;
+  if (treasuryFunded)
+    await apply(
+      treasuryPublicFundingMoves(
         worldEpoch,
         turn,
-        demand.funding.map((f) => {
-          const currency = countryCurrency.get(f.countryId)!;
-          const rate = rateOf(currency);
-          return {
-            countryId: f.countryId,
-            walletId: publicWallet(f.countryId),
-            amountLocal: f.fundingLocal * rate,
-            currencyCode: currency,
-            localPerAnchor: rate,
-          };
+        publicFundingRows.flatMap((row) => {
+          const budget = treasuryFunded.get(row.countryId);
+          if (!budget) return [];
+          return [
+            {
+              ...row,
+              budgetId: budget.budgetId,
+              amountLocal: treasuryPublicFunding({
+                requestedLocal: row.amountLocal,
+                bookPrimarySpendingPerTurn: budget.bookPrimaryPerTurn,
+                scale: budget.scale,
+                treasuryCashLocal: budget.cashLocal,
+              }),
+            },
+          ];
         })
-      )
-    )
-  );
+      ),
+      { tolerateRejected: true }
+    );
+  else
+    await apply(
+      batchProducerMoves(worldEpoch, turn, publicFundingMoves(worldEpoch, turn, publicFundingRows))
+    );
   await apply(
     batchProducerMoves(
       worldEpoch,
@@ -1001,17 +1040,34 @@ export async function runFundedProducerTurn(
       },
     ];
   };
-  await apply(
-    batchProducerMoves(
-      worldEpoch,
-      turn,
-      publicReturnMoves(
+  const publicReturnRows = demand.funding.flatMap((f) =>
+    returnRow(f.countryId, publicWallet(f.countryId))
+  );
+  if (treasuryFunded)
+    await apply(
+      treasuryPublicReturnMoves(
         worldEpoch,
         turn,
-        demand.funding.flatMap((f) => returnRow(f.countryId, publicWallet(f.countryId)))
+        publicReturnRows.flatMap((row) => {
+          const budget = treasuryFunded.get(row.countryId);
+          return budget ? [{ ...row, budgetId: budget.budgetId }] : [];
+        })
       )
-    )
-  );
+    );
+  if (!treasuryFunded || publicReturnRows.some((row) => !treasuryFunded.has(row.countryId)))
+    await apply(
+      batchProducerMoves(
+        worldEpoch,
+        turn,
+        publicReturnMoves(
+          worldEpoch,
+          turn,
+          treasuryFunded
+            ? publicReturnRows.filter((row) => !treasuryFunded.has(row.countryId))
+            : publicReturnRows
+        )
+      )
+    );
   // Faster construction where the funded book is short (fresh worlds start far
   // short of real demand; gameConfig.producerShortageBuildFactor).
   if (buildSpeedupOn && pressureNow) {
@@ -1208,4 +1264,42 @@ async function admitNewProducerEntrants(
     await db
       .collection<CorporateSector>("corporateSectors")
       .bulkWrite(sectorOps, { ordered: false });
+}
+
+/** Treasury cash, book primary spending and fiscal scale per country, for stage 2 public funding. */
+async function loadTreasuryFundingBudgets(
+  db: Db
+): Promise<
+  Map<string, { budgetId: string; cashLocal: number; scale: number; bookPrimaryPerTurn: number }>
+> {
+  const rows = await db
+    .collection<FederalBudget>("federalBudget")
+    .find(
+      {},
+      {
+        projection: {
+          countryId: 1,
+          treasuryCashLocal: 1,
+          "fiscalScale.scale": 1,
+          "spending.total": 1,
+          "spending.debtInterest": 1,
+        },
+      }
+    )
+    .toArray();
+  const out = new Map<
+    string,
+    { budgetId: string; cashLocal: number; scale: number; bookPrimaryPerTurn: number }
+  >();
+  for (const b of rows) {
+    const scale = b.fiscalScale?.scale;
+    if (typeof scale !== "number" || !Number.isFinite(scale) || scale <= 0) continue;
+    out.set(String(b.countryId ?? b._id), {
+      budgetId: String(b._id),
+      cashLocal: b.treasuryCashLocal ?? 0,
+      scale,
+      bookPrimaryPerTurn: bookPrimarySpendingPerTurn(b.spending),
+    });
+  }
+  return out;
 }

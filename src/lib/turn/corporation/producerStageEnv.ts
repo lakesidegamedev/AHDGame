@@ -30,6 +30,7 @@ export function producerStageEnv(
         producerFundedRestartStage?: number;
         producerShortageBuildFactor?: number;
         wholePlantsStage?: number;
+        fiscalScaleStage?: number;
       }
     | null
     | undefined
@@ -46,6 +47,7 @@ export function producerStageEnv(
     fundedRestartStage: config?.producerFundedRestartStage,
     shortageBuildFactor: config?.producerShortageBuildFactor,
     wholePlants: wholePlantsOn(config?.wholePlantsStage),
+    fiscalScaleStage: config?.fiscalScaleStage,
     spilloverShare:
       (config?.producerSpilloverStage ?? 0) >= 1
         ? (config?.producerSpilloverShare ?? SPILLOVER_DEFAULT_SHARE)
