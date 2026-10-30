@@ -4,9 +4,11 @@ import {
   calcRdGrowth,
   LOGISTICS_DECAY_RATE,
   RD_DECAY_RATE,
+  TURNS_PER_DAY,
 } from "@/lib/constants/corporations";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import { readCorpEconomicAnchor } from "@/lib/currency/corpEconomyFields";
+import { allocateProductDevelopmentBudget } from "@/lib/products/rules/productBudgets";
 import {
   MARKETING_DECAY_RATE,
   STRENGTH_UPKEEP_STAGE,
@@ -22,6 +24,44 @@ interface StrengthProjectionInput {
   rdScore?: number | null;
   liquidCurrencyCode?: CurrencyCode | string | null;
   strengthUpkeepStage?: number | null;
+  /** Active product projects the turn pays from the R&D budget before generic research. */
+  rdDevelopmentProjects?: readonly RdDevelopmentProject[];
+}
+
+export interface RdDevelopmentProject {
+  id: string;
+  stage: string;
+  /** Development cost paid so far, in anchor currency. */
+  paidAnchor: number;
+  /** Total development cost, in anchor currency. */
+  thresholdAnchor: number;
+}
+
+/**
+ * Daily R&D budget left for generic research after the turn pays active
+ * product development first (same allocator the turn runs, per turn).
+ */
+export function genericResearchDailyAnchor(
+  dailyBudgetAnchor: number,
+  projects: readonly RdDevelopmentProject[] | undefined
+): number {
+  if (!projects || projects.length === 0) return dailyBudgetAnchor;
+  const { genericResearchAnchor } = allocateProductDevelopmentBudget({
+    budgetAnchor: dailyBudgetAnchor / TURNS_PER_DAY,
+    projects,
+  });
+  return genericResearchAnchor * TURNS_PER_DAY;
+}
+
+/** Cost still owed on projects in development, in anchor currency. */
+export function remainingDevelopmentAnchor(projects: readonly RdDevelopmentProject[]): number {
+  return projects.reduce(
+    (sum, p) =>
+      p.stage === "development"
+        ? sum + Math.max(0, (p.thresholdAnchor || 0) - (p.paidAnchor || 0))
+        : sum,
+    0
+  );
 }
 
 export interface StrengthProjection {
@@ -30,6 +70,10 @@ export interface StrengthProjection {
   marketingDecayRate: number;
   logisticsStrengthNetChange: number;
   rdScoreNetChange: number;
+  /** Points earned this turn from generic research, before decay. */
+  rdScoreGrowth: number;
+  /** Points lost to decay this turn. */
+  rdScoreDecay: number;
 }
 
 export function calculateCorpStrengthProjection(
@@ -67,7 +111,10 @@ export function calculateCorpStrengthProjection(
   const logisticsDecay = currentLogisticsStrength * LOGISTICS_DECAY_RATE;
 
   const currentRdScore = corporation.rdScore ?? 0;
-  const rdGrowth = calcRdGrowth(rdBudgetAnchor, currentRdScore);
+  const rdGrowth = calcRdGrowth(
+    genericResearchDailyAnchor(rdBudgetAnchor, corporation.rdDevelopmentProjects),
+    currentRdScore
+  );
   const rdDecay = currentRdScore * RD_DECAY_RATE;
 
   return {
@@ -75,6 +122,8 @@ export function calculateCorpStrengthProjection(
     marketingDecayRate,
     logisticsStrengthNetChange: logisticsGrowth - logisticsDecay,
     rdScoreNetChange: rdGrowth - rdDecay,
+    rdScoreGrowth: rdGrowth,
+    rdScoreDecay: rdDecay,
   };
 }
 

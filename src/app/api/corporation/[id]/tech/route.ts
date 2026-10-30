@@ -27,7 +27,12 @@ import {
   RD_INNOVATION_INTERVAL,
   RD_INNOVATION_SCORE_THRESHOLD,
 } from "@/lib/constants/corporations";
-import { calculateCorpStrengthProjection } from "@/lib/corporations/strengthProjection";
+import {
+  calculateCorpStrengthProjection,
+  remainingDevelopmentAnchor,
+} from "@/lib/corporations/strengthProjection";
+import { loadRdDevelopmentProjects } from "@/lib/corporations/rdDevelopmentFunding";
+import { writeCorpEconomicLocal } from "@/lib/currency/corpEconomyFields";
 import { getCorpFxRate } from "@/lib/currency/corporationCapital";
 import { SECTOR_STRATEGIES, getOperatingSectorType } from "@/lib/constants/sectorStrategies";
 import {
@@ -295,6 +300,13 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     // FX rate for anchor-normalizing the R&D budget in rdGainPerTurn below.
     const corpFxRate = await getCorpFxRate(db, corporation);
+    const rdDevelopmentProjects = redact
+      ? []
+      : await loadRdDevelopmentProjects(db, String(corporation._id));
+    const fundedProject = rdDevelopmentProjects.find((project) => project.stage === "development");
+    const rdProjection = redact
+      ? null
+      : calculateCorpStrengthProjection({ ...corporation, rdDevelopmentProjects }, corpFxRate);
 
     return NextResponse.json({
       enabled: true,
@@ -313,11 +325,26 @@ export async function GET(_request: Request, { params }: RouteParams) {
       // with no anchor and no decay, which inflated the figure ~2.7× for non-USD
       // corps (e.g. JPY ~130× budget through the log curve) and disagreed with
       // every other tab (#903).
-      rdGainPerTurn: redact
-        ? null
-        : Math.round(
-            calculateCorpStrengthProjection(corporation, corpFxRate).rdScoreNetChange * 10
-          ) / 10,
+      // While an active product is in development the turn pays the R&D budget
+      // to it first, so only the budget left over earns points (#1724).
+      rdGainPerTurn: rdProjection ? Math.round(rdProjection.rdScoreNetChange * 10) / 10 : null,
+      rdDecayPerTurn: rdProjection ? Math.round(rdProjection.rdScoreDecay * 10) / 10 : null,
+      rdFundedProduct:
+        fundedProject &&
+        rdProjection &&
+        (corporation.rdBudget ?? 0) > 0 &&
+        rdProjection.rdScoreGrowth <= 0
+          ? {
+              label: fundedProject.label,
+              remainingCost: Math.round(
+                writeCorpEconomicLocal(
+                  remainingDevelopmentAnchor([fundedProject]),
+                  corporation.liquidCurrencyCode,
+                  corpFxRate
+                )
+              ),
+            }
+          : null,
       liquidCapital,
       cashPricing: redact
         ? null

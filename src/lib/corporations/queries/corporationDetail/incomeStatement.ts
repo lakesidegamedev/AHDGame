@@ -41,6 +41,10 @@ import { TURNS_PER_YEAR } from "@/lib/constants/turnTime";
 import { getRoundedPublicMarketCap } from "@/lib/corporations/marketQuote";
 import { computeTechAssetValueAnchor } from "@/lib/corporations/techAssetValue";
 import { calculateCorpStrengthProjection } from "@/lib/corporations/strengthProjection";
+import {
+  loadRdDevelopmentProjects,
+  type RdDevelopmentFundingProject,
+} from "@/lib/corporations/rdDevelopmentFunding";
 import { loadStrengthUpkeepStage } from "@/lib/corporations/strengthUpkeep";
 
 export interface SectorTaxLine {
@@ -111,6 +115,8 @@ export interface IncomeStatementResult {
   marketingDecayRate: number;
   logisticsStrengthNetChange: number;
   rdScoreNetChange: number;
+  /** Active product projects that the R&D budget pays before generic research. */
+  rdDevelopmentProjects: RdDevelopmentFundingProject[];
   totalShares: number;
   marketCapitalization: number;
   currentSharePrice: number;
@@ -463,6 +469,7 @@ export async function computeIncomeStatement(
   const currentLogisticsStrength = corporation.logisticsStrength ?? 0;
   const currentRdScore = corporation.rdScore ?? 0;
   const strengthUpkeepStage = await loadStrengthUpkeepStage(db);
+  const rdDevelopmentProjects = await loadRdDevelopmentProjects(db, String(corporation._id));
   const {
     marketingStrengthGrowth,
     marketingDecayRate,
@@ -478,6 +485,7 @@ export async function computeIncomeStatement(
       rdScore: currentRdScore,
       liquidCurrencyCode: corpCurrency,
       strengthUpkeepStage,
+      rdDevelopmentProjects,
     },
     corpFxRate
   );
@@ -626,6 +634,7 @@ export async function computeIncomeStatement(
     marketingDecayRate,
     logisticsStrengthNetChange,
     rdScoreNetChange,
+    rdDevelopmentProjects,
     totalShares,
     marketCapitalization,
     currentSharePrice,
