@@ -7,8 +7,8 @@ summary: >-
   never earned. Under plants, dominance is paid when you build, so those running
   charges are gone, and old stock written down is no longer charged twice.
 tags: [economy, corporations, balance]
-badges: [fix]
-areas: [economy]
+badges: [patch]
+areas: [engine]
 ---
 
 - A dominant sector on the funded market no longer pays the dominance size cost
