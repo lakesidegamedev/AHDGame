@@ -26,7 +26,6 @@ export const FRESH_PLANTS_CONFIG_UNSET: Readonly<Record<string, "">> = Object.fr
   // Launch-safety governor on the plants tier: cap, ramp and every glide field.
   // A rebuilt plants economy starts clean, with no deviation cap to glide off.
   marketGovernorCap: "",
-  marketGovernorRampTurns: "",
   marketGovernorGlideTurns: "",
   marketGovernorGlideStartTurn: "",
   marketGovernorGlideMode: "",
@@ -84,6 +83,8 @@ export const FRESH_PLANTS_CONFIG_KEPT: Readonly<Record<string, string>> = Object
   producerShortageBuildFactor: "fresh-world setting written by the reset (FRESH_PLANTS_SETTINGS)",
   producerPriceMaxMove: "fresh-world setting written by the reset (FRESH_PLANTS_SETTINGS)",
   producerPriceMaxMultiplier: "fresh-world setting written by the reset (FRESH_PLANTS_SETTINGS)",
+  marketGovernorRampTurns:
+    "fresh-world setting written by the reset (FRESH_PLANTS_SETTINGS): the legacy-to-plants ramp is complete",
   producerTransitionPackageEnabled:
     "switched off explicitly by FRESH_PLANTS_INTERVENTIONS_OFF: a rebuilt economy gets no transition package",
   producerMarketShadowEnabled:
@@ -118,11 +119,16 @@ const FRESH_PLANTS_INTERVENTIONS_OFF = Object.freeze({
  * base, where 6%/10x crashed mid-run and 3%/5x crashed by turn 8). A seeded
  * world starts far short of real demand: short plants build in a quarter of
  * the time, and prices move at most 2% a turn up to 3x.
+ *
+ * The legacy-to-plants governor ramp is finished on a rebuilt plants world
+ * (owner 2026-10-30): a ramp of 1 turn. Unsetting it fell back to the 240-turn
+ * default and brought the old running dominance tolls back.
  */
 const FRESH_PLANTS_SETTINGS = Object.freeze({
   producerShortageBuildFactor: 0.25,
   producerPriceMaxMove: 0.02,
   producerPriceMaxMultiplier: 3,
+  marketGovernorRampTurns: 1,
 } as const satisfies Partial<GameConfig>);
 
 /**
@@ -144,6 +150,8 @@ export const CENTRAL_BANK_HISTORY_RESET: Readonly<Record<string, unknown>> = Obj
   savingsFlowHistory: [],
   forexRevenue: 0,
   tradeGrowth: 0,
+  // Savings accounts are wiped, so the bank owes households nothing on them.
+  householdSavingsLiability: 0,
 });
 
 /**
