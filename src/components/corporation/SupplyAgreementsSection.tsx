@@ -14,6 +14,7 @@ import {
   CONTRACT_SHORTFALL_PENALTY,
   SUPPLY_AGREEMENT_DURATION_MAX_TURNS,
   SUPPLY_AGREEMENT_DURATION_MIN_TURNS,
+  AI_SUPPLIER_MAX_DISCOUNT,
   SUPPLY_AGREEMENT_PRICE_BAND,
 } from "@/lib/db/types/supplyAgreement";
 import { useToast } from "@/contexts/ToastContext";
@@ -99,6 +100,7 @@ interface CounterDraft {
 }
 
 const BAND_PCT = Math.round(SUPPLY_AGREEMENT_PRICE_BAND * 100);
+const AI_FLOOR_PCT = Math.round(AI_SUPPLIER_MAX_DISCOUNT * 100);
 const SHORTFALL_PENALTY_PCT = Math.round(CONTRACT_SHORTFALL_PENALTY * 100);
 const MIN_DURATION_TURNS = SUPPLY_AGREEMENT_DURATION_MIN_TURNS;
 const MAX_DURATION_TURNS = SUPPLY_AGREEMENT_DURATION_MAX_TURNS;
@@ -1032,7 +1034,7 @@ export default function SupplyAgreementsSection({
               className="w-full accent-primary"
             />
             <p className="text-[11px] text-muted">
-              {t("negotiation.priceHelp", { band: BAND_PCT })}
+              {t("negotiation.priceHelp", { band: BAND_PCT, aiFloor: AI_FLOOR_PCT })}
             </p>
           </div>
 

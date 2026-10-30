@@ -57,7 +57,7 @@
         "volumePlaceholder": "e.g. 5000",
         "volumeHelp": "Units/turn reserved for the buyer. Anything your sectors make above this still sells on the open market as normal.",
         "priceLabel": "Contract price",
-        "priceHelp": "At most ±{band}% of market price. Positive favours the supplier; negative favours the buyer.",
+        "priceHelp": "At most ±{band}% of market price. Positive favours the supplier; negative favours the buyer. AI-run suppliers accept at most {aiFloor}% below market and answer within a turn, with a counter-offer if you ask for more.",
         "termLabel": "Term in turns",
         "openEnded": "Open-ended",
         "termHelp": "Leave blank for an open-ended agreement. Fixed terms run for {min} to {max} turns after acceptance.",
