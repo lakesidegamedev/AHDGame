@@ -1031,6 +1031,11 @@ export interface GameConfig {
   /** When contract issuance was last toggled (ISO 8601). */
   contractIssuanceEnabledUpdatedAt?: string;
 
+  /** Global government-contract kill switch. Missing means enabled. Only new
+   * tenders, bids, awards and offer acceptance are gated; existing settlement,
+   * delivery, expiry and cancellation continue. Preserved with gameConfig. */
+  governmentContractsEnabled?: boolean;
+
   /**
    * Unified action audit spine master flag (forensics/alt-detection rework
    * plan §3.1). When on, `recordAudit`/`recordAuditBulk` writes normalized

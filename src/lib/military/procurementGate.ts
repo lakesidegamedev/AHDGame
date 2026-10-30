@@ -1,3 +1,5 @@
+import { isGovernmentContractsEnabled } from "@/lib/governmentContracts/featureFlag";
+import { GOVERNMENT_CONTRACTS_DISABLED_MESSAGE } from "@/lib/governmentContracts/rules/featureGate";
 import type { Db } from "mongodb";
 import type { CountryId } from "@/lib/constants/countries";
 import { activeProcurementRestriction } from "@/lib/db/collections/procurementRestrictions";
@@ -64,6 +66,9 @@ export async function isProcurementBlocked(
 ): Promise<ProcurementGateResult> {
   if (await isDefenceProcurementPaused(db)) {
     return { blocked: true, reason: DEFENCE_PROCUREMENT_PAUSED_MESSAGE, until: null };
+  }
+  if (!(await isGovernmentContractsEnabled(db))) {
+    return { blocked: true, reason: GOVERNMENT_CONTRACTS_DISABLED_MESSAGE, until: null };
   }
   const until = await activeProcurementRestriction(db, countryId, currentTurn);
   if (until != null) {
