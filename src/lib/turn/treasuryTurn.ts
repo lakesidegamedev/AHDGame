@@ -676,7 +676,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
         .collection<FederalBudget>("federalBudget")
         .findOne(
           { _id: b._id },
-          { projection: treasuryBudgetProjection(treasuryCashLedgerEnabled, fiscalScaleStage) }
+          { projection: treasuryBudgetProjection(treasuryCashLedgerEnabled) }
         );
       if (!refreshed) throw new Error(`Treasury budget ${b._id} disappeared during accrual`);
       b = refreshed;
