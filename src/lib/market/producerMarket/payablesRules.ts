@@ -9,9 +9,16 @@ export interface ProducerPayable {
   kind: "labour" | "operating";
   /** Anchor-valued invoice amount. Conversion to native cash happens at payment. */
   amount: number;
+  /**
+   * Turn since which the debtor's payables have not shrunk, on companies that
+   * may run on credit (producerCreditRules). Not part of the claim identity.
+   */
+  notShrinkingSince?: number;
 }
 
-export function producerPayableId(claim: Omit<ProducerPayable, "id" | "amount">): string {
+export function producerPayableId(
+  claim: Omit<ProducerPayable, "id" | "amount" | "notShrinkingSince">
+): string {
   return JSON.stringify([
     claim.debtorAccountId,
     claim.creditorAccountId,
@@ -22,7 +29,7 @@ export function producerPayableId(claim: Omit<ProducerPayable, "id" | "amount">)
 
 export function accrueProducerPayable(
   claims: Map<string, ProducerPayable>,
-  claim: Omit<ProducerPayable, "id">
+  claim: Omit<ProducerPayable, "id" | "notShrinkingSince">
 ): void {
   if (!Number.isFinite(claim.amount) || claim.amount < 0)
     throw new Error("Invalid producer payable");

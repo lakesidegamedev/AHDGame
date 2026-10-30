@@ -653,6 +653,15 @@ export async function runFundedProducerTurn(
       eligibleOffersByOrder: demand.eligibleOffersByOrder,
       spilloverShare: input.env.spilloverShare,
       stockCoverTurns: input.env.stockCoverTurns,
+      // Private companies (player and AI) may owe wages and site bills to keep
+      // running; state companies run on the treasury advance above instead.
+      credit: {
+        accountIds: [...demand.ownerKindByCompany]
+          .flatMap(([id, kind]) => (kind === "state" ? [] : [id]))
+          .sort(),
+        ...(input.env.creditRunTurns != null ? { runTurns: input.env.creditRunTurns } : {}),
+        ...(input.env.creditStuckTurns != null ? { stuckTurns: input.env.creditStuckTurns } : {}),
+      },
       ...((input.env.fundedBookStage ?? 0) >= 1
         ? {
             countryOfProducer: (id: string) => demand.planCountry.get(id),
