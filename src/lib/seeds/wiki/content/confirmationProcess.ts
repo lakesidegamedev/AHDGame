@@ -20,7 +20,7 @@ Pending nominations appear on the executive dashboard for the President, and ope
 
 - All Cabinet seats, except the White House Chief of Staff, whom the President appoints alone with no Senate vote.
 - Supreme Court justices, who use the same NPP party-line behavior (see [Supreme Court](/wiki/scotus)).
-- Federal Reserve chair and governors, voted on from the FOMC committee page (see [FOMC / Rate-Setting Board](/wiki/fomc) and [central-banks](/wiki/central-banks)). The Senate decides who sits on the FOMC board.
+- Federal Reserve chair and governors, voted on from the FOMC committee page (see [FOMC / Rate-Setting Board](/wiki/fomc) and [central-banks](/wiki/central-banks)). The Senate confirms anyone the President puts on the FOMC board; a vacant Fed chair seat can also be filled by the chair draw on Central Banks.
 - A Vice President nomination to fill a vacancy needs both the Senate and the House: each chamber must pass it with a strict majority.
 
 Parliamentary countries (UK, Japan, Germany) have no Senate confirmation. The Prime Minister or Chancellor appoints cabinet members directly. See [Government Formation](/wiki/government-formation).
