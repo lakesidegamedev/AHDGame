@@ -88,6 +88,18 @@ describe("PATCH /api/settings/experimental-features", () => {
     }
   );
 
+  it.each(["dock", "standard"])(
+    "persists phone layout %s without touching the desktop layout",
+    async (mobileNavigationLayout) => {
+      const response = await patch({ mobileNavigationLayout });
+      expect(response.status).toBe(200);
+      const update = vi.mocked(db.collectionMocks.users.updateOne).mock.calls[0];
+      expect(update[1].$set).toMatchObject({ mobileNavigationLayout });
+      expect(update[1].$set).not.toHaveProperty("desktopNavigationLayout");
+      expect(update[1].$set).not.toHaveProperty("experimentalFeatures");
+    }
+  );
+
   it("does not write preferences without authentication", async () => {
     vi.mocked(requireBasicAuth).mockResolvedValue({
       ok: false,
@@ -103,6 +115,7 @@ describe("PATCH /api/settings/experimental-features", () => {
     { experimentalFeatures: "yes" },
     { desktopNavigationLayout: "mobile" },
     { desktopNavigationLayout: true },
+    { mobileNavigationLayout: "cards" },
     { askDrawerHidden: "no" },
     { navCustomization: { pinned: ["a:1", "a:2", "a:3", "a:4", "a:5", "a:6"], order: {} } },
     { navCustomization: { pinned: ["has space"], order: {} } },

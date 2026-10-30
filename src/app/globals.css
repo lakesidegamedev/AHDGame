@@ -1734,3 +1734,12 @@ ins.adsbygoogle[data-ad-status="unfilled"] {
   --ascii-font: var(--font-geist-mono), ui-monospace, monospace;
   --ascii-accent: var(--primary);
 }
+
+/* Phone navigation dock (MobileDock): the fixed StatusBar rides directly above
+   it. The dock already pads for the home indicator, so the bar drops its own. */
+@media (max-width: 1023.98px) {
+  html[data-mobile-dock] [data-statusbar] {
+    bottom: var(--mobile-dock-height, 0px);
+    padding-bottom: 0;
+  }
+}

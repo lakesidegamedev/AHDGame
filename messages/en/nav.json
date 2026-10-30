@@ -349,6 +349,18 @@
       "done": "Done",
       "saveError": "Could not save your navigation. Try again."
     },
+    "dock": {
+      "label": "Phone navigation",
+      "company": "Company",
+      "market": "Market",
+      "more": "More",
+      "everything": "Everything",
+      "you": "You",
+      "portfolio": "Portfolio",
+      "whatsNew": "What's new",
+      "switchCountry": "View another country",
+      "close": "Close"
+    },
     "desktop": {
       "editNavigation": "Edit navigation",
       "pin": "Pin to top bar",
