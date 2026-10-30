@@ -21,6 +21,7 @@ import { getExchangeForCountry } from "@/lib/constants/exchangeRegistry";
 import type { MoneyPeriod } from "@/lib/constants/moneyTimescale";
 import { OPERATING_SECTOR_TYPES } from "@/lib/constants/corporationsClient";
 import { CorporationMasthead } from "@/components/corporation/CorporationMasthead";
+import { ParentDirectionNote } from "@/components/corporation/ParentDirectionNote";
 import { useCorporationPageData } from "./useCorporationPageData";
 import { HostileTakeoverCard } from "@/components/corporation/HostileTakeoverCard";
 import { SubsidiaryManagementCard } from "@/components/corporation/SubsidiaryManagementCard";
@@ -1025,6 +1026,14 @@ export default function CorporationDetailPage() {
             showBanner
           />
 
+          {corporation.canDirectAsParent && corporation.parentCorporation && (
+            <ParentDirectionNote
+              corpId={id}
+              parent={corporation.parentCorporation}
+              onRefresh={fetchCorporation}
+            />
+          )}
+
           {isCeo &&
             activeTab === "overview" &&
             corporation.countryId &&
@@ -1384,6 +1393,7 @@ export default function CorporationDetailPage() {
                         abandoningSectorId={abandoningSectorId}
                         sectorsMessage={sectorsMessage}
                         onStrategyChange={handleSectorStrategyChange}
+                        canChangeStrategy={isCeo || !!corporation.canDirectAsParent}
                         strategyUpdatingSectorId={strategyUpdatingSectorId}
                         onCancelTransition={handleCancelTransition}
                         cancelTransitionSectorId={cancelTransitionSectorId}

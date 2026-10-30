@@ -3,6 +3,7 @@ import { ObjectId, type Db } from "mongodb";
 import type { Corporation } from "@/lib/db/types/corporation";
 import type { State } from "@/lib/db/types";
 import { errorResponse } from "@/lib/api/errors";
+import { directingParentCorporationId } from "@/lib/corporations/subsidiaries/authorization";
 
 /**
  * Returns the canonical URL path segment for a corporation document.
@@ -84,4 +85,25 @@ export function requireCeo(corporation: Corporation, userId: string): NextRespon
     return errorResponse(403, "Only the CEO can perform this action");
   }
   return null;
+}
+
+export type CeoOrParentAuthorization =
+  { ok: true; directingParentId: ObjectId | null } | { ok: false; response: NextResponse };
+
+/**
+ * The corporation's own CEO, or the controlling parent's CEO when the
+ * corporation is an AI-run managed subsidiary. `directingParentId` is set only
+ * on the parent path so the caller can stamp who made the change.
+ */
+export async function requireCeoOrDirectingParent(
+  db: Db,
+  corporation: Corporation,
+  userId: string
+): Promise<CeoOrParentAuthorization> {
+  const ceoCheck = requireCeo(corporation, userId);
+  if (!ceoCheck) return { ok: true, directingParentId: null };
+  if (!ObjectId.isValid(userId)) return { ok: false, response: ceoCheck };
+  const parentId = await directingParentCorporationId(db, new ObjectId(userId), corporation);
+  if (!parentId) return { ok: false, response: ceoCheck };
+  return { ok: true, directingParentId: parentId };
 }

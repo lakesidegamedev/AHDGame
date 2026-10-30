@@ -71,6 +71,8 @@ interface SectorsTabProps {
   abandoningSectorId: string | null;
   sectorsMessage: { type: "error" | "success"; text: string } | null;
   onStrategyChange?: (sectorId: string, strategyId: string) => void;
+  /** May change sector strategies; defaults to isCeo (the controlling parent's CEO also may). */
+  canChangeStrategy?: boolean;
   strategyUpdatingSectorId?: string | null;
   onGrowthChange?: (sectorId: string, newRate: number) => void;
   growthUpdatingSectorId?: string | null;
@@ -112,6 +114,7 @@ export default function SectorsTab({
   abandoningSectorId,
   sectorsMessage,
   onStrategyChange,
+  canChangeStrategy,
   strategyUpdatingSectorId,
   onGrowthChange,
   growthUpdatingSectorId,
@@ -516,6 +519,7 @@ export default function SectorsTab({
                   }
                   onAbandonSector={onAbandonSector}
                   onStrategyChange={onStrategyChange}
+                  canChangeStrategy={canChangeStrategy ?? isCeo}
                   onGrowthChange={onGrowthChange}
                   onCancelTransition={onCancelTransition}
                   fmtMoney={fmtMoney}

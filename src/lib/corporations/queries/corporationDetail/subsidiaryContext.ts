@@ -7,7 +7,10 @@ import {
   HOSTILE_TAKEOVER_OWNERSHIP_THRESHOLD_PERCENT,
   SUBSIDIARY_OWNERSHIP_THRESHOLD_PERCENT,
 } from "@/lib/corporations/corporateOwnership";
-import { canActOnCorporationAsParent } from "@/lib/corporations/subsidiaries/authorization";
+import {
+  canActOnCorporationAsParent,
+  isAiRunCorporation,
+} from "@/lib/corporations/subsidiaries/authorization";
 import {
   activeParentDividendFloorPct,
   isEligibleAsSubsidiary,
@@ -107,6 +110,8 @@ export interface SubsidiaryContextResult {
   isFormalizedSub: boolean;
   activeFloorPct: number;
   canManageAsParent: boolean;
+  /** The viewer, as controlling parent CEO, may retool and rebrand this AI-run subsidiary. */
+  canDirectAsParent: boolean;
   canFormalizeAsSubsidiary: boolean;
   canSpinOff: boolean;
   /** Turns left before this corporation may spin off again; 0 when ready. */
@@ -349,6 +354,7 @@ export async function loadSubsidiaryContext(
     isFormalizedSub,
     activeFloorPct,
     canManageAsParent,
+    canDirectAsParent: canManageAsParent && isAiRunCorporation(corporation),
     canFormalizeAsSubsidiary,
     canSpinOff,
     spinOffCooldownTurnsRemaining: spinOffCooldownRemaining,
