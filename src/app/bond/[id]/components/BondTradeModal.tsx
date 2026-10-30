@@ -1,4 +1,5 @@
 "use client";
+import { SovereignBondRisk } from "@/components/SovereignBondRisk";
 
 import { InlineError } from "@/components/ui/InlineError";
 import { apiErrorText } from "@/lib/errors/catalog";
@@ -598,6 +599,7 @@ export function BondTradeModal({
         </div>
 
         <div className="px-6 py-5 space-y-4">
+          {bond.issuerType === "sovereign" && <SovereignBondRisk risk={bond.sovereignRisk} />}
           {/* Buy / Sell toggle */}
           <div className="flex overflow-hidden rounded-lg border border-card-border text-xs">
             <button

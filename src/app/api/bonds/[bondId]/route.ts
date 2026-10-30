@@ -1,3 +1,4 @@
+import { loadSovereignRiskDisclosures } from "@/lib/bonds/sovereignRiskDisclosure";
 import { charterMay } from "@/lib/banking/rules/capabilities";
 import { NextResponse } from "next/server";
 import { withNoStore } from "@/lib/api/withNoStore";
@@ -427,12 +428,20 @@ export const GET = withNoStore(async function GET(_request: Request, { params }:
     const totalInterestPaid = latestHistory?.totalInterestPaid ?? 0;
 
     const quote = await loadBondQuote(db, bond);
+    const sovereignRisks = await loadSovereignRiskDisclosures(
+      db,
+      bond.issuerType === "sovereign" && bond.countryId ? [bond.countryId as CountryId] : []
+    );
 
     return NextResponse.json({
       bond: {
         _id: bond._id.toString(),
         corporationId: bond.corporationId?.toString() ?? null,
         issuerType: bond.issuerType ?? "corporation",
+        sovereignRisk:
+          bond.issuerType === "sovereign"
+            ? (sovereignRisks.get(bond.countryId ?? "") ?? null)
+            : null,
         countryId: bond.countryId ?? null,
         // Bond's currency (Task 18B). Corporate bonds carry the issuer's
         // liquidCurrencyCode; sovereigns carry the country's currency.

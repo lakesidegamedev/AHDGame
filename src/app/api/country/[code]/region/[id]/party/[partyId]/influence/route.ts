@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
@@ -5,7 +6,7 @@ import { getDb } from "@/lib/mongodb";
 import { requireAuthWithCharacter } from "@/lib/api/requireAuth";
 import { crossCountryActionGuard } from "@/lib/api/crossCountryGuard";
 import { parseJsonBody } from "@/lib/api/validate";
-import { partyInfluenceSchema } from "@/lib/api/schemas/influence";
+import { partyInfluenceSchema, partyInfluenceQueueSchema } from "@/lib/api/schemas/influence";
 import type { StatePartyOrg, InfluenceType } from "@/lib/db/types";
 import { findPartyBySequentialId } from "@/lib/db/partyLookup";
 import {
@@ -158,15 +159,22 @@ export async function POST(request: Request, { params }: RouteParams) {
     );
     if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
-    const parsed = await parseJsonBody(request, partyInfluenceSchema);
+    const parsed = await parseJsonBody(
+      request,
+      z.union([partyInfluenceQueueSchema, partyInfluenceSchema])
+    );
     if (!parsed.success) {
       return errorResponse(parsed.status, parsed.error);
     }
 
-    if (!STATE_PARTY_MANAGEMENT_ACTIONS.includes(parsed.data.influenceType)) {
+    const queue = "queue" in parsed.data ? parsed.data.queue : [parsed.data];
+    const unsupported = queue.find(
+      (item) => !STATE_PARTY_MANAGEMENT_ACTIONS.includes(item.influenceType)
+    );
+    if (unsupported) {
       return errorResponse(
         400,
-        `${INFLUENCE_ACTIONS[parsed.data.influenceType].name} is not available in State NPP Management.`
+        `${INFLUENCE_ACTIONS[unsupported.influenceType].name} is not available in State NPP Management.`
       );
     }
 
@@ -176,17 +184,27 @@ export async function POST(request: Request, { params }: RouteParams) {
       return errorResponse(404, "Party not found");
     }
 
-    const result = await executeStatePartyInfluence({
-      partyId,
-      partyObjectId: party._id,
-      countryId: party.countryId,
-      stateId: stateId.toUpperCase(),
-      nppId: new ObjectId(parsed.data.nppId),
-      influenceType: parsed.data.influenceType,
-      fundAmount: Math.max(0, Math.floor(parsed.data.fundAmount || 0)),
-      actorCharacterId: authResult.user.character._id,
-      context: parsed.data.context || {},
-    });
+    const results = [];
+    for (const item of queue) {
+      const result = await executeStatePartyInfluence({
+        partyId,
+        partyObjectId: party._id,
+        countryId: party.countryId,
+        stateId: stateId.toUpperCase(),
+        nppId: new ObjectId(item.nppId),
+        influenceType: item.influenceType,
+        fundAmount: Math.max(0, Math.floor(item.fundAmount || 0)),
+        actorCharacterId: authResult.user.character._id,
+        context: item.context || {},
+      });
+      results.push({
+        success: result.success && !result.error,
+        outcome: result.error ? "error" : result.outcome,
+        message: result.error || result.message,
+      });
+      if (result.error) break;
+    }
+    const result = results[0];
 
     const updatedStateParty = await db
       .collection<StatePartyOrg>("statePartyOrg")
@@ -195,7 +213,8 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({
       success: result.success,
       outcome: result.outcome,
-      message: result.error || result.message,
+      message: result.message,
+      ...("queue" in parsed.data ? { results } : {}),
       party: updatedStateParty
         ? {
             politicalStrength: updatedStateParty.politicalStrength || 0,
