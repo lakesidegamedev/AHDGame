@@ -46,4 +46,17 @@ describe("summarizeBuildQueue", () => {
     );
     expect(summary?.unitsOrdered).toBe(300);
   });
+
+  it("reports the per-turn arrival of smooth orders and the last finish turn", () => {
+    const summary = summarizeBuildQueue(
+      [
+        order({ unitsOrdered: 100, startTurn: 0, onlineTurn: 50, smooth: true }),
+        order({ unitsOrdered: 40, startTurn: 0, onlineTurn: 80 }),
+      ],
+      10
+    );
+    expect(summary?.unitsPerTurn).toBeCloseTo(2, 10);
+    expect(summary?.lastOnlineTurn).toBe(80);
+    expect(summary?.nextOnlineTurn).toBe(50);
+  });
 });

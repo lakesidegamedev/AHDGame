@@ -15,6 +15,7 @@ type SectorFacts = Pick<
   | "sectorType"
   | "industryModel"
   | "mediaDiscriminator"
+  | "strategyId"
   | "capitalStock"
   | "capacityBookAnchor"
   | "buildQueue"
@@ -88,6 +89,8 @@ export function prepareProducerSector(input: {
       sectorType: sector.sectorType,
       industryModel: sector.industryModel,
       mediaDiscriminator: sector.mediaDiscriminator,
+      // Plant size follows the recipe; a vehicle strategy builds vehicle plants.
+      strategyId: sector.strategyId,
     },
   };
   const activeFraction = activeCapacityFraction(sector);

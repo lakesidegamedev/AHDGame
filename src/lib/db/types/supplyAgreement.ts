@@ -278,6 +278,9 @@ export const CONTRACT_DAMAGES_CAP_FRACTION = 0.25;
 /** Maximum contract price deviation from market (±35%). */
 export const SUPPLY_AGREEMENT_PRICE_BAND = 0.35;
 
+/** Deepest discount an AI-run supplier signs; deeper proposals get a counter at this price. */
+export const AI_SUPPLIER_MAX_DISCOUNT = 0.1;
+
 /** Clamp a proposed price premium into the legal band. */
 export function clampAgreementPremium(premium: number): number {
   if (!Number.isFinite(premium)) return 0;

@@ -42,6 +42,7 @@ import type {
 } from "@/lib/db/types";
 import type { RetiredCharacter } from "@/lib/db/types/retiredCharacter";
 import { isSeasonRecapEnabled } from "@/lib/recap/featureFlag";
+import { applyExperimentalUiCookie } from "@/lib/api/experimentalUiCookie";
 
 /**
  * Whether to show the "Campaign Manager" navbar link. Returns true for: admins,
@@ -709,7 +710,7 @@ export async function GET() {
       pendingSeasonRecapId = pendingRecap?._id.toString() ?? null;
     }
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         user: {
           id: userId,
@@ -794,6 +795,10 @@ export async function GET() {
       },
       { headers: { "Cache-Control": "private, max-age=5, no-transform" } }
     );
+    // Mirror the opt-in onto the cookie the root template reads. Running here,
+    // on every app load, is what carries a toggle made on another device to
+    // this browser.
+    return applyExperimentalUiCookie(response, user?.experimentalFeatures === true);
   } catch (error) {
     return handleRouteError(error);
   }

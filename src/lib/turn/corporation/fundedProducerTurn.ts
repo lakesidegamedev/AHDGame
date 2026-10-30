@@ -83,6 +83,7 @@ import { fundedShortageBuildOps } from "./sectorTurn/shortageBuildSpeedup";
 import { fundedRecipePressure } from "@/lib/market/producerMarket/fundedRestartRules";
 import { procurementSpill } from "@/lib/market/producerMarket/procurementSpillRules";
 import { newEntrantProducerBooks } from "@/lib/market/producerMarket/openingState";
+import { advanceStateRuns, returnStateRunAdvances } from "./stateRunAdvance";
 import {
   createProducerWallets,
   producerWalletId,
@@ -617,6 +618,26 @@ export async function runFundedProducerTurn(
     };
   };
 
+  // State companies hold almost no cash of their own (profit is remitted, the
+  // treasury backs losses), so on their own cash they would plan nothing and
+  // leave their plants, workers and wages idle. The owning treasury advances
+  // their full run before the market plans; what they do not spend goes back
+  // right after settlement (see stateRunAdvanceRules).
+  const stateCorpIds = new Set(
+    [...demand.ownerKindByCompany].flatMap(([id, kind]) => (kind === "state" ? [id] : []))
+  );
+  const advanceCtx = {
+    worldEpoch,
+    turn,
+    now: new Date(),
+    rates,
+    treasuryCurrency: (countryId: string) => countryCurrency.get(countryId),
+  };
+  const stateAdvances = await advanceStateRuns(db, advanceCtx, {
+    plans: demand.preparedSectors.map((p) => p.plan),
+    stateCorpIds,
+  });
+
   const settled = await runCorporationProducerMarket(db, {
     worldEpoch,
     turn,
@@ -641,6 +662,14 @@ export async function runFundedProducerTurn(
     },
     close: closeAtSettlement,
   });
+
+  // Unspent advance returns now, before the remittance sweep later in the turn
+  // reads this cash as profit. Keep the in-memory cash the legacy pass reads in step.
+  const returned = await returnStateRunAdvances(db, advanceCtx, stateAdvances);
+  for (const [id, local] of returned) {
+    const corp = corpById.get(id);
+    if (corp) corp.liquidCapital = (corp.liquidCapital ?? 0) - local;
+  }
 
   const supportBySector =
     (settled.result.close?.meta?.supportBySector as Record<string, number> | undefined) ?? {};

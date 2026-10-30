@@ -184,7 +184,13 @@ export async function bulkBuildCapacity(request: Request, { params }: RouteParam
         capacityUnits: Math.round(capacityUnits),
         units: bulkBuildUnits(
           body.rule,
-          { sectorType: meta.sectorType, capacityUnits },
+          {
+            sectorType: meta.sectorType,
+            industryModel: sector.industryModel,
+            mediaDiscriminator: sector.mediaDiscriminator,
+            strategyId: sector.strategyId,
+            capacityUnits,
+          },
           MAX_BUILD_UNITS_PER_ORDER
         ),
         costLocal: 0,

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { STATE_FLAGS } from "@/lib/constants";
 import { bypassNextImageOptimization } from "@/lib/images/bypassImageOptimization";
 import { FillText, signTone } from "../dense/DenseKit";
+import { UsedText } from "../plantsPresentation";
 import { DataBar } from "../dense/InlineViz";
 import { sectorMargin, sectorRevenue } from "../overviewModel";
 import type { SectorDetail } from "../CorporationPageTypes";
@@ -98,8 +99,13 @@ export function SectorCards({
                 {typeof s.profit === "number" ? est(fmtSigned(scale(s.profit))) : "n/a"}
               </Figure>
               {plantsMode ? (
-                <Figure label="Fill">
+                <Figure label="Sold">
                   <FillText fill={s.fillRate} band={s.fillRateBand} />
+                  <UsedText
+                    produced={s.producedUnits}
+                    capacity={s.capacityUnits}
+                    className="ml-1.5"
+                  />
                 </Figure>
               ) : (
                 <Figure label="Share" className="text-muted">

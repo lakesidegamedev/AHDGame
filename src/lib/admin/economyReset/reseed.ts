@@ -36,12 +36,33 @@ export const ECONOMY_RESET_INDEX_MIGRATIONS: readonly string[] = Object.freeze([
   "2026-09-29-union-prosecution-bar-index",
 ]);
 
+/** Post-breakup names for continuing states whose issuer the preset names after the federation. */
+const SUCCESSOR_ISSUER_NAMES: Readonly<Record<string, { name: string; description: string }>> = {
+  RU: {
+    name: "Russian Federation",
+    description:
+      "Russian sovereign issuer after the Soviet breakup; no command-economy production assets.",
+  },
+};
+
+/** Source entities of the federation settlements applied in this world. */
+export async function loadDissolvedFederations(db: Db, preset: string): Promise<string[]> {
+  const rows = await db
+    .collection<{ _id: string; sourceEntityId: string; presetId: string; status: string }>(
+      "federationSettlementApplications"
+    )
+    .find({ presetId: preset, status: "applied" }, { projection: { sourceEntityId: 1 } })
+    .toArray();
+  return [...new Set(rows.map((row) => row.sourceEntityId))];
+}
+
 function entriesFor(
   seed: CountryCorporationSeed,
   states: { id: string; population: number; gdp: number; countryId: string }[],
   preset: string,
   commandEconomyEnabled: boolean,
-  log: Log
+  log: Log,
+  liveCurrency?: string
 ): CountryOwnedSeedData[] {
   const generated = generateCountryOwnedSeedData(
     states,
@@ -50,6 +71,22 @@ function entriesFor(
     log
   ).filter((entry) => entry.corporation.countryOwnerId === seed.countryId);
   if (seed.mode === "generator") return generated;
+  if (seed.mode === "successorIssuer") {
+    const issuer = generated.find((entry) => entry.corporation.isPrimaryNationalCorporation);
+    if (!issuer) return [];
+    const renamed = SUCCESSOR_ISSUER_NAMES[seed.countryId];
+    return [
+      {
+        corporation: {
+          ...issuer.corporation,
+          ...(renamed ?? {}),
+          // The kept budget's currency, so the issuer matches the live forex layer.
+          ...(liveCurrency ? { liquidCurrencyCode: liveCurrency as never } : {}),
+        },
+        sectors: [],
+      },
+    ];
+  }
   // Same override seedModernBudgets2019 writes.
   const issuer = generated.find((entry) => entry.corporation.isPrimaryNationalCorporation);
   if (!issuer) throw new Error("Missing 2019 RU sovereign issuer template");
@@ -95,13 +132,26 @@ export async function reseedCountryOwnedCorporations(
     });
     byCountry.set(state.countryId, rows);
   }
+  const dissolvedFederations = await loadDissolvedFederations(db, preset);
   const seeds = countryCorporationSeeds({
     preset,
     nationalBudgetCountries: getInitialNationalBudgetsForPreset(preset).map(
       (budget) => budget.countryId
     ),
     easternBlocEra: isEasternBlocEra(preset),
+    dissolvedFederations,
   });
+  const liveCurrencies = new Map(
+    (
+      await db
+        .collection<{ countryId: string; currencyCode?: string }>("federalBudget")
+        .find(
+          { countryId: { $in: dissolvedFederations } },
+          { projection: { countryId: 1, currencyCode: 1 } }
+        )
+        .toArray()
+    ).map((row) => [row.countryId, row.currencyCode])
+  );
   const totals = { countries: 0, corporations: 0, sectors: 0 };
   for (const seed of seeds) {
     const entries = entriesFor(
@@ -109,7 +159,8 @@ export async function reseedCountryOwnedCorporations(
       byCountry.get(seed.countryId) ?? [],
       preset,
       commandEconomyEnabled,
-      log
+      log,
+      liveCurrencies.get(seed.countryId)
     );
     if (entries.length === 0) continue;
     // One bounded write set per country; the helper also re-points sectors left

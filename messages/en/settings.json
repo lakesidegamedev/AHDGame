@@ -385,7 +385,7 @@
       "avatarAlt": "{provider} avatar"
     },
     "experimental": {
-      "intro": "Try features that are still being built. They may change, break or go away. Turning this off removes them straight away. Right now this turns on the ASCII page decode: as you move around the site, each page scrambles into place through a character grid.",
+      "intro": "Try features that are still being built. They may change, break or go away. Turning this off removes them straight away. Right now this turns on the ASCII page decode: each page scrambles into place through a character grid.",
       "toggleLabel": "Turn on experimental features",
       "toggleHint": "Off by default. Only changes things for you.",
       "saveError": "Could not save. Try again.",

@@ -47,6 +47,47 @@ export interface PriorReceipt {
   labourArrears?: number;
   otherOperatingPaid?: number;
   otherOperatingArrears?: number;
+  /**
+   * Run share the plant planned for that turn, before input and cash cuts.
+   * Absent on receipts settled before it was recorded.
+   */
+  plannedRunShare?: number;
+}
+
+/** One product row of a settled receipt, as the run signals read it. */
+export interface ReceiptLine {
+  commodity: string;
+  offeredUnits?: number;
+  soldUnits?: number;
+  revenue?: number;
+}
+
+/**
+ * The receipt the run signals read: only the lines the plant makes now. After
+ * a retool the old lines' leftover stock is still offered and sold, but a glut
+ * in goods the plant no longer makes must not hold back the line it does make
+ * (it would keep sell-through under the sold-out mark and count the dead stock
+ * as held stock against the plan). A receipt with no row for a current line is
+ * returned as it is.
+ */
+export function liveLineReceipt<T extends PriorReceipt & { products?: readonly ReceiptLine[] }>(
+  receipt: T,
+  liveCommodities: ReadonlySet<string>
+): T {
+  const products = receipt.products;
+  if (!products || products.length === 0) return receipt;
+  const live = products.filter((p) => liveCommodities.has(p.commodity));
+  if (live.length === 0 || live.length === products.length) return receipt;
+  const finite = (x: number | undefined) => (typeof x === "number" && Number.isFinite(x) ? x : 0);
+  let offeredUnits = 0,
+    soldUnits = 0,
+    revenue = 0;
+  for (const p of live) {
+    offeredUnits += finite(p.offeredUnits);
+    soldUnits += finite(p.soldUnits);
+    revenue += finite(p.revenue);
+  }
+  return { ...receipt, products: live, offeredUnits, soldUnits, revenue };
 }
 
 /**
@@ -178,7 +219,17 @@ export function demandPlanRunShare(
     })
   )
     return Math.max(floor, run * (1 - OUTPUT_CUT_STEP));
-  if (sellThrough >= SOLD_OUT) return Math.min(1, run * soldOutGrowth);
+  if (sellThrough >= SOLD_OUT) {
+    // Grow from what the plant planned, not only from what it made: short
+    // inputs cut a sold-out line's output below its plan, and growing from the
+    // cut output would cut it again next turn, compounding the shortage toward
+    // the floor. The plan is held only while the run paid its running costs, so
+    // a starved plant paying a full crew for a cut output falls back to what it
+    // made.
+    const planned = Math.min(1, finite(prior.plannedRunShare ?? 0));
+    const base = contributionPerUnit >= 0 ? Math.max(run, planned) : run;
+    return Math.min(1, base * soldOutGrowth);
+  }
   const expectedSales = sold * (1 + DEMAND_PLAN_PROBE);
   const heldStock = Math.max(0, offered - sold);
   const planned = Math.max(0, expectedSales - heldStock);

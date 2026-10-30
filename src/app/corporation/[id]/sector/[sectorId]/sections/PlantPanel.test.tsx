@@ -81,6 +81,52 @@ describe("PlantPanel facility sizing", () => {
   });
 });
 
+describe("PlantPanel vehicle recipe without a vehicle model", () => {
+  it("counts vehicle plants for a manufacturing sector on a vehicle strategy", () => {
+    const vehicleRecipePlants = {
+      ...plants,
+      capacityUnits: 41.7,
+      plantCount: undefined,
+      strategyId: "vehicle_assembly",
+      buildQueue: [
+        {
+          orderIndex: 0,
+          startTurn: 531,
+          onlineTurn: 551,
+          turnsRemaining: 14,
+          smooth: true,
+          unitsOrdered: 40,
+          unitsDelivered: 12.4,
+          costPaidAnchor: 1_000_000,
+          progress: 0.31,
+        },
+      ],
+    } as unknown as PlantsData;
+
+    render(
+      <PlantPanel
+        plants={vehicleRecipePlants}
+        sectorType="manufacturing"
+        averageWageLevel={1}
+        isCeo={false}
+        busy={false}
+        message=""
+        onOpenBuild={noop}
+        onCancelOrder={noop}
+        onMothball={noop}
+        onReactivate={noop}
+      />
+    );
+
+    // Same size as the ledger and the build dialog: one vehicle unit per plant.
+    expect(screen.getByText("12 of 40 plants built")).toBeTruthy();
+    expect(screen.getByText(/about 2 plants arriving each turn · done on turn 551/)).toBeTruthy();
+    expect(screen.getByText("41")).toBeTruthy();
+    expect(screen.getByText(/28 more being built/)).toBeTruthy();
+    expect(screen.queryByText(/units per day/)).toBeNull();
+  });
+});
+
 describe("PlantPanel workforce", () => {
   it("shows the sector's one-hop freight estimate at installed capacity", () => {
     render(
