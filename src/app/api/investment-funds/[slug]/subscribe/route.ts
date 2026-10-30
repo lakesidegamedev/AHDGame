@@ -33,7 +33,12 @@ import {
 } from "@/lib/financialTxLog/atomicCashGuard";
 import { loadCharacterFxRate } from "@/lib/currency/characterFunds";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
-import { autoConvertForPurchase, convertForExplicitPay } from "@/lib/currency/autoConvert";
+import {
+  autoConvertForPurchase,
+  convertForExplicitPay,
+  type ExplicitPayConversion,
+} from "@/lib/currency/autoConvert";
+import { reverseExplicitPayConversionOrCapture } from "@/lib/currency/explicitPayReversal";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { GameState } from "@/lib/db/types";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
@@ -151,6 +156,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
       });
 
       let subscribeSpreadCharged = 0;
+      let subscribeConversion: ExplicitPayConversion | undefined;
       if (forexEnabled) {
         const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
         if (payCurrency && payCurrency !== fundCurrency) {
@@ -166,6 +172,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
             return errorResponse(400, convertResult.error);
           }
           subscribeSpreadCharged = convertResult.spreadCharged;
+          subscribeConversion = convertResult.conversion;
         } else {
           const convertResult = await autoConvertForPurchase(db, {
             character,
@@ -348,18 +355,25 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
           { units: number; costAnchor: number; nav: number; balanceAfter: number } | undefined;
         let debitError: string | null = null;
 
-        await runTransactionWithSessionRetry(
-          async () => db.client,
-          async (session) => {
-            // `session` is undefined on the standalone fallback path, where a
-            // partial write must be compensated by hand.
-            const outcome = await applySubscription(session, !session);
-            if (outcome.error) debitError = outcome.error;
-            else subscriptionResult = outcome.result;
-          }
-        );
+        try {
+          await runTransactionWithSessionRetry(
+            async () => db.client,
+            async (session) => {
+              // `session` is undefined on the standalone fallback path, where a
+              // partial write must be compensated by hand.
+              const outcome = await applySubscription(session, !session);
+              if (outcome.error) debitError = outcome.error;
+              else subscriptionResult = outcome.result;
+            }
+          );
+        } catch (error) {
+          // The debit was rolled back or compensated; undo the conversion too.
+          await reverseExplicitPayConversionOrCapture(db, subscribeConversion, "funds.subscribe");
+          throw error;
+        }
 
         if (debitError) {
+          await reverseExplicitPayConversionOrCapture(db, subscribeConversion, "funds.subscribe");
           return errorResponse(
             400,
             debitError === "Insufficient funds"

@@ -22,7 +22,12 @@ import {
   refundCorpLiquidCapital,
 } from "@/lib/financialTxLog/atomicCashGuard";
 import { isForexEnabled } from "@/lib/currency/featureFlag";
-import { autoConvertForPurchase, convertForExplicitPay } from "@/lib/currency/autoConvert";
+import {
+  autoConvertForPurchase,
+  convertForExplicitPay,
+  type ExplicitPayConversion,
+} from "@/lib/currency/autoConvert";
+import { reverseExplicitPayConversionOrCapture } from "@/lib/currency/explicitPayReversal";
 import { distributeConversionSpread } from "@/lib/currency/marketMaker";
 import {
   anchorToCorpLiquidCapital,
@@ -317,7 +322,20 @@ export async function POST(request: Request, { params }: RouteParams) {
           );
         }
 
+        // Everything that can reject the order runs before any conversion, so a
+        // refused order never leaves the wallet holding the bond currency.
+        const imperialCapErr = sovereignBondCapError(
+          bond,
+          "imperialCharacterId",
+          imperial._id,
+          units
+        );
+        if (imperialCapErr) {
+          return errorResponse(400, imperialCapErr);
+        }
+
         // Currency conversion for imperial characters
+        let imperialConversion: ExplicitPayConversion | undefined;
         if (forexEnabled) {
           const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
           if (payCurrency && payCurrency !== bondCurrency) {
@@ -333,6 +351,7 @@ export async function POST(request: Request, { params }: RouteParams) {
             if (!convertResult.success) {
               return errorResponse(400, convertResult.error);
             }
+            imperialConversion = convertResult.conversion;
           } else {
             const convertResult = await autoConvertForPurchase(db, {
               character: imperial,
@@ -353,15 +372,6 @@ export async function POST(request: Request, { params }: RouteParams) {
         // the regular character bug; convertForExplicitPay / autoConvert above
         // may have already consolidated FX into the bondCurrency, but the
         // final spend must still be guarded.
-        const imperialCapErr = sovereignBondCapError(
-          bond,
-          "imperialCharacterId",
-          imperial._id,
-          units
-        );
-        if (imperialCapErr) {
-          return errorResponse(400, imperialCapErr);
-        }
         const debitResult = await atomicallyDebitImperialCash(
           db,
           imperial._id,
@@ -370,6 +380,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           forexEnabled
         );
         if (!debitResult.ok) {
+          await reverseExplicitPayConversionOrCapture(db, imperialConversion, "bonds.buy");
           return errorResponse(
             400,
             `Insufficient funds. Need ${costLocal.toLocaleString(undefined, { minimumFractionDigits: 2 })} ${bondCurrency}.`
@@ -386,6 +397,7 @@ export async function POST(request: Request, { params }: RouteParams) {
           );
           if (!reserved) {
             await refundImperialCash(db, imperial._id, bondCurrency, costLocal, forexEnabled);
+            await reverseExplicitPayConversionOrCapture(db, imperialConversion, "bonds.buy");
             const latestBond = await db
               .collection<Bond>("bonds")
               .findOne({ _id: bond._id }, { projection: { publicFloat: 1 } });
@@ -425,6 +437,7 @@ export async function POST(request: Request, { params }: RouteParams) {
               extra: { imperialId: imperial._id.toString(), bondId, bondCurrency, costLocal },
             }
           );
+          await reverseExplicitPayConversionOrCapture(db, imperialConversion, "bonds.buy");
           throw err;
         }
 
@@ -472,8 +485,16 @@ export async function POST(request: Request, { params }: RouteParams) {
         );
       }
 
+      // Everything that can reject the order runs before any conversion, so a
+      // refused order never leaves the wallet holding the bond currency.
+      const charCapErr = sovereignBondCapError(bond, "characterId", character._id, units);
+      if (charCapErr) {
+        return errorResponse(400, charCapErr);
+      }
+
       // Convert currency for purchase
       let playerSpreadCharged = 0;
+      let playerConversion: ExplicitPayConversion | undefined;
       if (forexEnabled) {
         const gs = await db.collection<GameState>("gameState").findOne({ _id: "current" });
         if (payCurrency && payCurrency !== bondCurrency) {
@@ -489,6 +510,7 @@ export async function POST(request: Request, { params }: RouteParams) {
             return errorResponse(400, convertResult.error);
           }
           playerSpreadCharged = convertResult.spreadCharged;
+          playerConversion = convertResult.conversion;
         } else {
           const convertResult = await autoConvertForPurchase(db, {
             character,
@@ -509,10 +531,6 @@ export async function POST(request: Request, { params }: RouteParams) {
       // concurrent buys both pass the check on stale data and silently dropped
       // cash deductions while bond holdings still credited. See
       // src/lib/financialTxLog/atomicCashGuard.ts for the full rationale.
-      const charCapErr = sovereignBondCapError(bond, "characterId", character._id, units);
-      if (charCapErr) {
-        return errorResponse(400, charCapErr);
-      }
       const debitResult = await atomicallyDebitCharacterCash(
         db,
         character._id,
@@ -521,6 +539,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         forexEnabled
       );
       if (!debitResult.ok) {
+        await reverseExplicitPayConversionOrCapture(db, playerConversion, "bonds.buy");
         return errorResponse(
           400,
           `Insufficient funds. Need ${costLocal.toLocaleString(undefined, { minimumFractionDigits: 2 })} ${bondCurrency}.`
@@ -539,6 +558,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         );
         if (!reserved) {
           await refundCharacterCash(db, character._id, bondCurrency, costLocal, forexEnabled);
+          await reverseExplicitPayConversionOrCapture(db, playerConversion, "bonds.buy");
           const latestBond = await db
             .collection<Bond>("bonds")
             .findOne({ _id: bond._id }, { projection: { publicFloat: 1 } });
@@ -575,6 +595,7 @@ export async function POST(request: Request, { params }: RouteParams) {
             extra: { characterId: character._id.toString(), bondId, bondCurrency, costLocal },
           }
         );
+        await reverseExplicitPayConversionOrCapture(db, playerConversion, "bonds.buy");
         throw err;
       }
 
