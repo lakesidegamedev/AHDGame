@@ -20,6 +20,8 @@ areas: [engine]
 - Two shareholders casting a privatization vote at the same time no longer
   overwrite each other, and a vote cast just before the count is included in
   a later count instead of being dropped.
+- An extraction contract offer accepted just as it lapsed stays signed
+  instead of being marked expired after the signing fee was paid.
 - A state enterprise's loss cover adds exactly the shortfall instead of
   resetting its cash to zero.
 - Cancelling a share order, buying back a bond and winding up a fund now wait
