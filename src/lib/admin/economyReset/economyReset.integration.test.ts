@@ -16,10 +16,12 @@ const EPOCH = "economy-reset-test-epoch";
 const characterId = new ObjectId();
 const userId = new ObjectId();
 const playerCorpId = new ObjectId();
+const playerUnionId = new ObjectId();
 
 const before: Record<string, Document[]> = {};
 let freshCorporations = 0;
 let freshSectors = 0;
+let freshUnions = 0;
 let sovereignFaceBefore = 0;
 let heldBondId: ObjectId;
 let basePriceBefore = 0;
@@ -99,6 +101,7 @@ beforeAll(async () => {
   );
   freshCorporations = await db.collection("corporations").countDocuments({});
   freshSectors = await db.collection("corporateSectors").countDocuments({});
+  freshUnions = await db.collection("unions").countDocuments({});
 
   // A played world: a rich player with savings, credit, a company and bonds.
   await db
@@ -123,6 +126,7 @@ beforeAll(async () => {
     },
     lineOfCredit: { balances: { USD: 250 }, arrears: { USD: 5 } },
     ceoNiTenure: { corporationId: playerCorpId.toHexString(), sinceTurn: 1 },
+    unionLeaderOf: playerUnionId,
   });
   await db.collection("corporations").insertOne({
     _id: playerCorpId,
@@ -138,6 +142,46 @@ beforeAll(async () => {
     countryId: "US",
     stateId: "CA",
     sectorType: "retail",
+  });
+
+  // A played world's organized labour: a founded union with a head, an
+  // organizer, a leadership vote and a bill endorsement. All of it is tied to
+  // the corporations the reset wipes, so none of it may survive.
+  const now = new Date();
+  await db.collection("unions").insertOne({
+    _id: playerUnionId,
+    countryId: "US",
+    sectorType: "manufacturing",
+    name: "Test Workers United",
+    ownerId: characterId,
+    ownerType: "character",
+    foundedByCharacterId: characterId,
+    treasury: 500_000,
+    approval: 55,
+    createdAt: now,
+    updatedAt: now,
+  });
+  await db.collection("unionOrganizers").insertOne({
+    unionId: playerUnionId,
+    characterId,
+    organizeCount: 3,
+    strength: 40,
+    totalSpent: 0,
+    createdAt: now,
+    updatedAt: now,
+  });
+  await db.collection("unionLeaderVotes").insertOne({
+    unionId: playerUnionId,
+    voterCharacterId: characterId,
+    candidateCharacterId: characterId,
+    createdAt: now,
+    updatedAt: now,
+  });
+  await db.collection("unionEndorsements").insertOne({
+    unionId: playerUnionId,
+    billId: new ObjectId(),
+    stance: "endorse",
+    createdAt: now,
   });
   const bond = await db.collection("bonds").findOne({
     issuerType: "sovereign",
@@ -211,7 +255,6 @@ beforeAll(async () => {
     "politicalParties",
     "macroMetrics",
     "stateBudgets",
-    "unions",
   ])
     before[name] = await all(name);
   sovereignFaceBefore = sovereignFace(await all("bonds"));
@@ -252,14 +295,28 @@ describe("economy-only reset end to end", () => {
     expect(await db.collection("stockExchangeSnapshots").countDocuments({})).toBeGreaterThan(0);
   });
 
+  it("rebuilds organized labour as a vacant roster on the rebuilt sectors", async () => {
+    // The player-founded union, its organizer, vote and endorsement are gone.
+    expect(await db.collection("unions").findOne({ _id: playerUnionId })).toBeNull();
+    expect(await db.collection("unionOrganizers").countDocuments({})).toBe(0);
+    expect(await db.collection("unionLeaderVotes").countDocuments({})).toBe(0);
+    expect(await db.collection("unionEndorsements").countDocuments({})).toBe(0);
+    // The same world slots come back, every one unmanned.
+    expect(await db.collection("unions").countDocuments({})).toBe(freshUnions);
+    expect(await db.collection("unions").countDocuments({ ownerId: { $ne: null } })).toBe(0);
+    // The head's cache cleared with the union, so founding or leading another
+    // union is not blocked by a pointer at a deleted document.
+    expect((await db.collection("characters").findOne({ _id: characterId }))!.unionLeaderOf).toBe(
+      null
+    );
+    // The rebuilt shops are represented by the reseeded roster again.
+    expect(
+      await db.collection("corporateSectors").countDocuments({ representingUnionId: { $ne: null } })
+    ).toBeGreaterThan(0);
+  });
+
   it("leaves politics, budgets and macro state untouched", async () => {
-    for (const name of [
-      "enactedLaws",
-      "politicalParties",
-      "macroMetrics",
-      "stateBudgets",
-      "unions",
-    ])
+    for (const name of ["enactedLaws", "politicalParties", "macroMetrics", "stateBudgets"])
       expect(await all(name), name).toEqual(before[name]);
     const strip = (rows: Document[]) =>
       rows.map(({ economyResetDigest: _d, updatedAt: _u, ...rest }) => rest);
