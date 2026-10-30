@@ -29,7 +29,11 @@ export interface NppRosterPanelProps {
   /** Currency to format per-action treasury costs in (defaults to USD). */
   currency?: CurrencyCode;
   /** Execute one influence action against one NPP. */
-  onExecute: (nppId: string, type: ActionOption["type"]) => Promise<{ ok: boolean }>;
+  onExecute: (
+    nppId: string,
+    type: ActionOption["type"],
+    count?: number
+  ) => Promise<{ ok: boolean }>;
   /**
    * Execute one action against many NPPs in as few requests as possible. When
    * omitted, bulk runs fall back to one onExecute call per NPP.
@@ -179,10 +183,10 @@ export function NppRosterPanel({
       return n;
     });
 
-  const runOne = async (id: string, type: ActionOption["type"]) => {
+  const runOne = async (id: string, type: ActionOption["type"], count = 1) => {
     setBusy(true);
     try {
-      await onExecute(id, type);
+      await onExecute(id, type, count);
     } finally {
       setBusy(false);
     }
@@ -434,8 +438,9 @@ function NppDrawer({
   currency: CurrencyCode;
   busy: boolean;
   onClose: () => void;
-  onAction: (id: string, type: ActionOption["type"]) => void;
+  onAction: (id: string, type: ActionOption["type"], count?: number) => void;
 }) {
+  const [count, setCount] = useState(1);
   const rec = recommendedAction(npp.stats);
   const flags = needsAttention(npp.stats);
   return (
@@ -470,6 +475,24 @@ function NppDrawer({
           </div>
         ))}
       </div>
+      <fieldset disabled={busy} className="mb-3 flex gap-2 items-center">
+        <legend className="text-xs text-muted">Actions per click</legend>
+        {[1, 5, 10].map((value) => (
+          <button
+            key={value}
+            type="button"
+            aria-pressed={count === value}
+            onClick={() => setCount(value)}
+            className={`rounded border px-3 py-1 ${count === value ? "border-primary bg-primary/15 text-primary" : "border-card-border"}`}
+          >
+            x{value}
+          </button>
+        ))}
+      </fieldset>
+      <p className="mb-2 text-xs text-muted">
+        Stops if a stat cap or available funds/action points prevent the next action. Completed
+        actions remain charged.
+      </p>
       <div className="space-y-2">
         {actions.map((a) => {
           const blocked = getStatCapOverride(a.type, npp.stats);
@@ -479,7 +502,7 @@ function NppDrawer({
               key={a.type}
               type="button"
               disabled={busy || !!blocked || !a.available}
-              onClick={() => onAction(npp.id, a.type)}
+              onClick={() => onAction(npp.id, a.type, count)}
               className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm disabled:opacity-50 ${
                 isRec ? "border-primary bg-primary/5" : "border-card-border hover:bg-card-elevated"
               }`}
@@ -492,8 +515,10 @@ function NppDrawer({
                   </span>
                 )}
                 <span className="ml-2 text-xs text-muted">
-                  {a.actionCost} AP
-                  {a.baseFundCost > 0 ? ` · ${formatLocalFunds(a.baseFundCost, currency)}` : ""}
+                  {a.actionCost * count} AP
+                  {a.baseFundCost > 0
+                    ? ` · ${formatLocalFunds(a.baseFundCost * count, currency)}`
+                    : ""}
                   {blocked ? ` · ${blocked.unavailableReason}` : ""}
                 </span>
               </span>

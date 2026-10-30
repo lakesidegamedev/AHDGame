@@ -52,37 +52,14 @@ interface RouteParams {
  */
 const buildOrgBodySchema = z.object({
   psPool: z.enum(["state", "national"]).optional(),
+  count: z.number().int().min(1).max(10).optional(),
 });
 
-/**
- * Build Org historically accepted no request body. Parse tolerantly: an empty
- * or absent body is valid (→ no `psPool`, server default = state pool). A
- * present-but-malformed body is rejected.
- */
-async function parseOptionalPsPool(
-  request: Request
-): Promise<{ ok: true; psPool?: "state" | "national" } | { ok: false; error: string }> {
-  let text = "";
-  try {
-    text = await request.text();
-  } catch {
-    return { ok: true };
-  }
-  if (!text.trim()) return { ok: true };
-  let raw: unknown;
-  try {
-    raw = JSON.parse(text);
-  } catch {
-    return { ok: false, error: "Invalid JSON body" };
-  }
-  const parsed = buildOrgBodySchema.safeParse(raw);
-  if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid body" };
-  }
-  return { ok: true, psPool: parsed.data.psPool };
-}
-
-export async function POST(request: Request, { params }: RouteParams) {
+async function buildOnce(
+  body: z.infer<typeof buildOrgBodySchema>,
+  { params }: RouteParams,
+  skipRateLimit = false
+) {
   const { code, id: regionId, partyId } = await params;
   const countryId = code.toUpperCase() as CountryId;
   if (!COUNTRY_CONFIGS[countryId]) {
@@ -99,18 +76,16 @@ export async function POST(request: Request, { params }: RouteParams) {
   const crossCountry = crossCountryActionGuard(authUser.character, countryId);
   if (crossCountry) return crossCountry;
 
-  const rateLimit = checkRateLimit(
-    `api/country/[code]/region/[id]/party/[partyId]/build-org:${authUser.userId}`,
-    60,
-    60_000
-  );
+  const rateLimit = skipRateLimit
+    ? { ok: true as const }
+    : checkRateLimit(
+        `api/country/[code]/region/[id]/party/[partyId]/build-org:${authUser.userId}`,
+        60,
+        60_000
+      );
   if (!rateLimit.ok) return rateLimitResponse(rateLimit.retryAfter);
 
-  const bodyResult = await parseOptionalPsPool(request);
-  if (!bodyResult.ok) {
-    return errorResponse(400, bodyResult.error);
-  }
-  const psPool = bodyResult.psPool;
+  const psPool = body.psPool;
 
   const upperRegionId = regionId.toUpperCase();
   const db = await getDb();
@@ -374,5 +349,62 @@ export async function POST(request: Request, { params }: RouteParams) {
     newOrg: ownResult.organization,
     dilutions,
     nextPreview,
+  });
+}
+
+/** A bounded batch reuses each single spend, including its live pressure and funding checks. */
+export async function POST(request: Request, context: RouteParams) {
+  let raw: unknown;
+  try {
+    const text = await request.text();
+    raw = text.trim() ? JSON.parse(text) : {};
+  } catch {
+    return errorResponse(400, "Invalid JSON body");
+  }
+  const parsed = buildOrgBodySchema.safeParse(raw);
+  if (!parsed.success) return errorResponse(400, parsed.error.issues[0]?.message ?? "Invalid body");
+  const count = parsed.data.count ?? 1;
+  let completed = 0;
+  let psCost = 0;
+  let cashCost = 0;
+  let cashPrice = 0;
+  const dilutions = new Map<string, { partyId: string; loss: number; newOrg: number }>();
+  let orgGain = 0;
+  let contributionUnits = 0;
+  let last: Record<string, unknown> = {};
+  let stopReason: string | undefined;
+  for (let index = 0; index < count; index++) {
+    const response = await buildOnce(parsed.data, context, index > 0);
+    if (count === 1) return response;
+    const result = await response.json();
+    if (!response.ok) {
+      if (completed === 0) return NextResponse.json(result, { status: response.status });
+      stopReason = result.error ?? "The next build could not be completed.";
+      break;
+    }
+    completed++;
+    last = result;
+    psCost += result.psCost;
+    cashCost += result.cashCost;
+    cashPrice += result.cashPrice;
+    for (const row of result.dilutions ?? []) {
+      const previous = dilutions.get(row.partyId);
+      dilutions.set(row.partyId, { ...row, loss: row.loss + (previous?.loss ?? 0) });
+    }
+    orgGain += result.orgGain;
+    contributionUnits += result.contributionUnits;
+  }
+  return NextResponse.json({
+    ...last,
+    requested: count,
+    completed,
+    stopReason,
+    psCost,
+    cashCost,
+    orgGain,
+    contributionUnits,
+    cashPrice,
+    fundedFraction: cashPrice > 0 ? cashCost / cashPrice : 1,
+    dilutions: [...dilutions.values()],
   });
 }
