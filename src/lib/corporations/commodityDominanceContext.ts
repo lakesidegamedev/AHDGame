@@ -182,9 +182,24 @@ export async function loadCommodityDominanceContext(
       .toArray();
     const commandEconomyEnabled = config?.commandEconomyEnabled === true;
     const sectors = (rows as FirmSectorRow[]).map((r) => toDominanceSector(r, args.turn));
-    const target = sectors.find((s) => String(s._id) === String(args.sector._id));
-    if (!target) return null;
-    const commodities = sectorOutputCommodities(target, args.turn);
+    const targetIndex = sectors.findIndex((s) => String(s._id) === String(args.sector._id));
+    if (targetIndex < 0) return null;
+    // Price the toll on the strategy the ORDER will run, not the trailing
+    // retool blend. A sector part-way through standard -> iron_mining still
+    // reports the old diversified mix to production, so counting that mix
+    // charged an iron mine for its timber/rare-earth byproducts: a firm with
+    // 26k units of queued extraction capacity was quoted 40x because 1.5% of
+    // its transitional mix was timber against a 36 unit/day world market.
+    // The new units land after the retool and will make iron only. Other
+    // sectors of the firm keep their live effective mix, because they are not
+    // being expanded and their current output is real.
+    const pricedSectors = sectors.map((sector, index) =>
+      index === targetIndex
+        ? { ...sector, transitionFromStrategyId: null, transitionStartTurn: null }
+        : sector
+    );
+    const pricedTarget = pricedSectors[targetIndex];
+    const commodities = sectorOutputCommodities(pricedTarget, args.turn);
     if (commodities.length === 0) return null;
     const priceDocs = await db
       .collection<CommodityPrice>("commodityPrices")
@@ -193,7 +208,7 @@ export async function loadCommodityDominanceContext(
     const demand: Partial<Record<CommodityType, number>> = {};
     for (const doc of priceDocs) demand[doc.commodity] = doc.globalDemand;
     return {
-      sectors,
+      sectors: pricedSectors,
       commodities,
       demand,
       targetSectorId: String(args.sector._id),
