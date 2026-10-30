@@ -60,6 +60,8 @@ import {
 import type { SovereignCouponCorporationQuote } from "@/lib/banking/rules/sovereignCoupons";
 import { RESET_V2_READY } from "@/lib/resetVersions/availability";
 import { resetSystemVersionsForCountry } from "@/lib/resetVersions/rules";
+import { measureFiscalScales } from "@/lib/budget/fiscalScaleTurn";
+import { FISCAL_SCALE_STAGE, normalizeFiscalScaleStage } from "@/lib/budget/rules/fiscalScale";
 
 /** Concurrent country settlements; a shared payee or pool still orders them. */
 const TREASURY_LANES = 8;
@@ -78,7 +80,10 @@ const BANK_CLAIMS_KEY = "bankSovereignClaims";
  * read by the funded coupon path; a world with that ledger off does not need to
  * decode it.
  */
-function treasuryBudgetProjection(treasuryCashLedgerEnabled: boolean): Record<string, number> {
+function treasuryBudgetProjection(
+  treasuryCashLedgerEnabled: boolean,
+  fiscalScaleStage = 0
+): Record<string, number> {
   return {
     countryId: 1,
     currencyCode: 1,
@@ -103,6 +108,7 @@ function treasuryBudgetProjection(treasuryCashLedgerEnabled: boolean): Record<st
     financialCrisisAusterityUntilTurn: 1,
     financialCrisisAusterityBaseSpending: 1,
     ...(treasuryCashLedgerEnabled ? { sovereignCouponFrozenThrough: 1 } : {}),
+    ...(fiscalScaleStage >= FISCAL_SCALE_STAGE.MEASURE ? { fiscalScale: 1 } : {}),
   };
 }
 
@@ -165,6 +171,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
           ledgerShadow: 1,
           privateBankingEnabled: 1,
           treasuryCashLedgerEnabled: 1,
+          fiscalScaleStage: 1,
         },
       }
     ),
@@ -178,12 +185,13 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
   const ledgerShadow = config?.ledgerShadow === true;
   const bankTreasury = config?.privateBankingEnabled === true;
   const treasuryCashLedgerEnabled = config?.treasuryCashLedgerEnabled === true;
+  const fiscalScaleStage = normalizeFiscalScaleStage(config?.fiscalScaleStage);
 
   // Projected read: see `treasuryBudgetProjection`. The rows are a narrower
   // shape than `FederalBudget`; every field the settle path reads is included.
   const allBudgets = await db
     .collection<FederalBudget>("federalBudget")
-    .find({}, { projection: treasuryBudgetProjection(treasuryCashLedgerEnabled) })
+    .find({}, { projection: treasuryBudgetProjection(treasuryCashLedgerEnabled, fiscalScaleStage) })
     .toArray();
   // Dissolved countries keep their budget doc but must not be simulated against
   // it; see `getRegisteredCountryIdSet`. Which of them still owe a stored claim
@@ -270,6 +278,17 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
     }
   }
   steps.mark("load");
+  // Stage 1 of the fiscal scale: measure and store each live country's scale
+  // before any money moves. Measuring moves no money.
+  if (fiscalScaleStage >= FISCAL_SCALE_STAGE.MEASURE) {
+    await measureFiscalScales(db, {
+      turn: _turn,
+      stage: fiscalScaleStage,
+      budgets: allBudgets.filter((b) => liveCountries.has(String(b.countryId ?? b._id))),
+      rateByCurrency,
+    });
+    steps.mark("fiscalScale");
+  }
   let countriesProcessed = 0;
   // Countries settle in bounded lanes. Each holds its budget, its bond pool,
   // every coupon payee it can move money for this turn (the settleable frozen
@@ -657,7 +676,7 @@ export async function processTreasuryTurn(_turn: number): Promise<{ countriesPro
         .collection<FederalBudget>("federalBudget")
         .findOne(
           { _id: b._id },
-          { projection: treasuryBudgetProjection(treasuryCashLedgerEnabled) }
+          { projection: treasuryBudgetProjection(treasuryCashLedgerEnabled, fiscalScaleStage) }
         );
       if (!refreshed) throw new Error(`Treasury budget ${b._id} disappeared during accrual`);
       b = refreshed;

@@ -75,6 +75,8 @@ export const FRESH_PLANTS_CONFIG_KEPT: Readonly<Record<string, string>> = Object
   commodityFixStage:
     "acts on the legacy warm-up turns only: it closes the formula-demand treadmill there; funded turns price by the funded rule (updateScarcityMultiplierFunded) regardless of the stage",
   strengthUpkeepStage: "plant strength upkeep is a standing cost rule",
+  fiscalScaleStage:
+    "the fiscal scale ties realistic government books to the funded economy of every plants world; the reset clears each budget's stored scale so it restarts from the rebuilt economy",
   groupSizeCostsStage: "management overhead and concentration rules on groups",
   soeSizeCostScale: "state-owned size cost rule",
   dominanceRunningCostScale: "running dominance cost rule",

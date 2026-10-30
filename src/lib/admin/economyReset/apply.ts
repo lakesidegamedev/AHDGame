@@ -361,6 +361,9 @@ async function phaseTreasury(db: Db, plan: EconomyResetPlan, digest: string): Pr
     });
   }
   await bulk(db, "federalBudget", ops);
+  // The fiscal scale measured the economy the reset deletes; it restarts from
+  // the rebuilt economy's first funded turn.
+  await db.collection("federalBudget").updateMany({}, { $unset: { fiscalScale: "" } });
   await db.collection("playerIncomeTaxAssessments").deleteMany(VOIDED_INCOME_TAX_FILTER);
 }
 
