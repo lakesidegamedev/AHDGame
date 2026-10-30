@@ -80,6 +80,11 @@ export interface NppCorpDecisionContext {
    * absent before the funded market or outside a funded world.
    */
   transitionFirstFundedTurn?: number;
+  /**
+   * Funded market only: era and tech facts for choosing an entrant's recipe
+   * (rules/foundingRecipe). Absent keeps entrants on the standard recipe.
+   */
+  fundedRecipeWorld?: import("./foundingRecipeChoice").FoundingRecipeWorld;
   /** Per-country allowance of capacity that may start converting this turn; absent = unpaced. */
   conversionBudgetOf?: (
     countryId: string
