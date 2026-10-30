@@ -18,9 +18,9 @@
 <text x="665.0" y="174.0" font-size="12" text-anchor="middle" fill="#18181b">minority bid is also allowed)</text>
 <path d="M665 64 L665 120" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
 <rect x="550" y="235" width="230" height="60" rx="6" fill="#eff6ff" stroke="#2563eb"/>
-<text x="665.0" y="252.0" font-size="12" text-anchor="middle" fill="#18181b">Confidence vote: majority of the</text>
-<text x="665.0" y="268.0" font-size="12" text-anchor="middle" fill="#18181b">chamber, 316 of 630 (244 of 487</text>
-<text x="665.0" y="284.0" font-size="12" text-anchor="middle" fill="#18181b">in 1953)</text>
+<text x="665.0" y="252.0" font-size="12" text-anchor="middle" fill="#18181b">Confidence vote: more ayes than</text>
+<text x="665.0" y="268.0" font-size="12" text-anchor="middle" fill="#18181b">nays (316 of 630 is the</text>
+<text x="665.0" y="284.0" font-size="12" text-anchor="middle" fill="#18181b">coalition threshold)</text>
 <path d="M665 190 L665 235" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
 <rect x="290" y="245" width="200" height="40" rx="6" fill="#eff6ff" stroke="#2563eb"/>
 <text x="390.0" y="268.5" font-size="13" text-anchor="middle" fill="#18181b" font-weight="700">Chancellor confirmed</text>

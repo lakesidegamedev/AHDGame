@@ -18,6 +18,7 @@ import {
   BOND_ISSUANCE_COOLDOWN_TURNS,
   BOND_ISSUANCE_COOLDOWN_TURNS_PRIVATE,
   CORPORATE_BOND_SPREAD_PREMIUM,
+  MIN_BOND_ISSUANCE_PER_ISSUE,
 } from "@/lib/constants/bonds";
 import {
   INVENTORY_CARRY_COST_RATE_PER_TURN,
@@ -34,7 +35,7 @@ import { STRANDED_WARN_TURNS } from "@/lib/corporations/strandedPlant";
  * which the wiki markdown renderer allows (same-origin absolute image src).
  */
 
-const pct = (f: number) => `${Math.round(f * 100)}%`;
+const pct = (f: number) => `${Math.round(f * 1000) / 10}%`;
 
 /** Build-time table, slowest first, from the live constants. */
 const buildTurnsTable = [...CAPACITY_SECTOR_TYPES]
@@ -54,14 +55,14 @@ Open the Stock Market page (World menu, or the Corporations link) and press **Fo
 
 ![The global stock market page, with the Found Corp button top right](/static/wiki/plants-corp-guide/stock-market.png)
 
-The founding dialog asks for a name, a ticker, and a primary sector. You choose between a **private** company, where you own 100% and your books are hidden from everyone else, and a **public IPO**, where shares trade on the exchange. A flat founding fee is deducted from your personal funds, the exact price is shown in the dialog, and headquarters is set to your home state.
+The founding dialog asks for a name, a ticker, and a primary sector. You choose between a **private** company, where you own 100% and your books are hidden from everyone else, and a **public IPO**, where shares trade on the exchange. A flat founding fee, plus any extra treasury you choose to commit and a premium when investor confidence in your country is low, is deducted from your personal funds. The exact price is shown in the dialog, and headquarters is set to your home state.
 
 ![The Found a Corporation dialog](/static/wiki/plants-corp-guide/found-corporation.png)
 
 Two things matter here:
 
 - **Sector match bonus.** Sectors matching your corporation type earn a margin bonus, mismatched sectors take a penalty. The secondary sector gives a half strength bonus in exchange for a bigger sprawl penalty, and changing it later costs a cooldown and a temporary margin penalty on every sector.
-- **The starter plant is a build, not a grant.** Founding a sector orders its starting capacity as a real construction project at a deep founding discount. The capacity arrives in slices, one per turn, across the build window. While the build is under way the sector produces little and earns little. That is normal, not broken. Revenue starts as the capacity lands, and the build queue shows the finish turn.
+- **The starter plant is a build, not a grant.** Founding a sector orders its starting capacity as a real construction project at a deep founding discount (worlds starting in 1991 pay the full price). The capacity arrives in slices, one per turn, across the build window. While the build is under way the sector produces little and earns little. That is normal, not broken. Revenue starts as the capacity lands, and the build queue shows the finish turn.
 
 The same applies when an existing [corporation](/wiki/corporations) opens a sector in a new state or industry through **Expand**: you are buying a starter plant, and it ramps in over the build window.
 
@@ -71,7 +72,7 @@ The corporation page's Operations tab lists every sector with its capacity (unit
 
 ![A corporation's Owned Sectors table with capacity, fill, revenue, profit and margin per sector](/static/wiki/plants-corp-guide/sector-rows.png)
 
-The margin shown here leads with the **fill adjusted margin**: realized profit over the cost of everything you produced, including the units that did not sell. A sector can have a great margin on the units it sells and still lose money overall because half its output goes unsold. The fill adjusted number is the honest one, which is why it comes first, and why your margin number may have changed when you changed nothing: the old number only looked at units that sold, which flattered any sector with a low selling share. Market prices for most commodities also move when demand is rebalanced, so what your inputs cost and what your output fetches both shift.
+The margin shown here leads with the **fill adjusted margin**: realized profit over revenue, where profit is charged with the cost of everything you produced, including the units that did not sell. A sector can have a great margin on the units it sells and still lose money overall because half its output goes unsold. The fill adjusted number is the honest one, which is why it comes first, and why your margin number may have changed when you changed nothing: the old number only looked at units that sold, which flattered any sector with a low selling share. Market prices for most commodities also move when demand is rebalanced, so what your inputs cost and what your output fetches both shift.
 
 Open any sector you own and the **Market and money** panel leads with three numbers before anything else:
 
@@ -139,20 +140,20 @@ What you should know about orders:
 - **Delivery is gradual.** Capacity arrives in equal slices every turn across the build window instead of one lump at the end, and the build queue shows units delivered so far, the slice arriving per turn, and the finish turn. Revenue from the new capacity starts as soon as slices land, not at the end.
 - **Cancelling costs you.** Cancelling an unfinished order refunds ${pct(CAPACITY_BUILD_CANCEL_REFUND)} of the paid cost of capacity still under construction. Delivered capacity remains yours.
 - **Plan against cash return.** The build dialog shows 48-, 96- and 192-turn scenarios using observed sales and costs, construction ramp, corporation overhead, tax, freight and a replacement reserve. Unwanted output still costs money to produce. Remaining paid plant value is shown separately from cash. These are scenarios, not promises of future demand.
-- **New expansion gets a discount.** Ordinary expansion receives a 20% reduction on strategy-priced construction. Heavy builds whose original schedules were 72 turns or longer now take half as long (the table above shows the base times). Founder prices and durations, and existing paid build schedules, are unchanged.
+- **New expansion gets a discount.** Ordinary expansion receives a 20% reduction on strategy-priced construction. Heavy builds whose original schedules were 72 turns or longer now take half as long (the table above already shows the shortened times). Founder prices and durations, and existing paid build schedules, are unchanged.
 - **Price varies by place and situation.** The same plant costs more in an expensive state and less in a cheap one, more when your central bank's prime rate is high, less with a business savvy CEO and with cost reducing technology. The dialog itemizes every multiplier so you can see why an order costs what it does.
 
 ### Past ${DOMINANCE_MARKET_SHARE_THRESHOLD}% of a market
 
 Past ${DOMINANCE_MARKET_SHARE_THRESHOLD}% share of a sector's market in a state, or ${DOMINANCE_NATIONAL_SHARE_THRESHOLD}% of the national market for that industry, building further capacity gets progressively more expensive, ramping up to ${DOMINANCE_GROWTH_COST_MULT_AT_FULL}x the normal build price at a full monopoly. The game takes the harsher of the state and national figure, so spreading a national giant thinly across states does not dodge it.
 
-Under the plants system dominance is a barrier to expansion, not a tax on operating: your existing plants run at an undistorted margin, but each additional unit of empire costs more than the last. Dominant sectors are also easier for rivals to attack. Being big is fine; buying the last quarter of a market is meant to be a luxury.
+Under the plants system dominance is a barrier to expansion, not a tax on operating: your existing plants run at an undistorted margin, but each additional unit of empire costs more than the last. Being big is fine; buying the last quarter of a market is meant to be a luxury.
 
 ## Paying for plants with bonds
 
 Building plants takes cash, and bonds are how a corporation raises it. The essentials:
 
-- **Caps.** A single issuance is limited to ${pct(MAX_BOND_ISSUANCE_REVENUE_FRACTION)} of your annual revenue. Total debt is limited to ${MAX_BOND_ISSUANCE_FRACTION}x your equity, and separately to ${MAX_BOND_ISSUANCE_EXIT_EQUITY_FRACTION}x what you could realize by selling up: your plants at book, your cash, and any bonds you hold. The second cap is usually the binding one for a built-out corporation, and it is deliberate. You are never lent more than your creditors could recover, which is also the test that decides whether you have defaulted. You cannot lever an empty shell into a war chest.
+- **Caps.** A single issuance is limited to ${pct(MAX_BOND_ISSUANCE_REVENUE_FRACTION)} of your annual revenue, or ₳${MIN_BOND_ISSUANCE_PER_ISSUE.toLocaleString("en-US")} if that is larger. Total debt is limited to ${MAX_BOND_ISSUANCE_FRACTION}x your equity, and separately to ${MAX_BOND_ISSUANCE_EXIT_EQUITY_FRACTION}x what you could realize by selling up: your plants at book, your cash, construction in progress, and any bonds you hold. The second cap is usually the binding one for a built-out corporation, and it is deliberate. You are never lent more than your creditors could recover, which is also the test that decides whether you have defaulted. You cannot lever an empty shell into a war chest.
 - **Cooldowns.** After an issuance, public corporations wait ${BOND_ISSUANCE_COOLDOWN_TURNS} turns before issuing again, private ones ${BOND_ISSUANCE_COOLDOWN_TURNS_PRIVATE}.
 - **The coupon scales with your standing.** The rate you pay is your country's prime rate, plus a spread for your credit rating, plus a ${CORPORATE_BOND_SPREAD_PREMIUM} point corporate premium, plus a term premium on longer maturities. Coupons are paid every turn, and more debt means more coupons: your credit rating is scored on debt against equity, so borrowing heavily makes the next borrowing dearer.
 - **Principal comes due.** At maturity the face value is debited from cash. Defaulting craters your credit rating and your bonds trade at pennies.

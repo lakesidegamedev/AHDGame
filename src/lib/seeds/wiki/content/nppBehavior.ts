@@ -4,23 +4,25 @@ A 60-point hard whip can still lose to an NPP that dislikes the bill. Every turn
 
 ## The forces
 
-An NPP votes on every open **federal** bill and every open **state or regional** bill. It adds up four forces, plus an optional fifth when its party backs the bill's sponsor.
+An NPP votes on every open **federal** bill and every open **state or regional** bill in its chamber. It adds up four forces, plus a party-line lean when it shares the sponsor's party and no whip is set.
 
 | Force | What pushes it | Range |
 | --- | --- | --- |
 | **Ideology** | How well the bill's economic and social direction matches the NPP's own positions | -100 to +100 |
-| **Whip** | Party and caucus whips, scaled by the NPP's compliance | -100 to +100 |
-| **Party line** | A default lean for the sponsor's own party when no whip is set | 0 to +20 |
+| **Whip** | The party whip that applies to the NPP, scaled by its compliance | -100 to +100 |
+| **Party line** | A default lean for the sponsor's own party when no whip is set, added to ideology | 0 to +20 |
 | **District** | How the NPP's home-state voters feel about the bill's chosen policy option | -100 to +100 |
 | **Donors** | The NPP's donor level (0 to 5) times the same match as ideology | -100 to +100 |
 
-An NPP's positions set its ideology force ([Party Ideology](/wiki/party-ideology)); its loyalty, stubbornness, donors and home state come from [NPPs Overview](/wiki/npps-overview), and generated NPPs start from the opening seeds ([game-starting-state](/wiki/game-starting-state)). The verdict uses a strict cutoff: a total **above +5** is For, **below -5** is Against, and anything from -5 to +5 inclusive is **Abstain**. There is no dice roll in a turn's vote. The only roll is when a **hard whip** is issued.
+An NPP's positions set its ideology force ([Party Ideology](/wiki/party-ideology)); its loyalty, stubbornness, donors and home state come from [NPPs Overview](/wiki/npps-overview), and generated NPPs start from the opening seeds ([game-starting-state](/wiki/game-starting-state)). The verdict uses a strict cutoff: a total **above +5** is For, **below -5** is Against, and anything from -5 to +5 inclusive is **Abstain**. There is no dice roll in a turn's vote. The only roll on a bill is when a **hard whip** is issued.
+
+A few smaller nudges also land in the ideology force: +8 towards For when a co-partisan leader's active address emphasises the bill's category, and, at autonomy level 1 or above, a push against the governing party's bills for members of the main opposition party when no whip is set.
 
 ![Ideology, whip, party line, district and donors added into one total, with For above plus 5, Abstain from minus 5 to plus 5 and Against below minus 5.](/wiki-images/diagrams/npp-behavior-force-sum.svg)
 
 ## Why a whip lands softer than you expect
 
-Whips and the party line reach an NPP only through its **compliance**, a number from 0 to 1:
+Whips, the party line and the opposition push reach an NPP only through its **compliance**, a number from 0 to 1:
 
 \`\`\`
 compliance = 0.7 x loyalty/100 + 0.3 x (1 - stubbornness/100)
@@ -39,12 +41,12 @@ npp-compliance-by-loyalty
 
 Party NPP management can raise loyalty and lower stubbornness ([Party Actions](/wiki/party-actions)). The whips themselves are issued by party officers ([Party Leadership](/wiki/party-leadership)); the system is described in [Voting & Whips](/wiki/voting-and-whips).
 
-- A **party whip** pushes with 30 (soft) or 60 (hard), times compliance.
-- A **caucus whip** pushes with 40 whether soft or hard, plus or minus 20 more if the bill matches one of the caucus's core positions, times compliance.
-- Party and caucus whips add together.
+- A **party whip** pushes with 30 (soft) or 60 (hard), times compliance. A governing party with a cabinet discipline effect pushes up to 20% harder.
+- A state party whip from the NPP's home state wins over a national one. A national whip reaches an NPP only when its home-state party has no player chair or vice chair.
+- A **caucus whip** does not enter the turn's vote. A soft caucus whip on a bill has no effect on NPPs; a hard one runs the same hidden check as a hard party whip.
 - With no whip at all, an NPP in the **same party as the bill's sponsor** gets a default push of 20 times its compliance towards For. Other NPPs get nothing.
 
-When a **hard whip** is first issued, each NPP gets one hidden check: 55, plus 15, plus 0.35 times loyalty, plus the whipper's Statecraft bonus, minus 0.18 times stubbornness, held between 40 and 95. A pass writes the vote at once. A fail leaves the NPP to decide with the forces above. Rules and examples are on [Voting & Whips](/wiki/voting-and-whips).
+When a **hard whip** is first issued, each NPP gets one hidden check: 55, plus 15, plus 0.35 times loyalty, plus the whipper's Statecraft bonus, minus 0.18 times stubbornness, held between 40 and 95. It runs for every NPP not already voting the whipped way, including NPPs that voted earlier. A pass writes the whipped vote at once. A fail writes the vote the forces give, with the full hard whip push of 60 times compliance included. Rules and examples are on [Voting & Whips](/wiki/voting-and-whips).
 
 ## Two NPPs, one whip
 
@@ -64,7 +66,7 @@ A whip cannot beat a strong ideology and district push by itself. The forces tha
 
 Local legislators use the same model with different weights: district is multiplied by **1.35** (home voters matter more) and donors by **0.65**. State and regional chairs and vice chairs can whip their own NPPs. In a veto override vote an NPP cannot abstain: a result that would be Abstain becomes Against.
 
-An NPP counts once for every seat it holds: 7 House seats means 7 votes, and the tally decides whether most bills pass ([Bills & Legislation](/wiki/bills-legislation)). NPPs vote every turn while a bill is open, so one that gains a seat mid-window still votes before it closes. Once voted, an NPP cannot change its vote. An NPP that has not voted on your bill either sees the bill not yet open, or abstained because its forces nearly cancel. You cannot order an NPP to sponsor a bill; that happens only through the autonomy level your world uses ([NPP Autonomy](/wiki/npp-autonomy)), where at higher levels NPPs count votes before sponsoring and governments whip their own members. US Speaker and floor leader races are for players, and NPPs vote there only when a player whips them.
+An NPP counts once for every seat it holds: 7 House seats means 7 votes, and the tally decides whether most bills pass ([Bills & Legislation](/wiki/bills-legislation)). NPPs vote every turn while a bill is open, so one that gains a seat mid-window still votes before it closes. Once voted, an NPP keeps its vote at later turns; only a hard whip can change it. An abstention is a recorded vote. An NPP that never votes is a technocrat, belongs to a party banned in a one-party state, or sits in a chamber whose voting window has already closed. You cannot order an NPP to sponsor a bill; that happens only through the autonomy level your world uses ([NPP Autonomy](/wiki/npp-autonomy)), where at higher levels NPPs count votes before sponsoring and governments whip their own members. US Speaker and floor leader races are for players, and NPPs vote there only when a player whips them.
 
 An NPP's loyalty and stubbornness also decide whether it accepts an assignment on the [Party Slate](/wiki/party-slate).
 
@@ -73,10 +75,9 @@ An NPP's loyalty and stubbornness also decide whether it accepts an assignment o
 | Verdict cutoff | Above +5 For, below -5 Against, otherwise Abstain |
 | Each force | Held between -100 and +100 |
 | Party whip | 30 soft, 60 hard, times compliance |
-| Caucus whip | 40, plus or minus 20 for core positions, times compliance |
 | Party line | 20 times compliance |
 | Hard whip check | 55 + 15 + 0.35 x loyalty - 0.18 x stubbornness, held at 40 to 95 |
 | State bills: district / donors weights | 1.35 / 0.65 |
 
-Live in every world and country with legislatures. The extra steps for autonomy level 6 are on [NPP Autonomy](/wiki/npp-autonomy). Last checked 2026-10-29, version 1.18.0. Exact rules: [NPP system design page](https://docs.lakesidegames.net/design/npp-system.html)
+Live in every world and country with legislatures. The extra steps for autonomy level 6 are on [NPP Autonomy](/wiki/npp-autonomy). Last checked 2026-10-30, version 1.18.0. Exact rules: [NPP system design page](https://docs.lakesidegames.net/design/npp-system.html)
 `;

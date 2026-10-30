@@ -4,15 +4,15 @@ Ireland comes down to one number: **81**, a bare majority of the 160-seat Dáil 
 
 ## Finding 81 votes
 
-The **coalition threshold is 81 seats** (160 / 2 + 1). A party or coalition holding 81+ seats can form a government and propose a Taoiseach through a confidence vote among all TDs.
+The **coalition threshold is 81 seats** (160 / 2 + 1). The Dáil is smaller or larger in some presets: 147 seats in 1953 (74 for a majority) and 166 in 1999 and 2007 (84). A party or coalition holding a majority can form a government and propose a Taoiseach through a confidence vote among all TDs.
 
 ![Taoiseach formation from the Dail election through a majority nomination or a minority bid to a confidence vote among all TDs.](/wiki-images/diagrams/ie-overview-taoiseach-formation.svg)
 
 **Minority government**: any party or coalition chair holding at least **25 Dáil seats** (15.38% of the chamber, rounded up) can propose a Taoiseach and call a confidence vote, even without 81. The Dáil votes the bid up or down.
 
-After an election, picture Fine Gael on 60 seats, Fianna Fáil on 45, Labour on 12 and the Greens on 8. Fine Gael plus Labour plus the Greens is 80, one short of 81. Fine Gael plus Fianna Fáil is 105, which passes with 24 to spare. A Taoiseach is confirmed once 81 TDs vote yes, so every missing seat has to be found among independents or other parties.
+After an election, picture Fine Gael on 60 seats, Fianna Fáil on 45, Labour on 12 and the Greens on 8. Fine Gael plus Labour plus the Greens is 80, one short of 81. Fine Gael plus Fianna Fáil is 105, which passes with 24 to spare. The confidence vote itself passes with more ayes than nays, but a government short of 81 governs as a minority, so every missing seat has to be found among independents or other parties.
 
-**Coalition government is the norm.** The two major parties are **Fine Gael** and **Fianna Fáil**, but neither typically governs alone. Coalitions (Fine Gael + Labour, Fianna Fáil + Greens, and so on) typically include one of the major parties plus smaller partners (Labour, Greens, independents). The 81-seat threshold is the only hard number that matters for confidence.
+**Coalition government is the norm.** The two major parties are **Fine Gael** and **Fianna Fáil**, but neither typically governs alone. Coalitions (Fine Gael + Labour, Fianna Fáil + Greens, and so on) typically include one of the major parties plus smaller partners (Labour, Greens, independents). The 81-seat threshold decides whether a government counts as a majority, and the 25-seat bar decides who may bid at all.
 
 If the government loses Dáil confidence, the Taoiseach falls and formation restarts (see [No-Confidence Votes](/wiki/no-confidence-votes)). The Taoiseach can also dissolve the Dáil and call an early election, mechanically similar to UK, JP and DE snap elections (see [Snap Elections](/wiki/snap-elections)). The [Cabinet Guide](/wiki/cabinet-guide) lists every post the winning coalition fills.
 
@@ -34,7 +34,7 @@ See [Election Mechanics](/wiki/election-mechanics) for the shared primary and ge
 | Teachta Dála (TD) | Hare-quota multi-seat election | 5 years | 160 |
 | Cathaoirleach (regional executive) | FPTP regional election | 5 years | 1 per region |
 | Local Councillor | Multi-seat local election | 5 years | 200 total |
-| Governor of the Central Bank of Ireland | Appointed action | 4 years | 1 |
+| Governor of the Central Bank of Ireland | Nominated by the Taoiseach, then drawn | 4 years | 1 |
 
 ## Why the Seanad doesn't matter for bills
 
@@ -46,7 +46,7 @@ So the legislature is mechanically **unicameral**: bills do not require Seanad p
 
 The **Uachtarán na hÉireann** is a directly elected ceremonial head of state, distinct from the Taoiseach. Open the live office at [Áras an Uachtaráin](/country/ie/executive/aras).
 
-- **7-year term**: the longest of any directly elected office in the game.
+- **7-year term**: one of the longest in the game (Brazil's senators serve 8).
 - **2-term lifetime limit per character**: a character cannot be elected to a third term, even after a break.
 - **+3 actions per turn** while in office.
 - **Party strength weight 0.5**: the party-strength weight is how much an office counts toward your party's standing. The ceremonial presidency counts less than the Taoiseach (1.0) or a TD (0.85).
@@ -64,13 +64,13 @@ Each region has a regional executive, the **Cathaoirleach**, using the same offi
 | Entry | Teachta Dála (TD) | +1 action/turn; national legislature access from the start |
 | Mid-game | Cathaoirleach | +2 actions/turn; controls regional executive; 5-year term |
 | Parallel | Uachtarán | +3 actions/turn; 7-year term; 2-term cap; ceremonial head of state |
-| Top | Taoiseach | +4 actions/turn; heads government; requires Dáil majority |
+| Top | Taoiseach | +4 actions/turn; heads government; requires winning a Dáil confidence vote |
 
 The Local Council is Ireland's lowest elected tier, and a Dáil seat is the first rung of national play. A councillor can run for the Dáil from the same region. See [Player Progression](/wiki/player-progression) for the general ladder.
 
-Founding a new party requires drafting a [Party Charter](/wiki/political-parties) co-signed by 3 human founders. IE-specific gates don't apply. Ireland requires 2 regions (no locked home state) × 1 NPP per region = 2 NPPs spawned on creation.
+Founding a new party requires drafting a [Party Charter](/wiki/political-parties) co-signed by 3 human founders. IE-specific gates don't apply. A ratified charter seeds 3 founding NPPs: one in the lead founder's home region and two in regions the founders pick.
 
-The **social axis** is the scale on which the game places a country's voters from socially liberal (−5) to socially conservative (+5). Ireland starts at −1.5, slightly liberal, and drifts toward the social stance of the national laws enacted over time.
+The **social axis** is the scale on which the game places a country's voters from libertarian (−5) to authoritarian (+5). Ireland starts at −1.5, slightly toward the libertarian end, and drifts toward the social stance of the national laws enacted over time.
 
 ## Money, and three starting years
 
@@ -78,22 +78,21 @@ Ireland starts with the Irish pound in pre-euro presets and can display the euro
 
 | Item | Detail |
 | --- | --- |
-| Currency | IEP before Eurozone adoption; EUR display after adoption |
+| Currency | IEP (shown as € eq. from the 1999 preset on); EUR display after Eurozone adoption |
 | Central Bank | Central Bank of Ireland |
 | Chair title | Governor of the Central Bank of Ireland |
-| Default prime rate | 3.0% (shared across Eurozone) |
+| Default prime rate | 3.0% (4.5% opening rate in the 1991 preset); set by the Central Bank of Ireland until a euro union is founded |
 | Stock exchange | ISEQ |
 | Finance Minister | Minister for Finance |
 
-Ireland has **three seeded start years**: 1953, 1991, and 2019 (the default), each with its own authored national baseline and regional tilts:
+Ireland is seeded in **every preset**, each with its own regional data. Its starting economic model depends only on whether the world starts before 2005:
 
-| Era | Model | Description |
+| Start | Model | Description |
 | --- | --- | --- |
-| 1953 | Protectionist agrarian | De Valera-era Ireland: protectionist trade policy, mass emigration, punt pegged to sterling |
-| 1991 | Agrarian | Pre-Celtic Tiger: a developing, largely agrarian economy |
-| 2019 | Tech innovation | Modern Ireland: a tech-driven, FDI-led innovation economy |
+| 1953, 1979, 1991, 1999 | Agrarian | From De Valera's protectionist, high-emigration Ireland to the years before the Celtic Tiger |
+| 2007 onward (2019 is the default) | Tech innovation | Modern Ireland: a tech-driven, FDI-led innovation economy |
 
-A 2019-start Ireland begins as a **tech innovation** economy: the same modern model as the US. A 1991-start Ireland begins as agrarian and modernizes over time through play. A 1953-start Ireland begins earlier still, in the protectionist, high-emigration economy that preceded both.
+A modern-start Ireland begins as a **tech innovation** economy: the same modern model as the US. An earlier start begins as agrarian and can modernize over time through play.
 
 ## Northern Ireland reunification
 
@@ -101,7 +100,7 @@ The reunification path runs through [Referendums](/wiki/referendums). If Ireland
 
 ## Living history
 
-The timeline below is written by the turn processor whenever a head-of-government transition or national-scope bill enactment happens in-game. Each entry is a real event from this save.
+The timeline below is written by the turn processor whenever a national event happens in-game: a change of leader, a national law enacted, an alliance joined or left, a referendum, or a region transferred. Each entry is a real event from this save.
 
 \`\`\`country-history
 IE
@@ -109,5 +108,5 @@ IE
 
 See also: [Core Systems](/wiki/core-systems) for turn structure and the action economy.
 
-Playable in every era. It opens to players when the world starts in a year that includes it, or when a Northern Ireland reunification vote brings the region in. Last checked 2026-10-29, version 1.18.0.
+Ireland runs as an economy preview in every preset: its economy is simulated, but its offices are closed to players unless an admin opens the country. A Northern Ireland reunification moves the region into Ireland without opening it. Last checked 2026-10-30, version 1.18.0.
 `;

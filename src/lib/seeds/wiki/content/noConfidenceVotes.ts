@@ -5,7 +5,7 @@ You can have far more Aye votes than Nay and still lose a vote of no confidence.
 ## Filing the motion
 
 1. **A member files the motion.** Any sitting lower-chamber member can propose it (in a one-party state only a ruling-party member can; see [One-Party States](/wiki/one-party-states)). Government must be formed (see [Government Formation](/wiki/government-formation)), no other VONC can be active, and 48 turns must have passed since the last one was proposed.
-2. **The vote runs 24 hours.** Every sitting lower-chamber member can vote Aye (remove the government) or Nay (keep it). The count is weighted by seats held. The motion can end early the moment Aye reaches the threshold.
+2. **The vote runs 24 hours.** Every sitting lower-chamber member can vote Aye (remove the government) or Nay (keep it). The count is weighted by seats held. The motion always runs the full window; it is counted when the 24 hours are up.
 3. **NPP benches vote by party line** unless whipped (see [Voting & Whips](/wiki/voting-and-whips)): government and coalition NPPs vote Nay, opposition NPPs vote Aye, NPPs with no party do not vote. A party whip overrides the default. This runs during the vote and again before resolution.
 4. **Resolution.** If Aye reaches the threshold the executive is removed. Otherwise the government stays.
 
@@ -31,8 +31,8 @@ The whole-chamber rule stops a government being toppled by a thin turnout. It is
 
 ## Running the vote
 
-- **File a motion** from the government page of your country, if you hold a lower-chamber seat and the cooldown has run out.
-- **Vote** Aye or Nay. Individual player votes stay private; the government page shows Aye, Nay and not-voted totals.
+- **File a motion** from your country's executive page (10 Downing Street in the UK, under the Nation menu), if you hold a lower-chamber seat and the cooldown has run out.
+- **Vote** Aye or Nay. Individual player votes stay private; the executive page shows the Aye and Nay totals and a by-party breakdown of Aye, Nay and abstaining seats.
 - **Whip** your party's NPP seats before the window closes.
 - **File a replacement PM nomination** during the VONC if you chair a qualifying party or coalition.
 
@@ -51,7 +51,7 @@ The executive stays, PM appointment votes filed during the VONC are cancelled, a
 
 A passed motion does not call an election straight away. If nobody is seated in 96 turns the system triggers one. A sitting executive cannot call a voluntary snap election to escape a VONC: the gate blocks it until the confidence vote resolves. See [Snap Elections](/wiki/snap-elections).
 
-Live in the UK, Japan, Germany and Ireland. Presidential countries use elections or [Impeachment](/wiki/impeachment) instead. One-party states do not expose this motion to ordinary members.
+Available in every parliamentary country, including the UK, Japan, Germany and Ireland. Presidential countries use elections or [Impeachment](/wiki/impeachment) instead. Most one-party states have no no-confidence motion at all; where one exists (the Soviet Union), only ruling-party members can file it.
 
 Last checked 2026-10-29, version 1.18.0. Exact rules: [Prime Minister no-confidence design doc](https://docs.lakesidegames.net/design/uk-pm-no-confidence.html)
 `;

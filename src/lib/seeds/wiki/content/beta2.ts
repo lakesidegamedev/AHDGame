@@ -1,6 +1,6 @@
-export const beta2Content = `**Iterations:** *Alpha 1 (not documented)*  ·  [[Beta 1]] *(concluded)*  ·  **Beta 2** *(concluded)*  ·  [[Iteration 1]] *(ongoing)*
+export const beta2Content = `**Iterations:** *Alpha 1 (not documented)*  ·  [[Beta 1]] *(concluded)*  ·  **Beta 2** *(concluded)*  ·  [[Iteration 1]] *(concluded)*
 
-*Alpha 1 ran before this wiki existed and was not documented; [[Beta 1]] and Beta 2 are preserved below as they were written. [[Iteration 1]] follows the current live world.*
+*Alpha 1 ran before this wiki existed and was not documented; [[Beta 1]] and Beta 2 are preserved below as they were written. [[Iteration 1]] has also concluded; the live world is now Iteration 2.*
 
 ---
 
@@ -215,7 +215,7 @@ China also founded two international organisations, including the **Global Ummah
 
 ## 🇮🇪 Ireland
 
-The only country in Beta 2 where a no-confidence vote actually removed a head of government, and the deposed leader kept their cabinet seat.
+The only country in Beta 2 where an opponent's no-confidence vote removed a head of government, and the deposed leader kept their cabinet seat.
 
 ### The fall of the Taoiseach
 
@@ -243,7 +243,7 @@ Ireland is also the only country to have *joined* NATO during Beta 2, at turn 46
 
 The nation that did not exist when Beta 2 started, and the only one whose president cannot command its own lower house.
 
-Nigeria was added mid-iteration: its first non-player politicians were generated around **turn 598**, in the in-game year 2003. It remains the only country ever added to an iteration already in progress. It arrived with a full federal apparatus: a bicameral National Assembly, six state governors, and 990 regional council seats, and immediately produced the most genuinely divided government in Beta 2.
+Nigeria was added mid-iteration: its first non-player politicians were generated around **turn 598**, in the in-game year 2003. It remains the only playable country added to an iteration already in progress; the countries [[Beta 1]] added mid-iteration were economy-only previews. It arrived with a full federal apparatus: a bicameral National Assembly, six state governors, and 990 regional council seats, and immediately produced the most genuinely divided government in Beta 2.
 
 ### The Nigerian presidency
 
@@ -362,7 +362,7 @@ Eight of the ten are run by a sitting minister, central bank governor, or former
 
 ### The shadow giants
 
-The two largest corporations in Beta 2 do not appear on that table, because **neither of them is listed.**
+The second- and third-largest corporations in Beta 2 do not appear on that table, because **neither of them is listed.**
 
 **Toyota Motor Corporation** is privately held, capitalised at **¥1.50 trillion (≈$20.2 billion)**, and run by a former Prime Minister of Japan, current Foreign Affairs Minister, and current **Governor of the Bank of Japan**. **an automaker owned by the Prime Minister** is privately held, capitalised at **¥1.27 trillion (≈$17.2 billion)**, and run by the sitting Prime Minister of Japan.
 
@@ -474,13 +474,13 @@ Beta 2 is not finished, so this is not a verdict. But at turn 1192 the iteration
 - **Germany's withdrawal from NATO**, passed twice, by 330-0 and 302-0.
 - A **Chinese Communist Party at regime stage "crisis"** with 32% internal confidence, having nationalised 65 sectors and then privatised its way back out.
 - An Irish Taoiseach **deposed 127-0** who stayed on as deputy to their successor.
-- **Nigeria**, the first country ever added to a running iteration.
+- **Nigeria**, the first playable country added to a running iteration.
 - **Nine embargoes enacted in a single turn**, still in force as this is written.
-- The two most valuable companies on earth held **privately** by a sitting Prime Minister and a sitting central bank governor.
+- The second- and third-most valuable companies on earth held **privately** by a sitting Prime Minister and a sitting central bank governor.
 
 The 2016 American and 2017 Nigerian elections are open. The Chinese regime clock is running. Beta 2 continues.
 
 ---
 
-*Drafted from live database snapshots taken at turn 1192 (2026-07-18), in-game year 2015. Beta 2 is ongoing; every number here is a moving target.*
+*Drafted from live database snapshots taken at turn 1192 (2026-07-18), in-game year 2015. Beta 2 was ongoing when this was written and has since concluded.*
 `;

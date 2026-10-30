@@ -21,7 +21,7 @@ Relationship does not stay put. Every turn it moves 0.1 closer to zero (that is 
 | Boost Influence | 6 | 20,000 | none | +2 influence, +2 relationship |
 | Reduce Influence | 6 | 20,000 | none | -2 influence, -2 relationship |
 
-Funds are campaign funds in your home currency. Gains from the Boost actions and the private meeting are scaled by your [Charisma](/wiki/rpg-stats): at Charisma 1 they are 18% smaller, at 10 they are 18% larger, then rounded. A private meeting gives +4 at Charisma 1, +5 at 5 or 6, and +6 at 10. Reductions are never scaled. Relationship stays between -100 and 100.
+Funds are campaign funds in your home currency. Relationship gains and the Boost Favorability gain are scaled by your [Charisma](/wiki/rpg-stats): at Charisma 1 they are 18% smaller, at 10 they are 18% larger, then rounded. The +2 influence from Boost Influence is not scaled. A private meeting gives +4 at Charisma 1, +5 at 5 or 6, and +6 at 10. Reductions are never scaled. Relationship stays between -100 and 100.
 
 ### Asking for an endorsement
 
@@ -40,7 +40,7 @@ Nothing is charged when an action is refused. It is refused if:
 - the NPP is retired;
 - you lack the actions or funds;
 - the relationship is below the minimum for the action;
-- a Boost would push favorability or influence past 100, or a Reduce would push it below 0.
+- a Boost targets favorability or influence that is already at 100, or a Reduce targets one already at 0. Short of that, the change is applied and the result is held between 0 and 100.
 
 There is no per-turn or per-NPP cap on how many times you can act. Your action balance and funds are the limit.
 

@@ -1,6 +1,6 @@
-export const iteration1Content = `**Iterations:** *Alpha 1 (not documented)*  ·  [[Beta 1]] *(concluded)*  ·  [[Beta 2]] *(concluded)*  ·  **Iteration 1** *(ongoing)*
+export const iteration1Content = `**Iterations:** *Alpha 1 (not documented)*  ·  [[Beta 1]] *(concluded)*  ·  [[Beta 2]] *(concluded)*  ·  **Iteration 1** *(concluded)*
 
-*[[Beta 1]] and [[Beta 2]] are preserved snapshots of the two public betas. Iteration 1 is the current chronicle, following the live world from its 1953 opening into 1979.*
+*[[Beta 1]] and [[Beta 2]] are preserved snapshots of the two public betas. Iteration 1 is the chronicle of the world that followed, from its 1953 opening into 1979. It has since concluded, and the live world is now Iteration 2.*
 
 ---
 
@@ -12,7 +12,7 @@ export const iteration1Content = `**Iterations:** *Alpha 1 (not documented)*  ·
 
 By turn **1,302**, the calendar had reached **1979**. The world had produced seven distinct American presidents and its first presidential conviction, five successful no-confidence votes, a German reunification decided by war, a Soviet reversal from East Germany's indispensable ally to its defeated invader, six player-founded international organizations, and a private American fortune larger than every public exchange combined.
 
-This is a snapshot of a running world. It is not a complete transcript of 1,302 turns. The Wire, election archive, country histories, battle reports, and market ledgers are much larger than any one article, so what follows is the story they tell most clearly.
+This is a snapshot taken at turn 1,302, while the world was still running. It is not a complete transcript of 1,302 turns. The Wire, election archive, country histories, battle reports, and market ledgers are much larger than any one article, so what follows is the story they tell most clearly.
 
 ---
 
@@ -89,7 +89,7 @@ The economy grew without producing another market boom. Between the 1974 and 197
 
 ### President E: a broader record than the coalition
 
-**President E** became president at turn 1,200, ending twenty-three in-game years of Democratic control. The four-party cabinet was historically unusual, but it was not the only accomplishment. *Healthcare Expansion Act Pt2*, the *Professional Service: Foreign Service and Negotiations Act*, and the *Poverty Reduction Act* entered law during that presidency. Through executive action, the administration established a federal role in election standards and statistics, created a Women's Bureau, replaced industrial modernization with a national investment drive, and streamlined federal land-development permits. The president also vetoed the *Connecting America Act* and a wage-support bill, giving the program a distinctly pro-investment, limited-support balance.
+**President E** became president at turn 1,200, ending twenty-four in-game years of Democratic control. The four-party cabinet was historically unusual, but it was not the only accomplishment. *Healthcare Expansion Act Pt2*, the *Professional Service: Foreign Service and Negotiations Act*, and the *Poverty Reduction Act* entered law during that presidency. Through executive action, the administration established a federal role in election standards and statistics, created a Women's Bureau, replaced industrial modernization with a national investment drive, and streamlined federal land-development permits. The president also vetoed the *Connecting America Act* and a wage-support bill, giving the program a distinctly pro-investment, limited-support balance.
 
 The aggregate economy improved during most of that presidency. From the first available macro snapshot of the term at turn 1,208 to the last before removal at turn 1,293, poverty fell from **5.88% to 4.03%**, unemployment from **13.79% to 12.92%**, measured GDP growth rose from **3.67% to 9.59%**, small-business formation from **59.8 to 62.9**, consumer confidence from **30.1 to 32.4**, and investor confidence reached **100**. The NYSE rose about **39%**, from **27.8 billion** to **38.6 billion**, and global public markets gained about **30%**, even as the dollar's local-per-reference rate rose from **1.069 to 1.185**, meaning the currency weakened. The 1979 budget still showed a **40.9 billion deficit**, but debt had declined to **103.6% of GDP**, its lowest level since 1962. The rating remained BBB and inflation was 9.08%, so this was improvement, not resolution. National government approval, which measures the administration as a whole rather than the president alone, rose from **49.8%** at turn 1,284 to **51.5%** on President E's final complete turn despite a dip between those points.
 
@@ -97,15 +97,15 @@ These are national outcomes, not a personal presidential score. War recovery, Co
 
 ### Coalition, impeachment, and two successors
 
-President E governed through a cabinet drawn from four parties. Former President C served as Secretary of Defense. The Speaker of the House was also Treasury Secretary, and the House Majority Leader was also Energy Secretary. a Constitutional Union senator was Attorney General, while two Farmer-Labor figures held Commerce and Housing.
+President E governed through a cabinet drawn from four parties. Former President C served as Secretary of Defense. The Speaker of the House was also Treasury Secretary, and the House Majority Leader was also Energy Secretary. A Constitutional Union senator was Attorney General, while two Farmer-Labor figures held Commerce and Housing.
 
 The administration looked less like a party government than a peace conference among the country's political survivors. It also linked government directly to the corporate economy: President C runs one of the world's most valuable public companies, the House Majority Leader runs Dubois Mining, and the Agriculture Secretary controls the iteration's largest private firm and its largest personal fortune.
 
-the Speaker filed articles of impeachment at turn 1,282. The House advanced them 213 to 97, with 90 abstentions. At turn **1,294**, the Senate convicted President E by **85 to 0**, with eight abstentions, and removed them from office. The vice president succeeded immediately. The Speaker then filed against the new president on the same turn, but that second case was dismissed in the House at turn 1,300. The caretaker president resigned shortly afterward. Following a brief vacancy at turn **1,302**, Speaker the Speaker was appointed President under the line of succession.
+The Speaker filed articles of impeachment at turn 1,282. The House advanced them 213 to 97, with 90 abstentions. At turn **1,294**, the Senate convicted President E by **85 to 0**, with eight abstentions, and removed them from office. The vice president succeeded immediately. The Speaker then filed against the new president on the same turn, but that second case was dismissed in the House at turn 1,300. The caretaker president resigned shortly afterward. Following a brief vacancy at turn **1,302**, the Speaker was appointed President under the line of succession.
 
 The political-business overlap became concrete during President E's final hours. The national Wire recorded Defense Secretary **President C** awarding their own Systems C 15 defense lots worth about **3.77 billion**. The award sits on the public order book, turning the administration's network into a matter of public record.
 
-**The caretaker presidency lasted only from turn 1,294 into turn 1,302.** It was a caretaker interlude dominated by a failed impeachment and resignation, with no enacted law or veto attached to it. The Speaker, who had already been Treasury Secretary, Treasury Secretary, and the author of both impeachment drives, then took office by appointment rather than election. National government approval stood at **52.5%** at turn 1,302. The new president's first address put the economy and education at the center of the new administration, but at this snapshot the presidential record had only just begun.
+**The caretaker presidency lasted only from turn 1,294 into turn 1,302.** It was a caretaker interlude dominated by a failed impeachment and resignation, with no enacted law or veto attached to it. The Speaker, who was also Treasury Secretary and the author of both impeachment drives, then took office by appointment rather than election. National government approval stood at **52.5%** at turn 1,302. The new president's first address put the economy and education at the center of the new administration, but at this snapshot the presidential record had only just begun.
 
 ### The latest national returns
 
@@ -164,7 +164,7 @@ Prime Minister C's enacted program joined the Commonwealth Defense Pact, reforme
 
 ### From NATO's war to Germany's defense
 
-Britain joined the War for Germany at turn **465** through NATO. Thirteen in-game years later, the alignment had inverted. East Germany had left the Warsaw Pact, built new organizations around itself, and faced invasion by its former Soviet ally. Britain entered the Russia-East Germany War on East Germany's side at turn **1,261**.
+Britain joined the War for Germany at turn **465** through NATO. About sixteen in-game years later, the alignment had inverted. East Germany had left the Warsaw Pact, built new organizations around itself, and faced invasion by its former Soviet ally. Britain entered the Russia-East Germany War on East Germany's side at turn **1,261**.
 
 The *War against the USSR Act* made the choice explicit. British and East German forces won four of the last five battles, reached the decisive pole at turn 1,297, and ended the war two turns later. The FTSE fell from **3.95 billion** shortly before entry to **3.51 billion** at turn 1,261, then recovered to **4.81 billion** by victory at turn 1,299. Britain had entered to defend Germany; East Germany used the victory to impose a parliamentary republic on Russia.
 
@@ -342,7 +342,7 @@ The market story and currency story therefore still point in opposite directions
 | --- | --- | --- | --- | --- |
 | 1 | **General Secretary** | DD | General Secretary | 4,105 |
 | 2 | **President A** | US | Former President; House member | 3,665 |
-| 3 | **Vladimir Premier B** | RU | Premier at the imposed transition | 3,573 |
+| 3 | **Premier B** | RU | Premier at the imposed transition | 3,573 |
 | 4 | **Character O** | UK | Commons | 3,064 |
 | 5 | **Character P** | US | Senate Majority Leader | 2,883 |
 | 6 | **Prime Minister A** | UK | Former Prime Minister | 2,792 |
@@ -351,7 +351,7 @@ The market story and currency story therefore still point in opposite directions
 | 9 | **President D** | US | Former President | 2,690 |
 | 10 | **Character Q** | US | Senator | 2,657 |
 
-The list captures the political structure better than any office chart. The first four places belong to the leaders or former leaders of all four playable nations. Neither former President President E nor the successor is in the top ten; the White House changed hands faster than the influence hierarchy did.
+The list captures the political structure better than any office chart. The first three places belong to the leaders or former leaders of East Germany, the United States and the Soviet Union. Britain's top entry is a Commons member in fourth, ahead of two of its Prime Ministers. Neither former President E nor the successor is in the top ten; the White House changed hands faster than the influence hierarchy did.
 
 ### Wealth
 
@@ -392,5 +392,5 @@ All three recorded wars are now resolved, and the latest supply-chain disruption
 
 ---
 
-*Drafted and updated from read-only live database snapshots through turn 1,302 on 2026-10-02, in-game year 1979. Iteration 1 is ongoing; figures and officeholders will continue to change.*
+*Drafted and updated from read-only live database snapshots through turn 1,302 on 2026-10-02, in-game year 1979. Iteration 1 has since concluded; the live world is now Iteration 2.*
 `;

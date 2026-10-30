@@ -144,7 +144,7 @@ A new unit is raised at full establishment, so it draws its full headcount from 
 
 The catalogue cost in the tables is not a currency amount. A unit is priced as a share of your country's own GDP, then multiplied by a per-country cost multiplier. An Infantry Division is about 0.41% of GDP before the multiplier, in every era and country.
 
-Half of any GDP growth since the game began feeds into prices, so a growing economy slowly outruns its unit prices rather than cancelling against them.
+Prices follow the square root of GDP growth since the game began: if GDP doubles, unit prices rise by about 41%. A growing economy slowly outruns its unit prices rather than cancelling against them.
 
 The price is paid from the **defence appropriation**, the pot fed by your enacted defence budget line. Contracts for equipment draw on the same pot, so unit purchase and upkeep compete with what [Defence Procurement](/wiki/defence-procurement) reserves. It is a hard limit. If the unit costs more than the appropriation holds, the order is refused: "Defence appropriation is short, 2,067 required, 1,500 available". New orders cannot be put on credit. Money already promised to a supplier under a defence contract is not available either.
 
@@ -171,7 +171,7 @@ It is a cost multiplier, not a size multiplier. It makes American divisions more
 
 Each unit also needs a load of equipment, counted in **lots**. A unit needs its cost divided by 387, rounded: 4 lots for an Infantry Division, 11 for an Armored Division. Recruiting draws those lots from your national arsenal at once. A short store does not block the order. The unit is raised anyway and arrives under-equipped, and the arsenal tops it up as deliveries land. The arsenal is stocked by [defence contracts](/wiki/defence-procurement). A unit's starting tech tier also comes from the grade of the materiel it received, so it is not always Standard.
 
-The Soviet Union and East Germany have no contract market. Their state arms industry delivers a fixed 3 and 1 lots a turn respectively, straight to the store, pointed at whichever branch is furthest from a full load. That keeps an army equipped but will not keep pace with a war fought flat out.
+The Soviet Union and East Germany have no contract market. Their state arms industry delivers a fixed 3 and 1 lots a turn respectively, straight to the store, pointed at whichever domain (ground, naval, air and so on) is furthest from a full load. That keeps an army equipped but will not keep pace with a war fought flat out.
 
 ## Building takes time
 
@@ -193,7 +193,7 @@ Two rules:
 1. A unit at a conflict cannot be on Garrison. It floors up to Standard automatically.
 2. Posture only forces up. A unit returning to reserve keeps its posture and does not drop back to Garrison.
 
-A force sitting heavily on Forward-Deployed or High Alert also tilts public trust and social cohesion at home. A permanent war footing has a political price. The **national force tier** (reduced, standard, elevated), set on the defence office Overview, scales readiness and upkeep across the whole army at once. Doctrine nodes in [National Doctrine](/wiki/national-doctrine) adjust upkeep and readiness of your forces too.
+A force sitting heavily on Forward-Deployed or High Alert also tilts public trust and social cohesion at home. A permanent war footing has a political price. The **national force tier** (reduced, standard, elevated), set on the defence office Overview, scales readiness and upkeep across the whole army at once. Doctrine nodes in [National Doctrine](/wiki/national-doctrine) do not change this upkeep or readiness: a doctrine's supply-draw bonus only changes what a formation draws from a front's supply.
 
 ## Technology tiers
 
@@ -212,7 +212,7 @@ Upkeep is derived on read, so a modernisation pass raises your whole running cos
 
 ## Veterancy and strength
 
-Veterancy has five grades: **Green, Regular, Seasoned, Veteran, Elite**. Grades are earned through fighting, and every battle lowers strength, readiness and veterancy as well as raising it (see [Fighting a Battle](/wiki/fighting-a-battle)). Veterans are meaningfully better than green troops at the same headcount, so preserving an experienced formation is one of the most valuable things you can do. Rebuilding a veteran formation with conscripts dilutes it; see [Manpower & Conscription](/wiki/manpower-conscription).
+Veterancy has five grades: **Green, Regular, Seasoned, Veteran, Elite**. Grades are earned through fighting: every battle adds experience, and 100 experience moves a unit up one grade, while the same battle costs it strength, readiness and equipment (see [Fighting a Battle](/wiki/fighting-a-battle)). A battle never lowers veterancy. Veterans are meaningfully better than green troops at the same headcount, so preserving an experienced formation is one of the most valuable things you can do. Rebuilding a veteran formation with conscripts dilutes it; see [Manpower & Conscription](/wiki/manpower-conscription).
 
 Strength is current personnel divided by establishment, shown on the unit card. A unit ground down in battle fights at reduced effect in proportion to its losses. A division at 40% strength fights like a much smaller formation.
 
@@ -224,7 +224,7 @@ Every unit costs upkeep every turn, set by its base upkeep, posture, tech tier, 
 
 Each turn the appropriation receives one forty-eighth of your annual defence line. A country at its historical starting force spends 55% of that on upkeep. Double the roster and upkeep is 110%, which drains the pot. The appropriation may then go negative by up to one full year of the line. Beyond that, unpaid upkeep becomes arrears. Arrears do not delete units. They pull each posture's readiness target down, by up to 35% if nothing is paid, and the readiness recovers when funding returns.
 
-So the more you raise, the less is left to buy with. Upkeep is also compared with your country's own starting force to set the budget-balance effect: a force below its historical size helps the budget score, and a large one hurts it.
+So the more you raise, the less is left to buy with. Upkeep is also compared with your country's own starting force to set the budget-balance effect: the smaller the force against its historical size, the better the budget score. A force at its starting size still helps the score, and only one past about 1.8 times that size starts to hurt it.
 
 ## Disbanding
 

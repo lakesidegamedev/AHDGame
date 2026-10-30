@@ -6,7 +6,7 @@ Scotland and Wales can leave the United Kingdom, and Northern Ireland can leave 
 
 Each region has a score from 0 to 100: Independence Desire in Scotland and Wales, Reunification Desire in Northern Ireland. It changes every turn (see "What moves desire" below). Once it reaches 60, the region's First Minister can file a request, which costs 3 office actions.
 
-The Prime Minister then decides. Granting opens a 48-turn campaign. Declining adds 5 to desire and locks the region for 96 turns, so the next request is likelier to succeed. In the campaign, Yes and No support is tracked by demographic group (a cohort) and players spend actions and funds to persuade voters or raise turnout. At the end, Yes must finish above 50%. A failed vote pulls desire toward 30 and locks the region for 480 turns. A passing vote opens a 24-turn window for the parliamentary consent bills, and when the required bills are enacted the region transfers automatically.
+The Prime Minister then decides. Granting opens a 48-turn campaign. Declining adds 5 to desire and locks the region for 96 turns, so the next request is likelier to succeed. In the campaign, Yes and No support is tracked by demographic group (a cohort) and players spend actions and funds to persuade voters or raise turnout. At the end, Yes must finish above 50%. A failed vote resets desire to 30 and locks the region for 480 turns. A passing vote opens a 24-turn vote on the parliamentary consent bills, and when the required bills are enacted the region transfers automatically. If a consent bill fails, the transfer is cancelled, with no cooldown on a new request.
 
 Minimum time from a granted request to a transfer is therefore 48 turns of campaign plus the consent bills, up to a further 24 turns. At 48 turns per game year that is between 1 and 1.5 years after the Prime Minister says yes. Government formation and Royal Assent can add to it.
 
@@ -21,7 +21,7 @@ Minimum time from a granted request to a transfer is therefore 48 turns of campa
 | Cooldown after a declined request | 96 turns |
 | Yes share needed to pass | above 50% |
 | Random swing added to the final vote | up to 4 points either way |
-| Desire after a failed vote | pulled toward 30 |
+| Desire after a failed vote | reset to 30 |
 | Cooldown after a failed vote | 480 turns |
 | Consent window after a passing vote | 24 turns |
 | Changing Westminster's stance | 2 national office actions, 72-turn cooldown per region |
@@ -73,13 +73,13 @@ You can aim an action at the whole electorate, which spreads its effect over eve
 
 Any UK player can spend actions and campaign funds this way, and party officers can spend the party's political strength on the same actions. Party chairs and vice chairs can also declare a public party position for Yes or No. A position is only a stance. It shows on the campaign page and the campaign wire, costs nothing and does not move the vote on its own. It can be changed or withdrawn only while the campaign runs.
 
-Open the live hub at **Country > Referendums**, or go directly to [UK Referendums](/country/uk/referendums). The detail page shows the tracking poll and recent momentum, party positions, cohort support and turnout, the campaign wire and any consent bills. Every push that moves the Yes share by 0.3 points or more is posted on the wire, so you can see what the other side is spending on.
+Open the live hub at **Country > Referendums** (the menu link appears while a campaign is live), or go directly to [UK Referendums](/country/uk/referendums). The detail page shows the tracking poll and recent momentum, party positions, cohort support and turnout, the campaign wire and any consent bills. Every push that moves the Yes share by 0.3 points or more is posted on the wire, so you can see what the other side is spending on.
 
-The final vote adds a deterministic swing of up to 4 points in either direction, then Yes must be above 50%. A poll within 4 points of 50% is still a gamble. Turnout is shown on the detail page and rises the further the result is from 50-50.
+The final vote adds a deterministic swing of up to 4 points in either direction, then Yes must be above 50%. A poll within 4 points of 50% is still a gamble. Turnout is shown on the detail page and comes from the cohorts: each cohort's base turnout plus whatever mobilising has added to it.
 
 ## The Prime Minister's choice
 
-The Prime Minister grants or declines a request, and sets Westminster's stance for each region (2 office actions, 72-turn cooldown). Granting a vote you expect to lose settles the question for 480 turns. Declining only delays it by 96 turns and raises desire by 5, which makes the next request likelier to succeed. The First Minister's side of it is simpler: file once desire reaches 60, and until then keep your policy stance and regional approval pointed the way you want desire to move.
+The Prime Minister grants or declines a request, and sets Westminster's stance for each region (2 office actions, 72-turn cooldown). When the Prime Minister is an NPP, the governing party's chair or vice chair can decide instead; if nobody has decided 24 turns after the request, the NPP government declines when Westminster's stance for that region is anti-devolution and grants otherwise. Granting a vote you expect to lose settles the question for 480 turns. Declining only delays it by 96 turns and raises desire by 5, which makes the next request likelier to succeed. The First Minister's side of it is simpler: file once desire reaches 60, and until then keep your policy stance and regional approval pointed the way you want desire to move.
 
 ## What a passing vote changes
 
@@ -87,8 +87,9 @@ Independence needs the Westminster consent bill before the new country is create
 
 When the transfer happens:
 
-- Residents of the region, including your character if you live there, become residents of the new country and are placed in its capital area. Party members move with their party.
-- UK offices held for the region end, including the region's MPs, and any cabinet posts held by people leaving. The [United Kingdom](/wiki/uk-overview) loses the region and its offices, parties and elections.
+- In Scotland and Wales, residents of the region, including your character if you live there, become residents of the new country and are placed in its capital area. The region's own party (the SNP or Plaid Cymru) moves with its members; members of UK-wide parties become Independents, and those parties have to be re-formed in the new country.
+- In Northern Ireland, player residents stay in the region, which becomes part of Ireland, and become Independents. The region's party organisations are dissolved, and its NPP politicians move to London and stay in the UK.
+- UK offices held for the region end, and so do cabinet posts held by people leaving. Scottish and Welsh MPs lose their seats; Northern Ireland's MPs carry over into the Dáil. If the Prime Minister is among those leaving, the UK government falls and has to be formed again. The [United Kingdom](/wiki/uk-overview) loses the region and its offices, parties and elections.
 - For Scotland and Wales, the First Minister stays on as head of the new government in a caretaker role.
 - Regional ownership, parties, elections, companies, natural resources and the affected country maps all update. It is a world change, not a cosmetic result. New elections are stood up in the new country under [Election Mechanics](/wiki/election-mechanics), and a Northern Ireland reunification brings the region into [Ireland](/wiki/ie-overview).
 

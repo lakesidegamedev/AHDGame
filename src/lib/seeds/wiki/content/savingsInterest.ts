@@ -46,7 +46,7 @@ Why is your interest so low? Almost always because inflation is close to the pri
 
 You hold 1,000,000 in savings. Prime is 4.0% and inflation is 2.0%, so the real rate is 2.0%, half is 1.0%, and the bonus makes 1.25%. Each turn you accrue 1,000,000 x 0.0125 / 48 = 260.42. After 12 turns the pot is credited: 12 x 260.42 = 3,125.04. That credit joins your balance, so the next quarter earns on 1,003,125.04. Interest compounds quarterly.
 
-Amounts round to whole units for yen and to two decimals for other currencies. Accrued interest that is not yet credited is tracked and shown as "Accrued (uncredited)". If you close or move an account mid-quarter, the pending amount is settled at that point. Interest counts as taxable personal income when it is credited.
+Amounts round to whole units for yen and to two decimals for other currencies. Accrued interest that is not yet credited is tracked and shown as "Accrued (uncredited)". Withdrawing mid-quarter does not pay it out early: it stays pending and is credited at the end of the quarter. Interest counts as taxable personal income when it is credited.
 
 ## The share cap
 
@@ -54,7 +54,7 @@ If the whole currency has 10,000,000 in savings and you hold 4,000,000, only 2,5
 
 ## Moving cash in and out
 
-Open the Savings tab on your country's Central Bank page and move cash between your wallet and savings. You can withdraw at any time, with no lock-up. The tab shows your balance, lifetime interest, accrued but uncredited interest, an estimate for this turn, and the total savings in the currency.
+Open the Savings tab on the Central Bank page for the currency you want to save in and move cash between your wallet and savings. You can withdraw at any time, with no lock-up. The tab shows your balance, lifetime interest, accrued but uncredited interest, an estimate for this turn, and the total savings in the currency.
 
 ![Savings tab showing APY, accrued interest, next credit turn and the open savings account button](/wiki-images/screens/savings-interest-savings-tab.webp)
 
@@ -64,7 +64,7 @@ Savings can be pulled out without you asking: the automatic payment on a [Line o
 
 Keep an eye on the real rate, not the headline prime rate. A balance held at a private bank earns that bank's own rate, which the savings screen quotes. Player savings at a private bank are a label on your account, not cash the bank holds, so the bank failing does not take your principal. See [Private Banking](/wiki/private-banking).
 
-Sovereign bond coupons are the prime rate plus a term premium, so a bond usually pays more than savings, but its price moves and it cannot be withdrawn at par on demand. See [Sovereign Bonds](/wiki/sovereign-bonds).
+Sovereign bond coupons are the prime rate plus a term premium and any credit risk spread, so a bond usually pays more than savings, but its price moves and it cannot be withdrawn at par on demand. See [Sovereign Bonds](/wiki/sovereign-bonds).
 
-Live in every world, for each country whose currency is tradable: 18 currencies in all, with the euro only from 1999. Countries whose currency is not tradable, such as the planned economies, have no savings tab. Last checked 2026-10-29, version 1.18.0. Exact rules: [Monetary system (design)](https://docs.lakesidegames.net/design/monetary-system-as-shipped.html)
+Live in every world, at the central banks of the 18 core countries with tradable currencies, including the Soviet Union and East Germany in the Cold War eras. Eurozone members share one euro account from 1999. The Eastern European central banks added in later eras do not offer savings. Last checked 2026-10-29, version 1.18.0. Exact rules: [Monetary system (design)](https://docs.lakesidegames.net/design/monetary-system-as-shipped.html)
 `;

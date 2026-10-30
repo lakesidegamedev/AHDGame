@@ -19,16 +19,16 @@ In the US, Brazil and Nigeria, a term-limited character cannot be selected as a 
 
 Your count for a country is the higher of two numbers:
 
-1. A **running counter** on your character, increased each time you are seated as president after winning an election, or when you succeed to the presidency from the vice presidency. Winning a presidential election in [General Elections](/wiki/general-elections) adds one.
+1. A **running counter** on your character, increased each time you are seated as president after winning an election, or when you succeed to the presidency from the vice presidency. Winning a presidential election in [General Elections](/wiki/general-elections) adds one. Ireland's Uachtarán race does not move this counter, so there the history below is the count.
 2. Your **career history**, scanned for every time you were elected or appointed to that office in that country.
 
 Taking the higher number means a character with an old history but no counter still counts accurately, and a history that under-reports cannot give you a fresh two terms.
 
-- **A partial term counts as a full term.** A vice president who takes over mid-term gets the counter increased by one, the same as winning an election.
-- **A vice president who has already hit the cap cannot take over.** Succession is blocked for them.
+- **A partial term counts as a full term.** A US vice president who takes over mid-term gets the counter increased by one, the same as winning an election.
+- **A US vice president who has already hit the cap cannot take over.** Succession is blocked for them. Automatic vice-presidential succession only runs in the US.
 - **An acting presidency from a [Contingent Election](/wiki/contingent-election) does not raise the counter, but it is recorded as an appointment in your career history, and the history scan counts appointments.** In practice it adds to your total.
 - **Founding terms do not count.** Terms flagged as founding terms in a character's history are subtracted from the total.
-- **The count is per country.** Terms served in one country never count against your limit in another.
+- **The count is per country.** Terms served in one country do not count against your limit in another. The one exception is an old history entry with no country recorded, which the scan counts in every country with the same office.
 
 ## Three characters, three counts
 
@@ -42,5 +42,5 @@ A third character is made acting president after a House deadlock. Their running
 
 The executive page for the country and the White House page show the term cap for the office; your career history on your character shows each term you have served. The block covers one office in one country, so every other office stays open. A capped character also cannot file for the office or appear on the ballot in [General Elections](/wiki/general-elections).
 
-Applies in the United States, Ireland, Brazil and Nigeria; other countries have no executive term cap. Last checked 2026-10-29, version 1.18.0. Exact rules: [Executive term limits (design)](https://docs.lakesidegames.net/design/executive-term-limits.html)
+Applies in the United States, Ireland, Brazil and Nigeria; other countries have no executive term cap. Last checked 2026-10-30, version 1.18.0. Exact rules: [Executive term limits (design)](https://docs.lakesidegames.net/design/executive-term-limits.html)
 `;

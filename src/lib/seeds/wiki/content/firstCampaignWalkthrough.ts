@@ -43,12 +43,12 @@ Actions are not your limit after the first day: you get 4 more every hour, which
 
 That is exactly 25 actions. Do the Fundraises first or you cannot afford the ad. Anything left over, leave for hourly income.
 
-**Days 2 to 7:**
+**Days 2 to 5:**
 
 - Each day you earn about ₳490,000 and 96 actions. Campaign enough to climb: PI 18 to 20 costs ₳20,000 a use, then ₳48,000 a use. From PI 30 you lose about 5 PI a day to decay, so about 6 Campaigns a day just hold your place.
 - Fundraise once a day. Build Donor Network again when you can afford it (4 actions and about ₳6,000 to ₳8,000 for the next levels).
 - Run two or three more ads toward Favorability 60 to 65.
-- Day 6: open **Elections**, find the Pennsylvania State Senate race and run a Quick Poll. It costs 2 actions and ₳25,000, and shows your topline and your best and worst five groups.
+- Day 5: open **Elections**, find the Pennsylvania State Senate race and run a Quick Poll. It costs 2 actions and ₳25,000, and shows your topline and your best and worst five groups.
 
 \`\`\`guide-screenshot
 elections
@@ -58,12 +58,12 @@ Stop week 1 when PI is about 30, Favorability is 60 or higher, donor level is 3 
 
 **If the poll shows you behind:** do not file blind. A rival 10 points ahead means either a different seat, or a plan: request NPP endorsements, run a Full Demographic Poll (6 actions, ₳75,000) to find which groups to canvass, and spend on those groups. A poll is much cheaper than a lost primary.
 
-## Week 2: the primary
+## Day 6: the primary closes
 
-When the primary window opens:
+Before the primary ends (entry shuts when it does):
 
 1. **Elections**, then the race, then **Declare**. You can hold one candidacy at a time.
-2. **View Campaign.** This is the spend screen.
+2. **View Campaign.** This is where your campaign budget is spent; Campaign actions stay on **Actions**.
 
 \`\`\`guide-screenshot
 campaign
@@ -76,20 +76,20 @@ campaign
 
 Your score is alignment plus favorability plus PI (see [Election Mechanics](/wiki/election-mechanics)). It sets your standing; over the closing window of the primary the party's registered voters cast ballots split by that standing, and the top count advances. Hold the lead; do not just grab it on the last turn.
 
-## Week 3: you are the nominee
+## The general: you are the nominee
 
-You are the nominee. The race page shows turns until resolution. The final 4 turns carry 30% of the vote.
+You are the nominee. A US State Senate general lasts 24 turns, one real day, and the race page shows turns until resolution. The final 4 turns carry 30% of the vote.
 
-Daily:
+Through those 24 turns:
 
 - Campaign enough to hold PI. Spreading spend beats spending early and then decaying.
-- Ads every other day to hold Favorability at 65 to 70.
+- An ad or two to hold Favorability at 65 to 70.
 - Collect general-phase endorsements.
 - If Favorability drops 5 or more points, someone is attacking you. Ads first; Attack only if you accept the Infamy.
 
 If you are clearly ahead by mid-general, stop spraying money. Save for the last 4 turns.
 
-## Week 4: the last four turns
+## The last four turns
 
 1. Log in hourly if you can (the routine is in [The Game Loop](/wiki/the-game-loop)). Each turn counts ballots weighted at 7.5% of the pool.
 2. Peak Favorability and PI going into those turns (ads plus Campaign).
@@ -124,7 +124,7 @@ An Independent enters the independent primary rather than a party's. You get no 
 
 - Declaring blind (no poll).
 - Dumping all your funds early, then decaying into the final turns.
-- Running ads when Favorability is already above 70: each ad gives less (3 minus 0.1 for every point over 70, never less than 1), and Favorability above 60 drains on its own.
+- Running ads when Favorability is already above 70: each ad gives less (3 minus 0.1 for every point over 70, rounded down, never less than 1), and Favorability above 60 drains on its own.
 - Attacking your own primary.
 - Ignoring NPP endorsements.
 

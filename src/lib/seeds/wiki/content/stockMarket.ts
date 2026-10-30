@@ -6,17 +6,17 @@ Whoever holds the shares decides who runs the company. Voting weight follows sha
 
 Each country has its own exchange, listing corporations headquartered there. The Market page has an exchange selector and shows market cap, share price, revenue, net income, CEO, sector and headquarters, with price history as candlestick charts (open, high, low and close for each period).
 
-Prices are recomputed every 15 minutes from three parts of a company's value, added together:
+Prices are recomputed every 15 minutes. The base is a fundamental value built from three parts of a company's value, added together:
 
 > share price = 1.0 x tangible book + 0.5 x earnings power + 0.15 x growth premium (each per share)
 
 | Part | What it measures |
 | --- | --- |
-| Tangible book (weight 1.0) | Cash, the present value of its sectors, construction in progress and tech assets, plus bonds it holds (counted at 75%) and 75% of the book equity of any bank it owns, minus bonds it has issued |
-| Earnings power (weight 0.5) | A 3-turn average of yearly after-tax earnings, divided by the cost of capital (the prime rate plus a sector risk premium) |
-| Growth premium (weight 0.15) | The value of future growth at the sector growth rate, capped just below the cost of capital |
+| Tangible book (weight 1.0) | Cash, the present value of its sectors, construction in progress and tech assets, plus bonds it holds (counted at 75%) and 75% of the book equity of any bank it owns, minus bonds it has issued, construction loans and unpaid cash arrears |
+| Earnings power (weight 0.5) | A 3-turn average of yearly after-tax earnings (net bond coupon income counted at 75%), divided by the cost of capital (the smoothed prime rate plus a sector risk premium) |
+| Growth premium (weight 0.15) | The value of future growth, capped 2 points below the cost of capital. Before the plants stage the growth rate is the sectors' growth rate; from the plants stage it is the company's actual sector value growth over recent turns |
 
-The result is then adjusted: a rate limiter stops moves above 35% per turn, an insider discount applies when the CEO holds too much, and other adjustments are listed in the table.
+The result is then adjusted: earnings and growth are cut when most earnings come from bond coupons, a parent with more than 3 formalized subsidiaries takes a conglomerate discount of up to 50%, an insider discount applies when the CEO holds too much, index fund ownership adds a small premium, and a rate limiter stops the fundamental moving more than 35% per turn. Market sentiment (up to 25% either way), confidence in the headquarters state (up to 12%) and recent order flow (up to 15%) then multiply that fundamental to give the traded price.
 
 The inputs come from the [corporation](/wiki/corporations): its cash, plants, earnings and growth, and the [market system](/wiki/market-system-guide) behind owned capacity and earnings. Bond debt lowers book value, held bonds add to it, and a default hurts the price (see [Corporate Bonds](/wiki/corporate-bonds)). The prime rate set by [Central Banks](/wiki/central-banks) is the base of the cost of capital, so rate changes shift every company at once. A [Market Safeguards](/wiki/market-safeguards) trip changes how share prices are computed for every company, and aggregate share prices and market value are what it measures.
 
@@ -26,23 +26,24 @@ The inputs come from the [corporation](/wiki/corporations): its cash, plants, ea
 | Weights: book / earnings / growth | 1.0 / 0.5 / 0.15 |
 | Bond holdings haircut | 0.75 |
 | Minimum share price | 0.01 |
-| Per-turn move limit | 35% (not applied at or below 1.00) |
+| Per-turn move limit | 35% on the fundamental (not applied at or below 1.00, or during post-split smoothing) |
 | Insider discount | Up to -30%, starts when the character CEO holds more than 65% of shares |
 | Corporate IMF restructuring | Price multiplied by 0.85 |
 | Dividend rate | 0% to 25% of after-tax income |
 | Public share issue | Up to 50% of shares; self-issue up to 20% at a 15% premium |
-| Split limits | Forward up to 100x; reverse down to 1,000,000 shares; 48-turn cooldown |
+| Split limits | Forward up to 100x; reverse down to 1,000,000 shares (scaled down in earlier eras); 48-turn cooldown |
 | Post-split smoothing | 70% previous price, 30% fundamental, for 3 turns |
 | Sell pacing | Pool absorbs at most 5% of company value per turn; sales under ₳25,000,000 never paced |
 | Issue pacing | At most 10% of shares or ₳50,000,000 per turn, whichever is larger |
 | Thin float | Public float under 5% trades at the fundamental price |
-| Hostile takeover | At 75% ownership; minority paid 125% of market price |
+| Hostile takeover | Above 75% of voting power; minority paid 125% of market price |
+| Conglomerate discount | Free up to 3 formalized subsidiaries, then up to -50% at 9 or more |
 
 A company has 10,000,000 shares, ₳2,000,000 of cash, sectors worth ₳6,000,000 in present value and ₳1,000,000 of bonds issued. Tangible book is 2,000,000 + 6,000,000 - 1,000,000 = ₳7,000,000, or **0.70 per share**.
 
 Its yearly earnings are ₳1,200,000 and the cost of capital is 10%. Earnings power is 1,200,000 / 0.10 / 10,000,000 = **1.20 per share**. Sector growth is 4%, so the growth premium is 1,200,000 x 0.04 / (0.10 - 0.04) / 10,000,000 = **0.08 per share**.
 
-The price is 0.70 + 0.5 x 1.20 + 0.15 x 0.08 = **1.312**. If the central bank raises rates so the cost of capital goes to 12%, earnings power falls to 1.00, the growth premium to 0.06, and the price to about 1.209, a drop of 8%. The same company in a boom can never rise more than 35% in a turn.
+The fundamental is 0.70 + 0.5 x 1.20 + 0.15 x 0.08 = **1.312**. If the central bank raises rates so the cost of capital goes to 12%, earnings power falls to 1.00, the growth premium to 0.06, and the fundamental to about 1.209, a drop of 8%. The same company in a boom can never lift its fundamental more than 35% in a turn, though sentiment and order flow move the traded price on top of that.
 
 \`\`\`wiki-chart
 share-price-by-cost-of-capital
@@ -58,9 +59,9 @@ From a corporation page, go to the Shares tab, or use the **Trade** shortcut on 
 
 Market orders use the quoted bid or ask. The equity pool's base half-spread is 1% on each side of its midpoint, before its cash-balance adjustment. Execution depends on available shares, cash and the applicable market path; liquidity is not unlimited.
 
-Very large sales are paced. The market buys at most **5% of a company's value** each turn from all sellers together. Sales under ₳25,000,000 per company per turn are never limited; a bigger sell order fills a slice each turn at the market price and settles over more turns. That is why you cannot always sell everything at once.
+Very large sales are paced. The market buys at most **5% of a company's value** each turn from all sellers together, or ₳25,000,000 if that is larger, so sales under ₳25,000,000 per company per turn are never limited. A market sale bigger than what is left this turn is refused and tells you how many shares the market will still take; place a sell order instead and the rest fills over the coming turns at the market price. That is why you cannot always sell everything at once.
 
-**Limit orders** place a buy or sell at a target price. The order sits on the book and fills automatically when the market price crosses your limit. You can set an optional expiry (cancel after N turns if unfilled).
+**Limit orders** place a buy or sell at a target price. The order sits on the book and fills automatically when the market price crosses your limit. Orders have no expiry; they stay open until filled or cancelled.
 
 - **Buy limit orders:** Funds are held in escrow until filled or cancelled
 - **Sell limit orders:** Shares are reserved until filled or cancelled
@@ -69,9 +70,9 @@ If insufficient liquidity exists at your limit price, the order fills partially:
 
 Corporations with a **public float below 5%** of total shares do not use the live market price for order execution. Instead, trades fall back to the **fundamental share price** computed by the turn formula. This prevents a single concentrated holder from manipulating the order-flow clamp and round-tripping against their own quote, and it is why your trade price can differ from the quote on such a company.
 
-Each exchange displays values in that country's currency. If you hold shares in a UK corporation, dividends are paid in GBP, then automatically converted to your home currency at the market-maker rate (1% spread); see [Currency Exchange](/wiki/currency-exchange). There is no per-holding preference.
+Each exchange displays values in that country's currency. If you hold shares in a UK corporation, dividends are paid in GBP, then automatically converted to your home currency at the market-maker rate (a 1% spread, scaled by that currency's spread setting); see [Currency Exchange](/wiki/currency-exchange). There is no per-holding preference.
 
-Share prices also mark the prop desk book of investment banks (see [Private Banking](/wiki/private-banking)). Computer-run politicians and companies trade on value: they buy where the price sits below their view of what a company is worth, and are more likely to sell shares priced far above it. Overall trading volume stays about the same.
+Share prices also mark the prop desk book of investment banks (see [Private Banking](/wiki/private-banking)). Computer-run politicians trade on value: they buy where the price sits below a company's fundamental value, and are more likely to sell shares priced far above it. Overall trading volume stays about the same.
 
 ## Dividends and the CEO's share levers
 
@@ -125,14 +126,15 @@ This lets any player audit structural changes and verify that ownership percenta
 
 ## Who gets the CEO seat
 
-When the CEO office is vacant, shareholders can vote for candidates. The vote is **weighted by shares**: 500 shares = 500 votes, not one vote per holder. A significant stake can swing a contested vote.
+Shareholders can vote for a CEO candidate at any time, whether the seat is vacant or held. The vote is **weighted by voting power**: 500 ordinary shares = 500 votes, not one vote per holder, and supershares count for more where a company has adopted them. A significant stake can swing a contested vote, and a tie goes to the sitting CEO.
 
 **Candidate eligibility:**
 - Must be located in the corporation's **HQ state**
 - Must be in the corporation's **home country**
+- The sitting CEO is exempt from both location rules
 - Self-voting is allowed
 
-The leading candidate (highest share-weighted vote total) receives a pending CEO offer notification. They must accept the position before taking office. Going public or privatising is also a CEO decision, on the corporation page.
+The leading candidate (highest vote total) receives a pending CEO offer notification, unless they hold the corporation's bonds. They must accept the position before taking office. Going public is a CEO decision on the corporation page; privatising is a 24-turn buyout vote that only a CEO holding more than 75% can open.
 
 ## Control, groups and takeovers
 
@@ -167,15 +169,15 @@ Four limits, all of them deliberate:
 - **Relief never exceeds the tax the group actually paid.** The state refunds; it does not pay out.
 - **Formalized subsidiaries only.** Relief is bought with a declaration.
 
-That last point is the trade. Formalizing a subsidiary is what unlocks relief, and it is also what makes the group legible, to everyone reading the corporation page, and to the competition authority reviewing your next merger. An offer for another company in a merger is referenced against the target's share price; see [Corporate Mergers & Acquisitions](/wiki/corporate-mergers).
+That last point is the trade. Formalizing a subsidiary is what unlocks relief, and it is also what makes the group legible to everyone reading the corporation page. In worlds where group-size merger review is switched on, the competition authority reviewing your next merger counts every corporation you control, formalized or not. An offer for another company in a merger is referenced against the target's share price; see [Corporate Mergers & Acquisitions](/wiki/corporate-mergers).
 
 **Synergies.** A group is not only a tax structure. Each turn, its members converge toward the group's **best** marketing and logistics capability, closing 5% of the gap per turn, up to 60% of the leader's level.
 
-**Synergy only ever lifts.** No member is reduced to bring the group toward an average. Averaging would mean acquiring a weak subsidiary drags your strong parent down, and the optimal move would be to never group anything, which is not what a group is for. The strong member's distribution network and brand are what the weak one gets access to, not the other way round.
+**Synergy only ever lifts.** No member is reduced to bring the group toward an average. In worlds where strength upkeep is switched on, though, the lift is paid out of the group leader's own strength, so a group shares strength rather than creating it. Averaging would mean acquiring a weak subsidiary drags your strong parent down, and the optimal move would be to never group anything, which is not what a group is for. The strong member's distribution network and brand are what the weak one gets access to, not the other way round.
 
 A member already above the capped share gains nothing. There is no reason to hold a flagship back.
 
-**A spin-off carries the brand out with it.** A corporation spun off from a group member keeps a higher ceiling, 85% instead of 60%, for two game years, because last turn it was literally part of that business. The advantage decays as the spin-off becomes its own company, and it disappears immediately if the corporation it came from leaves the group.
+**A spin-off carries the brand out with it.** A corporation spun off from a group member keeps a higher ceiling, 85% instead of 60%, for two game years (96 turns), because last turn it was literally part of that business. After that it drops back to 60%, and it drops immediately if the corporation it came from leaves the group.
 
 ### Transfer pricing
 
@@ -193,14 +195,14 @@ Three things worth knowing:
 
 Same-country intra-group pricing is not audited at all: both sides pay the same treasury, so no base moves, and group loss relief already nets the two positions against each other.
 
-An assessment you cannot afford is not waived. It is collected as far as your balance goes, and the exposure resets either way.
+An assessment is taken in full from the corporation that gained the profit. If it cannot cover the whole amount, nothing is collected, and the exposure resets either way.
 
 ### Hostile takeovers
 
-When a corporation (the acquirer) holds **at least 75%** of a target corporation's shares, the acquirer's CEO can initiate a **hostile takeover**:
+When a corporation (the acquirer) holds **more than 75%** of a target corporation's voting power, the acquirer's CEO can initiate a **hostile takeover** (national corporations cannot be taken over this way):
 
 - **Minority buyout:** All remaining minority shareholders are paid **125% of the current market price** per share (forex-aware)
-- **Sector merge:** Overlapping sectors (same state and sector type) are combined, summing revenue, workers, and margins
+- **Sector merge:** Overlapping sectors (same state and sector type) are combined, summing revenue and workers and taking a revenue-weighted average of margins
 - **Unique sectors:** Sectors that don't overlap are reassigned to the parent
 - **Cash transfer:** The target's liquid capital is transferred to the parent
 - **Orders cancelled:** All open share orders and listings on the target are cancelled
@@ -209,11 +211,11 @@ When a corporation (the acquirer) holds **at least 75%** of a target corporation
 ## The exchange page
 
 The exchange page shows aggregate stats for all listed corporations:
-- Total market capitalization
-- Average share price movement
-- Top movers (largest price % change)
+- Listed market capitalization, with candlestick history
+- Each company's price change over 1, 24 or 48 hours
+- A list you can sort by market cap, price, change %, income, revenue, float or dividend
 
 National GDP growth is driven by corporate sectors (their growth rates before the plants stage, what they actually sell and produce after it), so a healthy stock market generally reflects a growing economy, and vice versa. Share prices react to changing cash, bonds, rates, trading and sentiment every 15 minutes via the fundamental formula, while earnings and sector production still update on the hourly turn. A rescued company's price is cut by 0.85 and its shares are diluted under [Corporate IMF Restructuring](/wiki/imf).
 
-Applies on every country exchange: United States (NYSE), United Kingdom (FTSE), Germany (DAX), Japan (Nikkei), Ireland (ISEQ), Brazil (B3), China (SSE) and Nigeria (NGX). In multiplayer worlds prices update every 15 minutes. Command economies have no private listed companies, so no exchange. Last checked 2026-10-29, version 1.18.0. Exact rules: [Stock Market design page](https://docs.lakesidegames.net/design/stock-market.html)
+Applies on every country exchange: United States (NYSE), United Kingdom (FTSE), Germany (DAX), Japan (Nikkei), Ireland (ISEQ), Brazil (B3), China (SSE) and Nigeria (NGX). In multiplayer worlds prices update every 15 minutes. Command economies have no private listed companies; their venue is a state enterprise register instead of a market. Last checked 2026-10-29, version 1.18.0. Exact rules: [Stock Market design page](https://docs.lakesidegames.net/design/stock-market.html)
 `;

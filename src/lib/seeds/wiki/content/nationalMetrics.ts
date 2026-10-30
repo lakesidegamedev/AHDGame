@@ -30,7 +30,7 @@ Where a region has no labour force data, the game falls back to a simple Okun's 
 
 Take a region with a 4.5% structural rate and an output gap of +2 points. Its unemployment target is 4.5 - 0.4 x 2 = **3.7%**. Unemployment does not jump there. It slides toward 3.7% over a few dozen turns as corporations fill positions and the background economy hires. That is why unemployment did not fall the moment growth picked up: only growth above trend (a positive output gap) lowers the target.
 
-Unemployment also lowers union organising pressure ([Unions](/wiki/unions)), and feeds the household demand and price index in [Household Demand & Price Level](/wiki/household-economy), alongside confidence, median income and inflation. Wage growth above 2.5% adds cost pressure, see [Labour & Wages](/wiki/labour-and-wages).
+Higher unemployment also weakens union bargaining leverage ([Unions](/wiki/unions)), and feeds the household demand and price index in [Household Demand & Price Level](/wiki/household-economy), alongside confidence, median income and inflation. Wage growth above 2.5% adds cost pressure, see [Labour & Wages](/wiki/labour-and-wages).
 
 ## What moves inflation
 
@@ -88,20 +88,20 @@ metric-decay-recovery
 
 ## Placing sectors where conditions pay
 
-Conditions in a state change the profit margin of corporations operating there, in percentage points. If you run corporations, place sectors where this table works for you, since a state with good roads, a reliable grid and high skill pays you better margins. Growing your sectors also lifts the state's GDP growth and creates jobs.
+Conditions in a state change the profit margin of corporations operating there, in percentage points. Each metric has a base effect (below). That base is weighted by how much the sector depends on it, then capped at 0.75 points per metric, 2 points per channel (labour, logistics, digital and so on) and 8 points in total. Every sector feels every metric a little; the sectors listed feel it most. If you run corporations, place sectors where this table works for you, since a state with good roads, a reliable grid and high skill pays you better margins. Growing your sectors also lifts the state's GDP growth and creates jobs.
 
-| State metric | Margin effect | Sectors |
+| State metric | Base effect | Weighs most on |
 | --- | --- | --- |
 | Unemployment | -5 at 0%, 0 at 3%, +5 at 10% and above (tight labour costs more, slack labour is cheaper) | All |
 | Power grid reliability | 0 above 95% uptime, down to -4 at 85% | All |
 | Corruption index | 0 to -3, scaling to the maximum index | All |
-| Road condition | -3 at 0, 0 at 60, +3 at 100 | Manufacturing, retail, agriculture, vehicles, construction |
+| Road condition | -3 at 0, 0 at 60, +3 at 100 | Manufacturing, retail, agriculture, vehicles, construction, logistics, extraction |
 | Crime rate | 0 at 1,500 per 100,000, -5 at 3,500 and above | Retail, real estate, entertainment |
 | Broadband access | 0 at 70% and above, -4 at 40% and below | Technology, telecommunications, media, financial |
 | Workforce skill | -4 at 0, 0 at 50, +4 at 100 | Technology, chemical industries, healthcare, manufacturing, defence |
-| Carbon emissions | 0 at 3 tons per person, -3 at 25 and above | Energy, manufacturing, vehicles |
+| Carbon emissions | 0 at 3 tons per person, -3 at 25 and above | Energy, chemical industries, manufacturing, vehicles, extraction |
 
-With roads at 80 against the 60 where they add nothing, manufacturing, retail, agriculture, vehicle and construction corporations there gain (80 - 60) / 40 x 3 = **+1.5 margin points**.
+With roads at 80 against the 60 where they add nothing, the base effect is (80 - 60) / 40 x 3 = +1.5. A manufacturer weighs logistics at 0.9, giving 1.35, and the per-metric cap trims that to **+0.75 margin points**.
 
 ## Who reads the numbers
 

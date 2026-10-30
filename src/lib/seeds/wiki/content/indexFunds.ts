@@ -1,14 +1,14 @@
 export const indexFundsContent = `# Index Funds
 
-You want exposure to a whole market without picking shares one at a time, or you want a big enough stake in a fund to decide how it votes at a company. Either way you buy **units** in an index fund: a fixed basket of shares and bonds whose price per unit moves with the basket, with part of the dividends paid out to you. A fund that holds a big slice of a corporation also holds real votes in it, so funds matter for corporate control as well as for investing.
+You want exposure to a whole market without picking shares one at a time, or you want a big enough stake in a fund to decide how it votes at a company. Either way you buy **units** in an index fund: a rule-based basket of shares and bonds that rebalances as companies enter and leave the index, whose price per unit moves with the basket, with part of the dividends paid out to you. A fund that holds a big slice of a corporation also holds real votes in it, so funds matter for corporate control as well as for investing.
 
-Most funds are run by the game: one broad fund per country, one per industry, and one global fund. A player's corporation can also run a **sponsored fund** that charges a fee (see below).
+Most funds are run by the game: a Top 25 and a Top 50 fund for each country, a Global Top 50, a global fund for each industry, and bond funds (one government bond fund per country plus four global ones). A player's corporation can also run a **sponsored fund** that charges a fee (see below).
 
 ## What a unit is worth
 
 A fund's price per unit is its **net asset value (NAV)**: everything the fund owns (cash, shares, bonds and cash set aside for open buy orders) divided by the units outstanding. A brand new fund starts at 100 per unit. NAV updates once per turn, so there is no price to chase between turns. Share prices and dividends from the [Stock Market](/wiki/stock-market) set the fund's NAV and income, and bond prices and defaults move the value of its reserve (see [Corporate Bonds](/wiki/corporate-bonds)). Policy rates move the price of the sovereign bonds in the reserve ([Central Banks](/wiki/central-banks)).
 
-There is no active management. The fund follows its basket. It keeps at most 75% of its backing in shares and at least 25% in a reserve of bonds and cash.
+There is no active management. The fund follows its basket. An equity fund keeps at most 75% of its backing in shares and at least 25% in a reserve of bonds and cash; a bond fund holds no shares at all.
 
 | Item | Value |
 | --- | --- |
@@ -49,7 +49,7 @@ If this were a sponsored fund with a 1.00% fee, the sponsor would take 12,000,00
 index-fund-reinvest-vs-direct
 \`\`\`
 
-A country fund tracks that country's market, an industry fund tracks one industry, and the global fund spreads across everything. Pension schemes also buy broad fund units, adding demand and a long-term holder, and the market value of fund units a scheme holds raises or lowers its funding ratio (see [Pensions](/wiki/pensions)).
+A country fund tracks that country's largest companies, an industry fund tracks one industry worldwide, the Global Top 50 spreads across countries, and a bond fund holds government or corporate bonds of a set credit grade. Pension schemes also buy broad fund units, adding demand and a long-term holder, and the market value of fund units a scheme holds raises or lowers its funding ratio (see [Pensions](/wiki/pensions)).
 
 ## Voting the fund's shares
 
@@ -97,10 +97,10 @@ Suppose a corporation worth ₳80,000,000 has a free float of 9% against the 15%
 A **sponsored fund** is one a player's corporation charters and runs as a business. Only a corporation with a financial sector can sponsor one. A sponsor earns fee revenue, which counts in [Corporations](/wiki/corporations).
 
 - **Start-up cost.** A ₳2,500,000 charter fee, paid to the sponsor's national treasury and never refunded, plus at least ₳10,000,000 of seed capital paid into the fund.
-- **Choices.** A name and ticker, a mandate and a fee. The mandate is a scope (one country, or global) and a kind (broad, or a single industry). The sponsor cannot hand-pick the holdings, because a fund whose sponsor picks the basket is not an index fund.
+- **Choices.** A name and ticker, a mandate and a fee. The mandate is a scope (one country, or global) and a kind (broad, or a single industry). An ordinary financial corporation cannot hand-pick the holdings, because a fund whose sponsor picks the basket is not an index fund. A bank with an active investment or universal charter is the exception: it runs a picked-stock fund of named companies in its home country, with 25% held in cash and at most 15% in any one company.
 - **How the sponsor earns.** A yearly fee of 0.10% to 2.00% of assets, taken from fund cash a slice each turn and paid to the corporation as revenue. The sponsor holds no special stake in the fund's returns beyond its seed units, so the way to profit is to attract holders and keep them.
 - **When the fee stops.** Automatically, if the fund's backing falls below 90%, or if the fund is winding up. The fee is never taken by forcing a sale. If the fund has no spare cash, the sponsor is not paid that turn.
-- **Winding up.** The sponsor's CEO can close a fund, but not instantly. The fund stops buying and stops charging, then sells its holdings, bonds included, over the following turns. Once everything is cash, every unit holder is paid out at the final value, which is what the portfolio actually sold for rather than the last quoted NAV. Only then does the sponsor get back whatever remains of its seed capital. Seed capital is last in line, so a fund that lost money costs its sponsor before it costs holders.
+- **Winding up.** The sponsor's CEO can close a fund, but not instantly. The fund stops buying and stops charging, then sells its holdings, bonds included, over the following turns. Once everything is cash, every unit holder is paid out at the final value, which is what the portfolio actually sold for rather than the last quoted NAV. The sponsor's seed buys ordinary units, so it is paid out alongside everyone else's at the same final value. Only funds chartered under the older rules keep a residual seed that is repaid last.
 
 \`\`\`wiki-chart
 index-fund-expense-ratio-drag

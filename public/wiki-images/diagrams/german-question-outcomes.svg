@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="470" viewBox="0 0 800 470" role="img" font-family="system-ui, sans-serif">
 <title>German Question outcomes</title>
-<desc>If the East wins the German Question, East Germany joins a single one-party Germany with no election; if East Germany collapses, it becomes a parliamentary republic.</desc>
+<desc>If the East wins the German Question, West German offices convert to East German institutions in a single one-party Germany with no election; if East Germany collapses, it becomes a parliamentary republic.</desc>
 <defs><marker id="ma" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker><marker id="mw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/></marker><marker id="mg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#52525b"/></marker></defs>
 <rect x="0.5" y="0.5" width="799" height="469" rx="8" fill="#ffffff" stroke="#d4d4d8"/>
 <rect x="280" y="20" width="240" height="44" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
@@ -14,11 +14,11 @@
 <path d="M400 64 L400 86 L210 86 L210 110" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
 <path d="M400 86 L610 86 L610 110" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#mw)"/>
 <rect x="20" y="196" width="380" height="38" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
-<text x="210.0" y="210.0" font-size="12" text-anchor="middle" fill="#18181b">Volkskammer members take Bundestag seats, rescaled onto</text>
-<text x="210.0" y="226.0" font-size="12" text-anchor="middle" fill="#18181b">the eastern delegation</text>
+<text x="210.0" y="210.0" font-size="12" text-anchor="middle" fill="#18181b">Bundestag members take Volkskammer seats, rescaled onto</text>
+<text x="210.0" y="226.0" font-size="12" text-anchor="middle" fill="#18181b">the new chamber sizes</text>
 <rect x="20" y="248" width="380" height="38" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
-<text x="210.0" y="262.0" font-size="12" text-anchor="middle" fill="#18181b">Land assemblies become Landtage; Land First Secretaries</text>
-<text x="210.0" y="278.0" font-size="12" text-anchor="middle" fill="#18181b">become Minister-Presidents</text>
+<text x="210.0" y="262.0" font-size="12" text-anchor="middle" fill="#18181b">Landtage become land assemblies; Minister-Presidents</text>
+<text x="210.0" y="278.0" font-size="12" text-anchor="middle" fill="#18181b">become Land First Secretaries</text>
 <path d="M210 234 L210 248" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#ma)"/>
 <rect x="20" y="300" width="380" height="38" rx="6" fill="#f4f4f5" stroke="#d4d4d8"/>
 <text x="210.0" y="322.0" font-size="12" text-anchor="middle" fill="#18181b">East Berlin folds into Berlin</text>

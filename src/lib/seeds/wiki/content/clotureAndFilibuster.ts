@@ -1,11 +1,11 @@
 export const clotureAndFilibusterContent = `# Cloture & the Filibuster
 
-A senator can add 12 hours to a Senate vote and raise the bar to three fifths, and the 57 votes that pass a bill can fail it if 5 senators sit it out. In the US Senate, any seated senator can filibuster a bill that is on the floor. It does not kill the bill. It extends the vote by about 12 hours and raises the bar to pass from a simple majority to **three fifths of the votes cast**, the cloture threshold. There is no separate cloture motion: cloture is the passing rule the bill is held to once it has been filibustered.
+A senator can add 12 hours to a Senate vote and raise the bar to three fifths, and the 57 votes that pass a bill can fail it if 5 senators who sat it out vote Abstain instead. In the US Senate, any seated senator can filibuster a bill that is on the floor. It does not kill the bill. It extends the vote by about 12 hours and raises the bar to pass from a simple majority to **three fifths of the votes cast**, the cloture threshold. There is no separate cloture motion: cloture is the passing rule the bill is held to once it has been filibustered.
 
 ## Invoking it
 
 1. A bill is open for a vote in the US Senate, as the origin chamber or the second chamber (see [Bills & Legislation](/wiki/bills-legislation), where a filibuster lengthens a bill's Senate stage and raises its passing bar).
-2. A senator pays 25 action points and 5 NPI and invokes the filibuster from the bill page. The Senate deadline moves back by about 12 hours. Open the bill from the Congress page and use the **Filibuster** action while the bill is being voted on in the Senate. Invoking trains your Statecraft stat, and stronger Statecraft gives a longer delay (see [Rpg Stats](/wiki/rpg-stats)).
+2. A senator pays 25 action points and 5 NPI and invokes the filibuster from the bill page. The Senate deadline moves back by about 12 hours. Open the bill from the Congress page and use the **Invoke filibuster** button while the bill is being voted on in the Senate. Invoking trains your Statecraft stat, and stronger Statecraft gives a longer delay (see [Rpg Stats](/wiki/rpg-stats)).
 3. When the vote closes, the bill passes only if For is at least 60 percent of For plus Against plus Abstain, rounded up to a whole vote.
 4. If the Senate has abolished the filibuster, the bill is judged by simple majority again.
 
@@ -55,7 +55,7 @@ It does not park or kill the bill. The vote stays open and the status does not c
 
 ## Abolishing the filibuster
 
-The **Senate Filibuster Rules Act** is a Senate-only national bill with three options.
+The **Senate Filibuster Rules Act** is a US national bill with three options. It goes through the normal national bill process, so it needs both chambers and the president like any other national bill.
 
 | Option | Effect |
 | --- | --- |
@@ -63,9 +63,9 @@ The **Senate Filibuster Rules Act** is a Senate-only national bill with three op
 | Talking Filibuster Reform Act | Keeps the filibuster and the three-fifths threshold. |
 | Filibuster Preservation Act | Keeps the filibuster and the three-fifths threshold. |
 
-Only abolition changes anything. While it is in force the Filibuster button is unavailable and earlier invocations on open bills are ignored at the count, so a rules change mid-vote takes effect when the vote closes.
+Only abolition changes anything. While it is in force the Invoke filibuster button still shows, but using it is refused, and earlier invocations on open bills are ignored at the count, so a rules change mid-vote takes effect when the vote closes.
 
-Live in worlds with a US-style Senate. Not used in any other country. The Senate can switch it off with the Senate Filibuster Rules Act.
+Live in worlds with a US-style Senate. Not used in any other country. Congress can switch it off by enacting the Nuclear Option Act.
 
 Last checked 2026-10-29, version 1.18.0. Exact rules: [Bills & legislation design page](https://docs.lakesidegames.net/design/bills-legislation.html) (there is no separate filibuster design page)
 `;

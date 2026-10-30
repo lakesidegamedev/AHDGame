@@ -4,11 +4,11 @@ A tariff on machinery or an embargo on grain does not delete trade by decree; it
 
 ## How affinity decides who trades with whom
 
-For one commodity, the game lists the countries that make more than they use (exporters) and those that make less (importers). It then matches them, limited by how much surplus exists and how much each importer can pay. Where two sides could match several partners, affinity tilts the split toward the higher-affinity pairs. A pair with affinity 0 does not trade that commodity at all.
+For one commodity, the game lists the countries that make more than they use (exporters) and those that make less (importers). It then matches them, limited by how much surplus exists and how large each importer's shortage is. A tariff makes each imported unit use up more of that shortage, so it trims the volume as well as the affinity. Where two sides could match several partners, affinity tilts the split toward the higher-affinity pairs. A pair with affinity 0 does not trade that commodity at all.
 
 Affinity is worked out per commodity and per direction, in this order:
 
-1. **Base.** 1.0 for most pairs, higher for neighbours with close ties (table below).
+1. **Base.** 1.0 for most pairs, higher for a few pairs with close trading ties (table below).
 2. **Free trade agreement.** Multiply by 1.6 if an active FTA covers the pair.
 3. **Shared organization.** Multiply by 1.25 if both countries belong to the same [international organization](/wiki/international-organizations), where FTAs and sanctions are also passed.
 4. **Tariff drag.** Multiply by the drag from the importer's tariff on that flow (see [Tariffs](/wiki/tariffs)).
@@ -66,13 +66,14 @@ See [Tariffs](/wiki/tariffs) for how tariff layers are enacted and what they do 
 
 ### Embargoes
 
-An embargo is a deliberate break in trade. It can cover one commodity or all of them, exports, imports or both, and it can block the flow entirely or cap it at a fixed amount. Three things create one:
+An embargo is a deliberate break in trade. It can cover one commodity or all of them, exports, imports or both, and it can block the flow entirely or cap it at a fixed amount. Four things create one:
 
-- **A trade minister** spends 1 cabinet action (see [Cabinet](/wiki/cabinet)). The limits are in the table above. Only the seated trade minister of that country can do it.
+- **A trade minister** spends 1 cabinet action (see [Cabinet](/wiki/cabinet)). The limits are in the table above. Only the seated (or acting) trade minister of that country can do it.
 - **Legislation** for a restriction that has to last longer than 96 turns without renewal.
 - **An organization's sanctions resolution**, which lasts 48 turns.
+- **A global crisis outcome** that carries trade sanctions (see [Global Response Crises](/wiki/global-response-crises)). Countries whose leaders backed the response embargo the targeted side when the crisis resolves, for a set number of turns.
 
-The 168 turn cooldown starts when the embargo is enacted, not when it ends, and lifting early does not reset it. A full-length embargo therefore leaves 72 turns before the same minister's country can embargo that target again. Countries nobody plays can also impose and lift temporary embargoes. What an embargo does to a company is covered in [Embargoes and Trade Exposure](/wiki/embargo-and-trade-exposure).
+The 168 turn cooldown starts when the embargo is enacted, not when it ends, and lifting early does not reset it. A full-length embargo therefore leaves 72 turns before the same minister's country can embargo that target again. Governments run by computer-controlled parties can also impose and lift temporary embargoes, under the same limits. What an embargo does to a company is covered in [Embargoes and Trade Exposure](/wiki/embargo-and-trade-exposure).
 
 ### The iron curtain
 
@@ -91,7 +92,7 @@ Their base is 1.5, both are in the same organization, and Ireland has a 20% econ
 - No FTA: 1.5 x 1.25 x 0.625 = 1.17.
 - With an FTA: the tariff drops to 0, so 1.5 x 1.6 x 1.25 = 3.00.
 
-The FTA more than doubles their affinity (about 2.6 times). If Ireland's trade minister then embargoes Germany on all commodities, the pair goes to 0 until the embargo ends.
+The FTA more than doubles their affinity (about 2.6 times). If Ireland's trade minister then embargoes imports from Germany (or both directions) on all commodities, the pair goes to 0 until the embargo ends.
 
 ## Using trade as a player
 
@@ -102,7 +103,7 @@ The FTA more than doubles their affinity (about 2.6 times). If Ireland's trade m
 
 Tips:
 
-- An FTA is the biggest single lever, because it adds 1.6 and removes tariff drag together.
+- An FTA is the biggest single lever, because it multiplies affinity by 1.6 and removes tariff drag together.
 - Shared membership gives a 25% lift with no legislation.
 - Use embargoes for short, targeted pressure. They expire and then lock you out of re-imposing for 72 turns at least.
 - A corporation that sells almost entirely into one country is the one an embargo against that country hurts most.

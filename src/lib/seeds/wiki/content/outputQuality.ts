@@ -4,12 +4,12 @@ Two corporations make the same goods. One has deep research and decent pay; the 
 
 ## The four pillars
 
-Each manufacturing or service sector gets a quality score every turn. Each pillar is turned into a sub-score between 0.1 and 1, and the four are blended as a weighted geometric mean (a product where each term is raised to its weight, so a weak pillar drags the result down more than a strong one lifts it).
+Every sector gets a quality score every turn, except extraction-only sectors (those whose only outputs are oil, coal, iron, natural gas, timber or rare earth). Each pillar is turned into a sub-score between 0.1 and 1, and the four are blended as a weighted geometric mean (a product where each term is raised to its weight, so a weak pillar drags the result down more than a strong one lifts it).
 
 | Pillar | Weight | Sub-score | Reaches 1.0 at |
 | --- | --- | --- | --- |
 | Tech | 0.4 | square root of (R&D score / 25) | R&D score 25 |
-| Inputs | 0.2 | average input quality / 100 (50 if the sector has no measurable inputs) | input quality 100 |
+| Inputs | 0.2 | average input quality / 100 (50 if none of the sector's inputs carry a quality score, as with raw ore and fuel) | input quality 100 |
 | Wages | 0.2 | 0.5 + 0.6 x (wage level - 1) | wage level 1.83 (above the 1.5 maximum, so wages alone never max out) |
 | Operations | 0.2 | square root of (Logistics & Operations strength / 15) | strength 15 |
 
@@ -19,7 +19,7 @@ output-quality-pillars
 
 Pillars **substitute, they do not gate**. Poor inputs pull quality down, but strong tech, wages or operations pull it back up. No pillar can drop a sub-score below 0.1, so one terrible pillar never zeroes the product.
 
-Tech has the largest weight, so research is the strongest single driver: your R&D score comes from the [Corporate R&D tech tree](/wiki/corporate-r-and-d). The wages pillar follows each sector's wage level, which runs from 0.8 to 1.5 (see [Labour & Wages](/wiki/labour-and-wages)). Operations strength is covered in the [Logistics guide](/wiki/logistics-guide).
+Tech has the largest weight, so research is the strongest single driver. Your R&D score grows with your R&D budget and decays 3% a turn, and unlocking a node in the [Corporate R&D tech tree](/wiki/corporate-r-and-d) spends it, so a big unlock lowers your tech pillar until the score rebuilds. The wages pillar follows each sector's wage level, which runs from 0.8 to 1.5 (see [Labour & Wages](/wiki/labour-and-wages)). Operations strength is covered in the [Logistics guide](/wiki/logistics-guide).
 
 ## Why B can catch A
 
@@ -33,7 +33,7 @@ Because the blend is geometric, lifting your weakest pillar is worth more than t
 
 ## Quality travels down the chain
 
-A sector's input pillar uses the average quality of the [commodities](/wiki/commodities) it consumes, as made by all producers of that commodity in the world last turn. Last turn's output feeds this turn's input, so a change in your tech or wages shows up in your own score straight away, and reaches the sectors that buy from you one turn later.
+A sector's input pillar uses the average quality of the [commodities](/wiki/commodities) it consumes, as made by all corporate producers of that commodity in the world last turn, weighted by their revenue. Last turn's output feeds this turn's input, so a change in your tech or wages shows up in your own score straight away, and reaches the sectors that buy from you one turn later.
 
 Note this is a market-wide average per commodity, not the quality of one supplier. A [supply agreement](/wiki/supply-agreements) with a good supplier does not by itself raise your input quality, although the supplier's output counts toward the commodity average.
 
@@ -45,7 +45,7 @@ Mines and wells produce ore and crude that are interchangeable, so extraction-on
 
 Every corporation shows **Average Quality** on its page, a revenue-weighted average across non-extraction sectors, and the Charts tab plots it over time next to share price and market cap. The page itself is the [corporation](/wiki/corporations) page.
 
-Quality is a measure and a chain input. In ordinary commodity clearing it does not decide who buys from you; price, contracts and loyalty do. Where a world prices premium goods on quality (media and advertised products), a higher score supports a higher price.
+Quality does not decide who buys from you; in clearing, price, contracts and loyalty do. It does change what a premium earns. When you post a price above the market reference, your corporation's Average Quality from last turn scales the premium part of that price: neutral at 50, up to 1.3 times the premium at 100 and down to 0.7 times at 0. A discount or a market price is never scaled. Products with their own quality score, such as media titles, use that score instead.
 
-Applies in worlds where the output quality system is on, which includes new worlds; where it is off, no Average Quality appears. Extraction-only sectors never have a score. Last checked 2026-10-29, version 1.18.0. This system has no separate design page yet.
+Applies in worlds where the output quality system is on, which includes new worlds; where it is off, no Average Quality appears. Extraction-only sectors never have a score. Last checked 2026-10-30, version 1.18.0. This system has no separate design page yet.
 `;
