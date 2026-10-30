@@ -1,3 +1,4 @@
+import { COUNTY_POPULATION_SOURCE, parseCountyPopulations } from "./countyPopulationData";
 /**
  * Build script: Generate county and congressional district map data
  *
@@ -179,44 +180,9 @@ function calculateCountyPVI(
   return -rawLean;
 }
 
-// Load county population data from Census GitHub repo
+// Fail closed: missing county population is a data error, never a 50,000-person estimate.
 async function loadCountyPopulation(): Promise<CountyPopulation> {
-  console.log("Loading county population data from GitHub...");
-
-  // Using a reliable GitHub source with 2020 Census data
-  const url = "https://raw.githubusercontent.com/balsama/us_counties_data/master/data/counties.csv";
-
-  try {
-    const csvText = await fetchText(url);
-    const lines = csvText.split("\n");
-    const population: CountyPopulation = {};
-
-    // Parse CSV - format: County,State,"FIPS Code",Population,Area,Density
-    // FIPS Code is in column 2 (0-indexed)
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
-
-      const cols = line.split(",");
-      if (cols.length < 4) continue;
-
-      let fips = cols[2]?.replace(/"/g, "").trim();
-      const pop = parseInt(cols[3]?.replace(/"/g, "").trim() || "0");
-
-      if (!fips || isNaN(pop) || pop <= 0) continue;
-
-      // Ensure FIPS is 5 digits
-      if (fips.length < 5) fips = fips.padStart(5, "0");
-
-      population[fips] = pop;
-    }
-
-    console.log(`Loaded population data for ${Object.keys(population).length} counties`);
-    return population;
-  } catch {
-    console.warn("Failed to load county population from GitHub, using fallback estimates");
-    return {}; // Return empty, we'll use a default value of 50000
-  }
+  return parseCountyPopulations(await fetchText(COUNTY_POPULATION_SOURCE));
 }
 
 // Load county election results and calculate PVI
@@ -468,7 +434,9 @@ async function main() {
     const pathStr = featureToPath(feature, projection, pathGenerator);
     if (!pathStr) continue;
 
-    const population = countyPopulation[fips] || 50000; // default fallback
+    const population = countyPopulation[fips];
+    if (!Number.isSafeInteger(population) || population <= 0)
+      throw new Error(`Missing population for county ${fips}`);
     const cookPVI = countyPVI[fips] || 0;
 
     if (countyPopulation[fips]) countiesWithPop++;

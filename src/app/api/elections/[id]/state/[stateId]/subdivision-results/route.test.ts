@@ -1,3 +1,6 @@
+vi.mock("@/lib/counties/queries", () => ({
+  loadCountyPopulationMap: vi.fn().mockResolvedValue(new Map()),
+}));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { ObjectId } from "mongodb";

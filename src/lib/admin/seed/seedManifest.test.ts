@@ -24,6 +24,10 @@ const COLLECTIONS_DIR = join(process.cwd(), "src/lib/db/collections");
  * module declares must carry a manifest classification.
  */
 describe("seed manifest classification coverage", () => {
+  it("classifies persisted county stocks for reseeding on every bootstrap", () => {
+    expect(getCollectionCategory("counties")).toBe("reference");
+    expect(getReferenceCollectionNames()).toContain("counties");
+  });
   it("clears population receipts and frozen projections on reset", () => {
     for (const name of ["demographicFlowReceipts", "demographicFlowProjections"]) {
       expect(getCollectionCategory(name)).toBe("runtime");

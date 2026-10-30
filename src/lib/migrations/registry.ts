@@ -1,3 +1,4 @@
+import { migration as countyPopulations } from "./entries/2026-10-30-county-populations";
 import { migration as nationalPartyNppBills } from "./entries/2026-10-27-national-party-npp-bills";
 import { migration as partyNppRegionalBills } from "./entries/2026-10-27-party-npp-regional-bills";
 import { migration as incomeTaxTiers } from "./entries/2026-10-16-income-tax-tiers";
@@ -434,6 +435,8 @@ export const HELD_MIGRATIONS: Migration[] = [
   // #2159: explicit live-world promotion. The dedicated script targets
   // MONGODB_URI_LIVE, defaults to dry-run, and requires the current world id.
   activateLiveDemographicsV2,
+  // County stock initialization requires paused population writers and an explicit --only.
+  countyPopulations,
 ];
 
 // Deferred to follow-up (need bootstrap-marker pass on production first):

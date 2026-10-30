@@ -29,6 +29,13 @@ export async function seedCoreIndexes(db: Db, log: (msg: string) => void) {
   log("Core indexes:");
   await ensureIndex(
     db,
+    "counties",
+    { countryId: 1, stateId: 1 },
+    { name: "counties_country_state" },
+    log
+  );
+  await ensureIndex(
+    db,
     "contestRounds",
     { status: 1, "standings.userId": 1, settledAt: -1 },
     { name: "contestRounds_account_history" },

@@ -30,13 +30,18 @@ interface LegacyCdFile {
 export async function loadSubdivisionFile(
   dataDir: string,
   regionId: string,
-  options?: { preset?: string | null }
+  options?: { preset?: string | null; countyPopulations?: ReadonlyMap<string, number> }
 ): Promise<SubdivisionFile | null> {
   try {
     const filePath = join(process.cwd(), "src", "data", ...dataDir.split("/"), `${regionId}.json`);
     const raw = await readFile(filePath, "utf-8");
     const parsed = JSON.parse(raw) as SubdivisionFile | LegacyCountyFile | LegacyCdFile;
     if ("counties" in parsed) {
+      if (
+        options?.countyPopulations &&
+        parsed.counties.some((c) => !options.countyPopulations!.has(c.fips))
+      )
+        throw new Error("Incomplete county population coverage");
       const eraLeans = options?.preset ? await loadCountyLeans(options.preset) : null;
       return {
         viewBox: parsed.viewBox,
@@ -44,7 +49,7 @@ export async function loadSubdivisionFile(
           id: c.fips,
           name: c.name,
           path: c.path,
-          electorate: c.population,
+          electorate: options?.countyPopulations?.get(c.fips) ?? c.population,
           leanScalar: eraLeans?.[c.fips] ?? c.cookPVI,
         })),
       };
