@@ -104,7 +104,9 @@ async function main(): Promise<void> {
   const client = new MongoClient(uri);
   await client.connect();
   try {
-    const db = client.db(resolveMongoDbName(process.env));
+    const db = client.db(
+      resolveMongoDbName(process.env as Parameters<typeof resolveMongoDbName>[0])
+    );
     const report = await buildConversionReport(db);
     if (flag("--json")) console.log(JSON.stringify({ ...report, conversions: undefined }, null, 2));
     else printReport(report);

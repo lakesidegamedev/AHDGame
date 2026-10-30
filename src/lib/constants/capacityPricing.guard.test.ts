@@ -46,6 +46,11 @@ const REGISTRY: Record<string, { count: number; expect: Expectation; why: string
     expect: "sector",
     why: "computeBuildCost forwards its own required strategyId to capacityPricePerUnit.",
   },
+  "src/lib/remediation/defects/AHD-whole-plants-conversion.ts": {
+    count: 1,
+    expect: "sector",
+    why: "The whole-plants conversion's list-price fallback values a sector's own existing part-plant, so it reads that sector's strategy.",
+  },
   "src/lib/corporations/sectorProfitBasis.ts": {
     count: 1,
     expect: "sector",
