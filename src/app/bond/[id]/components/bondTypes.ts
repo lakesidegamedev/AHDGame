@@ -1,8 +1,10 @@
+import type { SovereignRiskDisclosure } from "@/lib/bonds/sovereignRiskDisclosure";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 
 export interface BondDetail {
   _id: string;
   issuerType?: "corporation" | "sovereign";
+  sovereignRisk?: SovereignRiskDisclosure | null;
   countryId?: string | null;
   /** Bond's currency (Task 18B, v0.2.6). Missing = legacy/pre-stamp bond. */
   currencyCode?: string | null;

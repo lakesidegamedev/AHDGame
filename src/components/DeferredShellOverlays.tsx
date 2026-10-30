@@ -28,6 +28,10 @@ const TutorialCoachMount = dynamic(
   () => import("@/components/tutorial/TutorialCoachMount").then((m) => m.TutorialCoachMount),
   { ssr: false }
 );
+const NominationChoicePrompt = dynamic(
+  () => import("@/components/cabinet/NominationChoicePrompt").then((m) => m.NominationChoicePrompt),
+  { ssr: false }
+);
 
 export function DeferredStatAllocationGate() {
   return <StatAllocationGate />;
@@ -47,4 +51,8 @@ export function DeferredTurnProgressToast() {
 
 export function DeferredTutorialCoachMount() {
   return <TutorialCoachMount />;
+}
+
+export function DeferredNominationChoicePrompt() {
+  return <NominationChoicePrompt />;
 }

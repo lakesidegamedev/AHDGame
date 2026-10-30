@@ -6,8 +6,8 @@ Eighteen things want your attention this turn, and three of them have a deadline
 
 The inbox is at \`/notifications\`. It reads like a mail client, with a list of items on one side and the open item on the other. Each item links to the page it is about. Items come in two kinds:
 
-- **Notifications.** System events: your bill passed committee, you were named Commanding General, your corporation's credit rating changed, an opponent attacked your character. [Player Random Events](/wiki/player-events) post each offer and outcome here, [Crisis Interaction](/wiki/crisis-interaction) posts crisis alerts and decisions, [Coalitions](/wiki/coalitions) send invites, join requests and votes, and [News](/wiki/news) notifies subscribers when an author posts.
-- **Mail.** Direct messages from other players and NPPs, hosted with the archive, mute and snooze controls. See [Mail](/wiki/mail).
+- **Notifications.** System events: your bill passed a chamber, you were named Commanding General, your corporation's credit rating changed, an opponent attacked your character. [Player Random Events](/wiki/player-events) post each offer and outcome here, [Crisis Interaction](/wiki/crisis-interaction) posts crisis alerts and decisions, [Coalitions](/wiki/coalitions) send invites, join requests and votes, and [News](/wiki/news) notifies subscribers when an author posts.
+- **Mail.** Direct messages from other players, plus game messages such as forex fills. A mail thread can be archived but not snoozed. See [Mail](/wiki/mail).
 
 The inbox opens on **Needs action**. The four views are:
 
@@ -16,7 +16,7 @@ The inbox opens on **Needs action**. The four views are:
 | Needs action | Unread items waiting on you: a vote to cast, an offer or invite to answer, a random event, an election to enter, a crisis decision. Every unread mail also counts here. |
 | All | Notifications and mail together. |
 | Notifications | System events only. |
-| Mail | Player and NPP messages only. |
+| Mail | Mail threads only. |
 
 Busy views show a working set of 24 items, with unread items that need action first, then other unread items, then recent history. Nothing is discarded: "Show older" reveals the rest. Work from Needs action during a busy turn instead of scrolling All. If it is empty, nothing unread is waiting on you, which is the good case. Use **Mark all read** once you have caught up; it marks every unread item in the current view. [Reading the Game](/wiki/reading-the-game) describes how what you see and act on each turn starts from this inbox.
 

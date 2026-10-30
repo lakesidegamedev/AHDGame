@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { SovereignBondRisk } from "@/components/SovereignBondRisk";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { CorporationLogo } from "@/components/corporation/CorporationLogo";
 import { COUNTRY_CURRENCY_MAP } from "@/lib/constants/currencies";
@@ -126,6 +127,11 @@ export function BondHeroPanel({
         </div>
       </div>
 
+      {bond.issuerType === "sovereign" && (
+        <div className="px-6 py-3">
+          <SovereignBondRisk risk={bond.sovereignRisk} />
+        </div>
+      )}
       {/* Stats strip */}
       <div className="flex items-center overflow-x-auto divide-x divide-card-border">
         {(

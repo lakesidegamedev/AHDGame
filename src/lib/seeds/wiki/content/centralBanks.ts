@@ -55,7 +55,7 @@ central-bank
 
 *The Federal Reserve page. The header shows the prime rate, inflation, savings flow, and reserves. The rate corridor shows the prime rate against the inflation band, and the left panel shows the Chair's term and public scrutiny.*
 
-If a rate change is refused, one of these applies: the 6-turn wait, a size limit, the 0 to 25 range, a currency peg with open capital (see below), a government-controlled bank, or a command economy.
+If a rate change is refused, one of these applies: the 6-turn wait, a size limit, the 0 to 25 range, a currency peg with open capital (see below), a government-controlled bank, a command economy, or (at the US Fed) a seated board, since only the FOMC can change the rate while governors sit.
 
 Rules of thumb that hold up:
 
@@ -112,7 +112,7 @@ While a bank is government-controlled the chair is still chosen the usual way, b
 
 **Reserve requirement (Reserves tab).** Where [Private Banking](/wiki/private-banking) is open, the chair sets what share of deposits banks must hold back, from 5% to 95%. A bank's lendable room is deposits x (1 - requirement) minus loans. Raise it and banks at the old limit are frozen out of new lending. Lower it and room opens at once.
 
-**Deposit insurance fund (Insurance tab).** The fund is paid for by banks, not by the state, and bank premiums into it come through Private Banking. Each bank pays 0.4% a year on insured deposits, split across the turns, scaled by 0.5x to 3x depending on how thin its reserves are against the requirement. Deposits are insured up to a cap anchored at 5,000,000 in modern reference terms and scaled per currency and era. When a bank fails, insured balances are kept whole from the recovery pool, then the fund, then treasury cash, and any shortfall is funded by bonds. The expense shows in the federal budget, see [National Budget](/wiki/national-budget).
+**Deposit insurance fund (Insurance tab).** The fund is paid for by banks, not by the state, and bank premiums into it come through Private Banking. Each bank starts at 0.4% a year on insured deposits (once the fund has paid out claims, that base moves toward the losses it has actually seen, up to 2%), split across the turns, scaled by 0.5x to 3x depending on how thin its reserves are against the requirement. Deposits are insured up to a cap anchored at 5,000,000 in modern reference terms and scaled per currency and era. When a bank fails, insured balances are kept whole from the recovery pool, then the fund, then treasury cash, and any shortfall is funded by bonds. The expense shows in the federal budget, see [National Budget](/wiki/national-budget).
 
 ## The currency regime and defending it
 
@@ -128,7 +128,7 @@ The prime rate feeds several systems at once:
 
 - **Bonds.** New corporate bonds pay prime plus a credit spread. Sovereign bonds pay prime plus a term premium plus any credibility spread from scrutiny, so the prime rate sets the coupon on each new issue in the [National Budget](/wiki/national-budget). See [Corporate Bonds](/wiki/corporate-bonds) and [Sovereign Bonds](/wiki/sovereign-bonds). Policy rates also move the price of the sovereign bonds held in an [Index Fund](/wiki/index-funds) reserve. Inflation and currency falls reduce bond demand and can block the Monetize path above 8% inflation, see [Sovereign Default](/wiki/sovereign-default).
 - **Savings and credit.** Savings pay half the real rate and lines of credit are priced off prime. Central bank savings interest creates new money, line draws create money and repayments retire it, and interest feeds bank reserves. See [Savings & Interest](/wiki/savings-interest) and [Line of Credit](/wiki/line-of-credit). The margin line banks use for trading books costs prime plus 1.5 points, with draws creating money and repayments retiring it. See [Interbank Lending](/wiki/interbank-lending).
-- **Exchange rate.** Higher rates strengthen the currency, inflation weakens it, growth strengthens it. A rate shock closes about 5% of the gap per turn, roughly 91% after 48 turns, on top of noise and trade pressure, with a final clamp of 50% below to 50% above the base rate.
+- **Exchange rate.** Higher rates strengthen the currency, inflation weakens it, growth strengthens it. A rate shock closes about 5% of the gap per turn, roughly 91% after 48 turns, on top of noise and trade pressure, with a final clamp of 50% below to 50% above the base rate (80% either way once a Bretton Woods world has floated).
 - **Inflation and margins.** High rates cool borrowing and spending. Inflation changes every sector's profit margin, so inflation and the prime rate move margins and growth costs across [Corporations](/wiki/corporations):
 
 \`\`\`wiki-chart
@@ -158,7 +158,7 @@ The chair does not control fiscal policy, which needs legislation. But the two i
 | Bank | Who sets the rate | What is different |
 | --- | --- | --- |
 | US Federal Reserve | Chair proposes, FOMC votes | Board terms, nominations by the President, Senate confirmation. The chair alone cannot move the rate. The move size, wait and scrutiny rules cap what the [committee](/wiki/fomc) can do. |
-| Bank of England | Treasury before 1997, then the Bank | Independence is a statute, not a date. |
+| Bank of England | Treasury in worlds that start before 1997, until Parliament grants independence; the Bank in worlds that start in 1997 or later | Independence is a statute, not a date. |
 | Euro area | Shared central bank | One policy rate for every member. |
 | Command economies | The plan | No automatic rate setter. |
 | Other national banks | The seated Chair, or the government where the bank is not independent | Same move limits and scrutiny. |

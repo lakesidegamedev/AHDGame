@@ -13,6 +13,7 @@ import {
 } from "@/lib/constants/commodities";
 import { costPassThroughMultiplier } from "@/lib/market/costPassThrough";
 import { computeGlobalCommodityPrice } from "@/lib/market/globalCommodityPrice";
+import { clampFundedPrice } from "@/lib/market/fundedPriceClamp";
 import { getPriceSoftKnee } from "@/lib/constants/commodities";
 import {
   updateScarcityMultiplier,
@@ -291,7 +292,14 @@ export function priceCommodity(
     hardPeg: existing?.hardPeg ?? undefined,
     nudge: nudgeMap.get(commodity) ?? undefined,
   });
-  const globalMktPrice = globalResult.appliedPrice;
+  // Funded turns: the configured pace bounds the published price, not only
+  // the scarcity multiplier. Admin pegs and nudges are never clamped.
+  const paced = (next: number, previous: number | undefined) =>
+    fundedPricing ? clampFundedPrice(next, previous, nominalBasePrice, fundedPricePace) : next;
+  const globalPegged = existing?.hardPeg != null || nudgeMap.has(commodity);
+  const globalMktPrice = globalPegged
+    ? globalResult.appliedPrice
+    : paced(globalResult.appliedPrice, existing?.globalPrice);
   const effBasePrice = globalResult.effectiveBasePrice;
   const priceAttribution = globalResult.attribution;
   appliedGlobalPrices.set(commodity, globalMktPrice);
@@ -329,9 +337,9 @@ export function priceCommodity(
       nationalPrices[countryId] = marketNationalPrice;
     }
     // Partial adjustment from last turn's price damps the exporter cobweb (#4605).
-    nationalPrices[countryId] = adjustNationalPrice(
-      existing?.nationalPrices?.[countryId],
-      nationalPrices[countryId]
+    nationalPrices[countryId] = paced(
+      adjustNationalPrice(existing?.nationalPrices?.[countryId], nationalPrices[countryId]),
+      existing?.nationalPrices?.[countryId]
     );
     nationalSupply[countryId] = Math.round(bal.supply * 100) / 100;
     nationalDemand[countryId] = Math.round(bal.demand * 100) / 100;
@@ -455,10 +463,12 @@ export function priceCommodity(
         );
       }
       const previousPrice = existing?.statePrices?.[stateId] ?? targetPrice;
-      statePrice =
+      statePrice = paced(
         Math.round(
           (previousPrice + COMMODITY_PRICE_DRIFT_RATE * (targetPrice - previousPrice)) * 100
-        ) / 100;
+        ) / 100,
+        existing?.statePrices?.[stateId]
+      );
     }
 
     statePrices[stateId] = statePrice;

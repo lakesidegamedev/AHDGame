@@ -83,16 +83,37 @@ export function StatePartyInfluencePanel({
   }, [fetchData]);
 
   const handleExecute = useCallback(
-    async (nppId: string, type: ActionOption["type"]) => {
+    async (nppId: string, type: ActionOption["type"], count = 1) => {
       try {
         const res = await fetch(`${regionPartyApiUrl(countryId, stateId, partyId)}/influence`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ nppId, influenceType: type, fundAmount: 0, context: {} }),
+          body: JSON.stringify(
+            count === 1
+              ? { nppId, influenceType: type, fundAmount: 0, context: {} }
+              : {
+                  queue: Array.from({ length: count }, () => ({
+                    nppId,
+                    influenceType: type,
+                    fundAmount: 0,
+                    context: {},
+                  })),
+                }
+          ),
         });
         const json = await res.json().catch(() => ({}));
         if (res.ok) {
-          if (json.message) showToast(json.message, json.success ? "success" : "info");
+          if (count > 1 && json.results) {
+            const completed = json.results.filter(
+              (r: { outcome: string }) => r.outcome !== "error"
+            ).length;
+            const succeeded = json.results.filter((r: { success: boolean }) => r.success).length;
+            const stopped = json.results.find((r: { outcome: string }) => r.outcome === "error");
+            showToast(
+              `${completed} of ${count} actions attempted, ${succeeded} succeeded.${stopped ? ` ${stopped.message}` : ""}`,
+              "info"
+            );
+          } else if (json.message) showToast(json.message, json.success ? "success" : "info");
           await fetchData({ background: true });
           await onPartyRefresh?.();
           return { ok: true };

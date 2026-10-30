@@ -21,6 +21,7 @@ import {
   DeferredWealthTierRepickGate,
   DeferredTutorialCoachMount,
   DeferredTurnProgressToast,
+  DeferredNominationChoicePrompt,
 } from "@/components/DeferredShellOverlays";
 import { FeedbackProvider } from "@/contexts/FeedbackContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -446,6 +447,7 @@ export default async function RootLayout({
                           <DeferredStatAllocationGate />
                           <DeferredWealthTierRepickGate />
                           <DeferredSeasonRecapGate />
+                          <DeferredNominationChoicePrompt />
                           {/* overflow-x-CLIP, not -hidden: hidden makes this element the
                             scroll container for every `position: sticky` descendant
                             (admin status bar / sidebars / table headers), which both

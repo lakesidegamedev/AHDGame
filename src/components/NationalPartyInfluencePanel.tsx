@@ -322,7 +322,12 @@ export function NationalPartyInfluencePanel({
     }
   };
 
-  const handleStatExecute = async (nppId: string, type: ActionOption["type"]) => {
+  const handleStatExecute = async (nppId: string, type: ActionOption["type"], count = 1) => {
+    if (count > 1)
+      return handleStatBulk(
+        Array.from({ length: count }, () => nppId),
+        type
+      );
     try {
       const res = await fetch(`${partyApiUrl(country, partyId)}/influence`, {
         method: "POST",
