@@ -93,6 +93,9 @@ import type { DesktopNavigationLayout } from "@/lib/navigation/desktopNavigation
 import type { MobileNavigationLayout } from "@/lib/navigation/mobileNavigationLayout";
 import { MobileDock, type DockSheetKey } from "@/components/navbar/MobileDock";
 import { useMobileDockModel } from "@/components/navbar/mobileDockModel";
+import { SidebarWidget } from "@/components/sidebarWidgets/SidebarWidget";
+import { useSidebarWidgetData } from "@/components/sidebarWidgets/useSidebarWidgetData";
+import { useWidgetSetup } from "@/components/sidebarWidgets/useWidgetSetup";
 import { hasSandboxAccess } from "@/lib/sandbox/access";
 import { Wordmark, WORDMARK } from "@/components/Wordmark";
 import type {
@@ -221,6 +224,13 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
   const customizableNav = desktopLayout === "cards";
   const { showToast } = useToast();
   const refetchNav = useRefetchNav();
+  const widgetSetup = useWidgetSetup();
+  // Prefetched with the tray's widgets so an opened menu rarely waits.
+  const menuWidgetData = useSidebarWidgetData(
+    widgetSetup.enabled && desktopLayout && desktopLayout !== "standard"
+      ? Object.values(widgetSetup.layout.nav).map(widgetSetup.resolveKey)
+      : []
+  );
   const savedCustomizationJson = JSON.stringify(parseNavCustomization(savedCustomization));
   const [custom, setCustom] = useState<NavCustomization>(() =>
     parseNavCustomization(savedCustomization)
@@ -1156,6 +1166,21 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
   });
   const pinsFull = custom.pinned.length >= MAX_NAV_PINS;
 
+  // Experimental: a widget the player placed in this menu's side column.
+  const menuWidgetKey =
+    widgetSetup.enabled && openMenuKey ? widgetSetup.layout.nav[openMenuKey] : undefined;
+  const menuWidgetFetchKey = menuWidgetKey ? widgetSetup.resolveKey(menuWidgetKey) : null;
+  const menuWidget = menuWidgetKey ? (
+    <SidebarWidget
+      compact
+      widgetKey={menuWidgetKey}
+      data={menuWidgetData.data[menuWidgetFetchKey!]}
+      loaded={menuWidgetData.loaded(menuWidgetFetchKey!)}
+      exchangeLabel={widgetSetup.options.find((option) => option.key === menuWidgetKey)?.label}
+      onNavigate={closeAll}
+    />
+  ) : undefined;
+
   const megaPanel =
     desktopMenu && desktopLayout && desktopLayout !== "standard" ? (
       <DesktopMegaMenu
@@ -1166,6 +1191,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
         anchorRef={dropdownAnchorRef}
         panelRef={dropdownPanelRef}
         onClose={closeAll}
+        widget={menuWidget}
         {...(customizableNav && openMenuKey
           ? {
               pinnedIds: new Set(

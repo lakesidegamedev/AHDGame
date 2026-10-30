@@ -100,6 +100,25 @@ describe("PATCH /api/settings/experimental-features", () => {
     }
   );
 
+  it("saves a cleaned widget layout and the tray's open state", async () => {
+    const response = await patch({
+      widgetLayout: {
+        tray: ["myCompany", "myCompany", "stockTicker:nyse"],
+        nav: { world: "stockTicker:global" },
+      },
+      widgetTrayOpen: true,
+    });
+    expect(response.status).toBe(200);
+    const update = vi.mocked(db.collectionMocks.users.updateOne).mock.calls[0];
+    expect(update[1].$set).toMatchObject({
+      widgetLayout: {
+        tray: ["myCompany", "stockTicker:nyse"],
+        nav: { world: "stockTicker:global" },
+      },
+      widgetTrayOpen: true,
+    });
+  });
+
   it("does not write preferences without authentication", async () => {
     vi.mocked(requireBasicAuth).mockResolvedValue({
       ok: false,
@@ -122,6 +141,10 @@ describe("PATCH /api/settings/experimental-features", () => {
     { navCustomization: { pinned: ["a:1", "a:2", "a:3", "a:4", "a:5", "a:6"], order: {} } },
     { navCustomization: { pinned: ["has space"], order: {} } },
     { navCustomization: { pinned: [] } },
+    { widgetLayout: { tray: ["has space"], nav: {} } },
+    { widgetLayout: { tray: [], nav: { sidebar: "myCompany" } } },
+    { widgetLayout: { tray: Array.from({ length: 9 }, () => "myCompany"), nav: {} } },
+    { widgetTrayOpen: "yes" },
   ])("rejects %j", async (body) => {
     const response = await patch(body);
     expect(response.status).toBe(400);
