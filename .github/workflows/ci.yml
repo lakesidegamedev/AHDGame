@@ -13,12 +13,24 @@ concurrency:
   # caches are saved.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+env:
+  # When the account's cache egress allowance runs out, a cache download stalls
+  # until this segment timeout (default 10 minutes) before the job continues
+  # without it. That stall was the largest single cost in CI on 2026-10-30.
+  SEGMENT_DOWNLOAD_TIMEOUT_MINS: "2"
+# setup-node carries no npm cache. Installing from the registry takes about
+# 20 s either way, and the 244 MB npm cache restored by every job was most of
+# each run's cache egress, which is what ran the account allowance out.
+
 jobs:
   # Keep the stable `verify` check for every pull request, but avoid spending
   # the full matrix on changes that can only affect prose or changelog data.
   changes:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # A development -> staging promotion waits here (up to 35 minutes) for
+    # development's own push run on the same tree instead of rerunning the
+    # matrix beside it. Every other event decides in seconds.
+    timeout-minutes: 40
     permissions:
       contents: read
       actions: read
@@ -121,7 +133,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
       - run: npm ci --no-audit --no-fund
       - uses: actions/cache@v4
         with:
@@ -158,8 +169,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
       - run: npm ci --no-audit --no-fund
+      # The audit is read-only and single threaded, so it runs beside lint,
+      # format and typecheck instead of before them. It is collected below.
+      - name: Start architecture audit
+        run: |
+          (
+            status=0
+            npm run architecture:audit > "$RUNNER_TEMP/architecture-audit.log" 2>&1 || status=$?
+            echo "$status" > "$RUNNER_TEMP/architecture-audit.status"
+          ) &
       - uses: actions/cache@v4
         with:
           path: .cache/eslint
@@ -192,8 +211,6 @@ jobs:
           fi
       - name: Build recovery and promotion qualification tests
         run: node --test scripts/ci/change-scope.test.mjs scripts/ci/staging-qualification.test.mjs scripts/build-with-cache-recovery.test.mjs
-      - name: Architecture audit
-        run: npm run architecture:audit
 
       - uses: actions/cache@v4
         with:
@@ -227,6 +244,13 @@ jobs:
           # The clean program can exceed 6.5 GiB during final type serialization.
           # Keep enough heap headroom for the hosted runner to finish reliably.
           NODE_OPTIONS: --max-old-space-size=12288
+      - name: Architecture audit
+        if: ${{ !cancelled() }}
+        timeout-minutes: 10
+        run: |
+          while [ ! -f "$RUNNER_TEMP/architecture-audit.status" ]; do sleep 2; done
+          cat "$RUNNER_TEMP/architecture-audit.log"
+          exit "$(cat "$RUNNER_TEMP/architecture-audit.status")"
 
   # Split out of `verify` and sharded: the suite has thousands of files and its cost is
   # dominated by per-file module loading. Architecture contracts are excluded
@@ -239,37 +263,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5]
+        # Six shards: five ran about 7.5 minutes each and were the critical path.
+        shard: [1, 2, 3, 4, 5, 6]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
       - run: npm ci --no-audit --no-fund
       # Use job-total rather than a fixed divisor, so adding or removing a shard in
       # the matrix above cannot silently desync the divisor and drop test files.
       - name: Unit tests (shard ${{ matrix.shard }}/${{ strategy.job-total }})
-        # This full-world fixture alone took 320 s in a 583 s shard. Give it
-        # an independent required job so it cannot strand the other shards.
+        # The full-world bootstrap fixture runs in the integration job instead.
         run: npm run test:ci -- --shard=${{ matrix.shard }}/${{ strategy.job-total }} --exclude=src/lib/admin/seed/presetBootstrap.integration.test.ts
-        env:
-          NODE_OPTIONS: --max-old-space-size=6144
-
-  bootstrap-integration:
-    needs: changes
-    if: needs.changes.outputs.full_suite == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci --no-audit --no-fund
-      - name: Qualify every shipping bootstrap preset
-        run: npx vitest run src/lib/admin/seed/presetBootstrap.integration.test.ts --maxWorkers=1
         env:
           NODE_OPTIONS: --max-old-space-size=6144
 
@@ -283,13 +289,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
       - run: npm ci --no-audit --no-fund
       # Persist compiler work only. The full build still runs on every job;
       # runtime fetch caches and generated application outputs stay ephemeral.
+      # The cache is about 2.2 GB. Only development pushes save it (below):
+      # every pull request can restore development's entries, while a save per
+      # pull request pushed the repository past its 10 GB cache limit and
+      # evicted the entries everyone restores.
       - name: Restore Turbopack compiler cache
         id: compiler-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         continue-on-error: true
         timeout-minutes: 2
         with:
@@ -341,18 +350,28 @@ jobs:
           NEXT_BUILD_CPUS: "1"
       - name: Report compiler cache size
         run: du -sh .next/cache/turbopack || true
+      - name: Save Turbopack compiler cache
+        if: github.event_name == 'push' && github.ref == 'refs/heads/development' && steps.compiler-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        continue-on-error: true
+        with:
+          path: .next/cache/turbopack
+          key: ${{ steps.compiler-cache.outputs.cache-primary-key }}
 
-  federation-transactions:
+  # Federation transactions against an isolated Mongo replica set, then the
+  # full-world bootstrap fixture. They shared nothing but setup, and as two
+  # jobs each held a runner from the account's 20 concurrent-job pool for
+  # 3 and 5 minutes; one job of about 7 minutes stays under the test shards.
+  integration:
     needs: changes
     if: needs.changes.outputs.full_suite == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
       - run: npm ci --no-audit --no-fund
       - name: Start isolated Mongo replica set
         run: |
@@ -418,6 +437,13 @@ jobs:
         run: npx vitest run src/lib/turn/federationSettlements.mongo.integration.test.ts src/lib/turn/democratic1991Bills.mongo.integration.test.ts src/lib/countries/ru/dumaElections.mongo.integration.test.ts src/lib/countries/ru/assemblySeating.mongo.integration.test.ts src/lib/countries/ru/assemblyVacancySeating.mongo.integration.test.ts src/lib/countries/ru/assemblyCampaigns.mongo.integration.test.ts src/lib/countries/ru/dumaConvocations.mongo.integration.test.ts src/lib/countries/ru/dumaElectoralProposals1995.mongo.integration.test.ts scripts/sim/experimentReportSummary.mongo.integration.test.ts src/lib/countries/ru/councilComposition.mongo.integration.test.ts src/lib/countries/bg/foundingAssembly1990.mongo.integration.test.ts src/lib/countries/bg/ordinaryAssemblySeating.mongo.integration.test.ts src/lib/countries/hu/assembly1991.mongo.integration.test.ts src/lib/countries/hu/electoralProposals1994.mongo.integration.test.ts src/lib/countries/hu/electoralProposals2011.mongo.integration.test.ts src/lib/countries/ro/electoralProposals1992.mongo.integration.test.ts src/lib/countries/bg/constitutionalProposals1991.mongo.integration.test.ts src/lib/countries/bg/constitutionalInitiative1991.mongo.integration.test.ts src/lib/countries/bg/listVacancies1991.mongo.integration.test.ts src/lib/countries/bg/constituencyByElections1991.mongo.integration.test.ts src/lib/currency/openingPolicyRates.mongo.integration.test.ts src/lib/currency/nativeGdpBasis1991.mongo.integration.test.ts src/lib/admin/seed/backfillMissingRegionLeans.mongo.integration.test.ts src/lib/charters/draftCharter.emptyStart.mongo.integration.test.ts src/lib/npp/mortality.nativeSlate.mongo.integration.test.ts src/lib/turn/bgAssemblyTransition.mongo.test.ts src/lib/admin/seed/indexes/boundedNpcCandidates.mongo.integration.test.ts src/lib/casino/casino.mongo.integration.test.ts src/app/api/discord-bot/casino/casinoRoutes.mongo.integration.test.ts src/app/api/discord-bot/tickets/intake.mongo.integration.test.ts src/lib/contests/history.mongo.integration.test.ts --maxWorkers=1
         env:
           FEDERATION_TEST_MONGO_URI: mongodb://127.0.0.1:27991/?replicaSet=federationQualification&directConnection=true
+      # The fixture alone took 320 s in a 583 s test shard, so it runs here
+      # rather than in the sharded suite.
+      - name: Qualify every shipping bootstrap preset
+        if: ${{ !cancelled() }}
+        run: npx vitest run src/lib/admin/seed/presetBootstrap.integration.test.ts --maxWorkers=1
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
       - name: Stop isolated Mongo
         if: always()
         run: |
@@ -446,17 +472,7 @@ jobs:
   # above has completed successfully.
   verify:
     if: always()
-    needs:
-      [
-        changes,
-        content-checks,
-        static,
-        test,
-        bootstrap-integration,
-        build,
-        federation-transactions,
-        reuse-staging-qualification,
-      ]
+    needs: [changes, content-checks, static, test, build, integration, reuse-staging-qualification]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
@@ -470,9 +486,8 @@ jobs:
           CONTENT_RESULT: ${{ needs.content-checks.result }}
           STATIC_RESULT: ${{ needs.static.result }}
           TEST_RESULT: ${{ needs.test.result }}
-          BOOTSTRAP_RESULT: ${{ needs['bootstrap-integration'].result }}
           BUILD_RESULT: ${{ needs.build.result }}
-          FEDERATION_RESULT: ${{ needs['federation-transactions'].result }}
+          INTEGRATION_RESULT: ${{ needs.integration.result }}
         run: |
           printf 'changes=%s full-suite=%s content=%s\n' \
             "$CHANGES_RESULT" "$FULL_SUITE" "$CONTENT_RESULT"
@@ -499,14 +514,12 @@ jobs:
 
           printf 'static=%s test=%s build=%s\n' \
             "$STATIC_RESULT" "$TEST_RESULT" "$BUILD_RESULT"
-          printf 'bootstrap-integration=%s\n' "$BOOTSTRAP_RESULT"
-          printf 'federation-transactions=%s\n' "$FEDERATION_RESULT"
+          printf 'integration=%s\n' "$INTEGRATION_RESULT"
 
           if [[ "$STATIC_RESULT" != "success" || \
                 "$TEST_RESULT" != "success" || \
-                "$BOOTSTRAP_RESULT" != "success" || \
                 "$BUILD_RESULT" != "success" || \
-                "$FEDERATION_RESULT" != "success" ]]; then
+                "$INTEGRATION_RESULT" != "success" ]]; then
             exit 1
           fi
       # No checkout or application code runs here. This native successful step
