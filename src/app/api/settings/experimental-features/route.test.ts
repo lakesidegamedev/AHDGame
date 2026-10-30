@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
+import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { PATCH } from "./route";
@@ -71,7 +72,7 @@ describe("PATCH /api/settings/experimental-features", () => {
   it("does not write preferences without authentication", async () => {
     vi.mocked(requireBasicAuth).mockResolvedValue({
       ok: false,
-      response: new Response(null, { status: 401 }),
+      response: new NextResponse(null, { status: 401 }),
     });
     expect((await patch({ desktopNavigationLayout: "browser" })).status).toBe(401);
     expect(db.collectionMocks.users.updateOne).not.toHaveBeenCalled();
