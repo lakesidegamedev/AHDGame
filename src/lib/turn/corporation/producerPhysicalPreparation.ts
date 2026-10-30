@@ -121,7 +121,7 @@ export type ProducerPhysicalEnv = Pick<
   shortageGrowthStage?: number;
   /** gameConfig.producerCaptiveDeliveryStage: >= 1 counts internal deliveries as sales for planning. */
   captiveDeliveryStage?: number;
-  /** gameConfig.producerJointRunStage: >= 1 runs a multi-product plant at its best paying line plan. */
+  /** gameConfig.producerJointRunStage: >= 1 runs a multi-product plant at its best paying line plan; >= 2 on its marginal cost. */
   jointRunStage?: number;
   /** gameConfig.producerFundedRestartStage: >= 1 publishes shortage per recipe for AI restarts. */
   fundedRestartStage?: number;
@@ -436,13 +436,16 @@ export function prepareProducerPhysicalSector(input: {
       : nextRunShare(receipt, runFloor);
   const summedRunShare = planRun(lastReceipt);
   // A multi-product plant runs at the highest line plan that pays, not at the plan its summed lines read.
+  // Stage 2 weighs the run against its marginal cost: idle upkeep is owed at any run.
+  const jointMarginal = (env.jointRunStage ?? 0) >= 2;
   const unpacedRunShare =
     (env.jointRunStage ?? 0) >= 1
       ? jointRunShare(
           summedRunShare,
           lastReceipt,
-          lineSlices(lastReceipt, (env.captiveDeliveryStage ?? 0) >= 1),
-          (line) => planRun(line.receipt as typeof lastReceipt)
+          lineSlices(lastReceipt, (env.captiveDeliveryStage ?? 0) >= 1, jointMarginal),
+          (line) => planRun(line.receipt as typeof lastReceipt),
+          jointMarginal
         )
       : summedRunShare;
   // A plan that reads a glut sheds at most runPaceDrop of its run a turn; the workforce persists.
