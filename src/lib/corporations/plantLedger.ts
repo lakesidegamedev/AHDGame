@@ -1,16 +1,11 @@
-import type { CorporationType } from "@/lib/constants/corporations";
-import type { MediaDiscriminator } from "@/lib/constants/corporations";
-import { plantSizeUnits } from "@/lib/constants/facilityQuantum";
+import { plantSizeForSector, type PlantSizingSector } from "@/lib/constants/facilityQuantum";
 
 export interface PlantLedgerState {
   plantCount: number;
   plantUnitRemainder: number;
 }
 
-interface PlantLedgerSector {
-  sectorType: CorporationType;
-  industryModel?: string | null;
-  mediaDiscriminator?: MediaDiscriminator | null;
+interface PlantLedgerSector extends PlantSizingSector {
   plantCount?: number | null;
   plantUnitRemainder?: number | null;
 }
@@ -30,17 +25,18 @@ function wholeNonNegative(value: number | null | undefined): number {
  * floor capacity by the sector facility quantum, with one small plant for any
  * positive holding below a full quantum. The remainder is construction credit
  * toward the next whole plant and never participates in PvP by itself.
+ *
+ * Plant size follows the sector's lane AND its strategy, so pass the strategy
+ * the sector will hold after this write (the target strategy on a retool).
  */
 export function seedPlantLedger(
-  sectorType: CorporationType,
-  capitalStock: number | null | undefined,
-  industryModel?: string | null,
-  mediaDiscriminator?: MediaDiscriminator | null
+  sector: PlantSizingSector,
+  capitalStock: number | null | undefined
 ): PlantLedgerState {
   const stock = finiteNonNegative(capitalStock);
   if (stock <= 0) return { plantCount: 0, plantUnitRemainder: 0 };
 
-  const quantum = plantSizeUnits(sectorType, industryModel, mediaDiscriminator);
+  const quantum = plantSizeForSector(sector);
   if (stock < quantum) return { plantCount: 1, plantUnitRemainder: 0 };
 
   const plantCount = Math.floor(stock / quantum);
@@ -56,13 +52,11 @@ export function seedPlantLedger(
  * cannot persist a plant count seeded from a stale application snapshot.
  */
 export function plantCapacityDeltaPipeline(
-  sectorType: CorporationType,
+  sector: PlantSizingSector,
   delta: number,
-  setFields: Record<string, unknown> = {},
-  industryModel?: string | null,
-  mediaDiscriminator?: MediaDiscriminator | null
+  setFields: Record<string, unknown> = {}
 ): Array<Record<string, unknown>> {
-  const quantum = plantSizeUnits(sectorType, industryModel, mediaDiscriminator);
+  const quantum = plantSizeForSector(sector);
   const stock = "$capitalStock";
   const count = { $floor: { $divide: [stock, quantum] } };
   return [
@@ -103,9 +97,7 @@ export function plantCapacityDeltaPipeline(
  * depreciation, so this helper is only for computations before that write.
  */
 export function advancePlantLedger(input: {
-  sectorType: CorporationType;
-  industryModel?: string | null;
-  mediaDiscriminator?: MediaDiscriminator | null;
+  sector: PlantSizingSector;
   plantCount: number | null | undefined;
   plantUnitRemainder: number | null | undefined;
   currentCapitalStock: number | null | undefined;
@@ -116,13 +108,8 @@ export function advancePlantLedger(input: {
         plantCount: wholeNonNegative(input.plantCount),
         plantUnitRemainder: finiteNonNegative(input.plantUnitRemainder),
       }
-    : seedPlantLedger(
-        input.sectorType,
-        input.currentCapitalStock,
-        input.industryModel,
-        input.mediaDiscriminator
-      );
-  const quantum = plantSizeUnits(input.sectorType, input.industryModel, input.mediaDiscriminator);
+    : seedPlantLedger(input.sector, input.currentCapitalStock);
+  const quantum = plantSizeForSector(input.sector);
   const accumulated = seeded.plantUnitRemainder + finiteNonNegative(input.deliveredUnits);
   const completedPlants = Math.floor(accumulated / quantum);
 
@@ -139,9 +126,7 @@ export function advanceSectorPlantLedger(
   deliveredUnits: number
 ): PlantLedgerState {
   return advancePlantLedger({
-    sectorType: sector.sectorType,
-    industryModel: sector.industryModel,
-    mediaDiscriminator: sector.mediaDiscriminator,
+    sector,
     plantCount: sector.plantCount,
     plantUnitRemainder: sector.plantUnitRemainder,
     currentCapitalStock,

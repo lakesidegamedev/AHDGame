@@ -142,7 +142,7 @@
     "b3187f2feb4226d96a84b5bd90f36a2049d7603be6203c59508c3d4202950433": 1,
     "6d079f21778fb07aba0cfebdd67eaf06db5cc62a734f8be820e942e7e1059757": 1,
     "d381e9ccac838088771e4cabfc531c447a0bcfa9d544809474d003f8fafb0043": 1,
-    "1ad8dc2af684231fdc3b0f1ebdd3c45ecc04d6566626b1192e6c05aec7e53c7f": 1,
+    "5ba2a0a1b74a08badd943832de751bdf7a43357a67aef186ed4ce9d44d201342": 1,
     "7bedb8713d4a66bfba1f5f38b9ce0044c7a81ab529f832a258f0346850382fbf": 1,
     "e73243bed4b541ff5e4c2ff4ec836a2639c3d906612e2fd7e5c3616fe0d3a6da": 1,
     "5a8c0d062ecad3d9fdd51c0117251f74f72e6bfd76fcefe422dbb50e3ce62e7f": 1,
@@ -639,7 +639,7 @@
     "911bce362bcb45ba801bfeddcb3f70419e8b0f671bd44bb5d2204f7f6e726a33": 1,
     "8aa2251cc0ee1f391f32514380a48b8d07bba50f8f5cd80c5870adcf88c1ffe4": 1,
     "7a8589225f55da755d718f6f45da8434774eecf24e3ef50c7d7d7a9bd6f8402e": 1,
-    "efb6462d6d19e82234befba005d5c80329de0cbcb7adb71ff58297b187285dbd": 1,
+    "8ccaf682d926831967269ad935b57f14e0b73150e7e07c94928fe926de7ed61c": 1,
     "9a34a41e465abd0c573380fd66dc3fc32bb998f96994ea90ad1dbe18d36f6863": 1,
     "b10923cb39140180f4d10ec8e879917201404591b87f7f795f9e20d137060774": 1,
     "8425cc180d72aea91201a2ded75d0adf78aed0273443b90296cb03111ba29c87": 1,
@@ -1683,8 +1683,8 @@
       "file": "src/lib/nationalization/nationalizeSectorWide.ts",
       "operation": "updateOne",
       "owner": "nationalizeSectorWide",
-      "expression": "sectors.updateOne({ _id: ns._id }, { $inc: { revenue: captureLocal, ...(captureUnits > 0 ? { capitalStock: captureUnits } : {}), }, $set: { ...(captureUnits > 0 ? seedPlantLedger(params.sectorType, (ns.capitalStock ?? 0) + captureUnits, params.industryModel, params.mediaDiscriminator) : {}), nationalizedAtTurn: params.consequence.turn, nationalizationTransitionMultiplier: transitionMultiplier, sectorNationalizationScope: params.scope, sectorNationalizationCarveFraction: f, updatedAt: now, }, })",
-      "fingerprint": "1ad8dc2af684231fdc3b0f1ebdd3c45ecc04d6566626b1192e6c05aec7e53c7f"
+      "expression": "sectors.updateOne({ _id: ns._id }, { $inc: { revenue: captureLocal, ...(captureUnits > 0 ? { capitalStock: captureUnits } : {}), }, $set: { ...(captureUnits > 0 ? seedPlantLedger({ ...params, strategyId: ns.strategyId }, (ns.capitalStock ?? 0) + captureUnits) : {}), nationalizedAtTurn: params.consequence.turn, nationalizationTransitionMultiplier: transitionMultiplier, sectorNationalizationScope: params.scope, sectorNationalizationCarveFraction: f, updatedAt: now, }, })",
+      "fingerprint": "5ba2a0a1b74a08badd943832de751bdf7a43357a67aef186ed4ce9d44d201342"
     },
     {
       "file": "src/lib/admin/seed/reconcileCommandEconomyUnowned.ts",
@@ -5316,8 +5316,8 @@
       "file": "src/lib/nationalization/reverseNationalization.ts",
       "operation": "updateOne",
       "owner": "reverseNationalizationTaking",
-      "expression": "sectorsCol.updateOne({ _id: sector._id }, { $set: { corporationId: priorOwner._id, ...(typeof prov.formerRevenue === \"number\" ? { revenue: prov.formerRevenue } : {}), ...(typeof prov.formerCapitalStock === \"number\" ? { capitalStock: prov.formerCapitalStock, ...seedPlantLedger(sector.sectorType, prov.formerCapitalStock, sector.industryModel, sector.mediaDiscriminator), } : {}), updatedAt: now, }, $unset: { absorbedAtTurn: \"\", nationalizedAtTurn: \"\", nationalizationTransitionMultiplier: \"\", nationalizationProvenance: \"\", }, })",
-      "fingerprint": "efb6462d6d19e82234befba005d5c80329de0cbcb7adb71ff58297b187285dbd"
+      "expression": "sectorsCol.updateOne({ _id: sector._id }, { $set: { corporationId: priorOwner._id, ...(typeof prov.formerRevenue === \"number\" ? { revenue: prov.formerRevenue } : {}), ...(typeof prov.formerCapitalStock === \"number\" ? { capitalStock: prov.formerCapitalStock, ...seedPlantLedger(sector, prov.formerCapitalStock), } : {}), updatedAt: now, }, $unset: { absorbedAtTurn: \"\", nationalizedAtTurn: \"\", nationalizationTransitionMultiplier: \"\", nationalizationProvenance: \"\", }, })",
+      "fingerprint": "8ccaf682d926831967269ad935b57f14e0b73150e7e07c94928fe926de7ed61c"
     },
     {
       "file": "src/lib/nationalization/reverseNationalization.ts",

@@ -50,7 +50,7 @@ function plantSector(
     profitMargin: 10,
     workers: 100,
     capitalStock,
-    ...seedPlantLedger("logistics", capitalStock),
+    ...seedPlantLedger({ sectorType: "logistics" }, capitalStock),
     capacityBookAnchor: capitalStock * 10,
     buildQueue: [],
     constructionPropertyTransition: { key: `restore:${stateId}`, kind: "restore" },

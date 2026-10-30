@@ -19,7 +19,7 @@ import { getGameStatePresetOrDefault } from "@/lib/db/collections/gameState";
 import { computeUnownedHeadroomUnits, unownedPoolBoostSet } from "@/lib/market/unownedHeadroom";
 import { getMarketSystemModeForDb, marketAtLeast } from "@/lib/market/featureFlag";
 import { loadWorldEraUnitScale } from "@/lib/currency/gdpAnchorRate";
-import { plantSizeUnits } from "@/lib/constants/facilityQuantum";
+import { plantSizeMongoExpr } from "@/lib/constants/facilityQuantum";
 
 // Max per-year revenue boost applied to the most distressed sector type (linearly
 // scaled down the distress ranking). Raised 0.02 → 0.06 (audit t786): at 0.02 the
@@ -215,7 +215,8 @@ export async function processAutoSectorSeed(
     // Using $multiply (not $inc) keeps growth proportional and self-limiting.
     // The old approach used $inc which compounded unboundedly (UK energy runaway).
     if (natCorpObjectIds.length > 0) {
-      const quantum = plantSizeUnits(sectorType, industryModel, mediaDiscriminator);
+      // Per document: natcorps of one lane can run recipes of different plant sizes.
+      const quantum = plantSizeMongoExpr({ sectorType, industryModel, mediaDiscriminator });
       const boostedStock = { $multiply: [{ $ifNull: ["$capitalStock", 0] }, multiplier] };
       const { modifiedCount: natModified } = await db.collection("corporateSectors").updateMany(
         {

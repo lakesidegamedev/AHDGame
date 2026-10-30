@@ -1161,6 +1161,8 @@ export default function SectorDetailPage() {
             stateLabourMarket={sector.stateLabourMarket}
             stateName={sector.stateName}
             sectorType={sector.sectorType}
+            industryModel={sector.industryModel}
+            mediaDiscriminator={sector.mediaDiscriminator}
             sectorLabel={sector.displayName || sector.sectorLabel}
             submitting={capacityBusy}
             errorMessage={capacityMessage}

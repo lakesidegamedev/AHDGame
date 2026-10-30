@@ -851,6 +851,8 @@ export interface SoeCapexSectorBuy {
   sectorType: CorporateSector["sectorType"];
   industryModel?: CorporateSector["industryModel"];
   mediaDiscriminator?: CorporateSector["mediaDiscriminator"];
+  /** Decides plant size with the lane. */
+  strategyId?: CorporateSector["strategyId"];
   capitalStock: number;
   /** Capacity units bought back — exactly this turn's depreciation. */
   unitsAdded: number;
@@ -913,6 +915,7 @@ export function buildSoeCapexGrant(
       sectorType: sector.sectorType,
       industryModel: sector.industryModel,
       mediaDiscriminator: sector.mediaDiscriminator,
+      strategyId: sector.strategyId,
       capitalStock: stock,
       unitsAdded,
       costAnchor,
@@ -962,13 +965,10 @@ async function applyStateCapexGrants(
   const cashLedger = await treasuryLedger();
   const turn = cashLedger.context?.turn ?? 0;
   const capacityUpdate = (buy: SoeCapexSectorBuy) =>
-    plantCapacityDeltaPipeline(
-      buy.sectorType,
-      buy.unitsAdded,
-      { capacityBookAnchor: buy.nextBookAnchor, updatedAt: now },
-      buy.industryModel,
-      buy.mediaDiscriminator
-    );
+    plantCapacityDeltaPipeline(buy, buy.unitsAdded, {
+      capacityBookAnchor: buy.nextBookAnchor,
+      updatedAt: now,
+    });
 
   if (cashLedger.context?.treasuryCashLedgerEnabled) {
     // Funded cash: each country's capacity rides its Treasury debit's receipt,

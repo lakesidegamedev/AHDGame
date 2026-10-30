@@ -629,6 +629,8 @@ export interface PlantBuildOrderView {
 export interface PlantsData {
   /** Persisted whole facilities owned by this sector. */
   plantCount?: number;
+  /** The strategy the sector runs; with the lane it decides plant size. */
+  strategyId?: string | null;
   capacityUnits: number | null;
   producedUnits: number | null;
   soldUnits: number | null;

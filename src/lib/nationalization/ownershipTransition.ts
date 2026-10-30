@@ -217,12 +217,7 @@ async function absorbSectorIntoNatCorp(
       ? mergeSectorPlantFields(readSectorPlantFields(existing), {
           ...readSectorPlantFields(sector),
           capitalStock: haircutStock,
-          ...seedPlantLedger(
-            sector.sectorType,
-            haircutStock,
-            sector.industryModel,
-            sector.mediaDiscriminator
-          ),
+          ...seedPlantLedger(sector, haircutStock),
           capacityBookAnchor: haircutBook,
         })
       : null;
@@ -293,14 +288,7 @@ async function absorbSectorIntoNatCorp(
           corporationId: destId,
           revenue: transferRevenue,
           ...(plantsEnabled ? { capitalStock: haircutStock } : {}),
-          ...(plantsEnabled
-            ? seedPlantLedger(
-                sector.sectorType,
-                haircutStock,
-                sector.industryModel,
-                sector.mediaDiscriminator
-              )
-            : {}),
+          ...(plantsEnabled ? seedPlantLedger(sector, haircutStock) : {}),
           ...(plantsEnabled && haircutBook != null ? { capacityBookAnchor: haircutBook } : {}),
           absorbedAtTurn,
           nationalizedAtTurn: absorbedAtTurn,

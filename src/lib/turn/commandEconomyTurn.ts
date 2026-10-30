@@ -785,6 +785,10 @@ async function buildCapacityFromDirectedCredit(
             _id: 1,
             corporationId: 1,
             sectorType: 1,
+            // Plant size: lane, operating model and recipe.
+            industryModel: 1,
+            mediaDiscriminator: 1,
+            strategyId: 1,
             capitalStock: 1,
             capacityBookAnchor: 1,
             revenue: 1,
@@ -849,13 +853,9 @@ async function buildCapacityFromDirectedCredit(
       ops.push({
         updateOne: {
           filter: { _id: sector._id },
-          update: plantCapacityDeltaPipeline(
-            sector.sectorType,
-            unitsAdded,
-            { capacityBookAnchor: priorBook + unitsAdded * unitPrice },
-            sector.industryModel,
-            sector.mediaDiscriminator
-          ),
+          update: plantCapacityDeltaPipeline(sector, unitsAdded, {
+            capacityBookAnchor: priorBook + unitsAdded * unitPrice,
+          }),
         },
       });
       // mixPrice (corp-local) = revenue / capitalStock under plants; a sector
