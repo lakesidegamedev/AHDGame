@@ -1,10 +1,9 @@
 import { getMessages } from "next-intl/server";
 import type { ReactNode } from "react";
-import { cookies } from "next/headers";
 import { nonShellClientMessages } from "@/i18n/clientCatalog";
 import { RouteIntlProvider } from "@/i18n/RouteIntlProvider";
 import { ExperimentalPageReveal } from "@/components/ExperimentalPageReveal";
-import { EXPERIMENTAL_UI_COOKIE } from "@/lib/api/experimentalUiCookie";
+import { isExperimentalUiEnabled } from "@/lib/api/experimentalUi";
 
 /**
  * Per-navigation message provider.
@@ -23,11 +22,10 @@ import { EXPERIMENTAL_UI_COOKIE } from "@/lib/api/experimentalUiCookie";
  */
 export default async function RootTemplate({ children }: { children: ReactNode }) {
   const messages = await getMessages();
-  // The opt-in arrives as a cookie rather than from the auth context: the
-  // template renders on the server for every navigation, and the client
-  // bootstrap resolves after first paint. Reading it here means the first page
-  // of a visit decodes too, and non-opted-in players never get the wrapper.
-  const experimentalUi = (await cookies()).get(EXPERIMENTAL_UI_COOKIE)?.value === "1";
+  // The opt-in is resolved on the server for every navigation: the cookie
+  // first, then the account record, so the page a player lands on after
+  // signing in decodes without waiting for a second load.
+  const experimentalUi = await isExperimentalUiEnabled();
   return (
     <RouteIntlProvider messages={nonShellClientMessages(messages)}>
       <ExperimentalPageReveal enabled={experimentalUi}>{children}</ExperimentalPageReveal>

@@ -18,9 +18,9 @@ import { isChromeHiddenPath, isLightweightLayoutPath } from "@/lib/constants/lay
  * decode on the content the player came for; the interval rather than a
  * mutation debounce means a page that keeps updating still reveals.
  */
-const POLL_INTERVAL_MS = 100;
-const MAX_WAIT_MS = 10000;
-const MIN_TEXT_LENGTH = 20;
+const POLL_INTERVAL_MS = 50;
+const MAX_WAIT_MS = 8000;
+const MIN_TEXT_LENGTH = 10;
 
 /**
  * Experimental (Settings, Experimental features): decode each page into place
@@ -88,6 +88,9 @@ export function ExperimentalPageReveal({
       preset="decode"
       duration="fast"
       lazy
+      // Never abandon the decode for a fade: on a slow frame the library's
+      // watchdog would finish it instantly, which read as "nothing happened".
+      fallback={false}
       revealOnMount={false}
     >
       {children}
