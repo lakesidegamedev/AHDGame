@@ -20,6 +20,7 @@ const PRIVATE_REDACTED_CORP_FIELDS = [
   "rdBudget",
   "rdScore",
   "rdScoreNetChange",
+  "rdDevelopmentProjects",
   "ceoSalary",
   "sharePrice",
   "fundamentalSharePrice",
