@@ -281,9 +281,10 @@ export function fiscalScaleClaimLoadBound(
 /**
  * Largest share of a country's household cash the Treasury collects in one
  * turn. Book revenue times the scale is the target; this keeps one turn of tax
- * from emptying the wallets that buy the economy's output.
+ * from emptying the wallets that buy the economy's output. A rehearsal at 0.2
+ * bound most countries and cut household cash by 15 to 45% a turn.
  */
-export const FISCAL_TAX_MAX_HOUSEHOLD_SHARE = 0.2;
+export const FISCAL_TAX_MAX_HOUSEHOLD_SHARE = 0.05;
 
 /** Book revenue a turn, less the corporate tax the corporate phase already collects in real money. */
 export function bookNonCorporateRevenuePerTurn(

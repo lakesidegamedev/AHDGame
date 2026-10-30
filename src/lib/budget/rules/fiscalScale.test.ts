@@ -167,8 +167,8 @@ describe("stage 2: tax and spend", () => {
       bookRevenuePerTurn: book,
       scale: 0.1,
       payers: [
-        { id: "b", cash: 1_200 },
-        { id: "a", cash: 400 },
+        { id: "b", cash: 4_800 },
+        { id: "a", cash: 1_600 },
       ],
     });
     expect(tax.dueLocal).toBeCloseTo(90);
