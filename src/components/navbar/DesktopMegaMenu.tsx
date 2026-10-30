@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { captureProductEvent } from "@/lib/analytics/capture";
@@ -14,10 +21,13 @@ import { pixelIconForLink, type DesktopNavLink, type DesktopNavMenu } from "./de
 const EDGE_GAP = 16;
 const GROUP_COLUMN = 250;
 const SIDE_COLUMN = 220;
+/** The side column widens when it holds a widget. */
+const WIDGET_SIDE_COLUMN = 260;
 
 /** Wide enough for its card columns (at most three) and the side column, no wider. */
-export function panelWidth(groupCount: number): number {
-  return Math.max(520, Math.min(3, Math.max(1, groupCount)) * GROUP_COLUMN + SIDE_COLUMN + 32);
+export function panelWidth(groupCount: number, hasWidget = false): number {
+  const side = hasWidget ? WIDGET_SIDE_COLUMN : SIDE_COLUMN;
+  return Math.max(520, Math.min(3, Math.max(1, groupCount)) * GROUP_COLUMN + side + 32);
 }
 
 /** Centred under the tab that opened it, nudged inward to stay on screen. */
@@ -45,6 +55,8 @@ interface Props {
   pinsFull?: boolean;
   onTogglePin?: (itemId: string) => void;
   onCustomize?: () => void;
+  /** Experimental widget the player placed in this menu's side column. */
+  widget?: ReactNode;
 }
 
 export function DesktopMegaMenu({
@@ -58,9 +70,11 @@ export function DesktopMegaMenu({
   pinsFull = false,
   onTogglePin,
   onCustomize,
+  widget,
 }: Props) {
   const t = useTranslations("nav.desktop");
   const pathname = usePathname();
+  const hasWidget = !!widget;
   const [position, setPosition] = useState<{
     top: number;
     left: number;
@@ -78,7 +92,10 @@ export function DesktopMegaMenu({
         return;
       }
       const rect = anchor.getBoundingClientRect();
-      const width = Math.min(panelWidth(menu.groups.length), window.innerWidth - 2 * EDGE_GAP);
+      const width = Math.min(
+        panelWidth(menu.groups.length, hasWidget),
+        window.innerWidth - 2 * EDGE_GAP
+      );
       const top = Math.max(8, rect.bottom + 8);
       setPosition({
         top,
@@ -95,7 +112,7 @@ export function DesktopMegaMenu({
       window.removeEventListener("resize", update);
       window.removeEventListener("scroll", update, true);
     };
-  }, [anchorRef, menu.groups.length]);
+  }, [anchorRef, menu.groups.length, hasWidget]);
 
   useLayoutEffect(() => {
     if (!position || focused.current || !window.matchMedia("(min-width: 1024px)").matches) return;
@@ -246,6 +263,7 @@ export function DesktopMegaMenu({
   );
   const rail = (
     <aside className="flex flex-col gap-5 border-l border-card-border bg-background/40 p-4">
+      {widget}
       {shortcuts}
       {overview}
     </aside>
@@ -301,7 +319,9 @@ export function DesktopMegaMenu({
       <div className="flex items-center justify-between gap-4 border-b border-card-border px-5 py-3">
         <span className="text-sm font-medium text-foreground">{menu.title}</span>
       </div>
-      <div className="grid grid-cols-[minmax(0,1fr)_220px]">
+      <div
+        className={`grid ${widget ? "grid-cols-[minmax(0,1fr)_260px]" : "grid-cols-[minmax(0,1fr)_220px]"}`}
+      >
         {groups}
         {rail}
       </div>

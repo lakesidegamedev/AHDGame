@@ -8,44 +8,13 @@ import { fetchJson } from "@/lib/observability/fetchJson";
 import { isChromeHiddenPath, isLightweightLayoutPath } from "@/lib/constants/layoutPaths";
 import type { AskDrawerSide } from "@/components/askDrawer/AskDrawerPanel";
 import { KeirAvatar, KeirSprite } from "@/components/askDrawer/KeirSprite";
+import { useNavBottom } from "@/components/askDrawer/useNavBottom";
+import { ExperimentalSideTray } from "@/components/sidebarWidgets/ExperimentalSideTray";
 
 // The Ask Keir drawer, docked to the left or right edge of most pages for every
 // signed-in player. On a phone it opens as a full-screen sheet over the whole
 // page, nav included, from a floating Keir button. The panel and its markdown renderer load
 // on first open, so the tab costs almost nothing.
-
-/**
- * Where the top nav ends, so the drawer opens below it and the nav stays on
- * top. The nav is sticky and changes height (loading shell, safe area,
- * mobile menu), so it is measured rather than assumed.
- */
-function useNavBottom(active: boolean): number {
-  const [bottom, setBottom] = useState(0);
-  useEffect(() => {
-    if (!active) return;
-    const measure = () => {
-      // The nav is sticky at the top and slides in with a transform when the
-      // page loads, so its on-screen position can read as 0 mid-animation.
-      // Its layout height is stable and is where it ends once settled.
-      const navs = Array.from(document.querySelectorAll<HTMLElement>("[data-site-navbar]"));
-      setBottom(Math.max(0, ...navs.map((el) => el.offsetHeight)));
-    };
-    measure();
-    // The loading shell swaps for the real nav after auth resolves.
-    const frame = window.requestAnimationFrame(measure);
-    const observer = new ResizeObserver(measure);
-    document.querySelectorAll("[data-site-navbar]").forEach((el) => observer.observe(el));
-    window.addEventListener("resize", measure);
-    window.addEventListener("scroll", measure, { passive: true });
-    return () => {
-      window.cancelAnimationFrame(frame);
-      observer.disconnect();
-      window.removeEventListener("resize", measure);
-      window.removeEventListener("scroll", measure);
-    };
-  }, [active]);
-  return bottom;
-}
 
 /** Phones get the sheet layout; matches Tailwind's sm breakpoint. */
 const MOBILE_QUERY = "(max-width: 639px)";
@@ -185,8 +154,18 @@ export function AskDrawer() {
   const area = useVisibleArea(open && phone);
   useMobileScrollLock(open);
 
-  if (!user || user.askDrawerHidden === true) return null;
+  if (!user) return null;
   if (isChromeHiddenPath(pathname) || isLightweightLayoutPath(pathname)) return null;
+  // Experimental: on tablets and desktops Keir lives in the side tray as a tab.
+  if (user.experimentalFeatures === true && auth?.navData?.hasCharacter === true && !phone)
+    return (
+      <ExperimentalSideTray
+        side={side}
+        onSwapSide={swapSide}
+        keirHidden={user.askDrawerHidden === true}
+      />
+    );
+  if (user.askDrawerHidden === true) return null;
 
   const left = side === "left";
   // Phones: the sheet covers the screen, nav included, and slides up from the

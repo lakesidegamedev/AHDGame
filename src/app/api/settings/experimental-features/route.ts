@@ -8,6 +8,7 @@ import { parseJsonBody } from "@/lib/api/validate";
 import { experimentalFeaturesSchema } from "@/lib/api/schemas/settings";
 import { applyExperimentalUiCookie } from "@/lib/api/experimentalUiCookie";
 import { navCustomization } from "@/lib/navigation/navCustomization";
+import { widgetLayout } from "@/lib/sidebarWidgets/widgetCatalog";
 import type { User } from "@/lib/db/types";
 
 // PATCH /api/settings/experimental-features: Opts the authenticated user in or out of
@@ -37,6 +38,8 @@ export async function PATCH(request: Request) {
       askDrawerHidden,
       desktopNavigationLayout,
       mobileNavigationLayout,
+      widgetLayout: layout,
+      widgetTrayOpen,
       navCustomization: customization,
     } = parsed.data;
 
@@ -50,6 +53,8 @@ export async function PATCH(request: Request) {
           ...(askDrawerHidden !== undefined ? { askDrawerHidden } : {}),
           ...(desktopNavigationLayout !== undefined ? { desktopNavigationLayout } : {}),
           ...(mobileNavigationLayout !== undefined ? { mobileNavigationLayout } : {}),
+          ...(layout !== undefined ? { widgetLayout: widgetLayout(layout) ?? undefined } : {}),
+          ...(widgetTrayOpen !== undefined ? { widgetTrayOpen } : {}),
           ...(customization !== undefined
             ? { navCustomization: navCustomization(customization) }
             : {}),

@@ -7,6 +7,8 @@ describe("grouped cards panel placement", () => {
     expect(panelWidth(2)).toBe(752);
     expect(panelWidth(3)).toBe(1002);
     expect(panelWidth(6)).toBe(1002);
+    // A widget in the side column widens it.
+    expect(panelWidth(2, true)).toBe(792);
   });
 
   it("opens centred under its tab", () => {
