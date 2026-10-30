@@ -197,6 +197,34 @@ describe("physical producer preparation", () => {
     expect(retooled.plannedRunShare).toBeCloseTo(0.01 * 1.15, 12);
   });
 
+  it("prices the sales advance at last turn's realized price and sell-through", () => {
+    const { input, env, sector } = fixture();
+    const turn = env.currentTurn - 1;
+    expect(prepareProducerPhysicalSector(input).prepared.plan.expectedUnitRevenue).toBeUndefined();
+    (sector as unknown as { producerSettlement: unknown }).producerSettlement = {
+      activeUnits: 100,
+      producedUnits: 10,
+      offeredUnits: 10,
+      soldUnits: 8,
+      revenue: 400,
+      inputsConsumed: 1,
+      turn,
+      products: [
+        {
+          commodity: "financial_services",
+          book: "world",
+          offeredUnits: 10,
+          soldUnits: 8,
+          revenue: 400,
+        },
+      ],
+    };
+    const plan = prepareProducerPhysicalSector(input).prepared.plan;
+    const made = plan.outputs.find((o) => o.commodity === "financial_services")!;
+    // 400 over 10 offered: 40 a unit offered.
+    expect(plan.expectedUnitRevenue).toBeCloseTo(made.unitsPerOutput * 40, 12);
+  });
+
   it("runs a two-product plant at its sold-out dear line, not its glutted cheap one, under the joint run stage", () => {
     const { input, env, sector } = fixture();
     Object.assign(sector, { sectorType: "chemical_industries", strategyId: "standard" });
