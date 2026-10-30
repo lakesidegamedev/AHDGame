@@ -1,4 +1,5 @@
 import type { OperatingSectorType } from "@/lib/constants/corporations";
+import type { ManufacturingIndustryModel } from "@/lib/constants/corporationsClient";
 import type { StateMetricMarginContribution } from "@/lib/corporations/stateMetricMarginTypes";
 import type { PlantSectorSplitQuote } from "@/lib/corporations/plantSectorSplit";
 import type { RetoolHint } from "@/lib/corporations/retoolHint";
@@ -10,6 +11,8 @@ export interface SectorData {
   countryId?: string;
   stateName: string;
   sectorType: OperatingSectorType;
+  /** Manufacturing production model, e.g. "vehicles", which sets the facility size. */
+  industryModel?: ManufacturingIndustryModel | null;
   mediaDiscriminator?: "entertainment" | null;
   /** Authoritative news-media advertising output factor from commodity accounting. */
   mediaAdvertisingCampaignFactor?: number;

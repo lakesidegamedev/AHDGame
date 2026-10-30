@@ -12,7 +12,10 @@ import { useCurrency } from "@/contexts/CurrencyContext";
 import { Factory, Hammer, PauseCircle, PlayCircle, ShieldCheck, X } from "lucide-react";
 import type { CommodityFlow, PlantsData } from "../types";
 import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
-import type { MediaDiscriminator } from "@/lib/constants/corporationsClient";
+import type {
+  ManufacturingIndustryModel,
+  MediaDiscriminator,
+} from "@/lib/constants/corporationsClient";
 import {
   capitalizeFacility,
   facilityPlural,
@@ -34,6 +37,8 @@ interface PlantPanelProps {
   freightState?: { observedLoad: number; capacity: number; turn: number | null };
   /** Drives the facility noun. A retail sector says "stores", not "plants". */
   sectorType: OperatingSectorType;
+  /** Manufacturing production model, e.g. "vehicles", which sets the facility size. */
+  industryModel?: ManufacturingIndustryModel | null;
   mediaDiscriminator?: MediaDiscriminator | null;
   mediaAdvertisingCampaignFactor?: number;
   /** The national industry union covering this workforce, vacant or led. */
@@ -75,6 +80,7 @@ export default function PlantPanel({
   marketSupplies = [],
   freightState,
   sectorType,
+  industryModel,
   mediaDiscriminator,
   mediaAdvertisingCampaignFactor = 1,
   unionId,
@@ -93,7 +99,8 @@ export default function PlantPanel({
 }: PlantPanelProps) {
   const t = useTranslations("corporations.sectorInvestment");
   const ownedPlantCount =
-    plants.plantCount ?? facilitiesFromUnits(sectorType, plants.capacityUnits ?? 0);
+    plants.plantCount ??
+    facilitiesFromUnits(sectorType, plants.capacityUnits ?? 0, industryModel, mediaDiscriminator);
   const { formatAmount } = useCurrency();
   const vocab = facilityVocabulary(sectorType);
   const sites = facilityPlural(sectorType);
@@ -343,7 +350,9 @@ export default function PlantPanel({
               plants.buildQueue.reduce(
                 (s, o) => s + Math.max(0, o.unitsOrdered - o.unitsDelivered),
                 0
-              )
+              ),
+              industryModel,
+              mediaDiscriminator
             )
           )}
           sub={
@@ -385,10 +394,22 @@ export default function PlantPanel({
               // engine's internal measure of what a facility produces, and
               // quoting the queue in them read as though you were buying units
               // of output directly.
-              const sitesOrdered = facilitiesFromUnits(sectorType, o.unitsOrdered);
-              const sitesDelivered = facilitiesFromUnits(sectorType, o.unitsDelivered);
+              const sitesOrdered = facilitiesFromUnits(
+                sectorType,
+                o.unitsOrdered,
+                industryModel,
+                mediaDiscriminator
+              );
+              const sitesDelivered = facilitiesFromUnits(
+                sectorType,
+                o.unitsDelivered,
+                industryModel,
+                mediaDiscriminator
+              );
               const sitesPerTurn =
-                unitsPerTurn != null ? unitsPerTurn / plantSizeUnits(sectorType) : null;
+                unitsPerTurn != null
+                  ? unitsPerTurn / plantSizeUnits(sectorType, industryModel, mediaDiscriminator)
+                  : null;
               const orderedNoun = sitesOrdered === 1 ? vocab.singular : vocab.plural;
               return (
                 <li

@@ -706,16 +706,21 @@ export async function runFundedProducerTurn(
       ? (offtakeBySectorId.get(id) ?? receipt.soldUnits)
       : receipt.soldUnits;
     const throttle = throttleBySectorId.get(id) ?? 1;
+    // Only output that found no buyer is a demand signal. A plant that made
+    // nothing (no cash, no inputs, capacity not landed yet) holds its streak,
+    // so AI mothballing does not park plants that were never able to sell.
     sectorUpdates.push({
       updateOne: {
         filter: { _id: new ObjectId(id) },
         update:
           soldUnits > 0
             ? { $set: { demandThrottleFactor: throttle, producerZeroSalesTurns: 0 } }
-            : {
-                $inc: { producerZeroSalesTurns: 1 },
-                $set: { demandThrottleFactor: throttle },
-              },
+            : receipt.producedUnits > 0
+              ? {
+                  $inc: { producerZeroSalesTurns: 1 },
+                  $set: { demandThrottleFactor: throttle },
+                }
+              : { $set: { demandThrottleFactor: throttle } },
       },
     });
   }
