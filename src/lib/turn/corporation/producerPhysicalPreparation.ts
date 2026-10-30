@@ -109,6 +109,10 @@ export type ProducerPhysicalEnv = Pick<
   householdIncomeFloor?: number;
   /** gameConfig.producerStockCover: turns of recent sales a seller may carry before marking down (0 or absent = off). */
   stockCoverTurns?: number;
+  /** gameConfig.producerCreditRunTurns: credit cap in turns of wage and site bills (absent = default, 0 = off). */
+  creditRunTurns?: number;
+  /** gameConfig.producerCreditStuckTurns: turns without shrinking payables before credit stops (absent = default). */
+  creditStuckTurns?: number;
   /** gameConfig.producerClearingReferenceStage: >= 1 floors a buyer's reference at the last funded clearing price of a reachable good. */
   clearingReferenceStage?: number;
   /** gameConfig.producerFundedBookStage: >= 1 prices the funded market from its own orders and cross-border fills. */
@@ -117,7 +121,7 @@ export type ProducerPhysicalEnv = Pick<
   shortageGrowthStage?: number;
   /** gameConfig.producerCaptiveDeliveryStage: >= 1 counts internal deliveries as sales for planning. */
   captiveDeliveryStage?: number;
-  /** gameConfig.producerJointRunStage: >= 1 runs a multi-product plant at its best paying line plan. */
+  /** gameConfig.producerJointRunStage: >= 1 runs a multi-product plant at its best paying line plan; >= 2 on its marginal cost. */
   jointRunStage?: number;
   /** gameConfig.producerFundedRestartStage: >= 1 publishes shortage per recipe for AI restarts. */
   fundedRestartStage?: number;
@@ -432,13 +436,16 @@ export function prepareProducerPhysicalSector(input: {
       : nextRunShare(receipt, runFloor);
   const summedRunShare = planRun(lastReceipt);
   // A multi-product plant runs at the highest line plan that pays, not at the plan its summed lines read.
+  // Stage 2 weighs the run against its marginal cost: idle upkeep is owed at any run.
+  const jointMarginal = (env.jointRunStage ?? 0) >= 2;
   const unpacedRunShare =
     (env.jointRunStage ?? 0) >= 1
       ? jointRunShare(
           summedRunShare,
           lastReceipt,
-          lineSlices(lastReceipt, (env.captiveDeliveryStage ?? 0) >= 1),
-          (line) => planRun(line.receipt as typeof lastReceipt)
+          lineSlices(lastReceipt, (env.captiveDeliveryStage ?? 0) >= 1, jointMarginal),
+          (line) => planRun(line.receipt as typeof lastReceipt),
+          jointMarginal
         )
       : summedRunShare;
   // A plan that reads a glut sheds at most runPaceDrop of its run a turn; the workforce persists.

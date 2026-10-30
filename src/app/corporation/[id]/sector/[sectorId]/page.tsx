@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { trackAction } from "@/lib/observability/actionBreadcrumb";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { PARENT_DIRECTED_STRATEGY_PROTECTION_TURNS } from "@/lib/constants/sectorStrategyTypes";
 import { Skeleton } from "@/components/ui";
 import BackButton from "@/components/BackButton";
 import { getExchangeForCountry } from "@/lib/constants/exchangeRegistry";
@@ -126,6 +127,7 @@ export default function SectorDetailPage() {
     plants,
     plantsEnabled,
     isCeo,
+    parentDirection,
     strategy,
     loading,
     error,
@@ -196,6 +198,7 @@ export default function SectorDetailPage() {
         dispatch({ type: "SET_PLANTS_ENABLED", value: data.plantsEnabled === true });
         dispatch({ type: "SET_STRATEGY", value: data.strategy ?? null });
         dispatch({ type: "SET_IS_CEO", value: data.isCeo ?? false });
+        dispatch({ type: "SET_PARENT_DIRECTION", value: data.parentDirection ?? null });
         dispatch({ type: "SET_ATTACK_INFO", value: data.attackInfo ?? null });
         dispatch({
           type: "SET_STATE_RESOURCES",
@@ -896,12 +899,28 @@ export default function SectorDetailPage() {
                 Set strategy, output, investment and pricing from one workspace.
               </p>
             </div>
+            {parentDirection && (
+              <p className="rounded border border-card-border bg-card px-4 py-3 text-sm text-muted">
+                Managed by{" "}
+                <Link
+                  href={`/corporation/${parentDirection.parentPathId}`}
+                  className="font-medium text-foreground hover:underline"
+                >
+                  {parentDirection.parentName}
+                </Link>
+                . As its parent&apos;s CEO you can change this sector&apos;s strategy.
+                {parentDirection.protectedUntilTurn != null &&
+                (gameTurn?.currentTurn ?? 0) < parentDirection.protectedUntilTurn
+                  ? ` The AI manager keeps your choice until turn ${parentDirection.protectedUntilTurn}.`
+                  : ` The AI manager keeps a strategy you choose for ${PARENT_DIRECTED_STRATEGY_PROTECTION_TURNS} turns.`}
+              </p>
+            )}
             {strategy && (
               <StrategyPanel
                 strategy={strategy}
                 sector={sector}
                 corporation={corporation}
-                isCeo={isCeo}
+                isCeo={isCeo || parentDirection != null}
                 strategyUpdating={strategyUpdating}
                 cancelTransitionLoading={cancelTransitionLoading}
                 onStrategyChange={handleStrategyChange}

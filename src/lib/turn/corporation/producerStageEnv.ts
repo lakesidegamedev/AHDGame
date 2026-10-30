@@ -18,6 +18,8 @@ export function producerStageEnv(
         producerRunPaceDrop?: number;
         producerHouseholdIncomeFloor?: number;
         producerStockCover?: number;
+        producerCreditRunTurns?: number;
+        producerCreditStuckTurns?: number;
         producerClearingReferenceStage?: number;
         producerFundedBookStage?: number;
         producerProcurementSpillStage?: number;
@@ -51,6 +53,8 @@ export function producerStageEnv(
     runPaceDrop: config?.producerRunPaceDrop,
     householdIncomeFloor: config?.producerHouseholdIncomeFloor,
     stockCoverTurns: config?.producerStockCover,
+    creditRunTurns: config?.producerCreditRunTurns,
+    creditStuckTurns: config?.producerCreditStuckTurns,
     clearingReferenceStage: config?.producerClearingReferenceStage,
     publicCarryShare:
       (config?.producerPublicCarryStage ?? 0) >= 1

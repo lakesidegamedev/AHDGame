@@ -438,6 +438,7 @@ export async function loadCorporationDetailView(args: {
       isFormalizedSubsidiary: subsidiary.isFormalizedSub,
       canFormalizeAsSubsidiary: subsidiary.canFormalizeAsSubsidiary,
       canManageAsParent: subsidiary.canManageAsParent,
+      canDirectAsParent: subsidiary.canDirectAsParent,
       canSpinOff: subsidiary.canSpinOff,
       groupStrengthTransfer: subsidiary.groupStrengthTransfer,
       spinOffCooldownTurnsRemaining: subsidiary.spinOffCooldownTurnsRemaining,

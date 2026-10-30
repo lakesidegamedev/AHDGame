@@ -4,7 +4,10 @@ import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { parseJsonBody } from "@/lib/api/validate";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
-import { resolveCorporation, requireCeo } from "@/lib/api/corporations/resolveQuery";
+import {
+  resolveCorporation,
+  requireCeoOrDirectingParent,
+} from "@/lib/api/corporations/resolveQuery";
 import type { CorporateSector, GameConfig, GameState } from "@/lib/db/types";
 import type { StateResourceCapacity } from "@/lib/db/types/stateResourceCapacity";
 
@@ -14,6 +17,7 @@ import {
   STRATEGY_RETOOL_COST_FRACTION,
   STRATEGY_TRANSITION_TURNS,
   STRATEGY_COOLDOWN_TURNS,
+  PARENT_DIRECTED_STRATEGY_PROTECTION_TURNS,
   getMediaOperatingModelStrategies,
 } from "@/lib/constants/sectorStrategies";
 import {
@@ -58,7 +62,9 @@ interface RouteParams {
 
 /**
  * POST /api/corporations/[id]/sectors/[sectorId]/strategy
- * Change operating strategy for a sector. CEO only.
+ * Change operating strategy for a sector. The CEO, or the controlling parent's
+ * CEO for an AI-run managed subsidiary (same costs and rules; the change is
+ * stamped and shielded from the subsidiary's AI manager).
  * Charges 25% of daily revenue and begins a 12-turn transition. During the
  * funded-market transition window a mismatched sector's first retool is free
  * and skips the cooldown (the transition package's free conversion).
@@ -84,13 +90,14 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
     const { strategyId } = parsed.data;
     const db = await getDb();
 
-    // Resolve corporation + CEO check
+    // Resolve corporation + CEO (or directing parent CEO) check
     const resolved = await resolveCorporation(db, id);
     if (!resolved.ok) return resolved.response;
     const { corporation } = resolved;
 
-    const ceoCheck = requireCeo(corporation, auth.user.userId);
-    if (ceoCheck) return ceoCheck;
+    const authorized = await requireCeoOrDirectingParent(db, corporation, auth.user.userId);
+    if (!authorized.ok) return authorized.response;
+    const { directingParentId } = authorized;
 
     // Resolve sector
     if (!ObjectId.isValid(sectorId)) {
@@ -339,6 +346,17 @@ export async function setSectorStrategy(request: Request, { params }: RouteParam
             // whether a particular leg found something to scale.
             ...rescale,
             ...(freeConversion ? { cutoverConvertedAtTurn: currentTurn } : {}),
+            ...(directingParentId
+              ? {
+                  parentDirectedStrategy: {
+                    byCorporationId: directingParentId,
+                    byUserId: new ObjectId(auth.user.userId),
+                    strategyId,
+                    atTurn: currentTurn,
+                    untilTurn: currentTurn + PARENT_DIRECTED_STRATEGY_PROTECTION_TURNS,
+                  },
+                }
+              : {}),
             updatedAt: new Date(),
           },
         }

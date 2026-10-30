@@ -391,24 +391,31 @@
       "saveError": "Could not save. Try again.",
       "desktopNavigation": {
         "title": "Desktop navigation",
-        "hint": "Choose how desktop dropdowns open. Saved to your account. Mobile navigation stays the same.",
+        "hint": "Choose how desktop dropdowns open. Saved to your account.",
         "classicHint": "These layouts apply to the modern interface. Your classic interface stays the same.",
         "options": {
           "cards": {
-            "title": "A · Grouped cards (default)",
+            "title": "Grouped cards (default)",
             "hint": "See each section at once, with your shortcuts alongside. Adds a wide bar, a gear menu, pins and your own menu order."
-          },
-          "browser": {
-            "title": "B · Section browser",
-            "hint": "Choose a section, then explore its destination cards."
-          },
-          "directory": {
-            "title": "C · Compact directory",
-            "hint": "A tighter list of destinations with less descriptive text."
           },
           "standard": {
             "title": "Standard dropdowns",
             "hint": "Keep the current dropdown lists."
+          }
+        }
+      },
+      "mobileNavigation": {
+        "title": "Phone navigation",
+        "hint": "Choose how you get around on a phone. Saved to your account.",
+        "classicHint": "These layouts apply to the modern interface. Your classic interface stays the same.",
+        "options": {
+          "dock": {
+            "title": "A · Bottom dock (default)",
+            "hint": "Tabs at the bottom for your company, home state, nation, Actions and everything else. Your stats sit just above them."
+          },
+          "standard": {
+            "title": "Standard menu",
+            "hint": "Keep the current menu button at the top."
           }
         }
       }

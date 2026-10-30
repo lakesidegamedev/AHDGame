@@ -6,7 +6,13 @@ import { apiErrorText } from "@/lib/errors/catalog";
 import { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { CAPACITY_UNIT_LABEL, formatUnits } from "@/components/corporation/plantsPresentation";
+import { facilityPlural } from "@/lib/constants/facilityVocabulary";
+import {
+  CAPACITY_UNIT_LABEL,
+  formatUnits,
+  plantsOfRoom,
+  roomInPlantsLabel,
+} from "@/components/corporation/plantsPresentation";
 import { useSearchParams } from "next/navigation";
 import { Skeleton } from "@/components/ui";
 import { Tooltip } from "@/components/Tooltip";
@@ -649,9 +655,11 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
                   Room to build
                 </span>
               </Tooltip>
-              <span className="text-sm font-bold text-foreground tabular-nums">
-                {formatUnits(sector.headroomUnits)}
-                <span className="text-[10px] font-normal text-muted"> {CAPACITY_UNIT_LABEL}</span>
+              <span
+                className="text-sm font-bold text-foreground tabular-nums"
+                title={`${formatUnits(sector.headroomUnits)} ${CAPACITY_UNIT_LABEL} of unmet demand`}
+              >
+                {roomInPlantsLabel(sector.headroomUnits, { sectorType: sector.type })}
               </span>
             </div>
           ) : (
@@ -1045,11 +1053,22 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
                   className={`text-xl font-bold tabular-nums leading-none ${data.plantsMode ? "text-foreground" : "text-muted"}`}
                 >
                   {data.plantsMode
-                    ? formatUnits(sector.headroomUnits)
+                    ? plantsOfRoom(sector.headroomUnits, { sectorType: sector.type }) >= 1
+                      ? plantsOfRoom(sector.headroomUnits, {
+                          sectorType: sector.type,
+                        }).toLocaleString("en-US")
+                      : "<1"
                     : `${sector.unownedPercent.toFixed(1)}%`}
                 </div>
-                <div className="text-body-sm font-medium text-muted mt-0.5">
-                  {data.plantsMode ? CAPACITY_UNIT_LABEL : "share"}
+                <div
+                  className="text-body-sm font-medium text-muted mt-0.5"
+                  title={
+                    data.plantsMode
+                      ? `${formatUnits(sector.headroomUnits)} ${CAPACITY_UNIT_LABEL} of unmet demand`
+                      : undefined
+                  }
+                >
+                  {data.plantsMode ? `new ${facilityPlural(sector.type)}` : "share"}
                 </div>
               </div>
             </div>
@@ -1057,8 +1076,8 @@ export function StateEconomy({ stateId, countryId }: { stateId: string; countryI
             {data.plantsMode && (
               <p className="px-4 pb-3 text-xs leading-snug text-muted">
                 {sector.headroomScope === "country"
-                  ? `Buyers across this country want about ${formatUnits(sector.headroomUnits)} ${CAPACITY_UNIT_LABEL} more than they are getting, after plants already under construction. Every state in the country shares this figure.`
-                  : `Buyers in ${data.stateName} want about ${formatUnits(sector.headroomUnits)} ${CAPACITY_UNIT_LABEL} more than they are getting, after plants already under construction.`}
+                  ? `Buyers across this country want more than they are getting, enough to keep ${roomInPlantsLabel(sector.headroomUnits, { sectorType: sector.type })} busy, after plants already under construction. Every state in the country shares this figure.`
+                  : `Buyers in ${data.stateName} want more than they are getting, enough to keep ${roomInPlantsLabel(sector.headroomUnits, { sectorType: sector.type })} busy, after plants already under construction.`}
               </p>
             )}
 

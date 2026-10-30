@@ -30,3 +30,22 @@ describe("corporation detail sector rows payload", () => {
     expect(source).not.toMatch(/\.\.\.mods,/);
   });
 });
+
+/**
+ * A funded row that sold nothing has zero revenue and a zero margin, so a bill
+ * rebuilt as revenue x (1 - margin) was zero and the row showed the stock it
+ * made as profit. The row must read the funded bill, and the plants path must
+ * read plantless sectors through the view that drops their opening stamps.
+ */
+describe("corporation detail sector rows funded bill and plantless sectors", () => {
+  it("takes the funded total cost before the margin rebuild", () => {
+    expect(source).toMatch(/fundedSectorTotalCost\(sector\.plantsPnl\)/);
+    expect(source.indexOf("fundedTotalCost != null")).toBeLessThan(
+      source.indexOf("(1 - effectiveProfitMargin / 100)")
+    );
+  });
+
+  it("reads plants sectors through plantlessSectorView", () => {
+    expect(source).toMatch(/plantsMode \? plantlessSectorView\(storedSector\) : storedSector/);
+  });
+});

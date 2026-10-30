@@ -174,3 +174,133 @@ describe("jointRunShare", () => {
     expect(jointRunShare(1, null, null, linePlan)).toBe(1);
   });
 });
+
+/**
+ * An oil and gas well at the probe run: oil glutted (old stock on the book,
+ * none sold), gas sold out at 50. Gas is 64% of the units, so it brings 32 per
+ * unit of output. Inputs, wages and the run's site bill come to 30 a unit; the
+ * idle upkeep on the parked 99% adds 4, so the average cost is 34.
+ */
+function oilGasWell(overrides: Partial<JointReceipt> = {}): JointReceipt {
+  const active = 3000;
+  const produced = active * FLOOR;
+  const gas = produced * 0.64;
+  const oil = produced - gas;
+  return {
+    activeUnits: active,
+    producedUnits: produced,
+    offeredUnits: 200 + gas,
+    soldUnits: gas,
+    revenue: gas * 50,
+    inputsConsumed: produced * 22,
+    labourPaid: produced * 5,
+    otherOperatingPaid: produced * 7,
+    idleOperatingCost: produced * 4,
+    plannedRunShare: FLOOR,
+    products: [
+      {
+        commodity: "natural_gas",
+        book: "world",
+        producedUnits: gas,
+        offeredUnits: gas,
+        soldUnits: gas,
+        revenue: gas * 50,
+      },
+      {
+        commodity: "oil",
+        book: "world",
+        producedUnits: oil,
+        offeredUnits: 200,
+        soldUnits: 0,
+        revenue: 0,
+      },
+    ],
+    ...overrides,
+  };
+}
+
+/** The stage 2 shell: slices carry their idle upkeep and the gate reads the margin. */
+function marginalRun(receipt: JointReceipt, linePlanRule = linePlan): number {
+  return jointRunShare(plan(receipt), receipt, lineSlices(receipt, true, true), linePlanRule, true);
+}
+
+describe("jointRunShare on marginal cost (stage 2)", () => {
+  it("lifts a well whose sold-out gas covers its marginal but not its average cost", () => {
+    const r = oilGasWell();
+    expect(plan(r)).toBe(FLOOR);
+    expect(run(r)).toBe(FLOOR);
+    expect(marginalRun(r)).toBeCloseTo(FLOOR * GROW, 12);
+  });
+
+  it("ramps by the line's shortage growth, not in one jump", () => {
+    const r = oilGasWell();
+    const growth = (l: LineSlice) => demandPlanRunShare(l.receipt, FLOOR, 2);
+    expect(marginalRun(r, growth)).toBeCloseTo(FLOOR * 2, 12);
+  });
+
+  it("still refuses when gas does not cover the run's own inputs, wages and site bill", () => {
+    const r = oilGasWell({ inputsConsumed: oilGasWell().producedUnits * 27 });
+    expect(marginalRun(r)).toBe(FLOOR);
+  });
+
+  it("never treats more than the site bill as idle upkeep", () => {
+    const produced = oilGasWell().producedUnits;
+    // An idle figure beyond the whole site bill only removes the site bill: 22 + 5 = 27 < 32.
+    expect(marginalRun(oilGasWell({ idleOperatingCost: produced * 100 }))).toBeCloseTo(
+      FLOOR * GROW,
+      12
+    );
+    // Without the site bill to discount, 22 + 5 + 7 = 34 > 32 at stage 1.
+    expect(run(oilGasWell({ idleOperatingCost: produced * 100 }))).toBe(FLOOR);
+  });
+
+  it("still sheds a well whose every line is glutted", () => {
+    const r = chemicalPlant(3000, {
+      offeredUnits: 1200,
+      soldUnits: 2,
+      revenue: 2 * 170,
+      idleOperatingCost: 1000,
+      products: chemicalPlant(3000).products!.map((p) => ({
+        ...p,
+        offeredUnits: 600,
+        soldUnits: 1,
+        revenue: p.commodity === "plastics" ? 3000 : 170,
+      })),
+    });
+    expect(marginalRun(r)).toBe(FLOOR);
+  });
+
+  it("is the summed plan exactly for a one-product plant", () => {
+    const one: JointReceipt = {
+      activeUnits: 100,
+      producedUnits: 2,
+      offeredUnits: 2,
+      soldUnits: 2,
+      revenue: 60,
+      inputsConsumed: 40,
+      idleOperatingCost: 30,
+      otherOperatingPaid: 35,
+      plannedRunShare: 0.05,
+      products: [
+        {
+          commodity: "iron",
+          book: "world",
+          producedUnits: 2,
+          offeredUnits: 2,
+          soldUnits: 2,
+          revenue: 60,
+        },
+      ],
+    };
+    expect(lineSlices(one, true, true)).toBeNull();
+    expect(marginalRun(one)).toBe(plan(one));
+  });
+
+  it("gives each line its unit share of the idle upkeep only when asked to", () => {
+    const r = oilGasWell();
+    const gas = lineSlices(r, true, true)!.find((s) => s.commodity === "natural_gas")!;
+    expect(gas.receipt.idleOperatingCost).toBeCloseTo(r.idleOperatingCost! * 0.64, 9);
+    const stage1 = lineSlices(r, true)!.find((s) => s.commodity === "natural_gas")!;
+    expect(stage1.receipt.idleOperatingCost).toBeUndefined();
+  });
+});

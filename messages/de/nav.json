@@ -260,6 +260,77 @@
       "done": "Fertig",
       "saveError": "Navigation konnte nicht gespeichert werden. Bitte erneut versuchen."
     },
+    "dock": {
+      "label": "Handy-Navigation",
+      "company": "Unternehmen",
+      "market": "Markt",
+      "more": "Mehr",
+      "everything": "Alles",
+      "you": "Du",
+      "portfolio": "Portfolio",
+      "whatsNew": "Neuigkeiten",
+      "switchCountry": "Anderes Land ansehen",
+      "close": "Schließen"
+    },
+    "widgets": {
+      "open": "Öffnen",
+      "unavailable": "Gerade nicht verfügbar.",
+      "tray": {
+        "label": "Seitenleiste",
+        "widgets": "Widgets",
+        "keir": "Frag Keir",
+        "edit": "Bearbeiten",
+        "done": "Fertig",
+        "close": "Leiste schließen",
+        "openTray": "Widgets öffnen",
+        "swapSide": "Auf die andere Seite",
+        "empty": "Noch keine Widgets. Füge welche hinzu, um wichtige Zahlen im Blick zu behalten.",
+        "add": "Widget hinzufügen",
+        "inTray": "In der Leiste",
+        "menus": "In Desktop-Menüs",
+        "menusHint": "Zeigt ein Widget neben den Links eines Menüs, wenn es sich öffnet.",
+        "menuNone": "Keins",
+        "moveUp": "Nach oben",
+        "moveDown": "Nach unten",
+        "remove": "Entfernen",
+        "saveError": "Deine Widgets konnten nicht gespeichert werden. Versuch es noch einmal."
+      },
+      "names": {
+        "myCompany": "Mein Unternehmen",
+        "stockTicker": "Börsenticker",
+        "staffQueues": "Prüfwarteschlangen"
+      },
+      "tickerScopes": {
+        "global": "Weltmarkt",
+        "home": "Heimatbörse"
+      },
+      "menus": {
+        "state": "Staatsmenü",
+        "nation": "Nationsmenü",
+        "world": "Weltmenü",
+        "help": "Hilfemenü",
+        "staff": "Teammenü"
+      },
+      "myCompany": {
+        "title": "Mein Unternehmen",
+        "cash": "Bargeld",
+        "sharePrice": "Aktienkurs",
+        "revenue": "Umsatz letzte Runde",
+        "income": "Gewinn letzte Runde",
+        "cashTrend": "Bargeld, letzte Runden",
+        "empty": "Du leitest gerade kein Unternehmen."
+      },
+      "stockTicker": {
+        "title": "Börsenticker",
+        "empty": "Noch keine börsennotierten Unternehmen."
+      },
+      "staffQueues": {
+        "title": "Prüfwarteschlangen",
+        "wikiReview": "Wiki-Änderungen zu prüfen",
+        "altClusters": "Offene Alt-Cluster",
+        "playerReports": "Spielermeldungen"
+      }
+    },
     "desktop": {
       "editNavigation": "Navigation bearbeiten",
       "pin": "An obere Leiste heften",
@@ -267,14 +338,8 @@
       "pinsFull": "Maximum erreicht",
       "shortcuts": "Deine Verknüpfungen",
       "openOverview": "Übersicht öffnen",
-      "sections": "Bereiche",
       "keyboardHint": "Tab zum Navigieren · Esc zum Schließen",
       "changeLayout": "Layout ändern",
-      "layouts": {
-        "cards": "Gruppierte Karten",
-        "browser": "Bereichsauswahl",
-        "directory": "Kompaktes Verzeichnis"
-      },
       "groups": {
         "markets": "Märkte & Finanzen",
         "industry": "Industrie & Nachrichten",

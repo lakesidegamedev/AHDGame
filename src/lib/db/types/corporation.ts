@@ -555,6 +555,8 @@ export interface Corporation {
   brandColor?: string;
   /** URL to corporation logo (Vercel Blob or local) */
   logoUrl?: string;
+  /** Audit: the controlling parent's CEO last set this AI-run subsidiary's logo. */
+  logoSetByParent?: { byCorporationId: ObjectId; byUserId: ObjectId; at: Date };
   /** Wide banner image for the corporation page hero (CEO-set; Vercel Blob or /api/uploads/... ) */
   headerImageUrl?: string;
   /** Sequential ID for stable URLs (e.g., /corporation/1) */
@@ -1846,6 +1848,18 @@ export interface CorporateSector {
   entertainmentRemovalRescaleApplied?: boolean;
   /** Turn after which a new strategy change is allowed (transition end + cooldown) */
   transitionCooldownUntilTurn?: number | null;
+  /**
+   * Last strategy change made by a controlling parent's CEO on an AI-run
+   * subsidiary (audit). The AI manager does not retool the sector while
+   * `currentTurn < untilTurn`.
+   */
+  parentDirectedStrategy?: {
+    byCorporationId: ObjectId;
+    byUserId: ObjectId;
+    strategyId: string;
+    atTurn: number;
+    untilTurn: number;
+  } | null;
   /** Turn the extraction auto-strategy phase adopted a focused mining strategy here (audit trail). */
   autoStrategyAdoptedAtTurn?: number;
   /** True when transition is running backward toward original strategy (cancel in progress) */

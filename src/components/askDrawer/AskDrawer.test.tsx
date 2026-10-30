@@ -2,20 +2,29 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 
-const auth = { user: null as null | Record<string, unknown> };
+const auth = {
+  user: null as null | Record<string, unknown>,
+  navData: null as null | Record<string, unknown>,
+};
 let pathname = "/corporation/1";
 vi.mock("@/contexts/AuthDataContext", () => ({
-  useOptionalAuthMe: () => ({ user: auth.user, loading: false }),
+  useOptionalAuthMe: () => ({ user: auth.user, navData: auth.navData, loading: false }),
   useRefetchNav: () => () => undefined,
 }));
 vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
 vi.mock("next/dynamic", () => ({ default: () => () => null }));
+vi.mock("@/components/sidebarWidgets/ExperimentalSideTray", () => ({
+  ExperimentalSideTray: ({ side, keirHidden }: { side: string; keirHidden: boolean }) => (
+    <div data-testid="side-tray" data-side={side} data-keir-hidden={String(keirHidden)} />
+  ),
+}));
 
 import { AskDrawer, keyboardInset, visibleArea } from "./AskDrawer";
 
 describe("AskDrawer", () => {
   beforeEach(() => {
     auth.user = null;
+    auth.navData = null;
     pathname = "/corporation/1";
   });
 
@@ -31,6 +40,16 @@ describe("AskDrawer", () => {
     auth.user = { experimentalFeatures: false };
     render(<AskDrawer />);
     expect(screen.getAllByRole("button", { name: "Open Ask Keir" })).toHaveLength(2);
+  });
+
+  it("moves experimental players with a character into the side tray, Keir included", () => {
+    auth.user = { experimentalFeatures: true, askDrawerSide: "left", askDrawerHidden: true };
+    auth.navData = { hasCharacter: true };
+    render(<AskDrawer />);
+    const tray = screen.getByTestId("side-tray");
+    expect(tray.dataset.side).toBe("left");
+    expect(tray.dataset.keirHidden).toBe("true");
+    expect(screen.queryByRole("button", { name: "Open Ask Keir" })).toBeNull();
   });
 
   it("stays hidden on pages without the site chrome", () => {

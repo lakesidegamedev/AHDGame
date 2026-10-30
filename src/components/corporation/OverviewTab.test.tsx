@@ -261,4 +261,56 @@ describe("OverviewTab", () => {
     expect(screen.getByText("+0.00")).toBeTruthy();
     expect(screen.getByText("+0.50")).toBeTruthy();
   });
+
+  it("counts plants in the sectors table and labels running and sold", () => {
+    const plantsSector = {
+      ...sector(1, 50_000),
+      sectorType: "agriculture",
+      sectorLabel: "Agriculture",
+      plantCount: 14,
+      capacityUnits: 899,
+      producedUnits: 494,
+      soldUnits: 222,
+      fillRate: 0.45,
+      fillRateBand: "low",
+    };
+    const plantless = {
+      ...sector(2, 0),
+      stateName: "Connecticut",
+      sectorType: "logistics",
+      sectorLabel: "Logistics",
+      workers: 0,
+      plantCount: 0,
+      capacityUnits: 0,
+      producedUnits: 0,
+      soldUnits: 0,
+      fillRate: null,
+      fillRateBand: null,
+      buildQueueSummary: {
+        orders: 1,
+        unitsOrdered: 15,
+        unitsRemaining: 15,
+        unitsPerTurn: 0.5,
+        turnsRemaining: 15,
+        lastOnlineTurn: 563,
+      },
+    };
+    renderOverview({
+      corporation: { ...corporation, plantsMode: true },
+      sectors: [plantsSector, plantless],
+    });
+    const table = screen.getByRole("table");
+    expect(within(table).getByText("Plants")).toBeTruthy();
+    expect(within(table).getByText("Running / sold")).toBeTruthy();
+    const count = within(table).getByText("14 farms");
+    expect(count.getAttribute("title")).toMatch(/about 899 units of output a day/);
+    expect(within(table).queryByText("899")).toBeNull();
+    expect(within(table).queryByText(/% used/)).toBeNull();
+    expect(within(table).getByText("55%")).toBeTruthy();
+    expect(within(table).getByText("45%")).toBeTruthy();
+    // A sector with no plants yet: no unit pair, its build in plants.
+    expect(within(table).getByText("No depots yet")).toBeTruthy();
+    expect(within(table).getByText("Not running yet")).toBeTruthy();
+    expect(within(table).getByText(/\+3 building/)).toBeTruthy();
+  });
 });

@@ -140,7 +140,7 @@ describe("GET /api/client-nav", () => {
                 role: "player",
                 isAdmin: false,
                 experimentalFeatures: true,
-                desktopNavigationLayout: "browser",
+                desktopNavigationLayout: "standard",
                 activeCharacterId: null,
                 activeCharacterType: "character",
                 activeImperialCharacterId: null,
@@ -263,7 +263,7 @@ describe("GET /api/client-nav", () => {
       expect(json.myCorporationType).toBeNull();
       expect(json.myCorporationCountryId).toBeNull();
       expect(json.user.experimentalFeatures).toBe(true);
-      expect(json.user.desktopNavigationLayout).toBe("browser");
+      expect(json.user.desktopNavigationLayout).toBe("standard");
       expect(json.user.forexEnabled).toBe(true);
       expect(json.user.singleplayer).toBe(singleplayer);
       expect(json.user.isAdmin).toBe(false);

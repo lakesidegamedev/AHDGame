@@ -361,24 +361,31 @@
       "saveError": "Speichern fehlgeschlagen. Versuche es erneut.",
       "desktopNavigation": {
         "title": "Desktop-Navigation",
-        "hint": "Wähle das Layout der Desktop-Menüs. Die Auswahl wird in deinem Konto gespeichert. Die mobile Navigation bleibt gleich.",
+        "hint": "Wähle das Layout der Desktop-Menüs. Die Auswahl wird in deinem Konto gespeichert.",
         "classicHint": "Diese Layouts gelten für die moderne Oberfläche. Deine klassische Oberfläche bleibt gleich.",
         "options": {
           "cards": {
-            "title": "A · Gruppierte Karten (Standard)",
+            "title": "Gruppierte Karten (Standard)",
             "hint": "Alle Bereiche auf einen Blick, mit deinen Verknüpfungen daneben."
-          },
-          "browser": {
-            "title": "B · Bereichsauswahl",
-            "hint": "Wähle einen Bereich und erkunde seine Zielkarten."
-          },
-          "directory": {
-            "title": "C · Kompaktes Verzeichnis",
-            "hint": "Eine dichtere Liste mit weniger Beschreibungstext."
           },
           "standard": {
             "title": "Bisherige Menüs",
             "hint": "Die aktuellen Dropdown-Listen beibehalten."
+          }
+        }
+      },
+      "mobileNavigation": {
+        "title": "Navigation am Handy",
+        "hint": "Wähle, wie du dich am Handy bewegst. Wird in deinem Konto gespeichert.",
+        "classicHint": "Diese Layouts gelten für die moderne Oberfläche. Deine klassische Oberfläche bleibt gleich.",
+        "options": {
+          "dock": {
+            "title": "A · Leiste unten (Standard)",
+            "hint": "Tabs unten für dein Unternehmen, deinen Heimatstaat, deine Nation, Aktionen und alles andere. Deine Werte stehen direkt darüber."
+          },
+          "standard": {
+            "title": "Standardmenü",
+            "hint": "Behalte die bisherige Menütaste oben."
           }
         }
       }

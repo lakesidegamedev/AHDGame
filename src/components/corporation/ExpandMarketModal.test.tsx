@@ -118,14 +118,16 @@ describe("ExpandMarketModal plants market finder", () => {
     expect(optionEls).toHaveLength(OPERATING_SECTOR_TYPES.length);
     expect(optionEls.map((option) => option.textContent)).toContain("Retail (secondary)");
     expect(screen.getByText("Room to build")).toBeTruthy();
-    expect(screen.getByText("543k")).toBeTruthy();
+    // Room is counted in farms (60 units each), with the units on hover.
+    expect(screen.getByText("9,050")).toBeTruthy();
+    expect(screen.getByText("9,050").getAttribute("title")).toBe("543k units/day of unmet demand");
     expect(screen.getAllByText("Can enter now").length).toBeGreaterThan(0);
     expect(
       screen.getByText(
         "Some demand is local to each state. Other demand is shared across reachable markets in the same country, so state estimates can overlap. These estimates are not a sales guarantee."
       )
     ).toBeTruthy();
-    expect(screen.getByText(/Room to build: 543k units\/day/)).toBeTruthy();
+    expect(screen.getByText(/Room to build: about 9,050 farms/)).toBeTruthy();
     expect(screen.queryByText(/units\/day open/)).toBeNull();
     expect(screen.getByText("Best fit")).toBeTruthy();
 
@@ -276,8 +278,8 @@ describe("ExpandMarketModal plants market finder", () => {
     );
 
     await screen.findByText("New York");
-    expect(screen.getAllByText("543k")).toHaveLength(1);
-    expect(screen.getByText(/units\/day, shared across/)).toBeTruthy();
+    expect(screen.getAllByText("9,050")).toHaveLength(1);
+    expect(screen.getByText(/new farms, shared across/)).toBeTruthy();
     expect(screen.getByText("shared above")).toBeTruthy();
 
     const newYorkRow = screen.getAllByRole("button", { name: /New York/ })[0];
@@ -298,8 +300,8 @@ describe("ExpandMarketModal plants market finder", () => {
       />
     );
 
-    await screen.findByText("543k");
-    expect(screen.queryByText(/units\/day, shared across/)).toBeNull();
+    await screen.findByText("9,050");
+    expect(screen.queryByText(/new farms, shared across/)).toBeNull();
   });
 
   it("groups markets by whether they can be entered now and explains the refusal", async () => {
@@ -443,7 +445,7 @@ describe("ExpandMarketModal plants market finder", () => {
     );
 
     await screen.findByText("Best fit");
-    expect(screen.getByText(/Room to build: 0 units\/day/)).toBeTruthy();
+    expect(screen.getByText(/Room to build: none right now/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Review farm" }));
     expect(await screen.findByText(/Unclaimed legacy revenue here: \$2,400\/day/)).toBeTruthy();
   });

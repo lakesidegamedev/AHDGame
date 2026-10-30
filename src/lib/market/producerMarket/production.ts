@@ -24,6 +24,12 @@ import {
   settlePriorProducerPayables,
   type ProducerPayable,
 } from "./payablesRules";
+import {
+  creditRunShare,
+  payablesNotShrinkingSince,
+  producerCreditHeadroom,
+  type ProducerCreditPolicy,
+} from "./producerCreditRules";
 import { COMMODITY_SPOILAGE_PER_TURN } from "../inventory";
 import { householdPurchaseOrders } from "./householdRules";
 import { makeDoOutput } from "./makeDoRules";
@@ -282,6 +288,8 @@ export function advanceProducerEconomy(input: {
   countryOfProducer?: (producerId: string) => string | undefined;
   /** Build the per-country funded book on the final settlement (see fundedBookRules). */
   trackCountryBooks?: boolean;
+  /** Private companies that may owe wages and site bills to keep running (producerCreditRules). */
+  credit?: ProducerCreditPolicy;
 }): {
   accounts: MarketAccount[];
   payables: ProducerPayable[];
@@ -339,10 +347,14 @@ export function advanceProducerEconomy(input: {
       (pendingDueByAccount.get(claim.debtorAccountId) ?? 0) + claim.amount
     );
   const heldForPayables = new Map<string, number>();
+  // Wages and site bills a company chose to owe this turn on its credit line.
+  // They are paid from later turns' cash, so they do not claim the cash it
+  // keeps for the inputs of the run they staff.
+  const creditDrawn = new Map<string, number>();
   const reserveUnpaidCash = () => {
     for (const [id, due] of pendingDueByAccount) {
       const held = heldForPayables.get(id) ?? 0;
-      const added = Math.min(cash.get(id)!, Math.max(0, due - held));
+      const added = Math.min(cash.get(id)!, Math.max(0, due - held - (creditDrawn.get(id) ?? 0)));
       cash.set(id, cash.get(id)! - added);
       heldForPayables.set(id, held + added);
     }
@@ -424,11 +436,49 @@ export function advanceProducerEconomy(input: {
   // every wage with nothing left for materials, and owes no wages for a run
   // that never happened.
   const { fixedBills, variableNeed } = producerRunBudget(plans);
+  // A private company on the credit line may run past its cash: it buys the
+  // inputs with cash and owes the wages and site bills it cannot cover, up to
+  // its headroom (producerCreditRules). `inputReserve` is the cash kept back
+  // for those inputs; only companies that actually draw credit get one.
+  const creditAccounts = new Set(input.credit?.accountIds ?? []);
+  const fullLabour = new Map<string, number>();
+  for (const p of plans)
+    fullLabour.set(p.accountId, (fullLabour.get(p.accountId) ?? 0) + p.labourCost);
+  const notShrinkingSince = new Map<string, number>();
+  for (const claim of prior.payables)
+    if (claim.notShrinkingSince != null)
+      notShrinkingSince.set(
+        claim.debtorAccountId,
+        Math.min(
+          notShrinkingSince.get(claim.debtorAccountId) ?? claim.notShrinkingSince,
+          claim.notShrinkingSince
+        )
+      );
+  const inputReserve = new Map<string, number>();
   const runShare = new Map(
     [...bills.keys()].map((id) => {
       const need = variableNeed.get(id) ?? 0;
       const free = Math.max(0, cash.get(id)! - (fixedBills.get(id) ?? 0));
-      return [id, need > 0 ? Math.min(1, free / need) : 1];
+      const cashOnly = need > 0 ? Math.min(1, free / need) : 1;
+      if (!creditAccounts.has(id) || cashOnly >= 1) return [id, cashOnly];
+      const labour = fullLabour.get(id) ?? 0;
+      const inputs = Math.max(0, need - labour);
+      const share = creditRunShare({
+        cash: cash.get(id)!,
+        fixedBills: fixedBills.get(id) ?? 0,
+        labour,
+        inputs,
+        headroom: producerCreditHeadroom({
+          turn: input.turn,
+          billsAtFullRun: (fixedBills.get(id) ?? 0) + labour,
+          outstanding: pendingDueByAccount.get(id) ?? 0,
+          notShrinkingSince: notShrinkingSince.get(id),
+          runTurns: input.credit?.runTurns,
+          stuckTurns: input.credit?.stuckTurns,
+        }),
+      });
+      if (share > cashOnly * (1 + 1e-12) + 1e-15) inputReserve.set(id, inputs * share);
+      return [id, share];
     })
   );
   plans = plans.map((p) => {
@@ -439,7 +489,10 @@ export function advanceProducerEconomy(input: {
   for (const p of plans)
     bills.set(p.accountId, (bills.get(p.accountId) ?? 0) + p.labourCost + p.otherOperatingCost);
   const funding = new Map(
-    [...bills].map(([id, bill]) => [id, bill > 0 ? Math.min(1, cash.get(id)! / bill) : 1])
+    [...bills].map(([id, bill]) => {
+      const payable = Math.max(0, cash.get(id)! - (inputReserve.get(id) ?? 0));
+      return [id, bill > 0 ? Math.min(1, payable / bill) : 1];
+    })
   );
   const credits = new Map<string, number>();
   for (const p of plans) {
@@ -455,12 +508,10 @@ export function advanceProducerEconomy(input: {
       p.operatingRecipientAccountId,
       (credits.get(p.operatingRecipientAccountId) ?? 0) + operating
     );
-    pendingDueByAccount.set(
-      p.accountId,
-      (pendingDueByAccount.get(p.accountId) ?? 0) +
-        Math.max(0, p.labourCost - labour) +
-        Math.max(0, p.otherOperatingCost - operating)
-    );
+    const owed = Math.max(0, p.labourCost - labour) + Math.max(0, p.otherOperatingCost - operating);
+    pendingDueByAccount.set(p.accountId, (pendingDueByAccount.get(p.accountId) ?? 0) + owed);
+    if (inputReserve.has(p.accountId))
+      creditDrawn.set(p.accountId, (creditDrawn.get(p.accountId) ?? 0) + owed);
     payments.set(p.id, {
       labour,
       operating,
@@ -489,7 +540,8 @@ export function advanceProducerEconomy(input: {
         p.activeFraction *
         p.outputMultiplier *
         (runShare.get(p.accountId) ?? 1) *
-        (funding.get(p.accountId) ?? 1),
+        // A run on credit is fully staffed: what cash did not pay is owed.
+        (inputReserve.has(p.accountId) ? 1 : (funding.get(p.accountId) ?? 1)),
     ])
   );
   // Physical maximum per plant, before the feasibility pre-pass picks a start.
@@ -1159,6 +1211,34 @@ export function advanceProducerEconomy(input: {
       ),
       products,
     });
+  }
+  if (creditAccounts.size > 0) {
+    const owedAt = (claims: Iterable<ProducerPayable>) => {
+      const owed = new Map<string, number>();
+      for (const c of claims)
+        owed.set(c.debtorAccountId, (owed.get(c.debtorAccountId) ?? 0) + c.amount);
+      return owed;
+    };
+    const opening = owedAt(input.payables ?? []);
+    const closing = owedAt(closingPayables.values());
+    const priorSince = new Map<string, number>();
+    for (const c of input.payables ?? [])
+      if (c.notShrinkingSince != null)
+        priorSince.set(
+          c.debtorAccountId,
+          Math.min(priorSince.get(c.debtorAccountId) ?? c.notShrinkingSince, c.notShrinkingSince)
+        );
+    for (const [id, claim] of closingPayables)
+      if (creditAccounts.has(claim.debtorAccountId))
+        closingPayables.set(id, {
+          ...claim,
+          notShrinkingSince: payablesNotShrinkingSince({
+            turn: input.turn,
+            openingOwed: opening.get(claim.debtorAccountId) ?? 0,
+            closingOwed: closing.get(claim.debtorAccountId) ?? 0,
+            priorSince: priorSince.get(claim.debtorAccountId),
+          }),
+        });
   }
   const openingTotal = [...originalCash.values()].reduce((n, v) => n + v, 0);
   const closingTotal = [...closingCash.values()].reduce((n, v) => n + v, 0);

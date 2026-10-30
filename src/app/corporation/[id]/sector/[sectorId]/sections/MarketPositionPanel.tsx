@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  CAPACITY_UNIT_LABEL,
+  roomInPlantsLabel,
+} from "@/components/corporation/plantsPresentation";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useState } from "react";
@@ -270,10 +274,17 @@ export default function MarketPositionPanel({
                 </Tooltip>
                 <span
                   className={`ml-auto tabular-nums font-medium ${(buyersRoomUnits ?? 0) > 0 ? "text-foreground" : "text-muted"}`}
+                  title={
+                    buyersRoomUnits != null
+                      ? `${fmtUnits(buyersRoomUnits)} ${CAPACITY_UNIT_LABEL} of unmet demand`
+                      : undefined
+                  }
                 >
                   {buyersRoomUnits == null
                     ? t("estimateUnavailable")
-                    : t("estimatedBuildUnits", { units: fmtUnits(buyersRoomUnits) })}
+                    : t("estimatedBuildPlants", {
+                        plants: roomInPlantsLabel(buyersRoomUnits, sector),
+                      })}
                 </span>
               </div>
             </>
