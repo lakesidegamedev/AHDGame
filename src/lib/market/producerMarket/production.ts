@@ -301,7 +301,7 @@ export function advanceProducerEconomy(input: {
   reserveUnpaidCash();
   const payments = new Map<string, { labour: number; operating: number; arrears: number }>();
   const offers: ProducerOffer[] = [...(input.externalOffers ?? [])];
-  const plans = [...input.producers].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  let plans = [...input.producers].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   // Reserve fixed bills across a whole corporation pro rata, not by sector id.
   const bills = new Map<string, number>();
   for (const p of plans) {
@@ -368,6 +368,43 @@ export function advanceProducerEconomy(input: {
         );
     }
   }
+  // Budget the run, not just the payroll. Site and regulatory bills are the
+  // fixed cost of owning plants and are paid first. Wages and inputs scale with
+  // the share of the plants the remaining cash can staff and supply (inputs at
+  // the bid ceiling), so a company short of cash runs smaller instead of paying
+  // every wage with nothing left for materials, and owes no wages for a run
+  // that never happened.
+  const fixedBills = new Map<string, number>();
+  const variableNeed = new Map<string, number>();
+  for (const p of plans) {
+    const full = p.capacityUnits * p.activeFraction * p.outputMultiplier;
+    let spend = p.labourCost;
+    for (const recipe of p.inputs) {
+      const stock = p.inputStock
+        .filter((s) => s.commodity === recipe.commodity)
+        .reduce((n, s) => n + s.units, 0);
+      spend += Math.max(0, full * recipe.unitsPerOutput - stock) * recipe.maximumUnitPrice;
+    }
+    fixedBills.set(p.accountId, (fixedBills.get(p.accountId) ?? 0) + p.otherOperatingCost);
+    variableNeed.set(
+      p.accountId,
+      (variableNeed.get(p.accountId) ?? 0) + finite(spend, "run budget")
+    );
+  }
+  const runShare = new Map(
+    [...bills.keys()].map((id) => {
+      const need = variableNeed.get(id) ?? 0;
+      const free = Math.max(0, cash.get(id)! - (fixedBills.get(id) ?? 0));
+      return [id, need > 0 ? Math.min(1, free / need) : 1];
+    })
+  );
+  plans = plans.map((p) => {
+    const share = runShare.get(p.accountId) ?? 1;
+    return share >= 1 ? p : { ...p, labourCost: p.labourCost * share };
+  });
+  bills.clear();
+  for (const p of plans)
+    bills.set(p.accountId, (bills.get(p.accountId) ?? 0) + p.labourCost + p.otherOperatingCost);
   const funding = new Map(
     [...bills].map(([id, bill]) => [id, bill > 0 ? Math.min(1, cash.get(id)! / bill) : 1])
   );
@@ -415,7 +452,11 @@ export function advanceProducerEconomy(input: {
   const plannedById = new Map(
     plans.map((p) => [
       p.id,
-      p.capacityUnits * p.activeFraction * p.outputMultiplier * (funding.get(p.accountId) ?? 1),
+      p.capacityUnits *
+        p.activeFraction *
+        p.outputMultiplier *
+        (runShare.get(p.accountId) ?? 1) *
+        (funding.get(p.accountId) ?? 1),
     ])
   );
   // Physical maximum per plant, before the feasibility pre-pass picks a start.
