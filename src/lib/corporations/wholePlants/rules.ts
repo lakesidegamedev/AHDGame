@@ -235,11 +235,7 @@ export function convertSectorToWholePlants(
 export interface ConversionOrderInput {
   undeliveredUnits: number;
   undeliveredCost: number;
-  size: number;
-  currentTurn: number;
   onlineTurn: number;
-  /** Founding starter order of a sector that owns no plant yet. */
-  starterForEmptySector: boolean;
 }
 
 export type ConversionOrderResult =
@@ -248,42 +244,129 @@ export type ConversionOrderResult =
       unitsOrdered: number;
       costPaidAnchor: number;
       startTurn: number;
-      refundAnchor: number;
-      roundedUp: boolean;
     }
-  | { kind: "cancel"; refundAnchor: number };
+  | { kind: "cancel" };
+
+export interface ConversionQueueResult {
+  /** One entry per input order, in input order. */
+  orders: ConversionOrderResult[];
+  /** Paid cost of the part-plant left over across the sector's orders. */
+  refundAnchor: number;
+  plants: number;
+  /** True when a sector with no plant got its first plant for free. */
+  roundedUp: boolean;
+  /**
+   * Capacity units added at no charge: the founding plant's top-up, or the
+   * pool rounded up to the nearest plant (`rounding: "nearest"`).
+   */
+  freeUnits: number;
+}
 
 /**
- * Rewrite an in-flight order to whole plants. Remaining plants ramp from now
- * to the unchanged `onlineTurn`; the part-plant is refunded at its paid cost.
+ * How a sector's pooled orders land on whole plants. `floor` keeps only the
+ * plants paid in full and refunds the part-plant. `nearest` rounds half a
+ * plant or more up to a whole plant at no charge and refunds only a remainder
+ * below half a plant.
  */
-export function convertOrderToWholePlants(input: ConversionOrderInput): ConversionOrderResult {
-  const size = validSize(input.size);
-  const u = finiteNonNegative(input.undeliveredUnits);
-  const c = finiteNonNegative(input.undeliveredCost);
-  const plants = wholePlantsIn(u, size);
-  if (plants === 0) {
-    if (input.starterForEmptySector && u > 0) {
-      return {
-        kind: "rewrite",
-        unitsOrdered: size,
-        costPaidAnchor: c,
-        startTurn: input.currentTurn,
-        refundAnchor: 0,
-        roundedUp: true,
-      };
-    }
-    return { kind: "cancel", refundAnchor: c };
+export type QueueRounding = "floor" | "nearest";
+
+/**
+ * Recount a sector's in-flight cash orders to whole plants.
+ *
+ * The orders are pooled in online-turn order: plant k lands with the order at
+ * which the running total of undelivered units first reaches k plants, so
+ * small orders that add up to plants keep them. Each kept plant costs the
+ * pool's average paid cost per unit, and the part-plant left over is refunded
+ * at that cost. Remaining plants ramp from now to each order's unchanged
+ * online turn. A sector that owns no plant and whose orders add up to less
+ * than one plant gets one plant at no extra charge.
+ *
+ * With `rounding: "nearest"` a pool holding half a plant or more over its
+ * whole plants gets one more plant at no charge: it lands with the last order
+ * by online turn, every paid unit stays in the orders and nothing is refunded.
+ */
+export function convertQueueToWholePlants(
+  orders: readonly ConversionOrderInput[],
+  input: {
+    size: number;
+    currentTurn: number;
+    sectorHasPlants: boolean;
+    rounding?: QueueRounding;
   }
-  const units = plants * size;
-  const cost = u > 0 ? (c * units) / u : 0;
+): ConversionQueueResult {
+  const size = validSize(input.size);
+  const rows = orders.map((o, index) => ({
+    index,
+    u: finiteNonNegative(o.undeliveredUnits),
+    c: finiteNonNegative(o.undeliveredCost),
+    onlineTurn: o.onlineTurn,
+  }));
+  const totalUnits = rows.reduce((sum, r) => sum + r.u, 0);
+  const totalCost = rows.reduce((sum, r) => sum + r.c, 0);
+  const result: ConversionOrderResult[] = rows.map(() => ({ kind: "cancel" }));
+  if (rows.length === 0 || totalUnits <= 0) {
+    return { orders: result, refundAnchor: totalCost, plants: 0, roundedUp: false, freeUnits: 0 };
+  }
+  const paidPlants = wholePlantsIn(totalUnits, size);
+  const roundUp =
+    input.rounding === "nearest" &&
+    totalUnits - paidPlants * size >= size / 2 - PLANT_EPSILON * size;
+  const plants = roundUp ? paidPlants + 1 : paidPlants;
+  // Rounding up keeps every paid unit in the orders, spread over the plants.
+  const perUnit = roundUp ? totalCost / (plants * size) : totalCost / totalUnits;
+  const byOnline = [...rows].sort((a, b) => a.onlineTurn - b.onlineTurn || a.index - b.index);
+
+  if (plants === 0) {
+    if (input.sectorHasPlants)
+      return { orders: result, refundAnchor: totalCost, plants: 0, roundedUp: false, freeUnits: 0 };
+    const first = byOnline[0];
+    result[first.index] = {
+      kind: "rewrite",
+      unitsOrdered: size,
+      costPaidAnchor: totalCost,
+      startTurn: Math.min(input.currentTurn, first.onlineTurn),
+    };
+    return {
+      orders: result,
+      refundAnchor: 0,
+      plants: 1,
+      roundedUp: true,
+      freeUnits: Math.max(0, size - totalUnits),
+    };
+  }
+
+  let cumulative = 0;
+  let assigned = 0;
+  for (const row of byOnline) {
+    cumulative += row.u;
+    const due = Math.min(plants, wholePlantsIn(cumulative, size)) - assigned;
+    if (due <= 0) continue;
+    assigned += due;
+    result[row.index] = {
+      kind: "rewrite",
+      unitsOrdered: due * size,
+      costPaidAnchor: due * size * perUnit,
+      startTurn: Math.min(input.currentTurn, row.onlineTurn),
+    };
+  }
+  if (roundUp) {
+    // The running total never reaches the rounded-up plant: it lands last.
+    const last = byOnline[byOnline.length - 1];
+    const prior = result[last.index];
+    const lastPlants = (prior.kind === "rewrite" ? prior.unitsOrdered / size : 0) + 1;
+    result[last.index] = {
+      kind: "rewrite",
+      unitsOrdered: lastPlants * size,
+      costPaidAnchor: lastPlants * size * perUnit,
+      startTurn: Math.min(input.currentTurn, last.onlineTurn),
+    };
+  }
   return {
-    kind: "rewrite",
-    unitsOrdered: units,
-    costPaidAnchor: cost,
-    startTurn: Math.min(input.currentTurn, input.onlineTurn),
-    refundAnchor: Math.max(0, c - cost),
+    orders: result,
+    refundAnchor: roundUp ? 0 : Math.max(0, totalCost - plants * size * perUnit),
+    plants,
     roundedUp: false,
+    freeUnits: roundUp ? plants * size - totalUnits : 0,
   };
 }
 
