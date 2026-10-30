@@ -12,6 +12,7 @@ import {
 } from "@/lib/constants/exchangeRegistry";
 import {
   effectiveWidgetLayout,
+  EXCHANGE_SCOPED_WIDGETS,
   TICKER_HOME_SCOPE,
   WIDGETS,
   type WidgetAudience,
@@ -76,6 +77,7 @@ export function useWidgetSetup(): WidgetSetup {
     const list: WidgetOption[] = [];
     if (WIDGETS.myCompany.available(audience))
       list.push({ key: "myCompany", label: t("names.myCompany") });
+    list.push({ key: "netWorth", label: t("names.netWorth") });
     list.push({ key: "stockTicker:global", label: t("tickerScopes.global") });
     if (homeExchange)
       list.push({
@@ -83,10 +85,26 @@ export function useWidgetSetup(): WidgetSetup {
         label: `${t("tickerScopes.home")} · ${getExchangeLabel(homeExchange)}`,
       });
     const enabledSet = new Set<string>(enabledCountries);
-    for (const exchange of ALL_EXCHANGES) {
-      if (exchange.apiKey === homeExchange || !enabledSet.has(exchange.countryId)) continue;
+    const otherExchanges = ALL_EXCHANGES.filter(
+      (exchange) => exchange.apiKey !== homeExchange && enabledSet.has(exchange.countryId)
+    );
+    for (const exchange of otherExchanges) {
       list.push({ key: `stockTicker:${exchange.apiKey}`, label: exchange.exchangeName });
     }
+    const sectors = t("names.sectorHeatmap");
+    list.push({ key: "sectorHeatmap:global", label: `${sectors} · ${t("tickerScopes.global")}` });
+    if (homeExchange)
+      list.push({
+        key: `sectorHeatmap:${TICKER_HOME_SCOPE}`,
+        label: `${sectors} · ${t("tickerScopes.home")} · ${getExchangeLabel(homeExchange)}`,
+      });
+    for (const exchange of otherExchanges) {
+      list.push({
+        key: `sectorHeatmap:${exchange.apiKey}`,
+        label: `${sectors} · ${exchange.exchangeName}`,
+      });
+    }
+    list.push({ key: "commodityBoard", label: t("names.commodityBoard") });
     if (WIDGETS.staffQueues.available(audience))
       list.push({ key: "staffQueues", label: t("names.staffQueues") });
     return list;
@@ -103,8 +121,13 @@ export function useWidgetSetup(): WidgetSetup {
   ];
 
   const resolveKey = useCallback(
-    (key: string) =>
-      key === `stockTicker:${TICKER_HOME_SCOPE}` ? `stockTicker:${homeExchange ?? "global"}` : key,
+    (key: string) => {
+      const [id, param] = key.split(":");
+      return param === TICKER_HOME_SCOPE &&
+        (EXCHANGE_SCOPED_WIDGETS as readonly string[]).includes(id ?? "")
+        ? `${id}:${homeExchange ?? "global"}`
+        : key;
+    },
     [homeExchange]
   );
 

@@ -15,10 +15,22 @@ describe("sidebar widget keys", () => {
     expect(parseWidgetKey("myCompany")).toEqual({ id: "myCompany", param: null });
     expect(parseWidgetKey("stockTicker:nyse")).toEqual({ id: "stockTicker", param: "nyse" });
     expect(parseWidgetKey("stockTicker:gosplan-bssr")?.param).toBe("gosplan-bssr");
+    expect(parseWidgetKey("sectorHeatmap:home")).toEqual({ id: "sectorHeatmap", param: "home" });
+    expect(parseWidgetKey("netWorth")).toEqual({ id: "netWorth", param: null });
+    expect(parseWidgetKey("commodityBoard")).toEqual({ id: "commodityBoard", param: null });
   });
 
   it("rejects unknown widgets, missing parameters and unexpected ones", () => {
-    for (const key of ["", "nope", "stockTicker", "myCompany:7", "stockTicker:NYSE", "a b"]) {
+    for (const key of [
+      "",
+      "nope",
+      "stockTicker",
+      "myCompany:7",
+      "stockTicker:NYSE",
+      "a b",
+      "sectorHeatmap",
+      "netWorth:global",
+    ]) {
       expect(parseWidgetKey(key)).toBeNull();
     }
   });
@@ -49,8 +61,8 @@ describe("widget layouts", () => {
     expect(effectiveWidgetLayout(saved, player)).toEqual({ tray: ["stockTicker:global"], nav: {} });
   });
 
-  it("starts company runners and staff with their widgets", () => {
-    expect(defaultWidgetLayout(player).tray).toEqual(["stockTicker:home"]);
+  it("starts company runners and staff with their widgets, and others with commodities", () => {
+    expect(defaultWidgetLayout(player).tray).toEqual(["stockTicker:home", "commodityBoard"]);
     expect(defaultWidgetLayout(ceoStaff)).toEqual({
       tray: ["myCompany", "stockTicker:home", "staffQueues"],
       nav: { world: "stockTicker:global", staff: "staffQueues" },

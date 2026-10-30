@@ -387,7 +387,10 @@
       "names": {
         "myCompany": "My company",
         "stockTicker": "Stock ticker",
-        "staffQueues": "Staff review queues"
+        "staffQueues": "Staff review queues",
+        "sectorHeatmap": "Sector map",
+        "netWorth": "Net worth",
+        "commodityBoard": "Commodity prices"
       },
       "tickerScopes": {
         "global": "Global market",
@@ -406,12 +409,37 @@
         "sharePrice": "Share price",
         "revenue": "Revenue last turn",
         "income": "Income last turn",
-        "cashTrend": "Cash, recent turns",
-        "empty": "You do not run a company right now."
+        "empty": "You do not run a company right now.",
+        "recentTurns": "Last {count} turns",
+        "incomeTrend": "Income per turn",
+        "trendLabel": "{name} over the last {count} turns"
       },
       "stockTicker": {
         "title": "Stock ticker",
-        "empty": "No listed companies yet."
+        "empty": "No listed companies yet.",
+        "trendLabel": "{name} share price over the last {count} turns"
+      },
+      "sectorHeatmap": {
+        "title": "Sectors",
+        "empty": "No listed companies yet.",
+        "other": "Other",
+        "legendDown": "Falling",
+        "legendUp": "Rising",
+        "hint": "Tile size is market cap. Color is the price change since last turn.",
+        "tile": "{sector}: {change} since last turn, {cap} market cap, {count, plural, one {# company} other {# companies}}"
+      },
+      "netWorth": {
+        "title": "Net worth",
+        "empty": "No wealth record yet. It updates after each turn.",
+        "sinceLastTurn": "since last turn",
+        "overTurns": "over the last {count} turns",
+        "trendLabel": "Net worth over the last {count} turns",
+        "point": "Turn {turn}: {value}"
+      },
+      "commodityBoard": {
+        "title": "Commodity prices",
+        "empty": "No commodity prices yet.",
+        "trendLabel": "{commodity} price over the last {count} turns"
       },
       "staffQueues": {
         "title": "Review queues",

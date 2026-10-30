@@ -9,6 +9,9 @@ import { EXCHANGE_API_KEYS } from "@/lib/constants/exchangeRegistry";
 import { getAltClustersCollection } from "@/lib/db/collections";
 import { PLAYER_CONTENT_REPORTS } from "@/lib/safety/playerSafety";
 import { parseWidgetKey, TICKER_HOME_SCOPE } from "./widgetCatalog";
+import { loadSectorHeatmap } from "./data/sectorHeatmap";
+import { loadNetWorth } from "./data/netWorth";
+import { loadCommodityBoard } from "./data/commodityBoard";
 
 export interface MyCompanyWidgetData {
   sequentialId: number | null;
@@ -24,6 +27,8 @@ export interface MyCompanyWidgetData {
   /** Oldest first, up to 12 recorded turns. */
   sharePriceSeries: number[];
   cashSeries: number[];
+  /** Income per recorded turn, oldest first; may be negative. */
+  incomeSeries: number[];
   isPrivate: boolean;
 }
 
@@ -34,6 +39,8 @@ export interface TickerRow {
   sharePrice: number;
   currencyCode: CurrencyCode | null;
   change: number | null;
+  /** Share price over recent recorded turns, oldest first, ending at the current price. */
+  series: number[];
 }
 
 export interface StockTickerWidgetData {
@@ -117,6 +124,7 @@ async function loadMyCompany(db: Db, viewer: WidgetViewer): Promise<MyCompanyWid
     income: latest?.income ?? null,
     sharePriceSeries: oldestFirst.map((row) => row.sharePrice),
     cashSeries: oldestFirst.map((row) => row.liquidCapital),
+    incomeSeries: oldestFirst.map((row) => row.income ?? 0),
     isPrivate: corp.isPrivate === true,
   };
 }
@@ -131,26 +139,43 @@ async function loadTicker(db: Db, exchange: string): Promise<StockTickerWidgetDa
     );
   if (!snapshot) return null;
   const listings = snapshot.listings ?? [];
-  const previous = await db
+  // One read for every row's recent history, bounded by a turn floor.
+  const history = await db
     .collection<CorporationHistory>("corporationHistory")
     .find(
-      { corporationId: { $in: listings.map((row) => row._id) }, turn: snapshot.turn - 1 },
-      { projection: { corporationId: 1, sharePrice: 1 } }
+      {
+        corporationId: { $in: listings.map((row) => row._id) },
+        turn: { $gt: snapshot.turn - SERIES_TURNS, $lt: snapshot.turn },
+      },
+      { projection: { _id: 0, corporationId: 1, turn: 1, sharePrice: 1 } }
     )
     .toArray();
-  const before = new Map(previous.map((row) => [row.corporationId.toString(), row.sharePrice]));
+  const past = new Map<string, { turn: number; sharePrice: number }[]>();
+  for (const row of history) {
+    if (!Number.isFinite(row.sharePrice)) continue;
+    const key = row.corporationId.toString();
+    past.set(key, [...(past.get(key) ?? []), row]);
+  }
   return {
     exchange,
     exchangeName: snapshot.exchangeName,
     turn: snapshot.turn,
-    rows: listings.map((row) => ({
-      sequentialId: row.sequentialId,
-      name: row.name,
-      ticker: row.tickerSymbol ?? null,
-      sharePrice: row.sharePrice,
-      currencyCode: row.liquidCurrencyCode ?? null,
-      change: percentChange(row.sharePrice, before.get(row._id.toString())),
-    })),
+    rows: listings.map((row) => {
+      const points = (past.get(row._id.toString()) ?? []).sort((a, b) => a.turn - b.turn);
+      const previous = points.at(-1);
+      return {
+        sequentialId: row.sequentialId,
+        name: row.name,
+        ticker: row.tickerSymbol ?? null,
+        sharePrice: row.sharePrice,
+        currencyCode: row.liquidCurrencyCode ?? null,
+        change:
+          previous?.turn === snapshot.turn - 1
+            ? percentChange(row.sharePrice, previous.sharePrice)
+            : null,
+        series: [...points.map((point) => point.sharePrice), row.sharePrice],
+      };
+    }),
   };
 }
 
@@ -194,6 +219,17 @@ export async function loadSidebarWidgetData(
             ];
           case "staffQueues":
             return [key, await loadStaffQueues(db, viewer)];
+          case "sectorHeatmap":
+            return [
+              key,
+              parsed.param && parsed.param !== TICKER_HOME_SCOPE
+                ? await loadSectorHeatmap(db, parsed.param)
+                : null,
+            ];
+          case "netWorth":
+            return [key, await loadNetWorth(db, viewer.userId)];
+          case "commodityBoard":
+            return [key, await loadCommodityBoard(db)];
         }
       } catch {
         return [key, null];

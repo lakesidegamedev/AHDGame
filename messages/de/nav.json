@@ -298,7 +298,10 @@
       "names": {
         "myCompany": "Mein Unternehmen",
         "stockTicker": "Börsenticker",
-        "staffQueues": "Prüfwarteschlangen"
+        "staffQueues": "Prüfwarteschlangen",
+        "sectorHeatmap": "Sektorkarte",
+        "netWorth": "Nettovermögen",
+        "commodityBoard": "Rohstoffpreise"
       },
       "tickerScopes": {
         "global": "Weltmarkt",
@@ -317,12 +320,37 @@
         "sharePrice": "Aktienkurs",
         "revenue": "Umsatz letzte Runde",
         "income": "Gewinn letzte Runde",
-        "cashTrend": "Bargeld, letzte Runden",
-        "empty": "Du leitest gerade kein Unternehmen."
+        "empty": "Du leitest gerade kein Unternehmen.",
+        "recentTurns": "Letzte {count} Runden",
+        "incomeTrend": "Gewinn je Runde",
+        "trendLabel": "{name} in den letzten {count} Runden"
       },
       "stockTicker": {
         "title": "Börsenticker",
-        "empty": "Noch keine börsennotierten Unternehmen."
+        "empty": "Noch keine börsennotierten Unternehmen.",
+        "trendLabel": "Aktienkurs von {name} in den letzten {count} Runden"
+      },
+      "sectorHeatmap": {
+        "title": "Sektoren",
+        "empty": "Noch keine börsennotierten Unternehmen.",
+        "other": "Sonstige",
+        "legendDown": "Fallend",
+        "legendUp": "Steigend",
+        "hint": "Die Größe zeigt den Börsenwert. Die Farbe zeigt die Kursänderung seit der letzten Runde.",
+        "tile": "{sector}: {change} seit der letzten Runde, {cap} Börsenwert, {count, plural, one {# Unternehmen} other {# Unternehmen}}"
+      },
+      "netWorth": {
+        "title": "Nettovermögen",
+        "empty": "Noch keine Vermögensdaten. Sie werden nach jeder Runde aktualisiert.",
+        "sinceLastTurn": "seit der letzten Runde",
+        "overTurns": "in den letzten {count} Runden",
+        "trendLabel": "Nettovermögen in den letzten {count} Runden",
+        "point": "Runde {turn}: {value}"
+      },
+      "commodityBoard": {
+        "title": "Rohstoffpreise",
+        "empty": "Noch keine Rohstoffpreise.",
+        "trendLabel": "Preis von {commodity} in den letzten {count} Runden"
       },
       "staffQueues": {
         "title": "Prüfwarteschlangen",

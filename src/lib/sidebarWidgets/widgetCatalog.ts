@@ -4,14 +4,24 @@
  * can sit in the side tray and in a desktop menu panel.
  */
 
-export const WIDGET_IDS = ["myCompany", "stockTicker", "staffQueues"] as const;
+export const WIDGET_IDS = [
+  "myCompany",
+  "stockTicker",
+  "sectorHeatmap",
+  "netWorth",
+  "commodityBoard",
+  "staffQueues",
+] as const;
 export type WidgetId = (typeof WIDGET_IDS)[number];
 
 /** Desktop menus that can hold one widget in their side column. */
 export const WIDGET_MENUS = ["state", "nation", "world", "help", "staff"] as const;
 export type WidgetMenu = (typeof WIDGET_MENUS)[number];
 
-/** Ticker scopes: the world, the player's home exchange, or a named exchange. */
+/**
+ * Exchange scopes for the ticker and sector heatmap: the world, the player's
+ * home exchange, or a named exchange.
+ */
 export const TICKER_HOME_SCOPE = "home";
 
 export interface WidgetAudience {
@@ -30,8 +40,18 @@ export interface WidgetDefinition {
 export const WIDGETS: Record<WidgetId, WidgetDefinition> = {
   myCompany: { id: "myCompany", available: (a) => a.hasCorporation, params: [] },
   stockTicker: { id: "stockTicker", available: () => true, params: ["global", TICKER_HOME_SCOPE] },
+  sectorHeatmap: {
+    id: "sectorHeatmap",
+    available: () => true,
+    params: ["global", TICKER_HOME_SCOPE],
+  },
+  netWorth: { id: "netWorth", available: () => true, params: [] },
+  commodityBoard: { id: "commodityBoard", available: () => true, params: [] },
   staffQueues: { id: "staffQueues", available: (a) => a.isStaff, params: [] },
 };
+
+/** Widgets whose parameter is an exchange scope, resolved from "home" on the client. */
+export const EXCHANGE_SCOPED_WIDGETS: readonly WidgetId[] = ["stockTicker", "sectorHeatmap"];
 
 export const MAX_TRAY_WIDGETS = 8;
 export const WIDGET_KEY_PATTERN = /^[A-Za-z]+(?::[a-z0-9-]{1,24})?$/;
@@ -79,6 +99,7 @@ export function defaultWidgetLayout(audience: WidgetAudience): WidgetLayout {
   const tray = [
     ...(audience.hasCorporation ? ["myCompany"] : []),
     `stockTicker:${TICKER_HOME_SCOPE}`,
+    ...(audience.hasCorporation ? [] : ["commodityBoard"]),
     ...(audience.isStaff ? ["staffQueues"] : []),
   ];
   return {

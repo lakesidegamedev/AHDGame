@@ -5,44 +5,30 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { PixelNavIcon } from "@/components/navbar/PixelNavIcon";
 import type { PixelNavIconName } from "@/components/navbar/PixelNavIcon";
-import { Sparkline } from "@/components/statusbar/Sparkline";
-import { CURRENCY_SYMBOLS, type CurrencyCode } from "@/lib/constants/currencyCodes";
-import {
-  formatCompactNumber,
-  formatLocalAmount,
-  formatSharePrice,
-} from "@/lib/utils/formattersCore";
 import { parseWidgetKey, type WidgetId } from "@/lib/sidebarWidgets/widgetCatalog";
 import type {
   MyCompanyWidgetData,
   StaffQueuesWidgetData,
   StockTickerWidgetData,
 } from "@/lib/sidebarWidgets/widgetData";
+import type { SectorHeatmapWidgetData } from "@/lib/sidebarWidgets/data/sectorHeatmap";
+import type { NetWorthWidgetData } from "@/lib/sidebarWidgets/data/netWorth";
+import type { CommodityBoardWidgetData } from "@/lib/sidebarWidgets/data/commodityBoard";
+import { Empty } from "./bodies/shared";
+import { MyCompanyBody } from "./bodies/MyCompanyBody";
+import { TickerBody } from "./bodies/TickerBody";
+import { SectorHeatmapBody } from "./bodies/SectorHeatmapBody";
+import { NetWorthBody } from "./bodies/NetWorthBody";
+import { CommodityBoardBody } from "./bodies/CommodityBoardBody";
 
 export const WIDGET_ICONS: Record<WidgetId, PixelNavIconName> = {
   myCompany: "briefcase",
   stockTicker: "chart",
+  sectorHeatmap: "chart",
+  netWorth: "bill",
+  commodityBoard: "scales",
   staffQueues: "gear",
 };
-
-function money(amount: number, code: CurrencyCode | null): string {
-  return code ? formatLocalAmount(amount, code) : formatCompactNumber(amount);
-}
-
-function price(amount: number, code: CurrencyCode | null): string {
-  return formatSharePrice(amount, code ? (CURRENCY_SYMBOLS[code] ?? "$") : "$");
-}
-
-function Change({ value }: { value: number | null }) {
-  if (value === null) return <span className="text-muted">·</span>;
-  const up = value >= 0;
-  return (
-    <span className={`tabular-nums ${up ? "text-success" : "text-error"}`}>
-      {up ? "▲" : "▼"}
-      {Math.abs(value).toFixed(1)}%
-    </span>
-  );
-}
 
 interface FrameProps {
   icon: PixelNavIconName;
@@ -78,103 +64,6 @@ function Frame({ icon, title, href, openLabel, compact, onNavigate, children }: 
       </header>
       {children}
     </section>
-  );
-}
-
-function Empty({ children }: { children: ReactNode }) {
-  return <p className="text-xs leading-relaxed text-muted">{children}</p>;
-}
-
-function MyCompanyBody({ data, compact }: { data: MyCompanyWidgetData; compact: boolean }) {
-  const t = useTranslations("nav.widgets.myCompany");
-  return (
-    <div className="space-y-2">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="truncate text-sm font-semibold text-foreground">{data.name}</span>
-        {data.ticker && <span className="shrink-0 text-xs text-muted">{data.ticker}</span>}
-      </div>
-      <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-        <dt className="text-muted">{t("cash")}</dt>
-        <dd className="text-right font-medium tabular-nums text-foreground">
-          {money(data.cash, data.currencyCode)}
-        </dd>
-        {!data.isPrivate && (
-          <>
-            <dt className="text-muted">{t("sharePrice")}</dt>
-            <dd className="text-right font-medium tabular-nums text-foreground">
-              {price(data.sharePrice, data.currencyCode)} <Change value={data.sharePriceChange} />
-            </dd>
-          </>
-        )}
-        {data.revenue !== null && (
-          <>
-            <dt className="text-muted">{t("revenue")}</dt>
-            <dd className="text-right tabular-nums text-foreground">
-              {money(data.revenue, data.currencyCode)}
-            </dd>
-          </>
-        )}
-        {data.income !== null && (
-          <>
-            <dt className="text-muted">{t("income")}</dt>
-            <dd
-              className={`text-right tabular-nums ${data.income < 0 ? "text-error" : "text-foreground"}`}
-            >
-              {money(data.income, data.currencyCode)}
-            </dd>
-          </>
-        )}
-      </dl>
-      {!compact && data.cashSeries.length > 1 && (
-        <div className="flex items-center justify-between gap-2 text-[11px] text-muted">
-          <span>{t("cashTrend")}</span>
-          <Sparkline data={data.cashSeries} width={120} height={22} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-function TickerBody({
-  data,
-  compact,
-  onNavigate,
-}: {
-  data: StockTickerWidgetData;
-  compact: boolean;
-  onNavigate?: () => void;
-}) {
-  const t = useTranslations("nav.widgets.stockTicker");
-  if (data.rows.length === 0) return <Empty>{t("empty")}</Empty>;
-  return (
-    <ul className="space-y-0.5">
-      {data.rows.slice(0, compact ? 5 : 8).map((row) => (
-        <li key={row.sequentialId}>
-          <Link
-            href={`/corporation/${row.sequentialId}`}
-            onClick={onNavigate}
-            className="flex items-center gap-2 rounded px-1 py-1 text-xs hover:bg-white/5"
-          >
-            <span className="w-14 shrink-0 truncate font-semibold text-foreground">
-              {row.ticker ?? row.name}
-            </span>
-            {compact ? (
-              <span className="flex-1" />
-            ) : (
-              <span className="min-w-0 flex-1 truncate text-muted">
-                {row.ticker ? row.name : ""}
-              </span>
-            )}
-            <span className="shrink-0 tabular-nums text-foreground">
-              {price(row.sharePrice, row.currencyCode)}
-            </span>
-            <span className="w-14 shrink-0 text-right">
-              <Change value={row.change} />
-            </span>
-          </Link>
-        </li>
-      ))}
-    </ul>
   );
 }
 
@@ -292,6 +181,50 @@ export function SidebarWidget({
               <TickerBody data={ticker} compact={compact} onNavigate={onNavigate} />
             ) : (
               <Empty>{t("stockTicker.empty")}</Empty>
+            ))}
+        </Frame>
+      );
+    }
+    case "sectorHeatmap": {
+      const heatmap = data as SectorHeatmapWidgetData | null;
+      const scope = heatmap?.exchangeName ?? exchangeLabel;
+      return (
+        <Frame
+          {...common}
+          title={scope ? `${t("sectorHeatmap.title")} · ${scope}` : t("sectorHeatmap.title")}
+          href={heatmap ? `/stockmarket/${heatmap.exchange}` : undefined}
+        >
+          {pending ??
+            (heatmap ? (
+              <SectorHeatmapBody data={heatmap} compact={compact} onNavigate={onNavigate} />
+            ) : (
+              <Empty>{t("sectorHeatmap.empty")}</Empty>
+            ))}
+        </Frame>
+      );
+    }
+    case "netWorth": {
+      const wealth = data as NetWorthWidgetData | null;
+      return (
+        <Frame {...common} title={t("netWorth.title")} href="/portfolio">
+          {pending ??
+            (wealth ? (
+              <NetWorthBody data={wealth} compact={compact} />
+            ) : (
+              <Empty>{t("netWorth.empty")}</Empty>
+            ))}
+        </Frame>
+      );
+    }
+    case "commodityBoard": {
+      const board = data as CommodityBoardWidgetData | null;
+      return (
+        <Frame {...common} title={t("commodityBoard.title")} href="/market?tab=commodities">
+          {pending ??
+            (board ? (
+              <CommodityBoardBody data={board} compact={compact} onNavigate={onNavigate} />
+            ) : (
+              <Empty>{t("commodityBoard.empty")}</Empty>
             ))}
         </Frame>
       );
