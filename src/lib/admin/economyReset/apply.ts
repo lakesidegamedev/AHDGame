@@ -21,6 +21,7 @@ import { collectBalances } from "@/lib/ledger/balanceSnapshot";
 import { LEDGER_ENTRIES_COLLECTION, finalizeLedgerEntry } from "@/lib/ledger/emit";
 import { getStartingYearForPreset } from "@/lib/constants/turnTime";
 import { SOVEREIGN_COUPON_CLAIMS_COLLECTION } from "@/lib/banking/fundedSovereignCoupons";
+import { seedOutputTrend } from "@/lib/metricEngine/outputTrend";
 import { MIGRATIONS } from "@/lib/migrations/registry";
 import { runMigrations } from "@/lib/migrations/runner";
 import {
@@ -58,7 +59,10 @@ import {
 
 type Log = (message: string) => void;
 
-/** Sector-derived region caches; the macro state (capitalStock, outputGap) is kept. */
+/**
+ * Sector-derived region caches. The macro level (gdp, capitalStock) is kept;
+ * the output trend is re-seeded in the unset phase.
+ */
 const STATE_SECTOR_UNSET_FIELDS: readonly string[] = Object.freeze([
   "sectorRealizedRevenue",
   "sectorRealizedRevenueTurn",
@@ -70,6 +74,8 @@ const STATE_SECTOR_UNSET_FIELDS: readonly string[] = Object.freeze([
   "corpGrowthInvestmentAnchor",
   "corpGrowthInvestmentTurn",
   "topSectorsCache",
+  // Legacy potential-anchored gap kept for the measured-growth blend.
+  "legacyOutputGap",
 ]);
 
 const WRITE_CHUNK = 1000;
@@ -156,6 +162,11 @@ async function phaseHolders(db: Db, plan: EconomyResetPlan): Promise<void> {
     },
     { $unset: { ...NPP_MONEY_UNSET } }
   );
+  // Executive track records are the margins of companies the reset deletes;
+  // they set NPP CEO pay demands and who is picked as CEO.
+  await db
+    .collection("npps")
+    .updateMany({ ceoTrackRecord: { $exists: true } }, { $unset: { ceoTrackRecord: "" } });
   await db
     .collection("npps")
     .updateMany(
@@ -397,6 +408,12 @@ async function phaseUnset(db: Db, plan: EconomyResetPlan): Promise<void> {
   await db
     .collection("states")
     .updateMany({}, { $unset: Object.fromEntries(STATE_SECTOR_UNSET_FIELDS.map((f) => [f, ""])) });
+  await reseedOutputTrends(db);
+  // Cumulative extraction by the old economy's mines. Kept, it shortens every
+  // reserve's life for plants that never extracted from it.
+  await db
+    .collection("stateResourceCapacity")
+    .updateMany({ extractedUnits: { $exists: true } }, { $unset: { extractedUnits: "" } });
   // Unions are wiped and reseeded vacant, so no character can still cache
   // leadership of a union that no longer exists. Leaving it set would also
   // block them from founding or taking another union (`foundUnion` 409s while
@@ -416,6 +433,53 @@ async function phaseUnset(db: Db, plan: EconomyResetPlan): Promise<void> {
       { "labourEmployment.corporateDemandKnown": true },
       { $set: { "labourEmployment.corporateDemandKnown": false } }
     );
+}
+
+/**
+ * Each region's output trend restarts where a fresh region's does
+ * (`seedOutputTrend`): at its current measured growth, with no gap. The old
+ * economy's trend (up to 13% a year) would otherwise read the rebuilt plants
+ * as a deep slump, which feeds unemployment, migration, inflation and rates.
+ */
+async function reseedOutputTrends(db: Db): Promise<void> {
+  const states = await db
+    .collection<Document>("states")
+    .find({}, { projection: { _id: 1 } })
+    .toArray();
+  const metrics = await db
+    .collection<Document>("macroMetrics")
+    .find(
+      { _id: { $in: states.map((state) => state._id) } },
+      { projection: { "economic.sectorGrowth.value": 1, "economic.gdpGrowth.value": 1 } }
+    )
+    .toArray();
+  const growthById = new Map<string, number>();
+  for (const m of metrics) {
+    const growth = m.economic?.sectorGrowth?.value ?? m.economic?.gdpGrowth?.value;
+    if (typeof growth === "number" && Number.isFinite(growth))
+      growthById.set(String(m._id), growth);
+  }
+  await bulk(
+    db,
+    "states",
+    states.map((state) => {
+      const growth = growthById.get(String(state._id));
+      if (growth === undefined)
+        return {
+          updateOne: {
+            filter: { _id: state._id },
+            update: { $set: { outputGap: 0 }, $unset: { outputTrendGrowth: "" } },
+          },
+        };
+      const trend = seedOutputTrend(growth);
+      return {
+        updateOne: {
+          filter: { _id: state._id },
+          update: { $set: { outputGap: trend.gap, outputTrendGrowth: trend.trendGrowth } },
+        },
+      };
+    })
+  );
 }
 
 /**

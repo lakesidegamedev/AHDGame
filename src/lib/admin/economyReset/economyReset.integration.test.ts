@@ -25,6 +25,9 @@ let freshUnions = 0;
 let sovereignFaceBefore = 0;
 let heldBondId: ObjectId;
 let labourRegionId: string;
+let trendStateId: string;
+let trackRecordNppId: unknown;
+let resourceRowId: unknown;
 let basePriceBefore = 0;
 let plan: EconomyResetPlan;
 let digest: string;
@@ -67,6 +70,7 @@ beforeAll(async () => {
         marketRecoveryStage: 4,
         commodityFixStage: 6,
         marketGovernorCap: 0.3,
+        marketGovernorRampTurns: 240,
         marketGovernorGlideStartTurn: 203,
         marketGovernorGlideMode: "proportional",
         producerHouseholdIncomeFloor: 95_000_000,
@@ -97,6 +101,7 @@ beforeAll(async () => {
         chairCharacterName: "Test Player",
         rateHistory: [{ previousRate: 5, newRate: 6, changedBy: "x", changedAt: new Date() }],
         forexRevenue: 1234,
+        householdSavingsLiability: 5_413_734_632,
       },
     }
   );
@@ -278,6 +283,55 @@ beforeAll(async () => {
     }
   );
 
+  // Old-economy leftovers on kept rows: a region's output trend learned from
+  // the deleted plants, an NPP executive's record at deleted companies, an
+  // orphaned union pension and cumulative extraction by deleted mines.
+  const stateIds = new Set((await all("states")).map((row) => String(row._id)));
+  const trendRegion = (await all("macroMetrics")).find((row) => stateIds.has(String(row._id)))!;
+  trendStateId = String(trendRegion._id);
+  await db
+    .collection("macroMetrics")
+    .updateOne({ _id: trendStateId as never }, { $set: { "economic.sectorGrowth.value": 1.25 } });
+  await db
+    .collection("states")
+    .updateOne(
+      { _id: trendStateId as never },
+      { $set: { outputTrendGrowth: 12.8, outputGap: -5.07, legacyOutputGap: 2.1 } }
+    );
+  const npp = (await db.collection("npps").findOne({}))!;
+  trackRecordNppId = npp._id;
+  await db.collection("npps").updateOne(
+    { _id: npp._id },
+    {
+      $set: {
+        ceoTrackRecord: { real_estate: { turns: 336, relMarginPp: -12.02, lastTurn: 504 } },
+      },
+    }
+  );
+  await db.collection("pensionSchemes").insertOne({
+    unionId: playerUnionId,
+    countryId: "US",
+    assetsAnchor: 0,
+    liabilitiesAnchor: 1_924_245,
+    benefitsInPaymentAnchor: 1_854_129,
+    lastBenefitCutFraction: 1,
+  });
+  const resource = await db.collection("stateResourceCapacity").findOne({});
+  if (resource) {
+    resourceRowId = resource._id;
+    await db
+      .collection("stateResourceCapacity")
+      .updateOne({ _id: resource._id }, { $set: { extractedUnits: 58_840 } });
+  } else {
+    resourceRowId = (
+      await db.collection("stateResourceCapacity").insertOne({
+        stateId: "CA",
+        resource: "oil",
+        extractedUnits: 58_840,
+      })
+    ).insertedId;
+  }
+
   for (const name of [
     "federalBudget",
     "enactedLaws",
@@ -368,6 +422,23 @@ describe("economy-only reset end to end", () => {
     expect(region.labourEmployment.backgroundEmployed).toBe(550);
   });
 
+  it("clears the old economy's leftovers on kept rows", async () => {
+    const state = (await db.collection("states").findOne({ _id: trendStateId as never }))!;
+    // The trend restarts at the region's current measured growth, with no gap.
+    expect(state.outputTrendGrowth).toBe(1.25);
+    expect(state.outputGap).toBe(0);
+    expect(state.legacyOutputGap).toBeUndefined();
+    const npp = (await db.collection("npps").findOne({ _id: trackRecordNppId as never }))!;
+    expect(npp.ceoTrackRecord).toBeUndefined();
+    expect(await db.collection("pensionSchemes").countDocuments({})).toBe(0);
+    const resource = (await db
+      .collection("stateResourceCapacity")
+      .findOne({ _id: resourceRowId as never }))!;
+    expect(resource.extractedUnits).toBeUndefined();
+    const bank = (await db.collection("centralBanks").findOne({ countryId: "US" }))!;
+    expect(bank.householdSavingsLiability).toBe(0);
+  });
+
   it("starts the rebuilt plants from fresh-world configuration with no legacy steering", async () => {
     const config = (await db.collection("gameConfig").findOne({ _id: "default" as never }))!;
     for (const name of [
@@ -384,6 +455,7 @@ describe("economy-only reset end to end", () => {
       expect(config[name], name).toBeUndefined();
     expect(config).toMatchObject({
       commodityFixStage: 6,
+      marketGovernorRampTurns: 1,
       marketSystemMode: "plants",
       ledgerShadow: true,
       centralBankPricingPhaseIn: {},
