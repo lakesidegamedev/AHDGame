@@ -109,6 +109,10 @@ export type ProducerPhysicalEnv = Pick<
   householdIncomeFloor?: number;
   /** gameConfig.producerStockCover: turns of recent sales a seller may carry before marking down (0 or absent = off). */
   stockCoverTurns?: number;
+  /** gameConfig.producerCreditRunTurns: credit cap in turns of wage and site bills (absent = default, 0 = off). */
+  creditRunTurns?: number;
+  /** gameConfig.producerCreditStuckTurns: turns without shrinking payables before credit stops (absent = default). */
+  creditStuckTurns?: number;
   /** gameConfig.producerClearingReferenceStage: >= 1 floors a buyer's reference at the last funded clearing price of a reachable good. */
   clearingReferenceStage?: number;
   /** gameConfig.producerFundedBookStage: >= 1 prices the funded market from its own orders and cross-border fills. */
