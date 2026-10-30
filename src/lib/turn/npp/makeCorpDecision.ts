@@ -74,6 +74,7 @@ import {
 import { glutStaggerEligible } from "@/lib/turn/npp/cohort";
 import { foundingUnmetSizing, isMarketSaturated } from "@/lib/turn/npp/rules/marketSaturation";
 import {
+  fundedSellThrough,
   nppDemandThrottle,
   nppOperatingCapacityUnits,
 } from "@/lib/turn/npp/rules/fundedSellThrough";
@@ -479,6 +480,11 @@ export function makeNppCorpDecision(
       .filter(
         (sp) =>
           (sp.sector.lowFillTurns ?? 0) >= STRANDED_DIVEST_TURNS &&
+          // lowFillTurns counts the legacy clearing shadow. On a funded world a
+          // plant is stranded only if its own settlement left output unsold:
+          // deleting a sold-out plant destroys capacity in a short market.
+          (!ctx.fundedWorldEpoch ||
+            (fundedSellThrough(sp.sector, ctx.fundedWorldEpoch) ?? 1) < 0.5) &&
           !isCoreSector(sp.sector) &&
           !hasProtectedConstructionProperty(sp.sector) &&
           !isNppDivestmentProtected(sp.sector, ctx.turn) &&
