@@ -88,6 +88,8 @@ import {
   PLANT_CREW_SUSTAINED_GLUT_THROTTLE,
 } from "@/lib/constants/capacityEconomy";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
+import { applyPlantChange } from "@/lib/corporations/wholePlants/rules";
+import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import {
   inputBasketCostIndex,
   recordCostPlusBasis,
@@ -468,6 +470,7 @@ export function processSector(
     mothballed,
     activeFraction,
     plantLedger,
+    plantWearUnits,
     plantsOwnedCapacity,
     capacityBookAnchor,
     plantsMixPrice,
@@ -498,6 +501,7 @@ export function processSector(
     governorGlide: market.governorGlide,
     embargoLegacyMothball,
     recessionCapacityFactor: lookups.recessionCapacityFactorByCountry?.get(sector.countryId ?? ""),
+    wholePlants: lookups.wholePlantsOn === true,
   });
   // (moved to computePlantsCapacity: plant ledger + owned-capacity advance)
   // (moved to computePlantsCapacity: P5 paid basis of capacity)
@@ -526,7 +530,7 @@ export function processSector(
     effectiveMargin,
     sprawlMod,
     dominanceMarginPenalty,
-    managementOverheadMod,
+    fundedSizeLegs,
   } = accumulateMarginModifiers({
     corp,
     sector,
@@ -721,11 +725,35 @@ export function processSector(
       corp.ceoType === "npp" && lookups.engineSixCountries?.has(corp.countryId) === true,
   });
   const retainedCapacityShare = 1 - idleRetirement.retireFraction;
-  const persistedOwnedCapacity = plantsOwnedCapacity * retainedCapacityShare;
+  // Whole plants: retirement is wear too, and it is the one path that may take
+  // the last plant (a plant nobody buys from closes).
+  const idleWholePlants =
+    plantWearUnits != null && plantLedger
+      ? applyPlantChange(
+          {
+            capitalStock: plantsOwnedCapacity,
+            plantUnitRemainder: plantLedger.plantUnitRemainder,
+            plantWearUnits,
+          },
+          plantSizeForSector(sector),
+          {
+            lossUnits: plantsOwnedCapacity * idleRetirement.retireFraction,
+            protectLastPlant: false,
+          }
+        )
+      : null;
+  const persistedOwnedCapacity = idleWholePlants
+    ? idleWholePlants.capitalStock
+    : plantsOwnedCapacity * retainedCapacityShare;
   const idleCapacityRetiredUnits = plantsOwnedCapacity - persistedOwnedCapacity;
-  const persistedCapacityBookAnchor = capacityBookAnchor * retainedCapacityShare;
-  const persistedPlantLedger =
-    idleRetirement.retireFraction > 0
+  const persistedCapacityBookAnchor =
+    capacityBookAnchor * (idleWholePlants ? idleWholePlants.bookRetention : retainedCapacityShare);
+  const persistedPlantLedger = idleWholePlants
+    ? {
+        plantCount: idleWholePlants.plantCount,
+        plantUnitRemainder: idleWholePlants.plantUnitRemainder,
+      }
+    : idleRetirement.retireFraction > 0
       ? seedPlantLedger(sector, persistedOwnedCapacity)
       : plantLedger;
   // Phased stock-market boost, phase A: lift realized operating revenue AFTER
@@ -864,7 +892,13 @@ export function processSector(
   const maintenance = maintenanceBeforeSpecialization - operatingSaving;
   // ─── Growth cost (on realized revenue) + regulatory burden ────────────────
   // Pure computation in `sectorTurn/sectorCosts.ts`; names are unchanged.
-  const { hourlyGrowthCost, regulatoryBurden } = computeGrowthAndRegulatory({
+  const {
+    hourlyGrowthCost,
+    regulatoryBurden,
+    fundedRegulatoryBurdenRate,
+    nameplateHourlyGrowthCost,
+    nominalHourlyRevenue,
+  } = computeGrowthAndRegulatory({
     corp,
     newGrowthCost,
     preFlipNameplateRevenue,
@@ -1227,6 +1261,7 @@ export function processSector(
       sectorUpdate.capacityBookAnchor = persistedCapacityBookAnchor;
       sectorUpdate.plantCount = persistedPlantLedger?.plantCount ?? 0;
       sectorUpdate.plantUnitRemainder = persistedPlantLedger?.plantUnitRemainder ?? 0;
+      if (idleWholePlants) sectorUpdate.plantWearUnits = idleWholePlants.plantWearUnits;
     }
   }
   // Plants ramp anchor (stamped once, on the flip turn).
@@ -1580,6 +1615,7 @@ export function processSector(
     /** P3a: ₳ of paid-but-not-yet-delivered build orders after this turn. */
     constructionInProgressAnchor,
     npvContribution: market.capitalEnabled ? Math.round(capitalBookAnchor) : sectorNPV,
+    ...(plantsMixPrice > 0 ? { outputMixPriceAnchor: plantsMixPrice } : {}),
     // P3.5: under plants these two modifiers no longer drive cost (input costs
     // are billed physically, surplus is priced on the revenue side). Reporting
     // them as 0 keeps the corp margin diagnostic honest about what actually
@@ -1593,13 +1629,19 @@ export function processSector(
     stateMetricsLegacyTotal: stateMetricMargin.legacyTotal,
     hourlyGrowthCost,
     regulatoryBurden: embargoLegacyMothball ? 0 : regulatoryBurden,
+    // Funded turns charge the size and regulatory legs on the revenue the plant
+    // sold, with the plants fade complete (dominance is tolled at build time).
     fundedSizeCostPp: fundedSizeCostPp({
       stateOwned: isStateOwned(corp),
       overheadStage: lookups.fundedOverheadStage ?? 0,
-      overheadMod: managementOverheadMod,
-      sprawlMod,
-      dominancePenalty: dominanceMarginPenalty,
+      overheadMod: fundedSizeLegs.overhead,
+      sprawlMod: fundedSizeLegs.sprawl,
+      dominancePenalty: fundedSizeLegs.dominance,
     }),
+    fundedRegulatoryBurdenRate: embargoLegacyMothball ? 0 : fundedRegulatoryBurdenRate,
+    fundedDominancePenaltyPp: fundedSizeLegs.dominance,
+    nameplateHourlyGrowthCost: embargoLegacyMothball ? 0 : nameplateHourlyGrowthCost,
+    nameplateHourlyRevenue: nominalHourlyRevenue,
     // O1c: paid growth cost this turn (0 only under legacy mothball — froze, paid
     // nothing; the trade-exposure model keeps investing on the domestic remainder).
     growthInvestmentAnchor: embargoLegacyMothball ? 0 : hourlyGrowthCost,

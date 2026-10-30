@@ -37,6 +37,9 @@ import type { Corporation, CorporateSector } from "@/lib/db/types";
 import type { UnownedSector } from "@/lib/db/types/unownedSector";
 import type { NppMarketEntryDiagnostic } from "@/lib/db/types/marketFormation";
 import type { CorporationType } from "@/lib/constants/corporations";
+import { getOperatingSectorType, SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
+import { foundingRecipeFor, type FoundingRecipeWorld } from "@/lib/turn/npp/foundingRecipeChoice";
+import { recipePeakOutputRatio } from "@/lib/turn/npp/rules/foundingRecipe";
 
 export interface NppEntryEvaluationInput {
   corp: Corporation;
@@ -68,6 +71,11 @@ export interface NppEntryEvaluationInput {
   retailExpansionPaused?: boolean;
   /** Per-turn founding cap already reached before this decision. */
   entryCapReached: boolean;
+  /**
+   * Funded producer market only: the entrant builds the recipe whose outputs
+   * are short (rules/foundingRecipe). Absent keeps the standard recipe.
+   */
+  fundedRecipeWorld?: FoundingRecipeWorld;
 }
 
 export interface NppEntryEvaluation {
@@ -117,8 +125,31 @@ export function evaluateNppEntry(input: NppEntryEvaluationInput): NppEntryEvalua
   const {
     candidatePriceRatioOf: entryCandidatePriceRatioOf,
     interventionTargetCommodity,
-    foundingStrategyId,
+    foundingStrategyId: fragileStrategyId,
   } = resolveFragileEntryTreatment(entryCandidate, placementSignals, priceRatioOf);
+  // The fragile-market treatment keeps priority; otherwise a funded world
+  // builds the candidate lane's shortest recipe.
+  const candidateLane = entryCandidate
+    ? getOperatingSectorType(
+        entryCandidate.sectorType,
+        entryCandidate.industryModel,
+        entryCandidate.mediaDiscriminator
+      )
+    : null;
+  const foundingStrategyId =
+    fragileStrategyId ??
+    (entryCandidate && candidateLane && input.fundedRecipeWorld
+      ? foundingRecipeFor(
+          candidateLane,
+          entryCandidate.countryId,
+          entryCandidatePriceRatioOf,
+          input.fundedRecipeWorld
+        )
+      : undefined);
+  const foundingRecipe =
+    foundingStrategyId && candidateLane && !fragileStrategyId
+      ? SECTOR_STRATEGIES[candidateLane]?.find((r) => r.id === foundingStrategyId)
+      : undefined;
   const entryCandidateShortageScore = entryCandidate
     ? Math.max(
         sectorPeakShortageScore(
@@ -128,6 +159,14 @@ export function evaluateNppEntry(input: NppEntryEvaluationInput): NppEntryEvalua
         ),
         interventionTargetCommodity
           ? (entryCandidatePriceRatioOf(interventionTargetCommodity, entryCandidate.countryId) ?? 0)
+          : 0,
+        // The recipe it will build is what the market sees, not the standard mix.
+        foundingRecipe
+          ? recipePeakOutputRatio(
+              foundingRecipe,
+              entryCandidate.countryId,
+              entryCandidatePriceRatioOf
+            )
           : 0
       )
     : undefined;

@@ -144,6 +144,12 @@ export interface MarginStackResult {
   stateMetricMargin: ReturnType<typeof computeStateMetricMarginModifier>;
   typeSwitchMod: number;
   dominanceMarginPenalty: number;
+  /**
+   * Size legs a funded producer turn charges: the same cap, with the plants
+   * fade complete. The ramp only keeps the legacy flip turn identical; a
+   * funded sector has no flip to match, so it pays the running share alone.
+   */
+  fundedSizeLegs: { sprawl: number; overhead: number; dominance: number };
   negativeProductionMarginPenalty: number;
   expropriationRiskMod: number;
   economicModelAlignmentMod: number;
@@ -434,6 +440,20 @@ export function accumulateMarginModifiers(input: MarginStackInput): MarginStackR
   const sprawlMod = cappedSize.sprawl;
   const managementOverheadMod = cappedSize.overhead;
   const dominanceMarginPenalty = cappedSize.dominance;
+  const fundedSizeLegs = capSizeCosts({
+    sprawl: rawSprawlMod,
+    overhead: rawManagementOverheadMod,
+    dominance: isStateOwned(corp)
+      ? 0
+      : appliedDominanceMarginPenalty({
+          localSharePct: dominanceShares.local,
+          nationalSharePct: dominanceShares.national,
+          shield: techEffects.dominanceShield,
+          plantsEnabled,
+          plantsRampLambda: 1,
+          runningScale: running?.scale ?? 0,
+        }),
+  });
   // Sustained-negative-production margin penalty: counter-driven, see
   // `getSustainedNegativeProductionPenalty`. Punishes long-term parking at
   // negative production levels without preventing tactical short-term use.
@@ -559,6 +579,7 @@ export function accumulateMarginModifiers(input: MarginStackInput): MarginStackR
     stateMetricMargin,
     typeSwitchMod,
     dominanceMarginPenalty,
+    fundedSizeLegs,
     negativeProductionMarginPenalty,
     expropriationRiskMod,
     economicModelAlignmentMod,

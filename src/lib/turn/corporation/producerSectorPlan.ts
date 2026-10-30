@@ -1,6 +1,7 @@
 /** Map a reconciled sector and explicit physical/cost facts into the one funded market. */
 import { COMMODITY_TYPES, type CommodityType } from "@/lib/constants/commodities";
 import type { CorporateSector } from "@/lib/db/types";
+import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import { activeCapacityFraction } from "@/lib/corporations/investment/rules";
 import { isStorable } from "@/lib/market/inventory";
 import { advanceProducerCapacity } from "@/lib/market/producerMarket/capacityRules";
@@ -24,6 +25,8 @@ type SectorFacts = Pick<
   | "producerCapacity"
   | "producerInventory"
   | "producerQuotes"
+  | "plantUnitRemainder"
+  | "plantWearUnits"
 >;
 
 /** Preparation error for a sector with no physical stock yet; it produces nothing. */
@@ -51,6 +54,8 @@ export function prepareProducerSector(input: {
   otherOperatingCost: number;
   labourRecipientAccountId: string;
   operatingRecipientAccountId: string;
+  /** gameConfig.wholePlantsStage on: capacity moves in whole plants. */
+  wholePlants?: boolean;
 }): { plan: ProductionPlan; target: ProducerSectorTarget } {
   const { sector } = input;
   const generation = sector.producerCapacity;
@@ -82,6 +87,15 @@ export function prepareProducerSector(input: {
       ownedDailyUnits: sector.capitalStock,
       paidBookAnchor: sector.capacityBookAnchor,
       buildQueue: sector.buildQueue,
+      ...(input.wholePlants
+        ? {
+            wholePlants: {
+              plantUnits: plantSizeForSector(sector),
+              creditUnits: Math.max(0, sector.plantUnitRemainder ?? 0),
+              wearUnits: Math.max(0, sector.plantWearUnits ?? 0),
+            },
+          }
+        : {}),
     },
     operatingRecipeRatio: input.operatingRecipeRatio,
     recessionCapacityFactor: input.recessionCapacityFactor,

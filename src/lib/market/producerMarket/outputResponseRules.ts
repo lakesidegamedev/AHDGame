@@ -52,6 +52,8 @@ export interface PriorReceipt {
    * Absent on receipts settled before it was recorded.
    */
   plannedRunShare?: number;
+  /** Cold upkeep on idle capacity inside the site bill; owed whether or not the line runs. */
+  idleOperatingCost?: number;
 }
 
 /** One product row of a settled receipt, as the run signals read it. */
@@ -226,8 +228,13 @@ export function demandPlanRunShare(
     // the floor. The plan is held only while the run paid its running costs, so
     // a starved plant paying a full crew for a cut output falls back to what it
     // made.
+    // Idle upkeep is owed whether or not the line runs, so it does not count
+    // against holding the plan: an input-starved line pays it on a tiny output.
     const planned = Math.min(1, finite(prior.plannedRunShare ?? 0));
-    const base = contributionPerUnit >= 0 ? Math.max(run, planned) : run;
+    const runContribution =
+      contributionPerUnit +
+      Math.max(0, finite(prior.idleOperatingCost ?? 0)) / Math.max(produced, sold);
+    const base = runContribution >= 0 ? Math.max(run, planned) : run;
     return Math.min(1, base * soldOutGrowth);
   }
   const expectedSales = sold * (1 + DEMAND_PLAN_PROBE);

@@ -265,6 +265,25 @@ describe("a sold-out line short of inputs holds its plan", () => {
     );
   });
 
+  it("idle upkeep on the unrun capacity does not stop a starved line holding its plan", () => {
+    // Site 400 of which 350 is cold upkeep on idle capacity: running cost
+    // without it is 100 + 100 + 50 = 250 under revenue 400.
+    const billed = starved({ otherOperatingPaid: 400, idleOperatingCost: 350 });
+    expect(demandPlanRunShare(billed)).toBeCloseTo(0.5 * (1 + OUTPUT_GROW_STEP), 12);
+    // The same bill with no idle split reads as a loss and falls back to what it made.
+    expect(demandPlanRunShare(starved({ otherOperatingPaid: 400 }))).toBeCloseTo(
+      0.2 * (1 + OUTPUT_GROW_STEP),
+      12
+    );
+  });
+
+  it("idle upkeep does not lift the materials brake", () => {
+    expect(demandPlanRunShare(starved({ revenue: 50, idleOperatingCost: 1000 }))).toBeCloseTo(
+      0.2 * (1 - OUTPUT_CUT_STEP),
+      12
+    );
+  });
+
   it("a line selling under its materials still cuts from what it made", () => {
     expect(demandPlanRunShare(starved({ revenue: 50 }))).toBeCloseTo(
       0.2 * (1 - OUTPUT_CUT_STEP),

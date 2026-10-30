@@ -93,6 +93,7 @@ import {
   type FundedReceipt,
 } from "@/lib/market/producerMarket/fundedSectorRules";
 import { processSector, type SectorTurnEnv } from "./sectorTurn";
+import { fundedSectorValuation } from "./fundedSectorValuation";
 import {
   perTurnIssuerBondInterestExpense,
   perTurnBondCouponIncomeAsHolder,
@@ -369,6 +370,8 @@ export function processSectors(
     let corpWageWeighted = 0;
     let corpWageWeight = 0;
     let corpSectorNPV = 0; // Sum of sector NPVs for balance sheet price
+    // Funded valuation: units sold at base prices, for the real growth premium.
+    let corpRealOutput = 0;
     // Diagnostic accumulators (revenue-weighted)
     let diagWeightedMargin = 0;
     let diagWeightedCommodityInput = 0;
@@ -420,7 +423,21 @@ export function processSectors(
       }
       corpGrowthNumer += (r.newCurrentGrowthRate / 100) * r.hourlyRevenue;
       corpGrowthDenom += r.hourlyRevenue;
-      corpSectorNPV += r.npvContribution;
+      // Funded valuation values the sector on what the settlement says it
+      // earned, not on the legacy nameplate P&L run beside it.
+      const fundedValue =
+        fundedReceipt && (lookups.fundedValuationStage ?? 0) >= 1
+          ? fundedSectorValuation({
+              sector,
+              receipt: fundedReceipt,
+              result: r,
+              currentTurn,
+              currentYear,
+              eraUnitScale: lookups.eraUnitScale,
+            })
+          : null;
+      corpSectorNPV += fundedValue ? fundedValue.valueAnchor : r.npvContribution;
+      corpRealOutput += fundedValue?.realOutputAnchor ?? 0;
 
       // O1c: paid growth cost → the operating state's capital investment.
       if (r.growthInvestmentAnchor > 0) {
@@ -1344,6 +1361,9 @@ export function processSectors(
       actualSharePrice: placeholderSharePrice,
       totalShares,
       sectorNPV: corpSectorNPV,
+      ...((lookups.fundedValuationStage ?? 0) >= 1 && funded
+        ? { realOutputAnchor: corpRealOutput }
+        : {}),
       creditComposite: creditPack.creditRating.compositeScore,
       creditRating: creditPack.creditRating.rating,
       marginDiagnostic:

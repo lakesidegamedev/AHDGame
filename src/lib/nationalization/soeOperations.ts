@@ -3,6 +3,8 @@
  * to state metrics and back operating losses from the treasury. Builders are
  * pure (testable without DB); `processSoeOperations` orchestrates the writes.
  */
+import { floorUnitsToPlants } from "@/lib/corporations/wholePlants/rules";
+import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import type { Db, AnyBulkWriteOperation } from "mongodb";
 import type {
   Corporation,
@@ -25,7 +27,8 @@ import { sumCorporateSectorConstructionInProgress } from "@/lib/bonds/corporateC
 import type { CorpSnapshot, SoeBackingSnapshot } from "@/lib/turn/corporation/types";
 import type { ActionAuditInput } from "@/lib/db/types/actionAuditLog";
 import { isStateOwned } from "./nationalCorporation";
-import { plantCapacityDeltaPipeline } from "@/lib/corporations/plantLedger";
+import { plantChangePipeline } from "@/lib/corporations/plantLedger";
+import { loadWholePlantsOn } from "@/lib/corporations/wholePlants/stage";
 import { findMergedRegionMetricsMany } from "@/lib/macroMetrics/merge";
 import { isMacroMetricPath } from "@/lib/macroMetrics/paths";
 import { boardDeltaForLegacyEffect } from "@/lib/politicalLegislation/legacyEffectBridge";
@@ -964,11 +967,14 @@ async function applyStateCapexGrants(
   if (grantByCountry.size === 0) return;
   const cashLedger = await treasuryLedger();
   const turn = cashLedger.context?.turn ?? 0;
+  const wholePlants = await loadWholePlantsOn(db);
   const capacityUpdate = (buy: SoeCapexSectorBuy) =>
-    plantCapacityDeltaPipeline(buy, buy.unitsAdded, {
-      capacityBookAnchor: buy.nextBookAnchor,
-      updatedAt: now,
-    });
+    plantChangePipeline(
+      buy,
+      buy.unitsAdded,
+      { capacityBookAnchor: buy.nextBookAnchor, updatedAt: now },
+      { wholePlants }
+    );
 
   if (cashLedger.context?.treasuryCashLedgerEnabled) {
     // Funded cash: each country's capacity rides its Treasury debit's receipt,
@@ -1131,6 +1137,7 @@ async function applyStateCapexGrowth(
     budgetAnchor
   );
   if (orders.length === 0) return;
+  const wholePlantsGrowth = await loadWholePlantsOn(db);
 
   const outcome = await settleFundedSoeCapexGrant(db, {
     countryId,
@@ -1142,13 +1149,19 @@ async function applyStateCapexGrowth(
     key: `soe-capex-growth:${turn}:${countryId}`,
     capacity: orders.map((o) => {
       const sector = byId.get(o.sectorId)!;
+      // Whole plants: the grant buys whole plants, at least one, and the order
+      // keeps the cash it was granted (per-plant cost rises when rounded up).
+      const plantUnits = plantSizeForSector(sector);
       const buildOrder: SectorBuildOrder = {
-        unitsOrdered: o.units,
+        unitsOrdered: wholePlantsGrowth
+          ? Math.max(plantUnits, floorUnitsToPlants(o.units, plantUnits))
+          : o.units,
         strategyId: sector.strategyId ?? null,
         costPaidAnchor: o.costAnchor,
         startTurn: turn,
         onlineTurn: turn + Math.max(1, CAPACITY_BUILD_TURNS(sector.sectorType)),
         smooth: true,
+        ...(wholePlantsGrowth ? { plantUnits } : {}),
       };
       return {
         collection: "corporateSectors",

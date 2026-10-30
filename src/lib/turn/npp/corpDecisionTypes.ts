@@ -80,6 +80,17 @@ export interface NppCorpDecisionContext {
    * absent before the funded market or outside a funded world.
    */
   transitionFirstFundedTurn?: number;
+  /**
+   * Funded market only: era and tech facts for choosing an entrant's recipe
+   * (rules/foundingRecipe). Absent keeps entrants on the standard recipe.
+   */
+  fundedRecipeWorld?: import("./foundingRecipeChoice").FoundingRecipeWorld;
+  /**
+   * World epoch when the funded producer market runs; absent on a legacy world.
+   * Growth and mothball decisions read funded sell-through under it
+   * (rules/fundedSellThrough).
+   */
+  fundedWorldEpoch?: string;
   /** Per-country allowance of capacity that may start converting this turn; absent = unpaced. */
   conversionBudgetOf?: (
     countryId: string
@@ -199,6 +210,8 @@ export interface NppCorpDecision {
 /** World facts needed to price founding builds through the player-equivalent path. */
 export interface NppPlantsContext {
   enabled: boolean;
+  /** gameConfig.wholePlantsStage on: builds are sized in whole plants. */
+  wholePlants?: boolean;
   year: number;
   eraUnitScale: number;
   preset: string | undefined;

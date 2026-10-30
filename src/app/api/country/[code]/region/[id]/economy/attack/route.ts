@@ -36,6 +36,9 @@ import {
   operatingSectorIdentity,
 } from "@/lib/constants/corporations";
 
+import { loadWholePlantsOn } from "@/lib/corporations/wholePlants/stage";
+import { wholePlantsIn } from "@/lib/corporations/wholePlants/rules";
+import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import { z } from "zod";
 import { logWireEvent, wireHeadlineSectorCaptured } from "@/lib/wireEvent";
 import { logEconomicAction } from "@/lib/corporations/economicActionLog";
@@ -310,7 +313,42 @@ export async function POST(request: Request, { params }: RouteParams) {
       UNOWNED_CAPTURE_BONUS_MULTIPLIER *
       strengthMultiplier;
     // Cap to the unowned amount (large splits can't exceed available market)
-    const actualCapture = Math.min(Math.round(rawCapture), unowned);
+    const cappedCapture = Math.min(Math.round(rawCapture), unowned);
+    // Which own sector the captured capacity lands in (decides the mix and plant size).
+    const ownSectorForCapture = existingSectors.find(
+      (s) => s.corporationId.toString() === corporation._id.toString()
+    );
+    const captureRescale = plantsEnabled
+      ? capacityRescaleRatio(
+          sectorType,
+          UNOWNED_HEADROOM_DEFAULT_STRATEGY_ID,
+          ownSectorForCapture?.strategyId,
+          industryModel,
+          mediaDiscriminator
+        )
+      : 1;
+    // Whole plants: a capture takes whole plants only and is priced for them.
+    // A capture too small for one plant is refused rather than handing over a
+    // part-plant.
+    const wholePlants = plantsEnabled && (await loadWholePlantsOn(db));
+    const capturePlantUnits = plantSizeForSector({
+      sectorType,
+      industryModel,
+      mediaDiscriminator,
+      strategyId: ownSectorForCapture?.strategyId ?? null,
+    });
+    const capturedPlants = wholePlants
+      ? wholePlantsIn(cappedCapture * unitsPerAnchor * captureRescale, capturePlantUnits)
+      : 0;
+    if (wholePlants && capturedPlants === 0) {
+      return errorResponse(
+        400,
+        "This split would not capture a whole plant. Plants change hands whole; try a stronger split."
+      );
+    }
+    const actualCapture = wholePlants
+      ? (capturedPlants * capturePlantUnits) / (unitsPerAnchor * captureRescale)
+      : cappedCapture;
 
     // Base cost = fraction of the unowned sector size; scaled by strength only (size removed)
     //
@@ -404,19 +442,21 @@ export async function POST(request: Request, { params }: RouteParams) {
     // strategy), so convert to the buyer's mix keeping the ₳ nameplate
     // invariant — the same D9 ratio a retool applies.
     const capturedPoolUnits = plantsEnabled ? actualCapture * unitsPerAnchor : 0;
-    const capitalStockDelta = plantsEnabled
-      ? Math.round(
-          capturedPoolUnits *
-            capacityRescaleRatio(
-              sectorType,
-              UNOWNED_HEADROOM_DEFAULT_STRATEGY_ID,
-              existingOwnSector?.strategyId,
-              industryModel,
-              mediaDiscriminator
-            ) *
-            100
-        ) / 100
-      : 0;
+    const capitalStockDelta = wholePlants
+      ? capturedPlants * capturePlantUnits
+      : plantsEnabled
+        ? Math.round(
+            capturedPoolUnits *
+              capacityRescaleRatio(
+                sectorType,
+                UNOWNED_HEADROOM_DEFAULT_STRATEGY_ID,
+                existingOwnSector?.strategyId,
+                industryModel,
+                mediaDiscriminator
+              ) *
+              100
+          ) / 100
+        : 0;
 
     // Which sector the captured capacity landed in, for the capex ledger leg
     // below. Null only if the insert lost a duplicate-key race and the recovery
@@ -454,6 +494,9 @@ export async function POST(request: Request, { params }: RouteParams) {
         ...(plantsEnabled
           ? {
               capitalStock: capitalStockDelta,
+              ...(wholePlants
+                ? { plantCount: capturedPlants, plantUnitRemainder: 0, plantWearUnits: 0 }
+                : {}),
               plantsStartTurn: gameState?.currentTurn ?? 0,
               // Built under plants by a player: no flip to smooth, so it earns
               // the market from its first turn.

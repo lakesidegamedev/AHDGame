@@ -3962,3 +3962,77 @@ describe("funded producer turn", () => {
     expect(inc(unpaid) - inc(paid)).toBeCloseTo(30);
   });
 });
+
+describe("funded valuation (fundedValuationStage)", () => {
+  const ELECTRONICS_ONLY = {
+    growthRate: 1,
+    profitMargin: 0,
+    isTransitioning: false,
+    supply: { electronics: 1 },
+  } as unknown as ReturnType<typeof getEffectiveStrategyRates>;
+  const run = (opts: {
+    stage: number;
+    priceRatio: number;
+    receipt: { revenue: number; profit: number; producedUnits: number; soldUnits: number };
+  }) => {
+    const corp = makeCorp();
+    const sector = makeSector(corp._id, {
+      revenue: 24_000,
+      profitMargin: 50,
+      capacityBookAnchor: 500_000,
+    } as Partial<CorporateSector>);
+    const lookups = baseLookups([corp], [sector]);
+    lookups.fundedValuationStage = opts.stage;
+    lookups.priceRatioByCommodity = new Map([["electronics", opts.priceRatio]]);
+    vi.mocked(getEffectiveStrategyRates).mockReturnValueOnce(ELECTRONICS_ONLY);
+    const result = processSectors(
+      lookups,
+      1,
+      new Date(),
+      false,
+      undefined,
+      undefined,
+      { ...MARKET_DISABLED, realizationEnabled: true },
+      false,
+      false,
+      false,
+      new Set(),
+      false,
+      {
+        receiptsBySectorId: new Map([[sector._id.toString(), opts.receipt]]),
+        settledProfitByCorp: new Map([[corp._id.toString(), opts.receipt.profit]]),
+      }
+    );
+    return result.corpSnapshots[0];
+  };
+  const noSales = { revenue: 0, profit: -10, producedUnits: 0, soldUnits: 0 };
+
+  it("off: keeps the legacy nameplate valuation, which climbs with the output price", () => {
+    const flat = run({ stage: 0, priceRatio: 1, receipt: noSales });
+    const short = run({ stage: 0, priceRatio: 2.25, receipt: noSales });
+    expect(short.sectorNPV).toBeGreaterThan(flat.sectorNPV);
+    expect(flat.realOutputAnchor).toBeUndefined();
+  });
+
+  it("on: a plant with nameplate but no sales gains nothing from a price climb", () => {
+    const flat = run({ stage: 1, priceRatio: 1, receipt: noSales });
+    const short = run({ stage: 1, priceRatio: 2.25, receipt: noSales });
+    // Worth the paid basis of its capacity, at any price.
+    expect(flat.sectorNPV).toBe(500_000);
+    expect(short.sectorNPV).toBe(500_000);
+    expect(short.realOutputAnchor).toBe(0);
+  });
+
+  it("on: a plant whose settled earnings grow is worth more", () => {
+    const sells = (profit: number) =>
+      run({
+        stage: 1,
+        priceRatio: 1,
+        receipt: { revenue: 20_000, profit, producedUnits: 5, soldUnits: 5 },
+      });
+    const before = sells(4_000);
+    const after = sells(8_000);
+    expect(before.sectorNPV).toBeGreaterThan(500_000);
+    expect(after.sectorNPV).toBeGreaterThan(before.sectorNPV);
+  });
+});

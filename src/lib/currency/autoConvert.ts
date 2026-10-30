@@ -5,9 +5,13 @@
 import { resolveEuroConversionQuotes } from "./euro/quotes";
 import { euroLedgerCrossRate } from "./euro/rules";
 import { loadEuroMonetaryUnion } from "./euro/service";
-import { purchaseConversionRequired, purchaseConversionSpend } from "./rules/purchaseConversion";
+import {
+  purchaseConversionMinimumSpend,
+  purchaseConversionRequired,
+  purchaseConversionSpend,
+} from "./rules/purchaseConversion";
 import type { Db, ObjectId } from "mongodb";
-import type { ExchangeRate } from "@/lib/db/types";
+import type { ExchangeRate, TradeHistoryEntry } from "@/lib/db/types";
 import type { CurrencyCode } from "@/lib/constants/currencies";
 import type { CountryId } from "@/lib/constants/countries";
 import type { PersonalWealthHolder } from "@/lib/currency/characterFunds";
@@ -41,6 +45,23 @@ interface AutoConvertResult {
   /** Spread fee charged */
   spreadCharged: number;
   error?: string;
+  /** Set by convertForExplicitPay when a trade ran, so a failed purchase can undo it. */
+  conversion?: ExplicitPayConversion;
+}
+
+/** One executed explicit-pay conversion, enough to put the wallet back. */
+export interface ExplicitPayConversion {
+  characterId: ObjectId;
+  collectionName: "characters" | "imperialCharacters";
+  payCurrency: CurrencyCode;
+  requiredCurrency: CurrencyCode;
+  /** payCurrency taken from the wallet, spread included */
+  paid: number;
+  /** requiredCurrency credited to the wallet */
+  received: number;
+  spread: number;
+  turn: number;
+  tradeHistoryId?: ObjectId;
 }
 
 export interface TopUpPersonalBalanceParams {
@@ -428,12 +449,14 @@ interface ExplicitPayParams {
 }
 
 /**
- * Convert the full purchase amount from an explicitly chosen `payCurrency`
- * to `requiredCurrency` using the market maker.
+ * Convert from an explicitly chosen `payCurrency` into `requiredCurrency` so the
+ * wallet holds at least `requiredAmount` of it.
  *
- * Unlike autoConvertForPurchase (which converts the shortfall from home currency),
- * this converts the FULL required amount from the selected pay currency.
- * Used when the player explicitly picks a non-native currency in the UI.
+ * Only the part not already held in `requiredCurrency` is converted, and the
+ * spend is sized against the market maker's real rounding so the credit always
+ * covers the target. Callers must run every check that can reject the purchase
+ * before calling this, and call {@link reverseExplicitPayConversion} with
+ * `result.conversion` if the purchase still fails afterwards.
  *
  * No-op when payCurrency == requiredCurrency (direct payment, no conversion needed).
  */
@@ -448,6 +471,12 @@ export async function convertForExplicitPay(
     return { needed: false, success: true, shortfall: 0, convertedAmount: 0, spreadCharged: 0 };
   }
 
+  const held = getPersonalBalance(character, requiredCurrency, true);
+  const shortfall = Math.max(0, requiredAmount - held);
+  if (shortfall <= 0) {
+    return { needed: false, success: true, shortfall: 0, convertedAmount: 0, spreadCharged: 0 };
+  }
+
   const fromCountryId = getCountryForCurrency(payCurrency);
   const toCountryId = getCountryForCurrency(requiredCurrency);
 
@@ -455,7 +484,7 @@ export async function convertForExplicitPay(
     return {
       needed: true,
       success: false,
-      shortfall: requiredAmount,
+      shortfall,
       convertedAmount: 0,
       spreadCharged: 0,
       error: `Cannot convert ${payCurrency} → ${requiredCurrency}: currency not supported`,
@@ -478,31 +507,30 @@ export async function convertForExplicitPay(
     return {
       needed: true,
       success: false,
-      shortfall: requiredAmount,
+      shortfall,
       convertedAmount: 0,
       spreadCharged: 0,
       error: "Exchange rates not available",
     };
   }
 
-  // How much payCurrency is needed to produce requiredAmount in requiredCurrency?
-  // toAmount = fromAmount * (1 - spread) * crossRate
-  // => fromAmount = toAmount / ((1 - spread) * crossRate)
+  // Smallest payCurrency spend whose rounded credit covers what the wallet is
+  // missing in requiredCurrency.
   const fixedRate = euroLedgerCrossRate(union, payCurrency, requiredCurrency);
   const crossRate = fixedRate ?? getCrossRate(fromExRate.rate, toExRate.rate);
-  const requiredPayAmount = purchaseConversionRequired(
-    requiredAmount,
+  const requiredPayAmount = purchaseConversionMinimumSpend(
+    shortfall,
     crossRate,
     fixedRate != null,
     fromExRate.forexSpreadStrength
   );
 
   const payBalance = getPersonalBalance(character, payCurrency, true);
-  if (payBalance < requiredPayAmount) {
+  if (!Number.isFinite(requiredPayAmount) || payBalance < requiredPayAmount) {
     return {
       needed: true,
       success: false,
-      shortfall: requiredAmount,
+      shortfall,
       convertedAmount: 0,
       spreadCharged: 0,
       error: `Insufficient ${payCurrency}. Need ~${Math.ceil(requiredPayAmount).toLocaleString()} ${payCurrency}, have ${Math.floor(payBalance).toLocaleString()}.`,
@@ -524,7 +552,7 @@ export async function convertForExplicitPay(
     return {
       needed: true,
       success: false,
-      shortfall: requiredAmount,
+      shortfall,
       convertedAmount: 0,
       spreadCharged: 0,
       error: tradeResult.error,
@@ -537,5 +565,57 @@ export async function convertForExplicitPay(
     shortfall: 0,
     convertedAmount: tradeResult.fromAmount,
     spreadCharged: tradeResult.spreadCharged,
+    conversion: {
+      characterId: character._id,
+      collectionName: params.collectionName ?? "characters",
+      payCurrency,
+      requiredCurrency,
+      paid: tradeResult.fromAmount,
+      received: tradeResult.toAmount,
+      spread: tradeResult.spreadCharged,
+      turn,
+      tradeHistoryId: tradeResult.tradeHistoryId,
+    },
   };
+}
+
+/**
+ * Undo an explicit-pay conversion whose purchase then failed: take back exactly
+ * what was credited and return exactly what was spent, spread included, so the
+ * player ends where they started. The spread already booked to the central
+ * banks is left in place rather than clawed back; that keeps the undo a single
+ * guarded wallet write, and it is bounded by the fee on a purchase that failed.
+ *
+ * Returns false (and changes nothing) when the wallet no longer holds the
+ * credited amount, e.g. a concurrent request spent it.
+ */
+export async function reverseExplicitPayConversion(
+  db: Db,
+  conversion: ExplicitPayConversion | undefined
+): Promise<boolean> {
+  if (!conversion || conversion.received <= 0) return true;
+  const { characterId, collectionName, payCurrency, requiredCurrency, paid, received } = conversion;
+  const requiredField = `currencyBalances.personal.${requiredCurrency}`;
+  const result = await db
+    .collection(collectionName)
+    .updateOne(
+      { _id: characterId, [requiredField]: { $gte: received } },
+      { $inc: { [requiredField]: -received, [`currencyBalances.personal.${payCurrency}`]: paid } }
+    );
+  if (result.modifiedCount === 0) return false;
+  await db.collection<TradeHistoryEntry>("tradeHistory").insertOne({
+    buyerCharacterId: characterId,
+    sellerCharacterId: null,
+    fromCurrency: requiredCurrency,
+    toCurrency: payCurrency,
+    amount: received,
+    receivedAmount: paid,
+    rate: received > 0 ? paid / received : 0,
+    spread: 0,
+    turn: conversion.turn,
+    createdAt: new Date(),
+    source: "auto_purchase_reversal",
+    ...(conversion.tradeHistoryId ? { sourceRef: conversion.tradeHistoryId.toString() } : {}),
+  } as TradeHistoryEntry);
+  return true;
 }

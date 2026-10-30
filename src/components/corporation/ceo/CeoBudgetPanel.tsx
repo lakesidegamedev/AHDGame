@@ -27,7 +27,11 @@ import {
   RD_INNOVATION_SCORE_THRESHOLD,
   SPRAWL_SECTOR_THRESHOLD,
 } from "@/lib/constants/corporations";
-import { marketingStrengthEquilibrium } from "@/lib/corporations/strengthProjection";
+import {
+  genericResearchDailyAnchor,
+  marketingStrengthEquilibrium,
+  remainingDevelopmentAnchor,
+} from "@/lib/corporations/strengthProjection";
 import { CURRENCY_SYMBOLS, type CurrencyCode } from "@/lib/constants/currencies";
 import type { CorporationDetail, Financials } from "../CorporationPageTypes";
 import {
@@ -169,7 +173,16 @@ export default function CeoBudgetPanel({
   const lsEquilibrium =
     daily.logistics > 0 ? calcLogisticsGrowth(anchor(daily.logistics)) / LOGISTICS_DECAY_RATE : 0;
   const currentRd = corporation.rdScore ?? 0;
-  const rdNet = calcRdGrowth(anchor(daily.rd), currentRd) - currentRd * RD_DECAY_RATE;
+  // While a product is in development the turn pays it from the R&D budget
+  // first; only the leftover earns points (#1724).
+  const rdProjects = corporation.rdDevelopmentProjects ?? [];
+  const rdFundedProject = rdProjects.find((project) => project.stage === "development");
+  const rdGenericAnchor = genericResearchDailyAnchor(anchor(daily.rd), rdProjects);
+  const rdNet = calcRdGrowth(rdGenericAnchor, currentRd) - currentRd * RD_DECAY_RATE;
+  const rdGoesToProduct = rdFundedProject != null && daily.rd > 0 && rdGenericAnchor <= 0;
+  const anchorPerLocal = money.toAnchor(1);
+  const rdRemainingCost =
+    anchorPerLocal > 0 ? remainingDevelopmentAnchor(rdProjects) / anchorPerLocal : 0;
   const sprawlCap =
     SPRAWL_SECTOR_THRESHOLD +
     SPRAWL_SECTOR_THRESHOLD * (Math.max(0, currentLs) / LOGISTICS_MAX_SPRAWL_EFFECT);
@@ -386,7 +399,15 @@ export default function CeoBudgetPanel({
           amount={budgetInput("rd", "R&D")}
           pct={pctOfRevenue(daily.rd)}
           note={
-            daily.rd > 0 ? (
+            rdGoesToProduct ? (
+              <span className="text-warning">
+                +0/turn, R&amp;D budget is funding {rdFundedProject.label} development (
+                {money.fmt(rdRemainingCost)} still to pay)
+                {currentRd > 0
+                  ? `. Points decay ${(currentRd * RD_DECAY_RATE).toFixed(2)}/turn`
+                  : ""}
+              </span>
+            ) : daily.rd > 0 ? (
               `${rdNet >= 0 ? "+" : ""}${rdNet.toFixed(2)}/turn (now ${Math.round(currentRd)}). Innovation ${innovationPct.toFixed(0)}% every ${RD_INNOVATION_INTERVAL} turns; diminishing above ${RD_DIMINISHING_THRESHOLD}`
             ) : currentRd > 0 ? (
               <span className="text-warning">

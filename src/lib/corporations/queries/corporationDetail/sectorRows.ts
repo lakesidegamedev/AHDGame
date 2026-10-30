@@ -548,12 +548,22 @@ export function buildSectorDetails(ctx: SectorRowContext) {
     // profit includes. The inversion stays as the fallback for rows that
     // predate the field. See `plantsPnlBasis.ts`.
     const enginePnl = readPlantsPnl(sector);
+    // A funded row books compliance beside its total cost but carries no full
+    // engine P&L; its own line keeps it out of maintenance.
+    const fundedCompliance =
+      !enginePnl &&
+      sector.plantsPnl?.source === "funded" &&
+      typeof sector.plantsPnl.compliance === "number" &&
+      Number.isFinite(sector.plantsPnl.compliance)
+        ? sectorFieldToCorpCcy(sector.plantsPnl.compliance, sector)
+        : null;
     // The corporation pays the full physical bill, not only the operating-margin
     // subset. Compliance and stored growth have their own statement lines.
     const maintenance = enginePnl
       ? sectorFieldToCorpCcy(enginePnl.totalCost - enginePnl.compliance, sector) -
         sectorGrowthCostLocal
-      : (financialRevenue - freightIncome) * (1 - effectiveProfitMargin / 100);
+      : (financialRevenue - freightIncome) * (1 - effectiveProfitMargin / 100) -
+        (fundedCompliance ?? 0);
     // Funded market: the owner's result counts transition support received and
     // output sent to stock at cost, both written beside the booked profit.
     const fundedResultAdjust = sectorFieldToCorpCcy(
@@ -563,7 +573,11 @@ export function buildSectorDetails(ctx: SectorRowContext) {
     const profit =
       (enginePnl
         ? sectorFieldToCorpCcy(enginePnl.profit, sector)
-        : financialRevenue - freightIncome - maintenance - sectorGrowthCostLocal) +
+        : financialRevenue -
+          freightIncome -
+          maintenance -
+          sectorGrowthCostLocal -
+          (fundedCompliance ?? 0)) +
       freightIncome -
       freightCost +
       fundedResultAdjust;
@@ -643,7 +657,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
     const regulatoryBurdenRate = getDominanceRegulatoryBurden(sectorMarketSharePct);
     const sectorRegulatoryBurden = enginePnl
       ? sectorFieldToCorpCcy(enginePnl.compliance, sector)
-      : financialRevenue * regulatoryBurdenRate;
+      : (fundedCompliance ?? financialRevenue * regulatoryBurdenRate);
     // Freight settles alongside plantsPnl, so neither leg is in its totals.
     totalRevenue += financialRevenue;
     totalFreightCosts += freightCost;

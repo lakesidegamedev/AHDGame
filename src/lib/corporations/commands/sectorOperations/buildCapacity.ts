@@ -1,4 +1,7 @@
 import { rejectWhileTurnProcessing } from "./turnGuard";
+import { loadWholePlantsOn } from "@/lib/corporations/wholePlants/stage";
+import { isWholePlantOrder } from "@/lib/corporations/wholePlants/rules";
+import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import {
   rejectConstructionFinance,
   requestConstructionFinance,
@@ -723,6 +726,15 @@ export async function placeCapacityBuild(
   });
 
   const { units, preview } = input;
+  // Whole plants: an order is a whole number of plants and delivers them whole.
+  const wholePlants = await loadWholePlantsOn(db);
+  const plantUnits = plantSizeForSector(sector);
+  if (wholePlants && !isWholePlantOrder(units, plantUnits))
+    return fail(
+      400,
+      "blocked",
+      `Plants are built whole. Order a multiple of ${plantUnits} units (one plant each).`
+    );
   const primeRate = await resolveCountryPrimeRate(db, countryId);
   // Dominance multiplier: fetched the same way setSectorGrowth does, so a
   // dominant sector pays the same premium to build as it does to grow.
@@ -900,6 +912,7 @@ export async function placeCapacityBuild(
     // as one lump on `onlineTurn`. See `buildDelivery.ts`. Only orders placed
     // through this path ramp; legacy in-flight orders keep all-at-once landing.
     smooth: true,
+    ...(wholePlants ? { plantUnits } : {}),
   };
   if (input.financing) {
     const policy = await loadBankingPolicy(db);
