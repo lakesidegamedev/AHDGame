@@ -387,7 +387,8 @@
       "names": {
         "myCompany": "My company",
         "stockTicker": "Stock ticker",
-        "staffQueues": "Staff review queues"
+        "staffQueues": "Staff review queues",
+        "watchlist": "Watchlist"
       },
       "tickerScopes": {
         "global": "Global market",
@@ -418,6 +419,17 @@
         "wikiReview": "Wiki edits to review",
         "altClusters": "Open alt clusters",
         "playerReports": "Player reports"
+      },
+      "watchlist": {
+        "title": "Watchlist",
+        "empty": "Star a company or commodity on its page to follow it here.",
+        "watch": "Watch",
+        "unwatch": "Watching",
+        "remove": "Stop watching {name}",
+        "missing": "No longer exists",
+        "private": "Private",
+        "full": "Your watchlist is full ({max} items). Remove one first.",
+        "saveError": "Could not save your watchlist. Try again."
       }
     },
     "desktop": {
