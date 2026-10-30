@@ -73,6 +73,11 @@ import {
 } from "@/lib/turn/npp/capacityDecisionTelemetry";
 import { glutStaggerEligible } from "@/lib/turn/npp/cohort";
 import { foundingUnmetSizing, isMarketSaturated } from "@/lib/turn/npp/rules/marketSaturation";
+import {
+  fundedSellThrough,
+  nppDemandThrottle,
+  nppOperatingCapacityUnits,
+} from "@/lib/turn/npp/rules/fundedSellThrough";
 import type {
   NppCorpDecision,
   NppCorpDecisionContext,
@@ -475,6 +480,11 @@ export function makeNppCorpDecision(
       .filter(
         (sp) =>
           (sp.sector.lowFillTurns ?? 0) >= STRANDED_DIVEST_TURNS &&
+          // lowFillTurns counts the legacy clearing shadow. On a funded world a
+          // plant is stranded only if its own settlement left output unsold:
+          // deleting a sold-out plant destroys capacity in a short market.
+          (!ctx.fundedWorldEpoch ||
+            (fundedSellThrough(sp.sector, ctx.fundedWorldEpoch) ?? 1) < 0.5) &&
           !isCoreSector(sp.sector) &&
           !hasProtectedConstructionProperty(sp.sector) &&
           !isNppDivestmentProtected(sp.sector, ctx.turn) &&
@@ -659,6 +669,7 @@ export function makeNppCorpDecision(
     divestedSectorIds,
     priceRatioOf,
     marketSaturationOf: placementSignals?.marketSaturationOf,
+    fundedWorldEpoch: ctx.fundedWorldEpoch,
   });
   sectorUpdates.push(...mothballUpdates);
   const newlyMothballedIds = new Set(
@@ -1452,7 +1463,9 @@ export function makeNppCorpDecision(
       // share back every turn in perpetuity; replacing the RUN capacity lets it
       // depreciate away and the plant converges on the size it can actually
       // sell.
-      const productionCapacity = sector.operatingCapacityUnits ?? capitalStock;
+      // A funded world takes the settled capacity from the receipt.
+      const productionCapacity =
+        nppOperatingCapacityUnits(sector, ctx.fundedWorldEpoch) ?? capitalStock;
       const utilizationOfOwnedCapacity =
         productionCapacity > 0
           ? Math.max(0, Math.min(1, (sector.producedUnits ?? 0) / productionCapacity))
@@ -1652,12 +1665,12 @@ export function makeNppCorpDecision(
           : 0;
       let growthUnits = existingPlantGrowthUnits(affordableGrowthUnits, growthCapUnits);
       // NPP-run plants do not add growth where the market already throttles
-      // them; replacement of worn capacity still goes through below.
+      // them; replacement of worn capacity still goes through below. On a
+      // funded world the reading is sell-through, so a plant held down by
+      // missing inputs while selling all it makes is not a throttled market.
+      const demandReading = nppDemandThrottle(sector, ctx.fundedWorldEpoch);
       const throttledMarket =
-        !autopilot &&
-        typeof sector.demandThrottleFactor === "number" &&
-        Number.isFinite(sector.demandThrottleFactor) &&
-        sector.demandThrottleFactor < NPP_GROWTH_MIN_THROTTLE;
+        !autopilot && demandReading != null && demandReading < NPP_GROWTH_MIN_THROTTLE;
       let throttleGate = false;
       if (throttledMarket && growthUnits > 0) {
         growthUnits = 0;
