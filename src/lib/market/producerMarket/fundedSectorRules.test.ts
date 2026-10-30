@@ -105,10 +105,7 @@ describe("funded sector result keeps policy costs", () => {
     const r = fundedSectorResult(
       { ...legacy, fundedRegulatoryBurdenRate: 0.05 },
       receipt
-    ) as ReturnType<typeof fundedSectorResult> & {
-      regulatoryBurden: number;
-      fundedComplianceCost: number;
-    };
+    ) as unknown as { costs: number; regulatoryBurden: number; fundedComplianceCost: number };
     // receipt costs 70 + growth 10 + 5% of the 100 sold, not of the legacy 500
     expect(r.costs).toBeCloseTo(85);
     expect(r.regulatoryBurden).toBeCloseTo(5);
