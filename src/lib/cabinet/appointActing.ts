@@ -1,3 +1,7 @@
+/**
+ * Acting cabinet appointments fill vacant seats for one presidency-scoped charge.
+ * Only Senate defeats from the current presidency block the same nominee and office.
+ */
 import { getIncompatibleOfficeHolders } from "@/lib/cabinet/officeCompatibility";
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
@@ -15,6 +19,7 @@ import { getGameState } from "@/lib/gameState";
 import { type CountryId } from "@/lib/constants/countries";
 import { actingAppointmentsEnabled } from "./actingEligibility";
 import { ACTING_TENURE_TURNS } from "./actingScope";
+import { actingRejectionScope } from "./rules/actingRejection";
 import { initialMinisterialActionFields } from "./ministerialActionPool";
 import {
   hasUnspentActingCharge,
@@ -38,7 +43,7 @@ const actingSchema = z.object({
  *
  * Deliberately NOT a way around the legislature. The seat must be vacant, the
  * President gets one per seat per presidency, a nominee the Senate has already
- * rejected cannot be installed anyway, and the appointment lapses after
+ * rejected during this presidency cannot be installed anyway, and the appointment lapses after
  * ACTING_TENURE_TURNS. A pending nomination is left running, and the seat's
  * policy cooldowns are NOT reset: cooldowns belong to the seat, not the holder,
  * or swapping caretakers would reset department policy at will.
@@ -148,15 +153,21 @@ export async function appointActingCabinetMember(
       );
     }
 
-    // A nominee the Senate turned down cannot be installed anyway.
+    // Keep the historical votes, but only this presidency can bar an acting pick.
+    // A failed office-compatibility check is not a Senate defeat.
     const rejected = await db.collection<CabinetNomination>("cabinetNominations").findOne({
       countryId,
       positionId,
       nomineeCharacterId: appointeeOid,
       status: "rejected",
+      proposedByPresidentId: presidentOfficial.characterId,
+      ...actingRejectionScope(presidentOfficial.electedAt ?? null),
     });
     if (rejected) {
-      return errorResponse(409, "The Senate rejected this nominee for this office.");
+      return errorResponse(
+        409,
+        "The Senate rejected this nominee for this office during the current presidency."
+      );
     }
 
     const gameState = await getGameState();
