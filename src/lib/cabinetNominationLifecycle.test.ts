@@ -64,6 +64,8 @@ describe("processCabinetNominationLifecycle — holder seating", () => {
 
     db.collectionMocks.cabinetNominations.find.mockImplementation(
       (query: Record<string, unknown>) => {
+        // The unanswered-offer sweep queries awaiting_choice without a $or clause.
+        if (!query.$or) return { toArray: vi.fn().mockResolvedValue([]) } as never;
         const turnClause = (query.$or as Array<{ votingEndsOnTurn: Record<string, number> }>)[0]
           .votingEndsOnTurn;
         const found =
@@ -310,7 +312,8 @@ describe("processCabinetNominationLifecycle — holder seating", () => {
           toArray: vi
             .fn()
             .mockResolvedValue(
-              "$lte" in (query.$or as Array<{ votingEndsOnTurn: object }>)[0].votingEndsOnTurn
+              query.$or &&
+                "$lte" in (query.$or as Array<{ votingEndsOnTurn: object }>)[0].votingEndsOnTurn
                 ? [nomination]
                 : []
             ),
@@ -631,9 +634,9 @@ describe("processCabinetNominationLifecycle — rejection notices", () => {
     return { nomineeUser, presidentUser };
   }
 
-  it("notifies the nominee of a Senate-winning nomination lost to a bank-office conflict", async () => {
-    // A 57-17 confirmation can be voided by the dual-office guard; the nominee
-    // used to hear nothing and the record kept no reason.
+  it("offers the seat to a Senate-winning nominee blocked by a bank office", async () => {
+    // A 57-17 confirmation used to be voided by the dual-office guard; the
+    // nominee is now offered the seat instead of losing it in silence.
     const nomineeId = new ObjectId();
     const presidentId = new ObjectId();
     const { nomineeUser, presidentUser } = findMockFor(nomineeId, presidentId);
@@ -654,13 +657,14 @@ describe("processCabinetNominationLifecycle — rejection notices", () => {
       votesAbstain: 8,
     });
 
-    const rejectedOps = bulkOps(db.collectionMocks.cabinetNominations.bulkWrite);
-    expect(rejectedOps).toHaveLength(1);
-    expect(rejectedOps[0]![0]).toEqual({ _id: nom._id });
-    expect(rejectedOps[0]![1].$set).toEqual(
+    const offerOps = bulkOps(db.collectionMocks.cabinetNominations.bulkWrite);
+    expect(offerOps).toHaveLength(1);
+    expect(offerOps[0]![0]).toEqual({ _id: nom._id });
+    expect(offerOps[0]![1].$set).toEqual(
       expect.objectContaining({
-        status: "rejected",
-        rejectionReason: "incompatible_bank_office",
+        status: "awaiting_choice",
+        choiceOfferedAt: new Date(0),
+        choiceExpiresOnTurn: 508,
       })
     );
 
@@ -671,10 +675,10 @@ describe("processCabinetNominationLifecycle — rejection notices", () => {
       message: string;
     }>;
     const toNominee = sent.find((n) => String(n.userId) === nomineeUser.toString());
-    expect(toNominee?.title).toBe("Cabinet Nomination Rejected");
+    expect(toNominee?.title).toBe("Cabinet Seat Offered");
     expect(toNominee?.message).toContain("central bank");
     const toPresident = sent.find((n) => String(n.userId) === presidentUser.toString());
-    expect(toPresident?.message).toContain("Senate vote passed");
+    expect(toPresident?.message).toContain("won the Senate vote");
   });
 
   it("records a plain ballot defeat as a vote rejection and still tells the nominee", async () => {
