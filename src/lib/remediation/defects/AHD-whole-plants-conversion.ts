@@ -52,7 +52,10 @@ import type {
  *     part-plant left over is refunded at the pool's paid cost per unit. An
  *     order that ends up with no plant is cancelled. A sector that owns no
  *     plant and whose orders add up to less than one gets one plant at no
- *     extra charge. Financed orders (construction loan or claim) are left
+ *     extra charge. AI-owned sectors (any CEO that is not a character: NPP,
+ *     imperial or state) round the pool to the NEAREST plant instead: half a
+ *     plant or more rounds up at no charge, less is refunded. Player orders
+ *     keep the floor and refund. Financed orders (construction loan or claim) are left
  *     untouched and counted: their bank settlement is a separate step;
  *   - `plantWearUnits` and `plantUnitRemainder` start at 0.
  *
@@ -117,6 +120,8 @@ export interface SectorConversion {
   countryId: string;
   sectorType: string;
   cohort: Cohort;
+  /** Owner is not a character: in-flight orders round to the nearest plant. */
+  aiOwned: boolean;
   size: number;
   /** CAS: the stock and queue this was planned from. */
   priorStock: number | null;
@@ -133,6 +138,8 @@ export interface SectorConversion {
   ordersCancelled: number;
   starterRoundedUp: number;
   financedOrdersKept: number;
+  /** Capacity units the order recount adds at no charge. */
+  orderFreeUnits: number;
 }
 
 function isFinanced(order: SectorBuildOrder): boolean {
@@ -143,6 +150,12 @@ function cohortOf(corp: CorpRow | undefined): Cohort {
   if (!corp) return "player";
   if (corp.countryOwnerId) return "state";
   return corp.ceoType === "npp" ? "npp" : "player";
+}
+
+/** Not a character-run corporation. An unknown owner is treated as a player. */
+function isAiOwned(corp: CorpRow | undefined): boolean {
+  if (!corp) return false;
+  return Boolean(corp.countryOwnerId) || corp.ceoType !== "character";
 }
 
 /** Does this sector still need recounting at `turn`? */
@@ -162,8 +175,9 @@ export function needsConversion(sector: SectorRow, turn: number): boolean {
 /** Recount one sector. Plain data in, plain data out. */
 export function convertSector(
   sector: SectorRow,
-  input: { turn: number; listPricePerUnitAnchor: number; cohort: Cohort }
+  input: { turn: number; listPricePerUnitAnchor: number; cohort: Cohort; aiOwned?: boolean }
 ): SectorConversion {
+  const aiOwned = input.aiOwned ?? input.cohort !== "player";
   const { turn } = input;
   const size = plantSizeForSector(sector);
   const stock =
@@ -193,7 +207,7 @@ export function convertSector(
       undeliveredCost: undeliveredCost(order, turn),
       onlineTurn: order.onlineTurn,
     })),
-    { size, currentTurn: turn, sectorHasPlants: stock > 0 }
+    { size, currentTurn: turn, sectorHasPlants: stock > 0, rounding: aiOwned ? "nearest" : "floor" }
   );
   const rewriteOf = new Map(open.map((order, i) => [order, recount.orders[i]]));
   let ordersRewritten = 0;
@@ -240,6 +254,7 @@ export function convertSector(
     countryId: String(sector.countryId ?? ""),
     sectorType: sector.sectorType,
     cohort: input.cohort,
+    aiOwned,
     size,
     priorStock: typeof sector.capitalStock === "number" ? sector.capitalStock : null,
     priorQueue: sector.buildQueue ?? null,
@@ -255,6 +270,7 @@ export function convertSector(
     ordersCancelled,
     starterRoundedUp,
     financedOrdersKept,
+    orderFreeUnits: recount.freeUnits,
   };
 }
 
@@ -330,6 +346,13 @@ export interface ConversionReport {
     ordersCancelled: number;
     starterRoundedUp: number;
     financedOrdersKept: number;
+    /** Capacity units the order recount adds at no charge, by owner. */
+    orderFreeUnits: Record<Cohort, number>;
+    /** Sectors whose pooled orders rounded up to the nearest plant. */
+    orderRoundUpSectors: Record<Cohort, number>;
+    /** Sectors with an in-flight order refund, by owner. */
+    orderRefundSectors: Record<Cohort, number>;
+    orderRefundByCohort: Record<Cohort, number>;
     plantsBefore: number;
     plantsAfter: number;
   };
@@ -366,10 +389,12 @@ export async function buildConversionReport(db: Db): Promise<ConversionReport> {
     .toArray();
   const corpById = new Map(corps.map((c) => [c._id.toHexString(), c]));
 
-  const conversions = pending.map((sector) =>
-    convertSector(sector, {
+  const conversions = pending.map((sector) => {
+    const corp = corpById.get(sector.corporationId.toHexString());
+    return convertSector(sector, {
       turn: world.turn,
-      cohort: cohortOf(corpById.get(sector.corporationId.toHexString())),
+      cohort: cohortOf(corp),
+      aiOwned: isAiOwned(corp),
       listPricePerUnitAnchor: capacityPricePerUnit(
         sector.sectorType as OperatingSectorType,
         world.year,
@@ -379,8 +404,8 @@ export async function buildConversionReport(db: Db): Promise<ConversionReport> {
         sector.mediaDiscriminator,
         world.preset
       ),
-    })
-  );
+    });
+  });
 
   const zero = () => ({ sectors: 0, creditAnchor: 0 });
   const byCohort: ConversionReport["byCohort"] = { player: zero(), npp: zero(), state: zero() };
@@ -398,6 +423,10 @@ export async function buildConversionReport(db: Db): Promise<ConversionReport> {
     ordersCancelled: 0,
     starterRoundedUp: 0,
     financedOrdersKept: 0,
+    orderFreeUnits: { player: 0, npp: 0, state: 0 },
+    orderRoundUpSectors: { player: 0, npp: 0, state: 0 },
+    orderRefundSectors: { player: 0, npp: 0, state: 0 },
+    orderRefundByCohort: { player: 0, npp: 0, state: 0 },
     plantsBefore: 0,
     plantsAfter: 0,
   };
@@ -418,6 +447,10 @@ export async function buildConversionReport(db: Db): Promise<ConversionReport> {
     totals.ordersCancelled += c.ordersCancelled;
     totals.starterRoundedUp += c.starterRoundedUp;
     totals.financedOrdersKept += c.financedOrdersKept;
+    totals.orderFreeUnits[c.cohort] += c.orderFreeUnits;
+    if (c.orderFreeUnits > 0 && c.starterRoundedUp === 0) totals.orderRoundUpSectors[c.cohort]++;
+    if (c.orderRefundAnchor > 0) totals.orderRefundSectors[c.cohort]++;
+    totals.orderRefundByCohort[c.cohort] += c.orderRefundAnchor;
     totals.plantsBefore += c.plantsBefore;
     totals.plantsAfter += c.plantsAfter;
     byCohort[c.cohort].sectors++;

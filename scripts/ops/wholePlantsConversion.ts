@@ -68,6 +68,14 @@ function printReport(report: ConversionReport): void {
     `  orders rewritten ${t.ordersRewritten}, folded into another order or refunded ${t.ordersCancelled}, ` +
       `starters rounded up ${t.starterRoundedUp}, financed left as is ${t.financedOrdersKept}`
   );
+  const cohorts = ["player", "npp", "state"] as const;
+  console.log("  in-flight orders by owner (AI rounds to nearest plant, players floor):");
+  for (const cohort of cohorts)
+    console.log(
+      `    ${cohort.padEnd(7)} refunded ${String(t.orderRefundSectors[cohort]).padStart(5)} sectors ` +
+        `${money(t.orderRefundByCohort[cohort])}  rounded up ${t.orderRoundUpSectors[cohort]} sectors  ` +
+        `free ${Math.round(t.orderFreeUnits[cohort])} units`
+    );
   console.log("  credit by owner:");
   for (const [cohort, row] of Object.entries(report.byCohort))
     console.log(

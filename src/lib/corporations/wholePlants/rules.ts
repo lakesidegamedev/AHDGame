@@ -255,7 +255,20 @@ export interface ConversionQueueResult {
   plants: number;
   /** True when a sector with no plant got its first plant for free. */
   roundedUp: boolean;
+  /**
+   * Capacity units added at no charge: the founding plant's top-up, or the
+   * pool rounded up to the nearest plant (`rounding: "nearest"`).
+   */
+  freeUnits: number;
 }
+
+/**
+ * How a sector's pooled orders land on whole plants. `floor` keeps only the
+ * plants paid in full and refunds the part-plant. `nearest` rounds half a
+ * plant or more up to a whole plant at no charge and refunds only a remainder
+ * below half a plant.
+ */
+export type QueueRounding = "floor" | "nearest";
 
 /**
  * Recount a sector's in-flight cash orders to whole plants.
@@ -267,10 +280,19 @@ export interface ConversionQueueResult {
  * at that cost. Remaining plants ramp from now to each order's unchanged
  * online turn. A sector that owns no plant and whose orders add up to less
  * than one plant gets one plant at no extra charge.
+ *
+ * With `rounding: "nearest"` a pool holding half a plant or more over its
+ * whole plants gets one more plant at no charge: it lands with the last order
+ * by online turn, every paid unit stays in the orders and nothing is refunded.
  */
 export function convertQueueToWholePlants(
   orders: readonly ConversionOrderInput[],
-  input: { size: number; currentTurn: number; sectorHasPlants: boolean }
+  input: {
+    size: number;
+    currentTurn: number;
+    sectorHasPlants: boolean;
+    rounding?: QueueRounding;
+  }
 ): ConversionQueueResult {
   const size = validSize(input.size);
   const rows = orders.map((o, index) => ({
@@ -283,15 +305,20 @@ export function convertQueueToWholePlants(
   const totalCost = rows.reduce((sum, r) => sum + r.c, 0);
   const result: ConversionOrderResult[] = rows.map(() => ({ kind: "cancel" }));
   if (rows.length === 0 || totalUnits <= 0) {
-    return { orders: result, refundAnchor: totalCost, plants: 0, roundedUp: false };
+    return { orders: result, refundAnchor: totalCost, plants: 0, roundedUp: false, freeUnits: 0 };
   }
-  const perUnit = totalCost / totalUnits;
-  const plants = wholePlantsIn(totalUnits, size);
+  const paidPlants = wholePlantsIn(totalUnits, size);
+  const roundUp =
+    input.rounding === "nearest" &&
+    totalUnits - paidPlants * size >= size / 2 - PLANT_EPSILON * size;
+  const plants = roundUp ? paidPlants + 1 : paidPlants;
+  // Rounding up keeps every paid unit in the orders, spread over the plants.
+  const perUnit = roundUp ? totalCost / (plants * size) : totalCost / totalUnits;
   const byOnline = [...rows].sort((a, b) => a.onlineTurn - b.onlineTurn || a.index - b.index);
 
   if (plants === 0) {
     if (input.sectorHasPlants)
-      return { orders: result, refundAnchor: totalCost, plants: 0, roundedUp: false };
+      return { orders: result, refundAnchor: totalCost, plants: 0, roundedUp: false, freeUnits: 0 };
     const first = byOnline[0];
     result[first.index] = {
       kind: "rewrite",
@@ -299,7 +326,13 @@ export function convertQueueToWholePlants(
       costPaidAnchor: totalCost,
       startTurn: Math.min(input.currentTurn, first.onlineTurn),
     };
-    return { orders: result, refundAnchor: 0, plants: 1, roundedUp: true };
+    return {
+      orders: result,
+      refundAnchor: 0,
+      plants: 1,
+      roundedUp: true,
+      freeUnits: Math.max(0, size - totalUnits),
+    };
   }
 
   let cumulative = 0;
@@ -316,11 +349,24 @@ export function convertQueueToWholePlants(
       startTurn: Math.min(input.currentTurn, row.onlineTurn),
     };
   }
+  if (roundUp) {
+    // The running total never reaches the rounded-up plant: it lands last.
+    const last = byOnline[byOnline.length - 1];
+    const prior = result[last.index];
+    const lastPlants = (prior.kind === "rewrite" ? prior.unitsOrdered / size : 0) + 1;
+    result[last.index] = {
+      kind: "rewrite",
+      unitsOrdered: lastPlants * size,
+      costPaidAnchor: lastPlants * size * perUnit,
+      startTurn: Math.min(input.currentTurn, last.onlineTurn),
+    };
+  }
   return {
     orders: result,
-    refundAnchor: Math.max(0, totalCost - plants * size * perUnit),
+    refundAnchor: roundUp ? 0 : Math.max(0, totalCost - plants * size * perUnit),
     plants,
     roundedUp: false,
+    freeUnits: roundUp ? plants * size - totalUnits : 0,
   };
 }
 
