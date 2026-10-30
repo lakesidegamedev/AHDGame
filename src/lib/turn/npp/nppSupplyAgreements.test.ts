@@ -621,16 +621,35 @@ describe("AI supplier accepts a player buy proposal", () => {
     expect(run([proposal()])).toContainEqual({ action: "activate", agreementId: "pb1" });
   });
 
-  it("accepts a discount at the 10% floor but not deeper", () => {
+  it("accepts a discount at the 10% floor", () => {
     expect(run([proposal({ pricePremium: -0.1 })])).toContainEqual({
       action: "activate",
       agreementId: "pb1",
     });
-    expect(run([proposal({ pricePremium: -0.11 })])).toEqual([]);
   });
 
-  it("refuses when the volume exceeds spare capacity", () => {
-    expect(run([proposal({ volumeCap: 1e12 })])).toEqual([]);
+  it("counters at the glut discount when the price is deeper", () => {
+    expect(run([proposal({ pricePremium: -0.35 })])).toEqual([
+      { action: "counter", agreementId: "pb1", pricePremium: -0.1, volumeCap: 10 },
+    ]);
+  });
+
+  it("counters with the spare volume when the volume is too large", () => {
+    const cap = computeSupplierCommodityCapacityUnits({
+      sectors: miner().sectors,
+      commodity: "iron",
+      isNatcorp: false,
+      turn: TURN,
+    });
+    const d = run([proposal({ volumeCap: 1e12 })]);
+    expect(d).toEqual([
+      {
+        action: "counter",
+        agreementId: "pb1",
+        pricePremium: 0,
+        volumeCap: Math.floor(cap * CONTRACT_OVERCOMMIT_TOLERANCE),
+      },
+    ]);
   });
 
   it("refuses when settled contracts already use the capacity", () => {
@@ -649,7 +668,9 @@ describe("AI supplier accepts a player buy proposal", () => {
       pricePremium: 0,
       status: "active",
     };
-    expect(run([full, proposal({ volumeCap: 1 })])).toEqual([]);
+    expect(run([full, proposal({ volumeCap: 1 })])).toEqual([
+      { action: "decline", agreementId: "pb1", reason: "noCapacity" },
+    ]);
   });
 
   it("does not over-accept two proposals past spare capacity", () => {
@@ -662,10 +683,19 @@ describe("AI supplier accepts a player buy proposal", () => {
     const half = (cap * CONTRACT_OVERCOMMIT_TOLERANCE * 0.6) | 0;
     const d = run([proposal({ id: "a", volumeCap: half }), proposal({ id: "b", volumeCap: half })]);
     expect(d.filter((x) => x.action === "activate")).toHaveLength(1);
+    expect(d.filter((x) => x.action === "counter")).toHaveLength(1);
   });
 
-  it("refuses state-owned suppliers", () => {
-    expect(run([proposal()], { parties: [miner({ isNatcorp: true })] })).toEqual([]);
+  it("declines state-owned suppliers with a reason", () => {
+    expect(run([proposal()], { parties: [miner({ isNatcorp: true })] })).toEqual([
+      { action: "decline", agreementId: "pb1", reason: "stateOwned" },
+    ]);
+  });
+
+  it("declines an invalid volume", () => {
+    expect(run([proposal({ volumeCap: 0 })])).toEqual([
+      { action: "decline", agreementId: "pb1", reason: "invalidVolume" },
+    ]);
   });
 
   it("ignores proposals the supplier authored itself", () => {
@@ -686,7 +716,9 @@ describe("AI supplier accepts a player buy proposal", () => {
       turn: TURN,
     });
     const foreign = new Map([["player1", { countryId: "RU" }]]);
-    expect(run([proposal()], { externalBuyers: foreign, tradeBlocked: blocked })).toEqual([]);
+    expect(run([proposal()], { externalBuyers: foreign, tradeBlocked: blocked })).toEqual([
+      { action: "decline", agreementId: "pb1", reason: "embargo" },
+    ]);
     expect(run([proposal()], { tradeBlocked: blocked })).toContainEqual({
       action: "activate",
       agreementId: "pb1",
@@ -802,11 +834,18 @@ describe("decideAiSupplyListings", () => {
   });
 });
 
+const notified: Record<string, unknown>[] = [];
+vi.mock("@/lib/notifications", () => ({
+  createNotifications: async (inputs: Record<string, unknown>[]) => {
+    notified.push(...inputs);
+  },
+}));
+
 describe("processNppSupplyAgreements shell", () => {
   function fakeDb(over: {
     agreements: (sellerId: ObjectId) => unknown[];
     listings?: unknown[];
-    buyer?: { _id: ObjectId; countryId: string };
+    buyer?: { _id: ObjectId; countryId: string; userId?: ObjectId };
   }) {
     const sellerId = new ObjectId();
     const calls = {
@@ -904,6 +943,73 @@ describe("processNppSupplyAgreements shell", () => {
       expiresAtTurn: 148,
     });
     expect(f.calls.listingBulk.length).toBeGreaterThan(0);
+  });
+
+  it("counters a deep-discount proposal and tells the player", async () => {
+    const buyer = { _id: new ObjectId(), countryId: "US", userId: new ObjectId() };
+    const f = fakeDb({
+      buyer,
+      agreements: (sellerId) => [
+        {
+          _id: new ObjectId(),
+          supplierCorpId: sellerId,
+          buyerCorpId: buyer._id,
+          proposedByCorpId: buyer._id,
+          commodity: "iron",
+          volumeCap: 1,
+          pricePremium: -0.35,
+          exclusive: false,
+          currentOffer: { revision: 1, proposedByCorpId: buyer._id },
+          status: "pending",
+        },
+      ],
+    });
+    notified.length = 0;
+    await processNppSupplyAgreements(f.db, 100, new Date(), true);
+    const op = f.calls.agreementBulk[0] as {
+      updateOne: {
+        filter: { status: string };
+        update: { $set: Record<string, unknown>; $push: { offers: { revision: number } } };
+      };
+    };
+    expect(op.updateOne.filter.status).toBe("pending");
+    expect(op.updateOne.update.$set).toMatchObject({
+      pricePremium: -0.1,
+      volumeCap: 1,
+      proposedByCorpId: f.sellerId,
+    });
+    expect(op.updateOne.update.$push.offers.revision).toBe(2);
+    expect(notified).toHaveLength(1);
+    expect(notified[0]).toMatchObject({
+      userId: buyer.userId,
+      title: "Supply agreement countered",
+    });
+  });
+
+  it("declines a proposal the supplier cannot serve and tells the player", async () => {
+    const buyer = { _id: new ObjectId(), countryId: "US", userId: new ObjectId() };
+    const f = fakeDb({
+      buyer,
+      agreements: (sellerId) => [
+        {
+          _id: new ObjectId(),
+          supplierCorpId: sellerId,
+          buyerCorpId: buyer._id,
+          proposedByCorpId: buyer._id,
+          commodity: "iron",
+          volumeCap: 0,
+          pricePremium: 0,
+          status: "pending",
+        },
+      ],
+    });
+    notified.length = 0;
+    await processNppSupplyAgreements(f.db, 100, new Date(), true);
+    const op = f.calls.agreementBulk[0] as {
+      updateOne: { update: { $set: Record<string, unknown> } };
+    };
+    expect(op.updateOne.update.$set).toMatchObject({ status: "cancelled" });
+    expect(notified[0]).toMatchObject({ title: "Supply agreement declined" });
   });
 
   it("leaves an open-ended contract with a player buyer without an expiry", async () => {

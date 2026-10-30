@@ -26,6 +26,8 @@ const sector = (over: Partial<SectorDetail>) =>
     marketSharePercent: 18.2,
     fillRate: 0.89,
     fillRateBand: "high",
+    producedUnits: 40,
+    capacityUnits: 100,
     ...over,
   }) as unknown as SectorDetail;
 
@@ -62,7 +64,8 @@ describe("SectorCards", () => {
     );
     expect(screen.getByText("12.4%")).toBeTruthy();
     expect(screen.getByText("-$0.09")).toBeTruthy();
-    expect(screen.getAllByText("Fill")).toHaveLength(2);
+    expect(screen.getAllByText("Sold")).toHaveLength(2);
+    expect(screen.getAllByText("40% used")).toHaveLength(2);
   });
 
   it("shows share instead of fill below plants, and n/a for hidden money", () => {

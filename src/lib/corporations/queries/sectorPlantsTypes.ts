@@ -66,6 +66,8 @@ export interface PlantBuildOrderView {
 export interface SectorPlantsSection {
   /** Persisted whole facilities owned by this sector. */
   plantCount: number;
+  /** The strategy the sector runs; with the lane it decides plant size. */
+  strategyId?: string | null;
   /** Installed capacity, units/day. Null before the sector's first plants turn. */
   capacityUnits: number | null;
   /** Units the plants actually made this turn. Null until a plants turn has run. */

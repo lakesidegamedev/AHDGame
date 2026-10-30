@@ -61,14 +61,11 @@ export function retoolRescaleFields(input: RetoolRescaleInput): RetoolRescaleSet
   const out: RetoolRescaleSet = { retoolRescaleApplied: true };
   if (typeof input.capitalStock === "number" && Number.isFinite(input.capitalStock)) {
     out.capitalStock = input.capitalStock * ratio;
+    // Plant size follows the strategy (a vehicle recipe builds vehicle
+    // plants), so re-derive the count on the strategy being switched TO.
     Object.assign(
       out,
-      seedPlantLedger(
-        input.sectorType,
-        out.capitalStock,
-        input.industryModel,
-        input.mediaDiscriminator
-      )
+      seedPlantLedger({ ...input, strategyId: input.toStrategyId }, out.capitalStock)
     );
   }
   if (Array.isArray(input.buildQueue) && input.buildQueue.length > 0) {

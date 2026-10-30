@@ -156,6 +156,48 @@ describe("physical producer preparation", () => {
     expect(good / bad).toBeCloseTo((0.5 * 1.15) / (0.5 * 0.9), 10);
   });
 
+  it("plans from the line it makes, not leftover stock of a line it no longer makes", () => {
+    const { input, env, sector } = fixture();
+    env.demandPlanStage = 1;
+    env.lowUseCostStage = 1;
+    const turn = env.currentTurn - 1;
+    const live = { commodity: "financial_services", book: "world", offeredUnits: 1, soldUnits: 1 };
+    const base = { activeUnits: 100, producedUnits: 1, inputsConsumed: 1, turn };
+    (sector as unknown as { producerSettlement: unknown }).producerSettlement = {
+      ...base,
+      offeredUnits: 1,
+      soldUnits: 1,
+      revenue: 50,
+      products: [{ ...live, revenue: 50 }],
+    };
+    const clean = prepareProducerPhysicalSector(input).prepared.plan;
+    // Same sale plus unsold steel the recipe no longer makes.
+    sector.producerInventory!.outputStock = [
+      { commodity: "steel", book: "world", units: 2, quoteUnitCost: 2 },
+    ];
+    (sector as unknown as { producerSettlement: unknown }).producerSettlement = {
+      ...base,
+      offeredUnits: 3,
+      soldUnits: 1.2,
+      revenue: 54,
+      products: [
+        { ...live, revenue: 50 },
+        { commodity: "steel", book: "world", offeredUnits: 2, soldUnits: 0.2, revenue: 4 },
+      ],
+    };
+    const retooled = prepareProducerPhysicalSector(input).prepared.plan;
+    expect(retooled.outputs.find((o) => o.commodity === "steel")?.unitsPerOutput).toBe(0);
+    expect(retooled.outputMultiplier).toBeCloseTo(clean.outputMultiplier, 12);
+    expect(retooled.plannedRunShare).toBeCloseTo(0.01 * 1.15, 12);
+  });
+
+  it("records the planned run share only under the demand plan", () => {
+    const { input, env } = fixture();
+    expect(prepareProducerPhysicalSector(input).prepared.plan.plannedRunShare).toBeUndefined();
+    env.demandPlanStage = 1;
+    expect(prepareProducerPhysicalSector(input).prepared.plan.plannedRunShare).toBe(1);
+  });
+
   it("low-use cost stage zeroes the bill on a parked plant and cuts the probe run of a dead one", () => {
     const { input, env, sector } = fixture();
     (sector as unknown as { mothballed: boolean }).mothballed = true;

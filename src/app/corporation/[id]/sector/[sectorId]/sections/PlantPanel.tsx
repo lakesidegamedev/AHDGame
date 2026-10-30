@@ -27,7 +27,7 @@ import StateLabourPool from "../components/StateLabourPool";
 import type { StateLabourPoolView } from "@/lib/labour/rules/stateLabourPool";
 import DetailsDisclosure from "../components/DetailsDisclosure";
 import { fmtUnits, fmtPct } from "../lib/plants";
-import { facilitiesFromUnits, plantSizeUnits } from "@/lib/constants/facilityQuantum";
+import { plantSizeForSector, plantsFromUnitsForSector } from "@/lib/constants/facilityQuantum";
 import { estimateSectorFullCapacityOneHopFreightTeu } from "@/lib/logistics/freightVisibility";
 
 interface PlantPanelProps {
@@ -69,7 +69,7 @@ interface PlantPanelProps {
  * Design plan (two-pass, per the design-system skill):
  *   Palette   dominant card neutrals; `primary` spent in exactly one place (the
  *             Build CTA). success/warning/muted carry the run meter.
- *   Type      one display-scale number — the capacity figure. Everything else
+ *   Type      one display-scale number: the plant count. Everything else
  *             is body scale. The number IS the game object.
  *   Layout    hero number + run meter across the full width, then a 2-column
  *             grid of workforce / depreciation / queue.
@@ -98,9 +98,25 @@ export default function PlantPanel({
   onResize,
 }: PlantPanelProps) {
   const t = useTranslations("corporations.sectorInvestment");
+  // One sizing for the hero, the stat and the queue, shared with the build
+  // dialog and the persisted ledger, so a vehicle recipe counts vehicle plants.
+  const plantSizing = {
+    sectorType,
+    industryModel,
+    mediaDiscriminator,
+    strategyId: plants.strategyId,
+  };
+  const unitsPerPlant = plantSizeForSector(plantSizing);
   const ownedPlantCount =
-    plants.plantCount ??
-    facilitiesFromUnits(sectorType, plants.capacityUnits ?? 0, industryModel, mediaDiscriminator);
+    plants.plantCount ?? plantsFromUnitsForSector(plantSizing, plants.capacityUnits ?? 0);
+  // Per order: plants ordered, plants finished (whole ones only, so a plant
+  // a third built is not counted as built), and the rest still being built.
+  const orderPlants = (o: { unitsOrdered: number; unitsDelivered: number }) => {
+    const ordered = plantsFromUnitsForSector(plantSizing, o.unitsOrdered);
+    const built = Math.min(ordered, Math.floor(Math.max(0, o.unitsDelivered) / unitsPerPlant));
+    return { ordered, built, building: ordered - built };
+  };
+  const plantsBeingBuilt = plants.buildQueue.reduce((s, o) => s + orderPlants(o).building, 0);
   const { formatAmount } = useCurrency();
   const vocab = facilityVocabulary(sectorType);
   const sites = facilityPlural(sectorType);
@@ -153,7 +169,8 @@ export default function PlantPanel({
             Your {sites}
           </h2>
           <p className="mt-1 text-body-sm text-muted">
-            Capacity is what you own here. It makes things, you sell them, that is your income.
+            Your {sites} are what you own here. They make things, you sell them, that is your
+            income.
           </p>
           {(fullCapacityFreightEstimate != null || freightState) && (
             <div className="mt-2 max-w-2xl space-y-1 text-body-xs text-muted">
@@ -212,15 +229,31 @@ export default function PlantPanel({
           mothballed ? "opacity-70" : ""
         }`}
       >
-        <p className="text-body-sm font-medium text-muted">Installed capacity</p>
+        <p className="text-body-sm font-medium text-muted">
+          {capitalizeFacility(sites)} {mothballed ? "in cold storage" : "running"}
+        </p>
         <p className="mt-1 flex items-baseline gap-2">
           <span className="text-display font-bold tabular-nums text-foreground">
             {fmtUnits(ownedPlantCount)}
           </span>
-          <span className="text-body-sm text-muted">
-            {ownedPlantCount === 1 ? facilitySingular(sectorType) : sites} ·{" "}
-            {fmtUnits(plants.capacityUnits)} units per day
-          </span>
+          <InfoTooltip
+            width={260}
+            trigger={
+              <span className="cursor-help border-b border-dotted border-muted/40 text-body-sm text-muted">
+                {ownedPlantCount === 1 ? facilitySingular(sectorType) : sites}
+              </span>
+            }
+          >
+            <p className="text-muted">
+              Together they can make {fmtUnits(plants.capacityUnits)} units a day. One{" "}
+              {facilitySingular(sectorType)} makes about {fmtUnits(unitsPerPlant)}.
+            </p>
+          </InfoTooltip>
+          {plantsBeingBuilt > 0 && (
+            <span className="text-body-sm text-muted">
+              · {fmtUnits(plantsBeingBuilt)} more being built
+            </span>
+          )}
         </p>
 
         <p className="mb-2 mt-5 text-body-sm font-medium text-muted">Today&apos;s run</p>
@@ -269,18 +302,23 @@ export default function PlantPanel({
         <div className="mt-4 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-body-sm text-foreground">
           {idleRetirement.retiredUnits > 0 ? (
             <p>
-              {fmtUnits(idleRetirement.retiredUnits)} units of capacity retired last turn because
-              buyers here have not taken this plant&apos;s output for {idleRetirement.turns} turns.
-              Retirement continues a little each turn until the plant is close to what it sells.
-              Parked capacity is not retired{onResize ? ", so park any you want to keep" : ""}.
+              About{" "}
+              {fmtUnits(
+                idleRetirement.retiredUnits / unitsPerPlant,
+                idleRetirement.retiredUnits / unitsPerPlant < 10 ? 1 : 0
+              )}{" "}
+              {sites}&apos; worth of output retired last turn because buyers here have not taken it
+              for {idleRetirement.turns} turns. Retirement continues a little each turn until your{" "}
+              {sites} are close to what they sell. Parked {sites} are not retired
+              {onResize ? ", so park any you want to keep" : ""}.
             </p>
           ) : (
             <p>
               Sales here are below this plant&apos;s run. If that lasts{" "}
               {Math.max(1, idleRetirement.graceTurns - idleRetirement.turns + 1)} more turn
-              {idleRetirement.graceTurns - idleRetirement.turns === 0 ? "" : "s"}, unsold capacity
+              {idleRetirement.graceTurns - idleRetirement.turns === 0 ? "" : "s"}, unused output
               starts to retire a little each turn.
-              {onResize ? " Park capacity below to keep it." : ""}
+              {onResize ? ` Park ${sites} below to keep them.` : ""}
             </p>
           )}
         </div>
@@ -334,27 +372,17 @@ export default function PlantPanel({
               )}
             </div>
           }
-          help={`Workers staffing this capacity. It takes about ${plants.laborIntensity.toFixed(2)} workers for each unit per day.`}
+          help={`Workers staffing your ${sites}. Each ${facilitySingular(sectorType)} needs about ${fmtUnits(plants.laborIntensity * unitsPerPlant)} workers.`}
         />
         <Stat
           label="Wear and tear"
           value={`−${(plants.depreciationPerTurn * 100).toFixed(2)}%`}
           sub="per turn"
-          help="Capacity you lose every turn if you do not invest. Build at least this much to stand still."
+          help={`The share of your ${sites}' output that wears out every turn if you do not invest. Build at least this much to stand still.`}
         />
         <Stat
           label="Being built"
-          value={fmtUnits(
-            facilitiesFromUnits(
-              sectorType,
-              plants.buildQueue.reduce(
-                (s, o) => s + Math.max(0, o.unitsOrdered - o.unitsDelivered),
-                0
-              ),
-              industryModel,
-              mediaDiscriminator
-            )
-          )}
+          value={fmtUnits(plantsBeingBuilt)}
           sub={
             plants.constructionInProgressAnchor > 0
               ? `${money(plants.constructionInProgressAnchor)} paid`
@@ -394,22 +422,8 @@ export default function PlantPanel({
               // engine's internal measure of what a facility produces, and
               // quoting the queue in them read as though you were buying units
               // of output directly.
-              const sitesOrdered = facilitiesFromUnits(
-                sectorType,
-                o.unitsOrdered,
-                industryModel,
-                mediaDiscriminator
-              );
-              const sitesDelivered = facilitiesFromUnits(
-                sectorType,
-                o.unitsDelivered,
-                industryModel,
-                mediaDiscriminator
-              );
-              const sitesPerTurn =
-                unitsPerTurn != null
-                  ? unitsPerTurn / plantSizeUnits(sectorType, industryModel, mediaDiscriminator)
-                  : null;
+              const { ordered: sitesOrdered, built: sitesDelivered } = orderPlants(o);
+              const sitesPerTurn = unitsPerTurn != null ? unitsPerTurn / unitsPerPlant : null;
               const orderedNoun = sitesOrdered === 1 ? vocab.singular : vocab.plural;
               return (
                 <li
@@ -467,8 +481,8 @@ export default function PlantPanel({
       {isCeo && (
         <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-card-border pt-4">
           <Button variant="primary" onClick={onOpenBuild} disabled={busy}>
-            <Hammer className="mr-1.5 h-4 w-4" aria-hidden />{" "}
-            {vocab.buildVerb === "open" ? "Open more capacity" : "Build capacity"}
+            <Hammer className="mr-1.5 h-4 w-4" aria-hidden /> {capitalizeFacility(vocab.buildVerb)}{" "}
+            more {sites}
           </Button>
           {!mothballed && (
             <Button variant="secondary" onClick={onMothball} disabled={busy}>

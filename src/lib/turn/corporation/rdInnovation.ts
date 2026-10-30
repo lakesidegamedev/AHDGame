@@ -204,13 +204,9 @@ export function processRdInnovations(
       sectorBoostOps.push({
         updateOne: {
           filter: { _id: sector._id },
-          update: plantCapacityDeltaPipeline(
-            sector.sectorType,
-            Math.round(deltaCapacity * 100) / 100,
-            { updatedAt: now },
-            sector.industryModel,
-            sector.mediaDiscriminator
-          ),
+          update: plantCapacityDeltaPipeline(sector, Math.round(deltaCapacity * 100) / 100, {
+            updatedAt: now,
+          }),
         },
       });
     } else {

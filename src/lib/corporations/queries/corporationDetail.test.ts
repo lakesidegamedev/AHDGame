@@ -950,6 +950,8 @@ describe("loadCorporationDetailView — plants-tier physicals", () => {
       orders: 1,
       unitsOrdered: 800,
       unitsRemaining: 800,
+      unitsPerTurn: 0,
+      lastOnlineTurn: 52,
       nextOnlineTurn: 52,
       turnsRemaining: 12,
     });

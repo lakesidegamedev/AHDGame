@@ -365,12 +365,7 @@ export async function disposeLeavingSectors(
       }
       const hostCountry = hostByState.get(sector.stateId) ?? sector.countryId;
       const fields = readSectorPlantFields(sector);
-      const opening = seedPlantLedger(
-        sector.sectorType as CorporationType,
-        sector.capitalStock,
-        sector.industryModel,
-        sector.mediaDiscriminator
-      ).plantCount;
+      const opening = seedPlantLedger(sector, sector.capitalStock).plantCount;
       const split = splitWholePlantCount(opening, NPP_PICKUP_SHARE);
       const carved = carveSectorPlantFields(fields, NPP_PICKUP_SHARE, split.carved);
       const kept = carveSectorPlantFields(fields, 1 - NPP_PICKUP_SHARE, split.kept);

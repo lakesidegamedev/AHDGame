@@ -1,41 +1,95 @@
 "use client";
 
-import { useState } from "react";
 import type { ReactNode } from "react";
+import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { AsciiReveal } from "ascii-reveal";
-import { useOptionalAuthMe } from "@/contexts/AuthDataContext";
+import type { AsciiRevealHandle } from "ascii-reveal";
 import { isChromeHiddenPath, isLightweightLayoutPath } from "@/lib/constants/layoutPaths";
 
 /**
- * Experimental (Settings, Experimental features): decode each page into place
- * through an ASCII character grid when the player navigates.
+ * How often to look for the route's real content, how long to keep looking,
+ * and how much text the wrapper must hold first.
  *
- * Mounted from `app/template.tsx`, so the wrapper is a fresh instance on every
- * navigation and the decode plays once per page. Content stays in the DOM in
- * its real position; the glyphs are painted on a canvas above it, so nothing
- * shifts. Reduced-motion players get a short fade instead.
- *
- * The opt-in is read once, at mount, and never again. `/api/client-nav`
- * resolves a beat after the first paint, and swapping this wrapper in when it
- * lands would unmount and remount the whole page subtree below it, throwing
- * away client state and re-running every effect under it. Freezing the
- * decision means the first page of a visit renders untouched and the effect
- * starts with the next navigation.
+ * A route renders its loading skeleton before the page behind it, and a
+ * skeleton is markup with no text (the shared `<Skeleton>` is `aria-hidden`).
+ * Revealing on mount therefore decoded the skeleton and let the real page
+ * arrive plain. Waiting for text and for the skeleton to clear keeps the
+ * decode on the content the player came for; the interval rather than a
+ * mutation debounce means a page that keeps updating still reveals.
  */
-export function ExperimentalPageReveal({ children }: { children: ReactNode }) {
-  const auth = useOptionalAuthMe();
+const POLL_INTERVAL_MS = 100;
+const MAX_WAIT_MS = 10000;
+const MIN_TEXT_LENGTH = 20;
+
+/**
+ * Experimental (Settings, Experimental features): decode each page into place
+ * through an ASCII character grid.
+ *
+ * Mounted from `app/template.tsx`, so it covers page content only (the navbar
+ * and status bar stay put). `enabled` comes from the server, which reads the
+ * opt-in cookie mirrored from the user record, so a page load decodes too and
+ * a signed-out visitor never carries the effect.
+ *
+ * The reveal is driven from here rather than by `revealOnMount`. A root
+ * template only remounts when the first URL segment changes, so the wrapper is
+ * keyed on the pathname to replay inside one section (two corporations, two
+ * bills, two profiles), and `revealOnMount` adds an attribute the server HTML
+ * cannot have, which React reports as a hydration mismatch and does not patch
+ * up.
+ */
+export function ExperimentalPageReveal({
+  enabled,
+  children,
+}: {
+  enabled: boolean;
+  children: ReactNode;
+}) {
   const pathname = usePathname();
-  const [enabled] = useState(() => auth?.user?.experimentalFeatures === true);
+  const revealRef = useRef<AsciiRevealHandle>(null);
+  const skip = isChromeHiddenPath(pathname) || isLightweightLayoutPath(pathname);
+
+  useEffect(() => {
+    if (!enabled || skip) return;
+    const host = revealRef.current?.element;
+    if (!host) return;
+
+    const startedAt = Date.now();
+    let revealed = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const poll = () => {
+      if (revealed) return;
+      const stillLoading = host.querySelector(".animate-pulse") !== null;
+      const hasText = (host.innerText ?? "").trim().length >= MIN_TEXT_LENGTH;
+      if ((stillLoading || !hasText) && Date.now() - startedAt < MAX_WAIT_MS) {
+        timer = setTimeout(poll, POLL_INTERVAL_MS);
+        return;
+      }
+      revealed = true;
+      void revealRef.current?.reveal();
+    };
+
+    poll();
+    return () => clearTimeout(timer);
+  }, [enabled, skip, pathname]);
 
   // Chrome-free and lightweight pages (sign-in, banned, the marketing pages)
   // are not game screens a player moves between, so they stay untouched.
-  if (!enabled || isChromeHiddenPath(pathname) || isLightweightLayoutPath(pathname)) {
+  if (!enabled || skip) {
     return <>{children}</>;
   }
 
   return (
-    <AsciiReveal className="ascii-reveal-host" preset="decode" duration="fast" lazy>
+    <AsciiReveal
+      ref={revealRef}
+      key={pathname}
+      className="ascii-reveal-host"
+      preset="decode"
+      duration="fast"
+      lazy
+      revealOnMount={false}
+    >
       {children}
     </AsciiReveal>
   );

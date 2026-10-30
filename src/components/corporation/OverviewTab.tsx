@@ -20,7 +20,7 @@ import { GameMonthTime } from "@/components/time/GameMonthTime";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { corpIncomeBasis, netMarginPct } from "./financials/financialsModel";
 import { buildOwnershipSlices } from "./OwnershipDonut";
-import { CAPACITY_UNIT_LABEL, formatUnits } from "./plantsPresentation";
+import { CAPACITY_UNIT_LABEL, UsedText, formatUnits } from "./plantsPresentation";
 import {
   DenseSection,
   FillText,
@@ -216,7 +216,12 @@ function SectorTable({
                     <Th align="right" className="hidden md:table-cell">
                       Capacity
                     </Th>
-                    <Th align="right">Fill</Th>
+                    <Th
+                      align="right"
+                      title="Share of the output offered that sold. Used is output over capacity."
+                    >
+                      Sold
+                    </Th>
                   </>
                 ) : (
                   <Th align="right" title="Revenue growth rate per turn.">
@@ -302,9 +307,20 @@ function SectorTable({
                       <>
                         <Td align="right" className="hidden text-muted md:table-cell">
                           {formatUnits(s.capacityUnits)}
+                          {typeof s.plantCount === "number" && (
+                            <span className="block text-[11px]">
+                              {s.plantCount.toLocaleString("en-US")}{" "}
+                              {s.plantCount === 1 ? "plant" : "plants"}
+                            </span>
+                          )}
                         </Td>
                         <Td align="right">
                           <FillText fill={s.fillRate} band={s.fillRateBand} />
+                          <UsedText
+                            produced={s.producedUnits}
+                            capacity={s.capacityUnits}
+                            className="block"
+                          />
                         </Td>
                       </>
                     ) : (
@@ -736,7 +752,7 @@ export default function OverviewTab({
                       hint={CAPACITY_UNIT_LABEL}
                     />
                     <KVRow
-                      label="Fill"
+                      label="Sold"
                       mark={
                         physical.fillRate != null ? (
                           <Meter pct={physical.fillRate * 100} className="w-10" />

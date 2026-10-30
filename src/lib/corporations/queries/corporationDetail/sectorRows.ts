@@ -697,12 +697,7 @@ export function buildSectorDetails(ctx: SectorRowContext) {
       plantsMode && Number.isInteger(sector.plantCount) && (sector.plantCount ?? 0) >= 0
         ? (sector.plantCount as number)
         : plantsMode
-          ? seedPlantLedger(
-              sector.sectorType,
-              sector.capitalStock,
-              sector.industryModel,
-              sector.mediaDiscriminator
-            ).plantCount
+          ? seedPlantLedger(sector, sector.capitalStock).plantCount
           : null;
     const producedUnits =
       plantsMode && Number.isFinite(sector.producedUnits) ? (sector.producedUnits as number) : null;
