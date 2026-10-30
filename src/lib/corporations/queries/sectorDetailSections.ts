@@ -1293,6 +1293,11 @@ export function buildSectorPlantsSection(args: {
     freightCostAnchor?: number;
     freightIncomeAnchor?: number;
     /**
+     * Compliance a funded producer turn booked, in ₳. Funded rows carry no
+     * full engine P&L, so without it the line is re-derived from the share.
+     */
+    fundedComplianceAnchor?: number | null;
+    /**
      * Ticket 1122: the lines the turn ACTUALLY booked, in ₳. When present every
      * money figure below is read straight off them and nothing is
      * reconstructed. Absent on a sector that has not run a plants turn since
@@ -1596,7 +1601,9 @@ export function buildSectorPlantsSection(args: {
       );
   const complianceAnchor = money.enginePnl
     ? nonNeg(money.enginePnl.compliance)
-    : nonNeg((money.realizedRevenueAnchor * Math.max(0, regulatoryBurdenPp)) / 100);
+    : money.fundedComplianceAnchor != null
+      ? nonNeg(money.fundedComplianceAnchor)
+      : nonNeg((money.realizedRevenueAnchor * Math.max(0, regulatoryBurdenPp)) / 100);
   // The input bill renders at its real size, and `otherOperating` is the SIGNED
   // remainder that makes the named lines sum back to `maintenanceNet` exactly.
   //

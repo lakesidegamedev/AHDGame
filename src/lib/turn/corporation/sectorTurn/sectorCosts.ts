@@ -51,6 +51,14 @@ export interface GrowthRegulatoryResult {
   realizationRatio: number;
   regulatoryBurdenRate: number;
   regulatoryBurden: number;
+  /**
+   * The rate a funded producer turn charges: plants fade complete. The ramp
+   * only keeps the legacy flip turn identical, and a funded sector has no flip.
+   */
+  fundedRegulatoryBurdenRate: number;
+  /** Hourly growth cost at full realization (`hourlyGrowthCost` before the realization ratio). */
+  nameplateHourlyGrowthCost: number;
+  nominalHourlyRevenue: number;
 }
 
 /**
@@ -106,17 +114,25 @@ export function computeGrowthAndRegulatory(input: GrowthRegulatoryInput): Growth
   // P3a scoped touch #2b — the revenue-side twin of the margin penalty above,
   // gated off for the same reason (dominance is tolled once, at build time).
   // See `computeBuildCost` for the design; SOEs stay exempt in every mode.
-  const regulatoryBurdenRate = isStateOwned(corp)
+  const unfadedRegulatoryRate = isStateOwned(corp)
     ? 0
     : Math.max(
         getDominanceRegulatoryBurden(sectorMarketSharePct),
         getNationalDominanceRegulatoryBurden(nationalDominanceSharePct)
       ) *
-      (1 - dominanceShield) *
-      (plantsEnabled ? 1 - plantsRampLambda : 1);
+      (1 - dominanceShield);
+  const regulatoryBurdenRate = unfadedRegulatoryRate * (plantsEnabled ? 1 - plantsRampLambda : 1);
   const regulatoryBurden = hourlyRevenue * regulatoryBurdenRate;
 
-  return { hourlyGrowthCost, realizationRatio, regulatoryBurdenRate, regulatoryBurden };
+  return {
+    hourlyGrowthCost,
+    realizationRatio,
+    regulatoryBurdenRate,
+    regulatoryBurden,
+    fundedRegulatoryBurdenRate: plantsEnabled ? 0 : unfadedRegulatoryRate,
+    nameplateHourlyGrowthCost: newGrowthCost / TURNS_PER_DAY,
+    nominalHourlyRevenue,
+  };
 }
 
 export interface PhysicalCostsInput {

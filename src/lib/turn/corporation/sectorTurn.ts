@@ -530,7 +530,7 @@ export function processSector(
     effectiveMargin,
     sprawlMod,
     dominanceMarginPenalty,
-    managementOverheadMod,
+    fundedSizeLegs,
   } = accumulateMarginModifiers({
     corp,
     sector,
@@ -892,7 +892,13 @@ export function processSector(
   const maintenance = maintenanceBeforeSpecialization - operatingSaving;
   // ─── Growth cost (on realized revenue) + regulatory burden ────────────────
   // Pure computation in `sectorTurn/sectorCosts.ts`; names are unchanged.
-  const { hourlyGrowthCost, regulatoryBurden } = computeGrowthAndRegulatory({
+  const {
+    hourlyGrowthCost,
+    regulatoryBurden,
+    fundedRegulatoryBurdenRate,
+    nameplateHourlyGrowthCost,
+    nominalHourlyRevenue,
+  } = computeGrowthAndRegulatory({
     corp,
     newGrowthCost,
     preFlipNameplateRevenue,
@@ -1622,13 +1628,19 @@ export function processSector(
     stateMetricsLegacyTotal: stateMetricMargin.legacyTotal,
     hourlyGrowthCost,
     regulatoryBurden: embargoLegacyMothball ? 0 : regulatoryBurden,
+    // Funded turns charge the size and regulatory legs on the revenue the plant
+    // sold, with the plants fade complete (dominance is tolled at build time).
     fundedSizeCostPp: fundedSizeCostPp({
       stateOwned: isStateOwned(corp),
       overheadStage: lookups.fundedOverheadStage ?? 0,
-      overheadMod: managementOverheadMod,
-      sprawlMod,
-      dominancePenalty: dominanceMarginPenalty,
+      overheadMod: fundedSizeLegs.overhead,
+      sprawlMod: fundedSizeLegs.sprawl,
+      dominancePenalty: fundedSizeLegs.dominance,
     }),
+    fundedRegulatoryBurdenRate: embargoLegacyMothball ? 0 : fundedRegulatoryBurdenRate,
+    fundedDominancePenaltyPp: fundedSizeLegs.dominance,
+    nameplateHourlyGrowthCost: embargoLegacyMothball ? 0 : nameplateHourlyGrowthCost,
+    nameplateHourlyRevenue: nominalHourlyRevenue,
     // O1c: paid growth cost this turn (0 only under legacy mothball — froze, paid
     // nothing; the trade-exposure model keeps investing on the domestic remainder).
     growthInvestmentAnchor: embargoLegacyMothball ? 0 : hourlyGrowthCost,
