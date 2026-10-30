@@ -1,5 +1,6 @@
 import {
   BUYER_TOLERANCE_SLACK,
+  FREIGHT_SHIPPING_MAX_ASK_SHARE,
   FREIGHT_PRICE_TEU_PER_UNIT_HOP,
   FREIGHT_CONGESTION_OVERFLOW,
   FREIGHT_CONGESTION_SURCHARGE,
@@ -23,7 +24,7 @@ For a corporation, logistics answers three questions:
 
 1. **Can the market supply the input locally?** Projected local supply fills first and uses no freight capacity.
 2. **If not, where is the cheapest reachable seller?** The sourcing projection compares the seller's ask, shipping cost, and tariff.
-3. **What does the route cost?** Projected interstate haul consumes freight capacity in the seller's state, and haul past that state's nominal capacity pays a congestion surcharge on top. Capacity is a price rather than a ceiling: the buyer's price tolerance is what finally stops a route. Grid goods skip the haulage fleet entirely.
+3. **What does the route cost?** Projected interstate haul consumes freight capacity in the seller's state, and haul past that state's nominal capacity pays a congestion surcharge on top. Capacity is mostly a price rather than a ceiling: haul can run to ${overflowMultiple}x nominal capacity at a surcharge, and the buyer's price tolerance usually stops a route before that. Grid goods skip the haulage fleet entirely.
 
 ## Start with the Freight page
 
@@ -67,7 +68,7 @@ The cheapest eligible source fills first, up to three limits:
 
 ![Local, cross-state and import sources are ranked by landed price, and the cheapest one inside the tolerance ceiling fills first.](/wiki-images/diagrams/logistics-guide-landed-price.svg)
 
-Freight capacity is the fourth influence, and it now acts through price rather than as a limit of its own. Bulk and special cargo draw from the same state freight fleet. Haul above that fleet's nominal capacity keeps running at a surcharge, which pushes the landed price toward the tolerance ceiling. A state with no freight supply at all still hauls nothing.
+Freight capacity is the fourth influence, and it acts mostly through price. Bulk and special cargo draw from the same state freight fleet. Haul above that fleet's nominal capacity keeps running at a surcharge, up to ${overflowMultiple}x nominal, which pushes the landed price toward the tolerance ceiling. A state with no freight supply at all still hauls nothing. However tight freight gets, the shipping charge on a haul never exceeds ${pct(FREIGHT_SHIPPING_MAX_ASK_SHARE)} of the seller's ask.
 
 The tolerance ceiling is the local price plus ${pct(BUYER_TOLERANCE_SLACK)}. A technically reachable projected shipment can still be rejected when freight and tariffs make it too expensive. The sourcing report records that amount as unmet, while aggregate commodity clearing remains the source of truth for the commodity market itself. Route calculation measures haul and creates Freight demand; it is not a settled commodity transfer.
 
@@ -98,7 +99,7 @@ There is no capacity ceiling on a grid route, so a state short of power can alwa
 
 ## When the network is congested
 
-Freight capacity sets a price, not a ceiling. Once combined bulk and special haul in a state passes the fleet's nominal capacity:
+Freight capacity mostly sets a price rather than a ceiling. Once combined bulk and special haul in a state passes the fleet's nominal capacity:
 
 - the network keeps moving goods up to ${overflowMultiple}x that nominal capacity;
 - every unit above nominal pays a ${pct(FREIGHT_CONGESTION_SURCHARGE)} surcharge on the shipping leg of its landed price;

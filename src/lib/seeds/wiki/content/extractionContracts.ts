@@ -7,7 +7,7 @@ A crowded state squeezes everyone: when total demand beats what the ground can y
 | Most capacity that can be reserved in one state and resource | 75% (at least a quarter stays open access) |
 | Royalty rate | 0% to 2% |
 | Contract term | 24 to 480 turns |
-| Missed royalty payments before default | 3 in a row |
+| Missed royalty payments before default | 3 total (counter resets after a paid royalty) |
 | Bid | Signing fee, at or above the published minimum |
 | Finder's rights contract after a successful corporate survey | 96 turns, no royalty |
 
@@ -22,11 +22,11 @@ A crowded state squeezes everyone: when total demand beats what the ground can y
 
 Say a state can yield 100,000 barrels of oil per turn. The government publishes a tender for a 40% share, 1% royalty, 96-turn term and a minimum signing fee of ₳1,000,000. Corporation A bids ₳1,500,000 and Corporation B bids ₳1,200,000. The bids become public when bidding closes. The official picks A with a public reason and A pays ₳1,500,000.
 
-A now has 40,000 barrels per turn guaranteed. If A wants 55,000, it is still capped at 40,000 and does not touch the open pool. The other 60,000 barrels are open access: if B and a third company ask for 50,000 and 30,000, together 80,000 against a 60,000 pool, every company is scaled to 75%, giving B 37,500 and the other 22,500. Without the contract, A would compete for the whole 100,000 pool against 80,000 of other demand, so the guarantee matters most when open demand is heavy.
+A now has 40,000 barrels per turn guaranteed. If A wants 55,000, the extra 15,000 competes for the open-access pool alongside other companies' demand. The other 60,000 barrels are open access: if B and a third company ask for 50,000 and 30,000, together 80,000 against a 60,000 pool, every company is scaled to 75%, giving B 37,500 and the other 22,500. Without the contract, A would compete for the whole 100,000 pool against 80,000 of other demand, so the guarantee matters most when open demand is heavy.
 
 ## Finding the tenders
 
-Open **Government Contracts** from the World menu or a Cabinet Office's Government Contracts tab. Every country has its own board, with **Active Bidding**, **Bidding Closed**, **Awarded** and **Canceled** tabs. Filter by Resource Extraction to see concessions.
+Open **Government Contracts** from the World menu or a Cabinet Office's Government Contracts tab. Every country has its own board, with **Active Bidding**, **Bidding Closed**, **Awarded** and **Canceled** tabs. Filter by Extraction to see concessions.
 
 An extraction corporation’s **Contracts** tab links to matching tenders even before it holds a contract. Active agreements show their capacity share, royalty, expiry and award record. Revoked, expired and defaulted agreements stay in history.
 
@@ -64,11 +64,11 @@ The contract becomes active only after its signing payment settles. Its term sta
 
 ## Living with a concession
 
-An active contract guarantees the corporation's allocated fraction of that state's resource capacity. A company with multiple concessions for the same resource in the same region receives their combined share across all its sectors. A contracted company is capped at that allocation; it does not also draw on the open-access pool. Without a contract, companies share the open-access pool in proportion to their extraction demand. A concession reserves extraction capacity, not buyers or sales.
+An active contract guarantees the corporation's allocated fraction of that state's resource capacity. A company with multiple concessions for the same resource in the same region receives their combined share across all its sectors. A contracted company's reserved share is a floor, not a ceiling: demand above that allocation competes for the open-access pool like any other company's. Without a contract, companies share the open-access pool in proportion to their extraction demand. A concession reserves extraction capacity, not buyers or sales.
 
-Its royalty is charged each turn using current commodity prices. New concessions may specify a royalty from 0 to 2% and a term from 24 to 480 turns. The supply that comes from contracted extraction feeds [commodity prices](/wiki/commodities).
+Its royalty is charged each turn using current commodity prices. New concessions may specify a royalty from 0 to 2% and a term from 24 to 480 turns.
 
-Three consecutive missed royalty payments default the contract. Default or expiration ends the guaranteed allocation and returns the capacity to the open-access pool. The existing contract settlement and extraction-capacity rules continue to apply after a competitive award.
+Three missed royalty payments default the contract; the counter resets after a paid royalty. Default or expiration ends the guaranteed allocation and returns the capacity to the open-access pool. The existing contract settlement and extraction-capacity rules continue to apply after a competitive award.
 
 ## Cancellation and history
 

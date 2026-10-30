@@ -1,6 +1,6 @@
 export const nominatingConventionContent = `# Presidential Nominating Convention
 
-A presidential primary does not end on a single score. States vote in [staggered waves](/wiki/primaries) that hand out **pledged delegates**, and those delegates settle the nomination. If nobody wins a clear majority, the party holds a multi-ballot convention that drops the last-placed candidate round by round until someone has one. If you are in the race, the convention is where a close primary is really decided, and where who you have endorsed (or who likes your politics) matters.
+A presidential primary does not end on a single score. States vote in [staggered waves](/wiki/primaries) that hand out **pledged delegates**, and those delegates settle the nomination. If nobody wins a clear majority, the party holds a multi-ballot convention that drops the last-placed candidate round by round until someone has one. If you are in the race, the convention is where a close primary is really decided, and where how close your politics are to your rivals' matters.
 
 ## When nobody has a majority
 
@@ -24,12 +24,9 @@ Delegates are always handed out as whole numbers and always add up to exactly wh
 
 ### Where a dropped candidate's delegates go
 
-A dropped candidate's delegates do not split evenly. Each survivor gets a share weighted by:
+A dropped candidate's delegates do not split evenly. Each survivor gets a share weighted by **affinity**: how close the survivor is to the dropped candidate in economic and social positions, from 1 for identical positions down to 0 for opposite corners of the chart. A closer survivor gets more. It is the same closeness measure used for [suspend-and-endorse transfers](/wiki/running-mate-surrogate). The convention does not read endorsements or voter-group appeal, so endorsing a rival does not steer your delegates.
 
-- **Affinity:** how close the survivor is to the dropped candidate in economic and social positions (70% of the measure) and in which voter groups each party's candidate appeals to (30%). A closer survivor gets more. It is the same measure used for [suspend-and-endorse transfers](/wiki/running-mate-surrogate).
-- **Endorsement:** an extra 0.5 weight for any survivor the dropped candidate had actively endorsed. It is sized to tip a close release without overriding ideology.
-
-If every weight is zero and there is no endorsement, the delegates split as evenly as possible.
+If every weight is zero, the delegates split as evenly as possible.
 
 ### The numbers
 
@@ -38,9 +35,8 @@ If every weight is zero and there is no endorsement, the delegates split as even
 | Delegates needed | floor(total delegates / 2) + 1 |
 | Democratic delegates, modern roster | 3,889 (1,945 needed) |
 | Republican delegates, modern roster | 2,490 (1,246 needed) |
-| Extra release weight for an endorsed survivor | 0.5 |
-| Ideology share of affinity | 70% |
-| Voter-group share of affinity | 30% |
+| What weights a release | Closeness in economic and social positions |
+| Effect of an endorsement on a release | None |
 | Conventions run for | 1964 cycle onward |
 
 Each state's delegate count is the 2020 table, rescaled when an era's electoral votes for that state differ, with a minimum of 1.
@@ -60,14 +56,14 @@ D's 439 delegates went 100 to A, 220 to B and 119 to C, because B was closest to
 ## Playing for the convention
 
 - **Win delegates in the waves.** Anything that helps you in a state helps here too: [Campaign Presence](/wiki/political-operations), favorability and [polling](/wiki/polling). Whoever comes out on top is named as the nominee in the [General Elections](/wiki/general-elections).
-- **Endorse a rival.** An active endorsement adds weight to your choice if you are eliminated, but you cannot hand delegates to a chosen candidate directly.
+- **Endorsements do not move delegates.** If you are eliminated, your delegates follow ideological closeness, not who you endorsed, and you cannot hand them to a chosen candidate.
 - **Watch the delegate tracker** on the presidential primary race page to see where you stand against the majority.
 - **Position yourself.** If you are likely to finish mid-pack, being ideologically close to the leaders gets you delegates when others drop.
 
 Tips:
 
 - A lead that is short of a majority is not a nomination. Plan for the convention, not just the waves.
-- Nominees who withdraw do not choose where their delegates go. Affinity and endorsement decide.
+- A candidate who withdraws before the convention takes no part in it. Their delegates are not released to anyone, and later ballots count a majority of the delegates still in play.
 
 Live for US presidential races from the 1964 cycle onward. Older races, including 1960, name the delegate leader without a convention. Other countries do not use delegates. Last checked 2026-10-29, version 1.18.0. Exact rules: [Elections (design)](https://docs.lakesidegames.net/design/elections.html)
 `;

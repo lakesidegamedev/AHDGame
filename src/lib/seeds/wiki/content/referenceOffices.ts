@@ -19,18 +19,18 @@ The US uses a **presidential system** with directly elected executives. The legi
 
 The President is the most powerful office in the game. Winning requires a national campaign, strong NPI, and party organization in swing states. Cabinet nominations are made by the President and confirmed by the Senate (with one acting appointment per seat per term to bridge a vacancy). The President can veto federal legislation. National approval is computed from the country's condition rather than the President's own favorability, but the President answers for it at the polls.
 
-**Running mate:** After winning the primary, the nominee selects a Vice President. The VP cannot be the sitting President and cannot be the same person as the nominee.
+**Running mate:** Any presidential candidate can name a running mate during the race. A player nominee with no running mate when the primary resolves is given a tentative one (the highest-favorability character in the same party and country), which they can change. The running mate cannot be the sitting President, cannot be the candidate themselves, must be from the same country, and cannot already be a candidate in that race.
 
 ### Vice President
 
 | Field | Value |
 |---|---|
-| Won by | Appointed by the President-elect after winning the primary |
+| Won by | Chosen by the presidential candidate as running mate and elected with the ticket |
 | Term | 4 years (with President) |
 | Action bonus | +2/turn |
 | Party strength weight | 1.0 |
 
-The VP presides over the Senate and succeeds the President if the seat becomes vacant.
+The VP succeeds the President if the seat becomes vacant.
 
 ### US Senator
 
@@ -54,7 +54,7 @@ Senate seats are staggered across 3 classes, so only one class is up in any give
 | Party strength weight | 0.9 |
 | Chamber | U.S. House of Representatives (435 seats) |
 
-The shortest term in the US system: House members are up for election every 2 game years. Revenue bills must originate in the House. The Speaker of the House is elected by House members and gets +3 actions on top of the seat; Majority and Minority Leaders get +2 and Whips +1.
+The shortest term in the US system: House members are up for election every 2 game years. Any bill, revenue bills included, can start in either chamber. The Speaker of the House is elected by House members and gets +3 actions on top of the seat; Majority and Minority Leaders get +2 and Whips +1.
 
 ### Governor
 
@@ -66,7 +66,7 @@ The shortest term in the US system: House members are up for election every 2 ga
 | Party strength weight | 1.0 |
 | Sub-national | Yes |
 
-Governors sign or veto state bills and control their state's executive. Holding a governorship gives you a 1.0 party-strength weight (the same as President) in state-level vote calculations. Governors are a strong stepping stone to Senate.
+Governors sign or veto state bills and control their state's executive. The 1.0 party-strength weight belongs to the governor's race, scaling that race's vote pool for every candidate; holding the office does not add weight to your other races. Governors are a strong stepping stone to Senate.
 
 ### State Senator
 
@@ -156,18 +156,19 @@ The primary legislature. Three candidates advance from UK primaries (vs 1 in the
 | Party strength weight | 0.85 |
 | Sub-national | Yes |
 
-Regional Councillors represent UK nations and regions in devolved assemblies. Regional legislation is signed by the First Minister of each nation.
+Regional Councillors represent UK nations and regions in devolved assemblies. Regional legislation is signed by that region's First Minister or Mayor where one exists.
 
-### First Minister (Scotland and Wales)
+### First Minister (Scotland, Wales, Northern Ireland) and Mayor of London
 
 | Field | Value |
 |---|---|
-| Won by | Leader of the governing party in the devolved parliament |
-| Action bonus | +4/turn |
+| Won by | Regional executive election in that nation or in London |
+| Term | 4 years (192 turns) |
+| Action bonus | +2/turn |
 | Party strength weight | 1.0 |
-| Sub-national | No |
+| Sub-national | Yes |
 
-The head of government of a devolved nation. Source: \`src/lib/countries/sco/institutionsFacts.ts\` and \`src/lib/countries/wal/institutionsFacts.ts\`.
+The head of a devolved government inside the UK, or London's mayor. English regions outside London have no devolved executive. If Scotland or Wales secedes, its First Minister becomes a national head of government with +4 actions. Source: \`src/lib/countries/uk/institutionsFacts.ts\`, \`src/lib/countries/sco/institutionsFacts.ts\` and \`src/lib/countries/wal/institutionsFacts.ts\`.
 
 ### Governor of the Bank of England
 
@@ -265,7 +266,7 @@ Head of government. Must hold a Shūgiin confidence majority (233+ seats). The S
 
 | Field | Value |
 |---|---|
-| Won by | Regional constituency election (FPTP) |
+| Won by | Regional multi-seat election, seats split by largest remainder |
 | Term | Up to 4 years (variable, snap elections allowed) |
 | Action bonus | +1/turn |
 | Party strength weight | 0.85 |
@@ -277,7 +278,7 @@ Three candidates advance from JP primaries per party (same as UK). This is the c
 
 | Field | Value |
 |---|---|
-| Won by | Regional constituency election (FPTP) |
+| Won by | Regional multi-seat election, seats split by largest remainder |
 | Term | 6 years (288 turns, half contested every 3 years) |
 | Action bonus | +1/turn |
 | Party strength weight | 0.85 |

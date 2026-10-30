@@ -14,13 +14,13 @@ If the settled rate is above zero, a **pension scheme** is created, one per unio
 
 For every active agreement carrying a pension rate, three things happen each turn, in this order:
 
-1. **Contribution.** The employer pays covered wage bill x bargained rate into the scheme. If the employer cannot afford it that turn, the payment is skipped, not forgiven. The employer's cash pays contributions and top-ups, so they are a recurring cost for each [Corporation](/wiki/corporations); the financial statement has a Pensions line showing this turn's contribution and top-up, and how many of your schemes are in deficit. It is a live projection of what the agreement is charging you right now, not a history lookup.
+1. **Contribution.** The employer pays covered wage bill x bargained rate into the scheme. If the employer cannot afford it that turn, the payment is skipped and never collected later, but the workers' claim still grows. The employer's cash pays contributions and top-ups, so they are a recurring cost for each [Corporation](/wiki/corporations); the financial statement has a Pensions line showing this turn's contribution and top-up, and how many of your schemes are in deficit. It is a live projection of what the agreement is charging you right now, not a history lookup.
 2. **Top-up.** If the scheme's **funding ratio** (everything it holds divided by everything it owes) is below 90%, the employer is asked for an extra payment. It is only 5% of the gap to the 90% mark per turn, so a bad quarter cannot bankrupt an employer over a slow-moving number. Closing a deficit this way is slow by design. A top-up the employer cannot afford is skipped as well.
 3. **Accrual.** The workers' claim against the scheme (its **liabilities**) grows by covered wage bill x 8%, whatever happened in steps 1 and 2.
 
 ![Each turn a pension scheme runs contribution, top-up, accrual, benefits and optional investment in that order.](/wiki-images/diagrams/pensions-turn-order.svg)
 
-The accrual rate sits below the 15% ceiling on purpose. A scheme bargained at the ceiling builds a real surplus. A scheme with a 0% contribution rate still racks up a liability nobody is funding, which is the honest picture of promising a pension and paying nothing toward it. Contributions and accrual run only while the agreement is active.
+The accrual rate sits below the 15% ceiling on purpose. A scheme bargained at the ceiling builds a real surplus. A scheme bargained below 8% racks up a liability its contributions do not cover. An agreement with a 0% rate creates no scheme and accrues nothing. Contributions and accrual run only while the agreement is active.
 
 | Item | Value |
 | --- | --- |

@@ -8,7 +8,7 @@ All numbers were checked against the game on 2026-10-29. Values that need a tabl
 
 ## How your primary score is built
 
-The primary score is a candidate's **standing** in a primary. It does not pick the winner on its own. Each turn of the primary's closing window it sets your share of the ballots cast by your party's registered voters, and the running ballot count picks the nominee. Only where a party has no registered voters on file does the raw score decide directly. See [Primaries](/wiki/primaries).
+The primary score is a candidate's **standing** in a primary. It does not pick the winner on its own. Each turn of the primary's closing window it sets your share of the ballots cast by your party's registered voters, and the running ballot count picks the nominee. Only where a party has no registered voters on file does the raw score decide directly. Presidential primaries are different: they are decided by delegates won state by state. See [Primaries](/wiki/primaries).
 
 ### State-level primary score
 
@@ -54,7 +54,7 @@ A candidate has favorability 60, Political Influence 50 and infamy 20. The state
 
 ### Presidential primary score
 
-Used for the US President only. The maximum is 100 points.
+Used for presidential primaries in every country except Brazil and Russia, which run their own presidential rules. The maximum is 100 points.
 
 | Component | Range | Formula |
 |---|---|---|
@@ -126,7 +126,7 @@ newModifier     = clamp(currentModifier + boost x (1 - resistance), -20, +20)
 | 10 | 31% |
 | 20 | 10% |
 
-**Worked example.** You sit at econ 2, social 1 and canvass a group at econ 4, social 3. distanceSquared is (4 + 4) / 2 = 4, so fit is 0.2 + 0.8 x e^(-4/18) = 0.841 and the boost is 2 x 0.841^2 = **1.41 points**. In a closing sprint it is **2.83**. If that group already sits at +10, the sprint canvass adds only 1.41. A group exactly at your position gives the full 2.0 (4.0 in a sprint); a group far across the grid gives about 0.24.
+**Worked example.** You sit at econ 2, social 1 and canvass a group at econ 4, social 3. distanceSquared is (4 + 4) / 2 = 4, so fit is 0.2 + 0.8 x e^(-4/18) = 0.841 and the boost is 2 x 0.841^2 = **1.41 points**. In a closing sprint it is **2.83**. If that group already sits at +10, the sprint canvass adds only 1.41. A group exactly at your position gives the full 2.0 (4.0 in a sprint); a group at the far corner of the grid gives about 0.08, because fit never drops below 0.2.
 
 ### Older races
 

@@ -4,7 +4,7 @@ Two politicians with the same money and offices can play very differently, and t
 
 ## What a stat point is worth
 
-Each stat runs from 1 to 10. Six of them are an **effectiveness multiplier** applied to what the action produces (never to what it costs, apart from the two cost cases noted below). Energy is the exception: it raises your action stockpile limits.
+Each stat runs from 1 to 10. Six of them are an **effectiveness multiplier** applied to what the action produces. Some also divide the money cost of specific actions by the same multiplier; those cases are named in the table below. Energy is the exception: it raises your action stockpile limits.
 
 | Stat | Multiplier |
 | --- | --- |
@@ -28,25 +28,25 @@ multiplier = 1 + (stat - 5.5) x 0.04
 | Stat | What it does | What trains it |
 | --- | --- | --- |
 | **Charisma** | More political influence per Campaign, more favorability per ad, bigger gains from [Political Capital](/wiki/political-capital) meetings and boosts. Powers the *Above the fray* debate move | Campaign, Advertise |
-| **Debate** | Powers the *Attack* debate move and boosts debate scoring | Debate Prep, debating |
-| **Energy** | Raises your action stockpile cap from 200 to 250 and the point where hoarding starts costing you from 100 to 125 | Any action |
+| **Debate** | Powers the *Attack* debate move | Debate Prep, debating |
+| **Energy** | Raises your action stockpile cap from 200 to 250 and the point where hoarding starts costing you from 100 to 125 | Any action except Debate Prep |
 | **Fundraising** | More money per Fundraise (see [Fundraising and Ads](/wiki/fundraising-ads)), cheaper donor base expansion | Fundraise, Build Donor Base |
-| **Business Acumen** | Cheaper sector growth in [corporations](/wiki/corporations) you run as CEO, and high interest rates hurt that cost less | Holding a CEO seat |
+| **Business Acumen** | Cheaper sector growth, capacity builds and expansions in [corporations](/wiki/corporations) you run as CEO, and high interest rates raise the growth cost less | Holding a CEO seat |
 | **Statecraft** | Party whip success from -9 to +9 points ([Voting and Whips](/wiki/voting-and-whips)), longer filibusters ([Cloture and Filibuster](/wiki/cloture-and-filibuster): the 12 hour delay runs from 9.8 hours at Statecraft 1 to 14.2 at 10), stronger ministerial orders. Powers the *Tout accomplishments* debate move | Whipping, filibusters |
-| **Intellect** | Cheaper Quick and Full [polls](/wiki/polling), and a slower rise in the cost of repeated Campaigning | Running polls |
+| **Intellect** | Cheaper Quick and Full [polls](/wiki/polling), and a lower money cost for Campaigning | Running polls |
 
 Energy does not change how many actions each turn gives you. It changes how many you can save. Above the bank point you lose 4 actions per turn. At Energy 5 the cap is 222 and the bank point is 111, and both rise in a straight line to 250 and 125 at Energy 10.
 
 ### How stats grow and fade
 
-- Every qualifying action adds 0.03 progress to its stat, and the turn adds it in. About 34 Fundraise actions raise Fundraising by a full point. Energy gets 0.03 from every action of any kind.
+- Every qualifying action adds 0.03 progress to its stat, and the turn adds it in. About 34 Fundraise actions raise Fundraising by a full point. Energy gets 0.03 from every action except Debate Prep.
 - Business Acumen grows once per turn while you are CEO, scaled by that corporation's profit margin: 0.5x if it loses money, 1x up to a 10% margin, 1.5x up to 25%, 2x above that. At best it takes about 17 turns for a point.
 - Stats do not decay from idleness. The one exception is **Debate**, which loses 1 point every 72 hours of real time on a fixed clock, down to a floor of 1. Practice does not pause the clock, it only gives you chances to earn the point back.
-- Debate rises three ways. Debate Prep costs 1 action and has a 15% chance of +1. Each debate you take part in gives a practice roll for +1: 30% if you won, 15% if you lost.
+- Debate rises two ways. Debate Prep costs 1 action and has a 15% chance of +1. Each debate you take part in gives a practice roll for +1: 30% if you won, 15% if you lost or drew.
 
 ### Election debates
 
-When you are a candidate, an opponent may challenge you; the challenge arrives as a [player random event](/wiki/player-events), your stats nudge the event roll, and a debate this turn blocks a normal offer. Each time the event check runs there is a 50% chance, and a candidate can be drawn into at most 3 debates per election. You get **12 hours** to choose one strategy. Each strategy scores \`8 x your stat's multiplier + a random roll\`, and the two sides' scores are compared.
+When you are a candidate, an opponent may challenge you; the challenge is rolled in the same pass as [player random events](/wiki/player-events), and a debate this turn blocks a normal offer. Each turn there is a flat 50% chance (your stats do not change it), and a candidate can be drawn into at most 3 debates per election. You get **12 hours** to choose one strategy. Each strategy scores \`8 x your stat's multiplier + a random roll\`, and the two sides' scores are compared.
 
 | Strategy | Stat | Roll range | In practice |
 | --- | --- | --- | --- |

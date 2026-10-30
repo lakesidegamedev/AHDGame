@@ -58,5 +58,5 @@ A member in a state gives the party the presence it needs to build Org there ([P
 
 Leaders can tell you how to vote on bills and leadership races. A whip never forces your vote, and there is no automatic penalty, but leaders see who follows it. See [Voting & Whips](/wiki/voting-and-whips).
 
-Live in every world and country that has parties. Last checked 2026-10-29, version 1.18.0. Exact rules: [Parties design page](https://docs.lakesidegames.net/design/parties.html)
+Last checked 2026-10-29, version 1.18.0. Exact rules: [Parties design page](https://docs.lakesidegames.net/design/parties.html)
 `;

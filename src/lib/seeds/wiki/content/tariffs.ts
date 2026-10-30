@@ -20,14 +20,14 @@ A tariff applies to a sector only when the sector operates **in the country that
 
 ## Writing a tariff
 
-Tariffs come from a bill in [Bills & Legislation](/wiki/bills-legislation): a bill with a tariff provision creates, changes or removes one. Draft it from the bill drafting screen and choose the scope, target and rate. A narrow tariff leaves the rest of the economy alone, since only economy-wide and sector tariffs carry a domestic malus.
+Tariffs come from a bill in [Bills & Legislation](/wiki/bills-legislation): a bill with a tariff provision creates, changes or removes one. Draft it from the bill drafting screen and choose the scope, target and rate. Corporation-scoped tariffs are not available through bill proposal. A narrow tariff leaves the rest of the economy alone, since only economy-wide and sector tariffs carry a domestic malus.
 
 | Scope | Target | Example |
 | --- | --- | --- |
 | Economy-wide | All foreign corporations in the country | "25% tariff on all imports" |
 | Sector | Foreign corporations of one sector type | "30% on foreign steel producers" |
 | Origin country | Corporations headquartered in one country | "40% on German corporations" |
-| Corporation | One named corporation | Targeted sanction on one entity |
+| Corporation | One named corporation | Not available through bill proposal |
 
 Re-enacting the same scope and target at a new rate replaces the old record. To remove a tariff, pass a new bill for the same scope and target with a rate of 0. The old record stays in history but no longer applies.
 
@@ -92,5 +92,5 @@ When a **sector** tariff is enacted the market also reacts: corporations headqua
 
 Economy-wide tariff rates also feed the [National Budget](/wiki/national-budget) tariff revenue projection (import value x tariff rate). Narrower tariffs affect margins and inflation only. In trade, tariffs add to landed cost and can price a route out; see [Logistics: Freight, Sourcing, and Supply Chains](/wiki/logistics-guide).
 
-Tariffs work in any country where legislators can pass an industry bill with a tariff provision. FTAs apply only between countries in the same international organization that has passed one. Last checked 2026-10-29, version 1.18.0. Exact rules: [Tariffs (design)](https://docs.lakesidegames.net/design/tariffs.html)
+Tariffs work in any country where legislators can pass a trade bill with a tariff provision. FTAs apply only between countries in the same international organization that has passed one. Last checked 2026-10-29, version 1.18.0. Exact rules: [Tariffs (design)](https://docs.lakesidegames.net/design/tariffs.html)
 `;

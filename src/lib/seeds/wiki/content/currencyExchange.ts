@@ -1,21 +1,21 @@
 export const currencyExchangeContent = `# Currency Exchange
 
-You own shares in a Japanese company, the share price has not moved, and your holding is worth more anyway because the yen strengthened. That is the **foreign exchange (forex)** system at work. Each active country has its own floating currency, players can trade currencies for profit, and investments abroad settle in the currency of the asset's country, so exchange rates change what your holdings, dividends and bond coupons are worth at home.
+You own shares in a Japanese company, the share price has not moved, and your holding is worth more anyway because the yen strengthened. That is the **foreign exchange (forex)** system at work. Most countries have their own floating currency (euro members in a 2027 world share the euro, and Scotland and Wales use sterling), players can trade currencies for profit, and investments abroad settle in the currency of the asset's country, so exchange rates change what your holdings, dividends and bond coupons are worth at home.
 
 Planned economies work differently: a fully command country's official rate is fixed and does not float with macro conditions or player volume. See [Planned / Command Economies](/wiki/planned-economies).
 
 | Rule | Value |
 | --- | --- |
-| Drift toward macro target | 5% of the gap per turn (about 90% after a game year, 48 turns) |
-| Random noise | ±0.4% per turn |
+| Drift toward macro target | 5% of the gap per turn (about 90% after a game year, 48 turns); 7.5% once a currency floats after Bretton Woods |
+| Random noise | ±0.4% per turn; the three leading reserve currencies move 50%, 25% and 12.5% less |
 | Regime pressure | 12-turn windows, 0.07% or 0.15% a turn, either way, or neutral |
-| Rate guardrail | Within ±50% of the base rate |
+| Rate guardrail | Within ±50% of the base rate, widening to ±80% after the Bretton Woods float |
 | Trading volume lookback | 24 turns; volume push capped at ±5% |
-| Market maker spread | 1% |
+| Market maker spread | 1%, scaled 0.5x to 1.5x by the selling currency's central bank |
 | Public limit order spread | 0.64% |
 | Direct player trade spread | 0.36%; offers expire in 24 turns |
 | Size fee on your own trades | Rises toward 20%, total fee never above 30% |
-| Where fees go | 25% destroyed, 25% central bank forex revenue, 50% that currency's reserve pool |
+| Where fees go | Charged in the currency you sell: 25% destroyed, 25% forex revenue for its central bank, 50% to the bought currency's central bank as a reserve |
 
 ## Converting money
 
@@ -23,24 +23,25 @@ There are three ways to swap currencies, cheapest last:
 
 | Tier | Method | Spread | Fill |
 | --- | --- | --- | --- |
-| 1 | Market maker | 1% | Instant, always available |
+| 1 | Market maker | 1% (0.5% to 1.5%) | Instant, always available |
 | 2 | Public limit order | 0.64% | When market rate meets your limit |
 | 3 | Direct player trade | 0.36% | When target player accepts |
 
-**Tier 1 (Market Maker):** Instant fill at the current rate with a 1% base fee. Used automatically for auto-convert purchases. Volume pressure still applies.
+**Tier 1 (Market Maker):** Instant fill at the current rate with a 1% base fee. The central bank of the currency you sell can scale that fee from 0.5x to 1.5x. Used automatically for auto-convert purchases. Volume pressure still applies.
 
-**Tier 2 (Limit Orders):** Post a public order at a target rate. The order auto-fills when the market price crosses your limit (0.64% spread). Other players can manually fill it early for a direct player trade fee instead. Set an optional expiry in turns. Order fills send automatic [mail](/wiki/mail).
+**Tier 2 (Limit Orders):** Post a public order at a target rate. The order auto-fills when the market price crosses your limit (0.64% spread). Other players can fill it by hand at your limit rate, and the 0.64% spread is then split evenly between you and the filler. Set an optional expiry in turns. Fills made automatically during the turn send you [mail](/wiki/mail).
 
 **Tier 3 (Direct Trades):** Send a specific currency offer to a named character. They can accept or decline, no counter-offers. Expires after 24 turns by default.
 
 **Size and market fee:** Your own trades (market maker and limit orders) also pay a size fee that rises toward 20% on very large conversions. It counts everything you converted in the last 24 turns, so splitting a big trade into small ones costs the same. The whole fee is then scaled by how busy the two currencies are: 0.5x in a busy market, up to 1.5x in a quiet one. The total never passes 30%. Conversions the game makes for you (dividends, coupons, purchase shortfalls) pay only the base fee.
 
-You convert 100,000 USD to GBP through the market maker. At 0.75 that is 75,000 GBP, less a 1% fee of 750 GBP, so you receive **74,250 GBP**. Of the 750 fee, 187.50 is destroyed, 187.50 becomes forex revenue for the pound's central bank and 375 goes into the pound's reserve pool. Very large conversions pay an extra size fee.
+You convert 100,000 USD to GBP through the market maker. The 1% fee comes off the dollars first: 1,000 USD, leaving 99,000 USD, which at 0.75 is **74,250 GBP**. Of the 1,000 USD fee, 250 is destroyed, 250 becomes forex revenue for the dollar's central bank and 500 goes to the pound's central bank as a dollar reserve. Very large conversions pay an extra size fee.
 
-Spread fees are split three ways: **25% destroyed** (deflationary sink), **25%
-booked as the currency's central-bank forex revenue**, and **50% added to that
-currency's central bank reserve pool**. That currency-specific pool is separate
-from the central bank's general reserves.
+Spread fees are charged in the currency you sell and split three ways: **25%
+destroyed** (deflationary sink), **25% booked as forex revenue for the sold
+currency's central bank**, and **50% added to the bought currency's central
+bank as a reserve held in the sold currency**. That currency-specific pool is
+separate from the central bank's general reserves.
 
 ![The three trading tiers with their spreads and fills, and how the spread fee splits into destroyed, forex revenue and reserve pool shares.](/wiki-images/diagrams/currency-exchange-tiers-and-spread.svg)
 
@@ -53,8 +54,8 @@ Your character has two money pools:
 
 When making personal purchases in a foreign currency:
 1. Spend from your existing balance in that currency (free, no spread)
-2. If you lack enough, auto-convert the shortfall from your home currency (1% spread)
-3. If both are insufficient, the transaction is rejected
+2. If you lack enough, auto-convert the shortfall at the market-maker spread, first from your other foreign balances, then from your home currency
+3. If that is still not enough, or you turned auto-convert off, the transaction is rejected
 
 Income from foreign corporations is handled differently by type:
 
@@ -72,7 +73,7 @@ A country's rate drifts toward a target based on its prime rate, inflation, grow
 
 > target = base rate x (1 - 0.02 x prime gap + 0.015 x inflation gap - 0.01 x growth gap - 0.005 x trade gap)
 
-A higher prime rate lowers the rate number, which means a stronger currency. Higher inflation weakens it. Higher growth or a trade surplus strengthens it. A country with inflation above 6% takes an extra direct hit on top. The prime rate is the biggest input, set by the [Central Bank Chair](/wiki/central-banks) (in the US, a new prime rate set by the [committee](/wiki/fomc) moves the dollar's target), and inflation, growth and trade come from [National Metrics](/wiki/national-metrics).
+A higher prime rate lowers the rate number, which means a stronger currency. Higher inflation weakens it. Higher GDP growth or faster trade growth strengthens it. A country with inflation above 6% takes an extra direct hit on top. The prime rate is the biggest input, set by the [Central Bank Chair](/wiki/central-banks) (in the US, a new prime rate set by the [committee](/wiki/fomc) moves the dollar's target), and inflation, growth and trade come from [National Metrics](/wiki/national-metrics).
 
 | Country | Baseline prime | Baseline inflation | Baseline GDP growth | Baseline trade |
 | --- | --- | --- | --- | --- |
@@ -94,14 +95,14 @@ currency-rate-path-after-prime-rise
 
 Net buying or selling over the past 24 turns nudges the rate each turn. Everyday trading barely registers. The push from traded volume reaches half of its 5% cap only at ₳1B of net buying or selling, and it counts for 5% of the rate's direction, so macro fundamentals do almost all of the work. **Breadth** is how many traders stand behind the flow: it takes about five for the full push, and one trader alone gets a fifth of it, so a single fortune cannot move a currency by itself. Central-bank intervention keeps the stronger original channel (up to a 1% push a turn), so a bank can lean against a large traded flow, and market pressure on the currency decides whether a central bank FX band holds.
 
-Per-turn jitter of **±0.4%** prevents perfectly predictable movements.
+Per-turn jitter of **±0.4%** prevents perfectly predictable movements. The three most-held reserve currencies get 50%, 25% and 12.5% less jitter.
 
 A 12-turn directional regime applies independently of macro fundamentals,
 trading volume, and noise. Each window rolls one of five regimes at random:
 a moderate or slight push stronger (0.15% or 0.07% a turn), neutral, or the
 same push weaker.
 
-Rates are capped at ±50% from their base rate. A currency cannot hyperinflate or collapse beyond that floor/ceiling.
+Rates are capped at ±50% from their base rate. A currency cannot hyperinflate or collapse beyond that floor/ceiling. In a world that leaves Bretton Woods, floating currencies see that band widen to ±80% over 90 turns and drift 1.5x faster.
 
 ### The currencies
 
@@ -125,7 +126,7 @@ Rates are measured against an internal "anchor" unit, not directly against each 
 
 **Cross-country investments:** If you buy JP stock at ¥26,900 per share and the yen strengthens against your home currency, your holding is worth more in home-currency terms even if the share price didn't move.
 
-**Corporate economics:** [Corporation](/wiki/corporations) revenues and costs are denominated in the corporation's home currency. When a US corporation's sector operates in Japan, the revenue is earned in USD (the corp's currency) but taxed at Japanese rates against a JPY-denominated tax base. Cross-country HQ relocations trigger a full treasury conversion at the spot rate.
+**Corporate economics:** [Corporation](/wiki/corporations) revenues and costs are denominated in the corporation's home currency. When a US corporation's sector operates in Japan, its operating income is taxed where it is earned and is brought home into dollars with a 0.5% FX spread. Cross-country HQ relocations trigger a full treasury conversion at the spot rate.
 
 **Banks:** The prop desk's forex positions in [Private Banking](/wiki/private-banking) are marked at market rates.
 

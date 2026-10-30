@@ -2,7 +2,7 @@ export const generalsGuideContent = `# Generals & the Officer Corps
 
 A general is not an NPC. **A general is a player character** (one of your own, or one of your countrymen's) wearing a second hat.
 
-Every character has two profile tabs: **Political**, the career you already know, and **Military**, which holds their general. The Military tab is empty until somebody commissions them. After that, it is a full progression system running in parallel with their political life: rank, experience, skill points, and a trait tree of 115 nodes.
+Every character profile has a **Political** tab, the career you already know, and a **Military** tab, which holds their general (business owners also get a Business tab). The Military tab stays locked until somebody commissions them, and in a world with the conflict system switched off. After that, it is a full progression system running in parallel with their political life: rank, experience, skill points, and a trait tree of 115 nodes.
 
 This matters more than it sounds. **Generals are the only thing that makes your army better than the sum of its units.** An unled army fights; a well-trained general's army fights considerably harder. Generals carry units to fronts and lead them, which is how they fit into [Conflicts & the Military System](/wiki/conflicts-overview).
 
@@ -31,9 +31,9 @@ A general commissioned on turn 0 holds 4 points. By turn 240 tenure has added 10
 
 ## Getting commissioned
 
-**You cannot commission yourself.** The **defence seat holder** appoints generals, from their office → **Commands** tab → *General Corps*. An acting secretary can commission and dismiss generals under the same rules as a confirmed holder.
+**Only the defence seat holder commissions generals**, from their office → **Commands** tab → *General Corps*. Any other player has to be commissioned by them. An acting secretary can commission and dismiss generals under the same rules as a confirmed holder.
 
-They pick a character from their country and commission them. That character's Military tab immediately gains a general at:
+They pick any character from their country, their own included, and commission them. That character's Military tab immediately gains a general at:
 
 - **Level 1: Brigadier**
 - **0 XP**
@@ -135,31 +135,31 @@ Trained traits change how well a general's units fight. Each **path is a strict 
 Each node shows one of four statuses:
 
 - **Learned:** trained.
-- **Available:** the previous node in its path is trained, the era allows it, and you can afford it.
+- **Available:** the previous node in its path is trained and the era allows it. You still need a point to train it.
 - **Locked:** an earlier node in the path is missing. The interface names *which* one.
 - **Future:** the node's decade has not arrived yet in the game's calendar.
 
 ### Era gating
 
-Nodes carry a decade, from the 1900s to the 2040s, and are gated against **the live game year**. In a 1953 world, *Shock Commander* (1950s) is trainable while *Adaptive Commander* (2000s) is not, no matter how many points you have banked.
+Nodes carry a decade, from the 1900s to the 2010s, and are gated against **the live game year**. In a 1953 world, *Shock Commander* (1950s) is trainable while *Adaptive Commander* (2000s) is not, no matter how many points you have banked.
 
 This shapes long campaigns: banking points early lets you take newly unlocked capstones the moment their decade arrives.
 
 ### Conflicts and doctrine boosts
 
-Some nodes are marked "Conflicts with ...", for instance Shock Commander against Methodical Commander. This is advisory and not enforced. With 55 points against 115 nodes, training two traits that pull against each other is its own punishment.
+Some nodes are marked "Conflicts with ...", for instance Shock Commander, which is marked against the Cautious Commander path. This is advisory and not enforced. With 55 points against 115 nodes, training two traits that pull against each other is its own punishment.
 
-Some nodes are boosted by your nation's adopted doctrine. These are starred in the tree, and a **Doctrine Fit** view on your profile lists which trained traits are amplified. Boosted traits are strictly better than unboosted ones for the same point, so check what your defence secretary has adopted before you spend. See [National Doctrine](/wiki/national-doctrine).
+Some nodes are paired with a national doctrine. When your nation has adopted it they are starred in the tree, and the **Doctrine Synergy** section on the general's profile lists which trained traits are matched and which doctrine would match the rest. The pairing is a guide only: the engine gives a matched trait no extra effect, and the doctrine applies its own bonus to your forces either way. See [National Doctrine](/wiki/national-doctrine).
 
 ## Specialisation is derived, never chosen
 
 You do not pick a class. Your discipline is a label recomputed from the traits you have trained: **Armor Officer**, **Shock & Maneuver**, **Defensive Tactician**, **Logistician** or **Fleet Commander**. A general with no traits shows "No specialisation". Enough logistics nodes turn an Armor Officer into a Logistician.
 
-**Command fit** rates how suited a general is to lead a Command, and it and rank decide who can lead one in [Commands & Command Structure](/wiki/military-commands). It is 50, plus 8 for each rank, plus 2 for each trained trait, kept between 40 and 98.
+**Command fit** rates how suited a general is to lead a Command (see [Commands & Command Structure](/wiki/military-commands)). It is a guide only: any commissioned general can lead a Command, whatever their fit or rank. It is 50, plus 8 for each rank, plus 2 for each trained trait, kept between 40 and 98.
 
 ## When a general is dismissed or leaves
 
-The defence seat holder can dismiss a general. A change of defence secretary alone does not end anyone's commission. Only a dismissal, or the general moving to another country, does. When it happens the whole chain unwinds at once:
+The defence seat holder can dismiss a general. A change of defence secretary does not end anyone's commission. Only a dismissal does. When it happens the whole chain unwinds at once:
 
 - They leave **every Command roster** they were on.
 - Any Command they **led** loses its lead.
@@ -172,7 +172,7 @@ The defence seat holder can dismiss a general. A change of defence secretary alo
 
 **The record survives.** Level, XP and every trained trait are retained. A dismissed general shows as **"Former"** on the corps roster, and re-appointing them restores everything intact. Dismissal is a change of employment, not an execution.
 
-**Moving abroad runs the same cascade.** A general who relocates to another country comes off every Command roster, vacates any Command they led, loses their conflict postings, and hands their divisions back to the old country's General Staff, exactly as a dismissal would. See [Relocation](/wiki/relocation).
+**Moving abroad runs the same cascade but keeps the commission.** A general who relocates to another country comes off every Command roster, vacates any Command they led, loses their conflict postings, and hands their divisions back to the old country's General Staff. They stay a commissioned general, and the new country's corps picks them up. See [Relocation](/wiki/relocation).
 
 ## Where to click
 
@@ -194,7 +194,7 @@ If you are a Commanding General, a **"Manage your command →"** link appears on
 
 **Pick a lane in the first few points.** With 55 lifetime points against 115 nodes, spreading thin produces a general who is mediocre at everything. Chains are strict, so a deep path costs you the early nodes anyway, and committing is the whole point.
 
-**Train toward your nation's doctrine.** Boosted traits are strictly better than unboosted ones for the same point. Look at what your Secretary of Defense has adopted before spending.
+**Read your nation's doctrine before you spend.** A matched trait gets no extra effect, but the doctrine pairings show which traits the designers meant to sit alongside the doctrine your Secretary of Defense has adopted.
 
 **Fight. Even badly.** 20 XP for a loss beats 0 XP for staying home, and casualties can be rebuilt. A general who never deploys never advances past what tenure alone gives them.
 

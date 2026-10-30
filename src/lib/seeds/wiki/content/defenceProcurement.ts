@@ -23,13 +23,13 @@ The defence seat publishes a tender for equipment. Eligible domestic corporation
 | Self-dealing stake that triggers disclosure | 5% of shares, or owning the company |
 | Self-dealing political penalty | 1.5 to 8 favorability points |
 | Missed delivery turns for a free termination | 3 in a row |
-| Break fee for ending a working order | The supplier's margin on the lots not built |
+| Break fee for ending a working order | 15% of the contract price of each lot not built |
 
 ### A 100-lot tender in a 100,000 budget
 
 Suppose a country's annual defence line is 100,000 (in its own budget units). Its window allows about 100,000 × 0.45 × 12 / 48 = 11,250 of new orders, and one private supplier may take a third of that, 3,750. The minister tenders 100 lots, with a maximum of 100 a lot, so 10,000 is reserved. A private supplier can only be awarded 37 lots, so the tender is split or a state-owned plant is used.
 
-Say the winning supplier gets 37 lots at 100. The steady income is 100,000 × 0.45 / 48 = 937.5 a turn, so a private supplier can be paid at most 937.5 a turn, or 9 lots. The 37 lots therefore take at least 5 turns, even if the plant could build them faster. If the minister ends the order for convenience when 10 lots are delivered, and the cost to build is 85 a lot, the break fee is the margin of 15 on each of the 27 undelivered lots, which is 405. The fee comes out of the appropriation at once.
+Say the winning supplier gets 37 lots at 100. The steady income is 100,000 × 0.45 / 48 = 937.5 a turn, so a private supplier can be paid at most 937.5 a turn, or 9 lots. The 37 lots therefore take at least 5 turns, even if the plant could build them faster. If the minister ends the order for convenience when 10 lots are delivered, the break fee is 15% of the 100 price, 15, on each of the 27 undelivered lots, which is 405. The fee comes out of the appropriation at once.
 
 ## Who awards contracts
 
@@ -37,15 +37,15 @@ The defence seat holder publishes equipment tenders against the national defence
 
 A tender fixes the component, number of lots, required grade and maximum price per lot. The maximum price is checked against the lowest current price floor for that component and grade before the tender is published; if it is too low, the tender is refused and the minimum is shown in national budget units. Eligible domestic corporations (see [Corporations](/wiki/corporations); only domestic defence plants can be awarded orders, and a contract pays the supplier its margin) nominate a certified plant and bid a price within the permitted band. Bid values stay sealed until closing; CEOs can revise or withdraw their own bid before then. The government selects a qualifying bid after closing and publishes its reason. The winning bid activates the order without another acceptance step.
 
-Publishing reserves the maximum obligation. Award transfers the actual winning value into the contract and releases the difference. The supplier concentration cap still applies. Defence bidding and award deadlines must fit inside the current quarterly contracting window.
+Publishing reserves the maximum obligation. Award transfers the actual winning value into the contract and releases the difference. The supplier concentration cap still applies. Bidding runs 6 to 48 turns (24 by default), followed by a 24-turn award window. A tender may run past the end of its quarter; its reservation and quota stay in the window it was published in until it is awarded, cancelled or expires.
 
 The country board has **Active Bidding**, **Bidding Closed**, **Awarded** and **Canceled** tabs, type filters and ten results per page. An interrupted award remains in Bidding Closed so the government can resume it.
 
-A country under a **demilitarisation** settlement (see [Peace, Indemnities & Truces](/wiki/peace-and-truces)) may award no new contracts, and no company may accept a new order from it, until the bar lapses. Live contracts keep delivering.
+A country under a **demilitarisation** settlement (see [Peace, Indemnities & Truces](/wiki/peace-and-truces)) may publish no new tenders and award no new contracts, and no company may bid on its tenders, until the bar lapses. Live contracts keep delivering.
 
 ## Planned economies
 
-The Soviet Union and East Germany receive **state arms industry** output independently of tenders: a fixed number of lots each turn, delivered straight to the arsenal and aimed at the branch furthest from a full load. Eligible state-run suppliers and AI-run defence companies also submit an initial suggested-price bid when a tender opens. They use the same country, currency and component eligibility checks as player suppliers; they do not receive a direct-award shortcut. Player corporations run by a caretaker CEO still make their own bidding decisions. See [Units, Recruitment & Procurement](/wiki/military-units).
+The Soviet Union and East Germany receive **state arms industry** output independently of tenders: a fixed number of lots each turn, delivered straight to the arsenal and aimed at the branch furthest from a full load. Every other country gets only an emergency floor: one lot a turn into a branch whose store has run completely dry, which stops the moment that store holds anything. Eligible state-run suppliers and AI-run defence companies also submit an initial suggested-price bid when a tender opens. They use the same country, currency and component eligibility checks as player suppliers; they do not receive a direct-award shortcut. Player corporations run by a caretaker CEO still make their own bidding decisions. See [Units, Recruitment & Procurement](/wiki/military-units).
 
 ## Contracting windows
 
@@ -59,15 +59,15 @@ When the window rolls over, unspent capacity does not carry forward and a fresh 
 
 ## The price band and why cost tracks price
 
-The tension band from [Cold War Tension](/wiki/cold-war-tension) changes procurement demand, and [Global Response Crises](/wiki/global-response-crises) can raise strategic procurement demand further as tension climbs.
+The tension band from [Cold War Tension](/wiki/cold-war-tension), and the Vietnam escalation ladder in [Global Response Crises](/wiki/global-response-crises), set a procurement-pressure dial on the conflicts console. It is a readout: it does not change the contracting window, the caps or any lot price.
 
-A lot's price is anchored to a GDP-scaled figure and does not move turn to turn just because a plant's input costs do. What DOES move is the plant's production cost: it is priced off the live commodity market, using the same world price-ratio the plant's own turn economics use, so a lot's cost floor and a plant's actual input bill move together instead of drifting apart. A supplier building lots in a world where steel has gotten expensive pays more to build them; a minister paying 1953-era prices for a contract struck when commodities were cheap does not get to keep quoting that price forever, because cost is re-derived from the live market on each delivery sweep.
+A lot's price is anchored to a GDP-scaled figure and does not move turn to turn just because a plant's input costs do. What DOES move is the plant's production cost: it is priced off the live commodity market, using the same world price-ratio the plant's own turn economics use, so a lot's cost floor and a plant's actual input bill move together instead of drifting apart. A supplier building lots in a world where steel has gotten expensive pays more to build them, because cost is re-derived from the live market on each delivery sweep. The signed price never moves: rising inputs squeeze the supplier's margin, down to the 12% floor and no further, and never raise the bill to the buyer.
 
 The gap between what a lot sells for and what it costs to build is the supplier's margin. This margin is the entire economic point of a defence contract: it is deliberate profit for the arms industry, not free money. Contracts written before this cost model shipped keep settling on the terms they were signed under; that is not something you as a player can trigger or exploit going forward, it only matters for very old, already-existing contracts.
 
 ## The self-dealing check
 
-Warhead production for [The Nuclear Programme](/wiki/nuclear-programme) is paid from the same defence budget, so the same appropriation limits apply to it.
+Warhead production for [The Nuclear Programme](/wiki/nuclear-programme) is paid from the same defence appropriation, out of whatever live contracts have not already reserved. It is not a contract, so the window and supplier caps do not apply to it.
 
 Every award is checked for whether the minister writing it has a stake in the corporation receiving it:
 
@@ -86,7 +86,7 @@ A contract can be cancelled by the minister who holds the defence seat, and how 
 
 **Terminating for convenience.** Anything else. The supplier accepted, the plant is working, and the minister has decided the order should stop. Three things follow:
 
-- **A break fee.** The supplier is paid its margin on every lot it was ordered to build and now will not. This comes out of the defence appropriation, and it comes out immediately. If the appropriation cannot cover the fee, the termination is refused: a minister does not get to walk away and leave the company holding the bill.
+- **A break fee.** The supplier is paid 15% of the contract price, the target supplier margin, on every lot it was ordered to build and now will not. This comes out of the defence appropriation, and it comes out immediately. If the appropriation cannot cover the fee, the termination is refused: a minister does not get to walk away and leave the company holding the bill.
 - **The tranche stays spent.** The cancelled lots are NOT returned to the contracting window. Cancelling an order does not create room to award a new one this quarter, to anyone, including yourself.
 - **Public disclosure and a political price.** The cancellation goes on the wire with the minister's name on it, and they take a favorability hit that scales with how much of the quarter's procurement the order was. If the minister holds an interest in a different domestic defence supplier, one that competes for the same work, the wire says so and the penalty doubles.
 
@@ -113,7 +113,7 @@ Because the per-turn cap is three times the steady rate and a window is twelve t
 - If you hold the defence seat, plan contracts against the quarterly tranche, not against however much cash the treasury happens to be holding.
 - Awarding to your own corporation is legal but public and costly. Small orders are close to free politically; large ones are not.
 - Cancelling a rival's contract is legal too, and it now costs you money, tranche room, and standing. Check the quoted break fee on the cancel button before you confirm it.
-- If you supply defence contracts, an order that gets torn up mid-build pays you the margin you were promised on the rest of it. You will be notified, and the reason is on your order book.
+- If you supply defence contracts, an order that gets torn up mid-build for convenience pays you 15% of the price of the rest of it. A termination for cause pays nothing. You will be notified, and the reason is on your order book.
 - Deliveries on a large contract will spread across several turns even after the contract is signed. That is the spend cap working as designed, not a bug.
 - State industry in a command economy can absorb a whole window's tranche where private suppliers cannot; this is intentional, not an oversight.
 

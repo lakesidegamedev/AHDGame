@@ -9,15 +9,15 @@ Each party elects a **national committee** of up to **6 members**.
 1. An election opens automatically for each party that has none running.
 2. Party members enter as candidates and party members vote.
 3. Each voter can support up to **6 candidates**. Only your latest vote counts.
-4. After **168 turns** (one real week) the six candidates with the most votes are seated. Ties go to the candidate who entered first.
-5. A new election opens, so the committee is re-elected on a weekly cycle.
+4. After **168 turns** (one real week) the six candidates with the most votes are seated. Ties go to the candidate who entered first. A party that has changed its election length with a committee proposal uses that length instead.
+5. A new election opens, so the committee is re-elected on the same cycle.
 
 The committee sits on the party, not in a chamber, so candidacy and voting are scoped to the party. The party's membership decides who stands and votes (see [Political Parties](/wiki/political-parties)).
 
 | Item | Value |
 | --- | --- |
 | Committee size | Up to 6 seats |
-| Election length | 168 turns (7 real days) |
+| Election length | 168 turns (7 real days), unless the party has voted a different length |
 | Votes per voter | Up to 6 candidates |
 | Tie-break | Earlier candidacy wins |
 | Committee proposal window | 24 turns |
@@ -31,7 +31,7 @@ Ten members enter your party's committee election. Voters can pick up to six eac
 
 - **Stand for the committee** during the election and **vote** for up to six candidates, if you are a member of the party.
 - **As a committee member:** submit formal proposals to change the party and vote on them, together with the national chair, vice chair and treasurer. Proposals run 24 turns and pass at 60% of filled roles. Committee members propose and vote on party changes; full rules on [Party Leadership](/wiki/party-leadership).
-- **Chamber committee chairs** are a leadership idea, not a separate election. See [Congress Leadership](/wiki/congress-leadership) for the offices that are elected in each chamber.
+- **Chamber committees** do not exist, so there are no committee chairs to elect. See [Congress Leadership](/wiki/congress-leadership) for the offices that are elected in each chamber.
 
 Tips: with six votes each, vote for six: a vote withheld helps rivals. Enter early, since an earlier entry also wins ties.
 

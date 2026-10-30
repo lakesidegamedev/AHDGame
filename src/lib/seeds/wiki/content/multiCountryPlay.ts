@@ -1,6 +1,6 @@
 export const multiCountryPlayContent = `# Multi-Country Play
 
-Your character belongs to one country, but your money does not have to. The world runs a roster of playable countries that depends on the era: the United States, United Kingdom, Germany, Japan, China, Ireland, Brazil and Nigeria, plus the Soviet Union, East Germany and the Eastern bloc in the Cold War presets. Each has its own political system, legislature, election rules, and currency, and a country can be switched on for players during a world's life. The rest of the world is simulated: autonomous governments there legislate, trade, and conduct foreign policy on their own. This page covers what being locked to a country means, how the systems differ, and where your economic holdings cross borders.
+Your character belongs to one country, but your money does not have to. The world runs a roster of playable countries that depends on the era: the United States and United Kingdom in every era, the Soviet Union and East Germany in the 1953 and 1979 presets, Japan from 1991, and Germany and China in 2027. Countries such as Ireland, Brazil, Nigeria and the rest of Europe run as economies you can browse and invest in, and a country can be switched on for players during a world's life. Each has its own political system, legislature, election rules, and currency. The rest of the world is simulated: autonomous governments there legislate, trade, and conduct foreign policy on their own. This page covers what being locked to a country means, how the systems differ, and where your economic holdings cross borders.
 
 ## One character, one country
 
@@ -21,18 +21,18 @@ However, economic investments (corporations, bonds, forex positions) cross count
 | Country | System | Legislature | Executive | Election method |
 |---|---|---|---|---|
 | United States | Presidential | Congress (Senate + House) | President (directly elected) | FPTP, staggered Senate classes |
-| United Kingdom | Parliamentary | Parliament (Commons + Lords) | Prime Minister (confidence of Commons) | FPTP, snap elections allowed |
+| United Kingdom | Parliamentary | Parliament (Commons + Lords) | Prime Minister (confidence of Commons) | Regional multi-seat races split by largest remainder; snap elections allowed |
 | Germany | Parliamentary | Bundestag (+ Bundesrat) | Chancellor (confidence of Bundestag) | Mixed-member proportional (AMS) |
-| Japan | Parliamentary | Kokkai (Shūgiin + Sangiin) | Prime Minister (confidence of Shūgiin) | FPTP, snap elections allowed |
+| Japan | Parliamentary | Kokkai (Shūgiin + Sangiin) | Prime Minister (confidence of Shūgiin) | Regional multi-seat races split by largest remainder; snap elections allowed |
 | China | One-party state | National People's Congress (delegate-elected) | Premier (elected by NPC delegates) | One-party elections; approved/banned regime tiers; regime can collapse |
 | Ireland | Parliamentary | Oireachtas (Dáil + Seanad) | Taoiseach (confidence of Dáil); Uachtarán (directly elected, ceremonial head of state) | Hare-quota multi-seat allocation; snap elections allowed |
 | Brazil | Presidential | National Congress (Chamber + Senate) | President (directly elected, 2-term cap) | Open-list PR chamber, staggered FPTP senate |
-| Nigeria | Presidential | National Assembly (House + Senate) | President (directly elected, 2-term cap) | FPTP, single-member seats |
-| Soviet Union / East Germany / Eastern bloc | One-party state | Supreme Soviet (bicameral) / Volkskammer | Premier or General Secretary via internal party confidence | Single-list elections; regime can collapse |
+| Nigeria | Presidential | National Assembly (House + Senate) | President (directly elected, 2-term cap) | Multi-seat races in each of the six zones, split by largest remainder |
+| Soviet Union / East Germany / Eastern bloc | One-party state | Supreme Soviet (bicameral) / Volkskammer | Premier or General Secretary via internal party confidence | Only ruling and approved parties stand; regime can collapse |
 
 Parliamentary systems (UK, DE, JP, IE) form governments through legislative confidence rather than direct election. No one runs "for Prime Minister" / "Taoiseach" / "Chancellor" directly - you win a seat, your party wins a majority (or coalition), and the party leader is appointed. Ireland also elects a separate ceremonial head of state, the Uachtarán, on a 7-year nationwide ballot. The 1.0 simulation resolves that race from first-preference totals; ranked transfer fidelity is planned as a later electoral-system upgrade.
 
-China was the first one-party state modelled and the pattern is generic: see [One-Party States](/wiki/one-party-states) for how regime tiers, ruling-party confidence, liberalization reforms, and regime collapse work across all twelve.
+China was the first one-party state modelled and the pattern is generic: see [One-Party States](/wiki/one-party-states) for how regime tiers, ruling-party confidence, liberalization reforms, and regime collapse work across every one-party state.
 
 ## Reaching the top in a parliamentary country
 
@@ -51,7 +51,7 @@ In the UK, Germany, Japan, and Ireland, the path to executive power is:
 
 ## China and the one-party states
 
-China is a one-party state with three party tiers: the ruling Chinese Communist Party (CCP), approved opposition parties (CDL, CNDCA), and banned parties (player-created NPPs land here by default). The Premier is elected by NPC delegates rather than by a direct national vote.
+China is a one-party state with three party tiers: the ruling Chinese Communist Party (CCP), approved opposition parties (CDL, CNDCA), and banned parties (a party a player founds there starts out banned). The Premier is elected by NPC delegates rather than by a direct national vote.
 
 Critically, the regime is **not immortal**: sustained mismanagement, repression, or unpopular policy degrades two coupled scalars (popular legitimacy + party confidence) that escalate through a four-stage chain ending in regime collapse and forced conversion to a multi-party parliamentary system. The Premier has access to liberalization reforms and can announce a voluntary constitutional convention as an off-ramp. See [One-Party States](/wiki/one-party-states) for the full mechanics.
 
@@ -59,7 +59,7 @@ Critically, the regime is **not immortal**: sustained mismanagement, repression,
 
 ### Corporations across countries
 
-Corporations are created within a country's economy but their sector revenue can flow into any country's currency if the sector operates internationally. Corporate income is paid in the country's home currency. Players can own multiple corporations across countries if they have characters there.
+Corporations are created within a country's economy and hold their capital in that country's currency. Your account can own one corporation at a time, even across several characters, but you can buy shares and bonds of corporations in any country.
 
 ### Sovereign bonds
 
@@ -70,14 +70,15 @@ The bond market supports sovereign bonds issued by national governments. A chara
 When Forex is enabled for the game world, characters can trade between every floating currency in the world: USD, GBP, EUR or the pre-euro marks and punts, JPY, CNY, BRL, NGN and the rest of the live set. Planned economies fix their official rate and do not trade on the open market. Exchange rates shift based on:
 
 - Trade growth (tracked in federal budgets)
-- National inflation rates
+- National inflation and GDP growth
 - Interest rate differentials between central banks
+- Player and central bank trading flow
 
 A character invested in both US and JP politics might also hold JPY positions, betting on Japan's economic trajectory. Central bank chair roles (Fed, Bank of England, ECB, Bank of Japan) give bonus actions and influence over interest rates.
 
 ### Cross-border legislation
 
-Some bills are scoped as international, meaning they affect metrics in all countries simultaneously. Passing an international trade bill in the US Congress, for example, can shift economic metrics globally. Watch the legislation feed across countries to spot these.
+Every bill is national or regional; no bill writes another country's metrics directly. Cross-border effects come through trade: a tariff bill can target one country, one category of goods, or every partner, which changes what foreign producers can sell into your market. Watch the legislation feed across countries to spot these.
 
 ## Working with players in other countries
 
@@ -85,7 +86,7 @@ Since individual characters are country-locked, multi-country play typically mea
 
 - **Party coordination:** Establish the same party in multiple countries and coordinate platforms. UK Labour and German SPD can run compatible economic platforms to create aligned demographics in both countries.
 - **Economic coordination:** A player in each country can synchronize legislation to benefit shared corporations (e.g., both countries passing favorable tech sector policies).
-- **Forex coordination:** If one player controls the Bank of England and another controls the Federal Reserve, they can coordinate interest rate decisions to influence EUR/GBP exchange rates.
+- **Forex coordination:** If one player controls the Bank of England and another controls the Federal Reserve, they can coordinate interest rate decisions to influence the USD/GBP exchange rate.
 
 ## Finding each country in the game
 

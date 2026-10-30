@@ -4,9 +4,9 @@ A cabinet seat is the difference between voting on policy and running a departme
 
 ## Getting a seat
 
-1. **Nomination.** Only the character holding the **President** office can nominate. The President picks a player or NPP and submits the nomination from the executive dashboard. One nomination per seat can be pending at a time, and the President can withdraw it before the vote closes.
+1. **Nomination.** Only the character holding the **President** office can nominate. The President picks a player or NPP and submits the nomination from the executive dashboard. One nomination per seat can be pending at a time: nominating someone else for the seat withdraws the earlier nomination. The President can also withdraw it before the vote closes.
 2. **Senate confirmation.** The Senate votes for 24 hours, and the Senate vote decides whether a nominee takes office. See [Confirmation Process](/wiki/confirmation-process).
-3. **Taking office.** A confirmed nominee is installed as the Cabinet member and the seat shows as filled.
+3. **Taking office.** A confirmed nominee is installed as the Cabinet member and the seat shows as filled. A nominee who holds a central bank or FOMC office is first offered a choice between the seat and that office.
 4. **Direct appointment.** The White House Chief of Staff is the exception: the President appoints them alone, with no Senate vote, and can fire them at any time.
 
 ![A vacant cabinet seat is filled by nomination and a 24 hour Senate vote, by an acting secretary, or by direct appointment.](/wiki-images/diagrams/cabinet-seat-lifecycle.svg)
@@ -23,7 +23,6 @@ Tips:
 ### Why can't I nominate someone?
 
 - You are not the President.
-- The seat already has a pending nomination.
 - The seat does not exist yet in the current year.
 - The nominee holds an office that cannot be combined with this seat.
 
@@ -51,7 +50,7 @@ In the UK, Japan, Germany and Ireland the Prime Minister, Chancellor or Taoiseac
 
 ## When a seat falls vacant
 
-A seat becomes vacant when the Secretary resigns or is fired, when a new President takes office, or when the White House changes party. The turn never fills seats for you: the President must nominate or seat an acting secretary. A removed President is replaced (see [Impeachment](/wiki/impeachment)) and cabinet terms change with them, and a new President or a change of party after [General Elections](/wiki/general-elections) ends or resets cabinet terms.
+A seat becomes vacant when the Secretary resigns or is fired, or when a different President wins a [general election](/wiki/general-elections): that clears the whole cabinet and every pending nomination, whatever the party. A re-elected President keeps their cabinet. The turn never fills seats for you: the President must nominate or seat an acting secretary. A President removed from office is replaced by the Vice President (see [Impeachment](/wiki/impeachment)), and the cabinet stays in place.
 
 An empty cabinet loses approval in proportion to the share of seats left empty, up to -7.5 (see [Government Approval](/wiki/government-approval)).
 
@@ -87,7 +86,7 @@ Say you are confirmed as Secretary of Energy with the full bank of 4 actions. On
 ministerial-action-bank
 \`\`\`
 
-Holding a seat sets your national influence tier (see [Elections Player Guide](/wiki/elections-player-guide)). The trade minister's office holds the embargo panel and spends cabinet actions (see [Embargoes & Trade Exposure](/wiki/embargo-and-trade-exposure)). The head of government and finance minister hold the taking and privatization powers (see [Nationalization & National Corporations](/wiki/nationalization)) and the powers over state companies (see [National Corporations](/wiki/national-corporations)).
+Holding a seat sets your national influence tier (see [Elections Player Guide](/wiki/elections-player-guide)). The trade minister's office holds the embargo panel and spends cabinet actions (see [Embargoes & Trade Exposure](/wiki/embargo-and-trade-exposure)). The head of government orders executive takings, and the finance minister privatizes (see [Nationalization & National Corporations](/wiki/nationalization)) and holds the powers over state companies (see [National Corporations](/wiki/national-corporations)).
 
 Live in every world with a cabinet. The US uses nomination and Senate confirmation, and the US roster depends on the year. The UK, Japan, Germany and Ireland appoint directly. Several other countries, including China, the Soviet Union and the East German state, have their own cabinets; see the [Cabinet Guide](/wiki/cabinet-guide) for each country.
 

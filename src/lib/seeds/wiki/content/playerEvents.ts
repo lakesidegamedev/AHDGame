@@ -10,7 +10,7 @@ Each turn the game runs one pass over player characters.
 2. If you are in an election debate this turn, you are skipped. Debates take priority over normal events, which is how [RPG Stats & Debates](/wiki/rpg-stats) interacts with this system.
 3. If you already have a pending event, you are skipped. You never hold more than one.
 4. If you are still on your spacing cooldown, you are skipped.
-5. The game keeps the events that fit you: your role, your country, the in-game year, and the per-kind cooldown.
+5. The game keeps the events that fit you: your role, your country and the in-game year. There is no separate cooldown per event, so the same event can come up again once your spacing cooldown ends.
 6. It picks one from that list by weight. An event with weight 20 is twice as likely as one with weight 10.
 7. You are offered the event and notified through the [Notification Center](/wiki/notifications). A dice roll from 1 to 100 is fixed at that moment.
 
@@ -19,7 +19,7 @@ Each turn the game runs one pass over player characters.
 | Item | Value |
 | --- | --- |
 | Pending events per character | 1 |
-| Spacing cooldown after an event resolves | 10 to 20 turns, set per character |
+| Spacing cooldown after an event resolves | 10 to 20 turns, rolled again each time |
 | Time to answer | 48 turns or 24 real hours, whichever comes first |
 | Options per event | Usually 2 to 4, one is the default |
 | Broadcast events | At most one per turn, each at most once per world |
@@ -63,7 +63,7 @@ event-roll-stat-adjustment
 
 The roll is fixed when the event is offered, so a good stat shifts you toward a better tier but never guarantees one. If an option costs money you cannot afford, the default is not automatically the safe choice: in Tax Audit the default is "Ignore the notice", which carries a 120,000 wealth loss on a middle roll.
 
-Every resolution posts a notification with the tier you landed in, and notable outcomes can also reach the wire. Favorability changes feed your public standing in [Government Approval](/wiki/government-approval).
+Every resolution posts a notification with the tier you landed in, and notable outcomes can also reach the wire. Favorability is your personal standing with voters and feeds your results in [Election Mechanics](/wiki/election-mechanics).
 
 ## Moments everyone shares
 

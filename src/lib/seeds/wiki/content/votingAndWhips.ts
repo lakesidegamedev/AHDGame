@@ -1,6 +1,6 @@
 export const votingAndWhipsContent = `# Voting & whips
 
-Your own vote is a free choice, but the other 90 percent of a chamber is non-player politicians (NPPs), and a whip is how you move them. A whip is a party directive that tells members how to vote. Every legislator, player or NPP, can vote on every bill in their chamber, and the tally decides whether each bill passes, fails or goes on (see [Bills & Legislation](/wiki/bills-legislation)).
+Your own vote is a free choice, but most of a chamber is usually non-player politicians (NPPs), and a whip is how you move them. A whip is a party directive that tells members how to vote. Every legislator, player or NPP, can vote on every bill in their chamber, and the tally decides whether each bill passes, fails or goes on (see [Bills & Legislation](/wiki/bills-legislation)).
 
 ## One bill, one day
 
@@ -39,7 +39,7 @@ A 100 seat chamber. A bloc of 7 NPP seats has forces ideology +20, whip +30, dis
 
 ## Whipping
 
-Whips come from leaders: your party's Chair or Vice Chair, or chamber leadership such as Speaker, majority or minority leader, or whip (see [Party Leadership](/wiki/party-leadership), where chair, vice chair and chamber leaders hold the seats that can issue the whips). State and regional party leaders whip NPPs in their own geography, and caucus leaders whip their own members. Leaders are elected as described on [Congress Leadership](/wiki/congress-leadership) and [Chamber Leadership](/wiki/chamber-leadership); floor whips are appointed, not elected. At autonomy level 6, NPP-led governments whip their own members on bills that serve their goals (see [npp-autonomy](/wiki/npp-autonomy)).
+Whips come from leaders: your party's Chair or Vice Chair, or chamber leadership such as Speaker, majority or minority leader, or whip (see [Party Leadership](/wiki/party-leadership), where chair, vice chair and chamber leaders hold the seats that can issue the whips). State and regional party leaders whip NPPs in their own geography, and caucus leaders whip their own members. Leaders are elected as described on [Congress Leadership](/wiki/congress-leadership) and [Chamber Leadership](/wiki/chamber-leadership); in the US Congress the majority and minority whips are elected in the same leadership elections. At autonomy level 6, NPP-led governments whip their own members on bills that serve their goals (see [npp-autonomy](/wiki/npp-autonomy)).
 
 - **Pick hard or soft.** A hard whip rolls once for each NPP and writes the vote immediately when the roll succeeds. A soft whip leaves the NPP deciding with extra pressure.
 - **Read the defiance watch** to see which members currently vote against your whip. It shows only live defiance and clears when the member comes back into line.
@@ -51,7 +51,7 @@ Whips come from leaders: your party's Chair or Vice Chair, or chamber leadership
 | Each force | Clamped to -100 to +100 |
 | NPP verdict | Sum above +5 is For, below -5 is Against, otherwise Abstain |
 | Hard whip base chance | 55%, plus mode bonus 15, loyalty and Statecraft bonuses, minus stubbornness |
-| Soft whip roll bonus | 6 (used only for leadership, nomination and confidence votes) |
+| Soft whip roll bonus | 6 (used only for votes beyond bills, such as leadership, nomination, confidence and impeachment votes) |
 | Whip success chance limits | 40% to 95% |
 | Whip pressure on NPP decision | Party hard 60, party soft 30, caucus 40, caucus core-position bonus 20, then scaled by the NPP's compliance |
 | Party-line lean (same party as sponsor, no whip) | 20, scaled by compliance |

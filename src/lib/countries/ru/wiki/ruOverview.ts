@@ -13,7 +13,7 @@ The Soviet Union is played through its ministries. The Premier appoints a 16-sea
 
 ## The Council of Ministers
 
-The Premier is the head of government (Chairman of the Council of Ministers) and appoints ministers **directly from Supreme Soviet deputies**. Every seat carries a three-option **tier setting** (the middle option is the neutral default), a package of national metrics, and **two ministerial orders**: time-limited national modifiers that cost one ministerial action and run 24 turns (one game half-year, 24 real hours). Most line ministries also get a regional target and an emergency action aimed at a single republic.
+The Premier is the head of government (Chairman of the Council of Ministers) and appoints ministers **directly from Soviet of the Union deputies**. Every seat carries a three-option **tier setting** (the middle option is the neutral default), a package of national metrics, and **two ministerial orders**: time-limited national modifiers that cost one ministerial action and run 24 turns (one game half-year, 24 real hours). Most line ministries also get a regional target and an emergency action aimed at a single republic.
 
 ![The Council of Ministers loop: the Premier appoints 16 ministers whose tier settings and 24-turn orders move national metrics, which feed the marketization dial that decides the economic engine.](/wiki-images/diagrams/ru-overview-council-loop.svg)
 
@@ -32,7 +32,7 @@ The portfolios that define the Soviet council:
 | Minister of Internal Affairs (internal security) | Internal Security Posture: thaw vs crackdown | Public Order Sweep, Internal Passport Audit |
 | Minister of Culture | Cultural Line: liberal vs orthodox | Mass Literacy Campaign, Union Cultural Festival |
 
-The Foreign and Internal Trade seats are deliberately distinct levers: Foreign Trade tiers act on growth through the state import-export monopoly, Internal Trade tiers act on consumer costs and employment through domestic distribution. The remaining seats (First Deputy Chairman, Foreign Affairs, Defence, Finance, Railways, Health, Higher Education) follow the same tier-plus-orders pattern. See the [Cabinet Guide](/wiki/cabinet-guide) for every seat.
+The Foreign and Internal Trade seats are deliberately distinct levers: Foreign Trade tiers act on growth through the state import-export monopoly, Internal Trade tiers act on consumer costs and employment through domestic distribution. The remaining seats (First Deputy Chairman, Foreign Affairs, Defence, Finance, Railways, Health, Higher Education, and State Security, the KGB chairmanship from 1954) follow the same tier-plus-orders pattern. See the [Cabinet Guide](/wiki/cabinet-guide) for every seat.
 
 ## The plan and the marketization dial
 
@@ -57,7 +57,7 @@ marketization-schedule-by-country
 | State register | GOSPLAN (no bourse) |
 | Finance Minister | Minister of Finance |
 
-The 1979 budget models the Brezhnev-era pattern: slowing growth, suppressed inflation held near 1 percent by administered prices, and "financing the national economy" as the largest spending line. The 1953 budget is calibrated on the turnover tax as the dominant revenue source and infrastructure at roughly 30 percent of spending.
+The 1979 budget models the Brezhnev-era pattern: slowing growth, suppressed inflation targeted at 1.5 percent by administered prices, and "financing the national economy" as the largest spending line. The 1953 budget is calibrated on the turnover tax as the dominant revenue source and infrastructure at roughly 30 percent of spending.
 
 ## Holding the Premiership
 
@@ -65,13 +65,13 @@ The USSR runs the shared one-party-state regime system (see [One-Party States](/
 
 - **The CPSU is the only seeded party.** No approved satellite parties exist, which makes the USSR stricter than China or East Germany.
 - **Vote multipliers**: ruling-party votes weigh 3.0, approved parties 0.375, independents and banned parties 0. Player-created parties are **automatically banned** at charter ratification.
-- **No-confidence votes are skipped entirely.** One-party states have no legislative confidence mechanism, and coalition loss cannot collapse the government.
-- **Internal party confidence** replaces the confidence vote. The ruling leader starts at 75 confidence out of 100, gains +5 on renewal (capped at 95), and drifts each turn with policy alignment, popular mood and economic signals. If the Premier's confidence or the public's mood falls far enough for long enough, the regime walks through a four-stage escalation chain (discontent, unrest, internal challenge, collapse) with the same triggers as China. See the stage table on [China](/wiki/cn-overview) and [One-Party States](/wiki/one-party-states).
+- **No-confidence votes are CPSU business.** Unlike China, the USSR keeps a legislative confidence mechanism, but only a CPSU deputy can move a no-confidence vote, and coalition loss cannot collapse the government.
+- **Internal party confidence** runs alongside it. The ruling leader starts at 75 confidence out of 100, gains +5 on renewal (capped at 95), and drifts each turn with policy alignment, popular mood and economic signals. If the Premier's confidence or the public's mood falls far enough for long enough, the regime walks through a four-stage escalation chain (discontent, unrest, internal challenge, collapse) with the same triggers as China. See the stage table on [China](/wiki/cn-overview) and [One-Party States](/wiki/one-party-states).
 - **Can I play outside the CPSU?** Hardly. Independents and banned parties carry a vote weight of 0, and a party you create yourself starts banned, so the realistic route to office is the CPSU.
-- **Faction split**: at Stage 3 an auto-split spawns the **"Reformist Faction of the CPSU"** as a spinoff party, the only organic path to a second party.
-- **Regime conversion is one-way.** The collapse target is a parliamentary republic (the convention allowlist adds presidential). A negotiated convention reserves 20 percent of post-conversion seats for the former ruling party; the forced Stage-4 path reserves 5 percent (3 if the leader resisted) and delays the first election 12 turns instead of the default 24.
+- **Faction split**: at Stage 3 an auto-split spawns the **"Reformist Faction of the CPSU"** as a spinoff party, the only second party the regime itself produces (player-founded parties start banned).
+- **Regime conversion is one-way.** The collapse target is a parliamentary republic (the convention allowlist adds presidential). A negotiated convention reserves 20 percent of post-conversion seats for the former ruling party by default (up to 35); the forced Stage-4 path reserves 5 percent (3 if the leader resisted) and delays the first election 12 turns instead of the default 24.
 
-Party role labels are localized: chair reads **"General Secretary"**, vice chair **"Second Secretary"**, committee **"Politburo"**. The social axis runs from socially liberal (−5) to socially conservative (+5). The Soviet Union starts at **+3.5**, tied with China.
+Party role labels are localized: chair reads **"General Secretary"**, vice chair **"Second Secretary"**, committee **"Politburo"**. The social axis runs from libertarian (−5) to authoritarian (+5). The Soviet Union starts at **+3.5**, tied with China.
 
 ## The Supreme Soviet
 
@@ -82,19 +82,19 @@ Unlike China's mechanically unicameral NPC, the Supreme Soviet is **bill-active 
 
 Both chambers elect **on the same day** on a shared four-year cycle (anchored to 1954 in the 1953 preset and 1984 in the 1979 preset). Republic Supreme Soviets, the sub-national tier, run their own four-year cycle (1955 / 1980). There are **no snap elections**.
 
-The coalition threshold is a bare majority of the Soviet of the Union: **376 seats** (355 in 1953). Since the CPSU is the sole party, the threshold is a formality. The seeded government starts **formed**, with the CPSU holding a majority mandate from turn one. Historical composition follows the single-list convention of the era: the CPSU takes about **75 percent** of each chamber and the remaining quarter seats as non-party deputies.
+The coalition threshold is a bare majority of the Soviet of the Union: **280 seats** (264 of 526 in 1953). Since the CPSU is the sole party, the threshold is a formality. The seeded government starts **formed**, with the CPSU holding a majority mandate from turn one. Historical composition follows the single-list convention of the era: the CPSU takes about **75 percent** of each chamber and the remaining quarter seats as non-party deputies.
 
-When the last Supreme Soviet election of a cycle resolves, a **convocation reset** fires: the Premier's chair reopens for reappointment and the Chairman of the Presidium is cleared so the new chambers elect the head of state afresh.
+When the last Supreme Soviet election of a cycle resolves, a **convocation reset** fires: a sitting Premier who kept a seat stays on but faces an automatic confidence motion (a Premier without a seat loses the chair), and the Chairman of the Presidium is cleared so the new chambers elect the head of state afresh.
 
 | Office | How filled | Term | Seats |
 | --- | --- | --- | --- |
-| Premier (head of government) | Nominated by a party chair, confirmed by Soviet of the Union deputies | 4 years | 1 |
+| Premier (head of government) | Nominated by a party chair, confirmed by Soviet of the Union deputies | No fixed term; confidence motion after each Supreme Soviet election | 1 |
 | Chairman of the Presidium (ceremonial head of state) | Elected by a joint sitting of both chambers | No fixed term | 1 |
 | Supreme Soviet Deputy | Multi-seat regional election | 4 years | 559 (526 in 1953) |
 | Nationalities Deputy | Multi-seat republic-weighted election | 4 years | 515 |
-| Republic Deputy | Multi-seat sub-national election | 4 years | 5,000 total |
+| Republic Deputy | Multi-seat sub-national election | 4 years | 4,587 total |
 | Republic First Secretary | Regional executive election | 4 years | 1 per region |
-| Chairman of Gosbank | Appointed action | 4 years | 1 |
+| Chairman of Gosbank | Nominated by the Premier, then drawn | 4 years | 1 |
 
 The Premier carries **+4 actions per turn**; a Supreme Soviet or Nationalities Deputy +1; a Republic First Secretary +2; the Chairman of Gosbank +3. The Chairman of the Presidium carries +0 actions and zero party-strength weight: the office is a ceremonial capstone, not a power base.
 
@@ -126,10 +126,10 @@ The 1953 preset reapportions the Union chamber to 526 seats on 1953 populations;
 | Stage | Target | Why |
 | --- | --- | --- |
 | Entry | Republic Deputy | +1 action/turn; republic legislation; 4-year terms |
-| Entry | Supreme Soviet or Nationalities Deputy | +1 action/turn; national legislature and the pool ministers are drawn from |
+| Entry | Supreme Soviet or Nationalities Deputy | +1 action/turn; national legislature (only Soviet of the Union deputies can be appointed ministers) |
 | Mid-game | Republic First Secretary | +2 actions/turn; regional executive; signs republic bills |
 | Mid-game | Council of Ministers seat | Tier setting, two orders, and (Gosplan/Gosbank) the command-economy panels |
-| Top | Premier | +4 actions/turn; appoints the Council; held through internal party confidence |
+| Top | Premier | +4 actions/turn; appoints the Council; held through internal party confidence and CPSU-moved confidence votes |
 
 ## Starting scenarios
 
@@ -137,7 +137,7 @@ ${ruScenarios}
 
 ## The Warsaw Pact and the Cold War
 
-The **Warsaw Pact** is the socialist bloc's collective-defense alliance, seeded from 1952 and dissolved on schedule in 1991. Founding members are the USSR, East Germany, Poland, Hungary, Romania, Bulgaria and Czechoslovakia; the 1953 preset adds Albania, which is gone by 1979. Alignment and the pact are covered in [International Organizations](/wiki/international-organizations).
+The **Warsaw Pact** is the socialist bloc's collective-defense alliance, seeded from 1952. Worlds starting in 1991 or later do not have it, but a running game's pact is never dissolved while it has members. Founding members are the USSR, East Germany, Poland, Hungary, Romania, Bulgaria and Czechoslovakia; the 1953 preset adds Albania, which is gone by 1979. Alignment and the pact are covered in [International Organizations](/wiki/international-organizations).
 
 - **Moscow holds permanent leadership.** The pact's chair, the **Supreme Commander of the Unified Command**, is permanently assigned to the USSR. No other member can ever hold it.
 - **Tribute.** In worlds that began at the 1953 preset, the two armed blocs levy a fixed yearly tribute on non-voting client members instead of voted dues: 0.75% of GDP for the Warsaw Pact and 0.5% for NATO.
@@ -146,7 +146,7 @@ The **Warsaw Pact** is the socialist bloc's collective-defense alliance, seeded 
 
 ## Living history
 
-The timeline below is written by the turn processor whenever a Premier transition or national-scope bill enactment happens in-game. Each entry is a real event from this save.
+The timeline below is written by the turn processor whenever a national event happens in-game: a change of leader, a national law enacted, an escalation stage, an alliance joined or left, or a region transferred. Each entry is a real event from this save.
 
 \`\`\`country-history
 RU
@@ -154,5 +154,5 @@ RU
 
 See also: [Core Systems](/wiki/core-systems) for turn structure and the action economy.
 
-Runs as described in the 1953 and 1979 presets. The 1991 preset opens the same slot in its final year as a transitional Soviet Union: a 2,250-seat Congress of People's Deputies, a Chairman of the Cabinet of Ministers and a presidency, with no ruling party, so the one-party rules above do not apply there. The command economy, regime escalation and tribute rules apply in the 1953 and 1979 worlds. Last checked 2026-10-29, version 1.18.0.
+Runs as described, and is playable, in the 1953 and 1979 presets. In the 1991 preset the same slot is an economy preview (closed to players) showing the Soviet Union's final year: a 2,250-seat Congress of People's Deputies, a Chairman of the Cabinet of Ministers and a presidency, with no ruling party, so the one-party rules above do not apply there. The command economy, regime escalation and tribute rules apply in the 1953 and 1979 worlds. Last checked 2026-10-30, version 1.18.0.
 `;

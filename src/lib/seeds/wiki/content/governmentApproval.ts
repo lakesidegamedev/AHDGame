@@ -1,6 +1,6 @@
 export const governmentApprovalContent = `# Government Approval
 
-Leave half your cabinet empty and you start every turn up to 7.5 points in the hole. Drag the country into a long war and the public wears down at a point a year. Government approval is the share of a country's people who support the government, from 0 to 100, scored from how the country is actually doing rather than how popular any one politician is. It matters because it scales the votes parties win in every election.
+Leave half your cabinet empty and you start every turn 3.75 points in the hole; leave all of it empty and it is 7.5. Drag the country into a long war and the public wears down at a point a year. Government approval is the share of a country's people who support the government, from 0 to 100, scored from how the country is actually doing rather than how popular any one politician is. It matters because it scales the votes parties win in every election.
 
 Open a country's Approval page to see approval, disapproval and net approval, the last 20 turns of history, and every active modifier with its value. A net approval above +10 is comfortable. Below 0 is a warning. Approval and disapproval always add to 100: there is no undecided group, and net approval is approval minus disapproval.
 
@@ -27,7 +27,7 @@ The one formula worth knowing:
 
 **State score = 50 + (weighted average metric contribution x 2.5)**
 
-Because each contribution is capped at 2, metrics alone move a state at most 5 points either side of its starting point of 50. Named conditions and national modifiers do the rest. In some countries the starting point also includes a political adjustment, so the base shown on the Approval page may not be exactly 50.
+Because each contribution is capped at 2, metrics alone move a state at most 5 points either side of its starting point of 50. Named conditions and national modifiers do the rest. In the US, the UK, Russia, East Germany and the non-playable countries that carry a derived political board, the state base comes from that political board instead of this metric comparison, so the base shown on the Approval page may not be exactly 50. Named conditions, smoothing and national modifiers still apply on top.
 
 | Item | Value |
 | --- | --- |
@@ -83,7 +83,7 @@ war-exhaustion-curve
 | Alliance contribution | For a treaty ally, what you field against your allies (-1 to +1) |
 | Higher public expectations | A new head of government starts at 0 and builds to -5 across their term |
 | Empty cabinet seats | -7.5 with no seat filled, less in proportion as seats fill |
-| Acting appointments | -0.5 for each acting secretary, each shown as its own line |
+| Acting appointments | -0.5 for each acting secretary, shown together on one line |
 | Union crackdown | -2 while unions are banned and a crackdown is under way |
 | Bank failures | A recent bank failure costs approval for a while (worlds with private banking only) |
 
@@ -100,10 +100,10 @@ Expectations build in a straight line. Halfway through a four-year term the drag
 War arrives as separate lines, because a war going well and a tired public are different facts that call for different answers.
 
 - **War effort** judges the front against what the war was expected to do, not just who holds ground. A defence that gives up nothing is a success. An invasion that stalls is a failure. Putting down a rebellion is credited as winning. How the front moves, and how long a war lasts, change approval ([Conflicts & the Military System](/wiki/conflicts-overview)), and territory won or lost changes approval at home ([Occupation, Territory & Victory](/wiki/occupation-and-victory)). Losses at sea cut war approval once fleet condition is under 70 ([Blockades](/wiki/blockades)).
-- **War exhaustion** is measured from the turn your own country entered. Declaring a war from peace rallies the public at +1 ([Declaring War](/wiki/declaring-war)). Support then falls by 1 point per game year (48 turns), turning to cost after about a year, down to a floor of -25. Exhaustion carries over a peace and heals at the same pace it built, 1 point per game year. A country that never stops fighting never gets the rally. A year of fighting takes a year of peace to forgive. Ending a war stops the war effects on approval ([Peace, Indemnities & Truces](/wiki/peace-and-truces)).
+- **War exhaustion** is measured from the turn your own country entered. Entering a war from peace rallies the public by +1 on top of any exhaustion still carried, capped at +1 ([Declaring War](/wiki/declaring-war)); a country still carrying -3 opens at -2. Support then falls by 1 point per game year (48 turns), turning to cost after about a year, down to a floor of -25. Exhaustion carries over a peace and heals at the same pace it built, 1 point per game year. A country that never stops fighting never gets the rally. A year of fighting takes a year of peace to forgive. Ending a war removes the war effort and alliance lines at once, while exhaustion keeps healing ([Peace, Indemnities & Truces](/wiki/peace-and-truces)).
 - **Alliance contribution** applies to a country pulled in by a mutual-defence treaty. Matching your allies is neutral, sending nothing costs approval, and carrying more than your share earns it. Nobody is penalized in the first 6 turns after entry.
 
-When a war ends the lines ease out over several turns. See [A War, Start to Finish](/wiki/a-war-start-to-finish).
+When a war ends, the effort and alliance lines vanish that turn; exhaustion heals at a point a year and a defeat penalty fades over three years. See [A War, Start to Finish](/wiki/a-war-start-to-finish).
 
 Active crises can add direct approval effects each turn, on top of the metric score. A major crisis can swing approval by several points a turn. See [Crisis Interaction](/wiki/crisis-interaction). Favorability changes from [Player Random Events](/wiki/player-events) feed public standing, and most responses to [World Events](/wiki/world-events) move approval up or down.
 
@@ -114,10 +114,10 @@ Rank your levers by size:
 1. Fill the cabinet. It is worth up to 7.5 points and lands at once.
 2. Avoid acting appointments where confirmation is available. Each costs 0.5.
 3. Treat a war as an approval decision. A fresh war rallies the public once, a long one wears it down, and exhaustion follows you into the next war.
-4. Improve metrics in all 10 categories. Weakness in one category drags the average.
-5. Appoint a central bank chair who keeps inflation near target (see [Central Banks](/wiki/central-banks)).
+4. Watch the named conditions. Metrics are scored against the national average, so lifting every state together barely moves the metric part; nationwide booms and slumps reach approval through conditions such as Economic Boom, Recession and High Unemployment.
+5. Close the gap in lagging states. A state that trails the national average on many metrics drags its own score, and populous states weigh most in the national figure.
 
-As opposition, track the metrics. Rising inflation or unemployment will pull approval down within a few turns, and the election multiplier makes that matter at the ballot box.
+As opposition, track the named conditions. Rising unemployment that trips High Unemployment or Recession pulls approval down within a few turns, and the election multiplier makes that matter at the ballot box. Inflation has no direct approval term.
 
 If approval is under 40, expect recovery to take time. State ratings move at most 2 points a turn, so a 10 point gap needs at least 5 turns even if every metric turns around at once. National modifiers such as the cabinet penalty are the fast fixes. If approval dropped this turn, check the modifier lines first: a war line, an empty seat or a new Recession condition shows up there.
 
@@ -134,7 +134,7 @@ approval-vote-pool-multiplier
 
 This applies in [General Elections](/wiki/general-elections) races, and [Election Mechanics](/wiki/election-mechanics) scales the pool for the governing party. Regional and Westminster approval also push independence and reunification desire toward the government's stance ([Independence and Reunification Referendums](/wiki/referendums)).
 
-Low approval does not trigger a snap election and does not remove anyone from office. Snap elections in parliamentary countries (UK, Japan, Germany) come from only two things: the Prime Minister (or Chancellor in Germany) choosing to dissolve the lower chamber, or no Prime Minister being appointed within 96 turns of the government entering pending status. See [Snap Elections](/wiki/snap-elections).
+Low approval does not trigger a snap election and does not remove the head of government. In the UK, approval below 50 does make NPP ministers more likely to resign and erodes the government's confidence gauge. Snap elections in parliamentary countries (UK, Japan, Germany) come from only two things: the Prime Minister (or Chancellor in Germany) choosing to dissolve the lower chamber, or no Prime Minister being appointed within 96 turns of the government entering pending status. See [Snap Elections](/wiki/snap-elections).
 
 Live in every world for every country. A world set in an earlier era ignores metrics that did not exist yet. The acting appointment penalty applies only in presidential countries with confirmation. War lines appear only for countries at war, or still carrying exhaustion from one. The union crackdown line appears only where unions are banned. Bank failure lines appear only in worlds with private banking. Last checked 2026-10-29, version 1.18.0. Exact rules: [Government Approval (design)](https://docs.lakesidegames.net/design/government-approval.html). See also: [Glossary](/wiki/glossary)
 `;

@@ -24,7 +24,7 @@ The gap between 60 to join and 20 to stay is deliberate. Joining is hard so a ca
 | Relationship drift toward zero | 0.1 per turn |
 | Caucus tax | 0% to 5% |
 | Health window for joins and exits | last 12 turns |
-| Watch band (listed, not urgent) | 25 up to 30 |
+| Watch band (listed; already turns the caucus Strained) | 25 up to 30 |
 | Elevated band | 20 up to 25 |
 | Critical band | below 20 |
 
@@ -46,7 +46,7 @@ The at-risk list shows up to five NPPs whose relationship with the chair is belo
 
 ### Watching one senator drift away
 
-You chair the Rural Bloc caucus. An NPP senator joined at relationship 60 and you have not met her since. At turn 301 she is at 29.9, so she appears as Watch with a gap of 9.9. At turn 351 she is at 24.9 and becomes Elevated, and the caucus turns Strained. Two private meetings (6 actions, no funds) lift her to 34.9 and she leaves the list. If you ignore her until turn 401 she hits 19.9 and leaves at that turn's upkeep. The caucus turns Fragile for 12 turns, and she needs a fresh 60 to be recruited again.
+You chair the Rural Bloc caucus. An NPP senator joined at relationship 60 and you have not met her since. At turn 301 she is at 29.9, so she appears as Watch with a gap of 9.9, and the caucus turns Strained. At turn 351 she is at 24.9 and becomes Elevated. Two private meetings (6 actions, no funds) lift her to 34.9 and she leaves the list. If you ignore her until turn 401 she hits 19.9 and leaves at that turn's upkeep. The caucus turns Fragile for 12 turns, and she needs a fresh 60 to be recruited again.
 
 A new chair inherits the roster but not the old chair's relationships. Upkeep checks every NPP against whoever chairs now, so a freshly elected chair who barely knows the NPPs can lose several at once.
 

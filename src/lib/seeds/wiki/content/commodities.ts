@@ -15,13 +15,13 @@ Read the page from top to bottom. Do not start with the price chart.
 1. **Choose the market scope.** **Global** is the world market. A country exchange shows that country's national price and its own balance. The same commodity can be short globally and long in one country.
 2. **Compare price with base.** The percentage under the price is the move from the commodity's base price. A high price is only meaningful next to supply and demand.
 3. **Read the balance.** Supply, demand, and the balance tell you whether the market is short or long right now. A positive balance is a surplus; a negative balance is a shortage.
-4. **Read the raw D/S ratio.** This is the number the price and margin curves use. Below 1 is oversupply, above 1 is shortage.
+4. **Read the raw D/S ratio.** This is the number the price and margin curves start from, before the soft-knee compresses extremes. Below 1 is oversupply, above 1 is shortage.
 5. **Read the pooled ledger.** Cleared, unmet, and surplus volume tell you whether the imbalance actually traded or merely sat there. Unmet demand with a high price is a real shortage. Surplus with a high price is a stale price or a storage problem.
 6. **Read the price history last.** A one-turn spike is noise. A persistent trend is a build signal.
 
 | Field | What it means | What to do with it |
 | --- | --- | --- |
-| Market price | Current clearing price, in the world's local currency. | Compare with base and with your input costs. |
+| Market price | Current market price, in your selected display currency. | Compare with base and with your input costs. |
 | Rolling 1Y | Change over the last 48 turns. | Tells you whether the move is new or a trend. |
 | Global supply / demand | Units offered and units wanted per day. | The balance is the first signal. |
 | Balance | Surplus or shortage. | A shortage rewards sellers; a surplus rewards buyers. |
@@ -35,7 +35,7 @@ Read the page from top to bottom. Do not start with the price chart.
 
 ## How a price gets set
 
-Every sector supplies and demands specific commodities, in proportion to its revenue. All the supply and demand in the world is added up, and the ratio of demand to supply (**D/S**) pushes the price: above 1 is a shortage and the price rises, below 1 is oversupply and the price falls. A state's price blends world, country and state conditions. Your margin then moves with the D/S ratio of each commodity you buy or sell, and your revenue moves with the price your output realises.
+Every sector supplies and demands specific commodities: under the plants tier, supply is what plants actually produced and input demand follows how hard they ran; before it, both were in proportion to revenue. All the supply and demand in the world is added up, and the ratio of demand to supply (**D/S**) pushes the price: above 1 is a shortage and the price rises, below 1 is oversupply and the price falls. A state's price blends world, country and state conditions. Your margin then moves with the D/S ratio of each commodity you buy or sell, and your revenue moves with the price your output realises.
 
 \`\`\`wiki-chart
 commodity-price-by-pressure
@@ -47,9 +47,10 @@ commodity-price-by-pressure
 | --- | --- |
 | Commodities | 27 (copper is merged into Rare Earth Minerals) |
 | Price curve | price = base x (1 + 0.7 x ln(D/S)) in a shortage; base / (1 + 0.7 x ln(S/D)) in oversupply |
-| Soft knee (where the curve flattens) | 3 times for most goods, 8 times for oil, coal, iron, timber, natural gas and rare earth |
-| Global stabilizer | 50,000 units added to both supply and demand |
-| State price blend | 50% global, 25% national, 25% state |
+| Soft knee (where the curve flattens) | Prices: 3 times for most goods, 8 times for oil, coal, iron, timber, natural gas and rare earth. Margins: 3 times for all |
+| Global stabilizer | 1,500 to 50,000 units per commodity (about 5% of its normal flow) added to both supply and demand |
+| State price blend | 50% world (the market the country can reach), 25% national, 25% state |
+| National price step | Half the gap to its target each turn |
 | Price drift toward target | 6% per turn (about 95% closed after 48 turns) |
 | Margin effect per commodity | 40 x rate x ln(D/S) points, soft-capped at ±50 |
 | Aggregate margin caps | Input costs at most -30 points, surplus at most +30, combined negative floored at -15 |
@@ -61,11 +62,13 @@ Commodity prices update every turn based on the global supply/demand balance. Pl
 
 ### Supply and demand
 
-Each sector type supplies and demands specific commodities at defined **rates** (fraction of daily revenue). The number of units in the market is:
+Each sector type supplies and demands specific commodities at defined **rates** (fraction of daily revenue). Before the plants tier, and for extraction in every tier, the number of units in the market is:
 
 \`\`\`
 units = (sector daily revenue * rate) / basePrice
 \`\`\`
+
+Under the plants tier, other sectors put the units their plants actually produced on the market (a mothballed plant supplies nothing), and their input demand scales with how much of their capacity they used.
 
 Only **owned** sectors participate. Unowned market share does not contribute supply or demand. What every [corporation](/wiki/corporations) runs, including its strategy and production policy, feeds the totals.
 
@@ -75,7 +78,7 @@ Only **owned** sectors participate. Unowned market share does not contribute sup
 - **Aggressive (+25):** +15% supply output, +10% demand inputs
 - **Conservative (-25):** -10% supply output, -15% demand inputs
 
-Market price updates each turn using a **logarithmic curve** with a soft-knee (a gradual transition instead of a hard cutoff): 3× for most commodities, widened to **8×** for the six extractable resources (oil, coal, iron, timber, natural gas, and the merged rare earth/copper market), since their prices are allowed more room to run before the tail compresses. Extraction output is the supply side of those six prices; see [Resources](/wiki/resources-overview), and contracted extraction supplies the market too (see [Extraction Contracts](/wiki/extraction-contracts)).
+Market price updates each turn using a **logarithmic curve** with a soft-knee (a gradual transition instead of a hard cutoff): 3× for most commodities, widened to **8×** for the six extractable resources (oil, coal, iron, timber, natural gas, and the merged rare earth/copper market), since their prices are allowed more room to run before the tail compresses. The wider knee applies to prices only; margin math uses 3× for every commodity. Extraction output is the supply side of those six prices; see [Resources](/wiki/resources-overview), and contracted extraction supplies the market too (see [Extraction Contracts](/wiki/extraction-contracts)).
 
 \`\`\`
 rawRatio = demand / supply
@@ -86,13 +89,13 @@ if effectiveRatio >= 1 (shortage):   price = basePrice * (1 + 0.7 * ln(effective
 if effectiveRatio < 1 (oversupply): price = basePrice / (1 + 0.7 * ln(1 / effectiveRatio))
 \`\`\`
 
-Raw D/S remains visible on the market screens. Prices and margins use the effective ratio, so anything beyond the soft-knee can keep worsening, but each extra unit of shortage or oversupply has steeply diminishing impact.
+Raw D/S remains visible on the market screens. Prices and margins use the effective ratio, so anything beyond the soft-knee can keep worsening, but each extra unit of shortage or oversupply has steeply diminishing impact. The base price in the formula is itself adjusted: it follows the general commodity price level, and when the inputs needed to make a commodity trade above their base, part of that cost passes through and lifts the base (never lowers it).
 
-**Global stabilizer:** A 50,000-unit floor is added to both global supply and global demand to prevent extreme price swings when real activity is near zero (e.g. early game).
+**Global stabilizer:** A per-commodity floor, sized to about 5% of that market's normal flow and between 1,500 and 50,000 units, is added to both global supply and global demand to prevent extreme price swings when real activity is near zero (e.g. early game).
 
-**Blended state pricing:** A state's list price for a commodity blends **50% global + 25% national + 25% regional**. The national leg is the country-aggregate S/D (with a 500-unit stabilizer); the regional leg is the state's own S/D. Prices drift toward this target each turn rather than snapping to it (drift rate 6% per turn). After ~48 turns, a price gap is 95% closed. Prices differ by place: the same commodity can be short in one state and long in another.
+**Blended state pricing:** A state's list price for a commodity blends **50% global + 25% national + 25% regional**. In worlds split into trade blocs, the global leg is the price of the market that country can actually reach. The national leg is the country-aggregate S/D (with a 500-unit stabilizer); the regional leg is the state's own S/D, using the supply freight can actually deliver where freight limits apply. Prices drift toward this target each turn rather than snapping to it (drift rate 6% per turn). After ~48 turns, a price gap is 95% closed. Prices differ by place: the same commodity can be short in one state and long in another.
 
-**National prices** are computed each turn for every country (country-aggregate S/D + a 500-unit national stabilizer) and stored alongside global and per-state prices. They feed the 25% national leg of the state-price blend and are the public price for country-level views.
+**National prices** are computed each turn for every country (country-aggregate S/D + a 500-unit national stabilizer) and move half the gap toward that target each turn. They are stored alongside global and per-state prices. They feed the 25% national leg of the state-price blend and are the public price for country-level views.
 
 **Macro-driven commodities** (financial services, healthcare services, advertising, real estate services): state-level S/D is meaningless for these markets, since activity is driven by nationwide budgets, marketing campaigns, or bond issuance. For these four, the regional leg falls through to the national price, so the effective blend becomes **50% global + 50% national**.
 
@@ -102,7 +105,7 @@ Beyond sector-level supply and demand, several macroeconomic forces inject addit
 
 **Advertising:** Corporate marketing budgets convert to advertising commodity demand, distributed to the corporation's HQ state, but only as much as the corporation's liquid capital can actually fund for the next turn. The buyer pays only for the advertising that fills, at the clearing price, and that payment settles to the media and entertainment corporations whose offers filled it; unfilled budget stays in the buyer's treasury.
 
-**Healthcare services:** National healthcare budgets (Medicare, NHS, etc.) convert to healthcare_services demand. **1.5%** of annual healthcare spending is spread across turns as demand. Government spending in the [National Budget](/wiki/national-budget) drives healthcare and real estate demand.
+**Healthcare services:** National healthcare budgets (Medicare, NHS, etc.) convert to healthcare_services demand. **1.5%** of annual healthcare spending is spread across turns as demand. Government spending in the [National Budget](/wiki/national-budget) also drives ordnance demand: 0.5% of the annual defense budget becomes weapons procurement.
 
 **Financial services:** Bond-market activity drives latent financial services demand. Recent sovereign and corporate debt issuance (within the last 48 turns) is multiplied by a rate-environment factor and converted to demand. Lower central-bank prime rates boost financial activity; higher rates suppress it.
 
@@ -158,9 +161,9 @@ Steel demand is twice supply (D/S 2.0) and electricity demand is 1.5 times suppl
 - Steel input: -40 x 0.2 x ln(2) = **-5.5 points**.
 - Electricity input: -40 x 0.1 x ln(1.5) = **-1.6 points**.
 
-Net: +2.9 points against its base margin. A steel producer facing the same market gets +40 x rate x ln(2), about +27.7 points per unit of rate, so it gains from the same shortage that squeezes the manufacturer. That is why vertical integration works: the same shortage that hurts a steel-consuming manufacturer helps a steel-producing extraction sector. A buyer that consumes steel at rate 1.0 sees roughly **-27.7 margin points**, and a seller roughly **+27.7**. If the seller's realized price is also above base, price realization adds revenue on top.
+Net: +2.9 points against its base margin. A steel producer facing the same market gets +40 x rate x ln(2), about +27.7 points per unit of rate, so it gains from the same shortage that squeezes the manufacturer. That is why vertical integration works: the same shortage that hurts a steel-consuming sector helps a steel-producing manufacturing or defense sector. A buyer that consumes steel at rate 1.0 sees roughly **-27.7 margin points**, and a seller roughly **+27.7**. If the seller's realized price is also above base, price realization adds revenue on top.
 
-**Upstream shortages:** If your sector requires Steel and the global steel D/S ratio rises to 2x, your manufacturing margin takes a -27.7% hit. Competitors who are vertically integrated (owning both a manufacturing and extraction sector) partially insulate themselves. **Downstream windfalls:** If you are a steel producer and supply tightens, your extraction sector benefits from the shortage while your competitors suffer. Timing sector entries to commodity cycles can significantly boost profits.
+**Upstream shortages:** If your sector requires Steel and the global steel D/S ratio rises to 2x, your margin takes about -27.7 points per unit of steel rate (-5.5 at a 0.2 rate). Competitors who are vertically integrated (owning both the steel buyer and a steel-producing sector) partially insulate themselves. **Downstream windfalls:** If you are a steel producer and supply tightens, your producing sector benefits from the shortage while your competitors suffer. Timing sector entries to commodity cycles can significantly boost profits.
 
 ### Three scales of margin
 
@@ -213,7 +216,7 @@ A shortage is a signal, not an instruction. It is also not automatically a build
 
 1. **Is the shortage real?** Raw D/S above 1 with unmet demand in the ledger is real. A high price with a surplus in the ledger is not.
 2. **Is it new?** Check the one-year chart. A spike that is already fading is a bad entry.
-3. **Can you produce the right output?** The sector must have a strategy that supplies the scarce commodity at a useful rate. A diversified extraction sector produces a little of everything; a focused strategy produces three to five times more of one resource.
+3. **Can you produce the right output?** The sector must have a strategy that supplies the scarce commodity at a useful rate. A diversified extraction sector produces a little of everything; a focused strategy produces between about 1.7 and 21 times more of its target resource.
 4. **What are your inputs?** A steel shortage may make a steel plant profitable, but it also raises input costs for anything that consumes steel. Check the margin stack, not just the output price.
 5. **How long until your capacity arrives?** New plants arrive on a build delay. By the time your capacity lands, the shortage may have cleared. Short, sharp shortages reward existing capacity, not new construction.
 6. **Who else is building?** If every player reads the same signal, the next wave of capacity turns the shortage into a glut. That is the commodity cycle. Enter early or stay small.
@@ -244,7 +247,7 @@ Because capacity is a real asset, a company that reinvests its earnings into bui
 
 Under **plants**, the deepest tier, a sector's nameplate revenue is no longer a number in its own right: it is **derived** from the capacity you own, priced at what your output mix sells for. It therefore stops compounding on its own, and output grows only when you build more capacity.
 
-Two knock-on effects reach the commodity market directly. Entering a new market is a **build** with a delivery delay, so new supply arrives on a lag rather than the turn it is ordered. And taking share from a rival moves **real capacity** rather than a revenue figure, with an attack destroying part of what it takes. Supply responds to shortage more slowly and more permanently than under the earlier tiers. See [Corporations](/wiki/corporations) for the build, split and attack mechanics.
+Two knock-on effects reach the commodity market directly. Entering a new market is a **build** with a delivery delay, so new supply arrives on a lag rather than the turn it is ordered. And taking share from a rival moves **real capacity** rather than a revenue figure: an attack that succeeds moves whole plants from the rival to you. Supply responds to shortage more slowly and more permanently than under the earlier tiers. See [Corporations](/wiki/corporations) for the build, split and attack mechanics.
 
 When a new tier is switched on, **nothing changes on the first turn**: the new mechanics fade in gradually over time rather than snapping into place, so valuations drift rather than lurch. The intent is a smooth adjustment, not a shock: you have time to adapt your pricing and investment as the new rules take hold.
 
@@ -263,14 +266,14 @@ Extraction sectors choose between a **Diversified** strategy (standard) and five
 
 | Strategy | Supply rate | vs Diversified | Notes |
 | --- | --- | --- | --- |
-| Diversified | Iron 0.25, Coal 0.22, Oil 0.14, Rare Earth 0.14, Natural Gas 0.14, Timber 0.12 | n/a | Broad coverage; no ordnance demand; strong when no single shortage dominates |
+| Diversified | Iron 0.25, Coal 0.22, Oil 0.185, Rare Earth 0.14, Natural Gas 0.185, Timber 0.03 | n/a | Broad coverage; no ordnance demand; strong when no single shortage dominates |
 | Iron & Metals Mining | Iron **0.78** | **~3.1×** iron output | Best when iron is severely scarce (D/S above 2×) |
-| Oil & Gas | Oil **0.58** + Natural Gas **0.32** | **~4.1× / ~2.3×** | Best when oil and/or natural gas are scarce |
+| Oil & Gas | Oil **0.58** + Natural Gas **0.32** | **~3.1× / ~1.7×** | Best when oil and/or natural gas are scarce |
 | Coal Mining | Coal **0.72** | **~3.3×** | Best when coal is scarce |
-| Timber & Forestry | Timber **0.64** | **~5.3×** | Best when timber is scarce |
+| Timber & Forestry | Timber **0.64** | **~21×** | Best when timber is scarce |
 | Rare Earth Minerals Mining | Rare Earth **0.72** | **~5.1×** | Covers the merged copper + rare-earth market; best when that market is scarce |
 
-Focused strategies produce roughly **3 to 5× more** of their target commodity than the diversified strategy. If a resource is at D/S 2×+ and you have 3+ sectors, focusing beats diversifying on both supply contribution and margin. The Diversified strategy earns a broad surplus bonus across many commodities but caps quickly at the +30pp aggregate ceiling. Note: ordnance demand was removed from the Diversified strategy (blasting costs are now part of the chemicals budget rather than a weapons-system procurement).
+Focused strategies produce roughly **3 to 5× more** of iron, oil, coal and rare earth than the diversified strategy, about 1.7× the natural gas and about 21× the timber. If a resource is at D/S 2×+ and you have 3+ sectors, focusing beats diversifying on both supply contribution and margin. The Diversified strategy earns a broad surplus bonus across many commodities but caps quickly at the +30pp aggregate ceiling. Note: ordnance demand was removed from the Diversified strategy (blasting costs are now part of the chemicals budget rather than a weapons-system procurement).
 
 Extraction sectors are further modulated by state resource capacity and active
 extraction contracts. A contract reserves a share of the existing state
@@ -299,14 +302,14 @@ The point for a player is simple: a commodity that stores well can be held throu
 
 | Commodity | Typical suppliers | Typical buyers |
 | --- | --- | --- |
-| Steel & Metals | Manufacturing, Extraction | Construction, Automobiles, Defense, Real Estate |
+| Steel & Metals | Manufacturing, Defense | Construction, Automobiles, Defense, Real Estate |
 | Electronics & Semiconductors | Technology, Defense | Manufacturing, Healthcare, Telecommunications, Automobiles |
 | Energy (Electricity) | Energy | All sectors (universal input) |
-| Industrial Chemicals | Chemical Industries | Agriculture, Manufacturing, Extraction, Healthcare |
-| Pharmaceuticals | Healthcare (Hospital Networks) | Healthcare, Retail |
+| Industrial Chemicals | Chemical Industries | Extraction, Manufacturing, Chemical Industries, Energy, Technology, Defense |
+| Pharmaceuticals | Chemical Industries (Pharmaceuticals and Specialty Chemicals strategies) | Healthcare, Retail |
 | Fertilizers | Chemical Industries (Fertilizer Production) | Agriculture |
 | Food Products | Agriculture | Logistics, Healthcare, Retail |
-| Building Materials | Construction (Infrastructure co-produces), Extraction | Construction, Real Estate, Telecommunications |
+| Building Materials | Manufacturing, Construction (some strategies co-produce) | Construction, Real Estate, Telecommunications |
 | Construction Services | Construction | Real Estate, Energy, Extraction, Telecommunications |
 | Healthcare Services | Healthcare | (end consumer / government demand) |
 | Real Estate Services | Real Estate | Manufacturing, Technology, Financial, Healthcare, Automobiles, Logistics |
@@ -316,15 +319,15 @@ The point for a player is simple: a commodity that stores well can be held throu
 | Vehicles & Machinery | Automobiles, Defense | Energy, Agriculture, Logistics, Extraction, Construction |
 | Consumer Goods | Retail | (end consumer demand) |
 | Freight & Transportation | Logistics | Manufacturing, Agriculture, Chemical Industries, Extraction |
-| Consulting Services | Logistics, Financial | Technology, Manufacturing |
+| Consulting Services | Logistics | Technology, Financial, Media, Retail |
 | Iron Ore | Extraction | Manufacturing, Automobiles, Defense |
 | Coal | Extraction | Energy, Manufacturing |
 | Crude Oil | Extraction | Energy, Chemical Industries |
 | Rare Earth Minerals | Extraction | Technology, Defense, Energy (Renewables), Automobiles (EV), Manufacturing, Construction, Telecommunications |
 | Timber & Lumber | Extraction | Manufacturing, Real Estate, Agriculture, Construction, Retail |
 | Natural Gas | Extraction | Energy, Manufacturing, Chemical Industries, Agriculture, Retail |
-| Ordnance & Weapons Systems | Defense | Extraction focused strategies (mining explosives) |
-| Plastics & Polymers | Chemical Industries (all strategies co-produce; Plastics strategy maximises output) | Manufacturing, Healthcare, Agriculture, Automobiles, Construction, Retail |
+| Ordnance & Weapons Systems | Defense | Government defense budgets, Extraction focused strategies (mining explosives) |
+| Plastics & Polymers | Chemical Industries (Industrial Chemicals co-produces; Plastics strategy maximises output) | Manufacturing, Healthcare, Agriculture, Automobiles, Construction, Retail |
 | **Network Services** | **Telecommunications (all strategies)** | (macro demand from GDP: broadband/connectivity) |
 
 Copper is not a standalone commodity: its market was merged into Rare Earth Minerals, which now covers both and is priced as a demand-weighted blend of the two.

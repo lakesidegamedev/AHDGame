@@ -6,21 +6,21 @@ Holding a seat is the easy half. Dominating means a party chair, a bank governor
 
 Before you can dominate, you need baseline stats:
 
-- **Political Influence (PI) 40+**: Required for competitive primaries. Campaign aggressively in-state, at least 3 to 4 Campaign actions per turn.
-- **Favorability 60+**: Required for reliable primary wins and general election polling. Run ads on your strongest demographics.
+- **Political Influence (PI) 40+**: Not a game rule, but the level where primaries turn competitive. Campaign aggressively in-state: at 4 actions a turn that is two Campaigns a turn while PI is 20 to 39.
+- **Favorability 60+**: Not a game rule, but the level that makes primary wins and general election polling reliable. Run ads on your strongest demographics.
 - **Party membership**: Join the dominant party in your target state to access the largest candidate pool.
 - **Funds cushion ₳500k+**: Required to sustain canvassing, ads, and a campaign when elections open.
 
-Do not declare for office until PI reaches 35+ and favorability is at least 55. An early loss tanks favorability and costs you actions with nothing to show.
+Do not declare for office until PI reaches 35+ and favorability is at least 55. An early loss does not cut your stats, but it burns the actions and funds you spent with nothing to show.
 
 ## Winning and using the party chair
 
 Party leadership is the multiplier on everything else. The party chair controls:
 
-- **GOTV budget allocation**: Which demographics get turnout boosts across all party members' states
+- **GOTV budget allocation**: Which demographic group gets the national turnout boost, spread evenly across every region of the country
 - **Party organization growth**: Org share in a state scales every member's general-election weight there, and registration follows org
 - **Whip directives**: How NPP legislators vote on bills (affects legislation success rates)
-- **Party platform position**: The econ/social coordinates all members are scored against in primaries
+- **A vote on the party platform**: The econ/social coordinates all members are scored against in primaries move only through committee proposals, which the committee and national leadership vote on
 
 To win a party leadership election:
 
@@ -28,7 +28,7 @@ To win a party leadership election:
 2. Meet the tenure gate: you must have been a member for 24 turns before you can stand or vote
 3. Time your run: leadership elections run on a shared cycle; watch for the opening
 
-Once chair, use GOTV strategically: concentrate budget on states where your candidates are running, not spread evenly. A concentrated 20% turnout bump in three swing states beats 3% everywhere.
+Once chair, use GOTV strategically: the national budget spreads across every region, so put state party GOTV budgets behind the states where your candidates are running. A concentrated 20% turnout bump in three swing states beats 3% everywhere.
 
 ## Appointed posts that stack with your seat
 
@@ -40,16 +40,16 @@ In parliamentary countries the equivalent is the lower-chamber seat paired with 
 
 ## A corporation that funds the campaign
 
-Corporations generate passive income without requiring per-turn actions after setup. The action cost comes at setup: acquiring sectors, upgrading them, and managing corporate strategy.
+Corporations generate income without spending your actions. Founding, acquiring sectors, upgrading them and managing corporate strategy cost corporate money, not character actions.
 
 **The political-corporate cycle:**
 
-1. Found a corporation (one-time action cost + startup capital)
+1. Found a corporation (founding fee + startup capital)
 2. Acquire sectors in industries that benefit from your legislative agenda (e.g., healthcare sector if you're pushing healthcare bills)
 3. Legislation that passes in your home state raises sector revenue in aligned industries
 4. Revenue flows to your character as dividends, funding future campaigns and ads
 
-This is a long-term play: corporations take 10 to 20 turns to generate significant revenue. Start early, run it passively, and reinvest into higher-margin sectors as your political power grows.
+This is a long-term play. Start early, run it passively, and reinvest into higher-margin sectors as your political power grows.
 
 ## Steering the NPPs
 
@@ -59,7 +59,7 @@ NPPs (Non-Player Politicians) fill empty seats and vote autonomously. At scale, 
 
 **2. Ideology Convergence**: NPPs vote based on ideological alignment with bills. If you know the NPP ideology distribution in a chamber, you can craft bills to align with the plurality of NPPs regardless of party.
 
-**3. NPP Endorsements**: In primaries, NPPs with aligned ideology are willing to endorse you. Collect endorsements from NPP-heavy chambers for presidential primaries (player endorsements only count for presidential races).
+**3. NPP Endorsements**: You can ask NPPs in your country to endorse you in any race you run in. An NPP accepts once your relationship with it reaches 40 plus one point per step of policy distance, so aligned NPPs come cheapest. Player-to-player endorsements exist only in presidential races.
 
 ## Moving in step with other players
 
