@@ -4,7 +4,7 @@
  * can sit in the side tray and in a desktop menu panel.
  */
 
-export const WIDGET_IDS = ["myCompany", "stockTicker", "staffQueues"] as const;
+export const WIDGET_IDS = ["keirPet", "myCompany", "stockTicker", "staffQueues"] as const;
 export type WidgetId = (typeof WIDGET_IDS)[number];
 
 /** Desktop menus that can hold one widget in their side column. */
@@ -28,6 +28,7 @@ export interface WidgetDefinition {
 }
 
 export const WIDGETS: Record<WidgetId, WidgetDefinition> = {
+  keirPet: { id: "keirPet", available: () => true, params: [] },
   myCompany: { id: "myCompany", available: (a) => a.hasCorporation, params: [] },
   stockTicker: { id: "stockTicker", available: () => true, params: ["global", TICKER_HOME_SCOPE] },
   staffQueues: { id: "staffQueues", available: (a) => a.isStaff, params: [] },
@@ -77,6 +78,7 @@ export function widgetLayout(value: unknown): WidgetLayout | null {
 /** Starting layout for a player who has not customised, by what they can use. */
 export function defaultWidgetLayout(audience: WidgetAudience): WidgetLayout {
   const tray = [
+    "keirPet",
     ...(audience.hasCorporation ? ["myCompany"] : []),
     `stockTicker:${TICKER_HOME_SCOPE}`,
     ...(audience.isStaff ? ["staffQueues"] : []),

@@ -73,7 +73,7 @@ export function useWidgetSetup(): WidgetSetup {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const options = useMemo<WidgetOption[]>(() => {
-    const list: WidgetOption[] = [];
+    const list: WidgetOption[] = [{ key: "keirPet", label: t("names.keirPet") }];
     if (WIDGETS.myCompany.available(audience))
       list.push({ key: "myCompany", label: t("names.myCompany") });
     list.push({ key: "stockTicker:global", label: t("tickerScopes.global") });

@@ -385,6 +385,7 @@
         "saveError": "Could not save your widgets. Try again."
       },
       "names": {
+        "keirPet": "Keir",
         "myCompany": "My company",
         "stockTicker": "Stock ticker",
         "staffQueues": "Staff review queues"
@@ -399,6 +400,17 @@
         "world": "World menu",
         "help": "Help menu",
         "staff": "Staff menu"
+      },
+      "keirPet": {
+        "title": "Keir",
+        "pat": "Pat Keir",
+        "wake": "Wake Keir",
+        "tea": "Make tea",
+        "teaIn": "Tea in {time}",
+        "showMe": "Show me",
+        "streak": "{days, plural, one {# day} other {# days}}",
+        "hearts": "{count, plural, one {# heart} other {# hearts}}",
+        "bond": "Bond with Keir"
       },
       "myCompany": {
         "title": "My company",

@@ -50,9 +50,9 @@ describe("widget layouts", () => {
   });
 
   it("starts company runners and staff with their widgets", () => {
-    expect(defaultWidgetLayout(player).tray).toEqual(["stockTicker:home"]);
+    expect(defaultWidgetLayout(player).tray).toEqual(["keirPet", "stockTicker:home"]);
     expect(defaultWidgetLayout(ceoStaff)).toEqual({
-      tray: ["myCompany", "stockTicker:home", "staffQueues"],
+      tray: ["keirPet", "myCompany", "stockTicker:home", "staffQueues"],
       nav: { world: "stockTicker:global", staff: "staffQueues" },
     });
   });

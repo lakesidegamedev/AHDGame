@@ -9,6 +9,8 @@ import { EXCHANGE_API_KEYS } from "@/lib/constants/exchangeRegistry";
 import { getAltClustersCollection } from "@/lib/db/collections";
 import { PLAYER_CONTENT_REPORTS } from "@/lib/safety/playerSafety";
 import { parseWidgetKey, TICKER_HOME_SCOPE } from "./widgetCatalog";
+import { loadKeirPet } from "./keirPet";
+import { loadRecommendationsForUser } from "@/lib/actions/loadRecommendations";
 
 export interface MyCompanyWidgetData {
   sequentialId: number | null;
@@ -182,6 +184,8 @@ export async function loadSidebarWidgetData(
       if (!parsed) return [key, null];
       try {
         switch (parsed.id) {
+          case "keirPet":
+            return [key, await loadKeirPet(db, viewer.userId, loadRecommendationsForUser)];
           case "myCompany":
             return [key, await loadMyCompany(db, viewer)];
           case "stockTicker":

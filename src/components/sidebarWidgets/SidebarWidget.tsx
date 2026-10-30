@@ -13,6 +13,8 @@ import {
   formatSharePrice,
 } from "@/lib/utils/formattersCore";
 import { parseWidgetKey, type WidgetId } from "@/lib/sidebarWidgets/widgetCatalog";
+import type { KeirPetWidgetData } from "@/lib/sidebarWidgets/keirPet";
+import { KeirPetBody } from "./KeirPetBody";
 import type {
   MyCompanyWidgetData,
   StaffQueuesWidgetData,
@@ -20,6 +22,7 @@ import type {
 } from "@/lib/sidebarWidgets/widgetData";
 
 export const WIDGET_ICONS: Record<WidgetId, PixelNavIconName> = {
+  keirPet: "star",
   myCompany: "briefcase",
   stockTicker: "chart",
   staffQueues: "gear",
@@ -261,6 +264,19 @@ export function SidebarWidget({
   ) : null;
 
   switch (parsed.id) {
+    case "keirPet": {
+      const pet = data as KeirPetWidgetData | null;
+      return (
+        <Frame {...common} title={t("keirPet.title")}>
+          {pending ??
+            (pet ? (
+              <KeirPetBody data={pet} compact={compact} onNavigate={onNavigate} />
+            ) : (
+              <Empty>{t("unavailable")}</Empty>
+            ))}
+        </Frame>
+      );
+    }
     case "myCompany": {
       const company = data as MyCompanyWidgetData | null;
       return (

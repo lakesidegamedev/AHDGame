@@ -296,6 +296,7 @@
         "saveError": "Deine Widgets konnten nicht gespeichert werden. Versuch es noch einmal."
       },
       "names": {
+        "keirPet": "Keir",
         "myCompany": "Mein Unternehmen",
         "stockTicker": "Börsenticker",
         "staffQueues": "Prüfwarteschlangen"
@@ -310,6 +311,17 @@
         "world": "Weltmenü",
         "help": "Hilfemenü",
         "staff": "Teammenü"
+      },
+      "keirPet": {
+        "title": "Keir",
+        "pat": "Keir streicheln",
+        "wake": "Keir wecken",
+        "tea": "Tee kochen",
+        "teaIn": "Tee in {time}",
+        "showMe": "Zeig mir",
+        "streak": "{days, plural, one {# Tag} other {# Tage}}",
+        "hearts": "{count, plural, one {# Herz} other {# Herzen}}",
+        "bond": "Bindung zu Keir"
       },
       "myCompany": {
         "title": "Mein Unternehmen",
