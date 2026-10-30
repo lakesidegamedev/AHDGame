@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "mongodb";
+import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import { createMockDb, type MockDb } from "@/lib/test-utils/mockDb";
 import { PATCH } from "./route";
@@ -55,12 +56,37 @@ describe("PATCH /api/settings/experimental-features", () => {
     expect(update[1].$set).not.toHaveProperty("experimentalFeatures");
   });
 
-  it.each([{}, { askDrawerSide: "top" }, { experimentalFeatures: "yes" }])(
-    "rejects %j",
-    async (body) => {
-      const response = await patch(body);
-      expect(response.status).toBe(400);
-      expect(db.collectionMocks.users.updateOne).not.toHaveBeenCalled();
+  it.each(["cards", "browser", "directory", "standard"])(
+    "persists desktop layout %s without changing opt-in",
+    async (desktopNavigationLayout) => {
+      const response = await patch({ desktopNavigationLayout });
+      expect(response.status).toBe(200);
+      const update = vi.mocked(db.collectionMocks.users.updateOne).mock.calls[0];
+      expect(update[0]).toEqual({ _id: userId });
+      expect(update[1].$set).toMatchObject({ desktopNavigationLayout });
+      expect(update[1].$set).not.toHaveProperty("experimentalFeatures");
+      expect(update[1].$set).not.toHaveProperty("askDrawerSide");
     }
   );
+
+  it("does not write preferences without authentication", async () => {
+    vi.mocked(requireBasicAuth).mockResolvedValue({
+      ok: false,
+      response: new NextResponse(null, { status: 401 }),
+    });
+    expect((await patch({ desktopNavigationLayout: "browser" })).status).toBe(401);
+    expect(db.collectionMocks.users.updateOne).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {},
+    { askDrawerSide: "top" },
+    { experimentalFeatures: "yes" },
+    { desktopNavigationLayout: "mobile" },
+    { desktopNavigationLayout: true },
+  ])("rejects %j", async (body) => {
+    const response = await patch(body);
+    expect(response.status).toBe(400);
+    expect(db.collectionMocks.users.updateOne).not.toHaveBeenCalled();
+  });
 });

@@ -79,6 +79,7 @@ import {
   type EnrichmentParty,
 } from "./candidateEnrichment";
 import type { AccumulateVoteTurnPreload } from "./types";
+import { getCountryState } from "@/lib/countryState";
 import { loadPartyGroupFavorability } from "@/lib/governorOffice/address/partyGroupFavorabilityLoader";
 import {
   buildGranularElectorateSubstrate,
@@ -808,6 +809,16 @@ export async function accumulateVoteTurn(
     groups: deriveGroupLeans(effCategories, effDemographics),
   });
 
+  // Runtime one-party flag for the FPTP spoiler gate, so a mid-game conversion
+  // takes effect at once (the compile-time config is wrong for converted worlds).
+  // The batched path preloads it; the standalone path reads cached countryState.
+  const isOnePartyState =
+    isGeneralElection &&
+    (
+      options?.preload?.enrichmentCountryConfigByElection?.get(electionId.toString()) ??
+      (await getCountryState(db, electionCountryId))
+    ).governmentType === "onePartyState";
+
   const { votesPerCandidate, sharesPct } = distributeFn(
     effEnriched,
     effEffectiveTurnPool,
@@ -821,6 +832,7 @@ export async function accumulateVoteTurn(
       useNationalInfluenceForReach: false,
       votingSystem: state.votingSystem ?? "fptp",
       isGeneralElection,
+      isOnePartyState,
       countryId: electionCountryId,
       currentStateId: stateId,
       parentRegionId: state.parentRegionId,

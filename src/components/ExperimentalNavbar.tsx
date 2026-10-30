@@ -68,6 +68,14 @@ import {
 } from "@/components/navbar/experimentalNavPrimitives";
 import { ExperimentalUserMenu } from "@/components/navbar/ExperimentalUserMenu";
 import { ExperimentalMobileMenu } from "@/components/navbar/ExperimentalMobileMenu";
+import dynamic from "next/dynamic";
+
+import {
+  rankDesktopLinks,
+  type DesktopNavLink,
+  type DesktopNavMenu,
+} from "@/components/navbar/desktopNavModel";
+import type { DesktopNavigationLayout } from "@/lib/navigation/desktopNavigationLayout";
 import { hasSandboxAccess } from "@/lib/sandbox/access";
 import { Wordmark, WORDMARK } from "@/components/Wordmark";
 import type {
@@ -80,8 +88,14 @@ import type {
   OpenKey,
 } from "@/components/navbar/experimentalNavTypes";
 
+const DesktopMegaMenu = dynamic(
+  () => import("@/components/navbar/DesktopMegaMenu").then((module) => module.DesktopMegaMenu),
+  { ssr: false }
+);
+
 export interface ExperimentalNavbarProps {
   navigationVariant?: "a" | "b";
+  desktopLayout?: DesktopNavigationLayout | null;
   clientShell?: boolean;
   /** Type the site name in on load, in mono (1991 worlds). */
   typedWordmark?: boolean;
@@ -114,6 +128,7 @@ export interface ExperimentalNavbarProps {
 
 export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
   navigationVariant = "a",
+  desktopLayout = null,
   clientShell = false,
   typedWordmark = false,
   user,
@@ -222,6 +237,12 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
     };
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        if (
+          desktopLayout &&
+          desktopLayout !== "standard" &&
+          window.matchMedia("(min-width: 1024px)").matches
+        )
+          dropdownAnchorRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
         closeAll();
         setSearchOpen(false);
       }
@@ -233,7 +254,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
       document.removeEventListener("mousedown", handlePointer);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open, searchOpen, closeAll]);
+  }, [open, searchOpen, closeAll, desktopLayout]);
   const handleSignOut = useCallback(async () => {
     try {
       const res = await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
@@ -732,6 +753,287 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
     />
   ) : null;
 
+  const useDesktopMegaMenu = desktopLayout !== null && desktopLayout !== "standard";
+  const desktopLink = (
+    id: string,
+    label: string,
+    href?: string,
+    extra: Partial<DesktopNavLink> = {}
+  ): DesktopNavLink => ({
+    id,
+    label,
+    href,
+    description: t.has(`desktop.descriptions.${id}`) ? t(`desktop.descriptions.${id}`) : undefined,
+    ...extra,
+  });
+  let desktopMenu: DesktopNavMenu | null = null;
+  if (useDesktopMegaMenu && open === "nation" && showProfile) {
+    const map = nationalDetailSections
+      .flatMap((section) => section.items)
+      .find((item) => item.id === "map");
+    desktopMenu = {
+      title: countryName(pageCountry as CountryId),
+      overview: desktopLink(
+        "overview",
+        countryName(pageCountry as CountryId),
+        countryUrl(pageCountry as CountryId)
+      ),
+      groups: nationalDetailSections
+        .filter((section) => section.title !== "Other")
+        .map((section) => ({
+          id: section.title,
+          label: t(section.titleKey),
+          items: rankDesktopLinks(
+            section.items.map((item) =>
+              desktopLink(item.id, item.labelKey ? t(item.labelKey) : item.label, item.href)
+            )
+          ),
+        })),
+      shortcuts: rankDesktopLinks([
+        ...(currentParty
+          ? [
+              desktopLink(
+                "myParty",
+                currentParty.name,
+                partyUrl(currentParty.countryId ?? pageCountry, currentParty.id)
+              ),
+            ]
+          : []),
+        ...(map ? [desktopLink("map", t("menus.nation.map"), map.href)] : []),
+        ...(cabinetOffice
+          ? [
+              desktopLink(
+                "cabinetOffice",
+                t("menus.nation.cabinetOffice"),
+                cabinetOfficeUrl(cabinetOffice.countryCode, cabinetOffice.positionId)
+              ),
+            ]
+          : []),
+        ...(justiceOffice
+          ? [
+              desktopLink(
+                "justiceOffice",
+                t("menus.nation.justiceOffice"),
+                scotusJusticeOfficeUrl(justiceOffice.countryCode)
+              ),
+            ]
+          : []),
+        ...(userCountry === "US"
+          ? [
+              desktopLink(
+                "politicalOperations",
+                t("menus.nation.myPoliticalOperations"),
+                "/political-operations"
+              ),
+            ]
+          : []),
+        ...(userCountry !== pageCountry
+          ? [
+              desktopLink(
+                "homeNation",
+                `${t("menus.nation.homeNation")} · ${countryName(userCountry as CountryId)}`,
+                countryUrl(userCountry as CountryId)
+              ),
+            ]
+          : []),
+      ]),
+    };
+  }
+  if (useDesktopMegaMenu && open === "world") {
+    const markets = new Set(["stockMarket", "banking", "forex", "trade", "imf"]);
+    const industry = new Set(["sectors", "governmentContracts", "unions", "news"]);
+    const desktopWorldItems = visibleWorldNavItems({
+      countryId: pageCountry,
+      myCorporationId,
+      myCorporationHasGroup,
+      myUnionId,
+      conflictsEnabled,
+      unionsEnabled,
+      settlementCrisisLive,
+    });
+    const links = desktopWorldItems.map((item) =>
+      desktopLink(item.id, t(item.labelKey), item.href, { parentId: item.parentId })
+    );
+    const personal = new Set(
+      desktopWorldItems.filter((item) => item.section === "corporate").map((item) => item.id)
+    );
+    desktopMenu = {
+      title: t("common.world"),
+      overview: desktopLink("nations", t("menus.world.nations"), "/world"),
+      groups: [
+        {
+          id: "markets",
+          label: t("desktop.groups.markets"),
+          items: rankDesktopLinks(links.filter((item) => markets.has(item.id))),
+        },
+        {
+          id: "industry",
+          label: t("desktop.groups.industry"),
+          items: rankDesktopLinks(links.filter((item) => industry.has(item.id))),
+        },
+        {
+          id: "diplomacy",
+          label: t("desktop.groups.diplomacy"),
+          items: rankDesktopLinks(
+            links.filter(
+              (item) => !personal.has(item.id) && !markets.has(item.id) && !industry.has(item.id)
+            )
+          ),
+        },
+      ].filter((group) => group.items.length > 0),
+      shortcuts: rankDesktopLinks(links.filter((item) => personal.has(item.id))),
+    };
+  }
+  if (useDesktopMegaMenu && open === "state" && homeState) {
+    const region = regionUrl(homeState.countryId, homeState.id);
+    desktopMenu = {
+      title: homeState.name,
+      overview: desktopLink("overview", homeState.name, region),
+      groups: [
+        {
+          id: "politics",
+          label: t("menus.nation.sections.politics"),
+          items: [
+            ...(currentParty
+              ? [
+                  desktopLink(
+                    "stateParty",
+                    `${homeState.name} · ${currentParty.name}`,
+                    regionPartyUrl(homeState.countryId, homeState.id, currentParty.id)
+                  ),
+                ]
+              : []),
+            desktopLink(
+              "elections",
+              t("state.elections"),
+              regionElectionsUrl(homeState.countryId, homeState.id)
+            ),
+          ],
+        },
+        {
+          id: "government",
+          label: t("menus.nation.sections.government"),
+          items: [
+            desktopLink(
+              "legislature",
+              stateLegislatureLabel,
+              regionLegislatureUrl(homeState.countryId, homeState.id)
+            ),
+          ],
+        },
+        {
+          id: "economy",
+          label: t("menus.nation.sections.economy"),
+          items: [desktopLink("economy", t("state.economy"), `${region}?tab=economy`)],
+        },
+      ],
+      shortcuts: rankDesktopLinks([
+        ...(activeElection
+          ? [
+              desktopLink(
+                "activeElection",
+                t("state.myElection"),
+                `/elections/${activeElection.seatId ?? activeElection.id}`
+              ),
+            ]
+          : []),
+        ...(governorOffice && governorOffice.stateId === homeState.id
+          ? [desktopLink("governorOffice", t("state.governorOffice"), `${region}/office`)]
+          : []),
+        ...(cabinetOffice
+          ? [
+              desktopLink(
+                "cabinetOffice",
+                `${t("menus.nation.cabinetOffice")} · ${cabinetOffice.positionName}`,
+                cabinetOfficeUrl(cabinetOffice.countryCode, cabinetOffice.positionId)
+              ),
+            ]
+          : []),
+      ]),
+    };
+  }
+  if (useDesktopMegaMenu && open === "help") {
+    desktopMenu = {
+      title: t("common.help"),
+      overview: desktopLink(
+        "guides",
+        showWiki ? t("help.wikiGuides") : t("help.guides"),
+        showWiki ? "https://wiki.ahousedividedgame.com" : "/guides",
+        { external: showWiki }
+      ),
+      groups: [
+        {
+          id: "resources",
+          label: t("help.resources"),
+          items: [
+            desktopLink(
+              "guides",
+              showWiki ? t("help.wikiGuides") : t("help.guides"),
+              showWiki ? "https://wiki.ahousedividedgame.com" : "/guides",
+              { external: showWiki }
+            ),
+            desktopLink("about", t("help.about"), "/about"),
+            desktopLink("suggestions", t("help.suggestions"), "/feedback"),
+          ],
+        },
+        {
+          id: "community",
+          label: t("help.community"),
+          items: [
+            desktopLink("discord", "Discord", HELP_DISCORD_URL, { external: true }),
+            desktopLink("patreon", t("help.patreon"), HELP_PATREON_URL, { external: true }),
+            desktopLink("supporters", t("help.supporterWall"), HELP_SUPPORTER_WALL_URL, {
+              external: true,
+            }),
+          ],
+        },
+        {
+          id: "support",
+          label: t("desktop.groups.support"),
+          items: [
+            desktopLink("support", t("help.emailSupport"), HELP_SUPPORT_EMAIL, { external: true }),
+            ...(onOpenFeedback
+              ? [
+                  desktopLink(
+                    "feedback",
+                    feedbackCapturing ? t("common.capturingScreenshot") : t("common.quickSuggest"),
+                    undefined,
+                    { onSelect: onOpenFeedback, disabled: feedbackCapturing }
+                  ),
+                ]
+              : []),
+            desktopLink("privacy", t("help.privacy"), "/privacy"),
+            desktopLink("terms", t("help.terms"), "/terms"),
+          ],
+        },
+      ],
+      shortcuts: [],
+    };
+  }
+  if (useDesktopMegaMenu && open === "staff" && staffSubItems.length > 0) {
+    const items = staffSubItems.map((item) =>
+      desktopLink(item.labelKey, t(item.labelKey), item.href, { external: item.external })
+    );
+    desktopMenu = {
+      title: t("common.staff"),
+      overview: items[0]!,
+      groups: [{ id: "staff", label: t("common.staff"), items }],
+      shortcuts: [],
+    };
+  }
+  const megaPanel =
+    desktopMenu && desktopLayout && desktopLayout !== "standard" ? (
+      <DesktopMegaMenu
+        key={open}
+        menu={desktopMenu}
+        menuId={open ?? "unknown"}
+        layout={desktopLayout}
+        anchorRef={dropdownAnchorRef}
+        panelRef={dropdownPanelRef}
+        onClose={closeAll}
+      />
+    ) : null;
+
   return (
     <>
       <nav
@@ -805,7 +1107,7 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
                           type="button"
                           onClick={() => toggle(item.key!)}
                           aria-expanded={isOpen}
-                          aria-haspopup="menu"
+                          aria-haspopup={useDesktopMegaMenu ? undefined : "menu"}
                           className={navTabClassName(active || isOpen)}
                         >
                           {tabIcon}
@@ -813,13 +1115,14 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
                           <NavItemChevron open={isOpen} />
                         </button>
                         {isOpen &&
-                          (item.key === "state"
-                            ? stateMenu
-                            : item.key === "world"
-                              ? worldMenu
-                              : item.key === "nation"
-                                ? nationMenu
-                                : null)}
+                          (megaPanel ??
+                            (item.key === "state"
+                              ? stateMenu
+                              : item.key === "world"
+                                ? worldMenu
+                                : item.key === "nation"
+                                  ? nationMenu
+                                  : null))}
                       </div>
                     );
                   }
@@ -857,14 +1160,14 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
                     type="button"
                     onClick={() => toggle("help")}
                     aria-expanded={open === "help"}
-                    aria-haspopup="menu"
+                    aria-haspopup={useDesktopMegaMenu ? undefined : "menu"}
                     className={navTabClassName(open === "help")}
                   >
                     <NavIcon name="Help" />
                     <NavItemLabel>{t("common.help")}</NavItemLabel>
                     <NavItemChevron open={open === "help"} />
                   </button>
-                  {open === "help" && helpMenu}
+                  {open === "help" && (megaPanel ?? helpMenu)}
                 </div>
 
                 {/* Staff — admin/mod only */}
@@ -877,14 +1180,14 @@ export const ExperimentalNavbar = React.memo(function ExperimentalNavbar({
                       type="button"
                       onClick={() => toggle("staff")}
                       aria-expanded={open === "staff"}
-                      aria-haspopup="menu"
+                      aria-haspopup={useDesktopMegaMenu ? undefined : "menu"}
                       className={navTabClassName(open === "staff")}
                     >
                       <NavIcon name="Staff" />
                       <NavItemLabel>{t("common.staff")}</NavItemLabel>
                       <NavItemChevron open={open === "staff"} />
                     </button>
-                    {open === "staff" && staffMenu}
+                    {open === "staff" && (megaPanel ?? staffMenu)}
                   </div>
                 )}
               </div>
