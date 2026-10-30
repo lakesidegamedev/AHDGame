@@ -1118,6 +1118,7 @@ export async function buildCorporationLookups(
       honestBalanceSheetsStage?: number;
       fundedOverheadStage?: number;
       fundedHeadcountStage?: number;
+      fundedValuationStage?: number;
     }>("gameConfig")
     .findOne(
       { _id: "default" },
@@ -1131,6 +1132,7 @@ export async function buildCorporationLookups(
           honestBalanceSheetsStage: 1,
           fundedOverheadStage: 1,
           fundedHeadcountStage: 1,
+          fundedValuationStage: 1,
         },
       }
     );
@@ -1805,6 +1807,8 @@ export async function buildCorporationLookups(
       typeof overheadCfg?.fundedOverheadStage === "number" ? overheadCfg.fundedOverheadStage : 0,
     fundedHeadcountStage:
       typeof overheadCfg?.fundedHeadcountStage === "number" ? overheadCfg.fundedHeadcountStage : 0,
+    fundedValuationStage:
+      typeof overheadCfg?.fundedValuationStage === "number" ? overheadCfg.fundedValuationStage : 0,
     dumpingGuardRootByCorpId: groupSizeCostsStage >= 3 ? controlRootByCorpId : null,
     soeSizeCostByCorpId,
     dominanceRunningCost,

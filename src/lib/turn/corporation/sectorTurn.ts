@@ -1615,6 +1615,7 @@ export function processSector(
     /** P3a: ₳ of paid-but-not-yet-delivered build orders after this turn. */
     constructionInProgressAnchor,
     npvContribution: market.capitalEnabled ? Math.round(capitalBookAnchor) : sectorNPV,
+    ...(plantsMixPrice > 0 ? { outputMixPriceAnchor: plantsMixPrice } : {}),
     // P3.5: under plants these two modifiers no longer drive cost (input costs
     // are billed physically, surplus is priced on the revenue side). Reporting
     // them as 0 keeps the corp margin diagnostic honest about what actually

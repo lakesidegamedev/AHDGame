@@ -351,6 +351,14 @@ export interface GameConfig {
    */
   equityCashoutLimitsStage?: number;
   /**
+   * Funded producer path: 1 values each funded sector for the share price and
+   * credit rating on its settled earnings (floored at the paid basis of its
+   * capacity) instead of the legacy nameplate P&L, and reads the share price
+   * growth premium from real output sold rather than nominal value. 0 or
+   * absent = off.
+   */
+  fundedValuationStage?: number;
+  /**
    * Market Adjustment event: 1 records each country's loss share of funded
    * capacity every turn and lets the event fire when it holds. 0 or absent = off.
    */
