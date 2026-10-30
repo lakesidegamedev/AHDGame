@@ -932,6 +932,7 @@ export function makeNppCorpDecision(
     criticalLogisticsShortageEligible: ctx.criticalLogisticsShortageEligible,
     retailExpansionPaused: ctx.retailExpansionPaused,
     entryCapReached: newSectors.length >= NPP_SHORTAGE_ENTRIES_PER_TURN,
+    fundedRecipeWorld: ctx.fundedRecipeWorld,
   });
   const {
     entryCandidate,

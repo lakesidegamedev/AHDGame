@@ -67,6 +67,7 @@ import {
 } from "@/lib/nationalization/stateControlledBuckets";
 
 import { STARTING_YEAR, TURNS_PER_YEAR } from "@/lib/constants/turnTime";
+import type { FoundingRecipeWorld } from "@/lib/turn/npp/foundingRecipeChoice";
 
 import { loadGroupDominanceSectorResolver } from "@/lib/corporations/groupDominanceSectors";
 import type { BuildCapexTxInput } from "@/lib/corporations/capexTxLog";
@@ -534,6 +535,9 @@ export async function processNppCorporationDecisions(
         subsidiaryCorporationsEnabled: 1,
         worldEpochId: 1,
         producerOpening: 1,
+        currentYear: 1,
+        startingYear: 1,
+        currentTurn: 1,
       },
     }
   );
@@ -542,6 +546,18 @@ export async function processNppCorporationDecisions(
     strategyGate?.producerOpening &&
     strategyGate.producerOpening.worldEpoch === strategyGate.worldEpochId
       ? strategyGate.producerOpening.turn + 1
+      : undefined;
+  // Funded market: AI entrants build the recipe whose outputs are short. The
+  // era gate needs the in-game year whether or not tech trees are on.
+  const fundedRecipeWorld: FoundingRecipeWorld | undefined =
+    transitionFirstFundedTurn != null
+      ? {
+          currentYear:
+            strategyGate?.currentYear ??
+            (strategyGate?.startingYear ?? STARTING_YEAR) +
+              Math.floor(((strategyGate?.currentTurn ?? turn) - 1) / TURNS_PER_YEAR),
+          techTreesEnabled,
+        }
       : undefined;
   // Shortage per recipe from the latest funded settlement, for AI restarts.
   const recipePressureByKey =
@@ -679,6 +695,7 @@ export async function processNppCorporationDecisions(
       frontierEntry: autopilot ? undefined : frontierEntryTurn,
       engineSix: engineSixByCountry.get(corp.countryId) === true,
       transitionFirstFundedTurn,
+      fundedRecipeWorld,
       conversionBudgetOf:
         conversionPaceShare > 0 ? (countryId) => conversionBudgets.get(countryId) : undefined,
       reinvestPoolFor,

@@ -66,7 +66,9 @@ export async function nppFoundCorporation(
    * every other caller keeps the defence-in-depth check.
    */
   blockedCountries?: ReadonlySet<CountryId>,
-  preset?: string
+  preset?: string,
+  /** Recipe for the founding sector; absent builds the standard recipe. */
+  initialStrategyId?: string
 ): Promise<NppFoundCorporationResult> {
   if (!npp.homeState) {
     return { ok: false, reason: "NPP has no home state to headquarter a corporation in." };
@@ -122,6 +124,7 @@ export async function nppFoundCorporation(
       headquartersState: npp.homeState,
       nppPartyId: npp.party,
       foundedAtTurn: currentTurn,
+      ...(initialStrategyId ? { initialStrategyId } : {}),
     });
   } catch (error) {
     // Refund the founding fee — no corp was created, no partial state.
