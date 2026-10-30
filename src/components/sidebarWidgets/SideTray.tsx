@@ -17,14 +17,10 @@ const AskDrawerPanel = dynamic(
   { ssr: false }
 );
 
-/** Collapsed rail width; the page always makes room for it. */
+/** Collapsed rail width. */
 const RAIL_PX = 48;
-/** Open panel width. Wide screens push the page over; narrower ones overlay. */
+/** Open panel width. The tray sits over the page and never moves the nav or content. */
 const PANEL_PX = 380;
-// Below this the top bar would lose tabs to the open panel, so it overlays instead.
-const PUSH_QUERY = "(min-width: 1600px)";
-
-export const SIDE_TRAY_PUSH_VAR = "--side-tray-push";
 
 type Tab = "widgets" | "keir";
 
@@ -42,32 +38,6 @@ export interface SideTrayProps {
   initialOpen: boolean;
   onSaveLayout: (layout: WidgetLayout) => void;
   onSaveOpen: (open: boolean) => void;
-}
-
-function usePushes(): boolean {
-  const [pushes, setPushes] = useState(false);
-  useEffect(() => {
-    if (typeof window.matchMedia !== "function") return;
-    const query = window.matchMedia(PUSH_QUERY);
-    const update = () => setPushes(query.matches);
-    update();
-    query.addEventListener?.("change", update);
-    return () => query.removeEventListener?.("change", update);
-  }, []);
-  return pushes;
-}
-
-/** Make room for the tray on its side of the page. */
-function usePageRoom(side: AskDrawerSide, px: number) {
-  useEffect(() => {
-    const root = document.documentElement;
-    root.dataset.sideTray = side;
-    root.style.setProperty(SIDE_TRAY_PUSH_VAR, `${px}px`);
-    return () => {
-      delete root.dataset.sideTray;
-      root.style.removeProperty(SIDE_TRAY_PUSH_VAR);
-    };
-  }, [side, px]);
 }
 
 export function SideTray({
@@ -88,8 +58,6 @@ export function SideTray({
   const [keirMounted, setKeirMounted] = useState(false);
   const [editing, setEditing] = useState(false);
   const navBottom = useNavBottom(true);
-  const pushes = usePushes();
-  usePageRoom(side, open && pushes ? PANEL_PX : RAIL_PX);
 
   const fetchKeys = layout.tray.map(resolveKey);
   const { data, loaded } = useSidebarWidgetData(fetchKeys);
@@ -109,11 +77,11 @@ export function SideTray({
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !pushes) show(false);
+      if (event.key === "Escape") show(false);
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, pushes, show]);
+  }, [open, show]);
 
   const left = side === "left";
   const edge = left ? "left-0 border-r" : "right-0 border-l";
@@ -214,7 +182,12 @@ export function SideTray({
         </div>
         <div className={`min-h-0 flex-1 ${tab === "keir" ? "flex flex-col" : "hidden"}`}>
           {keirMounted && !keirHidden && (
-            <AskDrawerPanel side={side} onClose={() => show(false)} onSwapSide={onSwapSide} />
+            <AskDrawerPanel
+              side={side}
+              onClose={() => show(false)}
+              onSwapSide={onSwapSide}
+              embedded
+            />
           )}
         </div>
         {tab === "widgets" && (
@@ -246,7 +219,7 @@ export function SideTray({
                   loaded={loaded(resolveKey(key))}
                   exchangeLabel={options.find((option) => option.key === key)?.label}
                   onNavigate={() => {
-                    if (!pushes) show(false);
+                    show(false);
                   }}
                 />
               ))
