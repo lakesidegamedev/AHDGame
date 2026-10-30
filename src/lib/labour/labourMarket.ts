@@ -274,7 +274,7 @@ export function filledWorkers(desiredWorkers: number, staffingFactor: number): n
 }
 
 /**
- * Most the staffing factor may move in a single turn, in absolute terms.
+ * Most the staffing factor may FALL in a single turn, in absolute terms.
  *
  * A state that reads oversubscribed for the first time does not lose its
  * workforce overnight. The factor glides toward its target at up to this much
@@ -291,12 +291,44 @@ export function filledWorkers(desiredWorkers: number, staffingFactor: number): n
 export const LABOUR_STAFFING_MAX_TURN_MOVE = 0.1;
 
 /**
+ * Most the staffing factor may RISE in a single turn at market pay.
+ *
+ * Hiring into posted openings where jobseekers exist is fast; losing a
+ * workforce to a newly tight market is the slow side, and stays at
+ * {@link LABOUR_STAFFING_MAX_TURN_MOVE}. At 0.1 a turn up as well, plants built
+ * after the 2026-10-29 economy reset sat at 60% to 70% staffed in states with
+ * high unemployment while their build orders added jobs faster than the ramp
+ * filled them.
+ */
+export const LABOUR_STAFFING_MAX_TURN_RISE = 0.3;
+
+/** Extra rise per turn for each 1.0 of pay above the state's going rate. */
+export const LABOUR_STAFFING_WAGE_RISE_BONUS = 0.3;
+
+/** Ceiling on the per-turn rise, however high the pay. */
+export const LABOUR_STAFFING_MAX_TURN_RISE_CAP = 0.6;
+
+/**
+ * Per-turn rise for a sector paying `relativeBid` times the state's going rate
+ * ({@link relativeWageBid}). Paying above market hires faster; paying below
+ * market never hires slower than the base rise.
+ */
+export function staffingRiseForBid(relativeBid: number | undefined | null = 1): number {
+  const bid = typeof relativeBid === "number" && Number.isFinite(relativeBid) ? relativeBid : 1;
+  return Math.min(
+    LABOUR_STAFFING_MAX_TURN_RISE_CAP,
+    LABOUR_STAFFING_MAX_TURN_RISE + LABOUR_STAFFING_WAGE_RISE_BONUS * Math.max(0, bid - 1)
+  );
+}
+
+/**
  * Glide this turn's staffing factor toward its target from last turn's value.
  *
- * Symmetric on purpose. Rationing that bit hard and then released instantly
- * would let a sector flip between full and throttled output as its state's
- * tightness crossed 1, and the recovery side is the same physical story as the
- * cut: hiring a workforce back takes as long as losing it.
+ * Asymmetric. A cut glides down at {@link LABOUR_STAFFING_MAX_TURN_MOVE} so a
+ * CEO has ten turns to react before a tight market fully bites. Hiring back up
+ * rises at {@link staffingRiseForBid}: three turns from empty at market pay,
+ * two at a strong premium. Both sides stop exactly on target, so neither can
+ * overshoot or make a sector flip between full and throttled output.
  *
  * A sector with no previous factor (new, or the first turn after this shipped)
  * starts from 1. That makes the ramp automatic for the whole world rather than
@@ -304,12 +336,16 @@ export const LABOUR_STAFFING_MAX_TURN_MOVE = 0.1;
  * be able to staff, which is the right way round for a constraint arriving
  * without warning.
  */
-export function glideStaffingFactor(target: number, previous: number | undefined | null): number {
+export function glideStaffingFactor(
+  target: number,
+  previous: number | undefined | null,
+  relativeBid?: number | null
+): number {
   const prev =
     typeof previous === "number" && Number.isFinite(previous)
       ? Math.max(0, Math.min(1, previous))
       : 1;
   const clampedTarget = Math.max(0, Math.min(1, target));
-  if (clampedTarget >= prev) return Math.min(clampedTarget, prev + LABOUR_STAFFING_MAX_TURN_MOVE);
+  if (clampedTarget >= prev) return Math.min(clampedTarget, prev + staffingRiseForBid(relativeBid));
   return Math.max(clampedTarget, prev - LABOUR_STAFFING_MAX_TURN_MOVE);
 }
