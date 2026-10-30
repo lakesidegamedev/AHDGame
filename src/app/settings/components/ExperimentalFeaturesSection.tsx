@@ -92,7 +92,13 @@ export function ExperimentalFeaturesSection() {
         <>
           <LayoutChoice
             name="desktop-navigation-layout"
-            messages="experimental.desktopNavigation"
+            title={t("experimental.desktopNavigation.title")}
+            hint={t("experimental.desktopNavigation.hint")}
+            classicText={t("experimental.desktopNavigation.classicHint")}
+            optionText={(option) => ({
+              title: t(`experimental.desktopNavigation.options.${option}.title`),
+              hint: t(`experimental.desktopNavigation.options.${option}.hint`),
+            })}
             options={DESKTOP_NAVIGATION_LAYOUTS}
             value={layout}
             saving={saving}
@@ -105,7 +111,13 @@ export function ExperimentalFeaturesSection() {
           />
           <LayoutChoice
             name="mobile-navigation-layout"
-            messages="experimental.mobileNavigation"
+            title={t("experimental.mobileNavigation.title")}
+            hint={t("experimental.mobileNavigation.hint")}
+            classicText={t("experimental.mobileNavigation.classicHint")}
+            optionText={(option) => ({
+              title: t(`experimental.mobileNavigation.options.${option}.title`),
+              hint: t(`experimental.mobileNavigation.options.${option}.hint`),
+            })}
             options={MOBILE_NAVIGATION_LAYOUTS}
             value={mobileLayout}
             saving={saving}
@@ -124,7 +136,10 @@ export function ExperimentalFeaturesSection() {
 
 function LayoutChoice<T extends string>({
   name,
-  messages,
+  title,
+  hint,
+  classicText,
+  optionText,
   options,
   value,
   saving,
@@ -132,23 +147,25 @@ function LayoutChoice<T extends string>({
   onChange,
 }: {
   name: string;
-  messages: "experimental.desktopNavigation" | "experimental.mobileNavigation";
+  title: string;
+  hint: string;
+  classicText: string;
+  optionText: (option: T) => { title: string; hint: string };
   options: readonly T[];
   value: T;
   saving: boolean;
   classicHint: boolean;
   onChange: (option: T) => void;
 }) {
-  const t = useTranslations("settings");
   return (
     <fieldset
       className="space-y-3 rounded-xl border border-card-border p-4"
       disabled={saving}
       aria-busy={saving}
     >
-      <legend className="px-1 text-sm font-medium text-foreground">{t(`${messages}.title`)}</legend>
-      <p className="text-xs leading-relaxed text-muted">{t(`${messages}.hint`)}</p>
-      {classicHint && <p className="text-xs text-muted">{t(`${messages}.classicHint`)}</p>}
+      <legend className="px-1 text-sm font-medium text-foreground">{title}</legend>
+      <p className="text-xs leading-relaxed text-muted">{hint}</p>
+      {classicHint && <p className="text-xs text-muted">{classicText}</p>}
       <div className="grid gap-3 sm:grid-cols-2">
         {options.map((option) => (
           <label
@@ -165,10 +182,10 @@ function LayoutChoice<T extends string>({
             />
             <span>
               <span className="block text-sm font-medium text-foreground">
-                {t(`${messages}.options.${option}.title`)}
+                {optionText(option).title}
               </span>
               <span className="mt-1 block text-xs leading-relaxed text-muted">
-                {t(`${messages}.options.${option}.hint`)}
+                {optionText(option).hint}
               </span>
             </span>
           </label>
