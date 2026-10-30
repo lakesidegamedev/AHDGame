@@ -29,6 +29,7 @@ const FeedbackModal = dynamic(
 );
 import { isChromeHiddenPath, isLightweightLayoutPath } from "@/lib/constants/layoutPaths";
 import { getPostHogClient } from "@/lib/analytics/posthogClient";
+import { experimentalDesktopLayout } from "@/lib/navigation/desktopNavigationLayout";
 import { navigationVariantForAssignment } from "@/lib/analytics/navigationVariant";
 import { CONSENT_EVENT, CONSENT_RESET_EVENT, getStoredConsent } from "@/components/CookieConsent";
 
@@ -652,6 +653,10 @@ export function NavbarWrapper({
           {useExperimentalNav ? (
             <ExperimentalNavbar
               navigationVariant={navigationVariant}
+              desktopLayout={experimentalDesktopLayout(
+                navData?.user?.experimentalFeatures,
+                navData?.user?.desktopNavigationLayout
+              )}
               clientShell={clientShell}
               typedWordmark={typedWordmark}
               user={

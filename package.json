@@ -120,6 +120,7 @@
     "@types/node-cron": "^3.0.11",
     "@types/topojson-client": "^3.1.5",
     "@types/topojson-specification": "^1.0.5",
+    "ascii-reveal": "^0.3.0",
     "bcryptjs": "^3.0.3",
     "dotenv": "^18.0.6",
     "hast-util-to-html": "^9.0.5",

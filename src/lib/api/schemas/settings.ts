@@ -1,3 +1,4 @@
+import { DESKTOP_NAVIGATION_LAYOUTS } from "@/lib/navigation/desktopNavigationLayout";
 import { z } from "zod";
 import { containsBlockedName } from "@/lib/moderation";
 import { getAllDemographicCategoryKeys } from "@/lib/demographics/countryDemographics";
@@ -147,11 +148,18 @@ export const experimentalUiSchema = z.object({
 export const experimentalFeaturesSchema = z
   .object({
     experimentalFeatures: z.boolean().optional(),
+    desktopNavigationLayout: z.enum(DESKTOP_NAVIGATION_LAYOUTS).optional(),
     askDrawerSide: z.enum(["left", "right"]).optional(),
   })
-  .refine((v) => v.experimentalFeatures !== undefined || v.askDrawerSide !== undefined, {
-    message: "Nothing to update",
-  });
+  .refine(
+    (v) =>
+      v.experimentalFeatures !== undefined ||
+      v.askDrawerSide !== undefined ||
+      v.desktopNavigationLayout !== undefined,
+    {
+      message: "Nothing to update",
+    }
+  );
 
 export const autoRunForReelectionSchema = z.object({
   autoRunForReelection: z.boolean(),
