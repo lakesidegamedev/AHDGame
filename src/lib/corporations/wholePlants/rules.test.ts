@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   applyPlantChange,
-  convertOrderToWholePlants,
+  convertQueueToWholePlants,
   convertSectorToWholePlants,
   floorUnitsToPlants,
   isWholePlantOrder,
@@ -201,38 +201,50 @@ describe("conversion", () => {
     ).toBeNull();
   });
 
-  it("rewrites an in-flight order to whole plants and refunds the part-plant", () => {
-    const out = convertOrderToWholePlants({
-      undeliveredUnits: 60,
-      undeliveredCost: 600,
-      size: SIZE,
-      currentTurn: 100,
-      onlineTurn: 110,
-      starterForEmptySector: false,
-    });
-    expect(out).toMatchObject({ kind: "rewrite", unitsOrdered: 50, startTurn: 100 });
-    if (out.kind !== "rewrite") throw new Error("expected rewrite");
-    expect(out.costPaidAnchor).toBeCloseTo(500, 9);
+  it("pools a sector's orders so small orders that add up keep their plants", () => {
+    const out = convertQueueToWholePlants(
+      [
+        { undeliveredUnits: 10, undeliveredCost: 100, onlineTurn: 110 },
+        { undeliveredUnits: 10, undeliveredCost: 100, onlineTurn: 105 },
+        { undeliveredUnits: 40, undeliveredCost: 400, onlineTurn: 120 },
+      ],
+      { size: SIZE, currentTurn: 100, sectorHasPlants: true }
+    );
+    // 60 units: 2 plants, 10 units refunded at 10 per unit.
+    expect(out.plants).toBe(2);
     expect(out.refundAnchor).toBeCloseTo(100, 9);
+    // Running total by online turn: 10 at 105, 20 at 110, 60 at 120. Both
+    // plants land with the turn-120 order.
+    expect(out.orders[1]).toEqual({ kind: "cancel" });
+    expect(out.orders[0]).toEqual({ kind: "cancel" });
+    expect(out.orders[2]).toMatchObject({ kind: "rewrite", unitsOrdered: 50, startTurn: 100 });
+    if (out.orders[2].kind !== "rewrite") throw new Error("expected rewrite");
+    expect(out.orders[2].costPaidAnchor).toBeCloseTo(500, 9);
   });
 
-  it("cancels and refunds an order below one plant, except a founding starter", () => {
-    const base = {
-      undeliveredUnits: 10,
-      undeliveredCost: 80,
-      size: SIZE,
-      currentTurn: 5,
-      onlineTurn: 9,
-    };
-    expect(convertOrderToWholePlants({ ...base, starterForEmptySector: false })).toEqual({
-      kind: "cancel",
-      refundAnchor: 80,
-    });
-    expect(convertOrderToWholePlants({ ...base, starterForEmptySector: true })).toMatchObject({
-      kind: "rewrite",
-      unitsOrdered: SIZE,
-      costPaidAnchor: 80,
+  it("lands each plant with the order where the running total reaches it", () => {
+    const out = convertQueueToWholePlants(
+      [
+        { undeliveredUnits: 30, undeliveredCost: 30, onlineTurn: 5 },
+        { undeliveredUnits: 30, undeliveredCost: 30, onlineTurn: 9 },
+      ],
+      { size: SIZE, currentTurn: 1, sectorHasPlants: true }
+    );
+    expect(out.orders.map((o) => (o.kind === "rewrite" ? o.unitsOrdered : 0))).toEqual([25, 25]);
+    expect(out.refundAnchor).toBeCloseTo(10, 9);
+  });
+
+  it("refunds orders below one plant, except the first plant of an empty sector", () => {
+    const orders = [{ undeliveredUnits: 10, undeliveredCost: 80, onlineTurn: 9 }];
+    expect(
+      convertQueueToWholePlants(orders, { size: SIZE, currentTurn: 5, sectorHasPlants: true })
+    ).toEqual({ orders: [{ kind: "cancel" }], refundAnchor: 80, plants: 0, roundedUp: false });
+    expect(
+      convertQueueToWholePlants(orders, { size: SIZE, currentTurn: 5, sectorHasPlants: false })
+    ).toEqual({
+      orders: [{ kind: "rewrite", unitsOrdered: SIZE, costPaidAnchor: 80, startTurn: 5 }],
       refundAnchor: 0,
+      plants: 1,
       roundedUp: true,
     });
   });
