@@ -47,7 +47,7 @@ function projectingDb(db: Db): Db {
             const cursor = target.find(filter);
             if (!options?.projection) return cursor;
             return {
-              sort: (spec: Record<string, number>) => cursor.sort(spec),
+              sort: (spec: Parameters<typeof cursor.sort>[0]) => cursor.sort(spec),
               toArray: async () =>
                 (await cursor.toArray()).map((doc) =>
                   applyProjection(doc as Doc, options.projection!)
