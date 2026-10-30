@@ -355,7 +355,7 @@
       "avatarAlt": "{provider}-Avatar"
     },
     "experimental": {
-      "intro": "Teste Funktionen, die noch in Arbeit sind. Sie können sich ändern, ausfallen oder wieder verschwinden. Wenn du dies ausschaltest, sind sie sofort weg.",
+      "intro": "Teste Funktionen, die noch in Arbeit sind. Sie können sich ändern, ausfallen oder wieder verschwinden. Wenn du dies ausschaltest, sind sie sofort weg. Derzeit schaltet das den ASCII-Seitenaufbau ein: Beim Wechsel zwischen Seiten setzt sich jede Seite aus einem Zeichenraster zusammen.",
       "toggleLabel": "Experimentelle Funktionen einschalten",
       "toggleHint": "Standardmäßig aus. Ändert nur etwas für dich.",
       "saveError": "Speichern fehlgeschlagen. Versuche es erneut."

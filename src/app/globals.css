@@ -1725,3 +1725,12 @@ ins.adsbygoogle[data-ad-status="unfilled"] {
     transition: none;
   }
 }
+
+/* Experimental page decode (`Settings > Experimental features`).
+   ascii-reveal reads these custom properties from the wrapper it draws into,
+   so the glyph grid uses the site's monospace face and red accent instead of
+   the library defaults. */
+.ascii-reveal-host {
+  --ascii-font: var(--font-geist-mono), ui-monospace, monospace;
+  --ascii-accent: var(--primary);
+}
