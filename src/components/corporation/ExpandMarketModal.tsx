@@ -16,7 +16,19 @@ import type { OperatingSectorType } from "@/lib/constants/corporationsClient";
 import { COUNTRY_CURRENCY_MAP, type CurrencyCode } from "@/lib/constants/currencies";
 import { type CountryId } from "@/lib/constants/countriesCore";
 import { CorporationLogo } from "@/components/corporation/CorporationLogo";
-import { CAPACITY_UNIT_LABEL, formatUnits } from "./plantsPresentation";
+import {
+  CAPACITY_UNIT_LABEL,
+  formatUnits,
+  plantsOfRoom,
+  roomInPlantsLabel,
+} from "./plantsPresentation";
+
+/** Big-number form of room to build: whole plants, "<1" for a sliver, "0" for none. */
+function roomPlantsFigure(units: number | null | undefined, sectorType: string): string {
+  if (units == null || !Number.isFinite(units) || units <= 0) return "0";
+  const plants = plantsOfRoom(units, { sectorType });
+  return plants >= 1 ? plants.toLocaleString("en-US") : "<1";
+}
 import {
   facilityPlural,
   facilitySingular,
@@ -796,13 +808,23 @@ export default function ExpandMarketModal({
                                   </span>
                                 </span>
                                 <span className="text-right text-xs font-semibold tabular-nums text-foreground">
-                                  {showCountryEstimate ? formatUnits(room) : ""}
+                                  <span
+                                    title={
+                                      showCountryEstimate
+                                        ? `${formatUnits(room)} ${CAPACITY_UNIT_LABEL} of unmet demand`
+                                        : undefined
+                                    }
+                                  >
+                                    {showCountryEstimate
+                                      ? roomPlantsFigure(room, selectedType)
+                                      : ""}
+                                  </span>
                                   <span className="block text-[9px] font-normal text-muted">
                                     {sharedRoom
                                       ? showCountryEstimate
-                                        ? `${CAPACITY_UNIT_LABEL}, shared across ${countryName}`
+                                        ? `new ${facilityPlural(selectedType)}, shared across ${countryName}`
                                         : "shared above"
-                                      : CAPACITY_UNIT_LABEL}
+                                      : `new ${facilityPlural(selectedType)}`}
                                   </span>
                                   {open && showCountryEstimate && (room ?? 0) <= 0 && (
                                     <span className="mt-0.5 block text-[9px] font-normal leading-snug text-warning">
@@ -834,7 +856,8 @@ export default function ExpandMarketModal({
                             {activeSuggestion.stateName}
                           </p>
                           <p className="text-[11px] text-muted">
-                            Room to build: {formatUnits(activeDemandUnits)} {CAPACITY_UNIT_LABEL}
+                            Room to build:{" "}
+                            {roomInPlantsLabel(activeDemandUnits, { sectorType: selectedType })}
                             {" · "}
                             {activeSuggestion.foundingTotalAnchor != null
                               ? formatTreasuryAmount(activeSuggestion.foundingTotalAnchor)
@@ -908,13 +931,16 @@ export default function ExpandMarketModal({
                             >
                               Room to build
                             </p>
-                            <p className="text-sm font-bold text-foreground tabular-nums">
-                              {formatUnits(activeDemandUnits)}
+                            <p
+                              className="text-sm font-bold text-foreground tabular-nums"
+                              title={`${formatUnits(activeDemandUnits)} ${CAPACITY_UNIT_LABEL} of unmet demand`}
+                            >
+                              {roomPlantsFigure(activeDemandUnits, selectedType)}
                             </p>
                             <p className="text-[10px] text-muted">
                               {activeSuggestion.roomScope === "country" || countrySharedDemand
-                                ? `${CAPACITY_UNIT_LABEL}, shared across the country`
-                                : CAPACITY_UNIT_LABEL}
+                                ? `new ${facilityPlural(selectedType)}, shared across the country`
+                                : `new ${facilityPlural(selectedType)}`}
                             </p>
                           </div>
                           <div className="rounded-lg bg-background/60 px-3 py-2 text-center">
@@ -922,8 +948,11 @@ export default function ExpandMarketModal({
                               Your first {facilitySingular(selectedType)}
                             </p>
                             <p className="text-sm font-bold text-success tabular-nums">1</p>
-                            <p className="text-[10px] text-muted">
-                              {formatUnits(foundingQuote.starterUnits)} {CAPACITY_UNIT_LABEL}
+                            <p
+                              className="text-[10px] text-muted"
+                              title={`${formatUnits(foundingQuote.starterUnits)} ${CAPACITY_UNIT_LABEL} at full run`}
+                            >
+                              {facilitySingular(selectedType)}
                             </p>
                           </div>
                           <div className="rounded-lg bg-background/60 px-3 py-2 text-center">
@@ -1117,10 +1146,7 @@ export default function ExpandMarketModal({
                                   </span>
                                 </div>
                                 <div className="flex justify-between gap-3">
-                                  <span>
-                                    First {facilitySingular(selectedType)} (
-                                    {formatUnits(foundingQuote.starterUnits)} {CAPACITY_UNIT_LABEL})
-                                  </span>
+                                  <span>First {facilitySingular(selectedType)}</span>
                                   <span className="tabular-nums">
                                     {activeSuggestion.starterBuildCostAnchor != null
                                       ? formatTreasuryAmount(
@@ -1167,11 +1193,15 @@ export default function ExpandMarketModal({
                                     {enough
                                       ? t("foundingShareRoom", {
                                           state: activeSuggestion.stateName,
-                                          units: formatUnits(headroom),
+                                          plants: roomInPlantsLabel(headroom, {
+                                            sectorType: selectedType,
+                                          }),
                                         })
                                       : t("foundingShareLimited", {
                                           state: activeSuggestion.stateName,
-                                          units: formatUnits(headroom),
+                                          plants: roomInPlantsLabel(headroom, {
+                                            sectorType: selectedType,
+                                          }),
                                         })}
                                   </p>
                                 );

@@ -8,12 +8,13 @@ import {
 } from "@/lib/constants/moneyTimescale";
 import { GROWTH_HORIZON_SENTENCE } from "./SectorRowComponents";
 import type { SectorSortKey, SortDir } from "./sectorSortUtils";
+import { RUNNING_SOLD_HEADING, RUNNING_SOLD_HEADING_TITLE } from "./plantsPresentation";
 
 export const SECTOR_TABLE_GRID =
   "grid-cols-[minmax(220px,1.8fr)_minmax(120px,1fr)_minmax(72px,0.6fr)_150px_64px_88px_64px_88px_64px_44px]";
 
 /**
- * Plants-tier grid: plants and sold replace the growth columns (the
+ * Plants-tier grid: plants and running / sold replace the growth columns (the
  * slider does not build capacity under plants), and the net margin gets its
  * own column instead of a second line under profit.
  */
@@ -80,8 +81,8 @@ function columnsFor(plantsMode: boolean, timeScale: MoneyPeriod): Column[] {
         align: "right",
       },
       {
-        label: "Sold",
-        help: "Share of the output offered that sold. This is sell-through, not use of capacity: a sector can sell 100% of a trickle. The small figure underneath, Used, is output made over capacity. Low sold means unsold output; low used means plants idling below capacity. For corporations you do not run, sold is a broad band instead of the exact figure.",
+        label: RUNNING_SOLD_HEADING,
+        help: `${RUNNING_SOLD_HEADING_TITLE} A sector can sell all of a trickle, so read both: low running means plants sitting idle, low sold means output left unsold. For corporations you do not run, sold is a broad band instead of the exact figure.`,
         sortKey: "fill",
         align: "right",
       },

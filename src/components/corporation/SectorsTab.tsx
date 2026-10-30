@@ -31,14 +31,18 @@ import {
   type SectorSortKey,
   type SortDir,
 } from "./sectorSortUtils";
-import { CAPACITY_UNIT_LABEL, FillChip, UsedText, formatUnits } from "./plantsPresentation";
+import {
+  CAPACITY_UNIT_LABEL,
+  RunningSoldReading,
+  formatUnits,
+  sectorPlantCount,
+} from "./plantsPresentation";
 import { computeFillRate, fillRateBand } from "@/lib/corporations/financialFogOfWar";
 import {
   buildOnePhrase,
   capitalizeFacility,
   facilityPlural,
 } from "@/lib/constants/facilityVocabulary";
-import { plantsFromUnitsForSector } from "@/lib/constants/facilityQuantum";
 import { SectorTypeDossier } from "./SectorTypeDossier";
 import { SectorStrategyPanel } from "./SectorStrategyPanel";
 import type { SectorTypeMetricContext } from "./sectorTypeMetrics";
@@ -551,11 +555,7 @@ export default function SectorsTab({
                   (sum, s) => sum + (s.capacityUnits ?? 0),
                   0
                 );
-                const totalSites = sortedSectors.reduce(
-                  (sum, s) =>
-                    sum + (s.plantCount ?? plantsFromUnitsForSector(s, s.capacityUnits ?? 0)),
-                  0
-                );
+                const totalSites = sortedSectors.reduce((sum, s) => sum + sectorPlantCount(s), 0);
                 const totalProduced = sortedSectors.reduce(
                   (sum, s) => sum + (s.producedUnits ?? 0),
                   0
@@ -577,16 +577,19 @@ export default function SectorsTab({
                     <span></span>
                     <span
                       className={`${cellNum} text-right text-foreground`}
-                      title={`${formatUnits(totalCapacity)} ${CAPACITY_UNIT_LABEL}`}
+                      title={`${formatUnits(totalCapacity)} ${CAPACITY_UNIT_LABEL} at full run`}
                     >
-                      {totalSites.toLocaleString("en-US")} plants
+                      {totalSites.toLocaleString("en-US")} {totalSites === 1 ? "plant" : "plants"}
                     </span>
-                    <span className="flex flex-col items-end">
-                      <FillChip
+                    <span className="flex flex-col items-end text-right">
+                      <RunningSoldReading
+                        produced={totalProduced}
+                        capacity={totalCapacity}
                         fill={hasExactFill ? corpFill : null}
                         band={fillRateBand(corpFill)}
+                        plantCount={totalSites}
+                        className="items-end"
                       />
-                      <UsedText produced={totalProduced} capacity={totalCapacity} />
                     </span>
                     <span className={`${cellNum} text-right text-foreground`}>
                       {financialsRedacted ? "n/a" : fmtMoney(totalRev * scaleFactor)}

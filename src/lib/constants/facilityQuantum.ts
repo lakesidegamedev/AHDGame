@@ -136,6 +136,29 @@ export function plantsFromUnitsForSector(sector: PlantSizingSector, units: numbe
   return Math.max(1, Math.floor(units / plantSizeForSector(sector)));
 }
 
+/** What a surface needs to count a sector's plants the way the sector page does. */
+export interface PlantReadingSector extends PlantSizingSector {
+  /** Whole plants from the persisted ledger, when the payload carries it. */
+  plantCount?: number | null;
+  /** Capacity in output units per day. */
+  capacityUnits?: number | null;
+}
+
+/**
+ * Plants a sector owns, for display. The persisted ledger first; a payload
+ * without it (or a ledger still at zero beside real capacity) counts the
+ * capacity in plants of this sector's size. Every table counts plants here so
+ * none can disagree with the sector page.
+ */
+export function sectorPlantCount(sector: PlantReadingSector): number {
+  const fromUnits = plantsFromUnitsForSector(sector, sector.capacityUnits ?? 0);
+  const ledger = sector.plantCount;
+  if (typeof ledger === "number" && Number.isFinite(ledger) && ledger >= 0) {
+    return ledger > 0 ? Math.round(ledger) : fromUnits;
+  }
+  return fromUnits;
+}
+
 /**
  * Lane-only plant size, for callers that have no sector yet (a founding
  * plant, a fresh seed on the standard recipe). Prefer `plantSizeForSector`.

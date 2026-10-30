@@ -20,10 +20,21 @@ import { GameMonthTime } from "@/components/time/GameMonthTime";
 import { fetchJson } from "@/lib/observability/fetchJson";
 import { corpIncomeBasis, netMarginPct } from "./financials/financialsModel";
 import { buildOwnershipSlices } from "./OwnershipDonut";
-import { CAPACITY_UNIT_LABEL, UsedText, formatUnits } from "./plantsPresentation";
+import {
+  BuildQueueBadge,
+  CAPACITY_UNIT_LABEL,
+  PlantCount,
+  RUNNING_SOLD_HEADING,
+  RUNNING_SOLD_HEADING_TITLE,
+  RunningSoldReading,
+  capacityUsedFraction,
+  formatUnits,
+  sectorPlantCount,
+} from "./plantsPresentation";
+import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
+import { facilityPlural, facilitySingular } from "@/lib/constants/facilityVocabulary";
 import {
   DenseSection,
-  FillText,
   KVList,
   KVRow,
   Segmented,
@@ -213,14 +224,15 @@ function SectorTable({
                 )}
                 {plantsMode ? (
                   <>
-                    <Th align="right" className="hidden md:table-cell">
-                      Capacity
-                    </Th>
                     <Th
                       align="right"
-                      title="Share of the output offered that sold. Used is output over capacity."
+                      className="hidden md:table-cell"
+                      title="Plants built, and plants paid for and still being built."
                     >
-                      Sold
+                      Plants
+                    </Th>
+                    <Th align="right" title={RUNNING_SOLD_HEADING_TITLE}>
+                      {RUNNING_SOLD_HEADING}
                     </Th>
                   </>
                 ) : (
@@ -305,21 +317,24 @@ function SectorTable({
                     )}
                     {plantsMode ? (
                       <>
-                        <Td align="right" className="hidden text-muted md:table-cell">
-                          {formatUnits(s.capacityUnits)}
-                          {typeof s.plantCount === "number" && (
-                            <span className="block text-[11px]">
-                              {s.plantCount.toLocaleString("en-US")}{" "}
-                              {s.plantCount === 1 ? "plant" : "plants"}
-                            </span>
-                          )}
+                        <Td align="right" className="hidden md:table-cell">
+                          <PlantCount sector={s} className="block" />
+                          <BuildQueueBadge
+                            queue={s.buildQueueSummary}
+                            plantUnits={plantSizeForSector(s)}
+                            plantSingular={facilitySingular(s.sectorType)}
+                            plantPlural={facilityPlural(s.sectorType)}
+                            className="items-end"
+                          />
                         </Td>
                         <Td align="right">
-                          <FillText fill={s.fillRate} band={s.fillRateBand} />
-                          <UsedText
+                          <RunningSoldReading
                             produced={s.producedUnits}
                             capacity={s.capacityUnits}
-                            className="block"
+                            fill={s.fillRate}
+                            band={s.fillRateBand}
+                            plantCount={sectorPlantCount(s)}
+                            className="items-end"
                           />
                         </Td>
                       </>
@@ -483,6 +498,10 @@ export default function OverviewTab({
     corporation.brandLoyaltyLabel ??
     (corporation.brandLoyalty != null ? loyaltyLabel(corporation.brandLoyalty) : undefined);
   const physical = corporation.physical ?? null;
+  const totalPlants = sectors.reduce((sum, s) => sum + sectorPlantCount(s), 0);
+  const runningShare = physical
+    ? capacityUsedFraction(physical.producedUnits, physical.capacityUnits)
+    : null;
 
   const { mode, setMode } = useCorpOverviewMode();
   const leverageRating = corporation.creditRatingSnapshot ?? bondInfo?.creditRating.rating ?? null;
@@ -708,7 +727,7 @@ export default function OverviewTab({
             title="Operations"
             summary={
               physical?.fillRate != null
-                ? `${Math.round(physical.fillRate * 100)}% fill`
+                ? `${Math.round(physical.fillRate * 100)}% sold`
                 : `Marketing ${formatMarketingStrength(corporation.marketingStrength)}`
             }
           >
@@ -747,12 +766,16 @@ export default function OverviewTab({
                 {physical && (
                   <>
                     <KVRow
-                      label="Capacity"
-                      value={formatUnits(physical.capacityUnits)}
-                      hint={CAPACITY_UNIT_LABEL}
+                      label="Plants"
+                      value={totalPlants.toLocaleString("en-US")}
+                      hint={
+                        runningShare != null
+                          ? `${Math.round(runningShare * 100)}% running`
+                          : `${formatUnits(physical.capacityUnits)} ${CAPACITY_UNIT_LABEL}`
+                      }
                     />
                     <KVRow
-                      label="Sold"
+                      label="Output sold"
                       mark={
                         physical.fillRate != null ? (
                           <Meter pct={physical.fillRate * 100} className="w-10" />

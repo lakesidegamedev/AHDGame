@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import type { CorporationType } from "@/lib/constants/corporationsClient";
-import { facilityPlural } from "@/lib/constants/facilityVocabulary";
+import {
+  capitalizeFacility,
+  facilityPlural,
+  facilitySingular,
+} from "@/lib/constants/facilityVocabulary";
 import { SECTOR_STRATEGIES } from "@/lib/constants/sectorStrategies";
 import { Button, SectionLabel, Slider } from "@/components/ui";
 import type {
@@ -29,9 +33,10 @@ import Link from "next/link";
 import {
   BuildQueueBadge,
   CAPACITY_UNIT_LABEL,
-  FillChip,
   MothballedPill,
+  RunningSoldReading,
   formatUnits,
+  plantCountLabel,
   sectorBuildUrl,
 } from "@/components/corporation/plantsPresentation";
 import { apiErrorText } from "@/lib/errors/catalog";
@@ -695,9 +700,13 @@ function SectorOpsRow({
             <span className="font-medium text-foreground">{sector.profitMargin.toFixed(1)}%</span>
           </span>
           {plantsMode ? (
-            <span className="flex items-center gap-1.5">
-              Fill <FillChip fill={sector.fillRate} band={sector.fillRateBand} />
-            </span>
+            <RunningSoldReading
+              produced={sector.producedUnits}
+              capacity={sector.capacityUnits}
+              fill={sector.fillRate}
+              band={sector.fillRateBand}
+              plantCount={sector.plantCount}
+            />
           ) : (
             <span>
               Growth{" "}
@@ -771,27 +780,26 @@ function SectorOpsRow({
       {/* Capacity — plants: a build summary, not a slider. */}
       {plantsMode && (
         <div>
-          <div className="text-body-sm font-medium text-foreground">Capacity</div>
+          <div className="text-body-sm font-medium text-foreground">Plants</div>
           <p className="text-body-sm text-muted">
-            What these {facilityPlural(sector.sectorType as CorporationType)} can make in one
-            financial day. Capacity is bought, not set: order a build and it arrives after a
-            construction lag.
+            {capitalizeFacility(facilityPlural(sector.sectorType as CorporationType))} are bought,
+            not set: order a build and they arrive after a construction lag.
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-x-6 gap-y-2">
             <div>
-              <div className="text-body-sm font-semibold tabular-nums text-foreground">
-                {formatUnits(sector.capacityUnits)}
-                <span className="ml-1 text-body-xs font-normal text-muted">
-                  {CAPACITY_UNIT_LABEL}
-                </span>
+              <div
+                className="text-body-sm font-semibold tabular-nums text-foreground"
+                title={`${formatUnits(sector.capacityUnits)} ${CAPACITY_UNIT_LABEL} at full run`}
+              >
+                {plantCountLabel(sector.plantCount ?? 0, sector.sectorType)}
               </div>
-              <BuildQueueBadge queue={sector.buildQueueSummary} className="mt-1" />
-            </div>
-            <div className="text-body-xs text-muted">
-              Sold / made{" "}
-              <span className="font-medium tabular-nums text-foreground">
-                {formatUnits(sector.soldUnits)} / {formatUnits(sector.producedUnits)}
-              </span>
+              <BuildQueueBadge
+                queue={sector.buildQueueSummary}
+                plantUnits={sector.plantUnits}
+                plantSingular={facilitySingular(sector.sectorType)}
+                plantPlural={facilityPlural(sector.sectorType)}
+                className="mt-1"
+              />
             </div>
             <Link
               href={sectorBuildUrl(corpId, sector.sectorId)}
