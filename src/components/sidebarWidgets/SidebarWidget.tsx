@@ -18,11 +18,24 @@ import type {
   StaffQueuesWidgetData,
   StockTickerWidgetData,
 } from "@/lib/sidebarWidgets/widgetData";
+import type { ChamberFloorWidgetData } from "@/lib/sidebarWidgets/data/chamberFloor";
+import type { MyRaceWidgetData } from "@/lib/sidebarWidgets/data/myRace";
+import type { OfficeDashboardWidgetData } from "@/lib/sidebarWidgets/data/officeDashboard";
+import type { SinceAwayWidgetData } from "@/lib/sidebarWidgets/data/sinceAway";
+import { legislatureUrl } from "@/lib/urls";
+import { ChamberFloorBody } from "./bodies/ChamberFloorBody";
+import { MyRaceBody } from "./bodies/MyRaceBody";
+import { OfficeDashboardBody, officeDashboardHref } from "./bodies/OfficeDashboardBody";
+import { SinceAwayBody } from "./bodies/SinceAwayBody";
 
 export const WIDGET_ICONS: Record<WidgetId, PixelNavIconName> = {
   myCompany: "briefcase",
   stockTicker: "chart",
   staffQueues: "gear",
+  myRace: "vote",
+  chamberFloor: "bill",
+  officeDashboard: "capitol",
+  sinceAway: "bell",
 };
 
 function money(amount: number, code: CurrencyCode | null): string {
@@ -229,6 +242,9 @@ export function widgetBadge(widgetKey: string, data: unknown): number {
     const queues = data as StaffQueuesWidgetData;
     return queues.wikiReview + queues.altClusters + queues.playerReports;
   }
+  if (parsed?.id === "chamberFloor" && data) {
+    return (data as ChamberFloorWidgetData).bills.filter((bill) => bill.vote === null).length;
+  }
   return 0;
 }
 
@@ -303,6 +319,70 @@ export function SidebarWidget({
           {pending ??
             (queues ? (
               <StaffBody data={queues} onNavigate={onNavigate} />
+            ) : (
+              <Empty>{t("unavailable")}</Empty>
+            ))}
+        </Frame>
+      );
+    }
+    case "myRace": {
+      const race = data as MyRaceWidgetData | null;
+      return (
+        <Frame
+          {...common}
+          title={t("myRace.title")}
+          href={race ? `/elections/${race.electionId}` : undefined}
+        >
+          {pending ??
+            (race ? (
+              <MyRaceBody data={race} onNavigate={onNavigate} />
+            ) : (
+              <Empty>{t("myRace.empty")}</Empty>
+            ))}
+        </Frame>
+      );
+    }
+    case "chamberFloor": {
+      const floor = data as ChamberFloorWidgetData | null;
+      return (
+        <Frame
+          {...common}
+          title={floor?.chamber || t("chamberFloor.title")}
+          href={floor ? legislatureUrl(floor.countryId) : undefined}
+        >
+          {pending ??
+            (floor ? (
+              <ChamberFloorBody data={floor} compact={compact} onNavigate={onNavigate} />
+            ) : (
+              <Empty>{t("unavailable")}</Empty>
+            ))}
+        </Frame>
+      );
+    }
+    case "officeDashboard": {
+      const office = data as OfficeDashboardWidgetData | null;
+      return (
+        <Frame
+          {...common}
+          title={t("officeDashboard.title")}
+          href={office ? officeDashboardHref(office) : undefined}
+        >
+          {pending ??
+            (office ? (
+              <OfficeDashboardBody data={office} onNavigate={onNavigate} />
+            ) : (
+              <Empty>{t("unavailable")}</Empty>
+            ))}
+        </Frame>
+      );
+    }
+    case "sinceAway": {
+      const away = data as SinceAwayWidgetData | null;
+      return (
+        <Frame {...common} title={t("sinceAway.title")} href="/notifications">
+          {pending ??
+            (away ? (
+              <SinceAwayBody data={away} onNavigate={onNavigate} />
             ) : (
               <Empty>{t("unavailable")}</Empty>
             ))}

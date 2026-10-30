@@ -387,7 +387,11 @@
       "names": {
         "myCompany": "My company",
         "stockTicker": "Stock ticker",
-        "staffQueues": "Staff review queues"
+        "staffQueues": "Staff review queues",
+        "myRace": "My race",
+        "chamberFloor": "Chamber floor",
+        "officeDashboard": "My office",
+        "sinceAway": "Since last turn"
       },
       "tickerScopes": {
         "global": "Global market",
@@ -418,6 +422,60 @@
         "wikiReview": "Wiki edits to review",
         "altClusters": "Open alt clusters",
         "playerReports": "Player reports"
+      },
+      "myRace": {
+        "title": "My race",
+        "opensIn": "{turns, plural, =0 {Opens this turn} one {Opens in # turn} other {Opens in # turns}}",
+        "closesIn": "{turns, plural, =0 {Closes this turn} one {# turn left} other {# turns left}}",
+        "you": "Your share",
+        "place": "Position",
+        "placeValue": "{rank} of {count}",
+        "leader": "Leader",
+        "seats": "Projected seats",
+        "noVotes": "No votes projected yet.",
+        "election": "Race page",
+        "campaign": "Campaign",
+        "empty": "You are not standing in a race right now."
+      },
+      "chamberFloor": {
+        "title": "On the floor",
+        "empty": "No bills are up for a vote in your chamber.",
+        "for": "For",
+        "against": "Against",
+        "abstain": "Abstain",
+        "notVoted": "Not voted",
+        "turnsLeft": "{turns, plural, =0 {last turn} one {# turn} other {# turns}}",
+        "more": "{count, plural, one {# more bill} other {# more bills}} in your chamber"
+      },
+      "officeDashboard": {
+        "title": "My office",
+        "approval": "Approval",
+        "budgetBalance": "Budget balance",
+        "growth": "Growth",
+        "unemployment": "Unemployment",
+        "office": "Office",
+        "economy": "Economy",
+        "budget": "Budget"
+      },
+      "sinceAway": {
+        "title": "Since last turn",
+        "netWorth": "Net worth",
+        "cash": "Cash and savings",
+        "stocks": "Your shares",
+        "bonds": "Your bonds",
+        "funds": "Your funds",
+        "noHistory": "Changes show here after your next turn.",
+        "unread": "{count, plural, one {#{more} unread notification} other {#{more} unread notifications}}",
+        "noUnread": "No unread notifications.",
+        "categories": {
+          "crisis": "Crisis",
+          "legislation": "Legislation",
+          "election": "Election",
+          "party": "Party",
+          "standing": "Standing",
+          "treasury": "Treasury",
+          "system": "System"
+        }
       }
     },
     "desktop": {

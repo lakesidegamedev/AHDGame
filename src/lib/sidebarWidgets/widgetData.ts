@@ -9,6 +9,10 @@ import { EXCHANGE_API_KEYS } from "@/lib/constants/exchangeRegistry";
 import { getAltClustersCollection } from "@/lib/db/collections";
 import { PLAYER_CONTENT_REPORTS } from "@/lib/safety/playerSafety";
 import { parseWidgetKey, TICKER_HOME_SCOPE } from "./widgetCatalog";
+import { loadChamberFloor } from "./data/chamberFloor";
+import { loadMyRace } from "./data/myRace";
+import { loadOfficeDashboard } from "./data/officeDashboard";
+import { loadSinceAway } from "./data/sinceAway";
 
 export interface MyCompanyWidgetData {
   sequentialId: number | null;
@@ -194,6 +198,14 @@ export async function loadSidebarWidgetData(
             ];
           case "staffQueues":
             return [key, await loadStaffQueues(db, viewer)];
+          case "myRace":
+            return [key, await loadMyRace(db, viewer)];
+          case "chamberFloor":
+            return [key, await loadChamberFloor(db, viewer)];
+          case "officeDashboard":
+            return [key, await loadOfficeDashboard(db, viewer)];
+          case "sinceAway":
+            return [key, await loadSinceAway(db, viewer)];
         }
       } catch {
         return [key, null];

@@ -298,7 +298,11 @@
       "names": {
         "myCompany": "Mein Unternehmen",
         "stockTicker": "Börsenticker",
-        "staffQueues": "Prüfwarteschlangen"
+        "staffQueues": "Prüfwarteschlangen",
+        "myRace": "Mein Wahlkampf",
+        "chamberFloor": "Plenum",
+        "officeDashboard": "Mein Amt",
+        "sinceAway": "Seit der letzten Runde"
       },
       "tickerScopes": {
         "global": "Weltmarkt",
@@ -329,6 +333,60 @@
         "wikiReview": "Wiki-Änderungen zu prüfen",
         "altClusters": "Offene Alt-Cluster",
         "playerReports": "Spielermeldungen"
+      },
+      "myRace": {
+        "title": "Mein Wahlkampf",
+        "opensIn": "{turns, plural, =0 {Beginnt diese Runde} one {Beginnt in # Runde} other {Beginnt in # Runden}}",
+        "closesIn": "{turns, plural, =0 {Endet diese Runde} one {Noch # Runde} other {Noch # Runden}}",
+        "you": "Dein Anteil",
+        "place": "Platz",
+        "placeValue": "{rank} von {count}",
+        "leader": "Vorne",
+        "seats": "Erwartete Sitze",
+        "noVotes": "Noch keine Stimmen erwartet.",
+        "election": "Wahlseite",
+        "campaign": "Kampagne",
+        "empty": "Du kandidierst gerade nicht."
+      },
+      "chamberFloor": {
+        "title": "Im Plenum",
+        "empty": "In deiner Kammer steht kein Gesetz zur Abstimmung.",
+        "for": "Dafür",
+        "against": "Dagegen",
+        "abstain": "Enthaltung",
+        "notVoted": "Offen",
+        "turnsLeft": "{turns, plural, =0 {letzte Runde} one {# Runde} other {# Runden}}",
+        "more": "{count, plural, one {# weiteres Gesetz} other {# weitere Gesetze}} in deiner Kammer"
+      },
+      "officeDashboard": {
+        "title": "Mein Amt",
+        "approval": "Zustimmung",
+        "budgetBalance": "Haushaltssaldo",
+        "growth": "Wachstum",
+        "unemployment": "Arbeitslosigkeit",
+        "office": "Amt",
+        "economy": "Wirtschaft",
+        "budget": "Haushalt"
+      },
+      "sinceAway": {
+        "title": "Seit der letzten Runde",
+        "netWorth": "Vermögen",
+        "cash": "Bargeld und Ersparnisse",
+        "stocks": "Deine Aktien",
+        "bonds": "Deine Anleihen",
+        "funds": "Deine Fonds",
+        "noHistory": "Änderungen erscheinen hier nach deiner nächsten Runde.",
+        "unread": "{count, plural, one {#{more} ungelesene Benachrichtigung} other {#{more} ungelesene Benachrichtigungen}}",
+        "noUnread": "Keine ungelesenen Benachrichtigungen.",
+        "categories": {
+          "crisis": "Krise",
+          "legislation": "Gesetzgebung",
+          "election": "Wahl",
+          "party": "Partei",
+          "standing": "Ansehen",
+          "treasury": "Finanzen",
+          "system": "System"
+        }
       }
     },
     "desktop": {

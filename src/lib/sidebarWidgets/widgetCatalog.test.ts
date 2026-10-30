@@ -49,6 +49,35 @@ describe("widget layouts", () => {
     expect(effectiveWidgetLayout(saved, player)).toEqual({ tray: ["stockTicker:global"], nav: {} });
   });
 
+  it("offers role widgets only to the players they apply to", () => {
+    expect(parseWidgetKey("myRace")).toEqual({ id: "myRace", param: null });
+    expect(parseWidgetKey("chamberFloor:house")).toBeNull();
+    const saved = { tray: ["myRace", "chamberFloor", "officeDashboard", "sinceAway"], nav: {} };
+    expect(effectiveWidgetLayout(saved, player).tray).toEqual(["sinceAway"]);
+    expect(
+      effectiveWidgetLayout(saved, {
+        ...player,
+        isCandidate: true,
+        isLegislator: true,
+        holdsOffice: true,
+      }).tray
+    ).toEqual(saved.tray);
+  });
+
+  it("starts candidates with their race and office holders with their office", () => {
+    expect(defaultWidgetLayout({ ...player, isCandidate: true }).tray).toEqual([
+      "myRace",
+      "stockTicker:home",
+    ]);
+    expect(defaultWidgetLayout({ ...ceoStaff, holdsOffice: true, isCandidate: true }).tray).toEqual(
+      ["officeDashboard", "myRace", "myCompany", "stockTicker:home", "staffQueues"]
+    );
+    // A seat alone adds nothing by default; the floor widget is opt-in.
+    expect(defaultWidgetLayout({ ...player, isLegislator: true }).tray).toEqual([
+      "stockTicker:home",
+    ]);
+  });
+
   it("starts company runners and staff with their widgets", () => {
     expect(defaultWidgetLayout(player).tray).toEqual(["stockTicker:home"]);
     expect(defaultWidgetLayout(ceoStaff)).toEqual({

@@ -4,7 +4,15 @@
  * can sit in the side tray and in a desktop menu panel.
  */
 
-export const WIDGET_IDS = ["myCompany", "stockTicker", "staffQueues"] as const;
+export const WIDGET_IDS = [
+  "myCompany",
+  "stockTicker",
+  "staffQueues",
+  "myRace",
+  "chamberFloor",
+  "officeDashboard",
+  "sinceAway",
+] as const;
 export type WidgetId = (typeof WIDGET_IDS)[number];
 
 /** Desktop menus that can hold one widget in their side column. */
@@ -17,7 +25,16 @@ export const TICKER_HOME_SCOPE = "home";
 export interface WidgetAudience {
   hasCorporation: boolean;
   isStaff: boolean;
+  /** Standing in an open race. */
+  isCandidate?: boolean;
+  /** Holds a voting seat in the national legislature. */
+  isLegislator?: boolean;
+  /** Regional executive, cabinet member, or head of state or government. */
+  holdsOffice?: boolean;
 }
+
+/** Role widgets whose availability the server confirms by returning data. */
+export const SERVER_CHECKED_WIDGETS = ["chamberFloor", "officeDashboard"] as const;
 
 export interface WidgetDefinition {
   id: WidgetId;
@@ -31,6 +48,10 @@ export const WIDGETS: Record<WidgetId, WidgetDefinition> = {
   myCompany: { id: "myCompany", available: (a) => a.hasCorporation, params: [] },
   stockTicker: { id: "stockTicker", available: () => true, params: ["global", TICKER_HOME_SCOPE] },
   staffQueues: { id: "staffQueues", available: (a) => a.isStaff, params: [] },
+  myRace: { id: "myRace", available: (a) => a.isCandidate === true, params: [] },
+  chamberFloor: { id: "chamberFloor", available: (a) => a.isLegislator === true, params: [] },
+  officeDashboard: { id: "officeDashboard", available: (a) => a.holdsOffice === true, params: [] },
+  sinceAway: { id: "sinceAway", available: () => true, params: [] },
 };
 
 export const MAX_TRAY_WIDGETS = 8;
@@ -77,6 +98,8 @@ export function widgetLayout(value: unknown): WidgetLayout | null {
 /** Starting layout for a player who has not customised, by what they can use. */
 export function defaultWidgetLayout(audience: WidgetAudience): WidgetLayout {
   const tray = [
+    ...(audience.holdsOffice ? ["officeDashboard"] : []),
+    ...(audience.isCandidate ? ["myRace"] : []),
     ...(audience.hasCorporation ? ["myCompany"] : []),
     `stockTicker:${TICKER_HOME_SCOPE}`,
     ...(audience.isStaff ? ["staffQueues"] : []),
