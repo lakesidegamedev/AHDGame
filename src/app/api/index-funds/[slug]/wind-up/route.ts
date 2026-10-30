@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
+import { rejectDuringTurn } from "@/lib/api/rejectDuringTurn";
 import { handleRouteError, errorResponse } from "@/lib/api/errors";
 import type { Corporation } from "@/lib/db/types";
 import { resolveFundBySlugOrId } from "@/lib/indexFunds/fundQueries";
@@ -26,6 +27,10 @@ export async function POST(_request: Request, { params }: RouteParams) {
 
     const { slug } = await params;
     const db = await getDb();
+    // The fund pass writes each fund's status back from its own read; a wind-up
+    // landing during the turn would be reverted to active.
+    const turnGuard = await rejectDuringTurn(db);
+    if (turnGuard) return turnGuard;
     const fund = await resolveFundBySlugOrId(db, slug);
     if (!fund) return errorResponse(404, "Fund not found");
 

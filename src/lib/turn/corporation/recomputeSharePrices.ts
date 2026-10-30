@@ -405,12 +405,10 @@ export async function recomputeSharePricesAfterBondTurn(
     const localPrice = writeCorpEconomicLocal(anchorPrice, code, rate);
     corpOps.push({
       updateOne: {
-        // Between turns there is no turn lock: an IPO, share issue or vote
-        // effect may write fundamentalSharePrice concurrently. Its write wins;
-        // this tick skips that corp until the next one.
-        filter: intraHour
-          ? { _id: oid, fundamentalSharePrice: corp?.fundamentalSharePrice }
-          : { _id: oid },
+        // An IPO, share issue or vote effect may write fundamentalSharePrice
+        // between this pass's read and its write, between turns and during a
+        // turn alike. Its write wins; this pass skips that corp until the next.
+        filter: { _id: oid, fundamentalSharePrice: corp?.fundamentalSharePrice },
         update: {
           $set: { sharePrice: localPrice, fundamentalSharePrice: localPrice, updatedAt: now },
         },
@@ -446,15 +444,13 @@ export async function recomputeSharePricesAfterBondTurn(
         ? database.collection<CorporationHistory>("corporationHistory").bulkWrite(histOps)
         : null,
     ]);
-    if (intraHour) {
-      return {
-        corpsRepriced: corpResult.matchedCount,
-        corpsSkipped: skipped + corpOps.length - corpResult.matchedCount,
-      };
-    }
+    return {
+      corpsRepriced: corpResult.matchedCount,
+      corpsSkipped: skipped + corpOps.length - corpResult.matchedCount,
+    };
   }
 
-  return { corpsRepriced: corpOps.length, corpsSkipped: skipped };
+  return { corpsRepriced: 0, corpsSkipped: skipped };
 }
 
 /**
