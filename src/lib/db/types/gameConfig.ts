@@ -261,6 +261,12 @@ export interface GameConfig {
    */
   producerIdleRetireStage?: number;
   /**
+   * Whole plants: >= 1 keeps every sector's capacity at a whole number of
+   * plants (wear and credit counters, whole-plant build steps). Flip between
+   * turns, after the conversion has run. 0 or absent = off.
+   */
+  wholePlantsStage?: number;
+  /**
    * Funded producer market transition package (classification of over-built
    * sectors at the opening, struggling marks, support and free conversion for
    * 48 turns after the switch). Absent or true = on. False = no package: an

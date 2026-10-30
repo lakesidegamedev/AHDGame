@@ -92,6 +92,61 @@ export function plantCapacityDeltaPipeline(
 }
 
 /**
+ * Whole-plants twin of `plantCapacityDeltaPipeline`, same call shape. Off (the
+ * default) it IS that pipeline, so today's behaviour is unchanged. On, a gain
+ * is construction credit: the stock is snapped to whole plants (surplus to
+ * credit, a positive holding below one plant rounds up to one), the delta is
+ * added to `plantUnitRemainder`, and every full plant of credit becomes a
+ * plant. Negative deltas are not wear here; losses go through the turn.
+ */
+export function plantChangePipeline(
+  sector: PlantSizingSector,
+  delta: number,
+  setFields: Record<string, unknown> = {},
+  options: { wholePlants?: boolean } = {}
+): Array<Record<string, unknown>> {
+  if (!options.wholePlants) return plantCapacityDeltaPipeline(sector, delta, setFields);
+  const size = plantSizeForSector(sector);
+  const gain = Number.isFinite(delta) && delta > 0 ? delta : 0;
+  const stock = { $max: [0, { $ifNull: ["$capitalStock", 0] }] };
+  const floored = { $floor: { $add: [{ $divide: [stock, size] }, 1e-9] } };
+  const basePlants = {
+    $cond: [{ $lte: [stock, 0] }, 0, { $cond: [{ $lt: [floored, 1] }, 1, floored] }],
+  };
+  return [
+    {
+      $set: {
+        __wpBase: basePlants,
+        __wpCredit: {
+          $add: [
+            { $max: [0, { $ifNull: ["$plantUnitRemainder", 0] }] },
+            { $max: [0, { $subtract: [stock, { $multiply: [basePlants, size] }] }] },
+            gain,
+          ],
+        },
+      },
+    },
+    {
+      $set: {
+        __wpAdded: { $floor: { $add: [{ $divide: ["$__wpCredit", size] }, 1e-9] } },
+      },
+    },
+    {
+      $set: {
+        ...setFields,
+        plantCount: { $add: ["$__wpBase", "$__wpAdded"] },
+        capitalStock: { $multiply: [{ $add: ["$__wpBase", "$__wpAdded"] }, size] },
+        plantUnitRemainder: {
+          $max: [0, { $subtract: ["$__wpCredit", { $multiply: ["$__wpAdded", size] }] }],
+        },
+        plantWearUnits: { $max: [0, { $ifNull: ["$plantWearUnits", 0] }] },
+      },
+    },
+    { $unset: ["__wpBase", "__wpCredit", "__wpAdded"] },
+  ];
+}
+
+/**
  * Advance the construction ledger with newly delivered capacity.
  * Turn writers reconcile the persisted count from final capitalStock after
  * depreciation, so this helper is only for computations before that write.

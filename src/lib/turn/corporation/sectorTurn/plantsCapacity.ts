@@ -20,6 +20,8 @@ import { COMMODITY_BASE_PRICES, type CommodityType } from "@/lib/constants/commo
 import type { CorporateSector, Corporation } from "@/lib/db/types";
 import { advanceCapitalStock } from "@/lib/market/capital";
 import { seedPlantLedger } from "@/lib/corporations/plantLedger";
+import { applyPlantChange } from "@/lib/corporations/wholePlants/rules";
+import { plantSizeForSector } from "@/lib/constants/facilityQuantum";
 import { healRetoolStockBasis, type RetoolStockBasisHeal } from "@/lib/corporations/retoolRescale";
 import {
   retoolOperatingCapacityRatio,
@@ -45,6 +47,8 @@ export interface PlantsCapacityInput {
     | "operatingCapacityTurn"
     | "autoStrategyAdoptedAtTurn"
     | "otherOpexPerUnitAnchor"
+    | "plantUnitRemainder"
+    | "plantWearUnits"
   >;
   corp: Pick<Corporation, "ceoType">;
   /**
@@ -76,6 +80,11 @@ export interface PlantsCapacityInput {
    * applied as extra depreciation so the paid basis falls with it. Absent = 1.
    */
   recessionCapacityFactor?: number;
+  /**
+   * gameConfig.wholePlantsStage on: depreciation and recession become wear,
+   * and the stock stays a whole number of plants (corporations/wholePlants).
+   */
+  wholePlants?: boolean;
 }
 
 export interface PlantsCapacityResult {
@@ -84,6 +93,8 @@ export interface PlantsCapacityResult {
   activeFraction: number;
   plantsBaseStock: number;
   plantLedger: ReturnType<typeof seedPlantLedger> | null;
+  /** Whole-plant wear after this turn's depreciation. Null with the stage off. */
+  plantWearUnits: number | null;
   plantsPrevStock: number;
   plantsOwnedCapacity: number;
   plantsCapacityDepreciationFactor: number;
@@ -229,7 +240,7 @@ export function computePlantsCapacity(input: PlantsCapacityInput): PlantsCapacit
       : workingCapacity
     : 0;
   const plantsPrevStock = plantsBaseStock + landedBuildUnits;
-  const plantsOwnedCapacity = plantsEnabled
+  const continuousOwnedCapacity = plantsEnabled
     ? advanceCapitalStock({
         // The max() is a ONE-TIME migration, keyed off the absent ramp anchor.
         // Applying it every turn would re-lift capacity back to whatever the
@@ -260,7 +271,31 @@ export function computePlantsCapacity(input: PlantsCapacityInput): PlantsCapacit
         currentGrowthRate: 0,
       }) * recessionFactorOf(input.recessionCapacityFactor)
     : 0;
-  const plantLedger = plantsEnabled ? seedPlantLedger(sector, plantsOwnedCapacity) : null;
+  // Whole plants: the continuous decay above is wear, not lost stock. A plant
+  // comes off when the wear reaches one plant; the last plant never wears out.
+  const wholePlantChange =
+    plantsEnabled && input.wholePlants
+      ? applyPlantChange(
+          {
+            capitalStock: plantsPrevStock,
+            plantUnitRemainder: sector.plantUnitRemainder,
+            plantWearUnits: sector.plantWearUnits,
+          },
+          plantSizeForSector(sector),
+          { lossUnits: Math.max(0, plantsPrevStock - continuousOwnedCapacity) }
+        )
+      : null;
+  const plantsOwnedCapacity = wholePlantChange
+    ? wholePlantChange.capitalStock
+    : continuousOwnedCapacity;
+  const plantLedger = wholePlantChange
+    ? {
+        plantCount: wholePlantChange.plantCount,
+        plantUnitRemainder: wholePlantChange.plantUnitRemainder,
+      }
+    : plantsEnabled
+      ? seedPlantLedger(sector, plantsOwnedCapacity)
+      : null;
   // ─── P5: the PAID BASIS of that capacity ──────────────────────────────────
   //
   //   book_next = (book_prev + cash of the orders that just landed) × (the same
@@ -283,8 +318,13 @@ export function computePlantsCapacity(input: PlantsCapacityInput): PlantsCapacit
   // autoSectorSeed multiplier) adds units without adding cash, so it DILUTES
   // the per-unit basis. That is deliberate: free capacity has no paid basis,
   // and must not be exitable for cash it never cost.
-  const plantsCapacityDepreciationFactor =
-    plantsPrevStock > 0 ? plantsOwnedCapacity / plantsPrevStock : 1;
+  // Whole plants: the basis falls by the share of plants that came off, so
+  // credit converted into a plant (free) dilutes rather than inflates it.
+  const plantsCapacityDepreciationFactor = wholePlantChange
+    ? wholePlantChange.bookRetention
+    : plantsPrevStock > 0
+      ? plantsOwnedCapacity / plantsPrevStock
+      : 1;
   const priorCapacityBookAnchor =
     typeof sector.capacityBookAnchor === "number" &&
     Number.isFinite(sector.capacityBookAnchor) &&
@@ -359,6 +399,7 @@ export function computePlantsCapacity(input: PlantsCapacityInput): PlantsCapacit
     activeFraction,
     plantsBaseStock,
     plantLedger,
+    plantWearUnits: wholePlantChange ? wholePlantChange.plantWearUnits : null,
     plantsPrevStock,
     plantsOwnedCapacity,
     plantsCapacityDepreciationFactor,

@@ -26,6 +26,7 @@ export const SETTLEMENT_OWNED_SECTOR_FIELDS: readonly string[] = [
   "buildQueue",
   "plantCount",
   "plantUnitRemainder",
+  "plantWearUnits",
   "constructionInProgressAnchor",
   "producerCapacity",
   "producerInventory",

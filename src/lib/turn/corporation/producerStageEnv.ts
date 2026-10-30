@@ -1,3 +1,4 @@
+import { wholePlantsOn } from "@/lib/corporations/wholePlants/rules";
 import { PUBLIC_CARRY_DEFAULT_SHARE } from "@/lib/market/producerMarket/publicCarryRules";
 import { PROCUREMENT_SPILL_DEFAULT_SHARE } from "@/lib/market/producerMarket/procurementSpillRules";
 import { SUBSTITUTION_SHARE as SPILLOVER_DEFAULT_SHARE } from "@/lib/market/producerMarket/spilloverRules";
@@ -25,6 +26,7 @@ export function producerStageEnv(
         producerCaptiveDeliveryStage?: number;
         producerFundedRestartStage?: number;
         producerShortageBuildFactor?: number;
+        wholePlantsStage?: number;
       }
     | null
     | undefined
@@ -39,6 +41,7 @@ export function producerStageEnv(
     captiveDeliveryStage: config?.producerCaptiveDeliveryStage,
     fundedRestartStage: config?.producerFundedRestartStage,
     shortageBuildFactor: config?.producerShortageBuildFactor,
+    wholePlants: wholePlantsOn(config?.wholePlantsStage),
     spilloverShare:
       (config?.producerSpilloverStage ?? 0) >= 1
         ? (config?.producerSpilloverShare ?? SPILLOVER_DEFAULT_SHARE)
