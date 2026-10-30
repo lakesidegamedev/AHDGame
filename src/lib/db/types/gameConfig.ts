@@ -343,6 +343,14 @@ export interface GameConfig {
    */
   fundedHeadcountStage?: number;
   /**
+   * Equity cashout limits: 1 caps the price the system equity pool pays for new
+   * shares (no sentiment premium, no more than book or 15x trailing earnings per
+   * share), caps one company's pool placements at its book equity per 48 turns,
+   * and counts a borrower's shares in a company they control at the lower of
+   * book and half the quote toward their credit line. 0 or absent = off.
+   */
+  equityCashoutLimitsStage?: number;
+  /**
    * Market Adjustment event: 1 records each country's loss share of funded
    * capacity every turn and lets the event fire when it holds. 0 or absent = off.
    */

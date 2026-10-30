@@ -150,10 +150,12 @@ function GoPublicCard({
         setError(apiErrorText(data, "Failed to go public"));
         return;
       }
+      const notice = typeof data.placementNotice === "string" ? ` ${data.placementNotice}` : "";
       setSuccess(
-        typeof data.underwritingFeeLocal === "number"
+        (typeof data.underwritingFeeLocal === "number"
           ? `IPO complete: ${data.listedShares.toLocaleString("en-US")} funded shares listed, ${data.pendingShares.toLocaleString("en-US")} pending. Gross funded ${formatAmount(toInternal(data.grossPlacedLocal), liquidCode)}, underwriting fee ${formatAmount(toInternal(data.underwritingFeeLocal), liquidCode)}, net proceeds ${formatAmount(toInternal(data.issuerNetLocal), liquidCode)}.`
-          : `IPO complete: ${data.newShares.toLocaleString("en-US")} shares issued and available on the exchange now. The treasury receives proceeds only as those shares are bought.`
+          : `IPO complete: ${data.newShares.toLocaleString("en-US")} shares issued and available on the exchange now. The treasury receives proceeds only as those shares are bought.`) +
+          notice
       );
       onRefresh();
     } catch {

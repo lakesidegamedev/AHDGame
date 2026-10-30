@@ -21,8 +21,11 @@ import type { CorporationVote } from "@/lib/db/types/corporationVote";
 import {
   prepareEquityPrimaryPlacement,
   planEquityPrimaryPlacement,
+  placementPricePerShare,
+  recordCappedPrimaryPlacement,
   refundPreparedEquityPlacement,
 } from "@/lib/equities/primaryMarket";
+import { primaryPlacementNotice } from "@/lib/equities/cashoutLimits";
 import { emitTx } from "@/lib/financialTxLog/emit";
 import { loadBankingPolicy } from "@/lib/banking/policy";
 import { resolvePrimaryUnderwritingOffer } from "@/lib/banking/underwritingOffer";
@@ -137,11 +140,15 @@ export async function POST(request: Request, { params }: RouteParams) {
         )
       : null;
     const plannedPlacement = underwriting
-      ? await planEquityPrimaryPlacement(db, corporation, newShares, executionPrice)
+      ? await planEquityPrimaryPlacement(db, corporation, newShares, executionPrice, {
+          turn: currentTurn,
+        })
       : null;
     const legacyPlacement = plannedPlacement?.poolActive
       ? null
-      : await prepareEquityPrimaryPlacement(db, corporation, newShares, executionPrice, now);
+      : await prepareEquityPrimaryPlacement(db, corporation, newShares, executionPrice, now, {
+          turn: currentTurn,
+        });
     const placement = plannedPlacement?.poolActive
       ? { ...plannedPlacement, paidLocal: plannedPlacement.plannedGrossLocal }
       : legacyPlacement!;
@@ -279,9 +286,16 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
+    await recordCappedPrimaryPlacement(db, corporation._id, placement);
+
     const newTotalShares = currentShares + placedShares;
     const dilutedPrice =
       newTotalShares > 0 ? (executionPrice * currentShares) / newTotalShares : executionPrice;
+    const placementNotice = primaryPlacementNotice(
+      placement.cashoutLimits,
+      placedShares,
+      newShares
+    );
 
     // sharePrice is stored in the target corp's liquidCurrencyCode; convert to ₳
     // for the audit row so history math is consistent across corps in different
@@ -332,7 +346,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       sharesIssued: placedShares,
       sharesPending: placement.unsoldShares,
       proceeds: Math.round(proceeds * 100) / 100,
-      pricePerShare: executionPrice,
+      pricePerShare: placementPricePerShare(placement, executionPrice),
       newTotalShares,
       dilutedPrice: Math.round(dilutedPrice * 10000) / 10000,
       ...(underwritingFeeLocal > 0
@@ -342,6 +356,7 @@ export async function POST(request: Request, { params }: RouteParams) {
             issuerNetLocal: proceedsInCorpCapital,
           }
         : {}),
+      ...(placementNotice ? { placementNotice } : {}),
     });
   } catch (error) {
     return handleRouteError(error);
