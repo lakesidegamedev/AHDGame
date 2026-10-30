@@ -85,7 +85,7 @@ export interface LegacySectorResultLike {
 export function fundedSectorResult<T extends LegacySectorResultLike>(
   legacy: T,
   r: FundedReceipt
-): T & { regulatoryBurden: number; fundedComplianceCost: number } {
+): T {
   const revenue = Math.max(0, finite(r.revenue));
   const producerCosts = Math.max(0, revenue - finite(r.profit));
   const growthCost = fundedGrowthCost(legacy, revenue);
