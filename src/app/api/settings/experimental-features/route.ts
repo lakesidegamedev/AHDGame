@@ -6,6 +6,7 @@ import { requireBasicAuth } from "@/lib/api/requireAuth";
 import { checkRateLimit, rateLimitResponse } from "@/lib/api/rateLimit";
 import { parseJsonBody } from "@/lib/api/validate";
 import { experimentalFeaturesSchema } from "@/lib/api/schemas/settings";
+import { applyExperimentalUiCookie } from "@/lib/api/experimentalUiCookie";
 import type { User } from "@/lib/db/types";
 
 // PATCH /api/settings/experimental-features: Opts the authenticated user in or out of
@@ -44,7 +45,13 @@ export async function PATCH(request: Request) {
       }
     );
 
-    return NextResponse.json({ success: true });
+    const response = NextResponse.json({ success: true });
+    // The template reads the opt-in from a cookie, so apply a change to it on
+    // this response rather than waiting for the next `/api/client-nav` load.
+    if (experimentalFeatures !== undefined) {
+      applyExperimentalUiCookie(response, experimentalFeatures);
+    }
+    return response;
   } catch (error) {
     return handleRouteError(error);
   }
